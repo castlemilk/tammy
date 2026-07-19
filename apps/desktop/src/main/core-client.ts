@@ -1,11 +1,12 @@
 import { ConnectError, createClient, type Interceptor, type Transport } from "@connectrpc/connect";
-import { createConnectTransport } from "@connectrpc/connect-node";
+import { type ConnectTransportOptions, createConnectTransport } from "@connectrpc/connect-node";
 import { RuntimeMode, SystemService } from "@tammy/connect-client/tammy/v1/system_pb.js";
 
 import type { CoreReadiness } from "../shared/readiness";
 
 const CAPABILITY_HEADER = "X-Tammy-Capability";
 const EXPECTED_API_VERSION = "tammy.v1";
+const CORE_VERSION_PATTERN = /^[\x20-\x7e]{1,128}$/;
 
 export interface SystemDiagnostics {
   readonly apiVersion: string;
@@ -17,6 +18,8 @@ export interface SystemDiagnostics {
 export interface CoreClient {
   readonly getDiagnostics: () => Promise<SystemDiagnostics>;
 }
+
+export type CoreTransportFactory = (options: ConnectTransportOptions) => Transport;
 
 export type CoreClientErrorCode = "INVALID_DIAGNOSTICS";
 
@@ -41,8 +44,11 @@ export function capabilityInterceptor(capability: string): Interceptor {
   };
 }
 
-function productionTransport(readiness: Readonly<CoreReadiness>): Transport {
-  return createConnectTransport({
+export function createCoreClient(
+  readiness: Readonly<CoreReadiness>,
+  transportFactory: CoreTransportFactory = createConnectTransport,
+): Readonly<CoreClient> {
+  const transport = transportFactory({
     baseUrl: `https://127.0.0.1:${readiness.port}`,
     httpVersion: "1.1",
     defaultTimeoutMs: 5_000,
@@ -54,36 +60,20 @@ function productionTransport(readiness: Readonly<CoreReadiness>): Transport {
     },
     interceptors: [capabilityInterceptor(readiness.capability)],
   });
-}
-
-function capabilityHeaders(capability: string): Headers {
-  const headers = new Headers();
-  headers.set(CAPABILITY_HEADER, capability);
-  return headers;
-}
-
-export function createCoreClient(
-  readiness: Readonly<CoreReadiness>,
-  transport: Transport = productionTransport(readiness),
-): Readonly<CoreClient> {
   const client = createClient(SystemService, transport);
 
   return Object.freeze({
     getDiagnostics: async (): Promise<SystemDiagnostics> => {
       let response: Awaited<ReturnType<typeof client.getDiagnostics>>;
       try {
-        response = await client.getDiagnostics(
-          {},
-          {
-            headers: capabilityHeaders(readiness.capability),
-          },
-        );
+        response = await client.getDiagnostics({});
       } catch (error) {
         throw new ConnectError("Core request failed.", ConnectError.from(error).code);
       }
 
       if (
         response.apiVersion !== EXPECTED_API_VERSION ||
+        !CORE_VERSION_PATTERN.test(response.coreVersion) ||
         response.runtimeMode !== RuntimeMode.OFFLINE ||
         response.networkRequired !== false
       ) {

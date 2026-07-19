@@ -1,5 +1,12 @@
 import { create } from "@bufbuild/protobuf";
-import { Code, ConnectError, createContextValues, type Transport } from "@connectrpc/connect";
+import {
+  Code,
+  ConnectError,
+  createContextValues,
+  createRouterTransport,
+  type Transport,
+} from "@connectrpc/connect";
+import type { ConnectTransportOptions } from "@connectrpc/connect-node";
 import {
   GetDiagnosticsRequestSchema,
   GetDiagnosticsResponseSchema,
@@ -11,6 +18,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { CoreReadiness } from "../shared/readiness";
 import {
   CoreClientError,
+  type CoreTransportFactory,
   capabilityInterceptor,
   createCoreClient,
   type SystemDiagnostics,
@@ -42,33 +50,40 @@ function fakeTransport(
     runtimeMode: RuntimeMode.OFFLINE,
     networkRequired: false,
   },
+  failure?: ConnectError,
 ): {
-  readonly transport: Transport;
-  readonly unary: ReturnType<typeof vi.fn>;
+  readonly factory: CoreTransportFactory;
+  readonly methods: unknown[];
+  readonly receivedHeaders: Headers[];
 } {
-  const unary = vi.fn(
-    async (
-      method: (typeof SystemService.method)["getDiagnostics"],
-      _signal: AbortSignal | undefined,
-      _timeoutMs: number | undefined,
-      header: HeadersInit | undefined,
-    ) => ({
-      stream: false as const,
-      service: SystemService,
-      method,
-      header: new Headers(),
-      trailer: new Headers(),
-      message: create(GetDiagnosticsResponseSchema, response),
-      requestHeader: new Headers(header),
-    }),
+  const methods: unknown[] = [];
+  const receivedHeaders: Headers[] = [];
+  const factory = vi.fn(
+    (options: ConnectTransportOptions): Transport =>
+      createRouterTransport(
+        (router) =>
+          router.service(SystemService, {
+            getDiagnostics: (_request, context) => {
+              methods.push(context.method);
+              receivedHeaders.push(new Headers(context.requestHeader));
+              if (failure) {
+                throw failure;
+              }
+              return response;
+            },
+          }),
+        {
+          transport: {
+            interceptors: options.interceptors ?? [],
+          },
+        },
+      ),
   );
 
   return {
-    unary,
-    transport: {
-      unary,
-      stream: vi.fn(() => Promise.reject(new Error("unexpected streaming call"))),
-    } as unknown as Transport,
+    factory,
+    methods,
+    receivedHeaders,
   };
 }
 
@@ -81,8 +96,8 @@ function serialized(value: unknown): string {
 
 describe("createCoreClient", () => {
   it("constructs the production transport with pinned loopback TLS 1.3 settings", async () => {
-    const { transport } = fakeTransport();
-    connectNodeMocks.createConnectTransport.mockReturnValue(transport);
+    const { factory } = fakeTransport();
+    connectNodeMocks.createConnectTransport.mockImplementation(factory);
 
     await createCoreClient(READINESS).getDiagnostics();
 
@@ -102,24 +117,23 @@ describe("createCoreClient", () => {
   });
 
   it("calls the generated diagnostics method with exactly one capability header", async () => {
-    const { transport, unary } = fakeTransport();
-    const client = createCoreClient(READINESS, transport);
+    const { factory, methods, receivedHeaders } = fakeTransport();
+    const client = createCoreClient(READINESS, factory);
 
     await client.getDiagnostics();
 
-    expect(unary).toHaveBeenCalledTimes(1);
-    expect(unary.mock.calls[0]?.[0]).toBe(SystemService.method.getDiagnostics);
-    expect(unary.mock.calls[0]?.[4]).toEqual({});
-    const header = new Headers(unary.mock.calls[0]?.[3]);
+    expect(methods).toEqual([SystemService.method.getDiagnostics]);
+    expect(receivedHeaders).toHaveLength(1);
+    const header = receivedHeaders[0] as Headers;
     expect(header.get("X-Tammy-Capability")).toBe(CAPABILITY);
     expect([...header.entries()].filter(([name]) => name === "x-tammy-capability")).toHaveLength(1);
   });
 
   it("returns only a frozen structured-clone-safe projection", async () => {
-    const { transport } = fakeTransport();
+    const { factory } = fakeTransport();
     const diagnostics: SystemDiagnostics = await createCoreClient(
       READINESS,
-      transport,
+      factory,
     ).getDiagnostics();
 
     expect(diagnostics).toEqual({
@@ -147,7 +161,7 @@ describe("createCoreClient", () => {
     ["network-dependent runtime", { networkRequired: true }],
   ])("rejects %s with one stable sanitized error", async (_name, override) => {
     const secret = `${READINESS.capability}:${READINESS.port}:${READINESS.caPem}`;
-    const { transport } = fakeTransport({
+    const { factory } = fakeTransport({
       apiVersion: "tammy.v1",
       coreVersion: secret,
       runtimeMode: RuntimeMode.OFFLINE,
@@ -155,7 +169,7 @@ describe("createCoreClient", () => {
       ...override,
     });
 
-    const error = await createCoreClient(READINESS, transport)
+    const error = await createCoreClient(READINESS, factory)
       .getDiagnostics()
       .catch((caught: unknown) => caught);
 
@@ -171,21 +185,62 @@ describe("createCoreClient", () => {
     expect(serialized(error)).not.toContain(READINESS.capability);
   });
 
-  it("sanitizes transport failures while preserving the Connect status code", async () => {
-    const transport = {
-      unary: vi.fn(async () => {
-        throw new ConnectError(
-          `${READINESS.capability}:${READINESS.port}:${READINESS.caPem}`,
-          Code.Unauthenticated,
-          new Headers({
-            Authorization: READINESS.capability,
-          }),
-        );
-      }),
-      stream: vi.fn(() => Promise.reject(new Error("unexpected streaming call"))),
-    } as unknown as Transport;
+  it.each([
+    ["empty", ""],
+    ["longer than 128 characters", "v".repeat(129)],
+    ["containing a newline", "dev\nsecret-version"],
+    ["containing a tab", "dev\tsecret-version"],
+    ["containing DEL", "dev\u007fsecret-version"],
+    ["containing non-ASCII", "dév"],
+  ])("rejects a %s core version without exposing its content", async (_name, coreVersion) => {
+    const { factory } = fakeTransport({
+      apiVersion: "tammy.v1",
+      coreVersion,
+      runtimeMode: RuntimeMode.OFFLINE,
+      networkRequired: false,
+    });
 
-    const error = await createCoreClient(READINESS, transport)
+    const error = await createCoreClient(READINESS, factory)
+      .getDiagnostics()
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(CoreClientError);
+    expect(error).toMatchObject({
+      code: "INVALID_DIAGNOSTICS",
+      message: "Core returned invalid diagnostics.",
+    });
+    if (coreVersion.length > 0) {
+      expect(serialized(error)).not.toContain(coreVersion);
+    }
+  });
+
+  it.each(["v", "dev", "V".repeat(128), "release 1.2.3+build-7"])(
+    "accepts a printable ASCII core version: %j",
+    async (coreVersion) => {
+      const { factory } = fakeTransport({
+        apiVersion: "tammy.v1",
+        coreVersion,
+        runtimeMode: RuntimeMode.OFFLINE,
+        networkRequired: false,
+      });
+
+      await expect(createCoreClient(READINESS, factory).getDiagnostics()).resolves.toMatchObject({
+        coreVersion,
+      });
+    },
+  );
+
+  it("sanitizes transport failures while preserving the Connect status code", async () => {
+    const failure = new ConnectError(
+      `${READINESS.capability}:${READINESS.port}:${READINESS.caPem}`,
+      Code.Unauthenticated,
+      new Headers({
+        Authorization: READINESS.capability,
+      }),
+    );
+    const { factory } = fakeTransport(undefined, failure);
+
+    const error = await createCoreClient(READINESS, factory)
       .getDiagnostics()
       .catch((caught: unknown) => caught);
 
