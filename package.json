@@ -19,7 +19,7 @@
     "proto:format:check": "buf format --diff --exit-code",
     "proto:lint": "buf lint",
     "proto:generate": "buf generate",
-    "proto:breaking": "buf breaking --against .git#branch=master",
+    "proto:breaking": "node scripts/check-proto-breaking.mjs",
     "desktop:test": "pnpm --dir apps/desktop test",
     "desktop:typecheck": "pnpm --dir apps/desktop typecheck",
     "format": "biome check --write .",
