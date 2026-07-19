@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -11,6 +13,8 @@ const diagnostics: SystemDiagnostics = {
   runtimeMode: "offline",
   networkRequired: false,
 };
+
+const rendererStyles = readFileSync(resolve(process.cwd(), "src/renderer/styles.css"), "utf8");
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -116,5 +120,11 @@ describe("App", () => {
     expect(document.activeElement).toBe(screen.getByRole("link", { name: "Overview" }));
     await user.tab();
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "Retry local engine" }));
+  });
+});
+
+describe("renderer semantic styles", () => {
+  it("defines the separator background utility against the border token", () => {
+    expect(rendererStyles).toMatch(/\.bg-border\s*{\s*background-color:\s*var\(--border\);\s*}/);
   });
 });

@@ -95,6 +95,10 @@
     background-color: var(--muted);
   }
 
+  .bg-border {
+    background-color: var(--border);
+  }
+
   .bg-primary {
     background-color: var(--primary);
   }
