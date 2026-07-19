@@ -410,27 +410,28 @@ export async function writeBuildManifest({
     throw new Error("MANIFEST_WRITE_FAILED");
   } finally {
     await lockHandle?.close().catch(() => {});
-    if (lockIdentity && originalRootIdentity && resourcesIdentity) {
-      const [currentRoot, currentResources, lexicalLock] = await Promise.all([
-        lstat(buildRoot, { bigint: true }).catch(() => null),
+    if (lockIdentity && resourcesIdentity) {
+      const [currentResources, lexicalLock] = await Promise.all([
         lstat(resourcesRoot, { bigint: true }).catch(() => null),
         lstat(lock, { bigint: true }).catch(() => null),
       ]);
       if (
-        sameDirectoryIdentity(currentRoot, originalRootIdentity) &&
         sameDirectoryIdentity(currentResources, resourcesIdentity) &&
         lexicalLock?.isFile() &&
         !lexicalLock.isSymbolicLink() &&
         lexicalLock.dev === lockIdentity.dev &&
         lexicalLock.ino === lockIdentity.ino
       ) {
-        const [revalidatedRoot, revalidatedResources] = await Promise.all([
-          lstat(buildRoot, { bigint: true }).catch(() => null),
+        const [revalidatedResources, revalidatedLock] = await Promise.all([
           lstat(resourcesRoot, { bigint: true }).catch(() => null),
+          lstat(lock, { bigint: true }).catch(() => null),
         ]);
         if (
-          sameDirectoryIdentity(revalidatedRoot, originalRootIdentity) &&
-          sameDirectoryIdentity(revalidatedResources, resourcesIdentity)
+          sameDirectoryIdentity(revalidatedResources, resourcesIdentity) &&
+          revalidatedLock?.isFile() &&
+          !revalidatedLock.isSymbolicLink() &&
+          revalidatedLock.dev === lockIdentity.dev &&
+          revalidatedLock.ino === lockIdentity.ino
         ) {
           await rm(lock, { force: true });
         }

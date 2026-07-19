@@ -518,6 +518,21 @@ test("does not traverse a symlink replacement while cleaning failed staging", as
     for (const [name, bytes] of externalFiles) {
       assert.deepEqual(await readFile(path.join(external, name)), bytes);
     }
+    const siblingLock = path.join(root, "resources", ".build-manifest.lock");
+    assert.equal(
+      await lstat(siblingLock).then(
+        () => true,
+        () => false,
+      ),
+      false,
+    );
+    await rm(buildRoot);
+    await rename(moved, buildRoot);
+    await writeBuildManifest({
+      buildRoot,
+      manifest: createBuildManifest(validInput()),
+    });
+    assert.deepEqual((await readdir(buildRoot)).sort(), [".gitkeep", "build-manifest.json"]);
   } finally {
     await rm(root, { force: true, recursive: true });
   }
