@@ -32,15 +32,20 @@ afterEach(async () => {
 });
 
 class FakeWindow extends EventEmitter {
-  readonly close = vi.fn();
+  readonly close;
   readonly isDestroyed = vi.fn(() => false);
   readonly loadURL = vi.fn(async () => undefined);
   readonly show = vi.fn();
+
+  constructor(calls: string[]) {
+    super();
+    this.close = vi.fn(() => calls.push("window:close"));
+  }
 }
 
 function rig(overrides: Partial<DesktopDependencies> = {}) {
   const calls: string[] = [];
-  const window = new FakeWindow();
+  const window = new FakeWindow(calls);
   let requestQuit: (() => void) | undefined;
   const readiness = Object.freeze({
     caPem: "private readiness detail",
@@ -132,10 +137,12 @@ describe("desktop application composition", () => {
     expect(window.show).toHaveBeenCalledOnce();
 
     await application.shutdown();
-    expect(calls.indexOf("ipc:unregister")).toBeLessThan(calls.indexOf("core:stop"));
-    expect(calls.indexOf("window:create")).toBeLessThan(calls.indexOf("core:stop"));
+    expect(
+      calls.filter((call) =>
+        ["ipc:unregister", "window:close", "core:stop", "exit:0"].includes(call),
+      ),
+    ).toEqual(["ipc:unregister", "window:close", "core:stop", "exit:0"]);
     expect(window.close).toHaveBeenCalledOnce();
-    expect(calls.at(-1)).toBe("exit:0");
   });
 
   it.each(["start", "diagnostics"] as const)(
