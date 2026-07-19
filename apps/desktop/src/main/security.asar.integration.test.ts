@@ -1,11 +1,18 @@
-import { spawn } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
+
+import {
+  HarnessProcessError,
+  productionHarnessTimers,
+  runHarnessProcess,
+  spawnHarnessProcess,
+  terminateHarnessProcess,
+} from "../../tests/helpers/electron-harness-process";
 
 const DESKTOP_ROOT = process.cwd();
 const WORKSPACE_ROOT = resolve(DESKTOP_ROOT, "../..");
@@ -20,7 +27,8 @@ const ASAR_PACKAGE_ROOT = join(
 );
 const HARNESS_PATH = join(DESKTOP_ROOT, "tests", "fixtures", "electron-asar-harness.mjs");
 const SECURITY_SOURCE = join(DESKTOP_ROOT, "src", "main", "security.ts");
-const temporaryDirectories: string[] = [];
+const HARNESS_TIMEOUT_MS = 20_000;
+const CLOSE_CONFIRMATION_TIMEOUT_MS = 5_000;
 
 interface AsarModule {
   createPackage(source: string, destination: string): Promise<void>;
@@ -66,76 +74,57 @@ async function runElectron(
     process.platform === "linux" && process.getuid?.() === 0
       ? ["--no-sandbox", "--disable-gpu"]
       : [];
-  const child = spawn(
+  return runHarnessProcess({
+    closeConfirmationTimeoutMs: CLOSE_CONFIRMATION_TIMEOUT_MS,
+    electronArguments: [
+      ...platformArguments,
+      "--enable-logging=stderr",
+      resolve(HARNESS_PATH, ".."),
+    ],
+    environment,
     executable,
-    [...platformArguments, "--enable-logging=stderr", resolve(HARNESS_PATH, "..")],
-    {
-      env: environment,
-      shell: false,
-      stdio: ["ignore", "pipe", "pipe"],
-      windowsHide: true,
-    },
-  );
-  const output: Buffer[] = [];
-  const errors: Buffer[] = [];
-  child.stdout.on("data", (chunk: Buffer) => output.push(chunk));
-  child.stderr.on("data", (chunk: Buffer) => errors.push(chunk));
-
-  const exitCode = await new Promise<number | null>((resolveExit, reject) => {
-    const timeout = setTimeout(() => {
-      child.kill("SIGKILL");
-      reject(
-        new Error(
-          `Electron ASAR harness timed out. stdout=${Buffer.concat(output).toString("utf8")} stderr=${Buffer.concat(errors).toString("utf8")}`,
-        ),
-      );
-    }, 20_000);
-    child.once("error", (error) => {
-      clearTimeout(timeout);
-      reject(error);
-    });
-    child.once("exit", (code) => {
-      clearTimeout(timeout);
-      resolveExit(code);
-    });
+    platform: process.platform,
+    spawnProcess: spawnHarnessProcess,
+    terminateProcess: terminateHarnessProcess,
+    timeoutMs: HARNESS_TIMEOUT_MS,
+    timers: productionHarnessTimers,
   });
-  const stdout = Buffer.concat(output).toString("utf8");
-  const stderr = Buffer.concat(errors).toString("utf8");
-  if (exitCode !== 0) {
-    throw new Error(`Electron ASAR harness failed (${exitCode}): ${stderr}`);
-  }
-  return { stderr, stdout };
 }
-
-afterEach(async () => {
-  await Promise.all(
-    temporaryDirectories
-      .splice(0)
-      .map((directory) => rm(directory, { force: true, recursive: true })),
-  );
-});
 
 describe("packaged ASAR renderer protocol", () => {
   it("serves a real archive through pinned Electron net.fetch", { timeout: 30_000 }, async () => {
     const directory = await mkdtemp(join(tmpdir(), "tammy-asar-integration-"));
-    temporaryDirectories.push(directory);
-    const source = join(directory, "source");
-    const archive = join(directory, "app.asar");
-    await mkdir(join(source, "renderer"), { recursive: true });
-    await writeFile(join(source, "renderer", "index.html"), "<main>ASAR ready</main>");
-    await (await pinnedAsar()).createPackage(source, archive);
+    let safeToRemove = true;
+    try {
+      const source = join(directory, "source");
+      const archive = join(directory, "app.asar");
+      await mkdir(join(source, "renderer"), { recursive: true });
+      await writeFile(join(source, "renderer", "index.html"), "<main>ASAR ready</main>");
+      await (await pinnedAsar()).createPackage(source, archive);
 
-    const result = await runElectron(await pinnedElectron(), join(archive, "renderer"));
-    const resultLine = result.stdout
-      .split(/\r?\n/)
-      .find((line) => line.startsWith("TAMMY_ASAR_RESULT "));
-    expect(resultLine).toBeDefined();
-    expect(JSON.parse(resultLine?.slice("TAMMY_ASAR_RESULT ".length) ?? "")).toEqual({
-      body: "<main>ASAR ready</main>",
-      contentType: "text/html; charset=utf-8",
-      nosniff: "nosniff",
-      status: 200,
-    });
-    expect(result.stderr).not.toContain("TAMMY_ASAR_FAILURE");
+      const electronExecutable = await pinnedElectron();
+      let result: { readonly stderr: string; readonly stdout: string };
+      try {
+        result = await runElectron(electronExecutable, join(archive, "renderer"));
+      } catch (error) {
+        safeToRemove = error instanceof HarnessProcessError && error.processClosed;
+        throw error;
+      }
+      const resultLine = result.stdout
+        .split(/\r?\n/)
+        .find((line) => line.startsWith("TAMMY_ASAR_RESULT "));
+      expect(resultLine).toBeDefined();
+      expect(JSON.parse(resultLine?.slice("TAMMY_ASAR_RESULT ".length) ?? "")).toEqual({
+        body: "<main>ASAR ready</main>",
+        contentType: "text/html; charset=utf-8",
+        nosniff: "nosniff",
+        status: 200,
+      });
+      expect(result.stderr).not.toContain("TAMMY_ASAR_FAILURE");
+    } finally {
+      if (safeToRemove) {
+        await rm(directory, { force: true, recursive: true });
+      }
+    }
   });
 });

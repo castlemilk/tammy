@@ -1787,7 +1787,7 @@ actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
 
 Jobs:
 
-- `contracts` on `ubuntu-24.04`: Node 24.18.0, Go 1.26.4, frozen pnpm install, actionlint 1.7.12 workflow validation, Buf format/lint/breaking/generation cleanliness, Go race tests, desktop unit/type/lint tests;
+- `contracts` on `ubuntu-24.04`: Node 24.18.0, Go 1.26.4, frozen pnpm install, actionlint 1.7.12 workflow validation, Buf format/lint/breaking/generation cleanliness, Go race tests, `xvfb-run -a pnpm desktop:test` (after explicitly asserting `xvfb-run` is installed), and desktop type/lint tests;
 - `macos14-arm64-packaged` on `macos-14`: assert `uname -m` is `arm64`, then run `pnpm desktop:e2e` and upload failure artifacts;
 - `windows-server-x64-package-smoke` on `windows-2025`: assert AMD64, run
   `pnpm desktop:test`, `pnpm desktop:typecheck`, `pnpm core:build`,

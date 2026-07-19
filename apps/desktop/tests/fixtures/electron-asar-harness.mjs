@@ -33,14 +33,43 @@ async function run() {
     nosniff: response.headers.get("X-Content-Type-Options"),
     status: response.status,
   };
-  process.stdout.write(`TAMMY_ASAR_RESULT ${JSON.stringify(result)}\n`);
+  return result;
 }
 
-void run().then(
-  () => app.exit(0),
-  (error) => {
-    const code = error instanceof Error ? error.message : "UNKNOWN";
-    process.stderr.write(`TAMMY_ASAR_FAILURE ${code}\n`);
-    app.exit(1);
-  },
-);
+let exited = false;
+let failurePending = false;
+
+function exitOnce(code) {
+  if (exited) {
+    return;
+  }
+  exited = true;
+  app.exit(code);
+}
+
+function reportFailure(error) {
+  if (exited || failurePending) {
+    return;
+  }
+  failurePending = true;
+  const code = error instanceof Error ? error.message : "UNKNOWN";
+  try {
+    process.stderr.write(`TAMMY_ASAR_FAILURE ${code}\n`, () => exitOnce(1));
+  } catch {
+    exitOnce(1);
+  }
+}
+
+void run().then((result) => {
+  try {
+    process.stdout.write(`TAMMY_ASAR_RESULT ${JSON.stringify(result)}\n`, (error) => {
+      if (error) {
+        reportFailure(error);
+        return;
+      }
+      exitOnce(0);
+    });
+  } catch (error) {
+    reportFailure(error);
+  }
+}, reportFailure);
