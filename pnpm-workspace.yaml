@@ -17,4 +17,4 @@ minimumReleaseAge: 1440
 
 onlyBuiltDependencies: ["@bufbuild/buf", "electron", "electron-winstaller", "esbuild"]
 
-publicHoistPattern: ["@electron-forge/*", "@radix-ui/react-compose-refs", "scheduler"]
+publicHoistPattern: ["@electron-forge/*"]

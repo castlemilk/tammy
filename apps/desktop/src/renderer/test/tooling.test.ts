@@ -36,4 +36,18 @@ describe("desktop tooling", () => {
     );
     expect(document.querySelector("meta[http-equiv='Content-Security-Policy']")).toBeNull();
   });
+
+  test("keeps strict pnpm peers local to desktop while hoisting only Forge tooling", async () => {
+    const desktopPackage = JSON.parse(
+      await readFile(path.join(desktopRoot, "package.json"), "utf8"),
+    );
+    const workspace = await readFile(path.join(desktopRoot, "../../pnpm-workspace.yaml"), "utf8");
+
+    expect(desktopPackage.dependencies).toMatchObject({
+      "@radix-ui/react-compose-refs": "1.1.3",
+      scheduler: "0.27.0",
+    });
+    expect(workspace).toContain('publicHoistPattern: ["@electron-forge/*"]');
+    expect(workspace).not.toMatch(/publicHoistPattern:.*(?:react-compose-refs|scheduler)/u);
+  });
 });
