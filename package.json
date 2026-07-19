@@ -15,6 +15,7 @@
     "desktop:package": "pnpm core:build && pnpm build:manifest && pnpm --dir apps/desktop package && node apps/desktop/scripts/find-packaged-app.mjs --verify --source-manifest apps/desktop/resources/build/build-manifest.json",
     "desktop:start": "pnpm core:build && pnpm --dir apps/desktop start",
     "desktop:e2e": "pnpm desktop:package && pnpm --dir apps/desktop e2e",
+    "test:proto-breaking": "node --test scripts/check-proto-breaking.test.mjs",
     "test:toolchain": "node --test scripts/check-toolchain.test.mjs",
     "proto:format:check": "buf format --diff --exit-code",
     "proto:lint": "buf lint",

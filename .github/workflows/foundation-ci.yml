@@ -56,6 +56,9 @@ jobs:
       - name: Validate workflow definitions
         run: pnpm ci:lint
 
+      - name: Test protobuf breaking policy
+        run: pnpm test:proto-breaking
+
       - name: Verify Buf contracts
         run: |
           pnpm proto:format:check
@@ -182,6 +185,9 @@ jobs:
 
       - name: Verify the pinned toolchain
         run: pnpm check:toolchain
+
+      - name: Test protobuf policy process safety
+        run: pnpm test:proto-breaking
 
       - name: Refuse a dirty generated tree
         shell: pwsh

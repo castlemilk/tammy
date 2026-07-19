@@ -1,20 +1,21 @@
-import { spawn } from "node:child_process";
-import { lstat, readdir, realpath } from "node:fs/promises";
+import { spawn, spawnSync } from "node:child_process";
+import { lstat, open, readdir, realpath } from "node:fs/promises";
+import { createRequire } from "node:module";
+import { arch } from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 export const BASELINE_MESSAGE = "INITIAL_BASELINE_NOT_YET_ON_MASTER";
 
-const GIT_BASELINE_ARGS = Object.freeze([
-  "ls-tree",
-  "-r",
-  "--name-only",
-  "master",
-  "--",
-  "buf.yaml",
-  "proto",
-]);
-const BUF_BREAKING_ARGS = Object.freeze(["breaking", "--against", ".git#branch=master"]);
+const MASTER_REFERENCES = Object.freeze(["refs/remotes/origin/master", "refs/heads/master"]);
+const NATIVE_BUF_PACKAGES = Object.freeze({
+  "darwin:arm64": "@bufbuild/buf-darwin-arm64",
+  "darwin:x64": "@bufbuild/buf-darwin-x64",
+  "linux:arm": "@bufbuild/buf-linux-armv7",
+  "linux:arm64": "@bufbuild/buf-linux-aarch64",
+  "linux:x64": "@bufbuild/buf-linux-x64",
+  "win32:arm64": "@bufbuild/buf-win32-arm64",
+  "win32:x64": "@bufbuild/buf-win32-x64",
+});
 const MAX_OUTPUT_BYTES = 1024 * 1024;
 const MAX_CURRENT_ENTRIES = 4096;
 const MAX_CURRENT_DEPTH = 32;
@@ -41,6 +42,8 @@ class ProtoBreakingError extends Error {
     this.exitCode = exitCode;
   }
 }
+
+const requireFromBufPackage = createRequire(import.meta.resolve("@bufbuild/buf"));
 
 function commandError(message) {
   return new ProtoBreakingError(message);
@@ -149,6 +152,53 @@ function inspectMasterEntries(stdout) {
   };
 }
 
+function inspectMasterOid(stdout) {
+  if (!/^(?:[0-9a-f]{40}|[0-9a-f]{64})\n$/.test(stdout)) {
+    throw commandError("PROTO_BREAKING_MASTER_REF_MALFORMED");
+  }
+  return stdout.slice(0, -1);
+}
+
+function hasNativeExecutableHeader(header, platform) {
+  if (platform === "linux") {
+    return header.equals(Buffer.from([0x7f, 0x45, 0x4c, 0x46]));
+  }
+  if (platform === "win32") {
+    return header[0] === 0x4d && header[1] === 0x5a;
+  }
+  if (platform === "darwin") {
+    const magic = header.readUInt32BE(0);
+    return new Set([
+      0xbebafeca, 0xbfbafeca, 0xcafebabe, 0xcafebabf, 0xcefaedfe, 0xcffaedfe, 0xfeedface,
+      0xfeedfacf,
+    ]).has(magic);
+  }
+  return false;
+}
+
+async function resolveMasterOid({ commonPlan, run, writeError }) {
+  for (const reference of MASTER_REFERENCES) {
+    const result = validateCommandResult(
+      await run({
+        ...commonPlan,
+        args: ["rev-parse", "--verify", "--quiet", `${reference}^{commit}`],
+        timeoutMs: 10_000,
+        tool: "git",
+      }),
+    );
+    if (result.exitCode === 1 && result.signal === null && !result.stdout && !result.stderr) {
+      continue;
+    }
+    if (result.exitCode !== 0) {
+      if (result.stderr) writeError(result.stderr);
+      throw commandError("PROTO_BREAKING_GIT_INSPECTION_FAILED");
+    }
+
+    return inspectMasterOid(result.stdout);
+  }
+  throw commandError("PROTO_BREAKING_MASTER_REF_MISSING");
+}
+
 export async function checkProtoBreaking({
   root,
   run = runToolPlan,
@@ -164,10 +214,11 @@ export async function checkProtoBreaking({
     reapTimeoutMs: 1000,
     terminationGraceMs: 1000,
   };
+  const masterOid = await resolveMasterOid({ commonPlan, run, writeError });
   const gitResult = validateCommandResult(
     await run({
       ...commonPlan,
-      args: [...GIT_BASELINE_ARGS],
+      args: ["ls-tree", "-r", "--name-only", masterOid, "--", "buf.yaml", "proto"],
       timeoutMs: 10_000,
       tool: "git",
     }),
@@ -189,7 +240,7 @@ export async function checkProtoBreaking({
   const bufResult = validateCommandResult(
     await run({
       ...commonPlan,
-      args: [...BUF_BREAKING_ARGS],
+      args: ["breaking", "--against", `.git#ref=${masterOid}`],
       timeoutMs: 120_000,
       tool: "buf",
     }),
@@ -202,19 +253,108 @@ export async function checkProtoBreaking({
   return "VERIFIED";
 }
 
-async function runToolPlan(plan) {
+export async function resolveNativeBufExecutable({
+  architecture = arch(),
+  packageResolve = (specifier) => requireFromBufPackage.resolve(specifier),
+  platform = process.platform,
+} = {}) {
+  const packageName = NATIVE_BUF_PACKAGES[`${platform}:${architecture}`];
+  if (packageName === undefined) {
+    throw commandError("PROTO_BREAKING_BUF_PLATFORM_UNSUPPORTED");
+  }
+  const binaryName = platform === "win32" ? "buf.exe" : "buf";
+
+  let manifestPath;
+  let executablePath;
+  try {
+    [manifestPath, executablePath] = await Promise.all([
+      realpath(packageResolve(`${packageName}/package.json`)),
+      realpath(packageResolve(`${packageName}/bin/${binaryName}`)),
+    ]);
+  } catch {
+    throw commandError("PROTO_BREAKING_BUF_EXECUTABLE_INVALID");
+  }
+
+  const packageRoot = path.dirname(manifestPath);
+  if (path.relative(packageRoot, executablePath) !== path.join("bin", binaryName)) {
+    throw commandError("PROTO_BREAKING_BUF_EXECUTABLE_INVALID");
+  }
+  const executable = await lstat(executablePath).catch(() => null);
+  if (
+    executable === null ||
+    !executable.isFile() ||
+    executable.isSymbolicLink() ||
+    executable.size === 0 ||
+    (platform !== "win32" && (executable.mode & 0o111) === 0)
+  ) {
+    throw commandError("PROTO_BREAKING_BUF_EXECUTABLE_INVALID");
+  }
+
+  const handle = await open(executablePath, "r").catch(() => null);
+  if (handle === null) throw commandError("PROTO_BREAKING_BUF_EXECUTABLE_INVALID");
+  const header = Buffer.alloc(4);
+  let bytesRead = 0;
+  try {
+    ({ bytesRead } = await handle.read(header, 0, header.length, 0));
+  } catch {
+    throw commandError("PROTO_BREAKING_BUF_EXECUTABLE_INVALID");
+  } finally {
+    await handle.close().catch(() => {});
+  }
+  if (bytesRead !== header.length || !hasNativeExecutableHeader(header, platform)) {
+    throw commandError("PROTO_BREAKING_BUF_EXECUTABLE_INVALID");
+  }
+  return executablePath;
+}
+
+export async function runToolPlan(
+  plan,
+  { resolveBufExecutable = resolveNativeBufExecutable, runProcess = runBoundedProcess } = {},
+) {
   if (plan.tool === "git") {
-    return runBoundedProcess({ ...plan, file: "git" });
+    return runProcess({ ...plan, file: "git" });
   }
   if (plan.tool === "buf") {
-    const bufEntry = fileURLToPath(import.meta.resolve("@bufbuild/buf/bin/buf"));
-    return runBoundedProcess({
-      ...plan,
-      args: [bufEntry, ...plan.args],
-      file: process.execPath,
-    });
+    const executable = await resolveBufExecutable();
+    if (
+      typeof executable !== "string" ||
+      !path.isAbsolute(executable) ||
+      executable.includes("\0")
+    ) {
+      throw commandError("PROTO_BREAKING_BUF_EXECUTABLE_INVALID");
+    }
+    return runProcess({ ...plan, file: executable });
   }
   throw commandError("PROTO_BREAKING_TOOL_INVALID");
+}
+
+export function killProcessTree(
+  child,
+  signal,
+  { env = process.env, platform = process.platform, spawnProcessSync = spawnSync } = {},
+) {
+  if (platform === "win32" && Number.isInteger(child.pid) && child.pid > 0) {
+    const args = ["/PID", String(child.pid), "/T"];
+    if (signal === "SIGKILL") args.push("/F");
+    const result = spawnProcessSync("taskkill.exe", args, {
+      env,
+      shell: false,
+      stdio: "ignore",
+      timeout: 5000,
+      windowsHide: true,
+    });
+    if (result.error === undefined && result.status === 0) return;
+    if (signal === "SIGTERM") return;
+  }
+  if (platform !== "win32" && Number.isInteger(child.pid) && child.pid > 0) {
+    try {
+      process.kill(-child.pid, signal);
+      return;
+    } catch {
+      // Fall through when the process group no longer exists.
+    }
+  }
+  child.kill(signal);
 }
 
 export function runBoundedProcess(
@@ -226,6 +366,7 @@ export function runBoundedProcess(
     try {
       child = spawnProcess(file, args, {
         cwd,
+        detached: process.platform !== "win32",
         env,
         shell: false,
         stdio: ["ignore", "pipe", "pipe"],
@@ -260,13 +401,13 @@ export function runBoundedProcess(
       if (terminalError !== null || settled) return;
       terminalError = commandError(reason);
       try {
-        child.kill("SIGTERM");
+        killProcessTree(child, "SIGTERM", { env });
       } catch {
         // The close event remains the settlement boundary for a started child.
       }
       graceTimer = setTimer(() => {
         try {
-          child.kill("SIGKILL");
+          killProcessTree(child, "SIGKILL", { env });
         } catch {
           // The bounded reap timer below handles a missing close event.
         }
