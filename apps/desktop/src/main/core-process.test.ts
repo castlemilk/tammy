@@ -380,19 +380,17 @@ describe("CoreProcess stderr handling", () => {
     expect(logged).toContain("[REDACTED]");
   });
 
-  it("continues redacting readiness secrets while shutdown is in progress", async () => {
+  it("suppresses stderr while shutdown is in progress without retaining readiness", async () => {
     const { child, supervisor, timers, warnings } = testRig();
     const start = supervisor.start();
     child.stdout.write(readinessLine());
     await start;
 
+    const warningCount = warnings.length;
     const stop = supervisor.stop();
     child.stderr.write(`${CAPABILITY} ${PORT} ${CERTIFICATE.split("\n")[1]}\n`);
 
-    const logged = warnings.join("\n");
-    expect(logged).not.toContain(CAPABILITY);
-    expect(logged).not.toContain(String(PORT));
-    expect(logged).not.toContain(CERTIFICATE.split("\n")[1]);
+    expect(warnings).toHaveLength(warningCount);
     timers.runNext(3_000);
     await stop;
   });
@@ -453,6 +451,36 @@ describe("CoreProcess stopping and diagnostics", () => {
 
     expect(child.killCalls).toBe(1);
     expect(supervisor.getDiagnostic()).toEqual({ state: "STOPPED" });
+  });
+
+  it("fatally rejects shutdown if stdout arrives after readiness", async () => {
+    const { child, supervisor, timers } = testRig();
+    const start = supervisor.start();
+    child.stdout.write(readinessLine());
+    await start;
+
+    const stop = supervisor.stop();
+    const concurrentStop = supervisor.stop();
+    child.stdout.write(Buffer.from(CAPABILITY));
+
+    expect(concurrentStop).toBe(stop);
+    expect(supervisor.getDiagnostic()).toEqual({
+      state: "FAILED",
+      errorCode: "UNEXPECTED_STDOUT",
+    });
+    await expectCoreError(stop, "UNEXPECTED_STDOUT", "Core process wrote unexpected output.");
+    const publicText = JSON.stringify(supervisor.getDiagnostic());
+    expect(publicText).not.toContain(CAPABILITY);
+    expect(publicText).not.toContain(String(PORT));
+    expect(publicText).not.toContain("BEGIN CERTIFICATE");
+    expect(child.killCalls).toBe(1);
+    expect(child.stdin.writableEnded).toBe(true);
+    expect(child.listenerCount("error")).toBe(0);
+    expect(child.listenerCount("exit")).toBe(0);
+    expect(child.stdout.listenerCount("data")).toBe(0);
+    expect(timers.scheduled.filter((timer) => timer.delay === 3_000 && !timer.cancelled)).toEqual(
+      [],
+    );
   });
 
   it("deterministically aborts a concurrent start and deduplicates stop", async () => {

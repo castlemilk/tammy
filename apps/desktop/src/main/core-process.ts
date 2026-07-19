@@ -149,6 +149,7 @@ export class CoreProcess {
   #rejectStart: ((error: CoreProcessError) => void) | undefined;
   #stopPromise: Promise<void> | undefined;
   #resolveStop: (() => void) | undefined;
+  #rejectStop: ((error: CoreProcessError) => void) | undefined;
   #exitObserved = false;
 
   public constructor(options: CoreProcessOptions) {
@@ -226,6 +227,7 @@ export class CoreProcess {
     }
 
     const wasStarting = this.#state === "STARTING";
+    this.#readiness = undefined;
     this.#state = "STOPPING";
     this.#clearReadinessTimer();
 
@@ -233,9 +235,12 @@ export class CoreProcess {
       this.#rejectPendingStart(new CoreProcessError("START_ABORTED"));
     }
 
-    this.#stopPromise = new Promise((resolve) => {
+    const stopPromise = new Promise<void>((resolve, reject) => {
       this.#resolveStop = resolve;
+      this.#rejectStop = reject;
     });
+    this.#stopPromise = stopPromise;
+    void stopPromise.catch(() => undefined);
 
     this.#stopTimer = this.#timers.setTimeout(() => {
       if (!this.#exitObserved) {
@@ -254,7 +259,7 @@ export class CoreProcess {
       // A closed stdin already has the desired shutdown semantics.
     }
 
-    return this.#stopPromise;
+    return stopPromise;
   }
 
   public getDiagnostic(): Readonly<CoreProcessDiagnostic> {
@@ -278,7 +283,7 @@ export class CoreProcess {
     if (bytes.byteLength === 0) {
       return;
     }
-    if (this.#state === "READY") {
+    if (this.#state === "READY" || this.#state === "STOPPING") {
       this.#fail(new CoreProcessError("UNEXPECTED_STDOUT"));
       return;
     }
@@ -315,6 +320,10 @@ export class CoreProcess {
   };
 
   readonly #onStderr = (chunk: Buffer | Uint8Array | string): void => {
+    if (this.#state === "STOPPING") {
+      return;
+    }
+
     let bytes =
       typeof chunk === "string"
         ? Buffer.from(chunk)
@@ -432,7 +441,10 @@ export class CoreProcess {
   }
 
   #fail(error: CoreProcessError): void {
-    if (this.#state === "FAILED" || this.#state === "STOPPING" || this.#state === "STOPPED") {
+    if (this.#state === "FAILED" || this.#state === "STOPPED") {
+      return;
+    }
+    if (this.#state === "STOPPING" && error.code !== "UNEXPECTED_STDOUT") {
       return;
     }
     this.#state = "FAILED";
@@ -455,6 +467,11 @@ export class CoreProcess {
       // Native shutdown details are deliberately not surfaced.
     }
     this.#child = undefined;
+    const rejectStop = this.#rejectStop;
+    this.#resolveStop = undefined;
+    this.#rejectStop = undefined;
+    this.#stopPromise = undefined;
+    rejectStop?.(error);
   }
 
   #rejectPendingStart(error: CoreProcessError): void {
@@ -478,6 +495,8 @@ export class CoreProcess {
     this.#state = "STOPPED";
     const resolve = this.#resolveStop;
     this.#resolveStop = undefined;
+    this.#rejectStop = undefined;
+    this.#stopPromise = undefined;
     resolve?.();
   }
 
