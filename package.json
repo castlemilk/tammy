@@ -1,0 +1,26 @@
+{
+  "name": "tammy",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.15.0",
+  "engines": {
+    "node": "24.18.0",
+    "pnpm": "11.15.0"
+  },
+  "scripts": {
+    "check:toolchain": "node scripts/check-toolchain.mjs",
+    "test:toolchain": "node --test scripts/check-toolchain.test.mjs",
+    "proto:format:check": "buf format --diff --exit-code",
+    "proto:lint": "buf lint",
+    "proto:generate": "buf generate",
+    "proto:breaking": "buf breaking --against .git#branch=master",
+    "format": "biome check --write .",
+    "lint": "biome check ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.4",
+    "@bufbuild/buf": "1.72.0",
+    "@bufbuild/protoc-gen-es": "2.12.1",
+    "typescript": "7.0.2"
+  }
+}

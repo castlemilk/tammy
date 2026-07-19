@@ -1,2 +1,14 @@
 .superpowers/
 .worktrees/
+node_modules/
+.pnpm-store/
+**/.vite/
+**/out/
+**/dist/
+**/coverage/
+**/test-results/
+**/playwright-report/
+apps/desktop/resources/core/*
+!apps/desktop/resources/core/.gitkeep
+apps/desktop/resources/build/*
+!apps/desktop/resources/build/.gitkeep
