@@ -55,6 +55,7 @@ The following structure is locked for this plan:
 ├── buf.gen.yaml                          # pinned Go and ES generators
 ├── buf.yaml                              # Buf v2 module/lint/breaking policy
 ├── go.work                               # Go workspace containing services/core
+├── go.work.sum                           # exact Go workspace module checksums
 ├── package.json                          # root commands and tool pins
 ├── pnpm-lock.yaml                        # exact JS dependency graph
 ├── pnpm-workspace.yaml                   # apps/* and packages/* workspace
@@ -99,6 +100,7 @@ The following structure is locked for this plan:
 │       └── vitest.config.ts
 ├── services/core/
 │   ├── go.mod
+│   ├── go.sum
 │   ├── cmd/tammy-core/
 │   │   ├── main.go
 │   │   └── main_test.go
@@ -148,6 +150,7 @@ The following structure is locked for this plan:
 - Create: `tsconfig.base.json`
 - Create: `biome.json`
 - Create: `go.work`
+- Generate: `go.work.sum`
 - Create: `services/core/go.mod`
 - Generate: `services/core/go.sum`
 - Create: `packages/connect-client/package.json`
@@ -216,6 +219,8 @@ packages:
   - packages/*
 
 minimumReleaseAge: 1440
+
+onlyBuiltDependencies: ["@bufbuild/buf"]
 ```
 
 Use `.npmrc` values `save-exact=true`, `strict-peer-dependencies=true`, and `verify-store-integrity=true`. Set `.node-version` to `24.18.0`.
@@ -283,11 +288,11 @@ Use this complete Biome configuration:
   "files": {
     "includes": [
       "**",
-      "!**/internal/gen/**",
-      "!**/src/gen/**",
-      "!**/.vite/**",
-      "!**/out/**",
-      "!**/playwright-report/**"
+      "!**/internal/gen",
+      "!**/src/gen",
+      "!**/.vite",
+      "!**/out",
+      "!**/playwright-report"
     ]
   },
   "formatter": {
@@ -305,7 +310,7 @@ Use this complete Biome configuration:
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true
+      "preset": "recommended"
     }
   },
   "assist": {
@@ -406,6 +411,7 @@ Run:
 
 ```bash
 rtk mise exec -- corepack prepare pnpm@11.15.0 --activate
+rtk mise exec -- corepack enable pnpm
 rtk mise exec -- pnpm install
 ```
 
@@ -474,12 +480,12 @@ rtk mise exec -- go work sync
 rtk mise exec -- go -C services/core mod download
 ```
 
-Expected: two Node tests PASS, the real executable check prints `toolchain ok`, Biome reports no errors, the Go workspace sync exits 0, and `services/core/go.sum` records the exact Connect-Go and Protobuf Go module checksums.
+Expected: two Node tests PASS, the real executable check prints `toolchain ok`, Biome reports no errors, warnings, or deprecations, the Go workspace sync exits 0, and `go.work.sum` plus `services/core/go.sum` record the exact Connect-Go and Protobuf Go module checksums.
 
 - [ ] **Step 9: Commit the workspace**
 
 ```bash
-rtk git add .gitignore .editorconfig .node-version .npmrc mise.toml package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json biome.json go.work services/core/go.mod services/core/go.sum packages/connect-client scripts/check-toolchain.mjs scripts/check-toolchain.test.mjs
+rtk git add .gitignore .editorconfig .node-version .npmrc mise.toml package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json biome.json go.work go.work.sum services/core/go.mod services/core/go.sum packages/connect-client scripts/check-toolchain.mjs scripts/check-toolchain.test.mjs
 rtk git commit -m "build: pin the desktop foundation toolchain"
 ```
 
@@ -989,7 +995,7 @@ Add these root scripts:
 }
 ```
 
-Add `onlyBuiltDependencies: [electron, esbuild]` to `pnpm-workspace.yaml`; no other install script is approved.
+Extend the lifecycle allowlist to `onlyBuiltDependencies: ["@bufbuild/buf", "electron", "esbuild"]`; no install script beyond those three pinned packages is approved.
 
 - [ ] **Step 3: Create the complete Forge configuration**
 

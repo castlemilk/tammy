@@ -3,15 +3,15 @@
   "files": {
     "includes": [
       "**",
-      "!**/internal/gen/**",
-      "!**/src/gen/**",
-      "!**/.vite/**",
-      "!**/out/**",
-      "!**/playwright-report/**"
+      "!**/internal/gen",
+      "!**/src/gen",
+      "!**/.vite",
+      "!**/out",
+      "!**/playwright-report"
     ]
   },
   "formatter": { "enabled": true, "indentStyle": "space", "indentWidth": 2, "lineWidth": 100 },
   "javascript": { "formatter": { "quoteStyle": "double", "semicolons": "always" } },
-  "linter": { "enabled": true, "rules": { "recommended": true } },
+  "linter": { "enabled": true, "rules": { "preset": "recommended" } },
   "assist": { "enabled": true, "actions": { "source": { "organizeImports": "on" } } }
 }
