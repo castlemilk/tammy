@@ -1,6 +1,6 @@
 import type { ChildProcess } from "node:child_process";
 import { execFile } from "node:child_process";
-import { rm } from "node:fs/promises";
+import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 
@@ -15,10 +15,13 @@ import {
 } from "@playwright/test";
 
 import {
+  assertOwnedStagedArtifact,
   closeAndReapElectron,
   type ElectronLifecycleOperations,
   pollForNoCoreProcesses,
   runElectronLifecycle,
+  STAGED_ARTIFACT_FILENAMES,
+  type StagedArtifact,
 } from "./electron-lifecycle";
 import { findExactCoreProcesses } from "./process-check";
 
@@ -54,7 +57,7 @@ interface FixtureLifecycleState {
   readonly pageErrors: string[];
   readonly packagedLayout: PackagedLayout;
   readonly rawArtifacts: string;
-  readonly tracePath: string;
+  readonly stagedArtifactsRoot: string;
   traceStarted?: boolean;
 }
 
@@ -116,6 +119,16 @@ function forceKillMain(mainProcess: ChildProcess | undefined): void {
   if (!mainProcess.kill("SIGKILL")) throw new Error("ELECTRON_FORCE_KILL_FAILED");
 }
 
+function stagedArtifact(
+  state: FixtureLifecycleState,
+  kind: StagedArtifact["kind"],
+): StagedArtifact {
+  return {
+    kind,
+    path: path.join(state.stagedArtifactsRoot, STAGED_ARTIFACT_FILENAMES[kind]),
+  };
+}
+
 function fixtureOperations(
   use: (harness: ElectronHarness) => Promise<void>,
   testInfo: TestInfo,
@@ -128,10 +141,16 @@ function fixtureOperations(
         timeoutMs: ORPHAN_POLL_TIMEOUT_MS,
       });
     },
-    attachTrace: async (state) => {
-      await testInfo.attach("electron-trace", {
-        contentType: "application/zip",
-        path: state.tracePath,
+    attachArtifact: async (state, artifact) => {
+      assertOwnedStagedArtifact(state.stagedArtifactsRoot, artifact);
+      const attachment = {
+        screenshot: { contentType: "image/png", name: "electron-screenshot" },
+        trace: { contentType: "application/zip", name: "electron-trace" },
+        video: { contentType: "video/webm", name: "electron-video" },
+      } as const;
+      await testInfo.attach(attachment[artifact.kind].name, {
+        contentType: attachment[artifact.kind].contentType,
+        path: artifact.path,
       });
     },
     closeAndReap: async (state) => {
@@ -143,28 +162,15 @@ function fixtureOperations(
         timeoutMs: CLOSE_TIMEOUT_MS,
       });
     },
-    didTestFail: () => testInfo.status !== testInfo.expectedStatus,
-    handleVideo: async (state, retained) => {
-      const video = state.page?.video();
-      if (!video) return;
-      if (retained) {
-        const retainedVideo = testInfo.outputPath("failure.webm");
-        await video.saveAs(retainedVideo);
-        await testInfo.attach("electron-video", {
-          contentType: "video/webm",
-          path: retainedVideo,
-        });
-      } else {
-        await video.delete();
+    deleteStagedArtifacts: async (state, artifacts) => {
+      for (const artifact of artifacts) {
+        assertOwnedStagedArtifact(state.stagedArtifactsRoot, artifact);
       }
+      await rm(state.stagedArtifactsRoot, { force: true, recursive: true });
     },
+    didTestFail: () => testInfo.status !== testInfo.expectedStatus,
     removeRawArtifacts: async (state) => {
       await rm(state.rawArtifacts, { force: true, recursive: true });
-    },
-    screenshot: async (state) => {
-      if (state.page && !state.page.isClosed()) {
-        await state.page.screenshot({ path: testInfo.outputPath("failure.png") });
-      }
     },
     setup: async (state) => {
       const videoDirectory = path.join(state.rawArtifacts, "video");
@@ -204,13 +210,27 @@ function fixtureOperations(
         packagedLayout: state.packagedLayout,
       };
     },
-    stopTrace: async (state, retained) => {
+    stageScreenshot: async (state) => {
+      if (!state.page || state.page.isClosed()) return undefined;
+      const artifact = stagedArtifact(state, "screenshot");
+      await mkdir(state.stagedArtifactsRoot, { recursive: true });
+      await state.page.screenshot({ path: artifact.path });
+      return artifact;
+    },
+    stageVideo: async (state) => {
+      const video = state.page?.video();
+      if (!video) return undefined;
+      const artifact = stagedArtifact(state, "video");
+      await mkdir(state.stagedArtifactsRoot, { recursive: true });
+      await video.saveAs(artifact.path);
+      return artifact;
+    },
+    stopAndStageTrace: async (state) => {
       if (!state.application) throw new Error("ELECTRON_APPLICATION_MISSING");
-      if (retained) {
-        await state.application.context().tracing.stop({ path: state.tracePath });
-      } else {
-        await state.application.context().tracing.stop();
-      }
+      const artifact = stagedArtifact(state, "trace");
+      await mkdir(state.stagedArtifactsRoot, { recursive: true });
+      await state.application.context().tracing.stop({ path: artifact.path });
+      return artifact;
     },
     use,
   };
@@ -225,7 +245,7 @@ export const test = base.extend<ElectronFixtures>({
       packagedLayout,
       pageErrors: [],
       rawArtifacts: testInfo.outputPath("electron-raw"),
-      tracePath: testInfo.outputPath("electron-trace.zip"),
+      stagedArtifactsRoot: testInfo.outputPath("evidence-staging"),
     };
     await runElectronLifecycle(state, fixtureOperations(use, testInfo));
   },

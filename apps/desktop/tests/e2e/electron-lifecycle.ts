@@ -1,13 +1,38 @@
+import path from "node:path";
+
+export interface StagedArtifact {
+  readonly kind: "screenshot" | "trace" | "video";
+  readonly path: string;
+}
+
+export const STAGED_ARTIFACT_FILENAMES = Object.freeze({
+  screenshot: "failure.png",
+  trace: "electron-trace.zip",
+  video: "failure.webm",
+} satisfies Record<StagedArtifact["kind"], string>);
+
+export function assertOwnedStagedArtifact(stagingRoot: string, artifact: StagedArtifact): void {
+  const expected = path.join(stagingRoot, STAGED_ARTIFACT_FILENAMES[artifact.kind]);
+  if (
+    !path.isAbsolute(stagingRoot) ||
+    path.normalize(stagingRoot) !== stagingRoot ||
+    artifact.path !== expected
+  ) {
+    throw new Error("UNOWNED_STAGED_ARTIFACT");
+  }
+}
+
 export interface ElectronLifecycleOperations<State, Harness> {
   assertNoOrphan(state: State): Promise<void>;
-  attachTrace(state: State): Promise<void>;
+  attachArtifact(state: State, artifact: StagedArtifact): Promise<void>;
   closeAndReap(state: State): Promise<void>;
+  deleteStagedArtifacts(state: State, artifacts: readonly StagedArtifact[]): Promise<void>;
   didTestFail(): boolean;
-  handleVideo(state: State, retained: boolean): Promise<void>;
   removeRawArtifacts(state: State): Promise<void>;
-  screenshot(state: State): Promise<void>;
   setup(state: State): Promise<Harness>;
-  stopTrace(state: State, retained: boolean): Promise<void>;
+  stageScreenshot(state: State): Promise<StagedArtifact | undefined>;
+  stageVideo(state: State): Promise<StagedArtifact | undefined>;
+  stopAndStageTrace(state: State): Promise<StagedArtifact | undefined>;
   use(harness: Harness): Promise<void>;
 }
 
@@ -16,6 +41,7 @@ export async function runElectronLifecycle<State, Harness>(
   operations: ElectronLifecycleOperations<State, Harness>,
 ): Promise<void> {
   const failures: unknown[] = [];
+  const stagedArtifacts: StagedArtifact[] = [];
   let failed = false;
   try {
     const harness = await operations.setup(state);
@@ -30,19 +56,24 @@ export async function runElectronLifecycle<State, Harness>(
       failures.push(error);
       failed = true;
     }
-    if (failed) {
-      await collectFailure(failures, () => operations.screenshot(state));
-    }
+    await collectArtifact(failures, stagedArtifacts, () => operations.stageScreenshot(state));
     if (hasStartedTrace(state)) {
-      await collectFailure(failures, () => operations.stopTrace(state, failed));
-      if (failed) {
-        await collectFailure(failures, () => operations.attachTrace(state));
-      }
+      await collectArtifact(failures, stagedArtifacts, () => operations.stopAndStageTrace(state));
     }
     await collectFailure(failures, () => operations.closeAndReap(state));
-    await collectFailure(failures, () => operations.handleVideo(state, failed));
+    await collectArtifact(failures, stagedArtifacts, () => operations.stageVideo(state));
     await collectFailure(failures, () => operations.removeRawArtifacts(state));
     await collectFailure(failures, () => operations.assertNoOrphan(state));
+    if (failed || failures.length > 0) {
+      await attachStagedArtifacts(failures, stagedArtifacts, state, operations);
+    } else {
+      try {
+        await operations.deleteStagedArtifacts(state, stagedArtifacts);
+      } catch (error) {
+        failures.push(error);
+        await attachStagedArtifacts(failures, stagedArtifacts, state, operations);
+      }
+    }
   }
   throwFailures(failures, "ELECTRON_LIFECYCLE_FAILED");
 }
@@ -113,6 +144,30 @@ async function collectFailure(failures: unknown[], operation: () => Promise<void
     await operation();
   } catch (error) {
     failures.push(error);
+  }
+}
+
+async function collectArtifact(
+  failures: unknown[],
+  artifacts: StagedArtifact[],
+  operation: () => Promise<StagedArtifact | undefined>,
+): Promise<void> {
+  try {
+    const artifact = await operation();
+    if (artifact) artifacts.push(artifact);
+  } catch (error) {
+    failures.push(error);
+  }
+}
+
+async function attachStagedArtifacts<State, Harness>(
+  failures: unknown[],
+  artifacts: readonly StagedArtifact[],
+  state: State,
+  operations: ElectronLifecycleOperations<State, Harness>,
+): Promise<void> {
+  for (const artifact of artifacts) {
+    await collectFailure(failures, () => operations.attachArtifact(state, artifact));
   }
 }
 

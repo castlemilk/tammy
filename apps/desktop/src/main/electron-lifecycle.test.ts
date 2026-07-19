@@ -3,10 +3,12 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  assertOwnedStagedArtifact,
   closeAndReapElectron,
   type ElectronLifecycleOperations,
   pollForNoCoreProcesses,
   runElectronLifecycle,
+  type StagedArtifact,
 } from "../../tests/e2e/electron-lifecycle";
 
 interface TestState {
@@ -17,16 +19,24 @@ interface TestState {
   traceStarted?: boolean;
 }
 
+const stagedArtifacts = {
+  screenshot: { kind: "screenshot", path: "/owned/evidence/screenshot.png" },
+  trace: { kind: "trace", path: "/owned/evidence/trace.zip" },
+  video: { kind: "video", path: "/owned/evidence/video.webm" },
+} as const satisfies Record<string, StagedArtifact>;
+
 function failure(message: string) {
   return new Error(message);
 }
 
 function createOperations({
+  attachmentFailure,
   cleanupFailure,
-  failed = true,
+  failed = false,
   setupFailure,
   useFailure,
 }: {
+  attachmentFailure?: StagedArtifact["kind"];
   cleanupFailure?: string;
   failed?: boolean;
   setupFailure?: "firstWindow" | "traceStart";
@@ -41,26 +51,23 @@ function createOperations({
       calls.push("processQuery");
       maybeFail("processQuery");
     },
-    attachTrace: async () => {
-      calls.push("traceAttach");
-      maybeFail("traceAttach");
+    attachArtifact: async (_state, artifact) => {
+      const step = `attach:${artifact.kind}`;
+      calls.push(step);
+      if (attachmentFailure === artifact.kind) throw failure(step);
     },
     closeAndReap: async () => {
       calls.push("close");
       maybeFail("close");
     },
-    didTestFail: () => failed,
-    handleVideo: async (_state, retained) => {
-      calls.push(retained ? "videoRetain" : "videoDelete");
-      maybeFail("video");
+    deleteStagedArtifacts: async (_state, artifacts) => {
+      calls.push(`delete:${artifacts.map((artifact) => artifact.kind).join(",")}`);
+      maybeFail("delete");
     },
+    didTestFail: () => failed,
     removeRawArtifacts: async () => {
       calls.push("rawRm");
       maybeFail("rawRm");
-    },
-    screenshot: async () => {
-      calls.push("screenshot");
-      maybeFail("screenshot");
     },
     setup: async (state) => {
       calls.push("launch");
@@ -77,9 +84,20 @@ function createOperations({
       state.harness = true;
       return true;
     },
-    stopTrace: async (_state, retained) => {
-      calls.push(retained ? "traceStopRetained" : "traceStopDiscarded");
+    stageScreenshot: async (state) => {
+      calls.push("stage:screenshot");
+      maybeFail("screenshot");
+      return state.page ? stagedArtifacts.screenshot : undefined;
+    },
+    stageVideo: async (state) => {
+      calls.push("stage:video");
+      maybeFail("video");
+      return state.page ? stagedArtifacts.video : undefined;
+    },
+    stopAndStageTrace: async (state) => {
+      calls.push("stage:trace");
       maybeFail("traceStop");
+      return state.traceStarted ? stagedArtifacts.trace : undefined;
     },
     use: async () => {
       calls.push("use");
@@ -98,7 +116,7 @@ function errorMessages(error: unknown): string[] {
 
 describe("runElectronLifecycle", () => {
   it.each(["firstWindow", "traceStart"] as const)(
-    "cleans every available stage when %s setup fails",
+    "cleans every available stage and retains staged evidence when %s setup fails",
     async (setupFailure) => {
       const { calls, operations } = createOperations({ setupFailure });
       let caught: unknown;
@@ -112,20 +130,64 @@ describe("runElectronLifecycle", () => {
       expect(errorMessages(caught)).toEqual([setupFailure]);
       expect(calls).not.toContain("use");
       expect(calls).toEqual(
-        expect.arrayContaining(["screenshot", "close", "videoRetain", "rawRm", "processQuery"]),
+        expect.arrayContaining([
+          "stage:screenshot",
+          "close",
+          "stage:video",
+          "rawRm",
+          "processQuery",
+        ]),
       );
-      expect(calls.indexOf("close")).toBeLessThan(calls.indexOf("videoRetain"));
-      expect(calls.indexOf("videoRetain")).toBeLessThan(calls.indexOf("rawRm"));
+      expect(calls.some((call) => call.startsWith("delete:"))).toBe(false);
+      expect(calls.indexOf("close")).toBeLessThan(calls.indexOf("stage:video"));
+      expect(calls.indexOf("stage:video")).toBeLessThan(calls.indexOf("rawRm"));
       expect(calls.indexOf("rawRm")).toBeLessThan(calls.indexOf("processQuery"));
     },
   );
 
-  it.each(["screenshot", "traceStop", "traceAttach", "close", "video", "rawRm", "processQuery"])(
-    "continues later cleanup when %s fails",
+  it.each(["screenshot", "traceStop", "close", "video", "rawRm", "processQuery"])(
+    "retains all successfully staged evidence when otherwise-successful %s cleanup fails",
     async (cleanupFailure) => {
+      const { calls, operations } = createOperations({ cleanupFailure });
+      let caught: unknown;
+
+      try {
+        await runElectronLifecycle({}, operations);
+      } catch (error) {
+        caught = error;
+      }
+
+      expect(errorMessages(caught)).toEqual([cleanupFailure]);
+      expect(calls.some((call) => call.startsWith("delete:"))).toBe(false);
+      const expectedStages = [
+        "stage:screenshot",
+        "stage:trace",
+        "close",
+        "stage:video",
+        "rawRm",
+        "processQuery",
+      ];
+      for (const step of expectedStages) expect(calls).toContain(step);
+      const failedKind =
+        cleanupFailure === "screenshot"
+          ? "screenshot"
+          : cleanupFailure === "traceStop"
+            ? "trace"
+            : cleanupFailure === "video"
+              ? "video"
+              : undefined;
+      for (const kind of ["screenshot", "trace", "video"] as const) {
+        expect(calls.includes(`attach:${kind}`)).toBe(kind !== failedKind);
+      }
+    },
+  );
+
+  it.each(["screenshot", "trace", "video"] as const)(
+    "continues attaching every staged artifact when %s attachment fails",
+    async (attachmentFailure) => {
       const { calls, operations } = createOperations({
-        cleanupFailure,
-        useFailure: true,
+        attachmentFailure,
+        cleanupFailure: "rawRm",
       });
       let caught: unknown;
 
@@ -135,39 +197,51 @@ describe("runElectronLifecycle", () => {
         caught = error;
       }
 
-      expect(errorMessages(caught)).toEqual(["use", cleanupFailure]);
-      const expectedTail = [
-        "screenshot",
-        "traceStopRetained",
-        "traceAttach",
-        "close",
-        "videoRetain",
-        "rawRm",
-        "processQuery",
-      ];
-      for (const step of expectedTail) expect(calls).toContain(step);
+      expect(errorMessages(caught)).toEqual(["rawRm", `attach:${attachmentFailure}`]);
+      expect(calls).toEqual(
+        expect.arrayContaining(["attach:screenshot", "attach:trace", "attach:video"]),
+      );
+      expect(calls.some((call) => call.startsWith("delete:"))).toBe(false);
     },
   );
 
-  it("discards trace and video artifacts on success without retaining attachments", async () => {
-    const { calls, operations } = createOperations({ failed: false });
+  it("turns staged-artifact deletion failure into retention for every artifact", async () => {
+    const { calls, operations } = createOperations({ cleanupFailure: "delete" });
+    let caught: unknown;
+
+    try {
+      await runElectronLifecycle({}, operations);
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(errorMessages(caught)).toEqual(["delete"]);
+    expect(calls).toContain("delete:screenshot,trace,video");
+    expect(calls).toEqual(
+      expect.arrayContaining(["attach:screenshot", "attach:trace", "attach:video"]),
+    );
+  });
+
+  it("deletes staged artifacts only after every lifecycle stage succeeds", async () => {
+    const { calls, operations } = createOperations();
 
     await runElectronLifecycle({}, operations);
 
-    expect(calls).toContain("traceStopDiscarded");
-    expect(calls).not.toContain("traceAttach");
-    expect(calls).toContain("videoDelete");
-    expect(calls.at(-2)).toBe("rawRm");
-    expect(calls.at(-1)).toBe("processQuery");
+    expect(calls).not.toContain("attach:screenshot");
+    expect(calls).not.toContain("attach:trace");
+    expect(calls).not.toContain("attach:video");
+    expect(calls.at(-1)).toBe("delete:screenshot,trace,video");
+    expect(calls.indexOf("rawRm")).toBeLessThan(calls.indexOf("processQuery"));
+    expect(calls.indexOf("processQuery")).toBeLessThan(
+      calls.indexOf("delete:screenshot,trace,video"),
+    );
   });
 
-  it("keeps the primary failure first while aggregating every cleanup failure", async () => {
-    const calls: string[] = [];
-    const operations = createOperations({ setupFailure: "firstWindow" }).operations;
-    operations.screenshot = async () => {
-      calls.push("screenshot");
-      throw failure("screenshot");
-    };
+  it("keeps the primary failure first while aggregating cleanup and attachment failures", async () => {
+    const { calls, operations } = createOperations({
+      attachmentFailure: "trace",
+      useFailure: true,
+    });
     operations.removeRawArtifacts = async () => {
       calls.push("rawRm");
       throw failure("rawRm");
@@ -184,12 +258,14 @@ describe("runElectronLifecycle", () => {
       caught = error;
     }
 
-    expect(errorMessages(caught)).toEqual(["firstWindow", "screenshot", "rawRm", "processQuery"]);
-    expect(calls).toEqual(["screenshot", "rawRm", "processQuery"]);
+    expect(errorMessages(caught)).toEqual(["use", "rawRm", "processQuery", "attach:trace"]);
+    expect(calls).toEqual(
+      expect.arrayContaining(["attach:screenshot", "attach:trace", "attach:video"]),
+    );
   });
 
-  it("continues all cleanup when the test-status probe fails", async () => {
-    const { calls, operations } = createOperations({ failed: false });
+  it("continues all cleanup and retains evidence when the test-status probe fails", async () => {
+    const { calls, operations } = createOperations();
     operations.didTestFail = () => {
       throw failure("status");
     };
@@ -204,19 +280,22 @@ describe("runElectronLifecycle", () => {
     expect(errorMessages(caught)).toEqual(["status"]);
     expect(calls).toEqual(
       expect.arrayContaining([
-        "screenshot",
-        "traceStopRetained",
-        "traceAttach",
+        "stage:screenshot",
+        "stage:trace",
         "close",
-        "videoRetain",
+        "stage:video",
         "rawRm",
         "processQuery",
+        "attach:screenshot",
+        "attach:trace",
+        "attach:video",
       ]),
     );
+    expect(calls.some((call) => call.startsWith("delete:"))).toBe(false);
   });
 
-  it("force-reaps a graceful-close timeout before continuing artifact and orphan cleanup", async () => {
-    const { calls, operations } = createOperations({ failed: true });
+  it("force-reaps a close timeout before staging video and retaining all evidence", async () => {
+    const { calls, operations } = createOperations();
     let confirmClosed!: () => void;
     const mainClosed = new Promise<void>((resolve) => {
       confirmClosed = resolve;
@@ -243,9 +322,36 @@ describe("runElectronLifecycle", () => {
 
     expect(errorMessages(caught)).toEqual(["ELECTRON_CLOSE_TIMEOUT"]);
     expect(calls.indexOf("close")).toBeLessThan(calls.indexOf("forceKill"));
-    expect(calls.indexOf("forceKill")).toBeLessThan(calls.indexOf("videoRetain"));
-    expect(calls.indexOf("videoRetain")).toBeLessThan(calls.indexOf("rawRm"));
+    expect(calls.indexOf("forceKill")).toBeLessThan(calls.indexOf("stage:video"));
+    expect(calls.indexOf("stage:video")).toBeLessThan(calls.indexOf("rawRm"));
     expect(calls.indexOf("rawRm")).toBeLessThan(calls.indexOf("processQuery"));
+    expect(calls).toEqual(
+      expect.arrayContaining(["attach:screenshot", "attach:trace", "attach:video"]),
+    );
+  });
+});
+
+describe("assertOwnedStagedArtifact", () => {
+  it("accepts only the fixed filename for an artifact under the owned staging root", () => {
+    expect(() =>
+      assertOwnedStagedArtifact("/owned/evidence", {
+        kind: "trace",
+        path: "/owned/evidence/electron-trace.zip",
+      }),
+    ).not.toThrow();
+  });
+
+  it.each([
+    "/external/electron-trace.zip",
+    "/owned/evidence/../external/electron-trace.zip",
+    "/owned/evidence/failure.webm",
+  ])("rejects unowned or mismatched artifact path %s", (artifactPath) => {
+    expect(() =>
+      assertOwnedStagedArtifact("/owned/evidence", {
+        kind: "trace",
+        path: artifactPath,
+      }),
+    ).toThrow("UNOWNED_STAGED_ARTIFACT");
   });
 });
 
