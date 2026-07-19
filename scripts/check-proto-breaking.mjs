@@ -334,8 +334,8 @@ export function killProcessTree(
   { env = process.env, platform = process.platform, spawnProcessSync = spawnSync } = {},
 ) {
   if (platform === "win32" && Number.isInteger(child.pid) && child.pid > 0) {
-    const args = ["/PID", String(child.pid), "/T"];
-    if (signal === "SIGKILL") args.push("/F");
+    // Windows has no durable process-group identity, so force the tree before its parent PID exits.
+    const args = ["/PID", String(child.pid), "/T", "/F"];
     const result = spawnProcessSync("taskkill.exe", args, {
       env,
       shell: false,
@@ -343,18 +343,19 @@ export function killProcessTree(
       timeout: 5000,
       windowsHide: true,
     });
-    if (result.error === undefined && result.status === 0) return;
-    if (signal === "SIGTERM") return;
+    if (result.error === undefined && result.status === 0) return true;
+    if (signal === "SIGKILL") child.kill(signal);
+    return false;
   }
   if (platform !== "win32" && Number.isInteger(child.pid) && child.pid > 0) {
     try {
       process.kill(-child.pid, signal);
-      return;
+      return true;
     } catch {
       // Fall through when the process group no longer exists.
     }
   }
-  child.kill(signal);
+  return child.kill(signal);
 }
 
 export function runBoundedProcess(
@@ -383,38 +384,116 @@ export function runBoundedProcess(
     let stderrBytes = 0;
     let terminalError = null;
     let settled = false;
+    let directChildClosed = false;
+    let treeCleanupComplete = false;
     let graceTimer;
     let reapTimer;
+    let verificationTimer;
 
     const clearAllTimers = () => {
       clearTimer(timeoutTimer);
       if (graceTimer !== undefined) clearTimer(graceTimer);
       if (reapTimer !== undefined) clearTimer(reapTimer);
+      if (verificationTimer !== undefined) clearTimer(verificationTimer);
     };
-    const finishWithoutClose = () => {
+    const removeAllListeners = () => {
+      child.stdout.off("data", onStdout);
+      child.stderr.off("data", onStderr);
+      child.off("error", onError);
+      child.off("close", onClose);
+    };
+    const finishRejected = (error) => {
       if (settled) return;
       settled = true;
       clearAllTimers();
-      reject(commandError("COMMAND_REAP_FAILED"));
+      removeAllListeners();
+      reject(error);
+    };
+    const finishTerminatedIfReady = () => {
+      if (directChildClosed && treeCleanupComplete) finishRejected(terminalError);
+    };
+    const finishWithoutReap = () => {
+      if (settled) return;
+      try {
+        killProcessTree(child, "SIGKILL", { env });
+      } catch {
+        // The bounded cleanup has already exhausted both termination phases.
+      }
+      finishRejected(commandError("COMMAND_REAP_FAILED"));
+    };
+    const processGroupExists = () => {
+      try {
+        process.kill(-child.pid, 0);
+        return true;
+      } catch (error) {
+        return error?.code !== "ESRCH";
+      }
+    };
+    const verifyUnixTreeReaped = () => {
+      if (settled) return;
+      if (!processGroupExists()) {
+        treeCleanupComplete = true;
+        finishTerminatedIfReady();
+        return;
+      }
+      const pollMilliseconds = Math.max(1, Math.min(10, Math.floor(reapTimeoutMs / 4)));
+      verificationTimer = setTimer(verifyUnixTreeReaped, pollMilliseconds);
+    };
+    const startReapDeadline = () => {
+      if (reapTimer === undefined) {
+        reapTimer = setTimer(finishWithoutReap, reapTimeoutMs);
+      }
+    };
+    const forceTreeCleanup = () => {
+      if (settled) return;
+      startReapDeadline();
+      let forceIssued = false;
+      try {
+        forceIssued = killProcessTree(child, "SIGKILL", { env });
+      } catch {
+        // The reap deadline below is the fail-closed settlement boundary.
+      }
+      if (process.platform === "win32") {
+        treeCleanupComplete = forceIssued === true;
+        finishTerminatedIfReady();
+        return;
+      }
+      if (Number.isInteger(child.pid) && child.pid > 0) {
+        verifyUnixTreeReaped();
+        return;
+      }
+      treeCleanupComplete = true;
+      finishTerminatedIfReady();
     };
     const terminate = (reason) => {
       if (terminalError !== null || settled) return;
       terminalError = commandError(reason);
+      clearTimer(timeoutTimer);
+      if (process.platform === "win32") {
+        let forcedTree = false;
+        try {
+          forcedTree = killProcessTree(child, "SIGTERM", { env });
+        } catch {
+          // Retain the parent PID for the bounded forced retry below.
+        }
+        if (forcedTree === true) {
+          treeCleanupComplete = true;
+          startReapDeadline();
+          finishTerminatedIfReady();
+          return;
+        }
+        graceTimer = setTimer(forceTreeCleanup, terminationGraceMs);
+        return;
+      }
       try {
         killProcessTree(child, "SIGTERM", { env });
       } catch {
-        // The close event remains the settlement boundary for a started child.
+        // Forced process-group cleanup still runs after the grace period.
       }
-      graceTimer = setTimer(() => {
-        try {
-          killProcessTree(child, "SIGKILL", { env });
-        } catch {
-          // The bounded reap timer below handles a missing close event.
-        }
-        reapTimer = setTimer(finishWithoutClose, reapTimeoutMs);
-      }, terminationGraceMs);
+      graceTimer = setTimer(forceTreeCleanup, terminationGraceMs);
     };
     const collect = (chunks, chunk, currentBytes, setBytes) => {
+      if (terminalError !== null || settled) return;
       const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
       const nextBytes = currentBytes + bytes.length;
       setBytes(nextBytes);
@@ -426,23 +505,20 @@ export function runBoundedProcess(
     };
 
     const timeoutTimer = setTimer(() => terminate("COMMAND_TIMED_OUT"), timeoutMs);
-    child.stdout.on("data", (chunk) =>
+    const onStdout = (chunk) =>
       collect(stdout, chunk, stdoutBytes, (value) => {
         stdoutBytes = value;
-      }),
-    );
-    child.stderr.on("data", (chunk) =>
+      });
+    const onStderr = (chunk) =>
       collect(stderr, chunk, stderrBytes, (value) => {
         stderrBytes = value;
-      }),
-    );
-    child.once("error", () => terminate("COMMAND_START_FAILED"));
-    child.once("close", (exitCode, signal) => {
+      });
+    const onError = () => terminate("COMMAND_START_FAILED");
+    const onClose = (exitCode, signal) => {
       if (settled) return;
-      settled = true;
-      clearAllTimers();
       if (terminalError !== null) {
-        reject(terminalError);
+        directChildClosed = true;
+        finishTerminatedIfReady();
         return;
       }
       let stdoutText;
@@ -452,16 +528,23 @@ export function runBoundedProcess(
         stdoutText = decoder.decode(Buffer.concat(stdout));
         stderrText = decoder.decode(Buffer.concat(stderr));
       } catch {
-        reject(commandError("COMMAND_OUTPUT_INVALID"));
+        finishRejected(commandError("COMMAND_OUTPUT_INVALID"));
         return;
       }
+      settled = true;
+      clearAllTimers();
+      removeAllListeners();
       resolve({
         exitCode: Number.isInteger(exitCode) && exitCode >= 0 ? exitCode : 1,
         signal: signal ?? null,
         stderr: stderrText,
         stdout: stdoutText,
       });
-    });
+    };
+    child.stdout.on("data", onStdout);
+    child.stderr.on("data", onStderr);
+    child.once("error", onError);
+    child.once("close", onClose);
   });
 }
 

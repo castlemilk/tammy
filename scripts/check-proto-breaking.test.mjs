@@ -349,7 +349,7 @@ class FakeChild extends EventEmitter {
   }
 }
 
-test("Windows process-tree teardown escalates taskkill from graceful to forced", () => {
+test("Windows process-tree teardown forces descendants before the parent can exit", () => {
   const child = new FakeChild();
   child.pid = 42;
   const calls = [];
@@ -364,12 +364,10 @@ test("Windows process-tree teardown escalates taskkill from graceful to forced",
   };
 
   killProcessTree(child, "SIGTERM", options);
-  killProcessTree(child, "SIGKILL", options);
 
   assert.deepEqual(child.kills, []);
   assert.deepEqual(calls[0][0], "taskkill.exe");
-  assert.deepEqual(calls[0][1], ["/PID", "42", "/T"]);
-  assert.deepEqual(calls[1][1], ["/PID", "42", "/T", "/F"]);
+  assert.deepEqual(calls[0][1], ["/PID", "42", "/T", "/F"]);
   assert.deepEqual(calls[0][2], {
     env: { PATH: "C:\\Windows\\System32" },
     shell: false,
@@ -377,6 +375,78 @@ test("Windows process-tree teardown escalates taskkill from graceful to forced",
     timeout: 5000,
     windowsHide: true,
   });
+});
+
+test("a failed Windows tree kill cannot report descendants as reaped", () => {
+  const child = new FakeChild();
+  child.pid = 42;
+
+  const reaped = killProcessTree(child, "SIGKILL", {
+    env: { PATH: "C:\\Windows\\System32" },
+    platform: "win32",
+    spawnProcessSync: () => ({ error: undefined, status: 1 }),
+  });
+
+  assert.equal(reaped, false);
+  assert.deepEqual(child.kills, ["SIGKILL"]);
+});
+
+test("a direct child close cannot cancel forced tree escalation", async () => {
+  const child = new FakeChild();
+  const timers = [];
+  const promise = runBoundedProcess(
+    {
+      args: ["status", "--porcelain=v1"],
+      cwd: "/safe/root",
+      env: { PATH: "/safe/bin" },
+      file: "git",
+      maxOutputBytes: 1024,
+      reapTimeoutMs: 10,
+      terminationGraceMs: 10,
+      timeoutMs: 50,
+    },
+    {
+      clearTimer: (timer) => {
+        timer.cleared = true;
+      },
+      setTimer: (callback, milliseconds) => {
+        const timer = { callback, cleared: false, milliseconds };
+        timers.push(timer);
+        return timer;
+      },
+      spawnProcess: () => child,
+    },
+  );
+  let settled = false;
+  const observed = promise.then(
+    () => {
+      settled = true;
+      return null;
+    },
+    (error) => {
+      settled = true;
+      return error;
+    },
+  );
+
+  timers.find((timer) => timer.milliseconds === 50).callback();
+  child.emit("close", null, "SIGTERM");
+  await Promise.resolve();
+  assert.equal(settled, false);
+  assert.deepEqual(child.kills, ["SIGTERM"]);
+
+  timers.find((timer) => timer.milliseconds === 10 && !timer.cleared).callback();
+  const error = await observed;
+  assert.equal(error.message, "COMMAND_TIMED_OUT");
+  assert.deepEqual(child.kills, ["SIGTERM", "SIGKILL"]);
+  assert.equal(
+    timers.every((timer) => timer.cleared),
+    true,
+  );
+  assert.equal(child.listenerCount("close"), 0);
+  assert.equal(child.listenerCount("error"), 0);
+  assert.equal(child.stdout.listenerCount("data"), 0);
+  assert.equal(child.stderr.listenerCount("data"), 0);
 });
 
 test("a timed-out command escalates and settles only after the child closes", async () => {
@@ -444,15 +514,23 @@ test("a timed-out command escalates and settles only after the child closes", as
   });
 });
 
-test("a timed-out command leaves no surviving grandchild", async () => {
+test("a timed-out command leaves no stubborn grandchild", async () => {
   const root = await validRoot();
   const pidFile = path.join(root, "grandchild.pid");
+  const stubbornScript = path.join(root, "stubborn-grandchild.mjs");
+  await writeFile(
+    stubbornScript,
+    [
+      'import { writeFileSync } from "node:fs";',
+      'process.on("SIGTERM", () => {});',
+      "writeFileSync(process.argv[2], String(process.pid));",
+      "setInterval(() => {}, 1000);",
+    ].join("\n"),
+  );
   const parentScript = [
     'const { spawn } = require("node:child_process");',
-    'const { writeFileSync } = require("node:fs");',
-    'const child = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"],',
+    "const child = spawn(process.execPath, [process.argv[2], process.argv[1]],",
     '  { stdio: "ignore" });',
-    "writeFileSync(process.argv[1], String(child.pid));",
     "setInterval(() => {}, 1000);",
   ].join("\n");
   let grandchildPid;
@@ -460,14 +538,14 @@ test("a timed-out command leaves no surviving grandchild", async () => {
   try {
     await assert.rejects(
       runBoundedProcess({
-        args: ["-e", parentScript, pidFile],
+        args: ["-e", parentScript, pidFile, stubbornScript],
         cwd: root,
         env: { PATH: process.env.PATH },
         file: process.execPath,
         maxOutputBytes: 1024,
         reapTimeoutMs: 1000,
         terminationGraceMs: 50,
-        timeoutMs: 250,
+        timeoutMs: 500,
       }),
       /COMMAND_TIMED_OUT/,
     );
