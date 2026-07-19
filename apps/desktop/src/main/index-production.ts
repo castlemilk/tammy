@@ -5,7 +5,7 @@ import { app, BrowserWindow, type Event, ipcMain, net, protocol, session } from 
 
 import { createCoreClient } from "./core-client";
 import { CoreProcess } from "./core-process";
-import type { DesktopDependencies, DesktopWindow } from "./index";
+import type { DesktopDependencies, DesktopWindow } from "./index-lifecycle";
 import { resolveBundledCorePath } from "./index-paths";
 import { registerDiagnosticsIpc } from "./ipc";
 import {
