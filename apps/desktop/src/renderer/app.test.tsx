@@ -73,6 +73,28 @@ describe("App", () => {
     }
   });
 
+  it("keeps valid 128-character version values intact in wrap-safe cells", async () => {
+    const longApiVersion = "a".repeat(128);
+    const longCoreVersion = "9".repeat(128);
+    installDesktopAPI(
+      vi.fn().mockResolvedValue({
+        ...diagnostics,
+        apiVersion: longApiVersion,
+        coreVersion: longCoreVersion,
+      } satisfies SystemDiagnostics),
+    );
+
+    render(<App />);
+
+    for (const version of [longApiVersion, longCoreVersion]) {
+      const value = await screen.findByText(version);
+      expect(value.textContent).toBe(version);
+      expect(value.classList.contains("min-w-0")).toBe(true);
+      expect(value.classList.contains("[overflow-wrap:anywhere]")).toBe(true);
+      expect(value.parentElement?.classList.contains("min-w-0")).toBe(true);
+    }
+  });
+
   it("keeps failure copy safe and retries through the typed desktop method", async () => {
     const retry = deferred<SystemDiagnostics>();
     const getSystemDiagnostics = vi

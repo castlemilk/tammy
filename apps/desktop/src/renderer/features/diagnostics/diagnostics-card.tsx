@@ -82,12 +82,12 @@ function ReadyState({ diagnostics }: { readonly diagnostics: SystemDiagnostics }
       <dl className="grid grid-cols-2 border-y border-border bg-muted [&>div+div]:border-l [&>div+div]:border-border max-[520px]:grid-cols-1 max-[520px]:[&>div+div]:border-l-0 max-[520px]:[&>div+div]:border-t">
         {versionRows.map((row, index) => (
           <div
-            className="grid gap-1 px-4 py-3 max-[520px]:border-l-0"
+            className="grid min-w-0 gap-1 px-4 py-3 max-[520px]:border-l-0"
             key={row.label}
             data-column={index + 1}
           >
             <dt className="text-xs font-medium text-muted-foreground">{row.label}</dt>
-            <dd className="font-mono text-sm font-semibold tabular-nums text-foreground">
+            <dd className="min-w-0 [overflow-wrap:anywhere] font-mono text-sm font-semibold tabular-nums text-foreground">
               {row.value}
             </dd>
           </div>
