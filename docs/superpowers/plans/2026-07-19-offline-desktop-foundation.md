@@ -1026,6 +1026,9 @@ overrides:
 ```
 
 No install script beyond those four pinned packages is approved.
+Native Windows x64 execution of the audited `electron-winstaller` hook and MakerSquirrel
+is explicitly deferred to Task 14's `windows-server-x64-package-smoke` job on Windows
+Server 2025; macOS cannot validate that Squirrel path.
 
 - [ ] **Step 3: Create the complete Forge configuration**
 
@@ -1786,7 +1789,18 @@ Jobs:
 
 - `contracts` on `ubuntu-24.04`: Node 24.18.0, Go 1.26.4, frozen pnpm install, actionlint 1.7.12 workflow validation, Buf format/lint/breaking/generation cleanliness, Go race tests, desktop unit/type/lint tests;
 - `macos14-arm64-packaged` on `macos-14`: assert `uname -m` is `arm64`, then run `pnpm desktop:e2e` and upload failure artifacts;
-- `windows-server-x64-package-smoke` on `windows-2025`: assert AMD64, run unit/type tests and `pnpm desktop:package`, but label evidence `WINDOWS_SERVER_SMOKE_ONLY`.
+- `windows-server-x64-package-smoke` on `windows-2025`: assert AMD64, run
+  `pnpm desktop:test`, `pnpm desktop:typecheck`, `pnpm core:build`,
+  `pnpm build:manifest`, and `pnpm --dir apps/desktop make` so the native Windows x64
+  `electron-winstaller` hook and MakerSquirrel path are exercised; label all evidence
+  `WINDOWS_SERVER_SMOKE_ONLY`.
+
+The Windows Server job uploads `apps/desktop/out/make/squirrel.windows/**` with the pinned
+`actions/upload-artifact` SHA as
+`WINDOWS_SERVER_SMOKE_ONLY-squirrel-windows-x64`, sets `retention-days: 30`, and sets
+`if-no-files-found: error`. The job must fail if Forge produces no Squirrel maker artifact.
+This retained output is Windows Server x64 smoke evidence only, not Windows 11 release-gate
+evidence.
 
 Every job uses the pinned `setup-node` and `setup-go` action SHAs above with `node-version: 24.18.0` and `go-version: 1.26.4`, then runs `corepack prepare pnpm@11.15.0 --activate`, `pnpm install --frozen-lockfile`, `pnpm check:toolchain`, and refuses a dirty generated tree. No package, E2E, or evidence job may use a runner-default Node or Go.
 Every checkout uses `fetch-depth: 0` so `buf breaking --against .git#branch=master` can resolve the committed comparison branch.
@@ -1812,7 +1826,10 @@ rtk mise exec -- pnpm desktop:e2e
 rtk git diff --check
 ```
 
-Expected: local equivalents pass and the workflow files are ready to commit. External job results do not exist yet and must remain recorded as `NOT_YET_VERIFIED`.
+Expected: local equivalents pass and the workflow files are ready to commit. There is no
+local macOS equivalent for the Squirrel maker smoke; only the Task 14
+`windows-server-x64-package-smoke` job may produce that evidence. External job results do
+not exist yet and must remain recorded as `NOT_YET_VERIFIED`.
 
 - [ ] **Step 4: Commit CI**
 
@@ -1823,7 +1840,13 @@ rtk git commit -m "ci: verify the offline desktop foundation"
 
 - [ ] **Step 5: Retain post-commit CI evidence when the branch is authorised for push**
 
-After a later authorised push or pull request, require the contracts and macOS packaged jobs to be green and retain their artifact identifiers in the traceability matrix. Windows Server remains smoke evidence only. If no push is authorised during plan execution, leave every external CI status `NOT_YET_VERIFIED`; never represent local validation as a GitHub-hosted result.
+After a later authorised push or pull request, require the contracts, macOS packaged, and
+Windows Server smoke jobs to be green. Retain the macOS artifact identifiers and the
+`WINDOWS_SERVER_SMOKE_ONLY-squirrel-windows-x64` Squirrel artifact identifier in the
+traceability matrix. Windows Server remains smoke evidence only and never satisfies the
+Windows 11 release gate. If no push is authorised during plan execution, leave every
+external CI status `NOT_YET_VERIFIED`; never represent local validation as a GitHub-hosted
+result.
 
 ### Task 15: Establish foundation traceability and developer operations
 
