@@ -32,6 +32,7 @@ type serverLifecycleState uint8
 const (
 	serverStateNew serverLifecycleState = iota
 	serverStateRunning
+	serverStateServeEnded
 	serverStateStopping
 	serverStateStopped
 )
@@ -172,7 +173,7 @@ func (server *Server) Start() error {
 	case serverStateRunning:
 		server.mu.Unlock()
 		return errors.New("local API server already started")
-	case serverStateStopping, serverStateStopped:
+	case serverStateServeEnded, serverStateStopping, serverStateStopped:
 		server.mu.Unlock()
 		return errors.New("local API server is stopped")
 	default:
@@ -190,8 +191,7 @@ func (server *Server) Start() error {
 			server.serveErrors <- errors.New("local API server stopped unexpectedly")
 		}
 		if server.state == serverStateRunning {
-			server.state = serverStateStopped
-			close(server.shutdownDone)
+			server.state = serverStateServeEnded
 		}
 		server.closeServeErrorsLocked()
 		close(server.serveDone)
@@ -222,6 +222,9 @@ func (server *Server) Shutdown(ctx context.Context) error {
 		server.mu.Unlock()
 		return err
 	case serverStateRunning:
+		server.state = serverStateStopping
+		server.mu.Unlock()
+	case serverStateServeEnded:
 		server.state = serverStateStopping
 		server.mu.Unlock()
 	case serverStateStopping:
