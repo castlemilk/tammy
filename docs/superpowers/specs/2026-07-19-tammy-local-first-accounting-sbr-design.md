@@ -242,6 +242,7 @@ test/
 compliance/
   dpo/
   osf/
+  passwords/
   threat-model/
   evidence/
 ```
@@ -272,7 +273,7 @@ TaxRules ← Accounting ── AccountingReadPort ──→ Tax
     └──────────────────────────────────────────→ Tax
 Organisations ── OrganisationReadPort ─────────→ Tax
 Tax ───────── ReportReadPort ──────────────────→ Evidence
-Artefacts ── ArtefactReadPort ─────────────────→ Tax + SBR
+Artefacts ── ArtefactReadPort ─────────────────→ Accounting + Tax + SBR
 Identity ── IdentityAuthorizer ────────────────→ all handlers
 Organisations + Tax + Evidence + Artefacts ───→ SBR
 All command handlers ──────────────────────────→ AuditAppender
@@ -334,16 +335,18 @@ type AuditAppender interface {
 |---|---|---|---|---|
 | `WorkspaceService.CreateWorkspace` | unauthenticated local setup | path, passphrase, first-admin identity/password → pending workspace and one-time recovery secret | Workspace; key store, storage factory | path exists, weak passphrase, invalid administrator, key-store failure |
 | `WorkspaceService.ConfirmRecovery` | pending first administrator | prompted recovery-secret groups → active workspace | Workspace; header store, audit | wrong recovery groups, setup expired |
-| `WorkspaceService.UnlockWorkspace` | local user at locked app | workspace path, passphrase or remembered-device choice → unlock challenge | Workspace; key store, encrypted storage | wrong key, corrupt header, unsupported schema |
+| `WorkspaceService.UnlockWorkspace` | local user at closed app | workspace path, passphrase, recovery, or remembered-workspace choice → unauthenticated open workspace | Workspace; key store, encrypted storage | wrong key, corrupt header, unsupported schema |
+| `WorkspaceService.EstablishMovedWorkspaceTrust` | staged `workspace_admin` with fresh TOTP or recovery | destination installation ID and proof → writable workspace/new mirror | Workspace + Audit; key store | chain invalid, non-admin, stale factor |
 | `WorkspaceService.BackupWorkspace` | `workspace_admin` | destination, backup passphrase → backup manifest | Workspace; all-storage snapshot, audit signer | destination failure, integrity failure |
 | `WorkspaceService.RestoreWorkspace` | admin authenticated or recovered from staged backup | backup path/passphrase, normal admin proof or break-glass recovery proof, operation key → restored summary | External restore journal; staging storage, staged Identity/Audit | wrong key, non-admin, factor required, signature/schema failure |
-| `IdentityService.SignIn` | unlocked workspace user | username, password, optional TOTP → session | Identity; user repository, session store | invalid credentials, locked account, factor required |
+| `IdentityService.SignIn` | unauthenticated open workspace user | username, password → session | Identity; user repository, session store | invalid credentials, locked account |
 | `IdentityService.CreateUser` | `workspace_admin` | username, display name, initial roles → pending user and one-time activation code | Identity; audit | duplicate username, invalid role |
 | `IdentityService.ActivateUser` | pending local user | username, activation code, new password → active user | Identity; audit | code invalid/expired, weak password |
 | `IdentityService.ChangePassword` | authenticated user | current password, new password → session invalidation result | Identity; audit | current password invalid, weak/reused password |
 | `IdentityService.AssignRoles` | `workspace_admin` | user ID, complete role set → user | Identity; audit | last-admin removal, invalid role |
 | `IdentityService.EnrolTOTP` | authenticated user | current password → provisioning secret | Identity; factor repository, audit | password invalid, already enrolled |
 | `IdentityService.ConfirmTOTP` | enrolling user | one-time code → enabled factor | Identity; factor repository, audit | invalid or replayed code |
+| `IdentityService.AssertTOTP` | authenticated enrolled user | one-time code → five-minute elevated marker | Identity; factor/session repository, audit | invalid/replayed code, factor unavailable |
 | `IdentityService.DisableTOTP` | authenticated user | current password and TOTP → disabled factor | Identity; audit | invalid proof, lodgment becomes unavailable |
 | `IdentityService.ResetUserAuthentication` | `workspace_admin` with fresh TOTP | target user → pending user and new activation code | Identity; audit | target is last admin, admin factor stale |
 | `IdentityService.RecoverAdministrator` | locked-app break glass | recovery secret, admin username, new workspace/user passwords → reset administrator | Workspace + Identity; audit | recovery invalid, user not admin |
@@ -351,7 +354,8 @@ type AuditAppender interface {
 | `OrganisationService.RecordEntityVerification` | `workspace_admin` | organisation, source metadata, evidence hash → verification | Organisations; evidence blob port, audit | source invalid, evidence missing, details mismatch |
 | `AccountingService.CreateAccount` | `workspace_admin`, `business_preparer` | code, name, type → account | Accounting; audit | duplicate code, invalid type |
 | `AccountingService.SetAccountStatus` | `workspace_admin` | account ID, active/archived, reason → account | Accounting; audit | system account, invalid transition |
-| `AccountingService.PostJournal` | `workspace_admin`, `business_preparer` | date, memo, source lines, tax-rule IDs → posted journal | Accounting; TaxRules, audit | unbalanced, closed period, invalid account/tax treatment |
+| `AccountingService.ListTaxCodes` | any preparing role | organisation, posting date → rule IDs, labels, and treatments | Read-only Accounting; OrganisationReadPort, ArtefactReadPort, TaxRules | rule bundle unavailable, invalid date |
+| `AccountingService.PostJournal` | `workspace_admin`, `business_preparer` | date, memo, source lines/rule IDs, optional correction reversal ID → posted journal | Accounting; OrganisationReadPort, ArtefactReadPort, TaxRules, audit | unbalanced, closed period, invalid treatment/correction |
 | `AccountingService.ReverseJournal` | `workspace_admin`, `business_preparer` | journal ID, reversal date/reason → linked reversing journal | Accounting; TaxRules, audit | already reversed, closed period, invalid date |
 | `AccountingService.ClosePeriod` | `workspace_admin` with fresh TOTP | organisation, end date → closed period | Accounting; audit | open draft/report conflict, already closed |
 | `AccountingService.ReopenPeriod` | `workspace_admin` with fresh TOTP | period ID, reason → reopened period | Accounting; audit | not closed, missing reason |
@@ -379,7 +383,7 @@ The core stores:
 - created time; and
 - resulting resource identifier.
 
-A unique database constraint elects one execution. A concurrent duplicate waits for the elected transaction for a bounded period, then either returns the committed result or an `ABORTED` response with retry details; it never runs the command twice. Reusing a key with a different request hash returns `IDEMPOTENCY_CONFLICT`. Financial, report, declaration, transmission, and backup keys are retained for the workspace lifetime. Reversible administrative-command records are retained for at least 30 days.
+A unique database constraint elects one execution. A concurrent duplicate waits at most two seconds for the elected transaction, then either returns the committed result or an `ABORTED` response with retry details; it never runs the command twice. Reusing a key with a different request hash returns `IDEMPOTENCY_CONFLICT`. Financial, report, declaration, transmission, and backup keys are retained for the workspace lifetime. Reversible administrative-command records are retained for at least 30 days. Tests use an injected clock/scheduler rather than sleeping.
 
 Restore cannot rely on an idempotency row inside a database it may replace. A small external restore-operation journal in application data scopes keys by `(target_workspace_id, operation_key)`, stores the backup manifest hash and states `PREPARED`, `STAGED`, `SWAPPED`, and `COMPLETE`, and contains no accounting values or passwords. Entries are chained and HMAC-authenticated with an installation key held in the OS credential store. The journal is fsync'd at every transition and retained for the workspace lifetime. Startup resumes or rolls back the recorded transition; a reused key with a different manifest hash fails with `IDEMPOTENCY_CONFLICT`.
 
@@ -403,6 +407,17 @@ Responsibilities:
 
 The first slice supports `workspace_admin`, `business_preparer`, `business_lodger`, and `auditor`. Roles are additive. A workspace administrator does not receive lodgment permission unless also assigned `business_lodger`.
 
+Workspace passphrases and application-user passwords share this Milestone 1 policy:
+
+- normalise to Unicode NFC before strength checks, hashing, and comparison; never trim;
+- accept 15 through 128 Unicode code points and at most 1,024 UTF-8 bytes;
+- allow spaces and all printable Unicode without composition rules;
+- reject a case-folded match in the exact 10,000-entry `compliance/passwords/tammy-common-passwords-v1.txt` denylist whose checksum is pinned in the release manifest;
+- retain the prior five user-password verifiers and prior three workspace-passphrase verifiers and reject reuse; and
+- compare verifiers in constant time.
+
+The initial Argon2id verifier parameters are exactly 64 MiB memory, 3 iterations, parallelism 1, a random 16-byte salt, and a 32-byte result. Parameters and policy version are stored with every verifier. A later release may increase parameters under a versioned migration but may never reinterpret or silently weaken an existing verifier. "Weak password" and "reused password" in the API catalogue mean these exact rules.
+
 | Permission | Admin | Preparer | Lodger | Auditor |
 |---|:---:|:---:|:---:|:---:|
 | Manage workspace and users | ✓ |  |  |  |
@@ -424,15 +439,19 @@ Authentication timing is deterministic:
 
 | State/control | Rule | Recovery |
 |---|---|---|
+| Pending workspace setup | Recovery confirmation must finish within 15 minutes of `CreateWorkspace`; no business data may be entered while pending | Expiry securely deletes the pending database/header and setup restarts |
 | Pending user | Activation code is 128 random bits, stored hashed, valid for 24 hours, and locked after five failures | Administrator issues a new code |
 | Failed sign-in | Five consecutive failures within 15 minutes lock the user for 15 minutes; state persists across restart; successful sign-in clears the window | Time expiry or `ResetUserAuthentication` by an administrator |
-| Workspace unlock | DEK remains in core memory only while an application session is active | Passphrase, recovery secret, or a still-valid remembered-device item |
-| User session | Locks after 30 minutes without accepted user activity and always ends on process exit | User signs in again |
+| Closed workspace | Database is closed and no DEK is present | Passphrase, recovery secret, or a still-valid remembered-workspace item opens `UNAUTHENTICATED` |
+| Unauthenticated open workspace | DEK is in core memory and only sign-in/recovery RPCs are allowed for at most five minutes | Successful sign-in enters `AUTHENTICATED`; timeout or explicit cancel closes and zeroes the DEK |
+| Authenticated workspace | One user session and the DEK are active | 30 minutes without accepted user activity, explicit lock/sign-out, OS session lock/sleep, core exit, or app exit invalidates the session, closes SQLite, and zeroes the DEK |
 | Remembered workspace | OS-key-store DEK item lasts at most 23 hours 59 minutes; this is not a user session | Passphrase or recovery secret |
 | TOTP assertion | Six-digit, 30-second RFC 6238 value with a one-step clock window; accepted counters cannot replay | User enters a new value |
 | Elevated TOTP freshness | Valid for five minutes in the same session | User enters a new value |
 
-One fresh TOTP assertion may cover declaration and submission only when the session, report ID, and report content hash remain unchanged and dispatch begins inside five minutes. The core checks freshness again immediately before `DISPATCHING`. Reconciliation, factor reset, period close, and period reopen always require a new assertion.
+There is no independent remembered or locked user session in Milestone 1. A session lock always closes the workspace. Re-entry first opens the workspace using the passphrase, recovery secret, or remembered-workspace item, then requires the user's password. TOTP is asserted separately for high-risk actions.
+
+One fresh TOTP assertion may cover declaration and submission only when the session, report ID, and report content hash remain unchanged and dispatch begins inside five minutes. The core checks freshness again immediately before `DISPATCHING`. Reconciliation, factor reset, moved-workspace mirror establishment, period close, and period reopen always require a new assertion.
 
 Disabling TOTP immediately removes elevated permission; a lodger cannot declare or submit until re-enrolled. `ResetUserAuthentication` invalidates all target-user sessions and factors and returns the account to pending activation. The sole administrator who loses all factors uses the workspace recovery secret through `RecoverAdministrator`; the operation resets the workspace passphrase and that administrator's password, disables their factors, invalidates every session, and appends a high-risk audit event.
 
@@ -489,7 +508,9 @@ Invariants:
 - account type and status determine valid posting behaviour; and
 - repeated idempotency keys return the original result.
 
-An archived account remains in history and reports but rejects new postings. The five canonical system/control accounts cannot be archived while a report rule bundle references them. A reversal is a new posted journal dated in an open period, with every debit and credit inverted, an immutable link to the original, and a mandatory reason. A journal can have only one direct reversal. A correction is a reversal followed by a replacement `PostJournal` linked to the reversal; neither prior journal is edited.
+An archived account remains in history and reports but rejects new postings. The five canonical system/control accounts cannot be archived while a report rule bundle references them. A reversal is a new posted journal dated in an open period, with every debit and credit inverted, an immutable link to the original, and a mandatory reason. A journal can have only one direct reversal.
+
+A correction is a reversal followed by `PostJournal` with `correction_of_reversal_journal_id`. The referenced journal must be a reversal in the same organisation and currency, must not already have a correction, and the replacement date must be in an open period. A uniqueness constraint permits one replacement link. Neither the original nor reversal is edited.
 
 Closing a period prevents posting or reversal on or before its end date. It fails while a pre-dispatch BAS report for that period is stale or in draft. Reopening requires an administrator, fresh TOTP, and a reason; it creates an audit event and supersedes any pre-dispatch BAS validation for the affected period. Dispatched report snapshots remain immutable and later corrections use the revision rule in Section 7.4.
 
@@ -535,16 +556,18 @@ BAS presentation drops cents and does not round up, consistent with current ATO 
 
 ### 7.3.1 TaxRules kernel
 
-`TaxRules` owns immutable, versioned GST rule definitions and pure calculations. It depends only on money/date value types. Accounting calls `ExpandSourceLine(ruleID, grossAmount)` to obtain net and GST minor units plus the required control-account role. Tax calls `Rule(ruleID)` and `AggregateClassification(ruleID)` to map posted projections into BAS categories. Both receive the same rule-bundle version from workspace/report configuration.
+`TaxRules` owns the schemas and pure algorithms for interpreting immutable GST rule definitions; it does not persist or select bundles. Artefacts owns rule-bundle storage, checksums, lifecycle, and enumeration. The organisation reporting profile selects the active bundle for new postings, and each posted line/report retains that bundle ID.
 
-The kernel has no database, user, journal, report, or transport access. Its contract suite covers the canonical rules, sign handling, exact-half-cent behaviour, unsupported rule IDs, and deterministic results. New legislative rules are added as new immutable versions rather than changing prior calculations.
+Accounting obtains the organisation's bundle ID through `OrganisationReadPort`, loads it through `ArtefactReadPort`, and calls `TaxRules.Enumerate(bundle)` or `ExpandSourceLine(bundle, ruleID, grossAmount)`. Tax loads the report's retained bundle and calls `Rule` and `AggregateClassification` to map posted projections into BAS categories.
+
+The kernel has no database, user, journal, report, catalogue, or transport access. Its contract suite covers the canonical rules, sign handling, exact-half-cent behaviour, unsupported rule IDs, and deterministic results. New legislative rules are stored by Artefacts as new immutable bundle versions rather than changing prior definitions.
 
 ### 7.4 Tax
 
 Responsibilities:
 
-- GST tax-code definitions;
-- tax treatment captured on journal lines;
+- selection of the rule and BAS-mapping bundles retained by each workpaper/report;
+- consumption of the immutable tax treatment captured by Accounting on journal lines;
 - versioned BAS field mappings;
 - BAS workpapers;
 - local validation;
@@ -682,6 +705,8 @@ event_hash[n] = SHA-256(
 
 The random chain salt and genesis hash are stored in the workspace header. A database uniqueness constraint serialises the sequence. After commit, the latest `{workspace_id, generation, head}` is mirrored to the OS credential store. A database head ahead of the mirror in the same generation after a crash may repair the mirror after full verification; a mirror generation or head ahead of the database signals rollback and locks evidence export unless a matching in-progress authorised restore exists in the external restore journal.
 
+Workspace creation establishes the first OS mirror after recovery confirmation and administrator sign-in. If a moved workspace is opened under an OS account with no mirror, Tammy verifies the chain from genesis and opens read-only with an explicit warning that this device cannot independently detect pre-move rollback. Establishing trust requires workspace passphrase or recovery proof, a `workspace_admin` password, and fresh TOTP (or the audited administrator break-glass path). One transaction appends `WORKSPACE_MIRROR_ESTABLISHED` with the prior head, destination installation-ID hash, and `prior_mirror_unavailable=true`; only then is the resulting generation/head written as the new OS baseline and writes are enabled. Declining leaves the workspace read-only.
+
 An authorised restore starts a new audit generation from the backup head. Its first event is `WORKSPACE_RESTORED` and contains the prior active generation/head, backup generation/head, backup manifest hash, external restore operation ID, and hash of the encrypted pre-restore workspace archive. The chain's previous hash is the backup head, so all restored events remain verifiable; the generation increment and restore event make the deliberate history branch explicit. The pre-restore encrypted archive is retained as evidence for at least 12 months rather than discarded.
 
 Workspace creation generates an Ed25519 audit-export keypair. The private key is encrypted under the workspace data-encryption key; the public key and key ID are stored in the workspace header. Export is a ZIP containing canonical `events.jsonl`, `manifest.json`, selected evidence objects, the public key, and `signature.ed25519` over the manifest hash. The app and a small standalone verifier both verify object hashes, event sequence, chain hashes, and signature without database access. Key rotation creates a cross-signed new public key and never rewrites prior events.
@@ -692,6 +717,7 @@ Responsibilities:
 
 - immutable imported ATO packages;
 - checksums and provenance;
+- immutable GST rule bundles and their user-facing tax-code catalogue;
 - Service Registry metadata;
 - schemas, validation rules, messages, and declaration text;
 - lifecycle status; and
@@ -716,7 +742,7 @@ Storage requirements:
 - embedded, forward-only migrations;
 - a verified encrypted backup before migration;
 - periodic integrity checks;
-- explicit busy timeouts and bounded retry for safe local lock contention;
+- a five-second SQLite busy timeout and at most five pre-transaction `BUSY` retries with full jitter bounded from 10 to 250 milliseconds; once a write transaction begins it is never replayed by the storage adapter;
 - backup manifests containing schema and application versions; and
 - restore verification before replacing an active workspace.
 
@@ -725,17 +751,17 @@ Storage requirements:
 Workspace encryption and user authentication are distinct:
 
 1. `CreateWorkspace` generates a random 256-bit workspace data-encryption key (DEK).
-2. The user chooses a workspace passphrase. Argon2id derives a passphrase key-encryption key (KEK) using a random salt and parameters stored in the header. The initial minimum is 64 MiB memory, 3 iterations, and parallelism no greater than 4, with a startup benchmark permitted to increase but never silently decrease the stored parameters.
+2. The user chooses a workspace passphrase. Argon2id derives a passphrase key-encryption key (KEK) using the exact versioned parameters in Section 7.1 and a random salt stored in the header.
 3. AES-256-GCM wraps the DEK with the passphrase KEK using a random nonce and authenticated workspace/version metadata.
 4. Setup generates a separate random 256-bit recovery secret, displays it once in grouped Base32, and requires the user to confirm selected groups. HKDF-SHA-256 derives a recovery KEK that wraps the same DEK with AES-256-GCM.
 5. The unencrypted workspace header contains only format/KDF metadata, salts, nonces, wrapped DEKs, audit public material, and ciphertext hashes. It contains no accounting or identity data.
 6. SQLCipher uses the unwrapped DEK to open the database. The DEK is zeroed when the workspace locks or the core exits.
 
-If the user explicitly enables "remember this workspace on this OS account", the DEK is stored as a secret in macOS Keychain or Windows Credential Manager. This deliberately permits workspace decryption without re-entering the workspace passphrase, but it never signs in an application user. The remembered item expires or is deleted within 24 hours and is removed on explicit workspace lock, password-risk action, or user request.
+If the user explicitly enables "remember this workspace on this OS account", the DEK is stored as a secret in macOS Keychain or Windows Credential Manager. This deliberately permits workspace decryption without re-entering the workspace passphrase, but it never signs in an application user. The remembered item expires after at most 23 hours 59 minutes and is removed on passphrase/recovery change, administrator recovery, explicit "forget this workspace", or user request. Automatic and ordinary workspace locks zero the in-memory DEK but do not delete a still-valid remembered-workspace item.
 
-After workspace decryption, each natural person signs in with their own application password and TOTP where required. Milestone 1 permits one active application session at a time. Additional users do not receive or wrap the workspace DEK; an authorised person first unlocks the workspace on the device, then the user authenticates. Changing the workspace passphrase rewraps the same DEK. Recovery rewraps the DEK under a new passphrase and invalidates remembered-device entries.
+After workspace decryption, each natural person signs in with their own application password; TOTP is asserted separately when a high-risk action requires it. Milestone 1 permits one active application session at a time. Additional users do not receive or wrap the workspace DEK; an authorised person first unlocks the workspace on the device, then the user authenticates. Changing the workspace passphrase rewraps the same DEK. Recovery rewraps the DEK under a new passphrase and invalidates remembered-workspace entries.
 
-Losing the passphrase, recovery secret, and any still-valid remembered-device item makes the workspace unrecoverable. The UI states this during setup and backup.
+Losing the passphrase, recovery secret, and any still-valid remembered-workspace item makes the workspace unrecoverable. The UI states this during setup and backup.
 
 ### 8.2 Backup and restore
 
@@ -748,9 +774,13 @@ A `tammy-backup-v1` archive contains:
 - a canonical manifest of paths, sizes, hashes, schema version, application version, and audit head; and
 - the audit-export public key and signature over the manifest.
 
-Backups always exclude the machine-credential vault, credential passwords, remembered-device keys, active sessions, local RPC bootstrap material, and operational logs. Restricted ATO artefacts are included only when their licence permits encrypted backup; otherwise the manifest records the required checksum and restore marks the SBR adapter unavailable until the artefact is reimported.
+Backups always exclude the machine-credential vault, credential passwords, remembered-workspace keys, active sessions, local RPC bootstrap material, and operational logs. Restricted ATO artefacts are included only when their licence permits encrypted backup; otherwise the manifest records the required checksum and restore marks the SBR adapter unavailable until the artefact is reimported.
 
-Backup briefly acquires the workspace write gate, completes the SQLite online snapshot, captures evidence hashes, and then releases the gate. A random 256-bit archive key encrypts the complete archive using chunked AES-256-GCM. A backup-specific passphrase-derived Argon2id KEK wraps the archive key; it does not reuse the workspace passphrase KEK.
+Backup briefly acquires the workspace write gate, completes the SQLite online snapshot, captures evidence hashes, and then releases the gate. A random 256-bit archive key encrypts the complete archive using chunked AES-256-GCM. A backup-specific passphrase-derived Argon2id KEK wraps the archive key; it does not reuse the workspace passphrase KEK. Backup passphrases use the same normalization, length, denylist, and Argon2id parameters as Section 7.1 but have no cross-backup history.
+
+The retained pre-restore archive uses format `tammy-pre-restore-v1`. It contains the active workspace header, encrypted database, evidence, and redistributable artefacts plus a canonical manifest signed by the staged workspace audit-export key. It explicitly excludes the separately located machine-credential vault, credential passwords, OS-key-store items, local RPC bootstrap material, and operational logs.
+
+A new random 256-bit archive key encrypts `tammy-pre-restore-v1` with the same chunked AES-256-GCM envelope as a backup. The restored workspace DEK wraps that archive key with AES-256-GCM and authenticated operation/manifest metadata; the wrap is stored in the restored evidence record. Export or recovery requires an unlocked restored workspace plus administrator password and fresh TOTP. Export produces the original encrypted workspace bundle, which still requires its original workspace passphrase or recovery secret to open. The archive and key wrap are retained for at least 12 months; deletion after that period is an explicit audited administrator action.
 
 Restore never writes over the active workspace in place:
 
@@ -759,7 +789,7 @@ Restore never writes over the active workspace in place:
 3. verify authenticated encryption, manifest signature, every object hash, database integrity, schema compatibility, and the backup audit chain;
 4. open staging and either authenticate a staged `workspace_admin` with workspace passphrase, user password, and TOTP, or use the staged recovery secret plus administrator username/new passwords to execute the same audited break-glass reset as `RecoverAdministrator`;
 5. copy any active workspace into an encrypted pre-restore evidence archive, record its hash and OS-mirrored generation/head, and add the archive to staging;
-6. invalidate restored sessions and remembered-device references;
+6. invalidate restored sessions and remembered-workspace references;
 7. set `generation = max(backup_generation, active_mirror_generation) + 1` and append the `WORKSPACE_RESTORED` event described in Section 7.7 to the staged database;
 8. fsync external journal state `STAGED` with the new audit head;
 9. atomically rename the active workspace to a rollback directory and staging to active, then fsync state `SWAPPED`;
@@ -925,13 +955,15 @@ Policies:
 
 ## 12. Security controls
 
+These are Tammy's product-selected baseline controls for the expected Category D desktop model. They do not assert that the DPO has assigned Category D or accepted the self-assessment; written confirmation remains an external gate under Sections 3 and 14.
+
 ### 12.1 Local identity
 
 - No shared application accounts.
-- Argon2id password hashing with parameters stored per account and reviewed against current guidance.
+- Argon2id password hashing and versioned history use the exact Milestone 1 policy in Section 7.1.
 - Five failed attempts trigger the persisted 15-minute lockout defined in Section 7.1.
 - Inactivity locking occurs at or before 30 minutes.
-- Remembered sessions expire in less than 24 hours.
+- Application-user sessions are never remembered; an optional remembered-workspace key expires after at most 23 hours 59 minutes and still requires user sign-in.
 - TOTP is implemented without a cloud dependency and is mandatory for lodgment actions; passkeys are outside Milestone 1.
 - Lodgment permission is distinct from preparation permission.
 
@@ -979,6 +1011,7 @@ There is no hidden vendor support channel. Support exports are user-created, sco
 - changed source data invalidates validation and declaration;
 - entity verification expires and supersedes on defined high-risk changes;
 - the permission matrix denies preparer submission and admin-only user management;
+- Unicode password normalization, length/denylist/history rules, and exact Argon2id parameters;
 - activation expiry/attempts, persisted login lockout timing, TOTP replay/freshness, factor reset, and administrator recovery;
 - audit hash chains verify and tampering is detected; and
 - unknown SBR outcomes never trigger automatic resubmission.
@@ -996,8 +1029,11 @@ There is no hidden vendor support channel. Support exports are user-created, sco
 - restore-journal recovery from `PREPARED`, `STAGED`, and `SWAPPED`;
 - authorised restore generation, archived prior head, new audit event, and OS mirror update;
 - exact canonical data and evidence hashes plus the expected restore generation/event/head;
-- passphrase rewrap, recovery rewrap, remembered-device expiry, and DEK zeroing;
-- audit-head rollback detection against the OS credential-store mirror; and
+- passphrase rewrap, recovery rewrap, remembered-workspace expiry, and DEK zeroing;
+- closed/unauthenticated/authenticated workspace transitions and five-minute pre-auth timeout;
+- audit-head rollback detection against the OS credential-store mirror;
+- missing-mirror read-only opening and authorised mirror establishment;
+- pre-restore archive authenticated recovery and machine-credential exclusion; and
 - OS key-store adapter contract tests.
 
 ### 13.3 Contract tests
@@ -1054,7 +1090,7 @@ Playwright launches the packaged Electron application and bundled Go service. Th
 
 A second packaged E2E creates a backup after step 13, adds a distinguishable later journal, restores the backup, and proves that the later journal is absent while the canonical organisation, journals, balances, `$80` BAS, declaration, accepted simulator transmission, and evidence hashes match the backup. It verifies the new audit generation and single `WORKSPACE_RESTORED` event, the archived pre-restore workspace hash, and the new OS-mirrored head. It also proves the machine-credential vault and prior sessions are absent.
 
-Additional E2E cases cover preparer submission denial, administrator-without-lodger denial, lodger TOTP enforcement, session expiry, wrong workspace and backup passwords, rejected submission, safe pre-send failure, orphaned-dispatch `UNKNOWN`, reconciliation, keyboard navigation, and audit rollback detection.
+Additional E2E cases cover pending-user activation/expiry, administrator break-glass recovery, preparer submission denial, administrator-without-lodger denial, lodger TOTP enforcement, workspace/session lock transitions, wrong workspace and backup passwords, moved-workspace missing-mirror trust establishment, rejected submission, safe pre-send failure, orphaned-dispatch `UNKNOWN`, reconciliation, keyboard navigation, audit rollback detection, and refusal to start after signed-build-manifest tampering.
 
 ## 14. Compliance evidence
 
