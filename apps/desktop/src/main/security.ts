@@ -1,6 +1,6 @@
-import { lstat, realpath, stat } from "node:fs/promises";
-import { isAbsolute, join, relative, resolve, sep } from "node:path";
-import { pathToFileURL } from "node:url";
+import { constants } from "node:fs";
+import { lstat, open, realpath } from "node:fs/promises";
+import { extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 import type {
   App,
@@ -15,12 +15,33 @@ import type {
 } from "electron";
 
 export const PRODUCTION_APP_URL = "tammy://app/";
+export const MAX_RENDERER_ASSET_BYTES = 16 * 1024 * 1024;
 
 const PRODUCTION_CSP =
   "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'";
 const CSP_HEADER = "Content-Security-Policy";
 const CUSTOM_SCHEME = "tammy";
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
+const RESERVED_WINDOWS_BASENAME = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i;
+const OPEN_READ_ONLY_NO_FOLLOW = constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0);
+
+const CONTENT_TYPES: Readonly<Record<string, string>> = Object.freeze({
+  ".css": "text/css; charset=utf-8",
+  ".gif": "image/gif",
+  ".html": "text/html; charset=utf-8",
+  ".ico": "image/x-icon",
+  ".jpeg": "image/jpeg",
+  ".jpg": "image/jpeg",
+  ".js": "text/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".mjs": "text/javascript; charset=utf-8",
+  ".png": "image/png",
+  ".svg": "image/svg+xml",
+  ".wasm": "application/wasm",
+  ".webp": "image/webp",
+  ".woff": "font/woff",
+  ".woff2": "font/woff2",
+});
 
 export interface RendererSecurityPolicy {
   readonly applicationUrl: string;
@@ -28,17 +49,71 @@ export interface RendererSecurityPolicy {
   readonly responseFilter: WebRequestFilter;
 }
 
-type SchemeApp = Pick<App, "enableSandbox" | "isReady">;
-type SchemeProtocol = Pick<Protocol, "registerSchemesAsPrivileged">;
-type ApplicationProtocol = Pick<Protocol, "handle" | "isProtocolHandled" | "unhandle">;
-
-interface ApplicationProtocolOptions {
-  readonly app: Pick<App, "isReady">;
-  readonly fetch: (url: string) => Promise<Response>;
-  readonly protocol: ApplicationProtocol;
-  readonly rendererRoot: string;
+interface RendererFileStats {
+  readonly dev: number;
+  readonly ino: number;
+  readonly size: number;
+  isDirectory(): boolean;
+  isFile(): boolean;
+  isSymbolicLink(): boolean;
 }
 
+interface RendererFileHandle {
+  close(): Promise<void>;
+  readFile(): Promise<Uint8Array>;
+  stat(): Promise<RendererFileStats>;
+}
+
+export interface RendererFileSystem {
+  lstat(path: string): Promise<RendererFileStats>;
+  open(path: string, flags: number): Promise<RendererFileHandle>;
+  realpath(path: string): Promise<string>;
+}
+
+export interface RendererAsset {
+  readonly bytes: Uint8Array;
+  readonly contentType: string;
+}
+
+interface ValidatedRendererRoot {
+  readonly dev: number;
+  readonly ino: number;
+  readonly path: string;
+}
+
+interface ValidatedRendererAsset {
+  readonly components: readonly ComponentIdentity[];
+  readonly path: string;
+}
+
+interface ComponentIdentity {
+  readonly dev: number;
+  readonly ino: number;
+  readonly path: string;
+}
+
+interface LeaseRecord {
+  readonly leases: Set<symbol>;
+}
+
+interface SchemeRecord extends LeaseRecord {}
+
+interface ProtocolRecord extends LeaseRecord {
+  readonly root: ValidatedRendererRoot;
+}
+
+interface ContentSecurityRecord extends LeaseRecord {
+  readonly policy: RendererSecurityPolicy;
+  readonly policyKey: string;
+}
+
+interface WindowGuardRecord extends LeaseRecord {
+  readonly applicationUrl: string;
+}
+
+type SchemeApp = Pick<App, "enableSandbox" | "isReady">;
+type SchemeProtocol = Pick<Protocol, "registerSchemesAsPrivileged">;
+type ApplicationProtocol = Pick<Protocol, "handle" | "isProtocolHandled">;
 type ContentSecuritySession = Pick<Session, "webRequest">;
 type GuardedSession = Pick<
   Session,
@@ -53,23 +128,49 @@ type GuardedWebContents = Pick<
   "getURL" | "on" | "removeListener" | "setWindowOpenHandler"
 >;
 
-interface InstalledContentSecurityPolicy {
-  readonly dispose: () => void;
-  readonly policyKey: string;
+interface ApplicationProtocolOptions {
+  readonly app: Pick<App, "isReady">;
+  readonly protocol: ApplicationProtocol;
+  readonly rendererRoot: string;
 }
 
-interface InstalledSessionGuards {
-  readonly dispose: () => void;
-}
+// Electron patches these Node fs operations for files inside ASAR archives. Packaged
+// archives are immutable; the identity and no-follow checks also protect unpacked and
+// development renderer roots where filesystem entries can change between operations.
+const nodeRendererFileSystem: RendererFileSystem = {
+  lstat,
+  open,
+  realpath,
+};
 
-interface InstalledWindowGuards {
-  readonly applicationUrl: string;
-  readonly dispose: () => void;
-}
+/**
+ * Electron's singleton setter APIs have no corresponding getter, so ownership cannot
+ * be re-verified before teardown. This registrar is the composition root's sole owner
+ * of Tammy's scheme/protocol/CSP/permission/window handlers. Leases are reference
+ * counted, but deny handlers remain installed monotonically rather than risk a stale
+ * release clearing an active or externally replaced security handler.
+ */
+const electronSecurityRegistrar = {
+  contentSecurity: new WeakMap<object, ContentSecurityRecord>(),
+  protocols: new WeakMap<object, ProtocolRecord>(),
+  schemes: new WeakMap<object, SchemeRecord>(),
+  sessions: new WeakMap<object, LeaseRecord>(),
+  windows: new WeakMap<object, WindowGuardRecord>(),
+};
 
-const contentSecurityInstallations = new WeakMap<object, InstalledContentSecurityPolicy>();
-const sessionGuardInstallations = new WeakMap<object, InstalledSessionGuards>();
-const windowGuardInstallations = new WeakMap<object, InstalledWindowGuards>();
+function createLease(record: LeaseRecord): () => void {
+  const token = Symbol("electron-security-lease");
+  record.leases.add(token);
+  let released = false;
+
+  return () => {
+    if (released) {
+      return;
+    }
+    released = true;
+    record.leases.delete(token);
+  };
+}
 
 function parseViteOrigin(viteUrl: string): URL {
   let parsed: URL;
@@ -164,7 +265,16 @@ export function isAllowedNavigation(
   );
 }
 
-function rawRendererPath(url: string): string | null {
+function isWindowsAmbiguousSegment(segment: string): boolean {
+  return (
+    segment.includes(":") ||
+    segment.endsWith(".") ||
+    segment.endsWith(" ") ||
+    RESERVED_WINDOWS_BASENAME.test(segment)
+  );
+}
+
+function rawRendererSegments(url: string): readonly string[] | null {
   const match = /^tammy:\/\/app(\/[^?#]*)$/.exec(url);
   if (!match) {
     return null;
@@ -187,16 +297,21 @@ function rawRendererPath(url: string): string | null {
     return null;
   }
 
+  const normalizedPath = decoded === "/" ? "/index.html" : decoded;
+  const segments = normalizedPath.slice(1).split("/");
   if (
-    decoded.includes("\0") ||
-    decoded.includes("\\") ||
-    /%(?:2e|2f|5c)/i.test(decoded) ||
-    decoded.split("/").some((segment) => segment === "." || segment === "..")
+    normalizedPath.includes("\0") ||
+    normalizedPath.includes("\\") ||
+    /%(?:2e|2f|5c)/i.test(normalizedPath) ||
+    segments.some(
+      (segment) =>
+        segment === "" || segment === "." || segment === ".." || isWindowsAmbiguousSegment(segment),
+    )
   ) {
     return null;
   }
 
-  return decoded === "/" ? "/index.html" : decoded;
+  return segments;
 }
 
 function isContainedPath(root: string, candidate: string): boolean {
@@ -207,47 +322,202 @@ function isContainedPath(root: string, candidate: string): boolean {
   );
 }
 
-export async function resolveRendererAssetPath(
-  url: string,
-  rendererRoot: string,
-): Promise<string | null> {
-  const rendererPath = rawRendererPath(url);
-  if (rendererPath === null) {
-    return null;
-  }
+function sameIdentity(
+  left: Pick<RendererFileStats, "dev" | "ino">,
+  right: Pick<RendererFileStats, "dev" | "ino">,
+): boolean {
+  return left.dev === right.dev && left.ino === right.ino;
+}
 
+async function validateRendererRoot(
+  rendererRoot: string,
+  fileSystem: RendererFileSystem,
+): Promise<ValidatedRendererRoot | null> {
   try {
-    const canonicalRoot = await realpath(rendererRoot);
-    const candidate = resolve(canonicalRoot, `.${rendererPath}`);
-    if (!isContainedPath(canonicalRoot, candidate)) {
+    const configuredRoot = resolve(rendererRoot);
+    const configuredStats = await fileSystem.lstat(configuredRoot);
+    if (configuredStats.isSymbolicLink() || !configuredStats.isDirectory()) {
       return null;
     }
 
-    const relativeCandidate = relative(canonicalRoot, candidate);
-    let pathComponent = canonicalRoot;
-    for (const component of relativeCandidate.split(sep)) {
-      pathComponent = join(pathComponent, component);
-      if ((await lstat(pathComponent)).isSymbolicLink()) {
-        return null;
-      }
+    const canonicalRoot = await fileSystem.realpath(configuredRoot);
+    const canonicalStats = await fileSystem.lstat(canonicalRoot);
+    if (
+      canonicalStats.isSymbolicLink() ||
+      !canonicalStats.isDirectory() ||
+      !sameIdentity(configuredStats, canonicalStats)
+    ) {
+      return null;
     }
 
-    const canonicalCandidate = await realpath(candidate);
-    return isContainedPath(canonicalRoot, canonicalCandidate) &&
-      (await stat(canonicalCandidate)).isFile()
-      ? canonicalCandidate
-      : null;
+    return {
+      dev: canonicalStats.dev,
+      ino: canonicalStats.ino,
+      path: canonicalRoot,
+    };
   } catch {
     return null;
   }
 }
 
+async function validateRendererAsset(
+  segments: readonly string[],
+  root: ValidatedRendererRoot,
+  fileSystem: RendererFileSystem,
+): Promise<ValidatedRendererAsset | null> {
+  try {
+    const currentRootStats = await fileSystem.lstat(root.path);
+    if (
+      currentRootStats.isSymbolicLink() ||
+      !currentRootStats.isDirectory() ||
+      !sameIdentity(root, currentRootStats)
+    ) {
+      return null;
+    }
+
+    const components: ComponentIdentity[] = [];
+    let candidate = root.path;
+    for (const [index, segment] of segments.entries()) {
+      candidate = join(candidate, segment);
+      const stats = await fileSystem.lstat(candidate);
+      const finalComponent = index === segments.length - 1;
+      if (stats.isSymbolicLink() || (finalComponent ? !stats.isFile() : !stats.isDirectory())) {
+        return null;
+      }
+      components.push({ dev: stats.dev, ino: stats.ino, path: candidate });
+    }
+
+    const canonicalCandidate = await fileSystem.realpath(candidate);
+    if (!isContainedPath(root.path, canonicalCandidate) || canonicalCandidate !== candidate) {
+      return null;
+    }
+
+    return { components, path: candidate };
+  } catch {
+    return null;
+  }
+}
+
+async function identitiesRemainStable(
+  root: ValidatedRendererRoot,
+  asset: ValidatedRendererAsset,
+  fileSystem: RendererFileSystem,
+): Promise<boolean> {
+  try {
+    const rootStats = await fileSystem.lstat(root.path);
+    if (rootStats.isSymbolicLink() || !rootStats.isDirectory() || !sameIdentity(root, rootStats)) {
+      return false;
+    }
+
+    for (const component of asset.components) {
+      const stats = await fileSystem.lstat(component.path);
+      if (stats.isSymbolicLink() || !sameIdentity(component, stats)) {
+        return false;
+      }
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function resolveRendererAsset(
+  url: string,
+  rendererRoot: string,
+  fileSystem: RendererFileSystem,
+): Promise<{
+  readonly asset: ValidatedRendererAsset;
+  readonly root: ValidatedRendererRoot;
+} | null> {
+  const segments = rawRendererSegments(url);
+  if (segments === null) {
+    return null;
+  }
+
+  const root = await validateRendererRoot(rendererRoot, fileSystem);
+  if (root === null) {
+    return null;
+  }
+  const asset = await validateRendererAsset(segments, root, fileSystem);
+  return asset === null ? null : { asset, root };
+}
+
+export async function resolveRendererAssetPath(
+  url: string,
+  rendererRoot: string,
+): Promise<string | null> {
+  const validated = await resolveRendererAsset(url, rendererRoot, nodeRendererFileSystem);
+  return validated?.asset.path ?? null;
+}
+
+async function readRendererAssetFromRoot(
+  url: string,
+  expectedRoot: ValidatedRendererRoot | undefined,
+  rendererRoot: string,
+  fileSystem: RendererFileSystem,
+): Promise<RendererAsset | null> {
+  const validated = await resolveRendererAsset(url, rendererRoot, fileSystem);
+  if (
+    validated === null ||
+    (expectedRoot !== undefined && !sameIdentity(expectedRoot, validated.root))
+  ) {
+    return null;
+  }
+
+  let handle: RendererFileHandle | undefined;
+  try {
+    handle = await fileSystem.open(validated.asset.path, OPEN_READ_ONLY_NO_FOLLOW);
+    const openedStats = await handle.stat();
+    const finalIdentity = validated.asset.components.at(-1);
+    if (
+      finalIdentity === undefined ||
+      !openedStats.isFile() ||
+      !sameIdentity(finalIdentity, openedStats) ||
+      openedStats.size < 0 ||
+      openedStats.size > MAX_RENDERER_ASSET_BYTES ||
+      !(await identitiesRemainStable(validated.root, validated.asset, fileSystem))
+    ) {
+      return null;
+    }
+
+    const bytes = await handle.readFile();
+    if (bytes.byteLength > MAX_RENDERER_ASSET_BYTES) {
+      return null;
+    }
+
+    return Object.freeze({
+      bytes: new Uint8Array(bytes),
+      contentType:
+        CONTENT_TYPES[extname(validated.asset.path).toLowerCase()] ?? "application/octet-stream",
+    });
+  } catch {
+    return null;
+  } finally {
+    if (handle !== undefined) {
+      await handle.close().catch(() => undefined);
+    }
+  }
+}
+
+export async function readRendererAsset(
+  url: string,
+  rendererRoot: string,
+  fileSystem: RendererFileSystem = nodeRendererFileSystem,
+): Promise<RendererAsset | null> {
+  return readRendererAssetFromRoot(url, undefined, rendererRoot, fileSystem);
+}
+
 export function installApplicationScheme(options: {
   readonly app: SchemeApp;
   readonly protocol: SchemeProtocol;
-}): void {
+}): () => void {
   if (options.app.isReady()) {
     throw new Error("SCHEME_REGISTRATION_TOO_LATE");
+  }
+
+  const existing = electronSecurityRegistrar.schemes.get(options.protocol);
+  if (existing) {
+    return createLease(existing);
   }
 
   options.protocol.registerSchemesAsPrivileged([
@@ -261,21 +531,60 @@ export function installApplicationScheme(options: {
     },
   ]);
   options.app.enableSandbox();
+
+  const record: SchemeRecord = { leases: new Set() };
+  electronSecurityRegistrar.schemes.set(options.protocol, record);
+  return createLease(record);
 }
 
 function notFoundResponse(): Response {
   return new Response("Not found.", {
-    headers: { "Content-Type": "text/plain; charset=utf-8" },
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "X-Content-Type-Options": "nosniff",
+    },
     status: 404,
   });
 }
 
-export function installApplicationProtocol(options: ApplicationProtocolOptions): void {
+function assetResponse(asset: RendererAsset): Response {
+  const body = new Uint8Array(asset.bytes.byteLength);
+  body.set(asset.bytes);
+  return new Response(body.buffer, {
+    headers: {
+      "Content-Length": asset.bytes.byteLength.toString(),
+      "Content-Type": asset.contentType,
+      "X-Content-Type-Options": "nosniff",
+    },
+    status: 200,
+  });
+}
+
+export async function installApplicationProtocol(
+  options: ApplicationProtocolOptions,
+): Promise<() => void> {
   if (!options.app.isReady()) {
     throw new Error("PROTOCOL_REQUIRES_READY");
   }
+
+  const root = await validateRendererRoot(options.rendererRoot, nodeRendererFileSystem);
+  if (root === null) {
+    throw new Error("INVALID_RENDERER_ROOT");
+  }
+
+  const existing = electronSecurityRegistrar.protocols.get(options.protocol);
+  if (existing) {
+    if (existing.root.path !== root.path || !sameIdentity(existing.root, root)) {
+      throw new Error("PROTOCOL_ALREADY_CONFIGURED");
+    }
+    if (!options.protocol.isProtocolHandled(CUSTOM_SCHEME)) {
+      throw new Error("PROTOCOL_OWNERSHIP_LOST");
+    }
+    return createLease(existing);
+  }
+
   if (options.protocol.isProtocolHandled(CUSTOM_SCHEME)) {
-    options.protocol.unhandle(CUSTOM_SCHEME);
+    throw new Error("PROTOCOL_HANDLER_NOT_OWNED");
   }
 
   options.protocol.handle(CUSTOM_SCHEME, async (request) => {
@@ -283,17 +592,18 @@ export function installApplicationProtocol(options: ApplicationProtocolOptions):
       return notFoundResponse();
     }
 
-    const assetPath = await resolveRendererAssetPath(request.url, options.rendererRoot);
-    if (assetPath === null) {
-      return notFoundResponse();
-    }
-
-    try {
-      return await options.fetch(pathToFileURL(assetPath).toString());
-    } catch {
-      return notFoundResponse();
-    }
+    const asset = await readRendererAssetFromRoot(
+      request.url,
+      root,
+      root.path,
+      nodeRendererFileSystem,
+    );
+    return asset === null ? notFoundResponse() : assetResponse(asset);
   });
+
+  const record: ProtocolRecord = { leases: new Set(), root };
+  electronSecurityRegistrar.protocols.set(options.protocol, record);
+  return createLease(record);
 }
 
 export function createSecureWebPreferences(
@@ -333,14 +643,19 @@ export function installContentSecurityPolicy(
     policy.contentSecurityPolicy,
     policy.responseFilter.urls,
   ]);
-  const existing = contentSecurityInstallations.get(session);
+  const existing = electronSecurityRegistrar.contentSecurity.get(session);
   if (existing) {
     if (existing.policyKey !== policyKey) {
       throw new Error("CSP_ALREADY_CONFIGURED");
     }
-    return existing.dispose;
+    return createLease(existing);
   }
 
+  const record: ContentSecurityRecord = {
+    leases: new Set(),
+    policy,
+    policyKey,
+  };
   const listener = (
     details: OnHeadersReceivedListenerDetails,
     callback: (response: { readonly responseHeaders: Record<string, string[]> }) => void,
@@ -348,27 +663,19 @@ export function installContentSecurityPolicy(
     callback({
       responseHeaders: withSingleContentSecurityPolicy(
         details.responseHeaders,
-        policy.contentSecurityPolicy,
+        record.policy.contentSecurityPolicy,
       ),
     });
   };
   session.webRequest.onHeadersReceived(policy.responseFilter, listener);
-
-  const dispose = (): void => {
-    if (contentSecurityInstallations.get(session)?.dispose !== dispose) {
-      return;
-    }
-    session.webRequest.onHeadersReceived(null);
-    contentSecurityInstallations.delete(session);
-  };
-  contentSecurityInstallations.set(session, { dispose, policyKey });
-  return dispose;
+  electronSecurityRegistrar.contentSecurity.set(session, record);
+  return createLease(record);
 }
 
 export function installSessionGuards(session: GuardedSession): () => void {
-  const existing = sessionGuardInstallations.get(session);
+  const existing = electronSecurityRegistrar.sessions.get(session);
   if (existing) {
-    return existing.dispose;
+    return createLease(existing);
   }
 
   const denyRequest: Parameters<Session["setPermissionRequestHandler"]>[0] = (
@@ -386,18 +693,9 @@ export function installSessionGuards(session: GuardedSession): () => void {
   session.setDevicePermissionHandler(denyPermission);
   session.on("will-download", denyDownload);
 
-  const dispose = (): void => {
-    if (sessionGuardInstallations.get(session)?.dispose !== dispose) {
-      return;
-    }
-    session.setPermissionCheckHandler(null);
-    session.setPermissionRequestHandler(null);
-    session.setDevicePermissionHandler(null);
-    session.removeListener("will-download", denyDownload);
-    sessionGuardInstallations.delete(session);
-  };
-  sessionGuardInstallations.set(session, { dispose });
-  return dispose;
+  const record: LeaseRecord = { leases: new Set() };
+  electronSecurityRegistrar.sessions.set(session, record);
+  return createLease(record);
 }
 
 export function installWindowGuards(
@@ -408,12 +706,12 @@ export function installWindowGuards(
     throw new Error("INVALID_APPLICATION_URL");
   }
 
-  const existing = windowGuardInstallations.get(webContents);
+  const existing = electronSecurityRegistrar.windows.get(webContents);
   if (existing) {
     if (existing.applicationUrl !== applicationUrl) {
       throw new Error("WINDOW_GUARDS_ALREADY_CONFIGURED");
     }
-    return existing.dispose;
+    return createLease(existing);
   }
 
   const denyNavigation = (event: Event, targetUrl: string): void => {
@@ -432,14 +730,10 @@ export function installWindowGuards(
   webContents.on("will-redirect", denyNavigation);
   webContents.setWindowOpenHandler(denyWindowOpen);
 
-  const dispose = (): void => {
-    if (windowGuardInstallations.get(webContents)?.dispose !== dispose) {
-      return;
-    }
-    webContents.removeListener("will-navigate", denyNavigation);
-    webContents.removeListener("will-redirect", denyNavigation);
-    windowGuardInstallations.delete(webContents);
+  const record: WindowGuardRecord = {
+    applicationUrl,
+    leases: new Set(),
   };
-  windowGuardInstallations.set(webContents, { applicationUrl, dispose });
-  return dispose;
+  electronSecurityRegistrar.windows.set(webContents, record);
+  return createLease(record);
 }

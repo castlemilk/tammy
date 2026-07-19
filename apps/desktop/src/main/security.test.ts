@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, rename, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -15,7 +15,9 @@ import {
   installWindowGuards,
   isAllowedApplicationURL,
   isAllowedNavigation,
+  MAX_RENDERER_ASSET_BYTES,
   PRODUCTION_APP_URL,
+  readRendererAsset,
   resolveRendererAssetPath,
   withSingleContentSecurityPolicy,
 } from "./security";
@@ -162,6 +164,19 @@ describe("custom renderer protocol", () => {
     "tammy://app/assets/app.js?download",
     "tammy://app/assets/app.js#fragment",
     "tammy://app/assets",
+    "tammy://app/assets/app.js:secret",
+    "tammy://app/assets/app.js%3Asecret",
+    "tammy://app/assets/trailing.",
+    "tammy://app/assets/trailing%20",
+    "tammy://app/CON",
+    "tammy://app/con.txt",
+    "tammy://app/PRN.css",
+    "tammy://app/AUX",
+    "tammy://app/NUL.js",
+    "tammy://app/COM1.js",
+    "tammy://app/com9",
+    "tammy://app/LPT1.css",
+    "tammy://app/lpt9",
     "file:///index.html",
     "data:text/html,hello",
   ])("does not map confused or traversing URL %s", async (url) => {
@@ -184,6 +199,15 @@ describe("custom renderer protocol", () => {
     await expect(resolveRendererAssetPath("tammy://app/assets/alias.js", root)).resolves.toBeNull();
   });
 
+  it("rejects a renderer root that is a symlink or regular file", async () => {
+    const { outside, root } = await fixture();
+    const rootLink = join(root, "..", "renderer-link");
+    await symlink(root, rootLink);
+
+    await expect(resolveRendererAssetPath("tammy://app/", rootLink)).resolves.toBeNull();
+    await expect(resolveRendererAssetPath("tammy://app/", outside)).resolves.toBeNull();
+  });
+
   it("registers the standard secure fetch-enabled scheme and sandbox before ready", () => {
     const calls: string[] = [];
     const app = {
@@ -194,9 +218,14 @@ describe("custom renderer protocol", () => {
       registerSchemesAsPrivileged: vi.fn(() => calls.push("scheme")),
     };
 
-    installApplicationScheme({ app, protocol });
+    const first = installApplicationScheme({ app, protocol });
+    const second = installApplicationScheme({ app, protocol });
 
+    expect(first).not.toBe(second);
     expect(calls).toEqual(["scheme", "sandbox"]);
+    first();
+    first();
+    second();
     expect(protocol.registerSchemesAsPrivileged).toHaveBeenCalledWith([
       {
         scheme: "tammy",
@@ -225,10 +254,161 @@ describe("custom renderer protocol", () => {
     expect(app.enableSandbox).not.toHaveBeenCalled();
   });
 
-  it("serves only GET requests for contained renderer assets after ready", async () => {
+  it("refuses a symlink or non-directory protocol root before registering a handler", async () => {
+    const { outside, root } = await fixture();
+    const rootLink = join(root, "..", "protocol-root-link");
+    await symlink(root, rootLink);
+    const protocol = {
+      handle: vi.fn(),
+      isProtocolHandled: vi.fn(() => false),
+      unhandle: vi.fn(),
+    };
+
+    await expect(
+      installApplicationProtocol({
+        app: { isReady: () => true },
+        protocol,
+        rendererRoot: rootLink,
+      }),
+    ).rejects.toThrow("INVALID_RENDERER_ROOT");
+    await expect(
+      installApplicationProtocol({
+        app: { isReady: () => true },
+        protocol,
+        rendererRoot: outside,
+      }),
+    ).rejects.toThrow("INVALID_RENDERER_ROOT");
+    expect(protocol.handle).not.toHaveBeenCalled();
+    expect(protocol.unhandle).not.toHaveBeenCalled();
+  });
+
+  it("serves exact file bytes with conservative response headers after ready", async () => {
     const { root } = await fixture();
     let handler: ((request: { method: string; url: string }) => Promise<Response>) | undefined;
     const app = { isReady: () => true };
+    let handled = false;
+    const protocol = {
+      handle: vi.fn(
+        (
+          _scheme: string,
+          registered: (request: { method: string; url: string }) => Promise<Response>,
+        ) => {
+          handled = true;
+          handler = registered;
+        },
+      ),
+      isProtocolHandled: vi.fn(() => handled),
+      unhandle: vi.fn(() => {
+        handled = false;
+      }),
+    };
+
+    const release = await installApplicationProtocol({ app, protocol, rendererRoot: root });
+
+    expect(protocol.handle).toHaveBeenCalledWith("tammy", expect.any(Function));
+    const response = await handler?.({
+      method: "GET",
+      url: "tammy://app/assets/app.js",
+    });
+    expect(response?.status).toBe(200);
+    await expect(response?.text()).resolves.toBe("asset");
+    expect(response?.headers.get("Content-Type")).toBe("text/javascript; charset=utf-8");
+    expect(response?.headers.get("X-Content-Type-Options")).toBe("nosniff");
+
+    const notFound = await handler?.({
+      method: "POST",
+      url: "tammy://app/assets/app.js",
+    });
+    expect(notFound?.status).toBe(404);
+    await expect(notFound?.text()).resolves.toBe("Not found.");
+    expect(notFound?.headers.get("X-Content-Type-Options")).toBe("nosniff");
+
+    release();
+    expect(protocol.unhandle).not.toHaveBeenCalled();
+  });
+
+  it("refuses to install the file protocol before Electron is ready", async () => {
+    const protocol = {
+      handle: vi.fn(),
+      isProtocolHandled: vi.fn(() => false),
+      unhandle: vi.fn(),
+    };
+
+    await expect(
+      installApplicationProtocol({
+        app: { isReady: () => false },
+        protocol,
+        rendererRoot: "/renderer",
+      }),
+    ).rejects.toThrow("PROTOCOL_REQUIRES_READY");
+    expect(protocol.handle).not.toHaveBeenCalled();
+  });
+
+  it("refuses to replace a tammy handler not owned by the registrar", async () => {
+    const { root } = await fixture();
+    const protocol = {
+      handle: vi.fn(),
+      isProtocolHandled: vi.fn(() => true),
+      unhandle: vi.fn(),
+    };
+
+    await expect(
+      installApplicationProtocol({
+        app: { isReady: () => true },
+        protocol,
+        rendererRoot: root,
+      }),
+    ).rejects.toThrow("PROTOCOL_HANDLER_NOT_OWNED");
+    expect(protocol.handle).not.toHaveBeenCalled();
+    expect(protocol.unhandle).not.toHaveBeenCalled();
+  });
+
+  it("reference-counts distinct protocol leases without weakening the owned handler", async () => {
+    const { root } = await fixture();
+    const other = await fixture();
+    let handled = false;
+    const protocol = {
+      handle: vi.fn(() => {
+        handled = true;
+      }),
+      isProtocolHandled: vi.fn(() => handled),
+      unhandle: vi.fn(() => {
+        handled = false;
+      }),
+    };
+    const options = {
+      app: { isReady: () => true },
+      protocol,
+      rendererRoot: root,
+    };
+
+    const first = await installApplicationProtocol(options);
+    const second = await installApplicationProtocol(options);
+
+    expect(first).not.toBe(second);
+    expect(protocol.handle).toHaveBeenCalledTimes(1);
+    first();
+    first();
+    expect(handled).toBe(true);
+    expect(protocol.unhandle).not.toHaveBeenCalled();
+
+    await expect(
+      installApplicationProtocol({ ...options, rendererRoot: other.root }),
+    ).rejects.toThrow("PROTOCOL_ALREADY_CONFIGURED");
+    expect(protocol.handle).toHaveBeenCalledTimes(1);
+    expect(protocol.unhandle).not.toHaveBeenCalled();
+
+    second();
+    const successor = await installApplicationProtocol(options);
+    expect(protocol.handle).toHaveBeenCalledTimes(1);
+    successor();
+    expect(handled).toBe(true);
+    expect(protocol.unhandle).not.toHaveBeenCalled();
+  });
+
+  it("returns a sanitized 404 if a validated asset is swapped before the request", async () => {
+    const { outside, root } = await fixture();
+    let handler: ((request: { method: string; url: string }) => Promise<Response>) | undefined;
     const protocol = {
       handle: vi.fn(
         (
@@ -241,40 +421,63 @@ describe("custom renderer protocol", () => {
       isProtocolHandled: vi.fn(() => false),
       unhandle: vi.fn(),
     };
-    const fetch = vi.fn(async () => new Response("asset"));
+    await installApplicationProtocol({
+      app: { isReady: () => true },
+      protocol,
+      rendererRoot: root,
+    });
+    await rename(join(root, "assets", "app.js"), join(root, "assets", "moved.js"));
+    await symlink(outside, join(root, "assets", "app.js"));
 
-    installApplicationProtocol({ app, fetch, protocol, rendererRoot: root });
-
-    expect(protocol.handle).toHaveBeenCalledWith("tammy", expect.any(Function));
-    await expect(
-      handler?.({ method: "GET", url: "tammy://app/assets/app.js" }),
-    ).resolves.toMatchObject({ status: 200 });
-    expect(fetch).toHaveBeenCalledWith(expect.stringMatching(/^file:.*assets\/app\.js$/));
-
-    const notFound = await handler?.({
-      method: "POST",
+    const response = await handler?.({
+      method: "GET",
       url: "tammy://app/assets/app.js",
     });
-    expect(notFound?.status).toBe(404);
-    expect(fetch).toHaveBeenCalledTimes(1);
+
+    expect(response?.status).toBe(404);
+    const body = await response?.text();
+    expect(body).toBe("Not found.");
+    expect(body).not.toContain("secret");
   });
 
-  it("refuses to install the file protocol before Electron is ready", () => {
-    const protocol = {
-      handle: vi.fn(),
-      isProtocolHandled: vi.fn(() => false),
-      unhandle: vi.fn(),
+  it("rejects oversized renderer assets without returning their bytes", async () => {
+    const { root } = await fixture();
+    await writeFile(join(root, "assets", "large.js"), new Uint8Array(MAX_RENDERER_ASSET_BYTES + 1));
+
+    await expect(readRendererAsset("tammy://app/assets/large.js", root)).resolves.toBeNull();
+  });
+
+  it("closes the exact file handle when reading fails", async () => {
+    const root = "/renderer";
+    const close = vi.fn(async () => undefined);
+    const fileStats = {
+      dev: 1,
+      ino: 2,
+      size: 5,
+      isDirectory: () => false,
+      isFile: () => true,
+      isSymbolicLink: () => false,
+    };
+    const rootStats = {
+      ...fileStats,
+      ino: 1,
+      isDirectory: () => true,
+      isFile: () => false,
+    };
+    const fileSystem = {
+      lstat: vi.fn(async (path: string) => (path === root ? rootStats : fileStats)),
+      open: vi.fn(async () => ({
+        close,
+        readFile: vi.fn(async () => {
+          throw new Error("sensitive read failure");
+        }),
+        stat: vi.fn(async () => fileStats),
+      })),
+      realpath: vi.fn(async (path: string) => path),
     };
 
-    expect(() =>
-      installApplicationProtocol({
-        app: { isReady: () => false },
-        fetch: vi.fn(),
-        protocol,
-        rendererRoot: "/renderer",
-      }),
-    ).toThrow("PROTOCOL_REQUIRES_READY");
-    expect(protocol.handle).not.toHaveBeenCalled();
+    await expect(readRendererAsset("tammy://app/index.html", root, fileSystem)).resolves.toBeNull();
+    expect(close).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -310,7 +513,7 @@ describe("Electron boundary installation", () => {
     ).toHaveLength(1);
   });
 
-  it("installs one idempotent CSP response hook", () => {
+  it("reference-counts distinct CSP leases through one monotonic dispatcher", () => {
     const listeners: Array<
       | ((
           details: { readonly responseHeaders?: Record<string, string[]> },
@@ -338,7 +541,7 @@ describe("Electron boundary installation", () => {
     const first = installContentSecurityPolicy(session as never, policy);
     const second = installContentSecurityPolicy(session as never, policy);
 
-    expect(first).toBe(second);
+    expect(first).not.toBe(second);
     expect(session.webRequest.onHeadersReceived).toHaveBeenCalledTimes(1);
     expect(session.webRequest.onHeadersReceived).toHaveBeenCalledWith(
       policy.responseFilter,
@@ -366,9 +569,36 @@ describe("Electron boundary installation", () => {
         (name) => name.toLowerCase() === "content-security-policy",
       ),
     ).toHaveLength(1);
+
+    first();
+    first();
+    expect(session.webRequest.onHeadersReceived).toHaveBeenCalledTimes(1);
+    const responseAfterStaleRelease = vi.fn();
+    listeners[0]?.({ responseHeaders: {} }, responseAfterStaleRelease);
+    expect(responseAfterStaleRelease).toHaveBeenCalledWith({
+      responseHeaders: {
+        "Content-Security-Policy": [policy.contentSecurityPolicy],
+      },
+    });
+
+    expect(() =>
+      installContentSecurityPolicy(
+        session as never,
+        createRendererSecurityPolicy("http://localhost:5173"),
+      ),
+    ).toThrow("CSP_ALREADY_CONFIGURED");
+    expect(session.webRequest.onHeadersReceived).toHaveBeenCalledTimes(1);
+
+    second();
+    const successor = installContentSecurityPolicy(session as never, policy);
+    expect(successor).not.toBe(first);
+    expect(successor).not.toBe(second);
+    successor();
+    expect(session.webRequest.onHeadersReceived).toHaveBeenCalledTimes(1);
+    expect(listeners).not.toContain(null);
   });
 
-  it("denies permission checks, permission requests, and downloads", () => {
+  it("keeps permissions and downloads denied across independent lease release order", () => {
     let permissionCheck: (() => boolean) | undefined;
     let permissionRequest:
       | ((_contents: unknown, _permission: unknown, callback: (allowed: boolean) => void) => void)
@@ -393,7 +623,14 @@ describe("Electron boundary installation", () => {
       }),
     };
 
-    installSessionGuards(session as never);
+    const first = installSessionGuards(session as never);
+    const second = installSessionGuards(session as never);
+
+    expect(first).not.toBe(second);
+    expect(session.setPermissionCheckHandler).toHaveBeenCalledTimes(1);
+    expect(session.setPermissionRequestHandler).toHaveBeenCalledTimes(1);
+    expect(session.setDevicePermissionHandler).toHaveBeenCalledTimes(1);
+    expect(session.on).toHaveBeenCalledTimes(1);
 
     expect(permissionCheck?.()).toBe(false);
     expect(devicePermission?.()).toBe(false);
@@ -405,17 +642,29 @@ describe("Electron boundary installation", () => {
     downloadHandler?.(event, item);
     expect(event.preventDefault).toHaveBeenCalledTimes(1);
     expect(item.cancel).toHaveBeenCalledTimes(1);
+
+    first();
+    first();
+    expect(permissionCheck?.()).toBe(false);
+    expect(devicePermission?.()).toBe(false);
+    second();
+    const successor = installSessionGuards(session as never);
+    successor();
+    expect(permissionCheck?.()).toBe(false);
+    expect(session.setPermissionCheckHandler).toHaveBeenCalledTimes(1);
+    expect(session.setPermissionRequestHandler).toHaveBeenCalledTimes(1);
+    expect(session.setDevicePermissionHandler).toHaveBeenCalledTimes(1);
+    expect(session.removeListener).not.toHaveBeenCalled();
   });
 
-  it("denies navigation except an exact reload and denies every new window", () => {
-    let navigationHandler:
-      | ((event: { preventDefault: () => void }, url: string) => void)
-      | undefined;
+  it("keeps navigation and new windows denied across independent lease release order", () => {
+    type NavigationHandler = (event: { preventDefault: () => void }, url: string) => void;
+    const navigationHandlers = new Map<string, NavigationHandler>();
     let windowOpenHandler: (() => { action: "deny" }) | undefined;
     const webContents = {
       getURL: vi.fn(() => PRODUCTION_APP_URL),
-      on: vi.fn((_event: string, handler: typeof navigationHandler) => {
-        navigationHandler = handler;
+      on: vi.fn((event: string, handler: NavigationHandler) => {
+        navigationHandlers.set(event, handler);
       }),
       removeListener: vi.fn(),
       setWindowOpenHandler: vi.fn((handler: typeof windowOpenHandler) => {
@@ -423,15 +672,37 @@ describe("Electron boundary installation", () => {
       }),
     };
 
-    installWindowGuards(webContents as never, PRODUCTION_APP_URL);
+    const first = installWindowGuards(webContents as never, PRODUCTION_APP_URL);
+    const second = installWindowGuards(webContents as never, PRODUCTION_APP_URL);
+
+    expect(first).not.toBe(second);
+    expect(webContents.on).toHaveBeenCalledTimes(2);
+    expect(webContents.setWindowOpenHandler).toHaveBeenCalledTimes(1);
 
     const allowedEvent = { preventDefault: vi.fn() };
-    navigationHandler?.(allowedEvent, PRODUCTION_APP_URL);
+    navigationHandlers.get("will-navigate")?.(allowedEvent, PRODUCTION_APP_URL);
     expect(allowedEvent.preventDefault).not.toHaveBeenCalled();
 
     const deniedEvent = { preventDefault: vi.fn() };
-    navigationHandler?.(deniedEvent, "https://example.com/");
+    navigationHandlers.get("will-redirect")?.(deniedEvent, "https://example.com/");
     expect(deniedEvent.preventDefault).toHaveBeenCalledTimes(1);
+    expect(windowOpenHandler?.()).toEqual({ action: "deny" });
+
+    first();
+    first();
+    const deniedAfterStaleRelease = { preventDefault: vi.fn() };
+    navigationHandlers.get("will-navigate")?.(deniedAfterStaleRelease, "https://example.com/");
+    expect(deniedAfterStaleRelease.preventDefault).toHaveBeenCalledTimes(1);
+
+    expect(() => installWindowGuards(webContents as never, "http://localhost:5173/")).toThrow(
+      "WINDOW_GUARDS_ALREADY_CONFIGURED",
+    );
+    second();
+    const successor = installWindowGuards(webContents as never, PRODUCTION_APP_URL);
+    successor();
+    expect(webContents.on).toHaveBeenCalledTimes(2);
+    expect(webContents.setWindowOpenHandler).toHaveBeenCalledTimes(1);
+    expect(webContents.removeListener).not.toHaveBeenCalled();
     expect(windowOpenHandler?.()).toEqual({ action: "deny" });
   });
 });

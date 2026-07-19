@@ -1,6 +1,9 @@
-import type { SystemDiagnostics as CoreSystemDiagnostics } from "../main/core-client";
-
-export type SystemDiagnostics = CoreSystemDiagnostics;
+export interface SystemDiagnostics {
+  readonly apiVersion: string;
+  readonly coreVersion: string;
+  readonly runtimeMode: "offline";
+  readonly networkRequired: false;
+}
 
 export const SYSTEM_DIAGNOSTICS_CHANNEL = "tammy:system-diagnostics";
 

@@ -2,18 +2,14 @@ import { ConnectError, createClient, type Interceptor, type Transport } from "@c
 import { type ConnectTransportOptions, createConnectTransport } from "@connectrpc/connect-node";
 import { RuntimeMode, SystemService } from "@tammy/connect-client/tammy/v1/system_pb.js";
 
+import type { SystemDiagnostics } from "../shared/desktop-api";
 import type { CoreReadiness } from "../shared/readiness";
+
+export type { SystemDiagnostics } from "../shared/desktop-api";
 
 const CAPABILITY_HEADER = "X-Tammy-Capability";
 const EXPECTED_API_VERSION = "tammy.v1";
 const CORE_VERSION_PATTERN = /^[\x20-\x7e]{1,128}$/;
-
-export interface SystemDiagnostics {
-  readonly apiVersion: string;
-  readonly coreVersion: string;
-  readonly runtimeMode: "offline";
-  readonly networkRequired: false;
-}
 
 export interface CoreClient {
   readonly getDiagnostics: () => Promise<SystemDiagnostics>;
