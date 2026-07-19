@@ -14,6 +14,8 @@
     "proto:lint": "buf lint",
     "proto:generate": "buf generate",
     "proto:breaking": "buf breaking --against .git#branch=master",
+    "desktop:test": "pnpm --dir apps/desktop test",
+    "desktop:typecheck": "pnpm --dir apps/desktop typecheck",
     "format": "biome check --write .",
     "lint": "biome check ."
   },
