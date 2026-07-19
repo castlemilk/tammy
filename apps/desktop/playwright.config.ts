@@ -8,6 +8,7 @@ if (target !== "darwin-arm64" && target !== "win32-x64") {
 export default defineConfig({
   expect: { timeout: 10_000 },
   outputDir: "test-results",
+  preserveOutput: "failures-only",
   projects: [{ name: target, testMatch: "foundation.spec.ts" }],
   reporter: "list",
   retries: process.env.CI ? 2 : 0,
