@@ -1,6 +1,7 @@
 import { mkdir, mkdtemp, realpath, rename, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -8,6 +9,7 @@ import {
   createSecureWebPreferences,
   denyPermission,
   denyWindowOpen,
+  detectAsarBoundary,
   installApplicationProtocol,
   installApplicationScheme,
   installContentSecurityPolicy,
@@ -183,6 +185,22 @@ describe("custom renderer protocol", () => {
     const { root } = await fixture();
 
     await expect(resolveRendererAssetPath(url, root)).resolves.toBeNull();
+  });
+
+  it("detects only a complete ASAR path component", () => {
+    const base = resolve("/physical");
+
+    expect(detectAsarBoundary(join(base, "app.asar", "renderer"))).toEqual({
+      archivePath: join(base, "app.asar"),
+      internalRootSegments: ["renderer"],
+    });
+    expect(detectAsarBoundary(join(base, "APP.ASAR", "renderer"))).toEqual({
+      archivePath: join(base, "APP.ASAR"),
+      internalRootSegments: ["renderer"],
+    });
+    expect(detectAsarBoundary(join(base, "app.asar.unpacked", "renderer"))).toBeNull();
+    expect(detectAsarBoundary(join(base, "app.asar.txt", "renderer"))).toBeNull();
+    expect(detectAsarBoundary(join(base, "not-asar", "renderer"))).toBeNull();
   });
 
   it("does not follow a renderer symlink outside the compiled root", async () => {
@@ -468,7 +486,7 @@ describe("custom renderer protocol", () => {
       lstat: vi.fn(async (path: string) => (path === root ? rootStats : fileStats)),
       open: vi.fn(async () => ({
         close,
-        readFile: vi.fn(async () => {
+        read: vi.fn(async () => {
           throw new Error("sensitive read failure");
         }),
         stat: vi.fn(async () => fileStats),
@@ -478,6 +496,379 @@ describe("custom renderer protocol", () => {
 
     await expect(readRendererAsset("tammy://app/index.html", root, fileSystem)).resolves.toBeNull();
     expect(close).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns no asset when closing the opened file handle fails", async () => {
+    const root = "/renderer";
+    const close = vi.fn(async () => {
+      throw new Error("sensitive close failure");
+    });
+    const fileStats = {
+      dev: 1,
+      ino: 2,
+      size: 5,
+      isDirectory: () => false,
+      isFile: () => true,
+      isSymbolicLink: () => false,
+    };
+    const rootStats = {
+      ...fileStats,
+      ino: 1,
+      isDirectory: () => true,
+      isFile: () => false,
+    };
+    const read = vi.fn(
+      async (buffer: Uint8Array, _offset: number, _length: number, position: number) => {
+        if (position > 0) {
+          return { bytesRead: 0 };
+        }
+        buffer.set(new TextEncoder().encode("asset"));
+        return { bytesRead: 5 };
+      },
+    );
+    const fileSystem = {
+      lstat: vi.fn(async (path: string) => (path === root ? rootStats : fileStats)),
+      open: vi.fn(async () => ({
+        close,
+        read,
+        stat: vi.fn(async () => fileStats),
+      })),
+      realpath: vi.fn(async (path: string) => path),
+    };
+
+    await expect(readRendererAsset("tammy://app/index.html", root, fileSystem)).resolves.toBeNull();
+    expect(read).toHaveBeenCalled();
+    expect(close).toHaveBeenCalledTimes(1);
+  });
+
+  it("bounds a file that grows after its opened size check", async () => {
+    const root = "/renderer";
+    const close = vi.fn(async () => undefined);
+    const fileStats = {
+      dev: 1,
+      ino: 2,
+      size: 5,
+      isDirectory: () => false,
+      isFile: () => true,
+      isSymbolicLink: () => false,
+    };
+    const rootStats = {
+      ...fileStats,
+      ino: 1,
+      isDirectory: () => true,
+      isFile: () => false,
+    };
+    const read = vi.fn(
+      async (buffer: Uint8Array, _offset: number, length: number, position: number) => {
+        if (position > MAX_RENDERER_ASSET_BYTES) {
+          return { bytesRead: 0 };
+        }
+        buffer.fill(1);
+        return { bytesRead: length };
+      },
+    );
+    const fileSystem = {
+      lstat: vi.fn(async (path: string) => (path === root ? rootStats : fileStats)),
+      open: vi.fn(async () => ({
+        close,
+        read,
+        stat: vi.fn(async () => fileStats),
+      })),
+      realpath: vi.fn(async (path: string) => path),
+    };
+
+    await expect(readRendererAsset("tammy://app/index.html", root, fileSystem)).resolves.toBeNull();
+    expect(read).toHaveBeenLastCalledWith(expect.any(Uint8Array), 0, 1, MAX_RENDERER_ASSET_BYTES);
+    expect(close).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("packaged ASAR asset security", () => {
+  function stats(kind: "directory" | "file" | "symlink", dev: number, ino: number, size: number) {
+    return {
+      dev,
+      ino,
+      size,
+      isDirectory: () => kind === "directory",
+      isFile: () => kind === "file",
+      isSymbolicLink: () => kind === "symlink",
+    };
+  }
+
+  function asarHarness(
+    options: {
+      readonly entrySize?: number;
+      readonly fetchFile?: (url: string) => Promise<Response>;
+    } = {},
+  ) {
+    const archivePath = resolve("/physical/app.asar");
+    const rendererRoot = join(archivePath, "renderer");
+    const indexPath = join(rendererRoot, "index.html");
+    let archiveIdentity = { dev: 11, ino: 12, size: 4096 };
+    let archiveSymlink = false;
+    let virtualIdentity = 100;
+    let handled = false;
+    let handler: ((request: { method: string; url: string }) => Promise<Response>) | undefined;
+    const protocol = {
+      handle: vi.fn(
+        (
+          _scheme: string,
+          registered: (request: { method: string; url: string }) => Promise<Response>,
+        ) => {
+          handled = true;
+          handler = registered;
+        },
+      ),
+      isProtocolHandled: vi.fn(() => handled),
+      unhandle: vi.fn(),
+    };
+    const fileSystem = {
+      lstat: vi.fn(async (path: string) => {
+        virtualIdentity += 1;
+        if (path === rendererRoot) {
+          return stats("directory", 0, virtualIdentity, 0);
+        }
+        if (path === indexPath) {
+          return stats("file", 0, virtualIdentity, options.entrySize ?? 5);
+        }
+        throw new Error("missing virtual entry");
+      }),
+      open: vi.fn(async () => {
+        throw new Error("ASAR entries must not use fs.open");
+      }),
+      realpath: vi.fn(async (path: string) => path),
+    };
+    const originalFileSystem = {
+      lstat: vi.fn(async (path: string) => {
+        if (path !== archivePath) {
+          throw new Error("unexpected physical path");
+        }
+        return stats(
+          archiveSymlink ? "symlink" : "file",
+          archiveIdentity.dev,
+          archiveIdentity.ino,
+          archiveIdentity.size,
+        );
+      }),
+      realpath: vi.fn(async (path: string) => path),
+    };
+    const fetchFile =
+      options.fetchFile ??
+      vi.fn(
+        async () =>
+          new Response("asset", {
+            headers: {
+              Authorization: "must-not-forward",
+              "Content-Type": "application/hostile",
+            },
+          }),
+      );
+
+    return {
+      archivePath,
+      fetchFile,
+      fileSystem,
+      getHandler: () => handler,
+      originalFileSystem,
+      protocol,
+      rendererRoot,
+      setArchiveIdentity: (identity: typeof archiveIdentity) => {
+        archiveIdentity = identity;
+      },
+      setArchiveSymlink: (symlink: boolean) => {
+        archiveSymlink = symlink;
+      },
+    };
+  }
+
+  it("ignores unstable virtual inode values while reusing the physical archive owner", async () => {
+    const harness = asarHarness();
+    const options = {
+      app: { isReady: () => true },
+      fetchFile: harness.fetchFile,
+      fileSystem: harness.fileSystem,
+      originalFileSystem: harness.originalFileSystem,
+      protocol: harness.protocol,
+      rendererRoot: harness.rendererRoot,
+    };
+
+    const first = await installApplicationProtocol(options);
+    const second = await installApplicationProtocol(options);
+
+    expect(first).not.toBe(second);
+    expect(harness.protocol.handle).toHaveBeenCalledTimes(1);
+    const response = await harness.getHandler()?.({
+      method: "GET",
+      url: "tammy://app/",
+    });
+    expect(response?.status).toBe(200);
+    await expect(response?.text()).resolves.toBe("asset");
+    expect(response?.headers.get("Content-Type")).toBe("text/html; charset=utf-8");
+    expect(response?.headers.get("X-Content-Type-Options")).toBe("nosniff");
+    expect(response?.headers.has("Authorization")).toBe(false);
+    expect(harness.fileSystem.open).not.toHaveBeenCalled();
+    expect(harness.fetchFile).toHaveBeenCalledWith(
+      pathToFileURL(join(harness.rendererRoot, "index.html")).href,
+    );
+    first();
+    second();
+  });
+
+  it("rejects an invalid virtual root and invalid virtual file type", async () => {
+    const invalidRoot = asarHarness();
+    invalidRoot.fileSystem.lstat.mockImplementation(async () => stats("file", 0, 1, 5));
+
+    await expect(
+      installApplicationProtocol({
+        app: { isReady: () => true },
+        fetchFile: invalidRoot.fetchFile,
+        fileSystem: invalidRoot.fileSystem,
+        originalFileSystem: invalidRoot.originalFileSystem,
+        protocol: invalidRoot.protocol,
+        rendererRoot: invalidRoot.rendererRoot,
+      }),
+    ).rejects.toThrow("INVALID_RENDERER_ROOT");
+    expect(invalidRoot.protocol.handle).not.toHaveBeenCalled();
+
+    const invalidFile = asarHarness();
+    invalidFile.fileSystem.lstat.mockImplementation(async (path: string) =>
+      stats("directory", 0, path.endsWith("index.html") ? 2 : 1, 0),
+    );
+    await installApplicationProtocol({
+      app: { isReady: () => true },
+      fetchFile: invalidFile.fetchFile,
+      fileSystem: invalidFile.fileSystem,
+      originalFileSystem: invalidFile.originalFileSystem,
+      protocol: invalidFile.protocol,
+      rendererRoot: invalidFile.rendererRoot,
+    });
+    const response = await invalidFile.getHandler()?.({
+      method: "GET",
+      url: "tammy://app/",
+    });
+    expect(response?.status).toBe(404);
+    expect(invalidFile.fetchFile).not.toHaveBeenCalled();
+  });
+
+  it("rejects a virtual symlink without fetching it", async () => {
+    const harness = asarHarness();
+    harness.fileSystem.lstat.mockImplementation(async (path: string) =>
+      stats(path.endsWith("index.html") ? "symlink" : "directory", 0, 1, 5),
+    );
+    await installApplicationProtocol({
+      app: { isReady: () => true },
+      fetchFile: harness.fetchFile,
+      fileSystem: harness.fileSystem,
+      originalFileSystem: harness.originalFileSystem,
+      protocol: harness.protocol,
+      rendererRoot: harness.rendererRoot,
+    });
+
+    const response = await harness.getHandler()?.({
+      method: "GET",
+      url: "tammy://app/",
+    });
+
+    expect(response?.status).toBe(404);
+    expect(harness.fetchFile).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["replacement", { dev: 11, ino: 99, size: 4096 }, false],
+    ["size change", { dev: 11, ino: 12, size: 8192 }, false],
+    ["symlink swap", { dev: 11, ino: 12, size: 4096 }, true],
+  ])("returns 404 after a physical archive %s", async (_name, identity, symlink) => {
+    const harness = asarHarness();
+    await installApplicationProtocol({
+      app: { isReady: () => true },
+      fetchFile: harness.fetchFile,
+      fileSystem: harness.fileSystem,
+      originalFileSystem: harness.originalFileSystem,
+      protocol: harness.protocol,
+      rendererRoot: harness.rendererRoot,
+    });
+    harness.setArchiveIdentity(identity);
+    harness.setArchiveSymlink(symlink);
+
+    const response = await harness.getHandler()?.({
+      method: "GET",
+      url: "tammy://app/",
+    });
+
+    expect(response?.status).toBe(404);
+    await expect(response?.text()).resolves.toBe("Not found.");
+    expect(harness.fetchFile).not.toHaveBeenCalled();
+  });
+
+  it("returns 404 when the physical archive changes during the file fetch", async () => {
+    const harness = asarHarness();
+    const fetchFile = vi.fn(async () => {
+      harness.setArchiveIdentity({ dev: 11, ino: 99, size: 4096 });
+      return new Response("asset");
+    });
+    await installApplicationProtocol({
+      app: { isReady: () => true },
+      fetchFile,
+      fileSystem: harness.fileSystem,
+      originalFileSystem: harness.originalFileSystem,
+      protocol: harness.protocol,
+      rendererRoot: harness.rendererRoot,
+    });
+
+    const response = await harness.getHandler()?.({
+      method: "GET",
+      url: "tammy://app/",
+    });
+
+    expect(fetchFile).toHaveBeenCalledTimes(1);
+    expect(response?.status).toBe(404);
+    await expect(response?.text()).resolves.toBe("Not found.");
+  });
+
+  it("rejects an oversized virtual entry before fetching it", async () => {
+    const harness = asarHarness({
+      entrySize: MAX_RENDERER_ASSET_BYTES + 1,
+    });
+    await installApplicationProtocol({
+      app: { isReady: () => true },
+      fetchFile: harness.fetchFile,
+      fileSystem: harness.fileSystem,
+      originalFileSystem: harness.originalFileSystem,
+      protocol: harness.protocol,
+      rendererRoot: harness.rendererRoot,
+    });
+
+    const response = await harness.getHandler()?.({
+      method: "GET",
+      url: "tammy://app/",
+    });
+
+    expect(response?.status).toBe(404);
+    expect(harness.fetchFile).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["rejection", async () => Promise.reject(new Error("sensitive fetch error"))],
+    ["non-ok response", async () => new Response("denied", { status: 500 })],
+    ["oversized response", async () => new Response(new Uint8Array(MAX_RENDERER_ASSET_BYTES + 1))],
+  ])("sanitizes an ASAR fetch %s", async (_name, fetchFile) => {
+    const harness = asarHarness({ fetchFile });
+    await installApplicationProtocol({
+      app: { isReady: () => true },
+      fetchFile,
+      fileSystem: harness.fileSystem,
+      originalFileSystem: harness.originalFileSystem,
+      protocol: harness.protocol,
+      rendererRoot: harness.rendererRoot,
+    });
+
+    const response = await harness.getHandler()?.({
+      method: "GET",
+      url: "tammy://app/",
+    });
+
+    expect(response?.status).toBe(404);
+    await expect(response?.text()).resolves.toBe("Not found.");
   });
 });
 

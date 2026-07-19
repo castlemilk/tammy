@@ -1,6 +1,8 @@
 import { constants } from "node:fs";
 import { lstat, open, realpath } from "node:fs/promises";
-import { extname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { createRequire } from "node:module";
+import { extname, isAbsolute, join, parse, relative, resolve, sep } from "node:path";
+import { pathToFileURL } from "node:url";
 
 import type {
   App,
@@ -60,14 +62,22 @@ interface RendererFileStats {
 
 interface RendererFileHandle {
   close(): Promise<void>;
-  readFile(): Promise<Uint8Array>;
+  read(
+    buffer: Uint8Array,
+    offset: number,
+    length: number,
+    position: number,
+  ): Promise<{ readonly bytesRead: number }>;
   stat(): Promise<RendererFileStats>;
 }
 
-export interface RendererFileSystem {
+export interface RendererMetadataFileSystem {
   lstat(path: string): Promise<RendererFileStats>;
-  open(path: string, flags: number): Promise<RendererFileHandle>;
   realpath(path: string): Promise<string>;
+}
+
+export interface RendererFileSystem extends RendererMetadataFileSystem {
+  open(path: string, flags: number): Promise<RendererFileHandle>;
 }
 
 export interface RendererAsset {
@@ -75,11 +85,27 @@ export interface RendererAsset {
   readonly contentType: string;
 }
 
-interface ValidatedRendererRoot {
+interface ValidatedUnpackedRoot {
+  readonly kind: "unpacked";
   readonly dev: number;
   readonly ino: number;
   readonly path: string;
 }
+
+interface PhysicalArchiveIdentity {
+  readonly dev: number;
+  readonly ino: number;
+  readonly path: string;
+  readonly size: number;
+}
+
+interface ValidatedAsarRoot {
+  readonly archive: PhysicalArchiveIdentity;
+  readonly kind: "asar";
+  readonly path: string;
+}
+
+type ValidatedRendererRoot = ValidatedUnpackedRoot | ValidatedAsarRoot;
 
 interface ValidatedRendererAsset {
   readonly components: readonly ComponentIdentity[];
@@ -99,6 +125,9 @@ interface LeaseRecord {
 interface SchemeRecord extends LeaseRecord {}
 
 interface ProtocolRecord extends LeaseRecord {
+  readonly fetchFile: ((url: string) => Promise<Response>) | undefined;
+  readonly fileSystem: RendererFileSystem;
+  readonly originalFileSystem: RendererMetadataFileSystem | undefined;
   readonly root: ValidatedRendererRoot;
 }
 
@@ -130,18 +159,78 @@ type GuardedWebContents = Pick<
 
 interface ApplicationProtocolOptions {
   readonly app: Pick<App, "isReady">;
+  readonly fetchFile?: (url: string) => Promise<Response>;
+  readonly fileSystem?: RendererFileSystem;
+  readonly originalFileSystem?: RendererMetadataFileSystem;
   readonly protocol: ApplicationProtocol;
   readonly rendererRoot: string;
 }
 
-// Electron patches these Node fs operations for files inside ASAR archives. Packaged
-// archives are immutable; the identity and no-follow checks also protect unpacked and
-// development renderer roots where filesystem entries can change between operations.
+// Electron patches these metadata operations for paths inside ASAR archives. File handles
+// are used only for unpacked assets; packaged assets are read through Electron net.fetch.
 const nodeRendererFileSystem: RendererFileSystem = {
   lstat,
   open,
   realpath,
 };
+let originalRendererFileSystem: RendererMetadataFileSystem | undefined;
+
+function loadOriginalFileSystem(): RendererMetadataFileSystem {
+  if (originalRendererFileSystem) {
+    return originalRendererFileSystem;
+  }
+
+  const require = createRequire(import.meta.url);
+  const loaded = require("original-fs") as {
+    readonly promises?: {
+      lstat(path: string): Promise<RendererFileStats>;
+      realpath(path: string): Promise<string>;
+    };
+  };
+  if (!loaded.promises) {
+    throw new Error("ORIGINAL_FS_UNAVAILABLE");
+  }
+  const promises = loaded.promises;
+  originalRendererFileSystem = {
+    lstat: (path) => promises.lstat(path),
+    realpath: (path) => promises.realpath(path),
+  };
+  return originalRendererFileSystem;
+}
+
+export interface AsarBoundary {
+  readonly archivePath: string;
+  readonly internalRootSegments: readonly string[];
+}
+
+export function detectAsarBoundary(rendererRoot: string): AsarBoundary | null {
+  const absoluteRoot = resolve(rendererRoot);
+  const pathRoot = parse(absoluteRoot).root;
+  const relativeRoot = relative(pathRoot, absoluteRoot);
+  if (relativeRoot === "" || relativeRoot === ".") {
+    return null;
+  }
+
+  const segments = relativeRoot.split(sep);
+  const archiveIndex = segments.findIndex((segment) => /\.asar$/i.test(segment));
+  if (archiveIndex < 0 || archiveIndex === segments.length - 1) {
+    return null;
+  }
+  const internalRootSegments = segments.slice(archiveIndex + 1);
+  if (
+    internalRootSegments.some(
+      (segment) =>
+        segment === "" || segment === "." || segment === ".." || isWindowsAmbiguousSegment(segment),
+    )
+  ) {
+    return null;
+  }
+
+  return {
+    archivePath: join(pathRoot, ...segments.slice(0, archiveIndex + 1)),
+    internalRootSegments,
+  };
+}
 
 /**
  * Electron's singleton setter APIs have no corresponding getter, so ownership cannot
@@ -329,10 +418,10 @@ function sameIdentity(
   return left.dev === right.dev && left.ino === right.ino;
 }
 
-async function validateRendererRoot(
+async function validateUnpackedRendererRoot(
   rendererRoot: string,
   fileSystem: RendererFileSystem,
-): Promise<ValidatedRendererRoot | null> {
+): Promise<ValidatedUnpackedRoot | null> {
   try {
     const configuredRoot = resolve(rendererRoot);
     const configuredStats = await fileSystem.lstat(configuredRoot);
@@ -353,6 +442,7 @@ async function validateRendererRoot(
     return {
       dev: canonicalStats.dev,
       ino: canonicalStats.ino,
+      kind: "unpacked",
       path: canonicalRoot,
     };
   } catch {
@@ -362,7 +452,7 @@ async function validateRendererRoot(
 
 async function validateRendererAsset(
   segments: readonly string[],
-  root: ValidatedRendererRoot,
+  root: ValidatedUnpackedRoot,
   fileSystem: RendererFileSystem,
 ): Promise<ValidatedRendererAsset | null> {
   try {
@@ -399,7 +489,7 @@ async function validateRendererAsset(
 }
 
 async function identitiesRemainStable(
-  root: ValidatedRendererRoot,
+  root: ValidatedUnpackedRoot,
   asset: ValidatedRendererAsset,
   fileSystem: RendererFileSystem,
 ): Promise<boolean> {
@@ -427,14 +517,14 @@ async function resolveRendererAsset(
   fileSystem: RendererFileSystem,
 ): Promise<{
   readonly asset: ValidatedRendererAsset;
-  readonly root: ValidatedRendererRoot;
+  readonly root: ValidatedUnpackedRoot;
 } | null> {
   const segments = rawRendererSegments(url);
   if (segments === null) {
     return null;
   }
 
-  const root = await validateRendererRoot(rendererRoot, fileSystem);
+  const root = await validateUnpackedRendererRoot(rendererRoot, fileSystem);
   if (root === null) {
     return null;
   }
@@ -452,7 +542,7 @@ export async function resolveRendererAssetPath(
 
 async function readRendererAssetFromRoot(
   url: string,
-  expectedRoot: ValidatedRendererRoot | undefined,
+  expectedRoot: ValidatedUnpackedRoot | undefined,
   rendererRoot: string,
   fileSystem: RendererFileSystem,
 ): Promise<RendererAsset | null> {
@@ -465,6 +555,7 @@ async function readRendererAssetFromRoot(
   }
 
   let handle: RendererFileHandle | undefined;
+  let result: RendererAsset | null = null;
   try {
     handle = await fileSystem.open(validated.asset.path, OPEN_READ_ONLY_NO_FOLLOW);
     const openedStats = await handle.stat();
@@ -477,26 +568,62 @@ async function readRendererAssetFromRoot(
       openedStats.size > MAX_RENDERER_ASSET_BYTES ||
       !(await identitiesRemainStable(validated.root, validated.asset, fileSystem))
     ) {
-      return null;
+      result = null;
+    } else {
+      const bytes = await readFileHandleBounded(handle);
+      if (bytes !== null) {
+        result = Object.freeze({
+          bytes,
+          contentType:
+            CONTENT_TYPES[extname(validated.asset.path).toLowerCase()] ??
+            "application/octet-stream",
+        });
+      }
     }
-
-    const bytes = await handle.readFile();
-    if (bytes.byteLength > MAX_RENDERER_ASSET_BYTES) {
-      return null;
-    }
-
-    return Object.freeze({
-      bytes: new Uint8Array(bytes),
-      contentType:
-        CONTENT_TYPES[extname(validated.asset.path).toLowerCase()] ?? "application/octet-stream",
-    });
   } catch {
-    return null;
-  } finally {
-    if (handle !== undefined) {
-      await handle.close().catch(() => undefined);
+    result = null;
+  }
+
+  if (handle !== undefined) {
+    try {
+      await handle.close();
+    } catch {
+      return null;
     }
   }
+  return result;
+}
+
+async function readFileHandleBounded(handle: RendererFileHandle): Promise<Uint8Array | null> {
+  const chunks: Uint8Array[] = [];
+  let position = 0;
+  let total = 0;
+
+  while (total <= MAX_RENDERER_ASSET_BYTES) {
+    const capacity = Math.min(64 * 1024, MAX_RENDERER_ASSET_BYTES + 1 - total);
+    const buffer = new Uint8Array(capacity);
+    const { bytesRead } = await handle.read(buffer, 0, capacity, position);
+    if (bytesRead === 0) {
+      break;
+    }
+    if (bytesRead < 0 || bytesRead > capacity) {
+      return null;
+    }
+    chunks.push(buffer.slice(0, bytesRead));
+    position += bytesRead;
+    total += bytesRead;
+  }
+
+  if (total > MAX_RENDERER_ASSET_BYTES) {
+    return null;
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
 }
 
 export async function readRendererAsset(
@@ -505,6 +632,198 @@ export async function readRendererAsset(
   fileSystem: RendererFileSystem = nodeRendererFileSystem,
 ): Promise<RendererAsset | null> {
   return readRendererAssetFromRoot(url, undefined, rendererRoot, fileSystem);
+}
+
+function sameArchiveIdentity(
+  left: PhysicalArchiveIdentity,
+  right: Pick<RendererFileStats, "dev" | "ino" | "size">,
+): boolean {
+  return left.dev === right.dev && left.ino === right.ino && left.size === right.size;
+}
+
+async function validatePhysicalArchive(
+  archivePath: string,
+  fileSystem: RendererMetadataFileSystem,
+): Promise<PhysicalArchiveIdentity | null> {
+  try {
+    const configuredArchive = resolve(archivePath);
+    const configuredStats = await fileSystem.lstat(configuredArchive);
+    if (configuredStats.isSymbolicLink() || !configuredStats.isFile() || configuredStats.size < 0) {
+      return null;
+    }
+
+    const canonicalArchive = await fileSystem.realpath(configuredArchive);
+    const canonicalStats = await fileSystem.lstat(canonicalArchive);
+    if (
+      canonicalStats.isSymbolicLink() ||
+      !canonicalStats.isFile() ||
+      !sameIdentity(configuredStats, canonicalStats) ||
+      configuredStats.size !== canonicalStats.size
+    ) {
+      return null;
+    }
+    return {
+      dev: canonicalStats.dev,
+      ino: canonicalStats.ino,
+      path: canonicalArchive,
+      size: canonicalStats.size,
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function physicalArchiveRemainsStable(
+  archive: PhysicalArchiveIdentity,
+  fileSystem: RendererMetadataFileSystem,
+): Promise<boolean> {
+  try {
+    const stats = await fileSystem.lstat(archive.path);
+    return !stats.isSymbolicLink() && stats.isFile() && sameArchiveIdentity(archive, stats);
+  } catch {
+    return false;
+  }
+}
+
+async function validateAsarRendererRoot(
+  boundary: AsarBoundary,
+  fileSystem: RendererFileSystem,
+  originalFileSystem: RendererMetadataFileSystem,
+): Promise<ValidatedAsarRoot | null> {
+  const archive = await validatePhysicalArchive(boundary.archivePath, originalFileSystem);
+  if (archive === null) {
+    return null;
+  }
+
+  const virtualRoot = join(archive.path, ...boundary.internalRootSegments);
+  if (!isContainedPath(archive.path, virtualRoot)) {
+    return null;
+  }
+  try {
+    const rootStats = await fileSystem.lstat(virtualRoot);
+    if (rootStats.isSymbolicLink() || !rootStats.isDirectory()) {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+  return {
+    archive,
+    kind: "asar",
+    path: virtualRoot,
+  };
+}
+
+async function validateAsarEntry(
+  url: string,
+  root: ValidatedAsarRoot,
+  fileSystem: RendererFileSystem,
+): Promise<{ readonly path: string; readonly size: number } | null> {
+  const segments = rawRendererSegments(url);
+  if (segments === null) {
+    return null;
+  }
+
+  try {
+    const rootStats = await fileSystem.lstat(root.path);
+    if (rootStats.isSymbolicLink() || !rootStats.isDirectory()) {
+      return null;
+    }
+
+    let candidate = root.path;
+    let fileSize = -1;
+    for (const [index, segment] of segments.entries()) {
+      candidate = join(candidate, segment);
+      if (!isContainedPath(root.path, candidate)) {
+        return null;
+      }
+      const stats = await fileSystem.lstat(candidate);
+      const finalComponent = index === segments.length - 1;
+      if (stats.isSymbolicLink() || (finalComponent ? !stats.isFile() : !stats.isDirectory())) {
+        return null;
+      }
+      if (finalComponent) {
+        fileSize = stats.size;
+      }
+    }
+
+    return fileSize >= 0 && fileSize <= MAX_RENDERER_ASSET_BYTES
+      ? { path: candidate, size: fileSize }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+async function readResponseBodyBounded(response: Response): Promise<Uint8Array | null> {
+  if (!response.body) {
+    return new Uint8Array();
+  }
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      total += value.byteLength;
+      if (total > MAX_RENDERER_ASSET_BYTES) {
+        await reader.cancel().catch(() => undefined);
+        return null;
+      }
+      chunks.push(new Uint8Array(value));
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
+}
+
+async function readAsarRendererAsset(
+  url: string,
+  root: ValidatedAsarRoot,
+  fileSystem: RendererFileSystem,
+  originalFileSystem: RendererMetadataFileSystem,
+  fetchFile: (url: string) => Promise<Response>,
+): Promise<RendererAsset | null> {
+  if (!(await physicalArchiveRemainsStable(root.archive, originalFileSystem))) {
+    return null;
+  }
+  const entry = await validateAsarEntry(url, root, fileSystem);
+  if (entry === null) {
+    return null;
+  }
+
+  try {
+    const response = await fetchFile(pathToFileURL(entry.path).href);
+    if (!response.ok) {
+      return null;
+    }
+    const bytes = await readResponseBodyBounded(response);
+    if (
+      bytes === null ||
+      bytes.byteLength !== entry.size ||
+      !(await physicalArchiveRemainsStable(root.archive, originalFileSystem))
+    ) {
+      return null;
+    }
+    return Object.freeze({
+      bytes,
+      contentType: CONTENT_TYPES[extname(entry.path).toLowerCase()] ?? "application/octet-stream",
+    });
+  } catch {
+    return null;
+  }
 }
 
 export function installApplicationScheme(options: {
@@ -560,6 +879,21 @@ function assetResponse(asset: RendererAsset): Response {
   });
 }
 
+function sameRendererRoot(left: ValidatedRendererRoot, right: ValidatedRendererRoot): boolean {
+  if (left.kind !== right.kind || left.path !== right.path) {
+    return false;
+  }
+  if (left.kind === "unpacked" && right.kind === "unpacked") {
+    return sameIdentity(left, right);
+  }
+  if (left.kind === "asar" && right.kind === "asar") {
+    return (
+      left.archive.path === right.archive.path && sameArchiveIdentity(left.archive, right.archive)
+    );
+  }
+  return false;
+}
+
 export async function installApplicationProtocol(
   options: ApplicationProtocolOptions,
 ): Promise<() => void> {
@@ -567,14 +901,31 @@ export async function installApplicationProtocol(
     throw new Error("PROTOCOL_REQUIRES_READY");
   }
 
-  const root = await validateRendererRoot(options.rendererRoot, nodeRendererFileSystem);
+  const fileSystem = options.fileSystem ?? nodeRendererFileSystem;
+  const boundary = detectAsarBoundary(options.rendererRoot);
+  let originalFileSystem: RendererMetadataFileSystem | undefined;
+  let root: ValidatedRendererRoot | null;
+  if (boundary) {
+    originalFileSystem = options.originalFileSystem ?? loadOriginalFileSystem();
+    root = await validateAsarRendererRoot(boundary, fileSystem, originalFileSystem);
+    if (!options.fetchFile) {
+      throw new Error("ASAR_FETCH_REQUIRED");
+    }
+  } else {
+    root = await validateUnpackedRendererRoot(options.rendererRoot, fileSystem);
+  }
   if (root === null) {
     throw new Error("INVALID_RENDERER_ROOT");
   }
 
   const existing = electronSecurityRegistrar.protocols.get(options.protocol);
   if (existing) {
-    if (existing.root.path !== root.path || !sameIdentity(existing.root, root)) {
+    if (
+      !sameRendererRoot(existing.root, root) ||
+      existing.fileSystem !== fileSystem ||
+      existing.originalFileSystem !== originalFileSystem ||
+      existing.fetchFile !== options.fetchFile
+    ) {
       throw new Error("PROTOCOL_ALREADY_CONFIGURED");
     }
     if (!options.protocol.isProtocolHandled(CUSTOM_SCHEME)) {
@@ -592,16 +943,26 @@ export async function installApplicationProtocol(
       return notFoundResponse();
     }
 
-    const asset = await readRendererAssetFromRoot(
-      request.url,
-      root,
-      root.path,
-      nodeRendererFileSystem,
-    );
+    const asset =
+      root.kind === "asar"
+        ? await readAsarRendererAsset(
+            request.url,
+            root,
+            fileSystem,
+            originalFileSystem as RendererMetadataFileSystem,
+            options.fetchFile as (url: string) => Promise<Response>,
+          )
+        : await readRendererAssetFromRoot(request.url, root, root.path, fileSystem);
     return asset === null ? notFoundResponse() : assetResponse(asset);
   });
 
-  const record: ProtocolRecord = { leases: new Set(), root };
+  const record: ProtocolRecord = {
+    fetchFile: options.fetchFile,
+    fileSystem,
+    leases: new Set(),
+    originalFileSystem,
+    root,
+  };
   electronSecurityRegistrar.protocols.set(options.protocol, record);
   return createLease(record);
 }
