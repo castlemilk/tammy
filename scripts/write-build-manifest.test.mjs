@@ -484,6 +484,45 @@ test("does not clean a replacement build root after taking the staging lock", as
   }
 });
 
+test("does not traverse a symlink replacement while cleaning failed staging", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "tammy-manifest-symlink-swap-"));
+  const buildRoot = path.join(root, "resources", "build");
+  const moved = `${buildRoot}-moved`;
+  const external = path.join(root, "external");
+  const externalFiles = new Map([
+    [".build-manifest.json.tmp", Buffer.from("external temporary bytes\0")],
+    ["build-manifest.json", Buffer.from('{"external":"manifest"}\n')],
+    [".build-manifest.lock", Buffer.from("external lock bytes\n")],
+    ["build-manifest.lock", Buffer.from("another lock-named file\n")],
+  ]);
+  try {
+    await mkdir(buildRoot, { recursive: true });
+    await mkdir(external);
+    await writeFile(path.join(buildRoot, ".gitkeep"), "");
+    for (const [name, bytes] of externalFiles) {
+      await writeFile(path.join(external, name), bytes);
+    }
+    await assert.rejects(
+      writeBuildManifest({
+        beforeCleanup: async () => {
+          await rename(buildRoot, moved);
+          await symlink(external, buildRoot, "dir");
+        },
+        buildRoot,
+        manifest: createBuildManifest(validInput()),
+      }),
+      /BUILD_STAGING_INVALID/,
+    );
+    assert.equal((await lstat(buildRoot)).isSymbolicLink(), true);
+    assert.deepEqual((await readdir(external)).sort(), [...externalFiles.keys()].sort());
+    for (const [name, bytes] of externalFiles) {
+      assert.deepEqual(await readFile(path.join(external, name)), bytes);
+    }
+  } finally {
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
 test("rejects an invalid build staging keep file", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "tammy-manifest-keep-"));
   const buildRoot = path.join(root, "resources", "build");

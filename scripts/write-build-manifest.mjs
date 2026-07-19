@@ -233,14 +233,43 @@ function hashFile(file, code, maxBytes = 512 * 1024 * 1024) {
   return hashStableFile(file, { code, maxBytes });
 }
 
+function sameDirectoryIdentity(stats, expected) {
+  return Boolean(
+    stats?.isDirectory() &&
+      !stats.isSymbolicLink() &&
+      stats.dev === expected?.dev &&
+      stats.ino === expected?.ino,
+  );
+}
+
+async function assertBuildRootIdentity(buildRoot, expected) {
+  const stats = await lstat(buildRoot, { bigint: true }).catch(() => null);
+  if (!sameDirectoryIdentity(stats, expected)) {
+    throw new Error("BUILD_STAGING_INVALID");
+  }
+  return stats;
+}
+
+async function removeOwnedBuildFile(buildRoot, expectedRoot, file, expectedFile) {
+  if (!expectedRoot || !expectedFile) return;
+  const currentRoot = await lstat(buildRoot, { bigint: true }).catch(() => null);
+  if (!sameDirectoryIdentity(currentRoot, expectedRoot)) return;
+  const stats = await lstat(file, { bigint: true }).catch(() => null);
+  if (
+    !stats?.isFile() ||
+    stats.isSymbolicLink() ||
+    stats.dev !== expectedFile.dev ||
+    stats.ino !== expectedFile.ino
+  ) {
+    return;
+  }
+  const revalidatedRoot = await lstat(buildRoot, { bigint: true }).catch(() => null);
+  if (!sameDirectoryIdentity(revalidatedRoot, expectedRoot)) return;
+  await rm(file, { force: true });
+}
+
 async function cleanBuildRoot(buildRoot, expectedRoot) {
-  const rootStats = await lstat(buildRoot, { bigint: true }).catch(() => null);
-  if (!rootStats?.isDirectory() || rootStats.isSymbolicLink()) {
-    throw new Error("BUILD_STAGING_INVALID");
-  }
-  if (expectedRoot && (rootStats.dev !== expectedRoot.dev || rootStats.ino !== expectedRoot.ino)) {
-    throw new Error("BUILD_STAGING_INVALID");
-  }
+  const rootStats = await assertBuildRootIdentity(buildRoot, expectedRoot);
   const keep = path.join(buildRoot, ".gitkeep");
   const keepStats = await lstat(keep, { bigint: true }).catch(() => null);
   if (!keepStats?.isFile() || keepStats.isSymbolicLink() || keepStats.size !== 0n) {
@@ -248,10 +277,7 @@ async function cleanBuildRoot(buildRoot, expectedRoot) {
   }
   for (const entry of await readdir(buildRoot)) {
     if (entry !== ".gitkeep") {
-      const currentRoot = await lstat(buildRoot, { bigint: true });
-      if (currentRoot.dev !== rootStats.dev || currentRoot.ino !== rootStats.ino) {
-        throw new Error("BUILD_STAGING_INVALID");
-      }
+      await assertBuildRootIdentity(buildRoot, expectedRoot);
       await rm(path.join(buildRoot, entry), { force: true, recursive: true });
     }
   }
@@ -304,7 +330,10 @@ export async function writeBuildManifest({
   const temporary = path.join(buildRoot, ".build-manifest.json.tmp");
   let lockHandle;
   let lockIdentity;
+  let resourcesIdentity;
   let stagingIdentity;
+  let originalRootIdentity;
+  let manifestFileIdentity;
   const bytes = Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`);
   try {
     const [rootStats, resourcesStats] = await Promise.all([
@@ -319,6 +348,9 @@ export async function writeBuildManifest({
     ) {
       throw new Error("BUILD_STAGING_INVALID");
     }
+    originalRootIdentity = { dev: rootStats.dev, ino: rootStats.ino };
+    resourcesIdentity = { dev: resourcesStats.dev, ino: resourcesStats.ino };
+    await assertBuildRootIdentity(buildRoot, originalRootIdentity);
     try {
       lockHandle = await open(
         lock,
@@ -333,10 +365,7 @@ export async function writeBuildManifest({
     await lockHandle.writeFile("tammy-build-manifest-v1\n");
     await lockHandle.sync();
     await beforeCleanup?.();
-    stagingIdentity = await cleanBuildRoot(buildRoot, {
-      dev: rootStats.dev,
-      ino: rootStats.ino,
-    });
+    stagingIdentity = await cleanBuildRoot(buildRoot, originalRootIdentity);
     const currentResources = await lstat(resourcesRoot, {
       bigint: true,
     });
@@ -346,17 +375,22 @@ export async function writeBuildManifest({
     ) {
       throw new Error("BUILD_STAGING_INVALID");
     }
+    await assertBuildRootIdentity(buildRoot, originalRootIdentity);
     const temporaryHandle = await open(
       temporary,
       constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | (constants.O_NOFOLLOW ?? 0),
       0o600,
     );
     try {
+      const openedTemporary = await temporaryHandle.stat({ bigint: true });
+      if (!openedTemporary.isFile()) throw new Error("MANIFEST_WRITE_FAILED");
+      manifestFileIdentity = { dev: openedTemporary.dev, ino: openedTemporary.ino };
       await temporaryHandle.writeFile(bytes);
       await temporaryHandle.sync();
     } finally {
       await temporaryHandle.close();
     }
+    await assertBuildRootIdentity(buildRoot, originalRootIdentity);
     await renameFile(temporary, destination);
     const published = await readStableFileBytes(destination, {
       code: "MANIFEST_WRITE_FAILED",
@@ -365,10 +399,8 @@ export async function writeBuildManifest({
     if (!published.equals(bytes)) throw new Error("MANIFEST_WRITE_FAILED");
     await validateBuildRoot(buildRoot, stagingIdentity);
   } catch (error) {
-    if (lockHandle) {
-      await rm(temporary, { force: true });
-      await rm(destination, { force: true });
-    }
+    await removeOwnedBuildFile(buildRoot, originalRootIdentity, temporary, manifestFileIdentity);
+    await removeOwnedBuildFile(buildRoot, originalRootIdentity, destination, manifestFileIdentity);
     if (
       error instanceof Error &&
       ["BUILD_STAGING_INVALID", "BUILD_STAGING_LOCKED"].includes(error.message)
@@ -378,15 +410,30 @@ export async function writeBuildManifest({
     throw new Error("MANIFEST_WRITE_FAILED");
   } finally {
     await lockHandle?.close().catch(() => {});
-    if (lockIdentity) {
-      const lexicalLock = await lstat(lock, { bigint: true }).catch(() => null);
+    if (lockIdentity && originalRootIdentity && resourcesIdentity) {
+      const [currentRoot, currentResources, lexicalLock] = await Promise.all([
+        lstat(buildRoot, { bigint: true }).catch(() => null),
+        lstat(resourcesRoot, { bigint: true }).catch(() => null),
+        lstat(lock, { bigint: true }).catch(() => null),
+      ]);
       if (
+        sameDirectoryIdentity(currentRoot, originalRootIdentity) &&
+        sameDirectoryIdentity(currentResources, resourcesIdentity) &&
         lexicalLock?.isFile() &&
         !lexicalLock.isSymbolicLink() &&
         lexicalLock.dev === lockIdentity.dev &&
         lexicalLock.ino === lockIdentity.ino
       ) {
-        await rm(lock, { force: true });
+        const [revalidatedRoot, revalidatedResources] = await Promise.all([
+          lstat(buildRoot, { bigint: true }).catch(() => null),
+          lstat(resourcesRoot, { bigint: true }).catch(() => null),
+        ]);
+        if (
+          sameDirectoryIdentity(revalidatedRoot, originalRootIdentity) &&
+          sameDirectoryIdentity(revalidatedResources, resourcesIdentity)
+        ) {
+          await rm(lock, { force: true });
+        }
       }
     }
   }
@@ -401,7 +448,7 @@ export async function writeBuildManifest({
     }
     await validateBuildRoot(buildRoot, stagingIdentity);
   } catch {
-    await rm(destination, { force: true });
+    await removeOwnedBuildFile(buildRoot, originalRootIdentity, destination, manifestFileIdentity);
     throw new Error("MANIFEST_WRITE_FAILED");
   }
   return destination;
