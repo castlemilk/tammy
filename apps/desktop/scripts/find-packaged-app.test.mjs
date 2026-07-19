@@ -9,6 +9,41 @@ import { resolvePackagedLayout, verifyPackagedLayout } from "./find-packaged-app
 
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
 
+function encodeAsar(header, payload = Buffer.alloc(0)) {
+  const json = Buffer.from(JSON.stringify(header));
+  const alignedJsonLength = Math.ceil(json.length / 4) * 4;
+  const headerPayloadSize = 4 + alignedJsonLength;
+  const headerPickle = Buffer.alloc(4 + headerPayloadSize);
+  headerPickle.writeUInt32LE(headerPayloadSize, 0);
+  headerPickle.writeInt32LE(json.length, 4);
+  json.copy(headerPickle, 8);
+  const sizePickle = Buffer.alloc(8);
+  sizePickle.writeUInt32LE(4, 0);
+  sizePickle.writeUInt32LE(headerPickle.length, 4);
+  return Buffer.concat([sizePickle, headerPickle, payload]);
+}
+
+function coreAsarHeader(target, executable, unpacked) {
+  const core = unpacked ? { size: 1, unpacked: true } : { offset: "0", size: 1 };
+  return {
+    files: {
+      resources: {
+        files: {
+          core: {
+            files: {
+              [target]: {
+                files: {
+                  [executable]: core,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  };
+}
+
 async function withFixture(platform, arch, callback) {
   const root = await mkdtemp(path.join(tmpdir(), "tammy-package-layout-"));
   const desktopRoot = path.join(root, "apps", "desktop");
@@ -30,6 +65,17 @@ async function withFixture(platform, arch, callback) {
   await writeFile(layout.sourceCore, coreBytes);
   await writeFile(layout.packagedCore, coreBytes);
   await writeFile(layout.appExecutable, "application");
+  await writeFile(
+    layout.appAsar,
+    encodeAsar(
+      {
+        files: {
+          "package.json": { offset: "0", size: 2 },
+        },
+      },
+      Buffer.from("{}"),
+    ),
+  );
   const manifestBytes = Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`);
   await writeFile(layout.sourceManifest, manifestBytes);
   await writeFile(layout.packagedManifest, manifestBytes);
@@ -48,6 +94,7 @@ async function withFixture(platform, arch, callback) {
 test("resolves the exact macOS arm64 package paths", () => {
   const desktopRoot = path.resolve("/workspace/apps/desktop");
   assert.deepEqual(resolvePackagedLayout({ desktopRoot, platform: "darwin", arch: "arm64" }), {
+    appAsar: path.join(desktopRoot, "out/Tammy-darwin-arm64/Tammy.app/Contents/Resources/app.asar"),
     appExecutable: path.join(desktopRoot, "out/Tammy-darwin-arm64/Tammy.app/Contents/MacOS/Tammy"),
     packagedBuildRoot: path.join(
       desktopRoot,
@@ -77,6 +124,7 @@ test("resolves the exact Windows x64 package paths", () => {
   const desktopRoot = path.resolve("/workspace/apps/desktop");
   const layout = resolvePackagedLayout({ desktopRoot, platform: "win32", arch: "x64" });
   assert.equal(layout.appExecutable, path.join(desktopRoot, "out/Tammy-win32-x64/Tammy.exe"));
+  assert.equal(layout.appAsar, path.join(desktopRoot, "out/Tammy-win32-x64/resources/app.asar"));
   assert.equal(
     layout.packagedCore,
     path.join(desktopRoot, "out/Tammy-win32-x64/resources/core/win32-x64/tammy-core.exe"),
@@ -251,9 +299,86 @@ test("rejects manifest byte mismatch, core hash mismatch, and ASAR-contained cor
       /PACKAGED_CORE_HASH_MISMATCH/,
     );
   });
-  const desktopRoot = path.resolve("/workspace/apps/desktop");
-  const layout = resolvePackagedLayout({ desktopRoot, platform: "darwin", arch: "arm64" });
-  assert.equal(layout.packagedCore.includes(`${path.sep}app.asar${path.sep}`), false);
+});
+
+for (const [platform, arch, executable] of [
+  ["darwin", "arm64", "tammy-core"],
+  ["win32", "x64", "tammy-core.exe"],
+]) {
+  for (const unpacked of [false, true]) {
+    test(`rejects ${unpacked ? "unpacked" : "packed"} ${platform}/${arch} core metadata inside app.asar`, async () => {
+      await withFixture(platform, arch, async ({ desktopRoot, layout }) => {
+        await writeFile(
+          layout.appAsar,
+          encodeAsar(
+            coreAsarHeader(`${platform}-${arch}`, executable, unpacked),
+            unpacked ? Buffer.alloc(0) : Buffer.from("x"),
+          ),
+        );
+        await assert.rejects(
+          verifyPackagedLayout({
+            desktopRoot,
+            platform,
+            arch,
+            sourceManifestPath: layout.sourceManifest,
+          }),
+          /PACKAGED_CORE_INSIDE_ASAR/,
+        );
+      });
+    });
+  }
+}
+
+test("rejects malformed, truncated, and oversized ASAR headers", async () => {
+  for (const bytes of [
+    Buffer.from("not-an-asar"),
+    Buffer.from([4, 0, 0, 0, 64, 0, 0, 0]),
+    Buffer.from([4, 0, 0, 0, 255, 255, 255, 127]),
+  ]) {
+    await withFixture("darwin", "arm64", async ({ desktopRoot, layout }) => {
+      await writeFile(layout.appAsar, bytes);
+      await assert.rejects(
+        verifyPackagedLayout({
+          desktopRoot,
+          platform: "darwin",
+          arch: "arm64",
+          sourceManifestPath: layout.sourceManifest,
+        }),
+        /PACKAGE_ASAR_INVALID/,
+      );
+    });
+  }
+});
+
+test("rejects a non-regular or symlinked app.asar", async () => {
+  await withFixture("darwin", "arm64", async ({ desktopRoot, layout }) => {
+    await rm(layout.appAsar);
+    await mkdir(layout.appAsar);
+    await assert.rejects(
+      verifyPackagedLayout({
+        desktopRoot,
+        platform: "darwin",
+        arch: "arm64",
+        sourceManifestPath: layout.sourceManifest,
+      }),
+      /PACKAGE_ASAR_INVALID/,
+    );
+  });
+  await withFixture("darwin", "arm64", async ({ desktopRoot, layout }) => {
+    const target = path.join(path.dirname(layout.appAsar), "valid.asar");
+    await writeFile(target, encodeAsar({ files: {} }));
+    await rm(layout.appAsar);
+    await symlink(target, layout.appAsar);
+    await assert.rejects(
+      verifyPackagedLayout({
+        desktopRoot,
+        platform: "darwin",
+        arch: "arm64",
+        sourceManifestPath: layout.sourceManifest,
+      }),
+      /PACKAGE_ASAR_INVALID/,
+    );
+  });
 });
 
 test("rejects a lost executable bit on macOS", async () => {

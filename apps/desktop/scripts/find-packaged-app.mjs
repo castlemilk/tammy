@@ -1,12 +1,17 @@
 import { createHash } from "node:crypto";
-import { lstat, readdir, readFile } from "node:fs/promises";
+import { lstat, open, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 const HASH_PATTERN = /^[0-9a-f]{64}$/;
+const MAX_ASAR_ENTRIES = 200_000;
+const MAX_ASAR_HEADER_BYTES = 16 * 1024 * 1024;
+const MAX_ASAR_PATH_DEPTH = 128;
+const MAX_ASAR_PATH_LENGTH = 4096;
 
 const TARGETS = Object.freeze({
   "darwin/arm64": Object.freeze({
     app: "out/Tammy-darwin-arm64/Tammy.app/Contents/MacOS/Tammy",
+    asar: "out/Tammy-darwin-arm64/Tammy.app/Contents/Resources/app.asar",
     build: "out/Tammy-darwin-arm64/Tammy.app/Contents/Resources/build",
     core: "out/Tammy-darwin-arm64/Tammy.app/Contents/Resources/core",
     executable: "tammy-core",
@@ -15,6 +20,7 @@ const TARGETS = Object.freeze({
   }),
   "win32/x64": Object.freeze({
     app: "out/Tammy-win32-x64/Tammy.exe",
+    asar: "out/Tammy-win32-x64/resources/app.asar",
     build: "out/Tammy-win32-x64/resources/build",
     core: "out/Tammy-win32-x64/resources/core",
     executable: "tammy-core.exe",
@@ -64,7 +70,9 @@ export function resolvePackagedLayout({ desktopRoot, platform, arch }) {
   const sourceManifest = path.join(sourceBuildRoot, "build-manifest.json");
   const packagedManifest = path.join(packagedBuildRoot, "build-manifest.json");
   const appExecutable = path.join(desktopRoot, selected.app);
+  const appAsar = path.join(desktopRoot, selected.asar);
   for (const candidate of [
+    appAsar,
     sourceCoreRoot,
     sourceBuildRoot,
     packagedCoreRoot,
@@ -77,10 +85,8 @@ export function resolvePackagedLayout({ desktopRoot, platform, arch }) {
   ]) {
     assertContained(desktopRoot, candidate, "PACKAGE_PATH_TRAVERSAL");
   }
-  if (packagedCore.split(path.sep).includes("app.asar")) {
-    throw new Error("PACKAGED_CORE_INSIDE_ASAR");
-  }
   return {
+    appAsar,
     appExecutable,
     packagedBuildRoot,
     packagedCore,
@@ -92,6 +98,189 @@ export function resolvePackagedLayout({ desktopRoot, platform, arch }) {
     sourceManifest,
     target: selected.target,
   };
+}
+
+function isPlainRecord(value) {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    Object.getPrototypeOf(value) === Object.prototype
+  );
+}
+
+function assertAllowedKeys(value, allowed) {
+  if (Object.keys(value).some((key) => !allowed.has(key))) {
+    throw new Error("PACKAGE_ASAR_INVALID");
+  }
+}
+
+async function readExactly(file, length, position) {
+  const buffer = Buffer.alloc(length);
+  let offset = 0;
+  while (offset < length) {
+    const { bytesRead } = await file.read(buffer, offset, length - offset, position + offset);
+    if (bytesRead === 0) throw new Error("PACKAGE_ASAR_INVALID");
+    offset += bytesRead;
+  }
+  return buffer;
+}
+
+function parseAsarHeader(buffer) {
+  if (buffer.length < 12) throw new Error("PACKAGE_ASAR_INVALID");
+  const payloadSize = buffer.readUInt32LE(0);
+  if (payloadSize < 4 || payloadSize % 4 !== 0 || payloadSize + 4 !== buffer.length) {
+    throw new Error("PACKAGE_ASAR_INVALID");
+  }
+  const jsonLength = buffer.readInt32LE(4);
+  const alignedJsonLength = jsonLength >= 0 ? Math.ceil(jsonLength / 4) * 4 : -1;
+  if (jsonLength < 0 || alignedJsonLength + 4 !== payloadSize || jsonLength > buffer.length - 8) {
+    throw new Error("PACKAGE_ASAR_INVALID");
+  }
+  const jsonBytes = buffer.subarray(8, 8 + jsonLength);
+  const padding = buffer.subarray(8 + jsonLength);
+  if (padding.some((byte) => byte !== 0)) {
+    throw new Error("PACKAGE_ASAR_INVALID");
+  }
+  const json = jsonBytes.toString("utf8");
+  if (!Buffer.from(json, "utf8").equals(jsonBytes)) {
+    throw new Error("PACKAGE_ASAR_INVALID");
+  }
+  try {
+    return JSON.parse(json);
+  } catch {
+    throw new Error("PACKAGE_ASAR_INVALID");
+  }
+}
+
+function enumerateAsarEntries(header, packedDataSize) {
+  if (!isPlainRecord(header)) throw new Error("PACKAGE_ASAR_INVALID");
+  assertAllowedKeys(header, new Set(["files"]));
+  if (!isPlainRecord(header.files)) throw new Error("PACKAGE_ASAR_INVALID");
+  const entries = [];
+
+  function visit(files, parent, depth) {
+    if (depth > MAX_ASAR_PATH_DEPTH || !isPlainRecord(files) || entries.length > MAX_ASAR_ENTRIES) {
+      throw new Error("PACKAGE_ASAR_INVALID");
+    }
+    for (const [name, node] of Object.entries(files)) {
+      if (
+        name.length === 0 ||
+        name === "." ||
+        name === ".." ||
+        name.includes("/") ||
+        name.includes("\\") ||
+        name.includes("\0") ||
+        !isPlainRecord(node)
+      ) {
+        throw new Error("PACKAGE_ASAR_INVALID");
+      }
+      const entryPath = parent ? `${parent}/${name}` : name;
+      if (entryPath.length > MAX_ASAR_PATH_LENGTH || entries.length >= MAX_ASAR_ENTRIES) {
+        throw new Error("PACKAGE_ASAR_INVALID");
+      }
+      entries.push(entryPath);
+      if (Object.hasOwn(node, "files")) {
+        assertAllowedKeys(node, new Set(["files", "unpacked"]));
+        if (
+          !isPlainRecord(node.files) ||
+          (Object.hasOwn(node, "unpacked") && typeof node.unpacked !== "boolean")
+        ) {
+          throw new Error("PACKAGE_ASAR_INVALID");
+        }
+        visit(node.files, entryPath, depth + 1);
+      } else if (Object.hasOwn(node, "link")) {
+        assertAllowedKeys(node, new Set(["link", "unpacked"]));
+        if (
+          typeof node.link !== "string" ||
+          node.link.length === 0 ||
+          node.link.length > MAX_ASAR_PATH_LENGTH ||
+          node.link.includes("\0") ||
+          (Object.hasOwn(node, "unpacked") && typeof node.unpacked !== "boolean")
+        ) {
+          throw new Error("PACKAGE_ASAR_INVALID");
+        }
+      } else {
+        assertAllowedKeys(node, new Set(["executable", "integrity", "offset", "size", "unpacked"]));
+        if (
+          !Number.isSafeInteger(node.size) ||
+          node.size < 0 ||
+          node.size > 0xffffffff ||
+          (Object.hasOwn(node, "executable") && typeof node.executable !== "boolean") ||
+          (Object.hasOwn(node, "integrity") && !isPlainRecord(node.integrity)) ||
+          (Object.hasOwn(node, "unpacked") && typeof node.unpacked !== "boolean")
+        ) {
+          throw new Error("PACKAGE_ASAR_INVALID");
+        }
+        if (node.unpacked === true) {
+          if (Object.hasOwn(node, "offset")) {
+            throw new Error("PACKAGE_ASAR_INVALID");
+          }
+        } else {
+          if (typeof node.offset !== "string" || !/^(0|[1-9][0-9]*)$/.test(node.offset)) {
+            throw new Error("PACKAGE_ASAR_INVALID");
+          }
+          const offset = BigInt(node.offset);
+          if (offset + BigInt(node.size) > BigInt(packedDataSize)) {
+            throw new Error("PACKAGE_ASAR_INVALID");
+          }
+        }
+      }
+    }
+  }
+
+  visit(header.files, "", 1);
+  return entries;
+}
+
+async function readAsarEntries(archive) {
+  const before = await lstat(archive).catch(() => null);
+  if (!before?.isFile() || before.isSymbolicLink() || before.size < 20) {
+    throw new Error("PACKAGE_ASAR_INVALID");
+  }
+  let file;
+  try {
+    file = await open(archive, "r");
+    const opened = await file.stat();
+    if (
+      !opened.isFile() ||
+      opened.dev !== before.dev ||
+      opened.ino !== before.ino ||
+      opened.size !== before.size
+    ) {
+      throw new Error("PACKAGE_ASAR_INVALID");
+    }
+    const sizePickle = await readExactly(file, 8, 0);
+    if (sizePickle.readUInt32LE(0) !== 4) {
+      throw new Error("PACKAGE_ASAR_INVALID");
+    }
+    const headerSize = sizePickle.readUInt32LE(4);
+    if (headerSize < 12 || headerSize > MAX_ASAR_HEADER_BYTES || headerSize > opened.size - 8) {
+      throw new Error("PACKAGE_ASAR_INVALID");
+    }
+    const header = parseAsarHeader(await readExactly(file, headerSize, 8));
+    return enumerateAsarEntries(header, opened.size - 8 - headerSize);
+  } catch (error) {
+    if (error instanceof Error && error.message === "PACKAGE_ASAR_INVALID") {
+      throw error;
+    }
+    throw new Error("PACKAGE_ASAR_INVALID");
+  } finally {
+    await file?.close().catch(() => {});
+  }
+}
+
+async function assertCoreAbsentFromAsar(layout) {
+  const executable = path.basename(layout.packagedCore);
+  const selectedCoreSuffix = `core/${layout.target}/${executable}`;
+  const entries = await readAsarEntries(layout.appAsar);
+  if (
+    entries.some(
+      (entry) => entry === selectedCoreSuffix || entry.endsWith(`/${selectedCoreSuffix}`),
+    )
+  ) {
+    throw new Error("PACKAGED_CORE_INSIDE_ASAR");
+  }
 }
 
 async function enumerateTree(root, code) {
@@ -173,6 +362,7 @@ export async function verifyPackagedLayout({ desktopRoot, platform, arch, source
   );
 
   const appStats = await assertRegularFile(layout.appExecutable, "PACKAGE_APP_INVALID");
+  await assertCoreAbsentFromAsar(layout);
   const sourceCoreStats = await assertRegularFile(layout.sourceCore, "SOURCE_CORE_LAYOUT_INVALID");
   const packagedCoreStats = await assertRegularFile(
     layout.packagedCore,
