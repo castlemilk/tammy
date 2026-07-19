@@ -15,7 +15,7 @@ This design covers the first executable vertical slice:
 1. create and unlock an encrypted local workspace;
 2. configure a business and unique local user;
 3. create and use a chart of accounts;
-4. post a balanced, GST-bearing journal;
+4. post the canonical balanced, GST-bearing sale and purchase journals;
 5. inspect the journal, general ledger, and trial balance;
 6. derive a BAS workpaper;
 7. perform local validation;
@@ -66,6 +66,17 @@ External interactions are separate, explicit adapters:
 - a possible future CAA cloud relay certified as a separate operating mode.
 
 Disabling or losing any adapter must not prevent local accounting work.
+
+### 2.4 Initial platform matrix
+
+Milestone 1 supports these exact targets:
+
+| Operating system | Architecture | Minimum version | Packaging |
+|---|---|---|---|
+| macOS | Apple silicon `arm64` | macOS 14 Sonoma | Signed and notarised DMG |
+| Windows | `x86_64` | Windows 11 23H2 | Signed per-user installer |
+
+Linux, Intel macOS, Windows 10, and Windows on ARM are outside Milestone 1. Adding a target requires packaged E2E, key-store, encryption, backup/restore, and native-library tests on that target. Direct SBR support on either initial target also depends on the current ATO credential component supporting that operating system and architecture; Milestone 1 uses the simulator and makes no claim about native ATO component compatibility.
 
 ## 3. Regulatory position
 
@@ -247,6 +258,68 @@ The initial API packages are:
 
 Protobuf messages describe API intent rather than mirroring database rows. Mutating requests carry an idempotency key. Monetary fields use a currency code plus signed integer minor units. Rates and quantities use explicit scaled integers or decimal strings with a declared scale; binary floating point is prohibited for posted accounting values.
 
+### 6.1 Transaction and dependency rules
+
+`platform.UnitOfWork` owns every write transaction. An application service opens the unit of work, loads aggregates through module repositories, invokes domain behaviour, appends audit and outbox records, and commits once. Domain modules never call `Commit` and never query another module's tables.
+
+Documented application dependencies are:
+
+```text
+Identity ───────────────────────────────────────────────┐
+Organisations ──────────────────────────────────────┐   │
+Accounting ── AccountingReadPort ──→ Tax            │   │
+Tax ───────── ReportReadPort ──────→ Evidence        │   │
+Identity + Organisations + Tax + Evidence + Artefacts│   │
+                         └─────────→ SBR ←────────────┘   │
+All command handlers ── AuditAppender + OutboxAppender ←──┘
+```
+
+`AuditAppender` and `OutboxAppender` accept the current `UnitOfWork`; they do not create nested transactions. Read ports return immutable application projections rather than repositories or database handles. The composition root supplies in-memory fakes for unit tests, SQLite adapters for integration tests, and the simulator or helper adapter for SBR contract tests.
+
+### 6.2 First-slice use-case catalogue
+
+| RPC/use case | Authorised role | Request → result | Transaction owner and ports | Principal failures |
+|---|---|---|---|---|
+| `WorkspaceService.CreateWorkspace` | unauthenticated local setup | path, passphrase, first-admin identity/password → pending workspace and one-time recovery secret | Workspace; key store, storage factory | path exists, weak passphrase, invalid administrator, key-store failure |
+| `WorkspaceService.ConfirmRecovery` | pending first administrator | prompted recovery-secret groups → active workspace | Workspace; header store, audit | wrong recovery groups, setup expired |
+| `WorkspaceService.UnlockWorkspace` | local user at locked app | workspace path, passphrase or remembered-device choice → unlock challenge | Workspace; key store, encrypted storage | wrong key, corrupt header, unsupported schema |
+| `WorkspaceService.BackupWorkspace` | `workspace_admin` | destination, backup passphrase → backup manifest | Workspace; all-storage snapshot, audit signer | destination failure, integrity failure |
+| `WorkspaceService.RestoreWorkspace` | `workspace_admin` at locked app | backup path, backup passphrase → restored workspace summary | Workspace; staging restore, key store | wrong key, signature failure, incompatible schema |
+| `IdentityService.SignIn` | unlocked workspace user | username, password, optional TOTP → session | Identity; user repository, session store | invalid credentials, locked account, factor required |
+| `IdentityService.CreateUser` | `workspace_admin` | username, display name, initial roles → user | Identity; audit/outbox | duplicate username, invalid role |
+| `IdentityService.AssignRoles` | `workspace_admin` | user ID, complete role set → user | Identity; audit/outbox | last-admin removal, invalid role |
+| `IdentityService.EnrolTOTP` | authenticated user | current password → provisioning secret | Identity; factor repository, audit | password invalid, already enrolled |
+| `IdentityService.ConfirmTOTP` | enrolling user | one-time code → enabled factor | Identity; factor repository, audit | invalid or replayed code |
+| `OrganisationService.CreateOrganisation` | `workspace_admin` | ABN, legal name, GST settings → organisation | Organisations; audit/outbox | invalid ABN format, duplicate ABN |
+| `OrganisationService.RecordEntityVerification` | `workspace_admin` | organisation, source metadata, evidence hash → verification | Organisations; evidence blob port, audit/outbox | source invalid, evidence missing, details mismatch |
+| `AccountingService.CreateAccount` | `workspace_admin`, `business_preparer` | code, name, type → account | Accounting; audit/outbox | duplicate code, invalid type |
+| `AccountingService.PostJournal` | `workspace_admin`, `business_preparer` | date, memo, source lines, tax codes → posted journal | Accounting; tax-code read port, audit/outbox | unbalanced, closed period, invalid account/tax treatment |
+| `AccountingService.GetTrialBalance` | any first-slice role | organisation, as-of date → account balances and totals | Read-only Accounting | invalid period, permission denied |
+| `TaxService.CreateBASWorkpaper` | `workspace_admin`, `business_preparer` | organisation, period, rule bundle → workpaper with provenance | Tax; AccountingReadPort, OrganisationReadPort, audit/outbox | overlapping report, rule unavailable |
+| `TaxService.ValidateBAS` | `workspace_admin`, `business_preparer` | report ID → validation run and report state | Tax; artefact/rule port, audit/outbox | stale source, blocking validation |
+| `TaxService.AcceptDeclaration` | `business_lodger` | report ID, declaration version, acknowledgement → declaration | Evidence orchestrator; ReportReadPort, audit/outbox | MFA required, stale report, wrong declaration |
+| `SBRService.SubmitActivityStatement` | `business_lodger` | report ID, environment → durable transmission status | SBR orchestrator; identity, organisation, report, declaration, artefact, gateway, audit/outbox | unverified entity, no MFA, invalid state, credential unavailable |
+| `SBRService.ReconcileTransmission` | `business_lodger` | transmission ID → reconciled report/transmission state | SBR orchestrator; gateway, audit/outbox | not unknown, inconclusive response, unavailable service |
+| `AuditService.VerifyChain` | `workspace_admin`, `auditor` | optional sequence range → integrity result | Read-only Audit | chain mismatch, missing event |
+| `AuditService.ExportEvidence` | `workspace_admin`, `auditor` | destination, filters → signed export manifest | Audit; evidence reader, signing key | destination failure, chain invalid |
+
+Queries omitted from the table are read-only projections and still require role checks. Each mutation above commits its domain state, audit event, and outbox event in one `UnitOfWork`.
+
+### 6.3 Idempotency contract
+
+The idempotency scope is `(workspace_id, actor_user_id, fully_qualified_rpc_name, idempotency_key)`. The key is a client-generated UUID and is required on every mutation after workspace creation.
+
+The core stores:
+
+- the scope;
+- a deterministic protobuf hash of the semantic request, excluding authentication metadata and the idempotency key;
+- execution state;
+- committed response or error;
+- created time; and
+- resulting resource identifier.
+
+A unique database constraint elects one execution. A concurrent duplicate waits for the elected transaction for a bounded period, then either returns the committed result or an `ABORTED` response with retry details; it never runs the command twice. Reusing a key with a different request hash returns `IDEMPOTENCY_CONFLICT`. Financial, report, declaration, transmission, backup, and restore keys are retained for the workspace lifetime. Reversible administrative-command records are retained for at least 30 days.
+
 ## 7. Module boundaries
 
 Each module owns its domain rules, schema objects, repository interface, Connect handlers, and tests. A module may depend only on documented application ports, not another module's tables.
@@ -257,14 +330,28 @@ Responsibilities:
 
 - unique local users;
 - Argon2id password verification;
-- optional offline TOTP and platform passkey adapters;
+- offline TOTP enrolment and verification;
 - role assignments;
 - failed-login lockout;
 - 30-minute inactivity locking;
 - remembered-session expiry under 24 hours; and
 - authentication and authorisation audit events.
 
-The first slice supports `workspace_admin`, `business_preparer`, `business_lodger`, and `auditor`. Later agent roles extend the permission catalogue without changing the authentication boundary.
+The first slice supports `workspace_admin`, `business_preparer`, `business_lodger`, and `auditor`. Roles are additive. A workspace administrator does not receive lodgment permission unless also assigned `business_lodger`.
+
+| Permission | Admin | Preparer | Lodger | Auditor |
+|---|:---:|:---:|:---:|:---:|
+| Manage workspace and users | ✓ |  |  |  |
+| Manage organisation and verification | ✓ |  |  |  |
+| Read accounts, journals, and reports | ✓ | ✓ | ✓ | ✓ |
+| Create accounts and post journals | ✓ | ✓ |  |  |
+| Prepare and locally validate BAS | ✓ | ✓ |  |  |
+| Accept lodgment declaration |  |  | ✓ |  |
+| Submit or reconcile SBR |  |  | ✓ |  |
+| Read complete audit log | ✓ |  | relevant report only | ✓ |
+| Export audit evidence | ✓ |  |  | ✓ |
+
+All users authenticate with a password in Milestone 1. A `business_lodger` must also enrol and satisfy TOTP before accepting a declaration, submitting, or reconciling. Platform passkeys are deferred until a separate cross-platform design confirms offline recovery and Electron platform-authenticator behaviour.
 
 ### 7.2 Organisations
 
@@ -279,6 +366,21 @@ Responsibilities:
 - changes that require re-verification.
 
 Offline setup may record an organisation as `UNVERIFIED`. SBR actions remain disabled until independent entity validation evidence is recorded.
+
+An entity-verification record contains:
+
+- organisation ID and ABN;
+- verified legal name and entity type;
+- source method: `ABR_ONLINE`, `ABR_EXTRACT_MANUAL`, or `SIMULATOR_FIXTURE`;
+- source reference and lookup time;
+- recorder user ID and record time;
+- evidence object hash;
+- outcome: `VERIFIED`, `FAILED`, `EXPIRED`, or `SUPERSEDED`; and
+- expiry time.
+
+Only `workspace_admin` may record or supersede verification. `ABR_EXTRACT_MANUAL` requires a saved independent-source extract or capture whose hash is retained in evidence storage. Product policy expires verification after 12 months and immediately supersedes it after an ABN, verified legal-name, entity-type, or workspace-ownership change. A DPO response may require a shorter interval.
+
+`SIMULATOR_FIXTURE` exists only in test-signed builds with the SBR environment fixed to `SIMULATOR`. It cannot enable EVTE or production controls. The canonical packaged E2E records this fixture before BAS preparation and submission. Release builds require `ABR_ONLINE` or `ABR_EXTRACT_MANUAL`.
 
 ### 7.3 Accounting
 
@@ -302,6 +404,46 @@ Invariants:
 - account type and status determine valid posting behaviour; and
 - repeated idempotency keys return the original result.
 
+#### Canonical accounting and GST fixture
+
+Milestone 1 ships this executable fixture as the acceptance oracle:
+
+| Code | Account | Type |
+|---|---|---|
+| `1100` | Bank | Asset |
+| `1200` | GST receivable | Asset |
+| `2200` | GST payable | Liability |
+| `4000` | Consulting revenue | Revenue |
+| `6100` | Software expense | Expense |
+
+Source transaction A is a GST-inclusive taxable sale for `$1,100.00`. Posting produces debit Bank `$1,100.00`, credit Consulting revenue `$1,000.00`, and credit GST payable `$100.00`.
+
+Source transaction B is a creditable GST-inclusive software purchase for `$220.00`. Posting produces debit Software expense `$200.00`, debit GST receivable `$20.00`, and credit Bank `$220.00`.
+
+The trial balance must contain `$1,100.00` total debits and `$1,100.00` total credits. Closing balances are Bank debit `$880.00`, GST receivable debit `$20.00`, Software expense debit `$200.00`, GST payable credit `$100.00`, and Consulting revenue credit `$1,000.00`.
+
+Initial tax codes are:
+
+- `GST_SALES_10_INCLUSIVE`;
+- `GST_PURCHASES_10_INCLUSIVE`;
+- `GST_FREE_SALES`;
+- `GST_FREE_PURCHASES`;
+- `INPUT_TAXED`;
+- `OUT_OF_SCOPE`.
+
+For the two inclusive codes, GST is the taxable gross amount divided by 11 using exact integer/rational arithmetic. Fractions of one cent round to the nearest cent with an exact half-cent rounded away from zero. The stored source line records gross, net, GST, tax code, and derived control-account line IDs so `gross = net + GST` remains inspectable.
+
+For the canonical BAS workpaper:
+
+| BAS label | Expected source | Expected displayed value |
+|---|---|---:|
+| `G1` Total sales | Transaction A gross sale | `$1,100` |
+| `1A` GST on sales | GST payable from A | `$100` |
+| `1B` GST on purchases | GST receivable from B | `$20` |
+| Net GST payable | `1A - 1B` | `$80` |
+
+BAS presentation drops cents and does not round up, consistent with current ATO BAS instructions. Values sent to SBR must additionally satisfy the exact AS.0004 schema and rule bundle selected for the report.
+
 ### 7.4 Tax
 
 Responsibilities:
@@ -322,11 +464,25 @@ The first report state machine is:
 DRAFT
   → LOCALLY_VALIDATED
   → DECLARED
-  → SUBMITTING
-  → ACCEPTED | REJECTED | UNKNOWN | TECHNICAL_FAILURE
+  → SUBMISSION_PREPARED
+  → DISPATCHING
+  → ACCEPTED | REJECTED | UNKNOWN | TECHNICAL_FAILURE_SAFE
 ```
 
-`PREFILLED` and `ATO_VALIDATED` states become reachable when the real `LDG.List`, `AS.Get`, and `AS.Validate` adapters are enabled. Revisions start a new linked report and require a new declaration.
+Transitions and recovery rules:
+
+- Reversing a contributing journal or posting a new in-period journal while the report is `LOCALLY_VALIDATED`, `DECLARED`, or `SUBMISSION_PREPARED` moves it to `DRAFT`, cancels any not-yet-dispatched transmission, supersedes validation and declaration, and retains them as historical evidence.
+- Once a report is `DISPATCHING` or in a terminal submission state, its source snapshot and payload are immutable. Later in-period postings require a linked correction or revision workflow and never alter the dispatched payload.
+- `LOCALLY_VALIDATED → DECLARED` occurs only in the same transaction that stores a declaration for the current report content hash.
+- `DECLARED → SUBMISSION_PREPARED` creates the durable transmission identifiers and payload hash before network activity.
+- A user may cancel `SUBMISSION_PREPARED` back to `DECLARED` while no dispatch has begun.
+- Credential unlock and payload construction failures occur before `DISPATCHING` and return the report to `DECLARED` with a safe technical-failure record.
+- `DISPATCHING` means remote transmission may have begun. A crash, helper EOF, timeout, or error that cannot prove no bytes were sent changes the report to `UNKNOWN`.
+- `TECHNICAL_FAILURE_SAFE → DECLARED` permits an explicit retry because the helper attested that no network send began.
+- `UNKNOWN` is terminal until reconciliation. Reconciliation may move it to `ACCEPTED`, `REJECTED`, or `DECLARED` only when an authoritative result proves the original payload was not received. An inconclusive result leaves it `UNKNOWN`.
+- `REJECTED` may create a corrected linked `DRAFT`; an accepted report may create only a linked revision workflow.
+
+`PREFILLED` and `ATO_VALIDATED` become additional pre-declaration states when the real `LDG.List`, `AS.Get`, and `AS.Validate` adapters are enabled. Revisions start a new linked report and require a new declaration.
 
 ### 7.5 Evidence
 
@@ -341,6 +497,19 @@ Responsibilities:
 - retention policy.
 
 A submission requiring a declaration is impossible unless the declaration belongs to the same organisation, report, reporting period, and report content hash.
+
+The deterministic simulator fixture uses:
+
+- organisation `Wattle & Co Test Pty Ltd`;
+- syntactically valid, simulator-only ABN `11 000 000 560`, which is never looked up or transmitted;
+- reporting period 1 April through 30 June 2026;
+- the two accounting transactions in Section 7.3 dated 30 June 2026;
+- declaration version `SIM-AS-DECL-2026-01` with text "I declare that the information in this simulated Activity Statement is true and correct.";
+- simulator result code `SIM.ACCEPTED`;
+- simulator receipt `SIM-2026-Q4-0001`; and
+- amount payable `$80`.
+
+The simulator declaration and response are visibly marked non-ATO and are impossible to select for EVTE or production. Real declaration wording and response mapping come only from the applicable approved artefact bundle.
 
 ### 7.6 SBR
 
@@ -370,6 +539,25 @@ type ActivityStatementGateway interface {
 }
 ```
 
+Every gateway error carries a send phase:
+
+- `NOT_STARTED`: the helper proves no connection or write began;
+- `MAYBE_SENT`: the remote endpoint may have received any part of the request; or
+- `RESPONSE_RECEIVED`: complete response bytes are available for atomic persistence.
+
+The durable submission protocol is:
+
+1. Deterministically build the payload and allocate application transaction, SBR Message, and Conversation IDs.
+2. Commit a `PREPARED` transmission with payload hash, report content hash, artefact version, and identifiers.
+3. Unlock the credential and finish all work that can fail safely before network access.
+4. Commit the transmission and report as `DISPATCHING`.
+5. Invoke the helper exactly once with the already persisted identifiers and payload.
+6. If response bytes are returned, commit the encrypted raw response, parsed result, transmission state, report state, and audit/outbox events atomically before showing any result.
+7. If the helper reports `NOT_STARTED`, commit `TECHNICAL_FAILURE_SAFE`; if it reports `MAYBE_SENT`, exits unexpectedly, or times out, commit `UNKNOWN`.
+8. On startup, resume a `PREPARED` transmission only after user confirmation, but convert every orphaned `DISPATCHING` transmission to `UNKNOWN` without sending.
+
+A process death after ATO acceptance but before local response persistence therefore recovers as `UNKNOWN`, never as a retryable failure. Reconciliation uses the persisted original identifiers and payload hash.
+
 The simulator and the real helper adapter must pass the same contract suite.
 
 ### 7.7 Audit
@@ -384,6 +572,22 @@ Responsibilities:
 - signed evidence export.
 
 Every write transaction includes the domain change, audit record, and durable outbox entry. The next audit hash covers the prior hash plus a canonical representation of the new event. The application exposes verification but no ordinary delete or update operation for audit rows.
+
+There is one monotonically sequenced chain per workspace. Event content uses RFC 8785 JSON Canonicalization Scheme encoding. The chain is:
+
+```text
+genesis = SHA-256("tammy-audit-v1" || workspace_id || chain_salt)
+event_hash[n] = SHA-256(
+  "tammy-audit-event-v1" ||
+  event_hash[n-1] ||
+  uint64_be(canonical_event_length) ||
+  canonical_event_bytes
+)
+```
+
+The random chain salt and genesis hash are stored in the workspace header. A database uniqueness constraint serialises the sequence. After commit, the latest chain head is mirrored to the OS credential store. A database head ahead of the mirror after a crash may repair the mirror after full verification; a credential-store head ahead of the database signals rollback and locks evidence export.
+
+Workspace creation generates an Ed25519 audit-export keypair. The private key is encrypted under the workspace data-encryption key; the public key and key ID are stored in the workspace header. Export is a ZIP containing canonical `events.jsonl`, `manifest.json`, selected evidence objects, the public key, and `signature.ed25519` over the manifest hash. The app and a small standalone verifier both verify object hashes, event sequence, chain hashes, and signature without database access. Key rotation creates a cross-signed new public key and never rewrites prior events.
 
 ### 7.8 Artefacts
 
@@ -409,8 +613,6 @@ Each workspace is an independently movable encrypted SQLite database plus an enc
 Storage requirements:
 
 - SQLCipher-compatible AES-256 page encryption;
-- a random workspace data-encryption key;
-- workspace keys wrapped by a key held in the operating-system credential store;
 - restrictive filesystem permissions;
 - foreign keys enabled;
 - WAL mode with checkpoint policy;
@@ -421,7 +623,48 @@ Storage requirements:
 - backup manifests containing schema and application versions; and
 - restore verification before replacing an active workspace.
 
-The OS credential store is an additional protection layer, not a substitute for the workspace passphrase. A user may create a portable recovery key during setup. Losing both the passphrase/recovery key and the OS-wrapped key makes the encrypted workspace unrecoverable; the UI must state this clearly.
+### 8.1 Workspace-key lifecycle
+
+Workspace encryption and user authentication are distinct:
+
+1. `CreateWorkspace` generates a random 256-bit workspace data-encryption key (DEK).
+2. The user chooses a workspace passphrase. Argon2id derives a passphrase key-encryption key (KEK) using a random salt and parameters stored in the header. The initial minimum is 64 MiB memory, 3 iterations, and parallelism no greater than 4, with a startup benchmark permitted to increase but never silently decrease the stored parameters.
+3. AES-256-GCM wraps the DEK with the passphrase KEK using a random nonce and authenticated workspace/version metadata.
+4. Setup generates a separate random 256-bit recovery secret, displays it once in grouped Base32, and requires the user to confirm selected groups. HKDF-SHA-256 derives a recovery KEK that wraps the same DEK with AES-256-GCM.
+5. The unencrypted workspace header contains only format/KDF metadata, salts, nonces, wrapped DEKs, audit public material, and ciphertext hashes. It contains no accounting or identity data.
+6. SQLCipher uses the unwrapped DEK to open the database. The DEK is zeroed when the workspace locks or the core exits.
+
+If the user explicitly enables "remember this workspace on this OS account", the DEK is stored as a secret in macOS Keychain or Windows Credential Manager. This deliberately permits workspace decryption without re-entering the workspace passphrase, but it never signs in an application user. The remembered item expires or is deleted within 24 hours and is removed on explicit workspace lock, password-risk action, or user request.
+
+After workspace decryption, each natural person signs in with their own application password and TOTP where required. Milestone 1 permits one active application session at a time. Additional users do not receive or wrap the workspace DEK; an authorised person first unlocks the workspace on the device, then the user authenticates. Changing the workspace passphrase rewraps the same DEK. Recovery rewraps the DEK under a new passphrase and invalidates remembered-device entries.
+
+Losing the passphrase, recovery secret, and any still-valid remembered-device item makes the workspace unrecoverable. The UI states this during setup and backup.
+
+### 8.2 Backup and restore
+
+A `tammy-backup-v1` archive contains:
+
+- a consistent SQLite online-backup snapshot, not a copied live database/WAL pair;
+- the workspace header;
+- evidence objects referenced by the snapshot;
+- the simulator/public artefact bundle needed by the snapshot;
+- a canonical manifest of paths, sizes, hashes, schema version, application version, and audit head; and
+- the audit-export public key and signature over the manifest.
+
+Backups always exclude the machine-credential vault, credential passwords, remembered-device keys, active sessions, local RPC bootstrap material, and operational logs. Restricted ATO artefacts are included only when their licence permits encrypted backup; otherwise the manifest records the required checksum and restore marks the SBR adapter unavailable until the artefact is reimported.
+
+Backup briefly acquires the workspace write gate, completes the SQLite online snapshot, captures evidence hashes, and then releases the gate. A random 256-bit archive key encrypts the complete archive using chunked AES-256-GCM. A backup-specific passphrase-derived Argon2id KEK wraps the archive key; it does not reuse the workspace passphrase KEK.
+
+Restore never writes over the active workspace in place:
+
+1. decrypt into a new staging directory;
+2. verify authenticated encryption, manifest signature, every object hash, database integrity, schema compatibility, and audit chain;
+3. invalidate restored sessions and remembered-device references;
+4. atomically rename the active workspace to a rollback directory and staging to active;
+5. open and verify the restored workspace; and
+6. delete the rollback directory only after explicit success.
+
+A wrong backup passphrase or failed verification leaves the active workspace byte-for-byte unchanged. The canonical restore test verifies organisation data, both posted journals, exact account balances, the `$80` BAS result, declaration, accepted simulator transmission, evidence hashes, and audit head. The machine credential remains absent and must be imported again.
 
 The initial logical entities are:
 
@@ -474,16 +717,17 @@ The initial logical entities are:
 ### 9.3 Direct SBR submission
 
 1. The lodger opens the locally validated report.
-2. Tammy verifies organisation status, role permission, report content hash, artefact version, and declaration requirements.
+2. Tammy verifies current independent entity-validation evidence, the `business_lodger` role, recent TOTP, report content hash, artefact version, and declaration version.
 3. The user reviews and accepts the exact declaration.
-4. The core commits the declaration and changes the report to `SUBMITTING`.
-5. The user unlocks the local machine credential.
-6. The core passes the minimum request to the SBR helper.
-7. The helper obtains the required token, constructs and signs the current SBR2/ebMS3 message, and sends it directly to EVTE or production.
-8. The full response is persisted atomically before downstream processing.
-9. The response is correlated using application transaction ID, SBR Message ID, Conversation ID, and payload hash.
-10. The report changes to `ACCEPTED`, `REJECTED`, `UNKNOWN`, or `TECHNICAL_FAILURE`.
-11. The UI presents ATO messages verbatim, a human explanation where available, and the correlation reference.
+4. One transaction stores the declaration for the current content hash and changes the report from `LOCALLY_VALIDATED` to `DECLARED`.
+5. A second transaction deterministically stores the payload hash and all identifiers and changes the report to `SUBMISSION_PREPARED`.
+6. The user unlocks the local machine credential. A failure here safely returns the report to `DECLARED`.
+7. The core commits `DISPATCHING` before invoking the helper.
+8. The helper obtains the required token, constructs and signs the current SBR2/ebMS3 message, and sends it directly to EVTE or production.
+9. A complete response is persisted atomically before downstream processing. A crash or uncertain send recovers as `UNKNOWN`.
+10. The response is correlated using application transaction ID, SBR Message ID, Conversation ID, and payload hash.
+11. The report changes to `ACCEPTED`, `REJECTED`, `UNKNOWN`, or `TECHNICAL_FAILURE_SAFE`.
+12. The UI presents ATO messages verbatim, a human explanation where available, and the correlation reference.
 
 No `UNKNOWN` submission may be resubmitted. Reconciliation must first determine whether the ATO received and processed the original payload.
 
@@ -514,7 +758,7 @@ The workspace header shows:
 - active user; and
 - command palette access.
 
-The overview prioritises cash, receivables, payables, GST position, recent activity, reconciliation work, and the next compliance action. Tables remain dense and keyboard navigable. Risky actions use explicit verbs, show their effect, and require confirmation proportional to the consequence.
+The Milestone 1 overview shows cash, revenue, expenses, GST position, recent posted journals, and the next BAS action. Receivables, payables, and reconciliation cards appear only after their later modules exist. Tables remain dense and keyboard navigable. Risky actions use explicit verbs, show their effect, and require confirmation proportional to the consequence.
 
 SBR is never represented as background synchronisation. The UI distinguishes:
 
@@ -583,7 +827,7 @@ Policies:
 - Five failed attempts trigger a lockout security event and bounded lockout.
 - Inactivity locking occurs at or before 30 minutes.
 - Remembered sessions expire in less than 24 hours.
-- TOTP and platform passkeys are supported without a cloud dependency.
+- TOTP is implemented without a cloud dependency and is mandatory for lodgment actions; passkeys are outside Milestone 1.
 - Lodgment permission is distinct from preparation permission.
 
 ### 12.2 Credential protection
@@ -618,12 +862,16 @@ There is no hidden vendor support channel. Support exports are user-created, sco
 - debit equals credit for every posted journal;
 - posted journals cannot mutate;
 - reversal preserves the audit relationship;
-- idempotency returns one committed result;
+- concurrent idempotency duplicates return one committed result;
+- idempotency-key reuse with a different payload returns `IDEMPOTENCY_CONFLICT`;
 - closed periods reject posting;
-- amounts round and aggregate according to the versioned rule set;
+- the canonical `$1,100` sale and `$220` purchase produce the exact fixture balances and `$80` BAS result;
+- half-cent, negative, and whole-dollar BAS rounding follow the versioned rule set;
 - BAS field provenance is complete;
 - report transitions reject invalid paths;
 - changed source data invalidates validation and declaration;
+- entity verification expires and supersedes on defined high-risk changes;
+- the permission matrix denies preparer submission and admin-only user management;
 - audit hash chains verify and tampering is detected; and
 - unknown SBR outcomes never trigger automatic resubmission.
 
@@ -635,7 +883,11 @@ There is no hidden vendor support channel. Support exports are user-created, sco
 - WAL recovery;
 - outbox/domain/audit atomicity;
 - concurrent read and bounded writer contention;
-- corrupt backup rejection; and
+- corrupt and wrong-passphrase backup rejection without active-workspace changes;
+- staged restore rollback after open failure;
+- exact canonical data, evidence hashes, and audit head after restore;
+- passphrase rewrap, recovery rewrap, remembered-device expiry, and DEK zeroing;
+- audit-head rollback detection against the OS credential-store mirror; and
 - OS key-store adapter contract tests.
 
 ### 13.3 Contract tests
@@ -645,7 +897,9 @@ There is no hidden vendor support channel. Support exports are user-created, sco
 - generated-code cleanliness;
 - Connect-Go/Connect-ES interoperability;
 - structured error details;
-- all mutating RPCs require idempotency and authorisation; and
+- every use-case-catalogue permission decision;
+- all mutating RPCs require idempotency and authorisation;
+- read ports prevent cross-module repository/table access; and
 - the simulator and production SBR adapter share the same gateway contract suite.
 
 ### 13.4 SBR tests
@@ -657,7 +911,9 @@ There is no hidden vendor support channel. Support exports are user-created, sco
 - external entities, DTD retrieval, expansion, and malformed XML rejection;
 - correlation and duplicate-response handling;
 - response persistence before presentation;
-- network failure before, during, and after send;
+- process or network failure in `PREPARED`, before `DISPATCHING`, during dispatch, after remote acceptance, and after response receipt;
+- startup recovery resumes only `PREPARED` and converts orphaned `DISPATCHING` to `UNKNOWN`;
+- `NOT_STARTED`, `MAYBE_SENT`, and `RESPONSE_RECEIVED` helper classifications;
 - lost, duplicate, and malformed responses;
 - preserved ATO error, warning, and information messages;
 - `message.ping` when applicable;
@@ -669,22 +925,25 @@ There is no hidden vendor support channel. Support exports are user-created, sco
 Playwright launches the packaged Electron application and bundled Go service. The critical test:
 
 1. starts with networking disabled;
-2. creates and locks an encrypted workspace;
-3. signs in as a unique user;
-4. configures an organisation;
-5. creates accounts;
-6. rejects an unbalanced journal;
-7. posts a balanced GST-bearing journal;
-8. verifies ledger and trial balance;
-9. generates and validates the BAS workpaper;
-10. captures the declaration;
-11. receives an accepted simulated response;
-12. verifies audit evidence;
-13. exits all application processes;
-14. relaunches; and
-15. proves persisted values and audit-chain integrity.
+2. creates an encrypted workspace, confirms its recovery secret, then locks it;
+3. unlocks the workspace and signs in as its unique administrator;
+4. assigns that user the additional `business_lodger` role and enrols TOTP;
+5. configures an organisation and records `SIMULATOR_FIXTURE` entity verification;
+6. creates the five canonical accounts;
+7. rejects an unbalanced journal;
+8. posts the `$1,100` GST-inclusive sale and `$220` GST-inclusive purchase;
+9. verifies `$1,100` trial-balance totals and every exact closing balance;
+10. generates and validates `G1=$1,100`, `1A=$100`, `1B=$20`, net payable `$80`;
+11. satisfies TOTP and captures the versioned declaration;
+12. receives an accepted deterministic simulator response;
+13. verifies the report state, response hash, and audit evidence;
+14. exits every application process;
+15. relaunches, unlocks, and signs in; and
+16. proves exact persisted values and audit-chain integrity.
 
-Additional E2E cases cover role denial, session expiry, wrong workspace password, backup/restore, rejected submission, unknown outcome, keyboard navigation, and optional integration failure.
+A second packaged E2E creates a backup after step 13, adds a distinguishable later journal, restores the backup, and proves that the later journal is absent while the canonical organisation, journals, balances, `$80` BAS, declaration, accepted simulator transmission, evidence hashes, and audit head match the backup manifest. It also proves the machine-credential vault and prior sessions are absent.
+
+Additional E2E cases cover preparer submission denial, administrator-without-lodger denial, lodger TOTP enforcement, session expiry, wrong workspace and backup passwords, rejected submission, safe pre-send failure, orphaned-dispatch `UNKNOWN`, reconciliation, keyboard navigation, and audit rollback detection.
 
 ## 14. Compliance evidence
 
@@ -730,7 +989,7 @@ The executable path defined in Section 1, using the deterministic SBR simulator.
 
 Exit criteria:
 
-- clean install on supported macOS and Windows versions;
+- clean install on the exact macOS `arm64` and Windows `x86_64` matrix in Section 2.4;
 - no internet required for setup, accounting, BAS preparation, audit, backup, or restore;
 - all critical unit, integration, contract, and Electron E2E tests pass;
 - packaged-app restart persistence passes;
@@ -789,4 +1048,6 @@ The first implementation is complete only when:
 - [ATO Activity Statements AS.0004 (2025)](https://www.sbr.gov.au/digital-service-providers/developer-tools/australian-taxation-office-ato/activity-statements)
 - [ATO common artefacts and reference documents](https://www.sbr.gov.au/digital-service-providers/developer-tools/australian-taxation-office-ato/ato-common-artefacts-and-reference-documents)
 - [SBR software development steps](https://www.sbr.gov.au/digital-service-providers/software-development-steps)
-
+- [ATO: completing your BAS for GST](https://www.ato.gov.au/businesses-and-organisations/gst-excise-and-indirect-taxes/gst/in-detail/managing-gst-in-your-business/reporting-paying-and-activity-statements/completing-your-bas-for-gst/complete-your-bas)
+- [ATO: rounding of GST on tax invoices](https://www.ato.gov.au/businesses-and-organisations/gst-excise-and-indirect-taxes/gst/in-detail/rules-for-specific-transactions/invoicing)
+- [Electron 43 release](https://www.electronjs.org/blog/electron-43-0)
