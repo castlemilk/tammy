@@ -1,0 +1,103 @@
+name: Windows 11 foundation evidence
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: foundation-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows11-23h2-x64-packaged-e2e:
+    name: Windows 11 23H2 x64 packaged E2E
+    if: ${{ vars.TAMMY_WINDOWS11_RUNNER_ENABLED == 'true' }}
+    runs-on: [self-hosted, windows, x64, tammy-win11-23h2]
+    timeout-minutes: 30
+    steps:
+      - name: Verify Windows 11 23H2 or later x64
+        shell: pwsh
+        run: |
+          $os = Get-CimInstance -ClassName Win32_OperatingSystem
+          $build = [int]$os.BuildNumber
+          $architecture = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture
+          if ($os.Caption -notmatch "Windows 11") {
+            throw "WINDOWS11_EDITION_REQUIRED: $($os.Caption)"
+          }
+          if ($build -lt 22631) {
+            throw "WINDOWS11_23H2_BUILD_REQUIRED: $build"
+          }
+          if ($architecture -ne [System.Runtime.InteropServices.Architecture]::X64) {
+            throw "WINDOWS11_X64_REQUIRED: $architecture"
+          }
+          if ($env:PROCESSOR_ARCHITECTURE -ne "AMD64") {
+            throw "WINDOWS11_AMD64_PROCESS_REQUIRED"
+          }
+          Write-Host "Windows 11 x64 build $build verified."
+
+      - name: Check out the complete comparison history
+        id: checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+        with:
+          clean: true
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up pinned Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 24.18.0
+
+      - name: Set up pinned Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version: 1.26.4
+
+      - name: Activate pinned pnpm
+        run: corepack prepare pnpm@11.15.0 --activate
+
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify the pinned toolchain
+        run: pnpm check:toolchain
+
+      - name: Refuse a dirty generated tree
+        shell: pwsh
+        run: |
+          $changes = @(git status --porcelain=v1)
+          if ($LASTEXITCODE -ne 0) {
+            throw "GIT_STATUS_FAILED"
+          }
+          if ($changes.Count -ne 0) {
+            $changes | ForEach-Object { Write-Host $_ }
+            throw "DIRTY_GENERATED_TREE"
+          }
+
+      - name: Run packaged Windows 11 offline acceptance
+        shell: pwsh
+        run: |
+          pnpm desktop:e2e
+          if ($LASTEXITCODE -ne 0) {
+            throw "WINDOWS11_PACKAGED_E2E_FAILED"
+          }
+          New-Item -ItemType Directory -Force -Path "apps/desktop/test-results" | Out-Null
+          @{
+            classification = "WINDOWS11_23H2_X64_RELEASE_GATE"
+            status = "PASSED"
+            run_id = "${{ github.run_id }}"
+            run_attempt = "${{ github.run_attempt }}"
+          } | ConvertTo-Json | Set-Content -Encoding utf8 "apps/desktop/test-results/windows11-result.json"
+
+      - name: Upload Windows 11 manifest and results
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: windows11-x64-foundation-evidence
+          path: |
+            apps/desktop/resources/build/build-manifest.json
+            apps/desktop/test-results/**
+          if-no-files-found: error
+          retention-days: 30

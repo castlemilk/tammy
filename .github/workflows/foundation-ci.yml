@@ -1,0 +1,229 @@
+name: Offline desktop foundation
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: foundation-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contracts:
+    name: Contracts and local foundation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out the complete comparison history
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+        with:
+          clean: true
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up pinned Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 24.18.0
+
+      - name: Set up pinned Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version: 1.26.4
+
+      - name: Activate pinned pnpm
+        run: corepack prepare pnpm@11.15.0 --activate
+
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify the pinned toolchain
+        run: pnpm check:toolchain
+
+      - name: Refuse a dirty generated tree
+        shell: bash
+        run: |
+          changes="$(git status --porcelain=v1)"
+          if [[ -n "$changes" ]]; then
+            printf '%s\n' "$changes"
+            exit 1
+          fi
+
+      - name: Validate workflow definitions
+        run: pnpm ci:lint
+
+      - name: Verify Buf contracts
+        run: |
+          pnpm proto:format:check
+          pnpm proto:lint
+          pnpm proto:breaking
+          pnpm proto:generate
+          git diff --exit-code -- services/core/internal/gen packages/connect-client/src/gen
+          generated_changes="$(git status --porcelain=v1 -- services/core/internal/gen packages/connect-client/src/gen)"
+          if [[ -n "$generated_changes" ]]; then
+            printf '%s\n' "$generated_changes"
+            exit 1
+          fi
+
+      - name: Run Go race tests
+        run: go test -race ./services/core/...
+
+      - name: Run desktop tests with a virtual display
+        run: |
+          command -v xvfb-run
+          xvfb-run -a pnpm desktop:test
+
+      - name: Verify desktop types and repository lint
+        run: |
+          pnpm desktop:typecheck
+          pnpm lint
+
+  macos14-arm64-packaged:
+    name: macOS 14 arm64 packaged E2E
+    runs-on: macos-14
+    timeout-minutes: 30
+    steps:
+      - name: Assert native Apple silicon
+        run: test "$(uname -m)" = "arm64"
+
+      - name: Check out the complete comparison history
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+        with:
+          clean: true
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up pinned Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 24.18.0
+
+      - name: Set up pinned Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version: 1.26.4
+
+      - name: Activate pinned pnpm
+        run: corepack prepare pnpm@11.15.0 --activate
+
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify the pinned toolchain
+        run: pnpm check:toolchain
+
+      - name: Refuse a dirty generated tree
+        shell: bash
+        run: |
+          changes="$(git status --porcelain=v1)"
+          if [[ -n "$changes" ]]; then
+            printf '%s\n' "$changes"
+            exit 1
+          fi
+
+      - name: Run packaged offline acceptance
+        run: pnpm desktop:e2e
+
+      - name: Retain packaged failure evidence
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: macos14-arm64-foundation-failure-evidence
+          path: |
+            apps/desktop/test-results/**
+            apps/desktop/resources/build/build-manifest.json
+          if-no-files-found: warn
+          retention-days: 30
+
+  windows-server-x64-package-smoke:
+    name: WINDOWS_SERVER_SMOKE_ONLY / Windows Server 2025 x64 package
+    runs-on: windows-2025
+    timeout-minutes: 30
+    env:
+      EVIDENCE_CLASSIFICATION: WINDOWS_SERVER_SMOKE_ONLY
+    steps:
+      - name: Assert the Windows Server x64 smoke target
+        shell: pwsh
+        run: |
+          if ($env:PROCESSOR_ARCHITECTURE -ne "AMD64") {
+            throw "WINDOWS_SERVER_SMOKE_ONLY_REQUIRES_AMD64"
+          }
+          if ($env:EVIDENCE_CLASSIFICATION -ne "WINDOWS_SERVER_SMOKE_ONLY") {
+            throw "WINDOWS_SERVER_EVIDENCE_CLASSIFICATION_INVALID"
+          }
+          Write-Host "WINDOWS_SERVER_SMOKE_ONLY is not Windows 11 release-gate evidence."
+
+      - name: Check out the complete comparison history
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+        with:
+          clean: true
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up pinned Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 24.18.0
+
+      - name: Set up pinned Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version: 1.26.4
+
+      - name: Activate pinned pnpm
+        run: corepack prepare pnpm@11.15.0 --activate
+
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify the pinned toolchain
+        run: pnpm check:toolchain
+
+      - name: Refuse a dirty generated tree
+        shell: pwsh
+        run: |
+          $changes = @(git status --porcelain=v1)
+          if ($LASTEXITCODE -ne 0) {
+            throw "GIT_STATUS_FAILED"
+          }
+          if ($changes.Count -ne 0) {
+            $changes | ForEach-Object { Write-Host $_ }
+            throw "DIRTY_GENERATED_TREE"
+          }
+
+      - name: Run Windows desktop tests and package inputs
+        shell: pwsh
+        run: |
+          pnpm desktop:test
+          if ($LASTEXITCODE -ne 0) { throw "DESKTOP_TEST_FAILED" }
+          pnpm desktop:typecheck
+          if ($LASTEXITCODE -ne 0) { throw "DESKTOP_TYPECHECK_FAILED" }
+          pnpm core:build
+          if ($LASTEXITCODE -ne 0) { throw "CORE_BUILD_FAILED" }
+          pnpm build:manifest
+          if ($LASTEXITCODE -ne 0) { throw "BUILD_MANIFEST_FAILED" }
+          pnpm --dir apps/desktop make
+          if ($LASTEXITCODE -ne 0) { throw "FORGE_MAKE_FAILED" }
+
+      - name: Require Squirrel smoke artifacts
+        shell: pwsh
+        run: |
+          $root = "apps/desktop/out/make/squirrel.windows"
+          $setup = @(Get-ChildItem -Path $root -Recurse -File -Filter "*.exe" -ErrorAction SilentlyContinue)
+          $packages = @(Get-ChildItem -Path $root -Recurse -File -Filter "*.nupkg" -ErrorAction SilentlyContinue)
+          if ($setup.Count -eq 0 -or $packages.Count -eq 0) {
+            throw "WINDOWS_SERVER_SMOKE_ONLY_SQUIRREL_ARTIFACT_MISSING"
+          }
+          Write-Host "WINDOWS_SERVER_SMOKE_ONLY Squirrel artifacts: $($setup.Count) executable, $($packages.Count) package."
+
+      - name: Upload WINDOWS_SERVER_SMOKE_ONLY Squirrel output
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: WINDOWS_SERVER_SMOKE_ONLY-squirrel-windows-x64
+          path: apps/desktop/out/make/squirrel.windows/**
+          if-no-files-found: error
+          retention-days: 30
