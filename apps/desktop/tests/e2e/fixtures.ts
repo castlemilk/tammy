@@ -29,6 +29,7 @@ interface ElectronHarness {
   readonly page: Page;
   readonly pageErrors: string[];
   readonly packagedLayout: PackagedLayout;
+  readonly startupObserved: Promise<void>;
 }
 
 interface ElectronFixtures {
@@ -104,22 +105,37 @@ export const test = base.extend<ElectronFixtures>({
     const consoleErrors: string[] = [];
     const pageErrors: string[] = [];
     const observed = new WeakSet<Page>();
+    const startupByPage = new WeakMap<Page, Promise<void>>();
     const observe = (page: Page) => {
       if (observed.has(page)) return;
       observed.add(page);
       observePage(page, consoleErrors, pageErrors);
+      const startupObserved = page
+        .getByText("Starting local engine", { exact: true })
+        .waitFor({ state: "visible" });
+      void startupObserved.catch(() => undefined);
+      startupByPage.set(page, startupObserved);
     };
     application.windows().forEach(observe);
     application.on("window", observe);
     const page = await application.firstWindow();
     observe(page);
+    const startupObserved = startupByPage.get(page);
+    if (!startupObserved) throw new Error("STARTUP_OBSERVER_MISSING");
     const tracePath = testInfo.outputPath("electron-trace.zip");
     const traceStarted = testInfo.retry === 1;
     if (traceStarted) {
       await application.context().tracing.start({ screenshots: true, snapshots: true });
     }
 
-    await use({ application, consoleErrors, page, pageErrors, packagedLayout });
+    await use({
+      application,
+      consoleErrors,
+      page,
+      pageErrors,
+      packagedLayout,
+      startupObserved,
+    });
 
     const failed = testInfo.status !== testInfo.expectedStatus;
     if (failed && !page.isClosed()) {

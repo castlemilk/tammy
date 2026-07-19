@@ -8,9 +8,9 @@ test("runs the packaged desktop foundation offline and exits cleanly", async ({
 }) => {
   expect(test.info().project.name).toBe(expectedTarget);
 
-  const { consoleErrors, page, pageErrors } = electronHarness;
+  const { consoleErrors, page, pageErrors, startupObserved } = electronHarness;
   await expect(page).toHaveTitle("Tammy");
-  await expect(page.getByText("Starting local engine", { exact: true })).toBeVisible();
+  await startupObserved;
   await expect(page.getByText("Local engine ready", { exact: true })).toBeVisible();
   await expect(page.getByText("Offline", { exact: true })).toBeVisible();
   await expect(page.getByText("No cloud required", { exact: true })).toBeVisible();
