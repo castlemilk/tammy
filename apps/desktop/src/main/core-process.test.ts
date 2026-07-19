@@ -1,4 +1,8 @@
+import { spawn as nodeSpawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { PassThrough } from "node:stream";
 
 import { describe, expect, it, vi } from "vitest";
@@ -45,6 +49,7 @@ function readinessLine(): Buffer {
 }
 
 class FakeChild extends EventEmitter {
+  pid: number | undefined = 12_345;
   readonly stdout = new PassThrough();
   readonly stderr = new PassThrough();
   readonly stdin = new PassThrough();
@@ -212,6 +217,98 @@ describe("CoreProcess construction and spawning", () => {
       errorCode: "SPAWN_FAILED",
     });
   });
+
+  it("cleans up an asynchronous spawn failure that never acquired a PID", async () => {
+    const { child, supervisor, timers } = testRig();
+    child.pid = undefined;
+    const start = supervisor.start();
+
+    child.emit("error", new Error("ENOENT /secret/missing-core"));
+
+    await expectCoreError(start, "SPAWN_FAILED", "Core process could not be started.");
+    expect(child.killSignals).toEqual([]);
+    expect(timers.scheduled.filter((timer) => timer.delay === 3_000 && !timer.cancelled)).toEqual(
+      [],
+    );
+    expect(child.listenerCount("error")).toBe(0);
+    expect(child.listenerCount("exit")).toBe(0);
+    await expect(supervisor.stop()).resolves.toBeUndefined();
+    expect(supervisor.getDiagnostic()).toEqual({
+      state: "FAILED",
+      errorCode: "SPAWN_FAILED",
+    });
+  });
+});
+
+describe("CoreProcess real subprocess lifecycle", () => {
+  it("cleans up a production-spawn ENOENT without waiting for termination timers", async () => {
+    const missingPath = path.join(tmpdir(), `tammy-core-guaranteed-missing-${randomUUID()}`);
+    const supervisor = new CoreProcess({ binaryPath: missingPath });
+    const startedAt = Date.now();
+
+    const error = await supervisor.start().catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(CoreProcessError);
+    expect(error).toMatchObject({
+      code: "SPAWN_FAILED",
+      message: "Core process could not be started.",
+    });
+    expect(`${String(error)} ${JSON.stringify(error)}`).not.toMatch(
+      /ENOENT|tammy-core-guaranteed-missing/i,
+    );
+    await expect(supervisor.stop()).resolves.toBeUndefined();
+    expect(Date.now() - startedAt).toBeLessThan(1_500);
+    expect(supervisor.getDiagnostic()).toEqual({
+      state: "FAILED",
+      errorCode: "SPAWN_FAILED",
+    });
+    await expect(supervisor.stop()).resolves.toBeUndefined();
+  }, 7_000);
+
+  it("waits for real exit after the graceful window and SIGKILL", async () => {
+    const signals: NodeJS.Signals[] = [];
+    let exitObservedAt: number | undefined;
+    const script = [
+      `process.stdout.write(Buffer.from("${readinessLine().toString("base64")}","base64"));`,
+      'process.on("SIGTERM",()=>{});',
+      "process.stdin.resume();",
+      "setInterval(()=>{},1000);",
+    ].join("");
+    const spawn: SpawnCoreProcess = (_binaryPath, args, options) => {
+      expect(args).toEqual([]);
+      const child = nodeSpawn(process.execPath, ["-e", script], {
+        shell: options.shell,
+        windowsHide: options.windowsHide,
+        stdio: ["pipe", "pipe", "pipe"],
+        env: options.env,
+      });
+      const nativeKill = child.kill.bind(child);
+      child.kill = ((signal: NodeJS.Signals) => {
+        signals.push(signal);
+        return nativeKill(signal);
+      }) as typeof child.kill;
+      child.once("exit", () => {
+        exitObservedAt = Date.now();
+      });
+      return child;
+    };
+    const supervisor = new CoreProcess({
+      binaryPath: process.execPath,
+      spawn,
+    });
+    await supervisor.start();
+    const stopStartedAt = Date.now();
+
+    await supervisor.stop();
+    const stopResolvedAt = Date.now();
+
+    expect(signals).toEqual(["SIGKILL"]);
+    expect(stopResolvedAt - stopStartedAt).toBeGreaterThanOrEqual(2_800);
+    expect(stopResolvedAt - stopStartedAt).toBeLessThan(5_000);
+    expect(exitObservedAt).toBeDefined();
+    expect(stopResolvedAt).toBeGreaterThanOrEqual(exitObservedAt ?? Infinity);
+    expect(supervisor.getDiagnostic()).toEqual({ state: "STOPPED" });
+  }, 7_000);
 });
 
 describe("CoreProcess readiness", () => {

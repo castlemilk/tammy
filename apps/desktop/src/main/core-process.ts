@@ -52,6 +52,7 @@ export class CoreProcessError extends Error {
 }
 
 export interface CoreChildProcess extends EventEmitter {
+  readonly pid?: number | undefined;
   readonly stdout: Readable;
   readonly stderr: Readable;
   readonly stdin: Writable;
@@ -391,7 +392,12 @@ export class CoreProcess {
     if (this.#state === "STOPPING" || this.#state === "STOPPED") {
       return;
     }
+    const child = this.#child;
+    const neverSpawned = this.#state === "STARTING" && child?.pid === undefined;
     this.#fail(new CoreProcessError("SPAWN_FAILED"));
+    if (neverSpawned && this.#state === "FAILED" && this.#child === child) {
+      this.#finishFailedChildExit();
+    }
   };
 
   readonly #onExit = (): void => {
@@ -532,6 +538,7 @@ export class CoreProcess {
   }
 
   #finishFailedChildExit(): void {
+    this.#clearStopTimer();
     this.#clearForceConfirmationTimer();
     this.#removeListeners();
     this.#child = undefined;
