@@ -285,6 +285,11 @@ Use this complete Biome configuration:
 ```json
 {
   "$schema": "https://biomejs.dev/schemas/2.5.4/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
   "files": {
     "includes": [
       "**",
@@ -419,7 +424,7 @@ Expected: `pnpm-lock.yaml` is created; no peer-dependency or lifecycle-script wa
 
 - [ ] **Step 5: Write the failing toolchain contract test**
 
-`scripts/check-toolchain.test.mjs` must inject fake command output and assert exact acceptance of Node `v24.18.0`, pnpm `11.15.0`, Go `go1.26.4`, and Buf `1.72.0`; it must separately assert a readable mismatch for every tool. Import `validateToolVersions` from `check-toolchain.mjs`.
+`scripts/check-toolchain.test.mjs` must inject fake command output and assert exact acceptance of Node `v24.18.0`, pnpm `11.15.0`, Go `go1.26.4`, and Buf `1.72.0`; it must separately assert a readable mismatch for every tool. Import `validateToolVersions` from `check-toolchain.mjs`. Also cover argv-less dynamic import, pure `win32` and `darwin` command plans, sanitized command-execution failures, and a current-platform CLI subprocess.
 
 Core test:
 
@@ -462,11 +467,11 @@ test("reports every mismatch", () => {
 
 Run: `rtk mise exec -- pnpm test:toolchain`
 
-Expected: FAIL with `ERR_MODULE_NOT_FOUND` or missing `validateToolVersions`.
+Expected: FAIL with `ERR_MODULE_NOT_FOUND` or a missing validator/command-planning export.
 
 - [ ] **Step 7: Implement the toolchain checker**
 
-Export a pure `validateToolVersions(outputs)` function and keep command execution in the CLI branch. Use `execFileSync` with argument arrays for `node --version`, `pnpm --version`, `go version`, and `buf --version`; do not invoke a shell. Parse the Go version from the third whitespace-delimited token. Print every mismatch to stderr and exit 1, or print `toolchain ok` and exit 0.
+Export a pure `validateToolVersions(outputs)` function and a pure cross-platform command planner, and keep command execution in the `import.meta.main` CLI branch. Invoke Node with `process.execPath`. Run pnpm through `process.execPath` and its absolute lifecycle-provided JavaScript entry, with a validated Corepack JavaScript-entry fallback derived from the pinned Node installation. Resolve the pinned `@bufbuild/buf/bin/buf` JavaScript wrapper through ESM and run it through `process.execPath`. Go may remain a direct native `go` or `go.exe` call. Validate every selected entry as an absolute regular file, reject `.cmd` and `.bat` shims, and use `execFileSync` with argument arrays only—never a shell. Keep execution errors stable without exposing environment values. Parse the Go version from the third whitespace-delimited token. Print every mismatch to stderr and exit 1, or print `toolchain ok` and exit 0.
 
 - [ ] **Step 8: Verify tests and formatting**
 
@@ -480,7 +485,7 @@ rtk mise exec -- go work sync
 rtk mise exec -- go -C services/core mod download
 ```
 
-Expected: two Node tests PASS, the real executable check prints `toolchain ok`, Biome reports no errors, warnings, or deprecations, the Go workspace sync exits 0, and `go.work.sum` plus `services/core/go.sum` record the exact Connect-Go and Protobuf Go module checksums.
+Expected: all Node toolchain tests PASS, including argv-less import and the current-platform CLI subprocess; the real executable check prints `toolchain ok`; Biome reports no errors, warnings, or deprecations; the Go workspace sync exits 0; and `go.work.sum` plus `services/core/go.sum` record the exact Connect-Go and Protobuf Go module checksums.
 
 - [ ] **Step 9: Commit the workspace**
 
