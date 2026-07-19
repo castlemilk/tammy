@@ -115,6 +115,53 @@ interface CleanupPrimitives {
 
 type BuildExecutor = (signal: AbortSignal) => Promise<void>;
 
+interface IntegrationBuildExecOptions {
+  readonly cwd: string;
+  readonly env: NodeJS.ProcessEnv;
+  readonly signal: AbortSignal;
+  readonly windowsHide: boolean;
+}
+
+type IntegrationBuildExecFile = (
+  command: string,
+  args: readonly string[],
+  options: IntegrationBuildExecOptions,
+) => Promise<unknown>;
+
+interface ExecuteIntegrationCoreBuildOptions {
+  readonly binaryPath: string;
+  readonly execFile?: IntegrationBuildExecFile | undefined;
+  readonly signal: AbortSignal;
+  readonly sourceEnvironment?: Readonly<NodeJS.ProcessEnv> | undefined;
+  readonly temporaryDirectory: string;
+}
+
+const productionIntegrationBuildExecFile: IntegrationBuildExecFile = async (
+  command,
+  args,
+  options,
+) => {
+  await execFileAsync(command, [...args], options);
+};
+
+async function executeIntegrationCoreBuild({
+  binaryPath,
+  execFile: execute = productionIntegrationBuildExecFile,
+  signal,
+  sourceEnvironment = process.env,
+  temporaryDirectory,
+}: ExecuteIntegrationCoreBuildOptions): Promise<void> {
+  await execute("go", ["build", "-trimpath", "-o", binaryPath, "./services/core/cmd/tammy-core"], {
+    cwd: repositoryRoot,
+    env: {
+      ...sourceEnvironment,
+      GOCACHE: path.join(temporaryDirectory, "go-cache"),
+    },
+    signal,
+    windowsHide: true,
+  });
+}
+
 const productionTimeoutTimers: TimeoutTimers = {
   setTimeout: (callback, delay) => globalThis.setTimeout(callback, delay),
   clearTimeout: (timer) => globalThis.clearTimeout(timer as ReturnType<typeof setTimeout>),
@@ -316,6 +363,57 @@ describe("integration build timeout", () => {
   );
 });
 
+describe("integration build environment", () => {
+  it("gives execFile a contained local Go cache without mutating inherited environment", async () => {
+    const temporaryRoot = path.join(tmpdir(), "tammy-integration-environment");
+    const binary = path.join(
+      temporaryRoot,
+      process.platform === "win32" ? "tammy-core.exe" : "tammy-core",
+    );
+    const sourceEnvironment = Object.freeze({
+      GOCACHE: "/shared/go-cache",
+      PATH: "/toolchain/bin",
+      SystemRoot: "C:\\Windows",
+      TAMMY_SECRET_SENTINEL: "must-not-be-printed",
+    });
+    const abortController = new AbortController();
+    const calls: unknown[][] = [];
+
+    await executeIntegrationCoreBuild({
+      binaryPath: binary,
+      execFile: async (...call: unknown[]) => {
+        calls.push(call);
+      },
+      signal: abortController.signal,
+      sourceEnvironment,
+      temporaryDirectory: temporaryRoot,
+    });
+
+    expect(calls).toHaveLength(1);
+    const [command, args, rawOptions] = calls[0] ?? [];
+    const options = rawOptions as {
+      readonly cwd: string;
+      readonly env: Readonly<Record<string, string | undefined>>;
+      readonly signal: AbortSignal;
+      readonly windowsHide: boolean;
+    };
+    expect(command).toBe("go");
+    expect(args).toEqual(["build", "-trimpath", "-o", binary, "./services/core/cmd/tammy-core"]);
+    expect(options).toMatchObject({
+      cwd: repositoryRoot,
+      signal: abortController.signal,
+      windowsHide: true,
+    });
+    expect(options.env).not.toBe(sourceEnvironment);
+    expect(options.env).toMatchObject({
+      ...sourceEnvironment,
+      GOCACHE: path.join(temporaryRoot, "go-cache"),
+    });
+    expect(path.relative(temporaryRoot, options.env.GOCACHE ?? "")).toBe("go-cache");
+    expect(sourceEnvironment.GOCACHE).toBe("/shared/go-cache");
+  });
+});
+
 describe("bounded integration lifecycle helpers", () => {
   it("aborts a build executor that otherwise never settles", async () => {
     const timers = new FakeTimeoutTimers();
@@ -459,19 +557,14 @@ describe("CoreProcess and Connect-ES interoperability", () => {
       process.platform === "win32" ? "tammy-core.exe" : "tammy-core",
     );
     await runBoundedBuild(
-      async (signal) => {
+      (signal) =>
         // execFile's callback settles after child termination, so an aborted build is reaped
         // before the rejection reaches beforeAll and cleanup can remove the executable.
-        await execFileAsync(
-          "go",
-          ["build", "-trimpath", "-o", binaryPath, "./services/core/cmd/tammy-core"],
-          {
-            cwd: repositoryRoot,
-            windowsHide: true,
-            signal,
-          },
-        );
-      },
+        executeIntegrationCoreBuild({
+          binaryPath,
+          signal,
+          temporaryDirectory,
+        }),
       BUILD_TIMEOUT_MS,
       productionTimeoutTimers,
     );
