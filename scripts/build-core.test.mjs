@@ -7,6 +7,7 @@ import { afterEach, describe, it } from "node:test";
 import {
   buildCore,
   cleanCoreResources,
+  createBuildCache,
   createBuildPlan,
   parseCiTarget,
   resolveCoreBinary,
@@ -199,10 +200,20 @@ describe("generated resources", () => {
 describe("build execution", () => {
   it("cleans, builds once, requires a regular output, and returns its SHA-256", async () => {
     const root = await temporaryRoot();
+    const cacheRoot = path.join(root, "cache");
+    await mkdir(cacheRoot);
     const calls = [];
+    const sourceEnvironment = {
+      GOCACHE: path.join(root, "shared-cache"),
+      PATH: "/tools",
+      TAMMY_BUILD_SECRET: "must-not-be-printed",
+    };
+    const originalEnvironment = { ...sourceEnvironment };
     const result = await buildCore({
       root,
+      sourceEnvironment,
       target: selectTarget("darwin", "arm64"),
+      temporaryRoot: cacheRoot,
       version: "0.1.0",
       execFile: async (command, args, options) => {
         calls.push({ command, args, options });
@@ -216,6 +227,12 @@ describe("build execution", () => {
     assert.equal(calls[0].options.shell, false);
     assert.equal(calls[0].options.timeout, 120_000);
     assert.ok(calls[0].options.signal instanceof AbortSignal);
+    assert.equal(calls[0].options.env.TAMMY_BUILD_SECRET, "must-not-be-printed");
+    assert.equal(calls[0].options.env.PATH, "/tools");
+    assert.notEqual(calls[0].options.env.GOCACHE, originalEnvironment.GOCACHE);
+    assert.equal(path.relative(cacheRoot, calls[0].options.env.GOCACHE).startsWith(".."), false);
+    assert.deepEqual(sourceEnvironment, originalEnvironment);
+    assert.deepEqual(await readdir(cacheRoot), []);
     assert.equal(
       result.path,
       path.join(root, "apps/desktop/resources/core/darwin-arm64/tammy-core"),
@@ -226,24 +243,31 @@ describe("build execution", () => {
 
   it("rejects a build that does not produce the binary", async () => {
     const root = await temporaryRoot();
+    const cacheRoot = path.join(root, "cache");
+    await mkdir(cacheRoot);
     await assert.rejects(
       buildCore({
         root,
         target: selectTarget("darwin", "arm64"),
+        temporaryRoot: cacheRoot,
         version: "0.1.0",
         execFile: async () => undefined,
       }),
       /CORE_BINARY_MISSING/,
     );
+    assert.deepEqual(await readdir(cacheRoot), []);
   });
 
   it("aborts a bounded build and cleans its partial output", async () => {
     const root = await temporaryRoot();
     const resources = path.join(root, "apps/desktop/resources/core");
+    const cacheRoot = path.join(root, "cache");
+    await mkdir(cacheRoot);
     await assert.rejects(
       buildCore({
         root,
         target: selectTarget("darwin", "arm64"),
+        temporaryRoot: cacheRoot,
         timeoutMs: 1,
         version: "0.1.0",
         execFile: async (_command, args, options) =>
@@ -262,6 +286,70 @@ describe("build execution", () => {
           }),
       }),
       /CORE_BUILD_TIMEOUT/,
+    );
+    assert.deepEqual(await readdir(resources), [".gitkeep"]);
+    assert.deepEqual(await readdir(cacheRoot), []);
+  });
+
+  it("cleans the isolated cache and partial output after a build failure", async () => {
+    const root = await temporaryRoot();
+    const resources = path.join(root, "apps/desktop/resources/core");
+    const cacheRoot = path.join(root, "cache");
+    await mkdir(cacheRoot);
+    await assert.rejects(
+      buildCore({
+        root,
+        target: selectTarget("darwin", "arm64"),
+        temporaryRoot: cacheRoot,
+        version: "0.1.0",
+        execFile: async (_command, args, options) => {
+          assert.equal(path.relative(cacheRoot, options.env.GOCACHE).startsWith(".."), false);
+          await writeFile(path.join(options.env.GOCACHE, "cache-entry"), "cache");
+          const output = args[args.indexOf("-o") + 1];
+          await writeFile(output, "partial");
+          throw new Error("injected failure");
+        },
+      }),
+      /CORE_BUILD_FAILED/,
+    );
+    assert.deepEqual(await readdir(cacheRoot), []);
+    assert.deepEqual(await readdir(resources), [".gitkeep"]);
+  });
+
+  it("rejects a cache directory outside the configured temporary root", async () => {
+    const root = await temporaryRoot();
+    const cacheRoot = path.join(root, "cache");
+    const outside = path.join(root, "outside-cache");
+    await mkdir(cacheRoot);
+    await mkdir(outside);
+    await assert.rejects(
+      createBuildCache({
+        makeDirectory: async () => outside,
+        temporaryRoot: cacheRoot,
+      }),
+      /INVALID_BUILD_CACHE/,
+    );
+  });
+
+  it("fails closed and removes the binary when cache cleanup fails", async () => {
+    const root = await temporaryRoot();
+    const resources = path.join(root, "apps/desktop/resources/core");
+    const cacheRoot = path.join(root, "cache");
+    await mkdir(cacheRoot);
+    await assert.rejects(
+      buildCore({
+        root,
+        target: selectTarget("darwin", "arm64"),
+        temporaryRoot: cacheRoot,
+        version: "0.1.0",
+        execFile: async (_command, args) => {
+          await writeFile(args[args.indexOf("-o") + 1], "binary");
+        },
+        removeCacheDirectory: async () => {
+          throw new Error("injected cleanup failure");
+        },
+      }),
+      /CORE_BUILD_CACHE_CLEANUP_FAILED/,
     );
     assert.deepEqual(await readdir(resources), [".gitkeep"]);
   });

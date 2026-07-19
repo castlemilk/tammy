@@ -1,6 +1,7 @@
 import { execFile as nodeExecFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { lstat, mkdir, readdir, readFile, rm, truncate } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, readdir, readFile, rm, truncate } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -140,6 +141,42 @@ export async function cleanCoreResources(resourcesRoot) {
   }
 }
 
+export async function createBuildCache({
+  temporaryRoot = os.tmpdir(),
+  makeDirectory = mkdtemp,
+} = {}) {
+  if (
+    typeof temporaryRoot !== "string" ||
+    !path.isAbsolute(temporaryRoot) ||
+    path.normalize(temporaryRoot) !== temporaryRoot
+  ) {
+    throw new Error("INVALID_BUILD_CACHE");
+  }
+  const rootStats = await lstat(temporaryRoot).catch(() => null);
+  if (!rootStats?.isDirectory() || rootStats.isSymbolicLink()) {
+    throw new Error("INVALID_BUILD_CACHE");
+  }
+  const cache = await makeDirectory(path.join(temporaryRoot, "tammy-go-build-cache-")).catch(() => {
+    throw new Error("INVALID_BUILD_CACHE");
+  });
+  const relative = path.relative(temporaryRoot, cache);
+  const cacheStats = await lstat(cache).catch(() => null);
+  if (
+    typeof cache !== "string" ||
+    !path.isAbsolute(cache) ||
+    path.normalize(cache) !== cache ||
+    relative === "" ||
+    relative === ".." ||
+    relative.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relative) ||
+    !cacheStats?.isDirectory() ||
+    cacheStats.isSymbolicLink()
+  ) {
+    throw new Error("INVALID_BUILD_CACHE");
+  }
+  return cache;
+}
+
 function productionExecFile(command, args, options) {
   return new Promise((resolve, reject) => {
     nodeExecFile(command, args, options, (error) => {
@@ -159,34 +196,64 @@ export async function buildCore({
   execFile = productionExecFile,
   timeoutMs = BUILD_TIMEOUT_MS,
   sourceEnvironment,
+  temporaryRoot = os.tmpdir(),
+  makeCacheDirectory = mkdtemp,
+  removeCacheDirectory = (directory) => rm(directory, { force: true, recursive: true }),
 }) {
   const plan = createBuildPlan({ root, target, version, sourceEnvironment });
   await cleanCoreResources(plan.resourcesRoot);
   await mkdir(path.dirname(plan.output), { recursive: true });
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  let cacheDirectory;
+  let buildError;
+  let result;
   try {
-    await execFile(plan.command, plan.args, {
-      ...plan.options,
-      killSignal: "SIGKILL",
-      signal: controller.signal,
-      timeout: timeoutMs,
+    cacheDirectory = await createBuildCache({
+      makeDirectory: makeCacheDirectory,
+      temporaryRoot,
     });
-  } catch {
-    await cleanCoreResources(plan.resourcesRoot);
-    throw new Error(controller.signal.aborted ? "CORE_BUILD_TIMEOUT" : "CORE_BUILD_FAILED");
-  } finally {
-    clearTimeout(timeout);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      await execFile(plan.command, plan.args, {
+        ...plan.options,
+        env: Object.freeze({
+          ...plan.options.env,
+          GOCACHE: cacheDirectory,
+        }),
+        killSignal: "SIGKILL",
+        signal: controller.signal,
+        timeout: timeoutMs,
+      });
+    } catch {
+      await cleanCoreResources(plan.resourcesRoot);
+      throw new Error(controller.signal.aborted ? "CORE_BUILD_TIMEOUT" : "CORE_BUILD_FAILED");
+    } finally {
+      clearTimeout(timeout);
+    }
+    const outputStats = await lstat(plan.output).catch(() => null);
+    if (!outputStats?.isFile() || outputStats.isSymbolicLink()) {
+      await cleanCoreResources(plan.resourcesRoot);
+      throw new Error("CORE_BINARY_MISSING");
+    }
+    const sha256 = createHash("sha256")
+      .update(await readFile(plan.output))
+      .digest("hex");
+    result = Object.freeze({ path: plan.output, sha256 });
+  } catch (error) {
+    buildError = error;
   }
-  const outputStats = await lstat(plan.output).catch(() => null);
-  if (!outputStats?.isFile() || outputStats.isSymbolicLink()) {
-    await cleanCoreResources(plan.resourcesRoot);
-    throw new Error("CORE_BINARY_MISSING");
+  if (cacheDirectory) {
+    try {
+      await removeCacheDirectory(cacheDirectory);
+    } catch {
+      await cleanCoreResources(plan.resourcesRoot);
+      throw new Error("CORE_BUILD_CACHE_CLEANUP_FAILED");
+    }
   }
-  const sha256 = createHash("sha256")
-    .update(await readFile(plan.output))
-    .digest("hex");
-  return Object.freeze({ path: plan.output, sha256 });
+  if (buildError) {
+    throw buildError;
+  }
+  return result;
 }
 
 export function selectBuildTarget(environment, platform, arch) {
