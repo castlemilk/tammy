@@ -27,6 +27,15 @@ type serverConfig struct {
 // Option configures server construction.
 type Option func(*serverConfig) error
 
+type serverLifecycleState uint8
+
+const (
+	serverStateNew serverLifecycleState = iota
+	serverStateRunning
+	serverStateStopping
+	serverStateStopped
+)
+
 // WithClock injects the clock used for the ephemeral certificate validity
 // window.
 func WithClock(clock func() time.Time) Option {
@@ -53,14 +62,18 @@ func WithRandomSource(randomness io.Reader) Option {
 
 // Server owns one ephemeral loopback TLS listener and its Connect handler.
 type Server struct {
-	listener    net.Listener
-	tlsListener net.Listener
-	httpServer  *http.Server
-	ready       ReadinessRecord
-	serveErrors chan error
+	listener     net.Listener
+	tlsListener  net.Listener
+	httpServer   *http.Server
+	ready        ReadinessRecord
+	serveErrors  chan error
+	serveDone    chan struct{}
+	shutdownDone chan struct{}
 
-	mu      sync.Mutex
-	started bool
+	mu           sync.Mutex
+	state        serverLifecycleState
+	errorsClosed bool
+	shutdownErr  error
 }
 
 // NewServer constructs and binds an ephemeral IPv4 loopback server.
@@ -126,7 +139,9 @@ func NewServer(
 			CAPEM:      credentials.caPEM,
 			Capability: credentials.capability,
 		},
-		serveErrors: make(chan error, 1),
+		serveErrors:  make(chan error, 1),
+		serveDone:    make(chan struct{}),
+		shutdownDone: make(chan struct{}),
 	}
 	server.httpServer = &http.Server{
 		Handler:           mux,
@@ -151,18 +166,36 @@ func (server *Server) Ready() ReadinessRecord {
 // Errors.
 func (server *Server) Start() error {
 	server.mu.Lock()
-	defer server.mu.Unlock()
-	if server.started {
+	switch server.state {
+	case serverStateNew:
+		server.state = serverStateRunning
+	case serverStateRunning:
+		server.mu.Unlock()
 		return errors.New("local API server already started")
+	case serverStateStopping, serverStateStopped:
+		server.mu.Unlock()
+		return errors.New("local API server is stopped")
+	default:
+		server.mu.Unlock()
+		return errors.New("local API server has an invalid state")
 	}
-	server.started = true
+	server.mu.Unlock()
 
 	go func() {
 		err := server.httpServer.Serve(server.tlsListener)
-		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		server.mu.Lock()
+		if server.state == serverStateRunning &&
+			err != nil &&
+			!errors.Is(err, http.ErrServerClosed) {
 			server.serveErrors <- errors.New("local API server stopped unexpectedly")
 		}
-		close(server.serveErrors)
+		if server.state == serverStateRunning {
+			server.state = serverStateStopped
+			close(server.shutdownDone)
+		}
+		server.closeServeErrorsLocked()
+		close(server.serveDone)
+		server.mu.Unlock()
 	}()
 	return nil
 }
@@ -176,18 +209,69 @@ func (server *Server) Errors() <-chan error {
 // Shutdown gracefully stops serving within the caller's context deadline.
 func (server *Server) Shutdown(ctx context.Context) error {
 	server.mu.Lock()
-	started := server.started
-	server.mu.Unlock()
-	if !started {
+	switch server.state {
+	case serverStateNew:
+		server.state = serverStateStopped
 		if err := server.listener.Close(); err != nil && !errors.Is(err, net.ErrClosed) {
-			return errors.New("could not close local API listener")
+			server.shutdownErr = errors.New("could not close local API listener")
 		}
-		return nil
+		server.closeServeErrorsLocked()
+		close(server.serveDone)
+		close(server.shutdownDone)
+		err := server.shutdownErr
+		server.mu.Unlock()
+		return err
+	case serverStateRunning:
+		server.state = serverStateStopping
+		server.mu.Unlock()
+	case serverStateStopping:
+		done := server.shutdownDone
+		server.mu.Unlock()
+		select {
+		case <-done:
+			server.mu.Lock()
+			err := server.shutdownErr
+			server.mu.Unlock()
+			return err
+		case <-ctx.Done():
+			return errors.New("could not shut down local API server")
+		}
+	case serverStateStopped:
+		err := server.shutdownErr
+		server.mu.Unlock()
+		return err
+	default:
+		server.mu.Unlock()
+		return errors.New("local API server has an invalid state")
 	}
+
+	var shutdownErr error
 	if err := server.httpServer.Shutdown(ctx); err != nil {
-		return errors.New("could not shut down local API server")
+		shutdownErr = errors.New("could not shut down local API server")
 	}
-	return nil
+	if err := server.listener.Close(); err != nil && !errors.Is(err, net.ErrClosed) {
+		shutdownErr = errors.New("could not close local API listener")
+	}
+	select {
+	case <-server.serveDone:
+	case <-ctx.Done():
+		shutdownErr = errors.New("could not shut down local API server")
+	}
+
+	server.mu.Lock()
+	server.state = serverStateStopped
+	server.shutdownErr = shutdownErr
+	close(server.shutdownDone)
+	server.mu.Unlock()
+	return shutdownErr
+}
+
+func (server *Server) closeServeErrorsLocked() {
+	if server.errorsClosed {
+		return
+	}
+	close(server.serveErrors)
+	server.errorsClosed = true
 }
 
 type structuredLogWriter struct {
@@ -208,9 +292,12 @@ func (writer *structuredLogWriter) Write(message []byte) (int, error) {
 
 	writer.mu.Lock()
 	defer writer.mu.Unlock()
-	_, err = writer.destination.Write(record)
+	written, err := writer.destination.Write(record)
 	if err != nil {
 		return 0, err
+	}
+	if written != len(record) {
+		return 0, io.ErrShortWrite
 	}
 	return len(message), nil
 }

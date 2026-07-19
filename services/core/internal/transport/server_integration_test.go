@@ -173,13 +173,33 @@ func TestServerLoopbackTLSConnectAuthenticationAndShutdown(t *testing.T) {
 		})
 	}
 
-	plainClient := &http.Client{Timeout: 2 * time.Second}
-	if response, err := plainClient.Get("http://127.0.0.1:" + portString(ready.Port)); err == nil {
-		response.Body.Close()
-		if response.StatusCode >= http.StatusOK && response.StatusCode < http.StatusMultipleChoices {
-			t.Fatal("plain HTTP unexpectedly succeeded")
+	t.Run("plaintext Connect is rejected", func(t *testing.T) {
+		plainClient := &http.Client{Timeout: 2 * time.Second}
+		if response, err := plainClient.Get("http://127.0.0.1:" + portString(ready.Port)); err == nil {
+			response.Body.Close()
+			if response.StatusCode >= http.StatusOK && response.StatusCode < http.StatusMultipleChoices {
+				t.Fatal("plain HTTP unexpectedly succeeded")
+			}
 		}
-	}
+		plaintextConnect := tammyv1connect.NewSystemServiceClient(
+			plainClient,
+			"http://127.0.0.1:"+portString(ready.Port),
+		)
+		plaintextRequest := connect.NewRequest(&tammyv1.GetDiagnosticsRequest{})
+		plaintextRequest.Header().Set(CapabilityHeader, ready.Capability)
+		plaintextResponse, plaintextErr := plaintextConnect.GetDiagnostics(
+			context.Background(),
+			plaintextRequest,
+		)
+		if plaintextErr == nil || plaintextResponse != nil {
+			t.Fatal("plaintext Connect diagnostics unexpectedly succeeded")
+		}
+		assertServerSecretAbsent(
+			t,
+			plaintextErr.Error(),
+			ready.Capability,
+		)
+	})
 
 	started := time.Now()
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
