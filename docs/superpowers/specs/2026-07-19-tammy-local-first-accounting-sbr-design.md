@@ -276,6 +276,7 @@ Tax ───────── ReportReadPort ───────────
 Artefacts ── ArtefactReadPort ─────────────────→ Accounting + Tax + SBR
 Identity ── IdentityAuthorizer ────────────────→ all handlers
 Organisations + Tax + Evidence + Artefacts ───→ SBR
+Organisation/ownership orchestrators ── OrganisationImpactPort ──→ Identity + Tax
 All command handlers ──────────────────────────→ AuditAppender
 ```
 
@@ -322,12 +323,26 @@ type ArtefactReadPort interface {
     ServiceDefinition(ctx context.Context, tx TxScope, interaction InteractionID) (ServiceDefinitionProjection, error)
 }
 
+type OrganisationImpactPort interface {
+    Apply(ctx context.Context, tx TxScope, command OrganisationImpactCommand) (OrganisationImpactProjection, error)
+}
+
+type TaxReportImpactPort interface {
+    ApplyOrganisationImpact(ctx context.Context, tx TxScope, command OrganisationImpactCommand) (TaxImpactProjection, error)
+}
+
+type IdentitySessionImpactPort interface {
+    InvalidateForOrganisationImpact(ctx context.Context, tx TxScope, command OrganisationImpactCommand) (SessionImpactProjection, error)
+}
+
 type AuditAppender interface {
     Append(ctx context.Context, tx TxScope, event AuditEventDraft) (AuditEventProjection, error)
 }
 ```
 
-`TaxPostingSet` contains a ledger revision plus immutable posting projections: journal and line IDs, posting date, account, gross/net/GST minor units, tax-rule ID, tax-rule-bundle ID, and source hash. `ReportingProfile` contains ABN, legal name, GST basis, reporting period, active rule-bundle ID/effective date, and initiating-party role. Declaration and submission projections contain report version, organisation, period, content hash, state, BAS values, rule/artefact versions, and signatory requirements. Every cross-module read in a write command receives the same `TxScope`, so authorisation, source data, report state, declaration, and audit commit against one SQLite snapshot.
+`TaxPostingSet` contains a ledger revision plus immutable posting projections: journal and line IDs, posting date, account, gross/net/GST minor units, tax-rule ID, tax-rule-bundle ID, and source hash. `ReportingProfile` contains ABN, legal name, GST basis, reporting period, active rule-bundle ID/effective date, and initiating-party role. Declaration and submission projections contain report version, organisation, period, content hash, state, BAS values, rule/artefact versions, and signatory requirements. Every cross-module read or impact in a write command receives the same `TxScope`, so authorisation, source data, report state, declaration, session invalidation, organisation change, and audit commit against one SQLite snapshot.
+
+`OrganisationImpactCommand` contains the organisation ID, cause (`IDENTITY_CHANGED`, `GST_CONFIGURATION_CHANGED`, or `OWNERSHIP_TRANSFERRED`), affected-period start where applicable, and whether all sessions must be invalidated. Its composition-root implementation delegates to module-owned `TaxReportImpactPort` and `IdentitySessionImpactPort` adapters; each adapter mutates only its own module's tables. It first rejects any affected `DISPATCHING` or `UNKNOWN` transmission, then performs the exact supersession/cancellation rules in Section 7.4 and any session invalidation. `OrganisationImpactProjection` returns affected report, declaration, transmission, and session IDs for the containing audit event. A failure rolls back the organisation/owner change, every impact, and the audit event together. Orchestrator tests use strict fakes, and SQLite integration tests prove atomic rollback across all participating adapters.
 
 ### 6.2 First-slice use-case catalogue
 
@@ -353,9 +368,9 @@ type AuditAppender interface {
 | `IdentityService.ResetUserAuthentication` | `workspace_admin` with fresh TOTP | target user → pending user and new activation code | Identity; audit | target is last admin, admin factor stale |
 | `IdentityService.RecoverAdministrator` | locked-app break glass | recovery secret, admin username, new workspace/user passwords → reset administrator | Workspace + Identity; audit | recovery invalid, user not admin |
 | `OrganisationService.CreateOrganisation` | `workspace_admin` | ABN, legal name, GST settings → organisation | Organisations; audit | invalid ABN format, duplicate ABN |
-| `OrganisationService.UpdateOrganisation` | `workspace_admin` with fresh TOTP | field mask, identity/GST values, effective date, reason → organisation | Organisations; AccountingReadPort, Tax report port, audit | invalid ABN/settings, stale version, period has postings |
+| `OrganisationService.UpdateOrganisation` | `workspace_admin` with fresh TOTP | expected version, field mask, identity/GST values, effective date, reason → organisation | Organisation-change orchestrator; Organisations, AccountingReadPort, OrganisationImpactPort, audit | invalid ABN/settings, stale version, period has postings, unresolved transmission |
 | `OrganisationService.RecordEntityVerification` | `workspace_admin` | organisation, source metadata, evidence hash → verification | Organisations; evidence blob port, audit | source invalid, evidence missing, details mismatch |
-| `WorkspaceService.TransferOwnership` | current owner with fresh TOTP | target active administrator, acknowledgement → new owner | Workspace + Organisations + Identity; audit | target invalid, stale factor, acknowledgement missing |
+| `WorkspaceService.TransferOwnership` | current owner with fresh TOTP | target active administrator, acknowledgement → new owner | Ownership-change orchestrator; Workspace, Organisations, OrganisationImpactPort, audit | target invalid, stale factor, acknowledgement missing, unresolved transmission |
 | `AccountingService.CreateAccount` | `workspace_admin`, `business_preparer` | code, name, type → account | Accounting; audit | duplicate code, invalid type |
 | `AccountingService.SetAccountStatus` | `workspace_admin` | account ID, active/archived, reason → account | Accounting; audit | system account, invalid transition |
 | `AccountingService.ListTaxCodes` | any preparing role | organisation, posting date → rule IDs, labels, and treatments | Read-only Accounting; OrganisationReadPort, ArtefactReadPort, TaxRules | rule bundle unavailable, invalid date |
@@ -401,6 +416,8 @@ Bootstrap, authentication, and recovery use these explicit exceptions:
 Pre-authentication proofs never acquire an actor user ID by assertion from the client. Before a successful proof, counters are scoped to an installation-generated opaque principal for the pending setup, workspace, pending user, or factor-enrolment record. After a proof succeeds, any persistent recovery mutation is bound to the user/workspace identity read from encrypted storage.
 
 Wrong workspace passphrase or recovery-secret attempts are written to a chained, HMAC-authenticated security-attempt journal in application data using an installation key from the OS credential store. Five failures for the same workspace opaque ID within 15 minutes cause a 15-minute cooldown; a successful proof clears the window. Five failed `ConfirmRecovery` invocations expire and securely delete pending setup. Sign-in and activation use the exact windows in Section 7.1. Five failed TOTP confirmations or assertions for a user within five minutes block TOTP confirmation/elevation for 15 minutes without disabling an existing factor. These local Connect calls are never automatically retried by Electron main or the renderer; an explicit user action creates each new attempt.
+
+`AssertTOTP` validates the supplied code on every invocation even when an elevated marker already exists; it never returns the current marker before validation. A newly accepted, non-replayed counter replaces the marker's five-minute window. This keeps every assertion auditable and prevents an invalid code from appearing successful because of prior elevation.
 
 Restore cannot rely on an idempotency row inside a database it may replace. A small external restore-operation journal in application data scopes keys by `(target_workspace_id, operation_key)`, stores the backup manifest hash and states `PREPARED`, `STAGED`, `SWAPPED`, and `COMPLETE`, and contains no accounting values or passwords. Entries are chained and HMAC-authenticated with an installation key held in the OS credential store. The journal is fsync'd at every transition and retained for the workspace lifetime. Startup resumes or rolls back the recorded transition; a reused key with a different manifest hash fails with `IDEMPOTENCY_CONFLICT`.
 
@@ -502,11 +519,13 @@ An entity-verification record contains:
 
 Only `workspace_admin` may record or supersede verification. `ABR_EXTRACT_MANUAL` requires a saved independent-source extract or capture whose hash is retained in evidence storage. Product policy expires verification after 12 months and immediately supersedes it after an ABN, verified legal-name, entity-type, or workspace-ownership change. A DPO response may require a shorter interval.
 
-`UpdateOrganisation` carries an expected organisation version, field mask, reason, and any required effective date. Display-name and contact changes take effect immediately without superseding entity verification. ABN, legal-name, or entity-type changes take effect immediately, supersede the current verification, invalidate every pre-dispatch workpaper, validation, and declaration, and leave SBR disabled until a new matching verification is recorded. Immutable dispatched report snapshots retain the identity used when sent.
+`UpdateOrganisation` carries an expected organisation version, field mask, reason, and any required effective date. Display-name and contact changes take effect immediately without superseding entity verification. ABN, legal-name, or entity-type changes take effect immediately, supersede the current verification, and invoke `OrganisationImpactPort` in the same transaction. Every affected pre-dispatch report becomes `SUPERSEDED`; its validation and declaration are retained as superseded evidence; any associated `PREPARED` transmission becomes `CANCELLED` and its retained payload is permanently ineligible for dispatch. SBR remains disabled until a new matching verification is recorded. Immutable dispatched report snapshots retain the identity used when sent.
 
-GST basis, reporting frequency, and active tax-rule-bundle changes must take effect on the first day of a later GST reporting period. The command is rejected if that target period already contains a posting or report. It invalidates any pre-dispatch workpaper for the target or later affected period; dispatched reports remain immutable. A rule-bundle change cannot produce mixed bundle IDs in one period.
+GST basis, reporting frequency, and active tax-rule-bundle changes must take effect on the first day of a later GST reporting period. The command is rejected if that target period already contains a posting or dispatched report. Through `OrganisationImpactPort`, every affected pre-dispatch report for the target or a later period becomes `SUPERSEDED`, with the same declaration and `PREPARED → CANCELLED` transmission behavior. A rule-bundle change cannot produce mixed bundle IDs in one period.
 
-`TransferOwnership` requires the current owner, a new TOTP assertion, an explicit acknowledgement of the verification effect, and a target user who is active and already has `workspace_admin`. The transaction changes the owner, supersedes entity verification, invalidates all sessions and pre-dispatch reports, and appends the high-risk audit event. The workspace closes after returning the committed result; subsequent SBR remains disabled until a new matching entity verification is recorded.
+`TransferOwnership` requires the current owner, a new TOTP assertion, an explicit acknowledgement of the verification effect, and a target user who is active and already has `workspace_admin`. Through `OrganisationImpactPort`, the transaction changes the owner, supersedes entity verification, applies the same report/declaration/transmission supersession rules, invalidates all sessions, and appends the high-risk audit event. The workspace closes after returning the committed result; subsequent SBR remains disabled until a new matching entity verification is recorded.
+
+An identity, GST-configuration, or ownership command is rejected atomically with `TRANSMISSION_OUTCOME_UNRESOLVED` if any affected transmission is `DISPATCHING` or `UNKNOWN`; the lodger must reconcile it first. `ACCEPTED` and `REJECTED` reports and their payloads remain immutable historical snapshots. A `TECHNICAL_FAILURE_SAFE` transmission is proven unsent and may be cancelled and superseded. These checks occur inside the same `TxScope` as the optimistic organisation version check, so a concurrent dispatch cannot cross the decision boundary.
 
 `SIMULATOR_FIXTURE` exists only in test-signed builds with the SBR environment fixed to `SIMULATOR`. It cannot enable EVTE or production controls. The canonical packaged E2E records this fixture before BAS preparation and submission. Release builds require `ABR_ONLINE` or `ABR_EXTRACT_MANUAL`.
 
@@ -602,29 +621,44 @@ Responsibilities:
 
 The module never embeds a service-version constant throughout UI code. A report retains the tax rule, field mapping, and artefact-bundle versions used to prepare it.
 
-The first report state machine is:
+Report and transmission state are persisted separately:
 
 ```text
+Report:
 DRAFT
   → LOCALLY_VALIDATED
   → DECLARED
   → SUBMISSION_PREPARED
   → DISPATCHING
-  → ACCEPTED | REJECTED | UNKNOWN | TECHNICAL_FAILURE_SAFE
+  → ACCEPTED | REJECTED | UNKNOWN
+
+Any pre-dispatch state → SUPERSEDED
+SUBMISSION_PREPARED → DECLARED on explicit cancellation or proven-safe failure
+
+Transmission:
+PREPARED
+  → DISPATCHING
+  → ACCEPTED | REJECTED | UNKNOWN
+
+PREPARED → CANCELLED
+PREPARED | DISPATCHING → TECHNICAL_FAILURE_SAFE only with a NOT_STARTED attestation
+UNKNOWN → ACCEPTED | REJECTED | RECONCILED_NOT_RECEIVED
 ```
 
 Transitions and recovery rules:
 
 - Reversing a contributing journal or posting a new in-period journal while the report is `LOCALLY_VALIDATED`, `DECLARED`, or `SUBMISSION_PREPARED` moves it to `DRAFT`, cancels any not-yet-dispatched transmission, supersedes validation and declaration, and retains them as historical evidence.
+- An organisation identity/GST-configuration change or ownership transfer moves every affected pre-dispatch report (`DRAFT`, `LOCALLY_VALIDATED`, `DECLARED`, `SUBMISSION_PREPARED`, and later `PREFILLED`/`ATO_VALIDATED`) to terminal `SUPERSEDED`. Its validation and declaration remain historical evidence. An associated transmission in `PREPARED` moves to terminal `CANCELLED`; the payload and hash remain evidence but cannot be dispatched or revived.
 - Once a report is `DISPATCHING` or in a terminal submission state, its source snapshot and payload are immutable. Later in-period postings require a linked correction or revision workflow and never alter the dispatched payload.
 - `LOCALLY_VALIDATED → DECLARED` occurs only in the same transaction that stores a declaration for the current report content hash.
 - `DECLARED → SUBMISSION_PREPARED` creates the durable transmission identifiers and payload hash before network activity.
 - A user may cancel `SUBMISSION_PREPARED` back to `DECLARED` while no dispatch has begun.
 - Credential unlock and payload construction failures occur before `DISPATCHING` and return the report to `DECLARED` with a safe technical-failure record.
 - `DISPATCHING` means remote transmission may have begun. A crash, helper EOF, timeout, or error that cannot prove no bytes were sent changes the report to `UNKNOWN`.
-- `TECHNICAL_FAILURE_SAFE → DECLARED` permits an explicit retry because the helper attested that no network send began.
-- `UNKNOWN` is terminal until reconciliation. Reconciliation may move it to `ACCEPTED`, `REJECTED`, or `DECLARED` only when an authoritative result proves the original payload was not received. An inconclusive result leaves it `UNKNOWN`.
+- A transmission in `TECHNICAL_FAILURE_SAFE` is terminal evidence; the report returns to `DECLARED` and an explicit retry creates a new transmission because the helper attested that no network send began.
+- A report/transmission pair in `UNKNOWN` cannot be submitted or superseded until reconciliation. Reconciliation may move both to `ACCEPTED` or `REJECTED`; an authoritative not-received result moves the transmission to `RECONCILED_NOT_RECEIVED` and the report to `DECLARED`. An inconclusive result leaves both `UNKNOWN`.
 - `REJECTED` may create a corrected linked `DRAFT`; an accepted report may create only a linked revision workflow.
+- `SubmitActivityStatement` requires a non-superseded report, a non-cancelled transmission, the current report content hash, and the current matching entity-verification version immediately before `DISPATCHING`.
 
 `PREFILLED` and `ATO_VALIDATED` become additional pre-declaration states when the real `LDG.List`, `AS.Get`, and `AS.Validate` adapters are enabled. Revisions start a new linked report and require a new declaration.
 
@@ -1044,9 +1078,11 @@ There is no hidden vendor support channel. Support exports are user-created, sco
 - entity verification expires and supersedes on defined high-risk changes;
 - organisation identity/GST changes enforce optimistic versions, effective-period rules, verification supersession, and mixed-bundle rejection;
 - workspace ownership transfer requires the current owner, an active administrator target, acknowledgement, and a new TOTP assertion;
+- organisation/ownership impacts atomically supersede pre-dispatch reports, cancel prepared transmissions, invalidate sessions where required, and reject unresolved outcomes;
 - the permission matrix denies preparer submission and admin-only user management;
 - Unicode password normalization, length/denylist/history rules, and exact Argon2id parameters;
 - challenge RPC attempt accounting, activation expiry, persisted unlock/sign-in/TOTP cooldown timing, TOTP replay/freshness, factor reset, and administrator recovery;
+- `AssertTOTP` validates a new code even during an existing elevated window and accepted counters never replay;
 - audit hash chains verify and tampering is detected; and
 - unknown SBR outcomes never trigger automatic resubmission.
 
@@ -1062,6 +1098,7 @@ There is no hidden vendor support channel. Support exports are user-created, sco
 - staged restore rollback after open failure;
 - restore-journal recovery from `PREPARED`, `STAGED`, and `SWAPPED`;
 - authorised restore generation, archived prior head, new audit event, and OS mirror update;
+- transaction rollback leaves organisation, ownership, sessions, reports, transmissions, declarations, and audit unchanged when any organisation-impact adapter fails;
 - exact canonical data and evidence hashes plus the expected restore generation/event/head;
 - passphrase rewrap, recovery rewrap, remembered-workspace expiry, and DEK zeroing;
 - closed/unauthenticated/authenticated workspace transitions and five-minute pre-auth timeout;
@@ -1079,6 +1116,7 @@ There is no hidden vendor support channel. Support exports are user-created, sco
 - structured error details;
 - every use-case-catalogue permission decision;
 - every catalogued authenticated domain mutation requires idempotency and authorisation, while bootstrap/security challenges enforce the Section 6.3 replay and attempt rules;
+- `OrganisationImpactPort` and its module-owned adapters share one `TxScope`, expose no repositories, and implement exact report/transmission transition projections;
 - read ports prevent cross-module repository/table access; and
 - the simulator and production SBR adapter share the same gateway contract suite.
 
