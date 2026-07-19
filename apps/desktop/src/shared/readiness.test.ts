@@ -147,6 +147,31 @@ describe("parseReadiness", () => {
   });
 
   it.each([
+    ["without a trailing newline", CERTIFICATE],
+    ["with the standard pem.EncodeToMemory trailing newline", `${CERTIFICATE}\n`],
+  ])("accepts a certificate PEM %s and preserves it exactly", (_name, caPem) => {
+    const readiness = parseReadiness(encodeRecord(wire({ ca_pem: caPem })));
+
+    expect(readiness.caPem).toBe(caPem);
+  });
+
+  it.each([
+    ["CRLF line endings", CERTIFICATE.replaceAll("\n", "\r\n")],
+    ["leading whitespace", ` ${CERTIFICATE}`],
+    ["a blank trailing line", `${CERTIFICATE}\n\n`],
+    ["trailing spaces", `${CERTIFICATE} `],
+    ["trailing content", `${CERTIFICATE}\nnot-a-certificate`],
+    ["multiple PEM blocks", `${CERTIFICATE}\n${CERTIFICATE}`],
+    ["malformed base64", "-----BEGIN CERTIFICATE-----\nnot!base64\n-----END CERTIFICATE-----\n"],
+  ])("rejects certificate PEM with %s", (_name, caPem) => {
+    expectReadinessError(
+      encodeRecord(wire({ ca_pem: caPem })),
+      "INVALID_CA",
+      "Invalid readiness certificate.",
+    );
+  });
+
+  it.each([
     ["padded", `${CAPABILITY}=`],
     ["malformed", `${CAPABILITY.slice(0, -1)}*`],
     ["non-canonical", `${CAPABILITY.slice(0, -1)}/`],

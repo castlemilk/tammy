@@ -50,7 +50,7 @@ const wireSchema = z
   .strict();
 
 const certificatePemPattern =
-  /^-----BEGIN CERTIFICATE-----\n[A-Za-z0-9+/=\n]+\n-----END CERTIFICATE-----$/;
+  /^-----BEGIN CERTIFICATE-----\n[A-Za-z0-9+/=\n]+\n-----END CERTIFICATE-----\n?(?![\s\S])/;
 const duplicateKey = Symbol("duplicate-json-key");
 
 function containsDuplicateJsonKey(text: string): boolean {
