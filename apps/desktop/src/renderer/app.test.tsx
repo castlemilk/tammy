@@ -57,6 +57,7 @@ describe("App", () => {
 
     const status = await screen.findByRole("status");
     await waitFor(() => expect(status.textContent).toContain("Local engine ready"));
+    expect(status.getAttribute("data-startup-transition")).toBe("starting-to-ready");
     expect(status.textContent).toContain("Offline");
     expect(screen.getByText("tammy.v1")).toBeTruthy();
     expect(screen.getByText("0.1.0")).toBeTruthy();

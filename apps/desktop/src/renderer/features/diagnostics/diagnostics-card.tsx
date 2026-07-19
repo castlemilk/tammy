@@ -31,7 +31,12 @@ export function DiagnosticsCard({ onRetry, state }: DiagnosticsCardProps) {
       </CardHeader>
       <Separator />
       <CardContent className="pt-6">
-        <div aria-live="polite" aria-atomic="true" role="status">
+        <div
+          aria-live="polite"
+          aria-atomic="true"
+          data-startup-transition={state.status === "ready" ? "starting-to-ready" : undefined}
+          role="status"
+        >
           {state.status === "loading" && <LoadingState />}
           {state.status === "ready" && <ReadyState diagnostics={state.diagnostics} />}
           {state.status === "unavailable" && <UnavailableState onRetry={onRetry} />}

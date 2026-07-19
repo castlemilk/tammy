@@ -1,17 +1,23 @@
+import { consumeExpectedCspViolations } from "./csp-console";
 import { expect, test } from "./fixtures";
 
 const expectedTarget = `${process.platform}-${process.arch}`;
 const futureModules = ["Accounts", "Journal", "BAS", "Submissions", "Audit"] as const;
+const probeUrls = [
+  "https://example.com/tammy-csp-probe",
+  "http://example.com/tammy-csp-probe",
+] as const;
 
 test("runs the packaged desktop foundation offline and exits cleanly", async ({
   electronHarness,
 }) => {
   expect(test.info().project.name).toBe(expectedTarget);
 
-  const { consoleErrors, page, pageErrors, startupObserved } = electronHarness;
+  const { consoleErrors, page, pageErrors } = electronHarness;
   await expect(page).toHaveTitle("Tammy");
-  await startupObserved;
-  await expect(page.getByText("Local engine ready", { exact: true })).toBeVisible();
+  const engineStatus = page.getByRole("status");
+  await expect(engineStatus).toHaveAttribute("data-startup-transition", "starting-to-ready");
+  await expect(engineStatus.getByText("Local engine ready", { exact: true })).toBeVisible();
   await expect(page.getByText("Offline", { exact: true })).toBeVisible();
   await expect(page.getByText("No cloud required", { exact: true })).toBeVisible();
 
@@ -40,7 +46,8 @@ test("runs the packaged desktop foundation offline and exits cleanly", async ({
     require: "undefined",
   });
 
-  const fetchResults = await page.evaluate(async () => {
+  expect(await page.evaluate(() => navigator.onLine)).toBe(false);
+  const fetchResults = await page.evaluate(async (urls) => {
     const attempt = async (url: string) => {
       try {
         await fetch(url);
@@ -49,12 +56,20 @@ test("runs the packaged desktop foundation offline and exits cleanly", async ({
         return "rejected";
       }
     };
-    return Promise.all([
-      attempt("https://example.com/tammy-csp-probe"),
-      attempt("http://example.com/tammy-csp-probe"),
-    ]);
-  });
+    return Promise.all(urls.map(attempt));
+  }, probeUrls);
   expect(fetchResults).toEqual(["rejected", "rejected"]);
+  await expect
+    .poll(() => {
+      try {
+        consumeExpectedCspViolations(consoleErrors, probeUrls);
+        return true;
+      } catch {
+        return false;
+      }
+    })
+    .toBe(true);
+
   await expect
     .poll(async () => windowDiagnostics(page))
     .toEqual({
@@ -72,15 +87,8 @@ test("runs the packaged desktop foundation offline and exits cleanly", async ({
   await page.keyboard.press("Tab");
   await expect(workspace).not.toBeFocused();
 
+  expect(consumeExpectedCspViolations(consoleErrors, probeUrls)).toEqual([]);
   expect(pageErrors).toEqual([]);
-  expect(
-    consoleErrors.filter(
-      (message) =>
-        !message.includes("Content Security Policy") &&
-        !message.includes("Refused to connect") &&
-        !message.includes("ERR_INTERNET_DISCONNECTED"),
-    ),
-  ).toEqual([]);
 });
 
 async function windowDiagnostics(page: import("@playwright/test").Page) {

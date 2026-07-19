@@ -1,3 +1,4 @@
+import type { ChildProcess } from "node:child_process";
 import { execFile } from "node:child_process";
 import { rm } from "node:fs/promises";
 import path from "node:path";
@@ -10,12 +11,21 @@ import {
   type ElectronApplication,
   expect,
   type Page,
+  type TestInfo,
 } from "@playwright/test";
 
+import {
+  closeAndReapElectron,
+  type ElectronLifecycleOperations,
+  pollForNoCoreProcesses,
+  runElectronLifecycle,
+} from "./electron-lifecycle";
 import { findExactCoreProcesses } from "./process-check";
 
 const execFileAsync = promisify(execFile);
 const CLOSE_TIMEOUT_MS = 5_000;
+const ORPHAN_POLL_INTERVAL_MS = 100;
+const ORPHAN_POLL_TIMEOUT_MS = 5_000;
 
 interface PackagedLayout {
   readonly appExecutable: string;
@@ -29,11 +39,23 @@ interface ElectronHarness {
   readonly page: Page;
   readonly pageErrors: string[];
   readonly packagedLayout: PackagedLayout;
-  readonly startupObserved: Promise<void>;
 }
 
 interface ElectronFixtures {
   readonly electronHarness: ElectronHarness;
+}
+
+interface FixtureLifecycleState {
+  application?: ElectronApplication;
+  readonly consoleErrors: string[];
+  mainClosed?: Promise<void>;
+  mainProcess?: ChildProcess;
+  page?: Page;
+  readonly pageErrors: string[];
+  readonly packagedLayout: PackagedLayout;
+  readonly rawArtifacts: string;
+  readonly tracePath: string;
+  traceStarted?: boolean;
 }
 
 function isPackagedLayout(value: unknown): value is PackagedLayout {
@@ -74,99 +96,138 @@ function observePage(page: Page, consoleErrors: string[], pageErrors: string[]):
   page.on("pageerror", (error) => pageErrors.push(error.message));
 }
 
-async function closeWithin(application: ElectronApplication, timeoutMs: number): Promise<void> {
-  let timer: NodeJS.Timeout | undefined;
-  try {
-    await Promise.race([
-      application.close(),
-      new Promise<never>((_, reject) => {
-        timer = setTimeout(() => reject(new Error("ELECTRON_CLOSE_TIMEOUT")), timeoutMs);
-        timer.unref();
-      }),
-    ]);
-  } finally {
-    if (timer) clearTimeout(timer);
+function observeMainClose(mainProcess: ChildProcess): Promise<void> {
+  if (mainProcess.exitCode !== null || mainProcess.signalCode !== null) {
+    return Promise.resolve();
   }
+  return new Promise((resolve) => {
+    const closed = () => resolve();
+    mainProcess.once("close", closed);
+    if (mainProcess.exitCode !== null || mainProcess.signalCode !== null) {
+      mainProcess.removeListener("close", closed);
+      resolve();
+    }
+  });
+}
+
+function forceKillMain(mainProcess: ChildProcess | undefined): void {
+  if (!mainProcess) throw new Error("ELECTRON_MAIN_PROCESS_MISSING");
+  if (mainProcess.exitCode !== null || mainProcess.signalCode !== null) return;
+  if (!mainProcess.kill("SIGKILL")) throw new Error("ELECTRON_FORCE_KILL_FAILED");
+}
+
+function fixtureOperations(
+  use: (harness: ElectronHarness) => Promise<void>,
+  testInfo: TestInfo,
+): ElectronLifecycleOperations<FixtureLifecycleState, ElectronHarness> {
+  return {
+    assertNoOrphan: async (state) => {
+      await pollForNoCoreProcesses({
+        intervalMs: ORPHAN_POLL_INTERVAL_MS,
+        query: () => findExactCoreProcesses(state.packagedLayout.coreExecutable),
+        timeoutMs: ORPHAN_POLL_TIMEOUT_MS,
+      });
+    },
+    attachTrace: async (state) => {
+      await testInfo.attach("electron-trace", {
+        contentType: "application/zip",
+        path: state.tracePath,
+      });
+    },
+    closeAndReap: async (state) => {
+      if (!state.application) return;
+      await closeAndReapElectron({
+        forceKillMain: () => forceKillMain(state.mainProcess),
+        gracefulClose: () => state.application?.close() ?? Promise.resolve(),
+        mainClosed: state.mainClosed ?? new Promise<void>(() => {}),
+        timeoutMs: CLOSE_TIMEOUT_MS,
+      });
+    },
+    didTestFail: () => testInfo.status !== testInfo.expectedStatus,
+    handleVideo: async (state, retained) => {
+      const video = state.page?.video();
+      if (!video) return;
+      if (retained) {
+        const retainedVideo = testInfo.outputPath("failure.webm");
+        await video.saveAs(retainedVideo);
+        await testInfo.attach("electron-video", {
+          contentType: "video/webm",
+          path: retainedVideo,
+        });
+      } else {
+        await video.delete();
+      }
+    },
+    removeRawArtifacts: async (state) => {
+      await rm(state.rawArtifacts, { force: true, recursive: true });
+    },
+    screenshot: async (state) => {
+      if (state.page && !state.page.isClosed()) {
+        await state.page.screenshot({ path: testInfo.outputPath("failure.png") });
+      }
+    },
+    setup: async (state) => {
+      const videoDirectory = path.join(state.rawArtifacts, "video");
+      const application = await _electron.launch({
+        artifactsDir: path.join(state.rawArtifacts, "playwright"),
+        chromiumSandbox: true,
+        executablePath: state.packagedLayout.appExecutable,
+        offline: true,
+        recordVideo: { dir: videoDirectory },
+      });
+      state.application = application;
+      state.mainProcess = application.process();
+      state.mainClosed = observeMainClose(state.mainProcess);
+
+      const context = application.context();
+      const observed = new WeakSet<Page>();
+      const observe = (page: Page) => {
+        if (observed.has(page)) return;
+        observed.add(page);
+        observePage(page, state.consoleErrors, state.pageErrors);
+      };
+      context.on("page", observe);
+      context.pages().forEach(observe);
+
+      if (testInfo.retry === 1) {
+        await context.tracing.start({ screenshots: true, snapshots: true });
+        state.traceStarted = true;
+      }
+      const page = await application.firstWindow();
+      observe(page);
+      state.page = page;
+      return {
+        application,
+        consoleErrors: state.consoleErrors,
+        page,
+        pageErrors: state.pageErrors,
+        packagedLayout: state.packagedLayout,
+      };
+    },
+    stopTrace: async (state, retained) => {
+      if (!state.application) throw new Error("ELECTRON_APPLICATION_MISSING");
+      if (retained) {
+        await state.application.context().tracing.stop({ path: state.tracePath });
+      } else {
+        await state.application.context().tracing.stop();
+      }
+    },
+    use,
+  };
 }
 
 export const test = base.extend<ElectronFixtures>({
   // biome-ignore lint/correctness/noEmptyPattern: Playwright requires fixture dependencies to use object destructuring.
   electronHarness: async ({}, use, testInfo) => {
     const packagedLayout = await locatePackagedApplication();
-    const rawArtifacts = testInfo.outputPath("electron-raw");
-    const videoDirectory = path.join(rawArtifacts, "video");
-    const application = await _electron.launch({
-      artifactsDir: path.join(rawArtifacts, "playwright"),
-      chromiumSandbox: true,
-      executablePath: packagedLayout.appExecutable,
-      offline: true,
-      recordVideo: { dir: videoDirectory },
-    });
-    const consoleErrors: string[] = [];
-    const pageErrors: string[] = [];
-    const observed = new WeakSet<Page>();
-    const startupByPage = new WeakMap<Page, Promise<void>>();
-    const observe = (page: Page) => {
-      if (observed.has(page)) return;
-      observed.add(page);
-      observePage(page, consoleErrors, pageErrors);
-      const startupObserved = page
-        .getByText("Starting local engine", { exact: true })
-        .waitFor({ state: "visible" });
-      void startupObserved.catch(() => undefined);
-      startupByPage.set(page, startupObserved);
-    };
-    application.windows().forEach(observe);
-    application.on("window", observe);
-    const page = await application.firstWindow();
-    observe(page);
-    const startupObserved = startupByPage.get(page);
-    if (!startupObserved) throw new Error("STARTUP_OBSERVER_MISSING");
-    const tracePath = testInfo.outputPath("electron-trace.zip");
-    const traceStarted = testInfo.retry === 1;
-    if (traceStarted) {
-      await application.context().tracing.start({ screenshots: true, snapshots: true });
-    }
-
-    await use({
-      application,
-      consoleErrors,
-      page,
-      pageErrors,
+    const state: FixtureLifecycleState = {
+      consoleErrors: [],
       packagedLayout,
-      startupObserved,
-    });
-
-    const failed = testInfo.status !== testInfo.expectedStatus;
-    if (failed && !page.isClosed()) {
-      await page.screenshot({ path: testInfo.outputPath("failure.png") }).catch(() => undefined);
-    }
-    if (traceStarted) {
-      await application
-        .context()
-        .tracing.stop({ path: tracePath })
-        .catch(() => undefined);
-      if (failed) {
-        await testInfo.attach("electron-trace", {
-          contentType: "application/zip",
-          path: tracePath,
-        });
-      }
-    }
-    const video = page.video();
-    await closeWithin(application, CLOSE_TIMEOUT_MS);
-    if (video) {
-      if (failed) {
-        const retainedVideo = testInfo.outputPath("failure.webm");
-        await video.saveAs(retainedVideo);
-        await testInfo.attach("electron-video", { contentType: "video/webm", path: retainedVideo });
-      } else {
-        await video.delete();
-      }
-    }
-    await rm(rawArtifacts, { force: true, recursive: true });
-    const remaining = await findExactCoreProcesses(packagedLayout.coreExecutable);
-    expect(remaining, "the exact bundled core process must exit with Electron").toEqual([]);
+      pageErrors: [],
+      rawArtifacts: testInfo.outputPath("electron-raw"),
+      tracePath: testInfo.outputPath("electron-trace.zip"),
+    };
+    await runElectronLifecycle(state, fixtureOperations(use, testInfo));
   },
 });
 
