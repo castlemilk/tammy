@@ -3,8 +3,16 @@ packages:
   - packages/*
 
 allowBuilds:
-  electron-winstaller: false
+  "@bufbuild/buf": true
+  electron: true
+  electron-winstaller: true
+  esbuild: true
+
+overrides:
+  electron-winstaller: 5.4.4
+  tar: 7.5.20
+  tmp: 0.2.7
 
 minimumReleaseAge: 1440
 
-onlyBuiltDependencies: ["@bufbuild/buf", "electron", "esbuild"]
+onlyBuiltDependencies: ["@bufbuild/buf", "electron", "electron-winstaller", "esbuild"]

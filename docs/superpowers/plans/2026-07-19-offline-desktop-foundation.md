@@ -922,6 +922,8 @@ Expected: all commands pass and the worktree is clean.
 - Create: `apps/desktop/vite.renderer.config.ts`
 - Create: `apps/desktop/vitest.config.ts`
 - Create: `apps/desktop/src/renderer/test/setup.ts`
+- Create: `apps/desktop/src/renderer/test/tooling.fixture.ts`
+- Create: `apps/desktop/src/renderer/test/tooling.test.ts`
 - Create: `apps/desktop/components.json`
 - Create: `apps/desktop/index.html`
 - Create: `apps/desktop/resources/core/.gitkeep`
@@ -1000,7 +1002,30 @@ Add these root scripts:
 }
 ```
 
-Extend the lifecycle allowlist to `onlyBuiltDependencies: ["@bufbuild/buf", "electron", "esbuild"]`; no install script beyond those three pinned packages is approved.
+Extend the lifecycle allowlist to
+`onlyBuiltDependencies: ["@bufbuild/buf", "electron", "electron-winstaller", "esbuild"]`.
+`electron-winstaller` is the fourth approved package after auditing the exact `5.4.4`
+published tarball: its install hook only selects the bundled host-architecture 7-Zip
+executable and DLL with two package-local file copies. It performs no network access,
+command execution, or external writes. Pin that package and the audited security updates
+with exact workspace overrides. Because pnpm 11 executes build policy through
+`allowBuilds`, mirror the same four audited approvals there while retaining the explicit
+`onlyBuiltDependencies` list:
+
+```yaml
+allowBuilds:
+  "@bufbuild/buf": true
+  electron: true
+  electron-winstaller: true
+  esbuild: true
+
+overrides:
+  electron-winstaller: 5.4.4
+  tar: 7.5.20
+  tmp: 0.2.7
+```
+
+No install script beyond those four pinned packages is approved.
 
 - [ ] **Step 3: Create the complete Forge configuration**
 
@@ -1055,7 +1080,13 @@ export default config;
 
 - [ ] **Step 4: Create complete TypeScript and Vite configurations**
 
-`apps/desktop/tsconfig.json` extends `../../tsconfig.base.json`, includes `src`, `tests`, every Vite config, `forge.config.ts`, and `playwright.config.ts`, and adds types `["node", "vite/client"]`.
+`apps/desktop/tsconfig.json` extends `../../tsconfig.base.json`, includes `src`, `tests`, every
+Vite config, `forge.config.ts`, and `playwright.config.ts`, adds types
+`["node", "vite/client"]`, and maps `@/*` to `./src/*` without `baseUrl`. Keep the root
+`skipLibCheck: false`, but set it to `true` in this app config only: pinned Forge `7.11.2`
+publishes an undeclared `NewCtx`, and its listr2 `7.0.2` dependency has a type-only `rxjs`
+import without the peer installed. Remove this scoped exception when those pins are upgraded;
+Tammy source and config API use remain strictly checked.
 
 Use these build policies:
 
@@ -1074,6 +1105,7 @@ export default defineConfig({
 
 ```ts
 // vite.renderer.config.ts
+import { fileURLToPath } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
@@ -1081,11 +1113,19 @@ import { defineConfig } from "vite";
 export default defineConfig({
   base: "./",
   plugins: [react(), tailwindcss()],
+  resolve: {
+    alias: {
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
+    },
+  },
   build: { sourcemap: false, minify: true },
 });
 ```
 
 `vitest.config.ts` uses `jsdom`, `globals: false`, restores and clears mocks, loads `src/renderer/test/setup.ts`, and includes `src/**/*.test.ts` plus `src/**/*.test.tsx`. Create the setup file in this task with explicit `afterEach(cleanup)` imports from Vitest and Testing Library so every test starts with an empty DOM; it must not require an undeclared matcher package.
+
+Add a tooling smoke test that loads the real renderer config, covers the `@` alias with a
+type-only source probe, and verifies the HTML entry remains local and has no CSP meta tag.
 
 - [ ] **Step 5: Configure shadcn without generating network-dependent code**
 
@@ -1115,15 +1155,20 @@ Run:
 rtk mise exec -- pnpm install
 rtk mise exec -- pnpm --dir apps/desktop exec electron --version
 rtk mise exec -- pnpm --dir apps/desktop exec vite --version
+rtk mise exec -- pnpm desktop:typecheck
+rtk mise exec -- pnpm desktop:test
 rtk mise exec -- pnpm lint
+rtk mise exec -- pnpm audit --audit-level high
+rtk mise exec -- pnpm install --frozen-lockfile
 ```
 
-Expected: Electron prints `v43.1.1`, Vite prints `8.1.5`, and Biome reports no configuration errors.
+Expected: Electron prints `v43.1.1`, Vite prints `8.1.5`, TypeScript, Vitest, Biome, audit,
+and frozen installation all pass.
 
 - [ ] **Step 8: Commit desktop tooling**
 
 ```bash
-rtk git add package.json pnpm-lock.yaml pnpm-workspace.yaml apps/desktop/package.json apps/desktop/forge.config.ts apps/desktop/tsconfig.json apps/desktop/vite.* apps/desktop/vitest.config.ts apps/desktop/components.json apps/desktop/index.html apps/desktop/resources/core/.gitkeep apps/desktop/src/renderer/test/setup.ts
+rtk git add package.json pnpm-lock.yaml pnpm-workspace.yaml apps/desktop/package.json apps/desktop/forge.config.ts apps/desktop/tsconfig.json apps/desktop/vite.* apps/desktop/vitest.config.ts apps/desktop/components.json apps/desktop/index.html apps/desktop/resources/core/.gitkeep apps/desktop/src/renderer/test
 rtk git commit -m "build: configure the Electron React workspace"
 ```
 
