@@ -6,6 +6,9 @@ import { defineConfig } from "vite";
 export default defineConfig({
   base: "./",
   plugins: [react(), tailwindcss()],
+  optimizeDeps: {
+    include: ["@radix-ui/react-compose-refs", "scheduler"],
+  },
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),

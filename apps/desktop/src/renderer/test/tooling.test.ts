@@ -20,6 +20,7 @@ describe("desktop tooling", () => {
     expect(config.resolve?.alias).toEqual({
       "@": path.join(desktopRoot, "src"),
     });
+    expect(config.optimizeDeps?.include).toEqual(["@radix-ui/react-compose-refs", "scheduler"]);
 
     const html = await readFile(path.join(desktopRoot, "index.html"), "utf8");
     const document = new DOMParser().parseFromString(html, "text/html");

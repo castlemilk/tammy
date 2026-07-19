@@ -9,6 +9,9 @@
   },
   "scripts": {
     "check:toolchain": "node scripts/check-toolchain.mjs",
+    "core:build": "node scripts/build-core.mjs",
+    "desktop:package": "pnpm core:build && pnpm --dir apps/desktop package",
+    "desktop:start": "pnpm core:build && pnpm --dir apps/desktop start",
     "test:toolchain": "node --test scripts/check-toolchain.test.mjs",
     "proto:format:check": "buf format --diff --exit-code",
     "proto:lint": "buf lint",
