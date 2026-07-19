@@ -14,9 +14,39 @@ import { CoreProcess, type SpawnCoreProcess } from "./core-process";
 
 const execFileAsync = promisify(execFile);
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
-const BUILD_TIMEOUT_MS = 45_000;
+const DEFAULT_BUILD_TIMEOUT_MS = 120_000;
+const MAXIMUM_BUILD_TIMEOUT_MS = 600_000;
+const BUILD_HOOK_CLEANUP_HEADROOM_MS = 15_000;
+const BUILD_TIMEOUT_OVERRIDE = "TAMMY_CORE_INTEGRATION_BUILD_TIMEOUT_MS";
 const STOP_TIMEOUT_MS = 5_000;
 const CLOSE_TIMEOUT_MS = 2_000;
+
+interface IntegrationBuildTimeouts {
+  readonly buildTimeoutMs: number;
+  readonly hookTimeoutMs: number;
+}
+
+function resolveIntegrationBuildTimeoutMs(
+  environment: Readonly<Record<string, string | undefined>>,
+): IntegrationBuildTimeouts {
+  const override = environment[BUILD_TIMEOUT_OVERRIDE];
+  const buildTimeoutMs = override === undefined ? DEFAULT_BUILD_TIMEOUT_MS : Number(override);
+  if (
+    (override !== undefined && !/^[1-9][0-9]*$/u.test(override)) ||
+    !Number.isSafeInteger(buildTimeoutMs) ||
+    buildTimeoutMs < 1 ||
+    buildTimeoutMs > MAXIMUM_BUILD_TIMEOUT_MS
+  ) {
+    throw new Error("Invalid core integration build timeout.");
+  }
+  return Object.freeze({
+    buildTimeoutMs,
+    hookTimeoutMs: buildTimeoutMs + BUILD_HOOK_CLEANUP_HEADROOM_MS,
+  });
+}
+
+const { buildTimeoutMs: BUILD_TIMEOUT_MS, hookTimeoutMs: BUILD_HOOK_TIMEOUT_MS } =
+  resolveIntegrationBuildTimeoutMs(process.env);
 
 interface TimeoutTimers {
   setTimeout(callback: () => void, delay: number): unknown;
@@ -255,6 +285,37 @@ function deferred(): {
   return { promise, resolve };
 }
 
+describe("integration build timeout", () => {
+  it("defaults to the production core build bound with hook cleanup headroom", () => {
+    expect(resolveIntegrationBuildTimeoutMs({})).toEqual({
+      buildTimeoutMs: 120_000,
+      hookTimeoutMs: 135_000,
+    });
+  });
+
+  it("accepts a bounded explicit override", () => {
+    expect(
+      resolveIntegrationBuildTimeoutMs({
+        TAMMY_CORE_INTEGRATION_BUILD_TIMEOUT_MS: "180000",
+      }),
+    ).toEqual({
+      buildTimeoutMs: 180_000,
+      hookTimeoutMs: 195_000,
+    });
+  });
+
+  it.each(["0", "-1", "120000.5", " 120000", "600001", "unbounded"])(
+    "rejects invalid override %j",
+    (override) => {
+      expect(() =>
+        resolveIntegrationBuildTimeoutMs({
+          TAMMY_CORE_INTEGRATION_BUILD_TIMEOUT_MS: override,
+        }),
+      ).toThrow("Invalid core integration build timeout.");
+    },
+  );
+});
+
 describe("bounded integration lifecycle helpers", () => {
   it("aborts a build executor that otherwise never settles", async () => {
     const timers = new FakeTimeoutTimers();
@@ -414,7 +475,7 @@ describe("CoreProcess and Connect-ES interoperability", () => {
       BUILD_TIMEOUT_MS,
       productionTimeoutTimers,
     );
-  }, 60_000);
+  }, BUILD_HOOK_TIMEOUT_MS);
 
   afterAll(async () => {
     await cleanupIntegrationResources(
