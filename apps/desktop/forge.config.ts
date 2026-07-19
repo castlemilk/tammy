@@ -9,7 +9,7 @@ const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
     executableName: "Tammy",
-    extraResource: ["resources/core"],
+    extraResource: ["resources/core", "resources/build"],
   },
   makers: [
     new MakerSquirrel(

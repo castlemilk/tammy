@@ -10,7 +10,8 @@
   "scripts": {
     "check:toolchain": "node scripts/check-toolchain.mjs",
     "core:build": "node scripts/build-core.mjs",
-    "desktop:package": "pnpm core:build && pnpm --dir apps/desktop package",
+    "build:manifest": "node scripts/write-build-manifest.mjs",
+    "desktop:package": "pnpm core:build && pnpm build:manifest && pnpm --dir apps/desktop package && node apps/desktop/scripts/find-packaged-app.mjs --verify --source-manifest apps/desktop/resources/build/build-manifest.json",
     "desktop:start": "pnpm core:build && pnpm --dir apps/desktop start",
     "test:toolchain": "node --test scripts/check-toolchain.test.mjs",
     "proto:format:check": "buf format --diff --exit-code",
