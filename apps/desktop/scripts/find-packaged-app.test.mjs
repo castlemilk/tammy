@@ -8,6 +8,43 @@ import { test } from "node:test";
 import { resolvePackagedLayout, verifyPackagedLayout } from "./find-packaged-app.mjs";
 
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
+const VERSION_PINS = {
+  buf: "1.72.0",
+  connect_es: "2.1.2",
+  connect_go: "1.20.0",
+  electron: "43.1.1",
+  go: "1.26.4",
+  node: "24.18.0",
+  playwright: "1.61.1",
+  pnpm: "11.15.0",
+  protobuf_es: "2.12.1",
+  protobuf_go: "1.36.11",
+  react: "19.2.7",
+  shadcn: "4.13.1",
+  tailwindcss: "4.3.3",
+  typescript: "7.0.2",
+  vite: "8.1.5",
+  vitest: "4.1.10",
+};
+
+function validManifest(target, coreSha256) {
+  return {
+    schema: "tammy-build-manifest-v1",
+    source_revision: "a".repeat(40),
+    source_dirty: false,
+    target,
+    versions: VERSION_PINS,
+    lockfiles: {
+      "pnpm-lock.yaml": "b".repeat(64),
+      "services/core/go.sum": "c".repeat(64),
+    },
+    protobuf_tree_sha256: "d".repeat(64),
+    core_sha256: coreSha256,
+    test_profile: "foundation-packaged-e2e",
+    sbr_status: "SIMULATOR_NOT_IMPLEMENTED",
+    signed: false,
+  };
+}
 
 function encodeAsar(header, payload = Buffer.alloc(0)) {
   const json = Buffer.from(JSON.stringify(header));
@@ -49,10 +86,7 @@ async function withFixture(platform, arch, callback) {
   const desktopRoot = path.join(root, "apps", "desktop");
   const layout = resolvePackagedLayout({ arch, desktopRoot, platform });
   const coreBytes = Buffer.from(`core:${platform}/${arch}`);
-  const manifest = {
-    schema: "tammy-build-manifest-v1",
-    core_sha256: sha256(coreBytes),
-  };
+  const manifest = validManifest(`${platform}-${arch}`, sha256(coreBytes));
   await mkdir(path.dirname(layout.sourceCore), { recursive: true });
   await mkdir(path.dirname(layout.sourceManifest), { recursive: true });
   await mkdir(path.dirname(layout.appExecutable), { recursive: true });
@@ -301,6 +335,89 @@ test("rejects manifest byte mismatch, core hash mismatch, and ASAR-contained cor
   });
 });
 
+test("rejects semantically invalid authenticated manifests", async () => {
+  const mutations = [
+    ["wrong target", (manifest) => ({ ...manifest, target: "win32-x64" })],
+    ["signed", (manifest) => ({ ...manifest, signed: true })],
+    ["unsupported SBR claim", (manifest) => ({ ...manifest, sbr_status: "SBR_APPROVED" })],
+    ["extra field", (manifest) => ({ ...manifest, release_channel: "stable" })],
+    ["credential field", (manifest) => ({ ...manifest, api_secret: "not-allowed" })],
+    ["wrong type", (manifest) => ({ ...manifest, source_dirty: "false" })],
+    [
+      "missing version pin",
+      (manifest) => {
+        const { node: _node, ...versions } = manifest.versions;
+        return { ...manifest, versions };
+      },
+    ],
+    [
+      "malformed lock hash",
+      (manifest) => ({
+        ...manifest,
+        lockfiles: { ...manifest.lockfiles, "pnpm-lock.yaml": "bad" },
+      }),
+    ],
+  ];
+  for (const [name, mutate] of mutations) {
+    await withFixture("darwin", "arm64", async ({ desktopRoot, layout }) => {
+      const manifest = mutate(validManifest("darwin-arm64", sha256("core:darwin/arm64")));
+      const bytes = Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`);
+      await writeFile(layout.sourceManifest, bytes);
+      await writeFile(layout.packagedManifest, bytes);
+      await assert.rejects(
+        verifyPackagedLayout({
+          desktopRoot,
+          platform: "darwin",
+          arch: "arm64",
+          sourceManifestPath: layout.sourceManifest,
+        }),
+        /SOURCE_MANIFEST_INVALID/,
+        name,
+      );
+    });
+  }
+});
+
+test("rejects duplicate-key and noncanonical manifest JSON", async () => {
+  await withFixture("darwin", "arm64", async ({ desktopRoot, layout }) => {
+    const manifest = validManifest("darwin-arm64", sha256("core:darwin/arm64"));
+    const canonical = JSON.stringify(manifest, null, 2);
+    const duplicate = Buffer.from(
+      `${canonical.replace(
+        '  "schema": "tammy-build-manifest-v1",',
+        '  "schema": "tammy-build-manifest-v1",\n  "schema": "tammy-build-manifest-v1",',
+      )}\n`,
+    );
+    await writeFile(layout.sourceManifest, duplicate);
+    await writeFile(layout.packagedManifest, duplicate);
+    await assert.rejects(
+      verifyPackagedLayout({
+        desktopRoot,
+        platform: "darwin",
+        arch: "arm64",
+        sourceManifestPath: layout.sourceManifest,
+      }),
+      /SOURCE_MANIFEST_INVALID/,
+    );
+  });
+  await withFixture("darwin", "arm64", async ({ desktopRoot, layout }) => {
+    const noncanonical = Buffer.from(
+      JSON.stringify(validManifest("darwin-arm64", sha256("core:darwin/arm64"))),
+    );
+    await writeFile(layout.sourceManifest, noncanonical);
+    await writeFile(layout.packagedManifest, noncanonical);
+    await assert.rejects(
+      verifyPackagedLayout({
+        desktopRoot,
+        platform: "darwin",
+        arch: "arm64",
+        sourceManifestPath: layout.sourceManifest,
+      }),
+      /SOURCE_MANIFEST_INVALID/,
+    );
+  });
+});
+
 for (const [platform, arch, executable] of [
   ["darwin", "arm64", "tammy-core"],
   ["win32", "x64", "tammy-core.exe"],
@@ -381,6 +498,59 @@ test("rejects a non-regular or symlinked app.asar", async () => {
   });
 });
 
+test("rejects noncanonical or escaping ASAR link targets", async () => {
+  for (const link of [
+    "/absolute/target",
+    String.raw`..\windows\escape`,
+    "../parent",
+    "directory/../escape",
+    "./relative",
+    "directory/./file",
+  ]) {
+    await withFixture("darwin", "arm64", async ({ desktopRoot, layout }) => {
+      await writeFile(
+        layout.appAsar,
+        encodeAsar({
+          files: {
+            linked: { link },
+          },
+        }),
+      );
+      await assert.rejects(
+        verifyPackagedLayout({
+          desktopRoot,
+          platform: "darwin",
+          arch: "arm64",
+          sourceManifestPath: layout.sourceManifest,
+        }),
+        /PACKAGE_ASAR_INVALID/,
+      );
+    });
+  }
+});
+
+test("rejects an abusive ASAR packed offset without unbounded integer parsing", async () => {
+  await withFixture("darwin", "arm64", async ({ desktopRoot, layout }) => {
+    await writeFile(
+      layout.appAsar,
+      encodeAsar({
+        files: {
+          abusive: { offset: "9".repeat(100_000), size: 0 },
+        },
+      }),
+    );
+    await assert.rejects(
+      verifyPackagedLayout({
+        desktopRoot,
+        platform: "darwin",
+        arch: "arm64",
+        sourceManifestPath: layout.sourceManifest,
+      }),
+      /PACKAGE_ASAR_INVALID/,
+    );
+  });
+});
+
 test("rejects a lost executable bit on macOS", async () => {
   await withFixture("darwin", "arm64", async ({ desktopRoot, layout }) => {
     await chmod(layout.packagedCore, 0o644);
@@ -392,6 +562,23 @@ test("rejects a lost executable bit on macOS", async () => {
         sourceManifestPath: layout.sourceManifest,
       }),
       /PACKAGED_CORE_NOT_EXECUTABLE/,
+    );
+  });
+});
+
+test("rejects a resource tree changed before final identity revalidation", async () => {
+  await withFixture("darwin", "arm64", async ({ desktopRoot, layout }) => {
+    await assert.rejects(
+      verifyPackagedLayout({
+        arch: "arm64",
+        beforeTreeRevalidation: async () => {
+          await writeFile(path.join(layout.packagedCoreRoot, "late-entry"), "late");
+        },
+        desktopRoot,
+        platform: "darwin",
+        sourceManifestPath: layout.sourceManifest,
+      }),
+      /PACKAGED_CORE_LAYOUT_CHANGED/,
     );
   });
 });

@@ -1,6 +1,17 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { lstat, mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import {
+  lstat,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  realpath,
+  rename,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
@@ -9,6 +20,8 @@ import {
   collectBuildManifest,
   createBuildManifest,
   hashProtoTree,
+  runBoundedCommand,
+  sanitizeProvenanceEnvironment,
   selectCiMode,
   writeBuildManifest,
 } from "./write-build-manifest.mjs";
@@ -40,6 +53,30 @@ const lockfiles = {
   "pnpm-lock.yaml": ZERO_HASH,
   "services/core/go.sum": ONE_HASH,
 };
+
+function expectedTreeHash(entries) {
+  const ordered = [...entries].sort(([left], [right]) =>
+    Buffer.compare(Buffer.from(left), Buffer.from(right)),
+  );
+  const digest = createHash("sha256");
+  digest.update("tammy-protobuf-tree-v1\0");
+  const count = Buffer.alloc(4);
+  count.writeUInt32BE(ordered.length);
+  digest.update(count);
+  for (const [name, contents] of ordered) {
+    const nameBytes = Buffer.from(name);
+    const nameLength = Buffer.alloc(4);
+    nameLength.writeUInt32BE(nameBytes.length);
+    const contentBytes = Buffer.from(contents);
+    const contentLength = Buffer.alloc(8);
+    contentLength.writeBigUInt64BE(BigInt(contentBytes.length));
+    digest.update(nameLength);
+    digest.update(nameBytes);
+    digest.update(contentLength);
+    digest.update(createHash("sha256").update(contentBytes).digest());
+  }
+  return digest.digest("hex");
+}
 
 function validInput(overrides = {}) {
   return {
@@ -118,6 +155,59 @@ test("selects CI mode from only the exact CI flag", () => {
   assert.equal(selectCiMode({}), false);
 });
 
+test("sanitizes Git redirection and stabilizes command locale", () => {
+  assert.deepEqual(
+    sanitizeProvenanceEnvironment({
+      GIT_COMMON_DIR: "/redirect/common",
+      GIT_DIR: "/redirect/git",
+      GIT_WORK_TREE: "/redirect/worktree",
+      HOME: "/home/tammy",
+      PATH: "/tools",
+      SECRET_TOKEN: "must-not-be-forwarded",
+      SYSTEMROOT: "C:\\Windows",
+    }),
+    {
+      HOME: "/home/tammy",
+      LANG: "C",
+      LC_ALL: "C",
+      PATH: "/tools",
+      SYSTEMROOT: "C:\\Windows",
+    },
+  );
+});
+
+test("bounds command execution and settles only after the child callback", async () => {
+  let callbacks = 0;
+  const execFile = (_command, _args, options, callback) => {
+    options.signal.addEventListener(
+      "abort",
+      () => {
+        setImmediate(() => {
+          callbacks += 1;
+          callback(new Error("aborted"), "", "");
+        });
+      },
+      { once: true },
+    );
+  };
+  await assert.rejects(
+    runBoundedCommand(
+      "git",
+      ["status"],
+      {
+        cwd: path.resolve("/workspace"),
+        encoding: "utf8",
+        env: { LANG: "C", LC_ALL: "C" },
+        shell: false,
+        windowsHide: true,
+      },
+      { execFile, timeoutMs: 5 },
+    ),
+    /PROVENANCE_COMMAND_TIMEOUT/,
+  );
+  assert.equal(callbacks, 1);
+});
+
 test("rejects malformed source revisions and hashes", () => {
   assert.throws(
     () => createBuildManifest(validInput({ sourceRevision: "abc" })),
@@ -186,17 +276,84 @@ test("hashes a sorted protobuf tree with path boundaries", async () => {
     await mkdir(path.join(root, "tammy", "v1"), { recursive: true });
     await writeFile(path.join(root, "z.proto"), "z");
     await writeFile(path.join(root, "tammy", "v1", "a.proto"), "a");
-    const expected = createHash("sha256")
-      .update("tammy/v1/a.proto\0")
-      .update("a")
-      .update("\0")
-      .update("z.proto\0")
-      .update("z")
-      .update("\0")
-      .digest("hex");
+    const expected = expectedTreeHash([
+      ["tammy/v1/a.proto", "a"],
+      ["z.proto", "z"],
+    ]);
     assert.equal(await hashProtoTree(root), expected);
   } finally {
     await rm(root, { force: true, recursive: true });
+  }
+});
+
+test("does not collide when content contains the former path delimiter encoding", async () => {
+  const first = await mkdtemp(path.join(tmpdir(), "tammy-proto-collision-a-"));
+  const second = await mkdtemp(path.join(tmpdir(), "tammy-proto-collision-b-"));
+  try {
+    await writeFile(path.join(first, "a.proto"), "x\0b.proto\0");
+    await writeFile(path.join(second, "a.proto"), "x");
+    await writeFile(path.join(second, "b.proto"), "");
+    assert.notEqual(await hashProtoTree(first), await hashProtoTree(second));
+  } finally {
+    await rm(first, { force: true, recursive: true });
+    await rm(second, { force: true, recursive: true });
+  }
+});
+
+test("orders non-ASCII protobuf paths by UTF-8 bytes independent of locale", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "tammy-proto-utf8-"));
+  try {
+    const entries = [
+      ["é.proto", "e-acute"],
+      ["z.proto", "zed"],
+      ["ä.proto", "a-umlaut"],
+      ["a.proto", "ascii"],
+    ];
+    for (const [name, contents] of entries) {
+      await writeFile(path.join(root, name), contents);
+    }
+    assert.equal(await hashProtoTree(root), expectedTreeHash(entries));
+  } finally {
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
+test("rejects a protobuf tree changed after a file is hashed", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "tammy-proto-swap-"));
+  try {
+    const file = path.join(root, "system.proto");
+    await writeFile(file, "before");
+    await assert.rejects(
+      hashProtoTree(root, {
+        afterFileHashed: async () => {
+          await writeFile(file, "after!");
+        },
+      }),
+      /PROTOBUF_TREE_CHANGED/,
+    );
+  } finally {
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
+test("rejects a protobuf root replacement even when the file identity is preserved", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "tammy-proto-root-swap-"));
+  const moved = `${root}-moved`;
+  try {
+    await writeFile(path.join(root, "system.proto"), "unchanged");
+    await assert.rejects(
+      hashProtoTree(root, {
+        afterFileHashed: async () => {
+          await rename(root, moved);
+          await mkdir(root);
+          await rename(path.join(moved, "system.proto"), path.join(root, "system.proto"));
+        },
+      }),
+      /PROTOBUF_TREE_CHANGED/,
+    );
+  } finally {
+    await rm(root, { force: true, recursive: true });
+    await rm(moved, { force: true, recursive: true });
   }
 });
 
@@ -222,6 +379,7 @@ test("cleans build staging and atomically writes canonical JSON", async () => {
     await writeFile(path.join(buildRoot, ".gitkeep"), "");
     await writeFile(path.join(buildRoot, "stale", "nested", "old.json"), "{}");
     await writeFile(path.join(buildRoot, "old-manifest.json"), "{}");
+    await writeFile(path.join(buildRoot, ".build-manifest.json.tmp"), "stale");
     const result = await writeBuildManifest({
       buildRoot,
       manifest: createBuildManifest(validInput()),
@@ -259,6 +417,73 @@ test("removes the temporary file when atomic rename fails", async () => {
   }
 });
 
+test("excludes a concurrent manifest publisher with a bounded staging lock", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "tammy-manifest-lock-"));
+  const buildRoot = path.join(root, "resources", "build");
+  let enteredRename;
+  let releaseRename;
+  const renameEntered = new Promise((resolve) => {
+    enteredRename = resolve;
+  });
+  const renameReleased = new Promise((resolve) => {
+    releaseRename = resolve;
+  });
+  try {
+    await mkdir(buildRoot, { recursive: true });
+    await writeFile(path.join(buildRoot, ".gitkeep"), "");
+    const first = writeBuildManifest({
+      buildRoot,
+      manifest: createBuildManifest(validInput()),
+      renameFile: async (source, destination) => {
+        enteredRename();
+        await renameReleased;
+        await rename(source, destination);
+      },
+    });
+    await renameEntered;
+    await assert.rejects(
+      writeBuildManifest({
+        buildRoot,
+        manifest: createBuildManifest(validInput()),
+      }),
+      /BUILD_STAGING_LOCKED/,
+    );
+    releaseRename();
+    await first;
+    assert.deepEqual((await readdir(buildRoot)).sort(), [".gitkeep", "build-manifest.json"]);
+  } finally {
+    releaseRename?.();
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
+test("does not clean a replacement build root after taking the staging lock", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "tammy-manifest-root-swap-"));
+  const buildRoot = path.join(root, "resources", "build");
+  const moved = `${buildRoot}-moved`;
+  try {
+    await mkdir(buildRoot, { recursive: true });
+    await writeFile(path.join(buildRoot, ".gitkeep"), "");
+    await assert.rejects(
+      writeBuildManifest({
+        beforeCleanup: async () => {
+          await rename(buildRoot, moved);
+          await mkdir(buildRoot);
+          await writeFile(path.join(buildRoot, ".gitkeep"), "");
+          await writeFile(path.join(buildRoot, "must-survive"), "evidence");
+        },
+        buildRoot,
+        manifest: createBuildManifest(validInput()),
+      }),
+      /BUILD_STAGING_INVALID/,
+    );
+    assert.equal(await readFile(path.join(buildRoot, "must-survive"), "utf8"), "evidence");
+  } finally {
+    await rm(root, { force: true, recursive: true });
+    await rm(moved, { force: true, recursive: true });
+  }
+});
+
 test("rejects an invalid build staging keep file", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "tammy-manifest-keep-"));
   const buildRoot = path.join(root, "resources", "build");
@@ -279,7 +504,7 @@ test("rejects an invalid build staging keep file", async () => {
 });
 
 test("collects only committed pins, fixed git commands, and authenticated hashes", async () => {
-  const root = await mkdtemp(path.join(tmpdir(), "tammy-manifest-collect-"));
+  const root = await realpath(await mkdtemp(path.join(tmpdir(), "tammy-manifest-collect-")));
   const calls = [];
   try {
     await mkdir(path.join(root, "apps", "desktop", "resources", "core", "darwin-arm64"), {
@@ -330,6 +555,9 @@ test("collects only committed pins, fixed git commands, and authenticated hashes
     );
     const commandRunner = async (command, args, options) => {
       calls.push({ command, args, options });
+      if (args[0] === "rev-parse" && args[1] === "--show-toplevel") {
+        return `${root}\n`;
+      }
       return args[0] === "rev-parse" ? `${"b".repeat(40)}\n` : "";
     };
     const manifest = await collectBuildManifest({
@@ -343,19 +571,131 @@ test("collects only committed pins, fixed git commands, and authenticated hashes
     assert.equal(manifest.core_sha256, hash("core"));
     assert.equal(manifest.lockfiles["pnpm-lock.yaml"], hash("pnpm lock"));
     assert.equal(manifest.lockfiles["services/core/go.sum"], hash("go sum"));
-    assert.deepEqual(calls, [
-      {
-        command: "git",
-        args: ["rev-parse", "HEAD"],
-        options: { cwd: root, encoding: "utf8", shell: false, windowsHide: true },
-      },
-      {
-        command: "git",
-        args: ["status", "--porcelain", "--untracked-files=normal"],
-        options: { cwd: root, encoding: "utf8", shell: false, windowsHide: true },
-      },
-    ]);
+    assert.deepEqual(
+      calls.map(({ command, args, options }) => ({
+        command,
+        args,
+        options: {
+          cwd: options.cwd,
+          encoding: options.encoding,
+          shell: options.shell,
+          windowsHide: options.windowsHide,
+        },
+      })),
+      [
+        {
+          command: "git",
+          args: ["rev-parse", "--show-toplevel"],
+          options: { cwd: root, encoding: "utf8", shell: false, windowsHide: true },
+        },
+        {
+          command: "git",
+          args: ["rev-parse", "HEAD"],
+          options: { cwd: root, encoding: "utf8", shell: false, windowsHide: true },
+        },
+        {
+          command: "git",
+          args: ["status", "--porcelain", "--untracked-files=normal"],
+          options: { cwd: root, encoding: "utf8", shell: false, windowsHide: true },
+        },
+        {
+          command: "git",
+          args: ["rev-parse", "HEAD"],
+          options: { cwd: root, encoding: "utf8", shell: false, windowsHide: true },
+        },
+        {
+          command: "git",
+          args: ["status", "--porcelain", "--untracked-files=normal"],
+          options: { cwd: root, encoding: "utf8", shell: false, windowsHide: true },
+        },
+      ],
+    );
   } finally {
     await rm(root, { force: true, recursive: true });
+  }
+});
+
+test("rejects redirected repositories and concurrent Git observations", async () => {
+  const fixture = await realpath(await mkdtemp(path.join(tmpdir(), "tammy-git-change-")));
+  try {
+    await mkdir(path.join(fixture, "apps/desktop/resources/core/darwin-arm64"), {
+      recursive: true,
+    });
+    await mkdir(path.join(fixture, "services/core"), { recursive: true });
+    await mkdir(path.join(fixture, "proto"), { recursive: true });
+    await writeFile(
+      path.join(fixture, "package.json"),
+      JSON.stringify({
+        packageManager: "pnpm@11.15.0",
+        engines: { node: "24.18.0", pnpm: "11.15.0" },
+        devDependencies: {
+          "@bufbuild/buf": "1.72.0",
+          "@bufbuild/protoc-gen-es": "2.12.1",
+          typescript: "7.0.2",
+        },
+      }),
+    );
+    await writeFile(
+      path.join(fixture, "apps/desktop/package.json"),
+      JSON.stringify({
+        dependencies: {
+          "@connectrpc/connect": "2.1.2",
+          "@bufbuild/protobuf": "2.12.1",
+          react: "19.2.7",
+        },
+        devDependencies: {
+          "@playwright/test": "1.61.1",
+          electron: "43.1.1",
+          shadcn: "4.13.1",
+          tailwindcss: "4.3.3",
+          vite: "8.1.5",
+          vitest: "4.1.10",
+        },
+      }),
+    );
+    await writeFile(
+      path.join(fixture, "services/core/go.mod"),
+      "module example\n\ngo 1.26.4\n\nrequire (\n\tconnectrpc.com/connect v1.20.0\n\tgoogle.golang.org/protobuf v1.36.11\n)\n",
+    );
+    await writeFile(path.join(fixture, "pnpm-lock.yaml"), "lock");
+    await writeFile(path.join(fixture, "services/core/go.sum"), "sum");
+    await writeFile(path.join(fixture, "proto/system.proto"), "proto");
+    await writeFile(
+      path.join(fixture, "apps/desktop/resources/core/darwin-arm64/tammy-core"),
+      "core",
+    );
+    await assert.rejects(
+      collectBuildManifest({
+        arch: "arm64",
+        commandRunner: async (_command, args) =>
+          args[1] === "--show-toplevel"
+            ? `${path.dirname(fixture)}\n`
+            : args[0] === "rev-parse"
+              ? `${"a".repeat(40)}\n`
+              : "",
+        platform: "darwin",
+        root: fixture,
+      }),
+      /GIT_REPOSITORY_MISMATCH/,
+    );
+    let headReads = 0;
+    await assert.rejects(
+      collectBuildManifest({
+        arch: "arm64",
+        commandRunner: async (_command, args) => {
+          if (args[1] === "--show-toplevel") return `${fixture}\n`;
+          if (args[0] === "rev-parse") {
+            headReads += 1;
+            return `${(headReads === 1 ? "a" : "b").repeat(40)}\n`;
+          }
+          return "";
+        },
+        platform: "darwin",
+        root: fixture,
+      }),
+      /SOURCE_CHANGED_DURING_MANIFEST/,
+    );
+  } finally {
+    await rm(fixture, { force: true, recursive: true });
   }
 });

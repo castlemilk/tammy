@@ -1,32 +1,22 @@
 import { execFile as nodeExecFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { lstat, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { constants, lstat, open, readdir, realpath, rename, rm } from "node:fs/promises";
 import path from "node:path";
 
+import {
+  BUILD_MANIFEST_LOCKFILE_KEYS,
+  BUILD_MANIFEST_VERSION_KEYS,
+} from "./build-manifest-schema.mjs";
+import { hashStableFile, readStableFileBytes } from "./stable-file.mjs";
+
 const HASH_PATTERN = /^[0-9a-f]{64}$/;
+const PROVENANCE_TIMEOUT_MS = 10_000;
 const REVISION_PATTERN = /^[0-9a-f]{40}$/;
 const VERSION_PATTERN = /^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$/;
 const FORBIDDEN_FIELD_PATTERN = /credential|secret|token|password|environment|(^|_)env($|_)/i;
 
-const REQUIRED_VERSION_KEYS = Object.freeze([
-  "buf",
-  "connect_es",
-  "connect_go",
-  "electron",
-  "go",
-  "node",
-  "playwright",
-  "pnpm",
-  "protobuf_es",
-  "protobuf_go",
-  "react",
-  "shadcn",
-  "tailwindcss",
-  "typescript",
-  "vite",
-  "vitest",
-]);
-const REQUIRED_LOCKFILE_KEYS = Object.freeze(["pnpm-lock.yaml", "services/core/go.sum"]);
+const REQUIRED_VERSION_KEYS = BUILD_MANIFEST_VERSION_KEYS;
+const REQUIRED_LOCKFILE_KEYS = BUILD_MANIFEST_LOCKFILE_KEYS;
 const CREATE_INPUT_KEYS = Object.freeze([
   "ciMode",
   "coreSha256",
@@ -71,7 +61,9 @@ function assertNoForbiddenKeys(value) {
 
 function sortRecord(value) {
   return Object.fromEntries(
-    Object.entries(value).sort(([left], [right]) => left.localeCompare(right)),
+    Object.entries(value).sort(([left], [right]) =>
+      Buffer.compare(Buffer.from(left), Buffer.from(right)),
+    ),
   );
 }
 
@@ -141,103 +133,347 @@ export function createBuildManifest(input) {
 }
 
 async function listFiles(root, code) {
-  const stats = await lstat(root).catch(() => null);
+  const stats = await lstat(root, { bigint: true }).catch(() => null);
   if (!stats?.isDirectory() || stats.isSymbolicLink()) throw new Error(code);
-  const result = [];
+  const files = [];
+  const identities = [{ identity: treeIdentity(stats), relative: "" }];
   async function visit(directory, prefix) {
     const entries = await readdir(directory, { withFileTypes: true });
-    entries.sort((left, right) => left.name.localeCompare(right.name));
     for (const entry of entries) {
       const absolute = path.join(directory, entry.name);
       const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
-      const entryStats = await lstat(absolute);
+      const entryStats = await lstat(absolute, { bigint: true });
       if (entryStats.isSymbolicLink()) throw new Error(code);
       if (entryStats.isDirectory()) {
+        identities.push({
+          identity: treeIdentity(entryStats),
+          relative: `${relative}/`,
+        });
         await visit(absolute, relative);
       } else if (entryStats.isFile()) {
-        result.push({ absolute, relative });
+        const identity = treeIdentity(entryStats);
+        files.push({
+          absolute,
+          identity,
+          relative,
+        });
+        identities.push({ identity, relative });
       } else {
         throw new Error(code);
       }
     }
   }
   await visit(root, "");
-  return result;
+  files.sort((left, right) =>
+    Buffer.compare(Buffer.from(left.relative), Buffer.from(right.relative)),
+  );
+  identities.sort((left, right) =>
+    Buffer.compare(Buffer.from(left.relative), Buffer.from(right.relative)),
+  );
+  return { files, identities };
 }
 
-export async function hashProtoTree(protoRoot) {
-  const files = await listFiles(protoRoot, "PROTOBUF_TREE_INVALID");
+function treeIdentity(stats) {
+  return {
+    ctimeNs: stats.ctimeNs,
+    dev: stats.dev,
+    ino: stats.ino,
+    mode: stats.mode,
+    mtimeNs: stats.mtimeNs,
+    nlink: stats.nlink,
+    size: stats.size,
+  };
+}
+
+function sameFileList(left, right) {
+  return (
+    left.identities.length === right.identities.length &&
+    left.identities.every((file, index) => {
+      const other = right.identities[index];
+      return (
+        file.relative === other.relative &&
+        Object.keys(file.identity).every((key) => file.identity[key] === other.identity[key])
+      );
+    })
+  );
+}
+
+export async function hashProtoTree(protoRoot, { afterFileHashed } = {}) {
+  const initial = await listFiles(protoRoot, "PROTOBUF_TREE_INVALID");
+  const { files } = initial;
   if (files.length === 0) throw new Error("PROTOBUF_TREE_INVALID");
   const digest = createHash("sha256");
+  digest.update("tammy-protobuf-tree-v1\0");
+  const count = Buffer.alloc(4);
+  count.writeUInt32BE(files.length);
+  digest.update(count);
   for (const file of files) {
-    digest.update(`${file.relative}\0`);
-    digest.update(await readFile(file.absolute));
-    digest.update("\0");
+    const relative = Buffer.from(file.relative);
+    const relativeLength = Buffer.alloc(4);
+    relativeLength.writeUInt32BE(relative.length);
+    const contents = await readStableFileBytes(file.absolute, {
+      code: "PROTOBUF_TREE_CHANGED",
+      maxBytes: 64 * 1024 * 1024,
+    });
+    const contentLength = Buffer.alloc(8);
+    contentLength.writeBigUInt64BE(BigInt(contents.length));
+    digest.update(relativeLength);
+    digest.update(relative);
+    digest.update(contentLength);
+    digest.update(createHash("sha256").update(contents).digest());
+    await afterFileHashed?.(file.relative);
+  }
+  if (!sameFileList(initial, await listFiles(protoRoot, "PROTOBUF_TREE_INVALID"))) {
+    throw new Error("PROTOBUF_TREE_CHANGED");
   }
   return digest.digest("hex");
 }
 
-async function hashFile(file, code) {
-  const stats = await lstat(file).catch(() => null);
-  if (!stats?.isFile() || stats.isSymbolicLink()) throw new Error(code);
-  return createHash("sha256")
-    .update(await readFile(file))
-    .digest("hex");
+function hashFile(file, code, maxBytes = 512 * 1024 * 1024) {
+  return hashStableFile(file, { code, maxBytes });
 }
 
-async function cleanBuildRoot(buildRoot) {
-  const rootStats = await lstat(buildRoot).catch(() => null);
+async function cleanBuildRoot(buildRoot, expectedRoot) {
+  const rootStats = await lstat(buildRoot, { bigint: true }).catch(() => null);
   if (!rootStats?.isDirectory() || rootStats.isSymbolicLink()) {
     throw new Error("BUILD_STAGING_INVALID");
   }
+  if (expectedRoot && (rootStats.dev !== expectedRoot.dev || rootStats.ino !== expectedRoot.ino)) {
+    throw new Error("BUILD_STAGING_INVALID");
+  }
   const keep = path.join(buildRoot, ".gitkeep");
-  const keepStats = await lstat(keep).catch(() => null);
-  if (!keepStats?.isFile() || keepStats.isSymbolicLink() || keepStats.size !== 0) {
+  const keepStats = await lstat(keep, { bigint: true }).catch(() => null);
+  if (!keepStats?.isFile() || keepStats.isSymbolicLink() || keepStats.size !== 0n) {
     throw new Error("BUILD_STAGING_INVALID");
   }
   for (const entry of await readdir(buildRoot)) {
     if (entry !== ".gitkeep") {
+      const currentRoot = await lstat(buildRoot, { bigint: true });
+      if (currentRoot.dev !== rootStats.dev || currentRoot.ino !== rootStats.ino) {
+        throw new Error("BUILD_STAGING_INVALID");
+      }
       await rm(path.join(buildRoot, entry), { force: true, recursive: true });
     }
   }
+  return {
+    keep: treeIdentity(keepStats),
+    root: treeIdentity(rootStats),
+  };
 }
 
-export async function writeBuildManifest({ buildRoot, manifest, renameFile = rename }) {
+async function validateBuildRoot(buildRoot, expected) {
+  const [rootStats, keepStats] = await Promise.all([
+    lstat(buildRoot, { bigint: true }).catch(() => null),
+    lstat(path.join(buildRoot, ".gitkeep"), { bigint: true }).catch(() => null),
+  ]);
+  if (
+    !rootStats?.isDirectory() ||
+    rootStats.isSymbolicLink() ||
+    !keepStats?.isFile() ||
+    keepStats.isSymbolicLink() ||
+    keepStats.size !== 0n ||
+    rootStats.dev !== expected.root.dev ||
+    rootStats.ino !== expected.root.ino ||
+    rootStats.mode !== expected.root.mode ||
+    !sameFileList(
+      { identities: [{ identity: expected.keep, relative: ".gitkeep" }] },
+      {
+        identities: [
+          {
+            identity: treeIdentity(keepStats),
+            relative: ".gitkeep",
+          },
+        ],
+      },
+    )
+  ) {
+    throw new Error("BUILD_STAGING_INVALID");
+  }
+}
+
+export async function writeBuildManifest({
+  beforeCleanup,
+  buildRoot,
+  manifest,
+  renameFile = rename,
+}) {
   if (!path.isAbsolute(buildRoot)) throw new Error("BUILD_STAGING_INVALID");
-  await cleanBuildRoot(buildRoot);
+  const resourcesRoot = path.dirname(buildRoot);
+  const lock = path.join(resourcesRoot, ".build-manifest.lock");
   const destination = path.join(buildRoot, "build-manifest.json");
   const temporary = path.join(buildRoot, ".build-manifest.json.tmp");
+  let lockHandle;
+  let lockIdentity;
+  let stagingIdentity;
+  const bytes = Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`);
   try {
-    await writeFile(temporary, `${JSON.stringify(manifest, null, 2)}\n`, {
-      encoding: "utf8",
-      flag: "wx",
-      mode: 0o600,
+    const [rootStats, resourcesStats] = await Promise.all([
+      lstat(buildRoot, { bigint: true }).catch(() => null),
+      lstat(resourcesRoot, { bigint: true }).catch(() => null),
+    ]);
+    if (
+      !rootStats?.isDirectory() ||
+      rootStats.isSymbolicLink() ||
+      !resourcesStats?.isDirectory() ||
+      resourcesStats.isSymbolicLink()
+    ) {
+      throw new Error("BUILD_STAGING_INVALID");
+    }
+    try {
+      lockHandle = await open(
+        lock,
+        constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | (constants.O_NOFOLLOW ?? 0),
+        0o600,
+      );
+    } catch {
+      throw new Error("BUILD_STAGING_LOCKED");
+    }
+    const openedLock = await lockHandle.stat({ bigint: true });
+    lockIdentity = { dev: openedLock.dev, ino: openedLock.ino };
+    await lockHandle.writeFile("tammy-build-manifest-v1\n");
+    await lockHandle.sync();
+    await beforeCleanup?.();
+    stagingIdentity = await cleanBuildRoot(buildRoot, {
+      dev: rootStats.dev,
+      ino: rootStats.ino,
     });
+    const currentResources = await lstat(resourcesRoot, {
+      bigint: true,
+    });
+    if (
+      currentResources.dev !== resourcesStats.dev ||
+      currentResources.ino !== resourcesStats.ino
+    ) {
+      throw new Error("BUILD_STAGING_INVALID");
+    }
+    const temporaryHandle = await open(
+      temporary,
+      constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | (constants.O_NOFOLLOW ?? 0),
+      0o600,
+    );
+    try {
+      await temporaryHandle.writeFile(bytes);
+      await temporaryHandle.sync();
+    } finally {
+      await temporaryHandle.close();
+    }
     await renameFile(temporary, destination);
-  } catch {
-    await rm(temporary, { force: true });
-    await rm(destination, { force: true });
+    const published = await readStableFileBytes(destination, {
+      code: "MANIFEST_WRITE_FAILED",
+      maxBytes: 1024 * 1024,
+    });
+    if (!published.equals(bytes)) throw new Error("MANIFEST_WRITE_FAILED");
+    await validateBuildRoot(buildRoot, stagingIdentity);
+  } catch (error) {
+    if (lockHandle) {
+      await rm(temporary, { force: true });
+      await rm(destination, { force: true });
+    }
+    if (
+      error instanceof Error &&
+      ["BUILD_STAGING_INVALID", "BUILD_STAGING_LOCKED"].includes(error.message)
+    ) {
+      throw error;
+    }
     throw new Error("MANIFEST_WRITE_FAILED");
+  } finally {
+    await lockHandle?.close().catch(() => {});
+    if (lockIdentity) {
+      const lexicalLock = await lstat(lock, { bigint: true }).catch(() => null);
+      if (
+        lexicalLock?.isFile() &&
+        !lexicalLock.isSymbolicLink() &&
+        lexicalLock.dev === lockIdentity.dev &&
+        lexicalLock.ino === lockIdentity.ino
+      ) {
+        await rm(lock, { force: true });
+      }
+    }
   }
-  const remaining = (await readdir(buildRoot)).sort();
-  if (
-    remaining.length !== 2 ||
-    remaining[0] !== ".gitkeep" ||
-    remaining[1] !== "build-manifest.json"
-  ) {
+  try {
+    const remaining = (await readdir(buildRoot)).sort();
+    if (
+      remaining.length !== 2 ||
+      remaining[0] !== ".gitkeep" ||
+      remaining[1] !== "build-manifest.json"
+    ) {
+      throw new Error("MANIFEST_WRITE_FAILED");
+    }
+    await validateBuildRoot(buildRoot, stagingIdentity);
+  } catch {
     await rm(destination, { force: true });
     throw new Error("MANIFEST_WRITE_FAILED");
   }
   return destination;
 }
 
-function productionCommandRunner(command, args, options) {
+export function sanitizeProvenanceEnvironment(sourceEnvironment) {
+  const allowed = [
+    "COMSPEC",
+    "HOME",
+    "PATH",
+    "PATHEXT",
+    "SYSTEMROOT",
+    "SystemRoot",
+    "TEMP",
+    "TMP",
+    "TMPDIR",
+    "WINDIR",
+  ];
+  const sanitized = {};
+  for (const key of allowed) {
+    if (typeof sourceEnvironment?.[key] === "string") {
+      sanitized[key] = sourceEnvironment[key];
+    }
+  }
+  sanitized.LANG = "C";
+  sanitized.LC_ALL = "C";
+  return sanitized;
+}
+
+export function runBoundedCommand(
+  command,
+  args,
+  options,
+  { execFile = nodeExecFile, timeoutMs = PROVENANCE_TIMEOUT_MS } = {},
+) {
   return new Promise((resolve, reject) => {
-    nodeExecFile(command, args, options, (error, stdout) => {
-      if (error) reject(error);
-      else resolve(stdout);
-    });
+    const controller = new AbortController();
+    let timedOut = false;
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, timeoutMs);
+    try {
+      execFile(
+        command,
+        args,
+        {
+          ...options,
+          killSignal: "SIGKILL",
+          signal: controller.signal,
+          timeout: timeoutMs,
+        },
+        (error, stdout) => {
+          clearTimeout(timeout);
+          if (error) {
+            reject(
+              new Error(timedOut ? "PROVENANCE_COMMAND_TIMEOUT" : "PROVENANCE_COMMAND_FAILED"),
+            );
+          } else {
+            resolve(stdout);
+          }
+        },
+      );
+    } catch {
+      clearTimeout(timeout);
+      reject(new Error("PROVENANCE_COMMAND_FAILED"));
+    }
   });
+}
+
+function productionCommandRunner(command, args, options) {
+  return runBoundedCommand(command, args, options);
 }
 
 function parseJson(bytes, code) {
@@ -288,32 +524,53 @@ export async function collectBuildManifest({
   arch,
   ciMode = false,
   commandRunner = productionCommandRunner,
+  sourceEnvironment = process.env,
 }) {
   if (!path.isAbsolute(root) || path.normalize(root) !== root) {
     throw new Error("INVALID_PROJECT_ROOT");
   }
   const selected = selectTarget(platform, arch);
-  const rootPackage = parseJson(
-    await readFile(path.join(root, "package.json")),
-    "MANIFEST_PINS_INVALID",
-  );
-  const desktopPackage = parseJson(
-    await readFile(path.join(root, "apps/desktop/package.json")),
-    "MANIFEST_PINS_INVALID",
-  );
-  const goMod = await readFile(path.join(root, "services/core/go.mod"), "utf8");
+  const physicalRoot = await realpath(root).catch(() => null);
+  if (physicalRoot !== root) throw new Error("INVALID_PROJECT_ROOT");
   const commandOptions = {
-    cwd: root,
+    cwd: physicalRoot,
     encoding: "utf8",
+    env: sanitizeProvenanceEnvironment(sourceEnvironment),
     shell: false,
     windowsHide: true,
   };
+  const repositoryRoot = (
+    await commandRunner("git", ["rev-parse", "--show-toplevel"], commandOptions)
+  ).trim();
+  if (path.resolve(repositoryRoot) !== physicalRoot) {
+    throw new Error("GIT_REPOSITORY_MISMATCH");
+  }
   const sourceRevision = (await commandRunner("git", ["rev-parse", "HEAD"], commandOptions)).trim();
   const sourceStatus = await commandRunner(
     "git",
     ["status", "--porcelain", "--untracked-files=normal"],
     commandOptions,
   );
+  const rootPackage = parseJson(
+    await readStableFileBytes(path.join(root, "package.json"), {
+      code: "MANIFEST_PINS_INVALID",
+      maxBytes: 1024 * 1024,
+    }),
+    "MANIFEST_PINS_INVALID",
+  );
+  const desktopPackage = parseJson(
+    await readStableFileBytes(path.join(root, "apps/desktop/package.json"), {
+      code: "MANIFEST_PINS_INVALID",
+      maxBytes: 1024 * 1024,
+    }),
+    "MANIFEST_PINS_INVALID",
+  );
+  const goMod = (
+    await readStableFileBytes(path.join(root, "services/core/go.mod"), {
+      code: "MANIFEST_PINS_INVALID",
+      maxBytes: 1024 * 1024,
+    })
+  ).toString("utf8");
   const lockfiles = {};
   for (const relative of REQUIRED_LOCKFILE_KEYS) {
     lockfiles[relative] = await hashFile(
@@ -321,7 +578,7 @@ export async function collectBuildManifest({
       "MANIFEST_LOCKFILES_INVALID",
     );
   }
-  return createBuildManifest({
+  const manifestInput = {
     ciMode,
     coreSha256: await hashFile(
       path.join(root, ...selected.binary.split("/")),
@@ -333,7 +590,17 @@ export async function collectBuildManifest({
     sourceRevision,
     target: selected.target,
     versions: readPinnedVersions(rootPackage, desktopPackage, goMod),
-  });
+  };
+  const finalRevision = (await commandRunner("git", ["rev-parse", "HEAD"], commandOptions)).trim();
+  const finalStatus = await commandRunner(
+    "git",
+    ["status", "--porcelain", "--untracked-files=normal"],
+    commandOptions,
+  );
+  if (sourceRevision !== finalRevision || sourceStatus !== finalStatus) {
+    throw new Error("SOURCE_CHANGED_DURING_MANIFEST");
+  }
+  return createBuildManifest(manifestInput);
 }
 
 async function main() {

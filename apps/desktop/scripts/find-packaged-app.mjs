@@ -1,12 +1,19 @@
 import { createHash } from "node:crypto";
-import { lstat, open, readdir, readFile } from "node:fs/promises";
+import { lstat, readdir } from "node:fs/promises";
 import path from "node:path";
 
-const HASH_PATTERN = /^[0-9a-f]{64}$/;
+import { parseCanonicalBuildManifest } from "../../../scripts/build-manifest-schema.mjs";
+import {
+  hashStableFile,
+  readStableFileBytes,
+  withStableFileHandle,
+} from "../../../scripts/stable-file.mjs";
+
 const MAX_ASAR_ENTRIES = 200_000;
 const MAX_ASAR_HEADER_BYTES = 16 * 1024 * 1024;
 const MAX_ASAR_PATH_DEPTH = 128;
 const MAX_ASAR_PATH_LENGTH = 4096;
+const MAX_PACKAGED_FILE_BYTES = 512 * 1024 * 1024;
 
 const TARGETS = Object.freeze({
   "darwin/arm64": Object.freeze({
@@ -191,11 +198,18 @@ function enumerateAsarEntries(header, packedDataSize) {
         visit(node.files, entryPath, depth + 1);
       } else if (Object.hasOwn(node, "link")) {
         assertAllowedKeys(node, new Set(["link", "unpacked"]));
+        const linkParts = typeof node.link === "string" ? node.link.split("/") : [];
         if (
           typeof node.link !== "string" ||
           node.link.length === 0 ||
           node.link.length > MAX_ASAR_PATH_LENGTH ||
           node.link.includes("\0") ||
+          node.link.includes("\\") ||
+          path.posix.isAbsolute(node.link) ||
+          path.win32.isAbsolute(node.link) ||
+          linkParts.includes(".") ||
+          linkParts.includes("..") ||
+          path.posix.normalize(node.link) !== node.link ||
           (Object.hasOwn(node, "unpacked") && typeof node.unpacked !== "boolean")
         ) {
           throw new Error("PACKAGE_ASAR_INVALID");
@@ -220,8 +234,13 @@ function enumerateAsarEntries(header, packedDataSize) {
           if (typeof node.offset !== "string" || !/^(0|[1-9][0-9]*)$/.test(node.offset)) {
             throw new Error("PACKAGE_ASAR_INVALID");
           }
-          const offset = BigInt(node.offset);
-          if (offset + BigInt(node.size) > BigInt(packedDataSize)) {
+          const maximumOffset = packedDataSize - node.size;
+          const maximumOffsetText = maximumOffset >= 0 ? String(maximumOffset) : "";
+          if (
+            maximumOffset < 0 ||
+            node.offset.length > maximumOffsetText.length ||
+            (node.offset.length === maximumOffsetText.length && node.offset > maximumOffsetText)
+          ) {
             throw new Error("PACKAGE_ASAR_INVALID");
           }
         }
@@ -234,40 +253,30 @@ function enumerateAsarEntries(header, packedDataSize) {
 }
 
 async function readAsarEntries(archive) {
-  const before = await lstat(archive).catch(() => null);
-  if (!before?.isFile() || before.isSymbolicLink() || before.size < 20) {
+  return withStableFileHandle(
+    archive,
+    {
+      code: "PACKAGE_ASAR_INVALID",
+      maxBytes: MAX_PACKAGED_FILE_BYTES,
+    },
+    async (file, archiveSize) => {
+      if (archiveSize < 20) {
+        throw new Error("PACKAGE_ASAR_INVALID");
+      }
+      const sizePickle = await readExactly(file, 8, 0);
+      if (sizePickle.readUInt32LE(0) !== 4) {
+        throw new Error("PACKAGE_ASAR_INVALID");
+      }
+      const headerSize = sizePickle.readUInt32LE(4);
+      if (headerSize < 12 || headerSize > MAX_ASAR_HEADER_BYTES || headerSize > archiveSize - 8) {
+        throw new Error("PACKAGE_ASAR_INVALID");
+      }
+      const header = parseAsarHeader(await readExactly(file, headerSize, 8));
+      return enumerateAsarEntries(header, archiveSize - 8 - headerSize);
+    },
+  ).catch(() => {
     throw new Error("PACKAGE_ASAR_INVALID");
-  }
-  let file;
-  try {
-    file = await open(archive, "r");
-    const opened = await file.stat();
-    if (
-      !opened.isFile() ||
-      opened.dev !== before.dev ||
-      opened.ino !== before.ino ||
-      opened.size !== before.size
-    ) {
-      throw new Error("PACKAGE_ASAR_INVALID");
-    }
-    const sizePickle = await readExactly(file, 8, 0);
-    if (sizePickle.readUInt32LE(0) !== 4) {
-      throw new Error("PACKAGE_ASAR_INVALID");
-    }
-    const headerSize = sizePickle.readUInt32LE(4);
-    if (headerSize < 12 || headerSize > MAX_ASAR_HEADER_BYTES || headerSize > opened.size - 8) {
-      throw new Error("PACKAGE_ASAR_INVALID");
-    }
-    const header = parseAsarHeader(await readExactly(file, headerSize, 8));
-    return enumerateAsarEntries(header, opened.size - 8 - headerSize);
-  } catch (error) {
-    if (error instanceof Error && error.message === "PACKAGE_ASAR_INVALID") {
-      throw error;
-    }
-    throw new Error("PACKAGE_ASAR_INVALID");
-  } finally {
-    await file?.close().catch(() => {});
-  }
+  });
 }
 
 async function assertCoreAbsentFromAsar(layout) {
@@ -284,35 +293,67 @@ async function assertCoreAbsentFromAsar(layout) {
 }
 
 async function enumerateTree(root, code) {
-  const rootStats = await lstat(root).catch(() => null);
+  const rootStats = await lstat(root, { bigint: true }).catch(() => null);
   if (!rootStats?.isDirectory() || rootStats.isSymbolicLink()) {
     throw new Error(code);
   }
   const entries = [];
   async function visit(directory, prefix) {
     const children = await readdir(directory, { withFileTypes: true });
-    children.sort((left, right) => left.name.localeCompare(right.name));
     for (const child of children) {
       const relative = prefix ? `${prefix}/${child.name}` : child.name;
       const absolute = path.join(directory, child.name);
-      const stats = await lstat(absolute);
+      const stats = await lstat(absolute, { bigint: true });
       if (stats.isSymbolicLink()) throw new Error(code);
       if (stats.isDirectory()) {
-        entries.push(`${relative}/`);
+        entries.push({
+          identity: fileIdentity(stats),
+          path: `${relative}/`,
+        });
         await visit(absolute, relative);
       } else if (stats.isFile()) {
-        entries.push(relative);
+        entries.push({ identity: fileIdentity(stats), path: relative });
       } else {
         throw new Error(code);
       }
     }
   }
   await visit(root, "");
-  return entries;
+  entries.sort((left, right) => Buffer.compare(Buffer.from(left.path), Buffer.from(right.path)));
+  return { entries, root: fileIdentity(rootStats) };
+}
+
+function fileIdentity(stats) {
+  return {
+    ctimeNs: stats.ctimeNs,
+    dev: stats.dev,
+    ino: stats.ino,
+    mode: stats.mode,
+    mtimeNs: stats.mtimeNs,
+    nlink: stats.nlink,
+    size: stats.size,
+  };
+}
+
+function sameIdentity(left, right) {
+  return Object.keys(left).every((key) => left[key] === right[key]);
+}
+
+function sameTreeSnapshot(left, right) {
+  return (
+    sameIdentity(left.root, right.root) &&
+    left.entries.length === right.entries.length &&
+    left.entries.every(
+      (entry, index) =>
+        entry.path === right.entries[index].path &&
+        sameIdentity(entry.identity, right.entries[index].identity),
+    )
+  );
 }
 
 async function assertExactTree(root, expected, code) {
-  const actual = await enumerateTree(root, code);
+  const snapshot = await enumerateTree(root, code);
+  const actual = snapshot.entries.map((entry) => entry.path);
   if (
     actual.length !== expected.length ||
     actual.some((entry, index) => entry !== expected[index])
@@ -323,6 +364,12 @@ async function assertExactTree(root, expected, code) {
   if (!keep?.isFile() || keep.isSymbolicLink() || keep.size !== 0) {
     throw new Error(code);
   }
+  return { root, snapshot };
+}
+
+async function revalidateTree(tree, code) {
+  const current = await enumerateTree(tree.root, code);
+  if (!sameTreeSnapshot(tree.snapshot, current)) throw new Error(code);
 }
 
 async function assertRegularFile(file, code) {
@@ -331,13 +378,20 @@ async function assertRegularFile(file, code) {
   return stats;
 }
 
-async function hashFile(file) {
-  return createHash("sha256")
-    .update(await readFile(file))
-    .digest("hex");
+function hashFile(file, code) {
+  return hashStableFile(file, {
+    code,
+    maxBytes: MAX_PACKAGED_FILE_BYTES,
+  });
 }
 
-export async function verifyPackagedLayout({ desktopRoot, platform, arch, sourceManifestPath }) {
+export async function verifyPackagedLayout({
+  desktopRoot,
+  platform,
+  arch,
+  sourceManifestPath,
+  beforeTreeRevalidation,
+}) {
   const layout = resolvePackagedLayout({ desktopRoot, platform, arch });
   if (
     typeof sourceManifestPath !== "string" ||
@@ -348,14 +402,22 @@ export async function verifyPackagedLayout({ desktopRoot, platform, arch, source
   const executable = path.basename(layout.sourceCore);
   const targetDirectory = path.basename(path.dirname(layout.sourceCore));
   const coreAllowlist = [".gitkeep", `${targetDirectory}/`, `${targetDirectory}/${executable}`];
-  await assertExactTree(layout.sourceCoreRoot, coreAllowlist, "SOURCE_CORE_LAYOUT_INVALID");
-  await assertExactTree(
+  const sourceCoreTree = await assertExactTree(
+    layout.sourceCoreRoot,
+    coreAllowlist,
+    "SOURCE_CORE_LAYOUT_INVALID",
+  );
+  const sourceBuildTree = await assertExactTree(
     layout.sourceBuildRoot,
     [".gitkeep", "build-manifest.json"],
     "SOURCE_BUILD_LAYOUT_INVALID",
   );
-  await assertExactTree(layout.packagedCoreRoot, coreAllowlist, "PACKAGED_CORE_LAYOUT_INVALID");
-  await assertExactTree(
+  const packagedCoreTree = await assertExactTree(
+    layout.packagedCoreRoot,
+    coreAllowlist,
+    "PACKAGED_CORE_LAYOUT_INVALID",
+  );
+  const packagedBuildTree = await assertExactTree(
     layout.packagedBuildRoot,
     [".gitkeep", "build-manifest.json"],
     "PACKAGED_BUILD_LAYOUT_INVALID",
@@ -380,35 +442,40 @@ export async function verifyPackagedLayout({ desktopRoot, platform, arch, source
     }
   }
 
-  const sourceManifest = await readFile(layout.sourceManifest);
-  const packagedManifest = await readFile(layout.packagedManifest);
+  const sourceManifest = await readStableFileBytes(layout.sourceManifest, {
+    code: "SOURCE_BUILD_LAYOUT_CHANGED",
+    maxBytes: 1024 * 1024,
+  });
+  const packagedManifest = await readStableFileBytes(layout.packagedManifest, {
+    code: "PACKAGED_BUILD_LAYOUT_CHANGED",
+    maxBytes: 1024 * 1024,
+  });
   if (!sourceManifest.equals(packagedManifest)) {
     throw new Error("PACKAGED_MANIFEST_MISMATCH");
   }
   let manifest;
   try {
-    manifest = JSON.parse(sourceManifest.toString("utf8"));
+    manifest = parseCanonicalBuildManifest(sourceManifest, layout.target);
   } catch {
     throw new Error("SOURCE_MANIFEST_INVALID");
   }
-  if (
-    manifest?.schema !== "tammy-build-manifest-v1" ||
-    typeof manifest.core_sha256 !== "string" ||
-    !HASH_PATTERN.test(manifest.core_sha256)
-  ) {
-    throw new Error("SOURCE_MANIFEST_INVALID");
-  }
-  const sourceCoreHash = await hashFile(layout.sourceCore);
+  const sourceCoreHash = await hashFile(layout.sourceCore, "SOURCE_CORE_LAYOUT_CHANGED");
   if (sourceCoreHash !== manifest.core_sha256) {
     throw new Error("SOURCE_CORE_HASH_MISMATCH");
   }
-  const packagedCoreHash = await hashFile(layout.packagedCore);
+  const packagedCoreHash = await hashFile(layout.packagedCore, "PACKAGED_CORE_LAYOUT_CHANGED");
   if (packagedCoreHash !== manifest.core_sha256) {
     throw new Error("PACKAGED_CORE_HASH_MISMATCH");
   }
+  const appSha256 = await hashFile(layout.appExecutable, "PACKAGE_APP_CHANGED");
+  await beforeTreeRevalidation?.();
+  await revalidateTree(sourceCoreTree, "SOURCE_CORE_LAYOUT_CHANGED");
+  await revalidateTree(sourceBuildTree, "SOURCE_BUILD_LAYOUT_CHANGED");
+  await revalidateTree(packagedCoreTree, "PACKAGED_CORE_LAYOUT_CHANGED");
+  await revalidateTree(packagedBuildTree, "PACKAGED_BUILD_LAYOUT_CHANGED");
   return {
     appExecutable: layout.appExecutable,
-    appSha256: await hashFile(layout.appExecutable),
+    appSha256,
     coreExecutable: layout.packagedCore,
     coreSha256: packagedCoreHash,
     manifest: layout.packagedManifest,
