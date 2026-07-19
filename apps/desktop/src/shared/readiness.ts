@@ -51,6 +51,137 @@ const wireSchema = z
 
 const certificatePemPattern =
   /^-----BEGIN CERTIFICATE-----\n[A-Za-z0-9+/=\n]+\n-----END CERTIFICATE-----$/;
+const duplicateKey = Symbol("duplicate-json-key");
+
+function containsDuplicateJsonKey(text: string): boolean {
+  let cursor = 0;
+
+  const skipWhitespace = (): void => {
+    while (
+      text[cursor] === " " ||
+      text[cursor] === "\n" ||
+      text[cursor] === "\r" ||
+      text[cursor] === "\t"
+    ) {
+      cursor += 1;
+    }
+  };
+
+  const parseString = (): string => {
+    const start = cursor;
+    cursor += 1;
+    while (cursor < text.length) {
+      const character = text[cursor];
+      if (character === '"') {
+        cursor += 1;
+        return JSON.parse(text.slice(start, cursor)) as string;
+      }
+      if (character === "\\") {
+        cursor += 1;
+        if (cursor >= text.length) {
+          throw new SyntaxError();
+        }
+      }
+      cursor += 1;
+    }
+    throw new SyntaxError();
+  };
+
+  const parseValue = (): void => {
+    skipWhitespace();
+    const character = text[cursor];
+    if (character === "{") {
+      parseObject();
+      return;
+    }
+    if (character === "[") {
+      parseArray();
+      return;
+    }
+    if (character === '"') {
+      parseString();
+      return;
+    }
+
+    const start = cursor;
+    while (cursor < text.length && !/[\s,\]}]/.test(text[cursor] ?? "")) {
+      cursor += 1;
+    }
+    if (cursor === start) {
+      throw new SyntaxError();
+    }
+  };
+
+  const parseArray = (): void => {
+    cursor += 1;
+    skipWhitespace();
+    if (text[cursor] === "]") {
+      cursor += 1;
+      return;
+    }
+    while (cursor < text.length) {
+      parseValue();
+      skipWhitespace();
+      if (text[cursor] === "]") {
+        cursor += 1;
+        return;
+      }
+      if (text[cursor] !== ",") {
+        throw new SyntaxError();
+      }
+      cursor += 1;
+    }
+    throw new SyntaxError();
+  };
+
+  const parseObject = (): void => {
+    cursor += 1;
+    const keys = new Set<string>();
+    skipWhitespace();
+    if (text[cursor] === "}") {
+      cursor += 1;
+      return;
+    }
+    while (cursor < text.length) {
+      skipWhitespace();
+      if (text[cursor] !== '"') {
+        throw new SyntaxError();
+      }
+      const key = parseString();
+      if (keys.has(key)) {
+        throw duplicateKey;
+      }
+      keys.add(key);
+      skipWhitespace();
+      if (text[cursor] !== ":") {
+        throw new SyntaxError();
+      }
+      cursor += 1;
+      parseValue();
+      skipWhitespace();
+      if (text[cursor] === "}") {
+        cursor += 1;
+        return;
+      }
+      if (text[cursor] !== ",") {
+        throw new SyntaxError();
+      }
+      cursor += 1;
+    }
+    throw new SyntaxError();
+  };
+
+  try {
+    parseValue();
+    skipWhitespace();
+    if (cursor !== text.length) {
+      throw new SyntaxError();
+    }
+    return false;
+  } catch (error) {
+    return error === duplicateKey;
+  }
+}
 
 function isCertificatePem(value: string): boolean {
   if (!certificatePemPattern.test(value)) {
@@ -96,11 +227,17 @@ export function parseReadiness(bytes: Uint8Array): Readonly<CoreReadiness> {
     throw new ReadinessError("INVALID_ENCODING");
   }
 
+  const hasDuplicateKey = containsDuplicateJsonKey(text);
+
   let decoded: unknown;
   try {
     decoded = JSON.parse(text);
   } catch {
     throw new ReadinessError("INVALID_JSON");
+  }
+
+  if (hasDuplicateKey) {
+    throw new ReadinessError("INVALID_SCHEMA");
   }
 
   const parsed = wireSchema.safeParse(decoded);

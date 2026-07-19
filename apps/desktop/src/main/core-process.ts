@@ -8,6 +8,7 @@ import { type CoreReadiness, parseReadiness } from "../shared/readiness";
 const MAX_READINESS_BYTES = 65_536;
 const MAX_STDERR_LINE_BYTES = 4_096;
 const STOP_TIMEOUT_MS = 3_000;
+const FORCE_CONFIRMATION_TIMEOUT_MS = 1_000;
 const DEFAULT_READINESS_TIMEOUT_MS = 10_000;
 const ALLOWED_ENVIRONMENT_KEYS = ["SYSTEMROOT", "WINDIR", "TEMP", "TMP", "TMPDIR", "LANG"] as const;
 
@@ -23,7 +24,8 @@ export type CoreProcessErrorCode =
   | "UNEXPECTED_STDOUT"
   | "EXIT_BEFORE_READY"
   | "CORE_EXITED"
-  | "START_ABORTED";
+  | "START_ABORTED"
+  | "TERMINATION_FAILED";
 
 const ERROR_MESSAGES: Readonly<Record<CoreProcessErrorCode, string>> = {
   INVALID_BINARY_PATH: "Core binary path must be absolute.",
@@ -36,6 +38,7 @@ const ERROR_MESSAGES: Readonly<Record<CoreProcessErrorCode, string>> = {
   EXIT_BEFORE_READY: "Core process exited before readiness.",
   CORE_EXITED: "Core process exited unexpectedly.",
   START_ABORTED: "Core process start was stopped.",
+  TERMINATION_FAILED: "Core process termination was not confirmed.",
 };
 
 export class CoreProcessError extends Error {
@@ -52,11 +55,12 @@ export interface CoreChildProcess extends EventEmitter {
   readonly stdout: Readable;
   readonly stderr: Readable;
   readonly stdin: Writable;
-  kill(): boolean;
+  kill(signal: NodeJS.Signals): boolean;
 }
 
 interface CoreSpawnOptions {
   readonly shell: false;
+  readonly windowsHide: true;
   readonly stdio: readonly ["pipe", "pipe", "pipe"];
   readonly env: Readonly<Record<string, string>>;
 }
@@ -111,6 +115,7 @@ const silentLogger: CoreProcessLogger = {
 const productionSpawn: SpawnCoreProcess = (binaryPath, args, options) =>
   spawn(binaryPath, args, {
     shell: options.shell,
+    windowsHide: options.windowsHide,
     stdio: ["pipe", "pipe", "pipe"],
     env: options.env,
   });
@@ -139,11 +144,13 @@ export class CoreProcess {
   #failure: CoreProcessError | undefined;
   #child: CoreChildProcess | undefined;
   #readiness: Readonly<CoreReadiness> | undefined;
+  #readinessAccepted = false;
   #readinessBytes = Buffer.alloc(0);
   #stderrBytes = Buffer.alloc(0);
   #droppingStderrLine = false;
   #readinessTimer: unknown;
   #stopTimer: unknown;
+  #forceConfirmationTimer: unknown;
   #startPromise: Promise<Readonly<CoreReadiness>> | undefined;
   #resolveStart: ((readiness: Readonly<CoreReadiness>) => void) | undefined;
   #rejectStart: ((error: CoreProcessError) => void) | undefined;
@@ -187,7 +194,8 @@ export class CoreProcess {
     }
 
     this.#state = "STARTING";
-    this.#clock.now();
+    this.#readinessAccepted = false;
+    this.#exitObserved = false;
     const startPromise = new Promise<Readonly<CoreReadiness>>((resolve, reject) => {
       this.#resolveStart = resolve;
       this.#rejectStart = reject;
@@ -198,6 +206,7 @@ export class CoreProcess {
     try {
       this.#child = this.#spawn(this.#binaryPath, [], {
         shell: false,
+        windowsHide: true,
         stdio: ["pipe", "pipe", "pipe"],
         env: this.#environment,
       });
@@ -215,10 +224,20 @@ export class CoreProcess {
   }
 
   public stop(): Promise<void> {
-    if (this.#state === "STOPPING" && this.#stopPromise) {
+    if (this.#stopPromise) {
       return this.#stopPromise;
     }
-    if (this.#state === "STOPPED" || this.#state === "FAILED") {
+    if (this.#state === "FAILED") {
+      if (!this.#child) {
+        return Promise.resolve();
+      }
+      const retryPromise = this.#createStopPromise();
+      if (this.#stopTimer === undefined) {
+        this.#requestForceTermination("RETRY");
+      }
+      return retryPromise;
+    }
+    if (this.#state === "STOPPED") {
       return Promise.resolve();
     }
     if (this.#state === "IDLE") {
@@ -228,6 +247,9 @@ export class CoreProcess {
 
     const wasStarting = this.#state === "STARTING";
     this.#readiness = undefined;
+    this.#readinessBytes = Buffer.alloc(0);
+    this.#stderrBytes = Buffer.alloc(0);
+    this.#droppingStderrLine = false;
     this.#state = "STOPPING";
     this.#clearReadinessTimer();
 
@@ -235,23 +257,9 @@ export class CoreProcess {
       this.#rejectPendingStart(new CoreProcessError("START_ABORTED"));
     }
 
-    const stopPromise = new Promise<void>((resolve, reject) => {
-      this.#resolveStop = resolve;
-      this.#rejectStop = reject;
-    });
-    this.#stopPromise = stopPromise;
-    void stopPromise.catch(() => undefined);
+    const stopPromise = this.#createStopPromise();
 
-    this.#stopTimer = this.#timers.setTimeout(() => {
-      if (!this.#exitObserved) {
-        try {
-          this.#child?.kill();
-        } catch {
-          // Stop is bounded even if the native kill operation reports failure.
-        }
-      }
-      this.#finishStop();
-    }, STOP_TIMEOUT_MS);
+    this.#startGracefulTerminationTimer();
 
     try {
       this.#child?.stdin.end();
@@ -283,8 +291,14 @@ export class CoreProcess {
     if (bytes.byteLength === 0) {
       return;
     }
-    if (this.#state === "READY" || this.#state === "STOPPING") {
+    if (this.#state === "READY") {
       this.#fail(new CoreProcessError("UNEXPECTED_STDOUT"));
+      return;
+    }
+    if (this.#state === "STOPPING") {
+      if (this.#readinessAccepted) {
+        this.#fail(new CoreProcessError("UNEXPECTED_STDOUT"));
+      }
       return;
     }
     if (this.#state !== "STARTING") {
@@ -310,6 +324,7 @@ export class CoreProcess {
 
     this.#readinessBytes = Buffer.alloc(0);
     this.#readiness = readiness;
+    this.#readinessAccepted = true;
     this.#state = "READY";
     this.#clearReadinessTimer();
     const resolve = this.#resolveStart;
@@ -320,7 +335,7 @@ export class CoreProcess {
   };
 
   readonly #onStderr = (chunk: Buffer | Uint8Array | string): void => {
-    if (this.#state === "STOPPING") {
+    if (this.#state !== "READY") {
       return;
     }
 
@@ -391,6 +406,10 @@ export class CoreProcess {
     }
     if (this.#state === "READY") {
       this.#fail(new CoreProcessError("CORE_EXITED"));
+      return;
+    }
+    if (this.#state === "FAILED") {
+      this.#finishFailedChildExit();
     }
   };
 
@@ -401,15 +420,27 @@ export class CoreProcess {
     child.on("exit", this.#onExit);
   }
 
-  #removeListeners(): void {
+  #removeStreamListeners(): void {
     const child = this.#child;
     if (!child) {
       return;
     }
     child.stdout.removeListener("data", this.#onStdout);
     child.stderr.removeListener("data", this.#onStderr);
+  }
+
+  #removeLifecycleListeners(): void {
+    const child = this.#child;
+    if (!child) {
+      return;
+    }
     child.removeListener("error", this.#onError);
     child.removeListener("exit", this.#onExit);
+  }
+
+  #removeListeners(): void {
+    this.#removeStreamListeners();
+    this.#removeLifecycleListeners();
   }
 
   #logStderr(bytes: Buffer, truncated: boolean): void {
@@ -434,7 +465,10 @@ export class CoreProcess {
       message = `${message.slice(0, MAX_STDERR_LINE_BYTES - 12)}[TRUNCATED]`;
     }
     try {
-      this.#logger.warn(message.slice(0, MAX_STDERR_LINE_BYTES));
+      const now = this.#clock.now();
+      const timestamp = Number.isFinite(now) ? Math.trunc(now) : 0;
+      const prefix = `[${timestamp}] `;
+      this.#logger.warn(`${prefix}${message}`.slice(0, MAX_STDERR_LINE_BYTES));
     } catch {
       // Diagnostic sinks cannot be allowed to destabilize supervision.
     }
@@ -450,28 +484,26 @@ export class CoreProcess {
     this.#state = "FAILED";
     this.#failure = error;
     this.#readiness = undefined;
+    this.#readinessAccepted = false;
     this.#readinessBytes = Buffer.alloc(0);
     this.#stderrBytes = Buffer.alloc(0);
+    this.#droppingStderrLine = false;
     this.#clearReadinessTimer();
-    this.#clearStopTimer();
     this.#rejectPendingStart(error);
-    this.#removeListeners();
+    this.#removeStreamListeners();
     try {
       this.#child?.stdin.end();
     } catch {
       // Native shutdown details are deliberately not surfaced.
     }
-    try {
-      this.#child?.kill();
-    } catch {
-      // Native shutdown details are deliberately not surfaced.
+    this.#rejectPendingStop(error);
+    if (this.#exitObserved || !this.#child) {
+      this.#finishFailedChildExit();
+      return;
     }
-    this.#child = undefined;
-    const rejectStop = this.#rejectStop;
-    this.#resolveStop = undefined;
-    this.#rejectStop = undefined;
-    this.#stopPromise = undefined;
-    rejectStop?.(error);
+    if (this.#forceConfirmationTimer === undefined) {
+      this.#startGracefulTerminationTimer();
+    }
   }
 
   #rejectPendingStart(error: CoreProcessError): void {
@@ -487,17 +519,131 @@ export class CoreProcess {
       return;
     }
     this.#clearStopTimer();
+    this.#clearForceConfirmationTimer();
     this.#readiness = undefined;
+    this.#readinessAccepted = false;
     this.#readinessBytes = Buffer.alloc(0);
     this.#stderrBytes = Buffer.alloc(0);
+    this.#droppingStderrLine = false;
     this.#removeListeners();
     this.#child = undefined;
     this.#state = "STOPPED";
+    this.#resolvePendingStop();
+  }
+
+  #finishFailedChildExit(): void {
+    this.#clearForceConfirmationTimer();
+    this.#removeListeners();
+    this.#child = undefined;
+    this.#readiness = undefined;
+    this.#readinessAccepted = false;
+    this.#resolvePendingStop();
+  }
+
+  #createStopPromise(): Promise<void> {
+    const stopPromise = new Promise<void>((resolve, reject) => {
+      this.#resolveStop = resolve;
+      this.#rejectStop = reject;
+    });
+    this.#stopPromise = stopPromise;
+    void stopPromise.catch(() => undefined);
+    return stopPromise;
+  }
+
+  #resolvePendingStop(): void {
     const resolve = this.#resolveStop;
     this.#resolveStop = undefined;
     this.#rejectStop = undefined;
     this.#stopPromise = undefined;
     resolve?.();
+  }
+
+  #rejectPendingStop(error: CoreProcessError): void {
+    const reject = this.#rejectStop;
+    this.#resolveStop = undefined;
+    this.#rejectStop = undefined;
+    this.#stopPromise = undefined;
+    reject?.(error);
+  }
+
+  #requestForceTermination(mode: "STOP" | "FAILURE" | "RETRY"): void {
+    this.#clearForceConfirmationTimer();
+    const child = this.#child;
+    if (!child) {
+      if (mode === "STOP") {
+        this.#terminationNotConfirmed(mode);
+      } else if (mode === "RETRY") {
+        this.#resolvePendingStop();
+      }
+      return;
+    }
+
+    let signalSent = false;
+    try {
+      signalSent = child.kill("SIGKILL");
+    } catch {
+      this.#terminationNotConfirmed(mode);
+      return;
+    }
+
+    if (this.#child !== child || this.#exitObserved) {
+      return;
+    }
+    if (!signalSent) {
+      this.#terminationNotConfirmed(mode);
+      return;
+    }
+
+    let firedSynchronously = false;
+    const timer = this.#timers.setTimeout(() => {
+      firedSynchronously = true;
+      this.#forceConfirmationTimer = undefined;
+      if (this.#child === child && !this.#exitObserved) {
+        this.#terminationNotConfirmed(mode);
+      }
+    }, FORCE_CONFIRMATION_TIMEOUT_MS);
+    if (firedSynchronously) {
+      this.#timers.clearTimeout(timer);
+    } else {
+      this.#forceConfirmationTimer = timer;
+    }
+  }
+
+  #startGracefulTerminationTimer(): void {
+    if (this.#stopTimer !== undefined) {
+      return;
+    }
+    this.#stopTimer = this.#timers.setTimeout(() => {
+      this.#stopTimer = undefined;
+      if (this.#exitObserved) {
+        return;
+      }
+      if (this.#state === "STOPPING") {
+        this.#requestForceTermination("STOP");
+      } else if (this.#state === "FAILED") {
+        this.#requestForceTermination(this.#stopPromise ? "RETRY" : "FAILURE");
+      }
+    }, STOP_TIMEOUT_MS);
+  }
+
+  #terminationNotConfirmed(mode: "STOP" | "FAILURE" | "RETRY"): void {
+    this.#clearForceConfirmationTimer();
+    this.#removeStreamListeners();
+    if (mode === "STOP") {
+      if (this.#state !== "STOPPING") {
+        return;
+      }
+      const error = new CoreProcessError("TERMINATION_FAILED");
+      this.#state = "FAILED";
+      this.#failure = error;
+      this.#readiness = undefined;
+      this.#readinessAccepted = false;
+      this.#rejectPendingStop(error);
+      return;
+    }
+    if (mode === "RETRY") {
+      this.#rejectPendingStop(new CoreProcessError("TERMINATION_FAILED"));
+    }
   }
 
   #clearReadinessTimer(): void {
@@ -511,6 +657,13 @@ export class CoreProcess {
     if (this.#stopTimer !== undefined) {
       this.#timers.clearTimeout(this.#stopTimer);
       this.#stopTimer = undefined;
+    }
+  }
+
+  #clearForceConfirmationTimer(): void {
+    if (this.#forceConfirmationTimer !== undefined) {
+      this.#timers.clearTimeout(this.#forceConfirmationTimer);
+      this.#forceConfirmationTimer = undefined;
     }
   }
 }

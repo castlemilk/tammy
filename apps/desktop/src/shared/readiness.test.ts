@@ -179,4 +179,21 @@ describe("parseReadiness", () => {
       }
     }
   });
+
+  it.each([
+    ["plain", `${JSON.stringify(wire()).replace('"port":54321', '"port":1,"port":54321')}\n`],
+    [
+      "escaped-equivalent",
+      `${JSON.stringify(wire()).replace('"port":54321', '"po\\u0072t":1,"port":54321')}\n`,
+    ],
+    [
+      "capability with a valid final value",
+      `${JSON.stringify(wire()).replace(
+        `"capability":"${CAPABILITY}"`,
+        `"capability":"not-secret","capability":"${CAPABILITY}"`,
+      )}\n`,
+    ],
+  ])("rejects %s duplicate JSON keys", (_name, record) => {
+    expectReadinessError(encoder.encode(record), "INVALID_SCHEMA", "Invalid readiness record.");
+  });
 });

@@ -48,11 +48,16 @@ class FakeChild extends EventEmitter {
   readonly stdout = new PassThrough();
   readonly stderr = new PassThrough();
   readonly stdin = new PassThrough();
-  killCalls = 0;
+  readonly killSignals: NodeJS.Signals[] = [];
+  killBehavior: (signal: NodeJS.Signals) => boolean = () => true;
 
-  kill(): boolean {
-    this.killCalls += 1;
-    return true;
+  get killCalls(): number {
+    return this.killSignals.length;
+  }
+
+  kill(signal: NodeJS.Signals): boolean {
+    this.killSignals.push(signal);
+    return this.killBehavior(signal);
   }
 }
 
@@ -174,6 +179,7 @@ describe("CoreProcess construction and spawning", () => {
         [],
         {
           shell: false,
+          windowsHide: true,
           stdio: ["pipe", "pipe", "pipe"],
           env: {
             SYSTEMROOT: "C:\\Windows",
@@ -186,7 +192,7 @@ describe("CoreProcess construction and spawning", () => {
         },
       ],
     ]);
-    expect(now).toHaveBeenCalledOnce();
+    expect(now).not.toHaveBeenCalled();
   });
 
   it("converts a synchronous native spawn throw to a stable redacted failure", async () => {
@@ -353,35 +359,37 @@ describe("CoreProcess readiness", () => {
 });
 
 describe("CoreProcess stderr handling", () => {
-  it("logs only bounded, line-oriented, redacted warnings", async () => {
-    const { child, supervisor, warnings } = testRig();
+  it("suppresses all startup stderr and logs only bounded, timestamped, redacted READY lines", async () => {
+    const { child, now, supervisor, warnings } = testRig();
     const start = supervisor.start();
 
-    child.stderr.write(
-      'authorization: Bearer pre-ready-auth token="pre-ready-token" api_key=key-value\n',
-    );
+    child.stderr.write(`${CAPABILITY} ${PORT} ${CERTIFICATE.split("\n")[1]}`);
     child.stderr.write("x".repeat(100_000));
-    child.stderr.write("\n");
+    expect(warnings).toEqual([]);
+
     child.stdout.write(readinessLine());
     await start;
+    child.stderr.write("\n");
     child.stderr.write(
       `${CAPABILITY} ${PORT} ${CERTIFICATE.split("\n")[1]} password=bad secret:also-bad\n`,
     );
 
-    expect(warnings.length).toBeGreaterThanOrEqual(3);
+    expect(warnings.length).toBeGreaterThanOrEqual(2);
     for (const warning of warnings) {
       expect(warning.length).toBeLessThanOrEqual(4_096);
+      expect(warning).toMatch(/^\[42\] /);
     }
     const logged = warnings.join("\n");
-    expect(logged).not.toMatch(/pre-ready-token|pre-ready-auth|key-value|password=bad|also-bad/);
     expect(logged).not.toContain(CAPABILITY);
     expect(logged).not.toContain(String(PORT));
     expect(logged).not.toContain(CERTIFICATE.split("\n")[1]);
+    expect(logged).not.toMatch(/password=bad|also-bad/);
     expect(logged).toContain("[REDACTED]");
+    expect(now).toHaveBeenCalledTimes(warnings.length);
   });
 
   it("suppresses stderr while shutdown is in progress without retaining readiness", async () => {
-    const { child, supervisor, timers, warnings } = testRig();
+    const { child, supervisor, warnings } = testRig();
     const start = supervisor.start();
     child.stdout.write(readinessLine());
     await start;
@@ -391,7 +399,7 @@ describe("CoreProcess stderr handling", () => {
     child.stderr.write(`${CAPABILITY} ${PORT} ${CERTIFICATE.split("\n")[1]}\n`);
 
     expect(warnings).toHaveLength(warningCount);
-    timers.runNext(3_000);
+    child.emit("exit", 0, null);
     await stop;
   });
 });
@@ -447,10 +455,121 @@ describe("CoreProcess stopping and diagnostics", () => {
     const stop = supervisor.stop();
     expect(child.killCalls).toBe(0);
     timers.runNext(3_000);
+
+    expect(child.killSignals).toEqual(["SIGKILL"]);
+    expect(supervisor.getDiagnostic()).toEqual({ state: "STOPPING" });
+    child.emit("exit", 0, null);
+    await stop;
+    expect(supervisor.getDiagnostic()).toEqual({ state: "STOPPED" });
+  });
+
+  it("rejects after force termination is not exit-confirmed and permits a retry", async () => {
+    const { child, supervisor, timers } = testRig();
+    const start = supervisor.start();
+    child.stdout.write(readinessLine());
+    await start;
+
+    const stop = supervisor.stop();
+    let settled = false;
+    void stop.then(
+      () => {
+        settled = true;
+      },
+      () => {
+        settled = true;
+      },
+    );
+    timers.runNext(3_000);
+    await Promise.resolve();
+    expect(child.killSignals).toEqual(["SIGKILL"]);
+    expect(settled).toBe(false);
+    expect(supervisor.getDiagnostic()).toEqual({ state: "STOPPING" });
+
+    timers.runNext(1_000);
+    await expectCoreError(
+      stop,
+      "TERMINATION_FAILED",
+      "Core process termination was not confirmed.",
+    );
+    expect(supervisor.getDiagnostic()).toEqual({
+      state: "FAILED",
+      errorCode: "TERMINATION_FAILED",
+    });
+    expect(child.listenerCount("exit")).toBe(1);
+    expect(child.listenerCount("error")).toBe(1);
+
+    child.killBehavior = () => {
+      child.emit("exit", 0, null);
+      return true;
+    };
+    await expect(supervisor.stop()).resolves.toBeUndefined();
+    expect(child.killSignals).toEqual(["SIGKILL", "SIGKILL"]);
+    expect(child.listenerCount("exit")).toBe(0);
+    expect(child.listenerCount("error")).toBe(0);
+  });
+
+  it.each([
+    [
+      "kill returns false",
+      (child: FakeChild) => {
+        child.killBehavior = () => false;
+      },
+    ],
+    [
+      "kill throws",
+      (child: FakeChild) => {
+        child.killBehavior = () => {
+          throw new Error("/secret/native kill failure");
+        };
+      },
+    ],
+  ])("retains a live child when %s", async (_name, configure) => {
+    const { child, supervisor, timers } = testRig();
+    configure(child);
+    const start = supervisor.start();
+    child.stdout.write(readinessLine());
+    await start;
+
+    const stop = supervisor.stop();
+    timers.runNext(3_000);
+
+    await expectCoreError(
+      stop,
+      "TERMINATION_FAILED",
+      "Core process termination was not confirmed.",
+    );
+    expect(child.killSignals).toEqual(["SIGKILL"]);
+    expect(supervisor.getDiagnostic()).toEqual({
+      state: "FAILED",
+      errorCode: "TERMINATION_FAILED",
+    });
+    expect(child.listenerCount("exit")).toBe(1);
+    expect(child.listenerCount("error")).toBe(1);
+    child.emit("exit", 0, null);
+    expect(child.listenerCount("exit")).toBe(0);
+    expect(child.listenerCount("error")).toBe(0);
+  });
+
+  it("handles synchronous exit during SIGKILL without leaking a confirmation timer", async () => {
+    const { child, supervisor, timers } = testRig();
+    const start = supervisor.start();
+    child.stdout.write(readinessLine());
+    await start;
+    child.killBehavior = () => {
+      child.emit("exit", 0, null);
+      return true;
+    };
+
+    const stop = supervisor.stop();
+    timers.runNext(3_000);
     await stop;
 
-    expect(child.killCalls).toBe(1);
+    expect(child.killSignals).toEqual(["SIGKILL"]);
     expect(supervisor.getDiagnostic()).toEqual({ state: "STOPPED" });
+    expect(timers.scheduled.filter((timer) => timer.delay === 1_000 && !timer.cancelled)).toEqual(
+      [],
+    );
+    expect(child.listenerCount("exit")).toBe(0);
   });
 
   it("fatally rejects shutdown if stdout arrives after readiness", async () => {
@@ -473,14 +592,45 @@ describe("CoreProcess stopping and diagnostics", () => {
     expect(publicText).not.toContain(CAPABILITY);
     expect(publicText).not.toContain(String(PORT));
     expect(publicText).not.toContain("BEGIN CERTIFICATE");
-    expect(child.killCalls).toBe(1);
+    expect(child.killSignals).toEqual([]);
     expect(child.stdin.writableEnded).toBe(true);
+    expect(child.listenerCount("error")).toBe(1);
+    expect(child.listenerCount("exit")).toBe(1);
+    expect(child.stdout.listenerCount("data")).toBe(0);
+    expect(timers.scheduled.filter((timer) => timer.delay === 3_000 && !timer.cancelled)).toEqual([
+      expect.objectContaining({ delay: 3_000, cancelled: false }),
+    ]);
+    timers.runNext(3_000);
+    expect(child.killSignals).toEqual(["SIGKILL"]);
+    child.emit("exit", 0, null);
     expect(child.listenerCount("error")).toBe(0);
     expect(child.listenerCount("exit")).toBe(0);
-    expect(child.stdout.listenerCount("data")).toBe(0);
+  });
+
+  it("preserves the stdout failure during force-confirmation ordering", async () => {
+    const { child, supervisor, timers } = testRig();
+    const start = supervisor.start();
+    child.stdout.write(readinessLine());
+    await start;
+
+    const stop = supervisor.stop();
+    timers.runNext(3_000);
+    child.stdout.write(Buffer.from("x"));
+
+    await expectCoreError(stop, "UNEXPECTED_STDOUT", "Core process wrote unexpected output.");
+    expect(supervisor.getDiagnostic()).toEqual({
+      state: "FAILED",
+      errorCode: "UNEXPECTED_STDOUT",
+    });
     expect(timers.scheduled.filter((timer) => timer.delay === 3_000 && !timer.cancelled)).toEqual(
       [],
     );
+    timers.runNext(1_000);
+    expect(supervisor.getDiagnostic()).toEqual({
+      state: "FAILED",
+      errorCode: "UNEXPECTED_STDOUT",
+    });
+    child.emit("exit", 0, null);
   });
 
   it("deterministically aborts a concurrent start and deduplicates stop", async () => {
@@ -491,14 +641,17 @@ describe("CoreProcess stopping and diagnostics", () => {
 
     expect(concurrentStop).toBe(firstStop);
     await expectCoreError(start, "START_ABORTED", "Core process start was stopped.");
+    child.stdout.write(readinessLine());
+    expect(supervisor.getDiagnostic()).toEqual({ state: "STOPPING" });
     timers.runNext(3_000);
+    expect(child.killSignals).toEqual(["SIGKILL"]);
+    child.emit("exit", 0, null);
     await firstStop;
-    expect(child.killCalls).toBe(1);
     expect(supervisor.getDiagnostic()).toEqual({ state: "STOPPED" });
   });
 
   it("clears readiness on stop and failure and exposes only safe diagnostics", async () => {
-    const { child, supervisor, timers } = testRig();
+    const { child, supervisor } = testRig();
     const start = supervisor.start();
     child.stdout.write(readinessLine());
     await start;
@@ -510,7 +663,7 @@ describe("CoreProcess stopping and diagnostics", () => {
     );
 
     const stop = supervisor.stop();
-    timers.runNext(3_000);
+    child.emit("exit", 0, null);
     await stop;
 
     await expectCoreError(
@@ -525,15 +678,31 @@ describe("CoreProcess stopping and diagnostics", () => {
     );
   });
 
-  it("removes process listeners at terminal transitions", async () => {
-    const { child, supervisor } = testRig();
+  it("retains safe lifecycle listeners after failure and retries cleanup", async () => {
+    const { child, supervisor, timers } = testRig();
     const start = supervisor.start();
     child.emit("error", new Error("native"));
     await expectCoreError(start, "SPAWN_FAILED", "Core process could not be started.");
 
-    expect(child.listenerCount("error")).toBe(0);
-    expect(child.listenerCount("exit")).toBe(0);
+    expect(child.killSignals).toEqual([]);
+    expect(child.listenerCount("error")).toBe(1);
+    expect(child.listenerCount("exit")).toBe(1);
     expect(child.stdout.listenerCount("data")).toBe(0);
     expect(child.stderr.listenerCount("data")).toBe(0);
+    timers.runNext(3_000);
+    expect(child.killSignals).toEqual(["SIGKILL"]);
+    timers.runNext(1_000);
+    expect(supervisor.getDiagnostic()).toEqual({
+      state: "FAILED",
+      errorCode: "SPAWN_FAILED",
+    });
+    child.killBehavior = () => {
+      child.emit("exit", 0, null);
+      return true;
+    };
+    await supervisor.stop();
+    expect(child.killSignals).toEqual(["SIGKILL", "SIGKILL"]);
+    expect(child.listenerCount("error")).toBe(0);
+    expect(child.listenerCount("exit")).toBe(0);
   });
 });
