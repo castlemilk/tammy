@@ -9,6 +9,7 @@
   },
   "scripts": {
     "check:toolchain": "node scripts/check-toolchain.mjs",
+    "compliance:foundation": "node scripts/check-foundation-evidence.mjs",
     "core:build": "node scripts/build-core.mjs",
     "build:manifest": "node scripts/write-build-manifest.mjs",
     "ci:lint": "go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12",
