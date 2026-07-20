@@ -1,9 +1,22 @@
 import assert from "node:assert/strict";
+import { execFile } from "node:child_process";
 import { constants } from "node:fs";
-import { appendFile, lstat, mkdtemp, open, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  appendFile,
+  lstat,
+  mkdir,
+  mkdtemp,
+  open,
+  readFile,
+  realpath,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
+import { promisify } from "node:util";
 
 import * as foundationEvidence from "./check-foundation-evidence.mjs";
 import {
@@ -11,6 +24,8 @@ import {
   REQUIRED_FOUNDATION_REQUIREMENTS,
   validateFoundationEvidence,
 } from "./check-foundation-evidence.mjs";
+
+const execFileAsync = promisify(execFile);
 
 const columns = [
   "source_requirement_id",
@@ -41,7 +56,10 @@ const completeFoundationRequirements = [
 ];
 
 const currentTargetEvidence =
-  "LOCAL_DARWIN_ARM64_PACKAGED_E2E PASSED; HOSTED_MACOS_TARGET_STATUS NOT_YET_VERIFIED; macos14-arm64-foundation-failure-evidence NOT_PRODUCED; WINDOWS11_TARGET_STATUS NOT_YET_VERIFIED; windows11-x64-foundation-evidence NOT_PRODUCED; WINDOWS_SERVER_SMOKE_ONLY-squirrel-windows-x64 NOT_PRODUCED and NOT WINDOWS 11 EVIDENCE";
+  "LOCAL_DARWIN_ARM64_PACKAGED_E2E PASSED; LOCAL_DARWIN_ARM64_PACKAGED_E2E_COMMAND pnpm desktop:e2e; HOSTED_MACOS_TARGET_STATUS NOT_YET_VERIFIED; macos14-arm64-foundation-failure-evidence NOT_PRODUCED; WINDOWS11_TARGET_STATUS NOT_YET_VERIFIED; windows11-x64-foundation-evidence NOT_PRODUCED; WINDOWS_SERVER_SMOKE_ONLY-squirrel-windows-x64 NOT_PRODUCED and NOT WINDOWS 11 EVIDENCE";
+
+const verifiedTargetEvidence =
+  "LOCAL_DARWIN_ARM64_PACKAGED_E2E PASSED; LOCAL_DARWIN_ARM64_PACKAGED_E2E_COMMAND pnpm desktop:e2e; HOSTED_MACOS_TARGET_STATUS IMPLEMENTED_VERIFIED; HOSTED_MACOS_PACKAGED_E2E PASSED; WINDOWS11_TARGET_STATUS IMPLEMENTED_VERIFIED; WINDOWS11_PACKAGED_E2E PASSED; windows11-x64-foundation-evidence PRODUCED; WINDOWS_SERVER_SMOKE_ONLY-squirrel-windows-x64 NOT_PRODUCED and NOT WINDOWS 11 EVIDENCE";
 
 const productBoundaryEvidence =
   "FOUNDATION_PRODUCT_BOUNDARY; NO_ACTIVITY_STATEMENT_IMPLEMENTATION; NO_CREDENTIAL_IMPLEMENTATION; NO_ATO_TRANSPORT_IMPLEMENTATION; NO_APPROVAL_CLAIM";
@@ -86,11 +104,12 @@ function matrix(rows = REQUIRED_FOUNDATION_REQUIREMENTS.map((id) => evidenceRow(
 }
 
 async function withTemporaryEvidence(run) {
-  const root = await mkdtemp(path.join(tmpdir(), "tammy-foundation-evidence-"));
+  const root = await realpath(await mkdtemp(path.join(tmpdir(), "tammy-foundation-evidence-")));
   try {
-    const evidencePath = path.join(root, "foundation.csv");
+    const evidencePath = path.join(root, "compliance/traceability/foundation.csv");
+    await mkdir(path.dirname(evidencePath), { recursive: true });
     await writeFile(evidencePath, matrix(), { encoding: "utf8", mode: 0o600 });
-    await run(evidencePath);
+    await run(root, evidencePath);
   } finally {
     await rm(root, { force: true, recursive: true });
   }
@@ -388,6 +407,29 @@ test("allows a local packaged pass only when Windows 11 remains explicitly unver
   );
 });
 
+test("requires local packaged command provenance as a separate exact token", () => {
+  for (const requirementId of ["DESIGN-2.4", "DESIGN-13.5"]) {
+    const rows = REQUIRED_FOUNDATION_REQUIREMENTS.map((id) =>
+      evidenceRow(
+        id,
+        id === requirementId
+          ? {
+              retained_evidence: currentTargetEvidence.replace(
+                "LOCAL_DARWIN_ARM64_PACKAGED_E2E_COMMAND pnpm desktop:e2e; ",
+                "",
+              ),
+            }
+          : {},
+      ),
+    );
+    assert.throws(
+      () => validateFoundationEvidence(matrix(rows)),
+      new RegExp(`FOUNDATION_EVIDENCE_WINDOWS_TARGET_MISCLASSIFIED:${requirementId}`),
+      requirementId,
+    );
+  }
+});
+
 test("requires honest protobuf breaking baseline status for DESIGN-13.3", () => {
   const initialBaselineRows = REQUIRED_FOUNDATION_REQUIREMENTS.map((id) =>
     evidenceRow(
@@ -473,10 +515,107 @@ test("rejects suffixed lookalikes for target, baseline, and product-boundary mar
   }
 });
 
+test("rejects contradictory via suffixes on every mandatory verified target marker", () => {
+  for (const requirementId of ["DESIGN-2.4", "DESIGN-13.5"]) {
+    for (const marker of [
+      "LOCAL_DARWIN_ARM64_PACKAGED_E2E PASSED",
+      "HOSTED_MACOS_TARGET_STATUS IMPLEMENTED_VERIFIED",
+      "HOSTED_MACOS_PACKAGED_E2E PASSED",
+      "WINDOWS11_TARGET_STATUS IMPLEMENTED_VERIFIED",
+      "WINDOWS11_PACKAGED_E2E PASSED",
+      "windows11-x64-foundation-evidence PRODUCED",
+    ]) {
+      const rows = REQUIRED_FOUNDATION_REQUIREMENTS.map((id) =>
+        evidenceRow(
+          id,
+          id === requirementId
+            ? {
+                retained_evidence: verifiedTargetEvidence.replace(
+                  marker,
+                  `${marker} via NOT_PRODUCED`,
+                ),
+                status: "IMPLEMENTED_VERIFIED",
+              }
+            : {},
+        ),
+      );
+      assert.throws(
+        () => validateFoundationEvidence(matrix(rows)),
+        new RegExp(`FOUNDATION_EVIDENCE_WINDOWS_TARGET_MISCLASSIFIED:${requirementId}`),
+        `${requirementId}:${marker}`,
+      );
+    }
+  }
+});
+
+test("rejects contradictory via suffixes on baseline and product-boundary markers", () => {
+  const baselineRows = REQUIRED_FOUNDATION_REQUIREMENTS.map((id) =>
+    evidenceRow(
+      id,
+      id === "DESIGN-13.3"
+        ? {
+            retained_evidence:
+              "PROTO_BREAKING_BASELINE_STATUS VERIFIED_AGAINST_MASTER via NOT_PRODUCED",
+            status: "IMPLEMENTED_VERIFIED",
+          }
+        : {},
+    ),
+  );
+  assert.throws(
+    () => validateFoundationEvidence(matrix(baselineRows)),
+    /FOUNDATION_EVIDENCE_PROTO_BASELINE_MISCLASSIFIED:DESIGN-13\.3/,
+  );
+
+  const boundaryRows = REQUIRED_FOUNDATION_REQUIREMENTS.map((id) =>
+    evidenceRow(
+      id,
+      id === "DESIGN-14"
+        ? {
+            retained_evidence: productBoundaryEvidence.replace(
+              "NO_APPROVAL_CLAIM",
+              "NO_APPROVAL_CLAIM via APPROVAL_GRANTED",
+            ),
+          }
+        : {},
+    ),
+  );
+  assert.throws(
+    () => validateFoundationEvidence(matrix(boundaryRows)),
+    /FOUNDATION_EVIDENCE_PRODUCT_BOUNDARY_MISSING:DESIGN-14/,
+  );
+});
+
+test("rejects case and Unicode-lookalike mandatory markers", () => {
+  for (const forged of [
+    "local_darwin_arm64_packaged_e2e passed",
+    "LOCAL_DARWIN_ARM64_PACKAGED_E2E P\u0410SSED",
+    "LOCAL_DARWIN_ARM64_PACKAGED_E2E PASSED_NOT",
+  ]) {
+    const rows = REQUIRED_FOUNDATION_REQUIREMENTS.map((id) =>
+      evidenceRow(
+        id,
+        id === "DESIGN-2.4"
+          ? {
+              retained_evidence: currentTargetEvidence.replace(
+                "LOCAL_DARWIN_ARM64_PACKAGED_E2E PASSED",
+                forged,
+              ),
+            }
+          : {},
+      ),
+    );
+    assert.throws(
+      () => validateFoundationEvidence(matrix(rows)),
+      /FOUNDATION_EVIDENCE_WINDOWS_TARGET_MISCLASSIFIED:DESIGN-2\.4/,
+      forged,
+    );
+  }
+});
+
 test("reads the evidence through one bounded no-follow file handle", async () => {
-  await withTemporaryEvidence(async (evidencePath) => {
+  await withTemporaryEvidence(async (root) => {
     let openedFlags;
-    const csv = await foundationEvidence.readStableEvidenceFile(evidencePath, {
+    const csv = await foundationEvidence.readStableEvidenceFile(root, {
       openFile: async (file, flags) => {
         openedFlags = flags;
         return open(file, flags);
@@ -484,23 +623,26 @@ test("reads the evidence through one bounded no-follow file handle", async () =>
     });
 
     assert.equal(csv, matrix());
-    assert.equal(openedFlags, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+    assert.equal(
+      openedFlags,
+      constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0),
+    );
   });
 });
 
 test("rejects oversized, growing, and truncated evidence without an unbounded read", async () => {
-  await withTemporaryEvidence(async (evidencePath) => {
+  await withTemporaryEvidence(async (root, evidencePath) => {
     await writeFile(evidencePath, Buffer.alloc(1024 * 1024 + 1, 0x61));
     await assert.rejects(
-      foundationEvidence.readStableEvidenceFile(evidencePath),
+      foundationEvidence.readStableEvidenceFile(root),
       /FOUNDATION_EVIDENCE_FILE_INVALID/,
     );
   });
 
-  await withTemporaryEvidence(async (evidencePath) => {
+  await withTemporaryEvidence(async (root, evidencePath) => {
     let firstRead = true;
     await assert.rejects(
-      foundationEvidence.readStableEvidenceFile(evidencePath, {
+      foundationEvidence.readStableEvidenceFile(root, {
         openFile: async (file, flags) => {
           const handle = await open(file, flags);
           return {
@@ -520,10 +662,10 @@ test("rejects oversized, growing, and truncated evidence without an unbounded re
     );
   });
 
-  await withTemporaryEvidence(async (evidencePath) => {
+  await withTemporaryEvidence(async (root) => {
     let firstRead = true;
     await assert.rejects(
-      foundationEvidence.readStableEvidenceFile(evidencePath, {
+      foundationEvidence.readStableEvidenceFile(root, {
         openFile: async (file, flags) => {
           const handle = await open(file, flags);
           return {
@@ -545,10 +687,10 @@ test("rejects oversized, growing, and truncated evidence without an unbounded re
 });
 
 test("rejects file or committed-path identity changes during the bounded read", async () => {
-  await withTemporaryEvidence(async (evidencePath) => {
+  await withTemporaryEvidence(async (root) => {
     let statCalls = 0;
     await assert.rejects(
-      foundationEvidence.readStableEvidenceFile(evidencePath, {
+      foundationEvidence.readStableEvidenceFile(root, {
         openFile: async (file, flags) => {
           const handle = await open(file, flags);
           return {
@@ -573,10 +715,10 @@ test("rejects file or committed-path identity changes during the bounded read", 
     );
   });
 
-  await withTemporaryEvidence(async (evidencePath) => {
+  await withTemporaryEvidence(async (root) => {
     let lstatCalls = 0;
     await assert.rejects(
-      foundationEvidence.readStableEvidenceFile(evidencePath, {
+      foundationEvidence.readStableEvidenceFile(root, {
         lstatPath: async (file) => {
           const stats = await lstat(file, { bigint: true });
           lstatCalls += 1;
@@ -595,13 +737,14 @@ test("rejects file or committed-path identity changes during the bounded read", 
   });
 });
 
-test("rejects a symlinked path on platforms without no-follow support and always closes", async () => {
-  await withTemporaryEvidence(async (evidencePath) => {
-    let closed = false;
+test("rejects a symlinked final path before opening it", async () => {
+  await withTemporaryEvidence(async (root, evidencePath) => {
+    let opened = false;
     await assert.rejects(
-      foundationEvidence.readStableEvidenceFile(evidencePath, {
+      foundationEvidence.readStableEvidenceFile(root, {
         lstatPath: async (file) => {
           const stats = await lstat(file, { bigint: true });
+          if (file !== evidencePath) return stats;
           return new Proxy(stats, {
             get(target, property) {
               if (property === "isFile") return () => false;
@@ -612,6 +755,133 @@ test("rejects a symlinked path on platforms without no-follow support and always
           });
         },
         openFile: async (file, flags) => {
+          opened = true;
+          return open(file, flags);
+        },
+      }),
+      /FOUNDATION_EVIDENCE_FILE_INVALID/,
+    );
+    assert.equal(opened, false);
+  });
+});
+
+test("accepts only a trusted physical root and the fixed evidence-relative path", async () => {
+  await withTemporaryEvidence(async (root, evidencePath) => {
+    await assert.rejects(
+      foundationEvidence.readStableEvidenceFile(evidencePath),
+      /FOUNDATION_EVIDENCE_FILE_INVALID/,
+    );
+
+    const rootAlias = `${root}-alias`;
+    try {
+      await symlink(root, rootAlias, "dir");
+    } catch (error) {
+      if (["EACCES", "EPERM", "ENOTSUP"].includes(error?.code)) return;
+      throw error;
+    }
+    try {
+      await assert.rejects(
+        foundationEvidence.readStableEvidenceFile(rootAlias),
+        /FOUNDATION_EVIDENCE_FILE_INVALID/,
+      );
+    } finally {
+      await rm(rootAlias, { force: true });
+    }
+  });
+});
+
+test("rejects a real symlinked parent directory", async (context) => {
+  const root = await realpath(await mkdtemp(path.join(tmpdir(), "tammy-foundation-parent-")));
+  const outside = await realpath(await mkdtemp(path.join(tmpdir(), "tammy-foundation-outside-")));
+  try {
+    await mkdir(path.join(root, "compliance"), { recursive: true });
+    await mkdir(path.join(outside, "traceability"), { recursive: true });
+    await writeFile(path.join(outside, "traceability/foundation.csv"), matrix(), {
+      encoding: "utf8",
+      mode: 0o600,
+    });
+    try {
+      await symlink(
+        path.join(outside, "traceability"),
+        path.join(root, "compliance/traceability"),
+        "dir",
+      );
+    } catch (error) {
+      if (["EACCES", "EPERM", "ENOTSUP"].includes(error?.code)) {
+        context.skip(`directory symlinks unavailable: ${error.code}`);
+        return;
+      }
+      throw error;
+    }
+
+    await assert.rejects(
+      foundationEvidence.readStableEvidenceFile(root),
+      /FOUNDATION_EVIDENCE_FILE_INVALID/,
+    );
+  } finally {
+    await rm(root, { force: true, recursive: true });
+    await rm(outside, { force: true, recursive: true });
+  }
+});
+
+test("fails closed when an ancestor identity changes during validation", async () => {
+  await withTemporaryEvidence(async (root) => {
+    const traceabilityPath = path.join(root, "compliance/traceability");
+    let ancestorSnapshots = 0;
+    await assert.rejects(
+      foundationEvidence.readStableEvidenceFile(root, {
+        lstatPath: async (file, options) => {
+          const stats = await lstat(file, options);
+          if (file !== traceabilityPath) return stats;
+          ancestorSnapshots += 1;
+          if (ancestorSnapshots === 1) return stats;
+          return new Proxy(stats, {
+            get(target, property) {
+              if (property === "ino") return target.ino + 1n;
+              const value = Reflect.get(target, property);
+              return typeof value === "function" ? value.bind(target) : value;
+            },
+          });
+        },
+      }),
+      /FOUNDATION_EVIDENCE_FILE_INVALID/,
+    );
+    assert.ok(ancestorSnapshots >= 2);
+  });
+});
+
+test("rejects a real FIFO replacement without blocking and closes its handle", {
+  timeout: 3_000,
+}, async (context) => {
+  if (constants.O_NONBLOCK === undefined || process.platform === "win32") {
+    context.skip("nonblocking FIFO open is unavailable on this platform");
+    return;
+  }
+  const probeRoot = await mkdtemp(path.join(tmpdir(), "tammy-mkfifo-probe-"));
+  try {
+    await execFileAsync("mkfifo", ["-m", "600", path.join(probeRoot, "fifo")]);
+  } catch (error) {
+    if (["ENOENT", "EACCES", "EPERM", "ENOTSUP"].includes(error?.code)) {
+      context.skip(`mkfifo unavailable: ${error.code}`);
+      return;
+    }
+    throw error;
+  } finally {
+    await rm(probeRoot, { force: true, recursive: true });
+  }
+
+  await withTemporaryEvidence(async (root, evidencePath) => {
+    let openedFifo = false;
+    let closed = false;
+    const startedAt = Date.now();
+    await assert.rejects(
+      foundationEvidence.readStableEvidenceFile(root, {
+        openFile: async (file, flags) => {
+          assert.equal(file, evidencePath);
+          assert.notEqual(flags & constants.O_NONBLOCK, 0);
+          await rm(file);
+          await execFileAsync("mkfifo", ["-m", "600", file]);
+          openedFifo = true;
           const handle = await open(file, flags);
           return {
             close: async () => {
@@ -625,7 +895,9 @@ test("rejects a symlinked path on platforms without no-follow support and always
       }),
       /FOUNDATION_EVIDENCE_FILE_INVALID/,
     );
+    assert.equal(openedFifo, true);
     assert.equal(closed, true);
+    assert.ok(Date.now() - startedAt < 2_000);
   });
 });
 

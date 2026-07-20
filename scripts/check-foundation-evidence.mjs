@@ -21,6 +21,10 @@ export const REQUIRED_FOUNDATION_REQUIREMENTS = Object.freeze([
 ]);
 
 const COLUMNS = Object.freeze(FOUNDATION_EVIDENCE_HEADER.split(","));
+const EVIDENCE_DIRECTORY_COMPONENTS = Object.freeze(["compliance", "traceability"]);
+const EVIDENCE_FILE_NAME = "foundation.csv";
+const EVIDENCE_OPEN_FLAGS =
+  constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0);
 const MAX_EVIDENCE_BYTES = 1024 * 1024;
 const MAX_EVIDENCE_ROWS = 256;
 const PERMITTED_STATUSES = new Set([
@@ -32,6 +36,7 @@ const PERMITTED_STATUSES = new Set([
 ]);
 const TARGET_REQUIREMENTS = new Set(["DESIGN-2.4", "DESIGN-13.5"]);
 const LOCAL_PACKAGED_PASS = "LOCAL_DARWIN_ARM64_PACKAGED_E2E PASSED";
+const LOCAL_PACKAGED_COMMAND = "LOCAL_DARWIN_ARM64_PACKAGED_E2E_COMMAND pnpm desktop:e2e";
 const HOSTED_MACOS_UNVERIFIED = Object.freeze([
   "HOSTED_MACOS_TARGET_STATUS NOT_YET_VERIFIED",
   "macos14-arm64-foundation-failure-evidence NOT_PRODUCED",
@@ -42,6 +47,7 @@ const WINDOWS11_UNVERIFIED = Object.freeze([
 ]);
 const VERIFIED_TARGET_EVIDENCE = Object.freeze([
   LOCAL_PACKAGED_PASS,
+  LOCAL_PACKAGED_COMMAND,
   "HOSTED_MACOS_TARGET_STATUS IMPLEMENTED_VERIFIED",
   "HOSTED_MACOS_PACKAGED_E2E PASSED",
   "WINDOWS11_TARGET_STATUS IMPLEMENTED_VERIFIED",
@@ -162,7 +168,7 @@ function hasEvidenceMarker(value, marker) {
   return value
     .split(";")
     .map((item) => item.trim())
-    .some((item) => item === marker || item.startsWith(`${marker} via `));
+    .some((item) => item === marker);
 }
 
 function containsEveryEvidenceMarker(value, markers) {
@@ -189,6 +195,7 @@ function assertTargetEvidenceClassification(row) {
   const valid =
     (row.status === "IMPLEMENTED_PARTIAL_TARGET" &&
       hasEvidenceMarker(evidence, LOCAL_PACKAGED_PASS) &&
+      hasEvidenceMarker(evidence, LOCAL_PACKAGED_COMMAND) &&
       hasUnverifiedTargets) ||
     (row.status === "NOT_YET_VERIFIED" && hasUnverifiedTargets) ||
     (row.status === "IMPLEMENTED_VERIFIED" &&
@@ -238,7 +245,11 @@ function isStableRegularFile(stats) {
   );
 }
 
-function hasSameFileIdentity(left, right) {
+function isStableDirectory(stats) {
+  return stats?.isDirectory() === true && !stats.isSymbolicLink() && stats.nlink > 0n;
+}
+
+function hasSameNodeIdentity(left, right) {
   return (
     left.dev === right.dev &&
     left.ino === right.ino &&
@@ -248,6 +259,47 @@ function hasSameFileIdentity(left, right) {
     left.mtimeNs === right.mtimeNs &&
     left.ctimeNs === right.ctimeNs
   );
+}
+
+function hasSamePathSnapshot(left, right) {
+  return (
+    left.nodes.length === right.nodes.length &&
+    left.nodes.every(
+      (node, index) =>
+        node.path === right.nodes[index].path &&
+        hasSameNodeIdentity(node.stats, right.nodes[index].stats),
+    )
+  );
+}
+
+async function snapshotEvidencePath(root, { lstatPath, realpathPath }) {
+  const nodes = [];
+  let currentPath = root;
+  for (const component of [undefined, ...EVIDENCE_DIRECTORY_COMPONENTS]) {
+    if (component !== undefined) currentPath = path.join(currentPath, component);
+    const stats = await lstatPath(currentPath, { bigint: true });
+    const physicalPath = await realpathPath(currentPath);
+    if (!isStableDirectory(stats) || physicalPath !== currentPath) {
+      throw evidenceError("FOUNDATION_EVIDENCE_FILE_INVALID");
+    }
+    nodes.push({ path: currentPath, stats });
+  }
+
+  const evidencePath = path.join(currentPath, EVIDENCE_FILE_NAME);
+  const expectedRelativePath = path.join(...EVIDENCE_DIRECTORY_COMPONENTS, EVIDENCE_FILE_NAME);
+  const relativePath = path.relative(root, evidencePath);
+  const fileStats = await lstatPath(evidencePath, { bigint: true });
+  const physicalEvidencePath = await realpathPath(evidencePath);
+  if (
+    relativePath !== expectedRelativePath ||
+    path.isAbsolute(relativePath) ||
+    !isStableRegularFile(fileStats) ||
+    physicalEvidencePath !== evidencePath
+  ) {
+    throw evidenceError("FOUNDATION_EVIDENCE_FILE_INVALID");
+  }
+  nodes.push({ path: evidencePath, stats: fileStats });
+  return { evidencePath, fileStats, nodes };
 }
 
 async function readBoundedHandle(handle, expectedBytes) {
@@ -278,14 +330,10 @@ async function readBoundedHandle(handle, expectedBytes) {
 }
 
 export async function readStableEvidenceFile(
-  evidencePath,
-  { lstatPath = lstat, openFile = open } = {},
+  root,
+  { lstatPath = lstat, openFile = open, realpathPath = realpath } = {},
 ) {
-  if (
-    typeof evidencePath !== "string" ||
-    !path.isAbsolute(evidencePath) ||
-    path.normalize(evidencePath) !== evidencePath
-  ) {
+  if (typeof root !== "string" || !path.isAbsolute(root) || path.normalize(root) !== root) {
     throw evidenceError("FOUNDATION_EVIDENCE_FILE_INVALID");
   }
 
@@ -293,13 +341,24 @@ export async function readStableEvidenceFile(
   let bytes;
   let failed = false;
   try {
-    handle = await openFile(evidencePath, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+    if ((await realpathPath(root)) !== root) {
+      throw evidenceError("FOUNDATION_EVIDENCE_FILE_INVALID");
+    }
+    const initialPathSnapshot = await snapshotEvidencePath(root, {
+      lstatPath,
+      realpathPath,
+    });
+    handle = await openFile(initialPathSnapshot.evidencePath, EVIDENCE_OPEN_FLAGS);
     const initialHandleStats = await handle.stat({ bigint: true });
-    const initialPathStats = await lstatPath(evidencePath, { bigint: true });
+    const openedPathSnapshot = await snapshotEvidencePath(root, {
+      lstatPath,
+      realpathPath,
+    });
     if (
       !isStableRegularFile(initialHandleStats) ||
-      !isStableRegularFile(initialPathStats) ||
-      !hasSameFileIdentity(initialHandleStats, initialPathStats)
+      !hasSamePathSnapshot(initialPathSnapshot, openedPathSnapshot) ||
+      !hasSameNodeIdentity(initialHandleStats, initialPathSnapshot.fileStats) ||
+      !hasSameNodeIdentity(initialHandleStats, openedPathSnapshot.fileStats)
     ) {
       throw evidenceError("FOUNDATION_EVIDENCE_FILE_INVALID");
     }
@@ -307,12 +366,15 @@ export async function readStableEvidenceFile(
     bytes = await readBoundedHandle(handle, Number(initialHandleStats.size));
 
     const finalHandleStats = await handle.stat({ bigint: true });
-    const finalPathStats = await lstatPath(evidencePath, { bigint: true });
+    const finalPathSnapshot = await snapshotEvidencePath(root, {
+      lstatPath,
+      realpathPath,
+    });
     if (
       !isStableRegularFile(finalHandleStats) ||
-      !isStableRegularFile(finalPathStats) ||
-      !hasSameFileIdentity(initialHandleStats, finalHandleStats) ||
-      !hasSameFileIdentity(initialHandleStats, finalPathStats)
+      !hasSamePathSnapshot(initialPathSnapshot, finalPathSnapshot) ||
+      !hasSameNodeIdentity(initialHandleStats, finalHandleStats) ||
+      !hasSameNodeIdentity(initialHandleStats, finalPathSnapshot.fileStats)
     ) {
       throw evidenceError("FOUNDATION_EVIDENCE_FILE_INVALID");
     }
@@ -399,8 +461,7 @@ export function validateFoundationEvidence(csvText) {
 
 async function readCommittedEvidence() {
   const root = await realpath(path.resolve(import.meta.dirname, ".."));
-  const evidencePath = path.join(root, "compliance/traceability/foundation.csv");
-  return readStableEvidenceFile(evidencePath);
+  return readStableEvidenceFile(root);
 }
 
 async function main() {
