@@ -37,7 +37,7 @@ Before implementing this plan, read and follow:
 - Use Connect protocol over HTTP/1.1 inside TLS 1.3. HTTP/2 adds no value to the unary local foundation call and complicates lifecycle testing.
 - Electron main creates the Connect-ES client. The renderer has `connect-src 'none'` and cannot import `@connectrpc/connect`, generated service definitions, or Electron modules.
 - The core creates the capability as exactly 32 random bytes encoded as unpadded Base64URL. It emits the capability once through its parent-owned stdout pipe and never accepts it from Electron or places it in argv, environment variables, URLs, logs, crash metadata, renderer state, or persisted storage.
-- The core creates an ephemeral CA and leaf certificate in memory for each process. Readiness returns the public CA certificate, selected loopback port, and capability over stdout; Electron main parses the bounded record and never forwards its security fields.
+- The core creates a unique ephemeral CA, leaf certificate, and capability in memory for each process. The CA and leaf use a long practical X.509 validity window so normal certificate verification cannot expire while that supervised process is still running; their security lifetime ends with the process because keys and capability are never persisted or reused. Readiness returns the public CA certificate, selected loopback port, and capability over stdout; Electron main parses the bounded record and never forwards its security fields.
 - Production startup fails closed on malformed or extra readiness output, TLS validation failure, capability failure, core exit, or timeout. There is no HTTP fallback.
 - This plan packages unsigned development artifacts only. Signing, notarisation, MSIX identity, and production update policy belong to the release-hardening plan.
 
@@ -810,7 +810,7 @@ Expected: FAIL because the ephemeral certificate and server constructors are und
 
 - [ ] **Step 6: Implement in-memory CA and leaf creation**
 
-Generate an ECDSA P-256 CA and a separate ECDSA P-256 leaf. The CA is valid from injected `now - 1 minute` through `now + 30 minutes`, has `IsCA`, `BasicConstraintsValid`, certificate-signing key usage, and a random 128-bit positive serial. The leaf has a separate random serial, `127.0.0.1` as its only SAN, server-auth extended usage, and the same short validity. Generate the 32-byte capability from `crypto/rand.Reader` in the same constructor. Return the TLS certificate, CA PEM, and encoded capability; keep private-key values local and eligible for collection after server exit.
+Generate an ECDSA P-256 CA and a separate ECDSA P-256 leaf for every core launch. Both certificates are valid from injected `now - 1 minute` through `now + 100 years`, a long practical X.509 window that spans the lifetime of a continuously running supervised process under normal TLS verification. The CA has `IsCA`, `BasicConstraintsValid`, certificate-signing key usage, and a random 128-bit positive serial. The leaf has a separate random serial, `127.0.0.1` as its only SAN, and server-auth extended usage. Generate the 32-byte capability from `crypto/rand.Reader` in the same constructor. Return the TLS certificate, CA PEM, and encoded capability; keep the CA key, leaf key, and capability only in core memory, never persist or reuse them, and terminate their security lifetime when the supervised core exits.
 
 - [ ] **Step 7: Implement the loopback server**
 
@@ -825,7 +825,7 @@ Create `net.Listen("tcp4", "127.0.0.1:0")`, then wrap it with:
 }
 ```
 
-Register `tammyv1connect.NewSystemServiceHandler` on a dedicated `http.ServeMux` with the capability interceptor. Configure `http.Server` with a 2-second read-header timeout, 30-second idle timeout, 16 KiB max headers, and no global default mux. `Server.Ready()` returns:
+Register `tammyv1connect.NewSystemServiceHandler` on a dedicated `http.ServeMux` with the capability interceptor and a 1 MiB decoded request-message limit. Wrap the complete mux in a 1,048,581-byte HTTP request-body limit, allowing one maximum-sized message plus the 5-byte Connect envelope. Configure `http.Server` with a 2-second read-header timeout, 5-second whole-request read timeout, 5-second response write timeout, 30-second idle timeout, 16 KiB max headers, and no global default mux. `Server.Ready()` returns:
 
 ```json
 {"protocol":"tammy-core-ready-v1","port":12345,"ca_pem":"-----BEGIN CERTIFICATE-----...","capability":"<43-character unpadded Base64URL>"}
