@@ -14,6 +14,8 @@ import (
 	"time"
 )
 
+const ephemeralProcessIdentityValidityYears = 100
+
 type ephemeralCredentials struct {
 	certificate tls.Certificate
 	caPEM       string
@@ -43,7 +45,9 @@ func generateEphemeralCredentials(
 	}
 
 	notBefore := now.Add(-time.Minute)
-	notAfter := now.Add(30 * time.Minute)
+	// The key material exists only for this core process, so certificate expiry
+	// must not end an otherwise healthy long-running desktop session.
+	notAfter := now.AddDate(ephemeralProcessIdentityValidityYears, 0, 0)
 	caTemplate := &x509.Certificate{
 		SerialNumber:          caSerial,
 		Subject:               pkix.Name{CommonName: "Tammy Ephemeral Local CA"},

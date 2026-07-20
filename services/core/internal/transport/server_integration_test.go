@@ -53,14 +53,14 @@ func TestCertificatePropertiesAndLaunchFreshness(t *testing.T) {
 		t.Fatalf("CA key usage = %v, want CertSign only", ca.KeyUsage)
 	}
 	if !ca.NotBefore.Equal(serverTestNow.Add(-time.Minute)) ||
-		!ca.NotAfter.Equal(serverTestNow.Add(30*time.Minute)) {
-		t.Fatal("CA validity window differs from the required ephemeral window")
+		!ca.NotAfter.Equal(serverTestNow.AddDate(100, 0, 0)) {
+		t.Fatal("CA validity window does not span the ephemeral process identity")
 	}
 	if ca.SerialNumber.Sign() <= 0 || ca.SerialNumber.BitLen() != 128 {
 		t.Fatal("CA serial is not a positive 128-bit value")
 	}
 
-	state := dialServerTLS(t, firstReady)
+	state := dialServerTLSAt(t, firstReady, serverTestNow)
 	if state.Version != tls.VersionTLS13 {
 		t.Fatalf("negotiated TLS version = %#x, want TLS 1.3", state.Version)
 	}
@@ -80,8 +80,8 @@ func TestCertificatePropertiesAndLaunchFreshness(t *testing.T) {
 		t.Fatal("leaf extended key usage is not server authentication only")
 	}
 	if !leaf.NotBefore.Equal(serverTestNow.Add(-time.Minute)) ||
-		!leaf.NotAfter.Equal(serverTestNow.Add(30*time.Minute)) {
-		t.Fatal("leaf validity window differs from the required ephemeral window")
+		!leaf.NotAfter.Equal(serverTestNow.AddDate(100, 0, 0)) {
+		t.Fatal("leaf validity window does not span the ephemeral process identity")
 	}
 	if leaf.SerialNumber.Sign() <= 0 || leaf.SerialNumber.BitLen() != 128 {
 		t.Fatal("leaf serial is not a positive 128-bit value")
@@ -89,13 +89,25 @@ func TestCertificatePropertiesAndLaunchFreshness(t *testing.T) {
 
 	roots := x509.NewCertPool()
 	roots.AddCert(ca)
-	if _, err := leaf.Verify(x509.VerifyOptions{
-		Roots:       roots,
-		DNSName:     "127.0.0.1",
-		KeyUsages:   []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		CurrentTime: serverTestNow,
-	}); err != nil {
-		t.Fatalf("leaf.Verify() error = %v", err)
+	for _, verificationTime := range []time.Time{
+		serverTestNow,
+		serverTestNow.Add(31 * time.Minute),
+		serverTestNow.AddDate(50, 0, 0),
+	} {
+		if _, err := leaf.Verify(x509.VerifyOptions{
+			Roots:       roots,
+			DNSName:     "127.0.0.1",
+			KeyUsages:   []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+			CurrentTime: verificationTime,
+		}); err != nil {
+			t.Fatalf("leaf.Verify() at %v error = %v", verificationTime, err)
+		}
+		dialServerTLSAt(t, firstReady, verificationTime)
+	}
+
+	secondState := dialServerTLSAt(t, secondReady, serverTestNow)
+	if bytes.Equal(leaf.Raw, secondState.PeerCertificates[0].Raw) {
+		t.Fatal("two launches returned the same leaf certificate")
 	}
 
 	assertServerSecretAbsent(t, stderr.String(), firstReady.Capability)
@@ -270,12 +282,18 @@ func authenticatedHTTPClient(t *testing.T, ready ReadinessRecord) *http.Client {
 	}
 }
 
-func dialServerTLS(t *testing.T, ready ReadinessRecord) tls.ConnectionState {
+func dialServerTLSAt(
+	t *testing.T,
+	ready ReadinessRecord,
+	verificationTime time.Time,
+) tls.ConnectionState {
 	t.Helper()
 
 	client := authenticatedHTTPClient(t, ready)
 	transport := client.Transport.(*http.Transport)
-	connection, err := tls.Dial("tcp4", "127.0.0.1:"+portString(ready.Port), transport.TLSClientConfig)
+	tlsConfig := transport.TLSClientConfig.Clone()
+	tlsConfig.Time = func() time.Time { return verificationTime }
+	connection, err := tls.Dial("tcp4", "127.0.0.1:"+portString(ready.Port), tlsConfig)
 	if err != nil {
 		t.Fatalf("tls.Dial() error = %v", err)
 	}
