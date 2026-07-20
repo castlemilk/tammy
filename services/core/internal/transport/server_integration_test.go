@@ -117,6 +117,144 @@ func TestCertificatePropertiesAndLaunchFreshness(t *testing.T) {
 	}
 }
 
+func TestServerHTTPTimeoutConfiguration(t *testing.T) {
+	t.Parallel()
+
+	var stderr bytes.Buffer
+	server := newTestServer(t, &stderr, &countingReader{reader: rand.Reader})
+
+	if got, want := server.httpServer.ReadHeaderTimeout, 2*time.Second; got != want {
+		t.Fatalf("ReadHeaderTimeout = %s, want %s", got, want)
+	}
+	if got, want := server.httpServer.ReadTimeout, 5*time.Second; got != want {
+		t.Fatalf("ReadTimeout = %s, want %s", got, want)
+	}
+	if got, want := server.httpServer.WriteTimeout, 5*time.Second; got != want {
+		t.Fatalf("WriteTimeout = %s, want %s", got, want)
+	}
+	if got, want := server.httpServer.IdleTimeout, 30*time.Second; got != want {
+		t.Fatalf("IdleTimeout = %s, want %s", got, want)
+	}
+	if got, want := server.httpServer.MaxHeaderBytes, 16<<10; got != want {
+		t.Fatalf("MaxHeaderBytes = %d, want %d", got, want)
+	}
+}
+
+func TestServerBoundsSlowTLSHeadersAndBodies(t *testing.T) {
+	t.Parallel()
+
+	const (
+		testReadHeaderTimeout = 150 * time.Millisecond
+		testReadTimeout       = 750 * time.Millisecond
+		testWriteTimeout      = 2 * time.Second
+		outerDeadline         = 3 * time.Second
+	)
+
+	var stderr bytes.Buffer
+	server := newTestServer(t, &stderr, &countingReader{reader: rand.Reader})
+	server.httpServer.ReadHeaderTimeout = testReadHeaderTimeout
+	server.httpServer.ReadTimeout = testReadTimeout
+	server.httpServer.WriteTimeout = testWriteTimeout
+	if err := server.Start(); err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	ready := server.Ready()
+
+	t.Run("partial TLS handshake", func(t *testing.T) {
+		connection, err := net.DialTimeout(
+			"tcp4",
+			"127.0.0.1:"+portString(ready.Port),
+			time.Second,
+		)
+		if err != nil {
+			t.Fatalf("dial server: %v", err)
+		}
+		defer connection.Close()
+
+		if _, err := connection.Write([]byte{0x16}); err != nil {
+			t.Fatalf("write partial TLS record: %v", err)
+		}
+		assertConnectionTerminatesBefore(t, connection, outerDeadline)
+	})
+
+	t.Run("incomplete HTTP headers", func(t *testing.T) {
+		connection := dialServerTLSConnection(t, ready)
+		defer connection.Close()
+
+		if _, err := io.WriteString(
+			connection,
+			"POST "+tammyv1connect.SystemServiceGetDiagnosticsProcedure+" HTTP/1.1\r\n"+
+				"Host: 127.0.0.1:"+portString(ready.Port)+"\r\n"+
+				"Content-Type: application/proto\r\n",
+		); err != nil {
+			t.Fatalf("write incomplete HTTP headers: %v", err)
+		}
+		assertConnectionTerminatesBefore(t, connection, outerDeadline)
+	})
+
+	for _, test := range []struct {
+		name       string
+		capability string
+	}{
+		{name: "missing capability"},
+		{name: "valid capability", capability: ready.Capability},
+	} {
+		t.Run("incomplete body with "+test.name, func(t *testing.T) {
+			connection := dialServerTLSConnection(t, ready)
+			defer connection.Close()
+
+			request := "POST " + tammyv1connect.SystemServiceGetDiagnosticsProcedure + " HTTP/1.1\r\n" +
+				"Host: 127.0.0.1:" + portString(ready.Port) + "\r\n" +
+				"Content-Type: application/proto\r\n" +
+				"Connect-Protocol-Version: 1\r\n" +
+				"Content-Length: 1024\r\n" +
+				"Connection: close\r\n"
+			if test.capability != "" {
+				request += CapabilityHeader + ": " + test.capability + "\r\n"
+			}
+			request += "\r\n"
+
+			if _, err := io.WriteString(connection, request); err != nil {
+				t.Fatalf("write HTTP request headers: %v", err)
+			}
+			if _, err := connection.Write([]byte{0x0a}); err != nil {
+				t.Fatalf("write partial Connect request body: %v", err)
+			}
+			assertConnectionTerminatesBefore(t, connection, outerDeadline)
+		})
+	}
+
+	t.Run("legitimate Connect request still succeeds", func(t *testing.T) {
+		client := authenticatedHTTPClient(t, ready)
+		client.Timeout = outerDeadline
+		connectClient := tammyv1connect.NewSystemServiceClient(client, serverURL(ready))
+		request := connect.NewRequest(&tammyv1.GetDiagnosticsRequest{})
+		request.Header().Set(CapabilityHeader, ready.Capability)
+
+		response, err := connectClient.GetDiagnostics(context.Background(), request)
+		if err != nil {
+			t.Fatalf("GetDiagnostics() error = %v", redactCapability(err, ready.Capability))
+		}
+		if response.Msg.GetApiVersion() != "tammy.v1" {
+			t.Fatalf("GetDiagnostics() API version = %q, want tammy.v1", response.Msg.GetApiVersion())
+		}
+	})
+
+	shutdownContext, cancel := context.WithTimeout(context.Background(), outerDeadline)
+	defer cancel()
+	if err := server.Shutdown(shutdownContext); err != nil {
+		t.Fatalf("Shutdown() error = %v", err)
+	}
+	select {
+	case err, ok := <-server.Errors():
+		if ok && err != nil {
+			t.Fatalf("Errors() = %v after shutdown", err)
+		}
+	case <-time.After(outerDeadline):
+		t.Fatal("Errors() did not close after graceful shutdown")
+	}
+}
+
 func TestServerLoopbackTLSConnectAuthenticationAndShutdown(t *testing.T) {
 	t.Parallel()
 
@@ -240,6 +378,16 @@ func TestServerLoopbackTLSConnectAuthenticationAndShutdown(t *testing.T) {
 func startTestServer(t *testing.T, stderr io.Writer, randomness io.Reader) *Server {
 	t.Helper()
 
+	server := newTestServer(t, stderr, randomness)
+	if err := server.Start(); err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	return server
+}
+
+func newTestServer(t *testing.T, stderr io.Writer, randomness io.Reader) *Server {
+	t.Helper()
+
 	server, err := NewServer(
 		buildinfo.Info{Version: "test-core-version"},
 		stderr,
@@ -249,15 +397,40 @@ func startTestServer(t *testing.T, stderr io.Writer, randomness io.Reader) *Serv
 	if err != nil {
 		t.Fatalf("NewServer() error = %v", err)
 	}
-	if err := server.Start(); err != nil {
-		t.Fatalf("Start() error = %v", err)
-	}
 	t.Cleanup(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
 		_ = server.Shutdown(ctx)
 	})
 	return server
+}
+
+func dialServerTLSConnection(t *testing.T, ready ReadinessRecord) *tls.Conn {
+	t.Helper()
+
+	client := authenticatedHTTPClient(t, ready)
+	transport := client.Transport.(*http.Transport)
+	connection, err := tls.Dial(
+		"tcp4",
+		"127.0.0.1:"+portString(ready.Port),
+		transport.TLSClientConfig.Clone(),
+	)
+	if err != nil {
+		t.Fatalf("tls.Dial() error = %v", err)
+	}
+	return connection
+}
+
+func assertConnectionTerminatesBefore(t *testing.T, connection net.Conn, deadline time.Duration) {
+	t.Helper()
+
+	if err := connection.SetReadDeadline(time.Now().Add(deadline)); err != nil {
+		t.Fatalf("set client read deadline: %v", err)
+	}
+	_, err := io.ReadAll(connection)
+	if networkError, ok := err.(net.Error); ok && networkError.Timeout() {
+		t.Fatalf("server did not terminate the incomplete request within %s", deadline)
+	}
 }
 
 func authenticatedHTTPClient(t *testing.T, ready ReadinessRecord) *http.Client {

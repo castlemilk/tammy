@@ -37,6 +37,14 @@ const (
 	serverStateStopped
 )
 
+const (
+	localAPIReadHeaderTimeout = 2 * time.Second
+	localAPIReadTimeout       = 5 * time.Second
+	localAPIWriteTimeout      = 5 * time.Second
+	localAPIIdleTimeout       = 30 * time.Second
+	localAPIMaxHeaderBytes    = 16 << 10
+)
+
 // WithClock injects the clock used for the ephemeral certificate validity
 // window.
 func WithClock(clock func() time.Time) Option {
@@ -146,9 +154,11 @@ func NewServer(
 	}
 	server.httpServer = &http.Server{
 		Handler:           mux,
-		ReadHeaderTimeout: 2 * time.Second,
-		IdleTimeout:       30 * time.Second,
-		MaxHeaderBytes:    16 << 10,
+		ReadHeaderTimeout: localAPIReadHeaderTimeout,
+		ReadTimeout:       localAPIReadTimeout,
+		WriteTimeout:      localAPIWriteTimeout,
+		IdleTimeout:       localAPIIdleTimeout,
+		MaxHeaderBytes:    localAPIMaxHeaderBytes,
 		ErrorLog: log.New(
 			&structuredLogWriter{destination: stderr},
 			"",
