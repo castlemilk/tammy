@@ -56,13 +56,16 @@ const completeFoundationRequirements = [
 ];
 
 const currentTargetEvidence =
-  "LOCAL_DARWIN_ARM64_PACKAGED_E2E PASSED; LOCAL_DARWIN_ARM64_PACKAGED_E2E_COMMAND pnpm desktop:e2e; HOSTED_MACOS_TARGET_STATUS NOT_YET_VERIFIED; macos14-arm64-foundation-failure-evidence NOT_PRODUCED; WINDOWS11_TARGET_STATUS NOT_YET_VERIFIED; windows11-x64-foundation-evidence NOT_PRODUCED; WINDOWS_SERVER_SMOKE_ONLY-squirrel-windows-x64 NOT_PRODUCED and NOT WINDOWS 11 EVIDENCE";
+  "LOCAL_DARWIN_ARM64_PACKAGED_E2E_STATUS PASSED; LOCAL_DARWIN_ARM64_PACKAGED_E2E_COMMAND pnpm desktop:e2e; HOSTED_MACOS_TARGET_STATUS NOT_YET_VERIFIED; HOSTED_MACOS_PACKAGED_E2E_STATUS NOT_PRODUCED; WINDOWS11_TARGET_STATUS NOT_YET_VERIFIED; WINDOWS11_PACKAGED_E2E_STATUS NOT_PRODUCED; WINDOWS11_FOUNDATION_EVIDENCE_STATUS NOT_PRODUCED; WINDOWS_SERVER_SMOKE_STATUS NOT_PRODUCED; WINDOWS_SERVER_SMOKE_CLASSIFICATION NOT_WINDOWS_11_EVIDENCE";
 
 const verifiedTargetEvidence =
-  "LOCAL_DARWIN_ARM64_PACKAGED_E2E PASSED; LOCAL_DARWIN_ARM64_PACKAGED_E2E_COMMAND pnpm desktop:e2e; HOSTED_MACOS_TARGET_STATUS IMPLEMENTED_VERIFIED; HOSTED_MACOS_PACKAGED_E2E PASSED; WINDOWS11_TARGET_STATUS IMPLEMENTED_VERIFIED; WINDOWS11_PACKAGED_E2E PASSED; windows11-x64-foundation-evidence PRODUCED; WINDOWS_SERVER_SMOKE_ONLY-squirrel-windows-x64 NOT_PRODUCED and NOT WINDOWS 11 EVIDENCE";
+  "LOCAL_DARWIN_ARM64_PACKAGED_E2E_STATUS PASSED; LOCAL_DARWIN_ARM64_PACKAGED_E2E_COMMAND pnpm desktop:e2e; HOSTED_MACOS_TARGET_STATUS IMPLEMENTED_VERIFIED; HOSTED_MACOS_PACKAGED_E2E_STATUS PASSED; WINDOWS11_TARGET_STATUS IMPLEMENTED_VERIFIED; WINDOWS11_PACKAGED_E2E_STATUS PASSED; WINDOWS11_FOUNDATION_EVIDENCE_STATUS PRODUCED; WINDOWS_SERVER_SMOKE_STATUS NOT_PRODUCED; WINDOWS_SERVER_SMOKE_CLASSIFICATION NOT_WINDOWS_11_EVIDENCE";
+
+const notYetVerifiedTargetEvidence =
+  "LOCAL_DARWIN_ARM64_PACKAGED_E2E_STATUS NOT_YET_VERIFIED; HOSTED_MACOS_TARGET_STATUS NOT_YET_VERIFIED; HOSTED_MACOS_PACKAGED_E2E_STATUS NOT_PRODUCED; WINDOWS11_TARGET_STATUS NOT_YET_VERIFIED; WINDOWS11_PACKAGED_E2E_STATUS NOT_PRODUCED; WINDOWS11_FOUNDATION_EVIDENCE_STATUS NOT_PRODUCED; WINDOWS_SERVER_SMOKE_STATUS NOT_PRODUCED; WINDOWS_SERVER_SMOKE_CLASSIFICATION NOT_WINDOWS_11_EVIDENCE";
 
 const productBoundaryEvidence =
-  "FOUNDATION_PRODUCT_BOUNDARY; NO_ACTIVITY_STATEMENT_IMPLEMENTATION; NO_CREDENTIAL_IMPLEMENTATION; NO_ATO_TRANSPORT_IMPLEMENTATION; NO_APPROVAL_CLAIM";
+  "FOUNDATION_PRODUCT_BOUNDARY_STATUS FOUNDATION_ONLY; ACTIVITY_STATEMENT_IMPLEMENTATION_STATUS NOT_IMPLEMENTED; MACHINE_CREDENTIAL_IMPLEMENTATION_STATUS NOT_IMPLEMENTED; ATO_TRANSPORT_IMPLEMENTATION_STATUS NOT_IMPLEMENTED; SBR_APPROVAL_STATUS NOT_CLAIMED; LOCAL_TEST_COMMAND node --test scripts/check-foundation-evidence.test.mjs; COMPLIANCE_CHECK_COMMAND pnpm compliance:foundation; DPO_OSF_EVTE_CONFORMANCE_PVT_WHITELISTING_STATUS NOT_PRODUCED";
 
 function evidenceRow(sourceRequirementId, overrides = {}) {
   const row = {
@@ -315,12 +318,14 @@ test("keys release-target classification to DESIGN-2.4 and DESIGN-13.5 semantics
 test("rejects target evidence that omits any required unverified platform marker", () => {
   for (const requirementId of ["DESIGN-2.4", "DESIGN-13.5"]) {
     for (const marker of [
-      "LOCAL_DARWIN_ARM64_PACKAGED_E2E PASSED; ",
+      "LOCAL_DARWIN_ARM64_PACKAGED_E2E_STATUS PASSED; ",
       "HOSTED_MACOS_TARGET_STATUS NOT_YET_VERIFIED; ",
-      "macos14-arm64-foundation-failure-evidence NOT_PRODUCED; ",
+      "HOSTED_MACOS_PACKAGED_E2E_STATUS NOT_PRODUCED; ",
       "WINDOWS11_TARGET_STATUS NOT_YET_VERIFIED; ",
-      "windows11-x64-foundation-evidence NOT_PRODUCED; ",
-      "; WINDOWS_SERVER_SMOKE_ONLY-squirrel-windows-x64 NOT_PRODUCED and NOT WINDOWS 11 EVIDENCE",
+      "WINDOWS11_PACKAGED_E2E_STATUS NOT_PRODUCED; ",
+      "WINDOWS11_FOUNDATION_EVIDENCE_STATUS NOT_PRODUCED; ",
+      "WINDOWS_SERVER_SMOKE_STATUS NOT_PRODUCED; ",
+      "; WINDOWS_SERVER_SMOKE_CLASSIFICATION NOT_WINDOWS_11_EVIDENCE",
     ]) {
       const rows = REQUIRED_FOUNDATION_REQUIREMENTS.map((id) =>
         evidenceRow(
@@ -368,10 +373,7 @@ test("allows explicitly absent Windows Server smoke without satisfying Windows 1
       id === "DESIGN-13.5"
         ? {
             applicability: "Windows 11 23H2 x64 release gate remains required",
-            retained_evidence: currentTargetEvidence.replace(
-              "LOCAL_DARWIN_ARM64_PACKAGED_E2E PASSED; ",
-              "",
-            ),
+            retained_evidence: notYetVerifiedTargetEvidence,
             status: "NOT_YET_VERIFIED",
           }
         : {},
@@ -405,6 +407,91 @@ test("allows a local packaged pass only when Windows 11 remains explicitly unver
     () => validateFoundationEvidence(matrix(rows)),
     /FOUNDATION_EVIDENCE_WINDOWS_TARGET_MISCLASSIFIED:DESIGN-13\.5/,
   );
+});
+
+test("accepts one internally consistent target state for each implemented status", () => {
+  for (const [status, retainedEvidence] of [
+    ["IMPLEMENTED_PARTIAL_TARGET", currentTargetEvidence],
+    ["IMPLEMENTED_VERIFIED", verifiedTargetEvidence],
+    ["NOT_YET_VERIFIED", notYetVerifiedTargetEvidence],
+  ]) {
+    const rows = REQUIRED_FOUNDATION_REQUIREMENTS.map((id) =>
+      evidenceRow(
+        id,
+        id === "DESIGN-2.4" || id === "DESIGN-13.5"
+          ? { retained_evidence: retainedEvidence, status }
+          : {},
+      ),
+    );
+    assert.equal(validateFoundationEvidence(matrix(rows)).rowCount, rows.length, status);
+  }
+});
+
+test("rejects contradictory values for every target evidence key", () => {
+  for (const requirementId of ["DESIGN-2.4", "DESIGN-13.5"]) {
+    for (const contradiction of [
+      "LOCAL_DARWIN_ARM64_PACKAGED_E2E_STATUS NOT_YET_VERIFIED",
+      "HOSTED_MACOS_TARGET_STATUS IMPLEMENTED_VERIFIED",
+      "HOSTED_MACOS_PACKAGED_E2E_STATUS PASSED",
+      "WINDOWS11_TARGET_STATUS IMPLEMENTED_VERIFIED",
+      "WINDOWS11_PACKAGED_E2E_STATUS PASSED",
+      "WINDOWS11_FOUNDATION_EVIDENCE_STATUS PRODUCED",
+      "WINDOWS_SERVER_SMOKE_STATUS PASSED",
+      "WINDOWS_SERVER_SMOKE_CLASSIFICATION WINDOWS_11_EVIDENCE",
+    ]) {
+      const rows = REQUIRED_FOUNDATION_REQUIREMENTS.map((id) =>
+        evidenceRow(
+          id,
+          id === requirementId
+            ? { retained_evidence: `${currentTargetEvidence}; ${contradiction}` }
+            : {},
+        ),
+      );
+      assert.throws(
+        () => validateFoundationEvidence(matrix(rows)),
+        new RegExp(`FOUNDATION_EVIDENCE_WINDOWS_TARGET_MISCLASSIFIED:${requirementId}`),
+        `${requirementId}:${contradiction}`,
+      );
+    }
+  }
+});
+
+test("rejects duplicate target status and provenance keys", () => {
+  for (const duplicate of [
+    "WINDOWS11_TARGET_STATUS NOT_YET_VERIFIED",
+    "LOCAL_DARWIN_ARM64_PACKAGED_E2E_COMMAND pnpm desktop:e2e",
+  ]) {
+    const rows = REQUIRED_FOUNDATION_REQUIREMENTS.map((id) =>
+      evidenceRow(
+        id,
+        id === "DESIGN-2.4" ? { retained_evidence: `${currentTargetEvidence}; ${duplicate}` } : {},
+      ),
+    );
+    assert.throws(
+      () => validateFoundationEvidence(matrix(rows)),
+      /FOUNDATION_EVIDENCE_WINDOWS_TARGET_MISCLASSIFIED:DESIGN-2\.4/,
+      duplicate,
+    );
+  }
+});
+
+test("rejects unknown target keys and status values", () => {
+  for (const retainedEvidence of [
+    currentTargetEvidence.replace(
+      "WINDOWS11_TARGET_STATUS NOT_YET_VERIFIED",
+      "WINDOWS11_TARGET_STATUS UNKNOWN",
+    ),
+    `${currentTargetEvidence}; WINDOWS11_RELEASE_ASSERTION APPROVED`,
+  ]) {
+    const rows = REQUIRED_FOUNDATION_REQUIREMENTS.map((id) =>
+      evidenceRow(id, id === "DESIGN-13.5" ? { retained_evidence: retainedEvidence } : {}),
+    );
+    assert.throws(
+      () => validateFoundationEvidence(matrix(rows)),
+      /FOUNDATION_EVIDENCE_WINDOWS_TARGET_MISCLASSIFIED:DESIGN-13\.5/,
+      retainedEvidence,
+    );
+  }
 });
 
 test("requires local packaged command provenance as a separate exact token", () => {
@@ -466,11 +553,14 @@ test("requires honest protobuf breaking baseline status for DESIGN-13.3", () => 
 
 test("requires the complete no-claim product boundary in DESIGN-14", () => {
   for (const marker of [
-    "FOUNDATION_PRODUCT_BOUNDARY; ",
-    "NO_ACTIVITY_STATEMENT_IMPLEMENTATION; ",
-    "NO_CREDENTIAL_IMPLEMENTATION; ",
-    "NO_ATO_TRANSPORT_IMPLEMENTATION; ",
-    "; NO_APPROVAL_CLAIM",
+    "FOUNDATION_PRODUCT_BOUNDARY_STATUS FOUNDATION_ONLY; ",
+    "ACTIVITY_STATEMENT_IMPLEMENTATION_STATUS NOT_IMPLEMENTED; ",
+    "MACHINE_CREDENTIAL_IMPLEMENTATION_STATUS NOT_IMPLEMENTED; ",
+    "ATO_TRANSPORT_IMPLEMENTATION_STATUS NOT_IMPLEMENTED; ",
+    "SBR_APPROVAL_STATUS NOT_CLAIMED; ",
+    "LOCAL_TEST_COMMAND node --test scripts/check-foundation-evidence.test.mjs; ",
+    "COMPLIANCE_CHECK_COMMAND pnpm compliance:foundation; ",
+    "; DPO_OSF_EVTE_CONFORMANCE_PVT_WHITELISTING_STATUS NOT_PRODUCED",
   ]) {
     const rows = REQUIRED_FOUNDATION_REQUIREMENTS.map((id) =>
       evidenceRow(
@@ -488,11 +578,56 @@ test("requires the complete no-claim product boundary in DESIGN-14", () => {
   }
 });
 
+test("rejects contradictory product-boundary values for every protected capability", () => {
+  for (const contradiction of [
+    "ACTIVITY_STATEMENT_IMPLEMENTATION_STATUS IMPLEMENTED",
+    "MACHINE_CREDENTIAL_IMPLEMENTATION_STATUS IMPLEMENTED",
+    "ATO_TRANSPORT_IMPLEMENTATION_STATUS IMPLEMENTED",
+    "SBR_APPROVAL_STATUS APPROVAL_GRANTED",
+  ]) {
+    const rows = REQUIRED_FOUNDATION_REQUIREMENTS.map((id) =>
+      evidenceRow(
+        id,
+        id === "DESIGN-14"
+          ? { retained_evidence: `${productBoundaryEvidence}; ${contradiction}` }
+          : {},
+      ),
+    );
+    assert.throws(
+      () => validateFoundationEvidence(matrix(rows)),
+      /FOUNDATION_EVIDENCE_PRODUCT_BOUNDARY_MISSING:DESIGN-14/,
+      contradiction,
+    );
+  }
+});
+
+test("rejects duplicate, unknown, and legacy product-boundary assertions", () => {
+  for (const assertion of [
+    "LOCAL_TEST_COMMAND node --test scripts/check-foundation-evidence.test.mjs",
+    "SBR_APPROVAL_STATUS UNKNOWN",
+    "SIGNED_RELEASE_STATUS APPROVED",
+    "NO_APPROVAL_CLAIM",
+    "APPROVAL_GRANTED",
+  ]) {
+    const rows = REQUIRED_FOUNDATION_REQUIREMENTS.map((id) =>
+      evidenceRow(
+        id,
+        id === "DESIGN-14" ? { retained_evidence: `${productBoundaryEvidence}; ${assertion}` } : {},
+      ),
+    );
+    assert.throws(
+      () => validateFoundationEvidence(matrix(rows)),
+      /FOUNDATION_EVIDENCE_PRODUCT_BOUNDARY_MISSING:DESIGN-14/,
+      assertion,
+    );
+  }
+});
+
 test("rejects suffixed lookalikes for target, baseline, and product-boundary markers", () => {
   for (const [requirementId, marker, error] of [
     [
       "DESIGN-2.4",
-      "LOCAL_DARWIN_ARM64_PACKAGED_E2E PASSED",
+      "LOCAL_DARWIN_ARM64_PACKAGED_E2E_STATUS PASSED",
       /FOUNDATION_EVIDENCE_WINDOWS_TARGET_MISCLASSIFIED:DESIGN-2\.4/,
     ],
     [
@@ -500,7 +635,11 @@ test("rejects suffixed lookalikes for target, baseline, and product-boundary mar
       "INITIAL_BASELINE_NOT_YET_ON_MASTER",
       /FOUNDATION_EVIDENCE_PROTO_BASELINE_MISCLASSIFIED:DESIGN-13\.3/,
     ],
-    ["DESIGN-14", "NO_APPROVAL_CLAIM", /FOUNDATION_EVIDENCE_PRODUCT_BOUNDARY_MISSING:DESIGN-14/],
+    [
+      "DESIGN-14",
+      "SBR_APPROVAL_STATUS NOT_CLAIMED",
+      /FOUNDATION_EVIDENCE_PRODUCT_BOUNDARY_MISSING:DESIGN-14/,
+    ],
   ]) {
     const rows = REQUIRED_FOUNDATION_REQUIREMENTS.map((id) => {
       const row = evidenceRow(id);
@@ -518,12 +657,12 @@ test("rejects suffixed lookalikes for target, baseline, and product-boundary mar
 test("rejects contradictory via suffixes on every mandatory verified target marker", () => {
   for (const requirementId of ["DESIGN-2.4", "DESIGN-13.5"]) {
     for (const marker of [
-      "LOCAL_DARWIN_ARM64_PACKAGED_E2E PASSED",
+      "LOCAL_DARWIN_ARM64_PACKAGED_E2E_STATUS PASSED",
       "HOSTED_MACOS_TARGET_STATUS IMPLEMENTED_VERIFIED",
-      "HOSTED_MACOS_PACKAGED_E2E PASSED",
+      "HOSTED_MACOS_PACKAGED_E2E_STATUS PASSED",
       "WINDOWS11_TARGET_STATUS IMPLEMENTED_VERIFIED",
-      "WINDOWS11_PACKAGED_E2E PASSED",
-      "windows11-x64-foundation-evidence PRODUCED",
+      "WINDOWS11_PACKAGED_E2E_STATUS PASSED",
+      "WINDOWS11_FOUNDATION_EVIDENCE_STATUS PRODUCED",
     ]) {
       const rows = REQUIRED_FOUNDATION_REQUIREMENTS.map((id) =>
         evidenceRow(
@@ -572,8 +711,8 @@ test("rejects contradictory via suffixes on baseline and product-boundary marker
       id === "DESIGN-14"
         ? {
             retained_evidence: productBoundaryEvidence.replace(
-              "NO_APPROVAL_CLAIM",
-              "NO_APPROVAL_CLAIM via APPROVAL_GRANTED",
+              "SBR_APPROVAL_STATUS NOT_CLAIMED",
+              "SBR_APPROVAL_STATUS NOT_CLAIMED via APPROVAL_GRANTED",
             ),
           }
         : {},
@@ -585,11 +724,50 @@ test("rejects contradictory via suffixes on baseline and product-boundary marker
   );
 });
 
+test("rejects verified target evidence that also retains exact unverified states", () => {
+  const contradictoryEvidence = `${verifiedTargetEvidence}; HOSTED_MACOS_TARGET_STATUS NOT_YET_VERIFIED; HOSTED_MACOS_PACKAGED_E2E_STATUS NOT_PRODUCED; WINDOWS11_TARGET_STATUS NOT_YET_VERIFIED; WINDOWS11_PACKAGED_E2E_STATUS NOT_PRODUCED; WINDOWS11_FOUNDATION_EVIDENCE_STATUS NOT_PRODUCED`;
+  for (const requirementId of ["DESIGN-2.4", "DESIGN-13.5"]) {
+    const rows = REQUIRED_FOUNDATION_REQUIREMENTS.map((id) =>
+      evidenceRow(
+        id,
+        id === requirementId
+          ? {
+              retained_evidence: contradictoryEvidence,
+              status: "IMPLEMENTED_VERIFIED",
+            }
+          : {},
+      ),
+    );
+    assert.throws(
+      () => validateFoundationEvidence(matrix(rows)),
+      new RegExp(`FOUNDATION_EVIDENCE_WINDOWS_TARGET_MISCLASSIFIED:${requirementId}`),
+      requirementId,
+    );
+  }
+});
+
+test("rejects an approval grant alongside the exact no-approval claim", () => {
+  const rows = REQUIRED_FOUNDATION_REQUIREMENTS.map((id) =>
+    evidenceRow(
+      id,
+      id === "DESIGN-14"
+        ? {
+            retained_evidence: `${productBoundaryEvidence}; SBR_APPROVAL_STATUS APPROVAL_GRANTED`,
+          }
+        : {},
+    ),
+  );
+  assert.throws(
+    () => validateFoundationEvidence(matrix(rows)),
+    /FOUNDATION_EVIDENCE_PRODUCT_BOUNDARY_MISSING:DESIGN-14/,
+  );
+});
+
 test("rejects case and Unicode-lookalike mandatory markers", () => {
   for (const forged of [
-    "local_darwin_arm64_packaged_e2e passed",
-    "LOCAL_DARWIN_ARM64_PACKAGED_E2E P\u0410SSED",
-    "LOCAL_DARWIN_ARM64_PACKAGED_E2E PASSED_NOT",
+    "local_darwin_arm64_packaged_e2e_status passed",
+    "LOCAL_DARWIN_ARM64_PACKAGED_E2E_STATUS P\u0410SSED",
+    "LOCAL_DARWIN_ARM64_PACKAGED_E2E_STATUS PASSED_NOT",
   ]) {
     const rows = REQUIRED_FOUNDATION_REQUIREMENTS.map((id) =>
       evidenceRow(
@@ -597,7 +775,7 @@ test("rejects case and Unicode-lookalike mandatory markers", () => {
         id === "DESIGN-2.4"
           ? {
               retained_evidence: currentTargetEvidence.replace(
-                "LOCAL_DARWIN_ARM64_PACKAGED_E2E PASSED",
+                "LOCAL_DARWIN_ARM64_PACKAGED_E2E_STATUS PASSED",
                 forged,
               ),
             }

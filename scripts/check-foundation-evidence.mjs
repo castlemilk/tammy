@@ -35,36 +35,68 @@ const PERMITTED_STATUSES = new Set([
   "NOT_APPLICABLE",
 ]);
 const TARGET_REQUIREMENTS = new Set(["DESIGN-2.4", "DESIGN-13.5"]);
-const LOCAL_PACKAGED_PASS = "LOCAL_DARWIN_ARM64_PACKAGED_E2E PASSED";
-const LOCAL_PACKAGED_COMMAND = "LOCAL_DARWIN_ARM64_PACKAGED_E2E_COMMAND pnpm desktop:e2e";
-const HOSTED_MACOS_UNVERIFIED = Object.freeze([
-  "HOSTED_MACOS_TARGET_STATUS NOT_YET_VERIFIED",
-  "macos14-arm64-foundation-failure-evidence NOT_PRODUCED",
-]);
-const WINDOWS11_UNVERIFIED = Object.freeze([
-  "WINDOWS11_TARGET_STATUS NOT_YET_VERIFIED",
-  "windows11-x64-foundation-evidence NOT_PRODUCED",
-]);
-const VERIFIED_TARGET_EVIDENCE = Object.freeze([
-  LOCAL_PACKAGED_PASS,
-  LOCAL_PACKAGED_COMMAND,
-  "HOSTED_MACOS_TARGET_STATUS IMPLEMENTED_VERIFIED",
-  "HOSTED_MACOS_PACKAGED_E2E PASSED",
-  "WINDOWS11_TARGET_STATUS IMPLEMENTED_VERIFIED",
-  "WINDOWS11_PACKAGED_E2E PASSED",
-  "windows11-x64-foundation-evidence PRODUCED",
-]);
-const SERVER_SMOKE_ARTIFACT = "WINDOWS_SERVER_SMOKE_ONLY-squirrel-windows-x64";
-const SERVER_SMOKE_DISCLAIMER = "NOT WINDOWS 11 EVIDENCE";
+const TARGET_EVIDENCE_SCHEMA = Object.freeze({
+  HOSTED_MACOS_PACKAGED_E2E_STATUS: Object.freeze(["NOT_PRODUCED", "PASSED"]),
+  HOSTED_MACOS_TARGET_STATUS: Object.freeze(["IMPLEMENTED_VERIFIED", "NOT_YET_VERIFIED"]),
+  LOCAL_DARWIN_ARM64_PACKAGED_E2E_COMMAND: Object.freeze(["pnpm desktop:e2e"]),
+  LOCAL_DARWIN_ARM64_PACKAGED_E2E_STATUS: Object.freeze(["NOT_YET_VERIFIED", "PASSED"]),
+  WINDOWS11_FOUNDATION_EVIDENCE_STATUS: Object.freeze(["NOT_PRODUCED", "PRODUCED"]),
+  WINDOWS11_PACKAGED_E2E_STATUS: Object.freeze(["NOT_PRODUCED", "PASSED"]),
+  WINDOWS11_TARGET_STATUS: Object.freeze(["IMPLEMENTED_VERIFIED", "NOT_YET_VERIFIED"]),
+  WINDOWS_SERVER_SMOKE_CLASSIFICATION: Object.freeze(["NOT_WINDOWS_11_EVIDENCE"]),
+  WINDOWS_SERVER_SMOKE_STATUS: Object.freeze(["NOT_PRODUCED", "PASSED"]),
+});
+const TARGET_EVIDENCE_STATES = Object.freeze({
+  IMPLEMENTED_PARTIAL_TARGET: Object.freeze({
+    HOSTED_MACOS_PACKAGED_E2E_STATUS: "NOT_PRODUCED",
+    HOSTED_MACOS_TARGET_STATUS: "NOT_YET_VERIFIED",
+    LOCAL_DARWIN_ARM64_PACKAGED_E2E_COMMAND: "pnpm desktop:e2e",
+    LOCAL_DARWIN_ARM64_PACKAGED_E2E_STATUS: "PASSED",
+    WINDOWS11_FOUNDATION_EVIDENCE_STATUS: "NOT_PRODUCED",
+    WINDOWS11_PACKAGED_E2E_STATUS: "NOT_PRODUCED",
+    WINDOWS11_TARGET_STATUS: "NOT_YET_VERIFIED",
+    WINDOWS_SERVER_SMOKE_CLASSIFICATION: "NOT_WINDOWS_11_EVIDENCE",
+    WINDOWS_SERVER_SMOKE_STATUS: Object.freeze(["NOT_PRODUCED", "PASSED"]),
+  }),
+  IMPLEMENTED_VERIFIED: Object.freeze({
+    HOSTED_MACOS_PACKAGED_E2E_STATUS: "PASSED",
+    HOSTED_MACOS_TARGET_STATUS: "IMPLEMENTED_VERIFIED",
+    LOCAL_DARWIN_ARM64_PACKAGED_E2E_COMMAND: "pnpm desktop:e2e",
+    LOCAL_DARWIN_ARM64_PACKAGED_E2E_STATUS: "PASSED",
+    WINDOWS11_FOUNDATION_EVIDENCE_STATUS: "PRODUCED",
+    WINDOWS11_PACKAGED_E2E_STATUS: "PASSED",
+    WINDOWS11_TARGET_STATUS: "IMPLEMENTED_VERIFIED",
+    WINDOWS_SERVER_SMOKE_CLASSIFICATION: "NOT_WINDOWS_11_EVIDENCE",
+    WINDOWS_SERVER_SMOKE_STATUS: Object.freeze(["NOT_PRODUCED", "PASSED"]),
+  }),
+  NOT_YET_VERIFIED: Object.freeze({
+    HOSTED_MACOS_PACKAGED_E2E_STATUS: "NOT_PRODUCED",
+    HOSTED_MACOS_TARGET_STATUS: "NOT_YET_VERIFIED",
+    LOCAL_DARWIN_ARM64_PACKAGED_E2E_STATUS: "NOT_YET_VERIFIED",
+    WINDOWS11_FOUNDATION_EVIDENCE_STATUS: "NOT_PRODUCED",
+    WINDOWS11_PACKAGED_E2E_STATUS: "NOT_PRODUCED",
+    WINDOWS11_TARGET_STATUS: "NOT_YET_VERIFIED",
+    WINDOWS_SERVER_SMOKE_CLASSIFICATION: "NOT_WINDOWS_11_EVIDENCE",
+    WINDOWS_SERVER_SMOKE_STATUS: Object.freeze(["NOT_PRODUCED", "PASSED"]),
+  }),
+});
 const INITIAL_PROTO_BASELINE = "PROTO_BREAKING_BASELINE_STATUS INITIAL_BASELINE_NOT_YET_ON_MASTER";
 const VERIFIED_PROTO_BASELINE = "PROTO_BREAKING_BASELINE_STATUS VERIFIED_AGAINST_MASTER";
-const PRODUCT_BOUNDARY_MARKERS = Object.freeze([
-  "FOUNDATION_PRODUCT_BOUNDARY",
-  "NO_ACTIVITY_STATEMENT_IMPLEMENTATION",
-  "NO_CREDENTIAL_IMPLEMENTATION",
-  "NO_ATO_TRANSPORT_IMPLEMENTATION",
-  "NO_APPROVAL_CLAIM",
-]);
+const PRODUCT_BOUNDARY_SCHEMA = Object.freeze({
+  ACTIVITY_STATEMENT_IMPLEMENTATION_STATUS: Object.freeze(["NOT_IMPLEMENTED"]),
+  ATO_TRANSPORT_IMPLEMENTATION_STATUS: Object.freeze(["NOT_IMPLEMENTED"]),
+  COMPLIANCE_CHECK_COMMAND: Object.freeze(["pnpm compliance:foundation"]),
+  DPO_OSF_EVTE_CONFORMANCE_PVT_WHITELISTING_STATUS: Object.freeze(["NOT_PRODUCED"]),
+  FOUNDATION_PRODUCT_BOUNDARY_STATUS: Object.freeze(["FOUNDATION_ONLY"]),
+  LOCAL_TEST_COMMAND: Object.freeze(["node --test scripts/check-foundation-evidence.test.mjs"]),
+  MACHINE_CREDENTIAL_IMPLEMENTATION_STATUS: Object.freeze(["NOT_IMPLEMENTED"]),
+  SBR_APPROVAL_STATUS: Object.freeze(["NOT_CLAIMED"]),
+});
+const PRODUCT_BOUNDARY_STATE = Object.freeze(
+  Object.fromEntries(
+    Object.entries(PRODUCT_BOUNDARY_SCHEMA).map(([key, values]) => [key, values[0]]),
+  ),
+);
 const FORBIDDEN_AUDIT_CHARACTER =
   /(?:\p{Cc}|\p{Cf}|\p{Zl}|\p{Zp}|\p{Variation_Selector}|\u034F|\u115F|\u1160|\u17B4|\u17B5|\u3164|\uFFA0)/u;
 
@@ -171,37 +203,44 @@ function hasEvidenceMarker(value, marker) {
     .some((item) => item === marker);
 }
 
-function containsEveryEvidenceMarker(value, markers) {
-  return markers.every((marker) => hasEvidenceMarker(value, marker));
+function parseClosedEvidence(value, schema) {
+  const parsed = new Map();
+  for (const untrimmedToken of value.split(";")) {
+    const token = untrimmedToken.trim();
+    const match = /^([A-Z][A-Z0-9_]*) (.+)$/u.exec(token);
+    if (match === null) return null;
+    const [, key, evidenceValue] = match;
+    if (parsed.has(key) || !Object.hasOwn(schema, key) || !schema[key].includes(evidenceValue)) {
+      return null;
+    }
+    parsed.set(key, evidenceValue);
+  }
+  return parsed;
 }
 
-function hasExplicitServerSmokeClassification(evidence) {
+function matchesClosedEvidenceState(evidence, schema, expectedState) {
+  if (expectedState === undefined) return false;
+  const parsed = parseClosedEvidence(evidence, schema);
+  const expectedEntries = Object.entries(expectedState);
   return (
-    hasEvidenceMarker(
-      evidence,
-      `${SERVER_SMOKE_ARTIFACT} NOT_PRODUCED and ${SERVER_SMOKE_DISCLAIMER}`,
-    ) ||
-    hasEvidenceMarker(evidence, `${SERVER_SMOKE_ARTIFACT} PASSED and ${SERVER_SMOKE_DISCLAIMER}`)
+    parsed !== null &&
+    parsed.size === expectedEntries.length &&
+    expectedEntries.every(([key, expected]) => {
+      const actual = parsed.get(key);
+      return Array.isArray(expected) ? expected.includes(actual) : actual === expected;
+    })
   );
 }
 
 function assertTargetEvidenceClassification(row) {
   if (!TARGET_REQUIREMENTS.has(row.source_requirement_id)) return;
-  const evidence = row.retained_evidence;
-  const hasUnverifiedTargets =
-    containsEveryEvidenceMarker(evidence, HOSTED_MACOS_UNVERIFIED) &&
-    containsEveryEvidenceMarker(evidence, WINDOWS11_UNVERIFIED) &&
-    hasExplicitServerSmokeClassification(evidence);
-  const valid =
-    (row.status === "IMPLEMENTED_PARTIAL_TARGET" &&
-      hasEvidenceMarker(evidence, LOCAL_PACKAGED_PASS) &&
-      hasEvidenceMarker(evidence, LOCAL_PACKAGED_COMMAND) &&
-      hasUnverifiedTargets) ||
-    (row.status === "NOT_YET_VERIFIED" && hasUnverifiedTargets) ||
-    (row.status === "IMPLEMENTED_VERIFIED" &&
-      containsEveryEvidenceMarker(evidence, VERIFIED_TARGET_EVIDENCE) &&
-      hasExplicitServerSmokeClassification(evidence));
-  if (!valid) {
+  if (
+    !matchesClosedEvidenceState(
+      row.retained_evidence,
+      TARGET_EVIDENCE_SCHEMA,
+      TARGET_EVIDENCE_STATES[row.status],
+    )
+  ) {
     throw evidenceError(
       `FOUNDATION_EVIDENCE_WINDOWS_TARGET_MISCLASSIFIED:${row.source_requirement_id}`,
     );
@@ -228,7 +267,11 @@ function assertProtoBaselineClassification(row) {
 function assertProductBoundary(row) {
   if (
     row.source_requirement_id === "DESIGN-14" &&
-    !containsEveryEvidenceMarker(row.retained_evidence, PRODUCT_BOUNDARY_MARKERS)
+    !matchesClosedEvidenceState(
+      row.retained_evidence,
+      PRODUCT_BOUNDARY_SCHEMA,
+      PRODUCT_BOUNDARY_STATE,
+    )
   ) {
     throw evidenceError(
       `FOUNDATION_EVIDENCE_PRODUCT_BOUNDARY_MISSING:${row.source_requirement_id}`,
