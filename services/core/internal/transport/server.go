@@ -43,6 +43,14 @@ const (
 	localAPIWriteTimeout      = 5 * time.Second
 	localAPIIdleTimeout       = 30 * time.Second
 	localAPIMaxHeaderBytes    = 16 << 10
+
+	// Foundation RPCs are unary. The outer limit allows one maximum-sized
+	// protobuf message plus the five-byte prefix used by framed Connect
+	// protocols, while the Connect limit also applies after decompression.
+	localAPIConnectMessageMaxBytes = 1 << 20
+	localAPIConnectEnvelopeBytes   = 5
+	localAPIRequestBodyMaxBytes    = localAPIConnectMessageMaxBytes +
+		localAPIConnectEnvelopeBytes
 )
 
 // WithClock injects the clock used for the ephemeral certificate validity
@@ -130,6 +138,7 @@ func NewServer(
 	path, handler := tammyv1connect.NewSystemServiceHandler(
 		system.NewService(info),
 		connect.WithInterceptors(interceptor),
+		connect.WithReadMaxBytes(localAPIConnectMessageMaxBytes),
 	)
 	mux.Handle(path, handler)
 
@@ -153,7 +162,7 @@ func NewServer(
 		shutdownDone: make(chan struct{}),
 	}
 	server.httpServer = &http.Server{
-		Handler:           mux,
+		Handler:           http.MaxBytesHandler(mux, localAPIRequestBodyMaxBytes),
 		ReadHeaderTimeout: localAPIReadHeaderTimeout,
 		ReadTimeout:       localAPIReadTimeout,
 		WriteTimeout:      localAPIWriteTimeout,

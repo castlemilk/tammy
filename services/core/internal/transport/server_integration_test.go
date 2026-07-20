@@ -7,7 +7,9 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/json"
 	"encoding/pem"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -21,6 +23,7 @@ import (
 	"github.com/tammyapp/tammy/services/core/internal/buildinfo"
 	tammyv1 "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1"
 	tammyv1connect "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1/tammyv1connect"
+	"google.golang.org/protobuf/encoding/protowire"
 )
 
 var serverTestNow = time.Date(2026, time.July, 19, 9, 30, 0, 0, time.UTC)
@@ -255,6 +258,108 @@ func TestServerBoundsSlowTLSHeadersAndBodies(t *testing.T) {
 	}
 }
 
+func TestServerBoundsCompletedOversizedRequests(t *testing.T) {
+	t.Parallel()
+
+	const (
+		connectMessageMaxBytes  = 1 << 20
+		connectEnvelopePrefix   = 5
+		httpRequestBodyMaxBytes = connectMessageMaxBytes + connectEnvelopePrefix
+		maxErrorResponseBytes   = 4 << 10
+		requestDeadline         = 4 * time.Second
+	)
+
+	var stderr bytes.Buffer
+	server := startTestServer(t, &stderr, &countingReader{reader: rand.Reader})
+	ready := server.Ready()
+	client := authenticatedHTTPClient(t, ready)
+	client.Timeout = requestDeadline
+	transport := client.Transport.(*http.Transport)
+	t.Cleanup(transport.CloseIdleConnections)
+
+	outerOversizedBody := unknownProtobufMessageOfSize(
+		t,
+		httpRequestBodyMaxBytes+1,
+	)
+	for _, test := range []struct {
+		name       string
+		capability string
+	}{
+		{name: "missing capability"},
+		{name: "valid capability", capability: ready.Capability},
+	} {
+		t.Run("outer body limit with "+test.name, func(t *testing.T) {
+			response := postProtobufRequest(
+				t,
+				client,
+				ready,
+				outerOversizedBody,
+				test.capability,
+			)
+			assertConnectResourceExhaustedResponse(
+				t,
+				response,
+				maxErrorResponseBytes,
+				fmt.Sprintf("configured max %d", connectMessageMaxBytes),
+				"request body too large",
+			)
+		})
+	}
+
+	t.Run("decoded Connect message limit", func(t *testing.T) {
+		response := postProtobufRequest(
+			t,
+			client,
+			ready,
+			unknownProtobufMessageOfSize(t, connectMessageMaxBytes+1),
+			ready.Capability,
+		)
+		assertConnectResourceExhaustedResponse(
+			t,
+			response,
+			maxErrorResponseBytes,
+			fmt.Sprintf(
+				"message size %d is larger than configured max %d",
+				connectMessageMaxBytes+1,
+				connectMessageMaxBytes,
+			),
+		)
+	})
+
+	t.Run("just under decoded message limit succeeds", func(t *testing.T) {
+		connectClient := tammyv1connect.NewSystemServiceClient(client, serverURL(ready))
+		request := connect.NewRequest(&tammyv1.GetDiagnosticsRequest{})
+		request.Msg.ProtoReflect().SetUnknown(
+			unknownProtobufMessageOfSize(t, connectMessageMaxBytes-1),
+		)
+		request.Header().Set(CapabilityHeader, ready.Capability)
+
+		response, err := connectClient.GetDiagnostics(context.Background(), request)
+		if err != nil {
+			t.Fatalf("GetDiagnostics() error = %v", redactCapability(err, ready.Capability))
+		}
+		if response.Msg.GetApiVersion() != "tammy.v1" {
+			t.Fatalf("GetDiagnostics() API version = %q, want tammy.v1", response.Msg.GetApiVersion())
+		}
+	})
+
+	transport.CloseIdleConnections()
+	shutdownContext, cancel := context.WithTimeout(context.Background(), requestDeadline)
+	defer cancel()
+	if err := server.Shutdown(shutdownContext); err != nil {
+		t.Fatalf("Shutdown() error = %v", err)
+	}
+	select {
+	case err, ok := <-server.Errors():
+		if ok && err != nil {
+			t.Fatalf("Errors() = %v after shutdown", err)
+		}
+	case <-time.After(requestDeadline):
+		t.Fatal("Errors() did not close after oversized requests and graceful shutdown")
+	}
+	assertServerSecretAbsent(t, stderr.String(), ready.Capability)
+}
+
 func TestServerLoopbackTLSConnectAuthenticationAndShutdown(t *testing.T) {
 	t.Parallel()
 
@@ -430,6 +535,111 @@ func assertConnectionTerminatesBefore(t *testing.T, connection net.Conn, deadlin
 	_, err := io.ReadAll(connection)
 	if networkError, ok := err.(net.Error); ok && networkError.Timeout() {
 		t.Fatalf("server did not terminate the incomplete request within %s", deadline)
+	}
+}
+
+func unknownProtobufMessageOfSize(t *testing.T, targetSize int) []byte {
+	t.Helper()
+
+	tagSize := protowire.SizeTag(1)
+	for payloadSize := targetSize - tagSize; payloadSize >= 0; payloadSize-- {
+		if tagSize+protowire.SizeBytes(payloadSize) != targetSize {
+			continue
+		}
+		message := make([]byte, 0, targetSize)
+		message = protowire.AppendTag(message, 1, protowire.BytesType)
+		message = protowire.AppendVarint(message, uint64(payloadSize))
+		message = append(message, make([]byte, payloadSize)...)
+		return message
+	}
+	t.Fatalf("cannot construct a valid unknown protobuf field of size %d", targetSize)
+	return nil
+}
+
+func postProtobufRequest(
+	t *testing.T,
+	client *http.Client,
+	ready ReadinessRecord,
+	body []byte,
+	capability string,
+) *http.Response {
+	t.Helper()
+
+	request, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		serverURL(ready)+tammyv1connect.SystemServiceGetDiagnosticsProcedure,
+		bytes.NewReader(body),
+	)
+	if err != nil {
+		t.Fatalf("http.NewRequestWithContext() error = %v", err)
+	}
+	request.Header.Set("Content-Type", "application/proto")
+	request.Header.Set("Connect-Protocol-Version", "1")
+	if capability != "" {
+		request.Header.Set(CapabilityHeader, capability)
+	}
+
+	response, err := client.Do(request)
+	if err != nil {
+		t.Fatalf("completed protobuf request error = %v", redactCapability(err, ready.Capability))
+	}
+	return response
+}
+
+func assertConnectResourceExhaustedResponse(
+	t *testing.T,
+	response *http.Response,
+	maxResponseBytes int64,
+	messageFragments ...string,
+) {
+	t.Helper()
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusTooManyRequests {
+		t.Fatalf(
+			"oversized request HTTP status = %d, want %d",
+			response.StatusCode,
+			http.StatusTooManyRequests,
+		)
+	}
+	if contentType := response.Header.Get("Content-Type"); contentType != "application/json" {
+		t.Fatalf("oversized request content type = %q, want application/json", contentType)
+	}
+
+	body, err := io.ReadAll(io.LimitReader(response.Body, maxResponseBytes+1))
+	if err != nil {
+		t.Fatalf("read oversized request response: %v", err)
+	}
+	if int64(len(body)) > maxResponseBytes {
+		t.Fatalf(
+			"oversized request response length = %d, want at most %d",
+			len(body),
+			maxResponseBytes,
+		)
+	}
+	var connectError struct {
+		Code    string `json:"code"`
+		Message string `json:"message"`
+	}
+	if err := json.Unmarshal(body, &connectError); err != nil {
+		t.Fatalf("decode oversized request response: %v", err)
+	}
+	if connectError.Code != connect.CodeResourceExhausted.String() {
+		t.Fatalf(
+			"oversized request Connect code = %q, want %q",
+			connectError.Code,
+			connect.CodeResourceExhausted,
+		)
+	}
+	for _, fragment := range messageFragments {
+		if !strings.Contains(connectError.Message, fragment) {
+			t.Fatalf(
+				"oversized request message = %q, want fragment %q",
+				connectError.Message,
+				fragment,
+			)
+		}
 	}
 }
 
