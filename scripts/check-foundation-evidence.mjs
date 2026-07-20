@@ -1,4 +1,5 @@
-import { lstat, readFile, realpath } from "node:fs/promises";
+import { constants } from "node:fs";
+import { lstat, open, realpath } from "node:fs/promises";
 import path from "node:path";
 
 export const FOUNDATION_EVIDENCE_HEADER =
@@ -29,6 +30,37 @@ const PERMITTED_STATUSES = new Set([
   "PLANNED",
   "NOT_APPLICABLE",
 ]);
+const TARGET_REQUIREMENTS = new Set(["DESIGN-2.4", "DESIGN-13.5"]);
+const LOCAL_PACKAGED_PASS = "LOCAL_DARWIN_ARM64_PACKAGED_E2E PASSED";
+const HOSTED_MACOS_UNVERIFIED = Object.freeze([
+  "HOSTED_MACOS_TARGET_STATUS NOT_YET_VERIFIED",
+  "macos14-arm64-foundation-failure-evidence NOT_PRODUCED",
+]);
+const WINDOWS11_UNVERIFIED = Object.freeze([
+  "WINDOWS11_TARGET_STATUS NOT_YET_VERIFIED",
+  "windows11-x64-foundation-evidence NOT_PRODUCED",
+]);
+const VERIFIED_TARGET_EVIDENCE = Object.freeze([
+  LOCAL_PACKAGED_PASS,
+  "HOSTED_MACOS_TARGET_STATUS IMPLEMENTED_VERIFIED",
+  "HOSTED_MACOS_PACKAGED_E2E PASSED",
+  "WINDOWS11_TARGET_STATUS IMPLEMENTED_VERIFIED",
+  "WINDOWS11_PACKAGED_E2E PASSED",
+  "windows11-x64-foundation-evidence PRODUCED",
+]);
+const SERVER_SMOKE_ARTIFACT = "WINDOWS_SERVER_SMOKE_ONLY-squirrel-windows-x64";
+const SERVER_SMOKE_DISCLAIMER = "NOT WINDOWS 11 EVIDENCE";
+const INITIAL_PROTO_BASELINE = "PROTO_BREAKING_BASELINE_STATUS INITIAL_BASELINE_NOT_YET_ON_MASTER";
+const VERIFIED_PROTO_BASELINE = "PROTO_BREAKING_BASELINE_STATUS VERIFIED_AGAINST_MASTER";
+const PRODUCT_BOUNDARY_MARKERS = Object.freeze([
+  "FOUNDATION_PRODUCT_BOUNDARY",
+  "NO_ACTIVITY_STATEMENT_IMPLEMENTATION",
+  "NO_CREDENTIAL_IMPLEMENTATION",
+  "NO_ATO_TRANSPORT_IMPLEMENTATION",
+  "NO_APPROVAL_CLAIM",
+]);
+const FORBIDDEN_AUDIT_CHARACTER =
+  /(?:\p{Cc}|\p{Cf}|\p{Zl}|\p{Zp}|\p{Variation_Selector}|\u034F|\u115F|\u1160|\u17B4|\u17B5|\u3164|\uFFA0)/u;
 
 function evidenceError(code) {
   return new Error(code);
@@ -126,33 +158,181 @@ function parseCsv(csvText) {
   return rows;
 }
 
-function assertWindowsEvidenceClassification(row) {
-  const applicability = row.applicability.toUpperCase();
-  const evidence = row.retained_evidence.toUpperCase();
-  const referencesWindowsServer =
-    evidence.includes("WINDOWS_SERVER_SMOKE_ONLY") || evidence.includes("WINDOWS SERVER");
-  const referencesWindows11 =
-    applicability.includes("WINDOWS 11") ||
-    evidence.includes("WINDOWS11") ||
-    evidence.includes("WINDOWS 11");
-  if (!referencesWindowsServer || !referencesWindows11) return;
+function hasEvidenceMarker(value, marker) {
+  return value
+    .split(";")
+    .map((item) => item.trim())
+    .some((item) => item === marker || item.startsWith(`${marker} via `));
+}
 
-  const isExplicitlyAbsent = evidence.includes("NOT_PRODUCED") || evidence.includes("NOT PRODUCED");
-  const isExplicitlyNotWindows11Evidence = evidence.includes("NOT WINDOWS 11 EVIDENCE");
-  const isUnverifiedWindowsTarget = evidence.includes("WINDOWS11_TARGET_STATUS NOT_YET_VERIFIED");
-  const isVerifiedLocalPartialTarget =
-    row.status === "IMPLEMENTED_PARTIAL_TARGET" &&
-    evidence.includes("LOCAL_DARWIN_ARM64_PACKAGED_E2E PASSED") &&
-    isUnverifiedWindowsTarget;
-  if (row.status !== "NOT_YET_VERIFIED" && !isVerifiedLocalPartialTarget) {
+function containsEveryEvidenceMarker(value, markers) {
+  return markers.every((marker) => hasEvidenceMarker(value, marker));
+}
+
+function hasExplicitServerSmokeClassification(evidence) {
+  return (
+    hasEvidenceMarker(
+      evidence,
+      `${SERVER_SMOKE_ARTIFACT} NOT_PRODUCED and ${SERVER_SMOKE_DISCLAIMER}`,
+    ) ||
+    hasEvidenceMarker(evidence, `${SERVER_SMOKE_ARTIFACT} PASSED and ${SERVER_SMOKE_DISCLAIMER}`)
+  );
+}
+
+function assertTargetEvidenceClassification(row) {
+  if (!TARGET_REQUIREMENTS.has(row.source_requirement_id)) return;
+  const evidence = row.retained_evidence;
+  const hasUnverifiedTargets =
+    containsEveryEvidenceMarker(evidence, HOSTED_MACOS_UNVERIFIED) &&
+    containsEveryEvidenceMarker(evidence, WINDOWS11_UNVERIFIED) &&
+    hasExplicitServerSmokeClassification(evidence);
+  const valid =
+    (row.status === "IMPLEMENTED_PARTIAL_TARGET" &&
+      hasEvidenceMarker(evidence, LOCAL_PACKAGED_PASS) &&
+      hasUnverifiedTargets) ||
+    (row.status === "NOT_YET_VERIFIED" && hasUnverifiedTargets) ||
+    (row.status === "IMPLEMENTED_VERIFIED" &&
+      containsEveryEvidenceMarker(evidence, VERIFIED_TARGET_EVIDENCE) &&
+      hasExplicitServerSmokeClassification(evidence));
+  if (!valid) {
     throw evidenceError(
       `FOUNDATION_EVIDENCE_WINDOWS_TARGET_MISCLASSIFIED:${row.source_requirement_id}`,
     );
   }
-  if (!isExplicitlyAbsent || !isExplicitlyNotWindows11Evidence) {
+}
+
+function assertProtoBaselineClassification(row) {
+  if (row.source_requirement_id !== "DESIGN-13.3") return;
+  const evidence = row.retained_evidence;
+  const valid =
+    (row.status === "IMPLEMENTED_PARTIAL_TARGET" &&
+      hasEvidenceMarker(evidence, INITIAL_PROTO_BASELINE) &&
+      !hasEvidenceMarker(evidence, VERIFIED_PROTO_BASELINE)) ||
+    (row.status === "IMPLEMENTED_VERIFIED" &&
+      hasEvidenceMarker(evidence, VERIFIED_PROTO_BASELINE) &&
+      !hasEvidenceMarker(evidence, INITIAL_PROTO_BASELINE));
+  if (!valid) {
     throw evidenceError(
-      `FOUNDATION_EVIDENCE_WINDOWS_TARGET_MISCLASSIFIED:${row.source_requirement_id}`,
+      `FOUNDATION_EVIDENCE_PROTO_BASELINE_MISCLASSIFIED:${row.source_requirement_id}`,
     );
+  }
+}
+
+function assertProductBoundary(row) {
+  if (
+    row.source_requirement_id === "DESIGN-14" &&
+    !containsEveryEvidenceMarker(row.retained_evidence, PRODUCT_BOUNDARY_MARKERS)
+  ) {
+    throw evidenceError(
+      `FOUNDATION_EVIDENCE_PRODUCT_BOUNDARY_MISSING:${row.source_requirement_id}`,
+    );
+  }
+}
+
+function isStableRegularFile(stats) {
+  return (
+    stats?.isFile() === true &&
+    !stats.isSymbolicLink() &&
+    stats.size > 0n &&
+    stats.size <= BigInt(MAX_EVIDENCE_BYTES)
+  );
+}
+
+function hasSameFileIdentity(left, right) {
+  return (
+    left.dev === right.dev &&
+    left.ino === right.ino &&
+    left.mode === right.mode &&
+    left.nlink === right.nlink &&
+    left.size === right.size &&
+    left.mtimeNs === right.mtimeNs &&
+    left.ctimeNs === right.ctimeNs
+  );
+}
+
+async function readBoundedHandle(handle, expectedBytes) {
+  const bytes = Buffer.alloc(expectedBytes + 1);
+  let offset = 0;
+  let reachedEof = false;
+  while (offset < bytes.length) {
+    const result = await handle.read(bytes, offset, bytes.length - offset, null);
+    if (
+      result === null ||
+      typeof result !== "object" ||
+      !Number.isSafeInteger(result.bytesRead) ||
+      result.bytesRead < 0 ||
+      result.bytesRead > bytes.length - offset
+    ) {
+      throw evidenceError("FOUNDATION_EVIDENCE_FILE_INVALID");
+    }
+    if (result.bytesRead === 0) {
+      reachedEof = true;
+      break;
+    }
+    offset += result.bytesRead;
+  }
+  if (!reachedEof || offset !== expectedBytes) {
+    throw evidenceError("FOUNDATION_EVIDENCE_FILE_INVALID");
+  }
+  return bytes.subarray(0, expectedBytes);
+}
+
+export async function readStableEvidenceFile(
+  evidencePath,
+  { lstatPath = lstat, openFile = open } = {},
+) {
+  if (
+    typeof evidencePath !== "string" ||
+    !path.isAbsolute(evidencePath) ||
+    path.normalize(evidencePath) !== evidencePath
+  ) {
+    throw evidenceError("FOUNDATION_EVIDENCE_FILE_INVALID");
+  }
+
+  let handle;
+  let bytes;
+  let failed = false;
+  try {
+    handle = await openFile(evidencePath, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+    const initialHandleStats = await handle.stat({ bigint: true });
+    const initialPathStats = await lstatPath(evidencePath, { bigint: true });
+    if (
+      !isStableRegularFile(initialHandleStats) ||
+      !isStableRegularFile(initialPathStats) ||
+      !hasSameFileIdentity(initialHandleStats, initialPathStats)
+    ) {
+      throw evidenceError("FOUNDATION_EVIDENCE_FILE_INVALID");
+    }
+
+    bytes = await readBoundedHandle(handle, Number(initialHandleStats.size));
+
+    const finalHandleStats = await handle.stat({ bigint: true });
+    const finalPathStats = await lstatPath(evidencePath, { bigint: true });
+    if (
+      !isStableRegularFile(finalHandleStats) ||
+      !isStableRegularFile(finalPathStats) ||
+      !hasSameFileIdentity(initialHandleStats, finalHandleStats) ||
+      !hasSameFileIdentity(initialHandleStats, finalPathStats)
+    ) {
+      throw evidenceError("FOUNDATION_EVIDENCE_FILE_INVALID");
+    }
+  } catch {
+    failed = true;
+  }
+  if (handle !== undefined) {
+    try {
+      await handle.close();
+    } catch {
+      failed = true;
+    }
+  }
+  if (failed || bytes === undefined) {
+    throw evidenceError("FOUNDATION_EVIDENCE_FILE_INVALID");
+  }
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    throw evidenceError("FOUNDATION_EVIDENCE_FILE_INVALID");
   }
 }
 
@@ -178,6 +358,11 @@ export function validateFoundationEvidence(csvText) {
       throw evidenceError("FOUNDATION_EVIDENCE_COLUMN_COUNT_INVALID");
     }
     const row = Object.fromEntries(COLUMNS.map((column, index) => [column, values[index]]));
+    for (const column of COLUMNS) {
+      if (FORBIDDEN_AUDIT_CHARACTER.test(row[column].replaceAll("\n", ""))) {
+        throw evidenceError(`FOUNDATION_EVIDENCE_CONTROL_INVALID:${column}`);
+      }
+    }
     const requirementId = row.source_requirement_id;
     if (!/^DESIGN-\d+(?:\.\d+)?$/.test(requirementId)) {
       throw evidenceError("FOUNDATION_EVIDENCE_REQUIREMENT_ID_INVALID");
@@ -199,7 +384,9 @@ export function validateFoundationEvidence(csvText) {
     if (!PERMITTED_STATUSES.has(row.status)) {
       throw evidenceError(`FOUNDATION_EVIDENCE_STATUS_INVALID:${requirementId}`);
     }
-    assertWindowsEvidenceClassification(row);
+    assertTargetEvidenceClassification(row);
+    assertProtoBaselineClassification(row);
+    assertProductBoundary(row);
   }
 
   for (const requirementId of REQUIRED_FOUNDATION_REQUIREMENTS) {
@@ -213,22 +400,7 @@ export function validateFoundationEvidence(csvText) {
 async function readCommittedEvidence() {
   const root = await realpath(path.resolve(import.meta.dirname, ".."));
   const evidencePath = path.join(root, "compliance/traceability/foundation.csv");
-  const metadata = await lstat(evidencePath).catch(() => null);
-  if (
-    metadata === null ||
-    !metadata.isFile() ||
-    metadata.isSymbolicLink() ||
-    metadata.size === 0 ||
-    metadata.size > MAX_EVIDENCE_BYTES
-  ) {
-    throw evidenceError("FOUNDATION_EVIDENCE_FILE_INVALID");
-  }
-  const bytes = await readFile(evidencePath);
-  try {
-    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
-  } catch {
-    throw evidenceError("FOUNDATION_EVIDENCE_FILE_INVALID");
-  }
+  return readStableEvidenceFile(evidencePath);
 }
 
 async function main() {
