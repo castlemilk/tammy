@@ -1,6 +1,6 @@
 # Tammy Core Business Accounting Suite Design
 
-**Status:** Approved in interactive design; written-spec review issues being addressed
+**Status:** Approved in interactive design and independent written-spec review
 **Date:** 2 August 2026  
 **Delivery model:** Vertical slices on a shared accounting kernel  
 **Product model:** Local-first, one organisation per encrypted workspace  
