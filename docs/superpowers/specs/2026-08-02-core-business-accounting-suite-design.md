@@ -221,11 +221,25 @@ A schema change and its generated output, migration, compatibility test, and con
 
 Protobuf defines type and semantic meaning; it does not replace the foundation audit chain's RFC 8785 canonical encoding.
 
-The core applies these exact rules:
+The schema fingerprint is the lower-case hexadecimal SHA-256 of `descriptors.pb` produced by the repository-pinned Buf CLI using:
+
+```text
+buf build --as-file-descriptor-set \
+  --exclude-source-info \
+  --exclude-source-retention-options \
+  --output descriptors.pb
+```
+
+The release manifest stores the descriptor byte length, SHA-256, Buf CLI version, module identity, and Git source revision. Consumers and standalone verifiers compare the shipped hash and hash the exact retained descriptor bytes; they do not rebuild descriptors with an arbitrary local compiler.
+
+The core applies these exact request-normalization rules:
 
 - Connect handlers reject unknown fields on persistent command requests. A newer client cannot silently make an older core hash or execute only the fields it understands.
 - The semantic idempotency hash covers the fully-qualified message name, schema fingerprint, and the RFC 8785 encoding of the normalized Protobuf JSON mapping after authentication metadata and idempotency key are removed.
-- Default and absent values are normalized according to each field's declared presence semantics before hashing. Map fields are prohibited in hash-bearing command and audit payloads unless the enclosing specification defines a stable repeated-entry replacement.
+- Normalized Protobuf JSON uses proto field names, emits an explicitly present optional scalar or selected oneof even when it has the default value, omits an absent presence-aware field, and omits an implicit-presence scalar whose value is its default. It uses the standard decimal-string mapping for 64-bit integers and the standard symbolic enum name.
+- Timestamps must be valid and are normalized to UTC with exactly 0, 3, 6, or 9 fractional digits as required to represent nanos. Durations and civil dates are validated and written in their one declared form.
+- Repeated-field order is semantically significant. `FieldMask.paths` is the sole generic exception: paths are validated, deduplicated, and sorted by UTF-8 byte order before hashing. Set-like application fields use an explicitly sorted repeated-entry message in their RPC specification.
+- Map fields and `google.protobuf.Any` are prohibited in hash-bearing command and audit payloads. Floating-point fields are prohibited in financial commands.
 - An audit event has a typed Protobuf payload, but its chain bytes remain the predecessor's RFC 8785 canonical event representation. The canonical event includes the Protobuf type URL, schema fingerprint, and normalized JSON payload.
 - Evidence bundles retain `payload.pb` as the exact stored bytes, `payload.json` as the RFC 8785 canonical Protobuf JSON view, and `descriptors.pb` as the transitive `FileDescriptorSet` needed to interpret that payload. The manifest hashes the stored bytes; a verifier never reserializes a payload to decide whether its hash is valid.
 - Every release retains its descriptor-set fingerprint and compatible decoder fixtures. Removing a field reserves its name and number; evidence decoding preserves unknown binary fields when it reads and re-emits a stored binary payload.
@@ -406,7 +420,7 @@ Source modules submit `PostingIntent` messages. They do not submit arbitrary jou
 
 Posted journals cannot be edited or deleted. Corrections create a linked reversing journal and, when required, one linked replacement journal. Reasons are mandatory. A journal has at most one direct reversal and one correction replacement.
 
-Closing a period blocks every new source posting, manual journal, allocation tax fact, or reversal dated on or before the close date. Reopening requires a workspace administrator, recent TOTP, and a reason. Reopening supersedes affected pre-dispatch BAS workpapers and is fully audited.
+Closing a period blocks every new source posting, manual journal, allocation tax fact, or reversal dated on or before the close date. Reopening requires a workspace administrator, recent TOTP, and a reason. Reopening invokes `TaxReportImpactPort` as a source change: an affected `DRAFT` calculation becomes outdated; an affected `LOCALLY_VALIDATED`, `DECLARED`, or `SUBMISSION_PREPARED` report returns to `DRAFT`; validation/declaration artefacts are retained as superseded evidence; and a prepared transmission is cancelled. It does not move the report itself to terminal `SUPERSEDED` unless the separate identity/configuration/ownership/rule conditions in Section 11.3 apply.
 
 ### 6.4 Ledger reconciliation invariants
 
@@ -810,13 +824,26 @@ assets = liabilities + contributed/retained equity + current-year earnings
 
 Retained earnings is the posted retained-earnings account. Current-year earnings is derived and is not double-counted when an explicit year-end journal closes prior-year income/expense accounts. A year-end close wizard previews and posts an ordinary auditable journal; it never changes report formula or history.
 
-The indirect cash-flow statement starts with net profit, adds configured non-cash profit-and-loss adjustments, and applies signed changes in non-cash balance-sheet accounts according to each account's operating, investing, financing, or excluded classification. Transfers between cash accounts are excluded. Its final check is:
+Every posted journal that contains a cash-account line also contains immutable `CashFlowFact` components emitted by its posting policy. A component has cash account, source line, operating/investing/financing/transfer category, signed debit-positive cash amount, and classification version. Components for each cash line must sum exactly to that line. System source policies create them deterministically. A manual journal involving cash requires the user to allocate and classify components before posting. A journal with no cash line emits no cash-flow fact, so an asset acquired through a loan cannot appear as both investing outflow and financing inflow.
+
+The indirect cash-flow statement starts with net profit. Its operating reconciliation then:
+
+- adds the period signed balance of every profit-and-loss account classified as a non-cash adjustment; this adds debit expenses such as depreciation and subtracts credit gains;
+- adds `-Δ signed_balance` for each non-cash balance-sheet account classified as operating working capital; the same formula yields an outflow for an increased debit asset and an inflow for an increased credit liability;
+- excludes cash accounts, current-year earnings, retained earnings, and balance-sheet counterparts already marked non-cash; and
+- must equal the sum of operating `CashFlowFact` amounts.
+
+Investing and financing totals are the sums of their `CashFlowFact` amounts, not raw balance-sheet movements. Transfer facts must net to zero across included cash accounts and are omitted from category totals. Contra and non-cash counterpart accounts require an explicit `NONCASH_EXCLUDED` or working-capital classification; the report blocks on a missing or contradictory classification.
+
+The final checks are:
 
 ```text
 opening cash + operating cash + investing cash + financing cash = closing cash
+operating indirect reconciliation = operating CashFlowFact total
+all CashFlowFact amounts = closing cash - opening cash
 ```
 
-Missing or conflicting account classifications are blocking report validations, not an “unclassified” plug. Disposal gains/losses and other non-cash items require explicit account mappings and golden fixtures.
+Missing or conflicting account classifications are blocking report validations, not an “unclassified” plug. Disposal gains/losses, depreciation, debt-funded asset acquisitions, owner contributions, loan principal, bank transfers, and other non-cash items have explicit golden fixtures.
 
 Aged reports calculate each source's outstanding amount from active credits and allocations as of the ageing date. Age is based on due date by default or issue date when explicitly selected. Boundary days belong to the older bucket only after they exceed the configured upper bound. Credits and overpayments appear separately and reconcile with control accounts.
 
