@@ -1,3 +1,5 @@
+import path from "node:path";
+
 import { FuseV1Options, FuseVersion } from "@electron/fuses";
 import { MakerSquirrel } from "@electron-forge/maker-squirrel";
 import { MakerZIP } from "@electron-forge/maker-zip";
@@ -5,11 +7,29 @@ import { FusesPlugin } from "@electron-forge/plugin-fuses";
 import { VitePlugin } from "@electron-forge/plugin-vite";
 import type { ForgeConfig } from "@electron-forge/shared-types";
 
+const packagedCoreSuffix = path.join(
+  "Contents",
+  "Resources",
+  "core",
+  `darwin-${process.arch}`,
+  "tammy-core",
+);
+
+function isManifestBoundCore(file: string): boolean {
+  return path.isAbsolute(file) && file.endsWith(`${path.sep}${packagedCoreSuffix}`);
+}
+
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
     executableName: "Tammy",
     extraResource: ["resources/core", "resources/build"],
+    osxSign: {
+      identity: "-",
+      identityValidation: false,
+      ignore: isManifestBoundCore,
+      optionsForFile: () => ({ hardenedRuntime: false, timestamp: "none" }),
+    },
   },
   makers: [
     new MakerSquirrel(
