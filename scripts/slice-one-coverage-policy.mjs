@@ -1,3 +1,5 @@
+import { E2E_IDEMPOTENCY_MODES } from "./e2e-coverage-vocabulary.mjs";
+
 const ALLOWED = "planned_allowed";
 const DENIED = "planned_permission_denied";
 const NOT_APPLICABLE = "not_applicable_pre_authentication";
@@ -18,6 +20,13 @@ const OUTCOMES = {
   session_action: ["state_predicate_election", "terminal_state_after_success"],
   setup_journal: ["exact_replay", "changed_request_conflict"],
 };
+
+if (
+  Object.keys(OUTCOMES).length !== E2E_IDEMPOTENCY_MODES.length ||
+  E2E_IDEMPOTENCY_MODES.some((mode) => !Object.hasOwn(OUTCOMES, mode))
+) {
+  throw new Error("SLICE_ONE_IDEMPOTENCY_MODES_INCONSISTENT");
+}
 
 function roles(...allowedRoles) {
   return Object.fromEntries(
@@ -720,5 +729,3 @@ export const SLICE_ONE_RPC_POLICY = {
     list: ["empty", "populated", "filtered", "paginated"],
   }),
 };
-
-export const SLICE_ONE_IDEMPOTENCY_MODES = Object.freeze(Object.keys(OUTCOMES));

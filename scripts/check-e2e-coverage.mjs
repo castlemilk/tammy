@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { fromBinary } from "@bufbuild/protobuf";
 import { FileDescriptorSetSchema } from "@bufbuild/protobuf/wkt";
 import { parseDocument } from "yaml";
+import { E2E_IDEMPOTENCY_MODES } from "./e2e-coverage-vocabulary.mjs";
 
 const REQUIRED_ROLES = ["workspace_admin", "business_preparer", "business_lodger", "auditor"];
 const REVIEWED_EXCEPTION = "not_applicable_pre_workspace_system_query";
@@ -84,15 +85,7 @@ function hasCompleteListMetadata(value) {
 function hasCompleteIdempotencyMetadata(value) {
   return (
     hasExactKeys(value, ["mode", "outcomes"]) &&
-    [
-      "fresh_challenge",
-      "persistent_command",
-      "query",
-      "recovery_operation",
-      "restore",
-      "session_action",
-      "setup_journal",
-    ].includes(value.mode) &&
+    E2E_IDEMPOTENCY_MODES.includes(value.mode) &&
     isUniqueStringArray(
       value.outcomes,
       (outcome) => matchesPattern(outcome, STABLE_TOKEN_PATTERN),

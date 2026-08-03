@@ -326,11 +326,16 @@ func TestSliceOnePublicIdentifiersRequireCanonicalUUIDv7(t *testing.T) {
 		tammyv1.File_tammy_v1_events_proto,
 		tammyv1.File_tammy_v1_fixtures_proto,
 	}
-	exemptIdentifiers := map[protoreflect.FullName]struct{}{
-		"tammy.v1.ApprovedFileRef.capability_id": {},
-		"tammy.v1.AuditExportJob.signing_key_id": {},
-		"tammy.v1.FieldViolation.rule_id":        {},
+	type boundedStringRules struct {
+		minLen uint64
+		maxLen uint64
 	}
+	exemptIdentifiers := map[protoreflect.FullName]boundedStringRules{
+		"tammy.v1.ApprovedFileRef.capability_id": {minLen: 16, maxLen: 256},
+		"tammy.v1.AuditExportJob.signing_key_id": {maxLen: 128},
+		"tammy.v1.FieldViolation.rule_id":        {minLen: 1, maxLen: 96},
+	}
+	seenExemptIdentifiers := make(map[protoreflect.FullName]struct{}, len(exemptIdentifiers))
 
 	var visitMessages func(protoreflect.MessageDescriptors)
 	visitMessages = func(messages protoreflect.MessageDescriptors) {
@@ -342,27 +347,62 @@ func TestSliceOnePublicIdentifiersRequireCanonicalUUIDv7(t *testing.T) {
 					continue
 				}
 				name := string(field.Name())
-				_, exempt := exemptIdentifiers[field.FullName()]
-				isPublicIdentifier := !exempt && (name == "id" ||
+				exemptRules, exempt := exemptIdentifiers[field.FullName()]
+				isPublicScalarIdentifier := !field.IsList() && !exempt && (name == "id" ||
 					name == "idempotency_key" ||
 					name == "operation_key" ||
 					strings.HasSuffix(name, "_id"))
+				isPublicRepeatedIdentifier := field.IsList() && !exempt && strings.HasSuffix(name, "_ids")
 
-				var stringRules *validate.StringRules
+				var fieldRules *validate.FieldRules
 				options, ok := field.Options().(*descriptorpb.FieldOptions)
 				if ok && proto.HasExtension(options, validate.E_Field) {
 					if rules, rulesOK := proto.GetExtension(options, validate.E_Field).(*validate.FieldRules); rulesOK {
-						stringRules = rules.GetString_()
+						fieldRules = rules
 					}
 				}
-				if stringRules != nil && stringRules.GetUuid() {
-					t.Errorf("%s uses a generic UUID constraint", field.FullName())
+				scalarStringRules := fieldRules.GetString_()
+				var repeatedItemStringRules *validate.StringRules
+				if repeatedRules := fieldRules.GetRepeated(); repeatedRules != nil && repeatedRules.GetItems() != nil {
+					repeatedItemStringRules = repeatedRules.GetItems().GetString_()
 				}
-				if isPublicIdentifier {
-					if stringRules == nil {
+				if scalarStringRules != nil && scalarStringRules.GetUuid() {
+					t.Errorf("%s uses a generic scalar UUID constraint", field.FullName())
+				}
+				if repeatedItemStringRules != nil && repeatedItemStringRules.GetUuid() {
+					t.Errorf("%s uses a generic repeated-item UUID constraint", field.FullName())
+				}
+				if exempt {
+					seenExemptIdentifiers[field.FullName()] = struct{}{}
+					if field.IsList() {
+						t.Errorf("UUIDv7 exemption %s unexpectedly identifies a repeated field", field.FullName())
+					} else if scalarStringRules == nil {
+						t.Errorf("UUIDv7 exemption %s is missing bounded string validation", field.FullName())
+					} else if scalarStringRules.GetMinLen() != exemptRules.minLen || scalarStringRules.GetMaxLen() != exemptRules.maxLen {
+						t.Errorf(
+							"UUIDv7 exemption %s bounds = %d..%d, want %d..%d",
+							field.FullName(),
+							scalarStringRules.GetMinLen(),
+							scalarStringRules.GetMaxLen(),
+							exemptRules.minLen,
+							exemptRules.maxLen,
+						)
+					} else if scalarStringRules.GetPattern() != "" {
+						t.Errorf("UUIDv7 exemption %s unexpectedly uses pattern %q", field.FullName(), scalarStringRules.GetPattern())
+					}
+				}
+				if isPublicScalarIdentifier {
+					if scalarStringRules == nil {
 						t.Errorf("%s is missing a string validation rule", field.FullName())
-					} else if stringRules.GetPattern() != canonicalUUIDv7Pattern {
-						t.Errorf("%s UUIDv7 pattern = %q, want %q", field.FullName(), stringRules.GetPattern(), canonicalUUIDv7Pattern)
+					} else if scalarStringRules.GetPattern() != canonicalUUIDv7Pattern {
+						t.Errorf("%s UUIDv7 pattern = %q, want %q", field.FullName(), scalarStringRules.GetPattern(), canonicalUUIDv7Pattern)
+					}
+				}
+				if isPublicRepeatedIdentifier {
+					if repeatedItemStringRules == nil {
+						t.Errorf("%s is missing a repeated-item string validation rule", field.FullName())
+					} else if repeatedItemStringRules.GetPattern() != canonicalUUIDv7Pattern {
+						t.Errorf("%s repeated-item UUIDv7 pattern = %q, want %q", field.FullName(), repeatedItemStringRules.GetPattern(), canonicalUUIDv7Pattern)
 					}
 				}
 			}
@@ -371,6 +411,11 @@ func TestSliceOnePublicIdentifiersRequireCanonicalUUIDv7(t *testing.T) {
 	}
 	for _, file := range files {
 		visitMessages(file.Messages())
+	}
+	for exemptIdentifier := range exemptIdentifiers {
+		if _, seen := seenExemptIdentifiers[exemptIdentifier]; !seen {
+			t.Errorf("UUIDv7 exemption %s does not identify a string field", exemptIdentifier)
+		}
 	}
 
 	pattern := regexp.MustCompile(canonicalUUIDv7Pattern)
@@ -385,6 +430,48 @@ func TestSliceOnePublicIdentifiersRequireCanonicalUUIDv7(t *testing.T) {
 	} {
 		if pattern.MatchString(invalid) {
 			t.Errorf("canonical UUIDv7 pattern accepted %q", invalid)
+		}
+	}
+}
+
+func TestGetGeneralLedgerAccountIDsRequireCanonicalUUIDv7(t *testing.T) {
+	message := tammyv1.File_tammy_v1_accounting_proto.Messages().ByName("GetGeneralLedgerRequest")
+	if message == nil {
+		t.Fatal("GetGeneralLedgerRequest descriptor not found")
+	}
+	field := message.Fields().ByName("account_ids")
+	if field == nil {
+		t.Fatal("GetGeneralLedgerRequest.account_ids descriptor not found")
+	}
+	options, ok := field.Options().(*descriptorpb.FieldOptions)
+	if !ok || !proto.HasExtension(options, validate.E_Field) {
+		t.Fatal("GetGeneralLedgerRequest.account_ids validation rules not found")
+	}
+	fieldRules, ok := proto.GetExtension(options, validate.E_Field).(*validate.FieldRules)
+	if !ok {
+		t.Fatal("GetGeneralLedgerRequest.account_ids validation rules have an unexpected type")
+	}
+	itemRules := fieldRules.GetRepeated().GetItems().GetString_()
+	if itemRules == nil {
+		t.Fatal("GetGeneralLedgerRequest.account_ids repeated-item string rules not found")
+	}
+	if itemRules.GetUuid() {
+		t.Fatal("GetGeneralLedgerRequest.account_ids uses a generic UUID constraint")
+	}
+	if got := itemRules.GetPattern(); got != canonicalUUIDv7Pattern {
+		t.Fatalf("GetGeneralLedgerRequest.account_ids UUIDv7 pattern = %q, want %q", got, canonicalUUIDv7Pattern)
+	}
+
+	pattern := regexp.MustCompile(itemRules.GetPattern())
+	if !pattern.MatchString("01890f3c-7b2e-7cc4-98c4-dc0c0c07398f") {
+		t.Fatal("GetGeneralLedgerRequest.account_ids rejected a lowercase version-7 identifier")
+	}
+	for _, invalid := range []string{
+		"01890f3c-7b2e-4cc4-98c4-dc0c0c07398f",
+		"01890F3C-7B2E-7CC4-98C4-DC0C0C07398F",
+	} {
+		if pattern.MatchString(invalid) {
+			t.Errorf("GetGeneralLedgerRequest.account_ids accepted %q", invalid)
 		}
 	}
 }

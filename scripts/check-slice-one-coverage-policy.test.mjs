@@ -32,6 +32,12 @@ test("Slice 1 coverage declares the exact normative policy for all 65 RPCs", asy
   }
 });
 
+test("Slice 1 policy does not export a duplicate idempotency-mode vocabulary", async () => {
+  const policyModule = await import("./slice-one-coverage-policy.mjs");
+
+  assert.equal(Object.hasOwn(policyModule, "SLICE_ONE_IDEMPOTENCY_MODES"), false);
+});
+
 test("coverage conflict failures match every public request concurrency field", async () => {
   const protoPaths = [
     "proto/tammy/v1/workspace.proto",

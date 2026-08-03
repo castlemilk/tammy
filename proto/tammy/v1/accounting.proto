@@ -911,7 +911,7 @@ message GetGeneralLedgerRequest {
     max_items: 200
     unique: true
     items: {
-      string: {uuid: true}
+      string: {pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"}
     }
   }];
 

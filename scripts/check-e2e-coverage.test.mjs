@@ -6,6 +6,7 @@ import test from "node:test";
 import { create, toBinary } from "@bufbuild/protobuf";
 import { FileDescriptorSetSchema } from "@bufbuild/protobuf/wkt";
 import { stringify } from "yaml";
+import { E2E_IDEMPOTENCY_MODES } from "./e2e-coverage-vocabulary.mjs";
 
 const RPC = "tammy.v1.WorkspaceService.GetWorkspaceState";
 const SYSTEM_RPC = "tammy.v1.SystemService.GetDiagnostics";
@@ -354,7 +355,7 @@ test("business RPC coverage requires complete deterministic metadata", async () 
 
 test("business RPC coverage accepts every normative idempotency class", async () => {
   const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
-  const modes = [
+  const expectedModes = [
     "fresh_challenge",
     "persistent_command",
     "query",
@@ -363,8 +364,10 @@ test("business RPC coverage accepts every normative idempotency class", async ()
     "session_action",
     "setup_journal",
   ];
+  assert.ok(Object.isFrozen(E2E_IDEMPOTENCY_MODES));
+  assert.deepEqual(E2E_IDEMPOTENCY_MODES, expectedModes);
 
-  for (const mode of modes) {
+  for (const mode of E2E_IDEMPOTENCY_MODES) {
     const input = validInput();
     input.coverage.rpcs[RPC].idempotency = { mode, outcomes: ["not_applicable"] };
     assert.doesNotThrow(() => checkE2ECoverage(input), mode);
