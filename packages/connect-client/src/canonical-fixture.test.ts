@@ -75,4 +75,30 @@ describe("canonical protobuf JSON fixtures", () => {
       expect(semanticHashV1(normalized)).toBe(fixtureCase.expectedSemanticHashHex);
     });
   }
+
+  test("semantic vector relationships", () => {
+    const remainingNames = new Set([
+      "semantic-v1",
+      "non-bmp-control-string",
+      "presence-absent",
+      "presence-explicit-empty",
+      "metadata-only-a",
+      "metadata-only-b",
+      "semantic-change",
+    ]);
+    for (const fixtureCase of fixture.semanticHashCases) {
+      expect(remainingNames.delete(fixtureCase.name)).toBe(true);
+    }
+    expect(remainingNames.size).toBe(0);
+    const hashes = new Map(
+      fixture.semanticHashCases.map((fixtureCase) => [
+        fixtureCase.name,
+        fixtureCase.expectedSemanticHashHex,
+      ]),
+    );
+    expect(hashes.size).toBe(7);
+    expect(hashes.get("metadata-only-a")).toBe(hashes.get("metadata-only-b"));
+    expect(hashes.get("presence-absent")).not.toBe(hashes.get("presence-explicit-empty"));
+    expect(hashes.get("metadata-only-a")).not.toBe(hashes.get("semantic-change"));
+  });
 });

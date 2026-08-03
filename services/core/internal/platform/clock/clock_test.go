@@ -30,3 +30,10 @@ func TestClockFunctionIsInjectableAndNormalizesUTC(t *testing.T) {
 		t.Fatalf("now = %s, calls = %d", got, calls)
 	}
 }
+
+func TestNilClockFunctionReturnsZeroTime(t *testing.T) {
+	var source clock.Func
+	if got := source.Now(); !got.IsZero() || got.Location() != time.UTC {
+		t.Fatalf("nil clock now = %s (%s), want zero UTC", got, got.Location())
+	}
+}

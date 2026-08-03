@@ -89,6 +89,17 @@ func TestGeneratorRejectsInvalidSourcesTimeAndEntropy(t *testing.T) {
 	}
 }
 
+func TestGeneratorRejectsTypedNilSources(t *testing.T) {
+	var source clock.Func
+	if _, err := ids.NewGenerator(source, bytes.NewReader(make([]byte, 10))); !errors.Is(err, ids.ErrInvalidSource) {
+		t.Fatalf("typed-nil clock error = %v, want %v", err, ids.ErrInvalidSource)
+	}
+	var entropy *bytes.Reader
+	if _, err := ids.NewGenerator(clock.NewFixed(time.UnixMilli(1)), entropy); !errors.Is(err, ids.ErrInvalidSource) {
+		t.Fatalf("typed-nil entropy error = %v, want %v", err, ids.ErrInvalidSource)
+	}
+}
+
 func TestGeneratorSerializesConcurrentEntropyReads(t *testing.T) {
 	entropy := &countingEntropy{}
 	generator, err := ids.NewGenerator(clock.NewFixed(time.UnixMilli(1)), entropy)

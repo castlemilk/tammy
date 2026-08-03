@@ -95,6 +95,85 @@
       "expectedMessageType": "tammy.v1.CanonicalRequest",
       "expectedSemanticHashVersion": "v1",
       "expectedSemanticHashHex": "8ecf80e82b6b928d2e2186507ed19b92aac2537ced274a65e98425b5f61512bc"
+    },
+    {
+      "name": "non-bmp-control-string",
+      "input": {
+        "optional_note": "\u0001music \ud834\udd1e\n\"\\end"
+      },
+      "expectedCanonicalJson": "{\"optional_note\":\"\\u0001music 𝄞\\n\\\"\\\\end\"}",
+      "expectedMessageType": "tammy.v1.CanonicalRequest",
+      "expectedSemanticHashVersion": "v1",
+      "expectedSemanticHashHex": "938661e4fb4c2457984b13df7c17ace9b3af322b01816b6ccbc8119052b53490"
+    },
+    {
+      "name": "presence-absent",
+      "input": {},
+      "expectedCanonicalJson": "{}",
+      "expectedMessageType": "tammy.v1.CanonicalRequest",
+      "expectedSemanticHashVersion": "v1",
+      "expectedSemanticHashHex": "fcc566e3cb253c8723551cc1ae2fb71d3d67a089b4dfb278959edfe06db742c1"
+    },
+    {
+      "name": "presence-explicit-empty",
+      "input": {
+        "optional_note": ""
+      },
+      "expectedCanonicalJson": "{\"optional_note\":\"\"}",
+      "expectedMessageType": "tammy.v1.CanonicalRequest",
+      "expectedSemanticHashVersion": "v1",
+      "expectedSemanticHashHex": "b35156df0b1aa8c465ff9cac35ec3f3d0fcfabcb3ebd886d1234828610ceba6f"
+    },
+    {
+      "name": "metadata-only-a",
+      "input": {
+        "command_context": {
+          "idempotency_key": "01890f3c-7b2e-7cc4-98c4-dc0c0c073992",
+          "authentication": {
+            "actor_user_id": "01890f3c-7b2e-7cc4-98c4-dc0c0c073990",
+            "session_id": "01890f3c-7b2e-7cc4-98c4-dc0c0c073991"
+          }
+        },
+        "optional_note": "stable"
+      },
+      "expectedCanonicalJson": "{\"command_context\":{\"authentication\":{\"actor_user_id\":\"01890f3c-7b2e-7cc4-98c4-dc0c0c073990\",\"session_id\":\"01890f3c-7b2e-7cc4-98c4-dc0c0c073991\"},\"idempotency_key\":\"01890f3c-7b2e-7cc4-98c4-dc0c0c073992\"},\"optional_note\":\"stable\"}",
+      "expectedMessageType": "tammy.v1.CanonicalRequest",
+      "expectedSemanticHashVersion": "v1",
+      "expectedSemanticHashHex": "4e339602cad8e18079f47898c2b46b82c48bd46394f3832e4a0d177fcf8ea776"
+    },
+    {
+      "name": "metadata-only-b",
+      "input": {
+        "command_context": {
+          "idempotency_key": "01890f3c-7b2e-7cc4-98c4-dc0c0c0739a2",
+          "authentication": {
+            "actor_user_id": "01890f3c-7b2e-7cc4-98c4-dc0c0c0739a0",
+            "session_id": "01890f3c-7b2e-7cc4-98c4-dc0c0c0739a1"
+          }
+        },
+        "optional_note": "stable"
+      },
+      "expectedCanonicalJson": "{\"command_context\":{\"authentication\":{\"actor_user_id\":\"01890f3c-7b2e-7cc4-98c4-dc0c0c0739a0\",\"session_id\":\"01890f3c-7b2e-7cc4-98c4-dc0c0c0739a1\"},\"idempotency_key\":\"01890f3c-7b2e-7cc4-98c4-dc0c0c0739a2\"},\"optional_note\":\"stable\"}",
+      "expectedMessageType": "tammy.v1.CanonicalRequest",
+      "expectedSemanticHashVersion": "v1",
+      "expectedSemanticHashHex": "4e339602cad8e18079f47898c2b46b82c48bd46394f3832e4a0d177fcf8ea776"
+    },
+    {
+      "name": "semantic-change",
+      "input": {
+        "command_context": {
+          "idempotency_key": "01890f3c-7b2e-7cc4-98c4-dc0c0c0739a2",
+          "authentication": {
+            "actor_user_id": "01890f3c-7b2e-7cc4-98c4-dc0c0c0739a0",
+            "session_id": "01890f3c-7b2e-7cc4-98c4-dc0c0c0739a1"
+          }
+        },
+        "optional_note": "changed"
+      },
+      "expectedCanonicalJson": "{\"command_context\":{\"authentication\":{\"actor_user_id\":\"01890f3c-7b2e-7cc4-98c4-dc0c0c0739a0\",\"session_id\":\"01890f3c-7b2e-7cc4-98c4-dc0c0c0739a1\"},\"idempotency_key\":\"01890f3c-7b2e-7cc4-98c4-dc0c0c0739a2\"},\"optional_note\":\"changed\"}",
+      "expectedMessageType": "tammy.v1.CanonicalRequest",
+      "expectedSemanticHashVersion": "v1",
+      "expectedSemanticHashHex": "0b8bf0bf5b1f743cd15481679d9fe3487c71f7cb11459246ebd6cbf8e85cbe07"
     }
   ],
   "unknownFieldCases": [

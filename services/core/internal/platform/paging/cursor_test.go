@@ -32,7 +32,7 @@ func TestSignedCursorIsDeterministicOpaqueAndRoundTrips(t *testing.T) {
 	if first != second || strings.Contains(first, "=") || strings.Contains(first, cursor.Snapshot) {
 		t.Fatalf("cursor is not deterministic opaque unpadded Base64URL: %q / %q", first, second)
 	}
-	decoded, err := codec.Decode(first)
+	decoded, err := codec.Decode(first, cursor.QueryHash)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,13 +74,40 @@ func TestSignedCursorRejectsTamperingWrongKeyAndNonCanonicalEncoding(t *testing.
 		"invalid_base64": "not+a+cursor",
 	} {
 		t.Run(name, func(t *testing.T) {
-			if _, err := codec.Decode(candidate); !errors.Is(err, paging.ErrInvalidCursor) || err.Error() != paging.ErrInvalidCursor.Error() {
+			if _, err := codec.Decode(candidate, sha256.Sum256([]byte("query"))); !errors.Is(err, paging.ErrInvalidCursor) || err.Error() != paging.ErrInvalidCursor.Error() {
 				t.Fatalf("error = %v, want stable %v", err, paging.ErrInvalidCursor)
 			}
 		})
 	}
-	if _, err := wrongCodec.Decode(token); !errors.Is(err, paging.ErrInvalidCursor) {
+	if _, err := wrongCodec.Decode(token, sha256.Sum256([]byte("query"))); !errors.Is(err, paging.ErrInvalidCursor) {
 		t.Fatalf("wrong-key error = %v, want %v", err, paging.ErrInvalidCursor)
+	}
+}
+
+func TestSignedCursorRejectsDifferentOrMissingExpectedQueryHash(t *testing.T) {
+	codec, err := paging.NewCodec(bytes.Repeat([]byte{0x42}, 32))
+	if err != nil {
+		t.Fatal(err)
+	}
+	queryA := sha256.Sum256([]byte("organisation=a"))
+	queryB := sha256.Sum256([]byte("organisation=b"))
+	token, err := codec.Encode(paging.Cursor{
+		Snapshot:  "revision:1",
+		Position:  "line:a",
+		QueryHash: queryA,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, expected := range map[string][sha256.Size]byte{
+		"different_query": queryB,
+		"missing_query":   {},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if _, err := codec.Decode(token, expected); !errors.Is(err, paging.ErrInvalidCursor) || err.Error() != paging.ErrInvalidCursor.Error() {
+				t.Fatalf("error = %v, want stable %v", err, paging.ErrInvalidCursor)
+			}
+		})
 	}
 }
 

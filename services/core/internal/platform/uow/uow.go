@@ -4,9 +4,14 @@ package uow
 import (
 	"context"
 	"errors"
+	"reflect"
 )
 
-var ErrInvalidWork = errors.New("invalid unit of work callback")
+var (
+	ErrInvalidStarter     = errors.New("invalid unit of work starter")
+	ErrInvalidTransaction = errors.New("invalid unit of work transaction")
+	ErrInvalidWork        = errors.New("invalid unit of work callback")
+)
 
 // Mode selects a write transaction or a stable read snapshot.
 type Mode uint8
@@ -82,15 +87,29 @@ func (unit *UnitOfWork[Repositories]) run(
 	if work == nil {
 		return ErrInvalidWork
 	}
+	if unit == nil || isNilInterface(unit.starter) {
+		return ErrInvalidStarter
+	}
 	transaction, err := unit.starter.Begin(ctx, mode)
 	if err != nil {
 		return err
 	}
+	if isNilInterface(transaction) {
+		return ErrInvalidTransaction
+	}
 	rollbackContext := context.WithoutCancel(ctx)
 	finished := false
+	rollbackClaimed := false
+	rollback := func() error {
+		if rollbackClaimed {
+			return nil
+		}
+		rollbackClaimed = true
+		return transaction.Rollback(rollbackContext)
+	}
 	defer func() {
 		if !finished {
-			_ = transaction.Rollback(rollbackContext)
+			_ = rollback()
 		}
 	}()
 
@@ -99,15 +118,28 @@ func (unit *UnitOfWork[Repositories]) run(
 		repositories:  transaction.Repositories(),
 	}
 	if err := work(ctx, scope); err != nil {
-		rollbackErr := transaction.Rollback(rollbackContext)
+		rollbackErr := rollback()
 		finished = true
 		return errors.Join(err, rollbackErr)
 	}
 	if err := transaction.Commit(ctx); err != nil {
-		rollbackErr := transaction.Rollback(rollbackContext)
+		rollbackErr := rollback()
 		finished = true
 		return errors.Join(err, rollbackErr)
 	}
 	finished = true
 	return nil
+}
+
+func isNilInterface(value any) bool {
+	if value == nil {
+		return true
+	}
+	reflected := reflect.ValueOf(value)
+	switch reflected.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
+		return reflected.IsNil()
+	default:
+		return false
+	}
 }

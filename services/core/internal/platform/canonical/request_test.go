@@ -341,30 +341,60 @@ func TestCrossLanguageSemanticHashFixture(t *testing.T) {
 	if err := json.Unmarshal(fixtureBytes, &fixture); err != nil {
 		t.Fatal(err)
 	}
-	if len(fixture.SemanticHashCases) != 1 {
-		t.Fatalf("semantic hash fixture cases = %d, want 1", len(fixture.SemanticHashCases))
+	remainingNames := map[string]struct{}{
+		"semantic-v1":             {},
+		"non-bmp-control-string":  {},
+		"presence-absent":         {},
+		"presence-explicit-empty": {},
+		"metadata-only-a":         {},
+		"metadata-only-b":         {},
+		"semantic-change":         {},
 	}
-	fixtureCase := fixture.SemanticHashCases[0]
-	request := &tammyv1.CanonicalRequest{}
-	if err := canonical.UnmarshalStrict(fixtureCase.Input, request); err != nil {
-		t.Fatal(err)
+	const expectedCaseCount = 7
+	if len(fixture.SemanticHashCases) != expectedCaseCount {
+		t.Fatalf("semantic hash fixture cases = %d, want %d", len(fixture.SemanticHashCases), expectedCaseCount)
 	}
-	normalized, err := canonical.NormalizedJSON(request)
-	if err != nil {
-		t.Fatal(err)
+	hashes := make(map[string]string, expectedCaseCount)
+	for _, fixtureCase := range fixture.SemanticHashCases {
+		t.Run(fixtureCase.Name, func(t *testing.T) {
+			if _, ok := remainingNames[fixtureCase.Name]; !ok {
+				t.Fatalf("duplicate or unexpected semantic fixture %q", fixtureCase.Name)
+			}
+			delete(remainingNames, fixtureCase.Name)
+			request := &tammyv1.CanonicalRequest{}
+			if err := canonical.UnmarshalStrict(fixtureCase.Input, request); err != nil {
+				t.Fatal(err)
+			}
+			normalized, err := canonical.NormalizedJSON(request)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(normalized) != fixtureCase.ExpectedCanonicalJSON {
+				t.Fatalf("canonical JSON\nwant: %s\n got: %s", fixtureCase.ExpectedCanonicalJSON, normalized)
+			}
+			hash, err := canonical.SemanticHashV1(request)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if fixtureCase.ExpectedMessageType != string(request.ProtoReflect().Descriptor().FullName()) ||
+				fixtureCase.ExpectedSemanticHashVersion != hash.Version ||
+				fixtureCase.ExpectedSemanticHashHex != hash.Hex() {
+				t.Fatalf("semantic fixture mismatch: %#v, hash=%s/%s", fixtureCase, hash.Version, hash.Hex())
+			}
+			hashes[fixtureCase.Name] = hash.Hex()
+		})
 	}
-	if string(normalized) != fixtureCase.ExpectedCanonicalJSON {
-		t.Fatalf("canonical JSON\nwant: %s\n got: %s", fixtureCase.ExpectedCanonicalJSON, normalized)
+	if len(remainingNames) != 0 {
+		t.Fatalf("missing semantic fixtures: %v", remainingNames)
 	}
-	hash, err := canonical.SemanticHashV1(request)
-	if err != nil {
-		t.Fatal(err)
+	if hashes["metadata-only-a"] != hashes["metadata-only-b"] {
+		t.Fatal("metadata-only changes altered semantic hash")
 	}
-	if fixtureCase.Name != "semantic-v1" ||
-		fixtureCase.ExpectedMessageType != string(request.ProtoReflect().Descriptor().FullName()) ||
-		fixtureCase.ExpectedSemanticHashVersion != hash.Version ||
-		fixtureCase.ExpectedSemanticHashHex != hash.Hex() {
-		t.Fatalf("semantic fixture mismatch: %#v, hash=%s/%s", fixtureCase, hash.Version, hash.Hex())
+	if hashes["presence-absent"] == hashes["presence-explicit-empty"] {
+		t.Fatal("presence change did not alter semantic hash")
+	}
+	if hashes["metadata-only-a"] == hashes["semantic-change"] {
+		t.Fatal("semantic change did not alter semantic hash")
 	}
 }
 

@@ -194,12 +194,22 @@ func TestMoneyRequiresCanonicalCurrency(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Currency != "AUD" || got.MinorUnits != -125 {
+	if got.Currency() != "AUD" || got.MinorUnits() != -125 {
 		t.Fatalf("money = %#v", got)
 	}
 	for _, invalid := range []string{"", "aud", "AU", "AÜD", "AUDD"} {
 		if _, err := money.New(invalid, 0); !errors.Is(err, money.ErrInvalidCurrency) {
 			t.Fatalf("currency %q error = %v, want %v", invalid, err, money.ErrInvalidCurrency)
+		}
+	}
+}
+
+func TestMoneyRepresentationCannotBypassConstructorValidation(t *testing.T) {
+	typeOfMoney := reflect.TypeOf(money.Money{})
+	for index := range typeOfMoney.NumField() {
+		field := typeOfMoney.Field(index)
+		if field.IsExported() {
+			t.Fatalf("Money exposes mutable representation field %q", field.Name)
 		}
 	}
 }

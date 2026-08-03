@@ -19,8 +19,8 @@ var (
 
 // Money is a currency-qualified signed amount in minor units.
 type Money struct {
-	Currency   string
-	MinorUnits int64
+	currency   string
+	minorUnits int64
 }
 
 // New creates a signed money value with a canonical ISO-style currency code.
@@ -33,7 +33,17 @@ func New(currency string, minorUnits int64) (Money, error) {
 			return Money{}, ErrInvalidCurrency
 		}
 	}
-	return Money{Currency: currency, MinorUnits: minorUnits}, nil
+	return Money{currency: currency, minorUnits: minorUnits}, nil
+}
+
+// Currency returns the canonical currency code.
+func (money Money) Currency() string {
+	return money.currency
+}
+
+// MinorUnits returns the signed amount in minor units.
+func (money Money) MinorUnits() int64 {
+	return money.minorUnits
 }
 
 // CheckedAdd adds two signed integers and rejects overflow.

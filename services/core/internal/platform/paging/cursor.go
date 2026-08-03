@@ -60,9 +60,9 @@ func (codec *Codec) Encode(cursor Cursor) (string, error) {
 	return base64.RawURLEncoding.EncodeToString(raw), nil
 }
 
-// Decode verifies a cursor before returning its bound snapshot, position, and query hash.
-func (codec *Codec) Decode(token string) (Cursor, error) {
-	if token == "" || len(token) > maximumTokenLen {
+// Decode verifies a cursor and binds it to the caller's expected normalized query hash.
+func (codec *Codec) Decode(token string, expectedQueryHash [sha256.Size]byte) (Cursor, error) {
+	if token == "" || len(token) > maximumTokenLen || expectedQueryHash == [sha256.Size]byte{} {
 		return Cursor{}, ErrInvalidCursor
 	}
 	raw, err := base64.RawURLEncoding.DecodeString(token)
@@ -75,7 +75,7 @@ func (codec *Codec) Decode(token string) (Cursor, error) {
 		return Cursor{}, ErrInvalidCursor
 	}
 	cursor, ok := decodePayload(payload)
-	if !ok || !validCursor(cursor) {
+	if !ok || !validCursor(cursor) || !hmac.Equal(cursor.QueryHash[:], expectedQueryHash[:]) {
 		return Cursor{}, ErrInvalidCursor
 	}
 	return cursor, nil

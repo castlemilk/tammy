@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"io"
+	"reflect"
 	"regexp"
 	"sync"
 
@@ -30,10 +31,23 @@ type Generator struct {
 
 // NewGenerator creates a UUIDv7 generator without ambient time or randomness.
 func NewGenerator(source clock.Clock, entropy io.Reader) (*Generator, error) {
-	if source == nil || entropy == nil {
+	if isNilSource(source) || isNilSource(entropy) {
 		return nil, ErrInvalidSource
 	}
 	return &Generator{clock: source, entropy: entropy}, nil
+}
+
+func isNilSource(source any) bool {
+	if source == nil {
+		return true
+	}
+	reflected := reflect.ValueOf(source)
+	switch reflected.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
+		return reflected.IsNil()
+	default:
+		return false
+	}
 }
 
 // New returns one canonical lowercase UUIDv7 string.

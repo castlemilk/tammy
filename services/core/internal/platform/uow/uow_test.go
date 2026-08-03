@@ -44,6 +44,7 @@ type fakeTransaction struct {
 	commitCalls        int
 	rollbackCalls      int
 	rollbackContextErr error
+	rollbackPanic      any
 }
 
 func (transaction *fakeTransaction) TransactionID() string { return "tx-1" }
@@ -67,17 +68,29 @@ func (transaction *fakeTransaction) Commit(context.Context) error {
 func (transaction *fakeTransaction) Rollback(ctx context.Context) error {
 	transaction.rollbackCalls++
 	transaction.rollbackContextErr = ctx.Err()
+	if transaction.rollbackPanic != nil {
+		panic(transaction.rollbackPanic)
+	}
 	transaction.staged = persistedState{}
 	return nil
 }
 
 type fakeStarter struct {
-	store      *persistedState
-	beginErr   error
-	commitErr  error
-	beginCalls int
-	modes      []uow.Mode
-	last       *fakeTransaction
+	store         *persistedState
+	beginErr      error
+	commitErr     error
+	rollbackPanic any
+	beginCalls    int
+	modes         []uow.Mode
+	last          *fakeTransaction
+}
+
+type fixedStarter struct {
+	transaction uow.Transaction[fakeRepositories]
+}
+
+func (starter fixedStarter) Begin(context.Context, uow.Mode) (uow.Transaction[fakeRepositories], error) {
+	return starter.transaction, nil
 }
 
 func (starter *fakeStarter) Begin(_ context.Context, mode uow.Mode) (uow.Transaction[fakeRepositories], error) {
@@ -86,8 +99,28 @@ func (starter *fakeStarter) Begin(_ context.Context, mode uow.Mode) (uow.Transac
 	if starter.beginErr != nil {
 		return nil, starter.beginErr
 	}
-	starter.last = &fakeTransaction{store: starter.store, commitErr: starter.commitErr}
+	starter.last = &fakeTransaction{
+		store: starter.store, commitErr: starter.commitErr, rollbackPanic: starter.rollbackPanic,
+	}
 	return starter.last, nil
+}
+
+func TestUnitOfWorkClaimsRollbackBeforeInvokingIt(t *testing.T) {
+	panicMarker := &struct{}{}
+	starter := &fakeStarter{store: &persistedState{}, rollbackPanic: panicMarker}
+	unit := uow.New[fakeRepositories](starter)
+	defer func() {
+		if recovered := recover(); recovered != panicMarker {
+			t.Fatalf("recovered = %v, want rollback panic marker", recovered)
+		}
+		if starter.last.rollbackCalls != 1 {
+			t.Fatalf("rollback calls = %d, want exactly 1", starter.last.rollbackCalls)
+		}
+	}()
+	_ = unit.Do(context.Background(), func(context.Context, uow.TxScope[fakeRepositories]) error {
+		return errInjected
+	})
+	t.Fatal("unit of work returned after rollback panic")
 }
 
 func TestUnitOfWorkCommitsDomainIdempotencyAndAuditExactlyOnce(t *testing.T) {
@@ -194,6 +227,34 @@ func TestUnitOfWorkRejectsNilCallback(t *testing.T) {
 	unit := uow.New[fakeRepositories](&fakeStarter{store: &persistedState{}})
 	if err := unit.Do(context.Background(), nil); !errors.Is(err, uow.ErrInvalidWork) {
 		t.Fatalf("error = %v, want %v", err, uow.ErrInvalidWork)
+	}
+}
+
+func TestUnitOfWorkRejectsNilAndTypedNilStarters(t *testing.T) {
+	var typedNil *fakeStarter
+	starters := []uow.Starter[fakeRepositories]{nil, typedNil}
+	for index, starter := range starters {
+		unit := uow.New[fakeRepositories](starter)
+		err := unit.Do(context.Background(), func(context.Context, uow.TxScope[fakeRepositories]) error {
+			return nil
+		})
+		if !errors.Is(err, uow.ErrInvalidStarter) {
+			t.Fatalf("starter %d error = %v, want %v", index, err, uow.ErrInvalidStarter)
+		}
+	}
+}
+
+func TestUnitOfWorkRejectsNilAndTypedNilTransactions(t *testing.T) {
+	var typedNil *fakeTransaction
+	transactions := []uow.Transaction[fakeRepositories]{nil, typedNil}
+	for index, transaction := range transactions {
+		unit := uow.New[fakeRepositories](fixedStarter{transaction: transaction})
+		err := unit.Do(context.Background(), func(context.Context, uow.TxScope[fakeRepositories]) error {
+			return nil
+		})
+		if !errors.Is(err, uow.ErrInvalidTransaction) {
+			t.Fatalf("transaction %d error = %v, want %v", index, err, uow.ErrInvalidTransaction)
+		}
 	}
 }
 

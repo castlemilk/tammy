@@ -12,6 +12,9 @@ type Clock interface {
 type Func func() time.Time
 
 func (function Func) Now() time.Time {
+	if function == nil {
+		return time.Time{}
+	}
 	return function().UTC()
 }
 
