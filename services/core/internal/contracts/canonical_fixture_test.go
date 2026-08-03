@@ -25,6 +25,7 @@ type canonicalFixtureDocument struct {
 	SchemaVersion     int                           `json:"schemaVersion"`
 	MessageType       string                        `json:"messageType"`
 	Cases             []canonicalFixtureCase        `json:"cases"`
+	SemanticHashCases []json.RawMessage             `json:"semanticHashCases"`
 	UnknownFieldCases []canonicalUnknownFixtureCase `json:"unknownFieldCases"`
 }
 

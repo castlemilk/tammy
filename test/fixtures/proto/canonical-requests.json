@@ -66,6 +66,37 @@
       }
     }
   ],
+  "semanticHashCases": [
+    {
+      "name": "semantic-v1",
+      "input": {
+        "command_context": {
+          "idempotency_key": "01890f3c-7b2e-7cc4-98c4-dc0c0c07398f",
+          "authentication": {
+            "actor_user_id": "01890f3c-7b2e-7cc4-98c4-dc0c0c073980",
+            "session_id": "01890f3c-7b2e-7cc4-98c4-dc0c0c073981"
+          },
+          "fresh_factor": {
+            "assertion_id": "01890f3c-7b2e-7cc4-98c4-dc0c0c073982",
+            "purpose": "post_journal",
+            "asserted_at": "2026-08-03T10:11:12+10:00"
+          }
+        },
+        "explicit_default_flag": false,
+        "update_mask": "legalName,displayName,legalName",
+        "ordered_values": ["second", "first", "second"],
+        "signed_units": "-9223372036854775808",
+        "observed_at": "2026-08-03T10:11:12.120000+10:00",
+        "account_status": "ACCOUNT_STATUS_ARCHIVED",
+        "explicit_zero": "0",
+        "optional_note": ""
+      },
+      "expectedCanonicalJson": "{\"account_status\":\"ACCOUNT_STATUS_ARCHIVED\",\"command_context\":{\"authentication\":{\"actor_user_id\":\"01890f3c-7b2e-7cc4-98c4-dc0c0c073980\",\"session_id\":\"01890f3c-7b2e-7cc4-98c4-dc0c0c073981\"},\"fresh_factor\":{\"asserted_at\":\"2026-08-03T00:11:12Z\",\"assertion_id\":\"01890f3c-7b2e-7cc4-98c4-dc0c0c073982\",\"purpose\":\"post_journal\"},\"idempotency_key\":\"01890f3c-7b2e-7cc4-98c4-dc0c0c07398f\"},\"explicit_default_flag\":false,\"explicit_zero\":\"0\",\"observed_at\":\"2026-08-03T00:11:12.120Z\",\"optional_note\":\"\",\"ordered_values\":[\"second\",\"first\",\"second\"],\"signed_units\":\"-9223372036854775808\",\"update_mask\":\"displayName,legalName\"}",
+      "expectedMessageType": "tammy.v1.CanonicalRequest",
+      "expectedSemanticHashVersion": "v1",
+      "expectedSemanticHashHex": "8ecf80e82b6b928d2e2186507ed19b92aac2537ced274a65e98425b5f61512bc"
+    }
+  ],
   "unknownFieldCases": [
     {
       "name": "reject-unknown-field",
