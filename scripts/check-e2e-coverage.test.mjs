@@ -25,7 +25,11 @@ function validInput() {
           preload: "getWorkspaceState",
           cases: ["foundation/offline-ready"],
           projections: ["workspace_state"],
+          routes: ["/unlock"],
           roles: Object.fromEntries(ROLES.map((role) => [role, "allowed"])),
+          principalFailures: ["AUTHENTICATION_REQUIRED"],
+          list: { states: ["found"] },
+          idempotency: { mode: "query", outcomes: ["not_applicable"] },
         },
       },
       transitions: {},
@@ -65,7 +69,7 @@ function futureInput() {
     roles: Object.fromEntries(ROLES.map((role) => [role, "planned_allowed"])),
     principalFailures: ["PERMISSION_DENIED"],
     list: { states: ["not_applicable_single_query"] },
-    idempotency: { cases: ["not_applicable_query"] },
+    idempotency: { mode: "query", outcomes: ["not_applicable"] },
   };
   input.preloadMethods = [];
   return input;
@@ -216,6 +220,138 @@ test("production mode rejects declared future transition coverage", async () => 
 
   assert.throws(() => checkE2ECoverage(input), {
     message: "E2E_COVERAGE_FUTURE_PROMOTION_REQUIRED",
+  });
+});
+
+test("production RPC coverage requires an executed case", async () => {
+  const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
+  const input = validInput();
+  input.coverage.rpcs[RPC].cases = [];
+
+  assert.throws(() => checkE2ECoverage(input), {
+    message: "E2E_COVERAGE_MANIFEST_INVALID",
+  });
+});
+
+test("production transition coverage requires an executed case", async () => {
+  const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
+  const input = validInput();
+  input.coverage.transitions["tammy.v1.WorkspaceState.LOCKED->READY"] = {
+    stage: "production",
+    cases: [],
+  };
+  input.transitionIds = ["tammy.v1.WorkspaceState.LOCKED->READY"];
+
+  assert.throws(() => checkE2ECoverage(input), {
+    message: "E2E_COVERAGE_MANIFEST_INVALID",
+  });
+});
+
+test("business RPC coverage requires complete deterministic metadata", async () => {
+  const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
+  const mutations = [
+    (rpc) => {
+      rpc.preload = "";
+    },
+    (rpc) => {
+      rpc.routes = [""];
+    },
+    (rpc) => {
+      rpc.routes = ["unlock"];
+    },
+    (rpc) => {
+      rpc.routes = ["/unlock", "/unlock"];
+    },
+    (rpc) => {
+      rpc.principalFailures = [""];
+    },
+    (rpc) => {
+      rpc.principalFailures = ["permission_denied"];
+    },
+    (rpc) => {
+      rpc.principalFailures = ["PERMISSION_DENIED", "PERMISSION_DENIED"];
+    },
+    (rpc) => {
+      rpc.list = {};
+    },
+    (rpc) => {
+      rpc.list = { states: [null] };
+    },
+    (rpc) => {
+      rpc.idempotency = {};
+    },
+    (rpc) => {
+      rpc.idempotency = { mode: "query", outcomes: [null] };
+    },
+    (rpc) => {
+      rpc.roles.auditor = null;
+    },
+  ];
+
+  for (const mutate of mutations) {
+    const input = futureInput();
+    mutate(input.coverage.rpcs[RPC]);
+    assert.throws(() => checkE2ECoverage(input), {
+      message: "E2E_COVERAGE_MANIFEST_INVALID",
+    });
+  }
+});
+
+test("scenario cases are nonempty, unique, disjoint, and globally unambiguous", async () => {
+  const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
+  const mutations = [
+    (coverage) => {
+      coverage.scenarios["E2E-00"].cases = [""];
+    },
+    (coverage) => {
+      coverage.scenarios["E2E-00"].cases = ["foundation/offline-ready", "foundation/offline-ready"];
+    },
+    (coverage) => {
+      coverage.scenarios["E2E-00"].futureCases = ["foundation/offline-ready"];
+    },
+    (coverage) => {
+      coverage.scenarios["E2E-01"] = { cases: ["foundation/offline-ready"] };
+    },
+  ];
+
+  for (const mutate of mutations) {
+    const input = validInput();
+    mutate(input.coverage);
+    assert.throws(() => checkE2ECoverage(input), {
+      message: "E2E_COVERAGE_MANIFEST_INVALID",
+    });
+  }
+});
+
+test("RPC and transition case arrays reject empty and duplicate IDs", async () => {
+  const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
+  const rpcInput = futureInput();
+  rpcInput.coverage.scenarios["E2E-00"].futureCases.push("foundation/second-future");
+  rpcInput.coverage.rpcs[RPC].futureCases = [
+    "foundation/workspace-state",
+    "foundation/workspace-state",
+  ];
+  assert.throws(() => checkE2ECoverage(rpcInput), {
+    message: "E2E_COVERAGE_MANIFEST_INVALID",
+  });
+
+  const transitionInput = futureTransitionInput();
+  transitionInput.coverage.transitions["tammy.v1.WorkspaceState.LOCKED->READY"].futureCases = [""];
+  assert.throws(() => checkE2ECoverage(transitionInput), {
+    message: "E2E_COVERAGE_MANIFEST_INVALID",
+  });
+});
+
+test("the legacy System stage omission never applies to transitions", async () => {
+  const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
+  const input = validInput();
+  input.coverage.transitions[SYSTEM_RPC] = {
+    cases: ["foundation/offline-ready"],
+  };
+  input.transitionIds = [SYSTEM_RPC];
+
+  assert.throws(() => checkE2ECoverage(input), {
+    message: "E2E_COVERAGE_MANIFEST_INVALID",
   });
 });
 
@@ -386,15 +522,11 @@ test("permits only the reviewed pre-workspace system-query exception", async () 
 test("rejects the reviewed system-query exception on business RPC coverage", async () => {
   const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
   const structuredInput = validInput();
-  structuredInput.coverage.rpcs[RPC].list = { cases: ["non-empty"] };
-  structuredInput.coverage.rpcs[RPC].idempotency = { cases: ["replay"] };
 
   assert.doesNotThrow(() => checkE2ECoverage(structuredInput));
 
   for (const field of ["roles", "list", "idempotency"]) {
     const input = validInput();
-    input.coverage.rpcs[RPC].list = { cases: ["non-empty"] };
-    input.coverage.rpcs[RPC].idempotency = { cases: ["replay"] };
     input.coverage.rpcs[RPC][field] = REVIEWED_EXCEPTION;
 
     assert.throws(() => checkE2ECoverage(input), {

@@ -19,26 +19,87 @@ function isStringArray(value) {
   return Array.isArray(value) && value.every((entry) => typeof entry === "string");
 }
 
-function coverageStage(entry, name) {
+function isNonEmptyString(value) {
+  return typeof value === "string" && value.length > 0;
+}
+
+function isUniqueNonEmptyStringArray(value) {
+  return (
+    Array.isArray(value) && value.every(isNonEmptyString) && new Set(value).size === value.length
+  );
+}
+
+function hasExactKeys(value, keys) {
+  return (
+    isRecord(value) &&
+    Object.keys(value).length === keys.length &&
+    keys.every((key) => Object.hasOwn(value, key))
+  );
+}
+
+function coverageStage(entry, name, rowKind) {
   if (entry.stage === PRODUCTION_STAGE || entry.stage === DECLARED_FUTURE_STAGE) {
     return entry.stage;
   }
-  if (entry.stage === undefined && name === PRE_WORKSPACE_SYSTEM_QUERY) return PRODUCTION_STAGE;
+  if (entry.stage === undefined && rowKind === "rpc" && name === PRE_WORKSPACE_SYSTEM_QUERY) {
+    return PRODUCTION_STAGE;
+  }
   return undefined;
 }
 
-function hasCompleteFutureRpcMetadata(rpc) {
+function hasCompleteListMetadata(value) {
+  return hasExactKeys(value, ["states"]) && isUniqueNonEmptyStringArray(value.states);
+}
+
+function hasCompleteIdempotencyMetadata(value) {
   return (
-    rpc.cases.length === 0 &&
-    isStringArray(rpc.futureCases) &&
-    rpc.futureCases.length > 0 &&
-    isStringArray(rpc.routes) &&
-    rpc.routes.length > 0 &&
-    isStringArray(rpc.principalFailures) &&
-    rpc.principalFailures.length > 0 &&
-    isRecord(rpc.list) &&
-    isRecord(rpc.idempotency)
+    hasExactKeys(value, ["mode", "outcomes"]) &&
+    ["query", "persistent_command", "challenge", "restore"].includes(value.mode) &&
+    isUniqueNonEmptyStringArray(value.outcomes)
   );
+}
+
+function hasCompleteBusinessRpcMetadata(rpc) {
+  return (
+    isUniqueNonEmptyStringArray(rpc.projections) &&
+    isUniqueNonEmptyStringArray(rpc.routes) &&
+    rpc.routes.every((route) => route.startsWith("/") && !/\s/.test(route)) &&
+    isUniqueNonEmptyStringArray(rpc.principalFailures) &&
+    rpc.principalFailures.every((outcome) => /^[A-Z][A-Z0-9_]*$/.test(outcome)) &&
+    isRecord(rpc.roles) &&
+    Object.values(rpc.roles).every(isNonEmptyString) &&
+    hasCompleteListMetadata(rpc.list) &&
+    hasCompleteIdempotencyMetadata(rpc.idempotency)
+  );
+}
+
+function hasValidStageCases(stage, entry) {
+  if (stage === PRODUCTION_STAGE) {
+    return (
+      entry.cases.length > 0 && (entry.futureCases === undefined || entry.futureCases.length === 0)
+    );
+  }
+  return (
+    entry.cases.length === 0 && Array.isArray(entry.futureCases) && entry.futureCases.length > 0
+  );
+}
+
+function hasValidScenarioShape(scenarios) {
+  if (
+    !Object.values(scenarios).every(
+      (scenario) =>
+        isRecord(scenario) &&
+        isUniqueNonEmptyStringArray(scenario.cases) &&
+        (scenario.futureCases === undefined || isUniqueNonEmptyStringArray(scenario.futureCases)),
+    )
+  ) {
+    return false;
+  }
+  const allCaseIds = Object.values(scenarios).flatMap((scenario) => [
+    ...scenario.cases,
+    ...(scenario.futureCases ?? []),
+  ]);
+  return new Set(allCaseIds).size === allCaseIds.length;
 }
 
 function hasValidManifestShape(coverage) {
@@ -51,53 +112,46 @@ function hasValidManifestShape(coverage) {
   ) {
     return false;
   }
-  if (
-    !Object.values(coverage.scenarios).every(
-      (scenario) =>
-        isRecord(scenario) &&
-        isStringArray(scenario.cases) &&
-        (scenario.futureCases === undefined || isStringArray(scenario.futureCases)),
-    )
-  ) {
+  if (!hasValidScenarioShape(coverage.scenarios)) {
     return false;
   }
   if (
-    !Object.entries(coverage.rpcs).every(
-      ([rpcName, rpc]) =>
-        isRecord(rpc) &&
-        coverageStage(rpc, rpcName) !== undefined &&
-        typeof rpc.preload === "string" &&
-        isStringArray(rpc.cases) &&
-        (rpc.futureCases === undefined || isStringArray(rpc.futureCases)) &&
-        isStringArray(rpc.projections) &&
-        (rpc.roles === REVIEWED_EXCEPTION || isRecord(rpc.roles)) &&
-        (coverageStage(rpc, rpcName) === PRODUCTION_STAGE
-          ? rpc.futureCases === undefined || rpc.futureCases.length === 0
-          : hasCompleteFutureRpcMetadata(rpc)),
-    )
+    !Object.entries(coverage.rpcs).every(([rpcName, rpc]) => {
+      if (!isRecord(rpc)) return false;
+      const stage = coverageStage(rpc, rpcName, "rpc");
+      if (
+        stage === undefined ||
+        !isNonEmptyString(rpc.preload) ||
+        !isUniqueNonEmptyStringArray(rpc.cases) ||
+        (rpc.futureCases !== undefined && !isUniqueNonEmptyStringArray(rpc.futureCases)) ||
+        !hasValidStageCases(stage, rpc)
+      ) {
+        return false;
+      }
+      if (rpcName === PRE_WORKSPACE_SYSTEM_QUERY) {
+        return (
+          isUniqueNonEmptyStringArray(rpc.projections) &&
+          rpc.roles === REVIEWED_EXCEPTION &&
+          rpc.list === REVIEWED_EXCEPTION &&
+          rpc.idempotency === REVIEWED_EXCEPTION
+        );
+      }
+      return hasCompleteBusinessRpcMetadata(rpc);
+    })
   ) {
     return false;
   }
-  if (Object.hasOwn(coverage.rpcs, PRE_WORKSPACE_SYSTEM_QUERY)) {
-    const systemQuery = coverage.rpcs[PRE_WORKSPACE_SYSTEM_QUERY];
-    if (
-      systemQuery.roles !== REVIEWED_EXCEPTION ||
-      systemQuery.list !== REVIEWED_EXCEPTION ||
-      systemQuery.idempotency !== REVIEWED_EXCEPTION
-    ) {
-      return false;
-    }
-  }
-  return Object.entries(coverage.transitions).every(
-    ([transitionId, transition]) =>
-      isRecord(transition) &&
-      coverageStage(transition, transitionId) !== undefined &&
-      isStringArray(transition.cases) &&
-      (transition.futureCases === undefined || isStringArray(transition.futureCases)) &&
-      (coverageStage(transition, transitionId) === PRODUCTION_STAGE
-        ? transition.futureCases === undefined || transition.futureCases.length === 0
-        : transition.cases.length === 0 && transition.futureCases.length > 0),
-  );
+  return Object.entries(coverage.transitions).every(([transitionId, transition]) => {
+    if (!isRecord(transition)) return false;
+    const stage = coverageStage(transition, transitionId, "transition");
+    return (
+      stage !== undefined &&
+      isUniqueNonEmptyStringArray(transition.cases) &&
+      (transition.futureCases === undefined ||
+        isUniqueNonEmptyStringArray(transition.futureCases)) &&
+      hasValidStageCases(stage, transition)
+    );
+  });
 }
 
 export function parseCoverageManifest(source) {
@@ -167,11 +221,12 @@ export function checkE2ECoverage({
   if (
     requireProduction &&
     (Object.entries(coverage.rpcs).some(
-      ([rpcName, rpcCoverage]) => coverageStage(rpcCoverage, rpcName) === DECLARED_FUTURE_STAGE,
+      ([rpcName, rpcCoverage]) =>
+        coverageStage(rpcCoverage, rpcName, "rpc") === DECLARED_FUTURE_STAGE,
     ) ||
       Object.entries(coverage.transitions).some(
         ([transitionId, transitionCoverage]) =>
-          coverageStage(transitionCoverage, transitionId) === DECLARED_FUTURE_STAGE,
+          coverageStage(transitionCoverage, transitionId, "transition") === DECLARED_FUTURE_STAGE,
       ))
   ) {
     throw new Error("E2E_COVERAGE_FUTURE_PROMOTION_REQUIRED");
@@ -213,7 +268,7 @@ export function checkE2ECoverage({
         }
       }
     }
-    if (coverageStage(rpcCoverage, rpcName) === DECLARED_FUTURE_STAGE) {
+    if (coverageStage(rpcCoverage, rpcName, "rpc") === DECLARED_FUTURE_STAGE) {
       if (preloadMethods.includes(rpcCoverage.preload)) {
         throw new Error("E2E_COVERAGE_FUTURE_PROMOTION_REQUIRED");
       }
