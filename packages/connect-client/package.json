@@ -3,10 +3,24 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "scripts": {
+    "test": "vitest run"
+  },
   "dependencies": {
     "@bufbuild/protobuf": "2.12.1"
   },
+  "devDependencies": {
+    "vitest": "4.1.10"
+  },
   "exports": {
-    "./tammy/v1/system_pb.js": "./src/gen/tammy/v1/system_pb.ts"
+    "./tammy/v1/accounting_pb.js": "./src/gen/tammy/v1/accounting_pb.ts",
+    "./tammy/v1/audit_pb.js": "./src/gen/tammy/v1/audit_pb.ts",
+    "./tammy/v1/common_pb.js": "./src/gen/tammy/v1/common_pb.ts",
+    "./tammy/v1/events_pb.js": "./src/gen/tammy/v1/events_pb.ts",
+    "./tammy/v1/fixtures_pb.js": "./src/gen/tammy/v1/fixtures_pb.ts",
+    "./tammy/v1/identity_pb.js": "./src/gen/tammy/v1/identity_pb.ts",
+    "./tammy/v1/organisation_pb.js": "./src/gen/tammy/v1/organisation_pb.ts",
+    "./tammy/v1/system_pb.js": "./src/gen/tammy/v1/system_pb.ts",
+    "./tammy/v1/workspace_pb.js": "./src/gen/tammy/v1/workspace_pb.ts"
   }
 }

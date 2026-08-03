@@ -13,6 +13,7 @@ plugins:
       - paths=source_relative
   - local: protoc-gen-es
     out: packages/connect-client/src/gen
+    include_imports: true
     opt:
       - target=ts
       - import_extension=js

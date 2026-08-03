@@ -1,0 +1,298 @@
+syntax = "proto3";
+
+package tammy.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+import "tammy/v1/common.proto";
+import "tammy/v1/events.proto";
+
+option go_package = "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1";
+
+// AuditExportJobState is the restart-safe signed evidence-export lifecycle.
+// Allowed transitions are QUEUED -> RUNNING | CANCELLED,
+// RUNNING -> QUEUED | WAITING_FOR_INPUT | COMPLETED | FAILED_RETRYABLE | FAILED_TERMINAL | CANCELLED,
+// WAITING_FOR_INPUT -> QUEUED | CANCELLED, and FAILED_RETRYABLE -> QUEUED | CANCELLED.
+enum AuditExportJobState {
+  // AUDIT_EXPORT_JOB_STATE_UNSPECIFIED indicates an invalid or unavailable job state.
+  AUDIT_EXPORT_JOB_STATE_UNSPECIFIED = 0;
+
+  // AUDIT_EXPORT_JOB_STATE_QUEUED is eligible for one worker lease.
+  AUDIT_EXPORT_JOB_STATE_QUEUED = 1;
+
+  // AUDIT_EXPORT_JOB_STATE_RUNNING has an active restart-safe export stage.
+  AUDIT_EXPORT_JOB_STATE_RUNNING = 2;
+
+  // AUDIT_EXPORT_JOB_STATE_WAITING_FOR_INPUT requires explicit destination reapproval.
+  AUDIT_EXPORT_JOB_STATE_WAITING_FOR_INPUT = 3;
+
+  // AUDIT_EXPORT_JOB_STATE_COMPLETED has a verified signed committed destination.
+  AUDIT_EXPORT_JOB_STATE_COMPLETED = 4;
+
+  // AUDIT_EXPORT_JOB_STATE_FAILED_RETRYABLE requires an explicit safe retry.
+  AUDIT_EXPORT_JOB_STATE_FAILED_RETRYABLE = 5;
+
+  // AUDIT_EXPORT_JOB_STATE_FAILED_TERMINAL cannot be retried with retained input.
+  AUDIT_EXPORT_JOB_STATE_FAILED_TERMINAL = 6;
+
+  // AUDIT_EXPORT_JOB_STATE_CANCELLED committed before verified destination rename.
+  AUDIT_EXPORT_JOB_STATE_CANCELLED = 7;
+}
+
+// AuditChainIntegrity is the explicit chain verification outcome.
+enum AuditChainIntegrity {
+  // AUDIT_CHAIN_INTEGRITY_UNSPECIFIED indicates no verified outcome.
+  AUDIT_CHAIN_INTEGRITY_UNSPECIFIED = 0;
+
+  // AUDIT_CHAIN_INTEGRITY_VALID means every selected predecessor and event hash verified.
+  AUDIT_CHAIN_INTEGRITY_VALID = 1;
+
+  // AUDIT_CHAIN_INTEGRITY_INVALID means verification localized a mismatch or missing event.
+  AUDIT_CHAIN_INTEGRITY_INVALID = 2;
+}
+
+// AuditEvent is one immutable typed entry in a workspace-generation hash chain.
+message AuditEvent {
+  // id is an opaque UUIDv7 string.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+
+  // workspace_id identifies the owning encrypted workspace.
+  string workspace_id = 2 [(buf.validate.field).string.uuid = true];
+
+  // generation identifies the audit history branch and begins at one.
+  uint64 generation = 3 [(buf.validate.field).uint64.gte = 1];
+
+  // sequence is monotonically increasing within one generation and begins at one.
+  uint64 sequence = 4 [(buf.validate.field).uint64.gte = 1];
+
+  // type is the stable typed event discriminator.
+  AuditEventType type = 5 [(buf.validate.field).enum.defined_only = true];
+
+  // occurred_at is the core-authored commit instant.
+  google.protobuf.Timestamp occurred_at = 6 [(buf.validate.field).required = true];
+
+  // actor identifies the authenticated principal when the event has one.
+  AuthenticationContext actor = 7;
+
+  // source identifies immutable cross-module command or domain provenance.
+  SourceRef source = 8;
+
+  // payload is a closed typed union; google.protobuf.Any is prohibited.
+  AuditEventPayload payload = 9 [(buf.validate.field).required = true];
+
+  // payload_schema_fingerprint is the exact 32-byte retained descriptor-set fingerprint.
+  bytes payload_schema_fingerprint = 10 [(buf.validate.field).bytes.len = 32];
+
+  // previous_hash is genesis for sequence one and the prior event hash otherwise.
+  bytes previous_hash = 11 [(buf.validate.field).bytes.len = 32];
+
+  // event_hash is the exact domain-separated 32-byte chain hash.
+  bytes event_hash = 12 [(buf.validate.field).bytes.len = 32];
+}
+
+// AuditEventFilter is a bounded stable query and export selection.
+message AuditEventFilter {
+  // event_types is a sorted, deduplicated set; empty selects all event types.
+  repeated AuditEventType event_types = 1 [(buf.validate.field).repeated = {
+    max_items: 64
+    unique: true
+  }];
+
+  // actor_user_id is present only when filtering one principal.
+  optional string actor_user_id = 2 [(buf.validate.field).string.uuid = true];
+
+  // from_time is the inclusive core-authored instant lower bound.
+  google.protobuf.Timestamp from_time = 3;
+
+  // to_time is the inclusive core-authored instant upper bound.
+  google.protobuf.Timestamp to_time = 4;
+
+  // start_sequence is present only when selecting an inclusive sequence lower bound.
+  optional uint64 start_sequence = 5;
+
+  // end_sequence is present only when selecting an inclusive sequence upper bound.
+  optional uint64 end_sequence = 6;
+}
+
+// AuditExportJob is a persisted bounded signed evidence-export projection.
+message AuditExportJob {
+  // id is an opaque UUIDv7 job identifier.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+
+  // version is the optimistic job version.
+  uint64 version = 2 [(buf.validate.field).uint64.gte = 1];
+
+  // operation_key is the UUID used for persistent command replay election.
+  string operation_key = 3 [(buf.validate.field).string.uuid = true];
+
+  // state is the restart-safe signed export lifecycle state.
+  AuditExportJobState state = 4 [(buf.validate.field).enum.defined_only = true];
+
+  // progress is bounded and contains no raw event or destination content.
+  JobProgress progress = 5 [(buf.validate.field).required = true];
+
+  // created_at is the core-authored job creation instant.
+  google.protobuf.Timestamp created_at = 6 [(buf.validate.field).required = true];
+
+  // completed_at is present only for terminal completion.
+  google.protobuf.Timestamp completed_at = 7;
+
+  // destination_hash is present only after verified atomic rename.
+  optional bytes destination_hash = 8 [(buf.validate.field).bytes.len = 32];
+
+  // signing_key_id is present only after a signed manifest is committed.
+  optional string signing_key_id = 9 [(buf.validate.field).string.max_len = 128];
+}
+
+// VerifyChainRequest verifies a complete chain or one bounded inclusive sequence range.
+message VerifyChainRequest {
+  // authentication identifies an authorized administrator or auditor.
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+
+  // workspace_id identifies the encrypted workspace chain.
+  string workspace_id = 2 [(buf.validate.field).string.uuid = true];
+
+  // generation is present only when selecting a historical generation explicitly.
+  optional uint64 generation = 3;
+
+  // start_sequence is present only when selecting an inclusive lower bound.
+  optional uint64 start_sequence = 4;
+
+  // end_sequence is present only when selecting an inclusive upper bound.
+  optional uint64 end_sequence = 5;
+}
+
+// VerifyChainResponse returns the explicit verification result and localized mismatch.
+message VerifyChainResponse {
+  // integrity is VALID or INVALID after complete verification of the selected range.
+  AuditChainIntegrity integrity = 1 [(buf.validate.field).enum.defined_only = true];
+
+  // verified_through_sequence is the last contiguous verified sequence.
+  uint64 verified_through_sequence = 2;
+
+  // mismatch_sequence is present only when verification localized an invalid event or gap.
+  optional uint64 mismatch_sequence = 3;
+
+  // verified_head is the exact 32-byte head through verified_through_sequence.
+  bytes verified_head = 4 [(buf.validate.field).bytes.len = 32];
+}
+
+// ListAuditEventsRequest requests a stable bounded event page.
+message ListAuditEventsRequest {
+  // authentication identifies an authorized administrator or auditor.
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+
+  // workspace_id identifies the encrypted workspace chain.
+  string workspace_id = 2 [(buf.validate.field).string.uuid = true];
+
+  // filter selects bounded typed events.
+  AuditEventFilter filter = 3 [(buf.validate.field).required = true];
+
+  // page requests the stable signed cursor page.
+  PageRequest page = 4 [(buf.validate.field).required = true];
+}
+
+// ListAuditEventsResponse returns events in generation and sequence order.
+message ListAuditEventsResponse {
+  // events is a bounded stable page of typed immutable projections.
+  repeated AuditEvent events = 1 [(buf.validate.field).repeated.max_items = 200];
+
+  // page describes continuation of the same verified chain snapshot.
+  PageInfo page = 2 [(buf.validate.field).required = true];
+}
+
+// ExportEvidenceRequest starts a persisted signed evidence-export job.
+message ExportEvidenceRequest {
+  // command_context carries a UUID idempotency key and authorized administrator or auditor.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+
+  // workspace_id identifies the encrypted workspace chain.
+  string workspace_id = 2 [(buf.validate.field).string.uuid = true];
+
+  // filter selects bounded typed events and evidence references.
+  AuditEventFilter filter = 3 [(buf.validate.field).required = true];
+
+  // destination is an approved capability, never a raw path.
+  ApprovedFileRef destination = 4 [(buf.validate.field).required = true];
+}
+
+// ExportEvidenceResponse returns the elected persisted signed export job.
+message ExportEvidenceResponse {
+  // job is identical on an exact command replay.
+  AuditExportJob job = 1 [(buf.validate.field).required = true];
+}
+
+// CancelAuditExportRequest elects cancellation before verified destination rename.
+message CancelAuditExportRequest {
+  // command_context carries a UUID idempotency key and authorized principal.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+
+  // job_id is an opaque UUIDv7 string.
+  string job_id = 2 [(buf.validate.field).string.uuid = true];
+
+  // expected_version prevents cancellation of a changed job.
+  uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
+}
+
+// CancelAuditExportResponse returns cancellation or completed-commit election.
+message CancelAuditExportResponse {
+  // job is terminal CANCELLED or already COMPLETED.
+  AuditExportJob job = 1 [(buf.validate.field).required = true];
+}
+
+// GetAuditExportJobRequest requests one bounded persisted export job.
+message GetAuditExportJobRequest {
+  // authentication identifies an authorized administrator or auditor.
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+
+  // job_id is an opaque UUIDv7 string.
+  string job_id = 2 [(buf.validate.field).string.uuid = true];
+}
+
+// GetAuditExportJobResponse returns one bounded persisted export job.
+message GetAuditExportJobResponse {
+  // job contains no destination path, private key, or raw event content.
+  AuditExportJob job = 1 [(buf.validate.field).required = true];
+}
+
+// ListAuditExportJobsRequest requests a stable bounded export-job page.
+message ListAuditExportJobsRequest {
+  // authentication identifies an authorized administrator or auditor.
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+
+  // page requests the stable signed cursor page.
+  PageRequest page = 2 [(buf.validate.field).required = true];
+
+  // state is present only when filtering by lifecycle state.
+  optional AuditExportJobState state = 3;
+}
+
+// ListAuditExportJobsResponse returns jobs in stable creation order.
+message ListAuditExportJobsResponse {
+  // jobs is a bounded stable page.
+  repeated AuditExportJob jobs = 1 [(buf.validate.field).repeated.max_items = 200];
+
+  // page describes continuation of the same job snapshot.
+  PageInfo page = 2 [(buf.validate.field).required = true];
+}
+
+// AuditService exposes chain verification, typed event listing, and persisted signed evidence export.
+service AuditService {
+  // VerifyChain verifies the complete chain or one inclusive sequence range.
+  rpc VerifyChain(VerifyChainRequest) returns (VerifyChainResponse);
+
+  // ListAuditEvents returns a stable bounded page of typed immutable events.
+  rpc ListAuditEvents(ListAuditEventsRequest) returns (ListAuditEventsResponse);
+
+  // ExportEvidence starts a restart-safe signed evidence-export job.
+  rpc ExportEvidence(ExportEvidenceRequest) returns (ExportEvidenceResponse);
+
+  // CancelAuditExport elects cancellation before verified destination rename.
+  rpc CancelAuditExport(CancelAuditExportRequest) returns (CancelAuditExportResponse);
+
+  // GetAuditExportJob returns one bounded persisted export job.
+  rpc GetAuditExportJob(GetAuditExportJobRequest) returns (GetAuditExportJobResponse);
+
+  // ListAuditExportJobs returns a stable bounded export-job page.
+  rpc ListAuditExportJobs(ListAuditExportJobsRequest) returns (ListAuditExportJobsResponse);
+}

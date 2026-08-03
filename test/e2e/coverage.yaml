@@ -3,8 +3,12 @@ scenarios:
   E2E-00:
     cases:
       - foundation/offline-ready
+    futureCases:
+      - slice-1/foundation-contracts
   E2E-01:
     cases: []
+    futureCases:
+      - slice-1/opening-chart-contracts
   E2E-02:
     cases: []
   E2E-03:
@@ -31,10 +35,14 @@ scenarios:
     cases: []
   E2E-14:
     cases: []
+    futureCases:
+      - slice-1/journal-period-contracts
   E2E-15:
     cases: []
   E2E-16:
     cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
   E2E-17:
     cases: []
 rpcs:
@@ -47,4 +55,2091 @@ rpcs:
     roles: not_applicable_pre_workspace_system_query
     list: not_applicable_pre_workspace_system_query
     idempotency: not_applicable_pre_workspace_system_query
-transitions: {}
+  tammy.v1.WorkspaceService.CreateWorkspace:
+    stage: declared_future
+    preload: createWorkspace
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+    projections:
+      - create_workspace_result
+    routes:
+      - /workspace/security
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.WorkspaceService.ConfirmRecovery:
+    stage: declared_future
+    preload: confirmRecovery
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+    projections:
+      - confirm_recovery_result
+    routes:
+      - /workspace/security
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: challenge
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.WorkspaceService.UnlockWorkspace:
+    stage: declared_future
+    preload: unlockWorkspace
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+    projections:
+      - unlock_workspace_result
+    routes:
+      - /workspace/security
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: challenge
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.WorkspaceService.LockWorkspace:
+    stage: declared_future
+    preload: lockWorkspace
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+    projections:
+      - lock_workspace_result
+    routes:
+      - /workspace/security
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.WorkspaceService.ForgetRememberedWorkspace:
+    stage: declared_future
+    preload: forgetRememberedWorkspace
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+    projections:
+      - forget_remembered_workspace_result
+    routes:
+      - /workspace/security
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.WorkspaceService.GetWorkspaceState:
+    stage: declared_future
+    preload: getWorkspaceState
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+    projections:
+      - get_workspace_state_result
+    routes:
+      - /workspace/security
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_allowed
+      auditor: planned_allowed
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - found
+        - not_found
+    idempotency:
+      mode: query
+      outcomes:
+        - not_applicable
+  tammy.v1.WorkspaceService.ChangePassphrase:
+    stage: declared_future
+    preload: changePassphrase
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+    projections:
+      - change_passphrase_result
+    routes:
+      - /workspace/security
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: challenge
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.WorkspaceService.RecoverWorkspace:
+    stage: declared_future
+    preload: recoverWorkspace
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+    projections:
+      - recover_workspace_result
+    routes:
+      - /workspace/security
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: challenge
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.WorkspaceService.EstablishMovedWorkspaceTrust:
+    stage: declared_future
+    preload: establishMovedWorkspaceTrust
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+    projections:
+      - establish_moved_workspace_trust_result
+    routes:
+      - /workspace/moved-trust
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: challenge
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.WorkspaceService.BackupWorkspace:
+    stage: declared_future
+    preload: backupWorkspace
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+    projections:
+      - backup_workspace_result
+    routes:
+      - /workspace/backup-restore
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.WorkspaceService.CancelBackup:
+    stage: declared_future
+    preload: cancelBackup
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+    projections:
+      - cancel_backup_result
+    routes:
+      - /workspace/backup-restore
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.WorkspaceService.GetBackupJob:
+    stage: declared_future
+    preload: getBackupJob
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+    projections:
+      - get_backup_job_result
+    routes:
+      - /workspace/backup-restore
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - found
+        - not_found
+    idempotency:
+      mode: query
+      outcomes:
+        - not_applicable
+  tammy.v1.WorkspaceService.ListBackupJobs:
+    stage: declared_future
+    preload: listBackupJobs
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+    projections:
+      - list_backup_jobs_result
+    routes:
+      - /workspace/backup-restore
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - empty
+        - populated
+        - filtered
+        - paginated
+    idempotency:
+      mode: query
+      outcomes:
+        - not_applicable
+  tammy.v1.WorkspaceService.RestoreWorkspace:
+    stage: declared_future
+    preload: restoreWorkspace
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+    projections:
+      - restore_workspace_result
+    routes:
+      - /workspace/backup-restore
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: restore
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.WorkspaceService.GetRestoreStatus:
+    stage: declared_future
+    preload: getRestoreStatus
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+    projections:
+      - get_restore_status_result
+    routes:
+      - /workspace/backup-restore
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - found
+        - not_found
+    idempotency:
+      mode: query
+      outcomes:
+        - not_applicable
+  tammy.v1.WorkspaceService.ExportPreRestoreArchive:
+    stage: declared_future
+    preload: exportPreRestoreArchive
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+    projections:
+      - export_pre_restore_archive_result
+    routes:
+      - /workspace/backup-restore
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.WorkspaceService.CancelPreRestoreArchiveExport:
+    stage: declared_future
+    preload: cancelPreRestoreArchiveExport
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+    projections:
+      - cancel_pre_restore_archive_export_result
+    routes:
+      - /workspace/backup-restore
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.WorkspaceService.GetPreRestoreArchiveExportJob:
+    stage: declared_future
+    preload: getPreRestoreArchiveExportJob
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+    projections:
+      - get_pre_restore_archive_export_job_result
+    routes:
+      - /workspace/backup-restore
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - found
+        - not_found
+    idempotency:
+      mode: query
+      outcomes:
+        - not_applicable
+  tammy.v1.WorkspaceService.ListPreRestoreArchiveExportJobs:
+    stage: declared_future
+    preload: listPreRestoreArchiveExportJobs
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+    projections:
+      - list_pre_restore_archive_export_jobs_result
+    routes:
+      - /workspace/backup-restore
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - empty
+        - populated
+        - filtered
+        - paginated
+    idempotency:
+      mode: query
+      outcomes:
+        - not_applicable
+  tammy.v1.WorkspaceService.DeletePreRestoreArchive:
+    stage: declared_future
+    preload: deletePreRestoreArchive
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+    projections:
+      - delete_pre_restore_archive_result
+    routes:
+      - /workspace/backup-restore
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.WorkspaceService.GetPreRestoreArchive:
+    stage: declared_future
+    preload: getPreRestoreArchive
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+    projections:
+      - get_pre_restore_archive_result
+    routes:
+      - /workspace/backup-restore
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - found
+        - not_found
+    idempotency:
+      mode: query
+      outcomes:
+        - not_applicable
+  tammy.v1.WorkspaceService.ListPreRestoreArchives:
+    stage: declared_future
+    preload: listPreRestoreArchives
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+    projections:
+      - list_pre_restore_archives_result
+    routes:
+      - /workspace/backup-restore
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - empty
+        - populated
+        - filtered
+        - paginated
+    idempotency:
+      mode: query
+      outcomes:
+        - not_applicable
+  tammy.v1.WorkspaceService.TransferOwnership:
+    stage: declared_future
+    preload: transferOwnership
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+    projections:
+      - transfer_ownership_result
+    routes:
+      - /workspace/ownership
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: challenge
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.IdentityService.SignIn:
+    stage: declared_future
+    preload: signIn
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+    projections:
+      - sign_in_result
+    routes:
+      - /workspace/security
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_allowed
+      auditor: planned_allowed
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: challenge
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.IdentityService.SignOut:
+    stage: declared_future
+    preload: signOut
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+    projections:
+      - sign_out_result
+    routes:
+      - /workspace/security
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_allowed
+      auditor: planned_allowed
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.IdentityService.GetSession:
+    stage: declared_future
+    preload: getSession
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+    projections:
+      - get_session_result
+    routes:
+      - /workspace/security
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_allowed
+      auditor: planned_allowed
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - found
+        - not_found
+    idempotency:
+      mode: query
+      outcomes:
+        - not_applicable
+  tammy.v1.IdentityService.GetCurrentUser:
+    stage: declared_future
+    preload: getCurrentUser
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+    projections:
+      - get_current_user_result
+    routes:
+      - /workspace/security
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_allowed
+      auditor: planned_allowed
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - found
+        - not_found
+    idempotency:
+      mode: query
+      outcomes:
+        - not_applicable
+  tammy.v1.IdentityService.CreateUser:
+    stage: declared_future
+    preload: createUser
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+    projections:
+      - create_user_result
+    routes:
+      - /workspace/users
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.IdentityService.AssignRoles:
+    stage: declared_future
+    preload: assignRoles
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+    projections:
+      - assign_roles_result
+    routes:
+      - /workspace/users
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.IdentityService.ResetUserAuthentication:
+    stage: declared_future
+    preload: resetUserAuthentication
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+    projections:
+      - reset_user_authentication_result
+    routes:
+      - /workspace/users
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.IdentityService.GetUser:
+    stage: declared_future
+    preload: getUser
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+    projections:
+      - get_user_result
+    routes:
+      - /workspace/users
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - found
+        - not_found
+    idempotency:
+      mode: query
+      outcomes:
+        - not_applicable
+  tammy.v1.IdentityService.ListUsers:
+    stage: declared_future
+    preload: listUsers
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+    projections:
+      - list_users_result
+    routes:
+      - /workspace/users
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - empty
+        - populated
+        - filtered
+        - paginated
+    idempotency:
+      mode: query
+      outcomes:
+        - not_applicable
+  tammy.v1.IdentityService.ActivateUser:
+    stage: declared_future
+    preload: activateUser
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+    projections:
+      - activate_user_result
+    routes:
+      - /workspace/users
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: challenge
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.IdentityService.ChangePassword:
+    stage: declared_future
+    preload: changePassword
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+    projections:
+      - change_password_result
+    routes:
+      - /workspace/security
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_allowed
+      auditor: planned_allowed
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: challenge
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.IdentityService.EnrolTOTP:
+    stage: declared_future
+    preload: enrolTOTP
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+    projections:
+      - enrol_totp_result
+    routes:
+      - /workspace/security
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_allowed
+      auditor: planned_allowed
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: challenge
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.IdentityService.ConfirmTOTP:
+    stage: declared_future
+    preload: confirmTOTP
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+    projections:
+      - confirm_totp_result
+    routes:
+      - /workspace/security
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_allowed
+      auditor: planned_allowed
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: challenge
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.IdentityService.AssertTOTP:
+    stage: declared_future
+    preload: assertTOTP
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+    projections:
+      - assert_totp_result
+    routes:
+      - /workspace/security
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_allowed
+      auditor: planned_allowed
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: challenge
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.IdentityService.DisableTOTP:
+    stage: declared_future
+    preload: disableTOTP
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+    projections:
+      - disable_totp_result
+    routes:
+      - /workspace/security
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_allowed
+      auditor: planned_allowed
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: challenge
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.IdentityService.RecoverAdministrator:
+    stage: declared_future
+    preload: recoverAdministrator
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+    projections:
+      - recover_administrator_result
+    routes:
+      - /workspace/users
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: challenge
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.OrganisationService.CreateOrganisation:
+    stage: declared_future
+    preload: createOrganisation
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+    projections:
+      - create_organisation_result
+    routes:
+      - /setup/organisation
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.OrganisationService.UpdateOrganisation:
+    stage: declared_future
+    preload: updateOrganisation
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+    projections:
+      - update_organisation_result
+    routes:
+      - /setup/organisation
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.OrganisationService.RecordEntityVerification:
+    stage: declared_future
+    preload: recordEntityVerification
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+    projections:
+      - record_entity_verification_result
+    routes:
+      - /setup/organisation
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.OrganisationService.GetOrganisation:
+    stage: declared_future
+    preload: getOrganisation
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+    projections:
+      - get_organisation_result
+    routes:
+      - /setup/organisation
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_allowed
+      auditor: planned_allowed
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - found
+        - not_found
+    idempotency:
+      mode: query
+      outcomes:
+        - not_applicable
+  tammy.v1.AccountingService.CreateAccount:
+    stage: declared_future
+    preload: createAccount
+    cases: []
+    futureCases:
+      - slice-1/opening-chart-contracts
+    projections:
+      - create_account_result
+    routes:
+      - /accounting/opening-balances
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.AccountingService.UpdateAccount:
+    stage: declared_future
+    preload: updateAccount
+    cases: []
+    futureCases:
+      - slice-1/opening-chart-contracts
+    projections:
+      - update_account_result
+    routes:
+      - /accounting/opening-balances
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.AccountingService.SetAccountStatus:
+    stage: declared_future
+    preload: setAccountStatus
+    cases: []
+    futureCases:
+      - slice-1/opening-chart-contracts
+    projections:
+      - set_account_status_result
+    routes:
+      - /accounting/opening-balances
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.AccountingService.ListTaxCodes:
+    stage: declared_future
+    preload: listTaxCodes
+    cases: []
+    futureCases:
+      - slice-1/opening-chart-contracts
+    projections:
+      - list_tax_codes_result
+    routes:
+      - /accounting/opening-balances
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_allowed
+      auditor: planned_allowed
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - empty
+        - populated
+        - filtered
+        - paginated
+    idempotency:
+      mode: query
+      outcomes:
+        - not_applicable
+  tammy.v1.AccountingService.PostOpeningConversion:
+    stage: declared_future
+    preload: postOpeningConversion
+    cases: []
+    futureCases:
+      - slice-1/opening-chart-contracts
+    projections:
+      - post_opening_conversion_result
+    routes:
+      - /accounting/opening-balances
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.AccountingService.ReplaceOpeningConversion:
+    stage: declared_future
+    preload: replaceOpeningConversion
+    cases: []
+    futureCases:
+      - slice-1/opening-chart-contracts
+    projections:
+      - replace_opening_conversion_result
+    routes:
+      - /accounting/opening-balances
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.AccountingService.PostManualJournal:
+    stage: declared_future
+    preload: postManualJournal
+    cases: []
+    futureCases:
+      - slice-1/journal-period-contracts
+    projections:
+      - post_manual_journal_result
+    routes:
+      - /accounting/journals
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.AccountingService.ReverseJournal:
+    stage: declared_future
+    preload: reverseJournal
+    cases: []
+    futureCases:
+      - slice-1/journal-period-contracts
+    projections:
+      - reverse_journal_result
+    routes:
+      - /accounting/journals
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.AccountingService.ClosePeriod:
+    stage: declared_future
+    preload: closePeriod
+    cases: []
+    futureCases:
+      - slice-1/journal-period-contracts
+    projections:
+      - close_period_result
+    routes:
+      - /accounting/periods
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.AccountingService.ReopenPeriod:
+    stage: declared_future
+    preload: reopenPeriod
+    cases: []
+    futureCases:
+      - slice-1/journal-period-contracts
+    projections:
+      - reopen_period_result
+    routes:
+      - /accounting/periods
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.AccountingService.GetAccount:
+    stage: declared_future
+    preload: getAccount
+    cases: []
+    futureCases:
+      - slice-1/opening-chart-contracts
+    projections:
+      - get_account_result
+    routes:
+      - /accounting/opening-balances
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_allowed
+      auditor: planned_allowed
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - found
+        - not_found
+    idempotency:
+      mode: query
+      outcomes:
+        - not_applicable
+  tammy.v1.AccountingService.ListAccounts:
+    stage: declared_future
+    preload: listAccounts
+    cases: []
+    futureCases:
+      - slice-1/opening-chart-contracts
+    projections:
+      - list_accounts_result
+    routes:
+      - /accounting/opening-balances
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_allowed
+      auditor: planned_allowed
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - empty
+        - populated
+        - filtered
+        - paginated
+    idempotency:
+      mode: query
+      outcomes:
+        - not_applicable
+  tammy.v1.AccountingService.GetJournal:
+    stage: declared_future
+    preload: getJournal
+    cases: []
+    futureCases:
+      - slice-1/journal-period-contracts
+    projections:
+      - get_journal_result
+    routes:
+      - /accounting/journals
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_allowed
+      auditor: planned_allowed
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - found
+        - not_found
+    idempotency:
+      mode: query
+      outcomes:
+        - not_applicable
+  tammy.v1.AccountingService.ListJournals:
+    stage: declared_future
+    preload: listJournals
+    cases: []
+    futureCases:
+      - slice-1/journal-period-contracts
+    projections:
+      - list_journals_result
+    routes:
+      - /accounting/journals
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_allowed
+      auditor: planned_allowed
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - empty
+        - populated
+        - filtered
+        - paginated
+    idempotency:
+      mode: query
+      outcomes:
+        - not_applicable
+  tammy.v1.AccountingService.GetGeneralLedger:
+    stage: declared_future
+    preload: getGeneralLedger
+    cases: []
+    futureCases:
+      - slice-1/journal-period-contracts
+    projections:
+      - get_general_ledger_result
+    routes:
+      - /accounting/general-ledger
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_allowed
+      auditor: planned_allowed
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - found
+        - not_found
+    idempotency:
+      mode: query
+      outcomes:
+        - not_applicable
+  tammy.v1.AccountingService.GetTrialBalance:
+    stage: declared_future
+    preload: getTrialBalance
+    cases: []
+    futureCases:
+      - slice-1/journal-period-contracts
+    projections:
+      - get_trial_balance_result
+    routes:
+      - /accounting/trial-balance
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_allowed
+      auditor: planned_allowed
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - found
+        - not_found
+    idempotency:
+      mode: query
+      outcomes:
+        - not_applicable
+  tammy.v1.AuditService.VerifyChain:
+    stage: declared_future
+    preload: verifyChain
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+    projections:
+      - verify_chain_result
+    routes:
+      - /audit
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_allowed
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: query
+      outcomes:
+        - not_applicable
+  tammy.v1.AuditService.ListAuditEvents:
+    stage: declared_future
+    preload: listAuditEvents
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+    projections:
+      - list_audit_events_result
+    routes:
+      - /audit
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_allowed
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - empty
+        - populated
+        - filtered
+        - paginated
+    idempotency:
+      mode: query
+      outcomes:
+        - not_applicable
+  tammy.v1.AuditService.ExportEvidence:
+    stage: declared_future
+    preload: exportEvidence
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+    projections:
+      - export_evidence_result
+    routes:
+      - /audit
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_allowed
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.AuditService.CancelAuditExport:
+    stage: declared_future
+    preload: cancelAuditExport
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+    projections:
+      - cancel_audit_export_result
+    routes:
+      - /audit
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_allowed
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - replay
+        - changed_request_conflict
+  tammy.v1.AuditService.GetAuditExportJob:
+    stage: declared_future
+    preload: getAuditExportJob
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+    projections:
+      - get_audit_export_job_result
+    routes:
+      - /audit
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_allowed
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - found
+        - not_found
+    idempotency:
+      mode: query
+      outcomes:
+        - not_applicable
+  tammy.v1.AuditService.ListAuditExportJobs:
+    stage: declared_future
+    preload: listAuditExportJobs
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+    projections:
+      - list_audit_export_jobs_result
+    routes:
+      - /audit
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_allowed
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+    list:
+      states:
+        - empty
+        - populated
+        - filtered
+        - paginated
+    idempotency:
+      mode: query
+      outcomes:
+        - not_applicable
+transitions:
+  tammy.v1.WorkspaceState.WORKSPACE_STATE_PENDING_RECOVERY->WORKSPACE_STATE_UNAUTHENTICATED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+  tammy.v1.WorkspaceState.WORKSPACE_STATE_LOCKED->WORKSPACE_STATE_UNAUTHENTICATED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+  tammy.v1.WorkspaceState.WORKSPACE_STATE_UNAUTHENTICATED->WORKSPACE_STATE_AUTHENTICATED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+  tammy.v1.WorkspaceState.WORKSPACE_STATE_UNAUTHENTICATED->WORKSPACE_STATE_LOCKED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+  tammy.v1.WorkspaceState.WORKSPACE_STATE_AUTHENTICATED->WORKSPACE_STATE_LOCKED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+  tammy.v1.WorkspaceTrustState.WORKSPACE_TRUST_STATE_TRUSTED->WORKSPACE_TRUST_STATE_MOVED_READ_ONLY:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+  tammy.v1.WorkspaceTrustState.WORKSPACE_TRUST_STATE_MOVED_READ_ONLY->WORKSPACE_TRUST_STATE_TRUSTED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+  tammy.v1.UserState.USER_STATE_PENDING_ACTIVATION->USER_STATE_ACTIVE:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+  tammy.v1.UserState.USER_STATE_ACTIVE->USER_STATE_AUTHENTICATION_LOCKED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+  tammy.v1.UserState.USER_STATE_ACTIVE->USER_STATE_PENDING_ACTIVATION:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+  tammy.v1.UserState.USER_STATE_AUTHENTICATION_LOCKED->USER_STATE_ACTIVE:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+  tammy.v1.UserState.USER_STATE_AUTHENTICATION_LOCKED->USER_STATE_PENDING_ACTIVATION:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+  tammy.v1.SessionState.SESSION_STATE_ACTIVE->SESSION_STATE_SIGNED_OUT:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+  tammy.v1.SessionState.SESSION_STATE_ACTIVE->SESSION_STATE_EXPIRED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+  tammy.v1.SessionState.SESSION_STATE_ACTIVE->SESSION_STATE_INVALIDATED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+  tammy.v1.FactorState.FACTOR_STATE_PENDING_CONFIRMATION->FACTOR_STATE_ENABLED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+  tammy.v1.FactorState.FACTOR_STATE_ENABLED->FACTOR_STATE_DISABLED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+  tammy.v1.OrganisationVerificationState.ORGANISATION_VERIFICATION_STATE_UNVERIFIED->ORGANISATION_VERIFICATION_STATE_VERIFIED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+  tammy.v1.OrganisationVerificationState.ORGANISATION_VERIFICATION_STATE_UNVERIFIED->ORGANISATION_VERIFICATION_STATE_FAILED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+  tammy.v1.OrganisationVerificationState.ORGANISATION_VERIFICATION_STATE_FAILED->ORGANISATION_VERIFICATION_STATE_VERIFIED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+  tammy.v1.OrganisationVerificationState.ORGANISATION_VERIFICATION_STATE_FAILED->ORGANISATION_VERIFICATION_STATE_EXPIRED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+  tammy.v1.OrganisationVerificationState.ORGANISATION_VERIFICATION_STATE_VERIFIED->ORGANISATION_VERIFICATION_STATE_EXPIRED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+  tammy.v1.OrganisationVerificationState.ORGANISATION_VERIFICATION_STATE_VERIFIED->ORGANISATION_VERIFICATION_STATE_SUPERSEDED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/foundation-contracts
+  tammy.v1.AccountStatus.ACCOUNT_STATUS_ACTIVE->ACCOUNT_STATUS_ARCHIVED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/opening-chart-contracts
+  tammy.v1.AccountStatus.ACCOUNT_STATUS_ARCHIVED->ACCOUNT_STATUS_ACTIVE:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/opening-chart-contracts
+  tammy.v1.OpeningConversionState.OPENING_CONVERSION_STATE_POSTED->OPENING_CONVERSION_STATE_REPLACED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/opening-chart-contracts
+  tammy.v1.JournalState.JOURNAL_STATE_POSTED->JOURNAL_STATE_REVERSED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/journal-period-contracts
+  tammy.v1.PeriodState.PERIOD_STATE_OPEN->PERIOD_STATE_CLOSED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/journal-period-contracts
+  tammy.v1.PeriodState.PERIOD_STATE_CLOSED->PERIOD_STATE_OPEN:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/journal-period-contracts
+  tammy.v1.BackupJobState.BACKUP_JOB_STATE_QUEUED->BACKUP_JOB_STATE_RUNNING:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+  tammy.v1.BackupJobState.BACKUP_JOB_STATE_QUEUED->BACKUP_JOB_STATE_CANCELLED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+  tammy.v1.BackupJobState.BACKUP_JOB_STATE_RUNNING->BACKUP_JOB_STATE_QUEUED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+  tammy.v1.BackupJobState.BACKUP_JOB_STATE_RUNNING->BACKUP_JOB_STATE_COMPLETED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+  tammy.v1.BackupJobState.BACKUP_JOB_STATE_RUNNING->BACKUP_JOB_STATE_FAILED_RETRYABLE:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+  tammy.v1.BackupJobState.BACKUP_JOB_STATE_RUNNING->BACKUP_JOB_STATE_FAILED_TERMINAL:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+  tammy.v1.BackupJobState.BACKUP_JOB_STATE_RUNNING->BACKUP_JOB_STATE_CANCELLED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+  tammy.v1.BackupJobState.BACKUP_JOB_STATE_FAILED_RETRYABLE->BACKUP_JOB_STATE_QUEUED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+  tammy.v1.BackupJobState.BACKUP_JOB_STATE_FAILED_RETRYABLE->BACKUP_JOB_STATE_CANCELLED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+  tammy.v1.RestoreState.RESTORE_STATE_PREPARED->RESTORE_STATE_STAGED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+  tammy.v1.RestoreState.RESTORE_STATE_STAGED->RESTORE_STATE_SWAPPED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+  tammy.v1.RestoreState.RESTORE_STATE_SWAPPED->RESTORE_STATE_COMPLETE:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+  tammy.v1.PreRestoreArchiveState.PRE_RESTORE_ARCHIVE_STATE_AVAILABLE->PRE_RESTORE_ARCHIVE_STATE_DELETED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+  tammy.v1.PreRestoreArchiveExportJobState.PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_QUEUED->PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_WRITING:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+  tammy.v1.PreRestoreArchiveExportJobState.PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_QUEUED->PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_CANCELLED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+  tammy.v1.PreRestoreArchiveExportJobState.PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_QUEUED->PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_FAILED_RETRYABLE:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+  tammy.v1.PreRestoreArchiveExportJobState.PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_WRITING->PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_VERIFIED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+  tammy.v1.PreRestoreArchiveExportJobState.PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_WRITING->PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_CANCELLED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+  tammy.v1.PreRestoreArchiveExportJobState.PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_WRITING->PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_FAILED_RETRYABLE:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+  tammy.v1.PreRestoreArchiveExportJobState.PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_VERIFIED->PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_COMPLETED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+  tammy.v1.PreRestoreArchiveExportJobState.PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_FAILED_RETRYABLE->PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_QUEUED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+  tammy.v1.PreRestoreArchiveExportJobState.PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_FAILED_RETRYABLE->PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_CANCELLED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+  tammy.v1.AuditExportJobState.AUDIT_EXPORT_JOB_STATE_QUEUED->AUDIT_EXPORT_JOB_STATE_RUNNING:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+  tammy.v1.AuditExportJobState.AUDIT_EXPORT_JOB_STATE_QUEUED->AUDIT_EXPORT_JOB_STATE_CANCELLED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+  tammy.v1.AuditExportJobState.AUDIT_EXPORT_JOB_STATE_RUNNING->AUDIT_EXPORT_JOB_STATE_QUEUED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+  tammy.v1.AuditExportJobState.AUDIT_EXPORT_JOB_STATE_RUNNING->AUDIT_EXPORT_JOB_STATE_WAITING_FOR_INPUT:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+  tammy.v1.AuditExportJobState.AUDIT_EXPORT_JOB_STATE_RUNNING->AUDIT_EXPORT_JOB_STATE_COMPLETED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+  tammy.v1.AuditExportJobState.AUDIT_EXPORT_JOB_STATE_RUNNING->AUDIT_EXPORT_JOB_STATE_FAILED_RETRYABLE:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+  tammy.v1.AuditExportJobState.AUDIT_EXPORT_JOB_STATE_RUNNING->AUDIT_EXPORT_JOB_STATE_FAILED_TERMINAL:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+  tammy.v1.AuditExportJobState.AUDIT_EXPORT_JOB_STATE_RUNNING->AUDIT_EXPORT_JOB_STATE_CANCELLED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+  tammy.v1.AuditExportJobState.AUDIT_EXPORT_JOB_STATE_WAITING_FOR_INPUT->AUDIT_EXPORT_JOB_STATE_QUEUED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+  tammy.v1.AuditExportJobState.AUDIT_EXPORT_JOB_STATE_WAITING_FOR_INPUT->AUDIT_EXPORT_JOB_STATE_CANCELLED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+  tammy.v1.AuditExportJobState.AUDIT_EXPORT_JOB_STATE_FAILED_RETRYABLE->AUDIT_EXPORT_JOB_STATE_QUEUED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+  tammy.v1.AuditExportJobState.AUDIT_EXPORT_JOB_STATE_FAILED_RETRYABLE->AUDIT_EXPORT_JOB_STATE_CANCELLED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts

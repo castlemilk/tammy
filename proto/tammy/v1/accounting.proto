@@ -1,0 +1,1019 @@
+syntax = "proto3";
+
+package tammy.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+import "tammy/v1/common.proto";
+
+option go_package = "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1";
+
+// AccountType is the stable primary financial-statement classification.
+enum AccountType {
+  // ACCOUNT_TYPE_UNSPECIFIED indicates an invalid or unavailable classification.
+  ACCOUNT_TYPE_UNSPECIFIED = 0;
+
+  // ACCOUNT_TYPE_ASSET represents resources controlled by the organisation.
+  ACCOUNT_TYPE_ASSET = 1;
+
+  // ACCOUNT_TYPE_LIABILITY represents present obligations.
+  ACCOUNT_TYPE_LIABILITY = 2;
+
+  // ACCOUNT_TYPE_EQUITY represents residual owner interest.
+  ACCOUNT_TYPE_EQUITY = 3;
+
+  // ACCOUNT_TYPE_REVENUE represents ordinary operating income.
+  ACCOUNT_TYPE_REVENUE = 4;
+
+  // ACCOUNT_TYPE_OTHER_REVENUE represents non-operating income.
+  ACCOUNT_TYPE_OTHER_REVENUE = 5;
+
+  // ACCOUNT_TYPE_EXPENSE represents ordinary operating expense.
+  ACCOUNT_TYPE_EXPENSE = 6;
+
+  // ACCOUNT_TYPE_OTHER_EXPENSE represents non-operating expense.
+  ACCOUNT_TYPE_OTHER_EXPENSE = 7;
+
+  // ACCOUNT_TYPE_CONTRA is presented against its linked primary classification.
+  ACCOUNT_TYPE_CONTRA = 8;
+}
+
+// NormalBalance identifies the side that increases an account's ledger-normal balance.
+enum NormalBalance {
+  // NORMAL_BALANCE_UNSPECIFIED indicates an invalid or unavailable normal side.
+  NORMAL_BALANCE_UNSPECIFIED = 0;
+
+  // NORMAL_BALANCE_DEBIT increases with debit postings.
+  NORMAL_BALANCE_DEBIT = 1;
+
+  // NORMAL_BALANCE_CREDIT increases with credit postings.
+  NORMAL_BALANCE_CREDIT = 2;
+}
+
+// AccountStatus is the chart account lifecycle.
+// Allowed transitions are ACTIVE -> ARCHIVED and ARCHIVED -> ACTIVE.
+enum AccountStatus {
+  // ACCOUNT_STATUS_UNSPECIFIED indicates an invalid or unavailable status.
+  ACCOUNT_STATUS_UNSPECIFIED = 0;
+
+  // ACCOUNT_STATUS_ACTIVE permits valid postings.
+  ACCOUNT_STATUS_ACTIVE = 1;
+
+  // ACCOUNT_STATUS_ARCHIVED remains visible in history and rejects new postings.
+  ACCOUNT_STATUS_ARCHIVED = 2;
+}
+
+// AccountDesignation identifies immutable system and control-account ownership.
+enum AccountDesignation {
+  // ACCOUNT_DESIGNATION_UNSPECIFIED indicates no validated designation.
+  ACCOUNT_DESIGNATION_UNSPECIFIED = 0;
+
+  // ACCOUNT_DESIGNATION_ORDINARY is user-managed subject to history and dependency rules.
+  ACCOUNT_DESIGNATION_ORDINARY = 1;
+
+  // ACCOUNT_DESIGNATION_SYSTEM is installed and protected by the accounting kernel.
+  ACCOUNT_DESIGNATION_SYSTEM = 2;
+
+  // ACCOUNT_DESIGNATION_CONTROL is owned by a specific accounting workflow.
+  ACCOUNT_DESIGNATION_CONTROL = 3;
+}
+
+// OpeningConversionState is the immutable opening conversion lifecycle.
+// The sole allowed transition is POSTED -> REPLACED.
+enum OpeningConversionState {
+  // OPENING_CONVERSION_STATE_UNSPECIFIED indicates an invalid or unavailable state.
+  OPENING_CONVERSION_STATE_UNSPECIFIED = 0;
+
+  // OPENING_CONVERSION_STATE_POSTED is the current immutable opening conversion.
+  OPENING_CONVERSION_STATE_POSTED = 1;
+
+  // OPENING_CONVERSION_STATE_REPLACED retains the reversed predecessor as history.
+  OPENING_CONVERSION_STATE_REPLACED = 2;
+}
+
+// OpeningBalanceKind identifies a typed conversion line without ambiguous free-form categories.
+enum OpeningBalanceKind {
+  // OPENING_BALANCE_KIND_UNSPECIFIED indicates an invalid opening line type.
+  OPENING_BALANCE_KIND_UNSPECIFIED = 0;
+
+  // OPENING_BALANCE_KIND_ORDINARY is an ordinary account ledger opening.
+  OPENING_BALANCE_KIND_ORDINARY = 1;
+
+  // OPENING_BALANCE_KIND_CUSTOMER_OPEN_ITEM is an accounts-receivable opening item.
+  OPENING_BALANCE_KIND_CUSTOMER_OPEN_ITEM = 2;
+
+  // OPENING_BALANCE_KIND_SUPPLIER_OPEN_ITEM is an accounts-payable opening item.
+  OPENING_BALANCE_KIND_SUPPLIER_OPEN_ITEM = 3;
+
+  // OPENING_BALANCE_KIND_FINANCIAL_ACCOUNT is a bank or credit-card ledger opening.
+  OPENING_BALANCE_KIND_FINANCIAL_ACCOUNT = 4;
+
+  // OPENING_BALANCE_KIND_UNALLOCATED_CREDIT is a customer or supplier unallocated credit.
+  OPENING_BALANCE_KIND_UNALLOCATED_CREDIT = 5;
+
+  // OPENING_BALANCE_KIND_OPENING_EQUITY is the explicit balancing amount.
+  OPENING_BALANCE_KIND_OPENING_EQUITY = 6;
+}
+
+// JournalState is the immutable journal lifecycle.
+// The sole allowed transition is POSTED -> REVERSED.
+enum JournalState {
+  // JOURNAL_STATE_UNSPECIFIED indicates an invalid or unavailable state.
+  JOURNAL_STATE_UNSPECIFIED = 0;
+
+  // JOURNAL_STATE_POSTED is immutable and contributes to the general ledger.
+  JOURNAL_STATE_POSTED = 1;
+
+  // JOURNAL_STATE_REVERSED retains the original and links one direct reversing journal.
+  JOURNAL_STATE_REVERSED = 2;
+}
+
+// JournalSource identifies the workflow that owns the immutable posting.
+enum JournalSource {
+  // JOURNAL_SOURCE_UNSPECIFIED indicates an invalid or unavailable source.
+  JOURNAL_SOURCE_UNSPECIFIED = 0;
+
+  // JOURNAL_SOURCE_OPENING_CONVERSION is owned by the opening conversion workflow.
+  JOURNAL_SOURCE_OPENING_CONVERSION = 1;
+
+  // JOURNAL_SOURCE_MANUAL is a user-authored balanced manual journal.
+  JOURNAL_SOURCE_MANUAL = 2;
+
+  // JOURNAL_SOURCE_REVERSAL is a linked reversing journal.
+  JOURNAL_SOURCE_REVERSAL = 3;
+}
+
+// PeriodState is the accounting period lifecycle.
+// Allowed transitions are OPEN -> CLOSED and CLOSED -> OPEN.
+enum PeriodState {
+  // PERIOD_STATE_UNSPECIFIED indicates an invalid or unavailable state.
+  PERIOD_STATE_UNSPECIFIED = 0;
+
+  // PERIOD_STATE_OPEN permits otherwise valid postings and reversals.
+  PERIOD_STATE_OPEN = 1;
+
+  // PERIOD_STATE_CLOSED rejects postings and reversals on or before the period end.
+  PERIOD_STATE_CLOSED = 2;
+}
+
+// TaxTreatment is the stable accounting treatment carried by immutable tax facts.
+enum TaxTreatment {
+  // TAX_TREATMENT_UNSPECIFIED indicates no validated tax treatment.
+  TAX_TREATMENT_UNSPECIFIED = 0;
+
+  // TAX_TREATMENT_TAXABLE is subject to a retained GST rate and rule.
+  TAX_TREATMENT_TAXABLE = 1;
+
+  // TAX_TREATMENT_GST_FREE is a GST-free supply or acquisition.
+  TAX_TREATMENT_GST_FREE = 2;
+
+  // TAX_TREATMENT_INPUT_TAXED is input taxed under the retained rule bundle.
+  TAX_TREATMENT_INPUT_TAXED = 3;
+
+  // TAX_TREATMENT_OUT_OF_SCOPE is outside Australian GST scope.
+  TAX_TREATMENT_OUT_OF_SCOPE = 4;
+}
+
+// Account is the bounded chart-of-accounts projection.
+message Account {
+  // id is an opaque UUIDv7 string.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+
+  // organisation_id identifies the owning organisation.
+  string organisation_id = 2 [(buf.validate.field).string.uuid = true];
+
+  // version is the optimistic aggregate version.
+  uint64 version = 3 [(buf.validate.field).uint64.gte = 1];
+
+  // code is a bounded organisation-unique chart code.
+  string code = 4 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 32
+  }];
+
+  // name is bounded presentation text.
+  string name = 5 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 160
+  }];
+
+  // type is the immutable primary account classification.
+  AccountType type = 6 [(buf.validate.field).enum.defined_only = true];
+
+  // subtype is an optional stable reporting subclassification.
+  optional string subtype = 7 [(buf.validate.field).string.max_len = 96];
+
+  // normal_balance identifies the ledger-normal increasing side.
+  NormalBalance normal_balance = 8 [(buf.validate.field).enum.defined_only = true];
+
+  // status is the active/archive lifecycle state.
+  AccountStatus status = 9 [(buf.validate.field).enum.defined_only = true];
+
+  // designation protects system and workflow-control accounts.
+  AccountDesignation designation = 10 [(buf.validate.field).enum.defined_only = true];
+
+  // default_tax_code_id is present only when postings may inherit a tax-code default.
+  optional string default_tax_code_id = 11 [(buf.validate.field).string.uuid = true];
+
+  // report_classification is a stable bounded reporting classification.
+  string report_classification = 12 [(buf.validate.field).string.max_len = 96];
+
+  // cash_flow_classification is a stable bounded cash-flow classification.
+  string cash_flow_classification = 13 [(buf.validate.field).string.max_len = 96];
+}
+
+// AccountPatch contains only fields selected by UpdateAccountRequest.update_mask.
+message AccountPatch {
+  // code is a bounded organisation-unique chart code.
+  string code = 1 [(buf.validate.field).string.max_len = 32];
+
+  // name is bounded presentation text.
+  string name = 2 [(buf.validate.field).string.max_len = 160];
+
+  // subtype is selected to set or clear optional reporting detail.
+  optional string subtype = 3 [(buf.validate.field).string.max_len = 96];
+
+  // default_tax_code_id is selected to set or clear the posting default.
+  optional string default_tax_code_id = 4 [(buf.validate.field).string.uuid = true];
+
+  // report_classification is a stable bounded reporting classification.
+  string report_classification = 5 [(buf.validate.field).string.max_len = 96];
+
+  // cash_flow_classification is a stable bounded cash-flow classification.
+  string cash_flow_classification = 6 [(buf.validate.field).string.max_len = 96];
+}
+
+// TaxCode is the effective user-facing projection of one immutable rule-bundle treatment.
+message TaxCode {
+  // id is an opaque UUIDv7 string scoped to the retained rule bundle.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+
+  // code is the stable bounded user-facing code.
+  string code = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 32
+  }];
+
+  // label is bounded user-facing treatment text.
+  string label = 3 [(buf.validate.field).string.max_len = 160];
+
+  // treatment is the immutable accounting treatment.
+  TaxTreatment treatment = 4 [(buf.validate.field).enum.defined_only = true];
+
+  // rate is exact scaled decimal provenance; no binary floating point is permitted.
+  Decimal rate = 5 [(buf.validate.field).required = true];
+
+  // rule is the immutable retained tax-rule source.
+  SourceRef rule = 6 [(buf.validate.field).required = true];
+}
+
+// OpeningBalanceInput is one typed, ordered opening conversion input line.
+message OpeningBalanceInput {
+  // client_line_id is a caller-generated UUIDv7 retained for deterministic diagnostics.
+  string client_line_id = 1 [(buf.validate.field).string.uuid = true];
+
+  // kind identifies the typed conversion workflow owning the line.
+  OpeningBalanceKind kind = 2 [(buf.validate.field).enum.defined_only = true];
+
+  // account_id identifies the ledger account receiving the opening amount.
+  string account_id = 3 [(buf.validate.field).string.uuid = true];
+
+  // ledger_balance is exact ledger-normal signed money.
+  Money ledger_balance = 4 [(buf.validate.field).required = true];
+
+  // source is present for imported or cross-module opening provenance.
+  SourceRef source = 5;
+
+  // original_issue_date is present for customer or supplier open items.
+  CivilDate original_issue_date = 6;
+
+  // original_due_date is present for customer or supplier open items.
+  CivilDate original_due_date = 7;
+
+  // outstanding_gst is present for GST-bearing open items.
+  Money outstanding_gst = 8;
+
+  // prior_gst_attributed is the exact amount already attributed before conversion.
+  Money prior_gst_attributed = 9;
+
+  // latest_statement_date is present for financial-account openings.
+  CivilDate latest_statement_date = 10;
+
+  // latest_statement_balance is present for financial-account openings.
+  Money latest_statement_balance = 11;
+}
+
+// OpeningConversion is the immutable posted conversion aggregate projection.
+message OpeningConversion {
+  // id is an opaque UUIDv7 string.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+
+  // organisation_id identifies the owning organisation.
+  string organisation_id = 2 [(buf.validate.field).string.uuid = true];
+
+  // version is the optimistic aggregate version.
+  uint64 version = 3 [(buf.validate.field).uint64.gte = 1];
+
+  // state is the posted/replaced lifecycle state.
+  OpeningConversionState state = 4 [(buf.validate.field).enum.defined_only = true];
+
+  // conversion_date is the civil accounting date of the opening journal.
+  CivilDate conversion_date = 5 [(buf.validate.field).required = true];
+
+  // journal_id identifies the immutable posting created by the conversion.
+  string journal_id = 6 [(buf.validate.field).string.uuid = true];
+
+  // replaced_by_id is present only after a full replacement succeeds.
+  optional string replaced_by_id = 7 [(buf.validate.field).string.uuid = true];
+
+  // financial_revision is the resulting committed financial revision.
+  uint64 financial_revision = 8 [(buf.validate.field).uint64.gte = 1];
+}
+
+// ManualJournalLineInput is one ordered debit or credit input with explicit tax intent.
+message ManualJournalLineInput {
+  // client_line_id is a caller-generated UUIDv7 retained for deterministic diagnostics.
+  string client_line_id = 1 [(buf.validate.field).string.uuid = true];
+
+  // account_id identifies the active account receiving the posting.
+  string account_id = 2 [(buf.validate.field).string.uuid = true];
+
+  // debit is exact non-negative debit money; the domain enforces exactly one non-zero side.
+  Money debit = 3 [(buf.validate.field).required = true];
+
+  // credit is exact non-negative credit money; the domain enforces exactly one non-zero side.
+  Money credit = 4 [(buf.validate.field).required = true];
+
+  // description is bounded audit-safe line text.
+  string description = 5 [(buf.validate.field).string.max_len = 512];
+
+  // tax_code_id is present only for an explicit retained tax treatment.
+  optional string tax_code_id = 6 [(buf.validate.field).string.uuid = true];
+
+  // tax_amount is exact derived or explicitly validated GST money.
+  Money tax_amount = 7;
+
+  // source is present for immutable cross-module provenance.
+  SourceRef source = 8;
+}
+
+// JournalLine is one immutable balanced-ledger posting line.
+message JournalLine {
+  // id is an opaque UUIDv7 string.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+
+  // journal_id identifies the immutable parent journal.
+  string journal_id = 2 [(buf.validate.field).string.uuid = true];
+
+  // account_id identifies the posted account.
+  string account_id = 3 [(buf.validate.field).string.uuid = true];
+
+  // sequence preserves semantically significant request and posting order.
+  uint32 sequence = 4 [(buf.validate.field).uint32.gte = 1];
+
+  // debit is exact non-negative debit money.
+  Money debit = 5 [(buf.validate.field).required = true];
+
+  // credit is exact non-negative credit money.
+  Money credit = 6 [(buf.validate.field).required = true];
+
+  // description is bounded retained line text.
+  string description = 7 [(buf.validate.field).string.max_len = 512];
+
+  // tax_code_id is present only when a tax fact was posted.
+  optional string tax_code_id = 8 [(buf.validate.field).string.uuid = true];
+
+  // tax_amount is exact retained GST money.
+  Money tax_amount = 9;
+
+  // tax_rule is immutable tax-rule provenance.
+  SourceRef tax_rule = 10;
+}
+
+// Journal is an immutable balanced posting projection.
+message Journal {
+  // id is an opaque UUIDv7 string.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+
+  // organisation_id identifies the owning organisation.
+  string organisation_id = 2 [(buf.validate.field).string.uuid = true];
+
+  // version is the optimistic aggregate version.
+  uint64 version = 3 [(buf.validate.field).uint64.gte = 1];
+
+  // state is POSTED or REVERSED without mutating posted lines.
+  JournalState state = 4 [(buf.validate.field).enum.defined_only = true];
+
+  // source identifies the owning posting workflow.
+  JournalSource source = 5 [(buf.validate.field).enum.defined_only = true];
+
+  // posting_date is the civil accounting date.
+  CivilDate posting_date = 6 [(buf.validate.field).required = true];
+
+  // memo is bounded retained journal text.
+  string memo = 7 [(buf.validate.field).string.max_len = 512];
+
+  // lines preserve immutable posting order.
+  repeated JournalLine lines = 8 [(buf.validate.field).repeated = {
+    min_items: 2
+    max_items: 1000
+  }];
+
+  // total_debits is exact and equals total_credits for every posted journal.
+  Money total_debits = 9 [(buf.validate.field).required = true];
+
+  // total_credits is exact and equals total_debits for every posted journal.
+  Money total_credits = 10 [(buf.validate.field).required = true];
+
+  // reversal_of_journal_id is present only for a reversing journal.
+  optional string reversal_of_journal_id = 11 [(buf.validate.field).string.uuid = true];
+
+  // reversed_by_journal_id is present only after one direct reversal commits.
+  optional string reversed_by_journal_id = 12 [(buf.validate.field).string.uuid = true];
+
+  // posted_at is the core-authored commit instant.
+  google.protobuf.Timestamp posted_at = 13 [(buf.validate.field).required = true];
+
+  // financial_revision is the resulting committed financial revision.
+  uint64 financial_revision = 14 [(buf.validate.field).uint64.gte = 1];
+}
+
+// AccountingPeriod is the inclusive close boundary projection.
+message AccountingPeriod {
+  // id is an opaque UUIDv7 string.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+
+  // organisation_id identifies the owning organisation.
+  string organisation_id = 2 [(buf.validate.field).string.uuid = true];
+
+  // version is the optimistic aggregate version.
+  uint64 version = 3 [(buf.validate.field).uint64.gte = 1];
+
+  // state is the open/closed lifecycle state.
+  PeriodState state = 4 [(buf.validate.field).enum.defined_only = true];
+
+  // end_date is the inclusive civil close boundary.
+  CivilDate end_date = 5 [(buf.validate.field).required = true];
+
+  // closed_at is present only after close commits.
+  google.protobuf.Timestamp closed_at = 6;
+
+  // reopened_at is present after the latest audited reopen.
+  google.protobuf.Timestamp reopened_at = 7;
+}
+
+// LedgerEntry is one immutable journal line with its ledger-normal running balance.
+message LedgerEntry {
+  // journal is immutable provenance for the entry.
+  SourceRef journal = 1 [(buf.validate.field).required = true];
+
+  // journal_line_id identifies the exact immutable posting line.
+  string journal_line_id = 2 [(buf.validate.field).string.uuid = true];
+
+  // account_id identifies the account projection being queried.
+  string account_id = 3 [(buf.validate.field).string.uuid = true];
+
+  // posting_date is the civil accounting date.
+  CivilDate posting_date = 4 [(buf.validate.field).required = true];
+
+  // debit is exact posted debit money.
+  Money debit = 5 [(buf.validate.field).required = true];
+
+  // credit is exact posted credit money.
+  Money credit = 6 [(buf.validate.field).required = true];
+
+  // running_balance is exact ledger-normal money after this ordered entry.
+  Money running_balance = 7 [(buf.validate.field).required = true];
+}
+
+// TrialBalanceLine is one account's exact debit/credit/balance projection.
+message TrialBalanceLine {
+  // account is immutable account provenance at the query revision.
+  SourceRef account = 1 [(buf.validate.field).required = true];
+
+  // code is the retained account code used for stable display ordering.
+  string code = 2 [(buf.validate.field).string.max_len = 32];
+
+  // name is the retained account name.
+  string name = 3 [(buf.validate.field).string.max_len = 160];
+
+  // debits is the exact debit total through the query date.
+  Money debits = 4 [(buf.validate.field).required = true];
+
+  // credits is the exact credit total through the query date.
+  Money credits = 5 [(buf.validate.field).required = true];
+
+  // ledger_normal_balance is the exact signed ledger-normal balance.
+  Money ledger_normal_balance = 6 [(buf.validate.field).required = true];
+}
+
+// CreateAccountRequest creates one ordinary account in an audited persistent command.
+message CreateAccountRequest {
+  // command_context carries a UUID idempotency key and authorized principal.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+
+  // organisation_id identifies the owning organisation.
+  string organisation_id = 2 [(buf.validate.field).string.uuid = true];
+
+  // code is a bounded organisation-unique chart code.
+  string code = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 32
+  }];
+
+  // name is bounded presentation text.
+  string name = 4 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 160
+  }];
+
+  // type is the immutable primary account classification.
+  AccountType type = 5 [(buf.validate.field).enum.defined_only = true];
+
+  // subtype is optional reporting detail.
+  optional string subtype = 6 [(buf.validate.field).string.max_len = 96];
+
+  // normal_balance identifies the increasing side.
+  NormalBalance normal_balance = 7 [(buf.validate.field).enum.defined_only = true];
+
+  // default_tax_code_id is present only when postings may inherit a tax default.
+  optional string default_tax_code_id = 8 [(buf.validate.field).string.uuid = true];
+
+  // report_classification is a stable bounded reporting classification.
+  string report_classification = 9 [(buf.validate.field).string.max_len = 96];
+
+  // cash_flow_classification is a stable bounded cash-flow classification.
+  string cash_flow_classification = 10 [(buf.validate.field).string.max_len = 96];
+}
+
+// CreateAccountResponse returns the committed account projection.
+message CreateAccountResponse {
+  // account is active and ordinary unless installed by a separate trusted template path.
+  Account account = 1 [(buf.validate.field).required = true];
+}
+
+// UpdateAccountRequest applies a FieldMask-selected optimistic update.
+message UpdateAccountRequest {
+  // command_context carries a UUID idempotency key and authorized administrator.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+
+  // account_id identifies the account being updated.
+  string account_id = 2 [(buf.validate.field).string.uuid = true];
+
+  // expected_version prevents stale chart updates.
+  uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
+
+  // update_mask is validated, deduplicated, and UTF-8 sorted before semantic hashing.
+  google.protobuf.FieldMask update_mask = 4 [(buf.validate.field).required = true];
+
+  // patch supplies values only for selected paths.
+  AccountPatch patch = 5 [(buf.validate.field).required = true];
+}
+
+// UpdateAccountResponse returns the committed account projection.
+message UpdateAccountResponse {
+  // account reflects the selected mutable field changes.
+  Account account = 1 [(buf.validate.field).required = true];
+}
+
+// SetAccountStatusRequest archives or reactivates an ordinary account.
+message SetAccountStatusRequest {
+  // command_context carries a UUID idempotency key and authorized administrator.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+
+  // account_id identifies the account changing lifecycle state.
+  string account_id = 2 [(buf.validate.field).string.uuid = true];
+
+  // expected_version prevents stale transition decisions.
+  uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
+
+  // status is the requested ACTIVE or ARCHIVED state.
+  AccountStatus status = 4 [(buf.validate.field).enum.defined_only = true];
+
+  // reason is mandatory bounded audit-safe text.
+  string reason = 5 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 512
+  }];
+}
+
+// SetAccountStatusResponse returns the committed account projection.
+message SetAccountStatusResponse {
+  // account reflects the elected lifecycle transition.
+  Account account = 1 [(buf.validate.field).required = true];
+}
+
+// ListTaxCodesRequest requests effective tax treatments for one civil posting date.
+message ListTaxCodesRequest {
+  // authentication identifies an authorized preparing or reading principal.
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+
+  // organisation_id identifies the configured organisation.
+  string organisation_id = 2 [(buf.validate.field).string.uuid = true];
+
+  // posting_date selects the one effective immutable rule bundle.
+  CivilDate posting_date = 3 [(buf.validate.field).required = true];
+
+  // page requests the stable signed cursor page.
+  PageRequest page = 4 [(buf.validate.field).required = true];
+}
+
+// ListTaxCodesResponse returns effective codes in stable user-facing code order.
+message ListTaxCodesResponse {
+  // tax_codes is a bounded stable page.
+  repeated TaxCode tax_codes = 1 [(buf.validate.field).repeated.max_items = 200];
+
+  // page describes continuation of the same retained rule-bundle snapshot.
+  PageInfo page = 2 [(buf.validate.field).required = true];
+}
+
+// PostOpeningConversionRequest atomically validates and posts the complete opening aggregate.
+message PostOpeningConversionRequest {
+  // command_context carries a UUID idempotency key and authorized administrator.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+
+  // organisation_id identifies the owning organisation.
+  string organisation_id = 2 [(buf.validate.field).string.uuid = true];
+
+  // conversion_date is the civil accounting date of all opening facts.
+  CivilDate conversion_date = 3 [(buf.validate.field).required = true];
+
+  // balances preserves semantically significant client order for diagnostics and retained results.
+  repeated OpeningBalanceInput balances = 4 [(buf.validate.field).repeated = {
+    min_items: 2
+    max_items: 5000
+  }];
+
+  // expected_financial_revision is present when the caller requires an unchanged financial snapshot.
+  optional uint64 expected_financial_revision = 5;
+}
+
+// PostOpeningConversionResponse returns the conversion and immutable balanced journal.
+message PostOpeningConversionResponse {
+  // conversion is the committed current opening aggregate.
+  OpeningConversion conversion = 1 [(buf.validate.field).required = true];
+
+  // journal is the immutable balanced opening posting.
+  Journal journal = 2 [(buf.validate.field).required = true];
+}
+
+// ReplaceOpeningConversionRequest reverses the complete predecessor and posts one replacement.
+message ReplaceOpeningConversionRequest {
+  // command_context carries a UUID idempotency key and new purpose-bound factor assertion.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+
+  // opening_conversion_id identifies the current posted conversion.
+  string opening_conversion_id = 2 [(buf.validate.field).string.uuid = true];
+
+  // expected_version prevents stale full-replacement decisions.
+  uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
+
+  // replacement_date is the civil date of reversal and replacement postings.
+  CivilDate replacement_date = 4 [(buf.validate.field).required = true];
+
+  // balances is the complete replacement input, not a partial patch.
+  repeated OpeningBalanceInput balances = 5 [(buf.validate.field).repeated = {
+    min_items: 2
+    max_items: 5000
+  }];
+
+  // reason is mandatory bounded audit-safe replacement text.
+  string reason = 6 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 512
+  }];
+}
+
+// ReplaceOpeningConversionResponse returns predecessor, replacement, reversal, and replacement journal.
+message ReplaceOpeningConversionResponse {
+  // predecessor has the terminal REPLACED state.
+  OpeningConversion predecessor = 1 [(buf.validate.field).required = true];
+
+  // replacement is the new current POSTED conversion.
+  OpeningConversion replacement = 2 [(buf.validate.field).required = true];
+
+  // reversal_journal immutably reverses the predecessor posting.
+  Journal reversal_journal = 3 [(buf.validate.field).required = true];
+
+  // replacement_journal is the immutable balanced successor posting.
+  Journal replacement_journal = 4 [(buf.validate.field).required = true];
+}
+
+// PostManualJournalRequest validates and posts one immutable balanced manual journal.
+message PostManualJournalRequest {
+  // command_context carries a UUID idempotency key and authorized principal.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+
+  // organisation_id identifies the owning organisation.
+  string organisation_id = 2 [(buf.validate.field).string.uuid = true];
+
+  // posting_date is the civil accounting date.
+  CivilDate posting_date = 3 [(buf.validate.field).required = true];
+
+  // memo is bounded audit-safe retained text.
+  string memo = 4 [(buf.validate.field).string.max_len = 512];
+
+  // lines preserves semantically significant debit, credit, and tax-intent order.
+  repeated ManualJournalLineInput lines = 5 [(buf.validate.field).repeated = {
+    min_items: 2
+    max_items: 1000
+  }];
+
+  // expected_financial_revision is present when the caller requires an unchanged financial snapshot.
+  optional uint64 expected_financial_revision = 6;
+}
+
+// PostManualJournalResponse returns the immutable posted journal.
+message PostManualJournalResponse {
+  // journal is the deterministic retained result of an exact replay.
+  Journal journal = 1 [(buf.validate.field).required = true];
+}
+
+// ReverseJournalRequest creates one linked reversing journal in an open period.
+message ReverseJournalRequest {
+  // command_context carries a UUID idempotency key and authorized principal.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+
+  // journal_id identifies the immutable original posting.
+  string journal_id = 2 [(buf.validate.field).string.uuid = true];
+
+  // expected_version prevents a second direct reversal or stale transition.
+  uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
+
+  // reversal_date is a civil date in an open accounting period.
+  CivilDate reversal_date = 4 [(buf.validate.field).required = true];
+
+  // reason is mandatory bounded audit-safe text.
+  string reason = 5 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 512
+  }];
+}
+
+// ReverseJournalResponse returns the original and linked reversing journal.
+message ReverseJournalResponse {
+  // original has the terminal REVERSED projection state.
+  Journal original = 1 [(buf.validate.field).required = true];
+
+  // reversal is the new immutable inverse posting.
+  Journal reversal = 2 [(buf.validate.field).required = true];
+}
+
+// ClosePeriodRequest closes postings through one inclusive civil date.
+message ClosePeriodRequest {
+  // command_context carries a UUID idempotency key and new purpose-bound factor assertion.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+
+  // organisation_id identifies the owning organisation.
+  string organisation_id = 2 [(buf.validate.field).string.uuid = true];
+
+  // end_date is the inclusive civil close boundary.
+  CivilDate end_date = 3 [(buf.validate.field).required = true];
+
+  // expected_financial_revision prevents close across a changed financial snapshot.
+  uint64 expected_financial_revision = 4 [(buf.validate.field).uint64.gte = 1];
+}
+
+// ClosePeriodResponse returns the committed closed period.
+message ClosePeriodResponse {
+  // period has the CLOSED lifecycle state.
+  AccountingPeriod period = 1 [(buf.validate.field).required = true];
+}
+
+// ReopenPeriodRequest reopens one closed period after high-risk proof.
+message ReopenPeriodRequest {
+  // command_context carries a UUID idempotency key and new purpose-bound factor assertion.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+
+  // period_id identifies the closed accounting period.
+  string period_id = 2 [(buf.validate.field).string.uuid = true];
+
+  // expected_version prevents a stale reopen decision.
+  uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
+
+  // reason is mandatory bounded audit-safe text.
+  string reason = 4 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 512
+  }];
+}
+
+// ReopenPeriodResponse returns the committed open period.
+message ReopenPeriodResponse {
+  // period has the OPEN lifecycle state after audit and report impact commit.
+  AccountingPeriod period = 1 [(buf.validate.field).required = true];
+}
+
+// GetAccountRequest requests one explicit account projection.
+message GetAccountRequest {
+  // authentication identifies an authorized accounting reader.
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+
+  // account_id is an opaque UUIDv7 identifier.
+  string account_id = 2 [(buf.validate.field).string.uuid = true];
+}
+
+// GetAccountResponse returns one explicit account projection.
+message GetAccountResponse {
+  // account is the current bounded projection.
+  Account account = 1 [(buf.validate.field).required = true];
+}
+
+// ListAccountsRequest requests a stable bounded chart page.
+message ListAccountsRequest {
+  // authentication identifies an authorized accounting reader.
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+
+  // organisation_id identifies the owning organisation.
+  string organisation_id = 2 [(buf.validate.field).string.uuid = true];
+
+  // page requests the stable signed cursor page.
+  PageRequest page = 3 [(buf.validate.field).required = true];
+
+  // status is present only when filtering by lifecycle state.
+  optional AccountStatus status = 4;
+
+  // type is present only when filtering by primary classification.
+  optional AccountType type = 5;
+
+  // query is optional bounded code/name search text.
+  optional string query = 6 [(buf.validate.field).string.max_len = 128];
+}
+
+// ListAccountsResponse returns accounts in stable code and ID order.
+message ListAccountsResponse {
+  // accounts is a bounded stable page.
+  repeated Account accounts = 1 [(buf.validate.field).repeated.max_items = 200];
+
+  // page describes continuation of the same chart snapshot.
+  PageInfo page = 2 [(buf.validate.field).required = true];
+}
+
+// GetJournalRequest requests one explicit immutable journal projection.
+message GetJournalRequest {
+  // authentication identifies an authorized accounting reader.
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+
+  // journal_id is an opaque UUIDv7 identifier.
+  string journal_id = 2 [(buf.validate.field).string.uuid = true];
+}
+
+// GetJournalResponse returns one explicit immutable journal projection.
+message GetJournalResponse {
+  // journal includes ordered immutable lines and reversal links.
+  Journal journal = 1 [(buf.validate.field).required = true];
+}
+
+// ListJournalsRequest requests a stable bounded journal page.
+message ListJournalsRequest {
+  // authentication identifies an authorized accounting reader.
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+
+  // organisation_id identifies the owning organisation.
+  string organisation_id = 2 [(buf.validate.field).string.uuid = true];
+
+  // page requests the stable signed cursor page.
+  PageRequest page = 3 [(buf.validate.field).required = true];
+
+  // start_date is present only when filtering the inclusive lower bound.
+  CivilDate start_date = 4;
+
+  // end_date is present only when filtering the inclusive upper bound.
+  CivilDate end_date = 5;
+
+  // state is present only when filtering by journal lifecycle state.
+  optional JournalState state = 6;
+
+  // source is present only when filtering by owning workflow.
+  optional JournalSource source = 7;
+}
+
+// ListJournalsResponse returns journals in stable posting-date and ID order.
+message ListJournalsResponse {
+  // journals is a bounded stable page.
+  repeated Journal journals = 1 [(buf.validate.field).repeated.max_items = 200];
+
+  // page describes continuation of the same ledger snapshot.
+  PageInfo page = 2 [(buf.validate.field).required = true];
+}
+
+// GetGeneralLedgerRequest requests explicit ordered ledger entries.
+message GetGeneralLedgerRequest {
+  // authentication identifies an authorized accounting reader.
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+
+  // organisation_id identifies the owning organisation.
+  string organisation_id = 2 [(buf.validate.field).string.uuid = true];
+
+  // account_ids is a sorted, deduplicated filter; empty means all accounts.
+  repeated string account_ids = 3 [(buf.validate.field).repeated = {
+    max_items: 200
+    unique: true
+    items: {
+      string: {uuid: true}
+    }
+  }];
+
+  // start_date is present only when filtering the inclusive lower bound.
+  CivilDate start_date = 4;
+
+  // end_date is present only when filtering the inclusive upper bound.
+  CivilDate end_date = 5;
+
+  // page requests the stable signed cursor page.
+  PageRequest page = 6 [(buf.validate.field).required = true];
+}
+
+// GetGeneralLedgerResponse returns explicit ordered entries and snapshot revision.
+message GetGeneralLedgerResponse {
+  // entries is a bounded stable page in date, journal, and line sequence order.
+  repeated LedgerEntry entries = 1 [(buf.validate.field).repeated.max_items = 200];
+
+  // page describes continuation of the same ledger snapshot.
+  PageInfo page = 2 [(buf.validate.field).required = true];
+
+  // financial_revision identifies the complete query snapshot.
+  uint64 financial_revision = 3 [(buf.validate.field).uint64.gte = 1];
+}
+
+// GetTrialBalanceRequest requests one explicit as-of trial balance snapshot.
+message GetTrialBalanceRequest {
+  // authentication identifies an authorized accounting reader.
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+
+  // organisation_id identifies the owning organisation.
+  string organisation_id = 2 [(buf.validate.field).string.uuid = true];
+
+  // as_of_date is the inclusive civil accounting date.
+  CivilDate as_of_date = 3 [(buf.validate.field).required = true];
+
+  // expected_financial_revision is present when the caller requires an unchanged snapshot.
+  optional uint64 expected_financial_revision = 4;
+}
+
+// GetTrialBalanceResponse returns exact account totals and balancing totals.
+message GetTrialBalanceResponse {
+  // lines is ordered by account code and opaque ID.
+  repeated TrialBalanceLine lines = 1 [(buf.validate.field).repeated.max_items = 10000];
+
+  // total_debits is the exact debit-column total.
+  Money total_debits = 2 [(buf.validate.field).required = true];
+
+  // total_credits is the exact credit-column total and equals total_debits.
+  Money total_credits = 3 [(buf.validate.field).required = true];
+
+  // financial_revision identifies the complete query snapshot.
+  uint64 financial_revision = 4 [(buf.validate.field).uint64.gte = 1];
+}
+
+// AccountingService exposes chart, opening conversion, immutable journals, periods, and explicit ledger queries.
+service AccountingService {
+  // CreateAccount creates one ordinary account.
+  rpc CreateAccount(CreateAccountRequest) returns (CreateAccountResponse);
+
+  // UpdateAccount applies optimistic FieldMask-selected mutable changes.
+  rpc UpdateAccount(UpdateAccountRequest) returns (UpdateAccountResponse);
+
+  // SetAccountStatus archives or reactivates an ordinary account.
+  rpc SetAccountStatus(SetAccountStatusRequest) returns (SetAccountStatusResponse);
+
+  // ListTaxCodes returns the effective retained tax-code catalogue for a posting date.
+  rpc ListTaxCodes(ListTaxCodesRequest) returns (ListTaxCodesResponse);
+
+  // PostOpeningConversion validates and posts the complete opening aggregate.
+  rpc PostOpeningConversion(PostOpeningConversionRequest) returns (PostOpeningConversionResponse);
+
+  // ReplaceOpeningConversion fully reverses and replaces the current opening aggregate.
+  rpc ReplaceOpeningConversion(ReplaceOpeningConversionRequest) returns (ReplaceOpeningConversionResponse);
+
+  // PostManualJournal validates and posts one immutable balanced manual journal.
+  rpc PostManualJournal(PostManualJournalRequest) returns (PostManualJournalResponse);
+
+  // ReverseJournal creates one linked immutable reversing journal.
+  rpc ReverseJournal(ReverseJournalRequest) returns (ReverseJournalResponse);
+
+  // ClosePeriod closes postings through one inclusive civil date after new factor proof.
+  rpc ClosePeriod(ClosePeriodRequest) returns (ClosePeriodResponse);
+
+  // ReopenPeriod reopens one closed period after new factor proof and report impact checks.
+  rpc ReopenPeriod(ReopenPeriodRequest) returns (ReopenPeriodResponse);
+
+  // GetAccount returns one explicit account projection.
+  rpc GetAccount(GetAccountRequest) returns (GetAccountResponse);
+
+  // ListAccounts returns a stable bounded chart page.
+  rpc ListAccounts(ListAccountsRequest) returns (ListAccountsResponse);
+
+  // GetJournal returns one explicit immutable journal projection.
+  rpc GetJournal(GetJournalRequest) returns (GetJournalResponse);
+
+  // ListJournals returns a stable bounded journal page.
+  rpc ListJournals(ListJournalsRequest) returns (ListJournalsResponse);
+
+  // GetGeneralLedger returns explicit ordered ledger entries and snapshot revision.
+  rpc GetGeneralLedger(GetGeneralLedgerRequest) returns (GetGeneralLedgerResponse);
+
+  // GetTrialBalance returns one exact as-of trial balance snapshot.
+  rpc GetTrialBalance(GetTrialBalanceRequest) returns (GetTrialBalanceResponse);
+}

@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package tammy.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+import "tammy/v1/accounting.proto";
+import "tammy/v1/common.proto";
+
+option go_package = "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1";
+
+// CanonicalRequest is the shared cross-language boundary fixture for Task 2 normalization.
+// It is not a production RPC request and contains no real identities, secrets, or accounting data.
+message CanonicalRequest {
+  // command_context proves that authentication and idempotency metadata are typed and removable.
+  CommandContext command_context = 1;
+
+  // implicit_default_flag demonstrates that an implicit false value is omitted from normalized JSON.
+  bool implicit_default_flag = 2;
+
+  // explicit_default_flag demonstrates presence even when the selected value is false.
+  optional bool explicit_default_flag = 3;
+
+  // update_mask is the sole generic set-like exception and is normalized to sorted unique paths.
+  google.protobuf.FieldMask update_mask = 4;
+
+  // ordered_values demonstrates that repeated-field order is semantically significant.
+  repeated string ordered_values = 5 [(buf.validate.field).repeated.max_items = 16];
+
+  // signed_units demonstrates the standard Protobuf JSON decimal-string mapping for int64.
+  int64 signed_units = 6;
+
+  // observed_at demonstrates valid timestamp normalization to UTC and canonical fractional precision.
+  google.protobuf.Timestamp observed_at = 7;
+
+  // account_status demonstrates symbolic enum-name representation.
+  AccountStatus account_status = 8 [(buf.validate.field).enum.defined_only = true];
+
+  // explicit_zero demonstrates scalar presence for an explicitly supplied int64 zero.
+  optional int64 explicit_zero = 9;
+
+  // optional_note demonstrates absent versus explicitly present empty-string semantics.
+  optional string optional_note = 10 [(buf.validate.field).string.max_len = 64];
+}

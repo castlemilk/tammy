@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "messageType": "tammy.v1.CanonicalRequest",
+  "cases": [
+    {
+      "name": "absent-presence",
+      "input": {},
+      "expectedNormalizedJson": {}
+    },
+    {
+      "name": "explicit-default-presence",
+      "input": {
+        "explicit_default_flag": false,
+        "explicit_zero": "0",
+        "optional_note": ""
+      },
+      "expectedNormalizedJson": {
+        "explicit_default_flag": false,
+        "explicit_zero": "0",
+        "optional_note": ""
+      }
+    },
+    {
+      "name": "field-mask-normalization",
+      "input": {
+        "update_mask": "legalName,displayName,legalName"
+      },
+      "expectedNormalizedJson": {
+        "update_mask": "displayName,legalName"
+      }
+    },
+    {
+      "name": "repeated-order",
+      "input": {
+        "ordered_values": ["second", "first", "second"]
+      },
+      "expectedNormalizedJson": {
+        "ordered_values": ["second", "first", "second"]
+      }
+    },
+    {
+      "name": "int64-decimal-string",
+      "input": {
+        "signed_units": "-9223372036854775808"
+      },
+      "expectedNormalizedJson": {
+        "signed_units": "-9223372036854775808"
+      }
+    },
+    {
+      "name": "timestamp-normalization",
+      "input": {
+        "observed_at": "2026-08-03T10:11:12.120000+10:00"
+      },
+      "expectedNormalizedJson": {
+        "observed_at": "2026-08-03T00:11:12.120Z"
+      }
+    },
+    {
+      "name": "symbolic-enum-name",
+      "input": {
+        "account_status": "ACCOUNT_STATUS_ARCHIVED"
+      },
+      "expectedNormalizedJson": {
+        "account_status": "ACCOUNT_STATUS_ARCHIVED"
+      }
+    }
+  ],
+  "unknownFieldCases": [
+    {
+      "name": "reject-unknown-field",
+      "input": {
+        "future_accounting_rule": "must-not-be-dropped"
+      }
+    }
+  ]
+}
