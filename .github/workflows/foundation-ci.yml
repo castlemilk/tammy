@@ -62,10 +62,10 @@ jobs:
       - name: Verify descriptor-driven programme contracts
         run: pnpm contracts
 
-      - name: Prove descriptor evidence generation for the subject commit
+      - name: Verify retained descriptor evidence
         env:
-          TAMMY_SOURCE_REVISION: ${{ github.sha }}
-        run: pnpm proto:descriptors:evidence
+          TAMMY_EVIDENCE_SUBJECT_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: pnpm proto:descriptors:verify
 
       - name: Run Go race tests
         run: go test -race ./services/core/...
@@ -195,6 +195,11 @@ jobs:
             $changes | ForEach-Object { Write-Host $_ }
             throw "DIRTY_GENERATED_TREE"
           }
+
+      - name: Verify retained descriptor evidence
+        env:
+          TAMMY_EVIDENCE_SUBJECT_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: pnpm proto:descriptors:verify
 
       - name: Run Windows desktop tests and package inputs
         shell: pwsh

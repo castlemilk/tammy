@@ -73,7 +73,12 @@ export function parseCoverageManifest(source) {
 }
 
 export function descriptorRpcNames(bytes) {
-  const descriptorSet = fromBinary(FileDescriptorSetSchema, bytes);
+  let descriptorSet;
+  try {
+    descriptorSet = fromBinary(FileDescriptorSetSchema, bytes);
+  } catch (cause) {
+    throw new Error("E2E_COVERAGE_DESCRIPTOR_INVALID", { cause });
+  }
   return descriptorSet.file
     .filter((file) => file.package?.startsWith("tammy."))
     .flatMap((file) =>

@@ -197,6 +197,22 @@ test("decodes descriptor RPCs with the generated well-known schema", async () =>
   ]);
 });
 
+test("reports a deterministic error for invalid descriptor wire data", async () => {
+  const { descriptorRpcNames } = await import("./check-e2e-coverage.mjs");
+
+  for (const bytes of [Buffer.from([0x0a, 0x05, 0x01]), Buffer.from([0x0f])]) {
+    assert.throws(
+      () => descriptorRpcNames(bytes),
+      (error) => {
+        assert.equal(error.message, "E2E_COVERAGE_DESCRIPTOR_INVALID");
+        assert.ok(error.cause instanceof Error);
+        assert.notEqual(error.message, error.cause.message);
+        return true;
+      },
+    );
+  }
+});
+
 test("permits only the reviewed pre-workspace system-query exception", async () => {
   const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
   const input = systemQueryInput();

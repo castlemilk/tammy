@@ -25,6 +25,7 @@
     "proto:breaking": "node scripts/check-proto-breaking.mjs",
     "proto:descriptors:check": "node scripts/build-descriptors.mjs --validation",
     "proto:descriptors:evidence": "node scripts/build-descriptors.mjs --evidence",
+    "proto:descriptors:verify": "node scripts/verify-descriptor-evidence.mjs",
     "transitions:generate": "node scripts/build-transition-index.mjs --write",
     "transitions:check": "node scripts/build-transition-index.mjs --check",
     "e2e:coverage": "node scripts/check-e2e-coverage.mjs --descriptors .tmp/contracts/descriptors.pb",
