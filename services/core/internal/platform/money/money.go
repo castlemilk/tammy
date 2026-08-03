@@ -25,25 +25,40 @@ type Money struct {
 
 // New creates a signed money value with a canonical ISO-style currency code.
 func New(currency string, minorUnits int64) (Money, error) {
-	if len(currency) != 3 {
-		return Money{}, ErrInvalidCurrency
+	money := Money{currency: currency, minorUnits: minorUnits}
+	if err := money.Validate(); err != nil {
+		return Money{}, err
 	}
-	for index := range len(currency) {
-		if currency[index] < 'A' || currency[index] > 'Z' {
-			return Money{}, ErrInvalidCurrency
+	return money, nil
+}
+
+// Validate rejects values that did not pass through the canonical constructor.
+func (money Money) Validate() error {
+	if len(money.currency) != 3 {
+		return ErrInvalidCurrency
+	}
+	for index := range len(money.currency) {
+		if money.currency[index] < 'A' || money.currency[index] > 'Z' {
+			return ErrInvalidCurrency
 		}
 	}
-	return Money{currency: currency, minorUnits: minorUnits}, nil
+	return nil
 }
 
-// Currency returns the canonical currency code.
-func (money Money) Currency() string {
-	return money.currency
+// Currency returns the canonical currency code after validating the whole value.
+func (money Money) Currency() (string, error) {
+	if err := money.Validate(); err != nil {
+		return "", err
+	}
+	return money.currency, nil
 }
 
-// MinorUnits returns the signed amount in minor units.
-func (money Money) MinorUnits() int64 {
-	return money.minorUnits
+// MinorUnits returns the signed amount after validating the whole value.
+func (money Money) MinorUnits() (int64, error) {
+	if err := money.Validate(); err != nil {
+		return 0, err
+	}
+	return money.minorUnits, nil
 }
 
 // CheckedAdd adds two signed integers and rejects overflow.

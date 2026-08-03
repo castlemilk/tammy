@@ -159,3 +159,38 @@ func TestCodecDefensivelyCopiesSigningKey(t *testing.T) {
 		t.Fatal("codec retained caller-owned key storage")
 	}
 }
+
+func TestCodecRejectsZeroStateAndNilReceiverBeforeCryptographicUse(t *testing.T) {
+	queryHash := sha256.Sum256([]byte("query"))
+	cursor := paging.Cursor{
+		Snapshot:  "revision:1",
+		Position:  "line:a",
+		QueryHash: queryHash,
+	}
+	var zeroA paging.Codec
+	var zeroB paging.Codec
+	var nilCodec *paging.Codec
+	for name, codec := range map[string]*paging.Codec{
+		"zero_a": &zeroA,
+		"zero_b": &zeroB,
+		"nil":    nilCodec,
+	} {
+		t.Run(name, func(t *testing.T) {
+			token, err := codec.Encode(cursor)
+			if token != "" || !errors.Is(err, paging.ErrInvalidKey) || err.Error() != paging.ErrInvalidKey.Error() {
+				t.Fatalf("Encode() = %q, %v; want empty token and stable %v", token, err, paging.ErrInvalidKey)
+			}
+			if _, err := codec.Decode("", queryHash); !errors.Is(err, paging.ErrInvalidKey) || err.Error() != paging.ErrInvalidKey.Error() {
+				t.Fatalf("Decode() error = %v, want stable %v", err, paging.ErrInvalidKey)
+			}
+		})
+	}
+
+	token, err := zeroA.Encode(cursor)
+	if !errors.Is(err, paging.ErrInvalidKey) {
+		t.Fatalf("zero codec A encode error = %v", err)
+	}
+	if _, err := zeroB.Decode(token, queryHash); !errors.Is(err, paging.ErrInvalidKey) {
+		t.Fatalf("zero codec B accepted zero codec A token: %v", err)
+	}
+}

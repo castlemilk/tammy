@@ -100,6 +100,22 @@ func TestGeneratorRejectsTypedNilSources(t *testing.T) {
 	}
 }
 
+func TestGeneratorNewRejectsNilAndZeroReceivers(t *testing.T) {
+	var nilGenerator *ids.Generator
+	var zeroGenerator ids.Generator
+	for name, generator := range map[string]*ids.Generator{
+		"nil":  nilGenerator,
+		"zero": &zeroGenerator,
+	} {
+		t.Run(name, func(t *testing.T) {
+			identifier, err := generator.New()
+			if identifier != "" || !errors.Is(err, ids.ErrInvalidSource) || err.Error() != ids.ErrInvalidSource.Error() {
+				t.Fatalf("New() = %q, %v; want empty identifier and stable %v", identifier, err, ids.ErrInvalidSource)
+			}
+		})
+	}
+}
+
 func TestGeneratorSerializesConcurrentEntropyReads(t *testing.T) {
 	entropy := &countingEntropy{}
 	generator, err := ids.NewGenerator(clock.NewFixed(time.UnixMilli(1)), entropy)

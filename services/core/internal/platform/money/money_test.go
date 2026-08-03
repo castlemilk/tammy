@@ -194,13 +194,41 @@ func TestMoneyRequiresCanonicalCurrency(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Currency() != "AUD" || got.MinorUnits() != -125 {
-		t.Fatalf("money = %#v", got)
+	currency, err := got.Currency()
+	if err != nil {
+		t.Fatal(err)
+	}
+	minorUnits, err := got.MinorUnits()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if currency != "AUD" || minorUnits != -125 {
+		t.Fatalf("money = %q/%d", currency, minorUnits)
 	}
 	for _, invalid := range []string{"", "aud", "AU", "AÜD", "AUDD"} {
 		if _, err := money.New(invalid, 0); !errors.Is(err, money.ErrInvalidCurrency) {
 			t.Fatalf("currency %q error = %v, want %v", invalid, err, money.ErrInvalidCurrency)
 		}
+	}
+}
+
+func TestMoneyZeroRepresentationsFailClosedOnEveryRead(t *testing.T) {
+	var declaredZero money.Money
+	for name, value := range map[string]money.Money{
+		"declared_zero": declaredZero,
+		"empty_literal": {},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if err := value.Validate(); !errors.Is(err, money.ErrInvalidCurrency) {
+				t.Fatalf("Validate() error = %v, want %v", err, money.ErrInvalidCurrency)
+			}
+			if currency, err := value.Currency(); currency != "" || !errors.Is(err, money.ErrInvalidCurrency) {
+				t.Fatalf("Currency() = %q, %v", currency, err)
+			}
+			if minorUnits, err := value.MinorUnits(); minorUnits != 0 || !errors.Is(err, money.ErrInvalidCurrency) {
+				t.Fatalf("MinorUnits() = %d, %v", minorUnits, err)
+			}
+		})
 	}
 }
 

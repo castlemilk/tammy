@@ -45,6 +45,9 @@ func NewCodec(key []byte) (*Codec, error) {
 
 // Encode returns canonical unpadded Base64URL over a versioned payload and HMAC.
 func (codec *Codec) Encode(cursor Cursor) (string, error) {
+	if !codec.valid() {
+		return "", ErrInvalidKey
+	}
 	if !validCursor(cursor) {
 		return "", ErrInvalidCursor
 	}
@@ -62,6 +65,9 @@ func (codec *Codec) Encode(cursor Cursor) (string, error) {
 
 // Decode verifies a cursor and binds it to the caller's expected normalized query hash.
 func (codec *Codec) Decode(token string, expectedQueryHash [sha256.Size]byte) (Cursor, error) {
+	if !codec.valid() {
+		return Cursor{}, ErrInvalidKey
+	}
 	if token == "" || len(token) > maximumTokenLen || expectedQueryHash == [sha256.Size]byte{} {
 		return Cursor{}, ErrInvalidCursor
 	}
@@ -79,6 +85,10 @@ func (codec *Codec) Decode(token string, expectedQueryHash [sha256.Size]byte) (C
 		return Cursor{}, ErrInvalidCursor
 	}
 	return cursor, nil
+}
+
+func (codec *Codec) valid() bool {
+	return codec != nil && len(codec.key) >= minimumKeyLen
 }
 
 func decodePayload(payload []byte) (Cursor, bool) {

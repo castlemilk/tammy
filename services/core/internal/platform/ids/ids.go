@@ -52,6 +52,9 @@ func isNilSource(source any) bool {
 
 // New returns one canonical lowercase UUIDv7 string.
 func (generator *Generator) New() (string, error) {
+	if generator == nil || isNilSource(generator.clock) || isNilSource(generator.entropy) {
+		return "", ErrInvalidSource
+	}
 	generator.mu.Lock()
 	defer generator.mu.Unlock()
 
