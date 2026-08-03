@@ -48,6 +48,18 @@ async function fixtureRoot() {
   return { root, sourceRoot };
 }
 
+async function writeFakeCompilerOutput(args, contents = "object") {
+  await writeFile(args[args.indexOf("-o") + 1], contents);
+  const dependencyIndex = args.indexOf("-MF");
+  if (dependencyIndex >= 0) {
+    const compileInput = args[args.indexOf("-c") + 1];
+    await writeFile(
+      args[dependencyIndex + 1],
+      `tammy-sqlcipher-object: ${compileInput} ${path.join(path.dirname(compileInput), "sqlite3.c")}\n`,
+    );
+  }
+}
+
 async function buildMacFixture({ resourceHooks, root, sourceRoot }) {
   return buildSqlcipher({
     arch: "arm64",
@@ -65,7 +77,7 @@ async function buildMacFixture({ resourceHooks, root, sourceRoot }) {
       }
       const outputIndex = args.indexOf("-o");
       if (command === "/usr/bin/clang" && outputIndex >= 0) {
-        await writeFile(args[outputIndex + 1], "object");
+        await writeFakeCompilerOutput(args);
       }
       if (command === "/usr/bin/libtool") {
         await writeFile(args[args.indexOf("-o") + 1], "static sqlcipher library");
@@ -73,6 +85,54 @@ async function buildMacFixture({ resourceHooks, root, sourceRoot }) {
       return { stderr: "", stdout: "" };
     },
   });
+}
+
+async function buildMacDependencyFixture({ dependencyEvidence = "valid", root, sourceRoot }) {
+  const state = {};
+  await mkdir(path.join(root, "apps/desktop/resources"), { recursive: true });
+  const result = await buildSqlcipher({
+    arch: "arm64",
+    platform: "darwin",
+    root,
+    vendor: async () => ({ sourceRoot, sourceTreeSha256: SOURCE_TREE_SHA256 }),
+    sourceTreeHasher: async () => SOURCE_TREE_SHA256,
+    execFile: async (command, args, options) => {
+      if (command === "/usr/bin/make") {
+        state.privateSource = options.cwd;
+        await Promise.all([
+          writeFile(path.join(options.cwd, "sqlite3.c"), "private sqlcipher source"),
+          writeFile(path.join(options.cwd, "sqlite3.h"), "sqlcipher header"),
+        ]);
+      }
+      if (command === "/usr/bin/clang" && args.includes("-c")) {
+        state.compilerArgs = args;
+        state.compileInput = args[args.indexOf("-c") + 1];
+        state.wrapperBytes = await readFile(state.compileInput, "utf8");
+        await writeFile(args[args.indexOf("-o") + 1], "object");
+        const dependencyIndex = args.indexOf("-MF");
+        if (dependencyIndex >= 0 && dependencyEvidence !== "missing") {
+          const dependencyFile = args[dependencyIndex + 1];
+          const expectedSqlite = path.join(state.privateSource, "sqlite3.c");
+          const shadowSqlite = path.join(root, "scripts/sqlite3.c");
+          const sqliteDependencies =
+            dependencyEvidence === "wrong"
+              ? [shadowSqlite]
+              : dependencyEvidence === "duplicate"
+                ? [expectedSqlite, shadowSqlite]
+                : [expectedSqlite];
+          await writeFile(
+            dependencyFile,
+            `tammy-sqlcipher-object: ${state.compileInput} ${sqliteDependencies.join(" ")}\n`,
+          );
+        }
+      }
+      if (command === "/usr/bin/libtool") {
+        await writeFile(args[args.indexOf("-o") + 1], "static sqlcipher library");
+      }
+      return { stderr: "", stdout: "" };
+    },
+  });
+  return { ...state, result };
 }
 
 async function onlyRetiredResourceRoot(root) {
@@ -216,6 +276,41 @@ describe("SQLCipher static build plan", () => {
 });
 
 describe("SQLCipher build execution", () => {
+  it("compiles a private staged wrapper beside sqlite3.c and cannot select a scripts shadow", async () => {
+    const { root, sourceRoot } = await fixtureRoot();
+    const shadowSqlite = path.join(root, "scripts/sqlite3.c");
+    await writeFile(shadowSqlite, "attacker-controlled shadow source");
+
+    const build = await buildMacDependencyFixture({ root, sourceRoot });
+    const expectedWrapper = path.join(build.privateSource, "sqlcipher-amalgamation.c");
+
+    assert.equal(build.compileInput, expectedWrapper);
+    assert.equal(path.dirname(build.compileInput), build.privateSource);
+    assert.equal(build.wrapperBytes, "fixture wrapper\n");
+    assert.ok(build.compilerArgs.includes("-MMD"));
+    assert.ok(build.compilerArgs.includes("-MF"));
+    assert.deepEqual(
+      build.compilerArgs.slice(
+        build.compilerArgs.indexOf("-MT"),
+        build.compilerArgs.indexOf("-MT") + 2,
+      ),
+      ["-MT", "tammy-sqlcipher-object"],
+    );
+    assert.ok(!build.compilerArgs.includes(shadowSqlite));
+  });
+
+  for (const dependencyEvidence of ["missing", "wrong", "duplicate"]) {
+    it(`fails closed on ${dependencyEvidence} compiler dependency evidence`, async () => {
+      const { root, sourceRoot } = await fixtureRoot();
+      await writeFile(path.join(root, "scripts/sqlite3.c"), "attacker-controlled shadow source");
+
+      await assert.rejects(
+        buildMacDependencyFixture({ dependencyEvidence, root, sourceRoot }),
+        /SQLCIPHER_DEPENDENCY_INVALID/,
+      );
+    });
+  }
+
   it("stages the static library, header, license, version, and authenticated hash", async () => {
     const { root, sourceRoot } = await fixtureRoot();
     const staleProvider = path.join(
@@ -244,7 +339,7 @@ describe("SQLCipher build execution", () => {
         }
         const outputIndex = args.indexOf("-o");
         if (command === "/usr/bin/clang" && outputIndex >= 0) {
-          await writeFile(args[outputIndex + 1], "object");
+          await writeFakeCompilerOutput(args);
         }
         if (command === "/usr/bin/libtool") {
           await writeFile(args[args.indexOf("-o") + 1], "static sqlcipher library");
@@ -261,7 +356,8 @@ describe("SQLCipher build execution", () => {
     const compilation = calls.find(
       ({ args, command }) => command === "/usr/bin/clang" && args.includes("-c"),
     );
-    assert.ok(compilation.args.includes(path.join(root, "scripts/sqlcipher-amalgamation.c")));
+    const privateSource = calls.find(({ command }) => command === "/usr/bin/make").options.cwd;
+    assert.ok(compilation.args.includes(path.join(privateSource, "sqlcipher-amalgamation.c")));
     assert.ok(
       compilation.args.some(
         (argument) => argument.startsWith("-I") && argument.includes("sqlcipher-4.15.0"),
@@ -300,13 +396,14 @@ describe("SQLCipher build execution", () => {
         root,
         vendor: async () => ({ sourceRoot, sourceTreeSha256: SOURCE_TREE_SHA256 }),
         sourceTreeHasher: async () => SOURCE_TREE_SHA256,
-        execFile: async (command, _args, options) => {
+        execFile: async (command, args, options) => {
           if (command === "/usr/bin/make") {
             await Promise.all([
               writeFile(path.join(options.cwd, "sqlite3.c"), "source"),
               writeFile(path.join(options.cwd, "sqlite3.h"), "header"),
             ]);
           }
+          if (command === "/usr/bin/clang") await writeFakeCompilerOutput(args);
           return { stderr: "", stdout: "" };
         },
       }),
@@ -432,7 +529,7 @@ describe("SQLCipher build execution", () => {
             writeFile(path.join(options.cwd, "sqlite3.h"), "header"),
           ]);
         } else if (command === paths.cc) {
-          await writeFile(args[args.indexOf("-o") + 1], "object");
+          await writeFakeCompilerOutput(args);
         } else if (command === paths.ar) {
           await writeFile(args[1], "sqlcipher archive");
         }

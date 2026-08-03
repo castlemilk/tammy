@@ -12,6 +12,7 @@ import {
 } from "./vendor-sqlcipher.mjs";
 
 const BUILD_TIMEOUT_MS = 10 * 60_000;
+const COMPILE_DEPENDENCY_TARGET = "tammy-sqlcipher-object";
 const OPENSSL_LICENSE_SHA256 = "657443fd2340ed2d45d44ceb57df718bc810abcc060a9032f93759c4afab9fa2";
 const OPENSSL_SOURCE_SHA256 = "d71a811bfbd9153d7b30cbe476263302ee4b04a9a47ffea6e6a782326805c93f";
 const OPENSSL_VERSION = "3.5.7";
@@ -146,6 +147,7 @@ export function createSqlcipherBuildPlan({
     archiver: windows ? archiver : "/usr/bin/libtool",
     buildRoot,
     compiler,
+    dependencyFile: path.join(buildRoot, "tammy-sqlcipher-object.d"),
     defines: windows ? WINDOWS_DEFINES : DEFINES,
     frameworks: windows ? [] : ["CoreFoundation", "Security"],
     generatorCompiler: windows ? generatorCompiler : undefined,
@@ -178,6 +180,11 @@ export function createSqlcipherBuildPlan({
         : {}),
     }),
     sourceRoot,
+    stagedAmalgamationWrapper: path.join(
+      buildRoot,
+      SQLCIPHER_RELEASE.rootDirectory,
+      "sqlcipher-amalgamation.c",
+    ),
     target: Object.freeze(selected),
   });
 }
@@ -199,6 +206,180 @@ async function requireRegularFile(candidate, code) {
 async function requireDirectory(candidate, code) {
   const stats = await lstat(candidate).catch(() => null);
   if (!stats?.isDirectory() || stats.isSymbolicLink()) fail(code);
+}
+
+function sameRegularFileIdentity(current, expected) {
+  return Boolean(
+    current?.isFile() &&
+      !current.isSymbolicLink() &&
+      current.dev === expected.dev &&
+      current.ino === expected.ino,
+  );
+}
+
+async function captureRegularFile(candidate, code) {
+  const before = await lstat(candidate, { bigint: true }).catch(() => null);
+  if (!before?.isFile() || before.isSymbolicLink()) fail(code);
+  const bytes = await readFile(candidate).catch(() => null);
+  const after = await lstat(candidate, { bigint: true }).catch(() => null);
+  if (
+    bytes === null ||
+    !sameRegularFileIdentity(after, before) ||
+    after.size !== BigInt(bytes.byteLength)
+  ) {
+    fail(code);
+  }
+  return Object.freeze({
+    bytes,
+    identity: after,
+    sha256: createHash("sha256").update(bytes).digest("hex"),
+  });
+}
+
+function sameFileSnapshot(current, expected) {
+  return (
+    sameRegularFileIdentity(current.identity, expected.identity) &&
+    current.sha256 === expected.sha256 &&
+    current.bytes.equals(expected.bytes)
+  );
+}
+
+function parseDependencyWords(body) {
+  const dependencies = [];
+  let current = "";
+  for (let index = 0; index < body.length; index += 1) {
+    const character = body[index];
+    if (/\s/.test(character)) {
+      if (current !== "") {
+        dependencies.push(current);
+        current = "";
+      }
+      continue;
+    }
+    if (character === "#") fail("SQLCIPHER_DEPENDENCY_INVALID");
+    if (character !== "\\") {
+      current += character;
+      continue;
+    }
+    const escaped = body[index + 1];
+    if (escaped === undefined) fail("SQLCIPHER_DEPENDENCY_INVALID");
+    if (/\s|[\\#:]/.test(escaped)) current += escaped;
+    else current += `\\${escaped}`;
+    index += 1;
+  }
+  if (current !== "") dependencies.push(current);
+  return dependencies;
+}
+
+function parseCompilerDependencies(bytes) {
+  const contents = bytes.toString("utf8");
+  if (contents.includes("\0")) fail("SQLCIPHER_DEPENDENCY_INVALID");
+  const unfolded = contents.replace(/\\\r?\n/g, " ").trim();
+  if (/[\r\n]/.test(unfolded)) fail("SQLCIPHER_DEPENDENCY_INVALID");
+  const prefix = `${COMPILE_DEPENDENCY_TARGET}:`;
+  if (!unfolded.startsWith(prefix)) fail("SQLCIPHER_DEPENDENCY_INVALID");
+  const dependencies = parseDependencyWords(unfolded.slice(prefix.length));
+  if (dependencies.length === 0) fail("SQLCIPHER_DEPENDENCY_INVALID");
+  return dependencies;
+}
+
+async function stagePrivateCompileInputs(plan, source, committedWrapper) {
+  const expectedWrapper = path.join(source, "sqlcipher-amalgamation.c");
+  const sqlite = path.join(source, "sqlite3.c");
+  if (plan.stagedAmalgamationWrapper !== expectedWrapper) {
+    fail("SQLCIPHER_AMALGAMATION_WRAPPER_INVALID");
+  }
+  const currentCommittedWrapper = await captureRegularFile(
+    plan.amalgamationWrapper,
+    "SQLCIPHER_AMALGAMATION_WRAPPER_INVALID",
+  );
+  if (!sameFileSnapshot(currentCommittedWrapper, committedWrapper)) {
+    fail("SQLCIPHER_AMALGAMATION_WRAPPER_INVALID");
+  }
+  const sqliteSnapshot = await captureRegularFile(sqlite, "SQLCIPHER_SOURCE_INVALID");
+  try {
+    await writeFile(expectedWrapper, committedWrapper.bytes, { flag: "wx", mode: 0o600 });
+  } catch {
+    fail("SQLCIPHER_AMALGAMATION_WRAPPER_INVALID");
+  }
+  const wrapperSnapshot = await captureRegularFile(
+    expectedWrapper,
+    "SQLCIPHER_AMALGAMATION_WRAPPER_INVALID",
+  );
+  if (
+    wrapperSnapshot.sha256 !== committedWrapper.sha256 ||
+    !wrapperSnapshot.bytes.equals(committedWrapper.bytes)
+  ) {
+    fail("SQLCIPHER_AMALGAMATION_WRAPPER_INVALID");
+  }
+  return Object.freeze({
+    sqlite: Object.freeze({ path: sqlite, snapshot: sqliteSnapshot }),
+    wrapper: Object.freeze({ path: expectedWrapper, snapshot: wrapperSnapshot }),
+  });
+}
+
+async function verifyStableCompileInputs(inputs) {
+  const [sqlite, wrapper] = await Promise.all([
+    captureRegularFile(inputs.sqlite.path, "SQLCIPHER_SOURCE_INVALID"),
+    captureRegularFile(inputs.wrapper.path, "SQLCIPHER_AMALGAMATION_WRAPPER_INVALID"),
+  ]);
+  if (
+    !sameFileSnapshot(sqlite, inputs.sqlite.snapshot) ||
+    !sameFileSnapshot(wrapper, inputs.wrapper.snapshot)
+  ) {
+    fail("SQLCIPHER_BUILD_INPUT_CHANGED");
+  }
+}
+
+async function validateCompilerDependencies(plan, inputs) {
+  const dependencyFile = await captureRegularFile(
+    plan.dependencyFile,
+    "SQLCIPHER_DEPENDENCY_INVALID",
+  );
+  const dependencies = parseCompilerDependencies(dependencyFile.bytes).map((candidate) => {
+    if (!path.isAbsolute(candidate)) fail("SQLCIPHER_DEPENDENCY_INVALID");
+    return path.normalize(candidate);
+  });
+  const expectedWrapper = path.normalize(inputs.wrapper.path);
+  const expectedSqlite = path.normalize(inputs.sqlite.path);
+  const wrapperDependencies = dependencies.filter((candidate) => candidate === expectedWrapper);
+  const sqliteDependencies = dependencies.filter(
+    (candidate) => path.basename(candidate).toLowerCase() === "sqlite3.c",
+  );
+  if (
+    wrapperDependencies.length !== 1 ||
+    sqliteDependencies.length !== 1 ||
+    sqliteDependencies[0] !== expectedSqlite
+  ) {
+    fail("SQLCIPHER_DEPENDENCY_INVALID");
+  }
+}
+
+async function compileStaticObject(plan, source, committedWrapper, compilerArgs, execFile) {
+  const inputs = await stagePrivateCompileInputs(plan, source, committedWrapper);
+  if ((await lstat(plan.dependencyFile).catch(() => null)) !== null) {
+    fail("SQLCIPHER_DEPENDENCY_INVALID");
+  }
+  await execute(
+    execFile,
+    plan.compiler,
+    [
+      ...compilerArgs,
+      "-MMD",
+      "-MF",
+      plan.dependencyFile,
+      "-MT",
+      COMPILE_DEPENDENCY_TARGET,
+      "-c",
+      plan.stagedAmalgamationWrapper,
+      "-o",
+      path.join(plan.buildRoot, "sqlite3.o"),
+    ],
+    { cwd: plan.buildRoot },
+  );
+  await validateCompilerDependencies(plan, inputs);
+  await verifyStableCompileInputs(inputs);
+  return inputs;
 }
 
 async function requireWindowsDirectoryList(value) {
@@ -252,7 +433,7 @@ async function execute(execFile, command, args, options = {}) {
   }
 }
 
-async function compileMac(plan, source, execFile) {
+async function compileMac(plan, source, committedWrapper, execFile) {
   const commonFlags = plan.defines.map((value) => `-D${value}`);
   const cflags = ["-O2", "-g0", "-fPIC", ...commonFlags].join(" ");
   await execute(
@@ -269,22 +450,12 @@ async function compileMac(plan, source, execFile) {
     },
   );
   await execute(execFile, plan.make, ["-j2", "sqlite3.c", "sqlite3.h"], { cwd: source });
-  await execute(
+  await compileStaticObject(
+    plan,
+    source,
+    committedWrapper,
+    ["-O2", "-g0", "-fPIC", `-ffile-prefix-map=${source}=.`, ...commonFlags, `-I${source}`],
     execFile,
-    plan.compiler,
-    [
-      "-O2",
-      "-g0",
-      "-fPIC",
-      `-ffile-prefix-map=${source}=.`,
-      ...commonFlags,
-      `-I${source}`,
-      "-c",
-      plan.amalgamationWrapper,
-      "-o",
-      path.join(plan.buildRoot, "sqlite3.o"),
-    ],
-    { cwd: plan.buildRoot },
   );
   await execute(
     execFile,
@@ -294,7 +465,7 @@ async function compileMac(plan, source, execFile) {
   );
 }
 
-async function compileWindows(plan, source, execFile) {
+async function compileWindows(plan, source, committedWrapper, execFile) {
   const commonFlags = plan.defines.map((value) => `-D${value}`);
   await execute(
     execFile,
@@ -313,21 +484,12 @@ async function compileWindows(plan, source, execFile) {
     ],
     { cwd: source },
   );
-  await execute(
+  const inputs = await compileStaticObject(
+    plan,
+    source,
+    committedWrapper,
+    ["-O2", "-g0", ...commonFlags, `-I${plan.opensslInclude}`, `-I${source}`],
     execFile,
-    plan.compiler,
-    [
-      "-O2",
-      "-g0",
-      ...commonFlags,
-      `-I${plan.opensslInclude}`,
-      `-I${source}`,
-      "-c",
-      plan.amalgamationWrapper,
-      "-o",
-      path.join(plan.buildRoot, "sqlite3.o"),
-    ],
-    { cwd: plan.buildRoot },
   );
   await execute(
     execFile,
@@ -348,13 +510,14 @@ async function compileWindows(plan, source, execFile) {
       `-I${source}`,
       `--ld-path=${plan.linker}`,
       "-Wl,/Brepro",
-      plan.amalgamationWrapper,
+      plan.stagedAmalgamationWrapper,
       plan.ordinaryReaderSource,
       "-o",
       plan.ordinaryReader,
     ],
     { cwd: plan.buildRoot },
   );
+  await verifyStableCompileInputs(inputs);
 }
 
 export async function buildWindowsProvider({
@@ -693,7 +856,10 @@ export async function buildSqlcipher({
 } = {}) {
   const target = selectSqlcipherTarget(platform, arch);
   const amalgamationWrapper = path.join(root, "scripts/sqlcipher-amalgamation.c");
-  await requireRegularFile(amalgamationWrapper, "SQLCIPHER_AMALGAMATION_WRAPPER_INVALID");
+  const committedWrapper = await captureRegularFile(
+    amalgamationWrapper,
+    "SQLCIPHER_AMALGAMATION_WRAPPER_INVALID",
+  );
   const cacheRoot = path.join(root, ".tmp/sqlcipher");
   await mkdir(cacheRoot, { recursive: true, mode: 0o700 });
   const cacheIdentity = await lstat(cacheRoot, { bigint: true });
@@ -745,6 +911,9 @@ export async function buildSqlcipher({
     if (plan.amalgamationWrapper !== amalgamationWrapper) {
       fail("SQLCIPHER_AMALGAMATION_WRAPPER_INVALID");
     }
+    if (plan.stagedAmalgamationWrapper !== path.join(source, "sqlcipher-amalgamation.c")) {
+      fail("SQLCIPHER_AMALGAMATION_WRAPPER_INVALID");
+    }
     await requireDirectory(plan.sourceRoot, "SQLCIPHER_SOURCE_MISSING");
     if (target.platform === "win32") {
       await Promise.all([
@@ -760,10 +929,10 @@ export async function buildSqlcipher({
         requireRegularFile(plan.resourceCompiler, "SQLCIPHER_COMPILER_MISSING"),
         requireRegularFile(plan.ordinaryReaderSource, "SQLCIPHER_ORDINARY_READER_SOURCE_MISSING"),
       ]);
-      await compileWindows(plan, source, execFile);
+      await compileWindows(plan, source, committedWrapper, execFile);
       await requireRegularFile(plan.ordinaryReader, "SQLCIPHER_ORDINARY_READER_MISSING");
     } else {
-      await compileMac(plan, source, execFile);
+      await compileMac(plan, source, committedWrapper, execFile);
     }
     await requireRegularFile(plan.library, "SQLCIPHER_LIBRARY_MISSING");
     const { headerSha256, librarySha256, opensslLibrarySha256 } = await stageResources(
