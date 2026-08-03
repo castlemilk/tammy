@@ -11,6 +11,7 @@ export async function checkContracts({
   buildDescriptorsFn = buildDescriptors,
   checkGeneratedTreeFn = checkGeneratedTree,
   checkTransitionIndexFn = checkTransitionIndex,
+  requireProduction = false,
   root = process.cwd(),
   runE2ECoverageFn = runE2ECoverage,
 } = {}) {
@@ -22,6 +23,7 @@ export async function checkContracts({
     await checkTransitionIndexFn({ root });
     await runE2ECoverageFn({
       descriptorPath: path.join(temporaryDirectory, "descriptors.pb"),
+      requireProduction,
       root,
     });
   } finally {
@@ -29,6 +31,14 @@ export async function checkContracts({
   }
 }
 
+export function contractsCliOptions(args) {
+  if (args.length === 0) return { requireProduction: false };
+  if (args.length === 1 && args[0] === "--require-production") {
+    return { requireProduction: true };
+  }
+  throw new Error("CONTRACTS_MODE_INVALID");
+}
+
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  await checkContracts();
+  await checkContracts(contractsCliOptions(process.argv.slice(2)));
 }

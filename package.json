@@ -14,6 +14,7 @@
     "build:manifest": "node scripts/write-build-manifest.mjs",
     "ci:lint": "go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12",
     "contracts": "pnpm proto:format:check && pnpm proto:lint && pnpm proto:breaking && pnpm proto:generate && node scripts/check-contracts.mjs",
+    "contracts:production": "pnpm proto:format:check && pnpm proto:lint && pnpm proto:breaking && pnpm proto:generate && node scripts/check-contracts.mjs --require-production",
     "desktop:package": "pnpm core:build && pnpm build:manifest && pnpm --dir apps/desktop package && node --test apps/desktop/tests/e2e/package-signature.test.mjs && node apps/desktop/scripts/find-packaged-app.mjs --verify --source-manifest apps/desktop/resources/build/build-manifest.json",
     "desktop:start": "pnpm core:build && pnpm --dir apps/desktop start",
     "desktop:e2e": "pnpm desktop:package && pnpm --dir apps/desktop e2e",

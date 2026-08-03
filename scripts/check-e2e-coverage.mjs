@@ -8,6 +8,8 @@ import { parseDocument } from "yaml";
 const REQUIRED_ROLES = ["workspace_admin", "business_preparer", "business_lodger", "auditor"];
 const REVIEWED_EXCEPTION = "not_applicable_pre_workspace_system_query";
 const PRE_WORKSPACE_SYSTEM_QUERY = "tammy.v1.SystemService.GetDiagnostics";
+const PRODUCTION_STAGE = "production";
+const DECLARED_FUTURE_STAGE = "declared_future";
 
 function isRecord(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -15,6 +17,28 @@ function isRecord(value) {
 
 function isStringArray(value) {
   return Array.isArray(value) && value.every((entry) => typeof entry === "string");
+}
+
+function coverageStage(entry, name) {
+  if (entry.stage === PRODUCTION_STAGE || entry.stage === DECLARED_FUTURE_STAGE) {
+    return entry.stage;
+  }
+  if (entry.stage === undefined && name === PRE_WORKSPACE_SYSTEM_QUERY) return PRODUCTION_STAGE;
+  return undefined;
+}
+
+function hasCompleteFutureRpcMetadata(rpc) {
+  return (
+    rpc.cases.length === 0 &&
+    isStringArray(rpc.futureCases) &&
+    rpc.futureCases.length > 0 &&
+    isStringArray(rpc.routes) &&
+    rpc.routes.length > 0 &&
+    isStringArray(rpc.principalFailures) &&
+    rpc.principalFailures.length > 0 &&
+    isRecord(rpc.list) &&
+    isRecord(rpc.idempotency)
+  );
 }
 
 function hasValidManifestShape(coverage) {
@@ -29,19 +53,27 @@ function hasValidManifestShape(coverage) {
   }
   if (
     !Object.values(coverage.scenarios).every(
-      (scenario) => isRecord(scenario) && isStringArray(scenario.cases),
+      (scenario) =>
+        isRecord(scenario) &&
+        isStringArray(scenario.cases) &&
+        (scenario.futureCases === undefined || isStringArray(scenario.futureCases)),
     )
   ) {
     return false;
   }
   if (
-    !Object.values(coverage.rpcs).every(
-      (rpc) =>
+    !Object.entries(coverage.rpcs).every(
+      ([rpcName, rpc]) =>
         isRecord(rpc) &&
+        coverageStage(rpc, rpcName) !== undefined &&
         typeof rpc.preload === "string" &&
         isStringArray(rpc.cases) &&
+        (rpc.futureCases === undefined || isStringArray(rpc.futureCases)) &&
         isStringArray(rpc.projections) &&
-        (rpc.roles === REVIEWED_EXCEPTION || isRecord(rpc.roles)),
+        (rpc.roles === REVIEWED_EXCEPTION || isRecord(rpc.roles)) &&
+        (coverageStage(rpc, rpcName) === PRODUCTION_STAGE
+          ? rpc.futureCases === undefined || rpc.futureCases.length === 0
+          : hasCompleteFutureRpcMetadata(rpc)),
     )
   ) {
     return false;
@@ -56,8 +88,15 @@ function hasValidManifestShape(coverage) {
       return false;
     }
   }
-  return Object.values(coverage.transitions).every(
-    (transition) => isRecord(transition) && isStringArray(transition.cases),
+  return Object.entries(coverage.transitions).every(
+    ([transitionId, transition]) =>
+      isRecord(transition) &&
+      coverageStage(transition, transitionId) !== undefined &&
+      isStringArray(transition.cases) &&
+      (transition.futureCases === undefined || isStringArray(transition.futureCases)) &&
+      (coverageStage(transition, transitionId) === PRODUCTION_STAGE
+        ? transition.futureCases === undefined || transition.futureCases.length === 0
+        : transition.cases.length === 0 && transition.futureCases.length > 0),
   );
 }
 
@@ -89,11 +128,18 @@ export function descriptorRpcNames(bytes) {
     .sort();
 }
 
-export function checkE2ECoverage({ coverage, descriptorRpcs, preloadMethods, transitionIds }) {
+export function checkE2ECoverage({
+  coverage,
+  descriptorRpcs,
+  preloadMethods,
+  requireProduction = false,
+  transitionIds,
+}) {
   if (
     !hasValidManifestShape(coverage) ||
     !isStringArray(descriptorRpcs) ||
     !isStringArray(preloadMethods) ||
+    typeof requireProduction !== "boolean" ||
     !isStringArray(transitionIds)
   ) {
     throw new Error("E2E_COVERAGE_MANIFEST_INVALID");
@@ -118,11 +164,31 @@ export function checkE2ECoverage({ coverage, descriptorRpcs, preloadMethods, tra
       throw new Error("E2E_COVERAGE_TRANSITION_UNKNOWN");
     }
   }
+  if (
+    requireProduction &&
+    (Object.entries(coverage.rpcs).some(
+      ([rpcName, rpcCoverage]) => coverageStage(rpcCoverage, rpcName) === DECLARED_FUTURE_STAGE,
+    ) ||
+      Object.entries(coverage.transitions).some(
+        ([transitionId, transitionCoverage]) =>
+          coverageStage(transitionCoverage, transitionId) === DECLARED_FUTURE_STAGE,
+      ))
+  ) {
+    throw new Error("E2E_COVERAGE_FUTURE_PROMOTION_REQUIRED");
+  }
   const scenarioCases = Object.values(coverage.scenarios).flatMap((scenario) => scenario.cases);
+  const scenarioFutureCases = Object.values(coverage.scenarios).flatMap(
+    (scenario) => scenario.futureCases ?? [],
+  );
   for (const transitionCoverage of Object.values(coverage.transitions)) {
     for (const scenarioCase of transitionCoverage.cases) {
       if (!scenarioCases.includes(scenarioCase)) {
         throw new Error("E2E_COVERAGE_CASE_MISSING");
+      }
+    }
+    for (const futureCase of transitionCoverage.futureCases ?? []) {
+      if (!scenarioFutureCases.includes(futureCase)) {
+        throw new Error("E2E_COVERAGE_FUTURE_CASE_MISSING");
       }
     }
   }
@@ -147,7 +213,11 @@ export function checkE2ECoverage({ coverage, descriptorRpcs, preloadMethods, tra
         }
       }
     }
-    if (!preloadMethods.includes(rpcCoverage.preload)) {
+    if (coverageStage(rpcCoverage, rpcName) === DECLARED_FUTURE_STAGE) {
+      if (preloadMethods.includes(rpcCoverage.preload)) {
+        throw new Error("E2E_COVERAGE_FUTURE_PROMOTION_REQUIRED");
+      }
+    } else if (!preloadMethods.includes(rpcCoverage.preload)) {
       throw new Error("E2E_COVERAGE_PRELOAD_MISSING");
     }
     for (const scenarioCase of rpcCoverage.cases) {
@@ -155,10 +225,19 @@ export function checkE2ECoverage({ coverage, descriptorRpcs, preloadMethods, tra
         throw new Error("E2E_COVERAGE_CASE_MISSING");
       }
     }
+    for (const futureCase of rpcCoverage.futureCases ?? []) {
+      if (!scenarioFutureCases.includes(futureCase)) {
+        throw new Error("E2E_COVERAGE_FUTURE_CASE_MISSING");
+      }
+    }
   }
 }
 
-export async function runE2ECoverage({ descriptorPath, root = process.cwd() }) {
+export async function runE2ECoverage({
+  descriptorPath,
+  requireProduction = false,
+  root = process.cwd(),
+}) {
   const [descriptorBytes, coverageSource, transitionsSource, preloadSource] = await Promise.all([
     readFile(descriptorPath),
     readFile(path.join(root, "test/e2e/coverage.yaml"), "utf8"),
@@ -180,15 +259,35 @@ export async function runE2ECoverage({ descriptorPath, root = process.cwd() }) {
     coverage,
     descriptorRpcs: descriptorRpcNames(descriptorBytes),
     preloadMethods,
+    requireProduction,
     transitionIds: Object.keys(transitionIndex.transitions),
   });
 }
 
+export function coverageCliOptions(args) {
+  let descriptorPath;
+  let requireProduction = false;
+  for (let index = 0; index < args.length; index += 1) {
+    const argument = args[index];
+    if (argument === "--require-production" && !requireProduction) {
+      requireProduction = true;
+      continue;
+    }
+    if (argument === "--descriptors" && descriptorPath === undefined && args[index + 1]) {
+      descriptorPath = path.resolve(args[index + 1]);
+      index += 1;
+      continue;
+    }
+    throw new Error("E2E_COVERAGE_DESCRIPTORS_REQUIRED");
+  }
+  if (descriptorPath === undefined) throw new Error("E2E_COVERAGE_DESCRIPTORS_REQUIRED");
+  return { descriptorPath, requireProduction };
+}
+
 export function coverageDescriptorPath(args) {
-  if (args.length === 2 && args[0] === "--descriptors") return path.resolve(args[1]);
-  throw new Error("E2E_COVERAGE_DESCRIPTORS_REQUIRED");
+  return coverageCliOptions(args).descriptorPath;
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  await runE2ECoverage({ descriptorPath: coverageDescriptorPath(process.argv.slice(2)) });
+  await runE2ECoverage(coverageCliOptions(process.argv.slice(2)));
 }

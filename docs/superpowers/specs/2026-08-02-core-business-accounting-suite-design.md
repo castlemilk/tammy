@@ -935,6 +935,12 @@ Clocks, IDs, job scheduling, and external outcomes are injectable. Tests do not 
 
 `test/e2e/coverage.yaml` is a machine-checked traceability manifest keyed by fully-qualified RPC and lifecycle transition. CI reads the generated `FileDescriptorSet` and fails when a public Tammy RPC is absent, a referenced RPC no longer exists, or an allowed transition lacks a scenario. The manifest links each entry to:
 
+Coverage entries have an explicit `production` or `declared_future` stage. The reviewed pre-workspace `SystemService.GetDiagnostics` entry is the only legacy entry permitted to omit `stage`, and it is treated as production. Production RPC entries retain the strict descriptor, named-preload, executed-case, role, list, idempotency, principal-failure, and projection checks. Production transition entries likewise refer only to executed scenario cases.
+
+`declared_future` is the contract-design state used before the desktop production composition exposes a method. Its `cases` array is empty, its non-empty `futureCases` refer only to scenario `futureCases`, its planned preload must be absent from the production preload manifest, and its routes, four role outcomes, principal failures, list states, idempotency cases, and projections remain structured and reviewable. Future transition entries follow the same empty-`cases` and non-empty-`futureCases` rule. A future case never satisfies production coverage. An unknown future case, an exposed preload on a future RPC, or executed cases on a future entry fails deterministically; exposure requires the entry to be promoted instead of weakening the checker.
+
+The ordinary `pnpm contracts` gate accepts complete staged declarations so descriptor work and production UI work can land in their owning tasks. `pnpm contracts:production` runs the same chain with `--require-production` and rejects any remaining future RPC or transition with `E2E_COVERAGE_FUTURE_PROMOTION_REQUIRED`. Task 1 declares Slice 1 coverage, Task 12 adds the real named preload/UI paths, promotes every Slice 1 entry, and passes the production gate, and Task 13 records runtime coverage and retained evidence from production entries only.
+
 - at least one packaged happy path through the named preload method and real Go core;
 - every allowed lifecycle transition and one invalid-transition attempt;
 - permission outcomes for admin, preparer, lodger, and auditor;

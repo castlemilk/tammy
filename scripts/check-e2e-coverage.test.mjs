@@ -21,6 +21,7 @@ function validInput() {
       },
       rpcs: {
         [RPC]: {
+          stage: "production",
           preload: "getWorkspaceState",
           cases: ["foundation/offline-ready"],
           projections: ["workspace_state"],
@@ -51,10 +52,171 @@ function systemQueryInput() {
   return input;
 }
 
+function futureInput() {
+  const input = validInput();
+  input.coverage.scenarios["E2E-00"].futureCases = ["foundation/workspace-state"];
+  input.coverage.rpcs[RPC] = {
+    stage: "declared_future",
+    preload: "getWorkspaceState",
+    cases: [],
+    futureCases: ["foundation/workspace-state"],
+    projections: ["workspace_state"],
+    routes: ["/unlock"],
+    roles: Object.fromEntries(ROLES.map((role) => [role, "planned_allowed"])),
+    principalFailures: ["PERMISSION_DENIED"],
+    list: { states: ["not_applicable_single_query"] },
+    idempotency: { cases: ["not_applicable_query"] },
+  };
+  input.preloadMethods = [];
+  return input;
+}
+
+function futureTransitionInput() {
+  const input = validInput();
+  input.coverage.scenarios["E2E-00"].futureCases = ["foundation/workspace-state"];
+  input.coverage.transitions["tammy.v1.WorkspaceState.LOCKED->READY"] = {
+    stage: "declared_future",
+    cases: [],
+    futureCases: ["foundation/workspace-state"],
+  };
+  input.transitionIds = ["tammy.v1.WorkspaceState.LOCKED->READY"];
+  return input;
+}
+
 test("checker module exists", async () => {
   const checker = await import("./check-e2e-coverage.mjs");
 
   assert.equal(typeof checker.checkE2ECoverage, "function");
+});
+
+test("parses the production-only coverage CLI option", async () => {
+  const { coverageCliOptions } = await import("./check-e2e-coverage.mjs");
+  const descriptorPath = path.join(process.cwd(), "descriptors.pb");
+
+  assert.deepEqual(
+    coverageCliOptions(["--require-production", "--descriptors", "descriptors.pb"]),
+    {
+      descriptorPath,
+      requireProduction: true,
+    },
+  );
+  assert.deepEqual(coverageCliOptions(["--descriptors", "descriptors.pb"]), {
+    descriptorPath,
+    requireProduction: false,
+  });
+  assert.throws(() => coverageCliOptions(["--require-production"]), {
+    message: "E2E_COVERAGE_DESCRIPTORS_REQUIRED",
+  });
+});
+
+test("declared future RPC permits an absent planned preload", async () => {
+  const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
+
+  assert.doesNotThrow(() => checkE2ECoverage(futureInput()));
+});
+
+test("declared future RPC requires promotion when its preload is exposed", async () => {
+  const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
+  const input = futureInput();
+  input.preloadMethods = ["getWorkspaceState"];
+
+  assert.throws(() => checkE2ECoverage(input), {
+    message: "E2E_COVERAGE_FUTURE_PROMOTION_REQUIRED",
+  });
+});
+
+test("declared future RPC rejects executed cases", async () => {
+  const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
+  const input = futureInput();
+  input.coverage.rpcs[RPC].cases = ["foundation/offline-ready"];
+
+  assert.throws(() => checkE2ECoverage(input), {
+    message: "E2E_COVERAGE_MANIFEST_INVALID",
+  });
+});
+
+test("declared future RPC rejects an unknown future case", async () => {
+  const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
+  const input = futureInput();
+  input.coverage.rpcs[RPC].futureCases = ["foundation/unknown-future"];
+
+  assert.throws(() => checkE2ECoverage(input), {
+    message: "E2E_COVERAGE_FUTURE_CASE_MISSING",
+  });
+});
+
+test("declared future transition permits a planned case", async () => {
+  const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
+
+  assert.doesNotThrow(() => checkE2ECoverage(futureTransitionInput()));
+});
+
+test("declared future transition rejects an executed case", async () => {
+  const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
+  const input = futureTransitionInput();
+  input.coverage.transitions["tammy.v1.WorkspaceState.LOCKED->READY"].cases = [
+    "foundation/offline-ready",
+  ];
+
+  assert.throws(() => checkE2ECoverage(input), {
+    message: "E2E_COVERAGE_MANIFEST_INVALID",
+  });
+});
+
+test("a future case cannot satisfy a production RPC", async () => {
+  const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
+  const input = validInput();
+  input.coverage.scenarios["E2E-00"].futureCases = ["foundation/workspace-state"];
+  input.coverage.rpcs[RPC].cases = ["foundation/workspace-state"];
+
+  assert.throws(() => checkE2ECoverage(input), {
+    message: "E2E_COVERAGE_CASE_MISSING",
+  });
+});
+
+test("a future case cannot satisfy a production transition", async () => {
+  const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
+  const input = validInput();
+  input.coverage.scenarios["E2E-00"].futureCases = ["foundation/workspace-state"];
+  input.coverage.transitions["tammy.v1.WorkspaceState.LOCKED->READY"] = {
+    stage: "production",
+    cases: ["foundation/workspace-state"],
+  };
+  input.transitionIds = ["tammy.v1.WorkspaceState.LOCKED->READY"];
+
+  assert.throws(() => checkE2ECoverage(input), {
+    message: "E2E_COVERAGE_CASE_MISSING",
+  });
+});
+
+test("rejects an unknown coverage stage", async () => {
+  const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
+  const input = validInput();
+  input.coverage.rpcs[RPC].stage = "planned";
+
+  assert.throws(() => checkE2ECoverage(input), {
+    message: "E2E_COVERAGE_MANIFEST_INVALID",
+  });
+});
+
+test("production mode rejects declared future RPC coverage", async () => {
+  const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
+  const input = futureInput();
+  input.requireProduction = true;
+
+  assert.throws(() => checkE2ECoverage(input), {
+    message: "E2E_COVERAGE_FUTURE_PROMOTION_REQUIRED",
+  });
+});
+
+test("production mode rejects declared future transition coverage", async () => {
+  const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
+  const input = futureTransitionInput();
+  input.requireProduction = true;
+
+  assert.throws(() => checkE2ECoverage(input), {
+    message: "E2E_COVERAGE_FUTURE_PROMOTION_REQUIRED",
+  });
 });
 
 test("missing descriptor RPC", async () => {
@@ -91,6 +253,7 @@ test("unknown transition", async () => {
   const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
   const input = validInput();
   input.coverage.transitions["tammy.v1.JobState.QUEUED->RUNNING"] = {
+    stage: "production",
     cases: ["foundation/offline-ready"],
   };
 
