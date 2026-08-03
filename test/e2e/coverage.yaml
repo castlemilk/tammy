@@ -1,0 +1,50 @@
+schemaVersion: 1
+scenarios:
+  E2E-00:
+    cases:
+      - foundation/offline-ready
+  E2E-01:
+    cases: []
+  E2E-02:
+    cases: []
+  E2E-03:
+    cases: []
+  E2E-04:
+    cases: []
+  E2E-05:
+    cases: []
+  E2E-06:
+    cases: []
+  E2E-07:
+    cases: []
+  E2E-08:
+    cases: []
+  E2E-09:
+    cases: []
+  E2E-10:
+    cases: []
+  E2E-11:
+    cases: []
+  E2E-12:
+    cases: []
+  E2E-13:
+    cases: []
+  E2E-14:
+    cases: []
+  E2E-15:
+    cases: []
+  E2E-16:
+    cases: []
+  E2E-17:
+    cases: []
+rpcs:
+  tammy.v1.SystemService.GetDiagnostics:
+    preload: getSystemDiagnostics
+    cases:
+      - foundation/offline-ready
+    projections:
+      - system_diagnostics
+    roles: not_applicable_pre_workspace_system_query
+    list: not_applicable_pre_workspace_system_query
+    idempotency: not_applicable_pre_workspace_system_query
+transitions: {}

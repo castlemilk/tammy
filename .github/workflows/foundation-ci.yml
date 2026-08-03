@@ -59,18 +59,13 @@ jobs:
       - name: Test protobuf breaking policy
         run: pnpm test:proto-breaking
 
-      - name: Verify Buf contracts
-        run: |
-          pnpm proto:format:check
-          pnpm proto:lint
-          pnpm proto:breaking
-          pnpm proto:generate
-          git diff --exit-code -- services/core/internal/gen packages/connect-client/src/gen
-          generated_changes="$(git status --porcelain=v1 -- services/core/internal/gen packages/connect-client/src/gen)"
-          if [[ -n "$generated_changes" ]]; then
-            printf '%s\n' "$generated_changes"
-            exit 1
-          fi
+      - name: Verify descriptor-driven programme contracts
+        run: pnpm contracts
+
+      - name: Prove descriptor evidence generation for the subject commit
+        env:
+          TAMMY_SOURCE_REVISION: ${{ github.sha }}
+        run: pnpm proto:descriptors:evidence
 
       - name: Run Go race tests
         run: go test -race ./services/core/...

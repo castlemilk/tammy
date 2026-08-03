@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { SYSTEM_DIAGNOSTICS_CHANNEL } from "../shared/desktop-api";
-import { registerDiagnosticsIpc } from "./ipc";
+import { DESKTOP_PRELOAD_METHODS, SYSTEM_DIAGNOSTICS_CHANNEL } from "../shared/desktop-api";
+import { DIAGNOSTICS_PRELOAD_METHOD, registerDiagnosticsIpc } from "./ipc";
 
 interface FakeFrame {
   readonly url: string;
@@ -73,6 +73,11 @@ function invoke(
 }
 
 describe("registerDiagnosticsIpc", () => {
+  it("shares the production preload method manifest with the desktop API", () => {
+    expect(DESKTOP_PRELOAD_METHODS).toEqual(["getSystemDiagnostics"]);
+    expect(DIAGNOSTICS_PRELOAD_METHOD).toBe(DESKTOP_PRELOAD_METHODS[0]);
+  });
+
   it("registers the one private channel and returns the injected diagnostics projection", async () => {
     const harness = createHarness();
 

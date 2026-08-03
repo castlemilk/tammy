@@ -1,5 +1,6 @@
 .superpowers/
 .worktrees/
+/.tmp/contracts/
 node_modules/
 .pnpm-store/
 **/.vite/

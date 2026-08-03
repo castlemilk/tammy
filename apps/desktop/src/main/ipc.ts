@@ -1,6 +1,13 @@
 import type { SystemDiagnostics } from "../shared/desktop-api";
 import { SYSTEM_DIAGNOSTICS_CHANNEL } from "../shared/desktop-api";
+import preloadMethods from "../shared/preload-methods.json";
 import { isTrustedApplicationURL } from "./security";
+
+export const DIAGNOSTICS_PRELOAD_METHOD = "getSystemDiagnostics";
+
+if (!preloadMethods.includes(DIAGNOSTICS_PRELOAD_METHOD)) {
+  throw new Error("DIAGNOSTICS_PRELOAD_METHOD_MISSING");
+}
 
 interface IpcFrame {
   readonly url: string;
