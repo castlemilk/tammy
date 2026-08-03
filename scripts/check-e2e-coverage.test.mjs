@@ -251,7 +251,13 @@ test("business RPC coverage requires complete deterministic metadata", async () 
   const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
   const mutations = [
     (rpc) => {
+      rpc.projections = [];
+    },
+    (rpc) => {
       rpc.preload = "";
+    },
+    (rpc) => {
+      rpc.routes = [];
     },
     (rpc) => {
       rpc.routes = [""];
@@ -266,6 +272,9 @@ test("business RPC coverage requires complete deterministic metadata", async () 
       rpc.principalFailures = [""];
     },
     (rpc) => {
+      rpc.principalFailures = [];
+    },
+    (rpc) => {
       rpc.principalFailures = ["permission_denied"];
     },
     (rpc) => {
@@ -275,10 +284,16 @@ test("business RPC coverage requires complete deterministic metadata", async () 
       rpc.list = {};
     },
     (rpc) => {
+      rpc.list = { states: [] };
+    },
+    (rpc) => {
       rpc.list = { states: [null] };
     },
     (rpc) => {
       rpc.idempotency = {};
+    },
+    (rpc) => {
+      rpc.idempotency = { mode: "query", outcomes: [] };
     },
     (rpc) => {
       rpc.idempotency = { mode: "query", outcomes: [null] };

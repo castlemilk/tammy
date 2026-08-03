@@ -23,10 +23,14 @@ function isNonEmptyString(value) {
   return typeof value === "string" && value.length > 0;
 }
 
-function isUniqueNonEmptyStringArray(value) {
+function isUniqueStringArray(value) {
   return (
     Array.isArray(value) && value.every(isNonEmptyString) && new Set(value).size === value.length
   );
+}
+
+function isUniqueNonEmptyStringArray(value) {
+  return isUniqueStringArray(value) && value.length > 0;
 }
 
 function hasExactKeys(value, keys) {
@@ -89,8 +93,8 @@ function hasValidScenarioShape(scenarios) {
     !Object.values(scenarios).every(
       (scenario) =>
         isRecord(scenario) &&
-        isUniqueNonEmptyStringArray(scenario.cases) &&
-        (scenario.futureCases === undefined || isUniqueNonEmptyStringArray(scenario.futureCases)),
+        isUniqueStringArray(scenario.cases) &&
+        (scenario.futureCases === undefined || isUniqueStringArray(scenario.futureCases)),
     )
   ) {
     return false;
@@ -122,8 +126,8 @@ function hasValidManifestShape(coverage) {
       if (
         stage === undefined ||
         !isNonEmptyString(rpc.preload) ||
-        !isUniqueNonEmptyStringArray(rpc.cases) ||
-        (rpc.futureCases !== undefined && !isUniqueNonEmptyStringArray(rpc.futureCases)) ||
+        !isUniqueStringArray(rpc.cases) ||
+        (rpc.futureCases !== undefined && !isUniqueStringArray(rpc.futureCases)) ||
         !hasValidStageCases(stage, rpc)
       ) {
         return false;
@@ -146,9 +150,8 @@ function hasValidManifestShape(coverage) {
     const stage = coverageStage(transition, transitionId, "transition");
     return (
       stage !== undefined &&
-      isUniqueNonEmptyStringArray(transition.cases) &&
-      (transition.futureCases === undefined ||
-        isUniqueNonEmptyStringArray(transition.futureCases)) &&
+      isUniqueStringArray(transition.cases) &&
+      (transition.futureCases === undefined || isUniqueStringArray(transition.futureCases)) &&
       hasValidStageCases(stage, transition)
     );
   });
