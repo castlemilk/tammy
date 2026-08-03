@@ -2,6 +2,7 @@
 .worktrees/
 /.tmp/contracts/
 /.tmp/descriptor-evidence/
+/.tmp/sqlcipher/
 node_modules/
 .pnpm-store/
 **/.vite/
@@ -14,3 +15,4 @@ apps/desktop/resources/core/*
 !apps/desktop/resources/core/.gitkeep
 apps/desktop/resources/build/*
 !apps/desktop/resources/build/.gitkeep
+apps/desktop/resources/sqlcipher/

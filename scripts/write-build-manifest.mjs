@@ -24,6 +24,7 @@ const CREATE_INPUT_KEYS = Object.freeze([
   "protobufTreeSha256",
   "sourceDirty",
   "sourceRevision",
+  "sqlcipher",
   "target",
   "versions",
 ]);
@@ -79,6 +80,84 @@ function selectTarget(platform, arch) {
   return selected;
 }
 
+async function authenticateSqlcipherManifestResource({
+  root,
+  selected,
+  commandRunner,
+  commandOptions,
+}) {
+  const resourceRoot = path.join(root, "apps/desktop/resources/sqlcipher");
+  const targetRoot = path.join(resourceRoot, selected.target);
+  const library = path.join(targetRoot, "lib/libsqlite3.a");
+  const header = path.join(targetRoot, "include/sqlite3.h");
+  const [versionBytes, hashBytes, headerHashBytes, licenseBytes, pinnedLicenseBytes] =
+    await Promise.all([
+      readStableFileBytes(path.join(resourceRoot, "VERSION"), {
+        code: "MANIFEST_SQLCIPHER_INVALID",
+        maxBytes: 16,
+      }),
+      readStableFileBytes(path.join(targetRoot, "LIBRARY_SHA256"), {
+        code: "MANIFEST_SQLCIPHER_INVALID",
+        maxBytes: 65,
+      }),
+      readStableFileBytes(path.join(targetRoot, "HEADER_SHA256"), {
+        code: "MANIFEST_SQLCIPHER_INVALID",
+        maxBytes: 65,
+      }),
+      readStableFileBytes(path.join(resourceRoot, "LICENSE"), {
+        code: "MANIFEST_SQLCIPHER_INVALID",
+        maxBytes: 64 * 1024,
+      }),
+      readStableFileBytes(path.join(root, "third_party/sqlcipher/LICENSE"), {
+        code: "MANIFEST_SQLCIPHER_INVALID",
+        maxBytes: 64 * 1024,
+      }),
+    ]);
+  const version = versionBytes.toString("utf8").replace(/\n$/, "");
+  const declaredHash = hashBytes.toString("utf8").replace(/\n$/, "");
+  const declaredHeaderHash = headerHashBytes.toString("utf8").replace(/\n$/, "");
+  const librarySha256 = await hashFile(library, "MANIFEST_SQLCIPHER_INVALID");
+  const headerSha256 = await hashFile(header, "MANIFEST_SQLCIPHER_INVALID", 4 * 1024 * 1024);
+  if (
+    version !== "4.15.0" ||
+    declaredHash !== librarySha256 ||
+    declaredHeaderHash !== headerSha256 ||
+    !licenseBytes.equals(pinnedLicenseBytes)
+  ) {
+    throw new Error("MANIFEST_SQLCIPHER_INVALID");
+  }
+  let report;
+  try {
+    report = JSON.parse(
+      await commandRunner(
+        path.join(root, ...selected.binary.split("/")),
+        ["--sqlcipher-status"],
+        commandOptions,
+      ),
+    );
+  } catch {
+    throw new Error("MANIFEST_SQLCIPHER_INVALID");
+  }
+  if (
+    !report ||
+    typeof report !== "object" ||
+    Array.isArray(report) ||
+    Object.keys(report).sort().join(",") !==
+      "library_sha256,ordinary_sqlite_fallback,runtime_version,version" ||
+    report.version !== version ||
+    report.runtime_version !== "4.15.0 community" ||
+    report.library_sha256 !== librarySha256 ||
+    report.ordinary_sqlite_fallback !== false
+  ) {
+    throw new Error("MANIFEST_SQLCIPHER_INVALID");
+  }
+  return {
+    librarySha256,
+    runtimeVersion: report.runtime_version,
+    version,
+  };
+}
+
 export function selectCiMode(environment) {
   return environment?.CI === "true";
 }
@@ -93,6 +172,7 @@ export function createBuildManifest(input) {
     protobufTreeSha256,
     sourceDirty,
     sourceRevision,
+    sqlcipher,
     target,
     versions,
   } = input;
@@ -108,6 +188,15 @@ export function createBuildManifest(input) {
   if (ciMode && sourceDirty) throw new Error("DIRTY_SOURCE_IN_CI");
   assertHash(coreSha256);
   assertHash(protobufTreeSha256);
+  assertExactKeys(
+    sqlcipher,
+    ["librarySha256", "runtimeVersion", "version"],
+    "MANIFEST_SQLCIPHER_INVALID",
+  );
+  assertHash(sqlcipher.librarySha256);
+  if (sqlcipher.version !== "4.15.0" || sqlcipher.runtimeVersion !== "4.15.0 community") {
+    throw new Error("MANIFEST_SQLCIPHER_INVALID");
+  }
   assertExactKeys(versions, REQUIRED_VERSION_KEYS, "MANIFEST_PINS_INVALID");
   for (const version of Object.values(versions)) {
     if (typeof version !== "string" || !VERSION_PATTERN.test(version)) {
@@ -126,6 +215,11 @@ export function createBuildManifest(input) {
     lockfiles: sortRecord(lockfiles),
     protobuf_tree_sha256: protobufTreeSha256,
     core_sha256: coreSha256,
+    sqlcipher: {
+      library_sha256: sqlcipher.librarySha256,
+      runtime_version: sqlcipher.runtimeVersion,
+      version: sqlcipher.version,
+    },
     test_profile: "foundation-packaged-e2e",
     sbr_status: "SIMULATOR_NOT_IMPLEMENTED",
     signed: false,
@@ -636,6 +730,12 @@ export async function collectBuildManifest({
     protobufTreeSha256: await hashProtoTree(path.join(root, "proto")),
     sourceDirty: sourceStatus.trim().length !== 0,
     sourceRevision,
+    sqlcipher: await authenticateSqlcipherManifestResource({
+      commandOptions,
+      commandRunner,
+      root,
+      selected,
+    }),
     target: selected.target,
     versions: readPinnedVersions(rootPackage, desktopPackage, goMod),
   };

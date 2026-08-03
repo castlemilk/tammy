@@ -86,10 +86,39 @@ function validInput(overrides = {}) {
     protobufTreeSha256: "3".repeat(64),
     sourceDirty: false,
     sourceRevision: "a".repeat(40),
+    sqlcipher: {
+      librarySha256: "4".repeat(64),
+      runtimeVersion: "4.15.0 community",
+      version: "4.15.0",
+    },
     target: "darwin-arm64",
     versions,
     ...overrides,
   };
+}
+
+async function writeSqlcipherManifestFixture(root, target = "darwin-arm64") {
+  const resourceRoot = path.join(root, "apps/desktop/resources/sqlcipher");
+  const library = Buffer.from(`sqlcipher static ${target}`);
+  const librarySha256 = hash(library);
+  const header = Buffer.from(`sqlcipher header ${target}`);
+  const headerSha256 = hash(header);
+  const license = "pinned sqlcipher license\n";
+  await Promise.all([
+    mkdir(path.join(resourceRoot, target, "lib"), { recursive: true }),
+    mkdir(path.join(resourceRoot, target, "include"), { recursive: true }),
+  ]);
+  await mkdir(path.join(root, "third_party/sqlcipher"), { recursive: true });
+  await Promise.all([
+    writeFile(path.join(resourceRoot, "VERSION"), "4.15.0\n"),
+    writeFile(path.join(resourceRoot, "LICENSE"), license),
+    writeFile(path.join(root, "third_party/sqlcipher/LICENSE"), license),
+    writeFile(path.join(resourceRoot, target, "lib/libsqlite3.a"), library),
+    writeFile(path.join(resourceRoot, target, "include/sqlite3.h"), header),
+    writeFile(path.join(resourceRoot, target, "HEADER_SHA256"), `${headerSha256}\n`),
+    writeFile(path.join(resourceRoot, target, "LIBRARY_SHA256"), `${librarySha256}\n`),
+  ]);
+  return librarySha256;
 }
 
 test("creates the exact stable manifest fields and ordering", () => {
@@ -103,6 +132,11 @@ test("creates the exact stable manifest fields and ordering", () => {
     lockfiles,
     protobuf_tree_sha256: "3".repeat(64),
     core_sha256: "2".repeat(64),
+    sqlcipher: {
+      library_sha256: "4".repeat(64),
+      runtime_version: "4.15.0 community",
+      version: "4.15.0",
+    },
     test_profile: "foundation-packaged-e2e",
     sbr_status: "SIMULATOR_NOT_IMPLEMENTED",
     signed: false,
@@ -119,6 +153,11 @@ test("creates the exact stable manifest fields and ordering", () => {
         lockfiles,
         protobuf_tree_sha256: "3".repeat(64),
         core_sha256: "2".repeat(64),
+        sqlcipher: {
+          library_sha256: "4".repeat(64),
+          runtime_version: "4.15.0 community",
+          version: "4.15.0",
+        },
         test_profile: "foundation-packaged-e2e",
         sbr_status: "SIMULATOR_NOT_IMPLEMENTED",
         signed: false,
@@ -146,6 +185,25 @@ test("rejects dirty CI source and unsupported targets", () => {
   );
   for (const target of ["linux-x64", "darwin-x64", "win32-arm64", "../darwin-arm64"]) {
     assert.throws(() => createBuildManifest(validInput({ target })), /UNSUPPORTED_MANIFEST_TARGET/);
+  }
+});
+
+test("rejects SQLCipher version, runtime, hash, or shape drift", () => {
+  for (const sqlcipher of [
+    { librarySha256: "bad", runtimeVersion: "4.15.0 community", version: "4.15.0" },
+    { librarySha256: "4".repeat(64), runtimeVersion: "4.15.0", version: "4.15.0" },
+    { librarySha256: "4".repeat(64), runtimeVersion: "4.15.0 community", version: "4.14.0" },
+    {
+      extra: true,
+      librarySha256: "4".repeat(64),
+      runtimeVersion: "4.15.0 community",
+      version: "4.15.0",
+    },
+  ]) {
+    assert.throws(
+      () => createBuildManifest(validInput({ sqlcipher })),
+      /MANIFEST_SQLCIPHER_INVALID|INVALID_MANIFEST_HASH/,
+    );
   }
 });
 
@@ -607,10 +665,19 @@ test("collects only committed pins, fixed git commands, and authenticated hashes
       path.join(root, "apps", "desktop", "resources", "core", "darwin-arm64", "tammy-core"),
       "core",
     );
+    const sqlcipherLibrarySha256 = await writeSqlcipherManifestFixture(root);
     const commandRunner = async (command, args, options) => {
       calls.push({ command, args, options });
       if (args[0] === "rev-parse" && args[1] === "--show-toplevel") {
         return `${root}\n`;
+      }
+      if (args[0] === "--sqlcipher-status") {
+        return `${JSON.stringify({
+          library_sha256: sqlcipherLibrarySha256,
+          ordinary_sqlite_fallback: false,
+          runtime_version: "4.15.0 community",
+          version: "4.15.0",
+        })}\n`;
       }
       return args[0] === "rev-parse" ? `${"b".repeat(40)}\n` : "";
     };
@@ -650,6 +717,11 @@ test("collects only committed pins, fixed git commands, and authenticated hashes
         {
           command: "git",
           args: ["status", "--porcelain", "--untracked-files=normal"],
+          options: { cwd: root, encoding: "utf8", shell: false, windowsHide: true },
+        },
+        {
+          command: path.join(root, "apps/desktop/resources/core/darwin-arm64/tammy-core"),
+          args: ["--sqlcipher-status"],
           options: { cwd: root, encoding: "utf8", shell: false, windowsHide: true },
         },
         {
@@ -718,15 +790,23 @@ test("rejects redirected repositories and concurrent Git observations", async ()
       path.join(fixture, "apps/desktop/resources/core/darwin-arm64/tammy-core"),
       "core",
     );
+    const sqlcipherLibrarySha256 = await writeSqlcipherManifestFixture(fixture);
     await assert.rejects(
       collectBuildManifest({
         arch: "arm64",
         commandRunner: async (_command, args) =>
-          args[1] === "--show-toplevel"
-            ? `${path.dirname(fixture)}\n`
-            : args[0] === "rev-parse"
-              ? `${"a".repeat(40)}\n`
-              : "",
+          args[0] === "--sqlcipher-status"
+            ? `${JSON.stringify({
+                library_sha256: sqlcipherLibrarySha256,
+                ordinary_sqlite_fallback: false,
+                runtime_version: "4.15.0 community",
+                version: "4.15.0",
+              })}\n`
+            : args[1] === "--show-toplevel"
+              ? `${path.dirname(fixture)}\n`
+              : args[0] === "rev-parse"
+                ? `${"a".repeat(40)}\n`
+                : "",
         platform: "darwin",
         root: fixture,
       }),
@@ -737,6 +817,14 @@ test("rejects redirected repositories and concurrent Git observations", async ()
       collectBuildManifest({
         arch: "arm64",
         commandRunner: async (_command, args) => {
+          if (args[0] === "--sqlcipher-status") {
+            return `${JSON.stringify({
+              library_sha256: sqlcipherLibrarySha256,
+              ordinary_sqlite_fallback: false,
+              runtime_version: "4.15.0 community",
+              version: "4.15.0",
+            })}\n`;
+          }
           if (args[1] === "--show-toplevel") return `${fixture}\n`;
           if (args[0] === "rev-parse") {
             headReads += 1;

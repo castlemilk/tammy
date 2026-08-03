@@ -123,6 +123,13 @@ jobs:
             exit 1
           fi
 
+      - name: Prove the pinned macOS SQLCipher boundary before migrations
+        env:
+          TAMMY_SQLCIPHER_REPRODUCIBILITY: "1"
+        run: |
+          pnpm sqlcipher:test
+          go test -race -tags tammy_sqlcipher ./services/core/internal/storage/sqlcipher/... -count=1
+
       - name: Run packaged offline acceptance
         run: pnpm desktop:e2e
 
@@ -138,7 +145,7 @@ jobs:
           retention-days: 30
 
   windows-server-x64-package-smoke:
-    name: WINDOWS_SERVER_SMOKE_ONLY / Windows Server 2025 x64 package
+    name: WINDOWS_SERVER_SMOKE_ONLY / Windows Server 2025 desktop checks
     runs-on: windows-2025
     timeout-minutes: 30
     env:
@@ -201,35 +208,10 @@ jobs:
           TAMMY_EVIDENCE_SUBJECT_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
         run: pnpm proto:descriptors:verify
 
-      - name: Run Windows desktop tests and package inputs
+      - name: Run non-packaged Windows desktop smoke checks
         shell: pwsh
         run: |
           pnpm desktop:test
           if ($LASTEXITCODE -ne 0) { throw "DESKTOP_TEST_FAILED" }
           pnpm desktop:typecheck
           if ($LASTEXITCODE -ne 0) { throw "DESKTOP_TYPECHECK_FAILED" }
-          pnpm core:build
-          if ($LASTEXITCODE -ne 0) { throw "CORE_BUILD_FAILED" }
-          pnpm build:manifest
-          if ($LASTEXITCODE -ne 0) { throw "BUILD_MANIFEST_FAILED" }
-          pnpm --dir apps/desktop make
-          if ($LASTEXITCODE -ne 0) { throw "FORGE_MAKE_FAILED" }
-
-      - name: Require Squirrel smoke artifacts
-        shell: pwsh
-        run: |
-          $root = "apps/desktop/out/make/squirrel.windows"
-          $setup = @(Get-ChildItem -Path $root -Recurse -File -Filter "*.exe" -ErrorAction SilentlyContinue)
-          $packages = @(Get-ChildItem -Path $root -Recurse -File -Filter "*.nupkg" -ErrorAction SilentlyContinue)
-          if ($setup.Count -eq 0 -or $packages.Count -eq 0) {
-            throw "WINDOWS_SERVER_SMOKE_ONLY_SQUIRREL_ARTIFACT_MISSING"
-          }
-          Write-Host "WINDOWS_SERVER_SMOKE_ONLY Squirrel artifacts: $($setup.Count) executable, $($packages.Count) package."
-
-      - name: Upload WINDOWS_SERVER_SMOKE_ONLY Squirrel output
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-        with:
-          name: WINDOWS_SERVER_SMOKE_ONLY-squirrel-windows-x64
-          path: apps/desktop/out/make/squirrel.windows/**
-          if-no-files-found: error
-          retention-days: 30

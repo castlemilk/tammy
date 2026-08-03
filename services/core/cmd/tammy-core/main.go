@@ -81,7 +81,12 @@ func run(stdin *os.File, stdout *os.File, stderr *os.File) int {
 	return exitCode
 }
 
-func main() { os.Exit(run(os.Stdin, os.Stdout, os.Stderr)) }
+func main() {
+	if handled, exitCode := reportSQLCipher(os.Args[1:], os.Stdout, os.Stderr); handled {
+		os.Exit(exitCode)
+	}
+	os.Exit(run(os.Stdin, os.Stdout, os.Stderr))
+}
 
 func shutdown(server *transport.Server) error {
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)

@@ -7,6 +7,7 @@ export const BUILD_MANIFEST_KEYS = Object.freeze([
   "lockfiles",
   "protobuf_tree_sha256",
   "core_sha256",
+  "sqlcipher",
   "test_profile",
   "sbr_status",
   "signed",
@@ -40,6 +41,7 @@ const FORBIDDEN_FIELD_PATTERN = /credential|secret|token|password|environment|(^
 const HASH_PATTERN = /^[0-9a-f]{64}$/;
 const REVISION_PATTERN = /^[0-9a-f]{40}$/;
 const VERSION_PATTERN = /^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$/;
+const SQLCIPHER_KEYS = Object.freeze(["library_sha256", "runtime_version", "version"]);
 
 function fail() {
   throw new Error("BUILD_MANIFEST_SCHEMA_INVALID");
@@ -90,6 +92,11 @@ export function validateBuildManifest(manifest, { expectedTarget, requireClean }
     !HASH_PATTERN.test(manifest.protobuf_tree_sha256) ||
     typeof manifest.core_sha256 !== "string" ||
     !HASH_PATTERN.test(manifest.core_sha256) ||
+    !hasExactOrderedKeys(manifest.sqlcipher, SQLCIPHER_KEYS) ||
+    typeof manifest.sqlcipher.library_sha256 !== "string" ||
+    !HASH_PATTERN.test(manifest.sqlcipher.library_sha256) ||
+    manifest.sqlcipher.runtime_version !== "4.15.0 community" ||
+    manifest.sqlcipher.version !== "4.15.0" ||
     manifest.test_profile !== "foundation-packaged-e2e" ||
     manifest.sbr_status !== "SIMULATOR_NOT_IMPLEMENTED" ||
     manifest.signed !== false

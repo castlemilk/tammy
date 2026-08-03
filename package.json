@@ -10,7 +10,10 @@
   "scripts": {
     "check:toolchain": "node scripts/check-toolchain.mjs",
     "compliance:foundation": "node scripts/check-foundation-evidence.mjs",
-    "core:build": "node scripts/build-core.mjs",
+    "sqlcipher:vendor": "node scripts/vendor-sqlcipher.mjs",
+    "sqlcipher:build": "node scripts/build-sqlcipher.mjs",
+    "sqlcipher:test": "node --test scripts/vendor-sqlcipher.test.mjs scripts/build-sqlcipher.test.mjs",
+    "core:build": "pnpm sqlcipher:build && node scripts/build-core.mjs",
     "build:manifest": "node scripts/write-build-manifest.mjs",
     "ci:lint": "go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12",
     "contracts": "pnpm proto:format:check && pnpm proto:lint && pnpm proto:breaking && pnpm proto:generate && node scripts/check-contracts.mjs",

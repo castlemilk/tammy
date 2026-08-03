@@ -23,7 +23,7 @@ const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
     executableName: "Tammy",
-    extraResource: ["resources/core", "resources/build"],
+    extraResource: ["resources/core", "resources/build", "resources/sqlcipher"],
     osxSign: {
       identity: "-",
       identityValidation: false,

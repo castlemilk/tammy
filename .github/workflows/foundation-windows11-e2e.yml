@@ -15,7 +15,29 @@ jobs:
     name: Windows 11 23H2 x64 packaged E2E
     if: ${{ vars.TAMMY_WINDOWS11_RUNNER_ENABLED == 'true' }}
     runs-on: [self-hosted, windows, x64, tammy-win11-23h2]
-    timeout-minutes: 30
+    timeout-minutes: 60
+    env:
+      CC: ${{ vars.TAMMY_WINDOWS_LLVM_CLANG }}
+      CGO_ENABLED: "1"
+      CI: "true"
+      TAMMY_CORE_TARGET: win32/x64
+      TAMMY_SQLCIPHER_AR: ${{ vars.TAMMY_WINDOWS_LLVM_AR }}
+      TAMMY_SQLCIPHER_CC: ${{ vars.TAMMY_WINDOWS_LLVM_CLANG }}
+      TAMMY_SQLCIPHER_LIB: ${{ vars.TAMMY_WINDOWS_LLVM_LIB }}
+      TAMMY_SQLCIPHER_LINK: ${{ vars.TAMMY_WINDOWS_LLD_LINK }}
+      TAMMY_SQLCIPHER_LLVM_READOBJ: ${{ vars.TAMMY_WINDOWS_LLVM_READOBJ }}
+      TAMMY_SQLCIPHER_MT: ${{ vars.TAMMY_WINDOWS_SDK_MT }}
+      TAMMY_SQLCIPHER_NMAKE: ${{ vars.TAMMY_WINDOWS_NMAKE }}
+      TAMMY_SQLCIPHER_NMAKE_CC: ${{ vars.TAMMY_WINDOWS_LLVM_CLANG_CL }}
+      TAMMY_SQLCIPHER_PERL: ${{ vars.TAMMY_WINDOWS_PERL }}
+      TAMMY_SQLCIPHER_RC: ${{ vars.TAMMY_WINDOWS_SDK_RC }}
+      TAMMY_WINDOWS_MSVC_INCLUDE: ${{ vars.TAMMY_WINDOWS_MSVC_INCLUDE }}
+      TAMMY_WINDOWS_MSVC_LIB: ${{ vars.TAMMY_WINDOWS_MSVC_LIB }}
+      TAMMY_WINDOWS_SDK_SHARED_INCLUDE: ${{ vars.TAMMY_WINDOWS_SDK_SHARED_INCLUDE }}
+      TAMMY_WINDOWS_SDK_UCRT_INCLUDE: ${{ vars.TAMMY_WINDOWS_SDK_UCRT_INCLUDE }}
+      TAMMY_WINDOWS_SDK_UCRT_LIB: ${{ vars.TAMMY_WINDOWS_SDK_UCRT_LIB }}
+      TAMMY_WINDOWS_SDK_UM_INCLUDE: ${{ vars.TAMMY_WINDOWS_SDK_UM_INCLUDE }}
+      TAMMY_WINDOWS_SDK_UM_LIB: ${{ vars.TAMMY_WINDOWS_SDK_UM_LIB }}
     steps:
       - name: Verify Windows 11 23H2 or later x64
         shell: pwsh
@@ -64,6 +86,106 @@ jobs:
       - name: Verify the pinned toolchain
         run: pnpm check:toolchain
 
+      - name: Verify the exact native SQLCipher tool paths
+        shell: pwsh
+        run: |
+          $required = @(
+            $env:TAMMY_SQLCIPHER_AR,
+            $env:TAMMY_SQLCIPHER_CC,
+            $env:TAMMY_SQLCIPHER_LIB,
+            $env:TAMMY_SQLCIPHER_LINK,
+            $env:TAMMY_SQLCIPHER_LLVM_READOBJ,
+            $env:TAMMY_SQLCIPHER_MT,
+            $env:TAMMY_SQLCIPHER_NMAKE,
+            $env:TAMMY_SQLCIPHER_NMAKE_CC,
+            $env:TAMMY_SQLCIPHER_PERL,
+            $env:TAMMY_SQLCIPHER_RC
+          )
+          foreach ($tool in $required) {
+            if ([string]::IsNullOrWhiteSpace($tool) -or -not [IO.Path]::IsPathFullyQualified($tool)) {
+              throw "SQLCIPHER_WINDOWS_TOOL_PATH_INVALID: $tool"
+            }
+            $item = Get-Item -LiteralPath $tool -Force -ErrorAction Stop
+            if ($item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+              throw "SQLCIPHER_WINDOWS_TOOL_FILE_INVALID: $tool"
+            }
+          }
+          foreach ($tool in @(
+            $env:TAMMY_SQLCIPHER_AR,
+            $env:TAMMY_SQLCIPHER_CC,
+            $env:TAMMY_SQLCIPHER_LIB,
+            $env:TAMMY_SQLCIPHER_LINK,
+            $env:TAMMY_SQLCIPHER_LLVM_READOBJ,
+            $env:TAMMY_SQLCIPHER_NMAKE_CC
+          )) {
+            $version = (& $tool --version 2>&1 | Out-String)
+            if ($LASTEXITCODE -ne 0 -or $version -notmatch "22\.1\.0") {
+              throw "SQLCIPHER_LLVM_VERSION_INVALID: $tool $version"
+            }
+          }
+          $perlVersion = (& $env:TAMMY_SQLCIPHER_PERL -e 'print $^V' | Out-String).Trim()
+          if ($LASTEXITCODE -ne 0 -or $perlVersion -ne "v5.40.2") {
+            throw "SQLCIPHER_PERL_VERSION_INVALID: $perlVersion"
+          }
+          $nmakeVersion = (& $env:TAMMY_SQLCIPHER_NMAKE /? 2>&1 | Out-String)
+          if ($nmakeVersion -notmatch "Version 14\.44\.35207\.1(?:\s|$)") {
+            throw "SQLCIPHER_NMAKE_VERSION_INVALID: $nmakeVersion"
+          }
+          foreach ($tool in @($env:TAMMY_SQLCIPHER_MT, $env:TAMMY_SQLCIPHER_RC)) {
+            $version = [Diagnostics.FileVersionInfo]::GetVersionInfo($tool).FileVersion
+            if ($version -notmatch "^10\.0\.26100\.") {
+              throw "SQLCIPHER_WINDOWS_SDK_VERSION_INVALID: $tool $version"
+            }
+          }
+          $directories = @(
+            $env:TAMMY_WINDOWS_MSVC_INCLUDE,
+            $env:TAMMY_WINDOWS_MSVC_LIB,
+            $env:TAMMY_WINDOWS_SDK_SHARED_INCLUDE,
+            $env:TAMMY_WINDOWS_SDK_UCRT_INCLUDE,
+            $env:TAMMY_WINDOWS_SDK_UCRT_LIB,
+            $env:TAMMY_WINDOWS_SDK_UM_INCLUDE,
+            $env:TAMMY_WINDOWS_SDK_UM_LIB
+          )
+          foreach ($directory in $directories) {
+            if ([string]::IsNullOrWhiteSpace($directory) -or -not [IO.Path]::IsPathFullyQualified($directory)) {
+              throw "SQLCIPHER_WINDOWS_SDK_PATH_INVALID: $directory"
+            }
+            $item = Get-Item -LiteralPath $directory -Force -ErrorAction Stop
+            if (-not $item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+              throw "SQLCIPHER_WINDOWS_SDK_DIRECTORY_INVALID: $directory"
+            }
+          }
+          if ($env:TAMMY_WINDOWS_MSVC_INCLUDE -notmatch "[\\/]MSVC[\\/]14\.44\.35207[\\/]include$") {
+            throw "SQLCIPHER_MSVC_INCLUDE_VERSION_INVALID"
+          }
+          if ($env:TAMMY_WINDOWS_MSVC_LIB -notmatch "[\\/]MSVC[\\/]14\.44\.35207[\\/]lib[\\/]x64$") {
+            throw "SQLCIPHER_MSVC_LIB_VERSION_INVALID"
+          }
+          foreach ($directory in @(
+            $env:TAMMY_WINDOWS_SDK_SHARED_INCLUDE,
+            $env:TAMMY_WINDOWS_SDK_UCRT_INCLUDE,
+            $env:TAMMY_WINDOWS_SDK_UCRT_LIB,
+            $env:TAMMY_WINDOWS_SDK_UM_INCLUDE,
+            $env:TAMMY_WINDOWS_SDK_UM_LIB
+          )) {
+            if ($directory -notmatch "[\\/]10\.0\.26100\.0[\\/]") {
+              throw "SQLCIPHER_WINDOWS_SDK_DIRECTORY_VERSION_INVALID: $directory"
+            }
+          }
+          $include = @(
+            $env:TAMMY_WINDOWS_MSVC_INCLUDE,
+            $env:TAMMY_WINDOWS_SDK_UCRT_INCLUDE,
+            $env:TAMMY_WINDOWS_SDK_SHARED_INCLUDE,
+            $env:TAMMY_WINDOWS_SDK_UM_INCLUDE
+          ) -join ";"
+          $lib = @(
+            $env:TAMMY_WINDOWS_MSVC_LIB,
+            $env:TAMMY_WINDOWS_SDK_UCRT_LIB,
+            $env:TAMMY_WINDOWS_SDK_UM_LIB
+          ) -join ";"
+          "INCLUDE=$include" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "LIB=$lib" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
       - name: Refuse a dirty generated tree
         shell: pwsh
         run: |
@@ -75,6 +197,19 @@ jobs:
             $changes | ForEach-Object { Write-Host $_ }
             throw "DIRTY_GENERATED_TREE"
           }
+
+      - name: Build and prove the pinned Windows SQLCipher boundary before migrations
+        shell: pwsh
+        run: |
+          pnpm sqlcipher:test
+          if ($LASTEXITCODE -ne 0) { throw "SQLCIPHER_NODE_TEST_FAILED" }
+          pnpm sqlcipher:build
+          if ($LASTEXITCODE -ne 0) { throw "SQLCIPHER_BUILD_FAILED" }
+          $probe = (Resolve-Path ".tmp/sqlcipher/ordinary/win32-x64/ordinary-sqlite3.exe").Path
+          "TAMMY_ORDINARY_SQLITE3=$probe" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          $env:TAMMY_ORDINARY_SQLITE3 = $probe
+          go test -tags tammy_sqlcipher ./services/core/internal/storage/sqlcipher/... -count=1
+          if ($LASTEXITCODE -ne 0) { throw "SQLCIPHER_GO_INTEGRATION_FAILED" }
 
       - name: Run packaged Windows 11 offline acceptance
         shell: pwsh

@@ -1,6 +1,6 @@
 {
   "schema": "tammy-toolchain-evidence-v1",
-  "retrieval_date": "2026-07-19",
+  "retrieval_date": "2026-08-04",
   "configuration_authority": false,
   "supported_targets": [
     {
@@ -26,6 +26,54 @@
       "version": "1.26.4",
       "official_source_url": "https://go.dev/dl/",
       "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "SQLCipher",
+      "package_or_module": "sqlcipher",
+      "version": "4.15.0",
+      "official_source_url": "https://codeload.github.com/sqlcipher/sqlcipher/tar.gz/refs/tags/v4.15.0",
+      "source_sha256": "21f5dfb2558a2a87740bb060ba75aadfec2e6119e08a87c3546c54751395a28d",
+      "source_tree_sha256": "ab920a951726ede8da090ad26874f094966de373e9ed566e6e6dc500541920be",
+      "source_commit": "0b4d16090a71579c4c88220b7fb67bb7396f1434",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "OpenSSL LTS SQLCipher provider",
+      "package_or_module": "openssl",
+      "version": "3.5.7",
+      "official_source_url": "https://codeload.github.com/openssl/openssl/tar.gz/refs/tags/openssl-3.5.7",
+      "source_sha256": "d71a811bfbd9153d7b30cbe476263302ee4b04a9a47ffea6e6a782326805c93f",
+      "source_commit": "8cf17aaeb4599f8af87fefd810b5b5fee90fe69e",
+      "license_sha256": "657443fd2340ed2d45d44ceb57df718bc810abcc060a9032f93759c4afab9fa2",
+      "targets": ["win32-x64"]
+    },
+    {
+      "name": "LLVM clang Windows SQLCipher compiler",
+      "package_or_module": "llvm-clang",
+      "version": "22.1.0",
+      "official_source_url": "https://github.com/llvm/llvm-project/releases/tag/llvmorg-22.1.0",
+      "targets": ["win32-x64"]
+    },
+    {
+      "name": "Strawberry Perl Windows SQLCipher generator",
+      "package_or_module": "strawberry-perl",
+      "version": "5.40.2",
+      "official_source_url": "https://strawberryperl.com/releases.html",
+      "targets": ["win32-x64"]
+    },
+    {
+      "name": "Visual Studio nmake Windows SQLCipher generator",
+      "package_or_module": "visual-studio-build-tools",
+      "version": "14.44.35207.1",
+      "official_source_url": "https://learn.microsoft.com/visualstudio/releases/2022/release-history",
+      "targets": ["win32-x64"]
+    },
+    {
+      "name": "Windows SDK SQLCipher resource tools",
+      "package_or_module": "windows-sdk",
+      "version": "10.0.26100.0",
+      "official_source_url": "https://developer.microsoft.com/windows/downloads/windows-sdk/",
+      "targets": ["win32-x64"]
     },
     {
       "name": "pnpm",
