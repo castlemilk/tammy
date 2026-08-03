@@ -7,6 +7,7 @@ import { parseDocument } from "yaml";
 
 const REQUIRED_ROLES = ["workspace_admin", "business_preparer", "business_lodger", "auditor"];
 const REVIEWED_EXCEPTION = "not_applicable_pre_workspace_system_query";
+const PRE_WORKSPACE_SYSTEM_QUERY = "tammy.v1.SystemService.GetDiagnostics";
 
 function isRecord(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -44,6 +45,16 @@ function hasValidManifestShape(coverage) {
     )
   ) {
     return false;
+  }
+  if (Object.hasOwn(coverage.rpcs, PRE_WORKSPACE_SYSTEM_QUERY)) {
+    const systemQuery = coverage.rpcs[PRE_WORKSPACE_SYSTEM_QUERY];
+    if (
+      systemQuery.roles !== REVIEWED_EXCEPTION ||
+      systemQuery.list !== REVIEWED_EXCEPTION ||
+      systemQuery.idempotency !== REVIEWED_EXCEPTION
+    ) {
+      return false;
+    }
   }
   return Object.values(coverage.transitions).every(
     (transition) => isRecord(transition) && isStringArray(transition.cases),

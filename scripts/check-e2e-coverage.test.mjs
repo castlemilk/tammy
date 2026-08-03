@@ -7,7 +7,9 @@ import { create, toBinary } from "@bufbuild/protobuf";
 import { FileDescriptorSetSchema } from "@bufbuild/protobuf/wkt";
 import { stringify } from "yaml";
 
-const RPC = "tammy.v1.SystemService.GetDiagnostics";
+const RPC = "tammy.v1.WorkspaceService.GetWorkspaceState";
+const SYSTEM_RPC = "tammy.v1.SystemService.GetDiagnostics";
+const REVIEWED_EXCEPTION = "not_applicable_pre_workspace_system_query";
 const ROLES = ["workspace_admin", "business_preparer", "business_lodger", "auditor"];
 
 function validInput() {
@@ -19,18 +21,34 @@ function validInput() {
       },
       rpcs: {
         [RPC]: {
-          preload: "getSystemDiagnostics",
+          preload: "getWorkspaceState",
           cases: ["foundation/offline-ready"],
-          projections: ["system_diagnostics"],
+          projections: ["workspace_state"],
           roles: Object.fromEntries(ROLES.map((role) => [role, "allowed"])),
         },
       },
       transitions: {},
     },
     descriptorRpcs: [RPC],
-    preloadMethods: ["getSystemDiagnostics"],
+    preloadMethods: ["getWorkspaceState"],
     transitionIds: [],
   };
+}
+
+function systemQueryInput() {
+  const input = validInput();
+  delete input.coverage.rpcs[RPC];
+  input.coverage.rpcs[SYSTEM_RPC] = {
+    preload: "getSystemDiagnostics",
+    cases: ["foundation/offline-ready"],
+    projections: ["system_diagnostics"],
+    roles: REVIEWED_EXCEPTION,
+    list: REVIEWED_EXCEPTION,
+    idempotency: REVIEWED_EXCEPTION,
+  };
+  input.descriptorRpcs = [SYSTEM_RPC];
+  input.preloadMethods = ["getSystemDiagnostics"];
+  return input;
 }
 
 test("checker module exists", async () => {
@@ -174,24 +192,42 @@ test("decodes descriptor RPCs with the generated well-known schema", async () =>
     ],
   });
 
-  assert.deepEqual(descriptorRpcNames(toBinary(FileDescriptorSetSchema, descriptorSet)), [RPC]);
+  assert.deepEqual(descriptorRpcNames(toBinary(FileDescriptorSetSchema, descriptorSet)), [
+    SYSTEM_RPC,
+  ]);
 });
 
 test("permits only the reviewed pre-workspace system-query exception", async () => {
   const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
-  const input = validInput();
-  const exception = "not_applicable_pre_workspace_system_query";
-  input.coverage.rpcs[RPC].roles = exception;
-  input.coverage.rpcs[RPC].idempotency = exception;
-  input.coverage.rpcs[RPC].list = exception;
+  const input = systemQueryInput();
 
   assert.doesNotThrow(() => checkE2ECoverage(input));
 });
 
+test("system query requires the exact reviewed roles list and idempotency exceptions", async () => {
+  const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
+  const invalidValues = [undefined, null, false, {}, []];
+
+  for (const field of ["list", "idempotency", "roles"]) {
+    for (const invalidValue of invalidValues) {
+      const input = systemQueryInput();
+      if (invalidValue === undefined) {
+        delete input.coverage.rpcs[SYSTEM_RPC][field];
+      } else {
+        input.coverage.rpcs[SYSTEM_RPC][field] = invalidValue;
+      }
+
+      assert.throws(() => checkE2ECoverage(input), {
+        message: "E2E_COVERAGE_MANIFEST_INVALID",
+      });
+    }
+  }
+});
+
 test("rejects an unreviewed not-applicable exception", async () => {
   const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
-  const input = validInput();
-  input.coverage.rpcs[RPC].idempotency = "not_applicable_query";
+  const input = systemQueryInput();
+  input.coverage.rpcs[SYSTEM_RPC].idempotency = "not_applicable_query";
 
   assert.throws(() => checkE2ECoverage(input), {
     message: "E2E_COVERAGE_MANIFEST_INVALID",
@@ -203,11 +239,7 @@ test("loads coverage from the descriptor and production manifests", async (conte
   context.after(() => rm(root, { force: true, recursive: true }));
   await mkdir(path.join(root, "test/e2e"), { recursive: true });
   await mkdir(path.join(root, "apps/desktop/src/shared"), { recursive: true });
-  const input = validInput();
-  const exception = "not_applicable_pre_workspace_system_query";
-  input.coverage.rpcs[RPC].roles = exception;
-  input.coverage.rpcs[RPC].idempotency = exception;
-  input.coverage.rpcs[RPC].list = exception;
+  const input = systemQueryInput();
   await writeFile(path.join(root, "test/e2e/coverage.yaml"), stringify(input.coverage));
   await writeFile(
     path.join(root, "test/e2e/transitions.yaml"),
