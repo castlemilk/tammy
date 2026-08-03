@@ -52,6 +52,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"runtime"
 	"strings"
 	"sync"
@@ -104,9 +105,11 @@ func (driverInstance *sqlcipherDriver) Open(string) (driver.Conn, error) {
 }
 
 type connector struct {
-	key  []byte
-	mu   sync.Mutex
-	path string
+	fileIdentity   os.FileInfo
+	key            []byte
+	mu             sync.Mutex
+	parentIdentity os.FileInfo
+	path           string
 }
 
 func (item *connector) Connect(ctx context.Context) (_ driver.Conn, returnedError error) {
@@ -121,6 +124,20 @@ func (item *connector) Connect(ctx context.Context) (_ driver.Conn, returnedErro
 	key := append([]byte(nil), item.key...)
 	item.mu.Unlock()
 	defer zeroBytes(key)
+	identityHandle, err := retainExpectedDatabaseFile(
+		item.path,
+		item.fileIdentity,
+		item.parentIdentity,
+	)
+	if err != nil {
+		return nil, err
+	}
+	identityClosed := false
+	defer func() {
+		if !identityClosed {
+			_ = identityHandle.Close()
+		}
+	}()
 
 	pathValue := C.CString(item.path)
 	defer C.free(unsafe.Pointer(pathValue))
@@ -155,6 +172,13 @@ func (item *connector) Connect(ctx context.Context) (_ driver.Conn, returnedErro
 	if err := connection.initialize(ctx); err != nil {
 		return nil, err
 	}
+	if err := verifyDatabaseIdentity(item.path, item.fileIdentity, item.parentIdentity); err != nil {
+		return nil, err
+	}
+	if err := identityHandle.Close(); err != nil {
+		return nil, ErrDatabaseIdentity
+	}
+	identityClosed = true
 	return connection, nil
 }
 

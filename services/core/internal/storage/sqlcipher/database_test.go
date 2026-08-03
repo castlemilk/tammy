@@ -9,6 +9,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -157,6 +158,112 @@ func TestOpenRejectsUnsafeOrUnavailablePaths(t *testing.T) {
 	missingParent := filepath.Join(t.TempDir(), "missing", "ledger.db")
 	if _, err := Open(context.Background(), missingParent, key); err == nil {
 		t.Fatal("Open succeeded with a missing parent directory")
+	}
+}
+
+func TestOpenRejectsInsecureExistingPermissionsWithoutMutatingThem(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("POSIX ownership and mode checks are meaningful on macOS")
+	}
+	t.Parallel()
+	ctx := context.Background()
+	path := filepath.Join(t.TempDir(), "insecure.db")
+	key := testKey(0x59)
+	database, err := Open(ctx, path, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := database.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(path, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	reopened, err := Open(ctx, path, key)
+	if err == nil {
+		_ = reopened.Close()
+		t.Fatal("existing database with group/world permissions was accepted")
+	}
+	stats, statErr := os.Lstat(path)
+	if statErr != nil {
+		t.Fatal(statErr)
+	}
+	if got := stats.Mode().Perm(); got != 0o644 {
+		t.Fatalf("rejected database permissions were mutated to %04o", got)
+	}
+}
+
+func TestOpenRejectsLeafReplacementAtFinalIdentityBoundary(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	root := t.TempDir()
+	probeTarget := filepath.Join(root, "symlink-probe-target")
+	probeLink := filepath.Join(root, "symlink-probe-link")
+	if err := os.WriteFile(probeTarget, []byte("probe"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(probeTarget, probeLink); err != nil {
+		t.Skipf("file symlinks unavailable on this target: %v", err)
+	}
+	if err := os.Remove(probeLink); err != nil {
+		t.Fatal(err)
+	}
+
+	victim := filepath.Join(root, "victim.db")
+	displaced := filepath.Join(root, "displaced.db")
+	attacker := filepath.Join(root, "attacker.txt")
+	key := testKey(0x5a)
+	database, err := Open(ctx, victim, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := database.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(attacker, []byte("attacker-controlled"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var hookErr error
+	reopened, err := openDatabase(ctx, victim, key, openBoundaryHooks{
+		beforeFinalIdentityCheck: func() {
+			if hookErr = os.Rename(victim, displaced); hookErr != nil {
+				return
+			}
+			hookErr = os.Symlink(attacker, victim)
+		},
+	})
+	if reopened != nil {
+		_ = reopened.Close()
+	}
+	if hookErr != nil {
+		if runtime.GOOS == "windows" {
+			contents, readErr := os.ReadFile(attacker)
+			if readErr != nil || string(contents) != "attacker-controlled" {
+				t.Fatalf("blocked replacement changed attacker target: content=%q error=%v", contents, readErr)
+			}
+			return
+		}
+		t.Fatalf("attack setup failed: %v", hookErr)
+	}
+	if err == nil {
+		t.Fatal("database open accepted a leaf replaced by an attacker symlink")
+	}
+	contents, readErr := os.ReadFile(attacker)
+	if readErr != nil {
+		t.Fatal(readErr)
+	}
+	if string(contents) != "attacker-controlled" {
+		t.Fatalf("attacker target content changed to %q", contents)
+	}
+	if runtime.GOOS == "darwin" {
+		stats, statErr := os.Lstat(attacker)
+		if statErr != nil {
+			t.Fatal(statErr)
+		}
+		if got := stats.Mode().Perm(); got != 0o644 {
+			t.Fatalf("attacker target permissions changed to %04o", got)
+		}
 	}
 }
 

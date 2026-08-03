@@ -21,9 +21,26 @@ const (
 )
 
 var (
-	ErrDatabasePath = errors.New("sqlcipher: invalid database path")
-	ErrKeyRequired  = errors.New("sqlcipher: a 32-byte key is required")
+	ErrDatabaseIdentity    = errors.New("sqlcipher: database identity changed")
+	ErrDatabasePath        = errors.New("sqlcipher: invalid database path")
+	ErrDatabasePermissions = errors.New("sqlcipher: insecure database permissions")
+	ErrKeyRequired         = errors.New("sqlcipher: a 32-byte key is required")
 )
+
+type databaseFileIdentity struct {
+	closeErr  error
+	closeOnce sync.Once
+	file      os.FileInfo
+	handle    *os.File
+	parent    os.FileInfo
+}
+
+func (identity *databaseFileIdentity) close() error {
+	identity.closeOnce.Do(func() {
+		identity.closeErr = identity.handle.Close()
+	})
+	return identity.closeErr
+}
 
 // Database is an authenticated SQLCipher database whose connector keys and
 // validates every physical SQLite connection before it is returned to callers.
@@ -32,11 +49,25 @@ type Database struct {
 	connector *connector
 	closeOnce sync.Once
 	closeErr  error
+	identity  *databaseFileIdentity
+}
+
+type openBoundaryHooks struct {
+	beforeFinalIdentityCheck func()
 }
 
 // Open creates or opens a database using an exact 32-byte SQLCipher raw key.
 // The caller retains ownership of key; Open copies it and Close clears that copy.
 func Open(ctx context.Context, databasePath string, key []byte) (*Database, error) {
+	return openDatabase(ctx, databasePath, key, openBoundaryHooks{})
+}
+
+func openDatabase(
+	ctx context.Context,
+	databasePath string,
+	key []byte,
+	hooks openBoundaryHooks,
+) (*Database, error) {
 	if len(key) != KeySize {
 		return nil, ErrKeyRequired
 	}
@@ -45,62 +76,128 @@ func Open(ctx context.Context, databasePath string, key []byte) (*Database, erro
 		return nil, err
 	}
 	ownedKey := append([]byte(nil), key...)
-	created, createdIdentity, err := createDatabaseFile(cleaned)
+	identity, created, err := retainDatabaseFile(cleaned)
 	if err != nil {
 		zeroBytes(ownedKey)
 		return nil, err
 	}
 	cleanupCreated := func() {
-		if !created || createdIdentity == nil {
+		if !created {
 			return
 		}
-		current, statErr := os.Lstat(cleaned)
-		if statErr == nil && current.Mode().IsRegular() && os.SameFile(createdIdentity, current) {
+		if verifyDatabaseIdentity(cleaned, identity.file, identity.parent) == nil {
 			_ = os.Remove(cleaned)
 		}
 	}
-	connectorInstance := &connector{key: ownedKey, path: cleaned}
+	connectorInstance := &connector{
+		fileIdentity:   identity.file,
+		key:            ownedKey,
+		parentIdentity: identity.parent,
+		path:           cleaned,
+	}
 	sqlDatabase := sql.OpenDB(connectorInstance)
 	sqlDatabase.SetMaxIdleConns(4)
 	sqlDatabase.SetMaxOpenConns(4)
 	sqlDatabase.SetConnMaxIdleTime(0)
 	sqlDatabase.SetConnMaxLifetime(0)
-	database := &Database{DB: sqlDatabase, connector: connectorInstance}
-	if err := sqlDatabase.PingContext(ctx); err != nil {
+	database := &Database{DB: sqlDatabase, connector: connectorInstance, identity: identity}
+	failOpen := func(openErr error) (*Database, error) {
 		_ = sqlDatabase.Close()
 		connectorInstance.destroy()
+		_ = identity.close()
 		cleanupCreated()
-		return nil, fmt.Errorf("sqlcipher: open failed: %w", err)
+		return nil, openErr
 	}
-	if err := os.Chmod(cleaned, 0o600); err != nil {
-		_ = sqlDatabase.Close()
-		connectorInstance.destroy()
-		cleanupCreated()
-		return nil, errors.New("sqlcipher: database permissions failed")
+	if err := sqlDatabase.PingContext(ctx); err != nil {
+		return failOpen(fmt.Errorf("sqlcipher: open failed: %w", err))
+	}
+	if hooks.beforeFinalIdentityCheck != nil {
+		hooks.beforeFinalIdentityCheck()
+	}
+	if err := verifyDatabaseIdentity(cleaned, identity.file, identity.parent); err != nil {
+		return failOpen(err)
 	}
 	return database, nil
 }
 
-func createDatabaseFile(candidate string) (bool, os.FileInfo, error) {
-	handle, err := os.OpenFile(candidate, os.O_CREATE|os.O_EXCL|os.O_RDWR, 0o600)
-	if errors.Is(err, os.ErrExist) {
-		return false, nil, nil
+func retainDatabaseFile(candidate string) (*databaseFileIdentity, bool, error) {
+	parent, err := os.Lstat(filepath.Dir(candidate))
+	if err != nil || validateDatabaseParentSecurity(parent) != nil {
+		return nil, false, ErrDatabasePermissions
+	}
+	initial, statErr := os.Lstat(candidate)
+	created := false
+	flags := os.O_RDWR
+	if os.IsNotExist(statErr) {
+		created = true
+		flags |= os.O_CREATE | os.O_EXCL
+	} else if statErr != nil {
+		return nil, false, ErrDatabaseIdentity
+	} else if err := validateDatabaseFileSecurity(initial); err != nil {
+		return nil, false, err
+	}
+	handle, err := os.OpenFile(candidate, flags, 0o600)
+	if err != nil {
+		return nil, false, errors.New("sqlcipher: database file open failed")
+	}
+	identity := &databaseFileIdentity{handle: handle, parent: parent}
+	identity.file, err = handle.Stat()
+	if err == nil {
+		err = validateDatabaseFileSecurity(identity.file)
+	}
+	if err == nil && !created && !os.SameFile(initial, identity.file) {
+		err = ErrDatabaseIdentity
+	}
+	if err == nil {
+		err = verifyDatabaseIdentity(candidate, identity.file, parent)
 	}
 	if err != nil {
-		return false, nil, errors.New("sqlcipher: database creation failed")
-	}
-	identity, statErr := handle.Stat()
-	closeErr := handle.Close()
-	if statErr != nil || closeErr != nil {
-		if identity != nil {
+		_ = identity.close()
+		if created {
 			current, currentErr := os.Lstat(candidate)
-			if currentErr == nil && os.SameFile(identity, current) {
+			if currentErr == nil && identity.file != nil && os.SameFile(identity.file, current) {
 				_ = os.Remove(candidate)
 			}
 		}
-		return false, nil, errors.New("sqlcipher: database creation failed")
+		return nil, false, err
 	}
-	return true, identity, nil
+	return identity, created, nil
+}
+
+func verifyDatabaseIdentity(candidate string, expectedFile, expectedParent os.FileInfo) error {
+	parent, err := os.Lstat(filepath.Dir(candidate))
+	if err != nil || validateDatabaseParentSecurity(parent) != nil || !os.SameFile(parent, expectedParent) {
+		return ErrDatabaseIdentity
+	}
+	current, err := os.Lstat(candidate)
+	if err != nil || validateDatabaseFileSecurity(current) != nil || !os.SameFile(current, expectedFile) {
+		return ErrDatabaseIdentity
+	}
+	return nil
+}
+
+func retainExpectedDatabaseFile(
+	candidate string,
+	expectedFile os.FileInfo,
+	expectedParent os.FileInfo,
+) (*os.File, error) {
+	if err := verifyDatabaseIdentity(candidate, expectedFile, expectedParent); err != nil {
+		return nil, err
+	}
+	handle, err := os.OpenFile(candidate, os.O_RDWR, 0)
+	if err != nil {
+		return nil, ErrDatabaseIdentity
+	}
+	identity, statErr := handle.Stat()
+	if statErr != nil || validateDatabaseFileSecurity(identity) != nil || !os.SameFile(identity, expectedFile) {
+		_ = handle.Close()
+		return nil, ErrDatabaseIdentity
+	}
+	if err := verifyDatabaseIdentity(candidate, expectedFile, expectedParent); err != nil {
+		_ = handle.Close()
+		return nil, err
+	}
+	return handle, nil
 }
 
 func validateDatabasePath(candidate string) (string, error) {
@@ -136,8 +233,9 @@ func validateDatabasePath(candidate string) (string, error) {
 // connector's owned key bytes. It is safe to call more than once.
 func (database *Database) Close() error {
 	database.closeOnce.Do(func() {
-		database.closeErr = database.DB.Close()
+		databaseError := database.DB.Close()
 		database.connector.destroy()
+		database.closeErr = errors.Join(databaseError, database.identity.close())
 	})
 	return database.closeErr
 }
