@@ -267,11 +267,138 @@ func TestOpenRejectsLeafReplacementAtFinalIdentityBoundary(t *testing.T) {
 	}
 }
 
+func TestOpenFailurePreservesEncryptedResidueAndAttackerReplacement(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the retained Windows handle prevents replacing the open database path")
+	}
+	t.Parallel()
+	ctx := context.Background()
+	root := t.TempDir()
+	path := filepath.Join(root, "created.db")
+	residue := filepath.Join(root, "encrypted-residue.db")
+	attacker := filepath.Join(root, "attacker.txt")
+	key := testKey(0x5b)
+	if err := os.WriteFile(attacker, []byte("attacker-controlled"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	injected := errors.New("injected post-ping failure")
+	var hookErr error
+	database, err := openDatabase(ctx, path, key, openBoundaryHooks{
+		afterPing: func() error {
+			if hookErr = os.Rename(path, residue); hookErr != nil {
+				return injected
+			}
+			if hookErr = os.Rename(attacker, path); hookErr != nil {
+				return injected
+			}
+			return injected
+		},
+	})
+	if database != nil {
+		_ = database.Close()
+	}
+	if hookErr != nil {
+		t.Fatalf("attack setup failed: %v", hookErr)
+	}
+	if !errors.Is(err, injected) {
+		t.Fatalf("Open error = %v, want injected post-ping failure", err)
+	}
+	contents, readErr := os.ReadFile(path)
+	if readErr != nil {
+		t.Fatalf("attacker replacement was removed: %v", readErr)
+	}
+	if string(contents) != "attacker-controlled" {
+		t.Fatalf("attacker replacement changed to %q", contents)
+	}
+	encrypted, readErr := os.ReadFile(residue)
+	if readErr != nil {
+		t.Fatalf("secured database residue was removed: %v", readErr)
+	}
+	if len(encrypted) == 0 || bytes.HasPrefix(encrypted, []byte("SQLite format 3\x00")) {
+		t.Fatal("failed-open residue is not an encrypted SQLCipher database")
+	}
+	stats, statErr := os.Lstat(residue)
+	if statErr != nil {
+		t.Fatal(statErr)
+	}
+	if runtime.GOOS == "darwin" && stats.Mode().Perm() != 0o600 {
+		t.Fatalf("residue mode = %04o, want 0600", stats.Mode().Perm())
+	}
+	recovered, recoverErr := Open(ctx, residue, key)
+	if recoverErr != nil {
+		t.Fatalf("encrypted residue is not recoverable: %v", recoverErr)
+	}
+	if closeErr := recovered.Close(); closeErr != nil {
+		t.Fatal(closeErr)
+	}
+}
+
+func TestConnectorRejectsTransientRegularFileReplacementAtSQLiteOpen(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the retained Windows handle prevents replacing the open database path")
+	}
+	t.Parallel()
+	ctx := context.Background()
+	root := t.TempDir()
+	victim := filepath.Join(root, "victim.db")
+	replacement := filepath.Join(root, "replacement.db")
+	displaced := filepath.Join(root, "displaced.db")
+	key := testKey(0x5c)
+	for _, candidate := range []string{victim, replacement} {
+		database, err := Open(ctx, candidate, key)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := database.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	identity, _, err := retainDatabaseFile(victim)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = identity.close() })
+	var beforeErr, afterErr error
+	connection, err := (&connector{
+		fileIdentity:   identity.file,
+		key:            append([]byte(nil), key...),
+		parentIdentity: identity.parent,
+		path:           victim,
+		hooks: connectorBoundaryHooks{
+			beforeSQLiteOpen: func() {
+				if beforeErr = os.Rename(victim, displaced); beforeErr != nil {
+					return
+				}
+				beforeErr = os.Rename(replacement, victim)
+			},
+			afterSQLiteOpen: func() {
+				if beforeErr != nil {
+					return
+				}
+				if afterErr = os.Rename(victim, replacement); afterErr != nil {
+					return
+				}
+				afterErr = os.Rename(displaced, victim)
+			},
+		},
+	}).Connect(ctx)
+	if connection != nil {
+		_ = connection.Close()
+	}
+	if beforeErr != nil || afterErr != nil {
+		t.Fatalf("transient replacement setup failed: before=%v after=%v", beforeErr, afterErr)
+	}
+	if !errors.Is(err, ErrDatabaseIdentity) {
+		t.Fatalf("Connect error = %v, want ErrDatabaseIdentity", err)
+	}
+}
+
 func TestConnectorRefusesDatabaseSymlinkAfterValidation(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	root := t.TempDir()
 	target := filepath.Join(root, "target.db")
+	displaced := filepath.Join(root, "displaced.db")
 	key := testKey(0x57)
 	database, err := Open(ctx, target, key)
 	if err != nil {
@@ -280,11 +407,54 @@ func TestConnectorRefusesDatabaseSymlinkAfterValidation(t *testing.T) {
 	if err := database.Close(); err != nil {
 		t.Fatal(err)
 	}
-	link := filepath.Join(root, "swapped.db")
-	if err := os.Symlink(target, link); err != nil {
+	probe := filepath.Join(root, "symlink-probe")
+	if err := os.Symlink(target, probe); err != nil {
 		t.Skipf("database symlinks unavailable on this target: %v", err)
 	}
-	connection, err := (&connector{key: append([]byte(nil), key...), path: link}).Connect(ctx)
+	if err := os.Remove(probe); err != nil {
+		t.Fatal(err)
+	}
+	identity, _, err := retainDatabaseFile(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = identity.close() })
+	var beforeErr, afterErr error
+	connection, err := (&connector{
+		fileIdentity:   identity.file,
+		key:            append([]byte(nil), key...),
+		parentIdentity: identity.parent,
+		path:           target,
+		hooks: connectorBoundaryHooks{
+			beforeSQLiteOpen: func() {
+				if beforeErr = os.Rename(target, displaced); beforeErr != nil {
+					return
+				}
+				beforeErr = os.Symlink(displaced, target)
+			},
+			afterSQLiteOpen: func() {
+				if beforeErr != nil {
+					return
+				}
+				if afterErr = os.Remove(target); afterErr != nil {
+					return
+				}
+				afterErr = os.Rename(displaced, target)
+			},
+		},
+	}).Connect(ctx)
+	if beforeErr != nil {
+		if connection != nil {
+			_ = connection.Close()
+		}
+		if runtime.GOOS == "windows" {
+			return
+		}
+		t.Fatalf("symlink replacement setup failed: %v", beforeErr)
+	}
+	if afterErr != nil {
+		t.Fatalf("symlink replacement cleanup failed: %v", afterErr)
+	}
 	if err == nil {
 		_ = connection.Close()
 		t.Fatal("connector followed a database symlink")

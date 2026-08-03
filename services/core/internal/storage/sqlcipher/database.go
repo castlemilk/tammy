@@ -53,6 +53,7 @@ type Database struct {
 }
 
 type openBoundaryHooks struct {
+	afterPing                func() error
 	beforeFinalIdentityCheck func()
 }
 
@@ -76,18 +77,10 @@ func openDatabase(
 		return nil, err
 	}
 	ownedKey := append([]byte(nil), key...)
-	identity, created, err := retainDatabaseFile(cleaned)
+	identity, _, err := retainDatabaseFile(cleaned)
 	if err != nil {
 		zeroBytes(ownedKey)
 		return nil, err
-	}
-	cleanupCreated := func() {
-		if !created {
-			return
-		}
-		if verifyDatabaseIdentity(cleaned, identity.file, identity.parent) == nil {
-			_ = os.Remove(cleaned)
-		}
 	}
 	connectorInstance := &connector{
 		fileIdentity:   identity.file,
@@ -105,11 +98,17 @@ func openDatabase(
 		_ = sqlDatabase.Close()
 		connectorInstance.destroy()
 		_ = identity.close()
-		cleanupCreated()
+		// Identity-conditional path deletion is not atomic on either supported
+		// target. Leave a newly created, mode-validated residue for recovery.
 		return nil, openErr
 	}
 	if err := sqlDatabase.PingContext(ctx); err != nil {
 		return failOpen(fmt.Errorf("sqlcipher: open failed: %w", err))
+	}
+	if hooks.afterPing != nil {
+		if err := hooks.afterPing(); err != nil {
+			return failOpen(err)
+		}
 	}
 	if hooks.beforeFinalIdentityCheck != nil {
 		hooks.beforeFinalIdentityCheck()
@@ -153,12 +152,6 @@ func retainDatabaseFile(candidate string) (*databaseFileIdentity, bool, error) {
 	}
 	if err != nil {
 		_ = identity.close()
-		if created {
-			current, currentErr := os.Lstat(candidate)
-			if currentErr == nil && identity.file != nil && os.SameFile(identity.file, current) {
-				_ = os.Remove(candidate)
-			}
-		}
 		return nil, false, err
 	}
 	return identity, created, nil

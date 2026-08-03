@@ -1,6 +1,17 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  lstat,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  readlink,
+  rename,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, it } from "node:test";
@@ -27,13 +38,50 @@ async function fixtureRoot() {
   const root = await mkdtemp(path.join(os.tmpdir(), "tammy-sqlcipher-build-test-"));
   temporaryDirectories.push(root);
   const sourceRoot = path.join(root, "fixture-source/sqlcipher-4.15.0");
-  await mkdir(sourceRoot, { recursive: true });
+  await Promise.all([mkdir(sourceRoot, { recursive: true }), mkdir(path.join(root, "scripts"))]);
   await Promise.all([
     writeFile(path.join(sourceRoot, "configure"), "#!/bin/sh\n", { mode: 0o700 }),
     writeFile(path.join(sourceRoot, "LICENSE.md"), "pinned license\n"),
     writeFile(path.join(sourceRoot, "VERSION"), "3.53.0\n"),
+    writeFile(path.join(root, "scripts/sqlcipher-amalgamation.c"), "fixture wrapper\n"),
   ]);
   return { root, sourceRoot };
+}
+
+async function buildMacFixture({ resourceHooks, root, sourceRoot }) {
+  return buildSqlcipher({
+    arch: "arm64",
+    platform: "darwin",
+    resourceHooks,
+    root,
+    vendor: async () => ({ sourceRoot, sourceTreeSha256: SOURCE_TREE_SHA256 }),
+    sourceTreeHasher: async () => SOURCE_TREE_SHA256,
+    execFile: async (command, args, options) => {
+      if (command === "/usr/bin/make") {
+        await Promise.all([
+          writeFile(path.join(options.cwd, "sqlite3.c"), "sqlcipher source"),
+          writeFile(path.join(options.cwd, "sqlite3.h"), "sqlcipher header"),
+        ]);
+      }
+      const outputIndex = args.indexOf("-o");
+      if (command === "/usr/bin/clang" && outputIndex >= 0) {
+        await writeFile(args[outputIndex + 1], "object");
+      }
+      if (command === "/usr/bin/libtool") {
+        await writeFile(args[args.indexOf("-o") + 1], "static sqlcipher library");
+      }
+      return { stderr: "", stdout: "" };
+    },
+  });
+}
+
+async function onlyRetiredResourceRoot(root) {
+  const cacheRoot = path.join(root, ".tmp/sqlcipher");
+  const entries = (await readdir(cacheRoot, { withFileTypes: true })).filter(
+    (entry) => entry.isDirectory() && entry.name.startsWith(".retired-resources-"),
+  );
+  assert.equal(entries.length, 1, "one recoverable retired resource directory is required");
+  return path.join(cacheRoot, entries[0].name, "sqlcipher");
 }
 
 describe("SQLCipher build targets", () => {
@@ -79,6 +127,7 @@ describe("SQLCipher static build plan", () => {
     });
 
     assert.equal(plan.compiler, "/usr/bin/clang");
+    assert.equal(plan.amalgamationWrapper, path.join(root, "scripts/sqlcipher-amalgamation.c"));
     assert.equal(plan.sourceRoot, sourceRoot);
     assert.equal(plan.library, path.join(buildRoot, "libsqlite3.a"));
     assert.deepEqual(plan.defines, [
@@ -209,6 +258,16 @@ describe("SQLCipher build execution", () => {
       calls.map(({ command }) => command),
       ["/bin/sh", "/usr/bin/make", "/usr/bin/clang", "/usr/bin/libtool"],
     );
+    const compilation = calls.find(
+      ({ args, command }) => command === "/usr/bin/clang" && args.includes("-c"),
+    );
+    assert.ok(compilation.args.includes(path.join(root, "scripts/sqlcipher-amalgamation.c")));
+    assert.ok(
+      compilation.args.some(
+        (argument) => argument.startsWith("-I") && argument.includes("sqlcipher-4.15.0"),
+      ),
+    );
+    assert.ok(!compilation.args.some((argument) => argument.endsWith("sqlite3.c")));
     assert.equal(await readFile(result.library, "utf8"), "static sqlcipher library");
     assert.equal(
       result.librarySha256,
@@ -255,6 +314,30 @@ describe("SQLCipher build execution", () => {
     );
   });
 
+  for (const mutation of ["missing", "symlinked"]) {
+    it(`rejects a ${mutation} committed amalgamation wrapper before invoking tools`, async () => {
+      const { root, sourceRoot } = await fixtureRoot();
+      const wrapper = path.join(root, "scripts/sqlcipher-amalgamation.c");
+      await rm(wrapper);
+      if (mutation === "symlinked") {
+        const outside = path.join(root, "outside-wrapper.c");
+        await writeFile(outside, '#include "sqlite3.c"\n');
+        await symlink(outside, wrapper);
+      }
+      await assert.rejects(
+        buildSqlcipher({
+          arch: "arm64",
+          platform: "darwin",
+          root,
+          vendor: async () => ({ sourceRoot, sourceTreeSha256: SOURCE_TREE_SHA256 }),
+          sourceTreeHasher: async () => SOURCE_TREE_SHA256,
+          execFile: async () => assert.fail("tools must not run without the committed wrapper"),
+        }),
+        /SQLCIPHER_AMALGAMATION_WRAPPER_INVALID/,
+      );
+    });
+  }
+
   it("rejects a private source copy whose full-tree hash changes before configure", async () => {
     const { root, sourceRoot } = await fixtureRoot();
     await assert.rejects(
@@ -298,11 +381,7 @@ describe("SQLCipher build execution", () => {
       manifestTool: path.join(toolsRoot, "mt.exe"),
       resourceCompiler: path.join(toolsRoot, "rc.exe"),
     };
-    await Promise.all([
-      mkdir(toolsRoot),
-      mkdir(paths.include, { recursive: true }),
-      mkdir(path.join(root, "scripts")),
-    ]);
+    await Promise.all([mkdir(toolsRoot), mkdir(paths.include, { recursive: true })]);
     await Promise.all([
       ...[
         paths.ar,
@@ -389,6 +468,150 @@ describe("SQLCipher build execution", () => {
     assert.match(result.opensslLibrarySha256, /^[a-f0-9]{64}$/);
     await assert.rejects(readFile(staleMacLibrary), { code: "ENOENT" });
   });
+
+  it("atomically retires the prior resource root and stages an exact new target root", async () => {
+    const { root, sourceRoot } = await fixtureRoot();
+    const resourceRoot = path.join(root, "apps/desktop/resources/sqlcipher");
+    const stale = path.join(resourceRoot, "stale/nested.txt");
+    const oppositeTarget = path.join(resourceRoot, "win32-x64/lib/libcrypto.a");
+    await Promise.all([
+      mkdir(path.dirname(stale), { recursive: true }),
+      mkdir(path.dirname(oppositeTarget), { recursive: true }),
+    ]);
+    await Promise.all([
+      writeFile(stale, "recoverable stale content"),
+      writeFile(oppositeTarget, "recoverable opposite target"),
+    ]);
+    const initial = await lstat(resourceRoot, { bigint: true });
+
+    await buildMacFixture({ root, sourceRoot });
+
+    const retiredRoot = await onlyRetiredResourceRoot(root);
+    const retired = await lstat(retiredRoot, { bigint: true });
+    assert.equal(retired.dev, initial.dev);
+    assert.equal(retired.ino, initial.ino);
+    assert.equal(
+      await readFile(path.join(retiredRoot, "stale/nested.txt"), "utf8"),
+      "recoverable stale content",
+    );
+    assert.equal(
+      await readFile(path.join(retiredRoot, "win32-x64/lib/libcrypto.a"), "utf8"),
+      "recoverable opposite target",
+    );
+    assert.deepEqual(await readdir(resourceRoot), ["LICENSE", "VERSION", "darwin-arm64"]);
+    assert.deepEqual(await readdir(path.join(resourceRoot, "darwin-arm64")), [
+      "HEADER_SHA256",
+      "LIBRARY_SHA256",
+      "include",
+      "lib",
+    ]);
+  });
+
+  for (const replacementType of ["symlink", "directory"]) {
+    it(`fails closed when the resource root is replaced by a ${replacementType} immediately before retirement`, async () => {
+      const { root, sourceRoot } = await fixtureRoot();
+      const resourceParent = path.join(root, "apps/desktop/resources");
+      const resourceRoot = path.join(resourceParent, "sqlcipher");
+      const displaced = path.join(root, "displaced-original-resources");
+      const external = path.join(root, "external-replacement");
+      await Promise.all([
+        mkdir(resourceRoot, { recursive: true }),
+        mkdir(external, { recursive: true }),
+      ]);
+      await Promise.all([
+        writeFile(path.join(resourceRoot, "original-marker"), "original"),
+        writeFile(path.join(external, "external-marker"), "external"),
+      ]);
+      let hookRan = false;
+      await assert.rejects(
+        buildMacFixture({
+          root,
+          sourceRoot,
+          resourceHooks: {
+            beforeResourceRetirementRename: async (context) => {
+              hookRan = true;
+              assert.equal(context.resourceRoot, resourceRoot);
+              await rename(resourceRoot, displaced);
+              if (replacementType === "symlink") await symlink(external, resourceRoot);
+              else await rename(external, resourceRoot);
+            },
+          },
+        }),
+        /SQLCIPHER_RESOURCE_ROOT_INVALID/,
+      );
+      assert.equal(hookRan, true);
+      assert.equal(await readFile(path.join(displaced, "original-marker"), "utf8"), "original");
+      const retiredRoot = await onlyRetiredResourceRoot(root);
+      if (replacementType === "symlink") {
+        assert.equal((await lstat(retiredRoot)).isSymbolicLink(), true);
+        assert.equal(await readlink(retiredRoot), external);
+        assert.equal(await readFile(path.join(external, "external-marker"), "utf8"), "external");
+      } else {
+        assert.equal(await readFile(path.join(retiredRoot, "external-marker"), "utf8"), "external");
+      }
+    });
+  }
+
+  for (const boundary of ["cache", "resource-parent"]) {
+    it(`fails closed when the ${boundary} identity changes before resource retirement`, async () => {
+      const { root, sourceRoot } = await fixtureRoot();
+      const resourceParent = path.join(root, "apps/desktop/resources");
+      const resourceRoot = path.join(resourceParent, "sqlcipher");
+      await mkdir(resourceRoot, { recursive: true });
+      await writeFile(path.join(resourceRoot, "original-marker"), "original");
+      let displaced;
+      await assert.rejects(
+        buildMacFixture({
+          root,
+          sourceRoot,
+          resourceHooks: {
+            beforeResourceRetirementRename: async (context) => {
+              if (boundary === "cache") {
+                displaced = path.join(root, "displaced-cache");
+                await rename(context.cacheRoot, displaced);
+                await mkdir(context.cacheRoot, { mode: 0o700 });
+              } else {
+                displaced = path.join(root, "displaced-resource-parent");
+                await rename(context.resourceParent, displaced);
+                await mkdir(context.resourceParent, { mode: 0o700 });
+              }
+            },
+          },
+        }),
+        /SQLCIPHER_RESOURCE_ROOT_INVALID/,
+      );
+      const preserved =
+        boundary === "cache"
+          ? path.join(resourceRoot, "original-marker")
+          : path.join(displaced, "sqlcipher/original-marker");
+      assert.equal(await readFile(preserved, "utf8"), "original");
+    });
+  }
+
+  it("uses non-recursive creation and never merges into a precreated replacement root", async () => {
+    const { root, sourceRoot } = await fixtureRoot();
+    const resourceRoot = path.join(root, "apps/desktop/resources/sqlcipher");
+    await mkdir(resourceRoot, { recursive: true });
+    await writeFile(path.join(resourceRoot, "original-marker"), "original");
+    let hookRan = false;
+    await assert.rejects(
+      buildMacFixture({
+        root,
+        sourceRoot,
+        resourceHooks: {
+          beforeNewResourceRootCreate: async (context) => {
+            hookRan = true;
+            assert.equal(context.resourceRoot, resourceRoot);
+            await mkdir(resourceRoot, { mode: 0o700 });
+            await writeFile(path.join(resourceRoot, "attacker-marker"), "attacker");
+          },
+        },
+      }),
+      /SQLCIPHER_RESOURCE_ROOT_INVALID/,
+    );
+    assert.equal(hookRan, true);
+    assert.equal(await readFile(path.join(resourceRoot, "attacker-marker"), "utf8"), "attacker");
+  });
 });
 
 describe("official Windows OpenSSL provider build", () => {
@@ -396,20 +619,56 @@ describe("official Windows OpenSSL provider build", () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "tammy-openssl-build-test-"));
     temporaryDirectories.push(root);
     const buildRoot = path.join(root, "build");
-    const toolsRoot = path.join(root, "tools");
-    await Promise.all([mkdir(buildRoot), mkdir(toolsRoot)]);
-    const environment = Object.fromEntries(
+    const paths = {
+      comspec: path.join(root, "Windows/System32/cmd.exe"),
+      compiler: path.join(root, "llvm/bin/clang-cl.exe"),
+      include: path.join(root, "sdk/include"),
+      librarian: path.join(root, "llvm/bin/llvm-lib.exe"),
+      lib: path.join(root, "sdk/lib"),
+      linker: path.join(root, "llvm/bin/lld-link.exe"),
+      make: path.join(root, "visual-studio/bin/nmake.exe"),
+      manifestTool: path.join(root, "windows-sdk/bin/mt.exe"),
+      perl: path.join(root, "perl/bin/perl.exe"),
+      resourceCompiler: path.join(root, "windows-sdk/bin/rc.exe"),
+    };
+    await Promise.all([
+      mkdir(buildRoot),
+      ...[
+        ...new Set(
+          Object.values(paths).map((candidate) =>
+            candidate === paths.include || candidate === paths.lib
+              ? candidate
+              : path.dirname(candidate),
+          ),
+        ),
+      ].map((directory) => mkdir(directory, { recursive: true })),
+    ]);
+    await Promise.all(
       [
-        ["TAMMY_SQLCIPHER_LIB", "llvm-lib.exe"],
-        ["TAMMY_SQLCIPHER_LINK", "lld-link.exe"],
-        ["TAMMY_SQLCIPHER_MT", "mt.exe"],
-        ["TAMMY_SQLCIPHER_NMAKE", "nmake.exe"],
-        ["TAMMY_SQLCIPHER_NMAKE_CC", "clang-cl.exe"],
-        ["TAMMY_SQLCIPHER_PERL", "perl.exe"],
-        ["TAMMY_SQLCIPHER_RC", "rc.exe"],
-      ].map(([key, name]) => [key, path.join(toolsRoot, name)]),
+        paths.comspec,
+        paths.compiler,
+        paths.librarian,
+        paths.linker,
+        paths.make,
+        paths.manifestTool,
+        paths.perl,
+        paths.resourceCompiler,
+      ].map((candidate) => writeFile(candidate, "tool")),
     );
-    await Promise.all(Object.values(environment).map((candidate) => writeFile(candidate, "tool")));
+    const environment = {
+      INCLUDE: paths.include,
+      LIB: paths.lib,
+      PATH: path.join(root, "attacker-bin"),
+      SECRET_TOKEN: "must-not-reach-child",
+      TAMMY_SQLCIPHER_COMSPEC: paths.comspec,
+      TAMMY_SQLCIPHER_LIB: paths.librarian,
+      TAMMY_SQLCIPHER_LINK: paths.linker,
+      TAMMY_SQLCIPHER_MT: paths.manifestTool,
+      TAMMY_SQLCIPHER_NMAKE: paths.make,
+      TAMMY_SQLCIPHER_NMAKE_CC: paths.compiler,
+      TAMMY_SQLCIPHER_PERL: paths.perl,
+      TAMMY_SQLCIPHER_RC: paths.resourceCompiler,
+    };
     const extractSource = async ({ destination, pin }) => {
       assert.deepEqual(pin, {
         archiveName: "openssl-3.5.7.tar.gz",
@@ -431,7 +690,7 @@ describe("official Windows OpenSSL provider build", () => {
       ]);
       return source;
     };
-    return { buildRoot, environment, extractSource, root };
+    return { buildRoot, environment, extractSource, paths, root };
   }
 
   it("pins source, licence, configuration, tools, environment, version, and one archive", async () => {
@@ -447,6 +706,7 @@ describe("official Windows OpenSSL provider build", () => {
             `AR = ${fixture.environment.TAMMY_SQLCIPHER_LIB}`,
             `LD := "${fixture.environment.TAMMY_SQLCIPHER_LINK}"`,
             `MT=${fixture.environment.TAMMY_SQLCIPHER_MT}`,
+            `PERL = "${fixture.environment.TAMMY_SQLCIPHER_PERL}"`,
             `RC = "${fixture.environment.TAMMY_SQLCIPHER_RC}"`,
           ].join("\n"),
         );
@@ -481,13 +741,98 @@ describe("official Windows OpenSSL provider build", () => {
     assert.ok(configure.args.includes("VC-WIN64A"));
     assert.ok(configure.args.includes("no-shared"));
     assert.ok(configure.args.includes("no-tests"));
-    assert.equal(configure.options.env.SOURCE_DATE_EPOCH, "1781042040");
-    assert.equal(configure.options.env.TZ, "UTC");
+    assert.ok(configure.args.includes("no-asm"));
+    const expectedPath = [
+      path.dirname(fixture.environment.TAMMY_SQLCIPHER_PERL),
+      path.dirname(fixture.environment.TAMMY_SQLCIPHER_NMAKE),
+      path.dirname(fixture.environment.TAMMY_SQLCIPHER_NMAKE_CC),
+      path.dirname(fixture.environment.TAMMY_SQLCIPHER_LIB),
+      path.dirname(fixture.environment.TAMMY_SQLCIPHER_LINK),
+      path.dirname(fixture.environment.TAMMY_SQLCIPHER_MT),
+      path.dirname(fixture.environment.TAMMY_SQLCIPHER_RC),
+      path.dirname(fixture.environment.TAMMY_SQLCIPHER_COMSPEC),
+    ]
+      .filter((candidate, index, candidates) => candidates.indexOf(candidate) === index)
+      .join(";");
+    const expectedEnvironment = {
+      AR: fixture.environment.TAMMY_SQLCIPHER_LIB,
+      CC: fixture.environment.TAMMY_SQLCIPHER_NMAKE_CC,
+      ComSpec: fixture.environment.TAMMY_SQLCIPHER_COMSPEC,
+      INCLUDE: fixture.environment.INCLUDE,
+      LANG: "C",
+      LC_ALL: "C",
+      LD: fixture.environment.TAMMY_SQLCIPHER_LINK,
+      LIB: fixture.environment.LIB,
+      MT: fixture.environment.TAMMY_SQLCIPHER_MT,
+      PATH: expectedPath,
+      PERL: fixture.environment.TAMMY_SQLCIPHER_PERL,
+      RC: fixture.environment.TAMMY_SQLCIPHER_RC,
+      SOURCE_DATE_EPOCH: "1781042040",
+      SystemRoot: path.dirname(path.dirname(fixture.environment.TAMMY_SQLCIPHER_COMSPEC)),
+      TEMP: fixture.buildRoot,
+      TMP: fixture.buildRoot,
+      TZ: "UTC",
+    };
+    assert.deepEqual(configure.options.env, expectedEnvironment);
     for (const call of calls.slice(1)) {
       assert.ok(call.args.includes(`CC=${fixture.environment.TAMMY_SQLCIPHER_NMAKE_CC}`));
       assert.ok(call.args.includes(`AR=${fixture.environment.TAMMY_SQLCIPHER_LIB}`));
       assert.ok(call.args.includes(`LD=${fixture.environment.TAMMY_SQLCIPHER_LINK}`));
+      assert.ok(call.args.includes(`PERL=${fixture.environment.TAMMY_SQLCIPHER_PERL}`));
+      assert.deepEqual(call.options.env, expectedEnvironment);
     }
+  });
+
+  for (const mutation of ["missing", "symlinked"]) {
+    it(`rejects a ${mutation} explicit COMSPEC before Configure`, async () => {
+      const fixture = await providerFixture();
+      const comspec = fixture.environment.TAMMY_SQLCIPHER_COMSPEC;
+      await rm(comspec);
+      if (mutation === "symlinked") {
+        const outside = path.join(fixture.root, "outside-cmd.exe");
+        await writeFile(outside, "attacker cmd");
+        await symlink(outside, comspec);
+      }
+      await assert.rejects(
+        buildWindowsProvider({
+          buildRoot: fixture.buildRoot,
+          environment: fixture.environment,
+          extractSource: fixture.extractSource,
+          repositoryRoot: path.resolve(import.meta.dirname, ".."),
+          execFile: async () => assert.fail("Configure must not run with invalid COMSPEC"),
+        }),
+        /SQLCIPHER_WINDOWS_TOOLCHAIN_INVALID/,
+      );
+    });
+  }
+
+  it("rejects a generated makefile without the exact absolute PERL before nmake", async () => {
+    const fixture = await providerFixture();
+    let invocation = 0;
+    await assert.rejects(
+      buildWindowsProvider({
+        buildRoot: fixture.buildRoot,
+        environment: fixture.environment,
+        extractSource: fixture.extractSource,
+        repositoryRoot: path.resolve(import.meta.dirname, ".."),
+        execFile: async (_command, _args, options) => {
+          invocation += 1;
+          if (invocation !== 1) assert.fail("nmake must not run after generated PERL drift");
+          await writeFile(
+            path.join(options.cwd, "makefile"),
+            [
+              `CC=${fixture.environment.TAMMY_SQLCIPHER_NMAKE_CC}`,
+              `AR=${fixture.environment.TAMMY_SQLCIPHER_LIB}`,
+              `LD=${fixture.environment.TAMMY_SQLCIPHER_LINK}`,
+              `MT=${fixture.environment.TAMMY_SQLCIPHER_MT}`,
+              `RC=${fixture.environment.TAMMY_SQLCIPHER_RC}`,
+            ].join("\n"),
+          );
+          return { stderr: "", stdout: "" };
+        },
+      }),
+      /SQLCIPHER_OPENSSL_TOOLCHAIN_DRIFT/,
+    );
   });
 
   it("rejects generated toolchain drift before nmake", async () => {
@@ -514,6 +859,7 @@ describe("official Windows OpenSSL provider build", () => {
       fixture.environment.TAMMY_SQLCIPHER_LIB,
       fixture.environment.TAMMY_SQLCIPHER_LINK,
       fixture.environment.TAMMY_SQLCIPHER_MT,
+      fixture.environment.TAMMY_SQLCIPHER_PERL,
       fixture.environment.TAMMY_SQLCIPHER_RC,
     ].map((tool) => `# expected tool: ${tool}`);
     await assert.rejects(
@@ -525,7 +871,7 @@ describe("official Windows OpenSSL provider build", () => {
         execFile: async (_command, _args, options) => {
           await writeFile(
             path.join(options.cwd, "makefile"),
-            [...comments, "CC=cl", "AR=lib", "LD=link", "MT=mt", "RC=rc"].join("\n"),
+            [...comments, "CC=cl", "AR=lib", "LD=link", "MT=mt", "PERL=perl", "RC=rc"].join("\n"),
           );
           return { stderr: "", stdout: "" };
         },

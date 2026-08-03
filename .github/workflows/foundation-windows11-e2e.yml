@@ -127,6 +127,17 @@ jobs:
           if ($LASTEXITCODE -ne 0 -or $perlVersion -ne "v5.40.2") {
             throw "SQLCIPHER_PERL_VERSION_INVALID: $perlVersion"
           }
+          $systemRoot = [IO.Path]::GetFullPath($env:SystemRoot)
+          $systemRootItem = Get-Item -LiteralPath $systemRoot -Force -ErrorAction Stop
+          if (-not $systemRootItem.PSIsContainer -or ($systemRootItem.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+            throw "SQLCIPHER_WINDOWS_SYSTEM_ROOT_INVALID: $systemRoot"
+          }
+          $comspec = [IO.Path]::GetFullPath((Join-Path $env:SystemRoot "System32\cmd.exe"))
+          $comspecItem = Get-Item -LiteralPath $comspec -Force -ErrorAction Stop
+          if ($comspecItem.PSIsContainer -or ($comspecItem.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+            throw "SQLCIPHER_WINDOWS_COMSPEC_INVALID: $comspec"
+          }
+          "TAMMY_SQLCIPHER_COMSPEC=$comspec" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           $nmakeVersion = (& $env:TAMMY_SQLCIPHER_NMAKE /? 2>&1 | Out-String)
           if ($nmakeVersion -notmatch "Version 14\.44\.35207\.1(?:\s|$)") {
             throw "SQLCIPHER_NMAKE_VERSION_INVALID: $nmakeVersion"

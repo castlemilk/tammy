@@ -1,6 +1,6 @@
 import { execFile as nodeExecFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { cp, lstat, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, lstat, mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -142,6 +142,7 @@ export function createSqlcipherBuildPlan({
     }
   }
   return Object.freeze({
+    amalgamationWrapper: path.join(root, "scripts/sqlcipher-amalgamation.c"),
     archiver: windows ? archiver : "/usr/bin/libtool",
     buildRoot,
     compiler,
@@ -198,6 +199,22 @@ async function requireRegularFile(candidate, code) {
 async function requireDirectory(candidate, code) {
   const stats = await lstat(candidate).catch(() => null);
   if (!stats?.isDirectory() || stats.isSymbolicLink()) fail(code);
+}
+
+async function requireWindowsDirectoryList(value) {
+  if (typeof value !== "string" || value === "") {
+    fail("SQLCIPHER_WINDOWS_TOOLCHAIN_INVALID");
+  }
+  const directories = value.split(";");
+  if (directories.some((candidate) => candidate === "")) {
+    fail("SQLCIPHER_WINDOWS_TOOLCHAIN_INVALID");
+  }
+  for (const candidate of directories) {
+    if (!path.isAbsolute(candidate) || path.normalize(candidate) !== candidate) {
+      fail("SQLCIPHER_WINDOWS_TOOLCHAIN_INVALID");
+    }
+    await requireDirectory(candidate, "SQLCIPHER_WINDOWS_TOOLCHAIN_INVALID");
+  }
 }
 
 async function findUniqueRegularFile(root, filename) {
@@ -261,8 +278,9 @@ async function compileMac(plan, source, execFile) {
       "-fPIC",
       `-ffile-prefix-map=${source}=.`,
       ...commonFlags,
+      `-I${source}`,
       "-c",
-      path.join(source, "sqlite3.c"),
+      plan.amalgamationWrapper,
       "-o",
       path.join(plan.buildRoot, "sqlite3.o"),
     ],
@@ -303,8 +321,9 @@ async function compileWindows(plan, source, execFile) {
       "-g0",
       ...commonFlags,
       `-I${plan.opensslInclude}`,
+      `-I${source}`,
       "-c",
-      path.join(source, "sqlite3.c"),
+      plan.amalgamationWrapper,
       "-o",
       path.join(plan.buildRoot, "sqlite3.o"),
     ],
@@ -329,7 +348,7 @@ async function compileWindows(plan, source, execFile) {
       `-I${source}`,
       `--ld-path=${plan.linker}`,
       "-Wl,/Brepro",
-      path.join(source, "sqlite3.c"),
+      plan.amalgamationWrapper,
       plan.ordinaryReaderSource,
       "-o",
       plan.ordinaryReader,
@@ -348,6 +367,7 @@ export async function buildWindowsProvider({
   const perl = environment.TAMMY_SQLCIPHER_PERL;
   const make = environment.TAMMY_SQLCIPHER_NMAKE;
   const compiler = environment.TAMMY_SQLCIPHER_NMAKE_CC;
+  const comspec = environment.TAMMY_SQLCIPHER_COMSPEC;
   const librarian = environment.TAMMY_SQLCIPHER_LIB;
   const linker = environment.TAMMY_SQLCIPHER_LINK;
   const manifestTool = environment.TAMMY_SQLCIPHER_MT;
@@ -361,11 +381,33 @@ export async function buildWindowsProvider({
     manifestTool,
     resourceCompiler,
   ]) {
-    if (typeof candidate !== "string" || !path.isAbsolute(candidate)) {
+    if (
+      typeof candidate !== "string" ||
+      !path.isAbsolute(candidate) ||
+      path.normalize(candidate) !== candidate
+    ) {
       fail("SQLCIPHER_WINDOWS_TOOLCHAIN_INVALID");
     }
     await requireRegularFile(candidate, "SQLCIPHER_WINDOWS_TOOLCHAIN_INVALID");
   }
+  if (
+    typeof comspec !== "string" ||
+    !path.isAbsolute(comspec) ||
+    path.normalize(comspec) !== comspec ||
+    path.basename(comspec).toLowerCase() !== "cmd.exe" ||
+    path.basename(path.dirname(comspec)).toLowerCase() !== "system32"
+  ) {
+    fail("SQLCIPHER_WINDOWS_TOOLCHAIN_INVALID");
+  }
+  await requireRegularFile(comspec, "SQLCIPHER_WINDOWS_TOOLCHAIN_INVALID");
+  const systemRoot = path.dirname(path.dirname(comspec));
+  await Promise.all([
+    requireDirectory(systemRoot, "SQLCIPHER_WINDOWS_TOOLCHAIN_INVALID"),
+    requireDirectory(path.dirname(comspec), "SQLCIPHER_WINDOWS_TOOLCHAIN_INVALID"),
+    requireDirectory(buildRoot, "SQLCIPHER_WINDOWS_TOOLCHAIN_INVALID"),
+    requireWindowsDirectoryList(environment.INCLUDE),
+    requireWindowsDirectoryList(environment.LIB),
+  ]);
   const extracted = path.join(buildRoot, "openssl-source");
   const source = await extractSource({ destination: extracted, pin: OPENSSL_RELEASE });
   const license = path.join(source, "LICENSE.txt");
@@ -380,16 +422,35 @@ export async function buildWindowsProvider({
     fail("SQLCIPHER_OPENSSL_LICENSE_INVALID");
   }
   const install = path.join(buildRoot, "openssl-install");
+  const toolPath = [
+    path.dirname(perl),
+    path.dirname(make),
+    path.dirname(compiler),
+    path.dirname(librarian),
+    path.dirname(linker),
+    path.dirname(manifestTool),
+    path.dirname(resourceCompiler),
+    path.dirname(comspec),
+  ]
+    .filter((candidate, index, candidates) => candidates.indexOf(candidate) === index)
+    .join(";");
   const toolEnvironment = {
-    ...process.env,
     AR: librarian,
     CC: compiler,
+    ComSpec: comspec,
+    INCLUDE: environment.INCLUDE,
     LANG: "C",
     LC_ALL: "C",
     LD: linker,
+    LIB: environment.LIB,
     MT: manifestTool,
+    PATH: toolPath,
+    PERL: perl,
     RC: resourceCompiler,
     SOURCE_DATE_EPOCH: "1781042040",
+    SystemRoot: systemRoot,
+    TEMP: buildRoot,
+    TMP: buildRoot,
     TZ: "UTC",
   };
   await execute(
@@ -398,6 +459,7 @@ export async function buildWindowsProvider({
     [
       path.join(source, "Configure"),
       "VC-WIN64A",
+      "no-asm",
       "no-shared",
       "no-tests",
       "no-apps",
@@ -414,11 +476,12 @@ export async function buildWindowsProvider({
     ["AR", librarian],
     ["LD", linker],
     ["MT", manifestTool],
+    ["PERL", perl],
     ["RC", resourceCompiler],
   ]);
   const effectiveAssignments = new Map();
   for (const line of generatedMakefile.replaceAll("\r\n", "\n").split("\n")) {
-    const match = /^[\t ]*(CC|AR|LD|MT|RC)[\t ]*(\?=|\+=|:=|=)[\t ]*(.*?)[\t ]*$/.exec(line);
+    const match = /^[\t ]*(CC|AR|LD|MT|PERL|RC)[\t ]*(\?=|\+=|:=|=)[\t ]*(.*?)[\t ]*$/.exec(line);
     if (!match) continue;
     const [, name, operator, rawValue] = match;
     const value = rawValue.trim();
@@ -446,6 +509,7 @@ export async function buildWindowsProvider({
     `AR=${librarian}`,
     `LD=${linker}`,
     `MT=${manifestTool}`,
+    `PERL=${perl}`,
     `RC=${resourceCompiler}`,
   ];
   await execute(execFile, make, ["/nologo", ...exactTools, "build_libs"], {
@@ -469,27 +533,105 @@ export async function buildWindowsProvider({
   });
 }
 
-async function stageResources(plan, source) {
+function sameDirectoryIdentity(current, expected) {
+  return Boolean(
+    current?.isDirectory() &&
+      !current.isSymbolicLink() &&
+      current.dev === expected.dev &&
+      current.ino === expected.ino,
+  );
+}
+
+async function stageResources(plan, source, { cacheIdentity, cacheRoot, resourceHooks = {} }) {
   const resourceRoot = path.dirname(plan.resources.license);
+  const resourceParent = path.dirname(resourceRoot);
+  const parentIdentity = await lstat(resourceParent, { bigint: true }).catch(() => null);
+  if (
+    !sameDirectoryIdentity(
+      await lstat(cacheRoot, { bigint: true }).catch(() => null),
+      cacheIdentity,
+    ) ||
+    !parentIdentity?.isDirectory() ||
+    parentIdentity.isSymbolicLink()
+  ) {
+    fail("SQLCIPHER_RESOURCE_ROOT_INVALID");
+  }
   const initialStats = await lstat(resourceRoot, { bigint: true }).catch(() => null);
   if (initialStats !== null) {
     if (!initialStats.isDirectory() || initialStats.isSymbolicLink()) {
       fail("SQLCIPHER_RESOURCE_ROOT_INVALID");
     }
-    for (const entry of await readdir(resourceRoot)) {
-      const currentStats = await lstat(resourceRoot, { bigint: true }).catch(() => null);
-      if (
-        !currentStats?.isDirectory() ||
-        currentStats.isSymbolicLink() ||
-        currentStats.dev !== initialStats.dev ||
-        currentStats.ino !== initialStats.ino
-      ) {
-        fail("SQLCIPHER_RESOURCE_ROOT_INVALID");
-      }
-      await rm(path.join(resourceRoot, entry), { force: true, recursive: true });
+    let retirementDirectory;
+    try {
+      retirementDirectory = await mkdtemp(path.join(cacheRoot, ".retired-resources-"));
+    } catch {
+      fail("SQLCIPHER_RESOURCE_ROOT_INVALID");
     }
-  } else {
-    await mkdir(resourceRoot, { recursive: true, mode: 0o700 });
+    const retirementIdentity = await lstat(retirementDirectory, { bigint: true }).catch(() => null);
+    if (!retirementIdentity?.isDirectory() || retirementIdentity.isSymbolicLink()) {
+      fail("SQLCIPHER_RESOURCE_ROOT_INVALID");
+    }
+    const retiredRoot = path.join(retirementDirectory, "sqlcipher");
+    const context = Object.freeze({ cacheRoot, resourceParent, resourceRoot, retiredRoot });
+    if (resourceHooks.beforeResourceRetirementRename) {
+      await resourceHooks.beforeResourceRetirementRename(context);
+    }
+    const [currentCache, currentParent, currentRetirement] = await Promise.all([
+      lstat(cacheRoot, { bigint: true }).catch(() => null),
+      lstat(resourceParent, { bigint: true }).catch(() => null),
+      lstat(retirementDirectory, { bigint: true }).catch(() => null),
+    ]);
+    if (
+      !sameDirectoryIdentity(currentCache, cacheIdentity) ||
+      !sameDirectoryIdentity(currentParent, parentIdentity) ||
+      !sameDirectoryIdentity(currentRetirement, retirementIdentity)
+    ) {
+      fail("SQLCIPHER_RESOURCE_ROOT_INVALID");
+    }
+    try {
+      await rename(resourceRoot, retiredRoot);
+    } catch {
+      fail("SQLCIPHER_RESOURCE_ROOT_INVALID");
+    }
+    const [movedRoot, cacheAfterRename, parentAfterRename, retirementAfterRename] =
+      await Promise.all([
+        lstat(retiredRoot, { bigint: true }).catch(() => null),
+        lstat(cacheRoot, { bigint: true }).catch(() => null),
+        lstat(resourceParent, { bigint: true }).catch(() => null),
+        lstat(retirementDirectory, { bigint: true }).catch(() => null),
+      ]);
+    if (
+      !sameDirectoryIdentity(movedRoot, initialStats) ||
+      !sameDirectoryIdentity(cacheAfterRename, cacheIdentity) ||
+      !sameDirectoryIdentity(parentAfterRename, parentIdentity) ||
+      !sameDirectoryIdentity(retirementAfterRename, retirementIdentity)
+    ) {
+      fail("SQLCIPHER_RESOURCE_ROOT_INVALID");
+    }
+  }
+  if (resourceHooks.beforeNewResourceRootCreate) {
+    await resourceHooks.beforeNewResourceRootCreate(
+      Object.freeze({ cacheRoot, resourceParent, resourceRoot }),
+    );
+  }
+  const [cacheBeforeCreate, parentBeforeCreate] = await Promise.all([
+    lstat(cacheRoot, { bigint: true }).catch(() => null),
+    lstat(resourceParent, { bigint: true }).catch(() => null),
+  ]);
+  if (
+    !sameDirectoryIdentity(cacheBeforeCreate, cacheIdentity) ||
+    !sameDirectoryIdentity(parentBeforeCreate, parentIdentity)
+  ) {
+    fail("SQLCIPHER_RESOURCE_ROOT_INVALID");
+  }
+  try {
+    await mkdir(resourceRoot, { mode: 0o700 });
+  } catch {
+    fail("SQLCIPHER_RESOURCE_ROOT_INVALID");
+  }
+  const stagedIdentity = await lstat(resourceRoot, { bigint: true }).catch(() => null);
+  if (!stagedIdentity?.isDirectory() || stagedIdentity.isSymbolicLink()) {
+    fail("SQLCIPHER_RESOURCE_ROOT_INVALID");
   }
   await Promise.all([
     mkdir(path.dirname(plan.resources.header), { recursive: true }),
@@ -523,6 +665,18 @@ async function stageResources(plan, source) {
       writeFile(plan.resources.opensslLibrarySha256, `${opensslLibrarySha256}\n`, { mode: 0o600 }),
     ]);
   }
+  const [finalRoot, finalCache, finalParent] = await Promise.all([
+    lstat(resourceRoot, { bigint: true }).catch(() => null),
+    lstat(cacheRoot, { bigint: true }).catch(() => null),
+    lstat(resourceParent, { bigint: true }).catch(() => null),
+  ]);
+  if (
+    !sameDirectoryIdentity(finalRoot, stagedIdentity) ||
+    !sameDirectoryIdentity(finalCache, cacheIdentity) ||
+    !sameDirectoryIdentity(finalParent, parentIdentity)
+  ) {
+    fail("SQLCIPHER_RESOURCE_ROOT_INVALID");
+  }
   return { headerSha256, librarySha256, opensslLibrarySha256 };
 }
 
@@ -533,12 +687,19 @@ export async function buildSqlcipher({
   platform = process.platform,
   root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."),
   providerBuilder = buildWindowsProvider,
+  resourceHooks = {},
   sourceTreeHasher = hashSourceTree,
   vendor = vendorSqlcipher,
 } = {}) {
   const target = selectSqlcipherTarget(platform, arch);
+  const amalgamationWrapper = path.join(root, "scripts/sqlcipher-amalgamation.c");
+  await requireRegularFile(amalgamationWrapper, "SQLCIPHER_AMALGAMATION_WRAPPER_INVALID");
   const cacheRoot = path.join(root, ".tmp/sqlcipher");
   await mkdir(cacheRoot, { recursive: true, mode: 0o700 });
+  const cacheIdentity = await lstat(cacheRoot, { bigint: true });
+  if (!cacheIdentity.isDirectory() || cacheIdentity.isSymbolicLink()) {
+    fail("SQLCIPHER_RESOURCE_ROOT_INVALID");
+  }
   const vendored = await vendor({ cacheRoot });
   if (vendored.sourceTreeSha256 !== SQLCIPHER_RELEASE.sourceTreeSha256) {
     fail("SQLCIPHER_SOURCE_INVALID");
@@ -581,6 +742,9 @@ export async function buildSqlcipher({
       target,
     });
     await requireRegularFile(plan.compiler, "SQLCIPHER_COMPILER_MISSING");
+    if (plan.amalgamationWrapper !== amalgamationWrapper) {
+      fail("SQLCIPHER_AMALGAMATION_WRAPPER_INVALID");
+    }
     await requireDirectory(plan.sourceRoot, "SQLCIPHER_SOURCE_MISSING");
     if (target.platform === "win32") {
       await Promise.all([
@@ -605,6 +769,7 @@ export async function buildSqlcipher({
     const { headerSha256, librarySha256, opensslLibrarySha256 } = await stageResources(
       plan,
       source,
+      { cacheIdentity, cacheRoot, resourceHooks },
     );
     return Object.freeze({
       include: path.dirname(plan.resources.header),

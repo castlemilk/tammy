@@ -12,6 +12,7 @@ package sqlcipher
 #include <string.h>
 
 int sqlite3_key(sqlite3*, const void*, int);
+int tammy_sqlite3_main_file_matches(sqlite3*, sqlite3_uint64);
 const char *sqlcipher_version(void);
 
 static int tammy_bind_text(sqlite3_stmt *statement, int index, const char *value, int length) {
@@ -106,10 +107,16 @@ func (driverInstance *sqlcipherDriver) Open(string) (driver.Conn, error) {
 
 type connector struct {
 	fileIdentity   os.FileInfo
+	hooks          connectorBoundaryHooks
 	key            []byte
 	mu             sync.Mutex
 	parentIdentity os.FileInfo
 	path           string
+}
+
+type connectorBoundaryHooks struct {
+	afterSQLiteOpen  func()
+	beforeSQLiteOpen func()
 }
 
 func (item *connector) Connect(ctx context.Context) (_ driver.Conn, returnedError error) {
@@ -143,7 +150,14 @@ func (item *connector) Connect(ctx context.Context) (_ driver.Conn, returnedErro
 	defer C.free(unsafe.Pointer(pathValue))
 	var database *C.sqlite3
 	flags := C.int(C.SQLITE_OPEN_READWRITE | C.SQLITE_OPEN_CREATE | C.SQLITE_OPEN_FULLMUTEX | C.SQLITE_OPEN_NOFOLLOW)
-	if result := C.sqlite3_open_v2(pathValue, &database, flags, nil); result != C.SQLITE_OK {
+	if item.hooks.beforeSQLiteOpen != nil {
+		item.hooks.beforeSQLiteOpen()
+	}
+	result := C.sqlite3_open_v2(pathValue, &database, flags, nil)
+	if item.hooks.afterSQLiteOpen != nil {
+		item.hooks.afterSQLiteOpen()
+	}
+	if result != C.SQLITE_OK {
 		if database != nil {
 			message := sqliteMessage(database, result)
 			C.sqlite3_close_v2(database)
@@ -168,6 +182,12 @@ func (item *connector) Connect(ctx context.Context) (_ driver.Conn, returnedErro
 	}()
 	if result := C.sqlite3_key(database, keyValue, C.int(len(key))); result != C.SQLITE_OK {
 		return nil, sqliteMessage(database, result)
+	}
+	if C.tammy_sqlite3_main_file_matches(
+		database,
+		C.sqlite3_uint64(identityHandle.Fd()),
+	) != 1 {
+		return nil, ErrDatabaseIdentity
 	}
 	if err := connection.initialize(ctx); err != nil {
 		return nil, err
