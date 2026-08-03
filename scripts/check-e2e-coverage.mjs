@@ -10,6 +10,26 @@ const REVIEWED_EXCEPTION = "not_applicable_pre_workspace_system_query";
 const PRE_WORKSPACE_SYSTEM_QUERY = "tammy.v1.SystemService.GetDiagnostics";
 const PRODUCTION_STAGE = "production";
 const DECLARED_FUTURE_STAGE = "declared_future";
+const CASE_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)+$/;
+const PRELOAD_NAME_PATTERN = /^[a-z][A-Za-z0-9]*$/;
+const ROUTE_PATTERN = /^\/[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*$/;
+const OUTCOME_CODE_PATTERN = /^[A-Z][A-Z0-9_]*$/;
+const STABLE_TOKEN_PATTERN = /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/;
+const TOP_LEVEL_KEYS = ["schemaVersion", "scenarios", "rpcs", "transitions"];
+const SCENARIO_KEYS = ["cases", "futureCases"];
+const RPC_KEYS = [
+  "stage",
+  "preload",
+  "cases",
+  "futureCases",
+  "projections",
+  "roles",
+  "routes",
+  "principalFailures",
+  "list",
+  "idempotency",
+];
+const TRANSITION_KEYS = ["stage", "cases", "futureCases"];
 
 function isRecord(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -19,18 +39,17 @@ function isStringArray(value) {
   return Array.isArray(value) && value.every((entry) => typeof entry === "string");
 }
 
-function isNonEmptyString(value) {
-  return typeof value === "string" && value.length > 0;
+function matchesPattern(value, pattern) {
+  return typeof value === "string" && pattern.test(value);
 }
 
-function isUniqueStringArray(value) {
+function isUniqueStringArray(value, validator, requireNonEmpty = false) {
   return (
-    Array.isArray(value) && value.every(isNonEmptyString) && new Set(value).size === value.length
+    Array.isArray(value) &&
+    (!requireNonEmpty || value.length > 0) &&
+    value.every(validator) &&
+    new Set(value).size === value.length
   );
-}
-
-function isUniqueNonEmptyStringArray(value) {
-  return isUniqueStringArray(value) && value.length > 0;
 }
 
 function hasExactKeys(value, keys) {
@@ -39,6 +58,10 @@ function hasExactKeys(value, keys) {
     Object.keys(value).length === keys.length &&
     keys.every((key) => Object.hasOwn(value, key))
   );
+}
+
+function hasOnlyKeys(value, keys) {
+  return isRecord(value) && Object.keys(value).every((key) => keys.includes(key));
 }
 
 function coverageStage(entry, name, rowKind) {
@@ -52,26 +75,47 @@ function coverageStage(entry, name, rowKind) {
 }
 
 function hasCompleteListMetadata(value) {
-  return hasExactKeys(value, ["states"]) && isUniqueNonEmptyStringArray(value.states);
+  return (
+    hasExactKeys(value, ["states"]) &&
+    isUniqueStringArray(value.states, (state) => matchesPattern(state, STABLE_TOKEN_PATTERN), true)
+  );
 }
 
 function hasCompleteIdempotencyMetadata(value) {
   return (
     hasExactKeys(value, ["mode", "outcomes"]) &&
     ["query", "persistent_command", "challenge", "restore"].includes(value.mode) &&
-    isUniqueNonEmptyStringArray(value.outcomes)
+    isUniqueStringArray(
+      value.outcomes,
+      (outcome) => matchesPattern(outcome, STABLE_TOKEN_PATTERN),
+      true,
+    )
+  );
+}
+
+function hasCompleteRoutes(value) {
+  return isUniqueStringArray(value, (route) => matchesPattern(route, ROUTE_PATTERN), true);
+}
+
+function hasCompletePrincipalFailures(value) {
+  return isUniqueStringArray(
+    value,
+    (outcome) => matchesPattern(outcome, OUTCOME_CODE_PATTERN),
+    true,
   );
 }
 
 function hasCompleteBusinessRpcMetadata(rpc) {
   return (
-    isUniqueNonEmptyStringArray(rpc.projections) &&
-    isUniqueNonEmptyStringArray(rpc.routes) &&
-    rpc.routes.every((route) => route.startsWith("/") && !/\s/.test(route)) &&
-    isUniqueNonEmptyStringArray(rpc.principalFailures) &&
-    rpc.principalFailures.every((outcome) => /^[A-Z][A-Z0-9_]*$/.test(outcome)) &&
+    isUniqueStringArray(
+      rpc.projections,
+      (projection) => matchesPattern(projection, STABLE_TOKEN_PATTERN),
+      true,
+    ) &&
+    hasCompleteRoutes(rpc.routes) &&
+    hasCompletePrincipalFailures(rpc.principalFailures) &&
     isRecord(rpc.roles) &&
-    Object.values(rpc.roles).every(isNonEmptyString) &&
+    Object.values(rpc.roles).every((outcome) => matchesPattern(outcome, STABLE_TOKEN_PATTERN)) &&
     hasCompleteListMetadata(rpc.list) &&
     hasCompleteIdempotencyMetadata(rpc.idempotency)
   );
@@ -92,9 +136,12 @@ function hasValidScenarioShape(scenarios) {
   if (
     !Object.values(scenarios).every(
       (scenario) =>
-        isRecord(scenario) &&
-        isUniqueStringArray(scenario.cases) &&
-        (scenario.futureCases === undefined || isUniqueStringArray(scenario.futureCases)),
+        hasOnlyKeys(scenario, SCENARIO_KEYS) &&
+        isUniqueStringArray(scenario.cases, (caseId) => matchesPattern(caseId, CASE_ID_PATTERN)) &&
+        (scenario.futureCases === undefined ||
+          isUniqueStringArray(scenario.futureCases, (caseId) =>
+            matchesPattern(caseId, CASE_ID_PATTERN),
+          )),
     )
   ) {
     return false;
@@ -108,7 +155,7 @@ function hasValidScenarioShape(scenarios) {
 
 function hasValidManifestShape(coverage) {
   if (
-    !isRecord(coverage) ||
+    !hasExactKeys(coverage, TOP_LEVEL_KEYS) ||
     coverage.schemaVersion !== 1 ||
     !isRecord(coverage.scenarios) ||
     !isRecord(coverage.rpcs) ||
@@ -121,20 +168,30 @@ function hasValidManifestShape(coverage) {
   }
   if (
     !Object.entries(coverage.rpcs).every(([rpcName, rpc]) => {
-      if (!isRecord(rpc)) return false;
+      if (!hasOnlyKeys(rpc, RPC_KEYS)) return false;
       const stage = coverageStage(rpc, rpcName, "rpc");
       if (
         stage === undefined ||
-        !isNonEmptyString(rpc.preload) ||
-        !isUniqueStringArray(rpc.cases) ||
-        (rpc.futureCases !== undefined && !isUniqueStringArray(rpc.futureCases)) ||
+        !matchesPattern(rpc.preload, PRELOAD_NAME_PATTERN) ||
+        !isUniqueStringArray(rpc.cases, (caseId) => matchesPattern(caseId, CASE_ID_PATTERN)) ||
+        (rpc.futureCases !== undefined &&
+          !isUniqueStringArray(rpc.futureCases, (caseId) =>
+            matchesPattern(caseId, CASE_ID_PATTERN),
+          )) ||
         !hasValidStageCases(stage, rpc)
       ) {
         return false;
       }
       if (rpcName === PRE_WORKSPACE_SYSTEM_QUERY) {
         return (
-          isUniqueNonEmptyStringArray(rpc.projections) &&
+          isUniqueStringArray(
+            rpc.projections,
+            (projection) => matchesPattern(projection, STABLE_TOKEN_PATTERN),
+            true,
+          ) &&
+          (rpc.routes === undefined || hasCompleteRoutes(rpc.routes)) &&
+          (rpc.principalFailures === undefined ||
+            hasCompletePrincipalFailures(rpc.principalFailures)) &&
           rpc.roles === REVIEWED_EXCEPTION &&
           rpc.list === REVIEWED_EXCEPTION &&
           rpc.idempotency === REVIEWED_EXCEPTION
@@ -146,12 +203,15 @@ function hasValidManifestShape(coverage) {
     return false;
   }
   return Object.entries(coverage.transitions).every(([transitionId, transition]) => {
-    if (!isRecord(transition)) return false;
+    if (!hasOnlyKeys(transition, TRANSITION_KEYS)) return false;
     const stage = coverageStage(transition, transitionId, "transition");
     return (
       stage !== undefined &&
-      isUniqueStringArray(transition.cases) &&
-      (transition.futureCases === undefined || isUniqueStringArray(transition.futureCases)) &&
+      isUniqueStringArray(transition.cases, (caseId) => matchesPattern(caseId, CASE_ID_PATTERN)) &&
+      (transition.futureCases === undefined ||
+        isUniqueStringArray(transition.futureCases, (caseId) =>
+          matchesPattern(caseId, CASE_ID_PATTERN),
+        )) &&
       hasValidStageCases(stage, transition)
     );
   });
@@ -331,8 +391,14 @@ export function coverageCliOptions(args) {
       requireProduction = true;
       continue;
     }
-    if (argument === "--descriptors" && descriptorPath === undefined && args[index + 1]) {
-      descriptorPath = path.resolve(args[index + 1]);
+    const descriptorArgument = args[index + 1];
+    if (
+      argument === "--descriptors" &&
+      descriptorPath === undefined &&
+      descriptorArgument &&
+      !descriptorArgument.startsWith("-")
+    ) {
+      descriptorPath = path.resolve(descriptorArgument);
       index += 1;
       continue;
     }

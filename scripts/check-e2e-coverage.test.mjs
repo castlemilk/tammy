@@ -87,6 +87,19 @@ function futureTransitionInput() {
   return input;
 }
 
+function ambiguousSemanticValues(validValue) {
+  return [
+    " ",
+    "\t",
+    "\n",
+    ` ${validValue}`,
+    `${validValue} `,
+    `${validValue}\u0007spoof`,
+    `${validValue}\u202Espoof`,
+    `${validValue}\u200Bspoof`,
+  ];
+}
+
 test("checker module exists", async () => {
   const checker = await import("./check-e2e-coverage.mjs");
 
@@ -108,9 +121,36 @@ test("parses the production-only coverage CLI option", async () => {
     descriptorPath,
     requireProduction: false,
   });
+  assert.deepEqual(
+    coverageCliOptions(["--descriptors", "descriptors.pb", "--require-production"]),
+    {
+      descriptorPath,
+      requireProduction: true,
+    },
+  );
   assert.throws(() => coverageCliOptions(["--require-production"]), {
     message: "E2E_COVERAGE_DESCRIPTORS_REQUIRED",
   });
+});
+
+test("rejects missing, flag-like, duplicate, and unknown coverage CLI arguments", async () => {
+  const { coverageCliOptions } = await import("./check-e2e-coverage.mjs");
+  const invalidArguments = [
+    [],
+    ["--descriptors"],
+    ["--descriptors", ""],
+    ["--descriptors", "--require-production"],
+    ["--descriptors", "--unknown"],
+    ["--descriptors", "one.pb", "--descriptors", "two.pb"],
+    ["--descriptors", "one.pb", "--require-production", "--require-production"],
+    ["--descriptors", "one.pb", "--unknown"],
+  ];
+
+  for (const args of invalidArguments) {
+    assert.throws(() => coverageCliOptions(args), {
+      message: "E2E_COVERAGE_DESCRIPTORS_REQUIRED",
+    });
+  }
 });
 
 test("declared future RPC permits an absent planned preload", async () => {
@@ -310,6 +350,153 @@ test("business RPC coverage requires complete deterministic metadata", async () 
       message: "E2E_COVERAGE_MANIFEST_INVALID",
     });
   }
+});
+
+test("production and future case IDs reject ambiguous semantic strings", async () => {
+  const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
+
+  for (const invalidCaseId of ambiguousSemanticValues("foundation/offline-ready")) {
+    const productionInput = validInput();
+    productionInput.coverage.scenarios["E2E-00"].cases = [invalidCaseId];
+    productionInput.coverage.rpcs[RPC].cases = [invalidCaseId];
+    assert.throws(() => checkE2ECoverage(productionInput), {
+      message: "E2E_COVERAGE_MANIFEST_INVALID",
+    });
+
+    const futureRpcInput = futureInput();
+    futureRpcInput.coverage.scenarios["E2E-00"].futureCases = [invalidCaseId];
+    futureRpcInput.coverage.rpcs[RPC].futureCases = [invalidCaseId];
+    assert.throws(() => checkE2ECoverage(futureRpcInput), {
+      message: "E2E_COVERAGE_MANIFEST_INVALID",
+    });
+
+    const futureTransition = futureTransitionInput();
+    futureTransition.coverage.scenarios["E2E-00"].futureCases = [invalidCaseId];
+    futureTransition.coverage.transitions["tammy.v1.WorkspaceState.LOCKED->READY"].futureCases = [
+      invalidCaseId,
+    ];
+    assert.throws(() => checkE2ECoverage(futureTransition), {
+      message: "E2E_COVERAGE_MANIFEST_INVALID",
+    });
+  }
+});
+
+test("RPC semantic metadata rejects whitespace, control, bidi, and invisible strings", async () => {
+  const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
+  const fields = [
+    {
+      validValue: "getWorkspaceState",
+      set: (rpc, value) => {
+        rpc.preload = value;
+      },
+    },
+    {
+      validValue: "workspace_state",
+      set: (rpc, value) => {
+        rpc.projections = [value];
+      },
+    },
+    {
+      validValue: "/unlock",
+      set: (rpc, value) => {
+        rpc.routes = [value];
+      },
+    },
+    {
+      validValue: "PERMISSION_DENIED",
+      set: (rpc, value) => {
+        rpc.principalFailures = [value];
+      },
+    },
+    {
+      validValue: "planned_allowed",
+      set: (rpc, value) => {
+        rpc.roles.auditor = value;
+      },
+    },
+    {
+      validValue: "not_applicable_single_query",
+      set: (rpc, value) => {
+        rpc.list.states = [value];
+      },
+    },
+    {
+      validValue: "not_applicable",
+      set: (rpc, value) => {
+        rpc.idempotency.outcomes = [value];
+      },
+    },
+  ];
+
+  for (const field of fields) {
+    for (const invalidValue of ambiguousSemanticValues(field.validValue)) {
+      const input = futureInput();
+      field.set(input.coverage.rpcs[RPC], invalidValue);
+      assert.throws(() => checkE2ECoverage(input), {
+        message: "E2E_COVERAGE_MANIFEST_INVALID",
+      });
+    }
+  }
+});
+
+test("rejects unknown top-level coverage keys", async () => {
+  const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
+  const input = validInput();
+  input.coverage.rpc = input.coverage.rpcs;
+
+  assert.throws(() => checkE2ECoverage(input), {
+    message: "E2E_COVERAGE_MANIFEST_INVALID",
+  });
+});
+
+test("rejects unknown scenario keys", async () => {
+  const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
+  const input = validInput();
+  input.coverage.scenarios["E2E-00"].futureCase = [];
+
+  assert.throws(() => checkE2ECoverage(input), {
+    message: "E2E_COVERAGE_MANIFEST_INVALID",
+  });
+});
+
+test("rejects unknown RPC coverage keys", async () => {
+  const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
+  const input = validInput();
+  input.coverage.rpcs[RPC].principalFailure = [];
+
+  assert.throws(() => checkE2ECoverage(input), {
+    message: "E2E_COVERAGE_MANIFEST_INVALID",
+  });
+});
+
+test("rejects unknown transition coverage keys", async () => {
+  const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
+  const input = futureTransitionInput();
+  input.coverage.transitions["tammy.v1.WorkspaceState.LOCKED->READY"].futureCase = [];
+
+  assert.throws(() => checkE2ECoverage(input), {
+    message: "E2E_COVERAGE_MANIFEST_INVALID",
+  });
+});
+
+test("rejects unknown list metadata keys", async () => {
+  const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
+  const input = validInput();
+  input.coverage.rpcs[RPC].list.state = "found";
+
+  assert.throws(() => checkE2ECoverage(input), {
+    message: "E2E_COVERAGE_MANIFEST_INVALID",
+  });
+});
+
+test("rejects unknown idempotency metadata keys", async () => {
+  const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
+  const input = validInput();
+  input.coverage.rpcs[RPC].idempotency.outcome = "not_applicable";
+
+  assert.throws(() => checkE2ECoverage(input), {
+    message: "E2E_COVERAGE_MANIFEST_INVALID",
+  });
 });
 
 test("scenario cases are nonempty, unique, disjoint, and globally unambiguous", async () => {
@@ -567,6 +754,26 @@ test("system query requires the exact reviewed roles list and idempotency except
         message: "E2E_COVERAGE_MANIFEST_INVALID",
       });
     }
+  }
+});
+
+test("system query validates optional development metadata when present", async () => {
+  const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
+  const mutations = [
+    (rpc) => {
+      rpc.routes = [" "];
+    },
+    (rpc) => {
+      rpc.principalFailures = ["permission_denied"];
+    },
+  ];
+
+  for (const mutate of mutations) {
+    const input = systemQueryInput();
+    mutate(input.coverage.rpcs[SYSTEM_RPC]);
+    assert.throws(() => checkE2ECoverage(input), {
+      message: "E2E_COVERAGE_MANIFEST_INVALID",
+    });
   }
 });
 
