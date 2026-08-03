@@ -178,10 +178,10 @@ enum TaxTreatment {
 // Account is the bounded chart-of-accounts projection.
 message Account {
   // id is an opaque UUIDv7 string.
-  string id = 1 [(buf.validate.field).string.uuid = true];
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // organisation_id identifies the owning organisation.
-  string organisation_id = 2 [(buf.validate.field).string.uuid = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // version is the optimistic aggregate version.
   uint64 version = 3 [(buf.validate.field).uint64.gte = 1];
@@ -214,7 +214,7 @@ message Account {
   AccountDesignation designation = 10 [(buf.validate.field).enum.defined_only = true];
 
   // default_tax_code_id is present only when postings may inherit a tax-code default.
-  optional string default_tax_code_id = 11 [(buf.validate.field).string.uuid = true];
+  optional string default_tax_code_id = 11 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // report_classification is a stable bounded reporting classification.
   string report_classification = 12 [(buf.validate.field).string.max_len = 96];
@@ -235,7 +235,7 @@ message AccountPatch {
   optional string subtype = 3 [(buf.validate.field).string.max_len = 96];
 
   // default_tax_code_id is selected to set or clear the posting default.
-  optional string default_tax_code_id = 4 [(buf.validate.field).string.uuid = true];
+  optional string default_tax_code_id = 4 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // report_classification is a stable bounded reporting classification.
   string report_classification = 5 [(buf.validate.field).string.max_len = 96];
@@ -247,7 +247,7 @@ message AccountPatch {
 // TaxCode is the effective user-facing projection of one immutable rule-bundle treatment.
 message TaxCode {
   // id is an opaque UUIDv7 string scoped to the retained rule bundle.
-  string id = 1 [(buf.validate.field).string.uuid = true];
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // code is the stable bounded user-facing code.
   string code = 2 [(buf.validate.field).string = {
@@ -271,13 +271,13 @@ message TaxCode {
 // OpeningBalanceInput is one typed, ordered opening conversion input line.
 message OpeningBalanceInput {
   // client_line_id is a caller-generated UUIDv7 retained for deterministic diagnostics.
-  string client_line_id = 1 [(buf.validate.field).string.uuid = true];
+  string client_line_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // kind identifies the typed conversion workflow owning the line.
   OpeningBalanceKind kind = 2 [(buf.validate.field).enum.defined_only = true];
 
   // account_id identifies the ledger account receiving the opening amount.
-  string account_id = 3 [(buf.validate.field).string.uuid = true];
+  string account_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // ledger_balance is exact ledger-normal signed money.
   Money ledger_balance = 4 [(buf.validate.field).required = true];
@@ -307,10 +307,10 @@ message OpeningBalanceInput {
 // OpeningConversion is the immutable posted conversion aggregate projection.
 message OpeningConversion {
   // id is an opaque UUIDv7 string.
-  string id = 1 [(buf.validate.field).string.uuid = true];
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // organisation_id identifies the owning organisation.
-  string organisation_id = 2 [(buf.validate.field).string.uuid = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // version is the optimistic aggregate version.
   uint64 version = 3 [(buf.validate.field).uint64.gte = 1];
@@ -322,10 +322,10 @@ message OpeningConversion {
   CivilDate conversion_date = 5 [(buf.validate.field).required = true];
 
   // journal_id identifies the immutable posting created by the conversion.
-  string journal_id = 6 [(buf.validate.field).string.uuid = true];
+  string journal_id = 6 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // replaced_by_id is present only after a full replacement succeeds.
-  optional string replaced_by_id = 7 [(buf.validate.field).string.uuid = true];
+  optional string replaced_by_id = 7 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // financial_revision is the resulting committed financial revision.
   uint64 financial_revision = 8 [(buf.validate.field).uint64.gte = 1];
@@ -334,10 +334,10 @@ message OpeningConversion {
 // ManualJournalLineInput is one ordered debit or credit input with explicit tax intent.
 message ManualJournalLineInput {
   // client_line_id is a caller-generated UUIDv7 retained for deterministic diagnostics.
-  string client_line_id = 1 [(buf.validate.field).string.uuid = true];
+  string client_line_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // account_id identifies the active account receiving the posting.
-  string account_id = 2 [(buf.validate.field).string.uuid = true];
+  string account_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // debit is exact non-negative debit money; the domain enforces exactly one non-zero side.
   Money debit = 3 [(buf.validate.field).required = true];
@@ -349,7 +349,7 @@ message ManualJournalLineInput {
   string description = 5 [(buf.validate.field).string.max_len = 512];
 
   // tax_code_id is present only for an explicit retained tax treatment.
-  optional string tax_code_id = 6 [(buf.validate.field).string.uuid = true];
+  optional string tax_code_id = 6 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // tax_amount is exact derived or explicitly validated GST money.
   Money tax_amount = 7;
@@ -361,13 +361,13 @@ message ManualJournalLineInput {
 // JournalLine is one immutable balanced-ledger posting line.
 message JournalLine {
   // id is an opaque UUIDv7 string.
-  string id = 1 [(buf.validate.field).string.uuid = true];
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // journal_id identifies the immutable parent journal.
-  string journal_id = 2 [(buf.validate.field).string.uuid = true];
+  string journal_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // account_id identifies the posted account.
-  string account_id = 3 [(buf.validate.field).string.uuid = true];
+  string account_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // sequence preserves semantically significant request and posting order.
   uint32 sequence = 4 [(buf.validate.field).uint32.gte = 1];
@@ -382,7 +382,7 @@ message JournalLine {
   string description = 7 [(buf.validate.field).string.max_len = 512];
 
   // tax_code_id is present only when a tax fact was posted.
-  optional string tax_code_id = 8 [(buf.validate.field).string.uuid = true];
+  optional string tax_code_id = 8 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // tax_amount is exact retained GST money.
   Money tax_amount = 9;
@@ -394,10 +394,10 @@ message JournalLine {
 // Journal is an immutable balanced posting projection.
 message Journal {
   // id is an opaque UUIDv7 string.
-  string id = 1 [(buf.validate.field).string.uuid = true];
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // organisation_id identifies the owning organisation.
-  string organisation_id = 2 [(buf.validate.field).string.uuid = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // version is the optimistic aggregate version.
   uint64 version = 3 [(buf.validate.field).uint64.gte = 1];
@@ -427,10 +427,10 @@ message Journal {
   Money total_credits = 10 [(buf.validate.field).required = true];
 
   // reversal_of_journal_id is present only for a reversing journal.
-  optional string reversal_of_journal_id = 11 [(buf.validate.field).string.uuid = true];
+  optional string reversal_of_journal_id = 11 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // reversed_by_journal_id is present only after one direct reversal commits.
-  optional string reversed_by_journal_id = 12 [(buf.validate.field).string.uuid = true];
+  optional string reversed_by_journal_id = 12 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // posted_at is the core-authored commit instant.
   google.protobuf.Timestamp posted_at = 13 [(buf.validate.field).required = true];
@@ -442,10 +442,10 @@ message Journal {
 // AccountingPeriod is the inclusive close boundary projection.
 message AccountingPeriod {
   // id is an opaque UUIDv7 string.
-  string id = 1 [(buf.validate.field).string.uuid = true];
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // organisation_id identifies the owning organisation.
-  string organisation_id = 2 [(buf.validate.field).string.uuid = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // version is the optimistic aggregate version.
   uint64 version = 3 [(buf.validate.field).uint64.gte = 1];
@@ -469,10 +469,10 @@ message LedgerEntry {
   SourceRef journal = 1 [(buf.validate.field).required = true];
 
   // journal_line_id identifies the exact immutable posting line.
-  string journal_line_id = 2 [(buf.validate.field).string.uuid = true];
+  string journal_line_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // account_id identifies the account projection being queried.
-  string account_id = 3 [(buf.validate.field).string.uuid = true];
+  string account_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // posting_date is the civil accounting date.
   CivilDate posting_date = 4 [(buf.validate.field).required = true];
@@ -514,7 +514,7 @@ message CreateAccountRequest {
   CommandContext command_context = 1 [(buf.validate.field).required = true];
 
   // organisation_id identifies the owning organisation.
-  string organisation_id = 2 [(buf.validate.field).string.uuid = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // code is a bounded organisation-unique chart code.
   string code = 3 [(buf.validate.field).string = {
@@ -538,7 +538,7 @@ message CreateAccountRequest {
   NormalBalance normal_balance = 7 [(buf.validate.field).enum.defined_only = true];
 
   // default_tax_code_id is present only when postings may inherit a tax default.
-  optional string default_tax_code_id = 8 [(buf.validate.field).string.uuid = true];
+  optional string default_tax_code_id = 8 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // report_classification is a stable bounded reporting classification.
   string report_classification = 9 [(buf.validate.field).string.max_len = 96];
@@ -559,7 +559,7 @@ message UpdateAccountRequest {
   CommandContext command_context = 1 [(buf.validate.field).required = true];
 
   // account_id identifies the account being updated.
-  string account_id = 2 [(buf.validate.field).string.uuid = true];
+  string account_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // expected_version prevents stale chart updates.
   uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
@@ -583,7 +583,7 @@ message SetAccountStatusRequest {
   CommandContext command_context = 1 [(buf.validate.field).required = true];
 
   // account_id identifies the account changing lifecycle state.
-  string account_id = 2 [(buf.validate.field).string.uuid = true];
+  string account_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // expected_version prevents stale transition decisions.
   uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
@@ -610,7 +610,7 @@ message ListTaxCodesRequest {
   AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
 
   // organisation_id identifies the configured organisation.
-  string organisation_id = 2 [(buf.validate.field).string.uuid = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // posting_date selects the one effective immutable rule bundle.
   CivilDate posting_date = 3 [(buf.validate.field).required = true];
@@ -634,7 +634,7 @@ message PostOpeningConversionRequest {
   CommandContext command_context = 1 [(buf.validate.field).required = true];
 
   // organisation_id identifies the owning organisation.
-  string organisation_id = 2 [(buf.validate.field).string.uuid = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // conversion_date is the civil accounting date of all opening facts.
   CivilDate conversion_date = 3 [(buf.validate.field).required = true];
@@ -664,7 +664,7 @@ message ReplaceOpeningConversionRequest {
   CommandContext command_context = 1 [(buf.validate.field).required = true];
 
   // opening_conversion_id identifies the current posted conversion.
-  string opening_conversion_id = 2 [(buf.validate.field).string.uuid = true];
+  string opening_conversion_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // expected_version prevents stale full-replacement decisions.
   uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
@@ -706,7 +706,7 @@ message PostManualJournalRequest {
   CommandContext command_context = 1 [(buf.validate.field).required = true];
 
   // organisation_id identifies the owning organisation.
-  string organisation_id = 2 [(buf.validate.field).string.uuid = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // posting_date is the civil accounting date.
   CivilDate posting_date = 3 [(buf.validate.field).required = true];
@@ -736,7 +736,7 @@ message ReverseJournalRequest {
   CommandContext command_context = 1 [(buf.validate.field).required = true];
 
   // journal_id identifies the immutable original posting.
-  string journal_id = 2 [(buf.validate.field).string.uuid = true];
+  string journal_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // expected_version prevents a second direct reversal or stale transition.
   uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
@@ -766,7 +766,7 @@ message ClosePeriodRequest {
   CommandContext command_context = 1 [(buf.validate.field).required = true];
 
   // organisation_id identifies the owning organisation.
-  string organisation_id = 2 [(buf.validate.field).string.uuid = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // end_date is the inclusive civil close boundary.
   CivilDate end_date = 3 [(buf.validate.field).required = true];
@@ -787,7 +787,7 @@ message ReopenPeriodRequest {
   CommandContext command_context = 1 [(buf.validate.field).required = true];
 
   // period_id identifies the closed accounting period.
-  string period_id = 2 [(buf.validate.field).string.uuid = true];
+  string period_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // expected_version prevents a stale reopen decision.
   uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
@@ -811,7 +811,7 @@ message GetAccountRequest {
   AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
 
   // account_id is an opaque UUIDv7 identifier.
-  string account_id = 2 [(buf.validate.field).string.uuid = true];
+  string account_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 }
 
 // GetAccountResponse returns one explicit account projection.
@@ -826,7 +826,7 @@ message ListAccountsRequest {
   AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
 
   // organisation_id identifies the owning organisation.
-  string organisation_id = 2 [(buf.validate.field).string.uuid = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // page requests the stable signed cursor page.
   PageRequest page = 3 [(buf.validate.field).required = true];
@@ -856,7 +856,7 @@ message GetJournalRequest {
   AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
 
   // journal_id is an opaque UUIDv7 identifier.
-  string journal_id = 2 [(buf.validate.field).string.uuid = true];
+  string journal_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 }
 
 // GetJournalResponse returns one explicit immutable journal projection.
@@ -871,7 +871,7 @@ message ListJournalsRequest {
   AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
 
   // organisation_id identifies the owning organisation.
-  string organisation_id = 2 [(buf.validate.field).string.uuid = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // page requests the stable signed cursor page.
   PageRequest page = 3 [(buf.validate.field).required = true];
@@ -904,7 +904,7 @@ message GetGeneralLedgerRequest {
   AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
 
   // organisation_id identifies the owning organisation.
-  string organisation_id = 2 [(buf.validate.field).string.uuid = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // account_ids is a sorted, deduplicated filter; empty means all accounts.
   repeated string account_ids = 3 [(buf.validate.field).repeated = {
@@ -943,7 +943,7 @@ message GetTrialBalanceRequest {
   AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
 
   // organisation_id identifies the owning organisation.
-  string organisation_id = 2 [(buf.validate.field).string.uuid = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // as_of_date is the inclusive civil accounting date.
   CivilDate as_of_date = 3 [(buf.validate.field).required = true];

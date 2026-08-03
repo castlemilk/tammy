@@ -56,7 +56,7 @@ message SourceRef {
   }];
 
   // id is an opaque UUIDv7 string.
-  string id = 2 [(buf.validate.field).string.uuid = true];
+  string id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // revision is the immutable source revision and begins at one.
   uint64 revision = 3 [(buf.validate.field).uint64.gte = 1];
@@ -68,16 +68,16 @@ message SourceRef {
 // AuthenticationContext names the authenticated principal attached by the trusted local client.
 message AuthenticationContext {
   // actor_user_id is the authenticated user's opaque UUIDv7 identifier.
-  string actor_user_id = 1 [(buf.validate.field).string.uuid = true];
+  string actor_user_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // session_id is the active session's opaque UUIDv7 identifier.
-  string session_id = 2 [(buf.validate.field).string.uuid = true];
+  string session_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 }
 
 // FreshFactorContext binds a recent factor assertion to one high-risk operation.
 message FreshFactorContext {
   // assertion_id is the single-use UUIDv7 assertion identifier.
-  string assertion_id = 1 [(buf.validate.field).string.uuid = true];
+  string assertion_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // purpose is the stable operation purpose reserved by the assertion.
   string purpose = 2 [(buf.validate.field).string = {
@@ -92,8 +92,8 @@ message FreshFactorContext {
 
 // CommandContext carries authorization and idempotency metadata for a persistent command.
 message CommandContext {
-  // idempotency_key is a caller-generated UUID used for workspace-lifetime replay election.
-  string idempotency_key = 1 [(buf.validate.field).string.uuid = true];
+  // idempotency_key is a caller-generated lowercase canonical UUIDv7 used for workspace-lifetime replay election.
+  string idempotency_key = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // authentication is excluded from the semantic request hash after authorization.
   AuthenticationContext authentication = 2 [(buf.validate.field).required = true];
@@ -220,7 +220,7 @@ message ErrorContext {
   RetryClassification retry = 5 [(buf.validate.field).enum.defined_only = true];
 
   // correlation_id is a non-secret UUIDv7 identifier for local support evidence.
-  string correlation_id = 6 [(buf.validate.field).string.uuid = true];
+  string correlation_id = 6 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 }
 
 // FieldViolation identifies one invalid Protobuf field path.
@@ -292,7 +292,7 @@ message StaleVersionErrorDetail {
   string resource = 2 [(buf.validate.field).string.max_len = 64];
 
   // resource_id is the aggregate's opaque UUIDv7 identifier.
-  string resource_id = 3 [(buf.validate.field).string.uuid = true];
+  string resource_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // expected_version is the version supplied by the caller.
   uint64 expected_version = 4;
@@ -322,7 +322,7 @@ message IdempotencyConflictErrorDetail {
   ErrorContext context = 1 [(buf.validate.field).required = true];
 
   // idempotency_key is the conflicting UUID and is safe to display.
-  string idempotency_key = 2 [(buf.validate.field).string.uuid = true];
+  string idempotency_key = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // request_type is the fully-qualified Protobuf request name.
   string request_type = 3 [(buf.validate.field).string.max_len = 192];
@@ -337,7 +337,7 @@ message DuplicateSourceErrorDetail {
   SourceRef source = 2 [(buf.validate.field).required = true];
 
   // existing_resource_id identifies the retained result without exposing its contents.
-  string existing_resource_id = 3 [(buf.validate.field).string.uuid = true];
+  string existing_resource_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 }
 
 // ClosedPeriodErrorDetail reports a financial mutation denied by a closed period.
@@ -346,7 +346,7 @@ message ClosedPeriodErrorDetail {
   ErrorContext context = 1 [(buf.validate.field).required = true];
 
   // period_id is the closed period's opaque UUIDv7 identifier.
-  string period_id = 2 [(buf.validate.field).string.uuid = true];
+  string period_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // period_end is the inclusive civil closing date.
   CivilDate period_end = 3 [(buf.validate.field).required = true];
@@ -370,7 +370,7 @@ message EvidenceCorruptionErrorDetail {
   ErrorContext context = 1 [(buf.validate.field).required = true];
 
   // evidence_id is the opaque UUIDv7 object identifier.
-  string evidence_id = 2 [(buf.validate.field).string.uuid = true];
+  string evidence_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // verification_stage is the bounded stage that detected corruption.
   string verification_stage = 3 [(buf.validate.field).string.max_len = 64];

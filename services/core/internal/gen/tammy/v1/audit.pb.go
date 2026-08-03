@@ -1242,11 +1242,11 @@ var File_tammy_v1_audit_proto protoreflect.FileDescriptor
 
 const file_tammy_v1_audit_proto_rawDesc = "" +
 	"\n" +
-	"\x14tammy/v1/audit.proto\x12\btammy.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15tammy/v1/common.proto\x1a\x15tammy/v1/events.proto\"\xde\x04\n" +
+	"\x14tammy/v1/audit.proto\x12\btammy.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15tammy/v1/common.proto\x1a\x15tammy/v1/events.proto\"\xe6\x05\n" +
 	"\n" +
-	"AuditEvent\x12\x18\n" +
-	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12+\n" +
-	"\fworkspace_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vworkspaceId\x12'\n" +
+	"AuditEvent\x12\\\n" +
+	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12o\n" +
+	"\fworkspace_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\vworkspaceId\x12'\n" +
 	"\n" +
 	"generation\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\n" +
 	"generation\x12#\n" +
@@ -1261,23 +1261,23 @@ const file_tammy_v1_audit_proto_rawDesc = "" +
 	" \x01(\fB\a\xbaH\x04z\x02h R\x18payloadSchemaFingerprint\x12,\n" +
 	"\rprevious_hash\x18\v \x01(\fB\a\xbaH\x04z\x02h R\fpreviousHash\x12&\n" +
 	"\n" +
-	"event_hash\x18\f \x01(\fB\a\xbaH\x04z\x02h R\teventHash\"\x84\x03\n" +
+	"event_hash\x18\f \x01(\fB\a\xbaH\x04z\x02h R\teventHash\"\xc8\x03\n" +
 	"\x10AuditEventFilter\x12E\n" +
 	"\vevent_types\x18\x01 \x03(\x0e2\x18.tammy.v1.AuditEventTypeB\n" +
 	"\xbaH\a\x92\x01\x04\x10@\x18\x01R\n" +
-	"eventTypes\x121\n" +
-	"\ractor_user_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01H\x00R\vactorUserId\x88\x01\x01\x127\n" +
+	"eventTypes\x12u\n" +
+	"\ractor_user_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$H\x00R\vactorUserId\x88\x01\x01\x127\n" +
 	"\tfrom_time\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\bfromTime\x123\n" +
 	"\ato_time\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\x06toTime\x12*\n" +
 	"\x0estart_sequence\x18\x05 \x01(\x04H\x01R\rstartSequence\x88\x01\x01\x12&\n" +
 	"\fend_sequence\x18\x06 \x01(\x04H\x02R\vendSequence\x88\x01\x01B\x10\n" +
 	"\x0e_actor_user_idB\x11\n" +
 	"\x0f_start_sequenceB\x0f\n" +
-	"\r_end_sequence\"\x8e\x04\n" +
-	"\x0eAuditExportJob\x12\x18\n" +
-	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12!\n" +
-	"\aversion\x18\x02 \x01(\x04B\a\xbaH\x042\x02(\x01R\aversion\x12-\n" +
-	"\roperation_key\x18\x03 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\foperationKey\x12=\n" +
+	"\r_end_sequence\"\x96\x05\n" +
+	"\x0eAuditExportJob\x12\\\n" +
+	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12!\n" +
+	"\aversion\x18\x02 \x01(\x04B\a\xbaH\x042\x02(\x01R\aversion\x12q\n" +
+	"\roperation_key\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\foperationKey\x12=\n" +
 	"\x05state\x18\x04 \x01(\x0e2\x1d.tammy.v1.AuditExportJobStateB\b\xbaH\x05\x82\x01\x02\x10\x01R\x05state\x129\n" +
 	"\bprogress\x18\x05 \x01(\v2\x15.tammy.v1.JobProgressB\x06\xbaH\x03\xc8\x01\x01R\bprogress\x12A\n" +
 	"\n" +
@@ -1286,10 +1286,10 @@ const file_tammy_v1_audit_proto_rawDesc = "" +
 	"\x10destination_hash\x18\b \x01(\fB\a\xbaH\x04z\x02h H\x00R\x0fdestinationHash\x88\x01\x01\x123\n" +
 	"\x0esigning_key_id\x18\t \x01(\tB\b\xbaH\x05r\x03\x18\x80\x01H\x01R\fsigningKeyId\x88\x01\x01B\x13\n" +
 	"\x11_destination_hashB\x11\n" +
-	"\x0f_signing_key_id\"\xbe\x02\n" +
+	"\x0f_signing_key_id\"\x82\x03\n" +
 	"\x12VerifyChainRequest\x12O\n" +
-	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12+\n" +
-	"\fworkspace_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vworkspaceId\x12#\n" +
+	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12o\n" +
+	"\fworkspace_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\vworkspaceId\x12#\n" +
 	"\n" +
 	"generation\x18\x03 \x01(\x04H\x00R\n" +
 	"generation\x88\x01\x01\x12*\n" +
@@ -1303,31 +1303,31 @@ const file_tammy_v1_audit_proto_rawDesc = "" +
 	"\x19verified_through_sequence\x18\x02 \x01(\x04R\x17verifiedThroughSequence\x120\n" +
 	"\x11mismatch_sequence\x18\x03 \x01(\x04H\x00R\x10mismatchSequence\x88\x01\x01\x12,\n" +
 	"\rverified_head\x18\x04 \x01(\fB\a\xbaH\x04z\x02h R\fverifiedHeadB\x14\n" +
-	"\x12_mismatch_sequence\"\x85\x02\n" +
+	"\x12_mismatch_sequence\"\xc9\x02\n" +
 	"\x16ListAuditEventsRequest\x12O\n" +
-	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12+\n" +
-	"\fworkspace_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vworkspaceId\x12:\n" +
+	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12o\n" +
+	"\fworkspace_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\vworkspaceId\x12:\n" +
 	"\x06filter\x18\x03 \x01(\v2\x1a.tammy.v1.AuditEventFilterB\x06\xbaH\x03\xc8\x01\x01R\x06filter\x121\n" +
 	"\x04page\x18\x04 \x01(\v2\x15.tammy.v1.PageRequestB\x06\xbaH\x03\xc8\x01\x01R\x04page\"\x82\x01\n" +
 	"\x17ListAuditEventsResponse\x127\n" +
 	"\x06events\x18\x01 \x03(\v2\x14.tammy.v1.AuditEventB\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\x06events\x12.\n" +
-	"\x04page\x18\x02 \x01(\v2\x12.tammy.v1.PageInfoB\x06\xbaH\x03\xc8\x01\x01R\x04page\"\x90\x02\n" +
+	"\x04page\x18\x02 \x01(\v2\x12.tammy.v1.PageInfoB\x06\xbaH\x03\xc8\x01\x01R\x04page\"\xd4\x02\n" +
 	"\x15ExportEvidenceRequest\x12I\n" +
-	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12+\n" +
-	"\fworkspace_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vworkspaceId\x12:\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12o\n" +
+	"\fworkspace_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\vworkspaceId\x12:\n" +
 	"\x06filter\x18\x03 \x01(\v2\x1a.tammy.v1.AuditEventFilterB\x06\xbaH\x03\xc8\x01\x01R\x06filter\x12C\n" +
 	"\vdestination\x18\x04 \x01(\v2\x19.tammy.v1.ApprovedFileRefB\x06\xbaH\x03\xc8\x01\x01R\vdestination\"L\n" +
 	"\x16ExportEvidenceResponse\x122\n" +
-	"\x03job\x18\x01 \x01(\v2\x18.tammy.v1.AuditExportJobB\x06\xbaH\x03\xc8\x01\x01R\x03job\"\xba\x01\n" +
+	"\x03job\x18\x01 \x01(\v2\x18.tammy.v1.AuditExportJobB\x06\xbaH\x03\xc8\x01\x01R\x03job\"\xfe\x01\n" +
 	"\x18CancelAuditExportRequest\x12I\n" +
-	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12\x1f\n" +
-	"\x06job_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05jobId\x122\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12c\n" +
+	"\x06job_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x05jobId\x122\n" +
 	"\x10expected_version\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion\"O\n" +
 	"\x19CancelAuditExportResponse\x122\n" +
-	"\x03job\x18\x01 \x01(\v2\x18.tammy.v1.AuditExportJobB\x06\xbaH\x03\xc8\x01\x01R\x03job\"\x8c\x01\n" +
+	"\x03job\x18\x01 \x01(\v2\x18.tammy.v1.AuditExportJobB\x06\xbaH\x03\xc8\x01\x01R\x03job\"\xd0\x01\n" +
 	"\x18GetAuditExportJobRequest\x12O\n" +
-	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12\x1f\n" +
-	"\x06job_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05jobId\"O\n" +
+	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12c\n" +
+	"\x06job_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x05jobId\"O\n" +
 	"\x19GetAuditExportJobResponse\x122\n" +
 	"\x03job\x18\x01 \x01(\v2\x18.tammy.v1.AuditExportJobB\x06\xbaH\x03\xc8\x01\x01R\x03job\"\xe4\x01\n" +
 	"\x1aListAuditExportJobsRequest\x12O\n" +

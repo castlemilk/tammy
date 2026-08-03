@@ -82,7 +82,7 @@ enum FactorState {
 // User is the bounded local identity projection without credential material.
 message User {
   // id is an opaque UUIDv7 string.
-  string id = 1 [(buf.validate.field).string.uuid = true];
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // version is the optimistic aggregate version.
   uint64 version = 2 [(buf.validate.field).uint64.gte = 1];
@@ -119,10 +119,10 @@ message User {
 // Session is a bounded local session projection without bearer or secret material.
 message Session {
   // id is an opaque UUIDv7 string.
-  string id = 1 [(buf.validate.field).string.uuid = true];
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // user_id identifies the authenticated user.
-  string user_id = 2 [(buf.validate.field).string.uuid = true];
+  string user_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // state is the session lifecycle state.
   SessionState state = 3 [(buf.validate.field).enum.defined_only = true];
@@ -140,10 +140,10 @@ message Session {
 // Factor is a bounded TOTP factor projection without seed or accepted counters.
 message Factor {
   // id is an opaque UUIDv7 string.
-  string id = 1 [(buf.validate.field).string.uuid = true];
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // user_id identifies the owning local user.
-  string user_id = 2 [(buf.validate.field).string.uuid = true];
+  string user_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // version is the optimistic factor version.
   uint64 version = 3 [(buf.validate.field).uint64.gte = 1];
@@ -255,7 +255,7 @@ message AssignRolesRequest {
   CommandContext command_context = 1 [(buf.validate.field).required = true];
 
   // user_id is the target user's opaque UUIDv7 identifier.
-  string user_id = 2 [(buf.validate.field).string.uuid = true];
+  string user_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // expected_version prevents stale role replacement.
   uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
@@ -280,7 +280,7 @@ message ResetUserAuthenticationRequest {
   CommandContext command_context = 1 [(buf.validate.field).required = true];
 
   // user_id is the target user's opaque UUIDv7 identifier.
-  string user_id = 2 [(buf.validate.field).string.uuid = true];
+  string user_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // expected_version prevents resetting a changed user.
   uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
@@ -304,7 +304,7 @@ message GetUserRequest {
   AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
 
   // user_id is an opaque UUIDv7 identifier.
-  string user_id = 2 [(buf.validate.field).string.uuid = true];
+  string user_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 }
 
 // GetUserResponse returns one bounded user projection.
@@ -409,7 +409,7 @@ message ConfirmTOTPRequest {
   AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
 
   // factor_id identifies the pending factor.
-  string factor_id = 2 [(buf.validate.field).string.uuid = true];
+  string factor_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // code is the transient six-digit TOTP value and is never logged.
   TotpCodeInput code = 3 [(buf.validate.field).required = true];
@@ -449,7 +449,7 @@ message DisableTOTPRequest {
   CommandContext command_context = 1 [(buf.validate.field).required = true];
 
   // factor_id identifies the enabled factor.
-  string factor_id = 2 [(buf.validate.field).string.uuid = true];
+  string factor_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // expected_version prevents disabling a changed factor.
   uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
@@ -467,7 +467,7 @@ message DisableTOTPResponse {
 // RecoverAdministratorRequest performs workspace and sole-administrator break glass in one operation.
 message RecoverAdministratorRequest {
   // recovery_operation_id is a caller-generated UUIDv7 for crash-safe operation election.
-  string recovery_operation_id = 1 [(buf.validate.field).string.uuid = true];
+  string recovery_operation_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // workspace_file is an approved encrypted workspace capability.
   ApprovedFileRef workspace_file = 2 [(buf.validate.field).required = true];

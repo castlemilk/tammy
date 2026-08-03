@@ -54,10 +54,10 @@ enum AuditChainIntegrity {
 // AuditEvent is one immutable typed entry in a workspace-generation hash chain.
 message AuditEvent {
   // id is an opaque UUIDv7 string.
-  string id = 1 [(buf.validate.field).string.uuid = true];
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // workspace_id identifies the owning encrypted workspace.
-  string workspace_id = 2 [(buf.validate.field).string.uuid = true];
+  string workspace_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // generation identifies the audit history branch and begins at one.
   uint64 generation = 3 [(buf.validate.field).uint64.gte = 1];
@@ -99,7 +99,7 @@ message AuditEventFilter {
   }];
 
   // actor_user_id is present only when filtering one principal.
-  optional string actor_user_id = 2 [(buf.validate.field).string.uuid = true];
+  optional string actor_user_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // from_time is the inclusive core-authored instant lower bound.
   google.protobuf.Timestamp from_time = 3;
@@ -117,13 +117,13 @@ message AuditEventFilter {
 // AuditExportJob is a persisted bounded signed evidence-export projection.
 message AuditExportJob {
   // id is an opaque UUIDv7 job identifier.
-  string id = 1 [(buf.validate.field).string.uuid = true];
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // version is the optimistic job version.
   uint64 version = 2 [(buf.validate.field).uint64.gte = 1];
 
   // operation_key is the UUID used for persistent command replay election.
-  string operation_key = 3 [(buf.validate.field).string.uuid = true];
+  string operation_key = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // state is the restart-safe signed export lifecycle state.
   AuditExportJobState state = 4 [(buf.validate.field).enum.defined_only = true];
@@ -150,7 +150,7 @@ message VerifyChainRequest {
   AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
 
   // workspace_id identifies the encrypted workspace chain.
-  string workspace_id = 2 [(buf.validate.field).string.uuid = true];
+  string workspace_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // generation is present only when selecting a historical generation explicitly.
   optional uint64 generation = 3;
@@ -183,7 +183,7 @@ message ListAuditEventsRequest {
   AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
 
   // workspace_id identifies the encrypted workspace chain.
-  string workspace_id = 2 [(buf.validate.field).string.uuid = true];
+  string workspace_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // filter selects bounded typed events.
   AuditEventFilter filter = 3 [(buf.validate.field).required = true];
@@ -207,7 +207,7 @@ message ExportEvidenceRequest {
   CommandContext command_context = 1 [(buf.validate.field).required = true];
 
   // workspace_id identifies the encrypted workspace chain.
-  string workspace_id = 2 [(buf.validate.field).string.uuid = true];
+  string workspace_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // filter selects bounded typed events and evidence references.
   AuditEventFilter filter = 3 [(buf.validate.field).required = true];
@@ -228,7 +228,7 @@ message CancelAuditExportRequest {
   CommandContext command_context = 1 [(buf.validate.field).required = true];
 
   // job_id is an opaque UUIDv7 string.
-  string job_id = 2 [(buf.validate.field).string.uuid = true];
+  string job_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // expected_version prevents cancellation of a changed job.
   uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
@@ -246,7 +246,7 @@ message GetAuditExportJobRequest {
   AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
 
   // job_id is an opaque UUIDv7 string.
-  string job_id = 2 [(buf.validate.field).string.uuid = true];
+  string job_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 }
 
 // GetAuditExportJobResponse returns one bounded persisted export job.

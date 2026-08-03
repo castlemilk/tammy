@@ -77,7 +77,7 @@ enum GstReportingFrequency {
 // Organisation is the single bounded business profile projection for a workspace.
 message Organisation {
   // id is an opaque UUIDv7 string.
-  string id = 1 [(buf.validate.field).string.uuid = true];
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // version is the optimistic aggregate version.
   uint64 version = 2 [(buf.validate.field).uint64.gte = 1];
@@ -119,7 +119,7 @@ message Organisation {
   OrganisationVerificationState verification_state = 10 [(buf.validate.field).enum.defined_only = true];
 
   // owner_user_id is the current owner's opaque UUIDv7 identifier.
-  string owner_user_id = 11 [(buf.validate.field).string.uuid = true];
+  string owner_user_id = 11 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // active_tax_rule_bundle is immutable retained provenance for tax calculations.
   SourceRef active_tax_rule_bundle = 12 [(buf.validate.field).required = true];
@@ -173,10 +173,10 @@ message VerificationEvidence {
 // EntityVerification is retained immutable independent-source evidence metadata.
 message EntityVerification {
   // id is an opaque UUIDv7 string.
-  string id = 1 [(buf.validate.field).string.uuid = true];
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // organisation_id identifies the verified organisation.
-  string organisation_id = 2 [(buf.validate.field).string.uuid = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // state is the retained verification outcome.
   OrganisationVerificationState state = 3 [(buf.validate.field).enum.defined_only = true];
@@ -194,7 +194,7 @@ message EntityVerification {
   string verified_entity_type = 7 [(buf.validate.field).string.max_len = 96];
 
   // evidence_object_id is the encrypted evidence object's opaque UUIDv7 identifier.
-  string evidence_object_id = 8 [(buf.validate.field).string.uuid = true];
+  string evidence_object_id = 8 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // recorded_at is the core-authored retention instant.
   google.protobuf.Timestamp recorded_at = 9 [(buf.validate.field).required = true];
@@ -257,7 +257,7 @@ message UpdateOrganisationRequest {
   CommandContext command_context = 1 [(buf.validate.field).required = true];
 
   // organisation_id is the sole organisation's opaque UUIDv7 identifier.
-  string organisation_id = 2 [(buf.validate.field).string.uuid = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // expected_version prevents stale profile, verification, and report-impact decisions.
   uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
@@ -287,7 +287,7 @@ message RecordEntityVerificationRequest {
   CommandContext command_context = 1 [(buf.validate.field).required = true];
 
   // organisation_id identifies the organisation being verified.
-  string organisation_id = 2 [(buf.validate.field).string.uuid = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // expected_version prevents recording evidence against stale identity fields.
   uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
@@ -335,7 +335,7 @@ message GetOrganisationRequest {
   AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
 
   // organisation_id is an opaque UUIDv7 identifier.
-  string organisation_id = 2 [(buf.validate.field).string.uuid = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 }
 
 // GetOrganisationResponse returns the sole bounded organisation projection.

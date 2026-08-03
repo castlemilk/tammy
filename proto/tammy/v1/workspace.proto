@@ -131,7 +131,7 @@ enum PreRestoreArchiveExportJobState {
 // Workspace is the bounded public projection of one encrypted local workspace.
 message Workspace {
   // id is an opaque UUIDv7 string.
-  string id = 1 [(buf.validate.field).string.uuid = true];
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // version is the optimistic aggregate version.
   uint64 version = 2 [(buf.validate.field).uint64.gte = 1];
@@ -152,13 +152,13 @@ message Workspace {
 // BackupJob is a persisted bounded encrypted-backup projection.
 message BackupJob {
   // id is an opaque UUIDv7 string.
-  string id = 1 [(buf.validate.field).string.uuid = true];
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // version is the optimistic job version.
   uint64 version = 2 [(buf.validate.field).uint64.gte = 1];
 
   // operation_key is the UUID used for persisted job replay election.
-  string operation_key = 3 [(buf.validate.field).string.uuid = true];
+  string operation_key = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // state is the restart-safe backup lifecycle state.
   BackupJobState state = 4 [(buf.validate.field).enum.defined_only = true];
@@ -179,7 +179,7 @@ message BackupJob {
 // RestoreStatus is the bounded projection of one external restore-journal operation.
 message RestoreStatus {
   // operation_id is the caller-generated UUID restore key.
-  string operation_id = 1 [(buf.validate.field).string.uuid = true];
+  string operation_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // state is the fsync'd external operation-journal state.
   RestoreState state = 2 [(buf.validate.field).enum.defined_only = true];
@@ -197,7 +197,7 @@ message RestoreStatus {
 // PreRestoreArchive is metadata for retained encrypted predecessor evidence, never decrypted bytes.
 message PreRestoreArchive {
   // id is an opaque UUIDv7 archive identifier.
-  string id = 1 [(buf.validate.field).string.uuid = true];
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // version is the optimistic archive version.
   uint64 version = 2 [(buf.validate.field).uint64.gte = 1];
@@ -221,16 +221,16 @@ message PreRestoreArchive {
 // PreRestoreArchiveExportJob is a bounded persisted archive-export projection.
 message PreRestoreArchiveExportJob {
   // id is an opaque UUIDv7 job identifier.
-  string id = 1 [(buf.validate.field).string.uuid = true];
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // version is the optimistic job version.
   uint64 version = 2 [(buf.validate.field).uint64.gte = 1];
 
   // archive_id identifies the retained encrypted archive.
-  string archive_id = 3 [(buf.validate.field).string.uuid = true];
+  string archive_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // operation_key is the UUID used for persistent command replay election.
-  string operation_key = 4 [(buf.validate.field).string.uuid = true];
+  string operation_key = 4 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // state is the exact archive-export lifecycle state.
   PreRestoreArchiveExportJobState state = 5 [(buf.validate.field).enum.defined_only = true];
@@ -317,7 +317,7 @@ message RestoreRecoveryProof {
 // CreateWorkspaceRequest creates encrypted pending setup under a caller-generated setup journal key.
 message CreateWorkspaceRequest {
   // setup_id is a caller-generated UUIDv7 retained by the authenticated setup journal.
-  string setup_id = 1 [(buf.validate.field).string.uuid = true];
+  string setup_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // destination is an approved directory capability, not a caller-controlled path.
   ApprovedFileRef destination = 2 [(buf.validate.field).required = true];
@@ -356,7 +356,7 @@ message CreateWorkspaceResponse {
 // ConfirmRecoveryRequest is a fresh rate-limited setup challenge, not an ordinary command replay.
 message ConfirmRecoveryRequest {
   // setup_id identifies the pending setup journal entry.
-  string setup_id = 1 [(buf.validate.field).string.uuid = true];
+  string setup_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // confirmations contains only the prompted recovery groups in prompt order.
   repeated RecoveryGroupConfirmation confirmations = 2 [(buf.validate.field).repeated = {
@@ -407,7 +407,7 @@ message ForgetRememberedWorkspaceRequest {
   AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
 
   // workspace_id is an opaque UUIDv7 string.
-  string workspace_id = 2 [(buf.validate.field).string.uuid = true];
+  string workspace_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 }
 
 // ForgetRememberedWorkspaceResponse returns the workspace without remembered-key metadata.
@@ -419,7 +419,7 @@ message ForgetRememberedWorkspaceResponse {
 // GetWorkspaceStateRequest requests the current bounded workspace state.
 message GetWorkspaceStateRequest {
   // workspace_id is explicitly present when a known workspace is being queried.
-  optional string workspace_id = 1 [(buf.validate.field).string.uuid = true];
+  optional string workspace_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 }
 
 // GetWorkspaceStateResponse returns the bounded current projection.
@@ -434,7 +434,7 @@ message ChangePassphraseRequest {
   CommandContext command_context = 1 [(buf.validate.field).required = true];
 
   // workspace_id is an opaque UUIDv7 string.
-  string workspace_id = 2 [(buf.validate.field).string.uuid = true];
+  string workspace_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // expected_version prevents stale header changes.
   uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
@@ -455,7 +455,7 @@ message ChangePassphraseResponse {
 // RecoverWorkspaceRequest is a fresh break-glass operation and never an ordinary unlock.
 message RecoverWorkspaceRequest {
   // recovery_operation_id is a caller-generated UUIDv7 for header crash recovery election.
-  string recovery_operation_id = 1 [(buf.validate.field).string.uuid = true];
+  string recovery_operation_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // workspace_file is the approved encrypted workspace capability.
   ApprovedFileRef workspace_file = 2 [(buf.validate.field).required = true];
@@ -479,13 +479,13 @@ message EstablishMovedWorkspaceTrustRequest {
   CommandContext command_context = 1 [(buf.validate.field).required = true];
 
   // workspace_id is an opaque UUIDv7 string.
-  string workspace_id = 2 [(buf.validate.field).string.uuid = true];
+  string workspace_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // expected_version prevents a stale mirror baseline.
   uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
 
   // destination_installation_id is an opaque UUIDv7 string hashed into audit evidence.
-  string destination_installation_id = 4 [(buf.validate.field).string.uuid = true];
+  string destination_installation_id = 4 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // proof selects normal administrator proof or audited recovery break glass.
   MovedWorkspaceTrustProof proof = 5 [(buf.validate.field).required = true];
@@ -503,7 +503,7 @@ message BackupWorkspaceRequest {
   CommandContext command_context = 1 [(buf.validate.field).required = true];
 
   // workspace_id is an opaque UUIDv7 string.
-  string workspace_id = 2 [(buf.validate.field).string.uuid = true];
+  string workspace_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // destination is an approved destination capability, never a raw path.
   ApprovedFileRef destination = 3 [(buf.validate.field).required = true];
@@ -524,7 +524,7 @@ message CancelBackupRequest {
   CommandContext command_context = 1 [(buf.validate.field).required = true];
 
   // job_id is an opaque UUIDv7 string.
-  string job_id = 2 [(buf.validate.field).string.uuid = true];
+  string job_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // expected_version prevents cancellation of a changed job.
   uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
@@ -542,7 +542,7 @@ message GetBackupJobRequest {
   AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
 
   // job_id is an opaque UUIDv7 string.
-  string job_id = 2 [(buf.validate.field).string.uuid = true];
+  string job_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 }
 
 // GetBackupJobResponse returns the persisted job projection.
@@ -575,10 +575,10 @@ message ListBackupJobsResponse {
 // RestoreWorkspaceRequest starts or resumes one external-journal restore operation.
 message RestoreWorkspaceRequest {
   // operation_id is a caller-generated UUIDv7 scoped to the target workspace.
-  string operation_id = 1 [(buf.validate.field).string.uuid = true];
+  string operation_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // target_workspace_id is the encrypted workspace being replaced.
-  string target_workspace_id = 2 [(buf.validate.field).string.uuid = true];
+  string target_workspace_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // backup_file is an approved encrypted backup capability.
   ApprovedFileRef backup_file = 3 [(buf.validate.field).required = true];
@@ -605,7 +605,7 @@ message RestoreWorkspaceResponse {
 // GetRestoreStatusRequest requests one external-journal operation projection.
 message GetRestoreStatusRequest {
   // operation_id is the caller-generated UUIDv7 restore key.
-  string operation_id = 1 [(buf.validate.field).string.uuid = true];
+  string operation_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 }
 
 // GetRestoreStatusResponse returns the latest fsync'd restore status.
@@ -620,7 +620,7 @@ message ExportPreRestoreArchiveRequest {
   CommandContext command_context = 1 [(buf.validate.field).required = true];
 
   // archive_id identifies retained encrypted evidence.
-  string archive_id = 2 [(buf.validate.field).string.uuid = true];
+  string archive_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // expected_version prevents exporting a changed archive projection.
   uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
@@ -644,7 +644,7 @@ message CancelPreRestoreArchiveExportRequest {
   CommandContext command_context = 1 [(buf.validate.field).required = true];
 
   // job_id is an opaque UUIDv7 string.
-  string job_id = 2 [(buf.validate.field).string.uuid = true];
+  string job_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // expected_version prevents cancellation of a changed job.
   uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
@@ -662,7 +662,7 @@ message GetPreRestoreArchiveExportJobRequest {
   AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
 
   // job_id is an opaque UUIDv7 string.
-  string job_id = 2 [(buf.validate.field).string.uuid = true];
+  string job_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 }
 
 // GetPreRestoreArchiveExportJobResponse returns the persisted export job.
@@ -698,7 +698,7 @@ message DeletePreRestoreArchiveRequest {
   CommandContext command_context = 1 [(buf.validate.field).required = true];
 
   // archive_id identifies retained encrypted evidence.
-  string archive_id = 2 [(buf.validate.field).string.uuid = true];
+  string archive_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // expected_version prevents stale deletion.
   uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
@@ -725,7 +725,7 @@ message GetPreRestoreArchiveRequest {
   AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
 
   // archive_id is an opaque UUIDv7 string.
-  string archive_id = 2 [(buf.validate.field).string.uuid = true];
+  string archive_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 }
 
 // GetPreRestoreArchiveResponse returns retained encrypted evidence metadata only.
@@ -761,13 +761,13 @@ message TransferOwnershipRequest {
   CommandContext command_context = 1 [(buf.validate.field).required = true];
 
   // workspace_id is an opaque UUIDv7 string.
-  string workspace_id = 2 [(buf.validate.field).string.uuid = true];
+  string workspace_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // expected_version prevents stale ownership changes.
   uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
 
   // target_user_id must identify an active workspace administrator.
-  string target_user_id = 4 [(buf.validate.field).string.uuid = true];
+  string target_user_id = 4 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // acknowledge_verification_effect must be explicitly present and true.
   optional bool acknowledge_verification_effect = 5;

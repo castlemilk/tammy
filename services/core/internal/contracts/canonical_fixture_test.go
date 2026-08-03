@@ -6,15 +6,19 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"sort"
 	"strings"
 	"testing"
 
+	validate "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	tammyv1 "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
+	"google.golang.org/protobuf/types/descriptorpb"
 )
 
 type canonicalFixtureDocument struct {
@@ -25,9 +29,9 @@ type canonicalFixtureDocument struct {
 }
 
 type canonicalFixtureCase struct {
-	Name           string          `json:"name"`
-	Input          json.RawMessage `json:"input"`
-	ExpectedJSON   json.RawMessage `json:"expectedNormalizedJson"`
+	Name         string          `json:"name"`
+	Input        json.RawMessage `json:"input"`
+	ExpectedJSON json.RawMessage `json:"expectedNormalizedJson"`
 }
 
 type canonicalUnknownFixtureCase struct {
@@ -44,6 +48,8 @@ type transitionFixtureEdge struct {
 	Enum       string `json:"enum"`
 	Transition string `json:"transition"`
 }
+
+const canonicalUUIDv7Pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
 
 func loadCanonicalFixture(t *testing.T) canonicalFixtureDocument {
 	t.Helper()
@@ -309,6 +315,80 @@ func TestCanonicalFixtureRejectsUnknownFields(t *testing.T) {
 	}
 }
 
+func TestSliceOnePublicIdentifiersRequireCanonicalUUIDv7(t *testing.T) {
+	files := []protoreflect.FileDescriptor{
+		tammyv1.File_tammy_v1_common_proto,
+		tammyv1.File_tammy_v1_workspace_proto,
+		tammyv1.File_tammy_v1_identity_proto,
+		tammyv1.File_tammy_v1_organisation_proto,
+		tammyv1.File_tammy_v1_accounting_proto,
+		tammyv1.File_tammy_v1_audit_proto,
+		tammyv1.File_tammy_v1_events_proto,
+		tammyv1.File_tammy_v1_fixtures_proto,
+	}
+	exemptIdentifiers := map[protoreflect.FullName]struct{}{
+		"tammy.v1.ApprovedFileRef.capability_id": {},
+		"tammy.v1.AuditExportJob.signing_key_id": {},
+		"tammy.v1.FieldViolation.rule_id":        {},
+	}
+
+	var visitMessages func(protoreflect.MessageDescriptors)
+	visitMessages = func(messages protoreflect.MessageDescriptors) {
+		for messageIndex := 0; messageIndex < messages.Len(); messageIndex++ {
+			message := messages.Get(messageIndex)
+			for fieldIndex := 0; fieldIndex < message.Fields().Len(); fieldIndex++ {
+				field := message.Fields().Get(fieldIndex)
+				if field.Kind() != protoreflect.StringKind {
+					continue
+				}
+				name := string(field.Name())
+				_, exempt := exemptIdentifiers[field.FullName()]
+				isPublicIdentifier := !exempt && (name == "id" ||
+					name == "idempotency_key" ||
+					name == "operation_key" ||
+					strings.HasSuffix(name, "_id"))
+
+				var stringRules *validate.StringRules
+				options, ok := field.Options().(*descriptorpb.FieldOptions)
+				if ok && proto.HasExtension(options, validate.E_Field) {
+					if rules, rulesOK := proto.GetExtension(options, validate.E_Field).(*validate.FieldRules); rulesOK {
+						stringRules = rules.GetString_()
+					}
+				}
+				if stringRules != nil && stringRules.GetUuid() {
+					t.Errorf("%s uses a generic UUID constraint", field.FullName())
+				}
+				if isPublicIdentifier {
+					if stringRules == nil {
+						t.Errorf("%s is missing a string validation rule", field.FullName())
+					} else if stringRules.GetPattern() != canonicalUUIDv7Pattern {
+						t.Errorf("%s UUIDv7 pattern = %q, want %q", field.FullName(), stringRules.GetPattern(), canonicalUUIDv7Pattern)
+					}
+				}
+			}
+			visitMessages(message.Messages())
+		}
+	}
+	for _, file := range files {
+		visitMessages(file.Messages())
+	}
+
+	pattern := regexp.MustCompile(canonicalUUIDv7Pattern)
+	if !pattern.MatchString("01890f3c-7b2e-7cc4-98c4-dc0c0c07398f") {
+		t.Fatal("canonical UUIDv7 pattern rejected a lowercase version-7 identifier")
+	}
+	for _, invalid := range []string{
+		"01890f3c-7b2e-4cc4-98c4-dc0c0c07398f",
+		"01890F3C-7B2E-7CC4-98C4-DC0C0C07398F",
+		"01890f3c-7b2e-7cc4-c8c4-dc0c0c07398f",
+		"01890f3c-7b2e-7cc4-98c4-dc0c0c07398f-extra",
+	} {
+		if pattern.MatchString(invalid) {
+			t.Errorf("canonical UUIDv7 pattern accepted %q", invalid)
+		}
+	}
+}
+
 func TestSliceOneTransitionFixtureMatchesDocumentedLifecycleEdges(t *testing.T) {
 	_, sourceFile, _, ok := runtime.Caller(0)
 	if !ok {
@@ -327,6 +407,13 @@ func TestSliceOneTransitionFixtureMatchesDocumentedLifecycleEdges(t *testing.T) 
 	}
 	if fixture.SchemaVersion != 1 {
 		t.Fatalf("transition schemaVersion = %d, want 1", fixture.SchemaVersion)
+	}
+	transitionIDs := make([]string, 0, len(fixture.Transitions))
+	for _, transition := range fixture.Transitions {
+		transitionIDs = append(transitionIDs, transition.Enum+"."+transition.Transition)
+	}
+	if !sort.StringsAreSorted(transitionIDs) {
+		t.Fatal("transition fixture source order must be sorted by fully-qualified transition ID")
 	}
 
 	want := map[string]struct{}{}

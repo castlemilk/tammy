@@ -1300,9 +1300,9 @@ var File_tammy_v1_organisation_proto protoreflect.FileDescriptor
 
 const file_tammy_v1_organisation_proto_rawDesc = "" +
 	"\n" +
-	"\x1btammy/v1/organisation.proto\x12\btammy.v1\x1a\x1bbuf/validate/validate.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15tammy/v1/common.proto\"\xbb\x05\n" +
-	"\fOrganisation\x12\x18\n" +
-	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12!\n" +
+	"\x1btammy/v1/organisation.proto\x12\btammy.v1\x1a\x1bbuf/validate/validate.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15tammy/v1/common.proto\"\xc3\x06\n" +
+	"\fOrganisation\x12\\\n" +
+	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12!\n" +
 	"\aversion\x18\x02 \x01(\x04B\a\xbaH\x042\x02(\x01R\aversion\x12$\n" +
 	"\x03abn\x18\x03 \x01(\tB\x12\xbaH\x0fr\r2\v^[0-9]{11}$R\x03abn\x12)\n" +
 	"\n" +
@@ -1316,8 +1316,8 @@ const file_tammy_v1_organisation_proto_rawDesc = "" +
 	"\x17gst_reporting_frequency\x18\b \x01(\x0e2\x1f.tammy.v1.GstReportingFrequencyB\b\xbaH\x05\x82\x01\x02\x10\x01R\x15gstReportingFrequency\x12B\n" +
 	"\x18financial_year_end_month\x18\t \x01(\rB\t\xbaH\x06*\x04\x18\f(\x01R\x15financialYearEndMonth\x12`\n" +
 	"\x12verification_state\x18\n" +
-	" \x01(\x0e2'.tammy.v1.OrganisationVerificationStateB\b\xbaH\x05\x82\x01\x02\x10\x01R\x11verificationState\x12,\n" +
-	"\rowner_user_id\x18\v \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vownerUserId\x12P\n" +
+	" \x01(\x0e2'.tammy.v1.OrganisationVerificationStateB\b\xbaH\x05\x82\x01\x02\x10\x01R\x11verificationState\x12p\n" +
+	"\rowner_user_id\x18\v \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\vownerUserId\x12P\n" +
 	"\x16active_tax_rule_bundle\x18\f \x01(\v2\x13.tammy.v1.SourceRefB\x06\xbaH\x03\xc8\x01\x01R\x13activeTaxRuleBundle\"\xe3\x03\n" +
 	"\x11OrganisationPatch\x12$\n" +
 	"\x03abn\x18\x01 \x01(\tB\x12\xbaH\x0fr\r2\v^[0-9]{11}$R\x03abn\x12'\n" +
@@ -1333,16 +1333,16 @@ const file_tammy_v1_organisation_proto_rawDesc = "" +
 	"\x14VerificationEvidence\x12&\n" +
 	"\tmime_type\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\t\x18 R\bmimeType\x12%\n" +
 	"\acontent\x18\x02 \x01(\fB\v\xbaH\bz\x06\x10\x01\x18\x80\x80@R\acontent\x12*\n" +
-	"\fcontent_hash\x18\x03 \x01(\fB\a\xbaH\x04z\x02h R\vcontentHash\"\xe7\x04\n" +
-	"\x12EntityVerification\x12\x18\n" +
-	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x121\n" +
-	"\x0forganisation_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0eorganisationId\x12G\n" +
+	"\fcontent_hash\x18\x03 \x01(\fB\a\xbaH\x04z\x02h R\vcontentHash\"\xb3\x06\n" +
+	"\x12EntityVerification\x12\\\n" +
+	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12G\n" +
 	"\x05state\x18\x03 \x01(\x0e2'.tammy.v1.OrganisationVerificationStateB\b\xbaH\x05\x82\x01\x02\x10\x01R\x05state\x12Q\n" +
 	"\rsource_method\x18\x04 \x01(\x0e2\".tammy.v1.VerificationSourceMethodB\b\xbaH\x05\x82\x01\x02\x10\x01R\fsourceMethod\x123\n" +
 	"\x06source\x18\x05 \x01(\v2\x13.tammy.v1.SourceRefB\x06\xbaH\x03\xc8\x01\x01R\x06source\x128\n" +
 	"\x13verified_legal_name\x18\x06 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x02R\x11verifiedLegalName\x129\n" +
-	"\x14verified_entity_type\x18\a \x01(\tB\a\xbaH\x04r\x02\x18`R\x12verifiedEntityType\x126\n" +
-	"\x12evidence_object_id\x18\b \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x10evidenceObjectId\x12C\n" +
+	"\x14verified_entity_type\x18\a \x01(\tB\a\xbaH\x04r\x02\x18`R\x12verifiedEntityType\x12z\n" +
+	"\x12evidence_object_id\x18\b \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x10evidenceObjectId\x12C\n" +
 	"\vrecorded_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\n" +
 	"recordedAt\x12A\n" +
 	"\n" +
@@ -1363,10 +1363,10 @@ const file_tammy_v1_organisation_proto_rawDesc = "" +
 	"\x18financial_year_end_month\x18\b \x01(\rB\t\xbaH\x06*\x04\x18\f(\x01R\x15financialYearEndMonth\x12P\n" +
 	"\x16active_tax_rule_bundle\x18\t \x01(\v2\x13.tammy.v1.SourceRefB\x06\xbaH\x03\xc8\x01\x01R\x13activeTaxRuleBundle\"`\n" +
 	"\x1aCreateOrganisationResponse\x12B\n" +
-	"\forganisation\x18\x01 \x01(\v2\x16.tammy.v1.OrganisationB\x06\xbaH\x03\xc8\x01\x01R\forganisation\"\xbb\x03\n" +
+	"\forganisation\x18\x01 \x01(\v2\x16.tammy.v1.OrganisationB\x06\xbaH\x03\xc8\x01\x01R\forganisation\"\xff\x03\n" +
 	"\x19UpdateOrganisationRequest\x12I\n" +
-	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x121\n" +
-	"\x0forganisation_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0eorganisationId\x122\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x122\n" +
 	"\x10expected_version\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion\x12C\n" +
 	"\vupdate_mask\x18\x04 \x01(\v2\x1a.google.protobuf.FieldMaskB\x06\xbaH\x03\xc8\x01\x01R\n" +
 	"updateMask\x129\n" +
@@ -1375,10 +1375,10 @@ const file_tammy_v1_organisation_proto_rawDesc = "" +
 	"\x0eeffective_date\x18\a \x01(\v2\x13.tammy.v1.CivilDateR\reffectiveDateB\t\n" +
 	"\a_reason\"`\n" +
 	"\x1aUpdateOrganisationResponse\x12B\n" +
-	"\forganisation\x18\x01 \x01(\v2\x16.tammy.v1.OrganisationB\x06\xbaH\x03\xc8\x01\x01R\forganisation\"\xaa\x05\n" +
+	"\forganisation\x18\x01 \x01(\v2\x16.tammy.v1.OrganisationB\x06\xbaH\x03\xc8\x01\x01R\forganisation\"\xee\x05\n" +
 	"\x1fRecordEntityVerificationRequest\x12I\n" +
-	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x121\n" +
-	"\x0forganisation_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0eorganisationId\x122\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x122\n" +
 	"\x10expected_version\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion\x12Q\n" +
 	"\rsource_method\x18\x04 \x01(\x0e2\".tammy.v1.VerificationSourceMethodB\b\xbaH\x05\x82\x01\x02\x10\x01R\fsourceMethod\x123\n" +
 	"\x06source\x18\x05 \x01(\v2\x13.tammy.v1.SourceRefB\x06\xbaH\x03\xc8\x01\x01R\x06source\x12:\n" +
@@ -1392,10 +1392,10 @@ const file_tammy_v1_organisation_proto_rawDesc = "" +
 	"lookupTime\"\xb0\x01\n" +
 	" RecordEntityVerificationResponse\x12H\n" +
 	"\fverification\x18\x01 \x01(\v2\x1c.tammy.v1.EntityVerificationB\x06\xbaH\x03\xc8\x01\x01R\fverification\x12B\n" +
-	"\forganisation\x18\x02 \x01(\v2\x16.tammy.v1.OrganisationB\x06\xbaH\x03\xc8\x01\x01R\forganisation\"\x9c\x01\n" +
+	"\forganisation\x18\x02 \x01(\v2\x16.tammy.v1.OrganisationB\x06\xbaH\x03\xc8\x01\x01R\forganisation\"\xe0\x01\n" +
 	"\x16GetOrganisationRequest\x12O\n" +
-	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x121\n" +
-	"\x0forganisation_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0eorganisationId\"]\n" +
+	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\"]\n" +
 	"\x17GetOrganisationResponse\x12B\n" +
 	"\forganisation\x18\x01 \x01(\v2\x16.tammy.v1.OrganisationB\x06\xbaH\x03\xc8\x01\x01R\forganisation*\xb7\x02\n" +
 	"\x1dOrganisationVerificationState\x12/\n" +

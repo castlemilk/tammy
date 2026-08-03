@@ -84,7 +84,15 @@ function hasCompleteListMetadata(value) {
 function hasCompleteIdempotencyMetadata(value) {
   return (
     hasExactKeys(value, ["mode", "outcomes"]) &&
-    ["query", "persistent_command", "challenge", "restore"].includes(value.mode) &&
+    [
+      "fresh_challenge",
+      "persistent_command",
+      "query",
+      "recovery_operation",
+      "restore",
+      "session_action",
+      "setup_journal",
+    ].includes(value.mode) &&
     isUniqueStringArray(
       value.outcomes,
       (outcome) => matchesPattern(outcome, STABLE_TOKEN_PATTERN),

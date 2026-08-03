@@ -2,36 +2,208 @@
   "schemaVersion": 1,
   "transitions": [
     {
-      "enum": "tammy.v1.WorkspaceState",
-      "transition": "WORKSPACE_STATE_PENDING_RECOVERY->WORKSPACE_STATE_UNAUTHENTICATED"
+      "enum": "tammy.v1.AccountStatus",
+      "transition": "ACCOUNT_STATUS_ACTIVE->ACCOUNT_STATUS_ARCHIVED"
     },
     {
-      "enum": "tammy.v1.WorkspaceState",
-      "transition": "WORKSPACE_STATE_LOCKED->WORKSPACE_STATE_UNAUTHENTICATED"
+      "enum": "tammy.v1.AccountStatus",
+      "transition": "ACCOUNT_STATUS_ARCHIVED->ACCOUNT_STATUS_ACTIVE"
     },
     {
-      "enum": "tammy.v1.WorkspaceState",
-      "transition": "WORKSPACE_STATE_UNAUTHENTICATED->WORKSPACE_STATE_AUTHENTICATED"
+      "enum": "tammy.v1.AuditExportJobState",
+      "transition": "AUDIT_EXPORT_JOB_STATE_FAILED_RETRYABLE->AUDIT_EXPORT_JOB_STATE_CANCELLED"
     },
     {
-      "enum": "tammy.v1.WorkspaceState",
-      "transition": "WORKSPACE_STATE_UNAUTHENTICATED->WORKSPACE_STATE_LOCKED"
+      "enum": "tammy.v1.AuditExportJobState",
+      "transition": "AUDIT_EXPORT_JOB_STATE_FAILED_RETRYABLE->AUDIT_EXPORT_JOB_STATE_QUEUED"
     },
     {
-      "enum": "tammy.v1.WorkspaceState",
-      "transition": "WORKSPACE_STATE_AUTHENTICATED->WORKSPACE_STATE_LOCKED"
+      "enum": "tammy.v1.AuditExportJobState",
+      "transition": "AUDIT_EXPORT_JOB_STATE_QUEUED->AUDIT_EXPORT_JOB_STATE_CANCELLED"
     },
     {
-      "enum": "tammy.v1.WorkspaceTrustState",
-      "transition": "WORKSPACE_TRUST_STATE_TRUSTED->WORKSPACE_TRUST_STATE_MOVED_READ_ONLY"
+      "enum": "tammy.v1.AuditExportJobState",
+      "transition": "AUDIT_EXPORT_JOB_STATE_QUEUED->AUDIT_EXPORT_JOB_STATE_RUNNING"
     },
     {
-      "enum": "tammy.v1.WorkspaceTrustState",
-      "transition": "WORKSPACE_TRUST_STATE_MOVED_READ_ONLY->WORKSPACE_TRUST_STATE_TRUSTED"
+      "enum": "tammy.v1.AuditExportJobState",
+      "transition": "AUDIT_EXPORT_JOB_STATE_RUNNING->AUDIT_EXPORT_JOB_STATE_CANCELLED"
     },
     {
-      "enum": "tammy.v1.UserState",
-      "transition": "USER_STATE_PENDING_ACTIVATION->USER_STATE_ACTIVE"
+      "enum": "tammy.v1.AuditExportJobState",
+      "transition": "AUDIT_EXPORT_JOB_STATE_RUNNING->AUDIT_EXPORT_JOB_STATE_COMPLETED"
+    },
+    {
+      "enum": "tammy.v1.AuditExportJobState",
+      "transition": "AUDIT_EXPORT_JOB_STATE_RUNNING->AUDIT_EXPORT_JOB_STATE_FAILED_RETRYABLE"
+    },
+    {
+      "enum": "tammy.v1.AuditExportJobState",
+      "transition": "AUDIT_EXPORT_JOB_STATE_RUNNING->AUDIT_EXPORT_JOB_STATE_FAILED_TERMINAL"
+    },
+    {
+      "enum": "tammy.v1.AuditExportJobState",
+      "transition": "AUDIT_EXPORT_JOB_STATE_RUNNING->AUDIT_EXPORT_JOB_STATE_QUEUED"
+    },
+    {
+      "enum": "tammy.v1.AuditExportJobState",
+      "transition": "AUDIT_EXPORT_JOB_STATE_RUNNING->AUDIT_EXPORT_JOB_STATE_WAITING_FOR_INPUT"
+    },
+    {
+      "enum": "tammy.v1.AuditExportJobState",
+      "transition": "AUDIT_EXPORT_JOB_STATE_WAITING_FOR_INPUT->AUDIT_EXPORT_JOB_STATE_CANCELLED"
+    },
+    {
+      "enum": "tammy.v1.AuditExportJobState",
+      "transition": "AUDIT_EXPORT_JOB_STATE_WAITING_FOR_INPUT->AUDIT_EXPORT_JOB_STATE_QUEUED"
+    },
+    {
+      "enum": "tammy.v1.BackupJobState",
+      "transition": "BACKUP_JOB_STATE_FAILED_RETRYABLE->BACKUP_JOB_STATE_CANCELLED"
+    },
+    {
+      "enum": "tammy.v1.BackupJobState",
+      "transition": "BACKUP_JOB_STATE_FAILED_RETRYABLE->BACKUP_JOB_STATE_QUEUED"
+    },
+    {
+      "enum": "tammy.v1.BackupJobState",
+      "transition": "BACKUP_JOB_STATE_QUEUED->BACKUP_JOB_STATE_CANCELLED"
+    },
+    {
+      "enum": "tammy.v1.BackupJobState",
+      "transition": "BACKUP_JOB_STATE_QUEUED->BACKUP_JOB_STATE_RUNNING"
+    },
+    {
+      "enum": "tammy.v1.BackupJobState",
+      "transition": "BACKUP_JOB_STATE_RUNNING->BACKUP_JOB_STATE_CANCELLED"
+    },
+    {
+      "enum": "tammy.v1.BackupJobState",
+      "transition": "BACKUP_JOB_STATE_RUNNING->BACKUP_JOB_STATE_COMPLETED"
+    },
+    {
+      "enum": "tammy.v1.BackupJobState",
+      "transition": "BACKUP_JOB_STATE_RUNNING->BACKUP_JOB_STATE_FAILED_RETRYABLE"
+    },
+    {
+      "enum": "tammy.v1.BackupJobState",
+      "transition": "BACKUP_JOB_STATE_RUNNING->BACKUP_JOB_STATE_FAILED_TERMINAL"
+    },
+    {
+      "enum": "tammy.v1.BackupJobState",
+      "transition": "BACKUP_JOB_STATE_RUNNING->BACKUP_JOB_STATE_QUEUED"
+    },
+    {
+      "enum": "tammy.v1.FactorState",
+      "transition": "FACTOR_STATE_ENABLED->FACTOR_STATE_DISABLED"
+    },
+    {
+      "enum": "tammy.v1.FactorState",
+      "transition": "FACTOR_STATE_PENDING_CONFIRMATION->FACTOR_STATE_ENABLED"
+    },
+    {
+      "enum": "tammy.v1.JournalState",
+      "transition": "JOURNAL_STATE_POSTED->JOURNAL_STATE_REVERSED"
+    },
+    {
+      "enum": "tammy.v1.OpeningConversionState",
+      "transition": "OPENING_CONVERSION_STATE_POSTED->OPENING_CONVERSION_STATE_REPLACED"
+    },
+    {
+      "enum": "tammy.v1.OrganisationVerificationState",
+      "transition": "ORGANISATION_VERIFICATION_STATE_FAILED->ORGANISATION_VERIFICATION_STATE_EXPIRED"
+    },
+    {
+      "enum": "tammy.v1.OrganisationVerificationState",
+      "transition": "ORGANISATION_VERIFICATION_STATE_FAILED->ORGANISATION_VERIFICATION_STATE_VERIFIED"
+    },
+    {
+      "enum": "tammy.v1.OrganisationVerificationState",
+      "transition": "ORGANISATION_VERIFICATION_STATE_UNVERIFIED->ORGANISATION_VERIFICATION_STATE_FAILED"
+    },
+    {
+      "enum": "tammy.v1.OrganisationVerificationState",
+      "transition": "ORGANISATION_VERIFICATION_STATE_UNVERIFIED->ORGANISATION_VERIFICATION_STATE_VERIFIED"
+    },
+    {
+      "enum": "tammy.v1.OrganisationVerificationState",
+      "transition": "ORGANISATION_VERIFICATION_STATE_VERIFIED->ORGANISATION_VERIFICATION_STATE_EXPIRED"
+    },
+    {
+      "enum": "tammy.v1.OrganisationVerificationState",
+      "transition": "ORGANISATION_VERIFICATION_STATE_VERIFIED->ORGANISATION_VERIFICATION_STATE_SUPERSEDED"
+    },
+    {
+      "enum": "tammy.v1.PeriodState",
+      "transition": "PERIOD_STATE_CLOSED->PERIOD_STATE_OPEN"
+    },
+    {
+      "enum": "tammy.v1.PeriodState",
+      "transition": "PERIOD_STATE_OPEN->PERIOD_STATE_CLOSED"
+    },
+    {
+      "enum": "tammy.v1.PreRestoreArchiveExportJobState",
+      "transition": "PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_FAILED_RETRYABLE->PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_CANCELLED"
+    },
+    {
+      "enum": "tammy.v1.PreRestoreArchiveExportJobState",
+      "transition": "PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_FAILED_RETRYABLE->PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_QUEUED"
+    },
+    {
+      "enum": "tammy.v1.PreRestoreArchiveExportJobState",
+      "transition": "PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_QUEUED->PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_CANCELLED"
+    },
+    {
+      "enum": "tammy.v1.PreRestoreArchiveExportJobState",
+      "transition": "PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_QUEUED->PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_FAILED_RETRYABLE"
+    },
+    {
+      "enum": "tammy.v1.PreRestoreArchiveExportJobState",
+      "transition": "PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_QUEUED->PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_WRITING"
+    },
+    {
+      "enum": "tammy.v1.PreRestoreArchiveExportJobState",
+      "transition": "PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_VERIFIED->PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_COMPLETED"
+    },
+    {
+      "enum": "tammy.v1.PreRestoreArchiveExportJobState",
+      "transition": "PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_WRITING->PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_CANCELLED"
+    },
+    {
+      "enum": "tammy.v1.PreRestoreArchiveExportJobState",
+      "transition": "PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_WRITING->PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_FAILED_RETRYABLE"
+    },
+    {
+      "enum": "tammy.v1.PreRestoreArchiveExportJobState",
+      "transition": "PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_WRITING->PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_VERIFIED"
+    },
+    {
+      "enum": "tammy.v1.PreRestoreArchiveState",
+      "transition": "PRE_RESTORE_ARCHIVE_STATE_AVAILABLE->PRE_RESTORE_ARCHIVE_STATE_DELETED"
+    },
+    {
+      "enum": "tammy.v1.RestoreState",
+      "transition": "RESTORE_STATE_PREPARED->RESTORE_STATE_STAGED"
+    },
+    {
+      "enum": "tammy.v1.RestoreState",
+      "transition": "RESTORE_STATE_STAGED->RESTORE_STATE_SWAPPED"
+    },
+    {
+      "enum": "tammy.v1.RestoreState",
+      "transition": "RESTORE_STATE_SWAPPED->RESTORE_STATE_COMPLETE"
+    },
+    {
+      "enum": "tammy.v1.SessionState",
+      "transition": "SESSION_STATE_ACTIVE->SESSION_STATE_EXPIRED"
+    },
+    {
+      "enum": "tammy.v1.SessionState",
+      "transition": "SESSION_STATE_ACTIVE->SESSION_STATE_INVALIDATED"
+    },
+    {
+      "enum": "tammy.v1.SessionState",
+      "transition": "SESSION_STATE_ACTIVE->SESSION_STATE_SIGNED_OUT"
     },
     {
       "enum": "tammy.v1.UserState",
@@ -50,208 +222,36 @@
       "transition": "USER_STATE_AUTHENTICATION_LOCKED->USER_STATE_PENDING_ACTIVATION"
     },
     {
-      "enum": "tammy.v1.SessionState",
-      "transition": "SESSION_STATE_ACTIVE->SESSION_STATE_SIGNED_OUT"
+      "enum": "tammy.v1.UserState",
+      "transition": "USER_STATE_PENDING_ACTIVATION->USER_STATE_ACTIVE"
     },
     {
-      "enum": "tammy.v1.SessionState",
-      "transition": "SESSION_STATE_ACTIVE->SESSION_STATE_EXPIRED"
+      "enum": "tammy.v1.WorkspaceState",
+      "transition": "WORKSPACE_STATE_AUTHENTICATED->WORKSPACE_STATE_LOCKED"
     },
     {
-      "enum": "tammy.v1.SessionState",
-      "transition": "SESSION_STATE_ACTIVE->SESSION_STATE_INVALIDATED"
+      "enum": "tammy.v1.WorkspaceState",
+      "transition": "WORKSPACE_STATE_LOCKED->WORKSPACE_STATE_UNAUTHENTICATED"
     },
     {
-      "enum": "tammy.v1.FactorState",
-      "transition": "FACTOR_STATE_PENDING_CONFIRMATION->FACTOR_STATE_ENABLED"
+      "enum": "tammy.v1.WorkspaceState",
+      "transition": "WORKSPACE_STATE_PENDING_RECOVERY->WORKSPACE_STATE_UNAUTHENTICATED"
     },
     {
-      "enum": "tammy.v1.FactorState",
-      "transition": "FACTOR_STATE_ENABLED->FACTOR_STATE_DISABLED"
+      "enum": "tammy.v1.WorkspaceState",
+      "transition": "WORKSPACE_STATE_UNAUTHENTICATED->WORKSPACE_STATE_AUTHENTICATED"
     },
     {
-      "enum": "tammy.v1.OrganisationVerificationState",
-      "transition": "ORGANISATION_VERIFICATION_STATE_UNVERIFIED->ORGANISATION_VERIFICATION_STATE_VERIFIED"
+      "enum": "tammy.v1.WorkspaceState",
+      "transition": "WORKSPACE_STATE_UNAUTHENTICATED->WORKSPACE_STATE_LOCKED"
     },
     {
-      "enum": "tammy.v1.OrganisationVerificationState",
-      "transition": "ORGANISATION_VERIFICATION_STATE_UNVERIFIED->ORGANISATION_VERIFICATION_STATE_FAILED"
+      "enum": "tammy.v1.WorkspaceTrustState",
+      "transition": "WORKSPACE_TRUST_STATE_MOVED_READ_ONLY->WORKSPACE_TRUST_STATE_TRUSTED"
     },
     {
-      "enum": "tammy.v1.OrganisationVerificationState",
-      "transition": "ORGANISATION_VERIFICATION_STATE_FAILED->ORGANISATION_VERIFICATION_STATE_VERIFIED"
-    },
-    {
-      "enum": "tammy.v1.OrganisationVerificationState",
-      "transition": "ORGANISATION_VERIFICATION_STATE_FAILED->ORGANISATION_VERIFICATION_STATE_EXPIRED"
-    },
-    {
-      "enum": "tammy.v1.OrganisationVerificationState",
-      "transition": "ORGANISATION_VERIFICATION_STATE_VERIFIED->ORGANISATION_VERIFICATION_STATE_EXPIRED"
-    },
-    {
-      "enum": "tammy.v1.OrganisationVerificationState",
-      "transition": "ORGANISATION_VERIFICATION_STATE_VERIFIED->ORGANISATION_VERIFICATION_STATE_SUPERSEDED"
-    },
-    {
-      "enum": "tammy.v1.AccountStatus",
-      "transition": "ACCOUNT_STATUS_ACTIVE->ACCOUNT_STATUS_ARCHIVED"
-    },
-    {
-      "enum": "tammy.v1.AccountStatus",
-      "transition": "ACCOUNT_STATUS_ARCHIVED->ACCOUNT_STATUS_ACTIVE"
-    },
-    {
-      "enum": "tammy.v1.OpeningConversionState",
-      "transition": "OPENING_CONVERSION_STATE_POSTED->OPENING_CONVERSION_STATE_REPLACED"
-    },
-    {
-      "enum": "tammy.v1.JournalState",
-      "transition": "JOURNAL_STATE_POSTED->JOURNAL_STATE_REVERSED"
-    },
-    {
-      "enum": "tammy.v1.PeriodState",
-      "transition": "PERIOD_STATE_OPEN->PERIOD_STATE_CLOSED"
-    },
-    {
-      "enum": "tammy.v1.PeriodState",
-      "transition": "PERIOD_STATE_CLOSED->PERIOD_STATE_OPEN"
-    },
-    {
-      "enum": "tammy.v1.BackupJobState",
-      "transition": "BACKUP_JOB_STATE_QUEUED->BACKUP_JOB_STATE_RUNNING"
-    },
-    {
-      "enum": "tammy.v1.BackupJobState",
-      "transition": "BACKUP_JOB_STATE_QUEUED->BACKUP_JOB_STATE_CANCELLED"
-    },
-    {
-      "enum": "tammy.v1.BackupJobState",
-      "transition": "BACKUP_JOB_STATE_RUNNING->BACKUP_JOB_STATE_QUEUED"
-    },
-    {
-      "enum": "tammy.v1.BackupJobState",
-      "transition": "BACKUP_JOB_STATE_RUNNING->BACKUP_JOB_STATE_COMPLETED"
-    },
-    {
-      "enum": "tammy.v1.BackupJobState",
-      "transition": "BACKUP_JOB_STATE_RUNNING->BACKUP_JOB_STATE_FAILED_RETRYABLE"
-    },
-    {
-      "enum": "tammy.v1.BackupJobState",
-      "transition": "BACKUP_JOB_STATE_RUNNING->BACKUP_JOB_STATE_FAILED_TERMINAL"
-    },
-    {
-      "enum": "tammy.v1.BackupJobState",
-      "transition": "BACKUP_JOB_STATE_RUNNING->BACKUP_JOB_STATE_CANCELLED"
-    },
-    {
-      "enum": "tammy.v1.BackupJobState",
-      "transition": "BACKUP_JOB_STATE_FAILED_RETRYABLE->BACKUP_JOB_STATE_QUEUED"
-    },
-    {
-      "enum": "tammy.v1.BackupJobState",
-      "transition": "BACKUP_JOB_STATE_FAILED_RETRYABLE->BACKUP_JOB_STATE_CANCELLED"
-    },
-    {
-      "enum": "tammy.v1.RestoreState",
-      "transition": "RESTORE_STATE_PREPARED->RESTORE_STATE_STAGED"
-    },
-    {
-      "enum": "tammy.v1.RestoreState",
-      "transition": "RESTORE_STATE_STAGED->RESTORE_STATE_SWAPPED"
-    },
-    {
-      "enum": "tammy.v1.RestoreState",
-      "transition": "RESTORE_STATE_SWAPPED->RESTORE_STATE_COMPLETE"
-    },
-    {
-      "enum": "tammy.v1.PreRestoreArchiveState",
-      "transition": "PRE_RESTORE_ARCHIVE_STATE_AVAILABLE->PRE_RESTORE_ARCHIVE_STATE_DELETED"
-    },
-    {
-      "enum": "tammy.v1.PreRestoreArchiveExportJobState",
-      "transition": "PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_QUEUED->PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_WRITING"
-    },
-    {
-      "enum": "tammy.v1.PreRestoreArchiveExportJobState",
-      "transition": "PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_QUEUED->PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_CANCELLED"
-    },
-    {
-      "enum": "tammy.v1.PreRestoreArchiveExportJobState",
-      "transition": "PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_QUEUED->PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_FAILED_RETRYABLE"
-    },
-    {
-      "enum": "tammy.v1.PreRestoreArchiveExportJobState",
-      "transition": "PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_WRITING->PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_VERIFIED"
-    },
-    {
-      "enum": "tammy.v1.PreRestoreArchiveExportJobState",
-      "transition": "PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_WRITING->PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_CANCELLED"
-    },
-    {
-      "enum": "tammy.v1.PreRestoreArchiveExportJobState",
-      "transition": "PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_WRITING->PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_FAILED_RETRYABLE"
-    },
-    {
-      "enum": "tammy.v1.PreRestoreArchiveExportJobState",
-      "transition": "PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_VERIFIED->PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_COMPLETED"
-    },
-    {
-      "enum": "tammy.v1.PreRestoreArchiveExportJobState",
-      "transition": "PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_FAILED_RETRYABLE->PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_QUEUED"
-    },
-    {
-      "enum": "tammy.v1.PreRestoreArchiveExportJobState",
-      "transition": "PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_FAILED_RETRYABLE->PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_CANCELLED"
-    },
-    {
-      "enum": "tammy.v1.AuditExportJobState",
-      "transition": "AUDIT_EXPORT_JOB_STATE_QUEUED->AUDIT_EXPORT_JOB_STATE_RUNNING"
-    },
-    {
-      "enum": "tammy.v1.AuditExportJobState",
-      "transition": "AUDIT_EXPORT_JOB_STATE_QUEUED->AUDIT_EXPORT_JOB_STATE_CANCELLED"
-    },
-    {
-      "enum": "tammy.v1.AuditExportJobState",
-      "transition": "AUDIT_EXPORT_JOB_STATE_RUNNING->AUDIT_EXPORT_JOB_STATE_QUEUED"
-    },
-    {
-      "enum": "tammy.v1.AuditExportJobState",
-      "transition": "AUDIT_EXPORT_JOB_STATE_RUNNING->AUDIT_EXPORT_JOB_STATE_WAITING_FOR_INPUT"
-    },
-    {
-      "enum": "tammy.v1.AuditExportJobState",
-      "transition": "AUDIT_EXPORT_JOB_STATE_RUNNING->AUDIT_EXPORT_JOB_STATE_COMPLETED"
-    },
-    {
-      "enum": "tammy.v1.AuditExportJobState",
-      "transition": "AUDIT_EXPORT_JOB_STATE_RUNNING->AUDIT_EXPORT_JOB_STATE_FAILED_RETRYABLE"
-    },
-    {
-      "enum": "tammy.v1.AuditExportJobState",
-      "transition": "AUDIT_EXPORT_JOB_STATE_RUNNING->AUDIT_EXPORT_JOB_STATE_FAILED_TERMINAL"
-    },
-    {
-      "enum": "tammy.v1.AuditExportJobState",
-      "transition": "AUDIT_EXPORT_JOB_STATE_RUNNING->AUDIT_EXPORT_JOB_STATE_CANCELLED"
-    },
-    {
-      "enum": "tammy.v1.AuditExportJobState",
-      "transition": "AUDIT_EXPORT_JOB_STATE_WAITING_FOR_INPUT->AUDIT_EXPORT_JOB_STATE_QUEUED"
-    },
-    {
-      "enum": "tammy.v1.AuditExportJobState",
-      "transition": "AUDIT_EXPORT_JOB_STATE_WAITING_FOR_INPUT->AUDIT_EXPORT_JOB_STATE_CANCELLED"
-    },
-    {
-      "enum": "tammy.v1.AuditExportJobState",
-      "transition": "AUDIT_EXPORT_JOB_STATE_FAILED_RETRYABLE->AUDIT_EXPORT_JOB_STATE_QUEUED"
-    },
-    {
-      "enum": "tammy.v1.AuditExportJobState",
-      "transition": "AUDIT_EXPORT_JOB_STATE_FAILED_RETRYABLE->AUDIT_EXPORT_JOB_STATE_CANCELLED"
+      "enum": "tammy.v1.WorkspaceTrustState",
+      "transition": "WORKSPACE_TRUST_STATE_TRUSTED->WORKSPACE_TRUST_STATE_MOVED_READ_ONLY"
     }
   ]
 }

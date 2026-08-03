@@ -1467,104 +1467,104 @@ var File_tammy_v1_events_proto protoreflect.FileDescriptor
 
 const file_tammy_v1_events_proto_rawDesc = "" +
 	"\n" +
-	"\x15tammy/v1/events.proto\x12\btammy.v1\x1a\x1bbuf/validate/validate.proto\x1a\x19tammy/v1/accounting.proto\x1a\x15tammy/v1/common.proto\x1a\x17tammy/v1/identity.proto\x1a\x1btammy/v1/organisation.proto\x1a\x18tammy/v1/workspace.proto\"\xf5\x01\n" +
-	"\x1aWorkspaceStateChangedEvent\x12+\n" +
-	"\fworkspace_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vworkspaceId\x12A\n" +
+	"\x15tammy/v1/events.proto\x12\btammy.v1\x1a\x1bbuf/validate/validate.proto\x1a\x19tammy/v1/accounting.proto\x1a\x15tammy/v1/common.proto\x1a\x17tammy/v1/identity.proto\x1a\x1btammy/v1/organisation.proto\x1a\x18tammy/v1/workspace.proto\"\xb9\x02\n" +
+	"\x1aWorkspaceStateChangedEvent\x12o\n" +
+	"\fworkspace_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\vworkspaceId\x12A\n" +
 	"\n" +
 	"from_state\x18\x02 \x01(\x0e2\x18.tammy.v1.WorkspaceStateB\b\xbaH\x05\x82\x01\x02\x10\x01R\tfromState\x12=\n" +
 	"\bto_state\x18\x03 \x01(\x0e2\x18.tammy.v1.WorkspaceStateB\b\xbaH\x05\x82\x01\x02\x10\x01R\atoState\x12(\n" +
 	"\vreason_code\x18\x04 \x01(\tB\a\xbaH\x04r\x02\x18`R\n" +
-	"reasonCode\"\xfc\x01\n" +
-	"\x1eWorkspaceTrustEstablishedEvent\x12+\n" +
-	"\fworkspace_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vworkspaceId\x12&\n" +
+	"reasonCode\"\xc0\x02\n" +
+	"\x1eWorkspaceTrustEstablishedEvent\x12o\n" +
+	"\fworkspace_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\vworkspaceId\x12&\n" +
 	"\n" +
 	"prior_head\x18\x02 \x01(\fB\a\xbaH\x04z\x02h R\tpriorHead\x12K\n" +
 	"\x1ddestination_installation_hash\x18\x03 \x01(\fB\a\xbaH\x04z\x02h R\x1bdestinationInstallationHash\x128\n" +
-	"\x18prior_mirror_unavailable\x18\x04 \x01(\bR\x16priorMirrorUnavailable\"\xdc\x01\n" +
-	"\x15UserStateChangedEvent\x12!\n" +
-	"\auser_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06userId\x12<\n" +
+	"\x18prior_mirror_unavailable\x18\x04 \x01(\bR\x16priorMirrorUnavailable\"\xa0\x02\n" +
+	"\x15UserStateChangedEvent\x12e\n" +
+	"\auser_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x06userId\x12<\n" +
 	"\n" +
 	"from_state\x18\x02 \x01(\x0e2\x13.tammy.v1.UserStateB\b\xbaH\x05\x82\x01\x02\x10\x01R\tfromState\x128\n" +
 	"\bto_state\x18\x03 \x01(\x0e2\x13.tammy.v1.UserStateB\b\xbaH\x05\x82\x01\x02\x10\x01R\atoState\x12(\n" +
 	"\vreason_code\x18\x04 \x01(\tB\a\xbaH\x04r\x02\x18`R\n" +
-	"reasonCode\"\xdf\x01\n" +
-	"\x17FactorStateChangedEvent\x12%\n" +
-	"\tfactor_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bfactorId\x12!\n" +
-	"\auser_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06userId\x12>\n" +
+	"reasonCode\"\xe7\x02\n" +
+	"\x17FactorStateChangedEvent\x12i\n" +
+	"\tfactor_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\bfactorId\x12e\n" +
+	"\auser_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x06userId\x12>\n" +
 	"\n" +
 	"from_state\x18\x03 \x01(\x0e2\x15.tammy.v1.FactorStateB\b\xbaH\x05\x82\x01\x02\x10\x01R\tfromState\x12:\n" +
-	"\bto_state\x18\x04 \x01(\x0e2\x15.tammy.v1.FactorStateB\b\xbaH\x05\x82\x01\x02\x10\x01R\atoState\"\x99\x02\n" +
-	"\x18OrganisationChangedEvent\x121\n" +
-	"\x0forganisation_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0eorganisationId\x122\n" +
+	"\bto_state\x18\x04 \x01(\x0e2\x15.tammy.v1.FactorStateB\b\xbaH\x05\x82\x01\x02\x10\x01R\atoState\"\xdd\x02\n" +
+	"\x18OrganisationChangedEvent\x12u\n" +
+	"\x0forganisation_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x122\n" +
 	"\x10previous_version\x18\x02 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fpreviousVersion\x12(\n" +
 	"\vnew_version\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\n" +
 	"newVersion\x123\n" +
 	"\x0echanged_fields\x18\x04 \x03(\tB\f\xbaH\t\x92\x01\x06\b\x01\x10 \x18\x01R\rchangedFields\x127\n" +
-	"\x17verification_superseded\x18\x05 \x01(\bR\x16verificationSuperseded\"\xd4\x02\n" +
-	"\x1eEntityVerificationChangedEvent\x121\n" +
-	"\x0fverification_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0everificationId\x121\n" +
-	"\x0forganisation_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0eorganisationId\x12P\n" +
+	"\x17verification_superseded\x18\x05 \x01(\bR\x16verificationSuperseded\"\xdc\x03\n" +
+	"\x1eEntityVerificationChangedEvent\x12u\n" +
+	"\x0fverification_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0everificationId\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12P\n" +
 	"\n" +
 	"from_state\x18\x03 \x01(\x0e2'.tammy.v1.OrganisationVerificationStateB\b\xbaH\x05\x82\x01\x02\x10\x01R\tfromState\x12L\n" +
 	"\bto_state\x18\x04 \x01(\x0e2'.tammy.v1.OrganisationVerificationStateB\b\xbaH\x05\x82\x01\x02\x10\x01R\atoState\x12,\n" +
-	"\revidence_hash\x18\x05 \x01(\fB\a\xbaH\x04z\x02h R\fevidenceHash\"\xf2\x01\n" +
-	"\x19AccountStatusChangedEvent\x12'\n" +
+	"\revidence_hash\x18\x05 \x01(\fB\a\xbaH\x04z\x02h R\fevidenceHash\"\xb6\x02\n" +
+	"\x19AccountStatusChangedEvent\x12k\n" +
 	"\n" +
-	"account_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\taccountId\x12B\n" +
+	"account_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\taccountId\x12B\n" +
 	"\vfrom_status\x18\x02 \x01(\x0e2\x17.tammy.v1.AccountStatusB\b\xbaH\x05\x82\x01\x02\x10\x01R\n" +
 	"fromStatus\x12>\n" +
 	"\tto_status\x18\x03 \x01(\x0e2\x17.tammy.v1.AccountStatusB\b\xbaH\x05\x82\x01\x02\x10\x01R\btoStatus\x12(\n" +
 	"\vreason_hash\x18\x04 \x01(\fB\a\xbaH\x04z\x02h R\n" +
-	"reasonHash\"\x93\x02\n" +
-	"\x1dOpeningConversionChangedEvent\x12-\n" +
-	"\rconversion_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\fconversionId\x12D\n" +
+	"reasonHash\"\x9b\x03\n" +
+	"\x1dOpeningConversionChangedEvent\x12q\n" +
+	"\rconversion_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\fconversionId\x12D\n" +
 	"\n" +
 	"from_state\x18\x02 \x01(\x0e2 .tammy.v1.OpeningConversionStateH\x00R\tfromState\x88\x01\x01\x12E\n" +
-	"\bto_state\x18\x03 \x01(\x0e2 .tammy.v1.OpeningConversionStateB\b\xbaH\x05\x82\x01\x02\x10\x01R\atoState\x12'\n" +
+	"\bto_state\x18\x03 \x01(\x0e2 .tammy.v1.OpeningConversionStateB\b\xbaH\x05\x82\x01\x02\x10\x01R\atoState\x12k\n" +
 	"\n" +
-	"journal_id\x18\x04 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tjournalIdB\r\n" +
-	"\v_from_state\"\xd1\x02\n" +
-	"\x12JournalPostedEvent\x12'\n" +
+	"journal_id\x18\x04 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\tjournalIdB\r\n" +
+	"\v_from_state\"\xda\x03\n" +
+	"\x12JournalPostedEvent\x12k\n" +
 	"\n" +
-	"journal_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tjournalId\x129\n" +
+	"journal_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\tjournalId\x129\n" +
 	"\x06source\x18\x02 \x01(\x0e2\x17.tammy.v1.JournalSourceB\b\xbaH\x05\x82\x01\x02\x10\x01R\x06source\x12:\n" +
 	"\ftotal_debits\x18\x03 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\vtotalDebits\x12<\n" +
-	"\rtotal_credits\x18\x04 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\ftotalCredits\x12B\n" +
-	"\x16reversal_of_journal_id\x18\x05 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01H\x00R\x13reversalOfJournalId\x88\x01\x01B\x19\n" +
-	"\x17_reversal_of_journal_id\"\xfb\x01\n" +
-	"\x17PeriodStateChangedEvent\x12%\n" +
-	"\tperiod_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bperiodId\x12>\n" +
+	"\rtotal_credits\x18\x04 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\ftotalCredits\x12\x86\x01\n" +
+	"\x16reversal_of_journal_id\x18\x05 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$H\x00R\x13reversalOfJournalId\x88\x01\x01B\x19\n" +
+	"\x17_reversal_of_journal_id\"\xbf\x02\n" +
+	"\x17PeriodStateChangedEvent\x12i\n" +
+	"\tperiod_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\bperiodId\x12>\n" +
 	"\n" +
 	"from_state\x18\x02 \x01(\x0e2\x15.tammy.v1.PeriodStateB\b\xbaH\x05\x82\x01\x02\x10\x01R\tfromState\x12:\n" +
 	"\bto_state\x18\x03 \x01(\x0e2\x15.tammy.v1.PeriodStateB\b\xbaH\x05\x82\x01\x02\x10\x01R\atoState\x12-\n" +
 	"\vreason_hash\x18\x04 \x01(\fB\a\xbaH\x04z\x02h H\x00R\n" +
 	"reasonHash\x88\x01\x01B\x0e\n" +
-	"\f_reason_hash\"\x89\x02\n" +
-	"\x15BackupJobChangedEvent\x12\x1f\n" +
-	"\x06job_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05jobId\x12<\n" +
+	"\f_reason_hash\"\xcd\x02\n" +
+	"\x15BackupJobChangedEvent\x12c\n" +
+	"\x06job_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x05jobId\x12<\n" +
 	"\n" +
 	"from_state\x18\x02 \x01(\x0e2\x18.tammy.v1.BackupJobStateH\x00R\tfromState\x88\x01\x01\x12=\n" +
 	"\bto_state\x18\x03 \x01(\x0e2\x18.tammy.v1.BackupJobStateB\b\xbaH\x05\x82\x01\x02\x10\x01R\atoState\x121\n" +
 	"\rmanifest_hash\x18\x04 \x01(\fB\a\xbaH\x04z\x02h H\x01R\fmanifestHash\x88\x01\x01B\r\n" +
 	"\v_from_stateB\x10\n" +
-	"\x0e_manifest_hash\"\x8a\x02\n" +
-	"\x18RestoreStateChangedEvent\x12+\n" +
-	"\foperation_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\voperationId\x12:\n" +
+	"\x0e_manifest_hash\"\xce\x02\n" +
+	"\x18RestoreStateChangedEvent\x12o\n" +
+	"\foperation_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\voperationId\x12:\n" +
 	"\n" +
 	"from_state\x18\x02 \x01(\x0e2\x16.tammy.v1.RestoreStateH\x00R\tfromState\x88\x01\x01\x12;\n" +
 	"\bto_state\x18\x03 \x01(\x0e2\x16.tammy.v1.RestoreStateB\b\xbaH\x05\x82\x01\x02\x10\x01R\atoState\x129\n" +
 	"\x14backup_manifest_hash\x18\x04 \x01(\fB\a\xbaH\x04z\x02h R\x12backupManifestHashB\r\n" +
-	"\v_from_state\"\x90\x02\n" +
-	"\x1dPreRestoreArchiveChangedEvent\x12'\n" +
+	"\v_from_state\"\xd4\x02\n" +
+	"\x1dPreRestoreArchiveChangedEvent\x12k\n" +
 	"\n" +
-	"archive_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tarchiveId\x12D\n" +
+	"archive_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\tarchiveId\x12D\n" +
 	"\n" +
 	"from_state\x18\x02 \x01(\x0e2 .tammy.v1.PreRestoreArchiveStateH\x00R\tfromState\x88\x01\x01\x12E\n" +
 	"\bto_state\x18\x03 \x01(\x0e2 .tammy.v1.PreRestoreArchiveStateB\b\xbaH\x05\x82\x01\x02\x10\x01R\atoState\x12*\n" +
 	"\fcontent_hash\x18\x04 \x01(\fB\a\xbaH\x04z\x02h R\vcontentHashB\r\n" +
-	"\v_from_state\"\xed\x01\n" +
-	"\x1aEvidenceExportChangedEvent\x12\x1f\n" +
-	"\x06job_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05jobId\x12+\n" +
+	"\v_from_state\"\xb1\x02\n" +
+	"\x1aEvidenceExportChangedEvent\x12c\n" +
+	"\x06job_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x05jobId\x12+\n" +
 	"\n" +
 	"from_state\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18`H\x00R\tfromState\x88\x01\x01\x12$\n" +
 	"\bto_state\x18\x03 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18`R\atoState\x127\n" +

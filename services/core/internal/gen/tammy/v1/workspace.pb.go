@@ -3932,49 +3932,49 @@ var File_tammy_v1_workspace_proto protoreflect.FileDescriptor
 
 const file_tammy_v1_workspace_proto_rawDesc = "" +
 	"\n" +
-	"\x18tammy/v1/workspace.proto\x12\btammy.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15tammy/v1/common.proto\"\xc0\x02\n" +
-	"\tWorkspace\x12\x18\n" +
-	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12!\n" +
+	"\x18tammy/v1/workspace.proto\x12\btammy.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15tammy/v1/common.proto\"\x84\x03\n" +
+	"\tWorkspace\x12\\\n" +
+	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12!\n" +
 	"\aversion\x18\x02 \x01(\x04B\a\xbaH\x042\x02(\x01R\aversion\x128\n" +
 	"\x05state\x18\x03 \x01(\x0e2\x18.tammy.v1.WorkspaceStateB\b\xbaH\x05\x82\x01\x02\x10\x01R\x05state\x12H\n" +
 	"\vtrust_state\x18\x04 \x01(\x0e2\x1d.tammy.v1.WorkspaceTrustStateB\b\xbaH\x05\x82\x01\x02\x10\x01R\n" +
 	"trustState\x12+\n" +
 	"\fdisplay_name\x18\x05 \x01(\tB\b\xbaH\x05r\x03\x18\xff\x01R\vdisplayName\x12E\n" +
-	"\x10remembered_until\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\x0frememberedUntil\"\xb3\x03\n" +
-	"\tBackupJob\x12\x18\n" +
-	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12!\n" +
-	"\aversion\x18\x02 \x01(\x04B\a\xbaH\x042\x02(\x01R\aversion\x12-\n" +
-	"\roperation_key\x18\x03 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\foperationKey\x128\n" +
+	"\x10remembered_until\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\x0frememberedUntil\"\xbb\x04\n" +
+	"\tBackupJob\x12\\\n" +
+	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12!\n" +
+	"\aversion\x18\x02 \x01(\x04B\a\xbaH\x042\x02(\x01R\aversion\x12q\n" +
+	"\roperation_key\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\foperationKey\x128\n" +
 	"\x05state\x18\x04 \x01(\x0e2\x18.tammy.v1.BackupJobStateB\b\xbaH\x05\x82\x01\x02\x10\x01R\x05state\x129\n" +
 	"\bprogress\x18\x05 \x01(\v2\x15.tammy.v1.JobProgressB\x06\xbaH\x03\xc8\x01\x01R\bprogress\x12A\n" +
 	"\n" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\tcreatedAt\x12=\n" +
 	"\fcompleted_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\vcompletedAt\x121\n" +
 	"\rmanifest_hash\x18\b \x01(\fB\a\xbaH\x04z\x02h H\x00R\fmanifestHash\x88\x01\x01B\x10\n" +
-	"\x0e_manifest_hash\"\xb9\x02\n" +
-	"\rRestoreStatus\x12+\n" +
-	"\foperation_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\voperationId\x126\n" +
+	"\x0e_manifest_hash\"\xfd\x02\n" +
+	"\rRestoreStatus\x12o\n" +
+	"\foperation_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\voperationId\x126\n" +
 	"\x05state\x18\x02 \x01(\x0e2\x16.tammy.v1.RestoreStateB\b\xbaH\x05\x82\x01\x02\x10\x01R\x05state\x129\n" +
 	"\x14backup_manifest_hash\x18\x03 \x01(\fB\a\xbaH\x04z\x02h R\x12backupManifestHash\x122\n" +
 	"\x0enew_audit_head\x18\x04 \x01(\fB\a\xbaH\x04z\x02h H\x00R\fnewAuditHead\x88\x01\x01\x12A\n" +
 	"\n" +
 	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\tupdatedAtB\x11\n" +
-	"\x0f_new_audit_head\"\x8d\x03\n" +
-	"\x11PreRestoreArchive\x12\x18\n" +
-	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12!\n" +
+	"\x0f_new_audit_head\"\xd1\x03\n" +
+	"\x11PreRestoreArchive\x12\\\n" +
+	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12!\n" +
 	"\aversion\x18\x02 \x01(\x04B\a\xbaH\x042\x02(\x01R\aversion\x12@\n" +
 	"\x05state\x18\x03 \x01(\x0e2 .tammy.v1.PreRestoreArchiveStateB\b\xbaH\x05\x82\x01\x02\x10\x01R\x05state\x12A\n" +
 	"\n" +
 	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\tcreatedAt\x12T\n" +
 	"\x14deletion_eligible_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\x12deletionEligibleAt\x12*\n" +
 	"\fcontent_hash\x18\x06 \x01(\fB\a\xbaH\x04z\x02h R\vcontentHash\x124\n" +
-	"\x11source_generation\x18\a \x01(\x04B\a\xbaH\x042\x02(\x01R\x10sourceGeneration\"\x85\x03\n" +
-	"\x1aPreRestoreArchiveExportJob\x12\x18\n" +
-	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12!\n" +
-	"\aversion\x18\x02 \x01(\x04B\a\xbaH\x042\x02(\x01R\aversion\x12'\n" +
+	"\x11source_generation\x18\a \x01(\x04B\a\xbaH\x042\x02(\x01R\x10sourceGeneration\"\xd1\x04\n" +
+	"\x1aPreRestoreArchiveExportJob\x12\\\n" +
+	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12!\n" +
+	"\aversion\x18\x02 \x01(\x04B\a\xbaH\x042\x02(\x01R\aversion\x12k\n" +
 	"\n" +
-	"archive_id\x18\x03 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tarchiveId\x12-\n" +
-	"\roperation_key\x18\x04 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\foperationKey\x12I\n" +
+	"archive_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\tarchiveId\x12q\n" +
+	"\roperation_key\x18\x04 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\foperationKey\x12I\n" +
 	"\x05state\x18\x05 \x01(\x0e2).tammy.v1.PreRestoreArchiveExportJobStateB\b\xbaH\x05\x82\x01\x02\x10\x01R\x05state\x129\n" +
 	"\bprogress\x18\x06 \x01(\v2\x15.tammy.v1.JobProgressB\x06\xbaH\x03\xc8\x01\x01R\bprogress\x127\n" +
 	"\x10destination_hash\x18\a \x01(\fB\a\xbaH\x04z\x02h H\x00R\x0fdestinationHash\x88\x01\x01B\x13\n" +
@@ -4004,9 +4004,9 @@ const file_tammy_v1_workspace_proto_rawDesc = "" +
 	"\x16administrator_username\x18\x02 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\x80\x01R\x15administratorUsername\x12W\n" +
 	"\x18new_workspace_passphrase\x18\x03 \x01(\v2\x15.tammy.v1.SecretInputB\x06\xbaH\x03\xc8\x01\x01R\x16newWorkspacePassphrase\x12I\n" +
-	"\x11new_user_password\x18\x04 \x01(\v2\x15.tammy.v1.SecretInputB\x06\xbaH\x03\xc8\x01\x01R\x0fnewUserPassword\"\xb7\x03\n" +
-	"\x16CreateWorkspaceRequest\x12#\n" +
-	"\bsetup_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\asetupId\x12C\n" +
+	"\x11new_user_password\x18\x04 \x01(\v2\x15.tammy.v1.SecretInputB\x06\xbaH\x03\xc8\x01\x01R\x0fnewUserPassword\"\xfb\x03\n" +
+	"\x16CreateWorkspaceRequest\x12g\n" +
+	"\bsetup_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\asetupId\x12C\n" +
 	"\vdestination\x18\x02 \x01(\v2\x19.tammy.v1.ApprovedFileRefB\x06\xbaH\x03\xc8\x01\x01R\vdestination\x12P\n" +
 	"\x14workspace_passphrase\x18\x03 \x01(\v2\x15.tammy.v1.SecretInputB\x06\xbaH\x03\xc8\x01\x01R\x13workspacePassphrase\x12A\n" +
 	"\x16administrator_username\x18\x04 \x01(\tB\n" +
@@ -4018,9 +4018,9 @@ const file_tammy_v1_workspace_proto_rawDesc = "" +
 	"\tworkspace\x18\x01 \x01(\v2\x13.tammy.v1.WorkspaceB\x06\xbaH\x03\xc8\x01\x01R\tworkspace\x12N\n" +
 	"\x0frecovery_secret\x18\x02 \x01(\v2\x1d.tammy.v1.OneTimeSecretOutputB\x06\xbaH\x03\xc8\x01\x01R\x0erecoverySecret\x12A\n" +
 	"\n" +
-	"expires_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\texpiresAt\"\x94\x01\n" +
-	"\x16ConfirmRecoveryRequest\x12#\n" +
-	"\bsetup_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\asetupId\x12U\n" +
+	"expires_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\texpiresAt\"\xd8\x01\n" +
+	"\x16ConfirmRecoveryRequest\x12g\n" +
+	"\bsetup_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\asetupId\x12U\n" +
 	"\rconfirmations\x18\x02 \x03(\v2#.tammy.v1.RecoveryGroupConfirmationB\n" +
 	"\xbaH\a\x92\x01\x04\b\x02\x10\bR\rconfirmations\"T\n" +
 	"\x17ConfirmRecoveryResponse\x129\n" +
@@ -4035,56 +4035,56 @@ const file_tammy_v1_workspace_proto_rawDesc = "" +
 	"\x14LockWorkspaceRequest\x12G\n" +
 	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextR\x0eauthentication\"R\n" +
 	"\x15LockWorkspaceResponse\x129\n" +
-	"\tworkspace\x18\x01 \x01(\v2\x13.tammy.v1.WorkspaceB\x06\xbaH\x03\xc8\x01\x01R\tworkspace\"\xa0\x01\n" +
+	"\tworkspace\x18\x01 \x01(\v2\x13.tammy.v1.WorkspaceB\x06\xbaH\x03\xc8\x01\x01R\tworkspace\"\xe4\x01\n" +
 	" ForgetRememberedWorkspaceRequest\x12O\n" +
-	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12+\n" +
-	"\fworkspace_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vworkspaceId\"^\n" +
+	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12o\n" +
+	"\fworkspace_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\vworkspaceId\"^\n" +
 	"!ForgetRememberedWorkspaceResponse\x129\n" +
-	"\tworkspace\x18\x01 \x01(\v2\x13.tammy.v1.WorkspaceB\x06\xbaH\x03\xc8\x01\x01R\tworkspace\"]\n" +
-	"\x18GetWorkspaceStateRequest\x120\n" +
-	"\fworkspace_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01H\x00R\vworkspaceId\x88\x01\x01B\x0f\n" +
+	"\tworkspace\x18\x01 \x01(\v2\x13.tammy.v1.WorkspaceB\x06\xbaH\x03\xc8\x01\x01R\tworkspace\"\xa1\x01\n" +
+	"\x18GetWorkspaceStateRequest\x12t\n" +
+	"\fworkspace_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$H\x00R\vworkspaceId\x88\x01\x01B\x0f\n" +
 	"\r_workspace_id\"N\n" +
 	"\x19GetWorkspaceStateResponse\x121\n" +
-	"\tworkspace\x18\x01 \x01(\v2\x13.tammy.v1.WorkspaceR\tworkspace\"\xd9\x02\n" +
+	"\tworkspace\x18\x01 \x01(\v2\x13.tammy.v1.WorkspaceR\tworkspace\"\x9d\x03\n" +
 	"\x17ChangePassphraseRequest\x12I\n" +
-	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12+\n" +
-	"\fworkspace_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vworkspaceId\x122\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12o\n" +
+	"\fworkspace_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\vworkspaceId\x122\n" +
 	"\x10expected_version\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion\x12L\n" +
 	"\x12current_passphrase\x18\x04 \x01(\v2\x15.tammy.v1.SecretInputB\x06\xbaH\x03\xc8\x01\x01R\x11currentPassphrase\x12D\n" +
 	"\x0enew_passphrase\x18\x05 \x01(\v2\x15.tammy.v1.SecretInputB\x06\xbaH\x03\xc8\x01\x01R\rnewPassphrase\"U\n" +
 	"\x18ChangePassphraseResponse\x129\n" +
-	"\tworkspace\x18\x01 \x01(\v2\x13.tammy.v1.WorkspaceB\x06\xbaH\x03\xc8\x01\x01R\tworkspace\"\xaf\x02\n" +
-	"\x17RecoverWorkspaceRequest\x12<\n" +
-	"\x15recovery_operation_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x13recoveryOperationId\x12H\n" +
+	"\tworkspace\x18\x01 \x01(\v2\x13.tammy.v1.WorkspaceB\x06\xbaH\x03\xc8\x01\x01R\tworkspace\"\xf4\x02\n" +
+	"\x17RecoverWorkspaceRequest\x12\x80\x01\n" +
+	"\x15recovery_operation_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x13recoveryOperationId\x12H\n" +
 	"\x0eworkspace_file\x18\x02 \x01(\v2\x19.tammy.v1.ApprovedFileRefB\x06\xbaH\x03\xc8\x01\x01R\rworkspaceFile\x12F\n" +
 	"\x0frecovery_secret\x18\x03 \x01(\v2\x15.tammy.v1.SecretInputB\x06\xbaH\x03\xc8\x01\x01R\x0erecoverySecret\x12D\n" +
 	"\x0enew_passphrase\x18\x04 \x01(\v2\x15.tammy.v1.SecretInputB\x06\xbaH\x03\xc8\x01\x01R\rnewPassphrase\"U\n" +
 	"\x18RecoverWorkspaceResponse\x129\n" +
-	"\tworkspace\x18\x01 \x01(\v2\x13.tammy.v1.WorkspaceB\x06\xbaH\x03\xc8\x01\x01R\tworkspace\"\xdd\x02\n" +
+	"\tworkspace\x18\x01 \x01(\v2\x13.tammy.v1.WorkspaceB\x06\xbaH\x03\xc8\x01\x01R\tworkspace\"\xe6\x03\n" +
 	"#EstablishMovedWorkspaceTrustRequest\x12I\n" +
-	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12+\n" +
-	"\fworkspace_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vworkspaceId\x122\n" +
-	"\x10expected_version\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion\x12H\n" +
-	"\x1bdestination_installation_id\x18\x04 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x19destinationInstallationId\x12@\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12o\n" +
+	"\fworkspace_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\vworkspaceId\x122\n" +
+	"\x10expected_version\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion\x12\x8c\x01\n" +
+	"\x1bdestination_installation_id\x18\x04 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x19destinationInstallationId\x12@\n" +
 	"\x05proof\x18\x05 \x01(\v2\".tammy.v1.MovedWorkspaceTrustProofB\x06\xbaH\x03\xc8\x01\x01R\x05proof\"a\n" +
 	"$EstablishMovedWorkspaceTrustResponse\x129\n" +
-	"\tworkspace\x18\x01 \x01(\v2\x13.tammy.v1.WorkspaceB\x06\xbaH\x03\xc8\x01\x01R\tworkspace\"\xa1\x02\n" +
+	"\tworkspace\x18\x01 \x01(\v2\x13.tammy.v1.WorkspaceB\x06\xbaH\x03\xc8\x01\x01R\tworkspace\"\xe5\x02\n" +
 	"\x16BackupWorkspaceRequest\x12I\n" +
-	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12+\n" +
-	"\fworkspace_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vworkspaceId\x12C\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12o\n" +
+	"\fworkspace_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\vworkspaceId\x12C\n" +
 	"\vdestination\x18\x03 \x01(\v2\x19.tammy.v1.ApprovedFileRefB\x06\xbaH\x03\xc8\x01\x01R\vdestination\x12J\n" +
 	"\x11backup_passphrase\x18\x04 \x01(\v2\x15.tammy.v1.SecretInputB\x06\xbaH\x03\xc8\x01\x01R\x10backupPassphrase\"H\n" +
 	"\x17BackupWorkspaceResponse\x12-\n" +
-	"\x03job\x18\x01 \x01(\v2\x13.tammy.v1.BackupJobB\x06\xbaH\x03\xc8\x01\x01R\x03job\"\xb5\x01\n" +
+	"\x03job\x18\x01 \x01(\v2\x13.tammy.v1.BackupJobB\x06\xbaH\x03\xc8\x01\x01R\x03job\"\xf9\x01\n" +
 	"\x13CancelBackupRequest\x12I\n" +
-	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12\x1f\n" +
-	"\x06job_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05jobId\x122\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12c\n" +
+	"\x06job_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x05jobId\x122\n" +
 	"\x10expected_version\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion\"E\n" +
 	"\x14CancelBackupResponse\x12-\n" +
-	"\x03job\x18\x01 \x01(\v2\x13.tammy.v1.BackupJobB\x06\xbaH\x03\xc8\x01\x01R\x03job\"\x87\x01\n" +
+	"\x03job\x18\x01 \x01(\v2\x13.tammy.v1.BackupJobB\x06\xbaH\x03\xc8\x01\x01R\x03job\"\xcb\x01\n" +
 	"\x13GetBackupJobRequest\x12O\n" +
-	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12\x1f\n" +
-	"\x06job_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05jobId\"E\n" +
+	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12c\n" +
+	"\x06job_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x05jobId\"E\n" +
 	"\x14GetBackupJobResponse\x12-\n" +
 	"\x03job\x18\x01 \x01(\v2\x13.tammy.v1.BackupJobB\x06\xbaH\x03\xc8\x01\x01R\x03job\"\xda\x01\n" +
 	"\x15ListBackupJobsRequest\x12O\n" +
@@ -4094,10 +4094,10 @@ const file_tammy_v1_workspace_proto_rawDesc = "" +
 	"\x06_state\"|\n" +
 	"\x16ListBackupJobsResponse\x122\n" +
 	"\x04jobs\x18\x01 \x03(\v2\x13.tammy.v1.BackupJobB\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\x04jobs\x12.\n" +
-	"\x04page\x18\x02 \x01(\v2\x12.tammy.v1.PageInfoB\x06\xbaH\x03\xc8\x01\x01R\x04page\"\xba\x03\n" +
-	"\x17RestoreWorkspaceRequest\x12+\n" +
-	"\foperation_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\voperationId\x128\n" +
-	"\x13target_workspace_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x11targetWorkspaceId\x12B\n" +
+	"\x04page\x18\x02 \x01(\v2\x12.tammy.v1.PageInfoB\x06\xbaH\x03\xc8\x01\x01R\x04page\"\xc2\x04\n" +
+	"\x17RestoreWorkspaceRequest\x12o\n" +
+	"\foperation_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\voperationId\x12|\n" +
+	"\x13target_workspace_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x11targetWorkspaceId\x12B\n" +
 	"\vbackup_file\x18\x03 \x01(\v2\x19.tammy.v1.ApprovedFileRefB\x06\xbaH\x03\xc8\x01\x01R\n" +
 	"backupFile\x12J\n" +
 	"\x11backup_passphrase\x18\x04 \x01(\v2\x15.tammy.v1.SecretInputB\x06\xbaH\x03\xc8\x01\x01R\x10backupPassphrase\x12V\n" +
@@ -4105,29 +4105,29 @@ const file_tammy_v1_workspace_proto_rawDesc = "" +
 	"\x0erecovery_proof\x18\x06 \x01(\v2\x1e.tammy.v1.RestoreRecoveryProofH\x00R\rrecoveryProofB\a\n" +
 	"\x05proof\"S\n" +
 	"\x18RestoreWorkspaceResponse\x127\n" +
-	"\x06status\x18\x01 \x01(\v2\x17.tammy.v1.RestoreStatusB\x06\xbaH\x03\xc8\x01\x01R\x06status\"F\n" +
-	"\x17GetRestoreStatusRequest\x12+\n" +
-	"\foperation_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\voperationId\"S\n" +
+	"\x06status\x18\x01 \x01(\v2\x17.tammy.v1.RestoreStatusB\x06\xbaH\x03\xc8\x01\x01R\x06status\"\x8a\x01\n" +
+	"\x17GetRestoreStatusRequest\x12o\n" +
+	"\foperation_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\voperationId\"S\n" +
 	"\x18GetRestoreStatusResponse\x127\n" +
-	"\x06status\x18\x01 \x01(\v2\x17.tammy.v1.RestoreStatusB\x06\xbaH\x03\xc8\x01\x01R\x06status\"\xe3\x02\n" +
+	"\x06status\x18\x01 \x01(\v2\x17.tammy.v1.RestoreStatusB\x06\xbaH\x03\xc8\x01\x01R\x06status\"\xa7\x03\n" +
 	"\x1eExportPreRestoreArchiveRequest\x12I\n" +
-	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12'\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12k\n" +
 	"\n" +
-	"archive_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tarchiveId\x122\n" +
+	"archive_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\tarchiveId\x122\n" +
 	"\x10expected_version\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion\x12T\n" +
 	"\x16administrator_password\x18\x04 \x01(\v2\x15.tammy.v1.SecretInputB\x06\xbaH\x03\xc8\x01\x01R\x15administratorPassword\x12C\n" +
 	"\vdestination\x18\x05 \x01(\v2\x19.tammy.v1.ApprovedFileRefB\x06\xbaH\x03\xc8\x01\x01R\vdestination\"a\n" +
 	"\x1fExportPreRestoreArchiveResponse\x12>\n" +
-	"\x03job\x18\x01 \x01(\v2$.tammy.v1.PreRestoreArchiveExportJobB\x06\xbaH\x03\xc8\x01\x01R\x03job\"\xc6\x01\n" +
+	"\x03job\x18\x01 \x01(\v2$.tammy.v1.PreRestoreArchiveExportJobB\x06\xbaH\x03\xc8\x01\x01R\x03job\"\x8a\x02\n" +
 	"$CancelPreRestoreArchiveExportRequest\x12I\n" +
-	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12\x1f\n" +
-	"\x06job_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05jobId\x122\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12c\n" +
+	"\x06job_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x05jobId\x122\n" +
 	"\x10expected_version\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion\"g\n" +
 	"%CancelPreRestoreArchiveExportResponse\x12>\n" +
-	"\x03job\x18\x01 \x01(\v2$.tammy.v1.PreRestoreArchiveExportJobB\x06\xbaH\x03\xc8\x01\x01R\x03job\"\x98\x01\n" +
+	"\x03job\x18\x01 \x01(\v2$.tammy.v1.PreRestoreArchiveExportJobB\x06\xbaH\x03\xc8\x01\x01R\x03job\"\xdc\x01\n" +
 	"$GetPreRestoreArchiveExportJobRequest\x12O\n" +
-	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12\x1f\n" +
-	"\x06job_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x05jobId\"g\n" +
+	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12c\n" +
+	"\x06job_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x05jobId\"g\n" +
 	"%GetPreRestoreArchiveExportJobResponse\x12>\n" +
 	"\x03job\x18\x01 \x01(\v2$.tammy.v1.PreRestoreArchiveExportJobB\x06\xbaH\x03\xc8\x01\x01R\x03job\"\xfc\x01\n" +
 	"&ListPreRestoreArchiveExportJobsRequest\x12O\n" +
@@ -4137,21 +4137,21 @@ const file_tammy_v1_workspace_proto_rawDesc = "" +
 	"\x06_state\"\x9e\x01\n" +
 	"'ListPreRestoreArchiveExportJobsResponse\x12C\n" +
 	"\x04jobs\x18\x01 \x03(\v2$.tammy.v1.PreRestoreArchiveExportJobB\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\x04jobs\x12.\n" +
-	"\x04page\x18\x02 \x01(\v2\x12.tammy.v1.PageInfoB\x06\xbaH\x03\xc8\x01\x01R\x04page\"\xc2\x02\n" +
+	"\x04page\x18\x02 \x01(\v2\x12.tammy.v1.PageInfoB\x06\xbaH\x03\xc8\x01\x01R\x04page\"\x86\x03\n" +
 	"\x1eDeletePreRestoreArchiveRequest\x12I\n" +
-	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12'\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12k\n" +
 	"\n" +
-	"archive_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tarchiveId\x122\n" +
+	"archive_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\tarchiveId\x122\n" +
 	"\x10expected_version\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion\x12T\n" +
 	"\x16administrator_password\x18\x04 \x01(\v2\x15.tammy.v1.SecretInputB\x06\xbaH\x03\xc8\x01\x01R\x15administratorPassword\x12\"\n" +
 	"\x06reason\x18\x05 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\x80\x04R\x06reason\"`\n" +
 	"\x1fDeletePreRestoreArchiveResponse\x12=\n" +
-	"\aarchive\x18\x01 \x01(\v2\x1b.tammy.v1.PreRestoreArchiveB\x06\xbaH\x03\xc8\x01\x01R\aarchive\"\x97\x01\n" +
+	"\aarchive\x18\x01 \x01(\v2\x1b.tammy.v1.PreRestoreArchiveB\x06\xbaH\x03\xc8\x01\x01R\aarchive\"\xdb\x01\n" +
 	"\x1bGetPreRestoreArchiveRequest\x12O\n" +
-	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12'\n" +
+	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12k\n" +
 	"\n" +
-	"archive_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tarchiveId\"]\n" +
+	"archive_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\tarchiveId\"]\n" +
 	"\x1cGetPreRestoreArchiveResponse\x12=\n" +
 	"\aarchive\x18\x01 \x01(\v2\x1b.tammy.v1.PreRestoreArchiveB\x06\xbaH\x03\xc8\x01\x01R\aarchive\"\xea\x01\n" +
 	"\x1dListPreRestoreArchivesRequest\x12O\n" +
@@ -4161,12 +4161,12 @@ const file_tammy_v1_workspace_proto_rawDesc = "" +
 	"\x06_state\"\x94\x01\n" +
 	"\x1eListPreRestoreArchivesResponse\x12B\n" +
 	"\barchives\x18\x01 \x03(\v2\x1b.tammy.v1.PreRestoreArchiveB\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\barchives\x12.\n" +
-	"\x04page\x18\x02 \x01(\v2\x12.tammy.v1.PageInfoB\x06\xbaH\x03\xc8\x01\x01R\x04page\"\xe7\x02\n" +
+	"\x04page\x18\x02 \x01(\v2\x12.tammy.v1.PageInfoB\x06\xbaH\x03\xc8\x01\x01R\x04page\"\xef\x03\n" +
 	"\x18TransferOwnershipRequest\x12I\n" +
-	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12+\n" +
-	"\fworkspace_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vworkspaceId\x122\n" +
-	"\x10expected_version\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion\x12.\n" +
-	"\x0etarget_user_id\x18\x04 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\ftargetUserId\x12K\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12o\n" +
+	"\fworkspace_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\vworkspaceId\x122\n" +
+	"\x10expected_version\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion\x12r\n" +
+	"\x0etarget_user_id\x18\x04 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\ftargetUserId\x12K\n" +
 	"\x1facknowledge_verification_effect\x18\x05 \x01(\bH\x00R\x1dacknowledgeVerificationEffect\x88\x01\x01B\"\n" +
 	" _acknowledge_verification_effect\"V\n" +
 	"\x19TransferOwnershipResponse\x129\n" +

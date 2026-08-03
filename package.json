@@ -33,7 +33,7 @@
     "desktop:test": "pnpm --dir apps/desktop test",
     "desktop:typecheck": "pnpm --dir apps/desktop typecheck",
     "test": "node --test scripts/*.test.mjs && go test ./services/core/... && pnpm desktop:test",
-    "typecheck": "go test ./services/core/... && pnpm desktop:typecheck",
+    "typecheck": "go test ./services/core/... && pnpm --filter @tammy/connect-client typecheck && pnpm desktop:typecheck",
     "package": "pnpm desktop:package",
     "test:e2e:packaged": "pnpm desktop:e2e",
     "format": "biome check --write .",

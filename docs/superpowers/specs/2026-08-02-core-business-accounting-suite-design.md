@@ -173,14 +173,14 @@ The initial Connect services are:
 
 ### 4.3 Common scalar and reference rules
 
-- Resource IDs are opaque UUIDv7 strings wrapped by domain-specific message fields. Callers never infer meaning from an ID.
+- Resource IDs, operation IDs, and idempotency keys are lowercase canonical UUIDv7 strings matching `^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`. Callers never infer meaning from an ID.
 - `Money` contains an ISO 4217 currency code and signed `int64` minor units.
 - Posted values never use binary floating point.
 - Rates and quantities use a signed coefficient and declared decimal scale.
 - Civil accounting dates use a local `CivilDate` message, not UTC timestamps.
 - Instants use `google.protobuf.Timestamp` and are written by the core clock.
 - Update commands use `google.protobuf.FieldMask` with an expected aggregate version.
-- Persistent commands carry a UUID idempotency key.
+- Persistent commands carry a caller-generated UUIDv7 idempotency key with the same canonical lowercase validation rule.
 - Cross-module provenance uses `SourceRef { type, id, revision, content_hash }`.
 - Page evidence uses a page number and normalized bounding rectangle, plus extraction engine, engine version, and confidence.
 - Every enum begins with an `_UNSPECIFIED = 0` value.
@@ -937,7 +937,18 @@ Clocks, IDs, job scheduling, and external outcomes are injectable. Tests do not 
 
 Coverage entries have an explicit `production` or `declared_future` stage. The reviewed pre-workspace `SystemService.GetDiagnostics` entry is the only legacy entry permitted to omit `stage`, and it is treated as production. Production RPC entries retain the strict descriptor, named-preload, executed-case, role, list, idempotency, principal-failure, and projection checks. Production transition entries likewise refer only to executed scenario cases.
 
-`declared_future` is the contract-design state used before the desktop production composition exposes a method. Its `cases` array is empty, its non-empty `futureCases` refer only to scenario `futureCases`, and its planned preload must be absent from the production preload manifest. Every business RPC declaration has a non-empty preload and projections; unique non-empty absolute routes; unique non-empty uppercase principal-failure codes; exactly four non-empty string role outcomes; `list: { states: [...] }`; and `idempotency: { mode, outcomes: [...] }`, where the mode is `query`, `persistent_command`, `challenge`, or `restore`. Nested declaration arrays contain unique non-empty strings and empty records or null values are invalid. Production business RPCs use the same metadata schema.
+`declared_future` is the contract-design state used before the desktop production composition exposes a method. Its `cases` array is empty, its non-empty `futureCases` refer only to scenario `futureCases`, and its planned preload must be absent from the production preload manifest. Production business RPCs use the same metadata schema. The exact lexical grammar is:
+
+- case IDs match `^[a-z0-9]+(?:-[a-z0-9]+)*(?:/[a-z0-9]+(?:-[a-z0-9]+)*)+$`;
+- named preload methods match `^[a-z][A-Za-z0-9]*$`;
+- visible routes match `^/[a-z0-9]+(?:-[a-z0-9]+)*(?:/[a-z0-9]+(?:-[a-z0-9]+)*)*$`;
+- projection names, role outcomes, list states, and idempotency outcomes match `^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$`;
+- principal-failure codes match `^[A-Z][A-Z0-9_]*$`; and
+- every array is duplicate-free, with preload, projections, routes, principal failures, list states, and idempotency outcomes non-empty.
+
+Every business RPC declares exactly the four role keys `workspace_admin`, `business_preparer`, `business_lodger`, and `auditor`. Its envelope mode is exactly one of `setup_journal`, `fresh_challenge`, `session_action`, `persistent_command`, `recovery_operation`, `restore`, or `query`. Setup-journal replay returns the identical pending setup and conflicts on a changed semantic request. A fresh challenge records every call as a new rate-limited attempt, is never automatically retried, and uses terminal state predicates after success. A session action uses state-predicate election without ordinary command replay. An ordinary persistent command provides exact replay and changed-request conflict. A recovery operation counts every invalid proof as a fresh attempt, then provides exact successful replay or changed-request conflict after proof. Restore resumes its fsync'd external journal and conflicts when the operation key names a changed manifest. Queries have no replay outcome.
+
+Failure metadata follows the request shape. Only requests containing `expected_version` declare `STALE_VERSION`; requests containing `expected_financial_revision` declare `SOURCE_CONFLICT` instead. Versionless queries do not claim stale-version failures. Unauthenticated setup and challenge requests do not claim `AUTHENTICATION_REQUIRED` or role `PERMISSION_DENIED`; their four role outcomes are the explicit `not_applicable_pre_authentication` token. Nested declaration records are exact-key records, and null values or unknown keys are invalid.
 
 Future transition entries follow the empty-`cases` and non-empty-`futureCases` rule, while production RPCs and transitions require at least one executed case. Scenario executed and future case IDs are non-empty, unique, disjoint, and globally unambiguous across the catalogue. A future case never satisfies production coverage. An unknown future case, an exposed preload on a future RPC, or executed cases on a future entry fails deterministically; exposure requires the entry to be promoted instead of weakening the checker. Stage omission is permitted only for the reviewed existing `SystemService.GetDiagnostics` RPC row and never for a transition.
 

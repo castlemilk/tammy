@@ -62,7 +62,7 @@ enum AuditEventType {
 // WorkspaceStateChangedEvent is the typed payload for secure workspace state changes.
 message WorkspaceStateChangedEvent {
   // workspace_id identifies the changed workspace.
-  string workspace_id = 1 [(buf.validate.field).string.uuid = true];
+  string workspace_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // from_state is the validated predecessor state.
   WorkspaceState from_state = 2 [(buf.validate.field).enum.defined_only = true];
@@ -77,7 +77,7 @@ message WorkspaceStateChangedEvent {
 // WorkspaceTrustEstablishedEvent records the verified predecessor head and destination baseline.
 message WorkspaceTrustEstablishedEvent {
   // workspace_id identifies the moved workspace.
-  string workspace_id = 1 [(buf.validate.field).string.uuid = true];
+  string workspace_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // prior_head is the exact verified 32-byte audit head.
   bytes prior_head = 2 [(buf.validate.field).bytes.len = 32];
@@ -92,7 +92,7 @@ message WorkspaceTrustEstablishedEvent {
 // UserStateChangedEvent is the typed payload for local user lifecycle changes.
 message UserStateChangedEvent {
   // user_id identifies the changed local user.
-  string user_id = 1 [(buf.validate.field).string.uuid = true];
+  string user_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // from_state is the validated predecessor state.
   UserState from_state = 2 [(buf.validate.field).enum.defined_only = true];
@@ -107,10 +107,10 @@ message UserStateChangedEvent {
 // FactorStateChangedEvent is the typed payload for TOTP factor lifecycle changes.
 message FactorStateChangedEvent {
   // factor_id identifies the changed factor.
-  string factor_id = 1 [(buf.validate.field).string.uuid = true];
+  string factor_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // user_id identifies the owning local user.
-  string user_id = 2 [(buf.validate.field).string.uuid = true];
+  string user_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // from_state is the validated predecessor state.
   FactorState from_state = 3 [(buf.validate.field).enum.defined_only = true];
@@ -122,7 +122,7 @@ message FactorStateChangedEvent {
 // OrganisationChangedEvent is the typed payload for organisation profile or ownership changes.
 message OrganisationChangedEvent {
   // organisation_id identifies the changed organisation.
-  string organisation_id = 1 [(buf.validate.field).string.uuid = true];
+  string organisation_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // previous_version is the optimistic predecessor version.
   uint64 previous_version = 2 [(buf.validate.field).uint64.gte = 1];
@@ -144,10 +144,10 @@ message OrganisationChangedEvent {
 // EntityVerificationChangedEvent is the typed payload for entity-verification lifecycle changes.
 message EntityVerificationChangedEvent {
   // verification_id identifies retained immutable evidence metadata.
-  string verification_id = 1 [(buf.validate.field).string.uuid = true];
+  string verification_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // organisation_id identifies the verified organisation.
-  string organisation_id = 2 [(buf.validate.field).string.uuid = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // from_state is the validated predecessor state.
   OrganisationVerificationState from_state = 3 [(buf.validate.field).enum.defined_only = true];
@@ -162,7 +162,7 @@ message EntityVerificationChangedEvent {
 // AccountStatusChangedEvent is the typed payload for account lifecycle changes.
 message AccountStatusChangedEvent {
   // account_id identifies the changed account.
-  string account_id = 1 [(buf.validate.field).string.uuid = true];
+  string account_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // from_status is the validated predecessor status.
   AccountStatus from_status = 2 [(buf.validate.field).enum.defined_only = true];
@@ -177,7 +177,7 @@ message AccountStatusChangedEvent {
 // OpeningConversionChangedEvent is the typed payload for opening conversion posting and replacement.
 message OpeningConversionChangedEvent {
   // conversion_id identifies the conversion aggregate.
-  string conversion_id = 1 [(buf.validate.field).string.uuid = true];
+  string conversion_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // from_state is absent for initial posting.
   optional OpeningConversionState from_state = 2;
@@ -186,13 +186,13 @@ message OpeningConversionChangedEvent {
   OpeningConversionState to_state = 3 [(buf.validate.field).enum.defined_only = true];
 
   // journal_id identifies the immutable balanced posting created by this change.
-  string journal_id = 4 [(buf.validate.field).string.uuid = true];
+  string journal_id = 4 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 }
 
 // JournalPostedEvent is the typed payload for one immutable balanced journal posting.
 message JournalPostedEvent {
   // journal_id identifies the immutable journal.
-  string journal_id = 1 [(buf.validate.field).string.uuid = true];
+  string journal_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // source identifies the workflow owning the posting.
   JournalSource source = 2 [(buf.validate.field).enum.defined_only = true];
@@ -204,13 +204,13 @@ message JournalPostedEvent {
   Money total_credits = 4 [(buf.validate.field).required = true];
 
   // reversal_of_journal_id is present only for a linked reversing journal.
-  optional string reversal_of_journal_id = 5 [(buf.validate.field).string.uuid = true];
+  optional string reversal_of_journal_id = 5 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 }
 
 // PeriodStateChangedEvent is the typed payload for accounting period close and reopen.
 message PeriodStateChangedEvent {
   // period_id identifies the changed accounting period.
-  string period_id = 1 [(buf.validate.field).string.uuid = true];
+  string period_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // from_state is the validated predecessor state.
   PeriodState from_state = 2 [(buf.validate.field).enum.defined_only = true];
@@ -225,7 +225,7 @@ message PeriodStateChangedEvent {
 // BackupJobChangedEvent is the typed payload for encrypted backup job changes.
 message BackupJobChangedEvent {
   // job_id identifies the persisted backup job.
-  string job_id = 1 [(buf.validate.field).string.uuid = true];
+  string job_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // from_state is absent for initial job creation.
   optional BackupJobState from_state = 2;
@@ -240,7 +240,7 @@ message BackupJobChangedEvent {
 // RestoreStateChangedEvent is the typed payload for external-journal restore progression.
 message RestoreStateChangedEvent {
   // operation_id identifies the external restore journal entry.
-  string operation_id = 1 [(buf.validate.field).string.uuid = true];
+  string operation_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // from_state is absent for PREPARED creation.
   optional RestoreState from_state = 2;
@@ -255,7 +255,7 @@ message RestoreStateChangedEvent {
 // PreRestoreArchiveChangedEvent is the typed payload for retained predecessor evidence changes.
 message PreRestoreArchiveChangedEvent {
   // archive_id identifies the retained encrypted archive.
-  string archive_id = 1 [(buf.validate.field).string.uuid = true];
+  string archive_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // from_state is absent for initial archive creation.
   optional PreRestoreArchiveState from_state = 2;
@@ -270,7 +270,7 @@ message PreRestoreArchiveChangedEvent {
 // EvidenceExportChangedEvent is the typed payload for a persisted signed export job.
 message EvidenceExportChangedEvent {
   // job_id identifies the persisted export job.
-  string job_id = 1 [(buf.validate.field).string.uuid = true];
+  string job_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 
   // from_state is an optional bounded symbolic state name to avoid a cross-file import cycle.
   optional string from_state = 2 [(buf.validate.field).string.max_len = 96];

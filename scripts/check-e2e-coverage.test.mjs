@@ -352,6 +352,25 @@ test("business RPC coverage requires complete deterministic metadata", async () 
   }
 });
 
+test("business RPC coverage accepts every normative idempotency class", async () => {
+  const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
+  const modes = [
+    "fresh_challenge",
+    "persistent_command",
+    "query",
+    "recovery_operation",
+    "restore",
+    "session_action",
+    "setup_journal",
+  ];
+
+  for (const mode of modes) {
+    const input = validInput();
+    input.coverage.rpcs[RPC].idempotency = { mode, outcomes: ["not_applicable"] };
+    assert.doesNotThrow(() => checkE2ECoverage(input), mode);
+  }
+});
+
 test("production and future case IDs reject ambiguous semantic strings", async () => {
   const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
 

@@ -13,9 +13,9 @@ plugins:
       - paths=source_relative
   - local: protoc-gen-es
     out: packages/connect-client/src/gen
-    include_imports: true
     opt:
       - target=ts
       - import_extension=js
+      - rewrite_imports=./buf/validate/validate_pb.js:@buf/bufbuild_protovalidate.bufbuild_es
 inputs:
   - directory: proto

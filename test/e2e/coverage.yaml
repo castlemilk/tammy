@@ -64,23 +64,25 @@ rpcs:
     projections:
       - create_workspace_result
     routes:
-      - /workspace/security
+      - /setup/workspace
     roles:
-      workspace_admin: planned_allowed
-      business_preparer: planned_permission_denied
-      business_lodger: planned_permission_denied
-      auditor: planned_permission_denied
+      workspace_admin: not_applicable_pre_authentication
+      business_preparer: not_applicable_pre_authentication
+      business_lodger: not_applicable_pre_authentication
+      auditor: not_applicable_pre_authentication
     principalFailures:
-      - AUTHENTICATION_REQUIRED
-      - PERMISSION_DENIED
-      - STALE_VERSION
+      - PATH_EXISTS
+      - WEAK_WORKSPACE_PASSPHRASE
+      - INVALID_ADMINISTRATOR
+      - KEY_STORE_FAILURE
+      - IDEMPOTENCY_CONFLICT
     list:
       states:
         - not_applicable
     idempotency:
-      mode: persistent_command
+      mode: setup_journal
       outcomes:
-        - replay
+        - exact_replay
         - changed_request_conflict
   tammy.v1.WorkspaceService.ConfirmRecovery:
     stage: declared_future
@@ -91,24 +93,25 @@ rpcs:
     projections:
       - confirm_recovery_result
     routes:
-      - /workspace/security
+      - /setup/workspace
     roles:
-      workspace_admin: planned_allowed
-      business_preparer: planned_permission_denied
-      business_lodger: planned_permission_denied
-      auditor: planned_permission_denied
+      workspace_admin: not_applicable_pre_authentication
+      business_preparer: not_applicable_pre_authentication
+      business_lodger: not_applicable_pre_authentication
+      auditor: not_applicable_pre_authentication
     principalFailures:
-      - AUTHENTICATION_REQUIRED
-      - PERMISSION_DENIED
-      - STALE_VERSION
+      - RECOVERY_GROUPS_INVALID
+      - SETUP_EXPIRED
+      - CHALLENGE_COOLDOWN
     list:
       states:
         - not_applicable
     idempotency:
-      mode: challenge
+      mode: fresh_challenge
       outcomes:
-        - replay
-        - changed_request_conflict
+        - fresh_attempt
+        - terminal_state_after_success
+        - no_automatic_retry
   tammy.v1.WorkspaceService.UnlockWorkspace:
     stage: declared_future
     preload: unlockWorkspace
@@ -118,24 +121,26 @@ rpcs:
     projections:
       - unlock_workspace_result
     routes:
-      - /workspace/security
+      - /unlock
     roles:
-      workspace_admin: planned_allowed
-      business_preparer: planned_permission_denied
-      business_lodger: planned_permission_denied
-      auditor: planned_permission_denied
+      workspace_admin: not_applicable_pre_authentication
+      business_preparer: not_applicable_pre_authentication
+      business_lodger: not_applicable_pre_authentication
+      auditor: not_applicable_pre_authentication
     principalFailures:
-      - AUTHENTICATION_REQUIRED
-      - PERMISSION_DENIED
-      - STALE_VERSION
+      - WORKSPACE_PROOF_INVALID
+      - WORKSPACE_COOLDOWN
+      - CORRUPT_HEADER
+      - UNSUPPORTED_SCHEMA
     list:
       states:
         - not_applicable
     idempotency:
-      mode: challenge
+      mode: fresh_challenge
       outcomes:
-        - replay
-        - changed_request_conflict
+        - fresh_attempt
+        - terminal_state_after_success
+        - no_automatic_retry
   tammy.v1.WorkspaceService.LockWorkspace:
     stage: declared_future
     preload: lockWorkspace
@@ -145,24 +150,23 @@ rpcs:
     projections:
       - lock_workspace_result
     routes:
-      - /workspace/security
+      - /unlock
     roles:
       workspace_admin: planned_allowed
-      business_preparer: planned_permission_denied
-      business_lodger: planned_permission_denied
-      auditor: planned_permission_denied
+      business_preparer: planned_allowed
+      business_lodger: planned_allowed
+      auditor: planned_allowed
     principalFailures:
       - AUTHENTICATION_REQUIRED
-      - PERMISSION_DENIED
-      - STALE_VERSION
+      - WORKSPACE_NOT_OPEN
     list:
       states:
         - not_applicable
     idempotency:
-      mode: persistent_command
+      mode: session_action
       outcomes:
-        - replay
-        - changed_request_conflict
+        - state_predicate_election
+        - terminal_state_after_success
   tammy.v1.WorkspaceService.ForgetRememberedWorkspace:
     stage: declared_future
     preload: forgetRememberedWorkspace
@@ -172,24 +176,24 @@ rpcs:
     projections:
       - forget_remembered_workspace_result
     routes:
-      - /workspace/security
+      - /unlock
     roles:
       workspace_admin: planned_allowed
-      business_preparer: planned_permission_denied
-      business_lodger: planned_permission_denied
-      auditor: planned_permission_denied
+      business_preparer: planned_allowed
+      business_lodger: planned_allowed
+      auditor: planned_allowed
     principalFailures:
       - AUTHENTICATION_REQUIRED
-      - PERMISSION_DENIED
-      - STALE_VERSION
+      - WORKSPACE_NOT_FOUND
+      - KEY_STORE_FAILURE
     list:
       states:
         - not_applicable
     idempotency:
-      mode: persistent_command
+      mode: session_action
       outcomes:
-        - replay
-        - changed_request_conflict
+        - state_predicate_election
+        - terminal_state_after_success
   tammy.v1.WorkspaceService.GetWorkspaceState:
     stage: declared_future
     preload: getWorkspaceState
@@ -199,16 +203,14 @@ rpcs:
     projections:
       - get_workspace_state_result
     routes:
-      - /workspace/security
+      - /unlock
     roles:
-      workspace_admin: planned_allowed
-      business_preparer: planned_allowed
-      business_lodger: planned_allowed
-      auditor: planned_allowed
+      workspace_admin: not_applicable_pre_authentication
+      business_preparer: not_applicable_pre_authentication
+      business_lodger: not_applicable_pre_authentication
+      auditor: not_applicable_pre_authentication
     principalFailures:
-      - AUTHENTICATION_REQUIRED
-      - PERMISSION_DENIED
-      - STALE_VERSION
+      - VALIDATION_FAILED
     list:
       states:
         - found
@@ -219,14 +221,14 @@ rpcs:
         - not_applicable
   tammy.v1.WorkspaceService.ChangePassphrase:
     stage: declared_future
-    preload: changePassphrase
+    preload: changeWorkspacePassphrase
     cases: []
     futureCases:
       - slice-1/foundation-contracts
     projections:
       - change_passphrase_result
     routes:
-      - /workspace/security
+      - /settings/security
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_permission_denied
@@ -236,13 +238,19 @@ rpcs:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
       - STALE_VERSION
+      - IDEMPOTENCY_CONFLICT
+      - CURRENT_PASSPHRASE_INVALID
+      - WEAK_WORKSPACE_PASSPHRASE
+      - PASSPHRASE_REUSED
+      - FACTOR_ASSERTION_REQUIRED
+      - FACTOR_ASSERTION_STALE
     list:
       states:
         - not_applicable
     idempotency:
-      mode: challenge
+      mode: persistent_command
       outcomes:
-        - replay
+        - exact_replay
         - changed_request_conflict
   tammy.v1.WorkspaceService.RecoverWorkspace:
     stage: declared_future
@@ -253,24 +261,28 @@ rpcs:
     projections:
       - recover_workspace_result
     routes:
-      - /workspace/security
+      - /recover
     roles:
-      workspace_admin: planned_allowed
-      business_preparer: planned_permission_denied
-      business_lodger: planned_permission_denied
-      auditor: planned_permission_denied
+      workspace_admin: not_applicable_pre_authentication
+      business_preparer: not_applicable_pre_authentication
+      business_lodger: not_applicable_pre_authentication
+      auditor: not_applicable_pre_authentication
     principalFailures:
-      - AUTHENTICATION_REQUIRED
-      - PERMISSION_DENIED
-      - STALE_VERSION
+      - RECOVERY_INVALID
+      - RECOVERY_COOLDOWN
+      - WEAK_WORKSPACE_PASSPHRASE
+      - PASSPHRASE_REUSED
+      - IDEMPOTENCY_CONFLICT
     list:
       states:
         - not_applicable
     idempotency:
-      mode: challenge
+      mode: recovery_operation
       outcomes:
-        - replay
+        - fresh_invalid_proof_attempt
+        - exact_success_replay
         - changed_request_conflict
+        - no_automatic_retry
   tammy.v1.WorkspaceService.EstablishMovedWorkspaceTrust:
     stage: declared_future
     preload: establishMovedWorkspaceTrust
@@ -280,7 +292,7 @@ rpcs:
     projections:
       - establish_moved_workspace_trust_result
     routes:
-      - /workspace/moved-trust
+      - /workspace-trust
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_permission_denied
@@ -290,13 +302,18 @@ rpcs:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
       - STALE_VERSION
+      - IDEMPOTENCY_CONFLICT
+      - AUDIT_CHAIN_INVALID
+      - FACTOR_ASSERTION_REQUIRED
+      - FACTOR_ASSERTION_STALE
+      - RECOVERY_INVALID
     list:
       states:
         - not_applicable
     idempotency:
-      mode: challenge
+      mode: persistent_command
       outcomes:
-        - replay
+        - exact_replay
         - changed_request_conflict
   tammy.v1.WorkspaceService.BackupWorkspace:
     stage: declared_future
@@ -307,7 +324,7 @@ rpcs:
     projections:
       - backup_workspace_result
     routes:
-      - /workspace/backup-restore
+      - /settings/backup
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_permission_denied
@@ -316,14 +333,16 @@ rpcs:
     principalFailures:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
-      - STALE_VERSION
+      - IDEMPOTENCY_CONFLICT
+      - DESTINATION_FAILURE
+      - INTEGRITY_FAILURE
     list:
       states:
         - not_applicable
     idempotency:
       mode: persistent_command
       outcomes:
-        - replay
+        - exact_replay
         - changed_request_conflict
   tammy.v1.WorkspaceService.CancelBackup:
     stage: declared_future
@@ -334,7 +353,7 @@ rpcs:
     projections:
       - cancel_backup_result
     routes:
-      - /workspace/backup-restore
+      - /settings/backup
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_permission_denied
@@ -344,13 +363,16 @@ rpcs:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
       - STALE_VERSION
+      - IDEMPOTENCY_CONFLICT
+      - COMMIT_POINT_PASSED
+      - INVALID_STATE_TRANSITION
     list:
       states:
         - not_applicable
     idempotency:
       mode: persistent_command
       outcomes:
-        - replay
+        - exact_replay
         - changed_request_conflict
   tammy.v1.WorkspaceService.GetBackupJob:
     stage: declared_future
@@ -361,7 +383,7 @@ rpcs:
     projections:
       - get_backup_job_result
     routes:
-      - /workspace/backup-restore
+      - /settings/backup
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_permission_denied
@@ -370,7 +392,7 @@ rpcs:
     principalFailures:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
-      - STALE_VERSION
+      - NOT_FOUND
     list:
       states:
         - found
@@ -388,7 +410,7 @@ rpcs:
     projections:
       - list_backup_jobs_result
     routes:
-      - /workspace/backup-restore
+      - /settings/backup
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_permission_denied
@@ -397,7 +419,7 @@ rpcs:
     principalFailures:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
-      - STALE_VERSION
+      - INVALID_CURSOR
     list:
       states:
         - empty
@@ -417,24 +439,28 @@ rpcs:
     projections:
       - restore_workspace_result
     routes:
-      - /workspace/backup-restore
+      - /restore
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_permission_denied
       business_lodger: planned_permission_denied
       auditor: planned_permission_denied
     principalFailures:
-      - AUTHENTICATION_REQUIRED
+      - RESTORE_KEY_INVALID
       - PERMISSION_DENIED
-      - STALE_VERSION
+      - FACTOR_ASSERTION_REQUIRED
+      - SIGNATURE_INVALID
+      - UNSUPPORTED_SCHEMA
+      - IDEMPOTENCY_CONFLICT
     list:
       states:
         - not_applicable
     idempotency:
       mode: restore
       outcomes:
-        - replay
-        - changed_request_conflict
+        - external_journal_resume
+        - exact_replay
+        - changed_manifest_conflict
   tammy.v1.WorkspaceService.GetRestoreStatus:
     stage: declared_future
     preload: getRestoreStatus
@@ -444,16 +470,14 @@ rpcs:
     projections:
       - get_restore_status_result
     routes:
-      - /workspace/backup-restore
+      - /restore
     roles:
-      workspace_admin: planned_allowed
-      business_preparer: planned_permission_denied
-      business_lodger: planned_permission_denied
-      auditor: planned_permission_denied
+      workspace_admin: not_applicable_pre_authentication
+      business_preparer: not_applicable_pre_authentication
+      business_lodger: not_applicable_pre_authentication
+      auditor: not_applicable_pre_authentication
     principalFailures:
-      - AUTHENTICATION_REQUIRED
-      - PERMISSION_DENIED
-      - STALE_VERSION
+      - RESTORE_OPERATION_NOT_FOUND
     list:
       states:
         - found
@@ -471,7 +495,7 @@ rpcs:
     projections:
       - export_pre_restore_archive_result
     routes:
-      - /workspace/backup-restore
+      - /restore/evidence
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_permission_denied
@@ -481,13 +505,19 @@ rpcs:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
       - STALE_VERSION
+      - IDEMPOTENCY_CONFLICT
+      - ARCHIVE_NOT_FOUND
+      - CURRENT_PASSWORD_INVALID
+      - FACTOR_ASSERTION_REQUIRED
+      - FACTOR_ASSERTION_STALE
+      - DESTINATION_FAILURE
     list:
       states:
         - not_applicable
     idempotency:
       mode: persistent_command
       outcomes:
-        - replay
+        - exact_replay
         - changed_request_conflict
   tammy.v1.WorkspaceService.CancelPreRestoreArchiveExport:
     stage: declared_future
@@ -498,7 +528,7 @@ rpcs:
     projections:
       - cancel_pre_restore_archive_export_result
     routes:
-      - /workspace/backup-restore
+      - /restore/evidence
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_permission_denied
@@ -508,13 +538,16 @@ rpcs:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
       - STALE_VERSION
+      - IDEMPOTENCY_CONFLICT
+      - COMMIT_POINT_PASSED
+      - INVALID_STATE_TRANSITION
     list:
       states:
         - not_applicable
     idempotency:
       mode: persistent_command
       outcomes:
-        - replay
+        - exact_replay
         - changed_request_conflict
   tammy.v1.WorkspaceService.GetPreRestoreArchiveExportJob:
     stage: declared_future
@@ -525,7 +558,7 @@ rpcs:
     projections:
       - get_pre_restore_archive_export_job_result
     routes:
-      - /workspace/backup-restore
+      - /restore/evidence
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_permission_denied
@@ -534,7 +567,7 @@ rpcs:
     principalFailures:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
-      - STALE_VERSION
+      - NOT_FOUND
     list:
       states:
         - found
@@ -552,7 +585,7 @@ rpcs:
     projections:
       - list_pre_restore_archive_export_jobs_result
     routes:
-      - /workspace/backup-restore
+      - /restore/evidence
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_permission_denied
@@ -561,7 +594,7 @@ rpcs:
     principalFailures:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
-      - STALE_VERSION
+      - INVALID_CURSOR
     list:
       states:
         - empty
@@ -581,7 +614,7 @@ rpcs:
     projections:
       - delete_pre_restore_archive_result
     routes:
-      - /workspace/backup-restore
+      - /restore/evidence
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_permission_denied
@@ -591,13 +624,20 @@ rpcs:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
       - STALE_VERSION
+      - IDEMPOTENCY_CONFLICT
+      - ARCHIVE_NOT_FOUND
+      - RETENTION_PERIOD_ACTIVE
+      - CURRENT_PASSWORD_INVALID
+      - FACTOR_ASSERTION_REQUIRED
+      - FACTOR_ASSERTION_STALE
+      - MISSING_REASON
     list:
       states:
         - not_applicable
     idempotency:
       mode: persistent_command
       outcomes:
-        - replay
+        - exact_replay
         - changed_request_conflict
   tammy.v1.WorkspaceService.GetPreRestoreArchive:
     stage: declared_future
@@ -608,7 +648,7 @@ rpcs:
     projections:
       - get_pre_restore_archive_result
     routes:
-      - /workspace/backup-restore
+      - /restore/evidence
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_permission_denied
@@ -617,7 +657,7 @@ rpcs:
     principalFailures:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
-      - STALE_VERSION
+      - NOT_FOUND
     list:
       states:
         - found
@@ -635,7 +675,7 @@ rpcs:
     projections:
       - list_pre_restore_archives_result
     routes:
-      - /workspace/backup-restore
+      - /restore/evidence
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_permission_denied
@@ -644,7 +684,7 @@ rpcs:
     principalFailures:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
-      - STALE_VERSION
+      - INVALID_CURSOR
     list:
       states:
         - empty
@@ -657,14 +697,14 @@ rpcs:
         - not_applicable
   tammy.v1.WorkspaceService.TransferOwnership:
     stage: declared_future
-    preload: transferOwnership
+    preload: transferWorkspaceOwnership
     cases: []
     futureCases:
       - slice-1/foundation-contracts
     projections:
       - transfer_ownership_result
     routes:
-      - /workspace/ownership
+      - /settings/ownership
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_permission_denied
@@ -674,13 +714,20 @@ rpcs:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
       - STALE_VERSION
+      - IDEMPOTENCY_CONFLICT
+      - OWNER_REQUIRED
+      - TARGET_INVALID
+      - FACTOR_ASSERTION_REQUIRED
+      - FACTOR_ASSERTION_STALE
+      - ACKNOWLEDGEMENT_MISSING
+      - UNRESOLVED_TRANSMISSION
     list:
       states:
         - not_applicable
     idempotency:
-      mode: challenge
+      mode: persistent_command
       outcomes:
-        - replay
+        - exact_replay
         - changed_request_conflict
   tammy.v1.IdentityService.SignIn:
     stage: declared_future
@@ -691,24 +738,25 @@ rpcs:
     projections:
       - sign_in_result
     routes:
-      - /workspace/security
+      - /sign-in
     roles:
-      workspace_admin: planned_allowed
-      business_preparer: planned_allowed
-      business_lodger: planned_allowed
-      auditor: planned_allowed
+      workspace_admin: not_applicable_pre_authentication
+      business_preparer: not_applicable_pre_authentication
+      business_lodger: not_applicable_pre_authentication
+      auditor: not_applicable_pre_authentication
     principalFailures:
-      - AUTHENTICATION_REQUIRED
-      - PERMISSION_DENIED
-      - STALE_VERSION
+      - INVALID_CREDENTIALS
+      - ACCOUNT_LOCKED
+      - SIGN_IN_COOLDOWN
     list:
       states:
         - not_applicable
     idempotency:
-      mode: challenge
+      mode: fresh_challenge
       outcomes:
-        - replay
-        - changed_request_conflict
+        - fresh_attempt
+        - terminal_state_after_success
+        - no_automatic_retry
   tammy.v1.IdentityService.SignOut:
     stage: declared_future
     preload: signOut
@@ -718,7 +766,7 @@ rpcs:
     projections:
       - sign_out_result
     routes:
-      - /workspace/security
+      - /sign-in
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_allowed
@@ -726,16 +774,15 @@ rpcs:
       auditor: planned_allowed
     principalFailures:
       - AUTHENTICATION_REQUIRED
-      - PERMISSION_DENIED
-      - STALE_VERSION
+      - SESSION_INVALID
     list:
       states:
         - not_applicable
     idempotency:
-      mode: persistent_command
+      mode: session_action
       outcomes:
-        - replay
-        - changed_request_conflict
+        - state_predicate_election
+        - terminal_state_after_success
   tammy.v1.IdentityService.GetSession:
     stage: declared_future
     preload: getSession
@@ -745,7 +792,7 @@ rpcs:
     projections:
       - get_session_result
     routes:
-      - /workspace/security
+      - /sign-in
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_allowed
@@ -753,8 +800,6 @@ rpcs:
       auditor: planned_allowed
     principalFailures:
       - AUTHENTICATION_REQUIRED
-      - PERMISSION_DENIED
-      - STALE_VERSION
     list:
       states:
         - found
@@ -772,7 +817,7 @@ rpcs:
     projections:
       - get_current_user_result
     routes:
-      - /workspace/security
+      - /sign-in
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_allowed
@@ -780,8 +825,6 @@ rpcs:
       auditor: planned_allowed
     principalFailures:
       - AUTHENTICATION_REQUIRED
-      - PERMISSION_DENIED
-      - STALE_VERSION
     list:
       states:
         - found
@@ -799,7 +842,7 @@ rpcs:
     projections:
       - create_user_result
     routes:
-      - /workspace/users
+      - /settings/users
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_permission_denied
@@ -808,14 +851,16 @@ rpcs:
     principalFailures:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
-      - STALE_VERSION
+      - IDEMPOTENCY_CONFLICT
+      - DUPLICATE_USERNAME
+      - INVALID_ROLE
     list:
       states:
         - not_applicable
     idempotency:
       mode: persistent_command
       outcomes:
-        - replay
+        - exact_replay
         - changed_request_conflict
   tammy.v1.IdentityService.AssignRoles:
     stage: declared_future
@@ -826,7 +871,7 @@ rpcs:
     projections:
       - assign_roles_result
     routes:
-      - /workspace/users
+      - /settings/users
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_permission_denied
@@ -836,13 +881,16 @@ rpcs:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
       - STALE_VERSION
+      - IDEMPOTENCY_CONFLICT
+      - LAST_ADMIN_REMOVAL
+      - INVALID_ROLE
     list:
       states:
         - not_applicable
     idempotency:
       mode: persistent_command
       outcomes:
-        - replay
+        - exact_replay
         - changed_request_conflict
   tammy.v1.IdentityService.ResetUserAuthentication:
     stage: declared_future
@@ -853,7 +901,7 @@ rpcs:
     projections:
       - reset_user_authentication_result
     routes:
-      - /workspace/users
+      - /settings/users
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_permission_denied
@@ -863,13 +911,17 @@ rpcs:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
       - STALE_VERSION
+      - IDEMPOTENCY_CONFLICT
+      - LAST_ADMIN_RESET
+      - FACTOR_ASSERTION_REQUIRED
+      - FACTOR_ASSERTION_STALE
     list:
       states:
         - not_applicable
     idempotency:
       mode: persistent_command
       outcomes:
-        - replay
+        - exact_replay
         - changed_request_conflict
   tammy.v1.IdentityService.GetUser:
     stage: declared_future
@@ -880,7 +932,7 @@ rpcs:
     projections:
       - get_user_result
     routes:
-      - /workspace/users
+      - /settings/users
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_permission_denied
@@ -889,7 +941,7 @@ rpcs:
     principalFailures:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
-      - STALE_VERSION
+      - NOT_FOUND
     list:
       states:
         - found
@@ -907,7 +959,7 @@ rpcs:
     projections:
       - list_users_result
     routes:
-      - /workspace/users
+      - /settings/users
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_permission_denied
@@ -916,7 +968,7 @@ rpcs:
     principalFailures:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
-      - STALE_VERSION
+      - INVALID_CURSOR
     list:
       states:
         - empty
@@ -936,24 +988,26 @@ rpcs:
     projections:
       - activate_user_result
     routes:
-      - /workspace/users
+      - /activate
     roles:
-      workspace_admin: planned_allowed
-      business_preparer: planned_permission_denied
-      business_lodger: planned_permission_denied
-      auditor: planned_permission_denied
+      workspace_admin: not_applicable_pre_authentication
+      business_preparer: not_applicable_pre_authentication
+      business_lodger: not_applicable_pre_authentication
+      auditor: not_applicable_pre_authentication
     principalFailures:
-      - AUTHENTICATION_REQUIRED
-      - PERMISSION_DENIED
-      - STALE_VERSION
+      - ACTIVATION_CODE_INVALID
+      - ACTIVATION_EXPIRED
+      - WEAK_PASSWORD
+      - ACTIVATION_COOLDOWN
     list:
       states:
         - not_applicable
     idempotency:
-      mode: challenge
+      mode: fresh_challenge
       outcomes:
-        - replay
-        - changed_request_conflict
+        - fresh_attempt
+        - terminal_state_after_success
+        - no_automatic_retry
   tammy.v1.IdentityService.ChangePassword:
     stage: declared_future
     preload: changePassword
@@ -963,7 +1017,7 @@ rpcs:
     projections:
       - change_password_result
     routes:
-      - /workspace/security
+      - /settings/security
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_allowed
@@ -973,24 +1027,28 @@ rpcs:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
       - STALE_VERSION
+      - IDEMPOTENCY_CONFLICT
+      - CURRENT_PASSWORD_INVALID
+      - WEAK_PASSWORD
+      - PASSWORD_REUSED
     list:
       states:
         - not_applicable
     idempotency:
-      mode: challenge
+      mode: persistent_command
       outcomes:
-        - replay
+        - exact_replay
         - changed_request_conflict
   tammy.v1.IdentityService.EnrolTOTP:
     stage: declared_future
-    preload: enrolTOTP
+    preload: enrolTotp
     cases: []
     futureCases:
       - slice-1/foundation-contracts
     projections:
-      - enrol_totp_result
+      - enrol_t_o_t_p_result
     routes:
-      - /workspace/security
+      - /settings/security
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_allowed
@@ -999,25 +1057,27 @@ rpcs:
     principalFailures:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
-      - STALE_VERSION
+      - IDEMPOTENCY_CONFLICT
+      - CURRENT_PASSWORD_INVALID
+      - FACTOR_ALREADY_ENROLLED
     list:
       states:
         - not_applicable
     idempotency:
-      mode: challenge
+      mode: persistent_command
       outcomes:
-        - replay
+        - exact_replay
         - changed_request_conflict
   tammy.v1.IdentityService.ConfirmTOTP:
     stage: declared_future
-    preload: confirmTOTP
+    preload: confirmTotp
     cases: []
     futureCases:
       - slice-1/foundation-contracts
     projections:
-      - confirm_totp_result
+      - confirm_t_o_t_p_result
     routes:
-      - /workspace/security
+      - /settings/security
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_allowed
@@ -1025,26 +1085,28 @@ rpcs:
       auditor: planned_allowed
     principalFailures:
       - AUTHENTICATION_REQUIRED
-      - PERMISSION_DENIED
-      - STALE_VERSION
+      - TOTP_INVALID
+      - TOTP_REPLAYED
+      - TOTP_COOLDOWN
     list:
       states:
         - not_applicable
     idempotency:
-      mode: challenge
+      mode: fresh_challenge
       outcomes:
-        - replay
-        - changed_request_conflict
+        - fresh_attempt
+        - terminal_state_after_success
+        - no_automatic_retry
   tammy.v1.IdentityService.AssertTOTP:
     stage: declared_future
-    preload: assertTOTP
+    preload: assertTotp
     cases: []
     futureCases:
       - slice-1/foundation-contracts
     projections:
-      - assert_totp_result
+      - assert_t_o_t_p_result
     routes:
-      - /workspace/security
+      - /settings/security
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_allowed
@@ -1052,26 +1114,29 @@ rpcs:
       auditor: planned_allowed
     principalFailures:
       - AUTHENTICATION_REQUIRED
-      - PERMISSION_DENIED
-      - STALE_VERSION
+      - TOTP_INVALID
+      - TOTP_REPLAYED
+      - FACTOR_UNAVAILABLE
+      - TOTP_COOLDOWN
     list:
       states:
         - not_applicable
     idempotency:
-      mode: challenge
+      mode: fresh_challenge
       outcomes:
-        - replay
-        - changed_request_conflict
+        - fresh_attempt
+        - terminal_state_after_success
+        - no_automatic_retry
   tammy.v1.IdentityService.DisableTOTP:
     stage: declared_future
-    preload: disableTOTP
+    preload: disableTotp
     cases: []
     futureCases:
       - slice-1/foundation-contracts
     projections:
-      - disable_totp_result
+      - disable_t_o_t_p_result
     routes:
-      - /workspace/security
+      - /settings/security
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_allowed
@@ -1081,13 +1146,18 @@ rpcs:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
       - STALE_VERSION
+      - IDEMPOTENCY_CONFLICT
+      - INVALID_PROOF
+      - FACTOR_ASSERTION_REQUIRED
+      - FACTOR_ASSERTION_STALE
+      - LODGMENT_UNAVAILABLE
     list:
       states:
         - not_applicable
     idempotency:
-      mode: challenge
+      mode: persistent_command
       outcomes:
-        - replay
+        - exact_replay
         - changed_request_conflict
   tammy.v1.IdentityService.RecoverAdministrator:
     stage: declared_future
@@ -1098,24 +1168,27 @@ rpcs:
     projections:
       - recover_administrator_result
     routes:
-      - /workspace/users
+      - /recover
     roles:
-      workspace_admin: planned_allowed
-      business_preparer: planned_permission_denied
-      business_lodger: planned_permission_denied
-      auditor: planned_permission_denied
+      workspace_admin: not_applicable_pre_authentication
+      business_preparer: not_applicable_pre_authentication
+      business_lodger: not_applicable_pre_authentication
+      auditor: not_applicable_pre_authentication
     principalFailures:
-      - AUTHENTICATION_REQUIRED
-      - PERMISSION_DENIED
-      - STALE_VERSION
+      - RECOVERY_INVALID
+      - RECOVERY_COOLDOWN
+      - USER_NOT_ADMIN
+      - IDEMPOTENCY_CONFLICT
     list:
       states:
         - not_applicable
     idempotency:
-      mode: challenge
+      mode: recovery_operation
       outcomes:
-        - replay
+        - fresh_invalid_proof_attempt
+        - exact_success_replay
         - changed_request_conflict
+        - no_automatic_retry
   tammy.v1.OrganisationService.CreateOrganisation:
     stage: declared_future
     preload: createOrganisation
@@ -1134,14 +1207,16 @@ rpcs:
     principalFailures:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
-      - STALE_VERSION
+      - IDEMPOTENCY_CONFLICT
+      - INVALID_ABN
+      - DUPLICATE_ABN
     list:
       states:
         - not_applicable
     idempotency:
       mode: persistent_command
       outcomes:
-        - replay
+        - exact_replay
         - changed_request_conflict
   tammy.v1.OrganisationService.UpdateOrganisation:
     stage: declared_future
@@ -1152,7 +1227,7 @@ rpcs:
     projections:
       - update_organisation_result
     routes:
-      - /setup/organisation
+      - /settings/organisation
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_permission_denied
@@ -1162,13 +1237,20 @@ rpcs:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
       - STALE_VERSION
+      - IDEMPOTENCY_CONFLICT
+      - INVALID_ABN
+      - INVALID_GST_SETTINGS
+      - FACTOR_ASSERTION_REQUIRED
+      - FACTOR_ASSERTION_STALE
+      - PERIOD_HAS_POSTINGS
+      - UNRESOLVED_TRANSMISSION
     list:
       states:
         - not_applicable
     idempotency:
       mode: persistent_command
       outcomes:
-        - replay
+        - exact_replay
         - changed_request_conflict
   tammy.v1.OrganisationService.RecordEntityVerification:
     stage: declared_future
@@ -1179,7 +1261,7 @@ rpcs:
     projections:
       - record_entity_verification_result
     routes:
-      - /setup/organisation
+      - /settings/organisation
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_permission_denied
@@ -1189,13 +1271,17 @@ rpcs:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
       - STALE_VERSION
+      - IDEMPOTENCY_CONFLICT
+      - VERIFICATION_SOURCE_INVALID
+      - EVIDENCE_MISSING
+      - DETAILS_MISMATCH
     list:
       states:
         - not_applicable
     idempotency:
       mode: persistent_command
       outcomes:
-        - replay
+        - exact_replay
         - changed_request_conflict
   tammy.v1.OrganisationService.GetOrganisation:
     stage: declared_future
@@ -1206,7 +1292,7 @@ rpcs:
     projections:
       - get_organisation_result
     routes:
-      - /setup/organisation
+      - /settings/organisation
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_allowed
@@ -1215,7 +1301,7 @@ rpcs:
     principalFailures:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
-      - STALE_VERSION
+      - NOT_FOUND
     list:
       states:
         - found
@@ -1233,23 +1319,25 @@ rpcs:
     projections:
       - create_account_result
     routes:
-      - /accounting/opening-balances
+      - /accounting/chart
     roles:
       workspace_admin: planned_allowed
-      business_preparer: planned_permission_denied
+      business_preparer: planned_allowed
       business_lodger: planned_permission_denied
       auditor: planned_permission_denied
     principalFailures:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
-      - STALE_VERSION
+      - IDEMPOTENCY_CONFLICT
+      - DUPLICATE_CODE
+      - INVALID_CLASSIFICATION
     list:
       states:
         - not_applicable
     idempotency:
       mode: persistent_command
       outcomes:
-        - replay
+        - exact_replay
         - changed_request_conflict
   tammy.v1.AccountingService.UpdateAccount:
     stage: declared_future
@@ -1260,7 +1348,7 @@ rpcs:
     projections:
       - update_account_result
     routes:
-      - /accounting/opening-balances
+      - /accounting/chart
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_permission_denied
@@ -1270,13 +1358,16 @@ rpcs:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
       - STALE_VERSION
+      - IDEMPOTENCY_CONFLICT
+      - CONTROL_FIELD_IMMUTABLE
+      - INVALID_CLASSIFICATION
     list:
       states:
         - not_applicable
     idempotency:
       mode: persistent_command
       outcomes:
-        - replay
+        - exact_replay
         - changed_request_conflict
   tammy.v1.AccountingService.SetAccountStatus:
     stage: declared_future
@@ -1287,7 +1378,7 @@ rpcs:
     projections:
       - set_account_status_result
     routes:
-      - /accounting/opening-balances
+      - /accounting/chart
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_permission_denied
@@ -1297,13 +1388,17 @@ rpcs:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
       - STALE_VERSION
+      - IDEMPOTENCY_CONFLICT
+      - SYSTEM_ACCOUNT
+      - NON_ZERO_DRAFT_DEPENDENCY
+      - INVALID_STATE_TRANSITION
     list:
       states:
         - not_applicable
     idempotency:
       mode: persistent_command
       outcomes:
-        - replay
+        - exact_replay
         - changed_request_conflict
   tammy.v1.AccountingService.ListTaxCodes:
     stage: declared_future
@@ -1314,7 +1409,7 @@ rpcs:
     projections:
       - list_tax_codes_result
     routes:
-      - /accounting/opening-balances
+      - /accounting/chart
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_allowed
@@ -1323,13 +1418,13 @@ rpcs:
     principalFailures:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
-      - STALE_VERSION
+      - RULE_BUNDLE_UNAVAILABLE
+      - INVALID_DATE
     list:
       states:
         - empty
         - populated
         - filtered
-        - paginated
     idempotency:
       mode: query
       outcomes:
@@ -1352,14 +1447,19 @@ rpcs:
     principalFailures:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
-      - STALE_VERSION
+      - IDEMPOTENCY_CONFLICT
+      - SOURCE_CONFLICT
+      - IMBALANCE
+      - CONTROL_MISMATCH
+      - GST_REMAINDER_MISMATCH
+      - ALREADY_POSTED
     list:
       states:
         - not_applicable
     idempotency:
       mode: persistent_command
       outcomes:
-        - replay
+        - exact_replay
         - changed_request_conflict
   tammy.v1.AccountingService.ReplaceOpeningConversion:
     stage: declared_future
@@ -1380,13 +1480,20 @@ rpcs:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
       - STALE_VERSION
+      - IDEMPOTENCY_CONFLICT
+      - FACTOR_ASSERTION_REQUIRED
+      - FACTOR_ASSERTION_STALE
+      - CLOSED_PERIOD
+      - LATER_DEPENDENCY
+      - CONTROL_MISMATCH
+      - GST_REMAINDER_MISMATCH
     list:
       states:
         - not_applicable
     idempotency:
       mode: persistent_command
       outcomes:
-        - replay
+        - exact_replay
         - changed_request_conflict
   tammy.v1.AccountingService.PostManualJournal:
     stage: declared_future
@@ -1406,14 +1513,19 @@ rpcs:
     principalFailures:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
-      - STALE_VERSION
+      - IDEMPOTENCY_CONFLICT
+      - SOURCE_CONFLICT
+      - IMBALANCE
+      - CLOSED_PERIOD
+      - INVALID_ACCOUNT
+      - INVALID_TAX_TREATMENT
     list:
       states:
         - not_applicable
     idempotency:
       mode: persistent_command
       outcomes:
-        - replay
+        - exact_replay
         - changed_request_conflict
   tammy.v1.AccountingService.ReverseJournal:
     stage: declared_future
@@ -1434,13 +1546,18 @@ rpcs:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
       - STALE_VERSION
+      - IDEMPOTENCY_CONFLICT
+      - ALREADY_REVERSED
+      - SYSTEM_SOURCE_WORKFLOW_REQUIRED
+      - CLOSED_PERIOD
+      - INVALID_DATE
     list:
       states:
         - not_applicable
     idempotency:
       mode: persistent_command
       outcomes:
-        - replay
+        - exact_replay
         - changed_request_conflict
   tammy.v1.AccountingService.ClosePeriod:
     stage: declared_future
@@ -1454,20 +1571,25 @@ rpcs:
       - /accounting/periods
     roles:
       workspace_admin: planned_allowed
-      business_preparer: planned_allowed
+      business_preparer: planned_permission_denied
       business_lodger: planned_permission_denied
       auditor: planned_permission_denied
     principalFailures:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
-      - STALE_VERSION
+      - IDEMPOTENCY_CONFLICT
+      - SOURCE_CONFLICT
+      - FACTOR_ASSERTION_REQUIRED
+      - FACTOR_ASSERTION_STALE
+      - UNRESOLVED_TRANSMISSION
+      - ALREADY_CLOSED
     list:
       states:
         - not_applicable
     idempotency:
       mode: persistent_command
       outcomes:
-        - replay
+        - exact_replay
         - changed_request_conflict
   tammy.v1.AccountingService.ReopenPeriod:
     stage: declared_future
@@ -1481,20 +1603,26 @@ rpcs:
       - /accounting/periods
     roles:
       workspace_admin: planned_allowed
-      business_preparer: planned_allowed
+      business_preparer: planned_permission_denied
       business_lodger: planned_permission_denied
       auditor: planned_permission_denied
     principalFailures:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
       - STALE_VERSION
+      - IDEMPOTENCY_CONFLICT
+      - FACTOR_ASSERTION_REQUIRED
+      - FACTOR_ASSERTION_STALE
+      - NOT_CLOSED
+      - MISSING_REASON
+      - UNRESOLVED_TRANSMISSION
     list:
       states:
         - not_applicable
     idempotency:
       mode: persistent_command
       outcomes:
-        - replay
+        - exact_replay
         - changed_request_conflict
   tammy.v1.AccountingService.GetAccount:
     stage: declared_future
@@ -1505,7 +1633,7 @@ rpcs:
     projections:
       - get_account_result
     routes:
-      - /accounting/opening-balances
+      - /accounting/chart
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_allowed
@@ -1514,7 +1642,7 @@ rpcs:
     principalFailures:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
-      - STALE_VERSION
+      - NOT_FOUND
     list:
       states:
         - found
@@ -1532,7 +1660,7 @@ rpcs:
     projections:
       - list_accounts_result
     routes:
-      - /accounting/opening-balances
+      - /accounting/chart
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_allowed
@@ -1541,7 +1669,7 @@ rpcs:
     principalFailures:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
-      - STALE_VERSION
+      - INVALID_CURSOR
     list:
       states:
         - empty
@@ -1570,7 +1698,7 @@ rpcs:
     principalFailures:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
-      - STALE_VERSION
+      - NOT_FOUND
     list:
       states:
         - found
@@ -1597,7 +1725,8 @@ rpcs:
     principalFailures:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
-      - STALE_VERSION
+      - INVALID_PERIOD
+      - INVALID_CURSOR
     list:
       states:
         - empty
@@ -1626,11 +1755,14 @@ rpcs:
     principalFailures:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
-      - STALE_VERSION
+      - INVALID_PERIOD
+      - INVALID_CURSOR
     list:
       states:
-        - found
-        - not_found
+        - empty
+        - populated
+        - filtered
+        - paginated
     idempotency:
       mode: query
       outcomes:
@@ -1653,11 +1785,12 @@ rpcs:
     principalFailures:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
-      - STALE_VERSION
+      - SOURCE_CONFLICT
+      - INVALID_PERIOD
     list:
       states:
-        - found
-        - not_found
+        - empty
+        - populated
     idempotency:
       mode: query
       outcomes:
@@ -1680,7 +1813,8 @@ rpcs:
     principalFailures:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
-      - STALE_VERSION
+      - CHAIN_MISMATCH
+      - MISSING_EVENT
     list:
       states:
         - not_applicable
@@ -1706,7 +1840,7 @@ rpcs:
     principalFailures:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
-      - STALE_VERSION
+      - INVALID_CURSOR
     list:
       states:
         - empty
@@ -1735,14 +1869,16 @@ rpcs:
     principalFailures:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
-      - STALE_VERSION
+      - IDEMPOTENCY_CONFLICT
+      - DESTINATION_FAILURE
+      - CHAIN_INVALID
     list:
       states:
         - not_applicable
     idempotency:
       mode: persistent_command
       outcomes:
-        - replay
+        - exact_replay
         - changed_request_conflict
   tammy.v1.AuditService.CancelAuditExport:
     stage: declared_future
@@ -1763,13 +1899,16 @@ rpcs:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
       - STALE_VERSION
+      - IDEMPOTENCY_CONFLICT
+      - COMMIT_POINT_PASSED
+      - INVALID_STATE_TRANSITION
     list:
       states:
         - not_applicable
     idempotency:
       mode: persistent_command
       outcomes:
-        - replay
+        - exact_replay
         - changed_request_conflict
   tammy.v1.AuditService.GetAuditExportJob:
     stage: declared_future
@@ -1789,7 +1928,7 @@ rpcs:
     principalFailures:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
-      - STALE_VERSION
+      - NOT_FOUND
     list:
       states:
         - found
@@ -1816,7 +1955,7 @@ rpcs:
     principalFailures:
       - AUTHENTICATION_REQUIRED
       - PERMISSION_DENIED
-      - STALE_VERSION
+      - INVALID_CURSOR
     list:
       states:
         - empty

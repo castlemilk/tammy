@@ -4063,10 +4063,10 @@ var File_tammy_v1_accounting_proto protoreflect.FileDescriptor
 
 const file_tammy_v1_accounting_proto_rawDesc = "" +
 	"\n" +
-	"\x19tammy/v1/accounting.proto\x12\btammy.v1\x1a\x1bbuf/validate/validate.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15tammy/v1/common.proto\"\xc7\x05\n" +
-	"\aAccount\x12\x18\n" +
-	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x121\n" +
-	"\x0forganisation_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0eorganisationId\x12!\n" +
+	"\x19tammy/v1/accounting.proto\x12\btammy.v1\x1a\x1bbuf/validate/validate.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15tammy/v1/common.proto\"\x94\a\n" +
+	"\aAccount\x12\\\n" +
+	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12!\n" +
 	"\aversion\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\aversion\x12\x1d\n" +
 	"\x04code\x18\x04 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18 R\x04code\x12\x1e\n" +
 	"\x04name\x18\x05 \x01(\tB\n" +
@@ -4076,35 +4076,35 @@ const file_tammy_v1_accounting_proto_rawDesc = "" +
 	"\x0enormal_balance\x18\b \x01(\x0e2\x17.tammy.v1.NormalBalanceB\b\xbaH\x05\x82\x01\x02\x10\x01R\rnormalBalance\x129\n" +
 	"\x06status\x18\t \x01(\x0e2\x17.tammy.v1.AccountStatusB\b\xbaH\x05\x82\x01\x02\x10\x01R\x06status\x12H\n" +
 	"\vdesignation\x18\n" +
-	" \x01(\x0e2\x1c.tammy.v1.AccountDesignationB\b\xbaH\x05\x82\x01\x02\x10\x01R\vdesignation\x12<\n" +
-	"\x13default_tax_code_id\x18\v \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01H\x01R\x10defaultTaxCodeId\x88\x01\x01\x12<\n" +
+	" \x01(\x0e2\x1c.tammy.v1.AccountDesignationB\b\xbaH\x05\x82\x01\x02\x10\x01R\vdesignation\x12\x80\x01\n" +
+	"\x13default_tax_code_id\x18\v \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$H\x01R\x10defaultTaxCodeId\x88\x01\x01\x12<\n" +
 	"\x15report_classification\x18\f \x01(\tB\a\xbaH\x04r\x02\x18`R\x14reportClassification\x12A\n" +
 	"\x18cash_flow_classification\x18\r \x01(\tB\a\xbaH\x04r\x02\x18`R\x16cashFlowClassificationB\n" +
 	"\n" +
 	"\b_subtypeB\x16\n" +
-	"\x14_default_tax_code_id\"\xd4\x02\n" +
+	"\x14_default_tax_code_id\"\x99\x03\n" +
 	"\fAccountPatch\x12\x1b\n" +
 	"\x04code\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x18 R\x04code\x12\x1c\n" +
 	"\x04name\x18\x02 \x01(\tB\b\xbaH\x05r\x03\x18\xa0\x01R\x04name\x12&\n" +
-	"\asubtype\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x18`H\x00R\asubtype\x88\x01\x01\x12<\n" +
-	"\x13default_tax_code_id\x18\x04 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01H\x01R\x10defaultTaxCodeId\x88\x01\x01\x12<\n" +
+	"\asubtype\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x18`H\x00R\asubtype\x88\x01\x01\x12\x80\x01\n" +
+	"\x13default_tax_code_id\x18\x04 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$H\x01R\x10defaultTaxCodeId\x88\x01\x01\x12<\n" +
 	"\x15report_classification\x18\x05 \x01(\tB\a\xbaH\x04r\x02\x18`R\x14reportClassification\x12A\n" +
 	"\x18cash_flow_classification\x18\x06 \x01(\tB\a\xbaH\x04r\x02\x18`R\x16cashFlowClassificationB\n" +
 	"\n" +
 	"\b_subtypeB\x16\n" +
-	"\x14_default_tax_code_id\"\x82\x02\n" +
-	"\aTaxCode\x12\x18\n" +
-	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12\x1d\n" +
+	"\x14_default_tax_code_id\"\xc6\x02\n" +
+	"\aTaxCode\x12\\\n" +
+	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12\x1d\n" +
 	"\x04code\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18 R\x04code\x12\x1e\n" +
 	"\x05label\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xa0\x01R\x05label\x12>\n" +
 	"\ttreatment\x18\x04 \x01(\x0e2\x16.tammy.v1.TaxTreatmentB\b\xbaH\x05\x82\x01\x02\x10\x01R\ttreatment\x12-\n" +
 	"\x04rate\x18\x05 \x01(\v2\x11.tammy.v1.DecimalB\x06\xbaH\x03\xc8\x01\x01R\x04rate\x12/\n" +
-	"\x04rule\x18\x06 \x01(\v2\x13.tammy.v1.SourceRefB\x06\xbaH\x03\xc8\x01\x01R\x04rule\"\xae\x05\n" +
-	"\x13OpeningBalanceInput\x12.\n" +
-	"\x0eclient_line_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\fclientLineId\x12:\n" +
-	"\x04kind\x18\x02 \x01(\x0e2\x1c.tammy.v1.OpeningBalanceKindB\b\xbaH\x05\x82\x01\x02\x10\x01R\x04kind\x12'\n" +
+	"\x04rule\x18\x06 \x01(\v2\x13.tammy.v1.SourceRefB\x06\xbaH\x03\xc8\x01\x01R\x04rule\"\xb6\x06\n" +
+	"\x13OpeningBalanceInput\x12r\n" +
+	"\x0eclient_line_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\fclientLineId\x12:\n" +
+	"\x04kind\x18\x02 \x01(\x0e2\x1c.tammy.v1.OpeningBalanceKindB\b\xbaH\x05\x82\x01\x02\x10\x01R\x04kind\x12k\n" +
 	"\n" +
-	"account_id\x18\x03 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\taccountId\x12>\n" +
+	"account_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\taccountId\x12>\n" +
 	"\x0eledger_balance\x18\x04 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\rledgerBalance\x12+\n" +
 	"\x06source\x18\x05 \x01(\v2\x13.tammy.v1.SourceRefR\x06source\x12C\n" +
 	"\x13original_issue_date\x18\x06 \x01(\v2\x13.tammy.v1.CivilDateR\x11originalIssueDate\x12?\n" +
@@ -4113,49 +4113,49 @@ const file_tammy_v1_accounting_proto_rawDesc = "" +
 	"\x14prior_gst_attributed\x18\t \x01(\v2\x0f.tammy.v1.MoneyR\x12priorGstAttributed\x12G\n" +
 	"\x15latest_statement_date\x18\n" +
 	" \x01(\v2\x13.tammy.v1.CivilDateR\x13latestStatementDate\x12I\n" +
-	"\x18latest_statement_balance\x18\v \x01(\v2\x0f.tammy.v1.MoneyR\x16latestStatementBalance\"\xb4\x03\n" +
-	"\x11OpeningConversion\x12\x18\n" +
-	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x121\n" +
-	"\x0forganisation_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0eorganisationId\x12!\n" +
+	"\x18latest_statement_balance\x18\v \x01(\v2\x0f.tammy.v1.MoneyR\x16latestStatementBalance\"\xc4\x05\n" +
+	"\x11OpeningConversion\x12\\\n" +
+	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12!\n" +
 	"\aversion\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\aversion\x12@\n" +
 	"\x05state\x18\x04 \x01(\x0e2 .tammy.v1.OpeningConversionStateB\b\xbaH\x05\x82\x01\x02\x10\x01R\x05state\x12D\n" +
-	"\x0fconversion_date\x18\x05 \x01(\v2\x13.tammy.v1.CivilDateB\x06\xbaH\x03\xc8\x01\x01R\x0econversionDate\x12'\n" +
+	"\x0fconversion_date\x18\x05 \x01(\v2\x13.tammy.v1.CivilDateB\x06\xbaH\x03\xc8\x01\x01R\x0econversionDate\x12k\n" +
 	"\n" +
-	"journal_id\x18\x06 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tjournalId\x123\n" +
-	"\x0ereplaced_by_id\x18\a \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01H\x00R\freplacedById\x88\x01\x01\x126\n" +
+	"journal_id\x18\x06 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\tjournalId\x12w\n" +
+	"\x0ereplaced_by_id\x18\a \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$H\x00R\freplacedById\x88\x01\x01\x126\n" +
 	"\x12financial_revision\x18\b \x01(\x04B\a\xbaH\x042\x02(\x01R\x11financialRevisionB\x11\n" +
-	"\x0f_replaced_by_id\"\x99\x03\n" +
-	"\x16ManualJournalLineInput\x12.\n" +
-	"\x0eclient_line_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\fclientLineId\x12'\n" +
+	"\x0f_replaced_by_id\"\xe5\x04\n" +
+	"\x16ManualJournalLineInput\x12r\n" +
+	"\x0eclient_line_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\fclientLineId\x12k\n" +
 	"\n" +
-	"account_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\taccountId\x12-\n" +
+	"account_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\taccountId\x12-\n" +
 	"\x05debit\x18\x03 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\x05debit\x12/\n" +
 	"\x06credit\x18\x04 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\x06credit\x12*\n" +
-	"\vdescription\x18\x05 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x04R\vdescription\x12-\n" +
-	"\vtax_code_id\x18\x06 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01H\x00R\ttaxCodeId\x88\x01\x01\x12.\n" +
+	"\vdescription\x18\x05 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x04R\vdescription\x12q\n" +
+	"\vtax_code_id\x18\x06 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$H\x00R\ttaxCodeId\x88\x01\x01\x12.\n" +
 	"\n" +
 	"tax_amount\x18\a \x01(\v2\x0f.tammy.v1.MoneyR\ttaxAmount\x12+\n" +
 	"\x06source\x18\b \x01(\v2\x13.tammy.v1.SourceRefR\x06sourceB\x0e\n" +
-	"\f_tax_code_id\"\xc9\x03\n" +
-	"\vJournalLine\x12\x18\n" +
-	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12'\n" +
+	"\f_tax_code_id\"\xd9\x05\n" +
+	"\vJournalLine\x12\\\n" +
+	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12k\n" +
 	"\n" +
-	"journal_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tjournalId\x12'\n" +
+	"journal_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\tjournalId\x12k\n" +
 	"\n" +
-	"account_id\x18\x03 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\taccountId\x12#\n" +
+	"account_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\taccountId\x12#\n" +
 	"\bsequence\x18\x04 \x01(\rB\a\xbaH\x04*\x02(\x01R\bsequence\x12-\n" +
 	"\x05debit\x18\x05 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\x05debit\x12/\n" +
 	"\x06credit\x18\x06 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\x06credit\x12*\n" +
-	"\vdescription\x18\a \x01(\tB\b\xbaH\x05r\x03\x18\x80\x04R\vdescription\x12-\n" +
-	"\vtax_code_id\x18\b \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01H\x00R\ttaxCodeId\x88\x01\x01\x12.\n" +
+	"\vdescription\x18\a \x01(\tB\b\xbaH\x05r\x03\x18\x80\x04R\vdescription\x12q\n" +
+	"\vtax_code_id\x18\b \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$H\x00R\ttaxCodeId\x88\x01\x01\x12.\n" +
 	"\n" +
 	"tax_amount\x18\t \x01(\v2\x0f.tammy.v1.MoneyR\ttaxAmount\x12.\n" +
 	"\btax_rule\x18\n" +
 	" \x01(\v2\x13.tammy.v1.SourceRefR\ataxRuleB\x0e\n" +
-	"\f_tax_code_id\"\xb5\x06\n" +
-	"\aJournal\x12\x18\n" +
-	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x121\n" +
-	"\x0forganisation_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0eorganisationId\x12!\n" +
+	"\f_tax_code_id\"\xc7\b\n" +
+	"\aJournal\x12\\\n" +
+	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12!\n" +
 	"\aversion\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\aversion\x126\n" +
 	"\x05state\x18\x04 \x01(\x0e2\x16.tammy.v1.JournalStateB\b\xbaH\x05\x82\x01\x02\x10\x01R\x05state\x129\n" +
 	"\x06source\x18\x05 \x01(\x0e2\x17.tammy.v1.JournalSourceB\b\xbaH\x05\x82\x01\x02\x10\x01R\x06source\x12>\n" +
@@ -4164,27 +4164,27 @@ const file_tammy_v1_accounting_proto_rawDesc = "" +
 	"\x05lines\x18\b \x03(\v2\x15.tammy.v1.JournalLineB\v\xbaH\b\x92\x01\x05\b\x02\x10\xe8\aR\x05lines\x12:\n" +
 	"\ftotal_debits\x18\t \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\vtotalDebits\x12<\n" +
 	"\rtotal_credits\x18\n" +
-	" \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\ftotalCredits\x12B\n" +
-	"\x16reversal_of_journal_id\x18\v \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01H\x00R\x13reversalOfJournalId\x88\x01\x01\x12B\n" +
-	"\x16reversed_by_journal_id\x18\f \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01H\x01R\x13reversedByJournalId\x88\x01\x01\x12?\n" +
+	" \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\ftotalCredits\x12\x86\x01\n" +
+	"\x16reversal_of_journal_id\x18\v \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$H\x00R\x13reversalOfJournalId\x88\x01\x01\x12\x86\x01\n" +
+	"\x16reversed_by_journal_id\x18\f \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$H\x01R\x13reversedByJournalId\x88\x01\x01\x12?\n" +
 	"\tposted_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\bpostedAt\x126\n" +
 	"\x12financial_revision\x18\x0e \x01(\x04B\a\xbaH\x042\x02(\x01R\x11financialRevisionB\x19\n" +
 	"\x17_reversal_of_journal_idB\x19\n" +
-	"\x17_reversed_by_journal_id\"\xe7\x02\n" +
-	"\x10AccountingPeriod\x12\x18\n" +
-	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x121\n" +
-	"\x0forganisation_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0eorganisationId\x12!\n" +
+	"\x17_reversed_by_journal_id\"\xef\x03\n" +
+	"\x10AccountingPeriod\x12\\\n" +
+	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12!\n" +
 	"\aversion\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\aversion\x125\n" +
 	"\x05state\x18\x04 \x01(\x0e2\x15.tammy.v1.PeriodStateB\b\xbaH\x05\x82\x01\x02\x10\x01R\x05state\x126\n" +
 	"\bend_date\x18\x05 \x01(\v2\x13.tammy.v1.CivilDateB\x06\xbaH\x03\xc8\x01\x01R\aendDate\x127\n" +
 	"\tclosed_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\bclosedAt\x12;\n" +
 	"\vreopened_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"reopenedAt\"\x81\x03\n" +
+	"reopenedAt\"\x89\x04\n" +
 	"\vLedgerEntry\x125\n" +
-	"\ajournal\x18\x01 \x01(\v2\x13.tammy.v1.SourceRefB\x06\xbaH\x03\xc8\x01\x01R\ajournal\x120\n" +
-	"\x0fjournal_line_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\rjournalLineId\x12'\n" +
+	"\ajournal\x18\x01 \x01(\v2\x13.tammy.v1.SourceRefB\x06\xbaH\x03\xc8\x01\x01R\ajournal\x12t\n" +
+	"\x0fjournal_line_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\rjournalLineId\x12k\n" +
 	"\n" +
-	"account_id\x18\x03 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\taccountId\x12>\n" +
+	"account_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\taccountId\x12>\n" +
 	"\fposting_date\x18\x04 \x01(\v2\x13.tammy.v1.CivilDateB\x06\xbaH\x03\xc8\x01\x01R\vpostingDate\x12-\n" +
 	"\x05debit\x18\x05 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\x05debit\x12/\n" +
 	"\x06credit\x18\x06 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\x06credit\x12@\n" +
@@ -4195,17 +4195,17 @@ const file_tammy_v1_accounting_proto_rawDesc = "" +
 	"\x04name\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xa0\x01R\x04name\x12/\n" +
 	"\x06debits\x18\x04 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\x06debits\x121\n" +
 	"\acredits\x18\x05 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\acredits\x12K\n" +
-	"\x15ledger_normal_balance\x18\x06 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\x13ledgerNormalBalance\"\xdd\x04\n" +
+	"\x15ledger_normal_balance\x18\x06 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\x13ledgerNormalBalance\"\xe6\x05\n" +
 	"\x14CreateAccountRequest\x12I\n" +
-	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x121\n" +
-	"\x0forganisation_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0eorganisationId\x12\x1d\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12\x1d\n" +
 	"\x04code\x18\x03 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18 R\x04code\x12\x1e\n" +
 	"\x04name\x18\x04 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\xa0\x01R\x04name\x123\n" +
 	"\x04type\x18\x05 \x01(\x0e2\x15.tammy.v1.AccountTypeB\b\xbaH\x05\x82\x01\x02\x10\x01R\x04type\x12&\n" +
 	"\asubtype\x18\x06 \x01(\tB\a\xbaH\x04r\x02\x18`H\x00R\asubtype\x88\x01\x01\x12H\n" +
-	"\x0enormal_balance\x18\a \x01(\x0e2\x17.tammy.v1.NormalBalanceB\b\xbaH\x05\x82\x01\x02\x10\x01R\rnormalBalance\x12<\n" +
-	"\x13default_tax_code_id\x18\b \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01H\x01R\x10defaultTaxCodeId\x88\x01\x01\x12<\n" +
+	"\x0enormal_balance\x18\a \x01(\x0e2\x17.tammy.v1.NormalBalanceB\b\xbaH\x05\x82\x01\x02\x10\x01R\rnormalBalance\x12\x80\x01\n" +
+	"\x13default_tax_code_id\x18\b \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$H\x01R\x10defaultTaxCodeId\x88\x01\x01\x12<\n" +
 	"\x15report_classification\x18\t \x01(\tB\a\xbaH\x04r\x02\x18`R\x14reportClassification\x12A\n" +
 	"\x18cash_flow_classification\x18\n" +
 	" \x01(\tB\a\xbaH\x04r\x02\x18`R\x16cashFlowClassificationB\n" +
@@ -4213,38 +4213,38 @@ const file_tammy_v1_accounting_proto_rawDesc = "" +
 	"\b_subtypeB\x16\n" +
 	"\x14_default_tax_code_id\"L\n" +
 	"\x15CreateAccountResponse\x123\n" +
-	"\aaccount\x18\x01 \x01(\v2\x11.tammy.v1.AccountB\x06\xbaH\x03\xc8\x01\x01R\aaccount\"\xb9\x02\n" +
+	"\aaccount\x18\x01 \x01(\v2\x11.tammy.v1.AccountB\x06\xbaH\x03\xc8\x01\x01R\aaccount\"\xfd\x02\n" +
 	"\x14UpdateAccountRequest\x12I\n" +
-	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12'\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12k\n" +
 	"\n" +
-	"account_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\taccountId\x122\n" +
+	"account_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\taccountId\x122\n" +
 	"\x10expected_version\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion\x12C\n" +
 	"\vupdate_mask\x18\x04 \x01(\v2\x1a.google.protobuf.FieldMaskB\x06\xbaH\x03\xc8\x01\x01R\n" +
 	"updateMask\x124\n" +
 	"\x05patch\x18\x05 \x01(\v2\x16.tammy.v1.AccountPatchB\x06\xbaH\x03\xc8\x01\x01R\x05patch\"L\n" +
 	"\x15UpdateAccountResponse\x123\n" +
-	"\aaccount\x18\x01 \x01(\v2\x11.tammy.v1.AccountB\x06\xbaH\x03\xc8\x01\x01R\aaccount\"\xa0\x02\n" +
+	"\aaccount\x18\x01 \x01(\v2\x11.tammy.v1.AccountB\x06\xbaH\x03\xc8\x01\x01R\aaccount\"\xe4\x02\n" +
 	"\x17SetAccountStatusRequest\x12I\n" +
-	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12'\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12k\n" +
 	"\n" +
-	"account_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\taccountId\x122\n" +
+	"account_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\taccountId\x122\n" +
 	"\x10expected_version\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion\x129\n" +
 	"\x06status\x18\x04 \x01(\x0e2\x17.tammy.v1.AccountStatusB\b\xbaH\x05\x82\x01\x02\x10\x01R\x06status\x12\"\n" +
 	"\x06reason\x18\x05 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\x80\x04R\x06reason\"O\n" +
 	"\x18SetAccountStatusResponse\x123\n" +
-	"\aaccount\x18\x01 \x01(\v2\x11.tammy.v1.AccountB\x06\xbaH\x03\xc8\x01\x01R\aaccount\"\x8c\x02\n" +
+	"\aaccount\x18\x01 \x01(\v2\x11.tammy.v1.AccountB\x06\xbaH\x03\xc8\x01\x01R\aaccount\"\xd0\x02\n" +
 	"\x13ListTaxCodesRequest\x12O\n" +
-	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x121\n" +
-	"\x0forganisation_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0eorganisationId\x12>\n" +
+	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12>\n" +
 	"\fposting_date\x18\x03 \x01(\v2\x13.tammy.v1.CivilDateB\x06\xbaH\x03\xc8\x01\x01R\vpostingDate\x121\n" +
 	"\x04page\x18\x04 \x01(\v2\x15.tammy.v1.PageRequestB\x06\xbaH\x03\xc8\x01\x01R\x04page\"\x81\x01\n" +
 	"\x14ListTaxCodesResponse\x129\n" +
 	"\ttax_codes\x18\x01 \x03(\v2\x11.tammy.v1.TaxCodeB\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\btaxCodes\x12.\n" +
-	"\x04page\x18\x02 \x01(\v2\x12.tammy.v1.PageInfoB\x06\xbaH\x03\xc8\x01\x01R\x04page\"\x8f\x03\n" +
+	"\x04page\x18\x02 \x01(\v2\x12.tammy.v1.PageInfoB\x06\xbaH\x03\xc8\x01\x01R\x04page\"\xd3\x03\n" +
 	"\x1cPostOpeningConversionRequest\x12I\n" +
-	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x121\n" +
-	"\x0forganisation_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0eorganisationId\x12D\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12D\n" +
 	"\x0fconversion_date\x18\x03 \x01(\v2\x13.tammy.v1.CivilDateB\x06\xbaH\x03\xc8\x01\x01R\x0econversionDate\x12F\n" +
 	"\bbalances\x18\x04 \x03(\v2\x1d.tammy.v1.OpeningBalanceInputB\v\xbaH\b\x92\x01\x05\b\x02\x10\x88'R\bbalances\x12C\n" +
 	"\x1bexpected_financial_revision\x18\x05 \x01(\x04H\x00R\x19expectedFinancialRevision\x88\x01\x01B\x1e\n" +
@@ -4253,10 +4253,10 @@ const file_tammy_v1_accounting_proto_rawDesc = "" +
 	"\n" +
 	"conversion\x18\x01 \x01(\v2\x1b.tammy.v1.OpeningConversionB\x06\xbaH\x03\xc8\x01\x01R\n" +
 	"conversion\x123\n" +
-	"\ajournal\x18\x02 \x01(\v2\x11.tammy.v1.JournalB\x06\xbaH\x03\xc8\x01\x01R\ajournal\"\x92\x03\n" +
+	"\ajournal\x18\x02 \x01(\v2\x11.tammy.v1.JournalB\x06\xbaH\x03\xc8\x01\x01R\ajournal\"\xd7\x03\n" +
 	"\x1fReplaceOpeningConversionRequest\x12I\n" +
-	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12<\n" +
-	"\x15opening_conversion_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x13openingConversionId\x122\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12\x80\x01\n" +
+	"\x15opening_conversion_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x13openingConversionId\x122\n" +
 	"\x10expected_version\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion\x12F\n" +
 	"\x10replacement_date\x18\x04 \x01(\v2\x13.tammy.v1.CivilDateB\x06\xbaH\x03\xc8\x01\x01R\x0freplacementDate\x12F\n" +
 	"\bbalances\x18\x05 \x03(\v2\x1d.tammy.v1.OpeningBalanceInputB\v\xbaH\b\x92\x01\x05\b\x02\x10\x88'R\bbalances\x12\"\n" +
@@ -4266,52 +4266,52 @@ const file_tammy_v1_accounting_proto_rawDesc = "" +
 	"\vpredecessor\x18\x01 \x01(\v2\x1b.tammy.v1.OpeningConversionB\x06\xbaH\x03\xc8\x01\x01R\vpredecessor\x12E\n" +
 	"\vreplacement\x18\x02 \x01(\v2\x1b.tammy.v1.OpeningConversionB\x06\xbaH\x03\xc8\x01\x01R\vreplacement\x12D\n" +
 	"\x10reversal_journal\x18\x03 \x01(\v2\x11.tammy.v1.JournalB\x06\xbaH\x03\xc8\x01\x01R\x0freversalJournal\x12J\n" +
-	"\x13replacement_journal\x18\x04 \x01(\v2\x11.tammy.v1.JournalB\x06\xbaH\x03\xc8\x01\x01R\x12replacementJournal\"\xa0\x03\n" +
+	"\x13replacement_journal\x18\x04 \x01(\v2\x11.tammy.v1.JournalB\x06\xbaH\x03\xc8\x01\x01R\x12replacementJournal\"\xe4\x03\n" +
 	"\x18PostManualJournalRequest\x12I\n" +
-	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x121\n" +
-	"\x0forganisation_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0eorganisationId\x12>\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12>\n" +
 	"\fposting_date\x18\x03 \x01(\v2\x13.tammy.v1.CivilDateB\x06\xbaH\x03\xc8\x01\x01R\vpostingDate\x12\x1c\n" +
 	"\x04memo\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x04R\x04memo\x12C\n" +
 	"\x05lines\x18\x05 \x03(\v2 .tammy.v1.ManualJournalLineInputB\v\xbaH\b\x92\x01\x05\b\x02\x10\xe8\aR\x05lines\x12C\n" +
 	"\x1bexpected_financial_revision\x18\x06 \x01(\x04H\x00R\x19expectedFinancialRevision\x88\x01\x01B\x1e\n" +
 	"\x1c_expected_financial_revision\"P\n" +
 	"\x19PostManualJournalResponse\x123\n" +
-	"\ajournal\x18\x01 \x01(\v2\x11.tammy.v1.JournalB\x06\xbaH\x03\xc8\x01\x01R\ajournal\"\xa5\x02\n" +
+	"\ajournal\x18\x01 \x01(\v2\x11.tammy.v1.JournalB\x06\xbaH\x03\xc8\x01\x01R\ajournal\"\xe9\x02\n" +
 	"\x15ReverseJournalRequest\x12I\n" +
-	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12'\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12k\n" +
 	"\n" +
-	"journal_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tjournalId\x122\n" +
+	"journal_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\tjournalId\x122\n" +
 	"\x10expected_version\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion\x12@\n" +
 	"\rreversal_date\x18\x04 \x01(\v2\x13.tammy.v1.CivilDateB\x06\xbaH\x03\xc8\x01\x01R\freversalDate\x12\"\n" +
 	"\x06reason\x18\x05 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\x80\x04R\x06reason\"\x86\x01\n" +
 	"\x16ReverseJournalResponse\x125\n" +
 	"\boriginal\x18\x01 \x01(\v2\x11.tammy.v1.JournalB\x06\xbaH\x03\xc8\x01\x01R\boriginal\x125\n" +
-	"\breversal\x18\x02 \x01(\v2\x11.tammy.v1.JournalB\x06\xbaH\x03\xc8\x01\x01R\breversal\"\x93\x02\n" +
+	"\breversal\x18\x02 \x01(\v2\x11.tammy.v1.JournalB\x06\xbaH\x03\xc8\x01\x01R\breversal\"\xd7\x02\n" +
 	"\x12ClosePeriodRequest\x12I\n" +
-	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x121\n" +
-	"\x0forganisation_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0eorganisationId\x126\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x126\n" +
 	"\bend_date\x18\x03 \x01(\v2\x13.tammy.v1.CivilDateB\x06\xbaH\x03\xc8\x01\x01R\aendDate\x12G\n" +
 	"\x1bexpected_financial_revision\x18\x04 \x01(\x04B\a\xbaH\x042\x02(\x01R\x19expectedFinancialRevision\"Q\n" +
 	"\x13ClosePeriodResponse\x12:\n" +
-	"\x06period\x18\x01 \x01(\v2\x1a.tammy.v1.AccountingPeriodB\x06\xbaH\x03\xc8\x01\x01R\x06period\"\xdf\x01\n" +
+	"\x06period\x18\x01 \x01(\v2\x1a.tammy.v1.AccountingPeriodB\x06\xbaH\x03\xc8\x01\x01R\x06period\"\xa3\x02\n" +
 	"\x13ReopenPeriodRequest\x12I\n" +
-	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12%\n" +
-	"\tperiod_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bperiodId\x122\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12i\n" +
+	"\tperiod_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\bperiodId\x122\n" +
 	"\x10expected_version\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion\x12\"\n" +
 	"\x06reason\x18\x04 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\x80\x04R\x06reason\"R\n" +
 	"\x14ReopenPeriodResponse\x12:\n" +
-	"\x06period\x18\x01 \x01(\v2\x1a.tammy.v1.AccountingPeriodB\x06\xbaH\x03\xc8\x01\x01R\x06period\"\x8d\x01\n" +
+	"\x06period\x18\x01 \x01(\v2\x1a.tammy.v1.AccountingPeriodB\x06\xbaH\x03\xc8\x01\x01R\x06period\"\xd1\x01\n" +
 	"\x11GetAccountRequest\x12O\n" +
-	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12'\n" +
+	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12k\n" +
 	"\n" +
-	"account_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\taccountId\"I\n" +
+	"account_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\taccountId\"I\n" +
 	"\x12GetAccountResponse\x123\n" +
-	"\aaccount\x18\x01 \x01(\v2\x11.tammy.v1.AccountB\x06\xbaH\x03\xc8\x01\x01R\aaccount\"\xf5\x02\n" +
+	"\aaccount\x18\x01 \x01(\v2\x11.tammy.v1.AccountB\x06\xbaH\x03\xc8\x01\x01R\aaccount\"\xb9\x03\n" +
 	"\x13ListAccountsRequest\x12O\n" +
-	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x121\n" +
-	"\x0forganisation_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0eorganisationId\x121\n" +
+	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x121\n" +
 	"\x04page\x18\x03 \x01(\v2\x15.tammy.v1.PageRequestB\x06\xbaH\x03\xc8\x01\x01R\x04page\x124\n" +
 	"\x06status\x18\x04 \x01(\x0e2\x17.tammy.v1.AccountStatusH\x00R\x06status\x88\x01\x01\x12.\n" +
 	"\x04type\x18\x05 \x01(\x0e2\x15.tammy.v1.AccountTypeH\x01R\x04type\x88\x01\x01\x12#\n" +
@@ -4321,16 +4321,16 @@ const file_tammy_v1_accounting_proto_rawDesc = "" +
 	"\x06_query\"\x80\x01\n" +
 	"\x14ListAccountsResponse\x128\n" +
 	"\baccounts\x18\x01 \x03(\v2\x11.tammy.v1.AccountB\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\baccounts\x12.\n" +
-	"\x04page\x18\x02 \x01(\v2\x12.tammy.v1.PageInfoB\x06\xbaH\x03\xc8\x01\x01R\x04page\"\x8d\x01\n" +
+	"\x04page\x18\x02 \x01(\v2\x12.tammy.v1.PageInfoB\x06\xbaH\x03\xc8\x01\x01R\x04page\"\xd1\x01\n" +
 	"\x11GetJournalRequest\x12O\n" +
-	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12'\n" +
+	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12k\n" +
 	"\n" +
-	"journal_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tjournalId\"I\n" +
+	"journal_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\tjournalId\"I\n" +
 	"\x12GetJournalResponse\x123\n" +
-	"\ajournal\x18\x01 \x01(\v2\x11.tammy.v1.JournalB\x06\xbaH\x03\xc8\x01\x01R\ajournal\"\xae\x03\n" +
+	"\ajournal\x18\x01 \x01(\v2\x11.tammy.v1.JournalB\x06\xbaH\x03\xc8\x01\x01R\ajournal\"\xf2\x03\n" +
 	"\x13ListJournalsRequest\x12O\n" +
-	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x121\n" +
-	"\x0forganisation_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0eorganisationId\x121\n" +
+	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x121\n" +
 	"\x04page\x18\x03 \x01(\v2\x15.tammy.v1.PageRequestB\x06\xbaH\x03\xc8\x01\x01R\x04page\x122\n" +
 	"\n" +
 	"start_date\x18\x04 \x01(\v2\x13.tammy.v1.CivilDateR\tstartDate\x12.\n" +
@@ -4341,10 +4341,10 @@ const file_tammy_v1_accounting_proto_rawDesc = "" +
 	"\a_source\"\x80\x01\n" +
 	"\x14ListJournalsResponse\x128\n" +
 	"\bjournals\x18\x01 \x03(\v2\x11.tammy.v1.JournalB\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\bjournals\x12.\n" +
-	"\x04page\x18\x02 \x01(\v2\x12.tammy.v1.PageInfoB\x06\xbaH\x03\xc8\x01\x01R\x04page\"\xe9\x02\n" +
+	"\x04page\x18\x02 \x01(\v2\x12.tammy.v1.PageInfoB\x06\xbaH\x03\xc8\x01\x01R\x04page\"\xad\x03\n" +
 	"\x17GetGeneralLedgerRequest\x12O\n" +
-	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x121\n" +
-	"\x0forganisation_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0eorganisationId\x123\n" +
+	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x123\n" +
 	"\vaccount_ids\x18\x03 \x03(\tB\x12\xbaH\x0f\x92\x01\f\x10\xc8\x01\x18\x01\"\x05r\x03\xb0\x01\x01R\n" +
 	"accountIds\x122\n" +
 	"\n" +
@@ -4354,10 +4354,10 @@ const file_tammy_v1_accounting_proto_rawDesc = "" +
 	"\x18GetGeneralLedgerResponse\x12:\n" +
 	"\aentries\x18\x01 \x03(\v2\x15.tammy.v1.LedgerEntryB\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\aentries\x12.\n" +
 	"\x04page\x18\x02 \x01(\v2\x12.tammy.v1.PageInfoB\x06\xbaH\x03\xc8\x01\x01R\x04page\x126\n" +
-	"\x12financial_revision\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\x11financialRevision\"\xbc\x02\n" +
+	"\x12financial_revision\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\x11financialRevision\"\x80\x03\n" +
 	"\x16GetTrialBalanceRequest\x12O\n" +
-	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x121\n" +
-	"\x0forganisation_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0eorganisationId\x129\n" +
+	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x129\n" +
 	"\n" +
 	"as_of_date\x18\x03 \x01(\v2\x13.tammy.v1.CivilDateB\x06\xbaH\x03\xc8\x01\x01R\basOfDate\x12C\n" +
 	"\x1bexpected_financial_revision\x18\x04 \x01(\x04H\x00R\x19expectedFinancialRevision\x88\x01\x01B\x1e\n" +

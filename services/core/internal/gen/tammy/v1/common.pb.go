@@ -518,7 +518,7 @@ func (x *FreshFactorContext) GetAssertedAt() *timestamppb.Timestamp {
 // CommandContext carries authorization and idempotency metadata for a persistent command.
 type CommandContext struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// idempotency_key is a caller-generated UUID used for workspace-lifetime replay election.
+	// idempotency_key is a caller-generated lowercase canonical UUIDv7 used for workspace-lifetime replay election.
 	IdempotencyKey string `protobuf:"bytes,1,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
 	// authentication is excluded from the semantic request hash after authorization.
 	Authentication *AuthenticationContext `protobuf:"bytes,2,opt,name=authentication,proto3" json:"authentication,omitempty"`
@@ -1822,23 +1822,23 @@ const file_tammy_v1_common_proto_rawDesc = "" +
 	"\x04year\x18\x01 \x01(\x05B\n" +
 	"\xbaH\a\x1a\x05\x18\x8fN(\x01R\x04year\x12\x1f\n" +
 	"\x05month\x18\x02 \x01(\x05B\t\xbaH\x06\x1a\x04\x18\f(\x01R\x05month\x12\x1b\n" +
-	"\x03day\x18\x03 \x01(\x05B\t\xbaH\x06\x1a\x04\x18\x1f(\x01R\x03day\"\xa8\x01\n" +
+	"\x03day\x18\x03 \x01(\x05B\t\xbaH\x06\x1a\x04\x18\x1f(\x01R\x03day\"\xec\x01\n" +
 	"\tSourceRef\x120\n" +
-	"\x04type\x18\x01 \x01(\tB\x1c\xbaH\x19r\x17\x10\x01\x18@2\x11^[a-z][a-z0-9_]*$R\x04type\x12\x18\n" +
-	"\x02id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12#\n" +
+	"\x04type\x18\x01 \x01(\tB\x1c\xbaH\x19r\x17\x10\x01\x18@2\x11^[a-z][a-z0-9_]*$R\x04type\x12\\\n" +
+	"\x02id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12#\n" +
 	"\brevision\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\brevision\x12*\n" +
-	"\fcontent_hash\x18\x04 \x01(\fB\a\xbaH\x04z\x02h R\vcontentHash\"n\n" +
-	"\x15AuthenticationContext\x12,\n" +
-	"\ractor_user_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vactorUserId\x12'\n" +
+	"\fcontent_hash\x18\x04 \x01(\fB\a\xbaH\x04z\x02h R\vcontentHash\"\xf6\x01\n" +
+	"\x15AuthenticationContext\x12p\n" +
+	"\ractor_user_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\vactorUserId\x12k\n" +
 	"\n" +
-	"session_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tsessionId\"\xbe\x01\n" +
-	"\x12FreshFactorContext\x12+\n" +
-	"\fassertion_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\vassertionId\x126\n" +
+	"session_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\tsessionId\"\x82\x02\n" +
+	"\x12FreshFactorContext\x12o\n" +
+	"\fassertion_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\vassertionId\x126\n" +
 	"\apurpose\x18\x02 \x01(\tB\x1c\xbaH\x19r\x17\x10\x01\x18`2\x11^[a-z][a-z0-9_]*$R\apurpose\x12C\n" +
 	"\vasserted_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\n" +
-	"assertedAt\"\xd5\x01\n" +
-	"\x0eCommandContext\x121\n" +
-	"\x0fidempotency_key\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0eidempotencyKey\x12O\n" +
+	"assertedAt\"\x99\x02\n" +
+	"\x0eCommandContext\x12u\n" +
+	"\x0fidempotency_key\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eidempotencyKey\x12O\n" +
 	"\x0eauthentication\x18\x02 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12?\n" +
 	"\ffresh_factor\x18\x03 \x01(\v2\x1c.tammy.v1.FreshFactorContextR\vfreshFactor\"f\n" +
 	"\vPageRequest\x12%\n" +
@@ -1863,15 +1863,15 @@ const file_tammy_v1_common_proto_rawDesc = "" +
 	"^[0-9]{6}$R\x05value\"5\n" +
 	"\x13OneTimeSecretOutput\x12\x1e\n" +
 	"\x04utf8\x18\x01 \x01(\fB\n" +
-	"\xbaH\az\x05\x10\x01\x18\x80\x10R\x04utf8\"\xca\x02\n" +
+	"\xbaH\az\x05\x10\x01\x18\x80\x10R\x04utf8\"\x8e\x03\n" +
 	"\fErrorContext\x120\n" +
 	"\x04code\x18\x01 \x01(\tB\x1c\xbaH\x19r\x17\x10\x01\x18`2\x11^[A-Z][A-Z0-9_]*$R\x04code\x12=\n" +
 	"\bcategory\x18\x02 \x01(\x0e2\x17.tammy.v1.ErrorCategoryB\b\xbaH\x05\x82\x01\x02\x10\x01R\bcategory\x12-\n" +
 	"\fsafe_summary\x18\x03 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\x80\x02R\vsafeSummary\x12*\n" +
 	"\vremediation\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x04R\vremediation\x12=\n" +
-	"\x05retry\x18\x05 \x01(\x0e2\x1d.tammy.v1.RetryClassificationB\b\xbaH\x05\x82\x01\x02\x10\x01R\x05retry\x12/\n" +
-	"\x0ecorrelation_id\x18\x06 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\rcorrelationId\"\x8e\x01\n" +
+	"\x05retry\x18\x05 \x01(\x0e2\x1d.tammy.v1.RetryClassificationB\b\xbaH\x05\x82\x01\x02\x10\x01R\x05retry\x12s\n" +
+	"\x0ecorrelation_id\x18\x06 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\rcorrelationId\"\x8e\x01\n" +
 	"\x0eFieldViolation\x12)\n" +
 	"\n" +
 	"field_path\x18\x01 \x01(\tB\n" +
@@ -1894,11 +1894,11 @@ const file_tammy_v1_common_proto_rawDesc = "" +
 	"\x13required_permission\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18`R\x12requiredPermission\"}\n" +
 	"\x1eFreshFactorRequiredErrorDetail\x128\n" +
 	"\acontext\x18\x01 \x01(\v2\x16.tammy.v1.ErrorContextB\x06\xbaH\x03\xc8\x01\x01R\acontext\x12!\n" +
-	"\apurpose\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18`R\apurpose\"\xf7\x01\n" +
+	"\apurpose\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18`R\apurpose\"\xbb\x02\n" +
 	"\x17StaleVersionErrorDetail\x128\n" +
 	"\acontext\x18\x01 \x01(\v2\x16.tammy.v1.ErrorContextB\x06\xbaH\x03\xc8\x01\x01R\acontext\x12#\n" +
-	"\bresource\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18@R\bresource\x12)\n" +
-	"\vresource_id\x18\x03 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\n" +
+	"\bresource\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18@R\bresource\x12m\n" +
+	"\vresource_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\n" +
 	"resourceId\x12)\n" +
 	"\x10expected_version\x18\x04 \x01(\x04R\x0fexpectedVersion\x12'\n" +
 	"\x0fcurrent_version\x18\x05 \x01(\x04R\x0ecurrentVersion\"\xe9\x01\n" +
@@ -1906,27 +1906,27 @@ const file_tammy_v1_common_proto_rawDesc = "" +
 	"\acontext\x18\x01 \x01(\v2\x16.tammy.v1.ErrorContextB\x06\xbaH\x03\xc8\x01\x01R\acontext\x12#\n" +
 	"\bresource\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18@R\bresource\x12,\n" +
 	"\rcurrent_state\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x18`R\fcurrentState\x127\n" +
-	"\x12allowed_operations\x18\x04 \x03(\tB\b\xbaH\x05\x92\x01\x02\x10 R\x11allowedOperations\"\xba\x01\n" +
+	"\x12allowed_operations\x18\x04 \x03(\tB\b\xbaH\x05\x92\x01\x02\x10 R\x11allowedOperations\"\xfe\x01\n" +
 	"\x1eIdempotencyConflictErrorDetail\x128\n" +
-	"\acontext\x18\x01 \x01(\v2\x16.tammy.v1.ErrorContextB\x06\xbaH\x03\xc8\x01\x01R\acontext\x121\n" +
-	"\x0fidempotency_key\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0eidempotencyKey\x12+\n" +
-	"\frequest_type\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xc0\x01R\vrequestType\"\xc7\x01\n" +
+	"\acontext\x18\x01 \x01(\v2\x16.tammy.v1.ErrorContextB\x06\xbaH\x03\xc8\x01\x01R\acontext\x12u\n" +
+	"\x0fidempotency_key\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eidempotencyKey\x12+\n" +
+	"\frequest_type\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xc0\x01R\vrequestType\"\x8b\x02\n" +
 	"\x1aDuplicateSourceErrorDetail\x128\n" +
 	"\acontext\x18\x01 \x01(\v2\x16.tammy.v1.ErrorContextB\x06\xbaH\x03\xc8\x01\x01R\acontext\x123\n" +
-	"\x06source\x18\x02 \x01(\v2\x13.tammy.v1.SourceRefB\x06\xbaH\x03\xc8\x01\x01R\x06source\x12:\n" +
-	"\x14existing_resource_id\x18\x03 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x12existingResourceId\"\xb6\x01\n" +
+	"\x06source\x18\x02 \x01(\v2\x13.tammy.v1.SourceRefB\x06\xbaH\x03\xc8\x01\x01R\x06source\x12~\n" +
+	"\x14existing_resource_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x12existingResourceId\"\xfa\x01\n" +
 	"\x17ClosedPeriodErrorDetail\x128\n" +
-	"\acontext\x18\x01 \x01(\v2\x16.tammy.v1.ErrorContextB\x06\xbaH\x03\xc8\x01\x01R\acontext\x12%\n" +
-	"\tperiod_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bperiodId\x12:\n" +
+	"\acontext\x18\x01 \x01(\v2\x16.tammy.v1.ErrorContextB\x06\xbaH\x03\xc8\x01\x01R\acontext\x12i\n" +
+	"\tperiod_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\bperiodId\x12:\n" +
 	"\n" +
 	"period_end\x18\x03 \x01(\v2\x13.tammy.v1.CivilDateB\x06\xbaH\x03\xc8\x01\x01R\tperiodEnd\"\xb4\x01\n" +
 	"\x14ImbalanceErrorDetail\x128\n" +
 	"\acontext\x18\x01 \x01(\v2\x16.tammy.v1.ErrorContextB\x06\xbaH\x03\xc8\x01\x01R\acontext\x12/\n" +
 	"\x06debits\x18\x02 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\x06debits\x121\n" +
-	"\acredits\x18\x03 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\acredits\"\xbc\x01\n" +
+	"\acredits\x18\x03 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\acredits\"\x80\x02\n" +
 	"\x1dEvidenceCorruptionErrorDetail\x128\n" +
-	"\acontext\x18\x01 \x01(\v2\x16.tammy.v1.ErrorContextB\x06\xbaH\x03\xc8\x01\x01R\acontext\x12)\n" +
-	"\vevidence_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\n" +
+	"\acontext\x18\x01 \x01(\v2\x16.tammy.v1.ErrorContextB\x06\xbaH\x03\xc8\x01\x01R\acontext\x12m\n" +
+	"\vevidence_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\n" +
 	"evidenceId\x126\n" +
 	"\x12verification_stage\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x18@R\x11verificationStage\"v\n" +
 	"\vJobProgress\x12'\n" +

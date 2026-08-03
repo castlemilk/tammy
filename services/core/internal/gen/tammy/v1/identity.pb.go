@@ -2382,9 +2382,9 @@ var File_tammy_v1_identity_proto protoreflect.FileDescriptor
 
 const file_tammy_v1_identity_proto_rawDesc = "" +
 	"\n" +
-	"\x17tammy/v1/identity.proto\x12\btammy.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15tammy/v1/common.proto\"\xaf\x03\n" +
-	"\x04User\x12\x18\n" +
-	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12!\n" +
+	"\x17tammy/v1/identity.proto\x12\btammy.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15tammy/v1/common.proto\"\xf3\x03\n" +
+	"\x04User\x12\\\n" +
+	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12!\n" +
 	"\aversion\x18\x02 \x01(\x04B\a\xbaH\x042\x02(\x01R\aversion\x12&\n" +
 	"\busername\x18\x03 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\x80\x01R\busername\x12-\n" +
@@ -2394,19 +2394,19 @@ const file_tammy_v1_identity_proto_rawDesc = "" +
 	"\x05roles\x18\x06 \x03(\x0e2\x0e.tammy.v1.RoleB\f\xbaH\t\x92\x01\x06\b\x01\x10\x04\x18\x01R\x05roles\x12=\n" +
 	"\ffactor_state\x18\a \x01(\x0e2\x15.tammy.v1.FactorStateH\x00R\vfactorState\x88\x01\x01\x12Z\n" +
 	"\x1bauthentication_locked_until\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\x19authenticationLockedUntilB\x0f\n" +
-	"\r_factor_state\"\xbb\x02\n" +
-	"\aSession\x12\x18\n" +
-	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12!\n" +
-	"\auser_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06userId\x126\n" +
+	"\r_factor_state\"\xc3\x03\n" +
+	"\aSession\x12\\\n" +
+	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12e\n" +
+	"\auser_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x06userId\x126\n" +
 	"\x05state\x18\x03 \x01(\x0e2\x16.tammy.v1.SessionStateB\b\xbaH\x05\x82\x01\x02\x10\x01R\x05state\x12A\n" +
 	"\n" +
 	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\tcreatedAt\x12A\n" +
 	"\n" +
 	"expires_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\texpiresAt\x125\n" +
-	"\bended_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\aendedAt\"\xe2\x01\n" +
-	"\x06Factor\x12\x18\n" +
-	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12!\n" +
-	"\auser_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06userId\x12!\n" +
+	"\bended_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\aendedAt\"\xea\x02\n" +
+	"\x06Factor\x12\\\n" +
+	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12e\n" +
+	"\auser_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x06userId\x12!\n" +
 	"\aversion\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\aversion\x125\n" +
 	"\x05state\x18\x04 \x01(\x0e2\x15.tammy.v1.FactorStateB\b\xbaH\x05\x82\x01\x02\x10\x01R\x05state\x12A\n" +
 	"\n" +
@@ -2441,26 +2441,26 @@ const file_tammy_v1_identity_proto_rawDesc = "" +
 	"\x04user\x18\x01 \x01(\v2\x0e.tammy.v1.UserB\x06\xbaH\x03\xc8\x01\x01R\x04user\x12N\n" +
 	"\x0factivation_code\x18\x02 \x01(\v2\x1d.tammy.v1.OneTimeSecretOutputB\x06\xbaH\x03\xc8\x01\x01R\x0eactivationCode\x12A\n" +
 	"\n" +
-	"expires_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\texpiresAt\"\xea\x01\n" +
+	"expires_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\texpiresAt\"\xae\x02\n" +
 	"\x12AssignRolesRequest\x12I\n" +
-	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12!\n" +
-	"\auser_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06userId\x122\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12e\n" +
+	"\auser_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x06userId\x122\n" +
 	"\x10expected_version\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion\x122\n" +
 	"\x05roles\x18\x04 \x03(\x0e2\x0e.tammy.v1.RoleB\f\xbaH\t\x92\x01\x06\b\x01\x10\x04\x18\x01R\x05roles\"A\n" +
 	"\x13AssignRolesResponse\x12*\n" +
-	"\x04user\x18\x01 \x01(\v2\x0e.tammy.v1.UserB\x06\xbaH\x03\xc8\x01\x01R\x04user\"\xc2\x01\n" +
+	"\x04user\x18\x01 \x01(\v2\x0e.tammy.v1.UserB\x06\xbaH\x03\xc8\x01\x01R\x04user\"\x86\x02\n" +
 	"\x1eResetUserAuthenticationRequest\x12I\n" +
-	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12!\n" +
-	"\auser_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06userId\x122\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12e\n" +
+	"\auser_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x06userId\x122\n" +
 	"\x10expected_version\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion\"\xe0\x01\n" +
 	"\x1fResetUserAuthenticationResponse\x12*\n" +
 	"\x04user\x18\x01 \x01(\v2\x0e.tammy.v1.UserB\x06\xbaH\x03\xc8\x01\x01R\x04user\x12N\n" +
 	"\x0factivation_code\x18\x02 \x01(\v2\x1d.tammy.v1.OneTimeSecretOutputB\x06\xbaH\x03\xc8\x01\x01R\x0eactivationCode\x12A\n" +
 	"\n" +
-	"expires_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\texpiresAt\"\x84\x01\n" +
+	"expires_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\texpiresAt\"\xc8\x01\n" +
 	"\x0eGetUserRequest\x12O\n" +
-	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12!\n" +
-	"\auser_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06userId\"=\n" +
+	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12e\n" +
+	"\auser_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x06userId\"=\n" +
 	"\x0fGetUserResponse\x12*\n" +
 	"\x04user\x18\x01 \x01(\v2\x0e.tammy.v1.UserB\x06\xbaH\x03\xc8\x01\x01R\x04user\"\x82\x02\n" +
 	"\x10ListUsersRequest\x12O\n" +
@@ -2494,10 +2494,10 @@ const file_tammy_v1_identity_proto_rawDesc = "" +
 	"\x10current_password\x18\x02 \x01(\v2\x15.tammy.v1.SecretInputB\x06\xbaH\x03\xc8\x01\x01R\x0fcurrentPassword\"\x9d\x01\n" +
 	"\x11EnrolTOTPResponse\x120\n" +
 	"\x06factor\x18\x01 \x01(\v2\x10.tammy.v1.FactorB\x06\xbaH\x03\xc8\x01\x01R\x06factor\x12V\n" +
-	"\x13provisioning_secret\x18\x02 \x01(\v2\x1d.tammy.v1.OneTimeSecretOutputB\x06\xbaH\x03\xc8\x01\x01R\x12provisioningSecret\"\xc1\x01\n" +
+	"\x13provisioning_secret\x18\x02 \x01(\v2\x1d.tammy.v1.OneTimeSecretOutputB\x06\xbaH\x03\xc8\x01\x01R\x12provisioningSecret\"\x85\x02\n" +
 	"\x12ConfirmTOTPRequest\x12O\n" +
-	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12%\n" +
-	"\tfactor_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bfactorId\x123\n" +
+	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12i\n" +
+	"\tfactor_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\bfactorId\x123\n" +
 	"\x04code\x18\x03 \x01(\v2\x17.tammy.v1.TotpCodeInputB\x06\xbaH\x03\xc8\x01\x01R\x04code\"G\n" +
 	"\x13ConfirmTOTPResponse\x120\n" +
 	"\x06factor\x18\x01 \x01(\v2\x10.tammy.v1.FactorB\x06\xbaH\x03\xc8\x01\x01R\x06factor\"\xd1\x01\n" +
@@ -2506,16 +2506,16 @@ const file_tammy_v1_identity_proto_rawDesc = "" +
 	"\x04code\x18\x02 \x01(\v2\x17.tammy.v1.TotpCodeInputB\x06\xbaH\x03\xc8\x01\x01R\x04code\x126\n" +
 	"\apurpose\x18\x03 \x01(\tB\x1c\xbaH\x19r\x17\x10\x01\x18`2\x11^[a-z][a-z0-9_]*$R\apurpose\"]\n" +
 	"\x12AssertTOTPResponse\x12G\n" +
-	"\ffresh_factor\x18\x01 \x01(\v2\x1c.tammy.v1.FreshFactorContextB\x06\xbaH\x03\xc8\x01\x01R\vfreshFactor\"\x84\x02\n" +
+	"\ffresh_factor\x18\x01 \x01(\v2\x1c.tammy.v1.FreshFactorContextB\x06\xbaH\x03\xc8\x01\x01R\vfreshFactor\"\xc8\x02\n" +
 	"\x12DisableTOTPRequest\x12I\n" +
-	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12%\n" +
-	"\tfactor_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\bfactorId\x122\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12i\n" +
+	"\tfactor_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\bfactorId\x122\n" +
 	"\x10expected_version\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion\x12H\n" +
 	"\x10current_password\x18\x04 \x01(\v2\x15.tammy.v1.SecretInputB\x06\xbaH\x03\xc8\x01\x01R\x0fcurrentPassword\"G\n" +
 	"\x13DisableTOTPResponse\x120\n" +
-	"\x06factor\x18\x01 \x01(\v2\x10.tammy.v1.FactorB\x06\xbaH\x03\xc8\x01\x01R\x06factor\"\xd4\x03\n" +
-	"\x1bRecoverAdministratorRequest\x12<\n" +
-	"\x15recovery_operation_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x13recoveryOperationId\x12H\n" +
+	"\x06factor\x18\x01 \x01(\v2\x10.tammy.v1.FactorB\x06\xbaH\x03\xc8\x01\x01R\x06factor\"\x99\x04\n" +
+	"\x1bRecoverAdministratorRequest\x12\x80\x01\n" +
+	"\x15recovery_operation_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x13recoveryOperationId\x12H\n" +
 	"\x0eworkspace_file\x18\x02 \x01(\v2\x19.tammy.v1.ApprovedFileRefB\x06\xbaH\x03\xc8\x01\x01R\rworkspaceFile\x12F\n" +
 	"\x0frecovery_secret\x18\x03 \x01(\v2\x15.tammy.v1.SecretInputB\x06\xbaH\x03\xc8\x01\x01R\x0erecoverySecret\x12A\n" +
 	"\x16administrator_username\x18\x04 \x01(\tB\n" +
