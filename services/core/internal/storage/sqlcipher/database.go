@@ -46,15 +46,18 @@ func (identity *databaseFileIdentity) close() error {
 // validates every physical SQLite connection before it is returned to callers.
 type Database struct {
 	*sql.DB
-	connector *connector
-	closeOnce sync.Once
-	closeErr  error
-	identity  *databaseFileIdentity
+	authenticatedDB *sql.DB
+	connector       *connector
+	closeOnce       sync.Once
+	closeErr        error
+	identity        *databaseFileIdentity
+	workspaceLock   *workspaceFileLock
 }
 
 type openBoundaryHooks struct {
 	afterPing                func() error
 	beforeFinalIdentityCheck func()
+	withoutWorkspaceLock     bool
 }
 
 // Open creates or opens a database using an exact 32-byte SQLCipher raw key.
@@ -77,9 +80,20 @@ func openDatabase(
 		return nil, err
 	}
 	ownedKey := append([]byte(nil), key...)
+	var workspaceLock *workspaceFileLock
+	if !hooks.withoutWorkspaceLock {
+		workspaceLock, err = acquireWorkspaceFileLock(cleaned, false)
+		if err != nil {
+			zeroBytes(ownedKey)
+			return nil, err
+		}
+	}
 	identity, _, err := retainDatabaseFile(cleaned)
 	if err != nil {
 		zeroBytes(ownedKey)
+		if workspaceLock != nil {
+			_ = workspaceLock.close()
+		}
 		return nil, err
 	}
 	connectorInstance := &connector{
@@ -93,11 +107,14 @@ func openDatabase(
 	sqlDatabase.SetMaxOpenConns(4)
 	sqlDatabase.SetConnMaxIdleTime(0)
 	sqlDatabase.SetConnMaxLifetime(0)
-	database := &Database{DB: sqlDatabase, connector: connectorInstance, identity: identity}
+	database := &Database{DB: sqlDatabase, authenticatedDB: sqlDatabase, connector: connectorInstance, identity: identity, workspaceLock: workspaceLock}
 	failOpen := func(openErr error) (*Database, error) {
 		_ = sqlDatabase.Close()
 		connectorInstance.destroy()
 		_ = identity.close()
+		if workspaceLock != nil {
+			_ = workspaceLock.close()
+		}
 		// Identity-conditional path deletion is not atomic on either supported
 		// target. Leave a newly created, mode-validated residue for recovery.
 		return nil, openErr
@@ -226,9 +243,14 @@ func validateDatabasePath(candidate string) (string, error) {
 // connector's owned key bytes. It is safe to call more than once.
 func (database *Database) Close() error {
 	database.closeOnce.Do(func() {
-		databaseError := database.DB.Close()
+		databaseError := database.authenticatedDB.Close()
 		database.connector.destroy()
-		database.closeErr = errors.Join(databaseError, database.identity.close())
+		identityError := database.identity.close()
+		var lockError error
+		if database.workspaceLock != nil {
+			lockError = database.workspaceLock.close()
+		}
+		database.closeErr = errors.Join(databaseError, identityError, lockError)
 	})
 	return database.closeErr
 }
