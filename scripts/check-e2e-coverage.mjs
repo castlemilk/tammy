@@ -121,9 +121,12 @@ export function checkE2ECoverage({ coverage, descriptorRpcs, preloadMethods, tra
       }
     }
   }
-  for (const rpcCoverage of Object.values(coverage.rpcs)) {
+  for (const [rpcName, rpcCoverage] of Object.entries(coverage.rpcs)) {
     for (const field of ["roles", "list", "idempotency"]) {
-      if (typeof rpcCoverage[field] === "string" && rpcCoverage[field] !== REVIEWED_EXCEPTION) {
+      if (
+        typeof rpcCoverage[field] === "string" &&
+        (rpcCoverage[field] !== REVIEWED_EXCEPTION || rpcName !== PRE_WORKSPACE_SYSTEM_QUERY)
+      ) {
         throw new Error("E2E_COVERAGE_MANIFEST_INVALID");
       }
     }

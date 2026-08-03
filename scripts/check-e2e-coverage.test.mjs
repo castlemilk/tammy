@@ -204,6 +204,26 @@ test("permits only the reviewed pre-workspace system-query exception", async () 
   assert.doesNotThrow(() => checkE2ECoverage(input));
 });
 
+test("rejects the reviewed system-query exception on business RPC coverage", async () => {
+  const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
+  const structuredInput = validInput();
+  structuredInput.coverage.rpcs[RPC].list = { cases: ["non-empty"] };
+  structuredInput.coverage.rpcs[RPC].idempotency = { cases: ["replay"] };
+
+  assert.doesNotThrow(() => checkE2ECoverage(structuredInput));
+
+  for (const field of ["roles", "list", "idempotency"]) {
+    const input = validInput();
+    input.coverage.rpcs[RPC].list = { cases: ["non-empty"] };
+    input.coverage.rpcs[RPC].idempotency = { cases: ["replay"] };
+    input.coverage.rpcs[RPC][field] = REVIEWED_EXCEPTION;
+
+    assert.throws(() => checkE2ECoverage(input), {
+      message: "E2E_COVERAGE_MANIFEST_INVALID",
+    });
+  }
+});
+
 test("system query requires the exact reviewed roles list and idempotency exceptions", async () => {
   const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
   const invalidValues = [undefined, null, false, {}, []];
