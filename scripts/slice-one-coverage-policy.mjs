@@ -29,6 +29,14 @@ function preAuthenticationRoles() {
   return Object.fromEntries(ROLE_NAMES.map((role) => [role, NOT_APPLICABLE]));
 }
 
+export function coverageProjectionName(name) {
+  const snakeCase = name
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .replace(/([A-Z]+)([A-Z][a-z])/g, "$1_$2")
+    .toLowerCase();
+  return `${snakeCase}_result`;
+}
+
 function rpc({
   failures,
   list = ["not_applicable"],
@@ -41,10 +49,7 @@ function rpc({
 }) {
   return {
     preload: preload ?? `${name[0].toLowerCase()}${name.slice(1)}`,
-    projections: [
-      projection ??
-        `${name.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`).slice(1)}_result`,
-    ],
+    projections: [projection ?? coverageProjectionName(name)],
     routes: [route],
     roles: rolePolicy,
     principalFailures: failures,
@@ -60,9 +65,20 @@ const accountingRead = roles(...ROLE_NAMES);
 const authenticatedUser = roles(...ROLE_NAMES);
 const preAuthentication = preAuthenticationRoles();
 
-const auth = ["AUTHENTICATION_REQUIRED", "PERMISSION_DENIED"];
-const persistent = ["AUTHENTICATION_REQUIRED", "PERMISSION_DENIED", "IDEMPOTENCY_CONFLICT"];
-const stalePersistent = [
+const authenticated = ["AUTHENTICATION_REQUIRED"];
+const authenticatedPersistent = ["AUTHENTICATION_REQUIRED", "IDEMPOTENCY_CONFLICT"];
+const authenticatedStalePersistent = [
+  "AUTHENTICATION_REQUIRED",
+  "STALE_VERSION",
+  "IDEMPOTENCY_CONFLICT",
+];
+const roleGuarded = ["AUTHENTICATION_REQUIRED", "PERMISSION_DENIED"];
+const roleGuardedPersistent = [
+  "AUTHENTICATION_REQUIRED",
+  "PERMISSION_DENIED",
+  "IDEMPOTENCY_CONFLICT",
+];
+const roleGuardedStalePersistent = [
   "AUTHENTICATION_REQUIRED",
   "PERMISSION_DENIED",
   "STALE_VERSION",
@@ -107,7 +123,7 @@ export const SLICE_ONE_RPC_POLICY = {
     route: "/unlock",
     rolePolicy: authenticatedUser,
     mode: "session_action",
-    failures: ["AUTHENTICATION_REQUIRED", "WORKSPACE_NOT_OPEN"],
+    failures: ["WORKSPACE_NOT_OPEN"],
   }),
   "tammy.v1.WorkspaceService.ForgetRememberedWorkspace": rpc({
     name: "ForgetRememberedWorkspace",
@@ -131,7 +147,7 @@ export const SLICE_ONE_RPC_POLICY = {
     rolePolicy: admin,
     mode: "persistent_command",
     failures: [
-      ...stalePersistent,
+      ...roleGuardedStalePersistent,
       "CURRENT_PASSPHRASE_INVALID",
       "WEAK_WORKSPACE_PASSPHRASE",
       "PASSPHRASE_REUSED",
@@ -158,7 +174,7 @@ export const SLICE_ONE_RPC_POLICY = {
     rolePolicy: admin,
     mode: "persistent_command",
     failures: [
-      ...stalePersistent,
+      ...roleGuardedStalePersistent,
       "AUDIT_CHAIN_INVALID",
       "FACTOR_ASSERTION_REQUIRED",
       "FACTOR_ASSERTION_STALE",
@@ -170,21 +186,21 @@ export const SLICE_ONE_RPC_POLICY = {
     route: "/settings/backup",
     rolePolicy: admin,
     mode: "persistent_command",
-    failures: [...persistent, "DESTINATION_FAILURE", "INTEGRITY_FAILURE"],
+    failures: [...roleGuardedPersistent, "DESTINATION_FAILURE", "INTEGRITY_FAILURE"],
   }),
   "tammy.v1.WorkspaceService.CancelBackup": rpc({
     name: "CancelBackup",
     route: "/settings/backup",
     rolePolicy: admin,
     mode: "persistent_command",
-    failures: [...stalePersistent, "COMMIT_POINT_PASSED", "INVALID_STATE_TRANSITION"],
+    failures: [...roleGuardedStalePersistent, "COMMIT_POINT_PASSED", "INVALID_STATE_TRANSITION"],
   }),
   "tammy.v1.WorkspaceService.GetBackupJob": rpc({
     name: "GetBackupJob",
     route: "/settings/backup",
     rolePolicy: admin,
     mode: "query",
-    failures: [...auth, "NOT_FOUND"],
+    failures: [...roleGuarded, "NOT_FOUND"],
     list: ["found", "not_found"],
   }),
   "tammy.v1.WorkspaceService.ListBackupJobs": rpc({
@@ -192,7 +208,7 @@ export const SLICE_ONE_RPC_POLICY = {
     route: "/settings/backup",
     rolePolicy: admin,
     mode: "query",
-    failures: [...auth, "INVALID_CURSOR"],
+    failures: [...roleGuarded, "INVALID_CURSOR"],
     list: ["empty", "populated", "filtered", "paginated"],
   }),
   "tammy.v1.WorkspaceService.RestoreWorkspace": rpc({
@@ -223,7 +239,7 @@ export const SLICE_ONE_RPC_POLICY = {
     rolePolicy: admin,
     mode: "persistent_command",
     failures: [
-      ...stalePersistent,
+      ...roleGuardedStalePersistent,
       "ARCHIVE_NOT_FOUND",
       "CURRENT_PASSWORD_INVALID",
       "FACTOR_ASSERTION_REQUIRED",
@@ -236,14 +252,14 @@ export const SLICE_ONE_RPC_POLICY = {
     route: "/restore/evidence",
     rolePolicy: admin,
     mode: "persistent_command",
-    failures: [...stalePersistent, "COMMIT_POINT_PASSED", "INVALID_STATE_TRANSITION"],
+    failures: [...roleGuardedStalePersistent, "COMMIT_POINT_PASSED", "INVALID_STATE_TRANSITION"],
   }),
   "tammy.v1.WorkspaceService.GetPreRestoreArchiveExportJob": rpc({
     name: "GetPreRestoreArchiveExportJob",
     route: "/restore/evidence",
     rolePolicy: admin,
     mode: "query",
-    failures: [...auth, "NOT_FOUND"],
+    failures: [...roleGuarded, "NOT_FOUND"],
     list: ["found", "not_found"],
   }),
   "tammy.v1.WorkspaceService.ListPreRestoreArchiveExportJobs": rpc({
@@ -251,7 +267,7 @@ export const SLICE_ONE_RPC_POLICY = {
     route: "/restore/evidence",
     rolePolicy: admin,
     mode: "query",
-    failures: [...auth, "INVALID_CURSOR"],
+    failures: [...roleGuarded, "INVALID_CURSOR"],
     list: ["empty", "populated", "filtered", "paginated"],
   }),
   "tammy.v1.WorkspaceService.DeletePreRestoreArchive": rpc({
@@ -260,7 +276,7 @@ export const SLICE_ONE_RPC_POLICY = {
     rolePolicy: admin,
     mode: "persistent_command",
     failures: [
-      ...stalePersistent,
+      ...roleGuardedStalePersistent,
       "ARCHIVE_NOT_FOUND",
       "RETENTION_PERIOD_ACTIVE",
       "CURRENT_PASSWORD_INVALID",
@@ -274,7 +290,7 @@ export const SLICE_ONE_RPC_POLICY = {
     route: "/restore/evidence",
     rolePolicy: admin,
     mode: "query",
-    failures: [...auth, "NOT_FOUND"],
+    failures: [...roleGuarded, "NOT_FOUND"],
     list: ["found", "not_found"],
   }),
   "tammy.v1.WorkspaceService.ListPreRestoreArchives": rpc({
@@ -282,7 +298,7 @@ export const SLICE_ONE_RPC_POLICY = {
     route: "/restore/evidence",
     rolePolicy: admin,
     mode: "query",
-    failures: [...auth, "INVALID_CURSOR"],
+    failures: [...roleGuarded, "INVALID_CURSOR"],
     list: ["empty", "populated", "filtered", "paginated"],
   }),
   "tammy.v1.WorkspaceService.TransferOwnership": rpc({
@@ -292,7 +308,7 @@ export const SLICE_ONE_RPC_POLICY = {
     rolePolicy: admin,
     mode: "persistent_command",
     failures: [
-      ...stalePersistent,
+      ...roleGuardedStalePersistent,
       "OWNER_REQUIRED",
       "TARGET_INVALID",
       "FACTOR_ASSERTION_REQUIRED",
@@ -336,14 +352,14 @@ export const SLICE_ONE_RPC_POLICY = {
     route: "/settings/users",
     rolePolicy: admin,
     mode: "persistent_command",
-    failures: [...persistent, "DUPLICATE_USERNAME", "INVALID_ROLE"],
+    failures: [...roleGuardedPersistent, "DUPLICATE_USERNAME", "INVALID_ROLE"],
   }),
   "tammy.v1.IdentityService.AssignRoles": rpc({
     name: "AssignRoles",
     route: "/settings/users",
     rolePolicy: admin,
     mode: "persistent_command",
-    failures: [...stalePersistent, "LAST_ADMIN_REMOVAL", "INVALID_ROLE"],
+    failures: [...roleGuardedStalePersistent, "LAST_ADMIN_REMOVAL", "INVALID_ROLE"],
   }),
   "tammy.v1.IdentityService.ResetUserAuthentication": rpc({
     name: "ResetUserAuthentication",
@@ -351,7 +367,7 @@ export const SLICE_ONE_RPC_POLICY = {
     rolePolicy: admin,
     mode: "persistent_command",
     failures: [
-      ...stalePersistent,
+      ...roleGuardedStalePersistent,
       "LAST_ADMIN_RESET",
       "FACTOR_ASSERTION_REQUIRED",
       "FACTOR_ASSERTION_STALE",
@@ -362,7 +378,7 @@ export const SLICE_ONE_RPC_POLICY = {
     route: "/settings/users",
     rolePolicy: admin,
     mode: "query",
-    failures: [...auth, "NOT_FOUND"],
+    failures: [...roleGuarded, "NOT_FOUND"],
     list: ["found", "not_found"],
   }),
   "tammy.v1.IdentityService.ListUsers": rpc({
@@ -370,7 +386,7 @@ export const SLICE_ONE_RPC_POLICY = {
     route: "/settings/users",
     rolePolicy: admin,
     mode: "query",
-    failures: [...auth, "INVALID_CURSOR"],
+    failures: [...roleGuarded, "INVALID_CURSOR"],
     list: ["empty", "populated", "filtered", "paginated"],
   }),
   "tammy.v1.IdentityService.ActivateUser": rpc({
@@ -390,7 +406,12 @@ export const SLICE_ONE_RPC_POLICY = {
     route: "/settings/security",
     rolePolicy: authenticatedUser,
     mode: "persistent_command",
-    failures: [...stalePersistent, "CURRENT_PASSWORD_INVALID", "WEAK_PASSWORD", "PASSWORD_REUSED"],
+    failures: [
+      ...authenticatedStalePersistent,
+      "CURRENT_PASSWORD_INVALID",
+      "WEAK_PASSWORD",
+      "PASSWORD_REUSED",
+    ],
   }),
   "tammy.v1.IdentityService.EnrolTOTP": rpc({
     name: "EnrolTOTP",
@@ -398,7 +419,7 @@ export const SLICE_ONE_RPC_POLICY = {
     route: "/settings/security",
     rolePolicy: authenticatedUser,
     mode: "persistent_command",
-    failures: [...persistent, "CURRENT_PASSWORD_INVALID", "FACTOR_ALREADY_ENROLLED"],
+    failures: [...authenticatedPersistent, "CURRENT_PASSWORD_INVALID", "FACTOR_ALREADY_ENROLLED"],
   }),
   "tammy.v1.IdentityService.ConfirmTOTP": rpc({
     name: "ConfirmTOTP",
@@ -429,7 +450,7 @@ export const SLICE_ONE_RPC_POLICY = {
     rolePolicy: authenticatedUser,
     mode: "persistent_command",
     failures: [
-      ...stalePersistent,
+      ...authenticatedStalePersistent,
       "INVALID_PROOF",
       "FACTOR_ASSERTION_REQUIRED",
       "FACTOR_ASSERTION_STALE",
@@ -448,7 +469,7 @@ export const SLICE_ONE_RPC_POLICY = {
     route: "/setup/organisation",
     rolePolicy: admin,
     mode: "persistent_command",
-    failures: [...persistent, "INVALID_ABN", "DUPLICATE_ABN"],
+    failures: [...roleGuardedPersistent, "INVALID_ABN", "DUPLICATE_ABN"],
   }),
   "tammy.v1.OrganisationService.UpdateOrganisation": rpc({
     name: "UpdateOrganisation",
@@ -456,7 +477,7 @@ export const SLICE_ONE_RPC_POLICY = {
     rolePolicy: admin,
     mode: "persistent_command",
     failures: [
-      ...stalePersistent,
+      ...roleGuardedStalePersistent,
       "INVALID_ABN",
       "INVALID_GST_SETTINGS",
       "FACTOR_ASSERTION_REQUIRED",
@@ -471,7 +492,7 @@ export const SLICE_ONE_RPC_POLICY = {
     rolePolicy: admin,
     mode: "persistent_command",
     failures: [
-      ...stalePersistent,
+      ...roleGuardedStalePersistent,
       "VERIFICATION_SOURCE_INVALID",
       "EVIDENCE_MISSING",
       "DETAILS_MISMATCH",
@@ -482,7 +503,7 @@ export const SLICE_ONE_RPC_POLICY = {
     route: "/settings/organisation",
     rolePolicy: accountingRead,
     mode: "query",
-    failures: [...auth, "NOT_FOUND"],
+    failures: [...authenticated, "NOT_FOUND"],
     list: ["found", "not_found"],
   }),
   "tammy.v1.AccountingService.CreateAccount": rpc({
@@ -490,14 +511,14 @@ export const SLICE_ONE_RPC_POLICY = {
     route: "/accounting/chart",
     rolePolicy: adminAndPreparer,
     mode: "persistent_command",
-    failures: [...persistent, "DUPLICATE_CODE", "INVALID_CLASSIFICATION"],
+    failures: [...roleGuardedPersistent, "DUPLICATE_CODE", "INVALID_CLASSIFICATION"],
   }),
   "tammy.v1.AccountingService.UpdateAccount": rpc({
     name: "UpdateAccount",
     route: "/accounting/chart",
     rolePolicy: admin,
     mode: "persistent_command",
-    failures: [...stalePersistent, "CONTROL_FIELD_IMMUTABLE", "INVALID_CLASSIFICATION"],
+    failures: [...roleGuardedStalePersistent, "CONTROL_FIELD_IMMUTABLE", "INVALID_CLASSIFICATION"],
   }),
   "tammy.v1.AccountingService.SetAccountStatus": rpc({
     name: "SetAccountStatus",
@@ -505,8 +526,9 @@ export const SLICE_ONE_RPC_POLICY = {
     rolePolicy: admin,
     mode: "persistent_command",
     failures: [
-      ...stalePersistent,
+      ...roleGuardedStalePersistent,
       "SYSTEM_ACCOUNT",
+      "CONTROL_ACCOUNT",
       "NON_ZERO_DRAFT_DEPENDENCY",
       "INVALID_STATE_TRANSITION",
     ],
@@ -516,7 +538,7 @@ export const SLICE_ONE_RPC_POLICY = {
     route: "/accounting/chart",
     rolePolicy: accountingRead,
     mode: "query",
-    failures: [...auth, "RULE_BUNDLE_UNAVAILABLE", "INVALID_DATE"],
+    failures: [...authenticated, "RULE_BUNDLE_UNAVAILABLE", "INVALID_DATE"],
     list: ["empty", "populated", "filtered"],
   }),
   "tammy.v1.AccountingService.PostOpeningConversion": rpc({
@@ -525,7 +547,7 @@ export const SLICE_ONE_RPC_POLICY = {
     rolePolicy: admin,
     mode: "persistent_command",
     failures: [
-      ...persistent,
+      ...roleGuardedPersistent,
       "SOURCE_CONFLICT",
       "IMBALANCE",
       "CONTROL_MISMATCH",
@@ -539,7 +561,7 @@ export const SLICE_ONE_RPC_POLICY = {
     rolePolicy: admin,
     mode: "persistent_command",
     failures: [
-      ...stalePersistent,
+      ...roleGuardedStalePersistent,
       "FACTOR_ASSERTION_REQUIRED",
       "FACTOR_ASSERTION_STALE",
       "CLOSED_PERIOD",
@@ -554,7 +576,7 @@ export const SLICE_ONE_RPC_POLICY = {
     rolePolicy: adminAndPreparer,
     mode: "persistent_command",
     failures: [
-      ...persistent,
+      ...roleGuardedPersistent,
       "SOURCE_CONFLICT",
       "IMBALANCE",
       "CLOSED_PERIOD",
@@ -568,7 +590,7 @@ export const SLICE_ONE_RPC_POLICY = {
     rolePolicy: adminAndPreparer,
     mode: "persistent_command",
     failures: [
-      ...stalePersistent,
+      ...roleGuardedStalePersistent,
       "ALREADY_REVERSED",
       "SYSTEM_SOURCE_WORKFLOW_REQUIRED",
       "CLOSED_PERIOD",
@@ -581,7 +603,7 @@ export const SLICE_ONE_RPC_POLICY = {
     rolePolicy: admin,
     mode: "persistent_command",
     failures: [
-      ...persistent,
+      ...roleGuardedPersistent,
       "SOURCE_CONFLICT",
       "FACTOR_ASSERTION_REQUIRED",
       "FACTOR_ASSERTION_STALE",
@@ -595,7 +617,7 @@ export const SLICE_ONE_RPC_POLICY = {
     rolePolicy: admin,
     mode: "persistent_command",
     failures: [
-      ...stalePersistent,
+      ...roleGuardedStalePersistent,
       "FACTOR_ASSERTION_REQUIRED",
       "FACTOR_ASSERTION_STALE",
       "NOT_CLOSED",
@@ -608,7 +630,7 @@ export const SLICE_ONE_RPC_POLICY = {
     route: "/accounting/chart",
     rolePolicy: accountingRead,
     mode: "query",
-    failures: [...auth, "NOT_FOUND"],
+    failures: [...authenticated, "NOT_FOUND"],
     list: ["found", "not_found"],
   }),
   "tammy.v1.AccountingService.ListAccounts": rpc({
@@ -616,7 +638,7 @@ export const SLICE_ONE_RPC_POLICY = {
     route: "/accounting/chart",
     rolePolicy: accountingRead,
     mode: "query",
-    failures: [...auth, "INVALID_CURSOR"],
+    failures: [...authenticated, "INVALID_CURSOR"],
     list: ["empty", "populated", "filtered", "paginated"],
   }),
   "tammy.v1.AccountingService.GetJournal": rpc({
@@ -624,7 +646,7 @@ export const SLICE_ONE_RPC_POLICY = {
     route: "/accounting/journals",
     rolePolicy: accountingRead,
     mode: "query",
-    failures: [...auth, "NOT_FOUND"],
+    failures: [...authenticated, "NOT_FOUND"],
     list: ["found", "not_found"],
   }),
   "tammy.v1.AccountingService.ListJournals": rpc({
@@ -632,7 +654,7 @@ export const SLICE_ONE_RPC_POLICY = {
     route: "/accounting/journals",
     rolePolicy: accountingRead,
     mode: "query",
-    failures: [...auth, "INVALID_PERIOD", "INVALID_CURSOR"],
+    failures: [...authenticated, "INVALID_PERIOD", "INVALID_CURSOR"],
     list: ["empty", "populated", "filtered", "paginated"],
   }),
   "tammy.v1.AccountingService.GetGeneralLedger": rpc({
@@ -640,7 +662,7 @@ export const SLICE_ONE_RPC_POLICY = {
     route: "/accounting/general-ledger",
     rolePolicy: accountingRead,
     mode: "query",
-    failures: [...auth, "INVALID_PERIOD", "INVALID_CURSOR"],
+    failures: [...authenticated, "INVALID_PERIOD", "INVALID_CURSOR"],
     list: ["empty", "populated", "filtered", "paginated"],
   }),
   "tammy.v1.AccountingService.GetTrialBalance": rpc({
@@ -648,7 +670,7 @@ export const SLICE_ONE_RPC_POLICY = {
     route: "/accounting/trial-balance",
     rolePolicy: accountingRead,
     mode: "query",
-    failures: [...auth, "SOURCE_CONFLICT", "INVALID_PERIOD"],
+    failures: [...authenticated, "SOURCE_CONFLICT", "INVALID_PERIOD"],
     list: ["empty", "populated"],
   }),
   "tammy.v1.AuditService.VerifyChain": rpc({
@@ -656,7 +678,7 @@ export const SLICE_ONE_RPC_POLICY = {
     route: "/audit",
     rolePolicy: adminAndAuditor,
     mode: "query",
-    failures: [...auth, "CHAIN_MISMATCH", "MISSING_EVENT"],
+    failures: [...roleGuarded, "CHAIN_MISMATCH", "MISSING_EVENT"],
     list: ["not_applicable"],
   }),
   "tammy.v1.AuditService.ListAuditEvents": rpc({
@@ -664,7 +686,7 @@ export const SLICE_ONE_RPC_POLICY = {
     route: "/audit",
     rolePolicy: adminAndAuditor,
     mode: "query",
-    failures: [...auth, "INVALID_CURSOR"],
+    failures: [...roleGuarded, "INVALID_CURSOR"],
     list: ["empty", "populated", "filtered", "paginated"],
   }),
   "tammy.v1.AuditService.ExportEvidence": rpc({
@@ -672,21 +694,21 @@ export const SLICE_ONE_RPC_POLICY = {
     route: "/audit",
     rolePolicy: adminAndAuditor,
     mode: "persistent_command",
-    failures: [...persistent, "DESTINATION_FAILURE", "CHAIN_INVALID"],
+    failures: [...roleGuardedPersistent, "DESTINATION_FAILURE", "CHAIN_INVALID"],
   }),
   "tammy.v1.AuditService.CancelAuditExport": rpc({
     name: "CancelAuditExport",
     route: "/audit",
     rolePolicy: adminAndAuditor,
     mode: "persistent_command",
-    failures: [...stalePersistent, "COMMIT_POINT_PASSED", "INVALID_STATE_TRANSITION"],
+    failures: [...roleGuardedStalePersistent, "COMMIT_POINT_PASSED", "INVALID_STATE_TRANSITION"],
   }),
   "tammy.v1.AuditService.GetAuditExportJob": rpc({
     name: "GetAuditExportJob",
     route: "/audit",
     rolePolicy: adminAndAuditor,
     mode: "query",
-    failures: [...auth, "NOT_FOUND"],
+    failures: [...roleGuarded, "NOT_FOUND"],
     list: ["found", "not_found"],
   }),
   "tammy.v1.AuditService.ListAuditExportJobs": rpc({
@@ -694,7 +716,7 @@ export const SLICE_ONE_RPC_POLICY = {
     route: "/audit",
     rolePolicy: adminAndAuditor,
     mode: "query",
-    failures: [...auth, "INVALID_CURSOR"],
+    failures: [...roleGuarded, "INVALID_CURSOR"],
     list: ["empty", "populated", "filtered", "paginated"],
   }),
 };

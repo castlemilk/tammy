@@ -157,7 +157,6 @@ rpcs:
       business_lodger: planned_allowed
       auditor: planned_allowed
     principalFailures:
-      - AUTHENTICATION_REQUIRED
       - WORKSPACE_NOT_OPEN
     list:
       states:
@@ -1025,7 +1024,6 @@ rpcs:
       auditor: planned_allowed
     principalFailures:
       - AUTHENTICATION_REQUIRED
-      - PERMISSION_DENIED
       - STALE_VERSION
       - IDEMPOTENCY_CONFLICT
       - CURRENT_PASSWORD_INVALID
@@ -1046,7 +1044,7 @@ rpcs:
     futureCases:
       - slice-1/foundation-contracts
     projections:
-      - enrol_t_o_t_p_result
+      - enrol_totp_result
     routes:
       - /settings/security
     roles:
@@ -1056,7 +1054,6 @@ rpcs:
       auditor: planned_allowed
     principalFailures:
       - AUTHENTICATION_REQUIRED
-      - PERMISSION_DENIED
       - IDEMPOTENCY_CONFLICT
       - CURRENT_PASSWORD_INVALID
       - FACTOR_ALREADY_ENROLLED
@@ -1075,7 +1072,7 @@ rpcs:
     futureCases:
       - slice-1/foundation-contracts
     projections:
-      - confirm_t_o_t_p_result
+      - confirm_totp_result
     routes:
       - /settings/security
     roles:
@@ -1104,7 +1101,7 @@ rpcs:
     futureCases:
       - slice-1/foundation-contracts
     projections:
-      - assert_t_o_t_p_result
+      - assert_totp_result
     routes:
       - /settings/security
     roles:
@@ -1134,7 +1131,7 @@ rpcs:
     futureCases:
       - slice-1/foundation-contracts
     projections:
-      - disable_t_o_t_p_result
+      - disable_totp_result
     routes:
       - /settings/security
     roles:
@@ -1144,7 +1141,6 @@ rpcs:
       auditor: planned_allowed
     principalFailures:
       - AUTHENTICATION_REQUIRED
-      - PERMISSION_DENIED
       - STALE_VERSION
       - IDEMPOTENCY_CONFLICT
       - INVALID_PROOF
@@ -1300,7 +1296,6 @@ rpcs:
       auditor: planned_allowed
     principalFailures:
       - AUTHENTICATION_REQUIRED
-      - PERMISSION_DENIED
       - NOT_FOUND
     list:
       states:
@@ -1390,6 +1385,7 @@ rpcs:
       - STALE_VERSION
       - IDEMPOTENCY_CONFLICT
       - SYSTEM_ACCOUNT
+      - CONTROL_ACCOUNT
       - NON_ZERO_DRAFT_DEPENDENCY
       - INVALID_STATE_TRANSITION
     list:
@@ -1417,7 +1413,6 @@ rpcs:
       auditor: planned_allowed
     principalFailures:
       - AUTHENTICATION_REQUIRED
-      - PERMISSION_DENIED
       - RULE_BUNDLE_UNAVAILABLE
       - INVALID_DATE
     list:
@@ -1641,7 +1636,6 @@ rpcs:
       auditor: planned_allowed
     principalFailures:
       - AUTHENTICATION_REQUIRED
-      - PERMISSION_DENIED
       - NOT_FOUND
     list:
       states:
@@ -1668,7 +1662,6 @@ rpcs:
       auditor: planned_allowed
     principalFailures:
       - AUTHENTICATION_REQUIRED
-      - PERMISSION_DENIED
       - INVALID_CURSOR
     list:
       states:
@@ -1697,7 +1690,6 @@ rpcs:
       auditor: planned_allowed
     principalFailures:
       - AUTHENTICATION_REQUIRED
-      - PERMISSION_DENIED
       - NOT_FOUND
     list:
       states:
@@ -1724,7 +1716,6 @@ rpcs:
       auditor: planned_allowed
     principalFailures:
       - AUTHENTICATION_REQUIRED
-      - PERMISSION_DENIED
       - INVALID_PERIOD
       - INVALID_CURSOR
     list:
@@ -1754,7 +1745,6 @@ rpcs:
       auditor: planned_allowed
     principalFailures:
       - AUTHENTICATION_REQUIRED
-      - PERMISSION_DENIED
       - INVALID_PERIOD
       - INVALID_CURSOR
     list:
@@ -1784,7 +1774,6 @@ rpcs:
       auditor: planned_allowed
     principalFailures:
       - AUTHENTICATION_REQUIRED
-      - PERMISSION_DENIED
       - SOURCE_CONFLICT
       - INVALID_PERIOD
     list:
