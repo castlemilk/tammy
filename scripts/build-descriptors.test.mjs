@@ -1,11 +1,16 @@
 import assert from "node:assert/strict";
+import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { access, mkdir, mkdtemp, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { create, toBinary } from "@bufbuild/protobuf";
+import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
+import { create, fromBinary, toBinary } from "@bufbuild/protobuf";
 import { FileDescriptorSetSchema } from "@bufbuild/protobuf/wkt";
+
+const execFileAsync = promisify(execFile);
 
 const DESCRIPTOR_BYTES = Buffer.from(
   toBinary(
@@ -49,11 +54,22 @@ function validManifest(overrides = {}) {
 
 async function writeRetainedEvidence(root) {
   const retainedDirectory = path.join(root, "compliance/contracts");
-  await mkdir(retainedDirectory, { recursive: true });
-  await writeFile(path.join(retainedDirectory, "descriptors.pb"), DESCRIPTOR_BYTES);
+  await writeEvidencePair(retainedDirectory);
+}
+
+async function writeEvidencePair(directory, descriptorBytes = DESCRIPTOR_BYTES) {
+  await mkdir(directory, { recursive: true });
+  await writeFile(path.join(directory, "descriptors.pb"), descriptorBytes);
   await writeFile(
-    path.join(retainedDirectory, "descriptor-manifest.json"),
-    `${JSON.stringify(validManifest(), null, 2)}\n`,
+    path.join(directory, "descriptor-manifest.json"),
+    `${JSON.stringify(
+      validManifest({
+        byteLength: descriptorBytes.byteLength,
+        sha256: createHash("sha256").update(descriptorBytes).digest("hex"),
+      }),
+      null,
+      2,
+    )}\n`,
   );
 }
 
@@ -65,11 +81,38 @@ async function retainedEvidence(root) {
   };
 }
 
+async function writeRecoveryState(
+  root,
+  { extraEntry = false, journal = true, noncanonicalManifest = false } = {},
+) {
+  const recoveryDirectory = path.join(root, ".tmp/contracts/descriptor-evidence-recovery");
+  await writeEvidencePair(path.join(recoveryDirectory, "previous-contracts"));
+  if (noncanonicalManifest) {
+    await writeFile(
+      path.join(recoveryDirectory, "previous-contracts/descriptor-manifest.json"),
+      JSON.stringify(validManifest()),
+    );
+  }
+  await writeFile(
+    path.join(recoveryDirectory, "recovery-journal.json"),
+    journal ? '{\n  "schemaVersion": 1,\n  "state": "previous_retained_pair"\n}\n' : "{}\n",
+  );
+  if (extraEntry) {
+    await writeEvidencePair(path.join(recoveryDirectory, "unexpected-second-pair"));
+  }
+  return recoveryDirectory;
+}
+
 async function assertRetainedEvidenceUnchanged(root, before) {
   const after = await retainedEvidence(root);
   assert.deepEqual(after.descriptor, before.descriptor);
   assert.deepEqual(after.manifest, before.manifest);
-  assert.deepEqual(await readdir(path.join(root, ".tmp")), []);
+  const temporaryDirectory = path.join(root, ".tmp");
+  try {
+    assert.deepEqual(await readdir(temporaryDirectory), []);
+  } catch (error) {
+    assert.equal(error.code, "ENOENT");
+  }
 }
 
 function createEvidenceRun({
@@ -435,6 +478,59 @@ test("evidence rejects a dirty tree before writing output", async (context) => {
   await assert.rejects(access(path.join(root, "compliance/contracts/descriptors.pb")));
 });
 
+test("evidence detects an untracked Buf input when Git config hides untracked files", async (context) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "tammy-descriptors-git-"));
+  const proofRoot = await mkdtemp(path.join(os.tmpdir(), "tammy-descriptors-proof-"));
+  context.after(() => rm(root, { force: true, recursive: true }));
+  context.after(() => rm(proofRoot, { force: true, recursive: true }));
+  const git = (args) => execFileAsync("git", args, { cwd: root, shell: false });
+  await writeRetainedEvidence(root);
+  await writeFile(
+    path.join(root, "buf.yaml"),
+    "version: v2\nmodules:\n  - path: proto\n    name: buf.build/tammyapp/tammy\n",
+  );
+  await writeFile(path.join(root, ".gitignore"), "/.tmp/contracts/\n");
+  await git(["init"]);
+  await git(["config", "user.email", "tests@tammy.invalid"]);
+  await git(["config", "user.name", "Tammy Tests"]);
+  await git(["add", "."]);
+  await git(["commit", "-m", "test fixture"]);
+  const { stdout: revisionStdout } = await git(["rev-parse", "HEAD"]);
+  const revision = revisionStdout.trim();
+  await git(["config", "status.showUntrackedFiles", "no"]);
+
+  const untrackedProto = path.join(root, "proto/tammy/v1/untracked.proto");
+  await mkdir(path.dirname(untrackedProto), { recursive: true });
+  await writeFile(
+    untrackedProto,
+    'syntax = "proto3";\npackage tammy.v1;\nmessage UntrackedInput {}\n',
+  );
+  const proofDescriptor = path.join(proofRoot, "descriptors.pb");
+  const bufEntry = fileURLToPath(import.meta.resolve("@bufbuild/buf/bin/buf"));
+  await execFileAsync(
+    process.execPath,
+    [bufEntry, "build", "--as-file-descriptor-set", "--output", proofDescriptor],
+    { cwd: root, shell: false },
+  );
+  const proofSet = fromBinary(FileDescriptorSetSchema, await readFile(proofDescriptor));
+  assert.equal(
+    proofSet.file.some((file) => file.name === "tammy/v1/untracked.proto"),
+    true,
+  );
+  const before = await retainedEvidence(root);
+  const { buildDescriptors } = await import("./build-descriptors.mjs");
+
+  await assert.rejects(
+    buildDescriptors({
+      env: { TAMMY_SOURCE_REVISION: revision },
+      mode: "evidence",
+      root,
+    }),
+    { message: "DESCRIPTOR_EVIDENCE_DIRTY_TREE" },
+  );
+  await assertRetainedEvidenceUnchanged(root, before);
+});
+
 test("Buf failure leaves retained evidence unchanged and removes staging", async (context) => {
   const root = await mkdtemp(path.join(os.tmpdir(), "tammy-descriptors-"));
   context.after(() => rm(root, { force: true, recursive: true }));
@@ -585,6 +681,151 @@ test("publication failure rolls back the complete retained pair and removes stag
   await assertRetainedEvidenceUnchanged(root, before);
 });
 
+test("double publication failure preserves the prior pair in stable recovery state", async (context) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "tammy-descriptors-"));
+  context.after(() => rm(root, { force: true, recursive: true }));
+  await writeRetainedEvidence(root);
+  const before = await retainedEvidence(root);
+  const { run } = createEvidenceRun();
+  let renameCount = 0;
+  const renamePath = async (source, destination) => {
+    renameCount += 1;
+    if (renameCount === 2) throw new Error("INJECTED_PUBLICATION_FAILURE");
+    if (renameCount === 3) throw new Error("INJECTED_ROLLBACK_FAILURE");
+    await rename(source, destination);
+  };
+  const { buildDescriptors } = await import("./build-descriptors.mjs");
+
+  await assert.rejects(
+    buildDescriptors({
+      bufEntry: BUF_ENTRY,
+      env: { TAMMY_SOURCE_REVISION: REVISION },
+      mode: "evidence",
+      nodeExecutable: NODE_EXECUTABLE,
+      platform: "darwin",
+      renamePath,
+      root,
+      run,
+    }),
+    (error) => {
+      assert.equal(error.message, "DESCRIPTOR_EVIDENCE_ROLLBACK_FAILED: RECOVERY_AVAILABLE");
+      assert.equal(error.cause?.errors?.[0]?.message, "INJECTED_PUBLICATION_FAILURE");
+      assert.equal(error.cause?.errors?.[1]?.message, "INJECTED_ROLLBACK_FAILURE");
+      return true;
+    },
+  );
+
+  assert.equal(renameCount, 3);
+  await assert.rejects(access(path.join(root, "compliance/contracts")));
+  const recoveryDirectory = path.join(root, ".tmp/contracts/descriptor-evidence-recovery");
+  assert.deepEqual(
+    await readFile(path.join(recoveryDirectory, "previous-contracts/descriptors.pb")),
+    before.descriptor,
+  );
+  assert.deepEqual(
+    await readFile(path.join(recoveryDirectory, "previous-contracts/descriptor-manifest.json")),
+    before.manifest,
+  );
+  assert.equal(
+    await readFile(path.join(recoveryDirectory, "recovery-journal.json"), "utf8"),
+    '{\n  "schemaVersion": 1,\n  "state": "previous_retained_pair"\n}\n',
+  );
+});
+
+test("next evidence invocation restores valid recovery before dirty-tree rejection", async (context) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "tammy-descriptors-"));
+  context.after(() => rm(root, { force: true, recursive: true }));
+  await writeRetainedEvidence(root);
+  const before = await retainedEvidence(root);
+  const { run: failedRun } = createEvidenceRun();
+  let renameCount = 0;
+  const failingRename = async (source, destination) => {
+    renameCount += 1;
+    if (renameCount === 2 || renameCount === 3) throw new Error("INJECTED_RENAME_FAILURE");
+    await rename(source, destination);
+  };
+  const { buildDescriptors } = await import("./build-descriptors.mjs");
+  await assert.rejects(
+    buildDescriptors({
+      bufEntry: BUF_ENTRY,
+      env: { TAMMY_SOURCE_REVISION: REVISION },
+      mode: "evidence",
+      nodeExecutable: NODE_EXECUTABLE,
+      platform: "darwin",
+      renamePath: failingRename,
+      root,
+      run: failedRun,
+    }),
+    { message: "DESCRIPTOR_EVIDENCE_ROLLBACK_FAILED: RECOVERY_AVAILABLE" },
+  );
+
+  const { run: restartRun } = createEvidenceRun({
+    statuses: ["?? proto/tammy/v1/restart.proto\n"],
+  });
+  await assert.rejects(
+    buildDescriptors({
+      bufEntry: BUF_ENTRY,
+      env: { TAMMY_SOURCE_REVISION: REVISION },
+      mode: "evidence",
+      nodeExecutable: NODE_EXECUTABLE,
+      platform: "darwin",
+      root,
+      run: restartRun,
+    }),
+    { message: "DESCRIPTOR_EVIDENCE_DIRTY_TREE" },
+  );
+
+  await assertRetainedEvidenceUnchanged(root, before);
+});
+
+test("malformed or ambiguous recovery state fails closed before Git checks", async (context) => {
+  for (const recoveryOptions of [
+    { journal: false },
+    { extraEntry: true },
+    { noncanonicalManifest: true },
+  ]) {
+    const root = await mkdtemp(path.join(os.tmpdir(), "tammy-descriptors-"));
+    context.after(() => rm(root, { force: true, recursive: true }));
+    const recoveryDirectory = await writeRecoveryState(root, recoveryOptions);
+    const { buildDescriptors } = await import("./build-descriptors.mjs");
+
+    await assert.rejects(
+      buildDescriptors({
+        env: { TAMMY_SOURCE_REVISION: REVISION },
+        mode: "evidence",
+        root,
+        run: async () => {
+          throw new Error("GIT_MUST_NOT_RUN_BEFORE_RECOVERY_VALIDATION");
+        },
+      }),
+      { message: "DESCRIPTOR_EVIDENCE_RECOVERY_INVALID" },
+    );
+    await access(path.join(recoveryDirectory, "previous-contracts/descriptors.pb"));
+  }
+});
+
+test("recovery state never overwrites a present retained pair", async (context) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "tammy-descriptors-"));
+  context.after(() => rm(root, { force: true, recursive: true }));
+  await writeRetainedEvidence(root);
+  const before = await retainedEvidence(root);
+  await writeRecoveryState(root);
+  const { buildDescriptors } = await import("./build-descriptors.mjs");
+
+  await assert.rejects(
+    buildDescriptors({
+      env: { TAMMY_SOURCE_REVISION: REVISION },
+      mode: "evidence",
+      root,
+      run: async () => {
+        throw new Error("GIT_MUST_NOT_RUN_WITH_RECOVERY_CONFLICT");
+      },
+    }),
+    { message: "DESCRIPTOR_EVIDENCE_RECOVERY_CONFLICT" },
+  );
+  assert.deepEqual(await retainedEvidence(root), before);
+});
+
 test("evidence publishes one validated pair after three clean source checks", async (context) => {
   const root = await mkdtemp(path.join(os.tmpdir(), "tammy-descriptors-"));
   context.after(() => rm(root, { force: true, recursive: true }));
@@ -616,10 +857,14 @@ test("evidence publishes one validated pair after three clean source checks", as
     calls.filter(({ command, args }) => command === "git" && args[0] === "rev-parse").length,
     3,
   );
-  assert.equal(
-    calls.filter(({ command, args }) => command === "git" && args[0] === "status").length,
-    3,
+  const statusCalls = calls.filter(
+    ({ command, args }) => command === "git" && args[0] === "status",
   );
+  assert.equal(statusCalls.length, 3);
+  for (const { args, options } of statusCalls) {
+    assert.deepEqual(args, ["status", "--porcelain=v1", "--untracked-files=all"]);
+    assert.equal(options.shell, false);
+  }
   const buildCall = calls.find(
     ({ command, args }) =>
       command === NODE_EXECUTABLE && args[0] === BUF_ENTRY && args[1] === "build",

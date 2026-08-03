@@ -1,6 +1,16 @@
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, rename, rm, rmdir, writeFile } from "node:fs/promises";
+import {
+  access,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rename,
+  rm,
+  rmdir,
+  writeFile,
+} from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
@@ -11,6 +21,8 @@ export const PINNED_BUF_VERSION = "1.72.0";
 export const BUF_MODULE = "buf.build/tammyapp/tammy";
 const execFileAsync = promisify(execFile);
 const DEFAULT_BUF_ENTRY = fileURLToPath(import.meta.resolve("@bufbuild/buf/bin/buf"));
+const RECOVERY_JOURNAL = '{\n  "schemaVersion": 1,\n  "state": "previous_retained_pair"\n}\n';
+const GIT_STATUS_ARGS = ["status", "--porcelain=v1", "--untracked-files=all"];
 
 export function createBufCommandPlan({ args, bufEntry, nodeExecutable, platform }) {
   const pathApi = platform === "win32" ? path.win32 : path.posix;
@@ -179,6 +191,20 @@ function createDescriptorManifest({ bufVersion, descriptorBytes, gitRevision }) 
   return manifest;
 }
 
+export function serializeDescriptorManifest(manifest) {
+  const canonicalManifest = {
+    path: manifest.path,
+    byteLength: manifest.byteLength,
+    sha256: manifest.sha256,
+    bufVersion: manifest.bufVersion,
+    module: manifest.module,
+  };
+  if (Object.hasOwn(manifest, "gitRevision")) {
+    canonicalManifest.gitRevision = manifest.gitRevision;
+  }
+  return `${JSON.stringify(canonicalManifest, null, 2)}\n`;
+}
+
 async function assertEvidenceSourceState({ expectedRevision, root, run }) {
   const revisionResult = await run("git", ["rev-parse", "HEAD"], {
     cwd: root,
@@ -187,7 +213,7 @@ async function assertEvidenceSourceState({ expectedRevision, root, run }) {
   if (String(revisionResult.stdout).trim() !== expectedRevision) {
     throw new Error("DESCRIPTOR_SOURCE_REVISION_MISMATCH");
   }
-  const statusResult = await run("git", ["status", "--porcelain=v1"], {
+  const statusResult = await run("git", GIT_STATUS_ARGS, {
     cwd: root,
     shell: false,
   });
@@ -198,13 +224,17 @@ async function assertEvidenceSourceState({ expectedRevision, root, run }) {
 
 async function publishDescriptorEvidence({
   backupDirectory,
+  recoveryDirectory,
   retainedDirectory,
   renamePath,
   stagingDirectory,
 }) {
+  await mkdir(recoveryDirectory);
+  await writeFile(path.join(recoveryDirectory, "recovery-journal.json"), RECOVERY_JOURNAL, "utf8");
   try {
     await renamePath(retainedDirectory, backupDirectory);
   } catch (cause) {
+    await rm(recoveryDirectory, { force: true, recursive: true });
     throw new Error("DESCRIPTOR_EVIDENCE_PUBLISH_FAILED", { cause });
   }
   try {
@@ -213,12 +243,14 @@ async function publishDescriptorEvidence({
     try {
       await renamePath(backupDirectory, retainedDirectory);
     } catch (rollbackCause) {
-      throw new Error("DESCRIPTOR_EVIDENCE_ROLLBACK_FAILED", {
+      throw new Error("DESCRIPTOR_EVIDENCE_ROLLBACK_FAILED: RECOVERY_AVAILABLE", {
         cause: new AggregateError([cause, rollbackCause]),
       });
     }
+    await rm(recoveryDirectory, { force: true, recursive: true });
     throw new Error("DESCRIPTOR_EVIDENCE_PUBLISH_FAILED", { cause });
   }
+  await rm(recoveryDirectory, { force: true, recursive: true });
 }
 
 async function removeEmptyDirectory(directory) {
@@ -227,6 +259,83 @@ async function removeEmptyDirectory(directory) {
   } catch (error) {
     if (!error || !["ENOENT", "ENOTEMPTY", "EEXIST"].includes(error.code)) throw error;
   }
+}
+
+async function pathExists(candidate) {
+  try {
+    await access(candidate);
+    return true;
+  } catch (error) {
+    if (error?.code === "ENOENT") return false;
+    throw error;
+  }
+}
+
+async function validateRecoveryState({ backupDirectory, recoveryDirectory }) {
+  const recoveryEntries = (await readdir(recoveryDirectory)).sort();
+  if (
+    recoveryEntries.length !== 2 ||
+    recoveryEntries[0] !== "previous-contracts" ||
+    recoveryEntries[1] !== "recovery-journal.json"
+  ) {
+    throw new Error("unexpected recovery entries");
+  }
+  if (
+    (await readFile(path.join(recoveryDirectory, "recovery-journal.json"), "utf8")) !==
+    RECOVERY_JOURNAL
+  ) {
+    throw new Error("invalid recovery journal");
+  }
+  const backupEntries = (await readdir(backupDirectory)).sort();
+  if (
+    backupEntries.length !== 2 ||
+    backupEntries[0] !== "descriptor-manifest.json" ||
+    backupEntries[1] !== "descriptors.pb"
+  ) {
+    throw new Error("invalid recovery pair");
+  }
+  const descriptorBytes = await readFile(path.join(backupDirectory, "descriptors.pb"));
+  const manifestSource = await readFile(
+    path.join(backupDirectory, "descriptor-manifest.json"),
+    "utf8",
+  );
+  const manifest = JSON.parse(manifestSource);
+  validateDescriptorOutput(descriptorBytes);
+  validateDescriptorManifest({
+    currentRevision: manifest.gitRevision,
+    descriptorBytes,
+    dirty: false,
+    manifest,
+    mode: "evidence",
+  });
+  if (manifestSource !== serializeDescriptorManifest(manifest)) {
+    throw new Error("DESCRIPTOR_MANIFEST_CANONICAL_INVALID");
+  }
+}
+
+async function recoverDescriptorEvidence({
+  backupDirectory,
+  recoveryDirectory,
+  renamePath,
+  retainedDirectory,
+  temporaryRoot,
+}) {
+  if (!(await pathExists(recoveryDirectory))) return;
+  if (await pathExists(retainedDirectory)) {
+    throw new Error("DESCRIPTOR_EVIDENCE_RECOVERY_CONFLICT");
+  }
+  try {
+    await validateRecoveryState({ backupDirectory, recoveryDirectory });
+  } catch (cause) {
+    throw new Error("DESCRIPTOR_EVIDENCE_RECOVERY_INVALID", { cause });
+  }
+  try {
+    await renamePath(backupDirectory, retainedDirectory);
+  } catch (cause) {
+    throw new Error("DESCRIPTOR_EVIDENCE_RECOVERY_RESTORE_FAILED", { cause });
+  }
+  await rm(recoveryDirectory, { force: true, recursive: true });
+  await removeEmptyDirectory(temporaryRoot);
 }
 
 export async function buildDescriptors({
@@ -254,11 +363,23 @@ export async function buildDescriptors({
     validateDescriptorManifest({ descriptorBytes, manifest, mode });
     await writeFile(
       path.join(outputDirectory, "descriptor-manifest.json"),
-      `${JSON.stringify(manifest, null, 2)}\n`,
+      serializeDescriptorManifest(manifest),
       "utf8",
     );
     return manifest;
   }
+
+  const temporaryRoot = path.join(root, ".tmp/contracts");
+  const recoveryDirectory = path.join(temporaryRoot, "descriptor-evidence-recovery");
+  const backupDirectory = path.join(recoveryDirectory, "previous-contracts");
+  const retainedDirectory = path.join(root, "compliance/contracts");
+  await recoverDescriptorEvidence({
+    backupDirectory,
+    recoveryDirectory,
+    renamePath,
+    retainedDirectory,
+    temporaryRoot,
+  });
 
   const revisionResult = await run("git", ["rev-parse", "HEAD"], {
     cwd: root,
@@ -271,7 +392,7 @@ export async function buildDescriptors({
   if (env.TAMMY_SOURCE_REVISION !== currentRevision) {
     throw new Error("DESCRIPTOR_SOURCE_REVISION_MISMATCH");
   }
-  const statusResult = await run("git", ["status", "--porcelain=v1"], {
+  const statusResult = await run("git", GIT_STATUS_ARGS, {
     cwd: root,
     shell: false,
   });
@@ -279,12 +400,9 @@ export async function buildDescriptors({
     throw new Error("DESCRIPTOR_EVIDENCE_DIRTY_TREE");
   }
 
-  const temporaryRoot = path.join(root, ".tmp/contracts");
   await mkdir(temporaryRoot, { recursive: true });
   const transactionDirectory = await mkdtemp(path.join(temporaryRoot, "descriptor-evidence-"));
   const stagingDirectory = path.join(transactionDirectory, "next-contracts");
-  const backupDirectory = path.join(transactionDirectory, "previous-contracts");
-  const retainedDirectory = path.join(root, "compliance/contracts");
   try {
     const { bufVersion, descriptorBytes } = await buildDescriptorIntoDirectory({
       bufEntry,
@@ -310,12 +428,13 @@ export async function buildDescriptors({
     await assertEvidenceSourceState({ expectedRevision: currentRevision, root, run });
     await writeFile(
       path.join(stagingDirectory, "descriptor-manifest.json"),
-      `${JSON.stringify(manifest, null, 2)}\n`,
+      serializeDescriptorManifest(manifest),
       "utf8",
     );
     await assertEvidenceSourceState({ expectedRevision: currentRevision, root, run });
     await publishDescriptorEvidence({
       backupDirectory,
+      recoveryDirectory,
       retainedDirectory,
       renamePath,
       stagingDirectory,

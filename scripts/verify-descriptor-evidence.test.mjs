@@ -127,6 +127,42 @@ test("verifies retained evidence against a fresh canonical build without mutatin
   );
 });
 
+test("rejects duplicate or otherwise noncanonical raw manifest JSON", async (context) => {
+  const canonicalManifest = `${JSON.stringify(manifestFor(DESCRIPTOR_BYTES), null, 2)}\n`;
+  const cases = [
+    canonicalManifest.replace(
+      '  "path": "descriptors.pb",',
+      '  "path": "descriptors.pb",\n  "path": "descriptors.pb",',
+    ),
+    JSON.stringify(manifestFor(DESCRIPTOR_BYTES)),
+  ];
+  const { verifyRetainedDescriptorEvidence } = await import("./verify-descriptor-evidence.mjs");
+
+  for (const [index, manifestSource] of cases.entries()) {
+    const root = await mkdtemp(path.join(os.tmpdir(), "tammy-retained-evidence-"));
+    context.after(() => rm(root, { force: true, recursive: true }));
+    await writeRetainedEvidence(root);
+    await writeFile(
+      path.join(root, "compliance/contracts/descriptor-manifest.json"),
+      manifestSource,
+    );
+    const { run } = createRun();
+
+    await assert.rejects(
+      verifyRetainedDescriptorEvidence({
+        bufEntry: BUF_ENTRY,
+        nodeExecutable: NODE_EXECUTABLE,
+        platform: "darwin",
+        root,
+        run,
+        subjectRevision: SUBJECT_REVISION,
+      }),
+      { message: "DESCRIPTOR_MANIFEST_CANONICAL_INVALID" },
+      `case ${index + 1}`,
+    );
+  }
+});
+
 test("rejects internally consistent stale retained evidence without repairing it", async (context) => {
   const root = await mkdtemp(path.join(os.tmpdir(), "tammy-retained-evidence-"));
   context.after(() => rm(root, { force: true, recursive: true }));

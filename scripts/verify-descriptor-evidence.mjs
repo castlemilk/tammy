@@ -7,6 +7,7 @@ import { promisify } from "node:util";
 import {
   createBufCommandPlan,
   createDescriptorBuildPlan,
+  serializeDescriptorManifest,
   validateDescriptorManifest,
   validateDescriptorOutput,
 } from "./build-descriptors.mjs";
@@ -28,11 +29,14 @@ export async function verifyRetainedDescriptorEvidence({
 }) {
   const retainedDirectory = path.join(root, "compliance/contracts");
   const descriptorBytes = await readFile(path.join(retainedDirectory, "descriptors.pb"));
+  let manifestSource;
   let manifest;
   try {
-    manifest = JSON.parse(
-      await readFile(path.join(retainedDirectory, "descriptor-manifest.json"), "utf8"),
+    manifestSource = await readFile(
+      path.join(retainedDirectory, "descriptor-manifest.json"),
+      "utf8",
     );
+    manifest = JSON.parse(manifestSource);
   } catch (cause) {
     throw new Error("DESCRIPTOR_MANIFEST_SCHEMA_INVALID", { cause });
   }
@@ -44,6 +48,9 @@ export async function verifyRetainedDescriptorEvidence({
     manifest,
     mode: "evidence",
   });
+  if (manifestSource !== serializeDescriptorManifest(manifest)) {
+    throw new Error("DESCRIPTOR_MANIFEST_CANONICAL_INVALID");
+  }
 
   let resolvedSubjectRevision;
   try {
