@@ -1420,8 +1420,13 @@ type ConfirmRecoveryRequest struct {
 	SetupId string `protobuf:"bytes,1,opt,name=setup_id,json=setupId,proto3" json:"setup_id,omitempty"`
 	// confirmations contains only the prompted recovery groups in prompt order.
 	Confirmations []*RecoveryGroupConfirmation `protobuf:"bytes,2,rep,name=confirmations,proto3" json:"confirmations,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// terminal_replay_proof is transient proof used only for a fully confirmed inactive terminal replay.
+	// It accepts a passphrase or explicitly elects an existing unexpired remembered-workspace capability.
+	// It is omitted and ignored during pending initial confirmation or while this workspace is already active.
+	// It is never persisted or logged.
+	TerminalReplayProof *WorkspaceUnlockProof `protobuf:"bytes,3,opt,name=terminal_replay_proof,json=terminalReplayProof,proto3" json:"terminal_replay_proof,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *ConfirmRecoveryRequest) Reset() {
@@ -1464,6 +1469,13 @@ func (x *ConfirmRecoveryRequest) GetSetupId() string {
 func (x *ConfirmRecoveryRequest) GetConfirmations() []*RecoveryGroupConfirmation {
 	if x != nil {
 		return x.Confirmations
+	}
+	return nil
+}
+
+func (x *ConfirmRecoveryRequest) GetTerminalReplayProof() *WorkspaceUnlockProof {
+	if x != nil {
+		return x.TerminalReplayProof
 	}
 	return nil
 }
@@ -4018,11 +4030,12 @@ const file_tammy_v1_workspace_proto_rawDesc = "" +
 	"\tworkspace\x18\x01 \x01(\v2\x13.tammy.v1.WorkspaceB\x06\xbaH\x03\xc8\x01\x01R\tworkspace\x12N\n" +
 	"\x0frecovery_secret\x18\x02 \x01(\v2\x1d.tammy.v1.OneTimeSecretOutputB\x06\xbaH\x03\xc8\x01\x01R\x0erecoverySecret\x12A\n" +
 	"\n" +
-	"expires_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\texpiresAt\"\xd8\x01\n" +
+	"expires_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\texpiresAt\"\xac\x02\n" +
 	"\x16ConfirmRecoveryRequest\x12g\n" +
 	"\bsetup_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\asetupId\x12U\n" +
 	"\rconfirmations\x18\x02 \x03(\v2#.tammy.v1.RecoveryGroupConfirmationB\n" +
-	"\xbaH\a\x92\x01\x04\b\x02\x10\bR\rconfirmations\"T\n" +
+	"\xbaH\a\x92\x01\x04\b\x02\x10\bR\rconfirmations\x12R\n" +
+	"\x15terminal_replay_proof\x18\x03 \x01(\v2\x1e.tammy.v1.WorkspaceUnlockProofR\x13terminalReplayProof\"T\n" +
 	"\x17ConfirmRecoveryResponse\x129\n" +
 	"\tworkspace\x18\x01 \x01(\v2\x13.tammy.v1.WorkspaceB\x06\xbaH\x03\xc8\x01\x01R\tworkspace\"\xeb\x01\n" +
 	"\x16UnlockWorkspaceRequest\x12H\n" +
@@ -4351,121 +4364,122 @@ var file_tammy_v1_workspace_proto_depIdxs = []int32{
 	67,  // 27: tammy.v1.CreateWorkspaceResponse.recovery_secret:type_name -> tammy.v1.OneTimeSecretOutput
 	62,  // 28: tammy.v1.CreateWorkspaceResponse.expires_at:type_name -> google.protobuf.Timestamp
 	11,  // 29: tammy.v1.ConfirmRecoveryRequest.confirmations:type_name -> tammy.v1.RecoveryGroupConfirmation
-	6,   // 30: tammy.v1.ConfirmRecoveryResponse.workspace:type_name -> tammy.v1.Workspace
-	66,  // 31: tammy.v1.UnlockWorkspaceRequest.workspace_file:type_name -> tammy.v1.ApprovedFileRef
-	12,  // 32: tammy.v1.UnlockWorkspaceRequest.proof:type_name -> tammy.v1.WorkspaceUnlockProof
-	6,   // 33: tammy.v1.UnlockWorkspaceResponse.workspace:type_name -> tammy.v1.Workspace
-	68,  // 34: tammy.v1.LockWorkspaceRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	6,   // 35: tammy.v1.LockWorkspaceResponse.workspace:type_name -> tammy.v1.Workspace
-	68,  // 36: tammy.v1.ForgetRememberedWorkspaceRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	6,   // 37: tammy.v1.ForgetRememberedWorkspaceResponse.workspace:type_name -> tammy.v1.Workspace
-	6,   // 38: tammy.v1.GetWorkspaceStateResponse.workspace:type_name -> tammy.v1.Workspace
-	69,  // 39: tammy.v1.ChangePassphraseRequest.command_context:type_name -> tammy.v1.CommandContext
-	64,  // 40: tammy.v1.ChangePassphraseRequest.current_passphrase:type_name -> tammy.v1.SecretInput
-	64,  // 41: tammy.v1.ChangePassphraseRequest.new_passphrase:type_name -> tammy.v1.SecretInput
-	6,   // 42: tammy.v1.ChangePassphraseResponse.workspace:type_name -> tammy.v1.Workspace
-	66,  // 43: tammy.v1.RecoverWorkspaceRequest.workspace_file:type_name -> tammy.v1.ApprovedFileRef
-	64,  // 44: tammy.v1.RecoverWorkspaceRequest.recovery_secret:type_name -> tammy.v1.SecretInput
-	64,  // 45: tammy.v1.RecoverWorkspaceRequest.new_passphrase:type_name -> tammy.v1.SecretInput
-	6,   // 46: tammy.v1.RecoverWorkspaceResponse.workspace:type_name -> tammy.v1.Workspace
-	69,  // 47: tammy.v1.EstablishMovedWorkspaceTrustRequest.command_context:type_name -> tammy.v1.CommandContext
-	13,  // 48: tammy.v1.EstablishMovedWorkspaceTrustRequest.proof:type_name -> tammy.v1.MovedWorkspaceTrustProof
-	6,   // 49: tammy.v1.EstablishMovedWorkspaceTrustResponse.workspace:type_name -> tammy.v1.Workspace
-	69,  // 50: tammy.v1.BackupWorkspaceRequest.command_context:type_name -> tammy.v1.CommandContext
-	66,  // 51: tammy.v1.BackupWorkspaceRequest.destination:type_name -> tammy.v1.ApprovedFileRef
-	64,  // 52: tammy.v1.BackupWorkspaceRequest.backup_passphrase:type_name -> tammy.v1.SecretInput
-	7,   // 53: tammy.v1.BackupWorkspaceResponse.job:type_name -> tammy.v1.BackupJob
-	69,  // 54: tammy.v1.CancelBackupRequest.command_context:type_name -> tammy.v1.CommandContext
-	7,   // 55: tammy.v1.CancelBackupResponse.job:type_name -> tammy.v1.BackupJob
-	68,  // 56: tammy.v1.GetBackupJobRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	7,   // 57: tammy.v1.GetBackupJobResponse.job:type_name -> tammy.v1.BackupJob
-	68,  // 58: tammy.v1.ListBackupJobsRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	70,  // 59: tammy.v1.ListBackupJobsRequest.page:type_name -> tammy.v1.PageRequest
-	2,   // 60: tammy.v1.ListBackupJobsRequest.state:type_name -> tammy.v1.BackupJobState
-	7,   // 61: tammy.v1.ListBackupJobsResponse.jobs:type_name -> tammy.v1.BackupJob
-	71,  // 62: tammy.v1.ListBackupJobsResponse.page:type_name -> tammy.v1.PageInfo
-	66,  // 63: tammy.v1.RestoreWorkspaceRequest.backup_file:type_name -> tammy.v1.ApprovedFileRef
-	64,  // 64: tammy.v1.RestoreWorkspaceRequest.backup_passphrase:type_name -> tammy.v1.SecretInput
-	14,  // 65: tammy.v1.RestoreWorkspaceRequest.administrator_proof:type_name -> tammy.v1.RestoreAdministratorProof
-	15,  // 66: tammy.v1.RestoreWorkspaceRequest.recovery_proof:type_name -> tammy.v1.RestoreRecoveryProof
-	8,   // 67: tammy.v1.RestoreWorkspaceResponse.status:type_name -> tammy.v1.RestoreStatus
-	8,   // 68: tammy.v1.GetRestoreStatusResponse.status:type_name -> tammy.v1.RestoreStatus
-	69,  // 69: tammy.v1.ExportPreRestoreArchiveRequest.command_context:type_name -> tammy.v1.CommandContext
-	64,  // 70: tammy.v1.ExportPreRestoreArchiveRequest.administrator_password:type_name -> tammy.v1.SecretInput
-	66,  // 71: tammy.v1.ExportPreRestoreArchiveRequest.destination:type_name -> tammy.v1.ApprovedFileRef
-	10,  // 72: tammy.v1.ExportPreRestoreArchiveResponse.job:type_name -> tammy.v1.PreRestoreArchiveExportJob
-	69,  // 73: tammy.v1.CancelPreRestoreArchiveExportRequest.command_context:type_name -> tammy.v1.CommandContext
-	10,  // 74: tammy.v1.CancelPreRestoreArchiveExportResponse.job:type_name -> tammy.v1.PreRestoreArchiveExportJob
-	68,  // 75: tammy.v1.GetPreRestoreArchiveExportJobRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	10,  // 76: tammy.v1.GetPreRestoreArchiveExportJobResponse.job:type_name -> tammy.v1.PreRestoreArchiveExportJob
-	68,  // 77: tammy.v1.ListPreRestoreArchiveExportJobsRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	70,  // 78: tammy.v1.ListPreRestoreArchiveExportJobsRequest.page:type_name -> tammy.v1.PageRequest
-	5,   // 79: tammy.v1.ListPreRestoreArchiveExportJobsRequest.state:type_name -> tammy.v1.PreRestoreArchiveExportJobState
-	10,  // 80: tammy.v1.ListPreRestoreArchiveExportJobsResponse.jobs:type_name -> tammy.v1.PreRestoreArchiveExportJob
-	71,  // 81: tammy.v1.ListPreRestoreArchiveExportJobsResponse.page:type_name -> tammy.v1.PageInfo
-	69,  // 82: tammy.v1.DeletePreRestoreArchiveRequest.command_context:type_name -> tammy.v1.CommandContext
-	64,  // 83: tammy.v1.DeletePreRestoreArchiveRequest.administrator_password:type_name -> tammy.v1.SecretInput
-	9,   // 84: tammy.v1.DeletePreRestoreArchiveResponse.archive:type_name -> tammy.v1.PreRestoreArchive
-	68,  // 85: tammy.v1.GetPreRestoreArchiveRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	9,   // 86: tammy.v1.GetPreRestoreArchiveResponse.archive:type_name -> tammy.v1.PreRestoreArchive
-	68,  // 87: tammy.v1.ListPreRestoreArchivesRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	70,  // 88: tammy.v1.ListPreRestoreArchivesRequest.page:type_name -> tammy.v1.PageRequest
-	4,   // 89: tammy.v1.ListPreRestoreArchivesRequest.state:type_name -> tammy.v1.PreRestoreArchiveState
-	9,   // 90: tammy.v1.ListPreRestoreArchivesResponse.archives:type_name -> tammy.v1.PreRestoreArchive
-	71,  // 91: tammy.v1.ListPreRestoreArchivesResponse.page:type_name -> tammy.v1.PageInfo
-	69,  // 92: tammy.v1.TransferOwnershipRequest.command_context:type_name -> tammy.v1.CommandContext
-	6,   // 93: tammy.v1.TransferOwnershipResponse.workspace:type_name -> tammy.v1.Workspace
-	16,  // 94: tammy.v1.WorkspaceService.CreateWorkspace:input_type -> tammy.v1.CreateWorkspaceRequest
-	18,  // 95: tammy.v1.WorkspaceService.ConfirmRecovery:input_type -> tammy.v1.ConfirmRecoveryRequest
-	20,  // 96: tammy.v1.WorkspaceService.UnlockWorkspace:input_type -> tammy.v1.UnlockWorkspaceRequest
-	22,  // 97: tammy.v1.WorkspaceService.LockWorkspace:input_type -> tammy.v1.LockWorkspaceRequest
-	24,  // 98: tammy.v1.WorkspaceService.ForgetRememberedWorkspace:input_type -> tammy.v1.ForgetRememberedWorkspaceRequest
-	26,  // 99: tammy.v1.WorkspaceService.GetWorkspaceState:input_type -> tammy.v1.GetWorkspaceStateRequest
-	28,  // 100: tammy.v1.WorkspaceService.ChangePassphrase:input_type -> tammy.v1.ChangePassphraseRequest
-	30,  // 101: tammy.v1.WorkspaceService.RecoverWorkspace:input_type -> tammy.v1.RecoverWorkspaceRequest
-	32,  // 102: tammy.v1.WorkspaceService.EstablishMovedWorkspaceTrust:input_type -> tammy.v1.EstablishMovedWorkspaceTrustRequest
-	34,  // 103: tammy.v1.WorkspaceService.BackupWorkspace:input_type -> tammy.v1.BackupWorkspaceRequest
-	36,  // 104: tammy.v1.WorkspaceService.CancelBackup:input_type -> tammy.v1.CancelBackupRequest
-	38,  // 105: tammy.v1.WorkspaceService.GetBackupJob:input_type -> tammy.v1.GetBackupJobRequest
-	40,  // 106: tammy.v1.WorkspaceService.ListBackupJobs:input_type -> tammy.v1.ListBackupJobsRequest
-	42,  // 107: tammy.v1.WorkspaceService.RestoreWorkspace:input_type -> tammy.v1.RestoreWorkspaceRequest
-	44,  // 108: tammy.v1.WorkspaceService.GetRestoreStatus:input_type -> tammy.v1.GetRestoreStatusRequest
-	46,  // 109: tammy.v1.WorkspaceService.ExportPreRestoreArchive:input_type -> tammy.v1.ExportPreRestoreArchiveRequest
-	48,  // 110: tammy.v1.WorkspaceService.CancelPreRestoreArchiveExport:input_type -> tammy.v1.CancelPreRestoreArchiveExportRequest
-	50,  // 111: tammy.v1.WorkspaceService.GetPreRestoreArchiveExportJob:input_type -> tammy.v1.GetPreRestoreArchiveExportJobRequest
-	52,  // 112: tammy.v1.WorkspaceService.ListPreRestoreArchiveExportJobs:input_type -> tammy.v1.ListPreRestoreArchiveExportJobsRequest
-	54,  // 113: tammy.v1.WorkspaceService.DeletePreRestoreArchive:input_type -> tammy.v1.DeletePreRestoreArchiveRequest
-	56,  // 114: tammy.v1.WorkspaceService.GetPreRestoreArchive:input_type -> tammy.v1.GetPreRestoreArchiveRequest
-	58,  // 115: tammy.v1.WorkspaceService.ListPreRestoreArchives:input_type -> tammy.v1.ListPreRestoreArchivesRequest
-	60,  // 116: tammy.v1.WorkspaceService.TransferOwnership:input_type -> tammy.v1.TransferOwnershipRequest
-	17,  // 117: tammy.v1.WorkspaceService.CreateWorkspace:output_type -> tammy.v1.CreateWorkspaceResponse
-	19,  // 118: tammy.v1.WorkspaceService.ConfirmRecovery:output_type -> tammy.v1.ConfirmRecoveryResponse
-	21,  // 119: tammy.v1.WorkspaceService.UnlockWorkspace:output_type -> tammy.v1.UnlockWorkspaceResponse
-	23,  // 120: tammy.v1.WorkspaceService.LockWorkspace:output_type -> tammy.v1.LockWorkspaceResponse
-	25,  // 121: tammy.v1.WorkspaceService.ForgetRememberedWorkspace:output_type -> tammy.v1.ForgetRememberedWorkspaceResponse
-	27,  // 122: tammy.v1.WorkspaceService.GetWorkspaceState:output_type -> tammy.v1.GetWorkspaceStateResponse
-	29,  // 123: tammy.v1.WorkspaceService.ChangePassphrase:output_type -> tammy.v1.ChangePassphraseResponse
-	31,  // 124: tammy.v1.WorkspaceService.RecoverWorkspace:output_type -> tammy.v1.RecoverWorkspaceResponse
-	33,  // 125: tammy.v1.WorkspaceService.EstablishMovedWorkspaceTrust:output_type -> tammy.v1.EstablishMovedWorkspaceTrustResponse
-	35,  // 126: tammy.v1.WorkspaceService.BackupWorkspace:output_type -> tammy.v1.BackupWorkspaceResponse
-	37,  // 127: tammy.v1.WorkspaceService.CancelBackup:output_type -> tammy.v1.CancelBackupResponse
-	39,  // 128: tammy.v1.WorkspaceService.GetBackupJob:output_type -> tammy.v1.GetBackupJobResponse
-	41,  // 129: tammy.v1.WorkspaceService.ListBackupJobs:output_type -> tammy.v1.ListBackupJobsResponse
-	43,  // 130: tammy.v1.WorkspaceService.RestoreWorkspace:output_type -> tammy.v1.RestoreWorkspaceResponse
-	45,  // 131: tammy.v1.WorkspaceService.GetRestoreStatus:output_type -> tammy.v1.GetRestoreStatusResponse
-	47,  // 132: tammy.v1.WorkspaceService.ExportPreRestoreArchive:output_type -> tammy.v1.ExportPreRestoreArchiveResponse
-	49,  // 133: tammy.v1.WorkspaceService.CancelPreRestoreArchiveExport:output_type -> tammy.v1.CancelPreRestoreArchiveExportResponse
-	51,  // 134: tammy.v1.WorkspaceService.GetPreRestoreArchiveExportJob:output_type -> tammy.v1.GetPreRestoreArchiveExportJobResponse
-	53,  // 135: tammy.v1.WorkspaceService.ListPreRestoreArchiveExportJobs:output_type -> tammy.v1.ListPreRestoreArchiveExportJobsResponse
-	55,  // 136: tammy.v1.WorkspaceService.DeletePreRestoreArchive:output_type -> tammy.v1.DeletePreRestoreArchiveResponse
-	57,  // 137: tammy.v1.WorkspaceService.GetPreRestoreArchive:output_type -> tammy.v1.GetPreRestoreArchiveResponse
-	59,  // 138: tammy.v1.WorkspaceService.ListPreRestoreArchives:output_type -> tammy.v1.ListPreRestoreArchivesResponse
-	61,  // 139: tammy.v1.WorkspaceService.TransferOwnership:output_type -> tammy.v1.TransferOwnershipResponse
-	117, // [117:140] is the sub-list for method output_type
-	94,  // [94:117] is the sub-list for method input_type
-	94,  // [94:94] is the sub-list for extension type_name
-	94,  // [94:94] is the sub-list for extension extendee
-	0,   // [0:94] is the sub-list for field type_name
+	12,  // 30: tammy.v1.ConfirmRecoveryRequest.terminal_replay_proof:type_name -> tammy.v1.WorkspaceUnlockProof
+	6,   // 31: tammy.v1.ConfirmRecoveryResponse.workspace:type_name -> tammy.v1.Workspace
+	66,  // 32: tammy.v1.UnlockWorkspaceRequest.workspace_file:type_name -> tammy.v1.ApprovedFileRef
+	12,  // 33: tammy.v1.UnlockWorkspaceRequest.proof:type_name -> tammy.v1.WorkspaceUnlockProof
+	6,   // 34: tammy.v1.UnlockWorkspaceResponse.workspace:type_name -> tammy.v1.Workspace
+	68,  // 35: tammy.v1.LockWorkspaceRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	6,   // 36: tammy.v1.LockWorkspaceResponse.workspace:type_name -> tammy.v1.Workspace
+	68,  // 37: tammy.v1.ForgetRememberedWorkspaceRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	6,   // 38: tammy.v1.ForgetRememberedWorkspaceResponse.workspace:type_name -> tammy.v1.Workspace
+	6,   // 39: tammy.v1.GetWorkspaceStateResponse.workspace:type_name -> tammy.v1.Workspace
+	69,  // 40: tammy.v1.ChangePassphraseRequest.command_context:type_name -> tammy.v1.CommandContext
+	64,  // 41: tammy.v1.ChangePassphraseRequest.current_passphrase:type_name -> tammy.v1.SecretInput
+	64,  // 42: tammy.v1.ChangePassphraseRequest.new_passphrase:type_name -> tammy.v1.SecretInput
+	6,   // 43: tammy.v1.ChangePassphraseResponse.workspace:type_name -> tammy.v1.Workspace
+	66,  // 44: tammy.v1.RecoverWorkspaceRequest.workspace_file:type_name -> tammy.v1.ApprovedFileRef
+	64,  // 45: tammy.v1.RecoverWorkspaceRequest.recovery_secret:type_name -> tammy.v1.SecretInput
+	64,  // 46: tammy.v1.RecoverWorkspaceRequest.new_passphrase:type_name -> tammy.v1.SecretInput
+	6,   // 47: tammy.v1.RecoverWorkspaceResponse.workspace:type_name -> tammy.v1.Workspace
+	69,  // 48: tammy.v1.EstablishMovedWorkspaceTrustRequest.command_context:type_name -> tammy.v1.CommandContext
+	13,  // 49: tammy.v1.EstablishMovedWorkspaceTrustRequest.proof:type_name -> tammy.v1.MovedWorkspaceTrustProof
+	6,   // 50: tammy.v1.EstablishMovedWorkspaceTrustResponse.workspace:type_name -> tammy.v1.Workspace
+	69,  // 51: tammy.v1.BackupWorkspaceRequest.command_context:type_name -> tammy.v1.CommandContext
+	66,  // 52: tammy.v1.BackupWorkspaceRequest.destination:type_name -> tammy.v1.ApprovedFileRef
+	64,  // 53: tammy.v1.BackupWorkspaceRequest.backup_passphrase:type_name -> tammy.v1.SecretInput
+	7,   // 54: tammy.v1.BackupWorkspaceResponse.job:type_name -> tammy.v1.BackupJob
+	69,  // 55: tammy.v1.CancelBackupRequest.command_context:type_name -> tammy.v1.CommandContext
+	7,   // 56: tammy.v1.CancelBackupResponse.job:type_name -> tammy.v1.BackupJob
+	68,  // 57: tammy.v1.GetBackupJobRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	7,   // 58: tammy.v1.GetBackupJobResponse.job:type_name -> tammy.v1.BackupJob
+	68,  // 59: tammy.v1.ListBackupJobsRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	70,  // 60: tammy.v1.ListBackupJobsRequest.page:type_name -> tammy.v1.PageRequest
+	2,   // 61: tammy.v1.ListBackupJobsRequest.state:type_name -> tammy.v1.BackupJobState
+	7,   // 62: tammy.v1.ListBackupJobsResponse.jobs:type_name -> tammy.v1.BackupJob
+	71,  // 63: tammy.v1.ListBackupJobsResponse.page:type_name -> tammy.v1.PageInfo
+	66,  // 64: tammy.v1.RestoreWorkspaceRequest.backup_file:type_name -> tammy.v1.ApprovedFileRef
+	64,  // 65: tammy.v1.RestoreWorkspaceRequest.backup_passphrase:type_name -> tammy.v1.SecretInput
+	14,  // 66: tammy.v1.RestoreWorkspaceRequest.administrator_proof:type_name -> tammy.v1.RestoreAdministratorProof
+	15,  // 67: tammy.v1.RestoreWorkspaceRequest.recovery_proof:type_name -> tammy.v1.RestoreRecoveryProof
+	8,   // 68: tammy.v1.RestoreWorkspaceResponse.status:type_name -> tammy.v1.RestoreStatus
+	8,   // 69: tammy.v1.GetRestoreStatusResponse.status:type_name -> tammy.v1.RestoreStatus
+	69,  // 70: tammy.v1.ExportPreRestoreArchiveRequest.command_context:type_name -> tammy.v1.CommandContext
+	64,  // 71: tammy.v1.ExportPreRestoreArchiveRequest.administrator_password:type_name -> tammy.v1.SecretInput
+	66,  // 72: tammy.v1.ExportPreRestoreArchiveRequest.destination:type_name -> tammy.v1.ApprovedFileRef
+	10,  // 73: tammy.v1.ExportPreRestoreArchiveResponse.job:type_name -> tammy.v1.PreRestoreArchiveExportJob
+	69,  // 74: tammy.v1.CancelPreRestoreArchiveExportRequest.command_context:type_name -> tammy.v1.CommandContext
+	10,  // 75: tammy.v1.CancelPreRestoreArchiveExportResponse.job:type_name -> tammy.v1.PreRestoreArchiveExportJob
+	68,  // 76: tammy.v1.GetPreRestoreArchiveExportJobRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	10,  // 77: tammy.v1.GetPreRestoreArchiveExportJobResponse.job:type_name -> tammy.v1.PreRestoreArchiveExportJob
+	68,  // 78: tammy.v1.ListPreRestoreArchiveExportJobsRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	70,  // 79: tammy.v1.ListPreRestoreArchiveExportJobsRequest.page:type_name -> tammy.v1.PageRequest
+	5,   // 80: tammy.v1.ListPreRestoreArchiveExportJobsRequest.state:type_name -> tammy.v1.PreRestoreArchiveExportJobState
+	10,  // 81: tammy.v1.ListPreRestoreArchiveExportJobsResponse.jobs:type_name -> tammy.v1.PreRestoreArchiveExportJob
+	71,  // 82: tammy.v1.ListPreRestoreArchiveExportJobsResponse.page:type_name -> tammy.v1.PageInfo
+	69,  // 83: tammy.v1.DeletePreRestoreArchiveRequest.command_context:type_name -> tammy.v1.CommandContext
+	64,  // 84: tammy.v1.DeletePreRestoreArchiveRequest.administrator_password:type_name -> tammy.v1.SecretInput
+	9,   // 85: tammy.v1.DeletePreRestoreArchiveResponse.archive:type_name -> tammy.v1.PreRestoreArchive
+	68,  // 86: tammy.v1.GetPreRestoreArchiveRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	9,   // 87: tammy.v1.GetPreRestoreArchiveResponse.archive:type_name -> tammy.v1.PreRestoreArchive
+	68,  // 88: tammy.v1.ListPreRestoreArchivesRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	70,  // 89: tammy.v1.ListPreRestoreArchivesRequest.page:type_name -> tammy.v1.PageRequest
+	4,   // 90: tammy.v1.ListPreRestoreArchivesRequest.state:type_name -> tammy.v1.PreRestoreArchiveState
+	9,   // 91: tammy.v1.ListPreRestoreArchivesResponse.archives:type_name -> tammy.v1.PreRestoreArchive
+	71,  // 92: tammy.v1.ListPreRestoreArchivesResponse.page:type_name -> tammy.v1.PageInfo
+	69,  // 93: tammy.v1.TransferOwnershipRequest.command_context:type_name -> tammy.v1.CommandContext
+	6,   // 94: tammy.v1.TransferOwnershipResponse.workspace:type_name -> tammy.v1.Workspace
+	16,  // 95: tammy.v1.WorkspaceService.CreateWorkspace:input_type -> tammy.v1.CreateWorkspaceRequest
+	18,  // 96: tammy.v1.WorkspaceService.ConfirmRecovery:input_type -> tammy.v1.ConfirmRecoveryRequest
+	20,  // 97: tammy.v1.WorkspaceService.UnlockWorkspace:input_type -> tammy.v1.UnlockWorkspaceRequest
+	22,  // 98: tammy.v1.WorkspaceService.LockWorkspace:input_type -> tammy.v1.LockWorkspaceRequest
+	24,  // 99: tammy.v1.WorkspaceService.ForgetRememberedWorkspace:input_type -> tammy.v1.ForgetRememberedWorkspaceRequest
+	26,  // 100: tammy.v1.WorkspaceService.GetWorkspaceState:input_type -> tammy.v1.GetWorkspaceStateRequest
+	28,  // 101: tammy.v1.WorkspaceService.ChangePassphrase:input_type -> tammy.v1.ChangePassphraseRequest
+	30,  // 102: tammy.v1.WorkspaceService.RecoverWorkspace:input_type -> tammy.v1.RecoverWorkspaceRequest
+	32,  // 103: tammy.v1.WorkspaceService.EstablishMovedWorkspaceTrust:input_type -> tammy.v1.EstablishMovedWorkspaceTrustRequest
+	34,  // 104: tammy.v1.WorkspaceService.BackupWorkspace:input_type -> tammy.v1.BackupWorkspaceRequest
+	36,  // 105: tammy.v1.WorkspaceService.CancelBackup:input_type -> tammy.v1.CancelBackupRequest
+	38,  // 106: tammy.v1.WorkspaceService.GetBackupJob:input_type -> tammy.v1.GetBackupJobRequest
+	40,  // 107: tammy.v1.WorkspaceService.ListBackupJobs:input_type -> tammy.v1.ListBackupJobsRequest
+	42,  // 108: tammy.v1.WorkspaceService.RestoreWorkspace:input_type -> tammy.v1.RestoreWorkspaceRequest
+	44,  // 109: tammy.v1.WorkspaceService.GetRestoreStatus:input_type -> tammy.v1.GetRestoreStatusRequest
+	46,  // 110: tammy.v1.WorkspaceService.ExportPreRestoreArchive:input_type -> tammy.v1.ExportPreRestoreArchiveRequest
+	48,  // 111: tammy.v1.WorkspaceService.CancelPreRestoreArchiveExport:input_type -> tammy.v1.CancelPreRestoreArchiveExportRequest
+	50,  // 112: tammy.v1.WorkspaceService.GetPreRestoreArchiveExportJob:input_type -> tammy.v1.GetPreRestoreArchiveExportJobRequest
+	52,  // 113: tammy.v1.WorkspaceService.ListPreRestoreArchiveExportJobs:input_type -> tammy.v1.ListPreRestoreArchiveExportJobsRequest
+	54,  // 114: tammy.v1.WorkspaceService.DeletePreRestoreArchive:input_type -> tammy.v1.DeletePreRestoreArchiveRequest
+	56,  // 115: tammy.v1.WorkspaceService.GetPreRestoreArchive:input_type -> tammy.v1.GetPreRestoreArchiveRequest
+	58,  // 116: tammy.v1.WorkspaceService.ListPreRestoreArchives:input_type -> tammy.v1.ListPreRestoreArchivesRequest
+	60,  // 117: tammy.v1.WorkspaceService.TransferOwnership:input_type -> tammy.v1.TransferOwnershipRequest
+	17,  // 118: tammy.v1.WorkspaceService.CreateWorkspace:output_type -> tammy.v1.CreateWorkspaceResponse
+	19,  // 119: tammy.v1.WorkspaceService.ConfirmRecovery:output_type -> tammy.v1.ConfirmRecoveryResponse
+	21,  // 120: tammy.v1.WorkspaceService.UnlockWorkspace:output_type -> tammy.v1.UnlockWorkspaceResponse
+	23,  // 121: tammy.v1.WorkspaceService.LockWorkspace:output_type -> tammy.v1.LockWorkspaceResponse
+	25,  // 122: tammy.v1.WorkspaceService.ForgetRememberedWorkspace:output_type -> tammy.v1.ForgetRememberedWorkspaceResponse
+	27,  // 123: tammy.v1.WorkspaceService.GetWorkspaceState:output_type -> tammy.v1.GetWorkspaceStateResponse
+	29,  // 124: tammy.v1.WorkspaceService.ChangePassphrase:output_type -> tammy.v1.ChangePassphraseResponse
+	31,  // 125: tammy.v1.WorkspaceService.RecoverWorkspace:output_type -> tammy.v1.RecoverWorkspaceResponse
+	33,  // 126: tammy.v1.WorkspaceService.EstablishMovedWorkspaceTrust:output_type -> tammy.v1.EstablishMovedWorkspaceTrustResponse
+	35,  // 127: tammy.v1.WorkspaceService.BackupWorkspace:output_type -> tammy.v1.BackupWorkspaceResponse
+	37,  // 128: tammy.v1.WorkspaceService.CancelBackup:output_type -> tammy.v1.CancelBackupResponse
+	39,  // 129: tammy.v1.WorkspaceService.GetBackupJob:output_type -> tammy.v1.GetBackupJobResponse
+	41,  // 130: tammy.v1.WorkspaceService.ListBackupJobs:output_type -> tammy.v1.ListBackupJobsResponse
+	43,  // 131: tammy.v1.WorkspaceService.RestoreWorkspace:output_type -> tammy.v1.RestoreWorkspaceResponse
+	45,  // 132: tammy.v1.WorkspaceService.GetRestoreStatus:output_type -> tammy.v1.GetRestoreStatusResponse
+	47,  // 133: tammy.v1.WorkspaceService.ExportPreRestoreArchive:output_type -> tammy.v1.ExportPreRestoreArchiveResponse
+	49,  // 134: tammy.v1.WorkspaceService.CancelPreRestoreArchiveExport:output_type -> tammy.v1.CancelPreRestoreArchiveExportResponse
+	51,  // 135: tammy.v1.WorkspaceService.GetPreRestoreArchiveExportJob:output_type -> tammy.v1.GetPreRestoreArchiveExportJobResponse
+	53,  // 136: tammy.v1.WorkspaceService.ListPreRestoreArchiveExportJobs:output_type -> tammy.v1.ListPreRestoreArchiveExportJobsResponse
+	55,  // 137: tammy.v1.WorkspaceService.DeletePreRestoreArchive:output_type -> tammy.v1.DeletePreRestoreArchiveResponse
+	57,  // 138: tammy.v1.WorkspaceService.GetPreRestoreArchive:output_type -> tammy.v1.GetPreRestoreArchiveResponse
+	59,  // 139: tammy.v1.WorkspaceService.ListPreRestoreArchives:output_type -> tammy.v1.ListPreRestoreArchivesResponse
+	61,  // 140: tammy.v1.WorkspaceService.TransferOwnership:output_type -> tammy.v1.TransferOwnershipResponse
+	118, // [118:141] is the sub-list for method output_type
+	95,  // [95:118] is the sub-list for method input_type
+	95,  // [95:95] is the sub-list for extension type_name
+	95,  // [95:95] is the sub-list for extension extendee
+	0,   // [0:95] is the sub-list for field type_name
 }
 
 func init() { file_tammy_v1_workspace_proto_init() }

@@ -12,8 +12,9 @@ func TestEmbeddedSchemaDeclaresOwnedPlatformAndLedgerTables(t *testing.T) {
 	}
 	platformTables := []string{
 		"schema_migrations", "header_operation_ids", "workspace_metadata", "users", "roles",
-		"user_roles", "sessions", "totp_credentials", "recovery_state",
-		"attempt_journal_anchors", "idempotency_records", "audit_envelopes",
+		"user_roles", "user_password_history", "application_sessions", "totp_factors",
+		"factor_assertions", "command_idempotency", "recovery_state", "attempt_journal_anchors",
+		"idempotency_records", "audit_envelopes",
 		"audit_mirror_metadata", "jobs", "job_checkpoints", "backup_evidence",
 		"restore_evidence", "organisation_evidence_objects", "organisation_verifications",
 	}

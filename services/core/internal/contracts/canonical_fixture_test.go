@@ -273,6 +273,50 @@ func TestSliceOneContractFilesUseProto3Syntax(t *testing.T) {
 	}
 }
 
+func TestConfirmRecoveryTerminalReplayProofContract(t *testing.T) {
+	descriptor, err := protoregistry.GlobalFiles.FindDescriptorByName("tammy.v1.ConfirmRecoveryRequest")
+	if err != nil {
+		t.Fatalf("find ConfirmRecoveryRequest descriptor: %v", err)
+	}
+	message, ok := descriptor.(protoreflect.MessageDescriptor)
+	if !ok {
+		t.Fatal("ConfirmRecoveryRequest descriptor is not a message")
+	}
+	field := message.Fields().ByName("terminal_replay_proof")
+	if field == nil {
+		t.Fatal("ConfirmRecoveryRequest.terminal_replay_proof descriptor not found")
+	}
+	if field.Number() != 3 {
+		t.Errorf("ConfirmRecoveryRequest.terminal_replay_proof number = %d, want 3", field.Number())
+	}
+	if field.Cardinality() != protoreflect.Optional || field.Kind() != protoreflect.MessageKind {
+		t.Errorf(
+			"ConfirmRecoveryRequest.terminal_replay_proof shape = %s %s, want optional message",
+			field.Cardinality(),
+			field.Kind(),
+		)
+	}
+	if field.Message() == nil || field.Message().FullName() != "tammy.v1.WorkspaceUnlockProof" {
+		t.Errorf(
+			"ConfirmRecoveryRequest.terminal_replay_proof type = %v, want tammy.v1.WorkspaceUnlockProof",
+			field.Message(),
+		)
+	}
+
+	_, sourceFile, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("resolve contract test path")
+	}
+	protoSource, err := os.ReadFile(filepath.Join(filepath.Dir(sourceFile), "../../../../proto/tammy/v1/workspace.proto"))
+	if err != nil {
+		t.Fatalf("read workspace proto source: %v", err)
+	}
+	terminalProofContract := regexp.MustCompile(`(?s)// terminal_replay_proof is transient proof used only for a fully confirmed inactive terminal replay\..*// It is never persisted or logged\..*WorkspaceUnlockProof terminal_replay_proof = 3;`)
+	if !terminalProofContract.Match(protoSource) {
+		t.Fatal("ConfirmRecoveryRequest.terminal_replay_proof is missing its transient non-persistence contract")
+	}
+}
+
 func TestCanonicalFixtureOmitsAbsentPresenceAwareFields(t *testing.T) {
 	fixtureCase := canonicalCase(t, "absent-presence")
 	assertJSONEqual(t, fixtureCase.ExpectedJSON, normalizeCanonicalRequest(t, fixtureCase.Input))

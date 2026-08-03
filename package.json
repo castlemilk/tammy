@@ -23,6 +23,7 @@
     "desktop:e2e": "pnpm desktop:package && pnpm --dir apps/desktop e2e",
     "test:proto-breaking": "node --test scripts/check-proto-breaking.test.mjs",
     "test:toolchain": "node --test scripts/check-toolchain.test.mjs",
+    "proto:format": "buf format -w",
     "proto:format:check": "buf format --diff --exit-code",
     "proto:lint": "buf lint",
     "proto:generate": "buf generate",

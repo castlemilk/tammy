@@ -363,6 +363,12 @@ message ConfirmRecoveryRequest {
     min_items: 2
     max_items: 8
   }];
+
+  // terminal_replay_proof is transient proof used only for a fully confirmed inactive terminal replay.
+  // It accepts a passphrase or explicitly elects an existing unexpired remembered-workspace capability.
+  // It is omitted and ignored during pending initial confirmation or while this workspace is already active.
+  // It is never persisted or logged.
+  WorkspaceUnlockProof terminal_replay_proof = 3;
 }
 
 // ConfirmRecoveryResponse returns the active open but unauthenticated workspace.

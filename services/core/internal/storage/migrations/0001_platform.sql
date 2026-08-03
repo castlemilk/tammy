@@ -22,15 +22,36 @@ CREATE TABLE header_operation_ids (
 CREATE TABLE users (
   id TEXT PRIMARY KEY,
   email TEXT NOT NULL COLLATE NOCASE UNIQUE,
+  normalized_username TEXT UNIQUE,
   display_name TEXT NOT NULL,
   status TEXT NOT NULL CHECK (status IN ('PENDING','ACTIVE','LOCKED','DISABLED')),
-  password_verifier BLOB,
-  password_changed_at TEXT,
+  password_policy_version INTEGER,
+  password_memory_kib INTEGER,
+  password_iterations INTEGER,
+  password_parallelism INTEGER,
+  password_salt BLOB,
+  password_digest BLOB,
+  activation_hash BLOB CHECK (activation_hash IS NULL OR length(activation_hash) = 32),
+  activation_consumed_hash BLOB CHECK (activation_consumed_hash IS NULL OR length(activation_consumed_hash) = 32),
+  activation_encrypted BLOB CHECK (activation_encrypted IS NULL OR length(activation_encrypted) > 0),
+  activation_expires_at TEXT,
+  activation_fails INTEGER NOT NULL DEFAULT 0 CHECK (activation_fails >= 0),
+  activation_session_id TEXT,
+  sign_in_failure_times BLOB NOT NULL DEFAULT X'' CHECK (length(sign_in_failure_times) <= 40 AND length(sign_in_failure_times) % 8 = 0),
   failed_attempts INTEGER NOT NULL DEFAULT 0 CHECK (failed_attempts >= 0),
   locked_until TEXT,
   version INTEGER NOT NULL DEFAULT 1 CHECK (version > 0),
+  repository_version INTEGER NOT NULL DEFAULT 1 CHECK (repository_version > 0),
   created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
+  updated_at TEXT NOT NULL,
+  CHECK ((password_policy_version IS NULL AND password_memory_kib IS NULL AND password_iterations IS NULL
+    AND password_parallelism IS NULL AND password_salt IS NULL AND password_digest IS NULL)
+    OR (password_policy_version IS NOT NULL AND password_memory_kib IS NOT NULL
+      AND password_iterations IS NOT NULL AND password_parallelism IS NOT NULL
+      AND password_salt IS NOT NULL AND password_digest IS NOT NULL
+      AND password_policy_version = 1 AND password_memory_kib = 65536 AND password_iterations = 3
+      AND password_parallelism = 1 AND length(password_salt) = 16 AND length(password_digest) = 32)),
+  CHECK (failed_attempts = length(sign_in_failure_times) / 8)
 );
 
 CREATE TABLE roles (
@@ -43,30 +64,64 @@ CREATE TABLE user_roles (
   role_code TEXT NOT NULL REFERENCES roles(code) ON DELETE RESTRICT,
   assigned_at TEXT NOT NULL,
   assigned_by_user_id TEXT REFERENCES users(id) ON DELETE RESTRICT,
+  repository_version INTEGER NOT NULL DEFAULT 1 CHECK (repository_version > 0),
   PRIMARY KEY (user_id, role_code)
 );
 
-CREATE TABLE sessions (
+CREATE TABLE user_password_history (
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  ordinal INTEGER NOT NULL CHECK (ordinal BETWEEN 0 AND 4),
+  policy_version INTEGER NOT NULL CHECK (policy_version = 1),
+  memory_kib INTEGER NOT NULL CHECK (memory_kib = 65536),
+  iterations INTEGER NOT NULL CHECK (iterations = 3),
+  parallelism INTEGER NOT NULL CHECK (parallelism = 1),
+  salt BLOB NOT NULL CHECK (length(salt) = 16),
+  digest BLOB NOT NULL CHECK (length(digest) = 32),
+  repository_version INTEGER NOT NULL DEFAULT 1 CHECK (repository_version > 0),
+  PRIMARY KEY (user_id, ordinal)
+);
+
+CREATE TABLE application_sessions (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  asserted_factor_at TEXT,
+  state INTEGER NOT NULL CHECK (state BETWEEN 1 AND 4),
+  created_at TEXT NOT NULL,
   last_active_at TEXT NOT NULL,
   expires_at TEXT NOT NULL,
-  closed_at TEXT,
-  state TEXT NOT NULL CHECK (state IN ('ACTIVE','CLOSED','EXPIRED')),
-  version INTEGER NOT NULL DEFAULT 1 CHECK (version > 0)
+  ended_at TEXT,
+  repository_version INTEGER NOT NULL DEFAULT 1 CHECK (repository_version > 0),
+  CHECK ((state = 1 AND ended_at IS NULL) OR (state <> 1 AND ended_at IS NOT NULL))
 );
 
-CREATE UNIQUE INDEX one_active_session ON sessions((state)) WHERE state = 'ACTIVE';
+CREATE UNIQUE INDEX one_active_session ON application_sessions((state)) WHERE state = 1;
 
-CREATE TABLE totp_credentials (
-  user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-  encrypted_secret BLOB NOT NULL,
+CREATE TABLE totp_factors (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  version INTEGER NOT NULL CHECK (version > 0),
+  state INTEGER NOT NULL CHECK (state BETWEEN 1 AND 3),
+  created_at TEXT NOT NULL,
+  encrypted_secret BLOB,
   last_counter INTEGER NOT NULL DEFAULT -1 CHECK (last_counter >= -1),
-  state TEXT NOT NULL CHECK (state IN ('PENDING','ACTIVE','DISABLED')),
-  enrolled_at TEXT NOT NULL,
-  disabled_at TEXT
+  repository_version INTEGER NOT NULL DEFAULT 1 CHECK (repository_version > 0),
+  CHECK ((state IN (1,2) AND encrypted_secret IS NOT NULL AND length(encrypted_secret) > 0)
+    OR (state = 3 AND encrypted_secret IS NULL))
 );
+
+CREATE UNIQUE INDEX one_enabled_totp_factor ON totp_factors(user_id) WHERE state IN (1,2);
+
+CREATE TABLE factor_assertions (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  session_id TEXT NOT NULL REFERENCES application_sessions(id) ON DELETE CASCADE,
+  purpose TEXT NOT NULL CHECK (length(purpose) BETWEEN 1 AND 128),
+  asserted_at TEXT NOT NULL,
+  consumed INTEGER NOT NULL CHECK (consumed IN (0,1)),
+  repository_version INTEGER NOT NULL DEFAULT 1 CHECK (repository_version > 0)
+);
+
+CREATE UNIQUE INDEX one_fresh_factor_assertion
+  ON factor_assertions(user_id, session_id, purpose) WHERE consumed = 0;
 
 CREATE TABLE recovery_state (
   id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -97,6 +152,31 @@ CREATE TABLE idempotency_records (
   created_at TEXT NOT NULL,
   committed_at TEXT
 );
+
+CREATE TABLE command_idempotency (
+  operation_key TEXT PRIMARY KEY,
+  command_type TEXT NOT NULL CHECK (length(command_type) BETWEEN 1 AND 128),
+  semantic_sha256 TEXT NOT NULL CHECK (length(semantic_sha256) = 64),
+  actor_user_id TEXT REFERENCES users(id) ON DELETE RESTRICT,
+  user_id TEXT REFERENCES users(id) ON DELETE RESTRICT,
+  factor_id TEXT REFERENCES totp_factors(id) ON DELETE RESTRICT,
+  session_id TEXT REFERENCES application_sessions(id) ON DELETE RESTRICT,
+  response_encrypted BLOB,
+  repository_version INTEGER NOT NULL DEFAULT 1 CHECK (repository_version > 0),
+  created_at TEXT NOT NULL
+);
+
+CREATE TRIGGER command_idempotency_no_update
+BEFORE UPDATE ON command_idempotency
+BEGIN
+  SELECT RAISE(ABORT, 'command idempotency rows are immutable');
+END;
+
+CREATE TRIGGER command_idempotency_no_delete
+BEFORE DELETE ON command_idempotency
+BEGIN
+  SELECT RAISE(ABORT, 'command idempotency rows are immutable');
+END;
 
 CREATE TABLE audit_envelopes (
   sequence INTEGER PRIMARY KEY CHECK (sequence > 0),
