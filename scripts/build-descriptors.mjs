@@ -318,7 +318,6 @@ async function recoverDescriptorEvidence({
   recoveryDirectory,
   renamePath,
   retainedDirectory,
-  temporaryRoot,
 }) {
   if (!(await pathExists(recoveryDirectory))) return;
   if (await pathExists(retainedDirectory)) {
@@ -335,7 +334,6 @@ async function recoverDescriptorEvidence({
     throw new Error("DESCRIPTOR_EVIDENCE_RECOVERY_RESTORE_FAILED", { cause });
   }
   await rm(recoveryDirectory, { force: true, recursive: true });
-  await removeEmptyDirectory(temporaryRoot);
 }
 
 export async function buildDescriptors({
@@ -369,80 +367,92 @@ export async function buildDescriptors({
     return manifest;
   }
 
-  const temporaryRoot = path.join(root, ".tmp/contracts");
-  const recoveryDirectory = path.join(temporaryRoot, "descriptor-evidence-recovery");
+  const temporaryRoot = path.join(root, ".tmp/descriptor-evidence");
+  const lockDirectory = path.join(temporaryRoot, "lock");
+  const recoveryDirectory = path.join(temporaryRoot, "recovery");
   const backupDirectory = path.join(recoveryDirectory, "previous-contracts");
   const retainedDirectory = path.join(root, "compliance/contracts");
-  await recoverDescriptorEvidence({
-    backupDirectory,
-    recoveryDirectory,
-    renamePath,
-    retainedDirectory,
-    temporaryRoot,
-  });
-
-  const revisionResult = await run("git", ["rev-parse", "HEAD"], {
-    cwd: root,
-    shell: false,
-  });
-  const currentRevision = String(revisionResult.stdout).trim();
-  if (typeof env.TAMMY_SOURCE_REVISION !== "string" || env.TAMMY_SOURCE_REVISION === "") {
-    throw new Error("DESCRIPTOR_SOURCE_REVISION_REQUIRED");
-  }
-  if (env.TAMMY_SOURCE_REVISION !== currentRevision) {
-    throw new Error("DESCRIPTOR_SOURCE_REVISION_MISMATCH");
-  }
-  const statusResult = await run("git", GIT_STATUS_ARGS, {
-    cwd: root,
-    shell: false,
-  });
-  if (String(statusResult.stdout).trim().length > 0) {
-    throw new Error("DESCRIPTOR_EVIDENCE_DIRTY_TREE");
-  }
-
   await mkdir(temporaryRoot, { recursive: true });
-  const transactionDirectory = await mkdtemp(path.join(temporaryRoot, "descriptor-evidence-"));
-  const stagingDirectory = path.join(transactionDirectory, "next-contracts");
   try {
-    const { bufVersion, descriptorBytes } = await buildDescriptorIntoDirectory({
-      bufEntry,
-      mode,
-      nodeExecutable,
-      outputDirectory: stagingDirectory,
-      platform,
-      root,
-      run,
-    });
-    const manifest = createDescriptorManifest({
-      bufVersion,
-      descriptorBytes,
-      gitRevision: env.TAMMY_SOURCE_REVISION,
-    });
-    validateDescriptorManifest({
-      currentRevision,
-      descriptorBytes,
-      dirty: false,
-      manifest,
-      mode,
-    });
-    await assertEvidenceSourceState({ expectedRevision: currentRevision, root, run });
-    await writeFile(
-      path.join(stagingDirectory, "descriptor-manifest.json"),
-      serializeDescriptorManifest(manifest),
-      "utf8",
-    );
-    await assertEvidenceSourceState({ expectedRevision: currentRevision, root, run });
-    await publishDescriptorEvidence({
+    await mkdir(lockDirectory);
+  } catch (cause) {
+    if (cause?.code === "EEXIST") {
+      throw new Error("DESCRIPTOR_EVIDENCE_BUSY", { cause });
+    }
+    throw cause;
+  }
+  try {
+    await recoverDescriptorEvidence({
       backupDirectory,
       recoveryDirectory,
-      retainedDirectory,
       renamePath,
-      stagingDirectory,
+      retainedDirectory,
     });
-    return manifest;
+
+    const revisionResult = await run("git", ["rev-parse", "HEAD"], {
+      cwd: root,
+      shell: false,
+    });
+    const currentRevision = String(revisionResult.stdout).trim();
+    if (typeof env.TAMMY_SOURCE_REVISION !== "string" || env.TAMMY_SOURCE_REVISION === "") {
+      throw new Error("DESCRIPTOR_SOURCE_REVISION_REQUIRED");
+    }
+    if (env.TAMMY_SOURCE_REVISION !== currentRevision) {
+      throw new Error("DESCRIPTOR_SOURCE_REVISION_MISMATCH");
+    }
+    const statusResult = await run("git", GIT_STATUS_ARGS, {
+      cwd: root,
+      shell: false,
+    });
+    if (String(statusResult.stdout).trim().length > 0) {
+      throw new Error("DESCRIPTOR_EVIDENCE_DIRTY_TREE");
+    }
+
+    const transactionDirectory = await mkdtemp(path.join(temporaryRoot, "transaction-"));
+    const stagingDirectory = path.join(transactionDirectory, "next-contracts");
+    try {
+      const { bufVersion, descriptorBytes } = await buildDescriptorIntoDirectory({
+        bufEntry,
+        mode,
+        nodeExecutable,
+        outputDirectory: stagingDirectory,
+        platform,
+        root,
+        run,
+      });
+      const manifest = createDescriptorManifest({
+        bufVersion,
+        descriptorBytes,
+        gitRevision: env.TAMMY_SOURCE_REVISION,
+      });
+      validateDescriptorManifest({
+        currentRevision,
+        descriptorBytes,
+        dirty: false,
+        manifest,
+        mode,
+      });
+      await assertEvidenceSourceState({ expectedRevision: currentRevision, root, run });
+      await writeFile(
+        path.join(stagingDirectory, "descriptor-manifest.json"),
+        serializeDescriptorManifest(manifest),
+        "utf8",
+      );
+      await assertEvidenceSourceState({ expectedRevision: currentRevision, root, run });
+      await publishDescriptorEvidence({
+        backupDirectory,
+        recoveryDirectory,
+        retainedDirectory,
+        renamePath,
+        stagingDirectory,
+      });
+      return manifest;
+    } finally {
+      await rm(transactionDirectory, { force: true, recursive: true });
+    }
   } finally {
     try {
-      await rm(transactionDirectory, { force: true, recursive: true });
+      await rm(lockDirectory, { force: true, recursive: true });
     } finally {
       await removeEmptyDirectory(temporaryRoot);
     }

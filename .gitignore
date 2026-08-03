@@ -1,6 +1,7 @@
 .superpowers/
 .worktrees/
 /.tmp/contracts/
+/.tmp/descriptor-evidence/
 node_modules/
 .pnpm-store/
 **/.vite/

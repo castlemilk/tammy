@@ -39,6 +39,15 @@ const REVISION = "0123456789abcdef0123456789abcdef01234567";
 const NEXT_REVISION = "abcdef0123456789abcdef0123456789abcdef01";
 const NODE_EXECUTABLE = "/mise/installs/node/24.18.0/bin/node";
 const BUF_ENTRY = "/workspace/tammy/node_modules/@bufbuild/buf/bin/buf";
+const EVIDENCE_TEMPORARY_PATH = ".tmp/descriptor-evidence";
+
+function createDeferred() {
+  let resolve;
+  const promise = new Promise((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
 
 function validManifest(overrides = {}) {
   return {
@@ -85,7 +94,7 @@ async function writeRecoveryState(
   root,
   { extraEntry = false, journal = true, noncanonicalManifest = false } = {},
 ) {
-  const recoveryDirectory = path.join(root, ".tmp/contracts/descriptor-evidence-recovery");
+  const recoveryDirectory = path.join(root, EVIDENCE_TEMPORARY_PATH, "recovery");
   await writeEvidencePair(path.join(recoveryDirectory, "previous-contracts"));
   if (noncanonicalManifest) {
     await writeFile(
@@ -113,6 +122,8 @@ async function assertRetainedEvidenceUnchanged(root, before) {
   } catch (error) {
     assert.equal(error.code, "ENOENT");
   }
+  await assert.rejects(access(path.join(root, ".tmp/contracts")), { code: "ENOENT" });
+  await assert.rejects(access(path.join(root, EVIDENCE_TEMPORARY_PATH)), { code: "ENOENT" });
 }
 
 function createEvidenceRun({
@@ -168,6 +179,15 @@ test("creates a Darwin Buf command plan through Node without a shell", async () 
       shell: false,
     },
   );
+});
+
+test("assigns validation and evidence exact disjoint ignored temporary roots", async () => {
+  const ignoreLines = (await readFile(new URL("../.gitignore", import.meta.url), "utf8"))
+    .split(/\r?\n/)
+    .filter(Boolean);
+
+  assert.equal(ignoreLines.filter((line) => line === "/.tmp/contracts/").length, 1);
+  assert.equal(ignoreLines.filter((line) => line === "/.tmp/descriptor-evidence/").length, 1);
 });
 
 test("creates a win32 Buf command plan without cmd or bat shims", async () => {
@@ -717,7 +737,9 @@ test("double publication failure preserves the prior pair in stable recovery sta
 
   assert.equal(renameCount, 3);
   await assert.rejects(access(path.join(root, "compliance/contracts")));
-  const recoveryDirectory = path.join(root, ".tmp/contracts/descriptor-evidence-recovery");
+  const evidenceTemporaryRoot = path.join(root, EVIDENCE_TEMPORARY_PATH);
+  const recoveryDirectory = path.join(evidenceTemporaryRoot, "recovery");
+  assert.deepEqual(await readdir(evidenceTemporaryRoot), ["recovery"]);
   assert.deepEqual(
     await readFile(path.join(recoveryDirectory, "previous-contracts/descriptors.pb")),
     before.descriptor,
@@ -730,6 +752,191 @@ test("double publication failure preserves the prior pair in stable recovery sta
     await readFile(path.join(recoveryDirectory, "recovery-journal.json"), "utf8"),
     '{\n  "schemaVersion": 1,\n  "state": "previous_retained_pair"\n}\n',
   );
+});
+
+test("contract cleanup cannot delete durable descriptor evidence recovery", async (context) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "tammy-descriptors-"));
+  context.after(() => rm(root, { force: true, recursive: true }));
+  await writeRetainedEvidence(root);
+  const before = await retainedEvidence(root);
+  const { run: failedRun } = createEvidenceRun();
+  let renameCount = 0;
+  const failingRename = async (source, destination) => {
+    renameCount += 1;
+    if (renameCount === 2 || renameCount === 3) throw new Error("INJECTED_RENAME_FAILURE");
+    await rename(source, destination);
+  };
+  const { buildDescriptors } = await import("./build-descriptors.mjs");
+  const { checkContracts } = await import("./check-contracts.mjs");
+
+  await assert.rejects(
+    buildDescriptors({
+      bufEntry: BUF_ENTRY,
+      env: { TAMMY_SOURCE_REVISION: REVISION },
+      mode: "evidence",
+      nodeExecutable: NODE_EXECUTABLE,
+      platform: "darwin",
+      renamePath: failingRename,
+      root,
+      run: failedRun,
+    }),
+    { message: "DESCRIPTOR_EVIDENCE_ROLLBACK_FAILED: RECOVERY_AVAILABLE" },
+  );
+
+  const recoveryDirectory = path.join(root, EVIDENCE_TEMPORARY_PATH, "recovery");
+  const legacyRecoveryDirectory = path.join(root, ".tmp/contracts/descriptor-evidence-recovery");
+  await access(path.join(recoveryDirectory, "previous-contracts/descriptors.pb"));
+  await assert.rejects(access(legacyRecoveryDirectory), { code: "ENOENT" });
+  await checkContracts({
+    buildDescriptorsFn: async () => {
+      await mkdir(path.join(root, ".tmp/contracts"), { recursive: true });
+      await writeFile(path.join(root, ".tmp/contracts/descriptors.pb"), "validation");
+    },
+    checkGeneratedTreeFn: async () => {},
+    checkTransitionIndexFn: async () => {},
+    root,
+    runE2ECoverageFn: async () => {},
+  });
+
+  await access(path.join(recoveryDirectory, "previous-contracts/descriptors.pb"));
+  await assert.rejects(access(path.join(root, ".tmp/contracts")), { code: "ENOENT" });
+  const { run: restartRun } = createEvidenceRun({
+    statuses: ["?? proto/tammy/v1/restart.proto\n"],
+  });
+  await assert.rejects(
+    buildDescriptors({
+      bufEntry: BUF_ENTRY,
+      env: { TAMMY_SOURCE_REVISION: REVISION },
+      mode: "evidence",
+      nodeExecutable: NODE_EXECUTABLE,
+      platform: "darwin",
+      root,
+      run: restartRun,
+    }),
+    { message: "DESCRIPTOR_EVIDENCE_DIRTY_TREE" },
+  );
+  await assertRetainedEvidenceUnchanged(root, before);
+});
+
+test("contract cleanup cannot delete a held descriptor evidence transaction", async (context) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "tammy-descriptors-"));
+  context.after(() => rm(root, { force: true, recursive: true }));
+  await writeRetainedEvidence(root);
+  const staged = createDeferred();
+  const release = createDeferred();
+  const { calls, run: baseRun } = createEvidenceRun();
+  const run = async (command, args, options) => {
+    const result = await baseRun(command, args, options);
+    if (
+      command === "git" &&
+      args[0] === "status" &&
+      calls.filter((call) => call.command === "git" && call.args[0] === "status").length === 2
+    ) {
+      staged.resolve();
+      await release.promise;
+    }
+    return result;
+  };
+  const { buildDescriptors } = await import("./build-descriptors.mjs");
+  const { checkContracts } = await import("./check-contracts.mjs");
+  const evidencePromise = buildDescriptors({
+    bufEntry: BUF_ENTRY,
+    env: { TAMMY_SOURCE_REVISION: REVISION },
+    mode: "evidence",
+    nodeExecutable: NODE_EXECUTABLE,
+    platform: "darwin",
+    root,
+    run,
+  });
+  await staged.promise;
+  const buildCall = calls.find(
+    ({ command, args }) =>
+      command === NODE_EXECUTABLE && args[0] === BUF_ENTRY && args[1] === "build",
+  );
+  const stagedDescriptorPath = buildCall.args.at(-1);
+  let boundaryError;
+  try {
+    await checkContracts({
+      buildDescriptorsFn: async () => {
+        await mkdir(path.join(root, ".tmp/contracts"), { recursive: true });
+        await writeFile(path.join(root, ".tmp/contracts/descriptors.pb"), "validation");
+      },
+      checkGeneratedTreeFn: async () => {},
+      checkTransitionIndexFn: async () => {},
+      root,
+      runE2ECoverageFn: async () => {},
+    });
+    await access(stagedDescriptorPath);
+  } catch (error) {
+    boundaryError = error;
+  } finally {
+    release.resolve();
+  }
+  const [evidenceResult] = await Promise.allSettled([evidencePromise]);
+  if (boundaryError) throw boundaryError;
+  assert.equal(evidenceResult.status, "fulfilled");
+  assert.deepEqual(
+    await readFile(path.join(root, "compliance/contracts/descriptors.pb")),
+    NEXT_DESCRIPTOR_BYTES,
+  );
+  await assert.rejects(access(path.join(root, ".tmp/contracts")), { code: "ENOENT" });
+  await assert.rejects(access(path.join(root, EVIDENCE_TEMPORARY_PATH)), { code: "ENOENT" });
+});
+
+test("concurrent descriptor evidence invocation fails closed without touching the owner", async (context) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "tammy-descriptors-"));
+  context.after(() => rm(root, { force: true, recursive: true }));
+  await writeRetainedEvidence(root);
+  const publicationHeld = createDeferred();
+  const release = createDeferred();
+  const { run: ownerRun } = createEvidenceRun();
+  let renameCount = 0;
+  const heldRename = async (source, destination) => {
+    renameCount += 1;
+    await rename(source, destination);
+    if (renameCount === 1) {
+      publicationHeld.resolve();
+      await release.promise;
+    }
+  };
+  const { buildDescriptors } = await import("./build-descriptors.mjs");
+  const ownerPromise = buildDescriptors({
+    bufEntry: BUF_ENTRY,
+    env: { TAMMY_SOURCE_REVISION: REVISION },
+    mode: "evidence",
+    nodeExecutable: NODE_EXECUTABLE,
+    platform: "darwin",
+    renamePath: heldRename,
+    root,
+    run: ownerRun,
+  });
+  await publicationHeld.promise;
+  let contenderError;
+  try {
+    await assert.rejects(
+      buildDescriptors({
+        env: { TAMMY_SOURCE_REVISION: REVISION },
+        mode: "evidence",
+        root,
+        run: async () => {
+          throw new Error("CONTENDER_MUST_NOT_REACH_GIT");
+        },
+      }),
+      { message: "DESCRIPTOR_EVIDENCE_BUSY" },
+    );
+  } catch (error) {
+    contenderError = error;
+  } finally {
+    release.resolve();
+  }
+  const [ownerResult] = await Promise.allSettled([ownerPromise]);
+  if (contenderError) throw contenderError;
+  assert.equal(ownerResult.status, "fulfilled");
+  assert.deepEqual(
+    await readFile(path.join(root, "compliance/contracts/descriptors.pb")),
+    NEXT_DESCRIPTOR_BYTES,
+  );
+  await assert.rejects(access(path.join(root, EVIDENCE_TEMPORARY_PATH)), { code: "ENOENT" });
 });
 
 test("next evidence invocation restores valid recovery before dirty-tree rejection", async (context) => {
@@ -870,9 +1077,10 @@ test("evidence publishes one validated pair after three clean source checks", as
       command === NODE_EXECUTABLE && args[0] === BUF_ENTRY && args[1] === "build",
   );
   const stagedOutputParts = path.relative(root, buildCall.args.at(-1)).split(path.sep);
-  assert.deepEqual(stagedOutputParts.slice(0, 2), [".tmp", "contracts"]);
-  assert.match(stagedOutputParts[2], /^descriptor-evidence-/);
+  assert.deepEqual(stagedOutputParts.slice(0, 2), [".tmp", "descriptor-evidence"]);
+  assert.match(stagedOutputParts[2], /^transaction-/);
   assert.deepEqual(stagedOutputParts.slice(3), ["next-contracts", "descriptors.pb"]);
+  await assert.rejects(access(path.join(root, ".tmp/contracts")), { code: "ENOENT" });
   assert.deepEqual(await readdir(path.join(root, ".tmp")), []);
 });
 
