@@ -55,6 +55,7 @@ type AuditPort interface {
 // call back into identity.
 type WorkspaceSessionLifecycle interface {
 	SessionStartedWithin(context.Context, workspace.MutationExecutor, string) error
+	SessionStartedAuditedWithin(context.Context, workspace.MutationExecutor) error
 	SessionStartedCommitted(context.Context) error
 }
 
@@ -379,6 +380,9 @@ func (service *Service) SignIn(ctx context.Context, request *connect.Request[tam
 		if err := service.audit.Record(ctx, executor, "session_started", sessionID); err != nil {
 			return err
 		}
+		if err := service.sessionLifecycle.SessionStartedAuditedWithin(lifecycleCtx, executor); err != nil {
+			return err
+		}
 		response = &tammyv1.SignInResponse{User: userProjection(record, *current), Session: sessionProjection(session)}
 		return nil
 	})
@@ -582,6 +586,9 @@ func (service *Service) ActivateUser(ctx context.Context, request *connect.Reque
 			return err
 		}
 		if err := service.audit.Record(ctx, executor, "user_activated", record.ID); err != nil {
+			return err
+		}
+		if err := service.sessionLifecycle.SessionStartedAuditedWithin(lifecycleCtx, executor); err != nil {
 			return err
 		}
 		response = &tammyv1.ActivateUserResponse{User: userProjection(record, *current), Session: sessionProjection(session)}

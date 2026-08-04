@@ -104,6 +104,41 @@ func TestSQLAnchorStorePersistsJournalAnchorAcrossRestart(t *testing.T) {
 	}
 }
 
+func TestWorkspaceMutationPublishesLifecycleOnlyAfterSQLCommit(t *testing.T) {
+	ctx := context.Background()
+	storage, err := NewSQLCipherStorageFactory(3).Create(ctx, filepath.Join(t.TempDir(), "lifecycle.db"), bytes.Repeat([]byte{0x42}, 32))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer storage.Close()
+	record := workspaceRecord{ID: "01890f60-4d6d-7c12-8f02-6c9129d5b001", Version: 1,
+		OperationHashes: map[string]string{}, OperationActors: map[string]string{}, OperationSessions: map[string]string{}}
+	mutation := WorkspaceMutation{OperationID: "01890f60-4d6d-7c12-8f02-6c9129d5b002", Kind: "TEST",
+		WorkspaceID: record.ID, Version: record.Version}
+	published := false
+	err = storage.CommitWorkspaceMutation(ctx, mutation, record, func(executor MutationExecutor, _ *workspaceRecord) error {
+		registrar, ok := executor.(interface {
+			AfterCommit(func(context.Context) error) error
+		})
+		if !ok {
+			t.Fatal("mutation executor has no post-commit lifecycle")
+		}
+		return registrar.AfterCommit(func(callbackContext context.Context) error {
+			if _, loadErr := storage.LoadWorkspaceRecord(callbackContext); loadErr != nil {
+				return loadErr
+			}
+			published = true
+			return nil
+		})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !published {
+		t.Fatal("post-commit lifecycle was not published")
+	}
+}
+
 type subprocessBlockingSQLAnchorStore struct {
 	*SQLAnchorStore
 	allowPath string

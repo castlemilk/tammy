@@ -432,6 +432,7 @@ func (handle *sqlCipherStorageHandle) CommitWorkspaceMutation(
 			_ = transaction.Rollback()
 		}
 	}()
+	lifecycle := &mutationTransaction{MutationExecutor: transaction}
 	if mutation.HeaderOperation {
 		if _, err := transaction.ExecContext(ctx, `INSERT INTO header_operation_ids(operation_id, operation_kind, header_version, committed_at)
 			VALUES (?, ?, ?, ?)`, mutation.OperationID, mutation.Kind, mutation.Version, time.Now().UTC().Format(time.RFC3339Nano)); err != nil {
@@ -439,7 +440,7 @@ func (handle *sqlCipherStorageHandle) CommitWorkspaceMutation(
 		}
 	}
 	if dependent != nil {
-		if err := dependent(transaction, &record); err != nil {
+		if err := dependent(lifecycle, &record); err != nil {
 			return err
 		}
 	}
@@ -460,7 +461,7 @@ func (handle *sqlCipherStorageHandle) CommitWorkspaceMutation(
 		return err
 	}
 	committed = true
-	return nil
+	return lifecycle.publish(ctx)
 }
 
 func (handle *sqlCipherStorageHandle) LoadWorkspaceRecord(ctx context.Context) (workspaceRecord, error) {

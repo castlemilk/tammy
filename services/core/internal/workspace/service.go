@@ -67,6 +67,16 @@ type MutationAuditPort interface {
 	AppendWorkspaceMutation(context.Context, MutationExecutor, WorkspaceMutation) error
 }
 
+// AuditBootstrapPort is an optional extension implemented by the production
+// audit adapter. It joins chain/key creation to CREATE and can reconstruct the
+// public header metadata after a crash between the database commit and header write.
+type AuditBootstrapPort interface {
+	BeginInitialMirrorLifecycle(context.Context, string, string) error
+	BootstrapWorkspaceAudit(context.Context, MutationExecutor, string, []byte, time.Time) (*AuditHeaderMetadata, error)
+	LoadWorkspaceAuditHeader(context.Context, MutationExecutor, string) (*AuditHeaderMetadata, error)
+	EstablishInitialMirror(context.Context, MutationExecutor, string, string) error
+}
+
 type OwnershipImpact struct {
 	WorkspaceID                   string
 	PriorOwnerUserID              string
@@ -412,6 +422,11 @@ func (service *Service) resumeCreate(ctx context.Context, request *tammyv1.Creat
 		}
 		return service.pendingCreateResponse(record)
 	}
+	if bootstrap, ok := service.audit.(AuditBootstrapPort); ok {
+		if err := bootstrap.BeginInitialMirrorLifecycle(ctx, record.ID, record.SetupID); err != nil {
+			return nil, err
+		}
+	}
 	material, err := service.openSetupMaterial(record.SetupID, record.SetupMaterialEncrypted)
 	if err != nil {
 		return nil, err
@@ -442,6 +457,13 @@ func (service *Service) resumeCreate(ctx context.Context, request *tammyv1.Creat
 	if !storage.HeaderOperationCommitted(ctx, record.SetupID, record.Version) {
 		var administrator *tammyv1.User
 		if err := storage.CommitWorkspaceMutation(ctx, mutation, record, func(executor MutationExecutor, transactionRecord *workspaceRecord) error {
+			if bootstrap, ok := service.audit.(AuditBootstrapPort); ok && material.InitialHeader.Audit == nil {
+				metadata, bootstrapErr := bootstrap.BootstrapWorkspaceAudit(ctx, executor, record.ID, material.DEK, service.clock.Now().UTC())
+				if bootstrapErr != nil {
+					return bootstrapErr
+				}
+				material.InitialHeader.Audit = metadata.Clone()
+			}
 			var bootstrapErr error
 			administrator, bootstrapErr = service.identity.BootstrapAdministratorWithin(ctx, executor, record.SetupID,
 				request.AdministratorUsername, request.AdministratorDisplayName, request.AdministratorPassword.Utf8)
@@ -469,6 +491,13 @@ func (service *Service) resumeCreate(ctx context.Context, request *tammyv1.Creat
 		}
 		record.OwnerUserID = authoritative.OwnerUserID
 		record.SetupPhase = authoritative.SetupPhase
+		if bootstrap, ok := service.audit.(AuditBootstrapPort); ok && material.InitialHeader.Audit == nil {
+			metadata, bootstrapErr := bootstrap.LoadWorkspaceAuditHeader(ctx, storage.Database(), record.ID)
+			if bootstrapErr != nil {
+				return nil, bootstrapErr
+			}
+			material.InitialHeader.Audit = metadata.Clone()
+		}
 	}
 	if err := service.checkpoint("create.after_database_commit"); err != nil {
 		return nil, err
@@ -1326,7 +1355,27 @@ func (service *Service) SessionStartedWithin(ctx context.Context, executor Mutat
 	}
 	mutation := WorkspaceMutation{OperationID: sessionID, Kind: "SESSION_STARTED", WorkspaceID: record.ID,
 		Version: record.Version, SemanticHash: service.operationSemantic("session_started", []byte(sessionID))}
-	return service.audit.AppendWorkspaceMutation(ctx, executor, mutation)
+	if err := service.audit.AppendWorkspaceMutation(ctx, executor, mutation); err != nil {
+		return err
+	}
+	return nil
+}
+
+// SessionStartedAuditedWithin finalizes the initial mirror only after every
+// sign-in audit append in the shared identity transaction has advanced the
+// chain, so the baseline is the exact committed head.
+func (service *Service) SessionStartedAuditedWithin(ctx context.Context, executor MutationExecutor) error {
+	if executor == nil {
+		return ErrWorkspaceNotFound
+	}
+	record, err := loadWorkspaceRecordFrom(ctx, executor)
+	if err != nil || record.State != tammyv1.WorkspaceState_WORKSPACE_STATE_AUTHENTICATED || record.SetupPhase != "confirmed" {
+		return ErrWorkspaceNotFound
+	}
+	if bootstrap, ok := service.audit.(AuditBootstrapPort); ok {
+		return bootstrap.EstablishInitialMirror(ctx, executor, record.ID, record.SetupID)
+	}
+	return nil
 }
 
 // SessionStartedCommitted converges the installation catalogue after the
@@ -1494,7 +1543,7 @@ func (service *Service) ChangePassphrase(ctx context.Context, request *connect.R
 	}
 	next := HeaderSlot{Version: nextVersion, OperationID: request.Msg.CommandContext.IdempotencyKey, WorkspaceID: record.ID,
 		PassphraseWrap: passphraseWrap, RecoveryWrap: current.RecoveryWrap, RecoveryVersion: recoveryVersion,
-		PassphraseHistory: RetainPasswordHistory(current.PassphraseWrap.Verifier, current.PassphraseHistory, 3)}
+		PassphraseHistory: RetainPasswordHistory(current.PassphraseWrap.Verifier, current.PassphraseHistory, 3), Audit: current.Audit.Clone()}
 	if err := service.remembered.Forget(record.ID); err != nil {
 		return nil, err
 	}
@@ -1745,7 +1794,7 @@ func (service *Service) recoverWorkspace(ctx context.Context, request *connect.R
 	}
 	next := HeaderSlot{Version: nextVersion, RecoveryVersion: nextVersion, OperationID: request.Msg.RecoveryOperationId,
 		WorkspaceID: record.ID, PassphraseWrap: passphraseWrap, RecoveryWrap: recoveryWrap,
-		PassphraseHistory: RetainPasswordHistory(current.PassphraseWrap.Verifier, current.PassphraseHistory, 3)}
+		PassphraseHistory: RetainPasswordHistory(current.PassphraseWrap.Verifier, current.PassphraseHistory, 3), Audit: current.Audit.Clone()}
 	if err := service.attempts.Success("workspace_recovery", record.ID); err != nil {
 		return fail(err)
 	}

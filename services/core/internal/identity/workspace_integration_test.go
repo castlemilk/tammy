@@ -125,6 +125,9 @@ type workspaceSessionLifecycle struct{ service *workspace.Service }
 func (lifecycle workspaceSessionLifecycle) SessionStartedWithin(ctx context.Context, executor workspace.MutationExecutor, sessionID string) error {
 	return lifecycle.service.SessionStartedWithin(ctx, executor, sessionID)
 }
+func (lifecycle workspaceSessionLifecycle) SessionStartedAuditedWithin(ctx context.Context, executor workspace.MutationExecutor) error {
+	return lifecycle.service.SessionStartedAuditedWithin(ctx, executor)
+}
 func (lifecycle workspaceSessionLifecycle) SessionStartedCommitted(ctx context.Context) error {
 	return lifecycle.service.SessionStartedCommitted(ctx)
 }

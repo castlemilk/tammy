@@ -17,7 +17,534 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file tammy/v1/audit.proto.
  */
 export const file_tammy_v1_audit: GenFile = /*@__PURE__*/
-  fileDesc("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bhgDIAEoBEgAiAEBEhsKDnN0YXJ0X3NlcXVlbmNlGAQgASgESAGIAQESGQoMZW5kX3NlcXVlbmNlGAUgASgESAKIAQFCDQoLX2dlbmVyYXRpb25CEQoPX3N0YXJ0X3NlcXVlbmNlQg8KDV9lbmRfc2VxdWVuY2UiygEKE1ZlcmlmeUNoYWluUmVzcG9uc2USOgoJaW50ZWdyaXR5GAEgASgOMh0udGFtbXkudjEuQXVkaXRDaGFpbkludGVncml0eUIIukgFggECEAESIQoZdmVyaWZpZWRfdGhyb3VnaF9zZXF1ZW5jZRgCIAEoBBIeChFtaXNtYXRjaF9zZXF1ZW5jZRgDIAEoBEgAiAEBEh4KDXZlcmlmaWVkX2hlYWQYBCABKAxCB7pIBHoCaCBCFAoSX21pc21hdGNoX3NlcXVlbmNlIp4CChZMaXN0QXVkaXRFdmVudHNSZXF1ZXN0Ej8KDmF1dGhlbnRpY2F0aW9uGAEgASgLMh8udGFtbXkudjEuQXV0aGVudGljYXRpb25Db250ZXh0Qga6SAPIAQESYgoMd29ya3NwYWNlX2lkGAIgASgJQky6SElyRzJFXlswLTlhLWZdezh9LVswLTlhLWZdezR9LTdbMC05YS1mXXszfS1bODlhYl1bMC05YS1mXXszfS1bMC05YS1mXXsxMn0kEjIKBmZpbHRlchgDIAEoCzIaLnRhbW15LnYxLkF1ZGl0RXZlbnRGaWx0ZXJCBrpIA8gBARIrCgRwYWdlGAQgASgLMhUudGFtbXkudjEuUGFnZVJlcXVlc3RCBrpIA8gBASJ0ChdMaXN0QXVkaXRFdmVudHNSZXNwb25zZRIvCgZldmVudHMYASADKAsyFC50YW1teS52MS5BdWRpdEV2ZW50Qgm6SAaSAQMQyAESKAoEcGFnZRgCIAEoCzISLnRhbW15LnYxLlBhZ2VJbmZvQga6SAPIAQEiogIKFUV4cG9ydEV2aWRlbmNlUmVxdWVzdBI5Cg9jb21tYW5kX2NvbnRleHQYASABKAsyGC50YW1teS52MS5Db21tYW5kQ29udGV4dEIGukgDyAEBEmIKDHdvcmtzcGFjZV9pZBgCIAEoCUJMukhJckcyRV5bMC05YS1mXXs4fS1bMC05YS1mXXs0fS03WzAtOWEtZl17M30tWzg5YWJdWzAtOWEtZl17M30tWzAtOWEtZl17MTJ9JBIyCgZmaWx0ZXIYAyABKAsyGi50YW1teS52MS5BdWRpdEV2ZW50RmlsdGVyQga6SAPIAQESNgoLZGVzdGluYXRpb24YBCABKAsyGS50YW1teS52MS5BcHByb3ZlZEZpbGVSZWZCBrpIA8gBASJHChZFeHBvcnRFdmlkZW5jZVJlc3BvbnNlEi0KA2pvYhgBIAEoCzIYLnRhbW15LnYxLkF1ZGl0RXhwb3J0Sm9iQga6SAPIAQEi1gEKGENhbmNlbEF1ZGl0RXhwb3J0UmVxdWVzdBI5Cg9jb21tYW5kX2NvbnRleHQYASABKAsyGC50YW1teS52MS5Db21tYW5kQ29udGV4dEIGukgDyAEBElwKBmpvYl9pZBgCIAEoCUJMukhJckcyRV5bMC05YS1mXXs4fS1bMC05YS1mXXs0fS03WzAtOWEtZl17M30tWzg5YWJdWzAtOWEtZl17M30tWzAtOWEtZl17MTJ9JBIhChBleHBlY3RlZF92ZXJzaW9uGAMgASgEQge6SAQyAigBIkoKGUNhbmNlbEF1ZGl0RXhwb3J0UmVzcG9uc2USLQoDam9iGAEgASgLMhgudGFtbXkudjEuQXVkaXRFeHBvcnRKb2JCBrpIA8gBASK5AQoYR2V0QXVkaXRFeHBvcnRKb2JSZXF1ZXN0Ej8KDmF1dGhlbnRpY2F0aW9uGAEgASgLMh8udGFtbXkudjEuQXV0aGVudGljYXRpb25Db250ZXh0Qga6SAPIAQESXAoGam9iX2lkGAIgASgJQky6SElyRzJFXlswLTlhLWZdezh9LVswLTlhLWZdezR9LTdbMC05YS1mXXszfS1bODlhYl1bMC05YS1mXXszfS1bMC05YS1mXXsxMn0kIkoKGUdldEF1ZGl0RXhwb3J0Sm9iUmVzcG9uc2USLQoDam9iGAEgASgLMhgudGFtbXkudjEuQXVkaXRFeHBvcnRKb2JCBrpIA8gBASLHAQoaTGlzdEF1ZGl0RXhwb3J0Sm9ic1JlcXVlc3QSPwoOYXV0aGVudGljYXRpb24YASABKAsyHy50YW1teS52MS5BdXRoZW50aWNhdGlvbkNvbnRleHRCBrpIA8gBARIrCgRwYWdlGAIgASgLMhUudGFtbXkudjEuUGFnZVJlcXVlc3RCBrpIA8gBARIxCgVzdGF0ZRgDIAEoDjIdLnRhbW15LnYxLkF1ZGl0RXhwb3J0Sm9iU3RhdGVIAIgBAUIICgZfc3RhdGUiegobTGlzdEF1ZGl0RXhwb3J0Sm9ic1Jlc3BvbnNlEjEKBGpvYnMYASADKAsyGC50YW1teS52MS5BdWRpdEV4cG9ydEpvYkIJukgGkgEDEMgBEigKBHBhZ2UYAiABKAsyEi50YW1teS52MS5QYWdlSW5mb0IGukgDyAEBKtcCChNBdWRpdEV4cG9ydEpvYlN0YXRlEiYKIkFVRElUX0VYUE9SVF9KT0JfU1RBVEVfVU5TUEVDSUZJRUQQABIhCh1BVURJVF9FWFBPUlRfSk9CX1NUQVRFX1FVRVVFRBABEiIKHkFVRElUX0VYUE9SVF9KT0JfU1RBVEVfUlVOTklORxACEiwKKEFVRElUX0VYUE9SVF9KT0JfU1RBVEVfV0FJVElOR19GT1JfSU5QVVQQAxIkCiBBVURJVF9FWFBPUlRfSk9CX1NUQVRFX0NPTVBMRVRFRBAEEisKJ0FVRElUX0VYUE9SVF9KT0JfU1RBVEVfRkFJTEVEX1JFVFJZQUJMRRAFEioKJkFVRElUX0VYUE9SVF9KT0JfU1RBVEVfRkFJTEVEX1RFUk1JTkFMEAYSJAogQVVESVRfRVhQT1JUX0pPQl9TVEFURV9DQU5DRUxMRUQQByqAAQoTQXVkaXRDaGFpbkludGVncml0eRIlCiFBVURJVF9DSEFJTl9JTlRFR1JJVFlfVU5TUEVDSUZJRUQQABIfChtBVURJVF9DSEFJTl9JTlRFR1JJVFlfVkFMSUQQARIhCh1BVURJVF9DSEFJTl9JTlRFR1JJVFlfSU5WQUxJRBACMqcECgxBdWRpdFNlcnZpY2USSgoLVmVyaWZ5Q2hhaW4SHC50YW1teS52MS5WZXJpZnlDaGFpblJlcXVlc3QaHS50YW1teS52MS5WZXJpZnlDaGFpblJlc3BvbnNlElYKD0xpc3RBdWRpdEV2ZW50cxIgLnRhbW15LnYxLkxpc3RBdWRpdEV2ZW50c1JlcXVlc3QaIS50YW1teS52MS5MaXN0QXVkaXRFdmVudHNSZXNwb25zZRJTCg5FeHBvcnRFdmlkZW5jZRIfLnRhbW15LnYxLkV4cG9ydEV2aWRlbmNlUmVxdWVzdBogLnRhbW15LnYxLkV4cG9ydEV2aWRlbmNlUmVzcG9uc2USXAoRQ2FuY2VsQXVkaXRFeHBvcnQSIi50YW1teS52MS5DYW5jZWxBdWRpdEV4cG9ydFJlcXVlc3QaIy50YW1teS52MS5DYW5jZWxBdWRpdEV4cG9ydFJlc3BvbnNlElwKEUdldEF1ZGl0RXhwb3J0Sm9iEiIudGFtbXkudjEuR2V0QXVkaXRFeHBvcnRKb2JSZXF1ZXN0GiMudGFtbXkudjEuR2V0QXVkaXRFeHBvcnRKb2JSZXNwb25zZRJiChNMaXN0QXVkaXRFeHBvcnRKb2JzEiQudGFtbXkudjEuTGlzdEF1ZGl0RXhwb3J0Sm9ic1JlcXVlc3QaJS50YW1teS52MS5MaXN0QXVkaXRFeHBvcnRKb2JzUmVzcG9uc2VCR1pFZ2l0aHViLmNvbS90YW1teWFwcC90YW1teS9zZXJ2aWNlcy9jb3JlL2ludGVybmFsL2dlbi90YW1teS92MTt0YW1teXYxYgZwcm90bzM", [file_buf_validate_validate, file_google_protobuf_timestamp, file_tammy_v1_common, file_tammy_v1_events]);
+  fileDesc("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Zy1rZXktY2hhaW4udjESOgoEa2V5cxgCIAMoCzIfLnRhbW15LnYxLkF1ZGl0U2lnbmluZ1B1YmxpY0tleUILukgIkgEFCAEQgAgSPwoFbGlua3MYAyADKAsyJS50YW1teS52MS5BdWRpdFNpZ25pbmdLZXlSb3RhdGlvbkxpbmtCCbpIBpIBAxD/BxJMCgxldmVudF9wcm9vZnMYBCADKAsyKy50YW1teS52MS5BdWRpdFNpZ25pbmdLZXlSb3RhdGlvbkV2ZW50UHJvb2ZCCbpIBpIBAxD/ByLmAQoXQXVkaXRDb21taXRtZW50T3BlbmluZ3MSKQoYaGlkZGVuX21ldGFkYXRhX2JsaW5kaW5nGAEgASgMQge6SAR6AmggEioKGXBheWxvYWRfaWRlbnRpdHlfYmxpbmRpbmcYAiABKAxCB7pIBHoCaCASJAoTZXZlbnRfdHlwZV9ibGluZGluZxgDIAEoDEIHukgEegJoIBIlChRvY2N1cnJlZF9hdF9ibGluZGluZxgEIAEoDEIHukgEegJoIBInChZhY3Rvcl91c2VyX2lkX2JsaW5kaW5nGAUgASgMQge6SAR6AmggIrQKCgpBdWRpdEV2ZW50ElgKAmlkGAEgASgJQky6SElyRzJFXlswLTlhLWZdezh9LVswLTlhLWZdezR9LTdbMC05YS1mXXszfS1bODlhYl1bMC05YS1mXXszfS1bMC05YS1mXXsxMn0kEmIKDHdvcmtzcGFjZV9pZBgCIAEoCUJMukhJckcyRV5bMC05YS1mXXs4fS1bMC05YS1mXXs0fS03WzAtOWEtZl17M30tWzg5YWJdWzAtOWEtZl17M30tWzAtOWEtZl17MTJ9JBIbCgpnZW5lcmF0aW9uGAMgASgEQge6SAQyAigBEhkKCHNlcXVlbmNlGAQgASgEQge6SAQyAigBEjAKBHR5cGUYBSABKA4yGC50YW1teS52MS5BdWRpdEV2ZW50VHlwZUIIukgFggECEAESNwoLb2NjdXJyZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQga6SAPIAQESLgoFYWN0b3IYByABKAsyHy50YW1teS52MS5BdXRoZW50aWNhdGlvbkNvbnRleHQSIwoGc291cmNlGAggASgLMhMudGFtbXkudjEuU291cmNl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EwoRX2Rlc3RpbmF0aW9uX2hhc2hCEQoPX3NpZ25pbmdfa2V5X2lkIr0CChJWZXJpZnlDaGFpblJlcXVlc3QSPwoOYXV0aGVudGljYXRpb24YASABKAsyHy50YW1teS52MS5BdXRoZW50aWNhdGlvbkNvbnRleHRCBrpIA8gBARJiCgx3b3Jrc3BhY2VfaWQYAiABKAlCTLpISXJHMkVeWzAtOWEtZl17OH0tWzAtOWEtZl17NH0tN1swLTlhLWZdezN9LVs4OWFiXVswLTlhLWZdezN9LVswLTlhLWZdezEyfSQSFwoKZ2VuZXJhdGlvbhgDIAEoBEgAiAEBEhsKDnN0YXJ0X3NlcXVlbmNlGAQgASgESAGIAQESGQoMZW5kX3NlcXVlbmNlGAUgASgESAKIAQFCDQoLX2dlbmVyYXRpb25CEQoPX3N0YXJ0X3NlcXVlbmNlQg8KDV9lbmRfc2VxdWVuY2UiygEKE1ZlcmlmeUNoYWluUmVzcG9uc2USOgoJaW50ZWdyaXR5GAEgASgOMh0udGFtbXkudjEuQXVkaXRDaGFpbkludGVncml0eUIIukgFggECEAESIQoZdmVyaWZpZWRfdGhyb3VnaF9zZXF1ZW5jZRgCIAEoBBIeChFtaXNtYXRjaF9zZXF1ZW5jZRgDIAEoBEgAiAEBEh4KDXZlcmlmaWVkX2hlYWQYBCABKAxCB7pIBHoCaCBCFAoSX21pc21hdGNoX3NlcXVlbmNlIp4CChZMaXN0QXVkaXRFdmVudHNSZXF1ZXN0Ej8KDmF1dGhlbnRpY2F0aW9uGAEgASgLMh8udGFtbXkudjEuQXV0aGVudGljYXRpb25Db250ZXh0Qga6SAPIAQESYgoMd29ya3NwYWNlX2lkGAIgASgJQky6SElyRzJFXlswLTlhLWZdezh9LVswLTlhLWZdezR9LTdbMC05YS1mXXszfS1bODlhYl1bMC05YS1mXXszfS1bMC05YS1mXXsxMn0kEjIKBmZpbHRlchgDIAEoCzIaLnRhbW15LnYxLkF1ZGl0RXZlbnRGaWx0ZXJCBrpIA8gBARIrCgRwYWdlGAQgASgLMhUudGFtbXkudjEuUGFnZVJlcXVlc3RCBrpIA8gBASJ0ChdMaXN0QXVkaXRFdmVudHNSZXNwb25zZRIvCgZldmVudHMYASADKAsyFC50YW1teS52MS5BdWRpdEV2ZW50Qgm6SAaSAQMQyAESKAoEcGFnZRgCIAEoCzISLnRhbW15LnYxLlBhZ2VJbmZvQga6SAPIAQEiogIKFUV4cG9ydEV2aWRlbmNlUmVxdWVzdBI5Cg9jb21tYW5kX2NvbnRleHQYASABKAsyGC50YW1teS52MS5Db21tYW5kQ29udGV4dEIGukgDyAEBEmIKDHdvcmtzcGFjZV9pZBgCIAEoCUJMukhJckcyRV5bMC05YS1mXXs4fS1bMC05YS1mXXs0fS03WzAtOWEtZl17M30tWzg5YWJdWzAtOWEtZl17M30tWzAtOWEtZl17MTJ9JBIyCgZmaWx0ZXIYAyABKAsyGi50YW1teS52MS5BdWRpdEV2ZW50RmlsdGVyQga6SAPIAQESNgoLZGVzdGluYXRpb24YBCABKAsyGS50YW1teS52MS5BcHByb3ZlZEZpbGVSZWZCBrpIA8gBASJHChZFeHBvcnRFdmlkZW5jZVJlc3BvbnNlEi0KA2pvYhgBIAEoCzIYLnRhbW15LnYxLkF1ZGl0RXhwb3J0Sm9iQga6SAPIAQEi1gEKGENhbmNlbEF1ZGl0RXhwb3J0UmVxdWVzdBI5Cg9jb21tYW5kX2NvbnRleHQYASABKAsyGC50YW1teS52MS5Db21tYW5kQ29udGV4dEIGukgDyAEBElwKBmpvYl9pZBgCIAEoCUJMukhJckcyRV5bMC05YS1mXXs4fS1bMC05YS1mXXs0fS03WzAtOWEtZl17M30tWzg5YWJdWzAtOWEtZl17M30tWzAtOWEtZl17MTJ9JBIhChBleHBlY3RlZF92ZXJzaW9uGAMgASgEQge6SAQyAigBIkoKGUNhbmNlbEF1ZGl0RXhwb3J0UmVzcG9uc2USLQoDam9iGAEgASgLMhgudGFtbXkudjEuQXVkaXRFeHBvcnRKb2JCBrpIA8gBASK5AQoYR2V0QXVkaXRFeHBvcnRKb2JSZXF1ZXN0Ej8KDmF1dGhlbnRpY2F0aW9uGAEgASgLMh8udGFtbXkudjEuQXV0aGVudGljYXRpb25Db250ZXh0Qga6SAPIAQESXAoGam9iX2lkGAIgASgJQky6SElyRzJFXlswLTlhLWZdezh9LVswLTlhLWZdezR9LTdbMC05YS1mXXszfS1bODlhYl1bMC05YS1mXXszfS1bMC05YS1mXXsxMn0kIkoKGUdldEF1ZGl0RXhwb3J0Sm9iUmVzcG9uc2USLQoDam9iGAEgASgLMhgudGFtbXkudjEuQXVkaXRFeHBvcnRKb2JCBrpIA8gBASLHAQoaTGlzdEF1ZGl0RXhwb3J0Sm9ic1JlcXVlc3QSPwoOYXV0aGVudGljYXRpb24YASABKAsyHy50YW1teS52MS5BdXRoZW50aWNhdGlvbkNvbnRleHRCBrpIA8gBARIrCgRwYWdlGAIgASgLMhUudGFtbXkudjEuUGFnZVJlcXVlc3RCBrpIA8gBARIxCgVzdGF0ZRgDIAEoDjIdLnRhbW15LnYxLkF1ZGl0RXhwb3J0Sm9iU3RhdGVIAIgBAUIICgZfc3RhdGUiegobTGlzdEF1ZGl0RXhwb3J0Sm9ic1Jlc3BvbnNlEjEKBGpvYnMYASADKAsyGC50YW1teS52MS5BdWRpdEV4cG9ydEpvYkIJukgGkgEDEMgBEigKBHBhZ2UYAiABKAsyEi50YW1teS52MS5QYWdlSW5mb0IGukgDyAEBKtcCChNBdWRpdEV4cG9ydEpvYlN0YXRlEiYKIkFVRElUX0VYUE9SVF9KT0JfU1RBVEVfVU5TUEVDSUZJRUQQABIhCh1BVURJVF9FWFBPUlRfSk9CX1NUQVRFX1FVRVVFRBABEiIKHkFVRElUX0VYUE9SVF9KT0JfU1RBVEVfUlVOTklORxACEiwKKEFVRElUX0VYUE9SVF9KT0JfU1RBVEVfV0FJVElOR19GT1JfSU5QVVQQAxIkCiBBVURJVF9FWFBPUlRfSk9CX1NUQVRFX0NPTVBMRVRFRBAEEisKJ0FVRElUX0VYUE9SVF9KT0JfU1RBVEVfRkFJTEVEX1JFVFJZQUJMRRAFEioKJkFVRElUX0VYUE9SVF9KT0JfU1RBVEVfRkFJTEVEX1RFUk1JTkFMEAYSJAogQVVESVRfRVhQT1JUX0pPQl9TVEFURV9DQU5DRUxMRUQQByqAAQoTQXVkaXRDaGFpbkludGVncml0eRIlCiFBVURJVF9DSEFJTl9JTlRFR1JJVFlfVU5TUEVDSUZJRUQQABIfChtBVURJVF9DSEFJTl9JTlRFR1JJVFlfVkFMSUQQARIhCh1BVURJVF9DSEFJTl9JTlRFR1JJVFlfSU5WQUxJRBACMqcECgxBdWRpdFNlcnZpY2USSgoLVmVyaWZ5Q2hhaW4SHC50YW1teS52MS5WZXJpZnlDaGFpblJlcXVlc3QaHS50YW1teS52MS5WZXJpZnlDaGFpblJlc3BvbnNlElYKD0xpc3RBdWRpdEV2ZW50cxIgLnRhbW15LnYxLkxpc3RBdWRpdEV2ZW50c1JlcXVlc3QaIS50YW1teS52MS5MaXN0QXVkaXRFdmVudHNSZXNwb25zZRJTCg5FeHBvcnRFdmlkZW5jZRIfLnRhbW15LnYxLkV4cG9ydEV2aWRlbmNlUmVxdWVzdBogLnRhbW15LnYxLkV4cG9ydEV2aWRlbmNlUmVzcG9uc2USXAoRQ2FuY2VsQXVkaXRFeHBvcnQSIi50YW1teS52MS5DYW5jZWxBdWRpdEV4cG9ydFJlcXVlc3QaIy50YW1teS52MS5DYW5jZWxBdWRpdEV4cG9ydFJlc3BvbnNlElwKEUdldEF1ZGl0RXhwb3J0Sm9iEiIudGFtbXkudjEuR2V0QXVkaXRFeHBvcnRKb2JSZXF1ZXN0GiMudGFtbXkudjEuR2V0QXVkaXRFeHBvcnRKb2JSZXNwb25zZRJiChNMaXN0QXVkaXRFeHBvcnRKb2JzEiQudGFtbXkudjEuTGlzdEF1ZGl0RXhwb3J0Sm9ic1JlcXVlc3QaJS50YW1teS52MS5MaXN0QXVkaXRFeHBvcnRKb2JzUmVzcG9uc2VCR1pFZ2l0aHViLmNvbS90YW1teWFwcC90YW1teS9zZXJ2aWNlcy9jb3JlL2ludGVybmFsL2dlbi90YW1teS92MTt0YW1teXYxYgZwcm90bzM", [file_buf_validate_validate, file_google_protobuf_timestamp, file_tammy_v1_common, file_tammy_v1_events]);
+
+/**
+ * AuditMirrorBaseline is the non-secret rollback baseline stored in the OS credential store.
+ *
+ * @generated from message tammy.v1.AuditMirrorBaseline
+ */
+export type AuditMirrorBaseline = Message<"tammy.v1.AuditMirrorBaseline"> & {
+  /**
+   * workspace_id identifies the encrypted workspace without carrying any unlock material.
+   *
+   * @generated from field: string workspace_id = 1;
+   */
+  workspaceId: string;
+
+  /**
+   * generation identifies the verified audit history branch.
+   *
+   * @generated from field: uint64 generation = 2;
+   */
+  generation: bigint;
+
+  /**
+   * sequence is zero only for a verified genesis baseline.
+   *
+   * @generated from field: uint64 sequence = 3;
+   */
+  sequence: bigint;
+
+  /**
+   * head is the exact verified genesis or event hash.
+   *
+   * @generated from field: bytes head = 4;
+   */
+  head: Uint8Array;
+};
+
+/**
+ * Describes the message tammy.v1.AuditMirrorBaseline.
+ * Use `create(AuditMirrorBaselineSchema)` to create a new message.
+ */
+export const AuditMirrorBaselineSchema: GenMessage<AuditMirrorBaseline> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_audit, 0);
+
+/**
+ * AuditResultMetadata commits an event to the deterministic command result without retaining result contents.
+ *
+ * @generated from message tammy.v1.AuditResultMetadata
+ */
+export type AuditResultMetadata = Message<"tammy.v1.AuditResultMetadata"> & {
+  /**
+   * type_name is the fully-qualified Protobuf result message name.
+   *
+   * @generated from field: string type_name = 1;
+   */
+  typeName: string;
+
+  /**
+   * deterministic_sha256 is SHA-256 of the exact retained deterministic Protobuf result bytes.
+   *
+   * @generated from field: bytes deterministic_sha256 = 2;
+   */
+  deterministicSha256: Uint8Array;
+
+  /**
+   * outcome_code is a stable audit-safe machine code and never contains an error message or secret.
+   *
+   * @generated from field: string outcome_code = 3;
+   */
+  outcomeCode: string;
+};
+
+/**
+ * Describes the message tammy.v1.AuditResultMetadata.
+ * Use `create(AuditResultMetadataSchema)` to create a new message.
+ */
+export const AuditResultMetadataSchema: GenMessage<AuditResultMetadata> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_audit, 1);
+
+/**
+ * AuditExportObject commits the manifest to one bounded archive member.
+ *
+ * @generated from message tammy.v1.AuditExportObject
+ */
+export type AuditExportObject = Message<"tammy.v1.AuditExportObject"> & {
+  /**
+   * path is the normalized relative archive path and never a host destination path.
+   *
+   * @generated from field: string path = 1;
+   */
+  path: string;
+
+  /**
+   * sha256 is SHA-256 of the exact archive member bytes.
+   *
+   * @generated from field: bytes sha256 = 2;
+   */
+  sha256: Uint8Array;
+
+  /**
+   * byte_length is the exact bounded uncompressed member length.
+   *
+   * @generated from field: uint64 byte_length = 3;
+   */
+  byteLength: bigint;
+};
+
+/**
+ * Describes the message tammy.v1.AuditExportObject.
+ * Use `create(AuditExportObjectSchema)` to create a new message.
+ */
+export const AuditExportObjectSchema: GenMessage<AuditExportObject> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_audit, 2);
+
+/**
+ * AuditExportManifest is the canonical public verification envelope for a signed evidence archive.
+ *
+ * @generated from message tammy.v1.AuditExportManifest
+ */
+export type AuditExportManifest = Message<"tammy.v1.AuditExportManifest"> & {
+  /**
+   * format is the stable evidence archive format discriminator.
+   *
+   * @generated from field: string format = 1;
+   */
+  format: string;
+
+  /**
+   * workspace_id identifies the exported encrypted workspace without unlock material.
+   *
+   * @generated from field: string workspace_id = 2;
+   */
+  workspaceId: string;
+
+  /**
+   * generation identifies the exported audit history branch.
+   *
+   * @generated from field: uint64 generation = 3;
+   */
+  generation: bigint;
+
+  /**
+   * start_sequence is the inclusive first exported sequence.
+   *
+   * @generated from field: uint64 start_sequence = 4;
+   */
+  startSequence: bigint;
+
+  /**
+   * end_sequence is the inclusive last exported sequence.
+   *
+   * @generated from field: uint64 end_sequence = 5;
+   */
+  endSequence: bigint;
+
+  /**
+   * chain_salt is the public random salt used to recompute genesis.
+   *
+   * @generated from field: bytes chain_salt = 6;
+   */
+  chainSalt: Uint8Array;
+
+  /**
+   * genesis_hash is the exact verified generation genesis.
+   *
+   * @generated from field: bytes genesis_hash = 7;
+   */
+  genesisHash: Uint8Array;
+
+  /**
+   * verified_head is the exact final event hash for the exported range.
+   *
+   * @generated from field: bytes verified_head = 8;
+   */
+  verifiedHead: Uint8Array;
+
+  /**
+   * signing_key_id identifies the public Ed25519 verification key.
+   *
+   * @generated from field: string signing_key_id = 9;
+   */
+  signingKeyId: string;
+
+  /**
+   * created_at is a caller-supplied core-authored instant covered by the signature.
+   *
+   * @generated from field: google.protobuf.Timestamp created_at = 10;
+   */
+  createdAt?: Timestamp | undefined;
+
+  /**
+   * objects are sorted by path and commit to every evidence member except this manifest and its signature.
+   *
+   * @generated from field: repeated tammy.v1.AuditExportObject objects = 11;
+   */
+  objects: AuditExportObject[];
+
+  /**
+   * root_signing_key_id anchors the immutable workspace signing-key lineage.
+   *
+   * @generated from field: string root_signing_key_id = 12;
+   */
+  rootSigningKeyId: string;
+
+  /**
+   * signing_key_epoch is the workspace-wide contiguous epoch of signing_key_id.
+   *
+   * @generated from field: uint64 signing_key_epoch = 13;
+   */
+  signingKeyEpoch: bigint;
+};
+
+/**
+ * Describes the message tammy.v1.AuditExportManifest.
+ * Use `create(AuditExportManifestSchema)` to create a new message.
+ */
+export const AuditExportManifestSchema: GenMessage<AuditExportManifest> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_audit, 3);
+
+/**
+ * AuditSigningPublicKey is one immutable public node in a workspace-wide signing-key lineage.
+ *
+ * @generated from message tammy.v1.AuditSigningPublicKey
+ */
+export type AuditSigningPublicKey = Message<"tammy.v1.AuditSigningPublicKey"> & {
+  /**
+   * workspace_id identifies the lineage owner.
+   *
+   * @generated from field: string workspace_id = 1;
+   */
+  workspaceId: string;
+
+  /**
+   * generation identifies the audit generation in which this key became active.
+   *
+   * @generated from field: uint64 generation = 2;
+   */
+  generation: bigint;
+
+  /**
+   * epoch is contiguous across the workspace lineage and begins at one.
+   *
+   * @generated from field: uint64 epoch = 3;
+   */
+  epoch: bigint;
+
+  /**
+   * key_id is derived from workspace_id and public_key.
+   *
+   * @generated from field: string key_id = 4;
+   */
+  keyId: string;
+
+  /**
+   * public_key is the exact Ed25519 verification key.
+   *
+   * @generated from field: bytes public_key = 5;
+   */
+  publicKey: Uint8Array;
+
+  /**
+   * created_at is the instant this key became active.
+   *
+   * @generated from field: google.protobuf.Timestamp created_at = 6;
+   */
+  createdAt?: Timestamp | undefined;
+
+  /**
+   * retired_at is present for every non-terminal key and equals its successor creation instant.
+   *
+   * @generated from field: google.protobuf.Timestamp retired_at = 7;
+   */
+  retiredAt?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message tammy.v1.AuditSigningPublicKey.
+ * Use `create(AuditSigningPublicKeySchema)` to create a new message.
+ */
+export const AuditSigningPublicKeySchema: GenMessage<AuditSigningPublicKey> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_audit, 4);
+
+/**
+ * AuditSigningKeyRotationLink authenticates one adjacent workspace key rotation.
+ *
+ * @generated from message tammy.v1.AuditSigningKeyRotationLink
+ */
+export type AuditSigningKeyRotationLink = Message<"tammy.v1.AuditSigningKeyRotationLink"> & {
+  /**
+   * version fixes the signed-link canonical form.
+   *
+   * @generated from field: string version = 1;
+   */
+  version: string;
+
+  /**
+   * workspace_id identifies the lineage owner.
+   *
+   * @generated from field: string workspace_id = 2;
+   */
+  workspaceId: string;
+
+  /**
+   * generation identifies the exact audit generation in which rotation occurred.
+   *
+   * @generated from field: uint64 generation = 3;
+   */
+  generation: bigint;
+
+  /**
+   * prior_sequence is the exact audit sequence before the rotation event append.
+   *
+   * @generated from field: uint64 prior_sequence = 4;
+   */
+  priorSequence: bigint;
+
+  /**
+   * prior_head is the exact audit head before the rotation event append.
+   *
+   * @generated from field: bytes prior_head = 5;
+   */
+  priorHead: Uint8Array;
+
+  /**
+   * successor_epoch is exactly predecessor epoch plus one.
+   *
+   * @generated from field: uint64 successor_epoch = 6;
+   */
+  successorEpoch: bigint;
+
+  /**
+   * predecessor_key_id identifies the retiring key.
+   *
+   * @generated from field: string predecessor_key_id = 7;
+   */
+  predecessorKeyId: string;
+
+  /**
+   * predecessor_public_key is the exact retiring Ed25519 public key.
+   *
+   * @generated from field: bytes predecessor_public_key = 8;
+   */
+  predecessorPublicKey: Uint8Array;
+
+  /**
+   * successor_key_id identifies the newly active key.
+   *
+   * @generated from field: string successor_key_id = 9;
+   */
+  successorKeyId: string;
+
+  /**
+   * successor_public_key is the exact newly active Ed25519 public key.
+   *
+   * @generated from field: bytes successor_public_key = 10;
+   */
+  successorPublicKey: Uint8Array;
+
+  /**
+   * rotated_at is the successor creation and predecessor retirement instant.
+   *
+   * @generated from field: google.protobuf.Timestamp rotated_at = 11;
+   */
+  rotatedAt?: Timestamp | undefined;
+
+  /**
+   * predecessor_signature cross-signs the canonical unsigned link.
+   *
+   * @generated from field: bytes predecessor_signature = 12;
+   */
+  predecessorSignature: Uint8Array;
+
+  /**
+   * successor_possession_signature proves possession of the successor private key.
+   *
+   * @generated from field: bytes successor_possession_signature = 13;
+   */
+  successorPossessionSignature: Uint8Array;
+};
+
+/**
+ * Describes the message tammy.v1.AuditSigningKeyRotationLink.
+ * Use `create(AuditSigningKeyRotationLinkSchema)` to create a new message.
+ */
+export const AuditSigningKeyRotationLinkSchema: GenMessage<AuditSigningKeyRotationLink> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_audit, 5);
+
+/**
+ * AuditSigningKeyRotationEventProof selectively opens only the commitments required to bind one link into a generation chain.
+ *
+ * @generated from message tammy.v1.AuditSigningKeyRotationEventProof
+ */
+export type AuditSigningKeyRotationEventProof = Message<"tammy.v1.AuditSigningKeyRotationEventProof"> & {
+  /**
+   * successor_epoch identifies the linked rotation.
+   *
+   * @generated from field: uint64 successor_epoch = 1;
+   */
+  successorEpoch: bigint;
+
+  /**
+   * schema_fingerprint identifies the exact descriptor set used for the deterministic rotation payload.
+   *
+   * @generated from field: bytes schema_fingerprint = 4;
+   */
+  schemaFingerprint: Uint8Array;
+
+  /**
+   * payload_identity_blinding opens only the canonical payload-identity commitment.
+   *
+   * @generated from field: bytes payload_identity_blinding = 5;
+   */
+  payloadIdentityBlinding: Uint8Array;
+
+  /**
+   * event_type_blinding opens only the canonical event-type commitment.
+   *
+   * @generated from field: bytes event_type_blinding = 6;
+   */
+  eventTypeBlinding: Uint8Array;
+
+  /**
+   * occurred_at_blinding opens only the canonical occurred-at commitment.
+   *
+   * @generated from field: bytes occurred_at_blinding = 7;
+   */
+  occurredAtBlinding: Uint8Array;
+};
+
+/**
+ * Describes the message tammy.v1.AuditSigningKeyRotationEventProof.
+ * Use `create(AuditSigningKeyRotationEventProofSchema)` to create a new message.
+ */
+export const AuditSigningKeyRotationEventProofSchema: GenMessage<AuditSigningKeyRotationEventProof> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_audit, 6);
+
+/**
+ * AuditSigningKeyChain is the complete ordered root-to-active public signing lineage.
+ *
+ * @generated from message tammy.v1.AuditSigningKeyChain
+ */
+export type AuditSigningKeyChain = Message<"tammy.v1.AuditSigningKeyChain"> & {
+  /**
+   * version fixes the deterministic archive object schema.
+   *
+   * @generated from field: string version = 1;
+   */
+  version: string;
+
+  /**
+   * keys contains contiguous workspace-wide epochs from root through active.
+   *
+   * @generated from field: repeated tammy.v1.AuditSigningPublicKey keys = 2;
+   */
+  keys: AuditSigningPublicKey[];
+
+  /**
+   * links contains exactly one authenticated link between each adjacent key.
+   *
+   * @generated from field: repeated tammy.v1.AuditSigningKeyRotationLink links = 3;
+   */
+  links: AuditSigningKeyRotationLink[];
+
+  /**
+   * event_proofs contains rotation events visible within the exported generation snapshot.
+   *
+   * @generated from field: repeated tammy.v1.AuditSigningKeyRotationEventProof event_proofs = 4;
+   */
+  eventProofs: AuditSigningKeyRotationEventProof[];
+};
+
+/**
+ * Describes the message tammy.v1.AuditSigningKeyChain.
+ * Use `create(AuditSigningKeyChainSchema)` to create a new message.
+ */
+export const AuditSigningKeyChainSchema: GenMessage<AuditSigningKeyChain> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_audit, 7);
+
+/**
+ * AuditCommitmentOpenings contains independent per-category random blindings.
+ * These values are retained with the event but selectively disclosed only when
+ * required to authenticate a signed evidence-export filter.
+ *
+ * @generated from message tammy.v1.AuditCommitmentOpenings
+ */
+export type AuditCommitmentOpenings = Message<"tammy.v1.AuditCommitmentOpenings"> & {
+  /**
+   * hidden_metadata_blinding opens the commitment to non-filter audit metadata.
+   *
+   * @generated from field: bytes hidden_metadata_blinding = 1;
+   */
+  hiddenMetadataBlinding: Uint8Array;
+
+  /**
+   * payload_identity_blinding opens the commitment to exact retained payload identity.
+   *
+   * @generated from field: bytes payload_identity_blinding = 2;
+   */
+  payloadIdentityBlinding: Uint8Array;
+
+  /**
+   * event_type_blinding opens the event type filter commitment.
+   *
+   * @generated from field: bytes event_type_blinding = 3;
+   */
+  eventTypeBlinding: Uint8Array;
+
+  /**
+   * occurred_at_blinding opens the event time filter commitment.
+   *
+   * @generated from field: bytes occurred_at_blinding = 4;
+   */
+  occurredAtBlinding: Uint8Array;
+
+  /**
+   * actor_user_id_blinding opens the actor filter commitment.
+   *
+   * @generated from field: bytes actor_user_id_blinding = 5;
+   */
+  actorUserIdBlinding: Uint8Array;
+};
+
+/**
+ * Describes the message tammy.v1.AuditCommitmentOpenings.
+ * Use `create(AuditCommitmentOpeningsSchema)` to create a new message.
+ */
+export const AuditCommitmentOpeningsSchema: GenMessage<AuditCommitmentOpenings> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_audit, 8);
 
 /**
  * AuditEvent is one immutable typed entry in a workspace-generation hash chain.
@@ -108,6 +635,69 @@ export type AuditEvent = Message<"tammy.v1.AuditEvent"> & {
    * @generated from field: bytes event_hash = 12;
    */
   eventHash: Uint8Array;
+
+  /**
+   * organisation_id identifies the affected organisation when the event is organisation-scoped.
+   *
+   * @generated from field: optional string organisation_id = 13;
+   */
+  organisationId?: string | undefined;
+
+  /**
+   * command_id identifies the core-authored command execution independently of the event ID.
+   *
+   * @generated from field: optional string command_id = 14;
+   */
+  commandId?: string | undefined;
+
+  /**
+   * command_type is the fully-qualified RPC or stable internal command name.
+   *
+   * @generated from field: string command_type = 15;
+   */
+  commandType: string;
+
+  /**
+   * idempotency_key is present only for an ordinary persistent command or elected recovery operation.
+   *
+   * @generated from field: optional string idempotency_key = 16;
+   */
+  idempotencyKey?: string | undefined;
+
+  /**
+   * affected_resources are immutable bounded references covered by the event chain.
+   *
+   * @generated from field: repeated tammy.v1.SourceRef affected_resources = 17;
+   */
+  affectedResources: SourceRef[];
+
+  /**
+   * before_semantic_hash is present when the event records a predecessor aggregate state.
+   *
+   * @generated from field: optional bytes before_semantic_hash = 18;
+   */
+  beforeSemanticHash?: Uint8Array | undefined;
+
+  /**
+   * after_semantic_hash is present when the event records a successor aggregate state.
+   *
+   * @generated from field: optional bytes after_semantic_hash = 19;
+   */
+  afterSemanticHash?: Uint8Array | undefined;
+
+  /**
+   * result commits to deterministic response bytes without placing those bytes in the audit event.
+   *
+   * @generated from field: tammy.v1.AuditResultMetadata result = 20;
+   */
+  result?: AuditResultMetadata | undefined;
+
+  /**
+   * commitment_openings contains core-generated independent nonzero blindings.
+   *
+   * @generated from field: tammy.v1.AuditCommitmentOpenings commitment_openings = 21;
+   */
+  commitmentOpenings?: AuditCommitmentOpenings | undefined;
 };
 
 /**
@@ -115,7 +705,7 @@ export type AuditEvent = Message<"tammy.v1.AuditEvent"> & {
  * Use `create(AuditEventSchema)` to create a new message.
  */
 export const AuditEventSchema: GenMessage<AuditEvent> = /*@__PURE__*/
-  messageDesc(file_tammy_v1_audit, 0);
+  messageDesc(file_tammy_v1_audit, 9);
 
 /**
  * AuditEventFilter is a bounded stable query and export selection.
@@ -171,7 +761,7 @@ export type AuditEventFilter = Message<"tammy.v1.AuditEventFilter"> & {
  * Use `create(AuditEventFilterSchema)` to create a new message.
  */
 export const AuditEventFilterSchema: GenMessage<AuditEventFilter> = /*@__PURE__*/
-  messageDesc(file_tammy_v1_audit, 1);
+  messageDesc(file_tammy_v1_audit, 10);
 
 /**
  * AuditExportJob is a persisted bounded signed evidence-export projection.
@@ -248,7 +838,7 @@ export type AuditExportJob = Message<"tammy.v1.AuditExportJob"> & {
  * Use `create(AuditExportJobSchema)` to create a new message.
  */
 export const AuditExportJobSchema: GenMessage<AuditExportJob> = /*@__PURE__*/
-  messageDesc(file_tammy_v1_audit, 2);
+  messageDesc(file_tammy_v1_audit, 11);
 
 /**
  * VerifyChainRequest verifies a complete chain or one bounded inclusive sequence range.
@@ -297,7 +887,7 @@ export type VerifyChainRequest = Message<"tammy.v1.VerifyChainRequest"> & {
  * Use `create(VerifyChainRequestSchema)` to create a new message.
  */
 export const VerifyChainRequestSchema: GenMessage<VerifyChainRequest> = /*@__PURE__*/
-  messageDesc(file_tammy_v1_audit, 3);
+  messageDesc(file_tammy_v1_audit, 12);
 
 /**
  * VerifyChainResponse returns the explicit verification result and localized mismatch.
@@ -339,7 +929,7 @@ export type VerifyChainResponse = Message<"tammy.v1.VerifyChainResponse"> & {
  * Use `create(VerifyChainResponseSchema)` to create a new message.
  */
 export const VerifyChainResponseSchema: GenMessage<VerifyChainResponse> = /*@__PURE__*/
-  messageDesc(file_tammy_v1_audit, 4);
+  messageDesc(file_tammy_v1_audit, 13);
 
 /**
  * ListAuditEventsRequest requests a stable bounded event page.
@@ -381,7 +971,7 @@ export type ListAuditEventsRequest = Message<"tammy.v1.ListAuditEventsRequest"> 
  * Use `create(ListAuditEventsRequestSchema)` to create a new message.
  */
 export const ListAuditEventsRequestSchema: GenMessage<ListAuditEventsRequest> = /*@__PURE__*/
-  messageDesc(file_tammy_v1_audit, 5);
+  messageDesc(file_tammy_v1_audit, 14);
 
 /**
  * ListAuditEventsResponse returns events in generation and sequence order.
@@ -409,7 +999,7 @@ export type ListAuditEventsResponse = Message<"tammy.v1.ListAuditEventsResponse"
  * Use `create(ListAuditEventsResponseSchema)` to create a new message.
  */
 export const ListAuditEventsResponseSchema: GenMessage<ListAuditEventsResponse> = /*@__PURE__*/
-  messageDesc(file_tammy_v1_audit, 6);
+  messageDesc(file_tammy_v1_audit, 15);
 
 /**
  * ExportEvidenceRequest starts a persisted signed evidence-export job.
@@ -451,7 +1041,7 @@ export type ExportEvidenceRequest = Message<"tammy.v1.ExportEvidenceRequest"> & 
  * Use `create(ExportEvidenceRequestSchema)` to create a new message.
  */
 export const ExportEvidenceRequestSchema: GenMessage<ExportEvidenceRequest> = /*@__PURE__*/
-  messageDesc(file_tammy_v1_audit, 7);
+  messageDesc(file_tammy_v1_audit, 16);
 
 /**
  * ExportEvidenceResponse returns the elected persisted signed export job.
@@ -472,7 +1062,7 @@ export type ExportEvidenceResponse = Message<"tammy.v1.ExportEvidenceResponse"> 
  * Use `create(ExportEvidenceResponseSchema)` to create a new message.
  */
 export const ExportEvidenceResponseSchema: GenMessage<ExportEvidenceResponse> = /*@__PURE__*/
-  messageDesc(file_tammy_v1_audit, 8);
+  messageDesc(file_tammy_v1_audit, 17);
 
 /**
  * CancelAuditExportRequest elects cancellation before verified destination rename.
@@ -507,7 +1097,7 @@ export type CancelAuditExportRequest = Message<"tammy.v1.CancelAuditExportReques
  * Use `create(CancelAuditExportRequestSchema)` to create a new message.
  */
 export const CancelAuditExportRequestSchema: GenMessage<CancelAuditExportRequest> = /*@__PURE__*/
-  messageDesc(file_tammy_v1_audit, 9);
+  messageDesc(file_tammy_v1_audit, 18);
 
 /**
  * CancelAuditExportResponse returns cancellation or completed-commit election.
@@ -528,7 +1118,7 @@ export type CancelAuditExportResponse = Message<"tammy.v1.CancelAuditExportRespo
  * Use `create(CancelAuditExportResponseSchema)` to create a new message.
  */
 export const CancelAuditExportResponseSchema: GenMessage<CancelAuditExportResponse> = /*@__PURE__*/
-  messageDesc(file_tammy_v1_audit, 10);
+  messageDesc(file_tammy_v1_audit, 19);
 
 /**
  * GetAuditExportJobRequest requests one bounded persisted export job.
@@ -556,7 +1146,7 @@ export type GetAuditExportJobRequest = Message<"tammy.v1.GetAuditExportJobReques
  * Use `create(GetAuditExportJobRequestSchema)` to create a new message.
  */
 export const GetAuditExportJobRequestSchema: GenMessage<GetAuditExportJobRequest> = /*@__PURE__*/
-  messageDesc(file_tammy_v1_audit, 11);
+  messageDesc(file_tammy_v1_audit, 20);
 
 /**
  * GetAuditExportJobResponse returns one bounded persisted export job.
@@ -577,7 +1167,7 @@ export type GetAuditExportJobResponse = Message<"tammy.v1.GetAuditExportJobRespo
  * Use `create(GetAuditExportJobResponseSchema)` to create a new message.
  */
 export const GetAuditExportJobResponseSchema: GenMessage<GetAuditExportJobResponse> = /*@__PURE__*/
-  messageDesc(file_tammy_v1_audit, 12);
+  messageDesc(file_tammy_v1_audit, 21);
 
 /**
  * ListAuditExportJobsRequest requests a stable bounded export-job page.
@@ -612,7 +1202,7 @@ export type ListAuditExportJobsRequest = Message<"tammy.v1.ListAuditExportJobsRe
  * Use `create(ListAuditExportJobsRequestSchema)` to create a new message.
  */
 export const ListAuditExportJobsRequestSchema: GenMessage<ListAuditExportJobsRequest> = /*@__PURE__*/
-  messageDesc(file_tammy_v1_audit, 13);
+  messageDesc(file_tammy_v1_audit, 22);
 
 /**
  * ListAuditExportJobsResponse returns jobs in stable creation order.
@@ -640,7 +1230,7 @@ export type ListAuditExportJobsResponse = Message<"tammy.v1.ListAuditExportJobsR
  * Use `create(ListAuditExportJobsResponseSchema)` to create a new message.
  */
 export const ListAuditExportJobsResponseSchema: GenMessage<ListAuditExportJobsResponse> = /*@__PURE__*/
-  messageDesc(file_tammy_v1_audit, 14);
+  messageDesc(file_tammy_v1_audit, 23);
 
 /**
  * AuditExportJobState is the restart-safe signed evidence-export lifecycle.

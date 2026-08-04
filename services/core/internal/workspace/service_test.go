@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"os"
@@ -175,6 +176,49 @@ func (identity testWorkspaceIdentity) issueFactor(id, purpose string, asserted t
 type testMutationAudit struct {
 	counts map[string]int
 	fail   error
+}
+
+type bootstrapTestAudit struct {
+	testMutationAudit
+	metadata       *AuditHeaderMetadata
+	beginCalls     int
+	beginWorkspace string
+	beginSetup     string
+	bootstrapCalls int
+	loadCalls      int
+	establishCalls int
+}
+
+func (audit *bootstrapTestAudit) BeginInitialMirrorLifecycle(_ context.Context, workspaceID, setupID string) error {
+	audit.beginCalls++
+	audit.beginWorkspace = workspaceID
+	audit.beginSetup = setupID
+	return nil
+}
+
+func (audit *bootstrapTestAudit) BootstrapWorkspaceAudit(_ context.Context, _ MutationExecutor, workspaceID string, dek []byte, _ time.Time) (*AuditHeaderMetadata, error) {
+	if len(dek) != DEKSize {
+		return nil, ErrKeyMaterial
+	}
+	audit.bootstrapCalls++
+	metadata := audit.metadata.Clone()
+	digest := sha256.New()
+	_, _ = digest.Write([]byte("tammy-audit-v1"))
+	_, _ = digest.Write([]byte(workspaceID))
+	_, _ = digest.Write(metadata.ChainSalt)
+	metadata.GenesisHash = digest.Sum(nil)
+	audit.metadata = metadata.Clone()
+	return metadata, nil
+}
+
+func (audit *bootstrapTestAudit) LoadWorkspaceAuditHeader(context.Context, MutationExecutor, string) (*AuditHeaderMetadata, error) {
+	audit.loadCalls++
+	return audit.metadata.Clone(), nil
+}
+
+func (audit *bootstrapTestAudit) EstablishInitialMirror(context.Context, MutationExecutor, string, string) error {
+	audit.establishCalls++
+	return nil
 }
 
 type trackingSecretStore struct {
@@ -519,6 +563,45 @@ func TestWorkspaceServiceCreateConfirmLockUnlockRestart(t *testing.T) {
 	unlocked, err = restarted.UnlockWorkspace(ctx, connect.NewRequest(unlockRequest("workspace-passphrase-long-enough", false)))
 	if err != nil || unlocked.Msg.Workspace.Id != created.Msg.Workspace.Id {
 		t.Fatalf("restart unlock: %v", err)
+	}
+}
+
+func TestWorkspaceCreateWritesPublicAuditBootstrapMetadataIntoAuthenticatedHeader(t *testing.T) {
+	harness := newWorkspaceHarness(t)
+	salt := bytes.Repeat([]byte{0x41}, 32)
+	audit := &bootstrapTestAudit{testMutationAudit: testMutationAudit{counts: make(map[string]int)}, metadata: &AuditHeaderMetadata{
+		ChainSalt: salt, SigningPublicKey: bytes.Repeat([]byte{0x42}, 32), SigningKeyID: "key-01",
+	}}
+	config := harness.config
+	config.Audit = audit
+	service, err := NewService(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	created, err := service.CreateWorkspace(context.Background(), connect.NewRequest(&tammyv1.CreateWorkspaceRequest{
+		SetupId: "01890f3c-7b2e-7cc4-98c4-dc0c0c073911", Destination: &tammyv1.ApprovedFileRef{CapabilityId: "destination-capability"},
+		WorkspacePassphrase:   &tammyv1.SecretInput{Utf8: []byte("workspace-passphrase-long-enough")},
+		AdministratorUsername: "admin@example.test", AdministratorDisplayName: "Admin",
+		AdministratorPassword: &tammyv1.SecretInput{Utf8: []byte("admin-password-long-enough")},
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	header, err := NewHeaderStore(harness.databasePath+".header", config.HeaderAuthenticationKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer header.Close()
+	slots, err := header.Slots()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if created.Msg.Workspace.Id == "" || audit.beginCalls != 1 || audit.beginWorkspace != created.Msg.Workspace.Id ||
+		audit.beginSetup != "01890f3c-7b2e-7cc4-98c4-dc0c0c073911" || audit.bootstrapCalls != 1 || slots[0].Audit == nil ||
+		!bytes.Equal(slots[0].Audit.ChainSalt, salt) || !bytes.Equal(slots[0].Audit.GenesisHash, audit.metadata.GenesisHash) ||
+		!bytes.Equal(slots[0].Audit.SigningPublicKey, audit.metadata.SigningPublicKey) || slots[0].Audit.SigningKeyID != "key-01" {
+		t.Fatalf("audit lifecycle begins=%d workspace=%q setup=%q bootstrap calls=%d slot=%#v",
+			audit.beginCalls, audit.beginWorkspace, audit.beginSetup, audit.bootstrapCalls, slots[0].Audit)
 	}
 }
 

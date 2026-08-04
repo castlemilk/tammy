@@ -51,6 +51,224 @@ enum AuditChainIntegrity {
   AUDIT_CHAIN_INTEGRITY_INVALID = 2;
 }
 
+// AuditMirrorBaseline is the non-secret rollback baseline stored in the OS credential store.
+message AuditMirrorBaseline {
+  // workspace_id identifies the encrypted workspace without carrying any unlock material.
+  string workspace_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // generation identifies the verified audit history branch.
+  uint64 generation = 2 [(buf.validate.field).uint64.gte = 1];
+
+  // sequence is zero only for a verified genesis baseline.
+  uint64 sequence = 3;
+
+  // head is the exact verified genesis or event hash.
+  bytes head = 4 [(buf.validate.field).bytes.len = 32];
+}
+
+// AuditResultMetadata commits an event to the deterministic command result without retaining result contents.
+message AuditResultMetadata {
+  // type_name is the fully-qualified Protobuf result message name.
+  string type_name = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 256
+  }];
+
+  // deterministic_sha256 is SHA-256 of the exact retained deterministic Protobuf result bytes.
+  bytes deterministic_sha256 = 2 [(buf.validate.field).bytes.len = 32];
+
+  // outcome_code is a stable audit-safe machine code and never contains an error message or secret.
+  string outcome_code = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 96
+    pattern: "^[A-Z][A-Z0-9_]*$"
+  }];
+}
+
+// AuditExportObject commits the manifest to one bounded archive member.
+message AuditExportObject {
+  // path is the normalized relative archive path and never a host destination path.
+  string path = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 512
+    pattern: "^[A-Za-z0-9][A-Za-z0-9._/-]*$"
+  }];
+
+  // sha256 is SHA-256 of the exact archive member bytes.
+  bytes sha256 = 2 [(buf.validate.field).bytes.len = 32];
+
+  // byte_length is the exact bounded uncompressed member length.
+  uint64 byte_length = 3;
+}
+
+// AuditExportManifest is the canonical public verification envelope for a signed evidence archive.
+message AuditExportManifest {
+  // format is the stable evidence archive format discriminator.
+  string format = 1 [(buf.validate.field).string.const = "tammy-audit-evidence-v1"];
+
+  // workspace_id identifies the exported encrypted workspace without unlock material.
+  string workspace_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // generation identifies the exported audit history branch.
+  uint64 generation = 3 [(buf.validate.field).uint64.gte = 1];
+
+  // start_sequence is the inclusive first exported sequence.
+  uint64 start_sequence = 4 [(buf.validate.field).uint64.gte = 1];
+
+  // end_sequence is the inclusive last exported sequence.
+  uint64 end_sequence = 5 [(buf.validate.field).uint64.gte = 1];
+
+  // chain_salt is the public random salt used to recompute genesis.
+  bytes chain_salt = 6 [(buf.validate.field).bytes.len = 32];
+
+  // genesis_hash is the exact verified generation genesis.
+  bytes genesis_hash = 7 [(buf.validate.field).bytes.len = 32];
+
+  // verified_head is the exact final event hash for the exported range.
+  bytes verified_head = 8 [(buf.validate.field).bytes.len = 32];
+
+  // signing_key_id identifies the public Ed25519 verification key.
+  string signing_key_id = 9 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // created_at is a caller-supplied core-authored instant covered by the signature.
+  google.protobuf.Timestamp created_at = 10 [(buf.validate.field).required = true];
+
+  // objects are sorted by path and commit to every evidence member except this manifest and its signature.
+  repeated AuditExportObject objects = 11 [(buf.validate.field).repeated.max_items = 10000];
+
+  // root_signing_key_id anchors the immutable workspace signing-key lineage.
+  string root_signing_key_id = 12 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // signing_key_epoch is the workspace-wide contiguous epoch of signing_key_id.
+  uint64 signing_key_epoch = 13 [(buf.validate.field).uint64.gte = 1];
+}
+
+// AuditSigningPublicKey is one immutable public node in a workspace-wide signing-key lineage.
+message AuditSigningPublicKey {
+  // workspace_id identifies the lineage owner.
+  string workspace_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // generation identifies the audit generation in which this key became active.
+  uint64 generation = 2 [(buf.validate.field).uint64.gte = 1];
+
+  // epoch is contiguous across the workspace lineage and begins at one.
+  uint64 epoch = 3 [(buf.validate.field).uint64.gte = 1];
+
+  // key_id is derived from workspace_id and public_key.
+  string key_id = 4 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // public_key is the exact Ed25519 verification key.
+  bytes public_key = 5 [(buf.validate.field).bytes.len = 32];
+
+  // created_at is the instant this key became active.
+  google.protobuf.Timestamp created_at = 6 [(buf.validate.field).required = true];
+
+  // retired_at is present for every non-terminal key and equals its successor creation instant.
+  google.protobuf.Timestamp retired_at = 7;
+}
+
+// AuditSigningKeyRotationLink authenticates one adjacent workspace key rotation.
+message AuditSigningKeyRotationLink {
+  // version fixes the signed-link canonical form.
+  string version = 1 [(buf.validate.field).string.const = "tammy.audit.signing-key-rotation.v1"];
+
+  // workspace_id identifies the lineage owner.
+  string workspace_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // generation identifies the exact audit generation in which rotation occurred.
+  uint64 generation = 3 [(buf.validate.field).uint64.gte = 1];
+
+  // prior_sequence is the exact audit sequence before the rotation event append.
+  uint64 prior_sequence = 4;
+
+  // prior_head is the exact audit head before the rotation event append.
+  bytes prior_head = 5 [(buf.validate.field).bytes.len = 32];
+
+  // successor_epoch is exactly predecessor epoch plus one.
+  uint64 successor_epoch = 6 [(buf.validate.field).uint64.gte = 2];
+
+  // predecessor_key_id identifies the retiring key.
+  string predecessor_key_id = 7 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // predecessor_public_key is the exact retiring Ed25519 public key.
+  bytes predecessor_public_key = 8 [(buf.validate.field).bytes.len = 32];
+
+  // successor_key_id identifies the newly active key.
+  string successor_key_id = 9 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // successor_public_key is the exact newly active Ed25519 public key.
+  bytes successor_public_key = 10 [(buf.validate.field).bytes.len = 32];
+
+  // rotated_at is the successor creation and predecessor retirement instant.
+  google.protobuf.Timestamp rotated_at = 11 [(buf.validate.field).required = true];
+
+  // predecessor_signature cross-signs the canonical unsigned link.
+  bytes predecessor_signature = 12 [(buf.validate.field).bytes.len = 64];
+
+  // successor_possession_signature proves possession of the successor private key.
+  bytes successor_possession_signature = 13 [(buf.validate.field).bytes.len = 64];
+}
+
+// AuditSigningKeyRotationEventProof selectively opens only the commitments required to bind one link into a generation chain.
+message AuditSigningKeyRotationEventProof {
+  // successor_epoch identifies the linked rotation.
+  uint64 successor_epoch = 1 [(buf.validate.field).uint64.gte = 2];
+
+  // Fields 2 and 3 previously carried the full event and payload and must never be reused.
+  reserved 2, 3;
+  reserved "event_proto", "payload_proto";
+
+  // schema_fingerprint identifies the exact descriptor set used for the deterministic rotation payload.
+  bytes schema_fingerprint = 4 [(buf.validate.field).bytes.len = 32];
+
+  // payload_identity_blinding opens only the canonical payload-identity commitment.
+  bytes payload_identity_blinding = 5 [(buf.validate.field).bytes.len = 32];
+
+  // event_type_blinding opens only the canonical event-type commitment.
+  bytes event_type_blinding = 6 [(buf.validate.field).bytes.len = 32];
+
+  // occurred_at_blinding opens only the canonical occurred-at commitment.
+  bytes occurred_at_blinding = 7 [(buf.validate.field).bytes.len = 32];
+}
+
+// AuditSigningKeyChain is the complete ordered root-to-active public signing lineage.
+message AuditSigningKeyChain {
+  // version fixes the deterministic archive object schema.
+  string version = 1 [(buf.validate.field).string.const = "tammy.audit.signing-key-chain.v1"];
+
+  // keys contains contiguous workspace-wide epochs from root through active.
+  repeated AuditSigningPublicKey keys = 2 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 1024
+  }];
+
+  // links contains exactly one authenticated link between each adjacent key.
+  repeated AuditSigningKeyRotationLink links = 3 [(buf.validate.field).repeated.max_items = 1023];
+
+  // event_proofs contains rotation events visible within the exported generation snapshot.
+  repeated AuditSigningKeyRotationEventProof event_proofs = 4 [(buf.validate.field).repeated.max_items = 1023];
+}
+
+// AuditCommitmentOpenings contains independent per-category random blindings.
+// These values are retained with the event but selectively disclosed only when
+// required to authenticate a signed evidence-export filter.
+message AuditCommitmentOpenings {
+  // hidden_metadata_blinding opens the commitment to non-filter audit metadata.
+  bytes hidden_metadata_blinding = 1 [(buf.validate.field).bytes.len = 32];
+
+  // payload_identity_blinding opens the commitment to exact retained payload identity.
+  bytes payload_identity_blinding = 2 [(buf.validate.field).bytes.len = 32];
+
+  // event_type_blinding opens the event type filter commitment.
+  bytes event_type_blinding = 3 [(buf.validate.field).bytes.len = 32];
+
+  // occurred_at_blinding opens the event time filter commitment.
+  bytes occurred_at_blinding = 4 [(buf.validate.field).bytes.len = 32];
+
+  // actor_user_id_blinding opens the actor filter commitment.
+  bytes actor_user_id_blinding = 5 [(buf.validate.field).bytes.len = 32];
+}
+
 // AuditEvent is one immutable typed entry in a workspace-generation hash chain.
 message AuditEvent {
   // id is an opaque UUIDv7 string.
@@ -88,6 +306,36 @@ message AuditEvent {
 
   // event_hash is the exact domain-separated 32-byte chain hash.
   bytes event_hash = 12 [(buf.validate.field).bytes.len = 32];
+
+  // organisation_id identifies the affected organisation when the event is organisation-scoped.
+  optional string organisation_id = 13 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // command_id identifies the core-authored command execution independently of the event ID.
+  optional string command_id = 14 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // command_type is the fully-qualified RPC or stable internal command name.
+  string command_type = 15 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 256
+  }];
+
+  // idempotency_key is present only for an ordinary persistent command or elected recovery operation.
+  optional string idempotency_key = 16 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // affected_resources are immutable bounded references covered by the event chain.
+  repeated SourceRef affected_resources = 17 [(buf.validate.field).repeated.max_items = 64];
+
+  // before_semantic_hash is present when the event records a predecessor aggregate state.
+  optional bytes before_semantic_hash = 18 [(buf.validate.field).bytes.len = 32];
+
+  // after_semantic_hash is present when the event records a successor aggregate state.
+  optional bytes after_semantic_hash = 19 [(buf.validate.field).bytes.len = 32];
+
+  // result commits to deterministic response bytes without placing those bytes in the audit event.
+  AuditResultMetadata result = 20;
+
+  // commitment_openings contains core-generated independent nonzero blindings.
+  AuditCommitmentOpenings commitment_openings = 21 [(buf.validate.field).required = true];
 }
 
 // AuditEventFilter is a bounded stable query and export selection.

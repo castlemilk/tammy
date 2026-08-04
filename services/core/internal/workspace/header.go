@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"bytes"
+	"crypto/ed25519"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/json"
@@ -26,7 +27,30 @@ type HeaderSlot struct {
 	RecoveryWrap      WrappedKey
 	RecoveryVersion   uint64
 	PassphraseHistory []PasswordVerifier
+	Audit             *AuditHeaderMetadata
 	MAC               []byte
+}
+
+// AuditHeaderMetadata contains only public/non-secret audit bootstrap state.
+// The encrypted private signing key remains inside SQLCipher.
+type AuditHeaderMetadata struct {
+	ChainSalt            []byte
+	GenesisHash          []byte
+	SigningPublicKey     []byte
+	SigningKeyID         string
+	PreviousSigningKeyID string
+	RotationSignature    []byte
+}
+
+func (metadata *AuditHeaderMetadata) Clone() *AuditHeaderMetadata {
+	if metadata == nil {
+		return nil
+	}
+	return &AuditHeaderMetadata{ChainSalt: append([]byte(nil), metadata.ChainSalt...),
+		GenesisHash:      append([]byte(nil), metadata.GenesisHash...),
+		SigningPublicKey: append([]byte(nil), metadata.SigningPublicKey...), SigningKeyID: metadata.SigningKeyID,
+		PreviousSigningKeyID: metadata.PreviousSigningKeyID,
+		RotationSignature:    append([]byte(nil), metadata.RotationSignature...)}
 }
 
 // Slots returns authenticated slots with the active slot first. Callers use
@@ -47,6 +71,7 @@ func (slot HeaderSlot) Clone() HeaderSlot {
 	for index := range slot.PassphraseHistory {
 		slot.PassphraseHistory[index] = slot.PassphraseHistory[index].Clone()
 	}
+	slot.Audit = slot.Audit.Clone()
 	return slot
 }
 
@@ -77,7 +102,7 @@ func (store *HeaderStore) Close() {
 }
 
 func (store *HeaderStore) Initialize(initial HeaderSlot) error {
-	if store == nil || initial.Version != 1 || initial.OperationID == "" || initial.WorkspaceID == "" {
+	if store == nil || initial.Version != 1 || initial.OperationID == "" || initial.WorkspaceID == "" || !validAuditMetadata(initial) {
 		return ErrHeaderVersion
 	}
 	if _, err := os.Lstat(store.path); err == nil || !os.IsNotExist(err) {
@@ -97,6 +122,9 @@ func (store *HeaderStore) Prepare(next HeaderSlot) error {
 	}
 	current := content.Slots[content.Active]
 	if next.Version != current.Version+1 || next.OperationID == "" || next.WorkspaceID != current.WorkspaceID {
+		return ErrHeaderVersion
+	}
+	if !validAuditMetadata(next) || !validAuditTransition(next.WorkspaceID, current.Audit, next.Audit) {
 		return ErrHeaderVersion
 	}
 	inactive := 1 - content.Active
@@ -169,11 +197,64 @@ func (store *HeaderStore) load() (headerFile, error) {
 		if !hmac.Equal(slot.MAC, store.authenticateSlot(slot).MAC) {
 			return headerFile{}, ErrHeaderAuthentication
 		}
+		if slot.Version != 0 && !validAuditMetadata(slot) {
+			return headerFile{}, ErrHeaderAuthentication
+		}
 	}
 	if !hmac.Equal(content.ActiveMAC, store.activeMAC(content)) {
 		return headerFile{}, ErrHeaderAuthentication
 	}
 	return content, nil
+}
+
+func validAuditMetadata(slot HeaderSlot) bool {
+	if slot.Audit == nil {
+		return true
+	}
+	metadata := slot.Audit
+	if len(metadata.ChainSalt) != sha256.Size || len(metadata.GenesisHash) != sha256.Size ||
+		len(metadata.SigningPublicKey) != ed25519.PublicKeySize || metadata.SigningKeyID == "" || len(metadata.SigningKeyID) > 128 ||
+		!((metadata.PreviousSigningKeyID == "" && len(metadata.RotationSignature) == 0) ||
+			(metadata.PreviousSigningKeyID != "" && len(metadata.PreviousSigningKeyID) <= 128 && len(metadata.RotationSignature) == ed25519.SignatureSize)) {
+		return false
+	}
+	digest := sha256.New()
+	_, _ = digest.Write([]byte("tammy-audit-v1"))
+	_, _ = digest.Write([]byte(slot.WorkspaceID))
+	_, _ = digest.Write(metadata.ChainSalt)
+	return hmac.Equal(digest.Sum(nil), metadata.GenesisHash)
+}
+
+func validAuditTransition(workspaceID string, current, next *AuditHeaderMetadata) bool {
+	if current == nil {
+		return next == nil || next.PreviousSigningKeyID == "" && len(next.RotationSignature) == 0
+	}
+	if next == nil || !bytes.Equal(current.ChainSalt, next.ChainSalt) || !bytes.Equal(current.GenesisHash, next.GenesisHash) {
+		return false
+	}
+	if bytes.Equal(current.SigningPublicKey, next.SigningPublicKey) && current.SigningKeyID == next.SigningKeyID {
+		return current.PreviousSigningKeyID == next.PreviousSigningKeyID && bytes.Equal(current.RotationSignature, next.RotationSignature)
+	}
+	if next.PreviousSigningKeyID != current.SigningKeyID || len(next.RotationSignature) != ed25519.SignatureSize {
+		return false
+	}
+	digest := auditSigningKeyRotationDigest(workspaceID, current.SigningKeyID, next.SigningKeyID, next.SigningPublicKey)
+	return ed25519.Verify(ed25519.PublicKey(current.SigningPublicKey), digest[:], next.RotationSignature)
+}
+
+func auditSigningKeyRotationDigest(workspaceID, previousKeyID, newKeyID string, newPublicKey []byte) [sha256.Size]byte {
+	digest := sha256.New()
+	_, _ = digest.Write([]byte("tammy-audit-signing-key-rotation-v1\x00"))
+	_, _ = digest.Write([]byte(workspaceID))
+	_, _ = digest.Write([]byte{0})
+	_, _ = digest.Write([]byte(previousKeyID))
+	_, _ = digest.Write([]byte{0})
+	_, _ = digest.Write([]byte(newKeyID))
+	_, _ = digest.Write([]byte{0})
+	_, _ = digest.Write(newPublicKey)
+	var result [sha256.Size]byte
+	copy(result[:], digest.Sum(nil))
+	return result
 }
 
 func (store *HeaderStore) authenticateSlot(slot HeaderSlot) HeaderSlot {

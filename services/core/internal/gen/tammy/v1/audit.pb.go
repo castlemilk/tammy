@@ -152,6 +152,854 @@ func (AuditChainIntegrity) EnumDescriptor() ([]byte, []int) {
 	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{1}
 }
 
+// AuditMirrorBaseline is the non-secret rollback baseline stored in the OS credential store.
+type AuditMirrorBaseline struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// workspace_id identifies the encrypted workspace without carrying any unlock material.
+	WorkspaceId string `protobuf:"bytes,1,opt,name=workspace_id,json=workspaceId,proto3" json:"workspace_id,omitempty"`
+	// generation identifies the verified audit history branch.
+	Generation uint64 `protobuf:"varint,2,opt,name=generation,proto3" json:"generation,omitempty"`
+	// sequence is zero only for a verified genesis baseline.
+	Sequence uint64 `protobuf:"varint,3,opt,name=sequence,proto3" json:"sequence,omitempty"`
+	// head is the exact verified genesis or event hash.
+	Head          []byte `protobuf:"bytes,4,opt,name=head,proto3" json:"head,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AuditMirrorBaseline) Reset() {
+	*x = AuditMirrorBaseline{}
+	mi := &file_tammy_v1_audit_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuditMirrorBaseline) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuditMirrorBaseline) ProtoMessage() {}
+
+func (x *AuditMirrorBaseline) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_audit_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuditMirrorBaseline.ProtoReflect.Descriptor instead.
+func (*AuditMirrorBaseline) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *AuditMirrorBaseline) GetWorkspaceId() string {
+	if x != nil {
+		return x.WorkspaceId
+	}
+	return ""
+}
+
+func (x *AuditMirrorBaseline) GetGeneration() uint64 {
+	if x != nil {
+		return x.Generation
+	}
+	return 0
+}
+
+func (x *AuditMirrorBaseline) GetSequence() uint64 {
+	if x != nil {
+		return x.Sequence
+	}
+	return 0
+}
+
+func (x *AuditMirrorBaseline) GetHead() []byte {
+	if x != nil {
+		return x.Head
+	}
+	return nil
+}
+
+// AuditResultMetadata commits an event to the deterministic command result without retaining result contents.
+type AuditResultMetadata struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// type_name is the fully-qualified Protobuf result message name.
+	TypeName string `protobuf:"bytes,1,opt,name=type_name,json=typeName,proto3" json:"type_name,omitempty"`
+	// deterministic_sha256 is SHA-256 of the exact retained deterministic Protobuf result bytes.
+	DeterministicSha256 []byte `protobuf:"bytes,2,opt,name=deterministic_sha256,json=deterministicSha256,proto3" json:"deterministic_sha256,omitempty"`
+	// outcome_code is a stable audit-safe machine code and never contains an error message or secret.
+	OutcomeCode   string `protobuf:"bytes,3,opt,name=outcome_code,json=outcomeCode,proto3" json:"outcome_code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AuditResultMetadata) Reset() {
+	*x = AuditResultMetadata{}
+	mi := &file_tammy_v1_audit_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuditResultMetadata) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuditResultMetadata) ProtoMessage() {}
+
+func (x *AuditResultMetadata) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_audit_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuditResultMetadata.ProtoReflect.Descriptor instead.
+func (*AuditResultMetadata) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *AuditResultMetadata) GetTypeName() string {
+	if x != nil {
+		return x.TypeName
+	}
+	return ""
+}
+
+func (x *AuditResultMetadata) GetDeterministicSha256() []byte {
+	if x != nil {
+		return x.DeterministicSha256
+	}
+	return nil
+}
+
+func (x *AuditResultMetadata) GetOutcomeCode() string {
+	if x != nil {
+		return x.OutcomeCode
+	}
+	return ""
+}
+
+// AuditExportObject commits the manifest to one bounded archive member.
+type AuditExportObject struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// path is the normalized relative archive path and never a host destination path.
+	Path string `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	// sha256 is SHA-256 of the exact archive member bytes.
+	Sha256 []byte `protobuf:"bytes,2,opt,name=sha256,proto3" json:"sha256,omitempty"`
+	// byte_length is the exact bounded uncompressed member length.
+	ByteLength    uint64 `protobuf:"varint,3,opt,name=byte_length,json=byteLength,proto3" json:"byte_length,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AuditExportObject) Reset() {
+	*x = AuditExportObject{}
+	mi := &file_tammy_v1_audit_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuditExportObject) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuditExportObject) ProtoMessage() {}
+
+func (x *AuditExportObject) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_audit_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuditExportObject.ProtoReflect.Descriptor instead.
+func (*AuditExportObject) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *AuditExportObject) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *AuditExportObject) GetSha256() []byte {
+	if x != nil {
+		return x.Sha256
+	}
+	return nil
+}
+
+func (x *AuditExportObject) GetByteLength() uint64 {
+	if x != nil {
+		return x.ByteLength
+	}
+	return 0
+}
+
+// AuditExportManifest is the canonical public verification envelope for a signed evidence archive.
+type AuditExportManifest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// format is the stable evidence archive format discriminator.
+	Format string `protobuf:"bytes,1,opt,name=format,proto3" json:"format,omitempty"`
+	// workspace_id identifies the exported encrypted workspace without unlock material.
+	WorkspaceId string `protobuf:"bytes,2,opt,name=workspace_id,json=workspaceId,proto3" json:"workspace_id,omitempty"`
+	// generation identifies the exported audit history branch.
+	Generation uint64 `protobuf:"varint,3,opt,name=generation,proto3" json:"generation,omitempty"`
+	// start_sequence is the inclusive first exported sequence.
+	StartSequence uint64 `protobuf:"varint,4,opt,name=start_sequence,json=startSequence,proto3" json:"start_sequence,omitempty"`
+	// end_sequence is the inclusive last exported sequence.
+	EndSequence uint64 `protobuf:"varint,5,opt,name=end_sequence,json=endSequence,proto3" json:"end_sequence,omitempty"`
+	// chain_salt is the public random salt used to recompute genesis.
+	ChainSalt []byte `protobuf:"bytes,6,opt,name=chain_salt,json=chainSalt,proto3" json:"chain_salt,omitempty"`
+	// genesis_hash is the exact verified generation genesis.
+	GenesisHash []byte `protobuf:"bytes,7,opt,name=genesis_hash,json=genesisHash,proto3" json:"genesis_hash,omitempty"`
+	// verified_head is the exact final event hash for the exported range.
+	VerifiedHead []byte `protobuf:"bytes,8,opt,name=verified_head,json=verifiedHead,proto3" json:"verified_head,omitempty"`
+	// signing_key_id identifies the public Ed25519 verification key.
+	SigningKeyId string `protobuf:"bytes,9,opt,name=signing_key_id,json=signingKeyId,proto3" json:"signing_key_id,omitempty"`
+	// created_at is a caller-supplied core-authored instant covered by the signature.
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	// objects are sorted by path and commit to every evidence member except this manifest and its signature.
+	Objects []*AuditExportObject `protobuf:"bytes,11,rep,name=objects,proto3" json:"objects,omitempty"`
+	// root_signing_key_id anchors the immutable workspace signing-key lineage.
+	RootSigningKeyId string `protobuf:"bytes,12,opt,name=root_signing_key_id,json=rootSigningKeyId,proto3" json:"root_signing_key_id,omitempty"`
+	// signing_key_epoch is the workspace-wide contiguous epoch of signing_key_id.
+	SigningKeyEpoch uint64 `protobuf:"varint,13,opt,name=signing_key_epoch,json=signingKeyEpoch,proto3" json:"signing_key_epoch,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *AuditExportManifest) Reset() {
+	*x = AuditExportManifest{}
+	mi := &file_tammy_v1_audit_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuditExportManifest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuditExportManifest) ProtoMessage() {}
+
+func (x *AuditExportManifest) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_audit_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuditExportManifest.ProtoReflect.Descriptor instead.
+func (*AuditExportManifest) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *AuditExportManifest) GetFormat() string {
+	if x != nil {
+		return x.Format
+	}
+	return ""
+}
+
+func (x *AuditExportManifest) GetWorkspaceId() string {
+	if x != nil {
+		return x.WorkspaceId
+	}
+	return ""
+}
+
+func (x *AuditExportManifest) GetGeneration() uint64 {
+	if x != nil {
+		return x.Generation
+	}
+	return 0
+}
+
+func (x *AuditExportManifest) GetStartSequence() uint64 {
+	if x != nil {
+		return x.StartSequence
+	}
+	return 0
+}
+
+func (x *AuditExportManifest) GetEndSequence() uint64 {
+	if x != nil {
+		return x.EndSequence
+	}
+	return 0
+}
+
+func (x *AuditExportManifest) GetChainSalt() []byte {
+	if x != nil {
+		return x.ChainSalt
+	}
+	return nil
+}
+
+func (x *AuditExportManifest) GetGenesisHash() []byte {
+	if x != nil {
+		return x.GenesisHash
+	}
+	return nil
+}
+
+func (x *AuditExportManifest) GetVerifiedHead() []byte {
+	if x != nil {
+		return x.VerifiedHead
+	}
+	return nil
+}
+
+func (x *AuditExportManifest) GetSigningKeyId() string {
+	if x != nil {
+		return x.SigningKeyId
+	}
+	return ""
+}
+
+func (x *AuditExportManifest) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *AuditExportManifest) GetObjects() []*AuditExportObject {
+	if x != nil {
+		return x.Objects
+	}
+	return nil
+}
+
+func (x *AuditExportManifest) GetRootSigningKeyId() string {
+	if x != nil {
+		return x.RootSigningKeyId
+	}
+	return ""
+}
+
+func (x *AuditExportManifest) GetSigningKeyEpoch() uint64 {
+	if x != nil {
+		return x.SigningKeyEpoch
+	}
+	return 0
+}
+
+// AuditSigningPublicKey is one immutable public node in a workspace-wide signing-key lineage.
+type AuditSigningPublicKey struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// workspace_id identifies the lineage owner.
+	WorkspaceId string `protobuf:"bytes,1,opt,name=workspace_id,json=workspaceId,proto3" json:"workspace_id,omitempty"`
+	// generation identifies the audit generation in which this key became active.
+	Generation uint64 `protobuf:"varint,2,opt,name=generation,proto3" json:"generation,omitempty"`
+	// epoch is contiguous across the workspace lineage and begins at one.
+	Epoch uint64 `protobuf:"varint,3,opt,name=epoch,proto3" json:"epoch,omitempty"`
+	// key_id is derived from workspace_id and public_key.
+	KeyId string `protobuf:"bytes,4,opt,name=key_id,json=keyId,proto3" json:"key_id,omitempty"`
+	// public_key is the exact Ed25519 verification key.
+	PublicKey []byte `protobuf:"bytes,5,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
+	// created_at is the instant this key became active.
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	// retired_at is present for every non-terminal key and equals its successor creation instant.
+	RetiredAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=retired_at,json=retiredAt,proto3" json:"retired_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AuditSigningPublicKey) Reset() {
+	*x = AuditSigningPublicKey{}
+	mi := &file_tammy_v1_audit_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuditSigningPublicKey) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuditSigningPublicKey) ProtoMessage() {}
+
+func (x *AuditSigningPublicKey) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_audit_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuditSigningPublicKey.ProtoReflect.Descriptor instead.
+func (*AuditSigningPublicKey) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *AuditSigningPublicKey) GetWorkspaceId() string {
+	if x != nil {
+		return x.WorkspaceId
+	}
+	return ""
+}
+
+func (x *AuditSigningPublicKey) GetGeneration() uint64 {
+	if x != nil {
+		return x.Generation
+	}
+	return 0
+}
+
+func (x *AuditSigningPublicKey) GetEpoch() uint64 {
+	if x != nil {
+		return x.Epoch
+	}
+	return 0
+}
+
+func (x *AuditSigningPublicKey) GetKeyId() string {
+	if x != nil {
+		return x.KeyId
+	}
+	return ""
+}
+
+func (x *AuditSigningPublicKey) GetPublicKey() []byte {
+	if x != nil {
+		return x.PublicKey
+	}
+	return nil
+}
+
+func (x *AuditSigningPublicKey) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *AuditSigningPublicKey) GetRetiredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.RetiredAt
+	}
+	return nil
+}
+
+// AuditSigningKeyRotationLink authenticates one adjacent workspace key rotation.
+type AuditSigningKeyRotationLink struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// version fixes the signed-link canonical form.
+	Version string `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	// workspace_id identifies the lineage owner.
+	WorkspaceId string `protobuf:"bytes,2,opt,name=workspace_id,json=workspaceId,proto3" json:"workspace_id,omitempty"`
+	// generation identifies the exact audit generation in which rotation occurred.
+	Generation uint64 `protobuf:"varint,3,opt,name=generation,proto3" json:"generation,omitempty"`
+	// prior_sequence is the exact audit sequence before the rotation event append.
+	PriorSequence uint64 `protobuf:"varint,4,opt,name=prior_sequence,json=priorSequence,proto3" json:"prior_sequence,omitempty"`
+	// prior_head is the exact audit head before the rotation event append.
+	PriorHead []byte `protobuf:"bytes,5,opt,name=prior_head,json=priorHead,proto3" json:"prior_head,omitempty"`
+	// successor_epoch is exactly predecessor epoch plus one.
+	SuccessorEpoch uint64 `protobuf:"varint,6,opt,name=successor_epoch,json=successorEpoch,proto3" json:"successor_epoch,omitempty"`
+	// predecessor_key_id identifies the retiring key.
+	PredecessorKeyId string `protobuf:"bytes,7,opt,name=predecessor_key_id,json=predecessorKeyId,proto3" json:"predecessor_key_id,omitempty"`
+	// predecessor_public_key is the exact retiring Ed25519 public key.
+	PredecessorPublicKey []byte `protobuf:"bytes,8,opt,name=predecessor_public_key,json=predecessorPublicKey,proto3" json:"predecessor_public_key,omitempty"`
+	// successor_key_id identifies the newly active key.
+	SuccessorKeyId string `protobuf:"bytes,9,opt,name=successor_key_id,json=successorKeyId,proto3" json:"successor_key_id,omitempty"`
+	// successor_public_key is the exact newly active Ed25519 public key.
+	SuccessorPublicKey []byte `protobuf:"bytes,10,opt,name=successor_public_key,json=successorPublicKey,proto3" json:"successor_public_key,omitempty"`
+	// rotated_at is the successor creation and predecessor retirement instant.
+	RotatedAt *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=rotated_at,json=rotatedAt,proto3" json:"rotated_at,omitempty"`
+	// predecessor_signature cross-signs the canonical unsigned link.
+	PredecessorSignature []byte `protobuf:"bytes,12,opt,name=predecessor_signature,json=predecessorSignature,proto3" json:"predecessor_signature,omitempty"`
+	// successor_possession_signature proves possession of the successor private key.
+	SuccessorPossessionSignature []byte `protobuf:"bytes,13,opt,name=successor_possession_signature,json=successorPossessionSignature,proto3" json:"successor_possession_signature,omitempty"`
+	unknownFields                protoimpl.UnknownFields
+	sizeCache                    protoimpl.SizeCache
+}
+
+func (x *AuditSigningKeyRotationLink) Reset() {
+	*x = AuditSigningKeyRotationLink{}
+	mi := &file_tammy_v1_audit_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuditSigningKeyRotationLink) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuditSigningKeyRotationLink) ProtoMessage() {}
+
+func (x *AuditSigningKeyRotationLink) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_audit_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuditSigningKeyRotationLink.ProtoReflect.Descriptor instead.
+func (*AuditSigningKeyRotationLink) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *AuditSigningKeyRotationLink) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *AuditSigningKeyRotationLink) GetWorkspaceId() string {
+	if x != nil {
+		return x.WorkspaceId
+	}
+	return ""
+}
+
+func (x *AuditSigningKeyRotationLink) GetGeneration() uint64 {
+	if x != nil {
+		return x.Generation
+	}
+	return 0
+}
+
+func (x *AuditSigningKeyRotationLink) GetPriorSequence() uint64 {
+	if x != nil {
+		return x.PriorSequence
+	}
+	return 0
+}
+
+func (x *AuditSigningKeyRotationLink) GetPriorHead() []byte {
+	if x != nil {
+		return x.PriorHead
+	}
+	return nil
+}
+
+func (x *AuditSigningKeyRotationLink) GetSuccessorEpoch() uint64 {
+	if x != nil {
+		return x.SuccessorEpoch
+	}
+	return 0
+}
+
+func (x *AuditSigningKeyRotationLink) GetPredecessorKeyId() string {
+	if x != nil {
+		return x.PredecessorKeyId
+	}
+	return ""
+}
+
+func (x *AuditSigningKeyRotationLink) GetPredecessorPublicKey() []byte {
+	if x != nil {
+		return x.PredecessorPublicKey
+	}
+	return nil
+}
+
+func (x *AuditSigningKeyRotationLink) GetSuccessorKeyId() string {
+	if x != nil {
+		return x.SuccessorKeyId
+	}
+	return ""
+}
+
+func (x *AuditSigningKeyRotationLink) GetSuccessorPublicKey() []byte {
+	if x != nil {
+		return x.SuccessorPublicKey
+	}
+	return nil
+}
+
+func (x *AuditSigningKeyRotationLink) GetRotatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.RotatedAt
+	}
+	return nil
+}
+
+func (x *AuditSigningKeyRotationLink) GetPredecessorSignature() []byte {
+	if x != nil {
+		return x.PredecessorSignature
+	}
+	return nil
+}
+
+func (x *AuditSigningKeyRotationLink) GetSuccessorPossessionSignature() []byte {
+	if x != nil {
+		return x.SuccessorPossessionSignature
+	}
+	return nil
+}
+
+// AuditSigningKeyRotationEventProof selectively opens only the commitments required to bind one link into a generation chain.
+type AuditSigningKeyRotationEventProof struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// successor_epoch identifies the linked rotation.
+	SuccessorEpoch uint64 `protobuf:"varint,1,opt,name=successor_epoch,json=successorEpoch,proto3" json:"successor_epoch,omitempty"`
+	// schema_fingerprint identifies the exact descriptor set used for the deterministic rotation payload.
+	SchemaFingerprint []byte `protobuf:"bytes,4,opt,name=schema_fingerprint,json=schemaFingerprint,proto3" json:"schema_fingerprint,omitempty"`
+	// payload_identity_blinding opens only the canonical payload-identity commitment.
+	PayloadIdentityBlinding []byte `protobuf:"bytes,5,opt,name=payload_identity_blinding,json=payloadIdentityBlinding,proto3" json:"payload_identity_blinding,omitempty"`
+	// event_type_blinding opens only the canonical event-type commitment.
+	EventTypeBlinding []byte `protobuf:"bytes,6,opt,name=event_type_blinding,json=eventTypeBlinding,proto3" json:"event_type_blinding,omitempty"`
+	// occurred_at_blinding opens only the canonical occurred-at commitment.
+	OccurredAtBlinding []byte `protobuf:"bytes,7,opt,name=occurred_at_blinding,json=occurredAtBlinding,proto3" json:"occurred_at_blinding,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *AuditSigningKeyRotationEventProof) Reset() {
+	*x = AuditSigningKeyRotationEventProof{}
+	mi := &file_tammy_v1_audit_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuditSigningKeyRotationEventProof) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuditSigningKeyRotationEventProof) ProtoMessage() {}
+
+func (x *AuditSigningKeyRotationEventProof) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_audit_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuditSigningKeyRotationEventProof.ProtoReflect.Descriptor instead.
+func (*AuditSigningKeyRotationEventProof) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *AuditSigningKeyRotationEventProof) GetSuccessorEpoch() uint64 {
+	if x != nil {
+		return x.SuccessorEpoch
+	}
+	return 0
+}
+
+func (x *AuditSigningKeyRotationEventProof) GetSchemaFingerprint() []byte {
+	if x != nil {
+		return x.SchemaFingerprint
+	}
+	return nil
+}
+
+func (x *AuditSigningKeyRotationEventProof) GetPayloadIdentityBlinding() []byte {
+	if x != nil {
+		return x.PayloadIdentityBlinding
+	}
+	return nil
+}
+
+func (x *AuditSigningKeyRotationEventProof) GetEventTypeBlinding() []byte {
+	if x != nil {
+		return x.EventTypeBlinding
+	}
+	return nil
+}
+
+func (x *AuditSigningKeyRotationEventProof) GetOccurredAtBlinding() []byte {
+	if x != nil {
+		return x.OccurredAtBlinding
+	}
+	return nil
+}
+
+// AuditSigningKeyChain is the complete ordered root-to-active public signing lineage.
+type AuditSigningKeyChain struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// version fixes the deterministic archive object schema.
+	Version string `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	// keys contains contiguous workspace-wide epochs from root through active.
+	Keys []*AuditSigningPublicKey `protobuf:"bytes,2,rep,name=keys,proto3" json:"keys,omitempty"`
+	// links contains exactly one authenticated link between each adjacent key.
+	Links []*AuditSigningKeyRotationLink `protobuf:"bytes,3,rep,name=links,proto3" json:"links,omitempty"`
+	// event_proofs contains rotation events visible within the exported generation snapshot.
+	EventProofs   []*AuditSigningKeyRotationEventProof `protobuf:"bytes,4,rep,name=event_proofs,json=eventProofs,proto3" json:"event_proofs,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AuditSigningKeyChain) Reset() {
+	*x = AuditSigningKeyChain{}
+	mi := &file_tammy_v1_audit_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuditSigningKeyChain) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuditSigningKeyChain) ProtoMessage() {}
+
+func (x *AuditSigningKeyChain) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_audit_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuditSigningKeyChain.ProtoReflect.Descriptor instead.
+func (*AuditSigningKeyChain) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *AuditSigningKeyChain) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *AuditSigningKeyChain) GetKeys() []*AuditSigningPublicKey {
+	if x != nil {
+		return x.Keys
+	}
+	return nil
+}
+
+func (x *AuditSigningKeyChain) GetLinks() []*AuditSigningKeyRotationLink {
+	if x != nil {
+		return x.Links
+	}
+	return nil
+}
+
+func (x *AuditSigningKeyChain) GetEventProofs() []*AuditSigningKeyRotationEventProof {
+	if x != nil {
+		return x.EventProofs
+	}
+	return nil
+}
+
+// AuditCommitmentOpenings contains independent per-category random blindings.
+// These values are retained with the event but selectively disclosed only when
+// required to authenticate a signed evidence-export filter.
+type AuditCommitmentOpenings struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// hidden_metadata_blinding opens the commitment to non-filter audit metadata.
+	HiddenMetadataBlinding []byte `protobuf:"bytes,1,opt,name=hidden_metadata_blinding,json=hiddenMetadataBlinding,proto3" json:"hidden_metadata_blinding,omitempty"`
+	// payload_identity_blinding opens the commitment to exact retained payload identity.
+	PayloadIdentityBlinding []byte `protobuf:"bytes,2,opt,name=payload_identity_blinding,json=payloadIdentityBlinding,proto3" json:"payload_identity_blinding,omitempty"`
+	// event_type_blinding opens the event type filter commitment.
+	EventTypeBlinding []byte `protobuf:"bytes,3,opt,name=event_type_blinding,json=eventTypeBlinding,proto3" json:"event_type_blinding,omitempty"`
+	// occurred_at_blinding opens the event time filter commitment.
+	OccurredAtBlinding []byte `protobuf:"bytes,4,opt,name=occurred_at_blinding,json=occurredAtBlinding,proto3" json:"occurred_at_blinding,omitempty"`
+	// actor_user_id_blinding opens the actor filter commitment.
+	ActorUserIdBlinding []byte `protobuf:"bytes,5,opt,name=actor_user_id_blinding,json=actorUserIdBlinding,proto3" json:"actor_user_id_blinding,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *AuditCommitmentOpenings) Reset() {
+	*x = AuditCommitmentOpenings{}
+	mi := &file_tammy_v1_audit_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuditCommitmentOpenings) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuditCommitmentOpenings) ProtoMessage() {}
+
+func (x *AuditCommitmentOpenings) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_audit_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuditCommitmentOpenings.ProtoReflect.Descriptor instead.
+func (*AuditCommitmentOpenings) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *AuditCommitmentOpenings) GetHiddenMetadataBlinding() []byte {
+	if x != nil {
+		return x.HiddenMetadataBlinding
+	}
+	return nil
+}
+
+func (x *AuditCommitmentOpenings) GetPayloadIdentityBlinding() []byte {
+	if x != nil {
+		return x.PayloadIdentityBlinding
+	}
+	return nil
+}
+
+func (x *AuditCommitmentOpenings) GetEventTypeBlinding() []byte {
+	if x != nil {
+		return x.EventTypeBlinding
+	}
+	return nil
+}
+
+func (x *AuditCommitmentOpenings) GetOccurredAtBlinding() []byte {
+	if x != nil {
+		return x.OccurredAtBlinding
+	}
+	return nil
+}
+
+func (x *AuditCommitmentOpenings) GetActorUserIdBlinding() []byte {
+	if x != nil {
+		return x.ActorUserIdBlinding
+	}
+	return nil
+}
+
 // AuditEvent is one immutable typed entry in a workspace-generation hash chain.
 type AuditEvent struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -178,14 +1026,32 @@ type AuditEvent struct {
 	// previous_hash is genesis for sequence one and the prior event hash otherwise.
 	PreviousHash []byte `protobuf:"bytes,11,opt,name=previous_hash,json=previousHash,proto3" json:"previous_hash,omitempty"`
 	// event_hash is the exact domain-separated 32-byte chain hash.
-	EventHash     []byte `protobuf:"bytes,12,opt,name=event_hash,json=eventHash,proto3" json:"event_hash,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	EventHash []byte `protobuf:"bytes,12,opt,name=event_hash,json=eventHash,proto3" json:"event_hash,omitempty"`
+	// organisation_id identifies the affected organisation when the event is organisation-scoped.
+	OrganisationId *string `protobuf:"bytes,13,opt,name=organisation_id,json=organisationId,proto3,oneof" json:"organisation_id,omitempty"`
+	// command_id identifies the core-authored command execution independently of the event ID.
+	CommandId *string `protobuf:"bytes,14,opt,name=command_id,json=commandId,proto3,oneof" json:"command_id,omitempty"`
+	// command_type is the fully-qualified RPC or stable internal command name.
+	CommandType string `protobuf:"bytes,15,opt,name=command_type,json=commandType,proto3" json:"command_type,omitempty"`
+	// idempotency_key is present only for an ordinary persistent command or elected recovery operation.
+	IdempotencyKey *string `protobuf:"bytes,16,opt,name=idempotency_key,json=idempotencyKey,proto3,oneof" json:"idempotency_key,omitempty"`
+	// affected_resources are immutable bounded references covered by the event chain.
+	AffectedResources []*SourceRef `protobuf:"bytes,17,rep,name=affected_resources,json=affectedResources,proto3" json:"affected_resources,omitempty"`
+	// before_semantic_hash is present when the event records a predecessor aggregate state.
+	BeforeSemanticHash []byte `protobuf:"bytes,18,opt,name=before_semantic_hash,json=beforeSemanticHash,proto3,oneof" json:"before_semantic_hash,omitempty"`
+	// after_semantic_hash is present when the event records a successor aggregate state.
+	AfterSemanticHash []byte `protobuf:"bytes,19,opt,name=after_semantic_hash,json=afterSemanticHash,proto3,oneof" json:"after_semantic_hash,omitempty"`
+	// result commits to deterministic response bytes without placing those bytes in the audit event.
+	Result *AuditResultMetadata `protobuf:"bytes,20,opt,name=result,proto3" json:"result,omitempty"`
+	// commitment_openings contains core-generated independent nonzero blindings.
+	CommitmentOpenings *AuditCommitmentOpenings `protobuf:"bytes,21,opt,name=commitment_openings,json=commitmentOpenings,proto3" json:"commitment_openings,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *AuditEvent) Reset() {
 	*x = AuditEvent{}
-	mi := &file_tammy_v1_audit_proto_msgTypes[0]
+	mi := &file_tammy_v1_audit_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -197,7 +1063,7 @@ func (x *AuditEvent) String() string {
 func (*AuditEvent) ProtoMessage() {}
 
 func (x *AuditEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_audit_proto_msgTypes[0]
+	mi := &file_tammy_v1_audit_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -210,7 +1076,7 @@ func (x *AuditEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AuditEvent.ProtoReflect.Descriptor instead.
 func (*AuditEvent) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{0}
+	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *AuditEvent) GetId() string {
@@ -297,6 +1163,69 @@ func (x *AuditEvent) GetEventHash() []byte {
 	return nil
 }
 
+func (x *AuditEvent) GetOrganisationId() string {
+	if x != nil && x.OrganisationId != nil {
+		return *x.OrganisationId
+	}
+	return ""
+}
+
+func (x *AuditEvent) GetCommandId() string {
+	if x != nil && x.CommandId != nil {
+		return *x.CommandId
+	}
+	return ""
+}
+
+func (x *AuditEvent) GetCommandType() string {
+	if x != nil {
+		return x.CommandType
+	}
+	return ""
+}
+
+func (x *AuditEvent) GetIdempotencyKey() string {
+	if x != nil && x.IdempotencyKey != nil {
+		return *x.IdempotencyKey
+	}
+	return ""
+}
+
+func (x *AuditEvent) GetAffectedResources() []*SourceRef {
+	if x != nil {
+		return x.AffectedResources
+	}
+	return nil
+}
+
+func (x *AuditEvent) GetBeforeSemanticHash() []byte {
+	if x != nil {
+		return x.BeforeSemanticHash
+	}
+	return nil
+}
+
+func (x *AuditEvent) GetAfterSemanticHash() []byte {
+	if x != nil {
+		return x.AfterSemanticHash
+	}
+	return nil
+}
+
+func (x *AuditEvent) GetResult() *AuditResultMetadata {
+	if x != nil {
+		return x.Result
+	}
+	return nil
+}
+
+func (x *AuditEvent) GetCommitmentOpenings() *AuditCommitmentOpenings {
+	if x != nil {
+		return x.CommitmentOpenings
+	}
+	return nil
+}
+
 // AuditEventFilter is a bounded stable query and export selection.
 type AuditEventFilter struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -318,7 +1247,7 @@ type AuditEventFilter struct {
 
 func (x *AuditEventFilter) Reset() {
 	*x = AuditEventFilter{}
-	mi := &file_tammy_v1_audit_proto_msgTypes[1]
+	mi := &file_tammy_v1_audit_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -330,7 +1259,7 @@ func (x *AuditEventFilter) String() string {
 func (*AuditEventFilter) ProtoMessage() {}
 
 func (x *AuditEventFilter) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_audit_proto_msgTypes[1]
+	mi := &file_tammy_v1_audit_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -343,7 +1272,7 @@ func (x *AuditEventFilter) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AuditEventFilter.ProtoReflect.Descriptor instead.
 func (*AuditEventFilter) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{1}
+	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *AuditEventFilter) GetEventTypes() []AuditEventType {
@@ -415,7 +1344,7 @@ type AuditExportJob struct {
 
 func (x *AuditExportJob) Reset() {
 	*x = AuditExportJob{}
-	mi := &file_tammy_v1_audit_proto_msgTypes[2]
+	mi := &file_tammy_v1_audit_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -427,7 +1356,7 @@ func (x *AuditExportJob) String() string {
 func (*AuditExportJob) ProtoMessage() {}
 
 func (x *AuditExportJob) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_audit_proto_msgTypes[2]
+	mi := &file_tammy_v1_audit_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -440,7 +1369,7 @@ func (x *AuditExportJob) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AuditExportJob.ProtoReflect.Descriptor instead.
 func (*AuditExportJob) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{2}
+	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *AuditExportJob) GetId() string {
@@ -525,7 +1454,7 @@ type VerifyChainRequest struct {
 
 func (x *VerifyChainRequest) Reset() {
 	*x = VerifyChainRequest{}
-	mi := &file_tammy_v1_audit_proto_msgTypes[3]
+	mi := &file_tammy_v1_audit_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -537,7 +1466,7 @@ func (x *VerifyChainRequest) String() string {
 func (*VerifyChainRequest) ProtoMessage() {}
 
 func (x *VerifyChainRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_audit_proto_msgTypes[3]
+	mi := &file_tammy_v1_audit_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -550,7 +1479,7 @@ func (x *VerifyChainRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VerifyChainRequest.ProtoReflect.Descriptor instead.
 func (*VerifyChainRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{3}
+	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *VerifyChainRequest) GetAuthentication() *AuthenticationContext {
@@ -605,7 +1534,7 @@ type VerifyChainResponse struct {
 
 func (x *VerifyChainResponse) Reset() {
 	*x = VerifyChainResponse{}
-	mi := &file_tammy_v1_audit_proto_msgTypes[4]
+	mi := &file_tammy_v1_audit_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -617,7 +1546,7 @@ func (x *VerifyChainResponse) String() string {
 func (*VerifyChainResponse) ProtoMessage() {}
 
 func (x *VerifyChainResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_audit_proto_msgTypes[4]
+	mi := &file_tammy_v1_audit_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -630,7 +1559,7 @@ func (x *VerifyChainResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VerifyChainResponse.ProtoReflect.Descriptor instead.
 func (*VerifyChainResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{4}
+	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *VerifyChainResponse) GetIntegrity() AuditChainIntegrity {
@@ -678,7 +1607,7 @@ type ListAuditEventsRequest struct {
 
 func (x *ListAuditEventsRequest) Reset() {
 	*x = ListAuditEventsRequest{}
-	mi := &file_tammy_v1_audit_proto_msgTypes[5]
+	mi := &file_tammy_v1_audit_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -690,7 +1619,7 @@ func (x *ListAuditEventsRequest) String() string {
 func (*ListAuditEventsRequest) ProtoMessage() {}
 
 func (x *ListAuditEventsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_audit_proto_msgTypes[5]
+	mi := &file_tammy_v1_audit_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -703,7 +1632,7 @@ func (x *ListAuditEventsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAuditEventsRequest.ProtoReflect.Descriptor instead.
 func (*ListAuditEventsRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{5}
+	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *ListAuditEventsRequest) GetAuthentication() *AuthenticationContext {
@@ -747,7 +1676,7 @@ type ListAuditEventsResponse struct {
 
 func (x *ListAuditEventsResponse) Reset() {
 	*x = ListAuditEventsResponse{}
-	mi := &file_tammy_v1_audit_proto_msgTypes[6]
+	mi := &file_tammy_v1_audit_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -759,7 +1688,7 @@ func (x *ListAuditEventsResponse) String() string {
 func (*ListAuditEventsResponse) ProtoMessage() {}
 
 func (x *ListAuditEventsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_audit_proto_msgTypes[6]
+	mi := &file_tammy_v1_audit_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -772,7 +1701,7 @@ func (x *ListAuditEventsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAuditEventsResponse.ProtoReflect.Descriptor instead.
 func (*ListAuditEventsResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{6}
+	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ListAuditEventsResponse) GetEvents() []*AuditEvent {
@@ -806,7 +1735,7 @@ type ExportEvidenceRequest struct {
 
 func (x *ExportEvidenceRequest) Reset() {
 	*x = ExportEvidenceRequest{}
-	mi := &file_tammy_v1_audit_proto_msgTypes[7]
+	mi := &file_tammy_v1_audit_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -818,7 +1747,7 @@ func (x *ExportEvidenceRequest) String() string {
 func (*ExportEvidenceRequest) ProtoMessage() {}
 
 func (x *ExportEvidenceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_audit_proto_msgTypes[7]
+	mi := &file_tammy_v1_audit_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -831,7 +1760,7 @@ func (x *ExportEvidenceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportEvidenceRequest.ProtoReflect.Descriptor instead.
 func (*ExportEvidenceRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{7}
+	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ExportEvidenceRequest) GetCommandContext() *CommandContext {
@@ -873,7 +1802,7 @@ type ExportEvidenceResponse struct {
 
 func (x *ExportEvidenceResponse) Reset() {
 	*x = ExportEvidenceResponse{}
-	mi := &file_tammy_v1_audit_proto_msgTypes[8]
+	mi := &file_tammy_v1_audit_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -885,7 +1814,7 @@ func (x *ExportEvidenceResponse) String() string {
 func (*ExportEvidenceResponse) ProtoMessage() {}
 
 func (x *ExportEvidenceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_audit_proto_msgTypes[8]
+	mi := &file_tammy_v1_audit_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -898,7 +1827,7 @@ func (x *ExportEvidenceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportEvidenceResponse.ProtoReflect.Descriptor instead.
 func (*ExportEvidenceResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{8}
+	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ExportEvidenceResponse) GetJob() *AuditExportJob {
@@ -923,7 +1852,7 @@ type CancelAuditExportRequest struct {
 
 func (x *CancelAuditExportRequest) Reset() {
 	*x = CancelAuditExportRequest{}
-	mi := &file_tammy_v1_audit_proto_msgTypes[9]
+	mi := &file_tammy_v1_audit_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -935,7 +1864,7 @@ func (x *CancelAuditExportRequest) String() string {
 func (*CancelAuditExportRequest) ProtoMessage() {}
 
 func (x *CancelAuditExportRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_audit_proto_msgTypes[9]
+	mi := &file_tammy_v1_audit_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -948,7 +1877,7 @@ func (x *CancelAuditExportRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelAuditExportRequest.ProtoReflect.Descriptor instead.
 func (*CancelAuditExportRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{9}
+	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *CancelAuditExportRequest) GetCommandContext() *CommandContext {
@@ -983,7 +1912,7 @@ type CancelAuditExportResponse struct {
 
 func (x *CancelAuditExportResponse) Reset() {
 	*x = CancelAuditExportResponse{}
-	mi := &file_tammy_v1_audit_proto_msgTypes[10]
+	mi := &file_tammy_v1_audit_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -995,7 +1924,7 @@ func (x *CancelAuditExportResponse) String() string {
 func (*CancelAuditExportResponse) ProtoMessage() {}
 
 func (x *CancelAuditExportResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_audit_proto_msgTypes[10]
+	mi := &file_tammy_v1_audit_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1008,7 +1937,7 @@ func (x *CancelAuditExportResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelAuditExportResponse.ProtoReflect.Descriptor instead.
 func (*CancelAuditExportResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{10}
+	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *CancelAuditExportResponse) GetJob() *AuditExportJob {
@@ -1031,7 +1960,7 @@ type GetAuditExportJobRequest struct {
 
 func (x *GetAuditExportJobRequest) Reset() {
 	*x = GetAuditExportJobRequest{}
-	mi := &file_tammy_v1_audit_proto_msgTypes[11]
+	mi := &file_tammy_v1_audit_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1043,7 +1972,7 @@ func (x *GetAuditExportJobRequest) String() string {
 func (*GetAuditExportJobRequest) ProtoMessage() {}
 
 func (x *GetAuditExportJobRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_audit_proto_msgTypes[11]
+	mi := &file_tammy_v1_audit_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1056,7 +1985,7 @@ func (x *GetAuditExportJobRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAuditExportJobRequest.ProtoReflect.Descriptor instead.
 func (*GetAuditExportJobRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{11}
+	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *GetAuditExportJobRequest) GetAuthentication() *AuthenticationContext {
@@ -1084,7 +2013,7 @@ type GetAuditExportJobResponse struct {
 
 func (x *GetAuditExportJobResponse) Reset() {
 	*x = GetAuditExportJobResponse{}
-	mi := &file_tammy_v1_audit_proto_msgTypes[12]
+	mi := &file_tammy_v1_audit_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1096,7 +2025,7 @@ func (x *GetAuditExportJobResponse) String() string {
 func (*GetAuditExportJobResponse) ProtoMessage() {}
 
 func (x *GetAuditExportJobResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_audit_proto_msgTypes[12]
+	mi := &file_tammy_v1_audit_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1109,7 +2038,7 @@ func (x *GetAuditExportJobResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAuditExportJobResponse.ProtoReflect.Descriptor instead.
 func (*GetAuditExportJobResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{12}
+	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *GetAuditExportJobResponse) GetJob() *AuditExportJob {
@@ -1134,7 +2063,7 @@ type ListAuditExportJobsRequest struct {
 
 func (x *ListAuditExportJobsRequest) Reset() {
 	*x = ListAuditExportJobsRequest{}
-	mi := &file_tammy_v1_audit_proto_msgTypes[13]
+	mi := &file_tammy_v1_audit_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1146,7 +2075,7 @@ func (x *ListAuditExportJobsRequest) String() string {
 func (*ListAuditExportJobsRequest) ProtoMessage() {}
 
 func (x *ListAuditExportJobsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_audit_proto_msgTypes[13]
+	mi := &file_tammy_v1_audit_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1159,7 +2088,7 @@ func (x *ListAuditExportJobsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAuditExportJobsRequest.ProtoReflect.Descriptor instead.
 func (*ListAuditExportJobsRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{13}
+	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *ListAuditExportJobsRequest) GetAuthentication() *AuthenticationContext {
@@ -1196,7 +2125,7 @@ type ListAuditExportJobsResponse struct {
 
 func (x *ListAuditExportJobsResponse) Reset() {
 	*x = ListAuditExportJobsResponse{}
-	mi := &file_tammy_v1_audit_proto_msgTypes[14]
+	mi := &file_tammy_v1_audit_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1208,7 +2137,7 @@ func (x *ListAuditExportJobsResponse) String() string {
 func (*ListAuditExportJobsResponse) ProtoMessage() {}
 
 func (x *ListAuditExportJobsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_audit_proto_msgTypes[14]
+	mi := &file_tammy_v1_audit_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1221,7 +2150,7 @@ func (x *ListAuditExportJobsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAuditExportJobsResponse.ProtoReflect.Descriptor instead.
 func (*ListAuditExportJobsResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{14}
+	return file_tammy_v1_audit_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *ListAuditExportJobsResponse) GetJobs() []*AuditExportJob {
@@ -1242,7 +2171,95 @@ var File_tammy_v1_audit_proto protoreflect.FileDescriptor
 
 const file_tammy_v1_audit_proto_rawDesc = "" +
 	"\n" +
-	"\x14tammy/v1/audit.proto\x12\btammy.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15tammy/v1/common.proto\x1a\x15tammy/v1/events.proto\"\xe6\x05\n" +
+	"\x14tammy/v1/audit.proto\x12\btammy.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15tammy/v1/common.proto\x1a\x15tammy/v1/events.proto\"\xe8\x01\n" +
+	"\x13AuditMirrorBaseline\x12o\n" +
+	"\fworkspace_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\vworkspaceId\x12'\n" +
+	"\n" +
+	"generation\x18\x02 \x01(\x04B\a\xbaH\x042\x02(\x01R\n" +
+	"generation\x12\x1a\n" +
+	"\bsequence\x18\x03 \x01(\x04R\bsequence\x12\x1b\n" +
+	"\x04head\x18\x04 \x01(\fB\a\xbaH\x04z\x02h R\x04head\"\xbb\x01\n" +
+	"\x13AuditResultMetadata\x12'\n" +
+	"\ttype_name\x18\x01 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\x80\x02R\btypeName\x12:\n" +
+	"\x14deterministic_sha256\x18\x02 \x01(\fB\a\xbaH\x04z\x02h R\x13deterministicSha256\x12?\n" +
+	"\foutcome_code\x18\x03 \x01(\tB\x1c\xbaH\x19r\x17\x10\x01\x18`2\x11^[A-Z][A-Z0-9_]*$R\voutcomeCode\"\x94\x01\n" +
+	"\x11AuditExportObject\x12=\n" +
+	"\x04path\x18\x01 \x01(\tB)\xbaH&r$\x10\x01\x18\x80\x042\x1d^[A-Za-z0-9][A-Za-z0-9._/-]*$R\x04path\x12\x1f\n" +
+	"\x06sha256\x18\x02 \x01(\fB\a\xbaH\x04z\x02h R\x06sha256\x12\x1f\n" +
+	"\vbyte_length\x18\x03 \x01(\x04R\n" +
+	"byteLength\"\xf0\x06\n" +
+	"\x13AuditExportManifest\x126\n" +
+	"\x06format\x18\x01 \x01(\tB\x1e\xbaH\x1br\x19\n" +
+	"\x17tammy-audit-evidence-v1R\x06format\x12o\n" +
+	"\fworkspace_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\vworkspaceId\x12'\n" +
+	"\n" +
+	"generation\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\n" +
+	"generation\x12.\n" +
+	"\x0estart_sequence\x18\x04 \x01(\x04B\a\xbaH\x042\x02(\x01R\rstartSequence\x12*\n" +
+	"\fend_sequence\x18\x05 \x01(\x04B\a\xbaH\x042\x02(\x01R\vendSequence\x12&\n" +
+	"\n" +
+	"chain_salt\x18\x06 \x01(\fB\a\xbaH\x04z\x02h R\tchainSalt\x12*\n" +
+	"\fgenesis_hash\x18\a \x01(\fB\a\xbaH\x04z\x02h R\vgenesisHash\x12,\n" +
+	"\rverified_head\x18\b \x01(\fB\a\xbaH\x04z\x02h R\fverifiedHead\x12r\n" +
+	"\x0esigning_key_id\x18\t \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\fsigningKeyId\x12A\n" +
+	"\n" +
+	"created_at\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\tcreatedAt\x12@\n" +
+	"\aobjects\x18\v \x03(\v2\x1b.tammy.v1.AuditExportObjectB\t\xbaH\x06\x92\x01\x03\x10\x90NR\aobjects\x12{\n" +
+	"\x13root_signing_key_id\x18\f \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x10rootSigningKeyId\x123\n" +
+	"\x11signing_key_epoch\x18\r \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fsigningKeyEpoch\"\xdb\x03\n" +
+	"\x15AuditSigningPublicKey\x12o\n" +
+	"\fworkspace_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\vworkspaceId\x12'\n" +
+	"\n" +
+	"generation\x18\x02 \x01(\x04B\a\xbaH\x042\x02(\x01R\n" +
+	"generation\x12\x1d\n" +
+	"\x05epoch\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\x05epoch\x12c\n" +
+	"\x06key_id\x18\x04 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x05keyId\x12&\n" +
+	"\n" +
+	"public_key\x18\x05 \x01(\fB\a\xbaH\x04z\x02h R\tpublicKey\x12A\n" +
+	"\n" +
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\tcreatedAt\x129\n" +
+	"\n" +
+	"retired_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tretiredAt\"\xbc\a\n" +
+	"\x1bAuditSigningKeyRotationLink\x12D\n" +
+	"\aversion\x18\x01 \x01(\tB*\xbaH'r%\n" +
+	"#tammy.audit.signing-key-rotation.v1R\aversion\x12o\n" +
+	"\fworkspace_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\vworkspaceId\x12'\n" +
+	"\n" +
+	"generation\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\n" +
+	"generation\x12%\n" +
+	"\x0eprior_sequence\x18\x04 \x01(\x04R\rpriorSequence\x12&\n" +
+	"\n" +
+	"prior_head\x18\x05 \x01(\fB\a\xbaH\x04z\x02h R\tpriorHead\x120\n" +
+	"\x0fsuccessor_epoch\x18\x06 \x01(\x04B\a\xbaH\x042\x02(\x02R\x0esuccessorEpoch\x12z\n" +
+	"\x12predecessor_key_id\x18\a \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x10predecessorKeyId\x12=\n" +
+	"\x16predecessor_public_key\x18\b \x01(\fB\a\xbaH\x04z\x02h R\x14predecessorPublicKey\x12v\n" +
+	"\x10successor_key_id\x18\t \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0esuccessorKeyId\x129\n" +
+	"\x14successor_public_key\x18\n" +
+	" \x01(\fB\a\xbaH\x04z\x02h R\x12successorPublicKey\x12A\n" +
+	"\n" +
+	"rotated_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\trotatedAt\x12<\n" +
+	"\x15predecessor_signature\x18\f \x01(\fB\a\xbaH\x04z\x02h@R\x14predecessorSignature\x12M\n" +
+	"\x1esuccessor_possession_signature\x18\r \x01(\fB\a\xbaH\x04z\x02h@R\x1csuccessorPossessionSignature\"\xee\x02\n" +
+	"!AuditSigningKeyRotationEventProof\x120\n" +
+	"\x0fsuccessor_epoch\x18\x01 \x01(\x04B\a\xbaH\x042\x02(\x02R\x0esuccessorEpoch\x126\n" +
+	"\x12schema_fingerprint\x18\x04 \x01(\fB\a\xbaH\x04z\x02h R\x11schemaFingerprint\x12C\n" +
+	"\x19payload_identity_blinding\x18\x05 \x01(\fB\a\xbaH\x04z\x02h R\x17payloadIdentityBlinding\x127\n" +
+	"\x13event_type_blinding\x18\x06 \x01(\fB\a\xbaH\x04z\x02h R\x11eventTypeBlinding\x129\n" +
+	"\x14occurred_at_blinding\x18\a \x01(\fB\a\xbaH\x04z\x02h R\x12occurredAtBlindingJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04R\vevent_protoR\rpayload_proto\"\xbe\x02\n" +
+	"\x14AuditSigningKeyChain\x12A\n" +
+	"\aversion\x18\x01 \x01(\tB'\xbaH$r\"\n" +
+	" tammy.audit.signing-key-chain.v1R\aversion\x12@\n" +
+	"\x04keys\x18\x02 \x03(\v2\x1f.tammy.v1.AuditSigningPublicKeyB\v\xbaH\b\x92\x01\x05\b\x01\x10\x80\bR\x04keys\x12F\n" +
+	"\x05links\x18\x03 \x03(\v2%.tammy.v1.AuditSigningKeyRotationLinkB\t\xbaH\x06\x92\x01\x03\x10\xff\aR\x05links\x12Y\n" +
+	"\fevent_proofs\x18\x04 \x03(\v2+.tammy.v1.AuditSigningKeyRotationEventProofB\t\xbaH\x06\x92\x01\x03\x10\xff\aR\veventProofs\"\xd3\x02\n" +
+	"\x17AuditCommitmentOpenings\x12A\n" +
+	"\x18hidden_metadata_blinding\x18\x01 \x01(\fB\a\xbaH\x04z\x02h R\x16hiddenMetadataBlinding\x12C\n" +
+	"\x19payload_identity_blinding\x18\x02 \x01(\fB\a\xbaH\x04z\x02h R\x17payloadIdentityBlinding\x127\n" +
+	"\x13event_type_blinding\x18\x03 \x01(\fB\a\xbaH\x04z\x02h R\x11eventTypeBlinding\x129\n" +
+	"\x14occurred_at_blinding\x18\x04 \x01(\fB\a\xbaH\x04z\x02h R\x12occurredAtBlinding\x12<\n" +
+	"\x16actor_user_id_blinding\x18\x05 \x01(\fB\a\xbaH\x04z\x02h R\x13actorUserIdBlinding\"\xc6\f\n" +
 	"\n" +
 	"AuditEvent\x12\\\n" +
 	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12o\n" +
@@ -1261,7 +2278,23 @@ const file_tammy_v1_audit_proto_rawDesc = "" +
 	" \x01(\fB\a\xbaH\x04z\x02h R\x18payloadSchemaFingerprint\x12,\n" +
 	"\rprevious_hash\x18\v \x01(\fB\a\xbaH\x04z\x02h R\fpreviousHash\x12&\n" +
 	"\n" +
-	"event_hash\x18\f \x01(\fB\a\xbaH\x04z\x02h R\teventHash\"\xc8\x03\n" +
+	"event_hash\x18\f \x01(\fB\a\xbaH\x04z\x02h R\teventHash\x12z\n" +
+	"\x0forganisation_id\x18\r \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$H\x00R\x0eorganisationId\x88\x01\x01\x12p\n" +
+	"\n" +
+	"command_id\x18\x0e \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$H\x01R\tcommandId\x88\x01\x01\x12-\n" +
+	"\fcommand_type\x18\x0f \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\x80\x02R\vcommandType\x12z\n" +
+	"\x0fidempotency_key\x18\x10 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$H\x02R\x0eidempotencyKey\x88\x01\x01\x12L\n" +
+	"\x12affected_resources\x18\x11 \x03(\v2\x13.tammy.v1.SourceRefB\b\xbaH\x05\x92\x01\x02\x10@R\x11affectedResources\x12>\n" +
+	"\x14before_semantic_hash\x18\x12 \x01(\fB\a\xbaH\x04z\x02h H\x03R\x12beforeSemanticHash\x88\x01\x01\x12<\n" +
+	"\x13after_semantic_hash\x18\x13 \x01(\fB\a\xbaH\x04z\x02h H\x04R\x11afterSemanticHash\x88\x01\x01\x125\n" +
+	"\x06result\x18\x14 \x01(\v2\x1d.tammy.v1.AuditResultMetadataR\x06result\x12Z\n" +
+	"\x13commitment_openings\x18\x15 \x01(\v2!.tammy.v1.AuditCommitmentOpeningsB\x06\xbaH\x03\xc8\x01\x01R\x12commitmentOpeningsB\x12\n" +
+	"\x10_organisation_idB\r\n" +
+	"\v_command_idB\x12\n" +
+	"\x10_idempotency_keyB\x17\n" +
+	"\x15_before_semantic_hashB\x16\n" +
+	"\x14_after_semantic_hash\"\xc8\x03\n" +
 	"\x10AuditEventFilter\x12E\n" +
 	"\vevent_types\x18\x01 \x03(\x0e2\x18.tammy.v1.AuditEventTypeB\n" +
 	"\xbaH\a\x92\x01\x04\x10@\x18\x01R\n" +
@@ -1372,86 +2405,106 @@ func file_tammy_v1_audit_proto_rawDescGZIP() []byte {
 }
 
 var file_tammy_v1_audit_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_tammy_v1_audit_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_tammy_v1_audit_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_tammy_v1_audit_proto_goTypes = []any{
-	(AuditExportJobState)(0),            // 0: tammy.v1.AuditExportJobState
-	(AuditChainIntegrity)(0),            // 1: tammy.v1.AuditChainIntegrity
-	(*AuditEvent)(nil),                  // 2: tammy.v1.AuditEvent
-	(*AuditEventFilter)(nil),            // 3: tammy.v1.AuditEventFilter
-	(*AuditExportJob)(nil),              // 4: tammy.v1.AuditExportJob
-	(*VerifyChainRequest)(nil),          // 5: tammy.v1.VerifyChainRequest
-	(*VerifyChainResponse)(nil),         // 6: tammy.v1.VerifyChainResponse
-	(*ListAuditEventsRequest)(nil),      // 7: tammy.v1.ListAuditEventsRequest
-	(*ListAuditEventsResponse)(nil),     // 8: tammy.v1.ListAuditEventsResponse
-	(*ExportEvidenceRequest)(nil),       // 9: tammy.v1.ExportEvidenceRequest
-	(*ExportEvidenceResponse)(nil),      // 10: tammy.v1.ExportEvidenceResponse
-	(*CancelAuditExportRequest)(nil),    // 11: tammy.v1.CancelAuditExportRequest
-	(*CancelAuditExportResponse)(nil),   // 12: tammy.v1.CancelAuditExportResponse
-	(*GetAuditExportJobRequest)(nil),    // 13: tammy.v1.GetAuditExportJobRequest
-	(*GetAuditExportJobResponse)(nil),   // 14: tammy.v1.GetAuditExportJobResponse
-	(*ListAuditExportJobsRequest)(nil),  // 15: tammy.v1.ListAuditExportJobsRequest
-	(*ListAuditExportJobsResponse)(nil), // 16: tammy.v1.ListAuditExportJobsResponse
-	(AuditEventType)(0),                 // 17: tammy.v1.AuditEventType
-	(*timestamppb.Timestamp)(nil),       // 18: google.protobuf.Timestamp
-	(*AuthenticationContext)(nil),       // 19: tammy.v1.AuthenticationContext
-	(*SourceRef)(nil),                   // 20: tammy.v1.SourceRef
-	(*AuditEventPayload)(nil),           // 21: tammy.v1.AuditEventPayload
-	(*JobProgress)(nil),                 // 22: tammy.v1.JobProgress
-	(*PageRequest)(nil),                 // 23: tammy.v1.PageRequest
-	(*PageInfo)(nil),                    // 24: tammy.v1.PageInfo
-	(*CommandContext)(nil),              // 25: tammy.v1.CommandContext
-	(*ApprovedFileRef)(nil),             // 26: tammy.v1.ApprovedFileRef
+	(AuditExportJobState)(0),                  // 0: tammy.v1.AuditExportJobState
+	(AuditChainIntegrity)(0),                  // 1: tammy.v1.AuditChainIntegrity
+	(*AuditMirrorBaseline)(nil),               // 2: tammy.v1.AuditMirrorBaseline
+	(*AuditResultMetadata)(nil),               // 3: tammy.v1.AuditResultMetadata
+	(*AuditExportObject)(nil),                 // 4: tammy.v1.AuditExportObject
+	(*AuditExportManifest)(nil),               // 5: tammy.v1.AuditExportManifest
+	(*AuditSigningPublicKey)(nil),             // 6: tammy.v1.AuditSigningPublicKey
+	(*AuditSigningKeyRotationLink)(nil),       // 7: tammy.v1.AuditSigningKeyRotationLink
+	(*AuditSigningKeyRotationEventProof)(nil), // 8: tammy.v1.AuditSigningKeyRotationEventProof
+	(*AuditSigningKeyChain)(nil),              // 9: tammy.v1.AuditSigningKeyChain
+	(*AuditCommitmentOpenings)(nil),           // 10: tammy.v1.AuditCommitmentOpenings
+	(*AuditEvent)(nil),                        // 11: tammy.v1.AuditEvent
+	(*AuditEventFilter)(nil),                  // 12: tammy.v1.AuditEventFilter
+	(*AuditExportJob)(nil),                    // 13: tammy.v1.AuditExportJob
+	(*VerifyChainRequest)(nil),                // 14: tammy.v1.VerifyChainRequest
+	(*VerifyChainResponse)(nil),               // 15: tammy.v1.VerifyChainResponse
+	(*ListAuditEventsRequest)(nil),            // 16: tammy.v1.ListAuditEventsRequest
+	(*ListAuditEventsResponse)(nil),           // 17: tammy.v1.ListAuditEventsResponse
+	(*ExportEvidenceRequest)(nil),             // 18: tammy.v1.ExportEvidenceRequest
+	(*ExportEvidenceResponse)(nil),            // 19: tammy.v1.ExportEvidenceResponse
+	(*CancelAuditExportRequest)(nil),          // 20: tammy.v1.CancelAuditExportRequest
+	(*CancelAuditExportResponse)(nil),         // 21: tammy.v1.CancelAuditExportResponse
+	(*GetAuditExportJobRequest)(nil),          // 22: tammy.v1.GetAuditExportJobRequest
+	(*GetAuditExportJobResponse)(nil),         // 23: tammy.v1.GetAuditExportJobResponse
+	(*ListAuditExportJobsRequest)(nil),        // 24: tammy.v1.ListAuditExportJobsRequest
+	(*ListAuditExportJobsResponse)(nil),       // 25: tammy.v1.ListAuditExportJobsResponse
+	(*timestamppb.Timestamp)(nil),             // 26: google.protobuf.Timestamp
+	(AuditEventType)(0),                       // 27: tammy.v1.AuditEventType
+	(*AuthenticationContext)(nil),             // 28: tammy.v1.AuthenticationContext
+	(*SourceRef)(nil),                         // 29: tammy.v1.SourceRef
+	(*AuditEventPayload)(nil),                 // 30: tammy.v1.AuditEventPayload
+	(*JobProgress)(nil),                       // 31: tammy.v1.JobProgress
+	(*PageRequest)(nil),                       // 32: tammy.v1.PageRequest
+	(*PageInfo)(nil),                          // 33: tammy.v1.PageInfo
+	(*CommandContext)(nil),                    // 34: tammy.v1.CommandContext
+	(*ApprovedFileRef)(nil),                   // 35: tammy.v1.ApprovedFileRef
 }
 var file_tammy_v1_audit_proto_depIdxs = []int32{
-	17, // 0: tammy.v1.AuditEvent.type:type_name -> tammy.v1.AuditEventType
-	18, // 1: tammy.v1.AuditEvent.occurred_at:type_name -> google.protobuf.Timestamp
-	19, // 2: tammy.v1.AuditEvent.actor:type_name -> tammy.v1.AuthenticationContext
-	20, // 3: tammy.v1.AuditEvent.source:type_name -> tammy.v1.SourceRef
-	21, // 4: tammy.v1.AuditEvent.payload:type_name -> tammy.v1.AuditEventPayload
-	17, // 5: tammy.v1.AuditEventFilter.event_types:type_name -> tammy.v1.AuditEventType
-	18, // 6: tammy.v1.AuditEventFilter.from_time:type_name -> google.protobuf.Timestamp
-	18, // 7: tammy.v1.AuditEventFilter.to_time:type_name -> google.protobuf.Timestamp
-	0,  // 8: tammy.v1.AuditExportJob.state:type_name -> tammy.v1.AuditExportJobState
-	22, // 9: tammy.v1.AuditExportJob.progress:type_name -> tammy.v1.JobProgress
-	18, // 10: tammy.v1.AuditExportJob.created_at:type_name -> google.protobuf.Timestamp
-	18, // 11: tammy.v1.AuditExportJob.completed_at:type_name -> google.protobuf.Timestamp
-	19, // 12: tammy.v1.VerifyChainRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	1,  // 13: tammy.v1.VerifyChainResponse.integrity:type_name -> tammy.v1.AuditChainIntegrity
-	19, // 14: tammy.v1.ListAuditEventsRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	3,  // 15: tammy.v1.ListAuditEventsRequest.filter:type_name -> tammy.v1.AuditEventFilter
-	23, // 16: tammy.v1.ListAuditEventsRequest.page:type_name -> tammy.v1.PageRequest
-	2,  // 17: tammy.v1.ListAuditEventsResponse.events:type_name -> tammy.v1.AuditEvent
-	24, // 18: tammy.v1.ListAuditEventsResponse.page:type_name -> tammy.v1.PageInfo
-	25, // 19: tammy.v1.ExportEvidenceRequest.command_context:type_name -> tammy.v1.CommandContext
-	3,  // 20: tammy.v1.ExportEvidenceRequest.filter:type_name -> tammy.v1.AuditEventFilter
-	26, // 21: tammy.v1.ExportEvidenceRequest.destination:type_name -> tammy.v1.ApprovedFileRef
-	4,  // 22: tammy.v1.ExportEvidenceResponse.job:type_name -> tammy.v1.AuditExportJob
-	25, // 23: tammy.v1.CancelAuditExportRequest.command_context:type_name -> tammy.v1.CommandContext
-	4,  // 24: tammy.v1.CancelAuditExportResponse.job:type_name -> tammy.v1.AuditExportJob
-	19, // 25: tammy.v1.GetAuditExportJobRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	4,  // 26: tammy.v1.GetAuditExportJobResponse.job:type_name -> tammy.v1.AuditExportJob
-	19, // 27: tammy.v1.ListAuditExportJobsRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	23, // 28: tammy.v1.ListAuditExportJobsRequest.page:type_name -> tammy.v1.PageRequest
-	0,  // 29: tammy.v1.ListAuditExportJobsRequest.state:type_name -> tammy.v1.AuditExportJobState
-	4,  // 30: tammy.v1.ListAuditExportJobsResponse.jobs:type_name -> tammy.v1.AuditExportJob
-	24, // 31: tammy.v1.ListAuditExportJobsResponse.page:type_name -> tammy.v1.PageInfo
-	5,  // 32: tammy.v1.AuditService.VerifyChain:input_type -> tammy.v1.VerifyChainRequest
-	7,  // 33: tammy.v1.AuditService.ListAuditEvents:input_type -> tammy.v1.ListAuditEventsRequest
-	9,  // 34: tammy.v1.AuditService.ExportEvidence:input_type -> tammy.v1.ExportEvidenceRequest
-	11, // 35: tammy.v1.AuditService.CancelAuditExport:input_type -> tammy.v1.CancelAuditExportRequest
-	13, // 36: tammy.v1.AuditService.GetAuditExportJob:input_type -> tammy.v1.GetAuditExportJobRequest
-	15, // 37: tammy.v1.AuditService.ListAuditExportJobs:input_type -> tammy.v1.ListAuditExportJobsRequest
-	6,  // 38: tammy.v1.AuditService.VerifyChain:output_type -> tammy.v1.VerifyChainResponse
-	8,  // 39: tammy.v1.AuditService.ListAuditEvents:output_type -> tammy.v1.ListAuditEventsResponse
-	10, // 40: tammy.v1.AuditService.ExportEvidence:output_type -> tammy.v1.ExportEvidenceResponse
-	12, // 41: tammy.v1.AuditService.CancelAuditExport:output_type -> tammy.v1.CancelAuditExportResponse
-	14, // 42: tammy.v1.AuditService.GetAuditExportJob:output_type -> tammy.v1.GetAuditExportJobResponse
-	16, // 43: tammy.v1.AuditService.ListAuditExportJobs:output_type -> tammy.v1.ListAuditExportJobsResponse
-	38, // [38:44] is the sub-list for method output_type
-	32, // [32:38] is the sub-list for method input_type
-	32, // [32:32] is the sub-list for extension type_name
-	32, // [32:32] is the sub-list for extension extendee
-	0,  // [0:32] is the sub-list for field type_name
+	26, // 0: tammy.v1.AuditExportManifest.created_at:type_name -> google.protobuf.Timestamp
+	4,  // 1: tammy.v1.AuditExportManifest.objects:type_name -> tammy.v1.AuditExportObject
+	26, // 2: tammy.v1.AuditSigningPublicKey.created_at:type_name -> google.protobuf.Timestamp
+	26, // 3: tammy.v1.AuditSigningPublicKey.retired_at:type_name -> google.protobuf.Timestamp
+	26, // 4: tammy.v1.AuditSigningKeyRotationLink.rotated_at:type_name -> google.protobuf.Timestamp
+	6,  // 5: tammy.v1.AuditSigningKeyChain.keys:type_name -> tammy.v1.AuditSigningPublicKey
+	7,  // 6: tammy.v1.AuditSigningKeyChain.links:type_name -> tammy.v1.AuditSigningKeyRotationLink
+	8,  // 7: tammy.v1.AuditSigningKeyChain.event_proofs:type_name -> tammy.v1.AuditSigningKeyRotationEventProof
+	27, // 8: tammy.v1.AuditEvent.type:type_name -> tammy.v1.AuditEventType
+	26, // 9: tammy.v1.AuditEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	28, // 10: tammy.v1.AuditEvent.actor:type_name -> tammy.v1.AuthenticationContext
+	29, // 11: tammy.v1.AuditEvent.source:type_name -> tammy.v1.SourceRef
+	30, // 12: tammy.v1.AuditEvent.payload:type_name -> tammy.v1.AuditEventPayload
+	29, // 13: tammy.v1.AuditEvent.affected_resources:type_name -> tammy.v1.SourceRef
+	3,  // 14: tammy.v1.AuditEvent.result:type_name -> tammy.v1.AuditResultMetadata
+	10, // 15: tammy.v1.AuditEvent.commitment_openings:type_name -> tammy.v1.AuditCommitmentOpenings
+	27, // 16: tammy.v1.AuditEventFilter.event_types:type_name -> tammy.v1.AuditEventType
+	26, // 17: tammy.v1.AuditEventFilter.from_time:type_name -> google.protobuf.Timestamp
+	26, // 18: tammy.v1.AuditEventFilter.to_time:type_name -> google.protobuf.Timestamp
+	0,  // 19: tammy.v1.AuditExportJob.state:type_name -> tammy.v1.AuditExportJobState
+	31, // 20: tammy.v1.AuditExportJob.progress:type_name -> tammy.v1.JobProgress
+	26, // 21: tammy.v1.AuditExportJob.created_at:type_name -> google.protobuf.Timestamp
+	26, // 22: tammy.v1.AuditExportJob.completed_at:type_name -> google.protobuf.Timestamp
+	28, // 23: tammy.v1.VerifyChainRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	1,  // 24: tammy.v1.VerifyChainResponse.integrity:type_name -> tammy.v1.AuditChainIntegrity
+	28, // 25: tammy.v1.ListAuditEventsRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	12, // 26: tammy.v1.ListAuditEventsRequest.filter:type_name -> tammy.v1.AuditEventFilter
+	32, // 27: tammy.v1.ListAuditEventsRequest.page:type_name -> tammy.v1.PageRequest
+	11, // 28: tammy.v1.ListAuditEventsResponse.events:type_name -> tammy.v1.AuditEvent
+	33, // 29: tammy.v1.ListAuditEventsResponse.page:type_name -> tammy.v1.PageInfo
+	34, // 30: tammy.v1.ExportEvidenceRequest.command_context:type_name -> tammy.v1.CommandContext
+	12, // 31: tammy.v1.ExportEvidenceRequest.filter:type_name -> tammy.v1.AuditEventFilter
+	35, // 32: tammy.v1.ExportEvidenceRequest.destination:type_name -> tammy.v1.ApprovedFileRef
+	13, // 33: tammy.v1.ExportEvidenceResponse.job:type_name -> tammy.v1.AuditExportJob
+	34, // 34: tammy.v1.CancelAuditExportRequest.command_context:type_name -> tammy.v1.CommandContext
+	13, // 35: tammy.v1.CancelAuditExportResponse.job:type_name -> tammy.v1.AuditExportJob
+	28, // 36: tammy.v1.GetAuditExportJobRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	13, // 37: tammy.v1.GetAuditExportJobResponse.job:type_name -> tammy.v1.AuditExportJob
+	28, // 38: tammy.v1.ListAuditExportJobsRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	32, // 39: tammy.v1.ListAuditExportJobsRequest.page:type_name -> tammy.v1.PageRequest
+	0,  // 40: tammy.v1.ListAuditExportJobsRequest.state:type_name -> tammy.v1.AuditExportJobState
+	13, // 41: tammy.v1.ListAuditExportJobsResponse.jobs:type_name -> tammy.v1.AuditExportJob
+	33, // 42: tammy.v1.ListAuditExportJobsResponse.page:type_name -> tammy.v1.PageInfo
+	14, // 43: tammy.v1.AuditService.VerifyChain:input_type -> tammy.v1.VerifyChainRequest
+	16, // 44: tammy.v1.AuditService.ListAuditEvents:input_type -> tammy.v1.ListAuditEventsRequest
+	18, // 45: tammy.v1.AuditService.ExportEvidence:input_type -> tammy.v1.ExportEvidenceRequest
+	20, // 46: tammy.v1.AuditService.CancelAuditExport:input_type -> tammy.v1.CancelAuditExportRequest
+	22, // 47: tammy.v1.AuditService.GetAuditExportJob:input_type -> tammy.v1.GetAuditExportJobRequest
+	24, // 48: tammy.v1.AuditService.ListAuditExportJobs:input_type -> tammy.v1.ListAuditExportJobsRequest
+	15, // 49: tammy.v1.AuditService.VerifyChain:output_type -> tammy.v1.VerifyChainResponse
+	17, // 50: tammy.v1.AuditService.ListAuditEvents:output_type -> tammy.v1.ListAuditEventsResponse
+	19, // 51: tammy.v1.AuditService.ExportEvidence:output_type -> tammy.v1.ExportEvidenceResponse
+	21, // 52: tammy.v1.AuditService.CancelAuditExport:output_type -> tammy.v1.CancelAuditExportResponse
+	23, // 53: tammy.v1.AuditService.GetAuditExportJob:output_type -> tammy.v1.GetAuditExportJobResponse
+	25, // 54: tammy.v1.AuditService.ListAuditExportJobs:output_type -> tammy.v1.ListAuditExportJobsResponse
+	49, // [49:55] is the sub-list for method output_type
+	43, // [43:49] is the sub-list for method input_type
+	43, // [43:43] is the sub-list for extension type_name
+	43, // [43:43] is the sub-list for extension extendee
+	0,  // [0:43] is the sub-list for field type_name
 }
 
 func init() { file_tammy_v1_audit_proto_init() }
@@ -1461,18 +2514,19 @@ func file_tammy_v1_audit_proto_init() {
 	}
 	file_tammy_v1_common_proto_init()
 	file_tammy_v1_events_proto_init()
-	file_tammy_v1_audit_proto_msgTypes[1].OneofWrappers = []any{}
-	file_tammy_v1_audit_proto_msgTypes[2].OneofWrappers = []any{}
-	file_tammy_v1_audit_proto_msgTypes[3].OneofWrappers = []any{}
-	file_tammy_v1_audit_proto_msgTypes[4].OneofWrappers = []any{}
+	file_tammy_v1_audit_proto_msgTypes[9].OneofWrappers = []any{}
+	file_tammy_v1_audit_proto_msgTypes[10].OneofWrappers = []any{}
+	file_tammy_v1_audit_proto_msgTypes[11].OneofWrappers = []any{}
+	file_tammy_v1_audit_proto_msgTypes[12].OneofWrappers = []any{}
 	file_tammy_v1_audit_proto_msgTypes[13].OneofWrappers = []any{}
+	file_tammy_v1_audit_proto_msgTypes[22].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_tammy_v1_audit_proto_rawDesc), len(file_tammy_v1_audit_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   15,
+			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

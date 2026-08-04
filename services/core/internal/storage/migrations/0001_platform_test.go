@@ -11,10 +11,10 @@ func TestEmbeddedMigrationsAreOrderedAndContentAuthenticated(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(steps) != 2 {
-		t.Fatalf("migration count = %d, want 2", len(steps))
+	if len(steps) != 3 {
+		t.Fatalf("migration count = %d, want 3", len(steps))
 	}
-	wantNames := []string{"0001_platform.sql", "0002_ledger.sql"}
+	wantNames := []string{"0001_platform.sql", "0002_ledger.sql", "0003_audit_idempotency.sql"}
 	for index, step := range steps {
 		wantVersion := uint32(index + 1)
 		if step.Version != wantVersion || step.Name != wantNames[index] {
@@ -46,7 +46,7 @@ func TestPrefixReturnsAnIndependentOrderedCopy(t *testing.T) {
 	if again[0].Name != "0001_platform.sql" {
 		t.Fatalf("embedded migration was mutable: %#v", again[0])
 	}
-	for _, target := range []uint32{0, 3} {
+	for _, target := range []uint32{0, 4} {
 		if _, err := Prefix(target); err == nil {
 			t.Fatalf("Prefix(%d) succeeded", target)
 		}

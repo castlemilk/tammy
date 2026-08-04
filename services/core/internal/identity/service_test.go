@@ -36,7 +36,15 @@ type recordingIdentityAudit struct {
 
 type testWorkspaceSessionLifecycle struct {
 	within    func(context.Context, workspace.MutationExecutor) error
+	audited   func(context.Context, workspace.MutationExecutor) error
 	committed func(context.Context) error
+}
+
+func (lifecycle *testWorkspaceSessionLifecycle) SessionStartedAuditedWithin(ctx context.Context, executor workspace.MutationExecutor) error {
+	if lifecycle.audited != nil {
+		return lifecycle.audited(ctx, executor)
+	}
+	return nil
 }
 
 func (lifecycle *testWorkspaceSessionLifecycle) SessionStartedWithin(ctx context.Context, executor workspace.MutationExecutor, _ string) error {
@@ -158,17 +166,25 @@ func TestSignInPersistsOneSessionAuditAndRunsPostCommitLifecycle(t *testing.T) {
 		t.Fatal(err)
 	}
 	withinCalls := 0
+	auditedCalls := 0
 	committedCalls := 0
 	lifecycle := harness.config.SessionLifecycle.(*testWorkspaceSessionLifecycle)
 	lifecycle.within = func(context.Context, workspace.MutationExecutor) error { withinCalls++; return nil }
+	lifecycle.audited = func(context.Context, workspace.MutationExecutor) error {
+		if harness.audit.counts["session_started"] != 1 {
+			return errors.New("session audit was not persisted before lifecycle finalization")
+		}
+		auditedCalls++
+		return nil
+	}
 	lifecycle.committed = func(context.Context) error { committedCalls++; return nil }
 	response, err := harness.service.SignIn(ctx, connect.NewRequest(&tammyv1.SignInRequest{Username: admin.Username, Password: secret("admin-password-long-enough")}))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if response.Msg.Session.State != tammyv1.SessionState_SESSION_STATE_ACTIVE || withinCalls != 1 || committedCalls != 1 ||
+	if response.Msg.Session.State != tammyv1.SessionState_SESSION_STATE_ACTIVE || withinCalls != 1 || auditedCalls != 1 || committedCalls != 1 ||
 		harness.audit.counts["session_started"] != 1 {
-		t.Fatalf("session lifecycle: state=%v within=%d committed=%d audit=%d", response.Msg.Session.State, withinCalls, committedCalls,
+		t.Fatalf("session lifecycle: state=%v within=%d audited=%d committed=%d audit=%d", response.Msg.Session.State, withinCalls, auditedCalls, committedCalls,
 			harness.audit.counts["session_started"])
 	}
 }

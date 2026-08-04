@@ -57,6 +57,9 @@ enum AuditEventType {
 
   // AUDIT_EVENT_TYPE_EVIDENCE_EXPORT_CHANGED records persisted signed export changes.
   AUDIT_EVENT_TYPE_EVIDENCE_EXPORT_CHANGED = 14;
+
+  // AUDIT_EVENT_TYPE_SIGNING_KEY_ROTATED records an authenticated workspace signing-key rotation.
+  AUDIT_EVENT_TYPE_SIGNING_KEY_ROTATED = 15;
 }
 
 // WorkspaceStateChangedEvent is the typed payload for secure workspace state changes.
@@ -285,6 +288,27 @@ message EvidenceExportChangedEvent {
   optional bytes destination_hash = 4 [(buf.validate.field).bytes.len = 32];
 }
 
+// SigningKeyRotatedEvent commits the audit chain to one exact fully signed rotation link.
+message SigningKeyRotatedEvent {
+  // workspace_id identifies the workspace-wide signing lineage.
+  string workspace_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // generation identifies the audit generation containing this rotation event.
+  uint64 generation = 2 [(buf.validate.field).uint64.gte = 1];
+
+  // successor_epoch is the newly active workspace-wide key epoch.
+  uint64 successor_epoch = 3 [(buf.validate.field).uint64.gte = 2];
+
+  // predecessor_key_id identifies the retired key.
+  string predecessor_key_id = 4 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // successor_key_id identifies the newly active key.
+  string successor_key_id = 5 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // rotation_link_sha256 is SHA-256 of the exact deterministic fully signed link protobuf.
+  bytes rotation_link_sha256 = 6 [(buf.validate.field).bytes.len = 32];
+}
+
 // AuditEventPayload is a closed typed union; google.protobuf.Any is intentionally prohibited.
 message AuditEventPayload {
   // payload selects exactly one typed event body matching AuditEventType.
@@ -330,5 +354,8 @@ message AuditEventPayload {
 
     // evidence_export_changed records persisted signed export changes.
     EvidenceExportChangedEvent evidence_export_changed = 14;
+
+    // signing_key_rotated records one authenticated workspace signing-key rotation.
+    SigningKeyRotatedEvent signing_key_rotated = 15;
   }
 }

@@ -68,17 +68,21 @@ func (repository *DatabaseRepository) Mutate(ctx context.Context, work func(cont
 			_ = transaction.Rollback()
 		}
 	}()
-	state, err := repository.LoadFrom(ctx, transaction)
+	lifecycle := workspace.NewMutationLifecycle(transaction)
+	if lifecycle == nil {
+		return ErrRepositoryIntegrity
+	}
+	state, err := repository.LoadFrom(ctx, lifecycle)
 	if err != nil {
 		return err
 	}
-	if err := work(ctx, transaction, &state); err != nil {
+	if err := work(ctx, lifecycle, &state); err != nil {
 		if isRepositoryBusy(err) {
 			return ErrRepositoryConflict
 		}
 		return err
 	}
-	if err := repository.SaveTo(ctx, transaction, state); err != nil {
+	if err := repository.SaveTo(ctx, lifecycle, state); err != nil {
 		return err
 	}
 	if err := transaction.Commit(); err != nil {
@@ -88,7 +92,7 @@ func (repository *DatabaseRepository) Mutate(ctx context.Context, work func(cont
 		return err
 	}
 	committed = true
-	return nil
+	return lifecycle.Publish(ctx)
 }
 
 func (repository *DatabaseRepository) LoadFrom(ctx context.Context, executor workspace.MutationExecutor) (repositoryState, error) {
