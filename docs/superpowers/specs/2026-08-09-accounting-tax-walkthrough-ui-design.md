@@ -1,6 +1,6 @@
 # Tammy Accounting and Tax Walkthrough UI Design
 
-**Status:** Approved interaction design; awaiting independent specification review  
+**Status:** Approved interaction design and independent specification review  
 **Date:** 2026-08-09  
 **Scope:** First complete packaged-desktop accounting walkthrough  
 **Normative parent:** [Core Business Accounting Suite Design](./2026-08-02-core-business-accounting-suite-design.md)
