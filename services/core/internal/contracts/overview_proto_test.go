@@ -110,7 +110,7 @@ func TestOverviewDescriptorsExposeBoundedAttentionSummary(t *testing.T) {
 	}
 
 	revisions := requireMessage(t, "tammy.v1.AttentionRevisionVector")
-	assertExactFields(t, revisions, map[protoreflect.Name]protoreflect.Kind{
+	revisionFields := map[protoreflect.Name]protoreflect.Kind{
 		"financial_revision":            protoreflect.Uint64Kind,
 		"ledger_revision":               protoreflect.Uint64Kind,
 		"settlement_revision":           protoreflect.Uint64Kind,
@@ -118,7 +118,11 @@ func TestOverviewDescriptorsExposeBoundedAttentionSummary(t *testing.T) {
 		"tax_source_revision":           protoreflect.Uint64Kind,
 		"organisation_profile_revision": protoreflect.Uint64Kind,
 		"rule_bundle_revision":          protoreflect.Uint64Kind,
-	})
+	}
+	assertExactFields(t, revisions, revisionFields)
+	for name := range revisionFields {
+		assertPositiveRevision(t, revisions.Fields().ByName(name))
+	}
 
 	assertEnumValues(t, "tammy.v1.AttentionItemKind", []protoreflect.Name{
 		"ATTENTION_ITEM_KIND_UNSPECIFIED",
@@ -290,6 +294,14 @@ func assertBoundedCount(t *testing.T, field protoreflect.FieldDescriptor, max ui
 	rules := fieldRules(t, field).GetUint32()
 	if rules == nil || rules.GetLte() != max {
 		t.Fatalf("%s upper bound = %v, want %d", field.FullName(), rules, max)
+	}
+}
+
+func assertPositiveRevision(t *testing.T, field protoreflect.FieldDescriptor) {
+	t.Helper()
+	rules := fieldRules(t, field).GetUint64()
+	if rules == nil || rules.GetGte() != 1 {
+		t.Fatalf("%s lower bound = %v, want gte 1", field.FullName(), rules)
 	}
 }
 

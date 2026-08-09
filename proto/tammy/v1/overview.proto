@@ -64,25 +64,25 @@ message AttentionItem {
 // AttentionRevisionVector pins every financial module read by one verified summary snapshot.
 message AttentionRevisionVector {
   // financial_revision is the monotonic revision for the complete financial snapshot.
-  uint64 financial_revision = 1;
+  uint64 financial_revision = 1 [(buf.validate.field).uint64.gte = 1];
 
   // ledger_revision pins accounting ledger inputs.
-  uint64 ledger_revision = 2;
+  uint64 ledger_revision = 2 [(buf.validate.field).uint64.gte = 1];
 
   // settlement_revision pins payment and allocation inputs.
-  uint64 settlement_revision = 3;
+  uint64 settlement_revision = 3 [(buf.validate.field).uint64.gte = 1];
 
   // banking_revision pins statement, match, and reconciliation inputs.
-  uint64 banking_revision = 4;
+  uint64 banking_revision = 4 [(buf.validate.field).uint64.gte = 1];
 
   // tax_source_revision pins GST source facts and BAS inputs.
-  uint64 tax_source_revision = 5;
+  uint64 tax_source_revision = 5 [(buf.validate.field).uint64.gte = 1];
 
   // organisation_profile_revision pins reporting identity and GST configuration.
-  uint64 organisation_profile_revision = 6;
+  uint64 organisation_profile_revision = 6 [(buf.validate.field).uint64.gte = 1];
 
   // rule_bundle_revision pins the retained accounting and tax rules.
-  uint64 rule_bundle_revision = 7;
+  uint64 rule_bundle_revision = 7 [(buf.validate.field).uint64.gte = 1];
 }
 
 // GetAttentionSummaryRequest requests one read-only organisation snapshot.

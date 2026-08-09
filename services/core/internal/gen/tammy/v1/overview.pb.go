@@ -568,15 +568,15 @@ const file_tammy_v1_overview_proto_rawDesc = "" +
 	"\x04kind\x18\x01 \x01(\x0e2\x1b.tammy.v1.AttentionItemKindB\b\xbaH\x05\x82\x01\x02\x10\x01R\x04kind\x127\n" +
 	"\bresource\x18\x02 \x01(\v2\x13.tammy.v1.SourceRefB\x06\xbaH\x03\xc8\x01\x01R\bresource\x12 \n" +
 	"\x05label\x18\x03 \x01(\tB\n" +
-	"\xbaH\ar\x05\x10\x01\x18\xa0\x01R\x05label\"\xf3\x02\n" +
-	"\x17AttentionRevisionVector\x12-\n" +
-	"\x12financial_revision\x18\x01 \x01(\x04R\x11financialRevision\x12'\n" +
-	"\x0fledger_revision\x18\x02 \x01(\x04R\x0eledgerRevision\x12/\n" +
-	"\x13settlement_revision\x18\x03 \x01(\x04R\x12settlementRevision\x12)\n" +
-	"\x10banking_revision\x18\x04 \x01(\x04R\x0fbankingRevision\x12.\n" +
-	"\x13tax_source_revision\x18\x05 \x01(\x04R\x11taxSourceRevision\x12B\n" +
-	"\x1dorganisation_profile_revision\x18\x06 \x01(\x04R\x1borganisationProfileRevision\x120\n" +
-	"\x14rule_bundle_revision\x18\a \x01(\x04R\x12ruleBundleRevision\"\xed\x02\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xa0\x01R\x05label\"\xb2\x03\n" +
+	"\x17AttentionRevisionVector\x126\n" +
+	"\x12financial_revision\x18\x01 \x01(\x04B\a\xbaH\x042\x02(\x01R\x11financialRevision\x120\n" +
+	"\x0fledger_revision\x18\x02 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0eledgerRevision\x128\n" +
+	"\x13settlement_revision\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\x12settlementRevision\x122\n" +
+	"\x10banking_revision\x18\x04 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fbankingRevision\x127\n" +
+	"\x13tax_source_revision\x18\x05 \x01(\x04B\a\xbaH\x042\x02(\x01R\x11taxSourceRevision\x12K\n" +
+	"\x1dorganisation_profile_revision\x18\x06 \x01(\x04B\a\xbaH\x042\x02(\x01R\x1borganisationProfileRevision\x129\n" +
+	"\x14rule_bundle_revision\x18\a \x01(\x04B\a\xbaH\x042\x02(\x01R\x12ruleBundleRevision\"\xed\x02\n" +
 	"\x1aGetAttentionSummaryRequest\x12O\n" +
 	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12u\n" +
 	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x129\n" +
