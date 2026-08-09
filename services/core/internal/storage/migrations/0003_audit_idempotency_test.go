@@ -10,8 +10,8 @@ func TestAuditIdempotencyMigrationIsForwardOnlyAndPreservesPredecessors(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(steps) != 3 {
-		t.Fatalf("migration count = %d, want 3", len(steps))
+	if len(steps) != 4 {
+		t.Fatalf("migration count = %d, want 4", len(steps))
 	}
 	if steps[0].SHA256 != "a3643ab3c6f9d162972beccc41ba75569f66722bb5f8f33e2bff136f9345f4fc" {
 		t.Fatalf("0001 checksum changed: %s", steps[0].SHA256)

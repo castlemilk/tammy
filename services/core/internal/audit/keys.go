@@ -60,6 +60,26 @@ type SigningKeyRecord struct {
 	RetiredAt           *time.Time
 }
 
+// SigningLineageRootFingerprint returns the domain-separated identity of the
+// authenticated root signing key. Backup and restore share this framing so an
+// archive cannot assert an unrelated root or reinterpret another digest.
+func SigningLineageRootFingerprint(workspaceID, keyID string, publicKey ed25519.PublicKey) ([sha256.Size]byte, error) {
+	if workspaceID == "" || keyID == "" || len(publicKey) != ed25519.PublicKeySize {
+		return [sha256.Size]byte{}, ErrSigningKey
+	}
+	digest := sha256.New()
+	_, _ = digest.Write([]byte("tammy.audit.signing-lineage-root.v1\x00"))
+	for _, value := range [][]byte{[]byte(workspaceID), []byte(keyID), publicKey} {
+		var length [4]byte
+		binary.BigEndian.PutUint32(length[:], uint32(len(value)))
+		_, _ = digest.Write(length[:])
+		_, _ = digest.Write(value)
+	}
+	var result [sha256.Size]byte
+	copy(result[:], digest.Sum(nil))
+	return result, nil
+}
+
 // SigningKeyState is the workspace-wide compare-and-swap pointer into the
 // immutable signing-key lineage.
 type SigningKeyState struct {

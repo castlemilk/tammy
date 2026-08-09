@@ -19,10 +19,10 @@ type Migration struct {
 	SQL     []byte
 }
 
-//go:embed 0001_platform.sql 0002_ledger.sql 0003_audit_idempotency.sql
+//go:embed 0001_platform.sql 0002_ledger.sql 0003_audit_idempotency.sql 0004_pre_restore_archives.sql
 var migrationFiles embed.FS
 
-var orderedFiles = [...]string{"0001_platform.sql", "0002_ledger.sql", "0003_audit_idempotency.sql"}
+var orderedFiles = [...]string{"0001_platform.sql", "0002_ledger.sql", "0003_audit_idempotency.sql", "0004_pre_restore_archives.sql"}
 
 // All returns an independent copy of every embedded migration.
 func All() ([]Migration, error) {

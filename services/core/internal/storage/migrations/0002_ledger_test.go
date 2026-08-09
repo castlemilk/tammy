@@ -25,6 +25,27 @@ func TestEmbeddedSchemaDeclaresOwnedPlatformAndLedgerTables(t *testing.T) {
 	}
 	assertCreatesTables(t, string(steps[0].SQL), platformTables)
 	assertCreatesTables(t, string(steps[1].SQL), ledgerTables)
+	assertCreatesTables(t, string(steps[3].SQL), []string{"pre_restore_archives_v1", "pre_restore_archive_export_jobs_v1"})
+}
+
+func TestTask7MigrationCapsSharedJobProtobufBlobs(t *testing.T) {
+	steps, err := All()
+	if err != nil {
+		t.Fatal(err)
+	}
+	schema := strings.ToLower(string(steps[3].SQL))
+	for _, fragment := range []string{
+		"jobs_proto_size_insert", "jobs_proto_size_update", "job_checkpoints_proto_size_insert",
+		"length(new.payload_proto) not between 1 and 1048576",
+		"length(new.progress_proto) not between 1 and 1048576",
+		"length(new.result_proto) not between 1 and 1048576",
+		"length(new.checkpoint_proto) not between 1 and 1048576",
+		"length(new.checkpoint_sha256) != 64",
+	} {
+		if !strings.Contains(schema, fragment) {
+			t.Errorf("migration 4 missing shared-job bound %q", fragment)
+		}
+	}
 }
 
 func assertCreatesTables(t *testing.T, sql string, tables []string) {

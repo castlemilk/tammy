@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package tammy.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1";
+
+// PreRestoreArchiveManifest authenticates retained encrypted predecessor bytes.
+message PreRestoreArchiveManifest {
+  // format is the stable predecessor-retention discriminator.
+  string format = 1 [(buf.validate.field).string.const = "tammy-pre-restore-v1"];
+
+  // archive_id is the retained evidence UUIDv7.
+  string archive_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // source_generation is the predecessor audit generation.
+  uint64 source_generation = 3 [(buf.validate.field).uint64.gte = 1];
+
+  // created_at starts the mandatory retention period.
+  google.protobuf.Timestamp created_at = 4 [(buf.validate.field).required = true];
+
+  // deletion_eligible_at is at least twelve calendar months after creation.
+  google.protobuf.Timestamp deletion_eligible_at = 5 [(buf.validate.field).required = true];
+
+  // predecessor_sha256 commits to the exact plaintext predecessor workspace bytes.
+  bytes predecessor_sha256 = 6 [(buf.validate.field).bytes.len = 32];
+}

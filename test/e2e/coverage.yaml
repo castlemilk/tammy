@@ -551,6 +551,39 @@ rpcs:
       outcomes:
         - exact_replay
         - changed_request_conflict
+  tammy.v1.WorkspaceService.RetryPreRestoreArchiveExport:
+    stage: declared_future
+    preload: retryPreRestoreArchiveExport
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+    projections:
+      - retry_pre_restore_archive_export_result
+    routes:
+      - /restore/evidence
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+      - IDEMPOTENCY_CONFLICT
+      - INVALID_STATE_TRANSITION
+      - CURRENT_PASSWORD_INVALID
+      - FACTOR_ASSERTION_REQUIRED
+      - FACTOR_ASSERTION_STALE
+      - DESTINATION_FAILURE
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - exact_replay
+        - changed_request_conflict
   tammy.v1.WorkspaceService.GetPreRestoreArchiveExportJob:
     stage: declared_future
     preload: getPreRestoreArchiveExportJob
@@ -2190,7 +2223,17 @@ transitions:
     cases: []
     futureCases:
       - slice-1/backup-audit-contracts
+  tammy.v1.RestoreState.RESTORE_STATE_PREPARED->RESTORE_STATE_ROLLED_BACK:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
   tammy.v1.RestoreState.RESTORE_STATE_STAGED->RESTORE_STATE_SWAPPED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - slice-1/backup-audit-contracts
+  tammy.v1.RestoreState.RESTORE_STATE_STAGED->RESTORE_STATE_ROLLED_BACK:
     stage: declared_future
     cases: []
     futureCases:

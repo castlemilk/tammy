@@ -183,7 +183,15 @@
     },
     {
       "enum": "tammy.v1.RestoreState",
+      "transition": "RESTORE_STATE_PREPARED->RESTORE_STATE_ROLLED_BACK"
+    },
+    {
+      "enum": "tammy.v1.RestoreState",
       "transition": "RESTORE_STATE_PREPARED->RESTORE_STATE_STAGED"
+    },
+    {
+      "enum": "tammy.v1.RestoreState",
+      "transition": "RESTORE_STATE_STAGED->RESTORE_STATE_ROLLED_BACK"
     },
     {
       "enum": "tammy.v1.RestoreState",

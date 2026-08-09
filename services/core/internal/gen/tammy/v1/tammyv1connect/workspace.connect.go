@@ -84,6 +84,9 @@ const (
 	// WorkspaceServiceCancelPreRestoreArchiveExportProcedure is the fully-qualified name of the
 	// WorkspaceService's CancelPreRestoreArchiveExport RPC.
 	WorkspaceServiceCancelPreRestoreArchiveExportProcedure = "/tammy.v1.WorkspaceService/CancelPreRestoreArchiveExport"
+	// WorkspaceServiceRetryPreRestoreArchiveExportProcedure is the fully-qualified name of the
+	// WorkspaceService's RetryPreRestoreArchiveExport RPC.
+	WorkspaceServiceRetryPreRestoreArchiveExportProcedure = "/tammy.v1.WorkspaceService/RetryPreRestoreArchiveExport"
 	// WorkspaceServiceGetPreRestoreArchiveExportJobProcedure is the fully-qualified name of the
 	// WorkspaceService's GetPreRestoreArchiveExportJob RPC.
 	WorkspaceServiceGetPreRestoreArchiveExportJobProcedure = "/tammy.v1.WorkspaceService/GetPreRestoreArchiveExportJob"
@@ -140,6 +143,8 @@ type WorkspaceServiceClient interface {
 	ExportPreRestoreArchive(context.Context, *connect.Request[v1.ExportPreRestoreArchiveRequest]) (*connect.Response[v1.ExportPreRestoreArchiveResponse], error)
 	// CancelPreRestoreArchiveExport elects cancellation before verified destination rename.
 	CancelPreRestoreArchiveExport(context.Context, *connect.Request[v1.CancelPreRestoreArchiveExportRequest]) (*connect.Response[v1.CancelPreRestoreArchiveExportResponse], error)
+	// RetryPreRestoreArchiveExport reauthorizes one retryable job with a newly approved destination.
+	RetryPreRestoreArchiveExport(context.Context, *connect.Request[v1.RetryPreRestoreArchiveExportRequest]) (*connect.Response[v1.RetryPreRestoreArchiveExportResponse], error)
 	// GetPreRestoreArchiveExportJob returns one bounded persisted export job.
 	GetPreRestoreArchiveExportJob(context.Context, *connect.Request[v1.GetPreRestoreArchiveExportJobRequest]) (*connect.Response[v1.GetPreRestoreArchiveExportJobResponse], error)
 	// ListPreRestoreArchiveExportJobs returns a stable bounded export-job page.
@@ -267,6 +272,12 @@ func NewWorkspaceServiceClient(httpClient connect.HTTPClient, baseURL string, op
 			connect.WithSchema(workspaceServiceMethods.ByName("CancelPreRestoreArchiveExport")),
 			connect.WithClientOptions(opts...),
 		),
+		retryPreRestoreArchiveExport: connect.NewClient[v1.RetryPreRestoreArchiveExportRequest, v1.RetryPreRestoreArchiveExportResponse](
+			httpClient,
+			baseURL+WorkspaceServiceRetryPreRestoreArchiveExportProcedure,
+			connect.WithSchema(workspaceServiceMethods.ByName("RetryPreRestoreArchiveExport")),
+			connect.WithClientOptions(opts...),
+		),
 		getPreRestoreArchiveExportJob: connect.NewClient[v1.GetPreRestoreArchiveExportJobRequest, v1.GetPreRestoreArchiveExportJobResponse](
 			httpClient,
 			baseURL+WorkspaceServiceGetPreRestoreArchiveExportJobProcedure,
@@ -325,6 +336,7 @@ type workspaceServiceClient struct {
 	getRestoreStatus                *connect.Client[v1.GetRestoreStatusRequest, v1.GetRestoreStatusResponse]
 	exportPreRestoreArchive         *connect.Client[v1.ExportPreRestoreArchiveRequest, v1.ExportPreRestoreArchiveResponse]
 	cancelPreRestoreArchiveExport   *connect.Client[v1.CancelPreRestoreArchiveExportRequest, v1.CancelPreRestoreArchiveExportResponse]
+	retryPreRestoreArchiveExport    *connect.Client[v1.RetryPreRestoreArchiveExportRequest, v1.RetryPreRestoreArchiveExportResponse]
 	getPreRestoreArchiveExportJob   *connect.Client[v1.GetPreRestoreArchiveExportJobRequest, v1.GetPreRestoreArchiveExportJobResponse]
 	listPreRestoreArchiveExportJobs *connect.Client[v1.ListPreRestoreArchiveExportJobsRequest, v1.ListPreRestoreArchiveExportJobsResponse]
 	deletePreRestoreArchive         *connect.Client[v1.DeletePreRestoreArchiveRequest, v1.DeletePreRestoreArchiveResponse]
@@ -418,6 +430,11 @@ func (c *workspaceServiceClient) CancelPreRestoreArchiveExport(ctx context.Conte
 	return c.cancelPreRestoreArchiveExport.CallUnary(ctx, req)
 }
 
+// RetryPreRestoreArchiveExport calls tammy.v1.WorkspaceService.RetryPreRestoreArchiveExport.
+func (c *workspaceServiceClient) RetryPreRestoreArchiveExport(ctx context.Context, req *connect.Request[v1.RetryPreRestoreArchiveExportRequest]) (*connect.Response[v1.RetryPreRestoreArchiveExportResponse], error) {
+	return c.retryPreRestoreArchiveExport.CallUnary(ctx, req)
+}
+
 // GetPreRestoreArchiveExportJob calls tammy.v1.WorkspaceService.GetPreRestoreArchiveExportJob.
 func (c *workspaceServiceClient) GetPreRestoreArchiveExportJob(ctx context.Context, req *connect.Request[v1.GetPreRestoreArchiveExportJobRequest]) (*connect.Response[v1.GetPreRestoreArchiveExportJobResponse], error) {
 	return c.getPreRestoreArchiveExportJob.CallUnary(ctx, req)
@@ -484,6 +501,8 @@ type WorkspaceServiceHandler interface {
 	ExportPreRestoreArchive(context.Context, *connect.Request[v1.ExportPreRestoreArchiveRequest]) (*connect.Response[v1.ExportPreRestoreArchiveResponse], error)
 	// CancelPreRestoreArchiveExport elects cancellation before verified destination rename.
 	CancelPreRestoreArchiveExport(context.Context, *connect.Request[v1.CancelPreRestoreArchiveExportRequest]) (*connect.Response[v1.CancelPreRestoreArchiveExportResponse], error)
+	// RetryPreRestoreArchiveExport reauthorizes one retryable job with a newly approved destination.
+	RetryPreRestoreArchiveExport(context.Context, *connect.Request[v1.RetryPreRestoreArchiveExportRequest]) (*connect.Response[v1.RetryPreRestoreArchiveExportResponse], error)
 	// GetPreRestoreArchiveExportJob returns one bounded persisted export job.
 	GetPreRestoreArchiveExportJob(context.Context, *connect.Request[v1.GetPreRestoreArchiveExportJobRequest]) (*connect.Response[v1.GetPreRestoreArchiveExportJobResponse], error)
 	// ListPreRestoreArchiveExportJobs returns a stable bounded export-job page.
@@ -607,6 +626,12 @@ func NewWorkspaceServiceHandler(svc WorkspaceServiceHandler, opts ...connect.Han
 		connect.WithSchema(workspaceServiceMethods.ByName("CancelPreRestoreArchiveExport")),
 		connect.WithHandlerOptions(opts...),
 	)
+	workspaceServiceRetryPreRestoreArchiveExportHandler := connect.NewUnaryHandler(
+		WorkspaceServiceRetryPreRestoreArchiveExportProcedure,
+		svc.RetryPreRestoreArchiveExport,
+		connect.WithSchema(workspaceServiceMethods.ByName("RetryPreRestoreArchiveExport")),
+		connect.WithHandlerOptions(opts...),
+	)
 	workspaceServiceGetPreRestoreArchiveExportJobHandler := connect.NewUnaryHandler(
 		WorkspaceServiceGetPreRestoreArchiveExportJobProcedure,
 		svc.GetPreRestoreArchiveExportJob,
@@ -679,6 +704,8 @@ func NewWorkspaceServiceHandler(svc WorkspaceServiceHandler, opts ...connect.Han
 			workspaceServiceExportPreRestoreArchiveHandler.ServeHTTP(w, r)
 		case WorkspaceServiceCancelPreRestoreArchiveExportProcedure:
 			workspaceServiceCancelPreRestoreArchiveExportHandler.ServeHTTP(w, r)
+		case WorkspaceServiceRetryPreRestoreArchiveExportProcedure:
+			workspaceServiceRetryPreRestoreArchiveExportHandler.ServeHTTP(w, r)
 		case WorkspaceServiceGetPreRestoreArchiveExportJobProcedure:
 			workspaceServiceGetPreRestoreArchiveExportJobHandler.ServeHTTP(w, r)
 		case WorkspaceServiceListPreRestoreArchiveExportJobsProcedure:
@@ -766,6 +793,10 @@ func (UnimplementedWorkspaceServiceHandler) ExportPreRestoreArchive(context.Cont
 
 func (UnimplementedWorkspaceServiceHandler) CancelPreRestoreArchiveExport(context.Context, *connect.Request[v1.CancelPreRestoreArchiveExportRequest]) (*connect.Response[v1.CancelPreRestoreArchiveExportResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("tammy.v1.WorkspaceService.CancelPreRestoreArchiveExport is not implemented"))
+}
+
+func (UnimplementedWorkspaceServiceHandler) RetryPreRestoreArchiveExport(context.Context, *connect.Request[v1.RetryPreRestoreArchiveExportRequest]) (*connect.Response[v1.RetryPreRestoreArchiveExportResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("tammy.v1.WorkspaceService.RetryPreRestoreArchiveExport is not implemented"))
 }
 
 func (UnimplementedWorkspaceServiceHandler) GetPreRestoreArchiveExportJob(context.Context, *connect.Request[v1.GetPreRestoreArchiveExportJobRequest]) (*connect.Response[v1.GetPreRestoreArchiveExportJobResponse], error) {

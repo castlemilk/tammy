@@ -59,7 +59,7 @@ enum BackupJobState {
   // BACKUP_JOB_STATE_COMPLETED has a verified committed destination.
   BACKUP_JOB_STATE_COMPLETED = 3;
 
-  // BACKUP_JOB_STATE_FAILED_RETRYABLE requires an explicit safe retry.
+  // BACKUP_JOB_STATE_FAILED_RETRYABLE requires an existing public command that supplies every expired capability.
   BACKUP_JOB_STATE_FAILED_RETRYABLE = 4;
 
   // BACKUP_JOB_STATE_FAILED_TERMINAL cannot be retried with the retained input.
@@ -70,7 +70,8 @@ enum BackupJobState {
 }
 
 // RestoreState is the fsync'd external restore operation-journal lifecycle.
-// Allowed transitions are PREPARED -> STAGED -> SWAPPED -> COMPLETE.
+// Allowed transitions are PREPARED -> STAGED -> SWAPPED -> COMPLETE, or
+// PREPARED|STAGED -> ROLLED_BACK after restart cleanup is durable.
 enum RestoreState {
   // RESTORE_STATE_UNSPECIFIED indicates that no valid operation-journal state is available.
   RESTORE_STATE_UNSPECIFIED = 0;
@@ -86,6 +87,9 @@ enum RestoreState {
 
   // RESTORE_STATE_COMPLETE records verified activation and mirror update.
   RESTORE_STATE_COMPLETE = 4;
+
+  // RESTORE_STATE_ROLLED_BACK records completed cleanup of an interrupted pre-swap restore.
+  RESTORE_STATE_ROLLED_BACK = 5;
 }
 
 // PreRestoreArchiveState is the retained encrypted predecessor evidence lifecycle.
@@ -99,6 +103,9 @@ enum PreRestoreArchiveState {
 
   // PRE_RESTORE_ARCHIVE_STATE_DELETED is an audited tombstone after at least 12 months.
   PRE_RESTORE_ARCHIVE_STATE_DELETED = 2;
+
+  // PRE_RESTORE_ARCHIVE_STATE_DELETE_PENDING records durable cleanup work before final audited deletion.
+  PRE_RESTORE_ARCHIVE_STATE_DELETE_PENDING = 3;
 }
 
 // PreRestoreArchiveExportJobState is the exact retained-archive export lifecycle.
@@ -192,6 +199,81 @@ message RestoreStatus {
 
   // updated_at is the core-authored instant of the last fsync'd state.
   google.protobuf.Timestamp updated_at = 5 [(buf.validate.field).required = true];
+
+  // recovery is externally authenticated, contains no secrets, and is present before predecessor evidence is published.
+  RestoreRecoveryRecord recovery = 6;
+}
+
+// RestoreRecoveryRecord is the bounded restart plan authenticated by the machine-vault journal key.
+message RestoreRecoveryRecord {
+  // workspace_id binds all restart work to one workspace.
+  string workspace_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // pre_restore_archive_id identifies retained predecessor evidence.
+  string pre_restore_archive_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // pre_restore_archive_hash binds the encrypted retained bytes.
+  bytes pre_restore_archive_hash = 3 [(buf.validate.field).bytes.len = 32];
+
+  // stage_basename is a root-confined operation-derived filename, never an absolute path.
+  string stage_basename = 4 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 192
+  }];
+
+  // rollback_basename is a root-confined operation-derived filename, never an absolute path.
+  string rollback_basename = 5 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 192
+  }];
+
+  // finalized_generation is present only after staged mutation and verification.
+  optional uint64 finalized_generation = 6 [(buf.validate.field).uint64.gte = 2];
+
+  // finalized_audit_head is present only after staged mutation and verification.
+  optional bytes finalized_audit_head = 7 [(buf.validate.field).bytes.len = 32];
+
+  // schema_version is present only after staged schema verification.
+  optional uint64 schema_version = 8 [(buf.validate.field).uint64.gte = 1];
+
+  // migration_manifest_hash is present only after staged schema verification.
+  optional bytes migration_manifest_hash = 9 [(buf.validate.field).bytes.len = 32];
+
+  // post_swap_verified records successful read-only activation verification.
+  bool post_swap_verified = 10;
+
+  // machine_credentials_revoked records idempotent external capability invalidation.
+  bool machine_credentials_revoked = 11;
+
+  // mirror_published records idempotent restored-head mirror publication.
+  bool mirror_published = 12;
+
+  // pre_restore_archive_prepared_basename is the exact operation-owned unpublished evidence filename.
+  string pre_restore_archive_prepared_basename = 13 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+  }];
+
+  // pre_restore_archive_final_basename is the exact random-ID evidence filename published only after this record is durable.
+  string pre_restore_archive_final_basename = 14 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+  }];
+
+  // artifact_ownership_digest binds the durable exclusive stage/rollback reservation markers.
+  bytes artifact_ownership_digest = 15 [(buf.validate.field).bytes.len = 32];
+
+  // rollback_predecessor_hash binds the exact active encrypted bytes that may become rollback evidence.
+  bytes rollback_predecessor_hash = 16 [(buf.validate.field).bytes.max_len = 32];
+
+  // stage_owner_marker_sha256 independently authenticates the stage ownership marker during crash cleanup.
+  bytes stage_owner_marker_sha256 = 17 [(buf.validate.field).bytes.len = 32];
+
+  // rollback_owner_marker_sha256 independently authenticates the rollback ownership marker during crash cleanup.
+  bytes rollback_owner_marker_sha256 = 18 [(buf.validate.field).bytes.len = 32];
+
+  // activated_database_sha256 binds the exact verified staged encrypted bytes that become active.
+  bytes activated_database_sha256 = 19 [(buf.validate.field).bytes.max_len = 32];
 }
 
 // PreRestoreArchive is metadata for retained encrypted predecessor evidence, never decrypted bytes.
@@ -216,6 +298,9 @@ message PreRestoreArchive {
 
   // source_generation is the predecessor audit generation.
   uint64 source_generation = 7 [(buf.validate.field).uint64.gte = 1];
+
+  // deleted_at is the immutable terminal deletion instant and is absent before deletion.
+  optional google.protobuf.Timestamp deleted_at = 8;
 }
 
 // PreRestoreArchiveExportJob is a bounded persisted archive-export projection.
@@ -662,6 +747,30 @@ message CancelPreRestoreArchiveExportResponse {
   PreRestoreArchiveExportJob job = 1 [(buf.validate.field).required = true];
 }
 
+// RetryPreRestoreArchiveExportRequest reauthorizes a retryable job for one newly approved destination.
+message RetryPreRestoreArchiveExportRequest {
+  // command_context carries a distinct UUID idempotency key and new purpose-bound factor assertion.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+
+  // job_id identifies the failed retryable export job.
+  string job_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // expected_version prevents reauthorizing a changed job.
+  uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
+
+  // administrator_password is transient proof and never retained or logged.
+  SecretInput administrator_password = 4 [(buf.validate.field).required = true];
+
+  // destination is a newly approved capability; the failed capability is never reused.
+  ApprovedFileRef destination = 5 [(buf.validate.field).required = true];
+}
+
+// RetryPreRestoreArchiveExportResponse returns the reauthorized queued job.
+message RetryPreRestoreArchiveExportResponse {
+  // job is identical on an exact retry-command replay.
+  PreRestoreArchiveExportJob job = 1 [(buf.validate.field).required = true];
+}
+
 // GetPreRestoreArchiveExportJobRequest requests one bounded export job.
 message GetPreRestoreArchiveExportJobRequest {
   // authentication identifies an authorized administrator.
@@ -837,6 +946,9 @@ service WorkspaceService {
 
   // CancelPreRestoreArchiveExport elects cancellation before verified destination rename.
   rpc CancelPreRestoreArchiveExport(CancelPreRestoreArchiveExportRequest) returns (CancelPreRestoreArchiveExportResponse);
+
+  // RetryPreRestoreArchiveExport reauthorizes one retryable job with a newly approved destination.
+  rpc RetryPreRestoreArchiveExport(RetryPreRestoreArchiveExportRequest) returns (RetryPreRestoreArchiveExportResponse);
 
   // GetPreRestoreArchiveExportJob returns one bounded persisted export job.
   rpc GetPreRestoreArchiveExportJob(GetPreRestoreArchiveExportJobRequest) returns (GetPreRestoreArchiveExportJobResponse);

@@ -370,7 +370,8 @@ func TestMigrateWorkspaceFailuresNeverMutateTheOnlyEncryptedFile(t *testing.T) {
 			mutate: func(steps []migrations.Migration) []migrations.Migration {
 				badSQL := []byte("CREATE TABLE copy_rollback_probe(id INTEGER PRIMARY KEY); SELECT * FROM absent_copy_table;")
 				digest := sha256.Sum256(badSQL)
-				return append(steps, migrations.Migration{Version: 4, Name: "0004_bad.sql", SHA256: hex.EncodeToString(digest[:]), SQL: badSQL})
+				steps[3] = migrations.Migration{Version: 4, Name: "0004_bad.sql", SHA256: hex.EncodeToString(digest[:]), SQL: badSQL}
+				return steps
 			},
 			target:    4,
 			wantStage: true,

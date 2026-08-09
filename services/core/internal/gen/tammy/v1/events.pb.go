@@ -58,6 +58,8 @@ const (
 	AuditEventType_AUDIT_EVENT_TYPE_EVIDENCE_EXPORT_CHANGED AuditEventType = 14
 	// AUDIT_EVENT_TYPE_SIGNING_KEY_ROTATED records an authenticated workspace signing-key rotation.
 	AuditEventType_AUDIT_EVENT_TYPE_SIGNING_KEY_ROTATED AuditEventType = 15
+	// AUDIT_EVENT_TYPE_WORKSPACE_RESTORED records one completed generation-changing restore.
+	AuditEventType_AUDIT_EVENT_TYPE_WORKSPACE_RESTORED AuditEventType = 16
 )
 
 // Enum value maps for AuditEventType.
@@ -79,6 +81,7 @@ var (
 		13: "AUDIT_EVENT_TYPE_PRE_RESTORE_ARCHIVE_CHANGED",
 		14: "AUDIT_EVENT_TYPE_EVIDENCE_EXPORT_CHANGED",
 		15: "AUDIT_EVENT_TYPE_SIGNING_KEY_ROTATED",
+		16: "AUDIT_EVENT_TYPE_WORKSPACE_RESTORED",
 	}
 	AuditEventType_value = map[string]int32{
 		"AUDIT_EVENT_TYPE_UNSPECIFIED":                 0,
@@ -97,6 +100,7 @@ var (
 		"AUDIT_EVENT_TYPE_PRE_RESTORE_ARCHIVE_CHANGED": 13,
 		"AUDIT_EVENT_TYPE_EVIDENCE_EXPORT_CHANGED":     14,
 		"AUDIT_EVENT_TYPE_SIGNING_KEY_ROTATED":         15,
+		"AUDIT_EVENT_TYPE_WORKSPACE_RESTORED":          16,
 	}
 )
 
@@ -1267,6 +1271,124 @@ func (x *SigningKeyRotatedEvent) GetRotationLinkSha256() []byte {
 	return nil
 }
 
+// WorkspaceRestoredEvent binds the new audit generation to the exact backup
+// manifest and retained predecessor archive used by one restore operation.
+type WorkspaceRestoredEvent struct {
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	WorkspaceId           string                 `protobuf:"bytes,1,opt,name=workspace_id,json=workspaceId,proto3" json:"workspace_id,omitempty"`
+	OperationId           string                 `protobuf:"bytes,2,opt,name=operation_id,json=operationId,proto3" json:"operation_id,omitempty"`
+	PredecessorGeneration uint64                 `protobuf:"varint,3,opt,name=predecessor_generation,json=predecessorGeneration,proto3" json:"predecessor_generation,omitempty"`
+	BackupGeneration      uint64                 `protobuf:"varint,4,opt,name=backup_generation,json=backupGeneration,proto3" json:"backup_generation,omitempty"`
+	RestoredGeneration    uint64                 `protobuf:"varint,5,opt,name=restored_generation,json=restoredGeneration,proto3" json:"restored_generation,omitempty"`
+	BackupManifestHash    []byte                 `protobuf:"bytes,6,opt,name=backup_manifest_hash,json=backupManifestHash,proto3" json:"backup_manifest_hash,omitempty"`
+	PreRestoreArchiveId   string                 `protobuf:"bytes,7,opt,name=pre_restore_archive_id,json=preRestoreArchiveId,proto3" json:"pre_restore_archive_id,omitempty"`
+	PreRestoreArchiveHash []byte                 `protobuf:"bytes,8,opt,name=pre_restore_archive_hash,json=preRestoreArchiveHash,proto3" json:"pre_restore_archive_hash,omitempty"`
+	PredecessorHead       []byte                 `protobuf:"bytes,9,opt,name=predecessor_head,json=predecessorHead,proto3" json:"predecessor_head,omitempty"`
+	ArchivedHead          []byte                 `protobuf:"bytes,10,opt,name=archived_head,json=archivedHead,proto3" json:"archived_head,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
+}
+
+func (x *WorkspaceRestoredEvent) Reset() {
+	*x = WorkspaceRestoredEvent{}
+	mi := &file_tammy_v1_events_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WorkspaceRestoredEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WorkspaceRestoredEvent) ProtoMessage() {}
+
+func (x *WorkspaceRestoredEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_events_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WorkspaceRestoredEvent.ProtoReflect.Descriptor instead.
+func (*WorkspaceRestoredEvent) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_events_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *WorkspaceRestoredEvent) GetWorkspaceId() string {
+	if x != nil {
+		return x.WorkspaceId
+	}
+	return ""
+}
+
+func (x *WorkspaceRestoredEvent) GetOperationId() string {
+	if x != nil {
+		return x.OperationId
+	}
+	return ""
+}
+
+func (x *WorkspaceRestoredEvent) GetPredecessorGeneration() uint64 {
+	if x != nil {
+		return x.PredecessorGeneration
+	}
+	return 0
+}
+
+func (x *WorkspaceRestoredEvent) GetBackupGeneration() uint64 {
+	if x != nil {
+		return x.BackupGeneration
+	}
+	return 0
+}
+
+func (x *WorkspaceRestoredEvent) GetRestoredGeneration() uint64 {
+	if x != nil {
+		return x.RestoredGeneration
+	}
+	return 0
+}
+
+func (x *WorkspaceRestoredEvent) GetBackupManifestHash() []byte {
+	if x != nil {
+		return x.BackupManifestHash
+	}
+	return nil
+}
+
+func (x *WorkspaceRestoredEvent) GetPreRestoreArchiveId() string {
+	if x != nil {
+		return x.PreRestoreArchiveId
+	}
+	return ""
+}
+
+func (x *WorkspaceRestoredEvent) GetPreRestoreArchiveHash() []byte {
+	if x != nil {
+		return x.PreRestoreArchiveHash
+	}
+	return nil
+}
+
+func (x *WorkspaceRestoredEvent) GetPredecessorHead() []byte {
+	if x != nil {
+		return x.PredecessorHead
+	}
+	return nil
+}
+
+func (x *WorkspaceRestoredEvent) GetArchivedHead() []byte {
+	if x != nil {
+		return x.ArchivedHead
+	}
+	return nil
+}
+
 // AuditEventPayload is a closed typed union; google.protobuf.Any is intentionally prohibited.
 type AuditEventPayload struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -1289,6 +1411,7 @@ type AuditEventPayload struct {
 	//	*AuditEventPayload_PreRestoreArchiveChanged
 	//	*AuditEventPayload_EvidenceExportChanged
 	//	*AuditEventPayload_SigningKeyRotated
+	//	*AuditEventPayload_WorkspaceRestored
 	Payload       isAuditEventPayload_Payload `protobuf_oneof:"payload"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1296,7 +1419,7 @@ type AuditEventPayload struct {
 
 func (x *AuditEventPayload) Reset() {
 	*x = AuditEventPayload{}
-	mi := &file_tammy_v1_events_proto_msgTypes[15]
+	mi := &file_tammy_v1_events_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1308,7 +1431,7 @@ func (x *AuditEventPayload) String() string {
 func (*AuditEventPayload) ProtoMessage() {}
 
 func (x *AuditEventPayload) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_events_proto_msgTypes[15]
+	mi := &file_tammy_v1_events_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1321,7 +1444,7 @@ func (x *AuditEventPayload) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AuditEventPayload.ProtoReflect.Descriptor instead.
 func (*AuditEventPayload) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_events_proto_rawDescGZIP(), []int{15}
+	return file_tammy_v1_events_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *AuditEventPayload) GetPayload() isAuditEventPayload_Payload {
@@ -1466,6 +1589,15 @@ func (x *AuditEventPayload) GetSigningKeyRotated() *SigningKeyRotatedEvent {
 	return nil
 }
 
+func (x *AuditEventPayload) GetWorkspaceRestored() *WorkspaceRestoredEvent {
+	if x != nil {
+		if x, ok := x.Payload.(*AuditEventPayload_WorkspaceRestored); ok {
+			return x.WorkspaceRestored
+		}
+	}
+	return nil
+}
+
 type isAuditEventPayload_Payload interface {
 	isAuditEventPayload_Payload()
 }
@@ -1545,6 +1677,11 @@ type AuditEventPayload_SigningKeyRotated struct {
 	SigningKeyRotated *SigningKeyRotatedEvent `protobuf:"bytes,15,opt,name=signing_key_rotated,json=signingKeyRotated,proto3,oneof"`
 }
 
+type AuditEventPayload_WorkspaceRestored struct {
+	// workspace_restored records one generation-changing restore.
+	WorkspaceRestored *WorkspaceRestoredEvent `protobuf:"bytes,16,opt,name=workspace_restored,json=workspaceRestored,proto3,oneof"`
+}
+
 func (*AuditEventPayload_WorkspaceStateChanged) isAuditEventPayload_Payload() {}
 
 func (*AuditEventPayload_WorkspaceTrustEstablished) isAuditEventPayload_Payload() {}
@@ -1574,6 +1711,8 @@ func (*AuditEventPayload_PreRestoreArchiveChanged) isAuditEventPayload_Payload()
 func (*AuditEventPayload_EvidenceExportChanged) isAuditEventPayload_Payload() {}
 
 func (*AuditEventPayload_SigningKeyRotated) isAuditEventPayload_Payload() {}
+
+func (*AuditEventPayload_WorkspaceRestored) isAuditEventPayload_Payload() {}
 
 var File_tammy_v1_events_proto protoreflect.FileDescriptor
 
@@ -1691,7 +1830,19 @@ const file_tammy_v1_events_proto_rawDesc = "" +
 	"\x0fsuccessor_epoch\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x02R\x0esuccessorEpoch\x12z\n" +
 	"\x12predecessor_key_id\x18\x04 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x10predecessorKeyId\x12v\n" +
 	"\x10successor_key_id\x18\x05 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0esuccessorKeyId\x129\n" +
-	"\x14rotation_link_sha256\x18\x06 \x01(\fB\a\xbaH\x04z\x02h R\x12rotationLinkSha256\"\x84\v\n" +
+	"\x14rotation_link_sha256\x18\x06 \x01(\fB\a\xbaH\x04z\x02h R\x12rotationLinkSha256\"\x8d\x06\n" +
+	"\x16WorkspaceRestoredEvent\x12o\n" +
+	"\fworkspace_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\vworkspaceId\x12o\n" +
+	"\foperation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\voperationId\x12>\n" +
+	"\x16predecessor_generation\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\x15predecessorGeneration\x124\n" +
+	"\x11backup_generation\x18\x04 \x01(\x04B\a\xbaH\x042\x02(\x01R\x10backupGeneration\x128\n" +
+	"\x13restored_generation\x18\x05 \x01(\x04B\a\xbaH\x042\x02(\x02R\x12restoredGeneration\x129\n" +
+	"\x14backup_manifest_hash\x18\x06 \x01(\fB\a\xbaH\x04z\x02h R\x12backupManifestHash\x12\x81\x01\n" +
+	"\x16pre_restore_archive_id\x18\a \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x13preRestoreArchiveId\x12@\n" +
+	"\x18pre_restore_archive_hash\x18\b \x01(\fB\a\xbaH\x04z\x02h R\x15preRestoreArchiveHash\x122\n" +
+	"\x10predecessor_head\x18\t \x01(\fB\a\xbaH\x04z\x02h R\x0fpredecessorHead\x12,\n" +
+	"\rarchived_head\x18\n" +
+	" \x01(\fB\a\xbaH\x04z\x02h R\farchivedHead\"\xd7\v\n" +
 	"\x11AuditEventPayload\x12^\n" +
 	"\x17workspace_state_changed\x18\x01 \x01(\v2$.tammy.v1.WorkspaceStateChangedEventH\x00R\x15workspaceStateChanged\x12j\n" +
 	"\x1bworkspace_trust_established\x18\x02 \x01(\v2(.tammy.v1.WorkspaceTrustEstablishedEventH\x00R\x19workspaceTrustEstablished\x12O\n" +
@@ -1708,8 +1859,9 @@ const file_tammy_v1_events_proto_rawDesc = "" +
 	"\x15restore_state_changed\x18\f \x01(\v2\".tammy.v1.RestoreStateChangedEventH\x00R\x13restoreStateChanged\x12h\n" +
 	"\x1bpre_restore_archive_changed\x18\r \x01(\v2'.tammy.v1.PreRestoreArchiveChangedEventH\x00R\x18preRestoreArchiveChanged\x12^\n" +
 	"\x17evidence_export_changed\x18\x0e \x01(\v2$.tammy.v1.EvidenceExportChangedEventH\x00R\x15evidenceExportChanged\x12R\n" +
-	"\x13signing_key_rotated\x18\x0f \x01(\v2 .tammy.v1.SigningKeyRotatedEventH\x00R\x11signingKeyRotatedB\t\n" +
-	"\apayload*\xd0\x05\n" +
+	"\x13signing_key_rotated\x18\x0f \x01(\v2 .tammy.v1.SigningKeyRotatedEventH\x00R\x11signingKeyRotated\x12Q\n" +
+	"\x12workspace_restored\x18\x10 \x01(\v2 .tammy.v1.WorkspaceRestoredEventH\x00R\x11workspaceRestoredB\t\n" +
+	"\apayload*\xf9\x05\n" +
 	"\x0eAuditEventType\x12 \n" +
 	"\x1cAUDIT_EVENT_TYPE_UNSPECIFIED\x10\x00\x12,\n" +
 	"(AUDIT_EVENT_TYPE_WORKSPACE_STATE_CHANGED\x10\x01\x120\n" +
@@ -1727,7 +1879,8 @@ const file_tammy_v1_events_proto_rawDesc = "" +
 	"&AUDIT_EVENT_TYPE_RESTORE_STATE_CHANGED\x10\f\x120\n" +
 	",AUDIT_EVENT_TYPE_PRE_RESTORE_ARCHIVE_CHANGED\x10\r\x12,\n" +
 	"(AUDIT_EVENT_TYPE_EVIDENCE_EXPORT_CHANGED\x10\x0e\x12(\n" +
-	"$AUDIT_EVENT_TYPE_SIGNING_KEY_ROTATED\x10\x0fBGZEgithub.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1b\x06proto3"
+	"$AUDIT_EVENT_TYPE_SIGNING_KEY_ROTATED\x10\x0f\x12'\n" +
+	"#AUDIT_EVENT_TYPE_WORKSPACE_RESTORED\x10\x10BGZEgithub.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1b\x06proto3"
 
 var (
 	file_tammy_v1_events_proto_rawDescOnce sync.Once
@@ -1742,7 +1895,7 @@ func file_tammy_v1_events_proto_rawDescGZIP() []byte {
 }
 
 var file_tammy_v1_events_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_tammy_v1_events_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_tammy_v1_events_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_tammy_v1_events_proto_goTypes = []any{
 	(AuditEventType)(0),                    // 0: tammy.v1.AuditEventType
 	(*WorkspaceStateChangedEvent)(nil),     // 1: tammy.v1.WorkspaceStateChangedEvent
@@ -1760,44 +1913,45 @@ var file_tammy_v1_events_proto_goTypes = []any{
 	(*PreRestoreArchiveChangedEvent)(nil),  // 13: tammy.v1.PreRestoreArchiveChangedEvent
 	(*EvidenceExportChangedEvent)(nil),     // 14: tammy.v1.EvidenceExportChangedEvent
 	(*SigningKeyRotatedEvent)(nil),         // 15: tammy.v1.SigningKeyRotatedEvent
-	(*AuditEventPayload)(nil),              // 16: tammy.v1.AuditEventPayload
-	(WorkspaceState)(0),                    // 17: tammy.v1.WorkspaceState
-	(UserState)(0),                         // 18: tammy.v1.UserState
-	(FactorState)(0),                       // 19: tammy.v1.FactorState
-	(OrganisationVerificationState)(0),     // 20: tammy.v1.OrganisationVerificationState
-	(AccountStatus)(0),                     // 21: tammy.v1.AccountStatus
-	(OpeningConversionState)(0),            // 22: tammy.v1.OpeningConversionState
-	(JournalSource)(0),                     // 23: tammy.v1.JournalSource
-	(*Money)(nil),                          // 24: tammy.v1.Money
-	(PeriodState)(0),                       // 25: tammy.v1.PeriodState
-	(BackupJobState)(0),                    // 26: tammy.v1.BackupJobState
-	(RestoreState)(0),                      // 27: tammy.v1.RestoreState
-	(PreRestoreArchiveState)(0),            // 28: tammy.v1.PreRestoreArchiveState
+	(*WorkspaceRestoredEvent)(nil),         // 16: tammy.v1.WorkspaceRestoredEvent
+	(*AuditEventPayload)(nil),              // 17: tammy.v1.AuditEventPayload
+	(WorkspaceState)(0),                    // 18: tammy.v1.WorkspaceState
+	(UserState)(0),                         // 19: tammy.v1.UserState
+	(FactorState)(0),                       // 20: tammy.v1.FactorState
+	(OrganisationVerificationState)(0),     // 21: tammy.v1.OrganisationVerificationState
+	(AccountStatus)(0),                     // 22: tammy.v1.AccountStatus
+	(OpeningConversionState)(0),            // 23: tammy.v1.OpeningConversionState
+	(JournalSource)(0),                     // 24: tammy.v1.JournalSource
+	(*Money)(nil),                          // 25: tammy.v1.Money
+	(PeriodState)(0),                       // 26: tammy.v1.PeriodState
+	(BackupJobState)(0),                    // 27: tammy.v1.BackupJobState
+	(RestoreState)(0),                      // 28: tammy.v1.RestoreState
+	(PreRestoreArchiveState)(0),            // 29: tammy.v1.PreRestoreArchiveState
 }
 var file_tammy_v1_events_proto_depIdxs = []int32{
-	17, // 0: tammy.v1.WorkspaceStateChangedEvent.from_state:type_name -> tammy.v1.WorkspaceState
-	17, // 1: tammy.v1.WorkspaceStateChangedEvent.to_state:type_name -> tammy.v1.WorkspaceState
-	18, // 2: tammy.v1.UserStateChangedEvent.from_state:type_name -> tammy.v1.UserState
-	18, // 3: tammy.v1.UserStateChangedEvent.to_state:type_name -> tammy.v1.UserState
-	19, // 4: tammy.v1.FactorStateChangedEvent.from_state:type_name -> tammy.v1.FactorState
-	19, // 5: tammy.v1.FactorStateChangedEvent.to_state:type_name -> tammy.v1.FactorState
-	20, // 6: tammy.v1.EntityVerificationChangedEvent.from_state:type_name -> tammy.v1.OrganisationVerificationState
-	20, // 7: tammy.v1.EntityVerificationChangedEvent.to_state:type_name -> tammy.v1.OrganisationVerificationState
-	21, // 8: tammy.v1.AccountStatusChangedEvent.from_status:type_name -> tammy.v1.AccountStatus
-	21, // 9: tammy.v1.AccountStatusChangedEvent.to_status:type_name -> tammy.v1.AccountStatus
-	22, // 10: tammy.v1.OpeningConversionChangedEvent.from_state:type_name -> tammy.v1.OpeningConversionState
-	22, // 11: tammy.v1.OpeningConversionChangedEvent.to_state:type_name -> tammy.v1.OpeningConversionState
-	23, // 12: tammy.v1.JournalPostedEvent.source:type_name -> tammy.v1.JournalSource
-	24, // 13: tammy.v1.JournalPostedEvent.total_debits:type_name -> tammy.v1.Money
-	24, // 14: tammy.v1.JournalPostedEvent.total_credits:type_name -> tammy.v1.Money
-	25, // 15: tammy.v1.PeriodStateChangedEvent.from_state:type_name -> tammy.v1.PeriodState
-	25, // 16: tammy.v1.PeriodStateChangedEvent.to_state:type_name -> tammy.v1.PeriodState
-	26, // 17: tammy.v1.BackupJobChangedEvent.from_state:type_name -> tammy.v1.BackupJobState
-	26, // 18: tammy.v1.BackupJobChangedEvent.to_state:type_name -> tammy.v1.BackupJobState
-	27, // 19: tammy.v1.RestoreStateChangedEvent.from_state:type_name -> tammy.v1.RestoreState
-	27, // 20: tammy.v1.RestoreStateChangedEvent.to_state:type_name -> tammy.v1.RestoreState
-	28, // 21: tammy.v1.PreRestoreArchiveChangedEvent.from_state:type_name -> tammy.v1.PreRestoreArchiveState
-	28, // 22: tammy.v1.PreRestoreArchiveChangedEvent.to_state:type_name -> tammy.v1.PreRestoreArchiveState
+	18, // 0: tammy.v1.WorkspaceStateChangedEvent.from_state:type_name -> tammy.v1.WorkspaceState
+	18, // 1: tammy.v1.WorkspaceStateChangedEvent.to_state:type_name -> tammy.v1.WorkspaceState
+	19, // 2: tammy.v1.UserStateChangedEvent.from_state:type_name -> tammy.v1.UserState
+	19, // 3: tammy.v1.UserStateChangedEvent.to_state:type_name -> tammy.v1.UserState
+	20, // 4: tammy.v1.FactorStateChangedEvent.from_state:type_name -> tammy.v1.FactorState
+	20, // 5: tammy.v1.FactorStateChangedEvent.to_state:type_name -> tammy.v1.FactorState
+	21, // 6: tammy.v1.EntityVerificationChangedEvent.from_state:type_name -> tammy.v1.OrganisationVerificationState
+	21, // 7: tammy.v1.EntityVerificationChangedEvent.to_state:type_name -> tammy.v1.OrganisationVerificationState
+	22, // 8: tammy.v1.AccountStatusChangedEvent.from_status:type_name -> tammy.v1.AccountStatus
+	22, // 9: tammy.v1.AccountStatusChangedEvent.to_status:type_name -> tammy.v1.AccountStatus
+	23, // 10: tammy.v1.OpeningConversionChangedEvent.from_state:type_name -> tammy.v1.OpeningConversionState
+	23, // 11: tammy.v1.OpeningConversionChangedEvent.to_state:type_name -> tammy.v1.OpeningConversionState
+	24, // 12: tammy.v1.JournalPostedEvent.source:type_name -> tammy.v1.JournalSource
+	25, // 13: tammy.v1.JournalPostedEvent.total_debits:type_name -> tammy.v1.Money
+	25, // 14: tammy.v1.JournalPostedEvent.total_credits:type_name -> tammy.v1.Money
+	26, // 15: tammy.v1.PeriodStateChangedEvent.from_state:type_name -> tammy.v1.PeriodState
+	26, // 16: tammy.v1.PeriodStateChangedEvent.to_state:type_name -> tammy.v1.PeriodState
+	27, // 17: tammy.v1.BackupJobChangedEvent.from_state:type_name -> tammy.v1.BackupJobState
+	27, // 18: tammy.v1.BackupJobChangedEvent.to_state:type_name -> tammy.v1.BackupJobState
+	28, // 19: tammy.v1.RestoreStateChangedEvent.from_state:type_name -> tammy.v1.RestoreState
+	28, // 20: tammy.v1.RestoreStateChangedEvent.to_state:type_name -> tammy.v1.RestoreState
+	29, // 21: tammy.v1.PreRestoreArchiveChangedEvent.from_state:type_name -> tammy.v1.PreRestoreArchiveState
+	29, // 22: tammy.v1.PreRestoreArchiveChangedEvent.to_state:type_name -> tammy.v1.PreRestoreArchiveState
 	1,  // 23: tammy.v1.AuditEventPayload.workspace_state_changed:type_name -> tammy.v1.WorkspaceStateChangedEvent
 	2,  // 24: tammy.v1.AuditEventPayload.workspace_trust_established:type_name -> tammy.v1.WorkspaceTrustEstablishedEvent
 	3,  // 25: tammy.v1.AuditEventPayload.user_state_changed:type_name -> tammy.v1.UserStateChangedEvent
@@ -1813,11 +1967,12 @@ var file_tammy_v1_events_proto_depIdxs = []int32{
 	13, // 35: tammy.v1.AuditEventPayload.pre_restore_archive_changed:type_name -> tammy.v1.PreRestoreArchiveChangedEvent
 	14, // 36: tammy.v1.AuditEventPayload.evidence_export_changed:type_name -> tammy.v1.EvidenceExportChangedEvent
 	15, // 37: tammy.v1.AuditEventPayload.signing_key_rotated:type_name -> tammy.v1.SigningKeyRotatedEvent
-	38, // [38:38] is the sub-list for method output_type
-	38, // [38:38] is the sub-list for method input_type
-	38, // [38:38] is the sub-list for extension type_name
-	38, // [38:38] is the sub-list for extension extendee
-	0,  // [0:38] is the sub-list for field type_name
+	16, // 38: tammy.v1.AuditEventPayload.workspace_restored:type_name -> tammy.v1.WorkspaceRestoredEvent
+	39, // [39:39] is the sub-list for method output_type
+	39, // [39:39] is the sub-list for method input_type
+	39, // [39:39] is the sub-list for extension type_name
+	39, // [39:39] is the sub-list for extension extendee
+	0,  // [0:39] is the sub-list for field type_name
 }
 
 func init() { file_tammy_v1_events_proto_init() }
@@ -1837,7 +1992,7 @@ func file_tammy_v1_events_proto_init() {
 	file_tammy_v1_events_proto_msgTypes[11].OneofWrappers = []any{}
 	file_tammy_v1_events_proto_msgTypes[12].OneofWrappers = []any{}
 	file_tammy_v1_events_proto_msgTypes[13].OneofWrappers = []any{}
-	file_tammy_v1_events_proto_msgTypes[15].OneofWrappers = []any{
+	file_tammy_v1_events_proto_msgTypes[16].OneofWrappers = []any{
 		(*AuditEventPayload_WorkspaceStateChanged)(nil),
 		(*AuditEventPayload_WorkspaceTrustEstablished)(nil),
 		(*AuditEventPayload_UserStateChanged)(nil),
@@ -1853,6 +2008,7 @@ func file_tammy_v1_events_proto_init() {
 		(*AuditEventPayload_PreRestoreArchiveChanged)(nil),
 		(*AuditEventPayload_EvidenceExportChanged)(nil),
 		(*AuditEventPayload_SigningKeyRotated)(nil),
+		(*AuditEventPayload_WorkspaceRestored)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -1860,7 +2016,7 @@ func file_tammy_v1_events_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_tammy_v1_events_proto_rawDesc), len(file_tammy_v1_events_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   16,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

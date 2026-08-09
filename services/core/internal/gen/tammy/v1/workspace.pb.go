@@ -156,7 +156,7 @@ const (
 	BackupJobState_BACKUP_JOB_STATE_RUNNING BackupJobState = 2
 	// BACKUP_JOB_STATE_COMPLETED has a verified committed destination.
 	BackupJobState_BACKUP_JOB_STATE_COMPLETED BackupJobState = 3
-	// BACKUP_JOB_STATE_FAILED_RETRYABLE requires an explicit safe retry.
+	// BACKUP_JOB_STATE_FAILED_RETRYABLE requires an existing public command that supplies every expired capability.
 	BackupJobState_BACKUP_JOB_STATE_FAILED_RETRYABLE BackupJobState = 4
 	// BACKUP_JOB_STATE_FAILED_TERMINAL cannot be retried with the retained input.
 	BackupJobState_BACKUP_JOB_STATE_FAILED_TERMINAL BackupJobState = 5
@@ -214,7 +214,8 @@ func (BackupJobState) EnumDescriptor() ([]byte, []int) {
 }
 
 // RestoreState is the fsync'd external restore operation-journal lifecycle.
-// Allowed transitions are PREPARED -> STAGED -> SWAPPED -> COMPLETE.
+// Allowed transitions are PREPARED -> STAGED -> SWAPPED -> COMPLETE, or
+// PREPARED|STAGED -> ROLLED_BACK after restart cleanup is durable.
 type RestoreState int32
 
 const (
@@ -228,6 +229,8 @@ const (
 	RestoreState_RESTORE_STATE_SWAPPED RestoreState = 3
 	// RESTORE_STATE_COMPLETE records verified activation and mirror update.
 	RestoreState_RESTORE_STATE_COMPLETE RestoreState = 4
+	// RESTORE_STATE_ROLLED_BACK records completed cleanup of an interrupted pre-swap restore.
+	RestoreState_RESTORE_STATE_ROLLED_BACK RestoreState = 5
 )
 
 // Enum value maps for RestoreState.
@@ -238,6 +241,7 @@ var (
 		2: "RESTORE_STATE_STAGED",
 		3: "RESTORE_STATE_SWAPPED",
 		4: "RESTORE_STATE_COMPLETE",
+		5: "RESTORE_STATE_ROLLED_BACK",
 	}
 	RestoreState_value = map[string]int32{
 		"RESTORE_STATE_UNSPECIFIED": 0,
@@ -245,6 +249,7 @@ var (
 		"RESTORE_STATE_STAGED":      2,
 		"RESTORE_STATE_SWAPPED":     3,
 		"RESTORE_STATE_COMPLETE":    4,
+		"RESTORE_STATE_ROLLED_BACK": 5,
 	}
 )
 
@@ -286,6 +291,8 @@ const (
 	PreRestoreArchiveState_PRE_RESTORE_ARCHIVE_STATE_AVAILABLE PreRestoreArchiveState = 1
 	// PRE_RESTORE_ARCHIVE_STATE_DELETED is an audited tombstone after at least 12 months.
 	PreRestoreArchiveState_PRE_RESTORE_ARCHIVE_STATE_DELETED PreRestoreArchiveState = 2
+	// PRE_RESTORE_ARCHIVE_STATE_DELETE_PENDING records durable cleanup work before final audited deletion.
+	PreRestoreArchiveState_PRE_RESTORE_ARCHIVE_STATE_DELETE_PENDING PreRestoreArchiveState = 3
 )
 
 // Enum value maps for PreRestoreArchiveState.
@@ -294,11 +301,13 @@ var (
 		0: "PRE_RESTORE_ARCHIVE_STATE_UNSPECIFIED",
 		1: "PRE_RESTORE_ARCHIVE_STATE_AVAILABLE",
 		2: "PRE_RESTORE_ARCHIVE_STATE_DELETED",
+		3: "PRE_RESTORE_ARCHIVE_STATE_DELETE_PENDING",
 	}
 	PreRestoreArchiveState_value = map[string]int32{
-		"PRE_RESTORE_ARCHIVE_STATE_UNSPECIFIED": 0,
-		"PRE_RESTORE_ARCHIVE_STATE_AVAILABLE":   1,
-		"PRE_RESTORE_ARCHIVE_STATE_DELETED":     2,
+		"PRE_RESTORE_ARCHIVE_STATE_UNSPECIFIED":    0,
+		"PRE_RESTORE_ARCHIVE_STATE_AVAILABLE":      1,
+		"PRE_RESTORE_ARCHIVE_STATE_DELETED":        2,
+		"PRE_RESTORE_ARCHIVE_STATE_DELETE_PENDING": 3,
 	}
 )
 
@@ -613,7 +622,9 @@ type RestoreStatus struct {
 	// new_audit_head is present after staging has verified the successor generation.
 	NewAuditHead []byte `protobuf:"bytes,4,opt,name=new_audit_head,json=newAuditHead,proto3,oneof" json:"new_audit_head,omitempty"`
 	// updated_at is the core-authored instant of the last fsync'd state.
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// recovery is externally authenticated, contains no secrets, and is present before predecessor evidence is published.
+	Recovery      *RestoreRecoveryRecord `protobuf:"bytes,6,opt,name=recovery,proto3" json:"recovery,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -683,6 +694,221 @@ func (x *RestoreStatus) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *RestoreStatus) GetRecovery() *RestoreRecoveryRecord {
+	if x != nil {
+		return x.Recovery
+	}
+	return nil
+}
+
+// RestoreRecoveryRecord is the bounded restart plan authenticated by the machine-vault journal key.
+type RestoreRecoveryRecord struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// workspace_id binds all restart work to one workspace.
+	WorkspaceId string `protobuf:"bytes,1,opt,name=workspace_id,json=workspaceId,proto3" json:"workspace_id,omitempty"`
+	// pre_restore_archive_id identifies retained predecessor evidence.
+	PreRestoreArchiveId string `protobuf:"bytes,2,opt,name=pre_restore_archive_id,json=preRestoreArchiveId,proto3" json:"pre_restore_archive_id,omitempty"`
+	// pre_restore_archive_hash binds the encrypted retained bytes.
+	PreRestoreArchiveHash []byte `protobuf:"bytes,3,opt,name=pre_restore_archive_hash,json=preRestoreArchiveHash,proto3" json:"pre_restore_archive_hash,omitempty"`
+	// stage_basename is a root-confined operation-derived filename, never an absolute path.
+	StageBasename string `protobuf:"bytes,4,opt,name=stage_basename,json=stageBasename,proto3" json:"stage_basename,omitempty"`
+	// rollback_basename is a root-confined operation-derived filename, never an absolute path.
+	RollbackBasename string `protobuf:"bytes,5,opt,name=rollback_basename,json=rollbackBasename,proto3" json:"rollback_basename,omitempty"`
+	// finalized_generation is present only after staged mutation and verification.
+	FinalizedGeneration *uint64 `protobuf:"varint,6,opt,name=finalized_generation,json=finalizedGeneration,proto3,oneof" json:"finalized_generation,omitempty"`
+	// finalized_audit_head is present only after staged mutation and verification.
+	FinalizedAuditHead []byte `protobuf:"bytes,7,opt,name=finalized_audit_head,json=finalizedAuditHead,proto3,oneof" json:"finalized_audit_head,omitempty"`
+	// schema_version is present only after staged schema verification.
+	SchemaVersion *uint64 `protobuf:"varint,8,opt,name=schema_version,json=schemaVersion,proto3,oneof" json:"schema_version,omitempty"`
+	// migration_manifest_hash is present only after staged schema verification.
+	MigrationManifestHash []byte `protobuf:"bytes,9,opt,name=migration_manifest_hash,json=migrationManifestHash,proto3,oneof" json:"migration_manifest_hash,omitempty"`
+	// post_swap_verified records successful read-only activation verification.
+	PostSwapVerified bool `protobuf:"varint,10,opt,name=post_swap_verified,json=postSwapVerified,proto3" json:"post_swap_verified,omitempty"`
+	// machine_credentials_revoked records idempotent external capability invalidation.
+	MachineCredentialsRevoked bool `protobuf:"varint,11,opt,name=machine_credentials_revoked,json=machineCredentialsRevoked,proto3" json:"machine_credentials_revoked,omitempty"`
+	// mirror_published records idempotent restored-head mirror publication.
+	MirrorPublished bool `protobuf:"varint,12,opt,name=mirror_published,json=mirrorPublished,proto3" json:"mirror_published,omitempty"`
+	// pre_restore_archive_prepared_basename is the exact operation-owned unpublished evidence filename.
+	PreRestoreArchivePreparedBasename string `protobuf:"bytes,13,opt,name=pre_restore_archive_prepared_basename,json=preRestoreArchivePreparedBasename,proto3" json:"pre_restore_archive_prepared_basename,omitempty"`
+	// pre_restore_archive_final_basename is the exact random-ID evidence filename published only after this record is durable.
+	PreRestoreArchiveFinalBasename string `protobuf:"bytes,14,opt,name=pre_restore_archive_final_basename,json=preRestoreArchiveFinalBasename,proto3" json:"pre_restore_archive_final_basename,omitempty"`
+	// artifact_ownership_digest binds the durable exclusive stage/rollback reservation markers.
+	ArtifactOwnershipDigest []byte `protobuf:"bytes,15,opt,name=artifact_ownership_digest,json=artifactOwnershipDigest,proto3" json:"artifact_ownership_digest,omitempty"`
+	// rollback_predecessor_hash binds the exact active encrypted bytes that may become rollback evidence.
+	RollbackPredecessorHash []byte `protobuf:"bytes,16,opt,name=rollback_predecessor_hash,json=rollbackPredecessorHash,proto3" json:"rollback_predecessor_hash,omitempty"`
+	// stage_owner_marker_sha256 independently authenticates the stage ownership marker during crash cleanup.
+	StageOwnerMarkerSha256 []byte `protobuf:"bytes,17,opt,name=stage_owner_marker_sha256,json=stageOwnerMarkerSha256,proto3" json:"stage_owner_marker_sha256,omitempty"`
+	// rollback_owner_marker_sha256 independently authenticates the rollback ownership marker during crash cleanup.
+	RollbackOwnerMarkerSha256 []byte `protobuf:"bytes,18,opt,name=rollback_owner_marker_sha256,json=rollbackOwnerMarkerSha256,proto3" json:"rollback_owner_marker_sha256,omitempty"`
+	// activated_database_sha256 binds the exact verified staged encrypted bytes that become active.
+	ActivatedDatabaseSha256 []byte `protobuf:"bytes,19,opt,name=activated_database_sha256,json=activatedDatabaseSha256,proto3" json:"activated_database_sha256,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
+}
+
+func (x *RestoreRecoveryRecord) Reset() {
+	*x = RestoreRecoveryRecord{}
+	mi := &file_tammy_v1_workspace_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RestoreRecoveryRecord) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RestoreRecoveryRecord) ProtoMessage() {}
+
+func (x *RestoreRecoveryRecord) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_workspace_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RestoreRecoveryRecord.ProtoReflect.Descriptor instead.
+func (*RestoreRecoveryRecord) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *RestoreRecoveryRecord) GetWorkspaceId() string {
+	if x != nil {
+		return x.WorkspaceId
+	}
+	return ""
+}
+
+func (x *RestoreRecoveryRecord) GetPreRestoreArchiveId() string {
+	if x != nil {
+		return x.PreRestoreArchiveId
+	}
+	return ""
+}
+
+func (x *RestoreRecoveryRecord) GetPreRestoreArchiveHash() []byte {
+	if x != nil {
+		return x.PreRestoreArchiveHash
+	}
+	return nil
+}
+
+func (x *RestoreRecoveryRecord) GetStageBasename() string {
+	if x != nil {
+		return x.StageBasename
+	}
+	return ""
+}
+
+func (x *RestoreRecoveryRecord) GetRollbackBasename() string {
+	if x != nil {
+		return x.RollbackBasename
+	}
+	return ""
+}
+
+func (x *RestoreRecoveryRecord) GetFinalizedGeneration() uint64 {
+	if x != nil && x.FinalizedGeneration != nil {
+		return *x.FinalizedGeneration
+	}
+	return 0
+}
+
+func (x *RestoreRecoveryRecord) GetFinalizedAuditHead() []byte {
+	if x != nil {
+		return x.FinalizedAuditHead
+	}
+	return nil
+}
+
+func (x *RestoreRecoveryRecord) GetSchemaVersion() uint64 {
+	if x != nil && x.SchemaVersion != nil {
+		return *x.SchemaVersion
+	}
+	return 0
+}
+
+func (x *RestoreRecoveryRecord) GetMigrationManifestHash() []byte {
+	if x != nil {
+		return x.MigrationManifestHash
+	}
+	return nil
+}
+
+func (x *RestoreRecoveryRecord) GetPostSwapVerified() bool {
+	if x != nil {
+		return x.PostSwapVerified
+	}
+	return false
+}
+
+func (x *RestoreRecoveryRecord) GetMachineCredentialsRevoked() bool {
+	if x != nil {
+		return x.MachineCredentialsRevoked
+	}
+	return false
+}
+
+func (x *RestoreRecoveryRecord) GetMirrorPublished() bool {
+	if x != nil {
+		return x.MirrorPublished
+	}
+	return false
+}
+
+func (x *RestoreRecoveryRecord) GetPreRestoreArchivePreparedBasename() string {
+	if x != nil {
+		return x.PreRestoreArchivePreparedBasename
+	}
+	return ""
+}
+
+func (x *RestoreRecoveryRecord) GetPreRestoreArchiveFinalBasename() string {
+	if x != nil {
+		return x.PreRestoreArchiveFinalBasename
+	}
+	return ""
+}
+
+func (x *RestoreRecoveryRecord) GetArtifactOwnershipDigest() []byte {
+	if x != nil {
+		return x.ArtifactOwnershipDigest
+	}
+	return nil
+}
+
+func (x *RestoreRecoveryRecord) GetRollbackPredecessorHash() []byte {
+	if x != nil {
+		return x.RollbackPredecessorHash
+	}
+	return nil
+}
+
+func (x *RestoreRecoveryRecord) GetStageOwnerMarkerSha256() []byte {
+	if x != nil {
+		return x.StageOwnerMarkerSha256
+	}
+	return nil
+}
+
+func (x *RestoreRecoveryRecord) GetRollbackOwnerMarkerSha256() []byte {
+	if x != nil {
+		return x.RollbackOwnerMarkerSha256
+	}
+	return nil
+}
+
+func (x *RestoreRecoveryRecord) GetActivatedDatabaseSha256() []byte {
+	if x != nil {
+		return x.ActivatedDatabaseSha256
+	}
+	return nil
+}
+
 // PreRestoreArchive is metadata for retained encrypted predecessor evidence, never decrypted bytes.
 type PreRestoreArchive struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -700,13 +926,15 @@ type PreRestoreArchive struct {
 	ContentHash []byte `protobuf:"bytes,6,opt,name=content_hash,json=contentHash,proto3" json:"content_hash,omitempty"`
 	// source_generation is the predecessor audit generation.
 	SourceGeneration uint64 `protobuf:"varint,7,opt,name=source_generation,json=sourceGeneration,proto3" json:"source_generation,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// deleted_at is the immutable terminal deletion instant and is absent before deletion.
+	DeletedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=deleted_at,json=deletedAt,proto3,oneof" json:"deleted_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *PreRestoreArchive) Reset() {
 	*x = PreRestoreArchive{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[3]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -718,7 +946,7 @@ func (x *PreRestoreArchive) String() string {
 func (*PreRestoreArchive) ProtoMessage() {}
 
 func (x *PreRestoreArchive) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[3]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -731,7 +959,7 @@ func (x *PreRestoreArchive) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PreRestoreArchive.ProtoReflect.Descriptor instead.
 func (*PreRestoreArchive) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{3}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *PreRestoreArchive) GetId() string {
@@ -783,6 +1011,13 @@ func (x *PreRestoreArchive) GetSourceGeneration() uint64 {
 	return 0
 }
 
+func (x *PreRestoreArchive) GetDeletedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.DeletedAt
+	}
+	return nil
+}
+
 // PreRestoreArchiveExportJob is a bounded persisted archive-export projection.
 type PreRestoreArchiveExportJob struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -806,7 +1041,7 @@ type PreRestoreArchiveExportJob struct {
 
 func (x *PreRestoreArchiveExportJob) Reset() {
 	*x = PreRestoreArchiveExportJob{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[4]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -818,7 +1053,7 @@ func (x *PreRestoreArchiveExportJob) String() string {
 func (*PreRestoreArchiveExportJob) ProtoMessage() {}
 
 func (x *PreRestoreArchiveExportJob) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[4]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -831,7 +1066,7 @@ func (x *PreRestoreArchiveExportJob) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PreRestoreArchiveExportJob.ProtoReflect.Descriptor instead.
 func (*PreRestoreArchiveExportJob) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{4}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *PreRestoreArchiveExportJob) GetId() string {
@@ -896,7 +1131,7 @@ type RecoveryGroupConfirmation struct {
 
 func (x *RecoveryGroupConfirmation) Reset() {
 	*x = RecoveryGroupConfirmation{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[5]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -908,7 +1143,7 @@ func (x *RecoveryGroupConfirmation) String() string {
 func (*RecoveryGroupConfirmation) ProtoMessage() {}
 
 func (x *RecoveryGroupConfirmation) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[5]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -921,7 +1156,7 @@ func (x *RecoveryGroupConfirmation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RecoveryGroupConfirmation.ProtoReflect.Descriptor instead.
 func (*RecoveryGroupConfirmation) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{5}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *RecoveryGroupConfirmation) GetGroupIndex() uint32 {
@@ -954,7 +1189,7 @@ type WorkspaceUnlockProof struct {
 
 func (x *WorkspaceUnlockProof) Reset() {
 	*x = WorkspaceUnlockProof{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[6]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -966,7 +1201,7 @@ func (x *WorkspaceUnlockProof) String() string {
 func (*WorkspaceUnlockProof) ProtoMessage() {}
 
 func (x *WorkspaceUnlockProof) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[6]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -979,7 +1214,7 @@ func (x *WorkspaceUnlockProof) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WorkspaceUnlockProof.ProtoReflect.Descriptor instead.
 func (*WorkspaceUnlockProof) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{6}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *WorkspaceUnlockProof) GetProof() isWorkspaceUnlockProof_Proof {
@@ -1041,7 +1276,7 @@ type MovedWorkspaceTrustProof struct {
 
 func (x *MovedWorkspaceTrustProof) Reset() {
 	*x = MovedWorkspaceTrustProof{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[7]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1053,7 +1288,7 @@ func (x *MovedWorkspaceTrustProof) String() string {
 func (*MovedWorkspaceTrustProof) ProtoMessage() {}
 
 func (x *MovedWorkspaceTrustProof) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[7]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1066,7 +1301,7 @@ func (x *MovedWorkspaceTrustProof) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MovedWorkspaceTrustProof.ProtoReflect.Descriptor instead.
 func (*MovedWorkspaceTrustProof) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{7}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *MovedWorkspaceTrustProof) GetProof() isMovedWorkspaceTrustProof_Proof {
@@ -1129,7 +1364,7 @@ type RestoreAdministratorProof struct {
 
 func (x *RestoreAdministratorProof) Reset() {
 	*x = RestoreAdministratorProof{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[8]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1141,7 +1376,7 @@ func (x *RestoreAdministratorProof) String() string {
 func (*RestoreAdministratorProof) ProtoMessage() {}
 
 func (x *RestoreAdministratorProof) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[8]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1154,7 +1389,7 @@ func (x *RestoreAdministratorProof) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RestoreAdministratorProof.ProtoReflect.Descriptor instead.
 func (*RestoreAdministratorProof) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{8}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *RestoreAdministratorProof) GetUsername() string {
@@ -1202,7 +1437,7 @@ type RestoreRecoveryProof struct {
 
 func (x *RestoreRecoveryProof) Reset() {
 	*x = RestoreRecoveryProof{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[9]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1214,7 +1449,7 @@ func (x *RestoreRecoveryProof) String() string {
 func (*RestoreRecoveryProof) ProtoMessage() {}
 
 func (x *RestoreRecoveryProof) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[9]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1227,7 +1462,7 @@ func (x *RestoreRecoveryProof) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RestoreRecoveryProof.ProtoReflect.Descriptor instead.
 func (*RestoreRecoveryProof) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{9}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *RestoreRecoveryProof) GetRecoverySecret() *SecretInput {
@@ -1279,7 +1514,7 @@ type CreateWorkspaceRequest struct {
 
 func (x *CreateWorkspaceRequest) Reset() {
 	*x = CreateWorkspaceRequest{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[10]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1291,7 +1526,7 @@ func (x *CreateWorkspaceRequest) String() string {
 func (*CreateWorkspaceRequest) ProtoMessage() {}
 
 func (x *CreateWorkspaceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[10]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1304,7 +1539,7 @@ func (x *CreateWorkspaceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateWorkspaceRequest.ProtoReflect.Descriptor instead.
 func (*CreateWorkspaceRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{10}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *CreateWorkspaceRequest) GetSetupId() string {
@@ -1364,7 +1599,7 @@ type CreateWorkspaceResponse struct {
 
 func (x *CreateWorkspaceResponse) Reset() {
 	*x = CreateWorkspaceResponse{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[11]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1376,7 +1611,7 @@ func (x *CreateWorkspaceResponse) String() string {
 func (*CreateWorkspaceResponse) ProtoMessage() {}
 
 func (x *CreateWorkspaceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[11]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1389,7 +1624,7 @@ func (x *CreateWorkspaceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateWorkspaceResponse.ProtoReflect.Descriptor instead.
 func (*CreateWorkspaceResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{11}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *CreateWorkspaceResponse) GetWorkspace() *Workspace {
@@ -1431,7 +1666,7 @@ type ConfirmRecoveryRequest struct {
 
 func (x *ConfirmRecoveryRequest) Reset() {
 	*x = ConfirmRecoveryRequest{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[12]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1443,7 +1678,7 @@ func (x *ConfirmRecoveryRequest) String() string {
 func (*ConfirmRecoveryRequest) ProtoMessage() {}
 
 func (x *ConfirmRecoveryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[12]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1456,7 +1691,7 @@ func (x *ConfirmRecoveryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfirmRecoveryRequest.ProtoReflect.Descriptor instead.
 func (*ConfirmRecoveryRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{12}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ConfirmRecoveryRequest) GetSetupId() string {
@@ -1491,7 +1726,7 @@ type ConfirmRecoveryResponse struct {
 
 func (x *ConfirmRecoveryResponse) Reset() {
 	*x = ConfirmRecoveryResponse{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[13]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1503,7 +1738,7 @@ func (x *ConfirmRecoveryResponse) String() string {
 func (*ConfirmRecoveryResponse) ProtoMessage() {}
 
 func (x *ConfirmRecoveryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[13]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1516,7 +1751,7 @@ func (x *ConfirmRecoveryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfirmRecoveryResponse.ProtoReflect.Descriptor instead.
 func (*ConfirmRecoveryResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{13}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *ConfirmRecoveryResponse) GetWorkspace() *Workspace {
@@ -1541,7 +1776,7 @@ type UnlockWorkspaceRequest struct {
 
 func (x *UnlockWorkspaceRequest) Reset() {
 	*x = UnlockWorkspaceRequest{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[14]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1553,7 +1788,7 @@ func (x *UnlockWorkspaceRequest) String() string {
 func (*UnlockWorkspaceRequest) ProtoMessage() {}
 
 func (x *UnlockWorkspaceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[14]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1566,7 +1801,7 @@ func (x *UnlockWorkspaceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnlockWorkspaceRequest.ProtoReflect.Descriptor instead.
 func (*UnlockWorkspaceRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{14}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *UnlockWorkspaceRequest) GetWorkspaceFile() *ApprovedFileRef {
@@ -1601,7 +1836,7 @@ type UnlockWorkspaceResponse struct {
 
 func (x *UnlockWorkspaceResponse) Reset() {
 	*x = UnlockWorkspaceResponse{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[15]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1613,7 +1848,7 @@ func (x *UnlockWorkspaceResponse) String() string {
 func (*UnlockWorkspaceResponse) ProtoMessage() {}
 
 func (x *UnlockWorkspaceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[15]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1626,7 +1861,7 @@ func (x *UnlockWorkspaceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnlockWorkspaceResponse.ProtoReflect.Descriptor instead.
 func (*UnlockWorkspaceResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{15}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *UnlockWorkspaceResponse) GetWorkspace() *Workspace {
@@ -1647,7 +1882,7 @@ type LockWorkspaceRequest struct {
 
 func (x *LockWorkspaceRequest) Reset() {
 	*x = LockWorkspaceRequest{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[16]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1659,7 +1894,7 @@ func (x *LockWorkspaceRequest) String() string {
 func (*LockWorkspaceRequest) ProtoMessage() {}
 
 func (x *LockWorkspaceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[16]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1672,7 +1907,7 @@ func (x *LockWorkspaceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LockWorkspaceRequest.ProtoReflect.Descriptor instead.
 func (*LockWorkspaceRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{16}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *LockWorkspaceRequest) GetAuthentication() *AuthenticationContext {
@@ -1693,7 +1928,7 @@ type LockWorkspaceResponse struct {
 
 func (x *LockWorkspaceResponse) Reset() {
 	*x = LockWorkspaceResponse{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[17]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1705,7 +1940,7 @@ func (x *LockWorkspaceResponse) String() string {
 func (*LockWorkspaceResponse) ProtoMessage() {}
 
 func (x *LockWorkspaceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[17]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1718,7 +1953,7 @@ func (x *LockWorkspaceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LockWorkspaceResponse.ProtoReflect.Descriptor instead.
 func (*LockWorkspaceResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{17}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *LockWorkspaceResponse) GetWorkspace() *Workspace {
@@ -1741,7 +1976,7 @@ type ForgetRememberedWorkspaceRequest struct {
 
 func (x *ForgetRememberedWorkspaceRequest) Reset() {
 	*x = ForgetRememberedWorkspaceRequest{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[18]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1753,7 +1988,7 @@ func (x *ForgetRememberedWorkspaceRequest) String() string {
 func (*ForgetRememberedWorkspaceRequest) ProtoMessage() {}
 
 func (x *ForgetRememberedWorkspaceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[18]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1766,7 +2001,7 @@ func (x *ForgetRememberedWorkspaceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ForgetRememberedWorkspaceRequest.ProtoReflect.Descriptor instead.
 func (*ForgetRememberedWorkspaceRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{18}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ForgetRememberedWorkspaceRequest) GetAuthentication() *AuthenticationContext {
@@ -1794,7 +2029,7 @@ type ForgetRememberedWorkspaceResponse struct {
 
 func (x *ForgetRememberedWorkspaceResponse) Reset() {
 	*x = ForgetRememberedWorkspaceResponse{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[19]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1806,7 +2041,7 @@ func (x *ForgetRememberedWorkspaceResponse) String() string {
 func (*ForgetRememberedWorkspaceResponse) ProtoMessage() {}
 
 func (x *ForgetRememberedWorkspaceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[19]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1819,7 +2054,7 @@ func (x *ForgetRememberedWorkspaceResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ForgetRememberedWorkspaceResponse.ProtoReflect.Descriptor instead.
 func (*ForgetRememberedWorkspaceResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{19}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ForgetRememberedWorkspaceResponse) GetWorkspace() *Workspace {
@@ -1840,7 +2075,7 @@ type GetWorkspaceStateRequest struct {
 
 func (x *GetWorkspaceStateRequest) Reset() {
 	*x = GetWorkspaceStateRequest{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[20]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1852,7 +2087,7 @@ func (x *GetWorkspaceStateRequest) String() string {
 func (*GetWorkspaceStateRequest) ProtoMessage() {}
 
 func (x *GetWorkspaceStateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[20]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1865,7 +2100,7 @@ func (x *GetWorkspaceStateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetWorkspaceStateRequest.ProtoReflect.Descriptor instead.
 func (*GetWorkspaceStateRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{20}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *GetWorkspaceStateRequest) GetWorkspaceId() string {
@@ -1886,7 +2121,7 @@ type GetWorkspaceStateResponse struct {
 
 func (x *GetWorkspaceStateResponse) Reset() {
 	*x = GetWorkspaceStateResponse{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[21]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1898,7 +2133,7 @@ func (x *GetWorkspaceStateResponse) String() string {
 func (*GetWorkspaceStateResponse) ProtoMessage() {}
 
 func (x *GetWorkspaceStateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[21]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1911,7 +2146,7 @@ func (x *GetWorkspaceStateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetWorkspaceStateResponse.ProtoReflect.Descriptor instead.
 func (*GetWorkspaceStateResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{21}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *GetWorkspaceStateResponse) GetWorkspace() *Workspace {
@@ -1940,7 +2175,7 @@ type ChangePassphraseRequest struct {
 
 func (x *ChangePassphraseRequest) Reset() {
 	*x = ChangePassphraseRequest{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[22]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1952,7 +2187,7 @@ func (x *ChangePassphraseRequest) String() string {
 func (*ChangePassphraseRequest) ProtoMessage() {}
 
 func (x *ChangePassphraseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[22]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1965,7 +2200,7 @@ func (x *ChangePassphraseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChangePassphraseRequest.ProtoReflect.Descriptor instead.
 func (*ChangePassphraseRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{22}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *ChangePassphraseRequest) GetCommandContext() *CommandContext {
@@ -2014,7 +2249,7 @@ type ChangePassphraseResponse struct {
 
 func (x *ChangePassphraseResponse) Reset() {
 	*x = ChangePassphraseResponse{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[23]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2026,7 +2261,7 @@ func (x *ChangePassphraseResponse) String() string {
 func (*ChangePassphraseResponse) ProtoMessage() {}
 
 func (x *ChangePassphraseResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[23]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2039,7 +2274,7 @@ func (x *ChangePassphraseResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChangePassphraseResponse.ProtoReflect.Descriptor instead.
 func (*ChangePassphraseResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{23}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *ChangePassphraseResponse) GetWorkspace() *Workspace {
@@ -2066,7 +2301,7 @@ type RecoverWorkspaceRequest struct {
 
 func (x *RecoverWorkspaceRequest) Reset() {
 	*x = RecoverWorkspaceRequest{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[24]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2078,7 +2313,7 @@ func (x *RecoverWorkspaceRequest) String() string {
 func (*RecoverWorkspaceRequest) ProtoMessage() {}
 
 func (x *RecoverWorkspaceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[24]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2091,7 +2326,7 @@ func (x *RecoverWorkspaceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RecoverWorkspaceRequest.ProtoReflect.Descriptor instead.
 func (*RecoverWorkspaceRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{24}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *RecoverWorkspaceRequest) GetRecoveryOperationId() string {
@@ -2133,7 +2368,7 @@ type RecoverWorkspaceResponse struct {
 
 func (x *RecoverWorkspaceResponse) Reset() {
 	*x = RecoverWorkspaceResponse{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[25]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2145,7 +2380,7 @@ func (x *RecoverWorkspaceResponse) String() string {
 func (*RecoverWorkspaceResponse) ProtoMessage() {}
 
 func (x *RecoverWorkspaceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[25]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2158,7 +2393,7 @@ func (x *RecoverWorkspaceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RecoverWorkspaceResponse.ProtoReflect.Descriptor instead.
 func (*RecoverWorkspaceResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{25}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *RecoverWorkspaceResponse) GetWorkspace() *Workspace {
@@ -2187,7 +2422,7 @@ type EstablishMovedWorkspaceTrustRequest struct {
 
 func (x *EstablishMovedWorkspaceTrustRequest) Reset() {
 	*x = EstablishMovedWorkspaceTrustRequest{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[26]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2199,7 +2434,7 @@ func (x *EstablishMovedWorkspaceTrustRequest) String() string {
 func (*EstablishMovedWorkspaceTrustRequest) ProtoMessage() {}
 
 func (x *EstablishMovedWorkspaceTrustRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[26]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2212,7 +2447,7 @@ func (x *EstablishMovedWorkspaceTrustRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use EstablishMovedWorkspaceTrustRequest.ProtoReflect.Descriptor instead.
 func (*EstablishMovedWorkspaceTrustRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{26}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *EstablishMovedWorkspaceTrustRequest) GetCommandContext() *CommandContext {
@@ -2261,7 +2496,7 @@ type EstablishMovedWorkspaceTrustResponse struct {
 
 func (x *EstablishMovedWorkspaceTrustResponse) Reset() {
 	*x = EstablishMovedWorkspaceTrustResponse{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[27]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2273,7 +2508,7 @@ func (x *EstablishMovedWorkspaceTrustResponse) String() string {
 func (*EstablishMovedWorkspaceTrustResponse) ProtoMessage() {}
 
 func (x *EstablishMovedWorkspaceTrustResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[27]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2286,7 +2521,7 @@ func (x *EstablishMovedWorkspaceTrustResponse) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use EstablishMovedWorkspaceTrustResponse.ProtoReflect.Descriptor instead.
 func (*EstablishMovedWorkspaceTrustResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{27}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *EstablishMovedWorkspaceTrustResponse) GetWorkspace() *Workspace {
@@ -2313,7 +2548,7 @@ type BackupWorkspaceRequest struct {
 
 func (x *BackupWorkspaceRequest) Reset() {
 	*x = BackupWorkspaceRequest{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[28]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2325,7 +2560,7 @@ func (x *BackupWorkspaceRequest) String() string {
 func (*BackupWorkspaceRequest) ProtoMessage() {}
 
 func (x *BackupWorkspaceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[28]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2338,7 +2573,7 @@ func (x *BackupWorkspaceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BackupWorkspaceRequest.ProtoReflect.Descriptor instead.
 func (*BackupWorkspaceRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{28}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *BackupWorkspaceRequest) GetCommandContext() *CommandContext {
@@ -2380,7 +2615,7 @@ type BackupWorkspaceResponse struct {
 
 func (x *BackupWorkspaceResponse) Reset() {
 	*x = BackupWorkspaceResponse{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[29]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2392,7 +2627,7 @@ func (x *BackupWorkspaceResponse) String() string {
 func (*BackupWorkspaceResponse) ProtoMessage() {}
 
 func (x *BackupWorkspaceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[29]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2405,7 +2640,7 @@ func (x *BackupWorkspaceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BackupWorkspaceResponse.ProtoReflect.Descriptor instead.
 func (*BackupWorkspaceResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{29}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *BackupWorkspaceResponse) GetJob() *BackupJob {
@@ -2430,7 +2665,7 @@ type CancelBackupRequest struct {
 
 func (x *CancelBackupRequest) Reset() {
 	*x = CancelBackupRequest{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[30]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2442,7 +2677,7 @@ func (x *CancelBackupRequest) String() string {
 func (*CancelBackupRequest) ProtoMessage() {}
 
 func (x *CancelBackupRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[30]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2455,7 +2690,7 @@ func (x *CancelBackupRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelBackupRequest.ProtoReflect.Descriptor instead.
 func (*CancelBackupRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{30}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *CancelBackupRequest) GetCommandContext() *CommandContext {
@@ -2490,7 +2725,7 @@ type CancelBackupResponse struct {
 
 func (x *CancelBackupResponse) Reset() {
 	*x = CancelBackupResponse{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[31]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2502,7 +2737,7 @@ func (x *CancelBackupResponse) String() string {
 func (*CancelBackupResponse) ProtoMessage() {}
 
 func (x *CancelBackupResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[31]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2515,7 +2750,7 @@ func (x *CancelBackupResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelBackupResponse.ProtoReflect.Descriptor instead.
 func (*CancelBackupResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{31}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *CancelBackupResponse) GetJob() *BackupJob {
@@ -2538,7 +2773,7 @@ type GetBackupJobRequest struct {
 
 func (x *GetBackupJobRequest) Reset() {
 	*x = GetBackupJobRequest{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[32]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2550,7 +2785,7 @@ func (x *GetBackupJobRequest) String() string {
 func (*GetBackupJobRequest) ProtoMessage() {}
 
 func (x *GetBackupJobRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[32]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2563,7 +2798,7 @@ func (x *GetBackupJobRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetBackupJobRequest.ProtoReflect.Descriptor instead.
 func (*GetBackupJobRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{32}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *GetBackupJobRequest) GetAuthentication() *AuthenticationContext {
@@ -2591,7 +2826,7 @@ type GetBackupJobResponse struct {
 
 func (x *GetBackupJobResponse) Reset() {
 	*x = GetBackupJobResponse{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[33]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2603,7 +2838,7 @@ func (x *GetBackupJobResponse) String() string {
 func (*GetBackupJobResponse) ProtoMessage() {}
 
 func (x *GetBackupJobResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[33]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2616,7 +2851,7 @@ func (x *GetBackupJobResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetBackupJobResponse.ProtoReflect.Descriptor instead.
 func (*GetBackupJobResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{33}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *GetBackupJobResponse) GetJob() *BackupJob {
@@ -2641,7 +2876,7 @@ type ListBackupJobsRequest struct {
 
 func (x *ListBackupJobsRequest) Reset() {
 	*x = ListBackupJobsRequest{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[34]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2653,7 +2888,7 @@ func (x *ListBackupJobsRequest) String() string {
 func (*ListBackupJobsRequest) ProtoMessage() {}
 
 func (x *ListBackupJobsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[34]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2666,7 +2901,7 @@ func (x *ListBackupJobsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListBackupJobsRequest.ProtoReflect.Descriptor instead.
 func (*ListBackupJobsRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{34}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *ListBackupJobsRequest) GetAuthentication() *AuthenticationContext {
@@ -2703,7 +2938,7 @@ type ListBackupJobsResponse struct {
 
 func (x *ListBackupJobsResponse) Reset() {
 	*x = ListBackupJobsResponse{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[35]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2715,7 +2950,7 @@ func (x *ListBackupJobsResponse) String() string {
 func (*ListBackupJobsResponse) ProtoMessage() {}
 
 func (x *ListBackupJobsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[35]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2728,7 +2963,7 @@ func (x *ListBackupJobsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListBackupJobsResponse.ProtoReflect.Descriptor instead.
 func (*ListBackupJobsResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{35}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *ListBackupJobsResponse) GetJobs() []*BackupJob {
@@ -2769,7 +3004,7 @@ type RestoreWorkspaceRequest struct {
 
 func (x *RestoreWorkspaceRequest) Reset() {
 	*x = RestoreWorkspaceRequest{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[36]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2781,7 +3016,7 @@ func (x *RestoreWorkspaceRequest) String() string {
 func (*RestoreWorkspaceRequest) ProtoMessage() {}
 
 func (x *RestoreWorkspaceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[36]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2794,7 +3029,7 @@ func (x *RestoreWorkspaceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RestoreWorkspaceRequest.ProtoReflect.Descriptor instead.
 func (*RestoreWorkspaceRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{36}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *RestoreWorkspaceRequest) GetOperationId() string {
@@ -2879,7 +3114,7 @@ type RestoreWorkspaceResponse struct {
 
 func (x *RestoreWorkspaceResponse) Reset() {
 	*x = RestoreWorkspaceResponse{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[37]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2891,7 +3126,7 @@ func (x *RestoreWorkspaceResponse) String() string {
 func (*RestoreWorkspaceResponse) ProtoMessage() {}
 
 func (x *RestoreWorkspaceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[37]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2904,7 +3139,7 @@ func (x *RestoreWorkspaceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RestoreWorkspaceResponse.ProtoReflect.Descriptor instead.
 func (*RestoreWorkspaceResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{37}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *RestoreWorkspaceResponse) GetStatus() *RestoreStatus {
@@ -2925,7 +3160,7 @@ type GetRestoreStatusRequest struct {
 
 func (x *GetRestoreStatusRequest) Reset() {
 	*x = GetRestoreStatusRequest{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[38]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2937,7 +3172,7 @@ func (x *GetRestoreStatusRequest) String() string {
 func (*GetRestoreStatusRequest) ProtoMessage() {}
 
 func (x *GetRestoreStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[38]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2950,7 +3185,7 @@ func (x *GetRestoreStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRestoreStatusRequest.ProtoReflect.Descriptor instead.
 func (*GetRestoreStatusRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{38}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *GetRestoreStatusRequest) GetOperationId() string {
@@ -2971,7 +3206,7 @@ type GetRestoreStatusResponse struct {
 
 func (x *GetRestoreStatusResponse) Reset() {
 	*x = GetRestoreStatusResponse{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[39]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2983,7 +3218,7 @@ func (x *GetRestoreStatusResponse) String() string {
 func (*GetRestoreStatusResponse) ProtoMessage() {}
 
 func (x *GetRestoreStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[39]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2996,7 +3231,7 @@ func (x *GetRestoreStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRestoreStatusResponse.ProtoReflect.Descriptor instead.
 func (*GetRestoreStatusResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{39}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *GetRestoreStatusResponse) GetStatus() *RestoreStatus {
@@ -3025,7 +3260,7 @@ type ExportPreRestoreArchiveRequest struct {
 
 func (x *ExportPreRestoreArchiveRequest) Reset() {
 	*x = ExportPreRestoreArchiveRequest{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[40]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3037,7 +3272,7 @@ func (x *ExportPreRestoreArchiveRequest) String() string {
 func (*ExportPreRestoreArchiveRequest) ProtoMessage() {}
 
 func (x *ExportPreRestoreArchiveRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[40]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3050,7 +3285,7 @@ func (x *ExportPreRestoreArchiveRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportPreRestoreArchiveRequest.ProtoReflect.Descriptor instead.
 func (*ExportPreRestoreArchiveRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{40}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *ExportPreRestoreArchiveRequest) GetCommandContext() *CommandContext {
@@ -3099,7 +3334,7 @@ type ExportPreRestoreArchiveResponse struct {
 
 func (x *ExportPreRestoreArchiveResponse) Reset() {
 	*x = ExportPreRestoreArchiveResponse{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[41]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3111,7 +3346,7 @@ func (x *ExportPreRestoreArchiveResponse) String() string {
 func (*ExportPreRestoreArchiveResponse) ProtoMessage() {}
 
 func (x *ExportPreRestoreArchiveResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[41]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3124,7 +3359,7 @@ func (x *ExportPreRestoreArchiveResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportPreRestoreArchiveResponse.ProtoReflect.Descriptor instead.
 func (*ExportPreRestoreArchiveResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{41}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *ExportPreRestoreArchiveResponse) GetJob() *PreRestoreArchiveExportJob {
@@ -3149,7 +3384,7 @@ type CancelPreRestoreArchiveExportRequest struct {
 
 func (x *CancelPreRestoreArchiveExportRequest) Reset() {
 	*x = CancelPreRestoreArchiveExportRequest{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[42]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3161,7 +3396,7 @@ func (x *CancelPreRestoreArchiveExportRequest) String() string {
 func (*CancelPreRestoreArchiveExportRequest) ProtoMessage() {}
 
 func (x *CancelPreRestoreArchiveExportRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[42]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3174,7 +3409,7 @@ func (x *CancelPreRestoreArchiveExportRequest) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use CancelPreRestoreArchiveExportRequest.ProtoReflect.Descriptor instead.
 func (*CancelPreRestoreArchiveExportRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{42}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *CancelPreRestoreArchiveExportRequest) GetCommandContext() *CommandContext {
@@ -3209,7 +3444,7 @@ type CancelPreRestoreArchiveExportResponse struct {
 
 func (x *CancelPreRestoreArchiveExportResponse) Reset() {
 	*x = CancelPreRestoreArchiveExportResponse{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[43]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3221,7 +3456,7 @@ func (x *CancelPreRestoreArchiveExportResponse) String() string {
 func (*CancelPreRestoreArchiveExportResponse) ProtoMessage() {}
 
 func (x *CancelPreRestoreArchiveExportResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[43]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3234,10 +3469,138 @@ func (x *CancelPreRestoreArchiveExportResponse) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use CancelPreRestoreArchiveExportResponse.ProtoReflect.Descriptor instead.
 func (*CancelPreRestoreArchiveExportResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{43}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *CancelPreRestoreArchiveExportResponse) GetJob() *PreRestoreArchiveExportJob {
+	if x != nil {
+		return x.Job
+	}
+	return nil
+}
+
+// RetryPreRestoreArchiveExportRequest reauthorizes a retryable job for one newly approved destination.
+type RetryPreRestoreArchiveExportRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// command_context carries a distinct UUID idempotency key and new purpose-bound factor assertion.
+	CommandContext *CommandContext `protobuf:"bytes,1,opt,name=command_context,json=commandContext,proto3" json:"command_context,omitempty"`
+	// job_id identifies the failed retryable export job.
+	JobId string `protobuf:"bytes,2,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
+	// expected_version prevents reauthorizing a changed job.
+	ExpectedVersion uint64 `protobuf:"varint,3,opt,name=expected_version,json=expectedVersion,proto3" json:"expected_version,omitempty"`
+	// administrator_password is transient proof and never retained or logged.
+	AdministratorPassword *SecretInput `protobuf:"bytes,4,opt,name=administrator_password,json=administratorPassword,proto3" json:"administrator_password,omitempty"`
+	// destination is a newly approved capability; the failed capability is never reused.
+	Destination   *ApprovedFileRef `protobuf:"bytes,5,opt,name=destination,proto3" json:"destination,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RetryPreRestoreArchiveExportRequest) Reset() {
+	*x = RetryPreRestoreArchiveExportRequest{}
+	mi := &file_tammy_v1_workspace_proto_msgTypes[45]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RetryPreRestoreArchiveExportRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RetryPreRestoreArchiveExportRequest) ProtoMessage() {}
+
+func (x *RetryPreRestoreArchiveExportRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_workspace_proto_msgTypes[45]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RetryPreRestoreArchiveExportRequest.ProtoReflect.Descriptor instead.
+func (*RetryPreRestoreArchiveExportRequest) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{45}
+}
+
+func (x *RetryPreRestoreArchiveExportRequest) GetCommandContext() *CommandContext {
+	if x != nil {
+		return x.CommandContext
+	}
+	return nil
+}
+
+func (x *RetryPreRestoreArchiveExportRequest) GetJobId() string {
+	if x != nil {
+		return x.JobId
+	}
+	return ""
+}
+
+func (x *RetryPreRestoreArchiveExportRequest) GetExpectedVersion() uint64 {
+	if x != nil {
+		return x.ExpectedVersion
+	}
+	return 0
+}
+
+func (x *RetryPreRestoreArchiveExportRequest) GetAdministratorPassword() *SecretInput {
+	if x != nil {
+		return x.AdministratorPassword
+	}
+	return nil
+}
+
+func (x *RetryPreRestoreArchiveExportRequest) GetDestination() *ApprovedFileRef {
+	if x != nil {
+		return x.Destination
+	}
+	return nil
+}
+
+// RetryPreRestoreArchiveExportResponse returns the reauthorized queued job.
+type RetryPreRestoreArchiveExportResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// job is identical on an exact retry-command replay.
+	Job           *PreRestoreArchiveExportJob `protobuf:"bytes,1,opt,name=job,proto3" json:"job,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RetryPreRestoreArchiveExportResponse) Reset() {
+	*x = RetryPreRestoreArchiveExportResponse{}
+	mi := &file_tammy_v1_workspace_proto_msgTypes[46]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RetryPreRestoreArchiveExportResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RetryPreRestoreArchiveExportResponse) ProtoMessage() {}
+
+func (x *RetryPreRestoreArchiveExportResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_workspace_proto_msgTypes[46]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RetryPreRestoreArchiveExportResponse.ProtoReflect.Descriptor instead.
+func (*RetryPreRestoreArchiveExportResponse) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{46}
+}
+
+func (x *RetryPreRestoreArchiveExportResponse) GetJob() *PreRestoreArchiveExportJob {
 	if x != nil {
 		return x.Job
 	}
@@ -3257,7 +3620,7 @@ type GetPreRestoreArchiveExportJobRequest struct {
 
 func (x *GetPreRestoreArchiveExportJobRequest) Reset() {
 	*x = GetPreRestoreArchiveExportJobRequest{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[44]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3269,7 +3632,7 @@ func (x *GetPreRestoreArchiveExportJobRequest) String() string {
 func (*GetPreRestoreArchiveExportJobRequest) ProtoMessage() {}
 
 func (x *GetPreRestoreArchiveExportJobRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[44]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3282,7 +3645,7 @@ func (x *GetPreRestoreArchiveExportJobRequest) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use GetPreRestoreArchiveExportJobRequest.ProtoReflect.Descriptor instead.
 func (*GetPreRestoreArchiveExportJobRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{44}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *GetPreRestoreArchiveExportJobRequest) GetAuthentication() *AuthenticationContext {
@@ -3310,7 +3673,7 @@ type GetPreRestoreArchiveExportJobResponse struct {
 
 func (x *GetPreRestoreArchiveExportJobResponse) Reset() {
 	*x = GetPreRestoreArchiveExportJobResponse{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[45]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3322,7 +3685,7 @@ func (x *GetPreRestoreArchiveExportJobResponse) String() string {
 func (*GetPreRestoreArchiveExportJobResponse) ProtoMessage() {}
 
 func (x *GetPreRestoreArchiveExportJobResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[45]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3335,7 +3698,7 @@ func (x *GetPreRestoreArchiveExportJobResponse) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use GetPreRestoreArchiveExportJobResponse.ProtoReflect.Descriptor instead.
 func (*GetPreRestoreArchiveExportJobResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{45}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *GetPreRestoreArchiveExportJobResponse) GetJob() *PreRestoreArchiveExportJob {
@@ -3360,7 +3723,7 @@ type ListPreRestoreArchiveExportJobsRequest struct {
 
 func (x *ListPreRestoreArchiveExportJobsRequest) Reset() {
 	*x = ListPreRestoreArchiveExportJobsRequest{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[46]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3372,7 +3735,7 @@ func (x *ListPreRestoreArchiveExportJobsRequest) String() string {
 func (*ListPreRestoreArchiveExportJobsRequest) ProtoMessage() {}
 
 func (x *ListPreRestoreArchiveExportJobsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[46]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3385,7 +3748,7 @@ func (x *ListPreRestoreArchiveExportJobsRequest) ProtoReflect() protoreflect.Mes
 
 // Deprecated: Use ListPreRestoreArchiveExportJobsRequest.ProtoReflect.Descriptor instead.
 func (*ListPreRestoreArchiveExportJobsRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{46}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *ListPreRestoreArchiveExportJobsRequest) GetAuthentication() *AuthenticationContext {
@@ -3422,7 +3785,7 @@ type ListPreRestoreArchiveExportJobsResponse struct {
 
 func (x *ListPreRestoreArchiveExportJobsResponse) Reset() {
 	*x = ListPreRestoreArchiveExportJobsResponse{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[47]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3434,7 +3797,7 @@ func (x *ListPreRestoreArchiveExportJobsResponse) String() string {
 func (*ListPreRestoreArchiveExportJobsResponse) ProtoMessage() {}
 
 func (x *ListPreRestoreArchiveExportJobsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[47]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3447,7 +3810,7 @@ func (x *ListPreRestoreArchiveExportJobsResponse) ProtoReflect() protoreflect.Me
 
 // Deprecated: Use ListPreRestoreArchiveExportJobsResponse.ProtoReflect.Descriptor instead.
 func (*ListPreRestoreArchiveExportJobsResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{47}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *ListPreRestoreArchiveExportJobsResponse) GetJobs() []*PreRestoreArchiveExportJob {
@@ -3483,7 +3846,7 @@ type DeletePreRestoreArchiveRequest struct {
 
 func (x *DeletePreRestoreArchiveRequest) Reset() {
 	*x = DeletePreRestoreArchiveRequest{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[48]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3495,7 +3858,7 @@ func (x *DeletePreRestoreArchiveRequest) String() string {
 func (*DeletePreRestoreArchiveRequest) ProtoMessage() {}
 
 func (x *DeletePreRestoreArchiveRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[48]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3508,7 +3871,7 @@ func (x *DeletePreRestoreArchiveRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeletePreRestoreArchiveRequest.ProtoReflect.Descriptor instead.
 func (*DeletePreRestoreArchiveRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{48}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *DeletePreRestoreArchiveRequest) GetCommandContext() *CommandContext {
@@ -3557,7 +3920,7 @@ type DeletePreRestoreArchiveResponse struct {
 
 func (x *DeletePreRestoreArchiveResponse) Reset() {
 	*x = DeletePreRestoreArchiveResponse{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[49]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3569,7 +3932,7 @@ func (x *DeletePreRestoreArchiveResponse) String() string {
 func (*DeletePreRestoreArchiveResponse) ProtoMessage() {}
 
 func (x *DeletePreRestoreArchiveResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[49]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3582,7 +3945,7 @@ func (x *DeletePreRestoreArchiveResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeletePreRestoreArchiveResponse.ProtoReflect.Descriptor instead.
 func (*DeletePreRestoreArchiveResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{49}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *DeletePreRestoreArchiveResponse) GetArchive() *PreRestoreArchive {
@@ -3605,7 +3968,7 @@ type GetPreRestoreArchiveRequest struct {
 
 func (x *GetPreRestoreArchiveRequest) Reset() {
 	*x = GetPreRestoreArchiveRequest{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[50]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3617,7 +3980,7 @@ func (x *GetPreRestoreArchiveRequest) String() string {
 func (*GetPreRestoreArchiveRequest) ProtoMessage() {}
 
 func (x *GetPreRestoreArchiveRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[50]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3630,7 +3993,7 @@ func (x *GetPreRestoreArchiveRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPreRestoreArchiveRequest.ProtoReflect.Descriptor instead.
 func (*GetPreRestoreArchiveRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{50}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *GetPreRestoreArchiveRequest) GetAuthentication() *AuthenticationContext {
@@ -3658,7 +4021,7 @@ type GetPreRestoreArchiveResponse struct {
 
 func (x *GetPreRestoreArchiveResponse) Reset() {
 	*x = GetPreRestoreArchiveResponse{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[51]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3670,7 +4033,7 @@ func (x *GetPreRestoreArchiveResponse) String() string {
 func (*GetPreRestoreArchiveResponse) ProtoMessage() {}
 
 func (x *GetPreRestoreArchiveResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[51]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3683,7 +4046,7 @@ func (x *GetPreRestoreArchiveResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPreRestoreArchiveResponse.ProtoReflect.Descriptor instead.
 func (*GetPreRestoreArchiveResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{51}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *GetPreRestoreArchiveResponse) GetArchive() *PreRestoreArchive {
@@ -3708,7 +4071,7 @@ type ListPreRestoreArchivesRequest struct {
 
 func (x *ListPreRestoreArchivesRequest) Reset() {
 	*x = ListPreRestoreArchivesRequest{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[52]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3720,7 +4083,7 @@ func (x *ListPreRestoreArchivesRequest) String() string {
 func (*ListPreRestoreArchivesRequest) ProtoMessage() {}
 
 func (x *ListPreRestoreArchivesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[52]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3733,7 +4096,7 @@ func (x *ListPreRestoreArchivesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPreRestoreArchivesRequest.ProtoReflect.Descriptor instead.
 func (*ListPreRestoreArchivesRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{52}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *ListPreRestoreArchivesRequest) GetAuthentication() *AuthenticationContext {
@@ -3770,7 +4133,7 @@ type ListPreRestoreArchivesResponse struct {
 
 func (x *ListPreRestoreArchivesResponse) Reset() {
 	*x = ListPreRestoreArchivesResponse{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[53]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3782,7 +4145,7 @@ func (x *ListPreRestoreArchivesResponse) String() string {
 func (*ListPreRestoreArchivesResponse) ProtoMessage() {}
 
 func (x *ListPreRestoreArchivesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[53]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3795,7 +4158,7 @@ func (x *ListPreRestoreArchivesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPreRestoreArchivesResponse.ProtoReflect.Descriptor instead.
 func (*ListPreRestoreArchivesResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{53}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *ListPreRestoreArchivesResponse) GetArchives() []*PreRestoreArchive {
@@ -3831,7 +4194,7 @@ type TransferOwnershipRequest struct {
 
 func (x *TransferOwnershipRequest) Reset() {
 	*x = TransferOwnershipRequest{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[54]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[57]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3843,7 +4206,7 @@ func (x *TransferOwnershipRequest) String() string {
 func (*TransferOwnershipRequest) ProtoMessage() {}
 
 func (x *TransferOwnershipRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[54]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[57]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3856,7 +4219,7 @@ func (x *TransferOwnershipRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TransferOwnershipRequest.ProtoReflect.Descriptor instead.
 func (*TransferOwnershipRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{54}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{57}
 }
 
 func (x *TransferOwnershipRequest) GetCommandContext() *CommandContext {
@@ -3905,7 +4268,7 @@ type TransferOwnershipResponse struct {
 
 func (x *TransferOwnershipResponse) Reset() {
 	*x = TransferOwnershipResponse{}
-	mi := &file_tammy_v1_workspace_proto_msgTypes[55]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[58]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3917,7 +4280,7 @@ func (x *TransferOwnershipResponse) String() string {
 func (*TransferOwnershipResponse) ProtoMessage() {}
 
 func (x *TransferOwnershipResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_workspace_proto_msgTypes[55]
+	mi := &file_tammy_v1_workspace_proto_msgTypes[58]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3930,7 +4293,7 @@ func (x *TransferOwnershipResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TransferOwnershipResponse.ProtoReflect.Descriptor instead.
 func (*TransferOwnershipResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{55}
+	return file_tammy_v1_workspace_proto_rawDescGZIP(), []int{58}
 }
 
 func (x *TransferOwnershipResponse) GetWorkspace() *Workspace {
@@ -3963,15 +4326,45 @@ const file_tammy_v1_workspace_proto_rawDesc = "" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\tcreatedAt\x12=\n" +
 	"\fcompleted_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\vcompletedAt\x121\n" +
 	"\rmanifest_hash\x18\b \x01(\fB\a\xbaH\x04z\x02h H\x00R\fmanifestHash\x88\x01\x01B\x10\n" +
-	"\x0e_manifest_hash\"\xfd\x02\n" +
+	"\x0e_manifest_hash\"\xba\x03\n" +
 	"\rRestoreStatus\x12o\n" +
 	"\foperation_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\voperationId\x126\n" +
 	"\x05state\x18\x02 \x01(\x0e2\x16.tammy.v1.RestoreStateB\b\xbaH\x05\x82\x01\x02\x10\x01R\x05state\x129\n" +
 	"\x14backup_manifest_hash\x18\x03 \x01(\fB\a\xbaH\x04z\x02h R\x12backupManifestHash\x122\n" +
 	"\x0enew_audit_head\x18\x04 \x01(\fB\a\xbaH\x04z\x02h H\x00R\fnewAuditHead\x88\x01\x01\x12A\n" +
 	"\n" +
-	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\tupdatedAtB\x11\n" +
-	"\x0f_new_audit_head\"\xd1\x03\n" +
+	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\tupdatedAt\x12;\n" +
+	"\brecovery\x18\x06 \x01(\v2\x1f.tammy.v1.RestoreRecoveryRecordR\brecoveryB\x11\n" +
+	"\x0f_new_audit_head\"\xc3\v\n" +
+	"\x15RestoreRecoveryRecord\x12o\n" +
+	"\fworkspace_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\vworkspaceId\x12\x81\x01\n" +
+	"\x16pre_restore_archive_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x13preRestoreArchiveId\x12@\n" +
+	"\x18pre_restore_archive_hash\x18\x03 \x01(\fB\a\xbaH\x04z\x02h R\x15preRestoreArchiveHash\x121\n" +
+	"\x0estage_basename\x18\x04 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xc0\x01R\rstageBasename\x127\n" +
+	"\x11rollback_basename\x18\x05 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xc0\x01R\x10rollbackBasename\x12?\n" +
+	"\x14finalized_generation\x18\x06 \x01(\x04B\a\xbaH\x042\x02(\x02H\x00R\x13finalizedGeneration\x88\x01\x01\x12>\n" +
+	"\x14finalized_audit_head\x18\a \x01(\fB\a\xbaH\x04z\x02h H\x01R\x12finalizedAuditHead\x88\x01\x01\x123\n" +
+	"\x0eschema_version\x18\b \x01(\x04B\a\xbaH\x042\x02(\x01H\x02R\rschemaVersion\x88\x01\x01\x12D\n" +
+	"\x17migration_manifest_hash\x18\t \x01(\fB\a\xbaH\x04z\x02h H\x03R\x15migrationManifestHash\x88\x01\x01\x12,\n" +
+	"\x12post_swap_verified\x18\n" +
+	" \x01(\bR\x10postSwapVerified\x12>\n" +
+	"\x1bmachine_credentials_revoked\x18\v \x01(\bR\x19machineCredentialsRevoked\x12)\n" +
+	"\x10mirror_published\x18\f \x01(\bR\x0fmirrorPublished\x12\\\n" +
+	"%pre_restore_archive_prepared_basename\x18\r \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\x80\x01R!preRestoreArchivePreparedBasename\x12V\n" +
+	"\"pre_restore_archive_final_basename\x18\x0e \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\x80\x01R\x1epreRestoreArchiveFinalBasename\x12C\n" +
+	"\x19artifact_ownership_digest\x18\x0f \x01(\fB\a\xbaH\x04z\x02h R\x17artifactOwnershipDigest\x12C\n" +
+	"\x19rollback_predecessor_hash\x18\x10 \x01(\fB\a\xbaH\x04z\x02\x18 R\x17rollbackPredecessorHash\x12B\n" +
+	"\x19stage_owner_marker_sha256\x18\x11 \x01(\fB\a\xbaH\x04z\x02h R\x16stageOwnerMarkerSha256\x12H\n" +
+	"\x1crollback_owner_marker_sha256\x18\x12 \x01(\fB\a\xbaH\x04z\x02h R\x19rollbackOwnerMarkerSha256\x12C\n" +
+	"\x19activated_database_sha256\x18\x13 \x01(\fB\a\xbaH\x04z\x02\x18 R\x17activatedDatabaseSha256B\x17\n" +
+	"\x15_finalized_generationB\x17\n" +
+	"\x15_finalized_audit_headB\x11\n" +
+	"\x0f_schema_versionB\x1a\n" +
+	"\x18_migration_manifest_hash\"\xa0\x04\n" +
 	"\x11PreRestoreArchive\x12\\\n" +
 	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12!\n" +
 	"\aversion\x18\x02 \x01(\x04B\a\xbaH\x042\x02(\x01R\aversion\x12@\n" +
@@ -3980,7 +4373,10 @@ const file_tammy_v1_workspace_proto_rawDesc = "" +
 	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\tcreatedAt\x12T\n" +
 	"\x14deletion_eligible_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\x12deletionEligibleAt\x12*\n" +
 	"\fcontent_hash\x18\x06 \x01(\fB\a\xbaH\x04z\x02h R\vcontentHash\x124\n" +
-	"\x11source_generation\x18\a \x01(\x04B\a\xbaH\x042\x02(\x01R\x10sourceGeneration\"\xd1\x04\n" +
+	"\x11source_generation\x18\a \x01(\x04B\a\xbaH\x042\x02(\x01R\x10sourceGeneration\x12>\n" +
+	"\n" +
+	"deleted_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampH\x00R\tdeletedAt\x88\x01\x01B\r\n" +
+	"\v_deleted_at\"\xd1\x04\n" +
 	"\x1aPreRestoreArchiveExportJob\x12\\\n" +
 	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12!\n" +
 	"\aversion\x18\x02 \x01(\x04B\a\xbaH\x042\x02(\x01R\aversion\x12k\n" +
@@ -4137,6 +4533,14 @@ const file_tammy_v1_workspace_proto_rawDesc = "" +
 	"\x06job_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x05jobId\x122\n" +
 	"\x10expected_version\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion\"g\n" +
 	"%CancelPreRestoreArchiveExportResponse\x12>\n" +
+	"\x03job\x18\x01 \x01(\v2$.tammy.v1.PreRestoreArchiveExportJobB\x06\xbaH\x03\xc8\x01\x01R\x03job\"\xa4\x03\n" +
+	"#RetryPreRestoreArchiveExportRequest\x12I\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12c\n" +
+	"\x06job_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x05jobId\x122\n" +
+	"\x10expected_version\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion\x12T\n" +
+	"\x16administrator_password\x18\x04 \x01(\v2\x15.tammy.v1.SecretInputB\x06\xbaH\x03\xc8\x01\x01R\x15administratorPassword\x12C\n" +
+	"\vdestination\x18\x05 \x01(\v2\x19.tammy.v1.ApprovedFileRefB\x06\xbaH\x03\xc8\x01\x01R\vdestination\"f\n" +
+	"$RetryPreRestoreArchiveExportResponse\x12>\n" +
 	"\x03job\x18\x01 \x01(\v2$.tammy.v1.PreRestoreArchiveExportJobB\x06\xbaH\x03\xc8\x01\x01R\x03job\"\xdc\x01\n" +
 	"$GetPreRestoreArchiveExportJobRequest\x12O\n" +
 	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12c\n" +
@@ -4201,17 +4605,19 @@ const file_tammy_v1_workspace_proto_rawDesc = "" +
 	"\x1aBACKUP_JOB_STATE_COMPLETED\x10\x03\x12%\n" +
 	"!BACKUP_JOB_STATE_FAILED_RETRYABLE\x10\x04\x12$\n" +
 	" BACKUP_JOB_STATE_FAILED_TERMINAL\x10\x05\x12\x1e\n" +
-	"\x1aBACKUP_JOB_STATE_CANCELLED\x10\x06*\x9a\x01\n" +
+	"\x1aBACKUP_JOB_STATE_CANCELLED\x10\x06*\xb9\x01\n" +
 	"\fRestoreState\x12\x1d\n" +
 	"\x19RESTORE_STATE_UNSPECIFIED\x10\x00\x12\x1a\n" +
 	"\x16RESTORE_STATE_PREPARED\x10\x01\x12\x18\n" +
 	"\x14RESTORE_STATE_STAGED\x10\x02\x12\x19\n" +
 	"\x15RESTORE_STATE_SWAPPED\x10\x03\x12\x1a\n" +
-	"\x16RESTORE_STATE_COMPLETE\x10\x04*\x93\x01\n" +
+	"\x16RESTORE_STATE_COMPLETE\x10\x04\x12\x1d\n" +
+	"\x19RESTORE_STATE_ROLLED_BACK\x10\x05*\xc1\x01\n" +
 	"\x16PreRestoreArchiveState\x12)\n" +
 	"%PRE_RESTORE_ARCHIVE_STATE_UNSPECIFIED\x10\x00\x12'\n" +
 	"#PRE_RESTORE_ARCHIVE_STATE_AVAILABLE\x10\x01\x12%\n" +
-	"!PRE_RESTORE_ARCHIVE_STATE_DELETED\x10\x02*\x90\x03\n" +
+	"!PRE_RESTORE_ARCHIVE_STATE_DELETED\x10\x02\x12,\n" +
+	"(PRE_RESTORE_ARCHIVE_STATE_DELETE_PENDING\x10\x03*\x90\x03\n" +
 	"\x1fPreRestoreArchiveExportJobState\x124\n" +
 	"0PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_UNSPECIFIED\x10\x00\x12/\n" +
 	"+PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_QUEUED\x10\x01\x120\n" +
@@ -4219,7 +4625,7 @@ const file_tammy_v1_workspace_proto_rawDesc = "" +
 	"-PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_VERIFIED\x10\x03\x122\n" +
 	".PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_COMPLETED\x10\x04\x122\n" +
 	".PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_CANCELLED\x10\x05\x129\n" +
-	"5PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_FAILED_RETRYABLE\x10\x062\x97\x12\n" +
+	"5PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_FAILED_RETRYABLE\x10\x062\x96\x13\n" +
 	"\x10WorkspaceService\x12V\n" +
 	"\x0fCreateWorkspace\x12 .tammy.v1.CreateWorkspaceRequest\x1a!.tammy.v1.CreateWorkspaceResponse\x12V\n" +
 	"\x0fConfirmRecovery\x12 .tammy.v1.ConfirmRecoveryRequest\x1a!.tammy.v1.ConfirmRecoveryResponse\x12V\n" +
@@ -4237,7 +4643,8 @@ const file_tammy_v1_workspace_proto_rawDesc = "" +
 	"\x10RestoreWorkspace\x12!.tammy.v1.RestoreWorkspaceRequest\x1a\".tammy.v1.RestoreWorkspaceResponse\x12Y\n" +
 	"\x10GetRestoreStatus\x12!.tammy.v1.GetRestoreStatusRequest\x1a\".tammy.v1.GetRestoreStatusResponse\x12n\n" +
 	"\x17ExportPreRestoreArchive\x12(.tammy.v1.ExportPreRestoreArchiveRequest\x1a).tammy.v1.ExportPreRestoreArchiveResponse\x12\x80\x01\n" +
-	"\x1dCancelPreRestoreArchiveExport\x12..tammy.v1.CancelPreRestoreArchiveExportRequest\x1a/.tammy.v1.CancelPreRestoreArchiveExportResponse\x12\x80\x01\n" +
+	"\x1dCancelPreRestoreArchiveExport\x12..tammy.v1.CancelPreRestoreArchiveExportRequest\x1a/.tammy.v1.CancelPreRestoreArchiveExportResponse\x12}\n" +
+	"\x1cRetryPreRestoreArchiveExport\x12-.tammy.v1.RetryPreRestoreArchiveExportRequest\x1a..tammy.v1.RetryPreRestoreArchiveExportResponse\x12\x80\x01\n" +
 	"\x1dGetPreRestoreArchiveExportJob\x12..tammy.v1.GetPreRestoreArchiveExportJobRequest\x1a/.tammy.v1.GetPreRestoreArchiveExportJobResponse\x12\x86\x01\n" +
 	"\x1fListPreRestoreArchiveExportJobs\x120.tammy.v1.ListPreRestoreArchiveExportJobsRequest\x1a1.tammy.v1.ListPreRestoreArchiveExportJobsResponse\x12n\n" +
 	"\x17DeletePreRestoreArchive\x12(.tammy.v1.DeletePreRestoreArchiveRequest\x1a).tammy.v1.DeletePreRestoreArchiveResponse\x12e\n" +
@@ -4258,7 +4665,7 @@ func file_tammy_v1_workspace_proto_rawDescGZIP() []byte {
 }
 
 var file_tammy_v1_workspace_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
-var file_tammy_v1_workspace_proto_msgTypes = make([]protoimpl.MessageInfo, 56)
+var file_tammy_v1_workspace_proto_msgTypes = make([]protoimpl.MessageInfo, 59)
 var file_tammy_v1_workspace_proto_goTypes = []any{
 	(WorkspaceState)(0),                             // 0: tammy.v1.WorkspaceState
 	(WorkspaceTrustState)(0),                        // 1: tammy.v1.WorkspaceTrustState
@@ -4269,217 +4676,228 @@ var file_tammy_v1_workspace_proto_goTypes = []any{
 	(*Workspace)(nil),                               // 6: tammy.v1.Workspace
 	(*BackupJob)(nil),                               // 7: tammy.v1.BackupJob
 	(*RestoreStatus)(nil),                           // 8: tammy.v1.RestoreStatus
-	(*PreRestoreArchive)(nil),                       // 9: tammy.v1.PreRestoreArchive
-	(*PreRestoreArchiveExportJob)(nil),              // 10: tammy.v1.PreRestoreArchiveExportJob
-	(*RecoveryGroupConfirmation)(nil),               // 11: tammy.v1.RecoveryGroupConfirmation
-	(*WorkspaceUnlockProof)(nil),                    // 12: tammy.v1.WorkspaceUnlockProof
-	(*MovedWorkspaceTrustProof)(nil),                // 13: tammy.v1.MovedWorkspaceTrustProof
-	(*RestoreAdministratorProof)(nil),               // 14: tammy.v1.RestoreAdministratorProof
-	(*RestoreRecoveryProof)(nil),                    // 15: tammy.v1.RestoreRecoveryProof
-	(*CreateWorkspaceRequest)(nil),                  // 16: tammy.v1.CreateWorkspaceRequest
-	(*CreateWorkspaceResponse)(nil),                 // 17: tammy.v1.CreateWorkspaceResponse
-	(*ConfirmRecoveryRequest)(nil),                  // 18: tammy.v1.ConfirmRecoveryRequest
-	(*ConfirmRecoveryResponse)(nil),                 // 19: tammy.v1.ConfirmRecoveryResponse
-	(*UnlockWorkspaceRequest)(nil),                  // 20: tammy.v1.UnlockWorkspaceRequest
-	(*UnlockWorkspaceResponse)(nil),                 // 21: tammy.v1.UnlockWorkspaceResponse
-	(*LockWorkspaceRequest)(nil),                    // 22: tammy.v1.LockWorkspaceRequest
-	(*LockWorkspaceResponse)(nil),                   // 23: tammy.v1.LockWorkspaceResponse
-	(*ForgetRememberedWorkspaceRequest)(nil),        // 24: tammy.v1.ForgetRememberedWorkspaceRequest
-	(*ForgetRememberedWorkspaceResponse)(nil),       // 25: tammy.v1.ForgetRememberedWorkspaceResponse
-	(*GetWorkspaceStateRequest)(nil),                // 26: tammy.v1.GetWorkspaceStateRequest
-	(*GetWorkspaceStateResponse)(nil),               // 27: tammy.v1.GetWorkspaceStateResponse
-	(*ChangePassphraseRequest)(nil),                 // 28: tammy.v1.ChangePassphraseRequest
-	(*ChangePassphraseResponse)(nil),                // 29: tammy.v1.ChangePassphraseResponse
-	(*RecoverWorkspaceRequest)(nil),                 // 30: tammy.v1.RecoverWorkspaceRequest
-	(*RecoverWorkspaceResponse)(nil),                // 31: tammy.v1.RecoverWorkspaceResponse
-	(*EstablishMovedWorkspaceTrustRequest)(nil),     // 32: tammy.v1.EstablishMovedWorkspaceTrustRequest
-	(*EstablishMovedWorkspaceTrustResponse)(nil),    // 33: tammy.v1.EstablishMovedWorkspaceTrustResponse
-	(*BackupWorkspaceRequest)(nil),                  // 34: tammy.v1.BackupWorkspaceRequest
-	(*BackupWorkspaceResponse)(nil),                 // 35: tammy.v1.BackupWorkspaceResponse
-	(*CancelBackupRequest)(nil),                     // 36: tammy.v1.CancelBackupRequest
-	(*CancelBackupResponse)(nil),                    // 37: tammy.v1.CancelBackupResponse
-	(*GetBackupJobRequest)(nil),                     // 38: tammy.v1.GetBackupJobRequest
-	(*GetBackupJobResponse)(nil),                    // 39: tammy.v1.GetBackupJobResponse
-	(*ListBackupJobsRequest)(nil),                   // 40: tammy.v1.ListBackupJobsRequest
-	(*ListBackupJobsResponse)(nil),                  // 41: tammy.v1.ListBackupJobsResponse
-	(*RestoreWorkspaceRequest)(nil),                 // 42: tammy.v1.RestoreWorkspaceRequest
-	(*RestoreWorkspaceResponse)(nil),                // 43: tammy.v1.RestoreWorkspaceResponse
-	(*GetRestoreStatusRequest)(nil),                 // 44: tammy.v1.GetRestoreStatusRequest
-	(*GetRestoreStatusResponse)(nil),                // 45: tammy.v1.GetRestoreStatusResponse
-	(*ExportPreRestoreArchiveRequest)(nil),          // 46: tammy.v1.ExportPreRestoreArchiveRequest
-	(*ExportPreRestoreArchiveResponse)(nil),         // 47: tammy.v1.ExportPreRestoreArchiveResponse
-	(*CancelPreRestoreArchiveExportRequest)(nil),    // 48: tammy.v1.CancelPreRestoreArchiveExportRequest
-	(*CancelPreRestoreArchiveExportResponse)(nil),   // 49: tammy.v1.CancelPreRestoreArchiveExportResponse
-	(*GetPreRestoreArchiveExportJobRequest)(nil),    // 50: tammy.v1.GetPreRestoreArchiveExportJobRequest
-	(*GetPreRestoreArchiveExportJobResponse)(nil),   // 51: tammy.v1.GetPreRestoreArchiveExportJobResponse
-	(*ListPreRestoreArchiveExportJobsRequest)(nil),  // 52: tammy.v1.ListPreRestoreArchiveExportJobsRequest
-	(*ListPreRestoreArchiveExportJobsResponse)(nil), // 53: tammy.v1.ListPreRestoreArchiveExportJobsResponse
-	(*DeletePreRestoreArchiveRequest)(nil),          // 54: tammy.v1.DeletePreRestoreArchiveRequest
-	(*DeletePreRestoreArchiveResponse)(nil),         // 55: tammy.v1.DeletePreRestoreArchiveResponse
-	(*GetPreRestoreArchiveRequest)(nil),             // 56: tammy.v1.GetPreRestoreArchiveRequest
-	(*GetPreRestoreArchiveResponse)(nil),            // 57: tammy.v1.GetPreRestoreArchiveResponse
-	(*ListPreRestoreArchivesRequest)(nil),           // 58: tammy.v1.ListPreRestoreArchivesRequest
-	(*ListPreRestoreArchivesResponse)(nil),          // 59: tammy.v1.ListPreRestoreArchivesResponse
-	(*TransferOwnershipRequest)(nil),                // 60: tammy.v1.TransferOwnershipRequest
-	(*TransferOwnershipResponse)(nil),               // 61: tammy.v1.TransferOwnershipResponse
-	(*timestamppb.Timestamp)(nil),                   // 62: google.protobuf.Timestamp
-	(*JobProgress)(nil),                             // 63: tammy.v1.JobProgress
-	(*SecretInput)(nil),                             // 64: tammy.v1.SecretInput
-	(*TotpCodeInput)(nil),                           // 65: tammy.v1.TotpCodeInput
-	(*ApprovedFileRef)(nil),                         // 66: tammy.v1.ApprovedFileRef
-	(*OneTimeSecretOutput)(nil),                     // 67: tammy.v1.OneTimeSecretOutput
-	(*AuthenticationContext)(nil),                   // 68: tammy.v1.AuthenticationContext
-	(*CommandContext)(nil),                          // 69: tammy.v1.CommandContext
-	(*PageRequest)(nil),                             // 70: tammy.v1.PageRequest
-	(*PageInfo)(nil),                                // 71: tammy.v1.PageInfo
+	(*RestoreRecoveryRecord)(nil),                   // 9: tammy.v1.RestoreRecoveryRecord
+	(*PreRestoreArchive)(nil),                       // 10: tammy.v1.PreRestoreArchive
+	(*PreRestoreArchiveExportJob)(nil),              // 11: tammy.v1.PreRestoreArchiveExportJob
+	(*RecoveryGroupConfirmation)(nil),               // 12: tammy.v1.RecoveryGroupConfirmation
+	(*WorkspaceUnlockProof)(nil),                    // 13: tammy.v1.WorkspaceUnlockProof
+	(*MovedWorkspaceTrustProof)(nil),                // 14: tammy.v1.MovedWorkspaceTrustProof
+	(*RestoreAdministratorProof)(nil),               // 15: tammy.v1.RestoreAdministratorProof
+	(*RestoreRecoveryProof)(nil),                    // 16: tammy.v1.RestoreRecoveryProof
+	(*CreateWorkspaceRequest)(nil),                  // 17: tammy.v1.CreateWorkspaceRequest
+	(*CreateWorkspaceResponse)(nil),                 // 18: tammy.v1.CreateWorkspaceResponse
+	(*ConfirmRecoveryRequest)(nil),                  // 19: tammy.v1.ConfirmRecoveryRequest
+	(*ConfirmRecoveryResponse)(nil),                 // 20: tammy.v1.ConfirmRecoveryResponse
+	(*UnlockWorkspaceRequest)(nil),                  // 21: tammy.v1.UnlockWorkspaceRequest
+	(*UnlockWorkspaceResponse)(nil),                 // 22: tammy.v1.UnlockWorkspaceResponse
+	(*LockWorkspaceRequest)(nil),                    // 23: tammy.v1.LockWorkspaceRequest
+	(*LockWorkspaceResponse)(nil),                   // 24: tammy.v1.LockWorkspaceResponse
+	(*ForgetRememberedWorkspaceRequest)(nil),        // 25: tammy.v1.ForgetRememberedWorkspaceRequest
+	(*ForgetRememberedWorkspaceResponse)(nil),       // 26: tammy.v1.ForgetRememberedWorkspaceResponse
+	(*GetWorkspaceStateRequest)(nil),                // 27: tammy.v1.GetWorkspaceStateRequest
+	(*GetWorkspaceStateResponse)(nil),               // 28: tammy.v1.GetWorkspaceStateResponse
+	(*ChangePassphraseRequest)(nil),                 // 29: tammy.v1.ChangePassphraseRequest
+	(*ChangePassphraseResponse)(nil),                // 30: tammy.v1.ChangePassphraseResponse
+	(*RecoverWorkspaceRequest)(nil),                 // 31: tammy.v1.RecoverWorkspaceRequest
+	(*RecoverWorkspaceResponse)(nil),                // 32: tammy.v1.RecoverWorkspaceResponse
+	(*EstablishMovedWorkspaceTrustRequest)(nil),     // 33: tammy.v1.EstablishMovedWorkspaceTrustRequest
+	(*EstablishMovedWorkspaceTrustResponse)(nil),    // 34: tammy.v1.EstablishMovedWorkspaceTrustResponse
+	(*BackupWorkspaceRequest)(nil),                  // 35: tammy.v1.BackupWorkspaceRequest
+	(*BackupWorkspaceResponse)(nil),                 // 36: tammy.v1.BackupWorkspaceResponse
+	(*CancelBackupRequest)(nil),                     // 37: tammy.v1.CancelBackupRequest
+	(*CancelBackupResponse)(nil),                    // 38: tammy.v1.CancelBackupResponse
+	(*GetBackupJobRequest)(nil),                     // 39: tammy.v1.GetBackupJobRequest
+	(*GetBackupJobResponse)(nil),                    // 40: tammy.v1.GetBackupJobResponse
+	(*ListBackupJobsRequest)(nil),                   // 41: tammy.v1.ListBackupJobsRequest
+	(*ListBackupJobsResponse)(nil),                  // 42: tammy.v1.ListBackupJobsResponse
+	(*RestoreWorkspaceRequest)(nil),                 // 43: tammy.v1.RestoreWorkspaceRequest
+	(*RestoreWorkspaceResponse)(nil),                // 44: tammy.v1.RestoreWorkspaceResponse
+	(*GetRestoreStatusRequest)(nil),                 // 45: tammy.v1.GetRestoreStatusRequest
+	(*GetRestoreStatusResponse)(nil),                // 46: tammy.v1.GetRestoreStatusResponse
+	(*ExportPreRestoreArchiveRequest)(nil),          // 47: tammy.v1.ExportPreRestoreArchiveRequest
+	(*ExportPreRestoreArchiveResponse)(nil),         // 48: tammy.v1.ExportPreRestoreArchiveResponse
+	(*CancelPreRestoreArchiveExportRequest)(nil),    // 49: tammy.v1.CancelPreRestoreArchiveExportRequest
+	(*CancelPreRestoreArchiveExportResponse)(nil),   // 50: tammy.v1.CancelPreRestoreArchiveExportResponse
+	(*RetryPreRestoreArchiveExportRequest)(nil),     // 51: tammy.v1.RetryPreRestoreArchiveExportRequest
+	(*RetryPreRestoreArchiveExportResponse)(nil),    // 52: tammy.v1.RetryPreRestoreArchiveExportResponse
+	(*GetPreRestoreArchiveExportJobRequest)(nil),    // 53: tammy.v1.GetPreRestoreArchiveExportJobRequest
+	(*GetPreRestoreArchiveExportJobResponse)(nil),   // 54: tammy.v1.GetPreRestoreArchiveExportJobResponse
+	(*ListPreRestoreArchiveExportJobsRequest)(nil),  // 55: tammy.v1.ListPreRestoreArchiveExportJobsRequest
+	(*ListPreRestoreArchiveExportJobsResponse)(nil), // 56: tammy.v1.ListPreRestoreArchiveExportJobsResponse
+	(*DeletePreRestoreArchiveRequest)(nil),          // 57: tammy.v1.DeletePreRestoreArchiveRequest
+	(*DeletePreRestoreArchiveResponse)(nil),         // 58: tammy.v1.DeletePreRestoreArchiveResponse
+	(*GetPreRestoreArchiveRequest)(nil),             // 59: tammy.v1.GetPreRestoreArchiveRequest
+	(*GetPreRestoreArchiveResponse)(nil),            // 60: tammy.v1.GetPreRestoreArchiveResponse
+	(*ListPreRestoreArchivesRequest)(nil),           // 61: tammy.v1.ListPreRestoreArchivesRequest
+	(*ListPreRestoreArchivesResponse)(nil),          // 62: tammy.v1.ListPreRestoreArchivesResponse
+	(*TransferOwnershipRequest)(nil),                // 63: tammy.v1.TransferOwnershipRequest
+	(*TransferOwnershipResponse)(nil),               // 64: tammy.v1.TransferOwnershipResponse
+	(*timestamppb.Timestamp)(nil),                   // 65: google.protobuf.Timestamp
+	(*JobProgress)(nil),                             // 66: tammy.v1.JobProgress
+	(*SecretInput)(nil),                             // 67: tammy.v1.SecretInput
+	(*TotpCodeInput)(nil),                           // 68: tammy.v1.TotpCodeInput
+	(*ApprovedFileRef)(nil),                         // 69: tammy.v1.ApprovedFileRef
+	(*OneTimeSecretOutput)(nil),                     // 70: tammy.v1.OneTimeSecretOutput
+	(*AuthenticationContext)(nil),                   // 71: tammy.v1.AuthenticationContext
+	(*CommandContext)(nil),                          // 72: tammy.v1.CommandContext
+	(*PageRequest)(nil),                             // 73: tammy.v1.PageRequest
+	(*PageInfo)(nil),                                // 74: tammy.v1.PageInfo
 }
 var file_tammy_v1_workspace_proto_depIdxs = []int32{
 	0,   // 0: tammy.v1.Workspace.state:type_name -> tammy.v1.WorkspaceState
 	1,   // 1: tammy.v1.Workspace.trust_state:type_name -> tammy.v1.WorkspaceTrustState
-	62,  // 2: tammy.v1.Workspace.remembered_until:type_name -> google.protobuf.Timestamp
+	65,  // 2: tammy.v1.Workspace.remembered_until:type_name -> google.protobuf.Timestamp
 	2,   // 3: tammy.v1.BackupJob.state:type_name -> tammy.v1.BackupJobState
-	63,  // 4: tammy.v1.BackupJob.progress:type_name -> tammy.v1.JobProgress
-	62,  // 5: tammy.v1.BackupJob.created_at:type_name -> google.protobuf.Timestamp
-	62,  // 6: tammy.v1.BackupJob.completed_at:type_name -> google.protobuf.Timestamp
+	66,  // 4: tammy.v1.BackupJob.progress:type_name -> tammy.v1.JobProgress
+	65,  // 5: tammy.v1.BackupJob.created_at:type_name -> google.protobuf.Timestamp
+	65,  // 6: tammy.v1.BackupJob.completed_at:type_name -> google.protobuf.Timestamp
 	3,   // 7: tammy.v1.RestoreStatus.state:type_name -> tammy.v1.RestoreState
-	62,  // 8: tammy.v1.RestoreStatus.updated_at:type_name -> google.protobuf.Timestamp
-	4,   // 9: tammy.v1.PreRestoreArchive.state:type_name -> tammy.v1.PreRestoreArchiveState
-	62,  // 10: tammy.v1.PreRestoreArchive.created_at:type_name -> google.protobuf.Timestamp
-	62,  // 11: tammy.v1.PreRestoreArchive.deletion_eligible_at:type_name -> google.protobuf.Timestamp
-	5,   // 12: tammy.v1.PreRestoreArchiveExportJob.state:type_name -> tammy.v1.PreRestoreArchiveExportJobState
-	63,  // 13: tammy.v1.PreRestoreArchiveExportJob.progress:type_name -> tammy.v1.JobProgress
-	64,  // 14: tammy.v1.WorkspaceUnlockProof.passphrase:type_name -> tammy.v1.SecretInput
-	64,  // 15: tammy.v1.MovedWorkspaceTrustProof.administrator_password:type_name -> tammy.v1.SecretInput
-	64,  // 16: tammy.v1.MovedWorkspaceTrustProof.recovery_secret:type_name -> tammy.v1.SecretInput
-	64,  // 17: tammy.v1.RestoreAdministratorProof.workspace_passphrase:type_name -> tammy.v1.SecretInput
-	64,  // 18: tammy.v1.RestoreAdministratorProof.user_password:type_name -> tammy.v1.SecretInput
-	65,  // 19: tammy.v1.RestoreAdministratorProof.totp_code:type_name -> tammy.v1.TotpCodeInput
-	64,  // 20: tammy.v1.RestoreRecoveryProof.recovery_secret:type_name -> tammy.v1.SecretInput
-	64,  // 21: tammy.v1.RestoreRecoveryProof.new_workspace_passphrase:type_name -> tammy.v1.SecretInput
-	64,  // 22: tammy.v1.RestoreRecoveryProof.new_user_password:type_name -> tammy.v1.SecretInput
-	66,  // 23: tammy.v1.CreateWorkspaceRequest.destination:type_name -> tammy.v1.ApprovedFileRef
-	64,  // 24: tammy.v1.CreateWorkspaceRequest.workspace_passphrase:type_name -> tammy.v1.SecretInput
-	64,  // 25: tammy.v1.CreateWorkspaceRequest.administrator_password:type_name -> tammy.v1.SecretInput
-	6,   // 26: tammy.v1.CreateWorkspaceResponse.workspace:type_name -> tammy.v1.Workspace
-	67,  // 27: tammy.v1.CreateWorkspaceResponse.recovery_secret:type_name -> tammy.v1.OneTimeSecretOutput
-	62,  // 28: tammy.v1.CreateWorkspaceResponse.expires_at:type_name -> google.protobuf.Timestamp
-	11,  // 29: tammy.v1.ConfirmRecoveryRequest.confirmations:type_name -> tammy.v1.RecoveryGroupConfirmation
-	12,  // 30: tammy.v1.ConfirmRecoveryRequest.terminal_replay_proof:type_name -> tammy.v1.WorkspaceUnlockProof
-	6,   // 31: tammy.v1.ConfirmRecoveryResponse.workspace:type_name -> tammy.v1.Workspace
-	66,  // 32: tammy.v1.UnlockWorkspaceRequest.workspace_file:type_name -> tammy.v1.ApprovedFileRef
-	12,  // 33: tammy.v1.UnlockWorkspaceRequest.proof:type_name -> tammy.v1.WorkspaceUnlockProof
-	6,   // 34: tammy.v1.UnlockWorkspaceResponse.workspace:type_name -> tammy.v1.Workspace
-	68,  // 35: tammy.v1.LockWorkspaceRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	6,   // 36: tammy.v1.LockWorkspaceResponse.workspace:type_name -> tammy.v1.Workspace
-	68,  // 37: tammy.v1.ForgetRememberedWorkspaceRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	6,   // 38: tammy.v1.ForgetRememberedWorkspaceResponse.workspace:type_name -> tammy.v1.Workspace
-	6,   // 39: tammy.v1.GetWorkspaceStateResponse.workspace:type_name -> tammy.v1.Workspace
-	69,  // 40: tammy.v1.ChangePassphraseRequest.command_context:type_name -> tammy.v1.CommandContext
-	64,  // 41: tammy.v1.ChangePassphraseRequest.current_passphrase:type_name -> tammy.v1.SecretInput
-	64,  // 42: tammy.v1.ChangePassphraseRequest.new_passphrase:type_name -> tammy.v1.SecretInput
-	6,   // 43: tammy.v1.ChangePassphraseResponse.workspace:type_name -> tammy.v1.Workspace
-	66,  // 44: tammy.v1.RecoverWorkspaceRequest.workspace_file:type_name -> tammy.v1.ApprovedFileRef
-	64,  // 45: tammy.v1.RecoverWorkspaceRequest.recovery_secret:type_name -> tammy.v1.SecretInput
-	64,  // 46: tammy.v1.RecoverWorkspaceRequest.new_passphrase:type_name -> tammy.v1.SecretInput
-	6,   // 47: tammy.v1.RecoverWorkspaceResponse.workspace:type_name -> tammy.v1.Workspace
-	69,  // 48: tammy.v1.EstablishMovedWorkspaceTrustRequest.command_context:type_name -> tammy.v1.CommandContext
-	13,  // 49: tammy.v1.EstablishMovedWorkspaceTrustRequest.proof:type_name -> tammy.v1.MovedWorkspaceTrustProof
-	6,   // 50: tammy.v1.EstablishMovedWorkspaceTrustResponse.workspace:type_name -> tammy.v1.Workspace
-	69,  // 51: tammy.v1.BackupWorkspaceRequest.command_context:type_name -> tammy.v1.CommandContext
-	66,  // 52: tammy.v1.BackupWorkspaceRequest.destination:type_name -> tammy.v1.ApprovedFileRef
-	64,  // 53: tammy.v1.BackupWorkspaceRequest.backup_passphrase:type_name -> tammy.v1.SecretInput
-	7,   // 54: tammy.v1.BackupWorkspaceResponse.job:type_name -> tammy.v1.BackupJob
-	69,  // 55: tammy.v1.CancelBackupRequest.command_context:type_name -> tammy.v1.CommandContext
-	7,   // 56: tammy.v1.CancelBackupResponse.job:type_name -> tammy.v1.BackupJob
-	68,  // 57: tammy.v1.GetBackupJobRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	7,   // 58: tammy.v1.GetBackupJobResponse.job:type_name -> tammy.v1.BackupJob
-	68,  // 59: tammy.v1.ListBackupJobsRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	70,  // 60: tammy.v1.ListBackupJobsRequest.page:type_name -> tammy.v1.PageRequest
-	2,   // 61: tammy.v1.ListBackupJobsRequest.state:type_name -> tammy.v1.BackupJobState
-	7,   // 62: tammy.v1.ListBackupJobsResponse.jobs:type_name -> tammy.v1.BackupJob
-	71,  // 63: tammy.v1.ListBackupJobsResponse.page:type_name -> tammy.v1.PageInfo
-	66,  // 64: tammy.v1.RestoreWorkspaceRequest.backup_file:type_name -> tammy.v1.ApprovedFileRef
-	64,  // 65: tammy.v1.RestoreWorkspaceRequest.backup_passphrase:type_name -> tammy.v1.SecretInput
-	14,  // 66: tammy.v1.RestoreWorkspaceRequest.administrator_proof:type_name -> tammy.v1.RestoreAdministratorProof
-	15,  // 67: tammy.v1.RestoreWorkspaceRequest.recovery_proof:type_name -> tammy.v1.RestoreRecoveryProof
-	8,   // 68: tammy.v1.RestoreWorkspaceResponse.status:type_name -> tammy.v1.RestoreStatus
-	8,   // 69: tammy.v1.GetRestoreStatusResponse.status:type_name -> tammy.v1.RestoreStatus
-	69,  // 70: tammy.v1.ExportPreRestoreArchiveRequest.command_context:type_name -> tammy.v1.CommandContext
-	64,  // 71: tammy.v1.ExportPreRestoreArchiveRequest.administrator_password:type_name -> tammy.v1.SecretInput
-	66,  // 72: tammy.v1.ExportPreRestoreArchiveRequest.destination:type_name -> tammy.v1.ApprovedFileRef
-	10,  // 73: tammy.v1.ExportPreRestoreArchiveResponse.job:type_name -> tammy.v1.PreRestoreArchiveExportJob
-	69,  // 74: tammy.v1.CancelPreRestoreArchiveExportRequest.command_context:type_name -> tammy.v1.CommandContext
-	10,  // 75: tammy.v1.CancelPreRestoreArchiveExportResponse.job:type_name -> tammy.v1.PreRestoreArchiveExportJob
-	68,  // 76: tammy.v1.GetPreRestoreArchiveExportJobRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	10,  // 77: tammy.v1.GetPreRestoreArchiveExportJobResponse.job:type_name -> tammy.v1.PreRestoreArchiveExportJob
-	68,  // 78: tammy.v1.ListPreRestoreArchiveExportJobsRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	70,  // 79: tammy.v1.ListPreRestoreArchiveExportJobsRequest.page:type_name -> tammy.v1.PageRequest
-	5,   // 80: tammy.v1.ListPreRestoreArchiveExportJobsRequest.state:type_name -> tammy.v1.PreRestoreArchiveExportJobState
-	10,  // 81: tammy.v1.ListPreRestoreArchiveExportJobsResponse.jobs:type_name -> tammy.v1.PreRestoreArchiveExportJob
-	71,  // 82: tammy.v1.ListPreRestoreArchiveExportJobsResponse.page:type_name -> tammy.v1.PageInfo
-	69,  // 83: tammy.v1.DeletePreRestoreArchiveRequest.command_context:type_name -> tammy.v1.CommandContext
-	64,  // 84: tammy.v1.DeletePreRestoreArchiveRequest.administrator_password:type_name -> tammy.v1.SecretInput
-	9,   // 85: tammy.v1.DeletePreRestoreArchiveResponse.archive:type_name -> tammy.v1.PreRestoreArchive
-	68,  // 86: tammy.v1.GetPreRestoreArchiveRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	9,   // 87: tammy.v1.GetPreRestoreArchiveResponse.archive:type_name -> tammy.v1.PreRestoreArchive
-	68,  // 88: tammy.v1.ListPreRestoreArchivesRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	70,  // 89: tammy.v1.ListPreRestoreArchivesRequest.page:type_name -> tammy.v1.PageRequest
-	4,   // 90: tammy.v1.ListPreRestoreArchivesRequest.state:type_name -> tammy.v1.PreRestoreArchiveState
-	9,   // 91: tammy.v1.ListPreRestoreArchivesResponse.archives:type_name -> tammy.v1.PreRestoreArchive
-	71,  // 92: tammy.v1.ListPreRestoreArchivesResponse.page:type_name -> tammy.v1.PageInfo
-	69,  // 93: tammy.v1.TransferOwnershipRequest.command_context:type_name -> tammy.v1.CommandContext
-	6,   // 94: tammy.v1.TransferOwnershipResponse.workspace:type_name -> tammy.v1.Workspace
-	16,  // 95: tammy.v1.WorkspaceService.CreateWorkspace:input_type -> tammy.v1.CreateWorkspaceRequest
-	18,  // 96: tammy.v1.WorkspaceService.ConfirmRecovery:input_type -> tammy.v1.ConfirmRecoveryRequest
-	20,  // 97: tammy.v1.WorkspaceService.UnlockWorkspace:input_type -> tammy.v1.UnlockWorkspaceRequest
-	22,  // 98: tammy.v1.WorkspaceService.LockWorkspace:input_type -> tammy.v1.LockWorkspaceRequest
-	24,  // 99: tammy.v1.WorkspaceService.ForgetRememberedWorkspace:input_type -> tammy.v1.ForgetRememberedWorkspaceRequest
-	26,  // 100: tammy.v1.WorkspaceService.GetWorkspaceState:input_type -> tammy.v1.GetWorkspaceStateRequest
-	28,  // 101: tammy.v1.WorkspaceService.ChangePassphrase:input_type -> tammy.v1.ChangePassphraseRequest
-	30,  // 102: tammy.v1.WorkspaceService.RecoverWorkspace:input_type -> tammy.v1.RecoverWorkspaceRequest
-	32,  // 103: tammy.v1.WorkspaceService.EstablishMovedWorkspaceTrust:input_type -> tammy.v1.EstablishMovedWorkspaceTrustRequest
-	34,  // 104: tammy.v1.WorkspaceService.BackupWorkspace:input_type -> tammy.v1.BackupWorkspaceRequest
-	36,  // 105: tammy.v1.WorkspaceService.CancelBackup:input_type -> tammy.v1.CancelBackupRequest
-	38,  // 106: tammy.v1.WorkspaceService.GetBackupJob:input_type -> tammy.v1.GetBackupJobRequest
-	40,  // 107: tammy.v1.WorkspaceService.ListBackupJobs:input_type -> tammy.v1.ListBackupJobsRequest
-	42,  // 108: tammy.v1.WorkspaceService.RestoreWorkspace:input_type -> tammy.v1.RestoreWorkspaceRequest
-	44,  // 109: tammy.v1.WorkspaceService.GetRestoreStatus:input_type -> tammy.v1.GetRestoreStatusRequest
-	46,  // 110: tammy.v1.WorkspaceService.ExportPreRestoreArchive:input_type -> tammy.v1.ExportPreRestoreArchiveRequest
-	48,  // 111: tammy.v1.WorkspaceService.CancelPreRestoreArchiveExport:input_type -> tammy.v1.CancelPreRestoreArchiveExportRequest
-	50,  // 112: tammy.v1.WorkspaceService.GetPreRestoreArchiveExportJob:input_type -> tammy.v1.GetPreRestoreArchiveExportJobRequest
-	52,  // 113: tammy.v1.WorkspaceService.ListPreRestoreArchiveExportJobs:input_type -> tammy.v1.ListPreRestoreArchiveExportJobsRequest
-	54,  // 114: tammy.v1.WorkspaceService.DeletePreRestoreArchive:input_type -> tammy.v1.DeletePreRestoreArchiveRequest
-	56,  // 115: tammy.v1.WorkspaceService.GetPreRestoreArchive:input_type -> tammy.v1.GetPreRestoreArchiveRequest
-	58,  // 116: tammy.v1.WorkspaceService.ListPreRestoreArchives:input_type -> tammy.v1.ListPreRestoreArchivesRequest
-	60,  // 117: tammy.v1.WorkspaceService.TransferOwnership:input_type -> tammy.v1.TransferOwnershipRequest
-	17,  // 118: tammy.v1.WorkspaceService.CreateWorkspace:output_type -> tammy.v1.CreateWorkspaceResponse
-	19,  // 119: tammy.v1.WorkspaceService.ConfirmRecovery:output_type -> tammy.v1.ConfirmRecoveryResponse
-	21,  // 120: tammy.v1.WorkspaceService.UnlockWorkspace:output_type -> tammy.v1.UnlockWorkspaceResponse
-	23,  // 121: tammy.v1.WorkspaceService.LockWorkspace:output_type -> tammy.v1.LockWorkspaceResponse
-	25,  // 122: tammy.v1.WorkspaceService.ForgetRememberedWorkspace:output_type -> tammy.v1.ForgetRememberedWorkspaceResponse
-	27,  // 123: tammy.v1.WorkspaceService.GetWorkspaceState:output_type -> tammy.v1.GetWorkspaceStateResponse
-	29,  // 124: tammy.v1.WorkspaceService.ChangePassphrase:output_type -> tammy.v1.ChangePassphraseResponse
-	31,  // 125: tammy.v1.WorkspaceService.RecoverWorkspace:output_type -> tammy.v1.RecoverWorkspaceResponse
-	33,  // 126: tammy.v1.WorkspaceService.EstablishMovedWorkspaceTrust:output_type -> tammy.v1.EstablishMovedWorkspaceTrustResponse
-	35,  // 127: tammy.v1.WorkspaceService.BackupWorkspace:output_type -> tammy.v1.BackupWorkspaceResponse
-	37,  // 128: tammy.v1.WorkspaceService.CancelBackup:output_type -> tammy.v1.CancelBackupResponse
-	39,  // 129: tammy.v1.WorkspaceService.GetBackupJob:output_type -> tammy.v1.GetBackupJobResponse
-	41,  // 130: tammy.v1.WorkspaceService.ListBackupJobs:output_type -> tammy.v1.ListBackupJobsResponse
-	43,  // 131: tammy.v1.WorkspaceService.RestoreWorkspace:output_type -> tammy.v1.RestoreWorkspaceResponse
-	45,  // 132: tammy.v1.WorkspaceService.GetRestoreStatus:output_type -> tammy.v1.GetRestoreStatusResponse
-	47,  // 133: tammy.v1.WorkspaceService.ExportPreRestoreArchive:output_type -> tammy.v1.ExportPreRestoreArchiveResponse
-	49,  // 134: tammy.v1.WorkspaceService.CancelPreRestoreArchiveExport:output_type -> tammy.v1.CancelPreRestoreArchiveExportResponse
-	51,  // 135: tammy.v1.WorkspaceService.GetPreRestoreArchiveExportJob:output_type -> tammy.v1.GetPreRestoreArchiveExportJobResponse
-	53,  // 136: tammy.v1.WorkspaceService.ListPreRestoreArchiveExportJobs:output_type -> tammy.v1.ListPreRestoreArchiveExportJobsResponse
-	55,  // 137: tammy.v1.WorkspaceService.DeletePreRestoreArchive:output_type -> tammy.v1.DeletePreRestoreArchiveResponse
-	57,  // 138: tammy.v1.WorkspaceService.GetPreRestoreArchive:output_type -> tammy.v1.GetPreRestoreArchiveResponse
-	59,  // 139: tammy.v1.WorkspaceService.ListPreRestoreArchives:output_type -> tammy.v1.ListPreRestoreArchivesResponse
-	61,  // 140: tammy.v1.WorkspaceService.TransferOwnership:output_type -> tammy.v1.TransferOwnershipResponse
-	118, // [118:141] is the sub-list for method output_type
-	95,  // [95:118] is the sub-list for method input_type
-	95,  // [95:95] is the sub-list for extension type_name
-	95,  // [95:95] is the sub-list for extension extendee
-	0,   // [0:95] is the sub-list for field type_name
+	65,  // 8: tammy.v1.RestoreStatus.updated_at:type_name -> google.protobuf.Timestamp
+	9,   // 9: tammy.v1.RestoreStatus.recovery:type_name -> tammy.v1.RestoreRecoveryRecord
+	4,   // 10: tammy.v1.PreRestoreArchive.state:type_name -> tammy.v1.PreRestoreArchiveState
+	65,  // 11: tammy.v1.PreRestoreArchive.created_at:type_name -> google.protobuf.Timestamp
+	65,  // 12: tammy.v1.PreRestoreArchive.deletion_eligible_at:type_name -> google.protobuf.Timestamp
+	65,  // 13: tammy.v1.PreRestoreArchive.deleted_at:type_name -> google.protobuf.Timestamp
+	5,   // 14: tammy.v1.PreRestoreArchiveExportJob.state:type_name -> tammy.v1.PreRestoreArchiveExportJobState
+	66,  // 15: tammy.v1.PreRestoreArchiveExportJob.progress:type_name -> tammy.v1.JobProgress
+	67,  // 16: tammy.v1.WorkspaceUnlockProof.passphrase:type_name -> tammy.v1.SecretInput
+	67,  // 17: tammy.v1.MovedWorkspaceTrustProof.administrator_password:type_name -> tammy.v1.SecretInput
+	67,  // 18: tammy.v1.MovedWorkspaceTrustProof.recovery_secret:type_name -> tammy.v1.SecretInput
+	67,  // 19: tammy.v1.RestoreAdministratorProof.workspace_passphrase:type_name -> tammy.v1.SecretInput
+	67,  // 20: tammy.v1.RestoreAdministratorProof.user_password:type_name -> tammy.v1.SecretInput
+	68,  // 21: tammy.v1.RestoreAdministratorProof.totp_code:type_name -> tammy.v1.TotpCodeInput
+	67,  // 22: tammy.v1.RestoreRecoveryProof.recovery_secret:type_name -> tammy.v1.SecretInput
+	67,  // 23: tammy.v1.RestoreRecoveryProof.new_workspace_passphrase:type_name -> tammy.v1.SecretInput
+	67,  // 24: tammy.v1.RestoreRecoveryProof.new_user_password:type_name -> tammy.v1.SecretInput
+	69,  // 25: tammy.v1.CreateWorkspaceRequest.destination:type_name -> tammy.v1.ApprovedFileRef
+	67,  // 26: tammy.v1.CreateWorkspaceRequest.workspace_passphrase:type_name -> tammy.v1.SecretInput
+	67,  // 27: tammy.v1.CreateWorkspaceRequest.administrator_password:type_name -> tammy.v1.SecretInput
+	6,   // 28: tammy.v1.CreateWorkspaceResponse.workspace:type_name -> tammy.v1.Workspace
+	70,  // 29: tammy.v1.CreateWorkspaceResponse.recovery_secret:type_name -> tammy.v1.OneTimeSecretOutput
+	65,  // 30: tammy.v1.CreateWorkspaceResponse.expires_at:type_name -> google.protobuf.Timestamp
+	12,  // 31: tammy.v1.ConfirmRecoveryRequest.confirmations:type_name -> tammy.v1.RecoveryGroupConfirmation
+	13,  // 32: tammy.v1.ConfirmRecoveryRequest.terminal_replay_proof:type_name -> tammy.v1.WorkspaceUnlockProof
+	6,   // 33: tammy.v1.ConfirmRecoveryResponse.workspace:type_name -> tammy.v1.Workspace
+	69,  // 34: tammy.v1.UnlockWorkspaceRequest.workspace_file:type_name -> tammy.v1.ApprovedFileRef
+	13,  // 35: tammy.v1.UnlockWorkspaceRequest.proof:type_name -> tammy.v1.WorkspaceUnlockProof
+	6,   // 36: tammy.v1.UnlockWorkspaceResponse.workspace:type_name -> tammy.v1.Workspace
+	71,  // 37: tammy.v1.LockWorkspaceRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	6,   // 38: tammy.v1.LockWorkspaceResponse.workspace:type_name -> tammy.v1.Workspace
+	71,  // 39: tammy.v1.ForgetRememberedWorkspaceRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	6,   // 40: tammy.v1.ForgetRememberedWorkspaceResponse.workspace:type_name -> tammy.v1.Workspace
+	6,   // 41: tammy.v1.GetWorkspaceStateResponse.workspace:type_name -> tammy.v1.Workspace
+	72,  // 42: tammy.v1.ChangePassphraseRequest.command_context:type_name -> tammy.v1.CommandContext
+	67,  // 43: tammy.v1.ChangePassphraseRequest.current_passphrase:type_name -> tammy.v1.SecretInput
+	67,  // 44: tammy.v1.ChangePassphraseRequest.new_passphrase:type_name -> tammy.v1.SecretInput
+	6,   // 45: tammy.v1.ChangePassphraseResponse.workspace:type_name -> tammy.v1.Workspace
+	69,  // 46: tammy.v1.RecoverWorkspaceRequest.workspace_file:type_name -> tammy.v1.ApprovedFileRef
+	67,  // 47: tammy.v1.RecoverWorkspaceRequest.recovery_secret:type_name -> tammy.v1.SecretInput
+	67,  // 48: tammy.v1.RecoverWorkspaceRequest.new_passphrase:type_name -> tammy.v1.SecretInput
+	6,   // 49: tammy.v1.RecoverWorkspaceResponse.workspace:type_name -> tammy.v1.Workspace
+	72,  // 50: tammy.v1.EstablishMovedWorkspaceTrustRequest.command_context:type_name -> tammy.v1.CommandContext
+	14,  // 51: tammy.v1.EstablishMovedWorkspaceTrustRequest.proof:type_name -> tammy.v1.MovedWorkspaceTrustProof
+	6,   // 52: tammy.v1.EstablishMovedWorkspaceTrustResponse.workspace:type_name -> tammy.v1.Workspace
+	72,  // 53: tammy.v1.BackupWorkspaceRequest.command_context:type_name -> tammy.v1.CommandContext
+	69,  // 54: tammy.v1.BackupWorkspaceRequest.destination:type_name -> tammy.v1.ApprovedFileRef
+	67,  // 55: tammy.v1.BackupWorkspaceRequest.backup_passphrase:type_name -> tammy.v1.SecretInput
+	7,   // 56: tammy.v1.BackupWorkspaceResponse.job:type_name -> tammy.v1.BackupJob
+	72,  // 57: tammy.v1.CancelBackupRequest.command_context:type_name -> tammy.v1.CommandContext
+	7,   // 58: tammy.v1.CancelBackupResponse.job:type_name -> tammy.v1.BackupJob
+	71,  // 59: tammy.v1.GetBackupJobRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	7,   // 60: tammy.v1.GetBackupJobResponse.job:type_name -> tammy.v1.BackupJob
+	71,  // 61: tammy.v1.ListBackupJobsRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	73,  // 62: tammy.v1.ListBackupJobsRequest.page:type_name -> tammy.v1.PageRequest
+	2,   // 63: tammy.v1.ListBackupJobsRequest.state:type_name -> tammy.v1.BackupJobState
+	7,   // 64: tammy.v1.ListBackupJobsResponse.jobs:type_name -> tammy.v1.BackupJob
+	74,  // 65: tammy.v1.ListBackupJobsResponse.page:type_name -> tammy.v1.PageInfo
+	69,  // 66: tammy.v1.RestoreWorkspaceRequest.backup_file:type_name -> tammy.v1.ApprovedFileRef
+	67,  // 67: tammy.v1.RestoreWorkspaceRequest.backup_passphrase:type_name -> tammy.v1.SecretInput
+	15,  // 68: tammy.v1.RestoreWorkspaceRequest.administrator_proof:type_name -> tammy.v1.RestoreAdministratorProof
+	16,  // 69: tammy.v1.RestoreWorkspaceRequest.recovery_proof:type_name -> tammy.v1.RestoreRecoveryProof
+	8,   // 70: tammy.v1.RestoreWorkspaceResponse.status:type_name -> tammy.v1.RestoreStatus
+	8,   // 71: tammy.v1.GetRestoreStatusResponse.status:type_name -> tammy.v1.RestoreStatus
+	72,  // 72: tammy.v1.ExportPreRestoreArchiveRequest.command_context:type_name -> tammy.v1.CommandContext
+	67,  // 73: tammy.v1.ExportPreRestoreArchiveRequest.administrator_password:type_name -> tammy.v1.SecretInput
+	69,  // 74: tammy.v1.ExportPreRestoreArchiveRequest.destination:type_name -> tammy.v1.ApprovedFileRef
+	11,  // 75: tammy.v1.ExportPreRestoreArchiveResponse.job:type_name -> tammy.v1.PreRestoreArchiveExportJob
+	72,  // 76: tammy.v1.CancelPreRestoreArchiveExportRequest.command_context:type_name -> tammy.v1.CommandContext
+	11,  // 77: tammy.v1.CancelPreRestoreArchiveExportResponse.job:type_name -> tammy.v1.PreRestoreArchiveExportJob
+	72,  // 78: tammy.v1.RetryPreRestoreArchiveExportRequest.command_context:type_name -> tammy.v1.CommandContext
+	67,  // 79: tammy.v1.RetryPreRestoreArchiveExportRequest.administrator_password:type_name -> tammy.v1.SecretInput
+	69,  // 80: tammy.v1.RetryPreRestoreArchiveExportRequest.destination:type_name -> tammy.v1.ApprovedFileRef
+	11,  // 81: tammy.v1.RetryPreRestoreArchiveExportResponse.job:type_name -> tammy.v1.PreRestoreArchiveExportJob
+	71,  // 82: tammy.v1.GetPreRestoreArchiveExportJobRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	11,  // 83: tammy.v1.GetPreRestoreArchiveExportJobResponse.job:type_name -> tammy.v1.PreRestoreArchiveExportJob
+	71,  // 84: tammy.v1.ListPreRestoreArchiveExportJobsRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	73,  // 85: tammy.v1.ListPreRestoreArchiveExportJobsRequest.page:type_name -> tammy.v1.PageRequest
+	5,   // 86: tammy.v1.ListPreRestoreArchiveExportJobsRequest.state:type_name -> tammy.v1.PreRestoreArchiveExportJobState
+	11,  // 87: tammy.v1.ListPreRestoreArchiveExportJobsResponse.jobs:type_name -> tammy.v1.PreRestoreArchiveExportJob
+	74,  // 88: tammy.v1.ListPreRestoreArchiveExportJobsResponse.page:type_name -> tammy.v1.PageInfo
+	72,  // 89: tammy.v1.DeletePreRestoreArchiveRequest.command_context:type_name -> tammy.v1.CommandContext
+	67,  // 90: tammy.v1.DeletePreRestoreArchiveRequest.administrator_password:type_name -> tammy.v1.SecretInput
+	10,  // 91: tammy.v1.DeletePreRestoreArchiveResponse.archive:type_name -> tammy.v1.PreRestoreArchive
+	71,  // 92: tammy.v1.GetPreRestoreArchiveRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	10,  // 93: tammy.v1.GetPreRestoreArchiveResponse.archive:type_name -> tammy.v1.PreRestoreArchive
+	71,  // 94: tammy.v1.ListPreRestoreArchivesRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	73,  // 95: tammy.v1.ListPreRestoreArchivesRequest.page:type_name -> tammy.v1.PageRequest
+	4,   // 96: tammy.v1.ListPreRestoreArchivesRequest.state:type_name -> tammy.v1.PreRestoreArchiveState
+	10,  // 97: tammy.v1.ListPreRestoreArchivesResponse.archives:type_name -> tammy.v1.PreRestoreArchive
+	74,  // 98: tammy.v1.ListPreRestoreArchivesResponse.page:type_name -> tammy.v1.PageInfo
+	72,  // 99: tammy.v1.TransferOwnershipRequest.command_context:type_name -> tammy.v1.CommandContext
+	6,   // 100: tammy.v1.TransferOwnershipResponse.workspace:type_name -> tammy.v1.Workspace
+	17,  // 101: tammy.v1.WorkspaceService.CreateWorkspace:input_type -> tammy.v1.CreateWorkspaceRequest
+	19,  // 102: tammy.v1.WorkspaceService.ConfirmRecovery:input_type -> tammy.v1.ConfirmRecoveryRequest
+	21,  // 103: tammy.v1.WorkspaceService.UnlockWorkspace:input_type -> tammy.v1.UnlockWorkspaceRequest
+	23,  // 104: tammy.v1.WorkspaceService.LockWorkspace:input_type -> tammy.v1.LockWorkspaceRequest
+	25,  // 105: tammy.v1.WorkspaceService.ForgetRememberedWorkspace:input_type -> tammy.v1.ForgetRememberedWorkspaceRequest
+	27,  // 106: tammy.v1.WorkspaceService.GetWorkspaceState:input_type -> tammy.v1.GetWorkspaceStateRequest
+	29,  // 107: tammy.v1.WorkspaceService.ChangePassphrase:input_type -> tammy.v1.ChangePassphraseRequest
+	31,  // 108: tammy.v1.WorkspaceService.RecoverWorkspace:input_type -> tammy.v1.RecoverWorkspaceRequest
+	33,  // 109: tammy.v1.WorkspaceService.EstablishMovedWorkspaceTrust:input_type -> tammy.v1.EstablishMovedWorkspaceTrustRequest
+	35,  // 110: tammy.v1.WorkspaceService.BackupWorkspace:input_type -> tammy.v1.BackupWorkspaceRequest
+	37,  // 111: tammy.v1.WorkspaceService.CancelBackup:input_type -> tammy.v1.CancelBackupRequest
+	39,  // 112: tammy.v1.WorkspaceService.GetBackupJob:input_type -> tammy.v1.GetBackupJobRequest
+	41,  // 113: tammy.v1.WorkspaceService.ListBackupJobs:input_type -> tammy.v1.ListBackupJobsRequest
+	43,  // 114: tammy.v1.WorkspaceService.RestoreWorkspace:input_type -> tammy.v1.RestoreWorkspaceRequest
+	45,  // 115: tammy.v1.WorkspaceService.GetRestoreStatus:input_type -> tammy.v1.GetRestoreStatusRequest
+	47,  // 116: tammy.v1.WorkspaceService.ExportPreRestoreArchive:input_type -> tammy.v1.ExportPreRestoreArchiveRequest
+	49,  // 117: tammy.v1.WorkspaceService.CancelPreRestoreArchiveExport:input_type -> tammy.v1.CancelPreRestoreArchiveExportRequest
+	51,  // 118: tammy.v1.WorkspaceService.RetryPreRestoreArchiveExport:input_type -> tammy.v1.RetryPreRestoreArchiveExportRequest
+	53,  // 119: tammy.v1.WorkspaceService.GetPreRestoreArchiveExportJob:input_type -> tammy.v1.GetPreRestoreArchiveExportJobRequest
+	55,  // 120: tammy.v1.WorkspaceService.ListPreRestoreArchiveExportJobs:input_type -> tammy.v1.ListPreRestoreArchiveExportJobsRequest
+	57,  // 121: tammy.v1.WorkspaceService.DeletePreRestoreArchive:input_type -> tammy.v1.DeletePreRestoreArchiveRequest
+	59,  // 122: tammy.v1.WorkspaceService.GetPreRestoreArchive:input_type -> tammy.v1.GetPreRestoreArchiveRequest
+	61,  // 123: tammy.v1.WorkspaceService.ListPreRestoreArchives:input_type -> tammy.v1.ListPreRestoreArchivesRequest
+	63,  // 124: tammy.v1.WorkspaceService.TransferOwnership:input_type -> tammy.v1.TransferOwnershipRequest
+	18,  // 125: tammy.v1.WorkspaceService.CreateWorkspace:output_type -> tammy.v1.CreateWorkspaceResponse
+	20,  // 126: tammy.v1.WorkspaceService.ConfirmRecovery:output_type -> tammy.v1.ConfirmRecoveryResponse
+	22,  // 127: tammy.v1.WorkspaceService.UnlockWorkspace:output_type -> tammy.v1.UnlockWorkspaceResponse
+	24,  // 128: tammy.v1.WorkspaceService.LockWorkspace:output_type -> tammy.v1.LockWorkspaceResponse
+	26,  // 129: tammy.v1.WorkspaceService.ForgetRememberedWorkspace:output_type -> tammy.v1.ForgetRememberedWorkspaceResponse
+	28,  // 130: tammy.v1.WorkspaceService.GetWorkspaceState:output_type -> tammy.v1.GetWorkspaceStateResponse
+	30,  // 131: tammy.v1.WorkspaceService.ChangePassphrase:output_type -> tammy.v1.ChangePassphraseResponse
+	32,  // 132: tammy.v1.WorkspaceService.RecoverWorkspace:output_type -> tammy.v1.RecoverWorkspaceResponse
+	34,  // 133: tammy.v1.WorkspaceService.EstablishMovedWorkspaceTrust:output_type -> tammy.v1.EstablishMovedWorkspaceTrustResponse
+	36,  // 134: tammy.v1.WorkspaceService.BackupWorkspace:output_type -> tammy.v1.BackupWorkspaceResponse
+	38,  // 135: tammy.v1.WorkspaceService.CancelBackup:output_type -> tammy.v1.CancelBackupResponse
+	40,  // 136: tammy.v1.WorkspaceService.GetBackupJob:output_type -> tammy.v1.GetBackupJobResponse
+	42,  // 137: tammy.v1.WorkspaceService.ListBackupJobs:output_type -> tammy.v1.ListBackupJobsResponse
+	44,  // 138: tammy.v1.WorkspaceService.RestoreWorkspace:output_type -> tammy.v1.RestoreWorkspaceResponse
+	46,  // 139: tammy.v1.WorkspaceService.GetRestoreStatus:output_type -> tammy.v1.GetRestoreStatusResponse
+	48,  // 140: tammy.v1.WorkspaceService.ExportPreRestoreArchive:output_type -> tammy.v1.ExportPreRestoreArchiveResponse
+	50,  // 141: tammy.v1.WorkspaceService.CancelPreRestoreArchiveExport:output_type -> tammy.v1.CancelPreRestoreArchiveExportResponse
+	52,  // 142: tammy.v1.WorkspaceService.RetryPreRestoreArchiveExport:output_type -> tammy.v1.RetryPreRestoreArchiveExportResponse
+	54,  // 143: tammy.v1.WorkspaceService.GetPreRestoreArchiveExportJob:output_type -> tammy.v1.GetPreRestoreArchiveExportJobResponse
+	56,  // 144: tammy.v1.WorkspaceService.ListPreRestoreArchiveExportJobs:output_type -> tammy.v1.ListPreRestoreArchiveExportJobsResponse
+	58,  // 145: tammy.v1.WorkspaceService.DeletePreRestoreArchive:output_type -> tammy.v1.DeletePreRestoreArchiveResponse
+	60,  // 146: tammy.v1.WorkspaceService.GetPreRestoreArchive:output_type -> tammy.v1.GetPreRestoreArchiveResponse
+	62,  // 147: tammy.v1.WorkspaceService.ListPreRestoreArchives:output_type -> tammy.v1.ListPreRestoreArchivesResponse
+	64,  // 148: tammy.v1.WorkspaceService.TransferOwnership:output_type -> tammy.v1.TransferOwnershipResponse
+	125, // [125:149] is the sub-list for method output_type
+	101, // [101:125] is the sub-list for method input_type
+	101, // [101:101] is the sub-list for extension type_name
+	101, // [101:101] is the sub-list for extension extendee
+	0,   // [0:101] is the sub-list for field type_name
 }
 
 func init() { file_tammy_v1_workspace_proto_init() }
@@ -4490,32 +4908,34 @@ func file_tammy_v1_workspace_proto_init() {
 	file_tammy_v1_common_proto_init()
 	file_tammy_v1_workspace_proto_msgTypes[1].OneofWrappers = []any{}
 	file_tammy_v1_workspace_proto_msgTypes[2].OneofWrappers = []any{}
+	file_tammy_v1_workspace_proto_msgTypes[3].OneofWrappers = []any{}
 	file_tammy_v1_workspace_proto_msgTypes[4].OneofWrappers = []any{}
-	file_tammy_v1_workspace_proto_msgTypes[6].OneofWrappers = []any{
+	file_tammy_v1_workspace_proto_msgTypes[5].OneofWrappers = []any{}
+	file_tammy_v1_workspace_proto_msgTypes[7].OneofWrappers = []any{
 		(*WorkspaceUnlockProof_Passphrase)(nil),
 		(*WorkspaceUnlockProof_UseRememberedWorkspace)(nil),
 	}
-	file_tammy_v1_workspace_proto_msgTypes[7].OneofWrappers = []any{
+	file_tammy_v1_workspace_proto_msgTypes[8].OneofWrappers = []any{
 		(*MovedWorkspaceTrustProof_AdministratorPassword)(nil),
 		(*MovedWorkspaceTrustProof_RecoverySecret)(nil),
 	}
-	file_tammy_v1_workspace_proto_msgTypes[14].OneofWrappers = []any{}
-	file_tammy_v1_workspace_proto_msgTypes[20].OneofWrappers = []any{}
-	file_tammy_v1_workspace_proto_msgTypes[34].OneofWrappers = []any{}
-	file_tammy_v1_workspace_proto_msgTypes[36].OneofWrappers = []any{
+	file_tammy_v1_workspace_proto_msgTypes[15].OneofWrappers = []any{}
+	file_tammy_v1_workspace_proto_msgTypes[21].OneofWrappers = []any{}
+	file_tammy_v1_workspace_proto_msgTypes[35].OneofWrappers = []any{}
+	file_tammy_v1_workspace_proto_msgTypes[37].OneofWrappers = []any{
 		(*RestoreWorkspaceRequest_AdministratorProof)(nil),
 		(*RestoreWorkspaceRequest_RecoveryProof)(nil),
 	}
-	file_tammy_v1_workspace_proto_msgTypes[46].OneofWrappers = []any{}
-	file_tammy_v1_workspace_proto_msgTypes[52].OneofWrappers = []any{}
-	file_tammy_v1_workspace_proto_msgTypes[54].OneofWrappers = []any{}
+	file_tammy_v1_workspace_proto_msgTypes[49].OneofWrappers = []any{}
+	file_tammy_v1_workspace_proto_msgTypes[55].OneofWrappers = []any{}
+	file_tammy_v1_workspace_proto_msgTypes[57].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_tammy_v1_workspace_proto_rawDesc), len(file_tammy_v1_workspace_proto_rawDesc)),
 			NumEnums:      6,
-			NumMessages:   56,
+			NumMessages:   59,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

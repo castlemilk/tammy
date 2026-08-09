@@ -60,6 +60,7 @@ var (
 		tammyv1.AuditEventType_AUDIT_EVENT_TYPE_PRE_RESTORE_ARCHIVE_CHANGED: {field: "pre_restore_archive_changed", message: "tammy.v1.PreRestoreArchiveChangedEvent"},
 		tammyv1.AuditEventType_AUDIT_EVENT_TYPE_EVIDENCE_EXPORT_CHANGED:     {field: "evidence_export_changed", message: "tammy.v1.EvidenceExportChangedEvent"},
 		tammyv1.AuditEventType_AUDIT_EVENT_TYPE_SIGNING_KEY_ROTATED:         {field: "signing_key_rotated", message: "tammy.v1.SigningKeyRotatedEvent"},
+		tammyv1.AuditEventType_AUDIT_EVENT_TYPE_WORKSPACE_RESTORED:          {field: "workspace_restored", message: "tammy.v1.WorkspaceRestoredEvent"},
 	}
 )
 
@@ -516,6 +517,39 @@ func (appender *Appender) AppendEvidence(
 		}
 	}
 	return appender.append(ctx, executor, event, payloadProto, publishMirror, mirrorEpoch)
+}
+
+// AppendStagedWorkspaceRestored is the sole mirror-free append permitted for
+// restore. The caller must already have initialized a fresh, empty generation
+// in an isolated staged database; the exact event then becomes its first head.
+func AppendStagedWorkspaceRestored(
+	ctx context.Context,
+	executor Executor,
+	event *tammyv1.AuditEvent,
+	payloadProto []byte,
+) (StoredEvent, error) {
+	if ctx == nil || executor == nil || event == nil || event.Generation != 0 || event.Sequence != 0 ||
+		event.Type != tammyv1.AuditEventType_AUDIT_EVENT_TYPE_WORKSPACE_RESTORED || event.Payload == nil {
+		return StoredEvent{}, ErrInvalidEvent
+	}
+	payload := event.Payload.GetWorkspaceRestored()
+	if payload == nil || payload.WorkspaceId != event.WorkspaceId || payload.RestoredGeneration < 2 ||
+		payload.PredecessorGeneration+1 != payload.RestoredGeneration || payload.BackupGeneration == 0 ||
+		payload.BackupGeneration >= payload.RestoredGeneration || len(payload.BackupManifestHash) != sha256.Size ||
+		len(payload.PreRestoreArchiveHash) != sha256.Size || len(payload.PredecessorHead) != sha256.Size ||
+		len(payload.ArchivedHead) != sha256.Size || payload.OperationId == "" || payload.PreRestoreArchiveId == "" {
+		return StoredEvent{}, ErrInvalidEvent
+	}
+	header, err := LoadChainHeader(ctx, executor, event.WorkspaceId, payload.RestoredGeneration)
+	if err != nil || header.Generation != payload.RestoredGeneration || header.CurrentSequence != 0 ||
+		header.CurrentHead != header.GenesisHash {
+		return StoredEvent{}, ErrInvalidEvent
+	}
+	stored, _, _, err := (&Appender{}).appendSQL(ctx, executor, event, payloadProto)
+	if err != nil || stored.Event == nil || stored.Event.Generation != payload.RestoredGeneration || stored.Event.Sequence != 1 {
+		return StoredEvent{}, errors.Join(ErrInvalidEvent, err)
+	}
+	return stored, nil
 }
 
 func (appender *Appender) append(

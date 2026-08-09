@@ -60,6 +60,9 @@ enum AuditEventType {
 
   // AUDIT_EVENT_TYPE_SIGNING_KEY_ROTATED records an authenticated workspace signing-key rotation.
   AUDIT_EVENT_TYPE_SIGNING_KEY_ROTATED = 15;
+
+  // AUDIT_EVENT_TYPE_WORKSPACE_RESTORED records one completed generation-changing restore.
+  AUDIT_EVENT_TYPE_WORKSPACE_RESTORED = 16;
 }
 
 // WorkspaceStateChangedEvent is the typed payload for secure workspace state changes.
@@ -309,6 +312,21 @@ message SigningKeyRotatedEvent {
   bytes rotation_link_sha256 = 6 [(buf.validate.field).bytes.len = 32];
 }
 
+// WorkspaceRestoredEvent binds the new audit generation to the exact backup
+// manifest and retained predecessor archive used by one restore operation.
+message WorkspaceRestoredEvent {
+  string workspace_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string operation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 predecessor_generation = 3 [(buf.validate.field).uint64.gte = 1];
+  uint64 backup_generation = 4 [(buf.validate.field).uint64.gte = 1];
+  uint64 restored_generation = 5 [(buf.validate.field).uint64.gte = 2];
+  bytes backup_manifest_hash = 6 [(buf.validate.field).bytes.len = 32];
+  string pre_restore_archive_id = 7 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  bytes pre_restore_archive_hash = 8 [(buf.validate.field).bytes.len = 32];
+  bytes predecessor_head = 9 [(buf.validate.field).bytes.len = 32];
+  bytes archived_head = 10 [(buf.validate.field).bytes.len = 32];
+}
+
 // AuditEventPayload is a closed typed union; google.protobuf.Any is intentionally prohibited.
 message AuditEventPayload {
   // payload selects exactly one typed event body matching AuditEventType.
@@ -357,5 +375,8 @@ message AuditEventPayload {
 
     // signing_key_rotated records one authenticated workspace signing-key rotation.
     SigningKeyRotatedEvent signing_key_rotated = 15;
+
+    // workspace_restored records one generation-changing restore.
+    WorkspaceRestoredEvent workspace_restored = 16;
   }
 }
