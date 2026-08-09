@@ -254,6 +254,9 @@ func (x *WalkthroughOverviewOracle) GetAttentionItems() []*AttentionItem {
 
 // NoncashSupplierMonthFixture is the canonical deterministic walkthrough input and accounting oracle.
 // It contains synthetic identities, fixed civil dates, exact AUD minor units, and no clock-authored instants.
+// The retained document_review SourceRef content hash is SHA-256 over these UTF-8 fields joined by NUL bytes:
+// tammy.walkthrough.retained-review, v1, source_document_name, supplier_reference, bill_issue_date as YYYY-MM-DD,
+// currency_code, bill_net minor units, bill_gst minor units, and bill_gross minor units.
 type NoncashSupplierMonthFixture struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// organisation_name is the clearly synthetic demo entity name.

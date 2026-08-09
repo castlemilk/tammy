@@ -2,22 +2,22 @@ package contracts_test
 
 import (
 	"bytes"
-	"encoding/json"
+	"crypto/sha256"
+	"math"
 	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 	"testing"
 
 	validate "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
-	_ "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1"
+	"buf.build/go/protovalidate"
+	tammyv1 "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
 	"google.golang.org/protobuf/types/descriptorpb"
-	"google.golang.org/protobuf/types/dynamicpb"
 )
 
 func TestOverviewDescriptorsExposeBoundedAttentionSummary(t *testing.T) {
@@ -121,7 +121,7 @@ func TestOverviewDescriptorsExposeBoundedAttentionSummary(t *testing.T) {
 	}
 	assertExactFields(t, revisions, revisionFields)
 	for name := range revisionFields {
-		assertPositiveRevision(t, revisions.Fields().ByName(name))
+		assertNonnegativeRevision(t, revisions.Fields().ByName(name))
 	}
 
 	assertEnumValues(t, "tammy.v1.AttentionItemKind", []protoreflect.Name{
@@ -136,6 +136,8 @@ func TestOverviewDescriptorsExposeBoundedAttentionSummary(t *testing.T) {
 		"BAS_ATTENTION_STATUS_DRAFT_NOT_LODGED",
 		"BAS_ATTENTION_STATUS_OUTDATED",
 	})
+	assertEnumRejectsUnspecified(t, item.Fields().ByName("kind"))
+	assertEnumRejectsUnspecified(t, response.Fields().ByName("bas_status"))
 
 	for messageIndex := 0; messageIndex < file.Messages().Len(); messageIndex++ {
 		message := file.Messages().Get(messageIndex)
@@ -152,6 +154,40 @@ func TestOverviewDescriptorsExposeBoundedAttentionSummary(t *testing.T) {
 			}
 		}
 	}
+	t.Run("runtime accepts zero genesis revision vector", func(t *testing.T) {
+		if err := protovalidate.Validate(validAttentionSummary(0)); err != nil {
+			t.Fatalf("zero revision vector rejected: %v", err)
+		}
+	})
+	t.Run("runtime accepts maximum uint64 revision vector", func(t *testing.T) {
+		if err := protovalidate.Validate(validAttentionSummary(math.MaxUint64)); err != nil {
+			t.Fatalf("maximum uint64 revision vector rejected: %v", err)
+		}
+	})
+	t.Run("runtime rejects unspecified BAS status", func(t *testing.T) {
+		response := validAttentionSummary(1)
+		response.BasStatus = tammyv1.BasAttentionStatus_BAS_ATTENTION_STATUS_UNSPECIFIED
+		if err := protovalidate.Validate(response); err == nil {
+			t.Fatal("unspecified BAS attention status passed runtime validation")
+		}
+	})
+	t.Run("runtime accepts valid BAS status", func(t *testing.T) {
+		if err := protovalidate.Validate(validAttentionSummary(1)); err != nil {
+			t.Fatalf("valid BAS attention status rejected: %v", err)
+		}
+	})
+	t.Run("runtime rejects unspecified attention item kind", func(t *testing.T) {
+		item := validAttentionItem()
+		item.Kind = tammyv1.AttentionItemKind_ATTENTION_ITEM_KIND_UNSPECIFIED
+		if err := protovalidate.Validate(item); err == nil {
+			t.Fatal("unspecified attention item kind passed runtime validation")
+		}
+	})
+	t.Run("runtime accepts valid attention item kind", func(t *testing.T) {
+		if err := protovalidate.Validate(validAttentionItem()); err != nil {
+			t.Fatalf("valid attention item kind rejected: %v", err)
+		}
+	})
 	assertOverviewCoverageContract(t)
 }
 
@@ -166,63 +202,32 @@ func TestNoncashSupplierMonthFixtureIsCanonicalAndExact(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read walkthrough fixture: %v", err)
 	}
-	message := dynamicpb.NewMessage(fixtureDescriptor)
-	if err := (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal(source, message); err != nil {
+	fixture := &tammyv1.NoncashSupplierMonthFixture{}
+	if err := (protojson.UnmarshalOptions{DiscardUnknown: false}).Unmarshal(source, fixture); err != nil {
 		t.Fatalf("decode canonical Protobuf JSON walkthrough fixture: %v", err)
 	}
-	normalized, err := (protojson.MarshalOptions{UseProtoNames: true, Indent: "  "}).Marshal(message)
+	if fixture.ProtoReflect().Descriptor().FullName() != fixtureDescriptor.FullName() {
+		t.Fatalf("fixture type = %s, want %s", fixture.ProtoReflect().Descriptor().FullName(), fixtureDescriptor.FullName())
+	}
+	if err := protovalidate.Validate(fixture); err != nil {
+		t.Fatalf("walkthrough fixture fails Protovalidate: %v", err)
+	}
+	normalized, err := (protojson.MarshalOptions{UseProtoNames: true, Indent: "  "}).Marshal(fixture)
 	if err != nil {
 		t.Fatalf("marshal walkthrough fixture: %v", err)
 	}
 	assertJSONEqual(t, source, normalized)
 
-	var fixture map[string]any
-	decoder := json.NewDecoder(bytes.NewReader(source))
-	decoder.UseNumber()
-	if err := decoder.Decode(&fixture); err != nil {
-		t.Fatal(err)
+	want := expectedNoncashSupplierMonthFixture()
+	if !proto.Equal(fixture, want) {
+		wantJSON, _ := (protojson.MarshalOptions{UseProtoNames: true}).Marshal(want)
+		gotJSON, _ := (protojson.MarshalOptions{UseProtoNames: true}).Marshal(fixture)
+		t.Fatalf("walkthrough fixture semantic oracle mismatch\nwant: %s\n got: %s", wantJSON, gotJSON)
 	}
-	assertFixtureMoney(t, fixture, "opening_balance", "100000")
-	assertFixtureMoney(t, fixture, "bill_net", "29000")
-	assertFixtureMoney(t, fixture, "bill_gross", "31900")
-	assertFixtureMoney(t, fixture, "bill_gst", "2900")
-	assertFixtureMoney(t, fixture, "statement_withdrawal", "-31900")
-	assertFixtureMoney(t, fixture, "payment_amount", "31900")
-	assertFixtureMoney(t, fixture, "closing_bank_balance", "68100")
-	assertFixtureMoney(t, fixture, "trial_balance_total_debits", "100000")
-	assertFixtureMoney(t, fixture, "trial_balance_total_credits", "100000")
-	assertFixtureMoney(t, fixture, "bas_g1", "0")
-	assertFixtureMoney(t, fixture, "bas_1a", "0")
-	assertFixtureMoney(t, fixture, "bas_1b", "2900")
-	assertFixtureMoney(t, fixture, "bas_net_refundable", "2900")
-	assertFixtureCivilDate(t, fixture, "opening_date", 2024, 4, 30)
-	assertFixtureCivilDate(t, fixture, "bill_issue_date", 2024, 5, 12)
-	assertFixtureCivilDate(t, fixture, "statement_start_date", 2024, 5, 1)
-	assertFixtureCivilDate(t, fixture, "statement_end_date", 2024, 5, 31)
-	assertFixtureCivilDate(t, fixture, "payment_date", 2024, 5, 15)
-	if fixture["gst_basis"] != "GST_BASIS_NON_CASH" {
-		t.Errorf("gst_basis = %v, want GST_BASIS_NON_CASH", fixture["gst_basis"])
-	}
-	if fixture["gst_reporting_frequency"] != "GST_REPORTING_FREQUENCY_QUARTERLY" {
-		t.Errorf("gst_reporting_frequency = %v, want quarterly", fixture["gst_reporting_frequency"])
-	}
-	if fixture["synthetic_abn"] != "99000000000" {
-		t.Errorf("synthetic_abn = %v, want the fixed valid synthetic ABN", fixture["synthetic_abn"])
-	}
-	period := fixture["bas_period"].(map[string]any)
-	assertFixtureCivilDate(t, period, "start_date", 2024, 4, 1)
-	assertFixtureCivilDate(t, period, "end_date", 2024, 6, 30)
-	afterExtraction := fixture["after_extraction_overview"].(map[string]any)
-	finalOverview := fixture["final_overview"].(map[string]any)
-	assertFixtureCount(t, afterExtraction, "documents_needing_review", 1)
-	assertFixtureCount(t, finalOverview, "documents_needing_review", 0)
-	assertFixtureCount(t, finalOverview, "documents_reviewed_in_period", 1)
-	assertFixtureCount(t, finalOverview, "banking_lines_needing_reconciliation", 0)
-	assertFixtureCount(t, finalOverview, "banking_lines_unreconciled_in_period", 0)
-	assertFixtureCount(t, finalOverview, "current_draft_bas_workpapers", 1)
-	items := afterExtraction["attention_items"].([]any)
-	if len(items) != 1 || items[0].(map[string]any)["kind"] != "ATTENTION_ITEM_KIND_DOCUMENT_REVIEW" {
-		t.Errorf("after-extraction attention items = %v, want one typed document review", items)
+	wantHash := retainedReviewContentHash()
+	gotHash := fixture.GetAfterExtractionOverview().GetAttentionItems()[0].GetResource().GetContentHash()
+	if !bytes.Equal(gotHash, wantHash) {
+		t.Fatalf("retained-review SHA-256 = %x, want independently recomputed %x", gotHash, wantHash)
 	}
 }
 
@@ -297,11 +302,28 @@ func assertBoundedCount(t *testing.T, field protoreflect.FieldDescriptor, max ui
 	}
 }
 
-func assertPositiveRevision(t *testing.T, field protoreflect.FieldDescriptor) {
+func assertNonnegativeRevision(t *testing.T, field protoreflect.FieldDescriptor) {
 	t.Helper()
 	rules := fieldRules(t, field).GetUint64()
-	if rules == nil || rules.GetGte() != 1 {
-		t.Fatalf("%s lower bound = %v, want gte 1", field.FullName(), rules)
+	if rules == nil {
+		t.Errorf("%s is missing explicit nonnegative uint64 validation", field.FullName())
+		return
+	}
+	gte := rules.ProtoReflect().Descriptor().Fields().ByName("gte")
+	if gte == nil || !rules.ProtoReflect().Has(gte) || rules.GetGte() != 0 {
+		t.Errorf("%s lower bound = %v, want explicit gte 0 for revision genesis compatibility", field.FullName(), rules)
+	}
+}
+
+func assertEnumRejectsUnspecified(t *testing.T, field protoreflect.FieldDescriptor) {
+	t.Helper()
+	rules := fieldRules(t, field).GetEnum()
+	if rules == nil || !rules.GetDefinedOnly() {
+		t.Errorf("%s must reject undefined enum values", field.FullName())
+		return
+	}
+	if notIn := rules.GetNotIn(); len(notIn) != 1 || notIn[0] != 0 {
+		t.Errorf("%s enum not_in = %v, want [0]", field.FullName(), notIn)
 	}
 }
 
@@ -345,40 +367,102 @@ func assertEnumValues(t *testing.T, name protoreflect.FullName, want []protorefl
 	}
 }
 
-func assertFixtureMoney(t *testing.T, fixture map[string]any, field, wantMinorUnits string) {
-	t.Helper()
-	money, ok := fixture[field].(map[string]any)
-	if !ok {
-		t.Fatalf("fixture %s is missing or not Money", field)
-	}
-	minorUnits := money["minor_units"]
-	if minorUnits == nil {
-		minorUnits = "0"
-	}
-	if money["currency_code"] != "AUD" || minorUnits != wantMinorUnits {
-		t.Errorf("fixture %s = %v, want AUD %s minor units", field, money, wantMinorUnits)
-	}
-}
-
-func assertFixtureCivilDate(t *testing.T, fixture map[string]any, field string, year, month, day int) {
-	t.Helper()
-	date, ok := fixture[field].(map[string]any)
-	if !ok {
-		t.Fatalf("fixture %s is missing or not CivilDate", field)
-	}
-	if date["year"].(json.Number).String() != strconv.Itoa(year) ||
-		date["month"].(json.Number).String() != strconv.Itoa(month) ||
-		date["day"].(json.Number).String() != strconv.Itoa(day) {
-		t.Errorf("fixture %s = %v, want %04d-%02d-%02d", field, date, year, month, day)
+func validAttentionSummary(revision uint64) *tammyv1.GetAttentionSummaryResponse {
+	return &tammyv1.GetAttentionSummaryResponse{
+		BasStatus: tammyv1.BasAttentionStatus_BAS_ATTENTION_STATUS_NOT_CREATED,
+		Revisions: &tammyv1.AttentionRevisionVector{
+			FinancialRevision: revision, LedgerRevision: revision, SettlementRevision: revision,
+			BankingRevision: revision, TaxSourceRevision: revision,
+			OrganisationProfileRevision: revision, RuleBundleRevision: revision,
+		},
+		AsOfDate: date(2024, 6, 30),
+		ReportingPeriod: &tammyv1.ReportingPeriod{
+			StartDate: date(2024, 4, 1),
+			EndDate:   date(2024, 6, 30),
+		},
 	}
 }
 
-func assertFixtureCount(t *testing.T, fixture map[string]any, field string, want int) {
-	t.Helper()
-	value, ok := fixture[field].(json.Number)
-	if !ok || value.String() != strconv.Itoa(want) {
-		t.Errorf("fixture %s count = %v, want %d", field, fixture[field], want)
+func validAttentionItem() *tammyv1.AttentionItem {
+	return &tammyv1.AttentionItem{
+		Kind: tammyv1.AttentionItemKind_ATTENTION_ITEM_KIND_DOCUMENT_REVIEW,
+		Resource: &tammyv1.SourceRef{
+			Type: "document_review", Id: "018f0000-0000-7000-8000-000000000101",
+			Revision: 1, ContentHash: retainedReviewContentHash(),
+		},
+		Label: "Review Paper & Co supplier invoice",
 	}
+}
+
+func expectedNoncashSupplierMonthFixture() *tammyv1.NoncashSupplierMonthFixture {
+	return &tammyv1.NoncashSupplierMonthFixture{
+		OrganisationName:         "Tammy Demo Pty Ltd",
+		SyntheticAbn:             "99000000000",
+		CurrencyCode:             "AUD",
+		GstBasis:                 tammyv1.GstBasis_GST_BASIS_NON_CASH,
+		GstReportingFrequency:    tammyv1.GstReportingFrequency_GST_REPORTING_FREQUENCY_QUARTERLY,
+		FinancialYearEndMonth:    6,
+		BasPeriod:                &tammyv1.ReportingPeriod{StartDate: date(2024, 4, 1), EndDate: date(2024, 6, 30)},
+		PrimaryBankName:          "Business Bank",
+		OpeningDate:              date(2024, 4, 30),
+		OpeningBalance:           aud(100000),
+		SupplierName:             "Paper & Co Supplies Pty Ltd",
+		SourceDocumentName:       "paper-and-co-sup-1001.pdf",
+		SupplierReference:        "SUP-1001",
+		BillIssueDate:            date(2024, 5, 12),
+		BillTaxExclusive:         true,
+		BillNet:                  aud(29000),
+		BillGst:                  aud(2900),
+		BillGross:                aud(31900),
+		StatementStartDate:       date(2024, 5, 1),
+		StatementEndDate:         date(2024, 5, 31),
+		PaymentDate:              date(2024, 5, 15),
+		StatementWithdrawal:      aud(-31900),
+		PaymentAmount:            aud(31900),
+		ClosingBankBalance:       aud(68100),
+		TrialBalanceTotalDebits:  aud(100000),
+		TrialBalanceTotalCredits: aud(100000),
+		BasG1:                    aud(0),
+		Bas_1A:                   aud(0),
+		Bas_1B:                   aud(2900),
+		BasNetRefundable:         aud(2900),
+		AfterExtractionOverview: &tammyv1.WalkthroughOverviewOracle{
+			DocumentsNeedingReview:            proto.Uint32(1),
+			DocumentsReviewedInPeriod:         proto.Uint32(0),
+			BankingLinesNeedingReconciliation: proto.Uint32(0),
+			BankingLinesUnreconciledInPeriod:  proto.Uint32(0),
+			CurrentDraftBasWorkpapers:         proto.Uint32(0),
+			BasStatus:                         tammyv1.BasAttentionStatus_BAS_ATTENTION_STATUS_NOT_CREATED,
+			AttentionItems:                    []*tammyv1.AttentionItem{validAttentionItem()},
+		},
+		FinalOverview: &tammyv1.WalkthroughOverviewOracle{
+			DocumentsNeedingReview:            proto.Uint32(0),
+			DocumentsReviewedInPeriod:         proto.Uint32(1),
+			BankingLinesNeedingReconciliation: proto.Uint32(0),
+			BankingLinesUnreconciledInPeriod:  proto.Uint32(0),
+			CurrentDraftBasWorkpapers:         proto.Uint32(1),
+			BasStatus:                         tammyv1.BasAttentionStatus_BAS_ATTENTION_STATUS_DRAFT_NOT_LODGED,
+		},
+	}
+}
+
+func date(year, month, day int32) *tammyv1.CivilDate {
+	return &tammyv1.CivilDate{Year: year, Month: month, Day: day}
+}
+
+func aud(minorUnits int64) *tammyv1.Money {
+	return &tammyv1.Money{CurrencyCode: "AUD", MinorUnits: minorUnits}
+}
+
+func retainedReviewContentHash() []byte {
+	// Exact v1 preimage: domain, version, source filename, supplier reference,
+	// issue date, currency, net, GST, and gross minor units, joined by NUL bytes.
+	preimage := strings.Join([]string{
+		"tammy.walkthrough.retained-review", "v1", "paper-and-co-sup-1001.pdf", "SUP-1001",
+		"2024-05-12", "AUD", "29000", "2900", "31900",
+	}, "\x00")
+	digest := sha256.Sum256([]byte(preimage))
+	return digest[:]
 }
 
 func assertOverviewCoverageContract(t *testing.T) {

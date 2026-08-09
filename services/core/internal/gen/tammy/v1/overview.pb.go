@@ -258,19 +258,19 @@ func (x *AttentionItem) GetLabel() string {
 // AttentionRevisionVector pins every financial module read by one verified summary snapshot.
 type AttentionRevisionVector struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// financial_revision is the monotonic revision for the complete financial snapshot.
+	// financial_revision is the monotonic revision for the complete financial snapshot and is zero at genesis.
 	FinancialRevision uint64 `protobuf:"varint,1,opt,name=financial_revision,json=financialRevision,proto3" json:"financial_revision,omitempty"`
-	// ledger_revision pins accounting ledger inputs.
+	// ledger_revision pins accounting ledger inputs and remains zero until the module changes.
 	LedgerRevision uint64 `protobuf:"varint,2,opt,name=ledger_revision,json=ledgerRevision,proto3" json:"ledger_revision,omitempty"`
-	// settlement_revision pins payment and allocation inputs.
+	// settlement_revision pins payment and allocation inputs and remains zero until the module changes.
 	SettlementRevision uint64 `protobuf:"varint,3,opt,name=settlement_revision,json=settlementRevision,proto3" json:"settlement_revision,omitempty"`
-	// banking_revision pins statement, match, and reconciliation inputs.
+	// banking_revision pins statement, match, and reconciliation inputs and remains zero until the module changes.
 	BankingRevision uint64 `protobuf:"varint,4,opt,name=banking_revision,json=bankingRevision,proto3" json:"banking_revision,omitempty"`
-	// tax_source_revision pins GST source facts and BAS inputs.
+	// tax_source_revision pins GST source facts and BAS inputs and remains zero until the module changes.
 	TaxSourceRevision uint64 `protobuf:"varint,5,opt,name=tax_source_revision,json=taxSourceRevision,proto3" json:"tax_source_revision,omitempty"`
-	// organisation_profile_revision pins reporting identity and GST configuration.
+	// organisation_profile_revision pins reporting identity and GST configuration and remains zero until changed.
 	OrganisationProfileRevision uint64 `protobuf:"varint,6,opt,name=organisation_profile_revision,json=organisationProfileRevision,proto3" json:"organisation_profile_revision,omitempty"`
-	// rule_bundle_revision pins the retained accounting and tax rules.
+	// rule_bundle_revision pins the retained accounting and tax rules and remains zero until changed.
 	RuleBundleRevision uint64 `protobuf:"varint,7,opt,name=rule_bundle_revision,json=ruleBundleRevision,proto3" json:"rule_bundle_revision,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
@@ -563,34 +563,36 @@ const file_tammy_v1_overview_proto_rawDesc = "" +
 	"\x0fReportingPeriod\x12:\n" +
 	"\n" +
 	"start_date\x18\x01 \x01(\v2\x13.tammy.v1.CivilDateB\x06\xbaH\x03\xc8\x01\x01R\tstartDate\x126\n" +
-	"\bend_date\x18\x02 \x01(\v2\x13.tammy.v1.CivilDateB\x06\xbaH\x03\xc8\x01\x01R\aendDate\"\xa5\x01\n" +
-	"\rAttentionItem\x129\n" +
-	"\x04kind\x18\x01 \x01(\x0e2\x1b.tammy.v1.AttentionItemKindB\b\xbaH\x05\x82\x01\x02\x10\x01R\x04kind\x127\n" +
+	"\bend_date\x18\x02 \x01(\v2\x13.tammy.v1.CivilDateB\x06\xbaH\x03\xc8\x01\x01R\aendDate\"\xa7\x01\n" +
+	"\rAttentionItem\x12;\n" +
+	"\x04kind\x18\x01 \x01(\x0e2\x1b.tammy.v1.AttentionItemKindB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x04kind\x127\n" +
 	"\bresource\x18\x02 \x01(\v2\x13.tammy.v1.SourceRefB\x06\xbaH\x03\xc8\x01\x01R\bresource\x12 \n" +
 	"\x05label\x18\x03 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\xa0\x01R\x05label\"\xb2\x03\n" +
 	"\x17AttentionRevisionVector\x126\n" +
-	"\x12financial_revision\x18\x01 \x01(\x04B\a\xbaH\x042\x02(\x01R\x11financialRevision\x120\n" +
-	"\x0fledger_revision\x18\x02 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0eledgerRevision\x128\n" +
-	"\x13settlement_revision\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\x12settlementRevision\x122\n" +
-	"\x10banking_revision\x18\x04 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fbankingRevision\x127\n" +
-	"\x13tax_source_revision\x18\x05 \x01(\x04B\a\xbaH\x042\x02(\x01R\x11taxSourceRevision\x12K\n" +
-	"\x1dorganisation_profile_revision\x18\x06 \x01(\x04B\a\xbaH\x042\x02(\x01R\x1borganisationProfileRevision\x129\n" +
-	"\x14rule_bundle_revision\x18\a \x01(\x04B\a\xbaH\x042\x02(\x01R\x12ruleBundleRevision\"\xed\x02\n" +
+	"\x12financial_revision\x18\x01 \x01(\x04B\a\xbaH\x042\x02(\x00R\x11financialRevision\x120\n" +
+	"\x0fledger_revision\x18\x02 \x01(\x04B\a\xbaH\x042\x02(\x00R\x0eledgerRevision\x128\n" +
+	"\x13settlement_revision\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x00R\x12settlementRevision\x122\n" +
+	"\x10banking_revision\x18\x04 \x01(\x04B\a\xbaH\x042\x02(\x00R\x0fbankingRevision\x127\n" +
+	"\x13tax_source_revision\x18\x05 \x01(\x04B\a\xbaH\x042\x02(\x00R\x11taxSourceRevision\x12K\n" +
+	"\x1dorganisation_profile_revision\x18\x06 \x01(\x04B\a\xbaH\x042\x02(\x00R\x1borganisationProfileRevision\x129\n" +
+	"\x14rule_bundle_revision\x18\a \x01(\x04B\a\xbaH\x042\x02(\x00R\x12ruleBundleRevision\"\xed\x02\n" +
 	"\x1aGetAttentionSummaryRequest\x12O\n" +
 	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12u\n" +
 	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x129\n" +
 	"\n" +
 	"as_of_date\x18\x03 \x01(\v2\x13.tammy.v1.CivilDateB\x06\xbaH\x03\xc8\x01\x01R\basOfDate\x12L\n" +
-	"\x10reporting_period\x18\x04 \x01(\v2\x19.tammy.v1.ReportingPeriodB\x06\xbaH\x03\xc8\x01\x01R\x0freportingPeriod\"\x96\x06\n" +
+	"\x10reporting_period\x18\x04 \x01(\v2\x19.tammy.v1.ReportingPeriodB\x06\xbaH\x03\xc8\x01\x01R\x0freportingPeriod\"\x98\x06\n" +
 	"\x1bGetAttentionSummaryResponse\x12C\n" +
 	"\x18documents_needing_review\x18\x01 \x01(\rB\t\xbaH\x06*\x04\x18\xc0\x84=R\x16documentsNeedingReview\x12J\n" +
 	"\x1cdocuments_reviewed_in_period\x18\x02 \x01(\rB\t\xbaH\x06*\x04\x18\xc0\x84=R\x19documentsReviewedInPeriod\x12Z\n" +
 	"$banking_lines_needing_reconciliation\x18\x03 \x01(\rB\t\xbaH\x06*\x04\x18\xc0\x84=R!bankingLinesNeedingReconciliation\x12Y\n" +
 	"$banking_lines_unreconciled_in_period\x18\x04 \x01(\rB\t\xbaH\x06*\x04\x18\xc0\x84=R bankingLinesUnreconciledInPeriod\x12J\n" +
-	"\x1ccurrent_draft_bas_workpapers\x18\x05 \x01(\rB\t\xbaH\x06*\x04\x18\xc0\x84=R\x19currentDraftBasWorkpapers\x12E\n" +
+	"\x1ccurrent_draft_bas_workpapers\x18\x05 \x01(\rB\t\xbaH\x06*\x04\x18\xc0\x84=R\x19currentDraftBasWorkpapers\x12G\n" +
 	"\n" +
-	"bas_status\x18\x06 \x01(\x0e2\x1c.tammy.v1.BasAttentionStatusB\b\xbaH\x05\x82\x01\x02\x10\x01R\tbasStatus\x12J\n" +
+	"bas_status\x18\x06 \x01(\x0e2\x1c.tammy.v1.BasAttentionStatusB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\tbasStatus\x12J\n" +
 	"\x0fattention_items\x18\a \x03(\v2\x17.tammy.v1.AttentionItemB\b\xbaH\x05\x92\x01\x02\x10\bR\x0eattentionItems\x12G\n" +
 	"\trevisions\x18\b \x01(\v2!.tammy.v1.AttentionRevisionVectorB\x06\xbaH\x03\xc8\x01\x01R\trevisions\x129\n" +
 	"\n" +
