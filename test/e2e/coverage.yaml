@@ -5,6 +5,9 @@ scenarios:
       - foundation/offline-ready
     futureCases:
       - slice-1/foundation-contracts
+      - walkthrough/blank-overview
+      - walkthrough/demo-overview
+      - walkthrough/noncash-supplier-month
   E2E-01:
     cases: []
     futureCases:
@@ -1776,6 +1779,42 @@ rpcs:
       - AUTHENTICATION_REQUIRED
       - SOURCE_CONFLICT
       - INVALID_PERIOD
+    list:
+      states:
+        - empty
+        - populated
+    idempotency:
+      mode: query
+      outcomes:
+        - not_applicable
+  tammy.v1.OverviewService.GetAttentionSummary:
+    stage: declared_future
+    preload: getAttentionSummary
+    cases: []
+    futureCases:
+      - walkthrough/blank-overview
+      - walkthrough/demo-overview
+      - walkthrough/noncash-supplier-month
+    projections:
+      - attention_counts
+      - typed_attention_items
+      - financial_revision
+      - module_revisions
+      - reporting_period
+    routes:
+      - /overview
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_allowed
+      auditor: planned_allowed
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - INVALID_ORGANISATION
+      - INVALID_DATE
+      - INVALID_PERIOD
+      - REVISION_SNAPSHOT_UNAVAILABLE
     list:
       states:
         - empty

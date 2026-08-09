@@ -9,15 +9,19 @@ import type { FieldMask, Timestamp } from "@bufbuild/protobuf/wkt";
 import { file_google_protobuf_field_mask, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { AccountStatus } from "./accounting_pb.js";
 import { file_tammy_v1_accounting } from "./accounting_pb.js";
-import type { CommandContext } from "./common_pb.js";
+import type { CivilDate, CommandContext, Money } from "./common_pb.js";
 import { file_tammy_v1_common } from "./common_pb.js";
+import type { GstBasis, GstReportingFrequency } from "./organisation_pb.js";
+import { file_tammy_v1_organisation } from "./organisation_pb.js";
+import type { AttentionItem, BasAttentionStatus, ReportingPeriod } from "./overview_pb.js";
+import { file_tammy_v1_overview } from "./overview_pb.js";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file tammy/v1/fixtures.proto.
  */
 export const file_tammy_v1_fixtures: GenFile = /*@__PURE__*/
-  fileDesc("Chd0YW1teS92MS9maXh0dXJlcy5wcm90bxIIdGFtbXkudjEi3AMKEENhbm9uaWNhbFJlcXVlc3QSMQoPY29tbWFuZF9jb250ZXh0GAEgASgLMhgudGFtbXkudjEuQ29tbWFuZENvbnRleHQSHQoVaW1wbGljaXRfZGVmYXVsdF9mbGFnGAIgASgIEiIKFWV4cGxpY2l0X2RlZmF1bHRfZmxhZxgDIAEoCEgAiAEBEi8KC3VwZGF0ZV9tYXNrGAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLkZpZWxkTWFzaxIgCg5vcmRlcmVkX3ZhbHVlcxgFIAMoCUIIukgFkgECEBASFAoMc2lnbmVkX3VuaXRzGAYgASgDEi8KC29ic2VydmVkX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBI5Cg5hY2NvdW50X3N0YXR1cxgIIAEoDjIXLnRhbW15LnYxLkFjY291bnRTdGF0dXNCCLpIBYIBAhABEhoKDWV4cGxpY2l0X3plcm8YCSABKANIAYgBARIjCg1vcHRpb25hbF9ub3RlGAogASgJQge6SARyAhhASAKIAQFCGAoWX2V4cGxpY2l0X2RlZmF1bHRfZmxhZ0IQCg5fZXhwbGljaXRfemVyb0IQCg5fb3B0aW9uYWxfbm90ZUJHWkVnaXRodWIuY29tL3RhbW15YXBwL3RhbW15L3NlcnZpY2VzL2NvcmUvaW50ZXJuYWwvZ2VuL3RhbW15L3YxO3RhbW15djFiBnByb3RvMw", [file_buf_validate_validate, file_google_protobuf_field_mask, file_google_protobuf_timestamp, file_tammy_v1_accounting, file_tammy_v1_common]);
+  fileDesc("Chd0YW1teS92MS9maXh0dXJlcy5wcm90bxIIdGFtbXkudjEi3AMKEENhbm9uaWNhbFJlcXVlc3QSMQoPY29tbWFuZF9jb250ZXh0GAEgASgLMhgudGFtbXkudjEuQ29tbWFuZENvbnRleHQSHQoVaW1wbGljaXRfZGVmYXVsdF9mbGFnGAIgASgIEiIKFWV4cGxpY2l0X2RlZmF1bHRfZmxhZxgDIAEoCEgAiAEBEi8KC3VwZGF0ZV9tYXNrGAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLkZpZWxkTWFzaxIgCg5vcmRlcmVkX3ZhbHVlcxgFIAMoCUIIukgFkgECEBASFAoMc2lnbmVkX3VuaXRzGAYgASgDEi8KC29ic2VydmVkX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBI5Cg5hY2NvdW50X3N0YXR1cxgIIAEoDjIXLnRhbW15LnYxLkFjY291bnRTdGF0dXNCCLpIBYIBAhABEhoKDWV4cGxpY2l0X3plcm8YCSABKANIAYgBARIjCg1vcHRpb25hbF9ub3RlGAogASgJQge6SARyAhhASAKIAQFCGAoWX2V4cGxpY2l0X2RlZmF1bHRfZmxhZ0IQCg5fZXhwbGljaXRfemVyb0IQCg5fb3B0aW9uYWxfbm90ZSLeBAoZV2Fsa3Rocm91Z2hPdmVydmlld09yYWNsZRIwChhkb2N1bWVudHNfbmVlZGluZ19yZXZpZXcYASABKA1CCbpIBioEGMCEPUgAiAEBEjQKHGRvY3VtZW50c19yZXZpZXdlZF9pbl9wZXJpb2QYAiABKA1CCbpIBioEGMCEPUgBiAEBEjwKJGJhbmtpbmdfbGluZXNfbmVlZGluZ19yZWNvbmNpbGlhdGlvbhgDIAEoDUIJukgGKgQYwIQ9SAKIAQESPAokYmFua2luZ19saW5lc191bnJlY29uY2lsZWRfaW5fcGVyaW9kGAQgASgNQgm6SAYqBBjAhD1IA4gBARI0ChxjdXJyZW50X2RyYWZ0X2Jhc193b3JrcGFwZXJzGAUgASgNQgm6SAYqBBjAhD1IBIgBARI6CgpiYXNfc3RhdHVzGAYgASgOMhwudGFtbXkudjEuQmFzQXR0ZW50aW9uU3RhdHVzQgi6SAWCAQIQARI6Cg9hdHRlbnRpb25faXRlbXMYByADKAsyFy50YW1teS52MS5BdHRlbnRpb25JdGVtQgi6SAWSAQIQCEIbChlfZG9jdW1lbnRzX25lZWRpbmdfcmV2aWV3Qh8KHV9kb2N1bWVudHNfcmV2aWV3ZWRfaW5fcGVyaW9kQicKJV9iYW5raW5nX2xpbmVzX25lZWRpbmdfcmVjb25jaWxpYXRpb25CJwolX2JhbmtpbmdfbGluZXNfdW5yZWNvbmNpbGVkX2luX3BlcmlvZEIfCh1fY3VycmVudF9kcmFmdF9iYXNfd29ya3BhcGVycyLODAobTm9uY2FzaFN1cHBsaWVyTW9udGhGaXh0dXJlEiUKEW9yZ2FuaXNhdGlvbl9uYW1lGAEgASgJQgq6SAdyBRABGIACEikKDXN5bnRoZXRpY19hYm4YAiABKAlCErpID3INMgteWzAtOV17MTF9JBIhCg1jdXJyZW5jeV9jb2RlGAMgASgJQgq6SAdyBQoDQVVEEi8KCWdzdF9iYXNpcxgEIAEoDjISLnRhbW15LnYxLkdzdEJhc2lzQgi6SAWCAQIQARJKChdnc3RfcmVwb3J0aW5nX2ZyZXF1ZW5jeRgFIAEoDjIfLnRhbW15LnYxLkdzdFJlcG9ydGluZ0ZyZXF1ZW5jeUIIukgFggECEAESKwoYZmluYW5jaWFsX3llYXJfZW5kX21vbnRoGAYgASgNQgm6SAYqBBgMKAESNQoKYmFzX3BlcmlvZBgHIAEoCzIZLnRhbW15LnYxLlJlcG9ydGluZ1BlcmlvZEIGukgDyAEBEiUKEXByaW1hcnlfYmFua19uYW1lGAggASgJQgq6SAdyBRABGKABEjEKDG9wZW5pbmdfZGF0ZRgJIAEoCzITLnRhbW15LnYxLkNpdmlsRGF0ZUIGukgDyAEBEjAKD29wZW5pbmdfYmFsYW5jZRgKIAEoCzIPLnRhbW15LnYxLk1vbmV5Qga6SAPIAQESIQoNc3VwcGxpZXJfbmFtZRgLIAEoCUIKukgHcgUQARiAAhIoChRzb3VyY2VfZG9jdW1lbnRfbmFtZRgMIAEoCUIKukgHcgUQARj/ARIlChJzdXBwbGllcl9yZWZlcmVuY2UYDSABKAlCCbpIBnIEEAEYYBI0Cg9iaWxsX2lzc3VlX2RhdGUYDiABKAsyEy50YW1teS52MS5DaXZpbERhdGVCBrpIA8gBARIaChJiaWxsX3RheF9leGNsdXNpdmUYDyABKAgSKQoIYmlsbF9uZXQYECABKAsyDy50YW1teS52MS5Nb25leUIGukgDyAEBEikKCGJpbGxfZ3N0GBEgASgLMg8udGFtbXkudjEuTW9uZXlCBrpIA8gBARIrCgpiaWxsX2dyb3NzGBIgASgLMg8udGFtbXkudjEuTW9uZXlCBrpIA8gBARI5ChRzdGF0ZW1lbnRfc3RhcnRfZGF0ZRgTIAEoCzITLnRhbW15LnYxLkNpdmlsRGF0ZUIGukgDyAEBEjcKEnN0YXRlbWVudF9lbmRfZGF0ZRgUIAEoCzITLnRhbW15LnYxLkNpdmlsRGF0ZUIGukgDyAEBEjEKDHBheW1lbnRfZGF0ZRgVIAEoCzITLnRhbW15LnYxLkNpdmlsRGF0ZUIGukgDyAEBEjUKFHN0YXRlbWVudF93aXRoZHJhd2FsGBYgASgLMg8udGFtbXkudjEuTW9uZXlCBrpIA8gBARIvCg5wYXltZW50X2Ftb3VudBgXIAEoCzIPLnRhbW15LnYxLk1vbmV5Qga6SAPIAQESNQoUY2xvc2luZ19iYW5rX2JhbGFuY2UYGCABKAsyDy50YW1teS52MS5Nb25leUIGukgDyAEBEjsKGnRyaWFsX2JhbGFuY2VfdG90YWxfZGViaXRzGBkgASgLMg8udGFtbXkudjEuTW9uZXlCBrpIA8gBARI8Cht0cmlhbF9iYWxhbmNlX3RvdGFsX2NyZWRpdHMYGiABKAsyDy50YW1teS52MS5Nb25leUIGukgDyAEBEicKBmJhc19nMRgbIAEoCzIPLnRhbW15LnYxLk1vbmV5Qga6SAPIAQESJwoGYmFzXzFhGBwgASgLMg8udGFtbXkudjEuTW9uZXlCBrpIA8gBARInCgZiYXNfMWIYHSABKAsyDy50YW1teS52MS5Nb25leUIGukgDyAEBEjMKEmJhc19uZXRfcmVmdW5kYWJsZRgeIAEoCzIPLnRhbW15LnYxLk1vbmV5Qga6SAPIAQESTgoZYWZ0ZXJfZXh0cmFjdGlvbl9vdmVydmlldxgfIAEoCzIjLnRhbW15LnYxLldhbGt0aHJvdWdoT3ZlcnZpZXdPcmFjbGVCBrpIA8gBARJDCg5maW5hbF9vdmVydmlldxggIAEoCzIjLnRhbW15LnYxLldhbGt0aHJvdWdoT3ZlcnZpZXdPcmFjbGVCBrpIA8gBAUJHWkVnaXRodWIuY29tL3RhbW15YXBwL3RhbW15L3NlcnZpY2VzL2NvcmUvaW50ZXJuYWwvZ2VuL3RhbW15L3YxO3RhbW15djFiBnByb3RvMw", [file_buf_validate_validate, file_google_protobuf_field_mask, file_google_protobuf_timestamp, file_tammy_v1_accounting, file_tammy_v1_common, file_tammy_v1_organisation, file_tammy_v1_overview]);
 
 /**
  * CanonicalRequest is the shared cross-language boundary fixture for Task 2 normalization.
@@ -103,4 +107,306 @@ export type CanonicalRequest = Message<"tammy.v1.CanonicalRequest"> & {
  */
 export const CanonicalRequestSchema: GenMessage<CanonicalRequest> = /*@__PURE__*/
   messageDesc(file_tammy_v1_fixtures, 0);
+
+/**
+ * WalkthroughOverviewOracle records exact deterministic attention outcomes without current-time values.
+ *
+ * @generated from message tammy.v1.WalkthroughOverviewOracle
+ */
+export type WalkthroughOverviewOracle = Message<"tammy.v1.WalkthroughOverviewOracle"> & {
+  /**
+   * documents_needing_review is explicitly present even when the expected count is zero.
+   *
+   * @generated from field: optional uint32 documents_needing_review = 1;
+   */
+  documentsNeedingReview?: number | undefined;
+
+  /**
+   * documents_reviewed_in_period is explicitly present even when the expected count is zero.
+   *
+   * @generated from field: optional uint32 documents_reviewed_in_period = 2;
+   */
+  documentsReviewedInPeriod?: number | undefined;
+
+  /**
+   * banking_lines_needing_reconciliation is explicitly present even when the expected count is zero.
+   *
+   * @generated from field: optional uint32 banking_lines_needing_reconciliation = 3;
+   */
+  bankingLinesNeedingReconciliation?: number | undefined;
+
+  /**
+   * banking_lines_unreconciled_in_period is explicitly present even when the expected count is zero.
+   *
+   * @generated from field: optional uint32 banking_lines_unreconciled_in_period = 4;
+   */
+  bankingLinesUnreconciledInPeriod?: number | undefined;
+
+  /**
+   * current_draft_bas_workpapers is explicitly present even when the expected count is zero.
+   *
+   * @generated from field: optional uint32 current_draft_bas_workpapers = 5;
+   */
+  currentDraftBasWorkpapers?: number | undefined;
+
+  /**
+   * bas_status is the expected local workpaper state.
+   *
+   * @generated from field: tammy.v1.BasAttentionStatus bas_status = 6;
+   */
+  basStatus: BasAttentionStatus;
+
+  /**
+   * attention_items are exact typed immutable links in stable display order.
+   *
+   * @generated from field: repeated tammy.v1.AttentionItem attention_items = 7;
+   */
+  attentionItems: AttentionItem[];
+};
+
+/**
+ * Describes the message tammy.v1.WalkthroughOverviewOracle.
+ * Use `create(WalkthroughOverviewOracleSchema)` to create a new message.
+ */
+export const WalkthroughOverviewOracleSchema: GenMessage<WalkthroughOverviewOracle> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_fixtures, 1);
+
+/**
+ * NoncashSupplierMonthFixture is the canonical deterministic walkthrough input and accounting oracle.
+ * It contains synthetic identities, fixed civil dates, exact AUD minor units, and no clock-authored instants.
+ *
+ * @generated from message tammy.v1.NoncashSupplierMonthFixture
+ */
+export type NoncashSupplierMonthFixture = Message<"tammy.v1.NoncashSupplierMonthFixture"> & {
+  /**
+   * organisation_name is the clearly synthetic demo entity name.
+   *
+   * @generated from field: string organisation_name = 1;
+   */
+  organisationName: string;
+
+  /**
+   * synthetic_abn is an explicitly non-production eleven-digit fixture value.
+   *
+   * @generated from field: string synthetic_abn = 2;
+   */
+  syntheticAbn: string;
+
+  /**
+   * currency_code fixes every monetary value to AUD.
+   *
+   * @generated from field: string currency_code = 3;
+   */
+  currencyCode: string;
+
+  /**
+   * gst_basis fixes the walkthrough to non-cash accrual attribution.
+   *
+   * @generated from field: tammy.v1.GstBasis gst_basis = 4;
+   */
+  gstBasis: GstBasis;
+
+  /**
+   * gst_reporting_frequency fixes the walkthrough to an Australian quarter.
+   *
+   * @generated from field: tammy.v1.GstReportingFrequency gst_reporting_frequency = 5;
+   */
+  gstReportingFrequency: GstReportingFrequency;
+
+  /**
+   * financial_year_end_month is June.
+   *
+   * @generated from field: uint32 financial_year_end_month = 6;
+   */
+  financialYearEndMonth: number;
+
+  /**
+   * bas_period is the fixed April through June 2024 reporting period.
+   *
+   * @generated from field: tammy.v1.ReportingPeriod bas_period = 7;
+   */
+  basPeriod?: ReportingPeriod | undefined;
+
+  /**
+   * primary_bank_name is the safe display label for the asset account.
+   *
+   * @generated from field: string primary_bank_name = 8;
+   */
+  primaryBankName: string;
+
+  /**
+   * opening_date is the fixed opening conversion date.
+   *
+   * @generated from field: tammy.v1.CivilDate opening_date = 9;
+   */
+  openingDate?: CivilDate | undefined;
+
+  /**
+   * opening_balance is the exact opening bank and statement balance.
+   *
+   * @generated from field: tammy.v1.Money opening_balance = 10;
+   */
+  openingBalance?: Money | undefined;
+
+  /**
+   * supplier_name is the synthetic supplier created before the bill draft.
+   *
+   * @generated from field: string supplier_name = 11;
+   */
+  supplierName: string;
+
+  /**
+   * source_document_name is the deterministic redistributable fixture filename.
+   *
+   * @generated from field: string source_document_name = 12;
+   */
+  sourceDocumentName: string;
+
+  /**
+   * supplier_reference is the exact source bill reference.
+   *
+   * @generated from field: string supplier_reference = 13;
+   */
+  supplierReference: string;
+
+  /**
+   * bill_issue_date is the fixed source and posting date.
+   *
+   * @generated from field: tammy.v1.CivilDate bill_issue_date = 14;
+   */
+  billIssueDate?: CivilDate | undefined;
+
+  /**
+   * bill_tax_exclusive records the source's exact amount convention.
+   *
+   * @generated from field: bool bill_tax_exclusive = 15;
+   */
+  billTaxExclusive: boolean;
+
+  /**
+   * bill_net is the exact office-supplies expense before GST.
+   *
+   * @generated from field: tammy.v1.Money bill_net = 16;
+   */
+  billNet?: Money | undefined;
+
+  /**
+   * bill_gst is the exact retained purchase GST fact.
+   *
+   * @generated from field: tammy.v1.Money bill_gst = 17;
+   */
+  billGst?: Money | undefined;
+
+  /**
+   * bill_gross is the exact approved supplier bill.
+   *
+   * @generated from field: tammy.v1.Money bill_gross = 18;
+   */
+  billGross?: Money | undefined;
+
+  /**
+   * statement_start_date is the fixed first statement date.
+   *
+   * @generated from field: tammy.v1.CivilDate statement_start_date = 19;
+   */
+  statementStartDate?: CivilDate | undefined;
+
+  /**
+   * statement_end_date is the fixed final statement date.
+   *
+   * @generated from field: tammy.v1.CivilDate statement_end_date = 20;
+   */
+  statementEndDate?: CivilDate | undefined;
+
+  /**
+   * payment_date is the fixed statement withdrawal and supplier payment date.
+   *
+   * @generated from field: tammy.v1.CivilDate payment_date = 21;
+   */
+  paymentDate?: CivilDate | undefined;
+
+  /**
+   * statement_withdrawal is the exact normalized negative ledger amount.
+   *
+   * @generated from field: tammy.v1.Money statement_withdrawal = 22;
+   */
+  statementWithdrawal?: Money | undefined;
+
+  /**
+   * payment_amount is the exact positive supplier allocation amount.
+   *
+   * @generated from field: tammy.v1.Money payment_amount = 23;
+   */
+  paymentAmount?: Money | undefined;
+
+  /**
+   * closing_bank_balance is the exact post-payment ledger and statement balance.
+   *
+   * @generated from field: tammy.v1.Money closing_bank_balance = 24;
+   */
+  closingBankBalance?: Money | undefined;
+
+  /**
+   * trial_balance_total_debits is the exact balanced debit-column total.
+   *
+   * @generated from field: tammy.v1.Money trial_balance_total_debits = 25;
+   */
+  trialBalanceTotalDebits?: Money | undefined;
+
+  /**
+   * trial_balance_total_credits is the exact balanced credit-column total.
+   *
+   * @generated from field: tammy.v1.Money trial_balance_total_credits = 26;
+   */
+  trialBalanceTotalCredits?: Money | undefined;
+
+  /**
+   * bas_g1 is the exact zero G1 amount.
+   *
+   * @generated from field: tammy.v1.Money bas_g1 = 27;
+   */
+  basG1?: Money | undefined;
+
+  /**
+   * bas_1a is the exact zero 1A amount.
+   *
+   * @generated from field: tammy.v1.Money bas_1a = 28;
+   */
+  bas1a?: Money | undefined;
+
+  /**
+   * bas_1b is the exact purchase-credit amount recognized on bill approval.
+   *
+   * @generated from field: tammy.v1.Money bas_1b = 29;
+   */
+  bas1b?: Money | undefined;
+
+  /**
+   * bas_net_refundable is the exact draft net GST refund.
+   *
+   * @generated from field: tammy.v1.Money bas_net_refundable = 30;
+   */
+  basNetRefundable?: Money | undefined;
+
+  /**
+   * after_extraction_overview is the exact initial needs-review projection.
+   *
+   * @generated from field: tammy.v1.WalkthroughOverviewOracle after_extraction_overview = 31;
+   */
+  afterExtractionOverview?: WalkthroughOverviewOracle | undefined;
+
+  /**
+   * final_overview is the exact projection after payment, matching, reconciliation, and BAS creation.
+   *
+   * @generated from field: tammy.v1.WalkthroughOverviewOracle final_overview = 32;
+   */
+  finalOverview?: WalkthroughOverviewOracle | undefined;
+};
+
+/**
+ * Describes the message tammy.v1.NoncashSupplierMonthFixture.
+ * Use `create(NoncashSupplierMonthFixtureSchema)` to create a new message.
+ */
+export const NoncashSupplierMonthFixtureSchema: GenMessage<NoncashSupplierMonthFixture> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_fixtures, 2);
 

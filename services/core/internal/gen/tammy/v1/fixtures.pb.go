@@ -152,11 +152,437 @@ func (x *CanonicalRequest) GetOptionalNote() string {
 	return ""
 }
 
+// WalkthroughOverviewOracle records exact deterministic attention outcomes without current-time values.
+type WalkthroughOverviewOracle struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// documents_needing_review is explicitly present even when the expected count is zero.
+	DocumentsNeedingReview *uint32 `protobuf:"varint,1,opt,name=documents_needing_review,json=documentsNeedingReview,proto3,oneof" json:"documents_needing_review,omitempty"`
+	// documents_reviewed_in_period is explicitly present even when the expected count is zero.
+	DocumentsReviewedInPeriod *uint32 `protobuf:"varint,2,opt,name=documents_reviewed_in_period,json=documentsReviewedInPeriod,proto3,oneof" json:"documents_reviewed_in_period,omitempty"`
+	// banking_lines_needing_reconciliation is explicitly present even when the expected count is zero.
+	BankingLinesNeedingReconciliation *uint32 `protobuf:"varint,3,opt,name=banking_lines_needing_reconciliation,json=bankingLinesNeedingReconciliation,proto3,oneof" json:"banking_lines_needing_reconciliation,omitempty"`
+	// banking_lines_unreconciled_in_period is explicitly present even when the expected count is zero.
+	BankingLinesUnreconciledInPeriod *uint32 `protobuf:"varint,4,opt,name=banking_lines_unreconciled_in_period,json=bankingLinesUnreconciledInPeriod,proto3,oneof" json:"banking_lines_unreconciled_in_period,omitempty"`
+	// current_draft_bas_workpapers is explicitly present even when the expected count is zero.
+	CurrentDraftBasWorkpapers *uint32 `protobuf:"varint,5,opt,name=current_draft_bas_workpapers,json=currentDraftBasWorkpapers,proto3,oneof" json:"current_draft_bas_workpapers,omitempty"`
+	// bas_status is the expected local workpaper state.
+	BasStatus BasAttentionStatus `protobuf:"varint,6,opt,name=bas_status,json=basStatus,proto3,enum=tammy.v1.BasAttentionStatus" json:"bas_status,omitempty"`
+	// attention_items are exact typed immutable links in stable display order.
+	AttentionItems []*AttentionItem `protobuf:"bytes,7,rep,name=attention_items,json=attentionItems,proto3" json:"attention_items,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *WalkthroughOverviewOracle) Reset() {
+	*x = WalkthroughOverviewOracle{}
+	mi := &file_tammy_v1_fixtures_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WalkthroughOverviewOracle) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WalkthroughOverviewOracle) ProtoMessage() {}
+
+func (x *WalkthroughOverviewOracle) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_fixtures_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WalkthroughOverviewOracle.ProtoReflect.Descriptor instead.
+func (*WalkthroughOverviewOracle) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_fixtures_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *WalkthroughOverviewOracle) GetDocumentsNeedingReview() uint32 {
+	if x != nil && x.DocumentsNeedingReview != nil {
+		return *x.DocumentsNeedingReview
+	}
+	return 0
+}
+
+func (x *WalkthroughOverviewOracle) GetDocumentsReviewedInPeriod() uint32 {
+	if x != nil && x.DocumentsReviewedInPeriod != nil {
+		return *x.DocumentsReviewedInPeriod
+	}
+	return 0
+}
+
+func (x *WalkthroughOverviewOracle) GetBankingLinesNeedingReconciliation() uint32 {
+	if x != nil && x.BankingLinesNeedingReconciliation != nil {
+		return *x.BankingLinesNeedingReconciliation
+	}
+	return 0
+}
+
+func (x *WalkthroughOverviewOracle) GetBankingLinesUnreconciledInPeriod() uint32 {
+	if x != nil && x.BankingLinesUnreconciledInPeriod != nil {
+		return *x.BankingLinesUnreconciledInPeriod
+	}
+	return 0
+}
+
+func (x *WalkthroughOverviewOracle) GetCurrentDraftBasWorkpapers() uint32 {
+	if x != nil && x.CurrentDraftBasWorkpapers != nil {
+		return *x.CurrentDraftBasWorkpapers
+	}
+	return 0
+}
+
+func (x *WalkthroughOverviewOracle) GetBasStatus() BasAttentionStatus {
+	if x != nil {
+		return x.BasStatus
+	}
+	return BasAttentionStatus_BAS_ATTENTION_STATUS_UNSPECIFIED
+}
+
+func (x *WalkthroughOverviewOracle) GetAttentionItems() []*AttentionItem {
+	if x != nil {
+		return x.AttentionItems
+	}
+	return nil
+}
+
+// NoncashSupplierMonthFixture is the canonical deterministic walkthrough input and accounting oracle.
+// It contains synthetic identities, fixed civil dates, exact AUD minor units, and no clock-authored instants.
+type NoncashSupplierMonthFixture struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// organisation_name is the clearly synthetic demo entity name.
+	OrganisationName string `protobuf:"bytes,1,opt,name=organisation_name,json=organisationName,proto3" json:"organisation_name,omitempty"`
+	// synthetic_abn is an explicitly non-production eleven-digit fixture value.
+	SyntheticAbn string `protobuf:"bytes,2,opt,name=synthetic_abn,json=syntheticAbn,proto3" json:"synthetic_abn,omitempty"`
+	// currency_code fixes every monetary value to AUD.
+	CurrencyCode string `protobuf:"bytes,3,opt,name=currency_code,json=currencyCode,proto3" json:"currency_code,omitempty"`
+	// gst_basis fixes the walkthrough to non-cash accrual attribution.
+	GstBasis GstBasis `protobuf:"varint,4,opt,name=gst_basis,json=gstBasis,proto3,enum=tammy.v1.GstBasis" json:"gst_basis,omitempty"`
+	// gst_reporting_frequency fixes the walkthrough to an Australian quarter.
+	GstReportingFrequency GstReportingFrequency `protobuf:"varint,5,opt,name=gst_reporting_frequency,json=gstReportingFrequency,proto3,enum=tammy.v1.GstReportingFrequency" json:"gst_reporting_frequency,omitempty"`
+	// financial_year_end_month is June.
+	FinancialYearEndMonth uint32 `protobuf:"varint,6,opt,name=financial_year_end_month,json=financialYearEndMonth,proto3" json:"financial_year_end_month,omitempty"`
+	// bas_period is the fixed April through June 2024 reporting period.
+	BasPeriod *ReportingPeriod `protobuf:"bytes,7,opt,name=bas_period,json=basPeriod,proto3" json:"bas_period,omitempty"`
+	// primary_bank_name is the safe display label for the asset account.
+	PrimaryBankName string `protobuf:"bytes,8,opt,name=primary_bank_name,json=primaryBankName,proto3" json:"primary_bank_name,omitempty"`
+	// opening_date is the fixed opening conversion date.
+	OpeningDate *CivilDate `protobuf:"bytes,9,opt,name=opening_date,json=openingDate,proto3" json:"opening_date,omitempty"`
+	// opening_balance is the exact opening bank and statement balance.
+	OpeningBalance *Money `protobuf:"bytes,10,opt,name=opening_balance,json=openingBalance,proto3" json:"opening_balance,omitempty"`
+	// supplier_name is the synthetic supplier created before the bill draft.
+	SupplierName string `protobuf:"bytes,11,opt,name=supplier_name,json=supplierName,proto3" json:"supplier_name,omitempty"`
+	// source_document_name is the deterministic redistributable fixture filename.
+	SourceDocumentName string `protobuf:"bytes,12,opt,name=source_document_name,json=sourceDocumentName,proto3" json:"source_document_name,omitempty"`
+	// supplier_reference is the exact source bill reference.
+	SupplierReference string `protobuf:"bytes,13,opt,name=supplier_reference,json=supplierReference,proto3" json:"supplier_reference,omitempty"`
+	// bill_issue_date is the fixed source and posting date.
+	BillIssueDate *CivilDate `protobuf:"bytes,14,opt,name=bill_issue_date,json=billIssueDate,proto3" json:"bill_issue_date,omitempty"`
+	// bill_tax_exclusive records the source's exact amount convention.
+	BillTaxExclusive bool `protobuf:"varint,15,opt,name=bill_tax_exclusive,json=billTaxExclusive,proto3" json:"bill_tax_exclusive,omitempty"`
+	// bill_net is the exact office-supplies expense before GST.
+	BillNet *Money `protobuf:"bytes,16,opt,name=bill_net,json=billNet,proto3" json:"bill_net,omitempty"`
+	// bill_gst is the exact retained purchase GST fact.
+	BillGst *Money `protobuf:"bytes,17,opt,name=bill_gst,json=billGst,proto3" json:"bill_gst,omitempty"`
+	// bill_gross is the exact approved supplier bill.
+	BillGross *Money `protobuf:"bytes,18,opt,name=bill_gross,json=billGross,proto3" json:"bill_gross,omitempty"`
+	// statement_start_date is the fixed first statement date.
+	StatementStartDate *CivilDate `protobuf:"bytes,19,opt,name=statement_start_date,json=statementStartDate,proto3" json:"statement_start_date,omitempty"`
+	// statement_end_date is the fixed final statement date.
+	StatementEndDate *CivilDate `protobuf:"bytes,20,opt,name=statement_end_date,json=statementEndDate,proto3" json:"statement_end_date,omitempty"`
+	// payment_date is the fixed statement withdrawal and supplier payment date.
+	PaymentDate *CivilDate `protobuf:"bytes,21,opt,name=payment_date,json=paymentDate,proto3" json:"payment_date,omitempty"`
+	// statement_withdrawal is the exact normalized negative ledger amount.
+	StatementWithdrawal *Money `protobuf:"bytes,22,opt,name=statement_withdrawal,json=statementWithdrawal,proto3" json:"statement_withdrawal,omitempty"`
+	// payment_amount is the exact positive supplier allocation amount.
+	PaymentAmount *Money `protobuf:"bytes,23,opt,name=payment_amount,json=paymentAmount,proto3" json:"payment_amount,omitempty"`
+	// closing_bank_balance is the exact post-payment ledger and statement balance.
+	ClosingBankBalance *Money `protobuf:"bytes,24,opt,name=closing_bank_balance,json=closingBankBalance,proto3" json:"closing_bank_balance,omitempty"`
+	// trial_balance_total_debits is the exact balanced debit-column total.
+	TrialBalanceTotalDebits *Money `protobuf:"bytes,25,opt,name=trial_balance_total_debits,json=trialBalanceTotalDebits,proto3" json:"trial_balance_total_debits,omitempty"`
+	// trial_balance_total_credits is the exact balanced credit-column total.
+	TrialBalanceTotalCredits *Money `protobuf:"bytes,26,opt,name=trial_balance_total_credits,json=trialBalanceTotalCredits,proto3" json:"trial_balance_total_credits,omitempty"`
+	// bas_g1 is the exact zero G1 amount.
+	BasG1 *Money `protobuf:"bytes,27,opt,name=bas_g1,json=basG1,proto3" json:"bas_g1,omitempty"`
+	// bas_1a is the exact zero 1A amount.
+	Bas_1A *Money `protobuf:"bytes,28,opt,name=bas_1a,json=bas1a,proto3" json:"bas_1a,omitempty"`
+	// bas_1b is the exact purchase-credit amount recognized on bill approval.
+	Bas_1B *Money `protobuf:"bytes,29,opt,name=bas_1b,json=bas1b,proto3" json:"bas_1b,omitempty"`
+	// bas_net_refundable is the exact draft net GST refund.
+	BasNetRefundable *Money `protobuf:"bytes,30,opt,name=bas_net_refundable,json=basNetRefundable,proto3" json:"bas_net_refundable,omitempty"`
+	// after_extraction_overview is the exact initial needs-review projection.
+	AfterExtractionOverview *WalkthroughOverviewOracle `protobuf:"bytes,31,opt,name=after_extraction_overview,json=afterExtractionOverview,proto3" json:"after_extraction_overview,omitempty"`
+	// final_overview is the exact projection after payment, matching, reconciliation, and BAS creation.
+	FinalOverview *WalkthroughOverviewOracle `protobuf:"bytes,32,opt,name=final_overview,json=finalOverview,proto3" json:"final_overview,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NoncashSupplierMonthFixture) Reset() {
+	*x = NoncashSupplierMonthFixture{}
+	mi := &file_tammy_v1_fixtures_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NoncashSupplierMonthFixture) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NoncashSupplierMonthFixture) ProtoMessage() {}
+
+func (x *NoncashSupplierMonthFixture) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_fixtures_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NoncashSupplierMonthFixture.ProtoReflect.Descriptor instead.
+func (*NoncashSupplierMonthFixture) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_fixtures_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *NoncashSupplierMonthFixture) GetOrganisationName() string {
+	if x != nil {
+		return x.OrganisationName
+	}
+	return ""
+}
+
+func (x *NoncashSupplierMonthFixture) GetSyntheticAbn() string {
+	if x != nil {
+		return x.SyntheticAbn
+	}
+	return ""
+}
+
+func (x *NoncashSupplierMonthFixture) GetCurrencyCode() string {
+	if x != nil {
+		return x.CurrencyCode
+	}
+	return ""
+}
+
+func (x *NoncashSupplierMonthFixture) GetGstBasis() GstBasis {
+	if x != nil {
+		return x.GstBasis
+	}
+	return GstBasis_GST_BASIS_UNSPECIFIED
+}
+
+func (x *NoncashSupplierMonthFixture) GetGstReportingFrequency() GstReportingFrequency {
+	if x != nil {
+		return x.GstReportingFrequency
+	}
+	return GstReportingFrequency_GST_REPORTING_FREQUENCY_UNSPECIFIED
+}
+
+func (x *NoncashSupplierMonthFixture) GetFinancialYearEndMonth() uint32 {
+	if x != nil {
+		return x.FinancialYearEndMonth
+	}
+	return 0
+}
+
+func (x *NoncashSupplierMonthFixture) GetBasPeriod() *ReportingPeriod {
+	if x != nil {
+		return x.BasPeriod
+	}
+	return nil
+}
+
+func (x *NoncashSupplierMonthFixture) GetPrimaryBankName() string {
+	if x != nil {
+		return x.PrimaryBankName
+	}
+	return ""
+}
+
+func (x *NoncashSupplierMonthFixture) GetOpeningDate() *CivilDate {
+	if x != nil {
+		return x.OpeningDate
+	}
+	return nil
+}
+
+func (x *NoncashSupplierMonthFixture) GetOpeningBalance() *Money {
+	if x != nil {
+		return x.OpeningBalance
+	}
+	return nil
+}
+
+func (x *NoncashSupplierMonthFixture) GetSupplierName() string {
+	if x != nil {
+		return x.SupplierName
+	}
+	return ""
+}
+
+func (x *NoncashSupplierMonthFixture) GetSourceDocumentName() string {
+	if x != nil {
+		return x.SourceDocumentName
+	}
+	return ""
+}
+
+func (x *NoncashSupplierMonthFixture) GetSupplierReference() string {
+	if x != nil {
+		return x.SupplierReference
+	}
+	return ""
+}
+
+func (x *NoncashSupplierMonthFixture) GetBillIssueDate() *CivilDate {
+	if x != nil {
+		return x.BillIssueDate
+	}
+	return nil
+}
+
+func (x *NoncashSupplierMonthFixture) GetBillTaxExclusive() bool {
+	if x != nil {
+		return x.BillTaxExclusive
+	}
+	return false
+}
+
+func (x *NoncashSupplierMonthFixture) GetBillNet() *Money {
+	if x != nil {
+		return x.BillNet
+	}
+	return nil
+}
+
+func (x *NoncashSupplierMonthFixture) GetBillGst() *Money {
+	if x != nil {
+		return x.BillGst
+	}
+	return nil
+}
+
+func (x *NoncashSupplierMonthFixture) GetBillGross() *Money {
+	if x != nil {
+		return x.BillGross
+	}
+	return nil
+}
+
+func (x *NoncashSupplierMonthFixture) GetStatementStartDate() *CivilDate {
+	if x != nil {
+		return x.StatementStartDate
+	}
+	return nil
+}
+
+func (x *NoncashSupplierMonthFixture) GetStatementEndDate() *CivilDate {
+	if x != nil {
+		return x.StatementEndDate
+	}
+	return nil
+}
+
+func (x *NoncashSupplierMonthFixture) GetPaymentDate() *CivilDate {
+	if x != nil {
+		return x.PaymentDate
+	}
+	return nil
+}
+
+func (x *NoncashSupplierMonthFixture) GetStatementWithdrawal() *Money {
+	if x != nil {
+		return x.StatementWithdrawal
+	}
+	return nil
+}
+
+func (x *NoncashSupplierMonthFixture) GetPaymentAmount() *Money {
+	if x != nil {
+		return x.PaymentAmount
+	}
+	return nil
+}
+
+func (x *NoncashSupplierMonthFixture) GetClosingBankBalance() *Money {
+	if x != nil {
+		return x.ClosingBankBalance
+	}
+	return nil
+}
+
+func (x *NoncashSupplierMonthFixture) GetTrialBalanceTotalDebits() *Money {
+	if x != nil {
+		return x.TrialBalanceTotalDebits
+	}
+	return nil
+}
+
+func (x *NoncashSupplierMonthFixture) GetTrialBalanceTotalCredits() *Money {
+	if x != nil {
+		return x.TrialBalanceTotalCredits
+	}
+	return nil
+}
+
+func (x *NoncashSupplierMonthFixture) GetBasG1() *Money {
+	if x != nil {
+		return x.BasG1
+	}
+	return nil
+}
+
+func (x *NoncashSupplierMonthFixture) GetBas_1A() *Money {
+	if x != nil {
+		return x.Bas_1A
+	}
+	return nil
+}
+
+func (x *NoncashSupplierMonthFixture) GetBas_1B() *Money {
+	if x != nil {
+		return x.Bas_1B
+	}
+	return nil
+}
+
+func (x *NoncashSupplierMonthFixture) GetBasNetRefundable() *Money {
+	if x != nil {
+		return x.BasNetRefundable
+	}
+	return nil
+}
+
+func (x *NoncashSupplierMonthFixture) GetAfterExtractionOverview() *WalkthroughOverviewOracle {
+	if x != nil {
+		return x.AfterExtractionOverview
+	}
+	return nil
+}
+
+func (x *NoncashSupplierMonthFixture) GetFinalOverview() *WalkthroughOverviewOracle {
+	if x != nil {
+		return x.FinalOverview
+	}
+	return nil
+}
+
 var File_tammy_v1_fixtures_proto protoreflect.FileDescriptor
 
 const file_tammy_v1_fixtures_proto_rawDesc = "" +
 	"\n" +
-	"\x17tammy/v1/fixtures.proto\x12\btammy.v1\x1a\x1bbuf/validate/validate.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x19tammy/v1/accounting.proto\x1a\x15tammy/v1/common.proto\"\xf5\x04\n" +
+	"\x17tammy/v1/fixtures.proto\x12\btammy.v1\x1a\x1bbuf/validate/validate.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x19tammy/v1/accounting.proto\x1a\x15tammy/v1/common.proto\x1a\x1btammy/v1/organisation.proto\x1a\x17tammy/v1/overview.proto\"\xf5\x04\n" +
 	"\x10CanonicalRequest\x12A\n" +
 	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextR\x0ecommandContext\x122\n" +
 	"\x15implicit_default_flag\x18\x02 \x01(\bR\x13implicitDefaultFlag\x127\n" +
@@ -173,7 +599,63 @@ const file_tammy_v1_fixtures_proto_rawDesc = "" +
 	" \x01(\tB\a\xbaH\x04r\x02\x18@H\x02R\foptionalNote\x88\x01\x01B\x18\n" +
 	"\x16_explicit_default_flagB\x10\n" +
 	"\x0e_explicit_zeroB\x10\n" +
-	"\x0e_optional_noteBGZEgithub.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1b\x06proto3"
+	"\x0e_optional_note\"\x8c\x06\n" +
+	"\x19WalkthroughOverviewOracle\x12H\n" +
+	"\x18documents_needing_review\x18\x01 \x01(\rB\t\xbaH\x06*\x04\x18\xc0\x84=H\x00R\x16documentsNeedingReview\x88\x01\x01\x12O\n" +
+	"\x1cdocuments_reviewed_in_period\x18\x02 \x01(\rB\t\xbaH\x06*\x04\x18\xc0\x84=H\x01R\x19documentsReviewedInPeriod\x88\x01\x01\x12_\n" +
+	"$banking_lines_needing_reconciliation\x18\x03 \x01(\rB\t\xbaH\x06*\x04\x18\xc0\x84=H\x02R!bankingLinesNeedingReconciliation\x88\x01\x01\x12^\n" +
+	"$banking_lines_unreconciled_in_period\x18\x04 \x01(\rB\t\xbaH\x06*\x04\x18\xc0\x84=H\x03R bankingLinesUnreconciledInPeriod\x88\x01\x01\x12O\n" +
+	"\x1ccurrent_draft_bas_workpapers\x18\x05 \x01(\rB\t\xbaH\x06*\x04\x18\xc0\x84=H\x04R\x19currentDraftBasWorkpapers\x88\x01\x01\x12E\n" +
+	"\n" +
+	"bas_status\x18\x06 \x01(\x0e2\x1c.tammy.v1.BasAttentionStatusB\b\xbaH\x05\x82\x01\x02\x10\x01R\tbasStatus\x12J\n" +
+	"\x0fattention_items\x18\a \x03(\v2\x17.tammy.v1.AttentionItemB\b\xbaH\x05\x92\x01\x02\x10\bR\x0eattentionItemsB\x1b\n" +
+	"\x19_documents_needing_reviewB\x1f\n" +
+	"\x1d_documents_reviewed_in_periodB'\n" +
+	"%_banking_lines_needing_reconciliationB'\n" +
+	"%_banking_lines_unreconciled_in_periodB\x1f\n" +
+	"\x1d_current_draft_bas_workpapers\"\xcd\x10\n" +
+	"\x1bNoncashSupplierMonthFixture\x127\n" +
+	"\x11organisation_name\x18\x01 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\x80\x02R\x10organisationName\x127\n" +
+	"\rsynthetic_abn\x18\x02 \x01(\tB\x12\xbaH\x0fr\r2\v^[0-9]{11}$R\fsyntheticAbn\x12/\n" +
+	"\rcurrency_code\x18\x03 \x01(\tB\n" +
+	"\xbaH\ar\x05\n" +
+	"\x03AUDR\fcurrencyCode\x129\n" +
+	"\tgst_basis\x18\x04 \x01(\x0e2\x12.tammy.v1.GstBasisB\b\xbaH\x05\x82\x01\x02\x10\x01R\bgstBasis\x12a\n" +
+	"\x17gst_reporting_frequency\x18\x05 \x01(\x0e2\x1f.tammy.v1.GstReportingFrequencyB\b\xbaH\x05\x82\x01\x02\x10\x01R\x15gstReportingFrequency\x12B\n" +
+	"\x18financial_year_end_month\x18\x06 \x01(\rB\t\xbaH\x06*\x04\x18\f(\x01R\x15financialYearEndMonth\x12@\n" +
+	"\n" +
+	"bas_period\x18\a \x01(\v2\x19.tammy.v1.ReportingPeriodB\x06\xbaH\x03\xc8\x01\x01R\tbasPeriod\x126\n" +
+	"\x11primary_bank_name\x18\b \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xa0\x01R\x0fprimaryBankName\x12>\n" +
+	"\fopening_date\x18\t \x01(\v2\x13.tammy.v1.CivilDateB\x06\xbaH\x03\xc8\x01\x01R\vopeningDate\x12@\n" +
+	"\x0fopening_balance\x18\n" +
+	" \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\x0eopeningBalance\x12/\n" +
+	"\rsupplier_name\x18\v \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\x80\x02R\fsupplierName\x12<\n" +
+	"\x14source_document_name\x18\f \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\x12sourceDocumentName\x128\n" +
+	"\x12supplier_reference\x18\r \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18`R\x11supplierReference\x12C\n" +
+	"\x0fbill_issue_date\x18\x0e \x01(\v2\x13.tammy.v1.CivilDateB\x06\xbaH\x03\xc8\x01\x01R\rbillIssueDate\x12,\n" +
+	"\x12bill_tax_exclusive\x18\x0f \x01(\bR\x10billTaxExclusive\x122\n" +
+	"\bbill_net\x18\x10 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\abillNet\x122\n" +
+	"\bbill_gst\x18\x11 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\abillGst\x126\n" +
+	"\n" +
+	"bill_gross\x18\x12 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\tbillGross\x12M\n" +
+	"\x14statement_start_date\x18\x13 \x01(\v2\x13.tammy.v1.CivilDateB\x06\xbaH\x03\xc8\x01\x01R\x12statementStartDate\x12I\n" +
+	"\x12statement_end_date\x18\x14 \x01(\v2\x13.tammy.v1.CivilDateB\x06\xbaH\x03\xc8\x01\x01R\x10statementEndDate\x12>\n" +
+	"\fpayment_date\x18\x15 \x01(\v2\x13.tammy.v1.CivilDateB\x06\xbaH\x03\xc8\x01\x01R\vpaymentDate\x12J\n" +
+	"\x14statement_withdrawal\x18\x16 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\x13statementWithdrawal\x12>\n" +
+	"\x0epayment_amount\x18\x17 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\rpaymentAmount\x12I\n" +
+	"\x14closing_bank_balance\x18\x18 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\x12closingBankBalance\x12T\n" +
+	"\x1atrial_balance_total_debits\x18\x19 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\x17trialBalanceTotalDebits\x12V\n" +
+	"\x1btrial_balance_total_credits\x18\x1a \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\x18trialBalanceTotalCredits\x12.\n" +
+	"\x06bas_g1\x18\x1b \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\x05basG1\x12.\n" +
+	"\x06bas_1a\x18\x1c \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\x05bas1a\x12.\n" +
+	"\x06bas_1b\x18\x1d \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\x05bas1b\x12E\n" +
+	"\x12bas_net_refundable\x18\x1e \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\x10basNetRefundable\x12g\n" +
+	"\x19after_extraction_overview\x18\x1f \x01(\v2#.tammy.v1.WalkthroughOverviewOracleB\x06\xbaH\x03\xc8\x01\x01R\x17afterExtractionOverview\x12R\n" +
+	"\x0efinal_overview\x18  \x01(\v2#.tammy.v1.WalkthroughOverviewOracleB\x06\xbaH\x03\xc8\x01\x01R\rfinalOverviewBGZEgithub.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1b\x06proto3"
 
 var (
 	file_tammy_v1_fixtures_proto_rawDescOnce sync.Once
@@ -187,24 +669,58 @@ func file_tammy_v1_fixtures_proto_rawDescGZIP() []byte {
 	return file_tammy_v1_fixtures_proto_rawDescData
 }
 
-var file_tammy_v1_fixtures_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_tammy_v1_fixtures_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_tammy_v1_fixtures_proto_goTypes = []any{
-	(*CanonicalRequest)(nil),      // 0: tammy.v1.CanonicalRequest
-	(*CommandContext)(nil),        // 1: tammy.v1.CommandContext
-	(*fieldmaskpb.FieldMask)(nil), // 2: google.protobuf.FieldMask
-	(*timestamppb.Timestamp)(nil), // 3: google.protobuf.Timestamp
-	(AccountStatus)(0),            // 4: tammy.v1.AccountStatus
+	(*CanonicalRequest)(nil),            // 0: tammy.v1.CanonicalRequest
+	(*WalkthroughOverviewOracle)(nil),   // 1: tammy.v1.WalkthroughOverviewOracle
+	(*NoncashSupplierMonthFixture)(nil), // 2: tammy.v1.NoncashSupplierMonthFixture
+	(*CommandContext)(nil),              // 3: tammy.v1.CommandContext
+	(*fieldmaskpb.FieldMask)(nil),       // 4: google.protobuf.FieldMask
+	(*timestamppb.Timestamp)(nil),       // 5: google.protobuf.Timestamp
+	(AccountStatus)(0),                  // 6: tammy.v1.AccountStatus
+	(BasAttentionStatus)(0),             // 7: tammy.v1.BasAttentionStatus
+	(*AttentionItem)(nil),               // 8: tammy.v1.AttentionItem
+	(GstBasis)(0),                       // 9: tammy.v1.GstBasis
+	(GstReportingFrequency)(0),          // 10: tammy.v1.GstReportingFrequency
+	(*ReportingPeriod)(nil),             // 11: tammy.v1.ReportingPeriod
+	(*CivilDate)(nil),                   // 12: tammy.v1.CivilDate
+	(*Money)(nil),                       // 13: tammy.v1.Money
 }
 var file_tammy_v1_fixtures_proto_depIdxs = []int32{
-	1, // 0: tammy.v1.CanonicalRequest.command_context:type_name -> tammy.v1.CommandContext
-	2, // 1: tammy.v1.CanonicalRequest.update_mask:type_name -> google.protobuf.FieldMask
-	3, // 2: tammy.v1.CanonicalRequest.observed_at:type_name -> google.protobuf.Timestamp
-	4, // 3: tammy.v1.CanonicalRequest.account_status:type_name -> tammy.v1.AccountStatus
-	4, // [4:4] is the sub-list for method output_type
-	4, // [4:4] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	3,  // 0: tammy.v1.CanonicalRequest.command_context:type_name -> tammy.v1.CommandContext
+	4,  // 1: tammy.v1.CanonicalRequest.update_mask:type_name -> google.protobuf.FieldMask
+	5,  // 2: tammy.v1.CanonicalRequest.observed_at:type_name -> google.protobuf.Timestamp
+	6,  // 3: tammy.v1.CanonicalRequest.account_status:type_name -> tammy.v1.AccountStatus
+	7,  // 4: tammy.v1.WalkthroughOverviewOracle.bas_status:type_name -> tammy.v1.BasAttentionStatus
+	8,  // 5: tammy.v1.WalkthroughOverviewOracle.attention_items:type_name -> tammy.v1.AttentionItem
+	9,  // 6: tammy.v1.NoncashSupplierMonthFixture.gst_basis:type_name -> tammy.v1.GstBasis
+	10, // 7: tammy.v1.NoncashSupplierMonthFixture.gst_reporting_frequency:type_name -> tammy.v1.GstReportingFrequency
+	11, // 8: tammy.v1.NoncashSupplierMonthFixture.bas_period:type_name -> tammy.v1.ReportingPeriod
+	12, // 9: tammy.v1.NoncashSupplierMonthFixture.opening_date:type_name -> tammy.v1.CivilDate
+	13, // 10: tammy.v1.NoncashSupplierMonthFixture.opening_balance:type_name -> tammy.v1.Money
+	12, // 11: tammy.v1.NoncashSupplierMonthFixture.bill_issue_date:type_name -> tammy.v1.CivilDate
+	13, // 12: tammy.v1.NoncashSupplierMonthFixture.bill_net:type_name -> tammy.v1.Money
+	13, // 13: tammy.v1.NoncashSupplierMonthFixture.bill_gst:type_name -> tammy.v1.Money
+	13, // 14: tammy.v1.NoncashSupplierMonthFixture.bill_gross:type_name -> tammy.v1.Money
+	12, // 15: tammy.v1.NoncashSupplierMonthFixture.statement_start_date:type_name -> tammy.v1.CivilDate
+	12, // 16: tammy.v1.NoncashSupplierMonthFixture.statement_end_date:type_name -> tammy.v1.CivilDate
+	12, // 17: tammy.v1.NoncashSupplierMonthFixture.payment_date:type_name -> tammy.v1.CivilDate
+	13, // 18: tammy.v1.NoncashSupplierMonthFixture.statement_withdrawal:type_name -> tammy.v1.Money
+	13, // 19: tammy.v1.NoncashSupplierMonthFixture.payment_amount:type_name -> tammy.v1.Money
+	13, // 20: tammy.v1.NoncashSupplierMonthFixture.closing_bank_balance:type_name -> tammy.v1.Money
+	13, // 21: tammy.v1.NoncashSupplierMonthFixture.trial_balance_total_debits:type_name -> tammy.v1.Money
+	13, // 22: tammy.v1.NoncashSupplierMonthFixture.trial_balance_total_credits:type_name -> tammy.v1.Money
+	13, // 23: tammy.v1.NoncashSupplierMonthFixture.bas_g1:type_name -> tammy.v1.Money
+	13, // 24: tammy.v1.NoncashSupplierMonthFixture.bas_1a:type_name -> tammy.v1.Money
+	13, // 25: tammy.v1.NoncashSupplierMonthFixture.bas_1b:type_name -> tammy.v1.Money
+	13, // 26: tammy.v1.NoncashSupplierMonthFixture.bas_net_refundable:type_name -> tammy.v1.Money
+	1,  // 27: tammy.v1.NoncashSupplierMonthFixture.after_extraction_overview:type_name -> tammy.v1.WalkthroughOverviewOracle
+	1,  // 28: tammy.v1.NoncashSupplierMonthFixture.final_overview:type_name -> tammy.v1.WalkthroughOverviewOracle
+	29, // [29:29] is the sub-list for method output_type
+	29, // [29:29] is the sub-list for method input_type
+	29, // [29:29] is the sub-list for extension type_name
+	29, // [29:29] is the sub-list for extension extendee
+	0,  // [0:29] is the sub-list for field type_name
 }
 
 func init() { file_tammy_v1_fixtures_proto_init() }
@@ -214,14 +730,17 @@ func file_tammy_v1_fixtures_proto_init() {
 	}
 	file_tammy_v1_accounting_proto_init()
 	file_tammy_v1_common_proto_init()
+	file_tammy_v1_organisation_proto_init()
+	file_tammy_v1_overview_proto_init()
 	file_tammy_v1_fixtures_proto_msgTypes[0].OneofWrappers = []any{}
+	file_tammy_v1_fixtures_proto_msgTypes[1].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_tammy_v1_fixtures_proto_rawDesc), len(file_tammy_v1_fixtures_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   1,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -23,6 +23,7 @@
     "./tammy/v1/fixtures_pb.js": "./src/gen/tammy/v1/fixtures_pb.ts",
     "./tammy/v1/identity_pb.js": "./src/gen/tammy/v1/identity_pb.ts",
     "./tammy/v1/organisation_pb.js": "./src/gen/tammy/v1/organisation_pb.ts",
+    "./tammy/v1/overview_pb.js": "./src/gen/tammy/v1/overview_pb.ts",
     "./tammy/v1/system_pb.js": "./src/gen/tammy/v1/system_pb.ts",
     "./tammy/v1/workspace_pb.js": "./src/gen/tammy/v1/workspace_pb.ts"
   }
