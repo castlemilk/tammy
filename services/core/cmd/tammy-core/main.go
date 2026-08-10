@@ -116,6 +116,11 @@ type processConfig struct {
 	developmentMemoryAnchors bool
 }
 
+var developmentAttemptJournalNames = [...]string{
+	"workspace-attempts.journal",
+	"identity-attempts.journal",
+}
+
 func configuredProcess(args []string) (processConfig, error) {
 	if len(args) == 0 {
 		return processConfig{}, nil
@@ -132,6 +137,26 @@ func configuredProcess(args []string) (processConfig, error) {
 		config.developmentMemoryAnchors = true
 	}
 	return config, nil
+}
+
+func prepareDevelopmentAttemptJournals(config processConfig) error {
+	if !config.developmentMemoryAnchors {
+		return nil
+	}
+	for _, name := range developmentAttemptJournalNames {
+		path := filepath.Join(config.dataRoot, "core", name)
+		info, err := os.Lstat(path)
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+		if err != nil || !info.Mode().IsRegular() || info.Mode().Perm()&0o077 != 0 {
+			return errProcessConfig
+		}
+		if err := os.Remove(path); err != nil {
+			return errProcessConfig
+		}
+	}
+	return nil
 }
 
 func shutdown(server *transport.Server) error {

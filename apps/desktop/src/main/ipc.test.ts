@@ -172,7 +172,6 @@ describe("registerDiagnosticsIpc", () => {
     "tammy://app@evil/",
     "tammy://APP/",
     "tammy://app:443/",
-    "tammy://app/path",
     "tammy://app/?query",
     "tammy://app/#fragment",
     "file:///index.html",
@@ -196,7 +195,7 @@ describe("registerDiagnosticsIpc", () => {
     expect(harness.getSystemDiagnostics).not.toHaveBeenCalled();
   });
 
-  it("accepts only the exact configured development application URL", async () => {
+  it("accepts the exact configured development application and its same-origin routes", async () => {
     const harness = createHarness("http://localhost:5173/");
     registerDiagnosticsIpc({
       applicationUrl: harness.applicationUrl,
@@ -210,6 +209,12 @@ describe("registerDiagnosticsIpc", () => {
     Object.defineProperty(harness.mainFrame, "url", {
       configurable: true,
       value: "http://localhost:5173/dashboard",
+    });
+    await expect(invoke(harness)).resolves.toBe(harness.diagnostics);
+
+    Object.defineProperty(harness.mainFrame, "url", {
+      configurable: true,
+      value: "http://localhost:5174/dashboard",
     });
     await expect(Promise.resolve(invoke(harness))).rejects.toMatchObject({
       code: "IPC_SENDER_REJECTED",
@@ -301,10 +306,7 @@ describe("registerDesktopIpc", () => {
     expect(handler).toBeDefined();
 
     await expect(
-      handler?.(
-        { sender: harness.webContents, senderFrame: harness.mainFrame },
-        frame,
-      ),
+      handler?.({ sender: harness.webContents, senderFrame: harness.mainFrame }, frame),
     ).resolves.toEqual(response);
     expect(router.invoke).toHaveBeenCalledExactlyOnceWith(ATTENTION_SUMMARY_CHANNEL, frame);
   });

@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
+	"errors"
 	"io"
 	"net/http"
 	"os"
@@ -135,6 +136,34 @@ func TestConfiguredProcessAcceptsDevelopmentMemoryAnchorsOnlyWithAnAbsoluteDataR
 		if got, err := configuredProcess(args); err == nil || got != (processConfig{}) {
 			t.Fatalf("configuredProcess(%q) = %#v, %v; want rejection", args, got, err)
 		}
+	}
+}
+
+func TestDevelopmentMemoryAnchorsResetOnlyPrivateAttemptJournals(t *testing.T) {
+	root := t.TempDir()
+	core := filepath.Join(root, "core")
+	if err := os.Mkdir(core, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range developmentAttemptJournalNames {
+		if err := os.WriteFile(filepath.Join(core, name), []byte("development-attempts"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	foreign := filepath.Join(core, "workspace-catalogue.enc")
+	if err := os.WriteFile(foreign, []byte("retained"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := prepareDevelopmentAttemptJournals(processConfig{dataRoot: root, developmentMemoryAnchors: true}); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range developmentAttemptJournalNames {
+		if _, err := os.Lstat(filepath.Join(core, name)); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("%s was not removed", name)
+		}
+	}
+	if payload, err := os.ReadFile(foreign); err != nil || string(payload) != "retained" {
+		t.Fatalf("foreign local data changed: %q, %v", payload, err)
 	}
 }
 

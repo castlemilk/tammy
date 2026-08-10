@@ -48,7 +48,6 @@ export function createProductionDependencies(): DesktopDependencies {
         binaryPath,
         args: createCoreLaunchArguments({
           isPackaged: app.isPackaged,
-          processId: process.pid,
           userDataPath: app.getPath("userData"),
         }),
       });

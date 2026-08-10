@@ -1,8 +1,8 @@
 import type { SystemDiagnostics } from "../shared/desktop-api";
 import { DESKTOP_PROTO_CHANNELS, SYSTEM_DIAGNOSTICS_CHANNEL } from "../shared/desktop-api";
 import preloadMethods from "../shared/preload-methods.json";
-import { isTrustedApplicationURL } from "./security";
 import type { DesktopRpcRouter } from "./rpc-router";
+import { isAllowedApplicationDocumentURL, isTrustedApplicationURL } from "./security";
 
 export const DIAGNOSTICS_PRELOAD_METHOD = "getSystemDiagnostics";
 
@@ -84,7 +84,7 @@ function isAcceptedSender(
       senderFrame !== null &&
       senderFrame === expectedFrame &&
       !senderFrame.isDestroyed() &&
-      senderFrame.url === applicationUrl
+      isAllowedApplicationDocumentURL(senderFrame.url, applicationUrl)
     );
   } catch {
     return false;

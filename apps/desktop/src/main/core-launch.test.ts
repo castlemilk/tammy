@@ -9,7 +9,6 @@ describe("createCoreLaunchArguments", () => {
     expect(
       createCoreLaunchArguments({
         isPackaged: true,
-        processId: 42,
         userDataPath: "/Users/test/Library/Application Support/Tammy",
       }),
     ).toEqual([
@@ -22,12 +21,11 @@ describe("createCoreLaunchArguments", () => {
     expect(
       createCoreLaunchArguments({
         isPackaged: false,
-        processId: 42,
         userDataPath: "/Users/test/Library/Application Support/Tammy",
       }),
     ).toEqual([
       "--data-root",
-      path.join("/Users/test/Library/Application Support/Tammy", "local-core-development-42"),
+      path.join("/Users/test/Library/Application Support/Tammy", "local-core-development"),
       "--development-memory-anchors",
     ]);
   });

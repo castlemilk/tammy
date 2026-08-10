@@ -15,6 +15,7 @@ import {
   installContentSecurityPolicy,
   installSessionGuards,
   installWindowGuards,
+  isAllowedApplicationDocumentURL,
   isAllowedApplicationURL,
   isAllowedNavigation,
   MAX_RENDERER_ASSET_BYTES,
@@ -99,6 +100,22 @@ describe("renderer security policy", () => {
     ["development default port trick", "http://localhost:80/", "http://localhost/", false],
   ])("%s application URL decision is %s", (_name, candidate, allowed, expected) => {
     expect(isAllowedApplicationURL(candidate, allowed)).toBe(expected);
+  });
+
+  it.each([
+    ["production route", "tammy://app/overview", PRODUCTION_APP_URL, true],
+    [
+      "production route query",
+      "tammy://app/accounting/journals?journal=018f0000-0000-7000-8000-000000000001",
+      PRODUCTION_APP_URL,
+      true,
+    ],
+    ["development route", "http://localhost:5173/overview", "http://localhost:5173/", true],
+    ["lookalike host", "tammy://app.evil/overview", PRODUCTION_APP_URL, false],
+    ["foreign development port", "http://localhost:5174/overview", "http://localhost:5173/", false],
+    ["fragment", "tammy://app/overview#unsafe", PRODUCTION_APP_URL, false],
+  ])("classifies an application document URL for %s", (_name, candidate, allowed, expected) => {
+    expect(isAllowedApplicationDocumentURL(candidate, allowed)).toBe(expected);
   });
 });
 

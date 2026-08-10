@@ -21,6 +21,9 @@ func newConfiguredComposition(info buildinfo.Info, config processConfig) (*app.C
 		Info: info, Root: config.dataRoot, Modules: []app.LocalWorkspaceModule{ledger},
 	}
 	if config.developmentMemoryAnchors {
+		if err := prepareDevelopmentAttemptJournals(config); err != nil {
+			return nil, err
+		}
 		localConfig.AttemptAnchors = workspace.NewMemoryAnchorStore()
 	}
 	return app.NewLocalComposition(localConfig)

@@ -335,6 +335,33 @@ export function isAllowedApplicationURL(candidate: string, allowed: string): boo
   return isTrustedApplicationURL(allowed) && candidate === allowed;
 }
 
+export function isAllowedApplicationDocumentURL(candidate: string, allowed: string): boolean {
+  if (!isTrustedApplicationURL(allowed)) {
+    return false;
+  }
+  if (candidate === allowed) {
+    return true;
+  }
+  if (!candidate.startsWith(allowed)) {
+    return false;
+  }
+  try {
+    const candidateUrl = new URL(candidate);
+    const allowedUrl = new URL(allowed);
+    return (
+      candidateUrl.protocol === allowedUrl.protocol &&
+      candidateUrl.hostname === allowedUrl.hostname &&
+      candidateUrl.port === allowedUrl.port &&
+      candidateUrl.username === "" &&
+      candidateUrl.password === "" &&
+      candidateUrl.pathname !== "/" &&
+      candidateUrl.hash === ""
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function denyPermission(..._ignored: unknown[]): false {
   return false;
 }
