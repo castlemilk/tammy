@@ -1,7 +1,8 @@
 import type { SystemDiagnostics } from "../shared/desktop-api";
-import { SYSTEM_DIAGNOSTICS_CHANNEL } from "../shared/desktop-api";
+import { ATTENTION_SUMMARY_CHANNEL, SYSTEM_DIAGNOSTICS_CHANNEL } from "../shared/desktop-api";
 import preloadMethods from "../shared/preload-methods.json";
 import { isTrustedApplicationURL } from "./security";
+import type { DesktopRpcRouter } from "./rpc-router";
 
 export const DIAGNOSTICS_PRELOAD_METHOD = "getSystemDiagnostics";
 
@@ -42,6 +43,10 @@ export interface DiagnosticsIpcOptions {
   readonly getSystemDiagnostics: () => Promise<SystemDiagnostics>;
   readonly ipcMain: IpcMainBoundary;
   readonly mainWindow: IpcWindow;
+}
+
+export interface DesktopIpcOptions extends DiagnosticsIpcOptions {
+  readonly router: DesktopRpcRouter;
 }
 
 export type IpcBoundaryErrorCode = "IPC_SENDER_REJECTED";
@@ -107,6 +112,41 @@ export function registerDiagnosticsIpc(options: DiagnosticsIpcOptions): () => vo
       return;
     }
     options.ipcMain.removeHandler(SYSTEM_DIAGNOSTICS_CHANNEL);
+    registrations.delete(options.ipcMain);
+  };
+}
+
+export function registerDesktopIpc(options: DesktopIpcOptions): () => void {
+  if (!isTrustedApplicationURL(options.applicationUrl)) {
+    throw new Error("INVALID_APPLICATION_URL");
+  }
+
+  const registration = Symbol("desktop-ipc-registration");
+  for (const channel of [SYSTEM_DIAGNOSTICS_CHANNEL, ATTENTION_SUMMARY_CHANNEL]) {
+    options.ipcMain.removeHandler(channel);
+  }
+  options.ipcMain.handle(SYSTEM_DIAGNOSTICS_CHANNEL, async (event) => {
+    if (!isAcceptedSender(event, options.mainWindow, options.applicationUrl)) {
+      throw new IpcBoundaryError();
+    }
+    return options.getSystemDiagnostics();
+  });
+  options.ipcMain.handle(ATTENTION_SUMMARY_CHANNEL, async (event, ...args) => {
+    if (!isAcceptedSender(event, options.mainWindow, options.applicationUrl)) {
+      throw new IpcBoundaryError();
+    }
+    if (args.length !== 1 || !(args[0] instanceof Uint8Array)) {
+      throw new IpcBoundaryError();
+    }
+    return options.router.invoke(ATTENTION_SUMMARY_CHANNEL, new Uint8Array(args[0]));
+  });
+  registrations.set(options.ipcMain, registration);
+
+  return () => {
+    if (registrations.get(options.ipcMain) !== registration) return;
+    for (const channel of [SYSTEM_DIAGNOSTICS_CHANNEL, ATTENTION_SUMMARY_CHANNEL]) {
+      options.ipcMain.removeHandler(channel);
+    }
     registrations.delete(options.ipcMain);
   };
 }

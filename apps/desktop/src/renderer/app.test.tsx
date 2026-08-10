@@ -30,7 +30,12 @@ function deferred<T>() {
 function installDesktopAPI(getSystemDiagnostics: TammyDesktopAPI["getSystemDiagnostics"]) {
   Object.defineProperty(window, "tammy", {
     configurable: true,
-    value: Object.freeze({ getSystemDiagnostics } satisfies TammyDesktopAPI),
+    value: Object.freeze({
+      getAttentionSummary: vi.fn(async () => {
+        throw new Error("unavailable");
+      }),
+      getSystemDiagnostics,
+    } satisfies TammyDesktopAPI),
   });
 }
 

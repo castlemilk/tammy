@@ -8,6 +8,10 @@ import {
 } from "@connectrpc/connect";
 import type { ConnectTransportOptions } from "@connectrpc/connect-node";
 import {
+  GetAttentionSummaryRequestSchema,
+  OverviewService,
+} from "@tammy/connect-client/tammy/v1/overview_pb.js";
+import {
   GetDiagnosticsRequestSchema,
   GetDiagnosticsResponseSchema,
   RuntimeMode,
@@ -61,7 +65,7 @@ function fakeTransport(
   const factory = vi.fn(
     (options: ConnectTransportOptions): Transport =>
       createRouterTransport(
-        (router) =>
+        (router) => {
           router.service(SystemService, {
             getDiagnostics: (_request, context) => {
               methods.push(context.method);
@@ -71,7 +75,18 @@ function fakeTransport(
               }
               return response;
             },
-          }),
+          });
+          router.service(OverviewService, {
+            getAttentionSummary: (_request, context) => {
+              methods.push(context.method);
+              receivedHeaders.push(new Headers(context.requestHeader));
+              return {
+                documentsNeedingReview: 3,
+                documentsReviewedInPeriod: 12,
+              };
+            },
+          });
+        },
         {
           transport: {
             interceptors: options.interceptors ?? [],
@@ -127,6 +142,21 @@ describe("createCoreClient", () => {
     const header = receivedHeaders[0] as Headers;
     expect(header.get("X-Tammy-Capability")).toBe(CAPABILITY);
     expect([...header.entries()].filter(([name]) => name === "x-tammy-capability")).toHaveLength(1);
+  });
+
+  it("calls the generated Overview method and retains the generated response type", async () => {
+    const { factory, methods, receivedHeaders } = fakeTransport();
+    const client = createCoreClient(READINESS, factory);
+    const request = create(GetAttentionSummaryRequestSchema, {
+      organisationId: "018f2f2a-7c1d-7a62-8d11-216b8d6ea4cb",
+    });
+
+    const response = await client.getAttentionSummary(request);
+
+    expect(response.$typeName).toBe("tammy.v1.GetAttentionSummaryResponse");
+    expect(response.documentsNeedingReview).toBe(3);
+    expect(methods).toEqual([OverviewService.method.getAttentionSummary]);
+    expect(receivedHeaders[0]?.get("X-Tammy-Capability")).toBe(CAPABILITY);
   });
 
   it("returns only a frozen structured-clone-safe projection", async () => {

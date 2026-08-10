@@ -1,0 +1,75 @@
+import { create } from "@bufbuild/protobuf";
+import {
+  GetAttentionSummaryRequestSchema,
+  GetAttentionSummaryResponseSchema,
+} from "@tammy/connect-client/tammy/v1/overview_pb.js";
+import { GetDiagnosticsRequestSchema } from "@tammy/connect-client/tammy/v1/system_pb.js";
+import { describe, expect, it, vi } from "vitest";
+
+import { createProtoMethodCodec } from "../shared/proto-ipc";
+import {
+  ATTENTION_SUMMARY_CHANNEL,
+  createDesktopRpcRouter,
+  DesktopRpcRouterError,
+} from "./rpc-router";
+
+const attentionCodec = createProtoMethodCodec({
+  input: GetAttentionSummaryRequestSchema,
+  maximumRequestBytes: 8_192,
+  maximumResponseBytes: 65_536,
+  output: GetAttentionSummaryResponseSchema,
+});
+
+describe("named desktop protobuf RPC router", () => {
+  it("decodes, invokes, and returns only the generated Overview messages", async () => {
+    const response = create(GetAttentionSummaryResponseSchema, {
+      documentsNeedingReview: 3,
+      documentsReviewedInPeriod: 12,
+    });
+    const getAttentionSummary = vi.fn(async () => response);
+    const router = createDesktopRpcRouter({ getAttentionSummary });
+    const request = create(GetAttentionSummaryRequestSchema, {
+      organisationId: "018f2f2a-7c1d-7a62-8d11-216b8d6ea4cb",
+    });
+
+    const encoded = await router.invoke(ATTENTION_SUMMARY_CHANNEL, attentionCodec.encodeRequest(request));
+
+    expect(getAttentionSummary).toHaveBeenCalledExactlyOnceWith(request);
+    expect(attentionCodec.decodeResponse(encoded)).toEqual(response);
+  });
+
+  it("rejects unknown channels and invalid, oversized, or wrong-type request frames before core", async () => {
+    const getAttentionSummary = vi.fn();
+    const router = createDesktopRpcRouter({ getAttentionSummary });
+    const wrongCodec = createProtoMethodCodec({
+      input: GetDiagnosticsRequestSchema,
+      maximumRequestBytes: 8_192,
+      maximumResponseBytes: 65_536,
+      output: GetAttentionSummaryResponseSchema,
+    });
+
+    for (const [channel, frame] of [
+      ["tammy:unknown", attentionCodec.encodeRequest(create(GetAttentionSummaryRequestSchema))],
+      [ATTENTION_SUMMARY_CHANNEL, Uint8Array.of(0xff)],
+      [ATTENTION_SUMMARY_CHANNEL, new Uint8Array(8_193)],
+      [ATTENTION_SUMMARY_CHANNEL, wrongCodec.encodeRequest(create(GetDiagnosticsRequestSchema))],
+    ] as const) {
+      await expect(router.invoke(channel, frame)).rejects.toBeInstanceOf(DesktopRpcRouterError);
+    }
+    expect(getAttentionSummary).not.toHaveBeenCalled();
+  });
+
+  it("maps core failures to one stable fault without exposing details", async () => {
+    const getAttentionSummary = vi.fn(async () => {
+      throw new Error("capability=secret database=/private/workspace.db");
+    });
+    const router = createDesktopRpcRouter({ getAttentionSummary });
+    const request = attentionCodec.encodeRequest(create(GetAttentionSummaryRequestSchema));
+
+    const error = await router.invoke(ATTENTION_SUMMARY_CHANNEL, request).catch((caught: unknown) => caught);
+
+    expect(error).toMatchObject({ code: "CORE_REQUEST_FAILED", message: "CORE_REQUEST_FAILED" });
+    expect(String(error)).not.toContain("secret");
+    expect(String(error)).not.toContain("workspace.db");
+  });
+});

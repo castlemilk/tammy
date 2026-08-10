@@ -79,6 +79,9 @@ function rig(overrides: Partial<DesktopDependencies> = {}) {
       }),
     },
     createClient: vi.fn(() => ({
+      getAttentionSummary: vi.fn(async () => {
+        throw new Error("unused");
+      }),
       getDiagnostics: async () => {
         calls.push("diagnostics");
         return {
@@ -175,6 +178,9 @@ describe("desktop application composition", () => {
             }
           : {
               createClient: vi.fn(() => ({
+                getAttentionSummary: vi.fn(async () => {
+                  throw new Error("unused");
+                }),
                 getDiagnostics: async () => {
                   throw new Error(secret);
                 },
@@ -350,6 +356,9 @@ describe("desktop application composition", () => {
     }>();
     const { calls, dependencies, requestQuit } = rig({
       createClient: vi.fn(() => ({
+        getAttentionSummary: vi.fn(async () => {
+          throw new Error("unused");
+        }),
         getDiagnostics: vi.fn(() => diagnostics.promise),
       })),
     });

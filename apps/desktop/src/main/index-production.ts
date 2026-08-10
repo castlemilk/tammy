@@ -7,7 +7,8 @@ import { createCoreClient } from "./core-client";
 import { CoreProcess } from "./core-process";
 import type { DesktopDependencies, DesktopWindow } from "./index-lifecycle";
 import { resolveBundledCorePath } from "./index-paths";
-import { registerDiagnosticsIpc } from "./ipc";
+import { registerDesktopIpc } from "./ipc";
+import { createDesktopRpcRouter } from "./rpc-router";
 import {
   createRendererSecurityPolicy,
   createSecureWebPreferences,
@@ -120,7 +121,7 @@ export function createProductionDependencies(): DesktopDependencies {
     logger: { error: (message) => console.error(message) },
     ready: () => app.whenReady(),
     registerIpc: (getWindow, client) =>
-      registerDiagnosticsIpc({
+      registerDesktopIpc({
         applicationUrl: policy.applicationUrl,
         getSystemDiagnostics: client.getDiagnostics,
         ipcMain,
@@ -131,6 +132,7 @@ export function createProductionDependencies(): DesktopDependencies {
           },
           isDestroyed: () => !nativeWindow || nativeWindow.isDestroyed(),
         },
+        router: createDesktopRpcRouter(client),
       }),
     registerScheme: () => installApplicationScheme({ app, protocol }),
   };

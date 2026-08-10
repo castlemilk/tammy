@@ -8,13 +8,16 @@ export interface SystemDiagnostics {
 }
 
 export const SYSTEM_DIAGNOSTICS_CHANNEL = "tammy:system-diagnostics";
+export const ATTENTION_SUMMARY_CHANNEL = "tammy:overview-attention-summary";
 
 export interface TammyDesktopAPI {
   readonly getSystemDiagnostics: () => Promise<SystemDiagnostics>;
+  readonly getAttentionSummary: (request: Uint8Array) => Promise<Uint8Array>;
 }
 
 const EXPECTED_DESKTOP_PRELOAD_METHODS = [
   "getSystemDiagnostics",
+  "getAttentionSummary",
 ] as const satisfies readonly (keyof TammyDesktopAPI)[];
 
 if (

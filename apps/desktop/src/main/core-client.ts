@@ -1,5 +1,10 @@
 import { ConnectError, createClient, type Interceptor, type Transport } from "@connectrpc/connect";
 import { type ConnectTransportOptions, createConnectTransport } from "@connectrpc/connect-node";
+import type {
+  GetAttentionSummaryRequest,
+  GetAttentionSummaryResponse,
+} from "@tammy/connect-client/tammy/v1/overview_pb.js";
+import { OverviewService } from "@tammy/connect-client/tammy/v1/overview_pb.js";
 import { RuntimeMode, SystemService } from "@tammy/connect-client/tammy/v1/system_pb.js";
 
 import type { SystemDiagnostics } from "../shared/desktop-api";
@@ -12,6 +17,9 @@ const EXPECTED_API_VERSION = "tammy.v1";
 const CORE_VERSION_PATTERN = /^[\x20-\x7e]{1,128}$/;
 
 export interface CoreClient {
+  readonly getAttentionSummary: (
+    request: GetAttentionSummaryRequest,
+  ) => Promise<GetAttentionSummaryResponse>;
   readonly getDiagnostics: () => Promise<SystemDiagnostics>;
 }
 
@@ -56,13 +64,23 @@ export function createCoreClient(
     },
     interceptors: [capabilityInterceptor(readiness.capability)],
   });
-  const client = createClient(SystemService, transport);
+  const systemClient = createClient(SystemService, transport);
+  const overviewClient = createClient(OverviewService, transport);
 
   return Object.freeze({
-    getDiagnostics: async (): Promise<SystemDiagnostics> => {
-      let response: Awaited<ReturnType<typeof client.getDiagnostics>>;
+    getAttentionSummary: async (
+      request: GetAttentionSummaryRequest,
+    ): Promise<GetAttentionSummaryResponse> => {
       try {
-        response = await client.getDiagnostics({});
+        return await overviewClient.getAttentionSummary(request);
+      } catch (error) {
+        throw new ConnectError("Core request failed.", ConnectError.from(error).code);
+      }
+    },
+    getDiagnostics: async (): Promise<SystemDiagnostics> => {
+      let response: Awaited<ReturnType<typeof systemClient.getDiagnostics>>;
+      try {
+        response = await systemClient.getDiagnostics({});
       } catch (error) {
         throw new ConnectError("Core request failed.", ConnectError.from(error).code);
       }

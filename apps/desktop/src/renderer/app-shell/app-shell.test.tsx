@@ -16,6 +16,9 @@ function installDesktopAPI() {
   Object.defineProperty(window, "tammy", {
     configurable: true,
     value: Object.freeze({
+      getAttentionSummary: vi.fn(async () => {
+        throw new Error("unavailable");
+      }),
       getSystemDiagnostics: vi.fn<TammyDesktopAPI["getSystemDiagnostics"]>().mockResolvedValue(diagnostics),
     } satisfies TammyDesktopAPI),
   });

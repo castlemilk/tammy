@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { DESKTOP_PRELOAD_METHODS, SYSTEM_DIAGNOSTICS_CHANNEL } from "../shared/desktop-api";
 import { DIAGNOSTICS_PRELOAD_METHOD, registerDiagnosticsIpc } from "./ipc";
+import { ATTENTION_SUMMARY_CHANNEL, type DesktopRpcRouter } from "./rpc-router";
 
 interface FakeFrame {
   readonly url: string;
@@ -21,9 +22,9 @@ function createHarness(applicationUrl = "tammy://app/") {
     webContents,
     isDestroyed: () => false,
   };
-  const handlers = new Map<string, (event: unknown) => unknown>();
+  const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>();
   const ipcMain = {
-    handle: vi.fn((channel: string, handler: (event: unknown) => unknown) => {
+    handle: vi.fn((channel: string, handler: (event: unknown, ...args: unknown[]) => unknown) => {
       if (handlers.has(channel)) {
         throw new Error("duplicate handler");
       }
@@ -74,7 +75,7 @@ function invoke(
 
 describe("registerDiagnosticsIpc", () => {
   it("shares the production preload method manifest with the desktop API", () => {
-    expect(DESKTOP_PRELOAD_METHODS).toEqual(["getSystemDiagnostics"]);
+    expect(DESKTOP_PRELOAD_METHODS).toEqual(["getSystemDiagnostics", "getAttentionSummary"]);
     expect(DIAGNOSTICS_PRELOAD_METHOD).toBe(DESKTOP_PRELOAD_METHODS[0]);
   });
 
@@ -255,8 +256,37 @@ describe("registerDiagnosticsIpc", () => {
   });
 });
 
+describe("registerDesktopIpc", () => {
+  it("registers the named Overview channel and forwards only its request bytes", async () => {
+    const harness = createHarness();
+    const frame = Uint8Array.of(1, 2, 3);
+    const response = Uint8Array.of(4, 5, 6);
+    const router: DesktopRpcRouter = {
+      invoke: vi.fn(async () => response),
+    };
+    const { registerDesktopIpc } = await import("./ipc");
+    registerDesktopIpc({
+      applicationUrl: harness.applicationUrl,
+      getSystemDiagnostics: harness.getSystemDiagnostics,
+      ipcMain: harness.ipcMain,
+      mainWindow: harness.mainWindow,
+      router,
+    });
+    const handler = harness.handlers.get(ATTENTION_SUMMARY_CHANNEL);
+    expect(handler).toBeDefined();
+
+    await expect(
+      handler?.(
+        { sender: harness.webContents, senderFrame: harness.mainFrame },
+        frame,
+      ),
+    ).resolves.toEqual(response);
+    expect(router.invoke).toHaveBeenCalledExactlyOnceWith(ATTENTION_SUMMARY_CHANNEL, frame);
+  });
+});
+
 describe("preload desktop bridge", () => {
-  it("exposes only one frozen use-case function and never ipcRenderer", async () => {
+  it("exposes only the named frozen use-case functions and never ipcRenderer", async () => {
     vi.resetModules();
     const exposeInMainWorld = vi.fn();
     const invoke = vi.fn(async () =>
@@ -277,10 +307,13 @@ describe("preload desktop bridge", () => {
     expect(exposeInMainWorld).toHaveBeenCalledTimes(1);
     expect(exposeInMainWorld).toHaveBeenCalledWith("tammy", expect.any(Object));
     const api = exposeInMainWorld.mock.calls[0]?.[1] as
-      | { readonly getSystemDiagnostics: () => Promise<unknown> }
+      | {
+          readonly getAttentionSummary: (request: Uint8Array) => Promise<Uint8Array>;
+          readonly getSystemDiagnostics: () => Promise<unknown>;
+        }
       | undefined;
     expect(api).toBeDefined();
-    expect(Object.keys(api ?? {})).toEqual(["getSystemDiagnostics"]);
+    expect(Object.keys(api ?? {})).toEqual(["getSystemDiagnostics", "getAttentionSummary"]);
     expect(Object.isFrozen(api)).toBe(true);
     await expect(api?.getSystemDiagnostics()).resolves.toMatchObject({
       runtimeMode: "offline",
