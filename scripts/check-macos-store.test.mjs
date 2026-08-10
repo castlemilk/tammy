@@ -83,8 +83,9 @@ test("distribution inputs require absolute paths, explicit compliance and a posi
 
 test("provisioning profiles bind the team, app identifier, mode, and expiry", () => {
   const development = {
+    ApplicationIdentifierPrefix: ["LEGACY1234"],
     Entitlements: {
-      "application-identifier": "ABCDE12345.com.tammy.desktop",
+      "com.apple.application-identifier": "LEGACY1234.com.tammy.desktop",
       "com.apple.developer.team-identifier": "ABCDE12345",
       "get-task-allow": true,
     },
@@ -114,9 +115,10 @@ test("provisioning profiles bind the team, app identifier, mode, and expiry", ()
       ...development,
       Entitlements: {
         ...development.Entitlements,
-        "application-identifier": "ABCDE12345.com.other.app",
+        "com.apple.application-identifier": "LEGACY1234.com.other.app",
       },
     },
+    { ...development, ApplicationIdentifierPrefix: ["OTHER12345"] },
     { ...development, ExpirationDate: "2026-08-10T00:00:00.000Z" },
     { ...development, ProvisionedDevices: undefined },
     { ...development, ProvisionsAllDevices: true },

@@ -108,6 +108,11 @@ function isRecord(value) {
 
 export function validateMacOSProvisioningProfile(profile, { mode, teamID, now = new Date() }) {
   const entitlements = isRecord(profile) ? profile.Entitlements : undefined;
+  const appIdentifierPrefixes = isRecord(profile) ? profile.ApplicationIdentifierPrefix : undefined;
+  const appIdentifierPrefix =
+    Array.isArray(appIdentifierPrefixes) && appIdentifierPrefixes.length === 1
+      ? appIdentifierPrefixes[0]
+      : undefined;
   const expiry = isRecord(profile) ? new Date(profile.ExpirationDate) : new Date(Number.NaN);
   const developmentDevices = isRecord(profile) ? profile.ProvisionedDevices : undefined;
   const validClass =
@@ -124,8 +129,11 @@ export function validateMacOSProvisioningProfile(profile, { mode, teamID, now = 
     !Array.isArray(profile.TeamIdentifier) ||
     profile.TeamIdentifier.length !== 1 ||
     profile.TeamIdentifier[0] !== teamID ||
+    typeof appIdentifierPrefix !== "string" ||
+    !/^[A-Z0-9]{10}$/.test(appIdentifierPrefix) ||
     entitlements["com.apple.developer.team-identifier"] !== teamID ||
-    entitlements["application-identifier"] !== `${teamID}.${APP_BUNDLE_ID}` ||
+    entitlements["com.apple.application-identifier"] !==
+      `${appIdentifierPrefix}.${APP_BUNDLE_ID}` ||
     profile.ProvisionsAllDevices === true ||
     !Number.isFinite(expiry.getTime()) ||
     expiry.getTime() <= now.getTime() ||
