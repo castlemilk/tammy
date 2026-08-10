@@ -105,6 +105,29 @@ func TestTask10LedgerSchemaRetainsImmutablePostingAndFactProvenance(t *testing.T
 	}
 }
 
+func TestTask11LedgerSchemaOwnsOpeningModulesAndPeriodTransitions(t *testing.T) {
+	steps, err := All()
+	if err != nil {
+		t.Fatal(err)
+	}
+	schema := strings.ToLower(string(steps[1].SQL))
+	for _, fragment := range []string{
+		"closed_at text not null",
+		"accounting_period_transition_guard",
+		"accounting_period_one_closed",
+		"opening_conversions_one_current",
+		"opening_conversion_transition_guard",
+		"opening_items_immutable_update",
+		"create table sales_opening_receivables",
+		"create table purchase_opening_payables",
+		"create table banking_opening_accounts",
+	} {
+		if !strings.Contains(schema, fragment) {
+			t.Errorf("migration 2 missing Task11 schema fragment %q", fragment)
+		}
+	}
+}
+
 func assertCreatesTables(t *testing.T, sql string, tables []string) {
 	t.Helper()
 	normalized := strings.ToLower(sql)

@@ -8,8 +8,11 @@ import (
 	"time"
 
 	"github.com/tammyapp/tammy/services/core/internal/app"
+	"github.com/tammyapp/tammy/services/core/internal/banking"
 	tammyv1 "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1"
 	"github.com/tammyapp/tammy/services/core/internal/platform/ids"
+	"github.com/tammyapp/tammy/services/core/internal/purchases"
+	"github.com/tammyapp/tammy/services/core/internal/sales"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -22,9 +25,29 @@ type AccountStore interface {
 }
 
 type CommandRepositories struct {
-	Accounts AccountStore
-	Journals JournalStore
-	TaxCodes TaxCodeReadPort
+	Accounts      AccountStore
+	Journals      JournalStore
+	TaxCodes      TaxCodeReadPort
+	Periods       PeriodStore
+	Openings      OpeningStore
+	Sales         sales.OpeningReceivablePort
+	Purchases     purchases.OpeningPayablePort
+	Banking       banking.OpeningFinancialAccountPort
+	Factors       FreshFactorConsumer
+	Reports       TaxReportImpactPort
+	OpeningImpact OpeningReplacementImpactPort
+}
+
+type FreshFactorConsumer interface {
+	Consume(context.Context, *tammyv1.FreshFactorContext, string) error
+}
+
+type TaxReportImpactPort interface {
+	RequirePeriodReopenAllowed(context.Context, string, string) error
+}
+
+type OpeningReplacementImpactPort interface {
+	RequireOpeningReplacementAllowed(context.Context, string, string) error
 }
 
 type CommandRunner interface {

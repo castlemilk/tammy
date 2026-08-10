@@ -78,11 +78,32 @@ CREATE TABLE accounting_periods (
   organisation_id TEXT NOT NULL REFERENCES organisations(id) ON DELETE RESTRICT,
   start_date TEXT NOT NULL,
   end_date TEXT NOT NULL,
-  state TEXT NOT NULL CHECK (state IN ('OPEN','LOCKED','CLOSED')),
+  state TEXT NOT NULL CHECK (state IN ('OPEN','CLOSED')),
   version INTEGER NOT NULL DEFAULT 1 CHECK (version > 0),
+  closed_at TEXT NOT NULL,
+  reopened_at TEXT,
   CHECK (start_date <= end_date),
   UNIQUE (organisation_id, start_date, end_date)
 );
+
+CREATE TRIGGER accounting_period_transition_guard
+BEFORE UPDATE ON accounting_periods
+WHEN NOT (
+  OLD.state = 'CLOSED' AND NEW.state = 'OPEN' AND NEW.version = OLD.version + 1
+  AND NEW.id = OLD.id AND NEW.organisation_id = OLD.organisation_id
+  AND NEW.start_date = OLD.start_date AND NEW.end_date = OLD.end_date
+  AND NEW.closed_at = OLD.closed_at AND OLD.reopened_at IS NULL AND NEW.reopened_at IS NOT NULL
+)
+BEGIN
+  SELECT RAISE(ABORT, 'invalid accounting period transition');
+END;
+
+CREATE TRIGGER accounting_period_no_delete BEFORE DELETE ON accounting_periods BEGIN
+  SELECT RAISE(ABORT, 'accounting periods are immutable history');
+END;
+
+CREATE UNIQUE INDEX accounting_period_one_closed
+ON accounting_periods(organisation_id) WHERE state = 'CLOSED';
 
 CREATE TABLE opening_conversions (
   id TEXT PRIMARY KEY,
@@ -105,8 +126,77 @@ CREATE TABLE opening_items (
   debit_minor INTEGER NOT NULL DEFAULT 0 CHECK (debit_minor >= 0),
   credit_minor INTEGER NOT NULL DEFAULT 0 CHECK (credit_minor >= 0),
   currency_code TEXT NOT NULL CHECK (currency_code = 'AUD'),
+  source_type TEXT,
+  source_id TEXT,
+  source_revision INTEGER CHECK (source_revision IS NULL OR source_revision > 0),
+  source_content_hash BLOB CHECK (source_content_hash IS NULL OR length(source_content_hash) = 32),
+  original_issue_date TEXT,
+  original_due_date TEXT,
+  outstanding_gst_minor INTEGER,
+  prior_gst_attributed_minor INTEGER,
+  latest_statement_date TEXT,
+  latest_statement_balance_minor INTEGER,
   CHECK ((debit_minor > 0 AND credit_minor = 0) OR (credit_minor > 0 AND debit_minor = 0))
 );
+
+CREATE UNIQUE INDEX opening_conversions_one_current
+ON opening_conversions(organisation_id) WHERE state = 'POSTED';
+
+CREATE TRIGGER opening_conversion_transition_guard
+BEFORE UPDATE ON opening_conversions
+WHEN NOT (
+  OLD.state = 'DRAFT' AND NEW.state = 'POSTED'
+  AND NEW.version = OLD.version AND NEW.id = OLD.id AND NEW.organisation_id = OLD.organisation_id
+  AND NEW.conversion_date = OLD.conversion_date AND NEW.source_sha256 = OLD.source_sha256
+  AND OLD.journal_id IS NULL AND NEW.journal_id IS NOT NULL
+  AND OLD.financial_revision IS NULL AND NEW.financial_revision IS NOT NULL
+  AND NEW.replaced_by_id IS NULL
+) AND NOT (
+  OLD.state = 'POSTED' AND NEW.state = 'REPLACED' AND NEW.version = OLD.version + 1
+  AND NEW.id = OLD.id AND NEW.organisation_id = OLD.organisation_id
+  AND NEW.conversion_date = OLD.conversion_date AND NEW.source_sha256 = OLD.source_sha256
+  AND NEW.journal_id = OLD.journal_id AND NEW.financial_revision = OLD.financial_revision
+  AND OLD.replaced_by_id IS NULL AND NEW.replaced_by_id IS NOT NULL
+)
+BEGIN
+  SELECT RAISE(ABORT, 'invalid opening conversion transition');
+END;
+
+CREATE TRIGGER opening_items_immutable_update BEFORE UPDATE ON opening_items BEGIN
+  SELECT RAISE(ABORT, 'opening items are immutable');
+END;
+CREATE TRIGGER opening_items_immutable_delete BEFORE DELETE ON opening_items BEGIN
+  SELECT RAISE(ABORT, 'opening items are immutable');
+END;
+
+CREATE TABLE sales_opening_receivables (
+  id TEXT PRIMARY KEY,
+  conversion_id TEXT NOT NULL REFERENCES opening_conversions(id) ON DELETE RESTRICT,
+  retained_input_proto BLOB NOT NULL CHECK (length(retained_input_proto) BETWEEN 1 AND 1048576),
+  created_at TEXT NOT NULL
+);
+CREATE TABLE purchase_opening_payables (
+  id TEXT PRIMARY KEY,
+  conversion_id TEXT NOT NULL REFERENCES opening_conversions(id) ON DELETE RESTRICT,
+  retained_input_proto BLOB NOT NULL CHECK (length(retained_input_proto) BETWEEN 1 AND 1048576),
+  created_at TEXT NOT NULL
+);
+CREATE TABLE banking_opening_accounts (
+  id TEXT PRIMARY KEY,
+  conversion_id TEXT NOT NULL REFERENCES opening_conversions(id) ON DELETE RESTRICT,
+  retained_input_proto BLOB NOT NULL CHECK (length(retained_input_proto) BETWEEN 1 AND 1048576),
+  created_at TEXT NOT NULL
+);
+
+CREATE TRIGGER sales_opening_receivables_immutable_update BEFORE UPDATE ON sales_opening_receivables BEGIN
+  SELECT RAISE(ABORT, 'sales opening rows are immutable');
+END;
+CREATE TRIGGER purchase_opening_payables_immutable_update BEFORE UPDATE ON purchase_opening_payables BEGIN
+  SELECT RAISE(ABORT, 'purchase opening rows are immutable');
+END;
+CREATE TRIGGER banking_opening_accounts_immutable_update BEFORE UPDATE ON banking_opening_accounts BEGIN
+  SELECT RAISE(ABORT, 'banking opening rows are immutable');
+END;
 
 CREATE TABLE journals (
   id TEXT PRIMARY KEY,

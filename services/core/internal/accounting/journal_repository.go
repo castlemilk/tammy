@@ -75,6 +75,17 @@ func (repository *JournalRepository) Post(
 		(sourceType != "MANUAL" && sourceType != "REVERSAL" && sourceType != "OPENING") {
 		return ErrJournalRepository
 	}
+	periods, err := NewPeriodRepository(repository.executor)
+	if err != nil {
+		return err
+	}
+	open, err := periods.IsPostingDateOpen(ctx, journal.OrganisationId, journal.PostingDate)
+	if err != nil {
+		return err
+	}
+	if !open {
+		return ErrClosedPeriod
+	}
 	accounts, err := repository.loadJournalAccounts(ctx, journal)
 	if err != nil {
 		return err
@@ -88,7 +99,11 @@ func (repository *JournalRepository) Post(
 	}
 	for _, line := range journal.Lines {
 		components, ok := flows[line.Id]
-		if !ok || ValidateCashFlowAllocation(line, IsCashAccount(accounts[line.AccountId]), components) != nil {
+		cashAccount := IsCashAccount(accounts[line.AccountId])
+		if sourceType == "OPENING" || sourceType == "REVERSAL" && len(components) > 0 && components[0].Category == CashFlowNoncash {
+			cashAccount = false
+		}
+		if !ok || ValidateCashFlowAllocation(line, cashAccount, components) != nil {
 			return ErrInvalidCashFlow
 		}
 	}
