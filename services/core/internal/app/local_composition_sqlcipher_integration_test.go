@@ -56,6 +56,7 @@ func TestLocalCompositionCreatesConfirmsAndAuthenticatesRealWorkspace(t *testing
 	baseURL := fmt.Sprintf("https://127.0.0.1:%d", ready.Port)
 	workspaceClient := tammyv1connect.NewWorkspaceServiceClient(httpClient, baseURL)
 	identityClient := tammyv1connect.NewIdentityServiceClient(httpClient, baseURL)
+	overviewClient := tammyv1connect.NewOverviewServiceClient(httpClient, baseURL)
 
 	createRequest := connect.NewRequest(&tammyv1.CreateWorkspaceRequest{
 		SetupId:                  "01900f3c-7b2e-7cc4-98c4-dc0c0c073991",
@@ -100,6 +101,27 @@ func TestLocalCompositionCreatesConfirmsAndAuthenticatesRealWorkspace(t *testing
 	}
 	if signedIn.Msg.User == nil || signedIn.Msg.Session == nil || signedIn.Msg.User.Username != "admin@tammy.local" {
 		t.Fatalf("SignIn() = %#v", signedIn.Msg)
+	}
+	overviewRequest := connect.NewRequest(&tammyv1.GetAttentionSummaryRequest{
+		Authentication: &tammyv1.AuthenticationContext{
+			ActorUserId: signedIn.Msg.User.Id,
+			SessionId:   signedIn.Msg.Session.Id,
+		},
+		OrganisationId: created.Msg.Workspace.Id,
+		AsOfDate:       &tammyv1.CivilDate{Year: 2026, Month: 8, Day: 10},
+		ReportingPeriod: &tammyv1.ReportingPeriod{
+			StartDate: &tammyv1.CivilDate{Year: 2026, Month: 7, Day: 1},
+			EndDate:   &tammyv1.CivilDate{Year: 2026, Month: 9, Day: 30},
+		},
+	})
+	overviewRequest.Header().Set(transport.CapabilityHeader, ready.Capability)
+	summary, err := overviewClient.GetAttentionSummary(context.Background(), overviewRequest)
+	if err != nil {
+		t.Fatalf("GetAttentionSummary() error = %v", err)
+	}
+	if summary.Msg.BasStatus != tammyv1.BasAttentionStatus_BAS_ATTENTION_STATUS_NOT_CREATED ||
+		summary.Msg.Revisions == nil || summary.Msg.Revisions.FinancialRevision != 0 {
+		t.Fatalf("GetAttentionSummary() = %#v", summary.Msg)
 	}
 }
 

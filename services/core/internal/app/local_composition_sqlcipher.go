@@ -19,6 +19,7 @@ import (
 	tammyv1 "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1"
 	tammyv1connect "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1/tammyv1connect"
 	"github.com/tammyapp/tammy/services/core/internal/identity"
+	"github.com/tammyapp/tammy/services/core/internal/overview"
 	"github.com/tammyapp/tammy/services/core/internal/platform/clock"
 	"github.com/tammyapp/tammy/services/core/internal/platform/ids"
 	"github.com/tammyapp/tammy/services/core/internal/transport"
@@ -180,6 +181,50 @@ type localIdentityRoute struct {
 	handler http.Handler
 }
 
+type localOverviewAccess struct{ bridge *localIdentityBridge }
+
+func (access localOverviewAccess) RequireRead(ctx context.Context, authentication *tammyv1.AuthenticationContext) error {
+	if access.bridge == nil {
+		return ErrComposition
+	}
+	return access.bridge.RequireActiveSessionReadOnly(ctx, authentication)
+}
+
+type localOverviewRoute struct {
+	mu      sync.RWMutex
+	options []connect.HandlerOption
+	handler http.Handler
+}
+
+func (route *localOverviewRoute) set(service tammyv1connect.OverviewServiceHandler) error {
+	if service == nil {
+		return ErrComposition
+	}
+	_, handler := tammyv1connect.NewOverviewServiceHandler(service, append([]connect.HandlerOption(nil), route.options...)...)
+	route.mu.Lock()
+	route.handler = handler
+	route.mu.Unlock()
+	return nil
+}
+
+func (route *localOverviewRoute) factory(options ...connect.HandlerOption) (string, http.Handler) {
+	route.mu.Lock()
+	route.options = append([]connect.HandlerOption(nil), options...)
+	route.mu.Unlock()
+	return "/" + tammyv1connect.OverviewServiceName + "/", route
+}
+
+func (route *localOverviewRoute) ServeHTTP(response http.ResponseWriter, request *http.Request) {
+	route.mu.RLock()
+	handler := route.handler
+	route.mu.RUnlock()
+	if handler == nil {
+		http.Error(response, "local overview unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	handler.ServeHTTP(response, request)
+}
+
 func (route *localIdentityRoute) set(service tammyv1connect.IdentityServiceHandler) error {
 	if service == nil {
 		return ErrComposition
@@ -216,6 +261,7 @@ type localRuntime struct {
 	workspace         *workspace.Service
 	bridge            *localIdentityBridge
 	identityRoute     *localIdentityRoute
+	overviewRoute     *localOverviewRoute
 	bootstrapIdentity *identity.Service
 	activeIdentity    *identity.Service
 	passwords         *workspace.PasswordPolicy
@@ -303,7 +349,20 @@ func (runtime *localRuntime) activate(workspaceID string) error {
 	}
 	runtime.activeIdentity = service
 	runtime.bridge.store(service)
-	return runtime.identityRoute.set(service)
+	if err := runtime.identityRoute.set(service); err != nil {
+		return err
+	}
+	snapshots, err := overview.NewSQLCipherSnapshotPort(database, workspaceID)
+	if err != nil {
+		return err
+	}
+	overviewService, err := overview.NewService(overview.ServiceConfig{
+		Access: localOverviewAccess{bridge: runtime.bridge}, Snapshots: snapshots,
+	})
+	if err != nil {
+		return err
+	}
+	return runtime.overviewRoute.set(overviewService)
 }
 
 func (runtime *localRuntime) Close() error {
@@ -398,6 +457,7 @@ func NewLocalComposition(config LocalCompositionConfig) (*Composition, error) {
 	runtime.bootstrapIdentity = bootstrapIdentity
 	runtime.bridge = &localIdentityBridge{current: bootstrapIdentity}
 	runtime.identityRoute = &localIdentityRoute{service: bootstrapIdentity}
+	runtime.overviewRoute = &localOverviewRoute{}
 	workspaceService, err := workspace.NewService(workspace.Config{
 		Repository:   catalogue,
 		Capabilities: localCapabilityResolver{directory: workspaceDirectory, database: filepath.Join(workspaceDirectory, "tammy-workspace.db")},
@@ -419,6 +479,7 @@ func NewLocalComposition(config LocalCompositionConfig) (*Composition, error) {
 			return tammyv1connect.NewWorkspaceServiceHandler(workspaceHandler, options...)
 		},
 		runtime.identityRoute.factory,
+		runtime.overviewRoute.factory,
 	}
 	return newComposition(factories, []ResourceCloser{runtime})
 }

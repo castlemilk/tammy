@@ -13,6 +13,21 @@ import { UnlockScreen } from "./features/workspace/unlock-screen";
 const WORKSPACE_ID_STORAGE = "tammy.workspace.id";
 const SESSION_STORAGE = "tammy.session.active";
 
+function storedAuthenticatedWorkspace(): AuthenticatedWorkspace | undefined {
+  const retained = window.sessionStorage.getItem(SESSION_STORAGE);
+  if (!retained) return undefined;
+  try {
+    const parsed = JSON.parse(retained) as Partial<AuthenticatedWorkspace>;
+    if (typeof parsed.workspaceId === "string" && typeof parsed.userId === "string" &&
+      typeof parsed.sessionId === "string" && parsed.workspaceId && parsed.userId && parsed.sessionId) {
+      return { workspaceId: parsed.workspaceId, userId: parsed.userId, sessionId: parsed.sessionId };
+    }
+  } catch {
+    return undefined;
+  }
+  return undefined;
+}
+
 function initialAccess(): WorkspaceAccess {
   if (window.sessionStorage.getItem(SESSION_STORAGE)) return "authenticated";
   if (window.localStorage.getItem(WORKSPACE_ID_STORAGE)) return "locked";
@@ -27,6 +42,7 @@ function currentLocation(): string {
 export function App() {
   const [diagnosticsState, setDiagnosticsState] = useState<DiagnosticsState>({ status: "loading" });
   const [access, setAccess] = useState<WorkspaceAccess>(initialAccess);
+  const [workspace, setWorkspace] = useState<AuthenticatedWorkspace | undefined>(storedAuthenticatedWorkspace);
   const [activePath, setActivePath] = useState(() =>
     resolveAppLocation(currentLocation(), initialAccess()).path,
   );
@@ -66,6 +82,7 @@ export function App() {
   const authenticated = useCallback((workspace: AuthenticatedWorkspace) => {
     window.localStorage.setItem(WORKSPACE_ID_STORAGE, workspace.workspaceId);
     window.sessionStorage.setItem(SESSION_STORAGE, JSON.stringify(workspace));
+    setWorkspace(workspace);
     setAccess("authenticated");
     window.history.replaceState(null, "", "/overview");
     setActivePath("/overview");
@@ -82,7 +99,7 @@ export function App() {
   return (
     <AppShell activePath={activePath} onNavigate={navigate}>
       <EngineStatus onRetry={loadDiagnostics} state={diagnosticsState} />
-      <RouteContent path={activePath} state={diagnosticsState} />
+      <RouteContent path={activePath} state={diagnosticsState} workspace={workspace} />
     </AppShell>
   );
 }
@@ -121,8 +138,8 @@ function EngineStatus({ onRetry, state }: { readonly onRetry: () => void; readon
   );
 }
 
-function RouteContent({ path, state }: { readonly path: string; readonly state: DiagnosticsState }) {
-  if (path === "/overview") return <OverviewScreen />;
+function RouteContent({ path, state, workspace }: { readonly path: string; readonly state: DiagnosticsState; readonly workspace: AuthenticatedWorkspace | undefined }) {
+  if (path === "/overview") return <OverviewScreen api={window.tammy} workspace={workspace} />;
   if (path === "/accounting/chart") {
     return <EmptyLedgerScreen description="Review the accounts used by your business." emptyLabel="No accounts yet" title="Chart of accounts" />;
   }
