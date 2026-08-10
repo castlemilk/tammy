@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/tammyapp/tammy/services/core/internal/app"
 	"github.com/tammyapp/tammy/services/core/internal/buildinfo"
 	"github.com/tammyapp/tammy/services/core/internal/transport"
 )
@@ -17,8 +18,14 @@ import (
 const shutdownTimeout = 3 * time.Second
 
 func run(stdin *os.File, stdout *os.File, stderr *os.File) int {
+	composition, err := app.NewBootComposition(buildinfo.Current())
+	if err != nil {
+		logLifecycleError(stderr, "composition_failed")
+		return 1
+	}
+	defer func() { _ = composition.Close() }()
 	server, err := transport.NewServer(
-		buildinfo.Current(),
+		composition.Registrar(),
 		stderr,
 		transport.WithRandomSource(rand.Reader),
 	)

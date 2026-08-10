@@ -234,7 +234,7 @@ func newUnstartedTestServer(t *testing.T) *Server {
 	t.Helper()
 
 	server, err := NewServer(
-		buildinfo.Info{Version: "lifecycle-test"},
+		testSystemRegistrar(t, buildinfo.Info{Version: "lifecycle-test"}),
 		io.Discard,
 		WithClock(func() time.Time { return serverTestNow }),
 		WithRandomSource(rand.Reader),

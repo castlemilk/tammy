@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -23,10 +24,50 @@ import (
 	"github.com/tammyapp/tammy/services/core/internal/buildinfo"
 	tammyv1 "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1"
 	tammyv1connect "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1/tammyv1connect"
+	"github.com/tammyapp/tammy/services/core/internal/system"
 	"google.golang.org/protobuf/encoding/protowire"
 )
 
 var serverTestNow = time.Date(2026, time.July, 19, 9, 30, 0, 0, time.UTC)
+
+type recordingServiceRegistrar struct {
+	options int
+}
+
+func (registrar *recordingServiceRegistrar) Handler(options ...connect.HandlerOption) (http.Handler, error) {
+	registrar.options = len(options)
+	return http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
+		response.WriteHeader(http.StatusNoContent)
+	}), nil
+}
+
+func TestServerReceivesRegistrarAndOwnsGeneratedHandlerSecurityOptions(t *testing.T) {
+	registrar := &recordingServiceRegistrar{}
+	server, err := NewServer(
+		registrar,
+		io.Discard,
+		WithClock(func() time.Time { return serverTestNow }),
+		WithRandomSource(rand.Reader),
+	)
+	if err != nil {
+		t.Fatalf("NewServer() error = %v", err)
+	}
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		_ = server.Shutdown(ctx)
+	}()
+	if registrar.options != 2 {
+		t.Fatalf("registrar handler options = %d, want interceptor and message bound", registrar.options)
+	}
+
+	var typedNil *recordingServiceRegistrar
+	for _, invalid := range []ServiceRegistrar{nil, typedNil} {
+		if constructed, err := NewServer(invalid, io.Discard); constructed != nil || !errors.Is(err, ErrRegistrar) {
+			t.Fatalf("NewServer(%T) = %#v, %v; want ErrRegistrar", invalid, constructed, err)
+		}
+	}
+}
 
 func TestCertificatePropertiesAndLaunchFreshness(t *testing.T) {
 	t.Parallel()
@@ -494,7 +535,7 @@ func newTestServer(t *testing.T, stderr io.Writer, randomness io.Reader) *Server
 	t.Helper()
 
 	server, err := NewServer(
-		buildinfo.Info{Version: "test-core-version"},
+		testSystemRegistrar(t, buildinfo.Info{Version: "test-core-version"}),
 		stderr,
 		WithClock(func() time.Time { return serverTestNow }),
 		WithRandomSource(randomness),
@@ -508,6 +549,19 @@ func newTestServer(t *testing.T, stderr io.Writer, randomness io.Reader) *Server
 		_ = server.Shutdown(ctx)
 	})
 	return server
+}
+
+func testSystemRegistrar(t *testing.T, info buildinfo.Info) ServiceRegistrar {
+	t.Helper()
+	registrar, err := NewGeneratedRegistrar([]GeneratedHandlerFactory{
+		func(options ...connect.HandlerOption) (string, http.Handler) {
+			return tammyv1connect.NewSystemServiceHandler(system.NewService(info), options...)
+		},
+	})
+	if err != nil {
+		t.Fatalf("NewGeneratedRegistrar() error = %v", err)
+	}
+	return registrar
 }
 
 func dialServerTLSConnection(t *testing.T, ready ReadinessRecord) *tls.Conn {

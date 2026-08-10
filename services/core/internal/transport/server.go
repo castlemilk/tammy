@@ -14,9 +14,6 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/tammyapp/tammy/services/core/internal/buildinfo"
-	"github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1/tammyv1connect"
-	"github.com/tammyapp/tammy/services/core/internal/system"
 )
 
 type serverConfig struct {
@@ -95,10 +92,13 @@ type Server struct {
 
 // NewServer constructs and binds an ephemeral IPv4 loopback server.
 func NewServer(
-	info buildinfo.Info,
+	registrar ServiceRegistrar,
 	stderr io.Writer,
 	options ...Option,
 ) (*Server, error) {
+	if nilInterface(registrar) {
+		return nil, ErrRegistrar
+	}
 	config := serverConfig{
 		clock:      time.Now,
 		randomness: rand.Reader,
@@ -123,6 +123,13 @@ func NewServer(
 	if err != nil {
 		return nil, errors.New("could not configure local API authentication")
 	}
+	handler, err := registrar.Handler(
+		connect.WithInterceptors(interceptor),
+		connect.WithReadMaxBytes(localAPIConnectMessageMaxBytes),
+	)
+	if err != nil || nilInterface(handler) {
+		return nil, errors.Join(ErrRegistrar, err)
+	}
 
 	listener, err := net.Listen("tcp4", "127.0.0.1:0")
 	if err != nil {
@@ -133,14 +140,6 @@ func NewServer(
 		_ = listener.Close()
 		return nil, errors.New("local API listener returned an invalid address")
 	}
-
-	mux := http.NewServeMux()
-	path, handler := tammyv1connect.NewSystemServiceHandler(
-		system.NewService(info),
-		connect.WithInterceptors(interceptor),
-		connect.WithReadMaxBytes(localAPIConnectMessageMaxBytes),
-	)
-	mux.Handle(path, handler)
 
 	tlsConfig := &tls.Config{
 		Certificates: []tls.Certificate{credentials.certificate},
@@ -162,7 +161,7 @@ func NewServer(
 		shutdownDone: make(chan struct{}),
 	}
 	server.httpServer = &http.Server{
-		Handler:           http.MaxBytesHandler(mux, localAPIRequestBodyMaxBytes),
+		Handler:           http.MaxBytesHandler(handler, localAPIRequestBodyMaxBytes),
 		ReadHeaderTimeout: localAPIReadHeaderTimeout,
 		ReadTimeout:       localAPIReadTimeout,
 		WriteTimeout:      localAPIWriteTimeout,
