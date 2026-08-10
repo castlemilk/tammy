@@ -21,7 +21,11 @@ type AccountStore interface {
 	Update(context.Context, uint64, *tammyv1.Account, time.Time) error
 }
 
-type CommandRepositories struct{ Accounts AccountStore }
+type CommandRepositories struct {
+	Accounts AccountStore
+	Journals JournalStore
+	TaxCodes TaxCodeReadPort
+}
 
 type CommandRunner interface {
 	Execute(context.Context, app.OrdinaryCommand[CommandRepositories]) (proto.Message, error)

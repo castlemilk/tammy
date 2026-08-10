@@ -140,6 +140,49 @@ func (repository *Repository) ListEffectiveTaxCodes(
 	return codes, nil
 }
 
+// GetEffectiveTaxCode is the narrow Accounting-facing rule lookup. It returns
+// only the immutable typed catalogue projection, never repository internals.
+func (repository *Repository) GetEffectiveTaxCode(
+	ctx context.Context, organisationID, postingDate, taxCodeID string,
+) (*tammyv1.TaxCode, error) {
+	if repository == nil || repository.executor == nil || ctx == nil || !ids.IsCanonicalV7(organisationID) ||
+		!ids.IsCanonicalV7(taxCodeID) || len(postingDate) != 10 {
+		return nil, ErrRuleRepository
+	}
+	rows, err := repository.executor.QueryContext(ctx, `
+		SELECT c.id, c.code, c.label, c.treatment, c.rate_millionths,
+		       b.id, b.version, b.semantic_sha256
+		FROM tax_code_catalogue c JOIN rule_bundles b ON b.id=c.rule_bundle_id
+		WHERE b.organisation_id=? AND c.id=? AND c.effective_from<=?
+		  AND (c.effective_to IS NULL OR c.effective_to>=?)`,
+		organisationID, taxCodeID, postingDate, postingDate)
+	if err != nil {
+		return nil, fmt.Errorf("%w: get tax code: %v", ErrRuleRepository, err)
+	}
+	defer rows.Close()
+	if !rows.Next() {
+		return nil, ErrRuleRepository
+	}
+	var code tammyv1.TaxCode
+	var treatment string
+	var rate int64
+	var sourceID, version, semantic string
+	if err := rows.Scan(&code.Id, &code.Code, &code.Label, &treatment, &rate, &sourceID, &version, &semantic); err != nil || rows.Next() || rows.Err() != nil {
+		return nil, ErrRuleRepository
+	}
+	digest, err := hex.DecodeString(semantic)
+	if err != nil || len(digest) != 32 || version == "" {
+		return nil, ErrRuleRepository
+	}
+	code.Treatment = parseTreatmentName(treatment)
+	code.Rate = &tammyv1.Decimal{Coefficient: rate, Scale: 6}
+	code.Rule = &tammyv1.SourceRef{Type: "tax_rule_bundle", Id: sourceID, Revision: 1, ContentHash: digest}
+	if code.Treatment == tammyv1.TaxTreatment_TAX_TREATMENT_UNSPECIFIED {
+		return nil, ErrRuleRepository
+	}
+	return proto.Clone(&code).(*tammyv1.TaxCode), nil
+}
+
 func treatmentName(value tammyv1.TaxTreatment) string {
 	return map[tammyv1.TaxTreatment]string{
 		tammyv1.TaxTreatment_TAX_TREATMENT_TAXABLE:      "TAXABLE",

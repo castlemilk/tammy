@@ -111,6 +111,7 @@ CREATE TABLE opening_items (
 CREATE TABLE journals (
   id TEXT PRIMARY KEY,
   organisation_id TEXT NOT NULL REFERENCES organisations(id) ON DELETE RESTRICT,
+  version INTEGER NOT NULL DEFAULT 1 CHECK (version > 0),
   source_type TEXT NOT NULL CHECK (source_type IN ('MANUAL','REVERSAL','OPENING','RECEIVABLE','PAYABLE','BANKING','TAX','SYSTEM')),
   source_id TEXT NOT NULL,
   source_revision INTEGER NOT NULL CHECK (source_revision > 0),
@@ -119,6 +120,10 @@ CREATE TABLE journals (
   description TEXT NOT NULL,
   reversal_of_journal_id TEXT UNIQUE REFERENCES journals(id) ON DELETE RESTRICT,
   reversed_by_journal_id TEXT UNIQUE REFERENCES journals(id) ON DELETE RESTRICT,
+  total_debits_minor INTEGER NOT NULL CHECK (total_debits_minor > 0),
+  total_credits_minor INTEGER NOT NULL CHECK (total_credits_minor > 0),
+  currency_code TEXT NOT NULL CHECK (currency_code = 'AUD'),
+  financial_revision INTEGER NOT NULL CHECK (financial_revision > 0),
   posted_at TEXT,
   created_at TEXT NOT NULL,
   CHECK ((state = 'DRAFT' AND posted_at IS NULL) OR (state IN ('POSTED','REVERSED') AND posted_at IS NOT NULL)),
@@ -136,7 +141,15 @@ CREATE TABLE journal_lines (
   credit_minor INTEGER NOT NULL DEFAULT 0 CHECK (credit_minor >= 0),
   currency_code TEXT NOT NULL CHECK (currency_code = 'AUD'),
   memo TEXT,
+  tax_code_id TEXT,
+  tax_amount_minor INTEGER,
+  tax_rule_type TEXT,
+  tax_rule_id TEXT,
+  tax_rule_revision INTEGER CHECK (tax_rule_revision IS NULL OR tax_rule_revision > 0),
+  tax_rule_content_hash BLOB CHECK (tax_rule_content_hash IS NULL OR length(tax_rule_content_hash) = 32),
   CHECK ((debit_minor > 0 AND credit_minor = 0) OR (credit_minor > 0 AND debit_minor = 0)),
+  CHECK ((tax_code_id IS NULL) = (tax_amount_minor IS NULL)),
+  CHECK ((tax_code_id IS NULL) = (tax_rule_id IS NULL)),
   UNIQUE (journal_id, line_number)
 );
 
@@ -146,8 +159,21 @@ CREATE TABLE tax_facts (
   journal_line_id TEXT NOT NULL UNIQUE REFERENCES journal_lines(id) ON DELETE RESTRICT,
   tax_code TEXT NOT NULL,
   treatment TEXT NOT NULL CHECK (treatment IN ('TAXABLE','GST_FREE','INPUT_TAXED','OUT_OF_SCOPE','ADJUSTMENT')),
-  taxable_minor INTEGER NOT NULL,
-  tax_minor INTEGER NOT NULL,
+  original_gross_minor INTEGER NOT NULL,
+  original_net_minor INTEGER NOT NULL,
+  original_gst_minor INTEGER NOT NULL,
+  attributed_gross_minor INTEGER NOT NULL,
+  attributed_net_minor INTEGER NOT NULL,
+  attributed_gst_minor INTEGER NOT NULL,
+  remaining_gross_minor INTEGER NOT NULL,
+  remaining_net_minor INTEGER NOT NULL,
+  remaining_gst_minor INTEGER NOT NULL,
+  tax_rule_type TEXT NOT NULL,
+  tax_rule_id TEXT NOT NULL,
+  tax_rule_revision INTEGER NOT NULL CHECK (tax_rule_revision > 0),
+  tax_rule_content_hash BLOB NOT NULL CHECK (length(tax_rule_content_hash) = 32),
+  source_type TEXT NOT NULL,
+  source_id TEXT NOT NULL,
   source_revision INTEGER NOT NULL CHECK (source_revision > 0),
   created_at TEXT NOT NULL
 );
@@ -155,12 +181,53 @@ CREATE TABLE tax_facts (
 CREATE TABLE cash_flow_facts (
   id TEXT PRIMARY KEY,
   organisation_id TEXT NOT NULL REFERENCES organisations(id) ON DELETE RESTRICT,
-  journal_line_id TEXT NOT NULL UNIQUE REFERENCES journal_lines(id) ON DELETE RESTRICT,
-  category TEXT NOT NULL CHECK (category IN ('OPERATING','INVESTING','FINANCING','UNCLASSIFIED')),
-  amount_minor INTEGER NOT NULL,
+  journal_line_id TEXT NOT NULL REFERENCES journal_lines(id) ON DELETE RESTRICT,
+  sequence INTEGER NOT NULL CHECK (sequence > 0),
+  category TEXT NOT NULL CHECK (category IN ('OPERATING','INVESTING','FINANCING','TRANSFER','NONCASH')),
+  amount_minor INTEGER NOT NULL CHECK (amount_minor <> 0),
   source_revision INTEGER NOT NULL CHECK (source_revision > 0),
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  UNIQUE (journal_line_id, sequence)
 );
+
+CREATE TRIGGER journals_posted_immutable
+BEFORE UPDATE ON journals
+WHEN OLD.state IN ('POSTED','REVERSED') AND NOT (
+  OLD.state = 'POSTED' AND NEW.state = 'REVERSED'
+  AND OLD.reversed_by_journal_id IS NULL AND NEW.reversed_by_journal_id IS NOT NULL
+  AND NEW.version = OLD.version + 1
+  AND NEW.id = OLD.id AND NEW.organisation_id = OLD.organisation_id
+  AND NEW.source_type = OLD.source_type AND NEW.source_id = OLD.source_id
+  AND NEW.source_revision = OLD.source_revision AND NEW.journal_date = OLD.journal_date
+  AND NEW.description = OLD.description AND NEW.reversal_of_journal_id IS OLD.reversal_of_journal_id
+  AND NEW.total_debits_minor = OLD.total_debits_minor
+  AND NEW.total_credits_minor = OLD.total_credits_minor
+  AND NEW.currency_code = OLD.currency_code
+  AND NEW.financial_revision = OLD.financial_revision
+  AND NEW.posted_at = OLD.posted_at AND NEW.created_at = OLD.created_at
+)
+BEGIN
+  SELECT RAISE(ABORT, 'posted journals are immutable except direct reversal link');
+END;
+
+CREATE TRIGGER journal_lines_immutable_update BEFORE UPDATE ON journal_lines BEGIN
+  SELECT RAISE(ABORT, 'journal lines are immutable');
+END;
+CREATE TRIGGER journal_lines_immutable_delete BEFORE DELETE ON journal_lines BEGIN
+  SELECT RAISE(ABORT, 'journal lines are immutable');
+END;
+CREATE TRIGGER tax_facts_immutable_update BEFORE UPDATE ON tax_facts BEGIN
+  SELECT RAISE(ABORT, 'tax facts are immutable');
+END;
+CREATE TRIGGER tax_facts_immutable_delete BEFORE DELETE ON tax_facts BEGIN
+  SELECT RAISE(ABORT, 'tax facts are immutable');
+END;
+CREATE TRIGGER cash_flow_facts_immutable_update BEFORE UPDATE ON cash_flow_facts BEGIN
+  SELECT RAISE(ABORT, 'cash flow facts are immutable');
+END;
+CREATE TRIGGER cash_flow_facts_immutable_delete BEFORE DELETE ON cash_flow_facts BEGIN
+  SELECT RAISE(ABORT, 'cash flow facts are immutable');
+END;
 
 CREATE TABLE rule_bundles (
   id TEXT PRIMARY KEY,

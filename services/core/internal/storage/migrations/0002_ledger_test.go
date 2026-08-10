@@ -79,6 +79,32 @@ func TestTask9LedgerSchemaPersistsGeneratedOrganisationAndAccountFields(t *testi
 	}
 }
 
+func TestTask10LedgerSchemaRetainsImmutablePostingAndFactProvenance(t *testing.T) {
+	steps, err := All()
+	if err != nil {
+		t.Fatal(err)
+	}
+	schema := strings.ToLower(string(steps[1].SQL))
+	for _, fragment := range []string{
+		"total_debits_minor integer not null",
+		"financial_revision integer not null",
+		"tax_rule_content_hash blob",
+		"original_gross_minor integer not null",
+		"attributed_gst_minor integer not null",
+		"remaining_gst_minor integer not null",
+		"unique (journal_line_id, sequence)",
+		"journals_posted_immutable",
+		"journal_lines_immutable_update",
+		"tax_facts_immutable_delete",
+		"cash_flow_facts_immutable_update",
+		"journal_posting_must_balance",
+	} {
+		if !strings.Contains(schema, fragment) {
+			t.Errorf("migration 2 missing Task10 schema fragment %q", fragment)
+		}
+	}
+}
+
 func assertCreatesTables(t *testing.T, sql string, tables []string) {
 	t.Helper()
 	normalized := strings.ToLower(sql)
