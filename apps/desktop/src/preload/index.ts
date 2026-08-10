@@ -7,6 +7,7 @@ import {
   CREATE_WORKSPACE_CHANNEL,
   SIGN_IN_CHANNEL,
   SYSTEM_DIAGNOSTICS_CHANNEL,
+  UNLOCK_WORKSPACE_CHANNEL,
 } from "../shared/desktop-api";
 import preloadMethods from "../shared/preload-methods.json";
 
@@ -23,6 +24,7 @@ export function createTammyDesktopAPI(invoke: Invoke): TammyDesktopAPI {
     getSystemDiagnostics: () => invoke(SYSTEM_DIAGNOSTICS_CHANNEL) as Promise<SystemDiagnostics>,
     createWorkspace: binaryMethod(CREATE_WORKSPACE_CHANNEL),
     confirmRecovery: binaryMethod(CONFIRM_RECOVERY_CHANNEL),
+    unlockWorkspace: binaryMethod(UNLOCK_WORKSPACE_CHANNEL),
     signIn: binaryMethod(SIGN_IN_CHANNEL),
     getAttentionSummary: binaryMethod(ATTENTION_SUMMARY_CHANNEL),
   } satisfies TammyDesktopAPI;

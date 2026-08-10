@@ -32,8 +32,9 @@ const (
 )
 
 type LocalCompositionConfig struct {
-	Info buildinfo.Info
-	Root string
+	Info           buildinfo.Info
+	Root           string
+	AttemptAnchors workspace.AnchorStore
 }
 
 type localCapabilityResolver struct {
@@ -352,13 +353,20 @@ func NewLocalComposition(config LocalCompositionConfig) (*Composition, error) {
 	if err != nil {
 		return nil, err
 	}
+	attemptAnchors := config.AttemptAnchors
+	if attemptAnchors == nil {
+		attemptAnchors, err = workspace.NewPlatformAnchorStore()
+		if err != nil {
+			return nil, err
+		}
+	}
 	workspaceAttempts, err := workspace.NewAttemptJournal(filepath.Join(root, "workspace-attempts.journal"), deriveLocalKey(master, "workspace-attempts"), source,
-		"local-workspace", workspace.NewMemoryAnchorStore())
+		"local-workspace", attemptAnchors)
 	if err != nil {
 		return nil, err
 	}
 	identityAttempts, err := workspace.NewAttemptJournal(filepath.Join(root, "identity-attempts.journal"), deriveLocalKey(master, "identity-attempts"), source,
-		"local-identity", workspace.NewMemoryAnchorStore())
+		"local-identity", attemptAnchors)
 	if err != nil {
 		workspaceAttempts.Close()
 		return nil, err

@@ -23,6 +23,9 @@ function installDesktopAPI() {
       confirmRecovery: vi.fn(async () => {
         throw new Error("unavailable");
       }),
+      unlockWorkspace: vi.fn(async () => {
+        throw new Error("unavailable");
+      }),
       signIn: vi.fn(async () => {
         throw new Error("unavailable");
       }),

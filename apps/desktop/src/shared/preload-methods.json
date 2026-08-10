@@ -1,1 +1,1 @@
-["getSystemDiagnostics", "createWorkspace", "confirmRecovery", "signIn", "getAttentionSummary"]
+["getSystemDiagnostics", "createWorkspace", "confirmRecovery", "unlockWorkspace", "signIn", "getAttentionSummary"]

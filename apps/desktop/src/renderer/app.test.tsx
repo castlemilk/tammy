@@ -38,6 +38,9 @@ function installDesktopAPI(getSystemDiagnostics: TammyDesktopAPI["getSystemDiagn
       confirmRecovery: vi.fn(async () => {
         throw new Error("unavailable");
       }),
+      unlockWorkspace: vi.fn(async () => {
+        throw new Error("unavailable");
+      }),
       signIn: vi.fn(async () => {
         throw new Error("unavailable");
       }),

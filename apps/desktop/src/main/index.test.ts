@@ -45,6 +45,9 @@ function unusedCoreMethods() {
     confirmRecovery: vi.fn(async () => {
       throw new Error("unused");
     }),
+    unlockWorkspace: vi.fn(async () => {
+      throw new Error("unused");
+    }),
     signIn: vi.fn(async () => {
       throw new Error("unused");
     }),

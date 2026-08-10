@@ -8,6 +8,7 @@ import { DiagnosticsCard, type DiagnosticsState } from "./features/diagnostics/d
 import { EmptyLedgerScreen } from "./features/ledger/empty-ledger-screen";
 import { OverviewScreen } from "./features/overview/overview-screen";
 import { SetupScreen, type AuthenticatedWorkspace } from "./features/setup/setup-screen";
+import { UnlockScreen } from "./features/workspace/unlock-screen";
 
 const WORKSPACE_ID_STORAGE = "tammy.workspace.id";
 const SESSION_STORAGE = "tammy.session.active";
@@ -75,14 +76,7 @@ export function App() {
   }
 
   if (access === "locked") {
-    return (
-      <main className="grid min-h-screen place-items-center bg-background px-5">
-        <section className="w-full max-w-[440px] rounded-[8px] border border-border bg-surface p-7 text-center">
-          <h1 className="text-[20px] font-semibold text-foreground">Workspace locked</h1>
-          <p className="mt-2 text-[11px] leading-5 text-muted-foreground">Unlocking this existing local workspace is the next connected step.</p>
-        </section>
-      </main>
-    );
+    return <UnlockScreen api={window.tammy} onAuthenticated={authenticated} />;
   }
 
   return (

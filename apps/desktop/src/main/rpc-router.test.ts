@@ -25,6 +25,7 @@ function rpcClient(getAttentionSummary: DesktopRpcClient["getAttentionSummary"])
   return {
     createWorkspace: vi.fn(),
     confirmRecovery: vi.fn(),
+    unlockWorkspace: vi.fn(),
     signIn: vi.fn(),
     getAttentionSummary,
   };

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync"
 	"testing"
 	"time"
 
@@ -22,8 +23,9 @@ import (
 
 func TestLocalCompositionCreatesConfirmsAndAuthenticatesRealWorkspace(t *testing.T) {
 	composition, err := NewLocalComposition(LocalCompositionConfig{
-		Info: buildinfo.Info{Version: "local-integration"},
-		Root: t.TempDir(),
+		Info:           buildinfo.Info{Version: "local-integration"},
+		Root:           t.TempDir(),
+		AttemptAnchors: workspace.NewMemoryAnchorStore(),
 	})
 	if err != nil {
 		t.Fatalf("NewLocalComposition() error = %v", err)
@@ -98,5 +100,121 @@ func TestLocalCompositionCreatesConfirmsAndAuthenticatesRealWorkspace(t *testing
 	}
 	if signedIn.Msg.User == nil || signedIn.Msg.Session == nil || signedIn.Msg.User.Username != "admin@tammy.local" {
 		t.Fatalf("SignIn() = %#v", signedIn.Msg)
+	}
+}
+
+func TestLocalCompositionReopensAndAuthenticatesExistingWorkspaceAfterRestart(t *testing.T) {
+	root := t.TempDir()
+	anchors := workspace.NewMemoryAnchorStore()
+	first, stopFirst := startLocalCompositionTestServer(t, root, anchors)
+	t.Cleanup(stopFirst)
+
+	createRequest := connect.NewRequest(&tammyv1.CreateWorkspaceRequest{
+		SetupId:                  "01900f3c-7b2e-7cc4-98c4-dc0c0c0739a1",
+		Destination:              &tammyv1.ApprovedFileRef{CapabilityId: LocalWorkspaceDirectoryCapability},
+		WorkspacePassphrase:      &tammyv1.SecretInput{Utf8: []byte("workspace-passphrase-long-enough")},
+		AdministratorUsername:    "admin@tammy.local",
+		AdministratorDisplayName: "Tammy Admin",
+		AdministratorPassword:    &tammyv1.SecretInput{Utf8: []byte("administrator-password-long-enough")},
+	})
+	createRequest.Header().Set(transport.CapabilityHeader, first.capability)
+	created, err := first.workspace.CreateWorkspace(context.Background(), createRequest)
+	if err != nil || created.Msg.Workspace == nil || created.Msg.RecoverySecret == nil {
+		t.Fatalf("CreateWorkspace() = %#v, %v", created, err)
+	}
+	groups, err := workspace.ParseRecoveryGroups(created.Msg.RecoverySecret.Utf8)
+	if err != nil {
+		t.Fatal(err)
+	}
+	confirm := connect.NewRequest(&tammyv1.ConfirmRecoveryRequest{
+		SetupId: createRequest.Msg.SetupId,
+		Confirmations: []*tammyv1.RecoveryGroupConfirmation{
+			{GroupIndex: 0, Value: groups[0]},
+			{GroupIndex: 1, Value: groups[1]},
+		},
+	})
+	confirm.Header().Set(transport.CapabilityHeader, first.capability)
+	if _, err := first.workspace.ConfirmRecovery(context.Background(), confirm); err != nil {
+		t.Fatalf("ConfirmRecovery() error = %v", err)
+	}
+
+	stopFirst()
+	second, stopSecond := startLocalCompositionTestServer(t, root, anchors)
+	t.Cleanup(stopSecond)
+	unlock := connect.NewRequest(&tammyv1.UnlockWorkspaceRequest{
+		WorkspaceFile: &tammyv1.ApprovedFileRef{CapabilityId: LocalWorkspaceFileCapability},
+		Proof: &tammyv1.WorkspaceUnlockProof{Proof: &tammyv1.WorkspaceUnlockProof_Passphrase{
+			Passphrase: &tammyv1.SecretInput{Utf8: []byte("workspace-passphrase-long-enough")},
+		}},
+	})
+	unlock.Header().Set(transport.CapabilityHeader, second.capability)
+	opened, err := second.workspace.UnlockWorkspace(context.Background(), unlock)
+	if err != nil {
+		t.Fatalf("UnlockWorkspace() error = %v", err)
+	}
+	if opened.Msg.Workspace == nil || opened.Msg.Workspace.Id != created.Msg.Workspace.Id {
+		t.Fatalf("UnlockWorkspace() = %#v", opened.Msg)
+	}
+	signIn := connect.NewRequest(&tammyv1.SignInRequest{
+		Username: "admin@tammy.local",
+		Password: &tammyv1.SecretInput{Utf8: []byte("administrator-password-long-enough")},
+	})
+	signIn.Header().Set(transport.CapabilityHeader, second.capability)
+	authenticated, err := second.identity.SignIn(context.Background(), signIn)
+	if err != nil {
+		t.Fatalf("SignIn() after restart error = %v", err)
+	}
+	if authenticated.Msg.User == nil || authenticated.Msg.Session == nil {
+		t.Fatalf("SignIn() after restart = %#v", authenticated.Msg)
+	}
+}
+
+type localCompositionTestClients struct {
+	capability string
+	identity   tammyv1connect.IdentityServiceClient
+	workspace  tammyv1connect.WorkspaceServiceClient
+}
+
+func startLocalCompositionTestServer(t *testing.T, root string, anchors workspace.AnchorStore) (localCompositionTestClients, func()) {
+	t.Helper()
+	composition, err := NewLocalComposition(LocalCompositionConfig{
+		Info:           buildinfo.Info{Version: "local-restart-integration"},
+		Root:           root,
+		AttemptAnchors: anchors,
+	})
+	if err != nil {
+		t.Fatalf("NewLocalComposition() error = %v", err)
+	}
+	server, err := transport.NewServer(composition.Registrar(), io.Discard)
+	if err != nil {
+		_ = composition.Close()
+		t.Fatalf("transport.NewServer() error = %v", err)
+	}
+	if err := server.Start(); err != nil {
+		_ = composition.Close()
+		t.Fatalf("server.Start() error = %v", err)
+	}
+	ready := server.Ready()
+	roots := x509.NewCertPool()
+	if !roots.AppendCertsFromPEM([]byte(ready.CAPEM)) {
+		t.Fatal("invalid server CA")
+	}
+	httpClient := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{
+		MinVersion: tls.VersionTLS13, MaxVersion: tls.VersionTLS13, RootCAs: roots, ServerName: "127.0.0.1",
+	}}}
+	baseURL := fmt.Sprintf("https://127.0.0.1:%d", ready.Port)
+	clients := localCompositionTestClients{
+		capability: ready.Capability,
+		identity:   tammyv1connect.NewIdentityServiceClient(httpClient, baseURL),
+		workspace:  tammyv1connect.NewWorkspaceServiceClient(httpClient, baseURL),
+	}
+	var once sync.Once
+	return clients, func() {
+		once.Do(func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+			_ = server.Shutdown(ctx)
+			_ = composition.Close()
+		})
 	}
 }

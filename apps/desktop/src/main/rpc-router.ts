@@ -13,12 +13,16 @@ import type {
   ConfirmRecoveryResponse,
   CreateWorkspaceRequest,
   CreateWorkspaceResponse,
+  UnlockWorkspaceRequest,
+  UnlockWorkspaceResponse,
 } from "@tammy/connect-client/tammy/v1/workspace_pb.js";
 import {
   ConfirmRecoveryRequestSchema,
   ConfirmRecoveryResponseSchema,
   CreateWorkspaceRequestSchema,
   CreateWorkspaceResponseSchema,
+  UnlockWorkspaceRequestSchema,
+  UnlockWorkspaceResponseSchema,
 } from "@tammy/connect-client/tammy/v1/workspace_pb.js";
 
 import {
@@ -26,6 +30,7 @@ import {
   CONFIRM_RECOVERY_CHANNEL,
   CREATE_WORKSPACE_CHANNEL,
   SIGN_IN_CHANNEL,
+  UNLOCK_WORKSPACE_CHANNEL,
 } from "../shared/desktop-api";
 import { createProtoMethodCodec, ProtoIpcError } from "../shared/proto-ipc";
 
@@ -48,6 +53,12 @@ const signInCodec = createProtoMethodCodec({
   maximumRequestBytes: 16_384,
   maximumResponseBytes: 32_768,
   output: SignInResponseSchema,
+});
+const unlockWorkspaceCodec = createProtoMethodCodec({
+  input: UnlockWorkspaceRequestSchema,
+  maximumRequestBytes: 16_384,
+  maximumResponseBytes: 16_384,
+  output: UnlockWorkspaceResponseSchema,
 });
 
 const attentionCodec = createProtoMethodCodec({
@@ -72,6 +83,7 @@ export class DesktopRpcRouterError extends Error {
 export interface DesktopRpcClient {
   readonly createWorkspace: (request: CreateWorkspaceRequest) => Promise<CreateWorkspaceResponse>;
   readonly confirmRecovery: (request: ConfirmRecoveryRequest) => Promise<ConfirmRecoveryResponse>;
+  readonly unlockWorkspace: (request: UnlockWorkspaceRequest) => Promise<UnlockWorkspaceResponse>;
   readonly signIn: (request: SignInRequest) => Promise<SignInResponse>;
   readonly getAttentionSummary: (
     request: GetAttentionSummaryRequest,
@@ -94,6 +106,10 @@ export function createDesktopRpcRouter(client: DesktopRpcClient): Readonly<Deskt
           case CONFIRM_RECOVERY_CHANNEL:
             return confirmRecoveryCodec.encodeResponse(
               await client.confirmRecovery(confirmRecoveryCodec.decodeRequest(request)),
+            );
+          case UNLOCK_WORKSPACE_CHANNEL:
+            return unlockWorkspaceCodec.encodeResponse(
+              await client.unlockWorkspace(unlockWorkspaceCodec.decodeRequest(request)),
             );
           case SIGN_IN_CHANNEL:
             return signInCodec.encodeResponse(await client.signIn(signInCodec.decodeRequest(request)));

@@ -13,6 +13,8 @@ import type {
   ConfirmRecoveryResponse,
   CreateWorkspaceRequest,
   CreateWorkspaceResponse,
+  UnlockWorkspaceRequest,
+  UnlockWorkspaceResponse,
 } from "@tammy/connect-client/tammy/v1/workspace_pb.js";
 import { WorkspaceService } from "@tammy/connect-client/tammy/v1/workspace_pb.js";
 
@@ -28,6 +30,7 @@ const CORE_VERSION_PATTERN = /^[\x20-\x7e]{1,128}$/;
 export interface CoreClient {
   readonly createWorkspace: (request: CreateWorkspaceRequest) => Promise<CreateWorkspaceResponse>;
   readonly confirmRecovery: (request: ConfirmRecoveryRequest) => Promise<ConfirmRecoveryResponse>;
+  readonly unlockWorkspace: (request: UnlockWorkspaceRequest) => Promise<UnlockWorkspaceResponse>;
   readonly signIn: (request: SignInRequest) => Promise<SignInResponse>;
   readonly getAttentionSummary: (
     request: GetAttentionSummaryRequest,
@@ -94,6 +97,8 @@ export function createCoreClient(
       coreRequest(() => workspaceClient.createWorkspace(request)),
     confirmRecovery: (request: ConfirmRecoveryRequest) =>
       coreRequest(() => workspaceClient.confirmRecovery(request)),
+    unlockWorkspace: (request: UnlockWorkspaceRequest) =>
+      coreRequest(() => workspaceClient.unlockWorkspace(request)),
     signIn: (request: SignInRequest) => coreRequest(() => identityClient.signIn(request)),
     getAttentionSummary: async (
       request: GetAttentionSummaryRequest,

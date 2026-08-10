@@ -78,6 +78,7 @@ it("creates, confirms, and signs in to a real local workspace through named prot
   const api = {
     createWorkspace,
     confirmRecovery,
+    unlockWorkspace: vi.fn(),
     signIn,
     getAttentionSummary: vi.fn(),
     getSystemDiagnostics: vi.fn(),

@@ -79,6 +79,7 @@ describe("registerDiagnosticsIpc", () => {
       "getSystemDiagnostics",
       "createWorkspace",
       "confirmRecovery",
+      "unlockWorkspace",
       "signIn",
       "getAttentionSummary",
     ]);
@@ -323,6 +324,7 @@ describe("preload desktop bridge", () => {
       "getSystemDiagnostics",
       "createWorkspace",
       "confirmRecovery",
+      "unlockWorkspace",
       "signIn",
       "getAttentionSummary",
     ]);
