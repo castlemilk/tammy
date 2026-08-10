@@ -22,6 +22,7 @@ import (
 	"github.com/tammyapp/tammy/services/core/internal/overview"
 	"github.com/tammyapp/tammy/services/core/internal/platform/clock"
 	"github.com/tammyapp/tammy/services/core/internal/platform/ids"
+	"github.com/tammyapp/tammy/services/core/internal/storage/sqlcipher"
 	"github.com/tammyapp/tammy/services/core/internal/transport"
 	"github.com/tammyapp/tammy/services/core/internal/workspace"
 )
@@ -36,6 +37,30 @@ type LocalCompositionConfig struct {
 	Info           buildinfo.Info
 	Root           string
 	AttemptAnchors workspace.AnchorStore
+	Modules        []LocalWorkspaceModule
+}
+
+// LocalModuleIdentity is the narrow authenticated identity capability exposed
+// to local business modules after the encrypted workspace is active.
+type LocalModuleIdentity interface {
+	RequireAdministratorWithin(context.Context, workspace.MutationExecutor, *tammyv1.AuthenticationContext) error
+	RequireActiveSessionReadOnly(context.Context, *tammyv1.AuthenticationContext) error
+	ConsumeFreshFactorWithin(context.Context, workspace.MutationExecutor, *tammyv1.AuthenticationContext, *tammyv1.FreshFactorContext, string) error
+}
+
+type LocalWorkspaceActivation struct {
+	Database    *sqlcipher.Database
+	WorkspaceID string
+	Identity    LocalModuleIdentity
+	Now         func() time.Time
+	NewID       func() (string, error)
+}
+
+// LocalWorkspaceModule contributes generated routes at construction and binds
+// them to one active encrypted workspace after Create or Unlock succeeds.
+type LocalWorkspaceModule interface {
+	HandlerFactories() []transport.GeneratedHandlerFactory
+	Activate(LocalWorkspaceActivation) error
 }
 
 type localCapabilityResolver struct {
@@ -270,6 +295,7 @@ type localRuntime struct {
 	identityAttempts  *workspace.AttemptJournal
 	workspaceAttempts *workspace.AttemptJournal
 	identityFactorKey []byte
+	modules           []LocalWorkspaceModule
 }
 
 type localWorkspaceHandler struct {
@@ -362,7 +388,19 @@ func (runtime *localRuntime) activate(workspaceID string) error {
 	if err != nil {
 		return err
 	}
-	return runtime.overviewRoute.set(overviewService)
+	if err := runtime.overviewRoute.set(overviewService); err != nil {
+		return err
+	}
+	activation := LocalWorkspaceActivation{
+		Database: database, WorkspaceID: workspaceID, Identity: runtime.bridge,
+		Now: runtime.clock.Now, NewID: runtime.ids.New,
+	}
+	for _, module := range runtime.modules {
+		if module == nil || module.Activate(activation) != nil {
+			return ErrComposition
+		}
+	}
+	return nil
 }
 
 func (runtime *localRuntime) Close() error {
@@ -442,7 +480,13 @@ func NewLocalComposition(config LocalCompositionConfig) (*Composition, error) {
 		identityAttempts.Close()
 		return nil, err
 	}
-	runtime := &localRuntime{passwords: passwords, clock: source, ids: generator,
+	modules := append([]LocalWorkspaceModule(nil), config.Modules...)
+	for _, module := range modules {
+		if module == nil {
+			return nil, ErrComposition
+		}
+	}
+	runtime := &localRuntime{passwords: passwords, clock: source, ids: generator, modules: modules,
 		workspaceAttempts: workspaceAttempts, identityAttempts: identityAttempts,
 		identityFactorKey: deriveLocalKey(master, "identity-factor")}
 	bootstrapIdentity, err := identity.NewService(identity.Config{
@@ -480,6 +524,14 @@ func NewLocalComposition(config LocalCompositionConfig) (*Composition, error) {
 		},
 		runtime.identityRoute.factory,
 		runtime.overviewRoute.factory,
+	}
+	for _, module := range modules {
+		moduleFactories := module.HandlerFactories()
+		if len(moduleFactories) == 0 {
+			_ = runtime.Close()
+			return nil, ErrComposition
+		}
+		factories = append(factories, moduleFactories...)
 	}
 	return newComposition(factories, []ResourceCloser{runtime})
 }
