@@ -77,17 +77,6 @@ type AuditBootstrapPort interface {
 	EstablishInitialMirror(context.Context, MutationExecutor, string, string) error
 }
 
-type OwnershipImpact struct {
-	WorkspaceID                   string
-	PriorOwnerUserID              string
-	NextOwnerUserID               string
-	AcknowledgeVerificationEffect bool
-}
-
-type OrganisationImpactPort interface {
-	ApplyOwnershipTransfer(context.Context, MutationExecutor, OwnershipImpact) error
-}
-
 type FailureCheckpointPort interface {
 	Check(string) error
 }

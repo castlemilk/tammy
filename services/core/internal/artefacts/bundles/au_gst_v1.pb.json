@@ -1,0 +1,12 @@
+{
+  "bundle_id": "018f0000-0000-7000-8000-000000000022",
+  "version": "au_gst_v1",
+  "revision": 1,
+  "effective_from": "2000-07-01",
+  "tax_codes": [
+    {"id":"018f0000-0000-7000-8000-000000000201","code":"GST","label":"GST 10%","treatment":"TAXABLE","rate_millionths":100000},
+    {"id":"018f0000-0000-7000-8000-000000000202","code":"GST_FREE","label":"GST-free","treatment":"GST_FREE","rate_millionths":0},
+    {"id":"018f0000-0000-7000-8000-000000000203","code":"INPUT","label":"Input taxed","treatment":"INPUT_TAXED","rate_millionths":0},
+    {"id":"018f0000-0000-7000-8000-000000000204","code":"N-T","label":"Out of scope","treatment":"OUT_OF_SCOPE","rate_millionths":0}
+  ]
+}

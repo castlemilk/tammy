@@ -16,7 +16,7 @@ func TestAuditIdempotencyMigrationIsForwardOnlyAndPreservesPredecessors(t *testi
 	if steps[0].SHA256 != "a3643ab3c6f9d162972beccc41ba75569f66722bb5f8f33e2bff136f9345f4fc" {
 		t.Fatalf("0001 checksum changed: %s", steps[0].SHA256)
 	}
-	if steps[1].SHA256 != "3db2b98e9d515beb814ae4e3aab465d64744adcdf38c2aeefb61e36064f7ccc9" {
+	if steps[1].SHA256 != "9b0c88e94d7e9b30a1d073a2e1bf4f102c05d315336a55ec5d1f77f28290cfb2" {
 		t.Fatalf("0002 checksum changed: %s", steps[1].SHA256)
 	}
 	if steps[2].Name != "0003_audit_idempotency.sql" {

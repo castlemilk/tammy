@@ -28,21 +28,12 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-const MaxVerificationEvidenceBytes = 1 << 20
-
 const (
 	maxEvidenceImageDimension = 12_000
 	maxEvidenceImagePixels    = 40_000_000
 )
 
 const evidenceTimestampLayout = "2006-01-02T15:04:05.000000000Z"
-
-var (
-	ErrEvidenceInvalid        = errors.New("organisations: invalid verification evidence")
-	ErrEvidenceNotFound       = errors.New("organisations: verification evidence not found")
-	ErrEvidenceReplayConflict = errors.New("organisations: evidence operation replay conflict")
-	ErrEvidenceTampered       = errors.New("organisations: verification evidence integrity failure")
-)
 
 var sourceTypePattern = regexp.MustCompile(`^[a-z][a-z0-9_]{0,63}$`)
 
@@ -51,17 +42,6 @@ var (
 	pdfRootPattern      = regexp.MustCompile(`/Root[\t\r\n ]+([1-9][0-9]*)[\t\r\n ]+([0-9]+)[\t\r\n ]+R`)
 	pdfXRefPattern      = regexp.MustCompile(`(?m)^xref[\t ]*\r?\n[0-9]+[\t ]+[1-9][0-9]*[\t ]*\r?$`)
 )
-
-// VerificationRecord is one immutable protobuf evidence object and its retained
-// verification metadata. Supersession creates a new record; it never mutates the old one.
-type VerificationRecord struct {
-	OperationKey             string
-	Verification             *tammyv1.EntityVerification
-	Evidence                 *tammyv1.VerificationEvidence
-	CreatedByUserID          string
-	SupersedesEvidenceID     string
-	SupersedesVerificationID string
-}
 
 // EvidenceRepository is scoped to its caller-owned transaction.
 type EvidenceRepository struct {

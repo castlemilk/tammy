@@ -1,8 +1,18 @@
 CREATE TABLE organisations (
   id TEXT PRIMARY KEY,
   legal_name TEXT NOT NULL,
+  display_name TEXT NOT NULL DEFAULT '',
+  entity_type TEXT NOT NULL DEFAULT '',
   trading_name TEXT,
   abn TEXT UNIQUE,
+  gst_basis INTEGER NOT NULL DEFAULT 0 CHECK (gst_basis BETWEEN 0 AND 2),
+  gst_reporting_frequency INTEGER NOT NULL DEFAULT 0 CHECK (gst_reporting_frequency BETWEEN 0 AND 3),
+  financial_year_end_month INTEGER NOT NULL DEFAULT 12 CHECK (financial_year_end_month BETWEEN 1 AND 12),
+  owner_user_id TEXT NOT NULL DEFAULT '',
+  active_tax_rule_type TEXT NOT NULL DEFAULT '',
+  active_tax_rule_id TEXT NOT NULL DEFAULT '',
+  active_tax_rule_revision INTEGER NOT NULL DEFAULT 0 CHECK (active_tax_rule_revision >= 0),
+  active_tax_rule_content_hash BLOB NOT NULL DEFAULT X'' CHECK (length(active_tax_rule_content_hash) IN (0,32)),
   status TEXT NOT NULL CHECK (status IN ('ACTIVE','INACTIVE')),
   verification_state TEXT NOT NULL DEFAULT 'UNVERIFIED' CHECK (verification_state IN ('UNVERIFIED','PENDING','VERIFIED','FAILED','EXPIRED','SUPERSEDED')),
   version INTEGER NOT NULL DEFAULT 1 CHECK (version > 0),
@@ -15,16 +25,53 @@ CREATE TABLE accounts (
   organisation_id TEXT NOT NULL REFERENCES organisations(id) ON DELETE RESTRICT,
   code TEXT NOT NULL,
   name TEXT NOT NULL,
-  account_type TEXT NOT NULL CHECK (account_type IN ('ASSET','LIABILITY','EQUITY','REVENUE','EXPENSE')),
+  account_type TEXT NOT NULL CHECK (account_type IN ('ASSET','LIABILITY','EQUITY','REVENUE','OTHER_REVENUE','EXPENSE','OTHER_EXPENSE','CONTRA')),
+  subtype TEXT,
   normal_balance TEXT NOT NULL CHECK (normal_balance IN ('DEBIT','CREDIT')),
   status TEXT NOT NULL CHECK (status IN ('ACTIVE','ARCHIVED')),
   designation TEXT NOT NULL CHECK (designation IN ('ORDINARY','SYSTEM','CONTROL')),
+  default_tax_code_id TEXT,
+  report_classification TEXT NOT NULL DEFAULT '',
+  cash_flow_classification TEXT NOT NULL DEFAULT '',
   owner_module TEXT NOT NULL DEFAULT 'ledger' CHECK (owner_module = 'ledger'),
   version INTEGER NOT NULL DEFAULT 1 CHECK (version > 0),
   created_at TEXT NOT NULL,
   updated_at TEXT,
   UNIQUE (organisation_id, code)
 );
+
+CREATE TRIGGER organisations_singleton_insert
+BEFORE INSERT ON organisations
+WHEN EXISTS (SELECT 1 FROM organisations)
+BEGIN
+  SELECT RAISE(ABORT, 'workspace already has an organisation');
+END;
+
+CREATE TRIGGER accounts_control_fields_immutable
+BEFORE UPDATE ON accounts
+WHEN OLD.designation IN ('SYSTEM','CONTROL') AND (
+  NEW.organisation_id <> OLD.organisation_id
+  OR NEW.code <> OLD.code
+  OR NEW.name <> OLD.name
+  OR NEW.account_type <> OLD.account_type
+  OR NEW.subtype IS NOT OLD.subtype
+  OR NEW.normal_balance <> OLD.normal_balance
+  OR NEW.status <> OLD.status
+  OR NEW.designation <> OLD.designation
+  OR NEW.default_tax_code_id IS NOT OLD.default_tax_code_id
+  OR NEW.report_classification <> OLD.report_classification
+  OR NEW.cash_flow_classification <> OLD.cash_flow_classification
+)
+BEGIN
+  SELECT RAISE(ABORT, 'system and control accounts cannot be repurposed');
+END;
+
+CREATE TRIGGER accounts_protected_no_delete
+BEFORE DELETE ON accounts
+WHEN OLD.designation IN ('SYSTEM','CONTROL')
+BEGIN
+  SELECT RAISE(ABORT, 'system and control accounts cannot be deleted');
+END;
 
 CREATE TABLE accounting_periods (
   id TEXT PRIMARY KEY,
@@ -129,6 +176,7 @@ CREATE TABLE rule_bundles (
 );
 
 CREATE TABLE tax_code_catalogue (
+  id TEXT NOT NULL UNIQUE,
   code TEXT NOT NULL,
   rule_bundle_id TEXT NOT NULL REFERENCES rule_bundles(id) ON DELETE RESTRICT,
   label TEXT NOT NULL,
@@ -138,6 +186,30 @@ CREATE TABLE tax_code_catalogue (
   effective_to TEXT,
   PRIMARY KEY (code, rule_bundle_id)
 );
+
+CREATE TRIGGER rule_bundles_immutable_update
+BEFORE UPDATE ON rule_bundles
+BEGIN
+  SELECT RAISE(ABORT, 'retained rule bundles are immutable');
+END;
+
+CREATE TRIGGER rule_bundles_immutable_delete
+BEFORE DELETE ON rule_bundles
+BEGIN
+  SELECT RAISE(ABORT, 'retained rule bundles are immutable');
+END;
+
+CREATE TRIGGER tax_code_catalogue_immutable_update
+BEFORE UPDATE ON tax_code_catalogue
+BEGIN
+  SELECT RAISE(ABORT, 'retained tax codes are immutable');
+END;
+
+CREATE TRIGGER tax_code_catalogue_immutable_delete
+BEFORE DELETE ON tax_code_catalogue
+BEGIN
+  SELECT RAISE(ABORT, 'retained tax codes are immutable');
+END;
 
 CREATE TABLE financial_revisions (
   id INTEGER PRIMARY KEY CHECK (id = 1),

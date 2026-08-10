@@ -48,6 +48,37 @@ func TestTask7MigrationCapsSharedJobProtobufBlobs(t *testing.T) {
 	}
 }
 
+func TestTask9LedgerSchemaPersistsGeneratedOrganisationAndAccountFields(t *testing.T) {
+	steps, err := All()
+	if err != nil {
+		t.Fatal(err)
+	}
+	schema := strings.ToLower(string(steps[1].SQL))
+	for _, fragment := range []string{
+		"display_name text not null",
+		"entity_type text not null",
+		"gst_basis integer not null",
+		"gst_reporting_frequency integer not null",
+		"financial_year_end_month integer not null",
+		"owner_user_id text not null",
+		"active_tax_rule_type text not null",
+		"active_tax_rule_content_hash blob not null",
+		"subtype text",
+		"default_tax_code_id text",
+		"report_classification text not null",
+		"cash_flow_classification text not null",
+		"id text not null unique",
+		"accounts_control_fields_immutable",
+		"organisations_singleton_insert",
+		"rule_bundles_immutable_update",
+		"tax_code_catalogue_immutable_delete",
+	} {
+		if !strings.Contains(schema, fragment) {
+			t.Errorf("migration 2 missing Task9 schema fragment %q", fragment)
+		}
+	}
+}
+
 func assertCreatesTables(t *testing.T, sql string, tables []string) {
 	t.Helper()
 	normalized := strings.ToLower(sql)

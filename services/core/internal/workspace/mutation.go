@@ -13,6 +13,20 @@ type MutationExecutor interface {
 	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
 }
 
+// OwnershipImpact is the narrow workspace-to-organisation mutation contract.
+// It lives with MutationExecutor so dependent domain packages can implement the
+// port in both default and SQLCipher builds.
+type OwnershipImpact struct {
+	WorkspaceID                   string
+	PriorOwnerUserID              string
+	NextOwnerUserID               string
+	AcknowledgeVerificationEffect bool
+}
+
+type OrganisationImpactPort interface {
+	ApplyOwnershipTransfer(context.Context, MutationExecutor, OwnershipImpact) error
+}
+
 type mutationTransaction struct {
 	MutationExecutor
 	afterCommit []func(context.Context) error
