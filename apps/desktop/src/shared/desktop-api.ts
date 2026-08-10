@@ -13,7 +13,12 @@ export const CONFIRM_RECOVERY_CHANNEL = "tammy:workspace-confirm-recovery";
 export const UNLOCK_WORKSPACE_CHANNEL = "tammy:workspace-unlock";
 export const SIGN_IN_CHANNEL = "tammy:identity-sign-in";
 export const CREATE_ORGANISATION_CHANNEL = "tammy:organisation-create";
+export const CREATE_ACCOUNT_CHANNEL = "tammy:accounting-create-account";
 export const LIST_ACCOUNTS_CHANNEL = "tammy:accounting-list-accounts";
+export const POST_MANUAL_JOURNAL_CHANNEL = "tammy:accounting-post-manual-journal";
+export const LIST_JOURNALS_CHANNEL = "tammy:accounting-list-journals";
+export const GET_JOURNAL_CHANNEL = "tammy:accounting-get-journal";
+export const GET_TRIAL_BALANCE_CHANNEL = "tammy:accounting-get-trial-balance";
 export const ATTENTION_SUMMARY_CHANNEL = "tammy:overview-attention-summary";
 
 export const DESKTOP_PROTO_CHANNELS = Object.freeze([
@@ -22,7 +27,12 @@ export const DESKTOP_PROTO_CHANNELS = Object.freeze([
   UNLOCK_WORKSPACE_CHANNEL,
   SIGN_IN_CHANNEL,
   CREATE_ORGANISATION_CHANNEL,
+  CREATE_ACCOUNT_CHANNEL,
   LIST_ACCOUNTS_CHANNEL,
+  POST_MANUAL_JOURNAL_CHANNEL,
+  LIST_JOURNALS_CHANNEL,
+  GET_JOURNAL_CHANNEL,
+  GET_TRIAL_BALANCE_CHANNEL,
   ATTENTION_SUMMARY_CHANNEL,
 ] as const);
 
@@ -33,7 +43,12 @@ export interface TammyDesktopAPI {
   readonly unlockWorkspace: (request: Uint8Array) => Promise<Uint8Array>;
   readonly signIn: (request: Uint8Array) => Promise<Uint8Array>;
   readonly createOrganisation: (request: Uint8Array) => Promise<Uint8Array>;
+  readonly createAccount: (request: Uint8Array) => Promise<Uint8Array>;
   readonly listAccounts: (request: Uint8Array) => Promise<Uint8Array>;
+  readonly postManualJournal: (request: Uint8Array) => Promise<Uint8Array>;
+  readonly listJournals: (request: Uint8Array) => Promise<Uint8Array>;
+  readonly getJournal: (request: Uint8Array) => Promise<Uint8Array>;
+  readonly getTrialBalance: (request: Uint8Array) => Promise<Uint8Array>;
   readonly getAttentionSummary: (request: Uint8Array) => Promise<Uint8Array>;
 }
 
@@ -44,7 +59,12 @@ const EXPECTED_DESKTOP_PRELOAD_METHODS = [
   "unlockWorkspace",
   "signIn",
   "createOrganisation",
+  "createAccount",
   "listAccounts",
+  "postManualJournal",
+  "listJournals",
+  "getJournal",
+  "getTrialBalance",
   "getAttentionSummary",
 ] as const satisfies readonly (keyof TammyDesktopAPI)[];
 

@@ -54,7 +54,22 @@ function unusedCoreMethods() {
     createOrganisation: vi.fn(async () => {
       throw new Error("unused");
     }),
+    createAccount: vi.fn(async () => {
+      throw new Error("unused");
+    }),
     listAccounts: vi.fn(async () => {
+      throw new Error("unused");
+    }),
+    postManualJournal: vi.fn(async () => {
+      throw new Error("unused");
+    }),
+    listJournals: vi.fn(async () => {
+      throw new Error("unused");
+    }),
+    getJournal: vi.fn(async () => {
+      throw new Error("unused");
+    }),
+    getTrialBalance: vi.fn(async () => {
       throw new Error("unused");
     }),
   };

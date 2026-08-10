@@ -66,7 +66,10 @@ it("renders the installed local chart through the named accounting method", asyn
       }),
     );
   });
-  const api = { listAccounts } satisfies Pick<TammyDesktopAPI, "listAccounts">;
+  const api = {
+    createAccount: vi.fn(),
+    listAccounts,
+  } satisfies Pick<TammyDesktopAPI, "createAccount" | "listAccounts">;
 
   render(
     <ChartScreen

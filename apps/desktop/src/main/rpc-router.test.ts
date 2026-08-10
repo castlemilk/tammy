@@ -50,7 +50,12 @@ function rpcClient(getAttentionSummary: DesktopRpcClient["getAttentionSummary"])
     unlockWorkspace: vi.fn(),
     signIn: vi.fn(),
     createOrganisation: vi.fn(),
+    createAccount: vi.fn(),
     listAccounts: vi.fn(),
+    postManualJournal: vi.fn(),
+    listJournals: vi.fn(),
+    getJournal: vi.fn(),
+    getTrialBalance: vi.fn(),
     getAttentionSummary,
   };
 }

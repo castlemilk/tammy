@@ -5,6 +5,8 @@ import { AppShell } from "./app-shell/app-shell";
 import { resolveAppLocation, type WorkspaceAccess } from "./app-shell/router";
 import { Button } from "./components/ui/button";
 import { ChartScreen } from "./features/accounting/chart-screen";
+import { JournalsScreen } from "./features/accounting/journals-screen";
+import { TrialBalanceScreen } from "./features/accounting/trial-balance-screen";
 import { DiagnosticsCard, type DiagnosticsState } from "./features/diagnostics/diagnostics-card";
 import { EmptyLedgerScreen } from "./features/ledger/empty-ledger-screen";
 import { OverviewScreen } from "./features/overview/overview-screen";
@@ -118,7 +120,7 @@ export function App() {
   return (
     <AppShell activePath={activePath} onNavigate={navigate}>
       <EngineStatus onRetry={loadDiagnostics} state={diagnosticsState} />
-      <RouteContent path={activePath} state={diagnosticsState} workspace={workspace} />
+      <RouteContent onNavigate={navigate} path={activePath} state={diagnosticsState} workspace={workspace} />
     </AppShell>
   );
 }
@@ -157,19 +159,19 @@ function EngineStatus({ onRetry, state }: { readonly onRetry: () => void; readon
   );
 }
 
-function RouteContent({ path, state, workspace }: { readonly path: string; readonly state: DiagnosticsState; readonly workspace: AuthenticatedWorkspace | undefined }) {
+function RouteContent({ onNavigate, path, state, workspace }: { readonly onNavigate: (path: string) => void; readonly path: string; readonly state: DiagnosticsState; readonly workspace: AuthenticatedWorkspace | undefined }) {
   if (path === "/overview") return <OverviewScreen api={window.tammy} workspace={workspace} />;
   if (path === "/accounting/chart") {
     return <ChartScreen api={window.tammy} workspace={workspace} />;
   }
   if (path.startsWith("/accounting/journals")) {
-    return <EmptyLedgerScreen description="Balanced accounting entries and their sources." emptyLabel="No journals yet" title="Journals" />;
+    return <JournalsScreen api={window.tammy} onNavigate={onNavigate} path={path} workspace={workspace} />;
   }
   if (path === "/accounting/general-ledger") {
     return <EmptyLedgerScreen description="Account movements with retained source links." emptyLabel="No ledger movements yet" title="General ledger" />;
   }
   if (path === "/accounting/trial-balance") {
-    return <EmptyLedgerScreen description="Debit and credit balances at an accounting date." emptyLabel="No trial balance yet" title="Trial balance" />;
+    return <TrialBalanceScreen api={window.tammy} workspace={workspace} />;
   }
   if (path === "/audit") {
     return <EmptyLedgerScreen description="Verifiable business actions retained on this device." emptyLabel="No audit events yet" title="Audit trail" />;

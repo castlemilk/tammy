@@ -82,7 +82,12 @@ describe("registerDiagnosticsIpc", () => {
       "unlockWorkspace",
       "signIn",
       "createOrganisation",
+      "createAccount",
       "listAccounts",
+      "postManualJournal",
+      "listJournals",
+      "getJournal",
+      "getTrialBalance",
       "getAttentionSummary",
     ]);
     expect(DIAGNOSTICS_PRELOAD_METHOD).toBe(DESKTOP_PRELOAD_METHODS[0]);
@@ -329,7 +334,12 @@ describe("preload desktop bridge", () => {
       "unlockWorkspace",
       "signIn",
       "createOrganisation",
+      "createAccount",
       "listAccounts",
+      "postManualJournal",
+      "listJournals",
+      "getJournal",
+      "getTrialBalance",
       "getAttentionSummary",
     ]);
     expect(Object.isFrozen(api)).toBe(true);

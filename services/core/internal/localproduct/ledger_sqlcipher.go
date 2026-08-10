@@ -9,6 +9,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"sync"
@@ -85,6 +86,52 @@ func (module *LedgerModule) Activate(activation app.LocalWorkspaceActivation) er
 	if err != nil {
 		return ErrLedgerModule
 	}
+	accountingTransactions, err := app.NewCommandTransactions[accounting.CommandRepositories](
+		activation.WorkspaceID,
+		&accountingTransactionStarter{activation: activation},
+	)
+	if err != nil {
+		return ErrLedgerModule
+	}
+	accountingCoordinator, err := app.NewCoordinator(app.CoordinatorConfig[accounting.CommandRepositories]{
+		Transactions: accountingTransactions,
+		Authorizer:   accountingAuthorizer{workspaceID: activation.WorkspaceID},
+		Elector:      elector,
+		Auditor:      localCommandAuditor{},
+	})
+	if err != nil {
+		return ErrLedgerModule
+	}
+	accountService, err := accounting.NewService(
+		accountingCoordinator,
+		localAccountingAuditFactory{workspaceID: activation.WorkspaceID},
+		activation.Now,
+		func() string {
+			identifier, idErr := activation.NewID()
+			if idErr != nil {
+				return ""
+			}
+			return identifier
+		},
+	)
+	if err != nil {
+		return ErrLedgerModule
+	}
+	postingService, err := accounting.NewPostingService(
+		accountingCoordinator,
+		localAccountingAuditFactory{workspaceID: activation.WorkspaceID},
+		activation.Now,
+		func() string {
+			identifier, idErr := activation.NewID()
+			if idErr != nil {
+				return ""
+			}
+			return identifier
+		},
+	)
+	if err != nil {
+		return ErrLedgerModule
+	}
 	service, err := organisations.NewService(organisations.ServiceConfig{
 		Commands: coordinator,
 		Audit:    localAuditFactory{workspaceID: activation.WorkspaceID},
@@ -105,8 +152,10 @@ func (module *LedgerModule) Activate(activation app.LocalWorkspaceActivation) er
 		return err
 	}
 	if err := module.accountingRoute.set(&accountingHandler{
+		accounts: accountService,
 		database: activation.Database,
 		identity: activation.Identity,
+		posting:  postingService,
 	}); err != nil {
 		return err
 	}
@@ -156,8 +205,66 @@ func (route *accountingRoute) ServeHTTP(response http.ResponseWriter, request *h
 
 type accountingHandler struct {
 	tammyv1connect.UnimplementedAccountingServiceHandler
+	accounts *accounting.Service
 	database *sqlcipher.Database
 	identity app.LocalModuleIdentity
+	posting  *accounting.PostingService
+}
+
+func (handler *accountingHandler) CreateAccount(
+	ctx context.Context,
+	request *connect.Request[tammyv1.CreateAccountRequest],
+) (*connect.Response[tammyv1.CreateAccountResponse], error) {
+	if handler == nil || handler.accounts == nil || request == nil || request.Msg == nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrLedgerModule)
+	}
+	response, err := handler.accounts.CreateAccount(ctx, request.Msg)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrLedgerModule)
+	}
+	return connect.NewResponse(response), nil
+}
+
+func (handler *accountingHandler) UpdateAccount(
+	ctx context.Context,
+	request *connect.Request[tammyv1.UpdateAccountRequest],
+) (*connect.Response[tammyv1.UpdateAccountResponse], error) {
+	if handler == nil || handler.accounts == nil || request == nil || request.Msg == nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrLedgerModule)
+	}
+	response, err := handler.accounts.UpdateAccount(ctx, request.Msg)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrLedgerModule)
+	}
+	return connect.NewResponse(response), nil
+}
+
+func (handler *accountingHandler) SetAccountStatus(
+	ctx context.Context,
+	request *connect.Request[tammyv1.SetAccountStatusRequest],
+) (*connect.Response[tammyv1.SetAccountStatusResponse], error) {
+	if handler == nil || handler.accounts == nil || request == nil || request.Msg == nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrLedgerModule)
+	}
+	response, err := handler.accounts.SetAccountStatus(ctx, request.Msg)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrLedgerModule)
+	}
+	return connect.NewResponse(response), nil
+}
+
+func (handler *accountingHandler) PostManualJournal(
+	ctx context.Context,
+	request *connect.Request[tammyv1.PostManualJournalRequest],
+) (*connect.Response[tammyv1.PostManualJournalResponse], error) {
+	if handler == nil || handler.posting == nil || request == nil || request.Msg == nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrLedgerModule)
+	}
+	response, err := handler.posting.PostManualJournal(ctx, request.Msg)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrLedgerModule)
+	}
+	return connect.NewResponse(response), nil
 }
 
 func (handler *accountingHandler) GetAccount(
@@ -230,6 +337,134 @@ func (handler *accountingHandler) ListAccounts(
 		Accounts: filtered,
 		Page:     &tammyv1.PageInfo{ReturnedCount: uint32(len(filtered))},
 	}), nil
+}
+
+func (handler *accountingHandler) GetJournal(
+	ctx context.Context,
+	request *connect.Request[tammyv1.GetJournalRequest],
+) (*connect.Response[tammyv1.GetJournalResponse], error) {
+	if handler == nil || handler.database == nil || handler.identity == nil || request == nil ||
+		request.Msg == nil || request.Msg.Authentication == nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrLedgerModule)
+	}
+	if err := handler.identity.RequireActiveSessionReadOnly(ctx, request.Msg.Authentication); err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, ErrLedgerModule)
+	}
+	tx, err := handler.database.BeginEncryptedTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	defer tx.Rollback()
+	repository, err := accounting.NewJournalRepository(tx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	journal, err := repository.Get(ctx, request.Msg.JournalId)
+	if err != nil || tx.Commit() != nil {
+		return nil, connect.NewError(connect.CodeNotFound, ErrLedgerModule)
+	}
+	return connect.NewResponse(&tammyv1.GetJournalResponse{Journal: journal}), nil
+}
+
+func (handler *accountingHandler) ListJournals(
+	ctx context.Context,
+	request *connect.Request[tammyv1.ListJournalsRequest],
+) (*connect.Response[tammyv1.ListJournalsResponse], error) {
+	if handler == nil || handler.database == nil || handler.identity == nil || request == nil ||
+		request.Msg == nil || request.Msg.Authentication == nil || request.Msg.Page == nil ||
+		request.Msg.Page.Cursor != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrLedgerModule)
+	}
+	if err := handler.identity.RequireActiveSessionReadOnly(ctx, request.Msg.Authentication); err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, ErrLedgerModule)
+	}
+	pageSize := int(request.Msg.Page.PageSize)
+	if pageSize == 0 {
+		pageSize = 50
+	}
+	if pageSize < 1 || pageSize > 200 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrLedgerModule)
+	}
+	tx, err := handler.database.BeginEncryptedTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	defer tx.Rollback()
+	repository, err := accounting.NewJournalRepository(tx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	startDate := ""
+	if request.Msg.StartDate != nil {
+		startDate = fmt.Sprintf("%04d-%02d-%02d", request.Msg.StartDate.Year, request.Msg.StartDate.Month, request.Msg.StartDate.Day)
+	}
+	endDate := ""
+	if request.Msg.EndDate != nil {
+		endDate = fmt.Sprintf("%04d-%02d-%02d", request.Msg.EndDate.Year, request.Msg.EndDate.Month, request.Msg.EndDate.Day)
+	}
+	journals, err := repository.List(ctx, request.Msg.OrganisationId, startDate, endDate, 200)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	filtered := filterJournals(journals, request.Msg)
+	if len(filtered) > pageSize {
+		filtered = filtered[:pageSize]
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	return connect.NewResponse(&tammyv1.ListJournalsResponse{
+		Journals: filtered,
+		Page:     &tammyv1.PageInfo{ReturnedCount: uint32(len(filtered))},
+	}), nil
+}
+
+func filterJournals(journals []*tammyv1.Journal, request *tammyv1.ListJournalsRequest) []*tammyv1.Journal {
+	filtered := make([]*tammyv1.Journal, 0, len(journals))
+	for _, journal := range journals {
+		if journal == nil || request.State != nil && journal.State != request.GetState() ||
+			request.Source != nil && journal.Source != request.GetSource() {
+			continue
+		}
+		filtered = append(filtered, journal)
+	}
+	return filtered
+}
+
+func (handler *accountingHandler) GetTrialBalance(
+	ctx context.Context,
+	request *connect.Request[tammyv1.GetTrialBalanceRequest],
+) (*connect.Response[tammyv1.GetTrialBalanceResponse], error) {
+	if handler == nil || handler.database == nil || handler.identity == nil || request == nil ||
+		request.Msg == nil || request.Msg.Authentication == nil || request.Msg.AsOfDate == nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrLedgerModule)
+	}
+	if err := handler.identity.RequireActiveSessionReadOnly(ctx, request.Msg.Authentication); err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, ErrLedgerModule)
+	}
+	tx, err := handler.database.BeginEncryptedTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	defer tx.Rollback()
+	repository, err := accounting.NewJournalRepository(tx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	asOf := fmt.Sprintf("%04d-%02d-%02d", request.Msg.AsOfDate.Year, request.Msg.AsOfDate.Month, request.Msg.AsOfDate.Day)
+	lines, debits, credits, revision, err := repository.TrialBalance(ctx, request.Msg.OrganisationId, asOf)
+	if err != nil || request.Msg.ExpectedFinancialRevision != nil &&
+		revision != request.Msg.GetExpectedFinancialRevision() || tx.Commit() != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, ErrLedgerModule)
+	}
+	return connect.NewResponse(&tammyv1.GetTrialBalanceResponse{
+		Lines: lines, TotalDebits: localAUDMoney(debits), TotalCredits: localAUDMoney(credits),
+		FinancialRevision: revision,
+	}), nil
+}
+
+func localAUDMoney(minor int64) *tammyv1.Money {
+	return &tammyv1.Money{CurrencyCode: "AUD", MinorUnits: minor}
 }
 
 func filterAccounts(accounts []*tammyv1.Account, request *tammyv1.ListAccountsRequest) []*tammyv1.Account {
@@ -359,6 +594,66 @@ type organisationCommandTransaction struct {
 	id           string
 }
 
+type accountingCommandTransaction struct {
+	*sqlcipher.Transaction
+	repositories accounting.CommandRepositories
+	id           string
+}
+
+func (transaction *accountingCommandTransaction) TransactionID() string { return transaction.id }
+func (transaction *accountingCommandTransaction) Repositories() accounting.CommandRepositories {
+	return transaction.repositories
+}
+func (transaction *accountingCommandTransaction) IdempotencyExecutor() idempotency.Executor {
+	return transaction.Transaction
+}
+func (transaction *accountingCommandTransaction) AuditExecutor() app.CommandSQLExecutor {
+	return transaction.Transaction
+}
+
+type accountingTransactionStarter struct{ activation app.LocalWorkspaceActivation }
+
+func (starter *accountingTransactionStarter) Begin(ctx context.Context) (app.OwnedCommandTransaction[accounting.CommandRepositories], error) {
+	if starter == nil || starter.activation.Database == nil {
+		return nil, ErrLedgerModule
+	}
+	tx, err := starter.activation.Database.BeginEncryptedTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	if err != nil {
+		return nil, err
+	}
+	fail := func(cause error) (app.OwnedCommandTransaction[accounting.CommandRepositories], error) {
+		_ = tx.Rollback()
+		return nil, cause
+	}
+	accounts, err := accounting.NewAccountRepository(tx)
+	if err != nil {
+		return fail(err)
+	}
+	journals, err := accounting.NewJournalRepository(tx)
+	if err != nil {
+		return fail(err)
+	}
+	rules, err := artefacts.NewRepository(tx)
+	if err != nil {
+		return fail(err)
+	}
+	identifier, err := starter.activation.NewID()
+	if err != nil {
+		return fail(err)
+	}
+	factor := &organisationFactor{identity: starter.activation.Identity, executor: tx}
+	return &accountingCommandTransaction{
+		Transaction: tx,
+		repositories: accounting.CommandRepositories{
+			Accounts: accounts,
+			Journals: journals,
+			TaxCodes: rules,
+			Factors:  factor,
+		},
+		id: identifier,
+	}, nil
+}
+
 func (transaction *organisationCommandTransaction) TransactionID() string { return transaction.id }
 func (transaction *organisationCommandTransaction) Repositories() organisations.CommandRepositories {
 	return transaction.repositories
@@ -436,6 +731,30 @@ func (authorizer organisationAuthorizer) Authorize(ctx context.Context, scope ap
 	return app.AuthorizedActor{WorkspaceID: authorizer.workspaceID, UserID: authentication.ActorUserId, SessionID: authentication.SessionId}, nil
 }
 
+type accountingAuthorizer struct{ workspaceID string }
+
+func (authorizer accountingAuthorizer) Authorize(
+	ctx context.Context,
+	scope app.CommandScope[accounting.CommandRepositories],
+	authentication *tammyv1.AuthenticationContext,
+	action authorisation.Action,
+) (app.AuthorizedActor, error) {
+	factor, ok := scope.Repositories().Factors.(*organisationFactor)
+	if !ok || factor == nil || authentication == nil ||
+		(action != authorisation.ActionManageAccounts && action != authorisation.ActionPostAccounting) {
+		return app.AuthorizedActor{}, ErrLedgerModule
+	}
+	if err := factor.identity.RequireAdministratorWithin(ctx, factor.executor, authentication); err != nil {
+		return app.AuthorizedActor{}, err
+	}
+	factor.authentication = proto.Clone(authentication).(*tammyv1.AuthenticationContext)
+	return app.AuthorizedActor{
+		WorkspaceID: authorizer.workspaceID,
+		UserID:      authentication.ActorUserId,
+		SessionID:   authentication.SessionId,
+	}, nil
+}
+
 type localCommandAuditor struct{}
 
 func (localCommandAuditor) Append(_ context.Context, _ app.CommandSQLExecutor, event *tammyv1.AuditEvent, payload []byte) error {
@@ -449,6 +768,30 @@ type localAuditFactory struct{ workspaceID string }
 
 func (factory localAuditFactory) Build(_ context.Context, operation app.OrdinaryOperation, authentication *tammyv1.AuthenticationContext,
 	operationKey, resourceID string, result proto.Message, payload *tammyv1.AuditEventPayload,
+) (app.CommandResult, error) {
+	return buildLocalAudit(factory.workspaceID, operation, authentication, operationKey, resourceID, result, payload)
+}
+
+type localAccountingAuditFactory struct{ workspaceID string }
+
+func (factory localAccountingAuditFactory) Build(
+	_ context.Context,
+	operation app.OrdinaryOperation,
+	authentication *tammyv1.AuthenticationContext,
+	operationKey, resourceID string,
+	result proto.Message,
+	payload proto.Message,
+) (app.CommandResult, error) {
+	return buildLocalAudit(factory.workspaceID, operation, authentication, operationKey, resourceID, result, payload)
+}
+
+func buildLocalAudit(
+	workspaceID string,
+	operation app.OrdinaryOperation,
+	authentication *tammyv1.AuthenticationContext,
+	operationKey, resourceID string,
+	result proto.Message,
+	payload proto.Message,
 ) (app.CommandResult, error) {
 	if authentication == nil || result == nil || payload == nil {
 		return app.CommandResult{}, ErrLedgerModule
@@ -465,7 +808,7 @@ func (factory localAuditFactory) Build(_ context.Context, operation app.Ordinary
 	return app.CommandResult{
 		Result: result, ResourceID: resourceID, AuditPayload: payloadBytes,
 		AuditEvent: &tammyv1.AuditEvent{
-			WorkspaceId: factory.workspaceID,
+			WorkspaceId: workspaceID,
 			Actor:       proto.Clone(authentication).(*tammyv1.AuthenticationContext),
 			CommandType: string(operation), IdempotencyKey: &operationKey,
 			Result: &tammyv1.AuditResultMetadata{

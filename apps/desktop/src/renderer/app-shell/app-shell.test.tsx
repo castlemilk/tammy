@@ -32,7 +32,22 @@ function installDesktopAPI() {
       createOrganisation: vi.fn(async () => {
         throw new Error("unavailable");
       }),
+      createAccount: vi.fn(async () => {
+        throw new Error("unavailable");
+      }),
       listAccounts: vi.fn(async () => {
+        throw new Error("unavailable");
+      }),
+      postManualJournal: vi.fn(async () => {
+        throw new Error("unavailable");
+      }),
+      listJournals: vi.fn(async () => {
+        throw new Error("unavailable");
+      }),
+      getJournal: vi.fn(async () => {
+        throw new Error("unavailable");
+      }),
+      getTrialBalance: vi.fn(async () => {
         throw new Error("unavailable");
       }),
       getAttentionSummary: vi.fn(async () => {
@@ -79,5 +94,5 @@ it("renders the walkthrough app shell", async () => {
 
   await user.click(within(navigation).getByRole("link", { name: "Journals" }));
   expect(screen.getByRole("heading", { level: 1, name: "Journals" })).toBeTruthy();
-  expect(screen.getByText("No journals yet")).toBeTruthy();
+  expect(await screen.findByText("Journals unavailable")).toBeTruthy();
 });

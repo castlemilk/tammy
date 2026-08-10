@@ -1,10 +1,30 @@
 import type {
+  CreateAccountRequest,
+  CreateAccountResponse,
+  GetJournalRequest,
+  GetJournalResponse,
+  GetTrialBalanceRequest,
+  GetTrialBalanceResponse,
   ListAccountsRequest,
   ListAccountsResponse,
+  ListJournalsRequest,
+  ListJournalsResponse,
+  PostManualJournalRequest,
+  PostManualJournalResponse,
 } from "@tammy/connect-client/tammy/v1/accounting_pb.js";
 import {
+  CreateAccountRequestSchema,
+  CreateAccountResponseSchema,
+  GetJournalRequestSchema,
+  GetJournalResponseSchema,
+  GetTrialBalanceRequestSchema,
+  GetTrialBalanceResponseSchema,
   ListAccountsRequestSchema,
   ListAccountsResponseSchema,
+  ListJournalsRequestSchema,
+  ListJournalsResponseSchema,
+  PostManualJournalRequestSchema,
+  PostManualJournalResponseSchema,
 } from "@tammy/connect-client/tammy/v1/accounting_pb.js";
 import type {
   GetAttentionSummaryRequest,
@@ -44,9 +64,14 @@ import {
 import {
   ATTENTION_SUMMARY_CHANNEL,
   CONFIRM_RECOVERY_CHANNEL,
+  CREATE_ACCOUNT_CHANNEL,
   CREATE_ORGANISATION_CHANNEL,
   CREATE_WORKSPACE_CHANNEL,
+  GET_JOURNAL_CHANNEL,
+  GET_TRIAL_BALANCE_CHANNEL,
   LIST_ACCOUNTS_CHANNEL,
+  LIST_JOURNALS_CHANNEL,
+  POST_MANUAL_JOURNAL_CHANNEL,
   SIGN_IN_CHANNEL,
   UNLOCK_WORKSPACE_CHANNEL,
 } from "../shared/desktop-api";
@@ -90,6 +115,36 @@ const listAccountsCodec = createProtoMethodCodec({
   maximumResponseBytes: 131_072,
   output: ListAccountsResponseSchema,
 });
+const createAccountCodec = createProtoMethodCodec({
+  input: CreateAccountRequestSchema,
+  maximumRequestBytes: 32_768,
+  maximumResponseBytes: 32_768,
+  output: CreateAccountResponseSchema,
+});
+const postManualJournalCodec = createProtoMethodCodec({
+  input: PostManualJournalRequestSchema,
+  maximumRequestBytes: 131_072,
+  maximumResponseBytes: 262_144,
+  output: PostManualJournalResponseSchema,
+});
+const listJournalsCodec = createProtoMethodCodec({
+  input: ListJournalsRequestSchema,
+  maximumRequestBytes: 16_384,
+  maximumResponseBytes: 262_144,
+  output: ListJournalsResponseSchema,
+});
+const getJournalCodec = createProtoMethodCodec({
+  input: GetJournalRequestSchema,
+  maximumRequestBytes: 8_192,
+  maximumResponseBytes: 262_144,
+  output: GetJournalResponseSchema,
+});
+const getTrialBalanceCodec = createProtoMethodCodec({
+  input: GetTrialBalanceRequestSchema,
+  maximumRequestBytes: 8_192,
+  maximumResponseBytes: 524_288,
+  output: GetTrialBalanceResponseSchema,
+});
 
 const attentionCodec = createProtoMethodCodec({
   input: GetAttentionSummaryRequestSchema,
@@ -111,7 +166,16 @@ export class DesktopRpcRouterError extends Error {
 }
 
 export interface DesktopRpcClient {
+  readonly createAccount: (request: CreateAccountRequest) => Promise<CreateAccountResponse>;
   readonly listAccounts: (request: ListAccountsRequest) => Promise<ListAccountsResponse>;
+  readonly postManualJournal: (
+    request: PostManualJournalRequest,
+  ) => Promise<PostManualJournalResponse>;
+  readonly listJournals: (request: ListJournalsRequest) => Promise<ListJournalsResponse>;
+  readonly getJournal: (request: GetJournalRequest) => Promise<GetJournalResponse>;
+  readonly getTrialBalance: (
+    request: GetTrialBalanceRequest,
+  ) => Promise<GetTrialBalanceResponse>;
   readonly createWorkspace: (request: CreateWorkspaceRequest) => Promise<CreateWorkspaceResponse>;
   readonly confirmRecovery: (request: ConfirmRecoveryRequest) => Promise<ConfirmRecoveryResponse>;
   readonly unlockWorkspace: (request: UnlockWorkspaceRequest) => Promise<UnlockWorkspaceResponse>;
@@ -154,6 +218,26 @@ export function createDesktopRpcRouter(client: DesktopRpcClient): Readonly<Deskt
           case LIST_ACCOUNTS_CHANNEL:
             return listAccountsCodec.encodeResponse(
               await client.listAccounts(listAccountsCodec.decodeRequest(request)),
+            );
+          case CREATE_ACCOUNT_CHANNEL:
+            return createAccountCodec.encodeResponse(
+              await client.createAccount(createAccountCodec.decodeRequest(request)),
+            );
+          case POST_MANUAL_JOURNAL_CHANNEL:
+            return postManualJournalCodec.encodeResponse(
+              await client.postManualJournal(postManualJournalCodec.decodeRequest(request)),
+            );
+          case LIST_JOURNALS_CHANNEL:
+            return listJournalsCodec.encodeResponse(
+              await client.listJournals(listJournalsCodec.decodeRequest(request)),
+            );
+          case GET_JOURNAL_CHANNEL:
+            return getJournalCodec.encodeResponse(
+              await client.getJournal(getJournalCodec.decodeRequest(request)),
+            );
+          case GET_TRIAL_BALANCE_CHANNEL:
+            return getTrialBalanceCodec.encodeResponse(
+              await client.getTrialBalance(getTrialBalanceCodec.decodeRequest(request)),
             );
           case ATTENTION_SUMMARY_CHANNEL:
             return attentionCodec.encodeResponse(

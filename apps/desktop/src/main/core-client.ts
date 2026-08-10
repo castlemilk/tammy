@@ -1,8 +1,18 @@
 import { ConnectError, createClient, type Interceptor, type Transport } from "@connectrpc/connect";
 import { type ConnectTransportOptions, createConnectTransport } from "@connectrpc/connect-node";
 import type {
+  CreateAccountRequest,
+  CreateAccountResponse,
+  GetJournalRequest,
+  GetJournalResponse,
+  GetTrialBalanceRequest,
+  GetTrialBalanceResponse,
   ListAccountsRequest,
   ListAccountsResponse,
+  ListJournalsRequest,
+  ListJournalsResponse,
+  PostManualJournalRequest,
+  PostManualJournalResponse,
 } from "@tammy/connect-client/tammy/v1/accounting_pb.js";
 import { AccountingService } from "@tammy/connect-client/tammy/v1/accounting_pb.js";
 import type {
@@ -38,7 +48,16 @@ const EXPECTED_API_VERSION = "tammy.v1";
 const CORE_VERSION_PATTERN = /^[\x20-\x7e]{1,128}$/;
 
 export interface CoreClient {
+  readonly createAccount: (request: CreateAccountRequest) => Promise<CreateAccountResponse>;
   readonly listAccounts: (request: ListAccountsRequest) => Promise<ListAccountsResponse>;
+  readonly postManualJournal: (
+    request: PostManualJournalRequest,
+  ) => Promise<PostManualJournalResponse>;
+  readonly listJournals: (request: ListJournalsRequest) => Promise<ListJournalsResponse>;
+  readonly getJournal: (request: GetJournalRequest) => Promise<GetJournalResponse>;
+  readonly getTrialBalance: (
+    request: GetTrialBalanceRequest,
+  ) => Promise<GetTrialBalanceResponse>;
   readonly createWorkspace: (request: CreateWorkspaceRequest) => Promise<CreateWorkspaceResponse>;
   readonly confirmRecovery: (request: ConfirmRecoveryRequest) => Promise<ConfirmRecoveryResponse>;
   readonly unlockWorkspace: (request: UnlockWorkspaceRequest) => Promise<UnlockWorkspaceResponse>;
@@ -109,8 +128,18 @@ export function createCoreClient(
   };
 
   return Object.freeze({
+    createAccount: (request: CreateAccountRequest) =>
+      coreRequest(() => accountingClient.createAccount(request)),
     listAccounts: (request: ListAccountsRequest) =>
       coreRequest(() => accountingClient.listAccounts(request)),
+    postManualJournal: (request: PostManualJournalRequest) =>
+      coreRequest(() => accountingClient.postManualJournal(request)),
+    listJournals: (request: ListJournalsRequest) =>
+      coreRequest(() => accountingClient.listJournals(request)),
+    getJournal: (request: GetJournalRequest) =>
+      coreRequest(() => accountingClient.getJournal(request)),
+    getTrialBalance: (request: GetTrialBalanceRequest) =>
+      coreRequest(() => accountingClient.getTrialBalance(request)),
     createWorkspace: (request: CreateWorkspaceRequest) =>
       coreRequest(() => workspaceClient.createWorkspace(request)),
     confirmRecovery: (request: ConfirmRecoveryRequest) =>

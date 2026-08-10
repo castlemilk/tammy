@@ -4,9 +4,14 @@ import type { SystemDiagnostics, TammyDesktopAPI } from "../shared/desktop-api";
 import {
   ATTENTION_SUMMARY_CHANNEL,
   CONFIRM_RECOVERY_CHANNEL,
+  CREATE_ACCOUNT_CHANNEL,
   CREATE_ORGANISATION_CHANNEL,
   CREATE_WORKSPACE_CHANNEL,
+  GET_JOURNAL_CHANNEL,
+  GET_TRIAL_BALANCE_CHANNEL,
   LIST_ACCOUNTS_CHANNEL,
+  LIST_JOURNALS_CHANNEL,
+  POST_MANUAL_JOURNAL_CHANNEL,
   SIGN_IN_CHANNEL,
   SYSTEM_DIAGNOSTICS_CHANNEL,
   UNLOCK_WORKSPACE_CHANNEL,
@@ -29,7 +34,12 @@ export function createTammyDesktopAPI(invoke: Invoke): TammyDesktopAPI {
     unlockWorkspace: binaryMethod(UNLOCK_WORKSPACE_CHANNEL),
     signIn: binaryMethod(SIGN_IN_CHANNEL),
     createOrganisation: binaryMethod(CREATE_ORGANISATION_CHANNEL),
+    createAccount: binaryMethod(CREATE_ACCOUNT_CHANNEL),
     listAccounts: binaryMethod(LIST_ACCOUNTS_CHANNEL),
+    postManualJournal: binaryMethod(POST_MANUAL_JOURNAL_CHANNEL),
+    listJournals: binaryMethod(LIST_JOURNALS_CHANNEL),
+    getJournal: binaryMethod(GET_JOURNAL_CHANNEL),
+    getTrialBalance: binaryMethod(GET_TRIAL_BALANCE_CHANNEL),
     getAttentionSummary: binaryMethod(ATTENTION_SUMMARY_CHANNEL),
   } satisfies TammyDesktopAPI;
   if (

@@ -140,4 +140,63 @@ func TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealSer
 			t.Fatalf("accounts not sorted by code: %q then %q", chart.Msg.Accounts[index-1].Code, chart.Msg.Accounts[index].Code)
 		}
 	}
+	createAccount := func(operationKey, code, name string, accountType tammyv1.AccountType, normal tammyv1.NormalBalance) *tammyv1.Account {
+		t.Helper()
+		request := connect.NewRequest(&tammyv1.CreateAccountRequest{
+			CommandContext: &tammyv1.CommandContext{IdempotencyKey: operationKey, Authentication: authentication},
+			OrganisationId: created.Msg.Organisation.Id,
+			Code:           code, Name: name, Type: accountType, NormalBalance: normal,
+			ReportClassification: "profit_loss.manual", CashFlowClassification: "noncash",
+		})
+		request.Header().Set(transport.CapabilityHeader, ready.Capability)
+		response, createErr := accountingClient.CreateAccount(context.Background(), request)
+		if createErr != nil || response.Msg.Account == nil {
+			t.Fatalf("CreateAccount(%q) = %#v, %v", code, response, createErr)
+		}
+		return response.Msg.Account
+	}
+	expense := createAccount("018f0000-0000-7000-8000-000000000103", "6100", "Office expenses",
+		tammyv1.AccountType_ACCOUNT_TYPE_EXPENSE, tammyv1.NormalBalance_NORMAL_BALANCE_DEBIT)
+	equity := createAccount("018f0000-0000-7000-8000-000000000104", "3100", "Owner contributions",
+		tammyv1.AccountType_ACCOUNT_TYPE_EQUITY, tammyv1.NormalBalance_NORMAL_BALANCE_CREDIT)
+	post := connect.NewRequest(&tammyv1.PostManualJournalRequest{
+		CommandContext: &tammyv1.CommandContext{IdempotencyKey: "018f0000-0000-7000-8000-000000000105", Authentication: authentication},
+		OrganisationId: created.Msg.Organisation.Id,
+		PostingDate:    &tammyv1.CivilDate{Year: 2026, Month: 8, Day: 10}, Memo: "Office supplies paid personally",
+		Lines: []*tammyv1.ManualJournalLineInput{
+			{ClientLineId: "018f0000-0000-7000-8000-000000000106", AccountId: expense.Id,
+				Debit: &tammyv1.Money{CurrencyCode: "AUD", MinorUnits: 31900}, Credit: &tammyv1.Money{CurrencyCode: "AUD"}, Description: "Office supplies"},
+			{ClientLineId: "018f0000-0000-7000-8000-000000000107", AccountId: equity.Id,
+				Debit: &tammyv1.Money{CurrencyCode: "AUD"}, Credit: &tammyv1.Money{CurrencyCode: "AUD", MinorUnits: 31900}, Description: "Owner contribution"},
+		},
+	})
+	post.Header().Set(transport.CapabilityHeader, ready.Capability)
+	posted, err := accountingClient.PostManualJournal(context.Background(), post)
+	if err != nil || posted.Msg.Journal == nil || posted.Msg.Journal.TotalDebits.MinorUnits != 31900 {
+		t.Fatalf("PostManualJournal() = %#v, %v", posted, err)
+	}
+	trialRequest := connect.NewRequest(&tammyv1.GetTrialBalanceRequest{
+		Authentication: authentication, OrganisationId: created.Msg.Organisation.Id,
+		AsOfDate: &tammyv1.CivilDate{Year: 2026, Month: 8, Day: 10},
+	})
+	trialRequest.Header().Set(transport.CapabilityHeader, ready.Capability)
+	trial, err := accountingClient.GetTrialBalance(context.Background(), trialRequest)
+	if err != nil || trial.Msg.TotalDebits.MinorUnits != 31900 || trial.Msg.TotalCredits.MinorUnits != 31900 || len(trial.Msg.Lines) != 2 {
+		t.Fatalf("GetTrialBalance() = %#v, %v", trial, err)
+	}
+	getJournal := connect.NewRequest(&tammyv1.GetJournalRequest{Authentication: authentication, JournalId: posted.Msg.Journal.Id})
+	getJournal.Header().Set(transport.CapabilityHeader, ready.Capability)
+	storedJournal, err := accountingClient.GetJournal(context.Background(), getJournal)
+	if err != nil || storedJournal.Msg.Journal == nil || storedJournal.Msg.Journal.Memo != post.Msg.Memo {
+		t.Fatalf("GetJournal() = %#v, %v", storedJournal, err)
+	}
+	listJournals := connect.NewRequest(&tammyv1.ListJournalsRequest{
+		Authentication: authentication, OrganisationId: created.Msg.Organisation.Id,
+		Page: &tammyv1.PageRequest{PageSize: 50},
+	})
+	listJournals.Header().Set(transport.CapabilityHeader, ready.Capability)
+	journalPage, err := accountingClient.ListJournals(context.Background(), listJournals)
+	if err != nil || len(journalPage.Msg.Journals) != 1 || journalPage.Msg.Journals[0].Id != posted.Msg.Journal.Id {
+		t.Fatalf("ListJournals() = %#v, %v", journalPage, err)
+	}
 }

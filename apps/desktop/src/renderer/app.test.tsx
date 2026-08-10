@@ -47,7 +47,22 @@ function installDesktopAPI(getSystemDiagnostics: TammyDesktopAPI["getSystemDiagn
       createOrganisation: vi.fn(async () => {
         throw new Error("unavailable");
       }),
+      createAccount: vi.fn(async () => {
+        throw new Error("unavailable");
+      }),
       listAccounts: vi.fn(async () => {
+        throw new Error("unavailable");
+      }),
+      postManualJournal: vi.fn(async () => {
+        throw new Error("unavailable");
+      }),
+      listJournals: vi.fn(async () => {
+        throw new Error("unavailable");
+      }),
+      getJournal: vi.fn(async () => {
+        throw new Error("unavailable");
+      }),
+      getTrialBalance: vi.fn(async () => {
         throw new Error("unavailable");
       }),
       getAttentionSummary: vi.fn(async () => {

@@ -238,6 +238,53 @@ func (repository *JournalRepository) Get(ctx context.Context, journalID string) 
 	return journal, nil
 }
 
+// List returns a bounded stable journal page in posting-date and ID order.
+func (repository *JournalRepository) List(
+	ctx context.Context,
+	organisationID, startDate, endDate string,
+	limit int,
+) ([]*tammyv1.Journal, error) {
+	if repository == nil || repository.executor == nil || ctx == nil || !ids.IsCanonicalV7(organisationID) ||
+		startDate != "" && !validDateString(startDate) || endDate != "" && !validDateString(endDate) ||
+		startDate != "" && endDate != "" && startDate > endDate || limit < 1 || limit > 200 {
+		return nil, ErrJournalRepository
+	}
+	rows, err := repository.executor.QueryContext(ctx, `
+		SELECT id FROM journals
+		WHERE organisation_id = ?
+		  AND (? = '' OR journal_date >= ?)
+		  AND (? = '' OR journal_date <= ?)
+		  AND state IN ('POSTED','REVERSED')
+		ORDER BY journal_date DESC, id DESC LIMIT ?`,
+		organisationID, startDate, startDate, endDate, endDate, limit)
+	if err != nil {
+		return nil, fmt.Errorf("%w: list journals: %v", ErrJournalRepository, err)
+	}
+	idsInOrder := make([]string, 0, limit)
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			_ = rows.Close()
+			return nil, ErrJournalRepository
+		}
+		idsInOrder = append(idsInOrder, id)
+	}
+	finishErr := rows.Err()
+	closeErr := rows.Close()
+	if finishErr != nil || closeErr != nil {
+		return nil, ErrJournalRepository
+	}
+	journals := make([]*tammyv1.Journal, 0, len(idsInOrder))
+	for _, id := range idsInOrder {
+		journal, err := repository.Get(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		journals = append(journals, journal)
+	}
+	return journals, nil
+}
+
 func (repository *JournalRepository) Reverse(ctx context.Context, journalID string, expectedVersion uint64,
 	date *tammyv1.CivilDate, reason, reversalID string, lineIDs []string, now time.Time,
 ) (*tammyv1.Journal, *tammyv1.Journal, error) {
