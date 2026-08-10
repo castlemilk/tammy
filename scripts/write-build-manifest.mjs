@@ -6,6 +6,8 @@ import path from "node:path";
 import {
   BUILD_MANIFEST_LOCKFILE_KEYS,
   BUILD_MANIFEST_VERSION_KEYS,
+  parseCanonicalBuildManifest,
+  validateBuildManifest,
 } from "./build-manifest-schema.mjs";
 import { hashStableFile, readStableFileBytes } from "./stable-file.mjs";
 
@@ -751,16 +753,86 @@ export async function collectBuildManifest({
   return createBuildManifest(manifestInput);
 }
 
+export async function rehashSignedBuildManifest({
+  root,
+  platform,
+  arch,
+  commandRunner = productionCommandRunner,
+  sourceEnvironment = process.env,
+}) {
+  if (!path.isAbsolute(root) || path.normalize(root) !== root) {
+    throw new Error("INVALID_PROJECT_ROOT");
+  }
+  const selected = selectTarget(platform, arch);
+  const physicalRoot = await realpath(root).catch(() => null);
+  if (physicalRoot !== root) throw new Error("INVALID_PROJECT_ROOT");
+  const commandOptions = {
+    cwd: physicalRoot,
+    encoding: "utf8",
+    env: sanitizeProvenanceEnvironment(sourceEnvironment),
+    shell: false,
+    windowsHide: true,
+  };
+  const repositoryRoot = (
+    await commandRunner("git", ["rev-parse", "--show-toplevel"], commandOptions)
+  ).trim();
+  const sourceRevision = (await commandRunner("git", ["rev-parse", "HEAD"], commandOptions)).trim();
+  const sourceStatus = await commandRunner(
+    "git",
+    ["status", "--porcelain", "--untracked-files=normal"],
+    commandOptions,
+  );
+  if (path.resolve(repositoryRoot) !== physicalRoot || sourceStatus !== "") {
+    throw new Error("SIGNED_MANIFEST_SOURCE_INVALID");
+  }
+  const buildRoot = path.join(root, "apps/desktop/resources/build");
+  const existing = parseCanonicalBuildManifest(
+    await readStableFileBytes(path.join(buildRoot, "build-manifest.json"), {
+      code: "SIGNED_MANIFEST_SOURCE_INVALID",
+      maxBytes: 1024 * 1024,
+    }),
+    selected.target,
+  );
+  if (existing.source_revision !== sourceRevision) {
+    throw new Error("SIGNED_MANIFEST_SOURCE_INVALID");
+  }
+  const manifest = {
+    ...existing,
+    core_sha256: await hashFile(
+      path.join(root, ...selected.binary.split("/")),
+      "CORE_BINARY_INVALID",
+    ),
+  };
+  validateBuildManifest(manifest, { expectedTarget: selected.target, requireClean: true });
+  const finalRevision = (await commandRunner("git", ["rev-parse", "HEAD"], commandOptions)).trim();
+  const finalStatus = await commandRunner(
+    "git",
+    ["status", "--porcelain", "--untracked-files=normal"],
+    commandOptions,
+  );
+  if (sourceRevision !== finalRevision || finalStatus !== sourceStatus) {
+    throw new Error("SOURCE_CHANGED_DURING_MANIFEST");
+  }
+  return manifest;
+}
+
 async function main() {
   const root = path.resolve(import.meta.dirname, "..");
-  const unexpected = process.argv.slice(2).filter((argument) => argument !== "--ci");
-  if (unexpected.length > 0) throw new Error("INVALID_MANIFEST_ARGUMENTS");
-  const manifest = await collectBuildManifest({
-    root,
-    platform: process.platform,
-    arch: process.arch,
-    ciMode: process.argv.includes("--ci") || selectCiMode(process.env),
-  });
+  const arguments_ = process.argv.slice(2);
+  if (
+    arguments_.some((argument) => !["--ci", "--rehash-core"].includes(argument)) ||
+    arguments_.length > 1
+  ) {
+    throw new Error("INVALID_MANIFEST_ARGUMENTS");
+  }
+  const manifest = arguments_.includes("--rehash-core")
+    ? await rehashSignedBuildManifest({ root, platform: process.platform, arch: process.arch })
+    : await collectBuildManifest({
+        root,
+        platform: process.platform,
+        arch: process.arch,
+        ciMode: arguments_.includes("--ci") || selectCiMode(process.env),
+      });
   const destination = await writeBuildManifest({
     buildRoot: path.join(root, "apps/desktop/resources/build"),
     manifest,

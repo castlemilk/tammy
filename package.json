@@ -9,6 +9,7 @@
   },
   "scripts": {
     "check:toolchain": "node scripts/check-toolchain.mjs",
+    "check:macos-store": "node scripts/check-macos-store.mjs",
     "compliance:foundation": "node scripts/check-foundation-evidence.mjs",
     "sqlcipher:vendor": "node scripts/vendor-sqlcipher.mjs",
     "sqlcipher:build": "node scripts/build-sqlcipher.mjs",
@@ -19,6 +20,7 @@
     "contracts": "pnpm proto:format:check && pnpm proto:lint && pnpm proto:breaking && pnpm proto:generate && node scripts/check-contracts.mjs",
     "contracts:production": "pnpm proto:format:check && pnpm proto:lint && pnpm proto:breaking && pnpm proto:generate && node scripts/check-contracts.mjs --require-production",
     "desktop:package": "pnpm core:build && pnpm build:manifest && pnpm --dir apps/desktop package && node --test apps/desktop/tests/e2e/package-signature.test.mjs && node apps/desktop/scripts/find-packaged-app.mjs --verify --source-manifest apps/desktop/resources/build/build-manifest.json",
+    "desktop:make:mas": "node scripts/package-macos-store.mjs",
     "desktop:start": "pnpm core:build && pnpm --dir apps/desktop start",
     "desktop:e2e": "pnpm desktop:package && pnpm --dir apps/desktop e2e",
     "test:proto-breaking": "node --test scripts/check-proto-breaking.test.mjs",

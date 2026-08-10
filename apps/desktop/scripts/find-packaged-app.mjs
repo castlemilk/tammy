@@ -25,6 +25,15 @@ const TARGETS = Object.freeze({
     resourceBase: "out/Tammy-darwin-arm64/Tammy.app/Contents/Resources",
     target: "darwin-arm64",
   }),
+  "mas/arm64": Object.freeze({
+    app: "out/Tammy-mas-arm64/Tammy.app/Contents/MacOS/Tammy",
+    asar: "out/Tammy-mas-arm64/Tammy.app/Contents/Resources/app.asar",
+    build: "out/Tammy-mas-arm64/Tammy.app/Contents/Resources/build",
+    core: "out/Tammy-mas-arm64/Tammy.app/Contents/Resources/core",
+    executable: "tammy-core",
+    resourceBase: "out/Tammy-mas-arm64/Tammy.app/Contents/Resources",
+    target: "darwin-arm64",
+  }),
   "win32/x64": Object.freeze({
     app: "out/Tammy-win32-x64/Tammy.exe",
     asar: "out/Tammy-win32-x64/resources/app.asar",
@@ -432,7 +441,7 @@ export async function verifyPackagedLayout({
   );
   await assertRegularFile(layout.sourceManifest, "SOURCE_BUILD_LAYOUT_INVALID");
   await assertRegularFile(layout.packagedManifest, "PACKAGED_BUILD_LAYOUT_INVALID");
-  if (platform === "darwin") {
+  if (platform === "darwin" || platform === "mas") {
     if ((appStats.mode & 0o111) === 0) throw new Error("PACKAGE_APP_NOT_EXECUTABLE");
     if ((sourceCoreStats.mode & 0o111) === 0) {
       throw new Error("SOURCE_CORE_NOT_EXECUTABLE");
@@ -485,12 +494,16 @@ export async function verifyPackagedLayout({
 }
 
 function parseArguments(argv) {
+  let platform;
   let sourceManifestPath;
   let verify = false;
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
     if (argument === "--verify") {
       verify = true;
+    } else if (argument === "--platform" && index + 1 < argv.length) {
+      platform = argv[index + 1];
+      index += 1;
     } else if (argument === "--source-manifest" && index + 1 < argv.length) {
       sourceManifestPath = path.resolve(argv[index + 1]);
       index += 1;
@@ -499,15 +512,15 @@ function parseArguments(argv) {
     }
   }
   if (!verify || !sourceManifestPath) throw new Error("INVALID_PACKAGE_ARGUMENTS");
-  return sourceManifestPath;
+  return { platform, sourceManifestPath };
 }
 
 async function main() {
   const desktopRoot = path.resolve(import.meta.dirname, "..");
-  const sourceManifestPath = parseArguments(process.argv.slice(2));
+  const { platform, sourceManifestPath } = parseArguments(process.argv.slice(2));
   const result = await verifyPackagedLayout({
     desktopRoot,
-    platform: process.platform,
+    platform: platform ?? process.platform,
     arch: process.arch,
     sourceManifestPath,
   });

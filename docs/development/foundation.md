@@ -23,7 +23,7 @@ Start the development application:
 rtk mise exec -- pnpm desktop:start
 ```
 
-Build an unsigned local package:
+Build an ad-hoc signed local macOS package:
 
 ```sh
 rtk mise exec -- pnpm desktop:package
@@ -35,7 +35,13 @@ Exercise the packaged lifecycle:
 rtk mise exec -- pnpm desktop:e2e
 ```
 
-These are development commands. They do not sign, notarise, upload, or obtain App Store/ATO approval.
+Check the repository-owned Mac App Store inputs:
+
+```sh
+rtk mise exec -- pnpm check:macos-store
+```
+
+The ordinary start/package/E2E commands are development commands. They do not sign, upload, or obtain App Store/ATO approval. The store checker is also local evidence only; Apple signing and submission follow the [macOS App Store runbook](../release/macos-app-store.md).
 
 ## Development workspace
 
@@ -114,5 +120,4 @@ The SQLCipher-tagged suite requires the supported cgo/platform toolchain and can
 - [Application documentation and macOS release design](../superpowers/specs/2026-08-10-application-documentation-macos-release-design.md)
 - [Accounting walkthrough UI design](../superpowers/specs/2026-08-09-accounting-tax-walkthrough-ui-design.md)
 - [Current documentation/release plan](../superpowers/plans/2026-08-10-application-documentation-macos-release.md)
-
-The macOS App Store runbook is intentionally not linked until its packaging pass creates and verifies it.
+- [macOS App Store release runbook](../release/macos-app-store.md)

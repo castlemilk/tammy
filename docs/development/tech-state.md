@@ -15,7 +15,7 @@ This page is the source of truth for what the application exposes today. Design 
 | GST and BAS | Reviewed source documents feed a local non-cash GST workpaper showing G1, 1A, 1B, and net GST. | Status is always **Draft — not lodged**. There is no declaration, ATO/SBR preparation, submission, or transport. |
 | Overview and activity | Overview attention counts and a consolidated chronological activity screen read journals, banking lines, documents, and the current BAS draft. | The activity screen is a product projection, not a replacement for audit-chain export and verification evidence. |
 | Backup, restore, and audit core | Encrypted backup/restore, authenticated recovery journals, audit-chain, and evidence-export components exist in the Go core and tests. | Their complete desktop workflows are not connected in this vertical slice. Do not infer UI availability from generated routes. |
-| Packaging | Electron Forge development start, unsigned package, and packaged E2E commands exist. | Code signing, notarisation, Mac App Store sandbox validation, upload, and review are not yet performed. |
+| Packaging | Electron Forge development start, ad-hoc signed local macOS package, and packaged E2E commands exist. A separate fail-closed Mac App Store profile now owns the bundle ID, icon, sandbox entitlements, privacy manifest, signing inputs, build number, repository check, and package orchestration. | Apple certificates/profiles, signed-build sandbox and privacy inspection, App Store Connect metadata, upload, and review are operator gates and have not been performed. |
 
 ## Architecture now
 
@@ -31,11 +31,11 @@ This page is the source of truth for what the application exposes today. Design 
 
 That reset prevents a stale development anchor from blocking restart. It also means development restart is not rate-limit durability evidence. Packaged mode uses `local-core` and does not request the development reset. Never copy this behavior into a production profile.
 
-Local packages are unsigned development artifacts. The current supported local evidence target is macOS arm64; hosted and external-platform claims require their own observed evidence.
+Local macOS packages are ad-hoc signed development artifacts. The current supported local evidence target is macOS arm64; hosted and external-platform claims require their own observed evidence.
 
 ## Deferred and external boundaries
 
-Deferred repository work includes connecting the placeholder accounting/Settings routes, exposing the complete backup/restore and audit-evidence workflows, completing production packaging inputs, and performing the remaining release validation described by the active plans.
+Deferred repository work includes connecting the placeholder accounting/Settings routes and exposing the complete backup/restore and audit-evidence workflows. The repository-owned Mac App Store inputs and checks exist; the signed-build and external validation gates are listed in the [macOS App Store runbook](../release/macos-app-store.md).
 
 External work includes Apple Developer/App Store Connect identity and approval, legal/support/privacy metadata, signing certificates and provisioning, ATO/SBR conformance, production credentials, and submission authorization. No local command creates that evidence.
 
@@ -46,5 +46,4 @@ External work includes Apple Developer/App Store Connect identity and approval, 
 - [Accounting walkthrough UI design](../superpowers/specs/2026-08-09-accounting-tax-walkthrough-ui-design.md)
 - [Application documentation and macOS release design](../superpowers/specs/2026-08-10-application-documentation-macos-release-design.md)
 - [Current application documentation/release plan](../superpowers/plans/2026-08-10-application-documentation-macos-release.md)
-
-The future `docs/release/macos-app-store.md` is intentionally omitted until the packaging pass creates and verifies it.
+- [macOS App Store release runbook](../release/macos-app-store.md)

@@ -1,6 +1,12 @@
 import { create } from "@bufbuild/protobuf";
-import { ApprovedFileRefSchema, SecretInputSchema } from "@tammy/connect-client/tammy/v1/common_pb.js";
-import { SignInRequestSchema, SignInResponseSchema } from "@tammy/connect-client/tammy/v1/identity_pb.js";
+import {
+  ApprovedFileRefSchema,
+  SecretInputSchema,
+} from "@tammy/connect-client/tammy/v1/common_pb.js";
+import {
+  SignInRequestSchema,
+  SignInResponseSchema,
+} from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import {
   UnlockWorkspaceRequestSchema,
   UnlockWorkspaceResponseSchema,
@@ -30,6 +36,7 @@ const signInCodec = createProtoMethodCodec({
 interface UnlockScreenProps {
   readonly api: Pick<TammyDesktopAPI, "signIn" | "unlockWorkspace">;
   readonly onAuthenticated: (workspace: AuthenticatedWorkspace) => void;
+  readonly onPrivacy?: () => void;
   readonly organisationId?: string;
 }
 
@@ -37,7 +44,12 @@ function fieldClassName(): string {
   return "focus-ring h-9 w-full rounded-[6px] border border-border bg-surface px-3 text-[12px] text-foreground outline-none placeholder:text-muted-foreground";
 }
 
-export function UnlockScreen({ api, onAuthenticated, organisationId }: UnlockScreenProps) {
+export function UnlockScreen({
+  api,
+  onAuthenticated,
+  onPrivacy,
+  organisationId,
+}: UnlockScreenProps) {
   const [workspacePassphrase, setWorkspacePassphrase] = useState("");
   const [username, setUsername] = useState("");
   const [administratorPassword, setAdministratorPassword] = useState("");
@@ -112,22 +124,57 @@ export function UnlockScreen({ api, onAuthenticated, organisationId }: UnlockScr
         <form className="grid gap-4" onSubmit={unlockAndSignIn}>
           <label className="grid gap-1.5 text-[11px] font-medium text-foreground">
             Workspace passphrase
-            <input autoComplete="current-password" className={fieldClassName()} minLength={16} onChange={(event) => setWorkspacePassphrase(event.target.value)} required type="password" value={workspacePassphrase} />
+            <input
+              autoComplete="current-password"
+              className={fieldClassName()}
+              minLength={16}
+              onChange={(event) => setWorkspacePassphrase(event.target.value)}
+              required
+              type="password"
+              value={workspacePassphrase}
+            />
           </label>
           <label className="grid gap-1.5 text-[11px] font-medium text-foreground">
             Email or username
-            <input autoComplete="username" className={fieldClassName()} onChange={(event) => setUsername(event.target.value)} required value={username} />
+            <input
+              autoComplete="username"
+              className={fieldClassName()}
+              onChange={(event) => setUsername(event.target.value)}
+              required
+              value={username}
+            />
           </label>
           <label className="grid gap-1.5 text-[11px] font-medium text-foreground">
             Administrator password
-            <input autoComplete="current-password" className={fieldClassName()} minLength={16} onChange={(event) => setAdministratorPassword(event.target.value)} required type="password" value={administratorPassword} />
+            <input
+              autoComplete="current-password"
+              className={fieldClassName()}
+              minLength={16}
+              onChange={(event) => setAdministratorPassword(event.target.value)}
+              required
+              type="password"
+              value={administratorPassword}
+            />
           </label>
           <Button className="mt-1 h-9 w-full text-[11px]" disabled={busy} type="submit">
             {busy ? <LoaderCircle aria-hidden="true" className="size-3.5 animate-spin" /> : null}
             Unlock workspace
           </Button>
         </form>
-        {error ? <p className="mt-4 text-[11px] text-destructive" role="alert">{error}</p> : null}
+        {error ? (
+          <p className="mt-4 text-[11px] text-destructive" role="alert">
+            {error}
+          </p>
+        ) : null}
+        {onPrivacy ? (
+          <button
+            className="focus-ring mt-4 text-[10px] font-medium text-forest underline"
+            onClick={onPrivacy}
+            type="button"
+          >
+            Privacy and support
+          </button>
+        ) : null}
       </section>
     </main>
   );

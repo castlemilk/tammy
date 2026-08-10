@@ -7,14 +7,15 @@ import { Button } from "./components/ui/button";
 import { ChartScreen } from "./features/accounting/chart-screen";
 import { JournalsScreen } from "./features/accounting/journals-screen";
 import { TrialBalanceScreen } from "./features/accounting/trial-balance-screen";
-import { DiagnosticsCard, type DiagnosticsState } from "./features/diagnostics/diagnostics-card";
-import { EmptyLedgerScreen } from "./features/ledger/empty-ledger-screen";
-import { DocumentsScreen } from "./features/documents/documents-screen";
+import { AuditScreen } from "./features/audit/audit-screen";
 import { BankingScreen } from "./features/banking/banking-screen";
 import { BasScreen } from "./features/bas/bas-screen";
-import { AuditScreen } from "./features/audit/audit-screen";
+import { DiagnosticsCard, type DiagnosticsState } from "./features/diagnostics/diagnostics-card";
+import { DocumentsScreen } from "./features/documents/documents-screen";
+import { EmptyLedgerScreen } from "./features/ledger/empty-ledger-screen";
 import { OverviewScreen } from "./features/overview/overview-screen";
-import { SetupScreen, type AuthenticatedWorkspace } from "./features/setup/setup-screen";
+import { PrivacyScreen, PrivacyStatement } from "./features/privacy/privacy-statement";
+import { type AuthenticatedWorkspace, SetupScreen } from "./features/setup/setup-screen";
 import { UnlockScreen } from "./features/workspace/unlock-screen";
 
 const WORKSPACE_ID_STORAGE = "tammy.workspace.id";
@@ -26,8 +27,14 @@ function storedAuthenticatedWorkspace(): AuthenticatedWorkspace | undefined {
   if (!retained) return undefined;
   try {
     const parsed = JSON.parse(retained) as Partial<AuthenticatedWorkspace>;
-    if (typeof parsed.workspaceId === "string" && typeof parsed.userId === "string" &&
-      typeof parsed.sessionId === "string" && parsed.workspaceId && parsed.userId && parsed.sessionId) {
+    if (
+      typeof parsed.workspaceId === "string" &&
+      typeof parsed.userId === "string" &&
+      typeof parsed.sessionId === "string" &&
+      parsed.workspaceId &&
+      parsed.userId &&
+      parsed.sessionId
+    ) {
       return {
         workspaceId: parsed.workspaceId,
         userId: parsed.userId,
@@ -57,9 +64,11 @@ function currentLocation(): string {
 export function App() {
   const [diagnosticsState, setDiagnosticsState] = useState<DiagnosticsState>({ status: "loading" });
   const [access, setAccess] = useState<WorkspaceAccess>(initialAccess);
-  const [workspace, setWorkspace] = useState<AuthenticatedWorkspace | undefined>(storedAuthenticatedWorkspace);
-  const [activePath, setActivePath] = useState(() =>
-    resolveAppLocation(currentLocation(), initialAccess()).path,
+  const [workspace, setWorkspace] = useState<AuthenticatedWorkspace | undefined>(
+    storedAuthenticatedWorkspace,
+  );
+  const [activePath, setActivePath] = useState(
+    () => resolveAppLocation(currentLocation(), initialAccess()).path,
   );
   const requestSequence = useRef(0);
 
@@ -69,7 +78,8 @@ export function App() {
     setDiagnosticsState({ status: "loading" });
     try {
       const diagnostics = await window.tammy.getSystemDiagnostics();
-      if (requestSequence.current === request) setDiagnosticsState({ diagnostics, status: "ready" });
+      if (requestSequence.current === request)
+        setDiagnosticsState({ diagnostics, status: "ready" });
     } catch {
       if (requestSequence.current === request) setDiagnosticsState({ status: "unavailable" });
     }
@@ -88,11 +98,14 @@ export function App() {
     return () => window.removeEventListener("popstate", restore);
   }, [access]);
 
-  const navigate = useCallback((path: string) => {
-    const resolved = resolveAppLocation(path, access);
-    window.history.pushState(null, "", resolved.path);
-    setActivePath(resolved.path);
-  }, [access]);
+  const navigate = useCallback(
+    (path: string) => {
+      const resolved = resolveAppLocation(path, access);
+      window.history.pushState(null, "", resolved.path);
+      setActivePath(resolved.path);
+    },
+    [access],
+  );
 
   const authenticated = useCallback((workspace: AuthenticatedWorkspace) => {
     window.localStorage.setItem(WORKSPACE_ID_STORAGE, workspace.workspaceId);
@@ -106,8 +119,18 @@ export function App() {
     setActivePath("/overview");
   }, []);
 
+  if (activePath === "/privacy") {
+    return <PrivacyScreen onBack={() => navigate("/overview")} />;
+  }
+
   if (access === "unconfigured") {
-    return <SetupScreen api={window.tammy} onAuthenticated={authenticated} />;
+    return (
+      <SetupScreen
+        api={window.tammy}
+        onAuthenticated={authenticated}
+        onPrivacy={() => navigate("/privacy")}
+      />
+    );
   }
 
   if (access === "locked") {
@@ -116,6 +139,7 @@ export function App() {
       <UnlockScreen
         api={window.tammy}
         onAuthenticated={authenticated}
+        onPrivacy={() => navigate("/privacy")}
         {...(organisationId ? { organisationId } : {})}
       />
     );
@@ -124,22 +148,42 @@ export function App() {
   return (
     <AppShell activePath={activePath} onNavigate={navigate}>
       <EngineStatus onRetry={loadDiagnostics} state={diagnosticsState} />
-      <RouteContent onNavigate={navigate} path={activePath} state={diagnosticsState} workspace={workspace} />
+      <RouteContent
+        onNavigate={navigate}
+        path={activePath}
+        state={diagnosticsState}
+        workspace={workspace}
+      />
     </AppShell>
   );
 }
 
-function EngineStatus({ onRetry, state }: { readonly onRetry: () => void; readonly state: DiagnosticsState }) {
+function EngineStatus({
+  onRetry,
+  state,
+}: {
+  readonly onRetry: () => void;
+  readonly state: DiagnosticsState;
+}) {
   if (state.status === "ready") {
     return (
-      <p aria-live="polite" className="sr-only" data-startup-transition="starting-to-ready" role="status">
+      <p
+        aria-live="polite"
+        className="sr-only"
+        data-startup-transition="starting-to-ready"
+        role="status"
+      >
         Local engine ready. Offline. No cloud required.
       </p>
     );
   }
   if (state.status === "loading") {
     return (
-      <div aria-live="polite" className="mb-4 flex items-center gap-2 text-[10px] text-muted-foreground" role="status">
+      <div
+        aria-live="polite"
+        className="mb-4 flex items-center gap-2 text-[10px] text-muted-foreground"
+        role="status"
+      >
         <LoaderCircle aria-hidden="true" className="size-3 animate-spin" />
         Starting local engine
       </div>
@@ -163,7 +207,17 @@ function EngineStatus({ onRetry, state }: { readonly onRetry: () => void; readon
   );
 }
 
-function RouteContent({ onNavigate, path, state, workspace }: { readonly onNavigate: (path: string) => void; readonly path: string; readonly state: DiagnosticsState; readonly workspace: AuthenticatedWorkspace | undefined }) {
+function RouteContent({
+  onNavigate,
+  path,
+  state,
+  workspace,
+}: {
+  readonly onNavigate: (path: string) => void;
+  readonly path: string;
+  readonly state: DiagnosticsState;
+  readonly workspace: AuthenticatedWorkspace | undefined;
+}) {
   if (path === "/overview") return <OverviewScreen api={window.tammy} workspace={workspace} />;
   if (path === "/documents") return <DocumentsScreen api={window.tammy} workspace={workspace} />;
   if (path === "/banking") return <BankingScreen api={window.tammy} workspace={workspace} />;
@@ -172,10 +226,23 @@ function RouteContent({ onNavigate, path, state, workspace }: { readonly onNavig
     return <ChartScreen api={window.tammy} workspace={workspace} />;
   }
   if (path.startsWith("/accounting/journals")) {
-    return <JournalsScreen api={window.tammy} onNavigate={onNavigate} path={path} workspace={workspace} />;
+    return (
+      <JournalsScreen
+        api={window.tammy}
+        onNavigate={onNavigate}
+        path={path}
+        workspace={workspace}
+      />
+    );
   }
   if (path === "/accounting/general-ledger") {
-    return <EmptyLedgerScreen description="Account movements with retained source links." emptyLabel="No ledger movements yet" title="General ledger" />;
+    return (
+      <EmptyLedgerScreen
+        description="Account movements with retained source links."
+        emptyLabel="No ledger movements yet"
+        title="General ledger"
+      />
+    );
   }
   if (path === "/accounting/trial-balance") {
     return <TrialBalanceScreen api={window.tammy} workspace={workspace} />;
@@ -188,11 +255,20 @@ function RouteContent({ onNavigate, path, state, workspace }: { readonly onNavig
       <div className="mx-auto grid w-full max-w-[920px] gap-5">
         <div>
           <h1 className="text-[18px] font-semibold tracking-[-0.02em] text-foreground">Settings</h1>
-          <p className="mt-1 text-[11px] leading-5 text-muted-foreground">Local workspace and system information.</p>
+          <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
+            Local workspace and system information.
+          </p>
         </div>
         <DiagnosticsCard onRetry={() => undefined} state={state} />
+        <PrivacyStatement />
       </div>
     );
   }
-  return <EmptyLedgerScreen description="This workspace screen is not yet connected." emptyLabel="Workspace action unavailable" title="Workspace" />;
+  return (
+    <EmptyLedgerScreen
+      description="This workspace screen is not yet connected."
+      emptyLabel="Workspace action unavailable"
+      title="Workspace"
+    />
+  );
 }

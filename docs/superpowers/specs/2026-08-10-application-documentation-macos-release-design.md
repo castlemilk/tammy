@@ -61,7 +61,7 @@ Development and store profiles must not silently select one another. A normal de
 
 ## Sandbox and child process design
 
-The Go core is an embedded executable, not a separately downloadable component. The store profile removes the development-only core signing exclusion and signs the application, Electron helpers, frameworks, dynamic libraries, and core consistently with the application's sandbox. The main app has the sandbox, network-client, and user-selected-read entitlements. Ordinary helpers inherit the sandbox. The core inherits the sandbox and adds network-server access. Signing supplies and later verifies the exact `ElectronTeamID`, embedded provisioning profile, helper identifiers, and application-group identity required by Electron.
+The Go core is an embedded executable, not a separately downloadable component. The store command authenticates SQLCipher while the freshly built core can still run standalone, signs and verifies the core, re-hashes those signed bytes without executing the inherited child outside its sandbox parent, excludes the manifest-bound core from a second signing pass, and then signs the outer application, Electron helpers, frameworks, and dynamic libraries. The main app has the sandbox, network-client/server, and user-selected-read entitlements. Ordinary helpers and the core are signed with exactly sandbox inheritance, so the core inherits the parent's server permission. Signing supplies and later verifies the exact `ElectronTeamID`, embedded provisioning profile, helper identifiers, and application-group identity required by Electron.
 
 Apple's network entitlements are not loopback-scoped, so they enable client access for Electron and server access for the core while Tammy's existing transport validation continues to constrain product behavior to the authenticated loopback channel. User-selected import locations use Apple's user-selection permission; Tammy's internal encrypted workspace remains in its application container. The current shipped UI does not persist an external export destination. Any future restart-resumable export feature must use application-scoped security-scoped bookmarks with stale-bookmark refresh and restart tests before it can be enabled in the store build.
 
@@ -69,7 +69,7 @@ The existing exact-path core supervision, build-manifest authentication, SQLCiph
 
 ## Privacy and store metadata
 
-The repository will include a minimal privacy manifest that declares no tracking and no collected data only to the extent supported by the current offline implementation. It will also declare the approved reasons for required-reason APIs Tammy directly uses to manage files in its container or files the user selected. An Xcode privacy report remains a final signed-build gate because bundled Electron and native code must be assessed as shipped. Any future telemetry, third-party SDK, networking, or data collection change must update the manifest and App Store privacy answers together. The app will expose its privacy statement in-app, while the final public privacy-policy URL remains an App Store Connect submission prerequisite.
+The repository will include a minimal privacy manifest that declares no tracking and no collected data only to the extent supported by the current offline implementation. It will also declare the approved reasons for required-reason APIs Tammy directly uses to manage files in its container or files the user selected. An Xcode privacy report remains a final signed-build gate because bundled Electron and native code must be assessed as shipped. Any future telemetry, third-party SDK, networking, or data collection change must update the manifest and App Store privacy answers together. The app exposes its privacy statement on a route available before sign-in. Store builds require exact HTTPS privacy and support URLs, render them in-app, and allow only those two URLs to open in the external browser.
 
 The repository will also provide a concise store-metadata template covering name, subtitle, description, keywords, category, privacy URL, support URL, copyright, review notes, and screenshots. Fields requiring legal or business decisions remain visibly incomplete and block the final submission checklist.
 
@@ -94,10 +94,10 @@ Implementation validation is proportionate and layered:
 
 1. unit tests for release-profile selection and the readiness checker;
 2. desktop typecheck and relevant Electron tests;
-3. a normal unsigned package plus the existing packaged end-to-end flow where practical;
+3. a normal ad-hoc signed macOS package plus the existing packaged end-to-end flow where practical;
 4. a static MAS-layout inspection without claiming sandbox runtime evidence;
 5. an Apple Development-signed MAS launch test on a provisioned Mac;
-6. an Apple Distribution-signed `mas` app, followed by a Mac Installer Distribution-signed `.pkg` produced with MakerPKG/`productbuild`;
+6. an Apple Distribution-signed `mas` app, followed by a Mac Installer Distribution-signed `.pkg` produced with `/usr/bin/productbuild`;
 7. operator-only `codesign`/`pkgutil`/`spctl` validation, Transporter upload, App Store processing, and TestFlight/App Review smoke tests.
 
 No documentation or local checker may report the app as submitted or approved. The final handoff will state exactly which repository checks pass and which Apple-controlled gates remain.
@@ -108,7 +108,7 @@ The following cannot be truthfully completed from the repository alone:
 
 - active Apple Developer Program membership and App Store Connect access;
 - registered bundle identifier matching the release configuration;
-- Apple Development and Apple Distribution certificates, plus Mac Installer Distribution when producing the upload `.pkg` (older documentation may use the legacy “Mac App Distribution” name);
+- Apple Development and Apple Distribution certificates, plus Mac Installer Distribution when producing the upload `.pkg` (older keychains may use the legacy “3rd Party Mac Developer Installer” name);
 - App Store provisioning profile and the associated Team ID;
 - a unique positive decimal build number greater than the latest App Store Connect upload;
 - final legal entity, copyright, pricing, tax/banking, support URL, privacy URL, and privacy questionnaire answers;

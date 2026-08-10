@@ -5,6 +5,12 @@ import { resolveAppLocation } from "./router";
 const journalID = "018f2f2a-7c1d-7a62-8d11-216b8d6ea4cb";
 
 describe("guarded walkthrough routes", () => {
+  it("keeps the privacy route available at every workspace access level", () => {
+    for (const access of ["unconfigured", "locked", "signed-out", "authenticated"] as const) {
+      expect(resolveAppLocation("/privacy", access)).toEqual({ path: "/privacy" });
+    }
+  });
+
   it("sends a locked business route to unlock and retains the safe return route", () => {
     expect(resolveAppLocation("/accounting/trial-balance", "locked")).toEqual({
       path: "/unlock",

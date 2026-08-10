@@ -6,7 +6,10 @@ import {
   SecretInputSchema,
   SourceRefSchema,
 } from "@tammy/connect-client/tammy/v1/common_pb.js";
-import { SignInRequestSchema, SignInResponseSchema } from "@tammy/connect-client/tammy/v1/identity_pb.js";
+import {
+  SignInRequestSchema,
+  SignInResponseSchema,
+} from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import {
   CreateOrganisationRequestSchema,
   CreateOrganisationResponseSchema,
@@ -60,8 +63,12 @@ export interface AuthenticatedWorkspace {
 }
 
 interface SetupScreenProps {
-  readonly api: Pick<TammyDesktopAPI, "confirmRecovery" | "createOrganisation" | "createWorkspace" | "signIn">;
+  readonly api: Pick<
+    TammyDesktopAPI,
+    "confirmRecovery" | "createOrganisation" | "createWorkspace" | "signIn"
+  >;
   readonly onAuthenticated: (workspace: AuthenticatedWorkspace) => void;
+  readonly onPrivacy?: () => void;
 }
 
 interface PendingSetup {
@@ -92,7 +99,7 @@ function fieldClassName(): string {
   return "focus-ring h-9 w-full rounded-[6px] border border-border bg-surface px-3 text-[12px] text-foreground outline-none placeholder:text-muted-foreground";
 }
 
-export function SetupScreen({ api, onAuthenticated }: SetupScreenProps) {
+export function SetupScreen({ api, onAuthenticated, onPrivacy }: SetupScreenProps) {
   const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
   const [businessLegalName, setBusinessLegalName] = useState("");
@@ -125,7 +132,8 @@ export function SetupScreen({ api, onAuthenticated }: SetupScreenProps) {
       const response = createCodec.decodeResponse(
         await api.createWorkspace(createCodec.encodeRequest(request)),
       );
-      if (!response.workspace || !response.recoverySecret?.utf8.byteLength) throw new Error("invalid");
+      if (!response.workspace || !response.recoverySecret?.utf8.byteLength)
+        throw new Error("invalid");
       setPending({
         administratorPassword,
         abn,
@@ -148,7 +156,10 @@ export function SetupScreen({ api, onAuthenticated }: SetupScreenProps) {
     setBusy(true);
     setError(undefined);
     try {
-      const groups = pending.recoveryCode.replaceAll("-", "").toUpperCase().match(/.{1,4}/g);
+      const groups = pending.recoveryCode
+        .replaceAll("-", "")
+        .toUpperCase()
+        .match(/.{1,4}/g);
       if (!groups || groups.length < 2) throw new Error("invalid recovery code");
       const confirmation = create(ConfirmRecoveryRequestSchema, {
         setupId: pending.setupId,
@@ -169,7 +180,9 @@ export function SetupScreen({ api, onAuthenticated }: SetupScreenProps) {
           utf8: new TextEncoder().encode(pending.administratorPassword),
         }),
       });
-      const authenticated = signInCodec.decodeResponse(await api.signIn(signInCodec.encodeRequest(signIn)));
+      const authenticated = signInCodec.decodeResponse(
+        await api.signIn(signInCodec.encodeRequest(signIn)),
+      );
       if (!authenticated.user || !authenticated.session) throw new Error("invalid session");
       const authentication = create(AuthenticationContextSchema, {
         actorUserId: authenticated.user.id,
@@ -239,42 +252,98 @@ export function SetupScreen({ api, onAuthenticated }: SetupScreenProps) {
               <p className="mb-2 flex items-center gap-2 text-[11px] font-semibold text-forest">
                 <CheckCircle2 aria-hidden="true" className="size-4" /> One-time recovery code
               </p>
-              <p className="break-all font-mono text-[13px] leading-6 text-foreground">{pending.recoveryCode}</p>
+              <p className="break-all font-mono text-[13px] leading-6 text-foreground">
+                {pending.recoveryCode}
+              </p>
             </div>
-            <Button className="h-9 w-full text-[11px]" disabled={busy} onClick={confirmAndSignIn} type="button">
-              {busy ? <LoaderCircle aria-hidden="true" className="size-3.5 animate-spin" /> : null}
-              I saved my recovery code
+            <Button
+              className="h-9 w-full text-[11px]"
+              disabled={busy}
+              onClick={confirmAndSignIn}
+              type="button"
+            >
+              {busy ? <LoaderCircle aria-hidden="true" className="size-3.5 animate-spin" /> : null}I
+              saved my recovery code
             </Button>
           </div>
         ) : (
           <form className="grid gap-4" onSubmit={createWorkspace}>
             <label className="grid gap-1.5 text-[11px] font-medium text-foreground">
               Your name
-              <input autoComplete="name" className={fieldClassName()} onChange={(event) => setDisplayName(event.target.value)} required value={displayName} />
+              <input
+                autoComplete="name"
+                className={fieldClassName()}
+                onChange={(event) => setDisplayName(event.target.value)}
+                required
+                value={displayName}
+              />
             </label>
             <label className="grid gap-1.5 text-[11px] font-medium text-foreground">
               Email or username
-              <input autoComplete="username" className={fieldClassName()} onChange={(event) => setUsername(event.target.value)} required value={username} />
+              <input
+                autoComplete="username"
+                className={fieldClassName()}
+                onChange={(event) => setUsername(event.target.value)}
+                required
+                value={username}
+              />
             </label>
             <label className="grid gap-1.5 text-[11px] font-medium text-foreground">
               Business legal name
-              <input className={fieldClassName()} maxLength={256} onChange={(event) => setBusinessLegalName(event.target.value)} required value={businessLegalName} />
+              <input
+                className={fieldClassName()}
+                maxLength={256}
+                onChange={(event) => setBusinessLegalName(event.target.value)}
+                required
+                value={businessLegalName}
+              />
             </label>
             <label className="grid gap-1.5 text-[11px] font-medium text-foreground">
               Business display name
-              <input className={fieldClassName()} maxLength={256} onChange={(event) => setBusinessDisplayName(event.target.value)} required value={businessDisplayName} />
+              <input
+                className={fieldClassName()}
+                maxLength={256}
+                onChange={(event) => setBusinessDisplayName(event.target.value)}
+                required
+                value={businessDisplayName}
+              />
             </label>
             <label className="grid gap-1.5 text-[11px] font-medium text-foreground">
               ABN
-              <input className={fieldClassName()} inputMode="numeric" maxLength={11} minLength={11} onChange={(event) => setAbn(event.target.value)} pattern="[0-9]{11}" required value={abn} />
+              <input
+                className={fieldClassName()}
+                inputMode="numeric"
+                maxLength={11}
+                minLength={11}
+                onChange={(event) => setAbn(event.target.value)}
+                pattern="[0-9]{11}"
+                required
+                value={abn}
+              />
             </label>
             <label className="grid gap-1.5 text-[11px] font-medium text-foreground">
               Workspace passphrase
-              <input autoComplete="new-password" className={fieldClassName()} minLength={16} onChange={(event) => setWorkspacePassphrase(event.target.value)} required type="password" value={workspacePassphrase} />
+              <input
+                autoComplete="new-password"
+                className={fieldClassName()}
+                minLength={16}
+                onChange={(event) => setWorkspacePassphrase(event.target.value)}
+                required
+                type="password"
+                value={workspacePassphrase}
+              />
             </label>
             <label className="grid gap-1.5 text-[11px] font-medium text-foreground">
               Administrator password
-              <input autoComplete="new-password" className={fieldClassName()} minLength={16} onChange={(event) => setAdministratorPassword(event.target.value)} required type="password" value={administratorPassword} />
+              <input
+                autoComplete="new-password"
+                className={fieldClassName()}
+                minLength={16}
+                onChange={(event) => setAdministratorPassword(event.target.value)}
+                required
+                type="password"
+                value={administratorPassword}
+              />
             </label>
             <Button className="mt-1 h-9 w-full text-[11px]" disabled={busy} type="submit">
               {busy ? <LoaderCircle aria-hidden="true" className="size-3.5 animate-spin" /> : null}
@@ -282,7 +351,20 @@ export function SetupScreen({ api, onAuthenticated }: SetupScreenProps) {
             </Button>
           </form>
         )}
-        {error ? <p className="mt-4 text-[11px] text-destructive" role="alert">{error}</p> : null}
+        {error ? (
+          <p className="mt-4 text-[11px] text-destructive" role="alert">
+            {error}
+          </p>
+        ) : null}
+        {onPrivacy ? (
+          <button
+            className="focus-ring mt-4 text-[10px] font-medium text-forest underline"
+            onClick={onPrivacy}
+            type="button"
+          >
+            Privacy and support
+          </button>
+        ) : null}
       </section>
     </main>
   );

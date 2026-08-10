@@ -7,30 +7,68 @@ import { FusesPlugin } from "@electron-forge/plugin-fuses";
 import { VitePlugin } from "@electron-forge/plugin-vite";
 import type { ForgeConfig } from "@electron-forge/shared-types";
 
-const packagedCoreSuffix = path.join(
-  "Contents",
-  "Resources",
-  "core",
-  `darwin-${process.arch}`,
-  "tammy-core",
-);
+import {
+  createMacOSReleaseProfile,
+  MACOS_APP_BUNDLE_ID,
+  MACOS_APP_CATEGORY,
+} from "./release/macos/profile";
+
+const desktopRoot = import.meta.dirname;
+const releaseProfile = createMacOSReleaseProfile(process.env, desktopRoot);
+
+const packagedCoreSuffix = path.join("Contents", "Resources", "core", "darwin-arm64", "tammy-core");
 
 function isManifestBoundCore(file: string): boolean {
   return path.isAbsolute(file) && file.endsWith(`${path.sep}${packagedCoreSuffix}`);
 }
 
+const developmentSign: NonNullable<ForgeConfig["packagerConfig"]>["osxSign"] = {
+  identity: "-",
+  identityValidation: false,
+  ignore: isManifestBoundCore,
+  optionsForFile: () => ({ hardenedRuntime: false, timestamp: "none" }),
+};
+
+const packagerConfig: NonNullable<ForgeConfig["packagerConfig"]> = {
+  asar: true,
+  executableName: "Tammy",
+  extraResource: [
+    "resources/core",
+    "resources/build",
+    "resources/sqlcipher",
+    ...(releaseProfile.kind === "mas" ? [releaseProfile.privacyManifest] : []),
+  ],
+  osxSign: developmentSign,
+};
+
+if (process.platform === "darwin") {
+  packagerConfig.appBundleId = MACOS_APP_BUNDLE_ID;
+  packagerConfig.appCategoryType = MACOS_APP_CATEGORY;
+  packagerConfig.helperBundleId = `${MACOS_APP_BUNDLE_ID}.helper`;
+  packagerConfig.icon = path.join(desktopRoot, "assets", "icon.icns");
+}
+
+if (releaseProfile.kind === "mas") {
+  packagerConfig.appBundleId = releaseProfile.appBundleId;
+  packagerConfig.appCategoryType = releaseProfile.category;
+  packagerConfig.buildVersion = releaseProfile.buildVersion;
+  packagerConfig.extendInfo = releaseProfile.info;
+  packagerConfig.helperBundleId = `${releaseProfile.appBundleId}.helper`;
+  packagerConfig.icon = releaseProfile.icon;
+  packagerConfig.osxSign = {
+    identity: releaseProfile.sign.identity,
+    identityValidation: true,
+    ignore: isManifestBoundCore,
+    optionsForFile: (file: string) => ({
+      entitlements: releaseProfile.sign.entitlementsFor(file),
+    }),
+    provisioningProfile: releaseProfile.sign.provisioningProfile,
+    type: releaseProfile.sign.type,
+  };
+}
+
 const config: ForgeConfig = {
-  packagerConfig: {
-    asar: true,
-    executableName: "Tammy",
-    extraResource: ["resources/core", "resources/build", "resources/sqlcipher"],
-    osxSign: {
-      identity: "-",
-      identityValidation: false,
-      ignore: isManifestBoundCore,
-      optionsForFile: () => ({ hardenedRuntime: false, timestamp: "none" }),
-    },
-  },
+  packagerConfig,
   makers: [
     new MakerSquirrel(
       { authors: "Tammy", description: "Local-first Australian accounting software" },

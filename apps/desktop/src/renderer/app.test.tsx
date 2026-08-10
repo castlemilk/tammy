@@ -65,17 +65,39 @@ function installDesktopAPI(getSystemDiagnostics: TammyDesktopAPI["getSystemDiagn
       getTrialBalance: vi.fn(async () => {
         throw new Error("unavailable");
       }),
-      importBankStatement: vi.fn(async () => { throw new Error("unavailable"); }),
-      listBankStatementLines: vi.fn(async () => { throw new Error("unavailable"); }),
-      matchBankStatementLine: vi.fn(async () => { throw new Error("unavailable"); }),
-      completeBankReconciliation: vi.fn(async () => { throw new Error("unavailable"); }),
-      getBankingSummary: vi.fn(async () => { throw new Error("unavailable"); }),
-      ingestDocument: vi.fn(async () => { throw new Error("unavailable"); }),
-      listDocuments: vi.fn(async () => { throw new Error("unavailable"); }),
-      getDocument: vi.fn(async () => { throw new Error("unavailable"); }),
-      saveDocumentReview: vi.fn(async () => { throw new Error("unavailable"); }),
-      createBasDraft: vi.fn(async () => { throw new Error("unavailable"); }),
-      getCurrentBasDraft: vi.fn(async () => { throw new Error("unavailable"); }),
+      importBankStatement: vi.fn(async () => {
+        throw new Error("unavailable");
+      }),
+      listBankStatementLines: vi.fn(async () => {
+        throw new Error("unavailable");
+      }),
+      matchBankStatementLine: vi.fn(async () => {
+        throw new Error("unavailable");
+      }),
+      completeBankReconciliation: vi.fn(async () => {
+        throw new Error("unavailable");
+      }),
+      getBankingSummary: vi.fn(async () => {
+        throw new Error("unavailable");
+      }),
+      ingestDocument: vi.fn(async () => {
+        throw new Error("unavailable");
+      }),
+      listDocuments: vi.fn(async () => {
+        throw new Error("unavailable");
+      }),
+      getDocument: vi.fn(async () => {
+        throw new Error("unavailable");
+      }),
+      saveDocumentReview: vi.fn(async () => {
+        throw new Error("unavailable");
+      }),
+      createBasDraft: vi.fn(async () => {
+        throw new Error("unavailable");
+      }),
+      getCurrentBasDraft: vi.fn(async () => {
+        throw new Error("unavailable");
+      }),
       getAttentionSummary: vi.fn(async () => {
         throw new Error("unavailable");
       }),
@@ -92,6 +114,17 @@ afterEach(() => {
 });
 
 describe("App", () => {
+  it("shows privacy and support information before workspace setup", () => {
+    installDesktopAPI(vi.fn().mockResolvedValue(diagnostics));
+    window.sessionStorage.clear();
+    window.history.replaceState(null, "", "/privacy");
+
+    render(<App />);
+
+    expect(screen.getByRole("heading", { level: 1, name: "Privacy and support" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Back to Tammy" })).toBeTruthy();
+  });
+
   it("announces the local engine while diagnostics are loading", () => {
     const pending = deferred<SystemDiagnostics>();
     installDesktopAPI(vi.fn(() => pending.promise));

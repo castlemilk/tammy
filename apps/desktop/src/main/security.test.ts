@@ -1068,7 +1068,9 @@ describe("Electron boundary installation", () => {
   it("keeps navigation and new windows denied across independent lease release order", () => {
     type NavigationHandler = (event: { preventDefault: () => void }, url: string) => void;
     const navigationHandlers = new Map<string, NavigationHandler>();
-    let windowOpenHandler: (() => { action: "deny" }) | undefined;
+    let windowOpenHandler: ((details: { url: string }) => { action: "deny" }) | undefined;
+    const openExternal = vi.fn(async () => undefined);
+    const privacyUrl = "https://example.com/tammy/privacy";
     const webContents = {
       getURL: vi.fn(() => PRODUCTION_APP_URL),
       on: vi.fn((event: string, handler: NavigationHandler) => {
@@ -1080,8 +1082,14 @@ describe("Electron boundary installation", () => {
       }),
     };
 
-    const first = installWindowGuards(webContents as never, PRODUCTION_APP_URL);
-    const second = installWindowGuards(webContents as never, PRODUCTION_APP_URL);
+    const first = installWindowGuards(webContents as never, PRODUCTION_APP_URL, {
+      allowedExternalUrls: [privacyUrl],
+      openExternal,
+    });
+    const second = installWindowGuards(webContents as never, PRODUCTION_APP_URL, {
+      allowedExternalUrls: [privacyUrl],
+      openExternal,
+    });
 
     expect(first).not.toBe(second);
     expect(webContents.on).toHaveBeenCalledTimes(2);
@@ -1094,7 +1102,10 @@ describe("Electron boundary installation", () => {
     const deniedEvent = { preventDefault: vi.fn() };
     navigationHandlers.get("will-redirect")?.(deniedEvent, "https://example.com/");
     expect(deniedEvent.preventDefault).toHaveBeenCalledTimes(1);
-    expect(windowOpenHandler?.()).toEqual({ action: "deny" });
+    expect(windowOpenHandler?.({ url: "https://example.com/other" })).toEqual({ action: "deny" });
+    expect(openExternal).not.toHaveBeenCalled();
+    expect(windowOpenHandler?.({ url: privacyUrl })).toEqual({ action: "deny" });
+    expect(openExternal).toHaveBeenCalledExactlyOnceWith(privacyUrl);
 
     first();
     first();
@@ -1106,11 +1117,14 @@ describe("Electron boundary installation", () => {
       "WINDOW_GUARDS_ALREADY_CONFIGURED",
     );
     second();
-    const successor = installWindowGuards(webContents as never, PRODUCTION_APP_URL);
+    const successor = installWindowGuards(webContents as never, PRODUCTION_APP_URL, {
+      allowedExternalUrls: [privacyUrl],
+      openExternal,
+    });
     successor();
     expect(webContents.on).toHaveBeenCalledTimes(2);
     expect(webContents.setWindowOpenHandler).toHaveBeenCalledTimes(1);
     expect(webContents.removeListener).not.toHaveBeenCalled();
-    expect(windowOpenHandler?.()).toEqual({ action: "deny" });
+    expect(windowOpenHandler?.({ url: "https://example.com/other" })).toEqual({ action: "deny" });
   });
 });

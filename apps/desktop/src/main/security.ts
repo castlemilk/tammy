@@ -138,6 +138,8 @@ interface ContentSecurityRecord extends LeaseRecord {
 
 interface WindowGuardRecord extends LeaseRecord {
   readonly applicationUrl: string;
+  readonly externalUrls: string;
+  readonly openExternal?: (url: string) => Promise<unknown>;
 }
 
 type SchemeApp = Pick<App, "enableSandbox" | "isReady">;
@@ -156,6 +158,8 @@ type GuardedWebContents = Pick<
   WebContents,
   "getURL" | "on" | "removeListener" | "setWindowOpenHandler"
 >;
+
+const ignoreExternalUrl = async (): Promise<void> => undefined;
 
 interface ApplicationProtocolOptions {
   readonly app: Pick<App, "isReady">;
@@ -1089,14 +1093,42 @@ export function installSessionGuards(session: GuardedSession): () => void {
 export function installWindowGuards(
   webContents: GuardedWebContents,
   applicationUrl: string,
+  external: Readonly<{
+    allowedExternalUrls: readonly string[];
+    openExternal: (url: string) => Promise<unknown>;
+  }> = { allowedExternalUrls: [], openExternal: ignoreExternalUrl },
 ): () => void {
   if (!isTrustedApplicationURL(applicationUrl)) {
     throw new Error("INVALID_APPLICATION_URL");
   }
 
+  const allowedExternalUrls = [...new Set(external.allowedExternalUrls)].sort();
+  if (
+    allowedExternalUrls.some((value) => {
+      try {
+        const parsed = new URL(value);
+        return (
+          parsed.href !== value ||
+          parsed.protocol !== "https:" ||
+          parsed.username !== "" ||
+          parsed.password !== "" ||
+          parsed.hash !== ""
+        );
+      } catch {
+        return true;
+      }
+    })
+  ) {
+    throw new Error("INVALID_EXTERNAL_URL");
+  }
+  const externalUrls = JSON.stringify(allowedExternalUrls);
   const existing = electronSecurityRegistrar.windows.get(webContents);
   if (existing) {
-    if (existing.applicationUrl !== applicationUrl) {
+    if (
+      existing.applicationUrl !== applicationUrl ||
+      existing.externalUrls !== externalUrls ||
+      existing.openExternal !== external.openExternal
+    ) {
       throw new Error("WINDOW_GUARDS_ALREADY_CONFIGURED");
     }
     return createLease(existing);
@@ -1114,13 +1146,23 @@ export function installWindowGuards(
     }
   };
 
+  const allowed = new Set(allowedExternalUrls);
+  const openAllowedExternal = (details: { readonly url: string }): { readonly action: "deny" } => {
+    if (allowed.has(details.url)) {
+      void external.openExternal(details.url).catch(() => undefined);
+    }
+    return denyWindowOpen();
+  };
+
   webContents.on("will-navigate", denyNavigation);
   webContents.on("will-redirect", denyNavigation);
-  webContents.setWindowOpenHandler(denyWindowOpen);
+  webContents.setWindowOpenHandler(openAllowedExternal);
 
   const record: WindowGuardRecord = {
     applicationUrl,
+    externalUrls,
     leases: new Set(),
+    openExternal: external.openExternal,
   };
   electronSecurityRegistrar.windows.set(webContents, record);
   return createLease(record);

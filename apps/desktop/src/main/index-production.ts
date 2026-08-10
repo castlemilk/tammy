@@ -1,7 +1,9 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { app, BrowserWindow, type Event, ipcMain, net, protocol, session } from "electron";
+import { app, BrowserWindow, type Event, ipcMain, net, protocol, session, shell } from "electron";
+
+import { readPublicLinks } from "../shared/public-links";
 
 import { createCoreClient } from "./core-client";
 import { createCoreLaunchArguments } from "./core-launch";
@@ -31,6 +33,10 @@ export function createProductionDependencies(): DesktopDependencies {
   const developmentResourcesPath = path.resolve(buildDirectory, "../../resources");
   const policy = createRendererSecurityPolicy(
     app.isPackaged ? undefined : MAIN_WINDOW_VITE_DEV_SERVER_URL,
+  );
+  const publicLinks = readPublicLinks();
+  const allowedExternalUrls = [publicLinks.privacyPolicy, publicLinks.support].filter(
+    (value): value is string => value !== undefined,
   );
   let core: CoreProcess | undefined;
   let nativeWindow: BrowserWindow | undefined;
@@ -109,7 +115,10 @@ export function createProductionDependencies(): DesktopDependencies {
     },
     installWindowSecurity: () => {
       if (!nativeWindow) throw new Error("WINDOW_NOT_CREATED");
-      return installWindowGuards(nativeWindow.webContents, policy.applicationUrl);
+      return installWindowGuards(nativeWindow.webContents, policy.applicationUrl, {
+        allowedExternalUrls,
+        openExternal: (url) => shell.openExternal(url),
+      });
     },
     listenForQuit: (listener) => {
       requestQuit = listener;

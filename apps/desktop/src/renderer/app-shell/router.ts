@@ -68,6 +68,8 @@ export function resolveAppLocation(
   rawLocation: string,
   access: WorkspaceAccess,
 ): ResolvedAppLocation {
+  if (rawLocation === "/privacy") return { path: "/privacy" };
+
   if (access === "unconfigured") {
     return { path: "/setup/workspace" };
   }

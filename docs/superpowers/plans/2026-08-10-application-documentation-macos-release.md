@@ -35,16 +35,16 @@
 - Create: `apps/desktop/release/macos/entitlements.mas.core.plist`
 - Create: `apps/desktop/release/macos/PrivacyInfo.xcprivacy`
 - Create: `apps/desktop/release/macos/store-metadata.md`
-- Create: `apps/desktop/src/renderer/features/privacy/privacy-screen.tsx`
-- Create: `apps/desktop/src/renderer/features/privacy/privacy-screen.test.tsx`
+- Create: `apps/desktop/src/renderer/features/privacy/privacy-statement.tsx`
+- Create: `apps/desktop/src/renderer/features/privacy/privacy-statement.test.tsx`
 - Create: `apps/desktop/assets/icon-source.png`
 - Create: `apps/desktop/assets/icon.icns`
 
 - [ ] Create a brand-consistent 1024×1024 source icon and deterministic `.icns` output.
-- [ ] Give the app sandbox/client/user-selected-read access; give ordinary helpers sandbox inheritance; give the core inherited sandbox/server access.
+- [ ] Give the app sandbox/client/server/user-selected-read access; sign ordinary helpers and the core with exactly sandbox inheritance so the core inherits the parent's server permission.
 - [ ] Declare no tracking/collection and the approved container/user-selected file metadata reasons in a valid privacy manifest.
 - [ ] Add factual suggested store copy plus visible operator-owned placeholders for privacy/support URLs, legal identity, pricing, screenshots, and review contact.
-- [ ] Add a locally available in-app privacy statement and route; retain the public privacy-policy URL as a submission blocker.
+- [ ] Add a privacy statement and route available before sign-in; require exact HTTPS privacy/support URLs for store builds and open only those allowlisted links externally.
 - [ ] Validate plist syntax with `rtk plutil -lint apps/desktop/release/macos/*.plist apps/desktop/release/macos/PrivacyInfo.xcprivacy` and image dimensions with `rtk sips -g pixelWidth -g pixelHeight apps/desktop/assets/icon-source.png`.
 
 ## Chunk 2: Packaging and evidence
@@ -55,14 +55,12 @@
 - Create: `apps/desktop/release/macos/profile.ts`
 - Create: `apps/desktop/release/macos/profile.test.ts`
 - Modify: `apps/desktop/forge.config.ts`
-- Modify: `apps/desktop/package.json`
-- Modify: `pnpm-lock.yaml`
 
 - [ ] Write tests proving development remains ad-hoc/darwin and MAS fails without exact identity/team/profile/installer inputs.
-- [ ] Write tests proving MAS pins `com.tammy.desktop`, accepts a positive decimal build number, uses category `public.app-category.finance`, includes icon/privacy resources, removes the core-signing exclusion, and applies distinct app/helper/core entitlements.
+- [ ] Write tests proving MAS pins `com.tammy.desktop`, accepts a positive decimal build number, uses category `public.app-category.finance`, includes icon/privacy resources, separately signs and manifest-binds the core without a second signing pass, and applies distinct app/helper/core entitlements.
 - [ ] Run `rtk mise exec -- pnpm --dir apps/desktop test release/macos/profile.test.ts` and observe the intended RED.
-- [ ] Implement a pure environment parser and Forge profile builder; never log secret/profile contents.
-- [ ] Add the pinned `@electron-forge/maker-pkg` version matching Forge 7.11.2 and select it only for MAS.
+- [ ] Implement a pure fail-closed environment parser and Forge profile builder; never log secret/profile contents.
+- [ ] Keep the pinned Forge dependency tree unchanged and use Apple's installed `/usr/bin/productbuild` for the distribution package; do not bypass the repository supply-chain policy for a transitive git dependency.
 - [ ] Run the focused tests and desktop typecheck, then commit.
 
 ### Task 4: Add deterministic release readiness and packaging commands
@@ -75,7 +73,7 @@
 - [ ] Test that repository mode validates bundle ID, version, resources, plist contents, icon dimensions, docs, and metadata placeholders.
 - [ ] Test that release mode rejects missing or relative signing/provisioning inputs, invalid build numbers, and unresolved export-compliance input, and reports all operator prerequisites without exposing values.
 - [ ] Run `rtk node --test scripts/check-macos-store.test.mjs` and observe the intended RED.
-- [ ] Implement `check:macos-store` and `desktop:make:mas` commands using the existing build-manifest/core build before Forge `make --platform=mas --arch=arm64`; the latter produces an Apple Distribution-signed app and Mac Installer Distribution-signed `.pkg`.
+- [ ] Implement `check:macos-store` and `desktop:make:mas` commands that authenticate the newly built core, sign and verify it, re-hash the signed bytes without executing the inherited child, package/sign the outer `mas` app without re-signing the core, verify the actual MAS core/manifest equality, and use `/usr/bin/productbuild` for the distribution `.pkg`.
 - [ ] Run focused tests plus `rtk mise exec -- pnpm check:macos-store` and commit.
 
 ### Task 5: Write the operator runbook and App Review assessment

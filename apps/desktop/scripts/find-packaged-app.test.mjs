@@ -40,6 +40,11 @@ function validManifest(target, coreSha256) {
     },
     protobuf_tree_sha256: "d".repeat(64),
     core_sha256: coreSha256,
+    sqlcipher: {
+      library_sha256: "e".repeat(64),
+      runtime_version: "4.15.0 community",
+      version: "4.15.0",
+    },
     test_profile: "foundation-packaged-e2e",
     sbr_status: "SIMULATOR_NOT_IMPLEMENTED",
     signed: false,
@@ -86,7 +91,8 @@ async function withFixture(platform, arch, callback) {
   const desktopRoot = path.join(root, "apps", "desktop");
   const layout = resolvePackagedLayout({ arch, desktopRoot, platform });
   const coreBytes = Buffer.from(`core:${platform}/${arch}`);
-  const manifest = validManifest(`${platform}-${arch}`, sha256(coreBytes));
+  const manifestTarget = platform === "mas" ? `darwin-${arch}` : `${platform}-${arch}`;
+  const manifest = validManifest(manifestTarget, sha256(coreBytes));
   await mkdir(path.dirname(layout.sourceCore), { recursive: true });
   await mkdir(path.dirname(layout.sourceManifest), { recursive: true });
   await mkdir(path.dirname(layout.appExecutable), { recursive: true });
@@ -113,7 +119,7 @@ async function withFixture(platform, arch, callback) {
   const manifestBytes = Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`);
   await writeFile(layout.sourceManifest, manifestBytes);
   await writeFile(layout.packagedManifest, manifestBytes);
-  if (platform === "darwin") {
+  if (platform === "darwin" || platform === "mas") {
     await chmod(layout.appExecutable, 0o755);
     await chmod(layout.sourceCore, 0o755);
     await chmod(layout.packagedCore, 0o755);
@@ -151,6 +157,35 @@ test("resolves the exact macOS arm64 package paths", () => {
     sourceCoreRoot: path.join(desktopRoot, "resources/core"),
     sourceManifest: path.join(desktopRoot, "resources/build/build-manifest.json"),
     target: "darwin-arm64",
+  });
+});
+
+test("resolves and verifies the exact Mac App Store arm64 package paths", async () => {
+  const desktopRoot = path.resolve("/workspace/apps/desktop");
+  const layout = resolvePackagedLayout({ desktopRoot, platform: "mas", arch: "arm64" });
+  assert.equal(
+    layout.appExecutable,
+    path.join(desktopRoot, "out/Tammy-mas-arm64/Tammy.app/Contents/MacOS/Tammy"),
+  );
+  assert.equal(
+    layout.packagedCore,
+    path.join(
+      desktopRoot,
+      "out/Tammy-mas-arm64/Tammy.app/Contents/Resources/core/darwin-arm64/tammy-core",
+    ),
+  );
+  assert.equal(layout.target, "darwin-arm64");
+
+  await withFixture("mas", "arm64", async ({ desktopRoot: fixtureRoot, layout: fixture }) => {
+    const result = await verifyPackagedLayout({
+      arch: "arm64",
+      desktopRoot: fixtureRoot,
+      platform: "mas",
+      sourceManifestPath: fixture.sourceManifest,
+    });
+    assert.equal(result.appExecutable, fixture.appExecutable);
+    assert.equal(result.coreExecutable, fixture.packagedCore);
+    assert.equal(result.target, "darwin-arm64");
   });
 });
 

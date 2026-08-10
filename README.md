@@ -4,7 +4,7 @@ Tammy is a local-first Australian accounting desktop application. The current de
 
 Today the connected application can create and reopen an encrypted workspace, confirm its recovery code, sign in, create the organisation and AU chart of accounts, post balanced manual journals, show a trial balance, review retained documents, import and reconcile bank-statement rows, create a local BAS draft, and show consolidated local activity.
 
-This is development software, not a production release. BAS workpapers are **drafts only**: Tammy has no declaration, lodgement, submission, or ATO/SBR transport in the current app. Local packages are unsigned and are not App Store approval or external assurance evidence.
+This is development software, not a production release. BAS workpapers are **drafts only**: Tammy has no declaration, lodgement, submission, or ATO/SBR transport in the current app. Local macOS packages use ad-hoc development signing and are not App Store approval or external assurance evidence.
 
 ## Quick start
 
@@ -31,14 +31,15 @@ rtk mise exec -- pnpm lint
 rtk git diff --check
 ```
 
-Build an unsigned local package with `rtk mise exec -- pnpm desktop:package`. Exercise that package with `rtk mise exec -- pnpm desktop:e2e`.
+Build an ad-hoc signed local macOS package with `rtk mise exec -- pnpm desktop:package`. Exercise that package with `rtk mise exec -- pnpm desktop:e2e`.
+
+Check the repository-owned Mac App Store profile with `rtk mise exec -- pnpm check:macos-store`. Signed packaging and upload require operator-owned Apple certificates, profiles, legal decisions, metadata, and approval; follow the [macOS App Store runbook](docs/release/macos-app-store.md).
 
 ## Documentation
 
 - [Current technical state](docs/development/tech-state.md) — implemented, development-only, deferred, and external boundaries.
 - [Developer handbook](docs/development/foundation.md) — setup, commands, repository map, local data, and safe changes.
 - [Local accounting walkthrough](docs/development/local-accounting-walkthrough.md) — the current setup-to-audit journey.
+- [macOS App Store release runbook](docs/release/macos-app-store.md) — repository checks, signing inputs, packaging, inspection, metadata, upload, and remaining operator gates.
 - [Application documentation and release design](docs/superpowers/specs/2026-08-10-application-documentation-macos-release-design.md) — approved direction, not current release evidence.
 - [Accounting walkthrough design](docs/superpowers/specs/2026-08-09-accounting-tax-walkthrough-ui-design.md) and [implementation plan](docs/superpowers/plans/2026-08-09-accounting-tax-walkthrough-ui.md) — design intent and historical implementation detail.
-
-The macOS App Store runbook belongs to the later packaging pass and is intentionally not linked yet.

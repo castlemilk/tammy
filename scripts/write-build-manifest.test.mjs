@@ -20,6 +20,7 @@ import {
   collectBuildManifest,
   createBuildManifest,
   hashProtoTree,
+  rehashSignedBuildManifest,
   runBoundedCommand,
   sanitizeProvenanceEnvironment,
   selectCiMode,
@@ -176,6 +177,43 @@ test("normalizes nested pin maps into stable key order", () => {
   );
   assert.deepEqual(Object.keys(manifest.versions), Object.keys(versions));
   assert.deepEqual(Object.keys(manifest.lockfiles), Object.keys(lockfiles));
+});
+
+test("rehashes a signed core without executing it or changing authenticated provenance", async () => {
+  const root = await realpath(await mkdtemp(path.join(tmpdir(), "tammy-signed-manifest-")));
+  try {
+    const buildRoot = path.join(root, "apps/desktop/resources/build");
+    const core = path.join(root, "apps/desktop/resources/core/darwin-arm64/tammy-core");
+    await mkdir(buildRoot, { recursive: true });
+    await mkdir(path.dirname(core), { recursive: true });
+    await writeFile(path.join(buildRoot, ".gitkeep"), "");
+    await writeFile(core, "signed-core");
+    await writeFile(
+      path.join(buildRoot, "build-manifest.json"),
+      `${JSON.stringify(createBuildManifest(validInput()), null, 2)}\n`,
+    );
+    const calls = [];
+    const manifest = await rehashSignedBuildManifest({
+      arch: "arm64",
+      commandRunner: async (command, args) => {
+        calls.push([command, ...args]);
+        if (args[1] === "--show-toplevel") return `${root}\n`;
+        if (args[0] === "rev-parse") return `${"a".repeat(40)}\n`;
+        if (args[0] === "status") return "";
+        throw new Error("unexpected command");
+      },
+      platform: "darwin",
+      root,
+    });
+    assert.equal(manifest.core_sha256, hash("signed-core"));
+    assert.deepEqual(manifest.sqlcipher, createBuildManifest(validInput()).sqlcipher);
+    assert.equal(
+      calls.some((call) => call.includes("--sqlcipher-status")),
+      false,
+    );
+  } finally {
+    await rm(root, { force: true, recursive: true });
+  }
 });
 
 test("rejects dirty CI source and unsupported targets", () => {
