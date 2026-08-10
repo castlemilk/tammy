@@ -12,6 +12,7 @@ import { EmptyLedgerScreen } from "./features/ledger/empty-ledger-screen";
 import { DocumentsScreen } from "./features/documents/documents-screen";
 import { BankingScreen } from "./features/banking/banking-screen";
 import { BasScreen } from "./features/bas/bas-screen";
+import { AuditScreen } from "./features/audit/audit-screen";
 import { OverviewScreen } from "./features/overview/overview-screen";
 import { SetupScreen, type AuthenticatedWorkspace } from "./features/setup/setup-screen";
 import { UnlockScreen } from "./features/workspace/unlock-screen";
@@ -180,7 +181,7 @@ function RouteContent({ onNavigate, path, state, workspace }: { readonly onNavig
     return <TrialBalanceScreen api={window.tammy} workspace={workspace} />;
   }
   if (path === "/audit") {
-    return <EmptyLedgerScreen description="Verifiable business actions retained on this device." emptyLabel="No audit events yet" title="Audit trail" />;
+    return <AuditScreen api={window.tammy} workspace={workspace} />;
   }
   if (path === "/settings") {
     return (
