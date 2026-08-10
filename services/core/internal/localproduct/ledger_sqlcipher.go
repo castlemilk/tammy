@@ -10,6 +10,7 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
+	"strings"
 	"sync"
 
 	"connectrpc.com/connect"
@@ -31,24 +32,32 @@ import (
 var ErrLedgerModule = errors.New("local product: ledger module unavailable")
 
 type LedgerModule struct {
-	route *organisationRoute
-	mu    sync.RWMutex
-	db    *sqlcipher.Database
+	organisationRoute *organisationRoute
+	accountingRoute   *accountingRoute
+	mu                sync.RWMutex
+	db                *sqlcipher.Database
 }
 
 func NewLedgerModule() (*LedgerModule, error) {
-	return &LedgerModule{route: &organisationRoute{}}, nil
+	return &LedgerModule{
+		organisationRoute: &organisationRoute{},
+		accountingRoute:   &accountingRoute{},
+	}, nil
 }
 
 func (module *LedgerModule) HandlerFactories() []transport.GeneratedHandlerFactory {
-	if module == nil || module.route == nil {
+	if module == nil || module.organisationRoute == nil || module.accountingRoute == nil {
 		return nil
 	}
-	return []transport.GeneratedHandlerFactory{module.route.factory}
+	return []transport.GeneratedHandlerFactory{
+		module.organisationRoute.factory,
+		module.accountingRoute.factory,
+	}
 }
 
 func (module *LedgerModule) Activate(activation app.LocalWorkspaceActivation) error {
-	if module == nil || module.route == nil || activation.Database == nil || activation.Identity == nil ||
+	if module == nil || module.organisationRoute == nil || module.accountingRoute == nil ||
+		activation.Database == nil || activation.Identity == nil ||
 		activation.Now == nil || activation.NewID == nil {
 		return ErrLedgerModule
 	}
@@ -92,13 +101,152 @@ func (module *LedgerModule) Activate(activation app.LocalWorkspaceActivation) er
 		return ErrLedgerModule
 	}
 	handler := &organisationHandler{service: service, database: activation.Database, identity: activation.Identity}
-	if err := module.route.set(handler); err != nil {
+	if err := module.organisationRoute.set(handler); err != nil {
+		return err
+	}
+	if err := module.accountingRoute.set(&accountingHandler{
+		database: activation.Database,
+		identity: activation.Identity,
+	}); err != nil {
 		return err
 	}
 	module.mu.Lock()
 	module.db = activation.Database
 	module.mu.Unlock()
 	return nil
+}
+
+type accountingRoute struct {
+	mu      sync.RWMutex
+	options []connect.HandlerOption
+	handler http.Handler
+}
+
+func (route *accountingRoute) set(service tammyv1connect.AccountingServiceHandler) error {
+	if route == nil || service == nil {
+		return ErrLedgerModule
+	}
+	_, handler := tammyv1connect.NewAccountingServiceHandler(
+		service,
+		append([]connect.HandlerOption(nil), route.options...)...,
+	)
+	route.mu.Lock()
+	route.handler = handler
+	route.mu.Unlock()
+	return nil
+}
+
+func (route *accountingRoute) factory(options ...connect.HandlerOption) (string, http.Handler) {
+	route.mu.Lock()
+	route.options = append([]connect.HandlerOption(nil), options...)
+	route.mu.Unlock()
+	return "/" + tammyv1connect.AccountingServiceName + "/", route
+}
+
+func (route *accountingRoute) ServeHTTP(response http.ResponseWriter, request *http.Request) {
+	route.mu.RLock()
+	handler := route.handler
+	route.mu.RUnlock()
+	if handler == nil {
+		http.Error(response, "local accounting unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	handler.ServeHTTP(response, request)
+}
+
+type accountingHandler struct {
+	tammyv1connect.UnimplementedAccountingServiceHandler
+	database *sqlcipher.Database
+	identity app.LocalModuleIdentity
+}
+
+func (handler *accountingHandler) GetAccount(
+	ctx context.Context,
+	request *connect.Request[tammyv1.GetAccountRequest],
+) (*connect.Response[tammyv1.GetAccountResponse], error) {
+	if handler == nil || handler.database == nil || handler.identity == nil || request == nil ||
+		request.Msg == nil || request.Msg.Authentication == nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrLedgerModule)
+	}
+	if err := handler.identity.RequireActiveSessionReadOnly(ctx, request.Msg.Authentication); err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, ErrLedgerModule)
+	}
+	tx, err := handler.database.BeginEncryptedTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	defer tx.Rollback()
+	repository, err := accounting.NewAccountRepository(tx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	account, err := repository.Get(ctx, request.Msg.AccountId)
+	if err != nil || tx.Commit() != nil {
+		return nil, connect.NewError(connect.CodeNotFound, ErrLedgerModule)
+	}
+	return connect.NewResponse(&tammyv1.GetAccountResponse{Account: account}), nil
+}
+
+func (handler *accountingHandler) ListAccounts(
+	ctx context.Context,
+	request *connect.Request[tammyv1.ListAccountsRequest],
+) (*connect.Response[tammyv1.ListAccountsResponse], error) {
+	if handler == nil || handler.database == nil || handler.identity == nil || request == nil ||
+		request.Msg == nil || request.Msg.Authentication == nil || request.Msg.Page == nil ||
+		request.Msg.Page.Cursor != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrLedgerModule)
+	}
+	if err := handler.identity.RequireActiveSessionReadOnly(ctx, request.Msg.Authentication); err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, ErrLedgerModule)
+	}
+	pageSize := int(request.Msg.Page.PageSize)
+	if pageSize == 0 {
+		pageSize = 50
+	}
+	if pageSize < 1 || pageSize > 200 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrLedgerModule)
+	}
+	tx, err := handler.database.BeginEncryptedTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	defer tx.Rollback()
+	repository, err := accounting.NewAccountRepository(tx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	accounts, err := repository.List(ctx, request.Msg.OrganisationId, "", "", 200)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	filtered := filterAccounts(accounts, request.Msg)
+	if len(filtered) > pageSize {
+		filtered = filtered[:pageSize]
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	return connect.NewResponse(&tammyv1.ListAccountsResponse{
+		Accounts: filtered,
+		Page:     &tammyv1.PageInfo{ReturnedCount: uint32(len(filtered))},
+	}), nil
+}
+
+func filterAccounts(accounts []*tammyv1.Account, request *tammyv1.ListAccountsRequest) []*tammyv1.Account {
+	query := strings.ToLower(strings.TrimSpace(request.GetQuery()))
+	filtered := make([]*tammyv1.Account, 0, len(accounts))
+	for _, account := range accounts {
+		if account == nil || request.Status != nil && account.Status != request.GetStatus() ||
+			request.Type != nil && account.Type != request.GetType() {
+			continue
+		}
+		if query != "" && !strings.Contains(strings.ToLower(account.Code), query) &&
+			!strings.Contains(strings.ToLower(account.Name), query) {
+			continue
+		}
+		filtered = append(filtered, account)
+	}
+	return filtered
 }
 
 // InstalledAccountCount is a narrow diagnostic used by the local integration
@@ -329,3 +477,4 @@ func (factory localAuditFactory) Build(_ context.Context, operation app.Ordinary
 
 var _ app.LocalWorkspaceModule = (*LedgerModule)(nil)
 var _ tammyv1connect.OrganisationServiceHandler = (*organisationHandler)(nil)
+var _ tammyv1connect.AccountingServiceHandler = (*accountingHandler)(nil)

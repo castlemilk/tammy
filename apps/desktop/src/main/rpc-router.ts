@@ -1,4 +1,12 @@
 import type {
+  ListAccountsRequest,
+  ListAccountsResponse,
+} from "@tammy/connect-client/tammy/v1/accounting_pb.js";
+import {
+  ListAccountsRequestSchema,
+  ListAccountsResponseSchema,
+} from "@tammy/connect-client/tammy/v1/accounting_pb.js";
+import type {
   GetAttentionSummaryRequest,
   GetAttentionSummaryResponse,
 } from "@tammy/connect-client/tammy/v1/overview_pb.js";
@@ -38,6 +46,7 @@ import {
   CONFIRM_RECOVERY_CHANNEL,
   CREATE_ORGANISATION_CHANNEL,
   CREATE_WORKSPACE_CHANNEL,
+  LIST_ACCOUNTS_CHANNEL,
   SIGN_IN_CHANNEL,
   UNLOCK_WORKSPACE_CHANNEL,
 } from "../shared/desktop-api";
@@ -75,6 +84,12 @@ const createOrganisationCodec = createProtoMethodCodec({
   maximumResponseBytes: 32_768,
   output: CreateOrganisationResponseSchema,
 });
+const listAccountsCodec = createProtoMethodCodec({
+  input: ListAccountsRequestSchema,
+  maximumRequestBytes: 16_384,
+  maximumResponseBytes: 131_072,
+  output: ListAccountsResponseSchema,
+});
 
 const attentionCodec = createProtoMethodCodec({
   input: GetAttentionSummaryRequestSchema,
@@ -96,6 +111,7 @@ export class DesktopRpcRouterError extends Error {
 }
 
 export interface DesktopRpcClient {
+  readonly listAccounts: (request: ListAccountsRequest) => Promise<ListAccountsResponse>;
   readonly createWorkspace: (request: CreateWorkspaceRequest) => Promise<CreateWorkspaceResponse>;
   readonly confirmRecovery: (request: ConfirmRecoveryRequest) => Promise<ConfirmRecoveryResponse>;
   readonly unlockWorkspace: (request: UnlockWorkspaceRequest) => Promise<UnlockWorkspaceResponse>;
@@ -134,6 +150,10 @@ export function createDesktopRpcRouter(client: DesktopRpcClient): Readonly<Deskt
           case CREATE_ORGANISATION_CHANNEL:
             return createOrganisationCodec.encodeResponse(
               await client.createOrganisation(createOrganisationCodec.decodeRequest(request)),
+            );
+          case LIST_ACCOUNTS_CHANNEL:
+            return listAccountsCodec.encodeResponse(
+              await client.listAccounts(listAccountsCodec.decodeRequest(request)),
             );
           case ATTENTION_SUMMARY_CHANNEL:
             return attentionCodec.encodeResponse(

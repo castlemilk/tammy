@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AppShell } from "./app-shell/app-shell";
 import { resolveAppLocation, type WorkspaceAccess } from "./app-shell/router";
 import { Button } from "./components/ui/button";
+import { ChartScreen } from "./features/accounting/chart-screen";
 import { DiagnosticsCard, type DiagnosticsState } from "./features/diagnostics/diagnostics-card";
 import { EmptyLedgerScreen } from "./features/ledger/empty-ledger-screen";
 import { OverviewScreen } from "./features/overview/overview-screen";
@@ -159,7 +160,7 @@ function EngineStatus({ onRetry, state }: { readonly onRetry: () => void; readon
 function RouteContent({ path, state, workspace }: { readonly path: string; readonly state: DiagnosticsState; readonly workspace: AuthenticatedWorkspace | undefined }) {
   if (path === "/overview") return <OverviewScreen api={window.tammy} workspace={workspace} />;
   if (path === "/accounting/chart") {
-    return <EmptyLedgerScreen description="Review the accounts used by your business." emptyLabel="No accounts yet" title="Chart of accounts" />;
+    return <ChartScreen api={window.tammy} workspace={workspace} />;
   }
   if (path.startsWith("/accounting/journals")) {
     return <EmptyLedgerScreen description="Balanced accounting entries and their sources." emptyLabel="No journals yet" title="Journals" />;

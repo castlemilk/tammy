@@ -6,6 +6,7 @@ import {
   CONFIRM_RECOVERY_CHANNEL,
   CREATE_ORGANISATION_CHANNEL,
   CREATE_WORKSPACE_CHANNEL,
+  LIST_ACCOUNTS_CHANNEL,
   SIGN_IN_CHANNEL,
   SYSTEM_DIAGNOSTICS_CHANNEL,
   UNLOCK_WORKSPACE_CHANNEL,
@@ -28,6 +29,7 @@ export function createTammyDesktopAPI(invoke: Invoke): TammyDesktopAPI {
     unlockWorkspace: binaryMethod(UNLOCK_WORKSPACE_CHANNEL),
     signIn: binaryMethod(SIGN_IN_CHANNEL),
     createOrganisation: binaryMethod(CREATE_ORGANISATION_CHANNEL),
+    listAccounts: binaryMethod(LIST_ACCOUNTS_CHANNEL),
     getAttentionSummary: binaryMethod(ATTENTION_SUMMARY_CHANNEL),
   } satisfies TammyDesktopAPI;
   if (

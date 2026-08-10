@@ -118,6 +118,7 @@ it("creates, confirms, and signs in to a real local workspace through named prot
     unlockWorkspace: vi.fn(),
     signIn,
     createOrganisation,
+    listAccounts: vi.fn(),
     getAttentionSummary: vi.fn(),
     getSystemDiagnostics: vi.fn(),
   } satisfies TammyDesktopAPI;

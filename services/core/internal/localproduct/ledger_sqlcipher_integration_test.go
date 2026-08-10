@@ -61,6 +61,7 @@ func TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealSer
 	workspaceClient := tammyv1connect.NewWorkspaceServiceClient(httpClient, baseURL)
 	identityClient := tammyv1connect.NewIdentityServiceClient(httpClient, baseURL)
 	organisationClient := tammyv1connect.NewOrganisationServiceClient(httpClient, baseURL)
+	accountingClient := tammyv1connect.NewAccountingServiceClient(httpClient, baseURL)
 
 	createWorkspace := connect.NewRequest(&tammyv1.CreateWorkspaceRequest{
 		SetupId:                  "018f0000-0000-7000-8000-000000000101",
@@ -120,5 +121,23 @@ func TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealSer
 	}
 	if installed := module.InstalledAccountCount(context.Background()); installed != 12 {
 		t.Fatalf("installed account count = %d, want 12", installed)
+	}
+	listAccounts := connect.NewRequest(&tammyv1.ListAccountsRequest{
+		Authentication: authentication,
+		OrganisationId: created.Msg.Organisation.Id,
+		Page:           &tammyv1.PageRequest{PageSize: 50},
+	})
+	listAccounts.Header().Set(transport.CapabilityHeader, ready.Capability)
+	chart, err := accountingClient.ListAccounts(context.Background(), listAccounts)
+	if err != nil {
+		t.Fatalf("ListAccounts() error = %v", err)
+	}
+	if len(chart.Msg.Accounts) != 12 || chart.Msg.Page == nil || chart.Msg.Page.ReturnedCount != 12 {
+		t.Fatalf("ListAccounts() = %#v, want 12 installed accounts", chart.Msg)
+	}
+	for index := 1; index < len(chart.Msg.Accounts); index++ {
+		if chart.Msg.Accounts[index-1].Code >= chart.Msg.Accounts[index].Code {
+			t.Fatalf("accounts not sorted by code: %q then %q", chart.Msg.Accounts[index-1].Code, chart.Msg.Accounts[index].Code)
+		}
 	}
 }

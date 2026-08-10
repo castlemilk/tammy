@@ -32,6 +32,9 @@ function installDesktopAPI() {
       createOrganisation: vi.fn(async () => {
         throw new Error("unavailable");
       }),
+      listAccounts: vi.fn(async () => {
+        throw new Error("unavailable");
+      }),
       getAttentionSummary: vi.fn(async () => {
         throw new Error("unavailable");
       }),

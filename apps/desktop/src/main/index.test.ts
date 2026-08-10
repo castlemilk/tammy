@@ -54,6 +54,9 @@ function unusedCoreMethods() {
     createOrganisation: vi.fn(async () => {
       throw new Error("unused");
     }),
+    listAccounts: vi.fn(async () => {
+      throw new Error("unused");
+    }),
   };
 }
 

@@ -13,6 +13,7 @@ export const CONFIRM_RECOVERY_CHANNEL = "tammy:workspace-confirm-recovery";
 export const UNLOCK_WORKSPACE_CHANNEL = "tammy:workspace-unlock";
 export const SIGN_IN_CHANNEL = "tammy:identity-sign-in";
 export const CREATE_ORGANISATION_CHANNEL = "tammy:organisation-create";
+export const LIST_ACCOUNTS_CHANNEL = "tammy:accounting-list-accounts";
 export const ATTENTION_SUMMARY_CHANNEL = "tammy:overview-attention-summary";
 
 export const DESKTOP_PROTO_CHANNELS = Object.freeze([
@@ -21,6 +22,7 @@ export const DESKTOP_PROTO_CHANNELS = Object.freeze([
   UNLOCK_WORKSPACE_CHANNEL,
   SIGN_IN_CHANNEL,
   CREATE_ORGANISATION_CHANNEL,
+  LIST_ACCOUNTS_CHANNEL,
   ATTENTION_SUMMARY_CHANNEL,
 ] as const);
 
@@ -31,6 +33,7 @@ export interface TammyDesktopAPI {
   readonly unlockWorkspace: (request: Uint8Array) => Promise<Uint8Array>;
   readonly signIn: (request: Uint8Array) => Promise<Uint8Array>;
   readonly createOrganisation: (request: Uint8Array) => Promise<Uint8Array>;
+  readonly listAccounts: (request: Uint8Array) => Promise<Uint8Array>;
   readonly getAttentionSummary: (request: Uint8Array) => Promise<Uint8Array>;
 }
 
@@ -41,6 +44,7 @@ const EXPECTED_DESKTOP_PRELOAD_METHODS = [
   "unlockWorkspace",
   "signIn",
   "createOrganisation",
+  "listAccounts",
   "getAttentionSummary",
 ] as const satisfies readonly (keyof TammyDesktopAPI)[];
 

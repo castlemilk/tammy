@@ -1,6 +1,11 @@
 import { ConnectError, createClient, type Interceptor, type Transport } from "@connectrpc/connect";
 import { type ConnectTransportOptions, createConnectTransport } from "@connectrpc/connect-node";
 import type {
+  ListAccountsRequest,
+  ListAccountsResponse,
+} from "@tammy/connect-client/tammy/v1/accounting_pb.js";
+import { AccountingService } from "@tammy/connect-client/tammy/v1/accounting_pb.js";
+import type {
   GetAttentionSummaryRequest,
   GetAttentionSummaryResponse,
 } from "@tammy/connect-client/tammy/v1/overview_pb.js";
@@ -33,6 +38,7 @@ const EXPECTED_API_VERSION = "tammy.v1";
 const CORE_VERSION_PATTERN = /^[\x20-\x7e]{1,128}$/;
 
 export interface CoreClient {
+  readonly listAccounts: (request: ListAccountsRequest) => Promise<ListAccountsResponse>;
   readonly createWorkspace: (request: CreateWorkspaceRequest) => Promise<CreateWorkspaceResponse>;
   readonly confirmRecovery: (request: ConfirmRecoveryRequest) => Promise<ConfirmRecoveryResponse>;
   readonly unlockWorkspace: (request: UnlockWorkspaceRequest) => Promise<UnlockWorkspaceResponse>;
@@ -88,6 +94,7 @@ export function createCoreClient(
     interceptors: [capabilityInterceptor(readiness.capability)],
   });
   const systemClient = createClient(SystemService, transport);
+  const accountingClient = createClient(AccountingService, transport);
   const overviewClient = createClient(OverviewService, transport);
   const workspaceClient = createClient(WorkspaceService, transport);
   const identityClient = createClient(IdentityService, transport);
@@ -102,6 +109,8 @@ export function createCoreClient(
   };
 
   return Object.freeze({
+    listAccounts: (request: ListAccountsRequest) =>
+      coreRequest(() => accountingClient.listAccounts(request)),
     createWorkspace: (request: CreateWorkspaceRequest) =>
       coreRequest(() => workspaceClient.createWorkspace(request)),
     confirmRecovery: (request: ConfirmRecoveryRequest) =>

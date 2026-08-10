@@ -1,5 +1,9 @@
 import { create } from "@bufbuild/protobuf";
 import {
+  ListAccountsRequestSchema,
+  ListAccountsResponseSchema,
+} from "@tammy/connect-client/tammy/v1/accounting_pb.js";
+import {
   GetAttentionSummaryRequestSchema,
   GetAttentionSummaryResponseSchema,
 } from "@tammy/connect-client/tammy/v1/overview_pb.js";
@@ -18,7 +22,7 @@ import {
   type DesktopRpcClient,
   DesktopRpcRouterError,
 } from "./rpc-router";
-import { CREATE_ORGANISATION_CHANNEL } from "../shared/desktop-api";
+import { CREATE_ORGANISATION_CHANNEL, LIST_ACCOUNTS_CHANNEL } from "../shared/desktop-api";
 
 const attentionCodec = createProtoMethodCodec({
   input: GetAttentionSummaryRequestSchema,
@@ -32,6 +36,12 @@ const createOrganisationCodec = createProtoMethodCodec({
   maximumResponseBytes: 32_768,
   output: CreateOrganisationResponseSchema,
 });
+const listAccountsCodec = createProtoMethodCodec({
+  input: ListAccountsRequestSchema,
+  maximumRequestBytes: 16_384,
+  maximumResponseBytes: 131_072,
+  output: ListAccountsResponseSchema,
+});
 
 function rpcClient(getAttentionSummary: DesktopRpcClient["getAttentionSummary"]): DesktopRpcClient {
   return {
@@ -40,6 +50,7 @@ function rpcClient(getAttentionSummary: DesktopRpcClient["getAttentionSummary"])
     unlockWorkspace: vi.fn(),
     signIn: vi.fn(),
     createOrganisation: vi.fn(),
+    listAccounts: vi.fn(),
     getAttentionSummary,
   };
 }
@@ -90,6 +101,26 @@ describe("named desktop protobuf RPC router", () => {
 
     expect(createOrganisation).toHaveBeenCalledExactlyOnceWith(request);
     expect(createOrganisationCodec.decodeResponse(encoded)).toEqual(response);
+  });
+
+  it("decodes and routes the generated chart read", async () => {
+    const response = create(ListAccountsResponseSchema);
+    const listAccounts = vi.fn(async () => response);
+    const router = createDesktopRpcRouter({
+      ...rpcClient(vi.fn()),
+      listAccounts,
+    });
+    const request = create(ListAccountsRequestSchema, {
+      organisationId: "018f2f2a-7c1d-7a62-8d11-216b8d6ea4cb",
+    });
+
+    const encoded = await router.invoke(
+      LIST_ACCOUNTS_CHANNEL,
+      listAccountsCodec.encodeRequest(request),
+    );
+
+    expect(listAccounts).toHaveBeenCalledExactlyOnceWith(request);
+    expect(listAccountsCodec.decodeResponse(encoded)).toEqual(response);
   });
 
   it("rejects unknown channels and invalid, oversized, or wrong-type request frames before core", async () => {
