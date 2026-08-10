@@ -72,10 +72,17 @@ function unusedCoreMethods() {
     getTrialBalance: vi.fn(async () => {
       throw new Error("unused");
     }),
+    importBankStatement: vi.fn(async () => { throw new Error("unused"); }),
+    listBankStatementLines: vi.fn(async () => { throw new Error("unused"); }),
+    matchBankStatementLine: vi.fn(async () => { throw new Error("unused"); }),
+    completeBankReconciliation: vi.fn(async () => { throw new Error("unused"); }),
+    getBankingSummary: vi.fn(async () => { throw new Error("unused"); }),
     ingestDocument: vi.fn(async () => { throw new Error("unused"); }),
     listDocuments: vi.fn(async () => { throw new Error("unused"); }),
     getDocument: vi.fn(async () => { throw new Error("unused"); }),
     saveDocumentReview: vi.fn(async () => { throw new Error("unused"); }),
+    createBasDraft: vi.fn(async () => { throw new Error("unused"); }),
+    getCurrentBasDraft: vi.fn(async () => { throw new Error("unused"); }),
   };
 }
 

@@ -19,10 +19,17 @@ export const POST_MANUAL_JOURNAL_CHANNEL = "tammy:accounting-post-manual-journal
 export const LIST_JOURNALS_CHANNEL = "tammy:accounting-list-journals";
 export const GET_JOURNAL_CHANNEL = "tammy:accounting-get-journal";
 export const GET_TRIAL_BALANCE_CHANNEL = "tammy:accounting-get-trial-balance";
+export const IMPORT_BANK_STATEMENT_CHANNEL = "tammy:banking-import-statement";
+export const LIST_BANK_STATEMENT_LINES_CHANNEL = "tammy:banking-list-lines";
+export const MATCH_BANK_STATEMENT_LINE_CHANNEL = "tammy:banking-match-line";
+export const COMPLETE_BANK_RECONCILIATION_CHANNEL = "tammy:banking-complete-reconciliation";
+export const GET_BANKING_SUMMARY_CHANNEL = "tammy:banking-summary";
 export const INGEST_DOCUMENT_CHANNEL = "tammy:documents-ingest";
 export const LIST_DOCUMENTS_CHANNEL = "tammy:documents-list";
 export const GET_DOCUMENT_CHANNEL = "tammy:documents-get";
 export const SAVE_DOCUMENT_REVIEW_CHANNEL = "tammy:documents-save-review";
+export const CREATE_BAS_DRAFT_CHANNEL = "tammy:tax-create-bas-draft";
+export const GET_CURRENT_BAS_DRAFT_CHANNEL = "tammy:tax-current-bas-draft";
 export const ATTENTION_SUMMARY_CHANNEL = "tammy:overview-attention-summary";
 
 export const DESKTOP_PROTO_CHANNELS = Object.freeze([
@@ -37,10 +44,17 @@ export const DESKTOP_PROTO_CHANNELS = Object.freeze([
   LIST_JOURNALS_CHANNEL,
   GET_JOURNAL_CHANNEL,
   GET_TRIAL_BALANCE_CHANNEL,
+  IMPORT_BANK_STATEMENT_CHANNEL,
+  LIST_BANK_STATEMENT_LINES_CHANNEL,
+  MATCH_BANK_STATEMENT_LINE_CHANNEL,
+  COMPLETE_BANK_RECONCILIATION_CHANNEL,
+  GET_BANKING_SUMMARY_CHANNEL,
   INGEST_DOCUMENT_CHANNEL,
   LIST_DOCUMENTS_CHANNEL,
   GET_DOCUMENT_CHANNEL,
   SAVE_DOCUMENT_REVIEW_CHANNEL,
+  CREATE_BAS_DRAFT_CHANNEL,
+  GET_CURRENT_BAS_DRAFT_CHANNEL,
   ATTENTION_SUMMARY_CHANNEL,
 ] as const);
 
@@ -57,10 +71,17 @@ export interface TammyDesktopAPI {
   readonly listJournals: (request: Uint8Array) => Promise<Uint8Array>;
   readonly getJournal: (request: Uint8Array) => Promise<Uint8Array>;
   readonly getTrialBalance: (request: Uint8Array) => Promise<Uint8Array>;
+  readonly importBankStatement: (request: Uint8Array) => Promise<Uint8Array>;
+  readonly listBankStatementLines: (request: Uint8Array) => Promise<Uint8Array>;
+  readonly matchBankStatementLine: (request: Uint8Array) => Promise<Uint8Array>;
+  readonly completeBankReconciliation: (request: Uint8Array) => Promise<Uint8Array>;
+  readonly getBankingSummary: (request: Uint8Array) => Promise<Uint8Array>;
   readonly ingestDocument: (request: Uint8Array) => Promise<Uint8Array>;
   readonly listDocuments: (request: Uint8Array) => Promise<Uint8Array>;
   readonly getDocument: (request: Uint8Array) => Promise<Uint8Array>;
   readonly saveDocumentReview: (request: Uint8Array) => Promise<Uint8Array>;
+  readonly createBasDraft: (request: Uint8Array) => Promise<Uint8Array>;
+  readonly getCurrentBasDraft: (request: Uint8Array) => Promise<Uint8Array>;
   readonly getAttentionSummary: (request: Uint8Array) => Promise<Uint8Array>;
 }
 
@@ -77,10 +98,17 @@ const EXPECTED_DESKTOP_PRELOAD_METHODS = [
   "listJournals",
   "getJournal",
   "getTrialBalance",
+  "importBankStatement",
+  "listBankStatementLines",
+  "matchBankStatementLine",
+  "completeBankReconciliation",
+  "getBankingSummary",
   "ingestDocument",
   "listDocuments",
   "getDocument",
   "saveDocumentReview",
+  "createBasDraft",
+  "getCurrentBasDraft",
   "getAttentionSummary",
 ] as const satisfies readonly (keyof TammyDesktopAPI)[];
 

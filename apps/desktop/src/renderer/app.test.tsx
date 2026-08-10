@@ -65,10 +65,17 @@ function installDesktopAPI(getSystemDiagnostics: TammyDesktopAPI["getSystemDiagn
       getTrialBalance: vi.fn(async () => {
         throw new Error("unavailable");
       }),
+      importBankStatement: vi.fn(async () => { throw new Error("unavailable"); }),
+      listBankStatementLines: vi.fn(async () => { throw new Error("unavailable"); }),
+      matchBankStatementLine: vi.fn(async () => { throw new Error("unavailable"); }),
+      completeBankReconciliation: vi.fn(async () => { throw new Error("unavailable"); }),
+      getBankingSummary: vi.fn(async () => { throw new Error("unavailable"); }),
       ingestDocument: vi.fn(async () => { throw new Error("unavailable"); }),
       listDocuments: vi.fn(async () => { throw new Error("unavailable"); }),
       getDocument: vi.fn(async () => { throw new Error("unavailable"); }),
       saveDocumentReview: vi.fn(async () => { throw new Error("unavailable"); }),
+      createBasDraft: vi.fn(async () => { throw new Error("unavailable"); }),
+      getCurrentBasDraft: vi.fn(async () => { throw new Error("unavailable"); }),
       getAttentionSummary: vi.fn(async () => {
         throw new Error("unavailable");
       }),
@@ -112,9 +119,8 @@ describe("App", () => {
     expect(within(navigation).getByRole("link", { name: "Overview" })).toBeTruthy();
 
     expect(within(navigation).getByRole("link", { name: "Documents" })).toBeTruthy();
-    for (const futureModule of ["Banking", "GST & BAS"]) {
-      expect(within(navigation).queryByText(futureModule)).toBeNull();
-    }
+    expect(within(navigation).getByRole("link", { name: "Banking" })).toBeTruthy();
+    expect(within(navigation).getByRole("link", { name: "GST & BAS" })).toBeTruthy();
     for (const futureModule of ["Submissions", "Lodge BAS"]) {
       expect(screen.queryByText(futureModule)).toBeNull();
     }
@@ -191,7 +197,7 @@ describe("App", () => {
     await user.tab();
     expect(document.activeElement).toBe(screen.getByRole("link", { name: "Documents" }));
     await user.tab();
-    expect(document.activeElement).toBe(screen.getByRole("link", { name: "Chart of accounts" }));
+    expect(document.activeElement).toBe(screen.getByRole("link", { name: "Banking" }));
   });
 });
 

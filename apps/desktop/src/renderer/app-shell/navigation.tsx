@@ -2,9 +2,11 @@ import {
   BookOpen,
   FileText,
   House,
+  Landmark,
   ListTree,
   Rows3,
   Scale,
+  Calculator,
   Settings,
   ShieldCheck,
 } from "lucide-react";
@@ -13,10 +15,12 @@ import type { MouseEvent } from "react";
 export const PRIMARY_NAVIGATION = Object.freeze([
   { href: "/overview", icon: House, label: "Overview" },
   { href: "/documents", icon: FileText, label: "Documents" },
+  { href: "/banking", icon: Landmark, label: "Banking" },
   { href: "/accounting/chart", icon: ListTree, label: "Chart of accounts" },
   { href: "/accounting/journals", icon: BookOpen, label: "Journals" },
   { href: "/accounting/general-ledger", icon: Rows3, label: "General ledger" },
   { href: "/accounting/trial-balance", icon: Scale, label: "Trial balance" },
+  { href: "/gst-bas", icon: Calculator, label: "GST & BAS" },
   { href: "/audit", icon: ShieldCheck, label: "Audit trail" },
   { href: "/settings", icon: Settings, label: "Settings" },
 ] as const);

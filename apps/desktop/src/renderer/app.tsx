@@ -10,6 +10,8 @@ import { TrialBalanceScreen } from "./features/accounting/trial-balance-screen";
 import { DiagnosticsCard, type DiagnosticsState } from "./features/diagnostics/diagnostics-card";
 import { EmptyLedgerScreen } from "./features/ledger/empty-ledger-screen";
 import { DocumentsScreen } from "./features/documents/documents-screen";
+import { BankingScreen } from "./features/banking/banking-screen";
+import { BasScreen } from "./features/bas/bas-screen";
 import { OverviewScreen } from "./features/overview/overview-screen";
 import { SetupScreen, type AuthenticatedWorkspace } from "./features/setup/setup-screen";
 import { UnlockScreen } from "./features/workspace/unlock-screen";
@@ -163,6 +165,8 @@ function EngineStatus({ onRetry, state }: { readonly onRetry: () => void; readon
 function RouteContent({ onNavigate, path, state, workspace }: { readonly onNavigate: (path: string) => void; readonly path: string; readonly state: DiagnosticsState; readonly workspace: AuthenticatedWorkspace | undefined }) {
   if (path === "/overview") return <OverviewScreen api={window.tammy} workspace={workspace} />;
   if (path === "/documents") return <DocumentsScreen api={window.tammy} workspace={workspace} />;
+  if (path === "/banking") return <BankingScreen api={window.tammy} workspace={workspace} />;
+  if (path === "/gst-bas") return <BasScreen api={window.tammy} workspace={workspace} />;
   if (path === "/accounting/chart") {
     return <ChartScreen api={window.tammy} workspace={workspace} />;
   }

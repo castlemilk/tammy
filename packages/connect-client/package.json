@@ -18,6 +18,7 @@
   "exports": {
     "./tammy/v1/accounting_pb.js": "./src/gen/tammy/v1/accounting_pb.ts",
     "./tammy/v1/audit_pb.js": "./src/gen/tammy/v1/audit_pb.ts",
+    "./tammy/v1/banking_pb.js": "./src/gen/tammy/v1/banking_pb.ts",
     "./tammy/v1/common_pb.js": "./src/gen/tammy/v1/common_pb.ts",
     "./tammy/v1/documents_pb.js": "./src/gen/tammy/v1/documents_pb.ts",
     "./tammy/v1/events_pb.js": "./src/gen/tammy/v1/events_pb.ts",
@@ -26,6 +27,7 @@
     "./tammy/v1/organisation_pb.js": "./src/gen/tammy/v1/organisation_pb.ts",
     "./tammy/v1/overview_pb.js": "./src/gen/tammy/v1/overview_pb.ts",
     "./tammy/v1/system_pb.js": "./src/gen/tammy/v1/system_pb.ts",
+    "./tammy/v1/tax_pb.js": "./src/gen/tammy/v1/tax_pb.ts",
     "./tammy/v1/workspace_pb.js": "./src/gen/tammy/v1/workspace_pb.ts"
   }
 }

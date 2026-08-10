@@ -16,6 +16,19 @@ import type {
 } from "@tammy/connect-client/tammy/v1/accounting_pb.js";
 import { AccountingService } from "@tammy/connect-client/tammy/v1/accounting_pb.js";
 import type {
+  CompleteBankReconciliationRequest,
+  CompleteBankReconciliationResponse,
+  GetBankingSummaryRequest,
+  GetBankingSummaryResponse,
+  ImportBankStatementRequest,
+  ImportBankStatementResponse,
+  ListBankStatementLinesRequest,
+  ListBankStatementLinesResponse,
+  MatchBankStatementLineRequest,
+  MatchBankStatementLineResponse,
+} from "@tammy/connect-client/tammy/v1/banking_pb.js";
+import { BankingService } from "@tammy/connect-client/tammy/v1/banking_pb.js";
+import type {
   GetDocumentRequest,
   GetDocumentResponse,
   IngestDocumentRequest,
@@ -34,6 +47,13 @@ import { OverviewService } from "@tammy/connect-client/tammy/v1/overview_pb.js";
 import type { SignInRequest, SignInResponse } from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import { IdentityService } from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import { RuntimeMode, SystemService } from "@tammy/connect-client/tammy/v1/system_pb.js";
+import type {
+  CreateBasDraftRequest,
+  CreateBasDraftResponse,
+  GetCurrentBasDraftRequest,
+  GetCurrentBasDraftResponse,
+} from "@tammy/connect-client/tammy/v1/tax_pb.js";
+import { TaxService } from "@tammy/connect-client/tammy/v1/tax_pb.js";
 import type {
   CreateOrganisationRequest,
   CreateOrganisationResponse,
@@ -69,12 +89,19 @@ export interface CoreClient {
   readonly getTrialBalance: (
     request: GetTrialBalanceRequest,
   ) => Promise<GetTrialBalanceResponse>;
+  readonly importBankStatement: (request: ImportBankStatementRequest) => Promise<ImportBankStatementResponse>;
+  readonly listBankStatementLines: (request: ListBankStatementLinesRequest) => Promise<ListBankStatementLinesResponse>;
+  readonly matchBankStatementLine: (request: MatchBankStatementLineRequest) => Promise<MatchBankStatementLineResponse>;
+  readonly completeBankReconciliation: (request: CompleteBankReconciliationRequest) => Promise<CompleteBankReconciliationResponse>;
+  readonly getBankingSummary: (request: GetBankingSummaryRequest) => Promise<GetBankingSummaryResponse>;
   readonly ingestDocument: (request: IngestDocumentRequest) => Promise<IngestDocumentResponse>;
   readonly listDocuments: (request: ListDocumentsRequest) => Promise<ListDocumentsResponse>;
   readonly getDocument: (request: GetDocumentRequest) => Promise<GetDocumentResponse>;
   readonly saveDocumentReview: (
     request: SaveDocumentReviewRequest,
   ) => Promise<SaveDocumentReviewResponse>;
+  readonly createBasDraft: (request: CreateBasDraftRequest) => Promise<CreateBasDraftResponse>;
+  readonly getCurrentBasDraft: (request: GetCurrentBasDraftRequest) => Promise<GetCurrentBasDraftResponse>;
   readonly createWorkspace: (request: CreateWorkspaceRequest) => Promise<CreateWorkspaceResponse>;
   readonly confirmRecovery: (request: ConfirmRecoveryRequest) => Promise<ConfirmRecoveryResponse>;
   readonly unlockWorkspace: (request: UnlockWorkspaceRequest) => Promise<UnlockWorkspaceResponse>;
@@ -131,11 +158,13 @@ export function createCoreClient(
   });
   const systemClient = createClient(SystemService, transport);
   const accountingClient = createClient(AccountingService, transport);
+  const bankingClient = createClient(BankingService, transport);
   const documentClient = createClient(DocumentService, transport);
   const overviewClient = createClient(OverviewService, transport);
   const workspaceClient = createClient(WorkspaceService, transport);
   const identityClient = createClient(IdentityService, transport);
   const organisationClient = createClient(OrganisationService, transport);
+  const taxClient = createClient(TaxService, transport);
 
   const coreRequest = async <Response>(request: () => Promise<Response>): Promise<Response> => {
     try {
@@ -158,6 +187,16 @@ export function createCoreClient(
       coreRequest(() => accountingClient.getJournal(request)),
     getTrialBalance: (request: GetTrialBalanceRequest) =>
       coreRequest(() => accountingClient.getTrialBalance(request)),
+    importBankStatement: (request: ImportBankStatementRequest) =>
+      coreRequest(() => bankingClient.importBankStatement(request)),
+    listBankStatementLines: (request: ListBankStatementLinesRequest) =>
+      coreRequest(() => bankingClient.listBankStatementLines(request)),
+    matchBankStatementLine: (request: MatchBankStatementLineRequest) =>
+      coreRequest(() => bankingClient.matchBankStatementLine(request)),
+    completeBankReconciliation: (request: CompleteBankReconciliationRequest) =>
+      coreRequest(() => bankingClient.completeBankReconciliation(request)),
+    getBankingSummary: (request: GetBankingSummaryRequest) =>
+      coreRequest(() => bankingClient.getBankingSummary(request)),
     ingestDocument: (request: IngestDocumentRequest) =>
       coreRequest(() => documentClient.ingestDocument(request)),
     listDocuments: (request: ListDocumentsRequest) =>
@@ -166,6 +205,10 @@ export function createCoreClient(
       coreRequest(() => documentClient.getDocument(request)),
     saveDocumentReview: (request: SaveDocumentReviewRequest) =>
       coreRequest(() => documentClient.saveDocumentReview(request)),
+    createBasDraft: (request: CreateBasDraftRequest) =>
+      coreRequest(() => taxClient.createBasDraft(request)),
+    getCurrentBasDraft: (request: GetCurrentBasDraftRequest) =>
+      coreRequest(() => taxClient.getCurrentBasDraft(request)),
     createWorkspace: (request: CreateWorkspaceRequest) =>
       coreRequest(() => workspaceClient.createWorkspace(request)),
     confirmRecovery: (request: ConfirmRecoveryRequest) =>

@@ -50,10 +50,17 @@ function installDesktopAPI() {
       getTrialBalance: vi.fn(async () => {
         throw new Error("unavailable");
       }),
+      importBankStatement: vi.fn(async () => { throw new Error("unavailable"); }),
+      listBankStatementLines: vi.fn(async () => { throw new Error("unavailable"); }),
+      matchBankStatementLine: vi.fn(async () => { throw new Error("unavailable"); }),
+      completeBankReconciliation: vi.fn(async () => { throw new Error("unavailable"); }),
+      getBankingSummary: vi.fn(async () => { throw new Error("unavailable"); }),
       ingestDocument: vi.fn(async () => { throw new Error("unavailable"); }),
       listDocuments: vi.fn(async () => { throw new Error("unavailable"); }),
       getDocument: vi.fn(async () => { throw new Error("unavailable"); }),
       saveDocumentReview: vi.fn(async () => { throw new Error("unavailable"); }),
+      createBasDraft: vi.fn(async () => { throw new Error("unavailable"); }),
+      getCurrentBasDraft: vi.fn(async () => { throw new Error("unavailable"); }),
       getAttentionSummary: vi.fn(async () => {
         throw new Error("unavailable");
       }),
@@ -82,10 +89,12 @@ it("renders the walkthrough app shell", async () => {
   expect(within(navigation).getAllByRole("link").map((link) => link.textContent?.trim())).toEqual([
     "Overview",
     "Documents",
+    "Banking",
     "Chart of accounts",
     "Journals",
     "General ledger",
     "Trial balance",
+    "GST & BAS",
     "Audit trail",
     "Settings",
   ]);

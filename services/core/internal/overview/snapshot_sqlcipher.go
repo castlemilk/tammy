@@ -105,13 +105,35 @@ func (port *SQLCipherSnapshotPort) Attention(ctx context.Context, organisationID
 	if err := documentRows.Close(); err != nil {
 		return Snapshot{}, errors.Join(ErrOverview, err)
 	}
+	var bankingNeedingReview, bankingUnreconciled uint32
+	if err := tx.QueryRowContext(ctx, `
+		SELECT COALESCE(SUM(CASE WHEN status = 'UNMATCHED' THEN 1 ELSE 0 END), 0),
+		       COALESCE(SUM(CASE WHEN status != 'RECONCILED' THEN 1 ELSE 0 END), 0)
+		FROM bank_statement_lines WHERE organisation_id = ?`, organisationID).Scan(
+		&bankingNeedingReview, &bankingUnreconciled,
+	); err != nil {
+		return Snapshot{}, errors.Join(ErrOverview, err)
+	}
+	var draftBASWorkpapers uint32
+	if err := tx.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM bas_workpapers
+		WHERE organisation_id = ? AND status = 'DRAFT_NOT_LODGED'`, organisationID).Scan(&draftBASWorkpapers); err != nil {
+		return Snapshot{}, errors.Join(ErrOverview, err)
+	}
+	basStatus := tammyv1.BasAttentionStatus_BAS_ATTENTION_STATUS_NOT_CREATED
+	if draftBASWorkpapers > 0 {
+		basStatus = tammyv1.BasAttentionStatus_BAS_ATTENTION_STATUS_DRAFT_NOT_LODGED
+	}
 	if err := tx.Commit(); err != nil {
 		return Snapshot{}, errors.Join(ErrOverview, err)
 	}
 	return Snapshot{
 		DocumentsNeedingReview: documentsNeedingReview,
 		DocumentsReviewed:      documentsReviewed,
-		BASStatus:              tammyv1.BasAttentionStatus_BAS_ATTENTION_STATUS_NOT_CREATED,
+		BankingNeedingReview:   bankingNeedingReview,
+		BankingUnreconciled:    bankingUnreconciled,
+		DraftBASWorkpapers:     draftBASWorkpapers,
+		BASStatus:              basStatus,
 		Items:                  items,
 		Revisions:              revisions,
 	}, nil

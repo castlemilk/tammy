@@ -56,10 +56,17 @@ function rpcClient(getAttentionSummary: DesktopRpcClient["getAttentionSummary"])
     listJournals: vi.fn(),
     getJournal: vi.fn(),
     getTrialBalance: vi.fn(),
+    importBankStatement: vi.fn(),
+    listBankStatementLines: vi.fn(),
+    matchBankStatementLine: vi.fn(),
+    completeBankReconciliation: vi.fn(),
+    getBankingSummary: vi.fn(),
     ingestDocument: vi.fn(),
     listDocuments: vi.fn(),
     getDocument: vi.fn(),
     saveDocumentReview: vi.fn(),
+    createBasDraft: vi.fn(),
+    getCurrentBasDraft: vi.fn(),
     getAttentionSummary,
   };
 }

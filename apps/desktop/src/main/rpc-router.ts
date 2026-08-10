@@ -47,6 +47,30 @@ import {
   PostManualJournalResponseSchema,
 } from "@tammy/connect-client/tammy/v1/accounting_pb.js";
 import type {
+  CompleteBankReconciliationRequest,
+  CompleteBankReconciliationResponse,
+  GetBankingSummaryRequest,
+  GetBankingSummaryResponse,
+  ImportBankStatementRequest,
+  ImportBankStatementResponse,
+  ListBankStatementLinesRequest,
+  ListBankStatementLinesResponse,
+  MatchBankStatementLineRequest,
+  MatchBankStatementLineResponse,
+} from "@tammy/connect-client/tammy/v1/banking_pb.js";
+import {
+  CompleteBankReconciliationRequestSchema,
+  CompleteBankReconciliationResponseSchema,
+  GetBankingSummaryRequestSchema,
+  GetBankingSummaryResponseSchema,
+  ImportBankStatementRequestSchema,
+  ImportBankStatementResponseSchema,
+  ListBankStatementLinesRequestSchema,
+  ListBankStatementLinesResponseSchema,
+  MatchBankStatementLineRequestSchema,
+  MatchBankStatementLineResponseSchema,
+} from "@tammy/connect-client/tammy/v1/banking_pb.js";
+import type {
   GetAttentionSummaryRequest,
   GetAttentionSummaryResponse,
 } from "@tammy/connect-client/tammy/v1/overview_pb.js";
@@ -72,6 +96,18 @@ import type {
   UnlockWorkspaceRequest,
   UnlockWorkspaceResponse,
 } from "@tammy/connect-client/tammy/v1/workspace_pb.js";
+import type {
+  CreateBasDraftRequest,
+  CreateBasDraftResponse,
+  GetCurrentBasDraftRequest,
+  GetCurrentBasDraftResponse,
+} from "@tammy/connect-client/tammy/v1/tax_pb.js";
+import {
+  CreateBasDraftRequestSchema,
+  CreateBasDraftResponseSchema,
+  GetCurrentBasDraftRequestSchema,
+  GetCurrentBasDraftResponseSchema,
+} from "@tammy/connect-client/tammy/v1/tax_pb.js";
 import {
   ConfirmRecoveryRequestSchema,
   ConfirmRecoveryResponseSchema,
@@ -83,17 +119,24 @@ import {
 
 import {
   ATTENTION_SUMMARY_CHANNEL,
+  COMPLETE_BANK_RECONCILIATION_CHANNEL,
   CONFIRM_RECOVERY_CHANNEL,
   CREATE_ACCOUNT_CHANNEL,
   CREATE_ORGANISATION_CHANNEL,
   CREATE_WORKSPACE_CHANNEL,
+  CREATE_BAS_DRAFT_CHANNEL,
+  GET_BANKING_SUMMARY_CHANNEL,
+  GET_CURRENT_BAS_DRAFT_CHANNEL,
   GET_JOURNAL_CHANNEL,
   GET_TRIAL_BALANCE_CHANNEL,
   GET_DOCUMENT_CHANNEL,
   INGEST_DOCUMENT_CHANNEL,
+  IMPORT_BANK_STATEMENT_CHANNEL,
   LIST_ACCOUNTS_CHANNEL,
   LIST_DOCUMENTS_CHANNEL,
   LIST_JOURNALS_CHANNEL,
+  LIST_BANK_STATEMENT_LINES_CHANNEL,
+  MATCH_BANK_STATEMENT_LINE_CHANNEL,
   POST_MANUAL_JOURNAL_CHANNEL,
   SIGN_IN_CHANNEL,
   SAVE_DOCUMENT_REVIEW_CHANNEL,
@@ -169,6 +212,11 @@ const getTrialBalanceCodec = createProtoMethodCodec({
   maximumResponseBytes: 524_288,
   output: GetTrialBalanceResponseSchema,
 });
+const importBankStatementCodec = createProtoMethodCodec({ input: ImportBankStatementRequestSchema, maximumRequestBytes: 262_144, maximumResponseBytes: 32_768, output: ImportBankStatementResponseSchema });
+const listBankStatementLinesCodec = createProtoMethodCodec({ input: ListBankStatementLinesRequestSchema, maximumRequestBytes: 16_384, maximumResponseBytes: 262_144, output: ListBankStatementLinesResponseSchema });
+const matchBankStatementLineCodec = createProtoMethodCodec({ input: MatchBankStatementLineRequestSchema, maximumRequestBytes: 16_384, maximumResponseBytes: 32_768, output: MatchBankStatementLineResponseSchema });
+const completeBankReconciliationCodec = createProtoMethodCodec({ input: CompleteBankReconciliationRequestSchema, maximumRequestBytes: 16_384, maximumResponseBytes: 16_384, output: CompleteBankReconciliationResponseSchema });
+const getBankingSummaryCodec = createProtoMethodCodec({ input: GetBankingSummaryRequestSchema, maximumRequestBytes: 16_384, maximumResponseBytes: 16_384, output: GetBankingSummaryResponseSchema });
 const ingestDocumentCodec = createProtoMethodCodec({
   input: IngestDocumentRequestSchema,
   maximumRequestBytes: 11 * 1024 * 1024,
@@ -193,6 +241,8 @@ const saveDocumentReviewCodec = createProtoMethodCodec({
   maximumResponseBytes: 2 * 1024 * 1024,
   output: SaveDocumentReviewResponseSchema,
 });
+const createBasDraftCodec = createProtoMethodCodec({ input: CreateBasDraftRequestSchema, maximumRequestBytes: 16_384, maximumResponseBytes: 262_144, output: CreateBasDraftResponseSchema });
+const getCurrentBasDraftCodec = createProtoMethodCodec({ input: GetCurrentBasDraftRequestSchema, maximumRequestBytes: 16_384, maximumResponseBytes: 262_144, output: GetCurrentBasDraftResponseSchema });
 
 const attentionCodec = createProtoMethodCodec({
   input: GetAttentionSummaryRequestSchema,
@@ -224,12 +274,19 @@ export interface DesktopRpcClient {
   readonly getTrialBalance: (
     request: GetTrialBalanceRequest,
   ) => Promise<GetTrialBalanceResponse>;
+  readonly importBankStatement: (request: ImportBankStatementRequest) => Promise<ImportBankStatementResponse>;
+  readonly listBankStatementLines: (request: ListBankStatementLinesRequest) => Promise<ListBankStatementLinesResponse>;
+  readonly matchBankStatementLine: (request: MatchBankStatementLineRequest) => Promise<MatchBankStatementLineResponse>;
+  readonly completeBankReconciliation: (request: CompleteBankReconciliationRequest) => Promise<CompleteBankReconciliationResponse>;
+  readonly getBankingSummary: (request: GetBankingSummaryRequest) => Promise<GetBankingSummaryResponse>;
   readonly ingestDocument: (request: IngestDocumentRequest) => Promise<IngestDocumentResponse>;
   readonly listDocuments: (request: ListDocumentsRequest) => Promise<ListDocumentsResponse>;
   readonly getDocument: (request: GetDocumentRequest) => Promise<GetDocumentResponse>;
   readonly saveDocumentReview: (
     request: SaveDocumentReviewRequest,
   ) => Promise<SaveDocumentReviewResponse>;
+  readonly createBasDraft: (request: CreateBasDraftRequest) => Promise<CreateBasDraftResponse>;
+  readonly getCurrentBasDraft: (request: GetCurrentBasDraftRequest) => Promise<GetCurrentBasDraftResponse>;
   readonly createWorkspace: (request: CreateWorkspaceRequest) => Promise<CreateWorkspaceResponse>;
   readonly confirmRecovery: (request: ConfirmRecoveryRequest) => Promise<ConfirmRecoveryResponse>;
   readonly unlockWorkspace: (request: UnlockWorkspaceRequest) => Promise<UnlockWorkspaceResponse>;
@@ -293,6 +350,16 @@ export function createDesktopRpcRouter(client: DesktopRpcClient): Readonly<Deskt
             return getTrialBalanceCodec.encodeResponse(
               await client.getTrialBalance(getTrialBalanceCodec.decodeRequest(request)),
             );
+          case IMPORT_BANK_STATEMENT_CHANNEL:
+            return importBankStatementCodec.encodeResponse(await client.importBankStatement(importBankStatementCodec.decodeRequest(request)));
+          case LIST_BANK_STATEMENT_LINES_CHANNEL:
+            return listBankStatementLinesCodec.encodeResponse(await client.listBankStatementLines(listBankStatementLinesCodec.decodeRequest(request)));
+          case MATCH_BANK_STATEMENT_LINE_CHANNEL:
+            return matchBankStatementLineCodec.encodeResponse(await client.matchBankStatementLine(matchBankStatementLineCodec.decodeRequest(request)));
+          case COMPLETE_BANK_RECONCILIATION_CHANNEL:
+            return completeBankReconciliationCodec.encodeResponse(await client.completeBankReconciliation(completeBankReconciliationCodec.decodeRequest(request)));
+          case GET_BANKING_SUMMARY_CHANNEL:
+            return getBankingSummaryCodec.encodeResponse(await client.getBankingSummary(getBankingSummaryCodec.decodeRequest(request)));
           case INGEST_DOCUMENT_CHANNEL:
             return ingestDocumentCodec.encodeResponse(
               await client.ingestDocument(ingestDocumentCodec.decodeRequest(request)),
@@ -309,6 +376,10 @@ export function createDesktopRpcRouter(client: DesktopRpcClient): Readonly<Deskt
             return saveDocumentReviewCodec.encodeResponse(
               await client.saveDocumentReview(saveDocumentReviewCodec.decodeRequest(request)),
             );
+          case CREATE_BAS_DRAFT_CHANNEL:
+            return createBasDraftCodec.encodeResponse(await client.createBasDraft(createBasDraftCodec.decodeRequest(request)));
+          case GET_CURRENT_BAS_DRAFT_CHANNEL:
+            return getCurrentBasDraftCodec.encodeResponse(await client.getCurrentBasDraft(getCurrentBasDraftCodec.decodeRequest(request)));
           case ATTENTION_SUMMARY_CHANNEL:
             return attentionCodec.encodeResponse(
               await client.getAttentionSummary(attentionCodec.decodeRequest(request)),

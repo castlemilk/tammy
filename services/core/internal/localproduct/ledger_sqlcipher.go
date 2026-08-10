@@ -20,12 +20,14 @@ import (
 	"github.com/tammyapp/tammy/services/core/internal/app"
 	"github.com/tammyapp/tammy/services/core/internal/artefacts"
 	"github.com/tammyapp/tammy/services/core/internal/authorisation"
+	"github.com/tammyapp/tammy/services/core/internal/banking"
 	"github.com/tammyapp/tammy/services/core/internal/documents"
 	tammyv1 "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1"
 	tammyv1connect "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1/tammyv1connect"
 	"github.com/tammyapp/tammy/services/core/internal/idempotency"
 	"github.com/tammyapp/tammy/services/core/internal/organisations"
 	"github.com/tammyapp/tammy/services/core/internal/platform/clock"
+	"github.com/tammyapp/tammy/services/core/internal/reporting"
 	"github.com/tammyapp/tammy/services/core/internal/storage/sqlcipher"
 	"github.com/tammyapp/tammy/services/core/internal/transport"
 	"github.com/tammyapp/tammy/services/core/internal/workspace"
@@ -38,7 +40,9 @@ var ErrLedgerModule = errors.New("local product: ledger module unavailable")
 type LedgerModule struct {
 	organisationRoute *organisationRoute
 	accountingRoute   *accountingRoute
+	bankingRoute      *bankingRoute
 	documentRoute     *documentRoute
+	taxRoute          *taxRoute
 	mu                sync.RWMutex
 	db                *sqlcipher.Database
 }
@@ -47,23 +51,29 @@ func NewLedgerModule() (*LedgerModule, error) {
 	return &LedgerModule{
 		organisationRoute: &organisationRoute{},
 		accountingRoute:   &accountingRoute{},
+		bankingRoute:      &bankingRoute{},
 		documentRoute:     &documentRoute{},
+		taxRoute:          &taxRoute{},
 	}, nil
 }
 
 func (module *LedgerModule) HandlerFactories() []transport.GeneratedHandlerFactory {
-	if module == nil || module.organisationRoute == nil || module.accountingRoute == nil || module.documentRoute == nil {
+	if module == nil || module.organisationRoute == nil || module.accountingRoute == nil || module.bankingRoute == nil ||
+		module.documentRoute == nil || module.taxRoute == nil {
 		return nil
 	}
 	return []transport.GeneratedHandlerFactory{
 		module.organisationRoute.factory,
 		module.accountingRoute.factory,
+		module.bankingRoute.factory,
 		module.documentRoute.factory,
+		module.taxRoute.factory,
 	}
 }
 
 func (module *LedgerModule) Activate(activation app.LocalWorkspaceActivation) error {
-	if module == nil || module.organisationRoute == nil || module.accountingRoute == nil || module.documentRoute == nil ||
+	if module == nil || module.organisationRoute == nil || module.accountingRoute == nil || module.bankingRoute == nil ||
+		module.documentRoute == nil || module.taxRoute == nil ||
 		activation.Database == nil || activation.Identity == nil ||
 		activation.Now == nil || activation.NewID == nil {
 		return ErrLedgerModule
@@ -173,10 +183,301 @@ func (module *LedgerModule) Activate(activation app.LocalWorkspaceActivation) er
 	}); err != nil {
 		return err
 	}
+	if err := module.bankingRoute.set(&bankingHandler{
+		database: activation.Database,
+		identity: activation.Identity,
+		now:      activation.Now,
+		newID:    activation.NewID,
+	}); err != nil {
+		return err
+	}
+	if err := module.taxRoute.set(&taxHandler{
+		database: activation.Database,
+		identity: activation.Identity,
+		now:      activation.Now,
+		newID:    activation.NewID,
+	}); err != nil {
+		return err
+	}
 	module.mu.Lock()
 	module.db = activation.Database
 	module.mu.Unlock()
 	return nil
+}
+
+type bankingRoute struct {
+	mu      sync.RWMutex
+	options []connect.HandlerOption
+	handler http.Handler
+}
+
+func (route *bankingRoute) set(service tammyv1connect.BankingServiceHandler) error {
+	if route == nil || service == nil {
+		return ErrLedgerModule
+	}
+	_, handler := tammyv1connect.NewBankingServiceHandler(service, append([]connect.HandlerOption(nil), route.options...)...)
+	route.mu.Lock()
+	route.handler = handler
+	route.mu.Unlock()
+	return nil
+}
+
+func (route *bankingRoute) factory(options ...connect.HandlerOption) (string, http.Handler) {
+	route.mu.Lock()
+	route.options = append([]connect.HandlerOption(nil), options...)
+	route.mu.Unlock()
+	return "/" + tammyv1connect.BankingServiceName + "/", route
+}
+
+func (route *bankingRoute) ServeHTTP(response http.ResponseWriter, request *http.Request) {
+	route.mu.RLock()
+	handler := route.handler
+	route.mu.RUnlock()
+	if handler == nil {
+		http.Error(response, "local banking unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	handler.ServeHTTP(response, request)
+}
+
+type bankingHandler struct {
+	tammyv1connect.UnimplementedBankingServiceHandler
+	database *sqlcipher.Database
+	identity app.LocalModuleIdentity
+	now      func() time.Time
+	newID    func() (string, error)
+}
+
+func (handler *bankingHandler) ImportBankStatement(ctx context.Context, request *connect.Request[tammyv1.ImportBankStatementRequest]) (*connect.Response[tammyv1.ImportBankStatementResponse], error) {
+	if handler == nil || handler.database == nil || handler.identity == nil || handler.now == nil || handler.newID == nil ||
+		request == nil || request.Msg == nil || request.Msg.CommandContext == nil ||
+		request.Msg.CommandContext.Authentication == nil || request.Msg.OpeningBalance == nil || len(request.Msg.Lines) == 0 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrLedgerModule)
+	}
+	tx, err := handler.database.BeginEncryptedTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	defer tx.Rollback()
+	if err := handler.identity.RequireAdministratorWithin(ctx, tx, request.Msg.CommandContext.Authentication); err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, ErrLedgerModule)
+	}
+	importID, err := handler.newID()
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	lineIDs := make([]string, len(request.Msg.Lines))
+	for index := range lineIDs {
+		lineIDs[index], err = handler.newID()
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+		}
+	}
+	repository, err := banking.NewRepository(tx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	statementImport, err := repository.ImportStatement(ctx, request.Msg.CommandContext.IdempotencyKey,
+		request.Msg.OrganisationId, importID, lineIDs, request.Msg.OpeningBalance.MinorUnits, request.Msg.Lines, handler.now())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrLedgerModule)
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	return connect.NewResponse(&tammyv1.ImportBankStatementResponse{StatementImport: statementImport}), nil
+}
+
+func (handler *bankingHandler) ListBankStatementLines(ctx context.Context, request *connect.Request[tammyv1.ListBankStatementLinesRequest]) (*connect.Response[tammyv1.ListBankStatementLinesResponse], error) {
+	if handler == nil || handler.database == nil || handler.identity == nil || request == nil || request.Msg == nil ||
+		request.Msg.Authentication == nil || request.Msg.Page == nil || request.Msg.Page.Cursor != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrLedgerModule)
+	}
+	if err := handler.identity.RequireActiveSessionReadOnly(ctx, request.Msg.Authentication); err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, ErrLedgerModule)
+	}
+	limit := int(request.Msg.Page.PageSize)
+	if limit == 0 {
+		limit = 100
+	}
+	if limit < 1 || limit > 200 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrLedgerModule)
+	}
+	tx, err := handler.database.BeginEncryptedTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	defer tx.Rollback()
+	repository, err := banking.NewRepository(tx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	lines, err := repository.ListLines(ctx, request.Msg.OrganisationId, limit)
+	if err != nil || tx.Commit() != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	return connect.NewResponse(&tammyv1.ListBankStatementLinesResponse{Lines: lines, Page: &tammyv1.PageInfo{ReturnedCount: uint32(len(lines))}}), nil
+}
+
+func (handler *bankingHandler) MatchBankStatementLine(ctx context.Context, request *connect.Request[tammyv1.MatchBankStatementLineRequest]) (*connect.Response[tammyv1.MatchBankStatementLineResponse], error) {
+	if handler == nil || handler.database == nil || handler.identity == nil || request == nil || request.Msg == nil ||
+		request.Msg.CommandContext == nil || request.Msg.CommandContext.Authentication == nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrLedgerModule)
+	}
+	tx, err := handler.database.BeginEncryptedTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	defer tx.Rollback()
+	if err := handler.identity.RequireAdministratorWithin(ctx, tx, request.Msg.CommandContext.Authentication); err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, ErrLedgerModule)
+	}
+	repository, _ := banking.NewRepository(tx)
+	line, err := repository.MatchLine(ctx, request.Msg.LineId, request.Msg.ExpectedVersion, request.Msg.MatchReference)
+	if err != nil || tx.Commit() != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, ErrLedgerModule)
+	}
+	return connect.NewResponse(&tammyv1.MatchBankStatementLineResponse{Line: line}), nil
+}
+
+func (handler *bankingHandler) CompleteBankReconciliation(ctx context.Context, request *connect.Request[tammyv1.CompleteBankReconciliationRequest]) (*connect.Response[tammyv1.CompleteBankReconciliationResponse], error) {
+	if handler == nil || handler.database == nil || handler.identity == nil || handler.now == nil || handler.newID == nil ||
+		request == nil || request.Msg == nil || request.Msg.CommandContext == nil || request.Msg.CommandContext.Authentication == nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrLedgerModule)
+	}
+	tx, err := handler.database.BeginEncryptedTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	defer tx.Rollback()
+	if err := handler.identity.RequireAdministratorWithin(ctx, tx, request.Msg.CommandContext.Authentication); err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, ErrLedgerModule)
+	}
+	id, err := handler.newID()
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	repository, _ := banking.NewRepository(tx)
+	count, closing, err := repository.CompleteReconciliation(ctx, request.Msg.CommandContext.IdempotencyKey, id, request.Msg.OrganisationId, handler.now())
+	if err != nil || tx.Commit() != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, ErrLedgerModule)
+	}
+	return connect.NewResponse(&tammyv1.CompleteBankReconciliationResponse{ReconciledLineCount: count, ClosingBalance: localAUD(closing)}), nil
+}
+
+func (handler *bankingHandler) GetBankingSummary(ctx context.Context, request *connect.Request[tammyv1.GetBankingSummaryRequest]) (*connect.Response[tammyv1.GetBankingSummaryResponse], error) {
+	if handler == nil || handler.database == nil || handler.identity == nil || request == nil || request.Msg == nil || request.Msg.Authentication == nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrLedgerModule)
+	}
+	if err := handler.identity.RequireActiveSessionReadOnly(ctx, request.Msg.Authentication); err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, ErrLedgerModule)
+	}
+	tx, err := handler.database.BeginEncryptedTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	defer tx.Rollback()
+	repository, _ := banking.NewRepository(tx)
+	total, unmatched, unreconciled, closing, err := repository.Summary(ctx, request.Msg.OrganisationId)
+	if err != nil || tx.Commit() != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	return connect.NewResponse(&tammyv1.GetBankingSummaryResponse{ImportedLineCount: total, UnmatchedLineCount: unmatched, UnreconciledLineCount: unreconciled, LatestClosingBalance: localAUD(closing)}), nil
+}
+
+type taxRoute struct {
+	mu      sync.RWMutex
+	options []connect.HandlerOption
+	handler http.Handler
+}
+
+func (route *taxRoute) set(service tammyv1connect.TaxServiceHandler) error {
+	if route == nil || service == nil {
+		return ErrLedgerModule
+	}
+	_, handler := tammyv1connect.NewTaxServiceHandler(service, append([]connect.HandlerOption(nil), route.options...)...)
+	route.mu.Lock()
+	route.handler = handler
+	route.mu.Unlock()
+	return nil
+}
+
+func (route *taxRoute) factory(options ...connect.HandlerOption) (string, http.Handler) {
+	route.mu.Lock()
+	route.options = append([]connect.HandlerOption(nil), options...)
+	route.mu.Unlock()
+	return "/" + tammyv1connect.TaxServiceName + "/", route
+}
+
+func (route *taxRoute) ServeHTTP(response http.ResponseWriter, request *http.Request) {
+	route.mu.RLock()
+	handler := route.handler
+	route.mu.RUnlock()
+	if handler == nil {
+		http.Error(response, "local BAS unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	handler.ServeHTTP(response, request)
+}
+
+type taxHandler struct {
+	tammyv1connect.UnimplementedTaxServiceHandler
+	database *sqlcipher.Database
+	identity app.LocalModuleIdentity
+	now      func() time.Time
+	newID    func() (string, error)
+}
+
+func (handler *taxHandler) CreateBasDraft(ctx context.Context, request *connect.Request[tammyv1.CreateBasDraftRequest]) (*connect.Response[tammyv1.CreateBasDraftResponse], error) {
+	if handler == nil || handler.database == nil || handler.identity == nil || handler.now == nil || handler.newID == nil ||
+		request == nil || request.Msg == nil || request.Msg.CommandContext == nil || request.Msg.CommandContext.Authentication == nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrLedgerModule)
+	}
+	tx, err := handler.database.BeginEncryptedTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	defer tx.Rollback()
+	if err := handler.identity.RequireAdministratorWithin(ctx, tx, request.Msg.CommandContext.Authentication); err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, ErrLedgerModule)
+	}
+	id, err := handler.newID()
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	repository, _ := reporting.NewRepository(tx)
+	workpaper, err := repository.CreateBASDraft(ctx, request.Msg.CommandContext.IdempotencyKey, id, request.Msg.OrganisationId, request.Msg.PeriodStart, request.Msg.PeriodEnd, handler.now())
+	if err != nil || tx.Commit() != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, ErrLedgerModule)
+	}
+	return connect.NewResponse(&tammyv1.CreateBasDraftResponse{Workpaper: workpaper}), nil
+}
+
+func (handler *taxHandler) GetCurrentBasDraft(ctx context.Context, request *connect.Request[tammyv1.GetCurrentBasDraftRequest]) (*connect.Response[tammyv1.GetCurrentBasDraftResponse], error) {
+	if handler == nil || handler.database == nil || handler.identity == nil || request == nil || request.Msg == nil || request.Msg.Authentication == nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrLedgerModule)
+	}
+	if err := handler.identity.RequireActiveSessionReadOnly(ctx, request.Msg.Authentication); err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, ErrLedgerModule)
+	}
+	tx, err := handler.database.BeginEncryptedTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	defer tx.Rollback()
+	repository, _ := reporting.NewRepository(tx)
+	workpaper, err := repository.GetCurrentBASDraft(ctx, request.Msg.OrganisationId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, ErrLedgerModule)
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	return connect.NewResponse(&tammyv1.GetCurrentBasDraftResponse{Workpaper: workpaper}), nil
+}
+
+func localAUD(minor int64) *tammyv1.Money {
+	return &tammyv1.Money{CurrencyCode: "AUD", MinorUnits: minor}
 }
 
 type documentRoute struct {
