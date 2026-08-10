@@ -51,7 +51,7 @@ A separate Mac App Store profile will be selected explicitly by a release comman
 - target the Electron `mas` platform and retain the bundled Go core and SQLCipher resources;
 - require Apple distribution identity, team identifier, and provisioning profile inputs instead of falling back to ad-hoc signing;
 - enable the App Sandbox with the minimum entitlements required by the current architecture;
-- keep outbound Internet access disabled by product design while permitting only the local client/server transport needed between Electron and the supervised core;
+- keep outbound Internet use absent from product code while enabling the coarse sandbox network entitlements required by the authenticated loopback transport;
 - place the privacy manifest and licensed resources in the application bundle;
 - preserve hardened Electron fuses and refuse a dirty or internally inconsistent release input;
 - produce an application bundle suitable for Apple's validation/upload tooling.
@@ -60,13 +60,13 @@ Development and store profiles must not silently select one another. A normal de
 
 ## Sandbox and child process design
 
-The Go core is an embedded executable, not a separately downloadable component. The store profile signs the application, Electron helpers, and the core consistently with the application's sandbox. The entitlements allow the Electron process to connect to the loopback core and the core to listen only for the application's authenticated local transport. User-selected import/export locations use Apple user-selection permissions; Tammy's internal encrypted workspace remains in its application container.
+The Go core is an embedded executable, not a separately downloadable component. The store profile signs the application, Electron helpers, and the core consistently with the application's sandbox. Apple's network entitlements are not loopback-scoped, so they enable client access for Electron and server access for the core while Tammy's existing transport validation continues to constrain product behavior to the authenticated loopback channel. User-selected import locations use Apple's user-selection permission; Tammy's internal encrypted workspace remains in its application container.
 
 The existing exact-path core supervision, build-manifest authentication, SQLCipher-only build, and clean-shutdown checks remain release gates. The store profile must not weaken them.
 
 ## Privacy and store metadata
 
-The repository will include a minimal privacy manifest that declares no tracking and no collected data only to the extent supported by the current offline implementation. Any future telemetry, third-party SDK, networking, or data collection change must update the manifest and App Store privacy answers together.
+The repository will include a minimal privacy manifest that declares no tracking and no collected data only to the extent supported by the current offline implementation. It will also declare the approved reasons for required-reason APIs Tammy directly uses to manage files in its container or files the user selected. An Xcode privacy report remains a final signed-build gate because bundled Electron and native code must be assessed as shipped. Any future telemetry, third-party SDK, networking, or data collection change must update the manifest and App Store privacy answers together.
 
 The repository will also provide a concise store-metadata template covering name, subtitle, description, keywords, category, privacy URL, support URL, copyright, review notes, and screenshots. Fields requiring legal or business decisions remain visibly incomplete and block the final submission checklist.
 
@@ -91,7 +91,8 @@ Implementation validation is proportionate and layered:
 2. desktop typecheck and relevant Electron tests;
 3. a normal unsigned package plus the existing packaged end-to-end flow where practical;
 4. a local unsigned or ad-hoc MAS-layout inspection when Electron tooling permits it without Apple credentials;
-5. operator-only signed archive validation, Transporter upload, App Store processing, and TestFlight/App Review smoke tests.
+5. a development-certificate MAS launch test on a provisioned Mac;
+6. operator-only distribution signing, Installer package validation, Transporter upload, App Store processing, and TestFlight/App Review smoke tests.
 
 No documentation or local checker may report the app as submitted or approved. The final handoff will state exactly which repository checks pass and which Apple-controlled gates remain.
 
@@ -105,6 +106,7 @@ The following cannot be truthfully completed from the repository alone:
 - App Store provisioning profile and the associated Team ID;
 - final legal entity, copyright, pricing, tax/banking, support URL, privacy URL, and privacy questionnaire answers;
 - approved product icon/brand direction and final App Store screenshots;
+- a signed-build Xcode privacy report confirming every shipped required-reason API declaration;
 - App Review submission, review notes, and release decision.
 
 These appear as a short operator checklist rather than being disguised as code defaults.
