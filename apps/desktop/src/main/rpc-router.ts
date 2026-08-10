@@ -9,6 +9,14 @@ import {
 import type { SignInRequest, SignInResponse } from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import { SignInRequestSchema, SignInResponseSchema } from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import type {
+  CreateOrganisationRequest,
+  CreateOrganisationResponse,
+} from "@tammy/connect-client/tammy/v1/organisation_pb.js";
+import {
+  CreateOrganisationRequestSchema,
+  CreateOrganisationResponseSchema,
+} from "@tammy/connect-client/tammy/v1/organisation_pb.js";
+import type {
   ConfirmRecoveryRequest,
   ConfirmRecoveryResponse,
   CreateWorkspaceRequest,
@@ -28,6 +36,7 @@ import {
 import {
   ATTENTION_SUMMARY_CHANNEL,
   CONFIRM_RECOVERY_CHANNEL,
+  CREATE_ORGANISATION_CHANNEL,
   CREATE_WORKSPACE_CHANNEL,
   SIGN_IN_CHANNEL,
   UNLOCK_WORKSPACE_CHANNEL,
@@ -60,6 +69,12 @@ const unlockWorkspaceCodec = createProtoMethodCodec({
   maximumResponseBytes: 16_384,
   output: UnlockWorkspaceResponseSchema,
 });
+const createOrganisationCodec = createProtoMethodCodec({
+  input: CreateOrganisationRequestSchema,
+  maximumRequestBytes: 32_768,
+  maximumResponseBytes: 32_768,
+  output: CreateOrganisationResponseSchema,
+});
 
 const attentionCodec = createProtoMethodCodec({
   input: GetAttentionSummaryRequestSchema,
@@ -85,6 +100,9 @@ export interface DesktopRpcClient {
   readonly confirmRecovery: (request: ConfirmRecoveryRequest) => Promise<ConfirmRecoveryResponse>;
   readonly unlockWorkspace: (request: UnlockWorkspaceRequest) => Promise<UnlockWorkspaceResponse>;
   readonly signIn: (request: SignInRequest) => Promise<SignInResponse>;
+  readonly createOrganisation: (
+    request: CreateOrganisationRequest,
+  ) => Promise<CreateOrganisationResponse>;
   readonly getAttentionSummary: (
     request: GetAttentionSummaryRequest,
   ) => Promise<GetAttentionSummaryResponse>;
@@ -113,6 +131,10 @@ export function createDesktopRpcRouter(client: DesktopRpcClient): Readonly<Deskt
             );
           case SIGN_IN_CHANNEL:
             return signInCodec.encodeResponse(await client.signIn(signInCodec.decodeRequest(request)));
+          case CREATE_ORGANISATION_CHANNEL:
+            return createOrganisationCodec.encodeResponse(
+              await client.createOrganisation(createOrganisationCodec.decodeRequest(request)),
+            );
           case ATTENTION_SUMMARY_CHANNEL:
             return attentionCodec.encodeResponse(
               await client.getAttentionSummary(attentionCodec.decodeRequest(request)),

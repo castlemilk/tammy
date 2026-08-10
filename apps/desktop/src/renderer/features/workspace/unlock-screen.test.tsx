@@ -62,13 +62,21 @@ it("unlocks and signs in to an existing local workspace through named protobuf m
     confirmRecovery: vi.fn(),
     unlockWorkspace,
     signIn,
+    createOrganisation: vi.fn(),
     getAttentionSummary: vi.fn(),
     getSystemDiagnostics: vi.fn(),
   } satisfies TammyDesktopAPI;
   const onAuthenticated = vi.fn();
   const user = userEvent.setup();
 
-  render(<UnlockScreen api={api} onAuthenticated={onAuthenticated} />);
+  const organisationId = "01900f3c-7b2e-7cc4-98c4-dc0c0c073994";
+  render(
+    <UnlockScreen
+      api={api}
+      onAuthenticated={onAuthenticated}
+      organisationId={organisationId}
+    />,
+  );
   await user.type(screen.getByLabelText("Workspace passphrase"), "workspace-passphrase-long-enough");
   await user.type(screen.getByLabelText("Email or username"), "admin@tammy.local");
   await user.type(screen.getByLabelText("Administrator password"), "administrator-password-long-enough");
@@ -79,6 +87,7 @@ it("unlocks and signs in to an existing local workspace through named protobuf m
       sessionId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073993",
       userId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073992",
       workspaceId: workspace.id,
+      organisationId,
     }),
   );
   expect(unlockWorkspace).toHaveBeenCalledOnce();

@@ -51,6 +51,9 @@ function unusedCoreMethods() {
     signIn: vi.fn(async () => {
       throw new Error("unused");
     }),
+    createOrganisation: vi.fn(async () => {
+      throw new Error("unused");
+    }),
   };
 }
 

@@ -4,6 +4,7 @@ import type { SystemDiagnostics, TammyDesktopAPI } from "../shared/desktop-api";
 import {
   ATTENTION_SUMMARY_CHANNEL,
   CONFIRM_RECOVERY_CHANNEL,
+  CREATE_ORGANISATION_CHANNEL,
   CREATE_WORKSPACE_CHANNEL,
   SIGN_IN_CHANNEL,
   SYSTEM_DIAGNOSTICS_CHANNEL,
@@ -26,6 +27,7 @@ export function createTammyDesktopAPI(invoke: Invoke): TammyDesktopAPI {
     confirmRecovery: binaryMethod(CONFIRM_RECOVERY_CHANNEL),
     unlockWorkspace: binaryMethod(UNLOCK_WORKSPACE_CHANNEL),
     signIn: binaryMethod(SIGN_IN_CHANNEL),
+    createOrganisation: binaryMethod(CREATE_ORGANISATION_CHANNEL),
     getAttentionSummary: binaryMethod(ATTENTION_SUMMARY_CHANNEL),
   } satisfies TammyDesktopAPI;
   if (

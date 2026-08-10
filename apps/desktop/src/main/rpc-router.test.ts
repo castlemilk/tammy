@@ -3,6 +3,11 @@ import {
   GetAttentionSummaryRequestSchema,
   GetAttentionSummaryResponseSchema,
 } from "@tammy/connect-client/tammy/v1/overview_pb.js";
+import {
+  CreateOrganisationRequestSchema,
+  CreateOrganisationResponseSchema,
+  OrganisationSchema,
+} from "@tammy/connect-client/tammy/v1/organisation_pb.js";
 import { GetDiagnosticsRequestSchema } from "@tammy/connect-client/tammy/v1/system_pb.js";
 import { describe, expect, it, vi } from "vitest";
 
@@ -13,12 +18,19 @@ import {
   type DesktopRpcClient,
   DesktopRpcRouterError,
 } from "./rpc-router";
+import { CREATE_ORGANISATION_CHANNEL } from "../shared/desktop-api";
 
 const attentionCodec = createProtoMethodCodec({
   input: GetAttentionSummaryRequestSchema,
   maximumRequestBytes: 8_192,
   maximumResponseBytes: 65_536,
   output: GetAttentionSummaryResponseSchema,
+});
+const createOrganisationCodec = createProtoMethodCodec({
+  input: CreateOrganisationRequestSchema,
+  maximumRequestBytes: 32_768,
+  maximumResponseBytes: 32_768,
+  output: CreateOrganisationResponseSchema,
 });
 
 function rpcClient(getAttentionSummary: DesktopRpcClient["getAttentionSummary"]): DesktopRpcClient {
@@ -27,6 +39,7 @@ function rpcClient(getAttentionSummary: DesktopRpcClient["getAttentionSummary"])
     confirmRecovery: vi.fn(),
     unlockWorkspace: vi.fn(),
     signIn: vi.fn(),
+    createOrganisation: vi.fn(),
     getAttentionSummary,
   };
 }
@@ -47,6 +60,36 @@ describe("named desktop protobuf RPC router", () => {
 
     expect(getAttentionSummary).toHaveBeenCalledExactlyOnceWith(request);
     expect(attentionCodec.decodeResponse(encoded)).toEqual(response);
+  });
+
+  it("decodes and routes the generated organisation setup command", async () => {
+    const response = create(CreateOrganisationResponseSchema, {
+      organisation: create(OrganisationSchema, {
+        id: "018f2f2a-7c1d-7a62-8d11-216b8d6ea4cc",
+        displayName: "Tammy Business",
+        legalName: "Tammy Business Pty Ltd",
+        abn: "51824753556",
+        version: 1n,
+      }),
+    });
+    const createOrganisation = vi.fn(async () => response);
+    const router = createDesktopRpcRouter({
+      ...rpcClient(vi.fn()),
+      createOrganisation,
+    });
+    const request = create(CreateOrganisationRequestSchema, {
+      displayName: "Tammy Business",
+      legalName: "Tammy Business Pty Ltd",
+      abn: "51824753556",
+    });
+
+    const encoded = await router.invoke(
+      CREATE_ORGANISATION_CHANNEL,
+      createOrganisationCodec.encodeRequest(request),
+    );
+
+    expect(createOrganisation).toHaveBeenCalledExactlyOnceWith(request);
+    expect(createOrganisationCodec.decodeResponse(encoded)).toEqual(response);
   });
 
   it("rejects unknown channels and invalid, oversized, or wrong-type request frames before core", async () => {

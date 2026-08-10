@@ -30,13 +30,14 @@ const signInCodec = createProtoMethodCodec({
 interface UnlockScreenProps {
   readonly api: Pick<TammyDesktopAPI, "signIn" | "unlockWorkspace">;
   readonly onAuthenticated: (workspace: AuthenticatedWorkspace) => void;
+  readonly organisationId?: string;
 }
 
 function fieldClassName(): string {
   return "focus-ring h-9 w-full rounded-[6px] border border-border bg-surface px-3 text-[12px] text-foreground outline-none placeholder:text-muted-foreground";
 }
 
-export function UnlockScreen({ api, onAuthenticated }: UnlockScreenProps) {
+export function UnlockScreen({ api, onAuthenticated, organisationId }: UnlockScreenProps) {
   const [workspacePassphrase, setWorkspacePassphrase] = useState("");
   const [username, setUsername] = useState("");
   const [administratorPassword, setAdministratorPassword] = useState("");
@@ -81,6 +82,7 @@ export function UnlockScreen({ api, onAuthenticated }: UnlockScreenProps) {
         sessionId: authenticated.session.id,
         userId: authenticated.user.id,
         workspaceId: opened.workspace.id,
+        ...(organisationId ? { organisationId } : {}),
       });
     } catch {
       setError("The workspace could not be unlocked. Check your passphrase and sign-in details.");

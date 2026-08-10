@@ -81,6 +81,7 @@ describe("registerDiagnosticsIpc", () => {
       "confirmRecovery",
       "unlockWorkspace",
       "signIn",
+      "createOrganisation",
       "getAttentionSummary",
     ]);
     expect(DIAGNOSTICS_PRELOAD_METHOD).toBe(DESKTOP_PRELOAD_METHODS[0]);
@@ -326,6 +327,7 @@ describe("preload desktop bridge", () => {
       "confirmRecovery",
       "unlockWorkspace",
       "signIn",
+      "createOrganisation",
       "getAttentionSummary",
     ]);
     expect(Object.isFrozen(api)).toBe(true);

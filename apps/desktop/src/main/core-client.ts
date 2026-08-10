@@ -9,6 +9,11 @@ import type { SignInRequest, SignInResponse } from "@tammy/connect-client/tammy/
 import { IdentityService } from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import { RuntimeMode, SystemService } from "@tammy/connect-client/tammy/v1/system_pb.js";
 import type {
+  CreateOrganisationRequest,
+  CreateOrganisationResponse,
+} from "@tammy/connect-client/tammy/v1/organisation_pb.js";
+import { OrganisationService } from "@tammy/connect-client/tammy/v1/organisation_pb.js";
+import type {
   ConfirmRecoveryRequest,
   ConfirmRecoveryResponse,
   CreateWorkspaceRequest,
@@ -32,6 +37,9 @@ export interface CoreClient {
   readonly confirmRecovery: (request: ConfirmRecoveryRequest) => Promise<ConfirmRecoveryResponse>;
   readonly unlockWorkspace: (request: UnlockWorkspaceRequest) => Promise<UnlockWorkspaceResponse>;
   readonly signIn: (request: SignInRequest) => Promise<SignInResponse>;
+  readonly createOrganisation: (
+    request: CreateOrganisationRequest,
+  ) => Promise<CreateOrganisationResponse>;
   readonly getAttentionSummary: (
     request: GetAttentionSummaryRequest,
   ) => Promise<GetAttentionSummaryResponse>;
@@ -83,6 +91,7 @@ export function createCoreClient(
   const overviewClient = createClient(OverviewService, transport);
   const workspaceClient = createClient(WorkspaceService, transport);
   const identityClient = createClient(IdentityService, transport);
+  const organisationClient = createClient(OrganisationService, transport);
 
   const coreRequest = async <Response>(request: () => Promise<Response>): Promise<Response> => {
     try {
@@ -100,6 +109,8 @@ export function createCoreClient(
     unlockWorkspace: (request: UnlockWorkspaceRequest) =>
       coreRequest(() => workspaceClient.unlockWorkspace(request)),
     signIn: (request: SignInRequest) => coreRequest(() => identityClient.signIn(request)),
+    createOrganisation: (request: CreateOrganisationRequest) =>
+      coreRequest(() => organisationClient.createOrganisation(request)),
     getAttentionSummary: async (
       request: GetAttentionSummaryRequest,
     ): Promise<GetAttentionSummaryResponse> => {

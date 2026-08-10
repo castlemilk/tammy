@@ -1,6 +1,18 @@
 import { create } from "@bufbuild/protobuf";
-import { ApprovedFileRefSchema, SecretInputSchema } from "@tammy/connect-client/tammy/v1/common_pb.js";
+import {
+  ApprovedFileRefSchema,
+  AuthenticationContextSchema,
+  CommandContextSchema,
+  SecretInputSchema,
+  SourceRefSchema,
+} from "@tammy/connect-client/tammy/v1/common_pb.js";
 import { SignInRequestSchema, SignInResponseSchema } from "@tammy/connect-client/tammy/v1/identity_pb.js";
+import {
+  CreateOrganisationRequestSchema,
+  CreateOrganisationResponseSchema,
+  GstBasis,
+  GstReportingFrequency,
+} from "@tammy/connect-client/tammy/v1/organisation_pb.js";
 import {
   ConfirmRecoveryRequestSchema,
   ConfirmRecoveryResponseSchema,
@@ -33,20 +45,30 @@ const signInCodec = createProtoMethodCodec({
   maximumResponseBytes: 32_768,
   output: SignInResponseSchema,
 });
+const createOrganisationCodec = createProtoMethodCodec({
+  input: CreateOrganisationRequestSchema,
+  maximumRequestBytes: 32_768,
+  maximumResponseBytes: 32_768,
+  output: CreateOrganisationResponseSchema,
+});
 
 export interface AuthenticatedWorkspace {
+  readonly organisationId?: string;
   readonly sessionId: string;
   readonly userId: string;
   readonly workspaceId: string;
 }
 
 interface SetupScreenProps {
-  readonly api: Pick<TammyDesktopAPI, "confirmRecovery" | "createWorkspace" | "signIn">;
+  readonly api: Pick<TammyDesktopAPI, "confirmRecovery" | "createOrganisation" | "createWorkspace" | "signIn">;
   readonly onAuthenticated: (workspace: AuthenticatedWorkspace) => void;
 }
 
 interface PendingSetup {
   readonly administratorPassword: string;
+  readonly abn: string;
+  readonly businessDisplayName: string;
+  readonly businessLegalName: string;
   readonly recoveryCode: string;
   readonly setupId: string;
   readonly username: string;
@@ -73,6 +95,9 @@ function fieldClassName(): string {
 export function SetupScreen({ api, onAuthenticated }: SetupScreenProps) {
   const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
+  const [businessLegalName, setBusinessLegalName] = useState("");
+  const [businessDisplayName, setBusinessDisplayName] = useState("");
+  const [abn, setAbn] = useState("");
   const [workspacePassphrase, setWorkspacePassphrase] = useState("");
   const [administratorPassword, setAdministratorPassword] = useState("");
   const [pending, setPending] = useState<PendingSetup>();
@@ -103,6 +128,9 @@ export function SetupScreen({ api, onAuthenticated }: SetupScreenProps) {
       if (!response.workspace || !response.recoverySecret?.utf8.byteLength) throw new Error("invalid");
       setPending({
         administratorPassword,
+        abn,
+        businessDisplayName,
+        businessLegalName,
         recoveryCode: new TextDecoder().decode(response.recoverySecret.utf8),
         setupId,
         username,
@@ -143,12 +171,40 @@ export function SetupScreen({ api, onAuthenticated }: SetupScreenProps) {
       });
       const authenticated = signInCodec.decodeResponse(await api.signIn(signInCodec.encodeRequest(signIn)));
       if (!authenticated.user || !authenticated.session) throw new Error("invalid session");
+      const authentication = create(AuthenticationContextSchema, {
+        actorUserId: authenticated.user.id,
+        sessionId: authenticated.session.id,
+      });
+      const organisation = create(CreateOrganisationRequestSchema, {
+        commandContext: create(CommandContextSchema, {
+          idempotencyKey: uuidV7(),
+          authentication,
+        }),
+        abn: pending.abn,
+        legalName: pending.businessLegalName,
+        displayName: pending.businessDisplayName,
+        entityType: "AU_PRIVATE_COMPANY",
+        gstBasis: GstBasis.NON_CASH,
+        gstReportingFrequency: GstReportingFrequency.QUARTERLY,
+        financialYearEndMonth: 6,
+        activeTaxRuleBundle: create(SourceRefSchema, {
+          type: "tax_rule_bundle",
+          id: "018f0000-0000-7000-8000-000000000022",
+          revision: 1n,
+          contentHash: hexBytes("e2f9cde094db43c30260dc54f089a1ab835912e75e8c29add5c7a240e90497e4"),
+        }),
+      });
+      const createdOrganisation = createOrganisationCodec.decodeResponse(
+        await api.createOrganisation(createOrganisationCodec.encodeRequest(organisation)),
+      );
+      if (!createdOrganisation.organisation?.id) throw new Error("invalid organisation");
       setAdministratorPassword("");
       setWorkspacePassphrase("");
       onAuthenticated({
         sessionId: authenticated.session.id,
         userId: authenticated.user.id,
         workspaceId: pending.workspaceId,
+        organisationId: createdOrganisation.organisation.id,
       });
     } catch {
       setError("Recovery confirmation or sign in failed. Your workspace remains on this device.");
@@ -201,6 +257,18 @@ export function SetupScreen({ api, onAuthenticated }: SetupScreenProps) {
               <input autoComplete="username" className={fieldClassName()} onChange={(event) => setUsername(event.target.value)} required value={username} />
             </label>
             <label className="grid gap-1.5 text-[11px] font-medium text-foreground">
+              Business legal name
+              <input className={fieldClassName()} maxLength={256} onChange={(event) => setBusinessLegalName(event.target.value)} required value={businessLegalName} />
+            </label>
+            <label className="grid gap-1.5 text-[11px] font-medium text-foreground">
+              Business display name
+              <input className={fieldClassName()} maxLength={256} onChange={(event) => setBusinessDisplayName(event.target.value)} required value={businessDisplayName} />
+            </label>
+            <label className="grid gap-1.5 text-[11px] font-medium text-foreground">
+              ABN
+              <input className={fieldClassName()} inputMode="numeric" maxLength={11} minLength={11} onChange={(event) => setAbn(event.target.value)} pattern="[0-9]{11}" required value={abn} />
+            </label>
+            <label className="grid gap-1.5 text-[11px] font-medium text-foreground">
               Workspace passphrase
               <input autoComplete="new-password" className={fieldClassName()} minLength={16} onChange={(event) => setWorkspacePassphrase(event.target.value)} required type="password" value={workspacePassphrase} />
             </label>
@@ -220,3 +288,11 @@ export function SetupScreen({ api, onAuthenticated }: SetupScreenProps) {
   );
 }
 
+function hexBytes(value: string): Uint8Array {
+  if (!/^[0-9a-f]{64}$/.test(value)) throw new Error("invalid checksum");
+  const bytes = new Uint8Array(value.length / 2);
+  for (let index = 0; index < bytes.length; index += 1) {
+    bytes[index] = Number.parseInt(value.slice(index * 2, index * 2 + 2), 16);
+  }
+  return bytes;
+}

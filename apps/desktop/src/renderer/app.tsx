@@ -11,6 +11,7 @@ import { SetupScreen, type AuthenticatedWorkspace } from "./features/setup/setup
 import { UnlockScreen } from "./features/workspace/unlock-screen";
 
 const WORKSPACE_ID_STORAGE = "tammy.workspace.id";
+const ORGANISATION_ID_STORAGE = "tammy.organisation.id";
 const SESSION_STORAGE = "tammy.session.active";
 
 function storedAuthenticatedWorkspace(): AuthenticatedWorkspace | undefined {
@@ -20,7 +21,14 @@ function storedAuthenticatedWorkspace(): AuthenticatedWorkspace | undefined {
     const parsed = JSON.parse(retained) as Partial<AuthenticatedWorkspace>;
     if (typeof parsed.workspaceId === "string" && typeof parsed.userId === "string" &&
       typeof parsed.sessionId === "string" && parsed.workspaceId && parsed.userId && parsed.sessionId) {
-      return { workspaceId: parsed.workspaceId, userId: parsed.userId, sessionId: parsed.sessionId };
+      return {
+        workspaceId: parsed.workspaceId,
+        userId: parsed.userId,
+        sessionId: parsed.sessionId,
+        ...(typeof parsed.organisationId === "string" && parsed.organisationId
+          ? { organisationId: parsed.organisationId }
+          : {}),
+      };
     }
   } catch {
     return undefined;
@@ -81,6 +89,9 @@ export function App() {
 
   const authenticated = useCallback((workspace: AuthenticatedWorkspace) => {
     window.localStorage.setItem(WORKSPACE_ID_STORAGE, workspace.workspaceId);
+    if (workspace.organisationId) {
+      window.localStorage.setItem(ORGANISATION_ID_STORAGE, workspace.organisationId);
+    }
     window.sessionStorage.setItem(SESSION_STORAGE, JSON.stringify(workspace));
     setWorkspace(workspace);
     setAccess("authenticated");
@@ -93,7 +104,14 @@ export function App() {
   }
 
   if (access === "locked") {
-    return <UnlockScreen api={window.tammy} onAuthenticated={authenticated} />;
+    const organisationId = window.localStorage.getItem(ORGANISATION_ID_STORAGE);
+    return (
+      <UnlockScreen
+        api={window.tammy}
+        onAuthenticated={authenticated}
+        {...(organisationId ? { organisationId } : {})}
+      />
+    );
   }
 
   return (

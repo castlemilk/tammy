@@ -25,7 +25,7 @@ const codec = createProtoMethodCodec({
 it("renders the live local attention summary through the named protobuf method", async () => {
   const getAttentionSummary = vi.fn(async (frame: Uint8Array) => {
     const request = codec.decodeRequest(frame);
-    expect(request.organisationId).toBe("018f0000-0000-7000-8000-000000000001");
+    expect(request.organisationId).toBe("018f0000-0000-7000-8000-000000000004");
     expect(request.authentication?.actorUserId).toBe("018f0000-0000-7000-8000-000000000002");
     expect(request.authentication?.sessionId).toBe("018f0000-0000-7000-8000-000000000003");
     expect(request.asOfDate).toMatchObject({ year: 2026, month: 8, day: 10 });
@@ -67,6 +67,7 @@ it("renders the live local attention summary through the named protobuf method",
         sessionId: "018f0000-0000-7000-8000-000000000003",
         userId: "018f0000-0000-7000-8000-000000000002",
         workspaceId: "018f0000-0000-7000-8000-000000000001",
+        organisationId: "018f0000-0000-7000-8000-000000000004",
       }}
     />,
   );

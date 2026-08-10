@@ -7,6 +7,11 @@ import {
   UserSchema,
 } from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import {
+  CreateOrganisationRequestSchema,
+  CreateOrganisationResponseSchema,
+  OrganisationSchema,
+} from "@tammy/connect-client/tammy/v1/organisation_pb.js";
+import {
   ConfirmRecoveryRequestSchema,
   ConfirmRecoveryResponseSchema,
   CreateWorkspaceRequestSchema,
@@ -38,6 +43,12 @@ const signInCodec = createProtoMethodCodec({
   maximumRequestBytes: 16_384,
   maximumResponseBytes: 32_768,
   output: SignInResponseSchema,
+});
+const createOrganisationCodec = createProtoMethodCodec({
+  input: CreateOrganisationRequestSchema,
+  maximumRequestBytes: 32_768,
+  maximumResponseBytes: 32_768,
+  output: CreateOrganisationResponseSchema,
 });
 
 it("creates, confirms, and signs in to a real local workspace through named protobuf methods", async () => {
@@ -75,11 +86,38 @@ it("creates, confirms, and signs in to a real local workspace through named prot
       }),
     );
   });
+  const createOrganisation = vi.fn(async (frame: Uint8Array) => {
+    const request = createOrganisationCodec.decodeRequest(frame);
+    expect(request.abn).toBe("51824753556");
+    expect(request.legalName).toBe("Tammy Business Pty Ltd");
+    expect(request.displayName).toBe("Tammy Business");
+    expect(request.commandContext?.authentication).toMatchObject({
+      actorUserId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073992",
+      sessionId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073993",
+    });
+    expect(request.activeTaxRuleBundle).toMatchObject({
+      type: "tax_rule_bundle",
+      id: "018f0000-0000-7000-8000-000000000022",
+      revision: 1n,
+    });
+    return createOrganisationCodec.encodeResponse(
+      create(CreateOrganisationResponseSchema, {
+        organisation: create(OrganisationSchema, {
+          id: "01900f3c-7b2e-7cc4-98c4-dc0c0c073994",
+          displayName: request.displayName,
+          legalName: request.legalName,
+          abn: request.abn,
+          version: 1n,
+        }),
+      }),
+    );
+  });
   const api = {
     createWorkspace,
     confirmRecovery,
     unlockWorkspace: vi.fn(),
     signIn,
+    createOrganisation,
     getAttentionSummary: vi.fn(),
     getSystemDiagnostics: vi.fn(),
   } satisfies TammyDesktopAPI;
@@ -89,6 +127,9 @@ it("creates, confirms, and signs in to a real local workspace through named prot
   render(<SetupScreen api={api} onAuthenticated={onAuthenticated} />);
   await user.type(screen.getByLabelText("Your name"), "Tammy Admin");
   await user.type(screen.getByLabelText("Email or username"), "admin@tammy.local");
+  await user.type(screen.getByLabelText("Business legal name"), "Tammy Business Pty Ltd");
+  await user.type(screen.getByLabelText("Business display name"), "Tammy Business");
+  await user.type(screen.getByLabelText("ABN"), "51824753556");
   await user.type(screen.getByLabelText("Workspace passphrase"), "workspace-passphrase-long-enough");
   await user.type(screen.getByLabelText("Administrator password"), "administrator-password-long-enough");
   await user.click(screen.getByRole("button", { name: "Create local workspace" }));
@@ -99,11 +140,13 @@ it("creates, confirms, and signs in to a real local workspace through named prot
   expect(createWorkspace).toHaveBeenCalledOnce();
   expect(confirmRecovery).toHaveBeenCalledOnce();
   expect(signIn).toHaveBeenCalledOnce();
+  expect(createOrganisation).toHaveBeenCalledOnce();
   await vi.waitFor(() =>
     expect(onAuthenticated).toHaveBeenCalledWith({
       sessionId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073993",
       userId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073992",
       workspaceId: workspace.id,
+      organisationId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073994",
     }),
   );
 });

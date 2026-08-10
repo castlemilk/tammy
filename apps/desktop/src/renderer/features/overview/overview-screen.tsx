@@ -137,7 +137,7 @@ function attentionRequest(workspace: AuthenticatedWorkspace, instant: Date) {
       actorUserId: workspace.userId,
       sessionId: workspace.sessionId,
     },
-    organisationId: workspace.workspaceId,
+    organisationId: workspace.organisationId ?? workspace.workspaceId,
     asOfDate: create(CivilDateSchema, { year, month, day }),
     reportingPeriod: create(ReportingPeriodSchema, {
       startDate: create(CivilDateSchema, { year, month: quarterStartMonth, day: 1 }),
