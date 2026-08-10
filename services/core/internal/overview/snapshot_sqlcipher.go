@@ -70,11 +70,49 @@ func (port *SQLCipherSnapshotPort) Attention(ctx context.Context, organisationID
 	); err != nil {
 		return Snapshot{}, errors.Join(ErrOverview, err)
 	}
+	var documentsNeedingReview, documentsReviewed uint32
+	if err := tx.QueryRowContext(ctx, `
+		SELECT
+			coalesce(sum(CASE WHEN status = 'NEEDS_REVIEW' THEN 1 ELSE 0 END), 0),
+			coalesce(sum(CASE WHEN status = 'REVIEWED' THEN 1 ELSE 0 END), 0)
+		FROM documents WHERE organisation_id = ?`, organisationID).Scan(
+		&documentsNeedingReview, &documentsReviewed,
+	); err != nil {
+		return Snapshot{}, errors.Join(ErrOverview, err)
+	}
+	documentRows, err := tx.QueryContext(ctx, `
+		SELECT id, version, sha256, source_display_name
+		FROM documents
+		WHERE organisation_id = ? AND status = 'NEEDS_REVIEW'
+		ORDER BY created_at DESC, id DESC LIMIT 8`, organisationID)
+	if err != nil {
+		return Snapshot{}, errors.Join(ErrOverview, err)
+	}
+	items := make([]*tammyv1.AttentionItem, 0, 8)
+	for documentRows.Next() {
+		item := &tammyv1.AttentionItem{Kind: tammyv1.AttentionItemKind_ATTENTION_ITEM_KIND_DOCUMENT_REVIEW,
+			Resource: &tammyv1.SourceRef{Type: "document"}}
+		if err := documentRows.Scan(&item.Resource.Id, &item.Resource.Revision, &item.Resource.ContentHash, &item.Label); err != nil {
+			_ = documentRows.Close()
+			return Snapshot{}, errors.Join(ErrOverview, err)
+		}
+		items = append(items, item)
+	}
+	if err := documentRows.Err(); err != nil {
+		_ = documentRows.Close()
+		return Snapshot{}, errors.Join(ErrOverview, err)
+	}
+	if err := documentRows.Close(); err != nil {
+		return Snapshot{}, errors.Join(ErrOverview, err)
+	}
 	if err := tx.Commit(); err != nil {
 		return Snapshot{}, errors.Join(ErrOverview, err)
 	}
 	return Snapshot{
-		BASStatus: tammyv1.BasAttentionStatus_BAS_ATTENTION_STATUS_NOT_CREATED,
-		Revisions: revisions,
+		DocumentsNeedingReview: documentsNeedingReview,
+		DocumentsReviewed:      documentsReviewed,
+		BASStatus:              tammyv1.BasAttentionStatus_BAS_ATTENTION_STATUS_NOT_CREATED,
+		Items:                  items,
+		Revisions:              revisions,
 	}, nil
 }

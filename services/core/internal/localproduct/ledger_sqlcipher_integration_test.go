@@ -62,6 +62,7 @@ func TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealSer
 	identityClient := tammyv1connect.NewIdentityServiceClient(httpClient, baseURL)
 	organisationClient := tammyv1connect.NewOrganisationServiceClient(httpClient, baseURL)
 	accountingClient := tammyv1connect.NewAccountingServiceClient(httpClient, baseURL)
+	documentClient := tammyv1connect.NewDocumentServiceClient(httpClient, baseURL)
 
 	createWorkspace := connect.NewRequest(&tammyv1.CreateWorkspaceRequest{
 		SetupId:                  "018f0000-0000-7000-8000-000000000101",
@@ -198,5 +199,67 @@ func TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealSer
 	journalPage, err := accountingClient.ListJournals(context.Background(), listJournals)
 	if err != nil || len(journalPage.Msg.Journals) != 1 || journalPage.Msg.Journals[0].Id != posted.Msg.Journal.Id {
 		t.Fatalf("ListJournals() = %#v, %v", journalPage, err)
+	}
+
+	invoiceBytes := []byte("%PDF-1.4\nTammy native-text fixture\n%%EOF")
+	ingest := connect.NewRequest(&tammyv1.IngestDocumentRequest{
+		CommandContext: &tammyv1.CommandContext{
+			IdempotencyKey: "018f0000-0000-7000-8000-000000000108",
+			Authentication: authentication,
+		},
+		OrganisationId:    created.Msg.Organisation.Id,
+		SourceDisplayName: "officeworks-invoice.pdf",
+		MimeType:          "application/pdf",
+		Original:          invoiceBytes,
+		ExtractedText:     "Officeworks Ltd Invoice INV-029847 Subtotal $290.00 GST $29.00 Total $319.00",
+		Candidate: &tammyv1.DocumentCandidate{
+			SupplierName:  "Officeworks Ltd",
+			InvoiceNumber: "INV-029847",
+			DocumentDate:  &tammyv1.CivilDate{Year: 2026, Month: 8, Day: 10},
+			Subtotal:      &tammyv1.Money{CurrencyCode: "AUD", MinorUnits: 29000},
+			Gst:           &tammyv1.Money{CurrencyCode: "AUD", MinorUnits: 2900},
+			Total:         &tammyv1.Money{CurrencyCode: "AUD", MinorUnits: 31900},
+		},
+	})
+	ingest.Header().Set(transport.CapabilityHeader, ready.Capability)
+	retained, err := documentClient.IngestDocument(context.Background(), ingest)
+	if err != nil || retained.Msg.Document == nil || retained.Msg.Document.Status != tammyv1.DocumentStatus_DOCUMENT_STATUS_NEEDS_REVIEW ||
+		retained.Msg.Document.ByteLength != uint64(len(invoiceBytes)) || len(retained.Msg.Document.Sha256) != 32 {
+		t.Fatalf("IngestDocument() = %#v, %v", retained, err)
+	}
+	listDocuments := connect.NewRequest(&tammyv1.ListDocumentsRequest{
+		Authentication: authentication,
+		OrganisationId: created.Msg.Organisation.Id,
+		Page:           &tammyv1.PageRequest{PageSize: 50},
+	})
+	listDocuments.Header().Set(transport.CapabilityHeader, ready.Capability)
+	documentPage, err := documentClient.ListDocuments(context.Background(), listDocuments)
+	if err != nil || len(documentPage.Msg.Documents) != 1 || documentPage.Msg.Documents[0].Id != retained.Msg.Document.Id {
+		t.Fatalf("ListDocuments() = %#v, %v", documentPage, err)
+	}
+	review := connect.NewRequest(&tammyv1.SaveDocumentReviewRequest{
+		CommandContext: &tammyv1.CommandContext{
+			IdempotencyKey: "018f0000-0000-7000-8000-000000000109",
+			Authentication: authentication,
+		},
+		DocumentId:      retained.Msg.Document.Id,
+		ExpectedVersion: retained.Msg.Document.Version,
+		Candidate:       retained.Msg.Document.Candidate,
+	})
+	review.Header().Set(transport.CapabilityHeader, ready.Capability)
+	reviewed, err := documentClient.SaveDocumentReview(context.Background(), review)
+	if err != nil || reviewed.Msg.Document == nil || reviewed.Msg.Document.Status != tammyv1.DocumentStatus_DOCUMENT_STATUS_REVIEWED ||
+		reviewed.Msg.Document.Version != 2 || reviewed.Msg.Document.ReviewedAt == nil {
+		t.Fatalf("SaveDocumentReview() = %#v, %v", reviewed, err)
+	}
+	getDocument := connect.NewRequest(&tammyv1.GetDocumentRequest{
+		Authentication: authentication,
+		DocumentId:     retained.Msg.Document.Id,
+	})
+	getDocument.Header().Set(transport.CapabilityHeader, ready.Capability)
+	storedDocument, err := documentClient.GetDocument(context.Background(), getDocument)
+	if err != nil || storedDocument.Msg.Document == nil || storedDocument.Msg.Document.Candidate.InvoiceNumber != "INV-029847" ||
+		storedDocument.Msg.Document.Status != tammyv1.DocumentStatus_DOCUMENT_STATUS_REVIEWED {
+		t.Fatalf("GetDocument() = %#v, %v", storedDocument, err)
 	}
 }

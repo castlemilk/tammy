@@ -10,6 +10,7 @@ const JOURNAL_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9
 
 export const COMPLETE_ROUTES = Object.freeze([
   "/overview",
+  "/documents",
   "/workspace-trust",
   "/restore",
   "/restore/evidence",

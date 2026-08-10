@@ -50,6 +50,10 @@ function installDesktopAPI() {
       getTrialBalance: vi.fn(async () => {
         throw new Error("unavailable");
       }),
+      ingestDocument: vi.fn(async () => { throw new Error("unavailable"); }),
+      listDocuments: vi.fn(async () => { throw new Error("unavailable"); }),
+      getDocument: vi.fn(async () => { throw new Error("unavailable"); }),
+      saveDocumentReview: vi.fn(async () => { throw new Error("unavailable"); }),
       getAttentionSummary: vi.fn(async () => {
         throw new Error("unavailable");
       }),
@@ -77,6 +81,7 @@ it("renders the walkthrough app shell", async () => {
   const navigation = screen.getByRole("navigation", { name: "Primary" });
   expect(within(navigation).getAllByRole("link").map((link) => link.textContent?.trim())).toEqual([
     "Overview",
+    "Documents",
     "Chart of accounts",
     "Journals",
     "General ledger",

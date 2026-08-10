@@ -12,6 +12,26 @@ import type {
   PostManualJournalRequest,
   PostManualJournalResponse,
 } from "@tammy/connect-client/tammy/v1/accounting_pb.js";
+import type {
+  GetDocumentRequest,
+  GetDocumentResponse,
+  IngestDocumentRequest,
+  IngestDocumentResponse,
+  ListDocumentsRequest,
+  ListDocumentsResponse,
+  SaveDocumentReviewRequest,
+  SaveDocumentReviewResponse,
+} from "@tammy/connect-client/tammy/v1/documents_pb.js";
+import {
+  GetDocumentRequestSchema,
+  GetDocumentResponseSchema,
+  IngestDocumentRequestSchema,
+  IngestDocumentResponseSchema,
+  ListDocumentsRequestSchema,
+  ListDocumentsResponseSchema,
+  SaveDocumentReviewRequestSchema,
+  SaveDocumentReviewResponseSchema,
+} from "@tammy/connect-client/tammy/v1/documents_pb.js";
 import {
   CreateAccountRequestSchema,
   CreateAccountResponseSchema,
@@ -69,10 +89,14 @@ import {
   CREATE_WORKSPACE_CHANNEL,
   GET_JOURNAL_CHANNEL,
   GET_TRIAL_BALANCE_CHANNEL,
+  GET_DOCUMENT_CHANNEL,
+  INGEST_DOCUMENT_CHANNEL,
   LIST_ACCOUNTS_CHANNEL,
+  LIST_DOCUMENTS_CHANNEL,
   LIST_JOURNALS_CHANNEL,
   POST_MANUAL_JOURNAL_CHANNEL,
   SIGN_IN_CHANNEL,
+  SAVE_DOCUMENT_REVIEW_CHANNEL,
   UNLOCK_WORKSPACE_CHANNEL,
 } from "../shared/desktop-api";
 import { createProtoMethodCodec, ProtoIpcError } from "../shared/proto-ipc";
@@ -145,6 +169,30 @@ const getTrialBalanceCodec = createProtoMethodCodec({
   maximumResponseBytes: 524_288,
   output: GetTrialBalanceResponseSchema,
 });
+const ingestDocumentCodec = createProtoMethodCodec({
+  input: IngestDocumentRequestSchema,
+  maximumRequestBytes: 11 * 1024 * 1024,
+  maximumResponseBytes: 2 * 1024 * 1024,
+  output: IngestDocumentResponseSchema,
+});
+const listDocumentsCodec = createProtoMethodCodec({
+  input: ListDocumentsRequestSchema,
+  maximumRequestBytes: 16_384,
+  maximumResponseBytes: 4 * 1024 * 1024,
+  output: ListDocumentsResponseSchema,
+});
+const getDocumentCodec = createProtoMethodCodec({
+  input: GetDocumentRequestSchema,
+  maximumRequestBytes: 8_192,
+  maximumResponseBytes: 2 * 1024 * 1024,
+  output: GetDocumentResponseSchema,
+});
+const saveDocumentReviewCodec = createProtoMethodCodec({
+  input: SaveDocumentReviewRequestSchema,
+  maximumRequestBytes: 32_768,
+  maximumResponseBytes: 2 * 1024 * 1024,
+  output: SaveDocumentReviewResponseSchema,
+});
 
 const attentionCodec = createProtoMethodCodec({
   input: GetAttentionSummaryRequestSchema,
@@ -176,6 +224,12 @@ export interface DesktopRpcClient {
   readonly getTrialBalance: (
     request: GetTrialBalanceRequest,
   ) => Promise<GetTrialBalanceResponse>;
+  readonly ingestDocument: (request: IngestDocumentRequest) => Promise<IngestDocumentResponse>;
+  readonly listDocuments: (request: ListDocumentsRequest) => Promise<ListDocumentsResponse>;
+  readonly getDocument: (request: GetDocumentRequest) => Promise<GetDocumentResponse>;
+  readonly saveDocumentReview: (
+    request: SaveDocumentReviewRequest,
+  ) => Promise<SaveDocumentReviewResponse>;
   readonly createWorkspace: (request: CreateWorkspaceRequest) => Promise<CreateWorkspaceResponse>;
   readonly confirmRecovery: (request: ConfirmRecoveryRequest) => Promise<ConfirmRecoveryResponse>;
   readonly unlockWorkspace: (request: UnlockWorkspaceRequest) => Promise<UnlockWorkspaceResponse>;
@@ -238,6 +292,22 @@ export function createDesktopRpcRouter(client: DesktopRpcClient): Readonly<Deskt
           case GET_TRIAL_BALANCE_CHANNEL:
             return getTrialBalanceCodec.encodeResponse(
               await client.getTrialBalance(getTrialBalanceCodec.decodeRequest(request)),
+            );
+          case INGEST_DOCUMENT_CHANNEL:
+            return ingestDocumentCodec.encodeResponse(
+              await client.ingestDocument(ingestDocumentCodec.decodeRequest(request)),
+            );
+          case LIST_DOCUMENTS_CHANNEL:
+            return listDocumentsCodec.encodeResponse(
+              await client.listDocuments(listDocumentsCodec.decodeRequest(request)),
+            );
+          case GET_DOCUMENT_CHANNEL:
+            return getDocumentCodec.encodeResponse(
+              await client.getDocument(getDocumentCodec.decodeRequest(request)),
+            );
+          case SAVE_DOCUMENT_REVIEW_CHANNEL:
+            return saveDocumentReviewCodec.encodeResponse(
+              await client.saveDocumentReview(saveDocumentReviewCodec.decodeRequest(request)),
             );
           case ATTENTION_SUMMARY_CHANNEL:
             return attentionCodec.encodeResponse(

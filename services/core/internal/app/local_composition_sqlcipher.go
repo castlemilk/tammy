@@ -30,7 +30,7 @@ import (
 const (
 	LocalWorkspaceDirectoryCapability = "local-workspace-directory"
 	LocalWorkspaceFileCapability      = "local-workspace-file"
-	localMigrationTarget              = 4
+	localMigrationTarget              = 5
 )
 
 type LocalCompositionConfig struct {

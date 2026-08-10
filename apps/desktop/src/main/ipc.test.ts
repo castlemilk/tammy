@@ -88,6 +88,10 @@ describe("registerDiagnosticsIpc", () => {
       "listJournals",
       "getJournal",
       "getTrialBalance",
+      "ingestDocument",
+      "listDocuments",
+      "getDocument",
+      "saveDocumentReview",
       "getAttentionSummary",
     ]);
     expect(DIAGNOSTICS_PRELOAD_METHOD).toBe(DESKTOP_PRELOAD_METHODS[0]);
@@ -340,6 +344,10 @@ describe("preload desktop bridge", () => {
       "listJournals",
       "getJournal",
       "getTrialBalance",
+      "ingestDocument",
+      "listDocuments",
+      "getDocument",
+      "saveDocumentReview",
       "getAttentionSummary",
     ]);
     expect(Object.isFrozen(api)).toBe(true);

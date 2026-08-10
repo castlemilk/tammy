@@ -72,6 +72,10 @@ function unusedCoreMethods() {
     getTrialBalance: vi.fn(async () => {
       throw new Error("unused");
     }),
+    ingestDocument: vi.fn(async () => { throw new Error("unused"); }),
+    listDocuments: vi.fn(async () => { throw new Error("unused"); }),
+    getDocument: vi.fn(async () => { throw new Error("unused"); }),
+    saveDocumentReview: vi.fn(async () => { throw new Error("unused"); }),
   };
 }
 

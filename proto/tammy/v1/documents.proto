@@ -1,0 +1,100 @@
+syntax = "proto3";
+
+package tammy.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+import "tammy/v1/common.proto";
+
+option go_package = "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1";
+
+enum DocumentStatus {
+  DOCUMENT_STATUS_UNSPECIFIED = 0;
+  DOCUMENT_STATUS_NEEDS_REVIEW = 1;
+  DOCUMENT_STATUS_REVIEWED = 2;
+}
+
+message DocumentCandidate {
+  string supplier_name = 1 [(buf.validate.field).string.max_len = 256];
+  string invoice_number = 2 [(buf.validate.field).string.max_len = 128];
+  optional CivilDate document_date = 3;
+  Money subtotal = 4;
+  Money gst = 5;
+  Money total = 6;
+}
+
+message Document {
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 version = 3 [(buf.validate.field).uint64.gte = 1];
+  DocumentStatus status = 4 [(buf.validate.field).enum.defined_only = true];
+  string source_display_name = 5 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 255
+  }];
+  string mime_type = 6 [(buf.validate.field).string.max_len = 96];
+  uint64 byte_length = 7 [(buf.validate.field).uint64 = {
+    gte: 1
+    lte: 10485760
+  }];
+  bytes sha256 = 8 [(buf.validate.field).bytes.len = 32];
+  string extracted_text = 9 [(buf.validate.field).string.max_bytes = 1048576];
+  DocumentCandidate candidate = 10 [(buf.validate.field).required = true];
+  google.protobuf.Timestamp created_at = 11 [(buf.validate.field).required = true];
+  google.protobuf.Timestamp reviewed_at = 12;
+}
+
+message IngestDocumentRequest {
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string source_display_name = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 255
+  }];
+  string mime_type = 4 [(buf.validate.field).string.max_len = 96];
+  bytes original = 5 [(buf.validate.field).bytes = {
+    min_len: 1
+    max_len: 10485760
+  }];
+  string extracted_text = 6 [(buf.validate.field).string.max_bytes = 1048576];
+  DocumentCandidate candidate = 7 [(buf.validate.field).required = true];
+}
+
+message IngestDocumentResponse {
+  Document document = 1 [(buf.validate.field).required = true];
+}
+
+message GetDocumentRequest {
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+  string document_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+}
+message GetDocumentResponse {
+  Document document = 1 [(buf.validate.field).required = true];
+}
+
+message ListDocumentsRequest {
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  PageRequest page = 3 [(buf.validate.field).required = true];
+}
+message ListDocumentsResponse {
+  repeated Document documents = 1 [(buf.validate.field).repeated.max_items = 200];
+  PageInfo page = 2 [(buf.validate.field).required = true];
+}
+
+message SaveDocumentReviewRequest {
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string document_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
+  DocumentCandidate candidate = 4 [(buf.validate.field).required = true];
+}
+message SaveDocumentReviewResponse {
+  Document document = 1 [(buf.validate.field).required = true];
+}
+
+service DocumentService {
+  rpc IngestDocument(IngestDocumentRequest) returns (IngestDocumentResponse);
+  rpc GetDocument(GetDocumentRequest) returns (GetDocumentResponse);
+  rpc ListDocuments(ListDocumentsRequest) returns (ListDocumentsResponse);
+  rpc SaveDocumentReview(SaveDocumentReviewRequest) returns (SaveDocumentReviewResponse);
+}

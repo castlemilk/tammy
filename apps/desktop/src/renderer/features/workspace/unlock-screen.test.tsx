@@ -69,6 +69,10 @@ it("unlocks and signs in to an existing local workspace through named protobuf m
     listJournals: vi.fn(),
     getJournal: vi.fn(),
     getTrialBalance: vi.fn(),
+    ingestDocument: vi.fn(),
+    listDocuments: vi.fn(),
+    getDocument: vi.fn(),
+    saveDocumentReview: vi.fn(),
     getAttentionSummary: vi.fn(),
     getSystemDiagnostics: vi.fn(),
   } satisfies TammyDesktopAPI;

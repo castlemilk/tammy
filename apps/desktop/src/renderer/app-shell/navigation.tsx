@@ -1,5 +1,6 @@
 import {
   BookOpen,
+  FileText,
   House,
   ListTree,
   Rows3,
@@ -11,6 +12,7 @@ import type { MouseEvent } from "react";
 
 export const PRIMARY_NAVIGATION = Object.freeze([
   { href: "/overview", icon: House, label: "Overview" },
+  { href: "/documents", icon: FileText, label: "Documents" },
   { href: "/accounting/chart", icon: ListTree, label: "Chart of accounts" },
   { href: "/accounting/journals", icon: BookOpen, label: "Journals" },
   { href: "/accounting/general-ledger", icon: Rows3, label: "General ledger" },
@@ -35,7 +37,7 @@ export function Navigation({ activePath, onNavigate }: NavigationProps) {
       <ul className="m-0 mt-auto list-none border-t border-border px-0 pb-0 pt-3">
         <NavigationItem
           activePath={activePath}
-          item={PRIMARY_NAVIGATION[6]}
+          item={PRIMARY_NAVIGATION.at(-1)!}
           onNavigate={onNavigate}
         />
       </ul>

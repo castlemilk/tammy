@@ -124,6 +124,10 @@ it("creates, confirms, and signs in to a real local workspace through named prot
     listJournals: vi.fn(),
     getJournal: vi.fn(),
     getTrialBalance: vi.fn(),
+    ingestDocument: vi.fn(),
+    listDocuments: vi.fn(),
+    getDocument: vi.fn(),
+    saveDocumentReview: vi.fn(),
     getAttentionSummary: vi.fn(),
     getSystemDiagnostics: vi.fn(),
   } satisfies TammyDesktopAPI;

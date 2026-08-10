@@ -52,8 +52,8 @@ it("renders the live local attention summary through the named protobuf method",
           }),
         ],
         revisions: create(AttentionRevisionVectorSchema, { financialRevision: 9n }),
-        asOfDate: request.asOfDate,
-        reportingPeriod: request.reportingPeriod,
+        ...(request.asOfDate ? { asOfDate: request.asOfDate } : {}),
+        ...(request.reportingPeriod ? { reportingPeriod: request.reportingPeriod } : {}),
       }),
     );
   });

@@ -1,1 +1,1 @@
-["getSystemDiagnostics", "createWorkspace", "confirmRecovery", "unlockWorkspace", "signIn", "createOrganisation", "createAccount", "listAccounts", "postManualJournal", "listJournals", "getJournal", "getTrialBalance", "getAttentionSummary"]
+["getSystemDiagnostics", "createWorkspace", "confirmRecovery", "unlockWorkspace", "signIn", "createOrganisation", "createAccount", "listAccounts", "postManualJournal", "listJournals", "getJournal", "getTrialBalance", "ingestDocument", "listDocuments", "getDocument", "saveDocumentReview", "getAttentionSummary"]

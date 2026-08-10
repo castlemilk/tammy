@@ -13,12 +13,14 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/tammyapp/tammy/services/core/internal/accounting"
 	"github.com/tammyapp/tammy/services/core/internal/app"
 	"github.com/tammyapp/tammy/services/core/internal/artefacts"
 	"github.com/tammyapp/tammy/services/core/internal/authorisation"
+	"github.com/tammyapp/tammy/services/core/internal/documents"
 	tammyv1 "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1"
 	tammyv1connect "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1/tammyv1connect"
 	"github.com/tammyapp/tammy/services/core/internal/idempotency"
@@ -28,6 +30,7 @@ import (
 	"github.com/tammyapp/tammy/services/core/internal/transport"
 	"github.com/tammyapp/tammy/services/core/internal/workspace"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 var ErrLedgerModule = errors.New("local product: ledger module unavailable")
@@ -35,6 +38,7 @@ var ErrLedgerModule = errors.New("local product: ledger module unavailable")
 type LedgerModule struct {
 	organisationRoute *organisationRoute
 	accountingRoute   *accountingRoute
+	documentRoute     *documentRoute
 	mu                sync.RWMutex
 	db                *sqlcipher.Database
 }
@@ -43,21 +47,23 @@ func NewLedgerModule() (*LedgerModule, error) {
 	return &LedgerModule{
 		organisationRoute: &organisationRoute{},
 		accountingRoute:   &accountingRoute{},
+		documentRoute:     &documentRoute{},
 	}, nil
 }
 
 func (module *LedgerModule) HandlerFactories() []transport.GeneratedHandlerFactory {
-	if module == nil || module.organisationRoute == nil || module.accountingRoute == nil {
+	if module == nil || module.organisationRoute == nil || module.accountingRoute == nil || module.documentRoute == nil {
 		return nil
 	}
 	return []transport.GeneratedHandlerFactory{
 		module.organisationRoute.factory,
 		module.accountingRoute.factory,
+		module.documentRoute.factory,
 	}
 }
 
 func (module *LedgerModule) Activate(activation app.LocalWorkspaceActivation) error {
-	if module == nil || module.organisationRoute == nil || module.accountingRoute == nil ||
+	if module == nil || module.organisationRoute == nil || module.accountingRoute == nil || module.documentRoute == nil ||
 		activation.Database == nil || activation.Identity == nil ||
 		activation.Now == nil || activation.NewID == nil {
 		return ErrLedgerModule
@@ -159,10 +165,222 @@ func (module *LedgerModule) Activate(activation app.LocalWorkspaceActivation) er
 	}); err != nil {
 		return err
 	}
+	if err := module.documentRoute.set(&documentHandler{
+		database: activation.Database,
+		identity: activation.Identity,
+		now:      activation.Now,
+		newID:    activation.NewID,
+	}); err != nil {
+		return err
+	}
 	module.mu.Lock()
 	module.db = activation.Database
 	module.mu.Unlock()
 	return nil
+}
+
+type documentRoute struct {
+	mu      sync.RWMutex
+	options []connect.HandlerOption
+	handler http.Handler
+}
+
+func (route *documentRoute) set(service tammyv1connect.DocumentServiceHandler) error {
+	if route == nil || service == nil {
+		return ErrLedgerModule
+	}
+	_, handler := tammyv1connect.NewDocumentServiceHandler(
+		service,
+		append([]connect.HandlerOption(nil), route.options...)...,
+	)
+	route.mu.Lock()
+	route.handler = handler
+	route.mu.Unlock()
+	return nil
+}
+
+func (route *documentRoute) factory(options ...connect.HandlerOption) (string, http.Handler) {
+	route.mu.Lock()
+	route.options = append([]connect.HandlerOption(nil), options...)
+	route.mu.Unlock()
+	return "/" + tammyv1connect.DocumentServiceName + "/", route
+}
+
+func (route *documentRoute) ServeHTTP(response http.ResponseWriter, request *http.Request) {
+	route.mu.RLock()
+	handler := route.handler
+	route.mu.RUnlock()
+	if handler == nil {
+		http.Error(response, "local documents unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	handler.ServeHTTP(response, request)
+}
+
+type documentHandler struct {
+	tammyv1connect.UnimplementedDocumentServiceHandler
+	database *sqlcipher.Database
+	identity app.LocalModuleIdentity
+	now      func() time.Time
+	newID    func() (string, error)
+}
+
+func (handler *documentHandler) IngestDocument(
+	ctx context.Context,
+	request *connect.Request[tammyv1.IngestDocumentRequest],
+) (*connect.Response[tammyv1.IngestDocumentResponse], error) {
+	if handler == nil || handler.database == nil || handler.identity == nil || handler.now == nil || handler.newID == nil ||
+		request == nil || request.Msg == nil || request.Msg.CommandContext == nil ||
+		request.Msg.CommandContext.Authentication == nil || request.Msg.Candidate == nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrLedgerModule)
+	}
+	tx, err := handler.database.BeginEncryptedTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	defer tx.Rollback()
+	authentication := request.Msg.CommandContext.Authentication
+	if err := handler.identity.RequireAdministratorWithin(ctx, tx, authentication); err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, ErrLedgerModule)
+	}
+	documentID, err := handler.newID()
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	digest := sha256.Sum256(request.Msg.Original)
+	document := &tammyv1.Document{
+		Id:                documentID,
+		OrganisationId:    request.Msg.OrganisationId,
+		Version:           1,
+		Status:            tammyv1.DocumentStatus_DOCUMENT_STATUS_NEEDS_REVIEW,
+		SourceDisplayName: request.Msg.SourceDisplayName,
+		MimeType:          request.Msg.MimeType,
+		ByteLength:        uint64(len(request.Msg.Original)),
+		Sha256:            append([]byte(nil), digest[:]...),
+		ExtractedText:     request.Msg.ExtractedText,
+		Candidate:         proto.Clone(request.Msg.Candidate).(*tammyv1.DocumentCandidate),
+		CreatedAt:         timestamppb.New(handler.now()),
+	}
+	repository, err := documents.NewRepository(tx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	retained, err := repository.Create(
+		ctx,
+		request.Msg.CommandContext.IdempotencyKey,
+		authentication.ActorUserId,
+		document,
+		request.Msg.Original,
+	)
+	if err != nil {
+		code := connect.CodeInvalidArgument
+		if errors.Is(err, documents.ErrDuplicateSource) {
+			code = connect.CodeAlreadyExists
+		}
+		return nil, connect.NewError(code, ErrLedgerModule)
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	return connect.NewResponse(&tammyv1.IngestDocumentResponse{Document: retained}), nil
+}
+
+func (handler *documentHandler) GetDocument(
+	ctx context.Context,
+	request *connect.Request[tammyv1.GetDocumentRequest],
+) (*connect.Response[tammyv1.GetDocumentResponse], error) {
+	if handler == nil || handler.database == nil || handler.identity == nil || request == nil ||
+		request.Msg == nil || request.Msg.Authentication == nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrLedgerModule)
+	}
+	if err := handler.identity.RequireActiveSessionReadOnly(ctx, request.Msg.Authentication); err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, ErrLedgerModule)
+	}
+	tx, err := handler.database.BeginEncryptedTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	defer tx.Rollback()
+	repository, err := documents.NewRepository(tx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	document, err := repository.Get(ctx, request.Msg.DocumentId)
+	if err != nil || tx.Commit() != nil {
+		return nil, connect.NewError(connect.CodeNotFound, ErrLedgerModule)
+	}
+	return connect.NewResponse(&tammyv1.GetDocumentResponse{Document: document}), nil
+}
+
+func (handler *documentHandler) ListDocuments(
+	ctx context.Context,
+	request *connect.Request[tammyv1.ListDocumentsRequest],
+) (*connect.Response[tammyv1.ListDocumentsResponse], error) {
+	if handler == nil || handler.database == nil || handler.identity == nil || request == nil ||
+		request.Msg == nil || request.Msg.Authentication == nil || request.Msg.Page == nil || request.Msg.Page.Cursor != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrLedgerModule)
+	}
+	if err := handler.identity.RequireActiveSessionReadOnly(ctx, request.Msg.Authentication); err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, ErrLedgerModule)
+	}
+	pageSize := int(request.Msg.Page.PageSize)
+	if pageSize == 0 {
+		pageSize = 50
+	}
+	if pageSize < 1 || pageSize > 200 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrLedgerModule)
+	}
+	tx, err := handler.database.BeginEncryptedTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	defer tx.Rollback()
+	repository, err := documents.NewRepository(tx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	items, err := repository.List(ctx, request.Msg.OrganisationId, pageSize)
+	if err != nil || tx.Commit() != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	return connect.NewResponse(&tammyv1.ListDocumentsResponse{
+		Documents: items,
+		Page:      &tammyv1.PageInfo{ReturnedCount: uint32(len(items))},
+	}), nil
+}
+
+func (handler *documentHandler) SaveDocumentReview(
+	ctx context.Context,
+	request *connect.Request[tammyv1.SaveDocumentReviewRequest],
+) (*connect.Response[tammyv1.SaveDocumentReviewResponse], error) {
+	if handler == nil || handler.database == nil || handler.identity == nil || handler.now == nil ||
+		request == nil || request.Msg == nil || request.Msg.CommandContext == nil ||
+		request.Msg.CommandContext.Authentication == nil || request.Msg.Candidate == nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrLedgerModule)
+	}
+	tx, err := handler.database.BeginEncryptedTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	defer tx.Rollback()
+	if err := handler.identity.RequireAdministratorWithin(ctx, tx, request.Msg.CommandContext.Authentication); err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, ErrLedgerModule)
+	}
+	repository, err := documents.NewRepository(tx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	document, err := repository.SaveReview(
+		ctx,
+		request.Msg.DocumentId,
+		request.Msg.ExpectedVersion,
+		request.Msg.Candidate,
+		handler.now(),
+	)
+	if err != nil || tx.Commit() != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, ErrLedgerModule)
+	}
+	return connect.NewResponse(&tammyv1.SaveDocumentReviewResponse{Document: document}), nil
 }
 
 type accountingRoute struct {

@@ -65,6 +65,10 @@ function installDesktopAPI(getSystemDiagnostics: TammyDesktopAPI["getSystemDiagn
       getTrialBalance: vi.fn(async () => {
         throw new Error("unavailable");
       }),
+      ingestDocument: vi.fn(async () => { throw new Error("unavailable"); }),
+      listDocuments: vi.fn(async () => { throw new Error("unavailable"); }),
+      getDocument: vi.fn(async () => { throw new Error("unavailable"); }),
+      saveDocumentReview: vi.fn(async () => { throw new Error("unavailable"); }),
       getAttentionSummary: vi.fn(async () => {
         throw new Error("unavailable");
       }),
@@ -107,7 +111,8 @@ describe("App", () => {
     const navigation = screen.getByRole("navigation", { name: "Primary" });
     expect(within(navigation).getByRole("link", { name: "Overview" })).toBeTruthy();
 
-    for (const futureModule of ["Documents", "Banking", "GST & BAS"]) {
+    expect(within(navigation).getByRole("link", { name: "Documents" })).toBeTruthy();
+    for (const futureModule of ["Banking", "GST & BAS"]) {
       expect(within(navigation).queryByText(futureModule)).toBeNull();
     }
     for (const futureModule of ["Submissions", "Lodge BAS"]) {
@@ -183,6 +188,8 @@ describe("App", () => {
     await screen.findByRole("button", { name: "Retry local engine" });
     await user.tab();
     expect(document.activeElement).toBe(screen.getByRole("link", { name: "Overview" }));
+    await user.tab();
+    expect(document.activeElement).toBe(screen.getByRole("link", { name: "Documents" }));
     await user.tab();
     expect(document.activeElement).toBe(screen.getByRole("link", { name: "Chart of accounts" }));
   });

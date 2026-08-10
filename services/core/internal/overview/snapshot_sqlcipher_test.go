@@ -16,7 +16,7 @@ func TestSQLCipherSnapshotPortReadsBlankWorkspaceRevisionVector(t *testing.T) {
 	for index := range key {
 		key[index] = byte(index + 1)
 	}
-	if _, err := sqlcipher.MigrateWorkspace(context.Background(), path, key, 4); err != nil {
+	if _, err := sqlcipher.MigrateWorkspace(context.Background(), path, key, 5); err != nil {
 		t.Fatal(err)
 	}
 	database, err := sqlcipher.Open(context.Background(), path, key)

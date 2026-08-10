@@ -19,6 +19,10 @@ export const POST_MANUAL_JOURNAL_CHANNEL = "tammy:accounting-post-manual-journal
 export const LIST_JOURNALS_CHANNEL = "tammy:accounting-list-journals";
 export const GET_JOURNAL_CHANNEL = "tammy:accounting-get-journal";
 export const GET_TRIAL_BALANCE_CHANNEL = "tammy:accounting-get-trial-balance";
+export const INGEST_DOCUMENT_CHANNEL = "tammy:documents-ingest";
+export const LIST_DOCUMENTS_CHANNEL = "tammy:documents-list";
+export const GET_DOCUMENT_CHANNEL = "tammy:documents-get";
+export const SAVE_DOCUMENT_REVIEW_CHANNEL = "tammy:documents-save-review";
 export const ATTENTION_SUMMARY_CHANNEL = "tammy:overview-attention-summary";
 
 export const DESKTOP_PROTO_CHANNELS = Object.freeze([
@@ -33,6 +37,10 @@ export const DESKTOP_PROTO_CHANNELS = Object.freeze([
   LIST_JOURNALS_CHANNEL,
   GET_JOURNAL_CHANNEL,
   GET_TRIAL_BALANCE_CHANNEL,
+  INGEST_DOCUMENT_CHANNEL,
+  LIST_DOCUMENTS_CHANNEL,
+  GET_DOCUMENT_CHANNEL,
+  SAVE_DOCUMENT_REVIEW_CHANNEL,
   ATTENTION_SUMMARY_CHANNEL,
 ] as const);
 
@@ -49,6 +57,10 @@ export interface TammyDesktopAPI {
   readonly listJournals: (request: Uint8Array) => Promise<Uint8Array>;
   readonly getJournal: (request: Uint8Array) => Promise<Uint8Array>;
   readonly getTrialBalance: (request: Uint8Array) => Promise<Uint8Array>;
+  readonly ingestDocument: (request: Uint8Array) => Promise<Uint8Array>;
+  readonly listDocuments: (request: Uint8Array) => Promise<Uint8Array>;
+  readonly getDocument: (request: Uint8Array) => Promise<Uint8Array>;
+  readonly saveDocumentReview: (request: Uint8Array) => Promise<Uint8Array>;
   readonly getAttentionSummary: (request: Uint8Array) => Promise<Uint8Array>;
 }
 
@@ -65,6 +77,10 @@ const EXPECTED_DESKTOP_PRELOAD_METHODS = [
   "listJournals",
   "getJournal",
   "getTrialBalance",
+  "ingestDocument",
+  "listDocuments",
+  "getDocument",
+  "saveDocumentReview",
   "getAttentionSummary",
 ] as const satisfies readonly (keyof TammyDesktopAPI)[];
 

@@ -26,6 +26,27 @@ func TestEmbeddedSchemaDeclaresOwnedPlatformAndLedgerTables(t *testing.T) {
 	assertCreatesTables(t, string(steps[0].SQL), platformTables)
 	assertCreatesTables(t, string(steps[1].SQL), ledgerTables)
 	assertCreatesTables(t, string(steps[3].SQL), []string{"pre_restore_archives_v1", "pre_restore_archive_export_jobs_v1"})
+	assertCreatesTables(t, string(steps[4].SQL), []string{"documents"})
+}
+
+func TestDocumentSchemaRetainsEncryptedWorkspaceEvidenceAndReviewState(t *testing.T) {
+	steps, err := All()
+	if err != nil {
+		t.Fatal(err)
+	}
+	schema := strings.ToLower(string(steps[4].SQL))
+	for _, fragment := range []string{
+		"operation_key text not null unique",
+		"original_bytes blob not null",
+		"unique (organisation_id, sha256)",
+		"documents_immutable_source",
+		"documents_review_transition",
+		"documents_immutable_delete",
+	} {
+		if !strings.Contains(schema, fragment) {
+			t.Errorf("migration 5 missing document schema fragment %q", fragment)
+		}
+	}
 }
 
 func TestTask7MigrationCapsSharedJobProtobufBlobs(t *testing.T) {

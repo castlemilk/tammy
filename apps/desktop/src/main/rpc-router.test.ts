@@ -56,6 +56,10 @@ function rpcClient(getAttentionSummary: DesktopRpcClient["getAttentionSummary"])
     listJournals: vi.fn(),
     getJournal: vi.fn(),
     getTrialBalance: vi.fn(),
+    ingestDocument: vi.fn(),
+    listDocuments: vi.fn(),
+    getDocument: vi.fn(),
+    saveDocumentReview: vi.fn(),
     getAttentionSummary,
   };
 }

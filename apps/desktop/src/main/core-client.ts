@@ -16,6 +16,17 @@ import type {
 } from "@tammy/connect-client/tammy/v1/accounting_pb.js";
 import { AccountingService } from "@tammy/connect-client/tammy/v1/accounting_pb.js";
 import type {
+  GetDocumentRequest,
+  GetDocumentResponse,
+  IngestDocumentRequest,
+  IngestDocumentResponse,
+  ListDocumentsRequest,
+  ListDocumentsResponse,
+  SaveDocumentReviewRequest,
+  SaveDocumentReviewResponse,
+} from "@tammy/connect-client/tammy/v1/documents_pb.js";
+import { DocumentService } from "@tammy/connect-client/tammy/v1/documents_pb.js";
+import type {
   GetAttentionSummaryRequest,
   GetAttentionSummaryResponse,
 } from "@tammy/connect-client/tammy/v1/overview_pb.js";
@@ -58,6 +69,12 @@ export interface CoreClient {
   readonly getTrialBalance: (
     request: GetTrialBalanceRequest,
   ) => Promise<GetTrialBalanceResponse>;
+  readonly ingestDocument: (request: IngestDocumentRequest) => Promise<IngestDocumentResponse>;
+  readonly listDocuments: (request: ListDocumentsRequest) => Promise<ListDocumentsResponse>;
+  readonly getDocument: (request: GetDocumentRequest) => Promise<GetDocumentResponse>;
+  readonly saveDocumentReview: (
+    request: SaveDocumentReviewRequest,
+  ) => Promise<SaveDocumentReviewResponse>;
   readonly createWorkspace: (request: CreateWorkspaceRequest) => Promise<CreateWorkspaceResponse>;
   readonly confirmRecovery: (request: ConfirmRecoveryRequest) => Promise<ConfirmRecoveryResponse>;
   readonly unlockWorkspace: (request: UnlockWorkspaceRequest) => Promise<UnlockWorkspaceResponse>;
@@ -114,6 +131,7 @@ export function createCoreClient(
   });
   const systemClient = createClient(SystemService, transport);
   const accountingClient = createClient(AccountingService, transport);
+  const documentClient = createClient(DocumentService, transport);
   const overviewClient = createClient(OverviewService, transport);
   const workspaceClient = createClient(WorkspaceService, transport);
   const identityClient = createClient(IdentityService, transport);
@@ -140,6 +158,14 @@ export function createCoreClient(
       coreRequest(() => accountingClient.getJournal(request)),
     getTrialBalance: (request: GetTrialBalanceRequest) =>
       coreRequest(() => accountingClient.getTrialBalance(request)),
+    ingestDocument: (request: IngestDocumentRequest) =>
+      coreRequest(() => documentClient.ingestDocument(request)),
+    listDocuments: (request: ListDocumentsRequest) =>
+      coreRequest(() => documentClient.listDocuments(request)),
+    getDocument: (request: GetDocumentRequest) =>
+      coreRequest(() => documentClient.getDocument(request)),
+    saveDocumentReview: (request: SaveDocumentReviewRequest) =>
+      coreRequest(() => documentClient.saveDocumentReview(request)),
     createWorkspace: (request: CreateWorkspaceRequest) =>
       coreRequest(() => workspaceClient.createWorkspace(request)),
     confirmRecovery: (request: ConfirmRecoveryRequest) =>

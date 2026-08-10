@@ -9,10 +9,14 @@ import {
   CREATE_WORKSPACE_CHANNEL,
   GET_JOURNAL_CHANNEL,
   GET_TRIAL_BALANCE_CHANNEL,
+  GET_DOCUMENT_CHANNEL,
+  INGEST_DOCUMENT_CHANNEL,
   LIST_ACCOUNTS_CHANNEL,
+  LIST_DOCUMENTS_CHANNEL,
   LIST_JOURNALS_CHANNEL,
   POST_MANUAL_JOURNAL_CHANNEL,
   SIGN_IN_CHANNEL,
+  SAVE_DOCUMENT_REVIEW_CHANNEL,
   SYSTEM_DIAGNOSTICS_CHANNEL,
   UNLOCK_WORKSPACE_CHANNEL,
 } from "../shared/desktop-api";
@@ -40,6 +44,10 @@ export function createTammyDesktopAPI(invoke: Invoke): TammyDesktopAPI {
     listJournals: binaryMethod(LIST_JOURNALS_CHANNEL),
     getJournal: binaryMethod(GET_JOURNAL_CHANNEL),
     getTrialBalance: binaryMethod(GET_TRIAL_BALANCE_CHANNEL),
+    ingestDocument: binaryMethod(INGEST_DOCUMENT_CHANNEL),
+    listDocuments: binaryMethod(LIST_DOCUMENTS_CHANNEL),
+    getDocument: binaryMethod(GET_DOCUMENT_CHANNEL),
+    saveDocumentReview: binaryMethod(SAVE_DOCUMENT_REVIEW_CHANNEL),
     getAttentionSummary: binaryMethod(ATTENTION_SUMMARY_CHANNEL),
   } satisfies TammyDesktopAPI;
   if (
