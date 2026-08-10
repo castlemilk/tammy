@@ -47,9 +47,10 @@ The existing development profile remains available and simple:
 
 A separate Mac App Store profile will be selected explicitly by a release command. It will:
 
-- use the stable bundle identifier `com.tammy.desktop` unless an operator intentionally supplies a different registered identifier;
+- use the pinned bundle identifier `com.tammy.desktop`; changing it requires a reviewed source change covering helpers, profiles, metadata, and App Store records;
 - target the Electron `mas` platform and retain the bundled Go core and SQLCipher resources;
-- require Apple distribution identity, team identifier, and provisioning profile inputs instead of falling back to ad-hoc signing;
+- require an Apple Development identity and development provisioning profile for a locally runnable sandbox test, or an Apple Distribution identity and distribution profile for upload, instead of falling back to ad-hoc signing;
+- require a positive decimal `CFBundleVersion` build number distinct from the semantic release version and supplied for every upload;
 - enable the App Sandbox with the minimum entitlements required by the current architecture;
 - keep outbound Internet use absent from product code while enabling the coarse sandbox network entitlements required by the authenticated loopback transport;
 - place the privacy manifest and licensed resources in the application bundle;
@@ -60,21 +61,25 @@ Development and store profiles must not silently select one another. A normal de
 
 ## Sandbox and child process design
 
-The Go core is an embedded executable, not a separately downloadable component. The store profile signs the application, Electron helpers, and the core consistently with the application's sandbox. Apple's network entitlements are not loopback-scoped, so they enable client access for Electron and server access for the core while Tammy's existing transport validation continues to constrain product behavior to the authenticated loopback channel. User-selected import locations use Apple's user-selection permission; Tammy's internal encrypted workspace remains in its application container.
+The Go core is an embedded executable, not a separately downloadable component. The store profile removes the development-only core signing exclusion and signs the application, Electron helpers, frameworks, dynamic libraries, and core consistently with the application's sandbox. The main app has the sandbox, network-client, and user-selected-read entitlements. Ordinary helpers inherit the sandbox. The core inherits the sandbox and adds network-server access. Signing supplies and later verifies the exact `ElectronTeamID`, embedded provisioning profile, helper identifiers, and application-group identity required by Electron.
+
+Apple's network entitlements are not loopback-scoped, so they enable client access for Electron and server access for the core while Tammy's existing transport validation continues to constrain product behavior to the authenticated loopback channel. User-selected import locations use Apple's user-selection permission; Tammy's internal encrypted workspace remains in its application container. The current shipped UI does not persist an external export destination. Any future restart-resumable export feature must use application-scoped security-scoped bookmarks with stale-bookmark refresh and restart tests before it can be enabled in the store build.
 
 The existing exact-path core supervision, build-manifest authentication, SQLCipher-only build, and clean-shutdown checks remain release gates. The store profile must not weaken them.
 
 ## Privacy and store metadata
 
-The repository will include a minimal privacy manifest that declares no tracking and no collected data only to the extent supported by the current offline implementation. It will also declare the approved reasons for required-reason APIs Tammy directly uses to manage files in its container or files the user selected. An Xcode privacy report remains a final signed-build gate because bundled Electron and native code must be assessed as shipped. Any future telemetry, third-party SDK, networking, or data collection change must update the manifest and App Store privacy answers together.
+The repository will include a minimal privacy manifest that declares no tracking and no collected data only to the extent supported by the current offline implementation. It will also declare the approved reasons for required-reason APIs Tammy directly uses to manage files in its container or files the user selected. An Xcode privacy report remains a final signed-build gate because bundled Electron and native code must be assessed as shipped. Any future telemetry, third-party SDK, networking, or data collection change must update the manifest and App Store privacy answers together. The app will expose its privacy statement in-app, while the final public privacy-policy URL remains an App Store Connect submission prerequisite.
 
 The repository will also provide a concise store-metadata template covering name, subtitle, description, keywords, category, privacy URL, support URL, copyright, review notes, and screenshots. Fields requiring legal or business decisions remain visibly incomplete and block the final submission checklist.
+
+Because Tammy bundles SQLCipher and TLS, release metadata will include an explicit operator decision for export compliance and the matching `ITSAppUsesNonExemptEncryption` and App Store Connect answers. The repository will not guess the legal conclusion.
 
 ## Release-readiness checker
 
 A small deterministic script will validate repository-owned prerequisites without contacting Apple. It will check at least:
 
-- app name, semantic version, bundle identifier, and Mac App Store profile;
+- app name, semantic version, positive decimal build number, pinned bundle identifier, and Mac App Store profile;
 - required entitlements and privacy manifest structure;
 - application icon source/output presence and expected dimensions;
 - required release documentation and operator placeholders;
@@ -90,9 +95,10 @@ Implementation validation is proportionate and layered:
 1. unit tests for release-profile selection and the readiness checker;
 2. desktop typecheck and relevant Electron tests;
 3. a normal unsigned package plus the existing packaged end-to-end flow where practical;
-4. a local unsigned or ad-hoc MAS-layout inspection when Electron tooling permits it without Apple credentials;
-5. a development-certificate MAS launch test on a provisioned Mac;
-6. operator-only distribution signing, Installer package validation, Transporter upload, App Store processing, and TestFlight/App Review smoke tests.
+4. a static MAS-layout inspection without claiming sandbox runtime evidence;
+5. an Apple Development-signed MAS launch test on a provisioned Mac;
+6. an Apple Distribution-signed `mas` app, followed by a Mac Installer Distribution-signed `.pkg` produced with MakerPKG/`productbuild`;
+7. operator-only `codesign`/`pkgutil`/`spctl` validation, Transporter upload, App Store processing, and TestFlight/App Review smoke tests.
 
 No documentation or local checker may report the app as submitted or approved. The final handoff will state exactly which repository checks pass and which Apple-controlled gates remain.
 
@@ -102,11 +108,13 @@ The following cannot be truthfully completed from the repository alone:
 
 - active Apple Developer Program membership and App Store Connect access;
 - registered bundle identifier matching the release configuration;
-- Mac App Distribution and Mac Installer Distribution certificates;
+- Apple Development and Apple Distribution certificates, plus Mac Installer Distribution when producing the upload `.pkg` (older documentation may use the legacy “Mac App Distribution” name);
 - App Store provisioning profile and the associated Team ID;
+- a unique positive decimal build number greater than the latest App Store Connect upload;
 - final legal entity, copyright, pricing, tax/banking, support URL, privacy URL, and privacy questionnaire answers;
 - approved product icon/brand direction and final App Store screenshots;
 - a signed-build Xcode privacy report confirming every shipped required-reason API declaration;
+- an export-compliance determination for the bundled SQLCipher/TLS cryptography and matching App Store Connect answers;
 - App Review submission, review notes, and release decision.
 
 These appear as a short operator checklist rather than being disguised as code defaults.

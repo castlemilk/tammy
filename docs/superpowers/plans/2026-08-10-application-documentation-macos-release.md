@@ -35,6 +35,8 @@
 - Create: `apps/desktop/release/macos/entitlements.mas.core.plist`
 - Create: `apps/desktop/release/macos/PrivacyInfo.xcprivacy`
 - Create: `apps/desktop/release/macos/store-metadata.md`
+- Create: `apps/desktop/src/renderer/features/privacy/privacy-screen.tsx`
+- Create: `apps/desktop/src/renderer/features/privacy/privacy-screen.test.tsx`
 - Create: `apps/desktop/assets/icon-source.png`
 - Create: `apps/desktop/assets/icon.icns`
 
@@ -42,6 +44,7 @@
 - [ ] Give the app sandbox/client/user-selected-read access; give ordinary helpers sandbox inheritance; give the core inherited sandbox/server access.
 - [ ] Declare no tracking/collection and the approved container/user-selected file metadata reasons in a valid privacy manifest.
 - [ ] Add factual suggested store copy plus visible operator-owned placeholders for privacy/support URLs, legal identity, pricing, screenshots, and review contact.
+- [ ] Add a locally available in-app privacy statement and route; retain the public privacy-policy URL as a submission blocker.
 - [ ] Validate plist syntax with `rtk plutil -lint apps/desktop/release/macos/*.plist apps/desktop/release/macos/PrivacyInfo.xcprivacy` and image dimensions with `rtk sips -g pixelWidth -g pixelHeight apps/desktop/assets/icon-source.png`.
 
 ## Chunk 2: Packaging and evidence
@@ -56,7 +59,7 @@
 - Modify: `pnpm-lock.yaml`
 
 - [ ] Write tests proving development remains ad-hoc/darwin and MAS fails without exact identity/team/profile/installer inputs.
-- [ ] Write tests proving MAS uses `com.tammy.desktop`, category `public.app-category.finance`, icon/privacy resources, MAS entitlements, and the packaged core-specific entitlements.
+- [ ] Write tests proving MAS pins `com.tammy.desktop`, accepts a positive decimal build number, uses category `public.app-category.finance`, includes icon/privacy resources, removes the core-signing exclusion, and applies distinct app/helper/core entitlements.
 - [ ] Run `rtk mise exec -- pnpm --dir apps/desktop test release/macos/profile.test.ts` and observe the intended RED.
 - [ ] Implement a pure environment parser and Forge profile builder; never log secret/profile contents.
 - [ ] Add the pinned `@electron-forge/maker-pkg` version matching Forge 7.11.2 and select it only for MAS.
@@ -70,9 +73,9 @@
 - Modify: `package.json`
 
 - [ ] Test that repository mode validates bundle ID, version, resources, plist contents, icon dimensions, docs, and metadata placeholders.
-- [ ] Test that release mode rejects missing or relative signing/provisioning inputs and reports all operator prerequisites without exposing values.
+- [ ] Test that release mode rejects missing or relative signing/provisioning inputs, invalid build numbers, and unresolved export-compliance input, and reports all operator prerequisites without exposing values.
 - [ ] Run `rtk node --test scripts/check-macos-store.test.mjs` and observe the intended RED.
-- [ ] Implement `check:macos-store` and `desktop:make:mas` commands using the existing build-manifest/core build before Forge `make --platform=mas --arch=arm64`.
+- [ ] Implement `check:macos-store` and `desktop:make:mas` commands using the existing build-manifest/core build before Forge `make --platform=mas --arch=arm64`; the latter produces an Apple Distribution-signed app and Mac Installer Distribution-signed `.pkg`.
 - [ ] Run focused tests plus `rtk mise exec -- pnpm check:macos-store` and commit.
 
 ### Task 5: Write the operator runbook and App Review assessment
@@ -83,6 +86,7 @@
 - Modify: `README.md`
 
 - [ ] Document development-signing versus distribution-signing behavior, App ID/profile/certificate creation, MAS sandbox testing, `codesign`, `spctl`, `productbuild`, Transporter, App Store processing, and rollback.
+- [ ] Document unique build-number ownership, `ElectronTeamID`/application-group/provisioning verification, all nested signatures, and the export-compliance decision.
 - [ ] Record App Review risks from @app-store-review: final/non-placeholder app, accurate screenshots, privacy/support links in metadata and app, no separate license gate, no orphan process, no downloaded code, no tracking/IAP today, fictional screenshot data, and financial-app legal-entity ownership.
 - [ ] Explain that the local workspace sign-in is not a remote account and that reviewers create their own offline workspace; provide review-note text without embedding credentials.
 - [ ] Link only Apple/Electron primary references and mark every external gate as unchecked until observed.
@@ -97,5 +101,5 @@
 - [ ] Run `rtk mise exec -- pnpm desktop:typecheck` and focused desktop/release tests.
 - [ ] Run `rtk mise exec -- pnpm desktop:package` to prove development packaging is unchanged.
 - [ ] Inspect the development app's Info.plist, signature, icon, privacy resource, packaged core path, and build manifest.
-- [ ] If credentials are available, run the development-certificate MAS build and signed validation; otherwise record the exact skipped gate without claiming readiness.
+- [ ] If credentials are available, run the Apple Development-signed MAS build, sandbox/core smoke test, and nested-signature validation; otherwise record the exact skipped gate without claiming readiness.
 - [ ] Run `rtk git diff --check`, check status, and provide the exact remaining Apple-account/operator checklist.
