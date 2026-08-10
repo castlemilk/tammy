@@ -1,31 +1,34 @@
-import { BookOpenText, LayoutGrid, LockKeyhole } from "lucide-react";
+import { AlertTriangle, LoaderCircle, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { AppShell } from "./app-shell/app-shell";
+import { resolveAppLocation } from "./app-shell/router";
 import { Button } from "./components/ui/button";
 import { DiagnosticsCard, type DiagnosticsState } from "./features/diagnostics/diagnostics-card";
+import { EmptyLedgerScreen } from "./features/ledger/empty-ledger-screen";
+import { OverviewScreen } from "./features/overview/overview-screen";
 
-const navigation = [{ href: "#overview", icon: LayoutGrid, label: "Overview" }] as const;
+function currentLocation(): string {
+  const location = `${window.location.pathname}${window.location.search}`;
+  return location === "/" ? "/overview" : location;
+}
 
 export function App() {
-  const [diagnosticsState, setDiagnosticsState] = useState<DiagnosticsState>({
-    status: "loading",
-  });
+  const [diagnosticsState, setDiagnosticsState] = useState<DiagnosticsState>({ status: "loading" });
+  const [activePath, setActivePath] = useState(() =>
+    resolveAppLocation(currentLocation(), "authenticated").path,
+  );
   const requestSequence = useRef(0);
 
   const loadDiagnostics = useCallback(async () => {
     const request = requestSequence.current + 1;
     requestSequence.current = request;
     setDiagnosticsState({ status: "loading" });
-
     try {
       const diagnostics = await window.tammy.getSystemDiagnostics();
-      if (requestSequence.current === request) {
-        setDiagnosticsState({ diagnostics, status: "ready" });
-      }
+      if (requestSequence.current === request) setDiagnosticsState({ diagnostics, status: "ready" });
     } catch {
-      if (requestSequence.current === request) {
-        setDiagnosticsState({ status: "unavailable" });
-      }
+      if (requestSequence.current === request) setDiagnosticsState({ status: "unavailable" });
     }
   }, []);
 
@@ -36,88 +39,87 @@ export function App() {
     };
   }, [loadDiagnostics]);
 
+  useEffect(() => {
+    const restore = () => setActivePath(resolveAppLocation(currentLocation(), "authenticated").path);
+    window.addEventListener("popstate", restore);
+    return () => window.removeEventListener("popstate", restore);
+  }, []);
+
+  const navigate = useCallback((path: string) => {
+    const resolved = resolveAppLocation(path, "authenticated");
+    window.history.pushState(null, "", resolved.path);
+    setActivePath(resolved.path);
+  }, []);
+
   return (
-    <div className="grid min-h-screen grid-cols-[216px_minmax(0,1fr)] bg-background max-[720px]:grid-cols-[72px_minmax(0,1fr)]">
-      <aside className="flex min-h-screen flex-col bg-rail text-rail-foreground">
-        <div className="flex h-11 shrink-0 items-center gap-2.5 border-b border-rail-border px-4 max-[720px]:justify-center max-[720px]:px-2">
-          <BookOpenText aria-hidden="true" className="size-[18px] shrink-0 text-ready-light" />
-          <span className="text-sm font-bold tracking-tight max-[720px]:sr-only">Tammy</span>
-        </div>
+    <AppShell activePath={activePath} onNavigate={navigate}>
+      <EngineStatus onRetry={loadDiagnostics} state={diagnosticsState} />
+      <RouteContent path={activePath} state={diagnosticsState} />
+    </AppShell>
+  );
+}
 
-        <div className="px-3 pt-5 max-[720px]:px-2">
-          <div className="mb-4 px-2 max-[720px]:sr-only">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-rail-muted">
-              Workspace
-            </p>
-            <p className="mt-1 truncate text-sm font-semibold">Local ledger</p>
-          </div>
-
-          <nav aria-label="Workspace">
-            <ul>
-              {navigation.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <li key={item.label}>
-                    <a
-                      aria-current="page"
-                      className="focus-ring-rail flex h-9 items-center gap-2.5 rounded-md bg-rail-active px-2.5 text-sm font-semibold outline-none transition-colors hover:bg-rail-active max-[720px]:justify-center max-[720px]:px-2"
-                      href={item.href}
-                      title={item.label}
-                    >
-                      <Icon aria-hidden="true" className="size-4 shrink-0 text-ready-light" />
-                      <span className="max-[720px]:sr-only">{item.label}</span>
-                    </a>
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
-        </div>
-
-        <div className="mt-auto border-t border-rail-border p-4 max-[720px]:p-3">
-          <div className="flex items-center gap-2 text-xs text-rail-muted max-[720px]:justify-center">
-            <LockKeyhole aria-hidden="true" className="size-3.5 shrink-0" />
-            <span className="max-[720px]:sr-only">Private on this device</span>
-          </div>
-        </div>
-      </aside>
-
-      <div className="min-w-0">
-        <header className="flex h-11 items-center border-b border-border bg-surface px-6 [-webkit-app-region:drag] max-[720px]:px-4">
-          <span className="text-xs font-medium text-muted-foreground">Local workspace</span>
-        </header>
-
-        <main className="px-8 py-8 max-[720px]:px-4 max-[720px]:py-6" id="overview">
-          <div className="mx-auto grid w-full max-w-[960px] gap-8">
-            <div className="grid max-w-[680px] gap-2">
-              <h1 className="text-2xl font-bold tracking-[-0.025em] text-foreground">Overview</h1>
-              <p className="text-sm leading-6 text-muted-foreground">
-                Your accounting workspace stays on this device and remains available without a
-                network.
-              </p>
-            </div>
-
-            <DiagnosticsCard onRetry={loadDiagnostics} state={diagnosticsState} />
-
-            <div className="flex max-w-[680px] items-center justify-between gap-4 border-t border-border pt-6 max-[520px]:items-start max-[520px]:flex-col">
-              <div className="grid gap-1">
-                <p className="text-sm font-semibold text-foreground">Accounting workspace</p>
-                <p className="text-xs leading-5 text-muted-foreground">
-                  Setup will unlock after the local foundation is complete.
-                </p>
-              </div>
-              <Button
-                aria-label="Workspace setup comes next"
-                className="max-[520px]:w-full"
-                disabled
-                type="button"
-              >
-                Workspace setup comes next
-              </Button>
-            </div>
-          </div>
-        </main>
+function EngineStatus({ onRetry, state }: { readonly onRetry: () => void; readonly state: DiagnosticsState }) {
+  if (state.status === "ready") {
+    return (
+      <p aria-live="polite" className="sr-only" data-startup-transition="starting-to-ready" role="status">
+        Local engine ready. Offline. No cloud required.
+      </p>
+    );
+  }
+  if (state.status === "loading") {
+    return (
+      <div aria-live="polite" className="mb-4 flex items-center gap-2 text-[10px] text-muted-foreground" role="status">
+        <LoaderCircle aria-hidden="true" className="size-3 animate-spin" />
+        Starting local engine
       </div>
+    );
+  }
+  return (
+    <div
+      aria-live="polite"
+      className="mb-4 flex items-center justify-between gap-4 rounded-[6px] border border-warning-border bg-warning-soft px-3 py-2"
+      role="status"
+    >
+      <div className="flex items-center gap-2 text-[10px] text-foreground">
+        <AlertTriangle aria-hidden="true" className="size-3.5 text-warning" />
+        Local engine unavailable. Your data has not left this device.
+      </div>
+      <Button className="h-7 text-[10px]" onClick={onRetry} type="button" variant="outline">
+        <RefreshCw aria-hidden="true" className="size-3" />
+        Retry local engine
+      </Button>
     </div>
   );
+}
+
+function RouteContent({ path, state }: { readonly path: string; readonly state: DiagnosticsState }) {
+  if (path === "/overview") return <OverviewScreen />;
+  if (path === "/accounting/chart") {
+    return <EmptyLedgerScreen description="Review the accounts used by your business." emptyLabel="No accounts yet" title="Chart of accounts" />;
+  }
+  if (path.startsWith("/accounting/journals")) {
+    return <EmptyLedgerScreen description="Balanced accounting entries and their sources." emptyLabel="No journals yet" title="Journals" />;
+  }
+  if (path === "/accounting/general-ledger") {
+    return <EmptyLedgerScreen description="Account movements with retained source links." emptyLabel="No ledger movements yet" title="General ledger" />;
+  }
+  if (path === "/accounting/trial-balance") {
+    return <EmptyLedgerScreen description="Debit and credit balances at an accounting date." emptyLabel="No trial balance yet" title="Trial balance" />;
+  }
+  if (path === "/audit") {
+    return <EmptyLedgerScreen description="Verifiable business actions retained on this device." emptyLabel="No audit events yet" title="Audit trail" />;
+  }
+  if (path === "/settings") {
+    return (
+      <div className="mx-auto grid w-full max-w-[920px] gap-5">
+        <div>
+          <h1 className="text-[18px] font-semibold tracking-[-0.02em] text-foreground">Settings</h1>
+          <p className="mt-1 text-[11px] leading-5 text-muted-foreground">Local workspace and system information.</p>
+        </div>
+        <DiagnosticsCard onRetry={() => undefined} state={state} />
+      </div>
+    );
+  }
+  return <EmptyLedgerScreen description="This workspace screen is not yet connected." emptyLabel="Workspace action unavailable" title="Workspace" />;
 }

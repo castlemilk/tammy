@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -36,6 +36,7 @@ function installDesktopAPI(getSystemDiagnostics: TammyDesktopAPI["getSystemDiagn
 
 afterEach(() => {
   Reflect.deleteProperty(window, "tammy");
+  window.history.replaceState(null, "", "/");
 });
 
 describe("App", () => {
@@ -50,26 +51,25 @@ describe("App", () => {
     expect(status.textContent).toContain("Starting local engine");
   });
 
-  it("shows the offline-ready foundation without future modules", async () => {
+  it("shows the offline-ready accounting shell without unavailable modules", async () => {
     installDesktopAPI(vi.fn().mockResolvedValue(diagnostics));
 
     render(<App />);
 
-    const status = await screen.findByRole("status");
-    await waitFor(() => expect(status.textContent).toContain("Local engine ready"));
+    await screen.findByText(/Local engine ready/);
+    const status = screen.getByRole("status");
     expect(status.getAttribute("data-startup-transition")).toBe("starting-to-ready");
     expect(status.textContent).toContain("Offline");
-    expect(screen.getByText("tammy.v1")).toBeTruthy();
-    expect(screen.getByText("0.1.0")).toBeTruthy();
-    expect(screen.getByText("No cloud required")).toBeTruthy();
+    expect(status.textContent).toContain("No cloud required");
 
-    const setupAction = screen.getByRole("button", { name: "Workspace setup comes next" });
-    expect(setupAction.hasAttribute("disabled")).toBe(true);
-
-    const navigation = screen.getByRole("navigation", { name: "Workspace" });
+    expect(screen.queryByText("Workspace setup comes next")).toBeNull();
+    const navigation = screen.getByRole("navigation", { name: "Primary" });
     expect(within(navigation).getByRole("link", { name: "Overview" })).toBeTruthy();
 
-    for (const futureModule of ["Accounts", "Journal", "BAS", "Submissions", "Audit"]) {
+    for (const futureModule of ["Documents", "Banking", "GST & BAS"]) {
+      expect(within(navigation).queryByText(futureModule)).toBeNull();
+    }
+    for (const futureModule of ["Submissions", "Lodge BAS"]) {
       expect(screen.queryByText(futureModule)).toBeNull();
     }
   });
@@ -86,6 +86,8 @@ describe("App", () => {
     );
 
     render(<App />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("link", { name: "Settings" }));
 
     for (const version of [longApiVersion, longCoreVersion]) {
       const value = await screen.findByText(version);
@@ -109,8 +111,8 @@ describe("App", () => {
 
     render(<App />);
 
-    const status = await screen.findByRole("status");
-    await waitFor(() => expect(status.textContent).toContain("Local engine unavailable"));
+    await screen.findByText(/Local engine unavailable/, { selector: "div" });
+    let status = screen.getByRole("status");
     expect(document.body.textContent).not.toContain("secret-token");
     expect(document.body.textContent).not.toContain("certificatePin");
     expect(document.body.textContent).not.toContain("127.0.0.1");
@@ -119,10 +121,11 @@ describe("App", () => {
     const retryButton = screen.getByRole("button", { name: "Retry local engine" });
     await user.click(retryButton);
     expect(getSystemDiagnostics).toHaveBeenCalledTimes(2);
+    status = screen.getByRole("status");
     expect(status.textContent).toContain("Starting local engine");
 
     retry.resolve(diagnostics);
-    await waitFor(() => expect(status.textContent).toContain("Local engine ready"));
+    await screen.findByText(/Local engine ready/);
   });
 
   it("uses semantic landmarks, heading order, and keyboard focus order", async () => {
@@ -131,18 +134,16 @@ describe("App", () => {
 
     render(<App />);
 
-    expect(screen.getByRole("navigation", { name: "Workspace" })).toBeTruthy();
+    expect(screen.getByRole("navigation", { name: "Primary" })).toBeTruthy();
     expect(screen.getByRole("main")).toBeTruthy();
     expect(screen.getByRole("heading", { level: 1, name: "Overview" })).toBeTruthy();
-    expect(
-      screen.getByRole("heading", { level: 2, name: "Local workspace foundation" }),
-    ).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 2, name: "Documents" })).toBeTruthy();
 
     await screen.findByRole("button", { name: "Retry local engine" });
     await user.tab();
     expect(document.activeElement).toBe(screen.getByRole("link", { name: "Overview" }));
     await user.tab();
-    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Retry local engine" }));
+    expect(document.activeElement).toBe(screen.getByRole("link", { name: "Chart of accounts" }));
   });
 });
 
