@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { app, BrowserWindow, type Event, ipcMain, net, protocol, session } from "electron";
 
 import { createCoreClient } from "./core-client";
+import { createCoreLaunchArguments } from "./core-launch";
 import { CoreProcess } from "./core-process";
 import type { DesktopDependencies, DesktopWindow } from "./index-lifecycle";
 import { resolveBundledCorePath } from "./index-paths";
@@ -45,7 +46,11 @@ export function createProductionDependencies(): DesktopDependencies {
       });
       core = new CoreProcess({
         binaryPath,
-        args: ["--data-root", path.join(app.getPath("userData"), "local-core")],
+        args: createCoreLaunchArguments({
+          isPackaged: app.isPackaged,
+          processId: process.pid,
+          userDataPath: app.getPath("userData"),
+        }),
       });
       return core.start();
     },

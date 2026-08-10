@@ -6,17 +6,22 @@ import (
 	"github.com/tammyapp/tammy/services/core/internal/app"
 	"github.com/tammyapp/tammy/services/core/internal/buildinfo"
 	"github.com/tammyapp/tammy/services/core/internal/localproduct"
+	"github.com/tammyapp/tammy/services/core/internal/workspace"
 )
 
-func newConfiguredComposition(info buildinfo.Info, dataRoot string) (*app.Composition, error) {
-	if dataRoot == "" {
+func newConfiguredComposition(info buildinfo.Info, config processConfig) (*app.Composition, error) {
+	if config.dataRoot == "" {
 		return app.NewBootComposition(info)
 	}
 	ledger, err := localproduct.NewLedgerModule()
 	if err != nil {
 		return nil, err
 	}
-	return app.NewLocalComposition(app.LocalCompositionConfig{
-		Info: info, Root: dataRoot, Modules: []app.LocalWorkspaceModule{ledger},
-	})
+	localConfig := app.LocalCompositionConfig{
+		Info: info, Root: config.dataRoot, Modules: []app.LocalWorkspaceModule{ledger},
+	}
+	if config.developmentMemoryAnchors {
+		localConfig.AttemptAnchors = workspace.NewMemoryAnchorStore()
+	}
+	return app.NewLocalComposition(localConfig)
 }

@@ -25,14 +25,18 @@ func run(stdin *os.File, stdout *os.File, stderr *os.File) int {
 }
 
 func runWithArgs(stdin *os.File, stdout *os.File, stderr *os.File, args []string) int {
-	dataRoot, err := configuredDataRoot(args)
+	config, err := configuredProcess(args)
 	if err != nil {
 		logLifecycleError(stderr, "configuration_failed")
 		return 1
 	}
-	composition, err := newConfiguredComposition(buildinfo.Current(), dataRoot)
+	composition, err := newConfiguredComposition(buildinfo.Current(), config)
 	if err != nil {
-		logLifecycleError(stderr, "composition_failed")
+		if config.developmentMemoryAnchors {
+			logDevelopmentCompositionError(stderr, err)
+		} else {
+			logLifecycleError(stderr, "composition_failed")
+		}
 		return 1
 	}
 	defer func() { _ = composition.Close() }()
@@ -107,14 +111,27 @@ func main() {
 	os.Exit(runWithArgs(os.Stdin, os.Stdout, os.Stderr, os.Args[1:]))
 }
 
-func configuredDataRoot(args []string) (string, error) {
+type processConfig struct {
+	dataRoot                 string
+	developmentMemoryAnchors bool
+}
+
+func configuredProcess(args []string) (processConfig, error) {
 	if len(args) == 0 {
-		return "", nil
+		return processConfig{}, nil
 	}
-	if len(args) != 2 || args[0] != "--data-root" || !filepath.IsAbs(args[1]) || filepath.Clean(args[1]) != args[1] {
-		return "", errProcessConfig
+	if (len(args) != 2 && len(args) != 3) || args[0] != "--data-root" ||
+		!filepath.IsAbs(args[1]) || filepath.Clean(args[1]) != args[1] {
+		return processConfig{}, errProcessConfig
 	}
-	return args[1], nil
+	config := processConfig{dataRoot: args[1]}
+	if len(args) == 3 {
+		if args[2] != "--development-memory-anchors" {
+			return processConfig{}, errProcessConfig
+		}
+		config.developmentMemoryAnchors = true
+	}
+	return config, nil
 }
 
 func shutdown(server *transport.Server) error {
@@ -130,6 +147,18 @@ func logLifecycleError(stderr io.Writer, event string) {
 	_ = json.NewEncoder(stderr).Encode(map[string]string{
 		"component": "tammy_core",
 		"event":     event,
+		"level":     "error",
+	})
+}
+
+func logDevelopmentCompositionError(stderr io.Writer, err error) {
+	if stderr == nil || err == nil {
+		return
+	}
+	_ = json.NewEncoder(stderr).Encode(map[string]string{
+		"component": "tammy_core",
+		"detail":    err.Error(),
+		"event":     "development_composition_failed",
 		"level":     "error",
 	})
 }

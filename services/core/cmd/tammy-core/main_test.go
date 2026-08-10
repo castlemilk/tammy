@@ -113,19 +113,27 @@ func TestProcessReadinessLifecycleAndClosedStdout(t *testing.T) {
 	})
 }
 
-func TestConfiguredDataRootAcceptsOnlyOneAbsoluteOwnedPath(t *testing.T) {
+func TestConfiguredProcessAcceptsDevelopmentMemoryAnchorsOnlyWithAnAbsoluteDataRoot(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "local-core")
-	if got, err := configuredDataRoot([]string{"--data-root", root}); err != nil || got != root {
-		t.Fatalf("configuredDataRoot() = %q, %v; want %q", got, err, root)
+	got, err := configuredProcess([]string{"--data-root", root})
+	if err != nil || got.dataRoot != root || got.developmentMemoryAnchors {
+		t.Fatalf("configuredProcess() = %#v, %v; want production local root %q", got, err, root)
+	}
+	got, err = configuredProcess([]string{"--data-root", root, "--development-memory-anchors"})
+	if err != nil || got.dataRoot != root || !got.developmentMemoryAnchors {
+		t.Fatalf("configuredProcess() = %#v, %v; want development local root %q", got, err, root)
 	}
 	for _, args := range [][]string{
 		{"--data-root"},
 		{"--data-root", "relative"},
 		{"--unknown", root},
 		{"--data-root", root, "extra"},
+		{"--development-memory-anchors"},
+		{"--development-memory-anchors", "--data-root", root},
+		{"--data-root", root, "--development-memory-anchors", "extra"},
 	} {
-		if got, err := configuredDataRoot(args); err == nil || got != "" {
-			t.Fatalf("configuredDataRoot(%q) = %q, %v; want rejection", args, got, err)
+		if got, err := configuredProcess(args); err == nil || got != (processConfig{}) {
+			t.Fatalf("configuredProcess(%q) = %#v, %v; want rejection", args, got, err)
 		}
 	}
 }

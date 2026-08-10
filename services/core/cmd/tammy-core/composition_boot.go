@@ -7,8 +7,8 @@ import (
 	"github.com/tammyapp/tammy/services/core/internal/buildinfo"
 )
 
-func newConfiguredComposition(info buildinfo.Info, dataRoot string) (*app.Composition, error) {
-	if dataRoot != "" {
+func newConfiguredComposition(info buildinfo.Info, config processConfig) (*app.Composition, error) {
+	if config != (processConfig{}) {
 		return nil, errProcessConfig
 	}
 	return app.NewBootComposition(info)
