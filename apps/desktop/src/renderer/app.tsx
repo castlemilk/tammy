@@ -2,11 +2,21 @@ import { AlertTriangle, LoaderCircle, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { AppShell } from "./app-shell/app-shell";
-import { resolveAppLocation } from "./app-shell/router";
+import { resolveAppLocation, type WorkspaceAccess } from "./app-shell/router";
 import { Button } from "./components/ui/button";
 import { DiagnosticsCard, type DiagnosticsState } from "./features/diagnostics/diagnostics-card";
 import { EmptyLedgerScreen } from "./features/ledger/empty-ledger-screen";
 import { OverviewScreen } from "./features/overview/overview-screen";
+import { SetupScreen, type AuthenticatedWorkspace } from "./features/setup/setup-screen";
+
+const WORKSPACE_ID_STORAGE = "tammy.workspace.id";
+const SESSION_STORAGE = "tammy.session.active";
+
+function initialAccess(): WorkspaceAccess {
+  if (window.sessionStorage.getItem(SESSION_STORAGE)) return "authenticated";
+  if (window.localStorage.getItem(WORKSPACE_ID_STORAGE)) return "locked";
+  return "unconfigured";
+}
 
 function currentLocation(): string {
   const location = `${window.location.pathname}${window.location.search}`;
@@ -15,8 +25,9 @@ function currentLocation(): string {
 
 export function App() {
   const [diagnosticsState, setDiagnosticsState] = useState<DiagnosticsState>({ status: "loading" });
+  const [access, setAccess] = useState<WorkspaceAccess>(initialAccess);
   const [activePath, setActivePath] = useState(() =>
-    resolveAppLocation(currentLocation(), "authenticated").path,
+    resolveAppLocation(currentLocation(), initialAccess()).path,
   );
   const requestSequence = useRef(0);
 
@@ -40,16 +51,39 @@ export function App() {
   }, [loadDiagnostics]);
 
   useEffect(() => {
-    const restore = () => setActivePath(resolveAppLocation(currentLocation(), "authenticated").path);
+    const restore = () => setActivePath(resolveAppLocation(currentLocation(), access).path);
     window.addEventListener("popstate", restore);
     return () => window.removeEventListener("popstate", restore);
-  }, []);
+  }, [access]);
 
   const navigate = useCallback((path: string) => {
-    const resolved = resolveAppLocation(path, "authenticated");
+    const resolved = resolveAppLocation(path, access);
     window.history.pushState(null, "", resolved.path);
     setActivePath(resolved.path);
+  }, [access]);
+
+  const authenticated = useCallback((workspace: AuthenticatedWorkspace) => {
+    window.localStorage.setItem(WORKSPACE_ID_STORAGE, workspace.workspaceId);
+    window.sessionStorage.setItem(SESSION_STORAGE, JSON.stringify(workspace));
+    setAccess("authenticated");
+    window.history.replaceState(null, "", "/overview");
+    setActivePath("/overview");
   }, []);
+
+  if (access === "unconfigured") {
+    return <SetupScreen api={window.tammy} onAuthenticated={authenticated} />;
+  }
+
+  if (access === "locked") {
+    return (
+      <main className="grid min-h-screen place-items-center bg-background px-5">
+        <section className="w-full max-w-[440px] rounded-[8px] border border-border bg-surface p-7 text-center">
+          <h1 className="text-[20px] font-semibold text-foreground">Workspace locked</h1>
+          <p className="mt-2 text-[11px] leading-5 text-muted-foreground">Unlocking this existing local workspace is the next connected step.</p>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <AppShell activePath={activePath} onNavigate={navigate}>

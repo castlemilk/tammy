@@ -10,6 +10,7 @@ import { createProtoMethodCodec } from "../shared/proto-ipc";
 import {
   ATTENTION_SUMMARY_CHANNEL,
   createDesktopRpcRouter,
+  type DesktopRpcClient,
   DesktopRpcRouterError,
 } from "./rpc-router";
 
@@ -20,6 +21,15 @@ const attentionCodec = createProtoMethodCodec({
   output: GetAttentionSummaryResponseSchema,
 });
 
+function rpcClient(getAttentionSummary: DesktopRpcClient["getAttentionSummary"]): DesktopRpcClient {
+  return {
+    createWorkspace: vi.fn(),
+    confirmRecovery: vi.fn(),
+    signIn: vi.fn(),
+    getAttentionSummary,
+  };
+}
+
 describe("named desktop protobuf RPC router", () => {
   it("decodes, invokes, and returns only the generated Overview messages", async () => {
     const response = create(GetAttentionSummaryResponseSchema, {
@@ -27,7 +37,7 @@ describe("named desktop protobuf RPC router", () => {
       documentsReviewedInPeriod: 12,
     });
     const getAttentionSummary = vi.fn(async () => response);
-    const router = createDesktopRpcRouter({ getAttentionSummary });
+    const router = createDesktopRpcRouter(rpcClient(getAttentionSummary));
     const request = create(GetAttentionSummaryRequestSchema, {
       organisationId: "018f2f2a-7c1d-7a62-8d11-216b8d6ea4cb",
     });
@@ -40,7 +50,7 @@ describe("named desktop protobuf RPC router", () => {
 
   it("rejects unknown channels and invalid, oversized, or wrong-type request frames before core", async () => {
     const getAttentionSummary = vi.fn();
-    const router = createDesktopRpcRouter({ getAttentionSummary });
+    const router = createDesktopRpcRouter(rpcClient(getAttentionSummary));
     const wrongCodec = createProtoMethodCodec({
       input: GetDiagnosticsRequestSchema,
       maximumRequestBytes: 8_192,
@@ -63,7 +73,7 @@ describe("named desktop protobuf RPC router", () => {
     const getAttentionSummary = vi.fn(async () => {
       throw new Error("capability=secret database=/private/workspace.db");
     });
-    const router = createDesktopRpcRouter({ getAttentionSummary });
+    const router = createDesktopRpcRouter(rpcClient(getAttentionSummary));
     const request = attentionCodec.encodeRequest(create(GetAttentionSummaryRequestSchema));
 
     const error = await router.invoke(ATTENTION_SUMMARY_CHANNEL, request).catch((caught: unknown) => caught);

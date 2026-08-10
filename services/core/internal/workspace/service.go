@@ -28,6 +28,7 @@ import (
 	"github.com/tammyapp/tammy/services/core/internal/platform/clock"
 	"github.com/tammyapp/tammy/services/core/internal/platform/faults"
 	"github.com/tammyapp/tammy/services/core/internal/platform/ids"
+	"github.com/tammyapp/tammy/services/core/internal/storage/sqlcipher"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -1308,6 +1309,26 @@ func (service *Service) GetWorkspaceState(ctx context.Context, request *connect.
 		return nil, err
 	}
 	return connect.NewResponse(&tammyv1.GetWorkspaceStateResponse{Workspace: service.projection(record)}), nil
+}
+
+// ActiveDatabase returns the database owned by the single active workspace.
+// Application composition uses this narrow activation hook to bind generated
+// workspace-scoped handlers after CreateWorkspace or UnlockWorkspace succeeds.
+// Callers must not retain the database beyond the active workspace lifetime.
+func (service *Service) ActiveDatabase(workspaceID string) (*sqlcipher.Database, error) {
+	if service == nil {
+		return nil, ErrWorkspaceNotFound
+	}
+	service.mu.Lock()
+	defer service.mu.Unlock()
+	if !ids.IsCanonicalV7(workspaceID) {
+		return nil, ErrWorkspaceNotFound
+	}
+	runtime := service.active[workspaceID]
+	if runtime == nil || runtime.storage == nil || runtime.storage.Database() == nil {
+		return nil, ErrWorkspaceNotFound
+	}
+	return runtime.storage.Database(), nil
 }
 
 // SessionStartedWithin is the workspace half of a sign-in unit of work. It

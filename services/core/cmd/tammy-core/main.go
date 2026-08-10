@@ -4,21 +4,33 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
+	"errors"
 	"io"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
-	"github.com/tammyapp/tammy/services/core/internal/app"
 	"github.com/tammyapp/tammy/services/core/internal/buildinfo"
 	"github.com/tammyapp/tammy/services/core/internal/transport"
 )
 
 const shutdownTimeout = 3 * time.Second
 
+var errProcessConfig = errors.New("tammy-core: invalid process configuration")
+
 func run(stdin *os.File, stdout *os.File, stderr *os.File) int {
-	composition, err := app.NewBootComposition(buildinfo.Current())
+	return runWithArgs(stdin, stdout, stderr, nil)
+}
+
+func runWithArgs(stdin *os.File, stdout *os.File, stderr *os.File, args []string) int {
+	dataRoot, err := configuredDataRoot(args)
+	if err != nil {
+		logLifecycleError(stderr, "configuration_failed")
+		return 1
+	}
+	composition, err := newConfiguredComposition(buildinfo.Current(), dataRoot)
 	if err != nil {
 		logLifecycleError(stderr, "composition_failed")
 		return 1
@@ -92,7 +104,17 @@ func main() {
 	if handled, exitCode := reportSQLCipher(os.Args[1:], os.Stdout, os.Stderr); handled {
 		os.Exit(exitCode)
 	}
-	os.Exit(run(os.Stdin, os.Stdout, os.Stderr))
+	os.Exit(runWithArgs(os.Stdin, os.Stdout, os.Stderr, os.Args[1:]))
+}
+
+func configuredDataRoot(args []string) (string, error) {
+	if len(args) == 0 {
+		return "", nil
+	}
+	if len(args) != 2 || args[0] != "--data-root" || !filepath.IsAbs(args[1]) || filepath.Clean(args[1]) != args[1] {
+		return "", errProcessConfig
+	}
+	return args[1], nil
 }
 
 func shutdown(server *transport.Server) error {

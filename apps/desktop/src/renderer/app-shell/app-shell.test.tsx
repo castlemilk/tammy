@@ -13,9 +13,19 @@ const diagnostics: SystemDiagnostics = {
 };
 
 function installDesktopAPI() {
+  window.sessionStorage.setItem("tammy.session.active", "test-session");
   Object.defineProperty(window, "tammy", {
     configurable: true,
     value: Object.freeze({
+      createWorkspace: vi.fn(async () => {
+        throw new Error("unavailable");
+      }),
+      confirmRecovery: vi.fn(async () => {
+        throw new Error("unavailable");
+      }),
+      signIn: vi.fn(async () => {
+        throw new Error("unavailable");
+      }),
       getAttentionSummary: vi.fn(async () => {
         throw new Error("unavailable");
       }),
@@ -27,6 +37,8 @@ function installDesktopAPI() {
 afterEach(() => {
   Reflect.deleteProperty(window, "tammy");
   window.history.replaceState(null, "", "/");
+  window.sessionStorage.clear();
+  window.localStorage.clear();
 });
 
 it("renders the walkthrough app shell", async () => {

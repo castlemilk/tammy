@@ -98,7 +98,11 @@ class FakeTimers implements CoreProcessTimers {
 }
 
 function testRig(
-  overrides: { readonly spawn?: SpawnCoreProcess; readonly readinessTimeoutMs?: number } = {},
+  overrides: {
+    readonly args?: readonly string[];
+    readonly spawn?: SpawnCoreProcess;
+    readonly readinessTimeoutMs?: number;
+  } = {},
 ) {
   const child = new FakeChild();
   const spawnCalls: unknown[][] = [];
@@ -113,6 +117,7 @@ function testRig(
   const now = vi.fn(() => 42);
   const supervisor = new CoreProcess({
     binaryPath: "/opt/tammy/bin/tammy-core",
+    ...(overrides.args === undefined ? {} : { args: overrides.args }),
     spawn,
     clock: { now },
     timers,
@@ -198,6 +203,19 @@ describe("CoreProcess construction and spawning", () => {
       ],
     ]);
     expect(now).not.toHaveBeenCalled();
+  });
+
+  it("passes only the explicitly owned local-data arguments", () => {
+    const { spawnCalls, supervisor } = testRig({
+      args: ["--data-root", "/Users/test/Library/Application Support/Tammy/local-core"],
+    });
+
+    void supervisor.start();
+
+    expect(spawnCalls[0]?.[1]).toEqual([
+      "--data-root",
+      "/Users/test/Library/Application Support/Tammy/local-core",
+    ]);
   });
 
   it("converts a synchronous native spawn throw to a stable redacted failure", async () => {

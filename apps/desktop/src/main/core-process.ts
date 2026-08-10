@@ -87,6 +87,7 @@ export interface CoreProcessClock {
 
 export interface CoreProcessOptions {
   readonly binaryPath: string;
+  readonly args?: readonly string[];
   readonly spawn?: SpawnCoreProcess;
   readonly clock?: CoreProcessClock;
   readonly timers?: CoreProcessTimers;
@@ -134,6 +135,7 @@ function allowedEnvironment(source: Readonly<NodeJS.ProcessEnv>): Record<string,
 
 export class CoreProcess {
   readonly #binaryPath: string;
+  readonly #args: readonly string[];
   readonly #spawn: SpawnCoreProcess;
   readonly #clock: CoreProcessClock;
   readonly #timers: CoreProcessTimers;
@@ -170,8 +172,12 @@ export class CoreProcess {
     ) {
       throw new CoreProcessError("INVALID_STATE");
     }
+    if (options.args?.some((argument) => argument.length === 0 || argument.includes("\0"))) {
+      throw new CoreProcessError("INVALID_STATE");
+    }
 
     this.#binaryPath = options.binaryPath;
+    this.#args = Object.freeze([...(options.args ?? [])]);
     this.#spawn = options.spawn ?? productionSpawn;
     this.#clock = options.clock ?? productionClock;
     this.#timers = options.timers ?? productionTimers;
@@ -205,7 +211,7 @@ export class CoreProcess {
     void startPromise.catch(() => undefined);
 
     try {
-      this.#child = this.#spawn(this.#binaryPath, [], {
+      this.#child = this.#spawn(this.#binaryPath, [...this.#args], {
         shell: false,
         windowsHide: true,
         stdio: ["pipe", "pipe", "pipe"],

@@ -5,7 +5,16 @@ import type {
   GetAttentionSummaryResponse,
 } from "@tammy/connect-client/tammy/v1/overview_pb.js";
 import { OverviewService } from "@tammy/connect-client/tammy/v1/overview_pb.js";
+import type { SignInRequest, SignInResponse } from "@tammy/connect-client/tammy/v1/identity_pb.js";
+import { IdentityService } from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import { RuntimeMode, SystemService } from "@tammy/connect-client/tammy/v1/system_pb.js";
+import type {
+  ConfirmRecoveryRequest,
+  ConfirmRecoveryResponse,
+  CreateWorkspaceRequest,
+  CreateWorkspaceResponse,
+} from "@tammy/connect-client/tammy/v1/workspace_pb.js";
+import { WorkspaceService } from "@tammy/connect-client/tammy/v1/workspace_pb.js";
 
 import type { SystemDiagnostics } from "../shared/desktop-api";
 import type { CoreReadiness } from "../shared/readiness";
@@ -17,6 +26,9 @@ const EXPECTED_API_VERSION = "tammy.v1";
 const CORE_VERSION_PATTERN = /^[\x20-\x7e]{1,128}$/;
 
 export interface CoreClient {
+  readonly createWorkspace: (request: CreateWorkspaceRequest) => Promise<CreateWorkspaceResponse>;
+  readonly confirmRecovery: (request: ConfirmRecoveryRequest) => Promise<ConfirmRecoveryResponse>;
+  readonly signIn: (request: SignInRequest) => Promise<SignInResponse>;
   readonly getAttentionSummary: (
     request: GetAttentionSummaryRequest,
   ) => Promise<GetAttentionSummaryResponse>;
@@ -66,16 +78,27 @@ export function createCoreClient(
   });
   const systemClient = createClient(SystemService, transport);
   const overviewClient = createClient(OverviewService, transport);
+  const workspaceClient = createClient(WorkspaceService, transport);
+  const identityClient = createClient(IdentityService, transport);
+
+  const coreRequest = async <Response>(request: () => Promise<Response>): Promise<Response> => {
+    try {
+      return await request();
+    } catch (error) {
+      throw new ConnectError("Core request failed.", ConnectError.from(error).code);
+    }
+  };
 
   return Object.freeze({
+    createWorkspace: (request: CreateWorkspaceRequest) =>
+      coreRequest(() => workspaceClient.createWorkspace(request)),
+    confirmRecovery: (request: ConfirmRecoveryRequest) =>
+      coreRequest(() => workspaceClient.confirmRecovery(request)),
+    signIn: (request: SignInRequest) => coreRequest(() => identityClient.signIn(request)),
     getAttentionSummary: async (
       request: GetAttentionSummaryRequest,
     ): Promise<GetAttentionSummaryResponse> => {
-      try {
-        return await overviewClient.getAttentionSummary(request);
-      } catch (error) {
-        throw new ConnectError("Core request failed.", ConnectError.from(error).code);
-      }
+      return coreRequest(() => overviewClient.getAttentionSummary(request));
     },
     getDiagnostics: async (): Promise<SystemDiagnostics> => {
       let response: Awaited<ReturnType<typeof systemClient.getDiagnostics>>;

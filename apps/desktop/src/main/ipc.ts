@@ -1,5 +1,5 @@
 import type { SystemDiagnostics } from "../shared/desktop-api";
-import { ATTENTION_SUMMARY_CHANNEL, SYSTEM_DIAGNOSTICS_CHANNEL } from "../shared/desktop-api";
+import { DESKTOP_PROTO_CHANNELS, SYSTEM_DIAGNOSTICS_CHANNEL } from "../shared/desktop-api";
 import preloadMethods from "../shared/preload-methods.json";
 import { isTrustedApplicationURL } from "./security";
 import type { DesktopRpcRouter } from "./rpc-router";
@@ -122,7 +122,7 @@ export function registerDesktopIpc(options: DesktopIpcOptions): () => void {
   }
 
   const registration = Symbol("desktop-ipc-registration");
-  for (const channel of [SYSTEM_DIAGNOSTICS_CHANNEL, ATTENTION_SUMMARY_CHANNEL]) {
+  for (const channel of [SYSTEM_DIAGNOSTICS_CHANNEL, ...DESKTOP_PROTO_CHANNELS]) {
     options.ipcMain.removeHandler(channel);
   }
   options.ipcMain.handle(SYSTEM_DIAGNOSTICS_CHANNEL, async (event) => {
@@ -131,20 +131,22 @@ export function registerDesktopIpc(options: DesktopIpcOptions): () => void {
     }
     return options.getSystemDiagnostics();
   });
-  options.ipcMain.handle(ATTENTION_SUMMARY_CHANNEL, async (event, ...args) => {
-    if (!isAcceptedSender(event, options.mainWindow, options.applicationUrl)) {
-      throw new IpcBoundaryError();
-    }
-    if (args.length !== 1 || !(args[0] instanceof Uint8Array)) {
-      throw new IpcBoundaryError();
-    }
-    return options.router.invoke(ATTENTION_SUMMARY_CHANNEL, new Uint8Array(args[0]));
-  });
+  for (const channel of DESKTOP_PROTO_CHANNELS) {
+    options.ipcMain.handle(channel, async (event, ...args) => {
+      if (!isAcceptedSender(event, options.mainWindow, options.applicationUrl)) {
+        throw new IpcBoundaryError();
+      }
+      if (args.length !== 1 || !(args[0] instanceof Uint8Array)) {
+        throw new IpcBoundaryError();
+      }
+      return options.router.invoke(channel, new Uint8Array(args[0]));
+    });
+  }
   registrations.set(options.ipcMain, registration);
 
   return () => {
     if (registrations.get(options.ipcMain) !== registration) return;
-    for (const channel of [SYSTEM_DIAGNOSTICS_CHANNEL, ATTENTION_SUMMARY_CHANNEL]) {
+    for (const channel of [SYSTEM_DIAGNOSTICS_CHANNEL, ...DESKTOP_PROTO_CHANNELS]) {
       options.ipcMain.removeHandler(channel);
     }
     registrations.delete(options.ipcMain);

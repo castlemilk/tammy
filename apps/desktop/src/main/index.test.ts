@@ -37,6 +37,20 @@ function occurrences(calls: readonly string[], value: string): number {
   return calls.filter((call) => call === value).length;
 }
 
+function unusedCoreMethods() {
+  return {
+    createWorkspace: vi.fn(async () => {
+      throw new Error("unused");
+    }),
+    confirmRecovery: vi.fn(async () => {
+      throw new Error("unused");
+    }),
+    signIn: vi.fn(async () => {
+      throw new Error("unused");
+    }),
+  };
+}
+
 afterEach(async () => {
   await Promise.all(
     temporaryDirectories
@@ -79,6 +93,7 @@ function rig(overrides: Partial<DesktopDependencies> = {}) {
       }),
     },
     createClient: vi.fn(() => ({
+      ...unusedCoreMethods(),
       getAttentionSummary: vi.fn(async () => {
         throw new Error("unused");
       }),
@@ -178,6 +193,7 @@ describe("desktop application composition", () => {
             }
           : {
               createClient: vi.fn(() => ({
+                ...unusedCoreMethods(),
                 getAttentionSummary: vi.fn(async () => {
                   throw new Error("unused");
                 }),
@@ -356,6 +372,7 @@ describe("desktop application composition", () => {
     }>();
     const { calls, dependencies, requestQuit } = rig({
       createClient: vi.fn(() => ({
+        ...unusedCoreMethods(),
         getAttentionSummary: vi.fn(async () => {
           throw new Error("unused");
         }),

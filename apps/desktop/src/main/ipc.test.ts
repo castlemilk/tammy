@@ -75,7 +75,13 @@ function invoke(
 
 describe("registerDiagnosticsIpc", () => {
   it("shares the production preload method manifest with the desktop API", () => {
-    expect(DESKTOP_PRELOAD_METHODS).toEqual(["getSystemDiagnostics", "getAttentionSummary"]);
+    expect(DESKTOP_PRELOAD_METHODS).toEqual([
+      "getSystemDiagnostics",
+      "createWorkspace",
+      "confirmRecovery",
+      "signIn",
+      "getAttentionSummary",
+    ]);
     expect(DIAGNOSTICS_PRELOAD_METHOD).toBe(DESKTOP_PRELOAD_METHODS[0]);
   });
 
@@ -313,7 +319,13 @@ describe("preload desktop bridge", () => {
         }
       | undefined;
     expect(api).toBeDefined();
-    expect(Object.keys(api ?? {})).toEqual(["getSystemDiagnostics", "getAttentionSummary"]);
+    expect(Object.keys(api ?? {})).toEqual([
+      "getSystemDiagnostics",
+      "createWorkspace",
+      "confirmRecovery",
+      "signIn",
+      "getAttentionSummary",
+    ]);
     expect(Object.isFrozen(api)).toBe(true);
     await expect(api?.getSystemDiagnostics()).resolves.toMatchObject({
       runtimeMode: "offline",

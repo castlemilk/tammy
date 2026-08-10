@@ -43,7 +43,10 @@ export function createProductionDependencies(): DesktopDependencies {
         platform: process.platform,
         resourcesPath: process.resourcesPath,
       });
-      core = new CoreProcess({ binaryPath });
+      core = new CoreProcess({
+        binaryPath,
+        args: ["--data-root", path.join(app.getPath("userData"), "local-core")],
+      });
       return core.start();
     },
     stop: async () => {

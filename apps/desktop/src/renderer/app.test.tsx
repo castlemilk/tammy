@@ -28,9 +28,19 @@ function deferred<T>() {
 }
 
 function installDesktopAPI(getSystemDiagnostics: TammyDesktopAPI["getSystemDiagnostics"]) {
+  window.sessionStorage.setItem("tammy.session.active", "test-session");
   Object.defineProperty(window, "tammy", {
     configurable: true,
     value: Object.freeze({
+      createWorkspace: vi.fn(async () => {
+        throw new Error("unavailable");
+      }),
+      confirmRecovery: vi.fn(async () => {
+        throw new Error("unavailable");
+      }),
+      signIn: vi.fn(async () => {
+        throw new Error("unavailable");
+      }),
       getAttentionSummary: vi.fn(async () => {
         throw new Error("unavailable");
       }),
@@ -42,6 +52,8 @@ function installDesktopAPI(getSystemDiagnostics: TammyDesktopAPI["getSystemDiagn
 afterEach(() => {
   Reflect.deleteProperty(window, "tammy");
   window.history.replaceState(null, "", "/");
+  window.sessionStorage.clear();
+  window.localStorage.clear();
 });
 
 describe("App", () => {

@@ -113,6 +113,23 @@ func TestProcessReadinessLifecycleAndClosedStdout(t *testing.T) {
 	})
 }
 
+func TestConfiguredDataRootAcceptsOnlyOneAbsoluteOwnedPath(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "local-core")
+	if got, err := configuredDataRoot([]string{"--data-root", root}); err != nil || got != root {
+		t.Fatalf("configuredDataRoot() = %q, %v; want %q", got, err, root)
+	}
+	for _, args := range [][]string{
+		{"--data-root"},
+		{"--data-root", "relative"},
+		{"--unknown", root},
+		{"--data-root", root, "extra"},
+	} {
+		if got, err := configuredDataRoot(args); err == nil || got != "" {
+			t.Fatalf("configuredDataRoot(%q) = %q, %v; want rejection", args, got, err)
+		}
+	}
+}
+
 func buildCoreBinary(t *testing.T) string {
 	t.Helper()
 
