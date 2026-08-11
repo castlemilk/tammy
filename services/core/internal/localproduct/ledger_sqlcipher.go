@@ -277,10 +277,16 @@ func (handler *bankingHandler) ImportBankStatement(ctx context.Context, request 
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
 	}
+	instant := handler.now()
 	statementImport, err := repository.ImportStatement(ctx, request.Msg.CommandContext.IdempotencyKey,
-		request.Msg.OrganisationId, importID, lineIDs, request.Msg.OpeningBalance.MinorUnits, request.Msg.Lines, handler.now())
+		request.Msg.OrganisationId, importID, lineIDs, request.Msg.OpeningBalance.MinorUnits, request.Msg.Lines, instant)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, ErrLedgerModule)
+	}
+	if statementImport.Id == importID {
+		if err := bumpBankingRevision(ctx, tx, instant); err != nil {
+			return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+		}
 	}
 	if err := tx.Commit(); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
@@ -320,7 +326,7 @@ func (handler *bankingHandler) ListBankStatementLines(ctx context.Context, reque
 }
 
 func (handler *bankingHandler) MatchBankStatementLine(ctx context.Context, request *connect.Request[tammyv1.MatchBankStatementLineRequest]) (*connect.Response[tammyv1.MatchBankStatementLineResponse], error) {
-	if handler == nil || handler.database == nil || handler.identity == nil || request == nil || request.Msg == nil ||
+	if handler == nil || handler.database == nil || handler.identity == nil || handler.now == nil || request == nil || request.Msg == nil ||
 		request.Msg.CommandContext == nil || request.Msg.CommandContext.Authentication == nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, ErrLedgerModule)
 	}
@@ -334,7 +340,13 @@ func (handler *bankingHandler) MatchBankStatementLine(ctx context.Context, reque
 	}
 	repository, _ := banking.NewRepository(tx)
 	line, err := repository.MatchLine(ctx, request.Msg.LineId, request.Msg.ExpectedVersion, request.Msg.MatchReference)
-	if err != nil || tx.Commit() != nil {
+	if err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, ErrLedgerModule)
+	}
+	if err := bumpBankingRevision(ctx, tx, handler.now()); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	if err := tx.Commit(); err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, ErrLedgerModule)
 	}
 	return connect.NewResponse(&tammyv1.MatchBankStatementLineResponse{Line: line}), nil
@@ -358,8 +370,15 @@ func (handler *bankingHandler) CompleteBankReconciliation(ctx context.Context, r
 		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
 	}
 	repository, _ := banking.NewRepository(tx)
-	count, closing, err := repository.CompleteReconciliation(ctx, request.Msg.CommandContext.IdempotencyKey, id, request.Msg.OrganisationId, handler.now())
-	if err != nil || tx.Commit() != nil {
+	instant := handler.now()
+	count, closing, err := repository.CompleteReconciliation(ctx, request.Msg.CommandContext.IdempotencyKey, id, request.Msg.OrganisationId, instant)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, ErrLedgerModule)
+	}
+	if err := bumpBankingRevision(ctx, tx, instant); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	if err := tx.Commit(); err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, ErrLedgerModule)
 	}
 	return connect.NewResponse(&tammyv1.CompleteBankReconciliationResponse{ReconciledLineCount: count, ClosingBalance: localAUD(closing)}), nil
@@ -446,8 +465,17 @@ func (handler *taxHandler) CreateBasDraft(ctx context.Context, request *connect.
 		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
 	}
 	repository, _ := reporting.NewRepository(tx)
-	workpaper, err := repository.CreateBASDraft(ctx, request.Msg.CommandContext.IdempotencyKey, id, request.Msg.OrganisationId, request.Msg.PeriodStart, request.Msg.PeriodEnd, handler.now())
-	if err != nil || tx.Commit() != nil {
+	instant := handler.now()
+	workpaper, err := repository.CreateBASDraft(ctx, request.Msg.CommandContext.IdempotencyKey, id, request.Msg.OrganisationId, request.Msg.PeriodStart, request.Msg.PeriodEnd, instant)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, ErrLedgerModule)
+	}
+	if workpaper.Id == id {
+		if err := bumpTaxSourceRevision(ctx, tx, instant); err != nil {
+			return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+		}
+	}
+	if err := tx.Commit(); err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, ErrLedgerModule)
 	}
 	return connect.NewResponse(&tammyv1.CreateBasDraftResponse{Workpaper: workpaper}), nil
@@ -478,6 +506,26 @@ func (handler *taxHandler) GetCurrentBasDraft(ctx context.Context, request *conn
 
 func localAUD(minor int64) *tammyv1.Money {
 	return &tammyv1.Money{CurrencyCode: "AUD", MinorUnits: minor}
+}
+
+func bumpBankingRevision(ctx context.Context, executor app.CommandSQLExecutor, instant time.Time) error {
+	_, err := executor.ExecContext(ctx, `
+		UPDATE financial_revisions
+		SET financial_revision = financial_revision + 1,
+		    banking_revision = banking_revision + 1,
+		    updated_at = ?
+		WHERE id = 1`, instant.UTC().Format(time.RFC3339Nano))
+	return err
+}
+
+func bumpTaxSourceRevision(ctx context.Context, executor app.CommandSQLExecutor, instant time.Time) error {
+	_, err := executor.ExecContext(ctx, `
+		UPDATE financial_revisions
+		SET financial_revision = financial_revision + 1,
+		    tax_source_revision = tax_source_revision + 1,
+		    updated_at = ?
+		WHERE id = 1`, instant.UTC().Format(time.RFC3339Nano))
+	return err
 }
 
 type documentRoute struct {
@@ -549,6 +597,7 @@ func (handler *documentHandler) IngestDocument(
 		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
 	}
 	digest := sha256.Sum256(request.Msg.Original)
+	instant := handler.now()
 	document := &tammyv1.Document{
 		Id:                documentID,
 		OrganisationId:    request.Msg.OrganisationId,
@@ -560,7 +609,7 @@ func (handler *documentHandler) IngestDocument(
 		Sha256:            append([]byte(nil), digest[:]...),
 		ExtractedText:     request.Msg.ExtractedText,
 		Candidate:         proto.Clone(request.Msg.Candidate).(*tammyv1.DocumentCandidate),
-		CreatedAt:         timestamppb.New(handler.now()),
+		CreatedAt:         timestamppb.New(instant),
 	}
 	repository, err := documents.NewRepository(tx)
 	if err != nil {
@@ -579,6 +628,11 @@ func (handler *documentHandler) IngestDocument(
 			code = connect.CodeAlreadyExists
 		}
 		return nil, connect.NewError(code, ErrLedgerModule)
+	}
+	if retained.Id == documentID {
+		if err := bumpTaxSourceRevision(ctx, tx, instant); err != nil {
+			return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+		}
 	}
 	if err := tx.Commit(); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
@@ -671,14 +725,21 @@ func (handler *documentHandler) SaveDocumentReview(
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
 	}
+	instant := handler.now()
 	document, err := repository.SaveReview(
 		ctx,
 		request.Msg.DocumentId,
 		request.Msg.ExpectedVersion,
 		request.Msg.Candidate,
-		handler.now(),
+		instant,
 	)
-	if err != nil || tx.Commit() != nil {
+	if err != nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, ErrLedgerModule)
+	}
+	if err := bumpTaxSourceRevision(ctx, tx, instant); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	if err := tx.Commit(); err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, ErrLedgerModule)
 	}
 	return connect.NewResponse(&tammyv1.SaveDocumentReviewResponse{Document: document}), nil

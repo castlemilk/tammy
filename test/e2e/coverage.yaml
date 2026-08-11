@@ -4,6 +4,7 @@ scenarios:
     cases:
       - foundation/offline-ready
       - reporting/capability-registry
+      - walkthrough/current-accounting-workflows
     futureCases:
       - slice-1/foundation-contracts
       - walkthrough/blank-overview
@@ -83,11 +84,10 @@ rpcs:
       outcomes:
         - not_applicable
   tammy.v1.WorkspaceService.CreateWorkspace:
-    stage: declared_future
+    stage: production
     preload: createWorkspace
-    cases: []
-    futureCases:
-      - slice-1/foundation-contracts
+    cases:
+      - walkthrough/current-accounting-workflows
     projections:
       - create_workspace_result
     routes:
@@ -112,11 +112,10 @@ rpcs:
         - exact_replay
         - changed_request_conflict
   tammy.v1.WorkspaceService.ConfirmRecovery:
-    stage: declared_future
+    stage: production
     preload: confirmRecovery
-    cases: []
-    futureCases:
-      - slice-1/foundation-contracts
+    cases:
+      - walkthrough/current-accounting-workflows
     projections:
       - confirm_recovery_result
     routes:
@@ -140,11 +139,10 @@ rpcs:
         - terminal_state_after_success
         - no_automatic_retry
   tammy.v1.WorkspaceService.UnlockWorkspace:
-    stage: declared_future
+    stage: production
     preload: unlockWorkspace
-    cases: []
-    futureCases:
-      - slice-1/foundation-contracts
+    cases:
+      - walkthrough/current-accounting-workflows
     projections:
       - unlock_workspace_result
     routes:
@@ -789,15 +787,15 @@ rpcs:
         - exact_replay
         - changed_request_conflict
   tammy.v1.IdentityService.SignIn:
-    stage: declared_future
+    stage: production
     preload: signIn
-    cases: []
-    futureCases:
-      - slice-1/foundation-contracts
+    cases:
+      - walkthrough/current-accounting-workflows
     projections:
       - sign_in_result
     routes:
-      - /sign-in
+      - /setup/workspace
+      - /unlock
     roles:
       workspace_admin: not_applicable_pre_authentication
       business_preparer: not_applicable_pre_authentication
@@ -1246,15 +1244,14 @@ rpcs:
         - changed_request_conflict
         - no_automatic_retry
   tammy.v1.OrganisationService.CreateOrganisation:
-    stage: declared_future
+    stage: production
     preload: createOrganisation
-    cases: []
-    futureCases:
-      - slice-1/foundation-contracts
+    cases:
+      - walkthrough/current-accounting-workflows
     projections:
       - create_organisation_result
     routes:
-      - /setup/organisation
+      - /setup/workspace
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_permission_denied
@@ -1366,11 +1363,10 @@ rpcs:
       outcomes:
         - not_applicable
   tammy.v1.AccountingService.CreateAccount:
-    stage: declared_future
+    stage: production
     preload: createAccount
-    cases: []
-    futureCases:
-      - slice-1/opening-chart-contracts
+    cases:
+      - walkthrough/current-accounting-workflows
     projections:
       - create_account_result
     routes:
@@ -1551,11 +1547,10 @@ rpcs:
         - exact_replay
         - changed_request_conflict
   tammy.v1.AccountingService.PostManualJournal:
-    stage: declared_future
+    stage: production
     preload: postManualJournal
-    cases: []
-    futureCases:
-      - slice-1/journal-period-contracts
+    cases:
+      - walkthrough/current-accounting-workflows
     projections:
       - post_manual_journal_result
     routes:
@@ -1706,11 +1701,10 @@ rpcs:
       outcomes:
         - not_applicable
   tammy.v1.AccountingService.ListAccounts:
-    stage: declared_future
+    stage: production
     preload: listAccounts
-    cases: []
-    futureCases:
-      - slice-1/opening-chart-contracts
+    cases:
+      - walkthrough/current-accounting-workflows
     projections:
       - list_accounts_result
     routes:
@@ -1734,11 +1728,10 @@ rpcs:
       outcomes:
         - not_applicable
   tammy.v1.AccountingService.GetJournal:
-    stage: declared_future
+    stage: production
     preload: getJournal
-    cases: []
-    futureCases:
-      - slice-1/journal-period-contracts
+    cases:
+      - walkthrough/current-accounting-workflows
     projections:
       - get_journal_result
     routes:
@@ -1760,11 +1753,10 @@ rpcs:
       outcomes:
         - not_applicable
   tammy.v1.AccountingService.ListJournals:
-    stage: declared_future
+    stage: production
     preload: listJournals
-    cases: []
-    futureCases:
-      - slice-1/journal-period-contracts
+    cases:
+      - walkthrough/current-accounting-workflows
     projections:
       - list_journals_result
     routes:
@@ -1818,11 +1810,10 @@ rpcs:
       outcomes:
         - not_applicable
   tammy.v1.AccountingService.GetTrialBalance:
-    stage: declared_future
+    stage: production
     preload: getTrialBalance
-    cases: []
-    futureCases:
-      - slice-1/journal-period-contracts
+    cases:
+      - walkthrough/current-accounting-workflows
     projections:
       - get_trial_balance_result
     routes:
@@ -1844,14 +1835,301 @@ rpcs:
       mode: query
       outcomes:
         - not_applicable
+  tammy.v1.BankingService.ImportBankStatement:
+    stage: production
+    preload: importBankStatement
+    cases:
+      - walkthrough/current-accounting-workflows
+    projections:
+      - import_bank_statement_result
+    routes:
+      - /banking
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - IDEMPOTENCY_CONFLICT
+      - INVALID_STATEMENT
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - exact_replay
+        - changed_request_conflict
+  tammy.v1.BankingService.ListBankStatementLines:
+    stage: production
+    preload: listBankStatementLines
+    cases:
+      - walkthrough/current-accounting-workflows
+    projections:
+      - list_bank_statement_lines_result
+    routes:
+      - /banking
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_allowed
+      auditor: planned_allowed
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - INVALID_CURSOR
+    list:
+      states:
+        - empty
+        - populated
+    idempotency:
+      mode: query
+      outcomes:
+        - not_applicable
+  tammy.v1.BankingService.MatchBankStatementLine:
+    stage: production
+    preload: matchBankStatementLine
+    cases:
+      - walkthrough/current-accounting-workflows
+    projections:
+      - match_bank_statement_line_result
+    routes:
+      - /banking
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+      - NOT_FOUND
+      - INVALID_STATE_TRANSITION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: session_action
+      outcomes:
+        - state_predicate_election
+        - terminal_state_after_success
+  tammy.v1.BankingService.CompleteBankReconciliation:
+    stage: production
+    preload: completeBankReconciliation
+    cases:
+      - walkthrough/current-accounting-workflows
+    projections:
+      - complete_bank_reconciliation_result
+    routes:
+      - /banking
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - NO_STATEMENT
+      - UNMATCHED_LINES
+      - INVALID_STATE_TRANSITION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: session_action
+      outcomes:
+        - state_predicate_election
+        - terminal_state_after_success
+  tammy.v1.BankingService.GetBankingSummary:
+    stage: production
+    preload: getBankingSummary
+    cases:
+      - walkthrough/current-accounting-workflows
+    projections:
+      - get_banking_summary_result
+    routes:
+      - /banking
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_allowed
+      auditor: planned_allowed
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: query
+      outcomes:
+        - not_applicable
+  tammy.v1.DocumentService.IngestDocument:
+    stage: production
+    preload: ingestDocument
+    cases:
+      - walkthrough/current-accounting-workflows
+    projections:
+      - ingest_document_result
+    routes:
+      - /documents
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - IDEMPOTENCY_CONFLICT
+      - DUPLICATE_SOURCE
+      - INVALID_DOCUMENT
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - exact_replay
+        - changed_request_conflict
+  tammy.v1.DocumentService.GetDocument:
+    stage: production
+    preload: getDocument
+    cases:
+      - walkthrough/current-accounting-workflows
+    projections:
+      - get_document_result
+    routes:
+      - /documents
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_allowed
+      auditor: planned_allowed
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - NOT_FOUND
+    list:
+      states:
+        - found
+        - not_found
+    idempotency:
+      mode: query
+      outcomes:
+        - not_applicable
+  tammy.v1.DocumentService.ListDocuments:
+    stage: production
+    preload: listDocuments
+    cases:
+      - walkthrough/current-accounting-workflows
+    projections:
+      - list_documents_result
+    routes:
+      - /documents
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_allowed
+      auditor: planned_allowed
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - INVALID_CURSOR
+    list:
+      states:
+        - empty
+        - populated
+    idempotency:
+      mode: query
+      outcomes:
+        - not_applicable
+  tammy.v1.DocumentService.SaveDocumentReview:
+    stage: production
+    preload: saveDocumentReview
+    cases:
+      - walkthrough/current-accounting-workflows
+    projections:
+      - save_document_review_result
+    routes:
+      - /documents
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+      - NOT_FOUND
+      - INVALID_DOCUMENT
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: session_action
+      outcomes:
+        - state_predicate_election
+        - terminal_state_after_success
+  tammy.v1.TaxService.CreateBasDraft:
+    stage: production
+    preload: createBasDraft
+    cases:
+      - walkthrough/current-accounting-workflows
+    projections:
+      - create_bas_draft_result
+    routes:
+      - /gst-bas
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - IDEMPOTENCY_CONFLICT
+      - INVALID_PERIOD
+      - SOURCE_CONFLICT
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - exact_replay
+        - changed_request_conflict
+  tammy.v1.TaxService.GetCurrentBasDraft:
+    stage: production
+    preload: getCurrentBasDraft
+    cases:
+      - walkthrough/current-accounting-workflows
+    projections:
+      - get_current_bas_draft_result
+    routes:
+      - /gst-bas
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_allowed
+      auditor: planned_allowed
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - NOT_FOUND
+    list:
+      states:
+        - found
+        - not_found
+    idempotency:
+      mode: query
+      outcomes:
+        - not_applicable
   tammy.v1.OverviewService.GetAttentionSummary:
-    stage: declared_future
+    stage: production
     preload: getAttentionSummary
-    cases: []
-    futureCases:
-      - walkthrough/blank-overview
-      - walkthrough/demo-overview
-      - walkthrough/noncash-supplier-month
+    cases:
+      - walkthrough/current-accounting-workflows
     projections:
       - attention_counts
       - typed_attention_items

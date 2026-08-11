@@ -20,6 +20,7 @@ import (
 	tammyv1connect "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1/tammyv1connect"
 	"github.com/tammyapp/tammy/services/core/internal/transport"
 	"github.com/tammyapp/tammy/services/core/internal/workspace"
+	"google.golang.org/protobuf/proto"
 )
 
 func TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealServer(t *testing.T) {
@@ -62,7 +63,10 @@ func TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealSer
 	identityClient := tammyv1connect.NewIdentityServiceClient(httpClient, baseURL)
 	organisationClient := tammyv1connect.NewOrganisationServiceClient(httpClient, baseURL)
 	accountingClient := tammyv1connect.NewAccountingServiceClient(httpClient, baseURL)
+	bankingClient := tammyv1connect.NewBankingServiceClient(httpClient, baseURL)
 	documentClient := tammyv1connect.NewDocumentServiceClient(httpClient, baseURL)
+	taxClient := tammyv1connect.NewTaxServiceClient(httpClient, baseURL)
+	overviewClient := tammyv1connect.NewOverviewServiceClient(httpClient, baseURL)
 
 	createWorkspace := connect.NewRequest(&tammyv1.CreateWorkspaceRequest{
 		SetupId:                  "018f0000-0000-7000-8000-000000000101",
@@ -252,6 +256,9 @@ func TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealSer
 		reviewed.Msg.Document.Version != 2 || reviewed.Msg.Document.ReviewedAt == nil {
 		t.Fatalf("SaveDocumentReview() = %#v, %v", reviewed, err)
 	}
+	if _, err := documentClient.SaveDocumentReview(context.Background(), review); connect.CodeOf(err) != connect.CodeFailedPrecondition {
+		t.Fatalf("terminal SaveDocumentReview() error = %v; want failed precondition", err)
+	}
 	getDocument := connect.NewRequest(&tammyv1.GetDocumentRequest{
 		Authentication: authentication,
 		DocumentId:     retained.Msg.Document.Id,
@@ -261,5 +268,107 @@ func TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealSer
 	if err != nil || storedDocument.Msg.Document == nil || storedDocument.Msg.Document.Candidate.InvoiceNumber != "INV-029847" ||
 		storedDocument.Msg.Document.Status != tammyv1.DocumentStatus_DOCUMENT_STATUS_REVIEWED {
 		t.Fatalf("GetDocument() = %#v, %v", storedDocument, err)
+	}
+
+	importStatement := connect.NewRequest(&tammyv1.ImportBankStatementRequest{
+		CommandContext: &tammyv1.CommandContext{
+			IdempotencyKey: "018f0000-0000-7000-8000-00000000010a",
+			Authentication: authentication,
+		},
+		OrganisationId: created.Msg.Organisation.Id,
+		OpeningBalance: &tammyv1.Money{CurrencyCode: "AUD", MinorUnits: 100000},
+		Lines: []*tammyv1.BankStatementLineInput{{
+			TransactionDate: &tammyv1.CivilDate{Year: 2026, Month: 8, Day: 10},
+			Description:     "Officeworks INV-029847",
+			Amount:          &tammyv1.Money{CurrencyCode: "AUD", MinorUnits: -31900},
+		}},
+	})
+	importStatement.Header().Set(transport.CapabilityHeader, ready.Capability)
+	imported, err := bankingClient.ImportBankStatement(context.Background(), importStatement)
+	if err != nil || imported.Msg.StatementImport == nil {
+		t.Fatalf("ImportBankStatement() = %#v, %v", imported, err)
+	}
+	replayedImport, err := bankingClient.ImportBankStatement(context.Background(), importStatement)
+	if err != nil || replayedImport.Msg.StatementImport == nil || replayedImport.Msg.StatementImport.Id != imported.Msg.StatementImport.Id {
+		t.Fatalf("exact ImportBankStatement() replay = %#v, %v; want import %s", replayedImport, err, imported.Msg.StatementImport.Id)
+	}
+	changedImport := connect.NewRequest(proto.Clone(importStatement.Msg).(*tammyv1.ImportBankStatementRequest))
+	changedImport.Msg.Lines[0].Description = "Changed same-count line"
+	changedImport.Header().Set(transport.CapabilityHeader, ready.Capability)
+	if _, err := bankingClient.ImportBankStatement(context.Background(), changedImport); connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatalf("changed ImportBankStatement() replay error = %v; want invalid argument", err)
+	}
+	listBankLines := connect.NewRequest(&tammyv1.ListBankStatementLinesRequest{
+		Authentication: authentication,
+		OrganisationId: created.Msg.Organisation.Id,
+		Page:           &tammyv1.PageRequest{PageSize: 50},
+	})
+	listBankLines.Header().Set(transport.CapabilityHeader, ready.Capability)
+	bankLines, err := bankingClient.ListBankStatementLines(context.Background(), listBankLines)
+	if err != nil || len(bankLines.Msg.Lines) != 1 {
+		t.Fatalf("ListBankStatementLines() = %#v, %v", bankLines, err)
+	}
+	matchBankLine := connect.NewRequest(&tammyv1.MatchBankStatementLineRequest{
+		CommandContext: &tammyv1.CommandContext{
+			IdempotencyKey: "018f0000-0000-7000-8000-00000000010b",
+			Authentication: authentication,
+		},
+		LineId:          bankLines.Msg.Lines[0].Id,
+		ExpectedVersion: bankLines.Msg.Lines[0].Version,
+		MatchReference:  "Reviewed accounting source",
+	})
+	matchBankLine.Header().Set(transport.CapabilityHeader, ready.Capability)
+	if _, err := bankingClient.MatchBankStatementLine(context.Background(), matchBankLine); err != nil {
+		t.Fatalf("MatchBankStatementLine() error = %v", err)
+	}
+	if _, err := bankingClient.MatchBankStatementLine(context.Background(), matchBankLine); connect.CodeOf(err) != connect.CodeFailedPrecondition {
+		t.Fatalf("terminal MatchBankStatementLine() error = %v; want failed precondition", err)
+	}
+	reconcile := connect.NewRequest(&tammyv1.CompleteBankReconciliationRequest{
+		CommandContext: &tammyv1.CommandContext{
+			IdempotencyKey: "018f0000-0000-7000-8000-00000000010c",
+			Authentication: authentication,
+		},
+		OrganisationId: created.Msg.Organisation.Id,
+	})
+	reconcile.Header().Set(transport.CapabilityHeader, ready.Capability)
+	if _, err := bankingClient.CompleteBankReconciliation(context.Background(), reconcile); err != nil {
+		t.Fatalf("CompleteBankReconciliation() error = %v", err)
+	}
+	if _, err := bankingClient.CompleteBankReconciliation(context.Background(), reconcile); connect.CodeOf(err) != connect.CodeFailedPrecondition {
+		t.Fatalf("terminal CompleteBankReconciliation() error = %v; want failed precondition", err)
+	}
+
+	createBAS := connect.NewRequest(&tammyv1.CreateBasDraftRequest{
+		CommandContext: &tammyv1.CommandContext{
+			IdempotencyKey: "018f0000-0000-7000-8000-00000000010d",
+			Authentication: authentication,
+		},
+		OrganisationId: created.Msg.Organisation.Id,
+		PeriodStart:    &tammyv1.CivilDate{Year: 2026, Month: 7, Day: 1},
+		PeriodEnd:      &tammyv1.CivilDate{Year: 2026, Month: 9, Day: 30},
+	})
+	createBAS.Header().Set(transport.CapabilityHeader, ready.Capability)
+	if _, err := taxClient.CreateBasDraft(context.Background(), createBAS); err != nil {
+		t.Fatalf("CreateBasDraft() error = %v", err)
+	}
+
+	attentionRequest := connect.NewRequest(&tammyv1.GetAttentionSummaryRequest{
+		Authentication: authentication,
+		OrganisationId: created.Msg.Organisation.Id,
+		AsOfDate:       &tammyv1.CivilDate{Year: 2026, Month: 8, Day: 10},
+		ReportingPeriod: &tammyv1.ReportingPeriod{
+			StartDate: &tammyv1.CivilDate{Year: 2026, Month: 7, Day: 1},
+			EndDate:   &tammyv1.CivilDate{Year: 2026, Month: 9, Day: 30},
+		},
+	})
+	attentionRequest.Header().Set(transport.CapabilityHeader, ready.Capability)
+	attention, err := overviewClient.GetAttentionSummary(context.Background(), attentionRequest)
+	if err != nil || attention.Msg.Revisions == nil {
+		t.Fatalf("GetAttentionSummary() = %#v, %v", attention, err)
+	}
+	if attention.Msg.Revisions.BankingRevision != 3 || attention.Msg.Revisions.TaxSourceRevision != 3 ||
+		attention.Msg.Revisions.FinancialRevision != 7 {
+		t.Fatalf("revisions = %#v, want financial=7 banking=3 tax-source=3", attention.Msg.Revisions)
 	}
 }

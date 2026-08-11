@@ -486,11 +486,12 @@ func assertOverviewCoverageContract(t *testing.T) {
 		block = block[:end]
 	}
 	wantFragments := []string{
-		"    stage: declared_future\n    preload: getAttentionSummary\n    cases: []",
+		"    stage: production\n    preload: getAttentionSummary\n    cases:\n      - walkthrough/current-accounting-workflows",
 		"    projections:\n      - attention_counts\n      - typed_attention_items\n      - financial_revision\n      - module_revisions\n      - reporting_period",
 		"    roles:\n      workspace_admin: planned_allowed\n      business_preparer: planned_allowed\n      business_lodger: planned_allowed\n      auditor: planned_allowed",
 		"    principalFailures:\n      - AUTHENTICATION_REQUIRED\n      - INVALID_ORGANISATION\n      - INVALID_DATE\n      - INVALID_PERIOD\n      - REVISION_SNAPSHOT_UNAVAILABLE",
 		"    list:\n      states:\n        - empty\n        - populated",
+		"    routes:\n      - /overview",
 		"    idempotency:\n      mode: query\n      outcomes:\n        - not_applicable",
 	}
 	for _, fragment := range wantFragments {

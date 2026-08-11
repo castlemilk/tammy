@@ -41,20 +41,26 @@ func (repository *Repository) ImportStatement(
 		len(lines) < 1 || len(lines) > 1000 || len(lineIDs) != len(lines) || now.IsZero() {
 		return nil, ErrRepository
 	}
-	if existing, err := repository.getImportByOperation(ctx, operationKey); err == nil {
-		if existing.OrganisationId == organisationID && existing.OpeningBalance.MinorUnits == openingBalance && int(existing.LineCount) == len(lines) {
-			return existing, nil
-		}
-		return nil, ErrConflict
-	} else if !errors.Is(err, ErrNotFound) {
-		return nil, err
-	}
 	closing := openingBalance
 	for index, line := range lines {
 		if !ids.IsCanonicalV7(lineIDs[index]) || !validLineInput(line) {
 			return nil, ErrRepository
 		}
 		closing += line.Amount.MinorUnits
+	}
+	if existing, err := repository.getImportByOperation(ctx, operationKey); err == nil {
+		if existing.OrganisationId == organisationID && existing.OpeningBalance.MinorUnits == openingBalance && int(existing.LineCount) == len(lines) {
+			matches, matchErr := repository.importLinesMatch(ctx, existing.Id, lines)
+			if matchErr != nil {
+				return nil, matchErr
+			}
+			if matches {
+				return existing, nil
+			}
+		}
+		return nil, ErrConflict
+	} else if !errors.Is(err, ErrNotFound) {
+		return nil, err
 	}
 	importedAt := now.UTC().Format(time.RFC3339Nano)
 	if _, err := repository.executor.ExecContext(ctx, `
@@ -83,6 +89,42 @@ func (repository *Repository) ImportStatement(
 		OpeningBalance: aud(openingBalance), ClosingBalance: aud(closing),
 		LineCount: uint32(len(lines)), ImportedAt: timestamppb.New(now),
 	}, nil
+}
+
+func (repository *Repository) importLinesMatch(
+	ctx context.Context,
+	statementImportID string,
+	lines []*tammyv1.BankStatementLineInput,
+) (bool, error) {
+	rows, err := repository.executor.QueryContext(ctx, `
+		SELECT transaction_date, description, amount_minor
+		FROM bank_statement_lines
+		WHERE statement_import_id = ?
+		ORDER BY sequence`, statementImportID)
+	if err != nil {
+		return false, ErrRepository
+	}
+	defer rows.Close()
+	index := 0
+	for rows.Next() {
+		if index >= len(lines) {
+			return false, nil
+		}
+		var date, description string
+		var amount int64
+		if err := rows.Scan(&date, &description, &amount); err != nil {
+			return false, ErrRepository
+		}
+		line := lines[index]
+		if date != civilDateString(line.TransactionDate) || description != line.Description || amount != line.Amount.MinorUnits {
+			return false, nil
+		}
+		index++
+	}
+	if err := rows.Err(); err != nil {
+		return false, ErrRepository
+	}
+	return index == len(lines), nil
 }
 
 func (repository *Repository) ListLines(ctx context.Context, organisationID string, limit int) ([]*tammyv1.BankStatementLine, error) {

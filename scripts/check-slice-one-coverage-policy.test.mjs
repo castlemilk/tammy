@@ -6,12 +6,38 @@ import { SLICE_ONE_RPC_POLICY } from "./slice-one-coverage-policy.mjs";
 
 const SYSTEM_RPC = "tammy.v1.SystemService.GetDiagnostics";
 const ALL_ROLES_ALLOWED = ["workspace_admin", "business_preparer", "business_lodger", "auditor"];
+const CURRENT_WORKFLOW_CASE = "walkthrough/current-accounting-workflows";
+const EXPOSED_BUSINESS_RPCS = [
+  "tammy.v1.WorkspaceService.CreateWorkspace",
+  "tammy.v1.WorkspaceService.ConfirmRecovery",
+  "tammy.v1.WorkspaceService.UnlockWorkspace",
+  "tammy.v1.IdentityService.SignIn",
+  "tammy.v1.OrganisationService.CreateOrganisation",
+  "tammy.v1.AccountingService.CreateAccount",
+  "tammy.v1.AccountingService.PostManualJournal",
+  "tammy.v1.AccountingService.ListAccounts",
+  "tammy.v1.AccountingService.GetJournal",
+  "tammy.v1.AccountingService.ListJournals",
+  "tammy.v1.AccountingService.GetTrialBalance",
+  "tammy.v1.OverviewService.GetAttentionSummary",
+  "tammy.v1.BankingService.ImportBankStatement",
+  "tammy.v1.BankingService.ListBankStatementLines",
+  "tammy.v1.BankingService.MatchBankStatementLine",
+  "tammy.v1.BankingService.CompleteBankReconciliation",
+  "tammy.v1.BankingService.GetBankingSummary",
+  "tammy.v1.DocumentService.IngestDocument",
+  "tammy.v1.DocumentService.ListDocuments",
+  "tammy.v1.DocumentService.GetDocument",
+  "tammy.v1.DocumentService.SaveDocumentReview",
+  "tammy.v1.TaxService.CreateBasDraft",
+  "tammy.v1.TaxService.GetCurrentBasDraft",
+];
 
-test("coverage declares the exact normative policy for all 68 non-system RPCs", async () => {
+test("coverage declares the exact normative policy for all 79 non-system RPCs", async () => {
   const coverage = parseCoverageManifest(await readFile("test/e2e/coverage.yaml", "utf8"));
   const actualRpcNames = Object.keys(coverage.rpcs).filter((rpcName) => rpcName !== SYSTEM_RPC);
 
-  assert.equal(Object.keys(SLICE_ONE_RPC_POLICY).length, 68);
+  assert.equal(Object.keys(SLICE_ONE_RPC_POLICY).length, 79);
   assert.deepEqual(actualRpcNames.sort(), Object.keys(SLICE_ONE_RPC_POLICY).sort());
 
   for (const [rpcName, expected] of Object.entries(SLICE_ONE_RPC_POLICY)) {
@@ -42,8 +68,43 @@ test("reporting capability is promoted only with the packaged pre-setup evidence
   assert.deepEqual(coverage.scenarios["E2E-00"].cases, [
     "foundation/offline-ready",
     "reporting/capability-registry",
+    CURRENT_WORKFLOW_CASE,
   ]);
   assert.ok(!coverage.scenarios["E2E-00"].futureCases.includes("reporting/capability-registry"));
+});
+
+test("every exposed business preload has production packaged evidence", async () => {
+  const coverage = parseCoverageManifest(await readFile("test/e2e/coverage.yaml", "utf8"));
+  const missing = EXPOSED_BUSINESS_RPCS.filter((rpcName) => coverage.rpcs[rpcName] === undefined);
+  const declaredFuture = EXPOSED_BUSINESS_RPCS.filter(
+    (rpcName) => coverage.rpcs[rpcName]?.stage === "declared_future",
+  );
+
+  assert.deepEqual({ missing, declaredFuture }, { missing: [], declaredFuture: [] });
+  assert.ok(coverage.scenarios["E2E-00"].cases.includes(CURRENT_WORKFLOW_CASE));
+  for (const rpcName of EXPOSED_BUSINESS_RPCS) {
+    assert.deepEqual(coverage.rpcs[rpcName].cases, [CURRENT_WORKFLOW_CASE], rpcName);
+    assert.equal(coverage.rpcs[rpcName].futureCases, undefined, rpcName);
+  }
+});
+
+test("current workflow policy names real routes and implemented command semantics", () => {
+  assert.deepEqual(SLICE_ONE_RPC_POLICY["tammy.v1.OrganisationService.CreateOrganisation"].routes, [
+    "/setup/workspace",
+  ]);
+
+  for (const rpcName of [
+    "tammy.v1.BankingService.MatchBankStatementLine",
+    "tammy.v1.BankingService.CompleteBankReconciliation",
+    "tammy.v1.DocumentService.SaveDocumentReview",
+  ]) {
+    const policy = SLICE_ONE_RPC_POLICY[rpcName];
+    assert.deepEqual(policy.idempotency, {
+      mode: "session_action",
+      outcomes: ["state_predicate_election", "terminal_state_after_success"],
+    });
+    assert.ok(!policy.principalFailures.includes("IDEMPOTENCY_CONFLICT"), rpcName);
+  }
 });
 
 test("Slice 1 policy does not export a duplicate idempotency-mode vocabulary", async () => {
@@ -58,6 +119,9 @@ test("coverage conflict failures match every public request concurrency field", 
     "proto/tammy/v1/identity.proto",
     "proto/tammy/v1/organisation.proto",
     "proto/tammy/v1/accounting.proto",
+    "proto/tammy/v1/banking.proto",
+    "proto/tammy/v1/documents.proto",
+    "proto/tammy/v1/tax.proto",
     "proto/tammy/v1/audit.proto",
   ];
 
@@ -93,6 +157,8 @@ test("coverage conflict failures match every public request concurrency field", 
 
 test("session-action authentication failures match request presence", async () => {
   const sources = {
+    banking: await readFile("proto/tammy/v1/banking.proto", "utf8"),
+    documents: await readFile("proto/tammy/v1/documents.proto", "utf8"),
     workspace: await readFile("proto/tammy/v1/workspace.proto", "utf8"),
     identity: await readFile("proto/tammy/v1/identity.proto", "utf8"),
   };
@@ -104,6 +170,13 @@ test("session-action authentication failures match request presence", async () =
       "ForgetRememberedWorkspaceRequest",
     ],
     ["tammy.v1.IdentityService.SignOut", "identity", "SignOutRequest"],
+    ["tammy.v1.BankingService.MatchBankStatementLine", "banking", "MatchBankStatementLineRequest"],
+    [
+      "tammy.v1.BankingService.CompleteBankReconciliation",
+      "banking",
+      "CompleteBankReconciliationRequest",
+    ],
+    ["tammy.v1.DocumentService.SaveDocumentReview", "documents", "SaveDocumentReviewRequest"],
   ];
 
   assert.deepEqual(
@@ -120,6 +193,9 @@ test("session-action authentication failures match request presence", async () =
     )?.[1];
     const authenticationRequired =
       /AuthenticationContext authentication = \d+ \[\(buf\.validate\.field\)\.required = true\]/.test(
+        request,
+      ) ||
+      /CommandContext command_context = \d+ \[\(buf\.validate\.field\)\.required = true\]/.test(
         request,
       );
     assert.equal(

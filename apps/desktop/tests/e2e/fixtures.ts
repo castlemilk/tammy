@@ -42,6 +42,7 @@ interface ElectronHarness {
   readonly page: Page;
   readonly pageErrors: string[];
   readonly packagedLayout: PackagedLayout;
+  readonly restart: () => Promise<Page>;
 }
 
 interface ElectronFixtures {
@@ -173,42 +174,58 @@ function fixtureOperations(
       await rm(state.rawArtifacts, { force: true, recursive: true });
     },
     setup: async (state) => {
-      const videoDirectory = path.join(state.rawArtifacts, "video");
-      const application = await _electron.launch({
-        args: [`--user-data-dir=${path.join(state.rawArtifacts, "user-data")}`],
-        artifactsDir: path.join(state.rawArtifacts, "playwright"),
-        chromiumSandbox: true,
-        executablePath: state.packagedLayout.appExecutable,
-        offline: true,
-        recordVideo: { dir: videoDirectory },
-      });
-      state.application = application;
-      state.mainProcess = application.process();
-      state.mainClosed = observeMainClose(state.mainProcess);
+      const launch = async () => {
+        const application = await _electron.launch({
+          args: [`--user-data-dir=${path.join(state.rawArtifacts, "user-data")}`],
+          artifactsDir: path.join(state.rawArtifacts, "playwright"),
+          chromiumSandbox: true,
+          executablePath: state.packagedLayout.appExecutable,
+          offline: true,
+          recordVideo: { dir: path.join(state.rawArtifacts, "video") },
+        });
+        state.application = application;
+        state.mainProcess = application.process();
+        state.mainClosed = observeMainClose(state.mainProcess);
 
-      const context = application.context();
-      const observed = new WeakSet<Page>();
-      const observe = (page: Page) => {
-        if (observed.has(page)) return;
-        observed.add(page);
-        observePage(page, state.consoleErrors, state.pageErrors);
+        const context = application.context();
+        const observed = new WeakSet<Page>();
+        const observe = (page: Page) => {
+          if (observed.has(page)) return;
+          observed.add(page);
+          observePage(page, state.consoleErrors, state.pageErrors);
+        };
+        context.on("page", observe);
+        context.pages().forEach(observe);
+        if (testInfo.retry === 1) {
+          await context.tracing.start({ screenshots: true, snapshots: true });
+          state.traceStarted = true;
+        }
+        const page = await application.firstWindow();
+        observe(page);
+        state.page = page;
+        return { application, page };
       };
-      context.on("page", observe);
-      context.pages().forEach(observe);
-
-      if (testInfo.retry === 1) {
-        await context.tracing.start({ screenshots: true, snapshots: true });
-        state.traceStarted = true;
-      }
-      const page = await application.firstWindow();
-      observe(page);
-      state.page = page;
+      const launched = await launch();
       return {
-        application,
+        application: launched.application,
         consoleErrors: state.consoleErrors,
-        page,
+        page: launched.page,
         pageErrors: state.pageErrors,
         packagedLayout: state.packagedLayout,
+        restart: async () => {
+          await closeAndReapElectron({
+            forceKillMain: () => forceKillMain(state.mainProcess),
+            gracefulClose: () => state.application?.close() ?? Promise.resolve(),
+            mainClosed: state.mainClosed ?? new Promise<void>(() => {}),
+            timeoutMs: CLOSE_TIMEOUT_MS,
+          });
+          await pollForNoCoreProcesses({
+            intervalMs: ORPHAN_POLL_INTERVAL_MS,
+            query: () => findExactCoreProcesses(state.packagedLayout.coreExecutable),
+            timeoutMs: ORPHAN_POLL_TIMEOUT_MS,
+          });
+          return (await launch()).page;
+        },
       };
     },
     stageScreenshot: async (state) => {
