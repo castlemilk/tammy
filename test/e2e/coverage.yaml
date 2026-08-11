@@ -4,6 +4,7 @@ scenarios:
     cases:
       - foundation/offline-ready
     futureCases:
+      - reporting/capability-registry
       - slice-1/foundation-contracts
       - walkthrough/blank-overview
       - walkthrough/demo-overview
@@ -58,6 +59,30 @@ rpcs:
     roles: not_applicable_pre_workspace_system_query
     list: not_applicable_pre_workspace_system_query
     idempotency: not_applicable_pre_workspace_system_query
+  tammy.v1.ReportingCapabilityService.GetReportingCapability:
+    stage: declared_future
+    preload: getReportingCapability
+    cases: []
+    futureCases:
+      - reporting/capability-registry
+    projections:
+      - reporting_capability
+    routes:
+      - /setup/workspace
+    roles:
+      workspace_admin: not_applicable_pre_authentication
+      business_preparer: not_applicable_pre_authentication
+      business_lodger: not_applicable_pre_authentication
+      auditor: not_applicable_pre_authentication
+    principalFailures:
+      - INVALID_REPORTING_CAPABILITY
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: query
+      outcomes:
+        - not_applicable
   tammy.v1.WorkspaceService.CreateWorkspace:
     stage: declared_future
     preload: createWorkspace

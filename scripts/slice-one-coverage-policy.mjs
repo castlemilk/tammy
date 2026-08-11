@@ -96,6 +96,15 @@ const roleGuardedStalePersistent = [
 ];
 
 export const SLICE_ONE_RPC_POLICY = {
+  "tammy.v1.ReportingCapabilityService.GetReportingCapability": rpc({
+    name: "GetReportingCapability",
+    preload: "getReportingCapability",
+    projection: "reporting_capability",
+    route: "/setup/workspace",
+    rolePolicy: preAuthentication,
+    mode: "query",
+    failures: ["INVALID_REPORTING_CAPABILITY"],
+  }),
   "tammy.v1.WorkspaceService.CreateWorkspace": rpc({
     name: "CreateWorkspace",
     route: "/setup/workspace",
