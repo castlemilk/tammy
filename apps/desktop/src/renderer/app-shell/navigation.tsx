@@ -1,12 +1,11 @@
 import {
   BookOpen,
+  Calculator,
   FileText,
   House,
   Landmark,
   ListTree,
-  Rows3,
   Scale,
-  Calculator,
   Settings,
   ShieldCheck,
 } from "lucide-react";
@@ -18,7 +17,6 @@ export const PRIMARY_NAVIGATION = Object.freeze([
   { href: "/banking", icon: Landmark, label: "Banking" },
   { href: "/accounting/chart", icon: ListTree, label: "Chart of accounts" },
   { href: "/accounting/journals", icon: BookOpen, label: "Journals" },
-  { href: "/accounting/general-ledger", icon: Rows3, label: "General ledger" },
   { href: "/accounting/trial-balance", icon: Scale, label: "Trial balance" },
   { href: "/gst-bas", icon: Calculator, label: "GST & BAS" },
   { href: "/audit", icon: ShieldCheck, label: "Audit trail" },
@@ -35,7 +33,12 @@ export function Navigation({ activePath, onNavigate }: NavigationProps) {
     <nav aria-label="Primary" className="flex min-h-0 flex-1 flex-col px-2 pb-3 pt-3">
       <ul className="m-0 grid list-none gap-1 p-0">
         {PRIMARY_NAVIGATION.slice(0, -1).map((item) => (
-          <NavigationItem activePath={activePath} item={item} key={item.href} onNavigate={onNavigate} />
+          <NavigationItem
+            activePath={activePath}
+            item={item}
+            key={item.href}
+            onNavigate={onNavigate}
+          />
         ))}
       </ul>
       <ul className="m-0 mt-auto list-none border-t border-border px-0 pb-0 pt-3">

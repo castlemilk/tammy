@@ -123,12 +123,12 @@ it("renders the walkthrough app shell", async () => {
     "Banking",
     "Chart of accounts",
     "Journals",
-    "General ledger",
     "Trial balance",
     "GST & BAS",
     "Audit trail",
     "Settings",
   ]);
+  expect(within(navigation).queryByRole("link", { name: "General ledger" })).toBeNull();
 
   expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
   expect(screen.getByRole("heading", { level: 1, name: "Overview" })).toBeTruthy();

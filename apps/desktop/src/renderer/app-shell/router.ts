@@ -25,7 +25,6 @@ export const COMPLETE_ROUTES = Object.freeze([
   "/accounting/chart",
   "/accounting/opening-balances",
   "/accounting/journals",
-  "/accounting/general-ledger",
   "/accounting/trial-balance",
   "/accounting/periods",
   "/audit",

@@ -35,6 +35,13 @@ describe("guarded walkthrough routes", () => {
     });
   });
 
+  it("returns the unimplemented General Ledger route to Overview", () => {
+    expect(resolveAppLocation("/accounting/general-ledger", "authenticated")).toEqual({
+      notice: "That page is not available.",
+      path: "/overview",
+    });
+  });
+
   it("accepts only the canonical journal selection query", () => {
     expect(
       resolveAppLocation(`/accounting/journals?journal=${journalID}`, "authenticated"),

@@ -220,6 +220,9 @@ test("runs the current accounting workflows through the packaged app", async ({
   await expect(page.getByText("One-time recovery code")).toBeVisible();
   await page.getByRole("button", { name: "I saved my recovery code" }).click();
   await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "General ledger" }),
+  ).toHaveCount(0);
 
   const createdWorkspace = await authenticatedWorkspace(page);
   expect(createdWorkspace.workspaceId).toMatch(UUID_V7);

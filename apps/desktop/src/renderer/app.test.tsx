@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -157,9 +157,40 @@ describe("App", () => {
     expect(within(navigation).getByRole("link", { name: "Documents" })).toBeTruthy();
     expect(within(navigation).getByRole("link", { name: "Banking" })).toBeTruthy();
     expect(within(navigation).getByRole("link", { name: "GST & BAS" })).toBeTruthy();
+    expect(within(navigation).queryByRole("link", { name: "General ledger" })).toBeNull();
     for (const futureModule of ["Submissions", "Lodge BAS"]) {
       expect(screen.queryByText(futureModule)).toBeNull();
     }
+  });
+
+  it("canonicalizes a rejected authenticated deep link to Overview", async () => {
+    installDesktopAPI(vi.fn().mockResolvedValue(diagnostics));
+    window.history.replaceState(null, "", "/accounting/general-ledger");
+
+    render(<App />);
+
+    expect(screen.getByRole("heading", { level: 1, name: "Overview" })).toBeTruthy();
+    await waitFor(() => expect(window.location.pathname).toBe("/overview"));
+  });
+
+  it("canonicalizes rejected popstate routes while preserving valid history paths", async () => {
+    installDesktopAPI(vi.fn().mockResolvedValue(diagnostics));
+    window.history.replaceState(null, "", "/overview");
+    render(<App />);
+
+    act(() => {
+      window.history.pushState(null, "", "/documents");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+    expect(await screen.findByRole("heading", { level: 1, name: "Documents" })).toBeTruthy();
+    expect(window.location.pathname).toBe("/documents");
+
+    act(() => {
+      window.history.pushState(null, "", "/accounting/general-ledger");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+    expect(await screen.findByRole("heading", { level: 1, name: "Overview" })).toBeTruthy();
+    await waitFor(() => expect(window.location.pathname).toBe("/overview"));
   });
 
   it("keeps valid 128-character version values intact in wrap-safe cells", async () => {

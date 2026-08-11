@@ -47,7 +47,7 @@ It uses four priorities:
 - [ ] Show the boundary before setup and before every declaration; never use “lodged” without an official successful outcome.
 - [ ] Detect unsupported profiles and transactions early, explain why Tammy cannot complete them, and generate an accountant handoff pack.
 - [ ] Version product claims and help content with the relevant rule/taxonomy bundle.
-- [ ] Remove or relabel placeholder routes that imply unimplemented reporting.
+- [x] Remove or relabel placeholder routes that imply unimplemented reporting.
 
 **Exit:** A packaged E2E matrix proves every navigation path and report card tells the truth for supported, preparation-only, and unsupported cases.
 

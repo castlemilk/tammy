@@ -57,8 +57,7 @@ function initialAccess(): WorkspaceAccess {
 }
 
 function currentLocation(): string {
-  const location = `${window.location.pathname}${window.location.search}`;
-  return location === "/" ? "/overview" : location;
+  return `${window.location.pathname}${window.location.search}`;
 }
 
 export function App() {
@@ -93,7 +92,15 @@ export function App() {
   }, [loadDiagnostics]);
 
   useEffect(() => {
-    const restore = () => setActivePath(resolveAppLocation(currentLocation(), access).path);
+    const restore = () => {
+      const location = currentLocation();
+      const resolved = resolveAppLocation(location, access);
+      if (location !== resolved.path) {
+        window.history.replaceState(null, "", resolved.path);
+      }
+      setActivePath(resolved.path);
+    };
+    restore();
     window.addEventListener("popstate", restore);
     return () => window.removeEventListener("popstate", restore);
   }, [access]);
@@ -232,15 +239,6 @@ function RouteContent({
         onNavigate={onNavigate}
         path={path}
         workspace={workspace}
-      />
-    );
-  }
-  if (path === "/accounting/general-ledger") {
-    return (
-      <EmptyLedgerScreen
-        description="Account movements with retained source links."
-        emptyLabel="No ledger movements yet"
-        title="General ledger"
       />
     );
   }
