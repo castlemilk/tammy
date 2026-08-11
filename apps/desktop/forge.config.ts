@@ -1,4 +1,6 @@
+import { execFile as nodeExecFile } from "node:child_process";
 import path from "node:path";
+import { promisify } from "node:util";
 
 import { FuseV1Options, FuseVersion } from "@electron/fuses";
 import { MakerSquirrel } from "@electron-forge/maker-squirrel";
@@ -15,6 +17,50 @@ import {
 
 const desktopRoot = import.meta.dirname;
 const releaseProfile = createMacOSReleaseProfile(process.env, desktopRoot);
+const execFile = promisify(nodeExecFile);
+
+const UNUSED_MACOS_INFO_KEYS = Object.freeze([
+  "NSAppTransportSecurity",
+  "NSAudioCaptureUsageDescription",
+  "NSBluetoothAlwaysUsageDescription",
+  "NSBluetoothPeripheralUsageDescription",
+  "NSCameraUsageDescription",
+  "NSMicrophoneUsageDescription",
+]);
+
+type PackagerConfig = NonNullable<ForgeConfig["packagerConfig"]>;
+type PackagerHook = NonNullable<PackagerConfig["afterCopyExtraResources"]>[number];
+
+const removeUnusedMacOSInfoKeys: PackagerHook = (
+  buildPath,
+  _electronVersion,
+  platform,
+  _arch,
+  callback,
+) => {
+  if (platform !== "darwin" && platform !== "mas") {
+    callback();
+    return;
+  }
+  const infoPlist = path.join(buildPath, "Tammy.app", "Contents", "Info.plist");
+  void execFile("/usr/bin/plutil", ["-convert", "json", "-o", "-", infoPlist], {
+    encoding: "utf8",
+    maxBuffer: 1024 * 1024,
+  })
+    .then(async ({ stdout }) => {
+      const info = JSON.parse(stdout);
+      for (const key of UNUSED_MACOS_INFO_KEYS) {
+        if (Object.hasOwn(info, key)) {
+          await execFile("/usr/bin/plutil", ["-remove", key, infoPlist]);
+        }
+      }
+    })
+    .then(
+      () => callback(),
+      (error: unknown) =>
+        callback(error instanceof Error ? error : new Error("MACOS_INFO_PLIST_INVALID")),
+    );
+};
 
 const packagedCoreSuffix = path.join("Contents", "Resources", "core", "darwin-arm64", "tammy-core");
 
@@ -29,7 +75,8 @@ const developmentSign: NonNullable<ForgeConfig["packagerConfig"]>["osxSign"] = {
   optionsForFile: () => ({ hardenedRuntime: false, timestamp: "none" }),
 };
 
-const packagerConfig: NonNullable<ForgeConfig["packagerConfig"]> = {
+const packagerConfig: PackagerConfig = {
+  afterCopyExtraResources: [removeUnusedMacOSInfoKeys],
   asar: true,
   executableName: "Tammy",
   extraResource: [

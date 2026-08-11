@@ -85,6 +85,37 @@ test("the ad-hoc macOS executable does not enable hardened runtime", {
   assert.doesNotMatch(stderr, /flags=.*\bruntime\b/);
 });
 
+test("the macOS bundle omits unused sensitive permissions and unrestricted transport", {
+  skip: process.platform !== "darwin",
+}, async () => {
+  const desktopRoot = path.resolve(import.meta.dirname, "../..");
+  const infoPlist = path.join(
+    desktopRoot,
+    "out",
+    `Tammy-${process.platform}-${process.arch}`,
+    "Tammy.app",
+    "Contents",
+    "Info.plist",
+  );
+  const { stdout } = await execFileAsync(
+    "/usr/bin/plutil",
+    ["-convert", "json", "-o", "-", infoPlist],
+    { encoding: "utf8", maxBuffer: 1024 * 1024, timeout: 10_000 },
+  );
+  const info = JSON.parse(stdout);
+
+  for (const key of [
+    "NSAppTransportSecurity",
+    "NSAudioCaptureUsageDescription",
+    "NSBluetoothAlwaysUsageDescription",
+    "NSBluetoothPeripheralUsageDescription",
+    "NSCameraUsageDescription",
+    "NSMicrophoneUsageDescription",
+  ]) {
+    assert.equal(Object.hasOwn(info, key), false, `${key} must not be shipped`);
+  }
+});
+
 test("the package authenticates its SQLCipher core and licence resources", async () => {
   const desktopRoot = path.resolve(import.meta.dirname, "../..");
   const repositoryRoot = path.resolve(desktopRoot, "../..");
