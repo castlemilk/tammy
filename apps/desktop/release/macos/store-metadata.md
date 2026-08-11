@@ -1,15 +1,19 @@
 # Tammy Mac App Store metadata
 
-This is a submission template, not proof that an App Store Connect record exists. Replace every `OPERATOR_REQUIRED` value before upload and keep the copy aligned with the build under review.
+This worksheet is linked to the draft App Store Connect record created on 11 August 2026. Replace every remaining `OPERATOR_REQUIRED` value before upload and keep the copy aligned with the build under review.
 
 ## Product page
 
-- **Name:** Tammy
+- **App Store Connect ID:** `6800226692`
+- **Apple Developer identifier ID:** `DXP9QHD7JH`
+- **Bundle identifier:** `com.tammy.desktop`
+- **Name:** Tammy Accounting (the installed app name remains Tammy)
 - **Subtitle:** Local accounting for Australia
 - **Primary category:** Finance
 - **Secondary category:** Business
 - **Default language:** English (Australia)
-- **SKU:** `OPERATOR_REQUIRED`
+- **SKU:** `tammy-macos-001`
+- **Release method:** Manual
 - **Privacy policy URL:** `OPERATOR_REQUIRED`
 - **Support URL:** `OPERATOR_REQUIRED`
 - **Marketing URL:** optional

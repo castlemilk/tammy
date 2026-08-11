@@ -22,10 +22,10 @@ rtk mise exec -- pnpm desktop:package
 Complete these steps in the Apple Developer portal and App Store Connect. Do not store certificates, private keys, provisioning profiles, credentials, or session tokens in this repository.
 
 - [ ] Confirm that the legal entity responsible for Tammy owns the Apple Developer membership and will submit the financial app.
-- [ ] Register the explicit Mac App ID `com.tammy.desktop` with App Sandbox enabled.
+- [x] Register the explicit Mac App ID `com.tammy.desktop` (`DXP9QHD7JH`). App Sandbox remains a mandatory signed-build entitlement and release-check requirement.
 - [ ] Create Apple Development and Apple Distribution signing certificates and a Mac Installer Distribution certificate (older keychains may show the legacy 3rd Party Mac Developer Installer name).
 - [ ] Create separate Mac App Store development and distribution provisioning profiles for the App ID.
-- [ ] Create the App Store Connect app record, using the primary Finance category.
+- [x] Create App Store Connect record `6800226692` for **Tammy Accounting**, version `0.1.0`, English (Australia), SKU `tammy-macos-001`, primary Finance and secondary Business categories, with manual release.
 - [ ] Publish HTTPS privacy-policy and support pages, then replace every `OPERATOR_REQUIRED` value in [store-metadata.md](../../apps/desktop/release/macos/store-metadata.md).
 - [ ] Obtain and record the export-compliance determination for SQLCipher and local TLS. Set the build input and App Store Connect answers to the same determination.
 - [ ] Assign a monotonically increasing positive decimal `CFBundleVersion` for every upload. Marketing version comes from `apps/desktop/package.json`.

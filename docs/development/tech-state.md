@@ -15,7 +15,7 @@ This page is the source of truth for what the application exposes today. Design 
 | GST and BAS | Reviewed source documents feed a local non-cash GST workpaper showing G1, 1A, 1B, and net GST. | Status is always **Draft — not lodged**. There is no declaration, ATO/SBR preparation, submission, or transport. |
 | Overview and activity | Overview attention counts and a consolidated chronological activity screen read journals, banking lines, documents, and the current BAS draft. | The activity screen is a product projection, not a replacement for audit-chain export and verification evidence. |
 | Backup, restore, and audit core | Encrypted backup/restore, authenticated recovery journals, audit-chain, and evidence-export components exist in the Go core and tests. | Their complete desktop workflows are not connected in this vertical slice. Do not infer UI availability from generated routes. |
-| Packaging | Electron Forge development start, ad-hoc signed local macOS package, and packaged E2E commands exist. A separate fail-closed Mac App Store profile now owns the bundle ID, icon, sandbox entitlements, privacy manifest, signing inputs, build number, repository check, and package orchestration. | Apple certificates/profiles, signed-build sandbox and privacy inspection, App Store Connect metadata, upload, and review are operator gates and have not been performed. |
+| Packaging | Electron Forge development start, ad-hoc signed local macOS package, and packaged E2E commands exist. A separate fail-closed Mac App Store profile owns the bundle ID, icon, sandbox entitlements, privacy manifest, signing inputs, build number, repository check, and package orchestration. Apple Developer identifier `DXP9QHD7JH` and draft App Store Connect record `6800226692` now exist, with the safe product-page copy and categories seeded. | Apple distribution certificates/profiles, signed-build sandbox and privacy inspection, public privacy/support URLs, legal/export/price declarations, upload, and App Review remain external gates. |
 
 ## Architecture now
 
@@ -37,7 +37,7 @@ Local macOS packages are ad-hoc signed development artifacts. The current suppor
 
 Deferred repository work includes connecting the placeholder accounting/Settings routes and exposing the complete backup/restore and audit-evidence workflows. The repository-owned Mac App Store inputs and checks exist; the signed-build and external validation gates are listed in the [macOS App Store runbook](../release/macos-app-store.md).
 
-External work includes Apple Developer/App Store Connect identity and approval, legal/support/privacy metadata, signing certificates and provisioning, ATO/SBR conformance, production credentials, and submission authorization. No local command creates that evidence.
+External work includes Apple approval, legal/support/privacy completion, signing certificates and provisioning, ATO/SBR conformance, production credentials, and submission authorization. The Apple identifier and draft App Store record now exist; that setup does not replace the remaining external evidence.
 
 ## Design references
 
