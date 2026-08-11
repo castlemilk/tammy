@@ -21,3 +21,25 @@ func TestSystemContract(t *testing.T) {
 		t.Fatal("offline runtime enum is not usable")
 	}
 }
+
+func TestReportingCapabilityContract(t *testing.T) {
+	if tammyv1connect.ReportingCapabilityServiceName != "tammy.v1.ReportingCapabilityService" {
+		t.Fatalf("unexpected service name %q", tammyv1connect.ReportingCapabilityServiceName)
+	}
+	if tammyv1connect.ReportingCapabilityServiceGetReportingCapabilityProcedure !=
+		"/tammy.v1.ReportingCapabilityService/GetReportingCapability" {
+		t.Fatalf("unexpected procedure %q", tammyv1connect.ReportingCapabilityServiceGetReportingCapabilityProcedure)
+	}
+
+	capability := &tammyv1.ReportingCapability{
+		Report:     tammyv1.ReportKind_REPORT_KIND_GST_WORKPAPER,
+		TaxYear:    2024,
+		EntityType: tammyv1.ReportingEntityType_REPORTING_ENTITY_TYPE_AU_BUSINESS,
+		Status:     tammyv1.ReportingCapabilityStatus_REPORTING_CAPABILITY_STATUS_AVAILABLE,
+		AppVersion: "test",
+		Summary:    "Local reviewed-document GST workpaper only.",
+	}
+	if capability.GetStatus() != tammyv1.ReportingCapabilityStatus_REPORTING_CAPABILITY_STATUS_AVAILABLE {
+		t.Fatal("available reporting capability enum is not usable")
+	}
+}

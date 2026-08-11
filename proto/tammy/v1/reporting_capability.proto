@@ -1,0 +1,139 @@
+edition = "2023";
+
+package tammy.v1;
+
+import "buf/validate/validate.proto";
+
+option features.field_presence = IMPLICIT;
+option go_package = "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1";
+
+// ReportingCapabilityStatus describes the exact reporting action available in this build.
+enum ReportingCapabilityStatus {
+  // REPORTING_CAPABILITY_STATUS_UNSPECIFIED indicates that no capability status was supplied.
+  REPORTING_CAPABILITY_STATUS_UNSPECIFIED = 0;
+
+  // REPORTING_CAPABILITY_STATUS_AVAILABLE indicates that the named report is available.
+  REPORTING_CAPABILITY_STATUS_AVAILABLE = 1;
+
+  // REPORTING_CAPABILITY_STATUS_PREPARATION_ONLY indicates that only report preparation is available.
+  REPORTING_CAPABILITY_STATUS_PREPARATION_ONLY = 2;
+
+  // REPORTING_CAPABILITY_STATUS_HANDOFF_ONLY indicates that only an external handoff is available.
+  REPORTING_CAPABILITY_STATUS_HANDOFF_ONLY = 3;
+
+  // REPORTING_CAPABILITY_STATUS_DIRECT_LODGEMENT indicates that direct lodgement is available.
+  REPORTING_CAPABILITY_STATUS_DIRECT_LODGEMENT = 4;
+
+  // REPORTING_CAPABILITY_STATUS_UNSUPPORTED indicates that the named report is unavailable.
+  REPORTING_CAPABILITY_STATUS_UNSUPPORTED = 5;
+}
+
+// ReportingEntityType identifies the Australian entity class requesting a report.
+enum ReportingEntityType {
+  // REPORTING_ENTITY_TYPE_UNSPECIFIED indicates that no entity type was supplied.
+  REPORTING_ENTITY_TYPE_UNSPECIFIED = 0;
+
+  // REPORTING_ENTITY_TYPE_AU_BUSINESS identifies an Australian business entity.
+  REPORTING_ENTITY_TYPE_AU_BUSINESS = 1;
+
+  // REPORTING_ENTITY_TYPE_AU_INDIVIDUAL identifies an Australian individual.
+  REPORTING_ENTITY_TYPE_AU_INDIVIDUAL = 2;
+}
+
+// ReportKind identifies one reporting product boundary.
+enum ReportKind {
+  // REPORT_KIND_UNSPECIFIED indicates that no report kind was supplied.
+  REPORT_KIND_UNSPECIFIED = 0;
+
+  // REPORT_KIND_GST_WORKPAPER identifies Tammy's local reviewed-document GST workpaper.
+  REPORT_KIND_GST_WORKPAPER = 1;
+
+  // REPORT_KIND_BAS identifies a complete business activity statement.
+  REPORT_KIND_BAS = 2;
+
+  // REPORT_KIND_INDIVIDUAL_INCOME_TAX_RETURN identifies an individual income tax return.
+  REPORT_KIND_INDIVIDUAL_INCOME_TAX_RETURN = 3;
+}
+
+// GetReportingCapabilityRequest asks about one exact report, entity, and tax year combination.
+message GetReportingCapabilityRequest {
+  // report identifies the exact report kind.
+  ReportKind report = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+
+  // tax_year identifies the requested four-digit Australian tax year.
+  int32 tax_year = 2 [(buf.validate.field).int32 = {
+    gte: 2000
+    lte: 9999
+  }];
+
+  // entity_type identifies the exact Australian entity class.
+  ReportingEntityType entity_type = 3 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+}
+
+// ReportingCapability reports the immutable support boundary for one exact request and build.
+message ReportingCapability {
+  // report echoes the requested report kind.
+  ReportKind report = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+
+  // tax_year echoes the requested four-digit Australian tax year.
+  int32 tax_year = 2 [(buf.validate.field).int32 = {
+    gte: 2000
+    lte: 9999
+  }];
+
+  // entity_type echoes the requested Australian entity class.
+  ReportingEntityType entity_type = 3 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+
+  // status identifies the exact reporting action available in this build.
+  ReportingCapabilityStatus status = 4 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+
+  // app_version pins this capability answer to the exact current core build.
+  string app_version = 5 [(buf.validate.field).string = {
+    min_len: 1
+    max_bytes: 128
+  }];
+
+  // summary is bounded user-facing text describing the support boundary.
+  string summary = 6 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 512
+  }];
+
+  // limitations contains at most eight bounded user-facing qualifications.
+  repeated string limitations = 7 [(buf.validate.field).repeated = {
+    max_items: 8
+    items: {
+      string: {
+        min_len: 1
+        max_len: 256
+      }
+    }
+  }];
+}
+
+// GetReportingCapabilityResponse returns one exact build-pinned capability.
+message GetReportingCapabilityResponse {
+  // capability is the immutable support boundary for the requested key.
+  ReportingCapability capability = 1 [(buf.validate.field).required = true];
+}
+
+// ReportingCapabilityService exposes reporting support before workspace setup or authentication.
+service ReportingCapabilityService {
+  // GetReportingCapability returns one read-only build-pinned capability answer.
+  rpc GetReportingCapability(GetReportingCapabilityRequest) returns (GetReportingCapabilityResponse);
+}
