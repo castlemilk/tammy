@@ -57,6 +57,8 @@ func TestLocalCompositionCreatesConfirmsAndAuthenticatesRealWorkspace(t *testing
 	workspaceClient := tammyv1connect.NewWorkspaceServiceClient(httpClient, baseURL)
 	identityClient := tammyv1connect.NewIdentityServiceClient(httpClient, baseURL)
 	overviewClient := tammyv1connect.NewOverviewServiceClient(httpClient, baseURL)
+	reportingCapabilityClient := tammyv1connect.NewReportingCapabilityServiceClient(httpClient, baseURL)
+	assertLocalReportingCapability(t, reportingCapabilityClient, ready.Capability, "local-integration")
 
 	createRequest := connect.NewRequest(&tammyv1.CreateWorkspaceRequest{
 		SetupId:                  "01900f3c-7b2e-7cc4-98c4-dc0c0c073991",
@@ -74,6 +76,7 @@ func TestLocalCompositionCreatesConfirmsAndAuthenticatesRealWorkspace(t *testing
 	if created.Msg.Workspace == nil || created.Msg.RecoverySecret == nil {
 		t.Fatalf("CreateWorkspace() = %#v", created.Msg)
 	}
+	assertLocalReportingCapability(t, reportingCapabilityClient, ready.Capability, "local-integration")
 	groups, err := workspace.ParseRecoveryGroups(created.Msg.RecoverySecret.Utf8)
 	if err != nil {
 		t.Fatal(err)
@@ -122,6 +125,32 @@ func TestLocalCompositionCreatesConfirmsAndAuthenticatesRealWorkspace(t *testing
 	if summary.Msg.BasStatus != tammyv1.BasAttentionStatus_BAS_ATTENTION_STATUS_NOT_CREATED ||
 		summary.Msg.Revisions == nil || summary.Msg.Revisions.FinancialRevision != 0 {
 		t.Fatalf("GetAttentionSummary() = %#v", summary.Msg)
+	}
+}
+
+func assertLocalReportingCapability(
+	t *testing.T,
+	client tammyv1connect.ReportingCapabilityServiceClient,
+	capabilityHeader string,
+	appVersion string,
+) {
+	t.Helper()
+	request := connect.NewRequest(&tammyv1.GetReportingCapabilityRequest{
+		Report:     tammyv1.ReportKind_REPORT_KIND_GST_WORKPAPER,
+		TaxYear:    2024,
+		EntityType: tammyv1.ReportingEntityType_REPORTING_ENTITY_TYPE_AU_BUSINESS,
+	})
+	request.Header().Set(transport.CapabilityHeader, capabilityHeader)
+	response, err := client.GetReportingCapability(context.Background(), request)
+	if err != nil {
+		t.Fatalf("GetReportingCapability() error = %v", err)
+	}
+	got := response.Msg.GetCapability()
+	if got == nil || got.GetReport() != request.Msg.GetReport() || got.GetTaxYear() != request.Msg.GetTaxYear() ||
+		got.GetEntityType() != request.Msg.GetEntityType() ||
+		got.GetStatus() != tammyv1.ReportingCapabilityStatus_REPORTING_CAPABILITY_STATUS_AVAILABLE ||
+		got.GetAppVersion() != appVersion {
+		t.Fatalf("GetReportingCapability() = %#v", got)
 	}
 }
 

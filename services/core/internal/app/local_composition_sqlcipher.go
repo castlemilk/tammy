@@ -519,6 +519,7 @@ func NewLocalComposition(config LocalCompositionConfig) (*Composition, error) {
 	var _ tammyv1connect.WorkspaceServiceHandler = workspaceHandler
 	factories := []transport.GeneratedHandlerFactory{
 		systemHandlerFactory(config.Info),
+		reportingCapabilityHandlerFactory(config.Info),
 		func(options ...connect.HandlerOption) (string, http.Handler) {
 			return tammyv1connect.NewWorkspaceServiceHandler(workspaceHandler, options...)
 		},

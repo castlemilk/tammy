@@ -32,7 +32,7 @@ func (closer *compositionCloser) Close() error {
 	return closer.err
 }
 
-func TestBootCompositionRegistersOnlySystemAndLeavesFutureServicesNotFound(t *testing.T) {
+func TestBootCompositionRegistersBuildScopedServicesAndLeavesFutureServicesNotFound(t *testing.T) {
 	composition, err := NewBootComposition(buildinfo.Info{Version: "composition-test"})
 	if err != nil {
 		t.Fatalf("NewBootComposition() error = %v", err)
@@ -45,6 +45,7 @@ func TestBootCompositionRegistersOnlySystemAndLeavesFutureServicesNotFound(t *te
 	if err != nil || response.Msg.CoreVersion != "composition-test" {
 		t.Fatalf("GetDiagnostics() = %#v, %v", response, err)
 	}
+	assertReportingCapability(t, tammyv1connect.NewReportingCapabilityServiceClient(server.Client(), server.URL), "composition-test")
 	for _, path := range []string{
 		tammyv1connect.WorkspaceServiceGetWorkspaceStateProcedure,
 		tammyv1connect.IdentityServiceGetSessionProcedure,
@@ -74,11 +75,13 @@ func TestWorkspaceCompositionRegistersOnlyCompleteSuppliedGeneratedHandlers(t *t
 
 	for _, path := range []string{
 		tammyv1connect.SystemServiceGetDiagnosticsProcedure,
+		tammyv1connect.ReportingCapabilityServiceGetReportingCapabilityProcedure,
 		tammyv1connect.IdentityServiceGetSessionProcedure,
 		tammyv1connect.AuditServiceVerifyChainProcedure,
 	} {
 		assertHTTPStatusNot(t, server.Client(), server.URL+path, http.StatusNotFound)
 	}
+	assertReportingCapability(t, tammyv1connect.NewReportingCapabilityServiceClient(server.Client(), server.URL), "workspace-composition-test")
 	for _, path := range []string{
 		tammyv1connect.WorkspaceServiceGetWorkspaceStateProcedure,
 		tammyv1connect.OrganisationServiceGetOrganisationProcedure,
@@ -92,6 +95,30 @@ func TestWorkspaceCompositionRegistersOnlyCompleteSuppliedGeneratedHandlers(t *t
 	}
 	if err := composition.Close(); err != nil || closer.calls != 1 {
 		t.Fatalf("second Close() = %v, calls=%d", err, closer.calls)
+	}
+}
+
+func assertReportingCapability(t *testing.T, client tammyv1connect.ReportingCapabilityServiceClient, appVersion string) {
+	t.Helper()
+	request := connect.NewRequest(&tammyv1.GetReportingCapabilityRequest{
+		Report:     tammyv1.ReportKind_REPORT_KIND_GST_WORKPAPER,
+		TaxYear:    2024,
+		EntityType: tammyv1.ReportingEntityType_REPORTING_ENTITY_TYPE_AU_BUSINESS,
+	})
+	response, err := client.GetReportingCapability(context.Background(), request)
+	if err != nil {
+		t.Fatalf("GetReportingCapability() error = %v", err)
+	}
+	capability := response.Msg.GetCapability()
+	if capability == nil ||
+		capability.GetReport() != request.Msg.GetReport() ||
+		capability.GetTaxYear() != request.Msg.GetTaxYear() ||
+		capability.GetEntityType() != request.Msg.GetEntityType() ||
+		capability.GetStatus() != tammyv1.ReportingCapabilityStatus_REPORTING_CAPABILITY_STATUS_AVAILABLE ||
+		capability.GetAppVersion() != appVersion {
+		t.Fatalf("GetReportingCapability() = %#v; want key=%v/%v/%d status=%v app_version=%q",
+			capability, request.Msg.GetReport(), request.Msg.GetEntityType(), request.Msg.GetTaxYear(),
+			tammyv1.ReportingCapabilityStatus_REPORTING_CAPABILITY_STATUS_AVAILABLE, appVersion)
 	}
 }
 

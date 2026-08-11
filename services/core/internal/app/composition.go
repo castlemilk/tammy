@@ -9,6 +9,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/tammyapp/tammy/services/core/internal/buildinfo"
 	tammyv1connect "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1/tammyv1connect"
+	"github.com/tammyapp/tammy/services/core/internal/reportingcapability"
 	"github.com/tammyapp/tammy/services/core/internal/system"
 	"github.com/tammyapp/tammy/services/core/internal/transport"
 )
@@ -45,13 +46,16 @@ type Composition struct {
 }
 
 // NewBootComposition constructs the pre-workspace process surface. It exposes
-// diagnostics only; workspace-scoped and future service prefixes remain
-// absent rather than using permissive placeholders.
+// build-scoped diagnostics and reporting capabilities; workspace-scoped and
+// future service prefixes remain absent rather than using permissive placeholders.
 func NewBootComposition(info buildinfo.Info) (*Composition, error) {
 	if !validBuildInfo(info) {
 		return nil, ErrComposition
 	}
-	return newComposition([]transport.GeneratedHandlerFactory{systemHandlerFactory(info)}, nil)
+	return newComposition([]transport.GeneratedHandlerFactory{
+		systemHandlerFactory(info),
+		reportingCapabilityHandlerFactory(info),
+	}, nil)
 }
 
 // NewWorkspaceComposition assembles the complete handlers supplied by the
@@ -70,6 +74,7 @@ func NewWorkspaceComposition(config WorkspaceCompositionConfig) (*Composition, e
 	}
 	factories := []transport.GeneratedHandlerFactory{
 		systemHandlerFactory(config.Info),
+		reportingCapabilityHandlerFactory(config.Info),
 		func(options ...connect.HandlerOption) (string, http.Handler) {
 			return tammyv1connect.NewIdentityServiceHandler(config.Identity, options...)
 		},
@@ -92,6 +97,20 @@ func systemHandlerFactory(info buildinfo.Info) transport.GeneratedHandlerFactory
 	service := system.NewService(info)
 	return func(options ...connect.HandlerOption) (string, http.Handler) {
 		return tammyv1connect.NewSystemServiceHandler(service, options...)
+	}
+}
+
+func reportingCapabilityHandlerFactory(info buildinfo.Info) transport.GeneratedHandlerFactory {
+	registry, err := reportingcapability.NewRegistry(info.Version)
+	if err != nil {
+		return nil
+	}
+	service, err := reportingcapability.NewService(registry)
+	if err != nil {
+		return nil
+	}
+	return func(options ...connect.HandlerOption) (string, http.Handler) {
+		return tammyv1connect.NewReportingCapabilityServiceHandler(service, options...)
 	}
 }
 
