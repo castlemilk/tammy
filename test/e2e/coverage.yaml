@@ -3,8 +3,8 @@ scenarios:
   E2E-00:
     cases:
       - foundation/offline-ready
-    futureCases:
       - reporting/capability-registry
+    futureCases:
       - slice-1/foundation-contracts
       - walkthrough/blank-overview
       - walkthrough/demo-overview
@@ -60,10 +60,9 @@ rpcs:
     list: not_applicable_pre_workspace_system_query
     idempotency: not_applicable_pre_workspace_system_query
   tammy.v1.ReportingCapabilityService.GetReportingCapability:
-    stage: declared_future
+    stage: production
     preload: getReportingCapability
-    cases: []
-    futureCases:
+    cases:
       - reporting/capability-registry
     projections:
       - reporting_capability

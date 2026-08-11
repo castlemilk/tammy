@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-
-import { DESKTOP_PRELOAD_METHODS, SYSTEM_DIAGNOSTICS_CHANNEL } from "../shared/desktop-api";
+import {
+  DESKTOP_PRELOAD_METHODS,
+  REPORTING_CAPABILITY_CHANNEL,
+  SYSTEM_DIAGNOSTICS_CHANNEL,
+} from "../shared/desktop-api";
 import { DIAGNOSTICS_PRELOAD_METHOD, registerDiagnosticsIpc } from "./ipc";
 import { ATTENTION_SUMMARY_CHANNEL, type DesktopRpcRouter } from "./rpc-router";
 
@@ -99,6 +102,7 @@ describe("registerDiagnosticsIpc", () => {
       "saveDocumentReview",
       "createBasDraft",
       "getCurrentBasDraft",
+      "getReportingCapability",
       "getAttentionSummary",
     ]);
     expect(DIAGNOSTICS_PRELOAD_METHOD).toBe(DESKTOP_PRELOAD_METHODS[0]);
@@ -310,6 +314,28 @@ describe("registerDesktopIpc", () => {
     ).resolves.toEqual(response);
     expect(router.invoke).toHaveBeenCalledExactlyOnceWith(ATTENTION_SUMMARY_CHANNEL, frame);
   });
+
+  it("registers the reporting capability channel and forwards one copied frame", async () => {
+    const harness = createHarness();
+    const frame = Uint8Array.of(1, 2, 3);
+    const response = Uint8Array.of(4, 5, 6);
+    const router: DesktopRpcRouter = { invoke: vi.fn(async () => response) };
+    const { registerDesktopIpc } = await import("./ipc");
+    registerDesktopIpc({
+      applicationUrl: harness.applicationUrl,
+      getSystemDiagnostics: harness.getSystemDiagnostics,
+      ipcMain: harness.ipcMain,
+      mainWindow: harness.mainWindow,
+      router,
+    });
+
+    const handler = harness.handlers.get(REPORTING_CAPABILITY_CHANNEL);
+    await expect(
+      handler?.({ sender: harness.webContents, senderFrame: harness.mainFrame }, frame),
+    ).resolves.toEqual(response);
+    expect(router.invoke).toHaveBeenCalledExactlyOnceWith(REPORTING_CAPABILITY_CHANNEL, frame);
+    expect(vi.mocked(router.invoke).mock.calls[0]?.[1]).not.toBe(frame);
+  });
 });
 
 describe("preload desktop bridge", () => {
@@ -364,6 +390,7 @@ describe("preload desktop bridge", () => {
       "saveDocumentReview",
       "createBasDraft",
       "getCurrentBasDraft",
+      "getReportingCapability",
       "getAttentionSummary",
     ]);
     expect(Object.isFrozen(api)).toBe(true);

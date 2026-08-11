@@ -12,6 +12,13 @@ import {
   OverviewService,
 } from "@tammy/connect-client/tammy/v1/overview_pb.js";
 import {
+  GetReportingCapabilityRequestSchema,
+  ReportingCapabilityService,
+  ReportingCapabilityStatus,
+  ReportingEntityType,
+  ReportKind,
+} from "@tammy/connect-client/tammy/v1/reporting_capability_pb.js";
+import {
   GetDiagnosticsRequestSchema,
   GetDiagnosticsResponseSchema,
   RuntimeMode,
@@ -86,6 +93,22 @@ function fakeTransport(
               };
             },
           });
+          router.service(ReportingCapabilityService, {
+            getReportingCapability: (request, context) => {
+              methods.push(context.method);
+              receivedHeaders.push(new Headers(context.requestHeader));
+              return {
+                capability: {
+                  report: request.report,
+                  taxYear: request.taxYear,
+                  entityType: request.entityType,
+                  status: ReportingCapabilityStatus.AVAILABLE,
+                  appVersion: "test-core",
+                  summary: "Tammy supports a local reviewed-document GST workpaper only.",
+                },
+              };
+            },
+          });
         },
         {
           transport: {
@@ -156,6 +179,28 @@ describe("createCoreClient", () => {
     expect(response.$typeName).toBe("tammy.v1.GetAttentionSummaryResponse");
     expect(response.documentsNeedingReview).toBe(3);
     expect(methods).toEqual([OverviewService.method.getAttentionSummary]);
+    expect(receivedHeaders[0]?.get("X-Tammy-Capability")).toBe(CAPABILITY);
+  });
+
+  it("calls the generated reporting capability method before workspace setup", async () => {
+    const { factory, methods, receivedHeaders } = fakeTransport();
+    const client = createCoreClient(READINESS, factory);
+    const request = create(GetReportingCapabilityRequestSchema, {
+      report: ReportKind.GST_WORKPAPER,
+      taxYear: 2024,
+      entityType: ReportingEntityType.AU_BUSINESS,
+    });
+
+    const response = await client.getReportingCapability(request);
+
+    expect(response.capability).toMatchObject({
+      report: ReportKind.GST_WORKPAPER,
+      taxYear: 2024,
+      entityType: ReportingEntityType.AU_BUSINESS,
+      status: ReportingCapabilityStatus.AVAILABLE,
+      appVersion: "test-core",
+    });
+    expect(methods).toEqual([ReportingCapabilityService.method.getReportingCapability]);
     expect(receivedHeaders[0]?.get("X-Tammy-Capability")).toBe(CAPABILITY);
   });
 

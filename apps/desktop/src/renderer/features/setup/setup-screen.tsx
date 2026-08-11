@@ -17,6 +17,10 @@ import {
   GstReportingFrequency,
 } from "@tammy/connect-client/tammy/v1/organisation_pb.js";
 import {
+  ReportingEntityType,
+  ReportKind,
+} from "@tammy/connect-client/tammy/v1/reporting_capability_pb.js";
+import {
   ConfirmRecoveryRequestSchema,
   ConfirmRecoveryResponseSchema,
   CreateWorkspaceRequestSchema,
@@ -29,6 +33,7 @@ import { type FormEvent, useState } from "react";
 import type { TammyDesktopAPI } from "../../../shared/desktop-api";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import { Button } from "../../components/ui/button";
+import { ReportingCapabilityNotice } from "../reporting/reporting-capability-notice";
 
 const createCodec = createProtoMethodCodec({
   input: CreateWorkspaceRequestSchema,
@@ -65,7 +70,11 @@ export interface AuthenticatedWorkspace {
 interface SetupScreenProps {
   readonly api: Pick<
     TammyDesktopAPI,
-    "confirmRecovery" | "createOrganisation" | "createWorkspace" | "signIn"
+    | "confirmRecovery"
+    | "createOrganisation"
+    | "createWorkspace"
+    | "getReportingCapability"
+    | "signIn"
   >;
   readonly onAuthenticated: (workspace: AuthenticatedWorkspace) => void;
   readonly onPrivacy?: () => void;
@@ -244,6 +253,16 @@ export function SetupScreen({ api, onAuthenticated, onPrivacy }: SetupScreenProp
                 : "Your accounting data stays encrypted on this device."}
             </p>
           </div>
+        </div>
+
+        <div className="mb-5">
+          <ReportingCapabilityNotice
+            api={api}
+            entityType={ReportingEntityType.AU_BUSINESS}
+            fallbackCopy="Tammy does not prepare, declare, or lodge a complete BAS."
+            report={ReportKind.GST_WORKPAPER}
+            taxYear={2024}
+          />
         </div>
 
         {pending ? (

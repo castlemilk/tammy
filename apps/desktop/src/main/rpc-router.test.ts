@@ -4,17 +4,29 @@ import {
   ListAccountsResponseSchema,
 } from "@tammy/connect-client/tammy/v1/accounting_pb.js";
 import {
-  GetAttentionSummaryRequestSchema,
-  GetAttentionSummaryResponseSchema,
-} from "@tammy/connect-client/tammy/v1/overview_pb.js";
-import {
   CreateOrganisationRequestSchema,
   CreateOrganisationResponseSchema,
   OrganisationSchema,
 } from "@tammy/connect-client/tammy/v1/organisation_pb.js";
+import {
+  GetAttentionSummaryRequestSchema,
+  GetAttentionSummaryResponseSchema,
+} from "@tammy/connect-client/tammy/v1/overview_pb.js";
+import {
+  GetReportingCapabilityRequestSchema,
+  GetReportingCapabilityResponseSchema,
+  ReportingCapabilitySchema,
+  ReportingCapabilityStatus,
+  ReportingEntityType,
+  ReportKind,
+} from "@tammy/connect-client/tammy/v1/reporting_capability_pb.js";
 import { GetDiagnosticsRequestSchema } from "@tammy/connect-client/tammy/v1/system_pb.js";
 import { describe, expect, it, vi } from "vitest";
-
+import {
+  CREATE_ORGANISATION_CHANNEL,
+  LIST_ACCOUNTS_CHANNEL,
+  REPORTING_CAPABILITY_CHANNEL,
+} from "../shared/desktop-api";
 import { createProtoMethodCodec } from "../shared/proto-ipc";
 import {
   ATTENTION_SUMMARY_CHANNEL,
@@ -22,7 +34,6 @@ import {
   type DesktopRpcClient,
   DesktopRpcRouterError,
 } from "./rpc-router";
-import { CREATE_ORGANISATION_CHANNEL, LIST_ACCOUNTS_CHANNEL } from "../shared/desktop-api";
 
 const attentionCodec = createProtoMethodCodec({
   input: GetAttentionSummaryRequestSchema,
@@ -41,6 +52,12 @@ const listAccountsCodec = createProtoMethodCodec({
   maximumRequestBytes: 16_384,
   maximumResponseBytes: 131_072,
   output: ListAccountsResponseSchema,
+});
+const reportingCapabilityCodec = createProtoMethodCodec({
+  input: GetReportingCapabilityRequestSchema,
+  maximumRequestBytes: 8_192,
+  maximumResponseBytes: 32_768,
+  output: GetReportingCapabilityResponseSchema,
 });
 
 function rpcClient(getAttentionSummary: DesktopRpcClient["getAttentionSummary"]): DesktopRpcClient {
@@ -67,6 +84,7 @@ function rpcClient(getAttentionSummary: DesktopRpcClient["getAttentionSummary"])
     saveDocumentReview: vi.fn(),
     createBasDraft: vi.fn(),
     getCurrentBasDraft: vi.fn(),
+    getReportingCapability: vi.fn(),
     getAttentionSummary,
   };
 }
@@ -83,10 +101,74 @@ describe("named desktop protobuf RPC router", () => {
       organisationId: "018f2f2a-7c1d-7a62-8d11-216b8d6ea4cb",
     });
 
-    const encoded = await router.invoke(ATTENTION_SUMMARY_CHANNEL, attentionCodec.encodeRequest(request));
+    const encoded = await router.invoke(
+      ATTENTION_SUMMARY_CHANNEL,
+      attentionCodec.encodeRequest(request),
+    );
 
     expect(getAttentionSummary).toHaveBeenCalledExactlyOnceWith(request);
     expect(attentionCodec.decodeResponse(encoded)).toEqual(response);
+  });
+
+  it("routes the exact bounded reporting capability request and response", async () => {
+    const response = create(GetReportingCapabilityResponseSchema, {
+      capability: create(ReportingCapabilitySchema, {
+        report: ReportKind.GST_WORKPAPER,
+        taxYear: 2024,
+        entityType: ReportingEntityType.AU_BUSINESS,
+        status: ReportingCapabilityStatus.AVAILABLE,
+        appVersion: "test-core",
+        summary: "Tammy supports a local reviewed-document GST workpaper only.",
+      }),
+    });
+    const getReportingCapability = vi.fn(async () => response);
+    const router = createDesktopRpcRouter({
+      ...rpcClient(vi.fn()),
+      getReportingCapability,
+    });
+    const request = create(GetReportingCapabilityRequestSchema, {
+      report: ReportKind.GST_WORKPAPER,
+      taxYear: 2024,
+      entityType: ReportingEntityType.AU_BUSINESS,
+    });
+
+    const encoded = await router.invoke(
+      REPORTING_CAPABILITY_CHANNEL,
+      reportingCapabilityCodec.encodeRequest(request),
+    );
+
+    expect(getReportingCapability).toHaveBeenCalledExactlyOnceWith(request);
+    expect(reportingCapabilityCodec.decodeResponse(encoded)).toEqual(response);
+
+    await expect(
+      router.invoke(REPORTING_CAPABILITY_CHANNEL, new Uint8Array(8_193)),
+    ).rejects.toMatchObject({ code: "INVALID_RPC_REQUEST" });
+    getReportingCapability.mockResolvedValueOnce(
+      create(GetReportingCapabilityResponseSchema, {
+        capability: create(ReportingCapabilitySchema, {
+          report: ReportKind.GST_WORKPAPER,
+          taxYear: 2024,
+          entityType: ReportingEntityType.AU_BUSINESS,
+          status: ReportingCapabilityStatus.AVAILABLE,
+          appVersion: "test-core",
+          summary: "Tammy supports a local reviewed-document GST workpaper only.",
+          limitations: ["x".repeat(32_769)],
+        }),
+      }),
+    );
+    await expect(
+      router.invoke(REPORTING_CAPABILITY_CHANNEL, reportingCapabilityCodec.encodeRequest(request)),
+    ).rejects.toMatchObject({ code: "CORE_REQUEST_FAILED" });
+    getReportingCapability.mockResolvedValueOnce(
+      new Proxy(create(GetReportingCapabilityResponseSchema), {
+        get: () => {
+          throw new Error("invalid core response");
+        },
+      }),
+    );
+    await expect(
+      router.invoke(REPORTING_CAPABILITY_CHANNEL, reportingCapabilityCodec.encodeRequest(request)),
+    ).rejects.toMatchObject({ code: "CORE_REQUEST_FAILED" });
   });
 
   it("decodes and routes the generated organisation setup command", async () => {
@@ -167,7 +249,34 @@ describe("named desktop protobuf RPC router", () => {
     const router = createDesktopRpcRouter(rpcClient(getAttentionSummary));
     const request = attentionCodec.encodeRequest(create(GetAttentionSummaryRequestSchema));
 
-    const error = await router.invoke(ATTENTION_SUMMARY_CHANNEL, request).catch((caught: unknown) => caught);
+    const error = await router
+      .invoke(ATTENTION_SUMMARY_CHANNEL, request)
+      .catch((caught: unknown) => caught);
+
+    expect(error).toMatchObject({ code: "CORE_REQUEST_FAILED", message: "CORE_REQUEST_FAILED" });
+    expect(String(error)).not.toContain("secret");
+    expect(String(error)).not.toContain("workspace.db");
+  });
+
+  it("maps reporting capability core failures to the generic desktop fault", async () => {
+    const getReportingCapability = vi.fn(async () => {
+      throw new Error("capability=secret database=/private/workspace.db");
+    });
+    const router = createDesktopRpcRouter({
+      ...rpcClient(vi.fn()),
+      getReportingCapability,
+    });
+    const request = reportingCapabilityCodec.encodeRequest(
+      create(GetReportingCapabilityRequestSchema, {
+        report: ReportKind.BAS,
+        taxYear: 2024,
+        entityType: ReportingEntityType.AU_BUSINESS,
+      }),
+    );
+
+    const error = await router
+      .invoke(REPORTING_CAPABILITY_CHANNEL, request)
+      .catch((caught: unknown) => caught);
 
     expect(error).toMatchObject({ code: "CORE_REQUEST_FAILED", message: "CORE_REQUEST_FAILED" });
     expect(String(error)).not.toContain("secret");

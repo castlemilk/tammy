@@ -175,6 +175,7 @@ function fixtureOperations(
     setup: async (state) => {
       const videoDirectory = path.join(state.rawArtifacts, "video");
       const application = await _electron.launch({
+        args: [`--user-data-dir=${path.join(state.rawArtifacts, "user-data")}`],
         artifactsDir: path.join(state.rawArtifacts, "playwright"),
         chromiumSandbox: true,
         executablePath: state.packagedLayout.appExecutable,

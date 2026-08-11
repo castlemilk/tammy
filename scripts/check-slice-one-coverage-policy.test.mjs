@@ -32,6 +32,20 @@ test("coverage declares the exact normative policy for all 68 non-system RPCs", 
   }
 });
 
+test("reporting capability is promoted only with the packaged pre-setup evidence", async () => {
+  const coverage = parseCoverageManifest(await readFile("test/e2e/coverage.yaml", "utf8"));
+  const reporting = coverage.rpcs["tammy.v1.ReportingCapabilityService.GetReportingCapability"];
+
+  assert.equal(reporting.stage, "production");
+  assert.deepEqual(reporting.cases, ["reporting/capability-registry"]);
+  assert.equal(reporting.futureCases, undefined);
+  assert.deepEqual(coverage.scenarios["E2E-00"].cases, [
+    "foundation/offline-ready",
+    "reporting/capability-registry",
+  ]);
+  assert.ok(!coverage.scenarios["E2E-00"].futureCases.includes("reporting/capability-registry"));
+});
+
 test("Slice 1 policy does not export a duplicate idempotency-mode vocabulary", async () => {
   const policyModule = await import("./slice-one-coverage-policy.mjs");
 

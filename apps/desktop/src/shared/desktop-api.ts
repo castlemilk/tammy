@@ -31,6 +31,7 @@ export const SAVE_DOCUMENT_REVIEW_CHANNEL = "tammy:documents-save-review";
 export const CREATE_BAS_DRAFT_CHANNEL = "tammy:tax-create-bas-draft";
 export const GET_CURRENT_BAS_DRAFT_CHANNEL = "tammy:tax-current-bas-draft";
 export const ATTENTION_SUMMARY_CHANNEL = "tammy:overview-attention-summary";
+export const REPORTING_CAPABILITY_CHANNEL = "tammy:reporting-get-capability";
 
 export const DESKTOP_PROTO_CHANNELS = Object.freeze([
   CREATE_WORKSPACE_CHANNEL,
@@ -55,6 +56,7 @@ export const DESKTOP_PROTO_CHANNELS = Object.freeze([
   SAVE_DOCUMENT_REVIEW_CHANNEL,
   CREATE_BAS_DRAFT_CHANNEL,
   GET_CURRENT_BAS_DRAFT_CHANNEL,
+  REPORTING_CAPABILITY_CHANNEL,
   ATTENTION_SUMMARY_CHANNEL,
 ] as const);
 
@@ -82,6 +84,7 @@ export interface TammyDesktopAPI {
   readonly saveDocumentReview: (request: Uint8Array) => Promise<Uint8Array>;
   readonly createBasDraft: (request: Uint8Array) => Promise<Uint8Array>;
   readonly getCurrentBasDraft: (request: Uint8Array) => Promise<Uint8Array>;
+  readonly getReportingCapability: (request: Uint8Array) => Promise<Uint8Array>;
   readonly getAttentionSummary: (request: Uint8Array) => Promise<Uint8Array>;
 }
 
@@ -109,6 +112,7 @@ const EXPECTED_DESKTOP_PRELOAD_METHODS = [
   "saveDocumentReview",
   "createBasDraft",
   "getCurrentBasDraft",
+  "getReportingCapability",
   "getAttentionSummary",
 ] as const satisfies readonly (keyof TammyDesktopAPI)[];
 

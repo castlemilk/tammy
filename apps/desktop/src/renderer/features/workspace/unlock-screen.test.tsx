@@ -1,5 +1,10 @@
 import { create } from "@bufbuild/protobuf";
-import { SessionSchema, SignInRequestSchema, SignInResponseSchema, UserSchema } from "@tammy/connect-client/tammy/v1/identity_pb.js";
+import {
+  SessionSchema,
+  SignInRequestSchema,
+  SignInResponseSchema,
+  UserSchema,
+} from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import {
   UnlockWorkspaceRequestSchema,
   UnlockWorkspaceResponseSchema,
@@ -80,6 +85,7 @@ it("unlocks and signs in to an existing local workspace through named protobuf m
     saveDocumentReview: vi.fn(),
     createBasDraft: vi.fn(),
     getCurrentBasDraft: vi.fn(),
+    getReportingCapability: vi.fn(),
     getAttentionSummary: vi.fn(),
     getSystemDiagnostics: vi.fn(),
   } satisfies TammyDesktopAPI;
@@ -88,15 +94,17 @@ it("unlocks and signs in to an existing local workspace through named protobuf m
 
   const organisationId = "01900f3c-7b2e-7cc4-98c4-dc0c0c073994";
   render(
-    <UnlockScreen
-      api={api}
-      onAuthenticated={onAuthenticated}
-      organisationId={organisationId}
-    />,
+    <UnlockScreen api={api} onAuthenticated={onAuthenticated} organisationId={organisationId} />,
   );
-  await user.type(screen.getByLabelText("Workspace passphrase"), "workspace-passphrase-long-enough");
+  await user.type(
+    screen.getByLabelText("Workspace passphrase"),
+    "workspace-passphrase-long-enough",
+  );
   await user.type(screen.getByLabelText("Email or username"), "admin@tammy.local");
-  await user.type(screen.getByLabelText("Administrator password"), "administrator-password-long-enough");
+  await user.type(
+    screen.getByLabelText("Administrator password"),
+    "administrator-password-long-enough",
+  );
   await user.click(screen.getByRole("button", { name: "Unlock workspace" }));
 
   await vi.waitFor(() =>

@@ -39,13 +39,23 @@ import type {
   SaveDocumentReviewResponse,
 } from "@tammy/connect-client/tammy/v1/documents_pb.js";
 import { DocumentService } from "@tammy/connect-client/tammy/v1/documents_pb.js";
+import type { SignInRequest, SignInResponse } from "@tammy/connect-client/tammy/v1/identity_pb.js";
+import { IdentityService } from "@tammy/connect-client/tammy/v1/identity_pb.js";
+import type {
+  CreateOrganisationRequest,
+  CreateOrganisationResponse,
+} from "@tammy/connect-client/tammy/v1/organisation_pb.js";
+import { OrganisationService } from "@tammy/connect-client/tammy/v1/organisation_pb.js";
 import type {
   GetAttentionSummaryRequest,
   GetAttentionSummaryResponse,
 } from "@tammy/connect-client/tammy/v1/overview_pb.js";
 import { OverviewService } from "@tammy/connect-client/tammy/v1/overview_pb.js";
-import type { SignInRequest, SignInResponse } from "@tammy/connect-client/tammy/v1/identity_pb.js";
-import { IdentityService } from "@tammy/connect-client/tammy/v1/identity_pb.js";
+import type {
+  GetReportingCapabilityRequest,
+  GetReportingCapabilityResponse,
+} from "@tammy/connect-client/tammy/v1/reporting_capability_pb.js";
+import { ReportingCapabilityService } from "@tammy/connect-client/tammy/v1/reporting_capability_pb.js";
 import { RuntimeMode, SystemService } from "@tammy/connect-client/tammy/v1/system_pb.js";
 import type {
   CreateBasDraftRequest,
@@ -54,11 +64,6 @@ import type {
   GetCurrentBasDraftResponse,
 } from "@tammy/connect-client/tammy/v1/tax_pb.js";
 import { TaxService } from "@tammy/connect-client/tammy/v1/tax_pb.js";
-import type {
-  CreateOrganisationRequest,
-  CreateOrganisationResponse,
-} from "@tammy/connect-client/tammy/v1/organisation_pb.js";
-import { OrganisationService } from "@tammy/connect-client/tammy/v1/organisation_pb.js";
 import type {
   ConfirmRecoveryRequest,
   ConfirmRecoveryResponse,
@@ -86,14 +91,22 @@ export interface CoreClient {
   ) => Promise<PostManualJournalResponse>;
   readonly listJournals: (request: ListJournalsRequest) => Promise<ListJournalsResponse>;
   readonly getJournal: (request: GetJournalRequest) => Promise<GetJournalResponse>;
-  readonly getTrialBalance: (
-    request: GetTrialBalanceRequest,
-  ) => Promise<GetTrialBalanceResponse>;
-  readonly importBankStatement: (request: ImportBankStatementRequest) => Promise<ImportBankStatementResponse>;
-  readonly listBankStatementLines: (request: ListBankStatementLinesRequest) => Promise<ListBankStatementLinesResponse>;
-  readonly matchBankStatementLine: (request: MatchBankStatementLineRequest) => Promise<MatchBankStatementLineResponse>;
-  readonly completeBankReconciliation: (request: CompleteBankReconciliationRequest) => Promise<CompleteBankReconciliationResponse>;
-  readonly getBankingSummary: (request: GetBankingSummaryRequest) => Promise<GetBankingSummaryResponse>;
+  readonly getTrialBalance: (request: GetTrialBalanceRequest) => Promise<GetTrialBalanceResponse>;
+  readonly importBankStatement: (
+    request: ImportBankStatementRequest,
+  ) => Promise<ImportBankStatementResponse>;
+  readonly listBankStatementLines: (
+    request: ListBankStatementLinesRequest,
+  ) => Promise<ListBankStatementLinesResponse>;
+  readonly matchBankStatementLine: (
+    request: MatchBankStatementLineRequest,
+  ) => Promise<MatchBankStatementLineResponse>;
+  readonly completeBankReconciliation: (
+    request: CompleteBankReconciliationRequest,
+  ) => Promise<CompleteBankReconciliationResponse>;
+  readonly getBankingSummary: (
+    request: GetBankingSummaryRequest,
+  ) => Promise<GetBankingSummaryResponse>;
   readonly ingestDocument: (request: IngestDocumentRequest) => Promise<IngestDocumentResponse>;
   readonly listDocuments: (request: ListDocumentsRequest) => Promise<ListDocumentsResponse>;
   readonly getDocument: (request: GetDocumentRequest) => Promise<GetDocumentResponse>;
@@ -101,7 +114,9 @@ export interface CoreClient {
     request: SaveDocumentReviewRequest,
   ) => Promise<SaveDocumentReviewResponse>;
   readonly createBasDraft: (request: CreateBasDraftRequest) => Promise<CreateBasDraftResponse>;
-  readonly getCurrentBasDraft: (request: GetCurrentBasDraftRequest) => Promise<GetCurrentBasDraftResponse>;
+  readonly getCurrentBasDraft: (
+    request: GetCurrentBasDraftRequest,
+  ) => Promise<GetCurrentBasDraftResponse>;
   readonly createWorkspace: (request: CreateWorkspaceRequest) => Promise<CreateWorkspaceResponse>;
   readonly confirmRecovery: (request: ConfirmRecoveryRequest) => Promise<ConfirmRecoveryResponse>;
   readonly unlockWorkspace: (request: UnlockWorkspaceRequest) => Promise<UnlockWorkspaceResponse>;
@@ -112,6 +127,9 @@ export interface CoreClient {
   readonly getAttentionSummary: (
     request: GetAttentionSummaryRequest,
   ) => Promise<GetAttentionSummaryResponse>;
+  readonly getReportingCapability: (
+    request: GetReportingCapabilityRequest,
+  ) => Promise<GetReportingCapabilityResponse>;
   readonly getDiagnostics: () => Promise<SystemDiagnostics>;
 }
 
@@ -161,6 +179,7 @@ export function createCoreClient(
   const bankingClient = createClient(BankingService, transport);
   const documentClient = createClient(DocumentService, transport);
   const overviewClient = createClient(OverviewService, transport);
+  const reportingCapabilityClient = createClient(ReportingCapabilityService, transport);
   const workspaceClient = createClient(WorkspaceService, transport);
   const identityClient = createClient(IdentityService, transport);
   const organisationClient = createClient(OrganisationService, transport);
@@ -223,6 +242,8 @@ export function createCoreClient(
     ): Promise<GetAttentionSummaryResponse> => {
       return coreRequest(() => overviewClient.getAttentionSummary(request));
     },
+    getReportingCapability: (request: GetReportingCapabilityRequest) =>
+      coreRequest(() => reportingCapabilityClient.getReportingCapability(request)),
     getDiagnostics: async (): Promise<SystemDiagnostics> => {
       let response: Awaited<ReturnType<typeof systemClient.getDiagnostics>>;
       try {

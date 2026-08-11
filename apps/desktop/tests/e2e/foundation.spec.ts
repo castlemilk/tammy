@@ -1,5 +1,13 @@
 import { readFileSync } from "node:fs";
-
+import { create } from "@bufbuild/protobuf";
+import {
+  GetReportingCapabilityRequestSchema,
+  GetReportingCapabilityResponseSchema,
+  ReportingCapabilityStatus,
+  ReportingEntityType,
+  ReportKind,
+} from "@tammy/connect-client/tammy/v1/reporting_capability_pb.js";
+import { createProtoMethodCodec } from "../../src/shared/proto-ipc";
 import { consumeExpectedCspViolations } from "./csp-console";
 import { expect, test } from "./fixtures";
 
@@ -11,6 +19,12 @@ const probeUrls = [
   "https://example.com/tammy-csp-probe",
   "http://example.com/tammy-csp-probe",
 ] as const;
+const reportingCodec = createProtoMethodCodec({
+  input: GetReportingCapabilityRequestSchema,
+  maximumRequestBytes: 8_192,
+  maximumResponseBytes: 32_768,
+  output: GetReportingCapabilityResponseSchema,
+});
 
 test("runs the packaged first-run journey offline and exits cleanly", async ({
   electronHarness,
@@ -30,6 +44,29 @@ test("runs the packaged first-run journey offline and exits cleanly", async ({
   await expect(page.getByLabel("ABN")).toBeVisible();
   await expect(page.getByLabel("Workspace passphrase")).toHaveAttribute("type", "password");
   await expect(page.getByLabel("Administrator password")).toHaveAttribute("type", "password");
+  await expect(
+    page.getByText("Tammy supports a local reviewed-document GST workpaper only."),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Tammy does not prepare, declare, or lodge a complete BAS."),
+  ).toBeVisible();
+
+  const gstWorkpaper = await windowReportingCapability(page, ReportKind.GST_WORKPAPER);
+  expect(gstWorkpaper.capability).toMatchObject({
+    report: ReportKind.GST_WORKPAPER,
+    taxYear: 2024,
+    entityType: ReportingEntityType.AU_BUSINESS,
+    status: ReportingCapabilityStatus.AVAILABLE,
+  });
+  expect(gstWorkpaper.capability?.appVersion).toBeTruthy();
+  const bas = await windowReportingCapability(page, ReportKind.BAS);
+  expect(bas.capability).toMatchObject({
+    report: ReportKind.BAS,
+    taxYear: 2024,
+    entityType: ReportingEntityType.AU_BUSINESS,
+    status: ReportingCapabilityStatus.UNSUPPORTED,
+  });
+  expect(bas.capability?.appVersion).toBe(gstWorkpaper.capability?.appVersion);
 
   expect(await page.evaluate(() => Object.keys(window.tammy))).toEqual(preloadMethods);
   expect(
@@ -98,4 +135,25 @@ async function windowDiagnostics(page: import("@playwright/test").Page) {
     networkRequired: diagnostics.networkRequired,
     runtimeMode: diagnostics.runtimeMode,
   };
+}
+
+async function windowReportingCapability(
+  page: import("@playwright/test").Page,
+  report: ReportKind,
+) {
+  const request = reportingCodec.encodeRequest(
+    create(GetReportingCapabilityRequestSchema, {
+      report,
+      taxYear: 2024,
+      entityType: ReportingEntityType.AU_BUSINESS,
+    }),
+  );
+  const response = await page.evaluate(
+    async (requestBytes) => {
+      const frame = await window.tammy.getReportingCapability(Uint8Array.from(requestBytes));
+      return [...frame];
+    },
+    [...request],
+  );
+  return reportingCodec.decodeResponse(Uint8Array.from(response));
 }

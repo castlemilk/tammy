@@ -98,6 +98,9 @@ function installDesktopAPI(getSystemDiagnostics: TammyDesktopAPI["getSystemDiagn
       getCurrentBasDraft: vi.fn(async () => {
         throw new Error("unavailable");
       }),
+      getReportingCapability: vi.fn(async () => {
+        throw new Error("unavailable");
+      }),
       getAttentionSummary: vi.fn(async () => {
         throw new Error("unavailable");
       }),

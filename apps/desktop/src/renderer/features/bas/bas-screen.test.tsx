@@ -1,6 +1,13 @@
 import { create } from "@bufbuild/protobuf";
 import { CivilDateSchema, MoneySchema } from "@tammy/connect-client/tammy/v1/common_pb.js";
 import {
+  GetReportingCapabilityRequestSchema,
+  GetReportingCapabilityResponseSchema,
+  ReportingCapabilitySchema,
+  ReportingCapabilityStatus,
+  ReportKind,
+} from "@tammy/connect-client/tammy/v1/reporting_capability_pb.js";
+import {
   BasSourceLineSchema,
   BasWorkpaperSchema,
   BasWorkpaperStatus,
@@ -9,7 +16,7 @@ import {
   GetCurrentBasDraftRequestSchema,
   GetCurrentBasDraftResponseSchema,
 } from "@tammy/connect-client/tammy/v1/tax_pb.js";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, it, vi } from "vitest";
 
@@ -28,6 +35,12 @@ const createCodec = createProtoMethodCodec({
   maximumRequestBytes: 16_384,
   maximumResponseBytes: 262_144,
   output: CreateBasDraftResponseSchema,
+});
+const reportingCodec = createProtoMethodCodec({
+  input: GetReportingCapabilityRequestSchema,
+  maximumRequestBytes: 8_192,
+  maximumResponseBytes: 32_768,
+  output: GetReportingCapabilityResponseSchema,
 });
 
 it("creates a local BAS draft from reviewed sources without exposing lodgement actions", async () => {
@@ -65,7 +78,30 @@ it("creates a local BAS draft from reviewed sources without exposing lodgement a
       expect(request.periodEnd).toMatchObject({ year: 2024, month: 6, day: 30 });
       return createCodec.encodeResponse(create(CreateBasDraftResponseSchema, { workpaper }));
     }),
-  } satisfies Pick<TammyDesktopAPI, "createBasDraft" | "getCurrentBasDraft">;
+    getReportingCapability: vi.fn(async (frame: Uint8Array) => {
+      const request = reportingCodec.decodeRequest(frame);
+      const available = request.report === ReportKind.GST_WORKPAPER;
+      return reportingCodec.encodeResponse(
+        create(GetReportingCapabilityResponseSchema, {
+          capability: create(ReportingCapabilitySchema, {
+            report: request.report,
+            taxYear: request.taxYear,
+            entityType: request.entityType,
+            status: available
+              ? ReportingCapabilityStatus.AVAILABLE
+              : ReportingCapabilityStatus.UNSUPPORTED,
+            appVersion: "test-core",
+            summary: available
+              ? "Tammy supports a local reviewed-document GST workpaper only."
+              : "Complete BAS preparation, declaration, and lodgement are unavailable.",
+          }),
+        }),
+      );
+    }),
+  } satisfies Pick<
+    TammyDesktopAPI,
+    "createBasDraft" | "getCurrentBasDraft" | "getReportingCapability"
+  >;
   const user = userEvent.setup();
 
   render(
@@ -80,10 +116,84 @@ it("creates a local BAS draft from reviewed sources without exposing lodgement a
     />,
   );
 
+  expect(
+    await screen.findByText("Tammy supports a local reviewed-document GST workpaper only."),
+  ).toBeTruthy();
+  expect(
+    screen.getByText("Complete BAS preparation, declaration, and lodgement are unavailable."),
+  ).toBeTruthy();
+  expect(api.getReportingCapability).toHaveBeenCalledTimes(2);
+
   await user.click(await screen.findByRole("button", { name: "Create local draft" }));
   expect(await screen.findByText("Draft — not lodged", { selector: "p" })).toBeTruthy();
   expect(screen.getByText("Officeworks Ltd")).toBeTruthy();
   expect(screen.getByRole("cell", { name: "$29.00" })).toBeTruthy();
   expect(screen.queryByRole("button", { name: /lodge|submit|declare/i })).toBeNull();
+  expect(screen.getByText(/no lodge, submit or declaration control/i)).toBeTruthy();
   expect(api.createBasDraft).toHaveBeenCalledOnce();
+});
+
+it("queries the selected AU tax year and blocks an unavailable workpaper year", async () => {
+  const api = {
+    getCurrentBasDraft: vi.fn(async () =>
+      getCodec.encodeResponse(create(GetCurrentBasDraftResponseSchema)),
+    ),
+    createBasDraft: vi.fn(),
+    getReportingCapability: vi.fn(async (frame: Uint8Array) => {
+      const request = reportingCodec.decodeRequest(frame);
+      const available = request.report === ReportKind.GST_WORKPAPER && request.taxYear === 2024;
+      return reportingCodec.encodeResponse(
+        create(GetReportingCapabilityResponseSchema, {
+          capability: create(ReportingCapabilitySchema, {
+            report: request.report,
+            taxYear: request.taxYear,
+            entityType: request.entityType,
+            status: available
+              ? ReportingCapabilityStatus.AVAILABLE
+              : ReportingCapabilityStatus.UNSUPPORTED,
+            appVersion: "test-core",
+            summary: available
+              ? "Tammy supports a local reviewed-document GST workpaper only."
+              : `Reporting is unavailable for tax year ${request.taxYear}.`,
+          }),
+        }),
+      );
+    }),
+  } satisfies Pick<
+    TammyDesktopAPI,
+    "createBasDraft" | "getCurrentBasDraft" | "getReportingCapability"
+  >;
+  const user = userEvent.setup();
+
+  render(
+    <BasScreen
+      api={api}
+      workspace={{
+        workspaceId: "018f0000-0000-7000-8000-000000000001",
+        userId: "018f0000-0000-7000-8000-000000000002",
+        sessionId: "018f0000-0000-7000-8000-000000000003",
+        organisationId: "018f0000-0000-7000-8000-000000000004",
+      }}
+    />,
+  );
+
+  const start = screen.getByLabelText("Period start");
+  const end = screen.getByLabelText("Period end");
+  await user.clear(start);
+  await user.type(start, "2025-04-01");
+  await user.clear(end);
+  await user.type(end, "2025-06-30");
+
+  await waitFor(() => {
+    const requests = api.getReportingCapability.mock.calls.map(([frame]) =>
+      reportingCodec.decodeRequest(frame),
+    );
+    expect(requests.slice(-2).map((request) => request.taxYear)).toEqual([2025, 2025]);
+  });
+  expect(await screen.findAllByText("Unsupported in this build")).toHaveLength(2);
+  expect(screen.queryByText("Available in this build")).toBeNull();
+  const createButton = screen.getByRole("button", { name: "Create local draft" });
+  expect((createButton as HTMLButtonElement).disabled).toBe(true);
+  await user.click(createButton);
+  expect(api.createBasDraft).not.toHaveBeenCalled();
 });
