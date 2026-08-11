@@ -3,6 +3,7 @@ package reportingcapability
 import (
 	"context"
 	"errors"
+	"reflect"
 
 	"buf.build/go/protovalidate"
 	"connectrpc.com/connect"
@@ -27,7 +28,7 @@ var _ tammyv1connect.ReportingCapabilityServiceHandler = (*Service)(nil)
 
 // NewService constructs a read-only reporting capability service.
 func NewService(registry RegistryReader) (*Service, error) {
-	if registry == nil {
+	if nilInterface(registry) {
 		return nil, ErrReportingCapability
 	}
 	return &Service{registry: registry}, nil
@@ -38,13 +39,16 @@ func (service *Service) GetReportingCapability(
 	_ context.Context,
 	request *connect.Request[tammyv1.GetReportingCapabilityRequest],
 ) (*connect.Response[tammyv1.GetReportingCapabilityResponse], error) {
-	if service == nil || service.registry == nil || request == nil || request.Msg == nil ||
+	if service == nil || nilInterface(service.registry) || request == nil || request.Msg == nil ||
 		len(request.Msg.ProtoReflect().GetUnknown()) != 0 || protovalidate.Validate(request.Msg) != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, ErrReportingCapability)
 	}
 
 	capability := service.registry.Lookup(request.Msg.Report, request.Msg.EntityType, request.Msg.TaxYear)
-	if capability == nil || len(capability.ProtoReflect().GetUnknown()) != 0 {
+	if capability == nil || len(capability.ProtoReflect().GetUnknown()) != 0 ||
+		capability.GetReport() != request.Msg.GetReport() ||
+		capability.GetEntityType() != request.Msg.GetEntityType() ||
+		capability.GetTaxYear() != request.Msg.GetTaxYear() {
 		return nil, connect.NewError(connect.CodeInternal, ErrReportingCapability)
 	}
 	ownedCapability, ok := proto.Clone(capability).(*tammyv1.ReportingCapability)
@@ -57,4 +61,17 @@ func (service *Service) GetReportingCapability(
 	}
 
 	return connect.NewResponse(response), nil
+}
+
+func nilInterface(value any) bool {
+	if value == nil {
+		return true
+	}
+	reflected := reflect.ValueOf(value)
+	switch reflected.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
+		return reflected.IsNil()
+	default:
+		return false
+	}
 }

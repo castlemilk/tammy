@@ -142,8 +142,64 @@ func TestServiceRejectsInvalidRegistryResponse(t *testing.T) {
 	}
 }
 
+func TestServiceRejectsMismatchedRegistryResponse(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*tammyv1.ReportingCapability)
+	}{
+		{
+			name: "report",
+			mutate: func(capability *tammyv1.ReportingCapability) {
+				capability.Report = tammyv1.ReportKind_REPORT_KIND_BAS
+			},
+		},
+		{
+			name: "entity type",
+			mutate: func(capability *tammyv1.ReportingCapability) {
+				capability.EntityType = tammyv1.ReportingEntityType_REPORTING_ENTITY_TYPE_AU_INDIVIDUAL
+			},
+		},
+		{
+			name: "tax year",
+			mutate: func(capability *tammyv1.ReportingCapability) {
+				capability.TaxYear = 2025
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			capability := validCapability()
+			tt.mutate(capability)
+			registry := &recordingRegistry{value: capability}
+			service, err := NewService(registry)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			response, callErr := service.GetReportingCapability(
+				context.Background(),
+				connect.NewRequest(validCapabilityRequest()),
+			)
+			if response != nil || connect.CodeOf(callErr) != connect.CodeInternal {
+				t.Fatalf("GetReportingCapability() = %#v, %v; want Internal", response, callErr)
+			}
+			if registry.calls != 1 {
+				t.Fatalf("Lookup() calls = %d; want 1", registry.calls)
+			}
+		})
+	}
+}
+
 func TestNewServiceRejectsNilRegistry(t *testing.T) {
 	if service, err := NewService(nil); err == nil || service != nil {
 		t.Fatalf("NewService(nil) = %#v, %v; want rejection", service, err)
+	}
+}
+
+func TestNewServiceRejectsTypedNilRegistry(t *testing.T) {
+	var registry *recordingRegistry
+	if service, err := NewService(registry); err == nil || service != nil {
+		t.Fatalf("NewService(typed nil) = %#v, %v; want rejection", service, err)
 	}
 }
