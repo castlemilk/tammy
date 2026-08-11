@@ -40,6 +40,7 @@ Check the repository-owned Mac App Store profile with `rtk mise exec -- pnpm che
 - [Current technical state](docs/development/tech-state.md) — implemented, development-only, deferred, and external boundaries.
 - [Developer handbook](docs/development/foundation.md) — setup, commands, repository map, local data, and safe changes.
 - [Local accounting walkthrough](docs/development/local-accounting-walkthrough.md) — the current setup-to-audit journey.
+- [User journey test matrix](docs/development/user-journey-test-matrix.md) — executable coverage by renderer, local core, and packaged Electron layer.
 - [macOS App Store release runbook](docs/release/macos-app-store.md) — repository checks, signing inputs, packaging, inspection, metadata, upload, and remaining operator gates.
 - [Application documentation and release design](docs/superpowers/specs/2026-08-10-application-documentation-macos-release-design.md) — approved direction, not current release evidence.
 - [Accounting walkthrough design](docs/superpowers/specs/2026-08-09-accounting-tax-walkthrough-ui-design.md) and [implementation plan](docs/superpowers/plans/2026-08-09-accounting-tax-walkthrough-ui.md) — design intent and historical implementation detail.

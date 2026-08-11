@@ -123,6 +123,8 @@ function testRig(
     timers,
     logger: { warn: (message) => warnings.push(message) },
     sourceEnvironment: {
+      APPDATA: "C:\\Users\\test\\AppData\\Roaming",
+      HOME: "/Users/test",
       PATH: "/secret/bin",
       NODE_OPTIONS: "--require=/secret/inject.js",
       DATABASE_PASSWORD: "do-not-copy",
@@ -132,6 +134,7 @@ function testRig(
       TMP: "C:\\Tmp",
       TMPDIR: "/tmp",
       LANG: "en_AU.UTF-8",
+      USERPROFILE: "C:\\Users\\test",
     },
     readinessTimeoutMs: overrides.readinessTimeoutMs ?? 10_000,
   });
@@ -192,12 +195,15 @@ describe("CoreProcess construction and spawning", () => {
           windowsHide: true,
           stdio: ["pipe", "pipe", "pipe"],
           env: {
+            APPDATA: "C:\\Users\\test\\AppData\\Roaming",
+            HOME: "/Users/test",
             SYSTEMROOT: "C:\\Windows",
             WINDIR: "C:\\Windows",
             TEMP: "C:\\Temp",
             TMP: "C:\\Tmp",
             TMPDIR: "/tmp",
             LANG: "en_AU.UTF-8",
+            USERPROFILE: "C:\\Users\\test",
           },
         },
       ],
