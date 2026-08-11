@@ -53,12 +53,13 @@ function rpc({
   name,
   preload,
   projection,
+  projections,
   rolePolicy,
   route,
 }) {
   return {
     preload: preload ?? `${name[0].toLowerCase()}${name.slice(1)}`,
-    projections: [projection ?? coverageProjectionName(name)],
+    projections: projections ?? [projection ?? coverageProjectionName(name)],
     routes: [route],
     roles: rolePolicy,
     principalFailures: failures,
@@ -262,6 +263,20 @@ export const SLICE_ONE_RPC_POLICY = {
     rolePolicy: admin,
     mode: "persistent_command",
     failures: [...roleGuardedStalePersistent, "COMMIT_POINT_PASSED", "INVALID_STATE_TRANSITION"],
+  }),
+  "tammy.v1.WorkspaceService.RetryPreRestoreArchiveExport": rpc({
+    name: "RetryPreRestoreArchiveExport",
+    route: "/restore/evidence",
+    rolePolicy: admin,
+    mode: "persistent_command",
+    failures: [
+      ...roleGuardedStalePersistent,
+      "INVALID_STATE_TRANSITION",
+      "CURRENT_PASSWORD_INVALID",
+      "FACTOR_ASSERTION_REQUIRED",
+      "FACTOR_ASSERTION_STALE",
+      "DESTINATION_FAILURE",
+    ],
   }),
   "tammy.v1.WorkspaceService.GetPreRestoreArchiveExportJob": rpc({
     name: "GetPreRestoreArchiveExportJob",
@@ -680,6 +695,27 @@ export const SLICE_ONE_RPC_POLICY = {
     rolePolicy: accountingRead,
     mode: "query",
     failures: [...authenticated, "SOURCE_CONFLICT", "INVALID_PERIOD"],
+    list: ["empty", "populated"],
+  }),
+  "tammy.v1.OverviewService.GetAttentionSummary": rpc({
+    name: "GetAttentionSummary",
+    route: "/overview",
+    rolePolicy: accountingRead,
+    mode: "query",
+    projections: [
+      "attention_counts",
+      "typed_attention_items",
+      "financial_revision",
+      "module_revisions",
+      "reporting_period",
+    ],
+    failures: [
+      ...authenticated,
+      "INVALID_ORGANISATION",
+      "INVALID_DATE",
+      "INVALID_PERIOD",
+      "REVISION_SNAPSHOT_UNAVAILABLE",
+    ],
     list: ["empty", "populated"],
   }),
   "tammy.v1.AuditService.VerifyChain": rpc({

@@ -7,11 +7,11 @@ import { SLICE_ONE_RPC_POLICY } from "./slice-one-coverage-policy.mjs";
 const SYSTEM_RPC = "tammy.v1.SystemService.GetDiagnostics";
 const ALL_ROLES_ALLOWED = ["workspace_admin", "business_preparer", "business_lodger", "auditor"];
 
-test("Slice 1 coverage declares the exact normative policy for all 65 RPCs", async () => {
+test("coverage declares the exact normative policy for all 67 authenticated RPCs", async () => {
   const coverage = parseCoverageManifest(await readFile("test/e2e/coverage.yaml", "utf8"));
   const actualRpcNames = Object.keys(coverage.rpcs).filter((rpcName) => rpcName !== SYSTEM_RPC);
 
-  assert.equal(Object.keys(SLICE_ONE_RPC_POLICY).length, 65);
+  assert.equal(Object.keys(SLICE_ONE_RPC_POLICY).length, 67);
   assert.deepEqual(actualRpcNames.sort(), Object.keys(SLICE_ONE_RPC_POLICY).sort());
 
   for (const [rpcName, expected] of Object.entries(SLICE_ONE_RPC_POLICY)) {

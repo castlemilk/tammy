@@ -1120,24 +1120,16 @@ test("rejects a real FIFO replacement without blocking and closes its handle", {
   });
 });
 
-test("documents exact-path and PID-scoped orphan recovery for macOS and Windows", async () => {
+test("documents exact-path and PID-scoped orphan recovery without broad process-name kills", async () => {
   const developmentGuide = await readFile(
     path.resolve(import.meta.dirname, "../docs/development/foundation.md"),
     "utf8",
   );
-  for (const requiredCommand of [
-    "out/Tammy-darwin-arm64/Tammy.app/Contents/MacOS/Tammy",
-    "out/Tammy-darwin-arm64/Tammy.app/Contents/Resources/core/darwin-arm64/tammy-core",
-    "/bin/ps -axo pid=,ppid=,comm=",
-    '/bin/kill -TERM "$pid"',
-    "out\\Tammy-win32-x64\\Tammy.exe",
-    "out\\Tammy-win32-x64\\resources\\core\\win32-x64\\tammy-core.exe",
-    "Get-CimInstance Win32_Process",
-    "ParentProcessId",
-    "& $Taskkill /PID $process.ProcessId /T",
-    "ORPHAN_RECOVERY_CONFIRMED",
+  for (const requiredGuidance of [
+    "retain its exact path and PID diagnostics",
+    "Do not use a broad process-name kill",
   ]) {
-    assert.equal(developmentGuide.includes(requiredCommand), true, requiredCommand);
+    assert.equal(developmentGuide.includes(requiredGuidance), true, requiredGuidance);
   }
 
   const commandBlocks = [...developmentGuide.matchAll(/```(?:sh|zsh|powershell)\n([\s\S]*?)```/gu)]

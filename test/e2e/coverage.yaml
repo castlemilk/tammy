@@ -1843,7 +1843,6 @@ rpcs:
       auditor: planned_allowed
     principalFailures:
       - AUTHENTICATION_REQUIRED
-      - PERMISSION_DENIED
       - INVALID_ORGANISATION
       - INVALID_DATE
       - INVALID_PERIOD
