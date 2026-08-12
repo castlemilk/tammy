@@ -21,6 +21,13 @@ typedef struct tammy_online_backup_handle {
   sqlite3_backup *backup;
 } tammy_online_backup_handle;
 
+enum tammy_online_backup_start_stage {
+  TAMMY_BACKUP_OPEN_DESTINATION = 1,
+  TAMMY_BACKUP_KEY_DESTINATION = 2,
+  TAMMY_BACKUP_VERIFY_DESTINATION = 3,
+  TAMMY_BACKUP_INITIALIZE = 4
+};
+
 // The destination must already exist. Omitting SQLITE_OPEN_CREATE ensures a
 // swapped pathname cannot create or write a second file outside the retained
 // caller-owned directory handle. Identity is checked before backup_init.
@@ -30,7 +37,9 @@ static tammy_online_backup_handle *tammy_online_backup_start(
     sqlite3_uint64 expected_file_descriptor,
     const void *key,
     int key_length,
+    int *stage_out,
     int *result_out) {
+  *stage_out = TAMMY_BACKUP_OPEN_DESTINATION;
   *result_out = SQLITE_ERROR;
   tammy_online_backup_handle *handle = calloc(1, sizeof(tammy_online_backup_handle));
   if(handle == NULL) return NULL;
@@ -43,13 +52,22 @@ static tammy_online_backup_handle *tammy_online_backup_start(
     *result_out = result;
     return NULL;
   }
+  *stage_out = TAMMY_BACKUP_KEY_DESTINATION;
   result = sqlite3_key(destination, key, key_length);
-  if(result != SQLITE_OK || tammy_sqlite3_main_file_matches(destination, expected_file_descriptor) != 1) {
+  if(result != SQLITE_OK) {
     sqlite3_close_v2(destination);
     free(handle);
-    *result_out = result == SQLITE_OK ? SQLITE_MISUSE : result;
+    *result_out = result;
     return NULL;
   }
+  *stage_out = TAMMY_BACKUP_VERIFY_DESTINATION;
+  if(tammy_sqlite3_main_file_matches(destination, expected_file_descriptor) != 1) {
+    sqlite3_close_v2(destination);
+    free(handle);
+    *result_out = SQLITE_MISUSE;
+    return NULL;
+  }
+  *stage_out = TAMMY_BACKUP_INITIALIZE;
   sqlite3_backup *backup = sqlite3_backup_init(destination, "main", source, "main");
   if(backup == NULL) {
     result = sqlite3_errcode(destination);
@@ -96,6 +114,7 @@ import "C"
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"unsafe"
@@ -181,11 +200,11 @@ func (database *Database) onlineBackupTo(
 			C.tammy_backup_zero(keyValue, C.int(len(key)))
 			C.free(keyValue)
 		}()
-		var startResult C.int
+		var startResult, startStage C.int
 		handle := C.tammy_online_backup_start(source.database, pathValue, C.sqlite3_uint64(expected.Fd()), keyValue,
-			C.int(len(key)), &startResult)
+			C.int(len(key)), &startStage, &startResult)
 		if handle == nil || startResult != C.SQLITE_OK {
-			return errors.Join(ErrOnlineBackup, errOnlineBackupStart)
+			return errors.Join(ErrOnlineBackup, fmt.Errorf("%w: stage %d code %d", errOnlineBackupStart, int(startStage), int(startResult)))
 		}
 		finished := false
 		defer func() {

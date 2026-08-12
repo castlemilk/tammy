@@ -74,7 +74,7 @@ const NODE_ACTION = "actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
 const GO_ACTION = "actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16";
 const TASK_INSTALL = "go install github.com/go-task/task/v3/cmd/task@v3.52.0";
 const CONCURRENCY_GROUP = "foundation-$" + "{{ github.workflow }}-$" + "{{ github.ref }}";
-const SUBJECT_REVISION = "$" + "{{ github.sha }}";
+const SUBJECT_REVISION = "$" + "{{ github.event.pull_request.head.sha || github.sha }}";
 const WINDOWS_LLVM_AR = "$" + "{{ vars.TAMMY_WINDOWS_LLVM_AR }}";
 const WINDOWS_NMAKE = "$" + "{{ vars.TAMMY_WINDOWS_NMAKE }}";
 const WINDOWS_ARTIFACT_CONDITION = "$" + "{{ always() && steps.checkout.outcome == 'success' }}";

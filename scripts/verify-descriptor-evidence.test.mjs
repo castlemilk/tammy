@@ -269,6 +269,7 @@ test("delegates non-mutating evidence verification to ordered Linux and Windows 
     new URL("../.github/workflows/foundation-ci.yml", import.meta.url),
     "utf8",
   );
+  const attributes = await readFile(new URL("../.gitattributes", import.meta.url), "utf8");
 
   assert.equal(
     packageJson.scripts.contracts,
@@ -278,9 +279,14 @@ test("delegates non-mutating evidence verification to ordered Linux and Windows 
     packageJson.scripts["proto:descriptors:verify"],
     "node scripts/verify-descriptor-evidence.mjs",
   );
+  assert.match(attributes, /^compliance\/contracts\/descriptor-manifest\.json text eol=lf$/m);
   assert.equal((workflow.match(/run: pnpm proto:descriptors:verify/g) ?? []).length, 0);
   assert.equal(
-    (workflow.match(/TAMMY_EVIDENCE_SUBJECT_REVISION: \$\{\{ github\.sha \}\}/g) ?? []).length,
+    (
+      workflow.match(
+        /TAMMY_EVIDENCE_SUBJECT_REVISION: \$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.sha \}\}/g,
+      ) ?? []
+    ).length,
     2,
   );
   assert.doesNotMatch(workflow, /run: pnpm proto:descriptors:evidence/);
@@ -291,6 +297,6 @@ test("delegates non-mutating evidence verification to ordered Linux and Windows 
   const windowsJob = workflow.split("windows-server-x64-package-smoke:")[1];
   assert.match(
     windowsJob,
-    /TAMMY_EVIDENCE_SUBJECT_REVISION: \$\{\{ github\.sha \}\}[\s\S]*task ci:windows-smoke/,
+    /TAMMY_EVIDENCE_SUBJECT_REVISION: \$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.sha \}\}[\s\S]*task ci:windows-smoke/,
   );
 });

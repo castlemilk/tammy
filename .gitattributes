@@ -1,1 +1,2 @@
 packages/connect-client/src/gen/** whitespace=-blank-at-eof
+compliance/contracts/descriptor-manifest.json text eol=lf
