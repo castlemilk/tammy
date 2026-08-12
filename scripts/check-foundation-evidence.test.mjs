@@ -95,7 +95,10 @@ function assertSharedCiProvisioning(job, shell) {
   });
   const node = requiredStep(job, "Set up pinned Node.js");
   assert.equal(node.uses, NODE_ACTION, `${job.name}: Node action pin`);
-  assert.equal(node.with["node-version"], "24.18.0", `${job.name}: Node version`);
+  assert.deepEqual(node.with, {
+    "node-version": "24.18.0",
+    "package-manager-cache": false,
+  });
   const go = requiredStep(job, "Set up pinned Go");
   assert.equal(go.uses, GO_ACTION, `${job.name}: Go action pin`);
   assert.equal(go.with["go-version"], "1.26.4", `${job.name}: Go version`);
