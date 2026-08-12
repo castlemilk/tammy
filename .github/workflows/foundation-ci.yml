@@ -59,7 +59,7 @@ jobs:
 
       - name: Run canonical Ubuntu CI scenarios
         env:
-          TAMMY_EVIDENCE_SUBJECT_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+          TAMMY_EVIDENCE_SUBJECT_REVISION: ${{ github.sha }}
         run: |
           task ci:contracts
           task ci:linux
@@ -182,5 +182,5 @@ jobs:
       - name: Run canonical Windows Server smoke CI scenario
         shell: pwsh
         env:
-          TAMMY_EVIDENCE_SUBJECT_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+          TAMMY_EVIDENCE_SUBJECT_REVISION: ${{ github.sha }}
         run: task ci:windows-smoke
