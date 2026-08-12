@@ -1,17 +1,137 @@
 {
   "version": "au_small_business_v1",
   "accounts": [
-    {"key":"bank","id":"018f0000-0000-7000-8000-000000000101","code":"1000","name":"Business bank","type":"ASSET","normal_balance":"DEBIT","designation":"CONTROL","report_classification":"balance_sheet.cash","cash_flow_classification":"operating"},
-    {"key":"accounts_receivable","id":"018f0000-0000-7000-8000-000000000102","code":"1100","name":"Accounts receivable","type":"ASSET","normal_balance":"DEBIT","designation":"CONTROL","report_classification":"balance_sheet.receivables","cash_flow_classification":"operating"},
-    {"key":"gst_receivable_current","id":"018f0000-0000-7000-8000-000000000103","code":"1150","name":"GST receivable current","type":"ASSET","normal_balance":"DEBIT","designation":"CONTROL","report_classification":"balance_sheet.gst_current","cash_flow_classification":"operating"},
-    {"key":"gst_input_deferred","id":"018f0000-0000-7000-8000-000000000104","code":"1160","name":"GST input deferred","type":"ASSET","normal_balance":"DEBIT","designation":"CONTROL","report_classification":"balance_sheet.gst_deferred","cash_flow_classification":"operating"},
-    {"key":"gst_evidence_suspense","id":"018f0000-0000-7000-8000-000000000105","code":"1170","name":"GST evidence suspense","type":"ASSET","normal_balance":"DEBIT","designation":"CONTROL","report_classification":"balance_sheet.gst_evidence","cash_flow_classification":"operating"},
-    {"key":"accounts_payable","id":"018f0000-0000-7000-8000-000000000106","code":"2000","name":"Accounts payable","type":"LIABILITY","normal_balance":"CREDIT","designation":"CONTROL","report_classification":"balance_sheet.payables","cash_flow_classification":"operating"},
-    {"key":"gst_payable_current","id":"018f0000-0000-7000-8000-000000000107","code":"2100","name":"GST payable current","type":"LIABILITY","normal_balance":"CREDIT","designation":"CONTROL","report_classification":"balance_sheet.gst_current","cash_flow_classification":"operating"},
-    {"key":"gst_output_deferred","id":"018f0000-0000-7000-8000-000000000108","code":"2110","name":"GST output deferred","type":"LIABILITY","normal_balance":"CREDIT","designation":"CONTROL","report_classification":"balance_sheet.gst_deferred","cash_flow_classification":"operating"},
-    {"key":"gst_adjustment","id":"018f0000-0000-7000-8000-000000000109","code":"2120","name":"GST adjustment control","type":"LIABILITY","normal_balance":"CREDIT","designation":"CONTROL","report_classification":"balance_sheet.gst_adjustment","cash_flow_classification":"operating"},
-    {"key":"retained_earnings","id":"018f0000-0000-7000-8000-000000000110","code":"3000","name":"Retained earnings","type":"EQUITY","normal_balance":"CREDIT","designation":"SYSTEM","report_classification":"balance_sheet.retained_earnings","cash_flow_classification":"financing"},
-    {"key":"opening_equity","id":"018f0000-0000-7000-8000-000000000111","code":"3999","name":"Opening balance equity","type":"EQUITY","normal_balance":"CREDIT","designation":"SYSTEM","report_classification":"balance_sheet.opening_equity","cash_flow_classification":"financing"},
-    {"key":"current_year_earnings","id":"018f0000-0000-7000-8000-000000000112","code":"4900","name":"Current year earnings","type":"EQUITY","normal_balance":"CREDIT","designation":"SYSTEM","report_classification":"balance_sheet.current_earnings","cash_flow_classification":"operating"}
+    {
+      "key": "bank",
+      "id": "018f0000-0000-7000-8000-000000000101",
+      "code": "1000",
+      "name": "Business bank",
+      "type": "ASSET",
+      "normal_balance": "DEBIT",
+      "designation": "CONTROL",
+      "report_classification": "balance_sheet.cash",
+      "cash_flow_classification": "operating"
+    },
+    {
+      "key": "accounts_receivable",
+      "id": "018f0000-0000-7000-8000-000000000102",
+      "code": "1100",
+      "name": "Accounts receivable",
+      "type": "ASSET",
+      "normal_balance": "DEBIT",
+      "designation": "CONTROL",
+      "report_classification": "balance_sheet.receivables",
+      "cash_flow_classification": "operating"
+    },
+    {
+      "key": "gst_receivable_current",
+      "id": "018f0000-0000-7000-8000-000000000103",
+      "code": "1150",
+      "name": "GST receivable current",
+      "type": "ASSET",
+      "normal_balance": "DEBIT",
+      "designation": "CONTROL",
+      "report_classification": "balance_sheet.gst_current",
+      "cash_flow_classification": "operating"
+    },
+    {
+      "key": "gst_input_deferred",
+      "id": "018f0000-0000-7000-8000-000000000104",
+      "code": "1160",
+      "name": "GST input deferred",
+      "type": "ASSET",
+      "normal_balance": "DEBIT",
+      "designation": "CONTROL",
+      "report_classification": "balance_sheet.gst_deferred",
+      "cash_flow_classification": "operating"
+    },
+    {
+      "key": "gst_evidence_suspense",
+      "id": "018f0000-0000-7000-8000-000000000105",
+      "code": "1170",
+      "name": "GST evidence suspense",
+      "type": "ASSET",
+      "normal_balance": "DEBIT",
+      "designation": "CONTROL",
+      "report_classification": "balance_sheet.gst_evidence",
+      "cash_flow_classification": "operating"
+    },
+    {
+      "key": "accounts_payable",
+      "id": "018f0000-0000-7000-8000-000000000106",
+      "code": "2000",
+      "name": "Accounts payable",
+      "type": "LIABILITY",
+      "normal_balance": "CREDIT",
+      "designation": "CONTROL",
+      "report_classification": "balance_sheet.payables",
+      "cash_flow_classification": "operating"
+    },
+    {
+      "key": "gst_payable_current",
+      "id": "018f0000-0000-7000-8000-000000000107",
+      "code": "2100",
+      "name": "GST payable current",
+      "type": "LIABILITY",
+      "normal_balance": "CREDIT",
+      "designation": "CONTROL",
+      "report_classification": "balance_sheet.gst_current",
+      "cash_flow_classification": "operating"
+    },
+    {
+      "key": "gst_output_deferred",
+      "id": "018f0000-0000-7000-8000-000000000108",
+      "code": "2110",
+      "name": "GST output deferred",
+      "type": "LIABILITY",
+      "normal_balance": "CREDIT",
+      "designation": "CONTROL",
+      "report_classification": "balance_sheet.gst_deferred",
+      "cash_flow_classification": "operating"
+    },
+    {
+      "key": "gst_adjustment",
+      "id": "018f0000-0000-7000-8000-000000000109",
+      "code": "2120",
+      "name": "GST adjustment control",
+      "type": "LIABILITY",
+      "normal_balance": "CREDIT",
+      "designation": "CONTROL",
+      "report_classification": "balance_sheet.gst_adjustment",
+      "cash_flow_classification": "operating"
+    },
+    {
+      "key": "retained_earnings",
+      "id": "018f0000-0000-7000-8000-000000000110",
+      "code": "3000",
+      "name": "Retained earnings",
+      "type": "EQUITY",
+      "normal_balance": "CREDIT",
+      "designation": "SYSTEM",
+      "report_classification": "balance_sheet.retained_earnings",
+      "cash_flow_classification": "financing"
+    },
+    {
+      "key": "opening_equity",
+      "id": "018f0000-0000-7000-8000-000000000111",
+      "code": "3999",
+      "name": "Opening balance equity",
+      "type": "EQUITY",
+      "normal_balance": "CREDIT",
+      "designation": "SYSTEM",
+      "report_classification": "balance_sheet.opening_equity",
+      "cash_flow_classification": "financing"
+    },
+    {
+      "key": "current_year_earnings",
+      "id": "018f0000-0000-7000-8000-000000000112",
+      "code": "4900",
+      "name": "Current year earnings",
+      "type": "EQUITY",
+      "normal_balance": "CREDIT",
+      "designation": "SYSTEM",
+      "report_classification": "balance_sheet.current_earnings",
+      "cash_flow_classification": "operating"
+    }
   ]
 }

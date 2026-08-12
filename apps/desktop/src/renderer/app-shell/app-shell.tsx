@@ -17,7 +17,11 @@ export function AppShell({ activePath, children, onNavigate }: AppShellProps) {
           <span className="font-serif text-[15px] font-bold tracking-[-0.02em] text-forest max-[900px]:sr-only">
             Tammy
           </span>
-          <Menu aria-hidden="true" className="size-[14px] text-muted-foreground" strokeWidth={1.8} />
+          <Menu
+            aria-hidden="true"
+            className="size-[14px] text-muted-foreground"
+            strokeWidth={1.8}
+          />
         </div>
         <Navigation activePath={activePath} onNavigate={onNavigate} />
       </aside>

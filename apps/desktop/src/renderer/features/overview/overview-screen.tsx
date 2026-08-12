@@ -2,8 +2,8 @@ import { create } from "@bufbuild/protobuf";
 import { CivilDateSchema } from "@tammy/connect-client/tammy/v1/common_pb.js";
 import {
   BasAttentionStatus,
-  type GetAttentionSummaryResponse,
   GetAttentionSummaryRequestSchema,
+  type GetAttentionSummaryResponse,
   GetAttentionSummaryResponseSchema,
   ReportingPeriodSchema,
 } from "@tammy/connect-client/tammy/v1/overview_pb.js";
@@ -34,7 +34,9 @@ type SummaryState =
 
 export function OverviewScreen({ api, now, workspace }: OverviewScreenProps) {
   const instant = now ?? new Date();
-  const asOfKey = `${instant.getFullYear()}-${instant.getMonth() + 1}-${instant.getDate()}`;
+  const year = instant.getFullYear();
+  const month = instant.getMonth();
+  const day = instant.getDate();
   const [summary, setSummary] = useState<SummaryState>(
     api && workspace ? { status: "loading" } : { status: "unavailable" },
   );
@@ -45,7 +47,7 @@ export function OverviewScreen({ api, now, workspace }: OverviewScreenProps) {
       return;
     }
     let active = true;
-    const request = attentionRequest(workspace, instant);
+    const request = attentionRequest(workspace, new Date(year, month, day));
     setSummary({ status: "loading" });
     void api
       .getAttentionSummary(attentionCodec.encodeRequest(request))
@@ -59,7 +61,7 @@ export function OverviewScreen({ api, now, workspace }: OverviewScreenProps) {
     return () => {
       active = false;
     };
-  }, [api, asOfKey, workspace]);
+  }, [api, day, month, workspace, year]);
 
   const cards = attentionCards(summary);
   return (
@@ -82,7 +84,9 @@ export function OverviewScreen({ api, now, workspace }: OverviewScreenProps) {
                 </span>
                 <div className="min-w-0">
                   <h2 className="text-[10px] font-semibold text-foreground">{card.label}</h2>
-                  <p className="mt-0.5 text-[17px] font-semibold leading-5 text-foreground">{card.value}</p>
+                  <p className="mt-0.5 text-[17px] font-semibold leading-5 text-foreground">
+                    {card.value}
+                  </p>
                   <p className="mt-1 text-[9px] leading-4 text-muted-foreground">{card.detail}</p>
                 </div>
               </div>
@@ -98,7 +102,10 @@ export function OverviewScreen({ api, now, workspace }: OverviewScreenProps) {
         {summary.status === "ready" && summary.value.attentionItems.length > 0 ? (
           <ul className="divide-y divide-border">
             {summary.value.attentionItems.map((item) => (
-              <li className="px-3 py-2.5 text-[10px] text-foreground" key={`${item.kind}-${item.resource?.id ?? item.label}`}>
+              <li
+                className="px-3 py-2.5 text-[10px] text-foreground"
+                key={`${item.kind}-${item.resource?.id ?? item.label}`}
+              >
                 {item.label}
               </li>
             ))}
@@ -107,7 +114,10 @@ export function OverviewScreen({ api, now, workspace }: OverviewScreenProps) {
           <div className="grid min-h-36 place-items-center px-5 py-8 text-center">
             <div>
               {summary.status === "loading" ? (
-                <LoaderCircle aria-hidden="true" className="mx-auto size-4 animate-spin text-forest" />
+                <LoaderCircle
+                  aria-hidden="true"
+                  className="mx-auto size-4 animate-spin text-forest"
+                />
               ) : null}
               <p className="mt-2 text-[11px] font-semibold text-foreground">
                 {summary.status === "unavailable" ? "Overview unavailable" : "Nothing needs review"}

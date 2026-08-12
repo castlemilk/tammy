@@ -10,7 +10,10 @@ import {
   ListAccountsResponseSchema,
   NormalBalance,
 } from "@tammy/connect-client/tammy/v1/accounting_pb.js";
-import { CommandContextSchema, PageRequestSchema } from "@tammy/connect-client/tammy/v1/common_pb.js";
+import {
+  CommandContextSchema,
+  PageRequestSchema,
+} from "@tammy/connect-client/tammy/v1/common_pb.js";
 import { LoaderCircle, Plus } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
 
@@ -55,6 +58,7 @@ export function ChartScreen({ api, workspace }: ChartScreenProps) {
   const [error, setError] = useState<string>();
 
   useEffect(() => {
+    void reload;
     if (!workspace?.organisationId) {
       setChart({ status: "unavailable" });
       return;
@@ -139,25 +143,48 @@ export function ChartScreen({ api, workspace }: ChartScreenProps) {
               {chart.accounts.length} accounts
             </p>
           ) : null}
-          <Button className="h-8 text-[10px]" onClick={() => setAdding((value) => !value)} type="button">
+          <Button
+            className="h-8 text-[10px]"
+            onClick={() => setAdding((value) => !value)}
+            type="button"
+          >
             <Plus aria-hidden="true" className="size-3" /> Add account
           </Button>
         </div>
       </div>
 
       {adding ? (
-        <form className="grid grid-cols-[120px_minmax(0,1fr)_160px_auto] gap-3 rounded-[6px] border border-border bg-surface p-3 max-[760px]:grid-cols-1" onSubmit={addAccount}>
+        <form
+          className="grid grid-cols-[120px_minmax(0,1fr)_160px_auto] gap-3 rounded-[6px] border border-border bg-surface p-3 max-[760px]:grid-cols-1"
+          onSubmit={addAccount}
+        >
           <label className="grid gap-1 text-[10px] font-medium text-foreground">
             Code
-            <input className={fieldClassName()} maxLength={32} onChange={(event) => setCode(event.target.value.toUpperCase())} required value={code} />
+            <input
+              className={fieldClassName()}
+              maxLength={32}
+              onChange={(event) => setCode(event.target.value.toUpperCase())}
+              required
+              value={code}
+            />
           </label>
           <label className="grid gap-1 text-[10px] font-medium text-foreground">
             Account name
-            <input className={fieldClassName()} maxLength={160} onChange={(event) => setName(event.target.value)} required value={name} />
+            <input
+              className={fieldClassName()}
+              maxLength={160}
+              onChange={(event) => setName(event.target.value)}
+              required
+              value={name}
+            />
           </label>
           <label className="grid gap-1 text-[10px] font-medium text-foreground">
             Type
-            <select className={fieldClassName()} onChange={(event) => setType(Number(event.target.value) as AccountType)} value={type}>
+            <select
+              className={fieldClassName()}
+              onChange={(event) => setType(Number(event.target.value) as AccountType)}
+              value={type}
+            >
               <option value={AccountType.ASSET}>Asset</option>
               <option value={AccountType.LIABILITY}>Liability</option>
               <option value={AccountType.EQUITY}>Equity</option>
@@ -165,10 +192,16 @@ export function ChartScreen({ api, workspace }: ChartScreenProps) {
               <option value={AccountType.EXPENSE}>Expense</option>
             </select>
           </label>
-          <Button className="self-end" disabled={saving} type="submit">{saving ? "Saving…" : "Save account"}</Button>
+          <Button className="self-end" disabled={saving} type="submit">
+            {saving ? "Saving…" : "Save account"}
+          </Button>
         </form>
       ) : null}
-      {error ? <p className="text-[10px] text-destructive" role="alert">{error}</p> : null}
+      {error ? (
+        <p className="text-[10px] text-destructive" role="alert">
+          {error}
+        </p>
+      ) : null}
 
       <section className="overflow-hidden rounded-[6px] border border-border bg-surface">
         {chart.status === "ready" && chart.accounts.length > 0 ? (
@@ -184,9 +217,13 @@ export function ChartScreen({ api, workspace }: ChartScreenProps) {
             <tbody className="divide-y divide-border text-[10px]">
               {chart.accounts.map((account) => (
                 <tr key={account.id}>
-                  <td className="w-24 px-3 py-2.5 font-mono font-medium text-foreground">{account.code}</td>
+                  <td className="w-24 px-3 py-2.5 font-mono font-medium text-foreground">
+                    {account.code}
+                  </td>
                   <td className="px-3 py-2.5 font-medium text-foreground">{account.name}</td>
-                  <td className="px-3 py-2.5 text-muted-foreground">{accountTypeLabel(account.type)}</td>
+                  <td className="px-3 py-2.5 text-muted-foreground">
+                    {accountTypeLabel(account.type)}
+                  </td>
                   <td className="px-3 py-2.5">
                     <span className="rounded-full bg-success-soft px-2 py-1 text-[9px] font-semibold text-forest">
                       {account.status === AccountStatus.ACTIVE ? "Active" : "Archived"}
@@ -200,7 +237,10 @@ export function ChartScreen({ api, workspace }: ChartScreenProps) {
           <div className="grid min-h-64 place-items-center px-5 py-10 text-center">
             <div>
               {chart.status === "loading" ? (
-                <LoaderCircle aria-hidden="true" className="mx-auto size-4 animate-spin text-forest" />
+                <LoaderCircle
+                  aria-hidden="true"
+                  className="mx-auto size-4 animate-spin text-forest"
+                />
               ) : null}
               <p className="mt-2 text-[12px] font-semibold text-foreground">
                 {chart.status === "unavailable" ? "Chart unavailable" : "No accounts yet"}

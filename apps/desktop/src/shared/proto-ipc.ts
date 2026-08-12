@@ -19,20 +19,14 @@ export class ProtoIpcError extends Error {
   }
 }
 
-export interface ProtoMethodCodec<
-  Input extends DescMessage,
-  Output extends DescMessage,
-> {
+export interface ProtoMethodCodec<Input extends DescMessage, Output extends DescMessage> {
   decodeRequest(frame: Uint8Array): MessageShape<Input>;
   decodeResponse(frame: Uint8Array): MessageShape<Output>;
   encodeRequest(message: MessageShape<Input>): Uint8Array;
   encodeResponse(message: MessageShape<Output>): Uint8Array;
 }
 
-interface ProtoMethodCodecConfig<
-  Input extends DescMessage,
-  Output extends DescMessage,
-> {
+interface ProtoMethodCodecConfig<Input extends DescMessage, Output extends DescMessage> {
   readonly input: Input;
   readonly maximumRequestBytes: number;
   readonly maximumResponseBytes: number;
@@ -95,7 +89,8 @@ function decodeFrame<Schema extends DescMessage>(
     }
     const message = fromBinary(schema, new Uint8Array(envelope.value), { readUnknownFields: true });
     const canonicalMessage = toBinary(schema, message, { writeUnknownFields: false });
-    if (!exactBytes(envelope.value, canonicalMessage)) throw new ProtoIpcError("PROTO_FRAME_INVALID");
+    if (!exactBytes(envelope.value, canonicalMessage))
+      throw new ProtoIpcError("PROTO_FRAME_INVALID");
     return message;
   } catch (error) {
     if (error instanceof ProtoIpcError) throw error;
@@ -103,10 +98,9 @@ function decodeFrame<Schema extends DescMessage>(
   }
 }
 
-export function createProtoMethodCodec<
-  Input extends DescMessage,
-  Output extends DescMessage,
->(config: ProtoMethodCodecConfig<Input, Output>): Readonly<ProtoMethodCodec<Input, Output>> {
+export function createProtoMethodCodec<Input extends DescMessage, Output extends DescMessage>(
+  config: ProtoMethodCodecConfig<Input, Output>,
+): Readonly<ProtoMethodCodec<Input, Output>> {
   const maximumRequestBytes = checkedLimit(config.maximumRequestBytes);
   const maximumResponseBytes = checkedLimit(config.maximumResponseBytes);
   return Object.freeze({

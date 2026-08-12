@@ -22,6 +22,7 @@ export const PRIMARY_NAVIGATION = Object.freeze([
   { href: "/audit", icon: ShieldCheck, label: "Audit trail" },
   { href: "/settings", icon: Settings, label: "Settings" },
 ] as const);
+const SETTINGS_NAVIGATION = PRIMARY_NAVIGATION[8];
 
 interface NavigationProps {
   readonly activePath: string;
@@ -44,7 +45,7 @@ export function Navigation({ activePath, onNavigate }: NavigationProps) {
       <ul className="m-0 mt-auto list-none border-t border-border px-0 pb-0 pt-3">
         <NavigationItem
           activePath={activePath}
-          item={PRIMARY_NAVIGATION.at(-1)!}
+          item={SETTINGS_NAVIGATION}
           onNavigate={onNavigate}
         />
       </ul>

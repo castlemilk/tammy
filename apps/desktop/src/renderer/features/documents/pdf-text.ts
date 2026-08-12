@@ -45,9 +45,12 @@ function collectHexOperators(source: string, output: string[]): void {
 }
 
 function decodePdfLiteral(value: string): string {
-  return value.replace(/\\([0-7]{1,3}|[nrtbf()\\])/g, (_match, escape: string) => {
-    if (/^[0-7]+$/.test(escape)) return String.fromCharCode(Number.parseInt(escape, 8));
-    return ({ n: "\n", r: "\r", t: "\t", b: "\b", f: "\f" } as Record<string, string>)[escape] ?? escape;
+  return value.replace(/\\([0-7]{1,3}|[nrtbf()\\])/g, (_match, escaped: string) => {
+    if (/^[0-7]+$/.test(escaped)) return String.fromCharCode(Number.parseInt(escaped, 8));
+    return (
+      ({ n: "\n", r: "\r", t: "\t", b: "\b", f: "\f" } as Record<string, string>)[escaped] ??
+      escaped
+    );
   });
 }
 
