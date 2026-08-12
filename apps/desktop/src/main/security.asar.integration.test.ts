@@ -70,10 +70,7 @@ async function runElectron(
   environment.ELECTRON_DISABLE_SECURITY_WARNINGS = "true";
   environment.TAMMY_TEST_RENDERER_ROOT = rendererRoot;
   environment.TAMMY_TEST_SECURITY_SOURCE = SECURITY_SOURCE;
-  const platformArguments =
-    process.platform === "linux" && process.getuid?.() === 0
-      ? ["--no-sandbox", "--disable-gpu"]
-      : [];
+  const platformArguments = process.platform === "linux" ? ["--no-sandbox"] : [];
   return runHarnessProcess({
     closeConfirmationTimeoutMs: CLOSE_CONFIRMATION_TIMEOUT_MS,
     electronArguments: [

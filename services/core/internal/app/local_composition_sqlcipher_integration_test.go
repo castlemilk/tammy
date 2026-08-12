@@ -3,6 +3,7 @@
 package app
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -20,6 +21,22 @@ import (
 	"github.com/tammyapp/tammy/services/core/internal/transport"
 	"github.com/tammyapp/tammy/services/core/internal/workspace"
 )
+
+func TestLocalAttemptAnchorIDsAreScopedToOneInstallation(t *testing.T) {
+	firstMaster := bytes.Repeat([]byte{0x31}, 32)
+	secondMaster := bytes.Repeat([]byte{0x32}, 32)
+	workspaceID := localAttemptAnchorID(firstMaster, "workspace")
+
+	if workspaceID != localAttemptAnchorID(firstMaster, "workspace") {
+		t.Fatal("same installation and purpose produced different anchor IDs")
+	}
+	if workspaceID == localAttemptAnchorID(secondMaster, "workspace") {
+		t.Fatal("different installations shared an anchor ID")
+	}
+	if workspaceID == localAttemptAnchorID(firstMaster, "identity") {
+		t.Fatal("workspace and identity shared an anchor ID")
+	}
+}
 
 func TestLocalCompositionCreatesConfirmsAndAuthenticatesRealWorkspace(t *testing.T) {
 	composition, err := NewLocalComposition(LocalCompositionConfig{

@@ -4,8 +4,10 @@ package app
 
 import (
 	"context"
+	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"io"
 	"net/http"
@@ -26,6 +28,13 @@ import (
 	"github.com/tammyapp/tammy/services/core/internal/transport"
 	"github.com/tammyapp/tammy/services/core/internal/workspace"
 )
+
+func localAttemptAnchorID(master []byte, purpose string) string {
+	digest := hmac.New(sha256.New, master)
+	_, _ = digest.Write([]byte("tammy.local-attempt-anchor.v1\x00"))
+	_, _ = digest.Write([]byte(purpose))
+	return "local-" + purpose + "/" + hex.EncodeToString(digest.Sum(nil))
+}
 
 const (
 	LocalWorkspaceDirectoryCapability = "local-workspace-directory"
@@ -458,12 +467,12 @@ func NewLocalComposition(config LocalCompositionConfig) (*Composition, error) {
 		}
 	}
 	workspaceAttempts, err := workspace.NewAttemptJournal(filepath.Join(root, "workspace-attempts.journal"), deriveLocalKey(master, "workspace-attempts"), source,
-		"local-workspace", attemptAnchors)
+		localAttemptAnchorID(master, "workspace"), attemptAnchors)
 	if err != nil {
 		return nil, err
 	}
 	identityAttempts, err := workspace.NewAttemptJournal(filepath.Join(root, "identity-attempts.journal"), deriveLocalKey(master, "identity-attempts"), source,
-		"local-identity", attemptAnchors)
+		localAttemptAnchorID(master, "identity"), attemptAnchors)
 	if err != nil {
 		workspaceAttempts.Close()
 		return nil, err
