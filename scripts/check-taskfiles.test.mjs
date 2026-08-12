@@ -56,6 +56,7 @@ const rootBoundaryScript =
   'console.log("Tammy boundaries: local-first encrypted accounting; development-only BAS workpapers; no ATO submission; local packages are not production/App Store evidence; upload remains manual.")';
 const targetPreconditionScript = `const target = process.argv[1] ?? \`\${process.platform}/\${process.arch}\`; if (!new Set(["darwin/arm64", "win32/x64"]).has(target)) { console.error(\`UNSUPPORTED_SQLCIPHER_TARGET:\${target}\`); process.exit(1); }`;
 const setupTaskVersionScript = `let output=""; process.stdin.on("data", (chunk) => output += chunk); process.stdin.on("end", () => { if (output.trim() !== "3.52.0") { console.error(\`UNSUPPORTED_TASK_VERSION:\${output.trim()}\`); process.exit(1); } })`;
+const ciTaskVersionCommand = `task --version | node -e '${setupTaskVersionScript}'`;
 const macosReleaseTargetPreconditionScript = `const target = process.argv[1] ?? \`\${process.platform}/\${process.arch}\`; if (target !== "darwin/arm64") { console.error(\`UNSUPPORTED_MACOS_RELEASE_TARGET:\${target}\`); process.exit(1); }`;
 const macosReleaseTargetVariableScript = `process.stdout.write(process.platform + "/" + process.arch)`;
 const macosReleaseVerificationTargetPreconditionScript = `const target = process.argv[1] ?? \`\${process.platform}/\${process.arch}\`; if (target !== "darwin/arm64") { console.error(\`UNSUPPORTED_MACOS_RELEASE_TARGET:\${target}\`); process.exit(1); }`;
@@ -251,13 +252,6 @@ test("local Task front door preserves the safe development contract", async () =
   const dev = await readTaskfile("taskfiles/dev.yml");
   const diagnostics = await readTaskfile("taskfiles/diagnostics.yml");
   for (const taskfile of [setup, dev, diagnostics]) assert.equal(taskfile.version, "3");
-  for (const scenarioFile of ["taskfiles/ci.yml"]) {
-    assert.deepEqual(
-      await readTaskfile(scenarioFile),
-      { version: "3" },
-      `${scenarioFile} is a Task 3 stub`,
-    );
-  }
   const taskGraph = await collectTaskGraph("Taskfile.yml");
 
   const rootTasks = root.tasks ?? {};
@@ -794,20 +788,98 @@ test("local Task front door preserves the safe development contract", async () =
     }
   }
 
+  const ciTasks = (await readTaskfile("taskfiles/ci.yml")).tasks;
+  const ciBaseCommands = [
+    ciTaskVersionCommand,
+    "pnpm check:toolchain",
+    "node scripts/check-clean-tree.mjs",
+  ];
+  assert.deepEqual(Object.keys(ciTasks), [
+    "contracts",
+    "linux",
+    "macos",
+    "windows-smoke",
+    "windows11",
+  ]);
+  assert.deepEqual(shellCommands(ciTasks.contracts), [
+    ...ciBaseCommands,
+    "pnpm ci:lint",
+    "pnpm test:proto-breaking",
+    "pnpm contracts",
+    "pnpm proto:descriptors:verify",
+  ]);
+  assert.deepEqual(shellCommands(ciTasks.linux), [
+    ...ciBaseCommands,
+    "go test -race ./services/core/...",
+    "command -v xvfb-run",
+    "xvfb-run -a pnpm desktop:test",
+    "pnpm desktop:typecheck",
+    "pnpm lint",
+  ]);
+  assert.deepEqual(shellCommands(ciTasks.macos), [
+    ...ciBaseCommands,
+    "TAMMY_SQLCIPHER_REPRODUCIBILITY=1 pnpm sqlcipher:test",
+    "go test -race -tags tammy_sqlcipher ./services/core/internal/storage/sqlcipher/... -count=1",
+    "pnpm desktop:e2e",
+  ]);
+  assert.deepEqual(shellCommands(ciTasks["windows-smoke"]), [
+    ...ciBaseCommands,
+    'pwsh -NoProfile -NonInteractive -Command \'& { if ($env:EVIDENCE_CLASSIFICATION -ne "WINDOWS_SERVER_SMOKE_ONLY") { throw "WINDOWS_SERVER_EVIDENCE_CLASSIFICATION_INVALID" }; if ($env:PROCESSOR_ARCHITECTURE -ne "AMD64") { throw "WINDOWS_SERVER_SMOKE_ONLY_REQUIRES_AMD64" } }\'',
+    "pnpm test:proto-breaking",
+    "pnpm proto:descriptors:verify",
+    "pnpm desktop:test",
+    "pnpm desktop:typecheck",
+  ]);
+  const windows11Commands = shellCommands(ciTasks.windows11);
+  assert.deepEqual(windows11Commands.slice(0, 3), ciBaseCommands);
+  assert.equal(
+    windows11Commands.length,
+    4,
+    "Windows 11 native handoff must stay in one task command",
+  );
+  assert.match(windows11Commands[3], /^pwsh -NoProfile -NonInteractive -Command '& \{/);
+  for (const expression of [
+    "pnpm sqlcipher:test",
+    "pnpm sqlcipher:build",
+    'Resolve-Path ".tmp/sqlcipher/ordinary/win32-x64/ordinary-sqlite3.exe"',
+    "$env:TAMMY_ORDINARY_SQLITE3 = $probe",
+    "go test -race -tags tammy_sqlcipher ./services/core/internal/storage/sqlcipher/... -count=1",
+    "pnpm desktop:e2e",
+    'classification = "WINDOWS11_23H2_X64_RELEASE_GATE"',
+    'status = "PASSED"',
+    "run_id = $env:GITHUB_RUN_ID",
+    "run_attempt = $env:GITHUB_RUN_ATTEMPT",
+  ]) {
+    assert.match(
+      windows11Commands[3],
+      new RegExp(expression.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+    );
+  }
+  assert.equal(ciTasks.windows11.status, undefined, "CI tasks must never be cached");
+  assert.doesNotMatch(
+    Object.values(ciTasks).flatMap(shellCommands).join("\n"),
+    /\bmise(?:\s|$)/,
+    "CI tasks use Actions-provisioned tools directly",
+  );
+
   const allCommands = [];
-  for (const { task } of taskGraph.values()) {
+  for (const { namespace, task } of taskGraph.values()) {
     for (const command of shellCommands(task)) {
-      allCommands.push(command);
-      if (
-        command !== "mise install" &&
-        command !== "git diff --check" &&
-        !command.startsWith("TAMMY_MACOS_SIGNING_MODE=")
-      ) {
-        assert.match(command, /^mise exec -- /, "local commands must use pinned mise execution");
+      if (namespace !== "ci") {
+        allCommands.push(command);
+        if (
+          command !== "mise install" &&
+          command !== "git diff --check" &&
+          !command.startsWith("TAMMY_MACOS_SIGNING_MODE=")
+        ) {
+          assert.match(command, /^mise exec -- /, "local commands must use pinned mise execution");
+        }
       }
     }
-    for (const precondition of task.preconditions ?? []) {
-      if (typeof precondition?.sh === "string") allCommands.push(precondition.sh);
+    if (namespace !== "ci") {
+      for (const precondition of task.preconditions ?? []) {
+        if (typeof precondition?.sh === "string") allCommands.push(precondition.sh);
+      }
     }
     assert.equal(task.status, undefined, "Task caching is not allowed");
     assert.equal(task.sources, undefined, "Task caching is not allowed");

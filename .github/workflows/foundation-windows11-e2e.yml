@@ -83,9 +83,6 @@ jobs:
       - name: Install frozen dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Verify the pinned toolchain
-        run: pnpm check:toolchain
-
       - name: Verify the exact native SQLCipher tool paths
         shell: pwsh
         run: |
@@ -197,45 +194,22 @@ jobs:
           "INCLUDE=$include" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "LIB=$lib" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Refuse a dirty generated tree
+      - name: Install exact Task
         shell: pwsh
         run: |
-          $changes = @(git status --porcelain=v1)
-          if ($LASTEXITCODE -ne 0) {
-            throw "GIT_STATUS_FAILED"
-          }
-          if ($changes.Count -ne 0) {
-            $changes | ForEach-Object { Write-Host $_ }
-            throw "DIRTY_GENERATED_TREE"
-          }
+          go install github.com/go-task/task/v3/cmd/task@v3.52.0
+          $taskBin = Join-Path (go env GOPATH) "bin"
+          $taskBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
-      - name: Build and prove the pinned Windows SQLCipher boundary before migrations
+      - name: Verify exact Task version
         shell: pwsh
         run: |
-          pnpm sqlcipher:test
-          if ($LASTEXITCODE -ne 0) { throw "SQLCIPHER_NODE_TEST_FAILED" }
-          pnpm sqlcipher:build
-          if ($LASTEXITCODE -ne 0) { throw "SQLCIPHER_BUILD_FAILED" }
-          $probe = (Resolve-Path ".tmp/sqlcipher/ordinary/win32-x64/ordinary-sqlite3.exe").Path
-          "TAMMY_ORDINARY_SQLITE3=$probe" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          $env:TAMMY_ORDINARY_SQLITE3 = $probe
-          go test -tags tammy_sqlcipher ./services/core/internal/storage/sqlcipher/... -count=1
-          if ($LASTEXITCODE -ne 0) { throw "SQLCIPHER_GO_INTEGRATION_FAILED" }
+          $version = task --version
+          if ($LASTEXITCODE -ne 0 -or $version -ne "3.52.0") { throw "UNSUPPORTED_TASK_VERSION:$version" }
 
-      - name: Run packaged Windows 11 offline acceptance
+      - name: Run canonical Windows 11 CI scenario
         shell: pwsh
-        run: |
-          pnpm desktop:e2e
-          if ($LASTEXITCODE -ne 0) {
-            throw "WINDOWS11_PACKAGED_E2E_FAILED"
-          }
-          New-Item -ItemType Directory -Force -Path "apps/desktop/test-results" | Out-Null
-          @{
-            classification = "WINDOWS11_23H2_X64_RELEASE_GATE"
-            status = "PASSED"
-            run_id = "${{ github.run_id }}"
-            run_attempt = "${{ github.run_attempt }}"
-          } | ConvertTo-Json | Set-Content -Encoding utf8 "apps/desktop/test-results/windows11-result.json"
+        run: task ci:windows11
 
       - name: Upload Windows 11 manifest and results
         if: ${{ always() && steps.checkout.outcome == 'success' }}

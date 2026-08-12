@@ -41,44 +41,25 @@ jobs:
       - name: Install frozen dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Verify the pinned toolchain
-        run: pnpm check:toolchain
+      - name: Verify virtual display availability
+        run: command -v xvfb-run
 
-      - name: Refuse a dirty generated tree
+      - name: Install exact Task
         shell: bash
         run: |
-          changes="$(git status --porcelain=v1)"
-          if [[ -n "$changes" ]]; then
-            printf '%s\n' "$changes"
-            exit 1
-          fi
+          go install github.com/go-task/task/v3/cmd/task@v3.52.0
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
-      - name: Validate workflow definitions
-        run: pnpm ci:lint
+      - name: Verify exact Task version
+        shell: bash
+        run: test "$(task --version)" = "3.52.0"
 
-      - name: Test protobuf breaking policy
-        run: pnpm test:proto-breaking
-
-      - name: Verify descriptor-driven programme contracts
-        run: pnpm contracts
-
-      - name: Verify retained descriptor evidence
+      - name: Run canonical Ubuntu CI scenarios
         env:
           TAMMY_EVIDENCE_SUBJECT_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: pnpm proto:descriptors:verify
-
-      - name: Run Go race tests
-        run: go test -race ./services/core/...
-
-      - name: Run desktop tests with a virtual display
         run: |
-          command -v xvfb-run
-          xvfb-run -a pnpm desktop:test
-
-      - name: Verify desktop types and repository lint
-        run: |
-          pnpm desktop:typecheck
-          pnpm lint
+          task ci:contracts
+          task ci:linux
 
   macos14-arm64-packaged:
     name: macOS 14 arm64 packaged E2E
@@ -111,27 +92,18 @@ jobs:
       - name: Install frozen dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Verify the pinned toolchain
-        run: pnpm check:toolchain
-
-      - name: Refuse a dirty generated tree
+      - name: Install exact Task
         shell: bash
         run: |
-          changes="$(git status --porcelain=v1)"
-          if [[ -n "$changes" ]]; then
-            printf '%s\n' "$changes"
-            exit 1
-          fi
+          go install github.com/go-task/task/v3/cmd/task@v3.52.0
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
-      - name: Prove the pinned macOS SQLCipher boundary before migrations
-        env:
-          TAMMY_SQLCIPHER_REPRODUCIBILITY: "1"
-        run: |
-          pnpm sqlcipher:test
-          go test -race -tags tammy_sqlcipher ./services/core/internal/storage/sqlcipher/... -count=1
+      - name: Verify exact Task version
+        shell: bash
+        run: test "$(task --version)" = "3.52.0"
 
-      - name: Run packaged offline acceptance
-        run: pnpm desktop:e2e
+      - name: Run canonical macOS CI scenario
+        run: task ci:macos
 
       - name: Retain packaged failure evidence
         if: failure()
@@ -185,33 +157,21 @@ jobs:
       - name: Install frozen dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Verify the pinned toolchain
-        run: pnpm check:toolchain
-
-      - name: Test protobuf policy process safety
-        run: pnpm test:proto-breaking
-
-      - name: Refuse a dirty generated tree
+      - name: Install exact Task
         shell: pwsh
         run: |
-          $changes = @(git status --porcelain=v1)
-          if ($LASTEXITCODE -ne 0) {
-            throw "GIT_STATUS_FAILED"
-          }
-          if ($changes.Count -ne 0) {
-            $changes | ForEach-Object { Write-Host $_ }
-            throw "DIRTY_GENERATED_TREE"
-          }
+          go install github.com/go-task/task/v3/cmd/task@v3.52.0
+          $taskBin = Join-Path (go env GOPATH) "bin"
+          $taskBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
-      - name: Verify retained descriptor evidence
+      - name: Verify exact Task version
+        shell: pwsh
+        run: |
+          $version = task --version
+          if ($LASTEXITCODE -ne 0 -or $version -ne "3.52.0") { throw "UNSUPPORTED_TASK_VERSION:$version" }
+
+      - name: Run canonical Windows Server smoke CI scenario
+        shell: pwsh
         env:
           TAMMY_EVIDENCE_SUBJECT_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: pnpm proto:descriptors:verify
-
-      - name: Run non-packaged Windows desktop smoke checks
-        shell: pwsh
-        run: |
-          pnpm desktop:test
-          if ($LASTEXITCODE -ne 0) { throw "DESKTOP_TEST_FAILED" }
-          pnpm desktop:typecheck
-          if ($LASTEXITCODE -ne 0) { throw "DESKTOP_TYPECHECK_FAILED" }
+        run: task ci:windows-smoke

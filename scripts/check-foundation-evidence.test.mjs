@@ -18,6 +18,8 @@ import path from "node:path";
 import { test } from "node:test";
 import { promisify } from "node:util";
 
+import YAML from "yaml";
+
 import * as foundationEvidence from "./check-foundation-evidence.mjs";
 import {
   FOUNDATION_EVIDENCE_HEADER,
@@ -66,6 +68,263 @@ const notYetVerifiedTargetEvidence =
 
 const productBoundaryEvidence =
   "FOUNDATION_PRODUCT_BOUNDARY_STATUS FOUNDATION_ONLY; ACTIVITY_STATEMENT_IMPLEMENTATION_STATUS NOT_IMPLEMENTED; MACHINE_CREDENTIAL_IMPLEMENTATION_STATUS NOT_IMPLEMENTED; ATO_TRANSPORT_IMPLEMENTATION_STATUS NOT_IMPLEMENTED; SBR_APPROVAL_STATUS NOT_CLAIMED; LOCAL_TEST_COMMAND node --test scripts/check-foundation-evidence.test.mjs; COMPLIANCE_CHECK_COMMAND pnpm compliance:foundation; DPO_OSF_EVTE_CONFORMANCE_PVT_WHITELISTING_STATUS NOT_PRODUCED";
+
+const CHECKOUT_ACTION = "actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd";
+const NODE_ACTION = "actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444";
+const GO_ACTION = "actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16";
+const TASK_INSTALL = "go install github.com/go-task/task/v3/cmd/task@v3.52.0";
+const CONCURRENCY_GROUP = "foundation-$" + "{{ github.workflow }}-$" + "{{ github.ref }}";
+const SUBJECT_REVISION = "$" + "{{ github.event.pull_request.head.sha || github.sha }}";
+const WINDOWS_LLVM_AR = "$" + "{{ vars.TAMMY_WINDOWS_LLVM_AR }}";
+const WINDOWS_NMAKE = "$" + "{{ vars.TAMMY_WINDOWS_NMAKE }}";
+const WINDOWS_ARTIFACT_CONDITION = "$" + "{{ always() && steps.checkout.outcome == 'success' }}";
+
+function requiredStep(job, name) {
+  const matches = job.steps.filter((step) => step.name === name);
+  assert.equal(matches.length, 1, `${job.name}: ${name} must occur exactly once`);
+  return matches[0];
+}
+
+function assertSharedCiProvisioning(job, shell) {
+  const checkout = requiredStep(job, "Check out the complete comparison history");
+  assert.equal(checkout.uses, CHECKOUT_ACTION, `${job.name}: checkout pin`);
+  assert.deepEqual(checkout.with, {
+    clean: true,
+    "fetch-depth": 0,
+    "persist-credentials": false,
+  });
+  const node = requiredStep(job, "Set up pinned Node.js");
+  assert.equal(node.uses, NODE_ACTION, `${job.name}: Node action pin`);
+  assert.equal(node.with["node-version"], "24.18.0", `${job.name}: Node version`);
+  const go = requiredStep(job, "Set up pinned Go");
+  assert.equal(go.uses, GO_ACTION, `${job.name}: Go action pin`);
+  assert.equal(go.with["go-version"], "1.26.4", `${job.name}: Go version`);
+  assert.equal(
+    requiredStep(job, "Activate pinned pnpm").run,
+    "corepack prepare pnpm@11.15.0 --activate",
+  );
+  assert.equal(
+    requiredStep(job, "Install frozen dependencies").run,
+    "pnpm install --frozen-lockfile",
+  );
+  const taskInstall = requiredStep(job, "Install exact Task");
+  assert.equal(taskInstall.shell, shell, `${job.name}: Task install shell`);
+  assert.match(taskInstall.run, new RegExp(TASK_INSTALL.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  const taskVersion = requiredStep(job, "Verify exact Task version");
+  assert.equal(taskVersion.shell, shell, `${job.name}: Task version shell`);
+  if (shell === "bash") {
+    assert.match(taskInstall.run, /echo "\$\(go env GOPATH\)\/bin" >> "\$GITHUB_PATH"/);
+    assert.equal(taskVersion.run, 'test "$(task --version)" = "3.52.0"');
+    return;
+  }
+  assert.match(taskInstall.run, /Join-Path \(go env GOPATH\) "bin"[\s\S]*\$env:GITHUB_PATH/);
+  assert.match(
+    taskVersion.run,
+    /\$version = task --version[\s\S]*\$LASTEXITCODE -ne 0 -or \$version -ne "3\.52\.0"[\s\S]*UNSUPPORTED_TASK_VERSION:\$version/,
+  );
+}
+
+test("retains runner provisioning, evidence classification, and artifacts around canonical CI tasks", async () => {
+  const foundationWorkflow = await readFile(
+    new URL("../.github/workflows/foundation-ci.yml", import.meta.url),
+    "utf8",
+  );
+  const windows11Workflow = await readFile(
+    new URL("../.github/workflows/foundation-windows11-e2e.yml", import.meta.url),
+    "utf8",
+  );
+  for (const workflow of [foundationWorkflow, windows11Workflow]) {
+    assert.match(workflow, /permissions:\n {2}contents: read/);
+    assert.match(
+      workflow,
+      /concurrency:\n {2}group: foundation-\$\{\{ github\.workflow \}\}-\$\{\{ github\.ref \}\}\n {2}cancel-in-progress: true/,
+    );
+    assert.match(
+      workflow,
+      /actions\/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd[\s\S]*clean: true[\s\S]*fetch-depth: 0[\s\S]*persist-credentials: false/,
+    );
+    assert.match(
+      workflow,
+      /actions\/setup-node@a0853c24544627f65ddf259abe73b1d18a591444[\s\S]*node-version: 24\.18\.0/,
+    );
+    assert.match(
+      workflow,
+      /actions\/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16[\s\S]*go-version: 1\.26\.4/,
+    );
+    assert.match(workflow, /corepack prepare pnpm@11\.15\.0 --activate/);
+    assert.match(workflow, /pnpm install --frozen-lockfile/);
+  }
+  assert.match(foundationWorkflow, /runs-on: ubuntu-24\.04[\s\S]*timeout-minutes: 30/);
+  assert.match(foundationWorkflow, /runs-on: macos-14[\s\S]*timeout-minutes: 30/);
+  assert.match(foundationWorkflow, /runs-on: windows-2025[\s\S]*timeout-minutes: 30/);
+  assert.match(foundationWorkflow, /name: Contracts and local foundation/);
+  assert.match(foundationWorkflow, /name: macOS 14 arm64 packaged E2E/);
+  assert.match(
+    foundationWorkflow,
+    /name: WINDOWS_SERVER_SMOKE_ONLY \/ Windows Server 2025 desktop checks/,
+  );
+  assert.match(foundationWorkflow, /Assert native Apple silicon[\s\S]*uname -m.*arm64/);
+  assert.match(foundationWorkflow, /Verify virtual display availability[\s\S]*command -v xvfb-run/);
+  assert.match(
+    foundationWorkflow,
+    /EVIDENCE_CLASSIFICATION: WINDOWS_SERVER_SMOKE_ONLY[\s\S]*WINDOWS_SERVER_SMOKE_ONLY_REQUIRES_AMD64[\s\S]*WINDOWS_SERVER_EVIDENCE_CLASSIFICATION_INVALID/,
+  );
+  assert.equal(
+    (foundationWorkflow.match(/name: Verify exact Task version/g) ?? []).length,
+    3,
+    "every foundation workflow job verifies the installed Task version",
+  );
+  assert.match(
+    foundationWorkflow,
+    /go install github\.com\/go-task\/task\/v3\/cmd\/task@v3\.52\.0[\s\S]*echo "\$\(go env GOPATH\)\/bin" >> "\$GITHUB_PATH"[\s\S]*name: Verify exact Task version[\s\S]*test "\$\(task --version\)" = "3\.52\.0"/,
+  );
+  assert.match(
+    foundationWorkflow,
+    /go install github\.com\/go-task\/task\/v3\/cmd\/task@v3\.52\.0[\s\S]*Join-Path \(go env GOPATH\) "bin"[\s\S]*\$env:GITHUB_PATH[\s\S]*name: Verify exact Task version[\s\S]*\$version = task --version[\s\S]*\$LASTEXITCODE -ne 0 -or \$version -ne "3\.52\.0"[\s\S]*UNSUPPORTED_TASK_VERSION:\$version/,
+  );
+  assert.match(
+    foundationWorkflow,
+    /Run canonical Ubuntu CI scenarios[\s\S]*task ci:contracts[\s\S]*task ci:linux/,
+  );
+  assert.match(foundationWorkflow, /Run canonical macOS CI scenario[\s\S]*task ci:macos/);
+  assert.match(
+    foundationWorkflow,
+    /Run canonical Windows Server smoke CI scenario[\s\S]*task ci:windows-smoke/,
+  );
+  assert.match(
+    foundationWorkflow,
+    /Retain packaged failure evidence[\s\S]*if: failure\(\)[\s\S]*macos14-arm64-foundation-failure-evidence[\s\S]*apps\/desktop\/test-results\/\*\*[\s\S]*apps\/desktop\/resources\/build\/build-manifest\.json[\s\S]*if-no-files-found: warn[\s\S]*retention-days: 30/,
+  );
+  assert.match(
+    windows11Workflow,
+    /runs-on: \[self-hosted, windows, x64, tammy-win11-23h2\][\s\S]*timeout-minutes: 60/,
+  );
+  assert.match(windows11Workflow, /name: Windows 11 23H2 x64 packaged E2E/);
+  assert.match(
+    windows11Workflow,
+    /WINDOWS11_23H2_BUILD_REQUIRED[\s\S]*WINDOWS11_X64_REQUIRED[\s\S]*WINDOWS11_AMD64_PROCESS_REQUIRED/,
+  );
+  for (const exportName of ["TAMMY_SQLCIPHER_COMSPEC", "INCLUDE", "LIB"]) {
+    assert.match(windows11Workflow, new RegExp(`"${exportName}=`));
+  }
+  assert.match(
+    windows11Workflow,
+    /TAMMY_SQLCIPHER_AR: \$\{\{ vars\.TAMMY_WINDOWS_LLVM_AR \}\}[\s\S]*TAMMY_SQLCIPHER_NMAKE: \$\{\{ vars\.TAMMY_WINDOWS_NMAKE \}\}[\s\S]*Verify the exact native SQLCipher tool paths[\s\S]*"LIB=\$lib"[\s\S]*Run canonical Windows 11 CI scenario[\s\S]*task ci:windows11/,
+  );
+  assert.equal(
+    (windows11Workflow.match(/name: Verify exact Task version/g) ?? []).length,
+    1,
+    "the Windows 11 workflow verifies the installed Task version",
+  );
+  assert.match(
+    windows11Workflow,
+    /Upload Windows 11 manifest and results[\s\S]*if: \$\{\{ always\(\) && steps\.checkout\.outcome == 'success' \}\}[\s\S]*windows11-x64-foundation-evidence[\s\S]*apps\/desktop\/resources\/build\/build-manifest\.json[\s\S]*apps\/desktop\/test-results\/\*\*[\s\S]*if-no-files-found: error[\s\S]*retention-days: 30/,
+  );
+});
+
+test("pins provisioning and evidence ownership independently for every CI job", async () => {
+  const foundation = YAML.parse(
+    await readFile(new URL("../.github/workflows/foundation-ci.yml", import.meta.url), "utf8"),
+  );
+  const windows11 = YAML.parse(
+    await readFile(
+      new URL("../.github/workflows/foundation-windows11-e2e.yml", import.meta.url),
+      "utf8",
+    ),
+  );
+  for (const workflow of [foundation, windows11]) {
+    assert.deepEqual(workflow.permissions, { contents: "read" });
+    assert.deepEqual(workflow.concurrency, {
+      group: CONCURRENCY_GROUP,
+      "cancel-in-progress": true,
+    });
+  }
+
+  const contracts = foundation.jobs.contracts;
+  assert.equal(contracts.name, "Contracts and local foundation");
+  assert.equal(contracts["runs-on"], "ubuntu-24.04");
+  assert.equal(contracts["timeout-minutes"], 30);
+  assertSharedCiProvisioning(contracts, "bash");
+  assert.equal(
+    requiredStep(contracts, "Verify virtual display availability").run,
+    "command -v xvfb-run",
+  );
+  const ubuntuTask = requiredStep(contracts, "Run canonical Ubuntu CI scenarios");
+  assert.equal(ubuntuTask.env.TAMMY_EVIDENCE_SUBJECT_REVISION, SUBJECT_REVISION);
+  assert.equal(ubuntuTask.run, "task ci:contracts\ntask ci:linux\n");
+
+  const macos = foundation.jobs["macos14-arm64-packaged"];
+  assert.equal(macos.name, "macOS 14 arm64 packaged E2E");
+  assert.equal(macos["runs-on"], "macos-14");
+  assert.equal(macos["timeout-minutes"], 30);
+  assertSharedCiProvisioning(macos, "bash");
+  assert.equal(
+    requiredStep(macos, "Assert native Apple silicon").run,
+    'test "$(uname -m)" = "arm64"',
+  );
+  assert.equal(requiredStep(macos, "Run canonical macOS CI scenario").run, "task ci:macos");
+  const macosArtifact = requiredStep(macos, "Retain packaged failure evidence");
+  assert.equal(macosArtifact.if, "failure()");
+  assert.equal(
+    macosArtifact.uses,
+    "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+  );
+  assert.equal(macosArtifact.with.name, "macos14-arm64-foundation-failure-evidence");
+  assert.match(
+    macosArtifact.with.path,
+    /apps\/desktop\/test-results\/\*\*[\s\S]*apps\/desktop\/resources\/build\/build-manifest\.json/,
+  );
+  assert.equal(macosArtifact.with["if-no-files-found"], "warn");
+  assert.equal(macosArtifact.with["retention-days"], 30);
+
+  const smoke = foundation.jobs["windows-server-x64-package-smoke"];
+  assert.equal(smoke.name, "WINDOWS_SERVER_SMOKE_ONLY / Windows Server 2025 desktop checks");
+  assert.equal(smoke["runs-on"], "windows-2025");
+  assert.equal(smoke["timeout-minutes"], 30);
+  assert.equal(smoke.env.EVIDENCE_CLASSIFICATION, "WINDOWS_SERVER_SMOKE_ONLY");
+  assertSharedCiProvisioning(smoke, "pwsh");
+  assert.match(
+    requiredStep(smoke, "Assert the Windows Server x64 smoke target").run,
+    /WINDOWS_SERVER_SMOKE_ONLY_REQUIRES_AMD64[\s\S]*WINDOWS_SERVER_EVIDENCE_CLASSIFICATION_INVALID/,
+  );
+  const smokeTask = requiredStep(smoke, "Run canonical Windows Server smoke CI scenario");
+  assert.equal(smokeTask.env.TAMMY_EVIDENCE_SUBJECT_REVISION, SUBJECT_REVISION);
+  assert.equal(smokeTask.run, "task ci:windows-smoke");
+
+  const releaseGate = windows11.jobs["windows11-23h2-x64-packaged-e2e"];
+  assert.equal(releaseGate.name, "Windows 11 23H2 x64 packaged E2E");
+  assert.deepEqual(releaseGate["runs-on"], ["self-hosted", "windows", "x64", "tammy-win11-23h2"]);
+  assert.equal(releaseGate["timeout-minutes"], 60);
+  assertSharedCiProvisioning(releaseGate, "pwsh");
+  assert.match(
+    requiredStep(releaseGate, "Verify Windows 11 23H2 or later x64").run,
+    /WINDOWS11_23H2_BUILD_REQUIRED[\s\S]*WINDOWS11_X64_REQUIRED[\s\S]*WINDOWS11_AMD64_PROCESS_REQUIRED/,
+  );
+  const nativeTools = requiredStep(releaseGate, "Verify the exact native SQLCipher tool paths");
+  assert.match(
+    nativeTools.run,
+    /TAMMY_SQLCIPHER_COMSPEC=\$comspec[\s\S]*INCLUDE=\$include[\s\S]*LIB=\$lib/,
+  );
+  assert.equal(releaseGate.env.TAMMY_SQLCIPHER_AR, WINDOWS_LLVM_AR);
+  assert.equal(releaseGate.env.TAMMY_SQLCIPHER_NMAKE, WINDOWS_NMAKE);
+  assert.equal(
+    requiredStep(releaseGate, "Run canonical Windows 11 CI scenario").run,
+    "task ci:windows11",
+  );
+  const windowsArtifact = requiredStep(releaseGate, "Upload Windows 11 manifest and results");
+  assert.equal(windowsArtifact.if, WINDOWS_ARTIFACT_CONDITION);
+  assert.equal(
+    windowsArtifact.uses,
+    "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+  );
+  assert.equal(windowsArtifact.with.name, "windows11-x64-foundation-evidence");
+  assert.match(
+    windowsArtifact.with.path,
+    /apps\/desktop\/resources\/build\/build-manifest\.json[\s\S]*apps\/desktop\/test-results\/\*\*/,
+  );
+  assert.equal(windowsArtifact.with["if-no-files-found"], "error");
+  assert.equal(windowsArtifact.with["retention-days"], 30);
+});
 
 function evidenceRow(sourceRequirementId, overrides = {}) {
   const row = {
