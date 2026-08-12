@@ -76,6 +76,13 @@ export function createElectronLaunchArguments(
   ];
 }
 
+export function shouldRecordElectronVideo(
+  target: PackagedLayout["target"],
+  continuousIntegration: boolean,
+): boolean {
+  return !(continuousIntegration && target === "darwin-arm64");
+}
+
 function isPackagedLayout(value: unknown): value is PackagedLayout {
   if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
   const record = value as Record<string, unknown>;
@@ -241,17 +248,20 @@ function fixtureOperations(
     },
     setup: async (state) => {
       const launch = async () => {
+        const continuousIntegration = process.env.CI !== undefined;
         const application = await _electron.launch({
           args: createElectronLaunchArguments(
             path.join(state.rawArtifacts, "user-data"),
             state.packagedLayout.target,
-            process.env.CI !== undefined,
+            continuousIntegration,
           ),
           artifactsDir: path.join(state.rawArtifacts, "playwright"),
           chromiumSandbox: true,
           executablePath: state.packagedLayout.appExecutable,
           offline: true,
-          recordVideo: { dir: path.join(state.rawArtifacts, "video") },
+          ...(shouldRecordElectronVideo(state.packagedLayout.target, continuousIntegration)
+            ? { recordVideo: { dir: path.join(state.rawArtifacts, "video") } }
+            : {}),
         });
         state.application = application;
         state.mainProcess = application.process();

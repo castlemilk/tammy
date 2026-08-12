@@ -2,7 +2,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 
-import { createElectronLaunchArguments } from "../../tests/e2e/fixtures";
+import { createElectronLaunchArguments, shouldRecordElectronVideo } from "../../tests/e2e/fixtures";
 import { findExactCoreProcesses } from "../../tests/e2e/process-check";
 
 interface QueryOptions {
@@ -233,5 +233,11 @@ describe("createElectronLaunchArguments", () => {
     expect(createElectronLaunchArguments(userData, "win32-x64", true)).toEqual([
       `--user-data-dir=${userData}`,
     ]);
+  });
+
+  it("skips video only on hosted macOS", () => {
+    expect(shouldRecordElectronVideo("darwin-arm64", true)).toBe(false);
+    expect(shouldRecordElectronVideo("darwin-arm64", false)).toBe(true);
+    expect(shouldRecordElectronVideo("win32-x64", true)).toBe(true);
   });
 });
