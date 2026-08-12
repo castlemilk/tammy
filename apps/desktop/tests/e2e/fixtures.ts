@@ -126,7 +126,7 @@ function forceKillMain(mainProcess: ChildProcess | undefined): void {
 async function captureMacOSStartupDiagnostic(state: FixtureLifecycleState): Promise<void> {
   if (state.packagedLayout.target !== "darwin-arm64") return;
   await mkdir(state.rawArtifacts, { recursive: true });
-  const diagnosticPath = path.join(state.rawArtifacts, "core-startup.sample.txt");
+  const diagnosticPath = path.join(path.dirname(state.rawArtifacts), "core-startup.sample.txt");
   await writeFile(diagnosticPath, "CORE_STARTUP_SAMPLE_PENDING\n", {
     encoding: "utf8",
     mode: 0o600,
