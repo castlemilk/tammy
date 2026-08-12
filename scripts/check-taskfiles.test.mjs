@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { chmod, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -24,6 +25,7 @@ const allowedExecutablePatterns = [
   /^mise install$/,
   /^mise exec -- corepack prepare pnpm@11\.15\.0 --activate$/,
   /^mise exec -- pnpm (?:--version|install --frozen-lockfile|check:toolchain|check:macos-store|test|core:build|build:manifest|desktop:start|desktop:test|desktop:typecheck|contracts|contracts:production|lint|sqlcipher:test|sqlcipher:build|desktop:package|desktop:e2e)$/,
+  /^TAMMY_MACOS_SIGNING_MODE=(?:development|distribution) mise exec -- pnpm desktop:make:mas$/,
   /^mise exec -- pnpm --filter @tammy\/connect-client typecheck$/,
   /^mise exec -- pnpm --dir apps\/desktop package$/,
   /^mise exec -- go test -race -tags tammy_sqlcipher \.\/services\/core\/internal\/storage\/sqlcipher\/\.\.\. -count=1$/,
@@ -55,6 +57,21 @@ const rootBoundaryScript =
 const targetPreconditionScript = `const target = process.argv[1] ?? \`\${process.platform}/\${process.arch}\`; if (!new Set(["darwin/arm64", "win32/x64"]).has(target)) { console.error(\`UNSUPPORTED_SQLCIPHER_TARGET:\${target}\`); process.exit(1); }`;
 const setupTaskVersionScript = `let output=""; process.stdin.on("data", (chunk) => output += chunk); process.stdin.on("end", () => { if (output.trim() !== "3.52.0") { console.error(\`UNSUPPORTED_TASK_VERSION:\${output.trim()}\`); process.exit(1); } })`;
 const macosReleaseTargetPreconditionScript = `const target = process.argv[1] ?? \`\${process.platform}/\${process.arch}\`; if (target !== "darwin/arm64") { console.error(\`UNSUPPORTED_MACOS_RELEASE_TARGET:\${target}\`); process.exit(1); }`;
+const macosReleaseTargetVariableScript = `process.stdout.write(process.platform + "/" + process.arch)`;
+const macosReleaseVerificationTargetPreconditionScript = `const target = process.argv[1] ?? \`\${process.platform}/\${process.arch}\`; if (target !== "darwin/arm64") { console.error(\`UNSUPPORTED_MACOS_RELEASE_TARGET:\${target}\`); process.exit(1); }`;
+const macosReleaseRequiredEnvironment = [
+  "TAMMY_MACOS_BUILD_NUMBER",
+  "TAMMY_MACOS_EXPORT_COMPLIANCE",
+  "TAMMY_MACOS_PROVISIONING_PROFILE",
+  "TAMMY_MACOS_PRIVACY_POLICY_URL",
+  "TAMMY_MACOS_SIGNING_IDENTITY",
+  "TAMMY_MACOS_SUPPORT_URL",
+  "TAMMY_MACOS_TEAM_ID",
+];
+function missingMacosReleaseEnvironmentScript(variable) {
+  return `if (!process.env.${variable}?.trim()) { console.error("MISSING_MACOS_RELEASE_ENV:${variable}"); process.exit(1); }`;
+}
+const macosReleaseDevelopmentInstallerScript = `if (process.env.TAMMY_MACOS_INSTALLER_IDENTITY?.trim()) { console.error("DEVELOPMENT_INSTALLER_IDENTITY_FORBIDDEN"); process.exit(1); }`;
 const fullVerificationRunnerScript = `const target = \`\${process.platform}/\${process.arch}\`; if (process.platform === "linux") process.exit(0); if (target === "darwin/arm64" || target === "win32/x64") { const { status } = await import("node:child_process").then(({ spawnSync }) => spawnSync("mise", ["exec", "--", "task", "test:sqlcipher"], { stdio: "inherit", shell: false })); process.exit(status ?? 1); } console.error(\`UNSUPPORTED_SQLCIPHER_TARGET:\${target}\`); process.exit(1);`;
 const windowsSqlcipherHandoff = `$ErrorActionPreference = "Stop"; mise exec -- pnpm sqlcipher:test; if ($LASTEXITCODE -ne 0) { throw "SQLCIPHER_NODE_TEST_FAILED" }; mise exec -- pnpm sqlcipher:build; if ($LASTEXITCODE -ne 0) { throw "SQLCIPHER_BUILD_FAILED" }; $probe = (Resolve-Path ".tmp/sqlcipher/ordinary/win32-x64/ordinary-sqlite3.exe").Path; $env:TAMMY_ORDINARY_SQLITE3 = $probe; mise exec -- go test -race -tags tammy_sqlcipher ./services/core/internal/storage/sqlcipher/... -count=1; if ($LASTEXITCODE -ne 0) { throw "SQLCIPHER_GO_INTEGRATION_FAILED" }`;
 const sqlcipherTargetRunnerScript = `const target = \`\${process.platform}/\${process.arch}\`; const { status } = await import("node:child_process").then(({ spawnSync }) => { const run = (args) => spawnSync("mise", ["exec", "--", ...args], { stdio: "inherit", shell: false }); if (target === "darwin/arm64") { for (const args of [["pnpm", "sqlcipher:test"], ["pnpm", "sqlcipher:build"], ["go", "test", "-race", "-tags", "tammy_sqlcipher", "./services/core/internal/storage/sqlcipher/...", "-count=1"]]) { const result = run(args); if (result.status !== 0) process.exit(result.status ?? 1); } return { status: 0 }; } if (target === "win32/x64") return run(["pwsh", "-NoProfile", "-EncodedCommand", Buffer.from(\`${windowsSqlcipherHandoff}\`, "utf16le").toString("base64")]); console.error(\`UNSUPPORTED_SQLCIPHER_TARGET:\${target}\`); return { status: 1 }; }); process.exit(status ?? 1);`;
@@ -106,9 +123,17 @@ async function collectTaskGraph(relativePath, namespace = "", graph = new Map())
   return graph;
 }
 
-function run(command, args) {
+function run(command, args, environment, { clearTaskEnvironment = false } = {}) {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { stdio: ["ignore", "pipe", "pipe"] });
+    const baseEnvironment = clearTaskEnvironment
+      ? Object.fromEntries(
+          Object.entries(process.env).filter(([name]) => !name.startsWith("TASK_")),
+        )
+      : process.env;
+    const child = spawn(command, args, {
+      env: environment ? { ...baseEnvironment, ...environment } : baseEnvironment,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
     let stderr = "";
     let stdout = "";
     child.stdout.on("data", (chunk) => (stdout += chunk));
@@ -116,6 +141,15 @@ function run(command, args) {
     child.on("error", reject);
     child.on("close", (code) => resolve({ code, stderr, stdout }));
   });
+}
+
+function runTask(taskName, environment, taskArguments, options) {
+  return run(
+    "mise",
+    ["exec", "--", "task", taskName, ...(taskArguments ?? [])],
+    environment,
+    options,
+  );
 }
 
 function nodePrintScript(lines) {
@@ -131,6 +165,11 @@ const allowedNodeScripts = new Set([
   targetPreconditionScript,
   setupTaskVersionScript,
   macosReleaseTargetPreconditionScript,
+  macosReleaseTargetVariableScript,
+  macosReleaseVerificationTargetPreconditionScript,
+  ...macosReleaseRequiredEnvironment.map(missingMacosReleaseEnvironmentScript),
+  missingMacosReleaseEnvironmentScript("TAMMY_MACOS_INSTALLER_IDENTITY"),
+  macosReleaseDevelopmentInstallerScript,
   sqlcipherTargetRunnerScript,
   fullVerificationRunnerScript,
   nodePrintScript(coreDiagnosticLines),
@@ -138,10 +177,10 @@ const allowedNodeScripts = new Set([
   nodePrintScript(dataDiagnosticLines),
 ]);
 
-async function runTargetPrecondition(precondition, target) {
+async function runTargetPrecondition(precondition, target, environment) {
   const match = precondition.sh.match(/^mise exec -- node -e '([\s\S]*)'$/);
   assert.ok(match, "the native precondition must be an extractable pinned Node command");
-  return run("mise", ["exec", "--", "node", "-e", match[1], target]);
+  return run("mise", ["exec", "--", "node", "-e", match[1], target], environment);
 }
 
 function assertAllowedShellAction(action) {
@@ -233,6 +272,7 @@ test("local Task front door preserves the safe development contract", async () =
     "verify:release",
     "build",
     "package",
+    "deploy:mas",
   ]) {
     assert.match(rootTasks[taskName]?.desc ?? "", /.+/, `${taskName} requires a description`);
   }
@@ -268,6 +308,37 @@ test("local Task front door preserves the safe development contract", async () =
   assert.deepEqual(taskReferences(rootTasks["verify:release"]), ["test:verify:release"]);
   assert.deepEqual(taskReferences(rootTasks.build), ["build:desktop"]);
   assert.deepEqual(taskReferences(rootTasks.package), ["package:verify"]);
+  const deployMas = rootTasks["deploy:mas"];
+  assert.match(deployMas.summary ?? "", /locally validates.*package/i);
+  assert.match(deployMas.summary ?? "", /manual.*submission/i);
+  assert.equal(deployMas.platforms, undefined, "deploy:mas must fail instead of silently skipping");
+  assert.equal(
+    deployMas.preconditions?.[0]?.sh,
+    `mise exec -- node -e '${macosReleaseTargetPreconditionScript}'`,
+  );
+  assert.equal(
+    deployMas.preconditions?.[0]?.msg,
+    "UNSUPPORTED_MACOS_RELEASE_TARGET:{{.NODE_TARGET}}",
+  );
+  assert.equal(
+    deployMas.vars?.NODE_TARGET?.sh,
+    `mise exec -- node -e '${macosReleaseTargetVariableScript}'`,
+  );
+  for (const { target, accepted } of [
+    { target: "darwin/arm64", accepted: true },
+    { target: "linux/x64", accepted: false },
+  ]) {
+    const result = await runTargetPrecondition(deployMas.preconditions[0], target);
+    assert.equal(result.code === 0, accepted, `deploy:mas target ${target}`);
+    if (!accepted) {
+      assert.match(
+        `${result.stdout}${result.stderr}`,
+        /UNSUPPORTED_MACOS_RELEASE_TARGET:linux\/x64/,
+      );
+    }
+  }
+  assert.deepEqual(taskCommands(deployMas), [{ task: "release:candidate" }]);
+  assert.deepEqual(taskReferences(deployMas), ["release:candidate"]);
   for (const taskName of ["build", "package"]) {
     const precondition = rootTasks[taskName].preconditions?.[0];
     assert.equal(precondition?.sh, `mise exec -- node -e '${targetPreconditionScript}'`);
@@ -388,7 +459,7 @@ test("local Task front door preserves the safe development contract", async () =
   const releaseVerificationPrecondition = testTasks["verify:release"].preconditions?.[0];
   assert.equal(
     releaseVerificationPrecondition?.sh,
-    `mise exec -- node -e '${macosReleaseTargetPreconditionScript}'`,
+    `mise exec -- node -e '${macosReleaseVerificationTargetPreconditionScript}'`,
   );
   for (const { target, accepted } of [
     { target: "darwin/arm64", accepted: true },
@@ -471,9 +542,209 @@ test("local Task front door preserves the safe development contract", async () =
   assert.deepEqual(shellCommands(packageTasks.e2e), ["mise exec -- pnpm desktop:e2e"]);
 
   const releaseTasks = (await readTaskfile("taskfiles/release.yml")).tasks;
-  assert.deepEqual(Object.keys(releaseTasks), ["check"]);
+  assert.deepEqual(Object.keys(releaseTasks), ["check", "development", "candidate"]);
   assert.equal(releaseTasks.check.preconditions, undefined);
   assert.deepEqual(shellCommands(releaseTasks.check), ["mise exec -- pnpm check:macos-store"]);
+  for (const [taskName, signingMode, requiredVariables] of [
+    ["development", "development", macosReleaseRequiredEnvironment],
+    [
+      "candidate",
+      "distribution",
+      [...macosReleaseRequiredEnvironment, "TAMMY_MACOS_INSTALLER_IDENTITY"],
+    ],
+  ]) {
+    const task = releaseTasks[taskName];
+    assert.match(task.desc ?? "", /.+/, `release:${taskName} requires a description`);
+    assert.equal(
+      task.platforms,
+      undefined,
+      `release:${taskName} must fail instead of silently skipping`,
+    );
+    assert.equal(
+      task.env?.TAMMY_MACOS_SIGNING_MODE,
+      undefined,
+      "signing mode must be command-scoped",
+    );
+    assert.equal(task.preconditions?.[0]?.msg, "UNSUPPORTED_MACOS_RELEASE_TARGET:{{.NODE_TARGET}}");
+    for (const [index, precondition] of (task.preconditions ?? []).slice(1).entries()) {
+      assert.equal(
+        precondition.msg,
+        taskName === "development" && index === macosReleaseRequiredEnvironment.length
+          ? "DEVELOPMENT_INSTALLER_IDENTITY_FORBIDDEN"
+          : `MISSING_MACOS_RELEASE_ENV:${requiredVariables[index]}`,
+        `release:${taskName} must expose exact input errors`,
+      );
+    }
+    assert.equal(
+      task.vars?.NODE_TARGET?.sh,
+      `mise exec -- node -e '${macosReleaseTargetVariableScript}'`,
+    );
+    assert.equal(
+      task.preconditions?.[0]?.sh,
+      `mise exec -- node -e '${macosReleaseTargetPreconditionScript}'`,
+    );
+    assert.deepEqual(
+      task.preconditions
+        ?.slice(1, requiredVariables.length + 1)
+        .map((precondition) => precondition.sh),
+      requiredVariables.map(
+        (variable) => `mise exec -- node -e '${missingMacosReleaseEnvironmentScript(variable)}'`,
+      ),
+    );
+    for (const { target, accepted } of [
+      { target: "darwin/arm64", accepted: true },
+      { target: "linux/x64", accepted: false },
+    ]) {
+      const result = await runTargetPrecondition(task.preconditions[0], target);
+      assert.equal(result.code === 0, accepted, `release:${taskName} target ${target}`);
+      if (!accepted) {
+        assert.match(
+          `${result.stdout}${result.stderr}`,
+          /UNSUPPORTED_MACOS_RELEASE_TARGET:linux\/x64/,
+        );
+      }
+    }
+    const missing = await runTargetPrecondition(task.preconditions[1], "darwin/arm64", {});
+    assert.equal(missing.code, 1, `release:${taskName} rejects missing signing inputs`);
+    assert.match(
+      `${missing.stdout}${missing.stderr}`,
+      /MISSING_MACOS_RELEASE_ENV:TAMMY_MACOS_BUILD_NUMBER/,
+    );
+    assert.deepEqual(shellCommands(task), [
+      "mise exec -- node scripts/check-clean-tree.mjs",
+      `TAMMY_MACOS_SIGNING_MODE=${signingMode} mise exec -- pnpm desktop:make:mas`,
+    ]);
+  }
+  assert.equal(
+    releaseTasks.development.preconditions?.[8]?.sh,
+    `mise exec -- node -e '${macosReleaseDevelopmentInstallerScript}'`,
+  );
+  const developmentInstaller = await runTargetPrecondition(
+    releaseTasks.development.preconditions[8],
+    "darwin/arm64",
+    {
+      TAMMY_MACOS_INSTALLER_IDENTITY:
+        "3rd Party Mac Developer Installer: Tammy Pty Ltd (ABCDE12345)",
+    },
+  );
+  assert.equal(developmentInstaller.code, 1, "release:development rejects an installer identity");
+  assert.match(
+    `${developmentInstaller.stdout}${developmentInstaller.stderr}`,
+    /DEVELOPMENT_INSTALLER_IDENTITY_FORBIDDEN/,
+  );
+  const missingReleaseEnvironment = Object.fromEntries(
+    [...macosReleaseRequiredEnvironment, "TAMMY_MACOS_INSTALLER_IDENTITY"].map((name) => [
+      name,
+      "",
+    ]),
+  );
+  const actualTarget = `${process.platform}/${process.arch}`;
+  const taskFailure =
+    actualTarget === "darwin/arm64"
+      ? /MISSING_MACOS_RELEASE_ENV:TAMMY_MACOS_BUILD_NUMBER/
+      : new RegExp(`UNSUPPORTED_MACOS_RELEASE_TARGET:${actualTarget}`);
+  for (const [taskName, expected] of [
+    ["release:development", /MISSING_MACOS_RELEASE_ENV:TAMMY_MACOS_BUILD_NUMBER/],
+    ["release:candidate", /MISSING_MACOS_RELEASE_ENV:TAMMY_MACOS_BUILD_NUMBER/],
+    ["deploy:mas", /MISSING_MACOS_RELEASE_ENV:TAMMY_MACOS_BUILD_NUMBER/],
+  ]) {
+    const result = await runTask(taskName, missingReleaseEnvironment);
+    assert.notEqual(result.code, 0, `${taskName} must fail before its signing owner`);
+    assert.match(
+      `${result.stdout}${result.stderr}`,
+      actualTarget === "darwin/arm64" ? expected : taskFailure,
+      `${taskName} exposes its host-appropriate exact error`,
+    );
+    assert.doesNotMatch(
+      `${result.stdout}${result.stderr}`,
+      /desktop:make:mas/,
+      `${taskName} must not start its signing owner`,
+    );
+  }
+  const spoofedTarget = actualTarget === "darwin/arm64" ? "linux/x64" : "darwin/arm64";
+  for (const [label, environment, arguments_] of [
+    ["environment", { ...missingReleaseEnvironment, NODE_TARGET: spoofedTarget }, undefined],
+    ["CLI", missingReleaseEnvironment, [`NODE_TARGET=${spoofedTarget}`]],
+  ]) {
+    const callerTargetOverride = await runTask("release:development", environment, arguments_);
+    assert.notEqual(callerTargetOverride.code, 0, "release:development fails before signing");
+    assert.match(
+      `${callerTargetOverride.stdout}${callerTargetOverride.stderr}`,
+      taskFailure,
+      `${label} NODE_TARGET cannot change the production target guard`,
+    );
+  }
+  const actualDevelopmentInstaller = await runTask("release:development", {
+    TAMMY_MACOS_BUILD_NUMBER: "1",
+    TAMMY_MACOS_EXPORT_COMPLIANCE: "exempt",
+    TAMMY_MACOS_PROVISIONING_PROFILE: "/private/tmp/tammy.provisionprofile",
+    TAMMY_MACOS_PRIVACY_POLICY_URL: "https://example.com/tammy/privacy",
+    TAMMY_MACOS_SIGNING_IDENTITY: "Apple Development: Tammy Pty Ltd (ABCDE12345)",
+    TAMMY_MACOS_SUPPORT_URL: "https://example.com/tammy/support",
+    TAMMY_MACOS_TEAM_ID: "ABCDE12345",
+    TAMMY_MACOS_INSTALLER_IDENTITY: "3rd Party Mac Developer Installer: Tammy Pty Ltd (ABCDE12345)",
+  });
+  assert.notEqual(
+    actualDevelopmentInstaller.code,
+    0,
+    "installer rejection must stop before signing",
+  );
+  assert.match(
+    `${actualDevelopmentInstaller.stdout}${actualDevelopmentInstaller.stderr}`,
+    actualTarget === "darwin/arm64" ? /DEVELOPMENT_INSTALLER_IDENTITY_FORBIDDEN/ : taskFailure,
+    "release:development exposes its host-appropriate installer or target error",
+  );
+  assert.match(
+    releaseTasks.development.summary ?? "",
+    /apps\/desktop\/out\/Tammy-mas-arm64\/Tammy\.app/,
+  );
+  assert.match(releaseTasks.development.summary ?? "", /no installer.*upload/i);
+  assert.match(releaseTasks.candidate.summary ?? "", /JSON.*pkg.*SHA-256.*Gatekeeper/is);
+  const releaseCommands = Object.values(releaseTasks).flatMap(shellCommands).join("\n");
+  assert.doesNotMatch(releaseCommands, /upload|Transporter|xcrun|API/i);
+
+  if (process.platform === "darwin") {
+    const signingFixtureDirectory = await mkdtemp(
+      path.join(tmpdir(), "tammy-taskfile-signing-mode-"),
+    );
+    try {
+      const fixtureMise = path.join(signingFixtureDirectory, "mise");
+      const fixturePnpm = path.join(signingFixtureDirectory, "pnpm");
+      const fixtureOutput = path.join(signingFixtureDirectory, "mode.txt");
+      const fixtureTaskfile = path.join(signingFixtureDirectory, "Taskfile.yml");
+      await writeFile(
+        fixtureMise,
+        '#!/bin/sh\nif [ "$1" = "exec" ] && [ "$2" = "--" ]; then\n  shift 2\n  exec "$@"\nfi\nexit 2\n',
+      );
+      await writeFile(
+        fixturePnpm,
+        '#!/bin/sh\nprintf "%s" "$TAMMY_MACOS_SIGNING_MODE" > "$TAMMY_TASK_TEST_OUTPUT"\n',
+      );
+      await writeFile(
+        fixtureTaskfile,
+        "version: '3'\ntasks:\n  force-mode:\n    cmds:\n      - TAMMY_MACOS_SIGNING_MODE=development mise exec -- pnpm desktop:make:mas\n",
+      );
+      await Promise.all([chmod(fixtureMise, 0o755), chmod(fixturePnpm, 0o755)]);
+      const fixture = await run(
+        "mise",
+        ["exec", "--", "task", "--taskfile", fixtureTaskfile, "force-mode"],
+        {
+          PATH: `${signingFixtureDirectory}:${process.env.PATH}`,
+          TAMMY_MACOS_SIGNING_MODE: "distribution",
+          TAMMY_TASK_TEST_OUTPUT: fixtureOutput,
+        },
+        { clearTaskEnvironment: true },
+      );
+      assert.equal(fixture.code, 0, "the isolated signing-mode fixture succeeds");
+      assert.equal(
+        await readFile(fixtureOutput, "utf8"),
+        "development",
+        "the inline development assignment overrides an inherited distribution mode",
+      );
+    } finally {
+      await rm(signingFixtureDirectory, { force: true, recursive: true });
+    }
+  }
 
   for (const taskName of ["toolchain", "core", "package", "data"]) {
     const task = diagnostics.tasks?.[taskName];
@@ -527,7 +798,11 @@ test("local Task front door preserves the safe development contract", async () =
   for (const { task } of taskGraph.values()) {
     for (const command of shellCommands(task)) {
       allCommands.push(command);
-      if (command !== "mise install" && command !== "git diff --check") {
+      if (
+        command !== "mise install" &&
+        command !== "git diff --check" &&
+        !command.startsWith("TAMMY_MACOS_SIGNING_MODE=")
+      ) {
         assert.match(command, /^mise exec -- /, "local commands must use pinned mise execution");
       }
     }
@@ -545,6 +820,11 @@ test("local Task front door preserves the safe development contract", async () =
     () => assertAllowedShellCommand('mise exec -- node -e \'require("node:fs").rmSync(".tmp")\''),
     assert.AssertionError,
     "Node filesystem mutation must be rejected",
+  );
+  assert.throws(
+    () => assertAllowedShellCommand("mise exec -- pnpm desktop:make:mas"),
+    assert.AssertionError,
+    "a signed macOS owner must always force its signing mode inline",
   );
   for (const mutation of [
     'mise exec -- node -e \'console.log(process.getBuiltinModule("fs").rmdirSync(".tmp"))\'',

@@ -88,3 +88,19 @@ tasks:
         msg: Package verification requires darwin/arm64 or win32/x64.
     cmds:
       - task: package:verify
+
+  deploy:mas:
+    desc: Create a signed macOS App Store package candidate for manual submission.
+    summary: |
+      Builds and locally validates the macOS package only; manual App Store submission
+      remains outside this task.
+    vars:
+      NODE_TARGET:
+        sh: >-
+          mise exec -- node -e 'process.stdout.write(process.platform + "/" + process.arch)'
+    preconditions:
+      - sh: >-
+          mise exec -- node -e 'const target = process.argv[1] ?? `${process.platform}/${process.arch}`; if (target !== "darwin/arm64") { console.error(`UNSUPPORTED_MACOS_RELEASE_TARGET:${target}`); process.exit(1); }'
+        msg: UNSUPPORTED_MACOS_RELEASE_TARGET:{{.NODE_TARGET}}
+    cmds:
+      - task: release:candidate
