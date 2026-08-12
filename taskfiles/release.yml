@@ -1,1 +1,7 @@
 version: '3'
+
+tasks:
+  check:
+    desc: Check repository-owned App Store readiness inputs without signing.
+    cmds:
+      - mise exec -- pnpm check:macos-store

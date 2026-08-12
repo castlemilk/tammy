@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import {
   assertMacOSReleaseMetadata,
   inspectMacOSStoreRepository,
+  readMacOSRepositoryPlist,
   readPngDimensions,
   validateMacOSProvisioningProfile,
   validateMacOSReleaseEnvironment,
@@ -15,6 +16,25 @@ import {
 } from "./check-macos-store.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+test("repository plist reader is portable and never shells out to plutil", async () => {
+  let reads = 0;
+  const privacy = await readMacOSRepositoryPlist(
+    "/portable/PrivacyInfo.xcprivacy",
+    async (file, encoding) => {
+      reads += 1;
+      assert.equal(file, "/portable/PrivacyInfo.xcprivacy");
+      assert.equal(encoding, "utf8");
+      return `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict><key>NSPrivacyTracking</key><false/><key>NSPrivacyCollectedDataTypes</key><array/></dict></plist>`;
+    },
+  );
+
+  assert.equal(reads, 1);
+  assert.deepEqual(privacy.NSPrivacyTracking, false);
+  assert.deepEqual(privacy.NSPrivacyCollectedDataTypes, []);
+});
 
 test("repository inspection binds Tammy identity, store resources and operator gates", async () => {
   const result = await inspectMacOSStoreRepository(root);

@@ -1,1 +1,72 @@
 version: '3'
+
+tasks:
+  core:
+    desc: Run the repository-owned default core and integration test scenario.
+    cmds:
+      - mise exec -- pnpm test
+
+  desktop:
+    desc: Run the desktop test owner for focused iteration.
+    cmds:
+      - mise exec -- pnpm desktop:test
+
+  contracts:
+    desc: Check protobuf contracts, generated outputs, and contract evidence policy.
+    cmds:
+      - mise exec -- pnpm contracts
+
+  sqlcipher:
+    desc: Run supported SQLCipher build and tagged storage integration verification.
+    summary: |
+      macOS arm64 runs SQLCipher Node tests and tagged storage race tests. Windows x64
+      keeps its pinned LLVM/MSVC/SDK environment and ordinary SQLite probe handoff in
+      one PowerShell process. Other targets fail explicitly rather than silently skip.
+    preconditions:
+      - sh: >-
+          mise exec -- node -e 'const target = process.argv[1] ?? `${process.platform}/${process.arch}`; if (!new Set(["darwin/arm64", "win32/x64"]).has(target)) { console.error(`UNSUPPORTED_SQLCIPHER_TARGET:${target}`); process.exit(1); }'
+        msg: SQLCipher verification requires darwin/arm64 or win32/x64.
+    cmds:
+      - >-
+          mise exec -- node -e 'const target = `${process.platform}/${process.arch}`; const { status } = await import("node:child_process").then(({ spawnSync }) => { const run = (args) => spawnSync("mise", ["exec", "--", ...args], { stdio: "inherit", shell: false }); if (target === "darwin/arm64") { for (const args of [["pnpm", "sqlcipher:test"], ["pnpm", "sqlcipher:build"], ["go", "test", "-race", "-tags", "tammy_sqlcipher", "./services/core/internal/storage/sqlcipher/...", "-count=1"]]) { const result = run(args); if (result.status !== 0) process.exit(result.status ?? 1); } return { status: 0 }; } if (target === "win32/x64") return run(["pwsh", "-NoProfile", "-EncodedCommand", Buffer.from(`$ErrorActionPreference = "Stop"; mise exec -- pnpm sqlcipher:test; if ($LASTEXITCODE -ne 0) { throw "SQLCIPHER_NODE_TEST_FAILED" }; mise exec -- pnpm sqlcipher:build; if ($LASTEXITCODE -ne 0) { throw "SQLCIPHER_BUILD_FAILED" }; $probe = (Resolve-Path ".tmp/sqlcipher/ordinary/win32-x64/ordinary-sqlite3.exe").Path; $env:TAMMY_ORDINARY_SQLITE3 = $probe; mise exec -- go test -race -tags tammy_sqlcipher ./services/core/internal/storage/sqlcipher/... -count=1; if ($LASTEXITCODE -ne 0) { throw "SQLCIPHER_GO_INTEGRATION_FAILED" }`, "utf16le").toString("base64")]); console.error(`UNSUPPORTED_SQLCIPHER_TARGET:${target}`); return { status: 1 }; }); process.exit(status ?? 1);'
+
+  verify:quick:
+    desc: Run fast repository verification without SQLCipher-tagged integration or packaging.
+    summary: |
+      Runs each default test owner once, then type, contract, lint, and whitespace checks.
+      It neither builds native SQLCipher nor produces package evidence.
+    cmds:
+      - mise exec -- pnpm check:toolchain
+      - mise exec -- pnpm test
+      - mise exec -- pnpm --filter @tammy/connect-client typecheck
+      - mise exec -- pnpm desktop:typecheck
+      - mise exec -- pnpm contracts
+      - mise exec -- pnpm lint
+      - git diff --check
+
+  verify:full:
+    desc: Run fast verification plus SQLCipher integration on supported native targets.
+    summary: |
+      Linux runs exactly the quick verification tier because it is not a supported
+      native SQLCipher target. macOS arm64 and Windows x64 additionally run the
+      explicit SQLCipher scenario; other targets fail closed.
+    cmds:
+      - task: verify:quick
+      - >-
+          mise exec -- node -e 'const target = `${process.platform}/${process.arch}`; if (process.platform === "linux") process.exit(0); if (target === "darwin/arm64" || target === "win32/x64") { const { status } = await import("node:child_process").then(({ spawnSync }) => spawnSync("mise", ["exec", "--", "task", "test:sqlcipher"], { stdio: "inherit", shell: false })); process.exit(status ?? 1); } console.error(`UNSUPPORTED_SQLCIPHER_TARGET:${target}`); process.exit(1);'
+
+  verify:release:
+    desc: Run macOS arm64 release-readiness checks without creating a signed candidate.
+    summary: |
+      Requires a clean tree, verifies production contracts and ordinary packaged E2E,
+      then checks repository-owned App Store inputs. It does not sign or upload anything.
+    preconditions:
+      - sh: >-
+          mise exec -- node -e 'const target = process.argv[1] ?? `${process.platform}/${process.arch}`; if (target !== "darwin/arm64") { console.error(`UNSUPPORTED_MACOS_RELEASE_TARGET:${target}`); process.exit(1); }'
+        msg: Release verification requires darwin/arm64.
+    cmds:
+      - mise exec -- node scripts/check-clean-tree.mjs
+      - mise exec -- pnpm contracts:production
+      - task: verify:full
+      - task: :package:e2e
+      - task: :release:check

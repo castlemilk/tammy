@@ -39,6 +39,10 @@ tasks:
 
   dev:
     desc: Launch the supported local desktop development scenario.
+    preconditions:
+      - sh: >-
+          mise exec -- node -e 'const target = process.argv[1] ?? `${process.platform}/${process.arch}`; if (!new Set(["darwin/arm64", "win32/x64"]).has(target)) { console.error(`UNSUPPORTED_SQLCIPHER_TARGET:${target}`); process.exit(1); }'
+        msg: Local desktop development requires darwin/arm64 or win32/x64.
     cmds:
       - task: dev:launch
 
@@ -46,3 +50,41 @@ tasks:
     desc: Run Tammy's existing local test owner.
     cmds:
       - mise exec -- pnpm test
+
+  verify:
+    desc: Run the complete supported local verification scenario.
+    cmds:
+      - task: verify:full
+
+  verify:quick:
+    desc: Run fast repository verification without native SQLCipher integration.
+    cmds:
+      - task: test:verify:quick
+
+  verify:full:
+    desc: Run verification including supported native SQLCipher integration.
+    cmds:
+      - task: test:verify:full
+
+  verify:release:
+    desc: Run the macOS arm64 release-readiness verification scenario without signing.
+    cmds:
+      - task: test:verify:release
+
+  build:
+    desc: Build a raw supported desktop bundle for local diagnosis.
+    preconditions:
+      - sh: >-
+          mise exec -- node -e 'const target = process.argv[1] ?? `${process.platform}/${process.arch}`; if (!new Set(["darwin/arm64", "win32/x64"]).has(target)) { console.error(`UNSUPPORTED_SQLCIPHER_TARGET:${target}`); process.exit(1); }'
+        msg: Desktop builds require darwin/arm64 or win32/x64.
+    cmds:
+      - task: build:desktop
+
+  package:
+    desc: Build and authenticate an ordinary supported local desktop package.
+    preconditions:
+      - sh: >-
+          mise exec -- node -e 'const target = process.argv[1] ?? `${process.platform}/${process.arch}`; if (!new Set(["darwin/arm64", "win32/x64"]).has(target)) { console.error(`UNSUPPORTED_SQLCIPHER_TARGET:${target}`); process.exit(1); }'
+        msg: Package verification requires darwin/arm64 or win32/x64.
+    cmds:
+      - task: package:verify

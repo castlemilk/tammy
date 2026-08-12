@@ -244,11 +244,91 @@ export function assertMacOSReleaseMetadata(metadata, environment) {
   }
 }
 
-async function readPlist(file) {
-  await execFile("/usr/bin/plutil", ["-lint", file]);
-  const { stdout } = await execFile("/usr/bin/plutil", ["-convert", "json", "-o", "-", file]);
+function decodePlistText(value) {
+  if (typeof value !== "string" || value.includes("<")) fail();
+  const decoded = value.replace(/&(amp|apos|gt|lt|quot);/g, (_match, entity) => {
+    return { amp: "&", apos: "'", gt: ">", lt: "<", quot: '"' }[entity];
+  });
+  if (decoded.includes("&")) fail();
+  return decoded;
+}
+
+export function parseMacOSRepositoryPlist(source) {
+  if (typeof source !== "string") fail();
+  const opening = source.indexOf('<plist version="1.0">');
+  const closing = source.lastIndexOf("</plist>");
+  if (
+    opening < 0 ||
+    closing < opening ||
+    !/^<\?xml[\s\S]*\?>\s*<!DOCTYPE plist[\s\S]*>$/.test(source.slice(0, opening).trim()) ||
+    source.slice(closing + "</plist>".length).trim() !== ""
+  ) {
+    fail();
+  }
+  const tokens = (
+    source.slice(opening + '<plist version="1.0">'.length, closing).match(/<[^>]*>|[^<]+/g) ?? []
+  ).filter((token) => !/^\s+$/.test(token));
+  let index = 0;
+  const take = (token) => {
+    if (tokens[index] !== token) fail();
+    index += 1;
+  };
+  const parseText = (tag) => {
+    take(`<${tag}>`);
+    const text = tokens[index];
+    if (typeof text !== "string" || text.startsWith("<")) fail();
+    index += 1;
+    take(`</${tag}>`);
+    return decodePlistText(text);
+  };
+  const parseValue = () => {
+    const token = tokens[index];
+    if (token === "<true/>") {
+      index += 1;
+      return true;
+    }
+    if (token === "<false/>") {
+      index += 1;
+      return false;
+    }
+    if (token === "<string>") return parseText("string");
+    if (token === "<array/>") {
+      index += 1;
+      return [];
+    }
+    if (token === "<array>") {
+      index += 1;
+      const values = [];
+      while (tokens[index] !== "</array>") values.push(parseValue());
+      take("</array>");
+      return values;
+    }
+    if (token === "<dict>") {
+      index += 1;
+      const dictionary = {};
+      while (tokens[index] !== "</dict>") {
+        const key = parseText("key");
+        if (Object.hasOwn(dictionary, key)) fail();
+        Object.defineProperty(dictionary, key, {
+          configurable: true,
+          enumerable: true,
+          value: parseValue(),
+          writable: true,
+        });
+      }
+      take("</dict>");
+      return dictionary;
+    }
+    fail();
+  };
+  const parsed = parseValue();
+  if (index !== tokens.length) fail();
+  return parsed;
+}
+
+export async function readMacOSRepositoryPlist(file, read = readFile) {
   try {
-    return JSON.parse(stdout);
+    return parseMacOSRepositoryPlist(await read(file, "utf8"));
   } catch {
     fail();
   }
@@ -288,14 +368,14 @@ export async function inspectMacOSStoreRepository(root) {
     runbook,
     techState,
   ] = await Promise.all([
-    readPlist(paths.appEntitlements),
-    readPlist(paths.childEntitlements),
-    readPlist(paths.coreEntitlements),
+    readMacOSRepositoryPlist(paths.appEntitlements),
+    readMacOSRepositoryPlist(paths.childEntitlements),
+    readMacOSRepositoryPlist(paths.coreEntitlements),
     readFile(paths.forge, "utf8"),
     readFile(paths.icon),
     readFile(paths.metadata, "utf8"),
     readFile(paths.package),
-    readPlist(paths.privacy),
+    readMacOSRepositoryPlist(paths.privacy),
     readFile(paths.profile, "utf8"),
     readFile(paths.readme, "utf8"),
     readFile(paths.runbook, "utf8"),

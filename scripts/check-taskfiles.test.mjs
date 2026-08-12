@@ -23,7 +23,12 @@ const scenarioFiles = [
 const allowedExecutablePatterns = [
   /^mise install$/,
   /^mise exec -- corepack prepare pnpm@11\.15\.0 --activate$/,
-  /^mise exec -- pnpm (?:--version|install --frozen-lockfile|check:toolchain|test|core:build|desktop:start)$/,
+  /^mise exec -- pnpm (?:--version|install --frozen-lockfile|check:toolchain|check:macos-store|test|core:build|build:manifest|desktop:start|desktop:test|desktop:typecheck|contracts|contracts:production|lint|sqlcipher:test|sqlcipher:build|desktop:package|desktop:e2e)$/,
+  /^mise exec -- pnpm --filter @tammy\/connect-client typecheck$/,
+  /^mise exec -- pnpm --dir apps\/desktop package$/,
+  /^mise exec -- go test -race -tags tammy_sqlcipher \.\/services\/core\/internal\/storage\/sqlcipher\/\.\.\. -count=1$/,
+  /^mise exec -- node scripts\/check-clean-tree\.mjs$/,
+  /^git diff --check$/,
   /^mise exec -- task --(?:list|version)$/,
   /^mise exec -- node --version$/,
 ];
@@ -49,6 +54,10 @@ const rootBoundaryScript =
   'console.log("Tammy boundaries: local-first encrypted accounting; development-only BAS workpapers; no ATO submission; local packages are not production/App Store evidence; upload remains manual.")';
 const targetPreconditionScript = `const target = process.argv[1] ?? \`\${process.platform}/\${process.arch}\`; if (!new Set(["darwin/arm64", "win32/x64"]).has(target)) { console.error(\`UNSUPPORTED_SQLCIPHER_TARGET:\${target}\`); process.exit(1); }`;
 const setupTaskVersionScript = `let output=""; process.stdin.on("data", (chunk) => output += chunk); process.stdin.on("end", () => { if (output.trim() !== "3.52.0") { console.error(\`UNSUPPORTED_TASK_VERSION:\${output.trim()}\`); process.exit(1); } })`;
+const macosReleaseTargetPreconditionScript = `const target = process.argv[1] ?? \`\${process.platform}/\${process.arch}\`; if (target !== "darwin/arm64") { console.error(\`UNSUPPORTED_MACOS_RELEASE_TARGET:\${target}\`); process.exit(1); }`;
+const fullVerificationRunnerScript = `const target = \`\${process.platform}/\${process.arch}\`; if (process.platform === "linux") process.exit(0); if (target === "darwin/arm64" || target === "win32/x64") { const { status } = await import("node:child_process").then(({ spawnSync }) => spawnSync("mise", ["exec", "--", "task", "test:sqlcipher"], { stdio: "inherit", shell: false })); process.exit(status ?? 1); } console.error(\`UNSUPPORTED_SQLCIPHER_TARGET:\${target}\`); process.exit(1);`;
+const windowsSqlcipherHandoff = `$ErrorActionPreference = "Stop"; mise exec -- pnpm sqlcipher:test; if ($LASTEXITCODE -ne 0) { throw "SQLCIPHER_NODE_TEST_FAILED" }; mise exec -- pnpm sqlcipher:build; if ($LASTEXITCODE -ne 0) { throw "SQLCIPHER_BUILD_FAILED" }; $probe = (Resolve-Path ".tmp/sqlcipher/ordinary/win32-x64/ordinary-sqlite3.exe").Path; $env:TAMMY_ORDINARY_SQLITE3 = $probe; mise exec -- go test -race -tags tammy_sqlcipher ./services/core/internal/storage/sqlcipher/... -count=1; if ($LASTEXITCODE -ne 0) { throw "SQLCIPHER_GO_INTEGRATION_FAILED" }`;
+const sqlcipherTargetRunnerScript = `const target = \`\${process.platform}/\${process.arch}\`; const { status } = await import("node:child_process").then(({ spawnSync }) => { const run = (args) => spawnSync("mise", ["exec", "--", ...args], { stdio: "inherit", shell: false }); if (target === "darwin/arm64") { for (const args of [["pnpm", "sqlcipher:test"], ["pnpm", "sqlcipher:build"], ["go", "test", "-race", "-tags", "tammy_sqlcipher", "./services/core/internal/storage/sqlcipher/...", "-count=1"]]) { const result = run(args); if (result.status !== 0) process.exit(result.status ?? 1); } return { status: 0 }; } if (target === "win32/x64") return run(["pwsh", "-NoProfile", "-EncodedCommand", Buffer.from(\`${windowsSqlcipherHandoff}\`, "utf16le").toString("base64")]); console.error(\`UNSUPPORTED_SQLCIPHER_TARGET:\${target}\`); return { status: 1 }; }); process.exit(status ?? 1);`;
 
 async function readTaskfile(relativePath) {
   return YAML.parse(await readFile(path.join(repositoryRoot, relativePath), "utf8"));
@@ -71,12 +80,18 @@ function taskReferences(task) {
     .map((command) => command.task);
 }
 
+function resolveTaskReference(namespace, reference) {
+  return reference.startsWith(":")
+    ? reference.slice(1)
+    : [namespace, reference].filter(Boolean).join(":");
+}
+
 async function collectTaskGraph(relativePath, namespace = "", graph = new Map()) {
   const taskfile = await readTaskfile(relativePath);
   for (const [taskName, task] of Object.entries(taskfile.tasks ?? {})) {
     const fullName = namespace ? `${namespace}:${taskName}` : taskName;
     assert.equal(graph.has(fullName), false, `duplicate task ${fullName}`);
-    graph.set(fullName, { task, taskfile: relativePath });
+    graph.set(fullName, { namespace, task, taskfile: relativePath });
   }
   for (const [includeName, include] of Object.entries(taskfile.includes ?? {})) {
     const configuration = typeof include === "string" ? { taskfile: include } : include;
@@ -115,6 +130,9 @@ const allowedNodeScripts = new Set([
   rootBoundaryScript,
   targetPreconditionScript,
   setupTaskVersionScript,
+  macosReleaseTargetPreconditionScript,
+  sqlcipherTargetRunnerScript,
+  fullVerificationRunnerScript,
   nodePrintScript(coreDiagnosticLines),
   nodePrintScript([packageDiagnosticLine]),
   nodePrintScript(dataDiagnosticLines),
@@ -194,13 +212,7 @@ test("local Task front door preserves the safe development contract", async () =
   const dev = await readTaskfile("taskfiles/dev.yml");
   const diagnostics = await readTaskfile("taskfiles/diagnostics.yml");
   for (const taskfile of [setup, dev, diagnostics]) assert.equal(taskfile.version, "3");
-  for (const scenarioFile of [
-    "taskfiles/test.yml",
-    "taskfiles/build.yml",
-    "taskfiles/package.yml",
-    "taskfiles/release.yml",
-    "taskfiles/ci.yml",
-  ]) {
+  for (const scenarioFile of ["taskfiles/ci.yml"]) {
     assert.deepEqual(
       await readTaskfile(scenarioFile),
       { version: "3" },
@@ -210,7 +222,18 @@ test("local Task front door preserves the safe development contract", async () =
   const taskGraph = await collectTaskGraph("Taskfile.yml");
 
   const rootTasks = root.tasks ?? {};
-  for (const taskName of ["default", "setup", "dev", "test"]) {
+  for (const taskName of [
+    "default",
+    "setup",
+    "dev",
+    "test",
+    "verify",
+    "verify:quick",
+    "verify:full",
+    "verify:release",
+    "build",
+    "package",
+  ]) {
     assert.match(rootTasks[taskName]?.desc ?? "", /.+/, `${taskName} requires a description`);
   }
   assert.match(rootTasks.default.summary ?? "", /local-first encrypted accounting/i);
@@ -229,12 +252,33 @@ test("local Task front door preserves the safe development contract", async () =
       `${taskName} must use sequential cmds, not deps`,
     );
   }
-  for (const unsupportedAlias of ["verify", "build", "package", "deploy:mas"]) {
-    assert.equal(
-      rootTasks[unsupportedAlias],
-      undefined,
-      `${unsupportedAlias} is not implemented yet`,
-    );
+  const rootDevPrecondition = rootTasks.dev.preconditions?.[0];
+  assert.equal(rootDevPrecondition?.sh, `mise exec -- node -e '${targetPreconditionScript}'`);
+  for (const { target, accepted } of [
+    { target: "darwin/arm64", accepted: true },
+    { target: "win32/x64", accepted: true },
+    { target: "linux/x64", accepted: false },
+  ]) {
+    const result = await runTargetPrecondition(rootDevPrecondition, target);
+    assert.equal(result.code === 0, accepted, `dev target ${target}`);
+  }
+  assert.deepEqual(taskReferences(rootTasks.verify), ["verify:full"]);
+  assert.deepEqual(taskReferences(rootTasks["verify:quick"]), ["test:verify:quick"]);
+  assert.deepEqual(taskReferences(rootTasks["verify:full"]), ["test:verify:full"]);
+  assert.deepEqual(taskReferences(rootTasks["verify:release"]), ["test:verify:release"]);
+  assert.deepEqual(taskReferences(rootTasks.build), ["build:desktop"]);
+  assert.deepEqual(taskReferences(rootTasks.package), ["package:verify"]);
+  for (const taskName of ["build", "package"]) {
+    const precondition = rootTasks[taskName].preconditions?.[0];
+    assert.equal(precondition?.sh, `mise exec -- node -e '${targetPreconditionScript}'`);
+    for (const { target, accepted } of [
+      { target: "darwin/arm64", accepted: true },
+      { target: "win32/x64", accepted: true },
+      { target: "linux/x64", accepted: false },
+    ]) {
+      const result = await runTargetPrecondition(precondition, target);
+      assert.equal(result.code === 0, accepted, `${taskName} target ${target}`);
+    }
   }
 
   for (const [taskName, task] of Object.entries(setup.tasks ?? {})) {
@@ -283,6 +327,154 @@ test("local Task front door preserves the safe development contract", async () =
   assert.deepEqual(shellCommands(dev.tasks.core), ["mise exec -- pnpm core:build"]);
   assert.deepEqual(shellCommands(dev.tasks.launch), ["mise exec -- pnpm desktop:start"]);
 
+  const testTasks = (await readTaskfile("taskfiles/test.yml")).tasks;
+  for (const taskName of [
+    "core",
+    "desktop",
+    "contracts",
+    "sqlcipher",
+    "verify:quick",
+    "verify:full",
+    "verify:release",
+  ]) {
+    assert.match(testTasks[taskName]?.desc ?? "", /.+/, `test:${taskName} requires a description`);
+    assert.equal(testTasks[taskName].deps, undefined, `test:${taskName} must use sequential cmds`);
+    assert.equal(
+      testTasks[taskName].platforms,
+      undefined,
+      `test:${taskName} must not silently skip`,
+    );
+  }
+  assert.deepEqual(shellCommands(testTasks.core), ["mise exec -- pnpm test"]);
+  assert.deepEqual(shellCommands(testTasks.desktop), ["mise exec -- pnpm desktop:test"]);
+  assert.deepEqual(shellCommands(testTasks.contracts), ["mise exec -- pnpm contracts"]);
+  const sqlcipherPrecondition = testTasks.sqlcipher.preconditions?.[0];
+  assert.equal(sqlcipherPrecondition?.sh, `mise exec -- node -e '${targetPreconditionScript}'`);
+  assert.deepEqual(shellCommands(testTasks.sqlcipher), [
+    `mise exec -- node -e '${sqlcipherTargetRunnerScript}'`,
+  ]);
+  assert.match(
+    sqlcipherTargetRunnerScript,
+    /\["pnpm", "sqlcipher:test"\], \["pnpm", "sqlcipher:build"\], \["go", "test", "-race", "-tags", "tammy_sqlcipher", "\.\/services\/core\/internal\/storage\/sqlcipher\/\.\.\.", "-count=1"\]/,
+    "macOS SQLCipher verification must build its clean-checkout native resource before tagged Go tests",
+  );
+  assert.match(
+    windowsSqlcipherHandoff,
+    /mise exec -- pnpm sqlcipher:test; if \(\$LASTEXITCODE -ne 0\) \{ throw "SQLCIPHER_NODE_TEST_FAILED" \}; mise exec -- pnpm sqlcipher:build; if \(\$LASTEXITCODE -ne 0\) \{ throw "SQLCIPHER_BUILD_FAILED" \}; [\s\S]*; mise exec -- go test -race -tags tammy_sqlcipher \.\/services\/core\/internal\/storage\/sqlcipher\/\.\.\. -count=1; if \(\$LASTEXITCODE -ne 0\) \{ throw "SQLCIPHER_GO_INTEGRATION_FAILED" \}/,
+    "the Windows handoff must fail immediately after every native command",
+  );
+  for (const { target, accepted } of [
+    { target: "darwin/arm64", accepted: true },
+    { target: "win32/x64", accepted: true },
+    { target: "linux/x64", accepted: false },
+  ]) {
+    const result = await runTargetPrecondition(sqlcipherPrecondition, target);
+    assert.equal(result.code === 0, accepted, `test:sqlcipher target ${target}`);
+  }
+  assert.deepEqual(taskReferences(testTasks["verify:quick"]), []);
+  assert.deepEqual(shellCommands(testTasks["verify:quick"]), [
+    "mise exec -- pnpm check:toolchain",
+    "mise exec -- pnpm test",
+    "mise exec -- pnpm --filter @tammy/connect-client typecheck",
+    "mise exec -- pnpm desktop:typecheck",
+    "mise exec -- pnpm contracts",
+    "mise exec -- pnpm lint",
+    "git diff --check",
+  ]);
+  assert.deepEqual(taskReferences(testTasks["verify:full"]), ["verify:quick"]);
+  assert.deepEqual(shellCommands(testTasks["verify:full"]), [
+    `mise exec -- node -e '${fullVerificationRunnerScript}'`,
+  ]);
+  const releaseVerificationPrecondition = testTasks["verify:release"].preconditions?.[0];
+  assert.equal(
+    releaseVerificationPrecondition?.sh,
+    `mise exec -- node -e '${macosReleaseTargetPreconditionScript}'`,
+  );
+  for (const { target, accepted } of [
+    { target: "darwin/arm64", accepted: true },
+    { target: "linux/x64", accepted: false },
+  ]) {
+    const result = await runTargetPrecondition(releaseVerificationPrecondition, target);
+    assert.equal(result.code === 0, accepted, `test:verify:release target ${target}`);
+  }
+  assert.deepEqual(taskReferences(testTasks["verify:release"]), [
+    "verify:full",
+    ":package:e2e",
+    ":release:check",
+  ]);
+  assert.deepEqual(taskCommands(testTasks["verify:release"]), [
+    "mise exec -- node scripts/check-clean-tree.mjs",
+    "mise exec -- pnpm contracts:production",
+    { task: "verify:full" },
+    { task: ":package:e2e" },
+    { task: ":release:check" },
+  ]);
+
+  const buildTasks = (await readTaskfile("taskfiles/build.yml")).tasks;
+  for (const taskName of ["sqlcipher", "core", "desktop"]) {
+    const task = buildTasks[taskName];
+    assert.equal(task.platforms, undefined, `build:${taskName} must not silently skip`);
+    assert.equal(task.preconditions?.[0]?.sh, `mise exec -- node -e '${targetPreconditionScript}'`);
+    for (const { target, accepted } of [
+      { target: "darwin/arm64", accepted: true },
+      { target: "win32/x64", accepted: true },
+      { target: "linux/x64", accepted: false },
+    ]) {
+      const result = await runTargetPrecondition(task.preconditions[0], target);
+      assert.equal(result.code === 0, accepted, `build:${taskName} target ${target}`);
+    }
+  }
+  assert.deepEqual(shellCommands(buildTasks.sqlcipher), ["mise exec -- pnpm sqlcipher:build"]);
+  assert.deepEqual(shellCommands(buildTasks.core), ["mise exec -- pnpm core:build"]);
+  assert.equal(buildTasks.manifest.preconditions, undefined);
+  assert.deepEqual(shellCommands(buildTasks.manifest), ["mise exec -- pnpm build:manifest"]);
+  assert.deepEqual(shellCommands(buildTasks.desktop), [
+    "mise exec -- pnpm core:build",
+    "mise exec -- pnpm build:manifest",
+    "mise exec -- pnpm --dir apps/desktop package",
+  ]);
+  assert.match(buildTasks.desktop.summary ?? "", /raw.*not verified/i);
+
+  const packageTasks = (await readTaskfile("taskfiles/package.yml")).tasks;
+  assert.equal(packageTasks.launch, undefined, "package:launch must not exist");
+  for (const taskName of ["verify", "e2e"]) {
+    const task = packageTasks[taskName];
+    assert.equal(task.platforms, undefined, `package:${taskName} must not silently skip`);
+    assert.equal(task.preconditions?.[0]?.sh, `mise exec -- node -e '${targetPreconditionScript}'`);
+    for (const { target, accepted } of [
+      { target: "darwin/arm64", accepted: true },
+      { target: "win32/x64", accepted: true },
+      { target: "linux/x64", accepted: false },
+    ]) {
+      const result = await runTargetPrecondition(task.preconditions[0], target);
+      assert.equal(result.code === 0, accepted, `package:${taskName} target ${target}`);
+    }
+    assert.match(task.summary ?? "", /not.*evidence/i);
+  }
+  assert.match(
+    packageTasks.verify.summary ?? "",
+    /authenticates[\s\S]*artifact[\s\S]*source[\s\S]*core[\s\S]*signature[\s\S]*resource/i,
+  );
+  assert.match(
+    packageTasks.verify.summary ?? "",
+    /excludes[\s\S]*runtime launch[\s\S]*isolated Electron[\s\S]*userData[\s\S]*orphan proof/i,
+  );
+  assert.match(
+    packageTasks.e2e.summary ?? "",
+    /authenticates[\s\S]*source[\s\S]*core[\s\S]*package/i,
+  );
+  assert.match(
+    packageTasks.e2e.summary ?? "",
+    /isolated Electron userData[\s\S]*runtime[\s\S]*orphan evidence/i,
+  );
+  assert.deepEqual(shellCommands(packageTasks.verify), ["mise exec -- pnpm desktop:package"]);
+  assert.deepEqual(shellCommands(packageTasks.e2e), ["mise exec -- pnpm desktop:e2e"]);
+
+  const releaseTasks = (await readTaskfile("taskfiles/release.yml")).tasks;
+  assert.deepEqual(Object.keys(releaseTasks), ["check"]);
+  assert.equal(releaseTasks.check.preconditions, undefined);
+  assert.deepEqual(shellCommands(releaseTasks.check), ["mise exec -- pnpm check:macos-store"]);
+
   for (const taskName of ["toolchain", "core", "package", "data"]) {
     const task = diagnostics.tasks?.[taskName];
     assert.match(task?.desc ?? "", /.+/, `diagnose:${taskName} requires a description`);
@@ -321,12 +513,12 @@ test("local Task front door preserves the safe development contract", async () =
     assert.throws(() => assertReadOnlyDiagnostic(mutation), assert.AssertionError);
   }
 
-  for (const [taskName, { task }] of taskGraph) {
+  for (const [taskName, { namespace, task }] of taskGraph) {
     for (const reference of taskReferences(task)) {
       assert.equal(
-        taskGraph.has(reference),
+        taskGraph.has(resolveTaskReference(namespace, reference)),
         true,
-        `${taskName} references missing task ${reference}`,
+        `${taskName} references missing task ${resolveTaskReference(namespace, reference)}`,
       );
     }
   }
@@ -335,7 +527,7 @@ test("local Task front door preserves the safe development contract", async () =
   for (const { task } of taskGraph.values()) {
     for (const command of shellCommands(task)) {
       allCommands.push(command);
-      if (command !== "mise install") {
+      if (command !== "mise install" && command !== "git diff --check") {
         assert.match(command, /^mise exec -- /, "local commands must use pinned mise execution");
       }
     }
@@ -346,6 +538,7 @@ test("local Task front door preserves the safe development contract", async () =
     assert.equal(task.sources, undefined, "Task caching is not allowed");
     assert.equal(task.generates, undefined, "Task caching is not allowed");
     assert.equal(task.deps, undefined, "Task dependencies are not allowed in this slice");
+    assert.equal(task.platforms, undefined, "Task platforms must not silently skip scenarios");
   }
   for (const command of allCommands) assertAllowedShellCommand(command);
   assert.throws(
