@@ -265,9 +265,9 @@ test("pins provisioning and evidence ownership independently for every CI job", 
     requiredStep(macos, "Assert native Apple silicon").run,
     'test "$(uname -m)" = "arm64"',
   );
-  assert.match(
-    requiredStep(macos, "Prepare isolated test keychain").run,
-    /security create-keychain[\s\S]*security default-keychain[\s\S]*security list-keychains -d user -s "\$keychain"[\s\S]*security unlock-keychain[\s\S]*security set-keychain-settings/,
+  assert.equal(
+    macos.steps.some((step) => step.name === "Prepare isolated test keychain"),
+    false,
   );
   assert.equal(requiredStep(macos, "Run canonical macOS CI scenario").run, "task ci:macos");
   const macosArtifact = requiredStep(macos, "Retain packaged failure evidence");

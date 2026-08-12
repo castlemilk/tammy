@@ -108,17 +108,6 @@ jobs:
         shell: bash
         run: test "$(task --version)" = "3.52.0"
 
-      - name: Prepare isolated test keychain
-        shell: bash
-        run: |
-          keychain="$RUNNER_TEMP/tammy-ci.keychain-db"
-          password="$(uuidgen)"
-          security create-keychain -p "$password" "$keychain"
-          security default-keychain -d user -s "$keychain"
-          security list-keychains -d user -s "$keychain"
-          security unlock-keychain -p "$password" "$keychain"
-          security set-keychain-settings -lut 21600 "$keychain"
-
       - name: Run canonical macOS CI scenario
         run: task ci:macos
 
