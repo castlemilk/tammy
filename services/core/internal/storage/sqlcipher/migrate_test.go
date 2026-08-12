@@ -160,6 +160,25 @@ func TestLedgerSchemaEnforcesPostingAndOwnershipInvariants(t *testing.T) {
 	assertExecFails(t, database, `UPDATE journals SET description='mutated' WHERE id='journal-1'`)
 	assertExecFails(t, database, `INSERT INTO accounts(id, organisation_id, code, name, account_type, normal_balance, status, designation, created_at) VALUES ('bad','org-1','9999','Bad','INVALID','DEBIT','ACTIVE','ORDINARY','2026-08-04T00:00:00Z')`)
 	assertExecFails(t, database, `INSERT INTO organisations(id, legal_name, status, created_at) VALUES ('org-2','Other Pty Ltd','ACTIVE','2026-08-04T00:00:00Z')`)
+	mustExec(t, database, `INSERT INTO journals(id, organisation_id, source_type, source_id, source_revision, state, journal_date, description, total_debits_minor, total_credits_minor, currency_code, financial_revision, created_at) VALUES ('journal-2','org-1','MANUAL','source-2',1,'DRAFT','2026-08-04','Ownership',100,100,'AUD',1,'2026-08-04T00:00:00Z')`)
+	assertExecFails(t, database, `INSERT INTO journal_lines(id, journal_id, line_number, account_id, debit_minor, credit_minor, currency_code) VALUES ('wrong-currency','journal-2',1,'account-1',100,0,'USD')`)
+	mustExec(t, database, `INSERT INTO journal_lines(id, journal_id, line_number, account_id, debit_minor, credit_minor, currency_code) VALUES ('ownership-line-1','journal-2',1,'account-1',100,0,'AUD')`)
+	mustExec(t, database, `INSERT INTO journal_lines(id, journal_id, line_number, account_id, debit_minor, credit_minor, currency_code) VALUES ('ownership-line-2','journal-2',2,'account-2',0,100,'AUD')`)
+	mustExec(t, database, `INSERT INTO tax_facts(id, organisation_id, journal_line_id, tax_code, treatment, original_gross_minor, original_net_minor, original_gst_minor, attributed_gross_minor, attributed_net_minor, attributed_gst_minor, remaining_gross_minor, remaining_net_minor, remaining_gst_minor, tax_rule_type, tax_rule_id, tax_rule_revision, tax_rule_content_hash, source_type, source_id, source_revision, created_at) VALUES ('tax-fact-1','org-1','ownership-line-1','GST','TAXABLE',100,91,9,100,91,9,100,91,9,'GST','rule-1',1,X'0000000000000000000000000000000000000000000000000000000000000000','MANUAL','source-2',1,'2026-08-04T00:00:00Z')`)
+	mustExec(t, database, `INSERT INTO cash_flow_facts(id, organisation_id, journal_line_id, sequence, category, amount_minor, source_revision, created_at) VALUES ('cash-fact-1','org-1','ownership-line-1',1,'OPERATING',100,1,'2026-08-04T00:00:00Z')`)
+	mustExec(t, database, `UPDATE journals SET state='POSTED', posted_at='2026-08-04T00:02:00Z' WHERE id='journal-2'`)
+	assertExecFails(t, database, `UPDATE tax_facts SET original_gst_minor=10 WHERE id='tax-fact-1'`)
+	assertExecFails(t, database, `DELETE FROM cash_flow_facts WHERE id='cash-fact-1'`)
+	mustExec(t, database, `INSERT INTO journals(id, organisation_id, source_type, source_id, source_revision, state, journal_date, description, total_debits_minor, total_credits_minor, currency_code, financial_revision, created_at) VALUES ('journal-opening','org-1','OPENING','source-opening',1,'DRAFT','2026-08-04','Opening conversion',100,100,'AUD',1,'2026-08-04T00:00:00Z')`)
+	mustExec(t, database, `INSERT INTO opening_conversions(id, organisation_id, conversion_date, state, source_sha256, created_at) VALUES ('opening-1','org-1','2026-08-04','DRAFT','0000000000000000000000000000000000000000000000000000000000000000','2026-08-04T00:00:00Z')`)
+	assertExecFails(t, database, `UPDATE opening_conversions SET state='POSTED', journal_id='journal-opening', financial_revision=1 WHERE id='opening-1'`)
+	mustExec(t, database, `INSERT INTO journal_lines(id, journal_id, line_number, account_id, debit_minor, credit_minor, currency_code) VALUES ('opening-line-1','journal-opening',1,'account-1',100,0,'AUD')`)
+	mustExec(t, database, `INSERT INTO journal_lines(id, journal_id, line_number, account_id, debit_minor, credit_minor, currency_code) VALUES ('opening-line-2','journal-opening',2,'account-2',0,100,'AUD')`)
+	mustExec(t, database, `INSERT INTO opening_items(id, conversion_id, account_id, item_kind, debit_minor, credit_minor, currency_code) VALUES ('opening-item-1','opening-1','account-1','ORDINARY',100,0,'AUD')`)
+	mustExec(t, database, `UPDATE journals SET state='POSTED', posted_at='2026-08-04T00:03:00Z' WHERE id='journal-opening'`)
+	mustExec(t, database, `UPDATE opening_conversions SET state='POSTED', journal_id='journal-opening', financial_revision=1 WHERE id='opening-1'`)
+	assertExecFails(t, database, `UPDATE opening_items SET debit_minor=99 WHERE id='opening-item-1'`)
+	assertExecFails(t, database, `UPDATE opening_conversions SET conversion_date='2026-08-05' WHERE id='opening-1'`)
 	assertExecFails(t, database, `INSERT INTO accounts(id, organisation_id, code, name, account_type, normal_balance, status, designation, owner_module, created_at) VALUES ('wrong-module','org-1','9998','Wrong Owner','ASSET','DEBIT','ACTIVE','ORDINARY','banking','2026-08-04T00:00:00Z')`)
 }
 
@@ -177,10 +196,14 @@ func TestLedgerOwnershipKeysCannotBeReparented(t *testing.T) {
 	mustExec(t, database, `INSERT INTO organisations(id, legal_name, status, created_at) VALUES ('org-1','Tammy Pty Ltd','ACTIVE','2026-08-04T00:00:00Z')`)
 	assertExecFails(t, database, `INSERT INTO organisations(id, legal_name, status, created_at) VALUES ('org-2','Other Pty Ltd','ACTIVE','2026-08-04T00:00:00Z')`)
 	mustExec(t, database, `INSERT INTO accounts(id, organisation_id, code, name, account_type, normal_balance, status, designation, created_at) VALUES ('account-1','org-1','1000','Cash','ASSET','DEBIT','ACTIVE','ORDINARY','2026-08-04T00:00:00Z')`)
+	mustExec(t, database, `INSERT INTO accounts(id, organisation_id, code, name, account_type, normal_balance, status, designation, created_at) VALUES ('account-2','org-1','2000','Equity','EQUITY','CREDIT','ACTIVE','ORDINARY','2026-08-04T00:00:00Z')`)
 	mustExec(t, database, `INSERT INTO journals(id, organisation_id, source_type, source_id, source_revision, state, journal_date, description, total_debits_minor, total_credits_minor, currency_code, financial_revision, created_at) VALUES ('journal-1','org-1','MANUAL','source-1',1,'DRAFT','2026-08-04','Draft',100,100,'AUD',1,'2026-08-04T00:00:00Z')`)
+	mustExec(t, database, `INSERT INTO journals(id, organisation_id, source_type, source_id, source_revision, state, journal_date, description, total_debits_minor, total_credits_minor, currency_code, financial_revision, created_at) VALUES ('journal-2','org-1','MANUAL','source-2',1,'DRAFT','2026-08-04','Other draft',100,100,'AUD',1,'2026-08-04T00:00:00Z')`)
 	mustExec(t, database, `INSERT INTO journal_lines(id, journal_id, line_number, account_id, debit_minor, credit_minor, currency_code) VALUES ('line-1','journal-1',1,'account-1',100,0,'AUD')`)
+	mustExec(t, database, `INSERT INTO tax_facts(id, organisation_id, journal_line_id, tax_code, treatment, original_gross_minor, original_net_minor, original_gst_minor, attributed_gross_minor, attributed_net_minor, attributed_gst_minor, remaining_gross_minor, remaining_net_minor, remaining_gst_minor, tax_rule_type, tax_rule_id, tax_rule_revision, tax_rule_content_hash, source_type, source_id, source_revision, created_at) VALUES ('tax-1','org-1','line-1','GST','TAXABLE',100,91,9,100,91,9,100,91,9,'GST','rule-1',1,X'0000000000000000000000000000000000000000000000000000000000000000','MANUAL','source-1',1,'2026-08-04T00:00:00Z')`)
 	mustExec(t, database, `INSERT INTO opening_conversions(id, organisation_id, conversion_date, state, source_sha256, created_at) VALUES ('opening-1','org-1','2026-08-04','DRAFT','0000000000000000000000000000000000000000000000000000000000000000','2026-08-04T00:00:00Z')`)
 	mustExec(t, database, `INSERT INTO opening_items(id, conversion_id, account_id, item_kind, debit_minor, credit_minor, currency_code) VALUES ('opening-item-1','opening-1','account-1','ORDINARY',100,0,'AUD')`)
+	assertExecFailsWith(t, database, `UPDATE journal_lines SET journal_id='journal-2' WHERE id='line-1'`, "journal lines carrying financial facts cannot change journals")
 
 	for name, statement := range map[string]string{
 		"journal":                        `UPDATE journals SET organisation_id='org-2' WHERE id='journal-1'`,
@@ -529,5 +552,14 @@ func assertExecFails(t *testing.T, database *Database, query string) {
 	t.Helper()
 	if _, err := database.Exec(query); err == nil {
 		t.Fatalf("Exec(%q) succeeded", query)
+	}
+}
+
+func assertExecFailsWith(t *testing.T, database *Database, query, message string) {
+	t.Helper()
+	if _, err := database.Exec(query); err == nil {
+		t.Fatalf("Exec(%q) succeeded", query)
+	} else if !strings.Contains(err.Error(), message) {
+		t.Fatalf("Exec(%q) error = %v, want %q", query, err, message)
 	}
 }
