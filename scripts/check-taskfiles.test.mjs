@@ -161,6 +161,129 @@ function nodePrintCommand(lines) {
   return `mise exec -- node -e '${nodePrintScript(lines)}'`;
 }
 
+test("documentation presents Task scenarios as the local command front door", async () => {
+  const [readme, foundation, releaseRunbook] = await Promise.all([
+    readFile(path.join(repositoryRoot, "README.md"), "utf8"),
+    readFile(path.join(repositoryRoot, "docs/development/foundation.md"), "utf8"),
+    readFile(path.join(repositoryRoot, "docs/release/macos-app-store.md"), "utf8"),
+  ]);
+  const bootstrap = /```sh\nmise install\nmise exec -- task setup\nmise exec -- task dev\n```/;
+  assert.match(readme, bootstrap, "README must show the complete Task bootstrap flow");
+  assert.match(foundation, bootstrap, "foundation must show the complete Task bootstrap flow");
+  for (const [document, name, taskNames] of [
+    [
+      readme,
+      "README",
+      [
+        "test",
+        "verify",
+        "package:e2e",
+        "release:check",
+        "release:development",
+        "release:candidate",
+        "deploy:mas",
+      ],
+    ],
+    [
+      foundation,
+      "foundation",
+      ["test", "verify", "build", "package", "package:e2e", "diagnose:data"],
+    ],
+    [
+      releaseRunbook,
+      "release runbook",
+      ["release:check", "release:development", "release:candidate", "deploy:mas"],
+    ],
+  ]) {
+    for (const taskName of taskNames) {
+      assert.match(
+        document,
+        new RegExp(`mise exec -- task ${taskName.replaceAll(":", "\\:")}`),
+        `${name} must show the ${taskName} scenario`,
+      );
+    }
+  }
+  for (const document of [readme, foundation, releaseRunbook]) {
+    assert.doesNotMatch(
+      document,
+      /\brtk\b/,
+      "documentation commands are for operators, not agents",
+    );
+  }
+
+  for (const command of [
+    "mise exec -- corepack prepare pnpm@11.15.0 --activate",
+    "mise exec -- pnpm install --frozen-lockfile",
+    "mise exec -- pnpm check:toolchain",
+  ]) {
+    assert.match(
+      foundation,
+      new RegExp(command.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+      `foundation retains the underlying ${command} reference`,
+    );
+  }
+
+  for (const phrase of [
+    "local-first encrypted accounting",
+    "supervised Go core",
+    "local-core-development",
+    "local-core",
+    "development-memory-anchors",
+    "Do not manually delete",
+    "recoverable",
+    "no ATO submission",
+    "protobuf source, not generated",
+    "focused failing test",
+    "loader/linker",
+    "orphan",
+  ]) {
+    assert.match(foundation, new RegExp(phrase, "i"), `foundation retains ${phrase}`);
+  }
+  for (const variable of [...macosReleaseRequiredEnvironment, "TAMMY_MACOS_INSTALLER_IDENTITY"]) {
+    assert.match(releaseRunbook, new RegExp(variable), `release runbook retains ${variable}`);
+  }
+  for (const phrase of [
+    "## One-time Apple setup",
+    "legal entity",
+    "Mac App ID",
+    "Apple Development and Apple Distribution",
+    "separate Mac App Store development and distribution provisioning profiles",
+    "App Store Connect record",
+    "OPERATOR_REQUIRED",
+    "export-compliance determination",
+    "CFBundleVersion",
+    "forces development signing",
+    "force(?:s)? distribution signing",
+    "apps/desktop/out/Tammy-mas-arm64/Tammy.app",
+    "apps/desktop/out/make/pkg/arm64/Tammy-<version>-build.<number>.pkg",
+    "## Inspect the signed build",
+    "codesign --verify",
+    "App Sandbox",
+    "Electron helpers inherit the sandbox",
+    "ElectronTeamID",
+    "PrivacyInfo.xcprivacy",
+    "Every nested framework, helper, library, and executable",
+    "Xcode's privacy report",
+    "pkgutil --check-signature",
+    "spctl --assess --type install",
+    "observational local Gatekeeper evidence",
+    "## Metadata and App Review",
+    "Open `/privacy` before sign-in",
+    "one to ten factual screenshots",
+    "BAS draft — not lodged",
+    "no remote account or demo credentials",
+    "no advertising, analytics, tracking",
+    "manual.*Transporter",
+    "never upload",
+    "## Release record and rollback",
+    "Record the commit, marketing version, build number, signing/profile names, package SHA-256",
+    "App Store rollback means",
+    "Never reuse an uploaded build number",
+  ]) {
+    assert.match(releaseRunbook, new RegExp(phrase, "i"), `release runbook retains ${phrase}`);
+  }
+});
+
 const allowedNodeScripts = new Set([
   rootBoundaryScript,
   targetPreconditionScript,

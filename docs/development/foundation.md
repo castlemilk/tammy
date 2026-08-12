@@ -1,44 +1,65 @@
 # Developer handbook
 
-Tammy is an offline-first Electron application backed by a supervised Go core and an encrypted local SQLCipher workspace. For the exact capability boundary, read [Current technical state](tech-state.md); for a manual product exercise, use the [Local accounting walkthrough](local-accounting-walkthrough.md).
+Tammy is local-first encrypted accounting: an offline-first Electron application backed by a supervised Go core and an encrypted local SQLCipher workspace. For the exact capability boundary, read [Current technical state](tech-state.md); for a manual product exercise, use the [Local accounting walkthrough](local-accounting-walkthrough.md). BAS workpapers are drafts only, with no BAS lodgement and no ATO submission.
 
-All commands below run from the repository root. This workspace requires the `rtk` prefix.
+All commands below run from the repository root. Task is the operator-facing command front door; pnpm, Go, Node, and Git commands remain implementation and troubleshooting reference.
 
 ## Toolchain setup
 
 ```sh
-rtk mise install
-rtk mise exec -- corepack prepare pnpm@11.15.0 --activate
-rtk mise exec -- pnpm install --frozen-lockfile
-rtk mise exec -- pnpm check:toolchain
+mise install
+mise exec -- task setup
+mise exec -- task dev
 ```
 
-Pinned Node, Go, Buf, and pnpm versions live in `mise.toml` and `package.json`. Use them when generating contracts, building the core, or reporting verification evidence.
+`mise install` is the sole prerequisite: it installs Task itself. After bootstrap, use `mise exec -- task ...`. `setup:tools` is a post-bootstrap repair/update task, not a bootstrap substitute. Pinned Node, Go, Buf, and pnpm versions live in `mise.toml` and `package.json`.
 
-## Run and build
-
-Start the development application:
+## Task scenarios
 
 ```sh
-rtk mise exec -- pnpm desktop:start
+mise exec -- task --list
+mise exec -- task test
+mise exec -- task verify
+mise exec -- task build
+mise exec -- task package
+mise exec -- task package:e2e
+mise exec -- task diagnose:data
 ```
 
-Build an ad-hoc signed local macOS package:
+`build` is a raw local bundle for diagnosis. `package` verifies the ordinary local package artifact, manifest, core, signatures, and resources but does not launch it. `package:e2e` adds isolated Electron user data, runtime acceptance, and orphan-process evidence. None is production or App Store evidence.
+
+## Implementation and troubleshooting reference
+
+Task scenarios delegate to the pinned commands below; use these only when focusing on the named implementation boundary. For a post-bootstrap dependency repair, run the underlying setup sequence directly (rather than replacing the Task front door):
 
 ```sh
-rtk mise exec -- pnpm desktop:package
+mise exec -- corepack prepare pnpm@11.15.0 --activate
+mise exec -- pnpm install --frozen-lockfile
+mise exec -- pnpm check:toolchain
+```
+
+Start the development application directly with:
+
+```sh
+mise exec -- pnpm desktop:start
+```
+
+Build an ordinary local macOS package directly:
+
+```sh
+mise exec -- pnpm desktop:package
 ```
 
 Exercise the packaged lifecycle:
 
 ```sh
-rtk mise exec -- pnpm desktop:e2e
+mise exec -- pnpm desktop:e2e
 ```
 
 Check the repository-owned Mac App Store inputs:
 
 ```sh
-rtk mise exec -- pnpm check:macos-store
+mise exec -- pnpm check:macos-store
 ```
 
 The ordinary start/package/E2E commands are development commands. They do not sign, upload, or obtain App Store/ATO approval. The store checker is also local evidence only; Apple signing and submission follow the [macOS App Store runbook](../release/macos-app-store.md).
@@ -50,6 +71,8 @@ Electron starts the development core with a data root below its user-data direct
 The data root is persistent: restarting `desktop:start` should reopen the same SQLCipher workspace. Development also passes `--development-memory-anchors`. On startup the core removes only its owned `workspace-attempts.journal` and `identity-attempts.journal` before recreating them against in-memory anchors. This avoids development restart failure but deliberately means attempt/cooldown durability is not production evidence. Packaged mode uses `local-core` and does not enable this reset.
 
 Do not manually delete individual files. For a deliberate blank-workspace reset, stop both Electron and the core, then move the entire `local-core-development` directory aside so it remains recoverable. Never include that directory, passwords, recovery codes, installation keys, databases, or imported documents in a commit.
+
+`mise exec -- task diagnose:data` only prints the expected development and packaged paths; there is no data-deletion task. Stop the app and core before the recoverable reset. Development memory anchors are process-memory-only and must not be treated as production durability evidence.
 
 ## Repository map
 
@@ -71,11 +94,11 @@ Do not manually delete individual files. For a deliberate blank-workspace reset,
 ## Contracts and generated code
 
 ```sh
-rtk mise exec -- pnpm proto:format:check
-rtk mise exec -- pnpm proto:lint
-rtk mise exec -- pnpm proto:breaking
-rtk mise exec -- pnpm proto:generate
-rtk git diff --exit-code -- services/core/internal/gen/tammy/v1 packages/connect-client/src/gen/tammy/v1
+mise exec -- pnpm proto:format:check
+mise exec -- pnpm proto:lint
+mise exec -- pnpm proto:breaking
+mise exec -- pnpm proto:generate
+git diff --exit-code -- services/core/internal/gen/tammy/v1 packages/connect-client/src/gen/tammy/v1
 ```
 
 Edit protobuf source, not generated Go or TypeScript. A generated diff after the pinned generation command must be reviewed and committed with its source contract; an unexpected diff means generation is not byte-stable.
@@ -85,16 +108,16 @@ Edit protobuf source, not generated Go or TypeScript. A generated diff after the
 Use the smallest relevant check while iterating, then the broader affected gates:
 
 ```sh
-rtk mise exec -- go test ./services/core/...
-rtk mise exec -- go test -tags=tammy_sqlcipher ./services/core/...
-rtk mise exec -- pnpm desktop:test
-rtk mise exec -- pnpm desktop:typecheck
-rtk mise exec -- pnpm lint
-rtk mise exec -- pnpm contracts
-rtk git diff --check
+mise exec -- go test ./services/core/...
+mise exec -- go test -tags=tammy_sqlcipher ./services/core/...
+mise exec -- pnpm desktop:test
+mise exec -- pnpm desktop:typecheck
+mise exec -- pnpm lint
+mise exec -- pnpm contracts
+git diff --check
 ```
 
-The SQLCipher-tagged suite requires the supported cgo/platform toolchain and can take substantially longer than default unit tests. Use `rtk mise exec -- pnpm desktop:e2e` when a change crosses Electron, preload, generated transport, or packaged-core boundaries.
+The SQLCipher-tagged suite requires the supported cgo/platform toolchain and can take substantially longer than default unit tests. Use `mise exec -- task package:e2e` when a change crosses Electron, preload, generated transport, or packaged-core boundaries.
 
 ## Safe change workflow
 
@@ -103,14 +126,15 @@ The SQLCipher-tagged suite requires the supported cgo/platform toolchain and can
 3. Add a focused failing test, run it, and confirm it fails for the intended missing behavior.
 4. Make the smallest implementation change. Use `apply_patch` for authored files and pinned Buf generation for protobuf output.
 5. Run the focused test, affected default/tagged tests, contract checks when relevant, and a real packaged or SQLCipher E2E when the boundary warrants it.
-6. Inspect `git diff`, preserve unrelated work, run `rtk git diff --check`, and commit only observed results. Never claim unsigned packages, simulated fixtures, or local checks as external approval evidence.
+6. Inspect `git diff`, preserve unrelated work, run `git diff --check`, and commit only observed results. Never claim unsigned packages, simulated fixtures, or local checks as external approval evidence.
 
 ## Troubleshooting
 
-- If tool versions drift, rerun the four setup commands above.
-- If the core binary is missing or stale, run `rtk mise exec -- pnpm core:build`.
+- If tool versions drift, rerun `mise exec -- task setup`; use `mise exec -- task diagnose:toolchain` to inspect without mutation.
+- If the core binary is missing or stale, run `mise exec -- pnpm core:build`.
 - If development startup reports attempt-journal authentication, stop all owned Tammy processes and restart normally so the development-only reset can run. Do not delete individual files while the core is live.
 - If a workspace does not reopen, retain the whole data root and diagnostics. Partial deletion can destroy the evidence needed to distinguish passphrase, catalogue, database, or recovery failure.
+- If a loader/linker reports contention, retain the exact process paths and use `mise exec -- task diagnose:core`; do not weaken timeouts or use broad process kills to mask it.
 - If packaged E2E reports an orphan, retain its exact path and PID diagnostics. Do not use a broad process-name kill that could hide the defect or terminate another developer's process.
 
 ## Further reading

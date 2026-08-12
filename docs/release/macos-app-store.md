@@ -6,16 +6,15 @@ Tammy uses bundle identifier `com.tammy.desktop`, category `public.app-category.
 
 ## Repository readiness
 
-From a clean checkout with the pinned toolchain installed:
+From a clean checkout, install the pinned toolchain once and check the repository-owned profile:
 
 ```sh
-rtk mise exec -- pnpm install --frozen-lockfile
-rtk mise exec -- pnpm check:macos-store
-rtk mise exec -- pnpm desktop:typecheck
-rtk mise exec -- pnpm desktop:package
+mise install
+mise exec -- task setup
+mise exec -- task release:check
 ```
 
-`check:macos-store` validates the repository-owned bundle identity, category, icon, privacy manifest, sandbox entitlements, packaging profile, and metadata template. `desktop:package` is the ordinary local package smoke test; it does not produce an App Store build.
+`release:check` validates the repository-owned bundle identity, category, icon, privacy manifest, sandbox entitlements, packaging profile, and metadata template without signing credentials. `mise exec -- task verify:release` adds the supported release-readiness verification but does not sign a candidate. `mise exec -- task package` remains an ordinary local package smoke test, not an App Store build.
 
 ## One-time Apple setup
 
@@ -34,7 +33,7 @@ Apple's current signing, provisioning, upload, metadata, screenshot, privacy, an
 
 ## Build inputs
 
-The release command accepts only explicit inputs and never prints their values. Certificate identity names are selected from the operator's keychain; the provisioning profile must be an absolute path outside the repository. Finalize and commit the metadata worksheet before invoking the signed-build command: repository mode accepts its visible template placeholders, while `--release` rejects them.
+The signed Task scenarios accept only explicit inputs and never print their values. Certificate identity names are selected from the operator's keychain; the provisioning profile must be an absolute path outside the repository. Finalize and commit the metadata worksheet before invoking a signed-build scenario: repository mode accepts its visible template placeholders, while `--release` rejects them.
 
 ```sh
 export TAMMY_MACOS_BUILD_NUMBER='1'
@@ -42,14 +41,13 @@ export TAMMY_MACOS_EXPORT_COMPLIANCE='exempt' # or non-exempt, from the legal de
 export TAMMY_MACOS_PROVISIONING_PROFILE='/absolute/path/Tammy_MAS_Development.provisionprofile'
 export TAMMY_MACOS_PRIVACY_POLICY_URL='https://example.com/tammy/privacy'
 export TAMMY_MACOS_SIGNING_IDENTITY='Apple Development: Example Person (TEAMID1234)'
-export TAMMY_MACOS_SIGNING_MODE='development'
 export TAMMY_MACOS_SUPPORT_URL='https://example.com/tammy/support'
 export TAMMY_MACOS_TEAM_ID='TEAMID1234'
 
-rtk mise exec -- pnpm desktop:make:mas
+mise exec -- task release:development
 ```
 
-Development mode produces `apps/desktop/out/Tammy-mas-arm64/Tammy.app`. Use it for a local sandbox smoke test. It deliberately does not produce an installer package.
+`release:development` forces development signing and produces `apps/desktop/out/Tammy-mas-arm64/Tammy.app`. Use it for a local sandbox smoke test. It deliberately does not produce an installer package or upload.
 
 For an upload candidate, use the distribution profile and identities:
 
@@ -60,14 +58,15 @@ export TAMMY_MACOS_PROVISIONING_PROFILE='/absolute/path/Tammy_MAS_Distribution.p
 export TAMMY_MACOS_PRIVACY_POLICY_URL='https://example.com/tammy/privacy'
 export TAMMY_MACOS_SIGNING_IDENTITY='Apple Distribution: Example Company Pty Ltd (TEAMID1234)'
 export TAMMY_MACOS_INSTALLER_IDENTITY='3rd Party Mac Developer Installer: Example Company Pty Ltd (TEAMID1234)'
-export TAMMY_MACOS_SIGNING_MODE='distribution'
 export TAMMY_MACOS_SUPPORT_URL='https://example.com/tammy/support'
 export TAMMY_MACOS_TEAM_ID='TEAMID1234'
 
-rtk mise exec -- pnpm desktop:make:mas
+mise exec -- task release:candidate
+# Equivalent candidate alias; it never uploads:
+mise exec -- task deploy:mas
 ```
 
-The command checks the clean tree, finalized metadata, and release inputs; rebuilds the Go core and authenticates its SQLCipher runtime before signing; verifies the Apple signature and records the signed core hash without executing that inherited child outside its sandbox parent; packages and signs the outer MAS app without signing the core a second time; verifies the actual `Tammy-mas-arm64` core/manifest equality; and uses Apple's `/usr/bin/productbuild` to create `apps/desktop/out/make/pkg/arm64/Tammy-<version>-build.<number>.pkg`. A distribution-signed app is for App Store upload; use the Apple Development build for local execution.
+`release:candidate` and `deploy:mas` force distribution signing. They check the clean tree, finalized metadata, and release inputs; rebuild the Go core and authenticate its SQLCipher runtime before signing; verify the Apple signature and record the signed core hash without executing that inherited child outside its sandbox parent; package and sign the outer MAS app without signing the core a second time; verify the actual `Tammy-mas-arm64` core/manifest equality; and use Apple's `/usr/bin/productbuild` to create `apps/desktop/out/make/pkg/arm64/Tammy-<version>-build.<number>.pkg`. They print local package evidence and never upload. A distribution-signed app is for App Store upload; use the Apple Development build for local execution.
 
 ## Inspect the signed build
 
@@ -76,11 +75,11 @@ Set `APP` to the development or distribution app path and inspect the actual out
 ```sh
 APP='apps/desktop/out/Tammy-mas-arm64/Tammy.app'
 
-rtk codesign --verify --deep --strict --verbose=2 "$APP"
-rtk codesign -d --entitlements :- "$APP"
-rtk security cms -D -i "$APP/Contents/embedded.provisionprofile"
-rtk find "$APP/Contents" -type f -perm -111 -print
-rtk spctl --assess --type execute --verbose=4 "$APP"
+codesign --verify --deep --strict --verbose=2 "$APP"
+codesign -d --entitlements :- "$APP"
+security cms -D -i "$APP/Contents/embedded.provisionprofile"
+find "$APP/Contents" -type f -perm -111 -print
+spctl --assess --type execute --verbose=4 "$APP"
 ```
 
 Verify, rather than assume, all of the following:
@@ -99,11 +98,11 @@ For a distribution package:
 
 ```sh
 PKG='apps/desktop/out/make/pkg/arm64/Tammy-0.1.0-build.2.pkg'
-rtk pkgutil --check-signature "$PKG"
-rtk spctl --assess --type install --verbose=4 "$PKG"
+pkgutil --check-signature "$PKG"
+spctl --assess --type install --verbose=4 "$PKG"
 ```
 
-Record the `spctl` output as local Gatekeeper evidence. A pre-submission Mac App Store candidate may not be accepted like a notarized Developer ID build before Apple processing, so do not treat that local result as a substitute for App Store Connect validation.
+Record the `spctl` output as observational local Gatekeeper evidence. A pre-submission Mac App Store candidate may not be accepted like a notarized Developer ID build before Apple processing, so do not treat that local classification as a substitute for App Store Connect validation.
 
 ## Metadata and App Review
 
@@ -117,7 +116,7 @@ Use [store-metadata.md](../../apps/desktop/release/macos/store-metadata.md) as t
 - [ ] Confirm the build contains no advertising, analytics, tracking, in-app purchases, separate licence key, downloaded executable code, or orphan background process.
 - [ ] Use final copy and assets only—no beta labels, placeholder values, test contact details, or development menus.
 
-Upload the signed `.pkg` with Apple's Transporter app, wait for App Store Connect processing, attach the resulting build to the version, complete privacy/export/age-rating declarations, and submit only after every checklist item has observed evidence.
+Manually upload the signed `.pkg` with Apple's Transporter app, wait for App Store Connect processing, attach the resulting build to the version, complete privacy/export/age-rating declarations, and submit only after every checklist item has observed evidence. Task scenarios, including `deploy:mas`, never upload or call App Store Connect.
 
 ## Release record and rollback
 

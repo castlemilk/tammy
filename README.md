@@ -8,32 +8,30 @@ This is development software, not a production release. BAS workpapers are **dra
 
 ## Quick start
 
-Use the pinned toolchain from the repository root:
+Install the pinned toolchain once, then use Task scenarios from the repository root:
 
 ```sh
-rtk mise install
-rtk mise exec -- corepack prepare pnpm@11.15.0 --activate
-rtk mise exec -- pnpm install --frozen-lockfile
-rtk mise exec -- pnpm check:toolchain
-rtk mise exec -- pnpm desktop:start
+mise install
+mise exec -- task setup
+mise exec -- task dev
 ```
 
-Development mode keeps its encrypted workspace below Electron's user-data directory in `local-core-development`. See the [developer handbook](docs/development/foundation.md#development-workspace) before resetting local data.
+`setup` repairs the pinned tools, installs frozen dependencies, and checks the toolchain; `dev` starts the supported local application. Development mode keeps its encrypted workspace below Electron's user-data directory in `local-core-development`. See the [developer handbook](docs/development/foundation.md#development-workspace) before resetting local data.
 
-## Principal checks
+## Common scenarios
 
 ```sh
-rtk mise exec -- pnpm contracts
-rtk mise exec -- go test ./services/core/...
-rtk mise exec -- pnpm desktop:test
-rtk mise exec -- pnpm desktop:typecheck
-rtk mise exec -- pnpm lint
-rtk git diff --check
+mise exec -- task --list
+mise exec -- task test
+mise exec -- task verify
+mise exec -- task package
+mise exec -- task package:e2e
+mise exec -- task diagnose:data
 ```
 
-Build an ad-hoc signed local macOS package with `rtk mise exec -- pnpm desktop:package`. Exercise that package with `rtk mise exec -- pnpm desktop:e2e`.
+`package` authenticates an ordinary local artifact; `package:e2e` additionally proves the packaged runtime, isolated user data, and no orphan core. Neither is production or App Store evidence. The developer handbook keeps the underlying pnpm, Go, and Node commands for focused implementation and troubleshooting.
 
-Check the repository-owned Mac App Store profile with `rtk mise exec -- pnpm check:macos-store`. Signed packaging and upload require operator-owned Apple certificates, profiles, legal decisions, metadata, and approval; follow the [macOS App Store runbook](docs/release/macos-app-store.md).
+Check the repository-owned Mac App Store profile with `mise exec -- task release:check`. Signed packaging uses `mise exec -- task release:development` or `mise exec -- task release:candidate`; `mise exec -- task deploy:mas` produces and locally validates a candidate only. Apple certificates, profiles, legal decisions, metadata, upload, and approval remain operator-owned; follow the [macOS App Store runbook](docs/release/macos-app-store.md).
 
 ## Documentation
 
