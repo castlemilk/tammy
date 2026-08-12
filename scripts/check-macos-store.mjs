@@ -400,7 +400,8 @@ export async function inspectMacOSStoreRepository(root) {
       "releaseProfile.privacyManifest",
     ]) ||
     forge.includes("process.arch") ||
-    !includesAll(readme, ["pnpm check:macos-store", "docs/release/macos-app-store.md"]) ||
+    !readme.includes("docs/release/macos-app-store.md") ||
+    !["pnpm check:macos-store", "task release:check"].some((command) => readme.includes(command)) ||
     !includesAll(runbook, [
       "TAMMY_MACOS_BUILD_NUMBER",
       "Apple Development",
