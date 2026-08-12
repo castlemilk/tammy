@@ -2,6 +2,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 
+import { createElectronLaunchArguments } from "../../tests/e2e/fixtures";
 import { findExactCoreProcesses } from "../../tests/e2e/process-check";
 
 interface QueryOptions {
@@ -215,5 +216,22 @@ describe("findExactCoreProcesses", () => {
         execFile: resultRunner(null, `${stdout}\n`),
       }),
     ).rejects.toThrow("INVALID_PROCESS_EVIDENCE");
+  });
+});
+
+describe("createElectronLaunchArguments", () => {
+  it("disables GPU only for hosted macOS evidence", () => {
+    const userData = "/private/tmp/tammy-e2e/user-data";
+
+    expect(createElectronLaunchArguments(userData, "darwin-arm64", true)).toEqual([
+      `--user-data-dir=${userData}`,
+      "--disable-gpu",
+    ]);
+    expect(createElectronLaunchArguments(userData, "darwin-arm64", false)).toEqual([
+      `--user-data-dir=${userData}`,
+    ]);
+    expect(createElectronLaunchArguments(userData, "win32-x64", true)).toEqual([
+      `--user-data-dir=${userData}`,
+    ]);
   });
 });

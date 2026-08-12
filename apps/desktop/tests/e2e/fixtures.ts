@@ -65,6 +65,17 @@ interface FixtureLifecycleState {
   traceStarted?: boolean;
 }
 
+export function createElectronLaunchArguments(
+  userDataPath: string,
+  target: PackagedLayout["target"],
+  continuousIntegration: boolean,
+): string[] {
+  return [
+    `--user-data-dir=${userDataPath}`,
+    ...(continuousIntegration && target === "darwin-arm64" ? ["--disable-gpu"] : []),
+  ];
+}
+
 function isPackagedLayout(value: unknown): value is PackagedLayout {
   if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
   const record = value as Record<string, unknown>;
@@ -231,7 +242,11 @@ function fixtureOperations(
     setup: async (state) => {
       const launch = async () => {
         const application = await _electron.launch({
-          args: [`--user-data-dir=${path.join(state.rawArtifacts, "user-data")}`],
+          args: createElectronLaunchArguments(
+            path.join(state.rawArtifacts, "user-data"),
+            state.packagedLayout.target,
+            process.env.CI !== undefined,
+          ),
           artifactsDir: path.join(state.rawArtifacts, "playwright"),
           chromiumSandbox: true,
           executablePath: state.packagedLayout.appExecutable,
