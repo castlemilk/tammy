@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { chmod, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -822,7 +821,7 @@ test("local Task front door preserves the safe development contract", async () =
 
   if (process.platform === "darwin") {
     const signingFixtureDirectory = await mkdtemp(
-      path.join(tmpdir(), "tammy-taskfile-signing-mode-"),
+      path.join("/private/tmp", "tammy-taskfile-signing-mode-"),
     );
     try {
       const fixtureMise = path.join(signingFixtureDirectory, "mise");
