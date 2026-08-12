@@ -391,6 +391,48 @@ test("a failed Windows tree kill cannot report descendants as reaped", () => {
   assert.deepEqual(child.kills, ["SIGKILL"]);
 });
 
+test("bounded teardown uses the injected Windows platform", async () => {
+  const child = new FakeChild();
+  child.pid = 42;
+  const timers = [];
+  const treeKills = [];
+  const promise = runBoundedProcess(
+    {
+      args: ["status", "--porcelain=v1"],
+      cwd: "C:\\safe\\root",
+      env: { PATH: "C:\\Windows\\System32" },
+      file: "git.exe",
+      maxOutputBytes: 1024,
+      reapTimeoutMs: 10,
+      terminationGraceMs: 10,
+      timeoutMs: 50,
+    },
+    {
+      clearTimer: (timer) => {
+        timer.cleared = true;
+      },
+      platform: "win32",
+      setTimer: (callback, milliseconds) => {
+        const timer = { callback, cleared: false, milliseconds };
+        timers.push(timer);
+        return timer;
+      },
+      spawnProcess: () => child,
+      spawnProcessSync: (...args) => {
+        treeKills.push(args);
+        return { error: undefined, status: 0 };
+      },
+    },
+  );
+
+  timers.find((timer) => timer.milliseconds === 50).callback();
+  assert.deepEqual(child.kills, []);
+  assert.deepEqual(treeKills[0].slice(0, 2), ["taskkill.exe", ["/PID", "42", "/T", "/F"]]);
+
+  child.emit("close", null, "SIGTERM");
+  await assert.rejects(promise, /COMMAND_TIMED_OUT/);
+});
+
 test("a direct child close cannot cancel forced tree escalation", async () => {
   const child = new FakeChild();
   const timers = [];
@@ -409,6 +451,7 @@ test("a direct child close cannot cancel forced tree escalation", async () => {
       clearTimer: (timer) => {
         timer.cleared = true;
       },
+      platform: "linux",
       setTimer: (callback, milliseconds) => {
         const timer = { callback, cleared: false, milliseconds };
         timers.push(timer);
@@ -468,6 +511,7 @@ test("a timed-out command escalates and settles only after the child closes", as
       clearTimer: (timer) => {
         timer.cleared = true;
       },
+      platform: "linux",
       setTimer: (callback, milliseconds) => {
         const timer = { callback, cleared: false, milliseconds };
         timers.push(timer);
@@ -506,7 +550,7 @@ test("a timed-out command escalates and settles only after the child closes", as
   assert.equal(error.message, "COMMAND_TIMED_OUT");
   assert.deepEqual(spawnCalls[0][2], {
     cwd: "/safe/root",
-    detached: process.platform !== "win32",
+    detached: true,
     env: { PATH: "/safe/bin" },
     shell: false,
     stdio: ["ignore", "pipe", "pipe"],

@@ -101,7 +101,10 @@ import (
 	"unsafe"
 )
 
-var ErrOnlineBackup = errors.New("sqlcipher: online backup failed")
+var (
+	ErrOnlineBackup      = errors.New("sqlcipher: online backup failed")
+	errOnlineBackupStart = errors.New("sqlcipher: online backup start failed")
+)
 
 const onlineBackupPagesPerStep = 128
 
@@ -182,7 +185,7 @@ func (database *Database) onlineBackupTo(
 		handle := C.tammy_online_backup_start(source.database, pathValue, C.sqlite3_uint64(expected.Fd()), keyValue,
 			C.int(len(key)), &startResult)
 		if handle == nil || startResult != C.SQLITE_OK {
-			return ErrOnlineBackup
+			return errors.Join(ErrOnlineBackup, errOnlineBackupStart)
 		}
 		finished := false
 		defer func() {

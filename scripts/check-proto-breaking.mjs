@@ -360,14 +360,20 @@ export function killProcessTree(
 
 export function runBoundedProcess(
   { args, cwd, env, file, maxOutputBytes, reapTimeoutMs, terminationGraceMs, timeoutMs },
-  { clearTimer = clearTimeout, setTimer = setTimeout, spawnProcess = spawn } = {},
+  {
+    clearTimer = clearTimeout,
+    platform = process.platform,
+    setTimer = setTimeout,
+    spawnProcess = spawn,
+    spawnProcessSync = spawnSync,
+  } = {},
 ) {
   return new Promise((resolve, reject) => {
     let child;
     try {
       child = spawnProcess(file, args, {
         cwd,
-        detached: process.platform !== "win32",
+        detached: platform !== "win32",
         env,
         shell: false,
         stdio: ["ignore", "pipe", "pipe"],
@@ -415,7 +421,7 @@ export function runBoundedProcess(
     const finishWithoutReap = () => {
       if (settled) return;
       try {
-        killProcessTree(child, "SIGKILL", { env });
+        killProcessTree(child, "SIGKILL", { env, platform, spawnProcessSync });
       } catch {
         // The bounded cleanup has already exhausted both termination phases.
       }
@@ -449,11 +455,11 @@ export function runBoundedProcess(
       startReapDeadline();
       let forceIssued = false;
       try {
-        forceIssued = killProcessTree(child, "SIGKILL", { env });
+        forceIssued = killProcessTree(child, "SIGKILL", { env, platform, spawnProcessSync });
       } catch {
         // The reap deadline below is the fail-closed settlement boundary.
       }
-      if (process.platform === "win32") {
+      if (platform === "win32") {
         treeCleanupComplete = forceIssued === true;
         finishTerminatedIfReady();
         return;
@@ -469,10 +475,10 @@ export function runBoundedProcess(
       if (terminalError !== null || settled) return;
       terminalError = commandError(reason);
       clearTimer(timeoutTimer);
-      if (process.platform === "win32") {
+      if (platform === "win32") {
         let forcedTree = false;
         try {
-          forcedTree = killProcessTree(child, "SIGTERM", { env });
+          forcedTree = killProcessTree(child, "SIGTERM", { env, platform, spawnProcessSync });
         } catch {
           // Retain the parent PID for the bounded forced retry below.
         }
@@ -486,7 +492,7 @@ export function runBoundedProcess(
         return;
       }
       try {
-        killProcessTree(child, "SIGTERM", { env });
+        killProcessTree(child, "SIGTERM", { env, platform, spawnProcessSync });
       } catch {
         // Forced process-group cleanup still runs after the grace period.
       }

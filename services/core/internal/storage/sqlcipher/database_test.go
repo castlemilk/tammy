@@ -393,6 +393,63 @@ func TestConnectorRejectsTransientRegularFileReplacementAtSQLiteOpen(t *testing.
 	}
 }
 
+func TestConnectorClassifiesPreOpenPathReplacement(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the retained Windows handle prevents replacing the open database path")
+	}
+	t.Parallel()
+	ctx := context.Background()
+	root := t.TempDir()
+	victim := filepath.Join(root, "victim.db")
+	displaced := filepath.Join(root, "displaced.db")
+	key := testKey(0x5d)
+	database, err := Open(ctx, victim, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := database.Close(); err != nil {
+		t.Fatal(err)
+	}
+	identity, _, err := retainDatabaseFile(victim)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = identity.close() })
+	var beforeErr, afterErr error
+	connection, err := (&connector{
+		fileIdentity:   identity.file,
+		key:            append([]byte(nil), key...),
+		parentIdentity: identity.parent,
+		path:           victim,
+		hooks: connectorBoundaryHooks{
+			beforeSQLiteOpen: func() {
+				if beforeErr = os.Rename(victim, displaced); beforeErr != nil {
+					return
+				}
+				beforeErr = os.Mkdir(victim, 0o700)
+			},
+			afterSQLiteOpen: func() {
+				if beforeErr != nil {
+					return
+				}
+				if afterErr = os.Remove(victim); afterErr != nil {
+					return
+				}
+				afterErr = os.Rename(displaced, victim)
+			},
+		},
+	}).Connect(ctx)
+	if connection != nil {
+		_ = connection.Close()
+	}
+	if beforeErr != nil || afterErr != nil {
+		t.Fatalf("path replacement setup failed: before=%v after=%v", beforeErr, afterErr)
+	}
+	if !errors.Is(err, ErrDatabaseIdentity) {
+		t.Fatalf("Connect error = %v, want ErrDatabaseIdentity", err)
+	}
+}
+
 func TestConnectorRefusesDatabaseSymlinkAfterValidation(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()

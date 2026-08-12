@@ -260,12 +260,16 @@ func TestMigrateWorkspaceCopyActivatesAndRetainsEncryptedPredecessor(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
+	activePath, err := validateDatabasePath(path)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	result, err := MigrateWorkspace(ctx, path, key, 2)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.PredecessorPath == "" || result.ActivePath != path || result.Version != 2 {
+	if result.PredecessorPath == "" || result.ActivePath != activePath || result.Version != 2 {
 		t.Fatalf("migration result = %#v", result)
 	}
 	if result.StagedPath != "" {
@@ -279,8 +283,8 @@ func TestMigrateWorkspaceCopyActivatesAndRetainsEncryptedPredecessor(t *testing.
 		t.Fatal("predecessor is not the byte-identical original encrypted file")
 	}
 	assertEncryptedWorkspaceMarker(t, result.PredecessorPath, key, 1)
-	assertEncryptedWorkspaceMarker(t, path, key, 2)
-	current, err := os.ReadFile(path)
+	assertEncryptedWorkspaceMarker(t, activePath, key, 2)
+	current, err := os.ReadFile(activePath)
 	if err != nil {
 		t.Fatal(err)
 	}

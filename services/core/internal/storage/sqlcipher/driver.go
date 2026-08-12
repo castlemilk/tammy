@@ -153,6 +153,12 @@ func (item *connector) Connect(ctx context.Context) (_ driver.Conn, returnedErro
 	if item.hooks.beforeSQLiteOpen != nil {
 		item.hooks.beforeSQLiteOpen()
 	}
+	if err := verifyDatabaseIdentity(item.path, item.fileIdentity, item.parentIdentity); err != nil {
+		if item.hooks.afterSQLiteOpen != nil {
+			item.hooks.afterSQLiteOpen()
+		}
+		return nil, err
+	}
 	result := C.sqlite3_open_v2(pathValue, &database, flags, nil)
 	if item.hooks.afterSQLiteOpen != nil {
 		item.hooks.afterSQLiteOpen()
