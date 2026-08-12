@@ -1,8 +1,8 @@
 {
   "path": "descriptors.pb",
-  "byteLength": 521,
-  "sha256": "c3faf3773a00d223ce42c0424f8c124d6c2bcd491542702a65f20a73e72a1099",
+  "byteLength": 169002,
+  "sha256": "c1ac78042845468685e0dd19d3eee0f5d713c4392a1923a6a4923a2a4110a320",
   "bufVersion": "1.72.0",
   "module": "buf.build/tammyapp/tammy",
-  "gitRevision": "16fce821a894ccd3262b3a6090e585a198f06c86"
+  "gitRevision": "375f948bb9f9ac6d796dcff799545c9494df09b5"
 }
