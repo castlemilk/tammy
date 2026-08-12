@@ -6,11 +6,10 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 
 export async function checkCleanTree(run = execFileAsync) {
-  const { stdout } = await run(
-    "git",
-    ["status", "--porcelain=v1", "--untracked-files=all"],
-    { cwd: process.cwd(), shell: false },
-  );
+  const { stdout } = await run("git", ["status", "--porcelain=v1", "--untracked-files=all"], {
+    cwd: process.cwd(),
+    shell: false,
+  });
   if (String(stdout).length === 0) {
     return;
   }

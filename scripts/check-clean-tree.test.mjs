@@ -55,8 +55,18 @@ test("clean tree guard propagates git spawn and non-zero failures", async () => 
   const statusFailure = new Error("git exited with status 1");
   statusFailure.code = 1;
 
-  await assert.rejects(checkCleanTree(async () => { throw spawnFailure; }), spawnFailure);
-  await assert.rejects(checkCleanTree(async () => { throw statusFailure; }), statusFailure);
+  await assert.rejects(
+    checkCleanTree(async () => {
+      throw spawnFailure;
+    }),
+    spawnFailure,
+  );
+  await assert.rejects(
+    checkCleanTree(async () => {
+      throw statusFailure;
+    }),
+    statusFailure,
+  );
 });
 
 test("zero-argument CLI checks the inherited cwd without mutating files", (context) => {
