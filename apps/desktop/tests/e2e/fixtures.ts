@@ -29,7 +29,7 @@ const execFileAsync = promisify(execFile);
 const CLOSE_TIMEOUT_MS = 5_000;
 const ORPHAN_POLL_INTERVAL_MS = 100;
 const ORPHAN_POLL_TIMEOUT_MS = 5_000;
-const STARTUP_DIAGNOSTIC_DELAY_MS = 12_000;
+const STARTUP_DIAGNOSTIC_DELAY_MS = 2_000;
 const STARTUP_DIAGNOSTIC_TIMEOUT_MS = 5_000;
 const STARTUP_DIAGNOSTIC_MAX_BYTES = 1024 * 1024;
 
@@ -125,6 +125,12 @@ function forceKillMain(mainProcess: ChildProcess | undefined): void {
 
 async function captureMacOSStartupDiagnostic(state: FixtureLifecycleState): Promise<void> {
   if (state.packagedLayout.target !== "darwin-arm64") return;
+  await mkdir(state.rawArtifacts, { recursive: true });
+  const diagnosticPath = path.join(state.rawArtifacts, "core-startup.sample.txt");
+  await writeFile(diagnosticPath, "CORE_STARTUP_SAMPLE_PENDING\n", {
+    encoding: "utf8",
+    mode: 0o600,
+  });
   let diagnostic = "CORE_STARTUP_PROCESS_NOT_FOUND\n";
   try {
     const processes = await findExactCoreProcesses(state.packagedLayout.coreExecutable);
@@ -145,8 +151,7 @@ async function captureMacOSStartupDiagnostic(state: FixtureLifecycleState): Prom
   } catch {
     diagnostic = "CORE_STARTUP_SAMPLE_FAILED\n";
   }
-  await mkdir(state.rawArtifacts, { recursive: true });
-  await writeFile(path.join(state.rawArtifacts, "core-startup.sample.txt"), diagnostic, {
+  await writeFile(diagnosticPath, diagnostic, {
     encoding: "utf8",
     mode: 0o600,
   });
