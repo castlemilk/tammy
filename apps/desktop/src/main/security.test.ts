@@ -483,7 +483,7 @@ describe("custom renderer protocol", () => {
   });
 
   it("closes the exact file handle when reading fails", async () => {
-    const root = "/renderer";
+    const root = resolve("renderer");
     const close = vi.fn(async () => undefined);
     const fileStats = {
       dev: 1,
@@ -516,7 +516,7 @@ describe("custom renderer protocol", () => {
   });
 
   it("returns no asset when closing the opened file handle fails", async () => {
-    const root = "/renderer";
+    const root = resolve("renderer");
     const close = vi.fn(async () => {
       throw new Error("sensitive close failure");
     });
@@ -559,7 +559,7 @@ describe("custom renderer protocol", () => {
   });
 
   it("bounds a file that grows after its opened size check", async () => {
-    const root = "/renderer";
+    const root = resolve("renderer");
     const close = vi.fn(async () => undefined);
     const fileStats = {
       dev: 1,

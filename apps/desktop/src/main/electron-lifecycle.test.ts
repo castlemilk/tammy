@@ -1,5 +1,6 @@
 // @vitest-environment node
 
+import { join, resolve, sep } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -332,22 +333,24 @@ describe("runElectronLifecycle", () => {
 });
 
 describe("assertOwnedStagedArtifact", () => {
+  const stagingRoot = resolve("owned", "evidence");
+
   it("accepts only the fixed filename for an artifact under the owned staging root", () => {
     expect(() =>
-      assertOwnedStagedArtifact("/owned/evidence", {
+      assertOwnedStagedArtifact(stagingRoot, {
         kind: "trace",
-        path: "/owned/evidence/electron-trace.zip",
+        path: join(stagingRoot, "electron-trace.zip"),
       }),
     ).not.toThrow();
   });
 
   it.each([
-    "/external/electron-trace.zip",
-    "/owned/evidence/../external/electron-trace.zip",
-    "/owned/evidence/failure.webm",
+    resolve("external", "electron-trace.zip"),
+    `${stagingRoot}${sep}..${sep}external${sep}electron-trace.zip`,
+    join(stagingRoot, "failure.webm"),
   ])("rejects unowned or mismatched artifact path %s", (artifactPath) => {
     expect(() =>
-      assertOwnedStagedArtifact("/owned/evidence", {
+      assertOwnedStagedArtifact(stagingRoot, {
         kind: "trace",
         path: artifactPath,
       }),
