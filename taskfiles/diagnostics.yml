@@ -1,0 +1,32 @@
+version: '3'
+
+tasks:
+  toolchain:
+    desc: Print pinned tool versions and validate the local toolchain.
+    summary: Read-only diagnostic; it reports versions and does not modify dependencies or tools.
+    cmds:
+      - mise exec -- task --version
+      - mise exec -- node --version
+      - mise exec -- pnpm --version
+      - mise exec -- pnpm check:toolchain
+
+  core:
+    desc: Show the owned core and build-manifest locations for manual inspection.
+    summary: Read-only diagnostic; it does not start, stop, or kill any process.
+    cmds:
+      - >-
+        mise exec -- node -e 'console.log("Expected owned source core: apps/desktop/resources/core/darwin-arm64/tammy-core or apps/desktop/resources/core/win32-x64/tammy-core.exe\nExpected build manifest: apps/desktop/resources/build/build-manifest.json\nmacOS read-only process-path command: ps -ax -o pid=,command= | rg \"[T]ammy|[t]ammy-core\"\nWindows read-only process-path command: Get-CimInstance Win32_Process | Where-Object { $_.Name -match \"Tammy|tammy-core\" } | Select-Object ProcessId,Name,ExecutablePath\nInspect the Electron and core process paths manually; confirm they resolve inside this checkout before taking any action.")'
+
+  package:
+    desc: Show package locator help for inspecting an existing local package.
+    summary: Read-only diagnostic; it prints the exact package-locator verification command and never rebuilds a package.
+    cmds:
+      - >-
+        mise exec -- node -e 'console.log("Locator verification for an existing local artefact: mise exec -- node apps/desktop/scripts/find-packaged-app.mjs --verify --source-manifest apps/desktop/resources/build/build-manifest.json")'
+
+  data:
+    desc: Show expected development and packaged encrypted data roots.
+    summary: Read-only diagnostic; it reports expected roots and does not delete or reset data.
+    cmds:
+      - >-
+        mise exec -- node -e 'console.log("macOS development: ~/Library/Application Support/Tammy/local-core-development\nmacOS packaged: ~/Library/Application Support/Tammy/local-core\nWindows development: %APPDATA%\\Tammy\\local-core-development\nWindows packaged: %APPDATA%\\Tammy\\local-core\nDevelopment memory anchors are process-memory-only; this task only prints paths.")'

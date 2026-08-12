@@ -1,0 +1,48 @@
+version: '3'
+
+includes:
+  setup:
+    taskfile: taskfiles/setup.yml
+  dev:
+    taskfile: taskfiles/dev.yml
+  diagnose:
+    taskfile: taskfiles/diagnostics.yml
+  test:
+    taskfile: taskfiles/test.yml
+  build:
+    taskfile: taskfiles/build.yml
+  package:
+    taskfile: taskfiles/package.yml
+  release:
+    taskfile: taskfiles/release.yml
+  ci:
+    taskfile: taskfiles/ci.yml
+
+tasks:
+  default:
+    desc: List Tammy task scenarios and product boundaries.
+    summary: |
+      Tammy is local-first encrypted accounting. Development-only BAS workpapers
+      with no ATO submission. Local packages are not production/App Store evidence,
+      and upload remains manual.
+    cmds:
+      - mise exec -- task --list
+      - >-
+        mise exec -- node -e 'console.log("Tammy boundaries: local-first encrypted accounting; development-only BAS workpapers; no ATO submission; local packages are not production/App Store evidence; upload remains manual.")'
+
+  setup:
+    desc: Repair pinned tools, install frozen dependencies, and check the local toolchain.
+    cmds:
+      - task: setup:tools
+      - task: setup:deps
+      - task: setup:check
+
+  dev:
+    desc: Launch the supported local desktop development scenario.
+    cmds:
+      - task: dev:launch
+
+  test:
+    desc: Run Tammy's existing local test owner.
+    cmds:
+      - mise exec -- pnpm test
