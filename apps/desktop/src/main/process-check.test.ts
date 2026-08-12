@@ -65,7 +65,7 @@ describe("findExactCoreProcesses", () => {
     ]);
     expect(runner).toHaveBeenCalledWith(
       "/usr/bin/pgrep",
-      ["-f", "-x", "/Applications/Tammy \\(Test\\)/tammy-core"],
+      ["-f", "-x", "^/Applications/Tammy \\(Test\\)/tammy-core( .*)?$"],
       expect.objectContaining({
         encoding: "utf8",
         killSignal: "SIGKILL",

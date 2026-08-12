@@ -1,6 +1,6 @@
 import type { ChildProcess } from "node:child_process";
 import { execFile } from "node:child_process";
-import { mkdir, rm } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 
@@ -29,6 +29,9 @@ const execFileAsync = promisify(execFile);
 const CLOSE_TIMEOUT_MS = 5_000;
 const ORPHAN_POLL_INTERVAL_MS = 100;
 const ORPHAN_POLL_TIMEOUT_MS = 5_000;
+const STARTUP_DIAGNOSTIC_DELAY_MS = 12_000;
+const STARTUP_DIAGNOSTIC_TIMEOUT_MS = 5_000;
+const STARTUP_DIAGNOSTIC_MAX_BYTES = 1024 * 1024;
 
 interface PackagedLayout {
   readonly appExecutable: string;
@@ -120,6 +123,53 @@ function forceKillMain(mainProcess: ChildProcess | undefined): void {
   if (!mainProcess.kill("SIGKILL")) throw new Error("ELECTRON_FORCE_KILL_FAILED");
 }
 
+async function captureMacOSStartupDiagnostic(state: FixtureLifecycleState): Promise<void> {
+  if (state.packagedLayout.target !== "darwin-arm64") return;
+  let diagnostic = "CORE_STARTUP_PROCESS_NOT_FOUND\n";
+  try {
+    const processes = await findExactCoreProcesses(state.packagedLayout.coreExecutable);
+    const process = processes.at(-1);
+    if (process) {
+      const { stderr, stdout } = await execFileAsync(
+        "/usr/bin/sample",
+        [String(process.processId), "1", "1"],
+        {
+          encoding: "utf8",
+          killSignal: "SIGKILL",
+          maxBuffer: STARTUP_DIAGNOSTIC_MAX_BYTES,
+          timeout: STARTUP_DIAGNOSTIC_TIMEOUT_MS,
+        },
+      );
+      diagnostic = `${stdout}${stderr}`;
+    }
+  } catch {
+    diagnostic = "CORE_STARTUP_SAMPLE_FAILED\n";
+  }
+  await mkdir(state.rawArtifacts, { recursive: true });
+  await writeFile(path.join(state.rawArtifacts, "core-startup.sample.txt"), diagnostic, {
+    encoding: "utf8",
+    mode: 0o600,
+  });
+}
+
+async function firstWindowWithStartupDiagnostic(
+  application: ElectronApplication,
+  state: FixtureLifecycleState,
+): Promise<Page> {
+  const firstWindow = application.firstWindow();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const diagnosticDue = new Promise<"DIAGNOSTIC">((resolve) => {
+    timer = setTimeout(() => resolve("DIAGNOSTIC"), STARTUP_DIAGNOSTIC_DELAY_MS);
+  });
+  try {
+    const outcome = await Promise.race([firstWindow.then(() => "WINDOW" as const), diagnosticDue]);
+    if (outcome === "DIAGNOSTIC") await captureMacOSStartupDiagnostic(state);
+    return await firstWindow;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 function stagedArtifact(
   state: FixtureLifecycleState,
   kind: StagedArtifact["kind"],
@@ -200,7 +250,7 @@ function fixtureOperations(
           await context.tracing.start({ screenshots: true, snapshots: true });
           state.traceStarted = true;
         }
-        const page = await application.firstWindow();
+        const page = await firstWindowWithStartupDiagnostic(application, state);
         observe(page);
         state.page = page;
         return { application, page };

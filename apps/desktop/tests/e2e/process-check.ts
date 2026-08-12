@@ -149,7 +149,7 @@ async function queryMacOS(
   try {
     stdout = await runBoundedQuery(
       "/usr/bin/pgrep",
-      ["-f", "-x", escapeRegularExpression(corePath)],
+      ["-f", "-x", `^${escapeRegularExpression(corePath)}( .*)?$`],
       dependencies,
     );
   } catch (error) {
