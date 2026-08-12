@@ -98,7 +98,7 @@ Build and package ownership is deliberately distinct:
 - `package:verify` calls `pnpm desktop:package`, which rebuilds and then authenticates the ordinary local package, signatures/resources, source manifest, and packaged core.
 - `package:e2e` calls `pnpm desktop:e2e`, which owns `package:verify` plus Playwright acceptance. There is no `package:launch` task because the repository has no safe cross-platform packaged-launch owner.
 
-The native-build restriction propagates to every public task that transitively builds SQLCipher: `dev`, `dev:launch`, `dev:core`, `build`, `build:core`, `build:desktop`, `package`, `package:verify`, and `package:e2e` support only `darwin/arm64` or `win32/x64`. They declare clear public preconditions and do not let developers discover the restriction through a deep `UNSUPPORTED_SQLCIPHER_TARGET` failure. Read-only diagnostics, contracts, default tests, and platform-neutral repository checks remain available on Linux.
+The native-build restriction propagates to every public task that transitively builds SQLCipher: `dev`, `dev:launch`, `dev:core`, `build`, `build:core`, `build:desktop`, `package`, `package:verify`, and `package:e2e` support only `darwin/arm64` or `win32/x64`. They use explicit target preconditions that fail with a clear unsupported-target message; they do not use Go Task's `platforms` filter because that silently skips mismatched tasks. Read-only diagnostics, contracts, default tests, and platform-neutral repository checks remain available on Linux.
 
 ## 5. Safety and domain knowledge
 
@@ -169,7 +169,7 @@ Add a repository Node test that parses the Taskfile hierarchy as YAML and verifi
 - Task is pinned to `3.52.0` locally and checked at the start of every CI scenario;
 - `deploy:mas` invokes local MAS packaging and contains no upload command or upload credential;
 - no destructive reset/delete task exists;
-- signed release tasks (`release:development`, `release:candidate`, and `deploy:mas`) declare the exact required `TAMMY_MACOS_*` inputs and macOS platform restriction; platform-neutral `release:check` does not;
+- signed release tasks (`release:development`, `release:candidate`, and `deploy:mas`) declare the exact required `TAMMY_MACOS_*` inputs and an explicit macOS arm64 failure precondition; platform-neutral `release:check` does not;
 - development summaries document persistent data and development-memory-anchor limits;
 - CI tasks exist for each workflow scenario;
 - workflow files invoke the canonical `ci:*` tasks after provisioning;
