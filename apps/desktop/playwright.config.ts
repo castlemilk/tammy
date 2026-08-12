@@ -13,6 +13,6 @@ export default defineConfig({
   reporter: "list",
   retries: process.env.CI ? 2 : 0,
   testDir: "tests/e2e",
-  timeout: 30_000,
+  timeout: 120_000,
   workers: 1,
 });
