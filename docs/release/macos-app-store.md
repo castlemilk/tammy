@@ -22,11 +22,11 @@ Complete these steps in the Apple Developer portal and App Store Connect. Do not
 
 - [ ] Confirm that the legal entity responsible for Tammy owns the Apple Developer membership and will submit the financial app.
 - [x] Register the explicit Mac App ID `com.tammy.desktop` (`DXP9QHD7JH`). App Sandbox remains a mandatory signed-build entitlement and release-check requirement.
-- [x] Create a Mac App Distribution certificate and a Mac Installer Distribution certificate (the current keychain shows the legacy 3rd Party Mac Developer names).
-- [x] Create the `Tammy Mac App Store 20260813` distribution provisioning profile for the App ID. A separate development profile remains optional for local sandbox testing.
+- [x] Create the required application and installer certificates. Apple Development and Apple Distribution are the current unified names; this candidate uses the valid Mac App Distribution and Mac Installer Distribution certificates shown in the current keychain under their legacy 3rd Party Mac Developer names.
+- [x] Create the `Tammy Mac App Store 20260813` distribution provisioning profile for the App ID. Keep separate Mac App Store development and distribution provisioning profiles when local sandbox testing is required; the development profile remains optional for this upload-only candidate.
 - [x] Create App Store Connect record `6800226692` for **Tammy Accounting**, version `0.1.0`, English (Australia), SKU `tammy-macos-001`, primary Finance and secondary Business categories, with manual release.
 - [x] Publish the HTTPS [privacy policy](../../PRIVACY.md) and [support page](https://github.com/castlemilk/tammy/issues), then replace every `OPERATOR_REQUIRED` value in [store-metadata.md](../../apps/desktop/release/macos/store-metadata.md).
-- [x] Record the Australia-only App Store Connect documentation determination for industry-standard SQLCipher and TLS. Set the build input and App Store Connect answers to `exempt`; expanding availability requires a fresh export-compliance review.
+- [x] Record the Australia-only export-compliance determination for industry-standard SQLCipher and TLS. Set the build input and App Store Connect answers to `exempt`; expanding availability requires a fresh review.
 - [ ] Assign a monotonically increasing positive decimal `CFBundleVersion` for every upload. Marketing version comes from `apps/desktop/package.json`.
 
 Apple's current signing, provisioning, upload, metadata, screenshot, privacy, and review requirements remain authoritative. Re-check them for every release.
