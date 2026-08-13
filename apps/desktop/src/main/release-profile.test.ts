@@ -159,7 +159,7 @@ describe("createMacOSReleaseProfile", () => {
   });
 });
 
-describe("normalizeMacOSPackagedResourcePermissions", () => {
+describe.skipIf(process.platform === "win32")("normalizeMacOSPackagedResourcePermissions", () => {
   it("makes packaged build and SQLCipher resources readable by App Store users", async () => {
     const fixture = await mkdtemp(path.join(os.tmpdir(), "tammy-mas-permissions-"));
     const resources = path.join(fixture, "Tammy.app", "Contents", "Resources");
