@@ -1,0 +1,389 @@
+syntax = "proto3";
+
+package tammy.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1";
+
+// Money is a signed amount in the minor units of one ISO 4217 currency.
+message Money {
+  // currency_code is the uppercase three-letter ISO 4217 code.
+  string currency_code = 1 [(buf.validate.field).string = {pattern: "^[A-Z]{3}$"}];
+
+  // minor_units is signed so credits, liabilities, and reversals retain their direction.
+  int64 minor_units = 2;
+}
+
+// Decimal is an exact base-10 value equal to coefficient multiplied by 10^-scale.
+message Decimal {
+  // coefficient is the signed scaled integer.
+  int64 coefficient = 1;
+
+  // scale is the count of fractional decimal places and is limited to 18.
+  uint32 scale = 2 [(buf.validate.field).uint32.lte = 18];
+}
+
+// CivilDate is a Gregorian calendar date without a timezone or time of day.
+message CivilDate {
+  // year is the four-digit Gregorian year.
+  int32 year = 1 [(buf.validate.field).int32 = {
+    gte: 1
+    lte: 9999
+  }];
+
+  // month is in the inclusive range 1 through 12.
+  int32 month = 2 [(buf.validate.field).int32 = {
+    gte: 1
+    lte: 12
+  }];
+
+  // day is validated with year and month by the domain boundary.
+  int32 day = 3 [(buf.validate.field).int32 = {
+    gte: 1
+    lte: 31
+  }];
+}
+
+// SourceRef identifies immutable cross-module provenance without exposing storage rows.
+message SourceRef {
+  // type is a stable lower_snake_case source type.
+  string type = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+    pattern: "^[a-z][a-z0-9_]*$"
+  }];
+
+  // id is an opaque UUIDv7 string.
+  string id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // revision is the immutable source revision and begins at one.
+  uint64 revision = 3 [(buf.validate.field).uint64.gte = 1];
+
+  // content_hash is the exact 32-byte SHA-256 digest of retained source content.
+  bytes content_hash = 4 [(buf.validate.field).bytes.len = 32];
+}
+
+// AuthenticationContext names the authenticated principal attached by the trusted local client.
+message AuthenticationContext {
+  // actor_user_id is the authenticated user's opaque UUIDv7 identifier.
+  string actor_user_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // session_id is the active session's opaque UUIDv7 identifier.
+  string session_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+}
+
+// FreshFactorContext binds a recent factor assertion to one high-risk operation.
+message FreshFactorContext {
+  // assertion_id is the single-use UUIDv7 assertion identifier.
+  string assertion_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // purpose is the stable operation purpose reserved by the assertion.
+  string purpose = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 96
+    pattern: "^[a-z][a-z0-9_]*$"
+  }];
+
+  // asserted_at is the core-authored instant used for the five-minute freshness decision.
+  google.protobuf.Timestamp asserted_at = 3 [(buf.validate.field).required = true];
+}
+
+// CommandContext carries authorization and idempotency metadata for a persistent command.
+message CommandContext {
+  // idempotency_key is a caller-generated lowercase canonical UUIDv7 used for workspace-lifetime replay election.
+  string idempotency_key = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // authentication is excluded from the semantic request hash after authorization.
+  AuthenticationContext authentication = 2 [(buf.validate.field).required = true];
+
+  // fresh_factor is explicitly present only when the operation requires a new factor assertion.
+  FreshFactorContext fresh_factor = 3;
+}
+
+// PageRequest requests a bounded stable page from a snapshot-ordered list.
+message PageRequest {
+  // page_size is limited to 200; zero selects the service default.
+  uint32 page_size = 1 [(buf.validate.field).uint32.lte = 200];
+
+  // cursor is an opaque signed cursor returned by the immediately preceding list response.
+  optional string cursor = 2 [(buf.validate.field).string.max_len = 2048];
+}
+
+// PageInfo describes the returned stable page without exposing cursor internals.
+message PageInfo {
+  // next_cursor is absent when the snapshot has no later page.
+  optional string next_cursor = 1 [(buf.validate.field).string.max_len = 2048];
+
+  // returned_count is the number of entries in this response.
+  uint32 returned_count = 2;
+}
+
+// ApprovedFileRef is a capability issued by Electron main for one approved local file or directory.
+message ApprovedFileRef {
+  // capability_id is an opaque bounded token, not a filesystem path.
+  string capability_id = 1 [(buf.validate.field).string = {
+    min_len: 16
+    max_len: 256
+  }];
+
+  // display_name is safe presentation text and is never used for filesystem resolution.
+  optional string display_name = 2 [(buf.validate.field).string.max_len = 255];
+}
+
+// SecretInput carries transient UTF-8 secret bytes that must never be persisted, logged, or echoed.
+message SecretInput {
+  // utf8 contains at most 1,024 bytes and is cleared by the receiving boundary where practical.
+  bytes utf8 = 1 [(buf.validate.field).bytes = {
+    min_len: 1
+    max_len: 1024
+  }];
+}
+
+// TotpCodeInput carries one transient six-digit TOTP value that must never be persisted or logged.
+message TotpCodeInput {
+  // value is the single challenge value and is cleared by the receiving boundary where practical.
+  string value = 1 [(buf.validate.field).string.pattern = "^[0-9]{6}$"];
+}
+
+// OneTimeSecretOutput carries a single-display secret that must never enter fixtures or logs.
+message OneTimeSecretOutput {
+  // utf8 is returned only once and is never retained as plaintext by the core.
+  bytes utf8 = 1 [(buf.validate.field).bytes = {
+    min_len: 1
+    max_len: 2048
+  }];
+}
+
+// ErrorCategory is the stable workflow category for a typed product failure.
+enum ErrorCategory {
+  // ERROR_CATEGORY_UNSPECIFIED indicates that no safe category was supplied.
+  ERROR_CATEGORY_UNSPECIFIED = 0;
+
+  // ERROR_CATEGORY_VALIDATION identifies malformed or invalid business input.
+  ERROR_CATEGORY_VALIDATION = 1;
+
+  // ERROR_CATEGORY_AUTHENTICATION identifies a failed principal challenge.
+  ERROR_CATEGORY_AUTHENTICATION = 2;
+
+  // ERROR_CATEGORY_AUTHORISATION identifies a denied authenticated principal.
+  ERROR_CATEGORY_AUTHORISATION = 3;
+
+  // ERROR_CATEGORY_CONFLICT identifies stale state or deterministic command conflicts.
+  ERROR_CATEGORY_CONFLICT = 4;
+
+  // ERROR_CATEGORY_STORAGE identifies a local encrypted-storage failure.
+  ERROR_CATEGORY_STORAGE = 5;
+
+  // ERROR_CATEGORY_INTERNAL identifies a safe internal failure with a correlation identifier.
+  ERROR_CATEGORY_INTERNAL = 6;
+}
+
+// RetryClassification states whether retry can be attempted without changing user input or state.
+enum RetryClassification {
+  // RETRY_CLASSIFICATION_UNSPECIFIED indicates that retry safety is unknown and retry is denied.
+  RETRY_CLASSIFICATION_UNSPECIFIED = 0;
+
+  // RETRY_CLASSIFICATION_NEVER means the same operation must not be retried automatically.
+  RETRY_CLASSIFICATION_NEVER = 1;
+
+  // RETRY_CLASSIFICATION_AFTER_USER_ACTION requires explicit corrective user action.
+  RETRY_CLASSIFICATION_AFTER_USER_ACTION = 2;
+
+  // RETRY_CLASSIFICATION_SAFE means the core proved the operation has not committed.
+  RETRY_CLASSIFICATION_SAFE = 3;
+}
+
+// ErrorContext carries safe display and support metadata shared by typed error details.
+message ErrorContext {
+  // code is a stable upper-snake-case product code.
+  string code = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 96
+    pattern: "^[A-Z][A-Z0-9_]*$"
+  }];
+
+  // category controls workflow-level rendering.
+  ErrorCategory category = 2 [(buf.validate.field).enum.defined_only = true];
+
+  // safe_summary excludes credentials and sensitive accounting content.
+  string safe_summary = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 256
+  }];
+
+  // remediation is an actionable safe next step.
+  string remediation = 4 [(buf.validate.field).string.max_len = 512];
+
+  // retry states whether automated or user-driven retry is safe.
+  RetryClassification retry = 5 [(buf.validate.field).enum.defined_only = true];
+
+  // correlation_id is a non-secret UUIDv7 identifier for local support evidence.
+  string correlation_id = 6 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+}
+
+// FieldViolation identifies one invalid Protobuf field path.
+message FieldViolation {
+  // field_path is a bounded lower_snake_case Protobuf path.
+  string field_path = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 256
+  }];
+
+  // rule_id identifies the stable violated rule.
+  string rule_id = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 96
+  }];
+
+  // safe_message explains the correction without echoing the rejected value.
+  string safe_message = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 256
+  }];
+}
+
+// ValidationErrorDetail reports bounded field and cross-field validation failures.
+message ValidationErrorDetail {
+  // context is safe shared error metadata.
+  ErrorContext context = 1 [(buf.validate.field).required = true];
+
+  // violations is bounded to prevent attacker-controlled error amplification.
+  repeated FieldViolation violations = 2 [(buf.validate.field).repeated.max_items = 64];
+}
+
+// AuthenticationErrorDetail reports a fresh rate-limited principal challenge failure.
+message AuthenticationErrorDetail {
+  // context is safe shared error metadata.
+  ErrorContext context = 1 [(buf.validate.field).required = true];
+
+  // challenge is the stable challenge class and never includes submitted credentials.
+  string challenge = 2 [(buf.validate.field).string.max_len = 64];
+
+  // retry_after is present only when a persisted cooldown is active.
+  google.protobuf.Timestamp retry_after = 3;
+}
+
+// PermissionDeniedErrorDetail reports authorization outcomes without leaking hidden resources.
+message PermissionDeniedErrorDetail {
+  // context is safe shared error metadata.
+  ErrorContext context = 1 [(buf.validate.field).required = true];
+
+  // required_permission is the stable denied permission name.
+  string required_permission = 2 [(buf.validate.field).string.max_len = 96];
+}
+
+// FreshFactorRequiredErrorDetail identifies a missing, stale, replayed, or wrong-purpose factor.
+message FreshFactorRequiredErrorDetail {
+  // context is safe shared error metadata.
+  ErrorContext context = 1 [(buf.validate.field).required = true];
+
+  // purpose is the factor purpose required by the command.
+  string purpose = 2 [(buf.validate.field).string.max_len = 96];
+}
+
+// StaleVersionErrorDetail reports an optimistic concurrency mismatch.
+message StaleVersionErrorDetail {
+  // context is safe shared error metadata.
+  ErrorContext context = 1 [(buf.validate.field).required = true];
+
+  // resource is the stable aggregate type.
+  string resource = 2 [(buf.validate.field).string.max_len = 64];
+
+  // resource_id is the aggregate's opaque UUIDv7 identifier.
+  string resource_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // expected_version is the version supplied by the caller.
+  uint64 expected_version = 4;
+
+  // current_version is the current committed aggregate version.
+  uint64 current_version = 5;
+}
+
+// InvalidStateTransitionErrorDetail reports the current lifecycle state and allowed operations.
+message InvalidStateTransitionErrorDetail {
+  // context is safe shared error metadata.
+  ErrorContext context = 1 [(buf.validate.field).required = true];
+
+  // resource is the stable aggregate type.
+  string resource = 2 [(buf.validate.field).string.max_len = 64];
+
+  // current_state is the symbolic enum name returned by the domain.
+  string current_state = 3 [(buf.validate.field).string.max_len = 96];
+
+  // allowed_operations is a sorted, deduplicated list of public operation names.
+  repeated string allowed_operations = 4 [(buf.validate.field).repeated.max_items = 32];
+}
+
+// IdempotencyConflictErrorDetail reports reuse of an operation key with different semantics.
+message IdempotencyConflictErrorDetail {
+  // context is safe shared error metadata.
+  ErrorContext context = 1 [(buf.validate.field).required = true];
+
+  // idempotency_key is the conflicting UUID and is safe to display.
+  string idempotency_key = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // request_type is the fully-qualified Protobuf request name.
+  string request_type = 3 [(buf.validate.field).string.max_len = 192];
+}
+
+// DuplicateSourceErrorDetail reports an immutable source already committed elsewhere.
+message DuplicateSourceErrorDetail {
+  // context is safe shared error metadata.
+  ErrorContext context = 1 [(buf.validate.field).required = true];
+
+  // source identifies the duplicate immutable source.
+  SourceRef source = 2 [(buf.validate.field).required = true];
+
+  // existing_resource_id identifies the retained result without exposing its contents.
+  string existing_resource_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+}
+
+// ClosedPeriodErrorDetail reports a financial mutation denied by a closed period.
+message ClosedPeriodErrorDetail {
+  // context is safe shared error metadata.
+  ErrorContext context = 1 [(buf.validate.field).required = true];
+
+  // period_id is the closed period's opaque UUIDv7 identifier.
+  string period_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // period_end is the inclusive civil closing date.
+  CivilDate period_end = 3 [(buf.validate.field).required = true];
+}
+
+// ImbalanceErrorDetail reports exact debit and credit totals for a rejected journal command.
+message ImbalanceErrorDetail {
+  // context is safe shared error metadata.
+  ErrorContext context = 1 [(buf.validate.field).required = true];
+
+  // debits is the exact submitted debit total.
+  Money debits = 2 [(buf.validate.field).required = true];
+
+  // credits is the exact submitted credit total.
+  Money credits = 3 [(buf.validate.field).required = true];
+}
+
+// EvidenceCorruptionErrorDetail identifies a retained object whose verified hash mismatched.
+message EvidenceCorruptionErrorDetail {
+  // context is safe shared error metadata.
+  ErrorContext context = 1 [(buf.validate.field).required = true];
+
+  // evidence_id is the opaque UUIDv7 object identifier.
+  string evidence_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // verification_stage is the bounded stage that detected corruption.
+  string verification_stage = 3 [(buf.validate.field).string.max_len = 64];
+}
+
+// JobProgress is a bounded persisted progress projection.
+message JobProgress {
+  // completed_units is never greater than total_units.
+  uint64 completed_units = 1;
+
+  // total_units is zero only while the total cannot yet be known safely.
+  uint64 total_units = 2;
+
+  // stage is a stable bounded stage identifier.
+  string stage = 3 [(buf.validate.field).string.max_len = 64];
+}

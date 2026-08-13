@@ -1,0 +1,89 @@
+version: '3'
+
+tasks:
+  check:
+    desc: Check repository-owned App Store readiness inputs without signing.
+    cmds:
+      - mise exec -- pnpm check:macos-store
+
+  development:
+    desc: Create a locally signed macOS development MAS app for device testing.
+    summary: |
+      Produces apps/desktop/out/Tammy-mas-arm64/Tammy.app for local development testing.
+      It produces no installer or upload.
+    vars:
+      NODE_TARGET:
+        sh: >-
+          mise exec -- node -e 'process.stdout.write(process.platform + "/" + process.arch)'
+    preconditions:
+      - sh: >-
+          mise exec -- node -e 'const target = process.argv[1] ?? `${process.platform}/${process.arch}`; if (target !== "darwin/arm64") { console.error(`UNSUPPORTED_MACOS_RELEASE_TARGET:${target}`); process.exit(1); }'
+        msg: UNSUPPORTED_MACOS_RELEASE_TARGET:{{.NODE_TARGET}}
+      - sh: >-
+          mise exec -- node -e 'if (!process.env.TAMMY_MACOS_BUILD_NUMBER?.trim()) { console.error("MISSING_MACOS_RELEASE_ENV:TAMMY_MACOS_BUILD_NUMBER"); process.exit(1); }'
+        msg: MISSING_MACOS_RELEASE_ENV:TAMMY_MACOS_BUILD_NUMBER
+      - sh: >-
+          mise exec -- node -e 'if (!process.env.TAMMY_MACOS_EXPORT_COMPLIANCE?.trim()) { console.error("MISSING_MACOS_RELEASE_ENV:TAMMY_MACOS_EXPORT_COMPLIANCE"); process.exit(1); }'
+        msg: MISSING_MACOS_RELEASE_ENV:TAMMY_MACOS_EXPORT_COMPLIANCE
+      - sh: >-
+          mise exec -- node -e 'if (!process.env.TAMMY_MACOS_PROVISIONING_PROFILE?.trim()) { console.error("MISSING_MACOS_RELEASE_ENV:TAMMY_MACOS_PROVISIONING_PROFILE"); process.exit(1); }'
+        msg: MISSING_MACOS_RELEASE_ENV:TAMMY_MACOS_PROVISIONING_PROFILE
+      - sh: >-
+          mise exec -- node -e 'if (!process.env.TAMMY_MACOS_PRIVACY_POLICY_URL?.trim()) { console.error("MISSING_MACOS_RELEASE_ENV:TAMMY_MACOS_PRIVACY_POLICY_URL"); process.exit(1); }'
+        msg: MISSING_MACOS_RELEASE_ENV:TAMMY_MACOS_PRIVACY_POLICY_URL
+      - sh: >-
+          mise exec -- node -e 'if (!process.env.TAMMY_MACOS_SIGNING_IDENTITY?.trim()) { console.error("MISSING_MACOS_RELEASE_ENV:TAMMY_MACOS_SIGNING_IDENTITY"); process.exit(1); }'
+        msg: MISSING_MACOS_RELEASE_ENV:TAMMY_MACOS_SIGNING_IDENTITY
+      - sh: >-
+          mise exec -- node -e 'if (!process.env.TAMMY_MACOS_SUPPORT_URL?.trim()) { console.error("MISSING_MACOS_RELEASE_ENV:TAMMY_MACOS_SUPPORT_URL"); process.exit(1); }'
+        msg: MISSING_MACOS_RELEASE_ENV:TAMMY_MACOS_SUPPORT_URL
+      - sh: >-
+          mise exec -- node -e 'if (!process.env.TAMMY_MACOS_TEAM_ID?.trim()) { console.error("MISSING_MACOS_RELEASE_ENV:TAMMY_MACOS_TEAM_ID"); process.exit(1); }'
+        msg: MISSING_MACOS_RELEASE_ENV:TAMMY_MACOS_TEAM_ID
+      - sh: >-
+          mise exec -- node -e 'if (process.env.TAMMY_MACOS_INSTALLER_IDENTITY?.trim()) { console.error("DEVELOPMENT_INSTALLER_IDENTITY_FORBIDDEN"); process.exit(1); }'
+        msg: DEVELOPMENT_INSTALLER_IDENTITY_FORBIDDEN
+    cmds:
+      - mise exec -- node scripts/check-clean-tree.mjs
+      - TAMMY_MACOS_SIGNING_MODE=development mise exec -- pnpm desktop:make:mas
+
+  candidate:
+    desc: Create and locally validate a signed macOS distribution package candidate.
+    summary: |
+      Emits the validated JSON pkg path, SHA-256, and Gatekeeper assessment for
+      local release evidence; manual App Store submission remains outside this task.
+    vars:
+      NODE_TARGET:
+        sh: >-
+          mise exec -- node -e 'process.stdout.write(process.platform + "/" + process.arch)'
+    preconditions:
+      - sh: >-
+          mise exec -- node -e 'const target = process.argv[1] ?? `${process.platform}/${process.arch}`; if (target !== "darwin/arm64") { console.error(`UNSUPPORTED_MACOS_RELEASE_TARGET:${target}`); process.exit(1); }'
+        msg: UNSUPPORTED_MACOS_RELEASE_TARGET:{{.NODE_TARGET}}
+      - sh: >-
+          mise exec -- node -e 'if (!process.env.TAMMY_MACOS_BUILD_NUMBER?.trim()) { console.error("MISSING_MACOS_RELEASE_ENV:TAMMY_MACOS_BUILD_NUMBER"); process.exit(1); }'
+        msg: MISSING_MACOS_RELEASE_ENV:TAMMY_MACOS_BUILD_NUMBER
+      - sh: >-
+          mise exec -- node -e 'if (!process.env.TAMMY_MACOS_EXPORT_COMPLIANCE?.trim()) { console.error("MISSING_MACOS_RELEASE_ENV:TAMMY_MACOS_EXPORT_COMPLIANCE"); process.exit(1); }'
+        msg: MISSING_MACOS_RELEASE_ENV:TAMMY_MACOS_EXPORT_COMPLIANCE
+      - sh: >-
+          mise exec -- node -e 'if (!process.env.TAMMY_MACOS_PROVISIONING_PROFILE?.trim()) { console.error("MISSING_MACOS_RELEASE_ENV:TAMMY_MACOS_PROVISIONING_PROFILE"); process.exit(1); }'
+        msg: MISSING_MACOS_RELEASE_ENV:TAMMY_MACOS_PROVISIONING_PROFILE
+      - sh: >-
+          mise exec -- node -e 'if (!process.env.TAMMY_MACOS_PRIVACY_POLICY_URL?.trim()) { console.error("MISSING_MACOS_RELEASE_ENV:TAMMY_MACOS_PRIVACY_POLICY_URL"); process.exit(1); }'
+        msg: MISSING_MACOS_RELEASE_ENV:TAMMY_MACOS_PRIVACY_POLICY_URL
+      - sh: >-
+          mise exec -- node -e 'if (!process.env.TAMMY_MACOS_SIGNING_IDENTITY?.trim()) { console.error("MISSING_MACOS_RELEASE_ENV:TAMMY_MACOS_SIGNING_IDENTITY"); process.exit(1); }'
+        msg: MISSING_MACOS_RELEASE_ENV:TAMMY_MACOS_SIGNING_IDENTITY
+      - sh: >-
+          mise exec -- node -e 'if (!process.env.TAMMY_MACOS_SUPPORT_URL?.trim()) { console.error("MISSING_MACOS_RELEASE_ENV:TAMMY_MACOS_SUPPORT_URL"); process.exit(1); }'
+        msg: MISSING_MACOS_RELEASE_ENV:TAMMY_MACOS_SUPPORT_URL
+      - sh: >-
+          mise exec -- node -e 'if (!process.env.TAMMY_MACOS_TEAM_ID?.trim()) { console.error("MISSING_MACOS_RELEASE_ENV:TAMMY_MACOS_TEAM_ID"); process.exit(1); }'
+        msg: MISSING_MACOS_RELEASE_ENV:TAMMY_MACOS_TEAM_ID
+      - sh: >-
+          mise exec -- node -e 'if (!process.env.TAMMY_MACOS_INSTALLER_IDENTITY?.trim()) { console.error("MISSING_MACOS_RELEASE_ENV:TAMMY_MACOS_INSTALLER_IDENTITY"); process.exit(1); }'
+        msg: MISSING_MACOS_RELEASE_ENV:TAMMY_MACOS_INSTALLER_IDENTITY
+    cmds:
+      - mise exec -- node scripts/check-clean-tree.mjs
+      - TAMMY_MACOS_SIGNING_MODE=distribution mise exec -- pnpm desktop:make:mas

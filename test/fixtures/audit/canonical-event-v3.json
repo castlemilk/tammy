@@ -1,0 +1,102 @@
+{
+  "format": "tammy.audit.canonical-event-fixture.v3",
+  "canonicalEventVersion": "tammy.audit.canonical-event.v3",
+  "storedPayloadType": "tammy.v1.WorkspaceStateChangedEvent",
+  "predecessorHex": "2222222222222222222222222222222222222222222222222222222222222222",
+  "hiddenMetadataCommitment": {
+    "algorithm": "SHA-256",
+    "domainUtf8": "tammy-audit-hidden-metadata-commitment-v2",
+    "blindingHex": "988933e0caab30d03dcce01100aec8fbab608f72a2d1cd5e128a476976c6b619",
+    "canonicalMetadataLengthHex": "0000000000000180",
+    "canonicalMetadataUtf8": "{\"command_type\":\"tammy.v1.IdentityService.SignIn\",\"id\":\"01890f60-4d6d-7c12-8f02-6c9129d5b008\",\"result\":{\"deterministic_sha256\":\"VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU=\",\"outcome_code\":\"OK\",\"type_name\":\"tammy.v1.SignInResponse\"},\"source\":{\"content_hash\":\"MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=\",\"id\":\"01890f60-4d6d-7c12-8f02-6c9129d5b001\",\"revision\":\"1\",\"type\":\"workspace\"}}",
+    "inputOrder": [
+      "domain_utf8",
+      "blinding_exact_32_bytes",
+      "canonical_metadata_length_uint64_be",
+      "canonical_metadata_utf8"
+    ],
+    "expectedSha256Hex": "32f00eafa904abdafe54756ad7023e63130c63106a7b0f0088491d6fab6b614e"
+  },
+  "payloadCommitment": {
+    "algorithm": "SHA-256",
+    "domainUtf8": "tammy-audit-payload-identity-commitment-v1",
+    "blindingHex": "938441c4cf1d742bcb0fe8d20252c214b9b4f562620a2f575dac40f9c79ed770",
+    "typeUrlLengthHex": "0000000000000037",
+    "typeUrlUtf8": "type.googleapis.com/tammy.v1.WorkspaceStateChangedEvent",
+    "schemaFingerprintLengthHex": "0000000000000020",
+    "schemaFingerprintHex": "4444444444444444444444444444444444444444444444444444444444444444",
+    "payloadProtoLengthHex": "0000000000000035",
+    "payloadProtoHex": "0a2430313839306636302d346436642d376331322d386630322d3663393132396435623030311003180422095349474e45445f494e",
+    "payloadJsonLengthHex": "00000000000000ab",
+    "payloadJsonUtf8": "{\"from_state\":\"WORKSPACE_STATE_UNAUTHENTICATED\",\"reason_code\":\"SIGNED_IN\",\"to_state\":\"WORKSPACE_STATE_AUTHENTICATED\",\"workspace_id\":\"01890f60-4d6d-7c12-8f02-6c9129d5b001\"}",
+    "inputOrder": [
+      "domain_utf8",
+      "blinding_exact_32_bytes",
+      "type_url_length_uint64_be",
+      "type_url_utf8",
+      "schema_fingerprint_length_uint64_be",
+      "schema_fingerprint_exact_32_bytes",
+      "payload_proto_length_uint64_be",
+      "payload_proto_exact_bytes",
+      "payload_json_length_uint64_be",
+      "payload_json_canonical_utf8"
+    ],
+    "expectedSha256Hex": "288ca1bf7114a415115141f8b90d0e7aa4560a008003ba735b72c8a91e8c31f7"
+  },
+  "eventTypeCommitment": {
+    "algorithm": "SHA-256",
+    "domainUtf8": "tammy-audit-event-type-commitment-v1",
+    "blindingHex": "b0ac0c13c76e3ac218f5956014b2b7f1ef4b373a68079957fa1ac51a5bd67136",
+    "valueLengthHex": "0000000000000001",
+    "valueUtf8": "1",
+    "inputOrder": [
+      "domain_utf8",
+      "blinding_exact_32_bytes",
+      "value_length_uint64_be",
+      "value_utf8"
+    ],
+    "expectedSha256Hex": "d886f7c6425d6742657561a69a7fe9290866a5005338a432e27a062080f5ab31"
+  },
+  "occurredAtCommitment": {
+    "algorithm": "SHA-256",
+    "domainUtf8": "tammy-audit-occurred-at-commitment-v1",
+    "blindingHex": "8d11609322b0f4370d6347f717efa189c61c1ee9d2f7311ae005f0bb090937c5",
+    "valueLengthHex": "0000000000000014",
+    "valueUtf8": "2026-08-04T01:02:03Z",
+    "inputOrder": [
+      "domain_utf8",
+      "blinding_exact_32_bytes",
+      "value_length_uint64_be",
+      "value_utf8"
+    ],
+    "expectedSha256Hex": "2feafec2314f004dba9a25ad9865d931361cb80de72da7b2c405027ba78e8b3c"
+  },
+  "actorUserIdCommitment": {
+    "algorithm": "SHA-256",
+    "domainUtf8": "tammy-audit-actor-user-id-commitment-v1",
+    "blindingHex": "f0c425623fc492b913e81a40679305bccd71bb4e8ddd06371a07d52507218387",
+    "valueLengthHex": "0000000000000000",
+    "valueUtf8": "",
+    "inputOrder": [
+      "domain_utf8",
+      "blinding_exact_32_bytes",
+      "value_length_uint64_be",
+      "value_utf8"
+    ],
+    "expectedSha256Hex": "f33f8f9c7d8fa8bdcbceedb078b26518318ace94bad3b4895ae580168c18cf5a"
+  },
+  "canonicalEnvelopeUtf8": "{\"actor_user_id_commitment\":\"f33f8f9c7d8fa8bdcbceedb078b26518318ace94bad3b4895ae580168c18cf5a\",\"event_type_commitment\":\"d886f7c6425d6742657561a69a7fe9290866a5005338a432e27a062080f5ab31\",\"hidden_metadata_commitment\":\"32f00eafa904abdafe54756ad7023e63130c63106a7b0f0088491d6fab6b614e\",\"identity_projection\":{\"generation\":\"1\",\"sequence\":\"1\",\"workspace_id\":\"01890f60-4d6d-7c12-8f02-6c9129d5b001\"},\"occurred_at_commitment\":\"2feafec2314f004dba9a25ad9865d931361cb80de72da7b2c405027ba78e8b3c\",\"payload_identity_commitment\":\"288ca1bf7114a415115141f8b90d0e7aa4560a008003ba735b72c8a91e8c31f7\",\"version\":\"tammy.audit.canonical-event.v3\"}",
+  "framing": {
+    "algorithm": "SHA-256",
+    "domainUtf8": "tammy-audit-event-v3",
+    "canonicalLengthEncoding": "uint64-big-endian",
+    "canonicalLengthHex": "0000000000000270",
+    "inputOrder": [
+      "domain_utf8",
+      "predecessor_32_bytes",
+      "canonical_length_uint64_be",
+      "canonical_envelope_utf8"
+    ]
+  },
+  "expectedEventSha256Hex": "82bd5be9c5a4a202662bdff0e7fe69cffef887fb1f4795105ffd6e95b11e732a"
+}

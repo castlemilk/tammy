@@ -1,0 +1,128 @@
+{
+  "organisation_name": "Tammy Demo Pty Ltd",
+  "synthetic_abn": "99000000000",
+  "currency_code": "AUD",
+  "gst_basis": "GST_BASIS_NON_CASH",
+  "gst_reporting_frequency": "GST_REPORTING_FREQUENCY_QUARTERLY",
+  "financial_year_end_month": 6,
+  "bas_period": {
+    "start_date": {
+      "year": 2024,
+      "month": 4,
+      "day": 1
+    },
+    "end_date": {
+      "year": 2024,
+      "month": 6,
+      "day": 30
+    }
+  },
+  "primary_bank_name": "Business Bank",
+  "opening_date": {
+    "year": 2024,
+    "month": 4,
+    "day": 30
+  },
+  "opening_balance": {
+    "currency_code": "AUD",
+    "minor_units": "100000"
+  },
+  "supplier_name": "Paper & Co Supplies Pty Ltd",
+  "source_document_name": "paper-and-co-sup-1001.pdf",
+  "supplier_reference": "SUP-1001",
+  "bill_issue_date": {
+    "year": 2024,
+    "month": 5,
+    "day": 12
+  },
+  "bill_tax_exclusive": true,
+  "bill_net": {
+    "currency_code": "AUD",
+    "minor_units": "29000"
+  },
+  "bill_gst": {
+    "currency_code": "AUD",
+    "minor_units": "2900"
+  },
+  "bill_gross": {
+    "currency_code": "AUD",
+    "minor_units": "31900"
+  },
+  "statement_start_date": {
+    "year": 2024,
+    "month": 5,
+    "day": 1
+  },
+  "statement_end_date": {
+    "year": 2024,
+    "month": 5,
+    "day": 31
+  },
+  "payment_date": {
+    "year": 2024,
+    "month": 5,
+    "day": 15
+  },
+  "statement_withdrawal": {
+    "currency_code": "AUD",
+    "minor_units": "-31900"
+  },
+  "payment_amount": {
+    "currency_code": "AUD",
+    "minor_units": "31900"
+  },
+  "closing_bank_balance": {
+    "currency_code": "AUD",
+    "minor_units": "68100"
+  },
+  "trial_balance_total_debits": {
+    "currency_code": "AUD",
+    "minor_units": "100000"
+  },
+  "trial_balance_total_credits": {
+    "currency_code": "AUD",
+    "minor_units": "100000"
+  },
+  "bas_g1": {
+    "currency_code": "AUD"
+  },
+  "bas_1a": {
+    "currency_code": "AUD"
+  },
+  "bas_1b": {
+    "currency_code": "AUD",
+    "minor_units": "2900"
+  },
+  "bas_net_refundable": {
+    "currency_code": "AUD",
+    "minor_units": "2900"
+  },
+  "after_extraction_overview": {
+    "documents_needing_review": 1,
+    "documents_reviewed_in_period": 0,
+    "banking_lines_needing_reconciliation": 0,
+    "banking_lines_unreconciled_in_period": 0,
+    "current_draft_bas_workpapers": 0,
+    "bas_status": "BAS_ATTENTION_STATUS_NOT_CREATED",
+    "attention_items": [
+      {
+        "kind": "ATTENTION_ITEM_KIND_DOCUMENT_REVIEW",
+        "resource": {
+          "type": "document_review",
+          "id": "018f0000-0000-7000-8000-000000000101",
+          "revision": "1",
+          "content_hash": "t4CkiWI2WC2U44DDO5V1UFQDUx9yUHQgDA1dRkIogjY="
+        },
+        "label": "Review Paper & Co supplier invoice"
+      }
+    ]
+  },
+  "final_overview": {
+    "documents_needing_review": 0,
+    "documents_reviewed_in_period": 1,
+    "banking_lines_needing_reconciliation": 0,
+    "banking_lines_unreconciled_in_period": 0,
+    "current_draft_bas_workpapers": 1,
+    "bas_status": "BAS_ATTENTION_STATUS_DRAFT_NOT_LODGED"
+  }
+}

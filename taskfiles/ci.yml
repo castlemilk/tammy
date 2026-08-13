@@ -1,0 +1,62 @@
+version: '3'
+
+tasks:
+  contracts:
+    desc: Run the canonical Linux contract and descriptor-evidence CI scenario.
+    cmds:
+      - >-
+        task --version | node -e 'let output=""; process.stdin.on("data", (chunk) => output += chunk); process.stdin.on("end", () => { if (output.trim() !== "3.52.0") { console.error(`UNSUPPORTED_TASK_VERSION:${output.trim()}`); process.exit(1); } })'
+      - pnpm check:toolchain
+      - node scripts/check-clean-tree.mjs
+      - pnpm ci:lint
+      - pnpm test:proto-breaking
+      - pnpm contracts
+      - pnpm proto:descriptors:verify
+
+  linux:
+    desc: Run the canonical Linux desktop and Go CI scenario.
+    cmds:
+      - >-
+        task --version | node -e 'let output=""; process.stdin.on("data", (chunk) => output += chunk); process.stdin.on("end", () => { if (output.trim() !== "3.52.0") { console.error(`UNSUPPORTED_TASK_VERSION:${output.trim()}`); process.exit(1); } })'
+      - pnpm check:toolchain
+      - node scripts/check-clean-tree.mjs
+      - go test -race ./services/core/...
+      - command -v xvfb-run
+      - xvfb-run -a pnpm desktop:test
+      - pnpm desktop:typecheck
+      - pnpm lint
+
+  macos:
+    desc: Run the canonical macOS arm64 SQLCipher and packaged CI scenario.
+    cmds:
+      - >-
+        task --version | node -e 'let output=""; process.stdin.on("data", (chunk) => output += chunk); process.stdin.on("end", () => { if (output.trim() !== "3.52.0") { console.error(`UNSUPPORTED_TASK_VERSION:${output.trim()}`); process.exit(1); } })'
+      - pnpm check:toolchain
+      - node scripts/check-clean-tree.mjs
+      - TAMMY_SQLCIPHER_REPRODUCIBILITY=1 pnpm sqlcipher:test
+      - go test -race -tags tammy_sqlcipher ./services/core/internal/storage/sqlcipher/... -count=1
+      - pnpm desktop:e2e
+
+  windows-smoke:
+    desc: Run the exact Windows Server smoke-only CI scenario.
+    cmds:
+      - >-
+        task --version | node -e 'let output=""; process.stdin.on("data", (chunk) => output += chunk); process.stdin.on("end", () => { if (output.trim() !== "3.52.0") { console.error(`UNSUPPORTED_TASK_VERSION:${output.trim()}`); process.exit(1); } })'
+      - pnpm check:toolchain
+      - node scripts/check-clean-tree.mjs
+      - >-
+        pwsh -NoProfile -NonInteractive -Command '& { if ($env:EVIDENCE_CLASSIFICATION -ne "WINDOWS_SERVER_SMOKE_ONLY") { throw "WINDOWS_SERVER_EVIDENCE_CLASSIFICATION_INVALID" }; if ($env:PROCESSOR_ARCHITECTURE -ne "AMD64") { throw "WINDOWS_SERVER_SMOKE_ONLY_REQUIRES_AMD64" } }'
+      - pnpm test:proto-breaking
+      - pnpm proto:descriptors:verify
+      - pnpm desktop:test
+      - pnpm desktop:typecheck
+
+  windows11:
+    desc: Run the Windows 11 release-gate SQLCipher and packaged evidence scenario.
+    cmds:
+      - >-
+        task --version | node -e 'let output=""; process.stdin.on("data", (chunk) => output += chunk); process.stdin.on("end", () => { if (output.trim() !== "3.52.0") { console.error(`UNSUPPORTED_TASK_VERSION:${output.trim()}`); process.exit(1); } })'
+      - pnpm check:toolchain
+      - node scripts/check-clean-tree.mjs
+      - cmd: >-
+          pwsh -NoProfile -NonInteractive -Command '& { $ErrorActionPreference = "Stop"; pnpm sqlcipher:test; if ($LASTEXITCODE -ne 0) { throw "SQLCIPHER_NODE_TEST_FAILED" }; pnpm sqlcipher:build; if ($LASTEXITCODE -ne 0) { throw "SQLCIPHER_BUILD_FAILED" }; $probe = (Resolve-Path ".tmp/sqlcipher/ordinary/win32-x64/ordinary-sqlite3.exe").Path; $env:TAMMY_ORDINARY_SQLITE3 = $probe; go test -race -tags tammy_sqlcipher ./services/core/internal/storage/sqlcipher/... -count=1; if ($LASTEXITCODE -ne 0) { throw "SQLCIPHER_GO_INTEGRATION_FAILED" }; pnpm desktop:e2e; if ($LASTEXITCODE -ne 0) { throw "WINDOWS11_PACKAGED_E2E_FAILED" }; New-Item -ItemType Directory -Force -Path "apps/desktop/test-results" | Out-Null; @{ classification = "WINDOWS11_23H2_X64_RELEASE_GATE"; status = "PASSED"; run_id = $env:GITHUB_RUN_ID; run_attempt = $env:GITHUB_RUN_ATTEMPT } | ConvertTo-Json | Set-Content -Encoding utf8 "apps/desktop/test-results/windows11-result.json" }'

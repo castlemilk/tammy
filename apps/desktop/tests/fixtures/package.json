@@ -1,0 +1,6 @@
+{
+  "name": "tammy-electron-asar-harness",
+  "private": true,
+  "type": "module",
+  "main": "electron-asar-harness.mjs"
+}

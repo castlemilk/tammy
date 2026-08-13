@@ -1,0 +1,366 @@
+{
+  "schema": "tammy-toolchain-evidence-v1",
+  "retrieval_date": "2026-08-04",
+  "configuration_authority": false,
+  "supported_targets": [
+    {
+      "os": "darwin",
+      "architecture": "arm64"
+    },
+    {
+      "os": "win32",
+      "architecture": "x64"
+    }
+  ],
+  "components": [
+    {
+      "name": "Node.js",
+      "package_or_module": "node",
+      "version": "24.18.0",
+      "official_source_url": "https://nodejs.org/en/download/archive/v24.18.0",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "Go",
+      "package_or_module": "go",
+      "version": "1.26.4",
+      "official_source_url": "https://go.dev/dl/",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "SQLCipher",
+      "package_or_module": "sqlcipher",
+      "version": "4.15.0",
+      "official_source_url": "https://codeload.github.com/sqlcipher/sqlcipher/tar.gz/refs/tags/v4.15.0",
+      "source_sha256": "21f5dfb2558a2a87740bb060ba75aadfec2e6119e08a87c3546c54751395a28d",
+      "source_tree_sha256": "ab920a951726ede8da090ad26874f094966de373e9ed566e6e6dc500541920be",
+      "source_commit": "0b4d16090a71579c4c88220b7fb67bb7396f1434",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "OpenSSL LTS SQLCipher provider",
+      "package_or_module": "openssl",
+      "version": "3.5.7",
+      "official_source_url": "https://codeload.github.com/openssl/openssl/tar.gz/refs/tags/openssl-3.5.7",
+      "source_sha256": "d71a811bfbd9153d7b30cbe476263302ee4b04a9a47ffea6e6a782326805c93f",
+      "source_commit": "8cf17aaeb4599f8af87fefd810b5b5fee90fe69e",
+      "license_sha256": "657443fd2340ed2d45d44ceb57df718bc810abcc060a9032f93759c4afab9fa2",
+      "targets": ["win32-x64"]
+    },
+    {
+      "name": "LLVM clang Windows SQLCipher compiler",
+      "package_or_module": "llvm-clang",
+      "version": "22.1.0",
+      "official_source_url": "https://github.com/llvm/llvm-project/releases/tag/llvmorg-22.1.0",
+      "targets": ["win32-x64"]
+    },
+    {
+      "name": "Strawberry Perl Windows SQLCipher generator",
+      "package_or_module": "strawberry-perl",
+      "version": "5.40.2",
+      "official_source_url": "https://strawberryperl.com/releases.html",
+      "targets": ["win32-x64"]
+    },
+    {
+      "name": "Visual Studio nmake Windows SQLCipher generator",
+      "package_or_module": "visual-studio-build-tools",
+      "version": "14.44.35207.1",
+      "official_source_url": "https://learn.microsoft.com/visualstudio/releases/2022/release-history",
+      "targets": ["win32-x64"]
+    },
+    {
+      "name": "Windows SDK SQLCipher resource tools",
+      "package_or_module": "windows-sdk",
+      "version": "10.0.26100.0",
+      "official_source_url": "https://developer.microsoft.com/windows/downloads/windows-sdk/",
+      "targets": ["win32-x64"]
+    },
+    {
+      "name": "pnpm",
+      "package_or_module": "pnpm",
+      "version": "11.15.0",
+      "official_source_url": "https://www.npmjs.com/package/pnpm/v/11.15.0",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "Buf CLI",
+      "package_or_module": "@bufbuild/buf",
+      "version": "1.72.0",
+      "official_source_url": "https://www.npmjs.com/package/@bufbuild/buf/v/1.72.0",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "TypeScript",
+      "package_or_module": "typescript",
+      "version": "7.0.2",
+      "official_source_url": "https://www.npmjs.com/package/typescript/v/7.0.2",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "Biome",
+      "package_or_module": "@biomejs/biome",
+      "version": "2.5.4",
+      "official_source_url": "https://www.npmjs.com/package/@biomejs/biome/v/2.5.4",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "Connect-Go",
+      "package_or_module": "connectrpc.com/connect",
+      "version": "1.20.0",
+      "official_source_url": "https://pkg.go.dev/connectrpc.com/connect@v1.20.0",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "Protobuf Go",
+      "package_or_module": "google.golang.org/protobuf",
+      "version": "1.36.11",
+      "official_source_url": "https://pkg.go.dev/google.golang.org/protobuf@v1.36.11",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "Protobuf-ES and unified Connect-ES generator",
+      "package_or_module": "@bufbuild/protoc-gen-es",
+      "version": "2.12.1",
+      "official_source_url": "https://www.npmjs.com/package/@bufbuild/protoc-gen-es/v/2.12.1",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "Protobuf-ES runtime",
+      "package_or_module": "@bufbuild/protobuf",
+      "version": "2.12.1",
+      "official_source_url": "https://www.npmjs.com/package/@bufbuild/protobuf/v/2.12.1",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "Connect-ES",
+      "package_or_module": "@connectrpc/connect",
+      "version": "2.1.2",
+      "official_source_url": "https://www.npmjs.com/package/@connectrpc/connect/v/2.1.2",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "Connect-Node",
+      "package_or_module": "@connectrpc/connect-node",
+      "version": "2.1.2",
+      "official_source_url": "https://www.npmjs.com/package/@connectrpc/connect-node/v/2.1.2",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "Electron",
+      "package_or_module": "electron",
+      "version": "43.1.1",
+      "official_source_url": "https://www.npmjs.com/package/electron/v/43.1.1",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "Electron Forge",
+      "package_or_module": "@electron-forge/cli",
+      "version": "7.11.2",
+      "official_source_url": "https://www.npmjs.com/package/@electron-forge/cli/v/7.11.2",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "Electron Fuses",
+      "package_or_module": "@electron/fuses",
+      "version": "2.1.3",
+      "official_source_url": "https://www.npmjs.com/package/@electron/fuses/v/2.1.3",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "electron-winstaller",
+      "package_or_module": "electron-winstaller",
+      "version": "5.4.4",
+      "official_source_url": "https://www.npmjs.com/package/electron-winstaller/v/5.4.4",
+      "targets": ["win32-x64"]
+    },
+    {
+      "name": "React",
+      "package_or_module": "react",
+      "version": "19.2.7",
+      "official_source_url": "https://www.npmjs.com/package/react/v/19.2.7",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "React DOM",
+      "package_or_module": "react-dom",
+      "version": "19.2.7",
+      "official_source_url": "https://www.npmjs.com/package/react-dom/v/19.2.7",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "React Scheduler",
+      "package_or_module": "scheduler",
+      "version": "0.27.0",
+      "official_source_url": "https://www.npmjs.com/package/scheduler/v/0.27.0",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "Vite",
+      "package_or_module": "vite",
+      "version": "8.1.5",
+      "official_source_url": "https://www.npmjs.com/package/vite/v/8.1.5",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "Vite React plugin",
+      "package_or_module": "@vitejs/plugin-react",
+      "version": "6.0.3",
+      "official_source_url": "https://www.npmjs.com/package/@vitejs/plugin-react/v/6.0.3",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "Tailwind CSS",
+      "package_or_module": "tailwindcss",
+      "version": "4.3.3",
+      "official_source_url": "https://www.npmjs.com/package/tailwindcss/v/4.3.3",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "Tailwind CSS Vite plugin",
+      "package_or_module": "@tailwindcss/vite",
+      "version": "4.3.3",
+      "official_source_url": "https://www.npmjs.com/package/@tailwindcss/vite/v/4.3.3",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "shadcn CLI provenance",
+      "package_or_module": "shadcn",
+      "version": "4.13.1",
+      "official_source_url": "https://www.npmjs.com/package/shadcn/v/4.13.1",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "Radix Slot",
+      "package_or_module": "@radix-ui/react-slot",
+      "version": "1.3.0",
+      "official_source_url": "https://www.npmjs.com/package/@radix-ui/react-slot/v/1.3.0",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "Radix Compose Refs",
+      "package_or_module": "@radix-ui/react-compose-refs",
+      "version": "1.1.3",
+      "official_source_url": "https://www.npmjs.com/package/@radix-ui/react-compose-refs/v/1.1.3",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "class-variance-authority",
+      "package_or_module": "class-variance-authority",
+      "version": "0.7.1",
+      "official_source_url": "https://www.npmjs.com/package/class-variance-authority/v/0.7.1",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "clsx",
+      "package_or_module": "clsx",
+      "version": "2.1.1",
+      "official_source_url": "https://www.npmjs.com/package/clsx/v/2.1.1",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "Lucide React",
+      "package_or_module": "lucide-react",
+      "version": "1.25.0",
+      "official_source_url": "https://www.npmjs.com/package/lucide-react/v/1.25.0",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "tailwind-merge",
+      "package_or_module": "tailwind-merge",
+      "version": "3.6.0",
+      "official_source_url": "https://www.npmjs.com/package/tailwind-merge/v/3.6.0",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "Zod",
+      "package_or_module": "zod",
+      "version": "4.4.3",
+      "official_source_url": "https://www.npmjs.com/package/zod/v/4.4.3",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "Vitest",
+      "package_or_module": "vitest",
+      "version": "4.1.10",
+      "official_source_url": "https://www.npmjs.com/package/vitest/v/4.1.10",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "Playwright",
+      "package_or_module": "@playwright/test",
+      "version": "1.61.1",
+      "official_source_url": "https://www.npmjs.com/package/@playwright/test/v/1.61.1",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "jsdom",
+      "package_or_module": "jsdom",
+      "version": "29.1.1",
+      "official_source_url": "https://www.npmjs.com/package/jsdom/v/29.1.1",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "Testing Library React",
+      "package_or_module": "@testing-library/react",
+      "version": "16.3.2",
+      "official_source_url": "https://www.npmjs.com/package/@testing-library/react/v/16.3.2",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "Testing Library User Event",
+      "package_or_module": "@testing-library/user-event",
+      "version": "14.6.1",
+      "official_source_url": "https://www.npmjs.com/package/@testing-library/user-event/v/14.6.1",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "Node type definitions",
+      "package_or_module": "@types/node",
+      "version": "26.1.1",
+      "official_source_url": "https://www.npmjs.com/package/@types/node/v/26.1.1",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "React type definitions",
+      "package_or_module": "@types/react",
+      "version": "19.2.17",
+      "official_source_url": "https://www.npmjs.com/package/@types/react/v/19.2.17",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "React DOM type definitions",
+      "package_or_module": "@types/react-dom",
+      "version": "19.2.3",
+      "official_source_url": "https://www.npmjs.com/package/@types/react-dom/v/19.2.3",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "actionlint",
+      "package_or_module": "github.com/rhysd/actionlint",
+      "version": "1.7.12",
+      "official_source_url": "https://github.com/rhysd/actionlint/releases/tag/v1.7.12",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "tar security override",
+      "package_or_module": "tar",
+      "version": "7.5.20",
+      "official_source_url": "https://www.npmjs.com/package/tar/v/7.5.20",
+      "targets": ["darwin-arm64", "win32-x64"]
+    },
+    {
+      "name": "tmp security override",
+      "package_or_module": "tmp",
+      "version": "0.2.7",
+      "official_source_url": "https://www.npmjs.com/package/tmp/v/0.2.7",
+      "targets": ["darwin-arm64", "win32-x64"]
+    }
+  ],
+  "connect_es_v2_codegen": {
+    "service_generator": "@bufbuild/protoc-gen-es",
+    "version": "2.12.1",
+    "unified_service_generation": true,
+    "protoc_gen_connect_es_installed": false,
+    "statement": "Connect-ES v2 service definitions are generated by unified protoc-gen-es; protoc-gen-connect-es is neither installed nor invoked."
+  }
+}

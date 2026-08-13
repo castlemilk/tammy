@@ -1,0 +1,970 @@
+syntax = "proto3";
+
+package tammy.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+import "tammy/v1/common.proto";
+
+option go_package = "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1";
+
+// WorkspaceState is the secure local workspace open and authentication lifecycle.
+// Allowed transitions are PENDING_RECOVERY -> UNAUTHENTICATED,
+// LOCKED -> UNAUTHENTICATED, UNAUTHENTICATED -> AUTHENTICATED,
+// UNAUTHENTICATED -> LOCKED, and AUTHENTICATED -> LOCKED.
+enum WorkspaceState {
+  // WORKSPACE_STATE_UNSPECIFIED indicates an unavailable or unvalidated state.
+  WORKSPACE_STATE_UNSPECIFIED = 0;
+
+  // WORKSPACE_STATE_PENDING_RECOVERY blocks business entry until recovery confirmation.
+  WORKSPACE_STATE_PENDING_RECOVERY = 1;
+
+  // WORKSPACE_STATE_LOCKED means SQLite is closed and no DEK is held in memory.
+  WORKSPACE_STATE_LOCKED = 2;
+
+  // WORKSPACE_STATE_UNAUTHENTICATED means the workspace is open for a bounded sign-in window.
+  WORKSPACE_STATE_UNAUTHENTICATED = 3;
+
+  // WORKSPACE_STATE_AUTHENTICATED means one local user session is active.
+  WORKSPACE_STATE_AUTHENTICATED = 4;
+}
+
+// WorkspaceTrustState is the OS audit-mirror trust lifecycle for a moved workspace.
+// Allowed transitions are TRUSTED -> MOVED_READ_ONLY and MOVED_READ_ONLY -> TRUSTED.
+enum WorkspaceTrustState {
+  // WORKSPACE_TRUST_STATE_UNSPECIFIED indicates that mirror trust has not been evaluated.
+  WORKSPACE_TRUST_STATE_UNSPECIFIED = 0;
+
+  // WORKSPACE_TRUST_STATE_TRUSTED means the verified audit head is mirrored on this installation.
+  WORKSPACE_TRUST_STATE_TRUSTED = 1;
+
+  // WORKSPACE_TRUST_STATE_MOVED_READ_ONLY means no trusted local mirror exists and writes are denied.
+  WORKSPACE_TRUST_STATE_MOVED_READ_ONLY = 2;
+}
+
+// BackupJobState is the restart-safe encrypted backup lifecycle.
+// Allowed transitions are QUEUED -> RUNNING | CANCELLED,
+// RUNNING -> QUEUED | COMPLETED | FAILED_RETRYABLE | FAILED_TERMINAL | CANCELLED,
+// and FAILED_RETRYABLE -> QUEUED | CANCELLED.
+enum BackupJobState {
+  // BACKUP_JOB_STATE_UNSPECIFIED indicates an unavailable or invalid job state.
+  BACKUP_JOB_STATE_UNSPECIFIED = 0;
+
+  // BACKUP_JOB_STATE_QUEUED is eligible for one worker lease.
+  BACKUP_JOB_STATE_QUEUED = 1;
+
+  // BACKUP_JOB_STATE_RUNNING has an active restart-safe stage.
+  BACKUP_JOB_STATE_RUNNING = 2;
+
+  // BACKUP_JOB_STATE_COMPLETED has a verified committed destination.
+  BACKUP_JOB_STATE_COMPLETED = 3;
+
+  // BACKUP_JOB_STATE_FAILED_RETRYABLE requires an existing public command that supplies every expired capability.
+  BACKUP_JOB_STATE_FAILED_RETRYABLE = 4;
+
+  // BACKUP_JOB_STATE_FAILED_TERMINAL cannot be retried with the retained input.
+  BACKUP_JOB_STATE_FAILED_TERMINAL = 5;
+
+  // BACKUP_JOB_STATE_CANCELLED committed cancellation before the destination rename.
+  BACKUP_JOB_STATE_CANCELLED = 6;
+}
+
+// RestoreState is the fsync'd external restore operation-journal lifecycle.
+// Allowed transitions are PREPARED -> STAGED -> SWAPPED -> COMPLETE, or
+// PREPARED|STAGED -> ROLLED_BACK after restart cleanup is durable.
+enum RestoreState {
+  // RESTORE_STATE_UNSPECIFIED indicates that no valid operation-journal state is available.
+  RESTORE_STATE_UNSPECIFIED = 0;
+
+  // RESTORE_STATE_PREPARED records the operation key and backup manifest hash.
+  RESTORE_STATE_PREPARED = 1;
+
+  // RESTORE_STATE_STAGED records a fully verified staged workspace and new audit head.
+  RESTORE_STATE_STAGED = 2;
+
+  // RESTORE_STATE_SWAPPED records the atomic active/staging rename boundary.
+  RESTORE_STATE_SWAPPED = 3;
+
+  // RESTORE_STATE_COMPLETE records verified activation and mirror update.
+  RESTORE_STATE_COMPLETE = 4;
+
+  // RESTORE_STATE_ROLLED_BACK records completed cleanup of an interrupted pre-swap restore.
+  RESTORE_STATE_ROLLED_BACK = 5;
+}
+
+// PreRestoreArchiveState is the retained encrypted predecessor evidence lifecycle.
+// The sole allowed transition is AVAILABLE -> DELETED after the retention and proof gates pass.
+enum PreRestoreArchiveState {
+  // PRE_RESTORE_ARCHIVE_STATE_UNSPECIFIED indicates an unavailable archive state.
+  PRE_RESTORE_ARCHIVE_STATE_UNSPECIFIED = 0;
+
+  // PRE_RESTORE_ARCHIVE_STATE_AVAILABLE is encrypted, verified, and retained.
+  PRE_RESTORE_ARCHIVE_STATE_AVAILABLE = 1;
+
+  // PRE_RESTORE_ARCHIVE_STATE_DELETED is an audited tombstone after at least 12 months.
+  PRE_RESTORE_ARCHIVE_STATE_DELETED = 2;
+
+  // PRE_RESTORE_ARCHIVE_STATE_DELETE_PENDING records durable cleanup work before final audited deletion.
+  PRE_RESTORE_ARCHIVE_STATE_DELETE_PENDING = 3;
+}
+
+// PreRestoreArchiveExportJobState is the exact retained-archive export lifecycle.
+// Allowed transitions are QUEUED -> WRITING | CANCELLED | FAILED_RETRYABLE,
+// WRITING -> VERIFIED | CANCELLED | FAILED_RETRYABLE,
+// VERIFIED -> COMPLETED, and FAILED_RETRYABLE -> QUEUED | CANCELLED.
+enum PreRestoreArchiveExportJobState {
+  // PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_UNSPECIFIED indicates an invalid job state.
+  PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_UNSPECIFIED = 0;
+
+  // PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_QUEUED awaits a worker and approved destination.
+  PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_QUEUED = 1;
+
+  // PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_WRITING writes a temporary encrypted export.
+  PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_WRITING = 2;
+
+  // PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_VERIFIED has renamed and fsync'd verified bytes.
+  PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_VERIFIED = 3;
+
+  // PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_COMPLETED has a committed verified result reference.
+  PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_COMPLETED = 4;
+
+  // PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_CANCELLED committed before verified rename.
+  PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_CANCELLED = 5;
+
+  // PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_FAILED_RETRYABLE requires destination reapproval.
+  PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_FAILED_RETRYABLE = 6;
+}
+
+// Workspace is the bounded public projection of one encrypted local workspace.
+message Workspace {
+  // id is an opaque UUIDv7 string.
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // version is the optimistic aggregate version.
+  uint64 version = 2 [(buf.validate.field).uint64.gte = 1];
+
+  // state is the current secure open/authentication state.
+  WorkspaceState state = 3 [(buf.validate.field).enum.defined_only = true];
+
+  // trust_state is the current installation audit-mirror trust state.
+  WorkspaceTrustState trust_state = 4 [(buf.validate.field).enum.defined_only = true];
+
+  // display_name is safe presentation text and is not a filesystem path.
+  string display_name = 5 [(buf.validate.field).string.max_len = 255];
+
+  // remembered_until is present only while an OS-keystore item remains valid.
+  google.protobuf.Timestamp remembered_until = 6;
+}
+
+// BackupJob is a persisted bounded encrypted-backup projection.
+message BackupJob {
+  // id is an opaque UUIDv7 string.
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // version is the optimistic job version.
+  uint64 version = 2 [(buf.validate.field).uint64.gte = 1];
+
+  // operation_key is the UUID used for persisted job replay election.
+  string operation_key = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // state is the restart-safe backup lifecycle state.
+  BackupJobState state = 4 [(buf.validate.field).enum.defined_only = true];
+
+  // progress is bounded and contains no file paths or accounting values.
+  JobProgress progress = 5 [(buf.validate.field).required = true];
+
+  // created_at is the core-authored creation instant.
+  google.protobuf.Timestamp created_at = 6 [(buf.validate.field).required = true];
+
+  // completed_at is present only for a terminal completed job.
+  google.protobuf.Timestamp completed_at = 7;
+
+  // manifest_hash is present only after the encrypted archive manifest is verified.
+  optional bytes manifest_hash = 8 [(buf.validate.field).bytes.len = 32];
+}
+
+// RestoreStatus is the bounded projection of one external restore-journal operation.
+message RestoreStatus {
+  // operation_id is the caller-generated UUID restore key.
+  string operation_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // state is the fsync'd external operation-journal state.
+  RestoreState state = 2 [(buf.validate.field).enum.defined_only = true];
+
+  // backup_manifest_hash commits the operation to one exact backup.
+  bytes backup_manifest_hash = 3 [(buf.validate.field).bytes.len = 32];
+
+  // new_audit_head is present after staging has verified the successor generation.
+  optional bytes new_audit_head = 4 [(buf.validate.field).bytes.len = 32];
+
+  // updated_at is the core-authored instant of the last fsync'd state.
+  google.protobuf.Timestamp updated_at = 5 [(buf.validate.field).required = true];
+
+  // recovery is externally authenticated, contains no secrets, and is present before predecessor evidence is published.
+  RestoreRecoveryRecord recovery = 6;
+}
+
+// RestoreRecoveryRecord is the bounded restart plan authenticated by the machine-vault journal key.
+message RestoreRecoveryRecord {
+  // workspace_id binds all restart work to one workspace.
+  string workspace_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // pre_restore_archive_id identifies retained predecessor evidence.
+  string pre_restore_archive_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // pre_restore_archive_hash binds the encrypted retained bytes.
+  bytes pre_restore_archive_hash = 3 [(buf.validate.field).bytes.len = 32];
+
+  // stage_basename is a root-confined operation-derived filename, never an absolute path.
+  string stage_basename = 4 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 192
+  }];
+
+  // rollback_basename is a root-confined operation-derived filename, never an absolute path.
+  string rollback_basename = 5 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 192
+  }];
+
+  // finalized_generation is present only after staged mutation and verification.
+  optional uint64 finalized_generation = 6 [(buf.validate.field).uint64.gte = 2];
+
+  // finalized_audit_head is present only after staged mutation and verification.
+  optional bytes finalized_audit_head = 7 [(buf.validate.field).bytes.len = 32];
+
+  // schema_version is present only after staged schema verification.
+  optional uint64 schema_version = 8 [(buf.validate.field).uint64.gte = 1];
+
+  // migration_manifest_hash is present only after staged schema verification.
+  optional bytes migration_manifest_hash = 9 [(buf.validate.field).bytes.len = 32];
+
+  // post_swap_verified records successful read-only activation verification.
+  bool post_swap_verified = 10;
+
+  // machine_credentials_revoked records idempotent external capability invalidation.
+  bool machine_credentials_revoked = 11;
+
+  // mirror_published records idempotent restored-head mirror publication.
+  bool mirror_published = 12;
+
+  // pre_restore_archive_prepared_basename is the exact operation-owned unpublished evidence filename.
+  string pre_restore_archive_prepared_basename = 13 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+  }];
+
+  // pre_restore_archive_final_basename is the exact random-ID evidence filename published only after this record is durable.
+  string pre_restore_archive_final_basename = 14 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+  }];
+
+  // artifact_ownership_digest binds the durable exclusive stage/rollback reservation markers.
+  bytes artifact_ownership_digest = 15 [(buf.validate.field).bytes.len = 32];
+
+  // rollback_predecessor_hash binds the exact active encrypted bytes that may become rollback evidence.
+  bytes rollback_predecessor_hash = 16 [(buf.validate.field).bytes.max_len = 32];
+
+  // stage_owner_marker_sha256 independently authenticates the stage ownership marker during crash cleanup.
+  bytes stage_owner_marker_sha256 = 17 [(buf.validate.field).bytes.len = 32];
+
+  // rollback_owner_marker_sha256 independently authenticates the rollback ownership marker during crash cleanup.
+  bytes rollback_owner_marker_sha256 = 18 [(buf.validate.field).bytes.len = 32];
+
+  // activated_database_sha256 binds the exact verified staged encrypted bytes that become active.
+  bytes activated_database_sha256 = 19 [(buf.validate.field).bytes.max_len = 32];
+}
+
+// PreRestoreArchive is metadata for retained encrypted predecessor evidence, never decrypted bytes.
+message PreRestoreArchive {
+  // id is an opaque UUIDv7 archive identifier.
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // version is the optimistic archive version.
+  uint64 version = 2 [(buf.validate.field).uint64.gte = 1];
+
+  // state is the retained archive lifecycle state.
+  PreRestoreArchiveState state = 3 [(buf.validate.field).enum.defined_only = true];
+
+  // created_at is the core-authored retention start instant.
+  google.protobuf.Timestamp created_at = 4 [(buf.validate.field).required = true];
+
+  // deletion_eligible_at is at least 12 months after creation.
+  google.protobuf.Timestamp deletion_eligible_at = 5 [(buf.validate.field).required = true];
+
+  // content_hash is the exact 32-byte hash of the retained encrypted archive.
+  bytes content_hash = 6 [(buf.validate.field).bytes.len = 32];
+
+  // source_generation is the predecessor audit generation.
+  uint64 source_generation = 7 [(buf.validate.field).uint64.gte = 1];
+
+  // deleted_at is the immutable terminal deletion instant and is absent before deletion.
+  optional google.protobuf.Timestamp deleted_at = 8;
+}
+
+// PreRestoreArchiveExportJob is a bounded persisted archive-export projection.
+message PreRestoreArchiveExportJob {
+  // id is an opaque UUIDv7 job identifier.
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // version is the optimistic job version.
+  uint64 version = 2 [(buf.validate.field).uint64.gte = 1];
+
+  // archive_id identifies the retained encrypted archive.
+  string archive_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // operation_key is the UUID used for persistent command replay election.
+  string operation_key = 4 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // state is the exact archive-export lifecycle state.
+  PreRestoreArchiveExportJobState state = 5 [(buf.validate.field).enum.defined_only = true];
+
+  // progress is bounded and contains no decrypted evidence.
+  JobProgress progress = 6 [(buf.validate.field).required = true];
+
+  // destination_hash is present only after verified atomic rename.
+  optional bytes destination_hash = 7 [(buf.validate.field).bytes.len = 32];
+}
+
+// RecoveryGroupConfirmation proves one prompted group without retaining the complete recovery secret.
+message RecoveryGroupConfirmation {
+  // group_index is the zero-based prompted group index.
+  uint32 group_index = 1 [(buf.validate.field).uint32.lte = 31];
+
+  // value is transient canonical Base32 group bytes and must never be logged.
+  bytes value = 2 [(buf.validate.field).bytes = {
+    min_len: 4
+    max_len: 16
+  }];
+}
+
+// WorkspaceUnlockProof selects exactly one ordinary unlock proof.
+message WorkspaceUnlockProof {
+  // proof selects passphrase or an existing unexpired remembered-workspace capability.
+  oneof proof {
+    // passphrase is transient and never persisted or logged.
+    SecretInput passphrase = 1;
+
+    // use_remembered_workspace must be true to elect the remembered-workspace proof.
+    bool use_remembered_workspace = 2;
+  }
+}
+
+// MovedWorkspaceTrustProof selects normal administrator proof or audited break glass.
+message MovedWorkspaceTrustProof {
+  // proof selects one mutually exclusive trust-establishment proof.
+  oneof proof {
+    // administrator_password is transient and requires command_context.fresh_factor.
+    SecretInput administrator_password = 1;
+
+    // recovery_secret is transient break-glass proof and never an ordinary unlock path.
+    SecretInput recovery_secret = 2;
+  }
+}
+
+// RestoreAdministratorProof authenticates a staged active administrator and workspace passphrase.
+message RestoreAdministratorProof {
+  // username is the staged administrator login name.
+  string username = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+  }];
+
+  // workspace_passphrase is transient and never persisted or logged.
+  SecretInput workspace_passphrase = 2 [(buf.validate.field).required = true];
+
+  // user_password is transient and never persisted or logged.
+  SecretInput user_password = 3 [(buf.validate.field).required = true];
+
+  // totp_code is the transient six-digit fresh staged factor value.
+  TotpCodeInput totp_code = 4 [(buf.validate.field).required = true];
+}
+
+// RestoreRecoveryProof performs the staged audited administrator break-glass reset.
+message RestoreRecoveryProof {
+  // recovery_secret is transient and never persisted or logged.
+  SecretInput recovery_secret = 1 [(buf.validate.field).required = true];
+
+  // administrator_username identifies the staged administrator to reset.
+  string administrator_username = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+  }];
+
+  // new_workspace_passphrase is transient and subject to workspace passphrase policy.
+  SecretInput new_workspace_passphrase = 3 [(buf.validate.field).required = true];
+
+  // new_user_password is transient and subject to user password policy.
+  SecretInput new_user_password = 4 [(buf.validate.field).required = true];
+}
+
+// CreateWorkspaceRequest creates encrypted pending setup under a caller-generated setup journal key.
+message CreateWorkspaceRequest {
+  // setup_id is a caller-generated UUIDv7 retained by the authenticated setup journal.
+  string setup_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // destination is an approved directory capability, not a caller-controlled path.
+  ApprovedFileRef destination = 2 [(buf.validate.field).required = true];
+
+  // workspace_passphrase is transient and subject to the exact workspace password policy.
+  SecretInput workspace_passphrase = 3 [(buf.validate.field).required = true];
+
+  // administrator_username is the unique first administrator login name.
+  string administrator_username = 4 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+  }];
+
+  // administrator_display_name is bounded presentation text.
+  string administrator_display_name = 5 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+  }];
+
+  // administrator_password is transient and subject to the exact user password policy.
+  SecretInput administrator_password = 6 [(buf.validate.field).required = true];
+}
+
+// CreateWorkspaceResponse returns pending setup and one-time recovery material.
+message CreateWorkspaceResponse {
+  // workspace is the committed pending projection.
+  Workspace workspace = 1 [(buf.validate.field).required = true];
+
+  // recovery_secret is single-display material and must never enter fixtures or logs.
+  OneTimeSecretOutput recovery_secret = 2 [(buf.validate.field).required = true];
+
+  // expires_at is the 15-minute setup confirmation deadline.
+  google.protobuf.Timestamp expires_at = 3 [(buf.validate.field).required = true];
+}
+
+// ConfirmRecoveryRequest is a fresh rate-limited setup challenge, not an ordinary command replay.
+message ConfirmRecoveryRequest {
+  // setup_id identifies the pending setup journal entry.
+  string setup_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // confirmations contains only the prompted recovery groups in prompt order.
+  repeated RecoveryGroupConfirmation confirmations = 2 [(buf.validate.field).repeated = {
+    min_items: 2
+    max_items: 8
+  }];
+
+  // terminal_replay_proof is transient proof used only for a fully confirmed inactive terminal replay.
+  // It accepts a passphrase or explicitly elects an existing unexpired remembered-workspace capability.
+  // It is omitted and ignored during pending initial confirmation or while this workspace is already active.
+  // It is never persisted or logged.
+  WorkspaceUnlockProof terminal_replay_proof = 3;
+}
+
+// ConfirmRecoveryResponse returns the active open but unauthenticated workspace.
+message ConfirmRecoveryResponse {
+  // workspace is the committed projection after successful confirmation.
+  Workspace workspace = 1 [(buf.validate.field).required = true];
+}
+
+// UnlockWorkspaceRequest is a fresh rate-limited workspace challenge.
+message UnlockWorkspaceRequest {
+  // workspace_file is an approved local workspace file capability.
+  ApprovedFileRef workspace_file = 1 [(buf.validate.field).required = true];
+
+  // proof selects passphrase or explicit remembered-workspace use.
+  WorkspaceUnlockProof proof = 2 [(buf.validate.field).required = true];
+
+  // remember_workspace is explicitly present only when the user made a consent choice.
+  optional bool remember_workspace = 3;
+}
+
+// UnlockWorkspaceResponse returns an open unauthenticated workspace.
+message UnlockWorkspaceResponse {
+  // workspace is the verified open workspace projection.
+  Workspace workspace = 1 [(buf.validate.field).required = true];
+}
+
+// LockWorkspaceRequest closes the active workspace and invalidates any session.
+message LockWorkspaceRequest {
+  // authentication identifies the active principal when a session exists.
+  AuthenticationContext authentication = 1;
+}
+
+// LockWorkspaceResponse returns the closed workspace projection.
+message LockWorkspaceResponse {
+  // workspace is the locked projection after DEK zeroing.
+  Workspace workspace = 1 [(buf.validate.field).required = true];
+}
+
+// ForgetRememberedWorkspaceRequest removes the OS-keystore item without requiring a passphrase change.
+message ForgetRememberedWorkspaceRequest {
+  // authentication identifies the active principal authorizing removal.
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+
+  // workspace_id is an opaque UUIDv7 string.
+  string workspace_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+}
+
+// ForgetRememberedWorkspaceResponse returns the workspace without remembered-key metadata.
+message ForgetRememberedWorkspaceResponse {
+  // workspace is the current projection.
+  Workspace workspace = 1 [(buf.validate.field).required = true];
+}
+
+// GetWorkspaceStateRequest requests the current bounded workspace state.
+message GetWorkspaceStateRequest {
+  // workspace_id is explicitly present when a known workspace is being queried.
+  optional string workspace_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+}
+
+// GetWorkspaceStateResponse returns the bounded current projection.
+message GetWorkspaceStateResponse {
+  // workspace is absent only when no workspace has been selected on this installation.
+  Workspace workspace = 1;
+}
+
+// ChangePassphraseRequest rewraps the existing DEK in one audited persistent command.
+message ChangePassphraseRequest {
+  // command_context carries a UUID idempotency key and a new purpose-bound factor assertion.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+
+  // workspace_id is an opaque UUIDv7 string.
+  string workspace_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // expected_version prevents stale header changes.
+  uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
+
+  // current_passphrase is transient current-key proof.
+  SecretInput current_passphrase = 4 [(buf.validate.field).required = true];
+
+  // new_passphrase is transient and subject to policy and prior-three history.
+  SecretInput new_passphrase = 5 [(buf.validate.field).required = true];
+}
+
+// ChangePassphraseResponse returns the committed workspace projection.
+message ChangePassphraseResponse {
+  // workspace reflects the advanced authenticated header version.
+  Workspace workspace = 1 [(buf.validate.field).required = true];
+}
+
+// RecoverWorkspaceRequest is a fresh break-glass operation and never an ordinary unlock.
+message RecoverWorkspaceRequest {
+  // recovery_operation_id is a caller-generated UUIDv7 for header crash recovery election.
+  string recovery_operation_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // workspace_file is the approved encrypted workspace capability.
+  ApprovedFileRef workspace_file = 2 [(buf.validate.field).required = true];
+
+  // recovery_secret is transient and never retained as plaintext.
+  SecretInput recovery_secret = 3 [(buf.validate.field).required = true];
+
+  // new_passphrase is transient and subject to policy and history.
+  SecretInput new_passphrase = 4 [(buf.validate.field).required = true];
+}
+
+// RecoverWorkspaceResponse returns the open unauthenticated recovered workspace.
+message RecoverWorkspaceResponse {
+  // workspace reflects the committed recovery operation.
+  Workspace workspace = 1 [(buf.validate.field).required = true];
+}
+
+// EstablishMovedWorkspaceTrustRequest establishes a new OS audit mirror after full chain verification.
+message EstablishMovedWorkspaceTrustRequest {
+  // command_context carries ordinary command election and, for normal proof, a new factor assertion.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+
+  // workspace_id is an opaque UUIDv7 string.
+  string workspace_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // expected_version prevents a stale mirror baseline.
+  uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
+
+  // destination_installation_id is an opaque UUIDv7 string hashed into audit evidence.
+  string destination_installation_id = 4 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // proof selects normal administrator proof or audited recovery break glass.
+  MovedWorkspaceTrustProof proof = 5 [(buf.validate.field).required = true];
+}
+
+// EstablishMovedWorkspaceTrustResponse returns the now-trusted writable workspace.
+message EstablishMovedWorkspaceTrustResponse {
+  // workspace reflects the committed mirror-establishment event.
+  Workspace workspace = 1 [(buf.validate.field).required = true];
+}
+
+// BackupWorkspaceRequest starts a persisted encrypted backup job.
+message BackupWorkspaceRequest {
+  // command_context carries a UUID operation key and authorized principal.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+
+  // workspace_id is an opaque UUIDv7 string.
+  string workspace_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // destination is an approved destination capability, never a raw path.
+  ApprovedFileRef destination = 3 [(buf.validate.field).required = true];
+
+  // backup_passphrase is transient and uses a backup-specific KEK.
+  SecretInput backup_passphrase = 4 [(buf.validate.field).required = true];
+}
+
+// BackupWorkspaceResponse returns the elected persisted job.
+message BackupWorkspaceResponse {
+  // job is identical on an exact command replay.
+  BackupJob job = 1 [(buf.validate.field).required = true];
+}
+
+// CancelBackupRequest elects cancellation before the verified destination rename.
+message CancelBackupRequest {
+  // command_context carries a UUID idempotency key and authorized principal.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+
+  // job_id is an opaque UUIDv7 string.
+  string job_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // expected_version prevents cancellation of a changed job.
+  uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
+}
+
+// CancelBackupResponse returns the elected terminal or already-committed job.
+message CancelBackupResponse {
+  // job reports cancellation or completed-commit election.
+  BackupJob job = 1 [(buf.validate.field).required = true];
+}
+
+// GetBackupJobRequest requests one bounded persisted job projection.
+message GetBackupJobRequest {
+  // authentication identifies an authorized principal.
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+
+  // job_id is an opaque UUIDv7 string.
+  string job_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+}
+
+// GetBackupJobResponse returns the persisted job projection.
+message GetBackupJobResponse {
+  // job contains no destination path or secret material.
+  BackupJob job = 1 [(buf.validate.field).required = true];
+}
+
+// ListBackupJobsRequest requests a stable bounded job page.
+message ListBackupJobsRequest {
+  // authentication identifies an authorized principal.
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+
+  // page requests the stable signed cursor page.
+  PageRequest page = 2 [(buf.validate.field).required = true];
+
+  // state is explicitly present only when filtering by one lifecycle state.
+  optional BackupJobState state = 3;
+}
+
+// ListBackupJobsResponse returns jobs in stable creation order.
+message ListBackupJobsResponse {
+  // jobs is a bounded stable page.
+  repeated BackupJob jobs = 1 [(buf.validate.field).repeated.max_items = 200];
+
+  // page describes continuation of the same stable snapshot.
+  PageInfo page = 2 [(buf.validate.field).required = true];
+}
+
+// RestoreWorkspaceRequest starts or resumes one external-journal restore operation.
+message RestoreWorkspaceRequest {
+  // operation_id is a caller-generated UUIDv7 scoped to the target workspace.
+  string operation_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // target_workspace_id is the encrypted workspace being replaced.
+  string target_workspace_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // backup_file is an approved encrypted backup capability.
+  ApprovedFileRef backup_file = 3 [(buf.validate.field).required = true];
+
+  // backup_passphrase is transient and never retained or logged.
+  SecretInput backup_passphrase = 4 [(buf.validate.field).required = true];
+
+  // proof selects staged administrator authentication or staged recovery break glass.
+  oneof proof {
+    // administrator_proof authenticates an active staged administrator with fresh TOTP.
+    RestoreAdministratorProof administrator_proof = 5;
+
+    // recovery_proof performs the staged audited administrator reset.
+    RestoreRecoveryProof recovery_proof = 6;
+  }
+}
+
+// RestoreWorkspaceResponse returns the fsync'd external-journal projection.
+message RestoreWorkspaceResponse {
+  // status is deterministic for an exact operation replay.
+  RestoreStatus status = 1 [(buf.validate.field).required = true];
+}
+
+// GetRestoreStatusRequest requests one external-journal operation projection.
+message GetRestoreStatusRequest {
+  // operation_id is the caller-generated UUIDv7 restore key.
+  string operation_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+}
+
+// GetRestoreStatusResponse returns the latest fsync'd restore status.
+message GetRestoreStatusResponse {
+  // status contains hashes and lifecycle metadata but no credentials or accounting content.
+  RestoreStatus status = 1 [(buf.validate.field).required = true];
+}
+
+// ExportPreRestoreArchiveRequest starts a restart-safe encrypted evidence export.
+message ExportPreRestoreArchiveRequest {
+  // command_context carries a UUID idempotency key and new purpose-bound factor assertion.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+
+  // archive_id identifies retained encrypted evidence.
+  string archive_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // expected_version prevents exporting a changed archive projection.
+  uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
+
+  // administrator_password is transient proof and never retained or logged.
+  SecretInput administrator_password = 4 [(buf.validate.field).required = true];
+
+  // destination is an approved capability, never a raw path.
+  ApprovedFileRef destination = 5 [(buf.validate.field).required = true];
+}
+
+// ExportPreRestoreArchiveResponse returns the elected persisted export job.
+message ExportPreRestoreArchiveResponse {
+  // job is identical on an exact replay.
+  PreRestoreArchiveExportJob job = 1 [(buf.validate.field).required = true];
+}
+
+// CancelPreRestoreArchiveExportRequest elects cancellation before verified rename.
+message CancelPreRestoreArchiveExportRequest {
+  // command_context carries a UUID idempotency key and authorized principal.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+
+  // job_id is an opaque UUIDv7 string.
+  string job_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // expected_version prevents cancellation of a changed job.
+  uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
+}
+
+// CancelPreRestoreArchiveExportResponse returns the elected job state.
+message CancelPreRestoreArchiveExportResponse {
+  // job reports cancellation or an already-completed commit point.
+  PreRestoreArchiveExportJob job = 1 [(buf.validate.field).required = true];
+}
+
+// RetryPreRestoreArchiveExportRequest reauthorizes a retryable job for one newly approved destination.
+message RetryPreRestoreArchiveExportRequest {
+  // command_context carries a distinct UUID idempotency key and new purpose-bound factor assertion.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+
+  // job_id identifies the failed retryable export job.
+  string job_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // expected_version prevents reauthorizing a changed job.
+  uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
+
+  // administrator_password is transient proof and never retained or logged.
+  SecretInput administrator_password = 4 [(buf.validate.field).required = true];
+
+  // destination is a newly approved capability; the failed capability is never reused.
+  ApprovedFileRef destination = 5 [(buf.validate.field).required = true];
+}
+
+// RetryPreRestoreArchiveExportResponse returns the reauthorized queued job.
+message RetryPreRestoreArchiveExportResponse {
+  // job is identical on an exact retry-command replay.
+  PreRestoreArchiveExportJob job = 1 [(buf.validate.field).required = true];
+}
+
+// GetPreRestoreArchiveExportJobRequest requests one bounded export job.
+message GetPreRestoreArchiveExportJobRequest {
+  // authentication identifies an authorized administrator.
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+
+  // job_id is an opaque UUIDv7 string.
+  string job_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+}
+
+// GetPreRestoreArchiveExportJobResponse returns the persisted export job.
+message GetPreRestoreArchiveExportJobResponse {
+  // job contains no decrypted evidence or destination path.
+  PreRestoreArchiveExportJob job = 1 [(buf.validate.field).required = true];
+}
+
+// ListPreRestoreArchiveExportJobsRequest requests a stable bounded job page.
+message ListPreRestoreArchiveExportJobsRequest {
+  // authentication identifies an authorized administrator.
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+
+  // page requests the stable signed cursor page.
+  PageRequest page = 2 [(buf.validate.field).required = true];
+
+  // state is explicitly present only when filtering by lifecycle state.
+  optional PreRestoreArchiveExportJobState state = 3;
+}
+
+// ListPreRestoreArchiveExportJobsResponse returns jobs in stable creation order.
+message ListPreRestoreArchiveExportJobsResponse {
+  // jobs is a bounded stable page.
+  repeated PreRestoreArchiveExportJob jobs = 1 [(buf.validate.field).repeated.max_items = 200];
+
+  // page describes continuation of the same stable snapshot.
+  PageInfo page = 2 [(buf.validate.field).required = true];
+}
+
+// DeletePreRestoreArchiveRequest deletes eligible retained evidence after all high-risk gates pass.
+message DeletePreRestoreArchiveRequest {
+  // command_context carries a UUID idempotency key and new purpose-bound factor assertion.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+
+  // archive_id identifies retained encrypted evidence.
+  string archive_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // expected_version prevents stale deletion.
+  uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
+
+  // administrator_password is transient proof and never retained or logged.
+  SecretInput administrator_password = 4 [(buf.validate.field).required = true];
+
+  // reason is mandatory bounded audit-safe text and must not contain secrets.
+  string reason = 5 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 512
+  }];
+}
+
+// DeletePreRestoreArchiveResponse returns the audited tombstone projection.
+message DeletePreRestoreArchiveResponse {
+  // archive has the terminal DELETED lifecycle state.
+  PreRestoreArchive archive = 1 [(buf.validate.field).required = true];
+}
+
+// GetPreRestoreArchiveRequest requests one bounded retained archive projection.
+message GetPreRestoreArchiveRequest {
+  // authentication identifies an authorized administrator.
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+
+  // archive_id is an opaque UUIDv7 string.
+  string archive_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+}
+
+// GetPreRestoreArchiveResponse returns retained encrypted evidence metadata only.
+message GetPreRestoreArchiveResponse {
+  // archive contains no decrypted bytes or archive key material.
+  PreRestoreArchive archive = 1 [(buf.validate.field).required = true];
+}
+
+// ListPreRestoreArchivesRequest requests a stable bounded retained-archive page.
+message ListPreRestoreArchivesRequest {
+  // authentication identifies an authorized administrator.
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+
+  // page requests the stable signed cursor page.
+  PageRequest page = 2 [(buf.validate.field).required = true];
+
+  // state is explicitly present only when filtering by archive lifecycle state.
+  optional PreRestoreArchiveState state = 3;
+}
+
+// ListPreRestoreArchivesResponse returns archive metadata in stable creation order.
+message ListPreRestoreArchivesResponse {
+  // archives is a bounded stable page.
+  repeated PreRestoreArchive archives = 1 [(buf.validate.field).repeated.max_items = 200];
+
+  // page describes continuation of the same stable snapshot.
+  PageInfo page = 2 [(buf.validate.field).required = true];
+}
+
+// TransferOwnershipRequest changes the sole owner and invalidates sessions in one audited command.
+message TransferOwnershipRequest {
+  // command_context carries a UUID idempotency key and new purpose-bound factor assertion.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+
+  // workspace_id is an opaque UUIDv7 string.
+  string workspace_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // expected_version prevents stale ownership changes.
+  uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
+
+  // target_user_id must identify an active workspace administrator.
+  string target_user_id = 4 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // acknowledge_verification_effect must be explicitly present and true.
+  optional bool acknowledge_verification_effect = 5;
+}
+
+// TransferOwnershipResponse returns the committed workspace projection before it closes.
+message TransferOwnershipResponse {
+  // workspace reflects the new owner and advanced version.
+  Workspace workspace = 1 [(buf.validate.field).required = true];
+}
+
+// WorkspaceService exposes secure local workspace lifecycle, backup, restore, and ownership use cases.
+service WorkspaceService {
+  // CreateWorkspace creates pending encrypted setup and returns one-time recovery material.
+  rpc CreateWorkspace(CreateWorkspaceRequest) returns (CreateWorkspaceResponse);
+
+  // ConfirmRecovery is a fresh rate-limited setup challenge.
+  rpc ConfirmRecovery(ConfirmRecoveryRequest) returns (ConfirmRecoveryResponse);
+
+  // UnlockWorkspace is a fresh rate-limited passphrase or remembered-key challenge.
+  rpc UnlockWorkspace(UnlockWorkspaceRequest) returns (UnlockWorkspaceResponse);
+
+  // LockWorkspace closes SQLite, invalidates the session, and zeroes the in-memory DEK.
+  rpc LockWorkspace(LockWorkspaceRequest) returns (LockWorkspaceResponse);
+
+  // ForgetRememberedWorkspace removes the unexpired OS-keystore item.
+  rpc ForgetRememberedWorkspace(ForgetRememberedWorkspaceRequest) returns (ForgetRememberedWorkspaceResponse);
+
+  // GetWorkspaceState returns the bounded current installation projection.
+  rpc GetWorkspaceState(GetWorkspaceStateRequest) returns (GetWorkspaceStateResponse);
+
+  // ChangePassphrase rewraps the existing DEK after current passphrase and new factor proof.
+  rpc ChangePassphrase(ChangePassphraseRequest) returns (ChangePassphraseResponse);
+
+  // RecoverWorkspace performs closed-workspace break glass and sets a new passphrase.
+  rpc RecoverWorkspace(RecoverWorkspaceRequest) returns (RecoverWorkspaceResponse);
+
+  // EstablishMovedWorkspaceTrust verifies the audit chain and creates a new OS mirror baseline.
+  rpc EstablishMovedWorkspaceTrust(EstablishMovedWorkspaceTrustRequest) returns (EstablishMovedWorkspaceTrustResponse);
+
+  // BackupWorkspace starts a restart-safe encrypted backup job.
+  rpc BackupWorkspace(BackupWorkspaceRequest) returns (BackupWorkspaceResponse);
+
+  // CancelBackup elects cancellation before the verified destination rename.
+  rpc CancelBackup(CancelBackupRequest) returns (CancelBackupResponse);
+
+  // GetBackupJob returns one bounded persisted backup job.
+  rpc GetBackupJob(GetBackupJobRequest) returns (GetBackupJobResponse);
+
+  // ListBackupJobs returns a stable bounded page of persisted backup jobs.
+  rpc ListBackupJobs(ListBackupJobsRequest) returns (ListBackupJobsResponse);
+
+  // RestoreWorkspace starts or resumes one external-journal staged restore.
+  rpc RestoreWorkspace(RestoreWorkspaceRequest) returns (RestoreWorkspaceResponse);
+
+  // GetRestoreStatus returns one fsync'd external-journal projection.
+  rpc GetRestoreStatus(GetRestoreStatusRequest) returns (GetRestoreStatusResponse);
+
+  // ExportPreRestoreArchive starts an authorized encrypted predecessor-evidence export.
+  rpc ExportPreRestoreArchive(ExportPreRestoreArchiveRequest) returns (ExportPreRestoreArchiveResponse);
+
+  // CancelPreRestoreArchiveExport elects cancellation before verified destination rename.
+  rpc CancelPreRestoreArchiveExport(CancelPreRestoreArchiveExportRequest) returns (CancelPreRestoreArchiveExportResponse);
+
+  // RetryPreRestoreArchiveExport reauthorizes one retryable job with a newly approved destination.
+  rpc RetryPreRestoreArchiveExport(RetryPreRestoreArchiveExportRequest) returns (RetryPreRestoreArchiveExportResponse);
+
+  // GetPreRestoreArchiveExportJob returns one bounded persisted export job.
+  rpc GetPreRestoreArchiveExportJob(GetPreRestoreArchiveExportJobRequest) returns (GetPreRestoreArchiveExportJobResponse);
+
+  // ListPreRestoreArchiveExportJobs returns a stable bounded export-job page.
+  rpc ListPreRestoreArchiveExportJobs(ListPreRestoreArchiveExportJobsRequest) returns (ListPreRestoreArchiveExportJobsResponse);
+
+  // DeletePreRestoreArchive deletes eligible predecessor evidence after password, factor, reason, and age checks.
+  rpc DeletePreRestoreArchive(DeletePreRestoreArchiveRequest) returns (DeletePreRestoreArchiveResponse);
+
+  // GetPreRestoreArchive returns retained encrypted-evidence metadata only.
+  rpc GetPreRestoreArchive(GetPreRestoreArchiveRequest) returns (GetPreRestoreArchiveResponse);
+
+  // ListPreRestoreArchives returns a stable bounded archive page.
+  rpc ListPreRestoreArchives(ListPreRestoreArchivesRequest) returns (ListPreRestoreArchivesResponse);
+
+  // TransferOwnership changes the owner, supersedes verification, invalidates sessions, and closes the workspace.
+  rpc TransferOwnership(TransferOwnershipRequest) returns (TransferOwnershipResponse);
+}

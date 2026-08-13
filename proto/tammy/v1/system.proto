@@ -1,0 +1,39 @@
+edition = "2023";
+
+package tammy.v1;
+
+option features.field_presence = IMPLICIT;
+option go_package = "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1";
+
+// RuntimeMode describes how Tammy is operating.
+enum RuntimeMode {
+  // RUNTIME_MODE_UNSPECIFIED indicates that the runtime mode is unknown.
+  RUNTIME_MODE_UNSPECIFIED = 0;
+
+  // RUNTIME_MODE_OFFLINE indicates that Tammy is operating without network access.
+  RUNTIME_MODE_OFFLINE = 1;
+}
+
+// GetDiagnosticsRequest requests system diagnostic information.
+message GetDiagnosticsRequest {}
+
+// GetDiagnosticsResponse contains system diagnostic information.
+message GetDiagnosticsResponse {
+  // api_version is the version of the Tammy API.
+  string api_version = 1;
+
+  // core_version is the version of the Tammy core service.
+  string core_version = 2;
+
+  // runtime_mode describes how Tammy is operating.
+  RuntimeMode runtime_mode = 3;
+
+  // network_required indicates whether the current operation requires network access.
+  bool network_required = 4;
+}
+
+// SystemService exposes system diagnostic information.
+service SystemService {
+  // GetDiagnostics returns current system diagnostic information.
+  rpc GetDiagnostics(GetDiagnosticsRequest) returns (GetDiagnosticsResponse);
+}

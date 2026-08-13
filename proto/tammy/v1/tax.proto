@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package tammy.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+import "tammy/v1/common.proto";
+
+option go_package = "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1";
+
+enum BasWorkpaperStatus {
+  BAS_WORKPAPER_STATUS_UNSPECIFIED = 0;
+  BAS_WORKPAPER_STATUS_DRAFT_NOT_LODGED = 1;
+}
+
+message BasSourceLine {
+  string document_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string supplier_name = 2 [(buf.validate.field).string.max_len = 256];
+  string invoice_number = 3 [(buf.validate.field).string.max_len = 128];
+  CivilDate document_date = 4 [(buf.validate.field).required = true];
+  Money gross = 5 [(buf.validate.field).required = true];
+  Money gst_credit = 6 [(buf.validate.field).required = true];
+}
+
+message BasWorkpaper {
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 version = 3 [(buf.validate.field).uint64.gte = 1];
+  CivilDate period_start = 4 [(buf.validate.field).required = true];
+  CivilDate period_end = 5 [(buf.validate.field).required = true];
+  BasWorkpaperStatus status = 6 [(buf.validate.field).enum.defined_only = true];
+  Money sales_g1 = 7 [(buf.validate.field).required = true];
+  Money gst_on_sales_1a = 8 [(buf.validate.field).required = true];
+  Money gst_credits_1b = 9 [(buf.validate.field).required = true];
+  Money net_gst_payable = 10 [(buf.validate.field).required = true];
+  repeated BasSourceLine sources = 11 [(buf.validate.field).repeated.max_items = 1000];
+  google.protobuf.Timestamp created_at = 12 [(buf.validate.field).required = true];
+}
+
+message CreateBasDraftRequest {
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  CivilDate period_start = 3 [(buf.validate.field).required = true];
+  CivilDate period_end = 4 [(buf.validate.field).required = true];
+}
+message CreateBasDraftResponse {
+  BasWorkpaper workpaper = 1 [(buf.validate.field).required = true];
+}
+
+message GetCurrentBasDraftRequest {
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+}
+message GetCurrentBasDraftResponse {
+  BasWorkpaper workpaper = 1 [(buf.validate.field).required = true];
+}
+
+service TaxService {
+  rpc CreateBasDraft(CreateBasDraftRequest) returns (CreateBasDraftResponse);
+  rpc GetCurrentBasDraft(GetCurrentBasDraftRequest) returns (GetCurrentBasDraftResponse);
+}

@@ -1,0 +1,186 @@
+name: Offline desktop foundation
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: foundation-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contracts:
+    name: Contracts and local foundation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out the complete comparison history
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+        with:
+          clean: true
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up pinned Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 24.18.0
+          package-manager-cache: false
+
+      - name: Set up pinned Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version: 1.26.4
+
+      - name: Activate pinned pnpm
+        run: |
+          corepack enable pnpm
+          corepack prepare pnpm@11.15.0 --activate
+
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify virtual display availability
+        run: command -v xvfb-run
+
+      - name: Install exact Task
+        shell: bash
+        run: |
+          go install github.com/go-task/task/v3/cmd/task@v3.52.0
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Verify exact Task version
+        shell: bash
+        run: test "$(task --version)" = "3.52.0"
+
+      - name: Run canonical Ubuntu CI scenarios
+        env:
+          TAMMY_EVIDENCE_SUBJECT_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          task ci:contracts
+          task ci:linux
+
+  macos14-arm64-packaged:
+    name: macOS 14 arm64 packaged E2E
+    runs-on: macos-14
+    timeout-minutes: 30
+    steps:
+      - name: Assert native Apple silicon
+        run: test "$(uname -m)" = "arm64"
+
+      - name: Check out the complete comparison history
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+        with:
+          clean: true
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up pinned Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 24.18.0
+          package-manager-cache: false
+
+      - name: Set up pinned Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version: 1.26.4
+
+      - name: Activate pinned pnpm
+        run: |
+          corepack enable pnpm
+          corepack prepare pnpm@11.15.0 --activate
+
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install exact Task
+        shell: bash
+        run: |
+          go install github.com/go-task/task/v3/cmd/task@v3.52.0
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Verify exact Task version
+        shell: bash
+        run: test "$(task --version)" = "3.52.0"
+
+      - name: Run canonical macOS CI scenario
+        run: task ci:macos
+
+      - name: Retain packaged failure evidence
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: macos14-arm64-foundation-failure-evidence
+          path: |
+            apps/desktop/test-results/**
+            apps/desktop/resources/build/build-manifest.json
+          if-no-files-found: warn
+          retention-days: 30
+
+  windows-server-x64-package-smoke:
+    name: WINDOWS_SERVER_SMOKE_ONLY / Windows Server 2025 desktop checks
+    runs-on: windows-2025
+    timeout-minutes: 30
+    env:
+      EVIDENCE_CLASSIFICATION: WINDOWS_SERVER_SMOKE_ONLY
+    steps:
+      - name: Assert the Windows Server x64 smoke target
+        shell: pwsh
+        run: |
+          if ($env:PROCESSOR_ARCHITECTURE -ne "AMD64") {
+            throw "WINDOWS_SERVER_SMOKE_ONLY_REQUIRES_AMD64"
+          }
+          if ($env:EVIDENCE_CLASSIFICATION -ne "WINDOWS_SERVER_SMOKE_ONLY") {
+            throw "WINDOWS_SERVER_EVIDENCE_CLASSIFICATION_INVALID"
+          }
+          Write-Host "WINDOWS_SERVER_SMOKE_ONLY is not Windows 11 release-gate evidence."
+
+      - name: Check out the complete comparison history
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+        with:
+          clean: true
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up pinned Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 24.18.0
+          package-manager-cache: false
+
+      - name: Set up pinned Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version: 1.26.4
+
+      - name: Activate pinned pnpm
+        run: |
+          corepack enable pnpm
+          corepack prepare pnpm@11.15.0 --activate
+
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install exact Task
+        shell: pwsh
+        run: |
+          go install github.com/go-task/task/v3/cmd/task@v3.52.0
+          $taskBin = Join-Path (go env GOPATH) "bin"
+          $taskBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Verify exact Task version
+        shell: pwsh
+        run: |
+          $version = task --version
+          if ($LASTEXITCODE -ne 0 -or $version -ne "3.52.0") { throw "UNSUPPORTED_TASK_VERSION:$version" }
+
+      - name: Run canonical Windows Server smoke CI scenario
+        shell: pwsh
+        env:
+          TAMMY_EVIDENCE_SUBJECT_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: task ci:windows-smoke

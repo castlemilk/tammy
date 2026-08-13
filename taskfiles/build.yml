@@ -1,0 +1,39 @@
+version: '3'
+
+tasks:
+  sqlcipher:
+    desc: Build the supported native SQLCipher resource boundary.
+    preconditions:
+      - sh: >-
+          mise exec -- node -e 'const target = process.argv[1] ?? `${process.platform}/${process.arch}`; if (!new Set(["darwin/arm64", "win32/x64"]).has(target)) { console.error(`UNSUPPORTED_SQLCIPHER_TARGET:${target}`); process.exit(1); }'
+        msg: SQLCipher builds require darwin/arm64 or win32/x64.
+    cmds:
+      - mise exec -- pnpm sqlcipher:build
+
+  core:
+    desc: Build the supported native core and its authenticated SQLCipher inputs.
+    preconditions:
+      - sh: >-
+          mise exec -- node -e 'const target = process.argv[1] ?? `${process.platform}/${process.arch}`; if (!new Set(["darwin/arm64", "win32/x64"]).has(target)) { console.error(`UNSUPPORTED_SQLCIPHER_TARGET:${target}`); process.exit(1); }'
+        msg: Native core builds require darwin/arm64 or win32/x64.
+    cmds:
+      - mise exec -- pnpm core:build
+
+  manifest:
+    desc: Write the build manifest for an already built native core.
+    cmds:
+      - mise exec -- pnpm build:manifest
+
+  desktop:
+    desc: Build a raw supported Electron bundle for local diagnosis.
+    summary: |
+      Produces a raw local desktop bundle from the authenticated native core and manifest.
+      It is raw, not verified package evidence: it does not check signatures, resources, or Electron data.
+    preconditions:
+      - sh: >-
+          mise exec -- node -e 'const target = process.argv[1] ?? `${process.platform}/${process.arch}`; if (!new Set(["darwin/arm64", "win32/x64"]).has(target)) { console.error(`UNSUPPORTED_SQLCIPHER_TARGET:${target}`); process.exit(1); }'
+        msg: Desktop builds require darwin/arm64 or win32/x64.
+    cmds:
+      - mise exec -- pnpm core:build
+      - mise exec -- pnpm build:manifest
+      - mise exec -- pnpm --dir apps/desktop package

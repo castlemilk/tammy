@@ -1,0 +1,187 @@
+{
+  "schemaVersion": 1,
+  "messageType": "tammy.v1.CanonicalRequest",
+  "cases": [
+    {
+      "name": "absent-presence",
+      "input": {},
+      "expectedNormalizedJson": {}
+    },
+    {
+      "name": "explicit-default-presence",
+      "input": {
+        "explicit_default_flag": false,
+        "explicit_zero": "0",
+        "optional_note": ""
+      },
+      "expectedNormalizedJson": {
+        "explicit_default_flag": false,
+        "explicit_zero": "0",
+        "optional_note": ""
+      }
+    },
+    {
+      "name": "field-mask-normalization",
+      "input": {
+        "update_mask": "legalName,displayName,legalName"
+      },
+      "expectedNormalizedJson": {
+        "update_mask": "displayName,legalName"
+      }
+    },
+    {
+      "name": "repeated-order",
+      "input": {
+        "ordered_values": ["second", "first", "second"]
+      },
+      "expectedNormalizedJson": {
+        "ordered_values": ["second", "first", "second"]
+      }
+    },
+    {
+      "name": "int64-decimal-string",
+      "input": {
+        "signed_units": "-9223372036854775808"
+      },
+      "expectedNormalizedJson": {
+        "signed_units": "-9223372036854775808"
+      }
+    },
+    {
+      "name": "timestamp-normalization",
+      "input": {
+        "observed_at": "2026-08-03T10:11:12.120000+10:00"
+      },
+      "expectedNormalizedJson": {
+        "observed_at": "2026-08-03T00:11:12.120Z"
+      }
+    },
+    {
+      "name": "symbolic-enum-name",
+      "input": {
+        "account_status": "ACCOUNT_STATUS_ARCHIVED"
+      },
+      "expectedNormalizedJson": {
+        "account_status": "ACCOUNT_STATUS_ARCHIVED"
+      }
+    }
+  ],
+  "semanticHashCases": [
+    {
+      "name": "semantic-v1",
+      "input": {
+        "command_context": {
+          "idempotency_key": "01890f3c-7b2e-7cc4-98c4-dc0c0c07398f",
+          "authentication": {
+            "actor_user_id": "01890f3c-7b2e-7cc4-98c4-dc0c0c073980",
+            "session_id": "01890f3c-7b2e-7cc4-98c4-dc0c0c073981"
+          },
+          "fresh_factor": {
+            "assertion_id": "01890f3c-7b2e-7cc4-98c4-dc0c0c073982",
+            "purpose": "post_journal",
+            "asserted_at": "2026-08-03T10:11:12+10:00"
+          }
+        },
+        "explicit_default_flag": false,
+        "update_mask": "legalName,displayName,legalName",
+        "ordered_values": ["second", "first", "second"],
+        "signed_units": "-9223372036854775808",
+        "observed_at": "2026-08-03T10:11:12.120000+10:00",
+        "account_status": "ACCOUNT_STATUS_ARCHIVED",
+        "explicit_zero": "0",
+        "optional_note": ""
+      },
+      "expectedCanonicalJson": "{\"account_status\":\"ACCOUNT_STATUS_ARCHIVED\",\"command_context\":{\"authentication\":{\"actor_user_id\":\"01890f3c-7b2e-7cc4-98c4-dc0c0c073980\",\"session_id\":\"01890f3c-7b2e-7cc4-98c4-dc0c0c073981\"},\"fresh_factor\":{\"asserted_at\":\"2026-08-03T00:11:12Z\",\"assertion_id\":\"01890f3c-7b2e-7cc4-98c4-dc0c0c073982\",\"purpose\":\"post_journal\"},\"idempotency_key\":\"01890f3c-7b2e-7cc4-98c4-dc0c0c07398f\"},\"explicit_default_flag\":false,\"explicit_zero\":\"0\",\"observed_at\":\"2026-08-03T00:11:12.120Z\",\"optional_note\":\"\",\"ordered_values\":[\"second\",\"first\",\"second\"],\"signed_units\":\"-9223372036854775808\",\"update_mask\":\"displayName,legalName\"}",
+      "expectedMessageType": "tammy.v1.CanonicalRequest",
+      "expectedSemanticHashVersion": "v1",
+      "expectedSemanticHashHex": "8ecf80e82b6b928d2e2186507ed19b92aac2537ced274a65e98425b5f61512bc"
+    },
+    {
+      "name": "non-bmp-control-string",
+      "input": {
+        "optional_note": "\u0001music \ud834\udd1e\n\"\\end"
+      },
+      "expectedCanonicalJson": "{\"optional_note\":\"\\u0001music 𝄞\\n\\\"\\\\end\"}",
+      "expectedMessageType": "tammy.v1.CanonicalRequest",
+      "expectedSemanticHashVersion": "v1",
+      "expectedSemanticHashHex": "938661e4fb4c2457984b13df7c17ace9b3af322b01816b6ccbc8119052b53490"
+    },
+    {
+      "name": "presence-absent",
+      "input": {},
+      "expectedCanonicalJson": "{}",
+      "expectedMessageType": "tammy.v1.CanonicalRequest",
+      "expectedSemanticHashVersion": "v1",
+      "expectedSemanticHashHex": "fcc566e3cb253c8723551cc1ae2fb71d3d67a089b4dfb278959edfe06db742c1"
+    },
+    {
+      "name": "presence-explicit-empty",
+      "input": {
+        "optional_note": ""
+      },
+      "expectedCanonicalJson": "{\"optional_note\":\"\"}",
+      "expectedMessageType": "tammy.v1.CanonicalRequest",
+      "expectedSemanticHashVersion": "v1",
+      "expectedSemanticHashHex": "b35156df0b1aa8c465ff9cac35ec3f3d0fcfabcb3ebd886d1234828610ceba6f"
+    },
+    {
+      "name": "metadata-only-a",
+      "input": {
+        "command_context": {
+          "idempotency_key": "01890f3c-7b2e-7cc4-98c4-dc0c0c073992",
+          "authentication": {
+            "actor_user_id": "01890f3c-7b2e-7cc4-98c4-dc0c0c073990",
+            "session_id": "01890f3c-7b2e-7cc4-98c4-dc0c0c073991"
+          }
+        },
+        "optional_note": "stable"
+      },
+      "expectedCanonicalJson": "{\"command_context\":{\"authentication\":{\"actor_user_id\":\"01890f3c-7b2e-7cc4-98c4-dc0c0c073990\",\"session_id\":\"01890f3c-7b2e-7cc4-98c4-dc0c0c073991\"},\"idempotency_key\":\"01890f3c-7b2e-7cc4-98c4-dc0c0c073992\"},\"optional_note\":\"stable\"}",
+      "expectedMessageType": "tammy.v1.CanonicalRequest",
+      "expectedSemanticHashVersion": "v1",
+      "expectedSemanticHashHex": "4e339602cad8e18079f47898c2b46b82c48bd46394f3832e4a0d177fcf8ea776"
+    },
+    {
+      "name": "metadata-only-b",
+      "input": {
+        "command_context": {
+          "idempotency_key": "01890f3c-7b2e-7cc4-98c4-dc0c0c0739a2",
+          "authentication": {
+            "actor_user_id": "01890f3c-7b2e-7cc4-98c4-dc0c0c0739a0",
+            "session_id": "01890f3c-7b2e-7cc4-98c4-dc0c0c0739a1"
+          }
+        },
+        "optional_note": "stable"
+      },
+      "expectedCanonicalJson": "{\"command_context\":{\"authentication\":{\"actor_user_id\":\"01890f3c-7b2e-7cc4-98c4-dc0c0c0739a0\",\"session_id\":\"01890f3c-7b2e-7cc4-98c4-dc0c0c0739a1\"},\"idempotency_key\":\"01890f3c-7b2e-7cc4-98c4-dc0c0c0739a2\"},\"optional_note\":\"stable\"}",
+      "expectedMessageType": "tammy.v1.CanonicalRequest",
+      "expectedSemanticHashVersion": "v1",
+      "expectedSemanticHashHex": "4e339602cad8e18079f47898c2b46b82c48bd46394f3832e4a0d177fcf8ea776"
+    },
+    {
+      "name": "semantic-change",
+      "input": {
+        "command_context": {
+          "idempotency_key": "01890f3c-7b2e-7cc4-98c4-dc0c0c0739a2",
+          "authentication": {
+            "actor_user_id": "01890f3c-7b2e-7cc4-98c4-dc0c0c0739a0",
+            "session_id": "01890f3c-7b2e-7cc4-98c4-dc0c0c0739a1"
+          }
+        },
+        "optional_note": "changed"
+      },
+      "expectedCanonicalJson": "{\"command_context\":{\"authentication\":{\"actor_user_id\":\"01890f3c-7b2e-7cc4-98c4-dc0c0c0739a0\",\"session_id\":\"01890f3c-7b2e-7cc4-98c4-dc0c0c0739a1\"},\"idempotency_key\":\"01890f3c-7b2e-7cc4-98c4-dc0c0c0739a2\"},\"optional_note\":\"changed\"}",
+      "expectedMessageType": "tammy.v1.CanonicalRequest",
+      "expectedSemanticHashVersion": "v1",
+      "expectedSemanticHashHex": "0b8bf0bf5b1f743cd15481679d9fe3487c71f7cb11459246ebd6cbf8e85cbe07"
+    }
+  ],
+  "unknownFieldCases": [
+    {
+      "name": "reject-unknown-field",
+      "input": {
+        "future_accounting_rule": "must-not-be-dropped"
+      }
+    }
+  ]
+}
