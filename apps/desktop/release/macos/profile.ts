@@ -136,10 +136,10 @@ export function createMacOSReleaseProfile(
     buildVersion,
     category: MACOS_APP_CATEGORY,
     icon: path.join(desktopRoot, "assets", "icon.icns"),
-    info: Object.freeze({
+    info: {
       ElectronTeamID: teamID,
       ITSAppUsesNonExemptEncryption: exportCompliance === "non-exempt",
-    }),
+    },
     ...(installerIdentity === undefined ? {} : { installerIdentity }),
     kind: "mas",
     privacyManifest: path.join(releaseRoot, "PrivacyInfo.xcprivacy"),

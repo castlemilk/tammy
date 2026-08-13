@@ -76,6 +76,7 @@ describe("createMacOSReleaseProfile", () => {
       ElectronTeamID: "ABCDE12345",
       ITSAppUsesNonExemptEncryption: false,
     });
+    expect(Object.isExtensible(profile.info)).toBe(true);
     expect(profile.publicLinks).toEqual({
       privacyPolicy: "https://example.com/tammy/privacy",
       support: "https://example.com/tammy/support",
