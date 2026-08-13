@@ -1,3 +1,4 @@
+import { chmod, lstat, readdir } from "node:fs/promises";
 import path from "node:path";
 
 export const MACOS_APP_BUNDLE_ID = "com.tammy.desktop";
@@ -34,6 +35,26 @@ export interface MacOSStoreProfile {
 }
 
 export type MacOSReleaseProfile = DevelopmentProfile | MacOSStoreProfile;
+
+export async function normalizeMacOSPackagedResourcePermissions(buildPath: string): Promise<void> {
+  if (!path.isAbsolute(buildPath)) throw new Error("MACOS_PACKAGED_RESOURCES_INVALID");
+  const resources = path.join(buildPath, "Tammy.app", "Contents", "Resources");
+
+  async function normalize(candidate: string): Promise<void> {
+    const stats = await lstat(candidate);
+    if (stats.isSymbolicLink()) throw new Error("MACOS_PACKAGED_RESOURCES_INVALID");
+    if (stats.isFile()) {
+      await chmod(candidate, 0o644);
+      return;
+    }
+    if (!stats.isDirectory()) throw new Error("MACOS_PACKAGED_RESOURCES_INVALID");
+    await chmod(candidate, 0o755);
+    for (const entry of await readdir(candidate)) await normalize(path.join(candidate, entry));
+  }
+
+  await normalize(path.join(resources, "build"));
+  await normalize(path.join(resources, "sqlcipher"));
+}
 
 function required(environment: NodeJS.ProcessEnv, key: string): string {
   const value = environment[key];
