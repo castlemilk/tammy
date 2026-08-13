@@ -1,8 +1,14 @@
+import { lstat, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { createMacOSReleaseProfile, MACOS_APP_BUNDLE_ID } from "../../release/macos/profile";
+import {
+  createMacOSReleaseProfile,
+  MACOS_APP_BUNDLE_ID,
+  normalizeMacOSPackagedResourcePermissions,
+} from "../../release/macos/profile";
 
 const desktopRoot = path.resolve(__dirname, "../..");
 const provisioningProfile = path.join(desktopRoot, "test.provisionprofile");
@@ -76,6 +82,7 @@ describe("createMacOSReleaseProfile", () => {
       ElectronTeamID: "ABCDE12345",
       ITSAppUsesNonExemptEncryption: false,
     });
+    expect(Object.isExtensible(profile.info)).toBe(true);
     expect(profile.publicLinks).toEqual({
       privacyPolicy: "https://example.com/tammy/privacy",
       support: "https://example.com/tammy/support",
@@ -149,5 +156,29 @@ describe("createMacOSReleaseProfile", () => {
     expect(() =>
       createMacOSReleaseProfile({ ...distributionEnvironment(), ...change }, desktopRoot),
     ).toThrow("MACOS_RELEASE_INPUT_INVALID");
+  });
+});
+
+describe.skipIf(process.platform === "win32")("normalizeMacOSPackagedResourcePermissions", () => {
+  it("makes packaged build and SQLCipher resources readable by App Store users", async () => {
+    const fixture = await mkdtemp(path.join(os.tmpdir(), "tammy-mas-permissions-"));
+    const resources = path.join(fixture, "Tammy.app", "Contents", "Resources");
+    const build = path.join(resources, "build");
+    const cipher = path.join(resources, "sqlcipher", "darwin-arm64");
+    try {
+      await mkdir(build, { mode: 0o700, recursive: true });
+      await mkdir(cipher, { mode: 0o700, recursive: true });
+      await writeFile(path.join(build, "build-manifest.json"), "{}\n", { mode: 0o600 });
+      await writeFile(path.join(cipher, "LIBRARY_SHA256"), "hash\n", { mode: 0o600 });
+
+      await normalizeMacOSPackagedResourcePermissions(fixture);
+
+      expect((await lstat(path.join(resources, "sqlcipher"))).mode & 0o777).toBe(0o755);
+      expect((await lstat(cipher)).mode & 0o777).toBe(0o755);
+      expect((await lstat(path.join(build, "build-manifest.json"))).mode & 0o777).toBe(0o644);
+      expect((await lstat(path.join(cipher, "LIBRARY_SHA256"))).mode & 0o777).toBe(0o644);
+    } finally {
+      await rm(fixture, { force: true, recursive: true });
+    }
   });
 });

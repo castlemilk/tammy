@@ -13,6 +13,7 @@ import {
   createMacOSReleaseProfile,
   MACOS_APP_BUNDLE_ID,
   MACOS_APP_CATEGORY,
+  normalizeMacOSPackagedResourcePermissions,
 } from "./release/macos/profile";
 
 const desktopRoot = import.meta.dirname;
@@ -62,6 +63,24 @@ const removeUnusedMacOSInfoKeys: PackagerHook = (
     );
 };
 
+const normalizePackagedResourcePermissions: PackagerHook = (
+  buildPath,
+  _electronVersion,
+  platform,
+  _arch,
+  callback,
+) => {
+  if (platform !== "darwin" && platform !== "mas") {
+    callback();
+    return;
+  }
+  void normalizeMacOSPackagedResourcePermissions(buildPath).then(
+    () => callback(),
+    (error: unknown) =>
+      callback(error instanceof Error ? error : new Error("MACOS_PACKAGED_RESOURCES_INVALID")),
+  );
+};
+
 const packagedCoreSuffix = path.join("Contents", "Resources", "core", "darwin-arm64", "tammy-core");
 
 function isManifestBoundCore(file: string): boolean {
@@ -76,7 +95,7 @@ const developmentSign: NonNullable<ForgeConfig["packagerConfig"]>["osxSign"] = {
 };
 
 const packagerConfig: PackagerConfig = {
-  afterCopyExtraResources: [removeUnusedMacOSInfoKeys],
+  afterCopyExtraResources: [removeUnusedMacOSInfoKeys, normalizePackagedResourcePermissions],
   asar: true,
   executableName: "Tammy",
   extraResource: [
