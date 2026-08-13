@@ -22,11 +22,11 @@ Complete these steps in the Apple Developer portal and App Store Connect. Do not
 
 - [ ] Confirm that the legal entity responsible for Tammy owns the Apple Developer membership and will submit the financial app.
 - [x] Register the explicit Mac App ID `com.tammy.desktop` (`DXP9QHD7JH`). App Sandbox remains a mandatory signed-build entitlement and release-check requirement.
-- [ ] Create Apple Development and Apple Distribution signing certificates and a Mac Installer Distribution certificate (older keychains may show the legacy 3rd Party Mac Developer Installer name).
-- [ ] Create separate Mac App Store development and distribution provisioning profiles for the App ID.
+- [x] Create a Mac App Distribution certificate and a Mac Installer Distribution certificate (the current keychain shows the legacy 3rd Party Mac Developer names).
+- [x] Create the `Tammy Mac App Store 20260813` distribution provisioning profile for the App ID. A separate development profile remains optional for local sandbox testing.
 - [x] Create App Store Connect record `6800226692` for **Tammy Accounting**, version `0.1.0`, English (Australia), SKU `tammy-macos-001`, primary Finance and secondary Business categories, with manual release.
-- [ ] Publish HTTPS privacy-policy and support pages, then replace every `OPERATOR_REQUIRED` value in [store-metadata.md](../../apps/desktop/release/macos/store-metadata.md).
-- [ ] Obtain and record the export-compliance determination for SQLCipher and local TLS. Set the build input and App Store Connect answers to the same determination.
+- [x] Publish the HTTPS [privacy policy](../../PRIVACY.md) and [support page](https://github.com/castlemilk/tammy/issues), then replace every `OPERATOR_REQUIRED` value in [store-metadata.md](../../apps/desktop/release/macos/store-metadata.md).
+- [x] Record the Australia-only App Store Connect documentation determination for industry-standard SQLCipher and TLS. Set the build input and App Store Connect answers to `exempt`; expanding availability requires a fresh export-compliance review.
 - [ ] Assign a monotonically increasing positive decimal `CFBundleVersion` for every upload. Marketing version comes from `apps/desktop/package.json`.
 
 Apple's current signing, provisioning, upload, metadata, screenshot, privacy, and review requirements remain authoritative. Re-check them for every release.

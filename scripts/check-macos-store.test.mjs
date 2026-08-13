@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -7,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import {
   assertMacOSReleaseMetadata,
   inspectMacOSStoreRepository,
+  readMacOSProvisioningProfilePlist,
   readMacOSRepositoryPlist,
   readPngDimensions,
   validateMacOSProvisioningProfile,
@@ -81,6 +83,14 @@ test("distribution inputs require absolute paths, explicit compliance and a posi
     buildNumber: "42",
     mode: "distribution",
   });
+  assert.deepEqual(
+    validateMacOSReleaseEnvironment({
+      ...valid,
+      TAMMY_MACOS_SIGNING_IDENTITY:
+        "3rd Party Mac Developer Application: Tammy Pty Ltd (ABCDE12345)",
+    }),
+    { buildNumber: "42", mode: "distribution" },
+  );
 
   for (const environment of [
     { ...valid, TAMMY_MACOS_BUILD_NUMBER: "0" },
@@ -129,6 +139,17 @@ test("provisioning profiles bind the team, app identifier, mode, and expiry", ()
       { ...options, mode: "distribution" },
     ),
   );
+  const appStore = {
+    ...development,
+    Entitlements: {
+      "com.apple.application-identifier": "LEGACY1234.com.tammy.desktop",
+      "com.apple.developer.team-identifier": "ABCDE12345",
+    },
+    ProvisionedDevices: undefined,
+  };
+  assert.doesNotThrow(() =>
+    validateMacOSProvisioningProfile(appStore, { ...options, mode: "distribution" }),
+  );
   for (const profile of [
     { ...development, TeamIdentifier: ["OTHER12345"] },
     {
@@ -150,6 +171,41 @@ test("provisioning profiles bind the team, app identifier, mode, and expiry", ()
   }
 });
 
+test("decoded Apple profiles retain validation fields without converting certificate data", async () => {
+  const temporaryRoot = await mkdtemp(path.join(tmpdir(), "tammy-profile-test-"));
+  const profile = path.join(temporaryRoot, "profile.plist");
+  try {
+    await writeFile(
+      profile,
+      `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>ApplicationIdentifierPrefix</key><array><string>WFTX6CN23F</string></array>
+<key>DeveloperCertificates</key><array><data>AQID</data></array>
+<key>Entitlements</key><dict>
+<key>com.apple.application-identifier</key><string>WFTX6CN23F.com.tammy.desktop</string>
+<key>com.apple.developer.team-identifier</key><string>WFTX6CN23F</string>
+</dict>
+<key>ExpirationDate</key><date>2027-05-13T11:58:20Z</date>
+<key>TeamIdentifier</key><array><string>WFTX6CN23F</string></array>
+</dict></plist>`,
+      { mode: 0o600 },
+    );
+
+    assert.deepEqual(await readMacOSProvisioningProfilePlist(profile), {
+      ApplicationIdentifierPrefix: ["WFTX6CN23F"],
+      Entitlements: {
+        "com.apple.application-identifier": "WFTX6CN23F.com.tammy.desktop",
+        "com.apple.developer.team-identifier": "WFTX6CN23F",
+      },
+      ExpirationDate: "2027-05-13T11:58:20Z",
+      TeamIdentifier: ["WFTX6CN23F"],
+    });
+  } finally {
+    await rm(temporaryRoot, { force: true, recursive: true });
+  }
+});
+
 test("development signing does not require an installer identity", () => {
   assert.deepEqual(
     validateMacOSReleaseEnvironment({
@@ -166,31 +222,39 @@ test("development signing does not require an installer identity", () => {
   );
 });
 
-test("store metadata distinguishes the repository template from a release candidate", async () => {
-  const template = await readFile(
+test("store metadata is complete and still rejects operator placeholders", async () => {
+  const metadata = await readFile(
     path.join(root, "apps/desktop/release/macos/store-metadata.md"),
     "utf8",
   );
-  assert.deepEqual(validateMacOSStoreMetadata(template), { complete: false });
-  const complete = template
-    .replaceAll("OPERATOR_REQUIRED", "approved-value")
-    .replace(
-      "**Privacy policy URL:** `approved-value`",
-      "**Privacy policy URL:** `https://example.com/tammy/privacy`",
-    )
-    .replace(
-      "**Support URL:** `approved-value`",
-      "**Support URL:** `https://example.com/tammy/support`",
-    );
-  assert.deepEqual(validateMacOSStoreMetadata(complete), {
+  assert.deepEqual(validateMacOSStoreMetadata(metadata), {
     complete: true,
-    privacyPolicy: "https://example.com/tammy/privacy",
-    support: "https://example.com/tammy/support",
+    privacyPolicy: "https://github.com/castlemilk/tammy/blob/master/PRIVACY.md",
+    support: "https://github.com/castlemilk/tammy/issues",
   });
-  assert.throws(
-    () => validateMacOSStoreMetadata(template.replaceAll("OPERATOR_REQUIRED", "approved-value")),
-    /MACOS_STORE_REPOSITORY_INVALID/,
+  assert.deepEqual(
+    validateMacOSStoreMetadata(
+      metadata.replace(
+        "**Privacy policy URL:** `https://github.com/castlemilk/tammy/blob/master/PRIVACY.md`",
+        "**Privacy policy URL:** `OPERATOR_REQUIRED`",
+      ),
+    ),
+    { complete: false },
   );
+});
+
+test("public privacy policy states the shipped offline data lifecycle", async () => {
+  const privacy = await readFile(path.join(root, "PRIVACY.md"), "utf8");
+  for (const statement of [
+    "does not collect or transmit",
+    "encrypted workspace",
+    "macOS Keychain",
+    "Files you choose to import",
+    "deleting the workspace",
+    "GitHub Issues",
+  ]) {
+    assert.match(privacy, new RegExp(statement, "i"));
+  }
 });
 
 test("release metadata URLs must exactly match the configured public links", () => {

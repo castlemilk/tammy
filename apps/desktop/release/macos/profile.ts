@@ -110,11 +110,13 @@ export function createMacOSReleaseProfile(
   const type = signingMode as SigningMode;
   const installerIdentity =
     type === "distribution" ? required(environment, "TAMMY_MACOS_INSTALLER_IDENTITY") : undefined;
+  const signingCertificateClasses =
+    type === "distribution"
+      ? ["Apple Distribution", "3rd Party Mac Developer Application"]
+      : ["Apple Development"];
   if (
-    !matchesIdentity(
-      identity,
-      type === "distribution" ? "Apple Distribution" : "Apple Development",
-      teamID,
+    !signingCertificateClasses.some((certificateClass) =>
+      matchesIdentity(identity, certificateClass, teamID),
     ) ||
     (installerIdentity !== undefined &&
       !["Mac Installer Distribution", "3rd Party Mac Developer Installer"].some(

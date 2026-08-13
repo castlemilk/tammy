@@ -14,11 +14,11 @@ This worksheet is linked to the draft App Store Connect record created on 11 Aug
 - **Default language:** English (Australia)
 - **SKU:** `tammy-macos-001`
 - **Release method:** Manual
-- **Privacy policy URL:** `OPERATOR_REQUIRED`
-- **Support URL:** `OPERATOR_REQUIRED`
+- **Privacy policy URL:** `https://github.com/castlemilk/tammy/blob/master/PRIVACY.md`
+- **Support URL:** `https://github.com/castlemilk/tammy/issues`
 - **Marketing URL:** optional
-- **Copyright:** `OPERATOR_REQUIRED`
-- **Price and availability:** `OPERATOR_REQUIRED`
+- **Copyright:** `© 2026 Ben Ebsworth`
+- **Price and availability:** `Free — Australia`
 - **Age rating:** complete the App Store Connect questionnaire for the submitted build; do not select the Kids Category.
 
 ## Description
@@ -37,7 +37,7 @@ Tammy is an offline desktop application. It has no remote demo account. On first
 
 The bundled `tammy-core` executable is supervised by Electron and serves only the authenticated loopback transport. The app does not download executable code or leave a background process running after quit. BAS screens create local drafts only; the build does not lodge with the ATO.
 
-For review support contact: `OPERATOR_REQUIRED`.
+For review support contact: `Tammy GitHub Issues — https://github.com/castlemilk/tammy/issues`.
 
 ## Screenshots
 
@@ -56,5 +56,5 @@ Recommended sequence:
 - **Data collection:** None for the current offline build; verify against the signed-build Xcode privacy report.
 - **Tracking:** None.
 - **Third-party advertising/analytics:** None.
-- **Encryption/export compliance:** `OPERATOR_REQUIRED` — obtain a legal/export-compliance determination for SQLCipher and TLS, then keep `ITSAppUsesNonExemptEncryption` and App Store Connect answers consistent.
-- **Financial-services developer entity:** `OPERATOR_REQUIRED` — confirm submission by the legal entity responsible for Tammy.
+- **Encryption/export compliance:** `Exempt App Store Connect documentation for Australia-only distribution; industry-standard SQLCipher and TLS, with no proprietary encryption` — keep `ITSAppUsesNonExemptEncryption` and App Store Connect answers consistent.
+- **Financial-services developer entity:** `Ben Ebsworth — individual Apple Developer account WFTX6CN23F`.

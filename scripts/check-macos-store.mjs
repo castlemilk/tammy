@@ -86,11 +86,13 @@ export function validateMacOSReleaseEnvironment(environment) {
   }
   const installerIdentity =
     mode === "distribution" ? required(environment, "TAMMY_MACOS_INSTALLER_IDENTITY") : undefined;
+  const signingCertificateClasses =
+    mode === "distribution"
+      ? ["Apple Distribution", "3rd Party Mac Developer Application"]
+      : ["Apple Development"];
   if (
-    !matchesIdentity(
-      signingIdentity,
-      mode === "distribution" ? "Apple Distribution" : "Apple Development",
-      teamID,
+    !signingCertificateClasses.some((certificateClass) =>
+      matchesIdentity(signingIdentity, certificateClass, teamID),
     ) ||
     (installerIdentity !== undefined &&
       !["Mac Installer Distribution", "3rd Party Mac Developer Installer"].some(
@@ -121,7 +123,7 @@ export function validateMacOSProvisioningProfile(profile, { mode, teamID, now = 
         Array.isArray(developmentDevices) &&
         developmentDevices.length > 0
       : mode === "distribution"
-        ? entitlements?.["get-task-allow"] === false && developmentDevices === undefined
+        ? entitlements?.["get-task-allow"] !== true && developmentDevices === undefined
         : false;
   if (
     !isRecord(profile) ||
@@ -143,6 +145,38 @@ export function validateMacOSProvisioningProfile(profile, { mode, teamID, now = 
   }
 }
 
+async function extractProvisioningProfileValue(file, key, format) {
+  const { stdout } = await execFile("/usr/bin/plutil", ["-extract", key, format, "-o", "-", file]);
+  return format === "json" ? JSON.parse(stdout) : stdout.trim();
+}
+
+export async function readMacOSProvisioningProfilePlist(file) {
+  try {
+    const [ApplicationIdentifierPrefix, Entitlements, ExpirationDate, TeamIdentifier] =
+      await Promise.all([
+        extractProvisioningProfileValue(file, "ApplicationIdentifierPrefix", "json"),
+        extractProvisioningProfileValue(file, "Entitlements", "json"),
+        extractProvisioningProfileValue(file, "ExpirationDate", "raw"),
+        extractProvisioningProfileValue(file, "TeamIdentifier", "json"),
+      ]);
+    const profile = { ApplicationIdentifierPrefix, Entitlements, ExpirationDate, TeamIdentifier };
+    for (const [key, format] of [
+      ["ProvisionedDevices", "json"],
+      ["ProvisionsAllDevices", "raw"],
+    ]) {
+      try {
+        const value = await extractProvisioningProfileValue(file, key, format);
+        profile[key] = format === "raw" ? value === "true" : value;
+      } catch {
+        // Distribution profiles omit device-scoped fields.
+      }
+    }
+    return profile;
+  } catch {
+    fail("MACOS_RELEASE_PROVISIONING_PROFILE_INVALID");
+  }
+}
+
 async function readMacOSProvisioningProfile(file) {
   let temporaryRoot;
   try {
@@ -152,14 +186,7 @@ async function readMacOSProvisioningProfile(file) {
     temporaryRoot = await mkdtemp(path.join(tmpdir(), "tammy-macos-profile-"));
     const decoded = path.join(temporaryRoot, "profile.plist");
     await writeFile(decoded, stdout, { flag: "wx", mode: 0o600 });
-    const { stdout: json } = await execFile("/usr/bin/plutil", [
-      "-convert",
-      "json",
-      "-o",
-      "-",
-      decoded,
-    ]);
-    return JSON.parse(json);
+    return await readMacOSProvisioningProfilePlist(decoded);
   } catch {
     fail("MACOS_RELEASE_PROVISIONING_PROFILE_INVALID");
   } finally {

@@ -105,6 +105,19 @@ describe("createMacOSReleaseProfile", () => {
     ).toMatch(/entitlements\.mas\.child\.plist$/);
   });
 
+  it("accepts Apple's Mac App Distribution certificate identity", () => {
+    const profile = createMacOSReleaseProfile(
+      {
+        ...distributionEnvironment(),
+        TAMMY_MACOS_SIGNING_IDENTITY:
+          "3rd Party Mac Developer Application: Tammy Pty Ltd (ABCDE12345)",
+      },
+      desktopRoot,
+    );
+
+    expect(profile.kind).toBe("mas");
+  });
+
   it("supports a locally runnable development-signed MAS profile without an installer identity", () => {
     const environment = distributionEnvironment();
     environment.TAMMY_MACOS_SIGNING_MODE = "development";
