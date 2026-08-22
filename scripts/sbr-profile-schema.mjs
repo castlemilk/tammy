@@ -51,23 +51,26 @@ function decodeProfile(rawProfile) {
   }
 }
 
-function assertUnicodeScalarString(value) {
+export function assertUnicodeScalarString(value, makeInvalid = invalid) {
   for (let index = 0; index < value.length; index += 1) {
     const codeUnit = value.charCodeAt(index);
     if (codeUnit >= 0xd800 && codeUnit <= 0xdbff) {
       const next = value.charCodeAt(index + 1);
-      if (next < 0xdc00 || next > 0xdfff) {
-        throw invalid("UNICODE");
+      if (!Number.isInteger(next) || next < 0xdc00 || next > 0xdfff) {
+        throw makeInvalid("UNICODE");
       }
       index += 1;
     } else if (codeUnit >= 0xdc00 && codeUnit <= 0xdfff) {
-      throw invalid("UNICODE");
+      throw makeInvalid("UNICODE");
     }
   }
 }
 
 // This structural pass runs before JSON.parse so duplicate member names cannot be erased.
-function assertJsonStructure(raw) {
+export function assertJsonStructure(
+  raw,
+  { makeInvalid = invalid, maximumDepth = MAX_JSON_NESTING_DEPTH } = {},
+) {
   let cursor = 0;
 
   function skipWhitespace() {
@@ -78,7 +81,7 @@ function assertJsonStructure(raw) {
 
   function parseString() {
     if (raw[cursor] !== '"') {
-      throw invalid("JSON");
+      throw makeInvalid("JSON");
     }
     const start = cursor;
     cursor += 1;
@@ -90,9 +93,9 @@ function assertJsonStructure(raw) {
         try {
           decoded = JSON.parse(raw.slice(start, cursor));
         } catch {
-          throw invalid("JSON");
+          throw makeInvalid("JSON");
         }
-        assertUnicodeScalarString(decoded);
+        assertUnicodeScalarString(decoded, makeInvalid);
         return decoded;
       }
       if (character === "\\") {
@@ -100,23 +103,23 @@ function assertJsonStructure(raw) {
         const escapeCode = raw[cursor];
         if (escapeCode === "u") {
           if (!/^[0-9a-fA-F]{4}$/.test(raw.slice(cursor + 1, cursor + 5))) {
-            throw invalid("JSON");
+            throw makeInvalid("JSON");
           }
           cursor += 5;
           continue;
         }
         if (!['"', "\\", "/", "b", "f", "n", "r", "t"].includes(escapeCode)) {
-          throw invalid("JSON");
+          throw makeInvalid("JSON");
         }
         cursor += 1;
         continue;
       }
       if (character.charCodeAt(0) < 0x20) {
-        throw invalid("JSON");
+        throw makeInvalid("JSON");
       }
       cursor += 1;
     }
-    throw invalid("JSON");
+    throw makeInvalid("JSON");
   }
 
   function parsePrimitive() {
@@ -125,16 +128,14 @@ function assertJsonStructure(raw) {
       cursor += 1;
     }
     const token = raw.slice(start, cursor);
+    let value;
     try {
-      const value = JSON.parse(token);
-      if (value !== null && typeof value === "object") {
-        throw invalid("JSON");
-      }
-    } catch (error) {
-      if (error instanceof Error && error.message.startsWith("SBR_PROFILE_INVALID:")) {
-        throw error;
-      }
-      throw invalid("JSON");
+      value = JSON.parse(token);
+    } catch {
+      throw makeInvalid("JSON");
+    }
+    if (value !== null && typeof value === "object") {
+      throw makeInvalid("JSON");
     }
   }
 
@@ -153,12 +154,12 @@ function assertJsonStructure(raw) {
         return;
       }
       if (raw[cursor] !== ",") {
-        throw invalid("JSON");
+        throw makeInvalid("JSON");
       }
       cursor += 1;
       skipWhitespace();
     }
-    throw invalid("JSON");
+    throw makeInvalid("JSON");
   }
 
   function parseObject(depth) {
@@ -172,12 +173,12 @@ function assertJsonStructure(raw) {
     while (cursor < raw.length) {
       const key = parseString();
       if (keys.has(key)) {
-        throw invalid("DUPLICATE_KEY");
+        throw makeInvalid("DUPLICATE_KEY");
       }
       keys.add(key);
       skipWhitespace();
       if (raw[cursor] !== ":") {
-        throw invalid("JSON");
+        throw makeInvalid("JSON");
       }
       cursor += 1;
       parseValue(depth);
@@ -187,24 +188,24 @@ function assertJsonStructure(raw) {
         return;
       }
       if (raw[cursor] !== ",") {
-        throw invalid("JSON");
+        throw makeInvalid("JSON");
       }
       cursor += 1;
       skipWhitespace();
     }
-    throw invalid("JSON");
+    throw makeInvalid("JSON");
   }
 
   function parseValue(depth = 0) {
     skipWhitespace();
     if (raw[cursor] === "{") {
-      if (depth >= MAX_JSON_NESTING_DEPTH) {
-        throw invalid("JSON_DEPTH");
+      if (depth >= maximumDepth) {
+        throw makeInvalid("JSON_DEPTH");
       }
       parseObject(depth + 1);
     } else if (raw[cursor] === "[") {
-      if (depth >= MAX_JSON_NESTING_DEPTH) {
-        throw invalid("JSON_DEPTH");
+      if (depth >= maximumDepth) {
+        throw makeInvalid("JSON_DEPTH");
       }
       parseArray(depth + 1);
     } else if (raw[cursor] === '"') {
@@ -217,7 +218,7 @@ function assertJsonStructure(raw) {
   parseValue();
   skipWhitespace();
   if (cursor !== raw.length) {
-    throw invalid("TRAILING_DATA");
+    throw makeInvalid("TRAILING_DATA");
   }
 }
 

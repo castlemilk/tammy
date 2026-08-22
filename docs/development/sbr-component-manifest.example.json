@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "component_name": "DOCUMENTATION-PLACEHOLDER-NOT-RUNNABLE",
+  "component_version": "0.0.0-placeholder",
+  "target": "darwin/arm64",
+  "files": [
+    {
+      "path": "PLACEHOLDER-NOT-A-COMPONENT.bin",
+      "byte_length": 0,
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ]
+}
