@@ -6,7 +6,7 @@ import { app, BrowserWindow, type Event, ipcMain, net, protocol, session, shell 
 import { readPublicLinks } from "../shared/public-links";
 
 import { createCoreClient } from "./core-client";
-import { createCoreLaunchArguments } from "./core-launch";
+import { createCoreLaunchArguments, parseLocalLaunchArguments } from "./core-launch";
 import { CoreProcess } from "./core-process";
 import type { DesktopDependencies, DesktopWindow } from "./index-lifecycle";
 import { resolveBundledCorePath } from "./index-paths";
@@ -28,7 +28,13 @@ function releaseAll(releases: readonly (() => void)[]): void {
   }
 }
 
-export function createProductionDependencies(): DesktopDependencies {
+export function createProductionDependencies(
+  processArguments: readonly string[] = process.argv,
+): DesktopDependencies {
+  const localLaunch = parseLocalLaunchArguments(processArguments);
+  if (localLaunch.userDataPath !== undefined) {
+    app.setPath("userData", localLaunch.userDataPath);
+  }
   const buildDirectory = path.dirname(fileURLToPath(import.meta.url));
   const developmentResourcesPath = path.resolve(buildDirectory, "../../resources");
   const policy = createRendererSecurityPolicy(

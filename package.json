@@ -22,6 +22,7 @@
     "desktop:package": "pnpm core:build && pnpm build:manifest && pnpm --dir apps/desktop package && node --test apps/desktop/tests/e2e/package-signature.test.mjs && node apps/desktop/scripts/find-packaged-app.mjs --verify --source-manifest apps/desktop/resources/build/build-manifest.json",
     "desktop:make:mas": "node scripts/package-macos-store.mjs",
     "desktop:start": "pnpm core:build && pnpm --dir apps/desktop start",
+    "desktop:start:scenario": "node scripts/launch-local-scenario.mjs --electron-forge",
     "desktop:e2e": "pnpm desktop:package && pnpm --dir apps/desktop e2e",
     "test:proto-breaking": "node --test scripts/check-proto-breaking.test.mjs",
     "test:toolchain": "node --test scripts/check-toolchain.test.mjs",

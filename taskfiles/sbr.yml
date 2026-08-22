@@ -3,17 +3,17 @@ version: '3'
 tasks:
   launch-accounting-fresh:
     internal: true
-    desc: Fail closed until the isolated fresh accounting launcher exists.
+    desc: Launch accounting with a new retained local data root.
     summary: |
       The simulator is synthetic and network-disabled. EVTE is non-production and requires signed external inputs.
       No live credential is accepted by Task. BAS remains preparation-only with no submit or lodge action.
-      Production SBR is unavailable, and no fresh scenario is claimed yet.
+      Production SBR is unavailable. This launches ordinary accounting with an isolated retained root.
     preconditions:
       - sh: >-
           mise exec -- node -e 'const target = `${process.platform}/${process.arch}`; if (target !== "darwin/arm64") { console.error(`UNSUPPORTED_SBR_TARGET:${target}`); process.exit(1); }'
         msg: UNSUPPORTED_SBR_TARGET:{{OS}}/{{ARCH}}
     cmds:
-      - mise exec -- node scripts/sbr-incomplete.mjs accounting-fresh
+      - mise exec -- node scripts/launch-local-scenario.mjs accounting-fresh
 
   launch-simulator:
     internal: true

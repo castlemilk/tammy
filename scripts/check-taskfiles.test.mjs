@@ -31,6 +31,7 @@ const allowedExecutablePatterns = [
   /^mise exec -- go test -race -tags tammy_sqlcipher \.\/services\/core\/internal\/storage\/sqlcipher\/\.\.\. -count=1$/,
   /^mise exec -- node scripts\/check-clean-tree\.mjs$/,
   /^mise exec -- node scripts\/sbr-incomplete\.mjs (?:accounting-fresh|simulator|evte|doctor|registration|test|evidence)$/,
+  /^mise exec -- node scripts\/launch-local-scenario\.mjs accounting-fresh$/,
   /^git diff --check$/,
   /^mise exec -- task --(?:list|version)$/,
   /^mise exec -- node --version$/,
@@ -639,7 +640,12 @@ test("local Task front door preserves the safe development contract", async () =
       "UNSUPPORTED_SBR_TARGET:{{OS}}/{{ARCH}}",
       `sbr:${taskName} exposes the exact real-host SBR guard error`,
     );
-    assert.deepEqual(shellCommands(task), [`mise exec -- node scripts/sbr-incomplete.mjs ${mode}`]);
+    assert.deepEqual(
+      shellCommands(task),
+      taskName === "launch-accounting-fresh"
+        ? ["mise exec -- node scripts/launch-local-scenario.mjs accounting-fresh"]
+        : [`mise exec -- node scripts/sbr-incomplete.mjs ${mode}`],
+    );
     assertNoSensitiveSbrSurface(task);
   }
   const publicSbrSummaries = guardedPublicSbrTasks
@@ -693,7 +699,6 @@ test("local Task front door preserves the safe development contract", async () =
   const sbrOutputDirectory = await mkdtemp(path.join("/private/tmp", "tammy-sbr-task-output-"));
   try {
     for (const [taskName, mode] of [
-      ["dev:accounting:fresh", "accounting-fresh"],
       ["dev:sbr:simulator", "simulator"],
       ["dev:sbr:evte", "evte"],
       ["sbr:doctor", "doctor"],
@@ -739,6 +744,13 @@ test("local Task front door preserves the safe development contract", async () =
   } finally {
     await rm(sbrOutputDirectory, { force: true, recursive: true });
   }
+
+  const rootPackage = JSON.parse(await readFile(path.join(repositoryRoot, "package.json"), "utf8"));
+  assert.equal(
+    rootPackage.scripts?.["desktop:start:scenario"],
+    "node scripts/launch-local-scenario.mjs --electron-forge",
+    "the launcher owns one narrow Electron Forge package scenario",
+  );
 
   const testTasks = (await readTaskfile("taskfiles/test.yml")).tasks;
   for (const taskName of [
