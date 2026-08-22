@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
+import { createHash, createPrivateKey, sign } from "node:crypto";
 import {
   lstat,
   mkdir,
@@ -15,7 +15,8 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-
+import { hashSbrHelperSourceTree } from "./build-sbr-helper.mjs";
+import { canonicalizeSbrProfile } from "./sbr-profile-schema.mjs";
 import {
   collectBuildManifest,
   createBuildManifest,
@@ -30,6 +31,12 @@ import {
 const hash = (value) => createHash("sha256").update(value).digest("hex");
 const ZERO_HASH = "0".repeat(64);
 const ONE_HASH = "1".repeat(64);
+const sbr = {
+  helper_sha256: "6".repeat(64),
+  profile_sha256: "7".repeat(64),
+  profile_signature_sha256: "8".repeat(64),
+  source_tree_sha256: "9".repeat(64),
+};
 
 const versions = {
   buf: "1.72.0",
@@ -87,6 +94,7 @@ function validInput(overrides = {}) {
     protobufTreeSha256: "3".repeat(64),
     sourceDirty: false,
     sourceRevision: "a".repeat(40),
+    sbr,
     sqlcipher: {
       librarySha256: "4".repeat(64),
       runtimeVersion: "4.15.0 community",
@@ -122,6 +130,66 @@ async function writeSqlcipherManifestFixture(root, target = "darwin-arm64") {
   return librarySha256;
 }
 
+async function writeSbrManifestFixture(root, sourceRevision = "a".repeat(40)) {
+  const helper = path.join(root, "apps/desktop/resources/sbr-helper/darwin-arm64/tammy-sbr-helper");
+  const profilePath = path.join(root, "apps/desktop/resources/sbr/simulator/sbr-profile-v1.json");
+  const signaturePath = path.join(root, "apps/desktop/resources/sbr/simulator/sbr-profile-v1.sig");
+  const publicKeyPath = path.join(root, "config/sbr/simulator/profile-public-key.pem");
+  const source = path.join(root, "services/sbr-helper/main.go");
+  const helperBytes = Buffer.from("helper");
+  const profile = {
+    component_manifest_sha256: "NONE",
+    endpoint_profile_sha256: "NONE",
+    environment: "SIMULATOR",
+    expires_at: "2030-01-01T00:00:00Z",
+    helper_sha256: hash(helperBytes),
+    issued_at: "2026-08-01T00:00:00Z",
+    registration_manifest_sha256: "NONE",
+    schema_version: 1,
+    target: "darwin/arm64",
+  };
+  const privateKey = createPrivateKey({
+    format: "der",
+    key: Buffer.from(
+      "302e020100300506032b6570042204209d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
+      "hex",
+    ),
+    type: "pkcs8",
+  });
+  await Promise.all([
+    mkdir(path.dirname(helper), { recursive: true }),
+    mkdir(path.dirname(profilePath), { recursive: true }),
+    mkdir(path.dirname(publicKeyPath), { recursive: true }),
+    mkdir(path.dirname(source), { recursive: true }),
+    mkdir(path.join(root, ".tmp/sbr-helper-build"), { recursive: true }),
+  ]);
+  await Promise.all([
+    writeFile(helper, helperBytes),
+    writeFile(source, "package main\n"),
+    writeFile(profilePath, `${JSON.stringify(profile, null, 2)}\n`),
+    writeFile(
+      signaturePath,
+      `${sign(null, canonicalizeSbrProfile(profile, { now: new Date("2026-08-01T00:00:00Z") }), privateKey).toString("base64")}\n`,
+    ),
+    writeFile(publicKeyPath, await readFile("config/sbr/simulator/profile-public-key.pem")),
+  ]);
+  const provenance = {
+    helper_raw_sha256: "5".repeat(64),
+    helper_sha256: hash(helperBytes),
+    profile_sha256: hash(await readFile(profilePath)),
+    profile_signature_sha256: hash(await readFile(signaturePath)),
+    session_nonce: "2".repeat(32),
+    source_revision: sourceRevision,
+    source_tree_sha256: await hashSbrHelperSourceTree(path.join(root, "services/sbr-helper")),
+    status: "SIMULATOR_ENABLED",
+    target: "darwin-arm64",
+  };
+  await writeFile(
+    path.join(root, ".tmp/sbr-helper-build/provenance.json"),
+    `${JSON.stringify(provenance, null, 2)}\n`,
+  );
+}
+
 test("creates the exact stable manifest fields and ordering", () => {
   const manifest = createBuildManifest(validInput());
   assert.deepEqual(manifest, {
@@ -139,7 +207,8 @@ test("creates the exact stable manifest fields and ordering", () => {
       version: "4.15.0",
     },
     test_profile: "foundation-packaged-e2e",
-    sbr_status: "SIMULATOR_NOT_IMPLEMENTED",
+    sbr_status: "SIMULATOR_ENABLED",
+    sbr,
     signed: false,
   });
   assert.equal(
@@ -160,7 +229,8 @@ test("creates the exact stable manifest fields and ordering", () => {
           version: "4.15.0",
         },
         test_profile: "foundation-packaged-e2e",
-        sbr_status: "SIMULATOR_NOT_IMPLEMENTED",
+        sbr_status: "SIMULATOR_ENABLED",
+        sbr,
         signed: false,
       },
       null,
@@ -703,6 +773,7 @@ test("collects only committed pins, fixed git commands, and authenticated hashes
       path.join(root, "apps", "desktop", "resources", "core", "darwin-arm64", "tammy-core"),
       "core",
     );
+    await writeSbrManifestFixture(root, "b".repeat(40));
     const sqlcipherLibrarySha256 = await writeSqlcipherManifestFixture(root);
     const commandRunner = async (command, args, options) => {
       calls.push({ command, args, options });
@@ -728,6 +799,7 @@ test("collects only committed pins, fixed git commands, and authenticated hashes
     assert.equal(manifest.source_revision, "b".repeat(40));
     assert.equal(manifest.source_dirty, false);
     assert.equal(manifest.core_sha256, hash("core"));
+    assert.equal(Object.hasOwn(manifest.sbr, "helper_raw_sha256"), false);
     assert.equal(manifest.lockfiles["pnpm-lock.yaml"], hash("pnpm lock"));
     assert.equal(manifest.lockfiles["services/core/go.sum"], hash("go sum"));
     assert.deepEqual(
@@ -828,6 +900,7 @@ test("rejects redirected repositories and concurrent Git observations", async ()
       path.join(fixture, "apps/desktop/resources/core/darwin-arm64/tammy-core"),
       "core",
     );
+    await writeSbrManifestFixture(fixture);
     const sqlcipherLibrarySha256 = await writeSqlcipherManifestFixture(fixture);
     await assert.rejects(
       collectBuildManifest({

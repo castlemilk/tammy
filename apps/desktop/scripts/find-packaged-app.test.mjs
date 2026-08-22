@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
+import { createHash, createPrivateKey, sign } from "node:crypto";
 import { chmod, lstat, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-
+import { canonicalizeSbrProfile } from "../../../scripts/sbr-profile-schema.mjs";
 import { resolvePackagedLayout, verifyPackagedLayout } from "./find-packaged-app.mjs";
 
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
@@ -27,7 +27,8 @@ const VERSION_PINS = {
   vitest: "4.1.10",
 };
 
-function validManifest(target, coreSha256) {
+function validManifest(target, coreSha256, sbrHashes = {}) {
+  const enabled = target === "darwin-arm64";
   return {
     schema: "tammy-build-manifest-v1",
     source_revision: "a".repeat(40),
@@ -46,7 +47,20 @@ function validManifest(target, coreSha256) {
       version: "4.15.0",
     },
     test_profile: "foundation-packaged-e2e",
-    sbr_status: "SIMULATOR_NOT_IMPLEMENTED",
+    sbr_status: enabled ? "SIMULATOR_ENABLED" : "SBR_UNAVAILABLE_ON_TARGET",
+    sbr: enabled
+      ? {
+          helper_sha256: sbrHashes.helper ?? "2".repeat(64),
+          profile_sha256: sbrHashes.profile ?? "3".repeat(64),
+          profile_signature_sha256: sbrHashes.signature ?? "4".repeat(64),
+          source_tree_sha256: "5".repeat(64),
+        }
+      : {
+          helper_sha256: null,
+          profile_sha256: null,
+          profile_signature_sha256: null,
+          source_tree_sha256: null,
+        },
     signed: false,
   };
 }
@@ -91,8 +105,36 @@ async function withFixture(platform, arch, callback) {
   const desktopRoot = path.join(root, "apps", "desktop");
   const layout = resolvePackagedLayout({ arch, desktopRoot, platform });
   const coreBytes = Buffer.from(`core:${platform}/${arch}`);
+  const helperBytes = Buffer.from("signed helper");
+  const profile = {
+    component_manifest_sha256: "NONE",
+    endpoint_profile_sha256: "NONE",
+    environment: "SIMULATOR",
+    expires_at: "2030-01-01T00:00:00Z",
+    helper_sha256: sha256(helperBytes),
+    issued_at: "2026-08-01T00:00:00Z",
+    registration_manifest_sha256: "NONE",
+    schema_version: 1,
+    target: "darwin/arm64",
+  };
+  const profileBytes = Buffer.from(`${JSON.stringify(profile, null, 2)}\n`);
+  const privateKey = createPrivateKey({
+    key: Buffer.from(
+      "302e020100300506032b6570042204209d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
+      "hex",
+    ),
+    format: "der",
+    type: "pkcs8",
+  });
+  const signatureBytes = Buffer.from(
+    `${sign(null, canonicalizeSbrProfile(profile, { now: new Date("2026-08-01T00:00:00Z") }), privateKey).toString("base64")}\n`,
+  );
   const manifestTarget = platform === "mas" ? `darwin-${arch}` : `${platform}-${arch}`;
-  const manifest = validManifest(manifestTarget, sha256(coreBytes));
+  const manifest = validManifest(manifestTarget, sha256(coreBytes), {
+    helper: sha256(helperBytes),
+    profile: sha256(profileBytes),
+    signature: sha256(signatureBytes),
+  });
   await mkdir(path.dirname(layout.sourceCore), { recursive: true });
   await mkdir(path.dirname(layout.sourceManifest), { recursive: true });
   await mkdir(path.dirname(layout.appExecutable), { recursive: true });
@@ -119,10 +161,35 @@ async function withFixture(platform, arch, callback) {
   const manifestBytes = Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`);
   await writeFile(layout.sourceManifest, manifestBytes);
   await writeFile(layout.packagedManifest, manifestBytes);
+  if (layout.sourceSbrHelper) {
+    for (const directory of [
+      layout.sourceSbrHelperRoot,
+      layout.sourceSbrRoot,
+      layout.packagedSbrHelperRoot,
+      layout.packagedSbrRoot,
+    ])
+      await mkdir(directory, { recursive: true });
+    for (const [file, bytes] of [
+      [layout.sourceSbrHelper, helperBytes],
+      [layout.packagedSbrHelper, helperBytes],
+      [layout.sourceSbrProfile, profileBytes],
+      [layout.packagedSbrProfile, profileBytes],
+      [layout.sourceSbrSignature, signatureBytes],
+      [layout.packagedSbrSignature, signatureBytes],
+    ]) {
+      await mkdir(path.dirname(file), { recursive: true });
+      await writeFile(file, bytes);
+    }
+    const publicKey = path.join(root, "config/sbr/simulator/profile-public-key.pem");
+    await mkdir(path.dirname(publicKey), { recursive: true });
+    await writeFile(publicKey, await readFile("config/sbr/simulator/profile-public-key.pem"));
+  }
   if (platform === "darwin" || platform === "mas") {
     await chmod(layout.appExecutable, 0o755);
     await chmod(layout.sourceCore, 0o755);
     await chmod(layout.packagedCore, 0o755);
+    await chmod(layout.sourceSbrHelper, 0o500);
+    await chmod(layout.packagedSbrHelper, 0o500);
   }
   try {
     await callback({ desktopRoot, layout, manifestBytes });
@@ -133,7 +200,8 @@ async function withFixture(platform, arch, callback) {
 
 test("resolves the exact macOS arm64 package paths", () => {
   const desktopRoot = path.resolve("/workspace/apps/desktop");
-  assert.deepEqual(resolvePackagedLayout({ desktopRoot, platform: "darwin", arch: "arm64" }), {
+  const layout = resolvePackagedLayout({ desktopRoot, platform: "darwin", arch: "arm64" });
+  assert.deepEqual(layout, {
     appAsar: path.join(desktopRoot, "out/Tammy-darwin-arm64/Tammy.app/Contents/Resources/app.asar"),
     appExecutable: path.join(desktopRoot, "out/Tammy-darwin-arm64/Tammy.app/Contents/MacOS/Tammy"),
     packagedBuildRoot: path.join(
@@ -148,6 +216,10 @@ test("resolves the exact macOS arm64 package paths", () => {
       desktopRoot,
       "out/Tammy-darwin-arm64/Tammy.app/Contents/Resources/core",
     ),
+    packagedResourceBase: path.join(
+      desktopRoot,
+      "out/Tammy-darwin-arm64/Tammy.app/Contents/Resources",
+    ),
     packagedManifest: path.join(
       desktopRoot,
       "out/Tammy-darwin-arm64/Tammy.app/Contents/Resources/build/build-manifest.json",
@@ -156,6 +228,31 @@ test("resolves the exact macOS arm64 package paths", () => {
     sourceCore: path.join(desktopRoot, "resources/core/darwin-arm64/tammy-core"),
     sourceCoreRoot: path.join(desktopRoot, "resources/core"),
     sourceManifest: path.join(desktopRoot, "resources/build/build-manifest.json"),
+    sourceSbrHelper: path.join(desktopRoot, "resources/sbr-helper/darwin-arm64/tammy-sbr-helper"),
+    sourceSbrHelperRoot: path.join(desktopRoot, "resources/sbr-helper"),
+    sourceSbrRoot: path.join(desktopRoot, "resources/sbr"),
+    sourceSbrProfile: path.join(desktopRoot, "resources/sbr/simulator/sbr-profile-v1.json"),
+    sourceSbrSignature: path.join(desktopRoot, "resources/sbr/simulator/sbr-profile-v1.sig"),
+    packagedSbrHelper: path.join(
+      desktopRoot,
+      "out/Tammy-darwin-arm64/Tammy.app/Contents/Resources/sbr-helper/darwin-arm64/tammy-sbr-helper",
+    ),
+    packagedSbrHelperRoot: path.join(
+      desktopRoot,
+      "out/Tammy-darwin-arm64/Tammy.app/Contents/Resources/sbr-helper",
+    ),
+    packagedSbrRoot: path.join(
+      desktopRoot,
+      "out/Tammy-darwin-arm64/Tammy.app/Contents/Resources/sbr",
+    ),
+    packagedSbrProfile: path.join(
+      desktopRoot,
+      "out/Tammy-darwin-arm64/Tammy.app/Contents/Resources/sbr/simulator/sbr-profile-v1.json",
+    ),
+    packagedSbrSignature: path.join(
+      desktopRoot,
+      "out/Tammy-darwin-arm64/Tammy.app/Contents/Resources/sbr/simulator/sbr-profile-v1.sig",
+    ),
     target: "darwin-arm64",
   });
 });
@@ -243,6 +340,14 @@ for (const [platform, arch] of [
         coreSha256: sha256(`core:${platform}/${arch}`),
         manifest: layout.packagedManifest,
         manifestSha256: sha256(await readFile(layout.sourceManifest)),
+        ...(layout.packagedSbrHelper
+          ? {
+              helperExecutable: layout.packagedSbrHelper,
+              helperSha256: sha256("signed helper"),
+              profileSha256: sha256(await readFile(layout.sourceSbrProfile)),
+              sbrStatus: "SIMULATOR_ENABLED",
+            }
+          : { sbrStatus: "SBR_UNAVAILABLE_ON_TARGET" }),
         target: `${platform}-${arch}`,
       });
     });
@@ -343,6 +448,32 @@ test("rejects symlinks, non-zero keep files, and non-regular executables", async
   });
 });
 
+test("rejects a hash-consistent but unauthenticated simulator profile signature", async () => {
+  await withFixture("darwin", "arm64", async ({ desktopRoot, layout }) => {
+    const badSignature = Buffer.from("bad\n");
+    await Promise.all([
+      writeFile(layout.sourceSbrSignature, badSignature),
+      writeFile(layout.packagedSbrSignature, badSignature),
+    ]);
+    const manifest = JSON.parse(await readFile(layout.sourceManifest, "utf8"));
+    manifest.sbr.profile_signature_sha256 = sha256(badSignature);
+    const bytes = `${JSON.stringify(manifest, null, 2)}\n`;
+    await Promise.all([
+      writeFile(layout.sourceManifest, bytes),
+      writeFile(layout.packagedManifest, bytes),
+    ]);
+    await assert.rejects(
+      verifyPackagedLayout({
+        desktopRoot,
+        platform: "darwin",
+        arch: "arm64",
+        sourceManifestPath: layout.sourceManifest,
+      }),
+      /PACKAGED_SBR_PROFILE_AUTHENTICATION_FAILED/,
+    );
+  });
+});
+
 test("rejects manifest byte mismatch, core hash mismatch, and ASAR-contained core", async () => {
   await withFixture("darwin", "arm64", async ({ desktopRoot, layout }) => {
     await writeFile(layout.packagedManifest, "{}\n");
@@ -366,6 +497,93 @@ test("rejects manifest byte mismatch, core hash mismatch, and ASAR-contained cor
         sourceManifestPath: layout.sourceManifest,
       }),
       /PACKAGED_CORE_HASH_MISMATCH/,
+    );
+  });
+});
+
+test("rejects simulator private-key material and duplicate SBR resources", async () => {
+  await withFixture("darwin", "arm64", async ({ desktopRoot, layout }) => {
+    const privateKey = Buffer.from("-----BEGIN PRIVATE KEY-----\nnot-shippable\n");
+    await writeFile(
+      layout.appAsar,
+      encodeAsar(
+        { files: { "innocent.dat": { offset: "0", size: privateKey.length } } },
+        privateKey,
+      ),
+    );
+    await assert.rejects(
+      verifyPackagedLayout({
+        desktopRoot,
+        platform: "darwin",
+        arch: "arm64",
+        sourceManifestPath: layout.sourceManifest,
+      }),
+      /PACKAGED_PRIVATE_KEY_LEAK/,
+    );
+  });
+  await withFixture("darwin", "arm64", async ({ desktopRoot, layout }) => {
+    for (const duplicate of ["tammy-sbr-helper", "sbr-profile-v1.json"]) {
+      await writeFile(
+        layout.appAsar,
+        encodeAsar({ files: { [duplicate]: { offset: "0", size: 0 } } }),
+      );
+      await assert.rejects(
+        verifyPackagedLayout({
+          desktopRoot,
+          platform: "darwin",
+          arch: "arm64",
+          sourceManifestPath: layout.sourceManifest,
+        }),
+        /PACKAGED_SBR_DUPLICATE/,
+      );
+    }
+  });
+  await withFixture("darwin", "arm64", async ({ desktopRoot, layout }) => {
+    await writeFile(
+      layout.appAsar,
+      encodeAsar({
+        files: {
+          test: {
+            files: {
+              fixtures: {
+                files: {
+                  sbr: {
+                    files: {
+                      "simulator-profile-private-key.pem": { offset: "0", size: 0 },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      }),
+    );
+    await assert.rejects(
+      verifyPackagedLayout({
+        desktopRoot,
+        platform: "darwin",
+        arch: "arm64",
+        sourceManifestPath: layout.sourceManifest,
+      }),
+      /PACKAGED_PRIVATE_KEY_LEAK/,
+    );
+  });
+  await withFixture("darwin", "arm64", async ({ desktopRoot, layout }) => {
+    const duplicate = path.join(
+      path.dirname(layout.packagedCoreRoot),
+      "duplicate/tammy-sbr-helper",
+    );
+    await mkdir(path.dirname(duplicate), { recursive: true });
+    await writeFile(duplicate, "duplicate");
+    await assert.rejects(
+      verifyPackagedLayout({
+        desktopRoot,
+        platform: "darwin",
+        arch: "arm64",
+        sourceManifestPath: layout.sourceManifest,
+      }),
+      /PACKAGED_SBR_DUPLICATE/,
     );
   });
 });

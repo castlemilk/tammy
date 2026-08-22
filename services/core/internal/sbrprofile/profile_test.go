@@ -151,7 +151,7 @@ func TestDirectoryResourceLocatorUsesFixedCodeOwnedConvention(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resources.HelperPath != "/Applications/Tammy.app/Contents/Resources/sbr/evte/tammy-sbr-helper" || resources.ComponentRoot != "/Applications/Tammy.app/Contents/Resources/sbr/evte/component/files" {
+	if resources.HelperPath != "/Applications/Tammy.app/Contents/Resources/sbr-helper/darwin-arm64/tammy-sbr-helper" || resources.ComponentRoot != "/Applications/Tammy.app/Contents/Resources/sbr/evte/component/files" {
 		t.Fatalf("resources=%+v", resources)
 	}
 }
@@ -163,5 +163,42 @@ func TestEmbeddedSimulatorTrustRootMatchesCommittedPublicFixture(t *testing.T) {
 	}
 	if string(fixture) != simulatorPublicKeyPEM {
 		t.Fatal("embedded simulator trust root drifted from committed fixture")
+	}
+}
+
+func TestCommittedSimulatorProfileAuthenticatesAndBindsRequestedHelper(t *testing.T) {
+	root := repositoryRoot(t)
+	profilePath := os.Getenv("TAMMY_SBR_PROFILE_PATH")
+	if profilePath == "" {
+		profilePath = filepath.Join(root, "config/sbr/simulator/sbr-profile-v1.json")
+	}
+	signaturePath := os.Getenv("TAMMY_SBR_PROFILE_SIGNATURE_PATH")
+	if signaturePath == "" {
+		signaturePath = filepath.Join(root, "config/sbr/simulator/sbr-profile-v1.sig")
+	}
+	raw, err := os.ReadFile(profilePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	signature, err := os.ReadFile(signaturePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	parsed, err := AuthenticateProfile(raw, signature, time.Date(2026, 8, 23, 0, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if parsed.Profile.Environment != "SIMULATOR" || parsed.Profile.Target != "darwin/arm64" {
+		t.Fatalf("profile=%+v", parsed.Profile)
+	}
+	if helper := os.Getenv("TAMMY_SBR_HELPER_PATH"); helper != "" {
+		bytes, readErr := os.ReadFile(helper)
+		if readErr != nil {
+			t.Fatal(readErr)
+		}
+		hash := sha256.Sum256(bytes)
+		if hex.EncodeToString(hash[:]) != parsed.Profile.HelperSHA256 {
+			t.Fatal("committed profile does not bind requested helper")
+		}
 	}
 }

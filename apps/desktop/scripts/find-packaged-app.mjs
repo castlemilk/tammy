@@ -3,6 +3,7 @@ import { lstat, readdir } from "node:fs/promises";
 import path from "node:path";
 
 import { parseCanonicalBuildManifest } from "../../../scripts/build-manifest-schema.mjs";
+import { authenticateSbrProfileBytes } from "../../../scripts/sbr-profile-schema.mjs";
 import {
   hashStableFile,
   readStableFileBytes,
@@ -81,23 +82,56 @@ export function resolvePackagedLayout({ desktopRoot, platform, arch }) {
   const sourceBuildRoot = path.join(desktopRoot, "resources", "build");
   const packagedCoreRoot = path.join(desktopRoot, selected.core);
   const packagedBuildRoot = path.join(desktopRoot, selected.build);
+  const packagedResourceBase = path.join(desktopRoot, selected.resourceBase);
   const sourceCore = path.join(sourceCoreRoot, selected.target, selected.executable);
   const packagedCore = path.join(packagedCoreRoot, selected.target, selected.executable);
   const sourceManifest = path.join(sourceBuildRoot, "build-manifest.json");
   const packagedManifest = path.join(packagedBuildRoot, "build-manifest.json");
   const appExecutable = path.join(desktopRoot, selected.app);
   const appAsar = path.join(desktopRoot, selected.asar);
+  const sbrLayout =
+    selected.target === "darwin-arm64"
+      ? {
+          packagedSbrHelper: path.join(
+            desktopRoot,
+            selected.resourceBase,
+            "sbr-helper/darwin-arm64/tammy-sbr-helper",
+          ),
+          packagedSbrHelperRoot: path.join(desktopRoot, selected.resourceBase, "sbr-helper"),
+          packagedSbrProfile: path.join(
+            desktopRoot,
+            selected.resourceBase,
+            "sbr/simulator/sbr-profile-v1.json",
+          ),
+          packagedSbrRoot: path.join(desktopRoot, selected.resourceBase, "sbr"),
+          packagedSbrSignature: path.join(
+            desktopRoot,
+            selected.resourceBase,
+            "sbr/simulator/sbr-profile-v1.sig",
+          ),
+          sourceSbrHelper: path.join(
+            desktopRoot,
+            "resources/sbr-helper/darwin-arm64/tammy-sbr-helper",
+          ),
+          sourceSbrHelperRoot: path.join(desktopRoot, "resources/sbr-helper"),
+          sourceSbrProfile: path.join(desktopRoot, "resources/sbr/simulator/sbr-profile-v1.json"),
+          sourceSbrRoot: path.join(desktopRoot, "resources/sbr"),
+          sourceSbrSignature: path.join(desktopRoot, "resources/sbr/simulator/sbr-profile-v1.sig"),
+        }
+      : {};
   for (const candidate of [
     appAsar,
     sourceCoreRoot,
     sourceBuildRoot,
     packagedCoreRoot,
+    packagedResourceBase,
     packagedBuildRoot,
     sourceCore,
     packagedCore,
     sourceManifest,
     packagedManifest,
     appExecutable,
+    ...Object.values(sbrLayout),
   ]) {
     assertContained(desktopRoot, candidate, "PACKAGE_PATH_TRAVERSAL");
   }
@@ -107,11 +141,13 @@ export function resolvePackagedLayout({ desktopRoot, platform, arch }) {
     packagedBuildRoot,
     packagedCore,
     packagedCoreRoot,
+    packagedResourceBase,
     packagedManifest,
     sourceBuildRoot,
     sourceCore,
     sourceCoreRoot,
     sourceManifest,
+    ...sbrLayout,
     target: selected.target,
   };
 }
@@ -301,6 +337,83 @@ async function assertCoreAbsentFromAsar(layout) {
   }
 }
 
+const PRIVATE_KEY_MARKERS = [
+  Buffer.from("-----BEGIN PRIVATE KEY-----"),
+  Buffer.from("-----BEGIN RSA PRIVATE KEY-----"),
+  Buffer.from("-----BEGIN EC PRIVATE KEY-----"),
+];
+
+async function fileContainsPrivateKey(file) {
+  return withStableFileHandle(
+    file,
+    { code: "PACKAGED_PRIVATE_KEY_LEAK", maxBytes: MAX_PACKAGED_FILE_BYTES },
+    async (handle, size) => {
+      const chunk = Buffer.alloc(64 * 1024);
+      const overlapLength = Math.max(...PRIVATE_KEY_MARKERS.map((marker) => marker.length)) - 1;
+      let overlap = Buffer.alloc(0);
+      let position = 0;
+      while (position < size) {
+        const { bytesRead } = await handle.read(
+          chunk,
+          0,
+          Math.min(chunk.length, size - position),
+          position,
+        );
+        if (bytesRead === 0) throw new Error("PACKAGED_PRIVATE_KEY_LEAK");
+        const window = Buffer.concat([overlap, chunk.subarray(0, bytesRead)]);
+        if (PRIVATE_KEY_MARKERS.some((marker) => window.includes(marker))) return true;
+        overlap = window.subarray(Math.max(0, window.length - overlapLength));
+        position += bytesRead;
+      }
+      return false;
+    },
+  ).catch(() => {
+    throw new Error("PACKAGED_PRIVATE_KEY_LEAK");
+  });
+}
+
+async function assertNoSensitiveSbrPackaging(layout) {
+  const resourceTree = await enumerateTree(
+    layout.packagedResourceBase,
+    "PACKAGED_RESOURCE_LAYOUT_INVALID",
+  );
+  const expected = new Map([
+    ["tammy-sbr-helper", "sbr-helper/darwin-arm64/tammy-sbr-helper"],
+    ["sbr-profile-v1.json", "sbr/simulator/sbr-profile-v1.json"],
+    ["sbr-profile-v1.sig", "sbr/simulator/sbr-profile-v1.sig"],
+  ]);
+  const files = resourceTree.entries.filter((entry) => !entry.path.endsWith("/"));
+  for (const { path: relative } of files) {
+    const basename = path.posix.basename(relative);
+    const canonical = expected.get(basename);
+    if (
+      (canonical !== undefined && relative !== canonical) ||
+      /(^|\/)test\/fixtures\/sbr(?:\/|$)/iu.test(relative) ||
+      /simulator-profile-private-key/iu.test(relative) ||
+      relative.toLowerCase().endsWith(".pem")
+    ) {
+      throw new Error(
+        canonical !== undefined ? "PACKAGED_SBR_DUPLICATE" : "PACKAGED_PRIVATE_KEY_LEAK",
+      );
+    }
+    if (await fileContainsPrivateKey(path.join(layout.packagedResourceBase, relative))) {
+      throw new Error("PACKAGED_PRIVATE_KEY_LEAK");
+    }
+  }
+  const asarEntries = await readAsarEntries(layout.appAsar);
+  for (const entry of asarEntries) {
+    if (expected.has(path.posix.basename(entry))) throw new Error("PACKAGED_SBR_DUPLICATE");
+    if (
+      /(^|\/)test\/fixtures\/sbr(?:\/|$)/iu.test(entry) ||
+      /simulator-profile-private-key/iu.test(entry) ||
+      entry.toLowerCase().endsWith(".pem")
+    ) {
+      throw new Error("PACKAGED_PRIVATE_KEY_LEAK");
+    }
+  }
+  return { root: layout.packagedResourceBase, snapshot: resourceTree };
+}
+
 async function enumerateTree(root, code) {
   const rootStats = await lstat(root, { bigint: true }).catch(() => null);
   if (!rootStats?.isDirectory() || rootStats.isSymbolicLink()) {
@@ -360,7 +473,7 @@ function sameTreeSnapshot(left, right) {
   );
 }
 
-async function assertExactTree(root, expected, code) {
+async function assertExactTree(root, expected, code, requireKeep = true) {
   const snapshot = await enumerateTree(root, code);
   const actual = snapshot.entries.map((entry) => entry.path);
   if (
@@ -369,9 +482,11 @@ async function assertExactTree(root, expected, code) {
   ) {
     throw new Error(code);
   }
-  const keep = await lstat(path.join(root, ".gitkeep")).catch(() => null);
-  if (!keep?.isFile() || keep.isSymbolicLink() || keep.size !== 0) {
-    throw new Error(code);
+  if (requireKeep) {
+    const keep = await lstat(path.join(root, ".gitkeep")).catch(() => null);
+    if (!keep?.isFile() || keep.isSymbolicLink() || keep.size !== 0) {
+      throw new Error(code);
+    }
   }
   return { root, snapshot };
 }
@@ -431,9 +546,50 @@ export async function verifyPackagedLayout({
     [".gitkeep", "build-manifest.json"],
     "PACKAGED_BUILD_LAYOUT_INVALID",
   );
+  const sbrTrees = [];
+  if (layout.sourceSbrHelper) {
+    sbrTrees.push(
+      await assertExactTree(
+        layout.sourceSbrHelperRoot,
+        ["darwin-arm64/", "darwin-arm64/tammy-sbr-helper"],
+        "SOURCE_SBR_HELPER_LAYOUT_INVALID",
+        false,
+      ),
+      await assertExactTree(
+        layout.packagedSbrHelperRoot,
+        ["darwin-arm64/", "darwin-arm64/tammy-sbr-helper"],
+        "PACKAGED_SBR_HELPER_LAYOUT_INVALID",
+        false,
+      ),
+      await assertExactTree(
+        layout.sourceSbrRoot,
+        ["simulator/", "simulator/sbr-profile-v1.json", "simulator/sbr-profile-v1.sig"],
+        "SOURCE_SBR_LAYOUT_INVALID",
+        false,
+      ),
+      await assertExactTree(
+        layout.packagedSbrRoot,
+        ["simulator/", "simulator/sbr-profile-v1.json", "simulator/sbr-profile-v1.sig"],
+        "PACKAGED_SBR_LAYOUT_INVALID",
+        false,
+      ),
+    );
+  } else {
+    const resourceBase = path.dirname(layout.packagedCoreRoot);
+    for (const forbidden of [
+      path.join(desktopRoot, "resources/sbr-helper"),
+      path.join(desktopRoot, "resources/sbr"),
+      path.join(resourceBase, "sbr-helper"),
+      path.join(resourceBase, "sbr"),
+    ]) {
+      if (await lstat(forbidden).catch(() => null))
+        throw new Error("SBR_UNAVAILABLE_LAYOUT_INVALID");
+    }
+  }
 
   const appStats = await assertRegularFile(layout.appExecutable, "PACKAGE_APP_INVALID");
   await assertCoreAbsentFromAsar(layout);
+  const packagedResourceTree = await assertNoSensitiveSbrPackaging(layout);
   const sourceCoreStats = await assertRegularFile(layout.sourceCore, "SOURCE_CORE_LAYOUT_INVALID");
   const packagedCoreStats = await assertRegularFile(
     layout.packagedCore,
@@ -448,6 +604,10 @@ export async function verifyPackagedLayout({
     }
     if ((packagedCoreStats.mode & 0o111) === 0) {
       throw new Error("PACKAGED_CORE_NOT_EXECUTABLE");
+    }
+    for (const helper of [layout.sourceSbrHelper, layout.packagedSbrHelper]) {
+      const stats = await assertRegularFile(helper, "SBR_HELPER_LAYOUT_INVALID");
+      if ((stats.mode & 0o777) !== 0o500) throw new Error("SBR_HELPER_MODE_INVALID");
     }
   }
 
@@ -476,12 +636,67 @@ export async function verifyPackagedLayout({
   if (packagedCoreHash !== manifest.core_sha256) {
     throw new Error("PACKAGED_CORE_HASH_MISMATCH");
   }
+  let sbrResult = { sbrStatus: manifest.sbr_status };
+  if (layout.sourceSbrHelper) {
+    const [
+      sourceHelperHash,
+      packagedHelperHash,
+      sourceProfileHash,
+      packagedProfileHash,
+      sourceSignatureHash,
+      packagedSignatureHash,
+    ] = await Promise.all([
+      hashFile(layout.sourceSbrHelper, "SOURCE_SBR_HELPER_LAYOUT_CHANGED"),
+      hashFile(layout.packagedSbrHelper, "PACKAGED_SBR_HELPER_LAYOUT_CHANGED"),
+      hashFile(layout.sourceSbrProfile, "SOURCE_SBR_LAYOUT_CHANGED"),
+      hashFile(layout.packagedSbrProfile, "PACKAGED_SBR_LAYOUT_CHANGED"),
+      hashFile(layout.sourceSbrSignature, "SOURCE_SBR_LAYOUT_CHANGED"),
+      hashFile(layout.packagedSbrSignature, "PACKAGED_SBR_LAYOUT_CHANGED"),
+    ]);
+    if (sourceHelperHash !== manifest.sbr.helper_sha256 || packagedHelperHash !== sourceHelperHash)
+      throw new Error("PACKAGED_SBR_HELPER_HASH_MISMATCH");
+    if (
+      sourceProfileHash !== manifest.sbr.profile_sha256 ||
+      packagedProfileHash !== sourceProfileHash ||
+      sourceSignatureHash !== manifest.sbr.profile_signature_sha256 ||
+      packagedSignatureHash !== sourceSignatureHash
+    )
+      throw new Error("PACKAGED_SBR_PROFILE_HASH_MISMATCH");
+    try {
+      const [profileBytes, signatureBytes, publicKey] = await Promise.all([
+        readStableFileBytes(layout.packagedSbrProfile, {
+          code: "PACKAGED_SBR_PROFILE_AUTHENTICATION_FAILED",
+          maxBytes: 64 * 1024,
+        }),
+        readStableFileBytes(layout.packagedSbrSignature, {
+          code: "PACKAGED_SBR_PROFILE_AUTHENTICATION_FAILED",
+          maxBytes: 128,
+        }),
+        readStableFileBytes(
+          path.resolve(desktopRoot, "../../config/sbr/simulator/profile-public-key.pem"),
+          { code: "PACKAGED_SBR_PROFILE_AUTHENTICATION_FAILED", maxBytes: 4096 },
+        ),
+      ]);
+      const profile = authenticateSbrProfileBytes({ profileBytes, publicKey, signatureBytes });
+      if (profile.helper_sha256 !== packagedHelperHash) throw new Error();
+    } catch {
+      throw new Error("PACKAGED_SBR_PROFILE_AUTHENTICATION_FAILED");
+    }
+    sbrResult = {
+      helperExecutable: layout.packagedSbrHelper,
+      helperSha256: packagedHelperHash,
+      profileSha256: packagedProfileHash,
+      sbrStatus: manifest.sbr_status,
+    };
+  }
   const appSha256 = await hashFile(layout.appExecutable, "PACKAGE_APP_CHANGED");
   await beforeTreeRevalidation?.();
   await revalidateTree(sourceCoreTree, "SOURCE_CORE_LAYOUT_CHANGED");
   await revalidateTree(sourceBuildTree, "SOURCE_BUILD_LAYOUT_CHANGED");
   await revalidateTree(packagedCoreTree, "PACKAGED_CORE_LAYOUT_CHANGED");
   await revalidateTree(packagedBuildTree, "PACKAGED_BUILD_LAYOUT_CHANGED");
+  for (const tree of sbrTrees) await revalidateTree(tree, "PACKAGED_SBR_LAYOUT_CHANGED");
+  await revalidateTree(packagedResourceTree, "PACKAGED_RESOURCE_LAYOUT_CHANGED");
   return {
     appExecutable: layout.appExecutable,
     appSha256,
@@ -489,6 +704,7 @@ export async function verifyPackagedLayout({
     coreSha256: packagedCoreHash,
     manifest: layout.packagedManifest,
     manifestSha256: createHash("sha256").update(sourceManifest).digest("hex"),
+    ...sbrResult,
     target: layout.target,
   };
 }

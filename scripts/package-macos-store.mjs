@@ -1,11 +1,12 @@
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { mkdir, open } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { validateMacOSReleaseEnvironment } from "./check-macos-store.mjs";
+import { acquireSbrBuildLock, SBR_BUILD_LOCK_ENV } from "./sbr-build-lock.mjs";
 
 const MAX_CAPTURED_OUTPUT_BYTES = 16 * 1024;
 
@@ -43,6 +44,23 @@ export function createMacOSStoreBuildPlan(root, sourceEnvironment) {
     "macos",
     "entitlements.mas.core.plist",
   );
+  const helper = path.join(
+    root,
+    "apps",
+    "desktop",
+    "resources",
+    "sbr-helper",
+    "darwin-arm64",
+    "tammy-sbr-helper",
+  );
+  const helperEntitlements = path.join(
+    root,
+    "apps",
+    "desktop",
+    "release",
+    "macos",
+    "entitlements.mas.sbr-helper.plist",
+  );
   const sourceManifest = path.join(
     root,
     "apps",
@@ -66,8 +84,30 @@ export function createMacOSStoreBuildPlan(root, sourceEnvironment) {
       : undefined;
   const commands = [
     command(process.execPath, [path.join(root, "scripts", "check-macos-store.mjs"), "--release"]),
+    command(process.execPath, [path.join(root, "scripts", "build-sbr-helper.mjs"), "--mas-raw"]),
+    command("/usr/bin/codesign", [
+      "--force",
+      "--sign",
+      sourceEnvironment.TAMMY_MACOS_SIGNING_IDENTITY,
+      "--entitlements",
+      helperEntitlements,
+      "--identifier",
+      "com.tammy.desktop.sbr-helper",
+      release.mode === "distribution" ? "--timestamp" : "--timestamp=none",
+      helper,
+    ]),
+    command("/usr/bin/codesign", [
+      "--verify",
+      "--strict",
+      "-R",
+      `=identifier "com.tammy.desktop.sbr-helper" and anchor apple generic and certificate leaf[subject.OU] = "${sourceEnvironment.TAMMY_MACOS_TEAM_ID}"`,
+      helper,
+    ]),
+    command(process.execPath, [
+      path.join(root, "scripts", "build-sbr-helper.mjs"),
+      "--mas-profile",
+    ]),
     command("pnpm", ["core:build"]),
-    command("pnpm", ["build:manifest"]),
     command("/usr/bin/codesign", [
       "--force",
       "--sign",
@@ -78,10 +118,7 @@ export function createMacOSStoreBuildPlan(root, sourceEnvironment) {
       core,
     ]),
     command("/usr/bin/codesign", ["--verify", "--strict", core]),
-    command(process.execPath, [
-      path.join(root, "scripts", "write-build-manifest.mjs"),
-      "--rehash-core",
-    ]),
+    command("pnpm", ["build:manifest"]),
     command("pnpm", ["--dir", "apps/desktop", "package", "--platform=mas", "--arch=arm64"]),
     command(process.execPath, [
       path.join(root, "apps", "desktop", "scripts", "find-packaged-app.mjs"),
@@ -90,6 +127,18 @@ export function createMacOSStoreBuildPlan(root, sourceEnvironment) {
       "mas",
       "--source-manifest",
       sourceManifest,
+    ]),
+    command(process.execPath, [
+      path.join(root, "scripts", "verify-sbr-helper-signature.mjs"),
+      "--mas",
+    ]),
+    command("/usr/bin/codesign", [
+      "--verify",
+      "--deep",
+      "--strict",
+      "-R",
+      `=identifier "com.tammy.desktop" and anchor apple generic and certificate leaf[subject.OU] = "${sourceEnvironment.TAMMY_MACOS_TEAM_ID}"`,
+      app,
     ]),
   ];
   if (pkg !== undefined) {
@@ -208,45 +257,53 @@ export async function executeMacOSStoreBuild(
     write = (line) => process.stdout.write(line),
   } = {},
 ) {
-  const commandOptions = { cwd: plan.root, environment: plan.environment };
-  for (const step of plan.commands) {
-    await runCommand(commandRunner, step, commandOptions, "MACOS_STORE_COMMAND_FAILED");
-  }
-  if (plan.pkg === undefined) {
-    const result = { app: plan.app };
+  const lock = await acquireSbrBuildLock(plan.root);
+  try {
+    const commandOptions = {
+      cwd: plan.root,
+      environment: { ...plan.environment, [SBR_BUILD_LOCK_ENV]: lock.token },
+    };
+    for (const step of plan.commands) {
+      await runCommand(commandRunner, step, commandOptions, "MACOS_STORE_COMMAND_FAILED");
+    }
+    if (plan.pkg === undefined) {
+      const result = { app: plan.app };
+      write(`${JSON.stringify(result)}\n`);
+      return result;
+    }
+
+    await runCommand(
+      commandRunner,
+      command("/usr/sbin/pkgutil", ["--check-signature", plan.pkg]),
+      { ...commandOptions, captureOutput: true },
+      "MACOS_STORE_PACKAGE_SIGNATURE_INVALID",
+    );
+    let pkgSha256;
+    try {
+      pkgSha256 = await packageHasher(plan.pkg);
+    } catch {
+      throw new Error("MACOS_STORE_PACKAGE_HASH_INVALID");
+    }
+    if (typeof pkgSha256 !== "string" || !/^[a-f0-9]{64}$/u.test(pkgSha256)) {
+      throw new Error("MACOS_STORE_PACKAGE_HASH_INVALID");
+    }
+    const gatekeeperOutput = await runCommand(
+      commandRunner,
+      command("/usr/sbin/spctl", ["--assess", "--type", "install", "--verbose=4", plan.pkg]),
+      { ...commandOptions, allowNonZero: true, captureOutput: true },
+      "MACOS_STORE_GATEKEEPER_ASSESSMENT_INVALID",
+    );
+    const result = {
+      app: plan.app,
+      pkg: plan.pkg,
+      pkgSha256,
+      gatekeeperAssessment: classifyGatekeeperAssessment(gatekeeperOutput),
+    };
     write(`${JSON.stringify(result)}\n`);
     return result;
+  } finally {
+    await lock.release();
   }
-
-  await runCommand(
-    commandRunner,
-    command("/usr/sbin/pkgutil", ["--check-signature", plan.pkg]),
-    { ...commandOptions, captureOutput: true },
-    "MACOS_STORE_PACKAGE_SIGNATURE_INVALID",
-  );
-  let pkgSha256;
-  try {
-    pkgSha256 = await packageHasher(plan.pkg);
-  } catch {
-    throw new Error("MACOS_STORE_PACKAGE_HASH_INVALID");
-  }
-  if (typeof pkgSha256 !== "string" || !/^[a-f0-9]{64}$/u.test(pkgSha256)) {
-    throw new Error("MACOS_STORE_PACKAGE_HASH_INVALID");
-  }
-  const gatekeeperOutput = await runCommand(
-    commandRunner,
-    command("/usr/sbin/spctl", ["--assess", "--type", "install", "--verbose=4", plan.pkg]),
-    { ...commandOptions, allowNonZero: true, captureOutput: true },
-    "MACOS_STORE_GATEKEEPER_ASSESSMENT_INVALID",
-  );
-  const result = {
-    app: plan.app,
-    pkg: plan.pkg,
-    pkgSha256,
-    gatekeeperAssessment: classifyGatekeeperAssessment(gatekeeperOutput),
-  };
-  write(`${JSON.stringify(result)}\n`);
-  return result;
 }
 
 async function main() {

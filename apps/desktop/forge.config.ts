@@ -82,15 +82,27 @@ const normalizePackagedResourcePermissions: PackagerHook = (
 };
 
 const packagedCoreSuffix = path.join("Contents", "Resources", "core", "darwin-arm64", "tammy-core");
+const packagedSbrHelperSuffix = path.join(
+  "Contents",
+  "Resources",
+  "sbr-helper",
+  "darwin-arm64",
+  "tammy-sbr-helper",
+);
 
-function isManifestBoundCore(file: string): boolean {
-  return path.isAbsolute(file) && file.endsWith(`${path.sep}${packagedCoreSuffix}`);
+function isManifestBoundExecutable(file: string): boolean {
+  return (
+    path.isAbsolute(file) &&
+    [packagedCoreSuffix, packagedSbrHelperSuffix].some((suffix) =>
+      file.endsWith(`${path.sep}${suffix}`),
+    )
+  );
 }
 
 const developmentSign: NonNullable<ForgeConfig["packagerConfig"]>["osxSign"] = {
   identity: "-",
   identityValidation: false,
-  ignore: isManifestBoundCore,
+  ignore: isManifestBoundExecutable,
   optionsForFile: () => ({ hardenedRuntime: false, timestamp: "none" }),
 };
 
@@ -102,6 +114,7 @@ const packagerConfig: PackagerConfig = {
     "resources/core",
     "resources/build",
     "resources/sqlcipher",
+    ...(process.platform === "darwin" ? ["resources/sbr-helper", "resources/sbr"] : []),
     ...(releaseProfile.kind === "mas" ? [releaseProfile.privacyManifest] : []),
   ],
   osxSign: developmentSign,
@@ -124,7 +137,9 @@ if (releaseProfile.kind === "mas") {
   packagerConfig.osxSign = {
     identity: releaseProfile.sign.identity,
     identityValidation: true,
-    ignore: isManifestBoundCore,
+    // Core and the SBR helper are signed before their hashes are written into
+    // authenticated manifests. Forge must preserve those exact bytes.
+    ignore: isManifestBoundExecutable,
     optionsForFile: (file: string) => ({
       entitlements: releaseProfile.sign.entitlementsFor(file),
     }),

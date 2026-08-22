@@ -116,8 +116,10 @@ test("provisioning profiles bind the team, app identifier, mode, and expiry", ()
     ApplicationIdentifierPrefix: ["LEGACY1234"],
     Entitlements: {
       "com.apple.application-identifier": "LEGACY1234.com.tammy.desktop",
+      "com.apple.security.application-groups": ["ABCDE12345.com.tammy.desktop"],
       "com.apple.developer.team-identifier": "ABCDE12345",
       "get-task-allow": true,
+      "keychain-access-groups": ["LEGACY1234.com.tammy.desktop.sbr"],
     },
     ExpirationDate: "2027-08-11T00:00:00.000Z",
     ProvisionedDevices: ["device-id"],
@@ -143,7 +145,9 @@ test("provisioning profiles bind the team, app identifier, mode, and expiry", ()
     ...development,
     Entitlements: {
       "com.apple.application-identifier": "LEGACY1234.com.tammy.desktop",
+      "com.apple.security.application-groups": ["ABCDE12345.com.tammy.desktop"],
       "com.apple.developer.team-identifier": "ABCDE12345",
+      "keychain-access-groups": ["LEGACY1234.com.tammy.desktop.sbr"],
     },
     ProvisionedDevices: undefined,
   };
@@ -163,6 +167,52 @@ test("provisioning profiles bind the team, app identifier, mode, and expiry", ()
     { ...development, ExpirationDate: "2026-08-10T00:00:00.000Z" },
     { ...development, ProvisionedDevices: undefined },
     { ...development, ProvisionsAllDevices: true },
+    {
+      ...development,
+      Entitlements: {
+        ...development.Entitlements,
+        "com.apple.security.application-groups": [],
+      },
+    },
+    {
+      ...development,
+      Entitlements: {
+        ...development.Entitlements,
+        "com.apple.security.application-groups": ["ABCDE12345.com.other.app"],
+      },
+    },
+    {
+      ...development,
+      Entitlements: {
+        ...development.Entitlements,
+        "com.apple.security.application-groups": [
+          "ABCDE12345.com.tammy.desktop",
+          "ABCDE12345.com.other.app",
+        ],
+      },
+    },
+    {
+      ...development,
+      Entitlements: Object.fromEntries(
+        Object.entries(development.Entitlements).filter(
+          ([key]) => key !== "keychain-access-groups",
+        ),
+      ),
+    },
+    {
+      ...development,
+      Entitlements: {
+        ...development.Entitlements,
+        "keychain-access-groups": ["LEGACY1234.com.other.app"],
+      },
+    },
+    {
+      ...development,
+      Entitlements: {
+        ...development.Entitlements,
+        "keychain-access-groups": ["LEGACY1234.com.tammy.desktop.sbr", "LEGACY1234.com.other.app"],
+      },
+    },
   ]) {
     assert.throws(
       () => validateMacOSProvisioningProfile(profile, options),
@@ -184,7 +234,9 @@ test("decoded Apple profiles retain validation fields without converting certifi
 <key>DeveloperCertificates</key><array><data>AQID</data></array>
 <key>Entitlements</key><dict>
 <key>com.apple.application-identifier</key><string>WFTX6CN23F.com.tammy.desktop</string>
+<key>com.apple.security.application-groups</key><array><string>WFTX6CN23F.com.tammy.desktop</string></array>
 <key>com.apple.developer.team-identifier</key><string>WFTX6CN23F</string>
+<key>keychain-access-groups</key><array><string>WFTX6CN23F.com.tammy.desktop.sbr</string></array>
 </dict>
 <key>ExpirationDate</key><date>2027-05-13T11:58:20Z</date>
 <key>TeamIdentifier</key><array><string>WFTX6CN23F</string></array>
@@ -196,7 +248,9 @@ test("decoded Apple profiles retain validation fields without converting certifi
       ApplicationIdentifierPrefix: ["WFTX6CN23F"],
       Entitlements: {
         "com.apple.application-identifier": "WFTX6CN23F.com.tammy.desktop",
+        "com.apple.security.application-groups": ["WFTX6CN23F.com.tammy.desktop"],
         "com.apple.developer.team-identifier": "WFTX6CN23F",
+        "keychain-access-groups": ["WFTX6CN23F.com.tammy.desktop.sbr"],
       },
       ExpirationDate: "2027-05-13T11:58:20Z",
       TeamIdentifier: ["WFTX6CN23F"],
@@ -295,6 +349,12 @@ test("store plist validation requires exact sandbox inheritance and privacy valu
       "com.apple.security.app-sandbox": true,
       "com.apple.security.inherit": true,
     },
+    sbrHelperEntitlements: {
+      "com.apple.security.app-sandbox": true,
+      "com.apple.security.files.user-selected.read-only": true,
+      "com.apple.security.application-groups": ["$(TeamIdentifierPrefix)com.tammy.desktop"],
+      "keychain-access-groups": ["$(AppIdentifierPrefix)com.tammy.desktop.sbr"],
+    },
     privacy: {
       NSPrivacyAccessedAPITypes: [
         {
@@ -317,6 +377,23 @@ test("store plist validation requires exact sandbox inheritance and privacy valu
       }),
     /MACOS_STORE_REPOSITORY_INVALID/,
   );
+  for (const sbrHelperEntitlements of [
+    { ...valid.sbrHelperEntitlements, "com.apple.security.app-sandbox": false },
+    {
+      ...valid.sbrHelperEntitlements,
+      "com.apple.security.application-groups": [
+        "$(TeamIdentifierPrefix)com.tammy.desktop",
+        "$(TeamIdentifierPrefix)com.other.app",
+      ],
+    },
+    { ...valid.sbrHelperEntitlements, "com.apple.security.network.client": true },
+    { ...valid.sbrHelperEntitlements, "com.apple.security.cs.allow-jit": true },
+  ]) {
+    assert.throws(
+      () => validateMacOSStorePlists({ ...valid, sbrHelperEntitlements }),
+      /MACOS_STORE_REPOSITORY_INVALID/,
+    );
+  }
   assert.throws(
     () =>
       validateMacOSStorePlists({

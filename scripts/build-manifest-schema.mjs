@@ -10,6 +10,7 @@ export const BUILD_MANIFEST_KEYS = Object.freeze([
   "sqlcipher",
   "test_profile",
   "sbr_status",
+  "sbr",
   "signed",
 ]);
 
@@ -42,6 +43,12 @@ const HASH_PATTERN = /^[0-9a-f]{64}$/;
 const REVISION_PATTERN = /^[0-9a-f]{40}$/;
 const VERSION_PATTERN = /^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$/;
 const SQLCIPHER_KEYS = Object.freeze(["library_sha256", "runtime_version", "version"]);
+const SBR_KEYS = Object.freeze([
+  "helper_sha256",
+  "profile_sha256",
+  "profile_signature_sha256",
+  "source_tree_sha256",
+]);
 
 function fail() {
   throw new Error("BUILD_MANIFEST_SCHEMA_INVALID");
@@ -72,6 +79,7 @@ function assertNoForbiddenFields(value) {
 
 export function validateBuildManifest(manifest, { expectedTarget, requireClean }) {
   assertNoForbiddenFields(manifest);
+  const enabledSbr = manifest?.target === "darwin-arm64";
   if (
     !hasExactOrderedKeys(manifest, BUILD_MANIFEST_KEYS) ||
     manifest.schema !== "tammy-build-manifest-v1" ||
@@ -98,7 +106,13 @@ export function validateBuildManifest(manifest, { expectedTarget, requireClean }
     manifest.sqlcipher.runtime_version !== "4.15.0 community" ||
     manifest.sqlcipher.version !== "4.15.0" ||
     manifest.test_profile !== "foundation-packaged-e2e" ||
-    manifest.sbr_status !== "SIMULATOR_NOT_IMPLEMENTED" ||
+    manifest.sbr_status !== (enabledSbr ? "SIMULATOR_ENABLED" : "SBR_UNAVAILABLE_ON_TARGET") ||
+    !hasExactOrderedKeys(manifest.sbr, SBR_KEYS) ||
+    Object.values(manifest.sbr).some((fingerprint) =>
+      enabledSbr
+        ? typeof fingerprint !== "string" || !HASH_PATTERN.test(fingerprint)
+        : fingerprint !== null,
+    ) ||
     manifest.signed !== false
   ) {
     fail();

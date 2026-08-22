@@ -3,6 +3,8 @@
 /.tmp/contracts/
 /.tmp/descriptor-evidence/
 /.tmp/sqlcipher/
+/.tmp/sbr-build-owner/
+.tmp/sbr-helper-build/
 node_modules/
 .pnpm-store/
 **/.vite/
@@ -16,5 +18,7 @@ apps/desktop/resources/core/*
 apps/desktop/resources/build/*
 !apps/desktop/resources/build/.gitkeep
 apps/desktop/resources/sqlcipher/
+apps/desktop/resources/sbr-helper/
+apps/desktop/resources/sbr/
 config/sbr/evte/*
 !config/sbr/evte/.gitkeep

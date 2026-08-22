@@ -1,0 +1,10 @@
+version: '3'
+
+tasks:
+  build:
+    desc: Build the deterministic authenticated SBR helper resource or record target unavailability.
+    summary: |
+      Builds only the network-disabled macOS arm64 helper. Windows x64 records SBR as unavailable.
+      No credential, Product ID, endpoint, or production SBR authority is accepted by this task.
+    cmds:
+      - mise exec -- node scripts/build-sbr-helper.mjs

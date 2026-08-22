@@ -9,6 +9,8 @@ import {
   parseCanonicalBuildManifest,
   validateBuildManifest,
 } from "./build-manifest-schema.mjs";
+import { hashSbrHelperSourceTree } from "./build-sbr-helper.mjs";
+import { authenticateSbrProfileBytes } from "./sbr-profile-schema.mjs";
 import { hashStableFile, readStableFileBytes } from "./stable-file.mjs";
 
 const HASH_PATTERN = /^[0-9a-f]{64}$/;
@@ -24,6 +26,7 @@ const CREATE_INPUT_KEYS = Object.freeze([
   "coreSha256",
   "lockfiles",
   "protobufTreeSha256",
+  "sbr",
   "sourceDirty",
   "sourceRevision",
   "sqlcipher",
@@ -174,6 +177,7 @@ export function createBuildManifest(input) {
     protobufTreeSha256,
     sourceDirty,
     sourceRevision,
+    sbr,
     sqlcipher,
     target,
     versions,
@@ -190,6 +194,16 @@ export function createBuildManifest(input) {
   if (ciMode && sourceDirty) throw new Error("DIRTY_SOURCE_IN_CI");
   assertHash(coreSha256);
   assertHash(protobufTreeSha256);
+  assertExactKeys(
+    sbr,
+    ["helper_sha256", "profile_sha256", "profile_signature_sha256", "source_tree_sha256"],
+    "MANIFEST_SBR_INVALID",
+  );
+  const sbrEnabled = target === "darwin-arm64";
+  for (const value of Object.values(sbr)) {
+    if (sbrEnabled) assertHash(value);
+    else if (value !== null) throw new Error("MANIFEST_SBR_INVALID");
+  }
   assertExactKeys(
     sqlcipher,
     ["librarySha256", "runtimeVersion", "version"],
@@ -223,7 +237,13 @@ export function createBuildManifest(input) {
       version: sqlcipher.version,
     },
     test_profile: "foundation-packaged-e2e",
-    sbr_status: "SIMULATOR_NOT_IMPLEMENTED",
+    sbr_status: sbrEnabled ? "SIMULATOR_ENABLED" : "SBR_UNAVAILABLE_ON_TARGET",
+    sbr: {
+      helper_sha256: sbr.helper_sha256,
+      profile_sha256: sbr.profile_sha256,
+      profile_signature_sha256: sbr.profile_signature_sha256,
+      source_tree_sha256: sbr.source_tree_sha256,
+    },
     signed: false,
   };
 }
@@ -628,6 +648,84 @@ function parseJson(bytes, code) {
   }
 }
 
+async function authenticateSbrManifestResources(root, selected, sourceRevision) {
+  const empty = {
+    helper_sha256: null,
+    profile_sha256: null,
+    profile_signature_sha256: null,
+    source_tree_sha256: null,
+  };
+  if (selected.target === "win32-x64") return empty;
+  const provenancePath = path.join(root, ".tmp/sbr-helper-build/provenance.json");
+  const provenance = parseJson(
+    await readStableFileBytes(provenancePath, { code: "MANIFEST_SBR_INVALID", maxBytes: 4096 }),
+    "MANIFEST_SBR_INVALID",
+  );
+  assertExactKeys(
+    provenance,
+    [
+      "helper_raw_sha256",
+      "helper_sha256",
+      "profile_sha256",
+      "profile_signature_sha256",
+      "session_nonce",
+      "source_revision",
+      "source_tree_sha256",
+      "status",
+      "target",
+    ],
+    "MANIFEST_SBR_INVALID",
+  );
+  if (
+    provenance.status !== "SIMULATOR_ENABLED" ||
+    provenance.target !== selected.target ||
+    provenance.source_revision !== sourceRevision ||
+    !/^[0-9a-f]{32}$/.test(provenance.session_nonce)
+  ) {
+    throw new Error("MANIFEST_SBR_INVALID");
+  }
+  const sbr = Object.fromEntries(
+    Object.entries(provenance).filter(
+      ([key]) =>
+        !["helper_raw_sha256", "session_nonce", "source_revision", "status", "target"].includes(
+          key,
+        ),
+    ),
+  );
+  for (const value of Object.values(sbr)) assertHash(value);
+  const helper = path.join(root, "apps/desktop/resources/sbr-helper/darwin-arm64/tammy-sbr-helper");
+  const profilePath = path.join(root, "apps/desktop/resources/sbr/simulator/sbr-profile-v1.json");
+  const signaturePath = path.join(root, "apps/desktop/resources/sbr/simulator/sbr-profile-v1.sig");
+  const publicKeyPath = path.join(root, "config/sbr/simulator/profile-public-key.pem");
+  const [helperHash, profileBytes, signatureBytes, publicKey, sourceTreeHash] = await Promise.all([
+    hashFile(helper, "MANIFEST_SBR_INVALID"),
+    readStableFileBytes(profilePath, { code: "MANIFEST_SBR_INVALID", maxBytes: 64 * 1024 }),
+    readStableFileBytes(signaturePath, { code: "MANIFEST_SBR_INVALID", maxBytes: 128 }),
+    readStableFileBytes(publicKeyPath, { code: "MANIFEST_SBR_INVALID", maxBytes: 4096 }),
+    hashSbrHelperSourceTree(path.join(root, "services/sbr-helper")),
+  ]);
+  let authenticated;
+  try {
+    authenticated = authenticateSbrProfileBytes({
+      now: new Date(),
+      profileBytes,
+      publicKey,
+      signatureBytes,
+    });
+  } catch {
+    throw new Error("MANIFEST_SBR_INVALID");
+  }
+  if (
+    helperHash !== sbr.helper_sha256 ||
+    authenticated.helper_sha256 !== helperHash ||
+    createHash("sha256").update(profileBytes).digest("hex") !== sbr.profile_sha256 ||
+    createHash("sha256").update(signatureBytes).digest("hex") !== sbr.profile_signature_sha256 ||
+    sourceTreeHash !== sbr.source_tree_sha256
+  )
+    throw new Error("MANIFEST_SBR_INVALID");
+  return sbr;
+}
+
 function extractGoVersion(goMod, moduleName) {
   const escaped = moduleName.replaceAll(".", "\\.").replaceAll("/", "\\/");
   const match = goMod.match(new RegExp(`(?:^|\\n)\\s*${escaped}\\s+v([^\\s]+)`));
@@ -732,6 +830,7 @@ export async function collectBuildManifest({
     protobufTreeSha256: await hashProtoTree(path.join(root, "proto")),
     sourceDirty: sourceStatus.trim().length !== 0,
     sourceRevision,
+    sbr: await authenticateSbrManifestResources(root, selected, sourceRevision),
     sqlcipher: await authenticateSqlcipherManifestResource({
       commandOptions,
       commandRunner,

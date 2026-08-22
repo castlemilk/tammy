@@ -6,6 +6,8 @@ import path from "node:path";
 import test from "node:test";
 import { promisify } from "node:util";
 
+import { verifySbrHelperSignature } from "../../../../scripts/verify-sbr-helper-signature.mjs";
+
 const execFileAsync = promisify(execFile);
 
 async function listRegularResourceFiles(root) {
@@ -83,6 +85,28 @@ test("the ad-hoc macOS executable does not enable hardened runtime", {
   });
   assert.match(stderr, /Signature=adhoc/);
   assert.doesNotMatch(stderr, /flags=.*\bruntime\b/);
+});
+
+test("the ordinary macOS package preserves the authenticated ad-hoc SBR helper", {
+  skip: process.platform !== "darwin" || process.arch !== "arm64",
+}, async () => {
+  const desktopRoot = path.resolve(import.meta.dirname, "../..");
+  const appBundle = path.join(desktopRoot, "out", "Tammy-darwin-arm64", "Tammy.app");
+  const result = await verifySbrHelperSignature({ appBundle, mode: "ordinary" });
+  assert.equal(result.identifier, "com.tammy.desktop.sbr-helper");
+});
+
+test("Windows packages contain no SBR helper resources and declare exact unavailability", {
+  skip: process.platform !== "win32" || process.arch !== "x64",
+}, async () => {
+  const desktopRoot = path.resolve(import.meta.dirname, "../..");
+  const resources = packagedResources(desktopRoot);
+  const manifest = JSON.parse(
+    await readFile(path.join(resources, "build/build-manifest.json"), "utf8"),
+  );
+  assert.equal(manifest.sbr_status, "SBR_UNAVAILABLE_ON_TARGET");
+  assert.equal(await lstat(path.join(resources, "sbr-helper")).catch(() => null), null);
+  assert.equal(await lstat(path.join(resources, "sbr")).catch(() => null), null);
 });
 
 test("the macOS bundle omits unused sensitive permissions and unrestricted transport", {

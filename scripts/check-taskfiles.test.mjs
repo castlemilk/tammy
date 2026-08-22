@@ -20,6 +20,7 @@ const scenarioFiles = [
   "taskfiles/release.yml",
   "taskfiles/ci.yml",
   "taskfiles/sbr.yml",
+  "taskfiles/sbr-helper.yml",
 ];
 const allowedExecutablePatterns = [
   /^mise install$/,
@@ -32,6 +33,7 @@ const allowedExecutablePatterns = [
   /^mise exec -- node scripts\/check-clean-tree\.mjs$/,
   /^mise exec -- node scripts\/sbr-incomplete\.mjs (?:accounting-fresh|simulator|evte|doctor|registration|test|evidence)$/,
   /^mise exec -- node scripts\/launch-local-scenario\.mjs accounting-fresh$/,
+  /^mise exec -- node scripts\/build-sbr-helper\.mjs$/,
   /^git diff --check$/,
   /^mise exec -- task --(?:list|version)$/,
   /^mise exec -- node --version$/,
@@ -399,6 +401,7 @@ test("local Task front door preserves the safe development contract", async () =
   );
   assert.deepEqual([...includedFiles].sort(), [...scenarioFiles].sort());
   assert.equal(new Set(includedFiles).size, scenarioFiles.length, "each scenario is included once");
+  assert.ok((await collectTaskGraph("Taskfile.yml")).has("sbr-helper:build"));
 
   const setup = await readTaskfile("taskfiles/setup.yml");
   const dev = await readTaskfile("taskfiles/dev.yml");
@@ -853,12 +856,13 @@ test("local Task front door preserves the safe development contract", async () =
   assert.deepEqual(shellCommands(buildTasks.core), ["mise exec -- pnpm core:build"]);
   assert.equal(buildTasks.manifest.preconditions, undefined);
   assert.deepEqual(shellCommands(buildTasks.manifest), ["mise exec -- pnpm build:manifest"]);
-  assert.deepEqual(shellCommands(buildTasks.desktop), [
-    "mise exec -- pnpm core:build",
-    "mise exec -- pnpm build:manifest",
-    "mise exec -- pnpm --dir apps/desktop package",
-  ]);
-  assert.match(buildTasks.desktop.summary ?? "", /raw.*not verified/i);
+  assert.deepEqual(shellCommands(buildTasks.desktop), ["mise exec -- pnpm desktop:package"]);
+  assert.deepEqual(taskReferences(buildTasks.desktop), []);
+  assert.doesNotMatch(
+    JSON.stringify(buildTasks.desktop.cmds),
+    /sbr-helper:build|build:manifest|apps\/desktop package/,
+  );
+  assert.match(buildTasks.desktop.summary ?? "", /verified.*single build owner/i);
 
   const packageTasks = (await readTaskfile("taskfiles/package.yml")).tasks;
   assert.equal(packageTasks.launch, undefined, "package:launch must not exist");
@@ -1203,7 +1207,8 @@ test("local Task front door preserves the safe development contract", async () =
     "pnpm sqlcipher:build",
     'Resolve-Path ".tmp/sqlcipher/ordinary/win32-x64/ordinary-sqlite3.exe"',
     "$env:TAMMY_ORDINARY_SQLITE3 = $probe",
-    "go test -race -tags tammy_sqlcipher ./services/core/internal/storage/sqlcipher/... -count=1",
+    "mise exec -- go test -race -tags tammy_sqlcipher ./services/core/internal/storage/sqlcipher/... ./services/core/internal/sbr ./services/core/internal/app ./services/core/cmd/tammy-core -count=1",
+    "SBR_UNAVAILABLE_ON_TARGET",
     "pnpm desktop:e2e",
     'classification = "WINDOWS11_23H2_X64_RELEASE_GATE"',
     'status = "PASSED"',
@@ -1216,8 +1221,15 @@ test("local Task front door preserves the safe development contract", async () =
     );
   }
   assert.equal(ciTasks.windows11.status, undefined, "CI tasks must never be cached");
+  const ciCommandsWithoutPinnedWindowsGo = Object.values(ciTasks)
+    .flatMap(shellCommands)
+    .join("\n")
+    .replace(
+      "mise exec -- go test -race -tags tammy_sqlcipher ./services/core/internal/storage/sqlcipher/... ./services/core/internal/sbr ./services/core/internal/app ./services/core/cmd/tammy-core -count=1",
+      "go test",
+    );
   assert.doesNotMatch(
-    Object.values(ciTasks).flatMap(shellCommands).join("\n"),
+    ciCommandsWithoutPinnedWindowsGo,
     /\bmise(?:\s|$)/,
     "CI tasks use Actions-provisioned tools directly",
   );

@@ -136,6 +136,12 @@ export function validateMacOSProvisioningProfile(profile, { mode, teamID, now = 
     entitlements["com.apple.developer.team-identifier"] !== teamID ||
     entitlements["com.apple.application-identifier"] !==
       `${appIdentifierPrefix}.${APP_BUNDLE_ID}` ||
+    !isDeepStrictEqual(entitlements["com.apple.security.application-groups"], [
+      `${teamID}.${APP_BUNDLE_ID}`,
+    ]) ||
+    !isDeepStrictEqual(entitlements["keychain-access-groups"], [
+      `${appIdentifierPrefix}.${APP_BUNDLE_ID}.sbr`,
+    ]) ||
     profile.ProvisionsAllDevices === true ||
     !Number.isFinite(expiry.getTime()) ||
     expiry.getTime() <= now.getTime() ||
@@ -202,6 +208,7 @@ export function validateMacOSStorePlists({
   appEntitlements,
   childEntitlements,
   coreEntitlements,
+  sbrHelperEntitlements,
   privacy,
 }) {
   const inherited = {
@@ -217,6 +224,12 @@ export function validateMacOSStorePlists({
     }) ||
     !isDeepStrictEqual(childEntitlements, inherited) ||
     !isDeepStrictEqual(coreEntitlements, inherited) ||
+    !isDeepStrictEqual(sbrHelperEntitlements, {
+      "com.apple.security.app-sandbox": true,
+      "com.apple.security.files.user-selected.read-only": true,
+      "com.apple.security.application-groups": ["$(TeamIdentifierPrefix)com.tammy.desktop"],
+      "keychain-access-groups": ["$(AppIdentifierPrefix)com.tammy.desktop.sbr"],
+    }) ||
     !isDeepStrictEqual(privacy, {
       NSPrivacyAccessedAPITypes: [
         {
@@ -369,6 +382,7 @@ export async function inspectMacOSStoreRepository(root) {
     appEntitlements: path.join(releaseRoot, "entitlements.mas.plist"),
     childEntitlements: path.join(releaseRoot, "entitlements.mas.child.plist"),
     coreEntitlements: path.join(releaseRoot, "entitlements.mas.core.plist"),
+    sbrHelperEntitlements: path.join(releaseRoot, "entitlements.mas.sbr-helper.plist"),
     forge: path.join(desktopRoot, "forge.config.ts"),
     icon: path.join(desktopRoot, "assets", "icon-source.png"),
     icns: path.join(desktopRoot, "assets", "icon.icns"),
@@ -385,6 +399,7 @@ export async function inspectMacOSStoreRepository(root) {
     appEntitlements,
     childEntitlements,
     coreEntitlements,
+    sbrHelperEntitlements,
     forge,
     iconBytes,
     metadata,
@@ -398,6 +413,7 @@ export async function inspectMacOSStoreRepository(root) {
     readMacOSRepositoryPlist(paths.appEntitlements),
     readMacOSRepositoryPlist(paths.childEntitlements),
     readMacOSRepositoryPlist(paths.coreEntitlements),
+    readMacOSRepositoryPlist(paths.sbrHelperEntitlements),
     readFile(paths.forge, "utf8"),
     readFile(paths.icon),
     readFile(paths.metadata, "utf8"),
@@ -412,7 +428,13 @@ export async function inspectMacOSStoreRepository(root) {
   const desktopPackage = JSON.parse(packageBytes.toString("utf8"));
   const icon = readPngDimensions(iconBytes);
   const metadataStatus = validateMacOSStoreMetadata(metadata);
-  validateMacOSStorePlists({ appEntitlements, childEntitlements, coreEntitlements, privacy });
+  validateMacOSStorePlists({
+    appEntitlements,
+    childEntitlements,
+    coreEntitlements,
+    sbrHelperEntitlements,
+    privacy,
+  });
   if (
     desktopPackage?.productName !== "Tammy" ||
     typeof desktopPackage?.version !== "string" ||
@@ -423,7 +445,8 @@ export async function inspectMacOSStoreRepository(root) {
     !includesAll(forge, [
       "createMacOSReleaseProfile",
       '"darwin-arm64"',
-      "ignore: isManifestBoundCore",
+      "ignore: isManifestBoundExecutable",
+      "packagedSbrHelperSuffix",
       "releaseProfile.privacyManifest",
     ]) ||
     forge.includes("process.arch") ||

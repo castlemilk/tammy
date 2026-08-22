@@ -107,6 +107,19 @@ describe("createMacOSReleaseProfile", () => {
     ).toMatch(/entitlements\.mas\.core\.plist$/);
     expect(
       profile.sign.entitlementsFor(
+        path.join(
+          desktopRoot,
+          "Tammy.app",
+          "Contents",
+          "Resources",
+          "sbr-helper",
+          "darwin-arm64",
+          "tammy-sbr-helper",
+        ),
+      ),
+    ).toMatch(/entitlements\.mas\.sbr-helper\.plist$/);
+    expect(
+      profile.sign.entitlementsFor(
         path.join(desktopRoot, "Tammy.app", "Contents", "Frameworks", "Tammy Helper.app"),
       ),
     ).toMatch(/entitlements\.mas\.child\.plist$/);
@@ -165,11 +178,17 @@ describe.skipIf(process.platform === "win32")("normalizeMacOSPackagedResourcePer
     const resources = path.join(fixture, "Tammy.app", "Contents", "Resources");
     const build = path.join(resources, "build");
     const cipher = path.join(resources, "sqlcipher", "darwin-arm64");
+    const helper = path.join(resources, "sbr-helper", "darwin-arm64", "tammy-sbr-helper");
+    const sbrProfile = path.join(resources, "sbr", "simulator", "sbr-profile-v1.json");
     try {
       await mkdir(build, { mode: 0o700, recursive: true });
       await mkdir(cipher, { mode: 0o700, recursive: true });
       await writeFile(path.join(build, "build-manifest.json"), "{}\n", { mode: 0o600 });
       await writeFile(path.join(cipher, "LIBRARY_SHA256"), "hash\n", { mode: 0o600 });
+      await mkdir(path.dirname(helper), { recursive: true });
+      await mkdir(path.dirname(sbrProfile), { recursive: true });
+      await writeFile(helper, "helper", { mode: 0o700 });
+      await writeFile(sbrProfile, "{}\n", { mode: 0o600 });
 
       await normalizeMacOSPackagedResourcePermissions(fixture);
 
@@ -177,6 +196,8 @@ describe.skipIf(process.platform === "win32")("normalizeMacOSPackagedResourcePer
       expect((await lstat(cipher)).mode & 0o777).toBe(0o755);
       expect((await lstat(path.join(build, "build-manifest.json"))).mode & 0o777).toBe(0o644);
       expect((await lstat(path.join(cipher, "LIBRARY_SHA256"))).mode & 0o777).toBe(0o644);
+      expect((await lstat(helper)).mode & 0o777).toBe(0o500);
+      expect((await lstat(sbrProfile)).mode & 0o777).toBe(0o444);
     } finally {
       await rm(fixture, { force: true, recursive: true });
     }

@@ -98,7 +98,7 @@ func (l directoryResourceLocator) Locate(profile Profile) (ResourceSet, error) {
 	}
 	root := filepath.Join(l.resourcesRoot, "sbr", environment)
 	return ResourceSet{
-		HelperPath:                filepath.Join(root, "tammy-sbr-helper"),
+		HelperPath:                filepath.Join(l.resourcesRoot, "sbr-helper", "darwin-arm64", "tammy-sbr-helper"),
 		ComponentManifestPath:     filepath.Join(root, "component", "manifest.json"),
 		ComponentRoot:             filepath.Join(root, "component", "files"),
 		RegistrationManifestPath:  filepath.Join(root, "registration", "manifest.json"),

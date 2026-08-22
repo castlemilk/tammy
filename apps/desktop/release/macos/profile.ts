@@ -54,6 +54,25 @@ export async function normalizeMacOSPackagedResourcePermissions(buildPath: strin
 
   await normalize(path.join(resources, "build"));
   await normalize(path.join(resources, "sqlcipher"));
+  const helper = path.join(resources, "sbr-helper", "darwin-arm64", "tammy-sbr-helper");
+  const helperStats = await lstat(helper);
+  if (!helperStats.isFile() || helperStats.isSymbolicLink()) {
+    throw new Error("MACOS_PACKAGED_RESOURCES_INVALID");
+  }
+  await chmod(helper, 0o500);
+  const sbrRoot = path.join(resources, "sbr");
+  await normalize(sbrRoot);
+  async function makeReadOnly(directory: string): Promise<void> {
+    for (const entry of await readdir(directory)) {
+      const candidate = path.join(directory, entry);
+      const stats = await lstat(candidate);
+      if (stats.isSymbolicLink()) throw new Error("MACOS_PACKAGED_RESOURCES_INVALID");
+      if (stats.isDirectory()) await makeReadOnly(candidate);
+      else if (stats.isFile()) await chmod(candidate, 0o444);
+      else throw new Error("MACOS_PACKAGED_RESOURCES_INVALID");
+    }
+  }
+  await makeReadOnly(sbrRoot);
 }
 
 function required(environment: NodeJS.ProcessEnv, key: string): string {
@@ -150,7 +169,15 @@ export function createMacOSReleaseProfile(
   const mainEntitlements = path.join(releaseRoot, "entitlements.mas.plist");
   const childEntitlements = path.join(releaseRoot, "entitlements.mas.child.plist");
   const coreEntitlements = path.join(releaseRoot, "entitlements.mas.core.plist");
+  const sbrHelperEntitlements = path.join(releaseRoot, "entitlements.mas.sbr-helper.plist");
   const coreSuffix = path.join("Contents", "Resources", "core", "darwin-arm64", "tammy-core");
+  const sbrHelperSuffix = path.join(
+    "Contents",
+    "Resources",
+    "sbr-helper",
+    "darwin-arm64",
+    "tammy-sbr-helper",
+  );
 
   return Object.freeze({
     appBundleId: MACOS_APP_BUNDLE_ID,
@@ -168,6 +195,7 @@ export function createMacOSReleaseProfile(
     sign: Object.freeze({
       entitlementsFor(file: string): string {
         if (file.endsWith(coreSuffix)) return coreEntitlements;
+        if (file.endsWith(sbrHelperSuffix)) return sbrHelperEntitlements;
         if (
           file.endsWith(`${path.sep}Tammy.app`) &&
           !file.includes(`${path.sep}Frameworks${path.sep}`)

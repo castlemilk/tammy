@@ -19,6 +19,8 @@ includes:
     taskfile: taskfiles/ci.yml
   sbr:
     taskfile: taskfiles/sbr.yml
+  sbr-helper:
+    taskfile: taskfiles/sbr-helper.yml
 
 tasks:
   default:
