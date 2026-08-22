@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
-import { chmod, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -19,6 +19,7 @@ const scenarioFiles = [
   "taskfiles/package.yml",
   "taskfiles/release.yml",
   "taskfiles/ci.yml",
+  "taskfiles/sbr.yml",
 ];
 const allowedExecutablePatterns = [
   /^mise install$/,
@@ -29,6 +30,7 @@ const allowedExecutablePatterns = [
   /^mise exec -- pnpm --dir apps\/desktop package$/,
   /^mise exec -- go test -race -tags tammy_sqlcipher \.\/services\/core\/internal\/storage\/sqlcipher\/\.\.\. -count=1$/,
   /^mise exec -- node scripts\/check-clean-tree\.mjs$/,
+  /^mise exec -- node scripts\/sbr-incomplete\.mjs (?:accounting-fresh|simulator|evte|doctor|registration|test|evidence)$/,
   /^git diff --check$/,
   /^mise exec -- task --(?:list|version)$/,
   /^mise exec -- node --version$/,
@@ -54,6 +56,7 @@ const packageDiagnosticLine =
 const rootBoundaryScript =
   'console.log("Tammy boundaries: local-first encrypted accounting; development-only BAS workpapers; no ATO submission; local packages are not production/App Store evidence; upload remains manual.")';
 const targetPreconditionScript = `const target = process.argv[1] ?? \`\${process.platform}/\${process.arch}\`; if (!new Set(["darwin/arm64", "win32/x64"]).has(target)) { console.error(\`UNSUPPORTED_SQLCIPHER_TARGET:\${target}\`); process.exit(1); }`;
+const sbrTargetPreconditionScript = `const target = \`\${process.platform}/\${process.arch}\`; if (target !== "darwin/arm64") { console.error(\`UNSUPPORTED_SBR_TARGET:\${target}\`); process.exit(1); }`;
 const setupTaskVersionScript = `let output=""; process.stdin.on("data", (chunk) => output += chunk); process.stdin.on("end", () => { if (output.trim() !== "3.52.0") { console.error(\`UNSUPPORTED_TASK_VERSION:\${output.trim()}\`); process.exit(1); } })`;
 const ciTaskVersionCommand = `task --version | node -e '${setupTaskVersionScript}'`;
 const macosReleaseTargetPreconditionScript = `const target = process.argv[1] ?? \`\${process.platform}/\${process.arch}\`; if (target !== "darwin/arm64") { console.error(\`UNSUPPORTED_MACOS_RELEASE_TARGET:\${target}\`); process.exit(1); }`;
@@ -286,6 +289,7 @@ test("documentation presents Task scenarios as the local command front door", as
 const allowedNodeScripts = new Set([
   rootBoundaryScript,
   targetPreconditionScript,
+  sbrTargetPreconditionScript,
   setupTaskVersionScript,
   macosReleaseTargetPreconditionScript,
   macosReleaseTargetVariableScript,
@@ -304,6 +308,31 @@ async function runTargetPrecondition(precondition, target, environment) {
   const match = precondition.sh.match(/^mise exec -- node -e '([\s\S]*)'$/);
   assert.ok(match, "the native precondition must be an extractable pinned Node command");
   return run("mise", ["exec", "--", "node", "-e", match[1], target], environment);
+}
+
+async function runSbrTargetPrecondition(precondition, platform, architecture) {
+  const match = precondition.sh.match(/^mise exec -- node -e '([\s\S]*)'$/);
+  assert.ok(match, "the SBR precondition must be an extractable pinned Node command");
+  const fixture = `Object.defineProperty(process, "platform", { value: ${JSON.stringify(platform)} }); Object.defineProperty(process, "arch", { value: ${JSON.stringify(architecture)} }); ${match[1]}`;
+  return run("mise", ["exec", "--", "node", "-e", fixture]);
+}
+
+const sensitiveSbrSurfacePattern =
+  /\b(?:credential[ _-]?(?:path|password)|private[ _-]?key[ _-]?path|product[ _-]?id|endpoint[ _-]?url|secret[ _-]?token)\b/i;
+
+function assertNoSensitiveSbrSurface(task) {
+  for (const [surface, value] of Object.entries({
+    commands: task.cmds,
+    preconditions: task.preconditions,
+    summary: task.summary,
+    variables: task.vars,
+  })) {
+    assert.doesNotMatch(
+      JSON.stringify(value ?? null),
+      sensitiveSbrSurfacePattern,
+      `SBR task ${surface} must not accept or print sensitive inputs`,
+    );
+  }
 }
 
 function assertAllowedShellAction(action) {
@@ -373,7 +402,8 @@ test("local Task front door preserves the safe development contract", async () =
   const setup = await readTaskfile("taskfiles/setup.yml");
   const dev = await readTaskfile("taskfiles/dev.yml");
   const diagnostics = await readTaskfile("taskfiles/diagnostics.yml");
-  for (const taskfile of [setup, dev, diagnostics]) assert.equal(taskfile.version, "3");
+  const sbr = await readTaskfile("taskfiles/sbr.yml");
+  for (const taskfile of [setup, dev, diagnostics, sbr]) assert.equal(taskfile.version, "3");
   const taskGraph = await collectTaskGraph("Taskfile.yml");
 
   const rootTasks = root.tasks ?? {};
@@ -389,6 +419,10 @@ test("local Task front door preserves the safe development contract", async () =
     "build",
     "package",
     "deploy:mas",
+    "sbr:doctor",
+    "sbr:registration:check",
+    "test:sbr",
+    "evidence:sbr",
   ]) {
     assert.match(rootTasks[taskName]?.desc ?? "", /.+/, `${taskName} requires a description`);
   }
@@ -399,6 +433,34 @@ test("local Task front door preserves the safe development contract", async () =
   assert.match(rootTasks.default.summary ?? "", /upload.*manual/i);
   assert.deepEqual(taskReferences(rootTasks.setup), ["setup:tools", "setup:deps", "setup:check"]);
   assert.deepEqual(taskReferences(rootTasks.dev), ["dev:launch"]);
+  const expectedSbrAliases = new Map([
+    ["dev:accounting", ["dev:launch", "taskfiles/dev.yml"]],
+    ["dev:accounting:fresh", ["sbr:launch-accounting-fresh", "taskfiles/dev.yml"]],
+    ["dev:sbr:simulator", ["sbr:launch-simulator", "taskfiles/dev.yml"]],
+    ["dev:sbr:evte", ["sbr:launch-evte", "taskfiles/dev.yml"]],
+    ["sbr:doctor", ["sbr:run-doctor", "Taskfile.yml"]],
+    ["sbr:registration:check", ["sbr:run-registration-check", "Taskfile.yml"]],
+    ["test:sbr", ["sbr:run-test", "Taskfile.yml"]],
+    ["evidence:sbr", ["sbr:run-evidence", "Taskfile.yml"]],
+  ]);
+  for (const [alias, [reference, taskfile]] of expectedSbrAliases) {
+    const entry = taskGraph.get(alias);
+    assert.ok(entry, `${alias} exists`);
+    assert.equal(entry.taskfile, taskfile, `${alias} belongs to its public namespace owner`);
+    assert.deepEqual(
+      taskReferences(entry.task).map((taskReference) =>
+        resolveTaskReference(entry.namespace, taskReference),
+      ),
+      [reference],
+      `${alias} exact delegation`,
+    );
+    assert.equal(entry.task.deps, undefined, `${alias} uses sequential task calls`);
+  }
+  assert.equal(
+    taskGraph.get("dev:accounting").task.preconditions?.[0]?.sh,
+    `mise exec -- node -e '${targetPreconditionScript}'`,
+    "ordinary accounting retains the supported SQLCipher host guard",
+  );
   assert.deepEqual(shellCommands(rootTasks.test), ["mise exec -- pnpm test"]);
   assert.equal(taskCommands(rootTasks.test).length, 1, "test delegates to pnpm test exactly once");
   for (const taskName of ["setup", "dev", "test"]) {
@@ -513,6 +575,170 @@ test("local Task front door preserves the safe development contract", async () =
   }
   assert.deepEqual(shellCommands(dev.tasks.core), ["mise exec -- pnpm core:build"]);
   assert.deepEqual(shellCommands(dev.tasks.launch), ["mise exec -- pnpm desktop:start"]);
+
+  const sbrLeaves = new Map([
+    ["launch-accounting-fresh", "accounting-fresh"],
+    ["launch-simulator", "simulator"],
+    ["launch-evte", "evte"],
+    ["run-doctor", "doctor"],
+    ["run-registration-check", "registration"],
+    ["run-test", "test"],
+    ["run-evidence", "evidence"],
+  ]);
+  assert.deepEqual(Object.keys(sbr.tasks ?? {}), [...sbrLeaves.keys()]);
+  assert.deepEqual(
+    [...sbrLeaves.keys()].filter((taskName) => sbr.tasks?.[taskName]?.internal !== true),
+    [],
+    "every SBR implementation leaf must be internal",
+  );
+  const publicTaskList = await run("mise", ["exec", "--", "task", "--list"]);
+  assert.equal(publicTaskList.code, 0, "the public Task list renders");
+  for (const taskName of sbrLeaves.keys()) {
+    assert.doesNotMatch(
+      publicTaskList.stdout,
+      new RegExp(`\\* sbr:${taskName.replaceAll(":", "\\:")}:`),
+      `sbr:${taskName} must be absent from the public Task list`,
+    );
+  }
+  for (const taskName of expectedSbrAliases.keys()) {
+    assert.match(
+      publicTaskList.stdout,
+      new RegExp(`\\* ${taskName.replaceAll(":", "\\:")}:`),
+      `${taskName} remains public`,
+    );
+  }
+  const guardedPublicSbrTasks = [
+    ...[...expectedSbrAliases.keys()].filter((taskName) => taskName !== "dev:accounting"),
+  ];
+  for (const taskName of guardedPublicSbrTasks) {
+    const task = taskGraph.get(taskName).task;
+    assert.equal(
+      task.preconditions?.[0]?.sh,
+      `mise exec -- node -e '${sbrTargetPreconditionScript}'`,
+      `${taskName} uses the exact real-host SBR guard`,
+    );
+    assert.equal(
+      task.preconditions?.[0]?.msg,
+      "UNSUPPORTED_SBR_TARGET:{{OS}}/{{ARCH}}",
+      `${taskName} exposes the exact real-host SBR guard error`,
+    );
+    assertNoSensitiveSbrSurface(task);
+  }
+  for (const [taskName, mode] of sbrLeaves) {
+    const task = sbr.tasks?.[taskName];
+    assert.match(task?.desc ?? "", /.+/, `sbr:${taskName} requires a description`);
+    assert.match(task?.summary ?? "", /.+/, `sbr:${taskName} requires a summary`);
+    assert.equal(task.deps, undefined, `sbr:${taskName} uses sequential commands`);
+    assert.equal(
+      task.preconditions?.[0]?.sh,
+      `mise exec -- node -e '${sbrTargetPreconditionScript}'`,
+      `sbr:${taskName} uses the exact real-host SBR guard`,
+    );
+    assert.equal(
+      task.preconditions?.[0]?.msg,
+      "UNSUPPORTED_SBR_TARGET:{{OS}}/{{ARCH}}",
+      `sbr:${taskName} exposes the exact real-host SBR guard error`,
+    );
+    assert.deepEqual(shellCommands(task), [`mise exec -- node scripts/sbr-incomplete.mjs ${mode}`]);
+    assertNoSensitiveSbrSurface(task);
+  }
+  const publicSbrSummaries = guardedPublicSbrTasks
+    .map((taskName) => taskGraph.get(taskName).task.summary ?? "")
+    .join("\n");
+  for (const pattern of [
+    /simulator.*synthetic.*network-disabled/i,
+    /EVTE.*non-production.*signed external inputs/i,
+    /no live credential.*accepted by Task/i,
+    /BAS.*preparation-only.*no submit.*lodge/i,
+    /production.*unavailable/i,
+  ]) {
+    assert.match(publicSbrSummaries, pattern, `public SBR summaries retain ${pattern}`);
+  }
+  for (const [surface, value] of [
+    ["commands", { cmds: ["print credential_path"] }],
+    ["variables", { vars: { credential_password: "unsafe" } }],
+    ["preconditions", { preconditions: [{ sh: "read private-key-path" }] }],
+    ["summary", { summary: "Accept Product ID and endpoint URL plus secret token." }],
+  ]) {
+    assert.throws(
+      () => assertNoSensitiveSbrSurface(value),
+      assert.AssertionError,
+      `negative ${surface} fixture must be rejected`,
+    );
+  }
+  for (const [platform, architecture, accepted] of [
+    ["darwin", "arm64", true],
+    ["linux", "x64", false],
+  ]) {
+    const result = await runSbrTargetPrecondition(
+      sbr.tasks["launch-simulator"].preconditions[0],
+      platform,
+      architecture,
+    );
+    assert.equal(result.code === 0, accepted, `SBR target ${platform}/${architecture}`);
+    if (!accepted) {
+      assert.equal(result.stdout, "");
+      assert.equal(result.stderr, `UNSUPPORTED_SBR_TARGET:${platform}/${architecture}\n`);
+    }
+  }
+  const actualSbrTarget = `${process.platform}/${process.arch}`;
+  const expectedSbrFailure =
+    actualSbrTarget === "darwin/arm64"
+      ? (mode) => new RegExp(`SBR_IMPLEMENTATION_INCOMPLETE:${mode}`)
+      : () => new RegExp(`UNSUPPORTED_SBR_TARGET:${actualSbrTarget}`);
+  const expectedSbrFailureCode = (mode) =>
+    actualSbrTarget === "darwin/arm64"
+      ? `SBR_IMPLEMENTATION_INCOMPLETE:${mode}`
+      : `UNSUPPORTED_SBR_TARGET:${actualSbrTarget}`;
+  const sbrOutputDirectory = await mkdtemp(path.join("/private/tmp", "tammy-sbr-task-output-"));
+  try {
+    for (const [taskName, mode] of [
+      ["dev:accounting:fresh", "accounting-fresh"],
+      ["dev:sbr:simulator", "simulator"],
+      ["dev:sbr:evte", "evte"],
+      ["sbr:doctor", "doctor"],
+      ["sbr:registration:check", "registration"],
+      ["test:sbr", "test"],
+      ["evidence:sbr", "evidence"],
+    ]) {
+      const result = await runTask(taskName, { TAMMY_SBR_EVIDENCE_DIR: sbrOutputDirectory });
+      assert.notEqual(result.code, 0, `${taskName} fails before an SBR prerequisite owner`);
+      assert.match(
+        `${result.stdout}${result.stderr}`,
+        expectedSbrFailure(mode),
+        `${taskName} exposes its host-appropriate stable failure`,
+      );
+      assert.deepEqual(
+        `${result.stdout}${result.stderr}`.match(
+          /(?:SBR_IMPLEMENTATION_INCOMPLETE|UNSUPPORTED_SBR_TARGET):[^\s]+/g,
+        ),
+        [expectedSbrFailureCode(mode)],
+        `${taskName} exposes exactly one stable failure code`,
+      );
+      assert.doesNotMatch(
+        `${result.stdout}${result.stderr}`,
+        /desktop:start|launch-local-scenario|check-sbr-readiness|write-sbr-evidence/i,
+        `${taskName} launches no future owner or Electron child`,
+      );
+      assert.deepEqual(
+        await readdir(sbrOutputDirectory),
+        [],
+        `${taskName} creates no evidence bundle`,
+      );
+    }
+    const callerOverride = await runTask("dev:sbr:simulator", { ARCH: "x64", OS: "linux" }, [
+      "ARCH=x64",
+      "OS=linux",
+    ]);
+    assert.notEqual(callerOverride.code, 0);
+    assert.match(
+      `${callerOverride.stdout}${callerOverride.stderr}`,
+      expectedSbrFailure("simulator"),
+      "caller-controlled OS and ARCH values cannot change the real SBR target guard",
+    );
+  } finally {
+    await rm(sbrOutputDirectory, { force: true, recursive: true });
+  }
 
   const testTasks = (await readTaskfile("taskfiles/test.yml")).tasks;
   for (const taskName of [

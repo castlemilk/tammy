@@ -24,3 +24,54 @@ tasks:
         msg: The local SQLCipher development target is unsupported.
     cmds:
       - mise exec -- pnpm desktop:start
+
+  accounting:
+    desc: Launch the current local accounting development application.
+    summary: |
+      Launches the existing local accounting application. BAS remains preparation-only
+      with no submit or lodge action, and production SBR is unavailable.
+    preconditions:
+      - sh: >-
+          mise exec -- node -e 'const target = process.argv[1] ?? `${process.platform}/${process.arch}`; if (!new Set(["darwin/arm64", "win32/x64"]).has(target)) { console.error(`UNSUPPORTED_SQLCIPHER_TARGET:${target}`); process.exit(1); }'
+        msg: Local accounting development requires darwin/arm64 or win32/x64.
+    cmds:
+      - task: launch
+
+  accounting:fresh:
+    desc: Request an isolated fresh accounting development scenario.
+    summary: |
+      The simulator is synthetic and network-disabled. EVTE is non-production and requires signed external inputs.
+      No live credential is accepted by Task. BAS remains preparation-only with no submit or lodge action.
+      Production SBR is unavailable, and this scenario fails closed until its isolated launcher exists.
+    preconditions:
+      - sh: >-
+          mise exec -- node -e 'const target = `${process.platform}/${process.arch}`; if (target !== "darwin/arm64") { console.error(`UNSUPPORTED_SBR_TARGET:${target}`); process.exit(1); }'
+        msg: UNSUPPORTED_SBR_TARGET:{{OS}}/{{ARCH}}
+    cmds:
+      - task: :sbr:launch-accounting-fresh
+
+  sbr:simulator:
+    desc: Request the synthetic network-disabled SBR simulator scenario.
+    summary: |
+      The simulator is synthetic and network-disabled. EVTE is non-production and requires signed external inputs.
+      No live credential is accepted by Task. BAS remains preparation-only with no submit or lodge action.
+      Production SBR is unavailable, and this scenario fails closed until its owner exists.
+    preconditions:
+      - sh: >-
+          mise exec -- node -e 'const target = `${process.platform}/${process.arch}`; if (target !== "darwin/arm64") { console.error(`UNSUPPORTED_SBR_TARGET:${target}`); process.exit(1); }'
+        msg: UNSUPPORTED_SBR_TARGET:{{OS}}/{{ARCH}}
+    cmds:
+      - task: :sbr:launch-simulator
+
+  sbr:evte:
+    desc: Request the non-production SBR EVTE readiness scenario.
+    summary: |
+      The simulator is synthetic and network-disabled. EVTE is non-production and requires signed external inputs.
+      No live credential is accepted by Task. BAS remains preparation-only with no submit or lodge action.
+      Production SBR is unavailable, and this scenario fails closed until its owner exists.
+    preconditions:
+      - sh: >-
+          mise exec -- node -e 'const target = `${process.platform}/${process.arch}`; if (target !== "darwin/arm64") { console.error(`UNSUPPORTED_SBR_TARGET:${target}`); process.exit(1); }'
+        msg: UNSUPPORTED_SBR_TARGET:{{OS}}/{{ARCH}}
+    cmds:
+      - task: :sbr:launch-evte
