@@ -16,3 +16,5 @@ apps/desktop/resources/core/*
 apps/desktop/resources/build/*
 !apps/desktop/resources/build/.gitkeep
 apps/desktop/resources/sqlcipher/
+config/sbr/evte/*
+!config/sbr/evte/.gitkeep
