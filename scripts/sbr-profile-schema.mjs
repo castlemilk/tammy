@@ -26,26 +26,83 @@ const CANONICAL_PUBLIC_KEY_PEM =
 const UTC_TIMESTAMP =
   /^(\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])T([01]\d|2[0-3]):([0-5]\d):([0-5]\d)Z$/;
 const STRICT_BASE64_SIGNATURE = /^[A-Za-z0-9+/]{86}==\n$/;
+const TrustedDate = Date;
+const trustedDateGetTime = Date.prototype.getTime;
+const trustedDateToISOString = Date.prototype.toISOString;
+const trustedDateParse = Date.parse;
+const trustedReflectApply = Reflect.apply;
+const TrustedBuffer = Buffer;
+const trustedBufferFrom = Buffer.from;
+const trustedBufferByteLength = Buffer.byteLength;
+const TypedArrayPrototype = Object.getPrototypeOf(Uint8Array.prototype);
+const trustedTypedArrayByteLength = Object.getOwnPropertyDescriptor(
+  TypedArrayPrototype,
+  "byteLength",
+).get;
 
 function invalid(reason) {
   return new Error(`SBR_PROFILE_INVALID:${reason}`);
 }
 
+function copyByteInput(value, inputError, maximumBytes, tooLargeError) {
+  let byteLength;
+  try {
+    if (!(value instanceof Uint8Array)) {
+      throw invalid(inputError);
+    }
+    if (!ArrayBuffer.isView(value)) throw invalid("CANONICALIZATION");
+    byteLength = trustedReflectApply(trustedTypedArrayByteLength, value, []);
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("SBR_PROFILE_INVALID:")) {
+      throw error;
+    }
+    throw invalid("CANONICALIZATION");
+  }
+  if (byteLength > maximumBytes) throw invalid(tooLargeError);
+  try {
+    const bytes = trustedReflectApply(trustedBufferFrom, TrustedBuffer, [value]);
+    if (trustedReflectApply(trustedTypedArrayByteLength, bytes, []) !== byteLength) {
+      throw invalid("CANONICALIZATION");
+    }
+    return bytes;
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("SBR_PROFILE_INVALID:")) {
+      throw error;
+    }
+    throw invalid("CANONICALIZATION");
+  }
+}
+
+function copyBoundedString(value, maximumBytes, tooLargeError) {
+  let byteLength;
+  try {
+    byteLength = trustedReflectApply(trustedBufferByteLength, TrustedBuffer, [value, "utf8"]);
+  } catch {
+    throw invalid("CANONICALIZATION");
+  }
+  if (byteLength > maximumBytes) throw invalid(tooLargeError);
+  try {
+    const bytes = trustedReflectApply(trustedBufferFrom, TrustedBuffer, [value]);
+    if (bytes.byteLength !== byteLength) throw invalid("CANONICALIZATION");
+    return bytes;
+  } catch {
+    throw invalid("CANONICALIZATION");
+  }
+}
+
 function decodeProfile(rawProfile) {
   if (typeof rawProfile === "string") {
-    if (Buffer.byteLength(rawProfile) > MAX_PROFILE_BYTES) {
+    if (
+      trustedReflectApply(trustedBufferByteLength, TrustedBuffer, [rawProfile, "utf8"]) >
+      MAX_PROFILE_BYTES
+    ) {
       throw invalid("PROFILE_TOO_LARGE");
     }
     return rawProfile;
   }
-  if (!(rawProfile instanceof Uint8Array)) {
-    throw invalid("PROFILE_INPUT");
-  }
-  if (rawProfile.byteLength > MAX_PROFILE_BYTES) {
-    throw invalid("PROFILE_TOO_LARGE");
-  }
+  const bytes = copyByteInput(rawProfile, "PROFILE_INPUT", MAX_PROFILE_BYTES, "PROFILE_TOO_LARGE");
   try {
-    return new TextDecoder("utf-8", { fatal: true }).decode(rawProfile);
+    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
   } catch {
     throw invalid("PROFILE_UTF8");
   }
@@ -226,11 +283,22 @@ function parseTimestamp(value, field) {
   if (typeof value !== "string" || !UTC_TIMESTAMP.test(value)) {
     throw invalid(`${field}_TIMESTAMP`);
   }
-  const milliseconds = Date.parse(value);
+  let milliseconds;
+  try {
+    milliseconds = trustedReflectApply(trustedDateParse, TrustedDate, [value]);
+  } catch {
+    throw invalid(`${field}_TIMESTAMP`);
+  }
   if (!Number.isFinite(milliseconds)) {
     throw invalid(`${field}_TIMESTAMP`);
   }
-  const canonical = new Date(milliseconds).toISOString().replace(".000Z", "Z");
+  let canonical;
+  try {
+    const date = new TrustedDate(milliseconds);
+    canonical = trustedReflectApply(trustedDateToISOString, date, []).replace(".000Z", "Z");
+  } catch {
+    throw invalid(`${field}_TIMESTAMP`);
+  }
   if (canonical !== value) {
     throw invalid(`${field}_TIMESTAMP`);
   }
@@ -317,7 +385,12 @@ function validateProfileData(profile, now) {
   }
   const issuedAt = parseTimestamp(profile.issued_at, "ISSUED_AT");
   const expiresAt = parseTimestamp(profile.expires_at, "EXPIRES_AT");
-  const nowMilliseconds = now instanceof Date ? now.getTime() : Number.NaN;
+  let nowMilliseconds;
+  try {
+    nowMilliseconds = trustedReflectApply(trustedDateGetTime, now, []);
+  } catch {
+    throw invalid("CLOCK");
+  }
   if (!Number.isFinite(nowMilliseconds)) {
     throw invalid("CLOCK");
   }
@@ -332,7 +405,7 @@ function validateProfileData(profile, now) {
   }
 }
 
-export function parseAndValidateSbrProfile(rawProfile, { now = new Date() } = {}) {
+export function parseAndValidateSbrProfile(rawProfile, { now = new TrustedDate() } = {}) {
   const raw = decodeProfile(rawProfile);
   assertJsonStructure(raw);
   let profile;
@@ -345,7 +418,7 @@ export function parseAndValidateSbrProfile(rawProfile, { now = new Date() } = {}
   return Object.freeze(profile);
 }
 
-export function canonicalizeSbrProfile(profile, { now = new Date() } = {}) {
+export function canonicalizeSbrProfile(profile, { now = new TrustedDate() } = {}) {
   try {
     const snapshot = dataOnlyProfileSnapshot(profile);
     validateProfileData(snapshot, now);
@@ -353,20 +426,17 @@ export function canonicalizeSbrProfile(profile, { now = new Date() } = {}) {
     if (typeof canonical !== "string") {
       throw invalid("CANONICALIZATION");
     }
-    return Buffer.from(canonical, "utf8");
+    return trustedReflectApply(trustedBufferFrom, TrustedBuffer, [canonical, "utf8"]);
   } catch {
     throw invalid("CANONICALIZATION");
   }
 }
 
 function decodePublicKey(publicKey) {
-  if (typeof publicKey !== "string" && !(publicKey instanceof Uint8Array)) {
-    throw invalid("PUBLIC_KEY_INPUT");
-  }
-  const bytes = typeof publicKey === "string" ? Buffer.from(publicKey) : Buffer.from(publicKey);
-  if (bytes.byteLength > MAX_PUBLIC_KEY_BYTES) {
-    throw invalid("PUBLIC_KEY_TOO_LARGE");
-  }
+  const bytes =
+    typeof publicKey === "string"
+      ? copyBoundedString(publicKey, MAX_PUBLIC_KEY_BYTES, "PUBLIC_KEY_TOO_LARGE")
+      : copyByteInput(publicKey, "PUBLIC_KEY_INPUT", MAX_PUBLIC_KEY_BYTES, "PUBLIC_KEY_TOO_LARGE");
   let pem;
   try {
     pem = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
@@ -394,13 +464,10 @@ function decodePublicKey(publicKey) {
 }
 
 function decodeSignature(signature) {
-  if (typeof signature !== "string" && !(signature instanceof Uint8Array)) {
-    throw invalid("SIGNATURE_ENCODING");
-  }
-  const bytes = typeof signature === "string" ? Buffer.from(signature) : Buffer.from(signature);
-  if (bytes.byteLength > MAX_SIGNATURE_BYTES) {
-    throw invalid("SIGNATURE_TOO_LARGE");
-  }
+  const bytes =
+    typeof signature === "string"
+      ? copyBoundedString(signature, MAX_SIGNATURE_BYTES, "SIGNATURE_TOO_LARGE")
+      : copyByteInput(signature, "SIGNATURE_ENCODING", MAX_SIGNATURE_BYTES, "SIGNATURE_TOO_LARGE");
   if (bytes.some((byte) => byte > 0x7f)) {
     throw invalid("SIGNATURE_ENCODING");
   }
@@ -409,14 +476,22 @@ function decodeSignature(signature) {
   if (!STRICT_BASE64_SIGNATURE.test(encoded)) {
     throw invalid("SIGNATURE_ENCODING");
   }
-  const decoded = Buffer.from(encoded.slice(0, -1), "base64");
+  const decoded = trustedReflectApply(trustedBufferFrom, TrustedBuffer, [
+    encoded.slice(0, -1),
+    "base64",
+  ]);
   if (decoded.byteLength !== 64 || `${decoded.toString("base64")}\n` !== encoded) {
     throw invalid("SIGNATURE_ENCODING");
   }
   return decoded;
 }
 
-export function verifySbrProfileSignature({ now = new Date(), profile, publicKey, signature }) {
+export function verifySbrProfileSignature({
+  now = new TrustedDate(),
+  profile,
+  publicKey,
+  signature,
+}) {
   const verified = verify(
     null,
     canonicalizeSbrProfile(profile, { now }),
@@ -430,7 +505,7 @@ export function verifySbrProfileSignature({ now = new Date(), profile, publicKey
 }
 
 export function authenticateSbrProfileBytes({
-  now = new Date(),
+  now = new TrustedDate(),
   profileBytes,
   publicKey,
   signatureBytes,
@@ -546,7 +621,7 @@ async function readOwnedRegularFile(filePath, maximumBytes, dependencies) {
 
 export async function loadAuthenticatedSbrProfile({
   dependencies = {},
-  now = new Date(),
+  now = new TrustedDate(),
   profilePath,
   publicKey,
   signaturePath,

@@ -27,9 +27,47 @@ const MANIFEST_KEYS = ["component_name", "component_version", "files", "schema_v
 const FILE_KEYS = ["byte_length", "path", "sha256"];
 const IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9._+-]{0,63}$/;
 const LOWERCASE_SHA256 = /^[0-9a-f]{64}$/;
+const TrustedBuffer = Buffer;
+const trustedBufferFrom = Buffer.from;
+const trustedBufferByteLength = Buffer.byteLength;
+const trustedReflectApply = Reflect.apply;
+const TypedArrayPrototype = Object.getPrototypeOf(Uint8Array.prototype);
+const trustedTypedArrayByteLength = Object.getOwnPropertyDescriptor(
+  TypedArrayPrototype,
+  "byteLength",
+).get;
 
 function invalid(reason) {
   return new Error(`SBR_COMPONENT_INVALID:${reason}`);
+}
+
+function copyByteInput(value, inputError, maximumBytes, tooLargeError) {
+  let byteLength;
+  try {
+    if (!(value instanceof Uint8Array)) {
+      throw invalid(inputError);
+    }
+    if (!ArrayBuffer.isView(value)) throw invalid("CANONICALIZATION");
+    byteLength = trustedReflectApply(trustedTypedArrayByteLength, value, []);
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("SBR_COMPONENT_INVALID:")) {
+      throw error;
+    }
+    throw invalid("CANONICALIZATION");
+  }
+  if (byteLength > maximumBytes) throw invalid(tooLargeError);
+  try {
+    const bytes = trustedReflectApply(trustedBufferFrom, TrustedBuffer, [value]);
+    if (trustedReflectApply(trustedTypedArrayByteLength, bytes, []) !== byteLength) {
+      throw invalid("CANONICALIZATION");
+    }
+    return bytes;
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("SBR_COMPONENT_INVALID:")) {
+      throw error;
+    }
+    throw invalid("CANONICALIZATION");
+  }
 }
 
 function hasControlCharacter(value) {
@@ -97,7 +135,8 @@ function validateIdentifier(value, field) {
   }
   if (
     typeof value !== "string" ||
-    Buffer.byteLength(value, "utf8") > MAX_COMPONENT_IDENTIFIER_BYTES ||
+    trustedReflectApply(trustedBufferByteLength, TrustedBuffer, [value, "utf8"]) >
+      MAX_COMPONENT_IDENTIFIER_BYTES ||
     !IDENTIFIER.test(value)
   ) {
     throw invalid(field);
@@ -112,7 +151,8 @@ function validateRelativePath(value) {
   if (
     value.length === 0 ||
     value !== value.normalize("NFC") ||
-    Buffer.byteLength(value, "utf8") > MAX_COMPONENT_PATH_BYTES ||
+    trustedReflectApply(trustedBufferByteLength, TrustedBuffer, [value, "utf8"]) >
+      MAX_COMPONENT_PATH_BYTES ||
     value.startsWith("/") ||
     value.endsWith("/") ||
     value.includes("\\") ||
@@ -130,7 +170,10 @@ function validateRelativePath(value) {
 }
 
 function compareUtf8(left, right) {
-  return Buffer.compare(Buffer.from(left, "utf8"), Buffer.from(right, "utf8"));
+  return Buffer.compare(
+    trustedReflectApply(trustedBufferFrom, TrustedBuffer, [left, "utf8"]),
+    trustedReflectApply(trustedBufferFrom, TrustedBuffer, [right, "utf8"]),
+  );
 }
 
 function sortUtf8WithoutPrototypeMethods(values) {
@@ -319,7 +362,7 @@ function canonicalManifestBytes(manifest) {
     if (typeof canonical !== "string") {
       throw invalid("CANONICALIZATION");
     }
-    return Buffer.from(canonical, "utf8");
+    return trustedReflectApply(trustedBufferFrom, TrustedBuffer, [canonical, "utf8"]);
   } catch (error) {
     if (error instanceof Error && error.message.startsWith("SBR_COMPONENT_INVALID:")) {
       throw error;
@@ -378,19 +421,22 @@ function readCrossHash(source, errorCode) {
 
 function decodeManifest(rawManifest) {
   if (typeof rawManifest === "string") {
-    if (Buffer.byteLength(rawManifest, "utf8") > MAX_COMPONENT_MANIFEST_BYTES) {
+    if (
+      trustedReflectApply(trustedBufferByteLength, TrustedBuffer, [rawManifest, "utf8"]) >
+      MAX_COMPONENT_MANIFEST_BYTES
+    ) {
       throw invalid("MANIFEST_TOO_LARGE");
     }
     return rawManifest;
   }
-  if (!(rawManifest instanceof Uint8Array)) {
-    throw invalid("MANIFEST_INPUT");
-  }
-  if (rawManifest.byteLength > MAX_COMPONENT_MANIFEST_BYTES) {
-    throw invalid("MANIFEST_TOO_LARGE");
-  }
+  const bytes = copyByteInput(
+    rawManifest,
+    "MANIFEST_INPUT",
+    MAX_COMPONENT_MANIFEST_BYTES,
+    "MANIFEST_TOO_LARGE",
+  );
   try {
-    return new TextDecoder("utf-8", { fatal: true }).decode(rawManifest);
+    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
   } catch {
     throw invalid("MANIFEST_UTF8");
   }

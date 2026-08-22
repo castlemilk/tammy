@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "environment": "EVTE",
+  "profile_id": "placeholder-endpoints",
+  "revision": 1,
+  "issued_at": "2026-01-01T00:00:00Z",
+  "expires_at": "2099-12-31T23:59:59Z",
+  "services": [
+    {
+      "service_id": "placeholder.service.invalid",
+      "endpoint_id": "placeholder-endpoint",
+      "endpoint_url": "https://sbr-endpoint.invalid/placeholder",
+      "tls_server_name": "sbr-endpoint.invalid",
+      "certificate_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ]
+}
