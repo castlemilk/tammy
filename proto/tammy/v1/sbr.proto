@@ -1,0 +1,393 @@
+syntax = "proto3";
+
+package tammy.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+import "tammy/v1/common.proto";
+
+option go_package = "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1";
+
+// SbrEnvironment is the closed non-production SBR runtime environment.
+enum SbrEnvironment {
+  // SBR_ENVIRONMENT_UNSPECIFIED indicates that no runtime environment was selected.
+  SBR_ENVIRONMENT_UNSPECIFIED = 0;
+
+  // SBR_ENVIRONMENT_SIMULATOR is the offline deterministic Tammy simulator.
+  SBR_ENVIRONMENT_SIMULATOR = 1;
+
+  // SBR_ENVIRONMENT_EVTE is the external vendor test environment.
+  SBR_ENVIRONMENT_EVTE = 2;
+}
+
+// SbrReadinessState is the furthest permitted non-production readiness stage.
+enum SbrReadinessState {
+  // SBR_READINESS_STATE_UNAVAILABLE blocks all SBR readiness activity.
+  SBR_READINESS_STATE_UNAVAILABLE = 0;
+
+  // SBR_READINESS_STATE_READY_FOR_SIMULATOR permits only local simulator fixtures.
+  SBR_READINESS_STATE_READY_FOR_SIMULATOR = 1;
+
+  // SBR_READINESS_STATE_READY_FOR_EVTE_PRE_CONFORMANCE permits pre-conformance EVTE checks.
+  SBR_READINESS_STATE_READY_FOR_EVTE_PRE_CONFORMANCE = 2;
+
+  // SBR_READINESS_STATE_READY_FOR_EVTE_POST_CONFORMANCE permits post-conformance EVTE checks.
+  SBR_READINESS_STATE_READY_FOR_EVTE_POST_CONFORMANCE = 3;
+}
+
+// MachineCredentialState is the safe machine-credential projection.
+enum MachineCredentialState {
+  // MACHINE_CREDENTIAL_STATE_MISSING indicates that no credential is stored.
+  MACHINE_CREDENTIAL_STATE_MISSING = 0;
+
+  // MACHINE_CREDENTIAL_STATE_PRESENT indicates that the credential is usable.
+  MACHINE_CREDENTIAL_STATE_PRESENT = 1;
+
+  // MACHINE_CREDENTIAL_STATE_INACCESSIBLE indicates that protected storage denied access.
+  MACHINE_CREDENTIAL_STATE_INACCESSIBLE = 2;
+
+  // MACHINE_CREDENTIAL_STATE_INCOMPATIBLE indicates that the credential cannot be used by this component.
+  MACHINE_CREDENTIAL_STATE_INCOMPATIBLE = 3;
+
+  // MACHINE_CREDENTIAL_STATE_REVOKED indicates that the credential has been revoked.
+  MACHINE_CREDENTIAL_STATE_REVOKED = 4;
+
+  // MACHINE_CREDENTIAL_STATE_EXPIRED indicates that the credential is outside its validity period.
+  MACHINE_CREDENTIAL_STATE_EXPIRED = 5;
+
+  // MACHINE_CREDENTIAL_STATE_ABN_MISMATCH indicates that the credential does not bind the derived organisation.
+  MACHINE_CREDENTIAL_STATE_ABN_MISMATCH = 6;
+}
+
+// ProductIdState is the safe EVTE Product ID projection.
+enum ProductIdState {
+  // PRODUCT_ID_STATE_UNSPECIFIED indicates that no state was supplied.
+  PRODUCT_ID_STATE_UNSPECIFIED = 0;
+
+  // PRODUCT_ID_STATE_PRESENT indicates that the scoped value exists in protected storage.
+  PRODUCT_ID_STATE_PRESENT = 1;
+
+  // PRODUCT_ID_STATE_MISSING indicates that no scoped value is stored.
+  PRODUCT_ID_STATE_MISSING = 2;
+
+  // PRODUCT_ID_STATE_INACCESSIBLE indicates that protected storage denied access.
+  PRODUCT_ID_STATE_INACCESSIBLE = 3;
+}
+
+// SbrReadinessFixtureFailure selects one closed transport failure for the fixed fixture.
+enum SbrReadinessFixtureFailure {
+  // SBR_READINESS_FIXTURE_FAILURE_UNSPECIFIED indicates no transport failure.
+  SBR_READINESS_FIXTURE_FAILURE_UNSPECIFIED = 0;
+
+  // SBR_READINESS_FIXTURE_FAILURE_NOT_STARTED indicates that transmission did not begin.
+  SBR_READINESS_FIXTURE_FAILURE_NOT_STARTED = 1;
+
+  // SBR_READINESS_FIXTURE_FAILURE_MAYBE_SENT indicates uncertain transmission completion.
+  SBR_READINESS_FIXTURE_FAILURE_MAYBE_SENT = 2;
+
+  // SBR_READINESS_FIXTURE_FAILURE_MALFORMED_RESPONSE indicates an invalid helper response.
+  SBR_READINESS_FIXTURE_FAILURE_MALFORMED_RESPONSE = 3;
+
+  // SBR_READINESS_FIXTURE_FAILURE_HELPER_DEATH indicates helper termination during the fixture.
+  SBR_READINESS_FIXTURE_FAILURE_HELPER_DEATH = 4;
+
+  // SBR_READINESS_FIXTURE_FAILURE_TIMEOUT indicates that the bounded fixture deadline elapsed.
+  SBR_READINESS_FIXTURE_FAILURE_TIMEOUT = 5;
+
+  // SBR_READINESS_FIXTURE_FAILURE_UNKNOWN indicates a bounded unclassified transport failure.
+  SBR_READINESS_FIXTURE_FAILURE_UNKNOWN = 6;
+}
+
+// MachineCredentialStatus contains redacted metadata only.
+message MachineCredentialStatus {
+  // state is the safe current credential state.
+  MachineCredentialState state = 1 [(buf.validate.field).enum.defined_only = true];
+
+  // fingerprint is an opaque bounded credential fingerprint.
+  string fingerprint = 2 [(buf.validate.field).string.max_len = 128];
+
+  // issuer is bounded certificate issuer metadata.
+  string issuer = 3 [(buf.validate.field).string.max_len = 512];
+
+  // serial is bounded certificate serial metadata.
+  string serial = 4 [(buf.validate.field).string.max_len = 128];
+
+  // created_at is present when safe certificate metadata is available.
+  google.protobuf.Timestamp created_at = 5;
+
+  // expires_at is present when safe certificate metadata is available.
+  google.protobuf.Timestamp expires_at = 6;
+
+  // component_version identifies the compatible signed helper component.
+  string component_version = 7 [(buf.validate.field).string.max_len = 128];
+}
+
+// SbrReadiness is a redacted non-production readiness projection.
+message SbrReadiness {
+  // environment is the active signed-profile environment.
+  SbrEnvironment environment = 1 [(buf.validate.field).enum.defined_only = true];
+
+  // state is the furthest permitted readiness stage.
+  SbrReadinessState state = 2 [(buf.validate.field).enum.defined_only = true];
+
+  // machine_credential_state is the safe credential state.
+  MachineCredentialState machine_credential_state = 3 [(buf.validate.field).enum.defined_only = true];
+
+  // product_id_state is the safe EVTE Product ID state.
+  ProductIdState product_id_state = 4 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+
+  // readiness_codes contains bounded stable diagnostic codes.
+  repeated string readiness_codes = 5 [(buf.validate.field).repeated = {
+    max_items: 32
+    unique: true
+    items: {
+      string: {
+        min_len: 1
+        max_len: 96
+        pattern: "^[A-Z][A-Z0-9_]*$"
+      }
+    }
+  }];
+
+  // credential_fingerprint is an opaque bounded credential fingerprint.
+  string credential_fingerprint = 6 [(buf.validate.field).string.max_len = 128];
+
+  // profile_fingerprint is the verified runtime-profile fingerprint.
+  string profile_fingerprint = 7 [(buf.validate.field).string.max_len = 128];
+
+  // component_fingerprint is the verified helper-component fingerprint.
+  string component_fingerprint = 8 [(buf.validate.field).string.max_len = 128];
+}
+
+// SbrReadinessFixtureResult is the redacted result of one fixed simulator fixture.
+message SbrReadinessFixtureResult {
+  // fixture_id echoes the sole supported fixed fixture identifier.
+  string fixture_id = 1 [(buf.validate.field).string.const = "SIM-SBR-READINESS-V1"];
+
+  // failure_case echoes the selected closed failure fixture.
+  SbrReadinessFixtureFailure failure_case = 2 [(buf.validate.field).enum.defined_only = true];
+
+  // succeeded reports whether the fixed expectation was observed.
+  bool succeeded = 3;
+
+  // readiness is the resulting redacted readiness projection.
+  SbrReadiness readiness = 4 [(buf.validate.field).required = true];
+}
+
+// GetSbrReadinessRequest reads readiness for the server-derived workspace and organisation.
+message GetSbrReadinessRequest {
+  // authentication identifies the current workspace principal.
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+}
+
+// GetSbrReadinessResponse returns redacted readiness metadata only.
+message GetSbrReadinessResponse {
+  // readiness is the current server-derived projection.
+  SbrReadiness readiness = 1 [(buf.validate.field).required = true];
+}
+
+// ImportMachineCredentialRequest imports one file selected by trusted Electron main.
+message ImportMachineCredentialRequest {
+  // command_context carries authorization, idempotency, and any required fresh factor.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+
+  // selected_local_path is exactly one absolute local path supplied by trusted Electron main.
+  string selected_local_path = 2 [(buf.validate.field).string = {
+    min_bytes: 1
+    max_bytes: 4096
+    pattern: "^/"
+  }];
+
+  // security_scoped_bookmark is optional and meaningful only in a Mac App Store build.
+  optional bytes security_scoped_bookmark = 3 [(buf.validate.field).bytes = {
+    min_len: 1
+    max_len: 65536
+  }];
+
+  // password is transient credential-opening material and is never logged or echoed.
+  bytes password = 4 [(buf.validate.field).bytes.max_len = 1024];
+}
+
+// ImportMachineCredentialResponse returns redacted credential metadata only.
+message ImportMachineCredentialResponse {
+  // credential_status is the safe stored credential projection.
+  MachineCredentialStatus credential_status = 1 [(buf.validate.field).required = true];
+}
+
+// GetMachineCredentialStatusRequest reads safe credential metadata.
+message GetMachineCredentialStatusRequest {
+  // authentication identifies the current workspace principal.
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+}
+
+// GetMachineCredentialStatusResponse returns redacted credential metadata only.
+message GetMachineCredentialStatusResponse {
+  // credential_status is the safe current credential projection.
+  MachineCredentialStatus credential_status = 1 [(buf.validate.field).required = true];
+}
+
+// UnlockMachineCredentialRequest unlocks the server-derived stored credential.
+message UnlockMachineCredentialRequest {
+  // command_context carries authorization, idempotency, and any required fresh factor.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+
+  // password is transient credential-opening material and is never logged or echoed.
+  bytes password = 2 [(buf.validate.field).bytes.max_len = 1024];
+}
+
+// UnlockMachineCredentialResponse returns redacted credential metadata only.
+message UnlockMachineCredentialResponse {
+  // credential_status is the safe unlocked credential projection.
+  MachineCredentialStatus credential_status = 1 [(buf.validate.field).required = true];
+}
+
+// ReplaceMachineCredentialRequest replaces the stored credential from one trusted selection.
+message ReplaceMachineCredentialRequest {
+  // command_context carries authorization, idempotency, and any required fresh factor.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+
+  // selected_local_path is exactly one absolute local path supplied by trusted Electron main.
+  string selected_local_path = 2 [(buf.validate.field).string = {
+    min_bytes: 1
+    max_bytes: 4096
+    pattern: "^/"
+  }];
+
+  // security_scoped_bookmark is optional and meaningful only in a Mac App Store build.
+  optional bytes security_scoped_bookmark = 3 [(buf.validate.field).bytes = {
+    min_len: 1
+    max_len: 65536
+  }];
+
+  // password is transient credential-opening material and is never logged or echoed.
+  bytes password = 4 [(buf.validate.field).bytes.max_len = 1024];
+}
+
+// ReplaceMachineCredentialResponse returns redacted credential metadata only.
+message ReplaceMachineCredentialResponse {
+  // credential_status is the safe replacement projection.
+  MachineCredentialStatus credential_status = 1 [(buf.validate.field).required = true];
+}
+
+// RemoveMachineCredentialRequest removes the server-derived stored credential.
+message RemoveMachineCredentialRequest {
+  // command_context carries authorization, idempotency, and any required fresh factor.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+}
+
+// RemoveMachineCredentialResponse returns the terminal redacted credential state.
+message RemoveMachineCredentialResponse {
+  // credential_status is the safe terminal credential projection.
+  MachineCredentialStatus credential_status = 1 [(buf.validate.field).required = true];
+}
+
+// ImportSbrProductIdRequest stores one transient value for one exact EVTE product/service pair.
+message ImportSbrProductIdRequest {
+  // command_context carries authorization, idempotency, and any required fresh factor.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+
+  // product_id_value is transient protected-storage material and is never logged or echoed.
+  string product_id_value = 2 [(buf.validate.field).string = {
+    min_bytes: 1
+    max_bytes: 1024
+  }];
+
+  // evte_product_identifier is the exact bounded EVTE product identifier.
+  string evte_product_identifier = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+  }];
+
+  // evte_service_identifier is the exact bounded EVTE service identifier.
+  string evte_service_identifier = 4 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+  }];
+}
+
+// ImportSbrProductIdResponse returns only protected-storage presence state.
+message ImportSbrProductIdResponse {
+  // product_id_state is the safe stored-value state.
+  ProductIdState product_id_state = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+}
+
+// RemoveSbrProductIdRequest removes one exact EVTE product/service value.
+message RemoveSbrProductIdRequest {
+  // command_context carries authorization, idempotency, and any required fresh factor.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+
+  // evte_product_identifier is the exact bounded EVTE product identifier.
+  string evte_product_identifier = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+  }];
+
+  // evte_service_identifier is the exact bounded EVTE service identifier.
+  string evte_service_identifier = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+  }];
+}
+
+// RemoveSbrProductIdResponse returns only protected-storage presence state.
+message RemoveSbrProductIdResponse {
+  // product_id_state is the safe terminal value state.
+  ProductIdState product_id_state = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+}
+
+// RunSbrReadinessFixtureRequest runs one fixed, network-disabled simulator fixture.
+message RunSbrReadinessFixtureRequest {
+  // command_context carries authorization, idempotency, and any required fresh factor.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+
+  // fixture_id is the sole supported fixed fixture identifier.
+  string fixture_id = 2 [(buf.validate.field).string.const = "SIM-SBR-READINESS-V1"];
+
+  // failure_case selects one closed deterministic outcome.
+  SbrReadinessFixtureFailure failure_case = 3 [(buf.validate.field).enum.defined_only = true];
+}
+
+// RunSbrReadinessFixtureResponse returns the redacted deterministic result.
+message RunSbrReadinessFixtureResponse {
+  // result is the complete bounded fixed-fixture result.
+  SbrReadinessFixtureResult result = 1 [(buf.validate.field).required = true];
+}
+
+// SbrService exposes only local registration-readiness operations.
+service SbrService {
+  // GetSbrReadiness reads redacted readiness for the server-derived scope.
+  rpc GetSbrReadiness(GetSbrReadinessRequest) returns (GetSbrReadinessResponse);
+
+  // ImportMachineCredential imports one trusted local selection.
+  rpc ImportMachineCredential(ImportMachineCredentialRequest) returns (ImportMachineCredentialResponse);
+
+  // GetMachineCredentialStatus reads redacted credential metadata.
+  rpc GetMachineCredentialStatus(GetMachineCredentialStatusRequest) returns (GetMachineCredentialStatusResponse);
+
+  // UnlockMachineCredential unlocks the stored credential using transient input.
+  rpc UnlockMachineCredential(UnlockMachineCredentialRequest) returns (UnlockMachineCredentialResponse);
+
+  // ReplaceMachineCredential replaces the stored credential from one trusted selection.
+  rpc ReplaceMachineCredential(ReplaceMachineCredentialRequest) returns (ReplaceMachineCredentialResponse);
+
+  // RemoveMachineCredential removes the server-derived stored credential.
+  rpc RemoveMachineCredential(RemoveMachineCredentialRequest) returns (RemoveMachineCredentialResponse);
+
+  // ImportSbrProductId stores one exact EVTE product/service value.
+  rpc ImportSbrProductId(ImportSbrProductIdRequest) returns (ImportSbrProductIdResponse);
+
+  // RemoveSbrProductId removes one exact EVTE product/service value.
+  rpc RemoveSbrProductId(RemoveSbrProductIdRequest) returns (RemoveSbrProductIdResponse);
+
+  // RunSbrReadinessFixture runs one fixed, network-disabled simulator fixture.
+  rpc RunSbrReadinessFixture(RunSbrReadinessFixtureRequest) returns (RunSbrReadinessFixtureResponse);
+}

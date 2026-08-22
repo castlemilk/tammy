@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { parseCoverageManifest } from "./check-e2e-coverage.mjs";
-import { SLICE_ONE_RPC_POLICY } from "./slice-one-coverage-policy.mjs";
+import { SBR_DECLARED_FUTURE_RPCS, SLICE_ONE_RPC_POLICY } from "./slice-one-coverage-policy.mjs";
 
 const SYSTEM_RPC = "tammy.v1.SystemService.GetDiagnostics";
 const ALL_ROLES_ALLOWED = ["workspace_admin", "business_preparer", "business_lodger", "auditor"];
@@ -33,11 +33,11 @@ const EXPOSED_BUSINESS_RPCS = [
   "tammy.v1.TaxService.GetCurrentBasDraft",
 ];
 
-test("coverage declares the exact normative policy for all 79 non-system RPCs", async () => {
+test("coverage declares the exact normative policy for all 88 non-system RPCs", async () => {
   const coverage = parseCoverageManifest(await readFile("test/e2e/coverage.yaml", "utf8"));
   const actualRpcNames = Object.keys(coverage.rpcs).filter((rpcName) => rpcName !== SYSTEM_RPC);
 
-  assert.equal(Object.keys(SLICE_ONE_RPC_POLICY).length, 79);
+  assert.equal(Object.keys(SLICE_ONE_RPC_POLICY).length, 88);
   assert.deepEqual(actualRpcNames.sort(), Object.keys(SLICE_ONE_RPC_POLICY).sort());
 
   for (const [rpcName, expected] of Object.entries(SLICE_ONE_RPC_POLICY)) {
@@ -55,6 +55,75 @@ test("coverage declares the exact normative policy for all 79 non-system RPCs", 
       expected,
       rpcName,
     );
+  }
+});
+
+test("all nine SBR RPCs are declared future and cannot claim exercised evidence", async () => {
+  const expected = [
+    "tammy.v1.SbrService.GetSbrReadiness",
+    "tammy.v1.SbrService.ImportMachineCredential",
+    "tammy.v1.SbrService.GetMachineCredentialStatus",
+    "tammy.v1.SbrService.UnlockMachineCredential",
+    "tammy.v1.SbrService.ReplaceMachineCredential",
+    "tammy.v1.SbrService.RemoveMachineCredential",
+    "tammy.v1.SbrService.ImportSbrProductId",
+    "tammy.v1.SbrService.RemoveSbrProductId",
+    "tammy.v1.SbrService.RunSbrReadinessFixture",
+  ].sort();
+  assert.deepEqual([...SBR_DECLARED_FUTURE_RPCS].sort(), expected);
+
+  const coverage = parseCoverageManifest(await readFile("test/e2e/coverage.yaml", "utf8"));
+  assert.deepEqual(coverage.scenarios["E2E-17"].futureCases, ["sbr/registration-readiness"]);
+  assert.deepEqual(
+    Object.keys(coverage.rpcs)
+      .filter((rpcName) => rpcName.startsWith("tammy.v1.SbrService."))
+      .sort(),
+    expected,
+  );
+  for (const rpcName of expected) {
+    const rpc = coverage.rpcs[rpcName];
+    assert.equal(rpc.stage, "declared_future", rpcName);
+    assert.deepEqual(rpc.cases, [], rpcName);
+    assert.deepEqual(rpc.futureCases, ["sbr/registration-readiness"], rpcName);
+    assert.deepEqual(rpc.routes, ["/settings/sbr"], rpcName);
+  }
+});
+
+test("SBR credential inspection permits only administrators and business lodgers", () => {
+  const allowedInspectionRoles = {
+    workspace_admin: "planned_allowed",
+    business_preparer: "planned_permission_denied",
+    business_lodger: "planned_allowed",
+    auditor: "planned_permission_denied",
+  };
+  assert.deepEqual(
+    SLICE_ONE_RPC_POLICY["tammy.v1.SbrService.GetMachineCredentialStatus"].roles,
+    allowedInspectionRoles,
+  );
+
+  const adminOnly = {
+    workspace_admin: "planned_allowed",
+    business_preparer: "planned_permission_denied",
+    business_lodger: "planned_permission_denied",
+    auditor: "planned_permission_denied",
+  };
+  for (const rpcName of SBR_DECLARED_FUTURE_RPCS.filter(
+    (name) => name !== "tammy.v1.SbrService.GetMachineCredentialStatus",
+  )) {
+    assert.deepEqual(SLICE_ONE_RPC_POLICY[rpcName].roles, adminOnly, rpcName);
+  }
+
+  for (const rpcName of [
+    "tammy.v1.SbrService.ImportMachineCredential",
+    "tammy.v1.SbrService.UnlockMachineCredential",
+    "tammy.v1.SbrService.ReplaceMachineCredential",
+    "tammy.v1.SbrService.RemoveMachineCredential",
+    "tammy.v1.SbrService.ImportSbrProductId",
+    "tammy.v1.SbrService.RemoveSbrProductId",
+  ]) {
+    const failures = SLICE_ONE_RPC_POLICY[rpcName].principalFailures;
+    assert.ok(failures.includes("FACTOR_ASSERTION_REQUIRED"), rpcName);
+    assert.ok(failures.includes("FACTOR_ASSERTION_STALE"), rpcName);
   }
 });
 

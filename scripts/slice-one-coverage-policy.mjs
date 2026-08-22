@@ -70,6 +70,7 @@ function rpc({
 }
 
 const admin = roles("workspace_admin");
+const adminAndLodger = roles("workspace_admin", "business_lodger");
 const adminAndPreparer = roles("workspace_admin", "business_preparer");
 const adminAndAuditor = roles("workspace_admin", "auditor");
 const accountingRead = roles(...ROLE_NAMES);
@@ -94,6 +95,18 @@ const roleGuardedStalePersistent = [
   "PERMISSION_DENIED",
   "STALE_VERSION",
   "IDEMPOTENCY_CONFLICT",
+];
+
+export const SBR_DECLARED_FUTURE_RPCS = [
+  "tammy.v1.SbrService.GetSbrReadiness",
+  "tammy.v1.SbrService.ImportMachineCredential",
+  "tammy.v1.SbrService.GetMachineCredentialStatus",
+  "tammy.v1.SbrService.UnlockMachineCredential",
+  "tammy.v1.SbrService.ReplaceMachineCredential",
+  "tammy.v1.SbrService.RemoveMachineCredential",
+  "tammy.v1.SbrService.ImportSbrProductId",
+  "tammy.v1.SbrService.RemoveSbrProductId",
+  "tammy.v1.SbrService.RunSbrReadinessFixture",
 ];
 
 export const SLICE_ONE_RPC_POLICY = {
@@ -854,5 +867,102 @@ export const SLICE_ONE_RPC_POLICY = {
     mode: "query",
     failures: [...roleGuarded, "INVALID_CURSOR"],
     list: ["empty", "populated", "filtered", "paginated"],
+  }),
+  "tammy.v1.SbrService.GetSbrReadiness": rpc({
+    name: "GetSbrReadiness",
+    route: "/settings/sbr",
+    rolePolicy: admin,
+    mode: "query",
+    failures: [...roleGuarded, "SBR_UNAVAILABLE"],
+  }),
+  "tammy.v1.SbrService.ImportMachineCredential": rpc({
+    name: "ImportMachineCredential",
+    route: "/settings/sbr",
+    rolePolicy: admin,
+    mode: "persistent_command",
+    failures: [
+      ...roleGuardedPersistent,
+      "FACTOR_ASSERTION_REQUIRED",
+      "FACTOR_ASSERTION_STALE",
+      "MACHINE_CREDENTIAL_INVALID",
+      "KEY_STORE_FAILURE",
+    ],
+  }),
+  "tammy.v1.SbrService.GetMachineCredentialStatus": rpc({
+    name: "GetMachineCredentialStatus",
+    route: "/settings/sbr",
+    rolePolicy: adminAndLodger,
+    mode: "query",
+    failures: [...roleGuarded, "KEY_STORE_FAILURE"],
+  }),
+  "tammy.v1.SbrService.UnlockMachineCredential": rpc({
+    name: "UnlockMachineCredential",
+    route: "/settings/sbr",
+    rolePolicy: admin,
+    mode: "persistent_command",
+    failures: [
+      ...roleGuardedPersistent,
+      "FACTOR_ASSERTION_REQUIRED",
+      "FACTOR_ASSERTION_STALE",
+      "MACHINE_CREDENTIAL_PASSWORD_INVALID",
+      "KEY_STORE_FAILURE",
+    ],
+  }),
+  "tammy.v1.SbrService.ReplaceMachineCredential": rpc({
+    name: "ReplaceMachineCredential",
+    route: "/settings/sbr",
+    rolePolicy: admin,
+    mode: "persistent_command",
+    failures: [
+      ...roleGuardedPersistent,
+      "FACTOR_ASSERTION_REQUIRED",
+      "FACTOR_ASSERTION_STALE",
+      "MACHINE_CREDENTIAL_INVALID",
+      "KEY_STORE_FAILURE",
+    ],
+  }),
+  "tammy.v1.SbrService.RemoveMachineCredential": rpc({
+    name: "RemoveMachineCredential",
+    route: "/settings/sbr",
+    rolePolicy: admin,
+    mode: "persistent_command",
+    failures: [
+      ...roleGuardedPersistent,
+      "FACTOR_ASSERTION_REQUIRED",
+      "FACTOR_ASSERTION_STALE",
+      "KEY_STORE_FAILURE",
+    ],
+  }),
+  "tammy.v1.SbrService.ImportSbrProductId": rpc({
+    name: "ImportSbrProductId",
+    route: "/settings/sbr",
+    rolePolicy: admin,
+    mode: "persistent_command",
+    failures: [
+      ...roleGuardedPersistent,
+      "FACTOR_ASSERTION_REQUIRED",
+      "FACTOR_ASSERTION_STALE",
+      "PRODUCT_ID_INVALID",
+      "KEY_STORE_FAILURE",
+    ],
+  }),
+  "tammy.v1.SbrService.RemoveSbrProductId": rpc({
+    name: "RemoveSbrProductId",
+    route: "/settings/sbr",
+    rolePolicy: admin,
+    mode: "persistent_command",
+    failures: [
+      ...roleGuardedPersistent,
+      "FACTOR_ASSERTION_REQUIRED",
+      "FACTOR_ASSERTION_STALE",
+      "KEY_STORE_FAILURE",
+    ],
+  }),
+  "tammy.v1.SbrService.RunSbrReadinessFixture": rpc({
+    name: "RunSbrReadinessFixture",
+    route: "/settings/sbr",
+    rolePolicy: admin,
+    mode: "persistent_command",
+    failures: [...roleGuardedPersistent, "FIXTURE_INVALID", "SIMULATOR_UNAVAILABLE"],
   }),
 };

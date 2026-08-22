@@ -50,6 +50,8 @@ scenarios:
       - slice-1/backup-audit-contracts
   E2E-17:
     cases: []
+    futureCases:
+      - sbr/registration-readiness
 rpcs:
   tammy.v1.SystemService.GetDiagnostics:
     preload: getSystemDiagnostics
@@ -2328,6 +2330,271 @@ rpcs:
       mode: query
       outcomes:
         - not_applicable
+  tammy.v1.SbrService.GetSbrReadiness:
+    stage: declared_future
+    preload: getSbrReadiness
+    cases: []
+    futureCases:
+      - sbr/registration-readiness
+    projections:
+      - get_sbr_readiness_result
+    routes:
+      - /settings/sbr
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - SBR_UNAVAILABLE
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: query
+      outcomes:
+        - not_applicable
+  tammy.v1.SbrService.ImportMachineCredential:
+    stage: declared_future
+    preload: importMachineCredential
+    cases: []
+    futureCases:
+      - sbr/registration-readiness
+    projections:
+      - import_machine_credential_result
+    routes:
+      - /settings/sbr
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - IDEMPOTENCY_CONFLICT
+      - FACTOR_ASSERTION_REQUIRED
+      - FACTOR_ASSERTION_STALE
+      - MACHINE_CREDENTIAL_INVALID
+      - KEY_STORE_FAILURE
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - exact_replay
+        - changed_request_conflict
+  tammy.v1.SbrService.GetMachineCredentialStatus:
+    stage: declared_future
+    preload: getMachineCredentialStatus
+    cases: []
+    futureCases:
+      - sbr/registration-readiness
+    projections:
+      - get_machine_credential_status_result
+    routes:
+      - /settings/sbr
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_allowed
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - KEY_STORE_FAILURE
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: query
+      outcomes:
+        - not_applicable
+  tammy.v1.SbrService.UnlockMachineCredential:
+    stage: declared_future
+    preload: unlockMachineCredential
+    cases: []
+    futureCases:
+      - sbr/registration-readiness
+    projections:
+      - unlock_machine_credential_result
+    routes:
+      - /settings/sbr
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - IDEMPOTENCY_CONFLICT
+      - FACTOR_ASSERTION_REQUIRED
+      - FACTOR_ASSERTION_STALE
+      - MACHINE_CREDENTIAL_PASSWORD_INVALID
+      - KEY_STORE_FAILURE
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - exact_replay
+        - changed_request_conflict
+  tammy.v1.SbrService.ReplaceMachineCredential:
+    stage: declared_future
+    preload: replaceMachineCredential
+    cases: []
+    futureCases:
+      - sbr/registration-readiness
+    projections:
+      - replace_machine_credential_result
+    routes:
+      - /settings/sbr
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - IDEMPOTENCY_CONFLICT
+      - FACTOR_ASSERTION_REQUIRED
+      - FACTOR_ASSERTION_STALE
+      - MACHINE_CREDENTIAL_INVALID
+      - KEY_STORE_FAILURE
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - exact_replay
+        - changed_request_conflict
+  tammy.v1.SbrService.RemoveMachineCredential:
+    stage: declared_future
+    preload: removeMachineCredential
+    cases: []
+    futureCases:
+      - sbr/registration-readiness
+    projections:
+      - remove_machine_credential_result
+    routes:
+      - /settings/sbr
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - IDEMPOTENCY_CONFLICT
+      - FACTOR_ASSERTION_REQUIRED
+      - FACTOR_ASSERTION_STALE
+      - KEY_STORE_FAILURE
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - exact_replay
+        - changed_request_conflict
+  tammy.v1.SbrService.ImportSbrProductId:
+    stage: declared_future
+    preload: importSbrProductId
+    cases: []
+    futureCases:
+      - sbr/registration-readiness
+    projections:
+      - import_sbr_product_id_result
+    routes:
+      - /settings/sbr
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - IDEMPOTENCY_CONFLICT
+      - FACTOR_ASSERTION_REQUIRED
+      - FACTOR_ASSERTION_STALE
+      - PRODUCT_ID_INVALID
+      - KEY_STORE_FAILURE
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - exact_replay
+        - changed_request_conflict
+  tammy.v1.SbrService.RemoveSbrProductId:
+    stage: declared_future
+    preload: removeSbrProductId
+    cases: []
+    futureCases:
+      - sbr/registration-readiness
+    projections:
+      - remove_sbr_product_id_result
+    routes:
+      - /settings/sbr
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - IDEMPOTENCY_CONFLICT
+      - FACTOR_ASSERTION_REQUIRED
+      - FACTOR_ASSERTION_STALE
+      - KEY_STORE_FAILURE
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - exact_replay
+        - changed_request_conflict
+  tammy.v1.SbrService.RunSbrReadinessFixture:
+    stage: declared_future
+    preload: runSbrReadinessFixture
+    cases: []
+    futureCases:
+      - sbr/registration-readiness
+    projections:
+      - run_sbr_readiness_fixture_result
+    routes:
+      - /settings/sbr
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_permission_denied
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - IDEMPOTENCY_CONFLICT
+      - FIXTURE_INVALID
+      - SIMULATOR_UNAVAILABLE
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - exact_replay
+        - changed_request_conflict
 transitions:
   tammy.v1.WorkspaceState.WORKSPACE_STATE_PENDING_RECOVERY->WORKSPACE_STATE_UNAUTHENTICATED:
     stage: declared_future

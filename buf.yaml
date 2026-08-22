@@ -7,6 +7,9 @@ deps:
 lint:
   use:
     - STANDARD
+  ignore_only:
+    ENUM_ZERO_VALUE_SUFFIX:
+      - proto/tammy/v1/sbr.proto
 breaking:
   use:
     - FILE
