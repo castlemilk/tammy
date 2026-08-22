@@ -279,6 +279,17 @@ test("requires strict sorted normalized collision-free POSIX paths", () => {
   }
 });
 
+test("allows dot-prefixed component path segments", async (context) => {
+  const files = new Map([
+    [".hidden", Buffer.from("hidden")],
+    [".well-known/config", Buffer.from("config")],
+  ]);
+  const manifest = parseAndValidateSbrComponentManifest(encode(manifestFor(files)));
+  const root = await makeBundle(context, files);
+  const verified = await verifySbrComponentBundle({ componentRoot: root, manifest });
+  assert.deepEqual(verified.files, [...files.keys()]);
+});
+
 test("uses raw UTF-8 byte ordering instead of locale ordering", () => {
   const bytes = Buffer.from("x");
   const correctlySorted = new Map([
@@ -713,6 +724,15 @@ test("bounds actual entry count and directory depth", async (context) => {
     }),
     /SBR_COMPONENT_INVALID:ENTRY_COUNT/,
   );
+
+  const boundaryFiles = new Map([
+    [`${"d/".repeat(MAX_COMPONENT_DEPTH - 1)}file`, Buffer.from("x")],
+  ]);
+  const boundaryRoot = await makeBundle(context, boundaryFiles);
+  await verifySbrComponentBundle({
+    componentRoot: boundaryRoot,
+    manifest: parseAndValidateSbrComponentManifest(encode(manifestFor(boundaryFiles))),
+  });
 
   const deepFiles = new Map([[`${"d/".repeat(MAX_COMPONENT_DEPTH)}file`, Buffer.from("x")]]);
   const deepRoot = await makeBundle(context, deepFiles);

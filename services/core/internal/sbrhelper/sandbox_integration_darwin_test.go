@@ -11,9 +11,12 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
+
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -105,6 +108,154 @@ func TestProductionRenderedSandboxEndToEnd(t *testing.T) {
 	zeroBytes(responsePayload)
 	if err != nil || response.Outcome != OutcomeOK || response.RedactedResult != ResultFixtureSelected {
 		t.Fatalf("sandboxed synthetic response=%#v error=%v", response, err)
+	}
+}
+
+func TestDarwinExecutableFDPathIsUnavailable(t *testing.T) {
+	_, _, helper, _, _, _ := stageSandboxIntegration(t)
+	helperFD, err := unix.Open(helper, 0x40000000|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	helperFile := os.NewFile(uintptr(helperFD), "helper-exec")
+	defer helperFile.Close()
+	command := exec.Command("/dev/fd/3")
+	command.ExtraFiles = []*os.File{helperFile}
+	err = command.Run()
+	if err == nil {
+		t.Fatal("Darwin gained executable /dev/fd support; replace the pathname fallback")
+	}
+	if !strings.Contains(strings.ToLower(err.Error()), "permission denied") {
+		t.Fatalf("unexpected /dev/fd execution failure: %v", err)
+	}
+}
+
+func TestBuiltSimulatorHelperStaticIdentityMatchesLivePID(t *testing.T) {
+	_, _, helper, _, _, _ := stageSandboxIntegration(t)
+	expected, err := captureStaticCodeIdentity(helper)
+	if err != nil {
+		t.Fatalf("built helper static identity: %v", err)
+	}
+	command := exec.Command(helper)
+	stdin, err := command.StdinPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = command.Start(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_ = stdin.Close()
+		_ = command.Process.Kill()
+		_ = command.Wait()
+	})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	live, err := waitLiveCodeIdentity(ctx, command.Process.Pid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !sameCodeIdentity(expected, live) {
+		t.Fatalf("built helper identity mismatch: expected=%+v live=%+v", expected, live)
+	}
+}
+
+func TestProductionSandboxConsumesRetainedProfileAndFixedStagedHelperPath(t *testing.T) {
+	sandboxExec, err := exec.LookPath("sandbox-exec")
+	if err != nil {
+		t.Skip("SBR_SANDBOX_EXEC_UNAVAILABLE")
+	}
+	if output, probeErr := exec.Command(sandboxExec, "-p", "(version 1)\n(allow default)", "/usr/bin/true").CombinedOutput(); probeErr != nil {
+		if sandboxApplyUnavailable(output, probeErr) {
+			t.Skip("SBR_SANDBOX_EXEC_UNAVAILABLE")
+		}
+		t.Fatalf("sandbox capability probe: %v %q", probeErr, output)
+	}
+	base, root, helper, _, _, _ := stageSandboxIntegration(t)
+	profile, guard, err := RenderDevelopmentSandboxProfile(SandboxProfileInput{TrustedBase: base, StagedRoot: root, StagedExecutables: []string{helper}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer guard.Close()
+	contents, err := profile.PrepareSpawn()
+	if err != nil {
+		t.Fatal(err)
+	}
+	profilePath := filepath.Join(root, "fd-profile.sb")
+	if err = os.WriteFile(profilePath, []byte(contents), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err = os.Chmod(profilePath, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	profileFile, err := os.Open(profilePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer profileFile.Close()
+	helperFD, err := unix.Open(helper, 0x40000000|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	helperFile := os.NewFile(uintptr(helperFD), "helper-exec")
+	defer helperFile.Close()
+	var helperStat unix.Stat_t
+	if err = unix.Fstat(helperFD, &helperStat); err != nil {
+		t.Fatal(err)
+	}
+	validate := func() error {
+		var descriptor, path unix.Stat_t
+		if unix.Fstat(helperFD, &descriptor) != nil || unix.Lstat(helper, &path) != nil || descriptor.Dev != path.Dev || descriptor.Ino != path.Ino || descriptor.Mode != path.Mode {
+			return errors.New("helper authority changed")
+		}
+		if descriptor.Dev != helperStat.Dev || descriptor.Ino != helperStat.Ino || descriptor.Mode != helperStat.Mode || descriptor.Size != helperStat.Size || descriptor.Mtim != helperStat.Mtim || descriptor.Ctim != helperStat.Ctim {
+			return errors.New("helper descriptor changed")
+		}
+		return nil
+	}
+	now := time.Now().UTC()
+	request := Request{ProtocolVersion: ProtocolVersion, RequestID: "018bcfe5-6800-7000-8000-000000000001", Operation: OperationFixture, DeadlineMillis: now.Add(10 * time.Second).UnixMilli(), Environment: EnvironmentSimulator, SimulatorCase: SimulatorAccepted}
+	payload, err := EncodeRequest(request, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var framed bytes.Buffer
+	if err = WriteFrame(&framed, payload); err != nil {
+		t.Fatal(err)
+	}
+	zeroBytes(payload)
+	ctx, cancel := context.WithDeadline(context.Background(), now.Add(10*time.Second))
+	defer cancel()
+	expectedIdentity, err := captureStaticCodeIdentity(helper)
+	if err != nil {
+		t.Fatalf("staged helper code identity: %v", err)
+	}
+	verify := func(verifyCtx context.Context, pid int, _ bool) error {
+		for {
+			processPath, pathErr := darwinProcessPath(pid)
+			liveIdentity, identityErr := captureLiveCodeIdentityContext(verifyCtx, pid)
+			if pathErr == nil && processPath == helper && identityErr == nil && sameCodeIdentity(expectedIdentity, liveIdentity) {
+				return nil
+			}
+			select {
+			case <-verifyCtx.Done():
+				return verifyCtx.Err()
+			case <-time.After(time.Millisecond):
+			}
+		}
+	}
+	output, err := runSandboxedProcess(ctx, sandboxExec, []string{"-f", "/dev/fd/4", helper}, framed.Bytes(), []*os.File{helperFile, profileFile}, validate, verify)
+	if err != nil {
+		t.Fatal(err)
+	}
+	responsePayload, err := ReadFrame(bytes.NewReader(output))
+	if err != nil {
+		t.Fatal(err)
+	}
+	response, err := DecodeResponse(responsePayload)
+	zeroBytes(responsePayload)
+	if err != nil || response.Outcome != OutcomeOK || response.RedactedResult != ResultFixtureSelected {
+		t.Fatalf("response=%+v error=%v", response, err)
 	}
 }
 

@@ -139,6 +139,61 @@ func TestConfiguredProcessAcceptsDevelopmentMemoryAnchorsOnlyWithAnAbsoluteDataR
 	}
 }
 
+func TestConfiguredProcessAcceptsOnlyOneCanonicalOwnedSBRProfileArgument(t *testing.T) {
+	root := t.TempDir()
+	profile := filepath.Join(root, "runtime-profile.json")
+	if err := os.WriteFile(profile, []byte("{}"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	arguments := []string{"--data-root", root, "--sbr-profile=" + profile}
+	configured, err := configuredProcess(arguments)
+	if runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" && strings.Contains(runtime.Version(), "go") && err == nil {
+		if err != nil || configured.sbrProfile != profile {
+			t.Fatalf("configuredProcess() = %#v, %v", configured, err)
+		}
+	} else if err == nil {
+		t.Fatal("unsupported target accepted SBR profile")
+	}
+	symlink := filepath.Join(root, "profile-link.json")
+	if err := os.Symlink(profile, symlink); err != nil {
+		t.Fatal(err)
+	}
+	for _, invalid := range [][]string{
+		{"--sbr-profile=" + profile},
+		{"--data-root", root, "--sbr-profile", profile},
+		{"--data-root", root, "--sbr-profile=relative"},
+		{"--data-root", root, "--sbr-profile=" + symlink},
+		{"--data-root", root, "--sbr-profile=" + profile, "--sbr-profile=" + profile},
+		{"--data-root", root, "--helper=" + profile},
+		{"--data-root", root, "--credential=" + profile},
+	} {
+		if got, gotErr := configuredProcess(invalid); gotErr == nil || got != (processConfig{}) {
+			t.Fatalf("configuredProcess(%q) = %#v, %v", invalid, got, gotErr)
+		}
+	}
+}
+
+func TestSBRStartupSeamIsInvokedOnlyAfterCompleteArgumentValidation(t *testing.T) {
+	original := prepareSBRProcess
+	t.Cleanup(func() { prepareSBRProcess = original })
+	called := 0
+	prepareSBRProcess = func(string) error { called++; return errors.New("expected stop") }
+	if code := runWithArgs(nil, nil, nil, []string{"--sbr-profile=relative"}); code != 1 || called != 0 {
+		t.Fatalf("invalid run code=%d calls=%d", code, called)
+	}
+	root := t.TempDir()
+	profile := filepath.Join(root, "profile.json")
+	if err := os.WriteFile(profile, []byte("{}"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := configuredProcess([]string{"--data-root", root, "--sbr-profile=" + profile}); err != nil {
+		return
+	}
+	if code := runWithArgs(nil, nil, nil, []string{"--data-root", root, "--sbr-profile=" + profile}); code != 1 || called != 1 {
+		t.Fatalf("valid SBR run code=%d calls=%d", code, called)
+	}
+}
+
 func TestDevelopmentMemoryAnchorsResetOnlyPrivateAttemptJournals(t *testing.T) {
 	root := t.TempDir()
 	core := filepath.Join(root, "core")

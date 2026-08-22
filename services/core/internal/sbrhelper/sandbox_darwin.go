@@ -3,6 +3,7 @@
 package sbrhelper
 
 import (
+	"context"
 	"errors"
 	"io/fs"
 	"os"
@@ -39,10 +40,14 @@ type SandboxProfile struct {
 // immediately before sandbox-exec consumption. The next launcher task must
 // hold the guard through spawn. Rendering does not authenticate component bytes.
 func (p SandboxProfile) PrepareSpawn() (string, error) {
+	return p.PrepareSpawnContext(context.Background())
+}
+
+func (p SandboxProfile) PrepareSpawnContext(ctx context.Context) (string, error) {
 	if p.guard == nil {
 		return "", ErrSandboxAuthorityClosed
 	}
-	if err := p.guard.Revalidate(); err != nil {
+	if err := p.guard.RevalidateContext(ctx); err != nil {
 		return "", err
 	}
 	return p.contents, nil
@@ -58,6 +63,13 @@ type SandboxProfileGuard struct {
 }
 
 func RenderDevelopmentSandboxProfile(input SandboxProfileInput) (SandboxProfile, *SandboxProfileGuard, error) {
+	return RenderDevelopmentSandboxProfileContext(context.Background(), input)
+}
+
+func RenderDevelopmentSandboxProfileContext(ctx context.Context, input SandboxProfileInput) (SandboxProfile, *SandboxProfileGuard, error) {
+	if ctx == nil || ctx.Err() != nil {
+		return SandboxProfile{}, nil, ErrSandboxProfileInvalid
+	}
 	if len(input.StagedExecutables) == 0 || !validTrustedBasePath(input.TrustedBase) || !validAbsolute(input.StagedRoot) ||
 		filepath.Dir(input.StagedRoot) != input.TrustedBase || !validRuntimeName(filepath.Base(input.StagedRoot)) {
 		return SandboxProfile{}, nil, ErrSandboxProfileInvalid
@@ -74,8 +86,11 @@ func RenderDevelopmentSandboxProfile(input SandboxProfileInput) (SandboxProfile,
 		return SandboxProfile{}, nil, ErrSandboxProfileInvalid
 	}
 	for index, path := range all {
+		if ctx.Err() != nil {
+			return fail()
+		}
 		regular := index >= 2
-		guard, err := openRetainedPath(path, regular)
+		guard, err := openRetainedPathContext(ctx, path, regular)
 		if err != nil || (index < selectedStart && !guard.trustedAncestors()) {
 			if guard != nil {
 				_ = guard.Close()
@@ -131,7 +146,7 @@ func RenderDevelopmentSandboxProfile(input SandboxProfileInput) (SandboxProfile,
 	profile.WriteString("(allow mach-lookup (global-name \"com.apple.securityd\"))\n")
 	profile.WriteString("(deny network*)\n")
 	result := SandboxProfile{contents: profile.String(), guard: guard}
-	if _, err := result.PrepareSpawn(); err != nil {
+	if _, err := result.PrepareSpawnContext(ctx); err != nil {
 		_ = guard.Close()
 		return SandboxProfile{}, nil, ErrSandboxProfileInvalid
 	}
@@ -139,8 +154,15 @@ func RenderDevelopmentSandboxProfile(input SandboxProfileInput) (SandboxProfile,
 }
 
 func (g *SandboxProfileGuard) Revalidate() error {
+	return g.RevalidateContext(context.Background())
+}
+
+func (g *SandboxProfileGuard) RevalidateContext(ctx context.Context) error {
 	if g == nil {
 		return ErrSandboxAuthorityClosed
+	}
+	if ctx == nil {
+		return ErrSandboxAuthorityChanged
 	}
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -148,7 +170,10 @@ func (g *SandboxProfileGuard) Revalidate() error {
 		return ErrSandboxAuthorityClosed
 	}
 	for _, path := range g.paths {
-		if err := path.revalidate(); err != nil {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if err := path.revalidateContext(ctx); err != nil {
 			return err
 		}
 	}
@@ -192,6 +217,13 @@ type retainedPath struct {
 }
 
 func openRetainedPath(path string, regular bool) (*retainedPath, error) {
+	return openRetainedPathContext(context.Background(), path, regular)
+}
+
+func openRetainedPathContext(ctx context.Context, path string, regular bool) (*retainedPath, error) {
+	if ctx == nil || ctx.Err() != nil {
+		return nil, ErrSandboxProfileInvalid
+	}
 	parts, ok := pathParts(path)
 	if !ok || (regular && len(parts) == 0) {
 		return nil, ErrSandboxProfileInvalid
@@ -208,6 +240,10 @@ func openRetainedPath(path string, regular bool) (*retainedPath, error) {
 	result := &retainedPath{components: []retainedComponent{{directory: true, fd: root, identity: rootID}}}
 	parent := root
 	for index, name := range parts {
+		if ctx.Err() != nil {
+			_ = result.Close()
+			return nil, ErrSandboxProfileInvalid
+		}
 		directory := index < len(parts)-1 || !regular
 		flags := unix.O_RDONLY | unix.O_NOFOLLOW | unix.O_NONBLOCK | unix.O_CLOEXEC
 		if directory {
@@ -239,6 +275,13 @@ func openRetainedPath(path string, regular bool) (*retainedPath, error) {
 }
 
 func (p *retainedPath) revalidate() error {
+	return p.revalidateContext(context.Background())
+}
+
+func (p *retainedPath) revalidateContext(ctx context.Context) error {
+	if ctx == nil {
+		return ErrSandboxAuthorityChanged
+	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if p.closed {
@@ -261,6 +304,9 @@ func (p *retainedPath) revalidate() error {
 	}
 	parent := root
 	for index := 1; index < len(p.components); index++ {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		expected := p.components[index]
 		flags := unix.O_RDONLY | unix.O_NOFOLLOW | unix.O_NONBLOCK | unix.O_CLOEXEC
 		if expected.directory {

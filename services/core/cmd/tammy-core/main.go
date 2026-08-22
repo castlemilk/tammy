@@ -9,16 +9,19 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/tammyapp/tammy/services/core/internal/buildinfo"
+	"github.com/tammyapp/tammy/services/core/internal/sbrhelper"
 	"github.com/tammyapp/tammy/services/core/internal/transport"
 )
 
 const shutdownTimeout = 3 * time.Second
 
 var errProcessConfig = errors.New("tammy-core: invalid process configuration")
+var prepareSBRProcess = sbrhelper.ValidateProfilePath
 
 func run(stdin *os.File, stdout *os.File, stderr *os.File) int {
 	return runWithArgs(stdin, stdout, stderr, nil)
@@ -29,6 +32,12 @@ func runWithArgs(stdin *os.File, stdout *os.File, stderr *os.File, args []string
 	if err != nil {
 		logLifecycleError(stderr, "configuration_failed")
 		return 1
+	}
+	if config.sbrProfile != "" {
+		if err := prepareSBRProcess(config.sbrProfile); err != nil {
+			logLifecycleError(stderr, "sbr_configuration_failed")
+			return 1
+		}
 	}
 	composition, err := newConfiguredComposition(buildinfo.Current(), config)
 	if err != nil {
@@ -114,6 +123,7 @@ func main() {
 type processConfig struct {
 	dataRoot                 string
 	developmentMemoryAnchors bool
+	sbrProfile               string
 }
 
 var developmentAttemptJournalNames = [...]string{
@@ -125,16 +135,22 @@ func configuredProcess(args []string) (processConfig, error) {
 	if len(args) == 0 {
 		return processConfig{}, nil
 	}
-	if (len(args) != 2 && len(args) != 3) || args[0] != "--data-root" ||
-		!filepath.IsAbs(args[1]) || filepath.Clean(args[1]) != args[1] {
+	if len(args) < 2 || len(args) > 4 || args[0] != "--data-root" || !filepath.IsAbs(args[1]) || filepath.Clean(args[1]) != args[1] {
 		return processConfig{}, errProcessConfig
 	}
 	config := processConfig{dataRoot: args[1]}
-	if len(args) == 3 {
-		if args[2] != "--development-memory-anchors" {
+	for _, argument := range args[2:] {
+		switch {
+		case argument == "--development-memory-anchors" && !config.developmentMemoryAnchors:
+			config.developmentMemoryAnchors = true
+		case strings.HasPrefix(argument, "--sbr-profile=") && config.sbrProfile == "":
+			config.sbrProfile = strings.TrimPrefix(argument, "--sbr-profile=")
+			if config.sbrProfile == "" || sbrhelper.ValidateProfilePath(config.sbrProfile) != nil {
+				return processConfig{}, errProcessConfig
+			}
+		default:
 			return processConfig{}, errProcessConfig
 		}
-		config.developmentMemoryAnchors = true
 	}
 	return config, nil
 }

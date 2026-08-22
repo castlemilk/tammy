@@ -3,6 +3,7 @@
 package sbrhelper
 
 import (
+	"context"
 	"errors"
 	"io/fs"
 )
@@ -26,8 +27,17 @@ type SandboxProfileGuard struct{}
 func RenderDevelopmentSandboxProfile(SandboxProfileInput) (SandboxProfile, *SandboxProfileGuard, error) {
 	return SandboxProfile{}, nil, ErrSandboxProfileInvalid
 }
+func RenderDevelopmentSandboxProfileContext(context.Context, SandboxProfileInput) (SandboxProfile, *SandboxProfileGuard, error) {
+	return SandboxProfile{}, nil, ErrSandboxProfileInvalid
+}
 func (SandboxProfile) PrepareSpawn() (string, error) { return "", ErrSandboxProfileInvalid }
-func (SandboxProfile) FileMode() fs.FileMode         { return 0 }
-func (SandboxProfile) OwnerUID() int                 { return -1 }
-func (*SandboxProfileGuard) Revalidate() error       { return ErrSandboxProfileInvalid }
-func (*SandboxProfileGuard) Close() error            { return nil }
+func (SandboxProfile) PrepareSpawnContext(context.Context) (string, error) {
+	return "", ErrSandboxProfileInvalid
+}
+func (SandboxProfile) FileMode() fs.FileMode   { return 0 }
+func (SandboxProfile) OwnerUID() int           { return -1 }
+func (*SandboxProfileGuard) Revalidate() error { return ErrSandboxProfileInvalid }
+func (*SandboxProfileGuard) RevalidateContext(context.Context) error {
+	return ErrSandboxProfileInvalid
+}
+func (*SandboxProfileGuard) Close() error { return nil }

@@ -3,6 +3,7 @@
 package sbrhelper
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -11,6 +12,20 @@ import (
 
 	"golang.org/x/sys/unix"
 )
+
+func TestSandboxGuardContextStopsRevalidationBeforePathWork(t *testing.T) {
+	base, root, executable, _, _ := secureSandboxTree(t)
+	_, guard, err := RenderDevelopmentSandboxProfile(SandboxProfileInput{TrustedBase: base, StagedRoot: root, StagedExecutables: []string{executable}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer guard.Close()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := guard.RevalidateContext(ctx); !errors.Is(err, context.Canceled) {
+		t.Fatalf("error=%v", err)
+	}
+}
 
 func TestCoreConstructsExactSandboxProfileAndRevalidatesAtSpawnBoundary(t *testing.T) {
 	base, root, executable, readable, selected := secureSandboxTree(t)

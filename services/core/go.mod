@@ -10,6 +10,7 @@ require (
 require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260709200747-435963d16310.1
 	buf.build/go/protovalidate v1.2.0
+	github.com/cyberphone/json-canonicalization v0.0.0-20241213102144-19d51d7fe467
 	golang.org/x/crypto v0.54.0
 	golang.org/x/sys v0.47.0
 	golang.org/x/text v0.40.0
