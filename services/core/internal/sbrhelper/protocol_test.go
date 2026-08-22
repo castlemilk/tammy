@@ -99,8 +99,8 @@ func TestProtocolCoreGoldenFixtureParity(t *testing.T) {
 		t.Fatalf("read golden fixture: %v", err)
 	}
 	records := parseCoreGoldenCorpus(t, got)
-	if len(records) != 21 {
-		t.Fatalf("golden record count = %d, want 21", len(records))
+	if len(records) != 22 {
+		t.Fatalf("golden record count = %d, want 22", len(records))
 	}
 	for index, record := range records {
 		var again []byte
@@ -239,7 +239,7 @@ func TestProtocolCoreNumericConstantsAreLocked(t *testing.T) {
 	if OutcomeOK != 1 || OutcomeError != 2 || OutcomePending != 3 {
 		t.Fatal("outcome values changed")
 	}
-	if ResultReady != 1 || ResultCredentialLocked != 2 || ResultRegistrationRequired != 3 || ResultMutationCommitted != 4 || ResultMutationAborted != 5 || ResultRecoveryRequired != 6 || ResultFixtureSelected != 7 {
+	if ResultReady != 1 || ResultCredentialLocked != 2 || ResultRegistrationRequired != 3 || ResultMutationCommitted != 4 || ResultMutationAborted != 5 || ResultRecoveryRequired != 6 || ResultFixtureSelected != 7 || ResultNotStarted != 8 {
 		t.Fatal("redacted result values changed")
 	}
 }
@@ -505,6 +505,20 @@ func TestProtocolCoreResponseRepresentsFixtureRecovery(t *testing.T) {
 	response := Response{RequestID: protocolTestRequestID, Outcome: OutcomeOK, RedactedResult: ResultRecoveryRequired}
 	if err := session.Complete(response, protocolTestNow); err != nil {
 		t.Fatalf("fixture recovery response: %v", err)
+	}
+}
+
+func TestProtocolCoreResponseRepresentsFixtureNotStarted(t *testing.T) {
+	request := coreBaseRequest(OperationFixture)
+	request.WorkspaceID, request.OrganisationID, request.CanonicalABN, request.OpaqueScope = "", "", "", nil
+	request.SimulatorCase = SimulatorNotStarted
+	session := &Session{}
+	if err := session.Begin(request, protocolTestNow); err != nil {
+		t.Fatal(err)
+	}
+	response := Response{RequestID: protocolTestRequestID, Outcome: OutcomeOK, RedactedResult: ResultNotStarted}
+	if err := session.Complete(response, protocolTestNow); err != nil {
+		t.Fatalf("fixture NOT_STARTED response: %v", err)
 	}
 }
 

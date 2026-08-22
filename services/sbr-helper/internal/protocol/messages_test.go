@@ -62,7 +62,7 @@ func TestProtocolRequestOperationAndMutationNumericValues(t *testing.T) {
 		t.Fatal("outcome numbers changed")
 	}
 	if ResultReady != 1 || ResultCredentialLocked != 2 || ResultRegistrationRequired != 3 ||
-		ResultMutationCommitted != 4 || ResultMutationAborted != 5 || ResultRecoveryRequired != 6 || ResultFixtureSelected != 7 {
+		ResultMutationCommitted != 4 || ResultMutationAborted != 5 || ResultRecoveryRequired != 6 || ResultFixtureSelected != 7 || ResultNotStarted != 8 {
 		t.Fatal("redacted result numbers changed")
 	}
 }
@@ -563,6 +563,26 @@ func TestProtocolSessionRecoveryResultOnlyFixtureAndReconcile(t *testing.T) {
 	assertProtocolError(t, session.Complete(response, protocolNow), "SESSION_RESPONSE_INVALID")
 }
 
+func TestProtocolSessionNotStartedResultOnlyFixture(t *testing.T) {
+	response := Response{RequestID: testRequestID, Outcome: OutcomeOK, RedactedResult: ResultNotStarted}
+	fixture := baseRequest(OperationFixture)
+	fixture.WorkspaceID, fixture.OrganisationID, fixture.CanonicalABN, fixture.OpaqueScope = "", "", "", nil
+	fixture.SimulatorCase = SimulatorNotStarted
+	session := &Session{}
+	if err := session.Begin(fixture, protocolNow); err != nil {
+		t.Fatal(err)
+	}
+	if err := session.Complete(response, protocolNow); err != nil {
+		t.Fatalf("fixture NOT_STARTED: %v", err)
+	}
+
+	session = &Session{}
+	if err := session.Begin(baseRequest(OperationStatus), protocolNow); err != nil {
+		t.Fatal(err)
+	}
+	assertProtocolError(t, session.Complete(response, protocolNow), "SESSION_RESPONSE_INVALID")
+}
+
 func TestProtocolSessionConcurrentBeginAndComplete(t *testing.T) {
 	request := mutationRequest(OperationPrepareMutation, MutationRemoveCredential, nil)
 	session := &Session{}
@@ -765,8 +785,8 @@ func TestProtocolGoldenFixture(t *testing.T) {
 		t.Fatalf("fixture differs: got %x want %x", got, want)
 	}
 	records := parseGoldenCorpus(t, got)
-	if len(records) != 21 {
-		t.Fatalf("golden record count = %d, want 21", len(records))
+	if len(records) != 22 {
+		t.Fatalf("golden record count = %d, want 22", len(records))
 	}
 	for index, record := range records {
 		var again []byte
@@ -901,8 +921,9 @@ func buildGoldenCorpus(t *testing.T) []byte {
 		{RequestID: corpusUUID("5"), Outcome: OutcomeOK, RedactedResult: ResultMutationAborted},
 		{RequestID: corpusUUID("6"), Outcome: OutcomeOK, RedactedResult: ResultRecoveryRequired},
 		{RequestID: corpusUUID("7"), Outcome: OutcomeOK, RedactedResult: ResultFixtureSelected},
-		NewErrorResponse(corpusUUID("8"), StableErrorCredentialLocked),
-		{RequestID: corpusUUID("9"), Outcome: OutcomePending, PendingItemID: testPendingID},
+		{RequestID: corpusUUID("8"), Outcome: OutcomeOK, RedactedResult: ResultNotStarted},
+		NewErrorResponse(corpusUUID("9"), StableErrorCredentialLocked),
+		{RequestID: corpusUUID("a"), Outcome: OutcomePending, PendingItemID: testPendingID},
 	}
 	records := make([]corpusRecord, 0, len(requests)+len(responses))
 	for index := range requests {

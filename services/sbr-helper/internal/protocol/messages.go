@@ -117,6 +117,7 @@ const (
 	ResultMutationAborted      Result = 5
 	ResultRecoveryRequired     Result = 6
 	ResultFixtureSelected      Result = 7
+	ResultNotStarted           Result = 8
 )
 
 type StableErrorCode string
@@ -637,7 +638,7 @@ func responseMatchesOperation(operation Operation, response Response) bool {
 	case OperationUnlock:
 		return response.Outcome == OutcomeOK && (response.RedactedResult == ResultReady || response.RedactedResult == ResultCredentialLocked)
 	case OperationFixture:
-		return response.Outcome == OutcomeOK && (response.RedactedResult == ResultFixtureSelected || response.RedactedResult == ResultRecoveryRequired)
+		return response.Outcome == OutcomeOK && (response.RedactedResult == ResultFixtureSelected || response.RedactedResult == ResultRecoveryRequired || response.RedactedResult == ResultNotStarted)
 	case OperationPrepareMutation:
 		return response.Outcome == OutcomePending
 	case OperationCommitMutation:
@@ -735,7 +736,7 @@ func validOperation(v Operation) bool { return v >= OperationStatus && v <= Oper
 func validMutation(v MutationKind) bool {
 	return v >= MutationImportCredential && v <= MutationRemoveProductID
 }
-func validResult(v Result) bool { return v >= ResultReady && v <= ResultFixtureSelected }
+func validResult(v Result) bool { return v >= ResultReady && v <= ResultNotStarted }
 
 func validProductIdentifier(value string) bool {
 	return utf8.ValidString(value) && utf8.RuneCountInString(value) >= 1 && utf8.RuneCountInString(value) <= 128 && !hasControl(value)
