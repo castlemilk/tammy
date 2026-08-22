@@ -15,3 +15,5 @@ func (*ScopedFile) Path() string                                      { return "
 func (*ScopedFile) Revalidate() error                                 { return ErrBookmarkInvalid }
 func (*ScopedFile) ReadAll(int) ([]byte, error)                       { return nil, ErrBookmarkInvalid }
 func (*ScopedFile) Close() error                                      { return nil }
+
+func ReadSecureRegular(string, int) ([]byte, error) { return nil, ErrBookmarkInvalid }

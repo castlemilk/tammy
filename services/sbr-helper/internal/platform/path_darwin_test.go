@@ -208,6 +208,26 @@ func TestPathGuardRejectsAncestorModeChange(t *testing.T) {
 	}
 }
 
+func TestReadSecureRegularRejectsWritableCredentialAndBoundsRead(t *testing.T) {
+	path := filepath.Join(secureTempDir(t), "credential.p12")
+	if err := os.WriteFile(path, []byte("synthetic"), 0o666); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ReadSecureRegular(path, 64); !errors.Is(err, ErrPathAuthorityInvalid) {
+		t.Fatalf("writable credential error = %v", err)
+	}
+	if err := os.Chmod(path, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ReadSecureRegular(path, 4); !errors.Is(err, ErrPathAuthorityInvalid) {
+		t.Fatalf("oversized credential error = %v", err)
+	}
+	got, err := ReadSecureRegular(path, 64)
+	if err != nil || !bytes.Equal(got, []byte("synthetic")) {
+		t.Fatalf("secure read = %q, %v", got, err)
+	}
+}
+
 func secureTempDir(t *testing.T) string {
 	t.Helper()
 	path, err := os.MkdirTemp("/private/tmp", "tammy-sbr-helper-test-")

@@ -104,6 +104,27 @@ type PathGuard struct {
 func openRegularNoFollow(path string) (*PathGuard, error)   { return openPathNoFollow(path, true) }
 func openDirectoryNoFollow(path string) (*PathGuard, error) { return openPathNoFollow(path, false) }
 
+// ReadSecureRegular opens every path component without following symlinks,
+// validates the retained file identity before and after the bounded read, and
+// closes all descriptors before returning owned bytes.
+func ReadSecureRegular(path string, maximum int) ([]byte, error) {
+	guard, err := openRegularNoFollow(path)
+	if err != nil {
+		return nil, err
+	}
+	defer guard.Close()
+	guard.mu.Lock()
+	leaf := guard.components[len(guard.components)-1].identity
+	guard.mu.Unlock()
+	if leaf[3] != uint64(syscall.Geteuid()) || uint32(leaf[2])&0o077 != 0 {
+		return nil, ErrPathAuthorityInvalid
+	}
+	if err := guard.Revalidate(); err != nil {
+		return nil, err
+	}
+	return guard.ReadAll(maximum)
+}
+
 func openPathNoFollow(path string, regular bool) (*PathGuard, error) {
 	components, ok := lexicalPathComponents(path)
 	if !ok || (regular && len(components) == 0) {
