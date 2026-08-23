@@ -108,6 +108,51 @@ function unusedCoreMethods() {
     getReportingCapability: vi.fn(async () => {
       throw new Error("unused");
     }),
+    getCurrentUser: vi.fn(async () => {
+      throw new Error("unused");
+    }),
+    enrolTotp: vi.fn(async () => {
+      throw new Error("unused");
+    }),
+    confirmTotp: vi.fn(async () => {
+      throw new Error("unused");
+    }),
+    assertTotp: vi.fn(async () => {
+      throw new Error("unused");
+    }),
+    getOrganisation: vi.fn(async () => {
+      throw new Error("unused");
+    }),
+    recordEntityVerification: vi.fn(async () => {
+      throw new Error("unused");
+    }),
+    getSbrReadiness: vi.fn(async () => {
+      throw new Error("unused");
+    }),
+    importMachineCredential: vi.fn(async () => {
+      throw new Error("unused");
+    }),
+    getMachineCredentialStatus: vi.fn(async () => {
+      throw new Error("unused");
+    }),
+    unlockMachineCredential: vi.fn(async () => {
+      throw new Error("unused");
+    }),
+    replaceMachineCredential: vi.fn(async () => {
+      throw new Error("unused");
+    }),
+    removeMachineCredential: vi.fn(async () => {
+      throw new Error("unused");
+    }),
+    importSbrProductId: vi.fn(async () => {
+      throw new Error("unused");
+    }),
+    removeSbrProductId: vi.fn(async () => {
+      throw new Error("unused");
+    }),
+    runSbrReadinessFixture: vi.fn(async () => {
+      throw new Error("unused");
+    }),
   };
 }
 

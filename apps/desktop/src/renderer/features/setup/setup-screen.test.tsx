@@ -175,6 +175,22 @@ it("creates, confirms, and signs in to a real local workspace through named prot
       );
     }),
     getAttentionSummary: vi.fn(),
+    getCurrentUser: vi.fn(),
+    enrolTotp: vi.fn(),
+    confirmTotp: vi.fn(),
+    assertTotp: vi.fn(),
+    getOrganisation: vi.fn(),
+    recordEntityVerification: vi.fn(),
+    getSbrReadiness: vi.fn(),
+    getMachineCredentialStatus: vi.fn(),
+    removeMachineCredential: vi.fn(),
+    removeSbrProductId: vi.fn(),
+    runSbrReadinessFixture: vi.fn(),
+    selectMachineCredentialFile: vi.fn(async () => ({ selected: false as const })),
+    importMachineCredential: vi.fn(),
+    replaceMachineCredential: vi.fn(),
+    unlockMachineCredential: vi.fn(),
+    importSbrProductId: vi.fn(),
     getSystemDiagnostics: vi.fn(),
   } satisfies TammyDesktopAPI;
   const onAuthenticated = vi.fn();

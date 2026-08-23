@@ -104,6 +104,22 @@ function installDesktopAPI(getSystemDiagnostics: TammyDesktopAPI["getSystemDiagn
       getAttentionSummary: vi.fn(async () => {
         throw new Error("unavailable");
       }),
+      getCurrentUser: vi.fn(),
+      enrolTotp: vi.fn(),
+      confirmTotp: vi.fn(),
+      assertTotp: vi.fn(),
+      getOrganisation: vi.fn(),
+      recordEntityVerification: vi.fn(),
+      getSbrReadiness: vi.fn(),
+      getMachineCredentialStatus: vi.fn(),
+      removeMachineCredential: vi.fn(),
+      removeSbrProductId: vi.fn(),
+      runSbrReadinessFixture: vi.fn(),
+      selectMachineCredentialFile: vi.fn(async () => ({ selected: false as const })),
+      importMachineCredential: vi.fn(),
+      replaceMachineCredential: vi.fn(),
+      unlockMachineCredential: vi.fn(),
+      importSbrProductId: vi.fn(),
       getSystemDiagnostics,
     } satisfies TammyDesktopAPI),
   });

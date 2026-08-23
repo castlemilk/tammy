@@ -678,7 +678,15 @@ test("runs the current accounting workflows through the packaged app", async ({
   expect(electronHarness.pageErrors).toEqual([]);
 });
 
-type BinaryMethod = Exclude<keyof TammyDesktopAPI, "getSystemDiagnostics">;
+type BinaryMethod = Exclude<
+  keyof TammyDesktopAPI,
+  | "getSystemDiagnostics"
+  | "selectMachineCredentialFile"
+  | "importMachineCredential"
+  | "replaceMachineCredential"
+  | "unlockMachineCredential"
+  | "importSbrProductId"
+>;
 
 async function invokeProto<Input extends DescMessage, Output extends DescMessage>(
   page: import("@playwright/test").Page,

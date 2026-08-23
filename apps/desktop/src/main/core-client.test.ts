@@ -8,6 +8,18 @@ import {
 } from "@connectrpc/connect";
 import type { ConnectTransportOptions } from "@connectrpc/connect-node";
 import {
+  AssertTOTPRequestSchema,
+  ConfirmTOTPRequestSchema,
+  EnrolTOTPRequestSchema,
+  GetCurrentUserRequestSchema,
+  IdentityService,
+} from "@tammy/connect-client/tammy/v1/identity_pb.js";
+import {
+  GetOrganisationRequestSchema,
+  OrganisationService,
+  RecordEntityVerificationRequestSchema,
+} from "@tammy/connect-client/tammy/v1/organisation_pb.js";
+import {
   GetAttentionSummaryRequestSchema,
   OverviewService,
 } from "@tammy/connect-client/tammy/v1/overview_pb.js";
@@ -18,6 +30,18 @@ import {
   ReportingEntityType,
   ReportKind,
 } from "@tammy/connect-client/tammy/v1/reporting_capability_pb.js";
+import {
+  GetMachineCredentialStatusRequestSchema,
+  GetSbrReadinessRequestSchema,
+  ImportMachineCredentialRequestSchema,
+  ImportSbrProductIdRequestSchema,
+  RemoveMachineCredentialRequestSchema,
+  RemoveSbrProductIdRequestSchema,
+  ReplaceMachineCredentialRequestSchema,
+  RunSbrReadinessFixtureRequestSchema,
+  SbrService,
+  UnlockMachineCredentialRequestSchema,
+} from "@tammy/connect-client/tammy/v1/sbr_pb.js";
 import {
   GetDiagnosticsRequestSchema,
   GetDiagnosticsResponseSchema,
@@ -107,6 +131,87 @@ function fakeTransport(
                   summary: "Tammy supports a local reviewed-document GST workpaper only.",
                 },
               };
+            },
+          });
+          router.service(IdentityService, {
+            getCurrentUser: (_request, context) => {
+              methods.push(context.method);
+              receivedHeaders.push(new Headers(context.requestHeader));
+              return {};
+            },
+            enrolTOTP: (_request, context) => {
+              methods.push(context.method);
+              receivedHeaders.push(new Headers(context.requestHeader));
+              return {};
+            },
+            confirmTOTP: (_request, context) => {
+              methods.push(context.method);
+              receivedHeaders.push(new Headers(context.requestHeader));
+              return {};
+            },
+            assertTOTP: (_request, context) => {
+              methods.push(context.method);
+              receivedHeaders.push(new Headers(context.requestHeader));
+              return {};
+            },
+          });
+          router.service(OrganisationService, {
+            getOrganisation: (_request, context) => {
+              methods.push(context.method);
+              receivedHeaders.push(new Headers(context.requestHeader));
+              return {};
+            },
+            recordEntityVerification: (_request, context) => {
+              methods.push(context.method);
+              receivedHeaders.push(new Headers(context.requestHeader));
+              return {};
+            },
+          });
+          router.service(SbrService, {
+            getSbrReadiness: (_request, context) => {
+              methods.push(context.method);
+              receivedHeaders.push(new Headers(context.requestHeader));
+              return {};
+            },
+            importMachineCredential: (_request, context) => {
+              methods.push(context.method);
+              receivedHeaders.push(new Headers(context.requestHeader));
+              return {};
+            },
+            getMachineCredentialStatus: (_request, context) => {
+              methods.push(context.method);
+              receivedHeaders.push(new Headers(context.requestHeader));
+              return {};
+            },
+            unlockMachineCredential: (_request, context) => {
+              methods.push(context.method);
+              receivedHeaders.push(new Headers(context.requestHeader));
+              return {};
+            },
+            replaceMachineCredential: (_request, context) => {
+              methods.push(context.method);
+              receivedHeaders.push(new Headers(context.requestHeader));
+              return {};
+            },
+            removeMachineCredential: (_request, context) => {
+              methods.push(context.method);
+              receivedHeaders.push(new Headers(context.requestHeader));
+              return {};
+            },
+            importSbrProductId: (_request, context) => {
+              methods.push(context.method);
+              receivedHeaders.push(new Headers(context.requestHeader));
+              return {};
+            },
+            removeSbrProductId: (_request, context) => {
+              methods.push(context.method);
+              receivedHeaders.push(new Headers(context.requestHeader));
+              return {};
+            },
+            runSbrReadinessFixture: (_request, context) => {
+              methods.push(context.method);
+              receivedHeaders.push(new Headers(context.requestHeader));
+              return {};
             },
           });
         },
@@ -202,6 +307,54 @@ describe("createCoreClient", () => {
     });
     expect(methods).toEqual([ReportingCapabilityService.method.getReportingCapability]);
     expect(receivedHeaders[0]?.get("X-Tammy-Capability")).toBe(CAPABILITY);
+  });
+
+  it("maps every required identity, organisation, and SBR call to its generated client", async () => {
+    const { factory, methods, receivedHeaders } = fakeTransport();
+    const client = createCoreClient(READINESS, factory);
+    const calls = [
+      ["getCurrentUser", GetCurrentUserRequestSchema],
+      ["enrolTotp", EnrolTOTPRequestSchema],
+      ["confirmTotp", ConfirmTOTPRequestSchema],
+      ["assertTotp", AssertTOTPRequestSchema],
+      ["getOrganisation", GetOrganisationRequestSchema],
+      ["recordEntityVerification", RecordEntityVerificationRequestSchema],
+      ["getSbrReadiness", GetSbrReadinessRequestSchema],
+      ["importMachineCredential", ImportMachineCredentialRequestSchema],
+      ["getMachineCredentialStatus", GetMachineCredentialStatusRequestSchema],
+      ["unlockMachineCredential", UnlockMachineCredentialRequestSchema],
+      ["replaceMachineCredential", ReplaceMachineCredentialRequestSchema],
+      ["removeMachineCredential", RemoveMachineCredentialRequestSchema],
+      ["importSbrProductId", ImportSbrProductIdRequestSchema],
+      ["removeSbrProductId", RemoveSbrProductIdRequestSchema],
+      ["runSbrReadinessFixture", RunSbrReadinessFixtureRequestSchema],
+    ] as const;
+
+    for (const [method, requestSchema] of calls) {
+      await (client[method] as (request: unknown) => Promise<unknown>)(create(requestSchema));
+    }
+
+    expect(methods).toEqual([
+      IdentityService.method.getCurrentUser,
+      IdentityService.method.enrolTOTP,
+      IdentityService.method.confirmTOTP,
+      IdentityService.method.assertTOTP,
+      OrganisationService.method.getOrganisation,
+      OrganisationService.method.recordEntityVerification,
+      SbrService.method.getSbrReadiness,
+      SbrService.method.importMachineCredential,
+      SbrService.method.getMachineCredentialStatus,
+      SbrService.method.unlockMachineCredential,
+      SbrService.method.replaceMachineCredential,
+      SbrService.method.removeMachineCredential,
+      SbrService.method.importSbrProductId,
+      SbrService.method.removeSbrProductId,
+      SbrService.method.runSbrReadinessFixture,
+    ]);
+    expect(receivedHeaders).toHaveLength(calls.length);
+    expect(receivedHeaders.every((header) => header.get("X-Tammy-Capability") === CAPABILITY)).toBe(
+      true,
+    );
   });
 
   it("returns only a frozen structured-clone-safe projection", async () => {

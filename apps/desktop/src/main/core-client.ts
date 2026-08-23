@@ -39,11 +39,26 @@ import type {
   SaveDocumentReviewResponse,
 } from "@tammy/connect-client/tammy/v1/documents_pb.js";
 import { DocumentService } from "@tammy/connect-client/tammy/v1/documents_pb.js";
-import type { SignInRequest, SignInResponse } from "@tammy/connect-client/tammy/v1/identity_pb.js";
+import type {
+  AssertTOTPRequest,
+  AssertTOTPResponse,
+  ConfirmTOTPRequest,
+  ConfirmTOTPResponse,
+  EnrolTOTPRequest,
+  EnrolTOTPResponse,
+  GetCurrentUserRequest,
+  GetCurrentUserResponse,
+  SignInRequest,
+  SignInResponse,
+} from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import { IdentityService } from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import type {
   CreateOrganisationRequest,
   CreateOrganisationResponse,
+  GetOrganisationRequest,
+  GetOrganisationResponse,
+  RecordEntityVerificationRequest,
+  RecordEntityVerificationResponse,
 } from "@tammy/connect-client/tammy/v1/organisation_pb.js";
 import { OrganisationService } from "@tammy/connect-client/tammy/v1/organisation_pb.js";
 import type {
@@ -56,6 +71,27 @@ import type {
   GetReportingCapabilityResponse,
 } from "@tammy/connect-client/tammy/v1/reporting_capability_pb.js";
 import { ReportingCapabilityService } from "@tammy/connect-client/tammy/v1/reporting_capability_pb.js";
+import type {
+  GetMachineCredentialStatusRequest,
+  GetMachineCredentialStatusResponse,
+  GetSbrReadinessRequest,
+  GetSbrReadinessResponse,
+  ImportMachineCredentialRequest,
+  ImportMachineCredentialResponse,
+  ImportSbrProductIdRequest,
+  ImportSbrProductIdResponse,
+  RemoveMachineCredentialRequest,
+  RemoveMachineCredentialResponse,
+  RemoveSbrProductIdRequest,
+  RemoveSbrProductIdResponse,
+  ReplaceMachineCredentialRequest,
+  ReplaceMachineCredentialResponse,
+  RunSbrReadinessFixtureRequest,
+  RunSbrReadinessFixtureResponse,
+  UnlockMachineCredentialRequest,
+  UnlockMachineCredentialResponse,
+} from "@tammy/connect-client/tammy/v1/sbr_pb.js";
+import { SbrService } from "@tammy/connect-client/tammy/v1/sbr_pb.js";
 import { RuntimeMode, SystemService } from "@tammy/connect-client/tammy/v1/system_pb.js";
 import type {
   CreateBasDraftRequest,
@@ -124,6 +160,39 @@ export interface CoreClient {
   readonly createOrganisation: (
     request: CreateOrganisationRequest,
   ) => Promise<CreateOrganisationResponse>;
+  readonly getCurrentUser: (request: GetCurrentUserRequest) => Promise<GetCurrentUserResponse>;
+  readonly enrolTotp: (request: EnrolTOTPRequest) => Promise<EnrolTOTPResponse>;
+  readonly confirmTotp: (request: ConfirmTOTPRequest) => Promise<ConfirmTOTPResponse>;
+  readonly assertTotp: (request: AssertTOTPRequest) => Promise<AssertTOTPResponse>;
+  readonly getOrganisation: (request: GetOrganisationRequest) => Promise<GetOrganisationResponse>;
+  readonly recordEntityVerification: (
+    request: RecordEntityVerificationRequest,
+  ) => Promise<RecordEntityVerificationResponse>;
+  readonly getSbrReadiness: (request: GetSbrReadinessRequest) => Promise<GetSbrReadinessResponse>;
+  readonly importMachineCredential: (
+    request: ImportMachineCredentialRequest,
+  ) => Promise<ImportMachineCredentialResponse>;
+  readonly getMachineCredentialStatus: (
+    request: GetMachineCredentialStatusRequest,
+  ) => Promise<GetMachineCredentialStatusResponse>;
+  readonly unlockMachineCredential: (
+    request: UnlockMachineCredentialRequest,
+  ) => Promise<UnlockMachineCredentialResponse>;
+  readonly replaceMachineCredential: (
+    request: ReplaceMachineCredentialRequest,
+  ) => Promise<ReplaceMachineCredentialResponse>;
+  readonly removeMachineCredential: (
+    request: RemoveMachineCredentialRequest,
+  ) => Promise<RemoveMachineCredentialResponse>;
+  readonly importSbrProductId: (
+    request: ImportSbrProductIdRequest,
+  ) => Promise<ImportSbrProductIdResponse>;
+  readonly removeSbrProductId: (
+    request: RemoveSbrProductIdRequest,
+  ) => Promise<RemoveSbrProductIdResponse>;
+  readonly runSbrReadinessFixture: (
+    request: RunSbrReadinessFixtureRequest,
+  ) => Promise<RunSbrReadinessFixtureResponse>;
   readonly getAttentionSummary: (
     request: GetAttentionSummaryRequest,
   ) => Promise<GetAttentionSummaryResponse>;
@@ -184,6 +253,7 @@ export function createCoreClient(
   const identityClient = createClient(IdentityService, transport);
   const organisationClient = createClient(OrganisationService, transport);
   const taxClient = createClient(TaxService, transport);
+  const sbrClient = createClient(SbrService, transport);
 
   const coreRequest = async <Response>(request: () => Promise<Response>): Promise<Response> => {
     try {
@@ -237,6 +307,35 @@ export function createCoreClient(
     signIn: (request: SignInRequest) => coreRequest(() => identityClient.signIn(request)),
     createOrganisation: (request: CreateOrganisationRequest) =>
       coreRequest(() => organisationClient.createOrganisation(request)),
+    getCurrentUser: (request: GetCurrentUserRequest) =>
+      coreRequest(() => identityClient.getCurrentUser(request)),
+    enrolTotp: (request: EnrolTOTPRequest) => coreRequest(() => identityClient.enrolTOTP(request)),
+    confirmTotp: (request: ConfirmTOTPRequest) =>
+      coreRequest(() => identityClient.confirmTOTP(request)),
+    assertTotp: (request: AssertTOTPRequest) =>
+      coreRequest(() => identityClient.assertTOTP(request)),
+    getOrganisation: (request: GetOrganisationRequest) =>
+      coreRequest(() => organisationClient.getOrganisation(request)),
+    recordEntityVerification: (request: RecordEntityVerificationRequest) =>
+      coreRequest(() => organisationClient.recordEntityVerification(request)),
+    getSbrReadiness: (request: GetSbrReadinessRequest) =>
+      coreRequest(() => sbrClient.getSbrReadiness(request)),
+    importMachineCredential: (request: ImportMachineCredentialRequest) =>
+      coreRequest(() => sbrClient.importMachineCredential(request)),
+    getMachineCredentialStatus: (request: GetMachineCredentialStatusRequest) =>
+      coreRequest(() => sbrClient.getMachineCredentialStatus(request)),
+    unlockMachineCredential: (request: UnlockMachineCredentialRequest) =>
+      coreRequest(() => sbrClient.unlockMachineCredential(request)),
+    replaceMachineCredential: (request: ReplaceMachineCredentialRequest) =>
+      coreRequest(() => sbrClient.replaceMachineCredential(request)),
+    removeMachineCredential: (request: RemoveMachineCredentialRequest) =>
+      coreRequest(() => sbrClient.removeMachineCredential(request)),
+    importSbrProductId: (request: ImportSbrProductIdRequest) =>
+      coreRequest(() => sbrClient.importSbrProductId(request)),
+    removeSbrProductId: (request: RemoveSbrProductIdRequest) =>
+      coreRequest(() => sbrClient.removeSbrProductId(request)),
+    runSbrReadinessFixture: (request: RunSbrReadinessFixtureRequest) =>
+      coreRequest(() => sbrClient.runSbrReadinessFixture(request)),
     getAttentionSummary: async (
       request: GetAttentionSummaryRequest,
     ): Promise<GetAttentionSummaryResponse> => {

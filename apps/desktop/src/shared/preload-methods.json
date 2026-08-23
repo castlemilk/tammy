@@ -23,5 +23,21 @@
   "createBasDraft",
   "getCurrentBasDraft",
   "getReportingCapability",
-  "getAttentionSummary"
+  "getAttentionSummary",
+  "getCurrentUser",
+  "enrolTotp",
+  "confirmTotp",
+  "assertTotp",
+  "getOrganisation",
+  "recordEntityVerification",
+  "getSbrReadiness",
+  "getMachineCredentialStatus",
+  "removeMachineCredential",
+  "removeSbrProductId",
+  "runSbrReadinessFixture",
+  "selectMachineCredentialFile",
+  "importMachineCredential",
+  "replaceMachineCredential",
+  "unlockMachineCredential",
+  "importSbrProductId"
 ]
