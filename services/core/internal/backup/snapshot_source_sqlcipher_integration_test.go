@@ -51,7 +51,7 @@ func TestSQLCipherSnapshotSourceProjectsLineageAndProvidersFromFixedCopy(t *test
 	}
 	defer zero(key)
 	livePath := t.TempDir() + "/live.db"
-	if _, err := sqlcipher.MigrateWorkspace(ctx, livePath, key, 3); err != nil {
+	if _, err := sqlcipher.MigrateWorkspace(ctx, livePath, key, 7); err != nil {
 		t.Fatal(err)
 	}
 	live, err := sqlcipher.Open(ctx, livePath, key)

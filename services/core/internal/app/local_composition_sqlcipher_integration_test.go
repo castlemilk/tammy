@@ -18,9 +18,25 @@ import (
 	"github.com/tammyapp/tammy/services/core/internal/buildinfo"
 	tammyv1 "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1"
 	tammyv1connect "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1/tammyv1connect"
+	"github.com/tammyapp/tammy/services/core/internal/storage/sqlcipher"
 	"github.com/tammyapp/tammy/services/core/internal/transport"
 	"github.com/tammyapp/tammy/services/core/internal/workspace"
 )
+
+type localMigrationCaptureModule struct {
+	database *sqlcipher.Database
+}
+
+func (module *localMigrationCaptureModule) HandlerFactories() []transport.GeneratedHandlerFactory {
+	return []transport.GeneratedHandlerFactory{func(...connect.HandlerOption) (string, http.Handler) {
+		return "/tammy.v1.MigrationCaptureService/", http.NotFoundHandler()
+	}}
+}
+
+func (module *localMigrationCaptureModule) Activate(activation LocalWorkspaceActivation) error {
+	module.database = activation.Database
+	return nil
+}
 
 func TestLocalAttemptAnchorIDsAreScopedToOneInstallation(t *testing.T) {
 	firstMaster := bytes.Repeat([]byte{0x31}, 32)
@@ -39,10 +55,15 @@ func TestLocalAttemptAnchorIDsAreScopedToOneInstallation(t *testing.T) {
 }
 
 func TestLocalCompositionCreatesConfirmsAndAuthenticatesRealWorkspace(t *testing.T) {
+	if localMigrationTarget != 7 {
+		t.Fatalf("localMigrationTarget = %d, want 7", localMigrationTarget)
+	}
+	migrationCapture := &localMigrationCaptureModule{}
 	composition, err := NewLocalComposition(LocalCompositionConfig{
 		Info:           buildinfo.Info{Version: "local-integration"},
 		Root:           t.TempDir(),
 		AttemptAnchors: workspace.NewMemoryAnchorStore(),
+		Modules:        []LocalWorkspaceModule{migrationCapture},
 	})
 	if err != nil {
 		t.Fatalf("NewLocalComposition() error = %v", err)
@@ -92,6 +113,34 @@ func TestLocalCompositionCreatesConfirmsAndAuthenticatesRealWorkspace(t *testing
 	}
 	if created.Msg.Workspace == nil || created.Msg.RecoverySecret == nil {
 		t.Fatalf("CreateWorkspace() = %#v", created.Msg)
+	}
+	if migrationCapture.database == nil {
+		t.Fatal("local workspace module was not activated")
+	}
+	var migrationVersion int
+	if err := migrationCapture.database.QueryRowContext(context.Background(),
+		`SELECT COALESCE(MAX(version), 0) FROM schema_migrations`).Scan(&migrationVersion); err != nil {
+		t.Fatalf("read migration version: %v", err)
+	}
+	if migrationVersion != 7 {
+		t.Fatalf("migration version = %d, want 7", migrationVersion)
+	}
+	for _, table := range []string{
+		"sbr_credential_bindings_v1",
+		"sbr_authenticated_profiles_v1",
+		"sbr_readiness_transitions_v1",
+		"sbr_mutations_v1",
+		"sbr_idempotency_v1",
+		"sbr_simulator_transports_v1",
+	} {
+		var count int
+		if err := migrationCapture.database.QueryRowContext(context.Background(),
+			`SELECT count(*) FROM sqlite_schema WHERE type = 'table' AND name = ?`, table).Scan(&count); err != nil {
+			t.Fatalf("inspect %s: %v", table, err)
+		}
+		if count != 1 {
+			t.Fatalf("table %s count = %d, want 1", table, count)
+		}
 	}
 	assertLocalReportingCapability(t, reportingCapabilityClient, ready.Capability, "local-integration")
 	groups, err := workspace.ParseRecoveryGroups(created.Msg.RecoverySecret.Utf8)

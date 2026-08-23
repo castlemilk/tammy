@@ -518,6 +518,19 @@ func TestSQLCipherStagedFinalizerCreatesGenerationAndRestoreEvent(t *testing.T) 
 	archived := createRestoreDatabaseFixture(t, ctx, restoredSourcePath, key, "archived")
 	createdAt := time.Unix(1_710_000_000, 0).UTC()
 	archivedHead, signingKey := seedArchivedAuditAndSessions(t, ctx, archived, workspaceID, key, createdAt)
+	organisationID := "018f0000-0000-7000-8000-000000000703"
+	credentialFingerprint := bytes.Repeat([]byte{0x7a}, sha256.Size)
+	if _, err := archived.ExecContext(ctx, `INSERT INTO organisations(id,legal_name,abn,status,created_at) VALUES (?,?,?,?,?)`,
+		organisationID, "Wattle & Co Test Pty Ltd", "11000000560", "ACTIVE", "2026-08-23T00:00:00.000000000Z"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := archived.ExecContext(ctx, `INSERT INTO sbr_credential_bindings_v1(workspace_id,organisation_id,canonical_abn,
+schema_version,credential_fingerprint,component_version,subject_hash,expires_at,binding_state,revision,updated_at)
+VALUES (?,?,?,?,?,?,?,?,?,?,?)`, workspaceID, organisationID, "11000000560", 1, credentialFingerprint,
+		"simulator-v1", bytes.Repeat([]byte{0x7b}, sha256.Size), "2027-08-23T00:00:00.000000000Z", "ACTIVE", 1,
+		"2026-08-23T00:00:00.000000000Z"); err != nil {
+		t.Fatal(err)
+	}
 	schemaVersion, migrationHash := restoreSchemaMetadata(t, ctx, archived)
 	if err := active.Close(); err != nil {
 		t.Fatal(err)
@@ -589,6 +602,15 @@ func TestSQLCipherStagedFinalizerCreatesGenerationAndRestoreEvent(t *testing.T) 
 	defer stagedDatabase.Close()
 	if err := backup.VerifySnapshotExclusions(ctx, stagedDatabase); err != nil {
 		t.Fatalf("restored sessions were not invalidated: %v", err)
+	}
+	var restoredBindingState string
+	if err := stagedDatabase.QueryRowContext(ctx, `SELECT binding_state FROM sbr_credential_bindings_v1
+WHERE workspace_id=? AND organisation_id=? AND canonical_abn=? AND credential_fingerprint=?`, workspaceID,
+		organisationID, "11000000560", credentialFingerprint).Scan(&restoredBindingState); err != nil {
+		t.Fatal(err)
+	}
+	if restoredBindingState != "REIMPORT_REQUIRED" {
+		t.Fatalf("restored SBR binding state = %q, want REIMPORT_REQUIRED", restoredBindingState)
 	}
 	header, err := audit.LoadChainHeader(ctx, stagedDatabase, workspaceID, 0)
 	if err != nil || header.Generation != 6 || header.CurrentSequence != 1 || !bytes.Equal(header.CurrentHead[:], finalized.AuditHead) {
@@ -1005,7 +1027,7 @@ func TestVerifyArchivedAuditStateRejectsCorruptEventBody(t *testing.T) {
 
 func createRestoreDatabaseFixture(t *testing.T, ctx context.Context, path string, key []byte, marker string) *sqlcipher.Database {
 	t.Helper()
-	if _, err := sqlcipher.MigrateWorkspace(ctx, path, key, 4); err != nil {
+	if _, err := sqlcipher.MigrateWorkspace(ctx, path, key, 7); err != nil {
 		t.Fatal(err)
 	}
 	database, err := sqlcipher.Open(ctx, path, key)

@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+
+	"github.com/tammyapp/tammy/services/core/internal/sbr"
 )
 
 var ErrSnapshotExclusion = errors.New("backup: snapshot exclusion policy failed")
@@ -54,6 +56,9 @@ func SanitizeSnapshot(ctx context.Context, executor SQLExecutor) error {
 			return ErrSnapshotExclusion
 		}
 	}
+	if err := sbr.SanitizeBackupState(ctx, executor); err != nil {
+		return ErrSnapshotExclusion
+	}
 	return VerifySnapshotExclusions(ctx, executor)
 }
 
@@ -73,6 +78,9 @@ func VerifySnapshotExclusions(ctx context.Context, executor SQLExecutor) error {
 		if err != nil || count != 0 {
 			return ErrSnapshotExclusion
 		}
+	}
+	if err := sbr.VerifyBackupState(ctx, executor); err != nil {
+		return ErrSnapshotExclusion
 	}
 	rows, err := executor.QueryContext(ctx, `PRAGMA foreign_key_check`)
 	if err != nil {

@@ -10,6 +10,7 @@ import (
 
 	"github.com/tammyapp/tammy/services/core/internal/authorisation"
 	tammyv1 "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1"
+	"github.com/tammyapp/tammy/services/core/internal/platform/abn"
 	"github.com/tammyapp/tammy/services/core/internal/platform/ids"
 	"google.golang.org/protobuf/proto"
 )
@@ -25,25 +26,9 @@ var (
 	ErrFreshFactorRequired = errors.New("organisations: fresh factor required")
 )
 
-var abnWeights = [...]int{10, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19}
-
 // ValidateABN applies the Australian Business Number weighted mod-89 check.
 func ValidateABN(value string) error {
-	if len(value) != 11 {
-		return ErrInvalidOrganisation
-	}
-	total := 0
-	for index := range value {
-		if value[index] < '0' || value[index] > '9' {
-			return ErrInvalidOrganisation
-		}
-		digit := int(value[index] - '0')
-		if index == 0 {
-			digit--
-		}
-		total += digit * abnWeights[index]
-	}
-	if total%89 != 0 {
+	if !abn.Valid(value) {
 		return ErrInvalidOrganisation
 	}
 	return nil

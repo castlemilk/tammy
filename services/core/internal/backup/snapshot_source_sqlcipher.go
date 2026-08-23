@@ -13,6 +13,7 @@ import (
 	"github.com/tammyapp/tammy/services/core/internal/audit"
 	tammyv1 "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1"
 	"github.com/tammyapp/tammy/services/core/internal/platform/ids"
+	"github.com/tammyapp/tammy/services/core/internal/sbr"
 	"github.com/tammyapp/tammy/services/core/internal/storage/sqlcipher"
 )
 
@@ -93,6 +94,9 @@ func (source *SQLCipherSnapshotSource) ConsistentSnapshot(
 		func(ctx context.Context, staged *sqlcipher.Database, reader snapshotSQLReader,
 			schemaVersion uint64, migrationHash []byte,
 		) error {
+			if err := sbr.VerifyBackupState(ctx, staged); err != nil {
+				return ErrService
+			}
 			lineage, err := loadStagedAuditLineage(ctx, reader, workspaceID)
 			if err != nil {
 				return err

@@ -18,6 +18,7 @@ import (
 	"github.com/tammyapp/tammy/services/core/internal/backup"
 	tammyv1 "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1"
 	"github.com/tammyapp/tammy/services/core/internal/platform/ids"
+	"github.com/tammyapp/tammy/services/core/internal/sbr"
 	"github.com/tammyapp/tammy/services/core/internal/storage/sqlcipher"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -236,6 +237,11 @@ func (adapter *SQLCipherWorkspaceAdapter) FinalizeStagedWorkspace(ctx context.Co
 	if err := backup.SanitizeSnapshot(ctx, transaction); err != nil {
 		return nil, ErrSQLCipherWorkspace
 	}
+	restoredAt := adapter.now().UTC()
+	if restoredAt.IsZero() || sbr.MarkRestoredState(ctx, transaction,
+		restoredAt.Format("2006-01-02T15:04:05.000000000Z")) != nil {
+		return nil, ErrSQLCipherWorkspace
+	}
 	if err := PersistPreRestoreArchive(ctx, transaction, PreRestoreArchiveRecord{
 		WorkspaceID: request.WorkspaceID, OperationID: request.OperationID,
 		ArchiveID: request.PreRestoreArchive.ArchiveID, Version: request.PreRestoreArchive.Version,
@@ -257,7 +263,7 @@ func (adapter *SQLCipherWorkspaceAdapter) FinalizeStagedWorkspace(ctx context.Co
 	if err != nil {
 		return nil, ErrSQLCipherWorkspace
 	}
-	occurredAt := adapter.now().UTC()
+	occurredAt := restoredAt
 	if occurredAt.IsZero() {
 		return nil, ErrSQLCipherWorkspace
 	}
