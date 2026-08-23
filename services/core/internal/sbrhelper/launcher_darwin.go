@@ -17,6 +17,11 @@ import (
 
 type launchFreshnessError struct{ err error }
 
+var (
+	errProcessExited        = errors.New("sbr helper process exited")
+	errProcessOutputInvalid = errors.New("sbr helper process output invalid")
+)
+
 func (e launchFreshnessError) Error() string { return e.err.Error() }
 func (e launchFreshnessError) Unwrap() error { return e.err }
 
@@ -166,6 +171,7 @@ func (l *Launcher) launchStaged(ctx context.Context, staged *sbrprofile.StagedRe
 		)
 	}
 	output, err := l.run(processContext, "/usr/bin/sandbox-exec", []string{"-f", "/dev/fd/4", staged.HelperPath}, framedPayload, []*os.File{helperFile, profileFile}, authority, verifyChild)
+	defer zeroBytes(output)
 	if err != nil {
 		if processContext.Err() != nil {
 			return Response{}, protocolError(string(StableErrorDeadlineExpired))
@@ -174,16 +180,28 @@ func (l *Launcher) launchStaged(ctx context.Context, staged *sbrprofile.StagedRe
 		if errors.As(err, &freshness) {
 			return Response{}, freshness.err
 		}
+		if errors.Is(err, errProcessOutputInvalid) {
+			return Response{}, errMalformedHelperResponse
+		}
+		if errors.Is(err, errProcessExited) && len(output) > 0 {
+			if _, decodeErr := decodeAuthenticatedResponse(output, &session, l.now()); decodeErr != nil {
+				return Response{}, errMalformedHelperResponse
+			}
+		}
 		return Response{}, protocolError(string(StableErrorHelperUnavailable))
 	}
+	return decodeAuthenticatedResponse(output, &session, l.now())
+}
+
+func decodeAuthenticatedResponse(output []byte, session *Session, now time.Time) (Response, error) {
 	responsePayload, err := ReadFrame(bytes.NewReader(output))
 	if err != nil {
-		return Response{}, protocolError(string(StableErrorHelperProtocol))
+		return Response{}, errMalformedHelperResponse
 	}
 	defer zeroBytes(responsePayload)
 	response, err := DecodeResponse(responsePayload)
-	if err != nil || session.Complete(response, l.now()) != nil {
-		return Response{}, protocolError(string(StableErrorHelperProtocol))
+	if err != nil || session == nil || session.Complete(response, now) != nil {
+		return Response{}, errMalformedHelperResponse
 	}
 	return response, nil
 }
@@ -291,8 +309,14 @@ func runSandboxedProcess(ctx context.Context, path string, args []string, input 
 	if err := <-writeErr; err != nil {
 		return nil, err
 	}
-	if profileWriteErr != nil || readErr != nil || waitErr != nil || len(output) > MaxPayloadSize+4 {
+	if profileWriteErr != nil || readErr != nil {
 		return nil, errors.New("process")
+	}
+	if len(output) > MaxPayloadSize+4 {
+		return output, errProcessOutputInvalid
+	}
+	if waitErr != nil {
+		return output, errProcessExited
 	}
 	return output, nil
 }

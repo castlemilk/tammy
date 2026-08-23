@@ -2,11 +2,14 @@ package sbrhelper
 
 import (
 	"context"
+	"errors"
 	"os"
 	"time"
 
 	"github.com/tammyapp/tammy/services/core/internal/sbrprofile"
 )
+
+var errMalformedHelperResponse = errors.New("sbr helper malformed response")
 
 type Launcher struct {
 	locator sbrprofile.ResourceLocator

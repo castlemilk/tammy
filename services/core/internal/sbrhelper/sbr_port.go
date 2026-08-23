@@ -174,6 +174,9 @@ func (port *SBRPort) executeStaged(ctx context.Context, staged *sbrprofile.Stage
 	defer request.ClearSecrets()
 	response, err := port.launcher.LaunchStaged(ctx, staged, request)
 	if err != nil {
+		if errors.Is(err, errMalformedHelperResponse) {
+			return sbr.HelperResult{}, sbr.ErrHelperMalformedResponse
+		}
 		var stable interface{ Code() string }
 		if errors.Is(err, context.DeadlineExceeded) || errors.As(err, &stable) && stable.Code() == string(StableErrorDeadlineExpired) {
 			return sbr.HelperResult{}, sbr.ErrHelperDeadlineExpired

@@ -129,7 +129,7 @@ func TestAuthenticatedProfileLeasePinsSnapshotAcrossSourceRotationAndCleansUp(t 
 	}
 }
 
-func TestAuthenticatedSimulatorPortLaunchesCurrentHelper(t *testing.T) {
+func TestAuthenticatedSimulatorPortLaunchesCurrentHelperAndClassifiesFailures(t *testing.T) {
 	if runtime.GOOS != "darwin" || runtime.GOARCH != "arm64" {
 		t.Skip("authenticated simulator helper is a macOS arm64 resource")
 	}
@@ -172,14 +172,30 @@ func TestAuthenticatedSimulatorPortLaunchesCurrentHelper(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer profile.Close()
-	result, err := profile.Execute(context.Background(), sbr.HelperRequest{Operation: sbr.HelperOperationFixture,
+	request := sbr.HelperRequest{Operation: sbr.HelperOperationFixture,
 		RequestID: "018f0000-0000-7000-8000-000000000712", Environment: profile.Environment,
 		WorkspaceID: "018f0000-0000-7000-8000-000000000701", OrganisationID: "018f0000-0000-7000-8000-000000000702",
 		CanonicalABN: "11000000560", OpaqueScope: bytes.Repeat([]byte{0x52}, sha256.Size),
 		ProfileFingerprint: profile.ProfileFingerprint, RegistrationFingerprint: profile.RegistrationFingerprint,
-		ComponentFingerprint: profile.ComponentFingerprint, ComponentVersion: profile.ComponentVersion})
+		ComponentFingerprint: profile.ComponentFingerprint, ComponentVersion: profile.ComponentVersion}
+	result, err := profile.Execute(context.Background(), request)
 	if err != nil || result.Outcome != sbr.HelperOutcomeOK || result.ResultCode != sbr.HelperResultFixtureSelected || result.FixtureState != sbr.TransportAccepted {
 		t.Fatalf("actual helper Execute() = %+v, %v", result, err)
+	}
+
+	malformed := request
+	malformed.RequestID = "018f0000-0000-7000-8000-000000000713"
+	malformed.FixtureFailureCase = tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_MALFORMED_RESPONSE
+	if _, err = profile.Execute(context.Background(), malformed); !errors.Is(err, sbr.ErrHelperMalformedResponse) || err.Error() != "SBR_HELPER_MALFORMED_RESPONSE" {
+		t.Fatalf("malformed helper response error = %v", err)
+	}
+
+	death := request
+	death.RequestID = "018f0000-0000-7000-8000-000000000714"
+	death.FixtureFailureCase = tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_HELPER_DEATH
+	if _, err = profile.Execute(context.Background(), death); err == nil || err.Error() != string(StableErrorHelperUnavailable) ||
+		errors.Is(err, sbr.ErrHelperMalformedResponse) || errors.Is(err, sbr.ErrHelperDeadlineExpired) {
+		t.Fatalf("helper death error = %v", err)
 	}
 }
 
@@ -266,5 +282,22 @@ func TestSBRPortMapsRunnerAndLauncherDeadlineCodesToCoreDeadline(t *testing.T) {
 		if !errors.Is(err, sbr.ErrHelperDeadlineExpired) {
 			t.Fatalf("deadline mapping error = %v", err)
 		}
+	}
+}
+
+func TestSBRPortMapsOnlyClosedLauncherMalformedResponseToCore(t *testing.T) {
+	requestID := "018f0000-0000-7000-8000-000000000715"
+	port, err := NewSBRPort(&fakePortLauncher{err: errMalformedHelperResponse},
+		"/Applications/Tammy.app/Contents/Resources/sbr/simulator/sbr-profile-v1.json",
+		func() time.Time { return time.Date(2026, 8, 24, 0, 0, 0, 0, time.UTC) })
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = port.executeStaged(context.Background(), nil, sbr.HelperRequest{Operation: sbr.HelperOperationFixture, RequestID: requestID,
+		Environment: tammyv1.SbrEnvironment_SBR_ENVIRONMENT_SIMULATOR, WorkspaceID: "018f0000-0000-7000-8000-000000000701",
+		OrganisationID: "018f0000-0000-7000-8000-000000000702", CanonicalABN: "11000000560",
+		OpaqueScope: bytes.Repeat([]byte{0x51}, sha256.Size)})
+	if !errors.Is(err, sbr.ErrHelperMalformedResponse) || err.Error() != "SBR_HELPER_MALFORMED_RESPONSE" {
+		t.Fatalf("malformed mapping error = %v", err)
 	}
 }

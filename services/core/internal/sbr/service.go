@@ -1723,20 +1723,30 @@ func (service *Service) RunSbrReadinessFixture(ctx context.Context, request *con
 	result, err := profile.Execute(ctx, helperRequest)
 	if err != nil {
 		failureCase := SimulatorCaseHelperDeath
+		state := TransportMaybeSent
+		finalAction := AuditFixtureUnknown
 		statusCode := "SBR_HELPER_FIXTURE_HELPER_DEATH"
-		if errors.Is(err, ErrHelperDeadlineExpired) || errors.Is(err, context.DeadlineExceeded) {
+		var resultHash *[sha256.Size]byte
+		if errors.Is(err, ErrHelperMalformedResponse) {
+			failureCase = SimulatorCaseMalformedResponse
+			state = TransportFailed
+			finalAction = AuditFixtureCompleted
+			statusCode = "SBR_HELPER_FIXTURE_REJECTED"
+			redactedHash := malformedFixtureResultHash(fixture.OperationID)
+			resultHash = &redactedHash
+		} else if errors.Is(err, ErrHelperDeadlineExpired) || errors.Is(err, context.DeadlineExceeded) {
 			failureCase = SimulatorCaseTimeout
 			statusCode = "SBR_HELPER_FIXTURE_TIMEOUT"
 		}
-		audit := AuditRecord{Action: AuditFixtureUnknown, CredentialFingerprint: stored.metadata.Fingerprint,
+		audit := AuditRecord{Action: finalAction, CredentialFingerprint: stored.metadata.Fingerprint,
 			StatusCode: statusCode}
-		if finishErr := service.store.FinishFixtureWithAudit(ctx, fixture, failureCase, nil, audit,
+		if finishErr := service.store.FinishFixtureWithAudit(ctx, fixture, failureCase, resultHash, audit,
 			func(auditCtx context.Context, executor MutationExecutor, record AuditRecord) error {
 				return service.audit.Record(auditCtx, executor, record)
 			}); finishErr != nil {
 			return nil, connect.NewError(connect.CodeInternal, ErrService)
 		}
-		return service.fixtureResponse(ctx, request.Msg, binding, profile, stored, TransportMaybeSent,
+		return service.fixtureResponse(ctx, request.Msg, binding, profile, stored, state,
 			fixtureOutcome(failureCase)), nil
 	}
 	resultHash := fixtureResultHash(result)
@@ -1832,6 +1842,15 @@ func fixtureResultHash(result HelperResult) [sha256.Size]byte {
 	_, _ = digest.Write([]byte(result.RequestID))
 	_, _ = digest.Write([]byte{byte(result.Outcome), byte(result.ResultCode), byte(result.FixtureFailureCase)})
 	_, _ = digest.Write([]byte(result.FixtureState))
+	var value [sha256.Size]byte
+	copy(value[:], digest.Sum(nil))
+	return value
+}
+
+func malformedFixtureResultHash(operationID string) [sha256.Size]byte {
+	digest := sha256.New()
+	_, _ = digest.Write([]byte("tammy.sbr.fixture-malformed-response.v1\x00"))
+	_, _ = digest.Write([]byte(operationID))
 	var value [sha256.Size]byte
 	copy(value[:], digest.Sum(nil))
 	return value

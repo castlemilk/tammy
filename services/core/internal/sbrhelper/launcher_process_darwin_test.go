@@ -3,6 +3,7 @@
 package sbrhelper
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"os"
@@ -12,6 +13,34 @@ import (
 	"testing"
 	"time"
 )
+
+func TestSandboxedProcessRetainsBoundedStdoutOnNonzeroExit(t *testing.T) {
+	root := t.TempDir()
+	profilePath := filepath.Join(root, "profile.sb")
+	writeLauncherFile(t, profilePath, []byte("profile"), 0o600)
+	profileFile, err := os.Open(profilePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer profileFile.Close()
+	helperFile, err := os.Open("/dev/null")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer helperFile.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	want := []byte{0, 0, 0, 3, 0x0a, 0x01, 'x'}
+	output, err := runSandboxedProcess(ctx, "/bin/sh", []string{"-c", "cat >/dev/null; printf '\\000\\000\\000\\003\\012\\001x'; exit 31"}, nil,
+		[]*os.File{helperFile, profileFile}, func() error { return nil }, func(context.Context, int, bool) error { return nil })
+	if !errors.Is(err, errProcessExited) {
+		t.Fatalf("process exit error = %v", err)
+	}
+	if !bytes.Equal(output, want) {
+		t.Fatalf("bounded stdout = %x, want %x", output, want)
+	}
+}
 
 func TestDarwinCodeIdentityBindsStaticHelperToLivePID(t *testing.T) {
 	if os.Getenv("TAMMY_CODE_IDENTITY_CHILD") == "1" {

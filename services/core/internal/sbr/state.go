@@ -10,15 +10,16 @@ import (
 )
 
 var (
-	ErrRepository            = errors.New("sbr: repository failure")
-	ErrInvalid               = errors.New("sbr: invalid redacted state")
-	ErrNotFound              = errors.New("sbr: binding not found")
-	ErrPermissionDenied      = errors.New("sbr: binding permission denied")
-	ErrConflict              = errors.New("sbr: durable state conflict")
-	ErrInvalidTransition     = errors.New("sbr: invalid state transition")
-	ErrIdempotencyConflict   = errors.New("sbr: idempotency conflict")
-	ErrUncertainTransport    = errors.New("sbr: uncertain transport outcome")
-	ErrHelperDeadlineExpired = errors.New("SBR_DEADLINE_EXPIRED")
+	ErrRepository              = errors.New("sbr: repository failure")
+	ErrInvalid                 = errors.New("sbr: invalid redacted state")
+	ErrNotFound                = errors.New("sbr: binding not found")
+	ErrPermissionDenied        = errors.New("sbr: binding permission denied")
+	ErrConflict                = errors.New("sbr: durable state conflict")
+	ErrInvalidTransition       = errors.New("sbr: invalid state transition")
+	ErrIdempotencyConflict     = errors.New("sbr: idempotency conflict")
+	ErrUncertainTransport      = errors.New("sbr: uncertain transport outcome")
+	ErrHelperDeadlineExpired   = errors.New("SBR_DEADLINE_EXPIRED")
+	ErrHelperMalformedResponse = errors.New("SBR_HELPER_MALFORMED_RESPONSE")
 )
 
 type BindingKey struct {

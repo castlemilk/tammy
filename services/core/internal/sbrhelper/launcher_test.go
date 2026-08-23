@@ -152,6 +152,44 @@ func TestLauncherExecutesOnlyStagedHelperWithSandboxProfileAndFramedStdio(t *tes
 	}
 }
 
+func TestLauncherClassifiesMalformedFrameFromExitedAuthenticatedHelper(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Second)
+	root, err := os.MkdirTemp(launcherRepositoryRoot(t), ".sbrhelper-malformed-test-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = os.Chmod(root, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(root) })
+	helper := []byte("authenticated helper")
+	helperPath := filepath.Join(root, "helper")
+	writeLauncherFile(t, helperPath, helper, 0o500)
+	runtimeBase := filepath.Join(root, "runtime")
+	if err = os.Mkdir(runtimeBase, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	profilePath := writeLauncherProfile(t, root, helper, now)
+	launcher := NewLauncher(launcherLocator{sbrprofile.ResourceSet{HelperPath: helperPath, TrustedRuntimeBase: runtimeBase}})
+	launcher.now = func() time.Time { return now }
+	installFakeCodeIdentity(launcher)
+	launcher.run = func(context.Context, string, []string, []byte, []*os.File, func() error, childVerifier) ([]byte, error) {
+		var framed bytes.Buffer
+		if err := WriteFrame(&framed, []byte{0x0a, 0x01, 'x'}); err != nil {
+			t.Fatal(err)
+		}
+		return framed.Bytes(), errProcessExited
+	}
+	request := scopedLauncherFixture(Request{ProtocolVersion: ProtocolVersion,
+		RequestID: "018bcfe5-6800-7000-8000-000000000001", Operation: OperationFixture,
+		DeadlineMillis: now.Add(time.Minute).UnixMilli(), Environment: EnvironmentSimulator,
+		SimulatorCase: SimulatorMalformedResponse})
+	if _, err = launcher.Launch(context.Background(), profilePath, request); !errors.Is(err, errMalformedHelperResponse) ||
+		err.Error() != "sbr helper malformed response" {
+		t.Fatalf("malformed launcher error = %v", err)
+	}
+}
+
 func TestLauncherRejectsHelperSwapAcrossSpawnBoundary(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Second)
 	root, err := os.MkdirTemp(launcherRepositoryRoot(t), ".sbrhelper-swap-test-")

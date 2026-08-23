@@ -1480,6 +1480,40 @@ func TestFixtureMapsAuthenticatedHelperDeadlineToTimeoutOutcome(t *testing.T) {
 	}
 }
 
+func TestFixtureMapsAuthenticatedMalformedHelperResponseToFailedOutcome(t *testing.T) {
+	helper := &fakeHelper{err: ErrHelperMalformedResponse}
+	service := testService(t, helper, &fakeIdentity{})
+	audit := &fakeAudit{}
+	service.audit = audit
+	binding := service.organisation.(fakeOrganisation).binding
+	metadata := CredentialMetadata{Fingerprint: sha256.Sum256([]byte("credential")), CanonicalABN: serviceABN,
+		ComponentVersion: "sim-v1", ExpiresAt: service.now().Add(time.Hour),
+		State: tammyv1.MachineCredentialState_MACHINE_CREDENTIAL_STATE_PRESENT}
+	service.store.(*memoryServiceStore).bindings[organisationStoreKey(binding)] = serviceBinding{
+		metadata: metadata, profile: service.profiles.(fakeProfile).profile, state: metadata.State,
+	}
+	response, err := service.RunSbrReadinessFixture(context.Background(), connect.NewRequest(&tammyv1.RunSbrReadinessFixtureRequest{
+		CommandContext: command(PurposeUseMachineCredential), FixtureId: ReadinessFixtureID,
+		FailureCase: tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_HELPER_DEATH,
+	}))
+	if err != nil || response.Msg.Result.Succeeded ||
+		response.Msg.Result.Outcome != tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_MALFORMED_RESPONSE {
+		t.Fatalf("malformed fixture response = %v, error = %v", response, err)
+	}
+	store := service.store.(*memoryServiceStore)
+	store.mu.Lock()
+	for _, fixture := range store.fixtures {
+		if fixture.State != TransportFailed {
+			t.Fatalf("malformed fixture durable state = %+v", fixture)
+		}
+	}
+	store.mu.Unlock()
+	last := audit.records[len(audit.records)-1]
+	if last.Action != AuditFixtureCompleted || last.StatusCode != "SBR_HELPER_FIXTURE_REJECTED" {
+		t.Fatalf("malformed fixture audit = %+v", last)
+	}
+}
+
 func TestFixtureDoesNotInferHelperDeathOrTimeoutFromASelectedCaseEcho(t *testing.T) {
 	for _, failure := range []tammyv1.SbrReadinessFixtureFailure{
 		tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_HELPER_DEATH,
