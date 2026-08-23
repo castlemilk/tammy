@@ -1,7 +1,17 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { app, BrowserWindow, type Event, ipcMain, net, protocol, session, shell } from "electron";
+import {
+  app,
+  BrowserWindow,
+  dialog,
+  type Event,
+  ipcMain,
+  net,
+  protocol,
+  session,
+  shell,
+} from "electron";
 
 import { readPublicLinks } from "../shared/public-links";
 
@@ -12,6 +22,11 @@ import type { DesktopDependencies, DesktopWindow } from "./index-lifecycle";
 import { resolveBundledCorePath } from "./index-paths";
 import { registerDesktopIpc } from "./ipc";
 import { createDesktopRpcRouter } from "./rpc-router";
+import {
+  createSbrFileIntake,
+  type SbrFileIntake,
+  type SbrFileReleaseKind,
+} from "./sbr-file-intake";
 import {
   createRendererSecurityPolicy,
   createSecureWebPreferences,
@@ -28,8 +43,25 @@ function releaseAll(releases: readonly (() => void)[]): void {
   }
 }
 
+export function resolveSbrFileReleaseKind(options: {
+  readonly isMas: boolean;
+  readonly isPackaged: boolean;
+}): SbrFileReleaseKind {
+  if (!options.isPackaged) return "development";
+  return options.isMas ? "mas" : "ordinary-package";
+}
+
+interface ProductionDependencyOverrides {
+  readonly createFileIntake?: (options: {
+    readonly releaseKind: SbrFileReleaseKind;
+    readonly showOpenDialog: Parameters<typeof createSbrFileIntake>[0]["showOpenDialog"];
+  }) => Readonly<SbrFileIntake>;
+  readonly isMas?: boolean;
+}
+
 export function createProductionDependencies(
   processArguments: readonly string[] = process.argv,
+  overrides: ProductionDependencyOverrides = {},
 ): DesktopDependencies {
   const localLaunch = parseLocalLaunchArguments(processArguments);
   if (localLaunch.userDataPath !== undefined) {
@@ -47,6 +79,19 @@ export function createProductionDependencies(
   let core: CoreProcess | undefined;
   let nativeWindow: BrowserWindow | undefined;
   let requestQuit: (() => void) | undefined;
+  const releaseKind = resolveSbrFileReleaseKind({
+    isMas:
+      overrides.isMas ?? (process as NodeJS.Process & Readonly<{ mas?: boolean }>).mas === true,
+    isPackaged: app.isPackaged,
+  });
+  const fileIntake = (overrides.createFileIntake ?? createSbrFileIntake)({
+    releaseKind,
+    showOpenDialog: async (options) =>
+      dialog.showOpenDialog({
+        properties: [...options.properties],
+        securityScopedBookmarks: options.securityScopedBookmarks,
+      }),
+  });
   const coreBoundary = {
     start: async () => {
       const binaryPath = await resolveBundledCorePath({
@@ -72,6 +117,7 @@ export function createProductionDependencies(
 
   return {
     applicationUrl: policy.applicationUrl,
+    cleanupSensitiveState: fileIntake.clear,
     core: coreBoundary,
     createClient: createCoreClient,
     createWindow: () => {
@@ -142,6 +188,7 @@ export function createProductionDependencies(
     },
     logger: { error: (message) => console.error(message) },
     ready: () => app.whenReady(),
+    releaseKind,
     registerIpc: (getWindow, client) =>
       registerDesktopIpc({
         applicationUrl: policy.applicationUrl,
@@ -154,7 +201,7 @@ export function createProductionDependencies(
           },
           isDestroyed: () => !nativeWindow || nativeWindow.isDestroyed(),
         },
-        router: createDesktopRpcRouter(client),
+        router: createDesktopRpcRouter(client, fileIntake),
       }),
     registerScheme: () => installApplicationScheme({ app, protocol }),
   };

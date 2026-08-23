@@ -1,6 +1,7 @@
 import type { CoreReadiness } from "../shared/readiness";
 import type { CoreClient } from "./core-client";
 import type { CoreProcess } from "./core-process";
+import type { SbrFileReleaseKind } from "./sbr-file-intake";
 
 export type DesktopApplicationErrorCode =
   | "APPLICATION_CLOSING"
@@ -32,6 +33,7 @@ export interface DesktopWindow {
 
 export interface DesktopDependencies {
   readonly applicationUrl: string;
+  readonly cleanupSensitiveState: () => void;
   readonly core: Pick<CoreProcess, "start" | "stop">;
   readonly createClient: (readiness: Readonly<CoreReadiness>) => Readonly<CoreClient>;
   readonly createWindow: () => DesktopWindow;
@@ -41,6 +43,7 @@ export interface DesktopDependencies {
   readonly listenForQuit: (listener: () => void) => Release;
   readonly logger: { error(message: string): void };
   readonly ready: () => Promise<void>;
+  readonly releaseKind: SbrFileReleaseKind;
   readonly registerIpc: (
     getWindow: () => DesktopWindow | undefined,
     client: Readonly<CoreClient>,
@@ -83,6 +86,7 @@ export async function startDesktopApplication(
   let pendingCore: Promise<Readonly<CoreReadiness>> | undefined;
   let coreReady = false;
   let shutdownPromise: Promise<void> | undefined;
+  const cleanupSensitiveState = onceRelease(dependencies.cleanupSensitiveState);
 
   const ensureOpen = (): void => {
     if (closing) throw new DesktopApplicationError("APPLICATION_CLOSING");
@@ -93,6 +97,7 @@ export async function startDesktopApplication(
     const coreWasPending = pendingCore !== undefined && !coreReady;
     shutdownPromise = (async () => {
       releaseSafely(unregisterIpc);
+      releaseSafely(cleanupSensitiveState);
       releaseSafely(releaseWindow);
       if (window && !window.isDestroyed()) window.close();
       let stopFailed = false;
@@ -144,6 +149,7 @@ export async function startDesktopApplication(
     if (closing) unlistenQuit();
   } catch {
     releaseSafely(releaseScheme);
+    releaseSafely(cleanupSensitiveState);
     dependencies.logger.error("LOCAL_ENGINE_UNAVAILABLE");
     dependencies.exit(1);
     throw new DesktopApplicationError("LOCAL_ENGINE_UNAVAILABLE");

@@ -338,6 +338,8 @@ test("store plist validation requires exact sandbox inheritance and privacy valu
     appEntitlements: {
       "com.apple.security.app-sandbox": true,
       "com.apple.security.files.user-selected.read-only": true,
+      "com.apple.security.application-groups": ["$(TeamIdentifierPrefix)com.tammy.desktop"],
+      "keychain-access-groups": ["$(AppIdentifierPrefix)com.tammy.desktop.sbr"],
       "com.apple.security.network.client": true,
       "com.apple.security.network.server": true,
     },

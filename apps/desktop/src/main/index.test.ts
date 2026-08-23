@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("electron", () => ({
   app: {},
   BrowserWindow: class {},
+  dialog: {},
   ipcMain: {},
   net: {},
   protocol: {},
@@ -216,6 +217,7 @@ function rig(overrides: Partial<DesktopDependencies> = {}) {
       calls.push("window:create");
       return window;
     }),
+    cleanupSensitiveState: vi.fn(() => calls.push("credential-intake:clear")),
     exit: vi.fn((code) => calls.push(`exit:${code}`)),
     installRuntimeSecurity: vi.fn(async () => {
       calls.push("security:runtime");
@@ -242,6 +244,7 @@ function rig(overrides: Partial<DesktopDependencies> = {}) {
       calls.push("scheme");
       return () => calls.push("scheme:release");
     }),
+    releaseKind: "development",
     ...overrides,
   };
   return {
@@ -276,10 +279,25 @@ describe("desktop application composition", () => {
     await application.shutdown();
     expect(
       calls.filter((call) =>
-        ["ipc:unregister", "window:close", "core:stop", "exit:0"].includes(call),
+        [
+          "ipc:unregister",
+          "credential-intake:clear",
+          "window:close",
+          "core:stop",
+          "exit:0",
+        ].includes(call),
       ),
-    ).toEqual(["ipc:unregister", "window:close", "core:stop", "exit:0"]);
+    ).toEqual(["ipc:unregister", "credential-intake:clear", "window:close", "core:stop", "exit:0"]);
     expect(window.close).toHaveBeenCalledOnce();
+  });
+
+  it("clears retained credential paths exactly once on repeated shutdown", async () => {
+    const { dependencies } = rig();
+    const application = await startDesktopApplication(dependencies);
+
+    await Promise.all([application.shutdown(), application.shutdown()]);
+
+    expect(dependencies.cleanupSensitiveState).toHaveBeenCalledOnce();
   });
 
   it.each(["start", "diagnostics"] as const)(
