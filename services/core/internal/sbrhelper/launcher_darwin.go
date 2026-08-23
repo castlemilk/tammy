@@ -306,10 +306,16 @@ func runSandboxedProcess(ctx context.Context, path string, args []string, input 
 	output, readErr := io.ReadAll(limited)
 	waitErr := command.Wait()
 	profileWriteErr := <-profileErr
-	if err := <-writeErr; err != nil {
-		return nil, err
+	return finishSandboxedProcessOutput(output, <-writeErr, profileWriteErr, readErr, waitErr)
+}
+
+func finishSandboxedProcessOutput(output []byte, writeErr, profileWriteErr, readErr, waitErr error) ([]byte, error) {
+	if writeErr != nil {
+		zeroBytes(output)
+		return nil, writeErr
 	}
 	if profileWriteErr != nil || readErr != nil {
+		zeroBytes(output)
 		return nil, errors.New("process")
 	}
 	if len(output) > MaxPayloadSize+4 {

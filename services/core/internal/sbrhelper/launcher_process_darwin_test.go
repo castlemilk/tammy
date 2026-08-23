@@ -14,6 +14,39 @@ import (
 	"time"
 )
 
+func TestFinishSandboxedProcessOutputZerosCapturedBytesOnPostReadFailure(t *testing.T) {
+	for _, test := range []struct {
+		name       string
+		writeErr   error
+		profileErr error
+		readErr    error
+	}{
+		{name: "stdin write", writeErr: errors.New("stdin closed")},
+		{name: "profile copy", profileErr: errors.New("profile copy")},
+		{name: "stdout read", readErr: errors.New("stdout read")},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			captured := []byte("sensitive malformed helper stdout")
+			retained := captured
+			output, err := finishSandboxedProcessOutput(captured, test.writeErr, test.profileErr, test.readErr, nil)
+			if err == nil || output != nil {
+				t.Fatalf("finish output = %x, %v", output, err)
+			}
+			if !bytes.Equal(retained, make([]byte, len(retained))) {
+				t.Fatalf("captured stdout backing retained bytes: %x", retained)
+			}
+		})
+	}
+}
+
+func TestFinishSandboxedProcessOutputTransfersNonzeroExitOwnership(t *testing.T) {
+	captured := []byte{0, 0, 0, 3, 0x0a, 0x01, 'x'}
+	output, err := finishSandboxedProcessOutput(captured, nil, nil, nil, errors.New("exit status 31"))
+	if !errors.Is(err, errProcessExited) || !bytes.Equal(output, captured) || len(output) == 0 || &output[0] != &captured[0] {
+		t.Fatalf("nonzero exit output = %x, %v", output, err)
+	}
+}
+
 func TestSandboxedProcessRetainsBoundedStdoutOnNonzeroExit(t *testing.T) {
 	root := t.TempDir()
 	profilePath := filepath.Join(root, "profile.sb")
