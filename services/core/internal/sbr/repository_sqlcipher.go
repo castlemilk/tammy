@@ -1351,7 +1351,7 @@ func (repository *SQLCipherRepository) PrepareSimulatorTransport(ctx context.Con
 		return tx.QueryRowContext(ctx, query, arguments...)
 	}, transport.Key, transport.IdempotencyKey); lookupErr == nil {
 		if original.SemanticHash != transport.SemanticHash {
-			return SimulatorTransport{}, false, ErrIdempotencyConflict
+			return original, false, ErrIdempotencyConflict
 		}
 		if err := tx.Commit(); err != nil {
 			return SimulatorTransport{}, false, ErrRepository
@@ -1361,16 +1361,23 @@ func (repository *SQLCipherRepository) PrepareSimulatorTransport(ctx context.Con
 	} else if !errors.Is(lookupErr, ErrNotFound) {
 		return SimulatorTransport{}, false, ErrRepository
 	}
-	var uncertain int
-	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM sbr_simulator_transports_v1
+	uncertain := SimulatorTransport{Key: transport.Key}
+	var uncertainSemantic []byte
+	if err := tx.QueryRowContext(ctx, `SELECT operation_id,actor_user_id,idempotency_key,semantic_hash,state,created_at,updated_at
+FROM sbr_simulator_transports_v1
 WHERE workspace_id=? AND organisation_id=? AND canonical_abn=? AND schema_version=?
-AND credential_fingerprint=? AND semantic_hash=? AND state IN ('DISPATCHING','MAYBE_SENT','UNKNOWN')`,
+AND credential_fingerprint=? AND semantic_hash=? AND state IN ('DISPATCHING','MAYBE_SENT','UNKNOWN') LIMIT 1`,
 		transport.Key.WorkspaceID, transport.Key.OrganisationID, transport.Key.CanonicalABN, transport.Key.SchemaVersion,
-		transport.Key.CredentialFingerprint[:], transport.SemanticHash[:]).Scan(&uncertain); err != nil {
+		transport.Key.CredentialFingerprint[:], transport.SemanticHash[:]).Scan(&uncertain.OperationID,
+		&uncertain.ActorUserID, &uncertain.IdempotencyKey, &uncertainSemantic, &uncertain.State,
+		&uncertain.CreatedAt, &uncertain.UpdatedAt); err == nil {
+		if len(uncertainSemantic) != sha256.Size {
+			return SimulatorTransport{}, false, ErrRepository
+		}
+		copy(uncertain.SemanticHash[:], uncertainSemantic)
+		return uncertain, false, ErrUncertainTransport
+	} else if !errors.Is(err, sql.ErrNoRows) {
 		return SimulatorTransport{}, false, ErrRepository
-	}
-	if uncertain != 0 {
-		return SimulatorTransport{}, false, ErrUncertainTransport
 	}
 	_, err = tx.ExecContext(ctx, `INSERT INTO sbr_idempotency_v1(idempotency_key,workspace_id,organisation_id,
 canonical_abn,schema_version,credential_fingerprint,semantic_hash,result_hash,original_operation_id,created_at)
@@ -1385,7 +1392,7 @@ VALUES (?,?,?,?,?,?,?,NULL,?,?)`, transport.IdempotencyKey, transport.Key.Worksp
 			return SimulatorTransport{}, false, ErrConflict
 		}
 		if original.SemanticHash != transport.SemanticHash {
-			return SimulatorTransport{}, false, ErrIdempotencyConflict
+			return original, false, ErrIdempotencyConflict
 		}
 		if err := tx.Commit(); err != nil {
 			return SimulatorTransport{}, false, ErrRepository

@@ -328,6 +328,87 @@ func (SbrReadinessFixtureFailure) EnumDescriptor() ([]byte, []int) {
 	return file_tammy_v1_sbr_proto_rawDescGZIP(), []int{4}
 }
 
+// SbrReadinessFixtureOutcome is the authoritative redacted durable outcome.
+type SbrReadinessFixtureOutcome int32
+
+const (
+	// SBR_READINESS_FIXTURE_OUTCOME_UNSPECIFIED is never returned.
+	SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_UNSPECIFIED SbrReadinessFixtureOutcome = 0
+	// SBR_READINESS_FIXTURE_OUTCOME_ACCEPTED completed the fixed fixture expectation.
+	SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_ACCEPTED SbrReadinessFixtureOutcome = 1
+	// SBR_READINESS_FIXTURE_OUTCOME_EXACT_REPLAY returned an owned terminal result without redispatch.
+	SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_EXACT_REPLAY SbrReadinessFixtureOutcome = 2
+	// SBR_READINESS_FIXTURE_OUTCOME_NOT_STARTED stopped before helper dispatch.
+	SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_NOT_STARTED SbrReadinessFixtureOutcome = 3
+	// SBR_READINESS_FIXTURE_OUTCOME_MAYBE_SENT has uncertain dispatch completion.
+	SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_MAYBE_SENT SbrReadinessFixtureOutcome = 4
+	// SBR_READINESS_FIXTURE_OUTCOME_MALFORMED_RESPONSE rejected an authenticated helper response.
+	SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_MALFORMED_RESPONSE SbrReadinessFixtureOutcome = 5
+	// SBR_READINESS_FIXTURE_OUTCOME_HELPER_DEATH observed helper termination after dispatch began.
+	SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_HELPER_DEATH SbrReadinessFixtureOutcome = 6
+	// SBR_READINESS_FIXTURE_OUTCOME_TIMEOUT observed the bounded helper deadline.
+	SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_TIMEOUT SbrReadinessFixtureOutcome = 7
+	// SBR_READINESS_FIXTURE_OUTCOME_UNKNOWN is a recovered or otherwise uncertain owned operation.
+	SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_UNKNOWN SbrReadinessFixtureOutcome = 8
+	// SBR_READINESS_FIXTURE_OUTCOME_IDEMPOTENCY_CONFLICT rejected changed bytes under the same key.
+	SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_IDEMPOTENCY_CONFLICT SbrReadinessFixtureOutcome = 9
+)
+
+// Enum value maps for SbrReadinessFixtureOutcome.
+var (
+	SbrReadinessFixtureOutcome_name = map[int32]string{
+		0: "SBR_READINESS_FIXTURE_OUTCOME_UNSPECIFIED",
+		1: "SBR_READINESS_FIXTURE_OUTCOME_ACCEPTED",
+		2: "SBR_READINESS_FIXTURE_OUTCOME_EXACT_REPLAY",
+		3: "SBR_READINESS_FIXTURE_OUTCOME_NOT_STARTED",
+		4: "SBR_READINESS_FIXTURE_OUTCOME_MAYBE_SENT",
+		5: "SBR_READINESS_FIXTURE_OUTCOME_MALFORMED_RESPONSE",
+		6: "SBR_READINESS_FIXTURE_OUTCOME_HELPER_DEATH",
+		7: "SBR_READINESS_FIXTURE_OUTCOME_TIMEOUT",
+		8: "SBR_READINESS_FIXTURE_OUTCOME_UNKNOWN",
+		9: "SBR_READINESS_FIXTURE_OUTCOME_IDEMPOTENCY_CONFLICT",
+	}
+	SbrReadinessFixtureOutcome_value = map[string]int32{
+		"SBR_READINESS_FIXTURE_OUTCOME_UNSPECIFIED":          0,
+		"SBR_READINESS_FIXTURE_OUTCOME_ACCEPTED":             1,
+		"SBR_READINESS_FIXTURE_OUTCOME_EXACT_REPLAY":         2,
+		"SBR_READINESS_FIXTURE_OUTCOME_NOT_STARTED":          3,
+		"SBR_READINESS_FIXTURE_OUTCOME_MAYBE_SENT":           4,
+		"SBR_READINESS_FIXTURE_OUTCOME_MALFORMED_RESPONSE":   5,
+		"SBR_READINESS_FIXTURE_OUTCOME_HELPER_DEATH":         6,
+		"SBR_READINESS_FIXTURE_OUTCOME_TIMEOUT":              7,
+		"SBR_READINESS_FIXTURE_OUTCOME_UNKNOWN":              8,
+		"SBR_READINESS_FIXTURE_OUTCOME_IDEMPOTENCY_CONFLICT": 9,
+	}
+)
+
+func (x SbrReadinessFixtureOutcome) Enum() *SbrReadinessFixtureOutcome {
+	p := new(SbrReadinessFixtureOutcome)
+	*p = x
+	return p
+}
+
+func (x SbrReadinessFixtureOutcome) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (SbrReadinessFixtureOutcome) Descriptor() protoreflect.EnumDescriptor {
+	return file_tammy_v1_sbr_proto_enumTypes[5].Descriptor()
+}
+
+func (SbrReadinessFixtureOutcome) Type() protoreflect.EnumType {
+	return &file_tammy_v1_sbr_proto_enumTypes[5]
+}
+
+func (x SbrReadinessFixtureOutcome) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use SbrReadinessFixtureOutcome.Descriptor instead.
+func (SbrReadinessFixtureOutcome) EnumDescriptor() ([]byte, []int) {
+	return file_tammy_v1_sbr_proto_rawDescGZIP(), []int{5}
+}
+
 // MachineCredentialStatus contains redacted metadata only.
 type MachineCredentialStatus struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -565,7 +646,9 @@ type SbrReadinessFixtureResult struct {
 	// succeeded reports whether the fixed expectation was observed.
 	Succeeded bool `protobuf:"varint,3,opt,name=succeeded,proto3" json:"succeeded,omitempty"`
 	// readiness is the resulting redacted readiness projection.
-	Readiness     *SbrReadiness `protobuf:"bytes,4,opt,name=readiness,proto3" json:"readiness,omitempty"`
+	Readiness *SbrReadiness `protobuf:"bytes,4,opt,name=readiness,proto3" json:"readiness,omitempty"`
+	// outcome is the exact authoritative redacted durable operation outcome.
+	Outcome       SbrReadinessFixtureOutcome `protobuf:"varint,5,opt,name=outcome,proto3,enum=tammy.v1.SbrReadinessFixtureOutcome" json:"outcome,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -626,6 +709,13 @@ func (x *SbrReadinessFixtureResult) GetReadiness() *SbrReadiness {
 		return x.Readiness
 	}
 	return nil
+}
+
+func (x *SbrReadinessFixtureResult) GetOutcome() SbrReadinessFixtureOutcome {
+	if x != nil {
+		return x.Outcome
+	}
+	return SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_UNSPECIFIED
 }
 
 // GetSbrReadinessRequest reads readiness for the server-derived workspace and organisation.
@@ -1609,14 +1699,16 @@ const file_tammy_v1_sbr_proto_rawDesc = "" +
 	"\x15component_fingerprint\x18\b \x01(\tB\b\xbaH\x05r\x03\x18\x80\x01R\x14componentFingerprint\x12T\n" +
 	"\x17evte_product_identifier\x18\t \x01(\tB\x1c\xbaH\x19r\x17\x18\x80\x012\x12^[A-Za-z0-9._:-]*$R\x15evteProductIdentifier\x12T\n" +
 	"\x17evte_service_identifier\x18\n" +
-	" \x01(\tB\x1c\xbaH\x19r\x17\x18\x80\x012\x12^[A-Za-z0-9._:-]*$R\x15evteServiceIdentifier\"\x86\x02\n" +
+	" \x01(\tB\x1c\xbaH\x19r\x17\x18\x80\x012\x12^[A-Za-z0-9._:-]*$R\x15evteServiceIdentifier\"\xd2\x02\n" +
 	"\x19SbrReadinessFixtureResult\x12:\n" +
 	"\n" +
 	"fixture_id\x18\x01 \x01(\tB\x1b\xbaH\x18r\x16\n" +
 	"\x14SIM-SBR-READINESS-V1R\tfixtureId\x12Q\n" +
 	"\ffailure_case\x18\x02 \x01(\x0e2$.tammy.v1.SbrReadinessFixtureFailureB\b\xbaH\x05\x82\x01\x02\x10\x01R\vfailureCase\x12\x1c\n" +
 	"\tsucceeded\x18\x03 \x01(\bR\tsucceeded\x12<\n" +
-	"\treadiness\x18\x04 \x01(\v2\x16.tammy.v1.SbrReadinessB\x06\xbaH\x03\xc8\x01\x01R\treadiness\"i\n" +
+	"\treadiness\x18\x04 \x01(\v2\x16.tammy.v1.SbrReadinessB\x06\xbaH\x03\xc8\x01\x01R\treadiness\x12J\n" +
+	"\aoutcome\x18\x05 \x01(\x0e2$.tammy.v1.SbrReadinessFixtureOutcomeB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\aoutcome\"i\n" +
 	"\x16GetSbrReadinessRequest\x12O\n" +
 	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\"W\n" +
 	"\x17GetSbrReadinessResponse\x12<\n" +
@@ -1707,7 +1799,18 @@ const file_tammy_v1_sbr_proto_rawDesc = "" +
 	"0SBR_READINESS_FIXTURE_FAILURE_MALFORMED_RESPONSE\x10\x03\x12.\n" +
 	"*SBR_READINESS_FIXTURE_FAILURE_HELPER_DEATH\x10\x04\x12)\n" +
 	"%SBR_READINESS_FIXTURE_FAILURE_TIMEOUT\x10\x05\x12)\n" +
-	"%SBR_READINESS_FIXTURE_FAILURE_UNKNOWN\x10\x062\xcf\a\n" +
+	"%SBR_READINESS_FIXTURE_FAILURE_UNKNOWN\x10\x06*\xf8\x03\n" +
+	"\x1aSbrReadinessFixtureOutcome\x12-\n" +
+	")SBR_READINESS_FIXTURE_OUTCOME_UNSPECIFIED\x10\x00\x12*\n" +
+	"&SBR_READINESS_FIXTURE_OUTCOME_ACCEPTED\x10\x01\x12.\n" +
+	"*SBR_READINESS_FIXTURE_OUTCOME_EXACT_REPLAY\x10\x02\x12-\n" +
+	")SBR_READINESS_FIXTURE_OUTCOME_NOT_STARTED\x10\x03\x12,\n" +
+	"(SBR_READINESS_FIXTURE_OUTCOME_MAYBE_SENT\x10\x04\x124\n" +
+	"0SBR_READINESS_FIXTURE_OUTCOME_MALFORMED_RESPONSE\x10\x05\x12.\n" +
+	"*SBR_READINESS_FIXTURE_OUTCOME_HELPER_DEATH\x10\x06\x12)\n" +
+	"%SBR_READINESS_FIXTURE_OUTCOME_TIMEOUT\x10\a\x12)\n" +
+	"%SBR_READINESS_FIXTURE_OUTCOME_UNKNOWN\x10\b\x126\n" +
+	"2SBR_READINESS_FIXTURE_OUTCOME_IDEMPOTENCY_CONFLICT\x10\t2\xcf\a\n" +
 	"\n" +
 	"SbrService\x12V\n" +
 	"\x0fGetSbrReadiness\x12 .tammy.v1.GetSbrReadinessRequest\x1a!.tammy.v1.GetSbrReadinessResponse\x12n\n" +
@@ -1732,7 +1835,7 @@ func file_tammy_v1_sbr_proto_rawDescGZIP() []byte {
 	return file_tammy_v1_sbr_proto_rawDescData
 }
 
-var file_tammy_v1_sbr_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
+var file_tammy_v1_sbr_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
 var file_tammy_v1_sbr_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
 var file_tammy_v1_sbr_proto_goTypes = []any{
 	(SbrEnvironment)(0),                        // 0: tammy.v1.SbrEnvironment
@@ -1740,83 +1843,85 @@ var file_tammy_v1_sbr_proto_goTypes = []any{
 	(MachineCredentialState)(0),                // 2: tammy.v1.MachineCredentialState
 	(ProductIdState)(0),                        // 3: tammy.v1.ProductIdState
 	(SbrReadinessFixtureFailure)(0),            // 4: tammy.v1.SbrReadinessFixtureFailure
-	(*MachineCredentialStatus)(nil),            // 5: tammy.v1.MachineCredentialStatus
-	(*SbrReadiness)(nil),                       // 6: tammy.v1.SbrReadiness
-	(*SbrReadinessFixtureResult)(nil),          // 7: tammy.v1.SbrReadinessFixtureResult
-	(*GetSbrReadinessRequest)(nil),             // 8: tammy.v1.GetSbrReadinessRequest
-	(*GetSbrReadinessResponse)(nil),            // 9: tammy.v1.GetSbrReadinessResponse
-	(*ImportMachineCredentialRequest)(nil),     // 10: tammy.v1.ImportMachineCredentialRequest
-	(*ImportMachineCredentialResponse)(nil),    // 11: tammy.v1.ImportMachineCredentialResponse
-	(*GetMachineCredentialStatusRequest)(nil),  // 12: tammy.v1.GetMachineCredentialStatusRequest
-	(*GetMachineCredentialStatusResponse)(nil), // 13: tammy.v1.GetMachineCredentialStatusResponse
-	(*UnlockMachineCredentialRequest)(nil),     // 14: tammy.v1.UnlockMachineCredentialRequest
-	(*UnlockMachineCredentialResponse)(nil),    // 15: tammy.v1.UnlockMachineCredentialResponse
-	(*ReplaceMachineCredentialRequest)(nil),    // 16: tammy.v1.ReplaceMachineCredentialRequest
-	(*ReplaceMachineCredentialResponse)(nil),   // 17: tammy.v1.ReplaceMachineCredentialResponse
-	(*RemoveMachineCredentialRequest)(nil),     // 18: tammy.v1.RemoveMachineCredentialRequest
-	(*RemoveMachineCredentialResponse)(nil),    // 19: tammy.v1.RemoveMachineCredentialResponse
-	(*ImportSbrProductIdRequest)(nil),          // 20: tammy.v1.ImportSbrProductIdRequest
-	(*ImportSbrProductIdResponse)(nil),         // 21: tammy.v1.ImportSbrProductIdResponse
-	(*RemoveSbrProductIdRequest)(nil),          // 22: tammy.v1.RemoveSbrProductIdRequest
-	(*RemoveSbrProductIdResponse)(nil),         // 23: tammy.v1.RemoveSbrProductIdResponse
-	(*RunSbrReadinessFixtureRequest)(nil),      // 24: tammy.v1.RunSbrReadinessFixtureRequest
-	(*RunSbrReadinessFixtureResponse)(nil),     // 25: tammy.v1.RunSbrReadinessFixtureResponse
-	(*timestamppb.Timestamp)(nil),              // 26: google.protobuf.Timestamp
-	(*AuthenticationContext)(nil),              // 27: tammy.v1.AuthenticationContext
-	(*CommandContext)(nil),                     // 28: tammy.v1.CommandContext
+	(SbrReadinessFixtureOutcome)(0),            // 5: tammy.v1.SbrReadinessFixtureOutcome
+	(*MachineCredentialStatus)(nil),            // 6: tammy.v1.MachineCredentialStatus
+	(*SbrReadiness)(nil),                       // 7: tammy.v1.SbrReadiness
+	(*SbrReadinessFixtureResult)(nil),          // 8: tammy.v1.SbrReadinessFixtureResult
+	(*GetSbrReadinessRequest)(nil),             // 9: tammy.v1.GetSbrReadinessRequest
+	(*GetSbrReadinessResponse)(nil),            // 10: tammy.v1.GetSbrReadinessResponse
+	(*ImportMachineCredentialRequest)(nil),     // 11: tammy.v1.ImportMachineCredentialRequest
+	(*ImportMachineCredentialResponse)(nil),    // 12: tammy.v1.ImportMachineCredentialResponse
+	(*GetMachineCredentialStatusRequest)(nil),  // 13: tammy.v1.GetMachineCredentialStatusRequest
+	(*GetMachineCredentialStatusResponse)(nil), // 14: tammy.v1.GetMachineCredentialStatusResponse
+	(*UnlockMachineCredentialRequest)(nil),     // 15: tammy.v1.UnlockMachineCredentialRequest
+	(*UnlockMachineCredentialResponse)(nil),    // 16: tammy.v1.UnlockMachineCredentialResponse
+	(*ReplaceMachineCredentialRequest)(nil),    // 17: tammy.v1.ReplaceMachineCredentialRequest
+	(*ReplaceMachineCredentialResponse)(nil),   // 18: tammy.v1.ReplaceMachineCredentialResponse
+	(*RemoveMachineCredentialRequest)(nil),     // 19: tammy.v1.RemoveMachineCredentialRequest
+	(*RemoveMachineCredentialResponse)(nil),    // 20: tammy.v1.RemoveMachineCredentialResponse
+	(*ImportSbrProductIdRequest)(nil),          // 21: tammy.v1.ImportSbrProductIdRequest
+	(*ImportSbrProductIdResponse)(nil),         // 22: tammy.v1.ImportSbrProductIdResponse
+	(*RemoveSbrProductIdRequest)(nil),          // 23: tammy.v1.RemoveSbrProductIdRequest
+	(*RemoveSbrProductIdResponse)(nil),         // 24: tammy.v1.RemoveSbrProductIdResponse
+	(*RunSbrReadinessFixtureRequest)(nil),      // 25: tammy.v1.RunSbrReadinessFixtureRequest
+	(*RunSbrReadinessFixtureResponse)(nil),     // 26: tammy.v1.RunSbrReadinessFixtureResponse
+	(*timestamppb.Timestamp)(nil),              // 27: google.protobuf.Timestamp
+	(*AuthenticationContext)(nil),              // 28: tammy.v1.AuthenticationContext
+	(*CommandContext)(nil),                     // 29: tammy.v1.CommandContext
 }
 var file_tammy_v1_sbr_proto_depIdxs = []int32{
 	2,  // 0: tammy.v1.MachineCredentialStatus.state:type_name -> tammy.v1.MachineCredentialState
-	26, // 1: tammy.v1.MachineCredentialStatus.created_at:type_name -> google.protobuf.Timestamp
-	26, // 2: tammy.v1.MachineCredentialStatus.expires_at:type_name -> google.protobuf.Timestamp
+	27, // 1: tammy.v1.MachineCredentialStatus.created_at:type_name -> google.protobuf.Timestamp
+	27, // 2: tammy.v1.MachineCredentialStatus.expires_at:type_name -> google.protobuf.Timestamp
 	0,  // 3: tammy.v1.SbrReadiness.environment:type_name -> tammy.v1.SbrEnvironment
 	1,  // 4: tammy.v1.SbrReadiness.state:type_name -> tammy.v1.SbrReadinessState
 	2,  // 5: tammy.v1.SbrReadiness.machine_credential_state:type_name -> tammy.v1.MachineCredentialState
 	3,  // 6: tammy.v1.SbrReadiness.product_id_state:type_name -> tammy.v1.ProductIdState
 	4,  // 7: tammy.v1.SbrReadinessFixtureResult.failure_case:type_name -> tammy.v1.SbrReadinessFixtureFailure
-	6,  // 8: tammy.v1.SbrReadinessFixtureResult.readiness:type_name -> tammy.v1.SbrReadiness
-	27, // 9: tammy.v1.GetSbrReadinessRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	6,  // 10: tammy.v1.GetSbrReadinessResponse.readiness:type_name -> tammy.v1.SbrReadiness
-	28, // 11: tammy.v1.ImportMachineCredentialRequest.command_context:type_name -> tammy.v1.CommandContext
-	5,  // 12: tammy.v1.ImportMachineCredentialResponse.credential_status:type_name -> tammy.v1.MachineCredentialStatus
-	27, // 13: tammy.v1.GetMachineCredentialStatusRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	5,  // 14: tammy.v1.GetMachineCredentialStatusResponse.credential_status:type_name -> tammy.v1.MachineCredentialStatus
-	28, // 15: tammy.v1.UnlockMachineCredentialRequest.command_context:type_name -> tammy.v1.CommandContext
-	5,  // 16: tammy.v1.UnlockMachineCredentialResponse.credential_status:type_name -> tammy.v1.MachineCredentialStatus
-	28, // 17: tammy.v1.ReplaceMachineCredentialRequest.command_context:type_name -> tammy.v1.CommandContext
-	5,  // 18: tammy.v1.ReplaceMachineCredentialResponse.credential_status:type_name -> tammy.v1.MachineCredentialStatus
-	28, // 19: tammy.v1.RemoveMachineCredentialRequest.command_context:type_name -> tammy.v1.CommandContext
-	5,  // 20: tammy.v1.RemoveMachineCredentialResponse.credential_status:type_name -> tammy.v1.MachineCredentialStatus
-	28, // 21: tammy.v1.ImportSbrProductIdRequest.command_context:type_name -> tammy.v1.CommandContext
-	3,  // 22: tammy.v1.ImportSbrProductIdResponse.product_id_state:type_name -> tammy.v1.ProductIdState
-	28, // 23: tammy.v1.RemoveSbrProductIdRequest.command_context:type_name -> tammy.v1.CommandContext
-	3,  // 24: tammy.v1.RemoveSbrProductIdResponse.product_id_state:type_name -> tammy.v1.ProductIdState
-	28, // 25: tammy.v1.RunSbrReadinessFixtureRequest.command_context:type_name -> tammy.v1.CommandContext
-	4,  // 26: tammy.v1.RunSbrReadinessFixtureRequest.failure_case:type_name -> tammy.v1.SbrReadinessFixtureFailure
-	7,  // 27: tammy.v1.RunSbrReadinessFixtureResponse.result:type_name -> tammy.v1.SbrReadinessFixtureResult
-	8,  // 28: tammy.v1.SbrService.GetSbrReadiness:input_type -> tammy.v1.GetSbrReadinessRequest
-	10, // 29: tammy.v1.SbrService.ImportMachineCredential:input_type -> tammy.v1.ImportMachineCredentialRequest
-	12, // 30: tammy.v1.SbrService.GetMachineCredentialStatus:input_type -> tammy.v1.GetMachineCredentialStatusRequest
-	14, // 31: tammy.v1.SbrService.UnlockMachineCredential:input_type -> tammy.v1.UnlockMachineCredentialRequest
-	16, // 32: tammy.v1.SbrService.ReplaceMachineCredential:input_type -> tammy.v1.ReplaceMachineCredentialRequest
-	18, // 33: tammy.v1.SbrService.RemoveMachineCredential:input_type -> tammy.v1.RemoveMachineCredentialRequest
-	20, // 34: tammy.v1.SbrService.ImportSbrProductId:input_type -> tammy.v1.ImportSbrProductIdRequest
-	22, // 35: tammy.v1.SbrService.RemoveSbrProductId:input_type -> tammy.v1.RemoveSbrProductIdRequest
-	24, // 36: tammy.v1.SbrService.RunSbrReadinessFixture:input_type -> tammy.v1.RunSbrReadinessFixtureRequest
-	9,  // 37: tammy.v1.SbrService.GetSbrReadiness:output_type -> tammy.v1.GetSbrReadinessResponse
-	11, // 38: tammy.v1.SbrService.ImportMachineCredential:output_type -> tammy.v1.ImportMachineCredentialResponse
-	13, // 39: tammy.v1.SbrService.GetMachineCredentialStatus:output_type -> tammy.v1.GetMachineCredentialStatusResponse
-	15, // 40: tammy.v1.SbrService.UnlockMachineCredential:output_type -> tammy.v1.UnlockMachineCredentialResponse
-	17, // 41: tammy.v1.SbrService.ReplaceMachineCredential:output_type -> tammy.v1.ReplaceMachineCredentialResponse
-	19, // 42: tammy.v1.SbrService.RemoveMachineCredential:output_type -> tammy.v1.RemoveMachineCredentialResponse
-	21, // 43: tammy.v1.SbrService.ImportSbrProductId:output_type -> tammy.v1.ImportSbrProductIdResponse
-	23, // 44: tammy.v1.SbrService.RemoveSbrProductId:output_type -> tammy.v1.RemoveSbrProductIdResponse
-	25, // 45: tammy.v1.SbrService.RunSbrReadinessFixture:output_type -> tammy.v1.RunSbrReadinessFixtureResponse
-	37, // [37:46] is the sub-list for method output_type
-	28, // [28:37] is the sub-list for method input_type
-	28, // [28:28] is the sub-list for extension type_name
-	28, // [28:28] is the sub-list for extension extendee
-	0,  // [0:28] is the sub-list for field type_name
+	7,  // 8: tammy.v1.SbrReadinessFixtureResult.readiness:type_name -> tammy.v1.SbrReadiness
+	5,  // 9: tammy.v1.SbrReadinessFixtureResult.outcome:type_name -> tammy.v1.SbrReadinessFixtureOutcome
+	28, // 10: tammy.v1.GetSbrReadinessRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	7,  // 11: tammy.v1.GetSbrReadinessResponse.readiness:type_name -> tammy.v1.SbrReadiness
+	29, // 12: tammy.v1.ImportMachineCredentialRequest.command_context:type_name -> tammy.v1.CommandContext
+	6,  // 13: tammy.v1.ImportMachineCredentialResponse.credential_status:type_name -> tammy.v1.MachineCredentialStatus
+	28, // 14: tammy.v1.GetMachineCredentialStatusRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	6,  // 15: tammy.v1.GetMachineCredentialStatusResponse.credential_status:type_name -> tammy.v1.MachineCredentialStatus
+	29, // 16: tammy.v1.UnlockMachineCredentialRequest.command_context:type_name -> tammy.v1.CommandContext
+	6,  // 17: tammy.v1.UnlockMachineCredentialResponse.credential_status:type_name -> tammy.v1.MachineCredentialStatus
+	29, // 18: tammy.v1.ReplaceMachineCredentialRequest.command_context:type_name -> tammy.v1.CommandContext
+	6,  // 19: tammy.v1.ReplaceMachineCredentialResponse.credential_status:type_name -> tammy.v1.MachineCredentialStatus
+	29, // 20: tammy.v1.RemoveMachineCredentialRequest.command_context:type_name -> tammy.v1.CommandContext
+	6,  // 21: tammy.v1.RemoveMachineCredentialResponse.credential_status:type_name -> tammy.v1.MachineCredentialStatus
+	29, // 22: tammy.v1.ImportSbrProductIdRequest.command_context:type_name -> tammy.v1.CommandContext
+	3,  // 23: tammy.v1.ImportSbrProductIdResponse.product_id_state:type_name -> tammy.v1.ProductIdState
+	29, // 24: tammy.v1.RemoveSbrProductIdRequest.command_context:type_name -> tammy.v1.CommandContext
+	3,  // 25: tammy.v1.RemoveSbrProductIdResponse.product_id_state:type_name -> tammy.v1.ProductIdState
+	29, // 26: tammy.v1.RunSbrReadinessFixtureRequest.command_context:type_name -> tammy.v1.CommandContext
+	4,  // 27: tammy.v1.RunSbrReadinessFixtureRequest.failure_case:type_name -> tammy.v1.SbrReadinessFixtureFailure
+	8,  // 28: tammy.v1.RunSbrReadinessFixtureResponse.result:type_name -> tammy.v1.SbrReadinessFixtureResult
+	9,  // 29: tammy.v1.SbrService.GetSbrReadiness:input_type -> tammy.v1.GetSbrReadinessRequest
+	11, // 30: tammy.v1.SbrService.ImportMachineCredential:input_type -> tammy.v1.ImportMachineCredentialRequest
+	13, // 31: tammy.v1.SbrService.GetMachineCredentialStatus:input_type -> tammy.v1.GetMachineCredentialStatusRequest
+	15, // 32: tammy.v1.SbrService.UnlockMachineCredential:input_type -> tammy.v1.UnlockMachineCredentialRequest
+	17, // 33: tammy.v1.SbrService.ReplaceMachineCredential:input_type -> tammy.v1.ReplaceMachineCredentialRequest
+	19, // 34: tammy.v1.SbrService.RemoveMachineCredential:input_type -> tammy.v1.RemoveMachineCredentialRequest
+	21, // 35: tammy.v1.SbrService.ImportSbrProductId:input_type -> tammy.v1.ImportSbrProductIdRequest
+	23, // 36: tammy.v1.SbrService.RemoveSbrProductId:input_type -> tammy.v1.RemoveSbrProductIdRequest
+	25, // 37: tammy.v1.SbrService.RunSbrReadinessFixture:input_type -> tammy.v1.RunSbrReadinessFixtureRequest
+	10, // 38: tammy.v1.SbrService.GetSbrReadiness:output_type -> tammy.v1.GetSbrReadinessResponse
+	12, // 39: tammy.v1.SbrService.ImportMachineCredential:output_type -> tammy.v1.ImportMachineCredentialResponse
+	14, // 40: tammy.v1.SbrService.GetMachineCredentialStatus:output_type -> tammy.v1.GetMachineCredentialStatusResponse
+	16, // 41: tammy.v1.SbrService.UnlockMachineCredential:output_type -> tammy.v1.UnlockMachineCredentialResponse
+	18, // 42: tammy.v1.SbrService.ReplaceMachineCredential:output_type -> tammy.v1.ReplaceMachineCredentialResponse
+	20, // 43: tammy.v1.SbrService.RemoveMachineCredential:output_type -> tammy.v1.RemoveMachineCredentialResponse
+	22, // 44: tammy.v1.SbrService.ImportSbrProductId:output_type -> tammy.v1.ImportSbrProductIdResponse
+	24, // 45: tammy.v1.SbrService.RemoveSbrProductId:output_type -> tammy.v1.RemoveSbrProductIdResponse
+	26, // 46: tammy.v1.SbrService.RunSbrReadinessFixture:output_type -> tammy.v1.RunSbrReadinessFixtureResponse
+	38, // [38:47] is the sub-list for method output_type
+	29, // [29:38] is the sub-list for method input_type
+	29, // [29:29] is the sub-list for extension type_name
+	29, // [29:29] is the sub-list for extension extendee
+	0,  // [0:29] is the sub-list for field type_name
 }
 
 func init() { file_tammy_v1_sbr_proto_init() }
@@ -1832,7 +1937,7 @@ func file_tammy_v1_sbr_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_tammy_v1_sbr_proto_rawDesc), len(file_tammy_v1_sbr_proto_rawDesc)),
-			NumEnums:      5,
+			NumEnums:      6,
 			NumMessages:   21,
 			NumExtensions: 0,
 			NumServices:   1,

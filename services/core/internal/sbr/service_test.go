@@ -719,14 +719,30 @@ func TestFixtureReplayIsElectedBeforeFreshFactorConsumption(t *testing.T) {
 	if err != nil {
 		t.Fatalf("fixture replay error = %v", err)
 	}
-	if !proto.Equal(first.Msg, second.Msg) {
-		t.Fatalf("fixture replay result differs: first=%v second=%v", first.Msg, second.Msg)
+	if first.Msg.Result.GetOutcome() != tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_ACCEPTED ||
+		second.Msg.Result.GetOutcome() != tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_EXACT_REPLAY ||
+		!proto.Equal(first.Msg.Result.GetReadiness(), second.Msg.Result.GetReadiness()) {
+		t.Fatalf("fixture/replay outcomes = first=%v second=%v", first.Msg, second.Msg)
 	}
 	if got, want := len(identity.purposes), 1; got != want {
 		t.Fatalf("fresh-factor consumptions = %d, want %d", got, want)
 	}
 	if got, want := len(helper.requests), 1; got != want {
 		t.Fatalf("helper requests = %d, want %d", got, want)
+	}
+	conflictRequest := &tammyv1.RunSbrReadinessFixtureRequest{
+		CommandContext: command(PurposeUseMachineCredential), FixtureId: ReadinessFixtureID,
+		FailureCase: tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_TIMEOUT,
+	}
+	conflict, err := service.RunSbrReadinessFixture(context.Background(), connect.NewRequest(conflictRequest))
+	if err != nil || conflict.Msg.Result.GetOutcome() != tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_IDEMPOTENCY_CONFLICT {
+		t.Fatalf("fixture conflict = %v, %v", conflict, err)
+	}
+	if got, want := len(identity.purposes), 1; got != want {
+		t.Fatalf("fresh-factor consumptions after conflict = %d, want %d", got, want)
+	}
+	if got, want := len(helper.requests), 1; got != want {
+		t.Fatalf("helper requests after conflict = %d, want %d", got, want)
 	}
 }
 
@@ -860,7 +876,7 @@ func TestFixtureReplayReauthorizesRoleWithoutFreshFactor(t *testing.T) {
 	}
 }
 
-func TestFixtureReplayRejectsDifferentAuthorizedActorWithoutFreshFactor(t *testing.T) {
+func TestFixtureConflictRejectsDifferentAuthorizedActorWithoutFreshFactor(t *testing.T) {
 	helper := &fakeHelper{execute: func(request HelperRequest) (HelperResult, error) {
 		return HelperResult{RequestID: request.RequestID, Outcome: HelperOutcomeOK, ResultCode: HelperResultFixtureSelected,
 			FixtureFailureCase: request.FixtureFailureCase, FixtureState: TransportAccepted}, nil
@@ -881,9 +897,10 @@ func TestFixtureReplayRejectsDifferentAuthorizedActorWithoutFreshFactor(t *testi
 	}
 	request.CommandContext = command(PurposeUseMachineCredential)
 	request.CommandContext.Authentication.ActorUserId = "018f5f48-7f01-7b6e-86df-8b89f45e1016"
+	request.FailureCase = tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_TIMEOUT
 	_, err := service.RunSbrReadinessFixture(context.Background(), connect.NewRequest(request))
 	if connect.CodeOf(err) != connect.CodePermissionDenied {
-		t.Fatalf("cross-actor fixture replay error = %v, want permission denied", err)
+		t.Fatalf("cross-actor fixture conflict error = %v, want permission denied", err)
 	}
 	if got, want := len(identity.purposes), 1; got != want {
 		t.Fatalf("cross-actor fixture replay factor consumptions = %d, want %d", got, want)
@@ -897,15 +914,16 @@ func TestUnlockAndFixtureConsumeFactorBeforeHelperAndNeverRefundIt(t *testing.T)
 	for _, test := range []struct {
 		name      string
 		helperErr error
+		wantError bool
 		call      func(*Service) error
 	}{
-		{name: "unlock helper death", helperErr: errors.New("helper died after reservation"), call: func(service *Service) error {
+		{name: "unlock helper death", helperErr: errors.New("helper died after reservation"), wantError: true, call: func(service *Service) error {
 			_, err := service.UnlockMachineCredential(context.Background(), connect.NewRequest(&tammyv1.UnlockMachineCredentialRequest{
 				CommandContext: command(PurposeUnlockMachineCredential), Password: []byte("transient"),
 			}))
 			return err
 		}},
-		{name: "unlock malformed response", call: func(service *Service) error {
+		{name: "unlock malformed response", wantError: true, call: func(service *Service) error {
 			_, err := service.UnlockMachineCredential(context.Background(), connect.NewRequest(&tammyv1.UnlockMachineCredentialRequest{
 				CommandContext: command(PurposeUnlockMachineCredential), Password: []byte("transient"),
 			}))
@@ -936,8 +954,8 @@ func TestUnlockAndFixtureConsumeFactorBeforeHelperAndNeverRefundIt(t *testing.T)
 			service.store.(*memoryServiceStore).bindings[organisationStoreKey(binding)] = serviceBinding{
 				metadata: metadata, profile: service.profiles.(fakeProfile).profile, state: metadata.State,
 			}
-			if err := test.call(service); err == nil {
-				t.Fatal("invalid helper outcome unexpectedly succeeded")
+			if err := test.call(service); (err != nil) != test.wantError {
+				t.Fatalf("helper outcome error = %v, wantError=%t", err, test.wantError)
 			}
 			if got, want := len(identity.purposes), 1; got != want {
 				t.Fatalf("fresh-factor consumptions after helper outcome = %d, want %d", got, want)
@@ -1416,13 +1434,13 @@ func TestFixtureNeverRedispatchesUncertainSemanticOperationUnderNewKey(t *testin
 		commandContext.IdempotencyKey = key
 		return &tammyv1.RunSbrReadinessFixtureRequest{CommandContext: commandContext, FixtureId: ReadinessFixtureID}
 	}
-	_, err := service.RunSbrReadinessFixture(context.Background(), connect.NewRequest(requestFor(serviceCommandID)))
-	if connect.CodeOf(err) != connect.CodeUnavailable {
-		t.Fatalf("first uncertain fixture error = %v", err)
+	first, err := service.RunSbrReadinessFixture(context.Background(), connect.NewRequest(requestFor(serviceCommandID)))
+	if err != nil || first.Msg.Result.GetOutcome() != tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_HELPER_DEATH {
+		t.Fatalf("first uncertain fixture = %v, %v", first, err)
 	}
-	_, err = service.RunSbrReadinessFixture(context.Background(), connect.NewRequest(requestFor("018f5f48-7f01-7b6e-86df-8b89f45e1015")))
-	if connect.CodeOf(err) != connect.CodeFailedPrecondition {
-		t.Fatalf("new-key uncertain fixture error = %v", err)
+	unknown, err := service.RunSbrReadinessFixture(context.Background(), connect.NewRequest(requestFor("018f5f48-7f01-7b6e-86df-8b89f45e1015")))
+	if err != nil || unknown.Msg.Result.GetOutcome() != tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_UNKNOWN {
+		t.Fatalf("new-key uncertain fixture = %v, %v", unknown, err)
 	}
 	if got, want := len(helper.requests), 1; got != want {
 		t.Fatalf("helper dispatches = %d, want %d", got, want)
@@ -1441,12 +1459,12 @@ func TestFixtureMapsAuthenticatedHelperDeadlineToTimeoutOutcome(t *testing.T) {
 	service.store.(*memoryServiceStore).bindings[organisationStoreKey(binding)] = serviceBinding{
 		metadata: metadata, profile: service.profiles.(fakeProfile).profile, state: metadata.State,
 	}
-	_, err := service.RunSbrReadinessFixture(context.Background(), connect.NewRequest(&tammyv1.RunSbrReadinessFixtureRequest{
+	response, err := service.RunSbrReadinessFixture(context.Background(), connect.NewRequest(&tammyv1.RunSbrReadinessFixtureRequest{
 		CommandContext: command(PurposeUseMachineCredential), FixtureId: ReadinessFixtureID,
 		FailureCase: tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_TIMEOUT,
 	}))
-	if connect.CodeOf(err) != connect.CodeUnavailable {
-		t.Fatalf("deadline fixture error = %v, want unavailable", err)
+	if err != nil || response.Msg.Result.Outcome != tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_TIMEOUT {
+		t.Fatalf("deadline fixture response = %v, error = %v", response, err)
 	}
 	store := service.store.(*memoryServiceStore)
 	store.mu.Lock()
@@ -1459,6 +1477,38 @@ func TestFixtureMapsAuthenticatedHelperDeadlineToTimeoutOutcome(t *testing.T) {
 	last := audit.records[len(audit.records)-1]
 	if last.Action != AuditFixtureUnknown || last.StatusCode != "SBR_HELPER_FIXTURE_TIMEOUT" {
 		t.Fatalf("deadline fixture audit = %+v", last)
+	}
+}
+
+func TestFixtureDoesNotInferHelperDeathOrTimeoutFromASelectedCaseEcho(t *testing.T) {
+	for _, failure := range []tammyv1.SbrReadinessFixtureFailure{
+		tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_HELPER_DEATH,
+		tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_TIMEOUT,
+	} {
+		t.Run(failure.String(), func(t *testing.T) {
+			helper := &fakeHelper{execute: func(request HelperRequest) (HelperResult, error) {
+				return HelperResult{RequestID: request.RequestID, Outcome: HelperOutcomeOK,
+					ResultCode: HelperResultFixtureSelected, FixtureFailureCase: request.FixtureFailureCase,
+					FixtureState: TransportMaybeSent}, nil
+			}}
+			service := testService(t, helper, &fakeIdentity{})
+			binding := OrganisationBinding{OrganisationID: serviceOrganisationID, CanonicalABN: serviceABN,
+				VerificationExpiresAt: service.now().Add(time.Hour)}
+			metadata := CredentialMetadata{Fingerprint: sha256.Sum256([]byte("credential")), CanonicalABN: serviceABN,
+				ComponentVersion: "sim-v1", ExpiresAt: service.now().Add(time.Hour),
+				State: tammyv1.MachineCredentialState_MACHINE_CREDENTIAL_STATE_PRESENT}
+			service.store.(*memoryServiceStore).bindings[organisationStoreKey(binding)] = serviceBinding{
+				metadata: metadata, profile: service.profiles.(fakeProfile).profile, state: metadata.State,
+			}
+
+			response, err := service.RunSbrReadinessFixture(context.Background(), connect.NewRequest(
+				&tammyv1.RunSbrReadinessFixtureRequest{CommandContext: command(PurposeUseMachineCredential),
+					FixtureId: ReadinessFixtureID, FailureCase: failure},
+			))
+			if err != nil || response.Msg.Result.GetOutcome() != tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_MALFORMED_RESPONSE {
+				t.Fatalf("selected-case echo response = %v, error = %v", response, err)
+			}
+		})
 	}
 }
 
@@ -1479,7 +1529,8 @@ func TestFixturePersistsValidatedHelperTerminalStateNotRequestedCase(t *testing.
 		CommandContext: command(PurposeUseMachineCredential), FixtureId: ReadinessFixtureID,
 		FailureCase: tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_MALFORMED_RESPONSE,
 	}))
-	if err != nil || response.Msg.Result.Succeeded {
+	if err != nil || response.Msg.Result.Succeeded ||
+		response.Msg.Result.GetOutcome() != tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_MALFORMED_RESPONSE {
 		t.Fatalf("response = %v, error = %v", response, err)
 	}
 	store := service.store.(*memoryServiceStore)
@@ -1524,7 +1575,22 @@ func TestFixtureFailureCasesAreDurableAndNeverReportSuccess(t *testing.T) {
 		tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_TIMEOUT:            TransportMaybeSent,
 	} {
 		t.Run(failure.String(), func(t *testing.T) {
+			wantOutcome := map[tammyv1.SbrReadinessFixtureFailure]tammyv1.SbrReadinessFixtureOutcome{
+				tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_NOT_STARTED:        tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_NOT_STARTED,
+				tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_MAYBE_SENT:         tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_MAYBE_SENT,
+				tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_MALFORMED_RESPONSE: tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_MALFORMED_RESPONSE,
+				tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_HELPER_DEATH:       tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_HELPER_DEATH,
+				tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_TIMEOUT:            tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_TIMEOUT,
+			}[failure]
 			helper := &fakeHelper{execute: func(request HelperRequest) (HelperResult, error) {
+				switch failure {
+				case tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_MALFORMED_RESPONSE:
+					return HelperResult{RequestID: request.RequestID, Outcome: HelperOutcomeOK}, nil
+				case tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_HELPER_DEATH:
+					return HelperResult{}, errors.New("helper process ended")
+				case tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_TIMEOUT:
+					return HelperResult{}, ErrHelperDeadlineExpired
+				}
 				return HelperResult{RequestID: request.RequestID, Outcome: HelperOutcomeOK, ResultCode: HelperResultFixtureSelected,
 					FixtureFailureCase: request.FixtureFailureCase, FixtureState: want}, nil
 			}}
@@ -1538,7 +1604,7 @@ func TestFixtureFailureCasesAreDurableAndNeverReportSuccess(t *testing.T) {
 			}
 			request := &tammyv1.RunSbrReadinessFixtureRequest{CommandContext: command(PurposeUseMachineCredential), FixtureId: ReadinessFixtureID, FailureCase: failure}
 			response, err := service.RunSbrReadinessFixture(context.Background(), connect.NewRequest(request))
-			if err != nil || response.Msg.Result.Succeeded {
+			if err != nil || response.Msg.Result.Succeeded || response.Msg.Result.GetOutcome() != wantOutcome {
 				t.Fatalf("response=%v error=%v", response, err)
 			}
 			store := service.store.(*memoryServiceStore)

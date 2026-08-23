@@ -97,6 +97,18 @@ func TestSbrPublicContractIsClosedAndRedacted(t *testing.T) {
 		"SBR_READINESS_FIXTURE_FAILURE_TIMEOUT",
 		"SBR_READINESS_FIXTURE_FAILURE_UNKNOWN",
 	))
+	assertEnumValues(t, "tammy.v1.SbrReadinessFixtureOutcome", names(
+		"SBR_READINESS_FIXTURE_OUTCOME_UNSPECIFIED",
+		"SBR_READINESS_FIXTURE_OUTCOME_ACCEPTED",
+		"SBR_READINESS_FIXTURE_OUTCOME_EXACT_REPLAY",
+		"SBR_READINESS_FIXTURE_OUTCOME_NOT_STARTED",
+		"SBR_READINESS_FIXTURE_OUTCOME_MAYBE_SENT",
+		"SBR_READINESS_FIXTURE_OUTCOME_MALFORMED_RESPONSE",
+		"SBR_READINESS_FIXTURE_OUTCOME_HELPER_DEATH",
+		"SBR_READINESS_FIXTURE_OUTCOME_TIMEOUT",
+		"SBR_READINESS_FIXTURE_OUTCOME_UNKNOWN",
+		"SBR_READINESS_FIXTURE_OUTCOME_IDEMPOTENCY_CONFLICT",
+	))
 
 	readRequests := map[protoreflect.Name]map[protoreflect.Name]protoreflect.Kind{
 		"GetSbrReadinessRequest":            {"authentication": protoreflect.MessageKind},
@@ -308,6 +320,7 @@ func expectedSbrMessageSchemas() map[protoreflect.Name]map[protoreflect.Name]sbr
 			"failure_case": sbrEnum("tammy.v1.SbrReadinessFixtureFailure"),
 			"succeeded":    sbrScalar(protoreflect.BoolKind),
 			"readiness":    sbrMessage("tammy.v1.SbrReadiness", true),
+			"outcome":      sbrEnumRejectZero("tammy.v1.SbrReadinessFixtureOutcome"),
 		},
 		"GetSbrReadinessRequest": {
 			"authentication": sbrMessage("tammy.v1.AuthenticationContext", true),
@@ -507,10 +520,12 @@ func assertSbrResponseShapes(t *testing.T, file protoreflect.FileDescriptor) {
 	assertExactFields(t, fixtureResult, map[protoreflect.Name]protoreflect.Kind{
 		"fixture_id": protoreflect.StringKind, "failure_case": protoreflect.EnumKind,
 		"succeeded": protoreflect.BoolKind, "readiness": protoreflect.MessageKind,
+		"outcome": protoreflect.EnumKind,
 	})
 	if got := fieldRules(t, fixtureResult.Fields().ByName("fixture_id")).GetString_().GetConst(); got != "SIM-SBR-READINESS-V1" {
 		t.Errorf("SbrReadinessFixtureResult.fixture_id const = %q", got)
 	}
+	assertEnumRejectsUnspecified(t, fixtureResult.Fields().ByName("outcome"))
 }
 
 func assertSbrSensitiveFieldMatrix(t *testing.T, file protoreflect.FileDescriptor) {
@@ -648,6 +663,7 @@ func TestSbrFixtureIdentifierIsExactAtRuntime(t *testing.T) {
 		FixtureId: fixtureID,
 		Succeeded: true,
 		Readiness: &tammyv1.SbrReadiness{ProductIdState: tammyv1.ProductIdState_PRODUCT_ID_STATE_MISSING},
+		Outcome:   tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_ACCEPTED,
 	}
 	if err := protovalidate.Validate(request); err != nil {
 		t.Fatalf("exact successful fixture request rejected: %v", err)
@@ -685,6 +701,10 @@ func TestSbrEnumRuntimeValidationIsClosedAndZeroSemanticsAreExplicit(t *testing.
 		}()},
 		{"nested fixture result failure", &tammyv1.RunSbrReadinessFixtureResponse{Result: &tammyv1.SbrReadinessFixtureResult{
 			FixtureId: "SIM-SBR-READINESS-V1", FailureCase: tammyv1.SbrReadinessFixtureFailure(unknown),
+			Readiness: validSbrReadiness(), Outcome: tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_ACCEPTED,
+		}}},
+		{"nested fixture result outcome", &tammyv1.RunSbrReadinessFixtureResponse{Result: &tammyv1.SbrReadinessFixtureResult{
+			FixtureId: "SIM-SBR-READINESS-V1", Outcome: tammyv1.SbrReadinessFixtureOutcome(unknown),
 			Readiness: validSbrReadiness(),
 		}}},
 	}
@@ -703,9 +723,6 @@ func TestSbrEnumRuntimeValidationIsClosedAndZeroSemanticsAreExplicit(t *testing.
 		{"UNSPECIFIED environment with meaningful zero readiness and credential states", &tammyv1.GetSbrReadinessResponse{Readiness: validSbrReadiness()}},
 		{"MISSING credential status", &tammyv1.GetMachineCredentialStatusResponse{CredentialStatus: &tammyv1.MachineCredentialStatus{}}},
 		{"UNSPECIFIED fixture request failure", validSbrFixtureRequest()},
-		{"UNSPECIFIED nested fixture result failure", &tammyv1.RunSbrReadinessFixtureResponse{Result: &tammyv1.SbrReadinessFixtureResult{
-			FixtureId: "SIM-SBR-READINESS-V1", Readiness: validSbrReadiness(),
-		}}},
 	}
 	for _, testCase := range acceptedZeroCases {
 		t.Run("accepts "+testCase.name, func(t *testing.T) {
@@ -715,16 +732,19 @@ func TestSbrEnumRuntimeValidationIsClosedAndZeroSemanticsAreExplicit(t *testing.
 		})
 	}
 
-	rejectedProductZeroCases := []struct {
+	rejectedRequiredZeroCases := []struct {
 		name    string
 		message proto.Message
 	}{
 		{"readiness", &tammyv1.GetSbrReadinessResponse{Readiness: &tammyv1.SbrReadiness{}}},
 		{"import response", &tammyv1.ImportSbrProductIdResponse{}},
 		{"remove response", &tammyv1.RemoveSbrProductIdResponse{}},
+		{"fixture result outcome", &tammyv1.RunSbrReadinessFixtureResponse{Result: &tammyv1.SbrReadinessFixtureResult{
+			FixtureId: "SIM-SBR-READINESS-V1", Readiness: validSbrReadiness(),
+		}}},
 	}
-	for _, testCase := range rejectedProductZeroCases {
-		t.Run("rejects UNSPECIFIED product ID in "+testCase.name, func(t *testing.T) {
+	for _, testCase := range rejectedRequiredZeroCases {
+		t.Run("rejects forbidden UNSPECIFIED in "+testCase.name, func(t *testing.T) {
 			if err := protovalidate.Validate(testCase.message); err == nil {
 				t.Fatal("UNSPECIFIED Product ID state passed runtime validation")
 			}

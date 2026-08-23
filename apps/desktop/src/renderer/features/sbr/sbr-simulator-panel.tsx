@@ -9,6 +9,7 @@ import {
   SbrEnvironment,
   type SbrReadiness,
   SbrReadinessFixtureFailure,
+  SbrReadinessFixtureOutcome,
   SbrReadinessState,
 } from "@tammy/connect-client/tammy/v1/sbr_pb.js";
 import { FlaskConical, LoaderCircle, RotateCcw } from "lucide-react";
@@ -79,10 +80,6 @@ function caseForName(name: DiagnosticName): (typeof diagnosticCases)[number] {
   return diagnosticCases.find((entry) => entry.name === name) ?? diagnosticCases[0];
 }
 
-function nameForCase(value: SbrReadinessFixtureFailure): DiagnosticName | undefined {
-  return diagnosticCases.find((entry) => entry.value === value)?.name;
-}
-
 function validSimulatorReadiness(readiness: SbrReadiness): boolean {
   return (
     readiness.environment === SbrEnvironment.SIMULATOR &&
@@ -100,14 +97,32 @@ function validSimulatorReadiness(readiness: SbrReadiness): boolean {
   );
 }
 
-function lockedResultName(failureCase: SbrReadinessFixtureFailure): ResultName {
-  if (failureCase === SbrReadinessFixtureFailure.MALFORMED_RESPONSE) return "MALFORMED_RESPONSE";
-  if (failureCase === SbrReadinessFixtureFailure.HELPER_DEATH) return "HELPER_DEATH";
-  if (failureCase === SbrReadinessFixtureFailure.TIMEOUT) return "TIMEOUT";
-  return "UNKNOWN";
+function resultNameForOutcome(outcome: SbrReadinessFixtureOutcome): ResultName | undefined {
+  switch (outcome) {
+    case SbrReadinessFixtureOutcome.ACCEPTED:
+      return "ACCEPTED";
+    case SbrReadinessFixtureOutcome.EXACT_REPLAY:
+      return "EXACT_REPLAY";
+    case SbrReadinessFixtureOutcome.NOT_STARTED:
+      return "NOT_STARTED";
+    case SbrReadinessFixtureOutcome.MAYBE_SENT:
+      return "MAYBE_SENT";
+    case SbrReadinessFixtureOutcome.MALFORMED_RESPONSE:
+      return "MALFORMED_RESPONSE";
+    case SbrReadinessFixtureOutcome.HELPER_DEATH:
+      return "HELPER_DEATH";
+    case SbrReadinessFixtureOutcome.TIMEOUT:
+      return "TIMEOUT";
+    case SbrReadinessFixtureOutcome.UNKNOWN:
+      return "UNKNOWN";
+    case SbrReadinessFixtureOutcome.IDEMPOTENCY_CONFLICT:
+      return "IDEMPOTENCY_CONFLICT";
+    default:
+      return undefined;
+  }
 }
 
-function resultDetail(result: ResultName | undefined): string {
+function resultDetail(result: ResultName | undefined, authoritativeUnknown = false): string {
   switch (result) {
     case "ACCEPTED":
       return "The fixed local fixture completed with its deterministic test receipt.";
@@ -126,7 +141,9 @@ function resultDetail(result: ResultName | undefined): string {
     case "TIMEOUT":
       return "The bounded helper deadline elapsed. Refresh status before another run.";
     case "UNKNOWN":
-      return "The operation outcome is unknown, including after restart recovery. It is never automatically resent.";
+      return authoritativeUnknown
+        ? "Core reports an unknown outcome after restart recovery. It is never automatically resent."
+        : "The local operation outcome is unknown. Refresh status before trying again; it is never automatically resent.";
     case "AUTHORIZATION_FAILED":
       return "The fresh security check failed. No simulator operation was started.";
     default:
@@ -152,21 +169,28 @@ export function SbrSimulatorPanel({
   const [busy, setBusy] = useState(false);
   const [locked, setLocked] = useState(false);
   const [result, setResult] = useState<ResultName>();
+  const [authoritativeUnknown, setAuthoritativeUnknown] = useState(false);
   const [storedOperation, setStoredOperation] = useState<Operation>();
   const operation = useRef<Operation | undefined>(undefined);
   const operationInFlight = useRef(false);
   const operationOwner = useRef<symbol | undefined>(undefined);
   const mounted = useRef(true);
   const generation = useRef(0);
-  const identityKey = `${workspace.sessionId}:${workspace.userId}`;
-  const currentIdentity = useRef(identityKey);
-  const previousIdentity = useRef(identityKey);
-  currentIdentity.current = identityKey;
+  const simulatorReady =
+    readiness.environment === SbrEnvironment.SIMULATOR &&
+    readiness.state === SbrReadinessState.READY_FOR_SIMULATOR &&
+    readiness.machineCredentialState === MachineCredentialState.PRESENT;
+  const authorised = workspace.roles.includes(Role.BUSINESS_LODGER);
+  const actionable = simulatorReady && authorised && factorEnabled;
+  const actionKey = `${workspace.workspaceId}:${workspace.organisationId}:${workspace.sessionId}:${workspace.userId}:${readiness.environment}:${readiness.state}:${readiness.machineCredentialState}:${authorised ? "lodger" : "no-lodger"}:${factorEnabled ? "factor" : "no-factor"}`;
+  const currentAction = useRef(actionKey);
+  const previousAction = useRef(actionKey);
+  currentAction.current = actionKey;
 
   useEffect(() => {
     mounted.current = true;
-    if (previousIdentity.current !== identityKey) {
-      previousIdentity.current = identityKey;
+    if (previousAction.current !== actionKey) {
+      previousAction.current = actionKey;
       generation.current += 1;
       operation.current = undefined;
       operationInFlight.current = false;
@@ -175,48 +199,46 @@ export function SbrSimulatorPanel({
       setBusy(false);
       setLocked(false);
       setResult(undefined);
+      setAuthoritativeUnknown(false);
       setTotp("");
     }
     return () => {
       mounted.current = false;
       generation.current += 1;
     };
-  }, [identityKey]);
+  }, [actionKey]);
 
-  const simulatorReady =
-    readiness.environment === SbrEnvironment.SIMULATOR &&
-    readiness.state === SbrReadinessState.READY_FOR_SIMULATOR;
-  const authorised = workspace.roles.includes(Role.BUSINESS_LODGER);
-  const actionable = simulatorReady && authorised && factorEnabled;
-
-  const isCurrent = (capturedGeneration: number, capturedIdentity: string) =>
+  const isCurrent = (capturedGeneration: number, capturedAction: string) =>
     mounted.current &&
     generation.current === capturedGeneration &&
-    currentIdentity.current === capturedIdentity;
+    currentAction.current === capturedAction;
 
   const dispatch = async (
     pendingOperation: Operation,
     mode: "conflict" | "initial" | "replay",
     capturedGeneration: number,
-    capturedIdentity: string,
+    capturedAction: string,
   ) => {
-    const request = create(RunSbrReadinessFixtureRequestSchema, {
-      commandContext: pendingOperation.command,
-      failureCase: pendingOperation.failureCase,
-      fixtureId: SBR_SIMULATOR_FIXTURE_ID,
-    });
-    const frame = runCodec.encodeRequest(request);
-    let responseReceived = false;
+    let frame: Uint8Array | undefined;
     try {
+      const request = create(RunSbrReadinessFixtureRequestSchema, {
+        commandContext: pendingOperation.command,
+        failureCase: pendingOperation.failureCase,
+        fixtureId: SBR_SIMULATOR_FIXTURE_ID,
+      });
+      frame = runCodec.encodeRequest(request);
       const pending = api.runSbrReadinessFixture(frame);
       const responseFrame = await pending;
-      responseReceived = true;
       const response = runCodec.decodeResponse(responseFrame);
       const returned = response.result;
+      const resultName = returned ? resultNameForOutcome(returned.outcome) : undefined;
       const expectedSucceeded =
-        pendingOperation.failureCase === SbrReadinessFixtureFailure.UNSPECIFIED;
+        returned?.outcome === SbrReadinessFixtureOutcome.ACCEPTED ||
+        (returned?.outcome === SbrReadinessFixtureOutcome.EXACT_REPLAY &&
+          pendingOperation.failureCase === SbrReadinessFixtureFailure.UNSPECIFIED);
       if (
         !returned ||
+        !resultName ||
         returned.fixtureId !== SBR_SIMULATOR_FIXTURE_ID ||
         returned.failureCase !== pendingOperation.failureCase ||
         returned.succeeded !== expectedSucceeded ||
@@ -225,26 +247,38 @@ export function SbrSimulatorPanel({
       ) {
         throw new Error("invalid simulator response");
       }
-      if (!isCurrent(capturedGeneration, capturedIdentity)) return;
-      if (mode === "conflict") {
+      if (
+        mode === "conflict" &&
+        returned.outcome !== SbrReadinessFixtureOutcome.IDEMPOTENCY_CONFLICT
+      )
+        throw new Error("invalid conflict outcome");
+      if (mode === "replay" && returned.outcome !== SbrReadinessFixtureOutcome.EXACT_REPLAY)
+        throw new Error("invalid replay outcome");
+      if (
+        mode === "initial" &&
+        (returned.outcome === SbrReadinessFixtureOutcome.EXACT_REPLAY ||
+          returned.outcome === SbrReadinessFixtureOutcome.IDEMPOTENCY_CONFLICT)
+      )
+        throw new Error("invalid initial outcome");
+      if (!isCurrent(capturedGeneration, capturedAction)) return;
+      setAuthoritativeUnknown(returned.outcome === SbrReadinessFixtureOutcome.UNKNOWN);
+      setResult(resultName);
+      if (
+        returned.outcome === SbrReadinessFixtureOutcome.MAYBE_SENT ||
+        returned.outcome === SbrReadinessFixtureOutcome.MALFORMED_RESPONSE ||
+        returned.outcome === SbrReadinessFixtureOutcome.HELPER_DEATH ||
+        returned.outcome === SbrReadinessFixtureOutcome.TIMEOUT ||
+        returned.outcome === SbrReadinessFixtureOutcome.UNKNOWN
+      ) {
         setLocked(true);
-        setResult("UNKNOWN");
-        return;
       }
-      const caseName = nameForCase(pendingOperation.failureCase);
-      if (!caseName) throw new Error("invalid simulator result");
-      setResult(mode === "replay" ? "EXACT_REPLAY" : caseName);
-      if (pendingOperation.failureCase === SbrReadinessFixtureFailure.MAYBE_SENT) setLocked(true);
     } catch {
-      if (!isCurrent(capturedGeneration, capturedIdentity)) return;
-      if (mode === "conflict" && !responseReceived) {
-        setResult("IDEMPOTENCY_CONFLICT");
-      } else {
-        setLocked(true);
-        setResult(lockedResultName(pendingOperation.failureCase));
-      }
+      if (!isCurrent(capturedGeneration, capturedAction)) return;
+      setAuthoritativeUnknown(false);
+      setLocked(true);
+      setResult("UNKNOWN");
     } finally {
-      frame.fill(0);
+      frame?.fill(0);
     }
   };
 
@@ -256,11 +290,12 @@ export function SbrSimulatorPanel({
     operationOwner.current = owner;
     setBusy(true);
     setResult(undefined);
+    setAuthoritativeUnknown(false);
     const capturedGeneration = generation.current;
-    const capturedIdentity = identityKey;
+    const capturedAction = actionKey;
     try {
       const freshFactor = await assertFreshFactor(api, workspace, totp, SBR_PURPOSE.useCredential);
-      if (!isCurrent(capturedGeneration, capturedIdentity)) return;
+      if (!isCurrent(capturedGeneration, capturedAction) || !actionable) return;
       setTotp("");
       const pendingOperation: Operation = {
         command: commandContext(workspace, freshFactor),
@@ -268,9 +303,9 @@ export function SbrSimulatorPanel({
       };
       operation.current = pendingOperation;
       setStoredOperation(pendingOperation);
-      await dispatch(pendingOperation, "initial", capturedGeneration, capturedIdentity);
+      await dispatch(pendingOperation, "initial", capturedGeneration, capturedAction);
     } catch {
-      if (isCurrent(capturedGeneration, capturedIdentity)) {
+      if (isCurrent(capturedGeneration, capturedAction)) {
         setTotp("");
         setResult("AUTHORIZATION_FAILED");
       }
@@ -278,7 +313,7 @@ export function SbrSimulatorPanel({
       if (operationOwner.current === owner) {
         operationOwner.current = undefined;
         operationInFlight.current = false;
-        if (isCurrent(capturedGeneration, capturedIdentity)) setBusy(false);
+        if (isCurrent(capturedGeneration, capturedAction)) setBusy(false);
       }
     }
   };
@@ -293,16 +328,17 @@ export function SbrSimulatorPanel({
     operationOwner.current = owner;
     setBusy(true);
     setResult(undefined);
+    setAuthoritativeUnknown(false);
     const capturedGeneration = generation.current;
-    const capturedIdentity = identityKey;
+    const capturedAction = actionKey;
     const pendingOperation = mode === "replay" ? previous : { ...previous, failureCase: nextCase };
     try {
-      await dispatch(pendingOperation, mode, capturedGeneration, capturedIdentity);
+      await dispatch(pendingOperation, mode, capturedGeneration, capturedAction);
     } finally {
       if (operationOwner.current === owner) {
         operationOwner.current = undefined;
         operationInFlight.current = false;
-        if (isCurrent(capturedGeneration, capturedIdentity)) setBusy(false);
+        if (isCurrent(capturedGeneration, capturedAction)) setBusy(false);
       }
     }
   };
@@ -310,7 +346,7 @@ export function SbrSimulatorPanel({
   const announcement = busy
     ? "Running the local simulator fixture."
     : result
-      ? `${result}. ${resultDetail(result)}`
+      ? `${result}. ${resultDetail(result, authoritativeUnknown)}`
       : "SBR readiness simulator is idle.";
   const changedCase =
     storedOperation && caseForName(selectedCase).value !== storedOperation.failureCase;
@@ -437,7 +473,7 @@ export function SbrSimulatorPanel({
                   {result}
                 </p>
                 <p className="mt-1 text-[10px] leading-5 text-muted-foreground">
-                  {resultDetail(result)}
+                  {resultDetail(result, authoritativeUnknown)}
                 </p>
               </>
             ) : (

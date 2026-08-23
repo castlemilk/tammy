@@ -630,12 +630,13 @@ func (store *sqlServiceStore) PrepareFixture(ctx context.Context, binding Organi
 	stamp := store.now().UTC().Format("2006-01-02T15:04:05.000000000Z")
 	stored, replay, err := store.repository.PrepareSimulatorTransport(ctx, SimulatorTransport{OperationID: operation, ActorUserID: actorUserID, Key: key,
 		IdempotencyKey: idempotency, SemanticHash: semantic, State: TransportPrepared, CreatedAt: stamp, UpdatedAt: stamp})
-	if err != nil {
-		return FixtureRecord{}, false, err
-	}
-	return FixtureRecord{OperationID: stored.OperationID, ActorUserID: stored.ActorUserID, State: stored.State,
+	record := FixtureRecord{OperationID: stored.OperationID, ActorUserID: stored.ActorUserID, State: stored.State,
 		semantic: stored.SemanticHash, credential: stored.Key.CredentialFingerprint, idempotencyKey: stored.IdempotencyKey,
-		bindingKey: organisationStoreKey(binding), scopeKey: organisationStoreKey(binding)}, replay, nil
+		bindingKey: organisationStoreKey(binding), scopeKey: organisationStoreKey(binding)}
+	if err != nil {
+		return record, false, err
+	}
+	return record, replay, nil
 }
 func (store *sqlServiceStore) fixtureKey(ctx context.Context, record FixtureRecord) (BindingKey, error) {
 	parts := strings.Split(record.bindingKey, "\x00")

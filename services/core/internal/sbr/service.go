@@ -593,7 +593,7 @@ func (store *memoryServiceStore) PrepareFixture(_ context.Context, binding Organ
 	key := organisationStoreKey(binding) + "\x00" + idempotency
 	if original, ok := store.fixtures[key]; ok {
 		if original.semantic != semantic {
-			return FixtureRecord{}, false, ErrIdempotencyConflict
+			return original, false, ErrIdempotencyConflict
 		}
 		return original, true, nil
 	}
@@ -601,7 +601,7 @@ func (store *memoryServiceStore) PrepareFixture(_ context.Context, binding Organ
 	for _, existing := range store.fixtures {
 		if existing.scopeKey == scope && existing.semantic == semantic &&
 			(existing.State == TransportDispatching || existing.State == TransportMaybeSent || existing.State == TransportUnknown) {
-			return FixtureRecord{}, false, ErrUncertainTransport
+			return existing, false, ErrUncertainTransport
 		}
 	}
 	record := FixtureRecord{OperationID: operation, ActorUserID: actorUserID, State: TransportPrepared, semantic: semantic,
@@ -1658,9 +1658,17 @@ func (service *Service) RunSbrReadinessFixture(ctx context.Context, request *con
 		request.Msg.CommandContext.Authentication.GetActorUserId(),
 		request.Msg.CommandContext.IdempotencyKey, semantic)
 	if errors.Is(prepareErr, ErrIdempotencyConflict) {
-		return nil, connect.NewError(connect.CodeAlreadyExists, ErrIdempotencyConflict)
+		if fixture.ActorUserID != request.Msg.CommandContext.Authentication.GetActorUserId() {
+			return nil, connect.NewError(connect.CodePermissionDenied, ErrService)
+		}
+		return service.fixtureResponse(ctx, request.Msg, binding, profile, stored, TransportNotStarted,
+			tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_IDEMPOTENCY_CONFLICT), nil
 	}
 	if errors.Is(prepareErr, ErrUncertainTransport) {
+		if fixture.ActorUserID == request.Msg.CommandContext.Authentication.GetActorUserId() {
+			return service.fixtureResponse(ctx, request.Msg, binding, profile, stored, TransportUnknown,
+				tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_UNKNOWN), nil
+		}
 		return nil, connect.NewError(connect.CodeFailedPrecondition, ErrUncertainTransport)
 	}
 	if prepareErr != nil {
@@ -1670,7 +1678,8 @@ func (service *Service) RunSbrReadinessFixture(ctx context.Context, request *con
 		if fixture.ActorUserID != request.Msg.CommandContext.Authentication.GetActorUserId() {
 			return nil, connect.NewError(connect.CodePermissionDenied, ErrService)
 		}
-		return service.fixtureResponse(ctx, request.Msg, binding, profile, stored, fixture.State), nil
+		return service.fixtureResponse(ctx, request.Msg, binding, profile, stored, fixture.State,
+			fixtureReplayOutcome(fixture.State)), nil
 	}
 	if err := service.validateFreshFactor(ctx, request.Msg.CommandContext.Authentication,
 		request.Msg.CommandContext.FreshFactor, PurposeUseMachineCredential); err != nil {
@@ -1689,7 +1698,8 @@ func (service *Service) RunSbrReadinessFixture(ctx context.Context, request *con
 			}); err != nil {
 			return nil, connect.NewError(connect.CodeInternal, ErrService)
 		}
-		return service.fixtureResponse(ctx, request.Msg, binding, profile, stored, TransportNotStarted), nil
+		return service.fixtureResponse(ctx, request.Msg, binding, profile, stored, TransportNotStarted,
+			fixtureOutcome(caseValue)), nil
 	}
 	if err := service.store.ReserveFixtureDispatch(ctx, fixture, request.Msg.CommandContext.Authentication.GetActorUserId(),
 		func(txctx context.Context, executor MutationExecutor) error {
@@ -1726,7 +1736,8 @@ func (service *Service) RunSbrReadinessFixture(ctx context.Context, request *con
 			}); finishErr != nil {
 			return nil, connect.NewError(connect.CodeInternal, ErrService)
 		}
-		return nil, connect.NewError(connect.CodeUnavailable, ErrService)
+		return service.fixtureResponse(ctx, request.Msg, binding, profile, stored, TransportMaybeSent,
+			fixtureOutcome(failureCase)), nil
 	}
 	resultHash := fixtureResultHash(result)
 	if !validFixtureHelperResponse(helperRequest, result) {
@@ -1738,7 +1749,8 @@ func (service *Service) RunSbrReadinessFixture(ctx context.Context, request *con
 			}); finishErr != nil {
 			return nil, connect.NewError(connect.CodeInternal, ErrService)
 		}
-		return nil, connect.NewError(connect.CodeUnavailable, ErrService)
+		return service.fixtureResponse(ctx, request.Msg, binding, profile, stored, TransportFailed,
+			tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_MALFORMED_RESPONSE), nil
 	}
 	caseValue, ok = simulatorCaseForState(result.FixtureState)
 	if !ok {
@@ -1761,7 +1773,27 @@ func (service *Service) RunSbrReadinessFixture(ctx context.Context, request *con
 	}
 	succeeded := result.FixtureState == TransportAccepted && caseValue == SimulatorCaseAccepted
 	readiness := service.readiness(ctx, binding, profile, stored, true)
-	return connect.NewResponse(&tammyv1.RunSbrReadinessFixtureResponse{Result: &tammyv1.SbrReadinessFixtureResult{FixtureId: ReadinessFixtureID, FailureCase: request.Msg.FailureCase, Succeeded: succeeded, Readiness: readiness}}), nil
+	outcome := fixtureOutcome(caseValue)
+	return connect.NewResponse(&tammyv1.RunSbrReadinessFixtureResponse{Result: &tammyv1.SbrReadinessFixtureResult{
+		FixtureId: ReadinessFixtureID, FailureCase: request.Msg.FailureCase, Succeeded: succeeded,
+		Readiness: readiness, Outcome: outcome}}), nil
+}
+
+func fixtureOutcome(caseValue SimulatorCase) tammyv1.SbrReadinessFixtureOutcome {
+	switch caseValue {
+	case SimulatorCasePreDispatchFailure:
+		return tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_NOT_STARTED
+	case SimulatorCaseUncertainWrite:
+		return tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_MAYBE_SENT
+	case SimulatorCaseMalformedResponse:
+		return tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_MALFORMED_RESPONSE
+	case SimulatorCaseHelperDeath:
+		return tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_HELPER_DEATH
+	case SimulatorCaseTimeout:
+		return tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_TIMEOUT
+	default:
+		return tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_ACCEPTED
+	}
 }
 
 func validFixtureHelperResponse(request HelperRequest, result HelperResult) bool {
@@ -1772,12 +1804,8 @@ func validFixtureHelperResponse(request HelperRequest, result HelperResult) bool
 	}
 	want := TransportAccepted
 	switch request.FixtureFailureCase {
-	case tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_MAYBE_SENT,
-		tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_HELPER_DEATH,
-		tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_TIMEOUT:
+	case tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_MAYBE_SENT:
 		want = TransportMaybeSent
-	case tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_MALFORMED_RESPONSE:
-		want = TransportFailed
 	case tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_UNSPECIFIED:
 	default:
 		return false
@@ -1809,8 +1837,26 @@ func fixtureResultHash(result HelperResult) [sha256.Size]byte {
 	return value
 }
 
-func (service *Service) fixtureResponse(ctx context.Context, request *tammyv1.RunSbrReadinessFixtureRequest, binding OrganisationBinding, profile RuntimeProfile, stored serviceBinding, state TransportState) *connect.Response[tammyv1.RunSbrReadinessFixtureResponse] {
-	return connect.NewResponse(&tammyv1.RunSbrReadinessFixtureResponse{Result: &tammyv1.SbrReadinessFixtureResult{FixtureId: ReadinessFixtureID, FailureCase: request.FailureCase, Succeeded: state == TransportAccepted, Readiness: service.readiness(ctx, binding, profile, stored, true)}})
+func fixtureReplayOutcome(state TransportState) tammyv1.SbrReadinessFixtureOutcome {
+	switch state {
+	case TransportUnknown, TransportDispatching:
+		return tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_UNKNOWN
+	case TransportMaybeSent:
+		return tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_MAYBE_SENT
+	case TransportPrepared:
+		return tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_NOT_STARTED
+	default:
+		return tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_EXACT_REPLAY
+	}
+}
+
+func (service *Service) fixtureResponse(ctx context.Context, request *tammyv1.RunSbrReadinessFixtureRequest,
+	binding OrganisationBinding, profile RuntimeProfile, stored serviceBinding, state TransportState,
+	outcome tammyv1.SbrReadinessFixtureOutcome,
+) *connect.Response[tammyv1.RunSbrReadinessFixtureResponse] {
+	return connect.NewResponse(&tammyv1.RunSbrReadinessFixtureResponse{Result: &tammyv1.SbrReadinessFixtureResult{
+		FixtureId: request.FixtureId, FailureCase: request.FailureCase, Succeeded: state == TransportAccepted,
+		Readiness: service.readiness(ctx, binding, profile, stored, true), Outcome: outcome}})
 }
 
 func fixtureSemanticHash(request *tammyv1.RunSbrReadinessFixtureRequest, profile RuntimeProfile, credential [sha256.Size]byte) [sha256.Size]byte {

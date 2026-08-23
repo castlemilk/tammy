@@ -98,6 +98,39 @@ enum SbrReadinessFixtureFailure {
   SBR_READINESS_FIXTURE_FAILURE_UNKNOWN = 6;
 }
 
+// SbrReadinessFixtureOutcome is the authoritative redacted durable outcome.
+enum SbrReadinessFixtureOutcome {
+  // SBR_READINESS_FIXTURE_OUTCOME_UNSPECIFIED is never returned.
+  SBR_READINESS_FIXTURE_OUTCOME_UNSPECIFIED = 0;
+
+  // SBR_READINESS_FIXTURE_OUTCOME_ACCEPTED completed the fixed fixture expectation.
+  SBR_READINESS_FIXTURE_OUTCOME_ACCEPTED = 1;
+
+  // SBR_READINESS_FIXTURE_OUTCOME_EXACT_REPLAY returned an owned terminal result without redispatch.
+  SBR_READINESS_FIXTURE_OUTCOME_EXACT_REPLAY = 2;
+
+  // SBR_READINESS_FIXTURE_OUTCOME_NOT_STARTED stopped before helper dispatch.
+  SBR_READINESS_FIXTURE_OUTCOME_NOT_STARTED = 3;
+
+  // SBR_READINESS_FIXTURE_OUTCOME_MAYBE_SENT has uncertain dispatch completion.
+  SBR_READINESS_FIXTURE_OUTCOME_MAYBE_SENT = 4;
+
+  // SBR_READINESS_FIXTURE_OUTCOME_MALFORMED_RESPONSE rejected an authenticated helper response.
+  SBR_READINESS_FIXTURE_OUTCOME_MALFORMED_RESPONSE = 5;
+
+  // SBR_READINESS_FIXTURE_OUTCOME_HELPER_DEATH observed helper termination after dispatch began.
+  SBR_READINESS_FIXTURE_OUTCOME_HELPER_DEATH = 6;
+
+  // SBR_READINESS_FIXTURE_OUTCOME_TIMEOUT observed the bounded helper deadline.
+  SBR_READINESS_FIXTURE_OUTCOME_TIMEOUT = 7;
+
+  // SBR_READINESS_FIXTURE_OUTCOME_UNKNOWN is a recovered or otherwise uncertain owned operation.
+  SBR_READINESS_FIXTURE_OUTCOME_UNKNOWN = 8;
+
+  // SBR_READINESS_FIXTURE_OUTCOME_IDEMPOTENCY_CONFLICT rejected changed bytes under the same key.
+  SBR_READINESS_FIXTURE_OUTCOME_IDEMPOTENCY_CONFLICT = 9;
+}
+
 // MachineCredentialStatus contains redacted metadata only.
 message MachineCredentialStatus {
   // state is the safe current credential state.
@@ -187,6 +220,12 @@ message SbrReadinessFixtureResult {
 
   // readiness is the resulting redacted readiness projection.
   SbrReadiness readiness = 4 [(buf.validate.field).required = true];
+
+  // outcome is the exact authoritative redacted durable operation outcome.
+  SbrReadinessFixtureOutcome outcome = 5 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
 }
 
 // GetSbrReadinessRequest reads readiness for the server-derived workspace and organisation.

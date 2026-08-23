@@ -13,6 +13,7 @@ import {
   RunSbrReadinessFixtureResponseSchema,
   SbrEnvironment,
   SbrReadinessFixtureFailure,
+  SbrReadinessFixtureOutcome,
   SbrReadinessFixtureResultSchema,
   SbrReadinessSchema,
   SbrReadinessState,
@@ -84,17 +85,35 @@ function resultFrame(
   overrides: {
     readonly failureCase?: SbrReadinessFixtureFailure;
     readonly fixtureId?: string;
+    readonly outcome?: SbrReadinessFixtureOutcome;
     readonly readiness?: Parameters<typeof create<typeof SbrReadinessSchema>>[1];
     readonly succeeded?: boolean;
   } = {},
 ) {
+  const defaultOutcome =
+    {
+      [SbrReadinessFixtureFailure.UNSPECIFIED]: SbrReadinessFixtureOutcome.ACCEPTED,
+      [SbrReadinessFixtureFailure.NOT_STARTED]: SbrReadinessFixtureOutcome.NOT_STARTED,
+      [SbrReadinessFixtureFailure.MAYBE_SENT]: SbrReadinessFixtureOutcome.MAYBE_SENT,
+      [SbrReadinessFixtureFailure.MALFORMED_RESPONSE]:
+        SbrReadinessFixtureOutcome.MALFORMED_RESPONSE,
+      [SbrReadinessFixtureFailure.HELPER_DEATH]: SbrReadinessFixtureOutcome.HELPER_DEATH,
+      [SbrReadinessFixtureFailure.TIMEOUT]: SbrReadinessFixtureOutcome.TIMEOUT,
+      [SbrReadinessFixtureFailure.UNKNOWN]: SbrReadinessFixtureOutcome.UNKNOWN,
+    }[failureCase] ?? SbrReadinessFixtureOutcome.UNKNOWN;
+  const outcome = overrides.outcome ?? defaultOutcome;
   return runCodec.encodeResponse(
     create(RunSbrReadinessFixtureResponseSchema, {
       result: create(SbrReadinessFixtureResultSchema, {
         fixtureId: overrides.fixtureId ?? FIXTURE_ID,
         failureCase: overrides.failureCase ?? failureCase,
-        succeeded: overrides.succeeded ?? failureCase === SbrReadinessFixtureFailure.UNSPECIFIED,
+        succeeded:
+          overrides.succeeded ??
+          (outcome === SbrReadinessFixtureOutcome.ACCEPTED ||
+            (outcome === SbrReadinessFixtureOutcome.EXACT_REPLAY &&
+              failureCase === SbrReadinessFixtureFailure.UNSPECIFIED)),
         readiness: create(SbrReadinessSchema, overrides.readiness ?? simulatorReadiness),
+        outcome,
       }),
     }),
   );
@@ -231,9 +250,12 @@ describe("SbrSimulatorPanel", () => {
   });
 
   it.each(["MALFORMED_RESPONSE", "HELPER_DEATH", "TIMEOUT"])(
-    "renders and terminal-locks the rejected %s diagnostic",
+    "renders and terminal-locks the authoritative %s diagnostic",
     async (diagnosticCase) => {
-      const run = vi.fn().mockRejectedValue(new Error("private helper detail"));
+      const run = vi.fn((frame: Uint8Array) => {
+        const request = runCodec.decodeRequest(frame);
+        return Promise.resolve(resultFrame(request.failureCase));
+      });
       const user = userEvent.setup();
       render(
         <SbrSimulatorPanel
@@ -246,7 +268,6 @@ describe("SbrSimulatorPanel", () => {
       await runFixture(user, diagnosticCase);
       expect(await screen.findByText(diagnosticCase)).toBeTruthy();
       expect(screen.getByRole("button", { name: "Refresh authoritative status" })).toBeTruthy();
-      expect(document.body.textContent).not.toContain("private helper detail");
       expect(
         (screen.getByRole("button", { name: "Run simulator fixture" }) as HTMLButtonElement)
           .disabled,
@@ -260,7 +281,14 @@ describe("SbrSimulatorPanel", () => {
       vi.fn((frame: Uint8Array) => {
         const request = runCodec.decodeRequest(frame);
         requests.push(request);
-        return Promise.resolve(resultFrame(request.failureCase));
+        return Promise.resolve(
+          resultFrame(request.failureCase, {
+            outcome:
+              requests.length === 1
+                ? SbrReadinessFixtureOutcome.ACCEPTED
+                : SbrReadinessFixtureOutcome.EXACT_REPLAY,
+          }),
+        );
       }),
     );
     const user = userEvent.setup();
@@ -288,7 +316,13 @@ describe("SbrSimulatorPanel", () => {
       const request = runCodec.decodeRequest(frame);
       keys.push(request.commandContext?.idempotencyKey ?? "");
       cases.push(request.failureCase);
-      if (keys.length === 2) return Promise.reject(new Error("CORE_REQUEST_FAILED"));
+      if (keys.length === 2) {
+        return Promise.resolve(
+          resultFrame(request.failureCase, {
+            outcome: SbrReadinessFixtureOutcome.IDEMPOTENCY_CONFLICT,
+          }),
+        );
+      }
       return Promise.resolve(resultFrame(request.failureCase));
     });
     const api = apiFor(run);
@@ -317,7 +351,12 @@ describe("SbrSimulatorPanel", () => {
 
   it("terminal-locks restart-recovered UNKNOWN and refreshes without resending", async () => {
     const onRefresh = vi.fn();
-    const run = vi.fn().mockRejectedValue(new Error("recovered internal receipt"));
+    const run = vi.fn((frame: Uint8Array) => {
+      const request = runCodec.decodeRequest(frame);
+      return Promise.resolve(
+        resultFrame(request.failureCase, { outcome: SbrReadinessFixtureOutcome.UNKNOWN }),
+      );
+    });
     const user = userEvent.setup();
     render(
       <SbrSimulatorPanel
@@ -329,10 +368,28 @@ describe("SbrSimulatorPanel", () => {
     );
     await runFixture(user);
     expect(await screen.findByText("UNKNOWN")).toBeTruthy();
+    expect(screen.getAllByText(/restart recovery/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/never automatically resent/i)).toHaveLength(2);
     await user.click(screen.getByRole("button", { name: "Refresh authoritative status" }));
     expect(onRefresh).toHaveBeenCalledOnce();
     expect(run).toHaveBeenCalledOnce();
+  });
+
+  it("uses generic UNKNOWN for a rejected invocation without claiming restart recovery", async () => {
+    const run = vi.fn().mockRejectedValue(new Error("private helper detail"));
+    const user = userEvent.setup();
+    render(
+      <SbrSimulatorPanel
+        api={apiFor(run)}
+        onRefresh={vi.fn()}
+        readiness={simulatorReadiness}
+        workspace={workspace}
+      />,
+    );
+    await runFixture(user, "HELPER_DEATH");
+    expect(await screen.findByText("UNKNOWN")).toBeTruthy();
+    expect(document.body.textContent).not.toContain("private helper detail");
+    expect(document.body.textContent).not.toMatch(/restart recovery/i);
   });
 
   it("guards double clicks before and after factor assertion", async () => {
@@ -378,6 +435,22 @@ describe("SbrSimulatorPanel", () => {
       "wrong boolean semantics",
       () =>
         resultFrame(SbrReadinessFixtureFailure.UNSPECIFIED, {
+          succeeded: false,
+        }),
+    ],
+    [
+      "unspecified authoritative outcome",
+      () =>
+        resultFrame(SbrReadinessFixtureFailure.UNSPECIFIED, {
+          outcome: SbrReadinessFixtureOutcome.UNSPECIFIED,
+          succeeded: false,
+        }),
+    ],
+    [
+      "unexpected initial conflict outcome",
+      () =>
+        resultFrame(SbrReadinessFixtureFailure.UNSPECIFIED, {
+          outcome: SbrReadinessFixtureOutcome.IDEMPOTENCY_CONFLICT,
           succeeded: false,
         }),
     ],
@@ -456,6 +529,85 @@ describe("SbrSimulatorPanel", () => {
     await act(async () => assertion.resolve(factorFrame()));
     expect(api.runSbrReadinessFixture).not.toHaveBeenCalled();
   });
+
+  it.each([
+    {
+      name: "EVTE transition",
+      readiness: create(SbrReadinessSchema, {
+        environment: SbrEnvironment.EVTE,
+        state: SbrReadinessState.READY_FOR_EVTE_PRE_CONFORMANCE,
+        machineCredentialState: MachineCredentialState.PRESENT,
+        productIdState: ProductIdState.PRESENT,
+        evteProductIdentifier: "TAMMY.EVTE",
+        evteServiceIdentifier: "BAS.LODGE",
+      }),
+      workspace,
+      factorEnabled: true,
+    },
+    {
+      name: "role loss",
+      readiness: simulatorReadiness,
+      workspace: { ...workspace, roles: [Role.WORKSPACE_ADMIN] },
+      factorEnabled: true,
+    },
+    {
+      name: "readiness loss",
+      readiness: create(SbrReadinessSchema, {
+        environment: SbrEnvironment.SIMULATOR,
+        state: SbrReadinessState.UNAVAILABLE,
+        machineCredentialState: MachineCredentialState.MISSING,
+        productIdState: ProductIdState.MISSING,
+      }),
+      workspace,
+      factorEnabled: true,
+    },
+    {
+      name: "credential readiness loss",
+      readiness: create(SbrReadinessSchema, {
+        environment: SbrEnvironment.SIMULATOR,
+        state: SbrReadinessState.READY_FOR_SIMULATOR,
+        machineCredentialState: MachineCredentialState.INACCESSIBLE,
+        productIdState: ProductIdState.MISSING,
+      }),
+      workspace,
+      factorEnabled: true,
+    },
+    {
+      name: "factor disable",
+      readiness: simulatorReadiness,
+      workspace,
+      factorEnabled: false,
+    },
+  ])(
+    "does not dispatch when $name invalidates the action gate during factor assertion",
+    async (next) => {
+      const assertion = deferred<Uint8Array>();
+      const api = apiFor();
+      vi.mocked(api.assertTotp).mockReturnValue(assertion.promise);
+      const user = userEvent.setup();
+      const view = render(
+        <SbrSimulatorPanel
+          api={api}
+          onRefresh={vi.fn()}
+          readiness={simulatorReadiness}
+          workspace={workspace}
+        />,
+      );
+      await user.type(screen.getByLabelText("Fresh six-digit code"), "123456");
+      await user.click(screen.getByRole("button", { name: "Run simulator fixture" }));
+      view.rerender(
+        <SbrSimulatorPanel
+          api={api}
+          factorEnabled={next.factorEnabled}
+          onRefresh={vi.fn()}
+          readiness={next.readiness}
+          workspace={next.workspace}
+        />,
+      );
+      await act(async () => assertion.resolve(factorFrame()));
+      expect(api.runSbrReadinessFixture).not.toHaveBeenCalled();
+    },
+  );
 
   it("ignores a stale operation response after the session changes", async () => {
     const operation = deferred<Uint8Array>();

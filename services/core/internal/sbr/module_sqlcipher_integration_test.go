@@ -45,6 +45,38 @@ func (integrationIdentity) ValidateFreshFactorWithin(context.Context, MutationEx
 	return nil
 }
 
+type countingIntegrationIdentity struct {
+	mu       sync.Mutex
+	consumed int
+}
+
+func (identity *countingIntegrationIdentity) RequireAdministratorWithin(context.Context, MutationExecutor, *tammyv1.AuthenticationContext) error {
+	return nil
+}
+func (identity *countingIntegrationIdentity) RequireActiveSessionReadOnly(context.Context, *tammyv1.AuthenticationContext) error {
+	return nil
+}
+func (identity *countingIntegrationIdentity) AuthorizeWithin(context.Context, MutationExecutor, *tammyv1.AuthenticationContext, authorisation.Action) error {
+	return nil
+}
+func (identity *countingIntegrationIdentity) ConsumeFreshFactorWithin(context.Context, MutationExecutor, *tammyv1.AuthenticationContext, *tammyv1.FreshFactorContext, string) error {
+	identity.mu.Lock()
+	defer identity.mu.Unlock()
+	identity.consumed++
+	return nil
+}
+func (identity *countingIntegrationIdentity) ValidateAuthorizationWithin(context.Context, MutationExecutor, *tammyv1.AuthenticationContext, authorisation.Action) error {
+	return nil
+}
+func (identity *countingIntegrationIdentity) ValidateFreshFactorWithin(context.Context, MutationExecutor, *tammyv1.AuthenticationContext, *tammyv1.FreshFactorContext, string) error {
+	return nil
+}
+func (identity *countingIntegrationIdentity) consumptionCount() int {
+	identity.mu.Lock()
+	defer identity.mu.Unlock()
+	return identity.consumed
+}
+
 type singleUseSQLFactorIdentity struct{}
 
 func (singleUseSQLFactorIdentity) RequireAdministratorWithin(context.Context, MutationExecutor, *tammyv1.AuthenticationContext) error {
@@ -169,7 +201,8 @@ func (helper *integrationHelper) Execute(_ context.Context, request HelperReques
 			ProfileFingerprint: request.ProfileFingerprint, RegistrationFingerprint: request.RegistrationFingerprint,
 			ComponentFingerprint: request.ComponentFingerprint, ComponentVersion: request.ComponentVersion}, nil
 	case HelperOperationFixture:
-		return HelperResult{RequestID: request.RequestID, Outcome: HelperOutcomeOK, ResultCode: HelperResultFixtureSelected, FixtureState: TransportAccepted}, nil
+		return HelperResult{RequestID: request.RequestID, Outcome: HelperOutcomeOK, ResultCode: HelperResultFixtureSelected,
+			FixtureFailureCase: request.FixtureFailureCase, FixtureState: TransportAccepted}, nil
 	default:
 		return HelperResult{Outcome: HelperOutcomeFailed, StableCode: "SBR_HELPER_PROTOCOL_ERROR"}, nil
 	}
@@ -214,7 +247,7 @@ func TestGeneratedConnectClientsExerciseAllNineSbrRPCsOverSQLCipher(t *testing.T
 	service, err := NewService(ServiceConfig{WorkspaceID: testWorkspaceID, Identity: integrationIdentity{},
 		Organisation: fakeOrganisation{binding: OrganisationBinding{OrganisationID: testOrganisation, CanonicalABN: testABN, VerificationExpiresAt: now.Add(time.Hour)}},
 		Profiles: fakeProfile{profile: RuntimeProfile{Environment: tammyv1.SbrEnvironment_SBR_ENVIRONMENT_SIMULATOR,
-			ComponentVersion:   "simulator-v1",
+			ComponentVersion: "simulator-v1", Conformance: ConformanceSimulator,
 			ProfileFingerprint: profileHash, RegistrationFingerprint: registrationHash, ComponentFingerprint: componentHash, AuthenticatedUntil: now.Add(time.Hour)}},
 		Helper: helper, Units: sqlUnitOfWork{database: database}, Store: store, Now: func() time.Time { return now }, NewID: generator.New,
 		Audit:           discardAudit{},
@@ -276,8 +309,19 @@ func TestGeneratedConnectClientsExerciseAllNineSbrRPCsOverSQLCipher(t *testing.T
 	if afterReplay != afterFirstFixture {
 		t.Fatalf("fixture replay dispatched helper: before=%d after=%d", afterFirstFixture, afterReplay)
 	}
-	if _, err := client.RunSbrReadinessFixture(ctx, connect.NewRequest(&tammyv1.RunSbrReadinessFixtureRequest{CommandContext: commandFor(PurposeUseMachineCredential), FixtureId: ReadinessFixtureID, FailureCase: tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_TIMEOUT})); connect.CodeOf(err) != connect.CodeAlreadyExists {
-		t.Fatalf("fixture idempotency conflict=%v", err)
+	crossActor := commandFor(PurposeUseMachineCredential)
+	crossActor.Authentication = &tammyv1.AuthenticationContext{
+		ActorUserId: "018f5f48-7f01-7b6e-86df-8b89f45e1016", SessionId: serviceSessionID,
+	}
+	if _, err := client.RunSbrReadinessFixture(ctx, connect.NewRequest(&tammyv1.RunSbrReadinessFixtureRequest{
+		CommandContext: crossActor, FixtureId: ReadinessFixtureID,
+		FailureCase: tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_HELPER_DEATH,
+	})); connect.CodeOf(err) != connect.CodePermissionDenied {
+		t.Fatalf("cross-actor fixture conflict=%v, want permission denied", err)
+	}
+	conflict, err := client.RunSbrReadinessFixture(ctx, connect.NewRequest(&tammyv1.RunSbrReadinessFixtureRequest{CommandContext: commandFor(PurposeUseMachineCredential), FixtureId: ReadinessFixtureID, FailureCase: tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_TIMEOUT}))
+	if err != nil || conflict.Msg.Result.GetOutcome() != tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_IDEMPOTENCY_CONFLICT {
+		t.Fatalf("fixture idempotency conflict=%v, %v", conflict, err)
 	}
 	if _, err := client.RemoveMachineCredential(ctx, connect.NewRequest(&tammyv1.RemoveMachineCredentialRequest{CommandContext: commandFor(PurposeRemoveMachineCredential)})); err != nil {
 		t.Fatal(err)
@@ -294,6 +338,75 @@ func TestGeneratedConnectClientsExerciseAllNineSbrRPCsOverSQLCipher(t *testing.T
 		if request.WorkspaceID != testWorkspaceID || request.OrganisationID != testOrganisation || request.CanonicalABN != testABN || !bytes.Equal(request.OpaqueScope, wantScope[:]) {
 			t.Fatalf("helper received non-server-derived binding: %+v", request)
 		}
+	}
+}
+
+func TestSQLCoreRestartReturnsUnknownFixtureWithoutRedispatchOrFreshFactorConsumption(t *testing.T) {
+	ctx := context.Background()
+	repository, database, _ := newRepositoryHarness(t)
+	now := time.Date(2026, 8, 22, 0, 0, 0, 0, time.UTC)
+	key := testBindingKey(0xb1)
+	if err := repository.PutBinding(ctx, Binding{Key: key, ComponentVersion: "simulator-v1", SubjectHash: digest(0xb2),
+		ExpiresAt: testTime, State: BindingActive, Revision: 1, UpdatedAt: testTime}); err != nil {
+		t.Fatal(err)
+	}
+	profile := RuntimeProfile{Environment: tammyv1.SbrEnvironment_SBR_ENVIRONMENT_SIMULATOR,
+		ComponentVersion: "simulator-v1", Conformance: ConformanceSimulator,
+		ProfileFingerprint: digest(0xb3), RegistrationFingerprint: digest(0xb4), ComponentFingerprint: digest(0xb5),
+		AuthenticatedUntil: now.Add(time.Hour)}
+	if err := repository.PutAuthenticatedProfile(ctx, AuthenticatedProfile{Key: key, Environment: EnvironmentSimulator,
+		ProfileFingerprint: profile.ProfileFingerprint, RegistrationFingerprint: profile.RegistrationFingerprint,
+		ComponentFingerprint: profile.ComponentFingerprint, Conformance: ConformanceSimulator}); err != nil {
+		t.Fatal(err)
+	}
+	identity := &countingIntegrationIdentity{}
+	helper := &integrationHelper{}
+	generator := &integrationIDs{}
+	store := newSQLServiceStore(repository, testWorkspaceID, func() time.Time { return now }, generator.New)
+	auth := &tammyv1.AuthenticationContext{ActorUserId: serviceUserID, SessionId: serviceSessionID}
+	commandContext := &tammyv1.CommandContext{IdempotencyKey: "018f0000-0000-7000-8000-000000000b01", Authentication: auth,
+		FreshFactor: &tammyv1.FreshFactorContext{AssertionId: servicePendingID, Purpose: PurposeUseMachineCredential, AssertedAt: timestamppb.New(now)}}
+	request := &tammyv1.RunSbrReadinessFixtureRequest{CommandContext: commandContext, FixtureId: ReadinessFixtureID}
+	binding := OrganisationBinding{OrganisationID: testOrganisation, CanonicalABN: testABN, VerificationExpiresAt: now.Add(time.Hour)}
+	record, replay, err := store.PrepareFixture(ctx, binding, key.CredentialFingerprint,
+		"018f0000-0000-7000-8000-000000000b02", serviceUserID, commandContext.IdempotencyKey,
+		fixtureSemanticHash(request, profile, key.CredentialFingerprint))
+	if err != nil || replay {
+		t.Fatalf("prepare orphan fixture = %#v, replay=%t, error=%v", record, replay, err)
+	}
+	if err := store.ReserveFixtureDispatch(ctx, record, serviceUserID, func(txctx context.Context, executor MutationExecutor) error {
+		return identity.ConsumeFreshFactorWithin(txctx, executor, auth, commandContext.FreshFactor, PurposeUseMachineCredential)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if identity.consumptionCount() != 1 {
+		t.Fatalf("initial factor consumptions = %d, want 1", identity.consumptionCount())
+	}
+	reopenedRepository, err := newSQLCipherRepository(database, func() time.Time { return now })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if recovered, err := reopenedRepository.RecoverSimulatorOrphans(ctx, testTime); err != nil || recovered != 1 {
+		t.Fatalf("restart recovery = %d, %v", recovered, err)
+	}
+	restarted, err := NewService(ServiceConfig{WorkspaceID: testWorkspaceID, Identity: identity,
+		Organisation: fakeOrganisation{binding: binding}, Profiles: fakeProfile{profile: profile}, Helper: helper,
+		Units: sqlUnitOfWork{database: database}, Store: newSQLServiceStore(reopenedRepository, testWorkspaceID, func() time.Time { return now }, generator.New),
+		Now: func() time.Time { return now }, NewID: generator.New, Audit: discardAudit{}, InstallationKey: bytes.Repeat([]byte{0x4b}, sha256.Size)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	response, err := restarted.RunSbrReadinessFixture(ctx, connect.NewRequest(request))
+	if err != nil || response.Msg.Result.GetOutcome() != tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_UNKNOWN {
+		t.Fatalf("restart replay = %v, %v", response, err)
+	}
+	if identity.consumptionCount() != 1 {
+		t.Fatalf("restart replay factor consumptions = %d, want 1", identity.consumptionCount())
+	}
+	helper.mu.Lock()
+	defer helper.mu.Unlock()
+	if len(helper.requests) != 0 {
+		t.Fatalf("restart replay helper dispatches = %d, want 0", len(helper.requests))
 	}
 }
 
@@ -398,7 +511,7 @@ func TestConcurrentMutationsSharingFreshFactorReserveBeforeHelperDispatch(t *tes
 			}
 			now := time.Date(2026, 8, 22, 0, 0, 0, 0, time.UTC)
 			profile := test.profile(RuntimeProfile{Environment: tammyv1.SbrEnvironment_SBR_ENVIRONMENT_SIMULATOR,
-				ComponentVersion: "simulator-v1", ProfileFingerprint: sha256.Sum256([]byte("profile")),
+				ComponentVersion: "simulator-v1", Conformance: ConformanceSimulator, ProfileFingerprint: sha256.Sum256([]byte("profile")),
 				RegistrationFingerprint: sha256.Sum256([]byte("registration")), ComponentFingerprint: sha256.Sum256([]byte("component")),
 				AuthenticatedUntil: now.Add(time.Hour)})
 			baseHelper := &integrationHelper{}
