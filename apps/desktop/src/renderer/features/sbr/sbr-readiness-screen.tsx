@@ -62,6 +62,8 @@ const issueCopy: Readonly<Record<string, string>> = {
   SBR_CREDENTIAL_EXPIRED: "The RAM machine credential has expired.",
   SBR_CREDENTIAL_ORGANISATION_MISMATCH:
     "The RAM machine credential does not match this organisation.",
+  SBR_CREDENTIAL_REIMPORT_REQUIRED:
+    "Reimport the RAM machine credential on this device before running SBR readiness checks.",
 };
 
 interface SbrReadinessScreenProps {
@@ -148,6 +150,58 @@ function safeIssues(codes: readonly string[]): string[] {
   return [...new Set(codes.flatMap((code) => (issueCopy[code] ? [issueCopy[code]] : [])))];
 }
 
+function validReadiness(readiness: SbrReadiness): boolean {
+  const environmentValid =
+    readiness.environment === SbrEnvironment.SIMULATOR ||
+    readiness.environment === SbrEnvironment.EVTE;
+  const stateValid =
+    readiness.state === SbrReadinessState.UNAVAILABLE ||
+    readiness.state === SbrReadinessState.READY_FOR_SIMULATOR ||
+    readiness.state === SbrReadinessState.READY_FOR_EVTE_PRE_CONFORMANCE ||
+    readiness.state === SbrReadinessState.READY_FOR_EVTE_POST_CONFORMANCE;
+  const credentialValid =
+    readiness.machineCredentialState === MachineCredentialState.MISSING ||
+    readiness.machineCredentialState === MachineCredentialState.PRESENT ||
+    readiness.machineCredentialState === MachineCredentialState.INACCESSIBLE ||
+    readiness.machineCredentialState === MachineCredentialState.INCOMPATIBLE ||
+    readiness.machineCredentialState === MachineCredentialState.REVOKED ||
+    readiness.machineCredentialState === MachineCredentialState.EXPIRED ||
+    readiness.machineCredentialState === MachineCredentialState.ABN_MISMATCH;
+  const productValid =
+    readiness.productIdState === ProductIdState.PRESENT ||
+    readiness.productIdState === ProductIdState.MISSING ||
+    readiness.productIdState === ProductIdState.INACCESSIBLE;
+  const fingerprintsValid = [
+    readiness.credentialFingerprint,
+    readiness.profileFingerprint,
+    readiness.componentFingerprint,
+  ].every((fingerprint) => fingerprint.length <= 128);
+  if (!environmentValid || !stateValid || !credentialValid || !productValid) return false;
+  if (!fingerprintsValid) return false;
+
+  if (readiness.environment === SbrEnvironment.SIMULATOR) {
+    if (
+      readiness.state !== SbrReadinessState.UNAVAILABLE &&
+      readiness.state !== SbrReadinessState.READY_FOR_SIMULATOR
+    ) {
+      return false;
+    }
+  } else if (readiness.state === SbrReadinessState.READY_FOR_SIMULATOR) {
+    return false;
+  }
+
+  if (readiness.state !== SbrReadinessState.UNAVAILABLE) {
+    if (readiness.machineCredentialState !== MachineCredentialState.PRESENT) return false;
+    if (
+      readiness.environment === SbrEnvironment.EVTE &&
+      readiness.productIdState !== ProductIdState.PRESENT
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
 export function SbrReadinessScreen({
   api,
   doctorMode = false,
@@ -174,7 +228,9 @@ export function SbrReadinessScreen({
       .then(() => api.getSbrReadiness(readinessCodec.encodeRequest(request)))
       .then((frame) => {
         const response = readinessCodec.decodeResponse(frame);
-        if (!response.readiness) throw new Error("invalid readiness response");
+        if (!response.readiness || !validReadiness(response.readiness)) {
+          throw new Error("invalid readiness response");
+        }
         if (requestSequence.current === sequence) {
           setState({ readiness: response.readiness, status: "ready" });
         }
@@ -197,14 +253,17 @@ export function SbrReadinessScreen({
         {announcement}
       </p>
       <header className="flex items-end justify-between gap-5 border-b border-border pb-4">
-        <div>
+        <div className="min-w-0">
           <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-forest">
             Settings / secure reporting
           </p>
           <h1 className="text-[19px] font-semibold tracking-[-0.025em] text-foreground">
             SBR readiness
           </h1>
-          <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
+          <p
+            className="mt-1 min-w-0 text-[11px] leading-5 text-muted-foreground [overflow-wrap:anywhere]"
+            data-testid="sbr-organisation-identity"
+          >
             {workspace.organisationDisplayName} · ABN {workspace.organisationCanonicalAbn}
           </p>
         </div>

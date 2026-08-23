@@ -75,6 +75,10 @@ describe("guarded walkthrough routes", () => {
       "/settings/sbr?doctor=1#again",
       "/settings/sbr?doctor=1#",
       "https://example.invalid/settings/sbr?doctor=1",
+      "https://tammy.invalid/settings/sbr?doctor=1",
+      "//tammy.invalid/settings/sbr?doctor=1",
+      "/settings/../settings/sbr?doctor=1",
+      "/settings\\sbr?doctor=1",
     ]) {
       expect(resolveAppLocation(location, "authenticated")).toEqual({
         notice: "That page is not available.",

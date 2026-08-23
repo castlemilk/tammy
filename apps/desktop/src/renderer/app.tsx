@@ -1,7 +1,17 @@
-import { Role } from "@tammy/connect-client/tammy/v1/identity_pb.js";
+import { create } from "@bufbuild/protobuf";
+import { AuthenticationContextSchema } from "@tammy/connect-client/tammy/v1/common_pb.js";
+import {
+  GetCurrentUserRequestSchema,
+  GetCurrentUserResponseSchema,
+  Role,
+} from "@tammy/connect-client/tammy/v1/identity_pb.js";
+import {
+  GetOrganisationRequestSchema,
+  GetOrganisationResponseSchema,
+} from "@tammy/connect-client/tammy/v1/organisation_pb.js";
 import { AlertTriangle, LoaderCircle, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-
+import { createProtoMethodCodec } from "../shared/proto-ipc";
 import { AppShell } from "./app-shell/app-shell";
 import { resolveAppLocation, type WorkspaceAccess } from "./app-shell/router";
 import { Button } from "./components/ui/button";
@@ -24,6 +34,47 @@ const WORKSPACE_ID_STORAGE = "tammy.workspace.id";
 const ORGANISATION_ID_STORAGE = "tammy.organisation.id";
 const SESSION_STORAGE = "tammy.session.active";
 const UUID_V7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+const currentUserCodec = createProtoMethodCodec({
+  input: GetCurrentUserRequestSchema,
+  maximumRequestBytes: 8_192,
+  maximumResponseBytes: 32_768,
+  output: GetCurrentUserResponseSchema,
+});
+const organisationCodec = createProtoMethodCodec({
+  input: GetOrganisationRequestSchema,
+  maximumRequestBytes: 8_192,
+  maximumResponseBytes: 32_768,
+  output: GetOrganisationResponseSchema,
+});
+
+type SettingsWorkspace = AuthenticatedWorkspace &
+  Required<
+    Pick<
+      AuthenticatedWorkspace,
+      "organisationCanonicalAbn" | "organisationDisplayName" | "organisationId" | "roles"
+    >
+  >;
+
+type SettingsProjectionState =
+  | { readonly status: "idle" }
+  | { readonly key: string; readonly status: "loading" | "unavailable" }
+  | { readonly key: string; readonly status: "ready"; readonly workspace: SettingsWorkspace };
+
+function validRoles(roles: unknown): roles is readonly Role[] {
+  return (
+    Array.isArray(roles) &&
+    roles.length > 0 &&
+    roles.every(
+      (role) =>
+        role === Role.WORKSPACE_ADMIN ||
+        role === Role.BUSINESS_PREPARER ||
+        role === Role.BUSINESS_LODGER ||
+        role === Role.AUDITOR,
+    ) &&
+    new Set(roles).size === roles.length &&
+    roles.every((role, index) => index === 0 || role > (roles[index - 1] ?? 0))
+  );
+}
 
 function storedAuthenticatedWorkspace(): AuthenticatedWorkspace | undefined {
   const retained = window.sessionStorage.getItem(SESSION_STORAGE);
@@ -37,7 +88,7 @@ function storedAuthenticatedWorkspace(): AuthenticatedWorkspace | undefined {
       typeof parsed.organisationId === "string" &&
       typeof parsed.organisationDisplayName === "string" &&
       typeof parsed.organisationCanonicalAbn === "string" &&
-      Array.isArray(parsed.roles) &&
+      validRoles(parsed.roles) &&
       UUID_V7.test(parsed.workspaceId) &&
       UUID_V7.test(parsed.userId) &&
       UUID_V7.test(parsed.sessionId) &&
@@ -45,16 +96,7 @@ function storedAuthenticatedWorkspace(): AuthenticatedWorkspace | undefined {
       parsed.organisationDisplayName.trim().length > 0 &&
       parsed.organisationDisplayName.length <= 256 &&
       /^[0-9]{11}$/.test(parsed.organisationCanonicalAbn) &&
-      parsed.roles.length > 0 &&
-      parsed.roles.every(
-        (role) =>
-          role === Role.WORKSPACE_ADMIN ||
-          role === Role.BUSINESS_PREPARER ||
-          role === Role.BUSINESS_LODGER ||
-          role === Role.AUDITOR,
-      ) &&
-      new Set(parsed.roles).size === parsed.roles.length &&
-      parsed.roles.every((role, index) => index === 0 || role > (parsed.roles?.[index - 1] ?? 0))
+      parsed.roles.length > 0
     ) {
       return {
         workspaceId: parsed.workspaceId,
@@ -79,7 +121,7 @@ function initialAccess(): WorkspaceAccess {
 }
 
 function currentLocation(): string {
-  return `${window.location.pathname}${window.location.search}`;
+  return `${window.location.pathname}${window.location.search}${window.location.hash}`;
 }
 
 function hasSbrWorkspaceProjection(
@@ -109,6 +151,20 @@ export function App() {
     () => resolveAppLocation(currentLocation(), initialAccess()).path,
   );
   const requestSequence = useRef(0);
+  const appMounted = useRef(false);
+  const settingsRequestSequence = useRef(0);
+  const settingsRequestedKey = useRef<string | undefined>(undefined);
+  const [settingsProjection, setSettingsProjection] = useState<SettingsProjectionState>({
+    status: "idle",
+  });
+  const settingsRoute =
+    activePath === "/settings/organisation" ||
+    activePath === "/settings/sbr" ||
+    activePath === "/settings/sbr?doctor=1";
+  const settingsRequestKey =
+    settingsRoute && hasSbrWorkspaceProjection(workspace)
+      ? `${workspace.sessionId}:${workspace.userId}:${workspace.organisationId}`
+      : undefined;
 
   const loadDiagnostics = useCallback(async () => {
     const request = requestSequence.current + 1;
@@ -124,11 +180,88 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    appMounted.current = true;
+    return () => {
+      appMounted.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
     void loadDiagnostics();
     return () => {
       requestSequence.current += 1;
     };
   }, [loadDiagnostics]);
+
+  useEffect(() => {
+    if (!settingsRequestKey || !hasSbrWorkspaceProjection(workspace)) {
+      settingsRequestSequence.current += 1;
+      settingsRequestedKey.current = undefined;
+      setSettingsProjection({ status: "idle" });
+      return;
+    }
+    if (settingsRequestedKey.current === settingsRequestKey) return;
+    settingsRequestedKey.current = settingsRequestKey;
+    const sequence = settingsRequestSequence.current + 1;
+    settingsRequestSequence.current = sequence;
+    setSettingsProjection({ key: settingsRequestKey, status: "loading" });
+    const authentication = create(AuthenticationContextSchema, {
+      actorUserId: workspace.userId,
+      sessionId: workspace.sessionId,
+    });
+    const currentWorkspace = workspace;
+    void Promise.all([
+      Promise.resolve()
+        .then(() =>
+          window.tammy.getCurrentUser(
+            currentUserCodec.encodeRequest(create(GetCurrentUserRequestSchema, { authentication })),
+          ),
+        )
+        .then((frame) => currentUserCodec.decodeResponse(frame)),
+      Promise.resolve()
+        .then(() =>
+          window.tammy.getOrganisation(
+            organisationCodec.encodeRequest(
+              create(GetOrganisationRequestSchema, {
+                authentication,
+                organisationId: workspace.organisationId,
+              }),
+            ),
+          ),
+        )
+        .then((frame) => organisationCodec.decodeResponse(frame)),
+    ])
+      .then(([currentUser, currentOrganisation]) => {
+        if (
+          !currentUser.user ||
+          currentUser.user.id !== currentWorkspace.userId ||
+          !validRoles(currentUser.user.roles) ||
+          !currentOrganisation.organisation ||
+          currentOrganisation.organisation.id !== currentWorkspace.organisationId ||
+          !currentOrganisation.organisation.displayName.trim() ||
+          currentOrganisation.organisation.displayName.length > 256 ||
+          !/^[0-9]{11}$/.test(currentOrganisation.organisation.abn)
+        ) {
+          throw new Error("invalid authoritative workspace projection");
+        }
+        const refreshed: SettingsWorkspace = {
+          ...currentWorkspace,
+          organisationCanonicalAbn: currentOrganisation.organisation.abn,
+          organisationDisplayName: currentOrganisation.organisation.displayName,
+          organisationId: currentOrganisation.organisation.id,
+          roles: [...currentUser.user.roles],
+        };
+        if (!appMounted.current || settingsRequestSequence.current !== sequence) return;
+        window.sessionStorage.setItem(SESSION_STORAGE, JSON.stringify(refreshed));
+        setWorkspace(refreshed);
+        setSettingsProjection({ key: settingsRequestKey, status: "ready", workspace: refreshed });
+      })
+      .catch(() => {
+        if (appMounted.current && settingsRequestSequence.current === sequence) {
+          setSettingsProjection({ key: settingsRequestKey, status: "unavailable" });
+        }
+      });
+  }, [settingsRequestKey, workspace]);
 
   useEffect(() => {
     const restore = () => {
@@ -207,6 +340,8 @@ export function App() {
         onNavigate={navigate}
         path={activePath}
         state={diagnosticsState}
+        settingsProjection={settingsProjection}
+        settingsRequestKey={settingsRequestKey}
         workspace={workspace}
       />
     </AppShell>
@@ -265,11 +400,15 @@ function EngineStatus({
 function RouteContent({
   onNavigate,
   path,
+  settingsProjection,
+  settingsRequestKey,
   state,
   workspace,
 }: {
   readonly onNavigate: (path: string) => void;
   readonly path: string;
+  readonly settingsProjection: SettingsProjectionState;
+  readonly settingsRequestKey: string | undefined;
   readonly state: DiagnosticsState;
   readonly workspace: AuthenticatedWorkspace | undefined;
 }) {
@@ -311,6 +450,10 @@ function RouteContent({
     );
   }
   if (path === "/settings/organisation") {
+    if (settingsProjection.status !== "ready" || settingsProjection.key !== settingsRequestKey) {
+      return <SettingsProjectionStatus state={settingsProjection} />;
+    }
+    const trustedWorkspace = settingsProjection.workspace;
     return (
       <div className="mx-auto grid w-full max-w-[920px] gap-5">
         <div className="border-b border-border pb-4">
@@ -321,33 +464,34 @@ function RouteContent({
             Organisation
           </h1>
         </div>
-        {workspace ? (
-          <dl className="grid border-t border-border text-[11px]">
-            <div className="grid grid-cols-[180px_minmax(0,1fr)] border-b border-border py-3">
-              <dt className="text-muted-foreground">Display name</dt>
-              <dd className="m-0 font-medium text-foreground">
-                {workspace.organisationDisplayName}
-              </dd>
-            </div>
-            <div className="grid grid-cols-[180px_minmax(0,1fr)] border-b border-border py-3">
-              <dt className="text-muted-foreground">Canonical ABN</dt>
-              <dd className="m-0 font-medium text-foreground">
-                {workspace.organisationCanonicalAbn}
-              </dd>
-            </div>
-          </dl>
-        ) : null}
+        <dl className="grid min-w-0 border-t border-border text-[11px]">
+          <div className="grid grid-cols-[180px_minmax(0,1fr)] border-b border-border py-3">
+            <dt className="text-muted-foreground">Display name</dt>
+            <dd className="m-0 min-w-0 font-medium text-foreground [overflow-wrap:anywhere]">
+              {trustedWorkspace.organisationDisplayName}
+            </dd>
+          </div>
+          <div className="grid grid-cols-[180px_minmax(0,1fr)] border-b border-border py-3">
+            <dt className="text-muted-foreground">Canonical ABN</dt>
+            <dd className="m-0 font-medium text-foreground">
+              {trustedWorkspace.organisationCanonicalAbn}
+            </dd>
+          </div>
+        </dl>
       </div>
     );
   }
   if (path === "/settings/sbr" || path === "/settings/sbr?doctor=1") {
-    return hasSbrWorkspaceProjection(workspace) ? (
+    if (settingsProjection.status !== "ready" || settingsProjection.key !== settingsRequestKey) {
+      return <SettingsProjectionStatus state={settingsProjection} />;
+    }
+    return (
       <SbrReadinessScreen
         api={window.tammy}
         doctorMode={path === "/settings/sbr?doctor=1"}
-        workspace={workspace}
+        workspace={settingsProjection.workspace}
       />
-    ) : null;
+    );
   }
   return (
     <EmptyLedgerScreen
@@ -355,5 +499,22 @@ function RouteContent({
       emptyLabel="Workspace action unavailable"
       title="Workspace"
     />
+  );
+}
+
+function SettingsProjectionStatus({ state }: { readonly state: SettingsProjectionState }) {
+  const unavailable = state.status === "unavailable";
+  return (
+    <div className="mx-auto w-full max-w-[920px] border-y border-border py-8">
+      <p aria-live="polite" className="text-[11px] text-muted-foreground" role="status">
+        {unavailable ? "Workspace details unavailable" : "Loading authenticated workspace details"}
+      </p>
+      {unavailable ? (
+        <p className="mt-2 text-[10px] leading-5 text-muted-foreground">
+          Tammy could not confirm the current user and organisation. No privileged settings are
+          shown.
+        </p>
+      ) : null}
+    </div>
   );
 }

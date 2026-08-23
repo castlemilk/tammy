@@ -35,7 +35,12 @@ export const COMPLETE_ROUTES = Object.freeze([
 const completeRoutes = new Set<string>(COMPLETE_ROUTES);
 
 function authenticatedLocation(rawLocation: string): ResolvedAppLocation {
-  if (rawLocation.includes("#")) {
+  if (
+    !rawLocation.startsWith("/") ||
+    rawLocation.startsWith("//") ||
+    rawLocation.includes("\\") ||
+    rawLocation.includes("#")
+  ) {
     return { notice: "That page is not available.", path: "/overview" };
   }
   let url: URL;
@@ -46,6 +51,9 @@ function authenticatedLocation(rawLocation: string): ResolvedAppLocation {
   }
 
   if (url.origin !== ROUTER_ORIGIN || url.hash !== "") {
+    return { notice: "That page is not available.", path: "/overview" };
+  }
+  if (`${url.pathname}${url.search}` !== rawLocation) {
     return { notice: "That page is not available.", path: "/overview" };
   }
 

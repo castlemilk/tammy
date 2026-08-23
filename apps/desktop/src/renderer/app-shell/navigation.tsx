@@ -86,7 +86,8 @@ function NavigationItem({
   readonly onNavigate: (path: string) => void;
 }) {
   const path = activePath.split("?", 1)[0] ?? activePath;
-  const active = path === item.href || path.startsWith(`${item.href}/`);
+  const current = path === item.href;
+  const active = current || path.startsWith(`${item.href}/`);
   const Icon = item.icon;
   const navigate = (event: MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
@@ -96,7 +97,7 @@ function NavigationItem({
   return (
     <li>
       <a
-        aria-current={active ? "page" : undefined}
+        aria-current={current ? "page" : undefined}
         className={`focus-ring flex min-h-8 items-center gap-2 rounded-[5px] px-2 text-[11px] font-medium leading-4 no-underline transition-colors max-[900px]:justify-center max-[900px]:px-1 ${
           active
             ? "bg-forest text-white"

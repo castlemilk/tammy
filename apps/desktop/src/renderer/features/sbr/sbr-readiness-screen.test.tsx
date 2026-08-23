@@ -93,7 +93,7 @@ describe("SbrReadinessScreen", () => {
         environment: SbrEnvironment.SIMULATOR,
         state: SbrReadinessState.READY_FOR_SIMULATOR,
         machineCredentialState: MachineCredentialState.PRESENT,
-        productIdState: ProductIdState.UNSPECIFIED,
+        productIdState: ProductIdState.MISSING,
         credentialFingerprint: "cred:7f91",
         profileFingerprint: "profile:3a12",
         componentFingerprint: "",
@@ -193,12 +193,30 @@ describe("SbrReadinessScreen", () => {
     expect(document.body.textContent).not.toContain("SECRET_VALUE_FROM_SERVER");
   });
 
+  it("drops an unknown readiness code without rejecting an otherwise valid response", async () => {
+    render(
+      <SbrReadinessScreen
+        api={apiFor({
+          environment: SbrEnvironment.SIMULATOR,
+          state: SbrReadinessState.READY_FOR_SIMULATOR,
+          machineCredentialState: MachineCredentialState.PRESENT,
+          productIdState: ProductIdState.MISSING,
+          readinessCodes: ["unknown private diagnostic"],
+        })}
+        workspace={workspace}
+      />,
+    );
+
+    expect(await screen.findByText("Ready for simulator")).toBeTruthy();
+    expect(document.body.textContent).not.toContain("unknown private diagnostic");
+  });
+
   it("runs doctor through the same RPC exactly once under StrictMode", async () => {
     const api = apiFor({
       environment: SbrEnvironment.SIMULATOR,
       state: SbrReadinessState.READY_FOR_SIMULATOR,
       machineCredentialState: MachineCredentialState.PRESENT,
-      productIdState: ProductIdState.UNSPECIFIED,
+      productIdState: ProductIdState.MISSING,
     });
     render(
       <StrictMode>
@@ -209,6 +227,25 @@ describe("SbrReadinessScreen", () => {
     expect(api.getSbrReadiness).toHaveBeenCalledOnce();
     expect(screen.queryByRole("button", { name: /doctor/i })).toBeNull();
   });
+
+  it.each([ProductIdState.MISSING, ProductIdState.PRESENT, ProductIdState.INACCESSIBLE])(
+    "accepts simulator readiness with core Product ID projection %s",
+    async (productIdState) => {
+      render(
+        <SbrReadinessScreen
+          api={apiFor({
+            environment: SbrEnvironment.SIMULATOR,
+            state: SbrReadinessState.READY_FOR_SIMULATOR,
+            machineCredentialState: MachineCredentialState.PRESENT,
+            productIdState,
+          })}
+          workspace={workspace}
+        />,
+      );
+
+      expect(await screen.findByText("Ready for simulator")).toBeTruthy();
+    },
+  );
 
   it("ignores a stale readiness response after the authenticated principal changes", async () => {
     const first = deferred<Uint8Array>();
@@ -245,7 +282,7 @@ describe("SbrReadinessScreen", () => {
           environment: SbrEnvironment.SIMULATOR,
           state: SbrReadinessState.READY_FOR_SIMULATOR,
           machineCredentialState: MachineCredentialState.PRESENT,
-          productIdState: ProductIdState.UNSPECIFIED,
+          productIdState: ProductIdState.MISSING,
         }),
       );
     });
@@ -293,5 +330,123 @@ describe("SbrReadinessScreen", () => {
     expect(remove.hasAttribute("disabled")).toBe(true);
     expect(replace.getAttribute("aria-describedby")).toBe("sbr-security-actions-description");
     expect(screen.getByText(/local core authorizes every change/i)).toBeTruthy();
+  });
+
+  it.each([
+    {
+      name: "unknown environment",
+      environment: 999 as SbrEnvironment,
+      state: SbrReadinessState.READY_FOR_SIMULATOR,
+      machineCredentialState: MachineCredentialState.PRESENT,
+      productIdState: ProductIdState.MISSING,
+    },
+    {
+      name: "unspecified environment",
+      environment: SbrEnvironment.UNSPECIFIED,
+      state: SbrReadinessState.UNAVAILABLE,
+      machineCredentialState: MachineCredentialState.MISSING,
+      productIdState: ProductIdState.MISSING,
+    },
+    {
+      name: "unknown readiness state",
+      environment: SbrEnvironment.SIMULATOR,
+      state: 999 as SbrReadinessState,
+      machineCredentialState: MachineCredentialState.PRESENT,
+      productIdState: ProductIdState.MISSING,
+    },
+    {
+      name: "unknown credential state",
+      environment: SbrEnvironment.SIMULATOR,
+      state: SbrReadinessState.READY_FOR_SIMULATOR,
+      machineCredentialState: 999 as MachineCredentialState,
+      productIdState: ProductIdState.MISSING,
+    },
+    {
+      name: "unknown Product ID state",
+      environment: SbrEnvironment.SIMULATOR,
+      state: SbrReadinessState.READY_FOR_SIMULATOR,
+      machineCredentialState: MachineCredentialState.PRESENT,
+      productIdState: 999 as ProductIdState,
+    },
+    {
+      name: "unspecified Product ID state",
+      environment: SbrEnvironment.SIMULATOR,
+      state: SbrReadinessState.READY_FOR_SIMULATOR,
+      machineCredentialState: MachineCredentialState.PRESENT,
+      productIdState: ProductIdState.UNSPECIFIED,
+    },
+    {
+      name: "EVTE stage under simulator",
+      environment: SbrEnvironment.SIMULATOR,
+      state: SbrReadinessState.READY_FOR_EVTE_PRE_CONFORMANCE,
+      machineCredentialState: MachineCredentialState.PRESENT,
+      productIdState: ProductIdState.PRESENT,
+    },
+    {
+      name: "simulator stage under EVTE",
+      environment: SbrEnvironment.EVTE,
+      state: SbrReadinessState.READY_FOR_SIMULATOR,
+      machineCredentialState: MachineCredentialState.PRESENT,
+      productIdState: ProductIdState.MISSING,
+    },
+    {
+      name: "EVTE ready without Product ID",
+      environment: SbrEnvironment.EVTE,
+      state: SbrReadinessState.READY_FOR_EVTE_PRE_CONFORMANCE,
+      machineCredentialState: MachineCredentialState.PRESENT,
+      productIdState: ProductIdState.MISSING,
+    },
+    {
+      name: "ready stage without usable credential",
+      environment: SbrEnvironment.EVTE,
+      state: SbrReadinessState.READY_FOR_EVTE_POST_CONFORMANCE,
+      machineCredentialState: MachineCredentialState.MISSING,
+      productIdState: ProductIdState.PRESENT,
+    },
+  ])("fails closed for $name", async (readiness) => {
+    render(<SbrReadinessScreen api={apiFor(readiness)} workspace={workspace} />);
+
+    expect(
+      await screen.findByText(/could not inspect the authenticated local SBR state/i),
+    ).toBeTruthy();
+    expect(screen.queryByText("Credential administration")).toBeNull();
+  });
+
+  it("renders the core reimport-required remediation without exposing internal state", async () => {
+    render(
+      <SbrReadinessScreen
+        api={apiFor({
+          environment: SbrEnvironment.SIMULATOR,
+          state: SbrReadinessState.UNAVAILABLE,
+          machineCredentialState: MachineCredentialState.PRESENT,
+          productIdState: ProductIdState.MISSING,
+          readinessCodes: ["SBR_CREDENTIAL_REIMPORT_REQUIRED"],
+          credentialFingerprint: "reimport-safe-fingerprint",
+        })}
+        workspace={workspace}
+      />,
+    );
+
+    expect(await screen.findByText(/reimport.*machine credential/i)).toBeTruthy();
+    expect(screen.getByText("reimport-safe-fingerprint")).toBeTruthy();
+  });
+
+  it("wraps the maximum-length organisation display name", async () => {
+    const longName = "W".repeat(256);
+    render(
+      <SbrReadinessScreen
+        api={apiFor({
+          environment: SbrEnvironment.SIMULATOR,
+          state: SbrReadinessState.READY_FOR_SIMULATOR,
+          machineCredentialState: MachineCredentialState.PRESENT,
+          productIdState: ProductIdState.MISSING,
+        })}
+        workspace={{ ...workspace, organisationDisplayName: longName }}
+      />,
+    );
+
+    const identity = await screen.findByTestId("sbr-organisation-identity");
+    expect(identity.classList.contains("min-w-0")).toBe(true);
+    expect(identity.classList.contains("[overflow-wrap:anywhere]")).toBe(true);
   });
 });

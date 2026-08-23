@@ -168,10 +168,18 @@ it("renders the walkthrough app shell", async () => {
   expect(within(navigation).getByRole("link", { name: "Organisation" })).toBeTruthy();
   expect(within(navigation).getByRole("link", { name: "SBR readiness" })).toBeTruthy();
   await user.click(within(navigation).getByRole("link", { name: "SBR readiness" }));
-  expect(screen.getByRole("heading", { level: 1, name: "SBR readiness" })).toBeTruthy();
+  expect(await screen.findByText("Workspace details unavailable")).toBeTruthy();
   expect(
     within(navigation).getByRole("link", { name: "SBR readiness" }).getAttribute("aria-current"),
   ).toBe("page");
+  expect(
+    within(navigation)
+      .getAllByRole("link")
+      .filter((link) => link.getAttribute("aria-current") === "page"),
+  ).toHaveLength(1);
+  expect(within(navigation).getByRole("link", { name: "Settings" }).className).toContain(
+    "bg-forest",
+  );
 
   await user.click(within(navigation).getByRole("link", { name: "Journals" }));
   expect(screen.getByRole("heading", { level: 1, name: "Journals" })).toBeTruthy();
