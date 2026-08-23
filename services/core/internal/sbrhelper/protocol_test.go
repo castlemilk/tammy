@@ -389,6 +389,45 @@ func TestProtocolCoreCombinationAndOwnership(t *testing.T) {
 	}
 }
 
+func TestProtocolCoreOmitsSimulatorCaseForEveryNonFixtureRequestShape(t *testing.T) {
+	credential := coreBaseRequest(OperationPrepareMutation)
+	credential.OperationID = protocolTestOperationID
+	credential.MutationKind = MutationImportCredential
+	credential.SelectedLocalPath = "/tmp/credential.p12"
+	credential.Bookmark = []byte("bookmark")
+	credential.TransientPassword = []byte("password")
+	product := coreBaseRequest(OperationPrepareMutation)
+	product.OperationID = protocolTestOperationID
+	product.MutationKind = MutationImportProductID
+	product.TransientProductID = []byte("product-secret")
+	product.ProductScope, product.ServiceID = "PAYROLL", "SBR_GST"
+	for _, test := range []struct {
+		name    string
+		request Request
+	}{
+		{name: "status", request: coreBaseRequest(OperationStatus)},
+		{name: "unlock", request: coreBaseRequest(OperationUnlock)},
+		{name: "credential mutation", request: credential},
+		{name: "Product mutation", request: product},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			encoded, err := EncodeRequest(test.request, protocolTestNow)
+			if err != nil {
+				t.Fatal(err)
+			}
+			decoded, err := DecodeRequest(encoded, protocolTestNow)
+			if err != nil || decoded.SimulatorCase != 0 || requestWireHasField(encoded, requestFieldSimulatorCase) {
+				t.Fatalf("decoded simulator case=%d encoded field=%t error=%v",
+					decoded.SimulatorCase, requestWireHasField(encoded, requestFieldSimulatorCase), err)
+			}
+			invalid := test.request
+			invalid.SimulatorCase = SimulatorAccepted
+			_, err = EncodeRequest(invalid, protocolTestNow)
+			assertCoreProtocolError(t, err, "REQUEST_INVALID", 0)
+		})
+	}
+}
+
 func TestProtocolCoreOwnsProductAndEndpointBytes(t *testing.T) {
 	product := coreBaseRequest(OperationPrepareMutation)
 	product.OperationID = protocolTestOperationID

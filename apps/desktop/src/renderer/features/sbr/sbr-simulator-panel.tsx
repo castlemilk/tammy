@@ -148,15 +148,15 @@ function validResultSemantics(
   succeeded: boolean,
   mode: DispatchMode,
 ): boolean {
+  if (mode === "conflict") {
+    return outcome === SbrReadinessFixtureOutcome.IDEMPOTENCY_CONFLICT && !succeeded;
+  }
   if (outcome === SbrReadinessFixtureOutcome.UNKNOWN) return !succeeded;
   if (mode === "replay") {
     return (
       outcome === SbrReadinessFixtureOutcome.EXACT_REPLAY &&
       succeeded === (failureCase === SbrReadinessFixtureFailure.UNSPECIFIED)
     );
-  }
-  if (mode === "conflict") {
-    return outcome === SbrReadinessFixtureOutcome.IDEMPOTENCY_CONFLICT && !succeeded;
   }
   if (failureCase === SbrReadinessFixtureFailure.UNSPECIFIED) {
     return outcome === SbrReadinessFixtureOutcome.ACCEPTED && succeeded;

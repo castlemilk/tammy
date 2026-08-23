@@ -472,6 +472,39 @@ describe("SbrSimulatorPanel", () => {
     expect(await screen.findByText("UNKNOWN")).toBeTruthy();
   });
 
+  it("rejects UNKNOWN in conflict mode without claiming authoritative restart recovery", async () => {
+    let calls = 0;
+    const run = vi.fn((frame: Uint8Array) => {
+      const request = runCodec.decodeRequest(frame);
+      calls += 1;
+      return Promise.resolve(
+        resultFrame(request.failureCase, {
+          outcome:
+            calls === 1 ? SbrReadinessFixtureOutcome.ACCEPTED : SbrReadinessFixtureOutcome.UNKNOWN,
+          succeeded: calls === 1,
+        }),
+      );
+    });
+    const user = userEvent.setup();
+    render(
+      <SbrSimulatorPanel
+        api={apiFor(run)}
+        onRefresh={vi.fn()}
+        readiness={simulatorReadiness}
+        workspace={workspace}
+      />,
+    );
+    await runFixture(user);
+    await screen.findByText("ACCEPTED");
+    await user.selectOptions(screen.getByLabelText("Test-only diagnostic case"), "TIMEOUT");
+    await user.click(screen.getByRole("button", { name: "Check idempotency conflict" }));
+    expect(await screen.findByText("UNKNOWN")).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toMatch(/local operation outcome is unknown/i);
+    expect(
+      screen.queryByText(/Core reports an unknown outcome after restart recovery/i),
+    ).toBeNull();
+  });
+
   it("terminal-locks restart-recovered UNKNOWN and refreshes without resending", async () => {
     const onRefresh = vi.fn();
     const run = vi.fn((frame: Uint8Array) => {

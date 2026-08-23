@@ -15,12 +15,33 @@ import (
 	tammyv1 "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1"
 	"github.com/tammyapp/tammy/services/core/internal/sbr"
 	"github.com/tammyapp/tammy/services/core/internal/sbrprofile"
+	"google.golang.org/protobuf/encoding/protowire"
 )
 
 type fakePortLauncher struct {
 	request  Request
 	response Response
 	err      error
+}
+
+type encodingPortLauncher struct {
+	now       time.Time
+	request   Request
+	encoded   []byte
+	encodeErr error
+}
+
+type portRequestCase struct {
+	name    string
+	request sbr.HelperRequest
+}
+
+var errEncodingPortStopped = errors.New("encoding port stopped")
+
+func (launcher *encodingPortLauncher) LaunchStaged(_ context.Context, _ *sbrprofile.StagedResources, request Request) (Response, error) {
+	launcher.request = request
+	launcher.encoded, launcher.encodeErr = EncodeRequest(request, launcher.now)
+	return Response{}, errEncodingPortStopped
 }
 
 type countingProfileLocator struct {
@@ -314,4 +335,106 @@ func TestSBRPortRejectsUnknownFixtureCaseInsteadOfDefaultingToAccepted(t *testin
 	if err == nil || launcher.request.RequestID != "" {
 		t.Fatalf("unknown fixture case error=%v launcher request=%+v", err, launcher.request)
 	}
+}
+
+func TestSBRPortKeepsSimulatorCaseAbsentForEveryNonFixtureOperation(t *testing.T) {
+	now := time.Date(2026, 8, 24, 0, 0, 0, 0, time.UTC)
+	base := sbr.HelperRequest{RequestID: "018f0000-0000-7000-8000-000000000716",
+		Environment: tammyv1.SbrEnvironment_SBR_ENVIRONMENT_SIMULATOR,
+		WorkspaceID: "018f0000-0000-7000-8000-000000000701", OrganisationID: "018f0000-0000-7000-8000-000000000702",
+		CanonicalABN: "11000000560", OpaqueScope: bytes.Repeat([]byte{0x51}, sha256.Size),
+		ProfileFingerprint: sha256.Sum256([]byte("profile")), RegistrationFingerprint: sha256.Sum256([]byte("registration")),
+		ComponentFingerprint: sha256.Sum256([]byte("component")), ComponentVersion: "simulator-v1"}
+	for _, test := range nonFixturePortRequests(base) {
+		t.Run(test.name, func(t *testing.T) {
+			launcher := &encodingPortLauncher{now: now}
+			port, err := NewSBRPort(launcher, "/Applications/Tammy.app/Contents/Resources/sbr/simulator/sbr-profile-v1.json",
+				func() time.Time { return now })
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err = port.executeStaged(context.Background(), nil, test.request); !errors.Is(err, errEncodingPortStopped) {
+				t.Fatalf("execute error=%v", err)
+			}
+			if launcher.encodeErr != nil || launcher.request.SimulatorCase != 0 || requestWireHasField(launcher.encoded, requestFieldSimulatorCase) {
+				t.Fatalf("launcher request simulator case=%d encoded field=%t encode error=%v",
+					launcher.request.SimulatorCase, requestWireHasField(launcher.encoded, requestFieldSimulatorCase), launcher.encodeErr)
+			}
+			decoded, err := DecodeRequest(launcher.encoded, now)
+			if err != nil || decoded.SimulatorCase != 0 {
+				t.Fatalf("decoded launcher request=%+v error=%v", decoded, err)
+			}
+		})
+	}
+}
+
+func TestSBRPortRejectsFixtureCaseOnEveryNonFixtureOperationBeforeLauncher(t *testing.T) {
+	base := sbr.HelperRequest{}
+	for _, test := range nonFixturePortRequests(base) {
+		t.Run(test.name, func(t *testing.T) {
+			launcher := &fakePortLauncher{}
+			port, err := NewSBRPort(launcher, "/Applications/Tammy.app/Contents/Resources/sbr/simulator/sbr-profile-v1.json", time.Now)
+			if err != nil {
+				t.Fatal(err)
+			}
+			test.request.FixtureFailureCase = tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_NOT_STARTED
+			_, err = port.executeStaged(context.Background(), nil, test.request)
+			if err == nil || launcher.request.RequestID != "" {
+				t.Fatalf("error=%v launcher request=%+v", err, launcher.request)
+			}
+		})
+	}
+}
+
+func nonFixturePortRequests(base sbr.HelperRequest) []portRequestCase {
+	return []portRequestCase{
+		{name: "status", request: withPortOperation(base, sbr.HelperOperationStatus)},
+		{name: "unlock", request: func() sbr.HelperRequest {
+			request := withPortOperation(base, sbr.HelperOperationUnlock)
+			request.Password = []byte("123456")
+			return request
+		}()},
+		{name: "credential mutation", request: func() sbr.HelperRequest {
+			request := withPortOperation(base, sbr.HelperOperationPrepareMutation)
+			request.OperationID = "018f0000-0000-7000-8000-000000000717"
+			request.MutationKind = sbr.MutationImportCredential
+			request.SelectedLocalPath = "/tmp/credential.p12"
+			request.Bookmark = []byte("bookmark")
+			request.Password = []byte("secret")
+			return request
+		}()},
+		{name: "Product mutation", request: func() sbr.HelperRequest {
+			request := withPortOperation(base, sbr.HelperOperationPrepareMutation)
+			request.OperationID = "018f0000-0000-7000-8000-000000000718"
+			request.MutationKind = sbr.MutationImportProductID
+			request.ProductID = []byte("product-secret")
+			request.ProductIdentifier = "PAYROLL"
+			request.ServiceIdentifier = "SBR_GST"
+			return request
+		}()},
+	}
+}
+
+func withPortOperation(request sbr.HelperRequest, operation sbr.HelperOperation) sbr.HelperRequest {
+	request.Operation = operation
+	return request
+}
+
+func requestWireHasField(encoded []byte, target protowire.Number) bool {
+	for len(encoded) > 0 {
+		number, wireType, tagLength := protowire.ConsumeTag(encoded)
+		if tagLength < 0 {
+			return false
+		}
+		encoded = encoded[tagLength:]
+		valueLength := protowire.ConsumeFieldValue(number, wireType, encoded)
+		if valueLength < 0 {
+			return false
+		}
+		if number == target {
+			return true
+		}
+		encoded = encoded[valueLength:]
+	}
+	return false
 }

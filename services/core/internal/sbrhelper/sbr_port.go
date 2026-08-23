@@ -159,8 +159,14 @@ func (port *SBRPort) executeStaged(ctx context.Context, staged *sbrprofile.Stage
 	if port == nil || port.launcher == nil || ctx == nil {
 		return sbr.HelperResult{}, errors.New("sbr helper unavailable")
 	}
-	simulatorCase, validSimulatorCase := simulatorProtocolCase(source.FixtureFailureCase)
-	if !validSimulatorCase {
+	var simulatorCase SimulatorCase
+	if source.Operation == sbr.HelperOperationFixture {
+		var validSimulatorCase bool
+		simulatorCase, validSimulatorCase = simulatorProtocolCase(source.FixtureFailureCase)
+		if !validSimulatorCase {
+			return sbr.HelperResult{}, errors.New("sbr helper fixture case invalid")
+		}
+	} else if source.FixtureFailureCase != tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_UNSPECIFIED {
 		return sbr.HelperResult{}, errors.New("sbr helper fixture case invalid")
 	}
 	request := Request{ProtocolVersion: ProtocolVersion, RequestID: source.RequestID,
