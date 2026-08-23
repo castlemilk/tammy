@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/tammyapp/tammy/services/core/internal/authorisation"
 	"github.com/tammyapp/tammy/services/core/internal/buildinfo"
 	tammyv1 "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1"
 	tammyv1connect "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1/tammyv1connect"
@@ -55,14 +56,18 @@ type LocalModuleIdentity interface {
 	RequireAdministratorWithin(context.Context, workspace.MutationExecutor, *tammyv1.AuthenticationContext) error
 	RequireActiveSessionReadOnly(context.Context, *tammyv1.AuthenticationContext) error
 	ConsumeFreshFactorWithin(context.Context, workspace.MutationExecutor, *tammyv1.AuthenticationContext, *tammyv1.FreshFactorContext, string) error
+	AuthorizeWithin(context.Context, workspace.MutationExecutor, *tammyv1.AuthenticationContext, authorisation.Action) error
+	ValidateAuthorizationWithin(context.Context, workspace.MutationExecutor, *tammyv1.AuthenticationContext, authorisation.Action) error
+	ValidateFreshFactorWithin(context.Context, workspace.MutationExecutor, *tammyv1.AuthenticationContext, *tammyv1.FreshFactorContext, string) error
 }
 
 type LocalWorkspaceActivation struct {
-	Database    *sqlcipher.Database
-	WorkspaceID string
-	Identity    LocalModuleIdentity
-	Now         func() time.Time
-	NewID       func() (string, error)
+	Database        *sqlcipher.Database
+	WorkspaceID     string
+	Identity        LocalModuleIdentity
+	InstallationKey []byte
+	Now             func() time.Time
+	NewID           func() (string, error)
 }
 
 // LocalWorkspaceModule contributes generated routes at construction and binds
@@ -183,6 +188,15 @@ func (bridge *localIdentityBridge) ValidateAdministratorReplayBinding(ctx contex
 func (bridge *localIdentityBridge) RequireAdministratorWithin(ctx context.Context, executor workspace.MutationExecutor, authentication *tammyv1.AuthenticationContext) error {
 	return bridge.load().RequireAdministratorWithin(ctx, executor, authentication)
 }
+func (bridge *localIdentityBridge) AuthorizeWithin(ctx context.Context, executor workspace.MutationExecutor, authentication *tammyv1.AuthenticationContext, action authorisation.Action) error {
+	return bridge.load().AuthorizeWithin(ctx, executor, authentication, action)
+}
+func (bridge *localIdentityBridge) ValidateAuthorizationWithin(ctx context.Context, executor workspace.MutationExecutor, authentication *tammyv1.AuthenticationContext, action authorisation.Action) error {
+	return bridge.load().ValidateAuthorizationWithin(ctx, executor, authentication, action)
+}
+func (bridge *localIdentityBridge) ValidateFreshFactorWithin(ctx context.Context, executor workspace.MutationExecutor, authentication *tammyv1.AuthenticationContext, factor *tammyv1.FreshFactorContext, purpose string) error {
+	return bridge.load().ValidateFreshFactorWithin(ctx, executor, authentication, factor, purpose)
+}
 func (bridge *localIdentityBridge) RequireActiveSessionReadOnly(ctx context.Context, authentication *tammyv1.AuthenticationContext) error {
 	return bridge.load().RequireActiveSessionReadOnly(ctx, authentication)
 }
@@ -291,20 +305,21 @@ func (route *localIdentityRoute) ServeHTTP(response http.ResponseWriter, request
 }
 
 type localRuntime struct {
-	mu                sync.Mutex
-	workspace         *workspace.Service
-	bridge            *localIdentityBridge
-	identityRoute     *localIdentityRoute
-	overviewRoute     *localOverviewRoute
-	bootstrapIdentity *identity.Service
-	activeIdentity    *identity.Service
-	passwords         *workspace.PasswordPolicy
-	clock             clock.Clock
-	ids               *ids.Generator
-	identityAttempts  *workspace.AttemptJournal
-	workspaceAttempts *workspace.AttemptJournal
-	identityFactorKey []byte
-	modules           []LocalWorkspaceModule
+	mu                 sync.Mutex
+	workspace          *workspace.Service
+	bridge             *localIdentityBridge
+	identityRoute      *localIdentityRoute
+	overviewRoute      *localOverviewRoute
+	bootstrapIdentity  *identity.Service
+	activeIdentity     *identity.Service
+	passwords          *workspace.PasswordPolicy
+	clock              clock.Clock
+	ids                *ids.Generator
+	identityAttempts   *workspace.AttemptJournal
+	workspaceAttempts  *workspace.AttemptJournal
+	identityFactorKey  []byte
+	sbrInstallationKey []byte
+	modules            []LocalWorkspaceModule
 }
 
 type localWorkspaceHandler struct {
@@ -402,7 +417,8 @@ func (runtime *localRuntime) activate(workspaceID string) error {
 	}
 	activation := LocalWorkspaceActivation{
 		Database: database, WorkspaceID: workspaceID, Identity: runtime.bridge,
-		Now: runtime.clock.Now, NewID: runtime.ids.New,
+		InstallationKey: append([]byte(nil), runtime.sbrInstallationKey...),
+		Now:             runtime.clock.Now, NewID: runtime.ids.New,
 	}
 	for _, module := range runtime.modules {
 		if module == nil || module.Activate(activation) != nil {
@@ -431,6 +447,7 @@ func (runtime *localRuntime) Close() error {
 		runtime.identityAttempts.Close()
 	}
 	workspace.Zero(runtime.identityFactorKey)
+	workspace.Zero(runtime.sbrInstallationKey)
 	return nil
 }
 
@@ -497,7 +514,7 @@ func NewLocalComposition(config LocalCompositionConfig) (*Composition, error) {
 	}
 	runtime := &localRuntime{passwords: passwords, clock: source, ids: generator, modules: modules,
 		workspaceAttempts: workspaceAttempts, identityAttempts: identityAttempts,
-		identityFactorKey: deriveLocalKey(master, "identity-factor")}
+		identityFactorKey: deriveLocalKey(master, "identity-factor"), sbrInstallationKey: deriveLocalKey(master, "sbr-scope")}
 	bootstrapIdentity, err := identity.NewService(identity.Config{
 		Repository: identity.NewMemoryRepository(), Passwords: passwords, Clock: source, Random: rand.Reader,
 		IDs: generator, Attempts: identityAttempts, FactorEncryptionKey: append([]byte(nil), runtime.identityFactorKey...),

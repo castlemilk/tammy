@@ -29,15 +29,17 @@ const (
 
 func baseRequest(operation Operation) Request {
 	return Request{
-		ProtocolVersion: ProtocolVersion,
-		RequestID:       testRequestID,
-		Operation:       operation,
-		DeadlineMillis:  protocolNow.Add(time.Minute).UnixMilli(),
-		Environment:     EnvironmentSimulator,
-		WorkspaceID:     testWorkspaceID,
-		OrganisationID:  testOrgID,
-		CanonicalABN:    "51824753556",
-		OpaqueScope:     bytes.Repeat([]byte{0x5a}, 32),
+		ProtocolVersion:    ProtocolVersion,
+		RequestID:          testRequestID,
+		Operation:          operation,
+		DeadlineMillis:     protocolNow.Add(time.Minute).UnixMilli(),
+		Environment:        EnvironmentSimulator,
+		WorkspaceID:        testWorkspaceID,
+		OrganisationID:     testOrgID,
+		CanonicalABN:       "51824753556",
+		OpaqueScope:        bytes.Repeat([]byte{0x5a}, 32),
+		ProfileFingerprint: bytes.Repeat([]byte{0x61}, 32), RegistrationFingerprint: bytes.Repeat([]byte{0x62}, 32),
+		ComponentFingerprint: bytes.Repeat([]byte{0x63}, 32), ComponentVersion: "simulator-v1",
 	}
 }
 
@@ -74,6 +76,7 @@ func TestProtocolRequestFieldNumbersAreLocked(t *testing.T) {
 		requestFieldOpaqueScope, requestFieldOperationID, requestFieldMutationKind, requestFieldSelectedPath,
 		requestFieldBookmark, requestFieldPassword, requestFieldProductID, requestFieldProductScope,
 		requestFieldServiceID, requestFieldEndpointProfile, requestFieldSimulatorCase,
+		requestFieldProfileFingerprint, requestFieldRegistrationFingerprint, requestFieldComponentFingerprint, requestFieldComponentVersion,
 	}
 	for index, field := range fields {
 		if want := protowire.Number(index + 1); field != want {
@@ -85,7 +88,11 @@ func TestProtocolRequestFieldNumbersAreLocked(t *testing.T) {
 func TestProtocolResponseFieldNumbersAreLocked(t *testing.T) {
 	fields := []protowire.Number{
 		responseFieldRequestID, responseFieldOutcome, responseFieldRedactedResult,
-		responseFieldStableErrorCode, responseFieldPendingItemID,
+		responseFieldStableErrorCode, responseFieldPendingItemID, responseFieldCanonicalABN,
+		responseFieldCredentialFingerprint, responseFieldCredentialCreatedMillis, responseFieldCredentialExpiresMillis,
+		responseFieldComponentVersion, responseFieldProfileFingerprint, responseFieldRegistrationFingerprint,
+		responseFieldComponentFingerprint, responseFieldProductState, responseFieldProductFingerprint,
+		responseFieldSimulatorCase, responseFieldSimulatorState,
 	}
 	for index, field := range fields {
 		if want := protowire.Number(index + 1); field != want {
@@ -93,14 +100,38 @@ func TestProtocolResponseFieldNumbersAreLocked(t *testing.T) {
 		}
 	}
 	responseType := reflect.TypeOf(Response{})
-	wantNames := []string{"RequestID", "Outcome", "RedactedResult", "StableErrorCode", "PendingItemID"}
+	wantNames := []string{"RequestID", "Outcome", "RedactedResult", "StableErrorCode", "PendingItemID", "CanonicalABN",
+		"CredentialFingerprint", "CredentialCreatedMillis", "CredentialExpiresMillis", "ComponentVersion",
+		"ProfileFingerprint", "RegistrationFingerprint", "ComponentFingerprint", "ProductState", "ProductFingerprint",
+		"SimulatorCase", "SimulatorState"}
 	if responseType.NumField() != len(wantNames) {
-		t.Fatalf("response fields = %d, want exact five-field response", responseType.NumField())
+		t.Fatalf("response fields = %d, want exact redacted response", responseType.NumField())
 	}
 	for index, want := range wantNames {
 		if got := responseType.Field(index).Name; got != want {
 			t.Fatalf("response field %d = %s, want %s", index, got, want)
 		}
+	}
+}
+
+func TestProtocolRedactedCredentialProductAndComponentMetadataRoundTripsCanonically(t *testing.T) {
+	response := Response{RequestID: testRequestID, Outcome: OutcomeOK, RedactedResult: ResultReady,
+		CanonicalABN: "51824753556", CredentialFingerprint: bytes.Repeat([]byte{0x31}, 32),
+		CredentialCreatedMillis: protocolNow.Add(-time.Hour).UnixMilli(), CredentialExpiresMillis: protocolNow.Add(time.Hour).UnixMilli(),
+		ComponentVersion: "simulator-v1", ProfileFingerprint: bytes.Repeat([]byte{0x32}, 32),
+		RegistrationFingerprint: bytes.Repeat([]byte{0x33}, 32), ComponentFingerprint: bytes.Repeat([]byte{0x34}, 32),
+		ProductState: ProductPresent, ProductFingerprint: bytes.Repeat([]byte{0x35}, 32)}
+	encoded, err := EncodeResponse(response)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := DecodeResponse(encoded)
+	if err != nil || !reflect.DeepEqual(decoded, response) {
+		t.Fatalf("round trip = %+v, %v", decoded, err)
+	}
+	response.CredentialFingerprint = make([]byte, 32)
+	if _, err := EncodeResponse(response); err == nil {
+		t.Fatal("zero credential fingerprint accepted")
 	}
 }
 
@@ -120,12 +151,13 @@ func TestProtocolRequestCombinationMatrix(t *testing.T) {
 	productImport.ServiceID = "SBR_GST"
 
 	fixture := baseRequest(OperationFixture)
-	fixture.WorkspaceID, fixture.OrganisationID, fixture.CanonicalABN, fixture.OpaqueScope = "", "", "", nil
 	fixture.SimulatorCase = SimulatorAccepted
 
 	evteStatus := baseRequest(OperationStatus)
 	evteStatus.Environment = EnvironmentEVTE
 	evteStatus.EndpointProfile = []byte("signed-endpoint-profile")
+	unlockWithPassword := baseRequest(OperationUnlock)
+	unlockWithPassword.TransientPassword = []byte("transient-unlock-password")
 
 	tests := []struct {
 		name    string
@@ -134,6 +166,7 @@ func TestProtocolRequestCombinationMatrix(t *testing.T) {
 	}{
 		{name: "status simulator", request: baseRequest(OperationStatus), valid: true},
 		{name: "unlock simulator", request: baseRequest(OperationUnlock), valid: true},
+		{name: "unlock simulator with password", request: unlockWithPassword, valid: true},
 		{name: "fixture accepted", request: fixture, valid: true},
 		{name: "fixture unknown reserved for response recovery", request: withFixtureCase(fixture, SimulatorUnknown)},
 		{name: "evte status authenticated profile", request: evteStatus, valid: true},
@@ -151,7 +184,7 @@ func TestProtocolRequestCombinationMatrix(t *testing.T) {
 		{name: "read rejects operation id", request: withOperationID(baseRequest(OperationStatus), testOperationID)},
 		{name: "mutation requires operation id", request: withOperationID(mutationRequest(OperationAbortMutation, MutationRemoveCredential, nil), "")},
 		{name: "mutation requires kind", request: withMutationKind(mutationRequest(OperationAbortMutation, MutationRemoveCredential, nil), 0)},
-		{name: "fixture rejects scope", request: withWorkspace(fixture, testWorkspaceID)},
+		{name: "fixture rejects missing scope", request: withWorkspace(fixture, "")},
 		{name: "product fields reject credential mutation", request: mutationRequest(OperationPrepareMutation, MutationRemoveCredential, func(r *Request) { r.ProductScope = "PAYROLL" })},
 	}
 	for _, tt := range tests {
@@ -542,7 +575,6 @@ func TestProtocolSessionRecoveryResultOnlyFixtureAndReconcile(t *testing.T) {
 	for _, operation := range []Operation{OperationFixture, OperationReconcileMutation} {
 		request := baseRequest(operation)
 		if operation == OperationFixture {
-			request.WorkspaceID, request.OrganisationID, request.CanonicalABN, request.OpaqueScope = "", "", "", nil
 			request.SimulatorCase = SimulatorAccepted
 		} else {
 			request.OperationID = testOperationID
@@ -563,10 +595,22 @@ func TestProtocolSessionRecoveryResultOnlyFixtureAndReconcile(t *testing.T) {
 	assertProtocolError(t, session.Complete(response, protocolNow), "SESSION_RESPONSE_INVALID")
 }
 
+func TestProtocolSessionPendingRecoveryOnlyReconcile(t *testing.T) {
+	request := mutationRequest(OperationReconcileMutation, MutationReplaceCredential, nil)
+	session := &Session{}
+	if err := session.Begin(request, protocolNow); err != nil {
+		t.Fatal(err)
+	}
+	response := Response{RequestID: testRequestID, Outcome: OutcomePending,
+		RedactedResult: ResultRecoveryRequired, PendingItemID: testPendingID}
+	if err := session.Complete(response, protocolNow); err != nil {
+		t.Fatalf("pending reconcile response: %v", err)
+	}
+}
+
 func TestProtocolSessionNotStartedResultOnlyFixture(t *testing.T) {
 	response := Response{RequestID: testRequestID, Outcome: OutcomeOK, RedactedResult: ResultNotStarted}
 	fixture := baseRequest(OperationFixture)
-	fixture.WorkspaceID, fixture.OrganisationID, fixture.CanonicalABN, fixture.OpaqueScope = "", "", "", nil
 	fixture.SimulatorCase = SimulatorNotStarted
 	session := &Session{}
 	if err := session.Begin(fixture, protocolNow); err != nil {
@@ -890,7 +934,6 @@ func buildGoldenCorpus(t *testing.T) []byte {
 		}),
 		corpusRequest("3", OperationUnlock, 0, nil),
 		corpusRequest("4", OperationFixture, 0, func(r *Request) {
-			r.WorkspaceID, r.OrganisationID, r.CanonicalABN, r.OpaqueScope = "", "", "", nil
 			r.SimulatorCase = SimulatorAccepted
 		}),
 		corpusRequest("5", OperationPrepareMutation, MutationImportCredential, func(r *Request) {

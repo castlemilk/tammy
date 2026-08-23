@@ -208,7 +208,7 @@ func TestStageCrashWindowsKeepAuthenticatedPendingRecoveryHandle(t *testing.T) {
 				if err := reopened.Promote(mutation.OperationID); err != nil {
 					t.Fatalf("resume = %v", err)
 				}
-				if status, err := reopened.PendingStatus(mutation.OperationID); err != nil || status != PendingNone {
+				if status, err := reopened.PendingStatus(mutation.OperationID); err != nil || status != PendingCommitted {
 					t.Fatalf("pending after resume = %v, %v", status, err)
 				}
 				mutationCase.check(t, reopened)

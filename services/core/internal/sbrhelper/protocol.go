@@ -3,6 +3,7 @@ package sbrhelper
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/binary"
 	"io"
 	"math"
@@ -96,7 +97,8 @@ const (
 // operation=3, deadline=4, environment=5, workspace=6, organisation=7,
 // ABN=8, opaque_scope=9, operation_id=10, mutation_kind=11, selected_path=12,
 // bookmark=13, password=14, Product ID=15, product_scope=16, service_id=17,
-// endpoint_profile=18, simulator_case=19.
+// endpoint_profile=18, simulator_case=19, profile_fingerprint=20,
+// registration_fingerprint=21, component_fingerprint=22, component_version=23.
 const (
 	requestFieldVersion protowire.Number = 1 + iota
 	requestFieldRequestID
@@ -117,6 +119,10 @@ const (
 	requestFieldServiceID
 	requestFieldEndpointProfile
 	requestFieldSimulatorCase
+	requestFieldProfileFingerprint
+	requestFieldRegistrationFingerprint
+	requestFieldComponentFingerprint
+	requestFieldComponentVersion
 )
 
 const (
@@ -125,6 +131,18 @@ const (
 	responseFieldRedactedResult
 	responseFieldStableErrorCode
 	responseFieldPendingItemID
+	responseFieldCanonicalABN
+	responseFieldCredentialFingerprint
+	responseFieldCredentialCreatedMillis
+	responseFieldCredentialExpiresMillis
+	responseFieldComponentVersion
+	responseFieldProfileFingerprint
+	responseFieldRegistrationFingerprint
+	responseFieldComponentFingerprint
+	responseFieldProductState
+	responseFieldProductFingerprint
+	responseFieldSimulatorCase
+	responseFieldSimulatorState
 )
 
 type Operation uint32
@@ -189,6 +207,24 @@ const (
 	ResultNotStarted           Result = 8
 )
 
+type ProductState uint32
+
+const (
+	ProductMissing      ProductState = 1
+	ProductPresent      ProductState = 2
+	ProductInaccessible ProductState = 3
+)
+
+type SimulatorState uint32
+
+const (
+	SimulatorStateAccepted   SimulatorState = 1
+	SimulatorStateNotStarted SimulatorState = 2
+	SimulatorStateMaybeSent  SimulatorState = 3
+	SimulatorStateFailed     SimulatorState = 4
+	SimulatorStateUnknown    SimulatorState = 5
+)
+
 type StableErrorCode string
 
 const (
@@ -234,25 +270,29 @@ const (
 )
 
 type Request struct {
-	ProtocolVersion    uint32
-	RequestID          string
-	Operation          Operation
-	DeadlineMillis     int64
-	Environment        Environment
-	WorkspaceID        string
-	OrganisationID     string
-	CanonicalABN       string
-	OpaqueScope        []byte
-	OperationID        string
-	MutationKind       MutationKind
-	SelectedLocalPath  string
-	Bookmark           []byte
-	TransientPassword  []byte
-	TransientProductID []byte
-	ProductScope       string
-	ServiceID          string
-	EndpointProfile    []byte
-	SimulatorCase      SimulatorCase
+	ProtocolVersion         uint32
+	RequestID               string
+	Operation               Operation
+	DeadlineMillis          int64
+	Environment             Environment
+	WorkspaceID             string
+	OrganisationID          string
+	CanonicalABN            string
+	OpaqueScope             []byte
+	OperationID             string
+	MutationKind            MutationKind
+	SelectedLocalPath       string
+	Bookmark                []byte
+	TransientPassword       []byte
+	TransientProductID      []byte
+	ProductScope            string
+	ServiceID               string
+	EndpointProfile         []byte
+	SimulatorCase           SimulatorCase
+	ProfileFingerprint      []byte
+	RegistrationFingerprint []byte
+	ComponentFingerprint    []byte
+	ComponentVersion        string
 }
 
 // ClearSecrets overwrites and releases request-owned sensitive buffers. Callers
@@ -276,11 +316,23 @@ func (r *Request) sensitiveBuffers() [][]byte {
 // Response field numbers are fixed: request_id=1, outcome=2,
 // redacted_result=3, stable_error_code=4, pending_item_id=5.
 type Response struct {
-	RequestID       string
-	Outcome         Outcome
-	RedactedResult  Result
-	StableErrorCode StableErrorCode
-	PendingItemID   string
+	RequestID               string
+	Outcome                 Outcome
+	RedactedResult          Result
+	StableErrorCode         StableErrorCode
+	PendingItemID           string
+	CanonicalABN            string
+	CredentialFingerprint   []byte
+	CredentialCreatedMillis int64
+	CredentialExpiresMillis int64
+	ComponentVersion        string
+	ProfileFingerprint      []byte
+	RegistrationFingerprint []byte
+	ComponentFingerprint    []byte
+	ProductState            ProductState
+	ProductFingerprint      []byte
+	SimulatorCase           SimulatorCase
+	SimulatorState          SimulatorState
 }
 
 // Error deliberately exposes only a stable code.
@@ -406,6 +458,14 @@ func decodeRequest(data []byte, now time.Time, observeCleanup func([][]byte, []b
 			} else {
 				ok = false
 			}
+		case requestFieldProfileFingerprint:
+			request.ProfileFingerprint, remaining, ok = consumeOwnedBytes(remaining, sha256.Size)
+		case requestFieldRegistrationFingerprint:
+			request.RegistrationFingerprint, remaining, ok = consumeOwnedBytes(remaining, sha256.Size)
+		case requestFieldComponentFingerprint:
+			request.ComponentFingerprint, remaining, ok = consumeOwnedBytes(remaining, sha256.Size)
+		case requestFieldComponentVersion:
+			request.ComponentVersion, remaining, ok = consumeOwnedString(remaining)
 		default:
 			err = protocolError("REQUEST_INVALID")
 			return
@@ -471,6 +531,10 @@ func appendRequest(dst []byte, r Request) []byte {
 	if r.SimulatorCase != 0 {
 		dst = appendVarintField(dst, requestFieldSimulatorCase, uint64(r.SimulatorCase))
 	}
+	dst = appendBytesField(dst, requestFieldProfileFingerprint, r.ProfileFingerprint)
+	dst = appendBytesField(dst, requestFieldRegistrationFingerprint, r.RegistrationFingerprint)
+	dst = appendBytesField(dst, requestFieldComponentFingerprint, r.ComponentFingerprint)
+	dst = appendStringField(dst, requestFieldComponentVersion, r.ComponentVersion)
 	return dst
 }
 
@@ -480,16 +544,19 @@ func validRequest(r Request, now time.Time) bool {
 		r.DeadlineMillis <= now.UnixMilli() || r.DeadlineMillis > now.Add(maxDeadlineHorizon).UnixMilli() {
 		return false
 	}
-	scoped := r.Operation != OperationFixture
-	if scoped != (r.WorkspaceID != "" && r.OrganisationID != "" && r.CanonicalABN != "" && r.OpaqueScope != nil) {
+	if !validFingerprint(r.ProfileFingerprint) || !validFingerprint(r.RegistrationFingerprint) ||
+		!validFingerprint(r.ComponentFingerprint) || r.ComponentVersion == "" || len(r.ComponentVersion) > 128 ||
+		!utf8.ValidString(r.ComponentVersion) || hasControl(r.ComponentVersion) {
 		return false
 	}
-	if scoped && (!validUUIDv7(r.WorkspaceID) || !validUUIDv7(r.OrganisationID) || !validABN(r.CanonicalABN) || len(r.OpaqueScope) != 32) {
+	if r.WorkspaceID == "" || r.OrganisationID == "" || r.CanonicalABN == "" || r.OpaqueScope == nil {
+		return false
+	}
+	if !validUUIDv7(r.WorkspaceID) || !validUUIDv7(r.OrganisationID) || !validABN(r.CanonicalABN) || len(r.OpaqueScope) != 32 {
 		return false
 	}
 	if r.Operation == OperationFixture {
 		return r.Environment == EnvironmentSimulator && r.SimulatorCase >= SimulatorAccepted && r.SimulatorCase <= SimulatorTimeout &&
-			r.WorkspaceID == "" && r.OrganisationID == "" && r.CanonicalABN == "" && r.OpaqueScope == nil &&
 			r.OperationID == "" && r.MutationKind == 0 && noMutationInputs(r) && r.EndpointProfile == nil
 	}
 	if r.SimulatorCase != 0 {
@@ -503,7 +570,9 @@ func validRequest(r Request, now time.Time) bool {
 			((r.Environment == EnvironmentEVTE && len(r.EndpointProfile) >= 1 && len(r.EndpointProfile) <= maxEndpointProfileBytes) || (r.Environment == EnvironmentSimulator && r.EndpointProfile == nil))
 	}
 	if r.Operation == OperationUnlock {
-		return r.OperationID == "" && r.MutationKind == 0 && noMutationInputs(r) && r.EndpointProfile == nil
+		return r.OperationID == "" && r.MutationKind == 0 && r.SelectedLocalPath == "" && r.Bookmark == nil &&
+			validOptionalBytes(r.TransientPassword, 0, maxSecretBytes) && r.TransientProductID == nil &&
+			r.ProductScope == "" && r.ServiceID == "" && r.EndpointProfile == nil
 	}
 	if !validUUIDv7(r.OperationID) || !validMutation(r.MutationKind) || r.EndpointProfile != nil {
 		return false
@@ -587,6 +656,42 @@ func DecodeResponse(data []byte) (Response, error) {
 			response.StableErrorCode, remaining, ok = consumeStableErrorCode(remaining)
 		case responseFieldPendingItemID:
 			response.PendingItemID, remaining, ok = consumeOwnedString(remaining)
+		case responseFieldCanonicalABN:
+			response.CanonicalABN, remaining, ok = consumeOwnedString(remaining)
+		case responseFieldCredentialFingerprint:
+			response.CredentialFingerprint, remaining, ok = consumeOwnedBytes(remaining, 32)
+		case responseFieldCredentialCreatedMillis:
+			var v uint64
+			v, remaining, ok = consumeVarint(remaining)
+			ok = ok && v <= math.MaxInt64
+			response.CredentialCreatedMillis = int64(v)
+		case responseFieldCredentialExpiresMillis:
+			var v uint64
+			v, remaining, ok = consumeVarint(remaining)
+			ok = ok && v <= math.MaxInt64
+			response.CredentialExpiresMillis = int64(v)
+		case responseFieldComponentVersion:
+			response.ComponentVersion, remaining, ok = consumeOwnedString(remaining)
+		case responseFieldProfileFingerprint:
+			response.ProfileFingerprint, remaining, ok = consumeOwnedBytes(remaining, 32)
+		case responseFieldRegistrationFingerprint:
+			response.RegistrationFingerprint, remaining, ok = consumeOwnedBytes(remaining, 32)
+		case responseFieldComponentFingerprint:
+			response.ComponentFingerprint, remaining, ok = consumeOwnedBytes(remaining, 32)
+		case responseFieldProductState:
+			var v uint64
+			v, remaining, ok = consumeVarint(remaining)
+			response.ProductState = ProductState(v)
+		case responseFieldProductFingerprint:
+			response.ProductFingerprint, remaining, ok = consumeOwnedBytes(remaining, 32)
+		case responseFieldSimulatorCase:
+			var v uint64
+			v, remaining, ok = consumeVarint(remaining)
+			response.SimulatorCase = SimulatorCase(v)
+		case responseFieldSimulatorState:
+			var v uint64
+			v, remaining, ok = consumeVarint(remaining)
+			response.SimulatorState = SimulatorState(v)
 		default:
 			return Response{}, protocolError("RESPONSE_INVALID")
 		}
@@ -615,11 +720,50 @@ func appendResponse(dst []byte, r Response) []byte {
 	if r.PendingItemID != "" {
 		dst = appendStringField(dst, responseFieldPendingItemID, r.PendingItemID)
 	}
+	if r.CanonicalABN != "" {
+		dst = appendStringField(dst, responseFieldCanonicalABN, r.CanonicalABN)
+	}
+	if r.CredentialFingerprint != nil {
+		dst = appendBytesField(dst, responseFieldCredentialFingerprint, r.CredentialFingerprint)
+	}
+	if r.CredentialCreatedMillis != 0 {
+		dst = appendVarintField(dst, responseFieldCredentialCreatedMillis, uint64(r.CredentialCreatedMillis))
+	}
+	if r.CredentialExpiresMillis != 0 {
+		dst = appendVarintField(dst, responseFieldCredentialExpiresMillis, uint64(r.CredentialExpiresMillis))
+	}
+	if r.ComponentVersion != "" {
+		dst = appendStringField(dst, responseFieldComponentVersion, r.ComponentVersion)
+	}
+	if r.ProfileFingerprint != nil {
+		dst = appendBytesField(dst, responseFieldProfileFingerprint, r.ProfileFingerprint)
+	}
+	if r.RegistrationFingerprint != nil {
+		dst = appendBytesField(dst, responseFieldRegistrationFingerprint, r.RegistrationFingerprint)
+	}
+	if r.ComponentFingerprint != nil {
+		dst = appendBytesField(dst, responseFieldComponentFingerprint, r.ComponentFingerprint)
+	}
+	if r.ProductState != 0 {
+		dst = appendVarintField(dst, responseFieldProductState, uint64(r.ProductState))
+	}
+	if r.ProductFingerprint != nil {
+		dst = appendBytesField(dst, responseFieldProductFingerprint, r.ProductFingerprint)
+	}
+	if r.SimulatorCase != 0 {
+		dst = appendVarintField(dst, responseFieldSimulatorCase, uint64(r.SimulatorCase))
+	}
+	if r.SimulatorState != 0 {
+		dst = appendVarintField(dst, responseFieldSimulatorState, uint64(r.SimulatorState))
+	}
 	return dst
 }
 
 func validResponse(r Response) bool {
 	if !validUUIDv7(r.RequestID) {
+		return false
+	}
+	if !validRedactedResponseMetadata(r) {
 		return false
 	}
 	switch r.Outcome {
@@ -628,10 +772,54 @@ func validResponse(r Response) bool {
 	case OutcomeError:
 		return r.RedactedResult == 0 && validStableErrorCode(r.StableErrorCode) && r.PendingItemID == ""
 	case OutcomePending:
-		return r.RedactedResult == 0 && r.StableErrorCode == "" && validUUIDv7(r.PendingItemID)
+		return (r.RedactedResult == 0 || r.RedactedResult == ResultRecoveryRequired) &&
+			r.StableErrorCode == "" && validUUIDv7(r.PendingItemID)
 	default:
 		return false
 	}
+}
+
+func validRedactedResponseMetadata(r Response) bool {
+	credentialPresent := r.CanonicalABN != "" || r.CredentialFingerprint != nil || r.CredentialCreatedMillis != 0 || r.CredentialExpiresMillis != 0
+	if credentialPresent && (!validABN(r.CanonicalABN) || !validFingerprint(r.CredentialFingerprint) || r.CredentialExpiresMillis <= 0 ||
+		r.CredentialCreatedMillis < 0 || r.CredentialCreatedMillis >= r.CredentialExpiresMillis || r.ComponentVersion == "") {
+		return false
+	}
+	profilePresent := r.ProfileFingerprint != nil || r.RegistrationFingerprint != nil || r.ComponentFingerprint != nil
+	if profilePresent && (!validFingerprint(r.ProfileFingerprint) || !validFingerprint(r.RegistrationFingerprint) ||
+		!validFingerprint(r.ComponentFingerprint) || r.ComponentVersion == "") {
+		return false
+	}
+	if r.ComponentVersion != "" && (!utf8.ValidString(r.ComponentVersion) || utf8.RuneCountInString(r.ComponentVersion) > 128 || hasControl(r.ComponentVersion)) {
+		return false
+	}
+	if r.ProductState == ProductMissing {
+		if r.ProductFingerprint != nil {
+			return false
+		}
+	} else if r.ProductState == ProductPresent || r.ProductState == ProductInaccessible {
+		if !validFingerprint(r.ProductFingerprint) {
+			return false
+		}
+	} else if r.ProductState != 0 || r.ProductFingerprint != nil {
+		return false
+	}
+	if (r.SimulatorCase == 0) != (r.SimulatorState == 0) || r.SimulatorCase > SimulatorTimeout || r.SimulatorState > SimulatorStateUnknown {
+		return false
+	}
+	return true
+}
+
+func validFingerprint(value []byte) bool {
+	if len(value) != 32 {
+		return false
+	}
+	for _, b := range value {
+		if b != 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // NewErrorResponse maps non-allowlisted values to a generic non-secret code.
@@ -709,13 +897,16 @@ func responseMatchesOperation(operation Operation, response Response) bool {
 	case OperationFixture:
 		return response.Outcome == OutcomeOK && (response.RedactedResult == ResultFixtureSelected || response.RedactedResult == ResultRecoveryRequired || response.RedactedResult == ResultNotStarted)
 	case OperationPrepareMutation:
-		return response.Outcome == OutcomePending
+		return response.Outcome == OutcomePending && response.RedactedResult == 0
 	case OperationCommitMutation:
 		return response.Outcome == OutcomeOK && response.RedactedResult == ResultMutationCommitted
 	case OperationAbortMutation:
 		return response.Outcome == OutcomeOK && response.RedactedResult == ResultMutationAborted
 	case OperationReconcileMutation:
-		return response.Outcome == OutcomeOK && (response.RedactedResult == ResultMutationCommitted || response.RedactedResult == ResultMutationAborted || response.RedactedResult == ResultRecoveryRequired)
+		return (response.Outcome == OutcomePending && response.RedactedResult == ResultRecoveryRequired) ||
+			(response.Outcome == OutcomeOK && (response.RedactedResult == ResultMutationCommitted ||
+				response.RedactedResult == ResultMutationAborted || response.RedactedResult == ResultRecoveryRequired ||
+				response.RedactedResult == ResultNotStarted))
 	default:
 		return false
 	}
@@ -785,7 +976,7 @@ func requestWireType(number protowire.Number) protowire.Type {
 	switch number {
 	case 1, 3, 4, 5, 11, 19:
 		return protowire.VarintType
-	case 2, 6, 7, 8, 9, 10, 12, 13, 14, 15, 16, 17, 18:
+	case 2, 6, 7, 8, 9, 10, 12, 13, 14, 15, 16, 17, 18, 20, 21, 22, 23:
 		return protowire.BytesType
 	default:
 		return -1
@@ -793,9 +984,12 @@ func requestWireType(number protowire.Number) protowire.Type {
 }
 func responseWireType(number protowire.Number) protowire.Type {
 	switch number {
-	case responseFieldOutcome, responseFieldRedactedResult:
+	case responseFieldOutcome, responseFieldRedactedResult, responseFieldCredentialCreatedMillis,
+		responseFieldCredentialExpiresMillis, responseFieldProductState, responseFieldSimulatorCase, responseFieldSimulatorState:
 		return protowire.VarintType
-	case responseFieldRequestID, responseFieldStableErrorCode, responseFieldPendingItemID:
+	case responseFieldRequestID, responseFieldStableErrorCode, responseFieldPendingItemID, responseFieldCanonicalABN,
+		responseFieldCredentialFingerprint, responseFieldComponentVersion, responseFieldProfileFingerprint,
+		responseFieldRegistrationFingerprint, responseFieldComponentFingerprint, responseFieldProductFingerprint:
 		return protowire.BytesType
 	default:
 		return -1

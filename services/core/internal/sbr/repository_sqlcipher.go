@@ -9,21 +9,15 @@ import (
 	"context"
 	"crypto/sha256"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"strings"
 	"time"
 
+	tammyv1 "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1"
 	"github.com/tammyapp/tammy/services/core/internal/platform/abn"
 	"github.com/tammyapp/tammy/services/core/internal/platform/ids"
 	"github.com/tammyapp/tammy/services/core/internal/storage/sqlcipher"
-)
-
-var (
-	ErrNotFound            = errors.New("sbr: binding not found")
-	ErrPermissionDenied    = errors.New("sbr: binding permission denied")
-	ErrConflict            = errors.New("sbr: durable state conflict")
-	ErrInvalidTransition   = errors.New("sbr: invalid state transition")
-	ErrIdempotencyConflict = errors.New("sbr: idempotency conflict")
 )
 
 type BindingState string
@@ -33,14 +27,6 @@ const (
 	BindingReimportRequired BindingState = "REIMPORT_REQUIRED"
 	BindingRemoved          BindingState = "REMOVED"
 )
-
-type BindingKey struct {
-	WorkspaceID           string
-	OrganisationID        string
-	CanonicalABN          string
-	SchemaVersion         uint32
-	CredentialFingerprint [sha256.Size]byte
-}
 
 type Binding struct {
 	Key              BindingKey
@@ -96,16 +82,6 @@ type ReadinessTransition struct {
 	OccurredAt   string
 }
 
-type MutationKind string
-
-const (
-	MutationImportCredential  MutationKind = "IMPORT_CREDENTIAL"
-	MutationReplaceCredential MutationKind = "REPLACE_CREDENTIAL"
-	MutationRemoveCredential  MutationKind = "REMOVE_CREDENTIAL"
-	MutationImportProductID   MutationKind = "IMPORT_PRODUCT_ID"
-	MutationRemoveProductID   MutationKind = "REMOVE_PRODUCT_ID"
-)
-
 type MutationState string
 
 const (
@@ -138,10 +114,29 @@ type MutationEffectExecutor interface {
 }
 
 type MutationCommit struct {
-	NewBinding *Binding
-	Profile    *AuthenticatedProfile
-	Readiness  *ReadinessTransition
-	Audit      func(context.Context, MutationEffectExecutor) error
+	NewBinding      *Binding
+	Profile         *AuthenticatedProfile
+	Readiness       *ReadinessTransition
+	Product         *ProductRecord
+	Command         *CommandCompletion
+	CompletionAudit AuditRecord
+	Decision        func(context.Context, MutationEffectExecutor) error `json:"-"`
+}
+
+type persistedMutationCommit struct {
+	NewBinding      *Binding              `json:"new_binding,omitempty"`
+	Profile         *AuthenticatedProfile `json:"profile,omitempty"`
+	Readiness       *ReadinessTransition  `json:"readiness,omitempty"`
+	Product         *ProductRecord        `json:"product,omitempty"`
+	Command         *CommandCompletion    `json:"command,omitempty"`
+	CompletionAudit AuditRecord           `json:"completion_audit"`
+}
+
+type CommandCompletion struct {
+	Scope      BindingKey
+	Credential CredentialMetadata
+	Product    ProductState
+	UpdatedAt  string
 }
 
 type mutationEffectExecutor struct{ transaction *sqlcipher.Transaction }
@@ -162,21 +157,42 @@ const (
 	ReconcileCommit ReconcileAction = "COMMIT"
 )
 
-type TransportState string
+type CommandState string
 
 const (
-	TransportPrepared         TransportState = "PREPARED"
-	TransportDispatching      TransportState = "DISPATCHING"
-	TransportNotStarted       TransportState = "NOT_STARTED"
-	TransportMaybeSent        TransportState = "MAYBE_SENT"
-	TransportResponseReceived TransportState = "RESPONSE_RECEIVED"
-	TransportAccepted         TransportState = "ACCEPTED"
-	TransportFailed           TransportState = "FAILED"
-	TransportUnknown          TransportState = "UNKNOWN"
+	CommandPrepared  CommandState = "PREPARED"
+	CommandCompleted CommandState = "COMPLETED"
 )
+
+type CommandRecord struct {
+	OperationID    string
+	ActorUserID    string
+	Scope          BindingKey
+	IdempotencyKey string
+	SemanticHash   [sha256.Size]byte
+	Kind           MutationKind
+	State          CommandState
+	Credential     CredentialMetadata
+	Product        ProductState
+	CreatedAt      string
+	UpdatedAt      string
+}
+
+type ProductRecord struct {
+	Key                       BindingKey
+	Environment               Environment
+	ScopeFingerprint          [sha256.Size]byte
+	ExpectedProductIdentifier string
+	ExpectedServiceID         string
+	State                     ProductState
+	ProductFingerprint        [sha256.Size]byte
+	Revision                  uint64
+	UpdatedAt                 string
+}
 
 type SimulatorTransport struct {
 	OperationID       string
+	ActorUserID       string
 	Key               BindingKey
 	IdempotencyKey    string
 	SemanticHash      [sha256.Size]byte
@@ -187,18 +203,6 @@ type SimulatorTransport struct {
 	pendingTerminal   TransportState
 	pendingResultHash *[sha256.Size]byte
 }
-
-type SimulatorCase string
-
-const (
-	SimulatorCasePreDispatchFailure SimulatorCase = "PRE_DISPATCH_FAILURE"
-	SimulatorCaseUncertainWrite     SimulatorCase = "UNCERTAIN_WRITE"
-	SimulatorCaseHelperDeath        SimulatorCase = "HELPER_DEATH"
-	SimulatorCaseTimeout            SimulatorCase = "TIMEOUT"
-	SimulatorCaseSyntacticResponse  SimulatorCase = "SYNTACTIC_RESPONSE"
-	SimulatorCaseMalformedResponse  SimulatorCase = "MALFORMED_RESPONSE"
-	SimulatorCaseAccepted           SimulatorCase = "ACCEPTED"
-)
 
 type repositoryHooks struct{ afterResponseReceived func() error }
 
@@ -259,6 +263,27 @@ WHERE workspace_id=? AND organisation_id=? AND canonical_abn=? AND schema_versio
 	}
 	copy(binding.SubjectHash[:], subject)
 	return binding, nil
+}
+
+// GetCurrentBinding resolves the sole current binding for a server-derived
+// workspace/organisation/ABN scope. The caller never supplies a fingerprint.
+func (repository *SQLCipherRepository) GetCurrentBinding(ctx context.Context, scope BindingKey) (Binding, error) {
+	if !repository.valid(ctx) || !validBindingScope(scope) || !zeroHash(scope.CredentialFingerprint) {
+		return Binding{}, ErrInvalid
+	}
+	var fingerprint []byte
+	err := repository.database.QueryRowContext(ctx, `SELECT credential_fingerprint FROM sbr_credential_bindings_v1
+WHERE workspace_id=? AND organisation_id=? AND canonical_abn=? AND schema_version=?
+AND binding_state IN ('ACTIVE','REIMPORT_REQUIRED') LIMIT 2`, scope.WorkspaceID, scope.OrganisationID,
+		scope.CanonicalABN, scope.SchemaVersion).Scan(&fingerprint)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Binding{}, ErrNotFound
+	}
+	if err != nil || len(fingerprint) != sha256.Size {
+		return Binding{}, ErrRepository
+	}
+	copy(scope.CredentialFingerprint[:], fingerprint)
+	return repository.GetBinding(ctx, scope)
 }
 
 func (repository *SQLCipherRepository) TransitionBinding(ctx context.Context, key BindingKey, next BindingState, updatedAt string) error {
@@ -420,6 +445,400 @@ AND schema_version=? AND credential_fingerprint=? ORDER BY sequence DESC LIMIT 1
 	return transition, nil
 }
 
+func (repository *SQLCipherRepository) PrepareCommand(ctx context.Context, command CommandRecord) error {
+	if !repository.valid(ctx) || !validCommandRecord(command) {
+		return ErrInvalid
+	}
+	_, err := repository.database.ExecContext(ctx, `INSERT INTO sbr_commands_v1(operation_id,actor_user_id,workspace_id,
+organisation_id,canonical_abn,schema_version,idempotency_key,semantic_hash,mutation_kind,command_state,created_at,updated_at)
+VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`, command.OperationID, command.ActorUserID, command.Scope.WorkspaceID, command.Scope.OrganisationID,
+		command.Scope.CanonicalABN, command.Scope.SchemaVersion, command.IdempotencyKey, command.SemanticHash[:],
+		command.Kind, command.State, command.CreatedAt, command.UpdatedAt)
+	if err == nil {
+		return nil
+	}
+	existing, lookupErr := repository.GetCommand(ctx, command.Scope, command.IdempotencyKey)
+	if lookupErr != nil {
+		return ErrConflict
+	}
+	if existing.SemanticHash != command.SemanticHash {
+		return ErrIdempotencyConflict
+	}
+	return ErrConflict
+}
+
+func (repository *SQLCipherRepository) PrepareCommandMutation(ctx context.Context, command CommandRecord, mutation Mutation) error {
+	return repository.ReserveCommandMutation(ctx, command, mutation, func(context.Context, MutationEffectExecutor) error { return nil })
+}
+
+// ReserveCommandMutation atomically consumes the caller-owned authorization
+// decision and persists the command election plus PREPARED helper dispatch.
+// Nothing external may be dispatched until this transaction commits.
+func (repository *SQLCipherRepository) ReserveCommandMutation(ctx context.Context, command CommandRecord, mutation Mutation,
+	reserve func(context.Context, MutationEffectExecutor) error,
+) error {
+	if !repository.valid(ctx) || !validCommandRecord(command) || !validMutation(mutation) ||
+		mutation.State != MutationPrepared || mutation.PendingID != "" || mutation.OperationID != command.OperationID ||
+		mutation.Kind != command.Kind || !sameScope(mutation.Key, command.Scope) || reserve == nil {
+		return ErrInvalid
+	}
+	var fingerprint any
+	if mutation.Kind == MutationImportCredential {
+		if !zeroHash(mutation.Key.CredentialFingerprint) {
+			return ErrInvalid
+		}
+		fingerprint = nil
+	} else if _, err := repository.GetBinding(ctx, mutation.Key); err != nil {
+		return err
+	} else {
+		fingerprint = mutation.Key.CredentialFingerprint[:]
+	}
+	tx, err := repository.database.BeginEncryptedTx(ctx, nil)
+	if err != nil {
+		return ErrRepository
+	}
+	committed := false
+	defer func() {
+		if !committed {
+			_ = tx.Rollback()
+		}
+	}()
+	if err := reserve(ctx, mutationEffectExecutor{transaction: tx}); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `INSERT INTO sbr_commands_v1(operation_id,actor_user_id,workspace_id,
+organisation_id,canonical_abn,schema_version,idempotency_key,semantic_hash,mutation_kind,command_state,created_at,updated_at)
+VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`, command.OperationID, command.ActorUserID, command.Scope.WorkspaceID, command.Scope.OrganisationID,
+		command.Scope.CanonicalABN, command.Scope.SchemaVersion, command.IdempotencyKey, command.SemanticHash[:],
+		command.Kind, command.State, command.CreatedAt, command.UpdatedAt); err != nil {
+		_ = tx.Rollback()
+		existing, lookupErr := repository.GetCommand(ctx, command.Scope, command.IdempotencyKey)
+		if lookupErr == nil && existing.SemanticHash != command.SemanticHash {
+			return ErrIdempotencyConflict
+		}
+		return ErrConflict
+	}
+	if _, err := tx.ExecContext(ctx, `INSERT INTO sbr_mutations_v1(
+operation_id,workspace_id,organisation_id,canonical_abn,schema_version,credential_fingerprint,mutation_kind,
+mutation_state,pending_id,metadata_hash,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,NULL,?,?,?)`,
+		mutation.OperationID, mutation.Key.WorkspaceID, mutation.Key.OrganisationID, mutation.Key.CanonicalABN,
+		mutation.Key.SchemaVersion, fingerprint, mutation.Kind, mutation.State, mutation.MetadataHash[:],
+		mutation.CreatedAt, mutation.UpdatedAt); err != nil {
+		return ErrConflict
+	}
+	if err := tx.Commit(); err != nil {
+		return ErrRepository
+	}
+	committed = true
+	return nil
+}
+
+func validCommandRecord(command CommandRecord) bool {
+	return validBindingScope(command.Scope) && zeroHash(command.Scope.CredentialFingerprint) &&
+		ids.IsCanonicalV7(command.OperationID) && ids.IsCanonicalV7(command.ActorUserID) && len(command.IdempotencyKey) >= 1 && len(command.IdempotencyKey) <= 128 &&
+		strings.IndexByte(command.IdempotencyKey, 0) < 0 && !zeroHash(command.SemanticHash) &&
+		validMutationKind(command.Kind) && command.State == CommandPrepared &&
+		validTimestamp(command.CreatedAt) && validTimestamp(command.UpdatedAt)
+}
+
+func (repository *SQLCipherRepository) GetCommand(ctx context.Context, scope BindingKey, idempotencyKey string) (CommandRecord, error) {
+	if !repository.valid(ctx) || !validBindingScope(scope) || !zeroHash(scope.CredentialFingerprint) ||
+		len(idempotencyKey) < 1 || len(idempotencyKey) > 128 || strings.IndexByte(idempotencyKey, 0) >= 0 {
+		return CommandRecord{}, ErrInvalid
+	}
+	record := CommandRecord{Scope: scope, IdempotencyKey: idempotencyKey}
+	var semantic, fingerprint []byte
+	var credentialState sql.NullInt64
+	var issuer, serial, createdAt, expiresAt, componentVersion, productState sql.NullString
+	err := repository.database.QueryRowContext(ctx, `SELECT operation_id,actor_user_id,semantic_hash,mutation_kind,command_state,
+result_credential_state,result_credential_fingerprint,result_credential_issuer,result_credential_serial,
+result_credential_created_at,result_credential_expires_at,result_component_version,result_product_state,created_at,updated_at
+FROM sbr_commands_v1 WHERE workspace_id=? AND organisation_id=? AND canonical_abn=? AND schema_version=? AND idempotency_key=?`,
+		scope.WorkspaceID, scope.OrganisationID, scope.CanonicalABN, scope.SchemaVersion, idempotencyKey).Scan(
+		&record.OperationID, &record.ActorUserID, &semantic, &record.Kind, &record.State, &credentialState, &fingerprint, &issuer, &serial,
+		&createdAt, &expiresAt, &componentVersion, &productState, &record.CreatedAt, &record.UpdatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return CommandRecord{}, ErrNotFound
+	}
+	if err != nil || !ids.IsCanonicalV7(record.ActorUserID) || len(semantic) != sha256.Size || (len(fingerprint) != 0 && len(fingerprint) != sha256.Size) {
+		return CommandRecord{}, ErrRepository
+	}
+	copy(record.SemanticHash[:], semantic)
+	if credentialState.Valid {
+		record.Credential.State = tammyv1.MachineCredentialState(credentialState.Int64)
+		record.Credential.CanonicalABN = scope.CanonicalABN
+		record.Credential.Issuer = issuer.String
+		record.Credential.Serial = serial.String
+		record.Credential.ComponentVersion = componentVersion.String
+		copy(record.Credential.Fingerprint[:], fingerprint)
+		if createdAt.Valid {
+			record.Credential.CreatedAt, err = time.Parse(time.RFC3339Nano, createdAt.String)
+			if err != nil {
+				return CommandRecord{}, ErrRepository
+			}
+		}
+		if expiresAt.Valid {
+			record.Credential.ExpiresAt, err = time.Parse(time.RFC3339Nano, expiresAt.String)
+			if err != nil {
+				return CommandRecord{}, ErrRepository
+			}
+		}
+	}
+	switch productState.String {
+	case "":
+	case "MISSING":
+		record.Product = ProductMissing
+	case "PRESENT":
+		record.Product = ProductPresent
+	case "INACCESSIBLE":
+		record.Product = ProductInaccessible
+	default:
+		return CommandRecord{}, ErrRepository
+	}
+	return record, nil
+}
+
+func (repository *SQLCipherRepository) GetCommandByOperation(ctx context.Context, workspaceID, operationID string) (CommandRecord, error) {
+	if !repository.valid(ctx) || !ids.IsCanonicalV7(workspaceID) || !ids.IsCanonicalV7(operationID) {
+		return CommandRecord{}, ErrInvalid
+	}
+	var scope BindingKey
+	var idempotencyKey string
+	err := repository.database.QueryRowContext(ctx, `SELECT workspace_id,organisation_id,canonical_abn,schema_version,idempotency_key
+FROM sbr_commands_v1 WHERE workspace_id=? AND operation_id=?`, workspaceID, operationID).Scan(
+		&scope.WorkspaceID, &scope.OrganisationID, &scope.CanonicalABN, &scope.SchemaVersion, &idempotencyKey)
+	if errors.Is(err, sql.ErrNoRows) {
+		return CommandRecord{}, ErrNotFound
+	}
+	if err != nil {
+		return CommandRecord{}, ErrRepository
+	}
+	return repository.GetCommand(ctx, scope, idempotencyKey)
+}
+
+func (repository *SQLCipherRepository) CompleteCommand(ctx context.Context, scope BindingKey, operationID string,
+	credential CredentialMetadata, product ProductState, updatedAt string,
+) error {
+	if !repository.valid(ctx) || !validBindingScope(scope) || !zeroHash(scope.CredentialFingerprint) ||
+		!ids.IsCanonicalV7(operationID) || !validTimestamp(updatedAt) || product > ProductInaccessible {
+		return ErrInvalid
+	}
+	var credentialState, fingerprint, issuer, serial, createdAt, expiresAt, componentVersion, productState any
+	if credential.Fingerprint != [sha256.Size]byte{} {
+		if credential.CanonicalABN != scope.CanonicalABN || credential.State < tammyv1.MachineCredentialState_MACHINE_CREDENTIAL_STATE_PRESENT ||
+			credential.State > tammyv1.MachineCredentialState_MACHINE_CREDENTIAL_STATE_ABN_MISMATCH ||
+			len(credential.Issuer) > 512 || len(credential.Serial) > 128 || len(credential.ComponentVersion) < 1 ||
+			len(credential.ComponentVersion) > 128 || credential.ExpiresAt.IsZero() {
+			return ErrInvalid
+		}
+		credentialState, fingerprint = int64(credential.State), credential.Fingerprint[:]
+		issuer, serial, componentVersion = credential.Issuer, credential.Serial, credential.ComponentVersion
+		if !credential.CreatedAt.IsZero() {
+			createdAt = credential.CreatedAt.UTC().Format("2006-01-02T15:04:05.000000000Z")
+		}
+		expiresAt = credential.ExpiresAt.UTC().Format("2006-01-02T15:04:05.000000000Z")
+	}
+	switch product {
+	case 0:
+	case ProductMissing:
+		productState = "MISSING"
+	case ProductPresent:
+		productState = "PRESENT"
+	case ProductInaccessible:
+		productState = "INACCESSIBLE"
+	default:
+		return ErrInvalid
+	}
+	result, err := repository.database.ExecContext(ctx, `UPDATE sbr_commands_v1 SET command_state=?,
+result_credential_state=?,result_credential_fingerprint=?,result_credential_issuer=?,result_credential_serial=?,
+result_credential_created_at=?,result_credential_expires_at=?,result_component_version=?,result_product_state=?,updated_at=?
+WHERE operation_id=? AND workspace_id=? AND organisation_id=? AND canonical_abn=? AND schema_version=? AND command_state=?`,
+		CommandCompleted, credentialState, fingerprint, issuer, serial, createdAt, expiresAt, componentVersion, productState,
+		updatedAt, operationID, scope.WorkspaceID, scope.OrganisationID, scope.CanonicalABN, scope.SchemaVersion, CommandPrepared)
+	if err != nil {
+		return ErrRepository
+	}
+	if !exactlyOne(result) {
+		return ErrInvalidTransition
+	}
+	return nil
+}
+
+func completeCommandWithin(ctx context.Context, tx *sqlcipher.Transaction, operationID string, completion CommandCompletion) error {
+	if tx == nil || !validBindingScope(completion.Scope) || !zeroHash(completion.Scope.CredentialFingerprint) ||
+		!ids.IsCanonicalV7(operationID) || !validTimestamp(completion.UpdatedAt) || completion.Product > ProductInaccessible {
+		return ErrInvalid
+	}
+	credential := completion.Credential
+	var credentialState, fingerprint, issuer, serial, createdAt, expiresAt, componentVersion, productState any
+	if credential.Fingerprint != [sha256.Size]byte{} {
+		if credential.CanonicalABN != completion.Scope.CanonicalABN ||
+			credential.State < tammyv1.MachineCredentialState_MACHINE_CREDENTIAL_STATE_PRESENT ||
+			credential.State > tammyv1.MachineCredentialState_MACHINE_CREDENTIAL_STATE_ABN_MISMATCH ||
+			len(credential.Issuer) > 512 || len(credential.Serial) > 128 || len(credential.ComponentVersion) < 1 ||
+			len(credential.ComponentVersion) > 128 || credential.ExpiresAt.IsZero() {
+			return ErrInvalid
+		}
+		credentialState, fingerprint = int64(credential.State), credential.Fingerprint[:]
+		issuer, serial, componentVersion = credential.Issuer, credential.Serial, credential.ComponentVersion
+		if !credential.CreatedAt.IsZero() {
+			createdAt = credential.CreatedAt.UTC().Format("2006-01-02T15:04:05.000000000Z")
+		}
+		expiresAt = credential.ExpiresAt.UTC().Format("2006-01-02T15:04:05.000000000Z")
+	}
+	switch completion.Product {
+	case 0:
+	case ProductMissing:
+		productState = "MISSING"
+	case ProductPresent:
+		productState = "PRESENT"
+	case ProductInaccessible:
+		productState = "INACCESSIBLE"
+	default:
+		return ErrInvalid
+	}
+	result, err := tx.ExecContext(ctx, `UPDATE sbr_commands_v1 SET command_state=?,
+result_credential_state=?,result_credential_fingerprint=?,result_credential_issuer=?,result_credential_serial=?,
+result_credential_created_at=?,result_credential_expires_at=?,result_component_version=?,result_product_state=?,updated_at=?
+WHERE operation_id=? AND workspace_id=? AND organisation_id=? AND canonical_abn=? AND schema_version=? AND command_state=?`,
+		CommandCompleted, credentialState, fingerprint, issuer, serial, createdAt, expiresAt, componentVersion, productState,
+		completion.UpdatedAt, operationID, completion.Scope.WorkspaceID, completion.Scope.OrganisationID,
+		completion.Scope.CanonicalABN, completion.Scope.SchemaVersion, CommandPrepared)
+	if err != nil || !exactlyOne(result) {
+		return ErrConflict
+	}
+	return nil
+}
+
+func (repository *SQLCipherRepository) PutProductState(ctx context.Context, record ProductRecord) error {
+	if !repository.valid(ctx) || !validBindingKey(record.Key) ||
+		(record.Environment != EnvironmentSimulator && record.Environment != EnvironmentEVTE) ||
+		zeroHash(record.ScopeFingerprint) || !validProductRecord(record) || !validTimestamp(record.UpdatedAt) {
+		return ErrInvalid
+	}
+	var fingerprint any
+	state := "MISSING"
+	switch record.State {
+	case ProductMissing:
+	case ProductPresent:
+		state, fingerprint = "PRESENT", record.ProductFingerprint[:]
+	case ProductInaccessible:
+		state, fingerprint = "INACCESSIBLE", record.ProductFingerprint[:]
+	default:
+		return ErrInvalid
+	}
+	_, err := repository.database.ExecContext(ctx, `INSERT INTO sbr_product_states_v1(workspace_id,organisation_id,
+canonical_abn,schema_version,credential_fingerprint,environment,scope_fingerprint,expected_product_identifier,
+expected_service_id,product_state,product_fingerprint,revision,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+ON CONFLICT(workspace_id,organisation_id,canonical_abn,schema_version,credential_fingerprint,environment,
+scope_fingerprint,expected_product_identifier,expected_service_id) DO UPDATE SET
+product_state=excluded.product_state,product_fingerprint=excluded.product_fingerprint,revision=sbr_product_states_v1.revision+1,
+updated_at=excluded.updated_at`, record.Key.WorkspaceID, record.Key.OrganisationID, record.Key.CanonicalABN,
+		record.Key.SchemaVersion, record.Key.CredentialFingerprint[:], record.Environment, record.ScopeFingerprint[:],
+		record.ExpectedProductIdentifier, record.ExpectedServiceID, state, fingerprint, record.Revision, record.UpdatedAt)
+	if err != nil {
+		return ErrRepository
+	}
+	return nil
+}
+
+func putProductStateWithin(ctx context.Context, tx *sqlcipher.Transaction, record ProductRecord) error {
+	if tx == nil || !validBindingKey(record.Key) ||
+		(record.Environment != EnvironmentSimulator && record.Environment != EnvironmentEVTE) ||
+		zeroHash(record.ScopeFingerprint) || !validProductRecord(record) || !validTimestamp(record.UpdatedAt) {
+		return ErrInvalid
+	}
+	var fingerprint any
+	state := "MISSING"
+	switch record.State {
+	case ProductMissing:
+	case ProductPresent:
+		state, fingerprint = "PRESENT", record.ProductFingerprint[:]
+	case ProductInaccessible:
+		state, fingerprint = "INACCESSIBLE", record.ProductFingerprint[:]
+	default:
+		return ErrInvalid
+	}
+	_, err := tx.ExecContext(ctx, `INSERT INTO sbr_product_states_v1(workspace_id,organisation_id,
+canonical_abn,schema_version,credential_fingerprint,environment,scope_fingerprint,expected_product_identifier,
+expected_service_id,product_state,product_fingerprint,revision,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+ON CONFLICT(workspace_id,organisation_id,canonical_abn,schema_version,credential_fingerprint,environment,
+scope_fingerprint,expected_product_identifier,expected_service_id) DO UPDATE SET
+product_state=excluded.product_state,product_fingerprint=excluded.product_fingerprint,revision=sbr_product_states_v1.revision+1,
+updated_at=excluded.updated_at`, record.Key.WorkspaceID, record.Key.OrganisationID, record.Key.CanonicalABN,
+		record.Key.SchemaVersion, record.Key.CredentialFingerprint[:], record.Environment, record.ScopeFingerprint[:],
+		record.ExpectedProductIdentifier, record.ExpectedServiceID, state, fingerprint, record.Revision, record.UpdatedAt)
+	if err != nil {
+		return ErrRepository
+	}
+	return nil
+}
+
+func (repository *SQLCipherRepository) GetProductState(ctx context.Context, key BindingKey, environment Environment,
+	scopeFingerprint [sha256.Size]byte, expectedProductIdentifier, expectedServiceID string,
+) (ProductRecord, error) {
+	if !repository.valid(ctx) || !validBindingKey(key) || (environment != EnvironmentSimulator && environment != EnvironmentEVTE) ||
+		zeroHash(scopeFingerprint) || !validExpectedProductScope(expectedProductIdentifier, expectedServiceID) {
+		return ProductRecord{}, ErrInvalid
+	}
+	record := ProductRecord{Key: key, Environment: environment, ScopeFingerprint: scopeFingerprint,
+		ExpectedProductIdentifier: expectedProductIdentifier, ExpectedServiceID: expectedServiceID}
+	var storedScopeFingerprint, productFingerprint []byte
+	var state string
+	err := repository.database.QueryRowContext(ctx, `SELECT scope_fingerprint,product_state,product_fingerprint,revision,updated_at
+FROM sbr_product_states_v1 WHERE workspace_id=? AND organisation_id=? AND canonical_abn=? AND schema_version=? AND
+credential_fingerprint=? AND environment=? AND scope_fingerprint=? AND expected_product_identifier=? AND expected_service_id=?`,
+		key.WorkspaceID, key.OrganisationID, key.CanonicalABN, key.SchemaVersion, key.CredentialFingerprint[:], environment,
+		scopeFingerprint[:], expectedProductIdentifier, expectedServiceID).Scan(&storedScopeFingerprint, &state, &productFingerprint, &record.Revision, &record.UpdatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ProductRecord{}, ErrNotFound
+	}
+	if err != nil || len(storedScopeFingerprint) != sha256.Size || !bytes.Equal(storedScopeFingerprint, scopeFingerprint[:]) ||
+		(len(productFingerprint) != 0 && len(productFingerprint) != sha256.Size) {
+		return ProductRecord{}, ErrRepository
+	}
+	copy(record.ProductFingerprint[:], productFingerprint)
+	switch state {
+	case "MISSING":
+		record.State = ProductMissing
+	case "PRESENT":
+		record.State = ProductPresent
+	case "INACCESSIBLE":
+		record.State = ProductInaccessible
+	default:
+		return ProductRecord{}, ErrRepository
+	}
+	if !validProductRecord(record) {
+		return ProductRecord{}, ErrRepository
+	}
+	return record, nil
+}
+
+func validProductRecord(record ProductRecord) bool {
+	if record.Revision == 0 || record.State < ProductMissing || record.State > ProductInaccessible ||
+		record.Environment != EnvironmentEVTE || !validExpectedProductScope(record.ExpectedProductIdentifier, record.ExpectedServiceID) ||
+		record.ScopeFingerprint != authenticatedProductScopeFingerprint(record.ExpectedProductIdentifier, record.ExpectedServiceID) {
+		return false
+	}
+	if record.State == ProductMissing {
+		return zeroHash(record.ProductFingerprint)
+	}
+	return !zeroHash(record.ProductFingerprint)
+}
+
+func validExpectedProductScope(productIdentifier, serviceID string) bool {
+	return len(productIdentifier) >= 1 && len(productIdentifier) <= 128 && len(serviceID) >= 1 && len(serviceID) <= 128
+}
+
+func validMutationKind(kind MutationKind) bool {
+	switch kind {
+	case MutationImportCredential, MutationReplaceCredential, MutationRemoveCredential, MutationImportProductID, MutationRemoveProductID:
+		return true
+	default:
+		return false
+	}
+}
+
 func (repository *SQLCipherRepository) PrepareMutation(ctx context.Context, mutation Mutation) error {
 	if !repository.valid(ctx) || !validMutation(mutation) || mutation.State != MutationPrepared || mutation.PendingID != "" {
 		return ErrInvalid
@@ -475,11 +894,11 @@ func (repository *SQLCipherRepository) MarkMutationStaged(ctx context.Context, k
 	return repository.transitionMutation(ctx, key, operationID, MutationPrepared, MutationStaged, pendingID, updatedAt)
 }
 
-// CommitMutation applies the core-owned binding/evidence/audit effects and the
-// durable CORE_COMMITTED decision in one SQLCipher transaction. Helper commit
-// remains a later acknowledged step.
+// CommitMutation persists the redacted projection and the durable
+// CORE_COMMITTED decision. It deliberately does not make any user-visible
+// binding, readiness, Product, command, or completion-audit change.
 func (repository *SQLCipherRepository) CommitMutation(ctx context.Context, key BindingKey, operationID string, commit MutationCommit) error {
-	if !repository.valid(ctx) || !validBindingScope(key) || !ids.IsCanonicalV7(operationID) || commit.Audit == nil {
+	if !repository.valid(ctx) || !validBindingScope(key) || !ids.IsCanonicalV7(operationID) || commit.Decision == nil {
 		return ErrInvalid
 	}
 	mutation, err := repository.GetMutation(ctx, key, operationID)
@@ -488,6 +907,14 @@ func (repository *SQLCipherRepository) CommitMutation(ctx context.Context, key B
 	}
 	if mutation.State != MutationStaged {
 		return ErrInvalidTransition
+	}
+	if err := validateMutationCommit(mutation, commit); err != nil {
+		return err
+	}
+	payload, err := json.Marshal(persistedMutationCommit{NewBinding: commit.NewBinding, Profile: commit.Profile,
+		Readiness: commit.Readiness, Product: commit.Product, Command: commit.Command, CompletionAudit: commit.CompletionAudit})
+	if err != nil || len(payload) < 2 || len(payload) > 32768 {
+		return ErrInvalid
 	}
 	tx, err := repository.database.BeginEncryptedTx(ctx, nil)
 	if err != nil {
@@ -499,64 +926,16 @@ func (repository *SQLCipherRepository) CommitMutation(ctx context.Context, key B
 			_ = tx.Rollback()
 		}
 	}()
-	updatedAt := mutation.UpdatedAt
-	effectKey := mutation.Key
-	switch mutation.Kind {
-	case MutationImportCredential:
-		if commit.NewBinding == nil || !validBinding(*commit.NewBinding) || !sameScope(commit.NewBinding.Key, mutation.Key) ||
-			commit.NewBinding.Key.CredentialFingerprint != mutation.Key.CredentialFingerprint {
-			return ErrInvalid
-		}
-		if err := insertBindingWithin(ctx, tx, *commit.NewBinding); err != nil {
-			return err
-		}
-		effectKey = commit.NewBinding.Key
-	case MutationReplaceCredential:
-		if commit.NewBinding == nil || commit.NewBinding.Key.CredentialFingerprint == mutation.Key.CredentialFingerprint ||
-			!validBinding(*commit.NewBinding) || !sameScope(commit.NewBinding.Key, mutation.Key) {
-			return ErrInvalid
-		}
-		if err := transitionBindingWithin(ctx, tx, mutation.Key, BindingActive, BindingRemoved, updatedAt); err != nil {
-			return err
-		}
-		if err := insertBindingWithin(ctx, tx, *commit.NewBinding); err != nil {
-			return err
-		}
-		effectKey = commit.NewBinding.Key
-	case MutationRemoveCredential:
-		if commit.NewBinding != nil || commit.Profile != nil {
-			return ErrInvalid
-		}
-		if err := transitionBindingWithin(ctx, tx, mutation.Key, BindingActive, BindingRemoved, updatedAt); err != nil {
-			return err
-		}
-	case MutationImportProductID, MutationRemoveProductID:
-		if commit.NewBinding != nil || commit.Profile != nil {
-			return ErrInvalid
-		}
-	default:
-		return ErrInvalid
-	}
-	if commit.Profile != nil && commit.Profile.Key != effectKey ||
-		commit.Readiness != nil && commit.Readiness.Key != effectKey {
-		return ErrInvalid
-	}
-	if commit.Profile != nil {
-		if err := repository.insertProfileEvidenceWithin(ctx, tx, *commit.Profile); err != nil {
-			return err
-		}
-	}
-	if commit.Readiness != nil {
-		if err := repository.insertReadinessWithin(ctx, tx, *commit.Readiness); err != nil {
-			return err
-		}
-	}
-	if err := commit.Audit(ctx, mutationEffectExecutor{transaction: tx}); err != nil {
+	if err := commit.Decision(ctx, mutationEffectExecutor{transaction: tx}); err != nil {
 		return err
+	}
+	if _, err := tx.ExecContext(ctx, `INSERT INTO sbr_pending_mutation_effects_v1(operation_id,effect_json,created_at)
+VALUES (?,?,?)`, operationID, payload, mutation.UpdatedAt); err != nil {
+		return ErrConflict
 	}
 	result, err := tx.ExecContext(ctx, `UPDATE sbr_mutations_v1 SET mutation_state=?,updated_at=?
 WHERE operation_id=? AND workspace_id=? AND organisation_id=? AND canonical_abn=? AND schema_version=?
-AND credential_fingerprint=? AND mutation_state=?`, MutationCoreCommitted, updatedAt, operationID, key.WorkspaceID,
+AND credential_fingerprint=? AND mutation_state=?`, MutationCoreCommitted, mutation.UpdatedAt, operationID, key.WorkspaceID,
 		mutation.Key.OrganisationID, mutation.Key.CanonicalABN, mutation.Key.SchemaVersion, mutation.Key.CredentialFingerprint[:], MutationStaged)
 	if err != nil || !exactlyOne(result) {
 		return ErrConflict
@@ -565,6 +944,46 @@ AND credential_fingerprint=? AND mutation_state=?`, MutationCoreCommitted, updat
 		return ErrRepository
 	}
 	committed = true
+	return nil
+}
+
+func validateMutationCommit(mutation Mutation, commit MutationCommit) error {
+	effectKey := mutation.Key
+	switch mutation.Kind {
+	case MutationImportCredential:
+		if commit.NewBinding == nil || !validBinding(*commit.NewBinding) || !sameScope(commit.NewBinding.Key, mutation.Key) ||
+			commit.NewBinding.Key.CredentialFingerprint != mutation.Key.CredentialFingerprint {
+			return ErrInvalid
+		}
+		effectKey = commit.NewBinding.Key
+	case MutationReplaceCredential:
+		if commit.NewBinding == nil || commit.NewBinding.Key.CredentialFingerprint == mutation.Key.CredentialFingerprint ||
+			!validBinding(*commit.NewBinding) || !sameScope(commit.NewBinding.Key, mutation.Key) {
+			return ErrInvalid
+		}
+		effectKey = commit.NewBinding.Key
+	case MutationRemoveCredential:
+		if commit.NewBinding != nil || commit.Profile != nil || commit.Product != nil {
+			return ErrInvalid
+		}
+	case MutationImportProductID, MutationRemoveProductID:
+		if commit.NewBinding != nil || commit.Profile != nil || commit.Readiness != nil || commit.Product == nil {
+			return ErrInvalid
+		}
+	default:
+		return ErrInvalid
+	}
+	if commit.Profile != nil && commit.Profile.Key != effectKey || commit.Readiness != nil && commit.Readiness.Key != effectKey ||
+		commit.Product != nil && commit.Product.Key != effectKey {
+		return ErrInvalid
+	}
+	if commit.Command == nil || !sameScope(commit.Command.Scope, mutation.Key) ||
+		!zeroHash(commit.Command.Scope.CredentialFingerprint) || !validTimestamp(commit.Command.UpdatedAt) {
+		return ErrInvalid
+	}
+	if _, err := BuildAuditPayload(commit.CompletionAudit); err != nil {
+		return ErrInvalid
+	}
 	return nil
 }
 
@@ -654,22 +1073,124 @@ WHERE workspace_id=? AND organisation_id=? AND canonical_abn=? AND schema_versio
 	return nil
 }
 
-func (repository *SQLCipherRepository) MarkMutationHelperCommitted(ctx context.Context, key BindingKey, operationID, updatedAt string) error {
-	if !validOperationInput(repository, ctx, key, operationID, updatedAt) {
+func (repository *SQLCipherRepository) FinalizeMutation(ctx context.Context, key BindingKey, operationID, updatedAt string,
+	audit func(context.Context, MutationEffectExecutor, AuditRecord) error,
+) error {
+	if !validOperationInput(repository, ctx, key, operationID, updatedAt) || audit == nil {
 		return ErrInvalid
 	}
-	result, err := repository.database.ExecContext(ctx, `UPDATE sbr_mutations_v1 SET mutation_state=?,pending_id=NULL,updated_at=?
-WHERE operation_id=? AND workspace_id=? AND organisation_id=? AND canonical_abn=? AND schema_version=?
-AND credential_fingerprint=? AND mutation_state IN (?,?)`, MutationHelperCommitted, updatedAt, operationID,
-		key.WorkspaceID, key.OrganisationID, key.CanonicalABN, key.SchemaVersion, key.CredentialFingerprint[:],
-		MutationCoreCommitted, MutationReconcileRequired)
+	mutation, err := repository.GetMutation(ctx, key, operationID)
+	if err != nil {
+		return err
+	}
+	if mutation.State != MutationCoreCommitted && mutation.State != MutationReconcileRequired {
+		return ErrInvalidTransition
+	}
+	effect, err := repository.PendingMutationCommit(ctx, mutation)
+	if err != nil {
+		return err
+	}
+	tx, err := repository.database.BeginEncryptedTx(ctx, nil)
 	if err != nil {
 		return ErrRepository
 	}
-	if !exactlyOne(result) {
-		return mutationMissingOrTransition(repository, ctx, key, operationID)
+	committed := false
+	defer func() {
+		if !committed {
+			_ = tx.Rollback()
+		}
+	}()
+	effectKey := mutation.Key
+	switch mutation.Kind {
+	case MutationImportCredential:
+		if err := insertBindingWithin(ctx, tx, *effect.NewBinding); err != nil {
+			return err
+		}
+		effectKey = effect.NewBinding.Key
+	case MutationReplaceCredential:
+		if err := transitionBindingWithin(ctx, tx, mutation.Key, BindingActive, BindingRemoved, updatedAt); err != nil {
+			return err
+		}
+		if err := insertBindingWithin(ctx, tx, *effect.NewBinding); err != nil {
+			return err
+		}
+		effectKey = effect.NewBinding.Key
+	case MutationRemoveCredential:
+		if err := transitionBindingWithin(ctx, tx, mutation.Key, BindingActive, BindingRemoved, updatedAt); err != nil {
+			return err
+		}
+	case MutationImportProductID, MutationRemoveProductID:
+	default:
+		return ErrRepository
 	}
+	if effect.Profile != nil {
+		if effect.Profile.Key != effectKey {
+			return ErrRepository
+		}
+		if err := repository.insertProfileEvidenceWithin(ctx, tx, *effect.Profile); err != nil {
+			return err
+		}
+	}
+	if effect.Readiness != nil {
+		if effect.Readiness.Key != effectKey {
+			return ErrRepository
+		}
+		if err := repository.insertReadinessWithin(ctx, tx, *effect.Readiness); err != nil {
+			return err
+		}
+	}
+	if effect.Product != nil {
+		if err := putProductStateWithin(ctx, tx, *effect.Product); err != nil {
+			return err
+		}
+	}
+	if err := completeCommandWithin(ctx, tx, operationID, *effect.Command); err != nil {
+		return err
+	}
+	if err := audit(ctx, mutationEffectExecutor{transaction: tx}, effect.CompletionAudit); err != nil {
+		return err
+	}
+	result, err := tx.ExecContext(ctx, `UPDATE sbr_mutations_v1 SET mutation_state=?,pending_id=NULL,updated_at=?
+WHERE operation_id=? AND workspace_id=? AND organisation_id=? AND canonical_abn=? AND schema_version=?
+AND credential_fingerprint=? AND mutation_state IN (?,?)`, MutationHelperCommitted, updatedAt, operationID,
+		key.WorkspaceID, mutation.Key.OrganisationID, mutation.Key.CanonicalABN, mutation.Key.SchemaVersion,
+		mutation.Key.CredentialFingerprint[:], MutationCoreCommitted, MutationReconcileRequired)
+	if err != nil || !exactlyOne(result) {
+		return ErrConflict
+	}
+	if err := tx.Commit(); err != nil {
+		return ErrRepository
+	}
+	committed = true
 	return nil
+}
+
+// PendingMutationCommit returns only the redacted effect durably selected by
+// core. Recovery uses it to compare a helper receipt before making that effect
+// visible.
+func (repository *SQLCipherRepository) PendingMutationCommit(ctx context.Context, mutation Mutation) (MutationCommit, error) {
+	if !repository.valid(ctx) || !ids.IsCanonicalV7(mutation.OperationID) || !validBindingKey(mutation.Key) ||
+		!validMutationKind(mutation.Kind) || zeroHash(mutation.MetadataHash) || !validTimestamp(mutation.CreatedAt) || !validTimestamp(mutation.UpdatedAt) ||
+		(mutation.State != MutationCoreCommitted && mutation.State != MutationReconcileRequired) {
+		return MutationCommit{}, ErrInvalid
+	}
+	var encoded []byte
+	if err := repository.database.QueryRowContext(ctx, `SELECT effect_json FROM sbr_pending_mutation_effects_v1 WHERE operation_id=?`, mutation.OperationID).Scan(&encoded); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return MutationCommit{}, ErrNotFound
+		}
+		return MutationCommit{}, ErrRepository
+	}
+	var persisted persistedMutationCommit
+	if err := json.Unmarshal(encoded, &persisted); err != nil {
+		return MutationCommit{}, ErrRepository
+	}
+	effect := MutationCommit{NewBinding: persisted.NewBinding, Profile: persisted.Profile, Readiness: persisted.Readiness,
+		Product: persisted.Product, Command: persisted.Command, CompletionAudit: persisted.CompletionAudit}
+	if err := validateMutationCommit(mutation, effect); err != nil {
+		return MutationCommit{}, ErrRepository
+	}
+	return effect, nil
 }
 
 func (repository *SQLCipherRepository) AbortMutation(ctx context.Context, key BindingKey, operationID, updatedAt string) error {
@@ -753,6 +1274,41 @@ AND canonical_abn=? AND schema_version=?`, operationID, key.WorkspaceID,
 	return mutation, nil
 }
 
+func (repository *SQLCipherRepository) ListRecoverableMutations(ctx context.Context, workspaceID string) ([]Mutation, error) {
+	if !repository.valid(ctx) || !ids.IsCanonicalV7(workspaceID) {
+		return nil, ErrInvalid
+	}
+	rows, err := repository.database.QueryContext(ctx, `SELECT operation_id,organisation_id,canonical_abn,schema_version,
+credential_fingerprint,mutation_kind,mutation_state,pending_id,metadata_hash,created_at,updated_at
+FROM sbr_mutations_v1 WHERE workspace_id=? AND mutation_state IN
+('PREPARED','STAGED','CORE_COMMITTED','ABORT_REQUIRED','ABORTING','RECONCILE_REQUIRED')
+ORDER BY created_at,operation_id`, workspaceID)
+	if err != nil {
+		return nil, ErrRepository
+	}
+	defer rows.Close()
+	mutations := make([]Mutation, 0)
+	for rows.Next() {
+		mutation := Mutation{Key: BindingKey{WorkspaceID: workspaceID}}
+		var fingerprint, metadata []byte
+		var pending sql.NullString
+		if err := rows.Scan(&mutation.OperationID, &mutation.Key.OrganisationID, &mutation.Key.CanonicalABN,
+			&mutation.Key.SchemaVersion, &fingerprint, &mutation.Kind, &mutation.State, &pending, &metadata,
+			&mutation.CreatedAt, &mutation.UpdatedAt); err != nil ||
+			(len(fingerprint) != 0 && len(fingerprint) != sha256.Size) || len(metadata) != sha256.Size {
+			return nil, ErrRepository
+		}
+		copy(mutation.Key.CredentialFingerprint[:], fingerprint)
+		copy(mutation.MetadataHash[:], metadata)
+		mutation.PendingID = pending.String
+		mutations = append(mutations, mutation)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, ErrRepository
+	}
+	return mutations, nil
+}
+
 func (repository *SQLCipherRepository) ReconcileMutation(ctx context.Context, key BindingKey, operationID, updatedAt string) (ReconcileAction, error) {
 	mutation, err := repository.GetMutation(ctx, key, operationID)
 	if err != nil {
@@ -799,6 +1355,31 @@ func (repository *SQLCipherRepository) PrepareSimulatorTransport(ctx context.Con
 			_ = tx.Rollback()
 		}
 	}()
+	if original, lookupErr := loadTransportByIdempotency(ctx, func(ctx context.Context, query string, arguments ...any) rowScanner {
+		return tx.QueryRowContext(ctx, query, arguments...)
+	}, transport.Key, transport.IdempotencyKey); lookupErr == nil {
+		if original.SemanticHash != transport.SemanticHash {
+			return SimulatorTransport{}, false, ErrIdempotencyConflict
+		}
+		if err := tx.Commit(); err != nil {
+			return SimulatorTransport{}, false, ErrRepository
+		}
+		committed = true
+		return original, true, nil
+	} else if !errors.Is(lookupErr, ErrNotFound) {
+		return SimulatorTransport{}, false, ErrRepository
+	}
+	var uncertain int
+	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM sbr_simulator_transports_v1
+WHERE workspace_id=? AND organisation_id=? AND canonical_abn=? AND schema_version=?
+AND credential_fingerprint=? AND semantic_hash=? AND state IN ('DISPATCHING','MAYBE_SENT','UNKNOWN')`,
+		transport.Key.WorkspaceID, transport.Key.OrganisationID, transport.Key.CanonicalABN, transport.Key.SchemaVersion,
+		transport.Key.CredentialFingerprint[:], transport.SemanticHash[:]).Scan(&uncertain); err != nil {
+		return SimulatorTransport{}, false, ErrRepository
+	}
+	if uncertain != 0 {
+		return SimulatorTransport{}, false, ErrUncertainTransport
+	}
 	_, err = tx.ExecContext(ctx, `INSERT INTO sbr_idempotency_v1(idempotency_key,workspace_id,organisation_id,
 canonical_abn,schema_version,credential_fingerprint,semantic_hash,result_hash,original_operation_id,created_at)
 VALUES (?,?,?,?,?,?,?,NULL,?,?)`, transport.IdempotencyKey, transport.Key.WorkspaceID, transport.Key.OrganisationID,
@@ -820,9 +1401,9 @@ VALUES (?,?,?,?,?,?,?,NULL,?,?)`, transport.IdempotencyKey, transport.Key.Worksp
 		committed = true
 		return original, true, nil
 	}
-	_, err = tx.ExecContext(ctx, `INSERT INTO sbr_simulator_transports_v1(operation_id,workspace_id,organisation_id,
+	_, err = tx.ExecContext(ctx, `INSERT INTO sbr_simulator_transports_v1(operation_id,actor_user_id,workspace_id,organisation_id,
 canonical_abn,schema_version,credential_fingerprint,idempotency_key,semantic_hash,result_hash,state,created_at,updated_at)
-VALUES (?,?,?,?,?,?,?,?,NULL,?,?,?)`, transport.OperationID, transport.Key.WorkspaceID, transport.Key.OrganisationID,
+VALUES (?,?,?,?,?,?,?,?,?,NULL,?,?,?)`, transport.OperationID, transport.ActorUserID, transport.Key.WorkspaceID, transport.Key.OrganisationID,
 		transport.Key.CanonicalABN, transport.Key.SchemaVersion, transport.Key.CredentialFingerprint[:],
 		transport.IdempotencyKey, transport.SemanticHash[:], transport.State, transport.CreatedAt, transport.UpdatedAt)
 	if err != nil || tx.Commit() != nil {
@@ -830,6 +1411,221 @@ VALUES (?,?,?,?,?,?,?,?,NULL,?,?,?)`, transport.OperationID, transport.Key.Works
 	}
 	committed = true
 	return cloneTransport(transport), false, nil
+}
+
+func (repository *SQLCipherRepository) ReserveSimulatorDispatch(ctx context.Context, transport SimulatorTransport,
+	actorUserID, updatedAt string, effect func(context.Context, MutationEffectExecutor) error,
+) error {
+	if !repository.valid(ctx) || !validTransport(transport) || transport.State != TransportPrepared ||
+		!ids.IsCanonicalV7(actorUserID) || !validTimestamp(updatedAt) || effect == nil {
+		return ErrInvalid
+	}
+	tx, err := repository.database.BeginEncryptedTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	if err != nil {
+		return ErrRepository
+	}
+	committed := false
+	defer func() {
+		if !committed {
+			_ = tx.Rollback()
+		}
+	}()
+	if err := reserveSimulatorDispatchPrecondition(ctx, tx, transport, actorUserID); err != nil {
+		return err
+	}
+	if err := effect(ctx, mutationEffectExecutor{transaction: tx}); err != nil {
+		return err
+	}
+	if err := repository.ReserveSimulatorDispatchWithin(ctx, tx, transport, actorUserID, updatedAt); err != nil {
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return ErrRepository
+	}
+	committed = true
+	return nil
+}
+
+func reserveSimulatorDispatchPrecondition(ctx context.Context, executor MutationEffectExecutor, transport SimulatorTransport, actorUserID string) error {
+	var storedActor, storedIdempotency string
+	var storedSemantic []byte
+	var state TransportState
+	row, queryErr := queryOne(ctx, executor, `SELECT actor_user_id,idempotency_key,semantic_hash,state
+FROM sbr_simulator_transports_v1 WHERE operation_id=? AND workspace_id=? AND organisation_id=? AND canonical_abn=?
+AND schema_version=? AND credential_fingerprint=?`, transport.OperationID, transport.Key.WorkspaceID,
+		transport.Key.OrganisationID, transport.Key.CanonicalABN, transport.Key.SchemaVersion, transport.Key.CredentialFingerprint[:])
+	if queryErr != nil {
+		return queryErr
+	}
+	defer row.Close()
+	if !row.Next() {
+		return ErrNotFound
+	}
+	if scanErr := row.Scan(&storedActor, &storedIdempotency, &storedSemantic, &state); scanErr != nil {
+		return ErrRepository
+	}
+	if storedActor != actorUserID {
+		return ErrPermissionDenied
+	}
+	if storedIdempotency != transport.IdempotencyKey || !bytes.Equal(storedSemantic, transport.SemanticHash[:]) {
+		return ErrConflict
+	}
+	if state != TransportPrepared {
+		return ErrInvalidTransition
+	}
+	return nil
+}
+
+func queryOne(ctx context.Context, executor MutationEffectExecutor, query string, arguments ...any) (*sql.Rows, error) {
+	rows, err := executor.QueryContext(ctx, query, arguments...)
+	if err != nil {
+		return nil, ErrRepository
+	}
+	return rows, nil
+}
+
+func (repository *SQLCipherRepository) ReserveSimulatorDispatchWithin(ctx context.Context, executor MutationEffectExecutor,
+	transport SimulatorTransport, actorUserID, updatedAt string,
+) error {
+	if executor == nil || !validTransport(transport) || transport.State != TransportPrepared ||
+		!ids.IsCanonicalV7(actorUserID) || !validTimestamp(updatedAt) {
+		return ErrInvalid
+	}
+	if err := reserveSimulatorDispatchPrecondition(ctx, executor, transport, actorUserID); err != nil {
+		return err
+	}
+	result, err := executor.ExecContext(ctx, `UPDATE sbr_simulator_transports_v1 SET state=?,updated_at=?
+WHERE operation_id=? AND actor_user_id=? AND workspace_id=? AND organisation_id=? AND canonical_abn=? AND schema_version=?
+AND credential_fingerprint=? AND idempotency_key=? AND semantic_hash=? AND state=?`, TransportDispatching, updatedAt,
+		transport.OperationID, actorUserID, transport.Key.WorkspaceID, transport.Key.OrganisationID, transport.Key.CanonicalABN,
+		transport.Key.SchemaVersion, transport.Key.CredentialFingerprint[:], transport.IdempotencyKey,
+		transport.SemanticHash[:], TransportPrepared)
+	if err != nil || !exactlyOne(result) {
+		return ErrConflict
+	}
+	return nil
+}
+
+func (repository *SQLCipherRepository) ReserveUnlockDispatch(ctx context.Context, record HelperDispatchRecord,
+	effect func(context.Context, MutationEffectExecutor) error,
+) error {
+	if !repository.valid(ctx) || !validHelperDispatch(record) || record.State != HelperDispatching || effect == nil {
+		return ErrInvalid
+	}
+	tx, err := repository.database.BeginEncryptedTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	if err != nil {
+		return ErrRepository
+	}
+	committed := false
+	defer func() {
+		if !committed {
+			_ = tx.Rollback()
+		}
+	}()
+	existing, lookupErr := loadHelperDispatch(ctx, mutationEffectExecutor{transaction: tx}, record.Key, record.IdempotencyKey)
+	if lookupErr == nil {
+		if existing.ActorUserID != record.ActorUserID {
+			return ErrPermissionDenied
+		}
+		if existing.SemanticHash != record.SemanticHash {
+			return ErrIdempotencyConflict
+		}
+		return ErrUncertainTransport
+	}
+	if !errors.Is(lookupErr, ErrNotFound) {
+		return lookupErr
+	}
+	if err := effect(ctx, mutationEffectExecutor{transaction: tx}); err != nil {
+		return err
+	}
+	if err := repository.ReserveUnlockDispatchWithin(ctx, tx, record); err != nil {
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return ErrRepository
+	}
+	committed = true
+	return nil
+}
+
+func (repository *SQLCipherRepository) ReserveUnlockDispatchWithin(ctx context.Context, executor MutationEffectExecutor,
+	record HelperDispatchRecord,
+) error {
+	if executor == nil || !validHelperDispatch(record) || record.State != HelperDispatching {
+		return ErrInvalid
+	}
+	_, err := executor.ExecContext(ctx, `INSERT INTO sbr_helper_dispatches_v1(operation_id,actor_user_id,workspace_id,
+organisation_id,canonical_abn,schema_version,credential_fingerprint,idempotency_key,semantic_hash,state,created_at,updated_at)
+VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`, record.OperationID, record.ActorUserID, record.Key.WorkspaceID,
+		record.Key.OrganisationID, record.Key.CanonicalABN, record.Key.SchemaVersion, record.Key.CredentialFingerprint[:],
+		record.IdempotencyKey, record.SemanticHash[:], record.State, record.CreatedAt, record.UpdatedAt)
+	if err != nil {
+		return ErrConflict
+	}
+	return nil
+}
+
+func (repository *SQLCipherRepository) GetHelperDispatch(ctx context.Context, key BindingKey, idempotencyKey string) (HelperDispatchRecord, error) {
+	if !repository.valid(ctx) || !validBindingKey(key) || len(idempotencyKey) < 1 || len(idempotencyKey) > 128 {
+		return HelperDispatchRecord{}, ErrInvalid
+	}
+	return loadHelperDispatch(ctx, repository.database, key, idempotencyKey)
+}
+
+func loadHelperDispatch(ctx context.Context, executor MutationEffectExecutor, key BindingKey, idempotencyKey string) (HelperDispatchRecord, error) {
+	record := HelperDispatchRecord{Key: key, IdempotencyKey: idempotencyKey}
+	var fingerprint, semantic []byte
+	rows, err := executor.QueryContext(ctx, `SELECT operation_id,actor_user_id,credential_fingerprint,semantic_hash,state,created_at,updated_at
+FROM sbr_helper_dispatches_v1 WHERE workspace_id=? AND organisation_id=? AND canonical_abn=? AND schema_version=?
+AND credential_fingerprint=? AND idempotency_key=?`, key.WorkspaceID, key.OrganisationID, key.CanonicalABN,
+		key.SchemaVersion, key.CredentialFingerprint[:], idempotencyKey)
+	if err != nil {
+		return HelperDispatchRecord{}, ErrRepository
+	}
+	defer rows.Close()
+	if !rows.Next() {
+		return HelperDispatchRecord{}, ErrNotFound
+	}
+	if err := rows.Scan(&record.OperationID, &record.ActorUserID, &fingerprint, &semantic, &record.State,
+		&record.CreatedAt, &record.UpdatedAt); err != nil || len(fingerprint) != sha256.Size || len(semantic) != sha256.Size {
+		return HelperDispatchRecord{}, ErrRepository
+	}
+	copy(record.SemanticHash[:], semantic)
+	return record, nil
+}
+
+func (repository *SQLCipherRepository) FinishHelperDispatch(ctx context.Context, record HelperDispatchRecord,
+	next HelperDispatchState, updatedAt string,
+) error {
+	if !repository.valid(ctx) || !validHelperDispatch(record) || record.State != HelperDispatching ||
+		!validHelperDispatchTerminal(next) || !validTimestamp(updatedAt) {
+		return ErrInvalid
+	}
+	result, err := repository.database.ExecContext(ctx, `UPDATE sbr_helper_dispatches_v1 SET state=?,updated_at=?
+WHERE operation_id=? AND actor_user_id=? AND workspace_id=? AND organisation_id=? AND canonical_abn=? AND schema_version=?
+AND credential_fingerprint=? AND idempotency_key=? AND semantic_hash=? AND state=?`, next, updatedAt, record.OperationID,
+		record.ActorUserID, record.Key.WorkspaceID, record.Key.OrganisationID, record.Key.CanonicalABN, record.Key.SchemaVersion,
+		record.Key.CredentialFingerprint[:], record.IdempotencyKey, record.SemanticHash[:], HelperDispatching)
+	if err != nil || !exactlyOne(result) {
+		return ErrConflict
+	}
+	return nil
+}
+
+func (repository *SQLCipherRepository) RecoverHelperDispatchOrphans(ctx context.Context, updatedAt string) (int64, error) {
+	if !repository.valid(ctx) || !validTimestamp(updatedAt) {
+		return 0, ErrInvalid
+	}
+	result, err := repository.database.ExecContext(ctx, `UPDATE sbr_helper_dispatches_v1 SET state='UNKNOWN',updated_at=?
+WHERE state='DISPATCHING'`, updatedAt)
+	if err != nil {
+		return 0, ErrRepository
+	}
+	count, err := result.RowsAffected()
+	if err != nil || count < 0 {
+		return 0, ErrRepository
+	}
+	return count, nil
 }
 
 func (repository *SQLCipherRepository) TransitionSimulatorTransport(ctx context.Context, key BindingKey, operationID string,
@@ -873,6 +1669,129 @@ AND canonical_abn=? AND schema_version=? AND credential_fingerprint=? AND idempo
 			key.CredentialFingerprint[:], current.IdempotencyKey); err != nil {
 			return ErrRepository
 		}
+	}
+	if err := tx.Commit(); err != nil {
+		return ErrRepository
+	}
+	committed = true
+	return nil
+}
+
+// FinishSimulatorTransportWithAudit makes the terminal transport projection,
+// idempotency result, and corresponding audit event one durable decision.
+func (repository *SQLCipherRepository) FinishSimulatorTransportWithAudit(ctx context.Context, key BindingKey,
+	operationID string, caseValue SimulatorCase, resultHash *[sha256.Size]byte, updatedAt string,
+	auditRecord AuditRecord, audit func(context.Context, MutationEffectExecutor, AuditRecord) error,
+) error {
+	if !repository.valid(ctx) || !validBindingKey(key) || !ids.IsCanonicalV7(operationID) ||
+		!validTimestamp(updatedAt) || audit == nil {
+		return ErrInvalid
+	}
+	var terminal TransportState
+	switch caseValue {
+	case SimulatorCasePreDispatchFailure:
+		terminal = TransportNotStarted
+	case SimulatorCaseUncertainWrite, SimulatorCaseHelperDeath, SimulatorCaseTimeout:
+		terminal = TransportMaybeSent
+	case SimulatorCaseMalformedResponse:
+		terminal = TransportFailed
+	case SimulatorCaseAccepted:
+		terminal = TransportAccepted
+	default:
+		return ErrInvalid
+	}
+	withResult := terminal == TransportAccepted || terminal == TransportFailed
+	if withResult != (resultHash != nil) || resultHash != nil && zeroHash(*resultHash) {
+		return ErrInvalid
+	}
+	tx, err := repository.database.BeginEncryptedTx(ctx, nil)
+	if err != nil {
+		return ErrRepository
+	}
+	committed := false
+	defer func() {
+		if !committed {
+			_ = tx.Rollback()
+		}
+	}()
+	var state TransportState
+	var idempotencyKey string
+	var storedResult, pendingResult []byte
+	var pendingTerminal sql.NullString
+	if err := tx.QueryRowContext(ctx, `SELECT state,idempotency_key,result_hash,pending_terminal_state,pending_result_hash
+FROM sbr_simulator_transports_v1 WHERE operation_id=? AND workspace_id=? AND organisation_id=? AND canonical_abn=?
+AND schema_version=? AND credential_fingerprint=?`, operationID, key.WorkspaceID, key.OrganisationID, key.CanonicalABN,
+		key.SchemaVersion, key.CredentialFingerprint[:]).Scan(&state, &idempotencyKey, &storedResult, &pendingTerminal, &pendingResult); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotFound
+		}
+		return ErrRepository
+	}
+	if state == terminal {
+		if (!withResult && len(storedResult) == 0) || (withResult && bytes.Equal(storedResult, resultHash[:])) {
+			if err := tx.Commit(); err != nil {
+				return ErrRepository
+			}
+			committed = true
+			return nil
+		}
+		return ErrConflict
+	}
+	if withResult {
+		if state == TransportDispatching {
+			updated, updateErr := tx.ExecContext(ctx, `UPDATE sbr_simulator_transports_v1 SET state=?,updated_at=?
+WHERE operation_id=? AND workspace_id=? AND organisation_id=? AND canonical_abn=? AND schema_version=?
+AND credential_fingerprint=? AND state=?`, TransportResponseReceived, updatedAt, operationID, key.WorkspaceID,
+				key.OrganisationID, key.CanonicalABN, key.SchemaVersion, key.CredentialFingerprint[:], TransportDispatching)
+			if updateErr != nil || !exactlyOne(updated) {
+				return ErrConflict
+			}
+			state = TransportResponseReceived
+		}
+		if state != TransportResponseReceived {
+			return ErrInvalidTransition
+		}
+		if !pendingTerminal.Valid {
+			updated, updateErr := tx.ExecContext(ctx, `UPDATE sbr_simulator_transports_v1 SET pending_terminal_state=?,
+pending_result_hash=?,updated_at=? WHERE operation_id=? AND workspace_id=? AND organisation_id=? AND canonical_abn=?
+AND schema_version=? AND credential_fingerprint=? AND state=? AND pending_terminal_state IS NULL AND pending_result_hash IS NULL`,
+				terminal, resultHash[:], updatedAt, operationID, key.WorkspaceID, key.OrganisationID, key.CanonicalABN,
+				key.SchemaVersion, key.CredentialFingerprint[:], TransportResponseReceived)
+			if updateErr != nil || !exactlyOne(updated) {
+				return ErrConflict
+			}
+		} else if TransportState(pendingTerminal.String) != terminal || !bytes.Equal(pendingResult, resultHash[:]) {
+			return ErrConflict
+		}
+		updated, updateErr := tx.ExecContext(ctx, `UPDATE sbr_simulator_transports_v1 SET state=?,result_hash=?,
+pending_terminal_state=NULL,pending_result_hash=NULL,updated_at=? WHERE operation_id=? AND workspace_id=? AND organisation_id=?
+AND canonical_abn=? AND schema_version=? AND credential_fingerprint=? AND state=? AND pending_terminal_state=? AND pending_result_hash=?`,
+			terminal, resultHash[:], updatedAt, operationID, key.WorkspaceID, key.OrganisationID, key.CanonicalABN,
+			key.SchemaVersion, key.CredentialFingerprint[:], TransportResponseReceived, terminal, resultHash[:])
+		if updateErr != nil || !exactlyOne(updated) {
+			return ErrConflict
+		}
+		idempotency, updateErr := tx.ExecContext(ctx, `UPDATE sbr_idempotency_v1 SET result_hash=? WHERE workspace_id=?
+AND organisation_id=? AND canonical_abn=? AND schema_version=? AND credential_fingerprint=? AND idempotency_key=?
+AND result_hash IS NULL`, resultHash[:], key.WorkspaceID, key.OrganisationID, key.CanonicalABN, key.SchemaVersion,
+			key.CredentialFingerprint[:], idempotencyKey)
+		if updateErr != nil || !exactlyOne(idempotency) {
+			return ErrConflict
+		}
+	} else {
+		if !transportTransitionAllowed(state, terminal) {
+			return ErrInvalidTransition
+		}
+		updated, updateErr := tx.ExecContext(ctx, `UPDATE sbr_simulator_transports_v1 SET state=?,updated_at=?
+WHERE operation_id=? AND workspace_id=? AND organisation_id=? AND canonical_abn=? AND schema_version=?
+AND credential_fingerprint=? AND state=?`, terminal, updatedAt, operationID, key.WorkspaceID, key.OrganisationID,
+			key.CanonicalABN, key.SchemaVersion, key.CredentialFingerprint[:], state)
+		if updateErr != nil || !exactlyOne(updated) {
+			return ErrConflict
+		}
+	}
+	if err := audit(ctx, mutationEffectExecutor{transaction: tx}, auditRecord); err != nil {
+		return err
 	}
 	if err := tx.Commit(); err != nil {
 		return ErrRepository
@@ -1067,14 +1986,15 @@ func (repository *SQLCipherRepository) RetryNotStarted(ctx context.Context, key 
 	}()
 	var originalState TransportState
 	var originalSemantic []byte
-	var originalKey string
-	if err := tx.QueryRowContext(ctx, `SELECT state,semantic_hash,idempotency_key FROM sbr_simulator_transports_v1
+	var originalKey, originalActor string
+	if err := tx.QueryRowContext(ctx, `SELECT state,semantic_hash,idempotency_key,actor_user_id FROM sbr_simulator_transports_v1
 WHERE operation_id=? AND workspace_id=? AND organisation_id=? AND canonical_abn=? AND schema_version=? AND credential_fingerprint=?`,
 		originalOperationID, key.WorkspaceID, key.OrganisationID, key.CanonicalABN, key.SchemaVersion,
-		key.CredentialFingerprint[:]).Scan(&originalState, &originalSemantic, &originalKey); err != nil {
+		key.CredentialFingerprint[:]).Scan(&originalState, &originalSemantic, &originalKey, &originalActor); err != nil {
 		return ErrNotFound
 	}
-	if originalState != TransportNotStarted || !bytes.Equal(originalSemantic, retry.SemanticHash[:]) || retry.IdempotencyKey == originalKey {
+	if originalState != TransportNotStarted || originalActor != retry.ActorUserID ||
+		!bytes.Equal(originalSemantic, retry.SemanticHash[:]) || retry.IdempotencyKey == originalKey {
 		return ErrInvalidTransition
 	}
 	var existingOperation, existingKey string
@@ -1101,9 +2021,9 @@ VALUES (?,?,?,?,?,?,?,NULL,?,?)`, retry.IdempotencyKey, key.WorkspaceID, key.Org
 	if err != nil {
 		return ErrConflict
 	}
-	_, err = tx.ExecContext(ctx, `INSERT INTO sbr_simulator_transports_v1(operation_id,workspace_id,organisation_id,
+	_, err = tx.ExecContext(ctx, `INSERT INTO sbr_simulator_transports_v1(operation_id,actor_user_id,workspace_id,organisation_id,
 canonical_abn,schema_version,credential_fingerprint,idempotency_key,semantic_hash,result_hash,retry_of_operation_id,state,created_at,updated_at)
-VALUES (?,?,?,?,?,?,?,?,NULL,?,?,?,?)`, retry.OperationID, key.WorkspaceID, key.OrganisationID, key.CanonicalABN,
+VALUES (?,?,?,?,?,?,?,?,?,NULL,?,?,?,?)`, retry.OperationID, retry.ActorUserID, key.WorkspaceID, key.OrganisationID, key.CanonicalABN,
 		key.SchemaVersion, key.CredentialFingerprint[:], retry.IdempotencyKey, retry.SemanticHash[:], originalOperationID,
 		retry.State, retry.CreatedAt, retry.UpdatedAt)
 	if err != nil {
@@ -1120,10 +2040,10 @@ func (repository *SQLCipherRepository) getTransport(ctx context.Context, key Bin
 	transport := SimulatorTransport{OperationID: operationID, Key: key}
 	var fingerprint, semantic, result, pendingResult []byte
 	var pendingTerminal sql.NullString
-	err := repository.database.QueryRowContext(ctx, `SELECT credential_fingerprint,idempotency_key,semantic_hash,result_hash,
+	err := repository.database.QueryRowContext(ctx, `SELECT actor_user_id,credential_fingerprint,idempotency_key,semantic_hash,result_hash,
 state,created_at,updated_at,pending_terminal_state,pending_result_hash FROM sbr_simulator_transports_v1 WHERE operation_id=? AND workspace_id=? AND organisation_id=?
 AND canonical_abn=? AND schema_version=? AND credential_fingerprint=?`, operationID, key.WorkspaceID, key.OrganisationID,
-		key.CanonicalABN, key.SchemaVersion, key.CredentialFingerprint[:]).Scan(&fingerprint, &transport.IdempotencyKey,
+		key.CanonicalABN, key.SchemaVersion, key.CredentialFingerprint[:]).Scan(&transport.ActorUserID, &fingerprint, &transport.IdempotencyKey,
 		&semantic, &result, &transport.State, &transport.CreatedAt, &transport.UpdatedAt, &pendingTerminal, &pendingResult)
 	if errors.Is(err, sql.ErrNoRows) {
 		return SimulatorTransport{}, ErrNotFound
@@ -1160,11 +2080,14 @@ type queryRowFunc func(context.Context, string, ...any) rowScanner
 func loadTransportByIdempotency(ctx context.Context, queryRow queryRowFunc, key BindingKey, idempotencyKey string) (SimulatorTransport, error) {
 	transport := SimulatorTransport{Key: key, IdempotencyKey: idempotencyKey}
 	var fingerprint, semantic, result []byte
-	err := queryRow(ctx, `SELECT operation_id,credential_fingerprint,semantic_hash,result_hash,state,created_at,updated_at
+	err := queryRow(ctx, `SELECT operation_id,actor_user_id,credential_fingerprint,semantic_hash,result_hash,state,created_at,updated_at
 FROM sbr_simulator_transports_v1 WHERE workspace_id=? AND organisation_id=? AND canonical_abn=? AND schema_version=?
 AND credential_fingerprint=? AND idempotency_key=?`, key.WorkspaceID, key.OrganisationID, key.CanonicalABN,
-		key.SchemaVersion, key.CredentialFingerprint[:], idempotencyKey).Scan(&transport.OperationID, &fingerprint,
+		key.SchemaVersion, key.CredentialFingerprint[:], idempotencyKey).Scan(&transport.OperationID, &transport.ActorUserID, &fingerprint,
 		&semantic, &result, &transport.State, &transport.CreatedAt, &transport.UpdatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return SimulatorTransport{}, ErrNotFound
+	}
 	if err != nil || len(fingerprint) != sha256.Size || len(semantic) != sha256.Size {
 		return SimulatorTransport{}, ErrRepository
 	}
@@ -1272,10 +2195,16 @@ func validMutation(mutation Mutation) bool {
 		!zeroHash(mutation.MetadataHash) && validTimestamp(mutation.CreatedAt) && validTimestamp(mutation.UpdatedAt)
 }
 func validTransport(transport SimulatorTransport) bool {
-	return ids.IsCanonicalV7(transport.OperationID) && validBindingKey(transport.Key) && len(transport.IdempotencyKey) >= 1 &&
+	return ids.IsCanonicalV7(transport.OperationID) && ids.IsCanonicalV7(transport.ActorUserID) && validBindingKey(transport.Key) && len(transport.IdempotencyKey) >= 1 &&
 		len(transport.IdempotencyKey) <= 128 && strings.IndexByte(transport.IdempotencyKey, 0) < 0 &&
 		!zeroHash(transport.SemanticHash) && (transport.ResultHash == nil || !zeroHash(*transport.ResultHash)) &&
 		validTimestamp(transport.CreatedAt) && validTimestamp(transport.UpdatedAt)
+}
+func validHelperDispatch(record HelperDispatchRecord) bool {
+	return ids.IsCanonicalV7(record.OperationID) && ids.IsCanonicalV7(record.ActorUserID) && validBindingKey(record.Key) &&
+		len(record.IdempotencyKey) >= 1 && len(record.IdempotencyKey) <= 128 && strings.IndexByte(record.IdempotencyKey, 0) < 0 &&
+		!zeroHash(record.SemanticHash) && (record.State == HelperDispatching || validHelperDispatchTerminal(record.State)) &&
+		validTimestamp(record.CreatedAt) && validTimestamp(record.UpdatedAt)
 }
 func transportTransitionAllowed(from, to TransportState) bool {
 	switch from {

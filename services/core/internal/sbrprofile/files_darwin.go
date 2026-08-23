@@ -65,7 +65,7 @@ func AuthenticateAndStage(ctx context.Context, profilePath string, locator Resou
 	if err != nil {
 		return nil, codedError("SBR_PROFILE_UNTRUSTED")
 	}
-	signatureFile, err := openSecureContext(ctx, profilePath+".sig", 128)
+	signatureFile, err := openSecureContext(ctx, profileSignaturePath(profilePath), 128)
 	if err != nil {
 		return nil, codedError("SBR_PROFILE_UNTRUSTED")
 	}
@@ -145,6 +145,10 @@ func AuthenticateAndStage(ctx context.Context, profilePath string, locator Resou
 		if authErr := AuthenticateEVTE(parsed, registration, endpoint, component); authErr != nil {
 			return nil, authErr
 		}
+		productIDScope, scopeErr := authenticateEVTEProductIDScope(registration, endpoint)
+		if scopeErr != nil {
+			return nil, scopeErr
+		}
 		phase := resources.ReadinessPhase
 		if phase == "" {
 			phase = "PRE_CONFORMANCE"
@@ -163,6 +167,8 @@ func AuthenticateAndStage(ctx context.Context, profilePath string, locator Resou
 		if stageErr != nil {
 			return nil, stageErr
 		}
+		staged.authenticatedProductIDScope = &productIDScope
+		staged.authenticatedComponentVersion = component.Manifest.ComponentVersion
 		staged.validateFresh = func(fresh time.Time) error {
 			if _, parseErr := ParseProfile(profileFile.bytes, fresh); parseErr != nil {
 				return stableProfileError(parseErr)
@@ -193,6 +199,10 @@ func AuthenticateAndStage(ctx context.Context, profilePath string, locator Resou
 		return nil
 	}
 	return staged, nil
+}
+
+func profileSignaturePath(profilePath string) string {
+	return strings.TrimSuffix(profilePath, filepath.Ext(profilePath)) + ".sig"
 }
 
 func loadProfileBoundComponent(ctx context.Context, root string, profile ParsedProfile, component ParsedComponent) (map[string]componentResource, error) {

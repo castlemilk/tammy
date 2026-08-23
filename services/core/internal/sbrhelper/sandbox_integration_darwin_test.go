@@ -85,8 +85,8 @@ func TestProductionRenderedSandboxEndToEnd(t *testing.T) {
 		t.Fatalf("spawn-boundary revalidation before helper: changed=%t error=%v", current != contents, err)
 	}
 	now := time.Now().UTC()
-	request := Request{ProtocolVersion: ProtocolVersion, RequestID: "018bcfe5-6800-7000-8000-000000000001", Operation: OperationFixture,
-		DeadlineMillis: now.Add(10 * time.Second).UnixMilli(), Environment: EnvironmentSimulator, SimulatorCase: SimulatorAccepted}
+	request := scopedLauncherFixture(Request{ProtocolVersion: ProtocolVersion, RequestID: "018bcfe5-6800-7000-8000-000000000001", Operation: OperationFixture,
+		DeadlineMillis: now.Add(10 * time.Second).UnixMilli(), Environment: EnvironmentSimulator, SimulatorCase: SimulatorAccepted})
 	payload, err := EncodeRequest(request, now)
 	if err != nil {
 		t.Fatal(err)
@@ -214,7 +214,7 @@ func TestProductionSandboxConsumesRetainedProfileAndFixedStagedHelperPath(t *tes
 		return nil
 	}
 	now := time.Now().UTC()
-	request := Request{ProtocolVersion: ProtocolVersion, RequestID: "018bcfe5-6800-7000-8000-000000000001", Operation: OperationFixture, DeadlineMillis: now.Add(10 * time.Second).UnixMilli(), Environment: EnvironmentSimulator, SimulatorCase: SimulatorAccepted}
+	request := scopedLauncherFixture(Request{ProtocolVersion: ProtocolVersion, RequestID: "018bcfe5-6800-7000-8000-000000000001", Operation: OperationFixture, DeadlineMillis: now.Add(10 * time.Second).UnixMilli(), Environment: EnvironmentSimulator, SimulatorCase: SimulatorAccepted})
 	payload, err := EncodeRequest(request, now)
 	if err != nil {
 		t.Fatal(err)

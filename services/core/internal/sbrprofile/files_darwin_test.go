@@ -50,7 +50,7 @@ func TestAuthenticateAndStageSimulatorNeverExecutesSourceAndOwnsCleanup(t *testi
 	if _, err := openSecure(profilePath, MaxProfileBytes); err != nil {
 		t.Fatalf("profile secure open: %v", err)
 	}
-	if _, err := openSecure(profilePath+".sig", 128); err != nil {
+	if _, err := openSecure(profileSignaturePath(profilePath), 128); err != nil {
 		t.Fatalf("signature secure open: %v", err)
 	}
 	staged, err := AuthenticateAndStage(context.Background(), profilePath, testLocator{ResourceSet{HelperPath: helperPath, TrustedRuntimeBase: runtimeBase}}, testNow)
@@ -252,7 +252,7 @@ func TestCurrentEVTETrustRootFailsBeforeResourceLocationOrStaging(t *testing.T) 
 	profilePath := filepath.Join(root, "evte.json")
 	raw := []byte(`{"component_manifest_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","endpoint_profile_sha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","environment":"EVTE","expires_at":"2026-08-22T00:00:00Z","helper_sha256":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","issued_at":"2026-08-21T00:00:00Z","registration_manifest_sha256":"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd","schema_version":1,"target":"darwin/arm64"}`)
 	writePrivate(t, profilePath, raw, 0o600)
-	writePrivate(t, profilePath+".sig", []byte("not-used-currently"), 0o600)
+	writePrivate(t, profileSignaturePath(profilePath), []byte("not-used-currently"), 0o600)
 	locator := &countingLocator{}
 	_, err := AuthenticateAndStage(context.Background(), profilePath, locator, testNow)
 	if err == nil || err.Error() != "SBR_EVTE_TRUST_ROOT_UNREGISTERED" {
@@ -619,7 +619,7 @@ func writeSignedSimulatorProfile(t *testing.T, path string, helper []byte) {
 	}
 	signature := append([]byte(base64.StdEncoding.EncodeToString(ed25519.Sign(ed25519.NewKeyFromSeed(testSeed), parsed.Canonical))), '\n')
 	writePrivate(t, path, raw, 0o600)
-	writePrivate(t, path+".sig", signature, 0o600)
+	writePrivate(t, profileSignaturePath(path), signature, 0o600)
 }
 func writePrivate(t *testing.T, path string, data []byte, mode os.FileMode) {
 	t.Helper()

@@ -38,3 +38,13 @@ func (l *Launcher) Launch(ctx context.Context, profilePath string, request Reque
 	}
 	return l.launch(ctx, profilePath, request)
 }
+
+// LaunchStaged executes only the already-authenticated resource snapshot owned
+// by the caller's profile lease. It never reopens the profile source path.
+func (l *Launcher) LaunchStaged(ctx context.Context, staged *sbrprofile.StagedResources, request Request) (Response, error) {
+	defer request.ClearSecrets()
+	if l == nil || staged == nil || ctx == nil {
+		return Response{}, protocolError("LAUNCHER_INVALID")
+	}
+	return l.launchStaged(ctx, staged, request)
+}

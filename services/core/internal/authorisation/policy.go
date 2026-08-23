@@ -12,17 +12,24 @@ import (
 type Action string
 
 const (
-	ActionManageWorkspace Action = "manage_workspace"
-	ActionManageUsers     Action = "manage_users"
-	ActionTransferOwner   Action = "transfer_owner"
-	ActionManageOrg       Action = "manage_organisation"
-	ActionReadFinancial   Action = "read_financial"
-	ActionPostAccounting  Action = "post_accounting"
-	ActionManageAccounts  Action = "manage_accounts"
-	ActionPrepareTax      Action = "prepare_tax"
-	ActionLodge           Action = "lodge"
-	ActionReadAudit       Action = "read_audit"
-	ActionExportAudit     Action = "export_audit"
+	ActionManageWorkspace             Action = "manage_workspace"
+	ActionManageUsers                 Action = "manage_users"
+	ActionTransferOwner               Action = "transfer_owner"
+	ActionManageOrg                   Action = "manage_organisation"
+	ActionReadFinancial               Action = "read_financial"
+	ActionPostAccounting              Action = "post_accounting"
+	ActionManageAccounts              Action = "manage_accounts"
+	ActionPrepareTax                  Action = "prepare_tax"
+	ActionLodge                       Action = "lodge"
+	ActionReadAudit                   Action = "read_audit"
+	ActionExportAudit                 Action = "export_audit"
+	ActionInspectSBR                  Action = "inspect_sbr"
+	ActionImportSBRMachineCredential  Action = "import_sbr_machine_credential"
+	ActionUnlockSBRMachineCredential  Action = "unlock_sbr_machine_credential"
+	ActionReplaceSBRMachineCredential Action = "replace_sbr_machine_credential"
+	ActionRemoveSBRMachineCredential  Action = "remove_sbr_machine_credential"
+	ActionManageSBRProductID          Action = "manage_sbr_product_id"
+	ActionUseSBRMachineCredential     Action = "use_sbr_machine_credential"
 )
 
 var permissions = map[Action]map[tammyv1.Role]struct{}{
@@ -42,6 +49,16 @@ var permissions = map[Action]map[tammyv1.Role]struct{}{
 	ActionLodge:          roleSet(tammyv1.Role_ROLE_BUSINESS_LODGER),
 	ActionReadAudit:      roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN, tammyv1.Role_ROLE_AUDITOR),
 	ActionExportAudit:    roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN, tammyv1.Role_ROLE_AUDITOR),
+	ActionInspectSBR: roleSet(
+		tammyv1.Role_ROLE_WORKSPACE_ADMIN,
+		tammyv1.Role_ROLE_BUSINESS_LODGER,
+	),
+	ActionImportSBRMachineCredential:  roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN),
+	ActionUnlockSBRMachineCredential:  roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN),
+	ActionReplaceSBRMachineCredential: roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN),
+	ActionRemoveSBRMachineCredential:  roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN),
+	ActionManageSBRProductID:          roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN),
+	ActionUseSBRMachineCredential:     roleSet(tammyv1.Role_ROLE_BUSINESS_LODGER),
 }
 
 func roleSet(roles ...tammyv1.Role) map[tammyv1.Role]struct{} {

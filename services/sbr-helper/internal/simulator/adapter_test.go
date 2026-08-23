@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"os"
+	"reflect"
 	"testing"
 
 	"github.com/tammyapp/tammy/services/sbr-helper/internal/protocol"
@@ -107,7 +108,7 @@ func TestSimulatorCaseMappingIsStatelessAndHasNoSendPath(t *testing.T) {
 			first.Response.RedactedResult != tt.wire.RedactedResult || first.Response.StableErrorCode != tt.wire.StableErrorCode {
 			t.Fatalf("case %d selection = %#v", tt.caseID, first)
 		}
-		if first.Response.RequestID != requestID || second.Response != first.Response || second.SemanticOutcome != first.SemanticOutcome ||
+		if first.Response.RequestID != requestID || !reflect.DeepEqual(second.Response, first.Response) || second.SemanticOutcome != first.SemanticOutcome ||
 			!bytes.Equal(second.FixtureBytes, first.FixtureBytes) || !bytes.Equal(second.MalformedPayload, first.MalformedPayload) || second.FixtureSHA256 != first.FixtureSHA256 {
 			t.Fatalf("case %d replay changed semantics: first=%#v second=%#v", tt.caseID, first, second)
 		}

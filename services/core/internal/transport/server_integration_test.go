@@ -34,6 +34,22 @@ type recordingServiceRegistrar struct {
 	options int
 }
 
+type delayedServiceRegistrar struct {
+	delegate ServiceRegistrar
+	delay    time.Duration
+}
+
+func (registrar delayedServiceRegistrar) Handler(options ...connect.HandlerOption) (http.Handler, error) {
+	handler, err := registrar.delegate.Handler(options...)
+	if err != nil {
+		return nil, err
+	}
+	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		time.Sleep(registrar.delay)
+		handler.ServeHTTP(response, request)
+	}), nil
+}
+
 func (registrar *recordingServiceRegistrar) Handler(options ...connect.HandlerOption) (http.Handler, error) {
 	registrar.options = len(options)
 	return http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
@@ -173,7 +189,7 @@ func TestServerHTTPTimeoutConfiguration(t *testing.T) {
 	if got, want := server.httpServer.ReadTimeout, 5*time.Second; got != want {
 		t.Fatalf("ReadTimeout = %s, want %s", got, want)
 	}
-	if got, want := server.httpServer.WriteTimeout, 5*time.Second; got != want {
+	if got, want := server.httpServer.WriteTimeout, 60*time.Second; got != want {
 		t.Fatalf("WriteTimeout = %s, want %s", got, want)
 	}
 	if got, want := server.httpServer.IdleTimeout, 30*time.Second; got != want {
@@ -181,6 +197,70 @@ func TestServerHTTPTimeoutConfiguration(t *testing.T) {
 	}
 	if got, want := server.httpServer.MaxHeaderBytes, 16<<10; got != want {
 		t.Fatalf("MaxHeaderBytes = %d, want %d", got, want)
+	}
+}
+
+func TestServerDoesNotCorruptTLSResponseForLongRunningLocalRPC(t *testing.T) {
+	registrar := delayedServiceRegistrar{
+		delegate: testSystemRegistrar(t, buildinfo.Info{Version: "slow-test-core"}),
+		delay:    250 * time.Millisecond,
+	}
+	server, err := NewServer(
+		registrar,
+		io.Discard,
+		WithClock(func() time.Time { return serverTestNow }),
+		WithRandomSource(rand.Reader),
+	)
+	if err != nil {
+		t.Fatalf("NewServer() error = %v", err)
+	}
+	t.Cleanup(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		_ = server.Shutdown(ctx)
+	})
+	if err := server.Start(); err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+
+	ready := server.Ready()
+	httpClient := authenticatedHTTPClient(t, ready)
+	httpClient.Timeout = 3 * time.Second
+	client := tammyv1connect.NewSystemServiceClient(httpClient, serverURL(ready))
+	request := connect.NewRequest(&tammyv1.GetDiagnosticsRequest{})
+	request.Header().Set(CapabilityHeader, ready.Capability)
+	response, err := client.GetDiagnostics(context.Background(), request)
+	if err != nil {
+		t.Fatalf("GetDiagnostics() error = %v", redactCapability(err, ready.Capability))
+	}
+	if got, want := response.Msg.GetCoreVersion(), "slow-test-core"; got != want {
+		t.Fatalf("core version = %q, want %q", got, want)
+	}
+}
+
+func TestServerFiniteWriteTimeoutTerminatesResponseBeyondInjectedBound(t *testing.T) {
+	registrar := delayedServiceRegistrar{delegate: testSystemRegistrar(t, buildinfo.Info{Version: "bounded-test-core"}), delay: 150 * time.Millisecond}
+	server, err := NewServer(registrar, io.Discard, WithClock(func() time.Time { return serverTestNow }), WithRandomSource(rand.Reader))
+	if err != nil {
+		t.Fatal(err)
+	}
+	server.httpServer.WriteTimeout = 50 * time.Millisecond
+	t.Cleanup(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		_ = server.Shutdown(ctx)
+	})
+	if err := server.Start(); err != nil {
+		t.Fatal(err)
+	}
+	ready := server.Ready()
+	httpClient := authenticatedHTTPClient(t, ready)
+	httpClient.Timeout = time.Second
+	client := tammyv1connect.NewSystemServiceClient(httpClient, serverURL(ready))
+	request := connect.NewRequest(&tammyv1.GetDiagnosticsRequest{})
+	request.Header().Set(CapabilityHeader, ready.Capability)
+	if _, err := client.GetDiagnostics(context.Background(), request); err == nil {
+		t.Fatal("response beyond injected finite write timeout unexpectedly succeeded")
 	}
 }
 

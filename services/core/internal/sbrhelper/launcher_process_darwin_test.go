@@ -197,6 +197,30 @@ func TestLiveIdentityPollingStopsAtDeadline(t *testing.T) {
 	}
 }
 
+func TestLiveIdentityPollingStopsWhenChildIsZombie(t *testing.T) {
+	command := exec.Command("/usr/bin/true")
+	if err := command.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = command.Wait() }()
+	deadline := time.Now().Add(time.Second)
+	for !processExited(command.Process.Pid) && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	if !processExited(command.Process.Pid) {
+		t.Fatal("child did not enter an exited state")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	started := time.Now()
+	err := waitForExpectedLiveCodeIdentityWithSamplers(ctx, command.Process.Pid, codeIdentity{cdHash: []byte{1}}, "/helper", true,
+		func(int) (string, error) { return "", errors.New("unavailable") },
+		func(context.Context, int) (codeIdentity, error) { return codeIdentity{}, errors.New("unavailable") })
+	if err == nil || time.Since(started) > 100*time.Millisecond {
+		t.Fatalf("zombie child was not rejected promptly: elapsed=%s error=%v", time.Since(started), err)
+	}
+}
+
 func TestLiveIdentityResamplesAcrossSandboxExecTransition(t *testing.T) {
 	expected := codeIdentity{cdHash: []byte{1, 2, 3}, identifier: "helper"}
 	helperPath := "/private/runtime/sbr-helper"

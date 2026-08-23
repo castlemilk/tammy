@@ -41,6 +41,10 @@ type RegistrationService struct {
 	EnrolmentState   string   `json:"enrolment_state"`
 	ConformanceState string   `json:"conformance_state"`
 }
+type ProductIDScope struct {
+	ProductIdentifier string `json:"product_identifier"`
+	ServiceID         string `json:"service_id"`
+}
 type EVTEAccess struct {
 	State             string  `json:"state"`
 	ExternalReference *string `json:"external_reference"`
@@ -63,6 +67,7 @@ type RegistrationManifest struct {
 	SchemaVersion       int                   `json:"schema_version"`
 	Environment         string                `json:"environment"`
 	Target              string                `json:"target"`
+	ProductIDScope      ProductIDScope        `json:"product_id_scope"`
 	DSPRegistration     Approval              `json:"dsp_registration"`
 	ProductRegistration Approval              `json:"product_registration"`
 	OSFAssessment       OSFAssessment         `json:"osf_assessment"`
@@ -107,7 +112,7 @@ func endpointProtocolBytes(endpoint ParsedEndpoint) []byte {
 	return append([]byte(nil), endpoint.Canonical...)
 }
 
-var registrationKeys = []string{"schema_version", "environment", "target", "dsp_registration", "product_registration", "osf_assessment", "component", "services", "evte_access", "endpoint_profile", "review"}
+var registrationKeys = []string{"schema_version", "environment", "target", "product_id_scope", "dsp_registration", "product_registration", "osf_assessment", "component", "services", "evte_access", "endpoint_profile", "review"}
 var endpointKeys = []string{"schema_version", "environment", "profile_id", "revision", "issued_at", "expires_at", "services"}
 var hostnameLabel = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$`)
 
@@ -146,6 +151,12 @@ func validateRegistration(m RegistrationManifest) error {
 	}
 	if m.Target != "darwin/arm64" {
 		return invalid("REGISTRATION", "TARGET")
+	}
+	if !opaque(m.ProductIDScope.ProductIdentifier) {
+		return invalid("REGISTRATION", "PRODUCT_IDENTIFIER")
+	}
+	if !opaque(m.ProductIDScope.ServiceID) {
+		return invalid("REGISTRATION", "PRODUCT_SERVICE_ID")
 	}
 	if err := validateApproval(m.DSPRegistration, "DSP_REGISTRATION"); err != nil {
 		return err
@@ -191,6 +202,7 @@ func validateRegistration(m RegistrationManifest) error {
 		return invalid("REGISTRATION", "SERVICES")
 	}
 	previous := ""
+	productServiceFound := false
 	for _, service := range m.Services {
 		if !opaque(service.ServiceID) {
 			return invalid("REGISTRATION", "SERVICE_ID")
@@ -205,6 +217,9 @@ func validateRegistration(m RegistrationManifest) error {
 			return invalid("REGISTRATION", "SERVICE_ORDER")
 		}
 		previous = service.ServiceID
+		if service.ServiceID == m.ProductIDScope.ServiceID {
+			productServiceFound = true
+		}
 		if len(service.ArtefactSHA256s) < 1 || len(service.ArtefactSHA256s) > 128 || !sortedHashes(service.ArtefactSHA256s) {
 			return invalid("REGISTRATION", "ARTEFACT_HASHES")
 		}
@@ -214,6 +229,9 @@ func validateRegistration(m RegistrationManifest) error {
 		if service.EnrolmentState != "APPROVED" && service.ConformanceState != "NOT_STARTED" {
 			return invalid("REGISTRATION", "SERVICE_TRANSITION")
 		}
+	}
+	if !productServiceFound {
+		return invalid("REGISTRATION", "PRODUCT_SERVICE_MISMATCH")
 	}
 	access := m.EVTEAccess
 	if !oneOf(access.State, "NOT_REQUESTED", "REQUESTED", "APPROVED") {
@@ -504,6 +522,9 @@ func AuthenticateEVTE(profile ParsedProfile, registration ParsedRegistration, en
 	if registration.Manifest.EndpointProfile.ID != endpoint.Profile.ProfileID || registration.Manifest.EndpointProfile.Revision != endpoint.Profile.Revision || registration.Manifest.EndpointProfile.IssuedAt != endpoint.Profile.IssuedAt || registration.Manifest.EndpointProfile.ExpiresAt != endpoint.Profile.ExpiresAt || registration.Manifest.EndpointProfile.EndpointProfileSHA256 != endpoint.SHA256 {
 		return invalid("REGISTRATION", "ENDPOINT_METADATA_MISMATCH")
 	}
+	if _, err := authenticateEVTEProductIDScope(registration, endpoint); err != nil {
+		return err
+	}
 	if len(registration.Manifest.Services) != len(endpoint.Profile.Services) {
 		return invalid("REGISTRATION", "SERVICE_SET_MISMATCH")
 	}
@@ -516,6 +537,29 @@ func AuthenticateEVTE(profile ParsedProfile, registration ParsedRegistration, en
 		return codedError("SBR_EVTE_TRUST_ROOT_UNREGISTERED")
 	}
 	return nil
+}
+
+func authenticateEVTEProductIDScope(registration ParsedRegistration, endpoint ParsedEndpoint) (AuthenticatedProductIDScope, error) {
+	selected := registration.Manifest.ProductIDScope
+	if !opaque(selected.ProductIdentifier) || !opaque(selected.ServiceID) {
+		return AuthenticatedProductIDScope{}, invalid("REGISTRATION", "PRODUCT_SERVICE_MISMATCH")
+	}
+	registrationMatches := 0
+	for _, service := range registration.Manifest.Services {
+		if service.ServiceID == selected.ServiceID {
+			registrationMatches++
+		}
+	}
+	endpointMatches := 0
+	for _, service := range endpoint.Profile.Services {
+		if service.ServiceID == selected.ServiceID {
+			endpointMatches++
+		}
+	}
+	if registrationMatches != 1 || endpointMatches != 1 {
+		return AuthenticatedProductIDScope{}, invalid("REGISTRATION", "PRODUCT_SERVICE_MISMATCH")
+	}
+	return AuthenticatedProductIDScope{ProductIdentifier: selected.ProductIdentifier, ServiceID: selected.ServiceID}, nil
 }
 
 // VerifyRegistrationSignature is the bounded detached-signature primitive. It
@@ -653,7 +697,7 @@ func registrationShape(raw []byte) bool {
 	if json.Unmarshal(raw, &root) != nil {
 		return false
 	}
-	return exactRaw(root, "dsp_registration", []string{"state", "external_reference", "decision_date", "expires_at"}) && exactRaw(root, "product_registration", []string{"state", "external_reference", "decision_date", "expires_at"}) && exactRaw(root, "osf_assessment", []string{"category", "state", "external_reference", "decision_date", "revalidation_date"}) && exactRaw(root, "component", []string{"name", "version", "component_manifest_sha256", "licence_state", "target"}) && exactArrayRaw(root, "services", []string{"service_id", "taxonomy_version", "release_version", "artefact_sha256s", "enrolment_state", "conformance_state"}) && exactRaw(root, "evte_access", []string{"state", "external_reference", "issued_at", "expires_at"}) && exactRaw(root, "endpoint_profile", []string{"id", "revision", "endpoint_profile_sha256", "issued_at", "expires_at"}) && exactRaw(root, "review", []string{"reviewer_identity", "approved_at", "revalidation_date"})
+	return exactRaw(root, "product_id_scope", []string{"product_identifier", "service_id"}) && exactRaw(root, "dsp_registration", []string{"state", "external_reference", "decision_date", "expires_at"}) && exactRaw(root, "product_registration", []string{"state", "external_reference", "decision_date", "expires_at"}) && exactRaw(root, "osf_assessment", []string{"category", "state", "external_reference", "decision_date", "revalidation_date"}) && exactRaw(root, "component", []string{"name", "version", "component_manifest_sha256", "licence_state", "target"}) && exactArrayRaw(root, "services", []string{"service_id", "taxonomy_version", "release_version", "artefact_sha256s", "enrolment_state", "conformance_state"}) && exactRaw(root, "evte_access", []string{"state", "external_reference", "issued_at", "expires_at"}) && exactRaw(root, "endpoint_profile", []string{"id", "revision", "endpoint_profile_sha256", "issued_at", "expires_at"}) && exactRaw(root, "review", []string{"reviewer_identity", "approved_at", "revalidation_date"})
 }
 func endpointShape(raw []byte) bool {
 	var root map[string]json.RawMessage

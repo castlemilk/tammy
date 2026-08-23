@@ -3,15 +3,90 @@ package sbr
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
 	"errors"
 	"time"
 )
 
 var (
-	ErrRepository = errors.New("sbr: repository failure")
-	ErrInvalid    = errors.New("sbr: invalid redacted state")
+	ErrRepository            = errors.New("sbr: repository failure")
+	ErrInvalid               = errors.New("sbr: invalid redacted state")
+	ErrNotFound              = errors.New("sbr: binding not found")
+	ErrPermissionDenied      = errors.New("sbr: binding permission denied")
+	ErrConflict              = errors.New("sbr: durable state conflict")
+	ErrInvalidTransition     = errors.New("sbr: invalid state transition")
+	ErrIdempotencyConflict   = errors.New("sbr: idempotency conflict")
+	ErrUncertainTransport    = errors.New("sbr: uncertain transport outcome")
+	ErrHelperDeadlineExpired = errors.New("SBR_DEADLINE_EXPIRED")
 )
+
+type BindingKey struct {
+	WorkspaceID           string
+	OrganisationID        string
+	CanonicalABN          string
+	SchemaVersion         uint32
+	CredentialFingerprint [sha256.Size]byte
+}
+
+type MutationKind string
+
+const (
+	MutationImportCredential  MutationKind = "IMPORT_CREDENTIAL"
+	MutationReplaceCredential MutationKind = "REPLACE_CREDENTIAL"
+	MutationRemoveCredential  MutationKind = "REMOVE_CREDENTIAL"
+	MutationImportProductID   MutationKind = "IMPORT_PRODUCT_ID"
+	MutationRemoveProductID   MutationKind = "REMOVE_PRODUCT_ID"
+)
+
+type TransportState string
+
+const (
+	TransportPrepared         TransportState = "PREPARED"
+	TransportDispatching      TransportState = "DISPATCHING"
+	TransportNotStarted       TransportState = "NOT_STARTED"
+	TransportMaybeSent        TransportState = "MAYBE_SENT"
+	TransportResponseReceived TransportState = "RESPONSE_RECEIVED"
+	TransportAccepted         TransportState = "ACCEPTED"
+	TransportFailed           TransportState = "FAILED"
+	TransportUnknown          TransportState = "UNKNOWN"
+)
+
+type SimulatorCase string
+
+const (
+	SimulatorCasePreDispatchFailure SimulatorCase = "PRE_DISPATCH_FAILURE"
+	SimulatorCaseUncertainWrite     SimulatorCase = "UNCERTAIN_WRITE"
+	SimulatorCaseHelperDeath        SimulatorCase = "HELPER_DEATH"
+	SimulatorCaseTimeout            SimulatorCase = "TIMEOUT"
+	SimulatorCaseSyntacticResponse  SimulatorCase = "SYNTACTIC_RESPONSE"
+	SimulatorCaseMalformedResponse  SimulatorCase = "MALFORMED_RESPONSE"
+	SimulatorCaseAccepted           SimulatorCase = "ACCEPTED"
+)
+
+type HelperDispatchState string
+
+const (
+	HelperDispatching       HelperDispatchState = "DISPATCHING"
+	HelperDispatchCompleted HelperDispatchState = "COMPLETED"
+	HelperDispatchFailed    HelperDispatchState = "FAILED"
+	HelperDispatchUnknown   HelperDispatchState = "UNKNOWN"
+)
+
+type HelperDispatchRecord struct {
+	OperationID    string
+	ActorUserID    string
+	Key            BindingKey
+	IdempotencyKey string
+	SemanticHash   [sha256.Size]byte
+	State          HelperDispatchState
+	CreatedAt      string
+	UpdatedAt      string
+}
+
+func validHelperDispatchTerminal(state HelperDispatchState) bool {
+	return state == HelperDispatchCompleted || state == HelperDispatchFailed || state == HelperDispatchUnknown
+}
 
 // SanitizeBackupState disconnects a fixed backup copy from helper-owned
 // pending items. It operates only on caller-owned staged storage and performs
@@ -30,6 +105,7 @@ func SanitizeBackupState(ctx context.Context, executor interface {
 	for _, statement := range []string{
 		`UPDATE sbr_mutations_v1 SET mutation_state='ABORTED',pending_id=NULL WHERE mutation_state IN ('PREPARED','STAGED','CORE_COMMITTED','RECONCILE_REQUIRED','ABORT_REQUIRED','ABORTING')`,
 		`UPDATE sbr_simulator_transports_v1 SET state='UNKNOWN' WHERE state IN ('DISPATCHING','MAYBE_SENT')`,
+		`UPDATE sbr_helper_dispatches_v1 SET state='UNKNOWN' WHERE state='DISPATCHING'`,
 	} {
 		if _, err := executor.ExecContext(ctx, statement); err != nil {
 			return ErrRepository
@@ -51,6 +127,7 @@ func VerifyBackupState(ctx context.Context, executor interface {
 	for _, query := range []string{
 		`SELECT COUNT(*) FROM sbr_mutations_v1 WHERE mutation_state IN ('PREPARED','STAGED','CORE_COMMITTED','RECONCILE_REQUIRED','ABORT_REQUIRED','ABORTING') OR (mutation_state IN ('ABORTED','HELPER_COMMITTED') AND pending_id IS NOT NULL)`,
 		`SELECT COUNT(*) FROM sbr_simulator_transports_v1 WHERE state IN ('DISPATCHING','MAYBE_SENT')`,
+		`SELECT COUNT(*) FROM sbr_helper_dispatches_v1 WHERE state='DISPATCHING'`,
 	} {
 		rows, queryErr := executor.QueryContext(ctx, query)
 		if queryErr != nil {
@@ -94,16 +171,17 @@ func sbrSchemaPresent(ctx context.Context, executor interface {
 }) (bool, error) {
 	rows, err := executor.QueryContext(ctx, `SELECT COUNT(*) FROM sqlite_schema WHERE type='table' AND name IN (
 'sbr_credential_bindings_v1','sbr_authenticated_profiles_v1','sbr_readiness_transitions_v1',
-'sbr_mutations_v1','sbr_idempotency_v1','sbr_simulator_transports_v1')`)
+'sbr_mutations_v1','sbr_idempotency_v1','sbr_simulator_transports_v1','sbr_commands_v1','sbr_product_states_v1',
+'sbr_audit_events_v1','sbr_helper_dispatches_v1','sbr_pending_mutation_effects_v1')`)
 	if err != nil {
 		return false, ErrRepository
 	}
 	defer rows.Close()
 	var count int64
-	if !rows.Next() || rows.Scan(&count) != nil || rows.Next() || rows.Err() != nil || (count != 0 && count != 6) {
+	if !rows.Next() || rows.Scan(&count) != nil || rows.Next() || rows.Err() != nil || (count != 0 && count != 11) {
 		return false, ErrRepository
 	}
-	return count == 6, nil
+	return count == 11, nil
 }
 
 func validTimestamp(value string) bool {

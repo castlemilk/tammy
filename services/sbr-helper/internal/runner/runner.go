@@ -163,9 +163,13 @@ func RunOne(ctx context.Context, input io.Reader, output, lifecycle io.Writer, d
 	response := execution.response
 	if execution.timedOut {
 		response = protocol.NewErrorResponse(response.RequestID, protocol.StableErrorDeadlineExpired)
-	} else if err := session.Complete(response, deps.Clock.Now()); err != nil {
-		writeLifecycle(lifecycle, protocol.StableErrorHelperProtocol)
-		return exitError
+	}
+	bindAuthenticatedEnvelope(&response, request)
+	if !execution.timedOut {
+		if err := session.Complete(response, deps.Clock.Now()); err != nil {
+			writeLifecycle(lifecycle, protocol.StableErrorHelperProtocol)
+			return exitError
+		}
 	}
 	encoded, err := protocol.EncodeResponse(response)
 	if err != nil {
@@ -190,7 +194,20 @@ func cloneRequest(request protocol.Request) protocol.Request {
 	request.TransientPassword = bytes.Clone(request.TransientPassword)
 	request.TransientProductID = bytes.Clone(request.TransientProductID)
 	request.EndpointProfile = bytes.Clone(request.EndpointProfile)
+	request.ProfileFingerprint = bytes.Clone(request.ProfileFingerprint)
+	request.RegistrationFingerprint = bytes.Clone(request.RegistrationFingerprint)
+	request.ComponentFingerprint = bytes.Clone(request.ComponentFingerprint)
 	return request
+}
+
+func bindAuthenticatedEnvelope(response *protocol.Response, request protocol.Request) {
+	if response == nil {
+		return
+	}
+	response.ProfileFingerprint = bytes.Clone(request.ProfileFingerprint)
+	response.RegistrationFingerprint = bytes.Clone(request.RegistrationFingerprint)
+	response.ComponentFingerprint = bytes.Clone(request.ComponentFingerprint)
+	response.ComponentVersion = request.ComponentVersion
 }
 
 type executionResult struct {

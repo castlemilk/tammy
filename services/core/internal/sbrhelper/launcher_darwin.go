@@ -24,6 +24,24 @@ func (l *Launcher) launch(ctx context.Context, profilePath string, request Reque
 	now := l.now()
 	processContext, cancel := context.WithDeadline(ctx, time.UnixMilli(request.DeadlineMillis))
 	defer cancel()
+	staged, err := sbrprofile.AuthenticateAndStage(processContext, profilePath, l.locator, now)
+	if err != nil {
+		if processContext.Err() != nil {
+			return Response{}, protocolError(string(StableErrorDeadlineExpired))
+		}
+		return Response{}, err
+	}
+	defer staged.Close()
+	return l.launchStaged(processContext, staged, request)
+}
+
+func (l *Launcher) launchStaged(ctx context.Context, staged *sbrprofile.StagedResources, request Request) (Response, error) {
+	now := l.now()
+	processContext, cancel := context.WithDeadline(ctx, time.UnixMilli(request.DeadlineMillis))
+	defer cancel()
+	if err := staged.ValidateFresh(now); err != nil {
+		return Response{}, err
+	}
 	if request.EndpointProfile != nil {
 		return Response{}, protocolError("REQUEST_INVALID")
 	}
@@ -36,14 +54,6 @@ func (l *Launcher) launch(ctx context.Context, profilePath string, request Reque
 		return Response{}, err
 	}
 	zeroBytes(validationPayload)
-	staged, err := sbrprofile.AuthenticateAndStage(processContext, profilePath, l.locator, now)
-	if err != nil {
-		if processContext.Err() != nil {
-			return Response{}, protocolError(string(StableErrorDeadlineExpired))
-		}
-		return Response{}, err
-	}
-	defer staged.Close()
 	if staged.Profile.Profile.Environment == "SIMULATOR" {
 		if request.Environment != EnvironmentSimulator {
 			return Response{}, protocolError("REQUEST_INVALID")

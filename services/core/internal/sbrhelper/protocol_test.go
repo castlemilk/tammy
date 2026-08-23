@@ -218,6 +218,7 @@ func TestProtocolCoreNumericConstantsAreLocked(t *testing.T) {
 		requestFieldOpaqueScope, requestFieldOperationID, requestFieldMutationKind, requestFieldSelectedPath,
 		requestFieldBookmark, requestFieldPassword, requestFieldProductID, requestFieldProductScope,
 		requestFieldServiceID, requestFieldEndpointProfile, requestFieldSimulatorCase,
+		requestFieldProfileFingerprint, requestFieldRegistrationFingerprint, requestFieldComponentFingerprint, requestFieldComponentVersion,
 	}
 	for index, field := range requestFields {
 		if field != protowire.Number(index+1) {
@@ -247,7 +248,11 @@ func TestProtocolCoreNumericConstantsAreLocked(t *testing.T) {
 func TestProtocolCoreResponseFieldNumbersAreLocked(t *testing.T) {
 	fields := []protowire.Number{
 		responseFieldRequestID, responseFieldOutcome, responseFieldRedactedResult,
-		responseFieldStableErrorCode, responseFieldPendingItemID,
+		responseFieldStableErrorCode, responseFieldPendingItemID, responseFieldCanonicalABN,
+		responseFieldCredentialFingerprint, responseFieldCredentialCreatedMillis, responseFieldCredentialExpiresMillis,
+		responseFieldComponentVersion, responseFieldProfileFingerprint, responseFieldRegistrationFingerprint,
+		responseFieldComponentFingerprint, responseFieldProductState, responseFieldProductFingerprint,
+		responseFieldSimulatorCase, responseFieldSimulatorState,
 	}
 	for index, field := range fields {
 		if want := protowire.Number(index + 1); field != want {
@@ -255,14 +260,38 @@ func TestProtocolCoreResponseFieldNumbersAreLocked(t *testing.T) {
 		}
 	}
 	responseType := reflect.TypeOf(Response{})
-	wantNames := []string{"RequestID", "Outcome", "RedactedResult", "StableErrorCode", "PendingItemID"}
+	wantNames := []string{"RequestID", "Outcome", "RedactedResult", "StableErrorCode", "PendingItemID", "CanonicalABN",
+		"CredentialFingerprint", "CredentialCreatedMillis", "CredentialExpiresMillis", "ComponentVersion",
+		"ProfileFingerprint", "RegistrationFingerprint", "ComponentFingerprint", "ProductState", "ProductFingerprint",
+		"SimulatorCase", "SimulatorState"}
 	if responseType.NumField() != len(wantNames) {
-		t.Fatalf("response fields = %d, want exact five-field response", responseType.NumField())
+		t.Fatalf("response fields = %d, want exact redacted response", responseType.NumField())
 	}
 	for index, want := range wantNames {
 		if got := responseType.Field(index).Name; got != want {
 			t.Fatalf("response field %d = %s, want %s", index, got, want)
 		}
+	}
+}
+
+func TestProtocolCoreRedactedCredentialProductAndComponentMetadataRoundTripsCanonically(t *testing.T) {
+	response := Response{RequestID: protocolTestRequestID, Outcome: OutcomeOK, RedactedResult: ResultReady,
+		CanonicalABN: "51824753556", CredentialFingerprint: bytes.Repeat([]byte{0x31}, 32),
+		CredentialCreatedMillis: protocolTestNow.Add(-time.Hour).UnixMilli(), CredentialExpiresMillis: protocolTestNow.Add(time.Hour).UnixMilli(),
+		ComponentVersion: "simulator-v1", ProfileFingerprint: bytes.Repeat([]byte{0x32}, 32),
+		RegistrationFingerprint: bytes.Repeat([]byte{0x33}, 32), ComponentFingerprint: bytes.Repeat([]byte{0x34}, 32),
+		ProductState: ProductPresent, ProductFingerprint: bytes.Repeat([]byte{0x35}, 32)}
+	encoded, err := EncodeResponse(response)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := DecodeResponse(encoded)
+	if err != nil || !reflect.DeepEqual(decoded, response) {
+		t.Fatalf("round trip = %+v, %v", decoded, err)
+	}
+	response.ProductFingerprint = make([]byte, 32)
+	if _, err := EncodeResponse(response); err == nil {
+		t.Fatal("zero Product fingerprint accepted")
 	}
 }
 
@@ -496,7 +525,6 @@ func TestProtocolCoreErrorCodesAreClosedAndMapped(t *testing.T) {
 
 func TestProtocolCoreResponseRepresentsFixtureRecovery(t *testing.T) {
 	request := coreBaseRequest(OperationFixture)
-	request.WorkspaceID, request.OrganisationID, request.CanonicalABN, request.OpaqueScope = "", "", "", nil
 	request.SimulatorCase = SimulatorAccepted
 	session := &Session{}
 	if err := session.Begin(request, protocolTestNow); err != nil {
@@ -510,7 +538,6 @@ func TestProtocolCoreResponseRepresentsFixtureRecovery(t *testing.T) {
 
 func TestProtocolCoreResponseRepresentsFixtureNotStarted(t *testing.T) {
 	request := coreBaseRequest(OperationFixture)
-	request.WorkspaceID, request.OrganisationID, request.CanonicalABN, request.OpaqueScope = "", "", "", nil
 	request.SimulatorCase = SimulatorNotStarted
 	session := &Session{}
 	if err := session.Begin(request, protocolTestNow); err != nil {
@@ -519,6 +546,33 @@ func TestProtocolCoreResponseRepresentsFixtureNotStarted(t *testing.T) {
 	response := Response{RequestID: protocolTestRequestID, Outcome: OutcomeOK, RedactedResult: ResultNotStarted}
 	if err := session.Complete(response, protocolTestNow); err != nil {
 		t.Fatalf("fixture NOT_STARTED response: %v", err)
+	}
+}
+
+func TestProtocolCoreUnlockPasswordAndPendingReconcile(t *testing.T) {
+	unlock := coreBaseRequest(OperationUnlock)
+	unlock.TransientPassword = []byte("transient-unlock-password")
+	encoded, err := EncodeRequest(unlock, protocolTestNow)
+	if err != nil {
+		t.Fatalf("encode unlock: %v", err)
+	}
+	decoded, err := DecodeRequest(encoded, protocolTestNow)
+	clear(encoded)
+	if err != nil || !bytes.Equal(decoded.TransientPassword, unlock.TransientPassword) {
+		t.Fatalf("decode unlock = %#v, %v", decoded, err)
+	}
+	decoded.ClearSecrets()
+
+	reconcile := coreBaseRequest(OperationReconcileMutation)
+	reconcile.OperationID, reconcile.MutationKind = protocolTestOperationID, MutationReplaceCredential
+	session := &Session{}
+	if err := session.Begin(reconcile, protocolTestNow); err != nil {
+		t.Fatal(err)
+	}
+	response := Response{RequestID: protocolTestRequestID, Outcome: OutcomePending,
+		RedactedResult: ResultRecoveryRequired, PendingItemID: protocolTestPendingID}
+	if err := session.Complete(response, protocolTestNow); err != nil {
+		t.Fatalf("pending reconcile response: %v", err)
 	}
 }
 
@@ -676,6 +730,8 @@ func coreBaseRequest(operation Operation) Request {
 		DeadlineMillis: protocolTestNow.Add(time.Minute).UnixMilli(), Environment: EnvironmentSimulator,
 		WorkspaceID: protocolTestWorkspaceID, OrganisationID: protocolTestOrgID,
 		CanonicalABN: "51824753556", OpaqueScope: bytes.Repeat([]byte{0x5a}, 32),
+		ProfileFingerprint: bytes.Repeat([]byte{0x61}, 32), RegistrationFingerprint: bytes.Repeat([]byte{0x62}, 32),
+		ComponentFingerprint: bytes.Repeat([]byte{0x63}, 32), ComponentVersion: "simulator-v1",
 	}
 }
 

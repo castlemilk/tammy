@@ -401,12 +401,18 @@ func encodeFrame(t *testing.T, request protocol.Request, now time.Time) []byte {
 
 func fixtureRequest(now time.Time, caseID protocol.SimulatorCase) protocol.Request {
 	return protocol.Request{ProtocolVersion: protocol.ProtocolVersion, RequestID: runnerRequestID, Operation: protocol.OperationFixture,
-		DeadlineMillis: now.Add(time.Minute).UnixMilli(), Environment: protocol.EnvironmentSimulator, SimulatorCase: caseID}
+		DeadlineMillis: now.Add(time.Minute).UnixMilli(), Environment: protocol.EnvironmentSimulator, SimulatorCase: caseID,
+		WorkspaceID: "018bcfe5-6800-7000-8000-000000000002", OrganisationID: "018bcfe5-6800-7000-8000-000000000003",
+		CanonicalABN: "51824753556", OpaqueScope: bytes.Repeat([]byte{0x55}, 32),
+		ProfileFingerprint: bytes.Repeat([]byte{0x61}, 32), RegistrationFingerprint: bytes.Repeat([]byte{0x62}, 32),
+		ComponentFingerprint: bytes.Repeat([]byte{0x63}, 32), ComponentVersion: "simulator-v1"}
 }
 
 func scopedRequest(now time.Time, operation protocol.Operation, environment protocol.Environment) protocol.Request {
 	return protocol.Request{ProtocolVersion: protocol.ProtocolVersion, RequestID: runnerRequestID, Operation: operation,
 		DeadlineMillis: now.Add(time.Minute).UnixMilli(), Environment: environment,
 		WorkspaceID: "018bcfe5-6800-7000-8000-000000000002", OrganisationID: "018bcfe5-6800-7000-8000-000000000003",
-		CanonicalABN: "51824753556", OpaqueScope: bytes.Repeat([]byte{0x55}, 32)}
+		CanonicalABN: "51824753556", OpaqueScope: bytes.Repeat([]byte{0x55}, 32),
+		ProfileFingerprint: bytes.Repeat([]byte{0x61}, 32), RegistrationFingerprint: bytes.Repeat([]byte{0x62}, 32),
+		ComponentFingerprint: bytes.Repeat([]byte{0x63}, 32), ComponentVersion: "simulator-v1"}
 }

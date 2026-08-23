@@ -13,6 +13,9 @@ import (
 func (l *Launcher) launch(context.Context, string, Request) (Response, error) {
 	return Response{}, protocolError("UNSUPPORTED_SBR_TARGET:" + runtime.GOOS + "/" + runtime.GOARCH)
 }
+func (l *Launcher) launchStaged(context.Context, *sbrprofile.StagedResources, Request) (Response, error) {
+	return Response{}, protocolError("UNSUPPORTED_SBR_TARGET:" + runtime.GOOS + "/" + runtime.GOARCH)
+}
 func runSandboxedProcess(context.Context, string, []string, []byte, []*os.File, func() error, childVerifier) ([]byte, error) {
 	return nil, protocolError("UNSUPPORTED_SBR_TARGET")
 }

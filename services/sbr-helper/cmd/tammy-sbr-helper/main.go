@@ -11,23 +11,14 @@ import (
 	"time"
 
 	"github.com/tammyapp/tammy/services/sbr-helper/internal/evte"
-	"github.com/tammyapp/tammy/services/sbr-helper/internal/protocol"
 	"github.com/tammyapp/tammy/services/sbr-helper/internal/runner"
 	"github.com/tammyapp/tammy/services/sbr-helper/internal/simulator"
+	"github.com/tammyapp/tammy/services/sbr-helper/internal/vault"
 )
 
 type systemClock struct{}
 
 func (systemClock) Now() time.Time { return time.Now() }
-
-type unavailableCredentialSigner struct{}
-
-func (unavailableCredentialSigner) Execute(ctx context.Context, request protocol.Request) protocol.Response {
-	if ctx.Err() != nil {
-		return protocol.NewErrorResponse(request.RequestID, protocol.StableErrorHelperUnavailable)
-	}
-	return protocol.NewErrorResponse(request.RequestID, protocol.StableErrorSecureStoreUnavailable)
-}
 
 func main() {
 	os.Exit(run())
@@ -50,13 +41,17 @@ func run() (exitCode int) {
 		return 1
 	}
 	defer monitor.Close()
-	return runWith(os.Stdin, os.Stdout, os.Stderr, signals, monitor, runner.Dependencies{
+	return runWith(os.Stdin, os.Stdout, os.Stderr, signals, monitor, helperDependencies())
+}
+
+func helperDependencies() runner.Dependencies {
+	return runner.Dependencies{
 		Clock:            systemClock{},
 		RandomSource:     rand.Reader,
 		Dialer:           simulator.DenyDialer{},
-		CredentialSigner: unavailableCredentialSigner{},
+		CredentialSigner: vault.NewDevelopmentSyntheticSigner(),
 		ComponentClient:  evte.Adapter{},
-	})
+	}
 }
 
 type parentLifetimeMonitor interface {

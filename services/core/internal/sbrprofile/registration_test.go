@@ -34,6 +34,106 @@ func TestCommittedEVTEExamplesParseButCannotBecomeRunnable(t *testing.T) {
 	}
 }
 
+func TestRegistrationParsesExactProductIDScope(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join(repositoryRoot(t), "docs/development/sbr-registration-manifest.example.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	parsed, err := ParseRegistrationManifest(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if parsed.Manifest.ProductIDScope.ProductIdentifier != "placeholder.product.invalid" || parsed.Manifest.ProductIDScope.ServiceID != "placeholder.service.invalid" {
+		t.Fatalf("product scope=%+v", parsed.Manifest.ProductIDScope)
+	}
+}
+
+func TestRegistrationRejectsInvalidProductIDScope(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join(repositoryRoot(t), "docs/development/sbr-registration-manifest.example.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	withScope := string(raw)
+	for _, testCase := range []struct {
+		name string
+		raw  string
+	}{
+		{name: "missing", raw: strings.Replace(withScope, `  "product_id_scope": {
+    "product_identifier": "placeholder.product.invalid",
+    "service_id": "placeholder.service.invalid"
+  },
+`, "", 1)},
+		{name: "empty product", raw: strings.Replace(withScope, "placeholder.product.invalid", "", 1)},
+		{name: "oversized product", raw: strings.Replace(withScope, "placeholder.product.invalid", strings.Repeat("p", 129), 1)},
+		{name: "noncanonical product", raw: strings.Replace(withScope, "placeholder.product.invalid", " product", 1)},
+		{name: "empty service", raw: strings.Replace(withScope, "placeholder.service.invalid", "", 1)},
+		{name: "unknown service", raw: strings.Replace(withScope, `"service_id": "placeholder.service.invalid"`, `"service_id": "other.service.invalid"`, 1)},
+		{name: "duplicate product field", raw: strings.Replace(withScope, `"product_identifier": "placeholder.product.invalid",`, `"product_identifier": "placeholder.product.invalid", "product_identifier": "other.product.invalid",`, 1)},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			if _, parseErr := ParseRegistrationManifest([]byte(testCase.raw)); parseErr == nil {
+				t.Fatal("invalid product ID scope parsed")
+			}
+		})
+	}
+}
+
+func TestAuthenticatedProductIDScopeCrossBindsRegistrationAndEndpointService(t *testing.T) {
+	registration := ParsedRegistration{Manifest: RegistrationManifest{
+		ProductIDScope: ProductIDScope{ProductIdentifier: "product.evte.invalid", ServiceID: "service.a.invalid"},
+		Services:       []RegistrationService{{ServiceID: "service.a.invalid"}},
+	}}
+	endpoint := ParsedEndpoint{Profile: EndpointProfile{Services: []EndpointService{{ServiceID: "service.a.invalid"}}}}
+
+	scope, err := authenticateEVTEProductIDScope(registration, endpoint)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if scope.ProductIdentifier != "product.evte.invalid" || scope.ServiceID != "service.a.invalid" {
+		t.Fatalf("scope=%+v", scope)
+	}
+
+	for _, testCase := range []struct {
+		name         string
+		registration ParsedRegistration
+		endpoint     ParsedEndpoint
+	}{
+		{name: "missing registration service", registration: ParsedRegistration{Manifest: RegistrationManifest{ProductIDScope: registration.Manifest.ProductIDScope}}, endpoint: endpoint},
+		{name: "missing endpoint service", registration: registration, endpoint: ParsedEndpoint{Profile: EndpointProfile{Services: []EndpointService{{ServiceID: "service.b.invalid"}}}}},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			if _, scopeErr := authenticateEVTEProductIDScope(testCase.registration, testCase.endpoint); scopeErr == nil || scopeErr.Error() != "SBR_REGISTRATION_INVALID:PRODUCT_SERVICE_MISMATCH" {
+				t.Fatalf("error=%v", scopeErr)
+			}
+		})
+	}
+}
+
+func TestStagedResourcesExposeOnlyAuthenticatedProductIDScope(t *testing.T) {
+	scope := AuthenticatedProductIDScope{ProductIdentifier: "product.evte.invalid", ServiceID: "service.a.invalid"}
+	simulator := &StagedResources{Profile: ParsedProfile{Profile: Profile{Environment: "SIMULATOR"}}, authenticatedProductIDScope: &scope}
+	if _, ok := simulator.AuthenticatedProductIDScope(); ok {
+		t.Fatal("simulator exposed a Product ID scope")
+	}
+	evte := &StagedResources{Profile: ParsedProfile{Profile: Profile{Environment: "EVTE"}}, authenticatedProductIDScope: &scope,
+		authenticatedComponentVersion: "component-v1"}
+	got, ok := evte.AuthenticatedProductIDScope()
+	if !ok || got != scope {
+		t.Fatalf("scope=%+v ok=%v", got, ok)
+	}
+	got.ProductIdentifier = "mutated"
+	again, ok := evte.AuthenticatedProductIDScope()
+	if !ok || again != scope {
+		t.Fatalf("snapshot was mutable: scope=%+v ok=%v", again, ok)
+	}
+	if componentVersion, ok := evte.AuthenticatedComponentVersion(); !ok || componentVersion != "component-v1" {
+		t.Fatalf("authenticated component version = %q, %v", componentVersion, ok)
+	}
+	if _, ok := simulator.AuthenticatedComponentVersion(); ok {
+		t.Fatal("simulator exposed an EVTE component version")
+	}
+}
+
 func TestCrossBoundEVTEFailsClosedAtCodeOwnedUnregisteredTrustRoot(t *testing.T) {
 	root := repositoryRoot(t)
 	componentRaw, _ := os.ReadFile(filepath.Join(root, "docs/development/sbr-component-manifest.example.json"))

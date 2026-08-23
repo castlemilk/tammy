@@ -37,9 +37,13 @@ const (
 const (
 	localAPIReadHeaderTimeout = 2 * time.Second
 	localAPIReadTimeout       = 5 * time.Second
-	localAPIWriteTimeout      = 5 * time.Second
-	localAPIIdleTimeout       = 30 * time.Second
-	localAPIMaxHeaderBytes    = 16 << 10
+	// The longest explicitly bounded local operation is the 30-second SBR helper
+	// request. Keep the transport write budget finite with an equal additional
+	// window for response encoding and loopback TLS delivery.
+	localAPIMaxRPCDuration = 30 * time.Second
+	localAPIWriteTimeout   = 2 * localAPIMaxRPCDuration
+	localAPIIdleTimeout    = 30 * time.Second
+	localAPIMaxHeaderBytes = 16 << 10
 
 	// Foundation RPCs are unary. The outer limit allows one maximum-sized
 	// protobuf message plus the five-byte prefix used by framed Connect

@@ -63,6 +63,46 @@ enum AuditEventType {
 
   // AUDIT_EVENT_TYPE_WORKSPACE_RESTORED records one completed generation-changing restore.
   AUDIT_EVENT_TYPE_WORKSPACE_RESTORED = 16;
+
+  // AUDIT_EVENT_TYPE_SBR_CHANGED records one redacted SBR readiness or helper lifecycle event.
+  AUDIT_EVENT_TYPE_SBR_CHANGED = 17;
+}
+
+// SbrAuditAction is the closed redacted SBR audit lifecycle.
+enum SbrAuditAction {
+  SBR_AUDIT_ACTION_UNSPECIFIED = 0;
+  SBR_AUDIT_ACTION_CREDENTIAL_IMPORTED = 1;
+  SBR_AUDIT_ACTION_CREDENTIAL_UNLOCKED = 2;
+  SBR_AUDIT_ACTION_CREDENTIAL_USED = 3;
+  SBR_AUDIT_ACTION_CREDENTIAL_FAILED = 4;
+  SBR_AUDIT_ACTION_CREDENTIAL_EXPIRED = 5;
+  SBR_AUDIT_ACTION_CREDENTIAL_REPLACED = 6;
+  SBR_AUDIT_ACTION_CREDENTIAL_REMOVED = 7;
+  SBR_AUDIT_ACTION_CREDENTIAL_SUSPECTED_COMPROMISE = 8;
+  SBR_AUDIT_ACTION_PRODUCT_ID_CHANGED = 9;
+  SBR_AUDIT_ACTION_PROFILE_ACCEPTED = 10;
+  SBR_AUDIT_ACTION_PROFILE_REJECTED = 11;
+  SBR_AUDIT_ACTION_HELPER_FIXTURE_PREPARED = 12;
+  SBR_AUDIT_ACTION_HELPER_FIXTURE_DISPATCHING = 13;
+  SBR_AUDIT_ACTION_HELPER_FIXTURE_COMPLETED = 14;
+  SBR_AUDIT_ACTION_HELPER_FIXTURE_UNKNOWN = 15;
+}
+
+// SbrAuditEvent contains fingerprints and closed codes only. It never retains
+// credential paths, passwords, Product IDs, endpoints, ABNs, or secret bytes.
+message SbrAuditEvent {
+  SbrAuditAction action = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  optional bytes credential_fingerprint = 2 [(buf.validate.field).bytes.len = 32];
+  optional bytes profile_fingerprint = 3 [(buf.validate.field).bytes.len = 32];
+  optional bytes component_fingerprint = 4 [(buf.validate.field).bytes.len = 32];
+  string status_code = 5 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 96
+    pattern: "^[A-Z][A-Z0-9_]*$"
+  }];
 }
 
 // WorkspaceStateChangedEvent is the typed payload for secure workspace state changes.
@@ -378,5 +418,8 @@ message AuditEventPayload {
 
     // workspace_restored records one generation-changing restore.
     WorkspaceRestoredEvent workspace_restored = 16;
+
+    // sbr_changed records one redacted local SBR readiness transition.
+    SbrAuditEvent sbr_changed = 17;
   }
 }

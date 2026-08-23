@@ -61,6 +61,7 @@ var (
 		tammyv1.AuditEventType_AUDIT_EVENT_TYPE_EVIDENCE_EXPORT_CHANGED:     {field: "evidence_export_changed", message: "tammy.v1.EvidenceExportChangedEvent"},
 		tammyv1.AuditEventType_AUDIT_EVENT_TYPE_SIGNING_KEY_ROTATED:         {field: "signing_key_rotated", message: "tammy.v1.SigningKeyRotatedEvent"},
 		tammyv1.AuditEventType_AUDIT_EVENT_TYPE_WORKSPACE_RESTORED:          {field: "workspace_restored", message: "tammy.v1.WorkspaceRestoredEvent"},
+		tammyv1.AuditEventType_AUDIT_EVENT_TYPE_SBR_CHANGED:                 {field: "sbr_changed", message: "tammy.v1.SbrAuditEvent"},
 	}
 )
 

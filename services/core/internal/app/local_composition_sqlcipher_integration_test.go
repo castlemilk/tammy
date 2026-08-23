@@ -132,6 +132,9 @@ func TestLocalCompositionCreatesConfirmsAndAuthenticatesRealWorkspace(t *testing
 		"sbr_mutations_v1",
 		"sbr_idempotency_v1",
 		"sbr_simulator_transports_v1",
+		"sbr_commands_v1",
+		"sbr_product_states_v1",
+		"sbr_audit_events_v1",
 	} {
 		var count int
 		if err := migrationCapture.database.QueryRowContext(context.Background(),

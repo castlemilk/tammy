@@ -287,7 +287,7 @@ func waitForExpectedLiveCodeIdentityWithSamplers(ctx context.Context, pid int, e
 			if !(allowInitialSandbox && initialSandbox) {
 				return errors.New("wrong process executable")
 			}
-		} else if killErr := unix.Kill(pid, 0); errors.Is(killErr, unix.ESRCH) {
+		} else if processExited(pid) {
 			return errors.New("process exited before authentication")
 		}
 		select {
@@ -296,6 +296,19 @@ func waitForExpectedLiveCodeIdentityWithSamplers(ctx context.Context, pid int, e
 		case <-ticker.C:
 		}
 	}
+}
+
+func processExited(pid int) bool {
+	if pid <= 0 {
+		return true
+	}
+	if killErr := unix.Kill(pid, 0); errors.Is(killErr, unix.ESRCH) {
+		return true
+	}
+	process, err := unix.SysctlKinfoProc("kern.proc.pid", pid)
+	// Darwin's process state 5 is SZOMB. kill(pid, 0) deliberately reports a
+	// zombie as present, so checking only ESRCH can otherwise spin to deadline.
+	return err != nil || process == nil || process.Proc.P_stat == 5
 }
 
 func equalCodeIdentity(left, right codeIdentity) bool {

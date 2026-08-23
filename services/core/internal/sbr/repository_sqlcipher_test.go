@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	tammyv1 "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1"
 	"github.com/tammyapp/tammy/services/core/internal/storage/sqlcipher"
 )
 
@@ -113,9 +114,7 @@ func TestMutationReconciliationConvergesAtEveryCrashPoint(t *testing.T) {
 				operationID := operationFor(kind, crash)
 				mutation := Mutation{OperationID: operationID, Key: key, Kind: kind, State: MutationPrepared,
 					MetadataHash: digest(0x31), CreatedAt: testTime, UpdatedAt: testTime}
-				if err := repository.PrepareMutation(ctx, mutation); err != nil {
-					t.Fatal(err)
-				}
+				command := prepareTestCommandMutation(t, repository, mutation)
 				pendingID := "018f0000-0000-7000-8000-000000000741"
 				actualKey := key
 				if crash != "before_stage" {
@@ -130,20 +129,18 @@ func TestMutationReconciliationConvergesAtEveryCrashPoint(t *testing.T) {
 					}
 				}
 				if crash == "after_sql_commit" || crash == "after_helper_commit" {
-					commit := MutationCommit{Audit: func(context.Context, MutationEffectExecutor) error { return nil }}
-					switch kind {
-					case MutationImportCredential:
-						commit.NewBinding = testBinding(actualKey, "simulator-import")
-					case MutationReplaceCredential:
-						replacement := withFingerprint(key, digest(0x92))
-						commit.NewBinding = testBinding(replacement, "simulator-replace")
+					staged, err := repository.GetMutation(ctx, key, operationID)
+					if err != nil {
+						t.Fatal(err)
 					}
+					commit := testMutationCommit(staged, command)
 					if err := repository.CommitMutation(ctx, key, operationID, commit); err != nil {
 						t.Fatal(err)
 					}
 				}
 				if crash == "after_helper_commit" {
-					if err := repository.MarkMutationHelperCommitted(ctx, actualKey, operationID, testTime); err != nil {
+					if err := repository.FinalizeMutation(ctx, actualKey, operationID, testTime,
+						func(context.Context, MutationEffectExecutor, AuditRecord) error { return nil }); err != nil {
 						t.Fatal(err)
 					}
 				}
@@ -179,7 +176,19 @@ func TestMutationReconciliationConvergesAtEveryCrashPoint(t *testing.T) {
 				if stored.State == MutationHelperCommitted && stored.PendingID != "" {
 					t.Fatalf("committed mutation retained helper pending authority %q", stored.PendingID)
 				}
-				if crash == "after_sql_commit" || crash == "after_helper_commit" {
+				if crash == "after_sql_commit" {
+					switch kind {
+					case MutationImportCredential:
+						if _, err := repository.GetBinding(ctx, actualKey); !errors.Is(err, ErrNotFound) {
+							t.Fatalf("import visible before helper ack: %v", err)
+						}
+					default:
+						if binding, err := repository.GetBinding(ctx, key); err != nil || binding.State != BindingActive {
+							t.Fatalf("old binding before helper ack=%#v err=%v", binding, err)
+						}
+					}
+				}
+				if crash == "after_helper_commit" {
 					switch kind {
 					case MutationImportCredential:
 						if binding, err := repository.GetBinding(ctx, actualKey); err != nil || binding.State != BindingActive {
@@ -285,9 +294,7 @@ func TestCommitMutationAtomicallyAppliesBindingAndAuditEffects(t *testing.T) {
 	operationID := "018f0000-0000-7000-8000-000000000735"
 	mutation := Mutation{OperationID: operationID, Key: oldKey, Kind: MutationReplaceCredential,
 		State: MutationPrepared, MetadataHash: digest(0x36), CreatedAt: testTime, UpdatedAt: testTime}
-	if err := repository.PrepareMutation(ctx, mutation); err != nil {
-		t.Fatal(err)
-	}
+	command := prepareTestCommandMutation(t, repository, mutation)
 	if err := repository.MarkMutationStaged(ctx, oldKey, operationID, "018f0000-0000-7000-8000-000000000736", testTime); err != nil {
 		t.Fatal(err)
 	}
@@ -298,18 +305,22 @@ func TestCommitMutationAtomicallyAppliesBindingAndAuditEffects(t *testing.T) {
 		RegistrationFingerprint: digest(0x3a), ComponentFingerprint: digest(0x3b), Conformance: ConformanceSimulator}
 	readiness := ReadinessTransition{TransitionID: "018f0000-0000-7000-8000-000000000737", Key: newKey,
 		State: ReadinessReadyForSimulator, ReasonCode: "ATOMIC_REPLACEMENT"}
+	completion := CommandCompletion{Scope: command.Scope, UpdatedAt: testTime}
+	auditRecord := AuditRecord{Action: AuditCredentialReplaced, StatusCode: "ATOMIC_REPLACEMENT"}
 	if _, err := database.ExecContext(ctx, `CREATE TABLE sbr_audit_probe(operation_id TEXT PRIMARY KEY)`); err != nil {
 		t.Fatal(err)
 	}
 	wrongProfile := profile
 	wrongProfile.Key = oldKey
 	if err := repository.CommitMutation(ctx, oldKey, operationID, MutationCommit{NewBinding: &newBinding, Profile: &wrongProfile,
-		Audit: func(context.Context, MutationEffectExecutor) error { return nil }}); !errors.Is(err, ErrInvalid) {
+		Command: &completion, CompletionAudit: auditRecord,
+		Decision: func(context.Context, MutationEffectExecutor) error { return nil }}); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("CommitMutation() cross-binding evidence error = %v, want ErrInvalid", err)
 	}
 	injected := errors.New("audit injection")
 	if err := repository.CommitMutation(ctx, oldKey, operationID, MutationCommit{NewBinding: &newBinding, Profile: &profile, Readiness: &readiness,
-		Audit: func(ctx context.Context, tx MutationEffectExecutor) error {
+		Command: &completion, CompletionAudit: auditRecord,
+		Decision: func(ctx context.Context, tx MutationEffectExecutor) error {
 			if _, err := tx.ExecContext(ctx, `INSERT INTO sbr_audit_probe(operation_id) VALUES (?)`, operationID); err != nil {
 				return err
 			}
@@ -334,10 +345,21 @@ func TestCommitMutationAtomicallyAppliesBindingAndAuditEffects(t *testing.T) {
 		}
 	}
 	if err := repository.CommitMutation(ctx, oldKey, operationID, MutationCommit{NewBinding: &newBinding, Profile: &profile, Readiness: &readiness,
-		Audit: func(ctx context.Context, tx MutationEffectExecutor) error {
+		Command: &completion, CompletionAudit: auditRecord,
+		Decision: func(ctx context.Context, tx MutationEffectExecutor) error {
 			_, err := tx.ExecContext(ctx, `INSERT INTO sbr_audit_probe(operation_id) VALUES (?)`, operationID)
 			return err
 		}}); err != nil {
+		t.Fatal(err)
+	}
+	if oldBinding, err := repository.GetBinding(ctx, oldKey); err != nil || oldBinding.State != BindingActive {
+		t.Fatalf("old binding before helper ack = %#v, %v", oldBinding, err)
+	}
+	if _, err := repository.GetBinding(ctx, newKey); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("replacement visible before helper ack: %v", err)
+	}
+	if err := repository.FinalizeMutation(ctx, oldKey, operationID, testTime,
+		func(context.Context, MutationEffectExecutor, AuditRecord) error { return nil }); err != nil {
 		t.Fatal(err)
 	}
 	if oldBinding, err := repository.GetBinding(ctx, oldKey); err != nil || oldBinding.State != BindingRemoved {
@@ -347,7 +369,7 @@ func TestCommitMutationAtomicallyAppliesBindingAndAuditEffects(t *testing.T) {
 		t.Fatalf("replacement after commit = %#v, %v", replacement, err)
 	}
 	stored, err := repository.GetMutation(ctx, oldKey, operationID)
-	if err != nil || stored.State != MutationCoreCommitted {
+	if err != nil || stored.State != MutationHelperCommitted {
 		t.Fatalf("mutation = %#v, %v", stored, err)
 	}
 	if latestProfile, err := repository.GetAuthenticatedProfile(ctx, newKey, EnvironmentSimulator); err != nil || latestProfile.ProfileFingerprint != profile.ProfileFingerprint {
@@ -355,6 +377,82 @@ func TestCommitMutationAtomicallyAppliesBindingAndAuditEffects(t *testing.T) {
 	}
 	if latestReadiness, err := repository.LatestReadiness(ctx, newKey); err != nil || latestReadiness.TransitionID != readiness.TransitionID {
 		t.Fatalf("atomic readiness = %#v, %v", latestReadiness, err)
+	}
+}
+
+func TestCoreCommittedMutationEffectsRemainInvisibleUntilHelperAck(t *testing.T) {
+	ctx := context.Background()
+	repository, database, _ := newRepositoryHarness(t)
+	oldKey := testBindingKey(0xe1)
+	putTestBinding(t, repository, oldKey)
+	operationID := "018f0000-0000-7000-8000-000000000e01"
+	pendingID := "018f0000-0000-7000-8000-000000000e02"
+	command := CommandRecord{OperationID: operationID, ActorUserID: "018f0000-0000-7000-8000-000000000e03",
+		Scope: BindingKey{WorkspaceID: oldKey.WorkspaceID, OrganisationID: oldKey.OrganisationID,
+			CanonicalABN: oldKey.CanonicalABN, SchemaVersion: oldKey.SchemaVersion},
+		IdempotencyKey: "replace-visible-after-ack", SemanticHash: digest(0xe2), Kind: MutationReplaceCredential,
+		State: CommandPrepared, CreatedAt: testTime, UpdatedAt: testTime}
+	mutation := Mutation{OperationID: operationID, Key: oldKey, Kind: MutationReplaceCredential,
+		State: MutationPrepared, MetadataHash: digest(0xe3), CreatedAt: testTime, UpdatedAt: testTime}
+	if err := repository.PrepareCommandMutation(ctx, command, mutation); err != nil {
+		t.Fatal(err)
+	}
+	if err := repository.MarkMutationStaged(ctx, oldKey, operationID, pendingID, testTime); err != nil {
+		t.Fatal(err)
+	}
+	newKey := withFingerprint(oldKey, digest(0xe4))
+	newBinding := testBinding(newKey, "simulator-v2")
+	completion := CommandCompletion{Scope: command.Scope, Credential: CredentialMetadata{State: tammyv1.MachineCredentialState_MACHINE_CREDENTIAL_STATE_PRESENT,
+		Fingerprint: newKey.CredentialFingerprint, CanonicalABN: oldKey.CanonicalABN, Issuer: "synthetic issuer", Serial: "e4",
+		CreatedAt: time.Date(2026, 8, 23, 0, 0, 0, 0, time.UTC), ExpiresAt: time.Date(2027, 8, 23, 0, 0, 0, 0, time.UTC), ComponentVersion: "simulator-v2"}, UpdatedAt: testTime}
+	audit := AuditRecord{Action: AuditCredentialReplaced, CredentialFingerprint: newKey.CredentialFingerprint,
+		ProfileFingerprint: digest(0xe5), ComponentFingerprint: digest(0xe6), StatusCode: string(AuditCredentialReplaced)}
+	if err := repository.CommitMutation(ctx, oldKey, operationID, MutationCommit{NewBinding: newBinding, Command: &completion,
+		CompletionAudit: audit, Decision: func(context.Context, MutationEffectExecutor) error { return nil }}); err != nil {
+		t.Fatal(err)
+	}
+	if old, err := repository.GetBinding(ctx, oldKey); err != nil || old.State != BindingActive {
+		t.Fatalf("old binding before helper ack = %#v, %v", old, err)
+	}
+	if _, err := repository.GetBinding(ctx, newKey); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("pending replacement visible before helper ack: %v", err)
+	}
+	if stored, err := repository.GetCommand(ctx, command.Scope, command.IdempotencyKey); err != nil || stored.State != CommandPrepared {
+		t.Fatalf("command before helper ack = %#v, %v", stored, err)
+	}
+	var audited AuditRecord
+	if err := repository.FinalizeMutation(ctx, oldKey, operationID, testTime,
+		func(_ context.Context, _ MutationEffectExecutor, record AuditRecord) error {
+			audited = record
+			return nil
+		}); err != nil {
+		t.Fatal(err)
+	}
+	if old, err := repository.GetBinding(ctx, oldKey); err != nil || old.State != BindingRemoved {
+		t.Fatalf("old binding after helper ack = %#v, %v", old, err)
+	}
+	if replacement, err := repository.GetBinding(ctx, newKey); err != nil || replacement.State != BindingActive {
+		t.Fatalf("replacement after helper ack = %#v, %v", replacement, err)
+	}
+	if stored, err := repository.GetCommand(ctx, command.Scope, command.IdempotencyKey); err != nil || stored.State != CommandCompleted {
+		t.Fatalf("command after helper ack = %#v, %v", stored, err)
+	}
+	if audited != audit {
+		t.Fatalf("completion audit = %#v, want %#v", audited, audit)
+	}
+	var pendingEffects int
+	if err := database.QueryRowContext(ctx, `SELECT COUNT(*) FROM sbr_pending_mutation_effects_v1 WHERE operation_id=?`, operationID).Scan(&pendingEffects); err != nil || pendingEffects != 1 {
+		t.Fatalf("durable pending effect history count=%d err=%v", pendingEffects, err)
+	}
+	var encodedEffect []byte
+	if err := database.QueryRowContext(ctx, `SELECT effect_json FROM sbr_pending_mutation_effects_v1 WHERE operation_id=?`, operationID).Scan(&encodedEffect); err != nil {
+		t.Fatal(err)
+	}
+	for _, secret := range [][]byte{[]byte("SENTINEL-PASSWORD"), []byte("SENTINEL-PRODUCT-ID"),
+		[]byte("SENTINEL-BOOKMARK"), []byte("https://sentinel.invalid"), []byte("PRIVATE KEY")} {
+		if bytes.Contains(encodedEffect, secret) {
+			t.Fatalf("pending effect retained forbidden secret %q", secret)
+		}
 	}
 }
 
@@ -368,9 +466,7 @@ func TestCommitMutationRollsBackCreateAndRemoveOnAuditFailure(t *testing.T) {
 		operationID := "018f0000-0000-7000-8000-00000000073c"
 		mutation := Mutation{OperationID: operationID, Key: scope, Kind: MutationImportCredential,
 			State: MutationPrepared, MetadataHash: digest(0x3d), CreatedAt: testTime, UpdatedAt: testTime}
-		if err := repository.PrepareMutation(ctx, mutation); err != nil {
-			t.Fatal(err)
-		}
+		command := prepareTestCommandMutation(t, repository, mutation)
 		actualKey := withFingerprint(scope, digest(0x3e))
 		if err := repository.MarkImportMutationStaged(ctx, scope, operationID,
 			"018f0000-0000-7000-8000-00000000073d", actualKey.CredentialFingerprint, testTime); err != nil {
@@ -378,7 +474,9 @@ func TestCommitMutationRollsBackCreateAndRemoveOnAuditFailure(t *testing.T) {
 		}
 		binding := testBinding(actualKey, "simulator-import")
 		if err := repository.CommitMutation(ctx, scope, operationID, MutationCommit{NewBinding: binding,
-			Audit: func(context.Context, MutationEffectExecutor) error { return injected }}); !errors.Is(err, injected) {
+			Command:         &CommandCompletion{Scope: command.Scope, UpdatedAt: testTime},
+			CompletionAudit: AuditRecord{Action: AuditCredentialImported, StatusCode: "TEST_IMPORT"},
+			Decision:        func(context.Context, MutationEffectExecutor) error { return injected }}); !errors.Is(err, injected) {
 			t.Fatalf("CommitMutation() error = %v, want injected", err)
 		}
 		if _, err := repository.GetBinding(ctx, actualKey); !errors.Is(err, ErrNotFound) {
@@ -395,15 +493,15 @@ func TestCommitMutationRollsBackCreateAndRemoveOnAuditFailure(t *testing.T) {
 		operationID := "018f0000-0000-7000-8000-00000000073e"
 		mutation := Mutation{OperationID: operationID, Key: key, Kind: MutationRemoveCredential,
 			State: MutationPrepared, MetadataHash: digest(0x40), CreatedAt: testTime, UpdatedAt: testTime}
-		if err := repository.PrepareMutation(ctx, mutation); err != nil {
-			t.Fatal(err)
-		}
+		command := prepareTestCommandMutation(t, repository, mutation)
 		if err := repository.MarkMutationStaged(ctx, key, operationID,
 			"018f0000-0000-7000-8000-00000000073f", testTime); err != nil {
 			t.Fatal(err)
 		}
 		if err := repository.CommitMutation(ctx, key, operationID, MutationCommit{
-			Audit: func(context.Context, MutationEffectExecutor) error { return injected }}); !errors.Is(err, injected) {
+			Command:         &CommandCompletion{Scope: command.Scope, UpdatedAt: testTime},
+			CompletionAudit: AuditRecord{Action: AuditCredentialRemoved, StatusCode: "TEST_REMOVE"},
+			Decision:        func(context.Context, MutationEffectExecutor) error { return injected }}); !errors.Is(err, injected) {
 			t.Fatalf("CommitMutation() error = %v, want injected", err)
 		}
 		if binding, err := repository.GetBinding(ctx, key); err != nil || binding.State != BindingActive {
@@ -423,24 +521,25 @@ func TestCommitMutationAuditReceivesNoTransactionLifecycleAuthority(t *testing.T
 	operationID := "018f0000-0000-7000-8000-000000000745"
 	mutation := Mutation{OperationID: operationID, Key: key, Kind: MutationRemoveCredential,
 		State: MutationPrepared, MetadataHash: digest(0x46), CreatedAt: testTime, UpdatedAt: testTime}
-	if err := repository.PrepareMutation(ctx, mutation); err != nil {
-		t.Fatal(err)
-	}
+	command := prepareTestCommandMutation(t, repository, mutation)
 	if err := repository.MarkMutationStaged(ctx, key, operationID,
 		"018f0000-0000-7000-8000-000000000746", testTime); err != nil {
 		t.Fatal(err)
 	}
 	injected := errors.New("audit injection")
 	sawConcreteTransaction, sawCommit, sawRollback := false, false, false
-	err := repository.CommitMutation(ctx, key, operationID, MutationCommit{Audit: func(ctx context.Context, executor MutationEffectExecutor) error {
-		_, sawConcreteTransaction = any(executor).(*sqlcipher.Transaction)
-		_, sawCommit = any(executor).(interface{ Commit() error })
-		_, sawRollback = any(executor).(interface{ Rollback() error })
-		if _, err := executor.ExecContext(ctx, `UPDATE organisations SET legal_name=legal_name WHERE id=?`, key.OrganisationID); err != nil {
-			return err
-		}
-		return injected
-	}})
+	err := repository.CommitMutation(ctx, key, operationID, MutationCommit{
+		Command:         &CommandCompletion{Scope: command.Scope, UpdatedAt: testTime},
+		CompletionAudit: AuditRecord{Action: AuditCredentialRemoved, StatusCode: "TEST_REMOVE"},
+		Decision: func(ctx context.Context, executor MutationEffectExecutor) error {
+			_, sawConcreteTransaction = any(executor).(*sqlcipher.Transaction)
+			_, sawCommit = any(executor).(interface{ Commit() error })
+			_, sawRollback = any(executor).(interface{ Rollback() error })
+			if _, err := executor.ExecContext(ctx, `UPDATE organisations SET legal_name=legal_name WHERE id=?`, key.OrganisationID); err != nil {
+				return err
+			}
+			return injected
+		}})
 	if !errors.Is(err, injected) {
 		t.Fatalf("CommitMutation() error = %v, want injected", err)
 	}
@@ -457,7 +556,7 @@ func TestSimulatorTransportStateAndIdempotencyAreDurableAndClosed(t *testing.T) 
 	repository, _, _ := newRepositoryHarness(t)
 	key := testBindingKey(0x41)
 	putTestBinding(t, repository, key)
-	original := SimulatorTransport{OperationID: "018f0000-0000-7000-8000-000000000751", Key: key,
+	original := SimulatorTransport{OperationID: "018f0000-0000-7000-8000-000000000751", ActorUserID: serviceUserID, Key: key,
 		IdempotencyKey: "fixture-1", SemanticHash: digest(0x42), State: TransportPrepared,
 		CreatedAt: testTime, UpdatedAt: testTime}
 	stored, replay, err := repository.PrepareSimulatorTransport(ctx, original)
@@ -465,7 +564,7 @@ func TestSimulatorTransportStateAndIdempotencyAreDurableAndClosed(t *testing.T) 
 		t.Fatalf("first prepare = %#v, replay=%v err=%v", stored, replay, err)
 	}
 	stored, replay, err = repository.PrepareSimulatorTransport(ctx, SimulatorTransport{OperationID: "018f0000-0000-7000-8000-000000000752",
-		Key: key, IdempotencyKey: original.IdempotencyKey, SemanticHash: original.SemanticHash, State: TransportPrepared,
+		ActorUserID: serviceUserID, Key: key, IdempotencyKey: original.IdempotencyKey, SemanticHash: original.SemanticHash, State: TransportPrepared,
 		CreatedAt: testTime, UpdatedAt: testTime})
 	if err != nil || !replay || stored.OperationID != original.OperationID {
 		t.Fatalf("same semantic replay = %#v, replay=%v err=%v", stored, replay, err)
@@ -517,6 +616,13 @@ func TestSimulatorTransportStateAndIdempotencyAreDurableAndClosed(t *testing.T) 
 	if err := repository.TransitionSimulatorTransport(ctx, key, maybe.OperationID, TransportDispatching, nil, testTime); !errors.Is(err, ErrInvalidTransition) {
 		t.Fatalf("UNKNOWN resend error = %v", err)
 	}
+	newKeyUnknown := original
+	newKeyUnknown.OperationID = "018f0000-0000-7000-8000-000000000759"
+	newKeyUnknown.IdempotencyKey = "unknown-new-key"
+	newKeyUnknown.SemanticHash = maybe.SemanticHash
+	if _, _, err := repository.PrepareSimulatorTransport(ctx, newKeyUnknown); !errors.Is(err, ErrUncertainTransport) {
+		t.Fatalf("UNKNOWN semantic operation under new key error = %v, want ErrUncertainTransport", err)
+	}
 	unknownRetry := original
 	unknownRetry.OperationID = "018f0000-0000-7000-8000-000000000758"
 	unknownRetry.IdempotencyKey = "unknown-retry"
@@ -527,6 +633,7 @@ func TestSimulatorTransportStateAndIdempotencyAreDurableAndClosed(t *testing.T) 
 	notStarted := original
 	notStarted.OperationID = "018f0000-0000-7000-8000-000000000755"
 	notStarted.IdempotencyKey = "fixture-3"
+	notStarted.SemanticHash = digest(0x45)
 	if _, _, err := repository.PrepareSimulatorTransport(ctx, notStarted); err != nil {
 		t.Fatal(err)
 	}
@@ -536,6 +643,7 @@ func TestSimulatorTransportStateAndIdempotencyAreDurableAndClosed(t *testing.T) 
 	retry := original
 	retry.OperationID = "018f0000-0000-7000-8000-000000000756"
 	retry.IdempotencyKey = "fixture-4"
+	retry.SemanticHash = notStarted.SemanticHash
 	if err := repository.RetryNotStarted(ctx, key, notStarted.OperationID, retry); err != nil {
 		t.Fatal(err)
 	}
@@ -562,7 +670,7 @@ func TestSimulatorCasesMapExactlyAndRecordSyntaxBeforeValidation(t *testing.T) {
 			key := testBindingKey(byte(0x80 + len(test.name)))
 			putTestBinding(t, repository, key)
 			operationID := operationFor(MutationKind("SIM"), test.name)
-			transport := SimulatorTransport{OperationID: operationID, Key: key, IdempotencyKey: "case-" + test.name,
+			transport := SimulatorTransport{OperationID: operationID, ActorUserID: serviceUserID, Key: key, IdempotencyKey: "case-" + test.name,
 				SemanticHash: digest(0x81), State: TransportPrepared, CreatedAt: testTime, UpdatedAt: testTime}
 			if _, _, err := repository.PrepareSimulatorTransport(ctx, transport); err != nil {
 				t.Fatal(err)
@@ -607,7 +715,7 @@ func TestSimulatorTerminalOutcomeSurvivesCrashAfterResponseReceived(t *testing.T
 			key := testBindingKey(byte(0x90 + len(test.name)))
 			putTestBinding(t, repository, key)
 			operationID := operationFor(MutationKind("SIMULATOR_CRASH"), test.name)
-			transport := SimulatorTransport{OperationID: operationID, Key: key, IdempotencyKey: "crash-" + test.name,
+			transport := SimulatorTransport{OperationID: operationID, ActorUserID: serviceUserID, Key: key, IdempotencyKey: "crash-" + test.name,
 				SemanticHash: digest(0x91), State: TransportPrepared, CreatedAt: testTime, UpdatedAt: testTime}
 			if _, _, err := repository.PrepareSimulatorTransport(ctx, transport); err != nil {
 				t.Fatal(err)
@@ -653,7 +761,7 @@ func TestNotStartedHasOneDurableIdempotentRetryEdge(t *testing.T) {
 	}
 	key := testBindingKey(0x8a)
 	putTestBinding(t, repository, key)
-	original := SimulatorTransport{OperationID: "018f0000-0000-7000-8000-00000000078a", Key: key,
+	original := SimulatorTransport{OperationID: "018f0000-0000-7000-8000-00000000078a", ActorUserID: serviceUserID, Key: key,
 		IdempotencyKey: "retry-original", SemanticHash: digest(0x8b), State: TransportPrepared, CreatedAt: testTime, UpdatedAt: testTime}
 	if _, _, err := repository.PrepareSimulatorTransport(ctx, original); err != nil {
 		t.Fatal(err)
@@ -662,8 +770,8 @@ func TestNotStartedHasOneDurableIdempotentRetryEdge(t *testing.T) {
 		t.Fatal(err)
 	}
 	retries := []SimulatorTransport{
-		{OperationID: "018f0000-0000-7000-8000-00000000078b", Key: key, IdempotencyKey: "retry-a", SemanticHash: original.SemanticHash, State: TransportPrepared, CreatedAt: testTime, UpdatedAt: testTime},
-		{OperationID: "018f0000-0000-7000-8000-00000000078c", Key: key, IdempotencyKey: "retry-b", SemanticHash: original.SemanticHash, State: TransportPrepared, CreatedAt: testTime, UpdatedAt: testTime},
+		{OperationID: "018f0000-0000-7000-8000-00000000078b", ActorUserID: serviceUserID, Key: key, IdempotencyKey: "retry-a", SemanticHash: original.SemanticHash, State: TransportPrepared, CreatedAt: testTime, UpdatedAt: testTime},
+		{OperationID: "018f0000-0000-7000-8000-00000000078c", ActorUserID: serviceUserID, Key: key, IdempotencyKey: "retry-b", SemanticHash: original.SemanticHash, State: TransportPrepared, CreatedAt: testTime, UpdatedAt: testTime},
 	}
 	start := make(chan struct{})
 	type retryResult struct {
@@ -709,8 +817,8 @@ func TestNotStartedHasOneDurableIdempotentRetryEdge(t *testing.T) {
 		t.Fatal(err)
 	}
 	chainRetries := []SimulatorTransport{
-		{OperationID: "018f0000-0000-7000-8000-00000000078d", Key: key, IdempotencyKey: "retry-chain-a", SemanticHash: original.SemanticHash, State: TransportPrepared, CreatedAt: testTime, UpdatedAt: testTime},
-		{OperationID: "018f0000-0000-7000-8000-00000000078e", Key: key, IdempotencyKey: "retry-chain-b", SemanticHash: original.SemanticHash, State: TransportPrepared, CreatedAt: testTime, UpdatedAt: testTime},
+		{OperationID: "018f0000-0000-7000-8000-00000000078d", ActorUserID: serviceUserID, Key: key, IdempotencyKey: "retry-chain-a", SemanticHash: original.SemanticHash, State: TransportPrepared, CreatedAt: testTime, UpdatedAt: testTime},
+		{OperationID: "018f0000-0000-7000-8000-00000000078e", ActorUserID: serviceUserID, Key: key, IdempotencyKey: "retry-chain-b", SemanticHash: original.SemanticHash, State: TransportPrepared, CreatedAt: testTime, UpdatedAt: testTime},
 	}
 	chainResults := make(chan retryResult, 2)
 	startChain := make(chan struct{})
@@ -847,7 +955,7 @@ func TestBackupSanitizationAndRestoreNeverCarryVaultAuthority(t *testing.T) {
 	if err := repository.MarkMutationStaged(ctx, key, mutation.OperationID, "018f0000-0000-7000-8000-000000000772", testTime); err != nil {
 		t.Fatal(err)
 	}
-	transport := SimulatorTransport{OperationID: "018f0000-0000-7000-8000-000000000773", Key: key,
+	transport := SimulatorTransport{OperationID: "018f0000-0000-7000-8000-000000000773", ActorUserID: serviceUserID, Key: key,
 		IdempotencyKey: "backup-fixture", SemanticHash: digest(0x73), State: TransportPrepared, CreatedAt: testTime, UpdatedAt: testTime}
 	if _, _, err := repository.PrepareSimulatorTransport(ctx, transport); err != nil {
 		t.Fatal(err)
@@ -888,18 +996,22 @@ func TestBackupSanitizationAndRestoreNeverCarryVaultAuthority(t *testing.T) {
 }
 
 func TestBackupSanitizationFailsClosedForPartialSBRSchema(t *testing.T) {
-	ctx := context.Background()
-	_, database, _ := newRepositoryHarness(t)
-	if _, err := database.ExecContext(ctx, `DROP TABLE sbr_simulator_transports_v1`); err != nil {
-		t.Fatal(err)
-	}
-	tx, err := database.BeginEncryptedTx(ctx, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() { _ = tx.Rollback() }()
-	if err := SanitizeBackupState(ctx, tx); !errors.Is(err, ErrRepository) {
-		t.Fatalf("SanitizeBackupState() error = %v, want ErrRepository", err)
+	for _, table := range []string{"sbr_simulator_transports_v1", "sbr_pending_mutation_effects_v1"} {
+		t.Run(table, func(t *testing.T) {
+			ctx := context.Background()
+			_, database, _ := newRepositoryHarness(t)
+			if _, err := database.ExecContext(ctx, `DROP TABLE `+table); err != nil {
+				t.Fatal(err)
+			}
+			tx, err := database.BeginEncryptedTx(ctx, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() { _ = tx.Rollback() }()
+			if err := SanitizeBackupState(ctx, tx); !errors.Is(err, ErrRepository) {
+				t.Fatalf("SanitizeBackupState() error = %v, want ErrRepository", err)
+			}
+		})
 	}
 }
 
@@ -948,6 +1060,490 @@ func testBinding(key BindingKey, componentVersion string) *Binding {
 		ExpiresAt: testTime, State: BindingActive, Revision: 1, UpdatedAt: testTime}
 }
 
+func TestRepositoryPersistsMutationCommandElectionAndOwnedResultAcrossRestart(t *testing.T) {
+	ctx := context.Background()
+	repository, database, _ := newRepositoryHarness(t)
+	semantic := digest(0xd1)
+	operationID := "018f0000-0000-7000-8000-000000000d01"
+	record := CommandRecord{
+		OperationID: operationID,
+		ActorUserID: serviceUserID,
+		Scope: BindingKey{WorkspaceID: testWorkspaceID, OrganisationID: testOrganisation,
+			CanonicalABN: testABN, SchemaVersion: 1},
+		IdempotencyKey: "018f0000-0000-7000-8000-000000000d02",
+		SemanticHash:   semantic,
+		Kind:           MutationImportCredential,
+		State:          CommandPrepared,
+		CreatedAt:      testTime,
+		UpdatedAt:      testTime,
+	}
+	if err := repository.PrepareCommand(ctx, record); err != nil {
+		t.Fatalf("PrepareCommand() error = %v", err)
+	}
+
+	restarted, err := newSQLCipherRepository(database, repository.now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stored, err := restarted.GetCommand(ctx, record.Scope, record.IdempotencyKey)
+	if err != nil {
+		t.Fatalf("GetCommand() after restart error = %v", err)
+	}
+	if stored.OperationID != operationID || stored.SemanticHash != semantic || stored.State != CommandPrepared {
+		t.Fatalf("stored command = %+v", stored)
+	}
+
+	credential := CredentialMetadata{Fingerprint: digest(0xd2), CanonicalABN: testABN,
+		Issuer: "Synthetic Issuer", Serial: "SIM-DURABLE", ComponentVersion: "simulator-v1",
+		CreatedAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+		ExpiresAt: time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC),
+		State:     tammyv1.MachineCredentialState_MACHINE_CREDENTIAL_STATE_PRESENT}
+	if err := restarted.CompleteCommand(ctx, record.Scope, operationID, credential, 0, "2026-08-23T00:00:01.000000000Z"); err != nil {
+		t.Fatalf("CompleteCommand() error = %v", err)
+	}
+	completed, err := repository.GetCommand(ctx, record.Scope, record.IdempotencyKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if completed.State != CommandCompleted || completed.Credential != credential {
+		t.Fatalf("completed command = %+v", completed)
+	}
+
+	conflict := record
+	conflict.OperationID = "018f0000-0000-7000-8000-000000000d03"
+	conflict.SemanticHash = digest(0xd3)
+	if err := repository.PrepareCommand(ctx, conflict); !errors.Is(err, ErrIdempotencyConflict) {
+		t.Fatalf("different semantic PrepareCommand() error = %v", err)
+	}
+}
+
+func TestUnlockDispatchReservationRollsBackWithOwningTransaction(t *testing.T) {
+	ctx := context.Background()
+	repository, database, _ := newRepositoryHarness(t)
+	key := testBindingKey(0xe1)
+	putTestBinding(t, repository, key)
+	record := HelperDispatchRecord{
+		OperationID: "018f0000-0000-7000-8000-000000000e11", ActorUserID: serviceUserID, Key: key,
+		IdempotencyKey: "018f0000-0000-7000-8000-000000000e12", SemanticHash: digest(0xe2),
+		State: HelperDispatching, CreatedAt: testTime, UpdatedAt: testTime,
+	}
+	tx, err := database.BeginEncryptedTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := repository.ReserveUnlockDispatchWithin(ctx, tx, record); err != nil {
+		_ = tx.Rollback()
+		t.Fatalf("ReserveUnlockDispatchWithin() error = %v", err)
+	}
+	if err := tx.Rollback(); err != nil {
+		t.Fatal(err)
+	}
+	var count int
+	if err := database.QueryRowContext(ctx, `SELECT COUNT(*) FROM sbr_helper_dispatches_v1 WHERE operation_id=?`, record.OperationID).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != 0 {
+		t.Fatalf("rolled-back unlock dispatch rows = %d, want 0", count)
+	}
+}
+
+func TestUnlockDispatchDecisionSurvivesRestartAndRecoversUnknown(t *testing.T) {
+	ctx := context.Background()
+	repository, database, path := newRepositoryHarness(t)
+	key := testBindingKey(0xe3)
+	putTestBinding(t, repository, key)
+	record := HelperDispatchRecord{
+		OperationID: "018f0000-0000-7000-8000-000000000e21", ActorUserID: serviceUserID, Key: key,
+		IdempotencyKey: "018f0000-0000-7000-8000-000000000e22", SemanticHash: digest(0xe4),
+		State: HelperDispatching, CreatedAt: testTime, UpdatedAt: testTime,
+	}
+	tx, err := database.BeginEncryptedTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := repository.ReserveUnlockDispatchWithin(ctx, tx, record); err != nil {
+		_ = tx.Rollback()
+		t.Fatal(err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	keyBytes := bytes.Repeat([]byte{0x71}, sqlcipher.KeySize)
+	if err := database.Close(); err != nil {
+		t.Fatal(err)
+	}
+	reopenedDatabase, err := sqlcipher.Open(ctx, path, keyBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = reopenedDatabase.Close() })
+	fixedTime, _ := time.Parse(time.RFC3339Nano, testTime)
+	reopened, err := newSQLCipherRepository(reopenedDatabase, func() time.Time { return fixedTime })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if recovered, err := reopened.RecoverHelperDispatchOrphans(ctx, testTime); err != nil || recovered != 1 {
+		t.Fatalf("RecoverHelperDispatchOrphans() = %d, %v", recovered, err)
+	}
+	stored, err := reopened.GetHelperDispatch(ctx, key, record.IdempotencyKey)
+	if err != nil || stored.State != HelperDispatchUnknown || stored.ActorUserID != record.ActorUserID || stored.SemanticHash != record.SemanticHash {
+		t.Fatalf("recovered unlock dispatch = %#v, %v", stored, err)
+	}
+}
+
+func TestFixtureTransportPersistsActorAndConditionsDispatchReservation(t *testing.T) {
+	ctx := context.Background()
+	repository, database, _ := newRepositoryHarness(t)
+	key := testBindingKey(0xe5)
+	putTestBinding(t, repository, key)
+	transport := SimulatorTransport{OperationID: "018f0000-0000-7000-8000-000000000e31", ActorUserID: serviceUserID,
+		Key: key, IdempotencyKey: "018f0000-0000-7000-8000-000000000e32", SemanticHash: digest(0xe6),
+		State: TransportPrepared, CreatedAt: testTime, UpdatedAt: testTime}
+	stored, replay, err := repository.PrepareSimulatorTransport(ctx, transport)
+	if err != nil || replay || stored.ActorUserID != serviceUserID {
+		t.Fatalf("PrepareSimulatorTransport() = %#v, %t, %v", stored, replay, err)
+	}
+	tx, err := database.BeginEncryptedTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wrongActor := "018f0000-0000-7000-8000-000000000e33"
+	if err := repository.ReserveSimulatorDispatchWithin(ctx, tx, transport, wrongActor, testTime); !errors.Is(err, ErrPermissionDenied) {
+		_ = tx.Rollback()
+		t.Fatalf("cross-actor fixture reservation error = %v, want ErrPermissionDenied", err)
+	}
+	if err := tx.Rollback(); err != nil {
+		t.Fatal(err)
+	}
+	tx, err = database.BeginEncryptedTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := repository.ReserveSimulatorDispatchWithin(ctx, tx, transport, serviceUserID, testTime); err != nil {
+		_ = tx.Rollback()
+		t.Fatal(err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := repository.getTransport(ctx, key, transport.OperationID)
+	if err != nil || loaded.State != TransportDispatching {
+		t.Fatalf("fixture dispatch reservation = %#v, %v", loaded, err)
+	}
+}
+
+func TestFinishFixtureWithAuditAtomicallyPersistsTerminalResultAndAudit(t *testing.T) {
+	ctx := context.Background()
+	repository, database, _ := newRepositoryHarness(t)
+	key := testBindingKey(0xea)
+	putTestBinding(t, repository, key)
+	transport := SimulatorTransport{OperationID: "018f0000-0000-7000-8000-000000000e41", ActorUserID: serviceUserID,
+		Key: key, IdempotencyKey: "018f0000-0000-7000-8000-000000000e42", SemanticHash: digest(0xeb),
+		State: TransportPrepared, CreatedAt: testTime, UpdatedAt: testTime}
+	if _, _, err := repository.PrepareSimulatorTransport(ctx, transport); err != nil {
+		t.Fatal(err)
+	}
+	tx, err := repository.database.BeginEncryptedTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := repository.ReserveSimulatorDispatchWithin(ctx, tx, transport, serviceUserID, testTime); err != nil {
+		_ = tx.Rollback()
+		t.Fatal(err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	resultHash := digest(0xec)
+	auditRecord := AuditRecord{Action: AuditFixtureCompleted, CredentialFingerprint: key.CredentialFingerprint,
+		StatusCode: "SBR_HELPER_FIXTURE_COMPLETED"}
+	appender, err := NewRedactedSQLAuditAppender(repository.now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	injected := errors.New("audit unavailable")
+	if err := repository.FinishSimulatorTransportWithAudit(ctx, key, transport.OperationID, SimulatorCaseAccepted,
+		&resultHash, testTime, auditRecord,
+		func(auditCtx context.Context, executor MutationEffectExecutor, record AuditRecord) error {
+			if err := appender.Record(auditCtx, executor, record); err != nil {
+				return err
+			}
+			return injected
+		}); !errors.Is(err, injected) {
+		t.Fatalf("FinishSimulatorTransportWithAudit() error = %v, want injected", err)
+	}
+	restarted, err := newSQLCipherRepository(database, repository.now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stored, err := restarted.getTransport(ctx, key, transport.OperationID)
+	if err != nil || stored.State != TransportDispatching || stored.ResultHash != nil {
+		t.Fatalf("terminal state/result escaped failed audit transaction: %+v, %v", stored, err)
+	}
+	var auditCount int
+	if err := database.QueryRowContext(ctx, `SELECT COUNT(*) FROM sbr_audit_events_v1`).Scan(&auditCount); err != nil || auditCount != 0 {
+		t.Fatalf("failed terminal audit escaped transaction: count=%d error=%v", auditCount, err)
+	}
+	if err := restarted.FinishSimulatorTransportWithAudit(ctx, key, transport.OperationID, SimulatorCaseAccepted,
+		&resultHash, testTime, auditRecord,
+		func(auditCtx context.Context, executor MutationEffectExecutor, record AuditRecord) error {
+			return appender.Record(auditCtx, executor, record)
+		}); err != nil {
+		t.Fatal(err)
+	}
+	stored, err = restarted.getTransport(ctx, key, transport.OperationID)
+	if err != nil || stored.State != TransportAccepted || stored.ResultHash == nil || *stored.ResultHash != resultHash {
+		t.Fatalf("terminal fixture state/result = %+v, %v", stored, err)
+	}
+	if err := database.QueryRowContext(ctx, `SELECT COUNT(*) FROM sbr_audit_events_v1`).Scan(&auditCount); err != nil || auditCount != 1 {
+		t.Fatalf("terminal audit count=%d error=%v", auditCount, err)
+	}
+}
+
+func TestRepositoryPersistsOnlyRedactedProductStateAcrossRestart(t *testing.T) {
+	ctx := context.Background()
+	repository, database, _ := newRepositoryHarness(t)
+	key := testBindingKey(0xd4)
+	putTestBinding(t, repository, key)
+	record := ProductRecord{Key: key, Environment: EnvironmentEVTE,
+		ExpectedProductIdentifier: "EVTE.PRODUCT", ExpectedServiceID: "EVTE.SERVICE",
+		State: ProductPresent, ProductFingerprint: digest(0xd6), Revision: 1, UpdatedAt: testTime}
+	record.ScopeFingerprint = authenticatedProductScopeFingerprint(record.ExpectedProductIdentifier, record.ExpectedServiceID)
+	if err := repository.PutProductState(ctx, record); err != nil {
+		t.Fatalf("PutProductState() error = %v", err)
+	}
+	restarted, err := newSQLCipherRepository(database, repository.now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stored, err := restarted.GetProductState(ctx, key, EnvironmentEVTE, record.ScopeFingerprint,
+		record.ExpectedProductIdentifier, record.ExpectedServiceID)
+	if err != nil || stored != record {
+		t.Fatalf("GetProductState() = %+v, %v", stored, err)
+	}
+	assertSchemaHasNoSecretColumns(t, database)
+}
+
+func TestRepositoryProductStateRequiresExactAuthenticatedProductAndServiceScope(t *testing.T) {
+	ctx := context.Background()
+	repository, database, _ := newRepositoryHarness(t)
+	key := testBindingKey(0xe7)
+	putTestBinding(t, repository, key)
+	record := ProductRecord{Key: key, Environment: EnvironmentEVTE,
+		ExpectedProductIdentifier: "EVTE.PRODUCT", ExpectedServiceID: "EVTE.SERVICE.A",
+		State: ProductPresent, ProductFingerprint: digest(0xe9), Revision: 1, UpdatedAt: testTime}
+	record.ScopeFingerprint = authenticatedProductScopeFingerprint(record.ExpectedProductIdentifier, record.ExpectedServiceID)
+	if err := repository.PutProductState(ctx, record); err != nil {
+		t.Fatal(err)
+	}
+	restarted, err := newSQLCipherRepository(database, repository.now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := restarted.GetProductState(ctx, key, EnvironmentEVTE, record.ScopeFingerprint,
+		record.ExpectedProductIdentifier, "EVTE.SERVICE.B"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("cross-service state lookup error = %v, want ErrNotFound", err)
+	}
+	stored, err := restarted.GetProductState(ctx, key, EnvironmentEVTE, record.ScopeFingerprint,
+		record.ExpectedProductIdentifier, record.ExpectedServiceID)
+	if err != nil || stored != record {
+		t.Fatalf("exact state lookup = %+v, %v", stored, err)
+	}
+}
+
+func TestPrepareCommandMutationRollsBackElectionWhenMutationInsertConflicts(t *testing.T) {
+	ctx := context.Background()
+	repository, _, _ := newRepositoryHarness(t)
+	scope := BindingKey{WorkspaceID: testWorkspaceID, OrganisationID: testOrganisation, CanonicalABN: testABN, SchemaVersion: 1}
+	operationID := "018f0000-0000-7000-8000-000000000d11"
+	mutation := Mutation{OperationID: operationID, Key: scope, Kind: MutationImportCredential,
+		State: MutationPrepared, MetadataHash: digest(0xd7), CreatedAt: testTime, UpdatedAt: testTime}
+	if err := repository.PrepareMutation(ctx, mutation); err != nil {
+		t.Fatal(err)
+	}
+	command := CommandRecord{OperationID: operationID, ActorUserID: serviceUserID, Scope: scope,
+		IdempotencyKey: "018f0000-0000-7000-8000-000000000d12", SemanticHash: digest(0xd8),
+		Kind: MutationImportCredential, State: CommandPrepared, CreatedAt: testTime, UpdatedAt: testTime}
+	if err := repository.PrepareCommandMutation(ctx, command, mutation); !errors.Is(err, ErrConflict) {
+		t.Fatalf("PrepareCommandMutation() error = %v", err)
+	}
+	if _, err := repository.GetCommand(ctx, scope, command.IdempotencyKey); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("command election escaped rollback: %v", err)
+	}
+}
+
+func TestCommitMutationRollsBackFactorAndSessionTouchesWhenLaterPersistenceFails(t *testing.T) {
+	ctx := context.Background()
+	repository, database, _ := newRepositoryHarness(t)
+	key := testBindingKey(0xea)
+	putTestBinding(t, repository, key)
+	operationID := "018f0000-0000-7000-8000-000000000ea1"
+	mutation := Mutation{OperationID: operationID, Key: key, Kind: MutationRemoveCredential,
+		State: MutationPrepared, MetadataHash: digest(0xeb), CreatedAt: testTime, UpdatedAt: testTime}
+	command := prepareTestCommandMutation(t, repository, mutation)
+	if err := repository.MarkMutationStaged(ctx, key, operationID,
+		"018f0000-0000-7000-8000-000000000ea2", testTime); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := database.ExecContext(ctx, `CREATE TABLE sbr_test_identity_touches(touches INTEGER NOT NULL)`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := database.ExecContext(ctx, `INSERT INTO sbr_test_identity_touches(touches) VALUES (0)`); err != nil {
+		t.Fatal(err)
+	}
+	// Reserve the immutable effect key first so CommitMutation fails only after
+	// its decision callback has written through the owning SQL transaction.
+	if _, err := database.ExecContext(ctx, `INSERT INTO sbr_pending_mutation_effects_v1(operation_id,effect_json,created_at)
+VALUES (?,?,?)`, operationID, []byte(`{}`), testTime); err != nil {
+		t.Fatal(err)
+	}
+	err := repository.CommitMutation(ctx, key, operationID, MutationCommit{
+		Command:         &CommandCompletion{Scope: command.Scope, UpdatedAt: testTime},
+		CompletionAudit: AuditRecord{Action: AuditCredentialRemoved, StatusCode: "TEST_REMOVE"},
+		Decision: func(decisionCtx context.Context, executor MutationEffectExecutor) error {
+			_, updateErr := executor.ExecContext(decisionCtx,
+				`UPDATE sbr_test_identity_touches SET touches=touches+1`)
+			return updateErr
+		},
+	})
+	if !errors.Is(err, ErrConflict) {
+		t.Fatalf("CommitMutation() error = %v, want ErrConflict", err)
+	}
+	var touches int
+	if err := database.QueryRowContext(ctx, `SELECT touches FROM sbr_test_identity_touches`).Scan(&touches); err != nil {
+		t.Fatal(err)
+	}
+	if touches != 0 {
+		t.Fatalf("factor/session touch escaped failed decision transaction: %d", touches)
+	}
+	stored, err := repository.GetMutation(ctx, key, operationID)
+	if err != nil || stored.State != MutationStaged {
+		t.Fatalf("mutation state after rollback = %+v, %v", stored, err)
+	}
+}
+
+func TestCommitMutationAtomicallyPersistsCommandProductAndAudit(t *testing.T) {
+	ctx := context.Background()
+	repository, _, _ := newRepositoryHarness(t)
+	key := testBindingKey(0xd9)
+	putTestBinding(t, repository, key)
+	operationID := "018f0000-0000-7000-8000-000000000d21"
+	command := CommandRecord{OperationID: operationID,
+		ActorUserID:    serviceUserID,
+		Scope:          BindingKey{WorkspaceID: key.WorkspaceID, OrganisationID: key.OrganisationID, CanonicalABN: key.CanonicalABN, SchemaVersion: 1},
+		IdempotencyKey: "018f0000-0000-7000-8000-000000000d22", SemanticHash: digest(0xda),
+		Kind: MutationImportProductID, State: CommandPrepared, CreatedAt: testTime, UpdatedAt: testTime}
+	mutation := Mutation{OperationID: operationID, Key: key, Kind: MutationImportProductID,
+		State: MutationPrepared, MetadataHash: digest(0xdb), CreatedAt: testTime, UpdatedAt: testTime}
+	if err := repository.PrepareCommandMutation(ctx, command, mutation); err != nil {
+		t.Fatal(err)
+	}
+	if err := repository.MarkMutationStaged(ctx, key, operationID,
+		"018f0000-0000-7000-8000-000000000d23", testTime); err != nil {
+		t.Fatal(err)
+	}
+	product := ProductRecord{Key: key, Environment: EnvironmentEVTE,
+		ExpectedProductIdentifier: "EVTE.PRODUCT", ExpectedServiceID: "EVTE.SERVICE",
+		State: ProductPresent, ProductFingerprint: digest(0xdd), Revision: 1, UpdatedAt: testTime}
+	product.ScopeFingerprint = authenticatedProductScopeFingerprint(product.ExpectedProductIdentifier, product.ExpectedServiceID)
+	completion := CommandCompletion{Scope: command.Scope, Credential: CredentialMetadata{}, Product: ProductPresent,
+		UpdatedAt: testTime}
+	auditRecord := AuditRecord{Action: AuditProductIDChanged, StatusCode: "TEST_PRODUCT_CHANGED"}
+	injected := errors.New("audit failed")
+	if err := repository.CommitMutation(ctx, key, operationID, MutationCommit{Product: &product, Command: &completion,
+		CompletionAudit: auditRecord,
+		Decision:        func(context.Context, MutationEffectExecutor) error { return injected }}); !errors.Is(err, injected) {
+		t.Fatalf("CommitMutation() injected error = %v", err)
+	}
+	storedCommand, err := repository.GetCommand(ctx, command.Scope, command.IdempotencyKey)
+	if err != nil || storedCommand.State != CommandPrepared {
+		t.Fatalf("command escaped rollback: %+v, %v", storedCommand, err)
+	}
+	if _, err := repository.GetProductState(ctx, key, EnvironmentEVTE, product.ScopeFingerprint,
+		product.ExpectedProductIdentifier, product.ExpectedServiceID); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("Product state escaped rollback: %v", err)
+	}
+	if err := repository.CommitMutation(ctx, key, operationID, MutationCommit{Product: &product, Command: &completion,
+		CompletionAudit: auditRecord,
+		Decision:        func(context.Context, MutationEffectExecutor) error { return nil }}); err != nil {
+		t.Fatalf("CommitMutation() error = %v", err)
+	}
+	storedCommand, err = repository.GetCommand(ctx, command.Scope, command.IdempotencyKey)
+	if err != nil || storedCommand.State != CommandPrepared {
+		t.Fatalf("command visible before helper ack = %+v, %v", storedCommand, err)
+	}
+	if _, err := repository.GetProductState(ctx, key, EnvironmentEVTE, product.ScopeFingerprint,
+		product.ExpectedProductIdentifier, product.ExpectedServiceID); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("Product visible before helper ack: %v", err)
+	}
+	if err := repository.FinalizeMutation(ctx, key, operationID, testTime,
+		func(context.Context, MutationEffectExecutor, AuditRecord) error { return injected }); !errors.Is(err, injected) {
+		t.Fatalf("FinalizeMutation() audit error = %v, want injected", err)
+	}
+	storedCommand, err = repository.GetCommand(ctx, command.Scope, command.IdempotencyKey)
+	if err != nil || storedCommand.State != CommandPrepared {
+		t.Fatalf("command escaped failed finalization = %+v, %v", storedCommand, err)
+	}
+	if _, err := repository.GetProductState(ctx, key, EnvironmentEVTE, product.ScopeFingerprint,
+		product.ExpectedProductIdentifier, product.ExpectedServiceID); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("Product escaped failed finalization: %v", err)
+	}
+	if err := repository.FinalizeMutation(ctx, key, operationID, testTime,
+		func(context.Context, MutationEffectExecutor, AuditRecord) error { return nil }); err != nil {
+		t.Fatal(err)
+	}
+	storedCommand, err = repository.GetCommand(ctx, command.Scope, command.IdempotencyKey)
+	if err != nil || storedCommand.State != CommandCompleted || storedCommand.Product != ProductPresent {
+		t.Fatalf("completed command = %+v, %v", storedCommand, err)
+	}
+	storedProduct, err := repository.GetProductState(ctx, key, EnvironmentEVTE, product.ScopeFingerprint,
+		product.ExpectedProductIdentifier, product.ExpectedServiceID)
+	if err != nil || storedProduct != product {
+		t.Fatalf("committed Product state = %+v, %v", storedProduct, err)
+	}
+}
+
+func prepareTestCommandMutation(t *testing.T, repository *SQLCipherRepository, mutation Mutation) CommandRecord {
+	t.Helper()
+	scope := mutation.Key
+	scope.CredentialFingerprint = [sha256.Size]byte{}
+	command := CommandRecord{OperationID: mutation.OperationID, ActorUserID: serviceUserID, Scope: scope,
+		IdempotencyKey: mutation.OperationID, SemanticHash: mutation.MetadataHash, Kind: mutation.Kind,
+		State: CommandPrepared, CreatedAt: mutation.CreatedAt, UpdatedAt: mutation.UpdatedAt}
+	if err := repository.PrepareCommandMutation(context.Background(), command, mutation); err != nil {
+		t.Fatal(err)
+	}
+	return command
+}
+
+func testMutationCommit(mutation Mutation, command CommandRecord) MutationCommit {
+	commit := MutationCommit{Command: &CommandCompletion{Scope: command.Scope, UpdatedAt: testTime},
+		CompletionAudit: AuditRecord{Action: AuditProductIDChanged, StatusCode: "TEST_MUTATION_COMPLETED"},
+		Decision:        func(context.Context, MutationEffectExecutor) error { return nil }}
+	switch mutation.Kind {
+	case MutationImportCredential:
+		commit.NewBinding = testBinding(mutation.Key, "simulator-import")
+		commit.CompletionAudit.Action = AuditCredentialImported
+	case MutationReplaceCredential:
+		replacement := withFingerprint(mutation.Key, digest(0x92))
+		commit.NewBinding = testBinding(replacement, "simulator-replace")
+		commit.CompletionAudit.Action = AuditCredentialReplaced
+	case MutationRemoveCredential:
+		commit.CompletionAudit.Action = AuditCredentialRemoved
+	case MutationImportProductID:
+		commit.Product = &ProductRecord{Key: mutation.Key, Environment: EnvironmentEVTE,
+			ScopeFingerprint: authenticatedProductScopeFingerprint("TEST.PRODUCT", "TEST.SERVICE"), ExpectedProductIdentifier: "TEST.PRODUCT", ExpectedServiceID: "TEST.SERVICE",
+			State: ProductPresent, ProductFingerprint: digest(0xf2), Revision: 1, UpdatedAt: testTime}
+		commit.Command.Product = ProductPresent
+	case MutationRemoveProductID:
+		commit.Product = &ProductRecord{Key: mutation.Key, Environment: EnvironmentEVTE,
+			ScopeFingerprint: authenticatedProductScopeFingerprint("TEST.PRODUCT", "TEST.SERVICE"), ExpectedProductIdentifier: "TEST.PRODUCT", ExpectedServiceID: "TEST.SERVICE",
+			State: ProductMissing, Revision: 1, UpdatedAt: testTime}
+		commit.Command.Product = ProductMissing
+	}
+	return commit
+}
+
 func digest(seed byte) [sha256.Size]byte                    { return sha256.Sum256([]byte{seed}) }
 func digestPtr(seed byte) *[sha256.Size]byte                { value := digest(seed); return &value }
 func withWorkspace(key BindingKey, value string) BindingKey { key.WorkspaceID = value; return key }
@@ -984,12 +1580,14 @@ func assertSchemaHasNoSecretColumns(t *testing.T, database *sqlcipher.Database) 
 	}
 	defer rows.Close()
 	count := 0
+	seen := map[string]bool{}
 	for rows.Next() {
 		var name, definition string
 		if err := rows.Scan(&name, &definition); err != nil {
 			t.Fatal(err)
 		}
 		count++
+		seen[name] = true
 		lower := bytes.ToLower([]byte(definition))
 		for _, forbidden := range [][]byte{[]byte("password"), []byte("product_id_value"), []byte("selected_local_path"),
 			[]byte("bookmark"), []byte("endpoint_url"), []byte("private_key"), []byte("credential_bytes")} {
@@ -1001,7 +1599,13 @@ func assertSchemaHasNoSecretColumns(t *testing.T, database *sqlcipher.Database) 
 	if err := rows.Err(); err != nil {
 		t.Fatal(err)
 	}
-	if count != 6 {
-		t.Fatalf("SBR table count = %d, want 6", count)
+	if count != 11 {
+		t.Fatalf("SBR table count = %d, want 11", count)
+	}
+	if !seen["sbr_helper_dispatches_v1"] {
+		t.Fatal("schema is missing the durable helper dispatch table")
+	}
+	if !seen["sbr_pending_mutation_effects_v1"] {
+		t.Fatal("schema is missing durable pending mutation effects")
 	}
 }

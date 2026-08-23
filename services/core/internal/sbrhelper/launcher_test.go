@@ -24,6 +24,18 @@ import (
 
 type launcherLocator struct{ resources sbrprofile.ResourceSet }
 
+func scopedLauncherFixture(request Request) Request {
+	request.WorkspaceID = "018bcfe5-6800-7000-8000-000000000003"
+	request.OrganisationID = "018bcfe5-6800-7000-8000-000000000004"
+	request.CanonicalABN = "51824753556"
+	request.OpaqueScope = bytes.Repeat([]byte{0x5a}, 32)
+	request.ProfileFingerprint = bytes.Repeat([]byte{0x61}, 32)
+	request.RegistrationFingerprint = bytes.Repeat([]byte{0x62}, 32)
+	request.ComponentFingerprint = bytes.Repeat([]byte{0x63}, 32)
+	request.ComponentVersion = "simulator-v1"
+	return request
+}
+
 func (l launcherLocator) Locate(sbrprofile.Profile) (sbrprofile.ResourceSet, error) {
 	return l.resources, nil
 }
@@ -66,7 +78,7 @@ func TestLauncherExecutesOnlyStagedHelperWithSandboxProfileAndFramedStdio(t *tes
 	launcher.now = func() time.Time { return now }
 	identity := codeIdentity{cdHash: []byte{1}}
 	launcher.capture = func(context.Context, *sbrprofile.StagedResources) (codeIdentity, error) { return identity, nil }
-	request := Request{ProtocolVersion: 1, RequestID: "018bcfe5-6800-7000-8000-000000000001", Operation: OperationStatus, DeadlineMillis: now.Add(time.Minute).UnixMilli(), Environment: EnvironmentSimulator, WorkspaceID: "018bcfe5-6800-7000-8000-000000000003", OrganisationID: "018bcfe5-6800-7000-8000-000000000004", CanonicalABN: "51824753556", OpaqueScope: bytes.Repeat([]byte{0x5a}, 32)}
+	request := scopedLauncherFixture(Request{ProtocolVersion: 1, RequestID: "018bcfe5-6800-7000-8000-000000000001", Operation: OperationStatus, DeadlineMillis: now.Add(time.Minute).UnixMilli(), Environment: EnvironmentSimulator})
 	var capturedInput []byte
 	verified := 0
 	launcher.verify = func(_ context.Context, _ int, _ *sbrprofile.StagedResources, got codeIdentity, _ bool) error {
@@ -175,7 +187,7 @@ func TestLauncherRejectsHelperSwapAcrossSpawnBoundary(t *testing.T) {
 		}
 		return nil, errors.New("authority changed")
 	}
-	request := Request{ProtocolVersion: 1, RequestID: "018bcfe5-6800-7000-8000-000000000001", Operation: OperationFixture, DeadlineMillis: now.Add(time.Minute).UnixMilli(), Environment: EnvironmentSimulator, SimulatorCase: SimulatorAccepted}
+	request := scopedLauncherFixture(Request{ProtocolVersion: 1, RequestID: "018bcfe5-6800-7000-8000-000000000001", Operation: OperationFixture, DeadlineMillis: now.Add(time.Minute).UnixMilli(), Environment: EnvironmentSimulator, SimulatorCase: SimulatorAccepted})
 	if _, err = launcher.Launch(context.Background(), profilePath, request); err == nil || err.Error() != string(StableErrorHelperUnavailable) {
 		t.Fatalf("error=%v", err)
 	}
@@ -217,7 +229,7 @@ func TestLauncherRejectsRuntimeBaseAncestorSwapAcrossSpawnBoundary(t *testing.T)
 		}
 		return nil, errors.New("authority changed")
 	}
-	request := Request{ProtocolVersion: 1, RequestID: "018bcfe5-6800-7000-8000-000000000001", Operation: OperationFixture, DeadlineMillis: now.Add(time.Minute).UnixMilli(), Environment: EnvironmentSimulator, SimulatorCase: SimulatorAccepted}
+	request := scopedLauncherFixture(Request{ProtocolVersion: 1, RequestID: "018bcfe5-6800-7000-8000-000000000001", Operation: OperationFixture, DeadlineMillis: now.Add(time.Minute).UnixMilli(), Environment: EnvironmentSimulator, SimulatorCase: SimulatorAccepted})
 	if _, err = launcher.Launch(context.Background(), profilePath, request); err == nil || err.Error() != string(StableErrorHelperUnavailable) {
 		t.Fatalf("error=%v", err)
 	}
@@ -268,7 +280,7 @@ func TestLauncherDeadlineCoversAuthenticationDelay(t *testing.T) {
 	profilePath := writeLauncherProfile(t, root, helper, now)
 	launcher := NewLauncher(delayedLauncherLocator{resources: sbrprofile.ResourceSet{HelperPath: helperPath, TrustedRuntimeBase: base}, delay: 50 * time.Millisecond})
 	launcher.now = func() time.Time { return now }
-	request := Request{ProtocolVersion: 1, RequestID: "018bcfe5-6800-7000-8000-000000000001", Operation: OperationFixture, DeadlineMillis: now.Add(10 * time.Millisecond).UnixMilli(), Environment: EnvironmentSimulator, SimulatorCase: SimulatorAccepted}
+	request := scopedLauncherFixture(Request{ProtocolVersion: 1, RequestID: "018bcfe5-6800-7000-8000-000000000001", Operation: OperationFixture, DeadlineMillis: now.Add(10 * time.Millisecond).UnixMilli(), Environment: EnvironmentSimulator, SimulatorCase: SimulatorAccepted})
 	_, err = launcher.Launch(context.Background(), profilePath, request)
 	if err == nil || err.Error() != string(StableErrorDeadlineExpired) {
 		t.Fatalf("error=%v", err)
@@ -304,7 +316,7 @@ func TestLauncherMapsChildDeadlineToStableDeadlineError(t *testing.T) {
 		<-ctx.Done()
 		return nil, ctx.Err()
 	}
-	request := Request{ProtocolVersion: 1, RequestID: "018bcfe5-6800-7000-8000-000000000001", Operation: OperationFixture, DeadlineMillis: now.Add(20 * time.Millisecond).UnixMilli(), Environment: EnvironmentSimulator, SimulatorCase: SimulatorAccepted}
+	request := scopedLauncherFixture(Request{ProtocolVersion: 1, RequestID: "018bcfe5-6800-7000-8000-000000000001", Operation: OperationFixture, DeadlineMillis: now.Add(20 * time.Millisecond).UnixMilli(), Environment: EnvironmentSimulator, SimulatorCase: SimulatorAccepted})
 	_, err = launcher.Launch(context.Background(), profilePath, request)
 	if err == nil || err.Error() != string(StableErrorDeadlineExpired) {
 		t.Fatalf("error=%v", err)
@@ -333,7 +345,7 @@ func TestLauncherMapsParentCancellationToStableDeadlineWithoutStaging(t *testing
 	launcher.now = func() time.Time { return now }
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	request := Request{ProtocolVersion: 1, RequestID: "018bcfe5-6800-7000-8000-000000000001", Operation: OperationFixture, DeadlineMillis: now.Add(time.Minute).UnixMilli(), Environment: EnvironmentSimulator, SimulatorCase: SimulatorAccepted}
+	request := scopedLauncherFixture(Request{ProtocolVersion: 1, RequestID: "018bcfe5-6800-7000-8000-000000000001", Operation: OperationFixture, DeadlineMillis: now.Add(time.Minute).UnixMilli(), Environment: EnvironmentSimulator, SimulatorCase: SimulatorAccepted})
 	_, err = launcher.Launch(ctx, profilePath, request)
 	if err == nil || err.Error() != string(StableErrorDeadlineExpired) {
 		t.Fatalf("error=%v", err)
@@ -612,7 +624,7 @@ func TestLauncherRechecksProfileExpiryImmediatelyBeforeSpawn(t *testing.T) {
 		launched = true
 		return nil, nil
 	}
-	request := Request{ProtocolVersion: 1, RequestID: "018bcfe5-6800-7000-8000-000000000001", Operation: OperationFixture, DeadlineMillis: now.Add(time.Minute).UnixMilli(), Environment: EnvironmentSimulator, SimulatorCase: SimulatorAccepted}
+	request := scopedLauncherFixture(Request{ProtocolVersion: 1, RequestID: "018bcfe5-6800-7000-8000-000000000001", Operation: OperationFixture, DeadlineMillis: now.Add(time.Minute).UnixMilli(), Environment: EnvironmentSimulator, SimulatorCase: SimulatorAccepted})
 	_, err = launcher.Launch(context.Background(), profilePath, request)
 	if err == nil || err.Error() != string(StableErrorProfileExpired) || launched {
 		t.Fatalf("error=%v launched=%t", err, launched)
@@ -657,7 +669,7 @@ func TestLauncherRechecksProfileExpiryAfterProcessIdentityBeforeStdin(t *testing
 		advanced = true
 		return nil, verify(runCtx, 123, false)
 	}
-	request := Request{ProtocolVersion: 1, RequestID: "018bcfe5-6800-7000-8000-000000000001", Operation: OperationFixture, DeadlineMillis: now.Add(time.Minute).UnixMilli(), Environment: EnvironmentSimulator, SimulatorCase: SimulatorAccepted}
+	request := scopedLauncherFixture(Request{ProtocolVersion: 1, RequestID: "018bcfe5-6800-7000-8000-000000000001", Operation: OperationFixture, DeadlineMillis: now.Add(time.Minute).UnixMilli(), Environment: EnvironmentSimulator, SimulatorCase: SimulatorAccepted})
 	_, err = launcher.Launch(context.Background(), profilePath, request)
 	if err == nil || err.Error() != string(StableErrorProfileExpired) {
 		t.Fatalf("error=%v", err)
@@ -689,7 +701,7 @@ func writeLauncherProfile(t *testing.T, root string, helper []byte, now time.Tim
 	signature := append([]byte(base64.StdEncoding.EncodeToString(ed25519.Sign(ed25519.NewKeyFromSeed(seed), parsed.Canonical))), '\n')
 	path := filepath.Join(root, "profile.json")
 	writeLauncherFile(t, path, raw, 0o600)
-	writeLauncherFile(t, path+".sig", signature, 0o600)
+	writeLauncherFile(t, strings.TrimSuffix(path, filepath.Ext(path))+".sig", signature, 0o600)
 	return path
 }
 func writeLauncherFile(t *testing.T, path string, data []byte, mode os.FileMode) {

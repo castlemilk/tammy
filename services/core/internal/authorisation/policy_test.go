@@ -60,3 +60,32 @@ func TestValidateFreshFactor(t *testing.T) {
 		t.Fatalf("stale marker returned %v", err)
 	}
 }
+
+func TestSbrAuthorizationMatrix(t *testing.T) {
+	roles := []tammyv1.Role{
+		tammyv1.Role_ROLE_WORKSPACE_ADMIN,
+		tammyv1.Role_ROLE_BUSINESS_PREPARER,
+		tammyv1.Role_ROLE_BUSINESS_LODGER,
+		tammyv1.Role_ROLE_AUDITOR,
+	}
+	want := map[Action]map[tammyv1.Role]bool{
+		ActionInspectSBR: {
+			tammyv1.Role_ROLE_WORKSPACE_ADMIN: true,
+			tammyv1.Role_ROLE_BUSINESS_LODGER: true,
+		},
+		ActionImportSBRMachineCredential:  {tammyv1.Role_ROLE_WORKSPACE_ADMIN: true},
+		ActionUnlockSBRMachineCredential:  {tammyv1.Role_ROLE_WORKSPACE_ADMIN: true},
+		ActionReplaceSBRMachineCredential: {tammyv1.Role_ROLE_WORKSPACE_ADMIN: true},
+		ActionRemoveSBRMachineCredential:  {tammyv1.Role_ROLE_WORKSPACE_ADMIN: true},
+		ActionManageSBRProductID:          {tammyv1.Role_ROLE_WORKSPACE_ADMIN: true},
+		ActionUseSBRMachineCredential:     {tammyv1.Role_ROLE_BUSINESS_LODGER: true},
+	}
+	for action, matrix := range want {
+		for _, role := range roles {
+			err := Authorize([]tammyv1.Role{role}, action)
+			if (err == nil) != matrix[role] {
+				t.Fatalf("action %q role %s allowed=%v, want %v", action, role, err == nil, matrix[role])
+			}
+		}
+	}
+}

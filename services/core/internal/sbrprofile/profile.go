@@ -110,26 +110,49 @@ func (l directoryResourceLocator) Locate(profile Profile) (ResourceSet, error) {
 }
 
 type StagedResources struct {
-	Profile         ParsedProfile
-	RuntimeRoot     string
-	HelperPath      string
-	ReadOnlyPaths   []string
-	EndpointProfile []byte
-	Fingerprints    map[string]string
-	close           func() error
-	revalidate      func() error
-	revalidateCtx   func(context.Context) error
-	validateFresh   func(time.Time) error
-	helperFile      *os.File
-	helperExecFile  *os.File
-	rootFile        *os.File
-	baseFile        *os.File
-	helperExpected  [sha256.Size]byte
-	createdFiles    []string
-	createdDirs     []string
-	closeMu         sync.Mutex
-	closed          bool
-	closeErr        error
+	Profile                       ParsedProfile
+	RuntimeRoot                   string
+	HelperPath                    string
+	ReadOnlyPaths                 []string
+	EndpointProfile               []byte
+	Fingerprints                  map[string]string
+	authenticatedProductIDScope   *AuthenticatedProductIDScope
+	authenticatedComponentVersion string
+	close                         func() error
+	revalidate                    func() error
+	revalidateCtx                 func(context.Context) error
+	validateFresh                 func(time.Time) error
+	helperFile                    *os.File
+	helperExecFile                *os.File
+	rootFile                      *os.File
+	baseFile                      *os.File
+	helperExpected                [sha256.Size]byte
+	createdFiles                  []string
+	createdDirs                   []string
+	closeMu                       sync.Mutex
+	closed                        bool
+	closeErr                      error
+}
+
+// AuthenticatedProductIDScope is the non-secret namespace pair selected by the
+// signed EVTE registration and cross-bound endpoint profile.
+type AuthenticatedProductIDScope struct {
+	ProductIdentifier string
+	ServiceID         string
+}
+
+func (s *StagedResources) AuthenticatedProductIDScope() (AuthenticatedProductIDScope, bool) {
+	if s == nil || s.Profile.Profile.Environment != "EVTE" || s.authenticatedProductIDScope == nil {
+		return AuthenticatedProductIDScope{}, false
+	}
+	return *s.authenticatedProductIDScope, true
+}
+
+func (s *StagedResources) AuthenticatedComponentVersion() (string, bool) {
+	if s == nil || s.Profile.Profile.Environment != "EVTE" || s.authenticatedComponentVersion == "" {
+		return "", false
+	}
+	return s.authenticatedComponentVersion, true
 }
 
 func (s *StagedResources) Revalidate() error {

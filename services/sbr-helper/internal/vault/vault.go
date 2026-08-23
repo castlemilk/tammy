@@ -24,6 +24,7 @@ const (
 	maximumCredential   = 4 << 20
 	maximumPassword     = 1 << 10
 	maximumOpaqueRecord = 4 << 20
+	maximumReceipt      = 4 << 10
 )
 
 var (
@@ -60,6 +61,7 @@ const (
 	PendingCreate
 	PendingReplace
 	PendingDelete
+	PendingCommitted
 )
 
 type pendingPhase uint8
@@ -155,6 +157,7 @@ type Scope struct {
 type CredentialMetadata struct {
 	Fingerprint       string
 	CanonicalABN      string
+	CreatedUnixMillis int64
 	ExpiresUnixMillis int64
 	ComponentVersion  string
 }
@@ -199,6 +202,19 @@ type StagedResult struct {
 	Kind       MutationKind
 	Credential CredentialMetadata
 	ProductID  ProductIDStatusResult
+}
+
+// CommitReceipt is the encrypted, redacted proof retained after a target has
+// been applied. The helper receives no durable acknowledgement from core, so
+// every receipt is bounded to maximumReceipt and is never silently evicted.
+type CommitReceipt struct {
+	OperationID    string
+	MutationKind   MutationKind
+	TargetAccount  string
+	ExpectedDigest string
+	DesiredDigest  string
+	Credential     CredentialMetadata
+	ProductID      ProductIDStatusResult
 }
 
 type Vault struct {
@@ -520,6 +536,11 @@ func (v *Vault) PendingStatus(operationID string) (PendingState, error) {
 	}
 	pending, err := v.readPending(operationID)
 	if errors.Is(err, ErrVaultMissing) {
+		if _, receiptErr := v.CommittedReceipt(operationID); receiptErr == nil {
+			return PendingCommitted, nil
+		} else if !errors.Is(receiptErr, ErrVaultMissing) {
+			return PendingNone, receiptErr
+		}
 		return PendingNone, nil
 	}
 	if err != nil {
@@ -534,11 +555,21 @@ func (v *Vault) Promote(operationID string) error {
 		return ErrVaultInaccessible
 	}
 	pending, err := v.readPending(operationID)
+	if errors.Is(err, ErrVaultMissing) {
+		if _, receiptErr := v.CommittedReceipt(operationID); receiptErr == nil {
+			return nil
+		} else if !errors.Is(receiptErr, ErrVaultMissing) {
+			return receiptErr
+		}
+	}
 	if err != nil {
 		return err
 	}
 	defer clear(pending.Envelope)
 	if pending.Phase == pendingApplied {
+		if err := v.writeCommittedReceipt(pending); err != nil {
+			return err
+		}
 		if err := v.releaseReservation(pending); err != nil && !errors.Is(err, ErrVaultCASConflict) {
 			return err
 		}
@@ -572,6 +603,9 @@ func (v *Vault) Promote(operationID string) error {
 	if err := v.markPendingApplied(pending); err != nil {
 		return err
 	}
+	if err := v.writeCommittedReceipt(pending); err != nil {
+		return err
+	}
 	if err := v.releaseReservation(pending); err != nil {
 		return err
 	}
@@ -586,6 +620,13 @@ func (v *Vault) Abort(operationID string) error {
 		return ErrVaultInvalidInput
 	}
 	pending, err := v.readPending(operationID)
+	if errors.Is(err, ErrVaultMissing) {
+		if _, receiptErr := v.CommittedReceipt(operationID); receiptErr == nil {
+			return ErrVaultCASConflict
+		} else if !errors.Is(receiptErr, ErrVaultMissing) {
+			return receiptErr
+		}
+	}
 	if err != nil {
 		return err
 	}
@@ -1022,6 +1063,164 @@ func (v *Vault) pendingScope(operationID string) string {
 	return hex.EncodeToString(mac.Sum(nil))
 }
 
+func (v *Vault) receiptAccount(operationID string) string {
+	return v.prefix() + "receipt/" + operationID
+}
+
+func (v *Vault) receiptScope(operationID string) string {
+	mac := hmac.New(sha256.New, v.installationKey)
+	_, _ = mac.Write([]byte("receipt"))
+	_, _ = mac.Write([]byte{0})
+	_, _ = mac.Write([]byte(operationID))
+	return hex.EncodeToString(mac.Sum(nil))
+}
+
+func (v *Vault) receiptForPending(pending pendingMutation) (CommitReceipt, error) {
+	receipt := CommitReceipt{OperationID: pending.OperationID, TargetAccount: pending.Account,
+		ExpectedDigest: pending.ExpectedDigest, DesiredDigest: pending.DesiredDigest}
+	switch {
+	case pending.Kind == CredentialKind && pending.Action == PendingCreate:
+		receipt.MutationKind = ImportCredentialMutation
+	case pending.Kind == CredentialKind && pending.Action == PendingReplace:
+		receipt.MutationKind = ReplaceCredentialMutation
+	case pending.Kind == CredentialKind && pending.Action == PendingDelete:
+		receipt.MutationKind = RemoveCredentialMutation
+	case pending.Kind == ProductIDKind && pending.Action == PendingCreate:
+		receipt.MutationKind = ImportProductIDMutation
+	case pending.Kind == ProductIDKind && pending.Action == PendingDelete:
+		receipt.MutationKind = RemoveProductIDMutation
+	default:
+		return CommitReceipt{}, ErrVaultAuthentication
+	}
+	if pending.Action == PendingDelete {
+		receipt.ProductID.State = ProductIDMissing
+		return receipt, nil
+	}
+	scopeDigest := strings.TrimPrefix(pending.Account, v.prefix()+"credential/")
+	if pending.Kind == ProductIDKind {
+		scopeDigest = strings.TrimPrefix(pending.Account, v.prefix()+"product-id/")
+	}
+	plain, version, err := v.open(scopeDigest, pending.Kind, pending.Envelope)
+	if err != nil {
+		return CommitReceipt{}, err
+	}
+	defer clear(plain)
+	if pending.Kind == CredentialKind {
+		record, decodeErr := decodeCredentialRecord(plain)
+		if decodeErr != nil || record.Metadata.ComponentVersion != version {
+			clear(record.Opaque)
+			return CommitReceipt{}, ErrVaultAuthentication
+		}
+		clear(record.Opaque)
+		receipt.Credential = record.Metadata
+		return receipt, nil
+	}
+	fields, decodeErr := decodeFields(plain, 2)
+	if decodeErr != nil || version != "product-id-v1" || len(fields[0]) == 0 || len(fields[0]) > maximumPassword ||
+		!regexp.MustCompile(`^[0-9a-f]{64}$`).MatchString(string(fields[1])) {
+		return CommitReceipt{}, ErrVaultAuthentication
+	}
+	receipt.ProductID = ProductIDStatusResult{State: ProductIDPresent, Fingerprint: string(fields[1])}
+	return receipt, nil
+}
+
+func (v *Vault) writeCommittedReceipt(pending pendingMutation) error {
+	receipt, err := v.receiptForPending(pending)
+	if err != nil {
+		return err
+	}
+	plain := encodeCommitReceipt(receipt)
+	defer clear(plain)
+	if len(plain) == 0 || len(plain) > maximumReceipt {
+		return ErrVaultInvalidInput
+	}
+	envelope, err := v.seal(v.receiptScope(receipt.OperationID), pending.Kind, "receipt-v1", plain)
+	if err != nil {
+		return err
+	}
+	defer clear(envelope)
+	err = v.store.Create(v.receiptAccount(receipt.OperationID), envelope, v.policy)
+	if err == nil {
+		return nil
+	}
+	if !errors.Is(err, ErrVaultCollision) {
+		return err
+	}
+	existing, readErr := v.CommittedReceipt(receipt.OperationID)
+	if readErr != nil || existing != receipt {
+		return ErrVaultCASConflict
+	}
+	return nil
+}
+
+func (v *Vault) CommittedReceipt(operationID string) (CommitReceipt, error) {
+	if v.closed {
+		return CommitReceipt{}, ErrVaultInaccessible
+	}
+	if !validOperationID(operationID) {
+		return CommitReceipt{}, ErrVaultInvalidInput
+	}
+	envelope, err := v.store.Read(v.receiptAccount(operationID))
+	if err != nil {
+		return CommitReceipt{}, err
+	}
+	defer clear(envelope)
+	if len(envelope) == 0 || len(envelope) > maximumReceipt {
+		return CommitReceipt{}, ErrVaultAuthentication
+	}
+	for _, kind := range []RecordKind{CredentialKind, ProductIDKind} {
+		plain, version, openErr := v.open(v.receiptScope(operationID), kind, envelope)
+		if openErr != nil {
+			continue
+		}
+		receipt, decodeErr := decodeCommitReceipt(plain)
+		clear(plain)
+		if decodeErr == nil && version == "receipt-v1" && receipt.OperationID == operationID && v.validCommitReceipt(receipt, kind) {
+			return receipt, nil
+		}
+	}
+	return CommitReceipt{}, ErrVaultAuthentication
+}
+
+func (v *Vault) validCommitReceipt(receipt CommitReceipt, kind RecordKind) bool {
+	wantPrefix := v.prefix() + "credential/"
+	if kind == ProductIDKind {
+		wantPrefix = v.prefix() + "product-id/"
+	}
+	digest := strings.TrimPrefix(receipt.TargetAccount, wantPrefix)
+	if digest == receipt.TargetAccount || !regexp.MustCompile(`^[0-9a-f]{64}$`).MatchString(digest) ||
+		!validReceiptDigest(receipt.ExpectedDigest) || !validReceiptDigest(receipt.DesiredDigest) {
+		return false
+	}
+	switch receipt.MutationKind {
+	case ImportCredentialMutation, ReplaceCredentialMutation:
+		return kind == CredentialKind && validCredentialMetadata(receipt.Credential) && receipt.ProductID == (ProductIDStatusResult{})
+	case RemoveCredentialMutation:
+		return kind == CredentialKind && receipt.Credential == (CredentialMetadata{}) && receipt.ProductID.State == ProductIDMissing && receipt.ProductID.Fingerprint == ""
+	case ImportProductIDMutation:
+		return kind == ProductIDKind && receipt.Credential == (CredentialMetadata{}) && receipt.ProductID.State == ProductIDPresent &&
+			regexp.MustCompile(`^[0-9a-f]{64}$`).MatchString(receipt.ProductID.Fingerprint)
+	case RemoveProductIDMutation:
+		return kind == ProductIDKind && receipt.Credential == (CredentialMetadata{}) && receipt.ProductID.State == ProductIDMissing && receipt.ProductID.Fingerprint == ""
+	default:
+		return false
+	}
+}
+
+func validReceiptDigest(value string) bool {
+	return value == "missing" || regexp.MustCompile(`^[0-9a-f]{64}$`).MatchString(value)
+}
+
+func validCredentialMetadata(metadata CredentialMetadata) bool {
+	if metadata.Fingerprint == "" || len(metadata.Fingerprint) > 256 || metadata.ComponentVersion == "" || len(metadata.ComponentVersion) > 128 ||
+		(metadata.CreatedUnixMillis != 0 || metadata.ExpiresUnixMillis != 0) &&
+			(metadata.CreatedUnixMillis <= 0 || metadata.ExpiresUnixMillis <= metadata.CreatedUnixMillis) {
+		return false
+	}
+	canonical, err := canonicalABN(metadata.CanonicalABN)
+	return err == nil && canonical == metadata.CanonicalABN
+}
+
 func (v *Vault) validPendingTarget(pending pendingMutation) bool {
 	var prefix string
 	switch pending.Kind {
@@ -1051,18 +1250,20 @@ func validateCredentialRecord(record CredentialRecord) error {
 }
 
 func encodeCredentialRecord(record CredentialRecord) []byte {
-	return encodeFields([][]byte{record.Opaque, []byte(record.Metadata.Fingerprint), []byte(record.Metadata.CanonicalABN), int64Bytes(record.Metadata.ExpiresUnixMillis), []byte(record.Metadata.ComponentVersion)})
+	return encodeFields([][]byte{record.Opaque, []byte(record.Metadata.Fingerprint), []byte(record.Metadata.CanonicalABN),
+		int64Bytes(record.Metadata.CreatedUnixMillis), int64Bytes(record.Metadata.ExpiresUnixMillis), []byte(record.Metadata.ComponentVersion)})
 }
 
 func decodeCredentialRecord(value []byte) (CredentialRecord, error) {
-	fields, err := decodeFields(value, 5)
+	fields, err := decodeFields(value, 6)
 	if err != nil {
 		return CredentialRecord{}, err
 	}
-	if len(fields[3]) != 8 {
+	if len(fields[3]) != 8 || len(fields[4]) != 8 {
 		return CredentialRecord{}, ErrVaultAuthentication
 	}
-	record := CredentialRecord{Opaque: append([]byte(nil), fields[0]...), Metadata: CredentialMetadata{Fingerprint: string(fields[1]), CanonicalABN: string(fields[2]), ExpiresUnixMillis: int64(binary.BigEndian.Uint64(fields[3])), ComponentVersion: string(fields[4])}}
+	record := CredentialRecord{Opaque: append([]byte(nil), fields[0]...), Metadata: CredentialMetadata{Fingerprint: string(fields[1]), CanonicalABN: string(fields[2]),
+		CreatedUnixMillis: int64(binary.BigEndian.Uint64(fields[3])), ExpiresUnixMillis: int64(binary.BigEndian.Uint64(fields[4])), ComponentVersion: string(fields[5])}}
 	if validateCredentialRecord(record) != nil {
 		clear(record.Opaque)
 		return CredentialRecord{}, ErrVaultAuthentication
@@ -1072,6 +1273,30 @@ func decodeCredentialRecord(value []byte) (CredentialRecord, error) {
 
 func encodePending(p pendingMutation) []byte {
 	return encodeFields([][]byte{[]byte(p.OperationID), {byte(p.Action)}, {byte(p.Kind)}, []byte(p.Account), p.Envelope, []byte(p.ExpectedDigest), []byte(p.DesiredDigest), []byte(p.ReservationAccount), []byte(p.ReservationDigest), []byte(p.ReservationToken), {byte(p.Phase)}})
+}
+
+func encodeCommitReceipt(receipt CommitReceipt) []byte {
+	return encodeFields([][]byte{[]byte(receipt.OperationID), {byte(receipt.MutationKind)}, []byte(receipt.TargetAccount),
+		[]byte(receipt.ExpectedDigest), []byte(receipt.DesiredDigest), []byte(receipt.Credential.Fingerprint),
+		[]byte(receipt.Credential.CanonicalABN), int64Bytes(receipt.Credential.CreatedUnixMillis),
+		int64Bytes(receipt.Credential.ExpiresUnixMillis), []byte(receipt.Credential.ComponentVersion),
+		{byte(receipt.ProductID.State)}, []byte(receipt.ProductID.Fingerprint)})
+}
+
+func decodeCommitReceipt(value []byte) (CommitReceipt, error) {
+	fields, err := decodeFields(value, 12)
+	if err != nil || len(fields[1]) != 1 || len(fields[7]) != 8 || len(fields[8]) != 8 || len(fields[10]) != 1 {
+		return CommitReceipt{}, ErrVaultAuthentication
+	}
+	receipt := CommitReceipt{OperationID: string(fields[0]), MutationKind: MutationKind(fields[1][0]), TargetAccount: string(fields[2]),
+		ExpectedDigest: string(fields[3]), DesiredDigest: string(fields[4]), Credential: CredentialMetadata{
+			Fingerprint: string(fields[5]), CanonicalABN: string(fields[6]), CreatedUnixMillis: int64(binary.BigEndian.Uint64(fields[7])),
+			ExpiresUnixMillis: int64(binary.BigEndian.Uint64(fields[8])), ComponentVersion: string(fields[9])},
+		ProductID: ProductIDStatusResult{State: ProductIDState(fields[10][0]), Fingerprint: string(fields[11])}}
+	if !validOperationID(receipt.OperationID) || !receipt.MutationKind.valid() {
+		return CommitReceipt{}, ErrVaultAuthentication
+	}
+	return receipt, nil
 }
 
 func decodePending(value []byte) (pendingMutation, error) {

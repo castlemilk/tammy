@@ -25,6 +25,8 @@ func TestSBRReadinessMigrationIsEmbeddedLastAndContainsOnlyRedactedState(t *test
 		"sbr_mutations_v1",
 		"sbr_idempotency_v1",
 		"sbr_simulator_transports_v1",
+		"sbr_helper_dispatches_v1",
+		"sbr_pending_mutation_effects_v1",
 	} {
 		if !strings.Contains(schema, "create table "+table) {
 			t.Errorf("migration 7 does not create %s", table)
@@ -46,6 +48,7 @@ func TestSBRReadinessMigrationIsEmbeddedLastAndContainsOnlyRedactedState(t *test
 		"retry_of_operation_id text unique references sbr_simulator_transports_v1(operation_id) on delete restrict",
 		"pending_terminal_state text check (pending_terminal_state is null or pending_terminal_state in ('accepted','failed'))",
 		"pending_result_hash blob check (pending_result_hash is null or (length(pending_result_hash) = 32 and pending_result_hash != zeroblob(32)))",
+		"state text not null check (state in ('dispatching','completed','failed','unknown'))",
 	} {
 		if !strings.Contains(schema, fragment) {
 			t.Errorf("migration 7 missing exact invariant %q", fragment)

@@ -245,8 +245,11 @@ func TestCredentialCreatePromoteUnlockReplaceDeleteAndAbort(t *testing.T) {
 	if err := v.Promote(operation); err != nil {
 		t.Fatal(err)
 	}
-	if status, err := v.PendingStatus(operation); err != nil || status != PendingNone {
+	if status, err := v.PendingStatus(operation); err != nil || status != PendingCommitted {
 		t.Fatalf("promoted pending = %v, %v", status, err)
+	}
+	if err := v.Promote(operation); err != nil {
+		t.Fatalf("repeated promote = %v", err)
 	}
 	got, err := v.ReadMetadata(scope)
 	if err != nil || got.Fingerprint != metadata.Credential.Fingerprint {
@@ -290,6 +293,42 @@ func TestCredentialCreatePromoteUnlockReplaceDeleteAndAbort(t *testing.T) {
 	}
 	if _, err := v.ReadMetadata(scope); !errors.Is(err, ErrVaultMissing) {
 		t.Fatalf("credential after delete = %v", err)
+	}
+}
+
+func TestCommittedReceiptIsAuthenticatedAndBoundToOperation(t *testing.T) {
+	store := newMemoryStore()
+	v := newTestVault(t, DevelopmentNamespace, store)
+	operation := "018f0000-0000-7000-8000-0000000000e1"
+	if _, err := v.StageCreate(Mutation{Kind: ImportCredentialMutation, OperationID: operation, Scope: testScope(),
+		SelectedPath: "/synthetic/credential.p12", Password: []byte("fixture-password")}); err != nil {
+		t.Fatal(err)
+	}
+	if err := v.Promote(operation); err != nil {
+		t.Fatal(err)
+	}
+	receiptAccount := v.prefix() + "receipt/" + operation
+	store.mu.Lock()
+	original := append([]byte(nil), store.items[receiptAccount]...)
+	store.mu.Unlock()
+	if len(original) == 0 || len(original) > 4096 {
+		t.Fatalf("bounded committed receipt length = %d", len(original))
+	}
+
+	store.mu.Lock()
+	store.items[receiptAccount][len(store.items[receiptAccount])-1] ^= 0xff
+	store.mu.Unlock()
+	if _, err := v.PendingStatus(operation); !errors.Is(err, ErrVaultAuthentication) {
+		t.Fatalf("tampered receipt status error = %v", err)
+	}
+
+	store.mu.Lock()
+	store.items[receiptAccount] = original
+	otherOperation := "018f0000-0000-7000-8000-0000000000e2"
+	store.items[v.prefix()+"receipt/"+otherOperation] = append([]byte(nil), original...)
+	store.mu.Unlock()
+	if _, err := v.PendingStatus(otherOperation); !errors.Is(err, ErrVaultAuthentication) {
+		t.Fatalf("cross-operation receipt status error = %v", err)
 	}
 }
 

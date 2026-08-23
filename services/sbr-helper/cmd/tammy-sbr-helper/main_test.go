@@ -17,9 +17,24 @@ import (
 	"github.com/tammyapp/tammy/services/sbr-helper/internal/protocol"
 	"github.com/tammyapp/tammy/services/sbr-helper/internal/runner"
 	"github.com/tammyapp/tammy/services/sbr-helper/internal/simulator"
+	"github.com/tammyapp/tammy/services/sbr-helper/internal/vault"
 )
 
 const childRequestID = "018bcfe5-6800-7000-8000-000000000001"
+
+func TestPackagedHelperComposesSimulatorVaultSignerAndUnavailableEVTE(t *testing.T) {
+	dependencies := helperDependencies()
+	if _, ok := dependencies.CredentialSigner.(*vault.SyntheticSigner); !ok {
+		t.Fatalf("credential signer = %T", dependencies.CredentialSigner)
+	}
+	request := scopedRequest(time.Now().UTC(), protocol.OperationStatus)
+	request.Environment = protocol.EnvironmentEVTE
+	request.EndpointProfile = []byte("authenticated-but-unimplemented-evte-profile")
+	response := dependencies.ComponentClient.Execute(context.Background(), request)
+	if response.StableErrorCode != protocol.StableErrorComponentUnavailable {
+		t.Fatalf("EVTE response = %#v", response)
+	}
+}
 
 func TestHelperChildProcessFrameEOFAndRedaction(t *testing.T) {
 	if !compiledHelperSupported {
@@ -27,8 +42,8 @@ func TestHelperChildProcessFrameEOFAndRedaction(t *testing.T) {
 	}
 	binary := buildHelper(t)
 	now := time.Now().UTC()
-	fixture := protocol.Request{ProtocolVersion: protocol.ProtocolVersion, RequestID: childRequestID, Operation: protocol.OperationFixture,
-		DeadlineMillis: now.Add(time.Minute).UnixMilli(), Environment: protocol.EnvironmentSimulator, SimulatorCase: protocol.SimulatorAccepted}
+	fixture := scopedRequest(now, protocol.OperationFixture)
+	fixture.SimulatorCase = protocol.SimulatorAccepted
 	stdout, stderr, err := runHelper(t, binary, frameRequest(t, fixture, now))
 	if err != nil || len(stderr) != 0 {
 		t.Fatalf("accepted fixture err=%v stderr=%q", err, stderr)
@@ -38,25 +53,6 @@ func TestHelperChildProcessFrameEOFAndRedaction(t *testing.T) {
 		t.Fatalf("response = %#v", response)
 	}
 
-	secret := "do-not-log-this-password"
-	path := "/tmp/do-not-log-this-credential.p12"
-	credential := scopedRequest(now, protocol.OperationPrepareMutation)
-	credential.OperationID = "018bcfe5-6800-7000-8000-000000000004"
-	credential.MutationKind = protocol.MutationImportCredential
-	credential.SelectedLocalPath = path
-	credential.Bookmark = []byte("bookmark-secret")
-	credential.TransientPassword = []byte(secret)
-	stdout, stderr, err = runHelper(t, binary, frameRequest(t, credential, now))
-	if err != nil || len(stderr) != 0 {
-		t.Fatalf("closed credential err=%v stderr=%q", err, stderr)
-	}
-	response = decodeResponseFrame(t, stdout)
-	if response.StableErrorCode != protocol.StableErrorSecureStoreUnavailable {
-		t.Fatalf("closed response = %#v", response)
-	}
-	if bytes.Contains(stdout, []byte(secret)) || bytes.Contains(stdout, []byte(path)) || bytes.Contains(stderr, []byte(secret)) || bytes.Contains(stderr, []byte(path)) {
-		t.Fatal("helper output disclosed a secret or selected path")
-	}
 }
 
 func TestHelperChildProcessExactSimulatorCaseTable(t *testing.T) {
@@ -88,8 +84,8 @@ func TestHelperChildProcessExactSimulatorCaseTable(t *testing.T) {
 			if test.caseID == protocol.SimulatorTimeout {
 				deadline = now.Add(100 * time.Millisecond)
 			}
-			request := protocol.Request{ProtocolVersion: protocol.ProtocolVersion, RequestID: childRequestID, Operation: protocol.OperationFixture,
-				DeadlineMillis: deadline.UnixMilli(), Environment: protocol.EnvironmentSimulator, SimulatorCase: test.caseID}
+			request := scopedRequest(now, protocol.OperationFixture)
+			request.DeadlineMillis, request.SimulatorCase = deadline.UnixMilli(), test.caseID
 			stdout, stderr, runErr := runHelper(t, binary, frameRequest(t, request, now))
 			if (runErr != nil) != test.exitError || string(stderr) != test.lifecycle {
 				t.Fatalf("run error=%v stderr=%q", runErr, stderr)
@@ -125,8 +121,8 @@ func TestHelperChildProcessExactSimulatorCaseTable(t *testing.T) {
 	}
 
 	now := time.Now().UTC()
-	unknown := protocol.Request{ProtocolVersion: protocol.ProtocolVersion, RequestID: childRequestID, Operation: protocol.OperationFixture,
-		DeadlineMillis: now.Add(time.Second).UnixMilli(), Environment: protocol.EnvironmentSimulator, SimulatorCase: protocol.SimulatorUnknown}
+	unknown := scopedRequest(now, protocol.OperationFixture)
+	unknown.DeadlineMillis, unknown.SimulatorCase = now.Add(time.Second).UnixMilli(), protocol.SimulatorUnknown
 	if _, err := protocol.EncodeRequest(unknown, now); err == nil || err.Error() != "REQUEST_INVALID" {
 		t.Fatalf("UNKNOWN input error = %v", err)
 	}
@@ -186,7 +182,7 @@ func TestRunWithRepeatedSignalsCancelsOnceAndJoinsRunner(t *testing.T) {
 	never := make(chan struct{})
 	done := make(chan int, 1)
 	go func() {
-		done <- runWith(reader, io.Discard, io.Discard, signals, channelParentMonitor{exit: never}, mainTestDependencies(unavailableCredentialSigner{}))
+		done <- runWith(reader, io.Discard, io.Discard, signals, channelParentMonitor{exit: never}, mainTestDependencies(unavailableMainSigner{}))
 	}()
 	signals <- syscall.SIGTERM
 	signals <- syscall.SIGTERM
@@ -233,8 +229,8 @@ func TestParentDeathChildIntegration(t *testing.T) {
 	if os.Getenv("TAMMY_PARENT_DEATH_HARNESS") == "1" {
 		helper := os.Getenv("TAMMY_PARENT_DEATH_HELPER")
 		now := time.Now().UTC()
-		request := protocol.Request{ProtocolVersion: protocol.ProtocolVersion, RequestID: childRequestID, Operation: protocol.OperationFixture,
-			DeadlineMillis: now.Add(30 * time.Second).UnixMilli(), Environment: protocol.EnvironmentSimulator, SimulatorCase: protocol.SimulatorTimeout}
+		request := scopedRequest(now, protocol.OperationFixture)
+		request.DeadlineMillis, request.SimulatorCase = now.Add(30*time.Second).UnixMilli(), protocol.SimulatorTimeout
 		command := exec.Command(helper)
 		command.Stdin = bytes.NewReader(frameRequest(t, request, now))
 		command.Stdout = os.Stdout
@@ -277,6 +273,12 @@ type unavailableMainComponent struct{}
 
 func (unavailableMainComponent) Execute(_ context.Context, request protocol.Request) protocol.Response {
 	return protocol.NewErrorResponse(request.RequestID, protocol.StableErrorComponentUnavailable)
+}
+
+type unavailableMainSigner struct{}
+
+func (unavailableMainSigner) Execute(_ context.Context, request protocol.Request) protocol.Response {
+	return protocol.NewErrorResponse(request.RequestID, protocol.StableErrorSecureStoreUnavailable)
 }
 
 func mainTestDependencies(signer runner.CredentialSigner) runner.Dependencies {
@@ -424,7 +426,9 @@ func scopedRequest(now time.Time, operation protocol.Operation) protocol.Request
 	return protocol.Request{ProtocolVersion: protocol.ProtocolVersion, RequestID: childRequestID, Operation: operation,
 		DeadlineMillis: now.Add(time.Minute).UnixMilli(), Environment: protocol.EnvironmentSimulator,
 		WorkspaceID: "018bcfe5-6800-7000-8000-000000000002", OrganisationID: "018bcfe5-6800-7000-8000-000000000003",
-		CanonicalABN: "51824753556", OpaqueScope: bytes.Repeat([]byte{0x55}, 32)}
+		CanonicalABN: "51824753556", OpaqueScope: bytes.Repeat([]byte{0x55}, 32),
+		ProfileFingerprint: bytes.Repeat([]byte{0x61}, 32), RegistrationFingerprint: bytes.Repeat([]byte{0x62}, 32),
+		ComponentFingerprint: bytes.Repeat([]byte{0x63}, 32), ComponentVersion: "simulator-v1"}
 }
 
 func helperModuleRoot(t *testing.T) string {

@@ -1476,6 +1476,13 @@ func (service *Service) ValidateAdministratorReplayBinding(ctx context.Context, 
 
 func (service *Service) RequireAdministratorWithin(ctx context.Context, executor workspace.MutationExecutor,
 	authentication *tammyv1.AuthenticationContext) error {
+	return service.AuthorizeWithin(ctx, executor, authentication, authorisation.ActionManageWorkspace)
+}
+
+// AuthorizeWithin revalidates the active session and current persisted roles
+// in the caller-owned transaction before applying the centralized policy.
+func (service *Service) AuthorizeWithin(ctx context.Context, executor workspace.MutationExecutor,
+	authentication *tammyv1.AuthenticationContext, action authorisation.Action) error {
 	service.mu.Lock()
 	defer service.mu.Unlock()
 	if executor == nil {
@@ -1489,13 +1496,61 @@ func (service *Service) RequireAdministratorWithin(ctx context.Context, executor
 	if err != nil {
 		return err
 	}
-	if err := authorisation.Authorize(actor.Roles, authorisation.ActionManageWorkspace); err != nil {
+	if err := authorisation.Authorize(actor.Roles, action); err != nil {
 		return err
 	}
 	if err := service.audit.Record(ctx, executor, "session_touched", authentication.GetSessionId()); err != nil {
 		return err
 	}
 	return saveRepositoryStateTo(ctx, executor, state)
+}
+
+// ValidateAuthorizationWithin checks the current persisted session and roles
+// without extending the session. Callers use it before external work, then
+// re-authorize in the transaction that commits the owned mutation.
+func (service *Service) ValidateAuthorizationWithin(ctx context.Context, executor workspace.MutationExecutor,
+	authentication *tammyv1.AuthenticationContext, action authorisation.Action) error {
+	service.mu.Lock()
+	defer service.mu.Unlock()
+	if executor == nil {
+		return ErrRepositoryIntegrity
+	}
+	state, err := loadRepositoryStateFrom(ctx, executor)
+	if err != nil {
+		return err
+	}
+	actor, _, err := service.authenticateReadOnlyLocked(&state, authentication)
+	if err != nil {
+		return err
+	}
+	return authorisation.Authorize(actor.Roles, action)
+}
+
+// ValidateFreshFactorWithin verifies an assertion without consuming it or
+// touching its session. Consumption is repeated inside the commit transaction.
+func (service *Service) ValidateFreshFactorWithin(ctx context.Context, executor workspace.MutationExecutor,
+	authentication *tammyv1.AuthenticationContext, marker *tammyv1.FreshFactorContext, purpose string) error {
+	service.mu.Lock()
+	defer service.mu.Unlock()
+	if executor == nil {
+		return ErrRepositoryIntegrity
+	}
+	state, err := loadRepositoryStateFrom(ctx, executor)
+	if err != nil {
+		return err
+	}
+	if _, _, err := service.authenticateReadOnlyLocked(&state, authentication); err != nil {
+		return err
+	}
+	if err := authorisation.ValidateFreshFactor(marker, purpose, service.clock.Now()); err != nil {
+		return err
+	}
+	assertion := state.Assertions[marker.AssertionId]
+	if assertion == nil || assertion.Consumed || assertion.UserID != authentication.ActorUserId ||
+		assertion.SessionID != authentication.SessionId || assertion.Purpose != purpose || !assertion.Asserted.Equal(marker.AssertedAt.AsTime()) {
+		return faults.New(faults.CodeAuthenticationRequired, nil)
+	}
+	return nil
 }
 
 // RequireActiveSessionWithin revalidates and touches any active workspace user

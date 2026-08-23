@@ -104,6 +104,38 @@ func TestAuditEventDescriptorCarriesIndependentCommitmentOpenings(t *testing.T) 
 	}
 }
 
+func TestSbrAuditPayloadIsClosedAndContainsNoSensitiveInputs(t *testing.T) {
+	descriptor, err := protoregistry.GlobalFiles.FindDescriptorByName("tammy.v1.SbrAuditEvent")
+	if err != nil {
+		t.Fatal(err)
+	}
+	message := descriptor.(protoreflect.MessageDescriptor)
+	want := map[protoreflect.Name]protoreflect.Kind{
+		"action": protoreflect.EnumKind, "credential_fingerprint": protoreflect.BytesKind,
+		"profile_fingerprint": protoreflect.BytesKind, "component_fingerprint": protoreflect.BytesKind,
+		"status_code": protoreflect.StringKind,
+	}
+	for name, kind := range want {
+		field := message.Fields().ByName(name)
+		if field == nil || field.Kind() != kind {
+			t.Errorf("SbrAuditEvent.%s missing or wrong kind", name)
+		}
+	}
+	for _, prohibited := range []protoreflect.Name{"path", "password", "product_id", "endpoint", "secret", "abn"} {
+		if message.Fields().ByName(prohibited) != nil {
+			t.Errorf("SbrAuditEvent exposes %s", prohibited)
+		}
+	}
+	actions, err := protoregistry.GlobalFiles.FindDescriptorByName("tammy.v1.SbrAuditAction")
+	if err != nil {
+		t.Fatal(err)
+	}
+	values := actions.(protoreflect.EnumDescriptor).Values()
+	if values.Len() != 16 {
+		t.Fatalf("SbrAuditAction values = %d, want 16 closed values", values.Len())
+	}
+}
+
 func TestAuditDescriptorsExposeSigningKeyRotationContinuity(t *testing.T) {
 	for messageName, fields := range map[protoreflect.FullName]map[protoreflect.Name]protoreflect.Kind{
 		"tammy.v1.AuditSigningPublicKey": {

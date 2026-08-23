@@ -110,21 +110,24 @@ func (a *Adapter) Select(ctx context.Context, requestID string, caseID protocol.
 	selection := Selection{
 		FixtureBytes:  []byte(canonicalFixture),
 		FixtureSHA256: hex.EncodeToString(digest[:]),
-		Response:      protocol.Response{RequestID: requestID},
+		Response:      protocol.Response{RequestID: requestID, SimulatorCase: caseID},
 	}
 	switch caseID {
 	case protocol.SimulatorAccepted:
 		selection.SemanticOutcome = SemanticAccepted
 		selection.Response.Outcome = protocol.OutcomeOK
 		selection.Response.RedactedResult = protocol.ResultFixtureSelected
+		selection.Response.SimulatorState = protocol.SimulatorStateAccepted
 	case protocol.SimulatorNotStarted:
 		selection.SemanticOutcome = SemanticNotStarted
 		selection.Response.Outcome = protocol.OutcomeOK
 		selection.Response.RedactedResult = protocol.ResultNotStarted
+		selection.Response.SimulatorState = protocol.SimulatorStateNotStarted
 	case protocol.SimulatorMaybeSent:
 		selection.SemanticOutcome = SemanticMaybeSent
 		selection.Response.Outcome = protocol.OutcomeOK
 		selection.Response.RedactedResult = protocol.ResultRecoveryRequired
+		selection.Response.SimulatorState = protocol.SimulatorStateMaybeSent
 	case protocol.SimulatorMalformedResponse:
 		selection.SemanticOutcome = SemanticMalformedResponse
 		selection.MalformedPayload = []byte{0x0a, 0x01, 'x'}
@@ -135,6 +138,7 @@ func (a *Adapter) Select(ctx context.Context, requestID string, caseID protocol.
 		selection.SemanticOutcome = SemanticTimeout
 		selection.Response.Outcome = protocol.OutcomeError
 		selection.Response.StableErrorCode = protocol.StableErrorDeadlineExpired
+		selection.Response.SimulatorState = protocol.SimulatorStateMaybeSent
 	}
 	return selection, nil
 }
@@ -150,6 +154,8 @@ func (a *Adapter) RecoverUnknown(requestID string) Selection {
 			RequestID:      requestID,
 			Outcome:        protocol.OutcomeOK,
 			RedactedResult: protocol.ResultRecoveryRequired,
+			SimulatorCase:  protocol.SimulatorUnknown,
+			SimulatorState: protocol.SimulatorStateUnknown,
 		},
 	}
 }

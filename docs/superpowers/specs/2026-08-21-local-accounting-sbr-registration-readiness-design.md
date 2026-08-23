@@ -94,6 +94,7 @@ ATO Product IDs are environment- and service-scoped secrets. They are imported t
 The exact `sbr-registration-v1.json` manifest contains only these fields:
 
 - `schema_version: 1`, `environment: "EVTE"`, and `target: "darwin/arm64"`;
+- `product_id_scope` with the exact non-secret product namespace identifier and enrolled service ID used to address the separately imported Product ID; the secret Product ID value is never present in the manifest;
 - `dsp_registration` and `product_registration`, each with `state: NOT_STARTED | SUBMITTED | APPROVED`, an external reference, decision date, and optional expiry;
 - `osf_assessment` with `category`, `state: NOT_STARTED | IN_REVIEW | APPROVED`, external reference, decision date, and revalidation date;
 - `component` with name, version, `component_manifest_sha256`, `licence_state: NOT_OBTAINED | REVIEW_REQUIRED | APPROVED`, and target;
