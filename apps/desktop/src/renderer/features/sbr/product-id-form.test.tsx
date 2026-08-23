@@ -279,3 +279,40 @@ it("keeps its live status region mounted across a known authorization failure", 
   await screen.findByText(/no Product ID operation was started/i);
   expect(screen.getByRole("status")).toBe(region);
 });
+
+it("terminal-locks after a dispatched Product ID promise rejects", async () => {
+  const importSbrProductId = vi.fn().mockRejectedValue(new Error("core restarted after dispatch"));
+  const assertTotp = vi.fn((frame: Uint8Array) => {
+    const request = assertCodec.decodeRequest(frame);
+    return Promise.resolve(
+      assertCodec.encodeResponse(
+        create(AssertTOTPResponseSchema, {
+          freshFactor: create(FreshFactorContextSchema, {
+            assertionId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073994",
+            purpose: request.purpose,
+            assertedAt: create(TimestampSchema, { seconds: 1n }),
+          }),
+        }),
+      ),
+    );
+  });
+  const user = userEvent.setup();
+  render(
+    <ProductIdForm
+      api={{ assertTotp, importSbrProductId, removeSbrProductId: vi.fn() }}
+      onChanged={vi.fn()}
+      productIdentifier="TAMMY.EVTE"
+      serviceIdentifier="BAS.LODGE"
+      state={ProductIdState.MISSING}
+      workspace={workspace}
+    />,
+  );
+  await user.click(screen.getByRole("button", { name: "Import Product ID" }));
+  await user.type(screen.getByLabelText("Product ID value"), "PRIVATE");
+  await user.type(screen.getByLabelText("Fresh six-digit code"), "123456");
+  await user.click(screen.getByRole("button", { name: "Continue" }));
+  await screen.findByText(/outcome is unknown/i);
+  await user.click(screen.getByRole("button", { name: "Continue" }));
+  expect(importSbrProductId).toHaveBeenCalledOnce();
+  expect(document.body.textContent).not.toContain("core restarted after dispatch");
+});

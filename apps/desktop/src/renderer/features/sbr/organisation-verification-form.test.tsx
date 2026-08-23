@@ -190,6 +190,29 @@ it("keeps its live status region mounted across evidence validation", async () =
   expect(screen.getByRole("status")).toBe(region);
 });
 
+it("terminal-locks after a dispatched verification promise rejects", async () => {
+  const recordEntityVerification = vi
+    .fn()
+    .mockRejectedValue(new Error("timeout after evidence commit"));
+  const user = userEvent.setup();
+  render(
+    <OrganisationVerificationForm
+      api={{ recordEntityVerification }}
+      onChanged={vi.fn()}
+      workspace={workspace}
+    />,
+  );
+  await user.upload(
+    screen.getByLabelText("Independent evidence"),
+    new File([new Uint8Array([1])], "evidence.pdf", { type: "application/pdf" }),
+  );
+  await user.click(screen.getByRole("button", { name: "Record verification" }));
+  await screen.findByText(/outcome is unknown/i);
+  await user.click(screen.getByRole("button", { name: "Record verification" }));
+  expect(recordEntityVerification).toHaveBeenCalledOnce();
+  expect(document.body.textContent).not.toContain("timeout after evidence commit");
+});
+
 it("does not dispatch verification after unmount during evidence read", async () => {
   const bytes = deferred<ArrayBuffer>();
   const recordEntityVerification = vi.fn();
