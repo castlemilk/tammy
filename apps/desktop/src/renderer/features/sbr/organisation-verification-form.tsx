@@ -95,6 +95,8 @@ export function OrganisationVerificationForm({
       : undefined,
   );
   const inFlight = useRef(false);
+  const outcomeLocked = useRef(false);
+  const [locked, setLocked] = useState(false);
   const mounted = useRef(true);
   const clearEvidence = () => {
     fileRef.current = undefined;
@@ -124,7 +126,7 @@ export function OrganisationVerificationForm({
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (inFlight.current || !fileRef.current) return;
+    if (inFlight.current || outcomeLocked.current || !fileRef.current) return;
     inFlight.current = true;
     setBusy(true);
     setNotice(undefined);
@@ -203,6 +205,10 @@ export function OrganisationVerificationForm({
     } catch {
       if (mounted.current) {
         clearEvidence();
+        if (commandStarted) {
+          outcomeLocked.current = true;
+          setLocked(true);
+        }
         setNotice(
           commandStarted
             ? unknownOutcomeCopy
@@ -294,11 +300,23 @@ export function OrganisationVerificationForm({
           A workspace administrator records verification evidence.
         </p>
       )}
-      {notice ? (
-        <p aria-live="polite" className="mt-3 text-[11px] text-muted-foreground" role="status">
-          {notice}
-        </p>
+      {locked ? (
+        <Button
+          className="mt-3 h-9 text-[11px]"
+          onClick={onChanged}
+          type="button"
+          variant="outline"
+        >
+          Refresh status
+        </Button>
       ) : null}
+      <p
+        aria-live="polite"
+        className="mt-3 min-h-4 text-[11px] text-muted-foreground"
+        role="status"
+      >
+        {notice ?? ""}
+      </p>
     </section>
   );
 }

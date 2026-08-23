@@ -56,14 +56,6 @@ type AuthenticatedProfile struct {
 	AuthenticatedAt         string
 }
 
-type Conformance string
-
-const (
-	ConformanceSimulator Conformance = "SIMULATOR"
-	ConformancePre       Conformance = "PRE_CONFORMANCE"
-	ConformancePost      Conformance = "POST_CONFORMANCE"
-)
-
 type ReadinessState string
 
 const (

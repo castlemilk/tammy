@@ -167,6 +167,27 @@ it("fails closed for an unknown verification state returned by core", async () =
   expect(
     await screen.findByText(/outcome is unknown.*refresh status before trying again/i),
   ).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Record verification" }));
+  expect(recordEntityVerification).toHaveBeenCalledOnce();
+  expect(screen.getByRole("button", { name: "Refresh status" })).toBeTruthy();
+});
+
+it("keeps its live status region mounted across evidence validation", async () => {
+  const user = userEvent.setup();
+  render(
+    <OrganisationVerificationForm
+      api={{ recordEntityVerification: vi.fn() }}
+      onChanged={vi.fn()}
+      workspace={workspace}
+    />,
+  );
+  const region = screen.getByRole("status");
+  await user.upload(
+    screen.getByLabelText("Independent evidence"),
+    new File([new Uint8Array(1024 * 1024 + 1)], "private.pdf", { type: "application/pdf" }),
+  );
+  await screen.findByText(/PDF, JPEG, or PNG/i);
+  expect(screen.getByRole("status")).toBe(region);
 });
 
 it("does not dispatch verification after unmount during evidence read", async () => {

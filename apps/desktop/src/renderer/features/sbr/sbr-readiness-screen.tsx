@@ -70,7 +70,7 @@ const issueCopy: Readonly<Record<string, string>> = {
 };
 
 interface SbrReadinessScreenProps {
-  readonly api: Pick<TammyDesktopAPI, "getSbrReadiness"> &
+  readonly api: Pick<TammyDesktopAPI, "getCurrentUser" | "getSbrReadiness"> &
     Partial<
       Pick<
         TammyDesktopAPI,
@@ -240,6 +240,11 @@ export function SbrReadinessScreen({
   const [factorEnabled, setFactorEnabled] = useState(
     workspace.userFactorState === FactorState.ENABLED,
   );
+  const factorPrincipal = useRef(workspace.userId);
+  useEffect(() => {
+    if (factorPrincipal.current !== workspace.userId) factorPrincipal.current = workspace.userId;
+    setFactorEnabled(workspace.userFactorState === FactorState.ENABLED);
+  }, [workspace.userFactorState, workspace.userId]);
   const requestKey = `${workspace.sessionId}:${workspace.userId}:${doctorMode ? "doctor" : "screen"}:${refresh}`;
 
   useEffect(() => {

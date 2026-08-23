@@ -67,6 +67,7 @@ type OrganisationPort interface {
 
 type RuntimeProfile struct {
 	Environment               tammyv1.SbrEnvironment
+	Conformance               Conformance
 	ComponentVersion          string
 	ProfileFingerprint        [sha256.Size]byte
 	RegistrationFingerprint   [sha256.Size]byte
@@ -940,12 +941,24 @@ func validCurrent(binding OrganisationBinding, profile RuntimeProfile, now time.
 		return false
 	}
 	if profile.Environment == tammyv1.SbrEnvironment_SBR_ENVIRONMENT_SIMULATOR {
-		return profile.ExpectedProductIdentifier == "" && profile.ExpectedServiceID == "" &&
+		return (profile.Conformance == "" || profile.Conformance == ConformanceSimulator) &&
+			profile.ExpectedProductIdentifier == "" && profile.ExpectedServiceID == "" &&
 			profile.ProductScopeFingerprint == [sha256.Size]byte{}
 	}
-	return len(profile.ExpectedProductIdentifier) >= 1 && len(profile.ExpectedProductIdentifier) <= 128 &&
+	return (profile.Conformance == "" || profile.Conformance == ConformancePre || profile.Conformance == ConformancePost) &&
+		len(profile.ExpectedProductIdentifier) >= 1 && len(profile.ExpectedProductIdentifier) <= 128 &&
 		len(profile.ExpectedServiceID) >= 1 && len(profile.ExpectedServiceID) <= 128 &&
 		profile.ProductScopeFingerprint == authenticatedProductScopeFingerprint(profile.ExpectedProductIdentifier, profile.ExpectedServiceID)
+}
+
+func runtimeConformance(profile RuntimeProfile) Conformance {
+	if profile.Environment == tammyv1.SbrEnvironment_SBR_ENVIRONMENT_SIMULATOR {
+		return ConformanceSimulator
+	}
+	if profile.Conformance == ConformancePost {
+		return ConformancePost
+	}
+	return ConformancePre
 }
 
 func (service *Service) helperRequest(operation HelperOperation, binding OrganisationBinding, profile RuntimeProfile) HelperRequest {
@@ -1863,6 +1876,9 @@ func (service *Service) readiness(ctx context.Context, binding OrganisationBindi
 			state = tammyv1.SbrReadinessState_SBR_READINESS_STATE_READY_FOR_SIMULATOR
 		} else if productState == ProductPresent {
 			state = tammyv1.SbrReadinessState_SBR_READINESS_STATE_READY_FOR_EVTE_PRE_CONFORMANCE
+			if runtimeConformance(profile) == ConformancePost {
+				state = tammyv1.SbrReadinessState_SBR_READINESS_STATE_READY_FOR_EVTE_POST_CONFORMANCE
+			}
 		} else {
 			codes = []string{"SBR_PRODUCT_ID_MISSING"}
 			if productState == ProductInaccessible {

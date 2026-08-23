@@ -1250,20 +1250,75 @@ func (x *GetOrganisationRequest) GetOrganisationId() string {
 	return ""
 }
 
+// OrganisationVerificationSummary is the minimal current verification projection required by settings.
+type OrganisationVerificationSummary struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// state is the current lifecycle state of the integrity-verified retained evidence.
+	State OrganisationVerificationState `protobuf:"varint,1,opt,name=state,proto3,enum=tammy.v1.OrganisationVerificationState" json:"state,omitempty"`
+	// expires_at is the core-authored evidence expiry.
+	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OrganisationVerificationSummary) Reset() {
+	*x = OrganisationVerificationSummary{}
+	mi := &file_tammy_v1_organisation_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OrganisationVerificationSummary) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OrganisationVerificationSummary) ProtoMessage() {}
+
+func (x *OrganisationVerificationSummary) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_organisation_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OrganisationVerificationSummary.ProtoReflect.Descriptor instead.
+func (*OrganisationVerificationSummary) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_organisation_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *OrganisationVerificationSummary) GetState() OrganisationVerificationState {
+	if x != nil {
+		return x.State
+	}
+	return OrganisationVerificationState_ORGANISATION_VERIFICATION_STATE_UNSPECIFIED
+}
+
+func (x *OrganisationVerificationSummary) GetExpiresAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return nil
+}
+
 // GetOrganisationResponse returns the sole bounded organisation projection.
 type GetOrganisationResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// organisation contains no raw evidence bytes or hidden transmission state.
 	Organisation *Organisation `protobuf:"bytes,1,opt,name=organisation,proto3" json:"organisation,omitempty"`
-	// current_verification is the latest retained redacted evidence metadata, when one exists.
-	CurrentVerification *EntityVerification `protobuf:"bytes,2,opt,name=current_verification,json=currentVerification,proto3" json:"current_verification,omitempty"`
+	// current_verification is the latest retained state and expiry after repository integrity checks.
+	CurrentVerification *OrganisationVerificationSummary `protobuf:"bytes,2,opt,name=current_verification,json=currentVerification,proto3" json:"current_verification,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
 
 func (x *GetOrganisationResponse) Reset() {
 	*x = GetOrganisationResponse{}
-	mi := &file_tammy_v1_organisation_proto_msgTypes[11]
+	mi := &file_tammy_v1_organisation_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1275,7 +1330,7 @@ func (x *GetOrganisationResponse) String() string {
 func (*GetOrganisationResponse) ProtoMessage() {}
 
 func (x *GetOrganisationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_organisation_proto_msgTypes[11]
+	mi := &file_tammy_v1_organisation_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1288,7 +1343,7 @@ func (x *GetOrganisationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetOrganisationResponse.ProtoReflect.Descriptor instead.
 func (*GetOrganisationResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_organisation_proto_rawDescGZIP(), []int{11}
+	return file_tammy_v1_organisation_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *GetOrganisationResponse) GetOrganisation() *Organisation {
@@ -1298,7 +1353,7 @@ func (x *GetOrganisationResponse) GetOrganisation() *Organisation {
 	return nil
 }
 
-func (x *GetOrganisationResponse) GetCurrentVerification() *EntityVerification {
+func (x *GetOrganisationResponse) GetCurrentVerification() *OrganisationVerificationSummary {
 	if x != nil {
 		return x.CurrentVerification
 	}
@@ -1404,10 +1459,15 @@ const file_tammy_v1_organisation_proto_rawDesc = "" +
 	"\forganisation\x18\x02 \x01(\v2\x16.tammy.v1.OrganisationB\x06\xbaH\x03\xc8\x01\x01R\forganisation\"\xe0\x01\n" +
 	"\x16GetOrganisationRequest\x12O\n" +
 	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12u\n" +
-	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\"\xae\x01\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\"\xaf\x01\n" +
+	"\x1fOrganisationVerificationSummary\x12I\n" +
+	"\x05state\x18\x01 \x01(\x0e2'.tammy.v1.OrganisationVerificationStateB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x05state\x12A\n" +
+	"\n" +
+	"expires_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\texpiresAt\"\xbb\x01\n" +
 	"\x17GetOrganisationResponse\x12B\n" +
-	"\forganisation\x18\x01 \x01(\v2\x16.tammy.v1.OrganisationB\x06\xbaH\x03\xc8\x01\x01R\forganisation\x12O\n" +
-	"\x14current_verification\x18\x02 \x01(\v2\x1c.tammy.v1.EntityVerificationR\x13currentVerification*\xb7\x02\n" +
+	"\forganisation\x18\x01 \x01(\v2\x16.tammy.v1.OrganisationB\x06\xbaH\x03\xc8\x01\x01R\forganisation\x12\\\n" +
+	"\x14current_verification\x18\x02 \x01(\v2).tammy.v1.OrganisationVerificationSummaryR\x13currentVerification*\xb7\x02\n" +
 	"\x1dOrganisationVerificationState\x12/\n" +
 	"+ORGANISATION_VERIFICATION_STATE_UNSPECIFIED\x10\x00\x12.\n" +
 	"*ORGANISATION_VERIFICATION_STATE_UNVERIFIED\x10\x01\x12,\n" +
@@ -1448,7 +1508,7 @@ func file_tammy_v1_organisation_proto_rawDescGZIP() []byte {
 }
 
 var file_tammy_v1_organisation_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_tammy_v1_organisation_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_tammy_v1_organisation_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_tammy_v1_organisation_proto_goTypes = []any{
 	(OrganisationVerificationState)(0),       // 0: tammy.v1.OrganisationVerificationState
 	(VerificationSourceMethod)(0),            // 1: tammy.v1.VerificationSourceMethod
@@ -1465,61 +1525,64 @@ var file_tammy_v1_organisation_proto_goTypes = []any{
 	(*RecordEntityVerificationRequest)(nil),  // 12: tammy.v1.RecordEntityVerificationRequest
 	(*RecordEntityVerificationResponse)(nil), // 13: tammy.v1.RecordEntityVerificationResponse
 	(*GetOrganisationRequest)(nil),           // 14: tammy.v1.GetOrganisationRequest
-	(*GetOrganisationResponse)(nil),          // 15: tammy.v1.GetOrganisationResponse
-	(*SourceRef)(nil),                        // 16: tammy.v1.SourceRef
-	(*timestamppb.Timestamp)(nil),            // 17: google.protobuf.Timestamp
-	(*CommandContext)(nil),                   // 18: tammy.v1.CommandContext
-	(*fieldmaskpb.FieldMask)(nil),            // 19: google.protobuf.FieldMask
-	(*CivilDate)(nil),                        // 20: tammy.v1.CivilDate
-	(*AuthenticationContext)(nil),            // 21: tammy.v1.AuthenticationContext
+	(*OrganisationVerificationSummary)(nil),  // 15: tammy.v1.OrganisationVerificationSummary
+	(*GetOrganisationResponse)(nil),          // 16: tammy.v1.GetOrganisationResponse
+	(*SourceRef)(nil),                        // 17: tammy.v1.SourceRef
+	(*timestamppb.Timestamp)(nil),            // 18: google.protobuf.Timestamp
+	(*CommandContext)(nil),                   // 19: tammy.v1.CommandContext
+	(*fieldmaskpb.FieldMask)(nil),            // 20: google.protobuf.FieldMask
+	(*CivilDate)(nil),                        // 21: tammy.v1.CivilDate
+	(*AuthenticationContext)(nil),            // 22: tammy.v1.AuthenticationContext
 }
 var file_tammy_v1_organisation_proto_depIdxs = []int32{
 	2,  // 0: tammy.v1.Organisation.gst_basis:type_name -> tammy.v1.GstBasis
 	3,  // 1: tammy.v1.Organisation.gst_reporting_frequency:type_name -> tammy.v1.GstReportingFrequency
 	0,  // 2: tammy.v1.Organisation.verification_state:type_name -> tammy.v1.OrganisationVerificationState
-	16, // 3: tammy.v1.Organisation.active_tax_rule_bundle:type_name -> tammy.v1.SourceRef
+	17, // 3: tammy.v1.Organisation.active_tax_rule_bundle:type_name -> tammy.v1.SourceRef
 	2,  // 4: tammy.v1.OrganisationPatch.gst_basis:type_name -> tammy.v1.GstBasis
 	3,  // 5: tammy.v1.OrganisationPatch.gst_reporting_frequency:type_name -> tammy.v1.GstReportingFrequency
-	16, // 6: tammy.v1.OrganisationPatch.active_tax_rule_bundle:type_name -> tammy.v1.SourceRef
+	17, // 6: tammy.v1.OrganisationPatch.active_tax_rule_bundle:type_name -> tammy.v1.SourceRef
 	0,  // 7: tammy.v1.EntityVerification.state:type_name -> tammy.v1.OrganisationVerificationState
 	1,  // 8: tammy.v1.EntityVerification.source_method:type_name -> tammy.v1.VerificationSourceMethod
-	16, // 9: tammy.v1.EntityVerification.source:type_name -> tammy.v1.SourceRef
-	17, // 10: tammy.v1.EntityVerification.recorded_at:type_name -> google.protobuf.Timestamp
-	17, // 11: tammy.v1.EntityVerification.expires_at:type_name -> google.protobuf.Timestamp
-	18, // 12: tammy.v1.CreateOrganisationRequest.command_context:type_name -> tammy.v1.CommandContext
+	17, // 9: tammy.v1.EntityVerification.source:type_name -> tammy.v1.SourceRef
+	18, // 10: tammy.v1.EntityVerification.recorded_at:type_name -> google.protobuf.Timestamp
+	18, // 11: tammy.v1.EntityVerification.expires_at:type_name -> google.protobuf.Timestamp
+	19, // 12: tammy.v1.CreateOrganisationRequest.command_context:type_name -> tammy.v1.CommandContext
 	2,  // 13: tammy.v1.CreateOrganisationRequest.gst_basis:type_name -> tammy.v1.GstBasis
 	3,  // 14: tammy.v1.CreateOrganisationRequest.gst_reporting_frequency:type_name -> tammy.v1.GstReportingFrequency
-	16, // 15: tammy.v1.CreateOrganisationRequest.active_tax_rule_bundle:type_name -> tammy.v1.SourceRef
+	17, // 15: tammy.v1.CreateOrganisationRequest.active_tax_rule_bundle:type_name -> tammy.v1.SourceRef
 	4,  // 16: tammy.v1.CreateOrganisationResponse.organisation:type_name -> tammy.v1.Organisation
-	18, // 17: tammy.v1.UpdateOrganisationRequest.command_context:type_name -> tammy.v1.CommandContext
-	19, // 18: tammy.v1.UpdateOrganisationRequest.update_mask:type_name -> google.protobuf.FieldMask
+	19, // 17: tammy.v1.UpdateOrganisationRequest.command_context:type_name -> tammy.v1.CommandContext
+	20, // 18: tammy.v1.UpdateOrganisationRequest.update_mask:type_name -> google.protobuf.FieldMask
 	5,  // 19: tammy.v1.UpdateOrganisationRequest.patch:type_name -> tammy.v1.OrganisationPatch
-	20, // 20: tammy.v1.UpdateOrganisationRequest.effective_date:type_name -> tammy.v1.CivilDate
+	21, // 20: tammy.v1.UpdateOrganisationRequest.effective_date:type_name -> tammy.v1.CivilDate
 	4,  // 21: tammy.v1.UpdateOrganisationResponse.organisation:type_name -> tammy.v1.Organisation
-	18, // 22: tammy.v1.RecordEntityVerificationRequest.command_context:type_name -> tammy.v1.CommandContext
+	19, // 22: tammy.v1.RecordEntityVerificationRequest.command_context:type_name -> tammy.v1.CommandContext
 	1,  // 23: tammy.v1.RecordEntityVerificationRequest.source_method:type_name -> tammy.v1.VerificationSourceMethod
-	16, // 24: tammy.v1.RecordEntityVerificationRequest.source:type_name -> tammy.v1.SourceRef
+	17, // 24: tammy.v1.RecordEntityVerificationRequest.source:type_name -> tammy.v1.SourceRef
 	0,  // 25: tammy.v1.RecordEntityVerificationRequest.outcome:type_name -> tammy.v1.OrganisationVerificationState
 	6,  // 26: tammy.v1.RecordEntityVerificationRequest.evidence:type_name -> tammy.v1.VerificationEvidence
-	17, // 27: tammy.v1.RecordEntityVerificationRequest.lookup_time:type_name -> google.protobuf.Timestamp
+	18, // 27: tammy.v1.RecordEntityVerificationRequest.lookup_time:type_name -> google.protobuf.Timestamp
 	7,  // 28: tammy.v1.RecordEntityVerificationResponse.verification:type_name -> tammy.v1.EntityVerification
 	4,  // 29: tammy.v1.RecordEntityVerificationResponse.organisation:type_name -> tammy.v1.Organisation
-	21, // 30: tammy.v1.GetOrganisationRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	4,  // 31: tammy.v1.GetOrganisationResponse.organisation:type_name -> tammy.v1.Organisation
-	7,  // 32: tammy.v1.GetOrganisationResponse.current_verification:type_name -> tammy.v1.EntityVerification
-	8,  // 33: tammy.v1.OrganisationService.CreateOrganisation:input_type -> tammy.v1.CreateOrganisationRequest
-	10, // 34: tammy.v1.OrganisationService.UpdateOrganisation:input_type -> tammy.v1.UpdateOrganisationRequest
-	12, // 35: tammy.v1.OrganisationService.RecordEntityVerification:input_type -> tammy.v1.RecordEntityVerificationRequest
-	14, // 36: tammy.v1.OrganisationService.GetOrganisation:input_type -> tammy.v1.GetOrganisationRequest
-	9,  // 37: tammy.v1.OrganisationService.CreateOrganisation:output_type -> tammy.v1.CreateOrganisationResponse
-	11, // 38: tammy.v1.OrganisationService.UpdateOrganisation:output_type -> tammy.v1.UpdateOrganisationResponse
-	13, // 39: tammy.v1.OrganisationService.RecordEntityVerification:output_type -> tammy.v1.RecordEntityVerificationResponse
-	15, // 40: tammy.v1.OrganisationService.GetOrganisation:output_type -> tammy.v1.GetOrganisationResponse
-	37, // [37:41] is the sub-list for method output_type
-	33, // [33:37] is the sub-list for method input_type
-	33, // [33:33] is the sub-list for extension type_name
-	33, // [33:33] is the sub-list for extension extendee
-	0,  // [0:33] is the sub-list for field type_name
+	22, // 30: tammy.v1.GetOrganisationRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	0,  // 31: tammy.v1.OrganisationVerificationSummary.state:type_name -> tammy.v1.OrganisationVerificationState
+	18, // 32: tammy.v1.OrganisationVerificationSummary.expires_at:type_name -> google.protobuf.Timestamp
+	4,  // 33: tammy.v1.GetOrganisationResponse.organisation:type_name -> tammy.v1.Organisation
+	15, // 34: tammy.v1.GetOrganisationResponse.current_verification:type_name -> tammy.v1.OrganisationVerificationSummary
+	8,  // 35: tammy.v1.OrganisationService.CreateOrganisation:input_type -> tammy.v1.CreateOrganisationRequest
+	10, // 36: tammy.v1.OrganisationService.UpdateOrganisation:input_type -> tammy.v1.UpdateOrganisationRequest
+	12, // 37: tammy.v1.OrganisationService.RecordEntityVerification:input_type -> tammy.v1.RecordEntityVerificationRequest
+	14, // 38: tammy.v1.OrganisationService.GetOrganisation:input_type -> tammy.v1.GetOrganisationRequest
+	9,  // 39: tammy.v1.OrganisationService.CreateOrganisation:output_type -> tammy.v1.CreateOrganisationResponse
+	11, // 40: tammy.v1.OrganisationService.UpdateOrganisation:output_type -> tammy.v1.UpdateOrganisationResponse
+	13, // 41: tammy.v1.OrganisationService.RecordEntityVerification:output_type -> tammy.v1.RecordEntityVerificationResponse
+	16, // 42: tammy.v1.OrganisationService.GetOrganisation:output_type -> tammy.v1.GetOrganisationResponse
+	39, // [39:43] is the sub-list for method output_type
+	35, // [35:39] is the sub-list for method input_type
+	35, // [35:35] is the sub-list for extension type_name
+	35, // [35:35] is the sub-list for extension extendee
+	0,  // [0:35] is the sub-list for field type_name
 }
 
 func init() { file_tammy_v1_organisation_proto_init() }
@@ -1535,7 +1598,7 @@ func file_tammy_v1_organisation_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_tammy_v1_organisation_proto_rawDesc), len(file_tammy_v1_organisation_proto_rawDesc)),
 			NumEnums:      4,
-			NumMessages:   12,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -306,7 +306,7 @@ func TestGeneratedConnectProductRPCsSucceedWithAuthenticatedEVTEFakeAndPersistAc
 		ProfileFingerprint: profileHash, RegistrationFingerprint: registrationHash,
 		ComponentFingerprint: componentHash, AuthenticatedUntil: now.Add(time.Hour), EndpointProfile: []byte("authenticated-evte-fixture"),
 		ExpectedProductIdentifier: "EVTE.PRODUCT", ExpectedServiceID: "EVTE.SERVICE",
-		ProductScopeFingerprint: authenticatedProductScopeFingerprint("EVTE.PRODUCT", "EVTE.SERVICE")}
+		ProductScopeFingerprint: authenticatedProductScopeFingerprint("EVTE.PRODUCT", "EVTE.SERVICE"), Conformance: ConformancePost}
 	helper := &integrationHelper{}
 	generator := &integrationIDs{}
 	store := newSQLServiceStore(repository, testWorkspaceID, func() time.Time { return now }, generator.New)
@@ -348,6 +348,11 @@ func TestGeneratedConnectProductRPCsSucceedWithAuthenticatedEVTEFakeAndPersistAc
 	binding := OrganisationBinding{OrganisationID: testOrganisation, CanonicalABN: testABN, VerificationExpiresAt: now.Add(time.Hour)}
 	if state := reopened.ProductState(ctx, binding, profile); state != ProductPresent {
 		t.Fatalf("reopened Product state = %v, want present", state)
+	}
+	readiness, err := client.GetSbrReadiness(ctx, connect.NewRequest(&tammyv1.GetSbrReadinessRequest{Authentication: auth}))
+	if err != nil || readiness.Msg.Readiness == nil ||
+		readiness.Msg.Readiness.State != tammyv1.SbrReadinessState_SBR_READINESS_STATE_READY_FOR_EVTE_POST_CONFORMANCE {
+		t.Fatalf("post-conformance readiness = %v, %v", readiness, err)
 	}
 	removed, err := client.RemoveSbrProductId(ctx, connect.NewRequest(&tammyv1.RemoveSbrProductIdRequest{
 		CommandContext:        commandFor("018f0000-0000-7000-8000-000000000a13", PurposeRemoveProductID),

@@ -9,6 +9,8 @@ import {
   EnrolTOTPRequestSchema,
   EnrolTOTPResponseSchema,
   FactorState,
+  GetCurrentUserRequestSchema,
+  GetCurrentUserResponseSchema,
 } from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import { LoaderCircle, ShieldCheck } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
@@ -37,24 +39,34 @@ const confirmCodec = createProtoMethodCodec({
   maximumResponseBytes: 8_192,
   output: ConfirmTOTPResponseSchema,
 });
+const currentUserCodec = createProtoMethodCodec({
+  input: GetCurrentUserRequestSchema,
+  maximumRequestBytes: 8_192,
+  maximumResponseBytes: 8_192,
+  output: GetCurrentUserResponseSchema,
+});
 
 export function TotpSetup({
   api,
   onEnabled,
   workspace,
 }: {
-  readonly api: Pick<TammyDesktopAPI, "confirmTotp" | "enrolTotp">;
+  readonly api: Pick<TammyDesktopAPI, "confirmTotp" | "enrolTotp" | "getCurrentUser">;
   readonly onEnabled: () => void;
-  readonly workspace: AuthenticatedWorkspace;
+  readonly workspace: AuthenticatedWorkspace & { readonly userFactorState?: FactorState };
 }) {
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [pending, setPending] = useState<{ factorId: string; material: string }>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
+  const [factorState, setFactorState] = useState(workspace.userFactorState);
+  const [outcomeLocked, setOutcomeLocked] = useState(false);
   const materialBytes = useRef<Uint8Array | undefined>(undefined);
   const inFlight = useRef(false);
+  const refreshInFlight = useRef(false);
   const mounted = useRef(true);
+  const factorPrincipal = useRef(workspace.userId);
 
   const clearProvisioning = () => {
     materialBytes.current?.fill(0);
@@ -70,10 +82,59 @@ export function TotpSetup({
       materialBytes.current = undefined;
     };
   }, []);
+  useEffect(() => {
+    if (factorPrincipal.current !== workspace.userId) factorPrincipal.current = workspace.userId;
+    materialBytes.current?.fill(0);
+    materialBytes.current = undefined;
+    setPending(undefined);
+    setCode("");
+    setFactorState(workspace.userFactorState);
+    setOutcomeLocked(false);
+    setError(undefined);
+  }, [workspace.userFactorState, workspace.userId]);
+
+  const refreshFactor = async () => {
+    if (refreshInFlight.current) return;
+    refreshInFlight.current = true;
+    try {
+      const frame = currentUserCodec.encodeRequest(
+        create(GetCurrentUserRequestSchema, { authentication: authentication(workspace) }),
+      );
+      const responseFrame = await api.getCurrentUser(frame);
+      const response = currentUserCodec.decodeResponse(responseFrame);
+      if (!mounted.current) return;
+      const state = response.user?.factorState;
+      if (
+        !response.user ||
+        response.user.id !== workspace.userId ||
+        (state !== undefined &&
+          state !== FactorState.PENDING_CONFIRMATION &&
+          state !== FactorState.ENABLED &&
+          state !== FactorState.DISABLED)
+      )
+        throw new Error("invalid current user");
+      setFactorState(state);
+      setOutcomeLocked(false);
+      if (state === FactorState.ENABLED) {
+        onEnabled();
+      } else if (state === FactorState.PENDING_CONFIRMATION) {
+        setError("A pending setup was found. Restart setup to invalidate it and create a new key.");
+      } else {
+        setError("No pending setup was found. You can begin setup again.");
+      }
+    } catch {
+      if (mounted.current) {
+        setOutcomeLocked(true);
+        setError("Security status is unavailable. Refresh security status before retrying.");
+      }
+    } finally {
+      refreshInFlight.current = false;
+    }
+  };
 
   const enrol = async (event: FormEvent) => {
     event.preventDefault();
-    if (inFlight.current) return;
+    if (inFlight.current || outcomeLocked) return;
     inFlight.current = true;
     setBusy(true);
     setError(undefined);
@@ -82,6 +143,7 @@ export function TotpSetup({
       const request = create(EnrolTOTPRequestSchema, {
         commandContext: { authentication: authentication(workspace), idempotencyKey: uuidV7() },
         currentPassword: create(SecretInputSchema, { utf8: passwordBytes }),
+        restartPending: factorState === FactorState.PENDING_CONFIRMATION,
       });
       setPassword("");
       const frame = enrolCodec.encodeRequest(request);
@@ -108,12 +170,12 @@ export function TotpSetup({
           response.factor.version < 1n ||
           response.factor.state !== FactorState.PENDING_CONFIRMATION ||
           !validTimestamp(response.factor.createdAt) ||
-          !responseSecret?.length ||
-          responseSecret.length > 1_024
+          !responseSecret?.length
         )
           throw new Error("invalid enrolment response");
         const bytes = new Uint8Array(responseSecret);
         const material = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+        if (!/^[A-Z2-7]{32}$/.test(material)) throw new Error("invalid provisioning secret");
         if (!mounted.current) {
           bytes.fill(0);
           return;
@@ -126,7 +188,9 @@ export function TotpSetup({
     } catch {
       if (mounted.current) {
         clearProvisioning();
-        setError("TOTP enrolment failed. Check your password and try again.");
+        setOutcomeLocked(true);
+        setError("TOTP setup outcome is unknown. Refresh security status before retrying.");
+        await refreshFactor();
       }
     } finally {
       inFlight.current = false;
@@ -136,7 +200,7 @@ export function TotpSetup({
 
   const confirm = async (event: FormEvent) => {
     event.preventDefault();
-    if (inFlight.current || !pending || !/^\d{6}$/.test(code)) return;
+    if (inFlight.current || outcomeLocked || !pending || !/^\d{6}$/.test(code)) return;
     inFlight.current = true;
     setBusy(true);
     setError(undefined);
@@ -170,8 +234,11 @@ export function TotpSetup({
       onEnabled();
     } catch {
       if (mounted.current) {
+        clearProvisioning();
         setCode("");
-        setError("That code could not be confirmed. Enter a new code from your authenticator.");
+        setOutcomeLocked(true);
+        setError("Confirmation outcome is unknown. Refresh security status before retrying.");
+        await refreshFactor();
       }
     } finally {
       inFlight.current = false;
@@ -208,7 +275,9 @@ export function TotpSetup({
                 {busy ? (
                   <LoaderCircle aria-hidden="true" className="size-3.5 animate-spin" />
                 ) : null}
-                Begin TOTP setup
+                {factorState === FactorState.PENDING_CONFIRMATION
+                  ? "Restart TOTP setup"
+                  : "Begin TOTP setup"}
               </Button>
             </form>
           ) : (
@@ -244,6 +313,17 @@ export function TotpSetup({
             <p className="mt-3 text-[11px] text-destructive" role="alert">
               {error}
             </p>
+          ) : null}
+          {outcomeLocked ? (
+            <Button
+              className="mt-3 h-9 w-fit text-[11px]"
+              disabled={busy}
+              onClick={refreshFactor}
+              type="button"
+              variant="outline"
+            >
+              Refresh security status
+            </Button>
           ) : null}
         </div>
       </div>

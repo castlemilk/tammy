@@ -98,6 +98,11 @@ func (port *AuthenticatedProfilePort) Current(ctx context.Context, now time.Time
 		RegistrationFingerprint: registrationFingerprint, ComponentFingerprint: componentFingerprint,
 		AuthenticatedUntil: expiresAt.UTC(), EndpointProfile: append([]byte(nil), staged.EndpointProfile...)}
 	if environment == tammyv1.SbrEnvironment_SBR_ENVIRONMENT_EVTE {
+		conformance, ok := staged.AuthenticatedConformance()
+		if !ok {
+			return sbr.RuntimeProfile{}, errors.New("sbr EVTE conformance unavailable")
+		}
+		profile.Conformance = sbr.Conformance(conformance)
 		scope, ok := staged.AuthenticatedProductIDScope()
 		if !ok {
 			return sbr.RuntimeProfile{}, errors.New("sbr EVTE Product scope unavailable")

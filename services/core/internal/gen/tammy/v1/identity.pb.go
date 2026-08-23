@@ -1799,8 +1799,11 @@ type EnrolTOTPRequest struct {
 	CommandContext *CommandContext `protobuf:"bytes,1,opt,name=command_context,json=commandContext,proto3" json:"command_context,omitempty"`
 	// current_password is transient proof and never persisted or logged.
 	CurrentPassword *SecretInput `protobuf:"bytes,2,opt,name=current_password,json=currentPassword,proto3" json:"current_password,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// restart_pending atomically invalidates the caller's existing pending factor before creating
+	// replacement single-display provisioning material. It is rejected unless a pending factor exists.
+	RestartPending bool `protobuf:"varint,3,opt,name=restart_pending,json=restartPending,proto3" json:"restart_pending,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *EnrolTOTPRequest) Reset() {
@@ -1845,6 +1848,13 @@ func (x *EnrolTOTPRequest) GetCurrentPassword() *SecretInput {
 		return x.CurrentPassword
 	}
 	return nil
+}
+
+func (x *EnrolTOTPRequest) GetRestartPending() bool {
+	if x != nil {
+		return x.RestartPending
+	}
+	return false
 }
 
 // EnrolTOTPResponse returns pending factor and single-display provisioning material.
@@ -2488,10 +2498,11 @@ const file_tammy_v1_identity_proto_rawDesc = "" +
 	"\fnew_password\x18\x04 \x01(\v2\x15.tammy.v1.SecretInputB\x06\xbaH\x03\xc8\x01\x01R\vnewPassword\"\x90\x01\n" +
 	"\x16ChangePasswordResponse\x12*\n" +
 	"\x04user\x18\x01 \x01(\v2\x0e.tammy.v1.UserB\x06\xbaH\x03\xc8\x01\x01R\x04user\x12J\n" +
-	"\x13invalidated_session\x18\x02 \x01(\v2\x11.tammy.v1.SessionB\x06\xbaH\x03\xc8\x01\x01R\x12invalidatedSession\"\xa7\x01\n" +
+	"\x13invalidated_session\x18\x02 \x01(\v2\x11.tammy.v1.SessionB\x06\xbaH\x03\xc8\x01\x01R\x12invalidatedSession\"\xd0\x01\n" +
 	"\x10EnrolTOTPRequest\x12I\n" +
 	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12H\n" +
-	"\x10current_password\x18\x02 \x01(\v2\x15.tammy.v1.SecretInputB\x06\xbaH\x03\xc8\x01\x01R\x0fcurrentPassword\"\x9d\x01\n" +
+	"\x10current_password\x18\x02 \x01(\v2\x15.tammy.v1.SecretInputB\x06\xbaH\x03\xc8\x01\x01R\x0fcurrentPassword\x12'\n" +
+	"\x0frestart_pending\x18\x03 \x01(\bR\x0erestartPending\"\x9d\x01\n" +
 	"\x11EnrolTOTPResponse\x120\n" +
 	"\x06factor\x18\x01 \x01(\v2\x10.tammy.v1.FactorB\x06\xbaH\x03\xc8\x01\x01R\x06factor\x12V\n" +
 	"\x13provisioning_secret\x18\x02 \x01(\v2\x1d.tammy.v1.OneTimeSecretOutputB\x06\xbaH\x03\xc8\x01\x01R\x12provisioningSecret\"\x85\x02\n" +

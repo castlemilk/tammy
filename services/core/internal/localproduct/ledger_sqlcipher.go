@@ -1169,7 +1169,7 @@ func (handler *organisationHandler) GetOrganisation(ctx context.Context, request
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
 	}
-	verification, err := evidenceRepository.GetCurrentMetadata(ctx, request.Msg.OrganisationId)
+	verification, err := evidenceRepository.GetCurrentSummary(ctx, request.Msg.OrganisationId)
 	if err != nil || tx.Commit() != nil {
 		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
 	}

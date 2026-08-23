@@ -392,6 +392,10 @@ message EnrolTOTPRequest {
 
   // current_password is transient proof and never persisted or logged.
   SecretInput current_password = 2 [(buf.validate.field).required = true];
+
+  // restart_pending atomically invalidates the caller's existing pending factor before creating
+  // replacement single-display provisioning material. It is rejected unless a pending factor exists.
+  bool restart_pending = 3;
 }
 
 // EnrolTOTPResponse returns pending factor and single-display provisioning material.

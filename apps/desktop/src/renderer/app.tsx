@@ -282,8 +282,7 @@ export function App() {
             currentUser.user.factorState !== FactorState.ENABLED &&
             currentUser.user.factorState !== FactorState.DISABLED) ||
           (currentOrganisation.currentVerification !== undefined &&
-            (currentOrganisation.currentVerification.organisationId !==
-              currentWorkspace.organisationId ||
+            (!validOrganisationVerificationState(currentOrganisation.currentVerification.state) ||
               !validTimestamp(currentOrganisation.currentVerification.expiresAt)))
         ) {
           throw new Error("invalid authoritative workspace projection");

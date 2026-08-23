@@ -338,13 +338,25 @@ message GetOrganisationRequest {
   string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 }
 
+// OrganisationVerificationSummary is the minimal current verification projection required by settings.
+message OrganisationVerificationSummary {
+  // state is the current lifecycle state of the integrity-verified retained evidence.
+  OrganisationVerificationState state = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+
+  // expires_at is the core-authored evidence expiry.
+  google.protobuf.Timestamp expires_at = 2 [(buf.validate.field).required = true];
+}
+
 // GetOrganisationResponse returns the sole bounded organisation projection.
 message GetOrganisationResponse {
   // organisation contains no raw evidence bytes or hidden transmission state.
   Organisation organisation = 1 [(buf.validate.field).required = true];
 
-  // current_verification is the latest retained redacted evidence metadata, when one exists.
-  EntityVerification current_verification = 2;
+  // current_verification is the latest retained state and expiry after repository integrity checks.
+  OrganisationVerificationSummary current_verification = 2;
 }
 
 // OrganisationService exposes the single-organisation profile and independent verification use cases.

@@ -61,13 +61,13 @@ func TestEvidenceRepositoryRoundTripsBoundedProtobufEvidence(t *testing.T) {
 			if !proto.Equal(loaded.Verification, record.Verification) || !proto.Equal(loaded.Evidence, record.Evidence) {
 				t.Fatalf("round trip mismatch\nloaded=%#v\nwant=%#v", loaded, record)
 			}
-			metadata, err := repository.GetCurrentMetadata(context.Background(), testOrganisationID)
+			summary, err := repository.GetCurrentSummary(context.Background(), testOrganisationID)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if metadata == nil || metadata.Id != record.Verification.Id || metadata.EvidenceObjectId != record.Verification.EvidenceObjectId ||
-				!metadata.ExpiresAt.AsTime().Equal(record.Verification.ExpiresAt.AsTime()) {
-				t.Fatalf("current verification metadata = %#v", metadata)
+			if summary == nil || summary.State != record.Verification.State ||
+				!summary.ExpiresAt.AsTime().Equal(record.Verification.ExpiresAt.AsTime()) {
+				t.Fatalf("current verification summary = %#v", summary)
 			}
 			if err := tx.Commit(); err != nil {
 				t.Fatal(err)
@@ -177,6 +177,29 @@ func TestEvidenceRowsAreImmutableAndReadDetectsStoredByteTampering(t *testing.T)
 			t.Fatalf("immutable statement succeeded: %s", statement)
 		}
 	}
+	if _, err := workspace.Database.ExecContext(ctx, `DROP TRIGGER organisation_verification_no_update`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := workspace.Database.ExecContext(ctx, `UPDATE organisation_verifications SET state=3 WHERE id=?`, testVerificationID); err != nil {
+		t.Fatal(err)
+	}
+	tamperedMetadataTx, err := workspace.Database.BeginEncryptedTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tamperedMetadataRepository, err := organisations.NewEvidenceRepository(tamperedMetadataTx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tamperedMetadataRepository.GetCurrentSummary(ctx, testOrganisationID); !errors.Is(err, organisations.ErrEvidenceTampered) {
+		t.Fatalf("valid-looking metadata tamper error = %v", err)
+	}
+	if err := tamperedMetadataTx.Rollback(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := workspace.Database.ExecContext(ctx, `UPDATE organisation_verifications SET state=? WHERE id=?`, immutableRecord.Verification.State, testVerificationID); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := workspace.Database.ExecContext(ctx, `DROP TRIGGER organisation_evidence_no_update`); err != nil {
 		t.Fatal(err)
 	}
@@ -194,6 +217,9 @@ func TestEvidenceRowsAreImmutableAndReadDetectsStoredByteTampering(t *testing.T)
 	}
 	if _, err := repository.Get(ctx, testVerificationID); !errors.Is(err, organisations.ErrEvidenceTampered) {
 		t.Fatalf("tampered read error = %v", err)
+	}
+	if _, err := repository.GetCurrentSummary(ctx, testOrganisationID); !errors.Is(err, organisations.ErrEvidenceTampered) {
+		t.Fatalf("tampered current summary error = %v", err)
 	}
 }
 

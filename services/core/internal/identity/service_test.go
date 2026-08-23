@@ -825,6 +825,73 @@ func TestIdentityServiceTOTPEnrolAssertDisableEnvelopes(t *testing.T) {
 	}
 }
 
+func TestIdentityServiceRestartPendingTOTPAtomicallyInvalidatesOldSeed(t *testing.T) {
+	harness := newIdentityHarness(t)
+	ctx := context.Background()
+	admin, err := harness.service.BootstrapAdministrator(ctx, "admin@example.test", "Admin", []byte("admin-password-long-enough"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	signedIn, err := harness.service.SignIn(ctx, connect.NewRequest(&tammyv1.SignInRequest{Username: admin.Username, Password: secret("admin-password-long-enough")}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	authentication := &tammyv1.AuthenticationContext{ActorUserId: admin.Id, SessionId: signedIn.Msg.Session.Id}
+	if _, err := harness.service.EnrolTOTP(ctx, connect.NewRequest(&tammyv1.EnrolTOTPRequest{
+		CommandContext:  &tammyv1.CommandContext{IdempotencyKey: "01890f3c-7b2e-7cc4-98c4-dc0c0c073939", Authentication: authentication},
+		CurrentPassword: secret("admin-password-long-enough"), RestartPending: true,
+	})); !errors.Is(err, faults.New(faults.CodeValidation, nil)) {
+		t.Fatalf("restart without authoritative pending factor error = %v", err)
+	}
+	enrol := func(operation string, restart bool) *tammyv1.EnrolTOTPResponse {
+		response, enrolErr := harness.service.EnrolTOTP(ctx, connect.NewRequest(&tammyv1.EnrolTOTPRequest{
+			CommandContext:  &tammyv1.CommandContext{IdempotencyKey: operation, Authentication: authentication},
+			CurrentPassword: secret("admin-password-long-enough"), RestartPending: restart,
+		}))
+		if enrolErr != nil {
+			t.Fatal(enrolErr)
+		}
+		return response.Msg
+	}
+	first := enrol("01890f3c-7b2e-7cc4-98c4-dc0c0c073940", false)
+	if _, err := harness.service.EnrolTOTP(ctx, connect.NewRequest(&tammyv1.EnrolTOTPRequest{
+		CommandContext:  &tammyv1.CommandContext{IdempotencyKey: "01890f3c-7b2e-7cc4-98c4-dc0c0c073941", Authentication: authentication},
+		CurrentPassword: secret("admin-password-long-enough"),
+	})); !errors.Is(err, faults.New(faults.CodeValidation, nil)) {
+		t.Fatalf("concurrent non-restart enrolment error = %v", err)
+	}
+	second := enrol("01890f3c-7b2e-7cc4-98c4-dc0c0c073942", true)
+	if second.Factor.Id == first.Factor.Id || bytes.Equal(second.ProvisioningSecret.Utf8, first.ProvisioningSecret.Utf8) {
+		t.Fatal("restart reused pending factor or seed")
+	}
+	state, err := harness.repository.Load(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	old := state.Factors[first.Factor.Id]
+	if old == nil || old.State != tammyv1.FactorState_FACTOR_STATE_DISABLED || len(old.EncryptedSecret) != 0 {
+		t.Fatalf("old pending factor was not invalidated: %#v", old)
+	}
+	oldSecret, err := base32.StdEncoding.WithPadding(base32.NoPadding).DecodeString(string(first.ProvisioningSecret.Utf8))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := harness.service.ConfirmTOTP(ctx, connect.NewRequest(&tammyv1.ConfirmTOTPRequest{
+		Authentication: authentication, FactorId: first.Factor.Id, Code: &tammyv1.TotpCodeInput{Value: TOTPCode(oldSecret, *harness.now)},
+	})); !errors.Is(err, faults.New(faults.CodeAuthenticationRequired, nil)) {
+		t.Fatalf("invalidated seed confirmation error = %v", err)
+	}
+	if _, err := harness.service.EnrolTOTP(ctx, connect.NewRequest(&tammyv1.EnrolTOTPRequest{
+		CommandContext:  &tammyv1.CommandContext{IdempotencyKey: "01890f3c-7b2e-7cc4-98c4-dc0c0c073943", Authentication: authentication},
+		CurrentPassword: secret("admin-password-long-enough"), RestartPending: true,
+	})); err != nil {
+		t.Fatalf("second authoritative restart failed: %v", err)
+	}
+	if harness.audit.counts["totp_enrolment_restarted"] != 2 {
+		t.Fatalf("restart audit count = %d", harness.audit.counts["totp_enrolment_restarted"])
+	}
+}
+
 func TestIdentityServiceTOTPConfirmationCooldown(t *testing.T) {
 	harness := newIdentityHarness(t)
 	ctx := context.Background()

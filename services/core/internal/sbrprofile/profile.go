@@ -71,7 +71,6 @@ type ResourceSet struct {
 	RegistrationSignaturePath string
 	EndpointProfilePath       string
 	TrustedRuntimeBase        string
-	ReadinessPhase            string
 }
 
 type ResourceLocator interface {
@@ -105,7 +104,6 @@ func (l directoryResourceLocator) Locate(profile Profile) (ResourceSet, error) {
 		RegistrationSignaturePath: filepath.Join(root, "registration", "manifest.sig"),
 		EndpointProfilePath:       filepath.Join(root, "endpoint", "profile.json"),
 		TrustedRuntimeBase:        l.runtimeBase,
-		ReadinessPhase:            "PRE_CONFORMANCE",
 	}, nil
 }
 
@@ -118,6 +116,7 @@ type StagedResources struct {
 	Fingerprints                  map[string]string
 	authenticatedProductIDScope   *AuthenticatedProductIDScope
 	authenticatedComponentVersion string
+	authenticatedConformance      string
 	close                         func() error
 	revalidate                    func() error
 	revalidateCtx                 func(context.Context) error
@@ -153,6 +152,14 @@ func (s *StagedResources) AuthenticatedComponentVersion() (string, bool) {
 		return "", false
 	}
 	return s.authenticatedComponentVersion, true
+}
+
+func (s *StagedResources) AuthenticatedConformance() (string, bool) {
+	if s == nil || s.Profile.Profile.Environment != "EVTE" ||
+		(s.authenticatedConformance != "PRE_CONFORMANCE" && s.authenticatedConformance != "POST_CONFORMANCE") {
+		return "", false
+	}
+	return s.authenticatedConformance, true
 }
 
 func (s *StagedResources) Revalidate() error {

@@ -48,6 +48,20 @@ func TestRegistrationParsesExactProductIDScope(t *testing.T) {
 	}
 }
 
+func TestAuthenticatedConformancePhaseComesFromSignedServiceStates(t *testing.T) {
+	manifest := RegistrationManifest{Services: []RegistrationService{
+		{EnrolmentState: "APPROVED", ConformanceState: "PASSED"},
+		{EnrolmentState: "APPROVED", ConformanceState: "PASSED"},
+	}}
+	if phase := authenticatedConformancePhase(manifest); phase != "POST_CONFORMANCE" {
+		t.Fatalf("all-passed phase = %q", phase)
+	}
+	manifest.Services[1].ConformanceState = "RUNNING"
+	if phase := authenticatedConformancePhase(manifest); phase != "PRE_CONFORMANCE" {
+		t.Fatalf("in-progress phase = %q", phase)
+	}
+}
+
 func TestRegistrationRejectsInvalidProductIDScope(t *testing.T) {
 	raw, err := os.ReadFile(filepath.Join(repositoryRoot(t), "docs/development/sbr-registration-manifest.example.json"))
 	if err != nil {
@@ -116,7 +130,7 @@ func TestStagedResourcesExposeOnlyAuthenticatedProductIDScope(t *testing.T) {
 		t.Fatal("simulator exposed a Product ID scope")
 	}
 	evte := &StagedResources{Profile: ParsedProfile{Profile: Profile{Environment: "EVTE"}}, authenticatedProductIDScope: &scope,
-		authenticatedComponentVersion: "component-v1"}
+		authenticatedComponentVersion: "component-v1", authenticatedConformance: "POST_CONFORMANCE"}
 	got, ok := evte.AuthenticatedProductIDScope()
 	if !ok || got != scope {
 		t.Fatalf("scope=%+v ok=%v", got, ok)
@@ -131,6 +145,12 @@ func TestStagedResourcesExposeOnlyAuthenticatedProductIDScope(t *testing.T) {
 	}
 	if _, ok := simulator.AuthenticatedComponentVersion(); ok {
 		t.Fatal("simulator exposed an EVTE component version")
+	}
+	if conformance, ok := evte.AuthenticatedConformance(); !ok || conformance != "POST_CONFORMANCE" {
+		t.Fatalf("authenticated conformance=%q ok=%v", conformance, ok)
+	}
+	if _, ok := simulator.AuthenticatedConformance(); ok {
+		t.Fatal("simulator exposed EVTE conformance")
 	}
 }
 

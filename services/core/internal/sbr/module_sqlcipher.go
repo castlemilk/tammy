@@ -427,7 +427,7 @@ func (store *sqlServiceStore) Current(ctx context.Context, binding OrganisationB
 	}
 	metadata := CredentialMetadata{Fingerprint: stored.Key.CredentialFingerprint, CanonicalABN: stored.Key.CanonicalABN,
 		ComponentVersion: stored.ComponentVersion, ExpiresAt: expires, State: credentialState}
-	runtime := RuntimeProfile{ComponentVersion: stored.ComponentVersion, ProfileFingerprint: profile.ProfileFingerprint,
+	runtime := RuntimeProfile{ComponentVersion: stored.ComponentVersion, Conformance: profile.Conformance, ProfileFingerprint: profile.ProfileFingerprint,
 		RegistrationFingerprint: profile.RegistrationFingerprint, ComponentFingerprint: profile.ComponentFingerprint}
 	if profile.Environment == EnvironmentSimulator {
 		runtime.Environment = tammyv1.SbrEnvironment_SBR_ENVIRONMENT_SIMULATOR
@@ -517,10 +517,12 @@ func (store *sqlServiceStore) Commit(ctx context.Context, operation string, valu
 		key.CredentialFingerprint = value.metadata.Fingerprint
 		subject := sha256.Sum256([]byte(value.metadata.Issuer + "\x00" + value.metadata.Serial))
 		commit.NewBinding = &Binding{Key: key, ComponentVersion: value.metadata.ComponentVersion, SubjectHash: subject, ExpiresAt: value.metadata.ExpiresAt.UTC().Format("2006-01-02T15:04:05.000000000Z"), State: BindingActive, Revision: 1, UpdatedAt: store.now().UTC().Format("2006-01-02T15:04:05.000000000Z")}
-		environment, conformance := EnvironmentEVTE, ConformancePre
+		environment, conformance := EnvironmentEVTE, runtimeConformance(value.profile)
 		readiness := ReadinessReadyForEVTEPreConformance
 		if value.profile.Environment == tammyv1.SbrEnvironment_SBR_ENVIRONMENT_SIMULATOR {
 			environment, conformance, readiness = EnvironmentSimulator, ConformanceSimulator, ReadinessReadyForSimulator
+		} else if conformance == ConformancePost {
+			readiness = ReadinessReadyForEVTEPostConformance
 		}
 		commit.Profile = &AuthenticatedProfile{Key: key, Environment: environment, ProfileFingerprint: value.profile.ProfileFingerprint, RegistrationFingerprint: value.profile.RegistrationFingerprint, ComponentFingerprint: value.profile.ComponentFingerprint, Conformance: conformance}
 		transitionID, err := store.newID()

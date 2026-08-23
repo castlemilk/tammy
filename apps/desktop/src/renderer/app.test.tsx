@@ -10,11 +10,11 @@ import {
   UserSchema,
 } from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import {
-  EntityVerificationSchema,
   GetOrganisationRequestSchema,
   GetOrganisationResponseSchema,
   OrganisationSchema,
   OrganisationVerificationState,
+  OrganisationVerificationSummarySchema,
 } from "@tammy/connect-client/tammy/v1/organisation_pb.js";
 import {
   GetSbrReadinessRequestSchema,
@@ -371,9 +371,7 @@ describe("App", () => {
             version: 1n,
             verificationState: OrganisationVerificationState.EXPIRED,
           }),
-          currentVerification: create(EntityVerificationSchema, {
-            id: "01900f3c-7b2e-7cc4-98c4-dc0c0c073995",
-            organisationId: request.organisationId,
+          currentVerification: create(OrganisationVerificationSummarySchema, {
             state: OrganisationVerificationState.VERIFIED,
             expiresAt: create(TimestampSchema, { seconds: 1n, nanos: 1_000_000_000 }),
           }),

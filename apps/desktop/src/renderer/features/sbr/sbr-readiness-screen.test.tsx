@@ -56,7 +56,7 @@ function responseFrame(readiness: Parameters<typeof create<typeof SbrReadinessSc
 function apiFor(
   readiness: NonNullable<Parameters<typeof create<typeof SbrReadinessSchema>>[1]>,
   defaultEvteScope = true,
-): Pick<TammyDesktopAPI, "getSbrReadiness"> {
+): Pick<TammyDesktopAPI, "getCurrentUser" | "getSbrReadiness"> {
   const projected =
     readiness.environment === SbrEnvironment.EVTE && defaultEvteScope
       ? {
@@ -66,6 +66,7 @@ function apiFor(
         }
       : readiness;
   return {
+    getCurrentUser: vi.fn(),
     getSbrReadiness: vi.fn(async (frame: Uint8Array) => {
       const request = codec.decodeRequest(frame);
       expect(request.authentication).toEqual(
@@ -86,7 +87,12 @@ function apiFor(
 describe("SbrReadinessScreen", () => {
   it("keeps a persistent polite status region from loading through unavailable", async () => {
     const getSbrReadiness = vi.fn().mockRejectedValue(new Error("secret credential path"));
-    render(<SbrReadinessScreen api={{ getSbrReadiness }} workspace={workspace} />);
+    render(
+      <SbrReadinessScreen
+        api={{ getCurrentUser: vi.fn(), getSbrReadiness }}
+        workspace={workspace}
+      />,
+    );
 
     const status = screen.getByRole("status");
     expect(status.getAttribute("aria-live")).toBe("polite");
@@ -271,8 +277,13 @@ describe("SbrReadinessScreen", () => {
       userId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073995",
       sessionId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073996",
     };
-    const view = render(<SbrReadinessScreen api={{ getSbrReadiness }} workspace={workspace} />);
-    view.rerender(<SbrReadinessScreen api={{ getSbrReadiness }} workspace={nextWorkspace} />);
+    const getCurrentUser = vi.fn();
+    const view = render(
+      <SbrReadinessScreen api={{ getCurrentUser, getSbrReadiness }} workspace={workspace} />,
+    );
+    view.rerender(
+      <SbrReadinessScreen api={{ getCurrentUser, getSbrReadiness }} workspace={nextWorkspace} />,
+    );
 
     await act(async () => {
       second.resolve(
@@ -359,6 +370,26 @@ describe("SbrReadinessScreen", () => {
     );
     expect(await screen.findByRole("heading", { name: "Set up a security code" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Import credential" })).toBeNull();
+  });
+
+  it("resets local factor gating when the authoritative principal projection changes", async () => {
+    const api = apiFor({
+      environment: SbrEnvironment.SIMULATOR,
+      state: SbrReadinessState.UNAVAILABLE,
+      machineCredentialState: MachineCredentialState.MISSING,
+      productIdState: ProductIdState.MISSING,
+    });
+    const view = render(<SbrReadinessScreen api={api} workspace={workspace} />);
+    expect(await screen.findByRole("button", { name: "Import credential" })).toBeTruthy();
+    view.rerender(
+      <SbrReadinessScreen
+        api={api}
+        workspace={{ ...workspace, userFactorState: FactorState.PENDING_CONFIRMATION }}
+      />,
+    );
+    expect(await screen.findByRole("button", { name: "Restart TOTP setup" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Import credential" })).toBeNull();
+    expect(api.getSbrReadiness).toHaveBeenCalledOnce();
   });
 
   it("shows Product ID administration only for exact signed EVTE product and service scope", async () => {

@@ -55,6 +55,8 @@ export function ProductIdForm({
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string>();
   const inFlight = useRef(false);
+  const outcomeLocked = useRef(false);
+  const [locked, setLocked] = useState(false);
   const mounted = useRef(true);
   const clear = () => {
     setProductId("");
@@ -67,7 +69,7 @@ export function ProductIdForm({
     };
   }, []);
   const choose = (next: "import" | "remove") => {
-    if (inFlight.current) return;
+    if (inFlight.current || outcomeLocked.current) return;
     clear();
     setNotice(undefined);
     setAction((value) => (value === next ? undefined : next));
@@ -75,7 +77,7 @@ export function ProductIdForm({
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!action || inFlight.current || !/^\d{6}$/.test(totp)) return;
+    if (!action || outcomeLocked.current || inFlight.current || !/^\d{6}$/.test(totp)) return;
     inFlight.current = true;
     setBusy(true);
     setNotice(undefined);
@@ -128,6 +130,10 @@ export function ProductIdForm({
     } catch {
       if (mounted.current) {
         clear();
+        if (mutationStarted) {
+          outcomeLocked.current = true;
+          setLocked(true);
+        }
         setNotice(
           mutationStarted
             ? unknownOutcomeCopy
@@ -176,6 +182,16 @@ export function ProductIdForm({
           </Button>
         )}
       </div>
+      {locked ? (
+        <Button
+          className="mt-3 h-9 text-[11px]"
+          onClick={onChanged}
+          type="button"
+          variant="outline"
+        >
+          Refresh status
+        </Button>
+      ) : null}
       {action ? (
         <form
           className="mt-4 grid max-w-[420px] gap-3 border-l-2 border-forest pl-4"
@@ -229,11 +245,13 @@ export function ProductIdForm({
           </div>
         </form>
       ) : null}
-      {notice ? (
-        <p aria-live="polite" className="mt-3 text-[11px] text-muted-foreground" role="status">
-          {notice}
-        </p>
-      ) : null}
+      <p
+        aria-live="polite"
+        className="mt-3 min-h-4 text-[11px] text-muted-foreground"
+        role="status"
+      >
+        {notice ?? ""}
+      </p>
     </section>
   );
 }

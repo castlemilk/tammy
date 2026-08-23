@@ -249,5 +249,33 @@ it("fails closed when Product ID import does not report PRESENT", async () => {
   await user.type(screen.getByLabelText("Fresh six-digit code"), "123456");
   await user.click(screen.getByRole("button", { name: "Continue" }));
   expect(await screen.findByText(/outcome is unknown/i)).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Continue" }));
+  expect(importSbrProductId).toHaveBeenCalledOnce();
+  expect(screen.getByRole("button", { name: "Refresh status" })).toBeTruthy();
   expect(changed).not.toHaveBeenCalled();
+});
+
+it("keeps its live status region mounted across a known authorization failure", async () => {
+  const user = userEvent.setup();
+  render(
+    <ProductIdForm
+      api={{
+        assertTotp: vi.fn().mockRejectedValue(new Error("denied")),
+        importSbrProductId: vi.fn(),
+        removeSbrProductId: vi.fn(),
+      }}
+      onChanged={vi.fn()}
+      productIdentifier="TAMMY.EVTE"
+      serviceIdentifier="BAS.LODGE"
+      state={ProductIdState.MISSING}
+      workspace={workspace}
+    />,
+  );
+  const region = screen.getByRole("status");
+  await user.click(screen.getByRole("button", { name: "Import Product ID" }));
+  await user.type(screen.getByLabelText("Product ID value"), "PRIVATE");
+  await user.type(screen.getByLabelText("Fresh six-digit code"), "123456");
+  await user.click(screen.getByRole("button", { name: "Continue" }));
+  await screen.findByText(/no Product ID operation was started/i);
+  expect(screen.getByRole("status")).toBe(region);
 });

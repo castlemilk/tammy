@@ -801,6 +801,42 @@ func TestSQLCipherEnrolTOTPAuditRollbackRetryReplayAndRestart(t *testing.T) {
 	if got := identityAuditCount(t, storage.Database(), "totp_enrolled"); got != 1 {
 		t.Fatalf("restart replay audit count = %d", got)
 	}
+	restartPendingRequest := &tammyv1.EnrolTOTPRequest{CommandContext: &tammyv1.CommandContext{
+		IdempotencyKey: "01890f3c-7b2e-7cc4-98c4-dc0c0c073956",
+		Authentication: &tammyv1.AuthenticationContext{ActorUserId: admin.Id, SessionId: resigned.Msg.Session.Id},
+	}, CurrentPassword: secret("admin-password-long-enough"), RestartPending: true}
+	replacement, err := restarted.EnrolTOTP(ctx, connect.NewRequest(restartPendingRequest))
+	if err != nil || replacement.Msg.Factor.Id == enrolled.Msg.Factor.Id ||
+		bytes.Equal(replacement.Msg.ProvisioningSecret.Utf8, enrolled.Msg.ProvisioningSecret.Utf8) {
+		t.Fatalf("pending restart replacement = %v, %v", replacement, err)
+	}
+	state, err = harness.repository.Load(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if old := state.Factors[enrolled.Msg.Factor.Id]; old == nil ||
+		old.State != tammyv1.FactorState_FACTOR_STATE_DISABLED || old.EncryptedSecret != nil {
+		t.Fatalf("persisted old pending factor = %#v", old)
+	}
+	restartedAgain, err := NewService(harness.config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resignedAgain, err := restartedAgain.SignIn(ctx, connect.NewRequest(&tammyv1.SignInRequest{
+		Username: admin.Username, Password: secret("admin-password-long-enough"),
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	restartPendingRequest.CommandContext.Authentication.SessionId = resignedAgain.Msg.Session.Id
+	replayedReplacement, err := restartedAgain.EnrolTOTP(ctx, connect.NewRequest(restartPendingRequest))
+	if err != nil || replayedReplacement.Msg.Factor.Id != replacement.Msg.Factor.Id ||
+		!bytes.Equal(replayedReplacement.Msg.ProvisioningSecret.Utf8, replacement.Msg.ProvisioningSecret.Utf8) {
+		t.Fatalf("replacement replay after core restart = %v, %v", replayedReplacement, err)
+	}
+	if got := identityAuditCount(t, storage.Database(), "totp_enrolment_restarted"); got != 1 {
+		t.Fatalf("restart audit count = %d", got)
+	}
 }
 
 func TestSQLCipherConcurrentEnrolTOTPCommitsOnePhysicalWinner(t *testing.T) {

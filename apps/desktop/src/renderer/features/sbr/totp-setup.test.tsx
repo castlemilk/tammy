@@ -8,6 +8,9 @@ import {
   EnrolTOTPResponseSchema,
   FactorSchema,
   FactorState,
+  GetCurrentUserRequestSchema,
+  GetCurrentUserResponseSchema,
+  UserSchema,
 } from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -20,6 +23,7 @@ const workspace = {
   workspaceId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073991",
   userId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073992",
   sessionId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073993",
+  userFactorState: FactorState.DISABLED,
 };
 const factorId = "01900f3c-7b2e-7cc4-98c4-dc0c0c073994";
 const enrolCodec = createProtoMethodCodec({
@@ -34,6 +38,18 @@ const confirmCodec = createProtoMethodCodec({
   maximumResponseBytes: 8_192,
   output: ConfirmTOTPResponseSchema,
 });
+const currentUserCodec = createProtoMethodCodec({
+  input: GetCurrentUserRequestSchema,
+  maximumRequestBytes: 8_192,
+  maximumResponseBytes: 8_192,
+  output: GetCurrentUserResponseSchema,
+});
+const currentUser = (state: FactorState) =>
+  currentUserCodec.encodeResponse(
+    create(GetCurrentUserResponseSchema, {
+      user: create(UserSchema, { id: workspace.userId, factorState: state }),
+    }),
+  );
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -44,7 +60,7 @@ function deferred<T>() {
 }
 
 it("shows provisioning material once, confirms it, and removes it permanently", async () => {
-  const secret = "otpauth://totp/Tammy?secret=ONLYONCE";
+  const secret = "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP";
   let enrolResponseFrame: Uint8Array | undefined;
   const api = {
     enrolTotp: vi.fn((frame: Uint8Array) => {
@@ -83,6 +99,7 @@ it("shows provisioning material once, confirms it, and removes it permanently", 
         ),
       );
     }),
+    getCurrentUser: vi.fn(),
   };
   const enabled = vi.fn();
   const user = userEvent.setup();
@@ -110,19 +127,24 @@ it("drops provisioning material on unmount and never renders a rejected password
   const api = {
     enrolTotp: vi.fn().mockRejectedValue(new Error("PRIVATE-PASSWORD")),
     confirmTotp: vi.fn(),
+    getCurrentUser: vi.fn(() => Promise.resolve(currentUser(FactorState.DISABLED))),
   };
   const user = userEvent.setup();
   const view = render(<TotpSetup api={api} onEnabled={vi.fn()} workspace={workspace} />);
   await user.type(screen.getByLabelText("Current administrator password"), "PRIVATE-PASSWORD");
   await user.click(screen.getByRole("button", { name: "Begin TOTP setup" }));
-  expect((await screen.findByRole("alert")).textContent).toMatch(/check your password/i);
+  expect((await screen.findByRole("alert")).textContent).toMatch(/begin setup again/i);
   expect(document.body.textContent).not.toContain("PRIVATE-PASSWORD");
   view.unmount();
 });
 
 it("ignores an enrolment response that arrives after unmount", async () => {
   const late = deferred<Uint8Array>();
-  const api = { enrolTotp: vi.fn(() => late.promise), confirmTotp: vi.fn() };
+  const api = {
+    enrolTotp: vi.fn(() => late.promise),
+    confirmTotp: vi.fn(),
+    getCurrentUser: vi.fn(),
+  };
   const user = userEvent.setup();
   const view = render(<TotpSetup api={api} onEnabled={vi.fn()} workspace={workspace} />);
   await user.type(screen.getByLabelText("Current administrator password"), "PRIVATE-PASSWORD");
@@ -140,7 +162,7 @@ it("ignores an enrolment response that arrives after unmount", async () => {
             createdAt: create(TimestampSchema, { seconds: 1n }),
           }),
           provisioningSecret: create(OneTimeSecretOutputSchema, {
-            utf8: new TextEncoder().encode("LATE-PRIVATE-SECRET"),
+            utf8: new TextEncoder().encode("JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP"),
           }),
         }),
       ),
@@ -171,11 +193,173 @@ it("rejects malformed factor metadata without displaying returned provisioning m
       ),
     ),
     confirmTotp: vi.fn(),
+    getCurrentUser: vi.fn(() => Promise.resolve(currentUser(FactorState.DISABLED))),
   };
   const user = userEvent.setup();
   render(<TotpSetup api={api} onEnabled={vi.fn()} workspace={workspace} />);
   await user.type(screen.getByLabelText("Current administrator password"), "PRIVATE-PASSWORD");
   await user.click(screen.getByRole("button", { name: "Begin TOTP setup" }));
   expect(await screen.findByRole("alert")).toBeTruthy();
+  expect(document.body.textContent).not.toContain(secret);
+});
+
+it("restarts an authoritative pending setup and requests atomic seed rotation", async () => {
+  const pendingWorkspace = { ...workspace, userFactorState: FactorState.PENDING_CONFIRMATION };
+  const api = {
+    enrolTotp: vi.fn((frame: Uint8Array) => {
+      expect(enrolCodec.decodeRequest(frame).restartPending).toBe(true);
+      return Promise.resolve(
+        enrolCodec.encodeResponse(
+          create(EnrolTOTPResponseSchema, {
+            factor: create(FactorSchema, {
+              id: factorId,
+              userId: workspace.userId,
+              version: 1n,
+              state: FactorState.PENDING_CONFIRMATION,
+              createdAt: create(TimestampSchema, { seconds: 1n }),
+            }),
+            provisioningSecret: create(OneTimeSecretOutputSchema, {
+              utf8: new TextEncoder().encode("JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP"),
+            }),
+          }),
+        ),
+      );
+    }),
+    confirmTotp: vi.fn(),
+    getCurrentUser: vi.fn(),
+  };
+  const user = userEvent.setup();
+  render(<TotpSetup api={api} onEnabled={vi.fn()} workspace={pendingWorkspace} />);
+  await user.type(screen.getByLabelText("Current administrator password"), "password");
+  await user.click(screen.getByRole("button", { name: "Restart TOTP setup" }));
+  expect(await screen.findByTestId("totp-provisioning-material")).toBeTruthy();
+  expect(api.enrolTotp).toHaveBeenCalledOnce();
+});
+
+it("locks an ambiguous enrolment until an authoritative refresh succeeds", async () => {
+  const api = {
+    enrolTotp: vi.fn().mockRejectedValue(new Error("timeout")),
+    confirmTotp: vi.fn(),
+    getCurrentUser: vi.fn().mockRejectedValue(new Error("core restarted")),
+  };
+  const user = userEvent.setup();
+  render(<TotpSetup api={api} onEnabled={vi.fn()} workspace={workspace} />);
+  await user.type(screen.getByLabelText("Current administrator password"), "password");
+  await user.click(screen.getByRole("button", { name: "Begin TOTP setup" }));
+  expect(await screen.findByRole("button", { name: "Refresh security status" })).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Begin TOTP setup" }));
+  expect(api.enrolTotp).toHaveBeenCalledOnce();
+  api.getCurrentUser.mockResolvedValueOnce(currentUser(FactorState.PENDING_CONFIRMATION));
+  await user.click(screen.getByRole("button", { name: "Refresh security status" }));
+  expect(await screen.findByRole("button", { name: "Restart TOTP setup" })).toBeTruthy();
+});
+
+it("rejects non-base32 provisioning shapes without ever displaying them", async () => {
+  const malformed = "JBSWY3DP\nHPK3PXPJBSWY3DPEHPK3PX";
+  const api = {
+    enrolTotp: vi.fn(() =>
+      Promise.resolve(
+        enrolCodec.encodeResponse(
+          create(EnrolTOTPResponseSchema, {
+            factor: create(FactorSchema, {
+              id: factorId,
+              userId: workspace.userId,
+              version: 1n,
+              state: FactorState.PENDING_CONFIRMATION,
+              createdAt: create(TimestampSchema, { seconds: 1n }),
+            }),
+            provisioningSecret: create(OneTimeSecretOutputSchema, {
+              utf8: new TextEncoder().encode(malformed),
+            }),
+          }),
+        ),
+      ),
+    ),
+    confirmTotp: vi.fn(),
+    getCurrentUser: vi.fn(() => Promise.resolve(currentUser(FactorState.DISABLED))),
+  };
+  const user = userEvent.setup();
+  render(<TotpSetup api={api} onEnabled={vi.fn()} workspace={workspace} />);
+  await user.type(screen.getByLabelText("Current administrator password"), "password");
+  await user.click(screen.getByRole("button", { name: "Begin TOTP setup" }));
+  await screen.findByRole("alert");
+  expect(document.body.textContent).not.toContain(malformed);
+});
+
+it("refreshes authoritative factor state after an ambiguous confirmation", async () => {
+  const secret = "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP";
+  const api = {
+    enrolTotp: vi.fn(() =>
+      Promise.resolve(
+        enrolCodec.encodeResponse(
+          create(EnrolTOTPResponseSchema, {
+            factor: create(FactorSchema, {
+              id: factorId,
+              userId: workspace.userId,
+              version: 1n,
+              state: FactorState.PENDING_CONFIRMATION,
+              createdAt: create(TimestampSchema, { seconds: 1n }),
+            }),
+            provisioningSecret: create(OneTimeSecretOutputSchema, {
+              utf8: new TextEncoder().encode(secret),
+            }),
+          }),
+        ),
+      ),
+    ),
+    confirmTotp: vi.fn().mockRejectedValue(new Error("timeout after commit")),
+    getCurrentUser: vi.fn(() => Promise.resolve(currentUser(FactorState.ENABLED))),
+  };
+  const enabled = vi.fn();
+  const user = userEvent.setup();
+  render(<TotpSetup api={api} onEnabled={enabled} workspace={workspace} />);
+  await user.type(screen.getByLabelText("Current administrator password"), "password");
+  await user.click(screen.getByRole("button", { name: "Begin TOTP setup" }));
+  await screen.findByText(secret);
+  await user.type(screen.getByLabelText("Six-digit code"), "123456");
+  await user.click(screen.getByRole("button", { name: "Confirm security code" }));
+  expect(enabled).toHaveBeenCalledOnce();
+  expect(api.getCurrentUser).toHaveBeenCalledOnce();
+  expect(document.body.textContent).not.toContain(secret);
+});
+
+it("does not redisplay provisioning material after navigation", async () => {
+  const secret = "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP";
+  const api = {
+    enrolTotp: vi.fn(() =>
+      Promise.resolve(
+        enrolCodec.encodeResponse(
+          create(EnrolTOTPResponseSchema, {
+            factor: create(FactorSchema, {
+              id: factorId,
+              userId: workspace.userId,
+              version: 1n,
+              state: FactorState.PENDING_CONFIRMATION,
+              createdAt: create(TimestampSchema, { seconds: 1n }),
+            }),
+            provisioningSecret: create(OneTimeSecretOutputSchema, {
+              utf8: new TextEncoder().encode(secret),
+            }),
+          }),
+        ),
+      ),
+    ),
+    confirmTotp: vi.fn(),
+    getCurrentUser: vi.fn(),
+  };
+  const user = userEvent.setup();
+  const view = render(<TotpSetup api={api} onEnabled={vi.fn()} workspace={workspace} />);
+  await user.type(screen.getByLabelText("Current administrator password"), "password");
+  await user.click(screen.getByRole("button", { name: "Begin TOTP setup" }));
+  await screen.findByText(secret);
+  view.unmount();
+  render(
+    <TotpSetup
+      api={api}
+      onEnabled={vi.fn()}
+      workspace={{ ...workspace, userFactorState: FactorState.PENDING_CONFIRMATION }}
+    />,
+  );
+  expect(screen.getByRole("button", { name: "Restart TOTP setup" })).toBeTruthy();
   expect(document.body.textContent).not.toContain(secret);
 });

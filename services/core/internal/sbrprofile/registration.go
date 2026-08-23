@@ -442,6 +442,15 @@ func EvaluateReadiness(m RegistrationManifest, now time.Time, phase string) (Rea
 	return Readiness{Ready: true, Code: "READY_" + phase}, nil
 }
 
+func authenticatedConformancePhase(manifest RegistrationManifest) string {
+	for _, service := range manifest.Services {
+		if service.EnrolmentState != "APPROVED" || service.ConformanceState != "PASSED" {
+			return "PRE_CONFORMANCE"
+		}
+	}
+	return "POST_CONFORMANCE"
+}
+
 func EvaluatePreEndpointReadiness(m RegistrationManifest, now time.Time) (Readiness, error) {
 	if err := validateRegistration(m); err != nil {
 		return Readiness{}, err

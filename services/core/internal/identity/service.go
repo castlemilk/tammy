@@ -687,7 +687,11 @@ func (service *Service) EnrolTOTP(ctx context.Context, request *connect.Request[
 	if err != nil {
 		return nil, err
 	}
-	digest := service.semanticDigest([]byte("enrol_totp"), []byte(actor.ID), request.Msg.CurrentPassword.Utf8)
+	restartMarker := []byte{0}
+	if request.Msg.RestartPending {
+		restartMarker[0] = 1
+	}
+	digest := service.semanticDigest([]byte("enrol_totp"), []byte(actor.ID), restartMarker, request.Msg.CurrentPassword.Utf8)
 	operationKey := request.Msg.CommandContext.IdempotencyKey
 	if retained, ok := state.Idempotency[operationKey]; ok {
 		response, err := service.electEnrolTOTP(operationKey, digest, actor.ID, retained)
@@ -703,7 +707,11 @@ func (service *Service) EnrolTOTP(ctx context.Context, request *connect.Request[
 			if err != nil {
 				return err
 			}
-			digest := service.semanticDigest([]byte("enrol_totp"), []byte(actor.ID), request.Msg.CurrentPassword.Utf8)
+			restartMarker := []byte{0}
+			if request.Msg.RestartPending {
+				restartMarker[0] = 1
+			}
+			digest := service.semanticDigest([]byte("enrol_totp"), []byte(actor.ID), restartMarker, request.Msg.CurrentPassword.Utf8)
 			if retained, ok := state.Idempotency[operationKey]; ok {
 				response, err = service.electEnrolTOTP(operationKey, digest, actor.ID, retained)
 				if err != nil {
@@ -718,10 +726,24 @@ func (service *Service) EnrolTOTP(ctx context.Context, request *connect.Request[
 			if !service.passwords.Verify(request.Msg.CurrentPassword.Utf8, actor.Password) {
 				return faults.New(faults.CodeAuthenticationRequired, nil)
 			}
+			var pendingFactor *factorRecord
 			for _, factor := range state.Factors {
-				if factor.UserID == actor.ID && factor.State != tammyv1.FactorState_FACTOR_STATE_DISABLED {
+				if factor.UserID != actor.ID || factor.State == tammyv1.FactorState_FACTOR_STATE_DISABLED {
+					continue
+				}
+				if factor.State == tammyv1.FactorState_FACTOR_STATE_ENABLED || pendingFactor != nil {
 					return faults.New(faults.CodeValidation, nil)
 				}
+				pendingFactor = factor
+			}
+			if request.Msg.RestartPending != (pendingFactor != nil) {
+				return faults.New(faults.CodeValidation, nil)
+			}
+			if pendingFactor != nil {
+				zero(pendingFactor.EncryptedSecret)
+				pendingFactor.EncryptedSecret = nil
+				pendingFactor.State = tammyv1.FactorState_FACTOR_STATE_DISABLED
+				pendingFactor.Version++
 			}
 			factorID, err := service.ids.New()
 			if err != nil {
@@ -749,7 +771,11 @@ func (service *Service) EnrolTOTP(ctx context.Context, request *connect.Request[
 			}
 			state.Idempotency[operationKey] = idempotencyRecord{Command: "enrol_totp", SemanticHash: digest, ActorUserID: actor.ID, UserID: actor.ID,
 				FactorID: factorID, ResponseEncrypted: retainedResponse}
-			return service.audit.Record(ctx, executor, "totp_enrolled", factorID)
+			event := "totp_enrolled"
+			if pendingFactor != nil {
+				event = "totp_enrolment_restarted"
+			}
+			return service.audit.Record(ctx, executor, event, factorID)
 		})
 		if !errors.Is(err, ErrRepositoryConflict) || conflictAttempt == retainedElectionConflictRetries-1 {
 			break

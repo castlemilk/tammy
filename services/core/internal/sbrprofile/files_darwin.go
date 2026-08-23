@@ -149,10 +149,7 @@ func AuthenticateAndStage(ctx context.Context, profilePath string, locator Resou
 		if scopeErr != nil {
 			return nil, scopeErr
 		}
-		phase := resources.ReadinessPhase
-		if phase == "" {
-			phase = "PRE_CONFORMANCE"
-		}
+		phase := authenticatedConformancePhase(registration.Manifest)
 		readiness, readinessErr := EvaluateReadiness(registration.Manifest, now, phase)
 		if readinessErr != nil {
 			return nil, readinessErr
@@ -169,6 +166,7 @@ func AuthenticateAndStage(ctx context.Context, profilePath string, locator Resou
 		}
 		staged.authenticatedProductIDScope = &productIDScope
 		staged.authenticatedComponentVersion = component.Manifest.ComponentVersion
+		staged.authenticatedConformance = phase
 		staged.validateFresh = func(fresh time.Time) error {
 			if _, parseErr := ParseProfile(profileFile.bytes, fresh); parseErr != nil {
 				return stableProfileError(parseErr)

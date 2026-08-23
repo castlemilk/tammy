@@ -159,7 +159,13 @@ it("does not mutate after picker cancel or failed factor assertion", async () =>
   expect(document.body.textContent).not.toContain("/secret");
 });
 
-it.each(["expired handle /private/path", "invalid password PRIVATE", "wrong ABN 00000000000"])(
+it.each([
+  "expired handle /private/path",
+  "invalid password PRIVATE",
+  "wrong ABN 00000000000",
+  "timeout",
+  "core restarted",
+])(
   "treats a dispatched %s failure as unknown without replaying or exposing details",
   async (detail) => {
     const importMachineCredential = vi.fn().mockRejectedValue(new Error(detail));
@@ -189,10 +195,38 @@ it.each(["expired handle /private/path", "invalid password PRIVATE", "wrong ABN 
       await screen.findByText(/outcome is unknown.*refresh status before trying again/i),
     ).toBeTruthy();
     expect(importMachineCredential).toHaveBeenCalledOnce();
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(importMachineCredential).toHaveBeenCalledOnce();
+    expect(screen.getByRole("button", { name: "Refresh status" })).toBeTruthy();
     expect(document.body.textContent).not.toContain(detail);
     expect(document.body.textContent).not.toContain("PRIVATE-PASSWORD");
   },
 );
+
+it("keeps one live status region mounted from first paint through picker rejection", async () => {
+  const api = {
+    assertTotp: factorAPI(),
+    selectMachineCredentialFile: vi.fn().mockRejectedValue(new Error("picker denied")),
+    importMachineCredential: vi.fn(),
+    replaceMachineCredential: unused(),
+    unlockMachineCredential: unused(),
+    removeMachineCredential: unused(),
+  };
+  const user = userEvent.setup();
+  render(
+    <MachineCredentialForm
+      api={api}
+      credentialState={MachineCredentialState.MISSING}
+      onChanged={vi.fn()}
+      workspace={workspace}
+    />,
+  );
+  const region = screen.getByRole("status");
+  await user.click(screen.getByRole("button", { name: "Import credential" }));
+  await user.click(screen.getByRole("button", { name: "Choose credential in macOS" }));
+  expect(await screen.findByText(/picker was unavailable/i)).toBeTruthy();
+  expect(screen.getByRole("status")).toBe(region);
+});
 
 it("names the organisation and ABN in both replace and remove confirmations", async () => {
   const api = {

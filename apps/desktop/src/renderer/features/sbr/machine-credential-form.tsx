@@ -84,6 +84,8 @@ export function MachineCredentialForm({
   const [notice, setNotice] = useState<string>();
   const pickerInFlight = useRef(false);
   const mutationInFlight = useRef(false);
+  const outcomeLocked = useRef(false);
+  const [locked, setLocked] = useState(false);
   const mounted = useRef(true);
 
   const clearTransient = () => {
@@ -101,14 +103,20 @@ export function MachineCredentialForm({
     };
   }, []);
   const chooseAction = (next: Action) => {
-    if (pickerInFlight.current || mutationInFlight.current) return;
+    if (pickerInFlight.current || mutationInFlight.current || outcomeLocked.current) return;
     clearTransient();
     setNotice(undefined);
     setAction((current) => (current === next ? undefined : next));
   };
 
   const select = async () => {
-    if (pickerInFlight.current || mutationInFlight.current || handle.current) return;
+    if (
+      pickerInFlight.current ||
+      mutationInFlight.current ||
+      outcomeLocked.current ||
+      handle.current
+    )
+      return;
     pickerInFlight.current = true;
     setBusy(true);
     setNotice(undefined);
@@ -132,7 +140,13 @@ export function MachineCredentialForm({
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!action || mutationInFlight.current || pickerInFlight.current || !/^\d{6}$/.test(totp))
+    if (
+      !action ||
+      outcomeLocked.current ||
+      mutationInFlight.current ||
+      pickerInFlight.current ||
+      !/^\d{6}$/.test(totp)
+    )
       return;
     if ((action === "import" || action === "replace") && !handle.current) return;
     if ((action === "remove" || action === "replace") && !confirmed) return;
@@ -225,6 +239,10 @@ export function MachineCredentialForm({
     } catch {
       if (mounted.current) {
         clearTransient();
+        if (mutationStarted) {
+          outcomeLocked.current = true;
+          setLocked(true);
+        }
         setNotice(
           mutationStarted
             ? unknownOutcomeCopy
@@ -289,6 +307,16 @@ export function MachineCredentialForm({
           </>
         )}
       </div>
+      {locked ? (
+        <Button
+          className="mt-3 h-9 text-[11px]"
+          onClick={onChanged}
+          type="button"
+          variant="outline"
+        >
+          Refresh status
+        </Button>
+      ) : null}
       {action ? (
         <form
           className="mt-4 grid max-w-[520px] gap-3 border-l-2 border-forest pl-4"
@@ -392,11 +420,13 @@ export function MachineCredentialForm({
           </div>
         </form>
       ) : null}
-      {notice ? (
-        <p aria-live="polite" className="mt-3 text-[11px] text-muted-foreground" role="status">
-          {notice}
-        </p>
-      ) : null}
+      <p
+        aria-live="polite"
+        className="mt-3 min-h-4 text-[11px] text-muted-foreground"
+        role="status"
+      >
+        {notice ?? ""}
+      </p>
     </section>
   );
 }
