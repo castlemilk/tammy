@@ -1,6 +1,7 @@
 import { create } from "@bufbuild/protobuf";
 import { AuthenticationContextSchema } from "@tammy/connect-client/tammy/v1/common_pb.js";
 import {
+  FactorState,
   GetCurrentUserRequestSchema,
   GetCurrentUserResponseSchema,
   Role,
@@ -8,6 +9,7 @@ import {
 import {
   GetOrganisationRequestSchema,
   GetOrganisationResponseSchema,
+  OrganisationVerificationState,
 } from "@tammy/connect-client/tammy/v1/organisation_pb.js";
 import { AlertTriangle, LoaderCircle, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -26,6 +28,8 @@ import { DocumentsScreen } from "./features/documents/documents-screen";
 import { EmptyLedgerScreen } from "./features/ledger/empty-ledger-screen";
 import { OverviewScreen } from "./features/overview/overview-screen";
 import { PrivacyScreen, PrivacyStatement } from "./features/privacy/privacy-statement";
+import { OrganisationVerificationForm } from "./features/sbr/organisation-verification-form";
+import { validTimestamp } from "./features/sbr/sbr-form-support";
 import { SbrReadinessScreen } from "./features/sbr/sbr-readiness-screen";
 import { type AuthenticatedWorkspace, SetupScreen } from "./features/setup/setup-screen";
 import { UnlockScreen } from "./features/workspace/unlock-screen";
@@ -55,10 +59,25 @@ type SettingsWorkspace = AuthenticatedWorkspace &
     >
   >;
 
+interface SettingsWorkspaceDetails {
+  readonly organisationEntityType: string;
+  readonly organisationLegalName: string;
+  readonly organisationVerificationState: OrganisationVerificationState;
+  readonly organisationVerificationExpiresAt?: { readonly nanos: number; readonly seconds: bigint };
+  readonly organisationVersion: bigint;
+  readonly userFactorState?: FactorState;
+}
+
+type CompleteSettingsWorkspace = SettingsWorkspace & SettingsWorkspaceDetails;
+
 type SettingsProjectionState =
   | { readonly status: "idle" }
   | { readonly key: string; readonly status: "loading" | "unavailable" }
-  | { readonly key: string; readonly status: "ready"; readonly workspace: SettingsWorkspace };
+  | {
+      readonly key: string;
+      readonly status: "ready";
+      readonly workspace: CompleteSettingsWorkspace;
+    };
 
 function validRoles(roles: unknown): roles is readonly Role[] {
   return (
@@ -73,6 +92,16 @@ function validRoles(roles: unknown): roles is readonly Role[] {
     ) &&
     new Set(roles).size === roles.length &&
     roles.every((role, index) => index === 0 || role > (roles[index - 1] ?? 0))
+  );
+}
+
+function validOrganisationVerificationState(state: OrganisationVerificationState): boolean {
+  return (
+    state === OrganisationVerificationState.UNVERIFIED ||
+    state === OrganisationVerificationState.VERIFIED ||
+    state === OrganisationVerificationState.FAILED ||
+    state === OrganisationVerificationState.EXPIRED ||
+    state === OrganisationVerificationState.SUPERSEDED
   );
 }
 
@@ -157,13 +186,14 @@ export function App() {
   const [settingsProjection, setSettingsProjection] = useState<SettingsProjectionState>({
     status: "idle",
   });
+  const [settingsReload, setSettingsReload] = useState(0);
   const settingsRoute =
     activePath === "/settings/organisation" ||
     activePath === "/settings/sbr" ||
     activePath === "/settings/sbr?doctor=1";
   const settingsRequestKey =
     settingsRoute && hasSbrWorkspaceProjection(workspace)
-      ? `${workspace.sessionId}:${workspace.userId}:${workspace.organisationId}`
+      ? `${workspace.sessionId}:${workspace.userId}:${workspace.organisationId}:${settingsReload}`
       : undefined;
 
   const loadDiagnostics = useCallback(async () => {
@@ -240,19 +270,57 @@ export function App() {
           currentOrganisation.organisation.id !== currentWorkspace.organisationId ||
           !currentOrganisation.organisation.displayName.trim() ||
           currentOrganisation.organisation.displayName.length > 256 ||
-          !/^[0-9]{11}$/.test(currentOrganisation.organisation.abn)
+          !/^[0-9]{11}$/.test(currentOrganisation.organisation.abn) ||
+          currentOrganisation.organisation.version < 1n ||
+          !currentOrganisation.organisation.legalName.trim() ||
+          currentOrganisation.organisation.legalName.length > 256 ||
+          !currentOrganisation.organisation.entityType.trim() ||
+          currentOrganisation.organisation.entityType.length > 96 ||
+          !validOrganisationVerificationState(currentOrganisation.organisation.verificationState) ||
+          (currentUser.user.factorState !== undefined &&
+            currentUser.user.factorState !== FactorState.PENDING_CONFIRMATION &&
+            currentUser.user.factorState !== FactorState.ENABLED &&
+            currentUser.user.factorState !== FactorState.DISABLED) ||
+          (currentOrganisation.currentVerification !== undefined &&
+            (currentOrganisation.currentVerification.organisationId !==
+              currentWorkspace.organisationId ||
+              !validTimestamp(currentOrganisation.currentVerification.expiresAt)))
         ) {
           throw new Error("invalid authoritative workspace projection");
         }
-        const refreshed: SettingsWorkspace = {
+        const refreshed: CompleteSettingsWorkspace = {
           ...currentWorkspace,
           organisationCanonicalAbn: currentOrganisation.organisation.abn,
           organisationDisplayName: currentOrganisation.organisation.displayName,
           organisationId: currentOrganisation.organisation.id,
           roles: [...currentUser.user.roles],
+          ...(currentUser.user.factorState === undefined
+            ? {}
+            : { userFactorState: currentUser.user.factorState }),
+          organisationVersion: currentOrganisation.organisation.version,
+          organisationLegalName: currentOrganisation.organisation.legalName,
+          organisationEntityType: currentOrganisation.organisation.entityType,
+          organisationVerificationState: currentOrganisation.organisation.verificationState,
+          ...(currentOrganisation.currentVerification?.expiresAt === undefined
+            ? {}
+            : {
+                organisationVerificationExpiresAt:
+                  currentOrganisation.currentVerification.expiresAt,
+              }),
         };
         if (!appMounted.current || settingsRequestSequence.current !== sequence) return;
-        window.sessionStorage.setItem(SESSION_STORAGE, JSON.stringify(refreshed));
+        window.sessionStorage.setItem(
+          SESSION_STORAGE,
+          JSON.stringify({
+            workspaceId: refreshed.workspaceId,
+            userId: refreshed.userId,
+            sessionId: refreshed.sessionId,
+            organisationId: refreshed.organisationId,
+            organisationDisplayName: refreshed.organisationDisplayName,
+            organisationCanonicalAbn: refreshed.organisationCanonicalAbn,
+            roles: refreshed.roles,
+          } satisfies AuthenticatedWorkspace),
+        );
         setWorkspace(refreshed);
         setSettingsProjection({ key: settingsRequestKey, status: "ready", workspace: refreshed });
       })
@@ -342,6 +410,7 @@ export function App() {
         state={diagnosticsState}
         settingsProjection={settingsProjection}
         settingsRequestKey={settingsRequestKey}
+        onReloadSettings={() => setSettingsReload((value) => value + 1)}
         workspace={workspace}
       />
     </AppShell>
@@ -402,6 +471,7 @@ function RouteContent({
   path,
   settingsProjection,
   settingsRequestKey,
+  onReloadSettings,
   state,
   workspace,
 }: {
@@ -409,6 +479,7 @@ function RouteContent({
   readonly path: string;
   readonly settingsProjection: SettingsProjectionState;
   readonly settingsRequestKey: string | undefined;
+  readonly onReloadSettings: () => void;
   readonly state: DiagnosticsState;
   readonly workspace: AuthenticatedWorkspace | undefined;
 }) {
@@ -478,6 +549,11 @@ function RouteContent({
             </dd>
           </div>
         </dl>
+        <OrganisationVerificationForm
+          api={window.tammy}
+          onChanged={onReloadSettings}
+          workspace={trustedWorkspace}
+        />
       </div>
     );
   }
@@ -489,6 +565,7 @@ function RouteContent({
       <SbrReadinessScreen
         api={window.tammy}
         doctorMode={path === "/settings/sbr?doctor=1"}
+        onNavigate={onNavigate}
         workspace={settingsProjection.workspace}
       />
     );

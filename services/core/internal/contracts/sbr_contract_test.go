@@ -300,6 +300,8 @@ func expectedSbrMessageSchemas() map[protoreflect.Name]map[protoreflect.Name]sbr
 			"credential_fingerprint":   sbrScalar(protoreflect.StringKind),
 			"profile_fingerprint":      sbrScalar(protoreflect.StringKind),
 			"component_fingerprint":    sbrScalar(protoreflect.StringKind),
+			"evte_product_identifier":  sbrScalar(protoreflect.StringKind),
+			"evte_service_identifier":  sbrScalar(protoreflect.StringKind),
 		},
 		"SbrReadinessFixtureResult": {
 			"fixture_id":   sbrConstString("SIM-SBR-READINESS-V1"),
@@ -480,11 +482,18 @@ func assertSbrResponseShapes(t *testing.T, file protoreflect.FileDescriptor) {
 		"machine_credential_state": protoreflect.EnumKind, "product_id_state": protoreflect.EnumKind,
 		"readiness_codes": protoreflect.StringKind, "credential_fingerprint": protoreflect.StringKind,
 		"profile_fingerprint": protoreflect.StringKind, "component_fingerprint": protoreflect.StringKind,
+		"evte_product_identifier": protoreflect.StringKind, "evte_service_identifier": protoreflect.StringKind,
 	})
 	if field := readiness.Fields().ByName("readiness_codes"); !field.IsList() || fieldRules(t, field).GetRepeated().GetMaxItems() != 32 {
 		t.Error("SbrReadiness.readiness_codes must be bounded to 32")
 	}
 	assertEnumRejectsUnspecified(t, readiness.Fields().ByName("product_id_state"))
+	for _, fieldName := range []protoreflect.Name{"evte_product_identifier", "evte_service_identifier"} {
+		rules := fieldRules(t, readiness.Fields().ByName(fieldName)).GetString_()
+		if rules.GetMaxLen() != 128 || rules.GetPattern() != "^[A-Za-z0-9._:-]*$" {
+			t.Errorf("SbrReadiness.%s must be bounded authenticated scope metadata", fieldName)
+		}
+	}
 
 	status := file.Messages().ByName("MachineCredentialStatus")
 	assertExactFields(t, status, map[protoreflect.Name]protoreflect.Kind{
@@ -531,6 +540,8 @@ func assertSbrSensitiveFieldMatrix(t *testing.T, file protoreflect.FileDescripto
 		"tammy.v1.ImportSbrProductIdRequest.evte_service_identifier": true,
 		"tammy.v1.RemoveSbrProductIdRequest.evte_product_identifier": true,
 		"tammy.v1.RemoveSbrProductIdRequest.evte_service_identifier": true,
+		"tammy.v1.SbrReadiness.evte_product_identifier":              true,
+		"tammy.v1.SbrReadiness.evte_service_identifier":              true,
 	}
 	for index := 0; index < file.Messages().Len(); index++ {
 		message := file.Messages().Get(index)

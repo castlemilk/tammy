@@ -994,6 +994,31 @@ func TestProductStateProjectionIsClosed(t *testing.T) {
 	}
 }
 
+func TestReadinessProjectsOnlyAuthenticatedEVTEProductAndServiceScope(t *testing.T) {
+	service := testService(t, &fakeHelper{}, &fakeIdentity{})
+	binding := OrganisationBinding{OrganisationID: serviceOrganisationID, CanonicalABN: serviceABN,
+		VerificationExpiresAt: service.now().Add(time.Hour)}
+	profile := evteProfile(service.profiles.(fakeProfile).profile, "EVTE.PRODUCT", "EVTE.SERVICE")
+	readiness := service.readiness(context.Background(), binding, profile, serviceBinding{}, false)
+	if readiness.EvteProductIdentifier != profile.ExpectedProductIdentifier ||
+		readiness.EvteServiceIdentifier != profile.ExpectedServiceID {
+		t.Fatalf("readiness product scope = %q/%q", readiness.EvteProductIdentifier, readiness.EvteServiceIdentifier)
+	}
+}
+
+func TestReadinessNeverProjectsEVTEScopeForSimulator(t *testing.T) {
+	service := testService(t, &fakeHelper{}, &fakeIdentity{})
+	binding := OrganisationBinding{OrganisationID: serviceOrganisationID, CanonicalABN: serviceABN,
+		VerificationExpiresAt: service.now().Add(time.Hour)}
+	profile := service.profiles.(fakeProfile).profile
+	profile.ExpectedProductIdentifier = "MUST.NOT.LEAK"
+	profile.ExpectedServiceID = "MUST.NOT.LEAK"
+	readiness := service.readiness(context.Background(), binding, profile, serviceBinding{}, false)
+	if readiness.EvteProductIdentifier != "" || readiness.EvteServiceIdentifier != "" {
+		t.Fatalf("simulator readiness projected EVTE scope = %q/%q", readiness.EvteProductIdentifier, readiness.EvteServiceIdentifier)
+	}
+}
+
 func TestProductStateIsBoundToExactAuthenticatedProductAndServiceScope(t *testing.T) {
 	service := testService(t, &fakeHelper{}, &fakeIdentity{})
 	store := service.store.(*memoryServiceStore)

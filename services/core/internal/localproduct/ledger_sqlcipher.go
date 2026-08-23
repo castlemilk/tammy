@@ -1162,10 +1162,18 @@ func (handler *organisationHandler) GetOrganisation(ctx context.Context, request
 		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
 	}
 	profile, err := repository.Get(ctx, request.Msg.OrganisationId)
-	if err != nil || tx.Commit() != nil {
+	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, ErrLedgerModule)
 	}
-	return connect.NewResponse(&tammyv1.GetOrganisationResponse{Organisation: profile}), nil
+	evidenceRepository, err := organisations.NewEvidenceRepository(tx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	verification, err := evidenceRepository.GetCurrentMetadata(ctx, request.Msg.OrganisationId)
+	if err != nil || tx.Commit() != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	return connect.NewResponse(&tammyv1.GetOrganisationResponse{Organisation: profile, CurrentVerification: verification}), nil
 }
 
 type organisationCommandTransaction struct {

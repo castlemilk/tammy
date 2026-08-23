@@ -1,6 +1,6 @@
 import { create } from "@bufbuild/protobuf";
 import { AuthenticationContextSchema } from "@tammy/connect-client/tammy/v1/common_pb.js";
-import { Role } from "@tammy/connect-client/tammy/v1/identity_pb.js";
+import { FactorState, Role } from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import {
   GetSbrReadinessRequestSchema,
   GetSbrReadinessResponseSchema,
@@ -34,7 +34,8 @@ const workspace = {
   organisationDisplayName: "Wattle & Co",
   organisationCanonicalAbn: "11000000560",
   roles: [Role.WORKSPACE_ADMIN],
-} satisfies AuthenticatedWorkspace;
+  userFactorState: FactorState.ENABLED,
+} satisfies AuthenticatedWorkspace & { readonly userFactorState: FactorState };
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -53,8 +54,17 @@ function responseFrame(readiness: Parameters<typeof create<typeof SbrReadinessSc
 }
 
 function apiFor(
-  readiness: Parameters<typeof create<typeof SbrReadinessSchema>>[1],
+  readiness: NonNullable<Parameters<typeof create<typeof SbrReadinessSchema>>[1]>,
+  defaultEvteScope = true,
 ): Pick<TammyDesktopAPI, "getSbrReadiness"> {
+  const projected =
+    readiness.environment === SbrEnvironment.EVTE && defaultEvteScope
+      ? {
+          evteProductIdentifier: "TAMMY.EVTE",
+          evteServiceIdentifier: "BAS.LODGE",
+          ...readiness,
+        }
+      : readiness;
   return {
     getSbrReadiness: vi.fn(async (frame: Uint8Array) => {
       const request = codec.decodeRequest(frame);
@@ -66,7 +76,7 @@ function apiFor(
       );
       return codec.encodeResponse(
         create(GetSbrReadinessResponseSchema, {
-          readiness: create(SbrReadinessSchema, readiness),
+          readiness: create(SbrReadinessSchema, projected),
         }),
       );
     }),
@@ -179,6 +189,8 @@ describe("SbrReadinessScreen", () => {
           state: SbrReadinessState.UNAVAILABLE,
           machineCredentialState: MachineCredentialState.PRESENT,
           productIdState: ProductIdState.PRESENT,
+          evteProductIdentifier: "TAMMY.EVTE",
+          evteServiceIdentifier: "BAS.LODGE",
           readinessCodes: [
             "SBR_REGISTRATION_MANIFEST_EXPIRED",
             "SBR_ENDPOINT_PROFILE_EXPIRED",
@@ -269,6 +281,8 @@ describe("SbrReadinessScreen", () => {
           state: SbrReadinessState.READY_FOR_EVTE_PRE_CONFORMANCE,
           machineCredentialState: MachineCredentialState.PRESENT,
           productIdState: ProductIdState.PRESENT,
+          evteProductIdentifier: "TAMMY.EVTE",
+          evteServiceIdentifier: "BAS.LODGE",
         }),
       );
     });
@@ -312,7 +326,7 @@ describe("SbrReadinessScreen", () => {
     }
   });
 
-  it("shows described but inactive credential controls only to administrators", async () => {
+  it("shows credential controls only to administrators with an enabled factor", async () => {
     render(
       <SbrReadinessScreen
         api={apiFor({
@@ -324,12 +338,72 @@ describe("SbrReadinessScreen", () => {
         workspace={workspace}
       />,
     );
-    const replace = await screen.findByRole("button", { name: "Replace machine credential" });
-    const remove = screen.getByRole("button", { name: "Remove machine credential" });
-    expect(replace.hasAttribute("disabled")).toBe(true);
-    expect(remove.hasAttribute("disabled")).toBe(true);
-    expect(replace.getAttribute("aria-describedby")).toBe("sbr-security-actions-description");
-    expect(screen.getByText(/local core authorizes every change/i)).toBeTruthy();
+    const replace = await screen.findByRole("button", { name: "Replace credential" });
+    const remove = screen.getByRole("button", { name: "Remove credential" });
+    expect(replace.hasAttribute("disabled")).toBe(false);
+    expect(remove.hasAttribute("disabled")).toBe(false);
+    expect(screen.getByText(/protected storage on this Mac/i)).toBeTruthy();
+  });
+
+  it("shows TOTP setup instead of high-risk actions when the administrator has no enabled factor", async () => {
+    render(
+      <SbrReadinessScreen
+        api={apiFor({
+          environment: SbrEnvironment.SIMULATOR,
+          state: SbrReadinessState.UNAVAILABLE,
+          machineCredentialState: MachineCredentialState.MISSING,
+          productIdState: ProductIdState.MISSING,
+        })}
+        workspace={{ ...workspace, userFactorState: FactorState.DISABLED }}
+      />,
+    );
+    expect(await screen.findByRole("heading", { name: "Set up a security code" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Import credential" })).toBeNull();
+  });
+
+  it("shows Product ID administration only for exact signed EVTE product and service scope", async () => {
+    const base = {
+      environment: SbrEnvironment.EVTE,
+      state: SbrReadinessState.UNAVAILABLE,
+      machineCredentialState: MachineCredentialState.PRESENT,
+      productIdState: ProductIdState.MISSING,
+    };
+    const view = render(<SbrReadinessScreen api={apiFor(base, false)} workspace={workspace} />);
+    expect(
+      await screen.findByText(/could not inspect the authenticated local SBR state/i),
+    ).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "EVTE Product ID" })).toBeNull();
+    view.unmount();
+    render(
+      <SbrReadinessScreen
+        api={apiFor({
+          ...base,
+          evteProductIdentifier: "TAMMY.EVTE",
+          evteServiceIdentifier: "BAS.LODGE",
+        })}
+        workspace={workspace}
+      />,
+    );
+    expect(await screen.findByRole("heading", { name: "EVTE Product ID" })).toBeTruthy();
+  });
+
+  it("fails closed when simulator readiness carries EVTE scope metadata", async () => {
+    render(
+      <SbrReadinessScreen
+        api={apiFor({
+          environment: SbrEnvironment.SIMULATOR,
+          state: SbrReadinessState.UNAVAILABLE,
+          machineCredentialState: MachineCredentialState.MISSING,
+          productIdState: ProductIdState.MISSING,
+          evteProductIdentifier: "TAMMY.EVTE",
+          evteServiceIdentifier: "BAS.LODGE",
+        })}
+        workspace={workspace}
+      />,
+    );
+    expect(
+      await screen.findByText(/could not inspect the authenticated local SBR state/i),
+    ).toBeTruthy();
   });
 
   it.each([

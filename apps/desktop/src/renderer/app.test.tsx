@@ -1,16 +1,20 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { create } from "@bufbuild/protobuf";
+import { TimestampSchema } from "@bufbuild/protobuf/wkt";
 import {
+  FactorState,
   GetCurrentUserRequestSchema,
   GetCurrentUserResponseSchema,
   Role,
   UserSchema,
 } from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import {
+  EntityVerificationSchema,
   GetOrganisationRequestSchema,
   GetOrganisationResponseSchema,
   OrganisationSchema,
+  OrganisationVerificationState,
 } from "@tammy/connect-client/tammy/v1/organisation_pb.js";
 import {
   GetSbrReadinessRequestSchema,
@@ -194,6 +198,7 @@ function mockAuthoritativeSettings(
           username: "tammy-user",
           displayName: "Tammy User",
           roles: [...roles],
+          factorState: FactorState.ENABLED,
         }),
       }),
     );
@@ -206,8 +211,11 @@ function mockAuthoritativeSettings(
         organisation: create(OrganisationSchema, {
           id: request.organisationId,
           displayName: organisationDisplayName,
-          legalName: `${organisationDisplayName} Pty Ltd`,
+          legalName: "Authoritative legal name",
           abn: "51824753556",
+          entityType: "company",
+          version: 1n,
+          verificationState: OrganisationVerificationState.UNVERIFIED,
         }),
       }),
     );
@@ -347,6 +355,37 @@ describe("App", () => {
     expect(document.body.textContent).not.toContain("51824753556");
   });
 
+  it("fails closed when retained verification expiry metadata is malformed", async () => {
+    installDesktopAPI(vi.fn().mockResolvedValue(diagnostics));
+    mockAuthoritativeSettings([Role.WORKSPACE_ADMIN]);
+    vi.mocked(window.tammy.getOrganisation).mockImplementation(async (frame) => {
+      const request = organisationCodec.decodeRequest(frame);
+      return organisationCodec.encodeResponse(
+        create(GetOrganisationResponseSchema, {
+          organisation: create(OrganisationSchema, {
+            id: request.organisationId,
+            displayName: "Authoritative Tammy Business",
+            legalName: "Authoritative legal name",
+            abn: "51824753556",
+            entityType: "company",
+            version: 1n,
+            verificationState: OrganisationVerificationState.EXPIRED,
+          }),
+          currentVerification: create(EntityVerificationSchema, {
+            id: "01900f3c-7b2e-7cc4-98c4-dc0c0c073995",
+            organisationId: request.organisationId,
+            state: OrganisationVerificationState.VERIFIED,
+            expiresAt: create(TimestampSchema, { seconds: 1n, nanos: 1_000_000_000 }),
+          }),
+        }),
+      );
+    });
+    window.history.replaceState(null, "", "/settings/organisation");
+    render(<App />);
+    expect(await screen.findByText("Workspace details unavailable")).toBeTruthy();
+    expect(document.body.textContent).not.toContain("Invalid Date");
+  });
+
   it("wraps an authoritative 256-character organisation display name", async () => {
     installDesktopAPI(vi.fn().mockResolvedValue(diagnostics));
     const displayName = "W".repeat(256);
@@ -358,6 +397,17 @@ describe("App", () => {
     const value = await screen.findByText(displayName);
     expect(value.className).toContain("min-w-0");
     expect(value.className).toContain("[overflow-wrap:anywhere]");
+  });
+
+  it("renders independent verification on the authenticated organisation route", async () => {
+    installDesktopAPI(vi.fn().mockResolvedValue(diagnostics));
+    mockAuthoritativeSettings([Role.WORKSPACE_ADMIN]);
+    window.history.replaceState(null, "", "/settings/organisation");
+    render(<App />);
+    expect(
+      await screen.findByRole("heading", { name: "Independent entity verification" }),
+    ).toBeTruthy();
+    expect(screen.getByLabelText("Independent evidence")).toBeTruthy();
   });
 
   it("ignores an authoritative settings refresh that resolves after unmount", async () => {

@@ -342,6 +342,9 @@ message GetOrganisationRequest {
 message GetOrganisationResponse {
   // organisation contains no raw evidence bytes or hidden transmission state.
   Organisation organisation = 1 [(buf.validate.field).required = true];
+
+  // current_verification is the latest retained redacted evidence metadata, when one exists.
+  EntityVerification current_verification = 2;
 }
 
 // OrganisationService exposes the single-organisation profile and independent verification use cases.

@@ -1,6 +1,6 @@
 import { create } from "@bufbuild/protobuf";
 import { AuthenticationContextSchema } from "@tammy/connect-client/tammy/v1/common_pb.js";
-import { Role } from "@tammy/connect-client/tammy/v1/identity_pb.js";
+import { FactorState, Role } from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import {
   GetSbrReadinessRequestSchema,
   GetSbrReadinessResponseSchema,
@@ -17,6 +17,9 @@ import type { TammyDesktopAPI } from "../../../shared/desktop-api";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import { Badge } from "../../components/ui/badge";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
+import { MachineCredentialForm } from "./machine-credential-form";
+import { ProductIdForm } from "./product-id-form";
+import { TotpSetup } from "./totp-setup";
 
 const readinessCodec = createProtoMethodCodec({
   input: GetSbrReadinessRequestSchema,
@@ -67,15 +70,31 @@ const issueCopy: Readonly<Record<string, string>> = {
 };
 
 interface SbrReadinessScreenProps {
-  readonly api: Pick<TammyDesktopAPI, "getSbrReadiness">;
+  readonly api: Pick<TammyDesktopAPI, "getSbrReadiness"> &
+    Partial<
+      Pick<
+        TammyDesktopAPI,
+        | "assertTotp"
+        | "confirmTotp"
+        | "enrolTotp"
+        | "importMachineCredential"
+        | "importSbrProductId"
+        | "removeMachineCredential"
+        | "removeSbrProductId"
+        | "replaceMachineCredential"
+        | "selectMachineCredentialFile"
+        | "unlockMachineCredential"
+      >
+    >;
   readonly doctorMode?: boolean;
+  readonly onNavigate?: (path: string) => void;
   readonly workspace: AuthenticatedWorkspace &
     Required<
       Pick<
         AuthenticatedWorkspace,
         "organisationCanonicalAbn" | "organisationDisplayName" | "organisationId" | "roles"
       >
-    >;
+    > & { readonly userFactorState?: FactorState };
 }
 
 function readinessLabel(state: SbrReadinessState): string {
@@ -176,8 +195,14 @@ function validReadiness(readiness: SbrReadiness): boolean {
     readiness.profileFingerprint,
     readiness.componentFingerprint,
   ].every((fingerprint) => fingerprint.length <= 128);
+  const scopePattern = /^[A-Za-z0-9._:-]{1,128}$/;
+  const scopeValid =
+    readiness.environment === SbrEnvironment.SIMULATOR
+      ? readiness.evteProductIdentifier === "" && readiness.evteServiceIdentifier === ""
+      : scopePattern.test(readiness.evteProductIdentifier) &&
+        scopePattern.test(readiness.evteServiceIdentifier);
   if (!environmentValid || !stateValid || !credentialValid || !productValid) return false;
-  if (!fingerprintsValid) return false;
+  if (!fingerprintsValid || !scopeValid) return false;
 
   if (readiness.environment === SbrEnvironment.SIMULATOR) {
     if (
@@ -205,12 +230,17 @@ function validReadiness(readiness: SbrReadiness): boolean {
 export function SbrReadinessScreen({
   api,
   doctorMode = false,
+  onNavigate = () => undefined,
   workspace,
 }: SbrReadinessScreenProps) {
   const [state, setState] = useState<ScreenState>({ status: "loading" });
   const requestSequence = useRef(0);
   const requestedKey = useRef<string | undefined>(undefined);
-  const requestKey = `${workspace.sessionId}:${workspace.userId}:${doctorMode ? "doctor" : "screen"}`;
+  const [refresh, setRefresh] = useState(0);
+  const [factorEnabled, setFactorEnabled] = useState(
+    workspace.userFactorState === FactorState.ENABLED,
+  );
+  const requestKey = `${workspace.sessionId}:${workspace.userId}:${doctorMode ? "doctor" : "screen"}:${refresh}`;
 
   useEffect(() => {
     if (requestedKey.current === requestKey) return;
@@ -273,7 +303,16 @@ export function SbrReadinessScreen({
       {state.status === "loading" ? <LoadingSurface /> : null}
       {state.status === "unavailable" ? <UnavailableSurface /> : null}
       {state.status === "ready" ? (
-        <ReadinessSurface readiness={state.readiness} roles={workspace.roles} />
+        <ReadinessSurface
+          api={api}
+          factorEnabled={factorEnabled}
+          onFactorEnabled={() => setFactorEnabled(true)}
+          onNavigate={onNavigate}
+          onRefresh={() => setRefresh((value) => value + 1)}
+          readiness={state.readiness}
+          roles={workspace.roles}
+          workspace={workspace}
+        />
       ) : null}
     </div>
   );
@@ -309,11 +348,23 @@ function UnavailableSurface() {
 }
 
 function ReadinessSurface({
+  api,
+  factorEnabled,
+  onFactorEnabled,
+  onNavigate,
+  onRefresh,
   readiness,
   roles,
+  workspace,
 }: {
+  readonly api: SbrReadinessScreenProps["api"];
+  readonly factorEnabled: boolean;
+  readonly onFactorEnabled: () => void;
+  readonly onNavigate: (path: string) => void;
+  readonly onRefresh: () => void;
   readonly readiness: SbrReadiness;
   readonly roles: readonly Role[];
+  readonly workspace: SbrReadinessScreenProps["workspace"];
 }) {
   const environment = environmentCopy(readiness.environment);
   const label = readinessLabel(readiness.state);
@@ -419,75 +470,49 @@ function ReadinessSurface({
               <li key={issue}>{issue}</li>
             ))}
           </ul>
+          <button
+            className="focus-ring mt-3 text-[10px] font-medium text-forest underline"
+            onClick={() => onNavigate("/settings/organisation")}
+            type="button"
+          >
+            Review organisation verification
+          </button>
         </section>
       ) : null}
 
       {roles.includes(Role.WORKSPACE_ADMIN) ? (
-        <SecurityActions credentialState={readiness.machineCredentialState} />
+        factorEnabled ? (
+          <>
+            <MachineCredentialForm
+              api={api as Parameters<typeof MachineCredentialForm>[0]["api"]}
+              credentialState={readiness.machineCredentialState}
+              onChanged={onRefresh}
+              workspace={workspace}
+            />
+            {readiness.environment === SbrEnvironment.EVTE &&
+            readiness.evteProductIdentifier &&
+            readiness.evteServiceIdentifier ? (
+              <ProductIdForm
+                api={api as Parameters<typeof ProductIdForm>[0]["api"]}
+                onChanged={onRefresh}
+                productIdentifier={readiness.evteProductIdentifier}
+                serviceIdentifier={readiness.evteServiceIdentifier}
+                state={readiness.productIdState}
+                workspace={workspace}
+              />
+            ) : null}
+          </>
+        ) : (
+          <TotpSetup
+            api={api as Parameters<typeof TotpSetup>[0]["api"]}
+            onEnabled={onFactorEnabled}
+            workspace={workspace}
+          />
+        )
       ) : null}
 
       <PreparationBoundary />
     </>
-  );
-}
-
-function SecurityActions({
-  credentialState,
-}: {
-  readonly credentialState: MachineCredentialState;
-}) {
-  const missing = credentialState === MachineCredentialState.MISSING;
-  return (
-    <section aria-labelledby="sbr-security-actions-heading" className="border-t border-border pt-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2
-            id="sbr-security-actions-heading"
-            className="text-[11px] font-semibold text-foreground"
-          >
-            Credential administration
-          </h2>
-          <p
-            id="sbr-security-actions-description"
-            className="mt-1 text-[10px] leading-5 text-muted-foreground"
-          >
-            These actions require administrator authorization and a fresh TOTP assertion. The local
-            core authorizes every change.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {missing ? (
-            <button
-              aria-describedby="sbr-security-actions-description"
-              className="rounded-[5px] border border-border px-3 py-1.5 text-[10px] font-medium text-muted-foreground"
-              disabled
-              type="button"
-            >
-              Import machine credential
-            </button>
-          ) : (
-            <>
-              <button
-                aria-describedby="sbr-security-actions-description"
-                className="rounded-[5px] border border-border px-3 py-1.5 text-[10px] font-medium text-muted-foreground"
-                disabled
-                type="button"
-              >
-                Replace machine credential
-              </button>
-              <button
-                aria-describedby="sbr-security-actions-description"
-                className="rounded-[5px] border border-border px-3 py-1.5 text-[10px] font-medium text-muted-foreground"
-                disabled
-                type="button"
-              >
-                Remove machine credential
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-    </section>
   );
 }
 

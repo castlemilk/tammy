@@ -61,6 +61,14 @@ func TestEvidenceRepositoryRoundTripsBoundedProtobufEvidence(t *testing.T) {
 			if !proto.Equal(loaded.Verification, record.Verification) || !proto.Equal(loaded.Evidence, record.Evidence) {
 				t.Fatalf("round trip mismatch\nloaded=%#v\nwant=%#v", loaded, record)
 			}
+			metadata, err := repository.GetCurrentMetadata(context.Background(), testOrganisationID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if metadata == nil || metadata.Id != record.Verification.Id || metadata.EvidenceObjectId != record.Verification.EvidenceObjectId ||
+				!metadata.ExpiresAt.AsTime().Equal(record.Verification.ExpiresAt.AsTime()) {
+				t.Fatalf("current verification metadata = %#v", metadata)
+			}
 			if err := tx.Commit(); err != nil {
 				t.Fatal(err)
 			}

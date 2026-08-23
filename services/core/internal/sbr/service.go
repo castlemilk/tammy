@@ -1878,9 +1878,14 @@ func (service *Service) readiness(ctx context.Context, binding OrganisationBindi
 			codes[0] = "SBR_CREDENTIAL_EXPIRED"
 		}
 	}
-	return &tammyv1.SbrReadiness{Environment: profile.Environment, State: state, MachineCredentialState: credentialState,
+	readiness := &tammyv1.SbrReadiness{Environment: profile.Environment, State: state, MachineCredentialState: credentialState,
 		ProductIdState: productProjection(productState), ReadinessCodes: codes, CredentialFingerprint: fingerprint,
 		ProfileFingerprint: hex.EncodeToString(profile.ProfileFingerprint[:]), ComponentFingerprint: hex.EncodeToString(profile.ComponentFingerprint[:])}
+	if profile.Environment == tammyv1.SbrEnvironment_SBR_ENVIRONMENT_EVTE {
+		readiness.EvteProductIdentifier = profile.ExpectedProductIdentifier
+		readiness.EvteServiceIdentifier = profile.ExpectedServiceID
+	}
+	return readiness
 }
 
 func credentialProjection(metadata CredentialMetadata) *tammyv1.MachineCredentialStatus {

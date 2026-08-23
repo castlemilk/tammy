@@ -1254,9 +1254,11 @@ func (x *GetOrganisationRequest) GetOrganisationId() string {
 type GetOrganisationResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// organisation contains no raw evidence bytes or hidden transmission state.
-	Organisation  *Organisation `protobuf:"bytes,1,opt,name=organisation,proto3" json:"organisation,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Organisation *Organisation `protobuf:"bytes,1,opt,name=organisation,proto3" json:"organisation,omitempty"`
+	// current_verification is the latest retained redacted evidence metadata, when one exists.
+	CurrentVerification *EntityVerification `protobuf:"bytes,2,opt,name=current_verification,json=currentVerification,proto3" json:"current_verification,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *GetOrganisationResponse) Reset() {
@@ -1292,6 +1294,13 @@ func (*GetOrganisationResponse) Descriptor() ([]byte, []int) {
 func (x *GetOrganisationResponse) GetOrganisation() *Organisation {
 	if x != nil {
 		return x.Organisation
+	}
+	return nil
+}
+
+func (x *GetOrganisationResponse) GetCurrentVerification() *EntityVerification {
+	if x != nil {
+		return x.CurrentVerification
 	}
 	return nil
 }
@@ -1395,9 +1404,10 @@ const file_tammy_v1_organisation_proto_rawDesc = "" +
 	"\forganisation\x18\x02 \x01(\v2\x16.tammy.v1.OrganisationB\x06\xbaH\x03\xc8\x01\x01R\forganisation\"\xe0\x01\n" +
 	"\x16GetOrganisationRequest\x12O\n" +
 	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12u\n" +
-	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\"]\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\"\xae\x01\n" +
 	"\x17GetOrganisationResponse\x12B\n" +
-	"\forganisation\x18\x01 \x01(\v2\x16.tammy.v1.OrganisationB\x06\xbaH\x03\xc8\x01\x01R\forganisation*\xb7\x02\n" +
+	"\forganisation\x18\x01 \x01(\v2\x16.tammy.v1.OrganisationB\x06\xbaH\x03\xc8\x01\x01R\forganisation\x12O\n" +
+	"\x14current_verification\x18\x02 \x01(\v2\x1c.tammy.v1.EntityVerificationR\x13currentVerification*\xb7\x02\n" +
 	"\x1dOrganisationVerificationState\x12/\n" +
 	"+ORGANISATION_VERIFICATION_STATE_UNSPECIFIED\x10\x00\x12.\n" +
 	"*ORGANISATION_VERIFICATION_STATE_UNVERIFIED\x10\x01\x12,\n" +
@@ -1496,19 +1506,20 @@ var file_tammy_v1_organisation_proto_depIdxs = []int32{
 	4,  // 29: tammy.v1.RecordEntityVerificationResponse.organisation:type_name -> tammy.v1.Organisation
 	21, // 30: tammy.v1.GetOrganisationRequest.authentication:type_name -> tammy.v1.AuthenticationContext
 	4,  // 31: tammy.v1.GetOrganisationResponse.organisation:type_name -> tammy.v1.Organisation
-	8,  // 32: tammy.v1.OrganisationService.CreateOrganisation:input_type -> tammy.v1.CreateOrganisationRequest
-	10, // 33: tammy.v1.OrganisationService.UpdateOrganisation:input_type -> tammy.v1.UpdateOrganisationRequest
-	12, // 34: tammy.v1.OrganisationService.RecordEntityVerification:input_type -> tammy.v1.RecordEntityVerificationRequest
-	14, // 35: tammy.v1.OrganisationService.GetOrganisation:input_type -> tammy.v1.GetOrganisationRequest
-	9,  // 36: tammy.v1.OrganisationService.CreateOrganisation:output_type -> tammy.v1.CreateOrganisationResponse
-	11, // 37: tammy.v1.OrganisationService.UpdateOrganisation:output_type -> tammy.v1.UpdateOrganisationResponse
-	13, // 38: tammy.v1.OrganisationService.RecordEntityVerification:output_type -> tammy.v1.RecordEntityVerificationResponse
-	15, // 39: tammy.v1.OrganisationService.GetOrganisation:output_type -> tammy.v1.GetOrganisationResponse
-	36, // [36:40] is the sub-list for method output_type
-	32, // [32:36] is the sub-list for method input_type
-	32, // [32:32] is the sub-list for extension type_name
-	32, // [32:32] is the sub-list for extension extendee
-	0,  // [0:32] is the sub-list for field type_name
+	7,  // 32: tammy.v1.GetOrganisationResponse.current_verification:type_name -> tammy.v1.EntityVerification
+	8,  // 33: tammy.v1.OrganisationService.CreateOrganisation:input_type -> tammy.v1.CreateOrganisationRequest
+	10, // 34: tammy.v1.OrganisationService.UpdateOrganisation:input_type -> tammy.v1.UpdateOrganisationRequest
+	12, // 35: tammy.v1.OrganisationService.RecordEntityVerification:input_type -> tammy.v1.RecordEntityVerificationRequest
+	14, // 36: tammy.v1.OrganisationService.GetOrganisation:input_type -> tammy.v1.GetOrganisationRequest
+	9,  // 37: tammy.v1.OrganisationService.CreateOrganisation:output_type -> tammy.v1.CreateOrganisationResponse
+	11, // 38: tammy.v1.OrganisationService.UpdateOrganisation:output_type -> tammy.v1.UpdateOrganisationResponse
+	13, // 39: tammy.v1.OrganisationService.RecordEntityVerification:output_type -> tammy.v1.RecordEntityVerificationResponse
+	15, // 40: tammy.v1.OrganisationService.GetOrganisation:output_type -> tammy.v1.GetOrganisationResponse
+	37, // [37:41] is the sub-list for method output_type
+	33, // [33:37] is the sub-list for method input_type
+	33, // [33:33] is the sub-list for extension type_name
+	33, // [33:33] is the sub-list for extension extendee
+	0,  // [0:33] is the sub-list for field type_name
 }
 
 func init() { file_tammy_v1_organisation_proto_init() }

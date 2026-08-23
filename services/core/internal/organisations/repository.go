@@ -189,8 +189,16 @@ func validOrganisation(profile *tammyv1.Organisation) bool {
 }
 
 func validVerificationState(state tammyv1.OrganisationVerificationState) bool {
-	return state >= tammyv1.OrganisationVerificationState_ORGANISATION_VERIFICATION_STATE_UNVERIFIED &&
-		state <= tammyv1.OrganisationVerificationState_ORGANISATION_VERIFICATION_STATE_SUPERSEDED
+	switch state {
+	case tammyv1.OrganisationVerificationState_ORGANISATION_VERIFICATION_STATE_UNVERIFIED,
+		tammyv1.OrganisationVerificationState_ORGANISATION_VERIFICATION_STATE_VERIFIED,
+		tammyv1.OrganisationVerificationState_ORGANISATION_VERIFICATION_STATE_FAILED,
+		tammyv1.OrganisationVerificationState_ORGANISATION_VERIFICATION_STATE_EXPIRED,
+		tammyv1.OrganisationVerificationState_ORGANISATION_VERIFICATION_STATE_SUPERSEDED:
+		return true
+	default:
+		return false
+	}
 }
 
 func verificationStateName(state tammyv1.OrganisationVerificationState) string {

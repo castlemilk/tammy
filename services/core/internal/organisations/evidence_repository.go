@@ -219,6 +219,54 @@ func (repository *EvidenceRepository) Get(ctx context.Context, verificationID st
 	return record, nil
 }
 
+// GetCurrentMetadata returns only the latest retained verification metadata for an organisation.
+// Raw evidence bytes and protected-storage identifiers remain inside the encrypted repository.
+func (repository *EvidenceRepository) GetCurrentMetadata(ctx context.Context, organisationID string) (*tammyv1.EntityVerification, error) {
+	if repository == nil || repository.tx == nil || !ids.IsCanonicalV7(organisationID) {
+		return nil, ErrEvidenceInvalid
+	}
+	verification := &tammyv1.EntityVerification{Source: &tammyv1.SourceRef{}}
+	var state, sourceMethod int32
+	var sourceRevision uint64
+	var recordedAt, expiresAt string
+	err := repository.tx.QueryRowContext(ctx, `
+		SELECT id, organisation_id, evidence_object_id, source_type, source_id, source_revision, source_content_hash,
+		       source_method, state, verified_legal_name, verified_entity_type, recorded_at, expires_at
+		FROM organisation_verifications
+		WHERE organisation_id = ?
+		ORDER BY recorded_at DESC, id DESC LIMIT 1`, organisationID).Scan(
+		&verification.Id, &verification.OrganisationId, &verification.EvidenceObjectId, &verification.Source.Type,
+		&verification.Source.Id, &sourceRevision, &verification.Source.ContentHash,
+		&sourceMethod, &state, &verification.VerifiedLegalName, &verification.VerifiedEntityType,
+		&recordedAt, &expiresAt,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("organisations: load current verification metadata: %w", err)
+	}
+	verification.Source.Revision = sourceRevision
+	verification.SourceMethod = tammyv1.VerificationSourceMethod(sourceMethod)
+	verification.State = tammyv1.OrganisationVerificationState(state)
+	verification.RecordedAt, err = parseTimestamp(recordedAt)
+	if err != nil {
+		return nil, ErrEvidenceTampered
+	}
+	verification.ExpiresAt, err = parseTimestamp(expiresAt)
+	if err != nil || !ids.IsCanonicalV7(verification.Id) || !ids.IsCanonicalV7(verification.EvidenceObjectId) || verification.OrganisationId != organisationID ||
+		!validSourceRef(verification.Source) || !boundedCanonicalText(verification.VerifiedLegalName, 256) ||
+		!boundedCanonicalText(verification.VerifiedEntityType, 96) || !validVerificationState(verification.State) ||
+		(verification.SourceMethod != tammyv1.VerificationSourceMethod_VERIFICATION_SOURCE_METHOD_ABR_ONLINE &&
+			verification.SourceMethod != tammyv1.VerificationSourceMethod_VERIFICATION_SOURCE_METHOD_ABR_EXTRACT_MANUAL) ||
+		verification.RecordedAt == nil || verification.ExpiresAt == nil || !verification.RecordedAt.IsValid() ||
+		!verification.ExpiresAt.IsValid() || verification.ExpiresAt.AsTime().Before(verification.RecordedAt.AsTime()) ||
+		verification.ExpiresAt.AsTime().After(verification.RecordedAt.AsTime().AddDate(1, 0, 0)) {
+		return nil, ErrEvidenceTampered
+	}
+	return verification, nil
+}
+
 func evidenceSemanticHash(record VerificationRecord) ([]byte, error) {
 	verification, err := proto.MarshalOptions{Deterministic: true}.Marshal(record.Verification)
 	if err != nil {

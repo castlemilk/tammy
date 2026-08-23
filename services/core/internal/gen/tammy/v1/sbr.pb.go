@@ -447,8 +447,12 @@ type SbrReadiness struct {
 	ProfileFingerprint string `protobuf:"bytes,7,opt,name=profile_fingerprint,json=profileFingerprint,proto3" json:"profile_fingerprint,omitempty"`
 	// component_fingerprint is the verified helper-component fingerprint.
 	ComponentFingerprint string `protobuf:"bytes,8,opt,name=component_fingerprint,json=componentFingerprint,proto3" json:"component_fingerprint,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	// evte_product_identifier is the exact non-secret Product scope authenticated by the signed EVTE profile.
+	EvteProductIdentifier string `protobuf:"bytes,9,opt,name=evte_product_identifier,json=evteProductIdentifier,proto3" json:"evte_product_identifier,omitempty"`
+	// evte_service_identifier is the exact non-secret service scope authenticated by the signed EVTE profile.
+	EvteServiceIdentifier string `protobuf:"bytes,10,opt,name=evte_service_identifier,json=evteServiceIdentifier,proto3" json:"evte_service_identifier,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *SbrReadiness) Reset() {
@@ -533,6 +537,20 @@ func (x *SbrReadiness) GetProfileFingerprint() string {
 func (x *SbrReadiness) GetComponentFingerprint() string {
 	if x != nil {
 		return x.ComponentFingerprint
+	}
+	return ""
+}
+
+func (x *SbrReadiness) GetEvteProductIdentifier() string {
+	if x != nil {
+		return x.EvteProductIdentifier
+	}
+	return ""
+}
+
+func (x *SbrReadiness) GetEvteServiceIdentifier() string {
+	if x != nil {
+		return x.EvteServiceIdentifier
 	}
 	return ""
 }
@@ -1578,7 +1596,7 @@ const file_tammy_v1_sbr_proto_rawDesc = "" +
 	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"expires_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\x125\n" +
-	"\x11component_version\x18\a \x01(\tB\b\xbaH\x05r\x03\x18\x80\x01R\x10componentVersion\"\xd2\x04\n" +
+	"\x11component_version\x18\a \x01(\tB\b\xbaH\x05r\x03\x18\x80\x01R\x10componentVersion\"\xfe\x05\n" +
 	"\fSbrReadiness\x12D\n" +
 	"\venvironment\x18\x01 \x01(\x0e2\x18.tammy.v1.SbrEnvironmentB\b\xbaH\x05\x82\x01\x02\x10\x01R\venvironment\x12;\n" +
 	"\x05state\x18\x02 \x01(\x0e2\x1b.tammy.v1.SbrReadinessStateB\b\xbaH\x05\x82\x01\x02\x10\x01R\x05state\x12d\n" +
@@ -1588,7 +1606,10 @@ const file_tammy_v1_sbr_proto_rawDesc = "" +
 	"\x0freadiness_codes\x18\x05 \x03(\tB%\xbaH\"\x92\x01\x1f\x10 \x18\x01\"\x19r\x17\x10\x01\x18`2\x11^[A-Z][A-Z0-9_]*$R\x0ereadinessCodes\x12?\n" +
 	"\x16credential_fingerprint\x18\x06 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x01R\x15credentialFingerprint\x129\n" +
 	"\x13profile_fingerprint\x18\a \x01(\tB\b\xbaH\x05r\x03\x18\x80\x01R\x12profileFingerprint\x12=\n" +
-	"\x15component_fingerprint\x18\b \x01(\tB\b\xbaH\x05r\x03\x18\x80\x01R\x14componentFingerprint\"\x86\x02\n" +
+	"\x15component_fingerprint\x18\b \x01(\tB\b\xbaH\x05r\x03\x18\x80\x01R\x14componentFingerprint\x12T\n" +
+	"\x17evte_product_identifier\x18\t \x01(\tB\x1c\xbaH\x19r\x17\x18\x80\x012\x12^[A-Za-z0-9._:-]*$R\x15evteProductIdentifier\x12T\n" +
+	"\x17evte_service_identifier\x18\n" +
+	" \x01(\tB\x1c\xbaH\x19r\x17\x18\x80\x012\x12^[A-Za-z0-9._:-]*$R\x15evteServiceIdentifier\"\x86\x02\n" +
 	"\x19SbrReadinessFixtureResult\x12:\n" +
 	"\n" +
 	"fixture_id\x18\x01 \x01(\tB\x1b\xbaH\x18r\x16\n" +
