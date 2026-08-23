@@ -197,8 +197,9 @@ func TestCommittedSimulatorProfileAuthenticatesAndBindsRequestedHelper(t *testin
 			t.Fatal(readErr)
 		}
 		hash := sha256.Sum256(bytes)
-		if hex.EncodeToString(hash[:]) != parsed.Profile.HelperSHA256 {
-			t.Fatal("committed profile does not bind requested helper")
+		actual := hex.EncodeToString(hash[:])
+		if actual != parsed.Profile.HelperSHA256 {
+			t.Fatalf("committed simulator profile helper_sha256=%s does not bind reproducible helper sha256=%s", parsed.Profile.HelperSHA256, actual)
 		}
 	}
 }

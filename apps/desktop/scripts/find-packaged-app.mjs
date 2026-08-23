@@ -704,6 +704,8 @@ export async function verifyPackagedLayout({
     coreSha256: packagedCoreHash,
     manifest: layout.packagedManifest,
     manifestSha256: createHash("sha256").update(sourceManifest).digest("hex"),
+    releaseKind: platform === "mas" ? "mas" : "ordinary-package",
+    sourceRevision: manifest.source_revision,
     ...sbrResult,
     target: layout.target,
   };

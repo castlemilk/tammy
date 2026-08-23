@@ -398,7 +398,7 @@ describe("SbrReadinessScreen", () => {
     expect(api.getSbrReadiness).toHaveBeenCalledOnce();
   });
 
-  it("shows Product ID administration only for exact signed EVTE product and service scope", async () => {
+  it("keeps Product ID mutation controls unreachable even with exact signed EVTE scope", async () => {
     const base = {
       environment: SbrEnvironment.EVTE,
       state: SbrReadinessState.UNAVAILABLE,
@@ -421,7 +421,9 @@ describe("SbrReadinessScreen", () => {
         workspace={workspace}
       />,
     );
-    expect(await screen.findByRole("heading", { name: "EVTE Product ID" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Readiness unavailable" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "EVTE Product ID" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Product ID/i })).toBeNull();
   });
 
   it("fails closed when simulator readiness carries EVTE scope metadata", async () => {
@@ -622,6 +624,8 @@ describe("SbrReadinessScreen", () => {
 
     expect(await screen.findByText(/EVTE status only/i)).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Run simulator fixture" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "EVTE Product ID" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Product ID/i })).toBeNull();
     expect(api.runSbrReadinessFixture).not.toHaveBeenCalled();
   });
 });

@@ -170,6 +170,37 @@ test("declared future RPC requires promotion when its preload is exposed", async
   });
 });
 
+test("RunSbrReadinessFixture production evidence is simulator-only", async () => {
+  const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
+  const input = validInput();
+  delete input.coverage.rpcs[RPC];
+  input.coverage.scenarios["E2E-00"].cases = ["sbr-readiness-simulator"];
+  input.coverage.rpcs["tammy.v1.SbrService.RunSbrReadinessFixture"] = {
+    stage: "production",
+    preload: "runSbrReadinessFixture",
+    cases: ["sbr-readiness-simulator"],
+    boundary: "simulator_only",
+    projections: ["run_sbr_readiness_fixture_result"],
+    routes: ["/settings/sbr"],
+    roles: Object.fromEntries(ROLES.map((role) => [role, "allowed"])),
+    principalFailures: ["AUTHENTICATION_REQUIRED"],
+    list: { states: ["not_applicable"] },
+    idempotency: { mode: "persistent_command", outcomes: ["exact_replay"] },
+  };
+  input.descriptorRpcs = ["tammy.v1.SbrService.RunSbrReadinessFixture"];
+  input.preloadMethods = ["runSbrReadinessFixture"];
+
+  assert.doesNotThrow(() => checkE2ECoverage(input));
+  delete input.coverage.rpcs["tammy.v1.SbrService.RunSbrReadinessFixture"].boundary;
+  assert.throws(() => checkE2ECoverage(input), {
+    message: "E2E_COVERAGE_SIMULATOR_BOUNDARY_REQUIRED",
+  });
+  input.coverage.rpcs["tammy.v1.SbrService.RunSbrReadinessFixture"].boundary = "production";
+  assert.throws(() => checkE2ECoverage(input), {
+    message: "E2E_COVERAGE_SIMULATOR_BOUNDARY_REQUIRED",
+  });
+});
+
 test("declared future RPC rejects executed cases", async () => {
   const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
   const input = futureInput();
@@ -401,6 +432,17 @@ test("production and future case IDs reject ambiguous semantic strings", async (
       message: "E2E_COVERAGE_MANIFEST_INVALID",
     });
   }
+});
+
+test("only the planned slashless SBR simulator case bypasses namespaced case IDs", async () => {
+  const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
+  const input = validInput();
+  input.coverage.scenarios["E2E-00"].cases = ["unreviewed-case"];
+  input.coverage.rpcs[RPC].cases = ["unreviewed-case"];
+
+  assert.throws(() => checkE2ECoverage(input), {
+    message: "E2E_COVERAGE_MANIFEST_INVALID",
+  });
 });
 
 test("RPC semantic metadata rejects whitespace, control, bidi, and invisible strings", async () => {

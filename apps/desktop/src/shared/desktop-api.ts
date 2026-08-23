@@ -223,13 +223,11 @@ export interface TammyDesktopAPI {
   readonly getSbrReadiness: (request: Uint8Array) => Promise<Uint8Array>;
   readonly getMachineCredentialStatus: (request: Uint8Array) => Promise<Uint8Array>;
   readonly removeMachineCredential: (request: Uint8Array) => Promise<Uint8Array>;
-  readonly removeSbrProductId: (request: Uint8Array) => Promise<Uint8Array>;
   readonly runSbrReadinessFixture: (request: Uint8Array) => Promise<Uint8Array>;
   readonly selectMachineCredentialFile: () => Promise<MachineCredentialFileSelection>;
   readonly importMachineCredential: (input: MachineCredentialMutationInput) => Promise<Uint8Array>;
   readonly replaceMachineCredential: (input: MachineCredentialMutationInput) => Promise<Uint8Array>;
   readonly unlockMachineCredential: (input: MachineCredentialUnlockInput) => Promise<Uint8Array>;
-  readonly importSbrProductId: (input: SbrProductIdImportInput) => Promise<Uint8Array>;
 }
 
 const EXPECTED_DESKTOP_PRELOAD_METHODS = [
@@ -267,13 +265,11 @@ const EXPECTED_DESKTOP_PRELOAD_METHODS = [
   "getSbrReadiness",
   "getMachineCredentialStatus",
   "removeMachineCredential",
-  "removeSbrProductId",
   "runSbrReadinessFixture",
   "selectMachineCredentialFile",
   "importMachineCredential",
   "replaceMachineCredential",
   "unlockMachineCredential",
-  "importSbrProductId",
 ] as const satisfies readonly (keyof TammyDesktopAPI)[];
 
 if (

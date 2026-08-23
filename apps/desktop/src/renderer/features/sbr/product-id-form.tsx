@@ -9,7 +9,7 @@ import {
 import { LoaderCircle } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 
-import type { TammyDesktopAPI } from "../../../shared/desktop-api";
+import type { SbrProductIdImportInput, TammyDesktopAPI } from "../../../shared/desktop-api";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import { Button } from "../../components/ui/button";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
@@ -42,7 +42,10 @@ export function ProductIdForm({
   state,
   workspace,
 }: {
-  readonly api: Pick<TammyDesktopAPI, "assertTotp" | "importSbrProductId" | "removeSbrProductId">;
+  readonly api: Pick<TammyDesktopAPI, "assertTotp"> & {
+    readonly importSbrProductId: (input: SbrProductIdImportInput) => Promise<Uint8Array>;
+    readonly removeSbrProductId: (request: Uint8Array) => Promise<Uint8Array>;
+  };
   readonly onChanged: () => void;
   readonly productIdentifier: string;
   readonly serviceIdentifier: string;

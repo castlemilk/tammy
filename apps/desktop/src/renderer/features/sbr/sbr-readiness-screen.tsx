@@ -18,7 +18,6 @@ import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import { Badge } from "../../components/ui/badge";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
 import { MachineCredentialForm } from "./machine-credential-form";
-import { ProductIdForm } from "./product-id-form";
 import { SbrSimulatorPanel } from "./sbr-simulator-panel";
 import { TotpSetup } from "./totp-setup";
 
@@ -79,9 +78,7 @@ interface SbrReadinessScreenProps {
         | "confirmTotp"
         | "enrolTotp"
         | "importMachineCredential"
-        | "importSbrProductId"
         | "removeMachineCredential"
-        | "removeSbrProductId"
         | "replaceMachineCredential"
         | "runSbrReadinessFixture"
         | "selectMachineCredentialFile"
@@ -495,26 +492,12 @@ function ReadinessSurface({
 
       {roles.includes(Role.WORKSPACE_ADMIN) ? (
         factorEnabled ? (
-          <>
-            <MachineCredentialForm
-              api={api as Parameters<typeof MachineCredentialForm>[0]["api"]}
-              credentialState={readiness.machineCredentialState}
-              onChanged={onRefresh}
-              workspace={workspace}
-            />
-            {readiness.environment === SbrEnvironment.EVTE &&
-            readiness.evteProductIdentifier &&
-            readiness.evteServiceIdentifier ? (
-              <ProductIdForm
-                api={api as Parameters<typeof ProductIdForm>[0]["api"]}
-                onChanged={onRefresh}
-                productIdentifier={readiness.evteProductIdentifier}
-                serviceIdentifier={readiness.evteServiceIdentifier}
-                state={readiness.productIdState}
-                workspace={workspace}
-              />
-            ) : null}
-          </>
+          <MachineCredentialForm
+            api={api as Parameters<typeof MachineCredentialForm>[0]["api"]}
+            credentialState={readiness.machineCredentialState}
+            onChanged={onRefresh}
+            workspace={workspace}
+          />
         ) : (
           <TotpSetup
             api={api as Parameters<typeof TotpSetup>[0]["api"]}

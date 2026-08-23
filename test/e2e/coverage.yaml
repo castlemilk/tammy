@@ -49,7 +49,8 @@ scenarios:
     futureCases:
       - slice-1/backup-audit-contracts
   E2E-17:
-    cases: []
+    cases:
+      - sbr-readiness-simulator
     futureCases:
       - sbr/registration-readiness
 rpcs:
@@ -868,15 +869,15 @@ rpcs:
       outcomes:
         - not_applicable
   tammy.v1.IdentityService.GetCurrentUser:
-    stage: declared_future
+    stage: production
     preload: getCurrentUser
-    cases: []
-    futureCases:
-      - slice-1/foundation-contracts
+    cases:
+      - sbr-readiness-simulator
     projections:
       - get_current_user_result
     routes:
       - /sign-in
+      - /settings/sbr
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_allowed
@@ -1098,15 +1099,15 @@ rpcs:
         - exact_replay
         - changed_request_conflict
   tammy.v1.IdentityService.EnrolTOTP:
-    stage: declared_future
+    stage: production
     preload: enrolTotp
-    cases: []
-    futureCases:
-      - slice-1/foundation-contracts
+    cases:
+      - sbr-readiness-simulator
     projections:
       - enrol_totp_result
     routes:
       - /settings/security
+      - /settings/sbr
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_allowed
@@ -1126,15 +1127,15 @@ rpcs:
         - exact_replay
         - changed_request_conflict
   tammy.v1.IdentityService.ConfirmTOTP:
-    stage: declared_future
+    stage: production
     preload: confirmTotp
-    cases: []
-    futureCases:
-      - slice-1/foundation-contracts
+    cases:
+      - sbr-readiness-simulator
     projections:
       - confirm_totp_result
     routes:
       - /settings/security
+      - /settings/sbr
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_allowed
@@ -1155,15 +1156,15 @@ rpcs:
         - terminal_state_after_success
         - no_automatic_retry
   tammy.v1.IdentityService.AssertTOTP:
-    stage: declared_future
+    stage: production
     preload: assertTotp
-    cases: []
-    futureCases:
-      - slice-1/foundation-contracts
+    cases:
+      - sbr-readiness-simulator
     projections:
       - assert_totp_result
     routes:
       - /settings/security
+      - /settings/sbr
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_allowed
@@ -1308,11 +1309,10 @@ rpcs:
         - exact_replay
         - changed_request_conflict
   tammy.v1.OrganisationService.RecordEntityVerification:
-    stage: declared_future
+    stage: production
     preload: recordEntityVerification
-    cases: []
-    futureCases:
-      - slice-1/foundation-contracts
+    cases:
+      - sbr-readiness-simulator
     projections:
       - record_entity_verification_result
     routes:
@@ -1339,11 +1339,10 @@ rpcs:
         - exact_replay
         - changed_request_conflict
   tammy.v1.OrganisationService.GetOrganisation:
-    stage: declared_future
+    stage: production
     preload: getOrganisation
-    cases: []
-    futureCases:
-      - slice-1/foundation-contracts
+    cases:
+      - sbr-readiness-simulator
     projections:
       - get_organisation_result
     routes:
@@ -2331,11 +2330,10 @@ rpcs:
       outcomes:
         - not_applicable
   tammy.v1.SbrService.GetSbrReadiness:
-    stage: declared_future
+    stage: production
     preload: getSbrReadiness
-    cases: []
-    futureCases:
-      - sbr/registration-readiness
+    cases:
+      - sbr-readiness-simulator
     projections:
       - get_sbr_readiness_result
     routes:
@@ -2357,11 +2355,10 @@ rpcs:
       outcomes:
         - not_applicable
   tammy.v1.SbrService.ImportMachineCredential:
-    stage: declared_future
+    stage: production
     preload: importMachineCredential
-    cases: []
-    futureCases:
-      - sbr/registration-readiness
+    cases:
+      - sbr-readiness-simulator
     projections:
       - import_machine_credential_result
     routes:
@@ -2388,11 +2385,10 @@ rpcs:
         - exact_replay
         - changed_request_conflict
   tammy.v1.SbrService.GetMachineCredentialStatus:
-    stage: declared_future
+    stage: production
     preload: getMachineCredentialStatus
-    cases: []
-    futureCases:
-      - sbr/registration-readiness
+    cases:
+      - sbr-readiness-simulator
     projections:
       - get_machine_credential_status_result
     routes:
@@ -2414,11 +2410,10 @@ rpcs:
       outcomes:
         - not_applicable
   tammy.v1.SbrService.UnlockMachineCredential:
-    stage: declared_future
+    stage: production
     preload: unlockMachineCredential
-    cases: []
-    futureCases:
-      - sbr/registration-readiness
+    cases:
+      - sbr-readiness-simulator
     projections:
       - unlock_machine_credential_result
     routes:
@@ -2445,11 +2440,10 @@ rpcs:
         - exact_replay
         - changed_request_conflict
   tammy.v1.SbrService.ReplaceMachineCredential:
-    stage: declared_future
+    stage: production
     preload: replaceMachineCredential
-    cases: []
-    futureCases:
-      - sbr/registration-readiness
+    cases:
+      - sbr-readiness-simulator
     projections:
       - replace_machine_credential_result
     routes:
@@ -2476,11 +2470,10 @@ rpcs:
         - exact_replay
         - changed_request_conflict
   tammy.v1.SbrService.RemoveMachineCredential:
-    stage: declared_future
+    stage: production
     preload: removeMachineCredential
-    cases: []
-    futureCases:
-      - sbr/registration-readiness
+    cases:
+      - sbr-readiness-simulator
     projections:
       - remove_machine_credential_result
     routes:
@@ -2567,11 +2560,11 @@ rpcs:
         - exact_replay
         - changed_request_conflict
   tammy.v1.SbrService.RunSbrReadinessFixture:
-    stage: declared_future
+    stage: production
+    boundary: simulator_only
     preload: runSbrReadinessFixture
-    cases: []
-    futureCases:
-      - sbr/registration-readiness
+    cases:
+      - sbr-readiness-simulator
     projections:
       - run_sbr_readiness_fixture_result
     routes:

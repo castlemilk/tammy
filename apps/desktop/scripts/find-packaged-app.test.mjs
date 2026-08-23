@@ -340,6 +340,8 @@ for (const [platform, arch] of [
         coreSha256: sha256(`core:${platform}/${arch}`),
         manifest: layout.packagedManifest,
         manifestSha256: sha256(await readFile(layout.sourceManifest)),
+        releaseKind: "ordinary-package",
+        sourceRevision: "a".repeat(40),
         ...(layout.packagedSbrHelper
           ? {
               helperExecutable: layout.packagedSbrHelper,

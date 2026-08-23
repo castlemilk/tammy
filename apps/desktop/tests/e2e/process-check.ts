@@ -1,11 +1,27 @@
 import { type ExecFileException, execFile as nodeExecFile } from "node:child_process";
+import { createHash } from "node:crypto";
+import { constants as fsConstants } from "node:fs";
+import { open } from "node:fs/promises";
 import path from "node:path";
 
 const PROCESS_QUERY_TIMEOUT_MS = 5_000;
+const verifiedPackagedAuthorities = new WeakSet<object>();
 
 export interface CoreProcessMatch {
   readonly executablePath: string;
   readonly processId: number;
+}
+
+export interface HelperSocketSample {
+  readonly processIds: readonly number[];
+  readonly samples: number;
+  readonly violations: number;
+}
+
+export interface StagedHelperAuthority {
+  readonly helperSha256: string;
+  readonly packagedExecutable: string;
+  readonly trustedRuntimeBases: readonly string[];
 }
 
 interface ProcessQueryOptions {
@@ -82,6 +98,40 @@ function requireCanonicalCorePath(corePath: string, platform: NodeJS.Platform): 
   return corePath;
 }
 
+function requireCanonicalPackagedHelperPath(helperPath: string): string {
+  if (
+    !path.posix.isAbsolute(helperPath) ||
+    path.posix.normalize(helperPath) !== helperPath ||
+    path.posix.basename(helperPath) !== "tammy-sbr-helper" ||
+    !helperPath.endsWith("/sbr-helper/darwin-arm64/tammy-sbr-helper")
+  ) {
+    throw new Error("INVALID_EXPECTED_HELPER_PATH");
+  }
+  return helperPath;
+}
+
+function requireStagedHelperAuthority(authority: StagedHelperAuthority): StagedHelperAuthority {
+  requireCanonicalPackagedHelperPath(authority.packagedExecutable);
+  if (
+    !/^[0-9a-f]{64}$/.test(authority.helperSha256) ||
+    authority.trustedRuntimeBases.length < 1 ||
+    authority.trustedRuntimeBases.length > 2 ||
+    new Set(authority.trustedRuntimeBases).size !== authority.trustedRuntimeBases.length
+  ) {
+    throw new Error("INVALID_STAGED_HELPER_AUTHORITY");
+  }
+  for (const base of authority.trustedRuntimeBases) {
+    if (
+      !path.posix.isAbsolute(base) ||
+      path.posix.normalize(base) !== base ||
+      !base.endsWith("/local-core/core/sbr-runtime")
+    ) {
+      throw new Error("INVALID_STAGED_HELPER_AUTHORITY");
+    }
+  }
+  return authority;
+}
+
 function escapeRegularExpression(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -139,6 +189,138 @@ function runBoundedQuery(
 
 function parseLines(stdout: string): string[] {
   return stdout.split(/\r?\n/u).filter((line) => line.length > 0);
+}
+
+async function queryMacOSExecutableImage(
+  processId: number,
+  dependencies: ProcessQueryDependencies,
+): Promise<string | undefined> {
+  let stdout: string;
+  try {
+    stdout = await runBoundedQuery(
+      "/usr/sbin/lsof",
+      ["-nP", "-a", "-p", String(processId), "-d", "txt", "-Fn"],
+      dependencies,
+    );
+  } catch (error) {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === 1) {
+      return undefined;
+    }
+    throw new Error("PROCESS_QUERY_FAILED");
+  }
+  const lines = parseLines(stdout);
+  const names = lines.filter((line) => line.startsWith("n")).map((line) => line.slice(1));
+  if (
+    lines[0] !== `p${processId}` ||
+    !lines.includes("ftxt") ||
+    names.length !== 1 ||
+    !path.posix.isAbsolute(names[0] ?? "")
+  ) {
+    throw new Error("INVALID_PROCESS_EVIDENCE");
+  }
+  return names[0];
+}
+
+function sameFileIdentity(
+  left: Awaited<ReturnType<Awaited<ReturnType<typeof open>>["stat"]>>,
+  right: Awaited<ReturnType<Awaited<ReturnType<typeof open>>["stat"]>>,
+): boolean {
+  return (
+    left.dev === right.dev &&
+    left.ino === right.ino &&
+    left.mode === right.mode &&
+    left.nlink === right.nlink &&
+    left.size === right.size &&
+    left.mtimeMs === right.mtimeMs &&
+    left.ctimeMs === right.ctimeMs
+  );
+}
+
+async function authenticatedFileDigest(filePath: string): Promise<string> {
+  let handle: Awaited<ReturnType<typeof open>> | undefined;
+  try {
+    handle = await open(filePath, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+    const before = await handle.stat();
+    if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1 || before.size <= 0) {
+      throw new Error("UNAUTHENTICATED_STAGED_HELPER");
+    }
+    const bytes = await handle.readFile();
+    const after = await handle.stat();
+    if (!sameFileIdentity(before, after) || bytes.byteLength !== before.size) {
+      throw new Error("UNAUTHENTICATED_STAGED_HELPER");
+    }
+    return createHash("sha256").update(bytes).digest("hex");
+  } catch (error) {
+    if (error instanceof Error && error.message === "UNAUTHENTICATED_STAGED_HELPER") throw error;
+    throw new Error("UNAUTHENTICATED_STAGED_HELPER");
+  } finally {
+    await handle?.close().catch(() => undefined);
+  }
+}
+
+function stagedHelperPatternSource(authority: StagedHelperAuthority): string {
+  const bases = authority.trustedRuntimeBases.map(escapeRegularExpression).join("|");
+  return `^(${bases})/tammy-sbr-runtime-[0-9a-f]{24}/sbr-helper$`;
+}
+
+async function queryAuthenticatedStagedHelpers(
+  authority: StagedHelperAuthority,
+  pinned: Map<number, string>,
+  dependencies: ProcessQueryDependencies,
+): Promise<readonly CoreProcessMatch[]> {
+  const trusted = requireStagedHelperAuthority(authority);
+  if (!verifiedPackagedAuthorities.has(trusted)) {
+    if ((await authenticatedFileDigest(trusted.packagedExecutable)) !== trusted.helperSha256) {
+      throw new Error("UNAUTHENTICATED_PACKAGED_HELPER");
+    }
+    verifiedPackagedAuthorities.add(trusted);
+  }
+  const patternSource = stagedHelperPatternSource(trusted);
+  const pattern = new RegExp(patternSource, "u");
+  let stdout: string;
+  try {
+    stdout = await runBoundedQuery("/usr/bin/pgrep", ["-f", "-x", patternSource], dependencies);
+  } catch (error) {
+    if (error instanceof Error && error.message === "PROCESS_QUERY_TIMEOUT") throw error;
+    if (typeof error === "object" && error !== null && "code" in error && error.code === 1) {
+      return [];
+    }
+    throw new Error("PROCESS_QUERY_FAILED");
+  }
+  const matches: CoreProcessMatch[] = [];
+  for (const line of parseLines(stdout)) {
+    const processId = parseProcessId(line);
+    let command: string;
+    try {
+      command = await runBoundedQuery(
+        "/bin/ps",
+        ["-p", String(processId), "-o", "command="],
+        dependencies,
+      );
+    } catch {
+      throw new Error("PROCESS_QUERY_FAILED");
+    }
+    const commands = parseLines(command);
+    const executablePath = commands.length === 1 ? commands[0] : undefined;
+    if (!executablePath || !pattern.test(executablePath)) {
+      throw new Error("UNAUTHENTICATED_STAGED_HELPER");
+    }
+    const executableImage = await queryMacOSExecutableImage(processId, dependencies);
+    if (executableImage === undefined) continue;
+    if (executableImage !== executablePath) {
+      throw new Error("UNAUTHENTICATED_STAGED_HELPER");
+    }
+    const prior = pinned.get(processId);
+    if (prior !== undefined && prior !== executablePath) {
+      throw new Error("STAGED_HELPER_PATH_CHANGED");
+    }
+    if ((await authenticatedFileDigest(executablePath)) !== trusted.helperSha256) {
+      throw new Error("UNAUTHENTICATED_STAGED_HELPER");
+    }
+    pinned.set(processId, executablePath);
+    matches.push({ executablePath, processId });
+  }
+  return matches;
 }
 
 async function queryMacOS(
@@ -272,4 +454,43 @@ export async function findExactCoreProcesses(
   if (platform === "darwin") return queryMacOS(expected, dependencies);
   if (platform === "win32") return queryWindows(expected, dependencies);
   throw new Error("UNSUPPORTED_PROCESS_CHECK_PLATFORM");
+}
+
+export async function findAuthenticatedStagedHelperProcesses(
+  authority: StagedHelperAuthority,
+  pinned: Map<number, string>,
+  dependencies: ProcessQueryDependencies = {},
+): Promise<readonly CoreProcessMatch[]> {
+  return queryAuthenticatedStagedHelpers(authority, pinned, dependencies);
+}
+
+export async function sampleAuthenticatedStagedHelperSockets(
+  authority: StagedHelperAuthority,
+  pinned: Map<number, string>,
+  dependencies: ProcessQueryDependencies = {},
+): Promise<HelperSocketSample> {
+  const processes = await findAuthenticatedStagedHelperProcesses(authority, pinned, dependencies);
+  let samples = 0;
+  let violations = 0;
+  for (const process of processes) {
+    samples += 1;
+    try {
+      const stdout = await runBoundedQuery(
+        "/usr/sbin/lsof",
+        ["-nP", "-a", "-p", String(process.processId), "-iTCP", "-iUDP"],
+        dependencies,
+      );
+      if (parseLines(stdout).length > 0) violations += 1;
+    } catch (error) {
+      if (typeof error === "object" && error !== null && "code" in error && error.code === 1) {
+        continue;
+      }
+      throw new Error("HELPER_SOCKET_QUERY_FAILED");
+    }
+  }
+  return {
+    processIds: processes.map((process) => process.processId),
+    samples,
+    violations,
+  };
 }

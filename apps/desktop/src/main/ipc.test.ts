@@ -124,13 +124,11 @@ describe("registerDiagnosticsIpc", () => {
       "getSbrReadiness",
       "getMachineCredentialStatus",
       "removeMachineCredential",
-      "removeSbrProductId",
       "runSbrReadinessFixture",
       "selectMachineCredentialFile",
       "importMachineCredential",
       "replaceMachineCredential",
       "unlockMachineCredential",
-      "importSbrProductId",
     ]);
     expect(DIAGNOSTICS_PRELOAD_METHOD).toBe(DESKTOP_PRELOAD_METHODS[0]);
   });
@@ -681,13 +679,11 @@ describe("preload desktop bridge", () => {
       "getSbrReadiness",
       "getMachineCredentialStatus",
       "removeMachineCredential",
-      "removeSbrProductId",
       "runSbrReadinessFixture",
       "selectMachineCredentialFile",
       "importMachineCredential",
       "replaceMachineCredential",
       "unlockMachineCredential",
-      "importSbrProductId",
     ]);
     expect(Object.isFrozen(api)).toBe(true);
     await expect(api?.getSystemDiagnostics()).resolves.toMatchObject({

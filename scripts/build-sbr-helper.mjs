@@ -374,7 +374,9 @@ export async function buildSbrHelper({
       });
     }
     const raw = await Promise.all(outputs.map((output) => readFile(output)));
-    if (!raw[0].equals(raw[1])) throw new Error("SBR_HELPER_REPRODUCIBILITY_FAILED");
+    if (!raw[0].equals(raw[1])) {
+      throw new Error(`SBR_HELPER_REPRODUCIBILITY_FAILED:${sha256(raw[0])}:${sha256(raw[1])}`);
+    }
     for (const output of outputs) {
       await commandRunner(
         "/usr/bin/codesign",

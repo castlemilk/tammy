@@ -58,29 +58,43 @@ test("coverage declares the exact normative policy for all 88 non-system RPCs", 
   }
 });
 
-test("all nine SBR RPCs are declared future and cannot claim exercised evidence", async () => {
-  const expected = [
+test("packaged SBR readiness promotes only the seven proven RPCs", async () => {
+  const proven = [
     "tammy.v1.SbrService.GetSbrReadiness",
     "tammy.v1.SbrService.ImportMachineCredential",
     "tammy.v1.SbrService.GetMachineCredentialStatus",
     "tammy.v1.SbrService.UnlockMachineCredential",
     "tammy.v1.SbrService.ReplaceMachineCredential",
     "tammy.v1.SbrService.RemoveMachineCredential",
-    "tammy.v1.SbrService.ImportSbrProductId",
-    "tammy.v1.SbrService.RemoveSbrProductId",
     "tammy.v1.SbrService.RunSbrReadinessFixture",
   ].sort();
-  assert.deepEqual([...SBR_DECLARED_FUTURE_RPCS].sort(), expected);
+  const future = [
+    "tammy.v1.SbrService.ImportSbrProductId",
+    "tammy.v1.SbrService.RemoveSbrProductId",
+  ].sort();
+  assert.deepEqual([...SBR_DECLARED_FUTURE_RPCS].sort(), future);
 
   const coverage = parseCoverageManifest(await readFile("test/e2e/coverage.yaml", "utf8"));
+  assert.deepEqual(coverage.scenarios["E2E-17"].cases, ["sbr-readiness-simulator"]);
   assert.deepEqual(coverage.scenarios["E2E-17"].futureCases, ["sbr/registration-readiness"]);
   assert.deepEqual(
     Object.keys(coverage.rpcs)
       .filter((rpcName) => rpcName.startsWith("tammy.v1.SbrService."))
       .sort(),
-    expected,
+    [...proven, ...future].sort(),
   );
-  for (const rpcName of expected) {
+  for (const rpcName of proven) {
+    const rpc = coverage.rpcs[rpcName];
+    assert.equal(rpc.stage, "production", rpcName);
+    assert.deepEqual(rpc.cases, ["sbr-readiness-simulator"], rpcName);
+    assert.equal(rpc.futureCases, undefined, rpcName);
+    assert.deepEqual(rpc.routes, ["/settings/sbr"], rpcName);
+  }
+  assert.equal(
+    coverage.rpcs["tammy.v1.SbrService.RunSbrReadinessFixture"].boundary,
+    "simulator_only",
+  );
+  for (const rpcName of future) {
     const rpc = coverage.rpcs[rpcName];
     assert.equal(rpc.stage, "declared_future", rpcName);
     assert.deepEqual(rpc.cases, [], rpcName);

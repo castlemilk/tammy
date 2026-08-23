@@ -33,11 +33,9 @@
   "getSbrReadiness",
   "getMachineCredentialStatus",
   "removeMachineCredential",
-  "removeSbrProductId",
   "runSbrReadinessFixture",
   "selectMachineCredentialFile",
   "importMachineCredential",
   "replaceMachineCredential",
-  "unlockMachineCredential",
-  "importSbrProductId"
+  "unlockMachineCredential"
 ]

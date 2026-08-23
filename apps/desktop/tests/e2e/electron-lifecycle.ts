@@ -34,6 +34,7 @@ export interface ElectronLifecycleOperations<State, Harness> {
   stageVideo(state: State): Promise<StagedArtifact | undefined>;
   stopAndStageTrace(state: State): Promise<StagedArtifact | undefined>;
   use(harness: Harness): Promise<void>;
+  finalize?(state: State, clean: boolean): Promise<void>;
 }
 
 export async function runElectronLifecycle<State, Harness>(
@@ -73,6 +74,12 @@ export async function runElectronLifecycle<State, Harness>(
         failures.push(error);
         await attachStagedArtifacts(failures, stagedArtifacts, state, operations);
       }
+    }
+    if (operations.finalize) {
+      await collectFailure(
+        failures,
+        () => operations.finalize?.(state, !failed && failures.length === 0) ?? Promise.resolve(),
+      );
     }
   }
   throwFailures(failures, "ELECTRON_LIFECYCLE_FAILED");

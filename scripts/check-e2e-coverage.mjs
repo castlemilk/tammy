@@ -12,6 +12,7 @@ const PRE_WORKSPACE_SYSTEM_QUERY = "tammy.v1.SystemService.GetDiagnostics";
 const PRODUCTION_STAGE = "production";
 const DECLARED_FUTURE_STAGE = "declared_future";
 const CASE_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)+$/;
+const SBR_SIMULATOR_CASE = "sbr-readiness-simulator";
 const PRELOAD_NAME_PATTERN = /^[a-z][A-Za-z0-9]*$/;
 const ROUTE_PATTERN = /^\/[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*$/;
 const OUTCOME_CODE_PATTERN = /^[A-Z][A-Z0-9_]*$/;
@@ -20,6 +21,7 @@ const TOP_LEVEL_KEYS = ["schemaVersion", "scenarios", "rpcs", "transitions"];
 const SCENARIO_KEYS = ["cases", "futureCases"];
 const RPC_KEYS = [
   "stage",
+  "boundary",
   "preload",
   "cases",
   "futureCases",
@@ -42,6 +44,10 @@ function isStringArray(value) {
 
 function matchesPattern(value, pattern) {
   return typeof value === "string" && pattern.test(value);
+}
+
+function isCaseId(value) {
+  return value === SBR_SIMULATOR_CASE || matchesPattern(value, CASE_ID_PATTERN);
 }
 
 function isUniqueStringArray(value, validator, requireNonEmpty = false) {
@@ -138,11 +144,8 @@ function hasValidScenarioShape(scenarios) {
     !Object.values(scenarios).every(
       (scenario) =>
         hasOnlyKeys(scenario, SCENARIO_KEYS) &&
-        isUniqueStringArray(scenario.cases, (caseId) => matchesPattern(caseId, CASE_ID_PATTERN)) &&
-        (scenario.futureCases === undefined ||
-          isUniqueStringArray(scenario.futureCases, (caseId) =>
-            matchesPattern(caseId, CASE_ID_PATTERN),
-          )),
+        isUniqueStringArray(scenario.cases, isCaseId) &&
+        (scenario.futureCases === undefined || isUniqueStringArray(scenario.futureCases, isCaseId)),
     )
   ) {
     return false;
@@ -174,13 +177,13 @@ function hasValidManifestShape(coverage) {
       if (
         stage === undefined ||
         !matchesPattern(rpc.preload, PRELOAD_NAME_PATTERN) ||
-        !isUniqueStringArray(rpc.cases, (caseId) => matchesPattern(caseId, CASE_ID_PATTERN)) ||
-        (rpc.futureCases !== undefined &&
-          !isUniqueStringArray(rpc.futureCases, (caseId) =>
-            matchesPattern(caseId, CASE_ID_PATTERN),
-          )) ||
+        !isUniqueStringArray(rpc.cases, isCaseId) ||
+        (rpc.futureCases !== undefined && !isUniqueStringArray(rpc.futureCases, isCaseId)) ||
         !hasValidStageCases(stage, rpc)
       ) {
+        return false;
+      }
+      if (rpc.boundary !== undefined && !matchesPattern(rpc.boundary, STABLE_TOKEN_PATTERN)) {
         return false;
       }
       if (rpcName === PRE_WORKSPACE_SYSTEM_QUERY) {
@@ -208,11 +211,9 @@ function hasValidManifestShape(coverage) {
     const stage = coverageStage(transition, transitionId, "transition");
     return (
       stage !== undefined &&
-      isUniqueStringArray(transition.cases, (caseId) => matchesPattern(caseId, CASE_ID_PATTERN)) &&
+      isUniqueStringArray(transition.cases, isCaseId) &&
       (transition.futureCases === undefined ||
-        isUniqueStringArray(transition.futureCases, (caseId) =>
-          matchesPattern(caseId, CASE_ID_PATTERN),
-        )) &&
+        isUniqueStringArray(transition.futureCases, isCaseId)) &&
       hasValidStageCases(stage, transition)
     );
   });
@@ -312,6 +313,16 @@ export function checkE2ECoverage({
     }
   }
   for (const [rpcName, rpcCoverage] of Object.entries(coverage.rpcs)) {
+    if (
+      rpcName === "tammy.v1.SbrService.RunSbrReadinessFixture" &&
+      coverageStage(rpcCoverage, rpcName, "rpc") === PRODUCTION_STAGE
+    ) {
+      if (rpcCoverage.boundary !== "simulator_only") {
+        throw new Error("E2E_COVERAGE_SIMULATOR_BOUNDARY_REQUIRED");
+      }
+    } else if (rpcCoverage.boundary !== undefined) {
+      throw new Error("E2E_COVERAGE_MANIFEST_INVALID");
+    }
     for (const field of ["roles", "list", "idempotency"]) {
       if (
         typeof rpcCoverage[field] === "string" &&

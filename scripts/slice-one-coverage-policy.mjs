@@ -98,15 +98,8 @@ const roleGuardedStalePersistent = [
 ];
 
 export const SBR_DECLARED_FUTURE_RPCS = [
-  "tammy.v1.SbrService.GetSbrReadiness",
-  "tammy.v1.SbrService.ImportMachineCredential",
-  "tammy.v1.SbrService.GetMachineCredentialStatus",
-  "tammy.v1.SbrService.UnlockMachineCredential",
-  "tammy.v1.SbrService.ReplaceMachineCredential",
-  "tammy.v1.SbrService.RemoveMachineCredential",
   "tammy.v1.SbrService.ImportSbrProductId",
   "tammy.v1.SbrService.RemoveSbrProductId",
-  "tammy.v1.SbrService.RunSbrReadinessFixture",
 ];
 
 export const SLICE_ONE_RPC_POLICY = {
@@ -388,7 +381,7 @@ export const SLICE_ONE_RPC_POLICY = {
   }),
   "tammy.v1.IdentityService.GetCurrentUser": rpc({
     name: "GetCurrentUser",
-    route: "/sign-in",
+    routes: ["/sign-in", "/settings/sbr"],
     rolePolicy: authenticatedUser,
     mode: "query",
     failures: ["AUTHENTICATION_REQUIRED"],
@@ -463,7 +456,7 @@ export const SLICE_ONE_RPC_POLICY = {
   "tammy.v1.IdentityService.EnrolTOTP": rpc({
     name: "EnrolTOTP",
     preload: "enrolTotp",
-    route: "/settings/security",
+    routes: ["/settings/security", "/settings/sbr"],
     rolePolicy: authenticatedUser,
     mode: "persistent_command",
     failures: [...authenticatedPersistent, "CURRENT_PASSWORD_INVALID", "FACTOR_ALREADY_ENROLLED"],
@@ -471,7 +464,7 @@ export const SLICE_ONE_RPC_POLICY = {
   "tammy.v1.IdentityService.ConfirmTOTP": rpc({
     name: "ConfirmTOTP",
     preload: "confirmTotp",
-    route: "/settings/security",
+    routes: ["/settings/security", "/settings/sbr"],
     rolePolicy: authenticatedUser,
     mode: "fresh_challenge",
     failures: ["AUTHENTICATION_REQUIRED", "TOTP_INVALID", "TOTP_REPLAYED", "TOTP_COOLDOWN"],
@@ -479,7 +472,7 @@ export const SLICE_ONE_RPC_POLICY = {
   "tammy.v1.IdentityService.AssertTOTP": rpc({
     name: "AssertTOTP",
     preload: "assertTotp",
-    route: "/settings/security",
+    routes: ["/settings/security", "/settings/sbr"],
     rolePolicy: authenticatedUser,
     mode: "fresh_challenge",
     failures: [

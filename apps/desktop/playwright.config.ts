@@ -9,7 +9,12 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   outputDir: "test-results",
   preserveOutput: "failures-only",
-  projects: [{ name: target, testMatch: ["foundation.spec.ts", "current-workflows.spec.ts"] }],
+  projects: [
+    { name: target, testMatch: ["foundation.spec.ts", "current-workflows.spec.ts"] },
+    ...(target === "darwin-arm64"
+      ? [{ name: "darwin-arm64-sbr", testMatch: ["sbr-readiness.spec.ts"] }]
+      : []),
+  ],
   reporter: "list",
   retries: process.env.CI ? 2 : 0,
   testDir: "tests/e2e",

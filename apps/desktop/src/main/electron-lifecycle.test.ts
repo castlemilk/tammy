@@ -34,12 +34,14 @@ function createOperations({
   attachmentFailure,
   cleanupFailure,
   failed = false,
+  finalizeFailure,
   setupFailure,
   useFailure,
 }: {
   attachmentFailure?: StagedArtifact["kind"];
   cleanupFailure?: string;
   failed?: boolean;
+  finalizeFailure?: boolean;
   setupFailure?: "firstWindow" | "traceStart";
   useFailure?: boolean;
 } = {}) {
@@ -66,6 +68,10 @@ function createOperations({
       maybeFail("delete");
     },
     didTestFail: () => failed,
+    finalize: async (_state, clean) => {
+      calls.push(`finalize:${clean}`);
+      if (finalizeFailure) throw failure("finalize");
+    },
     removeRawArtifacts: async () => {
       calls.push("rawRm");
       maybeFail("rawRm");
@@ -231,11 +237,31 @@ describe("runElectronLifecycle", () => {
     expect(calls).not.toContain("attach:screenshot");
     expect(calls).not.toContain("attach:trace");
     expect(calls).not.toContain("attach:video");
-    expect(calls.at(-1)).toBe("delete:screenshot,trace,video");
+    expect(calls.at(-1)).toBe("finalize:true");
     expect(calls.indexOf("rawRm")).toBeLessThan(calls.indexOf("processQuery"));
     expect(calls.indexOf("processQuery")).toBeLessThan(
       calls.indexOf("delete:screenshot,trace,video"),
     );
+    expect(calls.indexOf("delete:screenshot,trace,video")).toBeLessThan(
+      calls.indexOf("finalize:true"),
+    );
+  });
+
+  it("finalizes failure only after retained evidence and clean teardown attempts", async () => {
+    const { calls, operations } = createOperations({ useFailure: true });
+
+    await expect(runElectronLifecycle({}, operations)).rejects.toThrow("use");
+
+    expect(calls.at(-1)).toBe("finalize:false");
+    expect(calls.indexOf("attach:video")).toBeLessThan(calls.indexOf("finalize:false"));
+  });
+
+  it("refuses a clean lifecycle when the final result writer fails", async () => {
+    const { calls, operations } = createOperations({ finalizeFailure: true });
+
+    await expect(runElectronLifecycle({}, operations)).rejects.toThrow("finalize");
+
+    expect(calls.at(-1)).toBe("finalize:true");
   });
 
   it("keeps the primary failure first while aggregating cleanup and attachment failures", async () => {

@@ -23,7 +23,13 @@ import {
   STAGED_ARTIFACT_FILENAMES,
   type StagedArtifact,
 } from "./electron-lifecycle";
-import { findExactCoreProcesses } from "./process-check";
+import {
+  findAuthenticatedStagedHelperProcesses,
+  findExactCoreProcesses,
+  type StagedHelperAuthority,
+  sampleAuthenticatedStagedHelperSockets,
+} from "./process-check";
+import { removeSbrE2eResult, type SbrE2ePassedResult, writePassedSbrE2eResult } from "./sbr-result";
 
 const execFileAsync = promisify(execFile);
 const CLOSE_TIMEOUT_MS = 5_000;
@@ -32,20 +38,33 @@ const ORPHAN_POLL_TIMEOUT_MS = 5_000;
 const STARTUP_DIAGNOSTIC_DELAY_MS = 2_000;
 const STARTUP_DIAGNOSTIC_TIMEOUT_MS = 5_000;
 const STARTUP_DIAGNOSTIC_MAX_BYTES = 1024 * 1024;
+const HELPER_SAMPLE_INTERVAL_MS = 10;
 
-interface PackagedLayout {
+export interface PackagedLayout {
   readonly appExecutable: string;
+  readonly appSha256: string;
   readonly coreExecutable: string;
+  readonly coreSha256: string;
+  readonly helperExecutable?: string;
+  readonly helperSha256?: string;
+  readonly profileSha256?: string;
+  readonly releaseKind: "ordinary-package" | "mas";
+  readonly sourceRevision: string;
   readonly target: "darwin-arm64" | "win32-x64";
 }
 
-interface ElectronHarness {
+export interface ElectronHarness {
   readonly application: ElectronApplication;
   readonly consoleErrors: string[];
   readonly page: Page;
   readonly pageErrors: string[];
   readonly packagedLayout: PackagedLayout;
+  readonly currentPage: () => Page;
+  readonly injectMachineCredentialSelection: (selectedPath: string) => Promise<void>;
+  readonly markSbrPassed: (fixtureSha256: string) => void;
   readonly restart: () => Promise<Page>;
+  readonly switchUserDataRoot: (name: "secondary") => Promise<Page>;
+  readonly usePrimaryUserDataRoot: () => Promise<Page>;
 }
 
 interface ElectronFixtures {
@@ -60,9 +79,24 @@ interface FixtureLifecycleState {
   page?: Page;
   readonly pageErrors: string[];
   readonly packagedLayout: PackagedLayout;
+  currentUserDataPath: string;
+  corePathObserved?: boolean;
+  readonly primaryUserDataPath: string;
   readonly rawArtifacts: string;
   readonly stagedArtifactsRoot: string;
   traceStarted?: boolean;
+  forcedKillUsed?: boolean;
+  helperObserver?: HelperObserver;
+  readonly helperRuntimeBases: string[];
+  helperSamples?: number;
+  helperViolations?: number;
+  helperOrphans?: number;
+  sbrFixtureSha256?: string;
+}
+
+interface HelperObserver {
+  survivors(): Promise<readonly { readonly executablePath: string; readonly processId: number }[]>;
+  stop(): Promise<{ readonly samples: number; readonly violations: number }>;
 }
 
 export function createElectronLaunchArguments(
@@ -89,9 +123,23 @@ function isPackagedLayout(value: unknown): value is PackagedLayout {
   return (
     typeof record.appExecutable === "string" &&
     path.isAbsolute(record.appExecutable) &&
+    typeof record.appSha256 === "string" &&
+    /^[0-9a-f]{64}$/.test(record.appSha256) &&
     typeof record.coreExecutable === "string" &&
     path.isAbsolute(record.coreExecutable) &&
-    (record.target === "darwin-arm64" || record.target === "win32-x64")
+    typeof record.coreSha256 === "string" &&
+    /^[0-9a-f]{64}$/.test(record.coreSha256) &&
+    typeof record.sourceRevision === "string" &&
+    /^[0-9a-f]{40}$/.test(record.sourceRevision) &&
+    (record.releaseKind === "ordinary-package" || record.releaseKind === "mas") &&
+    (record.target === "darwin-arm64" || record.target === "win32-x64") &&
+    (record.target !== "darwin-arm64" ||
+      (typeof record.helperExecutable === "string" &&
+        path.isAbsolute(record.helperExecutable) &&
+        typeof record.helperSha256 === "string" &&
+        /^[0-9a-f]{64}$/.test(record.helperSha256) &&
+        typeof record.profileSha256 === "string" &&
+        /^[0-9a-f]{64}$/.test(record.profileSha256)))
   );
 }
 
@@ -112,6 +160,54 @@ async function locatePackagedApplication(): Promise<PackagedLayout> {
   }
   if (!isPackagedLayout(value)) throw new Error("PACKAGED_LAYOUT_EVIDENCE_INVALID");
   return value;
+}
+
+function sbrResultPath(): string {
+  return path.resolve(import.meta.dirname, "../../../..", ".tmp/sbr-e2e/latest/result.json");
+}
+
+export async function locatePackagedApplicationForProject(
+  projectName: string,
+  options: {
+    readonly locate?: () => Promise<PackagedLayout>;
+    readonly resultPath?: string;
+  } = {},
+): Promise<PackagedLayout> {
+  if (projectName === "darwin-arm64-sbr") {
+    await removeSbrE2eResult(options.resultPath ?? sbrResultPath());
+  }
+  return (options.locate ?? locatePackagedApplication)();
+}
+
+function startHelperObserver(authority: StagedHelperAuthority): HelperObserver {
+  let stopping = false;
+  let samples = 0;
+  let violations = 0;
+  let failure: unknown;
+  const pinned = new Map<number, string>();
+  const loop = (async () => {
+    while (!stopping) {
+      try {
+        const observed = await sampleAuthenticatedStagedHelperSockets(authority, pinned);
+        samples += observed.samples;
+        violations += observed.violations;
+      } catch (error) {
+        failure = error;
+        stopping = true;
+        break;
+      }
+      await new Promise<void>((resolve) => setTimeout(resolve, HELPER_SAMPLE_INTERVAL_MS));
+    }
+  })();
+  return {
+    survivors: () => findAuthenticatedStagedHelperProcesses(authority, pinned),
+    stop: async () => {
+      stopping = true;
+      await loop;
+      if (failure) throw failure;
+      return { samples, violations };
+    },
+  };
 }
 
 function observePage(page: Page, consoleErrors: string[], pageErrors: string[]): void {
@@ -193,6 +289,18 @@ async function firstWindowWithStartupDiagnostic(
   }
 }
 
+async function observeAuthenticatedCorePath(state: FixtureLifecycleState): Promise<void> {
+  const deadline = Date.now() + ORPHAN_POLL_TIMEOUT_MS;
+  while (true) {
+    if ((await findExactCoreProcesses(state.packagedLayout.coreExecutable)).length > 0) {
+      state.corePathObserved = true;
+      return;
+    }
+    if (Date.now() >= deadline) throw new Error("PACKAGED_CORE_PATH_NOT_OBSERVED");
+    await new Promise<void>((resolve) => setTimeout(resolve, ORPHAN_POLL_INTERVAL_MS));
+  }
+}
+
 function stagedArtifact(
   state: FixtureLifecycleState,
   kind: StagedArtifact["kind"],
@@ -214,6 +322,17 @@ function fixtureOperations(
         query: () => findExactCoreProcesses(state.packagedLayout.coreExecutable),
         timeoutMs: ORPHAN_POLL_TIMEOUT_MS,
       });
+      if (state.helperObserver) {
+        const observer = state.helperObserver;
+        const observed = await observer.stop();
+        delete state.helperObserver;
+        state.helperSamples = observed.samples;
+        state.helperViolations = observed.violations;
+        const survivors = await observer.survivors();
+        state.helperOrphans = survivors.length;
+        if (survivors.length > 0) throw new Error("SBR_HELPER_PROCESS_ORPHAN");
+        if (observed.violations > 0) throw new Error("SBR_HELPER_SOCKET_VIOLATION");
+      }
     },
     attachArtifact: async (state, artifact) => {
       assertOwnedStagedArtifact(state.stagedArtifactsRoot, artifact);
@@ -230,7 +349,10 @@ function fixtureOperations(
     closeAndReap: async (state) => {
       if (!state.application) return;
       await closeAndReapElectron({
-        forceKillMain: () => forceKillMain(state.mainProcess),
+        forceKillMain: () => {
+          state.forcedKillUsed = true;
+          forceKillMain(state.mainProcess);
+        },
         gracefulClose: () => state.application?.close() ?? Promise.resolve(),
         mainClosed: state.mainClosed ?? new Promise<void>(() => {}),
         timeoutMs: CLOSE_TIMEOUT_MS,
@@ -246,12 +368,46 @@ function fixtureOperations(
     removeRawArtifacts: async (state) => {
       await rm(state.rawArtifacts, { force: true, recursive: true });
     },
+    finalize: async (state, clean) => {
+      const resultPath = sbrResultPath();
+      if (!clean || !state.sbrFixtureSha256 || state.forcedKillUsed) {
+        await removeSbrE2eResult(resultPath);
+        if (clean && state.sbrFixtureSha256 && state.forcedKillUsed) {
+          throw new Error("SBR_E2E_FORCED_KILL");
+        }
+        return;
+      }
+      const { helperSha256, profileSha256, sourceRevision } = state.packagedLayout;
+      if (!helperSha256 || !profileSha256) throw new Error("SBR_E2E_LAYOUT_INCOMPLETE");
+      const helperSamples = state.helperSamples ?? 0;
+      const corePathVerified = state.corePathObserved === true;
+      const helperPathVerified = helperSamples > 0;
+      if (!corePathVerified || !helperPathVerified) {
+        throw new Error("SBR_E2E_PROCESS_PATH_UNVERIFIED");
+      }
+      const value: SbrE2ePassedResult = {
+        schema: "tammy-sbr-e2e-result-v1",
+        source_revision: sourceRevision,
+        profile_sha256: profileSha256,
+        helper_sha256: helperSha256,
+        fixture_sha256: state.sbrFixtureSha256,
+        socket_samples: helperSamples,
+        socket_violations: 0,
+        core_path_verified: corePathVerified,
+        helper_path_verified: helperPathVerified,
+        core_orphans: 0,
+        helper_orphans: 0,
+        playwright_status: "PASSED",
+        recorded_at: new Date().toISOString(),
+      };
+      await writePassedSbrE2eResult(resultPath, { ...value }, { expectedRevision: sourceRevision });
+    },
     setup: async (state) => {
       const launch = async () => {
         const continuousIntegration = process.env.CI !== undefined;
         const application = await _electron.launch({
           args: createElectronLaunchArguments(
-            path.join(state.rawArtifacts, "user-data"),
+            state.currentUserDataPath,
             state.packagedLayout.target,
             continuousIntegration,
           ),
@@ -281,32 +437,86 @@ function fixtureOperations(
           state.traceStarted = true;
         }
         const page = await firstWindowWithStartupDiagnostic(application, state);
+        await observeAuthenticatedCorePath(state);
         observe(page);
         state.page = page;
         return { application, page };
       };
+      if (testInfo.project.name === "darwin-arm64-sbr") {
+        const helperPath = state.packagedLayout.helperExecutable;
+        const helperSha256 = state.packagedLayout.helperSha256;
+        if (!helperPath || !helperSha256) throw new Error("PACKAGED_HELPER_PATH_MISSING");
+        state.helperObserver = startHelperObserver({
+          helperSha256,
+          packagedExecutable: helperPath,
+          trustedRuntimeBases: state.helperRuntimeBases,
+        });
+      }
       const launched = await launch();
-      return {
+      const closeCurrent = async () => {
+        await closeAndReapElectron({
+          forceKillMain: () => {
+            state.forcedKillUsed = true;
+            forceKillMain(state.mainProcess);
+          },
+          gracefulClose: () => state.application?.close() ?? Promise.resolve(),
+          mainClosed: state.mainClosed ?? new Promise<void>(() => {}),
+          timeoutMs: CLOSE_TIMEOUT_MS,
+        });
+        await pollForNoCoreProcesses({
+          intervalMs: ORPHAN_POLL_INTERVAL_MS,
+          query: () => findExactCoreProcesses(state.packagedLayout.coreExecutable),
+          timeoutMs: ORPHAN_POLL_TIMEOUT_MS,
+        });
+      };
+      const harness: ElectronHarness = {
         application: launched.application,
         consoleErrors: state.consoleErrors,
         page: launched.page,
         pageErrors: state.pageErrors,
         packagedLayout: state.packagedLayout,
+        currentPage: () => {
+          if (!state.page) throw new Error("ELECTRON_PAGE_MISSING");
+          return state.page;
+        },
+        injectMachineCredentialSelection: async (selectedPath) => {
+          if (!path.isAbsolute(selectedPath) || path.normalize(selectedPath) !== selectedPath) {
+            throw new Error("INVALID_E2E_CREDENTIAL_PATH");
+          }
+          if (!state.application) throw new Error("ELECTRON_APPLICATION_MISSING");
+          await state.application.evaluate(async ({ dialog }, credentialPath) => {
+            dialog.showOpenDialog = async () => ({
+              canceled: false,
+              filePaths: [credentialPath],
+            });
+          }, selectedPath);
+        },
+        markSbrPassed: (fixtureSha256) => {
+          if (!/^[0-9a-f]{64}$/.test(fixtureSha256) || state.sbrFixtureSha256) {
+            throw new Error("INVALID_SBR_FIXTURE_HASH");
+          }
+          state.sbrFixtureSha256 = fixtureSha256;
+        },
         restart: async () => {
-          await closeAndReapElectron({
-            forceKillMain: () => forceKillMain(state.mainProcess),
-            gracefulClose: () => state.application?.close() ?? Promise.resolve(),
-            mainClosed: state.mainClosed ?? new Promise<void>(() => {}),
-            timeoutMs: CLOSE_TIMEOUT_MS,
-          });
-          await pollForNoCoreProcesses({
-            intervalMs: ORPHAN_POLL_INTERVAL_MS,
-            query: () => findExactCoreProcesses(state.packagedLayout.coreExecutable),
-            timeoutMs: ORPHAN_POLL_TIMEOUT_MS,
-          });
+          await closeCurrent();
+          return (await launch()).page;
+        },
+        switchUserDataRoot: async (name) => {
+          if (name !== "secondary") throw new Error("INVALID_E2E_USER_DATA_ROOT");
+          await closeCurrent();
+          state.currentUserDataPath = path.join(state.rawArtifacts, "user-data-secondary");
+          state.helperRuntimeBases.push(
+            path.join(state.currentUserDataPath, "local-core", "core", "sbr-runtime"),
+          );
+          return (await launch()).page;
+        },
+        usePrimaryUserDataRoot: async () => {
+          await closeCurrent();
+          state.currentUserDataPath = state.primaryUserDataPath;
           return (await launch()).page;
         },
       };
+      return harness;
     },
     stageScreenshot: async (state) => {
       if (!state.page || state.page.isClosed()) return undefined;
@@ -337,12 +547,17 @@ function fixtureOperations(
 export const test = base.extend<ElectronFixtures>({
   // biome-ignore lint/correctness/noEmptyPattern: Playwright requires fixture dependencies to use object destructuring.
   electronHarness: async ({}, use, testInfo) => {
-    const packagedLayout = await locatePackagedApplication();
+    const packagedLayout = await locatePackagedApplicationForProject(testInfo.project.name);
+    const rawArtifacts = testInfo.outputPath("electron-raw");
+    const primaryUserDataPath = path.join(rawArtifacts, "user-data-primary");
     const state: FixtureLifecycleState = {
       consoleErrors: [],
+      currentUserDataPath: primaryUserDataPath,
+      helperRuntimeBases: [path.join(primaryUserDataPath, "local-core", "core", "sbr-runtime")],
       packagedLayout,
       pageErrors: [],
-      rawArtifacts: testInfo.outputPath("electron-raw"),
+      primaryUserDataPath,
+      rawArtifacts,
       stagedArtifactsRoot: testInfo.outputPath("evidence-staging"),
     };
     await runElectronLifecycle(state, fixtureOperations(use, testInfo));
