@@ -60,6 +60,38 @@ const simulatorReadiness = create(SbrReadinessSchema, {
   profileFingerprint: "profile:simulator",
 });
 
+const invalidSimulatorReadyProjections = [
+  {
+    name: "Product ID present",
+    readiness: create(SbrReadinessSchema, {
+      ...simulatorReadiness,
+      productIdState: ProductIdState.PRESENT,
+    }),
+  },
+  {
+    name: "readiness code present",
+    readiness: create(SbrReadinessSchema, {
+      ...simulatorReadiness,
+      readinessCodes: ["SBR_PRIVATE_INCONSISTENCY"],
+    }),
+  },
+  {
+    name: "EVTE scope present",
+    readiness: create(SbrReadinessSchema, {
+      ...simulatorReadiness,
+      evteProductIdentifier: "TAMMY.EVTE",
+      evteServiceIdentifier: "BAS.LODGE",
+    }),
+  },
+  {
+    name: "oversized fingerprint",
+    readiness: create(SbrReadinessSchema, {
+      ...simulatorReadiness,
+      componentFingerprint: "f".repeat(129),
+    }),
+  },
+] as const;
+
 function deferred<T>() {
   let resolve!: (value: T) => void;
   const promise = new Promise<T>((promiseResolve) => {
@@ -309,6 +341,68 @@ describe("SbrSimulatorPanel", () => {
     expect(api.assertTotp).toHaveBeenCalledOnce();
   });
 
+  it("accepts a non-successful exact replay only for the original named case", async () => {
+    const requests: ReturnType<typeof runCodec.decodeRequest>[] = [];
+    const api = apiFor(
+      vi.fn((frame: Uint8Array) => {
+        const request = runCodec.decodeRequest(frame);
+        requests.push(request);
+        return Promise.resolve(
+          resultFrame(request.failureCase, {
+            outcome:
+              requests.length === 1
+                ? SbrReadinessFixtureOutcome.NOT_STARTED
+                : SbrReadinessFixtureOutcome.EXACT_REPLAY,
+            succeeded: false,
+          }),
+        );
+      }),
+    );
+    const user = userEvent.setup();
+    render(
+      <SbrSimulatorPanel
+        api={api}
+        onRefresh={vi.fn()}
+        readiness={simulatorReadiness}
+        workspace={workspace}
+      />,
+    );
+    await runFixture(user, "NOT_STARTED");
+    await screen.findByText("NOT_STARTED");
+    await user.click(screen.getByRole("button", { name: "Replay exact request" }));
+    expect(await screen.findByText("EXACT_REPLAY")).toBeTruthy();
+    expect(requests[1]).toEqual(requests[0]);
+  });
+
+  it("allows authoritative UNKNOWN during replay without claiming an exact result", async () => {
+    let calls = 0;
+    const run = vi.fn((frame: Uint8Array) => {
+      const request = runCodec.decodeRequest(frame);
+      calls += 1;
+      return Promise.resolve(
+        resultFrame(request.failureCase, {
+          outcome:
+            calls === 1 ? SbrReadinessFixtureOutcome.ACCEPTED : SbrReadinessFixtureOutcome.UNKNOWN,
+          succeeded: calls === 1,
+        }),
+      );
+    });
+    const user = userEvent.setup();
+    render(
+      <SbrSimulatorPanel
+        api={apiFor(run)}
+        onRefresh={vi.fn()}
+        readiness={simulatorReadiness}
+        workspace={workspace}
+      />,
+    );
+    await runFixture(user);
+    await screen.findByText("ACCEPTED");
+    await user.click(screen.getByRole("button", { name: "Replay exact request" }));
+    expect(await screen.findByText("UNKNOWN")).toBeTruthy();
+    expect(screen.queryByText("EXACT_REPLAY")).toBeNull();
+  });
+
   it("uses the same key with an altered closed case to expose an idempotency conflict", async () => {
     const keys: string[] = [];
     const cases: SbrReadinessFixtureFailure[] = [];
@@ -347,6 +441,35 @@ describe("SbrSimulatorPanel", () => {
       SbrReadinessFixtureFailure.NOT_STARTED,
     ]);
     expect(api.assertTotp).toHaveBeenCalledOnce();
+  });
+
+  it("rejects a named terminal outcome returned in conflict mode", async () => {
+    let calls = 0;
+    const run = vi.fn((frame: Uint8Array) => {
+      const request = runCodec.decodeRequest(frame);
+      calls += 1;
+      return Promise.resolve(
+        resultFrame(request.failureCase, {
+          outcome:
+            calls === 1 ? SbrReadinessFixtureOutcome.ACCEPTED : SbrReadinessFixtureOutcome.TIMEOUT,
+          succeeded: calls === 1,
+        }),
+      );
+    });
+    const user = userEvent.setup();
+    render(
+      <SbrSimulatorPanel
+        api={apiFor(run)}
+        onRefresh={vi.fn()}
+        readiness={simulatorReadiness}
+        workspace={workspace}
+      />,
+    );
+    await runFixture(user);
+    await screen.findByText("ACCEPTED");
+    await user.selectOptions(screen.getByLabelText("Test-only diagnostic case"), "TIMEOUT");
+    await user.click(screen.getByRole("button", { name: "Check idempotency conflict" }));
+    expect(await screen.findByText("UNKNOWN")).toBeTruthy();
   });
 
   it("terminal-locks restart-recovered UNKNOWN and refreshes without resending", async () => {
@@ -483,6 +606,56 @@ describe("SbrSimulatorPanel", () => {
     expect(screen.getByRole("button", { name: "Refresh authoritative status" })).toBeTruthy();
   });
 
+  it.each([
+    {
+      name: "TIMEOUT request with accepted success",
+      diagnosticCase: "TIMEOUT",
+      outcome: SbrReadinessFixtureOutcome.ACCEPTED,
+      succeeded: true,
+    },
+    {
+      name: "HELPER_DEATH request with accepted success",
+      diagnosticCase: "HELPER_DEATH",
+      outcome: SbrReadinessFixtureOutcome.ACCEPTED,
+      succeeded: true,
+    },
+    {
+      name: "MALFORMED request with accepted success",
+      diagnosticCase: "MALFORMED_RESPONSE",
+      outcome: SbrReadinessFixtureOutcome.ACCEPTED,
+      succeeded: true,
+    },
+    {
+      name: "TIMEOUT request with helper-death outcome",
+      diagnosticCase: "TIMEOUT",
+      outcome: SbrReadinessFixtureOutcome.HELPER_DEATH,
+      succeeded: false,
+    },
+    {
+      name: "accepted request with timeout outcome",
+      diagnosticCase: "ACCEPTED",
+      outcome: SbrReadinessFixtureOutcome.TIMEOUT,
+      succeeded: false,
+    },
+  ])("rejects incompatible $name fields", async ({ diagnosticCase, outcome, succeeded }) => {
+    const user = userEvent.setup();
+    const run = vi.fn((frame: Uint8Array) => {
+      const request = runCodec.decodeRequest(frame);
+      return Promise.resolve(resultFrame(request.failureCase, { outcome, succeeded }));
+    });
+    render(
+      <SbrSimulatorPanel
+        api={apiFor(run)}
+        onRefresh={vi.fn()}
+        readiness={simulatorReadiness}
+        workspace={workspace}
+      />,
+    );
+    await runFixture(user, diagnosticCase);
+    expect(await screen.findByText("UNKNOWN")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Refresh authoritative status" })).toBeTruthy();
+  });
+
   it("does not dispatch after unmount while factor assertion is pending", async () => {
     const assertion = deferred<Uint8Array>();
     const api = apiFor();
@@ -578,6 +751,12 @@ describe("SbrSimulatorPanel", () => {
       workspace,
       factorEnabled: false,
     },
+    ...invalidSimulatorReadyProjections.map(({ name, readiness }) => ({
+      name,
+      readiness,
+      workspace,
+      factorEnabled: true,
+    })),
   ])(
     "does not dispatch when $name invalidates the action gate during factor assertion",
     async (next) => {
@@ -605,6 +784,24 @@ describe("SbrSimulatorPanel", () => {
         />,
       );
       await act(async () => assertion.resolve(factorFrame()));
+      expect(api.runSbrReadinessFixture).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(invalidSimulatorReadyProjections)(
+    "keeps invalid simulator READY projection status-only: $name",
+    ({ readiness }) => {
+      const api = apiFor();
+      render(
+        <SbrSimulatorPanel
+          api={api}
+          onRefresh={vi.fn()}
+          readiness={readiness}
+          workspace={workspace}
+        />,
+      );
+      expect(screen.getByText(/simulator is not ready/i)).toBeTruthy();
+      expect(screen.queryByRole("button", { name: "Run simulator fixture" })).toBeNull();
       expect(api.runSbrReadinessFixture).not.toHaveBeenCalled();
     },
   );

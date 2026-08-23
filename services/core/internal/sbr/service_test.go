@@ -502,6 +502,83 @@ func TestFixtureIsClosedToSimulatorAndFixedIdentifier(t *testing.T) {
 	}
 }
 
+func TestFixtureRejectsEveryUnrecognisedFailureCaseBeforeAuthorizationOrElection(t *testing.T) {
+	for _, value := range []tammyv1.SbrReadinessFixtureFailure{-1, 6, 7, 256} {
+		t.Run(value.String(), func(t *testing.T) {
+			identity := &fakeIdentity{}
+			helper := &fakeHelper{}
+			audit := &fakeAudit{}
+			service := testService(t, helper, identity)
+			service.audit = audit
+			_, err := service.RunSbrReadinessFixture(context.Background(), connect.NewRequest(&tammyv1.RunSbrReadinessFixtureRequest{
+				CommandContext: command(PurposeUseMachineCredential), FixtureId: ReadinessFixtureID, FailureCase: value,
+			}))
+			if connect.CodeOf(err) != connect.CodeInvalidArgument {
+				t.Fatalf("failure case %d error = %v", value, err)
+			}
+			if len(identity.actions) != 0 || len(identity.purposes) != 0 || len(helper.requests) != 0 || len(audit.records) != 0 {
+				t.Fatalf("invalid case caused effects: actions=%v purposes=%v helper=%d audit=%v",
+					identity.actions, identity.purposes, len(helper.requests), audit.records)
+			}
+			if got := len(service.store.(*memoryServiceStore).fixtures); got != 0 {
+				t.Fatalf("invalid case reserved %d fixture rows", got)
+			}
+		})
+	}
+}
+
+func TestFixtureFailureCase256CannotReplayUnspecifiedCase(t *testing.T) {
+	helper := &fakeHelper{execute: func(request HelperRequest) (HelperResult, error) {
+		return HelperResult{RequestID: request.RequestID, Outcome: HelperOutcomeOK,
+			ResultCode: HelperResultFixtureSelected, FixtureFailureCase: request.FixtureFailureCase,
+			FixtureState: TransportAccepted}, nil
+	}}
+	identity := &fakeIdentity{}
+	service := testService(t, helper, identity)
+	binding := service.organisation.(fakeOrganisation).binding
+	profile := service.profiles.(fakeProfile).profile
+	metadata := CredentialMetadata{Fingerprint: sha256.Sum256([]byte("credential")), CanonicalABN: serviceABN,
+		ComponentVersion: profile.ComponentVersion, ExpiresAt: service.now().Add(time.Hour),
+		State: tammyv1.MachineCredentialState_MACHINE_CREDENTIAL_STATE_PRESENT}
+	service.store.(*memoryServiceStore).bindings[organisationStoreKey(binding)] = serviceBinding{
+		metadata: metadata, profile: profile, state: metadata.State,
+	}
+	request := &tammyv1.RunSbrReadinessFixtureRequest{CommandContext: command(PurposeUseMachineCredential), FixtureId: ReadinessFixtureID}
+	if _, err := service.RunSbrReadinessFixture(context.Background(), connect.NewRequest(request)); err != nil {
+		t.Fatal(err)
+	}
+	request.FailureCase = 256
+	if _, err := service.RunSbrReadinessFixture(context.Background(), connect.NewRequest(request)); connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatalf("failure case 256 replay error = %v", err)
+	}
+	if len(helper.requests) != 1 || len(identity.purposes) != 1 || len(service.store.(*memoryServiceStore).fixtures) != 1 {
+		t.Fatalf("failure case 256 collided: helper=%d factors=%d fixtures=%d", len(helper.requests), len(identity.purposes), len(service.store.(*memoryServiceStore).fixtures))
+	}
+}
+
+func TestFixtureReplayOutcomeIsClosedForEveryTransportState(t *testing.T) {
+	for _, test := range []struct {
+		state TransportState
+		want  tammyv1.SbrReadinessFixtureOutcome
+		ok    bool
+	}{
+		{state: TransportPrepared, want: tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_NOT_STARTED, ok: true},
+		{state: TransportDispatching, want: tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_UNKNOWN, ok: true},
+		{state: TransportNotStarted, want: tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_EXACT_REPLAY, ok: true},
+		{state: TransportMaybeSent, want: tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_MAYBE_SENT, ok: true},
+		{state: TransportResponseReceived, want: tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_UNKNOWN, ok: true},
+		{state: TransportAccepted, want: tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_EXACT_REPLAY, ok: true},
+		{state: TransportFailed, want: tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_EXACT_REPLAY, ok: true},
+		{state: TransportUnknown, want: tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_UNKNOWN, ok: true},
+		{state: "CORRUPT", ok: false},
+	} {
+		got, ok := fixtureReplayOutcome(test.state)
+		if ok != test.ok || got != test.want {
+			t.Fatalf("state %q outcome=%v ok=%t, want %v %t", test.state, got, ok, test.want, test.ok)
+		}
+	}
+}
+
 func TestServiceClosesAuthenticatedProfileLeaseOnReadOnlySuccess(t *testing.T) {
 	service := testService(t, &fakeHelper{}, &fakeIdentity{})
 	port := service.profiles.(fakeProfile)

@@ -301,3 +301,17 @@ func TestSBRPortMapsOnlyClosedLauncherMalformedResponseToCore(t *testing.T) {
 		t.Fatalf("malformed mapping error = %v", err)
 	}
 }
+
+func TestSBRPortRejectsUnknownFixtureCaseInsteadOfDefaultingToAccepted(t *testing.T) {
+	launcher := &fakePortLauncher{}
+	port, err := NewSBRPort(launcher, "/Applications/Tammy.app/Contents/Resources/sbr/simulator/sbr-profile-v1.json",
+		func() time.Time { return time.Date(2026, 8, 24, 0, 0, 0, 0, time.UTC) })
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = port.executeStaged(context.Background(), nil, sbr.HelperRequest{Operation: sbr.HelperOperationFixture,
+		RequestID: "018f0000-0000-7000-8000-000000000716", FixtureFailureCase: 256})
+	if err == nil || launcher.request.RequestID != "" {
+		t.Fatalf("unknown fixture case error=%v launcher request=%+v", err, launcher.request)
+	}
+}

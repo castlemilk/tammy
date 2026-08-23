@@ -410,6 +410,60 @@ func TestSQLCoreRestartReturnsUnknownFixtureWithoutRedispatchOrFreshFactorConsum
 	}
 }
 
+func TestSQLCorruptFixtureReplayFailsBeforeFactorAuditOrHelperDispatch(t *testing.T) {
+	ctx := context.Background()
+	repository, database, _ := newRepositoryHarness(t)
+	now := time.Date(2026, 8, 22, 0, 0, 0, 0, time.UTC)
+	key := testBindingKey(0xc1)
+	if err := repository.PutBinding(ctx, Binding{Key: key, ComponentVersion: "simulator-v1", SubjectHash: digest(0xc2),
+		ExpiresAt: testTime, State: BindingActive, Revision: 1, UpdatedAt: testTime}); err != nil {
+		t.Fatal(err)
+	}
+	profile := RuntimeProfile{Environment: tammyv1.SbrEnvironment_SBR_ENVIRONMENT_SIMULATOR,
+		ComponentVersion: "simulator-v1", Conformance: ConformanceSimulator,
+		ProfileFingerprint: digest(0xc3), RegistrationFingerprint: digest(0xc4), ComponentFingerprint: digest(0xc5),
+		AuthenticatedUntil: now.Add(time.Hour)}
+	if err := repository.PutAuthenticatedProfile(ctx, AuthenticatedProfile{Key: key, Environment: EnvironmentSimulator,
+		ProfileFingerprint: profile.ProfileFingerprint, RegistrationFingerprint: profile.RegistrationFingerprint,
+		ComponentFingerprint: profile.ComponentFingerprint, Conformance: ConformanceSimulator}); err != nil {
+		t.Fatal(err)
+	}
+	binding := OrganisationBinding{OrganisationID: testOrganisation, CanonicalABN: testABN, VerificationExpiresAt: now.Add(time.Hour)}
+	commandContext := &tammyv1.CommandContext{IdempotencyKey: "018f0000-0000-7000-8000-000000000c01",
+		Authentication: &tammyv1.AuthenticationContext{ActorUserId: serviceUserID, SessionId: serviceSessionID},
+		FreshFactor:    &tammyv1.FreshFactorContext{AssertionId: servicePendingID, Purpose: PurposeUseMachineCredential, AssertedAt: timestamppb.New(now)}}
+	request := &tammyv1.RunSbrReadinessFixtureRequest{CommandContext: commandContext, FixtureId: ReadinessFixtureID}
+	store := newSQLServiceStore(repository, testWorkspaceID, func() time.Time { return now }, (&integrationIDs{}).New)
+	if _, replay, err := store.PrepareFixture(ctx, binding, key.CredentialFingerprint,
+		"018f0000-0000-7000-8000-000000000c02", serviceUserID, commandContext.IdempotencyKey,
+		fixtureSemanticHash(request, profile, key.CredentialFingerprint)); err != nil || replay {
+		t.Fatalf("seed corrupt replay fixture replay=%t error=%v", replay, err)
+	}
+	tamperSimulatorTransport(t, ctx, database, `UPDATE sbr_simulator_transports_v1 SET state='ACCEPTED',result_hash=x'01' WHERE idempotency_key=?`, commandContext.IdempotencyKey)
+
+	identity := &countingIntegrationIdentity{}
+	helper := &integrationHelper{}
+	audit := &fakeAudit{}
+	service, err := NewService(ServiceConfig{WorkspaceID: testWorkspaceID, Identity: identity,
+		Organisation: fakeOrganisation{binding: binding}, Profiles: fakeProfile{profile: profile}, Helper: helper,
+		Units: sqlUnitOfWork{database: database}, Store: store, Now: func() time.Time { return now }, NewID: (&integrationIDs{}).New,
+		Audit: audit, InstallationKey: bytes.Repeat([]byte{0x4c}, sha256.Size)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.RunSbrReadinessFixture(ctx, connect.NewRequest(request)); connect.CodeOf(err) != connect.CodeInternal {
+		t.Fatalf("corrupt fixture replay error=%v, want internal", err)
+	}
+	if identity.consumptionCount() != 0 || len(audit.records) != 0 {
+		t.Fatalf("corrupt replay effects: factors=%d audit=%+v", identity.consumptionCount(), audit.records)
+	}
+	helper.mu.Lock()
+	defer helper.mu.Unlock()
+	if len(helper.requests) != 0 {
+		t.Fatalf("corrupt replay helper dispatches=%d", len(helper.requests))
+	}
+}
+
 func TestGeneratedConnectProductRPCsSucceedWithAuthenticatedEVTEFakeAndPersistAcrossRestart(t *testing.T) {
 	ctx := context.Background()
 	repository, database, _ := newRepositoryHarness(t)

@@ -1232,6 +1232,82 @@ func TestFixtureTransportPersistsActorAndConditionsDispatchReservation(t *testin
 	}
 }
 
+func TestSimulatorTransportReplayRejectsEveryCorruptRetainedField(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		tamper func(*testing.T, context.Context, *sqlcipher.Database, SimulatorTransport)
+	}{
+		{name: "wrong result hash length", tamper: func(t *testing.T, ctx context.Context, database *sqlcipher.Database, transport SimulatorTransport) {
+			tamperSimulatorTransport(t, ctx, database, `UPDATE sbr_simulator_transports_v1 SET state='ACCEPTED',result_hash=x'01' WHERE operation_id=?`, transport.OperationID)
+		}},
+		{name: "wrong credential fingerprint length", tamper: func(t *testing.T, ctx context.Context, database *sqlcipher.Database, transport SimulatorTransport) {
+			tamperSimulatorTransport(t, ctx, database, `UPDATE sbr_simulator_transports_v1 SET credential_fingerprint=x'01' WHERE operation_id=?`, transport.OperationID)
+		}},
+		{name: "wrong semantic hash length", tamper: func(t *testing.T, ctx context.Context, database *sqlcipher.Database, transport SimulatorTransport) {
+			tamperSimulatorTransport(t, ctx, database, `UPDATE sbr_simulator_transports_v1 SET semantic_hash=x'01' WHERE operation_id=?`, transport.OperationID)
+		}},
+		{name: "unknown state", tamper: func(t *testing.T, ctx context.Context, database *sqlcipher.Database, transport SimulatorTransport) {
+			tamperSimulatorTransport(t, ctx, database, `UPDATE sbr_simulator_transports_v1 SET state='CORRUPT' WHERE operation_id=?`, transport.OperationID)
+		}},
+		{name: "invalid operation ID", tamper: func(t *testing.T, ctx context.Context, database *sqlcipher.Database, transport SimulatorTransport) {
+			tamperSimulatorTransport(t, ctx, database, `UPDATE sbr_simulator_transports_v1 SET operation_id='zzzzzzzz-zzzz-7zzz-8zzz-zzzzzzzzzzzz' WHERE operation_id=?`, transport.OperationID)
+		}},
+		{name: "invalid actor ID", tamper: func(t *testing.T, ctx context.Context, database *sqlcipher.Database, transport SimulatorTransport) {
+			tamperSimulatorTransport(t, ctx, database, `UPDATE sbr_simulator_transports_v1 SET actor_user_id='zzzzzzzz-zzzz-7zzz-8zzz-zzzzzzzzzzzz' WHERE operation_id=?`, transport.OperationID)
+		}},
+		{name: "invalid timestamp", tamper: func(t *testing.T, ctx context.Context, database *sqlcipher.Database, transport SimulatorTransport) {
+			tamperSimulatorTransport(t, ctx, database, `UPDATE sbr_simulator_transports_v1 SET updated_at='2026-99-99T99:99:99.999999999Z' WHERE operation_id=?`, transport.OperationID)
+		}},
+		{name: "reversed timestamps", tamper: func(t *testing.T, ctx context.Context, database *sqlcipher.Database, transport SimulatorTransport) {
+			tamperSimulatorTransport(t, ctx, database, `UPDATE sbr_simulator_transports_v1 SET updated_at='2026-08-22T00:00:00.000000000Z' WHERE operation_id=?`, transport.OperationID)
+		}},
+		{name: "semantic relation mismatch", tamper: func(t *testing.T, ctx context.Context, database *sqlcipher.Database, transport SimulatorTransport) {
+			tamperSimulatorTransport(t, ctx, database, `UPDATE sbr_simulator_transports_v1 SET semantic_hash=? WHERE operation_id=?`, bytes.Repeat([]byte{0xf7}, sha256.Size), transport.OperationID)
+		}},
+		{name: "state result relationship", tamper: func(t *testing.T, ctx context.Context, database *sqlcipher.Database, transport SimulatorTransport) {
+			tamperSimulatorTransport(t, ctx, database, `UPDATE sbr_simulator_transports_v1 SET result_hash=? WHERE operation_id=?`, bytes.Repeat([]byte{0xf8}, sha256.Size), transport.OperationID)
+		}},
+		{name: "idempotency operation relation", tamper: func(t *testing.T, ctx context.Context, database *sqlcipher.Database, transport SimulatorTransport) {
+			tamperSimulatorTransport(t, ctx, database, `UPDATE sbr_idempotency_v1 SET original_operation_id='018f0000-0000-7000-8000-000000000fff' WHERE idempotency_key=?`, transport.IdempotencyKey)
+		}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := context.Background()
+			repository, database, _ := newRepositoryHarness(t)
+			key := testBindingKey(0xf1)
+			putTestBinding(t, repository, key)
+			transport := SimulatorTransport{OperationID: "018f0000-0000-7000-8000-000000000f11", ActorUserID: serviceUserID,
+				Key: key, IdempotencyKey: "018f0000-0000-7000-8000-000000000f12", SemanticHash: digest(0xf2),
+				State: TransportPrepared, CreatedAt: testTime, UpdatedAt: testTime}
+			if _, replay, err := repository.PrepareSimulatorTransport(ctx, transport); err != nil || replay {
+				t.Fatalf("seed transport replay=%t error=%v", replay, err)
+			}
+			test.tamper(t, ctx, database, transport)
+			if _, _, err := repository.PrepareSimulatorTransport(ctx, transport); !errors.Is(err, ErrRepository) {
+				t.Fatalf("corrupt replay error=%v, want ErrRepository", err)
+			}
+		})
+	}
+}
+
+func tamperSimulatorTransport(t *testing.T, ctx context.Context, database *sqlcipher.Database, query string, args ...any) {
+	t.Helper()
+	for _, trigger := range []string{"sbr_transport_v1_transition", "sbr_idempotency_v1_result_once"} {
+		if _, err := database.ExecContext(ctx, `DROP TRIGGER `+trigger); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := database.ExecContext(ctx, `PRAGMA ignore_check_constraints = ON`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := database.ExecContext(ctx, `PRAGMA foreign_keys = OFF`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := database.ExecContext(ctx, query, args...); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestFinishFixtureWithAuditAtomicallyPersistsTerminalResultAndAudit(t *testing.T) {
 	ctx := context.Background()
 	repository, database, _ := newRepositoryHarness(t)

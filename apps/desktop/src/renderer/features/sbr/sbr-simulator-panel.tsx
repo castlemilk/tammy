@@ -75,6 +75,7 @@ type Operation = {
   readonly command: CommandContext;
   readonly failureCase: SbrReadinessFixtureFailure;
 };
+type DispatchMode = "conflict" | "initial" | "replay";
 
 function caseForName(name: DiagnosticName): (typeof diagnosticCases)[number] {
   return diagnosticCases.find((entry) => entry.name === name) ?? diagnosticCases[0];
@@ -120,6 +121,47 @@ function resultNameForOutcome(outcome: SbrReadinessFixtureOutcome): ResultName |
     default:
       return undefined;
   }
+}
+
+function expectedTerminalOutcome(
+  failureCase: SbrReadinessFixtureFailure,
+): SbrReadinessFixtureOutcome | undefined {
+  switch (failureCase) {
+    case SbrReadinessFixtureFailure.NOT_STARTED:
+      return SbrReadinessFixtureOutcome.NOT_STARTED;
+    case SbrReadinessFixtureFailure.MAYBE_SENT:
+      return SbrReadinessFixtureOutcome.MAYBE_SENT;
+    case SbrReadinessFixtureFailure.MALFORMED_RESPONSE:
+      return SbrReadinessFixtureOutcome.MALFORMED_RESPONSE;
+    case SbrReadinessFixtureFailure.HELPER_DEATH:
+      return SbrReadinessFixtureOutcome.HELPER_DEATH;
+    case SbrReadinessFixtureFailure.TIMEOUT:
+      return SbrReadinessFixtureOutcome.TIMEOUT;
+    default:
+      return undefined;
+  }
+}
+
+function validResultSemantics(
+  failureCase: SbrReadinessFixtureFailure,
+  outcome: SbrReadinessFixtureOutcome,
+  succeeded: boolean,
+  mode: DispatchMode,
+): boolean {
+  if (outcome === SbrReadinessFixtureOutcome.UNKNOWN) return !succeeded;
+  if (mode === "replay") {
+    return (
+      outcome === SbrReadinessFixtureOutcome.EXACT_REPLAY &&
+      succeeded === (failureCase === SbrReadinessFixtureFailure.UNSPECIFIED)
+    );
+  }
+  if (mode === "conflict") {
+    return outcome === SbrReadinessFixtureOutcome.IDEMPOTENCY_CONFLICT && !succeeded;
+  }
+  if (failureCase === SbrReadinessFixtureFailure.UNSPECIFIED) {
+    return outcome === SbrReadinessFixtureOutcome.ACCEPTED && succeeded;
+  }
+  return outcome === expectedTerminalOutcome(failureCase) && !succeeded;
 }
 
 function resultDetail(result: ResultName | undefined, authoritativeUnknown = false): string {
@@ -176,13 +218,23 @@ export function SbrSimulatorPanel({
   const operationOwner = useRef<symbol | undefined>(undefined);
   const mounted = useRef(true);
   const generation = useRef(0);
-  const simulatorReady =
-    readiness.environment === SbrEnvironment.SIMULATOR &&
-    readiness.state === SbrReadinessState.READY_FOR_SIMULATOR &&
-    readiness.machineCredentialState === MachineCredentialState.PRESENT;
+  const simulatorReady = validSimulatorReadiness(readiness);
   const authorised = workspace.roles.includes(Role.BUSINESS_LODGER);
   const actionable = simulatorReady && authorised && factorEnabled;
-  const actionKey = `${workspace.workspaceId}:${workspace.organisationId}:${workspace.sessionId}:${workspace.userId}:${readiness.environment}:${readiness.state}:${readiness.machineCredentialState}:${authorised ? "lodger" : "no-lodger"}:${factorEnabled ? "factor" : "no-factor"}`;
+  const readinessKey = JSON.stringify([
+    readiness.environment,
+    readiness.state,
+    readiness.machineCredentialState,
+    readiness.productIdState,
+    readiness.readinessCodes,
+    readiness.credentialFingerprint,
+    readiness.profileFingerprint,
+    readiness.componentFingerprint,
+    readiness.evteProductIdentifier,
+    readiness.evteServiceIdentifier,
+    simulatorReady,
+  ]);
+  const actionKey = `${workspace.workspaceId}:${workspace.organisationId}:${workspace.sessionId}:${workspace.userId}:${readinessKey}:${authorised ? "lodger" : "no-lodger"}:${factorEnabled ? "factor" : "no-factor"}`;
   const currentAction = useRef(actionKey);
   const previousAction = useRef(actionKey);
   currentAction.current = actionKey;
@@ -215,7 +267,7 @@ export function SbrSimulatorPanel({
 
   const dispatch = async (
     pendingOperation: Operation,
-    mode: "conflict" | "initial" | "replay",
+    mode: DispatchMode,
     capturedGeneration: number,
     capturedAction: string,
   ) => {
@@ -232,34 +284,22 @@ export function SbrSimulatorPanel({
       const response = runCodec.decodeResponse(responseFrame);
       const returned = response.result;
       const resultName = returned ? resultNameForOutcome(returned.outcome) : undefined;
-      const expectedSucceeded =
-        returned?.outcome === SbrReadinessFixtureOutcome.ACCEPTED ||
-        (returned?.outcome === SbrReadinessFixtureOutcome.EXACT_REPLAY &&
-          pendingOperation.failureCase === SbrReadinessFixtureFailure.UNSPECIFIED);
       if (
         !returned ||
         !resultName ||
         returned.fixtureId !== SBR_SIMULATOR_FIXTURE_ID ||
         returned.failureCase !== pendingOperation.failureCase ||
-        returned.succeeded !== expectedSucceeded ||
+        !validResultSemantics(
+          pendingOperation.failureCase,
+          returned.outcome,
+          returned.succeeded,
+          mode,
+        ) ||
         !returned.readiness ||
         !validSimulatorReadiness(returned.readiness)
       ) {
         throw new Error("invalid simulator response");
       }
-      if (
-        mode === "conflict" &&
-        returned.outcome !== SbrReadinessFixtureOutcome.IDEMPOTENCY_CONFLICT
-      )
-        throw new Error("invalid conflict outcome");
-      if (mode === "replay" && returned.outcome !== SbrReadinessFixtureOutcome.EXACT_REPLAY)
-        throw new Error("invalid replay outcome");
-      if (
-        mode === "initial" &&
-        (returned.outcome === SbrReadinessFixtureOutcome.EXACT_REPLAY ||
-          returned.outcome === SbrReadinessFixtureOutcome.IDEMPOTENCY_CONFLICT)
-      )
-        throw new Error("invalid initial outcome");
       if (!isCurrent(capturedGeneration, capturedAction)) return;
       setAuthoritativeUnknown(returned.outcome === SbrReadinessFixtureOutcome.UNKNOWN);
       setResult(resultName);

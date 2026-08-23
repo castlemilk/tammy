@@ -159,6 +159,10 @@ func (port *SBRPort) executeStaged(ctx context.Context, staged *sbrprofile.Stage
 	if port == nil || port.launcher == nil || ctx == nil {
 		return sbr.HelperResult{}, errors.New("sbr helper unavailable")
 	}
+	simulatorCase, validSimulatorCase := simulatorProtocolCase(source.FixtureFailureCase)
+	if !validSimulatorCase {
+		return sbr.HelperResult{}, errors.New("sbr helper fixture case invalid")
+	}
 	request := Request{ProtocolVersion: ProtocolVersion, RequestID: source.RequestID,
 		Operation: Operation(source.Operation), DeadlineMillis: port.now().Add(30 * time.Second).UnixMilli(),
 		Environment: Environment(source.Environment), WorkspaceID: source.WorkspaceID,
@@ -168,7 +172,7 @@ func (port *SBRPort) executeStaged(ctx context.Context, staged *sbrprofile.Stage
 		Bookmark: append([]byte(nil), source.Bookmark...), TransientPassword: append([]byte(nil), source.Password...),
 		TransientProductID: append([]byte(nil), source.ProductID...), ProductScope: source.ProductIdentifier,
 		ServiceID: source.ServiceIdentifier, EndpointProfile: append([]byte(nil), source.EndpointProfile...),
-		SimulatorCase: simulatorProtocolCase(source.FixtureFailureCase), ProfileFingerprint: bytes.Clone(source.ProfileFingerprint[:]),
+		SimulatorCase: simulatorCase, ProfileFingerprint: bytes.Clone(source.ProfileFingerprint[:]),
 		RegistrationFingerprint: bytes.Clone(source.RegistrationFingerprint[:]), ComponentFingerprint: bytes.Clone(source.ComponentFingerprint[:]),
 		ComponentVersion: source.ComponentVersion}
 	defer request.ClearSecrets()
@@ -260,19 +264,21 @@ func protocolMutationKind(kind sbr.MutationKind) MutationKind {
 	}
 }
 
-func simulatorProtocolCase(value tammyv1.SbrReadinessFixtureFailure) SimulatorCase {
+func simulatorProtocolCase(value tammyv1.SbrReadinessFixtureFailure) (SimulatorCase, bool) {
 	switch value {
+	case tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_UNSPECIFIED:
+		return SimulatorAccepted, true
 	case tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_NOT_STARTED:
-		return SimulatorNotStarted
+		return SimulatorNotStarted, true
 	case tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_MAYBE_SENT:
-		return SimulatorMaybeSent
+		return SimulatorMaybeSent, true
 	case tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_MALFORMED_RESPONSE:
-		return SimulatorMalformedResponse
+		return SimulatorMalformedResponse, true
 	case tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_HELPER_DEATH:
-		return SimulatorHelperDeath
+		return SimulatorHelperDeath, true
 	case tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_TIMEOUT:
-		return SimulatorTimeout
+		return SimulatorTimeout, true
 	default:
-		return SimulatorAccepted
+		return 0, false
 	}
 }

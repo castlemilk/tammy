@@ -1375,6 +1375,9 @@ AND credential_fingerprint=? AND semantic_hash=? AND state IN ('DISPATCHING','MA
 			return SimulatorTransport{}, false, ErrRepository
 		}
 		copy(uncertain.SemanticHash[:], uncertainSemantic)
+		if !validTransport(uncertain) {
+			return SimulatorTransport{}, false, ErrRepository
+		}
 		return uncertain, false, ErrUncertainTransport
 	} else if !errors.Is(err, sql.ErrNoRows) {
 		return SimulatorTransport{}, false, ErrRepository
@@ -2047,7 +2050,7 @@ AND canonical_abn=? AND schema_version=? AND credential_fingerprint=?`, operatio
 	if errors.Is(err, sql.ErrNoRows) {
 		return SimulatorTransport{}, ErrNotFound
 	}
-	if err != nil || len(fingerprint) != sha256.Size || len(semantic) != sha256.Size {
+	if err != nil || len(fingerprint) != sha256.Size || !bytes.Equal(fingerprint, key.CredentialFingerprint[:]) || len(semantic) != sha256.Size {
 		return SimulatorTransport{}, ErrRepository
 	}
 	copy(transport.SemanticHash[:], semantic)
@@ -2070,31 +2073,76 @@ AND canonical_abn=? AND schema_version=? AND credential_fingerprint=?`, operatio
 	} else if len(pendingResult) != 0 {
 		return SimulatorTransport{}, ErrRepository
 	}
+	if !validTransport(transport) {
+		return SimulatorTransport{}, ErrRepository
+	}
 	return transport, nil
 }
 
 type rowScanner interface{ Scan(...any) error }
 type queryRowFunc func(context.Context, string, ...any) rowScanner
 
+func (repository *SQLCipherRepository) GetSimulatorTransportByIdempotency(ctx context.Context, key BindingKey,
+	idempotencyKey string,
+) (SimulatorTransport, error) {
+	if !repository.valid(ctx) || !validBindingKey(key) || len(idempotencyKey) < 1 || len(idempotencyKey) > 128 ||
+		strings.IndexByte(idempotencyKey, 0) >= 0 {
+		return SimulatorTransport{}, ErrInvalid
+	}
+	return loadTransportByIdempotency(ctx, func(ctx context.Context, query string, arguments ...any) rowScanner {
+		return repository.database.QueryRowContext(ctx, query, arguments...)
+	}, key, idempotencyKey)
+}
+
 func loadTransportByIdempotency(ctx context.Context, queryRow queryRowFunc, key BindingKey, idempotencyKey string) (SimulatorTransport, error) {
 	transport := SimulatorTransport{Key: key, IdempotencyKey: idempotencyKey}
-	var fingerprint, semantic, result []byte
-	err := queryRow(ctx, `SELECT operation_id,actor_user_id,credential_fingerprint,semantic_hash,result_hash,state,created_at,updated_at
-FROM sbr_simulator_transports_v1 WHERE workspace_id=? AND organisation_id=? AND canonical_abn=? AND schema_version=?
-AND credential_fingerprint=? AND idempotency_key=?`, key.WorkspaceID, key.OrganisationID, key.CanonicalABN,
+	var fingerprint, semantic, result, pendingResult, idempotencySemantic, idempotencyResult []byte
+	var pendingTerminal sql.NullString
+	var originalOperationID, idempotencyCreatedAt string
+	err := queryRow(ctx, `SELECT transport.operation_id,transport.actor_user_id,transport.credential_fingerprint,
+transport.semantic_hash,transport.result_hash,transport.state,transport.created_at,transport.updated_at,
+transport.pending_terminal_state,transport.pending_result_hash,idempotency.semantic_hash,idempotency.result_hash,
+idempotency.original_operation_id,idempotency.created_at
+FROM sbr_idempotency_v1 AS idempotency
+LEFT JOIN sbr_simulator_transports_v1 AS transport ON idempotency.workspace_id=transport.workspace_id
+AND idempotency.organisation_id=transport.organisation_id AND idempotency.canonical_abn=transport.canonical_abn
+AND idempotency.schema_version=transport.schema_version AND idempotency.credential_fingerprint=transport.credential_fingerprint
+AND idempotency.idempotency_key=transport.idempotency_key
+WHERE idempotency.workspace_id=? AND idempotency.organisation_id=? AND idempotency.canonical_abn=? AND idempotency.schema_version=?
+AND idempotency.credential_fingerprint=? AND idempotency.idempotency_key=?`, key.WorkspaceID, key.OrganisationID, key.CanonicalABN,
 		key.SchemaVersion, key.CredentialFingerprint[:], idempotencyKey).Scan(&transport.OperationID, &transport.ActorUserID, &fingerprint,
-		&semantic, &result, &transport.State, &transport.CreatedAt, &transport.UpdatedAt)
+		&semantic, &result, &transport.State, &transport.CreatedAt, &transport.UpdatedAt, &pendingTerminal, &pendingResult,
+		&idempotencySemantic, &idempotencyResult, &originalOperationID, &idempotencyCreatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return SimulatorTransport{}, ErrNotFound
 	}
-	if err != nil || len(fingerprint) != sha256.Size || len(semantic) != sha256.Size {
+	if err != nil || len(fingerprint) != sha256.Size || !bytes.Equal(fingerprint, key.CredentialFingerprint[:]) ||
+		len(semantic) != sha256.Size || len(idempotencySemantic) != sha256.Size || !bytes.Equal(semantic, idempotencySemantic) ||
+		transport.OperationID != originalOperationID || transport.CreatedAt != idempotencyCreatedAt || !bytes.Equal(result, idempotencyResult) {
 		return SimulatorTransport{}, ErrRepository
 	}
 	copy(transport.SemanticHash[:], semantic)
-	if len(result) == sha256.Size {
+	if len(result) != 0 {
+		if len(result) != sha256.Size {
+			return SimulatorTransport{}, ErrRepository
+		}
 		value := [sha256.Size]byte{}
 		copy(value[:], result)
 		transport.ResultHash = &value
+	}
+	if pendingTerminal.Valid {
+		if len(pendingResult) != sha256.Size {
+			return SimulatorTransport{}, ErrRepository
+		}
+		transport.pendingTerminal = TransportState(pendingTerminal.String)
+		value := [sha256.Size]byte{}
+		copy(value[:], pendingResult)
+		transport.pendingResultHash = &value
+	} else if len(pendingResult) != 0 {
+		return SimulatorTransport{}, ErrRepository
+	}
+	if !validTransport(transport) {
+		return SimulatorTransport{}, ErrRepository
 	}
 	return transport, nil
 }
@@ -2197,7 +2245,38 @@ func validTransport(transport SimulatorTransport) bool {
 	return ids.IsCanonicalV7(transport.OperationID) && ids.IsCanonicalV7(transport.ActorUserID) && validBindingKey(transport.Key) && len(transport.IdempotencyKey) >= 1 &&
 		len(transport.IdempotencyKey) <= 128 && strings.IndexByte(transport.IdempotencyKey, 0) < 0 &&
 		!zeroHash(transport.SemanticHash) && (transport.ResultHash == nil || !zeroHash(*transport.ResultHash)) &&
-		validTimestamp(transport.CreatedAt) && validTimestamp(transport.UpdatedAt)
+		validTimestamp(transport.CreatedAt) && validTimestamp(transport.UpdatedAt) && validTransportTimestampOrder(transport) &&
+		validTransportStateAndResults(transport)
+}
+
+func validTransportTimestampOrder(transport SimulatorTransport) bool {
+	created, createdErr := time.Parse(time.RFC3339Nano, transport.CreatedAt)
+	updated, updatedErr := time.Parse(time.RFC3339Nano, transport.UpdatedAt)
+	return createdErr == nil && updatedErr == nil && !updated.Before(created)
+}
+
+func validTransportStateAndResults(transport SimulatorTransport) bool {
+	terminalResult := transport.State == TransportAccepted || transport.State == TransportFailed
+	if terminalResult != (transport.ResultHash != nil) {
+		return false
+	}
+	if transport.State == TransportResponseReceived {
+		if transport.pendingTerminal == "" && transport.pendingResultHash == nil {
+			return true
+		}
+		return (transport.pendingTerminal == TransportAccepted || transport.pendingTerminal == TransportFailed) &&
+			transport.pendingResultHash != nil && !zeroHash(*transport.pendingResultHash)
+	}
+	if transport.pendingTerminal != "" || transport.pendingResultHash != nil {
+		return false
+	}
+	switch transport.State {
+	case TransportPrepared, TransportDispatching, TransportNotStarted, TransportMaybeSent,
+		TransportAccepted, TransportFailed, TransportUnknown:
+		return true
+	default:
+		return false
+	}
 }
 func validHelperDispatch(record HelperDispatchRecord) bool {
 	return ids.IsCanonicalV7(record.OperationID) && ids.IsCanonicalV7(record.ActorUserID) && validBindingKey(record.Key) &&

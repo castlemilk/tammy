@@ -211,7 +211,7 @@ describe("SbrReadinessScreen", () => {
     expect(document.body.textContent).not.toContain("SECRET_VALUE_FROM_SERVER");
   });
 
-  it("drops an unknown readiness code without rejecting an otherwise valid response", async () => {
+  it("fails closed for an unknown readiness code on a simulator-ready projection", async () => {
     render(
       <SbrReadinessScreen
         api={apiFor({
@@ -225,7 +225,9 @@ describe("SbrReadinessScreen", () => {
       />,
     );
 
-    expect(await screen.findByText("Ready for simulator")).toBeTruthy();
+    expect(
+      await screen.findByText(/could not inspect the authenticated local SBR state/i),
+    ).toBeTruthy();
     expect(document.body.textContent).not.toContain("unknown private diagnostic");
   });
 
@@ -246,9 +248,13 @@ describe("SbrReadinessScreen", () => {
     expect(screen.queryByRole("button", { name: /doctor/i })).toBeNull();
   });
 
-  it.each([ProductIdState.MISSING, ProductIdState.PRESENT, ProductIdState.INACCESSIBLE])(
-    "accepts simulator readiness with core Product ID projection %s",
-    async (productIdState) => {
+  it.each([
+    [ProductIdState.MISSING, "Ready for simulator"],
+    [ProductIdState.PRESENT, "Readiness unavailable"],
+    [ProductIdState.INACCESSIBLE, "Readiness unavailable"],
+  ])(
+    "validates simulator readiness with core Product ID projection %s",
+    async (productIdState, expected) => {
       render(
         <SbrReadinessScreen
           api={apiFor({
@@ -261,7 +267,7 @@ describe("SbrReadinessScreen", () => {
         />,
       );
 
-      expect(await screen.findByText("Ready for simulator")).toBeTruthy();
+      expect(await screen.findByText(expected)).toBeTruthy();
     },
   );
 
@@ -486,6 +492,30 @@ describe("SbrReadinessScreen", () => {
       state: SbrReadinessState.READY_FOR_EVTE_PRE_CONFORMANCE,
       machineCredentialState: MachineCredentialState.PRESENT,
       productIdState: ProductIdState.PRESENT,
+    },
+    {
+      name: "simulator ready with Product ID",
+      environment: SbrEnvironment.SIMULATOR,
+      state: SbrReadinessState.READY_FOR_SIMULATOR,
+      machineCredentialState: MachineCredentialState.PRESENT,
+      productIdState: ProductIdState.PRESENT,
+    },
+    {
+      name: "simulator ready with readiness code",
+      environment: SbrEnvironment.SIMULATOR,
+      state: SbrReadinessState.READY_FOR_SIMULATOR,
+      machineCredentialState: MachineCredentialState.PRESENT,
+      productIdState: ProductIdState.MISSING,
+      readinessCodes: ["SBR_PRIVATE_INCONSISTENCY"],
+    },
+    {
+      name: "simulator ready with EVTE scope",
+      environment: SbrEnvironment.SIMULATOR,
+      state: SbrReadinessState.READY_FOR_SIMULATOR,
+      machineCredentialState: MachineCredentialState.PRESENT,
+      productIdState: ProductIdState.MISSING,
+      evteProductIdentifier: "TAMMY.EVTE",
+      evteServiceIdentifier: "BAS.LODGE",
     },
     {
       name: "simulator stage under EVTE",

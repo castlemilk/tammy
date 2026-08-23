@@ -395,6 +395,7 @@ type ServiceStore interface {
 	FinishAbort(context.Context, string) error
 	ProductState(context.Context, OrganisationBinding, RuntimeProfile) ProductState
 	SetProductState(context.Context, OrganisationBinding, RuntimeProfile, ProductState, [sha256.Size]byte, [sha256.Size]byte)
+	LookupFixture(context.Context, OrganisationBinding, [sha256.Size]byte, string) (FixtureRecord, bool, error)
 	PrepareFixture(context.Context, OrganisationBinding, [sha256.Size]byte, string, string, string, [sha256.Size]byte) (FixtureRecord, bool, error)
 	ReserveFixtureDispatch(context.Context, FixtureRecord, string, func(context.Context, MutationExecutor) error) error
 	ApplyFixture(context.Context, FixtureRecord, SimulatorCase, *[sha256.Size]byte) error
@@ -586,6 +587,12 @@ func (store *memoryServiceStore) SetProductState(_ context.Context, binding Orga
 	store.mu.Lock()
 	defer store.mu.Unlock()
 	store.products[productStoreKey(binding, profile)] = state
+}
+func (store *memoryServiceStore) LookupFixture(_ context.Context, binding OrganisationBinding, _ [sha256.Size]byte, idempotency string) (FixtureRecord, bool, error) {
+	store.mu.Lock()
+	defer store.mu.Unlock()
+	record, ok := store.fixtures[organisationStoreKey(binding)+"\x00"+idempotency]
+	return record, ok, nil
 }
 func (store *memoryServiceStore) PrepareFixture(_ context.Context, binding OrganisationBinding, credential [sha256.Size]byte, operation, actorUserID, idempotency string, semantic [sha256.Size]byte) (FixtureRecord, bool, error) {
 	store.mu.Lock()
@@ -1626,7 +1633,11 @@ func validCommittedProductResponse(request HelperRequest, result, prepared Helpe
 }
 
 func (service *Service) RunSbrReadinessFixture(ctx context.Context, request *connect.Request[tammyv1.RunSbrReadinessFixtureRequest]) (*connect.Response[tammyv1.RunSbrReadinessFixtureResponse], error) {
-	if request == nil || request.Msg == nil || request.Msg.CommandContext == nil || request.Msg.FixtureId != ReadinessFixtureID || request.Msg.FailureCase == tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_UNKNOWN {
+	if request == nil || request.Msg == nil || request.Msg.CommandContext == nil || request.Msg.FixtureId != ReadinessFixtureID {
+		return nil, invalid()
+	}
+	caseValue, validCase := simulatorCase(request.Msg.FailureCase)
+	if !validCase {
 		return nil, invalid()
 	}
 	binding, profile, err := service.current(ctx)
@@ -1646,6 +1657,31 @@ func (service *Service) RunSbrReadinessFixture(ctx context.Context, request *con
 		authorisation.ActionUseSBRMachineCredential, ""); err != nil {
 		return nil, err
 	}
+	semantic := fixtureSemanticHash(request.Msg, profile, stored.metadata.Fingerprint)
+	actorUserID := request.Msg.CommandContext.Authentication.GetActorUserId()
+	if existing, found, lookupErr := service.store.LookupFixture(ctx, binding, stored.metadata.Fingerprint,
+		request.Msg.CommandContext.IdempotencyKey); lookupErr != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrService)
+	} else if found {
+		if existing.ActorUserID != actorUserID {
+			return nil, connect.NewError(connect.CodePermissionDenied, ErrService)
+		}
+		if existing.semantic != semantic {
+			if err := service.auditProfile(ctx, profile, true); err != nil {
+				return nil, err
+			}
+			return service.fixtureResponse(ctx, request.Msg, binding, profile, stored, TransportNotStarted,
+				tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_IDEMPOTENCY_CONFLICT), nil
+		}
+		replayOutcome, validReplay := fixtureReplayOutcome(existing.State)
+		if !validReplay {
+			return nil, connect.NewError(connect.CodeInternal, ErrService)
+		}
+		if err := service.auditProfile(ctx, profile, true); err != nil {
+			return nil, err
+		}
+		return service.fixtureResponse(ctx, request.Msg, binding, profile, stored, existing.State, replayOutcome), nil
+	}
 	if err := service.auditProfile(ctx, profile, true); err != nil {
 		return nil, err
 	}
@@ -1653,19 +1689,18 @@ func (service *Service) RunSbrReadinessFixture(ctx context.Context, request *con
 	if idErr != nil || !ids.IsCanonicalV7(operationID) {
 		return nil, connect.NewError(connect.CodeInternal, ErrService)
 	}
-	semantic := fixtureSemanticHash(request.Msg, profile, stored.metadata.Fingerprint)
 	fixture, replay, prepareErr := service.store.PrepareFixture(ctx, binding, stored.metadata.Fingerprint, operationID,
-		request.Msg.CommandContext.Authentication.GetActorUserId(),
+		actorUserID,
 		request.Msg.CommandContext.IdempotencyKey, semantic)
 	if errors.Is(prepareErr, ErrIdempotencyConflict) {
-		if fixture.ActorUserID != request.Msg.CommandContext.Authentication.GetActorUserId() {
+		if fixture.ActorUserID != actorUserID {
 			return nil, connect.NewError(connect.CodePermissionDenied, ErrService)
 		}
 		return service.fixtureResponse(ctx, request.Msg, binding, profile, stored, TransportNotStarted,
 			tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_IDEMPOTENCY_CONFLICT), nil
 	}
 	if errors.Is(prepareErr, ErrUncertainTransport) {
-		if fixture.ActorUserID == request.Msg.CommandContext.Authentication.GetActorUserId() {
+		if fixture.ActorUserID == actorUserID {
 			return service.fixtureResponse(ctx, request.Msg, binding, profile, stored, TransportUnknown,
 				tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_UNKNOWN), nil
 		}
@@ -1675,11 +1710,15 @@ func (service *Service) RunSbrReadinessFixture(ctx context.Context, request *con
 		return nil, connect.NewError(connect.CodeInternal, ErrService)
 	}
 	if replay {
-		if fixture.ActorUserID != request.Msg.CommandContext.Authentication.GetActorUserId() {
+		if fixture.ActorUserID != actorUserID {
 			return nil, connect.NewError(connect.CodePermissionDenied, ErrService)
 		}
+		replayOutcome, validReplay := fixtureReplayOutcome(fixture.State)
+		if !validReplay {
+			return nil, connect.NewError(connect.CodeInternal, ErrService)
+		}
 		return service.fixtureResponse(ctx, request.Msg, binding, profile, stored, fixture.State,
-			fixtureReplayOutcome(fixture.State)), nil
+			replayOutcome), nil
 	}
 	if err := service.validateFreshFactor(ctx, request.Msg.CommandContext.Authentication,
 		request.Msg.CommandContext.FreshFactor, PurposeUseMachineCredential); err != nil {
@@ -1688,7 +1727,6 @@ func (service *Service) RunSbrReadinessFixture(ctx context.Context, request *con
 	if err := service.recordAudit(ctx, AuditRecord{Action: AuditFixturePrepared, CredentialFingerprint: stored.metadata.Fingerprint, StatusCode: "SBR_HELPER_FIXTURE_PREPARED"}); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, ErrService)
 	}
-	caseValue := simulatorCase(request.Msg.FailureCase)
 	if caseValue == SimulatorCasePreDispatchFailure {
 		audit := AuditRecord{Action: AuditFixtureCompleted, CredentialFingerprint: stored.metadata.Fingerprint,
 			StatusCode: "SBR_HELPER_FIXTURE_NOT_STARTED"}
@@ -1856,16 +1894,18 @@ func malformedFixtureResultHash(operationID string) [sha256.Size]byte {
 	return value
 }
 
-func fixtureReplayOutcome(state TransportState) tammyv1.SbrReadinessFixtureOutcome {
+func fixtureReplayOutcome(state TransportState) (tammyv1.SbrReadinessFixtureOutcome, bool) {
 	switch state {
-	case TransportUnknown, TransportDispatching:
-		return tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_UNKNOWN
+	case TransportUnknown, TransportDispatching, TransportResponseReceived:
+		return tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_UNKNOWN, true
 	case TransportMaybeSent:
-		return tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_MAYBE_SENT
+		return tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_MAYBE_SENT, true
 	case TransportPrepared:
-		return tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_NOT_STARTED
+		return tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_NOT_STARTED, true
+	case TransportNotStarted, TransportAccepted, TransportFailed:
+		return tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_EXACT_REPLAY, true
 	default:
-		return tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_EXACT_REPLAY
+		return tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_UNSPECIFIED, false
 	}
 }
 
@@ -1882,7 +1922,9 @@ func fixtureSemanticHash(request *tammyv1.RunSbrReadinessFixtureRequest, profile
 	digest := sha256.New()
 	_, _ = digest.Write([]byte("tammy.sbr.fixture.v1\x00"))
 	_, _ = digest.Write([]byte(request.FixtureId))
-	_, _ = digest.Write([]byte{byte(request.FailureCase)})
+	var failureCase [4]byte
+	binary.BigEndian.PutUint32(failureCase[:], uint32(request.FailureCase))
+	_, _ = digest.Write(failureCase[:])
 	_, _ = digest.Write(credential[:])
 	_, _ = digest.Write(profile.ProfileFingerprint[:])
 	_, _ = digest.Write(profile.ComponentFingerprint[:])
@@ -1904,20 +1946,22 @@ func unlockSemanticHash(binding OrganisationBinding, profile RuntimeProfile, cre
 	return result
 }
 
-func simulatorCase(value tammyv1.SbrReadinessFixtureFailure) SimulatorCase {
+func simulatorCase(value tammyv1.SbrReadinessFixtureFailure) (SimulatorCase, bool) {
 	switch value {
+	case tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_UNSPECIFIED:
+		return SimulatorCaseAccepted, true
 	case tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_NOT_STARTED:
-		return SimulatorCasePreDispatchFailure
+		return SimulatorCasePreDispatchFailure, true
 	case tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_MAYBE_SENT:
-		return SimulatorCaseUncertainWrite
+		return SimulatorCaseUncertainWrite, true
 	case tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_MALFORMED_RESPONSE:
-		return SimulatorCaseMalformedResponse
+		return SimulatorCaseMalformedResponse, true
 	case tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_HELPER_DEATH:
-		return SimulatorCaseHelperDeath
+		return SimulatorCaseHelperDeath, true
 	case tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_TIMEOUT:
-		return SimulatorCaseTimeout
+		return SimulatorCaseTimeout, true
 	default:
-		return SimulatorCaseAccepted
+		return "", false
 	}
 }
 

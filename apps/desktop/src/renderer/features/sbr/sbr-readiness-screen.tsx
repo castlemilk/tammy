@@ -213,6 +213,12 @@ function validReadiness(readiness: SbrReadiness): boolean {
     ) {
       return false;
     }
+    if (
+      readiness.state === SbrReadinessState.READY_FOR_SIMULATOR &&
+      (readiness.productIdState !== ProductIdState.MISSING || readiness.readinessCodes.length !== 0)
+    ) {
+      return false;
+    }
   } else if (readiness.state === SbrReadinessState.READY_FOR_SIMULATOR) {
     return false;
   }
