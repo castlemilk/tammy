@@ -59,6 +59,30 @@ describe("guarded walkthrough routes", () => {
     }
   });
 
+  it("accepts only the exact SBR doctor query", () => {
+    expect(resolveAppLocation("/settings/sbr", "authenticated")).toEqual({
+      path: "/settings/sbr",
+    });
+    expect(resolveAppLocation("/settings/sbr?doctor=1", "authenticated")).toEqual({
+      path: "/settings/sbr?doctor=1",
+    });
+
+    for (const location of [
+      "/settings/sbr?doctor=0",
+      "/settings/sbr?doctor=1&doctor=1",
+      "/settings/sbr?doctor=1&extra=true",
+      "/settings/organisation?doctor=1",
+      "/settings/sbr?doctor=1#again",
+      "/settings/sbr?doctor=1#",
+      "https://example.invalid/settings/sbr?doctor=1",
+    ]) {
+      expect(resolveAppLocation(location, "authenticated")).toEqual({
+        notice: "That page is not available.",
+        path: "/overview",
+      });
+    }
+  });
+
   it("preserves all complete nested routes without adding them to primary navigation", () => {
     for (const path of [
       "/workspace-trust",
@@ -68,6 +92,7 @@ describe("guarded walkthrough routes", () => {
       "/settings/backup",
       "/settings/users",
       "/settings/organisation",
+      "/settings/sbr",
       "/settings/ownership",
       "/accounting/opening-balances",
       "/accounting/periods",

@@ -1,3 +1,4 @@
+import { Role } from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import { AlertTriangle, LoaderCircle, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -15,33 +16,54 @@ import { DocumentsScreen } from "./features/documents/documents-screen";
 import { EmptyLedgerScreen } from "./features/ledger/empty-ledger-screen";
 import { OverviewScreen } from "./features/overview/overview-screen";
 import { PrivacyScreen, PrivacyStatement } from "./features/privacy/privacy-statement";
+import { SbrReadinessScreen } from "./features/sbr/sbr-readiness-screen";
 import { type AuthenticatedWorkspace, SetupScreen } from "./features/setup/setup-screen";
 import { UnlockScreen } from "./features/workspace/unlock-screen";
 
 const WORKSPACE_ID_STORAGE = "tammy.workspace.id";
 const ORGANISATION_ID_STORAGE = "tammy.organisation.id";
 const SESSION_STORAGE = "tammy.session.active";
+const UUID_V7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 function storedAuthenticatedWorkspace(): AuthenticatedWorkspace | undefined {
   const retained = window.sessionStorage.getItem(SESSION_STORAGE);
-  if (!retained) return undefined;
+  if (!retained || retained.length > 4_096) return undefined;
   try {
     const parsed = JSON.parse(retained) as Partial<AuthenticatedWorkspace>;
     if (
       typeof parsed.workspaceId === "string" &&
       typeof parsed.userId === "string" &&
       typeof parsed.sessionId === "string" &&
-      parsed.workspaceId &&
-      parsed.userId &&
-      parsed.sessionId
+      typeof parsed.organisationId === "string" &&
+      typeof parsed.organisationDisplayName === "string" &&
+      typeof parsed.organisationCanonicalAbn === "string" &&
+      Array.isArray(parsed.roles) &&
+      UUID_V7.test(parsed.workspaceId) &&
+      UUID_V7.test(parsed.userId) &&
+      UUID_V7.test(parsed.sessionId) &&
+      UUID_V7.test(parsed.organisationId) &&
+      parsed.organisationDisplayName.trim().length > 0 &&
+      parsed.organisationDisplayName.length <= 256 &&
+      /^[0-9]{11}$/.test(parsed.organisationCanonicalAbn) &&
+      parsed.roles.length > 0 &&
+      parsed.roles.every(
+        (role) =>
+          role === Role.WORKSPACE_ADMIN ||
+          role === Role.BUSINESS_PREPARER ||
+          role === Role.BUSINESS_LODGER ||
+          role === Role.AUDITOR,
+      ) &&
+      new Set(parsed.roles).size === parsed.roles.length &&
+      parsed.roles.every((role, index) => index === 0 || role > (parsed.roles?.[index - 1] ?? 0))
     ) {
       return {
         workspaceId: parsed.workspaceId,
         userId: parsed.userId,
         sessionId: parsed.sessionId,
-        ...(typeof parsed.organisationId === "string" && parsed.organisationId
-          ? { organisationId: parsed.organisationId }
-          : {}),
+        organisationId: parsed.organisationId,
+        organisationDisplayName: parsed.organisationDisplayName,
+        organisationCanonicalAbn: parsed.organisationCanonicalAbn,
+        roles: [...parsed.roles],
       };
     }
   } catch {
@@ -51,13 +73,30 @@ function storedAuthenticatedWorkspace(): AuthenticatedWorkspace | undefined {
 }
 
 function initialAccess(): WorkspaceAccess {
-  if (window.sessionStorage.getItem(SESSION_STORAGE)) return "authenticated";
+  if (storedAuthenticatedWorkspace()) return "authenticated";
   if (window.localStorage.getItem(WORKSPACE_ID_STORAGE)) return "locked";
   return "unconfigured";
 }
 
 function currentLocation(): string {
   return `${window.location.pathname}${window.location.search}`;
+}
+
+function hasSbrWorkspaceProjection(
+  workspace: AuthenticatedWorkspace | undefined,
+): workspace is AuthenticatedWorkspace &
+  Required<
+    Pick<
+      AuthenticatedWorkspace,
+      "organisationCanonicalAbn" | "organisationDisplayName" | "organisationId" | "roles"
+    >
+  > {
+  return Boolean(
+    workspace?.organisationId &&
+      workspace.organisationDisplayName &&
+      workspace.organisationCanonicalAbn &&
+      workspace.roles,
+  );
 }
 
 export function App() {
@@ -142,12 +181,21 @@ export function App() {
 
   if (access === "locked") {
     const organisationId = window.localStorage.getItem(ORGANISATION_ID_STORAGE);
+    if (!organisationId) {
+      return (
+        <SetupScreen
+          api={window.tammy}
+          onAuthenticated={authenticated}
+          onPrivacy={() => navigate("/privacy")}
+        />
+      );
+    }
     return (
       <UnlockScreen
         api={window.tammy}
         onAuthenticated={authenticated}
         onPrivacy={() => navigate("/privacy")}
-        {...(organisationId ? { organisationId } : {})}
+        organisationId={organisationId}
       />
     );
   }
@@ -261,6 +309,45 @@ function RouteContent({
         <PrivacyStatement />
       </div>
     );
+  }
+  if (path === "/settings/organisation") {
+    return (
+      <div className="mx-auto grid w-full max-w-[920px] gap-5">
+        <div className="border-b border-border pb-4">
+          <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-forest">
+            Settings / organisation
+          </p>
+          <h1 className="text-[19px] font-semibold tracking-[-0.025em] text-foreground">
+            Organisation
+          </h1>
+        </div>
+        {workspace ? (
+          <dl className="grid border-t border-border text-[11px]">
+            <div className="grid grid-cols-[180px_minmax(0,1fr)] border-b border-border py-3">
+              <dt className="text-muted-foreground">Display name</dt>
+              <dd className="m-0 font-medium text-foreground">
+                {workspace.organisationDisplayName}
+              </dd>
+            </div>
+            <div className="grid grid-cols-[180px_minmax(0,1fr)] border-b border-border py-3">
+              <dt className="text-muted-foreground">Canonical ABN</dt>
+              <dd className="m-0 font-medium text-foreground">
+                {workspace.organisationCanonicalAbn}
+              </dd>
+            </div>
+          </dl>
+        ) : null}
+      </div>
+    );
+  }
+  if (path === "/settings/sbr" || path === "/settings/sbr?doctor=1") {
+    return hasSbrWorkspaceProjection(workspace) ? (
+      <SbrReadinessScreen
+        api={window.tammy}
+        doctorMode={path === "/settings/sbr?doctor=1"}
+        workspace={workspace}
+      />
+    ) : null;
   }
   return (
     <EmptyLedgerScreen

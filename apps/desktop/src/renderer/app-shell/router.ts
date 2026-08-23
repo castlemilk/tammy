@@ -7,6 +7,7 @@ export interface ResolvedAppLocation {
 }
 
 const JOURNAL_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+const ROUTER_ORIGIN = "https://tammy.invalid";
 
 export const COMPLETE_ROUTES = Object.freeze([
   "/overview",
@@ -21,6 +22,7 @@ export const COMPLETE_ROUTES = Object.freeze([
   "/settings/backup",
   "/settings/users",
   "/settings/organisation",
+  "/settings/sbr",
   "/settings/ownership",
   "/accounting/chart",
   "/accounting/opening-balances",
@@ -33,10 +35,17 @@ export const COMPLETE_ROUTES = Object.freeze([
 const completeRoutes = new Set<string>(COMPLETE_ROUTES);
 
 function authenticatedLocation(rawLocation: string): ResolvedAppLocation {
+  if (rawLocation.includes("#")) {
+    return { notice: "That page is not available.", path: "/overview" };
+  }
   let url: URL;
   try {
-    url = new URL(rawLocation, "https://tammy.invalid");
+    url = new URL(rawLocation, ROUTER_ORIGIN);
   } catch {
+    return { notice: "That page is not available.", path: "/overview" };
+  }
+
+  if (url.origin !== ROUTER_ORIGIN || url.hash !== "") {
     return { notice: "That page is not available.", path: "/overview" };
   }
 
@@ -55,6 +64,13 @@ function authenticatedLocation(rawLocation: string): ResolvedAppLocation {
       return { path: `${url.pathname}?journal=${journal}` };
     }
     return { notice: "That journal link is not valid.", path: "/accounting/journals" };
+  }
+
+  if (url.pathname === "/settings/sbr") {
+    if (url.search === "" || url.search === "?doctor=1") {
+      return { path: `${url.pathname}${url.search}` };
+    }
+    return { notice: "That page is not available.", path: "/overview" };
   }
 
   if (url.search !== "" || !completeRoutes.has(url.pathname)) {

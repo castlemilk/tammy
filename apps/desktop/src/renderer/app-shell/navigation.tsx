@@ -1,10 +1,12 @@
 import {
   BookOpen,
+  Building2,
   Calculator,
   FileText,
   House,
   Landmark,
   ListTree,
+  RadioTower,
   Scale,
   Settings,
   ShieldCheck,
@@ -23,6 +25,10 @@ export const PRIMARY_NAVIGATION = Object.freeze([
   { href: "/settings", icon: Settings, label: "Settings" },
 ] as const);
 const SETTINGS_NAVIGATION = PRIMARY_NAVIGATION[8];
+const SETTINGS_ROUTES = Object.freeze([
+  { href: "/settings/organisation", icon: Building2, label: "Organisation" },
+  { href: "/settings/sbr", icon: RadioTower, label: "SBR readiness" },
+] as const);
 
 interface NavigationProps {
   readonly activePath: string;
@@ -48,6 +54,23 @@ export function Navigation({ activePath, onNavigate }: NavigationProps) {
           item={SETTINGS_NAVIGATION}
           onNavigate={onNavigate}
         />
+        {activePath.startsWith("/settings") ? (
+          <li>
+            <ul
+              aria-label="Settings"
+              className="m-0 mt-1 grid list-none gap-1 p-0 pl-3 max-[900px]:pl-0"
+            >
+              {SETTINGS_ROUTES.map((item) => (
+                <NavigationItem
+                  activePath={activePath}
+                  item={item}
+                  key={item.href}
+                  onNavigate={onNavigate}
+                />
+              ))}
+            </ul>
+          </li>
+        ) : null}
       </ul>
     </nav>
   );
@@ -59,10 +82,11 @@ function NavigationItem({
   onNavigate,
 }: {
   readonly activePath: string;
-  readonly item: (typeof PRIMARY_NAVIGATION)[number];
+  readonly item: (typeof PRIMARY_NAVIGATION)[number] | (typeof SETTINGS_ROUTES)[number];
   readonly onNavigate: (path: string) => void;
 }) {
-  const active = activePath === item.href || activePath.startsWith(`${item.href}/`);
+  const path = activePath.split("?", 1)[0] ?? activePath;
+  const active = path === item.href || path.startsWith(`${item.href}/`);
   const Icon = item.icon;
   const navigate = (event: MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();

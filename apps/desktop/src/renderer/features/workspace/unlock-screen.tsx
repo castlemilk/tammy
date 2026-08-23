@@ -1,12 +1,20 @@
 import { create } from "@bufbuild/protobuf";
 import {
   ApprovedFileRefSchema,
+  AuthenticationContextSchema,
   SecretInputSchema,
 } from "@tammy/connect-client/tammy/v1/common_pb.js";
 import {
+  GetCurrentUserRequestSchema,
+  GetCurrentUserResponseSchema,
+  Role,
   SignInRequestSchema,
   SignInResponseSchema,
 } from "@tammy/connect-client/tammy/v1/identity_pb.js";
+import {
+  GetOrganisationRequestSchema,
+  GetOrganisationResponseSchema,
+} from "@tammy/connect-client/tammy/v1/organisation_pb.js";
 import {
   UnlockWorkspaceRequestSchema,
   UnlockWorkspaceResponseSchema,
@@ -32,12 +40,27 @@ const signInCodec = createProtoMethodCodec({
   maximumResponseBytes: 32_768,
   output: SignInResponseSchema,
 });
+const currentUserCodec = createProtoMethodCodec({
+  input: GetCurrentUserRequestSchema,
+  maximumRequestBytes: 8_192,
+  maximumResponseBytes: 32_768,
+  output: GetCurrentUserResponseSchema,
+});
+const organisationCodec = createProtoMethodCodec({
+  input: GetOrganisationRequestSchema,
+  maximumRequestBytes: 8_192,
+  maximumResponseBytes: 32_768,
+  output: GetOrganisationResponseSchema,
+});
 
 interface UnlockScreenProps {
-  readonly api: Pick<TammyDesktopAPI, "signIn" | "unlockWorkspace">;
+  readonly api: Pick<
+    TammyDesktopAPI,
+    "getCurrentUser" | "getOrganisation" | "signIn" | "unlockWorkspace"
+  >;
   readonly onAuthenticated: (workspace: AuthenticatedWorkspace) => void;
   readonly onPrivacy?: () => void;
-  readonly organisationId?: string;
+  readonly organisationId: string;
 }
 
 function fieldClassName(): string {
@@ -88,13 +111,49 @@ export function UnlockScreen({
         await api.signIn(signInCodec.encodeRequest(signIn)),
       );
       if (!authenticated.user || !authenticated.session) throw new Error("invalid session");
+      const authentication = create(AuthenticationContextSchema, {
+        actorUserId: authenticated.user.id,
+        sessionId: authenticated.session.id,
+      });
+      const [currentUser, currentOrganisation] = await Promise.all([
+        api
+          .getCurrentUser(
+            currentUserCodec.encodeRequest(create(GetCurrentUserRequestSchema, { authentication })),
+          )
+          .then((frame) => currentUserCodec.decodeResponse(frame)),
+        api
+          .getOrganisation(
+            organisationCodec.encodeRequest(
+              create(GetOrganisationRequestSchema, { authentication, organisationId }),
+            ),
+          )
+          .then((frame) => organisationCodec.decodeResponse(frame)),
+      ]);
+      if (
+        !currentUser.user ||
+        currentUser.user.id !== authenticated.user.id ||
+        !validRoles(currentUser.user.roles)
+      ) {
+        throw new Error("invalid current user");
+      }
+      if (
+        !currentOrganisation.organisation ||
+        currentOrganisation.organisation.id !== organisationId ||
+        !currentOrganisation.organisation.displayName ||
+        !/^[0-9]{11}$/.test(currentOrganisation.organisation.abn)
+      ) {
+        throw new Error("invalid organisation");
+      }
       setWorkspacePassphrase("");
       setAdministratorPassword("");
       onAuthenticated({
         sessionId: authenticated.session.id,
         userId: authenticated.user.id,
         workspaceId: opened.workspace.id,
-        ...(organisationId ? { organisationId } : {}),
+        organisationId,
+        organisationDisplayName: currentOrganisation.organisation.displayName,
+        organisationCanonicalAbn: currentOrganisation.organisation.abn,
+        roles: [...currentUser.user.roles],
       });
     } catch {
       setError("The workspace could not be unlocked. Check your passphrase and sign-in details.");
@@ -177,5 +236,20 @@ export function UnlockScreen({
         ) : null}
       </section>
     </main>
+  );
+}
+
+function validRoles(roles: readonly Role[]): boolean {
+  return (
+    roles.length > 0 &&
+    roles.every(
+      (role) =>
+        role === Role.WORKSPACE_ADMIN ||
+        role === Role.BUSINESS_PREPARER ||
+        role === Role.BUSINESS_LODGER ||
+        role === Role.AUDITOR,
+    ) &&
+    new Set(roles).size === roles.length &&
+    roles.every((role, index) => index === 0 || role > (roles[index - 1] ?? 0))
   );
 }

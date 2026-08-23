@@ -1,6 +1,9 @@
 import { create } from "@bufbuild/protobuf";
 import { OneTimeSecretOutputSchema } from "@tammy/connect-client/tammy/v1/common_pb.js";
 import {
+  GetCurrentUserRequestSchema,
+  GetCurrentUserResponseSchema,
+  Role,
   SessionSchema,
   SignInRequestSchema,
   SignInResponseSchema,
@@ -64,6 +67,12 @@ const reportingCodec = createProtoMethodCodec({
   maximumResponseBytes: 32_768,
   output: GetReportingCapabilityResponseSchema,
 });
+const currentUserCodec = createProtoMethodCodec({
+  input: GetCurrentUserRequestSchema,
+  maximumRequestBytes: 8_192,
+  maximumResponseBytes: 32_768,
+  output: GetCurrentUserResponseSchema,
+});
 
 it("creates, confirms, and signs in to a real local workspace through named protobuf methods", async () => {
   const workspace = create(WorkspaceSchema, {
@@ -100,6 +109,7 @@ it("creates, confirms, and signs in to a real local workspace through named prot
         user: create(UserSchema, {
           id: "01900f3c-7b2e-7cc4-98c4-dc0c0c073992",
           username: request.username,
+          roles: [Role.WORKSPACE_ADMIN],
         }),
         session: create(SessionSchema, { id: "01900f3c-7b2e-7cc4-98c4-dc0c0c073993" }),
       }),
@@ -175,7 +185,23 @@ it("creates, confirms, and signs in to a real local workspace through named prot
       );
     }),
     getAttentionSummary: vi.fn(),
-    getCurrentUser: vi.fn(),
+    getCurrentUser: vi.fn(async (frame: Uint8Array) => {
+      const request = currentUserCodec.decodeRequest(frame);
+      expect(request.authentication).toMatchObject({
+        actorUserId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073992",
+        sessionId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073993",
+      });
+      return currentUserCodec.encodeResponse(
+        create(GetCurrentUserResponseSchema, {
+          user: create(UserSchema, {
+            id: "01900f3c-7b2e-7cc4-98c4-dc0c0c073992",
+            username: "admin@tammy.local",
+            displayName: "Tammy Admin",
+            roles: [Role.WORKSPACE_ADMIN],
+          }),
+        }),
+      );
+    }),
     enrolTotp: vi.fn(),
     confirmTotp: vi.fn(),
     assertTotp: vi.fn(),
@@ -231,6 +257,9 @@ it("creates, confirms, and signs in to a real local workspace through named prot
       userId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073992",
       workspaceId: workspace.id,
       organisationId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073994",
+      organisationDisplayName: "Tammy Business",
+      organisationCanonicalAbn: "51824753556",
+      roles: [Role.WORKSPACE_ADMIN],
     }),
   );
 });

@@ -1,10 +1,18 @@
 import { create } from "@bufbuild/protobuf";
 import {
+  GetCurrentUserRequestSchema,
+  GetCurrentUserResponseSchema,
+  Role,
   SessionSchema,
   SignInRequestSchema,
   SignInResponseSchema,
   UserSchema,
 } from "@tammy/connect-client/tammy/v1/identity_pb.js";
+import {
+  GetOrganisationRequestSchema,
+  GetOrganisationResponseSchema,
+  OrganisationSchema,
+} from "@tammy/connect-client/tammy/v1/organisation_pb.js";
 import {
   UnlockWorkspaceRequestSchema,
   UnlockWorkspaceResponseSchema,
@@ -29,6 +37,18 @@ const signInCodec = createProtoMethodCodec({
   maximumRequestBytes: 16_384,
   maximumResponseBytes: 32_768,
   output: SignInResponseSchema,
+});
+const currentUserCodec = createProtoMethodCodec({
+  input: GetCurrentUserRequestSchema,
+  maximumRequestBytes: 8_192,
+  maximumResponseBytes: 32_768,
+  output: GetCurrentUserResponseSchema,
+});
+const organisationCodec = createProtoMethodCodec({
+  input: GetOrganisationRequestSchema,
+  maximumRequestBytes: 8_192,
+  maximumResponseBytes: 32_768,
+  output: GetOrganisationResponseSchema,
 });
 
 it("unlocks and signs in to an existing local workspace through named protobuf methods", async () => {
@@ -57,6 +77,7 @@ it("unlocks and signs in to an existing local workspace through named protobuf m
         user: create(UserSchema, {
           id: "01900f3c-7b2e-7cc4-98c4-dc0c0c073992",
           username: request.username,
+          roles: [Role.WORKSPACE_ADMIN],
         }),
         session: create(SessionSchema, { id: "01900f3c-7b2e-7cc4-98c4-dc0c0c073993" }),
       }),
@@ -87,11 +108,36 @@ it("unlocks and signs in to an existing local workspace through named protobuf m
     getCurrentBasDraft: vi.fn(),
     getReportingCapability: vi.fn(),
     getAttentionSummary: vi.fn(),
-    getCurrentUser: vi.fn(),
+    getCurrentUser: vi.fn(async (frame: Uint8Array) => {
+      const request = currentUserCodec.decodeRequest(frame);
+      expect(request.authentication?.actorUserId).toBe("01900f3c-7b2e-7cc4-98c4-dc0c0c073992");
+      return currentUserCodec.encodeResponse(
+        create(GetCurrentUserResponseSchema, {
+          user: create(UserSchema, {
+            id: "01900f3c-7b2e-7cc4-98c4-dc0c0c073992",
+            username: "admin@tammy.local",
+            roles: [Role.WORKSPACE_ADMIN],
+          }),
+        }),
+      );
+    }),
     enrolTotp: vi.fn(),
     confirmTotp: vi.fn(),
     assertTotp: vi.fn(),
-    getOrganisation: vi.fn(),
+    getOrganisation: vi.fn(async (frame: Uint8Array) => {
+      const request = organisationCodec.decodeRequest(frame);
+      expect(request.organisationId).toBe("01900f3c-7b2e-7cc4-98c4-dc0c0c073994");
+      return organisationCodec.encodeResponse(
+        create(GetOrganisationResponseSchema, {
+          organisation: create(OrganisationSchema, {
+            id: request.organisationId,
+            displayName: "Tammy Business",
+            legalName: "Tammy Business Pty Ltd",
+            abn: "51824753556",
+          }),
+        }),
+      );
+    }),
     recordEntityVerification: vi.fn(),
     getSbrReadiness: vi.fn(),
     getMachineCredentialStatus: vi.fn(),
@@ -129,6 +175,9 @@ it("unlocks and signs in to an existing local workspace through named protobuf m
       userId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073992",
       workspaceId: workspace.id,
       organisationId,
+      organisationDisplayName: "Tammy Business",
+      organisationCanonicalAbn: "51824753556",
+      roles: [Role.WORKSPACE_ADMIN],
     }),
   );
   expect(unlockWorkspace).toHaveBeenCalledOnce();

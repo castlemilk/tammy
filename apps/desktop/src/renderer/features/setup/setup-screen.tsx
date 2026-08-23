@@ -7,6 +7,9 @@ import {
   SourceRefSchema,
 } from "@tammy/connect-client/tammy/v1/common_pb.js";
 import {
+  GetCurrentUserRequestSchema,
+  GetCurrentUserResponseSchema,
+  Role,
   SignInRequestSchema,
   SignInResponseSchema,
 } from "@tammy/connect-client/tammy/v1/identity_pb.js";
@@ -59,9 +62,18 @@ const createOrganisationCodec = createProtoMethodCodec({
   maximumResponseBytes: 32_768,
   output: CreateOrganisationResponseSchema,
 });
+const currentUserCodec = createProtoMethodCodec({
+  input: GetCurrentUserRequestSchema,
+  maximumRequestBytes: 8_192,
+  maximumResponseBytes: 32_768,
+  output: GetCurrentUserResponseSchema,
+});
 
 export interface AuthenticatedWorkspace {
+  readonly organisationCanonicalAbn?: string;
+  readonly organisationDisplayName?: string;
   readonly organisationId?: string;
+  readonly roles?: readonly Role[];
   readonly sessionId: string;
   readonly userId: string;
   readonly workspaceId: string;
@@ -73,6 +85,7 @@ interface SetupScreenProps {
     | "confirmRecovery"
     | "createOrganisation"
     | "createWorkspace"
+    | "getCurrentUser"
     | "getReportingCapability"
     | "signIn"
   >;
@@ -197,6 +210,18 @@ export function SetupScreen({ api, onAuthenticated, onPrivacy }: SetupScreenProp
         actorUserId: authenticated.user.id,
         sessionId: authenticated.session.id,
       });
+      const currentUser = currentUserCodec.decodeResponse(
+        await api.getCurrentUser(
+          currentUserCodec.encodeRequest(create(GetCurrentUserRequestSchema, { authentication })),
+        ),
+      );
+      if (
+        !currentUser.user ||
+        currentUser.user.id !== authenticated.user.id ||
+        !validRoles(currentUser.user.roles)
+      ) {
+        throw new Error("invalid current user");
+      }
       const organisation = create(CreateOrganisationRequestSchema, {
         commandContext: create(CommandContextSchema, {
           idempotencyKey: uuidV7(),
@@ -219,7 +244,13 @@ export function SetupScreen({ api, onAuthenticated, onPrivacy }: SetupScreenProp
       const createdOrganisation = createOrganisationCodec.decodeResponse(
         await api.createOrganisation(createOrganisationCodec.encodeRequest(organisation)),
       );
-      if (!createdOrganisation.organisation?.id) throw new Error("invalid organisation");
+      if (
+        !createdOrganisation.organisation?.id ||
+        !createdOrganisation.organisation.displayName ||
+        !/^[0-9]{11}$/.test(createdOrganisation.organisation.abn)
+      ) {
+        throw new Error("invalid organisation");
+      }
       setAdministratorPassword("");
       setWorkspacePassphrase("");
       onAuthenticated({
@@ -227,6 +258,9 @@ export function SetupScreen({ api, onAuthenticated, onPrivacy }: SetupScreenProp
         userId: authenticated.user.id,
         workspaceId: pending.workspaceId,
         organisationId: createdOrganisation.organisation.id,
+        organisationDisplayName: createdOrganisation.organisation.displayName,
+        organisationCanonicalAbn: createdOrganisation.organisation.abn,
+        roles: [...currentUser.user.roles],
       });
     } catch {
       setError("Recovery confirmation or sign in failed. Your workspace remains on this device.");
@@ -386,6 +420,21 @@ export function SetupScreen({ api, onAuthenticated, onPrivacy }: SetupScreenProp
         ) : null}
       </section>
     </main>
+  );
+}
+
+function validRoles(roles: readonly Role[]): boolean {
+  return (
+    roles.length > 0 &&
+    roles.every(
+      (role) =>
+        role === Role.WORKSPACE_ADMIN ||
+        role === Role.BUSINESS_PREPARER ||
+        role === Role.BUSINESS_LODGER ||
+        role === Role.AUDITOR,
+    ) &&
+    new Set(roles).size === roles.length &&
+    roles.every((role, index) => index === 0 || role > (roles[index - 1] ?? 0))
   );
 }
 

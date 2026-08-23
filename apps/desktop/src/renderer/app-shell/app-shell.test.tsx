@@ -13,7 +13,18 @@ const diagnostics: SystemDiagnostics = {
 };
 
 function installDesktopAPI() {
-  window.sessionStorage.setItem("tammy.session.active", "test-session");
+  window.sessionStorage.setItem(
+    "tammy.session.active",
+    JSON.stringify({
+      workspaceId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073991",
+      userId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073992",
+      sessionId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073993",
+      organisationId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073994",
+      organisationDisplayName: "Tammy Business",
+      organisationCanonicalAbn: "51824753556",
+      roles: [1],
+    }),
+  );
   Object.defineProperty(window, "tammy", {
     configurable: true,
     value: Object.freeze({
@@ -152,6 +163,15 @@ it("renders the walkthrough app shell", async () => {
   expect(screen.getByRole("heading", { level: 2, name: "Banking" })).toBeTruthy();
   expect(screen.getByRole("heading", { level: 2, name: "GST & BAS" })).toBeTruthy();
   expect(screen.queryByText("Workspace setup comes next")).toBeNull();
+
+  await user.click(within(navigation).getByRole("link", { name: "Settings" }));
+  expect(within(navigation).getByRole("link", { name: "Organisation" })).toBeTruthy();
+  expect(within(navigation).getByRole("link", { name: "SBR readiness" })).toBeTruthy();
+  await user.click(within(navigation).getByRole("link", { name: "SBR readiness" }));
+  expect(screen.getByRole("heading", { level: 1, name: "SBR readiness" })).toBeTruthy();
+  expect(
+    within(navigation).getByRole("link", { name: "SBR readiness" }).getAttribute("aria-current"),
+  ).toBe("page");
 
   await user.click(within(navigation).getByRole("link", { name: "Journals" }));
   expect(screen.getByRole("heading", { level: 1, name: "Journals" })).toBeTruthy();

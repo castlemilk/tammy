@@ -28,7 +28,18 @@ function deferred<T>() {
 }
 
 function installDesktopAPI(getSystemDiagnostics: TammyDesktopAPI["getSystemDiagnostics"]) {
-  window.sessionStorage.setItem("tammy.session.active", "test-session");
+  window.sessionStorage.setItem(
+    "tammy.session.active",
+    JSON.stringify({
+      workspaceId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073991",
+      userId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073992",
+      sessionId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073993",
+      organisationId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073994",
+      organisationDisplayName: "Tammy Business",
+      organisationCanonicalAbn: "51824753556",
+      roles: [1],
+    }),
+  );
   Object.defineProperty(window, "tammy", {
     configurable: true,
     value: Object.freeze({
@@ -187,6 +198,41 @@ describe("App", () => {
 
     expect(screen.getByRole("heading", { level: 1, name: "Overview" })).toBeTruthy();
     await waitFor(() => expect(window.location.pathname).toBe("/overview"));
+  });
+
+  it("runs the authenticated doctor route once without exposing another capability", async () => {
+    installDesktopAPI(vi.fn().mockResolvedValue(diagnostics));
+    vi.mocked(window.tammy.getSbrReadiness).mockRejectedValue(new Error("unavailable"));
+    window.history.replaceState(null, "", "/settings/sbr?doctor=1");
+
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { level: 1, name: "SBR readiness" })).toBeTruthy();
+    await screen.findByText("Readiness unavailable");
+    expect(window.tammy.getSbrReadiness).toHaveBeenCalledOnce();
+    expect(window.location.search).toBe("?doctor=1");
+    expect(screen.queryByRole("button", { name: /doctor/i })).toBeNull();
+  });
+
+  it("rejects a tampered retained role projection instead of authenticating it", () => {
+    installDesktopAPI(vi.fn().mockResolvedValue(diagnostics));
+    window.sessionStorage.setItem(
+      "tammy.session.active",
+      JSON.stringify({
+        workspaceId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073991",
+        userId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073992",
+        sessionId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073993",
+        organisationId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073994",
+        organisationDisplayName: "Tammy Business",
+        organisationCanonicalAbn: "51824753556",
+        roles: ["workspace_admin"],
+      }),
+    );
+
+    render(<App />);
+
+    expect(screen.getByRole("heading", { name: "Create your local workspace" })).toBeTruthy();
+    expect(screen.queryByRole("navigation", { name: "Primary" })).toBeNull();
   });
 
   it("canonicalizes rejected popstate routes while preserving valid history paths", async () => {
