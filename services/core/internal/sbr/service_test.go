@@ -187,6 +187,7 @@ func testService(t *testing.T, helper *fakeHelper, identity *fakeIdentity) *Serv
 		}},
 		Profiles: fakeProfile{profile: RuntimeProfile{
 			Environment:        tammyv1.SbrEnvironment_SBR_ENVIRONMENT_SIMULATOR,
+			Conformance:        ConformanceSimulator,
 			ComponentVersion:   "sim-v1",
 			ProfileFingerprint: profileHash, RegistrationFingerprint: registrationHash,
 			ComponentFingerprint: componentHash, AuthenticatedUntil: now.Add(time.Hour),
@@ -213,10 +214,43 @@ func command(purpose string) *tammyv1.CommandContext {
 
 func evteProfile(profile RuntimeProfile, productIdentifier, serviceID string) RuntimeProfile {
 	profile.Environment = tammyv1.SbrEnvironment_SBR_ENVIRONMENT_EVTE
+	profile.Conformance = ConformancePre
 	profile.ExpectedProductIdentifier = productIdentifier
 	profile.ExpectedServiceID = serviceID
 	profile.ProductScopeFingerprint = authenticatedProductScopeFingerprint(productIdentifier, serviceID)
 	return profile
+}
+
+func TestValidCurrentRejectsMissingAndUnknownAuthenticatedConformance(t *testing.T) {
+	service := testService(t, &fakeHelper{}, &fakeIdentity{})
+	binding, profile, err := service.current(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range []struct {
+		name        string
+		environment tammyv1.SbrEnvironment
+		conformance Conformance
+	}{
+		{name: "simulator missing", environment: tammyv1.SbrEnvironment_SBR_ENVIRONMENT_SIMULATOR},
+		{name: "simulator unknown", environment: tammyv1.SbrEnvironment_SBR_ENVIRONMENT_SIMULATOR, conformance: "UNKNOWN"},
+		{name: "EVTE missing", environment: tammyv1.SbrEnvironment_SBR_ENVIRONMENT_EVTE},
+		{name: "EVTE unknown", environment: tammyv1.SbrEnvironment_SBR_ENVIRONMENT_EVTE, conformance: "UNKNOWN"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			candidate := profile
+			candidate.Environment = test.environment
+			candidate.Conformance = test.conformance
+			if test.environment == tammyv1.SbrEnvironment_SBR_ENVIRONMENT_EVTE {
+				candidate.ExpectedProductIdentifier = "product"
+				candidate.ExpectedServiceID = "service"
+				candidate.ProductScopeFingerprint = authenticatedProductScopeFingerprint("product", "service")
+			}
+			if validCurrent(binding, candidate, service.now()) {
+				t.Fatal("invalid authenticated conformance was accepted")
+			}
+		})
+	}
 }
 
 func validPreparedHelperResult(metadata CredentialMetadata) HelperResult {

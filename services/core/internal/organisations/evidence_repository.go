@@ -188,6 +188,7 @@ func (repository *EvidenceRepository) Get(ctx context.Context, verificationID st
 		&evidence.MimeType, &byteLength, &storedHash,
 		&evidence.Content, &record.SupersedesEvidenceID,
 	)
+	defer clear(evidence.Content)
 	if errors.Is(err, sql.ErrNoRows) {
 		return VerificationRecord{}, ErrEvidenceNotFound
 	}
@@ -243,6 +244,13 @@ func (repository *EvidenceRepository) GetCurrentSummary(ctx context.Context, org
 	record, err := repository.Get(ctx, verificationID)
 	if err != nil {
 		return nil, err
+	}
+	return currentVerificationSummary(record, organisationID)
+}
+
+func currentVerificationSummary(record VerificationRecord, organisationID string) (*tammyv1.OrganisationVerificationSummary, error) {
+	if record.Evidence != nil {
+		defer clear(record.Evidence.Content)
 	}
 	if record.Verification == nil || record.Verification.OrganisationId != organisationID ||
 		!validVerificationState(record.Verification.State) || record.Verification.ExpiresAt == nil ||

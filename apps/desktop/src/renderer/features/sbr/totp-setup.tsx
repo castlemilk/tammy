@@ -46,6 +46,12 @@ const currentUserCodec = createProtoMethodCodec({
   output: GetCurrentUserResponseSchema,
 });
 
+interface PrincipalSnapshot {
+  readonly generation: number;
+  readonly key: string;
+  readonly userId: string;
+}
+
 export function TotpSetup({
   api,
   onEnabled,
@@ -57,7 +63,11 @@ export function TotpSetup({
 }) {
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
-  const [pending, setPending] = useState<{ factorId: string; material: string }>();
+  const [pending, setPending] = useState<{
+    factorId: string;
+    material: string;
+    principalKey: string;
+  }>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [factorState, setFactorState] = useState(workspace.userFactorState);
@@ -66,7 +76,30 @@ export function TotpSetup({
   const inFlight = useRef(false);
   const refreshInFlight = useRef(false);
   const mounted = useRef(true);
-  const factorPrincipal = useRef(workspace.userId);
+  const principalKey = `${workspace.userId}\u0000${workspace.sessionId}`;
+  const factorPrincipal = useRef(principalKey);
+  const principalGeneration = useRef(0);
+  const mutationOperation = useRef(0);
+  const refreshOperation = useRef(0);
+  if (factorPrincipal.current !== principalKey) {
+    factorPrincipal.current = principalKey;
+    principalGeneration.current += 1;
+    mutationOperation.current += 1;
+    refreshOperation.current += 1;
+  }
+
+  const capturePrincipal = (): PrincipalSnapshot => ({
+    generation: principalGeneration.current,
+    key: principalKey,
+    userId: workspace.userId,
+  });
+  const isCurrentPrincipal = (principal: PrincipalSnapshot) =>
+    mounted.current &&
+    factorPrincipal.current === principal.key &&
+    principalGeneration.current === principal.generation;
+  const isCurrentMutation = (principal: PrincipalSnapshot, operation: number) =>
+    isCurrentPrincipal(principal) && mutationOperation.current === operation;
+  const visiblePending = pending?.principalKey === principalKey ? pending : undefined;
 
   const clearProvisioning = () => {
     materialBytes.current?.fill(0);
@@ -83,18 +116,26 @@ export function TotpSetup({
     };
   }, []);
   useEffect(() => {
-    if (factorPrincipal.current !== workspace.userId) factorPrincipal.current = workspace.userId;
+    factorPrincipal.current = principalKey;
+    mutationOperation.current += 1;
+    refreshOperation.current += 1;
+    inFlight.current = false;
+    refreshInFlight.current = false;
     materialBytes.current?.fill(0);
     materialBytes.current = undefined;
+    setPassword("");
     setPending(undefined);
     setCode("");
+    setBusy(false);
     setFactorState(workspace.userFactorState);
     setOutcomeLocked(false);
     setError(undefined);
-  }, [workspace.userFactorState, workspace.userId]);
+  }, [principalKey, workspace.userFactorState]);
 
-  const refreshFactor = async () => {
-    if (refreshInFlight.current) return;
+  const refreshFactorFor = async (principal: PrincipalSnapshot) => {
+    if (!isCurrentPrincipal(principal) || refreshInFlight.current) return;
+    const operation = refreshOperation.current + 1;
+    refreshOperation.current = operation;
     refreshInFlight.current = true;
     try {
       const frame = currentUserCodec.encodeRequest(
@@ -102,11 +143,11 @@ export function TotpSetup({
       );
       const responseFrame = await api.getCurrentUser(frame);
       const response = currentUserCodec.decodeResponse(responseFrame);
-      if (!mounted.current) return;
+      if (!isCurrentPrincipal(principal) || refreshOperation.current !== operation) return;
       const state = response.user?.factorState;
       if (
         !response.user ||
-        response.user.id !== workspace.userId ||
+        response.user.id !== principal.userId ||
         (state !== undefined &&
           state !== FactorState.PENDING_CONFIRMATION &&
           state !== FactorState.ENABLED &&
@@ -123,18 +164,22 @@ export function TotpSetup({
         setError("No pending setup was found. You can begin setup again.");
       }
     } catch {
-      if (mounted.current) {
+      if (isCurrentPrincipal(principal) && refreshOperation.current === operation) {
         setOutcomeLocked(true);
         setError("Security status is unavailable. Refresh security status before retrying.");
       }
     } finally {
-      refreshInFlight.current = false;
+      if (refreshOperation.current === operation) refreshInFlight.current = false;
     }
   };
+  const refreshFactor = () => refreshFactorFor(capturePrincipal());
 
   const enrol = async (event: FormEvent) => {
     event.preventDefault();
     if (inFlight.current || outcomeLocked) return;
+    const principal = capturePrincipal();
+    const operation = mutationOperation.current + 1;
+    mutationOperation.current = operation;
     inFlight.current = true;
     setBusy(true);
     setError(undefined);
@@ -163,10 +208,11 @@ export function TotpSetup({
       })();
       const responseSecret = response.provisioningSecret?.utf8;
       try {
+        if (!isCurrentMutation(principal, operation)) return;
         if (
           !response.factor ||
           !isUuidV7(response.factor.id) ||
-          response.factor.userId !== workspace.userId ||
+          response.factor.userId !== principal.userId ||
           response.factor.version < 1n ||
           response.factor.state !== FactorState.PENDING_CONFIRMATION ||
           !validTimestamp(response.factor.createdAt) ||
@@ -176,38 +222,44 @@ export function TotpSetup({
         const bytes = new Uint8Array(responseSecret);
         const material = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
         if (!/^[A-Z2-7]{32}$/.test(material)) throw new Error("invalid provisioning secret");
-        if (!mounted.current) {
+        if (!isCurrentMutation(principal, operation)) {
           bytes.fill(0);
           return;
         }
         materialBytes.current = bytes;
-        setPending({ factorId: response.factor.id, material });
+        setPending({ factorId: response.factor.id, material, principalKey: principal.key });
       } finally {
         responseSecret?.fill(0);
       }
     } catch {
-      if (mounted.current) {
+      if (isCurrentMutation(principal, operation)) {
         clearProvisioning();
         setOutcomeLocked(true);
         setError("TOTP setup outcome is unknown. Refresh security status before retrying.");
-        await refreshFactor();
+        await refreshFactorFor(principal);
       }
     } finally {
-      inFlight.current = false;
-      if (mounted.current) setBusy(false);
+      if (mutationOperation.current === operation) {
+        inFlight.current = false;
+        if (isCurrentPrincipal(principal)) setBusy(false);
+      }
     }
   };
 
   const confirm = async (event: FormEvent) => {
     event.preventDefault();
-    if (inFlight.current || outcomeLocked || !pending || !/^\d{6}$/.test(code)) return;
+    if (inFlight.current || outcomeLocked || !visiblePending || !/^\d{6}$/.test(code)) return;
+    const principal = capturePrincipal();
+    const operation = mutationOperation.current + 1;
+    mutationOperation.current = operation;
+    const confirmingFactor = visiblePending.factorId;
     inFlight.current = true;
     setBusy(true);
     setError(undefined);
     try {
       const request = create(ConfirmTOTPRequestSchema, {
         authentication: authentication(workspace),
-        factorId: pending.factorId,
+        factorId: confirmingFactor,
         code: create(TotpCodeInputSchema, { value: code }),
       });
       setCode("");
@@ -219,12 +271,12 @@ export function TotpSetup({
           frame.fill(0);
         }
       })();
-      if (!mounted.current) return;
+      if (!isCurrentMutation(principal, operation)) return;
       if (
         !response.factor ||
         !isUuidV7(response.factor.id) ||
-        response.factor.id !== pending.factorId ||
-        response.factor.userId !== workspace.userId ||
+        response.factor.id !== confirmingFactor ||
+        response.factor.userId !== principal.userId ||
         response.factor.version < 1n ||
         response.factor.state !== FactorState.ENABLED ||
         !validTimestamp(response.factor.createdAt)
@@ -233,16 +285,18 @@ export function TotpSetup({
       clearProvisioning();
       onEnabled();
     } catch {
-      if (mounted.current) {
+      if (isCurrentMutation(principal, operation)) {
         clearProvisioning();
         setCode("");
         setOutcomeLocked(true);
         setError("Confirmation outcome is unknown. Refresh security status before retrying.");
-        await refreshFactor();
+        await refreshFactorFor(principal);
       }
     } finally {
-      inFlight.current = false;
-      if (mounted.current) setBusy(false);
+      if (mutationOperation.current === operation) {
+        inFlight.current = false;
+        if (isCurrentPrincipal(principal)) setBusy(false);
+      }
     }
   };
 
@@ -257,7 +311,7 @@ export function TotpSetup({
           <p className="mt-1 text-[10px] leading-5 text-muted-foreground">
             A fresh six-digit code is required before credential administration is available.
           </p>
-          {!pending ? (
+          {!visiblePending ? (
             <form className="mt-3 grid max-w-[420px] gap-3" onSubmit={enrol}>
               <label className="grid gap-1.5 text-[11px] font-medium">
                 Current administrator password
@@ -288,7 +342,7 @@ export function TotpSetup({
                   className="mt-1 block break-all text-[11px]"
                   data-testid="totp-provisioning-material"
                 >
-                  {pending.material}
+                  {visiblePending.material}
                 </code>
               </div>
               <label className="grid max-w-[220px] gap-1.5 text-[11px] font-medium">
@@ -309,11 +363,9 @@ export function TotpSetup({
               </Button>
             </form>
           )}
-          {error ? (
-            <p className="mt-3 text-[11px] text-destructive" role="alert">
-              {error}
-            </p>
-          ) : null}
+          <p className={error ? "mt-3 text-[11px] text-destructive" : "sr-only"} role="alert">
+            {error ?? ""}
+          </p>
           {outcomeLocked ? (
             <Button
               className="mt-3 h-9 w-fit text-[11px]"

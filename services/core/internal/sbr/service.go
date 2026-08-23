@@ -941,24 +941,18 @@ func validCurrent(binding OrganisationBinding, profile RuntimeProfile, now time.
 		return false
 	}
 	if profile.Environment == tammyv1.SbrEnvironment_SBR_ENVIRONMENT_SIMULATOR {
-		return (profile.Conformance == "" || profile.Conformance == ConformanceSimulator) &&
+		return profile.Conformance == ConformanceSimulator &&
 			profile.ExpectedProductIdentifier == "" && profile.ExpectedServiceID == "" &&
 			profile.ProductScopeFingerprint == [sha256.Size]byte{}
 	}
-	return (profile.Conformance == "" || profile.Conformance == ConformancePre || profile.Conformance == ConformancePost) &&
+	return (profile.Conformance == ConformancePre || profile.Conformance == ConformancePost) &&
 		len(profile.ExpectedProductIdentifier) >= 1 && len(profile.ExpectedProductIdentifier) <= 128 &&
 		len(profile.ExpectedServiceID) >= 1 && len(profile.ExpectedServiceID) <= 128 &&
 		profile.ProductScopeFingerprint == authenticatedProductScopeFingerprint(profile.ExpectedProductIdentifier, profile.ExpectedServiceID)
 }
 
 func runtimeConformance(profile RuntimeProfile) Conformance {
-	if profile.Environment == tammyv1.SbrEnvironment_SBR_ENVIRONMENT_SIMULATOR {
-		return ConformanceSimulator
-	}
-	if profile.Conformance == ConformancePost {
-		return ConformancePost
-	}
-	return ConformancePre
+	return profile.Conformance
 }
 
 func (service *Service) helperRequest(operation HelperOperation, binding OrganisationBinding, profile RuntimeProfile) HelperRequest {
