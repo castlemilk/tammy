@@ -554,4 +554,44 @@ describe("SbrReadinessScreen", () => {
     expect(identity.classList.contains("min-w-0")).toBe(true);
     expect(identity.classList.contains("[overflow-wrap:anywhere]")).toBe(true);
   });
+
+  it("integrates simulator controls only for a business lodger on authenticated simulator readiness", async () => {
+    const api = {
+      ...apiFor({
+        environment: SbrEnvironment.SIMULATOR,
+        state: SbrReadinessState.READY_FOR_SIMULATOR,
+        machineCredentialState: MachineCredentialState.PRESENT,
+        productIdState: ProductIdState.MISSING,
+      }),
+      assertTotp: vi.fn(),
+      runSbrReadinessFixture: vi.fn(),
+    };
+    render(
+      <SbrReadinessScreen api={api} workspace={{ ...workspace, roles: [Role.BUSINESS_LODGER] }} />,
+    );
+
+    expect(await screen.findByRole("button", { name: "Run simulator fixture" })).toBeTruthy();
+    expect(screen.getByText("SIM-SBR-READINESS-V1")).toBeTruthy();
+    expect(api.runSbrReadinessFixture).not.toHaveBeenCalled();
+  });
+
+  it("keeps EVTE simulator evidence status-only without a component operation", async () => {
+    const api = {
+      ...apiFor({
+        environment: SbrEnvironment.EVTE,
+        state: SbrReadinessState.READY_FOR_EVTE_PRE_CONFORMANCE,
+        machineCredentialState: MachineCredentialState.PRESENT,
+        productIdState: ProductIdState.PRESENT,
+      }),
+      assertTotp: vi.fn(),
+      runSbrReadinessFixture: vi.fn(),
+    };
+    render(
+      <SbrReadinessScreen api={api} workspace={{ ...workspace, roles: [Role.BUSINESS_LODGER] }} />,
+    );
+
+    expect(await screen.findByText(/EVTE status only/i)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Run simulator fixture" })).toBeNull();
+    expect(api.runSbrReadinessFixture).not.toHaveBeenCalled();
+  });
 });

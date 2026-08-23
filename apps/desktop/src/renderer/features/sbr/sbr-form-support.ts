@@ -21,6 +21,7 @@ export const SBR_PURPOSE = Object.freeze({
   removeProduct: "sbr_product_id_remove",
   replaceCredential: "sbr_machine_credential_replace",
   unlockCredential: "sbr_machine_credential_unlock",
+  useCredential: "sbr_machine_credential_use",
 });
 
 const UUID_V7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;

@@ -19,6 +19,7 @@ import { Badge } from "../../components/ui/badge";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
 import { MachineCredentialForm } from "./machine-credential-form";
 import { ProductIdForm } from "./product-id-form";
+import { SbrSimulatorPanel } from "./sbr-simulator-panel";
 import { TotpSetup } from "./totp-setup";
 
 const readinessCodec = createProtoMethodCodec({
@@ -82,6 +83,7 @@ interface SbrReadinessScreenProps {
         | "removeMachineCredential"
         | "removeSbrProductId"
         | "replaceMachineCredential"
+        | "runSbrReadinessFixture"
         | "selectMachineCredentialFile"
         | "unlockMachineCredential"
       >
@@ -515,6 +517,14 @@ function ReadinessSurface({
           />
         )
       ) : null}
+
+      <SbrSimulatorPanel
+        api={api as Parameters<typeof SbrSimulatorPanel>[0]["api"]}
+        factorEnabled={factorEnabled}
+        onRefresh={onRefresh}
+        readiness={readiness}
+        workspace={workspace}
+      />
 
       <PreparationBoundary />
     </>
