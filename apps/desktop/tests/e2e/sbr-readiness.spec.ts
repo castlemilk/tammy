@@ -21,8 +21,17 @@ import {
 } from "./support/current-accounting-workflow";
 import { generateTotp } from "./support/totp";
 
-const FIXTURE_BYTES =
-  '{"fixture_id":"SIM-SBR-READINESS-V1","organisation_name":"Wattle & Co Test Pty Ltd","abn":"11 000 000 560","service_id":"SIM.READINESS.0001","clock":"2026-06-30T00:00:00Z","message_id":"SIM.MSG.0001","conversation_id":"SIM.CONV.0001","receipt":"SIM-READY-0001"}\n';
+const FIXTURE_BYTES = `{
+  "fixture_id": "SIM-SBR-READINESS-V1",
+  "organisation_name": "Wattle & Co Test Pty Ltd",
+  "abn": "11 000 000 560",
+  "service_id": "SIM.READINESS.0001",
+  "clock": "2026-06-30T00:00:00Z",
+  "message_id": "SIM.MSG.0001",
+  "conversation_id": "SIM.CONV.0001",
+  "receipt": "SIM-READY-0001"
+}
+`;
 const SBR_OPERATION_UI_TIMEOUT_MS = 75_000;
 const SYNTHETIC_CREDENTIAL_MAGIC = Buffer.from("TAMMY-SBR-SYNTHETIC-CREDENTIAL-V1\0");
 const SYNTHETIC_CREDENTIAL_KEY_BYTES = 32;

@@ -13,7 +13,7 @@ import (
 	"github.com/tammyapp/tammy/services/sbr-helper/internal/protocol"
 )
 
-const fixtureSHA256 = "654d01804967e2ec45bb8709bbd33c89df6029a797d52bd417061c7ace03313d"
+const fixtureSHA256 = "d4b7b2991b21eff234e272015d39eeed8d332afeb95104dc2117a2c4484ef416"
 
 type policyDialer struct {
 	calls  int

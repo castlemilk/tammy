@@ -12,7 +12,17 @@ import (
 	"github.com/tammyapp/tammy/services/sbr-helper/internal/protocol"
 )
 
-const canonicalFixture = "{\"fixture_id\":\"SIM-SBR-READINESS-V1\",\"organisation_name\":\"Wattle & Co Test Pty Ltd\",\"abn\":\"11 000 000 560\",\"service_id\":\"SIM.READINESS.0001\",\"clock\":\"2026-06-30T00:00:00Z\",\"message_id\":\"SIM.MSG.0001\",\"conversation_id\":\"SIM.CONV.0001\",\"receipt\":\"SIM-READY-0001\"}\n"
+const canonicalFixture = `{
+  "fixture_id": "SIM-SBR-READINESS-V1",
+  "organisation_name": "Wattle & Co Test Pty Ltd",
+  "abn": "11 000 000 560",
+  "service_id": "SIM.READINESS.0001",
+  "clock": "2026-06-30T00:00:00Z",
+  "message_id": "SIM.MSG.0001",
+  "conversation_id": "SIM.CONV.0001",
+  "receipt": "SIM-READY-0001"
+}
+`
 
 var (
 	ErrFixtureInvalid       = errors.New("SBR_SIMULATOR_FIXTURE_INVALID")
