@@ -66,7 +66,7 @@ func TestSyntheticSignerCredentialLifecycle(t *testing.T) {
 	expires := now.AddDate(2, 0, 0).UnixMilli()
 	password := []byte("synthetic-password")
 	credential := encodeSyntheticTestCredential(t, syntheticTestABN, expires, password, 0x31)
-	credentialPath := filepath.Join(t.TempDir(), "tammy-synthetic-credential-v1.bin")
+	credentialPath := filepath.Join(canonicalSyntheticTestTempDir(t), "tammy-synthetic-credential-v1.bin")
 	if err := os.WriteFile(credentialPath, credential, 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -211,7 +211,7 @@ func TestSyntheticSignerReplaceRemoveAbortAndTamper(t *testing.T) {
 
 	tampered := encodeSyntheticTestCredential(t, syntheticTestABN, now.AddDate(2, 0, 0).UnixMilli(), password, 0x51)
 	tampered[len(tampered)-1] ^= 0xff
-	tamperedPath := filepath.Join(t.TempDir(), "tampered-synthetic-credential.bin")
+	tamperedPath := filepath.Join(canonicalSyntheticTestTempDir(t), "tampered-synthetic-credential.bin")
 	if err := os.WriteFile(tamperedPath, tampered, 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -349,12 +349,22 @@ func writeSyntheticTestCredential(t *testing.T, abn string, expires int64, passw
 	t.Helper()
 	credential := encodeSyntheticTestCredential(t, abn, expires, password, keyByte)
 	fingerprint := sha256.Sum256(credential)
-	path := filepath.Join(t.TempDir(), "tammy-synthetic-credential-v1.bin")
+	path := filepath.Join(canonicalSyntheticTestTempDir(t), "tammy-synthetic-credential-v1.bin")
 	if err := os.WriteFile(path, credential, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	clear(credential)
 	return path, fingerprint
+}
+
+func canonicalSyntheticTestTempDir(t *testing.T) string {
+	t.Helper()
+	directory := t.TempDir()
+	canonical, err := filepath.EvalSymlinks(directory)
+	if err != nil || !filepath.IsAbs(canonical) {
+		t.Fatalf("canonical synthetic credential directory = %q, %v", canonical, err)
+	}
+	return canonical
 }
 
 func prepareAndCommitCredential(t *testing.T, signer *SyntheticSigner, now time.Time, operationID string, kind protocol.MutationKind, path string, password []byte) {
