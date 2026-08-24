@@ -1282,6 +1282,10 @@ func (starter *organisationTransactionStarter) Begin(ctx context.Context) (app.O
 	if err != nil {
 		return fail(err)
 	}
+	evidence, err := organisations.NewEvidenceRepository(tx)
+	if err != nil {
+		return fail(err)
+	}
 	accounts, err := accounting.NewAccountRepository(tx)
 	if err != nil {
 		return fail(err)
@@ -1299,6 +1303,7 @@ func (starter *organisationTransactionStarter) Begin(ctx context.Context) (app.O
 		Profiles: profiles,
 		Setup:    accounting.InitialSetup{Accounts: accounts, Rules: rules},
 		Factors:  factor,
+		Evidence: evidence,
 	}
 	return &organisationCommandTransaction{Transaction: tx, repositories: repositories, id: identifier}, nil
 }
