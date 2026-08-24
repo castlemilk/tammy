@@ -83,7 +83,7 @@ async function runSimulatorCase(
 
 async function refreshAfterUncertain(page: Page): Promise<void> {
   await page.getByRole("button", { name: "Refresh authoritative status" }).click();
-  await expect(page.getByRole("heading", { name: "SBR readiness" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "SBR readiness", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Run simulator fixture" })).toBeVisible();
 }
 
@@ -195,7 +195,7 @@ test("SBR readiness uses local RAM credential and deterministic simulator only",
   ).toBeVisible();
 
   await navigateToSbrThroughSettings(page);
-  await expect(page.getByRole("heading", { name: "SBR readiness" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "SBR readiness", exact: true })).toBeVisible();
   await page.getByLabel("Current administrator password").fill(CURRENT_WORKFLOW_ADMIN_PASSWORD);
   await page.getByRole("button", { name: "Begin TOTP setup" }).click();
   const secret = await page.getByTestId("totp-provisioning-material").textContent();
