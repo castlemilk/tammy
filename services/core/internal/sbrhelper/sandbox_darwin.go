@@ -7,7 +7,10 @@ import (
 	"errors"
 	"io/fs"
 	"os"
+	"os/user"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"unicode"
@@ -74,10 +77,16 @@ func RenderDevelopmentSandboxProfileContext(ctx context.Context, input SandboxPr
 		filepath.Dir(input.StagedRoot) != input.TrustedBase || !validRuntimeName(filepath.Base(input.StagedRoot)) {
 		return SandboxProfile{}, nil, ErrSandboxProfileInvalid
 	}
+	keychainRoot, err := currentUserKeychainRoot()
+	if err != nil {
+		return SandboxProfile{}, nil, ErrSandboxProfileInvalid
+	}
 	all := append([]string{input.TrustedBase, input.StagedRoot}, input.StagedExecutables...)
 	all = append(all, input.StagedReadOnlyFiles...)
 	selectedStart := len(all)
 	all = append(all, input.SelectedReadFiles...)
+	keychainIndex := len(all)
+	all = append(all, keychainRoot)
 	guards := make([]*retainedPath, 0, len(all))
 	fail := func() (SandboxProfile, *SandboxProfileGuard, error) {
 		for _, guard := range guards {
@@ -89,9 +98,9 @@ func RenderDevelopmentSandboxProfileContext(ctx context.Context, input SandboxPr
 		if ctx.Err() != nil {
 			return fail()
 		}
-		regular := index >= 2
+		regular := index >= 2 && index != keychainIndex
 		guard, err := openRetainedPathContext(ctx, path, regular)
-		if err != nil || (index < selectedStart && !guard.trustedAncestors()) {
+		if err != nil || (index < selectedStart && !guard.trustedAncestors()) || (index == keychainIndex && !guard.trustedAncestors()) {
 			if guard != nil {
 				_ = guard.Close()
 			}
@@ -120,6 +129,9 @@ func RenderDevelopmentSandboxProfileContext(ctx context.Context, input SandboxPr
 			return fail()
 		}
 	}
+	if !guards[keychainIndex].leafDirectoryPrivate(euid) {
+		return fail()
+	}
 	guard := &SandboxProfileGuard{paths: guards}
 	var profile strings.Builder
 	profile.WriteString("(version 1)\n(import \"system.sb\")\n(deny default)\n")
@@ -141,9 +153,13 @@ func RenderDevelopmentSandboxProfileContext(ctx context.Context, input SandboxPr
 	profile.WriteString(")\n")
 	profile.WriteString("(allow file-read-data file-read-metadata (literal \"/dev/null\") (literal \"/dev/urandom\"))\n")
 	profile.WriteString("(allow file-write-data (literal \"/dev/null\"))\n")
-	// securityd is a platform bootstrap necessity, not item isolation. Future
-	// packaging enforces helper-specific Keychain ACL/access-group isolation.
+	// Security.framework's legacy login-Keychain client atomically swaps a
+	// login.keychain-db.sb-* shadow through a same-directory .fl* lock. Limit the
+	// helper to those exact filename families; item isolation is still enforced
+	// by the helper-specific Keychain ACL/access group.
+	appendLegacyKeychainFileRules(&profile, keychainRoot)
 	profile.WriteString("(allow mach-lookup (global-name \"com.apple.securityd\"))\n")
+	profile.WriteString("(allow mach-lookup (global-name \"com.apple.SecurityServer\"))\n")
 	profile.WriteString("(deny network*)\n")
 	result := SandboxProfile{contents: profile.String(), guard: guard}
 	if _, err := result.PrepareSpawnContext(ctx); err != nil {
@@ -151,6 +167,50 @@ func RenderDevelopmentSandboxProfileContext(ctx context.Context, input SandboxPr
 		return SandboxProfile{}, nil, ErrSandboxProfileInvalid
 	}
 	return result, guard, nil
+}
+
+func appendLegacyKeychainFileRules(profile *strings.Builder, keychainRoot string) {
+	profile.WriteString("(allow file-read-metadata (literal \"")
+	profile.WriteString(schemeString(keychainRoot))
+	profile.WriteString("\"))\n")
+	profile.WriteString("(allow file-read* file-write*")
+	for _, path := range []string{
+		filepath.Join(keychainRoot, "login.keychain"),
+		filepath.Join(keychainRoot, "login.keychain-db"),
+	} {
+		profile.WriteString(" (literal \"")
+		profile.WriteString(schemeString(path))
+		profile.WriteString("\")")
+	}
+	for _, prefix := range []string{
+		filepath.Join(keychainRoot, "login.keychain-db.sb-"),
+		filepath.Join(keychainRoot, ".fl"),
+	} {
+		profile.WriteString(" (regex #\"")
+		profile.WriteString(schemeRegexString("^" + regexp.QuoteMeta(prefix) + "[^/]+$"))
+		profile.WriteString("\")")
+	}
+	profile.WriteString(")\n")
+}
+
+func schemeRegexString(value string) string {
+	return strings.ReplaceAll(value, `"`, `\"`)
+}
+
+func currentUserKeychainRoot() (string, error) {
+	current, err := user.Current()
+	if err != nil {
+		return "", ErrSandboxProfileInvalid
+	}
+	uid, err := strconv.ParseUint(current.Uid, 10, 64)
+	if err != nil || uid != uint64(os.Geteuid()) || !validAbsolute(current.HomeDir) {
+		return "", ErrSandboxProfileInvalid
+	}
+	root := filepath.Join(filepath.Clean(current.HomeDir), "Library", "Keychains")
+	if !validAbsolute(root) {
+		return "", ErrSandboxProfileInvalid
+	}
+	return root, nil
 }
 
 func (g *SandboxProfileGuard) Revalidate() error {
@@ -347,6 +407,12 @@ func (p *retainedPath) trustedAncestors() bool {
 func (p *retainedPath) leafDirectory(uid uint64, mode uint64) bool {
 	leaf := p.components[len(p.components)-1].identity
 	return leaf.mode&unix.S_IFMT == unix.S_IFDIR && leaf.uid == uid && leaf.mode&0o7777 == mode
+}
+
+func (p *retainedPath) leafDirectoryPrivate(uid uint64) bool {
+	leaf := p.components[len(p.components)-1].identity
+	mode := leaf.mode & 0o7777
+	return leaf.mode&unix.S_IFMT == unix.S_IFDIR && leaf.uid == uid && mode != 0 && mode&0o022 == 0
 }
 
 func (p *retainedPath) leafRegularExact(uid, mode uint64) bool {

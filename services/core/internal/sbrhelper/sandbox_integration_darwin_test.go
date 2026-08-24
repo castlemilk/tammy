@@ -20,13 +20,68 @@ import (
 )
 
 const (
-	productionProbeEnvironment = "TAMMY_CORE_SANDBOX_PROBE"
-	productionProbeStarted     = "SBR_SANDBOX_PROBE_STARTED"
-	productionProbeResult      = "SBR_SANDBOX_PROBE_RESULT="
-	productionProbeDenied      = "DENIED"
-	productionProbeAllowed     = "ALLOWED"
-	productionProbeUnexpected  = "UNEXPECTED"
+	productionProbeEnvironment   = "TAMMY_CORE_SANDBOX_PROBE"
+	productionProbeStarted       = "SBR_SANDBOX_PROBE_STARTED"
+	productionProbeResult        = "SBR_SANDBOX_PROBE_RESULT="
+	productionProbeDenied        = "DENIED"
+	productionProbeAllowed       = "ALLOWED"
+	productionProbeUnexpected    = "UNEXPECTED"
+	keychainPathProbeEnvironment = "TAMMY_CORE_KEYCHAIN_PATH_PROBE"
 )
+
+func TestKeychainAtomicPathFamiliesRejectSiblingAndNestedPaths(t *testing.T) {
+	if root := os.Getenv(keychainPathProbeEnvironment); root != "" {
+		allowedErr := os.WriteFile(filepath.Join(root, ".fl-tammy-probe"), []byte("allowed"), 0o600)
+		siblingErr := os.WriteFile(filepath.Join(root, "metadata.keychain-db"), []byte("denied"), 0o600)
+		nestedErr := os.WriteFile(filepath.Join(root, ".fl-tammy-directory", "nested"), []byte("denied"), 0o600)
+		if allowedErr == nil && classifySandboxError(siblingErr) == sandboxDenied && classifySandboxError(nestedErr) == sandboxDenied {
+			os.Exit(0)
+		}
+		_, _ = os.Stdout.WriteString("allowed=" + errorText(allowedErr) + " sibling=" + errorText(siblingErr) + " nested=" + errorText(nestedErr) + "\n")
+		os.Exit(44)
+	}
+	sandboxExec, err := exec.LookPath("sandbox-exec")
+	if err != nil {
+		t.Skip("SBR_SANDBOX_EXEC_UNAVAILABLE")
+	}
+	base, root, _, probe, _, _ := stageSandboxIntegration(t)
+	keychainRoot := filepath.Join(base, "synthetic-keychains")
+	if err := os.Mkdir(keychainRoot, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(keychainRoot, ".fl-tammy-directory"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	var profile strings.Builder
+	profile.WriteString("(version 1)\n(import \"system.sb\")\n(deny default)\n")
+	profile.WriteString("(allow process-exec (literal \"")
+	profile.WriteString(schemeString(probe))
+	profile.WriteString("\"))\n(allow file-read* (literal \"")
+	profile.WriteString(schemeString(probe))
+	profile.WriteString("\"))\n")
+	appendLegacyKeychainFileRules(&profile, keychainRoot)
+	profile.WriteString("(deny network*)\n")
+	profilePath := filepath.Join(root, "keychain-path-profile.sb")
+	if err := os.WriteFile(profilePath, []byte(profile.String()), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	stdout, stderr, runErr := runSandboxedCommand(t, sandboxExec, profilePath, probe,
+		[]string{"-test.run=^TestKeychainAtomicPathFamiliesRejectSiblingAndNestedPaths$"},
+		[]string{keychainPathProbeEnvironment + "=" + keychainRoot}, nil)
+	if sandboxApplyUnavailable(stderr, runErr) {
+		t.Skip("SBR_SANDBOX_EXEC_UNAVAILABLE")
+	}
+	if runErr != nil {
+		t.Fatalf("exact Keychain path-family probe failed: %v stdout=%q stderr=%q", runErr, stdout, stderr)
+	}
+}
+
+func errorText(err error) string {
+	if err == nil {
+		return "nil"
+	}
+	return err.Error()
+}
 
 func TestProductionRenderedSandboxEndToEnd(t *testing.T) {
 	if os.Getenv(productionProbeEnvironment) == "1" {

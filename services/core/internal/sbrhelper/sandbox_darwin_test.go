@@ -7,6 +7,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -29,6 +30,10 @@ func TestSandboxGuardContextStopsRevalidationBeforePathWork(t *testing.T) {
 
 func TestCoreConstructsExactSandboxProfileAndRevalidatesAtSpawnBoundary(t *testing.T) {
 	base, root, executable, readable, selected := secureSandboxTree(t)
+	keychainRoot, err := currentUserKeychainRoot()
+	if err != nil {
+		t.Fatal(err)
+	}
 	profile, guard, err := RenderDevelopmentSandboxProfile(SandboxProfileInput{
 		TrustedBase: base, StagedRoot: root, StagedExecutables: []string{executable}, StagedReadOnlyFiles: []string{readable}, SelectedReadFiles: []string{selected},
 	})
@@ -59,8 +64,29 @@ func TestCoreConstructsExactSandboxProfileAndRevalidatesAtSpawnBoundary(t *testi
 		strings.Contains(contents, `(allow process-exec (subpath`) || strings.Contains(contents, `(allow process-exec)`) || strings.Contains(contents, "tammy-keychain-service") {
 		t.Fatalf("profile has broad execution or inert Keychain claim:\n%s", contents)
 	}
-	if !strings.Contains(contents, `(allow mach-lookup (global-name "com.apple.securityd"))`) || !strings.Contains(contents, "(deny network*)") || strings.Contains(contents, "(allow network") {
-		t.Fatalf("profile must expose only the documented securityd platform lookup and explicitly deny network:\n%s", contents)
+	for _, service := range []string{"com.apple.securityd", "com.apple.SecurityServer"} {
+		if !strings.Contains(contents, `(allow mach-lookup (global-name "`+service+`"))`) {
+			t.Fatalf("profile is missing exact Keychain service %q:\n%s", service, contents)
+		}
+	}
+	for _, pathRule := range []string{
+		`(literal "` + schemeString(keychainRoot) + `")`,
+		`(literal "` + schemeString(filepath.Join(keychainRoot, "login.keychain")) + `")`,
+		`(literal "` + schemeString(filepath.Join(keychainRoot, "login.keychain-db")) + `")`,
+		`(regex #"` + schemeRegexString(`^`+regexp.QuoteMeta(filepath.Join(keychainRoot, "login.keychain-db.sb-"))+`[^/]+$`) + `")`,
+		`(regex #"` + schemeRegexString(`^`+regexp.QuoteMeta(filepath.Join(keychainRoot, ".fl"))+`[^/]+$`) + `")`,
+	} {
+		if !strings.Contains(contents, pathRule) {
+			t.Fatalf("profile is missing exact Keychain path rule %q:\n%s", pathRule, contents)
+		}
+	}
+	if strings.Contains(contents, `(subpath "`+schemeString(keychainRoot)+`")`) ||
+		strings.Contains(contents, `(prefix "`+schemeString(filepath.Join(keychainRoot, "login.keychain-db.sb-"))+`")`) ||
+		strings.Contains(contents, `(prefix "`+schemeString(filepath.Join(keychainRoot, ".fl"))+`")`) {
+		t.Fatalf("profile broadly exposes the current user's Keychains directory:\n%s", contents)
+	}
+	if !strings.Contains(contents, "(deny network*)") || strings.Contains(contents, "(allow network") {
+		t.Fatalf("profile must explicitly deny network:\n%s", contents)
 	}
 	if profile.FileMode() != 0o600 || profile.OwnerUID() != os.Geteuid() {
 		t.Fatalf("profile ownership contract mode=%o uid=%d", profile.FileMode(), profile.OwnerUID())
