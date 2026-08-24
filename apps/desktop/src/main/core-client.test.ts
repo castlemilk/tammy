@@ -90,9 +90,11 @@ function fakeTransport(
   readonly factory: CoreTransportFactory;
   readonly methods: unknown[];
   readonly receivedHeaders: Headers[];
+  readonly receivedTimeouts: Array<number | undefined>;
 } {
   const methods: unknown[] = [];
   const receivedHeaders: Headers[] = [];
+  const receivedTimeouts: Array<number | undefined> = [];
   const factory = vi.fn(
     (options: ConnectTransportOptions): Transport =>
       createRouterTransport(
@@ -171,46 +173,55 @@ function fakeTransport(
             getSbrReadiness: (_request, context) => {
               methods.push(context.method);
               receivedHeaders.push(new Headers(context.requestHeader));
+              receivedTimeouts.push(context.timeoutMs());
               return {};
             },
             importMachineCredential: (_request, context) => {
               methods.push(context.method);
               receivedHeaders.push(new Headers(context.requestHeader));
+              receivedTimeouts.push(context.timeoutMs());
               return {};
             },
             getMachineCredentialStatus: (_request, context) => {
               methods.push(context.method);
               receivedHeaders.push(new Headers(context.requestHeader));
+              receivedTimeouts.push(context.timeoutMs());
               return {};
             },
             unlockMachineCredential: (_request, context) => {
               methods.push(context.method);
               receivedHeaders.push(new Headers(context.requestHeader));
+              receivedTimeouts.push(context.timeoutMs());
               return {};
             },
             replaceMachineCredential: (_request, context) => {
               methods.push(context.method);
               receivedHeaders.push(new Headers(context.requestHeader));
+              receivedTimeouts.push(context.timeoutMs());
               return {};
             },
             removeMachineCredential: (_request, context) => {
               methods.push(context.method);
               receivedHeaders.push(new Headers(context.requestHeader));
+              receivedTimeouts.push(context.timeoutMs());
               return {};
             },
             importSbrProductId: (_request, context) => {
               methods.push(context.method);
               receivedHeaders.push(new Headers(context.requestHeader));
+              receivedTimeouts.push(context.timeoutMs());
               return {};
             },
             removeSbrProductId: (_request, context) => {
               methods.push(context.method);
               receivedHeaders.push(new Headers(context.requestHeader));
+              receivedTimeouts.push(context.timeoutMs());
               return {};
             },
             runSbrReadinessFixture: (_request, context) => {
               methods.push(context.method);
               receivedHeaders.push(new Headers(context.requestHeader));
+              receivedTimeouts.push(context.timeoutMs());
               return {};
             },
           });
@@ -227,6 +238,7 @@ function fakeTransport(
     factory,
     methods,
     receivedHeaders,
+    receivedTimeouts,
   };
 }
 
@@ -355,6 +367,32 @@ describe("createCoreClient", () => {
     expect(receivedHeaders.every((header) => header.get("X-Tammy-Capability") === CAPABILITY)).toBe(
       true,
     );
+  });
+
+  it("gives every local SBR helper RPC enough time to return its authoritative result", async () => {
+    const { factory, receivedTimeouts } = fakeTransport();
+    const client = createCoreClient(READINESS, factory);
+    const calls = [
+      ["getSbrReadiness", GetSbrReadinessRequestSchema],
+      ["importMachineCredential", ImportMachineCredentialRequestSchema],
+      ["getMachineCredentialStatus", GetMachineCredentialStatusRequestSchema],
+      ["unlockMachineCredential", UnlockMachineCredentialRequestSchema],
+      ["replaceMachineCredential", ReplaceMachineCredentialRequestSchema],
+      ["removeMachineCredential", RemoveMachineCredentialRequestSchema],
+      ["importSbrProductId", ImportSbrProductIdRequestSchema],
+      ["removeSbrProductId", RemoveSbrProductIdRequestSchema],
+      ["runSbrReadinessFixture", RunSbrReadinessFixtureRequestSchema],
+    ] as const;
+
+    for (const [method, requestSchema] of calls) {
+      await (client[method] as (request: unknown) => Promise<unknown>)(create(requestSchema));
+    }
+
+    expect(receivedTimeouts).toHaveLength(calls.length);
+    for (const timeout of receivedTimeouts) {
+      expect(timeout).toBeGreaterThanOrEqual(34_000);
+      expect(timeout).toBeLessThanOrEqual(35_000);
+    }
   });
 
   it("returns only a frozen structured-clone-safe projection", async () => {

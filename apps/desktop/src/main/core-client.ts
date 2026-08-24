@@ -206,6 +206,8 @@ export type CoreTransportFactory = (options: ConnectTransportOptions) => Transpo
 
 export type CoreClientErrorCode = "INVALID_DIAGNOSTICS";
 
+const SBR_LOCAL_OPERATION_TIMEOUT_MS = 35_000;
+
 const ERROR_MESSAGES: Readonly<Record<CoreClientErrorCode, string>> = {
   INVALID_DIAGNOSTICS: "Core returned invalid diagnostics.",
 };
@@ -319,23 +321,53 @@ export function createCoreClient(
     recordEntityVerification: (request: RecordEntityVerificationRequest) =>
       coreRequest(() => organisationClient.recordEntityVerification(request)),
     getSbrReadiness: (request: GetSbrReadinessRequest) =>
-      coreRequest(() => sbrClient.getSbrReadiness(request)),
+      coreRequest(() =>
+        sbrClient.getSbrReadiness(request, { timeoutMs: SBR_LOCAL_OPERATION_TIMEOUT_MS }),
+      ),
     importMachineCredential: (request: ImportMachineCredentialRequest) =>
-      coreRequest(() => sbrClient.importMachineCredential(request)),
+      coreRequest(() =>
+        sbrClient.importMachineCredential(request, {
+          timeoutMs: SBR_LOCAL_OPERATION_TIMEOUT_MS,
+        }),
+      ),
     getMachineCredentialStatus: (request: GetMachineCredentialStatusRequest) =>
-      coreRequest(() => sbrClient.getMachineCredentialStatus(request)),
+      coreRequest(() =>
+        sbrClient.getMachineCredentialStatus(request, {
+          timeoutMs: SBR_LOCAL_OPERATION_TIMEOUT_MS,
+        }),
+      ),
     unlockMachineCredential: (request: UnlockMachineCredentialRequest) =>
-      coreRequest(() => sbrClient.unlockMachineCredential(request)),
+      coreRequest(() =>
+        sbrClient.unlockMachineCredential(request, {
+          timeoutMs: SBR_LOCAL_OPERATION_TIMEOUT_MS,
+        }),
+      ),
     replaceMachineCredential: (request: ReplaceMachineCredentialRequest) =>
-      coreRequest(() => sbrClient.replaceMachineCredential(request)),
+      coreRequest(() =>
+        sbrClient.replaceMachineCredential(request, {
+          timeoutMs: SBR_LOCAL_OPERATION_TIMEOUT_MS,
+        }),
+      ),
     removeMachineCredential: (request: RemoveMachineCredentialRequest) =>
-      coreRequest(() => sbrClient.removeMachineCredential(request)),
+      coreRequest(() =>
+        sbrClient.removeMachineCredential(request, {
+          timeoutMs: SBR_LOCAL_OPERATION_TIMEOUT_MS,
+        }),
+      ),
     importSbrProductId: (request: ImportSbrProductIdRequest) =>
-      coreRequest(() => sbrClient.importSbrProductId(request)),
+      coreRequest(() =>
+        sbrClient.importSbrProductId(request, { timeoutMs: SBR_LOCAL_OPERATION_TIMEOUT_MS }),
+      ),
     removeSbrProductId: (request: RemoveSbrProductIdRequest) =>
-      coreRequest(() => sbrClient.removeSbrProductId(request)),
+      coreRequest(() =>
+        sbrClient.removeSbrProductId(request, { timeoutMs: SBR_LOCAL_OPERATION_TIMEOUT_MS }),
+      ),
     runSbrReadinessFixture: (request: RunSbrReadinessFixtureRequest) =>
-      coreRequest(() => sbrClient.runSbrReadinessFixture(request)),
+      coreRequest(() =>
+        sbrClient.runSbrReadinessFixture(request, {
+          timeoutMs: SBR_LOCAL_OPERATION_TIMEOUT_MS,
+        }),
+      ),
     getAttentionSummary: async (
       request: GetAttentionSummaryRequest,
     ): Promise<GetAttentionSummaryResponse> => {
