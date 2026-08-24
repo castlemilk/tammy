@@ -13,22 +13,23 @@ func TestAuditIdempotencyMigrationIsForwardOnlyAndPreservesPredecessors(t *testi
 	if len(steps) != 7 {
 		t.Fatalf("migration count = %d, want 7", len(steps))
 	}
-	if steps[0].SHA256 != "a3643ab3c6f9d162972beccc41ba75569f66722bb5f8f33e2bff136f9345f4fc" {
+	if steps[0].SHA256 != "034ebfd1359799f3c9da73dd36b8882175f78b7fc4337993e4ab474c42d3834d" {
 		t.Fatalf("0001 checksum changed: %s", steps[0].SHA256)
 	}
-	if steps[1].SHA256 != "6bd8e4471865558babd770a48908cc10b3ab4d1c1a144801778c72e15fc91dd2" {
+	if steps[1].SHA256 != "61ea34dbe8c0ba954610de21e76bc932fb1cf0b80d024c227fa240327930aeff" {
 		t.Fatalf("0002 checksum changed: %s", steps[1].SHA256)
 	}
 	if steps[2].Name != "0003_audit_idempotency.sql" {
 		t.Fatalf("migration 3 name = %q", steps[2].Name)
 	}
-	if steps[2].SHA256 != "8cc61fa5d69bac136c7920fae9beabae7230c9c9f3fe02e0ea95f36e23d2cced" {
+	if steps[2].SHA256 != "8143516aa6643d4a70915e910227a6f36e3d7d7cfc5673ba59641e06aa9c2953" {
 		t.Fatalf("0003 checksum changed: %s", steps[2].SHA256)
 	}
 	schema := strings.ToLower(string(steps[2].SQL))
+	retainedSchema := strings.ToLower(string(steps[0].SQL) + string(steps[2].SQL))
 	for _, table := range []string{
 		"audit_chain_headers_v1", "audit_events_v1", "audit_signing_keys_v1", "audit_signing_key_state_v1",
-		"audit_descriptor_sets_v1", "audit_export_jobs_v1", "command_idempotency_v1",
+		"audit_descriptor_sets_v1", "audit_export_jobs_v1",
 	} {
 		if !strings.Contains(schema, "create table "+table) {
 			t.Errorf("migration 3 does not create table %q", table)
@@ -60,7 +61,7 @@ func TestAuditIdempotencyMigrationIsForwardOnlyAndPreservesPredecessors(t *testi
 		"audit_descriptor_sets_v1_no_delete", "fingerprint blob not null primary key", "length(fingerprint) = 32",
 		"length(descriptor_set) between 1 and 67108864",
 	} {
-		if !strings.Contains(schema, fragment) {
+		if !strings.Contains(retainedSchema, fragment) {
 			t.Errorf("migration 3 missing required column %q", fragment)
 		}
 	}

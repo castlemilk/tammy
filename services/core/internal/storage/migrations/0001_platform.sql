@@ -153,6 +153,30 @@ CREATE TABLE idempotency_records (
   committed_at TEXT
 );
 
+CREATE TABLE command_idempotency_v1 (
+  workspace_id TEXT NOT NULL,
+  actor_user_id TEXT NOT NULL,
+  fully_qualified_rpc_name TEXT NOT NULL CHECK (length(fully_qualified_rpc_name) BETWEEN 1 AND 256),
+  operation_key TEXT NOT NULL,
+  semantic_hash_version TEXT NOT NULL CHECK (length(semantic_hash_version) BETWEEN 1 AND 32),
+  request_type TEXT NOT NULL CHECK (length(request_type) BETWEEN 1 AND 256),
+  normalized_hash BLOB NOT NULL CHECK (length(normalized_hash) = 32),
+  result_type TEXT,
+  result_proto BLOB,
+  outcome TEXT NOT NULL CHECK (outcome IN ('ELECTED','COMMITTED','FAILED')),
+  failure_code TEXT,
+  result_resource_id TEXT,
+  attempt INTEGER NOT NULL DEFAULT 1 CHECK (attempt > 0),
+  retention_policy TEXT NOT NULL DEFAULT 'WORKSPACE_LIFETIME' CHECK (retention_policy = 'WORKSPACE_LIFETIME'),
+  created_at TEXT NOT NULL,
+  completed_at TEXT,
+  PRIMARY KEY (workspace_id, actor_user_id, fully_qualified_rpc_name, operation_key),
+  UNIQUE (operation_key),
+  CHECK ((outcome = 'ELECTED' AND completed_at IS NULL AND result_type IS NULL AND result_proto IS NULL)
+    OR (outcome = 'COMMITTED' AND completed_at IS NOT NULL AND result_type IS NOT NULL AND result_proto IS NOT NULL)
+    OR (outcome = 'FAILED' AND completed_at IS NOT NULL AND failure_code IS NOT NULL))
+);
+
 CREATE TABLE command_idempotency (
   operation_key TEXT PRIMARY KEY,
   command_type TEXT NOT NULL CHECK (length(command_type) BETWEEN 1 AND 128),
@@ -285,7 +309,7 @@ CREATE TABLE organisation_evidence_objects (
 
 CREATE TABLE organisation_verifications (
   id TEXT PRIMARY KEY,
-  operation_key TEXT NOT NULL UNIQUE REFERENCES idempotency_records(operation_key) ON DELETE RESTRICT,
+  operation_key TEXT NOT NULL UNIQUE REFERENCES command_idempotency_v1(operation_key) ON DELETE RESTRICT,
   semantic_sha256 BLOB NOT NULL CHECK (length(semantic_sha256) = 32),
   organisation_id TEXT NOT NULL REFERENCES organisations(id) ON DELETE RESTRICT,
   evidence_object_id TEXT NOT NULL UNIQUE REFERENCES organisation_evidence_objects(id) ON DELETE RESTRICT,

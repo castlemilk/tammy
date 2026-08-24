@@ -142,12 +142,12 @@ func TestRevisionRollbackAndEmptySelectionDoNotIncrement(t *testing.T) {
 func seedIdempotency(t *testing.T, transaction *sql.Tx, operationKey string) {
 	t.Helper()
 	_, err := transaction.Exec(`
-		INSERT INTO idempotency_records(
-			operation_key, command_type, semantic_sha256, result_type,
-			result_proto, state, created_at
-		) VALUES (?, 'tammy.v1.TestCommand', ?, 'tammy.v1.TestResult', ?, 'ELECTED', ?)`,
-		operationKey, "0000000000000000000000000000000000000000000000000000000000000000",
-		[]byte{1}, "2026-08-04T00:00:00Z")
+		INSERT INTO command_idempotency_v1(
+			workspace_id, actor_user_id, fully_qualified_rpc_name, operation_key,
+			semantic_hash_version, request_type, normalized_hash, outcome, created_at
+		) VALUES (?, ?, 'tammy.v1.TestService.TestCommand', ?, 'v1',
+			'tammy.v1.TestCommand', ?, 'ELECTED', ?)`,
+		"018f0000-0000-7000-8000-000000000099", testkit.ActorUserID, operationKey, make([]byte, 32), "2026-08-04T00:00:00Z")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -13,7 +13,7 @@ func TestEmbeddedSchemaDeclaresOwnedPlatformAndLedgerTables(t *testing.T) {
 	platformTables := []string{
 		"schema_migrations", "header_operation_ids", "workspace_metadata", "users", "roles",
 		"user_roles", "user_password_history", "application_sessions", "totp_factors",
-		"factor_assertions", "command_idempotency", "recovery_state", "attempt_journal_anchors",
+		"factor_assertions", "command_idempotency", "command_idempotency_v1", "recovery_state", "attempt_journal_anchors",
 		"idempotency_records", "audit_envelopes",
 		"audit_mirror_metadata", "jobs", "job_checkpoints", "backup_evidence",
 		"restore_evidence", "organisation_evidence_objects", "organisation_verifications",
@@ -27,6 +27,25 @@ func TestEmbeddedSchemaDeclaresOwnedPlatformAndLedgerTables(t *testing.T) {
 	assertCreatesTables(t, string(steps[1].SQL), ledgerTables)
 	assertCreatesTables(t, string(steps[3].SQL), []string{"pre_restore_archives_v1", "pre_restore_archive_export_jobs_v1"})
 	assertCreatesTables(t, string(steps[4].SQL), []string{"documents"})
+}
+
+func TestRetainedCommandIdempotencyIsTheOnlyAuthorityForCommandOwnedEvidence(t *testing.T) {
+	steps, err := All()
+	if err != nil {
+		t.Fatal(err)
+	}
+	allSchema := strings.ToLower(string(steps[0].SQL) + string(steps[1].SQL) + string(steps[2].SQL))
+	if strings.Contains(allSchema, "references idempotency_records(operation_key)") {
+		t.Fatal("command-owned evidence still references the superseded idempotency authority")
+	}
+	for _, fragment := range []string{
+		"references command_idempotency_v1(operation_key)",
+		"unique (operation_key)",
+	} {
+		if !strings.Contains(allSchema, fragment) {
+			t.Errorf("retained command idempotency schema missing %q", fragment)
+		}
+	}
 }
 
 func TestDocumentSchemaRetainsEncryptedWorkspaceEvidenceAndReviewState(t *testing.T) {

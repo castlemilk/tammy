@@ -644,13 +644,12 @@ func saveRecord(t *testing.T, workspace *testkit.EncryptedWorkspace, record orga
 func seedEvidenceOperation(t *testing.T, transaction *sqlcipher.Transaction, operationKey string) {
 	t.Helper()
 	if _, err := transaction.ExecContext(context.Background(), `
-		INSERT INTO idempotency_records(
-			operation_key, command_type, semantic_sha256, result_type,
-			result_proto, state, created_at
-		) VALUES (?, 'tammy.v1.RecordOrganisationVerificationCommand', ?,
-			'tammy.v1.EntityVerification', ?, 'ELECTED', ?)`,
-		operationKey, "0000000000000000000000000000000000000000000000000000000000000000",
-		[]byte{1}, "2026-08-04T00:00:00Z"); err != nil {
+		INSERT INTO command_idempotency_v1(
+			workspace_id, actor_user_id, fully_qualified_rpc_name, operation_key,
+			semantic_hash_version, request_type, normalized_hash, outcome, created_at
+		) VALUES (?, ?, 'tammy.v1.OrganisationService.RecordEntityVerification', ?, 'v1',
+			'tammy.v1.RecordEntityVerificationRequest', ?, 'ELECTED', ?)`,
+		"018f0000-0000-7000-8000-000000000099", testkit.ActorUserID, operationKey, make([]byte, 32), "2026-08-04T00:00:00Z"); err != nil {
 		t.Fatal(err)
 	}
 }

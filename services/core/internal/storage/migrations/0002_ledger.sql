@@ -383,7 +383,7 @@ CREATE TABLE financial_revisions (
 INSERT INTO financial_revisions(id, updated_at) VALUES (1, '1970-01-01T00:00:00Z');
 
 CREATE TABLE financial_revision_claims (
-  operation_key TEXT PRIMARY KEY REFERENCES idempotency_records(operation_key) ON DELETE RESTRICT,
+  operation_key TEXT PRIMARY KEY REFERENCES command_idempotency_v1(operation_key) ON DELETE RESTRICT,
   domain_mask INTEGER NOT NULL CHECK (domain_mask BETWEEN 1 AND 63),
   financial_revision INTEGER NOT NULL CHECK (financial_revision > 0),
   ledger_revision INTEGER NOT NULL CHECK (ledger_revision >= 0),

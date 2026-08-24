@@ -4,11 +4,14 @@ package localproduct
 
 import (
 	"context"
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -21,6 +24,7 @@ import (
 	"github.com/tammyapp/tammy/services/core/internal/transport"
 	"github.com/tammyapp/tammy/services/core/internal/workspace"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealServer(t *testing.T) {
@@ -123,6 +127,27 @@ func TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealSer
 	read, err := organisationClient.GetOrganisation(context.Background(), get)
 	if err != nil || read.Msg.Organisation == nil || read.Msg.Organisation.Id != created.Msg.Organisation.Id {
 		t.Fatalf("GetOrganisation() = %#v, %v", read, err)
+	}
+	evidence, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "apps", "desktop", "tests", "e2e", "assets", "synthetic-abr-evidence.pdf"))
+	if err != nil {
+		t.Fatalf("read SBR evidence fixture: %v", err)
+	}
+	evidenceHash := sha256.Sum256(evidence)
+	recordVerification := connect.NewRequest(&tammyv1.RecordEntityVerificationRequest{
+		CommandContext: &tammyv1.CommandContext{IdempotencyKey: "018f0000-0000-7000-8000-00000000010a", Authentication: authentication},
+		OrganisationId: created.Msg.Organisation.Id, ExpectedVersion: created.Msg.Organisation.Version,
+		SourceMethod:      tammyv1.VerificationSourceMethod_VERIFICATION_SOURCE_METHOD_ABR_EXTRACT_MANUAL,
+		Source:            &tammyv1.SourceRef{Type: "abr_extract", Id: "018f0000-0000-7000-8000-00000000010b", Revision: 1, ContentHash: evidenceHash[:]},
+		VerifiedLegalName: created.Msg.Organisation.LegalName, VerifiedEntityType: created.Msg.Organisation.EntityType,
+		Outcome:    tammyv1.OrganisationVerificationState_ORGANISATION_VERIFICATION_STATE_VERIFIED,
+		Evidence:   &tammyv1.VerificationEvidence{MimeType: "application/pdf", Content: evidence, ContentHash: evidenceHash[:]},
+		LookupTime: timestamppb.Now(),
+	})
+	recordVerification.Header().Set(transport.CapabilityHeader, ready.Capability)
+	verified, err := organisationClient.RecordEntityVerification(context.Background(), recordVerification)
+	if err != nil || verified.Msg.Verification == nil || verified.Msg.Organisation == nil ||
+		verified.Msg.Organisation.VerificationState != tammyv1.OrganisationVerificationState_ORGANISATION_VERIFICATION_STATE_VERIFIED {
+		t.Fatalf("RecordEntityVerification() = %#v, %v", verified, err)
 	}
 	if installed := module.InstalledAccountCount(context.Background()); installed != 12 {
 		t.Fatalf("installed account count = %d, want 12", installed)
@@ -368,7 +393,7 @@ func TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealSer
 		t.Fatalf("GetAttentionSummary() = %#v, %v", attention, err)
 	}
 	if attention.Msg.Revisions.BankingRevision != 3 || attention.Msg.Revisions.TaxSourceRevision != 3 ||
-		attention.Msg.Revisions.FinancialRevision != 7 {
-		t.Fatalf("revisions = %#v, want financial=7 banking=3 tax-source=3", attention.Msg.Revisions)
+		attention.Msg.Revisions.FinancialRevision != 8 {
+		t.Fatalf("revisions = %#v, want financial=8 banking=3 tax-source=3", attention.Msg.Revisions)
 	}
 }
