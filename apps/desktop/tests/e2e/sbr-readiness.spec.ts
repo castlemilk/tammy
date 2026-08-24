@@ -147,6 +147,8 @@ test("SBR readiness uses local RAM credential and deterministic simulator only",
   expect(electronHarness.packagedLayout.releaseKind).toBe("ordinary-package");
   const profileSha256 = electronHarness.packagedLayout.profileSha256;
   if (!profileSha256) throw new Error("PACKAGED_PROFILE_HASH_MISSING");
+  const profileFingerprint = electronHarness.packagedLayout.profileFingerprint;
+  if (!profileFingerprint) throw new Error("PACKAGED_PROFILE_FINGERPRINT_MISSING");
   const installationAuthority = {
     appSha256: electronHarness.packagedLayout.appSha256,
     helperSha256: electronHarness.packagedLayout.helperSha256,
@@ -227,7 +229,7 @@ test("SBR readiness uses local RAM credential and deterministic simulator only",
   });
   await expect(page.getByText("Present", { exact: true }).first()).toBeVisible();
   await expect(page.getByText(credentialSha256, { exact: true })).toBeVisible();
-  await expect(page.getByText(profileSha256, { exact: true })).toBeVisible();
+  await expect(page.getByText(profileFingerprint, { exact: true })).toBeVisible();
   const rendered = await page.locator("body").textContent();
   expect(rendered).not.toContain(selectedCredentialPath);
   expect(rendered).not.toContain(path.basename(selectedCredentialPath));

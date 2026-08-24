@@ -3,7 +3,10 @@ import { lstat, readdir } from "node:fs/promises";
 import path from "node:path";
 
 import { parseCanonicalBuildManifest } from "../../../scripts/build-manifest-schema.mjs";
-import { authenticateSbrProfileBytes } from "../../../scripts/sbr-profile-schema.mjs";
+import {
+  authenticateSbrProfileBytes,
+  canonicalizeSbrProfile,
+} from "../../../scripts/sbr-profile-schema.mjs";
 import {
   hashStableFile,
   readStableFileBytes,
@@ -662,6 +665,7 @@ export async function verifyPackagedLayout({
       packagedSignatureHash !== sourceSignatureHash
     )
       throw new Error("PACKAGED_SBR_PROFILE_HASH_MISMATCH");
+    let profileFingerprint;
     try {
       const [profileBytes, signatureBytes, publicKey] = await Promise.all([
         readStableFileBytes(layout.packagedSbrProfile, {
@@ -679,12 +683,16 @@ export async function verifyPackagedLayout({
       ]);
       const profile = authenticateSbrProfileBytes({ profileBytes, publicKey, signatureBytes });
       if (profile.helper_sha256 !== packagedHelperHash) throw new Error();
+      profileFingerprint = createHash("sha256")
+        .update(canonicalizeSbrProfile(profile))
+        .digest("hex");
     } catch {
       throw new Error("PACKAGED_SBR_PROFILE_AUTHENTICATION_FAILED");
     }
     sbrResult = {
       helperExecutable: layout.packagedSbrHelper,
       helperSha256: packagedHelperHash,
+      profileFingerprint,
       profileSha256: packagedProfileHash,
       sbrStatus: manifest.sbr_status,
     };

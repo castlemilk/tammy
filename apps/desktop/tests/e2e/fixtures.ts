@@ -47,6 +47,7 @@ export interface PackagedLayout {
   readonly coreSha256: string;
   readonly helperExecutable?: string;
   readonly helperSha256?: string;
+  readonly profileFingerprint?: string;
   readonly profileSha256?: string;
   readonly releaseKind: "ordinary-package" | "mas";
   readonly sourceRevision: string;
@@ -138,6 +139,8 @@ function isPackagedLayout(value: unknown): value is PackagedLayout {
         path.isAbsolute(record.helperExecutable) &&
         typeof record.helperSha256 === "string" &&
         /^[0-9a-f]{64}$/.test(record.helperSha256) &&
+        typeof record.profileFingerprint === "string" &&
+        /^[0-9a-f]{64}$/.test(record.profileFingerprint) &&
         typeof record.profileSha256 === "string" &&
         /^[0-9a-f]{64}$/.test(record.profileSha256)))
   );

@@ -346,6 +346,9 @@ for (const [platform, arch] of [
           ? {
               helperExecutable: layout.packagedSbrHelper,
               helperSha256: sha256("signed helper"),
+              profileFingerprint: sha256(
+                canonicalizeSbrProfile(JSON.parse(await readFile(layout.sourceSbrProfile))),
+              ),
               profileSha256: sha256(await readFile(layout.sourceSbrProfile)),
               sbrStatus: "SIMULATOR_ENABLED",
             }
