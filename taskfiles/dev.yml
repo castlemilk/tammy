@@ -38,11 +38,11 @@ tasks:
       - task: launch
 
   accounting:fresh:
-    desc: Request an isolated fresh accounting development scenario.
+    desc: Launch an isolated fresh accounting development scenario.
     summary: |
       The simulator is synthetic and network-disabled. EVTE is non-production and requires signed external inputs.
       No live credential is accepted by Task. BAS remains preparation-only with no submit or lodge action.
-      Production SBR is unavailable, and this scenario fails closed until its isolated launcher exists.
+      Production SBR is unavailable. The isolated retained root is printed after exit.
     preconditions:
       - sh: >-
           mise exec -- node -e 'const target = `${process.platform}/${process.arch}`; if (target !== "darwin/arm64") { console.error(`UNSUPPORTED_SBR_TARGET:${target}`); process.exit(1); }'
@@ -51,11 +51,11 @@ tasks:
       - task: :sbr:launch-accounting-fresh
 
   sbr:simulator:
-    desc: Request the synthetic network-disabled SBR simulator scenario.
+    desc: Launch the synthetic network-disabled SBR simulator scenario.
     summary: |
       The simulator is synthetic and network-disabled. EVTE is non-production and requires signed external inputs.
       No live credential is accepted by Task. BAS remains preparation-only with no submit or lodge action.
-      Production SBR is unavailable, and this scenario fails closed until its owner exists.
+      Production SBR is unavailable. The simulator uses isolated retained user data.
     preconditions:
       - sh: >-
           mise exec -- node -e 'const target = `${process.platform}/${process.arch}`; if (target !== "darwin/arm64") { console.error(`UNSUPPORTED_SBR_TARGET:${target}`); process.exit(1); }'

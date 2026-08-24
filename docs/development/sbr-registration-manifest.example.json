@@ -2,10 +2,6 @@
   "schema_version": 1,
   "environment": "EVTE",
   "target": "darwin/arm64",
-  "product_id_scope": {
-    "product_identifier": "placeholder.product.invalid",
-    "service_id": "placeholder.service.invalid"
-  },
   "dsp_registration": {
     "state": "NOT_STARTED",
     "external_reference": null,

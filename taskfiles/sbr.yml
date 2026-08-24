@@ -17,17 +17,17 @@ tasks:
 
   launch-simulator:
     internal: true
-    desc: Fail closed until the synthetic network-disabled simulator owner exists.
+    desc: Launch the synthetic network-disabled simulator with isolated retained user data.
     summary: |
       The simulator is synthetic and network-disabled. EVTE is non-production and requires signed external inputs.
       No live credential is accepted by Task. BAS remains preparation-only with no submit or lodge action.
-      Production SBR is unavailable, and no simulator readiness is claimed yet.
+      Production SBR is unavailable. The retained simulator root is printed after exit.
     preconditions:
       - sh: >-
           mise exec -- node -e 'const target = `${process.platform}/${process.arch}`; if (target !== "darwin/arm64") { console.error(`UNSUPPORTED_SBR_TARGET:${target}`); process.exit(1); }'
         msg: UNSUPPORTED_SBR_TARGET:{{OS}}/{{ARCH}}
     cmds:
-      - mise exec -- node scripts/sbr-incomplete.mjs simulator
+      - mise exec -- node scripts/launch-local-scenario.mjs sbr-simulator
 
   launch-evte:
     internal: true
@@ -45,56 +45,59 @@ tasks:
 
   run-doctor:
     internal: true
-    desc: Fail closed until the authenticated SBR readiness doctor exists.
+    desc: Launch the authenticated simulator for SBR readiness inspection.
     summary: |
       The simulator is synthetic and network-disabled. EVTE is non-production and requires signed external inputs.
       No live credential is accepted by Task. BAS remains preparation-only with no submit or lodge action.
-      Production SBR is unavailable, and no doctor readiness is claimed yet.
+      Production SBR is unavailable. Unlock and sign in, then inspect Settings → SBR.
     preconditions:
       - sh: >-
           mise exec -- node -e 'const target = `${process.platform}/${process.arch}`; if (target !== "darwin/arm64") { console.error(`UNSUPPORTED_SBR_TARGET:${target}`); process.exit(1); }'
         msg: UNSUPPORTED_SBR_TARGET:{{OS}}/{{ARCH}}
     cmds:
-      - mise exec -- node scripts/sbr-incomplete.mjs doctor
+      - mise exec -- node scripts/launch-local-scenario.mjs sbr-simulator
 
   run-registration-check:
     internal: true
-    desc: Fail closed until the SBR registration readiness owner exists.
+    desc: Report the non-secret external registration handoff still required for EVTE.
     summary: |
       The simulator is synthetic and network-disabled. EVTE is non-production and requires signed external inputs.
       No live credential is accepted by Task. BAS remains preparation-only with no submit or lodge action.
-      Production SBR is unavailable, and registration readiness is not claimed.
+      Production SBR is unavailable. The report always stays blocked pending signed external inputs.
     preconditions:
       - sh: >-
           mise exec -- node -e 'const target = `${process.platform}/${process.arch}`; if (target !== "darwin/arm64") { console.error(`UNSUPPORTED_SBR_TARGET:${target}`); process.exit(1); }'
         msg: UNSUPPORTED_SBR_TARGET:{{OS}}/{{ARCH}}
     cmds:
-      - mise exec -- node scripts/sbr-incomplete.mjs registration
+      - mise exec -- node scripts/check-sbr-registration.mjs
 
   run-test:
     internal: true
-    desc: Fail closed until the focused SBR test owners exist.
+    desc: Run the focused helper, core, schema, desktop, and documentation SBR tests.
     summary: |
       The simulator is synthetic and network-disabled. EVTE is non-production and requires signed external inputs.
       No live credential is accepted by Task. BAS remains preparation-only with no submit or lodge action.
-      Production SBR is unavailable, and no SBR verification is claimed yet.
+      Production SBR is unavailable. These checks prove only the local simulator boundary.
     preconditions:
       - sh: >-
           mise exec -- node -e 'const target = `${process.platform}/${process.arch}`; if (target !== "darwin/arm64") { console.error(`UNSUPPORTED_SBR_TARGET:${target}`); process.exit(1); }'
         msg: UNSUPPORTED_SBR_TARGET:{{OS}}/{{ARCH}}
     cmds:
-      - mise exec -- node scripts/sbr-incomplete.mjs test
+      - mise exec -- go test ./services/sbr-helper/...
+      - mise exec -- go test ./services/core/internal/sbrprofile/... ./services/core/internal/sbrhelper/... ./services/core/internal/sbr/...
+      - mise exec -- node --test --test-concurrency=1 scripts/build-sbr-helper.test.mjs scripts/sbr-profile-schema.test.mjs scripts/sbr-component-schema.test.mjs scripts/sbr-registration-schema.test.mjs scripts/check-sbr-registration.test.mjs scripts/check-sbr-docs.test.mjs
+      - mise exec -- pnpm --dir apps/desktop exec vitest run src/preload/index.test.ts src/main/core-client.test.ts src/main/rpc-router.test.ts src/main/ipc.test.ts src/main/sbr-file-intake.test.ts src/main/sbr-result.test.ts src/renderer/features/sbr/totp-setup.test.tsx src/renderer/features/sbr/machine-credential-form.test.tsx src/renderer/features/sbr/organisation-verification-form.test.tsx src/renderer/features/sbr/sbr-readiness-screen.test.tsx src/renderer/features/sbr/sbr-simulator-panel.test.tsx
 
   run-evidence:
     internal: true
-    desc: Fail closed until the SBR evidence owner exists.
+    desc: Regenerate clean packaged SBR readiness evidence for the current revision.
     summary: |
       The simulator is synthetic and network-disabled. EVTE is non-production and requires signed external inputs.
       No live credential is accepted by Task. BAS remains preparation-only with no submit or lodge action.
-      Production SBR is unavailable, and no evidence bundle is created yet.
+      Production SBR is unavailable. Only the packaged simulator journey may write PASSED evidence.
     preconditions:
       - sh: >-
           mise exec -- node -e 'const target = `${process.platform}/${process.arch}`; if (target !== "darwin/arm64") { console.error(`UNSUPPORTED_SBR_TARGET:${target}`); process.exit(1); }'
         msg: UNSUPPORTED_SBR_TARGET:{{OS}}/{{ARCH}}
     cmds:
-      - mise exec -- node scripts/sbr-incomplete.mjs evidence
+      - mise exec -- pnpm test:e2e:packaged -- --grep "SBR readiness"

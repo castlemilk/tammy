@@ -43,7 +43,7 @@ mise exec -- task dev:sbr:evte
 mise exec -- task evidence:sbr
 ```
 
-The isolated accounting root is retained and printed after exit. The simulator is synthetic and network-disabled. Doctor and registration checks are read-only and redacted; EVTE remains fail-closed until externally issued signed inputs are installed. Task accepts no credential, password, TOTP, Product ID, or endpoint. Follow [Local SBR readiness](sbr-local-readiness.md) before importing a real RAM machine credential in Tammy.
+The isolated accounting root is retained and printed after exit. The simulator is synthetic and network-disabled. Doctor launches that authenticated simulator UI; readiness results and the read-only registration report are redacted. EVTE remains fail-closed until externally issued signed inputs are installed. Task accepts no credential, password, TOTP, Product ID, or endpoint. Follow [Local SBR readiness](sbr-local-readiness.md) before importing a real RAM machine credential in Tammy.
 
 ## Implementation and troubleshooting reference
 

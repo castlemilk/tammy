@@ -73,6 +73,33 @@ test("SBR operator docs use exact existing Task scenarios", async () => {
   }
 });
 
+test("every documented runnable SBR scenario has a real owner", async () => {
+  const taskfile = YAML.parse(await read("taskfiles/sbr.yml"));
+  const expectedCommands = new Map([
+    ["launch-simulator", ["mise exec -- node scripts/launch-local-scenario.mjs sbr-simulator"]],
+    ["run-doctor", ["mise exec -- node scripts/launch-local-scenario.mjs sbr-simulator"]],
+    ["run-registration-check", ["mise exec -- node scripts/check-sbr-registration.mjs"]],
+    ["run-evidence", ['mise exec -- pnpm test:e2e:packaged -- --grep "SBR readiness"']],
+  ]);
+
+  for (const [taskName, commands] of expectedCommands) {
+    assert.deepEqual(
+      taskfile.tasks?.[taskName]?.cmds,
+      commands,
+      `${taskName} must use its real owner`,
+    );
+  }
+  const focusedTests = taskfile.tasks?.["run-test"]?.cmds ?? [];
+  assert.ok(focusedTests.length >= 3, "test:sbr must run the helper, core, and desktop owners");
+  assert.equal(
+    focusedTests.some((command) => String(command).includes("sbr-incomplete.mjs")),
+    false,
+  );
+  assert.deepEqual(taskfile.tasks?.["launch-evte"]?.cmds, [
+    "mise exec -- node scripts/sbr-incomplete.mjs evte",
+  ]);
+});
+
 test("SBR guide states the credential lifecycle and security boundary", async () => {
   const guide = await read("docs/development/sbr-local-readiness.md");
   for (const phrase of [
@@ -80,7 +107,11 @@ test("SBR guide states the credential lifecycle and security boundary", async ()
     "native file chooser",
     "password and fresh TOTP",
     "only in Tammy",
-    "ABN, expiry, and fingerprint",
+    "Continue commits the import",
+    "machine-credential state and displayed fingerprint",
+    "no pre-import preview or separate accept step",
+    "does not display credential ABN or expiry",
+    "core validates the binding",
     "never leaves this Mac",
     "not included in workspace backups",
     "Task accepts no live credential",
@@ -103,6 +134,7 @@ test("SBR guide states the credential lifecycle and security boundary", async ()
       `SBR guide prohibits ${location}`,
     );
   }
+  assert.doesNotMatch(guide, /verify[^.]+(?:ABN|expiry)[^.]+before (?:accept|import)/i);
 });
 
 test("SBR guide owns the complete external registration handoff", async () => {

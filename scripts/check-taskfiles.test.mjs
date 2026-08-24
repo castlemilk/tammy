@@ -31,8 +31,14 @@ const allowedExecutablePatterns = [
   /^mise exec -- pnpm --dir apps\/desktop package$/,
   /^mise exec -- go test -race -tags tammy_sqlcipher \.\/services\/core\/internal\/storage\/sqlcipher\/\.\.\. -count=1$/,
   /^mise exec -- node scripts\/check-clean-tree\.mjs$/,
-  /^mise exec -- node scripts\/sbr-incomplete\.mjs (?:accounting-fresh|simulator|evte|doctor|registration|test|evidence)$/,
-  /^mise exec -- node scripts\/launch-local-scenario\.mjs accounting-fresh$/,
+  /^mise exec -- node scripts\/sbr-incomplete\.mjs evte$/,
+  /^mise exec -- node scripts\/launch-local-scenario\.mjs (?:accounting-fresh|sbr-simulator)$/,
+  /^mise exec -- node scripts\/check-sbr-registration\.mjs$/,
+  /^mise exec -- go test \.\/services\/sbr-helper\/\.\.\.$/,
+  /^mise exec -- go test \.\/services\/core\/internal\/sbrprofile\/\.\.\. \.\/services\/core\/internal\/sbrhelper\/\.\.\. \.\/services\/core\/internal\/sbr\/\.\.\.$/,
+  /^mise exec -- node --test --test-concurrency=1 scripts\/build-sbr-helper\.test\.mjs scripts\/sbr-profile-schema\.test\.mjs scripts\/sbr-component-schema\.test\.mjs scripts\/sbr-registration-schema\.test\.mjs scripts\/check-sbr-registration\.test\.mjs scripts\/check-sbr-docs\.test\.mjs$/,
+  /^mise exec -- pnpm --dir apps\/desktop exec vitest run src\/preload\/index\.test\.ts src\/main\/core-client\.test\.ts src\/main\/rpc-router\.test\.ts src\/main\/ipc\.test\.ts src\/main\/sbr-file-intake\.test\.ts src\/main\/sbr-result\.test\.ts src\/renderer\/features\/sbr\/totp-setup\.test\.tsx src\/renderer\/features\/sbr\/machine-credential-form\.test\.tsx src\/renderer\/features\/sbr\/organisation-verification-form\.test\.tsx src\/renderer\/features\/sbr\/sbr-readiness-screen\.test\.tsx src\/renderer\/features\/sbr\/sbr-simulator-panel\.test\.tsx$/,
+  /^mise exec -- pnpm test:e2e:packaged -- --grep "SBR readiness"$/,
   /^mise exec -- node scripts\/build-sbr-helper\.mjs$/,
   /^git diff --check$/,
   /^mise exec -- task --(?:list|version)$/,
@@ -581,13 +587,24 @@ test("local Task front door preserves the safe development contract", async () =
   assert.deepEqual(shellCommands(dev.tasks.launch), ["mise exec -- pnpm desktop:start"]);
 
   const sbrLeaves = new Map([
-    ["launch-accounting-fresh", "accounting-fresh"],
-    ["launch-simulator", "simulator"],
-    ["launch-evte", "evte"],
-    ["run-doctor", "doctor"],
-    ["run-registration-check", "registration"],
-    ["run-test", "test"],
-    ["run-evidence", "evidence"],
+    [
+      "launch-accounting-fresh",
+      ["mise exec -- node scripts/launch-local-scenario.mjs accounting-fresh"],
+    ],
+    ["launch-simulator", ["mise exec -- node scripts/launch-local-scenario.mjs sbr-simulator"]],
+    ["launch-evte", ["mise exec -- node scripts/sbr-incomplete.mjs evte"]],
+    ["run-doctor", ["mise exec -- node scripts/launch-local-scenario.mjs sbr-simulator"]],
+    ["run-registration-check", ["mise exec -- node scripts/check-sbr-registration.mjs"]],
+    [
+      "run-test",
+      [
+        "mise exec -- go test ./services/sbr-helper/...",
+        "mise exec -- go test ./services/core/internal/sbrprofile/... ./services/core/internal/sbrhelper/... ./services/core/internal/sbr/...",
+        "mise exec -- node --test --test-concurrency=1 scripts/build-sbr-helper.test.mjs scripts/sbr-profile-schema.test.mjs scripts/sbr-component-schema.test.mjs scripts/sbr-registration-schema.test.mjs scripts/check-sbr-registration.test.mjs scripts/check-sbr-docs.test.mjs",
+        "mise exec -- pnpm --dir apps/desktop exec vitest run src/preload/index.test.ts src/main/core-client.test.ts src/main/rpc-router.test.ts src/main/ipc.test.ts src/main/sbr-file-intake.test.ts src/main/sbr-result.test.ts src/renderer/features/sbr/totp-setup.test.tsx src/renderer/features/sbr/machine-credential-form.test.tsx src/renderer/features/sbr/organisation-verification-form.test.tsx src/renderer/features/sbr/sbr-readiness-screen.test.tsx src/renderer/features/sbr/sbr-simulator-panel.test.tsx",
+      ],
+    ],
+    ["run-evidence", ['mise exec -- pnpm test:e2e:packaged -- --grep "SBR readiness"']],
   ]);
   assert.deepEqual(Object.keys(sbr.tasks ?? {}), [...sbrLeaves.keys()]);
   assert.deepEqual(
@@ -628,7 +645,7 @@ test("local Task front door preserves the safe development contract", async () =
     );
     assertNoSensitiveSbrSurface(task);
   }
-  for (const [taskName, mode] of sbrLeaves) {
+  for (const [taskName, commands] of sbrLeaves) {
     const task = sbr.tasks?.[taskName];
     assert.match(task?.desc ?? "", /.+/, `sbr:${taskName} requires a description`);
     assert.match(task?.summary ?? "", /.+/, `sbr:${taskName} requires a summary`);
@@ -643,12 +660,7 @@ test("local Task front door preserves the safe development contract", async () =
       "UNSUPPORTED_SBR_TARGET:{{OS}}/{{ARCH}}",
       `sbr:${taskName} exposes the exact real-host SBR guard error`,
     );
-    assert.deepEqual(
-      shellCommands(task),
-      taskName === "launch-accounting-fresh"
-        ? ["mise exec -- node scripts/launch-local-scenario.mjs accounting-fresh"]
-        : [`mise exec -- node scripts/sbr-incomplete.mjs ${mode}`],
-    );
+    assert.deepEqual(shellCommands(task), commands);
     assertNoSensitiveSbrSurface(task);
   }
   const publicSbrSummaries = guardedPublicSbrTasks
@@ -691,59 +703,37 @@ test("local Task front door preserves the safe development contract", async () =
     }
   }
   const actualSbrTarget = `${process.platform}/${process.arch}`;
-  const expectedSbrFailure =
-    actualSbrTarget === "darwin/arm64"
-      ? (mode) => new RegExp(`SBR_IMPLEMENTATION_INCOMPLETE:${mode}`)
-      : () => new RegExp(`UNSUPPORTED_SBR_TARGET:${actualSbrTarget}`);
-  const expectedSbrFailureCode = (mode) =>
-    actualSbrTarget === "darwin/arm64"
-      ? `SBR_IMPLEMENTATION_INCOMPLETE:${mode}`
-      : `UNSUPPORTED_SBR_TARGET:${actualSbrTarget}`;
   const sbrOutputDirectory = await mkdtemp(path.join("/private/tmp", "tammy-sbr-task-output-"));
   try {
-    for (const [taskName, mode] of [
-      ["dev:sbr:simulator", "simulator"],
-      ["dev:sbr:evte", "evte"],
-      ["sbr:doctor", "doctor"],
-      ["sbr:registration:check", "registration"],
-      ["test:sbr", "test"],
-      ["evidence:sbr", "evidence"],
-    ]) {
-      const result = await runTask(taskName, { TAMMY_SBR_EVIDENCE_DIR: sbrOutputDirectory });
-      assert.notEqual(result.code, 0, `${taskName} fails before an SBR prerequisite owner`);
+    const registration = await runTask("sbr:registration:check", {
+      TAMMY_SBR_EVIDENCE_DIR: sbrOutputDirectory,
+    });
+    if (actualSbrTarget === "darwin/arm64") {
+      assert.equal(registration.code, 0);
+      assert.equal(JSON.parse(registration.stdout).code, "EVTE_SIGNED_INPUTS_REQUIRED");
+      assert.equal(
+        registration.stderr,
+        "task: [sbr:run-registration-check] mise exec -- node scripts/check-sbr-registration.mjs\n",
+      );
+    } else {
+      assert.notEqual(registration.code, 0);
       assert.match(
-        `${result.stdout}${result.stderr}`,
-        expectedSbrFailure(mode),
-        `${taskName} exposes its host-appropriate stable failure`,
-      );
-      assert.deepEqual(
-        `${result.stdout}${result.stderr}`.match(
-          /(?:SBR_IMPLEMENTATION_INCOMPLETE|UNSUPPORTED_SBR_TARGET):[^\s]+/g,
-        ),
-        [expectedSbrFailureCode(mode)],
-        `${taskName} exposes exactly one stable failure code`,
-      );
-      assert.doesNotMatch(
-        `${result.stdout}${result.stderr}`,
-        /desktop:start|launch-local-scenario|check-sbr-readiness|write-sbr-evidence/i,
-        `${taskName} launches no future owner or Electron child`,
-      );
-      assert.deepEqual(
-        await readdir(sbrOutputDirectory),
-        [],
-        `${taskName} creates no evidence bundle`,
+        `${registration.stdout}${registration.stderr}`,
+        new RegExp(`UNSUPPORTED_SBR_TARGET:${actualSbrTarget}`),
       );
     }
-    const callerOverride = await runTask("dev:sbr:simulator", { ARCH: "x64", OS: "linux" }, [
-      "ARCH=x64",
-      "OS=linux",
-    ]);
-    assert.notEqual(callerOverride.code, 0);
+
+    const evte = await runTask("dev:sbr:evte", {
+      TAMMY_SBR_EVIDENCE_DIR: sbrOutputDirectory,
+    });
+    assert.notEqual(evte.code, 0);
     assert.match(
-      `${callerOverride.stdout}${callerOverride.stderr}`,
-      expectedSbrFailure("simulator"),
-      "caller-controlled OS and ARCH values cannot change the real SBR target guard",
+      `${evte.stdout}${evte.stderr}`,
+      actualSbrTarget === "darwin/arm64"
+        ? /SBR_IMPLEMENTATION_INCOMPLETE:evte/
+        : new RegExp(`UNSUPPORTED_SBR_TARGET:${actualSbrTarget}`),
     );
+    assert.deepEqual(await readdir(sbrOutputDirectory), []);
   } finally {
     await rm(sbrOutputDirectory, { force: true, recursive: true });
   }

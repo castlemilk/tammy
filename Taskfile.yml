@@ -110,11 +110,11 @@ tasks:
       - task: release:candidate
 
   sbr:doctor:
-    desc: Request the fail-closed SBR readiness doctor.
+    desc: Launch the authenticated simulator for SBR readiness inspection.
     summary: |
       The simulator is synthetic and network-disabled. EVTE is non-production and requires signed external inputs.
       No live credential is accepted by Task. BAS remains preparation-only with no submit or lodge action.
-      Production SBR is unavailable, and this check fails closed until its owner exists.
+      Production SBR is unavailable. Unlock and sign in, then inspect Settings → SBR.
     preconditions:
       - sh: >-
           mise exec -- node -e 'const target = `${process.platform}/${process.arch}`; if (target !== "darwin/arm64") { console.error(`UNSUPPORTED_SBR_TARGET:${target}`); process.exit(1); }'
@@ -123,11 +123,11 @@ tasks:
       - task: sbr:run-doctor
 
   sbr:registration:check:
-    desc: Request the fail-closed SBR registration readiness check.
+    desc: Report the external signed registration inputs still required for EVTE.
     summary: |
       The simulator is synthetic and network-disabled. EVTE is non-production and requires signed external inputs.
       No live credential is accepted by Task. BAS remains preparation-only with no submit or lodge action.
-      Production SBR is unavailable, and registration readiness is not claimed.
+      Production SBR is unavailable, and the report remains blocked pending external issuance.
     preconditions:
       - sh: >-
           mise exec -- node -e 'const target = `${process.platform}/${process.arch}`; if (target !== "darwin/arm64") { console.error(`UNSUPPORTED_SBR_TARGET:${target}`); process.exit(1); }'
@@ -136,11 +136,11 @@ tasks:
       - task: sbr:run-registration-check
 
   test:sbr:
-    desc: Request the fail-closed focused SBR verification scenario.
+    desc: Run the focused local SBR simulator verification scenario.
     summary: |
       The simulator is synthetic and network-disabled. EVTE is non-production and requires signed external inputs.
       No live credential is accepted by Task. BAS remains preparation-only with no submit or lodge action.
-      Production SBR is unavailable, and this scenario fails closed until its owners exist.
+      Production SBR is unavailable. These checks prove only the local simulator boundary.
     preconditions:
       - sh: >-
           mise exec -- node -e 'const target = `${process.platform}/${process.arch}`; if (target !== "darwin/arm64") { console.error(`UNSUPPORTED_SBR_TARGET:${target}`); process.exit(1); }'
@@ -149,11 +149,11 @@ tasks:
       - task: sbr:run-test
 
   evidence:sbr:
-    desc: Request fail-closed SBR readiness evidence generation.
+    desc: Regenerate clean packaged SBR readiness evidence for the current revision.
     summary: |
       The simulator is synthetic and network-disabled. EVTE is non-production and requires signed external inputs.
       No live credential is accepted by Task. BAS remains preparation-only with no submit or lodge action.
-      Production SBR is unavailable, and no evidence is created until its owner exists.
+      Production SBR is unavailable. Only the packaged simulator journey may write PASSED evidence.
     preconditions:
       - sh: >-
           mise exec -- node -e 'const target = `${process.platform}/${process.arch}`; if (target !== "darwin/arm64") { console.error(`UNSUPPORTED_SBR_TARGET:${target}`); process.exit(1); }'

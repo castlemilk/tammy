@@ -28,7 +28,7 @@ mise exec -- task test:sbr
 mise exec -- task package:e2e
 ```
 
-The simulator uses fixed test identity and credential material and cannot select an EVTE or production endpoint. The doctor reports redacted readiness after normal workspace unlock and sign-in. `test:sbr` owns focused protocol, vault, core, desktop, and policy checks. Only a clean packaged E2E result is packaged evidence; an interactive launch is a development smoke.
+The simulator uses fixed test identity and credential material and cannot select an EVTE or production endpoint. The doctor launches the same isolated authenticated simulator: after normal workspace unlock and sign-in, open Settings → SBR to inspect the redacted readiness state. `test:sbr` owns focused protocol, vault, core, desktop, and policy checks. Only a clean packaged E2E result is packaged evidence; an interactive launch is a development smoke.
 
 ## Scenario: inspect the external registration handoff
 
@@ -70,8 +70,8 @@ Launch EVTE only after signed readiness passes. Then sign in normally and perfor
 
 1. Select the credential with Tammy's native file chooser. Do not use a Task argument or a terminal path.
 2. Enter the credential password and fresh TOTP only in Tammy. Task accepts no live credential.
-3. Verify the returned redacted ABN, expiry, and fingerprint before accepting the binding.
-4. Confirm the credential is bound to the intended installation, workspace, organisation, and verified ABN.
+3. Continue commits the import. Afterward, confirm the machine-credential state and displayed fingerprint; the current UI has no pre-import preview or separate accept step and does not display credential ABN or expiry.
+4. The core validates the binding against the authenticated installation, workspace, organisation, and independently verified ABN and rejects a mismatch before credential use.
 5. Remove or replace it only through the authenticated in-app action; reimport is required after moving to another machine or restoring a workspace.
 
 Never copy the credential bytes, credential password, TOTP secret, or Product ID into the repository, terminal, environment variables, command arguments, logs, evidence, backups, or cloud storage. The credential never leaves this Mac, is stored outside the accounting workspace, and is not included in workspace backups. If the secure OS store is unavailable, credential operations fail closed while ordinary accounting remains available.

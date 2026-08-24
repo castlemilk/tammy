@@ -24,14 +24,17 @@ const defaultDependencies = {
 
 function scenarioArguments(scenario, retainedRoot) {
   if (scenario === "accounting") return PACKAGE_COMMAND;
-  if (scenario === "accounting-fresh" && retainedRoot !== undefined) {
+  if (
+    (scenario === "accounting-fresh" || scenario === "sbr-simulator") &&
+    retainedRoot !== undefined
+  ) {
     return [...PACKAGE_COMMAND, "--", `--user-data-dir=${retainedRoot}`];
   }
   throw new Error("LOCAL_SCENARIO_INVALID");
 }
 
 function rejectUnimplementedScenario(scenario) {
-  if (scenario === "sbr-simulator" || scenario === "sbr-evte") {
+  if (scenario === "sbr-evte") {
     throw new Error(`SBR_IMPLEMENTATION_INCOMPLETE:${scenario}`);
   }
 }
@@ -39,15 +42,22 @@ function rejectUnimplementedScenario(scenario) {
 export async function launchLocalScenario(scenario, overrides = {}) {
   const dependencies = { ...defaultDependencies, ...overrides };
   rejectUnimplementedScenario(scenario);
-  if (scenario !== "accounting" && scenario !== "accounting-fresh") {
+  if (
+    scenario !== "accounting" &&
+    scenario !== "accounting-fresh" &&
+    scenario !== "sbr-simulator"
+  ) {
     throw new Error("LOCAL_SCENARIO_INVALID");
   }
 
   let retainedRoot;
-  if (scenario === "accounting-fresh") {
+  if (scenario === "accounting-fresh" || scenario === "sbr-simulator") {
     try {
       retainedRoot = await dependencies.makeTemporaryDirectory(
-        path.join(dependencies.temporaryRoot, "tammy-accounting-fresh-"),
+        path.join(
+          dependencies.temporaryRoot,
+          scenario === "accounting-fresh" ? "tammy-accounting-fresh-" : "tammy-sbr-simulator-",
+        ),
       );
     } catch {
       throw new Error("LOCAL_SCENARIO_TEMPORARY_ROOT_FAILED");
@@ -212,7 +222,7 @@ function validateDesktopScenarioOwnerArguments(arguments_, temporaryRoot) {
   if (
     !path.isAbsolute(userDataPath) ||
     path.dirname(userDataPath) !== path.resolve(temporaryRoot) ||
-    !/^tammy-accounting-fresh-[A-Za-z0-9_-]+$/u.test(path.basename(userDataPath))
+    !/^tammy-(?:accounting-fresh|sbr-simulator)-[A-Za-z0-9_-]+$/u.test(path.basename(userDataPath))
   ) {
     throw new Error("LOCAL_SCENARIO_OWNER_ARGUMENTS_INVALID");
   }

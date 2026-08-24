@@ -133,19 +133,56 @@ test("pins the child to the Tammy repository when invoked from a foreign cwd", a
   }
 });
 
-for (const scenario of ["sbr-simulator", "sbr-evte"]) {
-  test(`${scenario} stays fail-closed without creating a root or child`, async () => {
-    const harness = rig();
+test("sbr-simulator launches the authenticated profile with isolated retained user data", async () => {
+  const harness = rig();
+  harness.dependencies.makeTemporaryDirectory = async (prefix) => {
+    harness.calls.push(["temporary-directory", prefix]);
+    return "/private/tmp/tammy-sbr-simulator-fixed";
+  };
 
-    await assert.rejects(
-      launchLocalScenario(scenario, harness.dependencies),
-      new Error(`SBR_IMPLEMENTATION_INCOMPLETE:${scenario}`),
-    );
-    assert.deepEqual(harness.calls, []);
-    assert.deepEqual(harness.stdout, []);
-    assert.deepEqual(harness.stderr, []);
-  });
-}
+  const completion = launchLocalScenario("sbr-simulator", harness.dependencies);
+  await Promise.resolve();
+
+  assert.deepEqual(harness.calls, [
+    ["temporary-directory", "/private/tmp/tammy-sbr-simulator-"],
+    [
+      "spawn",
+      "mise",
+      [
+        "exec",
+        "--",
+        "pnpm",
+        "desktop:start:scenario",
+        "--",
+        "--user-data-dir=/private/tmp/tammy-sbr-simulator-fixed",
+      ],
+      {
+        cwd: repositoryRoot,
+        detached: true,
+        shell: false,
+        stdio: ["ignore", "pipe", "pipe"],
+      },
+    ],
+  ]);
+  harness.child.emit("close", 0, null);
+
+  await assert.doesNotReject(completion);
+  assert.deepEqual(harness.stdout, [
+    "LOCAL_SCENARIO_RETAINED_ROOT:/private/tmp/tammy-sbr-simulator-fixed\n",
+  ]);
+});
+
+test("sbr-evte stays fail-closed without creating a root or child", async () => {
+  const harness = rig();
+
+  await assert.rejects(
+    launchLocalScenario("sbr-evte", harness.dependencies),
+    new Error("SBR_IMPLEMENTATION_INCOMPLETE:sbr-evte"),
+  );
+  assert.deepEqual(harness.calls, []);
+  assert.deepEqual(harness.stdout, []);
+  assert.deepEqual(harness.stderr, []);
+});
 
 test("rejects extra or unknown inputs instead of forwarding them", async () => {
   const harness = rig();
@@ -296,6 +333,31 @@ test("desktop package owner forwards only validated Electron Forge arguments", a
       ],
       { cwd: repositoryRoot, shell: false, stdio: "inherit" },
     ],
+  ]);
+});
+
+test("desktop package owner accepts only the owned SBR simulator root", async () => {
+  const children = [new FakeChild(), new FakeChild()];
+  const calls = [];
+  const processRunner = (command, arguments_, options) => {
+    calls.push([command, arguments_, options]);
+    const child = children.shift();
+    queueMicrotask(() => child.emit("close", 0, null));
+    return child;
+  };
+
+  await runDesktopScenarioOwner(["--", "--user-data-dir=/private/tmp/tammy-sbr-simulator-fixed"], {
+    processRunner,
+    temporaryRoot: "/private/tmp",
+  });
+
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls[1][1], [
+    "--dir",
+    "apps/desktop",
+    "start",
+    "--",
+    "--user-data-dir=/private/tmp/tammy-sbr-simulator-fixed",
   ]);
 });
 
