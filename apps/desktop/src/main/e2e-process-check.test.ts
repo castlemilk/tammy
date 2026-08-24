@@ -1,6 +1,7 @@
 // @vitest-environment node
 
 import { createHash } from "node:crypto";
+import { rmSync } from "node:fs";
 import { chmod, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -19,10 +20,17 @@ type Callback = (
   stderr: string,
 ) => void;
 
-function runner(results: readonly { error?: Error & { code?: number }; stdout?: string }[]) {
+function runner(
+  results: readonly {
+    beforeCallback?: () => void;
+    error?: Error & { code?: number };
+    stdout?: string;
+  }[],
+) {
   let index = 0;
   return vi.fn((_: string, __: readonly string[], ___: unknown, callback: Callback) => {
     const result = results[index++] ?? {};
+    result.beforeCallback?.();
     callback(result.error ?? null, result.stdout ?? "", "");
     return {};
   });
@@ -152,6 +160,7 @@ describe("packaged SBR helper process observation", () => {
               { stdout: "52\n" },
               { stdout: `${observedPath}\n` },
               executableImage(52, observedPath),
+              { stdout: "52\n" },
             ],
       );
 
@@ -262,6 +271,31 @@ describe("packaged SBR helper process observation", () => {
     ).resolves.toEqual([]);
     expect(pinned).toEqual(new Map());
     expect(execute.mock.calls[2]?.slice(0, 2)).toEqual([
+      "/usr/bin/pgrep",
+      ["-f", "-x", expect.any(String)],
+    ]);
+  });
+
+  it("treats a helper and staged file disappearing during digest as exited after exact revalidation", async () => {
+    const { authority, stagedPath } = await fixture();
+    const execute = runner([
+      { stdout: "60\n" },
+      { stdout: `${stagedPath}\n` },
+      {
+        ...executableImage(60, stagedPath),
+        beforeCallback: () => rmSync(stagedPath),
+      },
+      { error: Object.assign(new Error("helper exited"), { code: 1 }) },
+    ]);
+    const pinned = new Map<number, string>();
+
+    await expect(
+      findAuthenticatedStagedHelperProcesses(authority, pinned, {
+        execFile: execute as never,
+      }),
+    ).resolves.toEqual([]);
+    expect(pinned).toEqual(new Map());
+    expect(execute.mock.calls[3]?.slice(0, 2)).toEqual([
       "/usr/bin/pgrep",
       ["-f", "-x", expect.any(String)],
     ]);

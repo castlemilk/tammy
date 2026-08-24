@@ -346,7 +346,20 @@ async function queryAuthenticatedStagedHelpers(
     if (prior !== undefined && prior !== executablePath) {
       throw new Error("STAGED_HELPER_PATH_CHANGED");
     }
-    if ((await authenticatedFileDigest(executablePath)) !== trusted.helperSha256) {
+    let stagedDigest: string;
+    try {
+      stagedDigest = await authenticatedFileDigest(executablePath);
+    } catch (error) {
+      if (!(error instanceof Error) || error.message !== "UNAUTHENTICATED_STAGED_HELPER") {
+        throw error;
+      }
+      const stillMatches = await queryExactStagedHelperProcessIds(patternSource, dependencies);
+      if (!stillMatches.includes(processId)) continue;
+      throw error;
+    }
+    if (stagedDigest !== trusted.helperSha256) {
+      const stillMatches = await queryExactStagedHelperProcessIds(patternSource, dependencies);
+      if (!stillMatches.includes(processId)) continue;
       throw new Error("UNAUTHENTICATED_STAGED_HELPER");
     }
     pinned.set(processId, executablePath);
