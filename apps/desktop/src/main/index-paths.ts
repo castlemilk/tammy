@@ -1,7 +1,7 @@
 import { lstat, realpath } from "node:fs/promises";
 import path from "node:path";
 
-interface BundledCorePathOptions {
+interface BundledResourcePathOptions {
   readonly arch: string;
   readonly developmentResourcesPath: string;
   readonly isPackaged: boolean;
@@ -24,13 +24,13 @@ function isContained(parent: string, candidate: string): boolean {
   );
 }
 
-async function requirePhysicalDirectory(candidate: string): Promise<string> {
+async function requirePhysicalDirectory(candidate: string, errorCode: string): Promise<string> {
   const before = await lstat(candidate).catch(() => null);
   if (!before?.isDirectory() || before.isSymbolicLink()) {
-    throw new Error("INVALID_CORE_BINARY");
+    throw new Error(errorCode);
   }
   const physical = await realpath(candidate).catch(() => {
-    throw new Error("INVALID_CORE_BINARY");
+    throw new Error(errorCode);
   });
   const after = await lstat(candidate).catch(() => null);
   if (
@@ -39,12 +39,12 @@ async function requirePhysicalDirectory(candidate: string): Promise<string> {
     before.dev !== after.dev ||
     before.ino !== after.ino
   ) {
-    throw new Error("INVALID_CORE_BINARY");
+    throw new Error(errorCode);
   }
   return physical;
 }
 
-export async function resolveBundledCorePath(options: BundledCorePathOptions): Promise<string> {
+export async function resolveBundledCorePath(options: BundledResourcePathOptions): Promise<string> {
   const executable = CORE_TARGETS[`${options.platform}/${options.arch}`];
   if (!executable) {
     throw new Error("UNSUPPORTED_CORE_TARGET");
@@ -59,9 +59,9 @@ export async function resolveBundledCorePath(options: BundledCorePathOptions): P
     throw new Error("INVALID_CORE_BINARY");
   }
   const [physicalResources, physicalCore, physicalTarget] = await Promise.all([
-    requirePhysicalDirectory(resourcesRoot),
-    requirePhysicalDirectory(coreRoot),
-    requirePhysicalDirectory(targetRoot),
+    requirePhysicalDirectory(resourcesRoot, "INVALID_CORE_BINARY"),
+    requirePhysicalDirectory(coreRoot, "INVALID_CORE_BINARY"),
+    requirePhysicalDirectory(targetRoot, "INVALID_CORE_BINARY"),
   ]);
   if (!isContained(physicalResources, physicalCore) || !isContained(physicalCore, physicalTarget)) {
     throw new Error("INVALID_CORE_BINARY");
@@ -84,4 +84,56 @@ export async function resolveBundledCorePath(options: BundledCorePathOptions): P
     throw new Error("INVALID_CORE_BINARY");
   }
   return physicalCandidate;
+}
+
+export interface BundledSbrProfileLocation {
+  readonly profilePath: string;
+  readonly resourcesRoot: string;
+}
+
+export async function resolveBundledSbrProfileLocation(
+  options: BundledResourcePathOptions,
+): Promise<BundledSbrProfileLocation> {
+  if (options.platform !== "darwin" || options.arch !== "arm64") {
+    throw new Error("UNSUPPORTED_SBR_TARGET");
+  }
+  const resourcesRoot = path.resolve(
+    options.isPackaged ? options.resourcesPath : options.developmentResourcesPath,
+  );
+  const sbrRoot = path.join(resourcesRoot, "sbr");
+  const simulatorRoot = path.join(sbrRoot, "simulator");
+  const profilePath = path.join(simulatorRoot, "sbr-profile-v1.json");
+  const signaturePath = path.join(simulatorRoot, "sbr-profile-v1.sig");
+  const [physicalResources, physicalSbr, physicalSimulator] = await Promise.all([
+    requirePhysicalDirectory(resourcesRoot, "INVALID_SBR_PROFILE"),
+    requirePhysicalDirectory(sbrRoot, "INVALID_SBR_PROFILE"),
+    requirePhysicalDirectory(simulatorRoot, "INVALID_SBR_PROFILE"),
+  ]);
+  if (
+    !isContained(physicalResources, physicalSbr) ||
+    !isContained(physicalSbr, physicalSimulator)
+  ) {
+    throw new Error("INVALID_SBR_PROFILE");
+  }
+  for (const candidate of [profilePath, signaturePath]) {
+    const before = await lstat(candidate).catch(() => null);
+    const physical = await realpath(candidate).catch(() => null);
+    const after = physical === null ? null : await lstat(physical).catch(() => null);
+    if (
+      !before?.isFile() ||
+      before.isSymbolicLink() ||
+      physical === null ||
+      !after?.isFile() ||
+      after.isSymbolicLink() ||
+      before.dev !== after.dev ||
+      before.ino !== after.ino ||
+      !isContained(physicalSimulator, physical)
+    ) {
+      throw new Error("INVALID_SBR_PROFILE");
+    }
+  }
+  return Object.freeze({
+    profilePath: await realpath(profilePath),
+    resourcesRoot: physicalResources,
+  });
 }

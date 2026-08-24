@@ -34,8 +34,11 @@ describe("createCoreLaunchArguments", () => {
     expect(
       createCoreLaunchArguments({
         isPackaged: true,
-        sbrProfilePath:
-          "/Applications/Tammy.app/Contents/Resources/sbr/simulator/sbr-profile-v1.json",
+        sbrProfile: {
+          profilePath:
+            "/Applications/Tammy.app/Contents/Resources/sbr/simulator/sbr-profile-v1.json",
+          resourcesRoot: "/Applications/Tammy.app/Contents/Resources",
+        },
         userDataPath: "/Users/test/Library/Application Support/Tammy",
       }),
     ).toEqual([
@@ -45,11 +48,18 @@ describe("createCoreLaunchArguments", () => {
     ]);
   });
 
-  it("rejects a non-absolute SBR profile before core launch", () => {
+  it.each([
+    ["relative", "resources", "resources/sbr/simulator/sbr-profile-v1.json"],
+    [
+      "foreign absolute",
+      "/Applications/Tammy.app/Contents/Resources",
+      "/private/tmp/sbr-profile-v1.json",
+    ],
+  ])("rejects a %s SBR profile before core launch", (_name, resourcesRoot, profilePath) => {
     expect(() =>
       createCoreLaunchArguments({
         isPackaged: true,
-        sbrProfilePath: "resources/sbr-profile-v1.json",
+        sbrProfile: { profilePath, resourcesRoot },
         userDataPath: "/Users/test/Library/Application Support/Tammy",
       }),
     ).toThrow("SBR_PROFILE_PATH_INVALID");

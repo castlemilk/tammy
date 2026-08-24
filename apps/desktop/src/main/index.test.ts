@@ -20,7 +20,7 @@ import {
   type DesktopDependencies,
   startDesktopApplication,
 } from "./index";
-import { resolveBundledCorePath } from "./index-paths";
+import { resolveBundledCorePath, resolveBundledSbrProfileLocation } from "./index-paths";
 
 const temporaryDirectories: string[] = [];
 
@@ -579,7 +579,7 @@ describe("desktop application composition", () => {
   );
 });
 
-describe("bundled core resolver", () => {
+describe("bundled resource resolver", () => {
   async function resourcesFixture() {
     const root = await mkdtemp(path.join(tmpdir(), "tammy-core-paths-"));
     temporaryDirectories.push(root);
@@ -739,4 +739,64 @@ describe("bundled core resolver", () => {
       ).rejects.toThrow("INVALID_CORE_BINARY");
     },
   );
+
+  it.each([false, true])(
+    "resolves the exact package-root-contained SBR profile for isPackaged=%s",
+    async (isPackaged) => {
+      const { development, packaged } = await resourcesFixture();
+      const selectedResources = isPackaged ? packaged : development;
+      const simulator = path.join(selectedResources, "sbr/simulator");
+      await mkdir(simulator, { recursive: true });
+      await Promise.all([
+        writeFile(path.join(simulator, "sbr-profile-v1.json"), "profile"),
+        writeFile(path.join(simulator, "sbr-profile-v1.sig"), "signature"),
+      ]);
+
+      await expect(
+        resolveBundledSbrProfileLocation({
+          arch: "arm64",
+          developmentResourcesPath: development,
+          isPackaged,
+          platform: "darwin",
+          resourcesPath: packaged,
+        }),
+      ).resolves.toEqual({
+        profilePath: await realpath(path.join(simulator, "sbr-profile-v1.json")),
+        resourcesRoot: await realpath(selectedResources),
+      });
+    },
+  );
+
+  it("rejects a foreign symlink masquerading as the packaged SBR profile", async () => {
+    const { development, packaged, root } = await resourcesFixture();
+    const simulator = path.join(packaged, "sbr/simulator");
+    const foreign = path.join(root, "foreign-profile.json");
+    await mkdir(simulator, { recursive: true });
+    await writeFile(foreign, "profile");
+    await symlink(foreign, path.join(simulator, "sbr-profile-v1.json"));
+    await writeFile(path.join(simulator, "sbr-profile-v1.sig"), "signature");
+
+    await expect(
+      resolveBundledSbrProfileLocation({
+        arch: "arm64",
+        developmentResourcesPath: development,
+        isPackaged: true,
+        platform: "darwin",
+        resourcesPath: packaged,
+      }),
+    ).rejects.toThrow("INVALID_SBR_PROFILE");
+  });
+
+  it("rejects SBR profile discovery on an unsupported target", async () => {
+    const { development, packaged } = await resourcesFixture();
+    await expect(
+      resolveBundledSbrProfileLocation({
+        arch: "x64",
+        developmentResourcesPath: development,
+        isPackaged: true,
+        platform: "win32",
+        resourcesPath: packaged,
+      }),
+    ).rejects.toThrow("UNSUPPORTED_SBR_TARGET");
+  });
 });

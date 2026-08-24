@@ -19,7 +19,7 @@ import { createCoreClient } from "./core-client";
 import { createCoreLaunchArguments, parseLocalLaunchArguments } from "./core-launch";
 import { CoreProcess } from "./core-process";
 import type { DesktopDependencies, DesktopWindow } from "./index-lifecycle";
-import { resolveBundledCorePath } from "./index-paths";
+import { resolveBundledCorePath, resolveBundledSbrProfileLocation } from "./index-paths";
 import { registerDesktopIpc } from "./ipc";
 import { createDesktopRpcRouter } from "./rpc-router";
 import {
@@ -101,20 +101,21 @@ export function createProductionDependencies(
         platform: process.platform,
         resourcesPath: process.resourcesPath,
       });
+      const sbrProfile =
+        process.platform === "darwin" && process.arch === "arm64" && releaseKind !== "mas"
+          ? await resolveBundledSbrProfileLocation({
+              arch: process.arch,
+              developmentResourcesPath,
+              isPackaged: app.isPackaged,
+              platform: process.platform,
+              resourcesPath: process.resourcesPath,
+            })
+          : undefined;
       core = new CoreProcess({
         binaryPath,
         args: createCoreLaunchArguments({
           isPackaged: app.isPackaged,
-          ...(process.platform === "darwin" && process.arch === "arm64" && releaseKind !== "mas"
-            ? {
-                sbrProfilePath: path.join(
-                  app.isPackaged ? process.resourcesPath : developmentResourcesPath,
-                  "sbr",
-                  "simulator",
-                  "sbr-profile-v1.json",
-                ),
-              }
-            : {}),
+          ...(sbrProfile ? { sbrProfile } : {}),
           userDataPath: app.getPath("userData"),
         }),
       });
