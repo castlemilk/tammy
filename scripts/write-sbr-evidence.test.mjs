@@ -103,7 +103,10 @@ test("fails closed for stale, malformed, insecure, or symlinked results and remo
 });
 
 test("CLI accepts no inputs and does not invoke Playwright", async () => {
-  const source = await readFile(path.join(realRepositoryRoot, "scripts/write-sbr-evidence.mjs"), "utf8");
+  const source = await readFile(
+    path.join(realRepositoryRoot, "scripts/write-sbr-evidence.mjs"),
+    "utf8",
+  );
   assert.doesNotMatch(source, /(?:pnpm|npx).*playwright|test:e2e:packaged/iu);
   const child = spawn(
     "mise",

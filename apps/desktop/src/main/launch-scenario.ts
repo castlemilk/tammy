@@ -20,9 +20,7 @@ const LOCAL_ROOT_PREFIX: Partial<Record<DesktopLaunchScenario, string>> = {
   "sbr-simulator": "tammy-sbr-simulator-",
 };
 
-export function parseDesktopLaunchScenario(
-  arguments_: readonly string[],
-): DesktopLaunchAuthority {
+export function parseDesktopLaunchScenario(arguments_: readonly string[]): DesktopLaunchAuthority {
   const kind = parseLaunchScenarioArgument(arguments_);
   const local = parseLocalLaunchArguments(
     arguments_.filter((argument) => !argument.startsWith(TAMMY_LAUNCH_SCENARIO_SWITCH)),
@@ -36,21 +34,19 @@ export function parseDesktopLaunchScenario(
   if (
     (kind !== "accounting" && local.userDataPath === undefined) ||
     (kind === "accounting" && looksLikeOwnedScenarioRoot) ||
-    (looksLikeOwnedScenarioRoot && expectedPrefix !== undefined && !basename?.startsWith(expectedPrefix))
+    (looksLikeOwnedScenarioRoot &&
+      expectedPrefix !== undefined &&
+      !basename?.startsWith(expectedPrefix))
   ) {
     throw new Error("LOCAL_SCENARIO_INVALID");
   }
-  return local.userDataPath === undefined
-    ? { kind }
-    : { kind, userDataPath: local.userDataPath };
+  return local.userDataPath === undefined ? { kind } : { kind, userDataPath: local.userDataPath };
 }
 
 export function requiresSimulatorProfile(kind: DesktopLaunchScenario): boolean {
   return kind === "sbr-simulator" || kind === "sbr-doctor";
 }
 
-export function rendererLaunchScenarioArguments(
-  kind: DesktopLaunchScenario,
-): string[] {
+export function rendererLaunchScenarioArguments(kind: DesktopLaunchScenario): string[] {
   return kind === "accounting" ? [] : [`${TAMMY_LAUNCH_SCENARIO_SWITCH}${kind}`];
 }

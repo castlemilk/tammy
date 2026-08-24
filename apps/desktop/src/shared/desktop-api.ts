@@ -1,5 +1,5 @@
-import preloadMethods from "./preload-methods.json";
 import type { DesktopLaunchScenario } from "./launch-scenario";
+import preloadMethods from "./preload-methods.json";
 
 export interface SystemDiagnostics {
   readonly apiVersion: string;

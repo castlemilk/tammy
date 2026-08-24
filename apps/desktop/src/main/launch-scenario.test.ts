@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  TAMMY_LAUNCH_SCENARIO_SWITCH,
   parseDesktopLaunchScenario,
   rendererLaunchScenarioArguments,
   requiresSimulatorProfile,
+  TAMMY_LAUNCH_SCENARIO_SWITCH,
 } from "./launch-scenario";
 
 describe("desktop launch scenario authority", () => {

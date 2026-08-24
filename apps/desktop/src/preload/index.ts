@@ -52,8 +52,8 @@ import {
   UNLOCK_MACHINE_CREDENTIAL_CHANNEL,
   UNLOCK_WORKSPACE_CHANNEL,
 } from "../shared/desktop-api";
-import preloadMethods from "../shared/preload-methods.json";
 import { parseLaunchScenarioArgument } from "../shared/launch-scenario";
+import preloadMethods from "../shared/preload-methods.json";
 
 type Invoke = (channel: string, ...args: unknown[]) => Promise<unknown>;
 
@@ -299,7 +299,4 @@ export function createTammyDesktopAPI(invoke: Invoke): TammyDesktopAPI {
 const tammy = createTammyDesktopAPI((channel, ...args) => ipcRenderer.invoke(channel, ...args));
 
 contextBridge.exposeInMainWorld("tammy", tammy);
-contextBridge.exposeInMainWorld(
-  "tammyLaunchScenario",
-  parseLaunchScenarioArgument(process.argv),
-);
+contextBridge.exposeInMainWorld("tammyLaunchScenario", parseLaunchScenarioArgument(process.argv));

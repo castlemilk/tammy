@@ -77,7 +77,13 @@ test("every documented runnable SBR scenario has a real owner", async () => {
   const taskfile = YAML.parse(await read("taskfiles/sbr.yml"));
   const expectedCommands = new Map([
     ["launch-simulator", ["mise exec -- node scripts/launch-local-scenario.mjs sbr-simulator"]],
-    ["run-doctor", ["mise exec -- node scripts/check-sbr-registration.mjs --doctor-preflight", "mise exec -- node scripts/launch-local-scenario.mjs sbr-doctor"]],
+    [
+      "run-doctor",
+      [
+        "mise exec -- node scripts/check-sbr-registration.mjs --doctor-preflight",
+        "mise exec -- node scripts/launch-local-scenario.mjs sbr-doctor",
+      ],
+    ],
     ["run-registration-check", ["mise exec -- node scripts/check-sbr-registration.mjs"]],
     ["run-evidence", ["mise exec -- node scripts/write-sbr-evidence.mjs"]],
   ]);

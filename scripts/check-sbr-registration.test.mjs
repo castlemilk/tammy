@@ -57,7 +57,8 @@ test("validates all exact installed inputs through the authenticated preflight",
   const root = await mkdtemp(path.join(os.tmpdir(), "tammy-registration-check-"));
   const installed = path.join(root, "config/sbr/evte");
   await mkdir(installed, { recursive: true });
-  for (const file of INSTALLED_FILES) await writeFile(path.join(installed, file), file, { mode: 0o600 });
+  for (const file of INSTALLED_FILES)
+    await writeFile(path.join(installed, file), file, { mode: 0o600 });
   const authenticate = (input) => {
     assert.equal(input.phase, "PRE_CONFORMANCE");
     assert.deepEqual(
@@ -73,7 +74,12 @@ test("validates all exact installed inputs through the authenticated preflight",
         endpoint_sha256: "b".repeat(64),
         registration_sha256: "c".repeat(64),
       },
-      metadata: { environment: "EVTE", target: "darwin/arm64", endpoint_id: "evte", endpoint_revision: 1 },
+      metadata: {
+        environment: "EVTE",
+        target: "darwin/arm64",
+        endpoint_id: "evte",
+        endpoint_revision: 1,
+      },
     };
   };
 
@@ -100,7 +106,10 @@ test("rejects unsafe installed inputs without disclosing their path", async () =
 });
 
 test("CLI is bounded, registration blocks nonzero, and doctor preflight may continue", async () => {
-  for (const [arguments_, expectedCode] of [[[], 1], [["--doctor-preflight"], 0]]) {
+  for (const [arguments_, expectedCode] of [
+    [[], 1],
+    [["--doctor-preflight"], 0],
+  ]) {
     const result = await run(arguments_);
     assert.equal(result.code, expectedCode);
     assert.equal(result.signal, null);
@@ -108,7 +117,10 @@ test("CLI is bounded, registration blocks nonzero, and doctor preflight may cont
     const report = JSON.parse(result.stdout);
     assert.equal(report.status, "BLOCKED");
     assert.ok(Buffer.byteLength(result.stdout) < 4096);
-    assert.doesNotMatch(result.stdout, /(?:password|credential|product.?id|endpoint.?url|\/Users\/)/iu);
+    assert.doesNotMatch(
+      result.stdout,
+      /(?:password|credential|product.?id|endpoint.?url|\/Users\/)/iu,
+    );
   }
 
   const rejected = await run(["--credential=/private/tmp/example.p12"]);

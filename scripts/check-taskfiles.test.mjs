@@ -593,8 +593,20 @@ test("local Task front door preserves the safe development contract", async () =
       ["mise exec -- node scripts/launch-local-scenario.mjs accounting-fresh"],
     ],
     ["launch-simulator", ["mise exec -- node scripts/launch-local-scenario.mjs sbr-simulator"]],
-    ["launch-evte", ["mise exec -- node scripts/check-sbr-registration.mjs", "mise exec -- node scripts/launch-local-scenario.mjs sbr-evte"]],
-    ["run-doctor", ["mise exec -- node scripts/check-sbr-registration.mjs --doctor-preflight", "mise exec -- node scripts/launch-local-scenario.mjs sbr-doctor"]],
+    [
+      "launch-evte",
+      [
+        "mise exec -- node scripts/check-sbr-registration.mjs",
+        "mise exec -- node scripts/launch-local-scenario.mjs sbr-evte",
+      ],
+    ],
+    [
+      "run-doctor",
+      [
+        "mise exec -- node scripts/check-sbr-registration.mjs --doctor-preflight",
+        "mise exec -- node scripts/launch-local-scenario.mjs sbr-doctor",
+      ],
+    ],
     ["run-registration-check", ["mise exec -- node scripts/check-sbr-registration.mjs"]],
     [
       "run-test",

@@ -13,8 +13,8 @@ import {
 } from "@tammy/connect-client/tammy/v1/organisation_pb.js";
 import { AlertTriangle, LoaderCircle, RefreshCw } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
-import { createProtoMethodCodec } from "../shared/proto-ipc";
 import type { DesktopLaunchScenario } from "../shared/launch-scenario";
+import { createProtoMethodCodec } from "../shared/proto-ipc";
 import { AppShell } from "./app-shell/app-shell";
 import { resolveAppLocation, type WorkspaceAccess } from "./app-shell/router";
 import { SimulatorBanner } from "./app-shell/simulator-banner";
@@ -194,11 +194,10 @@ export function App() {
   const [workspace, setWorkspace] = useState<AuthenticatedWorkspace | undefined>(
     storedAuthenticatedWorkspace,
   );
-  const [activePath, setActivePath] = useState(
-    () =>
-      launchScenario === "sbr-doctor" && initialAccess() === "authenticated"
-        ? "/settings/sbr?doctor=1"
-        : resolveAppLocation(currentLocation(), initialAccess()).path,
+  const [activePath, setActivePath] = useState(() =>
+    launchScenario === "sbr-doctor" && initialAccess() === "authenticated"
+      ? "/settings/sbr?doctor=1"
+      : resolveAppLocation(currentLocation(), initialAccess()).path,
   );
   const requestSequence = useRef(0);
   const appMounted = useRef(false);
@@ -393,8 +392,7 @@ export function App() {
       window.sessionStorage.setItem(SESSION_STORAGE, JSON.stringify(workspace));
       setWorkspace(workspace);
       setAccess("authenticated");
-      const destination =
-        launchScenario === "sbr-doctor" ? "/settings/sbr?doctor=1" : "/overview";
+      const destination = launchScenario === "sbr-doctor" ? "/settings/sbr?doctor=1" : "/overview";
       window.history.replaceState(null, "", destination);
       setActivePath(destination);
     },

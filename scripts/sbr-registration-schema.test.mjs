@@ -152,11 +152,26 @@ test("parses and freezes the exact Product ID scope bound to one registration se
 
   const base = registrationManifest();
   const cases = [
-    ["FIELDS", Object.fromEntries(Object.entries(base).filter(([key]) => key !== "product_id_scope"))],
-    ["PRODUCT_ID_SCOPE_FIELDS", { ...base, product_id_scope: { ...base.product_id_scope, extra: true } }],
-    ["PRODUCT_IDENTIFIER", { ...base, product_id_scope: { ...base.product_id_scope, product_identifier: "" } }],
-    ["PRODUCT_SERVICE_ID", { ...base, product_id_scope: { ...base.product_id_scope, service_id: "" } }],
-    ["PRODUCT_SERVICE_MISMATCH", { ...base, product_id_scope: { ...base.product_id_scope, service_id: "other.service" } }],
+    [
+      "FIELDS",
+      Object.fromEntries(Object.entries(base).filter(([key]) => key !== "product_id_scope")),
+    ],
+    [
+      "PRODUCT_ID_SCOPE_FIELDS",
+      { ...base, product_id_scope: { ...base.product_id_scope, extra: true } },
+    ],
+    [
+      "PRODUCT_IDENTIFIER",
+      { ...base, product_id_scope: { ...base.product_id_scope, product_identifier: "" } },
+    ],
+    [
+      "PRODUCT_SERVICE_ID",
+      { ...base, product_id_scope: { ...base.product_id_scope, service_id: "" } },
+    ],
+    [
+      "PRODUCT_SERVICE_MISMATCH",
+      { ...base, product_id_scope: { ...base.product_id_scope, service_id: "other.service" } },
+    ],
   ];
   for (const [code, manifest] of cases) {
     assert.throws(
