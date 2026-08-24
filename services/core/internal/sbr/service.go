@@ -1098,7 +1098,7 @@ func (service *Service) UnlockMachineCredential(ctx context.Context, request *co
 		return nil, connect.NewError(code, ErrService)
 	}
 	helperRequest := service.helperRequest(HelperOperationUnlock, binding, profile)
-	helperRequest.RequestID, helperRequest.OperationID = operationID, operationID
+	helperRequest.RequestID = operationID
 	helperRequest.Password = bytes.Clone(password)
 	defer helperRequest.ClearSecrets()
 	result, err := profile.Execute(ctx, helperRequest)

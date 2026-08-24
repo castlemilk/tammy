@@ -1129,6 +1129,36 @@ func TestConcurrentUnlocksWithSameFactorDispatchHelperExactlyOnce(t *testing.T) 
 	}
 }
 
+func TestUnlockDurabilityOperationIDIsNotEncodedAsMutationOperationID(t *testing.T) {
+	metadata := CredentialMetadata{Fingerprint: sha256.Sum256([]byte("credential")), CanonicalABN: serviceABN,
+		ComponentVersion: "sim-v1", CreatedAt: time.Date(2026, 6, 29, 0, 0, 0, 0, time.UTC),
+		ExpiresAt: time.Date(2027, 6, 30, 0, 0, 0, 0, time.UTC),
+		State:     tammyv1.MachineCredentialState_MACHINE_CREDENTIAL_STATE_PRESENT}
+	helper := &fakeHelper{execute: func(request HelperRequest) (HelperResult, error) {
+		if request.OperationID != "" {
+			return HelperResult{}, errors.New("unlock request carried mutation operation ID")
+		}
+		return HelperResult{RequestID: request.RequestID, Outcome: HelperOutcomeOK, ResultCode: HelperResultReady,
+			Credential: metadata, ProfileFingerprint: request.ProfileFingerprint,
+			RegistrationFingerprint: request.RegistrationFingerprint,
+			ComponentFingerprint:    request.ComponentFingerprint, ComponentVersion: request.ComponentVersion}, nil
+	}}
+	service := testService(t, helper, &fakeIdentity{})
+	binding := service.organisation.(fakeOrganisation).binding
+	service.store.(*memoryServiceStore).bindings[organisationStoreKey(binding)] = serviceBinding{
+		metadata: metadata, profile: service.profiles.(fakeProfile).profile, state: metadata.State,
+	}
+	response, err := service.UnlockMachineCredential(context.Background(), connect.NewRequest(&tammyv1.UnlockMachineCredentialRequest{
+		CommandContext: command(PurposeUnlockMachineCredential), Password: []byte("transient"),
+	}))
+	if err != nil || response.Msg.CredentialStatus.GetState() != tammyv1.MachineCredentialState_MACHINE_CREDENTIAL_STATE_PRESENT {
+		t.Fatalf("unlock response = %#v, %v", response, err)
+	}
+	if len(helper.requests) != 1 || helper.requests[0].RequestID != serviceOperationID || helper.requests[0].OperationID != "" {
+		t.Fatalf("unlock helper request = %#v", helper.requests)
+	}
+}
+
 func TestExpiredIndependentVerificationBlocksHelper(t *testing.T) {
 	helper := &fakeHelper{}
 	service := testService(t, helper, &fakeIdentity{})
