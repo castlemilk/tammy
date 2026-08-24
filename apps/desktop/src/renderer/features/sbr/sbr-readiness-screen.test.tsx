@@ -678,7 +678,7 @@ describe("SbrReadinessScreen", () => {
     expect(identity.classList.contains("[overflow-wrap:anywhere]")).toBe(true);
   });
 
-  it("integrates simulator controls only for a business lodger on authenticated simulator readiness", async () => {
+  it("integrates simulator controls only for a workspace administrator on authenticated simulator readiness", async () => {
     const api = {
       ...apiFor({
         environment: SbrEnvironment.SIMULATOR,
@@ -690,7 +690,7 @@ describe("SbrReadinessScreen", () => {
       runSbrReadinessFixture: vi.fn(),
     };
     render(
-      <SbrReadinessScreen api={api} workspace={{ ...workspace, roles: [Role.BUSINESS_LODGER] }} />,
+      <SbrReadinessScreen api={api} workspace={{ ...workspace, roles: [Role.WORKSPACE_ADMIN] }} />,
     );
 
     expect(await screen.findByRole("button", { name: "Run simulator fixture" })).toBeTruthy();
@@ -710,7 +710,7 @@ describe("SbrReadinessScreen", () => {
       runSbrReadinessFixture: vi.fn(),
     };
     render(
-      <SbrReadinessScreen api={api} workspace={{ ...workspace, roles: [Role.BUSINESS_LODGER] }} />,
+      <SbrReadinessScreen api={api} workspace={{ ...workspace, roles: [Role.WORKSPACE_ADMIN] }} />,
     );
 
     expect(await screen.findByText(/EVTE status only/i)).toBeTruthy();

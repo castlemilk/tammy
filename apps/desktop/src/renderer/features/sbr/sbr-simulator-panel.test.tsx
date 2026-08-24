@@ -48,7 +48,7 @@ const workspace = {
   organisationId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073994",
   organisationDisplayName: "Current Live Organisation",
   organisationCanonicalAbn: "53004085616",
-  roles: [Role.BUSINESS_LODGER],
+  roles: [Role.WORKSPACE_ADMIN],
 } satisfies AuthenticatedWorkspace;
 
 const simulatorReadiness = create(SbrReadinessSchema, {
@@ -753,7 +753,7 @@ describe("SbrSimulatorPanel", () => {
     {
       name: "role loss",
       readiness: simulatorReadiness,
-      workspace: { ...workspace, roles: [Role.WORKSPACE_ADMIN] },
+      workspace: { ...workspace, roles: [Role.BUSINESS_LODGER] },
       factorEnabled: true,
     },
     {
@@ -930,8 +930,8 @@ describe("SbrSimulatorPanel", () => {
     {
       name: "wrong role",
       readiness: simulatorReadiness,
-      workspace: { ...workspace, roles: [Role.WORKSPACE_ADMIN] },
-      expected: /business lodger role/i,
+      workspace: { ...workspace, roles: [Role.BUSINESS_LODGER] },
+      expected: /workspace administrator role/i,
     },
   ])(
     "keeps $name status-only with no component operation",

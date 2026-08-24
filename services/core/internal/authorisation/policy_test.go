@@ -79,6 +79,7 @@ func TestSbrAuthorizationMatrix(t *testing.T) {
 		ActionRemoveSBRMachineCredential:  {tammyv1.Role_ROLE_WORKSPACE_ADMIN: true},
 		ActionManageSBRProductID:          {tammyv1.Role_ROLE_WORKSPACE_ADMIN: true},
 		ActionUseSBRMachineCredential:     {tammyv1.Role_ROLE_BUSINESS_LODGER: true},
+		ActionRunSBRReadinessFixture:      {tammyv1.Role_ROLE_WORKSPACE_ADMIN: true},
 	}
 	for action, matrix := range want {
 		for _, role := range roles {
@@ -87,5 +88,17 @@ func TestSbrAuthorizationMatrix(t *testing.T) {
 				t.Fatalf("action %q role %s allowed=%v, want %v", action, role, err == nil, matrix[role])
 			}
 		}
+	}
+}
+
+func TestSbrReadinessFixtureAuthorizationIsAdministrativeNotLodgement(t *testing.T) {
+	if err := Authorize([]tammyv1.Role{tammyv1.Role_ROLE_WORKSPACE_ADMIN}, ActionRunSBRReadinessFixture); err != nil {
+		t.Fatalf("workspace administrator readiness fixture: %v", err)
+	}
+	if err := Authorize([]tammyv1.Role{tammyv1.Role_ROLE_BUSINESS_LODGER}, ActionRunSBRReadinessFixture); !errors.Is(err, faults.New(faults.CodePermissionDenied, nil)) {
+		t.Fatalf("business lodger readiness fixture = %v; want permission denied", err)
+	}
+	if err := Authorize([]tammyv1.Role{tammyv1.Role_ROLE_WORKSPACE_ADMIN}, ActionUseSBRMachineCredential); !errors.Is(err, faults.New(faults.CodePermissionDenied, nil)) {
+		t.Fatalf("workspace administrator production credential use = %v; want permission denied", err)
 	}
 }

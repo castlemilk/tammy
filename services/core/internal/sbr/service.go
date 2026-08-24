@@ -1644,7 +1644,7 @@ func (service *Service) RunSbrReadinessFixture(ctx context.Context, request *con
 	defer profile.Close()
 	if err != nil {
 		return nil, service.rejectProfileAfterAuthorization(ctx, request.Msg.CommandContext.Authentication,
-			authorisation.ActionUseSBRMachineCredential, profile, err)
+			authorisation.ActionRunSBRReadinessFixture, profile, err)
 	}
 	if profile.Environment != tammyv1.SbrEnvironment_SBR_ENVIRONMENT_SIMULATOR {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, ErrService)
@@ -1654,7 +1654,7 @@ func (service *Service) RunSbrReadinessFixture(ctx context.Context, request *con
 		return nil, connect.NewError(connect.CodeFailedPrecondition, ErrService)
 	}
 	if err := service.validateCurrent(ctx, request.Msg.CommandContext.Authentication, nil,
-		authorisation.ActionUseSBRMachineCredential, ""); err != nil {
+		authorisation.ActionRunSBRReadinessFixture, ""); err != nil {
 		return nil, err
 	}
 	semantic := fixtureSemanticHash(request.Msg, profile, stored.metadata.Fingerprint)
@@ -1742,7 +1742,7 @@ func (service *Service) RunSbrReadinessFixture(ctx context.Context, request *con
 	if err := service.store.ReserveFixtureDispatch(ctx, fixture, request.Msg.CommandContext.Authentication.GetActorUserId(),
 		func(txctx context.Context, executor MutationExecutor) error {
 			if err := service.identity.AuthorizeWithin(txctx, executor, request.Msg.CommandContext.Authentication,
-				authorisation.ActionUseSBRMachineCredential); err != nil {
+				authorisation.ActionRunSBRReadinessFixture); err != nil {
 				return err
 			}
 			if err := service.identity.ConsumeFreshFactorWithin(txctx, executor, request.Msg.CommandContext.Authentication,

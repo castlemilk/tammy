@@ -219,7 +219,7 @@ export function SbrSimulatorPanel({
   const mounted = useRef(true);
   const generation = useRef(0);
   const simulatorReady = validSimulatorReadiness(readiness);
-  const authorised = workspace.roles.includes(Role.BUSINESS_LODGER);
+  const authorised = workspace.roles.includes(Role.WORKSPACE_ADMIN);
   const actionable = simulatorReady && authorised && factorEnabled;
   const readinessKey = JSON.stringify([
     readiness.environment,
@@ -234,7 +234,7 @@ export function SbrSimulatorPanel({
     readiness.evteServiceIdentifier,
     simulatorReady,
   ]);
-  const actionKey = `${workspace.workspaceId}:${workspace.organisationId}:${workspace.sessionId}:${workspace.userId}:${readinessKey}:${authorised ? "lodger" : "no-lodger"}:${factorEnabled ? "factor" : "no-factor"}`;
+  const actionKey = `${workspace.workspaceId}:${workspace.organisationId}:${workspace.sessionId}:${workspace.userId}:${readinessKey}:${authorised ? "admin" : "no-admin"}:${factorEnabled ? "factor" : "no-factor"}`;
   const currentAction = useRef(actionKey);
   const previousAction = useRef(actionKey);
   currentAction.current = actionKey;
@@ -431,7 +431,7 @@ export function SbrSimulatorPanel({
       ) : !simulatorReady ? (
         <StatusOnly copy="The simulator is not ready in the current authoritative SBR status." />
       ) : !authorised ? (
-        <StatusOnly copy="The business lodger role is required to run this fixed local fixture." />
+        <StatusOnly copy="The workspace administrator role is required to run this fixed local fixture." />
       ) : !factorEnabled ? (
         <StatusOnly copy="Enable a security factor before running this fixed local fixture." />
       ) : (

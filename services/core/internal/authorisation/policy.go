@@ -30,6 +30,7 @@ const (
 	ActionRemoveSBRMachineCredential  Action = "remove_sbr_machine_credential"
 	ActionManageSBRProductID          Action = "manage_sbr_product_id"
 	ActionUseSBRMachineCredential     Action = "use_sbr_machine_credential"
+	ActionRunSBRReadinessFixture      Action = "run_sbr_readiness_fixture"
 )
 
 var permissions = map[Action]map[tammyv1.Role]struct{}{
@@ -59,6 +60,7 @@ var permissions = map[Action]map[tammyv1.Role]struct{}{
 	ActionRemoveSBRMachineCredential:  roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN),
 	ActionManageSBRProductID:          roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN),
 	ActionUseSBRMachineCredential:     roleSet(tammyv1.Role_ROLE_BUSINESS_LODGER),
+	ActionRunSBRReadinessFixture:      roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN),
 }
 
 func roleSet(roles ...tammyv1.Role) map[tammyv1.Role]struct{} {
