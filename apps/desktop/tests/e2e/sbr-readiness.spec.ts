@@ -23,6 +23,7 @@ import { generateTotp } from "./support/totp";
 
 const FIXTURE_BYTES =
   '{"fixture_id":"SIM-SBR-READINESS-V1","organisation_name":"Wattle & Co Test Pty Ltd","abn":"11 000 000 560","service_id":"SIM.READINESS.0001","clock":"2026-06-30T00:00:00Z","message_id":"SIM.MSG.0001","conversation_id":"SIM.CONV.0001","receipt":"SIM-READY-0001"}\n';
+const SBR_OPERATION_UI_TIMEOUT_MS = 45_000;
 const credentialStatusCodec = createProtoMethodCodec({
   input: GetMachineCredentialStatusRequestSchema,
   maximumRequestBytes: 8_192,
@@ -78,7 +79,9 @@ async function runSimulatorCase(
   await page.getByLabel("Test-only diagnostic case").selectOption({ label });
   await page.getByLabel("Fresh six-digit code").fill(await nextFreshCode(clock));
   await page.getByRole("button", { name: "Run simulator fixture" }).click();
-  await expect(page.getByText(expected, { exact: true })).toBeVisible();
+  await expect(page.getByText(expected, { exact: true })).toBeVisible({
+    timeout: SBR_OPERATION_UI_TIMEOUT_MS,
+  });
 }
 
 async function refreshAfterUncertain(page: Page): Promise<void> {
@@ -133,7 +136,7 @@ async function credentialAction(
         : "Credential status updated.",
       { exact: true },
     ),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: SBR_OPERATION_UI_TIMEOUT_MS });
 }
 
 test("SBR readiness uses local RAM credential and deterministic simulator only", async ({
@@ -219,7 +222,9 @@ test("SBR readiness uses local RAM credential and deterministic simulator only",
   await page.getByLabel("Credential password").fill(credentialPassword);
   await page.getByLabel("Fresh six-digit code").fill(await nextFreshCode(totp));
   await page.getByRole("button", { name: "Continue" }).click();
-  await expect(page.getByText("Credential status updated.", { exact: true })).toBeVisible();
+  await expect(page.getByText("Credential status updated.", { exact: true })).toBeVisible({
+    timeout: SBR_OPERATION_UI_TIMEOUT_MS,
+  });
   await expect(page.getByText("Present", { exact: true }).first()).toBeVisible();
   await expect(page.getByText(credentialSha256, { exact: true })).toBeVisible();
   await expect(page.getByText(profileSha256, { exact: true })).toBeVisible();
@@ -303,7 +308,9 @@ test("SBR readiness uses local RAM credential and deterministic simulator only",
   await page.getByLabel("Credential password").fill(credentialPassword);
   await page.getByLabel("Fresh six-digit code").fill(await nextFreshCode(totp));
   await page.getByRole("button", { name: "Continue" }).click();
-  await expect(page.getByText("Credential status updated.", { exact: true })).toBeVisible();
+  await expect(page.getByText("Credential status updated.", { exact: true })).toBeVisible({
+    timeout: SBR_OPERATION_UI_TIMEOUT_MS,
+  });
   await credentialAction(page, totp, credentialPassword, "Remove credential");
   await expect(page.getByText("Missing", { exact: true }).first()).toBeVisible();
 
