@@ -191,10 +191,13 @@ export function App() {
     activePath === "/settings/organisation" ||
     activePath === "/settings/sbr" ||
     activePath === "/settings/sbr?doctor=1";
-  const settingsRequestKey =
+  const settingsAuthorityKey =
     settingsRoute && hasSbrWorkspaceProjection(workspace)
-      ? `${workspace.sessionId}:${workspace.userId}:${workspace.organisationId}:${settingsReload}`
+      ? `${workspace.sessionId}:${workspace.userId}:${workspace.organisationId}`
       : undefined;
+  const settingsRequestKey = settingsAuthorityKey
+    ? `${settingsAuthorityKey}:${settingsReload}`
+    : undefined;
 
   const loadDiagnostics = useCallback(async () => {
     const request = requestSequence.current + 1;
@@ -234,7 +237,11 @@ export function App() {
     settingsRequestedKey.current = settingsRequestKey;
     const sequence = settingsRequestSequence.current + 1;
     settingsRequestSequence.current = sequence;
-    setSettingsProjection({ key: settingsRequestKey, status: "loading" });
+    setSettingsProjection((current) =>
+      current.status === "ready" && current.key.startsWith(`${settingsAuthorityKey}:`)
+        ? current
+        : { key: settingsRequestKey, status: "loading" },
+    );
     const authentication = create(AuthenticationContextSchema, {
       actorUserId: workspace.userId,
       sessionId: workspace.sessionId,
@@ -328,7 +335,7 @@ export function App() {
           setSettingsProjection({ key: settingsRequestKey, status: "unavailable" });
         }
       });
-  }, [settingsRequestKey, workspace]);
+  }, [settingsAuthorityKey, settingsRequestKey, workspace]);
 
   useEffect(() => {
     const restore = () => {
@@ -408,7 +415,7 @@ export function App() {
         path={activePath}
         state={diagnosticsState}
         settingsProjection={settingsProjection}
-        settingsRequestKey={settingsRequestKey}
+        settingsAuthorityKey={settingsAuthorityKey}
         onReloadSettings={() => setSettingsReload((value) => value + 1)}
         workspace={workspace}
       />
@@ -468,16 +475,16 @@ function EngineStatus({
 function RouteContent({
   onNavigate,
   path,
+  settingsAuthorityKey,
   settingsProjection,
-  settingsRequestKey,
   onReloadSettings,
   state,
   workspace,
 }: {
   readonly onNavigate: (path: string) => void;
   readonly path: string;
+  readonly settingsAuthorityKey: string | undefined;
   readonly settingsProjection: SettingsProjectionState;
-  readonly settingsRequestKey: string | undefined;
   readonly onReloadSettings: () => void;
   readonly state: DiagnosticsState;
   readonly workspace: AuthenticatedWorkspace | undefined;
@@ -520,7 +527,10 @@ function RouteContent({
     );
   }
   if (path === "/settings/organisation") {
-    if (settingsProjection.status !== "ready" || settingsProjection.key !== settingsRequestKey) {
+    if (
+      settingsProjection.status !== "ready" ||
+      !settingsProjection.key.startsWith(`${settingsAuthorityKey}:`)
+    ) {
       return <SettingsProjectionStatus state={settingsProjection} />;
     }
     const trustedWorkspace = settingsProjection.workspace;
@@ -557,7 +567,10 @@ function RouteContent({
     );
   }
   if (path === "/settings/sbr" || path === "/settings/sbr?doctor=1") {
-    if (settingsProjection.status !== "ready" || settingsProjection.key !== settingsRequestKey) {
+    if (
+      settingsProjection.status !== "ready" ||
+      !settingsProjection.key.startsWith(`${settingsAuthorityKey}:`)
+    ) {
       return <SettingsProjectionStatus state={settingsProjection} />;
     }
     return (

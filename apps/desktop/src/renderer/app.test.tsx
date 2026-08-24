@@ -10,11 +10,14 @@ import {
   UserSchema,
 } from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import {
+  EntityVerificationSchema,
   GetOrganisationRequestSchema,
   GetOrganisationResponseSchema,
   OrganisationSchema,
   OrganisationVerificationState,
   OrganisationVerificationSummarySchema,
+  RecordEntityVerificationRequestSchema,
+  RecordEntityVerificationResponseSchema,
 } from "@tammy/connect-client/tammy/v1/organisation_pb.js";
 import {
   GetSbrReadinessRequestSchema,
@@ -53,6 +56,12 @@ const organisationCodec = createProtoMethodCodec({
   maximumRequestBytes: 8_192,
   maximumResponseBytes: 32_768,
   output: GetOrganisationResponseSchema,
+});
+const recordVerificationCodec = createProtoMethodCodec({
+  input: RecordEntityVerificationRequestSchema,
+  maximumRequestBytes: Math.floor(1.1 * 1024 * 1024),
+  maximumResponseBytes: 32_768,
+  output: RecordEntityVerificationResponseSchema,
 });
 const readinessCodec = createProtoMethodCodec({
   input: GetSbrReadinessRequestSchema,
@@ -404,6 +413,45 @@ describe("App", () => {
       await screen.findByRole("heading", { name: "Independent entity verification" }),
     ).toBeTruthy();
     expect(screen.getByLabelText("Independent evidence")).toBeTruthy();
+  });
+
+  it("keeps successful verification visible while refreshing authoritative settings", async () => {
+    installDesktopAPI(vi.fn().mockResolvedValue(diagnostics));
+    mockAuthoritativeSettings([Role.WORKSPACE_ADMIN]);
+    vi.mocked(window.tammy.recordEntityVerification).mockImplementation(async (frame) => {
+      const request = recordVerificationCodec.decodeRequest(frame);
+      return recordVerificationCodec.encodeResponse(
+        create(RecordEntityVerificationResponseSchema, {
+          organisation: create(OrganisationSchema, {
+            id: request.organisationId,
+            version: 2n,
+            verificationState: OrganisationVerificationState.VERIFIED,
+          }),
+          verification: create(EntityVerificationSchema, {
+            id: "01900f3c-7b2e-7cc4-98c4-dc0c0c073995",
+            organisationId: request.organisationId,
+            state: OrganisationVerificationState.VERIFIED,
+            expiresAt: create(TimestampSchema, { seconds: 1_800_000_000n }),
+          }),
+        }),
+      );
+    });
+    window.history.replaceState(null, "", "/settings/organisation");
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByRole("heading", { name: "Independent entity verification" });
+
+    const refreshedUser = deferred<Uint8Array>();
+    const refreshedOrganisation = deferred<Uint8Array>();
+    vi.mocked(window.tammy.getCurrentUser).mockReturnValueOnce(refreshedUser.promise);
+    vi.mocked(window.tammy.getOrganisation).mockReturnValueOnce(refreshedOrganisation.promise);
+    await user.upload(
+      screen.getByLabelText("Independent evidence"),
+      new File([new Uint8Array([1])], "evidence.pdf", { type: "application/pdf" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Record verification" }));
+    await waitFor(() => expect(window.tammy.getOrganisation).toHaveBeenCalledTimes(2));
+    expect(screen.getByText("Entity verification evidence recorded.")).toBeTruthy();
   });
 
   it("ignores an authoritative settings refresh that resolves after unmount", async () => {
