@@ -97,4 +97,4 @@ Launch EVTE only after signed readiness passes. Then sign in normally and perfor
 
 Never copy the credential bytes, credential password, TOTP secret, or Product ID into the repository, terminal, environment variables, command arguments, logs, evidence, backups, or cloud storage. The credential never leaves this Mac, is stored outside the accounting workspace, and is not included in workspace backups. If the secure OS store is unavailable, credential operations fail closed while ordinary accounting remains available.
 
-The developer's own RAM credential proves neither Tammy DSP/product registration nor authority to transact. Do not install a Product ID or real component until the separately reviewed integration explicitly owns that in-app flow.
+The developer's own RAM credential proves neither Tammy DSP/product registration nor authority to transact. The in-app Product ID controls remain hidden and fail closed until the separately reviewed, signed EVTE registration binds an exact product and service scope; use them only after that gate passes.

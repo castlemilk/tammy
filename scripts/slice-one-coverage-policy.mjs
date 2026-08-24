@@ -97,10 +97,7 @@ const roleGuardedStalePersistent = [
   "IDEMPOTENCY_CONFLICT",
 ];
 
-export const SBR_DECLARED_FUTURE_RPCS = [
-  "tammy.v1.SbrService.ImportSbrProductId",
-  "tammy.v1.SbrService.RemoveSbrProductId",
-];
+export const SBR_DECLARED_FUTURE_RPCS = [];
 
 export const SLICE_ONE_RPC_POLICY = {
   "tammy.v1.ReportingCapabilityService.GetReportingCapability": rpc({

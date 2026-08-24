@@ -4,11 +4,18 @@ import path from "node:path";
 
 import { create } from "@bufbuild/protobuf";
 import type { Page } from "@playwright/test";
-import { AuthenticationContextSchema } from "@tammy/connect-client/tammy/v1/common_pb.js";
+import {
+  AuthenticationContextSchema,
+  CommandContextSchema,
+} from "@tammy/connect-client/tammy/v1/common_pb.js";
 import {
   GetMachineCredentialStatusRequestSchema,
   GetMachineCredentialStatusResponseSchema,
+  ImportSbrProductIdRequestSchema,
+  ImportSbrProductIdResponseSchema,
   MachineCredentialState,
+  RemoveSbrProductIdRequestSchema,
+  RemoveSbrProductIdResponseSchema,
 } from "@tammy/connect-client/tammy/v1/sbr_pb.js";
 
 import { createProtoMethodCodec } from "../../src/shared/proto-ipc";
@@ -44,6 +51,18 @@ const credentialStatusCodec = createProtoMethodCodec({
   maximumRequestBytes: 8_192,
   maximumResponseBytes: 32_768,
   output: GetMachineCredentialStatusResponseSchema,
+});
+const productImportCodec = createProtoMethodCodec({
+  input: ImportSbrProductIdRequestSchema,
+  maximumRequestBytes: 8_192,
+  maximumResponseBytes: 8_192,
+  output: ImportSbrProductIdResponseSchema,
+});
+const productRemoveCodec = createProtoMethodCodec({
+  input: RemoveSbrProductIdRequestSchema,
+  maximumRequestBytes: 8_192,
+  maximumResponseBytes: 8_192,
+  output: RemoveSbrProductIdResponseSchema,
 });
 
 interface TotpClock {
@@ -254,6 +273,57 @@ test("SBR readiness uses local RAM credential and deterministic simulator only",
     electronHarness,
   );
   let page = electronHarness.currentPage();
+
+  const productAuthentication = create(AuthenticationContextSchema, {
+    actorUserId: workspace.userId,
+    sessionId: workspace.sessionId,
+  });
+  const importProductFrame = productImportCodec.encodeRequest(
+    create(ImportSbrProductIdRequestSchema, {
+      commandContext: create(CommandContextSchema, {
+        authentication: productAuthentication,
+        idempotencyKey: "018f2f5e-7b5e-7a11-8f00-000000000017",
+      }),
+      evteProductIdentifier: "TAMMY.EVTE.TEST",
+      evteServiceIdentifier: "EVTE.TEST.SERVICE",
+    }),
+  );
+  const removeProductFrame = productRemoveCodec.encodeRequest(
+    create(RemoveSbrProductIdRequestSchema, {
+      commandContext: create(CommandContextSchema, {
+        authentication: productAuthentication,
+        idempotencyKey: "018f2f5e-7b5e-7a11-8f00-000000000018",
+      }),
+      evteProductIdentifier: "TAMMY.EVTE.TEST",
+      evteServiceIdentifier: "EVTE.TEST.SERVICE",
+    }),
+  );
+  const productBoundary = await page.evaluate(
+    async ({ importBytes, removeBytes }) => {
+      const capture = async (operation: Promise<Uint8Array>): Promise<string> => {
+        try {
+          await operation;
+          return "UNEXPECTED_SUCCESS";
+        } catch (error) {
+          return error instanceof Error ? error.message : String(error);
+        }
+      };
+      return {
+        importError: await capture(
+          window.tammy.importSbrProductId({
+            command: Uint8Array.from(importBytes),
+            productId: "SYNTHETIC-NON-ATO-PRODUCT-ID",
+          }),
+        ),
+        removeError: await capture(window.tammy.removeSbrProductId(Uint8Array.from(removeBytes))),
+      };
+    },
+    { importBytes: [...importProductFrame], removeBytes: [...removeProductFrame] },
+  );
+  importProductFrame.fill(0);
+  removeProductFrame.fill(0);
+  expect(productBoundary.importError).toContain("Core request failed.");
+  expect(productBoundary.removeError).toContain("Core request failed.");
 
   await navigate(page, "/settings/organisation");
   await expect(page.getByRole("heading", { name: "Organisation", exact: true })).toBeVisible();

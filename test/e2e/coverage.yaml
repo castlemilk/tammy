@@ -51,8 +51,6 @@ scenarios:
   E2E-17:
     cases:
       - sbr-readiness-simulator
-    futureCases:
-      - sbr/registration-readiness
 rpcs:
   tammy.v1.SystemService.GetDiagnostics:
     preload: getSystemDiagnostics
@@ -2499,11 +2497,10 @@ rpcs:
         - exact_replay
         - changed_request_conflict
   tammy.v1.SbrService.ImportSbrProductId:
-    stage: declared_future
+    stage: production
     preload: importSbrProductId
-    cases: []
-    futureCases:
-      - sbr/registration-readiness
+    cases:
+      - sbr-readiness-simulator
     projections:
       - import_sbr_product_id_result
     routes:
@@ -2530,11 +2527,10 @@ rpcs:
         - exact_replay
         - changed_request_conflict
   tammy.v1.SbrService.RemoveSbrProductId:
-    stage: declared_future
+    stage: production
     preload: removeSbrProductId
-    cases: []
-    futureCases:
-      - sbr/registration-readiness
+    cases:
+      - sbr-readiness-simulator
     projections:
       - remove_sbr_product_id_result
     routes:

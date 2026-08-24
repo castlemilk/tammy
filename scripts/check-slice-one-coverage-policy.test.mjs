@@ -58,7 +58,7 @@ test("coverage declares the exact normative policy for all 88 non-system RPCs", 
   }
 });
 
-test("packaged SBR readiness promotes only the seven proven RPCs", async () => {
+test("packaged SBR readiness promotes all nine exposed and fail-closed RPCs", async () => {
   const proven = [
     "tammy.v1.SbrService.GetSbrReadiness",
     "tammy.v1.SbrService.ImportMachineCredential",
@@ -66,17 +66,16 @@ test("packaged SBR readiness promotes only the seven proven RPCs", async () => {
     "tammy.v1.SbrService.UnlockMachineCredential",
     "tammy.v1.SbrService.ReplaceMachineCredential",
     "tammy.v1.SbrService.RemoveMachineCredential",
-    "tammy.v1.SbrService.RunSbrReadinessFixture",
-  ].sort();
-  const future = [
     "tammy.v1.SbrService.ImportSbrProductId",
     "tammy.v1.SbrService.RemoveSbrProductId",
+    "tammy.v1.SbrService.RunSbrReadinessFixture",
   ].sort();
+  const future = [];
   assert.deepEqual([...SBR_DECLARED_FUTURE_RPCS].sort(), future);
 
   const coverage = parseCoverageManifest(await readFile("test/e2e/coverage.yaml", "utf8"));
   assert.deepEqual(coverage.scenarios["E2E-17"].cases, ["sbr-readiness-simulator"]);
-  assert.deepEqual(coverage.scenarios["E2E-17"].futureCases, ["sbr/registration-readiness"]);
+  assert.equal(coverage.scenarios["E2E-17"].futureCases, undefined);
   assert.deepEqual(
     Object.keys(coverage.rpcs)
       .filter((rpcName) => rpcName.startsWith("tammy.v1.SbrService."))
