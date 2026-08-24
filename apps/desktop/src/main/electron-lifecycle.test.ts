@@ -385,6 +385,30 @@ describe("assertOwnedStagedArtifact", () => {
 });
 
 describe("closeAndReapElectron", () => {
+  it("labels an internal SBR restart close timeout with its exact lifecycle stage", async () => {
+    let confirmExited!: () => void;
+    const mainClosed = new Promise<void>((resolve) => {
+      confirmExited = resolve;
+    });
+    let caught: unknown;
+
+    try {
+      await closeAndReapElectron({
+        forceKillMain: confirmExited,
+        gracefulClose: () => new Promise<void>(() => {}),
+        mainClosed,
+        stage: "sbr-helper-death-recovery",
+        timeoutMs: 5,
+      });
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(errorMessages(caught)).toEqual([
+      "ELECTRON_CLOSE_TIMEOUT [stage=sbr-helper-death-recovery]",
+    ]);
+  });
+
   it("force-kills and confirms main-process close after graceful close times out", async () => {
     let confirmClosed!: () => void;
     const mainClosed = new Promise<void>((resolve) => {

@@ -316,7 +316,7 @@ test("SBR readiness uses local RAM credential and deterministic simulator only",
   await refreshAfterUncertain(page);
   await runSimulatorCase(page, totp, "Helper death", "HELPER_DEATH");
 
-  page = await electronHarness.restart();
+  page = await electronHarness.restart("sbr-helper-death-recovery");
   await unlockPrimary(page);
   await navigateToSbrThroughSettings(page);
   await expect(page.getByText("Present", { exact: true }).first()).toBeVisible();

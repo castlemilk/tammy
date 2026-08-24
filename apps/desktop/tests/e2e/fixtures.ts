@@ -17,6 +17,7 @@ import {
 import {
   assertOwnedStagedArtifact,
   closeAndReapElectron,
+  type ElectronCloseStage,
   type ElectronLifecycleOperations,
   pollForNoCoreProcesses,
   runElectronLifecycle,
@@ -63,7 +64,9 @@ export interface ElectronHarness {
   readonly currentPage: () => Page;
   readonly injectMachineCredentialSelection: (selectedPath: string) => Promise<void>;
   readonly markSbrPassed: (fixtureSha256: string) => void;
-  readonly restart: () => Promise<Page>;
+  readonly restart: (
+    stage: "accounting-workflow-restart" | "sbr-helper-death-recovery",
+  ) => Promise<Page>;
   readonly switchUserDataRoot: (name: "secondary") => Promise<Page>;
   readonly usePrimaryUserDataRoot: () => Promise<Page>;
 }
@@ -237,8 +240,9 @@ export function observeMainExit(mainProcess: ChildProcess): Promise<void> {
 export async function requestGracefulElectronQuit(
   application: Pick<ElectronApplication, "close" | "evaluate">,
 ): Promise<void> {
-  const quitRequest = application.evaluate(({ app }) => app.quit());
-  void quitRequest.catch(() => undefined);
+  await application.evaluate(({ app }) => {
+    setTimeout(() => app.quit(), 0);
+  });
   void application.close().catch(() => undefined);
 }
 
@@ -367,6 +371,7 @@ function fixtureOperations(
         gracefulClose: () =>
           state.application ? requestGracefulElectronQuit(state.application) : Promise.resolve(),
         mainClosed: state.mainClosed ?? new Promise<void>(() => {}),
+        stage: "final-test-teardown",
         timeoutMs: CLOSE_TIMEOUT_MS,
       });
     },
@@ -465,7 +470,7 @@ function fixtureOperations(
         });
       }
       const launched = await launch();
-      const closeCurrent = async () => {
+      const closeCurrent = async (stage: ElectronCloseStage) => {
         await closeAndReapElectron({
           forceKillMain: () => {
             state.forcedKillUsed = true;
@@ -474,6 +479,7 @@ function fixtureOperations(
           gracefulClose: () =>
             state.application ? requestGracefulElectronQuit(state.application) : Promise.resolve(),
           mainClosed: state.mainClosed ?? new Promise<void>(() => {}),
+          stage,
           timeoutMs: CLOSE_TIMEOUT_MS,
         });
         await pollForNoCoreProcesses({
@@ -510,13 +516,13 @@ function fixtureOperations(
           }
           state.sbrFixtureSha256 = fixtureSha256;
         },
-        restart: async () => {
-          await closeCurrent();
+        restart: async (stage) => {
+          await closeCurrent(stage);
           return (await launch()).page;
         },
         switchUserDataRoot: async (name) => {
           if (name !== "secondary") throw new Error("INVALID_E2E_USER_DATA_ROOT");
-          await closeCurrent();
+          await closeCurrent("sbr-secondary-isolation");
           state.currentUserDataPath = path.join(state.rawArtifacts, "user-data-secondary");
           state.helperRuntimeBases.push(
             path.join(state.currentUserDataPath, "local-core", "core", "sbr-runtime"),
@@ -524,7 +530,7 @@ function fixtureOperations(
           return (await launch()).page;
         },
         usePrimaryUserDataRoot: async () => {
-          await closeCurrent();
+          await closeCurrent("sbr-primary-return");
           state.currentUserDataPath = state.primaryUserDataPath;
           return (await launch()).page;
         },

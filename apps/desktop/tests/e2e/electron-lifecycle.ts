@@ -5,6 +5,13 @@ export interface StagedArtifact {
   readonly path: string;
 }
 
+export type ElectronCloseStage =
+  | "accounting-workflow-restart"
+  | "final-test-teardown"
+  | "sbr-helper-death-recovery"
+  | "sbr-primary-return"
+  | "sbr-secondary-isolation";
+
 export const STAGED_ARTIFACT_FILENAMES = Object.freeze({
   screenshot: "failure.png",
   trace: "electron-trace.zip",
@@ -89,6 +96,7 @@ export async function closeAndReapElectron(options: {
   readonly forceKillMain: () => void;
   readonly gracefulClose: () => Promise<void>;
   readonly mainClosed: Promise<void>;
+  readonly stage?: ElectronCloseStage;
   readonly timeoutMs: number;
 }): Promise<void> {
   const failures: unknown[] = [];
@@ -100,19 +108,24 @@ export async function closeAndReapElectron(options: {
     );
     return;
   } catch (error) {
-    failures.push(error);
+    failures.push(stageFailure(error, options.stage));
   }
   try {
     options.forceKillMain();
   } catch (error) {
-    failures.push(error);
+    failures.push(stageFailure(error, options.stage));
   }
   try {
     await bounded(options.mainClosed, options.timeoutMs, "ELECTRON_REAP_TIMEOUT");
   } catch (error) {
-    failures.push(error);
+    failures.push(stageFailure(error, options.stage));
   }
   throwFailures(failures, "ELECTRON_CLOSE_FAILED");
+}
+
+function stageFailure(error: unknown, stage: ElectronCloseStage | undefined): unknown {
+  if (!stage || !(error instanceof Error)) return error;
+  return new Error(`${error.message} [stage=${stage}]`, { cause: error });
 }
 
 export async function pollForNoCoreProcesses(options: {
