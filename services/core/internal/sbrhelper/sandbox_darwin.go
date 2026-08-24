@@ -158,6 +158,7 @@ func RenderDevelopmentSandboxProfileContext(ctx context.Context, input SandboxPr
 	// helper to those exact filename families; item isolation is still enforced
 	// by the helper-specific Keychain ACL/access group.
 	appendLegacyKeychainFileRules(&profile, keychainRoot)
+	appendSecurityFrameworkReadbackRules(&profile)
 	profile.WriteString("(allow mach-lookup (global-name \"com.apple.securityd\"))\n")
 	profile.WriteString("(allow mach-lookup (global-name \"com.apple.securityd.xpc\"))\n")
 	profile.WriteString("(allow mach-lookup (global-name \"com.apple.SecurityServer\"))\n")
@@ -168,6 +169,15 @@ func RenderDevelopmentSandboxProfileContext(ctx context.Context, input SandboxPr
 		return SandboxProfile{}, nil, ErrSandboxProfileInvalid
 	}
 	return result, guard, nil
+}
+
+func appendSecurityFrameworkReadbackRules(profile *strings.Builder) {
+	profile.WriteString("(allow user-preference-read (preference-domain \"com.apple.security\"))\n")
+	profile.WriteString("(allow file-read* (literal \"")
+	profile.WriteString(schemeString(filepath.Join("/private/var/db/mds/messages", strconv.Itoa(os.Geteuid()), "se_SecurityMessages")))
+	profile.WriteString("\"))\n")
+	profile.WriteString("(allow file-read-metadata (literal \"/private/var/run/systemkeychaincheck.done\"))\n")
+	profile.WriteString("(allow ipc-posix-shm-read-data ipc-posix-shm-write-create ipc-posix-shm-write-data (ipc-posix-name \"com.apple.AppleDatabaseChanged\"))\n")
 }
 
 func appendLegacyKeychainFileRules(profile *strings.Builder, keychainRoot string) {

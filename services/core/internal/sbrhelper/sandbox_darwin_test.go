@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -90,6 +91,53 @@ func TestCoreConstructsExactSandboxProfileAndRevalidatesAtSpawnBoundary(t *testi
 	}
 	if profile.FileMode() != 0o600 || profile.OwnerUID() != os.Geteuid() {
 		t.Fatalf("profile ownership contract mode=%o uid=%d", profile.FileMode(), profile.OwnerUID())
+	}
+}
+
+func TestSandboxAuthorizesOnlyExactSecurityFrameworkReadbackBundle(t *testing.T) {
+	base, root, executable, _, _ := secureSandboxTree(t)
+	profile, guard, err := RenderDevelopmentSandboxProfile(SandboxProfileInput{
+		TrustedBase: base, StagedRoot: root, StagedExecutables: []string{executable},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer guard.Close()
+	contents, err := profile.PrepareSpawn()
+	if err != nil {
+		t.Fatal(err)
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	securityMessages := filepath.Join("/private/var/db/mds/messages", strconv.Itoa(os.Geteuid()), "se_SecurityMessages")
+	for _, exactRule := range []string{
+		`(allow user-preference-read (preference-domain "com.apple.security"))`,
+		`(allow file-read* (literal "` + securityMessages + `"))`,
+		`(allow file-read-metadata (literal "/private/var/run/systemkeychaincheck.done"))`,
+		`(allow ipc-posix-shm-read-data ipc-posix-shm-write-create ipc-posix-shm-write-data (ipc-posix-name "com.apple.AppleDatabaseChanged"))`,
+	} {
+		if !strings.Contains(contents, exactRule) {
+			t.Fatalf("profile is missing exact Security.framework rule %q:\n%s", exactRule, contents)
+		}
+	}
+	for _, forbidden := range []string{
+		"systemkeychaincheck.socket",
+		`(subpath "/private/var/db/mds/messages")`,
+		`(prefix "/private/var/db/mds/messages")`,
+		`(literal "/Users")`,
+		`(subpath "/Users")`,
+		`(literal "/Library")`,
+		`(subpath "/Library")`,
+		`(literal "` + schemeString(filepath.Join(home, "Library/Preferences/com.apple.security.plist")) + `")`,
+	} {
+		if strings.Contains(contents, forbidden) {
+			t.Fatalf("profile broadens Security.framework authority with %q:\n%s", forbidden, contents)
+		}
+	}
+	if !strings.Contains(contents, "(deny network*)") || strings.Contains(contents, "(allow network") {
+		t.Fatalf("Security.framework readback must retain total network denial:\n%s", contents)
 	}
 }
 
