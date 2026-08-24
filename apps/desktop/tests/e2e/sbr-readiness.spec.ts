@@ -185,6 +185,15 @@ test("SBR readiness uses local RAM credential and deterministic simulator only",
     electronHarness,
   );
   let page = electronHarness.currentPage();
+
+  await navigate(page, "/settings/organisation");
+  await expect(page.getByRole("heading", { name: "Organisation", exact: true })).toBeVisible();
+  await page.getByLabel("Independent evidence").setInputFiles(evidencePath);
+  await page.getByRole("button", { name: "Record verification" }).click();
+  await expect(
+    page.getByText("Entity verification evidence recorded.", { exact: true }),
+  ).toBeVisible();
+
   await navigateToSbrThroughSettings(page);
   await expect(page.getByRole("heading", { name: "SBR readiness" })).toBeVisible();
   await page.getByLabel("Current administrator password").fill(CURRENT_WORKFLOW_ADMIN_PASSWORD);
@@ -198,17 +207,6 @@ test("SBR readiness uses local RAM credential and deterministic simulator only",
   await page.getByRole("button", { name: "Confirm security code" }).click();
   await expect(page.getByRole("button", { name: "Import credential" })).toBeVisible();
   const totp: TotpClock = { counter: confirmCounter, secret };
-
-  await navigate(page, "/settings/organisation");
-  await expect(page.getByRole("heading", { name: "Organisation", exact: true })).toBeVisible();
-  await page.getByLabel("Independent evidence").setInputFiles(evidencePath);
-  await page.getByRole("button", { name: "Record verification" }).click();
-  await expect(
-    page.getByText("Entity verification evidence recorded.", { exact: true }),
-  ).toBeVisible();
-
-  await navigate(page, "/settings/sbr");
-  await expect(page.getByRole("button", { name: "Import credential" })).toBeVisible();
   await page.getByRole("button", { name: "Import credential" }).click();
   await electronHarness.injectMachineCredentialSelection(credentialPath);
   await page.getByRole("button", { name: "Choose credential in macOS" }).click();

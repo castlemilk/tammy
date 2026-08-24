@@ -1144,6 +1144,17 @@ func (handler *organisationHandler) UpdateOrganisation(ctx context.Context, requ
 	return connect.NewResponse(response), nil
 }
 
+func (handler *organisationHandler) RecordEntityVerification(ctx context.Context, request *connect.Request[tammyv1.RecordEntityVerificationRequest]) (*connect.Response[tammyv1.RecordEntityVerificationResponse], error) {
+	if handler == nil || handler.service == nil || request == nil || request.Msg == nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	response, err := handler.service.RecordEntityVerification(ctx, request.Msg)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrLedgerModule)
+	}
+	return connect.NewResponse(response), nil
+}
+
 func (handler *organisationHandler) GetOrganisation(ctx context.Context, request *connect.Request[tammyv1.GetOrganisationRequest]) (*connect.Response[tammyv1.GetOrganisationResponse], error) {
 	if handler == nil || handler.database == nil || handler.identity == nil || request == nil || request.Msg == nil ||
 		request.Msg.Authentication == nil {
