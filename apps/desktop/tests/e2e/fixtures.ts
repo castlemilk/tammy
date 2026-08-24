@@ -235,9 +235,10 @@ export function observeMainExit(mainProcess: ChildProcess): Promise<void> {
 }
 
 export async function requestGracefulElectronQuit(
-  application: Pick<ElectronApplication, "evaluate">,
+  application: Pick<ElectronApplication, "close" | "evaluate">,
 ): Promise<void> {
   await application.evaluate(({ app }) => app.quit());
+  void application.close().catch(() => undefined);
 }
 
 function forceKillMain(mainProcess: ChildProcess | undefined): void {

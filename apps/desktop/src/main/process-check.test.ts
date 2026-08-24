@@ -261,14 +261,16 @@ describe("packaged Electron main-process observation", () => {
     await expect(exited).resolves.toBeUndefined();
   });
 
-  it("requests native app quit instead of closing the automation transport", async () => {
+  it("requests native app quit then detaches automation without awaiting inherited pipes", async () => {
     const quit = vi.fn();
+    const close = vi.fn(() => new Promise<void>(() => {}));
     const evaluate = vi.fn(async (callback: (electron: { app: { quit(): void } }) => void) => {
       callback({ app: { quit } });
     });
 
-    await requestGracefulElectronQuit({ evaluate } as never);
+    await requestGracefulElectronQuit({ close, evaluate } as never);
 
     expect(quit).toHaveBeenCalledOnce();
+    expect(close).toHaveBeenCalledOnce();
   });
 });
