@@ -311,10 +311,14 @@ async function queryAuthenticatedStagedHelpers(
         ["-p", String(processId), "-o", "command="],
         dependencies,
       );
-    } catch {
+    } catch (error) {
+      if (typeof error === "object" && error !== null && "code" in error && error.code === 1) {
+        continue;
+      }
       throw new Error("PROCESS_QUERY_FAILED");
     }
     const commands = parseLines(command);
+    if (commands.length === 0) continue;
     const executablePath = commands.length === 1 ? commands[0] : undefined;
     if (!executablePath || !pattern.test(executablePath)) {
       throw new Error("UNAUTHENTICATED_STAGED_HELPER");

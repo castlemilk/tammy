@@ -214,10 +214,22 @@ describe("packaged SBR helper process observation", () => {
 
   it("treats empty lsof image output as an enumerated helper that exited", async () => {
     const { authority, stagedPath } = await fixture();
+    const execute = runner([{ stdout: "56\n" }, { stdout: `${stagedPath}\n` }, { stdout: "" }]);
+    const pinned = new Map<number, string>();
+
+    await expect(
+      findAuthenticatedStagedHelperProcesses(authority, pinned, {
+        execFile: execute as never,
+      }),
+    ).resolves.toEqual([]);
+    expect(pinned).toEqual(new Map());
+  });
+
+  it("treats a pgrep-to-ps process-gone race as an enumerated helper that exited", async () => {
+    const { authority } = await fixture();
     const execute = runner([
-      { stdout: "56\n" },
-      { stdout: `${stagedPath}\n` },
-      { stdout: "" },
+      { stdout: "58\n" },
+      { error: Object.assign(new Error("process exited"), { code: 1 }) },
     ]);
     const pinned = new Map<number, string>();
 
