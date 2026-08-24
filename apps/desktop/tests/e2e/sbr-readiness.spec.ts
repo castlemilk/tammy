@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, createHmac, createPrivateKey, sign } from "node:crypto";
 import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -24,6 +24,12 @@ import { generateTotp } from "./support/totp";
 const FIXTURE_BYTES =
   '{"fixture_id":"SIM-SBR-READINESS-V1","organisation_name":"Wattle & Co Test Pty Ltd","abn":"11 000 000 560","service_id":"SIM.READINESS.0001","clock":"2026-06-30T00:00:00Z","message_id":"SIM.MSG.0001","conversation_id":"SIM.CONV.0001","receipt":"SIM-READY-0001"}\n';
 const SBR_OPERATION_UI_TIMEOUT_MS = 75_000;
+const SYNTHETIC_CREDENTIAL_MAGIC = Buffer.from("TAMMY-SBR-SYNTHETIC-CREDENTIAL-V1\0");
+const SYNTHETIC_CREDENTIAL_KEY_BYTES = 32;
+const SYNTHETIC_CREDENTIAL_SIGNATURE_BYTES = 64;
+const SYNTHETIC_CREDENTIAL_VERIFIER_BYTES = 32;
+const SYNTHETIC_REPLACEMENT_SHA256 =
+  "24df552f64307fb9e4ebc1b2317ae6a47ce361af097c97a7343ee4066d6f1eac";
 const credentialStatusCodec = createProtoMethodCodec({
   input: GetMachineCredentialStatusRequestSchema,
   maximumRequestBytes: 8_192,
@@ -34,6 +40,34 @@ const credentialStatusCodec = createProtoMethodCodec({
 interface TotpClock {
   counter: number;
   readonly secret: string;
+}
+
+function deterministicReplacementCredential(original: Buffer, password: string): Buffer {
+  const keyOffset = SYNTHETIC_CREDENTIAL_MAGIC.byteLength + 11 + 8 + 16;
+  const verifierOffset = keyOffset + SYNTHETIC_CREDENTIAL_KEY_BYTES;
+  const signatureOffset = verifierOffset + SYNTHETIC_CREDENTIAL_VERIFIER_BYTES;
+  if (
+    original.byteLength !== signatureOffset + SYNTHETIC_CREDENTIAL_SIGNATURE_BYTES ||
+    !original.subarray(0, SYNTHETIC_CREDENTIAL_MAGIC.byteLength).equals(SYNTHETIC_CREDENTIAL_MAGIC)
+  ) {
+    throw new Error("SYNTHETIC_CREDENTIAL_FIXTURE_INVALID");
+  }
+  const payload = Buffer.from(original.subarray(0, verifierOffset));
+  payload.fill(0x44, keyOffset, verifierOffset);
+  const verifier = createHmac("sha256", password)
+    .update("tammy-sbr-synthetic-password-v1\0")
+    .update(payload)
+    .digest();
+  const signed = Buffer.concat([payload, verifier]);
+  const seed = createHash("sha256").update("tammy-sbr-synthetic-fixture-signing-seed-v1").digest();
+  const privateKey = createPrivateKey({
+    format: "der",
+    key: Buffer.concat([Buffer.from("302e020100300506032b657004220420", "hex"), seed]),
+    type: "pkcs8",
+  });
+  const signature = sign(null, signed, privateKey);
+  seed.fill(0);
+  return Buffer.concat([signed, signature]);
 }
 
 async function navigate(page: Page, destination: string): Promise<void> {
@@ -183,6 +217,21 @@ test("SBR readiness uses local RAM credential and deterministic simulator only",
     throw new Error("SYNTHETIC_CREDENTIAL_METADATA_INVALID");
   }
   const credentialPassword = metadata.password;
+  const replacementCredential = deterministicReplacementCredential(
+    credentialBytes,
+    credentialPassword,
+  );
+  const replacementCredentialSha256 = createHash("sha256")
+    .update(replacementCredential)
+    .digest("hex");
+  expect(replacementCredentialSha256).toBe(SYNTHETIC_REPLACEMENT_SHA256);
+  expect(replacementCredentialSha256).not.toBe(credentialSha256);
+  const replacementCredentialPath = path.join(
+    chooserAuthority,
+    "synthetic-replacement-machine-credential.p12",
+  );
+  await writeFile(replacementCredentialPath, replacementCredential, { mode: 0o600 });
+  await chmod(replacementCredentialPath, 0o600);
   expect({ ...metadata, password: "[test-only password redacted]" }).toEqual({
     schema: "tammy-sbr-synthetic-credential-fixture-v1",
     password: "[test-only password redacted]",
@@ -312,7 +361,7 @@ test("SBR readiness uses local RAM credential and deterministic simulator only",
 
   const credential = page.getByRole("region", { name: "RAM machine credential" });
   await credential.getByRole("button", { name: "Replace credential" }).click();
-  await electronHarness.injectMachineCredentialSelection(credentialPath);
+  await electronHarness.injectMachineCredentialSelection(replacementCredentialPath);
   await credential.getByRole("button", { name: "Choose credential in macOS" }).click();
   await credential.getByLabel(/Replace the credential for/).check();
   await credential.getByLabel("Credential password").fill(credentialPassword);
@@ -321,6 +370,7 @@ test("SBR readiness uses local RAM credential and deterministic simulator only",
   await expect(page.getByText("Credential status updated.", { exact: true })).toBeVisible({
     timeout: SBR_OPERATION_UI_TIMEOUT_MS,
   });
+  await expect(page.getByText(replacementCredentialSha256, { exact: true })).toBeVisible();
   await credentialAction(page, totp, credentialPassword, "Remove credential");
   await expect(page.getByText("Missing", { exact: true }).first()).toBeVisible();
 
