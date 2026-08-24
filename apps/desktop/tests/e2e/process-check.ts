@@ -210,6 +210,7 @@ async function queryMacOSExecutableImage(
     throw new Error("PROCESS_QUERY_FAILED");
   }
   const lines = parseLines(stdout);
+  if (lines.length === 0) return undefined;
   if (lines[0] !== `p${processId}`) {
     throw new Error("INVALID_PROCESS_EVIDENCE");
   }

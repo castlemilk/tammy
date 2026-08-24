@@ -212,6 +212,38 @@ describe("packaged SBR helper process observation", () => {
     ).rejects.toThrow("UNAUTHENTICATED_STAGED_HELPER");
   });
 
+  it("treats empty lsof image output as an enumerated helper that exited", async () => {
+    const { authority, stagedPath } = await fixture();
+    const execute = runner([
+      { stdout: "56\n" },
+      { stdout: `${stagedPath}\n` },
+      { stdout: "" },
+    ]);
+    const pinned = new Map<number, string>();
+
+    await expect(
+      findAuthenticatedStagedHelperProcesses(authority, pinned, {
+        execFile: execute as never,
+      }),
+    ).resolves.toEqual([]);
+    expect(pinned).toEqual(new Map());
+  });
+
+  it("still rejects non-empty malformed lsof image evidence", async () => {
+    const { authority, stagedPath } = await fixture();
+    const execute = runner([
+      { stdout: "57\n" },
+      { stdout: `${stagedPath}\n` },
+      { stdout: "unexpected\n" },
+    ]);
+
+    await expect(
+      findAuthenticatedStagedHelperProcesses(authority, new Map(), {
+        execFile: execute as never,
+      }),
+    ).rejects.toThrow("INVALID_PROCESS_EVIDENCE");
+  });
+
   it("counts one exact-path sample when lsof reports no TCP or UDP sockets", async () => {
     const { authority, stagedPath } = await fixture();
     const execute = runner([
