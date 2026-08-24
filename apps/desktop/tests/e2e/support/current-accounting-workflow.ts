@@ -694,6 +694,7 @@ type BinaryMethod = Exclude<
   | "importMachineCredential"
   | "replaceMachineCredential"
   | "unlockMachineCredential"
+  | "importSbrProductId"
 >;
 
 async function invokeProto<Input extends DescMessage, Output extends DescMessage>(

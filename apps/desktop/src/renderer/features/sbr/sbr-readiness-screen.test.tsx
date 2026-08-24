@@ -11,6 +11,8 @@ import {
   Role,
 } from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import {
+  GetMachineCredentialStatusRequestSchema,
+  GetMachineCredentialStatusResponseSchema,
   GetSbrReadinessRequestSchema,
   GetSbrReadinessResponseSchema,
   ImportMachineCredentialRequestSchema,
@@ -43,6 +45,12 @@ const factorCodec = createProtoMethodCodec({
   maximumRequestBytes: 8_192,
   maximumResponseBytes: 8_192,
   output: AssertTOTPResponseSchema,
+});
+const credentialStatusCodec = createProtoMethodCodec({
+  input: GetMachineCredentialStatusRequestSchema,
+  maximumRequestBytes: 8_192,
+  maximumResponseBytes: 32_768,
+  output: GetMachineCredentialStatusResponseSchema,
 });
 const importCodec = createProtoMethodCodec({
   input: ImportMachineCredentialRequestSchema,
@@ -78,10 +86,26 @@ function responseFrame(readiness: Parameters<typeof create<typeof SbrReadinessSc
   );
 }
 
+function credentialStatusFrame(state = MachineCredentialState.PRESENT) {
+  return credentialStatusCodec.encodeResponse(
+    create(GetMachineCredentialStatusResponseSchema, {
+      credentialStatus: create(MachineCredentialStatusSchema, { state }),
+    }),
+  );
+}
+
 function apiFor(
   readiness: NonNullable<Parameters<typeof create<typeof SbrReadinessSchema>>[1]>,
   defaultEvteScope = true,
-): Pick<TammyDesktopAPI, "getCurrentUser" | "getSbrReadiness"> {
+): Pick<
+  TammyDesktopAPI,
+  | "assertTotp"
+  | "getCurrentUser"
+  | "getMachineCredentialStatus"
+  | "getSbrReadiness"
+  | "importSbrProductId"
+  | "removeSbrProductId"
+> {
   const projected =
     readiness.environment === SbrEnvironment.EVTE && defaultEvteScope
       ? {
@@ -91,7 +115,27 @@ function apiFor(
         }
       : readiness;
   return {
+    assertTotp: vi.fn(),
     getCurrentUser: vi.fn(),
+    getMachineCredentialStatus: vi.fn(async (frame: Uint8Array) => {
+      const request = credentialStatusCodec.decodeRequest(frame);
+      expect(request.authentication).toEqual(
+        create(AuthenticationContextSchema, {
+          actorUserId: workspace.userId,
+          sessionId: workspace.sessionId,
+        }),
+      );
+      return credentialStatusCodec.encodeResponse(
+        create(GetMachineCredentialStatusResponseSchema, {
+          credentialStatus: create(MachineCredentialStatusSchema, {
+            ...(projected.credentialFingerprint
+              ? { fingerprint: projected.credentialFingerprint }
+              : {}),
+            state: projected.machineCredentialState ?? MachineCredentialState.MISSING,
+          }),
+        }),
+      );
+    }),
     getSbrReadiness: vi.fn(async (frame: Uint8Array) => {
       const request = codec.decodeRequest(frame);
       expect(request.authentication).toEqual(
@@ -106,6 +150,8 @@ function apiFor(
         }),
       );
     }),
+    importSbrProductId: vi.fn(),
+    removeSbrProductId: vi.fn(),
   };
 }
 
@@ -114,7 +160,11 @@ describe("SbrReadinessScreen", () => {
     const getSbrReadiness = vi.fn().mockRejectedValue(new Error("secret credential path"));
     render(
       <SbrReadinessScreen
-        api={{ getCurrentUser: vi.fn(), getSbrReadiness }}
+        api={{
+          getCurrentUser: vi.fn(),
+          getMachineCredentialStatus: vi.fn().mockRejectedValue(new Error("unavailable")),
+          getSbrReadiness,
+        }}
         workspace={workspace}
       />,
     );
@@ -169,6 +219,41 @@ describe("SbrReadinessScreen", () => {
     }
     expect(screen.getByText(/BAS remains preparation-only/i)).toBeTruthy();
     expect(screen.queryByRole("button", { name: /lodge|submit/i })).toBeNull();
+  });
+
+  it("reads and displays the complete redacted machine credential status", async () => {
+    const api = apiFor({
+      environment: SbrEnvironment.SIMULATOR,
+      state: SbrReadinessState.READY_FOR_SIMULATOR,
+      machineCredentialState: MachineCredentialState.PRESENT,
+      productIdState: ProductIdState.MISSING,
+      credentialFingerprint: "credential-fingerprint",
+    });
+    vi.mocked(api.getMachineCredentialStatus).mockResolvedValueOnce(
+      credentialStatusCodec.encodeResponse(
+        create(GetMachineCredentialStatusResponseSchema, {
+          credentialStatus: create(MachineCredentialStatusSchema, {
+            componentVersion: "tammy-sbr-simulator-v1",
+            createdAt: create(TimestampSchema, { seconds: 1_777_593_600n }),
+            expiresAt: create(TimestampSchema, { seconds: 1_809_129_600n }),
+            fingerprint: "credential-fingerprint",
+            issuer: "Tammy synthetic test issuer",
+            serial: "SIM-0001",
+            state: MachineCredentialState.PRESENT,
+          }),
+        }),
+      ),
+    );
+
+    render(<SbrReadinessScreen api={api} workspace={workspace} />);
+
+    expect(await screen.findByText("Tammy synthetic test issuer")).toBeTruthy();
+    expect(screen.getByText("SIM-0001")).toBeTruthy();
+    expect(screen.getByText("tammy-sbr-simulator-v1")).toBeTruthy();
+    expect(screen.getByText("credential-fingerprint")).toBeTruthy();
+    expect(screen.getByText("2026-05-01")).toBeTruthy();
+    expect(screen.getByText("2027-05-01")).toBeTruthy();
+    expect(api.getMachineCredentialStatus).toHaveBeenCalledOnce();
   });
 
   it.each([
@@ -309,11 +394,18 @@ describe("SbrReadinessScreen", () => {
       sessionId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073996",
     };
     const getCurrentUser = vi.fn();
+    const getMachineCredentialStatus = vi.fn(async () => credentialStatusFrame());
     const view = render(
-      <SbrReadinessScreen api={{ getCurrentUser, getSbrReadiness }} workspace={workspace} />,
+      <SbrReadinessScreen
+        api={{ getCurrentUser, getMachineCredentialStatus, getSbrReadiness }}
+        workspace={workspace}
+      />,
     );
     view.rerender(
-      <SbrReadinessScreen api={{ getCurrentUser, getSbrReadiness }} workspace={nextWorkspace} />,
+      <SbrReadinessScreen
+        api={{ getCurrentUser, getMachineCredentialStatus, getSbrReadiness }}
+        workspace={nextWorkspace}
+      />,
     );
 
     await act(async () => {
@@ -402,6 +494,10 @@ describe("SbrReadinessScreen", () => {
       .mockReturnValueOnce(refreshed.promise);
     const api = {
       getCurrentUser: vi.fn(),
+      getMachineCredentialStatus: vi
+        .fn()
+        .mockResolvedValueOnce(credentialStatusFrame(MachineCredentialState.MISSING))
+        .mockResolvedValueOnce(credentialStatusFrame(MachineCredentialState.PRESENT)),
       getSbrReadiness,
       assertTotp: vi.fn().mockResolvedValue(
         factorCodec.encodeResponse(
@@ -489,7 +585,7 @@ describe("SbrReadinessScreen", () => {
     expect(api.getSbrReadiness).toHaveBeenCalledOnce();
   });
 
-  it("keeps Product ID mutation controls unreachable even with exact signed EVTE scope", async () => {
+  it("shows Product ID management only with exact signed EVTE scope", async () => {
     const base = {
       environment: SbrEnvironment.EVTE,
       state: SbrReadinessState.UNAVAILABLE,
@@ -513,8 +609,8 @@ describe("SbrReadinessScreen", () => {
       />,
     );
     expect(await screen.findByRole("heading", { name: "Readiness unavailable" })).toBeTruthy();
-    expect(screen.queryByRole("heading", { name: "EVTE Product ID" })).toBeNull();
-    expect(screen.queryByRole("button", { name: /Product ID/i })).toBeNull();
+    expect(screen.getByRole("heading", { name: "EVTE Product ID" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Import Product ID" })).toBeTruthy();
   });
 
   it("fails closed when simulator readiness carries EVTE scope metadata", async () => {
@@ -715,8 +811,8 @@ describe("SbrReadinessScreen", () => {
 
     expect(await screen.findByText(/EVTE status only/i)).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Run simulator fixture" })).toBeNull();
-    expect(screen.queryByRole("heading", { name: "EVTE Product ID" })).toBeNull();
-    expect(screen.queryByRole("button", { name: /Product ID/i })).toBeNull();
+    expect(screen.getByRole("heading", { name: "EVTE Product ID" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Remove Product ID" })).toBeTruthy();
     expect(api.runSbrReadinessFixture).not.toHaveBeenCalled();
   });
 });

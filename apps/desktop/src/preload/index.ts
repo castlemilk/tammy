@@ -4,6 +4,7 @@ import type {
   MachineCredentialFileSelection,
   MachineCredentialMutationInput,
   MachineCredentialUnlockInput,
+  SbrProductIdImportInput,
   SystemDiagnostics,
   TammyDesktopAPI,
 } from "../shared/desktop-api";
@@ -29,6 +30,7 @@ import {
   GET_TRIAL_BALANCE_CHANNEL,
   IMPORT_BANK_STATEMENT_CHANNEL,
   IMPORT_MACHINE_CREDENTIAL_CHANNEL,
+  IMPORT_SBR_PRODUCT_ID_CHANNEL,
   INGEST_DOCUMENT_CHANNEL,
   isBoundedUtf8String,
   LIST_ACCOUNTS_CHANNEL,
@@ -39,6 +41,7 @@ import {
   POST_MANUAL_JOURNAL_CHANNEL,
   RECORD_ENTITY_VERIFICATION_CHANNEL,
   REMOVE_MACHINE_CREDENTIAL_CHANNEL,
+  REMOVE_SBR_PRODUCT_ID_CHANNEL,
   REPLACE_MACHINE_CREDENTIAL_CHANNEL,
   REPORTING_CAPABILITY_CHANNEL,
   RUN_SBR_READINESS_FIXTURE_CHANNEL,
@@ -168,6 +171,12 @@ export function createTammyDesktopAPI(invoke: Invoke): TammyDesktopAPI {
     }
     return Object.freeze({ command: copiedCommand(input.command), password: input.password });
   };
+  const copyProductIdImport = (input: SbrProductIdImportInput): SbrProductIdImportInput => {
+    if (!exactKeys(input, ["command", "productId"]) || !boundedString(input.productId)) {
+      invalidRequest();
+    }
+    return Object.freeze({ command: copiedCommand(input.command), productId: input.productId });
+  };
   const api = {
     getSystemDiagnostics: () => invoke(SYSTEM_DIAGNOSTICS_CHANNEL) as Promise<SystemDiagnostics>,
     createWorkspace: binaryMethod(CREATE_WORKSPACE_CHANNEL),
@@ -231,6 +240,11 @@ export function createTammyDesktopAPI(invoke: Invoke): TammyDesktopAPI {
       STANDARD_REQUEST_BYTES,
       STANDARD_RESPONSE_BYTES,
     ),
+    removeSbrProductId: binaryMethod(
+      REMOVE_SBR_PRODUCT_ID_CHANNEL,
+      STANDARD_REQUEST_BYTES,
+      STANDARD_RESPONSE_BYTES,
+    ),
     runSbrReadinessFixture: binaryMethod(
       RUN_SBR_READINESS_FIXTURE_CHANNEL,
       STANDARD_REQUEST_BYTES,
@@ -270,6 +284,7 @@ export function createTammyDesktopAPI(invoke: Invoke): TammyDesktopAPI {
       copyCredentialMutation,
     ),
     unlockMachineCredential: mediatedBinaryMethod(UNLOCK_MACHINE_CREDENTIAL_CHANNEL, copyUnlock),
+    importSbrProductId: mediatedBinaryMethod(IMPORT_SBR_PRODUCT_ID_CHANNEL, copyProductIdImport),
   } satisfies TammyDesktopAPI;
   if (
     Object.keys(api).length !== preloadMethods.length ||

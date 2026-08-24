@@ -20,11 +20,13 @@ describe("preload desktop bridge", () => {
     "getSbrReadiness",
     "getMachineCredentialStatus",
     "removeMachineCredential",
+    "removeSbrProductId",
     "runSbrReadinessFixture",
     "selectMachineCredentialFile",
     "importMachineCredential",
     "replaceMachineCredential",
     "unlockMachineCredential",
+    "importSbrProductId",
   ] as const;
 
   it("constructs exactly the production preload method manifest", async () => {
@@ -117,6 +119,7 @@ describe("preload desktop bridge", () => {
       ["getSbrReadiness", "tammy:sbr-readiness"],
       ["getMachineCredentialStatus", "tammy:sbr-credential-status"],
       ["removeMachineCredential", "tammy:sbr-credential-remove"],
+      ["removeSbrProductId", "tammy:sbr-product-id-remove"],
       ["runSbrReadinessFixture", "tammy:sbr-run-fixture"],
     ] as const;
 
@@ -149,6 +152,7 @@ describe("preload desktop bridge", () => {
       importMachineCredential(input: unknown): Promise<Uint8Array>;
       replaceMachineCredential(input: unknown): Promise<Uint8Array>;
       unlockMachineCredential(input: unknown): Promise<Uint8Array>;
+      importSbrProductId(input: unknown): Promise<Uint8Array>;
     };
 
     await expect(api.selectMachineCredentialFile()).resolves.toEqual({
@@ -180,6 +184,11 @@ describe("preload desktop bridge", () => {
         "unlockMachineCredential",
         "tammy:sbr-credential-unlock",
         { command: Uint8Array.of(1, 2, 3), password: "transient-password" },
+      ],
+      [
+        "importSbrProductId",
+        "tammy:sbr-product-id-import",
+        { command: Uint8Array.of(1, 2, 3), productId: "transient-product-id" },
       ],
     ] as const;
 
@@ -229,6 +238,12 @@ describe("preload desktop bridge", () => {
       api.unlockMachineCredential?.({
         command: Uint8Array.of(1),
         password: "x".repeat(1_025),
+      }),
+    ).rejects.toThrow("INVALID_RPC_REQUEST");
+    await expect(
+      api.importSbrProductId?.({
+        command: Uint8Array.of(1),
+        productId: "x".repeat(1_025),
       }),
     ).rejects.toThrow("INVALID_RPC_REQUEST");
     expect(invoke).not.toHaveBeenCalled();

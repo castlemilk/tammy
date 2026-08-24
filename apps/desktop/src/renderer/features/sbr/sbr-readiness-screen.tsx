@@ -2,9 +2,12 @@ import { create } from "@bufbuild/protobuf";
 import { AuthenticationContextSchema } from "@tammy/connect-client/tammy/v1/common_pb.js";
 import { FactorState, Role } from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import {
+  GetMachineCredentialStatusRequestSchema,
+  GetMachineCredentialStatusResponseSchema,
   GetSbrReadinessRequestSchema,
   GetSbrReadinessResponseSchema,
   MachineCredentialState,
+  type MachineCredentialStatus,
   ProductIdState,
   SbrEnvironment,
   type SbrReadiness,
@@ -18,6 +21,7 @@ import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import { Badge } from "../../components/ui/badge";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
 import { MachineCredentialForm } from "./machine-credential-form";
+import { ProductIdForm } from "./product-id-form";
 import { SbrSimulatorPanel } from "./sbr-simulator-panel";
 import { TotpSetup } from "./totp-setup";
 
@@ -27,11 +31,21 @@ const readinessCodec = createProtoMethodCodec({
   maximumResponseBytes: 32_768,
   output: GetSbrReadinessResponseSchema,
 });
+const credentialStatusCodec = createProtoMethodCodec({
+  input: GetMachineCredentialStatusRequestSchema,
+  maximumRequestBytes: 8_192,
+  maximumResponseBytes: 32_768,
+  output: GetMachineCredentialStatusResponseSchema,
+});
 
 type ScreenState =
   | { readonly status: "loading" }
   | { readonly status: "unavailable" }
-  | { readonly readiness: SbrReadiness; readonly status: "ready" };
+  | {
+      readonly credentialStatus: MachineCredentialStatus;
+      readonly readiness: SbrReadiness;
+      readonly status: "ready";
+    };
 
 const issueCopy: Readonly<Record<string, string>> = {
   UNSUPPORTED_SBR_TARGET: "This device is not an approved SBR target.",
@@ -70,7 +84,10 @@ const issueCopy: Readonly<Record<string, string>> = {
 };
 
 interface SbrReadinessScreenProps {
-  readonly api: Pick<TammyDesktopAPI, "getCurrentUser" | "getSbrReadiness"> &
+  readonly api: Pick<
+    TammyDesktopAPI,
+    "getCurrentUser" | "getMachineCredentialStatus" | "getSbrReadiness"
+  > &
     Partial<
       Pick<
         TammyDesktopAPI,
@@ -78,7 +95,9 @@ interface SbrReadinessScreenProps {
         | "confirmTotp"
         | "enrolTotp"
         | "importMachineCredential"
+        | "importSbrProductId"
         | "removeMachineCredential"
+        | "removeSbrProductId"
         | "replaceMachineCredential"
         | "runSbrReadinessFixture"
         | "selectMachineCredentialFile"
@@ -232,6 +251,26 @@ function validReadiness(readiness: SbrReadiness): boolean {
   return true;
 }
 
+function validCredentialStatus(status: MachineCredentialStatus, readiness: SbrReadiness): boolean {
+  if (status.state !== readiness.machineCredentialState) return false;
+  if (
+    status.fingerprint.length > 128 ||
+    status.issuer.length > 512 ||
+    status.serial.length > 128 ||
+    status.componentVersion.length > 128
+  ) {
+    return false;
+  }
+  if (
+    readiness.credentialFingerprint &&
+    status.fingerprint &&
+    readiness.credentialFingerprint !== status.fingerprint
+  ) {
+    return false;
+  }
+  return true;
+}
+
 export function SbrReadinessScreen({
   api,
   doctorMode = false,
@@ -264,15 +303,30 @@ export function SbrReadinessScreen({
         sessionId: workspace.sessionId,
       }),
     });
-    void Promise.resolve()
-      .then(() => api.getSbrReadiness(readinessCodec.encodeRequest(request)))
-      .then((frame) => {
-        const response = readinessCodec.decodeResponse(frame);
+    const authentication = request.authentication;
+    const statusRequest = create(GetMachineCredentialStatusRequestSchema, { authentication });
+    void Promise.all([
+      api.getSbrReadiness(readinessCodec.encodeRequest(request)),
+      api.getMachineCredentialStatus(credentialStatusCodec.encodeRequest(statusRequest)),
+    ])
+      .then(([readinessFrame, statusFrame]) => {
+        const response = readinessCodec.decodeResponse(readinessFrame);
+        const statusResponse = credentialStatusCodec.decodeResponse(statusFrame);
         if (!response.readiness || !validReadiness(response.readiness)) {
           throw new Error("invalid readiness response");
         }
+        if (
+          !statusResponse.credentialStatus ||
+          !validCredentialStatus(statusResponse.credentialStatus, response.readiness)
+        ) {
+          throw new Error("invalid credential status response");
+        }
         if (requestSequence.current === sequence) {
-          setState({ readiness: response.readiness, status: "ready" });
+          setState({
+            credentialStatus: statusResponse.credentialStatus,
+            readiness: response.readiness,
+            status: "ready",
+          });
         }
       })
       .catch(() => {
@@ -315,6 +369,7 @@ export function SbrReadinessScreen({
       {state.status === "ready" ? (
         <ReadinessSurface
           api={api}
+          credentialStatus={state.credentialStatus}
           factorEnabled={factorEnabled}
           onFactorEnabled={() => setFactorEnabled(true)}
           onNavigate={onNavigate}
@@ -359,6 +414,7 @@ function UnavailableSurface() {
 
 function ReadinessSurface({
   api,
+  credentialStatus,
   factorEnabled,
   onFactorEnabled,
   onNavigate,
@@ -368,6 +424,7 @@ function ReadinessSurface({
   workspace,
 }: {
   readonly api: SbrReadinessScreenProps["api"];
+  readonly credentialStatus: MachineCredentialStatus;
   readonly factorEnabled: boolean;
   readonly onFactorEnabled: () => void;
   readonly onNavigate: (path: string) => void;
@@ -461,6 +518,27 @@ function ReadinessSurface({
               value={readiness.componentFingerprint}
             />
           ) : null}
+          {credentialStatus.issuer ? (
+            <StatusRow label="Credential issuer" value={credentialStatus.issuer} />
+          ) : null}
+          {credentialStatus.serial ? (
+            <StatusRow label="Credential serial" value={credentialStatus.serial} />
+          ) : null}
+          {credentialStatus.createdAt ? (
+            <StatusRow
+              label="Credential created"
+              value={formatTimestampDate(credentialStatus.createdAt.seconds)}
+            />
+          ) : null}
+          {credentialStatus.expiresAt ? (
+            <StatusRow
+              label="Credential expires"
+              value={formatTimestampDate(credentialStatus.expiresAt.seconds)}
+            />
+          ) : null}
+          {credentialStatus.componentVersion ? (
+            <StatusRow label="Credential component" value={credentialStatus.componentVersion} />
+          ) : null}
         </dl>
       </section>
 
@@ -507,6 +585,28 @@ function ReadinessSurface({
         )
       ) : null}
 
+      {roles.includes(Role.WORKSPACE_ADMIN) &&
+      factorEnabled &&
+      readiness.environment === SbrEnvironment.EVTE &&
+      readiness.evteProductIdentifier &&
+      readiness.evteServiceIdentifier &&
+      api.assertTotp &&
+      api.importSbrProductId &&
+      api.removeSbrProductId ? (
+        <ProductIdForm
+          api={{
+            assertTotp: api.assertTotp,
+            importSbrProductId: api.importSbrProductId,
+            removeSbrProductId: api.removeSbrProductId,
+          }}
+          onChanged={onRefresh}
+          productIdentifier={readiness.evteProductIdentifier}
+          serviceIdentifier={readiness.evteServiceIdentifier}
+          state={readiness.productIdState}
+          workspace={workspace}
+        />
+      ) : null}
+
       <SbrSimulatorPanel
         api={api as Parameters<typeof SbrSimulatorPanel>[0]["api"]}
         factorEnabled={factorEnabled}
@@ -518,6 +618,12 @@ function ReadinessSurface({
       <PreparationBoundary />
     </>
   );
+}
+
+function formatTimestampDate(seconds: bigint): string {
+  const milliseconds = Number(seconds) * 1_000;
+  if (!Number.isSafeInteger(milliseconds)) return "Unavailable";
+  return new Date(milliseconds).toISOString().slice(0, 10);
 }
 
 function StatusRow({
