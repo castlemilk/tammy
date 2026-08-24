@@ -7,6 +7,8 @@ package platform
 #include <fcntl.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sys/param.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -20,6 +22,10 @@ static int tammy_open_child_directory(int parent, const char *name) {
 
 static int tammy_open_child_regular(int parent, const char *name) {
   return openat(parent, name, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC);
+}
+
+static int tammy_open_regular_path(const char *path) {
+  return open(path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC);
 }
 
 static int tammy_file_identity(int fd, uint64_t *values) {
@@ -50,6 +56,27 @@ static int tammy_path_identity(int parent, const char *name, uint64_t *values) {
   values[7] = (uint64_t)info.st_ctimespec.tv_sec;
   values[8] = (uint64_t)info.st_ctimespec.tv_nsec;
   return 0;
+}
+
+static int tammy_absolute_path_identity(const char *path, uint64_t *values) {
+  struct stat info;
+  if (lstat(path, &info) != 0) return -1;
+  values[0] = (uint64_t)info.st_dev;
+  values[1] = (uint64_t)info.st_ino;
+  values[2] = (uint64_t)info.st_mode;
+  values[3] = (uint64_t)info.st_uid;
+  values[4] = (uint64_t)info.st_size;
+  values[5] = (uint64_t)info.st_mtimespec.tv_sec;
+  values[6] = (uint64_t)info.st_mtimespec.tv_nsec;
+  values[7] = (uint64_t)info.st_ctimespec.tv_sec;
+  values[8] = (uint64_t)info.st_ctimespec.tv_nsec;
+  return 0;
+}
+
+static int tammy_descriptor_matches_path(int fd, const char *path) {
+  char actual[MAXPATHLEN];
+  if (fcntl(fd, F_GETPATH, actual) != 0) return 0;
+  return strcmp(actual, path) == 0;
 }
 
 static int tammy_pread_exact(int fd, void *buffer, size_t length) {
@@ -108,21 +135,37 @@ func openDirectoryNoFollow(path string) (*PathGuard, error) { return openPathNoF
 // validates the retained file identity before and after the bounded read, and
 // closes all descriptors before returning owned bytes.
 func ReadSecureRegular(path string, maximum int) ([]byte, error) {
-	guard, err := openRegularNoFollow(path)
-	if err != nil {
-		return nil, err
-	}
-	defer guard.Close()
-	guard.mu.Lock()
-	leaf := guard.components[len(guard.components)-1].identity
-	guard.mu.Unlock()
-	if leaf[3] != uint64(syscall.Geteuid()) || uint32(leaf[2])&0o077 != 0 {
+	components, valid := lexicalPathComponents(path)
+	if !valid || len(components) == 0 || maximum < 0 {
 		return nil, ErrPathAuthorityInvalid
 	}
-	if err := guard.Revalidate(); err != nil {
-		return nil, err
+	cPath := C.CString(path)
+	defer C.free(unsafe.Pointer(cPath))
+	descriptor := int(C.tammy_open_regular_path(cPath))
+	if descriptor < 0 {
+		return nil, ErrPathAuthorityInvalid
 	}
-	return guard.ReadAll(maximum)
+	defer C.tammy_close_descriptor(C.int(descriptor))
+	before, descriptorValid := descriptorIdentity(descriptor)
+	pathBefore, pathValid := absolutePathIdentity(cPath)
+	if !descriptorValid || !pathValid || before != pathBefore ||
+		uint32(before[2])&syscall.S_IFMT != syscall.S_IFREG ||
+		before[3] != uint64(syscall.Geteuid()) || uint32(before[2])&0o077 != 0 ||
+		C.tammy_descriptor_matches_path(C.int(descriptor), cPath) == 0 || before[4] > uint64(maximum) {
+		return nil, ErrPathAuthorityInvalid
+	}
+	data := make([]byte, int(before[4]))
+	if len(data) > 0 && C.tammy_pread_exact(C.int(descriptor), unsafe.Pointer(&data[0]), C.size_t(len(data))) != 0 {
+		clearBytes(data)
+		return nil, ErrPathAuthorityChanged
+	}
+	after, descriptorValid := descriptorIdentity(descriptor)
+	pathAfter, pathValid := absolutePathIdentity(cPath)
+	if !descriptorValid || !pathValid || after != before || pathAfter != before || C.tammy_descriptor_matches_path(C.int(descriptor), cPath) == 0 {
+		clearBytes(data)
+		return nil, ErrPathAuthorityChanged
+	}
+	return data, nil
 }
 
 func openPathNoFollow(path string, regular bool) (*PathGuard, error) {
@@ -286,6 +329,12 @@ func childPathIdentity(parent int, name string) (fileIdentity, bool) {
 	defer C.free(unsafe.Pointer(cName))
 	var identity fileIdentity
 	ok := C.tammy_path_identity(C.int(parent), cName, (*C.uint64_t)(unsafe.Pointer(&identity[0]))) == 0
+	return identity, ok
+}
+
+func absolutePathIdentity(path *C.char) (fileIdentity, bool) {
+	var identity fileIdentity
+	ok := C.tammy_absolute_path_identity(path, (*C.uint64_t)(unsafe.Pointer(&identity[0]))) == 0
 	return identity, ok
 }
 

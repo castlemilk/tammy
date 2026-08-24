@@ -228,6 +228,25 @@ func TestReadSecureRegularRejectsWritableCredentialAndBoundsRead(t *testing.T) {
 	}
 }
 
+func TestReadSecureRegularRejectsAncestorSymlinkAtExactLiteralBoundary(t *testing.T) {
+	root := secureTempDir(t)
+	realDirectory := filepath.Join(root, "real")
+	if err := os.Mkdir(realDirectory, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	credential := filepath.Join(realDirectory, "credential.p12")
+	if err := os.WriteFile(credential, []byte("synthetic"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	linkedDirectory := filepath.Join(root, "linked")
+	if err := os.Symlink(realDirectory, linkedDirectory); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ReadSecureRegular(filepath.Join(linkedDirectory, "credential.p12"), 64); !errors.Is(err, ErrPathAuthorityInvalid) {
+		t.Fatalf("ancestor symlink error = %v", err)
+	}
+}
+
 func secureTempDir(t *testing.T) string {
 	t.Helper()
 	path, err := os.MkdirTemp("/private/tmp", "tammy-sbr-helper-test-")

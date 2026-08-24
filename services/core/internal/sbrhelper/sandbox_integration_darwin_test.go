@@ -5,6 +5,7 @@ package sbrhelper
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"os"
@@ -27,7 +28,173 @@ const (
 	productionProbeAllowed       = "ALLOWED"
 	productionProbeUnexpected    = "UNEXPECTED"
 	keychainPathProbeEnvironment = "TAMMY_CORE_KEYCHAIN_PATH_PROBE"
+	selectedPathProbeEnvironment = "TAMMY_CORE_SELECTED_PATH_PROBE"
 )
+
+func TestProductionSandboxPermitsExactLiteralSecureReadOfSelectedCredential(t *testing.T) {
+	if selected := os.Getenv(selectedPathProbeEnvironment); selected != "" {
+		contents, err := readRegularNoFollowAtExactPath(selected)
+		if err != nil || string(contents) != "synthetic selected credential" {
+			_, _ = os.Stdout.WriteString("selected-read=" + errorText(err) + "\n")
+			os.Exit(45)
+		}
+		os.Exit(0)
+	}
+	sandboxExec, err := exec.LookPath("sandbox-exec")
+	if err != nil {
+		t.Skip("SBR_SANDBOX_EXEC_UNAVAILABLE")
+	}
+	base, root, helper, probe, component, selected := stageSandboxIntegration(t)
+	profile, guard, err := RenderDevelopmentSandboxProfile(SandboxProfileInput{
+		TrustedBase: base, StagedRoot: root,
+		StagedExecutables: []string{helper, probe}, StagedReadOnlyFiles: []string{component}, SelectedReadFiles: []string{selected},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer guard.Close()
+	contents, err := profile.PrepareSpawn()
+	if err != nil {
+		t.Fatal(err)
+	}
+	profilePath := filepath.Join(root, "selected-path-profile.sb")
+	if err := os.WriteFile(profilePath, []byte(contents), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	stdout, stderr, runErr := runSandboxedCommand(t, sandboxExec, profilePath, probe,
+		[]string{"-test.run=^TestProductionSandboxPermitsExactLiteralSecureReadOfSelectedCredential$"},
+		[]string{selectedPathProbeEnvironment + "=" + selected}, nil)
+	if sandboxApplyUnavailable(stderr, runErr) {
+		t.Skip("SBR_SANDBOX_EXEC_UNAVAILABLE")
+	}
+	if runErr != nil {
+		t.Fatalf("selected credential secure-read probe failed: %v stdout=%q stderr=%q", runErr, stdout, stderr)
+	}
+}
+
+func TestProductionSandboxHelperPreparesSelectedSyntheticCredential(t *testing.T) {
+	sandboxExec, err := exec.LookPath("sandbox-exec")
+	if err != nil {
+		t.Skip("SBR_SANDBOX_EXEC_UNAVAILABLE")
+	}
+	base, root, helper, _, component, selected := stageSandboxIntegration(t)
+	assetRoot := filepath.Join(helperModuleRoot(t), "..", "..", "apps", "desktop", "tests", "e2e", "assets")
+	credential, err := os.ReadFile(filepath.Join(assetRoot, "synthetic-machine-credential.p12"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(selected, credential, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var fixture struct {
+		Password string `json:"password"`
+		ABN      string `json:"canonical_abn"`
+	}
+	manifest, err := os.ReadFile(filepath.Join(assetRoot, "synthetic-machine-credential.fixture.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(manifest, &fixture); err != nil || fixture.Password == "" || fixture.ABN == "" {
+		t.Fatalf("synthetic credential fixture metadata: %v", err)
+	}
+	profile, guard, err := RenderDevelopmentSandboxProfile(SandboxProfileInput{
+		TrustedBase: base, StagedRoot: root,
+		StagedExecutables: []string{helper}, StagedReadOnlyFiles: []string{component}, SelectedReadFiles: []string{selected},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer guard.Close()
+	contents, err := profile.PrepareSpawn()
+	if err != nil {
+		t.Fatal(err)
+	}
+	profilePath := filepath.Join(root, "selected-credential-profile.sb")
+	if err := os.WriteFile(profilePath, []byte(contents), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	now := time.Now().UTC()
+	operationID := "018bcfe5-6800-7000-8000-000000000033"
+	prepare := scopedLauncherFixture(Request{
+		ProtocolVersion: ProtocolVersion, RequestID: "018bcfe5-6800-7000-8000-000000000034",
+		Operation: OperationPrepareMutation, DeadlineMillis: now.Add(45 * time.Second).UnixMilli(), Environment: EnvironmentSimulator,
+		OperationID: operationID, MutationKind: MutationImportCredential, SelectedLocalPath: selected, TransientPassword: []byte(fixture.Password),
+	})
+	prepare.CanonicalABN = fixture.ABN
+	prepare.OpaqueScope = bytes.Repeat([]byte{0x7e}, 32)
+	prepare.ComponentVersion = "tammy-sbr-simulator-v1"
+	prepared := runSandboxedHelperRequest(t, sandboxExec, profilePath, helper, prepare)
+
+	abort := scopedLauncherFixture(Request{
+		ProtocolVersion: ProtocolVersion, RequestID: "018bcfe5-6800-7000-8000-000000000035",
+		Operation: OperationAbortMutation, DeadlineMillis: time.Now().UTC().Add(45 * time.Second).UnixMilli(), Environment: EnvironmentSimulator,
+		OperationID: operationID, MutationKind: MutationImportCredential,
+	})
+	abort.CanonicalABN = fixture.ABN
+	abort.OpaqueScope = bytes.Repeat([]byte{0x7e}, 32)
+	abort.ComponentVersion = "tammy-sbr-simulator-v1"
+	aborted := runSandboxedHelperRequest(t, sandboxExec, profilePath, helper, abort)
+	if prepared.Outcome != OutcomePending || prepared.RedactedResult != 0 || prepared.PendingItemID != operationID || prepared.CanonicalABN != fixture.ABN || len(prepared.CredentialFingerprint) != 32 {
+		t.Fatalf("prepared credential response=%+v", prepared)
+	}
+	if aborted.Outcome != OutcomeOK || aborted.RedactedResult != ResultMutationAborted {
+		t.Fatalf("aborted credential response=%+v", aborted)
+	}
+}
+
+func runSandboxedHelperRequest(t *testing.T, sandboxExec, profilePath, helper string, request Request) Response {
+	t.Helper()
+	payload, err := EncodeRequest(request, time.Now().UTC())
+	request.ClearSecrets()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var framed bytes.Buffer
+	if err := WriteFrame(&framed, payload); err != nil {
+		zeroBytes(payload)
+		t.Fatal(err)
+	}
+	zeroBytes(payload)
+	stdout, stderr, runErr := runSandboxedCommandWithTimeout(t, 60*time.Second, sandboxExec, profilePath, helper, nil, nil, framed.Bytes())
+	if sandboxApplyUnavailable(stderr, runErr) {
+		t.Skip("SBR_SANDBOX_EXEC_UNAVAILABLE")
+	}
+	if runErr != nil || len(stderr) != 0 {
+		t.Fatalf("sandboxed helper request failed: %v stderr=%q", runErr, stderr)
+	}
+	responsePayload, err := ReadFrame(bytes.NewReader(stdout))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer zeroBytes(responsePayload)
+	response, err := DecodeResponse(responsePayload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return response
+}
+
+func readRegularNoFollowAtExactPath(path string) ([]byte, error) {
+	if !filepath.IsAbs(path) {
+		return nil, errors.New("path is not absolute")
+	}
+	descriptor, err := unix.Open(path, unix.O_RDONLY|unix.O_NOFOLLOW|unix.O_NONBLOCK|unix.O_CLOEXEC, 0)
+	if err != nil {
+		return nil, err
+	}
+	file := os.NewFile(uintptr(descriptor), filepath.Base(path))
+	if file == nil {
+		_ = unix.Close(descriptor)
+		return nil, errors.New("selected credential descriptor unavailable")
+	}
+	defer file.Close()
+	var retained, resolved unix.Stat_t
+	if unix.Fstat(descriptor, &retained) != nil || unix.Lstat(path, &resolved) != nil || retained.Dev != resolved.Dev || retained.Ino != resolved.Ino || retained.Mode != resolved.Mode {
+		return nil, errors.New("selected credential authority changed")
+	}
+	return io.ReadAll(io.LimitReader(file, 1024))
+}
 
 func TestKeychainAtomicPathFamiliesRejectSiblingAndNestedPaths(t *testing.T) {
 	if root := os.Getenv(keychainPathProbeEnvironment); root != "" {
@@ -396,7 +563,12 @@ func copyFile(t *testing.T, source, destination string, mode os.FileMode) {
 
 func runSandboxedCommand(t *testing.T, sandboxExec, profilePath, executable string, arguments, environment []string, stdin []byte) ([]byte, []byte, error) {
 	t.Helper()
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	return runSandboxedCommandWithTimeout(t, 10*time.Second, sandboxExec, profilePath, executable, arguments, environment, stdin)
+}
+
+func runSandboxedCommandWithTimeout(t *testing.T, timeout time.Duration, sandboxExec, profilePath, executable string, arguments, environment []string, stdin []byte) ([]byte, []byte, error) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	commandArguments := append([]string{"-f", profilePath, executable}, arguments...)
 	command := exec.CommandContext(ctx, sandboxExec, commandArguments...)
