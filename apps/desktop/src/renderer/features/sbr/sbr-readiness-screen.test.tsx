@@ -1,16 +1,29 @@
 import { create } from "@bufbuild/protobuf";
-import { AuthenticationContextSchema } from "@tammy/connect-client/tammy/v1/common_pb.js";
-import { FactorState, Role } from "@tammy/connect-client/tammy/v1/identity_pb.js";
+import { TimestampSchema } from "@bufbuild/protobuf/wkt";
+import {
+  AuthenticationContextSchema,
+  FreshFactorContextSchema,
+} from "@tammy/connect-client/tammy/v1/common_pb.js";
+import {
+  AssertTOTPRequestSchema,
+  AssertTOTPResponseSchema,
+  FactorState,
+  Role,
+} from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import {
   GetSbrReadinessRequestSchema,
   GetSbrReadinessResponseSchema,
+  ImportMachineCredentialRequestSchema,
+  ImportMachineCredentialResponseSchema,
   MachineCredentialState,
+  MachineCredentialStatusSchema,
   ProductIdState,
   SbrEnvironment,
   SbrReadinessSchema,
   SbrReadinessState,
 } from "@tammy/connect-client/tammy/v1/sbr_pb.js";
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { StrictMode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -24,6 +37,18 @@ const codec = createProtoMethodCodec({
   maximumRequestBytes: 8_192,
   maximumResponseBytes: 32_768,
   output: GetSbrReadinessResponseSchema,
+});
+const factorCodec = createProtoMethodCodec({
+  input: AssertTOTPRequestSchema,
+  maximumRequestBytes: 8_192,
+  maximumResponseBytes: 8_192,
+  output: AssertTOTPResponseSchema,
+});
+const importCodec = createProtoMethodCodec({
+  input: ImportMachineCredentialRequestSchema,
+  maximumRequestBytes: 8_192,
+  maximumResponseBytes: 32_768,
+  output: ImportMachineCredentialResponseSchema,
 });
 
 const workspace = {
@@ -360,6 +385,72 @@ describe("SbrReadinessScreen", () => {
     expect(replace.hasAttribute("disabled")).toBe(false);
     expect(remove.hasAttribute("disabled")).toBe(false);
     expect(screen.getByText(/protected storage on this Mac/i)).toBeTruthy();
+  });
+
+  it("keeps credential success visible while authoritative readiness refresh is pending", async () => {
+    const refreshed = deferred<Uint8Array>();
+    const getSbrReadiness = vi
+      .fn()
+      .mockResolvedValueOnce(
+        responseFrame({
+          environment: SbrEnvironment.SIMULATOR,
+          state: SbrReadinessState.UNAVAILABLE,
+          machineCredentialState: MachineCredentialState.MISSING,
+          productIdState: ProductIdState.MISSING,
+        }),
+      )
+      .mockReturnValueOnce(refreshed.promise);
+    const api = {
+      getCurrentUser: vi.fn(),
+      getSbrReadiness,
+      assertTotp: vi.fn().mockResolvedValue(
+        factorCodec.encodeResponse(
+          create(AssertTOTPResponseSchema, {
+            freshFactor: create(FreshFactorContextSchema, {
+              assertionId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073995",
+              purpose: "sbr_machine_credential_import",
+              assertedAt: create(TimestampSchema, { seconds: 1n }),
+            }),
+          }),
+        ),
+      ),
+      selectMachineCredentialFile: vi.fn().mockResolvedValue({
+        selected: true as const,
+        handle: "01900f3c-7b2e-7cc4-98c4-dc0c0c073996",
+      }),
+      importMachineCredential: vi.fn().mockResolvedValue(
+        importCodec.encodeResponse(
+          create(ImportMachineCredentialResponseSchema, {
+            credentialStatus: create(MachineCredentialStatusSchema, {
+              state: MachineCredentialState.PRESENT,
+            }),
+          }),
+        ),
+      ),
+    };
+    const user = userEvent.setup();
+    render(<SbrReadinessScreen api={api} workspace={workspace} />);
+
+    await user.click(await screen.findByRole("button", { name: "Import credential" }));
+    await user.click(screen.getByRole("button", { name: "Choose credential in macOS" }));
+    await user.type(screen.getByLabelText("Credential password"), "synthetic-password");
+    await user.type(screen.getByLabelText("Fresh six-digit code"), "123456");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await waitFor(() => expect(getSbrReadiness).toHaveBeenCalledTimes(2));
+
+    expect(screen.getByText("Credential status updated.")).toBeTruthy();
+
+    await act(async () => {
+      refreshed.resolve(
+        responseFrame({
+          environment: SbrEnvironment.SIMULATOR,
+          state: SbrReadinessState.READY_FOR_SIMULATOR,
+          machineCredentialState: MachineCredentialState.PRESENT,
+          productIdState: ProductIdState.MISSING,
+        }),
+      );
+      await refreshed.promise;
+    });
   });
 
   it("shows TOTP setup instead of high-risk actions when the administrator has no enabled factor", async () => {

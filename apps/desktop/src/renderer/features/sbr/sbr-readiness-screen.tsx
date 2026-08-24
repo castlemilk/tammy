@@ -257,7 +257,7 @@ export function SbrReadinessScreen({
     requestedKey.current = requestKey;
     const sequence = requestSequence.current + 1;
     requestSequence.current = sequence;
-    setState({ status: "loading" });
+    setState((current) => (current.status === "ready" ? current : { status: "loading" }));
     const request = create(GetSbrReadinessRequestSchema, {
       authentication: create(AuthenticationContextSchema, {
         actorUserId: workspace.userId,
