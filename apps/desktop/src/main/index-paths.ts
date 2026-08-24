@@ -1,6 +1,8 @@
 import { lstat, realpath } from "node:fs/promises";
 import path from "node:path";
 
+import { type AuthenticatedCoreExecutable, authenticateCoreExecutable } from "./core-executable";
+
 interface BundledResourcePathOptions {
   readonly arch: string;
   readonly developmentResourcesPath: string;
@@ -44,7 +46,9 @@ async function requirePhysicalDirectory(candidate: string, errorCode: string): P
   return physical;
 }
 
-export async function resolveBundledCorePath(options: BundledResourcePathOptions): Promise<string> {
+export async function resolveBundledCorePath(
+  options: BundledResourcePathOptions,
+): Promise<AuthenticatedCoreExecutable> {
   const executable = CORE_TARGETS[`${options.platform}/${options.arch}`];
   if (!executable) {
     throw new Error("UNSUPPORTED_CORE_TARGET");
@@ -83,7 +87,7 @@ export async function resolveBundledCorePath(options: BundledResourcePathOptions
   ) {
     throw new Error("INVALID_CORE_BINARY");
   }
-  return physicalCandidate;
+  return authenticateCoreExecutable(physicalCandidate);
 }
 
 export interface BundledSbrProfileLocation {

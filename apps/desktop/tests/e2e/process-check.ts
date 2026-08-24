@@ -12,6 +12,16 @@ export interface CoreProcessMatch {
   readonly processId: number;
 }
 
+export interface PackagedCoreAuthority {
+  readonly coreSha256: string;
+  readonly packagedExecutable: string;
+}
+
+export interface CoreProcessInstancePin {
+  readonly executablePath: string;
+  readonly instanceToken: string;
+}
+
 export interface HelperSocketSample {
   readonly processIds: readonly number[];
   readonly samples: number;
@@ -82,6 +92,36 @@ const WINDOWS_ARGUMENTS = Object.freeze([
   WINDOWS_PROCESS_QUERY,
 ]);
 
+const WINDOWS_AUTH_PROCESS_QUERY = `
+$ErrorActionPreference = "Stop"
+$expected = [System.IO.Path]::GetFullPath($env:TAMMY_EXPECTED_CORE)
+Get-CimInstance Win32_Process |
+  Where-Object {
+    $_.ExecutablePath -and
+    [System.StringComparer]::OrdinalIgnoreCase.Equals(
+      [System.IO.Path]::GetFullPath($_.ExecutablePath),
+      $expected
+    )
+  } |
+  ForEach-Object {
+    [PSCustomObject]@{
+      ProcessId = [int]$_.ProcessId
+      ExecutablePath = [string]$_.ExecutablePath
+      CreationDate = [string]$_.CreationDate
+    } | ConvertTo-Json -Compress
+  }
+`.trim();
+
+const WINDOWS_AUTH_ARGUMENTS = Object.freeze([
+  "-NoLogo",
+  "-NoProfile",
+  "-NonInteractive",
+  "-ExecutionPolicy",
+  "Bypass",
+  "-Command",
+  WINDOWS_AUTH_PROCESS_QUERY,
+]);
+
 const productionExecFile: ProcessQueryExecFile = (command, arguments_, options, callback) =>
   nodeExecFile(command, [...arguments_], options, callback);
 
@@ -96,6 +136,17 @@ function requireCanonicalCorePath(corePath: string, platform: NodeJS.Platform): 
     throw new Error("INVALID_EXPECTED_CORE_PATH");
   }
   return corePath;
+}
+
+function requirePackagedCoreAuthority(
+  authority: PackagedCoreAuthority,
+  platform: NodeJS.Platform,
+): PackagedCoreAuthority {
+  requireCanonicalCorePath(authority.packagedExecutable, platform);
+  if (!/^[0-9a-f]{64}$/.test(authority.coreSha256)) {
+    throw new Error("INVALID_PACKAGED_CORE_AUTHORITY");
+  }
+  return authority;
 }
 
 function requireCanonicalPackagedHelperPath(helperPath: string): string {
@@ -270,6 +321,172 @@ async function authenticatedFileDigest(filePath: string): Promise<string> {
   } finally {
     await handle?.close().catch(() => undefined);
   }
+}
+
+async function authenticatedCoreFileEvidence(
+  filePath: string,
+): Promise<{ readonly dev: bigint; readonly ino: bigint; readonly sha256: string }> {
+  let handle: Awaited<ReturnType<typeof open>> | undefined;
+  try {
+    handle = await open(filePath, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+    const before = await handle.stat({ bigint: true });
+    if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1n || before.size <= 0n) {
+      throw new Error();
+    }
+    const digest = createHash("sha256");
+    const buffer = Buffer.alloc(Math.min(1024 * 1024, Number(before.size)));
+    let position = 0;
+    while (position < Number(before.size)) {
+      const { bytesRead } = await handle.read(
+        buffer,
+        0,
+        Math.min(buffer.length, Number(before.size) - position),
+        position,
+      );
+      if (bytesRead === 0) throw new Error();
+      digest.update(buffer.subarray(0, bytesRead));
+      position += bytesRead;
+    }
+    const after = await handle.stat({ bigint: true });
+    if (
+      before.dev !== after.dev ||
+      before.ino !== after.ino ||
+      before.mode !== after.mode ||
+      before.nlink !== after.nlink ||
+      before.size !== after.size ||
+      before.mtimeNs !== after.mtimeNs ||
+      before.ctimeNs !== after.ctimeNs
+    ) {
+      throw new Error();
+    }
+    return { dev: before.dev, ino: before.ino, sha256: digest.digest("hex") };
+  } catch {
+    throw new Error("UNAUTHENTICATED_CORE_PROCESS");
+  } finally {
+    await handle?.close().catch(() => undefined);
+  }
+}
+
+interface MacOSExecutableImageEvidence {
+  readonly dev: bigint;
+  readonly executablePath: string;
+  readonly ino: bigint;
+}
+
+async function queryMacOSCoreImage(
+  processId: number,
+  expectedExecutablePath: string,
+  dependencies: ProcessQueryDependencies,
+): Promise<MacOSExecutableImageEvidence | undefined> {
+  let stdout: string;
+  try {
+    stdout = await runBoundedQuery(
+      "/usr/sbin/lsof",
+      ["-nP", "-a", "-p", String(processId), "-d", "txt", "-FDin"],
+      dependencies,
+    );
+  } catch (error) {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === 1) {
+      return undefined;
+    }
+    throw new Error("PROCESS_QUERY_FAILED");
+  }
+  const lines = parseLines(stdout);
+  if (lines.length < 5 || lines[0] !== `p${processId}`) {
+    throw new Error("INVALID_PROCESS_EVIDENCE");
+  }
+  const images: MacOSExecutableImageEvidence[] = [];
+  for (let index = 1; index < lines.length; ) {
+    if (lines[index] !== "ftxt") throw new Error("INVALID_PROCESS_EVIDENCE");
+    const fields = lines.slice(index + 1, index + 4);
+    const deviceField = fields.find((value) => value.startsWith("D"));
+    const inodeField = fields.find((value) => value.startsWith("i"));
+    const nameField = fields.find((value) => value.startsWith("n"));
+    if (
+      fields.length !== 3 ||
+      deviceField === undefined ||
+      inodeField === undefined ||
+      nameField === undefined ||
+      !/^D(?:0x[0-9a-f]+|[0-9]+)$/iu.test(deviceField) ||
+      !/^i[1-9][0-9]*$/u.test(inodeField) ||
+      !path.posix.isAbsolute(nameField.slice(1))
+    ) {
+      throw new Error("INVALID_PROCESS_EVIDENCE");
+    }
+    images.push({
+      dev: BigInt(deviceField.slice(1)),
+      executablePath: nameField.slice(1),
+      ino: BigInt(inodeField.slice(1)),
+    });
+    index += 4;
+  }
+  const matches = images.filter((image) => image.executablePath === expectedExecutablePath);
+  if (matches.length !== 1) throw new Error("UNAUTHENTICATED_CORE_PROCESS");
+  return matches[0];
+}
+
+async function queryMacOSInstanceToken(
+  processId: number,
+  dependencies: ProcessQueryDependencies,
+): Promise<string | undefined> {
+  let stdout: string;
+  try {
+    stdout = await runBoundedQuery(
+      "/bin/ps",
+      ["-p", String(processId), "-o", "lstart="],
+      dependencies,
+    );
+  } catch (error) {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === 1) {
+      return undefined;
+    }
+    throw new Error("PROCESS_QUERY_FAILED");
+  }
+  const tokens = parseLines(stdout).map((line) => line.trim());
+  if (tokens.length === 0) return undefined;
+  const token = tokens[0];
+  if (tokens.length !== 1 || token === undefined || token.length === 0 || token.length > 128) {
+    throw new Error("INVALID_PROCESS_EVIDENCE");
+  }
+  return token;
+}
+
+async function queryAuthenticatedMacOSCore(
+  authority: PackagedCoreAuthority,
+  pinned: Map<number, CoreProcessInstancePin>,
+  dependencies: ProcessQueryDependencies,
+): Promise<readonly CoreProcessMatch[]> {
+  const processIds = await queryMacOS(authority.packagedExecutable, dependencies);
+  const matches: CoreProcessMatch[] = [];
+  for (const { processId } of processIds) {
+    const instanceBefore = await queryMacOSInstanceToken(processId, dependencies);
+    if (instanceBefore === undefined) continue;
+    const image = await queryMacOSCoreImage(processId, authority.packagedExecutable, dependencies);
+    if (image === undefined) continue;
+    const instanceAfter = await queryMacOSInstanceToken(processId, dependencies);
+    if (instanceAfter === undefined || instanceAfter !== instanceBefore) continue;
+    const prior = pinned.get(processId);
+    if (
+      prior !== undefined &&
+      (prior.instanceToken !== instanceBefore ||
+        prior.executablePath !== authority.packagedExecutable)
+    ) {
+      throw new Error("CORE_PROCESS_INSTANCE_CHANGED");
+    }
+    if (image.executablePath !== authority.packagedExecutable) {
+      throw new Error("UNAUTHENTICATED_CORE_PROCESS");
+    }
+    const file = await authenticatedCoreFileEvidence(image.executablePath);
+    if (file.dev !== image.dev || file.ino !== image.ino || file.sha256 !== authority.coreSha256) {
+      throw new Error("UNAUTHENTICATED_CORE_PROCESS");
+    }
+    pinned.set(processId, {
+      executablePath: image.executablePath,
+      instanceToken: instanceBefore,
+    });
+    matches.push({ executablePath: image.executablePath, processId });
+  }
+  return matches;
 }
 
 function stagedHelperPatternSource(authority: StagedHelperAuthority): string {
@@ -490,6 +707,83 @@ async function queryWindows(
   return parseLines(stdout).map((line) => parseWindowsLine(line, corePath));
 }
 
+function parseAuthenticatedWindowsLine(
+  line: string,
+  authority: PackagedCoreAuthority,
+): CoreProcessMatch & { readonly instanceToken: string } {
+  let value: unknown;
+  try {
+    value = JSON.parse(line);
+  } catch {
+    throw new Error("INVALID_PROCESS_EVIDENCE");
+  }
+  if (
+    value === null ||
+    typeof value !== "object" ||
+    Array.isArray(value) ||
+    Object.keys(value).sort().join(",") !== "CreationDate,ExecutablePath,ProcessId"
+  ) {
+    throw new Error("INVALID_PROCESS_EVIDENCE");
+  }
+  const record = value as Record<string, unknown>;
+  if (
+    typeof record.ExecutablePath !== "string" ||
+    typeof record.CreationDate !== "string" ||
+    record.CreationDate.length === 0 ||
+    record.CreationDate.length > 128 ||
+    typeof record.ProcessId !== "number" ||
+    !Number.isSafeInteger(record.ProcessId) ||
+    record.ProcessId <= 0 ||
+    path.win32.normalize(record.ExecutablePath).toLowerCase() !==
+      path.win32.normalize(authority.packagedExecutable).toLowerCase()
+  ) {
+    throw new Error("INVALID_PROCESS_EVIDENCE");
+  }
+  return {
+    executablePath: record.ExecutablePath,
+    instanceToken: record.CreationDate,
+    processId: record.ProcessId,
+  };
+}
+
+async function queryAuthenticatedWindowsCore(
+  authority: PackagedCoreAuthority,
+  pinned: Map<number, CoreProcessInstancePin>,
+  dependencies: ProcessQueryDependencies,
+): Promise<readonly CoreProcessMatch[]> {
+  const { command, environment } = windowsCommandAndEnvironment(
+    authority.packagedExecutable,
+    dependencies.environment ?? process.env,
+  );
+  let stdout: string;
+  try {
+    stdout = await runBoundedQuery(command, WINDOWS_AUTH_ARGUMENTS, {
+      ...dependencies,
+      environment,
+    });
+  } catch {
+    throw new Error("PROCESS_QUERY_FAILED");
+  }
+  const file = await authenticatedCoreFileEvidence(authority.packagedExecutable);
+  if (file.sha256 !== authority.coreSha256) throw new Error("UNAUTHENTICATED_CORE_PROCESS");
+  const matches = parseLines(stdout).map((line) => parseAuthenticatedWindowsLine(line, authority));
+  for (const match of matches) {
+    const prior = pinned.get(match.processId);
+    if (
+      prior !== undefined &&
+      (prior.executablePath.toLowerCase() !== match.executablePath.toLowerCase() ||
+        prior.instanceToken !== match.instanceToken)
+    ) {
+      throw new Error("CORE_PROCESS_INSTANCE_CHANGED");
+    }
+    pinned.set(match.processId, {
+      executablePath: match.executablePath,
+      instanceToken: match.instanceToken,
+    });
+  }
+  return matches.map(({ executablePath, processId }) => ({ executablePath, processId }));
+}
+
 export async function findExactCoreProcesses(
   corePath: string,
   platform: NodeJS.Platform = process.platform,
@@ -498,6 +792,18 @@ export async function findExactCoreProcesses(
   const expected = requireCanonicalCorePath(corePath, platform);
   if (platform === "darwin") return queryMacOS(expected, dependencies);
   if (platform === "win32") return queryWindows(expected, dependencies);
+  throw new Error("UNSUPPORTED_PROCESS_CHECK_PLATFORM");
+}
+
+export async function findAuthenticatedCoreProcesses(
+  authority: PackagedCoreAuthority,
+  pinned: Map<number, CoreProcessInstancePin>,
+  platform: NodeJS.Platform = process.platform,
+  dependencies: ProcessQueryDependencies = {},
+): Promise<readonly CoreProcessMatch[]> {
+  const trusted = requirePackagedCoreAuthority(authority, platform);
+  if (platform === "darwin") return queryAuthenticatedMacOSCore(trusted, pinned, dependencies);
+  if (platform === "win32") return queryAuthenticatedWindowsCore(trusted, pinned, dependencies);
   throw new Error("UNSUPPORTED_PROCESS_CHECK_PLATFORM");
 }
 

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -615,7 +616,7 @@ describe("bundled resource resolver", () => {
           platform,
           resourcesPath: packaged,
         }),
-      ).resolves.toBe(await realpath(developmentBinary));
+      ).resolves.toMatchObject({ executablePath: await realpath(developmentBinary) });
       await expect(
         resolveBundledCorePath({
           arch,
@@ -624,9 +625,35 @@ describe("bundled resource resolver", () => {
           platform,
           resourcesPath: packaged,
         }),
-      ).resolves.toBe(await realpath(packagedBinary));
+      ).resolves.toMatchObject({ executablePath: await realpath(packagedBinary) });
     },
   );
+
+  it("binds the resolved core path to a stable digest and filesystem identity", async () => {
+    const { development, packaged } = await resourcesFixture();
+    const binary = path.join(development, "core/darwin-arm64/tammy-core");
+    const bytes = Buffer.from("authenticated-core");
+    await mkdir(path.dirname(binary), { recursive: true });
+    await writeFile(binary, bytes);
+
+    await expect(
+      resolveBundledCorePath({
+        arch: "arm64",
+        developmentResourcesPath: development,
+        isPackaged: false,
+        platform: "darwin",
+        resourcesPath: packaged,
+      }),
+    ).resolves.toMatchObject({
+      executablePath: await realpath(binary),
+      identity: {
+        dev: expect.any(BigInt),
+        ino: expect.any(BigInt),
+        size: BigInt(bytes.byteLength),
+      },
+      sha256: createHash("sha256").update(bytes).digest("hex"),
+    });
+  });
 
   it.each([
     ["linux", "x64"],

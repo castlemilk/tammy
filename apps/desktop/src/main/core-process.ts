@@ -5,6 +5,11 @@ import type { Readable, Writable } from "node:stream";
 
 import { type CoreReadiness, parseReadiness } from "../shared/readiness";
 
+import {
+  type AuthenticatedCoreExecutable,
+  revalidateCoreExecutableForSpawn,
+} from "./core-executable";
+
 const MAX_READINESS_BYTES = 65_536;
 const MAX_STDERR_LINE_BYTES = 4_096;
 const STOP_TIMEOUT_MS = 3_000;
@@ -96,7 +101,7 @@ export interface CoreProcessClock {
 }
 
 export interface CoreProcessOptions {
-  readonly binaryPath: string;
+  readonly binary: AuthenticatedCoreExecutable;
   readonly args?: readonly string[];
   readonly spawn?: SpawnCoreProcess;
   readonly clock?: CoreProcessClock;
@@ -104,6 +109,7 @@ export interface CoreProcessOptions {
   readonly logger?: CoreProcessLogger;
   readonly sourceEnvironment?: Readonly<NodeJS.ProcessEnv>;
   readonly readinessTimeoutMs?: number;
+  readonly verifyBinary?: (binary: AuthenticatedCoreExecutable) => void;
 }
 
 export interface CoreProcessDiagnostic {
@@ -144,7 +150,7 @@ function allowedEnvironment(source: Readonly<NodeJS.ProcessEnv>): Record<string,
 }
 
 export class CoreProcess {
-  readonly #binaryPath: string;
+  readonly #binary: AuthenticatedCoreExecutable;
   readonly #args: readonly string[];
   readonly #spawn: SpawnCoreProcess;
   readonly #clock: CoreProcessClock;
@@ -152,6 +158,7 @@ export class CoreProcess {
   readonly #logger: CoreProcessLogger;
   readonly #environment: Readonly<Record<string, string>>;
   readonly #readinessTimeoutMs: number;
+  readonly #verifyBinary: (binary: AuthenticatedCoreExecutable) => void;
 
   #state: CoreProcessState = "IDLE";
   #failure: CoreProcessError | undefined;
@@ -173,7 +180,7 @@ export class CoreProcess {
   #exitObserved = false;
 
   public constructor(options: CoreProcessOptions) {
-    if (!path.isAbsolute(options.binaryPath)) {
+    if (!path.isAbsolute(options.binary.executablePath)) {
       throw new CoreProcessError("INVALID_BINARY_PATH");
     }
     if (
@@ -186,7 +193,7 @@ export class CoreProcess {
       throw new CoreProcessError("INVALID_STATE");
     }
 
-    this.#binaryPath = options.binaryPath;
+    this.#binary = options.binary;
     this.#args = Object.freeze([...(options.args ?? [])]);
     this.#spawn = options.spawn ?? productionSpawn;
     this.#clock = options.clock ?? productionClock;
@@ -194,6 +201,7 @@ export class CoreProcess {
     this.#logger = options.logger ?? silentLogger;
     this.#environment = Object.freeze(allowedEnvironment(options.sourceEnvironment ?? process.env));
     this.#readinessTimeoutMs = options.readinessTimeoutMs ?? DEFAULT_READINESS_TIMEOUT_MS;
+    this.#verifyBinary = options.verifyBinary ?? revalidateCoreExecutableForSpawn;
   }
 
   public start(): Promise<Readonly<CoreReadiness>> {
@@ -221,7 +229,8 @@ export class CoreProcess {
     void startPromise.catch(() => undefined);
 
     try {
-      this.#child = this.#spawn(this.#binaryPath, [...this.#args], {
+      this.#verifyBinary(this.#binary);
+      this.#child = this.#spawn(this.#binary.executablePath, [...this.#args], {
         shell: false,
         windowsHide: true,
         stdio: ["pipe", "pipe", "pipe"],

@@ -14,6 +14,8 @@ import {
   type TestInfo,
 } from "@playwright/test";
 
+import { TAMMY_LAUNCH_SCENARIO_SWITCH } from "../../src/shared/launch-scenario";
+
 import {
   assertOwnedStagedArtifact,
   closeAndReapElectron,
@@ -25,8 +27,10 @@ import {
   type StagedArtifact,
 } from "./electron-lifecycle";
 import {
+  type CoreProcessInstancePin,
+  findAuthenticatedCoreProcesses,
   findAuthenticatedStagedHelperProcesses,
-  findExactCoreProcesses,
+  type PackagedCoreAuthority,
   type StagedHelperAuthority,
   sampleAuthenticatedStagedHelperSockets,
 } from "./process-check";
@@ -78,6 +82,7 @@ interface ElectronFixtures {
 interface FixtureLifecycleState {
   application?: ElectronApplication;
   readonly consoleErrors: string[];
+  readonly coreProcessPins: Map<number, CoreProcessInstancePin>;
   mainClosed?: Promise<void>;
   mainProcess?: ChildProcess;
   page?: Page;
@@ -107,10 +112,12 @@ export function createElectronLaunchArguments(
   userDataPath: string,
   target: PackagedLayout["target"],
   continuousIntegration: boolean,
+  launchScenario?: "sbr-simulator",
 ): string[] {
   return [
     `--user-data-dir=${userDataPath}`,
     ...(continuousIntegration && target === "darwin-arm64" ? ["--disable-gpu"] : []),
+    ...(launchScenario ? [`${TAMMY_LAUNCH_SCENARIO_SWITCH}${launchScenario}`] : []),
   ];
 }
 
@@ -252,6 +259,13 @@ function forceKillMain(mainProcess: ChildProcess | undefined): void {
   if (!mainProcess.kill("SIGKILL")) throw new Error("ELECTRON_FORCE_KILL_FAILED");
 }
 
+function packagedCoreAuthority(layout: PackagedLayout): PackagedCoreAuthority {
+  return {
+    coreSha256: layout.coreSha256,
+    packagedExecutable: layout.coreExecutable,
+  };
+}
+
 async function captureMacOSStartupDiagnostic(state: FixtureLifecycleState): Promise<void> {
   if (state.packagedLayout.target !== "darwin-arm64") return;
   await mkdir(state.rawArtifacts, { recursive: true });
@@ -262,7 +276,10 @@ async function captureMacOSStartupDiagnostic(state: FixtureLifecycleState): Prom
   });
   let diagnostic = "CORE_STARTUP_PROCESS_NOT_FOUND\n";
   try {
-    const processes = await findExactCoreProcesses(state.packagedLayout.coreExecutable);
+    const processes = await findAuthenticatedCoreProcesses(
+      packagedCoreAuthority(state.packagedLayout),
+      state.coreProcessPins,
+    );
     const process = processes.at(-1);
     if (process) {
       const { stderr, stdout } = await execFileAsync(
@@ -307,7 +324,14 @@ async function firstWindowWithStartupDiagnostic(
 async function observeAuthenticatedCorePath(state: FixtureLifecycleState): Promise<void> {
   const deadline = Date.now() + ORPHAN_POLL_TIMEOUT_MS;
   while (true) {
-    if ((await findExactCoreProcesses(state.packagedLayout.coreExecutable)).length > 0) {
+    if (
+      (
+        await findAuthenticatedCoreProcesses(
+          packagedCoreAuthority(state.packagedLayout),
+          state.coreProcessPins,
+        )
+      ).length > 0
+    ) {
       state.corePathObserved = true;
       return;
     }
@@ -334,7 +358,11 @@ function fixtureOperations(
     assertNoOrphan: async (state) => {
       await pollForNoCoreProcesses({
         intervalMs: ORPHAN_POLL_INTERVAL_MS,
-        query: () => findExactCoreProcesses(state.packagedLayout.coreExecutable),
+        query: () =>
+          findAuthenticatedCoreProcesses(
+            packagedCoreAuthority(state.packagedLayout),
+            state.coreProcessPins,
+          ),
         timeoutMs: ORPHAN_POLL_TIMEOUT_MS,
       });
       if (state.helperObserver) {
@@ -427,6 +455,7 @@ function fixtureOperations(
             state.currentUserDataPath,
             state.packagedLayout.target,
             continuousIntegration,
+            testInfo.project.name === "darwin-arm64-sbr" ? "sbr-simulator" : undefined,
           ),
           artifactsDir: path.join(state.rawArtifacts, "playwright"),
           chromiumSandbox: true,
@@ -484,7 +513,11 @@ function fixtureOperations(
         });
         await pollForNoCoreProcesses({
           intervalMs: ORPHAN_POLL_INTERVAL_MS,
-          query: () => findExactCoreProcesses(state.packagedLayout.coreExecutable),
+          query: () =>
+            findAuthenticatedCoreProcesses(
+              packagedCoreAuthority(state.packagedLayout),
+              state.coreProcessPins,
+            ),
           timeoutMs: ORPHAN_POLL_TIMEOUT_MS,
         });
       };
@@ -571,6 +604,7 @@ export const test = base.extend<ElectronFixtures>({
     const primaryUserDataPath = path.join(rawArtifacts, "user-data-primary");
     const state: FixtureLifecycleState = {
       consoleErrors: [],
+      coreProcessPins: new Map(),
       currentUserDataPath: primaryUserDataPath,
       helperRuntimeBases: [path.join(primaryUserDataPath, "local-core", "core", "sbr-runtime")],
       packagedLayout,

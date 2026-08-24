@@ -10,6 +10,7 @@ import { Code, ConnectError } from "@connectrpc/connect";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { createCoreClient } from "./core-client";
+import { authenticateCoreExecutable } from "./core-executable";
 import { CoreProcess, type SpawnCoreProcess } from "./core-process";
 
 const execFileAsync = promisify(execFile);
@@ -600,7 +601,7 @@ describe("CoreProcess and Connect-ES interoperability", () => {
       return child;
     };
     supervisor = new CoreProcess({
-      binaryPath,
+      binary: await authenticateCoreExecutable(binaryPath),
       spawn: spawnCore,
       readinessTimeoutMs: 10_000,
     });

@@ -19,13 +19,13 @@ import { createCoreClient } from "./core-client";
 import { createCoreLaunchArguments } from "./core-launch";
 import { CoreProcess } from "./core-process";
 import type { DesktopDependencies, DesktopWindow } from "./index-lifecycle";
+import { resolveBundledCorePath, resolveBundledSbrProfileLocation } from "./index-paths";
+import { registerDesktopIpc } from "./ipc";
 import {
   parseDesktopLaunchScenario,
   rendererLaunchScenarioArguments,
   requiresSimulatorProfile,
 } from "./launch-scenario";
-import { resolveBundledCorePath, resolveBundledSbrProfileLocation } from "./index-paths";
-import { registerDesktopIpc } from "./ipc";
 import { createDesktopRpcRouter } from "./rpc-router";
 import {
   createSbrFileIntake,
@@ -99,7 +99,7 @@ export function createProductionDependencies(
   });
   const coreBoundary = {
     start: async () => {
-      const binaryPath = await resolveBundledCorePath({
+      const binary = await resolveBundledCorePath({
         arch: process.arch,
         developmentResourcesPath,
         isPackaged: app.isPackaged,
@@ -120,7 +120,7 @@ export function createProductionDependencies(
             })
           : undefined;
       core = new CoreProcess({
-        binaryPath,
+        binary,
         args: createCoreLaunchArguments({
           isPackaged: app.isPackaged,
           ...(sbrProfile ? { sbrProfile } : {}),

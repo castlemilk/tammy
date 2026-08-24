@@ -1,12 +1,13 @@
 import { spawn as nodeSpawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
+import { chmod, mkdtemp, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { PassThrough } from "node:stream";
 
 import { describe, expect, it, vi } from "vitest";
-
+import { authenticateCoreExecutable } from "./core-executable";
 import {
   CoreProcess,
   CoreProcessError,
@@ -36,6 +37,23 @@ w33IoyLPX5HmoGJSBw==
 
 const CAPABILITY = Buffer.alloc(32, 0xa5).toString("base64url");
 const PORT = 54_321;
+const TEST_BINARY_IDENTITY = Object.freeze({
+  ctimeNs: 1n,
+  dev: 2n,
+  ino: 3n,
+  mode: 0o100700n,
+  mtimeNs: 4n,
+  nlink: 1n,
+  size: 5n,
+});
+
+function testBinary(executablePath = "/opt/tammy/bin/tammy-core") {
+  return Object.freeze({
+    executablePath,
+    identity: TEST_BINARY_IDENTITY,
+    sha256: "a".repeat(64),
+  });
+}
 
 function readinessLine(): Buffer {
   return Buffer.from(
@@ -116,7 +134,7 @@ function testRig(
   const warnings: string[] = [];
   const now = vi.fn(() => 42);
   const supervisor = new CoreProcess({
-    binaryPath: "/opt/tammy/bin/tammy-core",
+    binary: testBinary(),
     ...(overrides.args === undefined ? {} : { args: overrides.args }),
     spawn,
     clock: { now },
@@ -137,6 +155,7 @@ function testRig(
       USERPROFILE: "C:\\Users\\test",
     },
     readinessTimeoutMs: overrides.readinessTimeoutMs ?? 10_000,
+    verifyBinary: () => undefined,
   });
   return {
     child,
@@ -170,7 +189,8 @@ describe("CoreProcess construction and spawning", () => {
       expect(
         () =>
           new CoreProcess({
-            binaryPath,
+            binary: testBinary(binaryPath),
+            verifyBinary: () => undefined,
           }),
       ).toThrowError(
         expect.objectContaining({
@@ -209,6 +229,34 @@ describe("CoreProcess construction and spawning", () => {
       ],
     ]);
     expect(now).not.toHaveBeenCalled();
+  });
+
+  it("rejects same-digest path substitution between resolution and spawn", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "tammy-core-identity-"));
+    try {
+      const binaryPath = path.join(root, "tammy-core");
+      const replacementPath = path.join(root, "replacement");
+      const bytes = Buffer.from("authenticated-core");
+      await writeFile(binaryPath, bytes, { mode: 0o700 });
+      const binary = await authenticateCoreExecutable(binaryPath);
+      const child = new FakeChild();
+      const spawn = vi.fn<SpawnCoreProcess>(() => child);
+      const supervisor = new CoreProcess({
+        binary,
+        spawn,
+      });
+      await writeFile(replacementPath, bytes, { mode: 0o700 });
+      await chmod(replacementPath, 0o700);
+      await rename(replacementPath, binaryPath);
+
+      const start = supervisor.start();
+      child.stdout.write(readinessLine());
+
+      await expectCoreError(start, "SPAWN_FAILED", "Core process could not be started.");
+      expect(spawn).not.toHaveBeenCalled();
+    } finally {
+      await rm(root, { force: true, recursive: true });
+    }
   });
 
   it("passes only the explicitly owned local-data arguments", () => {
@@ -267,7 +315,10 @@ describe("CoreProcess construction and spawning", () => {
 describe("CoreProcess real subprocess lifecycle", () => {
   it("cleans up a production-spawn ENOENT without waiting for termination timers", async () => {
     const missingPath = path.join(tmpdir(), `tammy-core-guaranteed-missing-${randomUUID()}`);
-    const supervisor = new CoreProcess({ binaryPath: missingPath });
+    const supervisor = new CoreProcess({
+      binary: testBinary(missingPath),
+      verifyBinary: () => undefined,
+    });
     const startedAt = Date.now();
 
     const error = await supervisor.start().catch((caught: unknown) => caught);
@@ -317,8 +368,9 @@ describe("CoreProcess real subprocess lifecycle", () => {
       return child;
     };
     const supervisor = new CoreProcess({
-      binaryPath: process.execPath,
+      binary: testBinary(process.execPath),
       spawn,
+      verifyBinary: () => undefined,
     });
     await supervisor.start();
     const stopStartedAt = Date.now();

@@ -1,7 +1,11 @@
 // @vitest-environment node
 
 import type { ChildProcess } from "node:child_process";
+import { createHash } from "node:crypto";
 import { EventEmitter } from "node:events";
+import { lstat, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -10,7 +14,10 @@ import {
   requestGracefulElectronQuit,
   shouldRecordElectronVideo,
 } from "../../tests/e2e/fixtures";
-import { findExactCoreProcesses } from "../../tests/e2e/process-check";
+import {
+  findAuthenticatedCoreProcesses,
+  findExactCoreProcesses,
+} from "../../tests/e2e/process-check";
 
 interface QueryOptions {
   readonly encoding: "utf8";
@@ -39,8 +46,13 @@ type FindProcesses = (
   corePath: string,
   platform: NodeJS.Platform,
   dependencies: {
+    readonly coreSha256?: string;
     readonly environment?: NodeJS.ProcessEnv;
     readonly execFile: QueryRunner;
+    readonly pinnedCoreProcesses?: Map<
+      number,
+      { readonly executablePath: string; readonly instanceToken: string }
+    >;
     readonly timeoutMs?: number;
   },
 ) => Promise<readonly { readonly executablePath: string; readonly processId: number }[]>;
@@ -83,6 +95,151 @@ describe("findExactCoreProcesses", () => {
       }),
       expect.any(Function),
     );
+  });
+
+  it("rejects a macOS pgrep match whose live executable image is not the packaged core", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "tammy-core-process-evidence-"));
+    try {
+      const corePath = path.join(root, "tammy-core");
+      const foreignPath = path.join(root, "foreign-core");
+      const bytes = Buffer.from("packaged-core");
+      await writeFile(corePath, bytes);
+      await writeFile(foreignPath, bytes);
+      const runner = vi.fn<QueryRunner>((command, _arguments, _options, callback) => {
+        if (command === "/usr/bin/pgrep") callback(null, "41\n", "");
+        else if (command === "/bin/ps") callback(null, "instance-a\n", "");
+        else callback(null, `p41\nftxt\nD0x1\ni1\nn${foreignPath}\n`, "");
+        return {};
+      });
+
+      await expect(
+        findAuthenticatedCoreProcesses(
+          {
+            coreSha256: createHash("sha256").update(bytes).digest("hex"),
+            packagedExecutable: corePath,
+          },
+          new Map(),
+          "darwin",
+          { execFile: runner as never },
+        ),
+      ).rejects.toThrow("UNAUTHENTICATED_CORE_PROCESS");
+    } finally {
+      await rm(root, { force: true, recursive: true });
+    }
+  });
+
+  it("authenticates the live macOS core image identity and digest before pinning its PID", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "tammy-core-process-evidence-"));
+    try {
+      const corePath = path.join(root, "tammy-core");
+      const bytes = Buffer.from("packaged-core");
+      await writeFile(corePath, bytes);
+      const stats = await lstat(corePath, { bigint: true });
+      const runner = vi.fn<QueryRunner>((command, _arguments, _options, callback) => {
+        if (command === "/usr/bin/pgrep") callback(null, "41\n", "");
+        else if (command === "/bin/ps") callback(null, "instance-a\n", "");
+        else {
+          callback(
+            null,
+            `p41\nftxt\nD${stats.dev}\ni${stats.ino}\nn${corePath}\nftxt\nD0x2\ni2\nn/usr/lib/dyld\n`,
+            "",
+          );
+        }
+        return {};
+      });
+      const pinned = new Map();
+
+      await expect(
+        findAuthenticatedCoreProcesses(
+          {
+            coreSha256: createHash("sha256").update(bytes).digest("hex"),
+            packagedExecutable: corePath,
+          },
+          pinned,
+          "darwin",
+          { execFile: runner as never },
+        ),
+      ).resolves.toEqual([{ executablePath: corePath, processId: 41 }]);
+      expect(pinned).toEqual(
+        new Map([[41, { executablePath: corePath, instanceToken: "instance-a" }]]),
+      );
+      expect(runner).toHaveBeenCalledWith(
+        "/usr/sbin/lsof",
+        ["-nP", "-a", "-p", "41", "-d", "txt", "-FDin"],
+        expect.objectContaining({ shell: false }),
+        expect.any(Function),
+      );
+    } finally {
+      await rm(root, { force: true, recursive: true });
+    }
+  });
+
+  it("refuses to authenticate a PID reused during macOS image observation", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "tammy-core-process-evidence-"));
+    try {
+      const corePath = path.join(root, "tammy-core");
+      const bytes = Buffer.from("packaged-core");
+      await writeFile(corePath, bytes);
+      const stats = await lstat(corePath, { bigint: true });
+      let processQueries = 0;
+      const runner = vi.fn<QueryRunner>((command, _arguments, _options, callback) => {
+        if (command === "/usr/bin/pgrep") callback(null, "41\n", "");
+        else if (command === "/bin/ps") {
+          processQueries += 1;
+          callback(null, processQueries === 1 ? "instance-a\n" : "instance-b\n", "");
+        } else {
+          callback(null, `p41\nftxt\nD${stats.dev}\ni${stats.ino}\nn${corePath}\n`, "");
+        }
+        return {};
+      });
+      const pinned = new Map();
+
+      await expect(
+        findAuthenticatedCoreProcesses(
+          {
+            coreSha256: createHash("sha256").update(bytes).digest("hex"),
+            packagedExecutable: corePath,
+          },
+          pinned,
+          "darwin",
+          { execFile: runner as never },
+        ),
+      ).resolves.toEqual([]);
+      expect(pinned).toEqual(new Map());
+    } finally {
+      await rm(root, { force: true, recursive: true });
+    }
+  });
+
+  it("rejects a live macOS core image whose digest differs from package authority", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "tammy-core-process-evidence-"));
+    try {
+      const corePath = path.join(root, "tammy-core");
+      await writeFile(corePath, "substituted-core");
+      const stats = await lstat(corePath, { bigint: true });
+      const runner = vi.fn<QueryRunner>((command, _arguments, _options, callback) => {
+        if (command === "/usr/bin/pgrep") callback(null, "41\n", "");
+        else if (command === "/bin/ps") callback(null, "instance-a\n", "");
+        else {
+          callback(null, `p41\nftxt\nD${stats.dev}\ni${stats.ino}\nn${corePath}\n`, "");
+        }
+        return {};
+      });
+
+      await expect(
+        findAuthenticatedCoreProcesses(
+          {
+            coreSha256: createHash("sha256").update("packaged-core").digest("hex"),
+            packagedExecutable: corePath,
+          },
+          new Map(),
+          "darwin",
+          { execFile: runner as never },
+        ),
+      ).rejects.toThrow("UNAUTHENTICATED_CORE_PROCESS");
+    } finally {
+      await rm(root, { force: true, recursive: true });
+    }
   });
 
   it("accepts only pgrep exit code 1 as no match", async () => {
@@ -238,6 +395,17 @@ describe("createElectronLaunchArguments", () => {
       `--user-data-dir=${userData}`,
     ]);
     expect(createElectronLaunchArguments(userData, "win32-x64", true)).toEqual([
+      `--user-data-dir=${userData}`,
+    ]);
+  });
+
+  it("passes the SBR simulator launch scenario only to the packaged SBR project", () => {
+    const userData = "/private/tmp/tammy-e2e/user-data";
+
+    expect(createElectronLaunchArguments(userData, "darwin-arm64", false, "sbr-simulator")).toEqual(
+      [`--user-data-dir=${userData}`, "--tammy-launch-scenario=sbr-simulator"],
+    );
+    expect(createElectronLaunchArguments(userData, "darwin-arm64", false)).toEqual([
       `--user-data-dir=${userData}`,
     ]);
   });
