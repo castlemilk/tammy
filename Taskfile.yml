@@ -123,7 +123,7 @@ tasks:
       - task: sbr:run-doctor
 
   sbr:registration:check:
-    desc: Report the external signed registration inputs still required for EVTE.
+    desc: Print the static external registration handoff checklist and exit blocked.
     summary: |
       The simulator is synthetic and network-disabled. EVTE is non-production and requires signed external inputs.
       No live credential is accepted by Task. BAS remains preparation-only with no submit or lodge action.

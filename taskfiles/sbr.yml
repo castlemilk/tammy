@@ -59,7 +59,7 @@ tasks:
 
   run-registration-check:
     internal: true
-    desc: Report the non-secret external registration handoff still required for EVTE.
+    desc: Print the static non-secret external registration handoff checklist and exit blocked.
     summary: |
       The simulator is synthetic and network-disabled. EVTE is non-production and requires signed external inputs.
       No live credential is accepted by Task. BAS remains preparation-only with no submit or lodge action.
@@ -86,7 +86,7 @@ tasks:
       - mise exec -- go test ./services/sbr-helper/...
       - mise exec -- go test ./services/core/internal/sbrprofile/... ./services/core/internal/sbrhelper/... ./services/core/internal/sbr/...
       - mise exec -- node --test --test-concurrency=1 scripts/build-sbr-helper.test.mjs scripts/sbr-profile-schema.test.mjs scripts/sbr-component-schema.test.mjs scripts/sbr-registration-schema.test.mjs scripts/check-sbr-registration.test.mjs scripts/check-sbr-docs.test.mjs
-      - mise exec -- pnpm --dir apps/desktop exec vitest run src/preload/index.test.ts src/main/core-client.test.ts src/main/rpc-router.test.ts src/main/ipc.test.ts src/main/sbr-file-intake.test.ts src/main/sbr-result.test.ts src/renderer/features/sbr/totp-setup.test.tsx src/renderer/features/sbr/machine-credential-form.test.tsx src/renderer/features/sbr/organisation-verification-form.test.tsx src/renderer/features/sbr/sbr-readiness-screen.test.tsx src/renderer/features/sbr/sbr-simulator-panel.test.tsx
+      - mise exec -- pnpm --dir apps/desktop exec vitest run --maxWorkers=1 src/preload/index.test.ts src/main/core-client.test.ts src/main/rpc-router.test.ts src/main/ipc.test.ts src/main/sbr-file-intake.test.ts src/main/sbr-result.test.ts src/renderer/features/sbr/totp-setup.test.tsx src/renderer/features/sbr/machine-credential-form.test.tsx src/renderer/features/sbr/organisation-verification-form.test.tsx src/renderer/features/sbr/sbr-readiness-screen.test.tsx src/renderer/features/sbr/sbr-simulator-panel.test.tsx
 
   run-evidence:
     internal: true

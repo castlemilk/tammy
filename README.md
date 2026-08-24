@@ -39,7 +39,7 @@ mise exec -- task dev:sbr:simulator
 mise exec -- task sbr:registration:check
 ```
 
-The first scenario retains a new isolated accounting root; the second is synthetic and network-disabled; the third reports external registration gaps without accepting credentials. EVTE remains blocked until externally issued signed inputs are installed. See [Local SBR readiness](docs/development/sbr-local-readiness.md) before handling a RAM machine credential.
+The first scenario retains a new isolated accounting root; the second is synthetic and network-disabled; the third prints the static external registration handoff checklist without accepting credentials and exits non-zero while blocked. EVTE remains blocked until externally issued signed inputs are installed. See [Local SBR readiness](docs/development/sbr-local-readiness.md) before handling a RAM machine credential.
 
 Check the repository-owned Mac App Store profile with `mise exec -- task release:check`. Signed packaging uses `mise exec -- task release:development` or `mise exec -- task release:candidate`; `mise exec -- task deploy:mas` produces and locally validates a candidate only. Apple certificates, profiles, legal decisions, metadata, upload, and approval remain operator-owned; follow the [macOS App Store runbook](docs/release/macos-app-store.md).
 

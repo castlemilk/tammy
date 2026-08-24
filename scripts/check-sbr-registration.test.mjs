@@ -4,7 +4,7 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { inspectSbrRegistration } from "./check-sbr-registration.mjs";
+import { createSbrRegistrationHandoffReport } from "./check-sbr-registration.mjs";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -29,7 +29,7 @@ function run(arguments_ = []) {
 }
 
 test("reports the complete external handoff without claiming EVTE readiness", () => {
-  assert.deepEqual(inspectSbrRegistration(), {
+  assert.deepEqual(createSbrRegistrationHandoffReport(), {
     schema: "tammy-sbr-registration-check-v1",
     environment: "EVTE",
     status: "BLOCKED",
@@ -54,10 +54,13 @@ test("reports the complete external handoff without claiming EVTE readiness", ()
 
 test("command emits one bounded non-secret report and accepts no inputs", async () => {
   const result = await run();
-  assert.equal(result.code, 0);
+  assert.equal(result.code, 1);
   assert.equal(result.signal, null);
   assert.equal(result.stderr, "");
-  assert.deepEqual(JSON.parse(result.stdout), inspectSbrRegistration());
+  const report = JSON.parse(result.stdout);
+  assert.deepEqual(report, createSbrRegistrationHandoffReport());
+  assert.equal(report.status, "BLOCKED");
+  assert.equal(report.code, "EVTE_SIGNED_INPUTS_REQUIRED");
   assert.ok(Buffer.byteLength(result.stdout) < 4096);
   assert.doesNotMatch(
     result.stdout,

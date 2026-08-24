@@ -139,6 +139,9 @@ test("SBR guide states the credential lifecycle and security boundary", async ()
 
 test("SBR guide owns the complete external registration handoff", async () => {
   const guide = await read("docs/development/sbr-local-readiness.md");
+  assert.match(guide, /static repository-owned external handoff checklist/i);
+  assert.match(guide, /exits non-zero[^.]+EVTE_SIGNED_INPUTS_REQUIRED/i);
+  assert.doesNotMatch(guide, /fixed signed-input locations|inspects? installed signed inputs/i);
   for (const item of [
     "DSP registration",
     "product registration",

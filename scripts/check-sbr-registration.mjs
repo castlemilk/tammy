@@ -15,7 +15,7 @@ const REQUIRED_EXTERNAL_ITEMS = Object.freeze([
   "REDACTED_EVIDENCE_EXPORT",
 ]);
 
-export function inspectSbrRegistration() {
+export function createSbrRegistrationHandoffReport() {
   return {
     schema: "tammy-sbr-registration-check-v1",
     environment: "EVTE",
@@ -31,7 +31,8 @@ function main() {
   if (process.argv.length !== 2) {
     throw new Error("SBR_REGISTRATION_CHECK_ARGUMENTS_INVALID");
   }
-  process.stdout.write(`${JSON.stringify(inspectSbrRegistration())}\n`);
+  process.stdout.write(`${JSON.stringify(createSbrRegistrationHandoffReport())}\n`);
+  process.exitCode = 1;
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {

@@ -37,7 +37,7 @@ const allowedExecutablePatterns = [
   /^mise exec -- go test \.\/services\/sbr-helper\/\.\.\.$/,
   /^mise exec -- go test \.\/services\/core\/internal\/sbrprofile\/\.\.\. \.\/services\/core\/internal\/sbrhelper\/\.\.\. \.\/services\/core\/internal\/sbr\/\.\.\.$/,
   /^mise exec -- node --test --test-concurrency=1 scripts\/build-sbr-helper\.test\.mjs scripts\/sbr-profile-schema\.test\.mjs scripts\/sbr-component-schema\.test\.mjs scripts\/sbr-registration-schema\.test\.mjs scripts\/check-sbr-registration\.test\.mjs scripts\/check-sbr-docs\.test\.mjs$/,
-  /^mise exec -- pnpm --dir apps\/desktop exec vitest run src\/preload\/index\.test\.ts src\/main\/core-client\.test\.ts src\/main\/rpc-router\.test\.ts src\/main\/ipc\.test\.ts src\/main\/sbr-file-intake\.test\.ts src\/main\/sbr-result\.test\.ts src\/renderer\/features\/sbr\/totp-setup\.test\.tsx src\/renderer\/features\/sbr\/machine-credential-form\.test\.tsx src\/renderer\/features\/sbr\/organisation-verification-form\.test\.tsx src\/renderer\/features\/sbr\/sbr-readiness-screen\.test\.tsx src\/renderer\/features\/sbr\/sbr-simulator-panel\.test\.tsx$/,
+  /^mise exec -- pnpm --dir apps\/desktop exec vitest run --maxWorkers=1 src\/preload\/index\.test\.ts src\/main\/core-client\.test\.ts src\/main\/rpc-router\.test\.ts src\/main\/ipc\.test\.ts src\/main\/sbr-file-intake\.test\.ts src\/main\/sbr-result\.test\.ts src\/renderer\/features\/sbr\/totp-setup\.test\.tsx src\/renderer\/features\/sbr\/machine-credential-form\.test\.tsx src\/renderer\/features\/sbr\/organisation-verification-form\.test\.tsx src\/renderer\/features\/sbr\/sbr-readiness-screen\.test\.tsx src\/renderer\/features\/sbr\/sbr-simulator-panel\.test\.tsx$/,
   /^mise exec -- pnpm test:e2e:packaged -- --grep "SBR readiness"$/,
   /^mise exec -- node scripts\/build-sbr-helper\.mjs$/,
   /^git diff --check$/,
@@ -601,7 +601,7 @@ test("local Task front door preserves the safe development contract", async () =
         "mise exec -- go test ./services/sbr-helper/...",
         "mise exec -- go test ./services/core/internal/sbrprofile/... ./services/core/internal/sbrhelper/... ./services/core/internal/sbr/...",
         "mise exec -- node --test --test-concurrency=1 scripts/build-sbr-helper.test.mjs scripts/sbr-profile-schema.test.mjs scripts/sbr-component-schema.test.mjs scripts/sbr-registration-schema.test.mjs scripts/check-sbr-registration.test.mjs scripts/check-sbr-docs.test.mjs",
-        "mise exec -- pnpm --dir apps/desktop exec vitest run src/preload/index.test.ts src/main/core-client.test.ts src/main/rpc-router.test.ts src/main/ipc.test.ts src/main/sbr-file-intake.test.ts src/main/sbr-result.test.ts src/renderer/features/sbr/totp-setup.test.tsx src/renderer/features/sbr/machine-credential-form.test.tsx src/renderer/features/sbr/organisation-verification-form.test.tsx src/renderer/features/sbr/sbr-readiness-screen.test.tsx src/renderer/features/sbr/sbr-simulator-panel.test.tsx",
+        "mise exec -- pnpm --dir apps/desktop exec vitest run --maxWorkers=1 src/preload/index.test.ts src/main/core-client.test.ts src/main/rpc-router.test.ts src/main/ipc.test.ts src/main/sbr-file-intake.test.ts src/main/sbr-result.test.ts src/renderer/features/sbr/totp-setup.test.tsx src/renderer/features/sbr/machine-credential-form.test.tsx src/renderer/features/sbr/organisation-verification-form.test.tsx src/renderer/features/sbr/sbr-readiness-screen.test.tsx src/renderer/features/sbr/sbr-simulator-panel.test.tsx",
       ],
     ],
     ["run-evidence", ['mise exec -- pnpm test:e2e:packaged -- --grep "SBR readiness"']],
@@ -709,11 +709,13 @@ test("local Task front door preserves the safe development contract", async () =
       TAMMY_SBR_EVIDENCE_DIR: sbrOutputDirectory,
     });
     if (actualSbrTarget === "darwin/arm64") {
-      assert.equal(registration.code, 0);
-      assert.equal(JSON.parse(registration.stdout).code, "EVTE_SIGNED_INPUTS_REQUIRED");
+      assert.notEqual(registration.code, 0);
+      const report = JSON.parse(registration.stdout);
+      assert.equal(report.status, "BLOCKED");
+      assert.equal(report.code, "EVTE_SIGNED_INPUTS_REQUIRED");
       assert.equal(
         registration.stderr,
-        "task: [sbr:run-registration-check] mise exec -- node scripts/check-sbr-registration.mjs\n",
+        'task: [sbr:run-registration-check] mise exec -- node scripts/check-sbr-registration.mjs\ntask: Failed to run task "sbr:registration:check": task: Failed to run task "sbr:run-registration-check": exit status 1\n',
       );
     } else {
       assert.notEqual(registration.code, 0);

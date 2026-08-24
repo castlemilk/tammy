@@ -30,13 +30,13 @@ mise exec -- task package:e2e
 
 The simulator uses fixed test identity and credential material and cannot select an EVTE or production endpoint. The doctor launches the same isolated authenticated simulator: after normal workspace unlock and sign-in, open Settings → SBR to inspect the redacted readiness state. `test:sbr` owns focused protocol, vault, core, desktop, and policy checks. Only a clean packaged E2E result is packaged evidence; an interactive launch is a development smoke.
 
-## Scenario: inspect the external registration handoff
+## Scenario: review the external registration handoff
 
 ```sh
 mise exec -- task sbr:registration:check
 ```
 
-This read-only check reports the external gaps it can determine from fixed signed-input locations. It accepts no credential, password, TOTP, Product ID, endpoint URL, or arbitrary path and does not launch EVTE.
+This command prints a static repository-owned external handoff checklist. It does not inspect installed inputs or validate readiness. While the checklist is blocked it emits bounded JSON, exits non-zero, and reports `EVTE_SIGNED_INPUTS_REQUIRED`, so automation cannot mistake it for approval. It accepts no credential, password, TOTP, Product ID, endpoint URL, or arbitrary path and does not launch EVTE.
 
 Before any EVTE launch, complete and retain this external registration checklist:
 
