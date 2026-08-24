@@ -264,8 +264,9 @@ describe("packaged Electron main-process observation", () => {
   it("requests native app quit then detaches automation without awaiting inherited pipes", async () => {
     const quit = vi.fn();
     const close = vi.fn(() => new Promise<void>(() => {}));
-    const evaluate = vi.fn(async (callback: (electron: { app: { quit(): void } }) => void) => {
+    const evaluate = vi.fn((callback: (electron: { app: { quit(): void } }) => void) => {
       callback({ app: { quit } });
+      return new Promise<void>(() => {});
     });
 
     await requestGracefulElectronQuit({ close, evaluate } as never);
