@@ -145,7 +145,6 @@ func (l *Launcher) launchStaged(ctx context.Context, staged *sbrprofile.StagedRe
 		}
 		return Response{}, protocolError(string(StableErrorHelperSandboxUnavailable))
 	}
-	defer profileFile.Close()
 	framedPayload := append([]byte(nil), framed.Bytes()...)
 	defer zeroBytes(framedPayload)
 	// Darwin rejects execve through /dev/fd even for a retained O_EXEC descriptor.
@@ -170,8 +169,12 @@ func (l *Launcher) launchStaged(ctx context.Context, staged *sbrprofile.StagedRe
 			},
 		)
 	}
-	output, err := l.run(processContext, "/usr/bin/sandbox-exec", []string{"-f", "/dev/fd/4", staged.HelperPath}, framedPayload, []*os.File{helperFile, profileFile}, authority, verifyChild)
+	output, runErr := l.run(processContext, "/usr/bin/sandbox-exec", []string{"-f", "/dev/fd/4", staged.HelperPath}, framedPayload, []*os.File{helperFile, profileFile}, authority, verifyChild)
 	defer zeroBytes(output)
+	if releaseErr := staged.ReleasePrivateRuntimeFile(profileFile); releaseErr != nil {
+		return Response{}, protocolError(string(StableErrorHelperUnavailable))
+	}
+	err = runErr
 	if err != nil {
 		if processContext.Err() != nil {
 			return Response{}, protocolError(string(StableErrorDeadlineExpired))

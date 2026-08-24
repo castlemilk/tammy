@@ -898,6 +898,56 @@ func (s *StagedResources) CreatePrivateRuntimeFileContext(ctx context.Context, n
 	return file, nil
 }
 
+// ReleasePrivateRuntimeFile closes and removes the exact retained sandbox
+// profile created for one helper process. A staged helper can then be launched
+// again without retaining mutable process-specific policy between launches.
+func (s *StagedResources) ReleasePrivateRuntimeFile(file *os.File) error {
+	const name = "sandbox.sb"
+	if s == nil || s.rootFile == nil || file == nil {
+		if file != nil {
+			_ = file.Close()
+		}
+		return codedError("SBR_HELPER_UNAVAILABLE")
+	}
+	closed := false
+	defer func() {
+		if !closed {
+			_ = file.Close()
+		}
+	}()
+	rootFD := int(s.rootFile.Fd())
+	var descriptor, path unix.Stat_t
+	if unix.Fstat(int(file.Fd()), &descriptor) != nil ||
+		unix.Fstatat(rootFD, name, &path, unix.AT_SYMLINK_NOFOLLOW) != nil ||
+		!sameStat(descriptor, path) || !trustedStagedRegular(descriptor, 0o600) {
+		return codedError("SBR_HELPER_UNAVAILABLE")
+	}
+	if err := unix.Unlinkat(rootFD, name, 0); err != nil {
+		return codedError("SBR_HELPER_UNAVAILABLE")
+	}
+	var unlinked unix.Stat_t
+	if unix.Fstat(int(file.Fd()), &unlinked) != nil ||
+		unlinked.Dev != descriptor.Dev || unlinked.Ino != descriptor.Ino ||
+		unlinked.Mode != descriptor.Mode || unlinked.Uid != descriptor.Uid ||
+		unlinked.Size != descriptor.Size || unlinked.Nlink != 0 {
+		return codedError("SBR_HELPER_UNAVAILABLE")
+	}
+	if err := unix.Fsync(rootFD); err != nil {
+		return codedError("SBR_HELPER_UNAVAILABLE")
+	}
+	if err := file.Close(); err != nil {
+		return codedError("SBR_HELPER_UNAVAILABLE")
+	}
+	closed = true
+	for index, relative := range s.createdFiles {
+		if relative == name {
+			s.createdFiles = append(s.createdFiles[:index], s.createdFiles[index+1:]...)
+			break
+		}
+	}
+	return nil
+}
+
 func writeAllFile(file *os.File, data []byte) error {
 	return writeAllFileContext(context.Background(), file, data)
 }

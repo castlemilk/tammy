@@ -552,6 +552,40 @@ func TestRuntimeProfileExclusiveDescriptorRejectsHelperPathSwaps(t *testing.T) {
 	}
 }
 
+func TestPrivateRuntimeProfileCanBeReleasedAndRecreatedWithinOneStage(t *testing.T) {
+	root := trustedTestRoot(t)
+	base := filepath.Join(root, "runtime")
+	if err := os.Mkdir(base, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	helper := []byte("trusted-helper")
+	profile := ParsedProfile{Profile: Profile{HelperSHA256: hashBytes(helper)}}
+	staged, err := stageAuthenticated(base, profile, helper, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer staged.Close()
+
+	first, err := staged.CreatePrivateRuntimeFile("sandbox.sb", []byte("first profile"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = staged.ReleasePrivateRuntimeFile(first); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = os.Lstat(filepath.Join(staged.RuntimeRoot, "sandbox.sb")); !os.IsNotExist(err) {
+		t.Fatalf("released profile remained at runtime path: %v", err)
+	}
+
+	second, err := staged.CreatePrivateRuntimeFile("sandbox.sb", []byte("second profile"))
+	if err != nil {
+		t.Fatalf("recreate profile in staged lifecycle: %v", err)
+	}
+	if err = staged.ReleasePrivateRuntimeFile(second); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestWriteFullyAndSyncHandlesPartialWritesAndFsyncFailure(t *testing.T) {
 	t.Run("partial writes", func(t *testing.T) {
 		var written []byte
