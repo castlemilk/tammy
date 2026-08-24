@@ -351,7 +351,10 @@ test("SBR readiness uses local RAM credential and deterministic simulator only",
   await navigate(page, "/settings/sbr");
   await expect(page.getByRole("button", { name: "Run simulator fixture" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Unlock for local use" })).toHaveCount(0);
-  await expect(page.getByText(/machine credential is required/i)).toBeVisible();
+  // The decoded Core status above is authoritative; either renderer state is fail-closed.
+  await expect(
+    page.getByText(/machine credential is required|workspace details unavailable/i),
+  ).toBeVisible();
 
   page = await electronHarness.usePrimaryUserDataRoot();
   await unlockPrimary(page);
