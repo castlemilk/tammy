@@ -383,6 +383,24 @@ export function SbrSimulatorPanel({
     }
   };
 
+  const refreshAuthoritativeStatus = () => {
+    try {
+      onRefresh();
+    } catch {
+      return;
+    }
+    generation.current += 1;
+    operation.current = undefined;
+    operationInFlight.current = false;
+    operationOwner.current = undefined;
+    setStoredOperation(undefined);
+    setBusy(false);
+    setLocked(false);
+    setResult(undefined);
+    setAuthoritativeUnknown(false);
+    setTotp("");
+  };
+
   const announcement = busy
     ? "Running the local simulator fixture."
     : result
@@ -497,7 +515,7 @@ export function SbrSimulatorPanel({
             {locked ? (
               <Button
                 className="h-9 text-[11px]"
-                onClick={onRefresh}
+                onClick={refreshAuthoritativeStatus}
                 type="button"
                 variant="outline"
               >

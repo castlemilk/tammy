@@ -529,6 +529,11 @@ describe("SbrSimulatorPanel", () => {
     await user.click(screen.getByRole("button", { name: "Refresh authoritative status" }));
     expect(onRefresh).toHaveBeenCalledOnce();
     expect(run).toHaveBeenCalledOnce();
+    expect((screen.getByLabelText("Test-only diagnostic case") as HTMLSelectElement).disabled).toBe(
+      false,
+    );
+    expect(screen.queryByRole("button", { name: "Refresh authoritative status" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Replay exact request" })).toBeNull();
   });
 
   it("uses generic UNKNOWN for a rejected invocation without claiming restart recovery", async () => {
