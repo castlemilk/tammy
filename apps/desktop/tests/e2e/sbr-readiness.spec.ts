@@ -318,7 +318,7 @@ test("SBR readiness uses local RAM credential and deterministic simulator only",
 
   page = await electronHarness.restart();
   await unlockPrimary(page);
-  await navigate(page, "/settings/sbr");
+  await navigateToSbrThroughSettings(page);
   await expect(page.getByText("Present", { exact: true }).first()).toBeVisible();
   await runSimulatorCase(page, totp, "Helper death", "UNKNOWN");
   await refreshAfterUncertain(page);
@@ -367,7 +367,7 @@ test("SBR readiness uses local RAM credential and deterministic simulator only",
 
   page = await electronHarness.usePrimaryUserDataRoot();
   await unlockPrimary(page);
-  await navigate(page, "/settings/sbr");
+  await navigateToSbrThroughSettings(page);
   await expect(page.getByText(credentialSha256, { exact: true })).toBeVisible();
   await credentialAction(page, totp, credentialPassword, "Unlock for local use");
 
