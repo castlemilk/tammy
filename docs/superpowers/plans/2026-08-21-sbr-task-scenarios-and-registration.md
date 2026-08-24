@@ -1,5 +1,7 @@
 # SBR Task Scenarios and Registration Implementation Plan
 
+**Normative design:** [Local accounting and SBR registration readiness](../specs/2026-08-21-local-accounting-sbr-registration-readiness-design.md)
+
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Give operators one truthful Taskfile front door for local accounting, isolated fresh accounting, the network-disabled SBR simulator, EVTE readiness, diagnostics, tests, and evidence without accepting secrets through Task, environment, argv, logs, or repository files.

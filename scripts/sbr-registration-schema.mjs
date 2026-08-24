@@ -37,6 +37,7 @@ const REGISTRATION_KEYS = [
   "schema_version",
   "environment",
   "target",
+  "product_id_scope",
   "dsp_registration",
   "product_registration",
   "osf_assessment",
@@ -46,6 +47,7 @@ const REGISTRATION_KEYS = [
   "endpoint_profile",
   "review",
 ];
+const PRODUCT_ID_SCOPE_KEYS = ["product_identifier", "service_id"];
 const REGISTRATION_STATE_KEYS = ["state", "external_reference", "decision_date", "expires_at"];
 const OSF_KEYS = ["category", "state", "external_reference", "decision_date", "revalidation_date"];
 const COMPONENT_KEYS = ["name", "version", "component_manifest_sha256", "licence_state", "target"];
@@ -609,6 +611,14 @@ function validateRegistrationServices(value) {
   return Object.freeze(result);
 }
 
+function validateProductIdScope(value) {
+  const source = exactObject(value, PRODUCT_ID_SCOPE_KEYS, "PRODUCT_ID_SCOPE_FIELDS");
+  return Object.freeze({
+    product_identifier: validateOpaque(source.product_identifier, "PRODUCT_IDENTIFIER"),
+    service_id: validateOpaque(source.service_id, "PRODUCT_SERVICE_ID"),
+  });
+}
+
 function validateEvteAccess(value) {
   const source = exactObject(value, EVTE_ACCESS_KEYS, "EVTE_ACCESS_FIELDS");
   if (!["NOT_REQUESTED", "REQUESTED", "APPROVED"].includes(source.state)) {
@@ -673,15 +683,21 @@ function validateRegistrationData(value) {
   if (source.schema_version !== 1) throw invalid("SCHEMA_VERSION");
   if (source.environment !== "EVTE") throw invalid("ENVIRONMENT");
   if (source.target !== "darwin/arm64") throw invalid("TARGET");
+  const productIdScope = validateProductIdScope(source.product_id_scope);
+  const services = validateRegistrationServices(source.services);
+  if (!services.some((service) => service.service_id === productIdScope.service_id)) {
+    throw invalid("PRODUCT_SERVICE_MISMATCH");
+  }
   return Object.freeze({
     schema_version: 1,
     environment: "EVTE",
     target: "darwin/arm64",
+    product_id_scope: productIdScope,
     dsp_registration: validateApproval(source.dsp_registration, "DSP_REGISTRATION"),
     product_registration: validateApproval(source.product_registration, "PRODUCT_REGISTRATION"),
     osf_assessment: validateOsfAssessment(source.osf_assessment),
     component: validateComponent(source.component),
-    services: validateRegistrationServices(source.services),
+    services,
     evte_access: validateEvteAccess(source.evte_access),
     endpoint_profile: validateEndpointReference(source.endpoint_profile),
     review: validateReview(source.review),
@@ -1121,6 +1137,13 @@ function assertCrossBinding({ component, endpoint, profile, registration }) {
     profile.endpoint_profile_sha256 !== endpoint.sha256
   ) {
     throw invalid("ENDPOINT_HASH_MISMATCH");
+  }
+  if (
+    !endpoint.profile.services.some(
+      (service) => service.service_id === registration.manifest.product_id_scope.service_id,
+    )
+  ) {
+    throw invalid("PRODUCT_SERVICE_MISMATCH");
   }
   if (registration.manifest.services.length !== endpoint.profile.services.length) {
     throw invalid("SERVICE_SET_MISMATCH");

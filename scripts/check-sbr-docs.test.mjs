@@ -77,9 +77,9 @@ test("every documented runnable SBR scenario has a real owner", async () => {
   const taskfile = YAML.parse(await read("taskfiles/sbr.yml"));
   const expectedCommands = new Map([
     ["launch-simulator", ["mise exec -- node scripts/launch-local-scenario.mjs sbr-simulator"]],
-    ["run-doctor", ["mise exec -- node scripts/launch-local-scenario.mjs sbr-simulator"]],
+    ["run-doctor", ["mise exec -- node scripts/check-sbr-registration.mjs --doctor-preflight", "mise exec -- node scripts/launch-local-scenario.mjs sbr-doctor"]],
     ["run-registration-check", ["mise exec -- node scripts/check-sbr-registration.mjs"]],
-    ["run-evidence", ['mise exec -- pnpm test:e2e:packaged -- --grep "SBR readiness"']],
+    ["run-evidence", ["mise exec -- node scripts/write-sbr-evidence.mjs"]],
   ]);
 
   for (const [taskName, commands] of expectedCommands) {
@@ -96,7 +96,8 @@ test("every documented runnable SBR scenario has a real owner", async () => {
     false,
   );
   assert.deepEqual(taskfile.tasks?.["launch-evte"]?.cmds, [
-    "mise exec -- node scripts/sbr-incomplete.mjs evte",
+    "mise exec -- node scripts/check-sbr-registration.mjs",
+    "mise exec -- node scripts/launch-local-scenario.mjs sbr-evte",
   ]);
 });
 
@@ -110,7 +111,7 @@ test("SBR guide states the credential lifecycle and security boundary", async ()
     "Continue commits the import",
     "machine-credential state and displayed fingerprint",
     "no pre-import preview or separate accept step",
-    "does not display credential ABN or expiry",
+    "issuer, serial, creation and expiry dates, component version, and fingerprint",
     "core validates the binding",
     "never leaves this Mac",
     "not included in workspace backups",
@@ -139,9 +140,9 @@ test("SBR guide states the credential lifecycle and security boundary", async ()
 
 test("SBR guide owns the complete external registration handoff", async () => {
   const guide = await read("docs/development/sbr-local-readiness.md");
-  assert.match(guide, /static repository-owned external handoff checklist/i);
+  assert.match(guide, /exact fixed installed signed-input locations/i);
   assert.match(guide, /exits non-zero[^.]+EVTE_SIGNED_INPUTS_REQUIRED/i);
-  assert.doesNotMatch(guide, /fixed signed-input locations|inspects? installed signed inputs/i);
+  assert.match(guide, /validates? installed signed inputs/i);
   for (const item of [
     "DSP registration",
     "product registration",

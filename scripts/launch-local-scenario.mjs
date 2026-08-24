@@ -25,10 +25,17 @@ const defaultDependencies = {
 function scenarioArguments(scenario, retainedRoot) {
   if (scenario === "accounting") return PACKAGE_COMMAND;
   if (
-    (scenario === "accounting-fresh" || scenario === "sbr-simulator") &&
+    (scenario === "accounting-fresh" ||
+      scenario === "sbr-simulator" ||
+      scenario === "sbr-doctor") &&
     retainedRoot !== undefined
   ) {
-    return [...PACKAGE_COMMAND, "--", `--user-data-dir=${retainedRoot}`];
+    return [
+      ...PACKAGE_COMMAND,
+      "--",
+      `--user-data-dir=${retainedRoot}`,
+      `--tammy-launch-scenario=${scenario}`,
+    ];
   }
   throw new Error("LOCAL_SCENARIO_INVALID");
 }
@@ -45,18 +52,27 @@ export async function launchLocalScenario(scenario, overrides = {}) {
   if (
     scenario !== "accounting" &&
     scenario !== "accounting-fresh" &&
-    scenario !== "sbr-simulator"
+    scenario !== "sbr-simulator" &&
+    scenario !== "sbr-doctor"
   ) {
     throw new Error("LOCAL_SCENARIO_INVALID");
   }
 
   let retainedRoot;
-  if (scenario === "accounting-fresh" || scenario === "sbr-simulator") {
+  if (
+    scenario === "accounting-fresh" ||
+    scenario === "sbr-simulator" ||
+    scenario === "sbr-doctor"
+  ) {
     try {
       retainedRoot = await dependencies.makeTemporaryDirectory(
         path.join(
           dependencies.temporaryRoot,
-          scenario === "accounting-fresh" ? "tammy-accounting-fresh-" : "tammy-sbr-simulator-",
+          scenario === "accounting-fresh"
+            ? "tammy-accounting-fresh-"
+            : scenario === "sbr-doctor"
+              ? "tammy-sbr-doctor-"
+              : "tammy-sbr-simulator-",
         ),
       );
     } catch {
@@ -215,14 +231,29 @@ export async function launchLocalScenario(scenario, overrides = {}) {
 function validateDesktopScenarioOwnerArguments(arguments_, temporaryRoot) {
   const forwardedArguments = arguments_[0] === "--" ? arguments_.slice(1) : arguments_;
   if (forwardedArguments.length === 0) return [];
-  if (forwardedArguments.length !== 1 || !forwardedArguments[0].startsWith("--user-data-dir=")) {
+  if (
+    forwardedArguments.length !== 2 ||
+    !forwardedArguments[0].startsWith("--user-data-dir=") ||
+    !forwardedArguments[1].startsWith("--tammy-launch-scenario=")
+  ) {
     throw new Error("LOCAL_SCENARIO_OWNER_ARGUMENTS_INVALID");
   }
   const userDataPath = forwardedArguments[0].slice("--user-data-dir=".length);
+  const scenario = forwardedArguments[1].slice("--tammy-launch-scenario=".length);
+  const expectedPrefix =
+    scenario === "accounting-fresh"
+      ? "tammy-accounting-fresh-"
+      : scenario === "sbr-simulator"
+        ? "tammy-sbr-simulator-"
+        : scenario === "sbr-doctor"
+          ? "tammy-sbr-doctor-"
+          : undefined;
   if (
+    expectedPrefix === undefined ||
     !path.isAbsolute(userDataPath) ||
     path.dirname(userDataPath) !== path.resolve(temporaryRoot) ||
-    !/^tammy-(?:accounting-fresh|sbr-simulator)-[A-Za-z0-9_-]+$/u.test(path.basename(userDataPath))
+    !path.basename(userDataPath).startsWith(expectedPrefix) ||
+    !/^[A-Za-z0-9_-]+$/u.test(path.basename(userDataPath).slice(expectedPrefix.length))
   ) {
     throw new Error("LOCAL_SCENARIO_OWNER_ARGUMENTS_INVALID");
   }

@@ -12,10 +12,12 @@ import {
   OrganisationVerificationState,
 } from "@tammy/connect-client/tammy/v1/organisation_pb.js";
 import { AlertTriangle, LoaderCircle, RefreshCw } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { createProtoMethodCodec } from "../shared/proto-ipc";
+import type { DesktopLaunchScenario } from "../shared/launch-scenario";
 import { AppShell } from "./app-shell/app-shell";
 import { resolveAppLocation, type WorkspaceAccess } from "./app-shell/router";
+import { SimulatorBanner } from "./app-shell/simulator-banner";
 import { Button } from "./components/ui/button";
 import { ChartScreen } from "./features/accounting/chart-screen";
 import { JournalsScreen } from "./features/accounting/journals-screen";
@@ -153,6 +155,21 @@ function currentLocation(): string {
   return `${window.location.pathname}${window.location.search}${window.location.hash}`;
 }
 
+function ScenarioFrame({
+  children,
+  scenario,
+}: {
+  readonly children: ReactNode;
+  readonly scenario: DesktopLaunchScenario;
+}) {
+  return (
+    <div className="flex min-h-screen flex-col">
+      <SimulatorBanner scenario={scenario} />
+      <div className="min-h-0 flex-1">{children}</div>
+    </div>
+  );
+}
+
 function hasSbrWorkspaceProjection(
   workspace: AuthenticatedWorkspace | undefined,
 ): workspace is AuthenticatedWorkspace &
@@ -171,13 +188,17 @@ function hasSbrWorkspaceProjection(
 }
 
 export function App() {
+  const launchScenario = window.tammyLaunchScenario ?? "accounting";
   const [diagnosticsState, setDiagnosticsState] = useState<DiagnosticsState>({ status: "loading" });
   const [access, setAccess] = useState<WorkspaceAccess>(initialAccess);
   const [workspace, setWorkspace] = useState<AuthenticatedWorkspace | undefined>(
     storedAuthenticatedWorkspace,
   );
   const [activePath, setActivePath] = useState(
-    () => resolveAppLocation(currentLocation(), initialAccess()).path,
+    () =>
+      launchScenario === "sbr-doctor" && initialAccess() === "authenticated"
+        ? "/settings/sbr?doctor=1"
+        : resolveAppLocation(currentLocation(), initialAccess()).path,
   );
   const requestSequence = useRef(0);
   const appMounted = useRef(false);
@@ -339,9 +360,12 @@ export function App() {
 
   useEffect(() => {
     const restore = () => {
-      const location = currentLocation();
+      const location =
+        launchScenario === "sbr-doctor" && access === "authenticated"
+          ? "/settings/sbr?doctor=1"
+          : currentLocation();
       const resolved = resolveAppLocation(location, access);
-      if (location !== resolved.path) {
+      if (currentLocation() !== resolved.path) {
         window.history.replaceState(null, "", resolved.path);
       }
       setActivePath(resolved.path);
@@ -349,7 +373,7 @@ export function App() {
     restore();
     window.addEventListener("popstate", restore);
     return () => window.removeEventListener("popstate", restore);
-  }, [access]);
+  }, [access, launchScenario]);
 
   const navigate = useCallback(
     (path: string) => {
@@ -360,29 +384,40 @@ export function App() {
     [access],
   );
 
-  const authenticated = useCallback((workspace: AuthenticatedWorkspace) => {
-    window.localStorage.setItem(WORKSPACE_ID_STORAGE, workspace.workspaceId);
-    if (workspace.organisationId) {
-      window.localStorage.setItem(ORGANISATION_ID_STORAGE, workspace.organisationId);
-    }
-    window.sessionStorage.setItem(SESSION_STORAGE, JSON.stringify(workspace));
-    setWorkspace(workspace);
-    setAccess("authenticated");
-    window.history.replaceState(null, "", "/overview");
-    setActivePath("/overview");
-  }, []);
+  const authenticated = useCallback(
+    (workspace: AuthenticatedWorkspace) => {
+      window.localStorage.setItem(WORKSPACE_ID_STORAGE, workspace.workspaceId);
+      if (workspace.organisationId) {
+        window.localStorage.setItem(ORGANISATION_ID_STORAGE, workspace.organisationId);
+      }
+      window.sessionStorage.setItem(SESSION_STORAGE, JSON.stringify(workspace));
+      setWorkspace(workspace);
+      setAccess("authenticated");
+      const destination =
+        launchScenario === "sbr-doctor" ? "/settings/sbr?doctor=1" : "/overview";
+      window.history.replaceState(null, "", destination);
+      setActivePath(destination);
+    },
+    [launchScenario],
+  );
 
   if (activePath === "/privacy") {
-    return <PrivacyScreen onBack={() => navigate("/overview")} />;
+    return (
+      <ScenarioFrame scenario={launchScenario}>
+        <PrivacyScreen onBack={() => navigate("/overview")} />
+      </ScenarioFrame>
+    );
   }
 
   if (access === "unconfigured") {
     return (
-      <SetupScreen
-        api={window.tammy}
-        onAuthenticated={authenticated}
-        onPrivacy={() => navigate("/privacy")}
-      />
+      <ScenarioFrame scenario={launchScenario}>
+        <SetupScreen
+          api={window.tammy}
+          onAuthenticated={authenticated}
+          onPrivacy={() => navigate("/privacy")}
+        />
+      </ScenarioFrame>
     );
   }
 
@@ -390,36 +425,42 @@ export function App() {
     const organisationId = window.localStorage.getItem(ORGANISATION_ID_STORAGE);
     if (!organisationId) {
       return (
-        <SetupScreen
-          api={window.tammy}
-          onAuthenticated={authenticated}
-          onPrivacy={() => navigate("/privacy")}
-        />
+        <ScenarioFrame scenario={launchScenario}>
+          <SetupScreen
+            api={window.tammy}
+            onAuthenticated={authenticated}
+            onPrivacy={() => navigate("/privacy")}
+          />
+        </ScenarioFrame>
       );
     }
     return (
-      <UnlockScreen
-        api={window.tammy}
-        onAuthenticated={authenticated}
-        onPrivacy={() => navigate("/privacy")}
-        organisationId={organisationId}
-      />
+      <ScenarioFrame scenario={launchScenario}>
+        <UnlockScreen
+          api={window.tammy}
+          onAuthenticated={authenticated}
+          onPrivacy={() => navigate("/privacy")}
+          organisationId={organisationId}
+        />
+      </ScenarioFrame>
     );
   }
 
   return (
-    <AppShell activePath={activePath} onNavigate={navigate}>
-      <EngineStatus onRetry={loadDiagnostics} state={diagnosticsState} />
-      <RouteContent
-        onNavigate={navigate}
-        path={activePath}
-        state={diagnosticsState}
-        settingsProjection={settingsProjection}
-        settingsAuthorityKey={settingsAuthorityKey}
-        onReloadSettings={() => setSettingsReload((value) => value + 1)}
-        workspace={workspace}
-      />
-    </AppShell>
+    <ScenarioFrame scenario={launchScenario}>
+      <AppShell activePath={activePath} onNavigate={navigate}>
+        <EngineStatus onRetry={loadDiagnostics} state={diagnosticsState} />
+        <RouteContent
+          onNavigate={navigate}
+          path={activePath}
+          state={diagnosticsState}
+          settingsProjection={settingsProjection}
+          settingsAuthorityKey={settingsAuthorityKey}
+          onReloadSettings={() => setSettingsReload((value) => value + 1)}
+          workspace={workspace}
+        />
+      </AppShell>
+    </ScenarioFrame>
   );
 }
 

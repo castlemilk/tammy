@@ -123,11 +123,11 @@ tasks:
       - task: sbr:run-doctor
 
   sbr:registration:check:
-    desc: Print the static external registration handoff checklist and exit blocked.
+    desc: Validate fixed installed signed inputs and report redacted registration readiness.
     summary: |
       The simulator is synthetic and network-disabled. EVTE is non-production and requires signed external inputs.
       No live credential is accepted by Task. BAS remains preparation-only with no submit or lodge action.
-      Production SBR is unavailable, and the report remains blocked pending external issuance.
+      Production SBR is unavailable; missing or invalid external issuance remains blocked.
     preconditions:
       - sh: >-
           mise exec -- node -e 'const target = `${process.platform}/${process.arch}`; if (target !== "darwin/arm64") { console.error(`UNSUPPORTED_SBR_TARGET:${target}`); process.exit(1); }'
@@ -149,11 +149,12 @@ tasks:
       - task: sbr:run-test
 
   evidence:sbr:
-    desc: Regenerate clean packaged SBR readiness evidence for the current revision.
+    desc: Export redacted evidence from an existing exact-revision packaged PASSED result.
     summary: |
       The simulator is synthetic and network-disabled. EVTE is non-production and requires signed external inputs.
       No live credential is accepted by Task. BAS remains preparation-only with no submit or lodge action.
-      Production SBR is unavailable. Only the packaged simulator journey may write PASSED evidence.
+      Production SBR is unavailable. package:e2e creates the PASSED result; this task validates
+      and consumes it without rerunning the packaged journey.
     preconditions:
       - sh: >-
           mise exec -- node -e 'const target = `${process.platform}/${process.arch}`; if (target !== "darwin/arm64") { console.error(`UNSUPPORTED_SBR_TARGET:${target}`); process.exit(1); }'

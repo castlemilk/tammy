@@ -98,6 +98,7 @@ test("accounting-fresh creates and retains one unique root passed only as Electr
         "desktop:start:scenario",
         "--",
         "--user-data-dir=/private/tmp/tammy-accounting-fresh-fixed",
+        "--tammy-launch-scenario=accounting-fresh",
       ],
       {
         cwd: repositoryRoot,
@@ -155,6 +156,7 @@ test("sbr-simulator launches the authenticated profile with isolated retained us
         "desktop:start:scenario",
         "--",
         "--user-data-dir=/private/tmp/tammy-sbr-simulator-fixed",
+        "--tammy-launch-scenario=sbr-simulator",
       ],
       {
         cwd: repositoryRoot,
@@ -314,7 +316,11 @@ test("desktop package owner forwards only validated Electron Forge arguments", a
   };
 
   await runDesktopScenarioOwner(
-    ["--", "--user-data-dir=/private/tmp/tammy-accounting-fresh-fixed"],
+    [
+      "--",
+      "--user-data-dir=/private/tmp/tammy-accounting-fresh-fixed",
+      "--tammy-launch-scenario=accounting-fresh",
+    ],
     {
       processRunner,
       temporaryRoot: "/private/tmp",
@@ -330,13 +336,14 @@ test("desktop package owner forwards only validated Electron Forge arguments", a
         "start",
         "--",
         "--user-data-dir=/private/tmp/tammy-accounting-fresh-fixed",
+        "--tammy-launch-scenario=accounting-fresh",
       ],
       { cwd: repositoryRoot, shell: false, stdio: "inherit" },
     ],
   ]);
 });
 
-test("desktop package owner accepts only the owned SBR simulator root", async () => {
+test("desktop package owner accepts only the owned SBR simulator root and explicit authority", async () => {
   const children = [new FakeChild(), new FakeChild()];
   const calls = [];
   const processRunner = (command, arguments_, options) => {
@@ -346,10 +353,17 @@ test("desktop package owner accepts only the owned SBR simulator root", async ()
     return child;
   };
 
-  await runDesktopScenarioOwner(["--", "--user-data-dir=/private/tmp/tammy-sbr-simulator-fixed"], {
-    processRunner,
-    temporaryRoot: "/private/tmp",
-  });
+  await runDesktopScenarioOwner(
+    [
+      "--",
+      "--user-data-dir=/private/tmp/tammy-sbr-simulator-fixed",
+      "--tammy-launch-scenario=sbr-simulator",
+    ],
+    {
+      processRunner,
+      temporaryRoot: "/private/tmp",
+    },
+  );
 
   assert.equal(calls.length, 2);
   assert.deepEqual(calls[1][1], [
@@ -358,6 +372,7 @@ test("desktop package owner accepts only the owned SBR simulator root", async ()
     "start",
     "--",
     "--user-data-dir=/private/tmp/tammy-sbr-simulator-fixed",
+    "--tammy-launch-scenario=sbr-simulator",
   ]);
 });
 
@@ -367,6 +382,14 @@ test("desktop package owner rejects arbitrary arguments before starting a child"
     ["--user-data-dir=relative"],
     ["--user-data-dir=/private/tmp/arbitrary"],
     ["--user-data-dir=/private/tmp/one", "--user-data-dir=/private/tmp/two"],
+    [
+      "--user-data-dir=/private/tmp/tammy-accounting-fresh-fixed",
+      "--tammy-launch-scenario=sbr-simulator",
+    ],
+    [
+      "--user-data-dir=/private/tmp/tammy-sbr-simulator-fixed",
+      "--tammy-launch-scenario=accounting-fresh",
+    ],
     ["--sbr-profile=/private/tmp/profile.json"],
   ]) {
     const calls = [];

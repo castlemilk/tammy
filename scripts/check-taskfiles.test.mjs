@@ -31,14 +31,15 @@ const allowedExecutablePatterns = [
   /^mise exec -- pnpm --dir apps\/desktop package$/,
   /^mise exec -- go test -race -tags tammy_sqlcipher \.\/services\/core\/internal\/storage\/sqlcipher\/\.\.\. -count=1$/,
   /^mise exec -- node scripts\/check-clean-tree\.mjs$/,
-  /^mise exec -- node scripts\/sbr-incomplete\.mjs evte$/,
-  /^mise exec -- node scripts\/launch-local-scenario\.mjs (?:accounting-fresh|sbr-simulator)$/,
-  /^mise exec -- node scripts\/check-sbr-registration\.mjs$/,
-  /^mise exec -- go test \.\/services\/sbr-helper\/\.\.\.$/,
-  /^mise exec -- go test \.\/services\/core\/internal\/sbrprofile\/\.\.\. \.\/services\/core\/internal\/sbrhelper\/\.\.\. \.\/services\/core\/internal\/sbr\/\.\.\.$/,
-  /^mise exec -- node --test --test-concurrency=1 scripts\/build-sbr-helper\.test\.mjs scripts\/sbr-profile-schema\.test\.mjs scripts\/sbr-component-schema\.test\.mjs scripts\/sbr-registration-schema\.test\.mjs scripts\/check-sbr-registration\.test\.mjs scripts\/check-sbr-docs\.test\.mjs$/,
-  /^mise exec -- pnpm --dir apps\/desktop exec vitest run --maxWorkers=1 src\/preload\/index\.test\.ts src\/main\/core-client\.test\.ts src\/main\/rpc-router\.test\.ts src\/main\/ipc\.test\.ts src\/main\/sbr-file-intake\.test\.ts src\/main\/sbr-result\.test\.ts src\/renderer\/features\/sbr\/totp-setup\.test\.tsx src\/renderer\/features\/sbr\/machine-credential-form\.test\.tsx src\/renderer\/features\/sbr\/organisation-verification-form\.test\.tsx src\/renderer\/features\/sbr\/sbr-readiness-screen\.test\.tsx src\/renderer\/features\/sbr\/sbr-simulator-panel\.test\.tsx$/,
-  /^mise exec -- pnpm test:e2e:packaged -- --grep "SBR readiness"$/,
+  /^mise exec -- node scripts\/launch-local-scenario\.mjs (?:accounting-fresh|sbr-simulator|sbr-doctor|sbr-evte)$/,
+  /^mise exec -- node scripts\/check-sbr-registration\.mjs(?: --doctor-preflight)?$/,
+  /^mise exec -- node scripts\/write-sbr-evidence\.mjs$/,
+  /^mise exec -- go test -race \.\/services\/sbr-helper\/\.\.\. -count=1$/,
+  /^mise exec -- go test -race \.\/services\/core\/internal\/sbrprofile \.\/services\/core\/internal\/sbrhelper \.\/services\/core\/internal\/sbr -count=1$/,
+  /^mise exec -- go test -race -tags tammy_sqlcipher \.\/services\/core\/internal\/storage\/migrations \.\/services\/core\/internal\/sbr \.\/services\/core\/internal\/backup \.\/services\/core\/internal\/restore \.\/services\/core\/internal\/app \.\/services\/core\/cmd\/tammy-core -count=1$/,
+  /^mise exec -- node --test scripts\/sbr-profile-schema\.test\.mjs scripts\/sbr-component-schema\.test\.mjs scripts\/sbr-registration-schema\.test\.mjs scripts\/check-sbr-registration\.test\.mjs scripts\/write-sbr-evidence\.test\.mjs scripts\/test-sbr-security-bookmark\.test\.mjs$/,
+  /^mise exec -- node --test scripts\/check-slice-one-coverage-policy\.test\.mjs scripts\/check-e2e-coverage\.test\.mjs$/,
+  /^mise exec -- pnpm --dir apps\/desktop exec vitest run --maxWorkers=1 .+$/,
   /^mise exec -- node scripts\/build-sbr-helper\.mjs$/,
   /^git diff --check$/,
   /^mise exec -- task --(?:list|version)$/,
@@ -327,7 +328,7 @@ async function runSbrTargetPrecondition(precondition, platform, architecture) {
 }
 
 const sensitiveSbrSurfacePattern =
-  /\b(?:credential[ _-]?(?:path|password)|private[ _-]?key[ _-]?path|product[ _-]?id|endpoint[ _-]?url|secret[ _-]?token)\b/i;
+  /\b(?:credential[ _-]?(?:path|password)|private[ _-]?key[ _-]?path|product[ _-]?id(?!-form\.test\.tsx)|endpoint[ _-]?url|secret[ _-]?token)\b/i;
 
 function assertNoSensitiveSbrSurface(task) {
   for (const [surface, value] of Object.entries({
@@ -592,19 +593,23 @@ test("local Task front door preserves the safe development contract", async () =
       ["mise exec -- node scripts/launch-local-scenario.mjs accounting-fresh"],
     ],
     ["launch-simulator", ["mise exec -- node scripts/launch-local-scenario.mjs sbr-simulator"]],
-    ["launch-evte", ["mise exec -- node scripts/sbr-incomplete.mjs evte"]],
-    ["run-doctor", ["mise exec -- node scripts/launch-local-scenario.mjs sbr-simulator"]],
+    ["launch-evte", ["mise exec -- node scripts/check-sbr-registration.mjs", "mise exec -- node scripts/launch-local-scenario.mjs sbr-evte"]],
+    ["run-doctor", ["mise exec -- node scripts/check-sbr-registration.mjs --doctor-preflight", "mise exec -- node scripts/launch-local-scenario.mjs sbr-doctor"]],
     ["run-registration-check", ["mise exec -- node scripts/check-sbr-registration.mjs"]],
     [
       "run-test",
       [
-        "mise exec -- go test ./services/sbr-helper/...",
-        "mise exec -- go test ./services/core/internal/sbrprofile/... ./services/core/internal/sbrhelper/... ./services/core/internal/sbr/...",
-        "mise exec -- node --test --test-concurrency=1 scripts/build-sbr-helper.test.mjs scripts/sbr-profile-schema.test.mjs scripts/sbr-component-schema.test.mjs scripts/sbr-registration-schema.test.mjs scripts/check-sbr-registration.test.mjs scripts/check-sbr-docs.test.mjs",
-        "mise exec -- pnpm --dir apps/desktop exec vitest run --maxWorkers=1 src/preload/index.test.ts src/main/core-client.test.ts src/main/rpc-router.test.ts src/main/ipc.test.ts src/main/sbr-file-intake.test.ts src/main/sbr-result.test.ts src/renderer/features/sbr/totp-setup.test.tsx src/renderer/features/sbr/machine-credential-form.test.tsx src/renderer/features/sbr/organisation-verification-form.test.tsx src/renderer/features/sbr/sbr-readiness-screen.test.tsx src/renderer/features/sbr/sbr-simulator-panel.test.tsx",
+        "mise exec -- go test -race ./services/sbr-helper/... -count=1",
+        "mise exec -- go test -race ./services/core/internal/sbrprofile ./services/core/internal/sbrhelper ./services/core/internal/sbr -count=1",
+        "mise exec -- go test -race -tags tammy_sqlcipher ./services/core/internal/storage/migrations ./services/core/internal/sbr ./services/core/internal/backup ./services/core/internal/restore ./services/core/internal/app ./services/core/cmd/tammy-core -count=1",
+        "mise exec -- node --test scripts/sbr-profile-schema.test.mjs scripts/sbr-component-schema.test.mjs scripts/sbr-registration-schema.test.mjs scripts/check-sbr-registration.test.mjs scripts/write-sbr-evidence.test.mjs scripts/test-sbr-security-bookmark.test.mjs",
+        "mise exec -- pnpm --dir apps/desktop exec vitest run --maxWorkers=1 src/preload/index.test.ts src/main/core-client.test.ts src/main/rpc-router.test.ts src/main/ipc.test.ts src/main/sbr-file-intake.test.ts src/main/index-production.test.ts src/main/index.test.ts src/main/playwright-config.test.ts src/main/launch-scenario.test.ts src/renderer/app.test.tsx src/renderer/app-shell/simulator-banner.test.tsx src/renderer/features/sbr/sbr-readiness-screen.test.tsx src/renderer/features/sbr/machine-credential-form.test.tsx src/renderer/features/sbr/product-id-form.test.tsx src/renderer/features/sbr/organisation-verification-form.test.tsx src/renderer/features/sbr/sbr-simulator-panel.test.tsx",
+        "mise exec -- node --test scripts/check-slice-one-coverage-policy.test.mjs scripts/check-e2e-coverage.test.mjs",
+        "mise exec -- pnpm --dir apps/desktop exec vitest run --maxWorkers=1 src/main/e2e-process-check.test.ts src/main/sbr-result.test.ts",
+        "mise exec -- pnpm contracts",
       ],
     ],
-    ["run-evidence", ['mise exec -- pnpm test:e2e:packaged -- --grep "SBR readiness"']],
+    ["run-evidence", ["mise exec -- node scripts/write-sbr-evidence.mjs"]],
   ]);
   assert.deepEqual(Object.keys(sbr.tasks ?? {}), [...sbrLeaves.keys()]);
   assert.deepEqual(
@@ -629,8 +634,15 @@ test("local Task front door preserves the safe development contract", async () =
     );
   }
   const guardedPublicSbrTasks = [
-    ...[...expectedSbrAliases.keys()].filter((taskName) => taskName !== "dev:accounting"),
+    ...[...expectedSbrAliases.keys()].filter(
+      (taskName) => taskName !== "dev:accounting" && taskName !== "dev:accounting:fresh",
+    ),
   ];
+  assert.equal(
+    taskGraph.get("dev:accounting:fresh").task.preconditions?.[0]?.sh,
+    `mise exec -- node -e '${targetPreconditionScript}'`,
+    "fresh accounting uses the ordinary SQLCipher host guard, not the macOS SBR guard",
+  );
   for (const taskName of guardedPublicSbrTasks) {
     const task = taskGraph.get(taskName).task;
     assert.equal(
@@ -650,16 +662,20 @@ test("local Task front door preserves the safe development contract", async () =
     assert.match(task?.desc ?? "", /.+/, `sbr:${taskName} requires a description`);
     assert.match(task?.summary ?? "", /.+/, `sbr:${taskName} requires a summary`);
     assert.equal(task.deps, undefined, `sbr:${taskName} uses sequential commands`);
-    assert.equal(
-      task.preconditions?.[0]?.sh,
-      `mise exec -- node -e '${sbrTargetPreconditionScript}'`,
-      `sbr:${taskName} uses the exact real-host SBR guard`,
-    );
-    assert.equal(
-      task.preconditions?.[0]?.msg,
-      "UNSUPPORTED_SBR_TARGET:{{OS}}/{{ARCH}}",
-      `sbr:${taskName} exposes the exact real-host SBR guard error`,
-    );
+    if (taskName === "launch-accounting-fresh") {
+      assert.equal(task.preconditions, undefined, "ordinary fresh accounting has no SBR guard");
+    } else {
+      assert.equal(
+        task.preconditions?.[0]?.sh,
+        `mise exec -- node -e '${sbrTargetPreconditionScript}'`,
+        `sbr:${taskName} uses the exact real-host SBR guard`,
+      );
+      assert.equal(
+        task.preconditions?.[0]?.msg,
+        "UNSUPPORTED_SBR_TARGET:{{OS}}/{{ARCH}}",
+        `sbr:${taskName} exposes the exact real-host SBR guard error`,
+      );
+    }
     assert.deepEqual(shellCommands(task), commands);
     assertNoSensitiveSbrSurface(task);
   }
@@ -732,7 +748,7 @@ test("local Task front door preserves the safe development contract", async () =
     assert.match(
       `${evte.stdout}${evte.stderr}`,
       actualSbrTarget === "darwin/arm64"
-        ? /SBR_IMPLEMENTATION_INCOMPLETE:evte/
+        ? /EVTE_SIGNED_INPUTS_REQUIRED/
         : new RegExp(`UNSUPPORTED_SBR_TARGET:${actualSbrTarget}`),
     );
     assert.deepEqual(await readdir(sbrOutputDirectory), []);

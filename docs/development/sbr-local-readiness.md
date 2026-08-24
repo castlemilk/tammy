@@ -2,7 +2,8 @@
 
 Tammy separates local accounting, the deterministic SBR simulator, and externally authorised EVTE work. The simulator is visibly synthetic and network-disabled. It is useful for local machine-credential lifecycle and transport-state tests, but it is not ATO approval or conformance evidence. There is no production SBR path and no BAS submit or lodge action.
 
-All commands run from the repository root. SBR scenarios require macOS arm64.
+All commands run from the repository root. Fresh ordinary accounting supports macOS arm64 and
+Windows x64. SBR simulator, doctor, registration, and evidence scenarios require macOS arm64.
 
 ## Bootstrap once
 
@@ -28,7 +29,18 @@ mise exec -- task test:sbr
 mise exec -- task package:e2e
 ```
 
-The simulator uses fixed test identity and credential material and cannot select an EVTE or production endpoint. The doctor launches the same isolated authenticated simulator: after normal workspace unlock and sign-in, open Settings → SBR to inspect the redacted readiness state. `test:sbr` owns focused protocol, vault, core, desktop, and policy checks. Only a clean packaged E2E result is packaged evidence; an interactive launch is a development smoke.
+The simulator uses fixed test identity and credential material and cannot select an EVTE or production endpoint. Simulator and doctor launches carry explicit main-process authority and display `SIMULATOR — NOT FOR ATO LODGMENT` for the entire session. Doctor first prints the static EVTE preflight, then launches an isolated simulator; after normal workspace unlock and sign-in it opens `/settings/sbr?doctor=1` to inspect authenticated, redacted readiness.
+
+`test:sbr` owns the local helper race tests, core SBR and tagged SQLCipher integration graph, schemas, desktop surfaces, policy coverage, process/result checks, and contracts. The signed Keychain integration and native security-bookmark host remain separate opt-in tests: both fail closed until their external signing inputs exist. They are not silently skipped or treated as proof by `test:sbr`.
+
+Only a clean packaged E2E result is packaged evidence; an interactive launch is a development smoke. Generate and then consume evidence in order:
+
+```sh
+mise exec -- task package:e2e
+mise exec -- task evidence:sbr
+```
+
+`evidence:sbr` does not rerun the packaged journey. It accepts no input arguments and consumes only `.tmp/sbr-e2e/latest/result.json` when it is a mode-0600 `PASSED` record for the exact current Git revision. It writes a mode-0600 redacted bundle beside that result and rejects stale, malformed, insecure, or symlinked input.
 
 ## Scenario: review the external registration handoff
 
@@ -36,7 +48,16 @@ The simulator uses fixed test identity and credential material and cannot select
 mise exec -- task sbr:registration:check
 ```
 
-This command prints a static repository-owned external handoff checklist. It does not inspect installed inputs or validate readiness. While the checklist is blocked it emits bounded JSON, exits non-zero, and reports `EVTE_SIGNED_INPUTS_REQUIRED`, so automation cannot mistake it for approval. It accepts no credential, password, TOTP, Product ID, endpoint URL, or arbitrary path and does not launch EVTE.
+This command checks the exact fixed installed signed-input locations below. Missing inputs produce the static repository-owned external handoff checklist. Present inputs are size, type, permission, and symlink checked, then their schemas, hashes, cross-bindings, expiry, and signatures are validated by the registration authenticator. A blocked check emits bounded redacted JSON and exits non-zero; missing inputs report `EVTE_SIGNED_INPUTS_REQUIRED`, so automation cannot mistake the result for approval. It accepts no credential, password, TOTP, Product ID, endpoint URL, environment override, or arbitrary path and does not launch EVTE.
+
+The checker validates installed signed inputs only at these repository-owned locations:
+
+- `config/sbr/evte/sbr-profile-v1.json`
+- `config/sbr/evte/sbr-profile-v1.sig`
+- `config/sbr/evte/sbr-component-v1.json`
+- `config/sbr/evte/sbr-registration-v1.json`
+- `config/sbr/evte/sbr-registration-v1.sig`
+- `config/sbr/evte/sbr-endpoint-profile-v1.json`
 
 Before any EVTE launch, complete and retain this external registration checklist:
 
@@ -70,7 +91,7 @@ Launch EVTE only after signed readiness passes. Then sign in normally and perfor
 
 1. Select the credential with Tammy's native file chooser. Do not use a Task argument or a terminal path.
 2. Enter the credential password and fresh TOTP only in Tammy. Task accepts no live credential.
-3. Continue commits the import. Afterward, confirm the machine-credential state and displayed fingerprint; the current UI has no pre-import preview or separate accept step and does not display credential ABN or expiry.
+3. Continue commits the import; there is no pre-import preview or separate accept step. After commit, confirm the machine-credential state and displayed fingerprint. The redacted status shows safe issuer, serial, creation and expiry dates, component version, and fingerprint. The screen does not expose the credential ABN or credential bytes.
 4. The core validates the binding against the authenticated installation, workspace, organisation, and independently verified ABN and rejects a mismatch before credential use.
 5. Remove or replace it only through the authenticated in-app action; reimport is required after moving to another machine or restoring a workspace.
 

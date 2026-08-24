@@ -44,6 +44,23 @@ describe("preload desktop bridge", () => {
     expect(Object.isFrozen(api)).toBe(true);
   });
 
+  it("exposes only the validated main-process launch scenario authority", async () => {
+    const exposeInMainWorld = vi.fn();
+    vi.doMock("electron", () => ({
+      contextBridge: { exposeInMainWorld },
+      ipcRenderer: { invoke: vi.fn() },
+    }));
+    const originalArguments = process.argv;
+    process.argv = ["electron", "app", "--tammy-launch-scenario=sbr-simulator"];
+    try {
+      await import("./index");
+    } finally {
+      process.argv = originalArguments;
+    }
+
+    expect(exposeInMainWorld).toHaveBeenCalledWith("tammyLaunchScenario", "sbr-simulator");
+  });
+
   it("exposes Overview as one named binary method without a generic RPC primitive", async () => {
     const exposeInMainWorld = vi.fn();
     vi.doMock("electron", () => ({

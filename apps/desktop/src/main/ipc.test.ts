@@ -124,11 +124,13 @@ describe("registerDiagnosticsIpc", () => {
       "getSbrReadiness",
       "getMachineCredentialStatus",
       "removeMachineCredential",
+      "removeSbrProductId",
       "runSbrReadinessFixture",
       "selectMachineCredentialFile",
       "importMachineCredential",
       "replaceMachineCredential",
       "unlockMachineCredential",
+      "importSbrProductId",
     ]);
     expect(DIAGNOSTICS_PRELOAD_METHOD).toBe(DESKTOP_PRELOAD_METHODS[0]);
   });
@@ -635,8 +637,9 @@ describe("preload desktop bridge", () => {
 
     await import("../preload/index");
 
-    expect(exposeInMainWorld).toHaveBeenCalledTimes(1);
+    expect(exposeInMainWorld).toHaveBeenCalledTimes(2);
     expect(exposeInMainWorld).toHaveBeenCalledWith("tammy", expect.any(Object));
+    expect(exposeInMainWorld).toHaveBeenCalledWith("tammyLaunchScenario", "accounting");
     const api = exposeInMainWorld.mock.calls[0]?.[1] as
       | {
           readonly getAttentionSummary: (request: Uint8Array) => Promise<Uint8Array>;
@@ -679,11 +682,13 @@ describe("preload desktop bridge", () => {
       "getSbrReadiness",
       "getMachineCredentialStatus",
       "removeMachineCredential",
+      "removeSbrProductId",
       "runSbrReadinessFixture",
       "selectMachineCredentialFile",
       "importMachineCredential",
       "replaceMachineCredential",
       "unlockMachineCredential",
+      "importSbrProductId",
     ]);
     expect(Object.isFrozen(api)).toBe(true);
     await expect(api?.getSystemDiagnostics()).resolves.toMatchObject({

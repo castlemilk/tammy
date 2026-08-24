@@ -249,12 +249,30 @@ function mockUnavailableReadiness() {
 
 afterEach(() => {
   Reflect.deleteProperty(window, "tammy");
+  Reflect.deleteProperty(window, "tammyLaunchScenario");
   window.history.replaceState(null, "", "/");
   window.sessionStorage.clear();
   window.localStorage.clear();
 });
 
 describe("App", () => {
+  it("keeps the simulator warning visible and opens authenticated doctor readiness", async () => {
+    installDesktopAPI(vi.fn().mockResolvedValue(diagnostics));
+    mockAuthoritativeSettings([Role.WORKSPACE_ADMIN]);
+    mockUnavailableReadiness();
+    Object.defineProperty(window, "tammyLaunchScenario", {
+      configurable: true,
+      value: "sbr-doctor",
+    });
+
+    render(<App />);
+
+    expect(screen.getByText("SIMULATOR — NOT FOR ATO LODGMENT")).toBeTruthy();
+    expect(await screen.findByRole("heading", { level: 1, name: "SBR readiness" })).toBeTruthy();
+    expect(window.location.pathname).toBe("/settings/sbr");
+    expect(window.location.search).toBe("?doctor=1");
+  });
+
   it("shows privacy and support information before workspace setup", () => {
     installDesktopAPI(vi.fn().mockResolvedValue(diagnostics));
     window.sessionStorage.clear();

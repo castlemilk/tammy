@@ -1,4 +1,5 @@
 import preloadMethods from "./preload-methods.json";
+import type { DesktopLaunchScenario } from "./launch-scenario";
 
 export interface SystemDiagnostics {
   readonly apiVersion: string;
@@ -290,5 +291,6 @@ export const DESKTOP_PRELOAD_METHODS = Object.freeze([
 declare global {
   interface Window {
     readonly tammy: TammyDesktopAPI;
+    readonly tammyLaunchScenario?: DesktopLaunchScenario;
   }
 }

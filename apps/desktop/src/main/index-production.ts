@@ -16,9 +16,14 @@ import {
 import { readPublicLinks } from "../shared/public-links";
 
 import { createCoreClient } from "./core-client";
-import { createCoreLaunchArguments, parseLocalLaunchArguments } from "./core-launch";
+import { createCoreLaunchArguments } from "./core-launch";
 import { CoreProcess } from "./core-process";
 import type { DesktopDependencies, DesktopWindow } from "./index-lifecycle";
+import {
+  parseDesktopLaunchScenario,
+  rendererLaunchScenarioArguments,
+  requiresSimulatorProfile,
+} from "./launch-scenario";
 import { resolveBundledCorePath, resolveBundledSbrProfileLocation } from "./index-paths";
 import { registerDesktopIpc } from "./ipc";
 import { createDesktopRpcRouter } from "./rpc-router";
@@ -63,7 +68,7 @@ export function createProductionDependencies(
   processArguments: readonly string[] = process.argv,
   overrides: ProductionDependencyOverrides = {},
 ): DesktopDependencies {
-  const localLaunch = parseLocalLaunchArguments(processArguments);
+  const localLaunch = parseDesktopLaunchScenario(processArguments);
   if (localLaunch.userDataPath !== undefined) {
     app.setPath("userData", localLaunch.userDataPath);
   }
@@ -102,7 +107,10 @@ export function createProductionDependencies(
         resourcesPath: process.resourcesPath,
       });
       const sbrProfile =
-        process.platform === "darwin" && process.arch === "arm64" && releaseKind !== "mas"
+        requiresSimulatorProfile(localLaunch.kind) &&
+        process.platform === "darwin" &&
+        process.arch === "arm64" &&
+        releaseKind !== "mas"
           ? await resolveBundledSbrProfileLocation({
               arch: process.arch,
               developmentResourcesPath,
@@ -138,7 +146,10 @@ export function createProductionDependencies(
         minHeight: 640,
         minWidth: 900,
         show: false,
-        webPreferences: createSecureWebPreferences(path.join(buildDirectory, "preload.cjs")),
+        webPreferences: {
+          ...createSecureWebPreferences(path.join(buildDirectory, "preload.cjs")),
+          additionalArguments: rendererLaunchScenarioArguments(localLaunch.kind),
+        },
         width: 1180,
       });
       nativeWindow = browser;

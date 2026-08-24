@@ -45,8 +45,8 @@ tasks:
       Production SBR is unavailable. The isolated retained root is printed after exit.
     preconditions:
       - sh: >-
-          mise exec -- node -e 'const target = `${process.platform}/${process.arch}`; if (target !== "darwin/arm64") { console.error(`UNSUPPORTED_SBR_TARGET:${target}`); process.exit(1); }'
-        msg: UNSUPPORTED_SBR_TARGET:{{OS}}/{{ARCH}}
+          mise exec -- node -e 'const target = process.argv[1] ?? `${process.platform}/${process.arch}`; if (!new Set(["darwin/arm64", "win32/x64"]).has(target)) { console.error(`UNSUPPORTED_SQLCIPHER_TARGET:${target}`); process.exit(1); }'
+        msg: Local accounting development requires darwin/arm64 or win32/x64.
     cmds:
       - task: :sbr:launch-accounting-fresh
 

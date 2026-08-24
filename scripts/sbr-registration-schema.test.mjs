@@ -78,6 +78,10 @@ function registrationManifest(overrides = {}) {
     schema_version: 1,
     environment: "EVTE",
     target: "darwin/arm64",
+    product_id_scope: {
+      product_identifier: "product.evte.invalid",
+      service_id: "au.gov.ato.sbr.bas",
+    },
     dsp_registration: {
       state: "APPROVED",
       external_reference: "DSP-EVTE-0001",
@@ -136,6 +140,32 @@ function registrationManifest(overrides = {}) {
   };
 }
 
+test("parses and freezes the exact Product ID scope bound to one registration service", () => {
+  const parsed = parseAndValidateSbrRegistrationManifest(encode(registrationManifest()), {
+    now: NOW,
+  });
+  assert.deepEqual(parsed.manifest.product_id_scope, {
+    product_identifier: "product.evte.invalid",
+    service_id: "au.gov.ato.sbr.bas",
+  });
+  assert.equal(Object.isFrozen(parsed.manifest.product_id_scope), true);
+
+  const base = registrationManifest();
+  const cases = [
+    ["FIELDS", Object.fromEntries(Object.entries(base).filter(([key]) => key !== "product_id_scope"))],
+    ["PRODUCT_ID_SCOPE_FIELDS", { ...base, product_id_scope: { ...base.product_id_scope, extra: true } }],
+    ["PRODUCT_IDENTIFIER", { ...base, product_id_scope: { ...base.product_id_scope, product_identifier: "" } }],
+    ["PRODUCT_SERVICE_ID", { ...base, product_id_scope: { ...base.product_id_scope, service_id: "" } }],
+    ["PRODUCT_SERVICE_MISMATCH", { ...base, product_id_scope: { ...base.product_id_scope, service_id: "other.service" } }],
+  ];
+  for (const [code, manifest] of cases) {
+    assert.throws(
+      () => parseAndValidateSbrRegistrationManifest(encode(manifest), { now: NOW }),
+      (error) => error?.message === `SBR_REGISTRATION_INVALID:${code}`,
+    );
+  }
+});
+
 function componentManifest() {
   return {
     schema_version: 1,
@@ -178,7 +208,13 @@ function registrationWithCanonicalSize(targetBytes) {
     release_version: "r",
     artefact_sha256s: [String(index + 1).padStart(64, "0")],
   }));
-  const manifest = registrationManifest({ services });
+  const manifest = registrationManifest({
+    product_id_scope: {
+      ...registrationManifest().product_id_scope,
+      service_id: services[0].service_id,
+    },
+    services,
+  });
   let size = Buffer.byteLength(JSON.stringify(manifest));
   let nextHash = services.length + 1;
   let serviceIndex = 0;
@@ -1406,14 +1442,17 @@ test("cross-binding requires exact sorted registration and endpoint service sets
   };
   const cases = [
     {
+      code: "SERVICE_SET_MISMATCH",
       registrationServices: [registrationService],
       endpointServices: [endpointService, secondEndpointService],
     },
     {
+      code: "SERVICE_SET_MISMATCH",
       registrationServices: [registrationService, secondRegistrationService],
       endpointServices: [endpointService],
     },
     {
+      code: "PRODUCT_SERVICE_MISMATCH",
       registrationServices: [registrationService],
       endpointServices: [secondEndpointService],
     },
@@ -1428,7 +1467,7 @@ test("cross-binding requires exact sorted registration and endpoint service sets
           now: NOW,
           phase: "POST_CONFORMANCE",
         }),
-      (error) => error?.message === "SBR_REGISTRATION_INVALID:SERVICE_SET_MISMATCH",
+      (error) => error?.message === `SBR_REGISTRATION_INVALID:${services.code}`,
     );
   }
 });

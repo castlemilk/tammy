@@ -30,7 +30,7 @@ mise exec -- task diagnose:data
 
 ### Accounting and SBR scenarios
 
-On macOS arm64, keep ordinary accounting, the synthetic simulator, and external EVTE registration work separate:
+Keep ordinary accounting, the synthetic simulator, and external EVTE registration work separate. Fresh accounting supports macOS arm64 and Windows x64; SBR scenarios remain macOS arm64 only:
 
 ```sh
 mise exec -- task dev:accounting:fresh
@@ -43,7 +43,7 @@ mise exec -- task dev:sbr:evte
 mise exec -- task evidence:sbr
 ```
 
-The isolated accounting root is retained and printed after exit. The simulator is synthetic and network-disabled. Doctor launches that authenticated simulator UI; readiness results and the read-only registration report are redacted. EVTE remains fail-closed until externally issued signed inputs are installed. Task accepts no credential, password, TOTP, Product ID, or endpoint. Follow [Local SBR readiness](sbr-local-readiness.md) before importing a real RAM machine credential in Tammy.
+The isolated accounting root is retained and printed after exit and does not load the SBR simulator profile. The simulator is synthetic, network-disabled, explicitly labelled against ATO lodgment, and carries separate main-process launch authority. Doctor prints static registration preflight, then opens the authenticated doctor route after unlock/sign-in. Registration validates only fixed installed signed-input locations and emits redacted results. `evidence:sbr` consumes an existing exact-revision mode-0600 packaged result; it does not rerun Playwright. EVTE remains fail-closed until externally issued signed inputs are installed. Task accepts no credential, password, TOTP, Product ID, or endpoint. Follow [Local SBR readiness](sbr-local-readiness.md) before importing a real RAM machine credential in Tammy.
 
 ## Implementation and troubleshooting reference
 

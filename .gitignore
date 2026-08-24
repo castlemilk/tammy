@@ -5,6 +5,7 @@
 /.tmp/sqlcipher/
 /.tmp/sbr-build-owner/
 .tmp/sbr-helper-build/
+.tmp/sbr-e2e/
 node_modules/
 .pnpm-store/
 **/.vite/

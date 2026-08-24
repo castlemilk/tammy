@@ -33,6 +33,7 @@ describe("createProductionDependencies local scenario ownership", () => {
     createProductionDependencies([
       "/Applications/Tammy.app/Contents/MacOS/Tammy",
       "--user-data-dir=/private/tmp/tammy-accounting-fresh-fixed",
+      "--tammy-launch-scenario=accounting-fresh",
     ]);
 
     expect(electron.app.setPath).toHaveBeenCalledTimes(1);
