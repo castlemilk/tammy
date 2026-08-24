@@ -121,14 +121,15 @@ async function credentialAction(
   credentialPassword: string,
   action: "Unlock for local use" | "Remove credential",
 ): Promise<void> {
-  await page.getByRole("button", { name: action }).click();
+  const credential = page.getByRole("region", { name: "RAM machine credential" });
+  await credential.getByRole("button", { name: action }).click();
   if (action === "Unlock for local use") {
-    await page.getByLabel("Credential password").fill(credentialPassword);
+    await credential.getByLabel("Credential password").fill(credentialPassword);
   } else {
-    await page.getByLabel(/Remove the credential for/).check();
+    await credential.getByLabel(/Remove the credential for/).check();
   }
-  await page.getByLabel("Fresh six-digit code").fill(await nextFreshCode(clock));
-  await page.getByRole("button", { name: "Continue" }).click();
+  await credential.getByLabel("Fresh six-digit code").fill(await nextFreshCode(clock));
+  await credential.getByRole("button", { name: "Continue" }).click();
   await expect(
     page.getByText(
       action === "Unlock for local use"
@@ -309,13 +310,14 @@ test("SBR readiness uses local RAM credential and deterministic simulator only",
   await expect(page.getByText(credentialSha256, { exact: true })).toBeVisible();
   await credentialAction(page, totp, credentialPassword, "Unlock for local use");
 
-  await page.getByRole("button", { name: "Replace credential" }).click();
+  const credential = page.getByRole("region", { name: "RAM machine credential" });
+  await credential.getByRole("button", { name: "Replace credential" }).click();
   await electronHarness.injectMachineCredentialSelection(credentialPath);
-  await page.getByRole("button", { name: "Choose credential in macOS" }).click();
-  await page.getByLabel(/Replace the credential for/).check();
-  await page.getByLabel("Credential password").fill(credentialPassword);
-  await page.getByLabel("Fresh six-digit code").fill(await nextFreshCode(totp));
-  await page.getByRole("button", { name: "Continue" }).click();
+  await credential.getByRole("button", { name: "Choose credential in macOS" }).click();
+  await credential.getByLabel(/Replace the credential for/).check();
+  await credential.getByLabel("Credential password").fill(credentialPassword);
+  await credential.getByLabel("Fresh six-digit code").fill(await nextFreshCode(totp));
+  await credential.getByRole("button", { name: "Continue" }).click();
   await expect(page.getByText("Credential status updated.", { exact: true })).toBeVisible({
     timeout: SBR_OPERATION_UI_TIMEOUT_MS,
   });
