@@ -277,6 +277,23 @@ function stagedHelperPatternSource(authority: StagedHelperAuthority): string {
   return `^(${bases})/tammy-sbr-runtime-[0-9a-f]{24}/sbr-helper$`;
 }
 
+async function queryExactStagedHelperProcessIds(
+  patternSource: string,
+  dependencies: ProcessQueryDependencies,
+): Promise<readonly number[]> {
+  let stdout: string;
+  try {
+    stdout = await runBoundedQuery("/usr/bin/pgrep", ["-f", "-x", patternSource], dependencies);
+  } catch (error) {
+    if (error instanceof Error && error.message === "PROCESS_QUERY_TIMEOUT") throw error;
+    if (typeof error === "object" && error !== null && "code" in error && error.code === 1) {
+      return [];
+    }
+    throw new Error("PROCESS_QUERY_FAILED");
+  }
+  return parseLines(stdout).map(parseProcessId);
+}
+
 async function queryAuthenticatedStagedHelpers(
   authority: StagedHelperAuthority,
   pinned: Map<number, string>,
@@ -291,19 +308,8 @@ async function queryAuthenticatedStagedHelpers(
   }
   const patternSource = stagedHelperPatternSource(trusted);
   const pattern = new RegExp(patternSource, "u");
-  let stdout: string;
-  try {
-    stdout = await runBoundedQuery("/usr/bin/pgrep", ["-f", "-x", patternSource], dependencies);
-  } catch (error) {
-    if (error instanceof Error && error.message === "PROCESS_QUERY_TIMEOUT") throw error;
-    if (typeof error === "object" && error !== null && "code" in error && error.code === 1) {
-      return [];
-    }
-    throw new Error("PROCESS_QUERY_FAILED");
-  }
   const matches: CoreProcessMatch[] = [];
-  for (const line of parseLines(stdout)) {
-    const processId = parseProcessId(line);
+  for (const processId of await queryExactStagedHelperProcessIds(patternSource, dependencies)) {
     let command: string;
     try {
       command = await runBoundedQuery(
@@ -321,6 +327,8 @@ async function queryAuthenticatedStagedHelpers(
     if (commands.length === 0) continue;
     const executablePath = commands.length === 1 ? commands[0] : undefined;
     if (!executablePath || !pattern.test(executablePath)) {
+      const stillMatches = await queryExactStagedHelperProcessIds(patternSource, dependencies);
+      if (!stillMatches.includes(processId)) continue;
       throw new Error("UNAUTHENTICATED_STAGED_HELPER");
     }
     const executableImage = await queryMacOSExecutableImage(
@@ -330,6 +338,8 @@ async function queryAuthenticatedStagedHelpers(
     );
     if (executableImage === undefined) continue;
     if (executableImage !== executablePath) {
+      const stillMatches = await queryExactStagedHelperProcessIds(patternSource, dependencies);
+      if (!stillMatches.includes(processId)) continue;
       throw new Error("UNAUTHENTICATED_STAGED_HELPER");
     }
     const prior = pinned.get(processId);

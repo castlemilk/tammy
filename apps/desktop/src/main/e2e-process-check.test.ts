@@ -145,11 +145,15 @@ describe("packaged SBR helper process observation", () => {
         await rm(stagedPath);
         await symlink(target, stagedPath);
       }
-      const execute = runner([
-        { stdout: "52\n" },
-        { stdout: `${observedPath}\n` },
-        executableImage(52, observedPath),
-      ]);
+      const execute = runner(
+        failureKind === "foreign root"
+          ? [{ stdout: "52\n" }, { stdout: `${observedPath}\n` }, { stdout: "52\n" }]
+          : [
+              { stdout: "52\n" },
+              { stdout: `${observedPath}\n` },
+              executableImage(52, observedPath),
+            ],
+      );
 
       await expect(
         findAuthenticatedStagedHelperProcesses(authority, new Map(), {
@@ -203,6 +207,7 @@ describe("packaged SBR helper process observation", () => {
       { stdout: "54\n" },
       { stdout: `${stagedPath}\n` },
       executableImage(54, "/tmp/foreign/sbr-helper"),
+      { stdout: "54\n" },
     ]);
 
     await expect(
@@ -239,6 +244,27 @@ describe("packaged SBR helper process observation", () => {
       }),
     ).resolves.toEqual([]);
     expect(pinned).toEqual(new Map());
+  });
+
+  it("treats a pgrep-to-ps PID reuse as exited only after exact-pattern revalidation", async () => {
+    const { authority } = await fixture();
+    const execute = runner([
+      { stdout: "59\n" },
+      { stdout: "/usr/bin/foreign-process\n" },
+      { error: Object.assign(new Error("original helper exited"), { code: 1 }) },
+    ]);
+    const pinned = new Map<number, string>();
+
+    await expect(
+      findAuthenticatedStagedHelperProcesses(authority, pinned, {
+        execFile: execute as never,
+      }),
+    ).resolves.toEqual([]);
+    expect(pinned).toEqual(new Map());
+    expect(execute.mock.calls[2]?.slice(0, 2)).toEqual([
+      "/usr/bin/pgrep",
+      ["-f", "-x", expect.any(String)],
+    ]);
   });
 
   it("still rejects non-empty malformed lsof image evidence", async () => {
