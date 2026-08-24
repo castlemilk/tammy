@@ -84,7 +84,7 @@ func (l *Launcher) launchStaged(ctx context.Context, staged *sbrprofile.StagedRe
 		return Response{}, err
 	}
 	defer zeroBytes(framed.Bytes())
-	sandbox, guard, err := RenderDevelopmentSandboxProfileContext(processContext, SandboxProfileInput{TrustedBase: filepath.Dir(staged.RuntimeRoot), StagedRoot: staged.RuntimeRoot, StagedExecutables: []string{staged.HelperPath}, StagedReadOnlyFiles: staged.ReadOnlyPaths})
+	sandbox, guard, err := RenderDevelopmentSandboxProfileContext(processContext, sandboxProfileInputForLaunch(staged, request))
 	if err != nil {
 		if processContext.Err() != nil {
 			return Response{}, protocolError(string(StableErrorDeadlineExpired))
@@ -194,6 +194,20 @@ func (l *Launcher) launchStaged(ctx context.Context, staged *sbrprofile.StagedRe
 		return Response{}, protocolError(string(StableErrorHelperUnavailable))
 	}
 	return decodeAuthenticatedResponse(output, &session, l.now())
+}
+
+func sandboxProfileInputForLaunch(staged *sbrprofile.StagedResources, request Request) SandboxProfileInput {
+	selected := []string(nil)
+	if request.SelectedLocalPath != "" {
+		selected = []string{request.SelectedLocalPath}
+	}
+	return SandboxProfileInput{
+		TrustedBase:         filepath.Dir(staged.RuntimeRoot),
+		StagedRoot:          staged.RuntimeRoot,
+		StagedExecutables:   []string{staged.HelperPath},
+		StagedReadOnlyFiles: staged.ReadOnlyPaths,
+		SelectedReadFiles:   selected,
+	}
 }
 
 func decodeAuthenticatedResponse(output []byte, session *Session, now time.Time) (Response, error) {

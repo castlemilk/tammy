@@ -56,6 +56,26 @@ func (l delayedLauncherLocator) Locate(sbrprofile.Profile) (sbrprofile.ResourceS
 	return l.resources, nil
 }
 
+func TestLauncherSandboxInputPinsOnlyTheSelectedCredentialPath(t *testing.T) {
+	staged := &sbrprofile.StagedResources{
+		RuntimeRoot:   "/private/var/folders/runtime/tammy-sbr-runtime-0123456789abcdef01234567",
+		HelperPath:    "/private/var/folders/runtime/tammy-sbr-runtime-0123456789abcdef01234567/sbr-helper",
+		ReadOnlyPaths: []string{"/private/var/folders/runtime/tammy-sbr-runtime-0123456789abcdef01234567/component.bin"},
+	}
+	selected := "/private/tmp/synthetic-machine-credential.p12"
+	input := sandboxProfileInputForLaunch(staged, Request{SelectedLocalPath: selected})
+	if input.TrustedBase != filepath.Dir(staged.RuntimeRoot) || input.StagedRoot != staged.RuntimeRoot ||
+		len(input.StagedExecutables) != 1 || input.StagedExecutables[0] != staged.HelperPath ||
+		len(input.StagedReadOnlyFiles) != 1 || input.StagedReadOnlyFiles[0] != staged.ReadOnlyPaths[0] ||
+		len(input.SelectedReadFiles) != 1 || input.SelectedReadFiles[0] != selected {
+		t.Fatalf("sandbox input = %+v", input)
+	}
+	withoutSelection := sandboxProfileInputForLaunch(staged, Request{})
+	if len(withoutSelection.SelectedReadFiles) != 0 {
+		t.Fatalf("empty request selected paths = %q", withoutSelection.SelectedReadFiles)
+	}
+}
+
 func TestLauncherExecutesOnlyStagedHelperWithSandboxProfileAndFramedStdio(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Second)
 	root, err := os.MkdirTemp(launcherRepositoryRoot(t), ".sbrhelper-launcher-test-")

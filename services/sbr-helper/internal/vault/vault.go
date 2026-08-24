@@ -43,8 +43,9 @@ var (
 type Namespace string
 
 const (
-	ProductionNamespace  Namespace = "production"
-	DevelopmentNamespace Namespace = "development"
+	ProductionNamespace      Namespace = "production"
+	DevelopmentNamespace     Namespace = "development"
+	simulatorKeychainVersion           = "simulator-v1"
 )
 
 type RecordKind uint8
@@ -265,11 +266,15 @@ func newProductionVault(teamID string, component CredentialComponent, opener Cre
 }
 
 func newDevelopmentVault(component CredentialComponent, opener CredentialFileOpener) (*Vault, error) {
-	store, err := newDevelopmentKeychainStore("")
+	store, err := newSimulatorDevelopmentKeychainStore()
 	if err != nil {
 		return nil, err
 	}
 	return newVault(vaultConfig{Store: store, Channel: developmentChannel(), Component: component, Opener: opener}, rand.Reader)
+}
+
+func newSimulatorDevelopmentKeychainStore() (*KeychainStore, error) {
+	return newDevelopmentKeychainStore(simulatorKeychainVersion)
 }
 
 func validNamespace(namespace Namespace) bool {

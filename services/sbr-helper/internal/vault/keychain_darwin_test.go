@@ -72,6 +72,19 @@ func TestKeychainServiceNameIsNamespaceSeparated(t *testing.T) {
 	}
 }
 
+func TestSimulatorVaultUsesVersionedDevelopmentKeychainService(t *testing.T) {
+	store, err := newSimulatorDevelopmentKeychainStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if store.service != "com.tammy.sbr.development.simulator-v1" {
+		t.Fatalf("simulator service = %q", store.service)
+	}
+	if store.policy != developmentChannel().policy {
+		t.Fatalf("simulator policy = %+v", store.policy)
+	}
+}
+
 func TestKeychainStorePassesExactRequirementThroughNarrowAdapter(t *testing.T) {
 	channel, _ := productionChannel("TEAM123456")
 	policy := channel.policy
