@@ -273,6 +273,12 @@ test("SBR readiness uses local RAM credential and deterministic simulator only",
   }).toEqual(installationAuthority);
   const secondary = await setupSecondaryWorkspace(page);
   expect(secondary.workspaceId).not.toBe(workspace.workspaceId);
+  await navigate(page, "/settings/organisation");
+  await page.getByLabel("Independent evidence").setInputFiles(evidencePath);
+  await page.getByRole("button", { name: "Record verification" }).click();
+  await expect(
+    page.getByText("Entity verification evidence recorded.", { exact: true }),
+  ).toBeVisible();
   const statusFrame = credentialStatusCodec.encodeRequest(
     create(GetMachineCredentialStatusRequestSchema, {
       authentication: create(AuthenticationContextSchema, {
