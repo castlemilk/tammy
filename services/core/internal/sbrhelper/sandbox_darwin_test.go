@@ -64,7 +64,7 @@ func TestCoreConstructsExactSandboxProfileAndRevalidatesAtSpawnBoundary(t *testi
 		strings.Contains(contents, `(allow process-exec (subpath`) || strings.Contains(contents, `(allow process-exec)`) || strings.Contains(contents, "tammy-keychain-service") {
 		t.Fatalf("profile has broad execution or inert Keychain claim:\n%s", contents)
 	}
-	for _, service := range []string{"com.apple.securityd", "com.apple.SecurityServer"} {
+	for _, service := range []string{"com.apple.securityd", "com.apple.securityd.xpc", "com.apple.SecurityServer"} {
 		if !strings.Contains(contents, `(allow mach-lookup (global-name "`+service+`"))`) {
 			t.Fatalf("profile is missing exact Keychain service %q:\n%s", service, contents)
 		}

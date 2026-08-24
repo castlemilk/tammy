@@ -159,6 +159,7 @@ func RenderDevelopmentSandboxProfileContext(ctx context.Context, input SandboxPr
 	// by the helper-specific Keychain ACL/access group.
 	appendLegacyKeychainFileRules(&profile, keychainRoot)
 	profile.WriteString("(allow mach-lookup (global-name \"com.apple.securityd\"))\n")
+	profile.WriteString("(allow mach-lookup (global-name \"com.apple.securityd.xpc\"))\n")
 	profile.WriteString("(allow mach-lookup (global-name \"com.apple.SecurityServer\"))\n")
 	profile.WriteString("(deny network*)\n")
 	result := SandboxProfile{contents: profile.String(), guard: guard}
