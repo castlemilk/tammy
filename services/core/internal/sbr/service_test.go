@@ -823,6 +823,37 @@ func TestFixtureReplayIsElectedBeforeFreshFactorConsumption(t *testing.T) {
 	}
 }
 
+func TestFixtureDurabilityOperationIDIsNotEncodedAsMutationOperationID(t *testing.T) {
+	helper := &fakeHelper{execute: func(request HelperRequest) (HelperResult, error) {
+		if request.OperationID != "" {
+			return HelperResult{}, errors.New("fixture request carried mutation operation ID")
+		}
+		return HelperResult{RequestID: request.RequestID, Outcome: HelperOutcomeOK,
+			ResultCode: HelperResultFixtureSelected, FixtureFailureCase: request.FixtureFailureCase,
+			FixtureState: TransportAccepted, ProfileFingerprint: request.ProfileFingerprint,
+			RegistrationFingerprint: request.RegistrationFingerprint,
+			ComponentFingerprint:    request.ComponentFingerprint, ComponentVersion: request.ComponentVersion}, nil
+	}}
+	service := testService(t, helper, &fakeIdentity{})
+	binding := service.organisation.(fakeOrganisation).binding
+	profile := service.profiles.(fakeProfile).profile
+	metadata := CredentialMetadata{Fingerprint: sha256.Sum256([]byte("credential")), CanonicalABN: serviceABN,
+		ComponentVersion: profile.ComponentVersion, ExpiresAt: service.now().Add(time.Hour),
+		State: tammyv1.MachineCredentialState_MACHINE_CREDENTIAL_STATE_PRESENT}
+	service.store.(*memoryServiceStore).bindings[organisationStoreKey(binding)] = serviceBinding{
+		metadata: metadata, profile: profile, state: metadata.State,
+	}
+	response, err := service.RunSbrReadinessFixture(context.Background(), connect.NewRequest(&tammyv1.RunSbrReadinessFixtureRequest{
+		CommandContext: command(PurposeUseMachineCredential), FixtureId: ReadinessFixtureID,
+	}))
+	if err != nil || response.Msg.Result.GetOutcome() != tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_ACCEPTED {
+		t.Fatalf("fixture response = %#v, %v", response, err)
+	}
+	if len(helper.requests) != 1 || helper.requests[0].RequestID != serviceOperationID || helper.requests[0].OperationID != "" {
+		t.Fatalf("fixture helper request = %#v", helper.requests)
+	}
+}
+
 func TestFixtureAuthorizationPrecedesDurableElection(t *testing.T) {
 	identity := &fakeIdentity{authorizeErr: errors.New("expired session or wrong role")}
 	service := testService(t, &fakeHelper{}, identity)

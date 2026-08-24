@@ -5,12 +5,15 @@ package sbr
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base32"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -20,8 +23,28 @@ import (
 	"github.com/tammyapp/tammy/services/core/internal/authorisation"
 	tammyv1 "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1"
 	tammyv1connect "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1/tammyv1connect"
+	"github.com/tammyapp/tammy/services/core/internal/identity"
+	"github.com/tammyapp/tammy/services/core/internal/platform/clock"
+	"github.com/tammyapp/tammy/services/core/internal/platform/ids"
+	"github.com/tammyapp/tammy/services/core/internal/workspace"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
+
+type fixtureIdentityAudit struct{}
+
+func (fixtureIdentityAudit) Record(context.Context, workspace.MutationExecutor, string, string) error {
+	return nil
+}
+
+type fixtureSessionLifecycle struct{}
+
+func (fixtureSessionLifecycle) SessionStartedWithin(context.Context, workspace.MutationExecutor, string) error {
+	return nil
+}
+func (fixtureSessionLifecycle) SessionStartedAuditedWithin(context.Context, workspace.MutationExecutor) error {
+	return nil
+}
+func (fixtureSessionLifecycle) SessionStartedCommitted(context.Context) error { return nil }
 
 type integrationIdentity struct{}
 
@@ -338,6 +361,120 @@ func TestGeneratedConnectClientsExerciseAllNineSbrRPCsOverSQLCipher(t *testing.T
 		if request.WorkspaceID != testWorkspaceID || request.OrganisationID != testOrganisation || request.CanonicalABN != testABN || !bytes.Equal(request.OpaqueScope, wantScope[:]) {
 			t.Fatalf("helper received non-server-derived binding: %+v", request)
 		}
+	}
+}
+
+func TestSQLCipherReadinessFixtureCompletesWithRealIdentityTransactions(t *testing.T) {
+	ctx := context.Background()
+	repository, database, _ := newRepositoryHarness(t)
+	now := time.Date(2026, 8, 22, 0, 0, 0, 0, time.UTC)
+	testClock := clock.Func(func() time.Time { return now })
+	passwords, err := workspace.NewPasswordPolicy(nil, rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	generator, err := ids.NewGenerator(testClock, rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	attempts, err := workspace.NewAttemptJournal(filepath.Join(t.TempDir(), "identity-attempts.journal"),
+		bytes.Repeat([]byte{0x7a}, 32), testClock, "sbr/real-identity-fixture", workspace.NewMemoryAnchorStore())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(attempts.Close)
+	identityRepository, err := identity.NewDatabaseRepository(database)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identityService, err := identity.NewService(identity.Config{
+		Repository: identityRepository, Passwords: passwords, Clock: testClock, Random: rand.Reader,
+		IDs: generator, Attempts: attempts, FactorEncryptionKey: bytes.Repeat([]byte{0x7b}, 32),
+		Audit: fixtureIdentityAudit{}, SessionLifecycle: fixtureSessionLifecycle{},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = identityService.Close() })
+	admin, err := identityService.BootstrapAdministrator(ctx, "admin@example.test", "Admin", []byte("administrator-password-long-enough"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	signedIn, err := identityService.SignIn(ctx, connect.NewRequest(&tammyv1.SignInRequest{Username: admin.Username,
+		Password: &tammyv1.SecretInput{Utf8: []byte("administrator-password-long-enough")}}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	authentication := &tammyv1.AuthenticationContext{ActorUserId: admin.Id, SessionId: signedIn.Msg.Session.Id}
+	enrolled, err := identityService.EnrolTOTP(ctx, connect.NewRequest(&tammyv1.EnrolTOTPRequest{
+		CommandContext:  &tammyv1.CommandContext{IdempotencyKey: "018f0000-0000-7000-8000-000000000c01", Authentication: authentication},
+		CurrentPassword: &tammyv1.SecretInput{Utf8: []byte("administrator-password-long-enough")},
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	totpSecret, err := base32.StdEncoding.WithPadding(base32.NoPadding).DecodeString(string(enrolled.Msg.ProvisioningSecret.Utf8))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer clear(totpSecret)
+	if _, err := identityService.ConfirmTOTP(ctx, connect.NewRequest(&tammyv1.ConfirmTOTPRequest{
+		Authentication: authentication, FactorId: enrolled.Msg.Factor.Id,
+		Code: &tammyv1.TotpCodeInput{Value: identity.TOTPCode(totpSecret, now)},
+	})); err != nil {
+		t.Fatal(err)
+	}
+	now = now.Add(30 * time.Second)
+	asserted, err := identityService.AssertTOTP(ctx, connect.NewRequest(&tammyv1.AssertTOTPRequest{
+		Authentication: authentication, Code: &tammyv1.TotpCodeInput{Value: identity.TOTPCode(totpSecret, now)},
+		Purpose: PurposeUseMachineCredential,
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	key := testBindingKey(0xc1)
+	putTestBinding(t, repository, key)
+	profile := RuntimeProfile{Environment: tammyv1.SbrEnvironment_SBR_ENVIRONMENT_SIMULATOR,
+		ComponentVersion: "simulator-v1", Conformance: ConformanceSimulator,
+		ProfileFingerprint: digest(0xc2), RegistrationFingerprint: digest(0xc3), ComponentFingerprint: digest(0xc4),
+		AuthenticatedUntil: now.Add(time.Hour)}
+	if err := repository.PutAuthenticatedProfile(ctx, AuthenticatedProfile{Key: key, Environment: EnvironmentSimulator,
+		ProfileFingerprint: profile.ProfileFingerprint, RegistrationFingerprint: profile.RegistrationFingerprint,
+		ComponentFingerprint: profile.ComponentFingerprint, Conformance: ConformanceSimulator}); err != nil {
+		t.Fatal(err)
+	}
+	helper := &fakeHelper{execute: func(request HelperRequest) (HelperResult, error) {
+		if request.OperationID != "" {
+			return HelperResult{}, errors.New("fixture request carried mutation operation ID")
+		}
+		return HelperResult{RequestID: request.RequestID, Outcome: HelperOutcomeOK,
+			ResultCode: HelperResultFixtureSelected, FixtureFailureCase: request.FixtureFailureCase,
+			FixtureState: TransportAccepted, ProfileFingerprint: request.ProfileFingerprint,
+			RegistrationFingerprint: request.RegistrationFingerprint, ComponentFingerprint: request.ComponentFingerprint,
+			ComponentVersion: request.ComponentVersion}, nil
+	}}
+	auditPort, err := NewRedactedSQLAuditAppender(func() time.Time { return now })
+	if err != nil {
+		t.Fatal(err)
+	}
+	service, err := NewService(ServiceConfig{WorkspaceID: testWorkspaceID, Identity: identityService,
+		Organisation: fakeOrganisation{binding: OrganisationBinding{OrganisationID: testOrganisation, CanonicalABN: testABN,
+			VerificationExpiresAt: now.Add(time.Hour)}}, Profiles: fakeProfile{profile: profile}, Helper: helper,
+		Units: sqlUnitOfWork{database: database}, Store: newSQLServiceStore(repository, testWorkspaceID, func() time.Time { return now }, generator.New),
+		Now: func() time.Time { return now }, NewID: generator.New, Audit: auditPort,
+		InstallationKey: bytes.Repeat([]byte{0x7c}, sha256.Size)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	requestContext, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+	response, err := service.RunSbrReadinessFixture(requestContext, connect.NewRequest(&tammyv1.RunSbrReadinessFixtureRequest{
+		CommandContext: &tammyv1.CommandContext{IdempotencyKey: "018f0000-0000-7000-8000-000000000c02",
+			Authentication: authentication, FreshFactor: asserted.Msg.FreshFactor}, FixtureId: ReadinessFixtureID,
+	}))
+	if err != nil || response.Msg.Result.GetOutcome() != tammyv1.SbrReadinessFixtureOutcome_SBR_READINESS_FIXTURE_OUTCOME_ACCEPTED {
+		t.Fatalf("real identity fixture = %#v, %v", response, err)
 	}
 }
 

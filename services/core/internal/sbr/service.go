@@ -1755,7 +1755,7 @@ func (service *Service) RunSbrReadinessFixture(ctx context.Context, request *con
 		return nil, connect.NewError(connect.CodePermissionDenied, ErrService)
 	}
 	helperRequest := service.helperRequest(HelperOperationFixture, binding, profile)
-	helperRequest.RequestID, helperRequest.OperationID = fixture.OperationID, fixture.OperationID
+	helperRequest.RequestID = fixture.OperationID
 	helperRequest.FixtureFailureCase = request.Msg.FailureCase
 	defer helperRequest.ClearSecrets()
 	result, err := profile.Execute(ctx, helperRequest)
