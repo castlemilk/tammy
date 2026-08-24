@@ -15,6 +15,7 @@ This page is the source of truth for what the application exposes today. Design 
 | GST and BAS | A build-version-pinned registry is connected before setup and on the current GST & BAS screen. It reports the 2024 Australian-business reviewed-document GST workpaper as available. | Complete BAS preparation, declaration, lodgement, and individual reporting remain unsupported. Workpaper status is always **Draft — not lodged**. |
 | Overview and activity | Overview attention counts and a consolidated chronological activity screen read journals, banking lines, documents, and the current BAS draft. | The activity screen is a product projection, not a replacement for audit-chain export and verification evidence. |
 | Backup, restore, and audit core | Encrypted backup/restore, authenticated recovery journals, audit-chain, and evidence-export components exist in the Go core and tests. | Their complete desktop workflows are not connected in this vertical slice. Do not infer UI availability from generated routes. |
+| SBR readiness | The macOS arm64 build has an authenticated, network-disabled simulator; TOTP-gated RAM machine-credential lifecycle UI; redacted readiness checks; and packaged fixture coverage. | EVTE is blocked pending externally issued signed registration, component, endpoint, service, and access inputs. There is no production SBR path and no BAS submit or lodge action. |
 | Packaging | Electron Forge development start, ad-hoc signed local macOS package, and packaged E2E commands exist. A separate fail-closed Mac App Store profile owns the bundle ID, icon, sandbox entitlements, privacy manifest, signing inputs, build number, repository check, and package orchestration. Apple Developer identifier `DXP9QHD7JH` and draft App Store Connect record `6800226692` now exist, with the safe product-page copy and categories seeded. | Apple distribution certificates/profiles, signed-build sandbox and privacy inspection, public privacy/support URLs, legal/export/price declarations, upload, and App Review remain external gates. |
 
 ## Architecture now
@@ -38,6 +39,8 @@ Local macOS packages are ad-hoc signed development artifacts. The current suppor
 Deferred repository work includes connecting the placeholder accounting/Settings routes and exposing the complete backup/restore and audit-evidence workflows. The repository-owned Mac App Store inputs and checks exist; the signed-build and external validation gates are listed in the [macOS App Store runbook](../release/macos-app-store.md).
 
 External work includes Apple approval, legal/support/privacy completion, signing certificates and provisioning, ATO/SBR conformance, production credentials, and submission authorization. The Apple identifier and draft App Store record now exist; that setup does not replace the remaining external evidence.
+
+For SBR, the authenticated simulator proves only local credential and transport-state behavior. EVTE cannot launch until its signed external evidence is installed and accepted. Actual ATO credential-component integration follows under a separately approved implementation after issuance; editable repository examples cannot enable it. See [Local SBR readiness](sbr-local-readiness.md).
 
 ## Design references
 

@@ -4,7 +4,7 @@ Tammy is a local-first Australian accounting desktop application. The current de
 
 Today the connected application can create and reopen an encrypted workspace, confirm its recovery code, sign in, create the organisation and AU chart of accounts, post balanced manual journals, show a trial balance, review retained documents, import and reconcile bank-statement rows, create a local BAS draft, and show consolidated local activity.
 
-This is development software, not a production release. BAS workpapers are **drafts only**: Tammy has no declaration, lodgement, submission, or ATO/SBR transport in the current app. Local macOS packages use ad-hoc development signing and are not App Store approval or external assurance evidence.
+This is development software, not a production release. BAS workpapers are **drafts only**: there is no production SBR path and no BAS submit or lodge action. Local macOS packages use ad-hoc development signing and are not App Store approval or external assurance evidence.
 
 ## Quick start
 
@@ -31,12 +31,23 @@ mise exec -- task diagnose:data
 
 `package` authenticates an ordinary local artifact; `package:e2e` additionally proves the packaged runtime, isolated user data, and no orphan core. Neither is production or App Store evidence. The developer handbook keeps the underlying pnpm, Go, and Node commands for focused implementation and troubleshooting.
 
+For the macOS SBR readiness work, use the scenario-specific front doors:
+
+```sh
+mise exec -- task dev:accounting:fresh
+mise exec -- task dev:sbr:simulator
+mise exec -- task sbr:registration:check
+```
+
+The first scenario retains a new isolated accounting root; the second is synthetic and network-disabled; the third reports external registration gaps without accepting credentials. EVTE remains blocked until externally issued signed inputs are installed. See [Local SBR readiness](docs/development/sbr-local-readiness.md) before handling a RAM machine credential.
+
 Check the repository-owned Mac App Store profile with `mise exec -- task release:check`. Signed packaging uses `mise exec -- task release:development` or `mise exec -- task release:candidate`; `mise exec -- task deploy:mas` produces and locally validates a candidate only. Apple certificates, profiles, legal decisions, metadata, upload, and approval remain operator-owned; follow the [macOS App Store runbook](docs/release/macos-app-store.md).
 
 ## Documentation
 
 - [Current technical state](docs/development/tech-state.md) — implemented, development-only, deferred, and external boundaries.
 - [Developer handbook](docs/development/foundation.md) — setup, commands, repository map, local data, and safe changes.
+- [Local SBR readiness](docs/development/sbr-local-readiness.md) — accounting, simulator, credential handling, and external registration scenarios.
 - [Local accounting walkthrough](docs/development/local-accounting-walkthrough.md) — the current setup-to-audit journey.
 - [User journey test matrix](docs/development/user-journey-test-matrix.md) — executable coverage by renderer, local core, and packaged Electron layer.
 - [macOS App Store release runbook](docs/release/macos-app-store.md) — repository checks, signing inputs, packaging, inspection, metadata, upload, and remaining operator gates.

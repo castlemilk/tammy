@@ -1,6 +1,6 @@
 # Developer handbook
 
-Tammy is local-first encrypted accounting: an offline-first Electron application backed by a supervised Go core and an encrypted local SQLCipher workspace. For the exact capability boundary, read [Current technical state](tech-state.md); for a manual product exercise, use the [Local accounting walkthrough](local-accounting-walkthrough.md). BAS workpapers are drafts only, with no BAS lodgement and no ATO submission.
+Tammy is local-first encrypted accounting: an offline-first Electron application backed by a supervised Go core and an encrypted local SQLCipher workspace. For the exact capability boundary, read [Current technical state](tech-state.md); for a manual product exercise, use the [Local accounting walkthrough](local-accounting-walkthrough.md). There is no production SBR path, no BAS submit or lodge action, and no ATO submission.
 
 All commands below run from the repository root. Task is the operator-facing command front door; pnpm, Go, Node, and Git commands remain implementation and troubleshooting reference.
 
@@ -27,6 +27,23 @@ mise exec -- task diagnose:data
 ```
 
 `build` is a raw local bundle for diagnosis. `package` verifies the ordinary local package artifact, manifest, core, signatures, and resources but does not launch it. `package:e2e` adds isolated Electron user data, runtime acceptance, and orphan-process evidence. None is production or App Store evidence.
+
+### Accounting and SBR scenarios
+
+On macOS arm64, keep ordinary accounting, the synthetic simulator, and external EVTE registration work separate:
+
+```sh
+mise exec -- task dev:accounting:fresh
+mise exec -- task dev:sbr:simulator
+mise exec -- task sbr:doctor
+mise exec -- task sbr:registration:check
+mise exec -- task test:sbr
+mise exec -- task package:e2e
+mise exec -- task dev:sbr:evte
+mise exec -- task evidence:sbr
+```
+
+The isolated accounting root is retained and printed after exit. The simulator is synthetic and network-disabled. Doctor and registration checks are read-only and redacted; EVTE remains fail-closed until externally issued signed inputs are installed. Task accepts no credential, password, TOTP, Product ID, or endpoint. Follow [Local SBR readiness](sbr-local-readiness.md) before importing a real RAM machine credential in Tammy.
 
 ## Implementation and troubleshooting reference
 
@@ -140,6 +157,7 @@ The SQLCipher-tagged suite requires the supported cgo/platform toolchain and can
 ## Further reading
 
 - [Current technical state](tech-state.md)
+- [Local SBR readiness](sbr-local-readiness.md)
 - [Local accounting walkthrough](local-accounting-walkthrough.md)
 - [Application documentation and macOS release design](../superpowers/specs/2026-08-10-application-documentation-macos-release-design.md)
 - [Accounting walkthrough UI design](../superpowers/specs/2026-08-09-accounting-tax-walkthrough-ui-design.md)
