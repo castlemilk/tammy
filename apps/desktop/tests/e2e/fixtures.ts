@@ -234,6 +234,12 @@ export function observeMainExit(mainProcess: ChildProcess): Promise<void> {
   });
 }
 
+export async function requestGracefulElectronQuit(
+  application: Pick<ElectronApplication, "evaluate">,
+): Promise<void> {
+  await application.evaluate(({ app }) => app.quit());
+}
+
 function forceKillMain(mainProcess: ChildProcess | undefined): void {
   if (!mainProcess) throw new Error("ELECTRON_MAIN_PROCESS_MISSING");
   if (mainProcess.exitCode !== null || mainProcess.signalCode !== null) return;
@@ -356,7 +362,8 @@ function fixtureOperations(
           state.forcedKillUsed = true;
           forceKillMain(state.mainProcess);
         },
-        gracefulClose: () => state.application?.close() ?? Promise.resolve(),
+        gracefulClose: () =>
+          state.application ? requestGracefulElectronQuit(state.application) : Promise.resolve(),
         mainClosed: state.mainClosed ?? new Promise<void>(() => {}),
         timeoutMs: CLOSE_TIMEOUT_MS,
       });
@@ -462,7 +469,8 @@ function fixtureOperations(
             state.forcedKillUsed = true;
             forceKillMain(state.mainProcess);
           },
-          gracefulClose: () => state.application?.close() ?? Promise.resolve(),
+          gracefulClose: () =>
+            state.application ? requestGracefulElectronQuit(state.application) : Promise.resolve(),
           mainClosed: state.mainClosed ?? new Promise<void>(() => {}),
           timeoutMs: CLOSE_TIMEOUT_MS,
         });

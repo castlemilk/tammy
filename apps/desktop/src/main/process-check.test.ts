@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   createElectronLaunchArguments,
   observeMainExit,
+  requestGracefulElectronQuit,
   shouldRecordElectronVideo,
 } from "../../tests/e2e/fixtures";
 import { findExactCoreProcesses } from "../../tests/e2e/process-check";
@@ -258,5 +259,16 @@ describe("packaged Electron main-process observation", () => {
     mainProcess.emit("exit", 0, null);
 
     await expect(exited).resolves.toBeUndefined();
+  });
+
+  it("requests native app quit instead of closing the automation transport", async () => {
+    const quit = vi.fn();
+    const evaluate = vi.fn(async (callback: (electron: { app: { quit(): void } }) => void) => {
+      callback({ app: { quit } });
+    });
+
+    await requestGracefulElectronQuit({ evaluate } as never);
+
+    expect(quit).toHaveBeenCalledOnce();
   });
 });
