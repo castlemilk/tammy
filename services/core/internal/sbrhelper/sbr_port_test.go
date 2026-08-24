@@ -95,7 +95,8 @@ func TestAuthenticatedProfilePortLoadsCommittedSimulatorResources(t *testing.T) 
 	}
 	profile, err := provider.Current(context.Background(), time.Date(2026, 8, 24, 0, 0, 0, 0, time.UTC))
 	if err != nil || profile.Environment != tammyv1.SbrEnvironment_SBR_ENVIRONMENT_SIMULATOR ||
-		profile.ComponentVersion != "tammy-sbr-simulator-v1" || profile.ProfileFingerprint == [sha256.Size]byte{} ||
+		profile.ComponentVersion != "tammy-sbr-simulator-v1" || profile.Conformance != sbr.ConformanceSimulator ||
+		profile.ProfileFingerprint == [sha256.Size]byte{} ||
 		profile.RegistrationFingerprint == [sha256.Size]byte{} || profile.ComponentFingerprint == [sha256.Size]byte{} ||
 		!profile.AuthenticatedUntil.After(time.Date(2026, 8, 24, 0, 0, 0, 0, time.UTC)) {
 		t.Fatalf("Current() = %+v, %v", profile, err)

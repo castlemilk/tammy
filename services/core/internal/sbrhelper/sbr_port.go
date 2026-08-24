@@ -97,7 +97,9 @@ func (port *AuthenticatedProfilePort) Current(ctx context.Context, now time.Time
 		ComponentVersion: componentVersion, ProfileFingerprint: profileFingerprint,
 		RegistrationFingerprint: registrationFingerprint, ComponentFingerprint: componentFingerprint,
 		AuthenticatedUntil: expiresAt.UTC(), EndpointProfile: append([]byte(nil), staged.EndpointProfile...)}
-	if environment == tammyv1.SbrEnvironment_SBR_ENVIRONMENT_EVTE {
+	if environment == tammyv1.SbrEnvironment_SBR_ENVIRONMENT_SIMULATOR {
+		profile.Conformance = sbr.ConformanceSimulator
+	} else {
 		conformance, ok := staged.AuthenticatedConformance()
 		if !ok {
 			return sbr.RuntimeProfile{}, errors.New("sbr EVTE conformance unavailable")
