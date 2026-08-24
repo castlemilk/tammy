@@ -390,8 +390,8 @@ describe("createCoreClient", () => {
 
     expect(receivedTimeouts).toHaveLength(calls.length);
     for (const timeout of receivedTimeouts) {
-      expect(timeout).toBeGreaterThanOrEqual(34_000);
-      expect(timeout).toBeLessThanOrEqual(35_000);
+      expect(timeout).toBeGreaterThanOrEqual(64_000);
+      expect(timeout).toBeLessThanOrEqual(65_000);
     }
   });
 

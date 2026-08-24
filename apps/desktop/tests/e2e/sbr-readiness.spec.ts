@@ -23,7 +23,7 @@ import { generateTotp } from "./support/totp";
 
 const FIXTURE_BYTES =
   '{"fixture_id":"SIM-SBR-READINESS-V1","organisation_name":"Wattle & Co Test Pty Ltd","abn":"11 000 000 560","service_id":"SIM.READINESS.0001","clock":"2026-06-30T00:00:00Z","message_id":"SIM.MSG.0001","conversation_id":"SIM.CONV.0001","receipt":"SIM-READY-0001"}\n';
-const SBR_OPERATION_UI_TIMEOUT_MS = 45_000;
+const SBR_OPERATION_UI_TIMEOUT_MS = 75_000;
 const credentialStatusCodec = createProtoMethodCodec({
   input: GetMachineCredentialStatusRequestSchema,
   maximumRequestBytes: 8_192,

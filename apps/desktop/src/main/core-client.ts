@@ -206,7 +206,10 @@ export type CoreTransportFactory = (options: ConnectTransportOptions) => Transpo
 
 export type CoreClientErrorCode = "INVALID_DIAGNOSTICS";
 
-const SBR_LOCAL_OPERATION_TIMEOUT_MS = 35_000;
+// Credential mutations can require both a prepare and commit helper launch.
+// Each authenticated local launch owns a 30-second deadline, so the renderer
+// boundary must allow both phases plus bounded core bookkeeping.
+const SBR_LOCAL_OPERATION_TIMEOUT_MS = 65_000;
 
 const ERROR_MESSAGES: Readonly<Record<CoreClientErrorCode, string>> = {
   INVALID_DIAGNOSTICS: "Core returned invalid diagnostics.",
