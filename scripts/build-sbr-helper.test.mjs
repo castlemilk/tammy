@@ -35,7 +35,7 @@ test("build plan pins deterministic Go inputs and the sole helper resource path"
   assert.deepEqual(plan.args.slice(-6), [
     "-trimpath",
     "-buildvcs=false",
-    "-ldflags=-buildid=",
+    "-ldflags=-buildid= -extldflags=-Wl,-no_uuid",
     "-o",
     plan.temporary,
     "./cmd/tammy-sbr-helper",
