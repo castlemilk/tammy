@@ -1,8 +1,14 @@
 // @vitest-environment node
 
+import type { ChildProcess } from "node:child_process";
+import { EventEmitter } from "node:events";
 import { describe, expect, it, vi } from "vitest";
 
-import { createElectronLaunchArguments, shouldRecordElectronVideo } from "../../tests/e2e/fixtures";
+import {
+  createElectronLaunchArguments,
+  observeMainExit,
+  shouldRecordElectronVideo,
+} from "../../tests/e2e/fixtures";
 import { findExactCoreProcesses } from "../../tests/e2e/process-check";
 
 interface QueryOptions {
@@ -239,5 +245,18 @@ describe("createElectronLaunchArguments", () => {
     expect(shouldRecordElectronVideo("darwin-arm64", true)).toBe(false);
     expect(shouldRecordElectronVideo("darwin-arm64", false)).toBe(true);
     expect(shouldRecordElectronVideo("win32-x64", true)).toBe(true);
+  });
+});
+
+describe("packaged Electron main-process observation", () => {
+  it("confirms OS process exit without waiting for inherited stdio close", async () => {
+    const mainProcess = new EventEmitter() as ChildProcess;
+    Object.assign(mainProcess, { exitCode: null, signalCode: null });
+    const exited = observeMainExit(mainProcess);
+
+    Object.assign(mainProcess, { exitCode: 0 });
+    mainProcess.emit("exit", 0, null);
+
+    await expect(exited).resolves.toBeUndefined();
   });
 });

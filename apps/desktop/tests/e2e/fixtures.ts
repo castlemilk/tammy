@@ -220,15 +220,15 @@ function observePage(page: Page, consoleErrors: string[], pageErrors: string[]):
   page.on("pageerror", (error) => pageErrors.push(error.message));
 }
 
-function observeMainClose(mainProcess: ChildProcess): Promise<void> {
+export function observeMainExit(mainProcess: ChildProcess): Promise<void> {
   if (mainProcess.exitCode !== null || mainProcess.signalCode !== null) {
     return Promise.resolve();
   }
   return new Promise((resolve) => {
-    const closed = () => resolve();
-    mainProcess.once("close", closed);
+    const exited = () => resolve();
+    mainProcess.once("exit", exited);
     if (mainProcess.exitCode !== null || mainProcess.signalCode !== null) {
-      mainProcess.removeListener("close", closed);
+      mainProcess.removeListener("exit", exited);
       resolve();
     }
   });
@@ -424,7 +424,7 @@ function fixtureOperations(
         });
         state.application = application;
         state.mainProcess = application.process();
-        state.mainClosed = observeMainClose(state.mainProcess);
+        state.mainClosed = observeMainExit(state.mainProcess);
 
         const context = application.context();
         const observed = new WeakSet<Page>();
