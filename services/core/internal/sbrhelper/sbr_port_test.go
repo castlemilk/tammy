@@ -266,6 +266,36 @@ func TestSBRPortForwardsServerDerivedScopeAndMapsAuthenticatedSimulatorFixture(t
 	}
 }
 
+func TestSBRPortTranslatesProtocolPendingOutcomeToCorePendingOutcome(t *testing.T) {
+	requestID := "018f0000-0000-7000-8000-000000000711"
+	profile, registration, component := sha256.Sum256([]byte("profile")), sha256.Sum256([]byte("registration")), sha256.Sum256([]byte("component"))
+	launcher := &fakePortLauncher{response: Response{
+		RequestID: requestID, Outcome: OutcomePending, PendingItemID: requestID,
+		ProfileFingerprint: profile[:], RegistrationFingerprint: registration[:],
+		ComponentFingerprint: component[:], ComponentVersion: "simulator-v1",
+	}}
+	port, err := NewSBRPort(launcher, "/Applications/Tammy.app/Contents/Resources/sbr/simulator/sbr-profile-v1.json",
+		func() time.Time { return time.Date(2026, 8, 24, 0, 0, 0, 0, time.UTC) })
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := port.executeStaged(context.Background(), nil, sbr.HelperRequest{
+		Operation: sbr.HelperOperationPrepareMutation, RequestID: requestID,
+		Environment: tammyv1.SbrEnvironment_SBR_ENVIRONMENT_SIMULATOR,
+		WorkspaceID: "018f0000-0000-7000-8000-000000000701", OrganisationID: "018f0000-0000-7000-8000-000000000702",
+		CanonicalABN: "11000000560", OpaqueScope: bytes.Repeat([]byte{0x51}, sha256.Size), OperationID: requestID,
+		MutationKind: sbr.MutationImportCredential, ProfileFingerprint: profile,
+		RegistrationFingerprint: registration, ComponentFingerprint: component, ComponentVersion: "simulator-v1",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Outcome != sbr.HelperOutcomePending {
+		t.Fatalf("pending protocol outcome mapped to core outcome %d; want %d", result.Outcome, sbr.HelperOutcomePending)
+	}
+}
+
 func TestSBRPortRejectsResponseWithoutAuthenticatedProfileEnvelope(t *testing.T) {
 	requestID := "018f0000-0000-7000-8000-000000000711"
 	port, err := NewSBRPort(&fakePortLauncher{response: Response{RequestID: requestID, Outcome: OutcomeOK,

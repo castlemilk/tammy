@@ -212,7 +212,16 @@ func (port *SBRPort) executeStaged(ctx context.Context, staged *sbrprofile.Stage
 		response.ComponentVersion != source.ComponentVersion {
 		return sbr.HelperResult{}, errors.New("sbr helper response profile mismatch")
 	}
-	result := sbr.HelperResult{RequestID: response.RequestID, Outcome: sbr.HelperOutcome(response.Outcome),
+	var outcome sbr.HelperOutcome
+	switch response.Outcome {
+	case OutcomeOK:
+		outcome = sbr.HelperOutcomeOK
+	case OutcomePending:
+		outcome = sbr.HelperOutcomePending
+	default:
+		return sbr.HelperResult{}, errors.New("sbr helper response outcome invalid")
+	}
+	result := sbr.HelperResult{RequestID: response.RequestID, Outcome: outcome,
 		ResultCode: sbr.HelperResultCode(response.RedactedResult), PendingID: response.PendingItemID,
 		FixtureFailureCase: source.FixtureFailureCase}
 	copy(result.ProfileFingerprint[:], response.ProfileFingerprint)
