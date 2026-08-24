@@ -15,7 +15,7 @@ import (
 )
 
 const SyntheticComponentVersion = "tammy-sbr-simulator-v1"
-const syntheticCredentialLifetimeMillis = int64(365 * 24 * 60 * 60 * 1000)
+const syntheticCredentialLifetimeMillis = int64(5 * 365 * 24 * 60 * 60 * 1000)
 
 var syntheticCredentialMagic = []byte("TAMMY-SBR-SYNTHETIC-CREDENTIAL-V1\x00")
 

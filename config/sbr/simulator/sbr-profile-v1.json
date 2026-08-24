@@ -3,7 +3,7 @@
   "endpoint_profile_sha256": "NONE",
   "environment": "SIMULATOR",
   "expires_at": "2030-01-01T00:00:00Z",
-  "helper_sha256": "257f8202931e21056eae3257184db3f1d4c9261172713040c4f9c393c3cc78ad",
+  "helper_sha256": "54b1800000a2cb1ff1db6a6670b1b62c5d809adcabda57a633da40d9a734022e",
   "issued_at": "2026-08-01T00:00:00Z",
   "registration_manifest_sha256": "NONE",
   "schema_version": 1,

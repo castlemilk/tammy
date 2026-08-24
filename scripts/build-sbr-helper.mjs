@@ -44,7 +44,7 @@ export function createSbrHelperBuildPlan(
       "build",
       "-trimpath",
       "-buildvcs=false",
-      "-ldflags=-buildid= -extldflags=-Wl,-no_uuid",
+      "-ldflags=-buildid=tammy-sbr-helper-v1",
       "-o",
       temporary,
       "./cmd/tammy-sbr-helper",

@@ -32,6 +32,12 @@ function executableImage(processId: number, executablePath: string) {
   return { stdout: `p${processId}\nftxt\nn${executablePath}\n` };
 }
 
+function executableImageWithDyld(processId: number, executablePath: string) {
+  return {
+    stdout: `p${processId}\nftxt\nn${executablePath}\nftxt\nn/usr/lib/dyld\n`,
+  };
+}
+
 const temporaryRoots: string[] = [];
 
 async function fixture(): Promise<{
@@ -100,6 +106,21 @@ describe("packaged SBR helper process observation", () => {
     expect(processPattern.test(stagedPath)).toBe(true);
     expect(processPattern.test("tammy-sbr-helper")).toBe(false);
     expect(processPattern.test(`/tmp/foreign/${path.basename(stagedPath)}`)).toBe(false);
+  });
+
+  it("pins the exact staged helper when lsof also reports the macOS dynamic loader", async () => {
+    const { authority, stagedPath } = await fixture();
+    const execute = runner([
+      { stdout: "55\n" },
+      { stdout: `${stagedPath}\n` },
+      executableImageWithDyld(55, stagedPath),
+    ]);
+    const pinned = new Map<number, string>();
+
+    await expect(
+      findAuthenticatedStagedHelperProcesses(authority, pinned, { execFile: execute as never }),
+    ).resolves.toEqual([{ executablePath: stagedPath, processId: 55 }]);
+    expect(pinned).toEqual(new Map([[55, stagedPath]]));
   });
 
   it.each(["foreign root", "digest mismatch", "symlink"] as const)(

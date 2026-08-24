@@ -25,7 +25,7 @@ test("selects only the supported helper and authenticated unavailable target", (
   assert.throws(() => selectSbrHelperTarget("linux", "x64"), /UNSUPPORTED_SBR_TARGET:linux\/x64/);
 });
 
-test("build plan pins deterministic Go inputs and the sole helper resource path", () => {
+test("build plan pins a deterministic non-empty Go build ID for the macOS load UUID", () => {
   const root = path.resolve("/workspace");
   const plan = createSbrHelperBuildPlan(root);
   assert.equal(
@@ -35,7 +35,7 @@ test("build plan pins deterministic Go inputs and the sole helper resource path"
   assert.deepEqual(plan.args.slice(-6), [
     "-trimpath",
     "-buildvcs=false",
-    "-ldflags=-buildid= -extldflags=-Wl,-no_uuid",
+    "-ldflags=-buildid=tammy-sbr-helper-v1",
     "-o",
     plan.temporary,
     "./cmd/tammy-sbr-helper",

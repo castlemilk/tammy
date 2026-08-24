@@ -7,6 +7,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/binary"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -17,6 +18,41 @@ import (
 	"github.com/tammyapp/tammy/services/sbr-helper/internal/runner"
 	"github.com/tammyapp/tammy/services/sbr-helper/internal/simulator"
 )
+
+func TestCommittedDesktopFixtureAuthenticatesDuringTaskSixPlanWindow(t *testing.T) {
+	assetRoot := filepath.Join("..", "..", "..", "..", "apps", "desktop", "tests", "e2e", "assets")
+	credential, err := os.ReadFile(filepath.Join(assetRoot, "synthetic-machine-credential.p12"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifestBytes, err := os.ReadFile(filepath.Join(assetRoot, "synthetic-machine-credential.fixture.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var manifest struct {
+		Password     string `json:"password"`
+		CanonicalABN string `json:"canonical_abn"`
+		ExpiresAt    string `json:"expires_at"`
+	}
+	if err := json.Unmarshal(manifestBytes, &manifest); err != nil {
+		t.Fatal(err)
+	}
+	expiresAt, err := time.Parse(time.RFC3339Nano, manifest.ExpiresAt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	record, err := (SyntheticCredentialComponent{}).Import(credential, []byte(manifest.Password))
+	if err != nil {
+		t.Fatal(err)
+	}
+	planNow := time.Date(2026, time.August, 24, 0, 0, 0, 0, time.UTC)
+	if record.Metadata.CanonicalABN != manifest.CanonicalABN ||
+		record.Metadata.ExpiresUnixMillis != expiresAt.UnixMilli() ||
+		time.UnixMilli(record.Metadata.CreatedUnixMillis).After(planNow.Add(5*time.Minute)) ||
+		!expiresAt.After(planNow) {
+		t.Fatalf("committed fixture metadata is outside the Task 6 plan window: %#v", record.Metadata)
+	}
+}
 
 const (
 	syntheticTestRequestID    = "018bcfe5-6800-7000-8000-000000000001"

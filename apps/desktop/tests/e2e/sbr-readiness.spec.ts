@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { create } from "@bufbuild/protobuf";
@@ -138,7 +138,7 @@ async function credentialAction(
 
 test("SBR readiness uses local RAM credential and deterministic simulator only", async ({
   electronHarness,
-}) => {
+}, testInfo) => {
   test.setTimeout(480_000);
   expect(electronHarness.packagedLayout.target).toBe("darwin-arm64");
   expect(electronHarness.packagedLayout.releaseKind).toBe("ordinary-package");
@@ -151,9 +151,14 @@ test("SBR readiness uses local RAM credential and deterministic simulator only",
   };
   const assets = path.resolve(import.meta.dirname, "assets");
   const credentialPath = path.join(assets, "synthetic-machine-credential.p12");
-  const credentialSha256 = createHash("sha256")
-    .update(await readFile(credentialPath))
-    .digest("hex");
+  const credentialBytes = await readFile(credentialPath);
+  const credentialSha256 = createHash("sha256").update(credentialBytes).digest("hex");
+  const chooserAuthority = testInfo.outputPath("chooser-authority");
+  const selectedCredentialPath = path.join(chooserAuthority, "synthetic-machine-credential.p12");
+  await mkdir(chooserAuthority, { mode: 0o700, recursive: true });
+  await chmod(chooserAuthority, 0o700);
+  await writeFile(selectedCredentialPath, credentialBytes, { mode: 0o600 });
+  await chmod(selectedCredentialPath, 0o600);
   const evidencePath = path.join(assets, "synthetic-abr-evidence.pdf");
   const metadata: unknown = JSON.parse(
     await readFile(path.join(assets, "synthetic-machine-credential.fixture.json"), "utf8"),
@@ -208,7 +213,7 @@ test("SBR readiness uses local RAM credential and deterministic simulator only",
   await expect(page.getByRole("button", { name: "Import credential" })).toBeVisible();
   const totp: TotpClock = { counter: confirmCounter, secret };
   await page.getByRole("button", { name: "Import credential" }).click();
-  await electronHarness.injectMachineCredentialSelection(credentialPath);
+  await electronHarness.injectMachineCredentialSelection(selectedCredentialPath);
   await page.getByRole("button", { name: "Choose credential in macOS" }).click();
   await expect(page.getByText(/filename is not retained or shown/i)).toBeVisible();
   await page.getByLabel("Credential password").fill(credentialPassword);
@@ -219,8 +224,8 @@ test("SBR readiness uses local RAM credential and deterministic simulator only",
   await expect(page.getByText(credentialSha256, { exact: true })).toBeVisible();
   await expect(page.getByText(profileSha256, { exact: true })).toBeVisible();
   const rendered = await page.locator("body").textContent();
-  expect(rendered).not.toContain(credentialPath);
-  expect(rendered).not.toContain(path.basename(credentialPath));
+  expect(rendered).not.toContain(selectedCredentialPath);
+  expect(rendered).not.toContain(path.basename(selectedCredentialPath));
   expect(rendered).not.toContain(credentialPassword);
 
   await navigate(page, "/settings/sbr?doctor=1");

@@ -193,6 +193,7 @@ function parseLines(stdout: string): string[] {
 
 async function queryMacOSExecutableImage(
   processId: number,
+  expectedExecutablePath: string,
   dependencies: ProcessQueryDependencies,
 ): Promise<string | undefined> {
   let stdout: string;
@@ -209,16 +210,28 @@ async function queryMacOSExecutableImage(
     throw new Error("PROCESS_QUERY_FAILED");
   }
   const lines = parseLines(stdout);
-  const names = lines.filter((line) => line.startsWith("n")).map((line) => line.slice(1));
-  if (
-    lines[0] !== `p${processId}` ||
-    !lines.includes("ftxt") ||
-    names.length !== 1 ||
-    !path.posix.isAbsolute(names[0] ?? "")
-  ) {
+  if (lines[0] !== `p${processId}`) {
     throw new Error("INVALID_PROCESS_EVIDENCE");
   }
-  return names[0];
+  const images: string[] = [];
+  for (let index = 1; index < lines.length; index += 2) {
+    const descriptor = lines[index];
+    const name = lines[index + 1];
+    if (
+      descriptor !== "ftxt" ||
+      name === undefined ||
+      !name.startsWith("n") ||
+      !path.posix.isAbsolute(name.slice(1))
+    ) {
+      throw new Error("INVALID_PROCESS_EVIDENCE");
+    }
+    images.push(name.slice(1));
+  }
+  const expectedMatches = images.filter((image) => image === expectedExecutablePath);
+  if (expectedMatches.length > 1 || images.length === 0) {
+    throw new Error("INVALID_PROCESS_EVIDENCE");
+  }
+  return expectedMatches.length === 1 ? expectedExecutablePath : images[0];
 }
 
 function sameFileIdentity(
@@ -305,7 +318,11 @@ async function queryAuthenticatedStagedHelpers(
     if (!executablePath || !pattern.test(executablePath)) {
       throw new Error("UNAUTHENTICATED_STAGED_HELPER");
     }
-    const executableImage = await queryMacOSExecutableImage(processId, dependencies);
+    const executableImage = await queryMacOSExecutableImage(
+      processId,
+      executablePath,
+      dependencies,
+    );
     if (executableImage === undefined) continue;
     if (executableImage !== executablePath) {
       throw new Error("UNAUTHENTICATED_STAGED_HELPER");
