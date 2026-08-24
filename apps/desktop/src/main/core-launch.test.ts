@@ -29,6 +29,31 @@ describe("createCoreLaunchArguments", () => {
       "--development-memory-anchors",
     ]);
   });
+
+  it("passes the exact owned SBR profile to the local core", () => {
+    expect(
+      createCoreLaunchArguments({
+        isPackaged: true,
+        sbrProfilePath:
+          "/Applications/Tammy.app/Contents/Resources/sbr/simulator/sbr-profile-v1.json",
+        userDataPath: "/Users/test/Library/Application Support/Tammy",
+      }),
+    ).toEqual([
+      "--data-root",
+      path.join("/Users/test/Library/Application Support/Tammy", "local-core"),
+      "--sbr-profile=/Applications/Tammy.app/Contents/Resources/sbr/simulator/sbr-profile-v1.json",
+    ]);
+  });
+
+  it("rejects a non-absolute SBR profile before core launch", () => {
+    expect(() =>
+      createCoreLaunchArguments({
+        isPackaged: true,
+        sbrProfilePath: "resources/sbr-profile-v1.json",
+        userDataPath: "/Users/test/Library/Application Support/Tammy",
+      }),
+    ).toThrow("SBR_PROFILE_PATH_INVALID");
+  });
 });
 
 describe("parseLocalLaunchArguments", () => {

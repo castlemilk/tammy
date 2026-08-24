@@ -105,6 +105,16 @@ export function createProductionDependencies(
         binaryPath,
         args: createCoreLaunchArguments({
           isPackaged: app.isPackaged,
+          ...(process.platform === "darwin" && process.arch === "arm64" && releaseKind !== "mas"
+            ? {
+                sbrProfilePath: path.join(
+                  app.isPackaged ? process.resourcesPath : developmentResourcesPath,
+                  "sbr",
+                  "simulator",
+                  "sbr-profile-v1.json",
+                ),
+              }
+            : {}),
           userDataPath: app.getPath("userData"),
         }),
       });

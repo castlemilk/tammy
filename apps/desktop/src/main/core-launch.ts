@@ -2,6 +2,7 @@ import path from "node:path";
 
 export interface CoreLaunchArgumentOptions {
   readonly isPackaged: boolean;
+  readonly sbrProfilePath?: string;
   readonly userDataPath: string;
 }
 
@@ -33,12 +34,19 @@ export function parseLocalLaunchArguments(arguments_: readonly string[]): LocalL
 }
 
 export function createCoreLaunchArguments(options: CoreLaunchArgumentOptions): readonly string[] {
+  if (options.sbrProfilePath !== undefined && !path.isAbsolute(options.sbrProfilePath)) {
+    throw new Error("SBR_PROFILE_PATH_INVALID");
+  }
+  const sbrArguments = options.sbrProfilePath
+    ? [`--sbr-profile=${path.normalize(options.sbrProfilePath)}`]
+    : [];
   if (options.isPackaged) {
-    return ["--data-root", path.join(options.userDataPath, "local-core")];
+    return ["--data-root", path.join(options.userDataPath, "local-core"), ...sbrArguments];
   }
   return [
     "--data-root",
     path.join(options.userDataPath, "local-core-development"),
     "--development-memory-anchors",
+    ...sbrArguments,
   ];
 }
