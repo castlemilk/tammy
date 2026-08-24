@@ -1846,19 +1846,21 @@ func fixtureOutcome(caseValue SimulatorCase) tammyv1.SbrReadinessFixtureOutcome 
 
 func validFixtureHelperResponse(request HelperRequest, result HelperResult) bool {
 	if result.RequestID != request.RequestID || result.Outcome != HelperOutcomeOK ||
-		result.ResultCode != HelperResultFixtureSelected || result.PendingID != "" || result.StableCode != "" ||
+		result.PendingID != "" || result.StableCode != "" ||
 		result.FixtureFailureCase != request.FixtureFailureCase {
 		return false
 	}
 	want := TransportAccepted
+	wantResult := HelperResultFixtureSelected
 	switch request.FixtureFailureCase {
 	case tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_MAYBE_SENT:
 		want = TransportMaybeSent
+		wantResult = HelperResultRecoveryRequired
 	case tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_UNSPECIFIED:
 	default:
 		return false
 	}
-	return result.FixtureState == want
+	return result.ResultCode == wantResult && result.FixtureState == want
 }
 
 func simulatorCaseForState(state TransportState) (SimulatorCase, bool) {

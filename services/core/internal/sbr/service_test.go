@@ -1733,7 +1733,11 @@ func TestFixtureFailureCasesAreDurableAndNeverReportSuccess(t *testing.T) {
 				case tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_TIMEOUT:
 					return HelperResult{}, ErrHelperDeadlineExpired
 				}
-				return HelperResult{RequestID: request.RequestID, Outcome: HelperOutcomeOK, ResultCode: HelperResultFixtureSelected,
+				resultCode := HelperResultFixtureSelected
+				if failure == tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_MAYBE_SENT {
+					resultCode = HelperResultRecoveryRequired
+				}
+				return HelperResult{RequestID: request.RequestID, Outcome: HelperOutcomeOK, ResultCode: resultCode,
 					FixtureFailureCase: request.FixtureFailureCase, FixtureState: want}, nil
 			}}
 			service := testService(t, helper, &fakeIdentity{})
@@ -1756,6 +1760,34 @@ func TestFixtureFailureCasesAreDurableAndNeverReportSuccess(t *testing.T) {
 				if record.State != want {
 					t.Fatalf("state=%s want=%s", record.State, want)
 				}
+			}
+		})
+	}
+}
+
+func TestFixtureHelperResponseRequiresCaseSpecificResultCode(t *testing.T) {
+	requestID := "018f0000-0000-7000-8000-0000000007f1"
+	for _, test := range []struct {
+		name        string
+		failureCase tammyv1.SbrReadinessFixtureFailure
+		state       TransportState
+		validCode   HelperResultCode
+		wrongCode   HelperResultCode
+	}{
+		{name: "accepted", state: TransportAccepted, validCode: HelperResultFixtureSelected, wrongCode: HelperResultRecoveryRequired},
+		{name: "maybe sent", failureCase: tammyv1.SbrReadinessFixtureFailure_SBR_READINESS_FIXTURE_FAILURE_MAYBE_SENT,
+			state: TransportMaybeSent, validCode: HelperResultRecoveryRequired, wrongCode: HelperResultFixtureSelected},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			request := HelperRequest{RequestID: requestID, FixtureFailureCase: test.failureCase}
+			result := HelperResult{RequestID: requestID, Outcome: HelperOutcomeOK, ResultCode: test.validCode,
+				FixtureFailureCase: test.failureCase, FixtureState: test.state}
+			if !validFixtureHelperResponse(request, result) {
+				t.Fatalf("case-specific result rejected: request=%+v result=%+v", request, result)
+			}
+			result.ResultCode = test.wrongCode
+			if validFixtureHelperResponse(request, result) {
+				t.Fatalf("wrong result code accepted: request=%+v result=%+v", request, result)
 			}
 		})
 	}
