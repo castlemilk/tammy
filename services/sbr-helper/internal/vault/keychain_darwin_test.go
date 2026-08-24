@@ -77,7 +77,7 @@ func TestSimulatorVaultUsesVersionedDevelopmentKeychainService(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if store.service != "com.tammy.sbr.development.simulator-v1" {
+	if store.service != "com.tammy.sbr.development.simulator-v2" {
 		t.Fatalf("simulator service = %q", store.service)
 	}
 	if store.policy != developmentChannel().policy {

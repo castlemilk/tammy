@@ -45,7 +45,7 @@ type Namespace string
 const (
 	ProductionNamespace      Namespace = "production"
 	DevelopmentNamespace     Namespace = "development"
-	simulatorKeychainVersion           = "simulator-v1"
+	simulatorKeychainVersion           = "simulator-v2"
 )
 
 type RecordKind uint8
