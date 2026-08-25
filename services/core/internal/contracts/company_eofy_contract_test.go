@@ -305,6 +305,7 @@ func assertExactFinancialCloseMessages(t *testing.T, file protoreflect.FileDescr
 func assertFinancialCloseFieldRules(t *testing.T, file protoreflect.FileDescriptor) {
 	t.Helper()
 	uuidPattern := "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+	stableCodePattern := "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"
 	uuidFields := map[protoreflect.Name][]protoreflect.Name{
 		"CloseCheck":                           {"id", "close_id", "resolved_by_user_id"},
 		"FinancialStatementApproval":           {"id", "approved_by_user_id", "fresh_factor_assertion_id"},
@@ -327,6 +328,9 @@ func assertFinancialCloseFieldRules(t *testing.T, file protoreflect.FileDescript
 				t.Errorf("%s.%s UUIDv7 pattern = %q", messageName, fieldName, got)
 			}
 		}
+	}
+	if got := fieldRules(t, file.Messages().ByName("CloseCheck").Fields().ByName("rule_id")).GetString_().GetPattern(); got != stableCodePattern {
+		t.Errorf("CloseCheck.rule_id pattern = %q, want %q", got, stableCodePattern)
 	}
 
 	for _, owner := range []struct{ message, field protoreflect.Name }{
@@ -578,6 +582,24 @@ func TestFinancialCloseProtovalidateEnforcesCloseCheckResolutionTuple(t *testing
 				assertFinancialCloseValidationRejects(t, "non-resolved check carrying resolution metadata", check)
 			})
 		}
+	}
+}
+
+func TestFinancialCloseProtovalidateRejectsInvalidRuleIdentifiers(t *testing.T) {
+	for _, ruleID := range []string{"A", "trial_balance:balanced/v1-2._"} {
+		check := validFinancialCloseCheck(tammyv1.CloseCheckResult_CLOSE_CHECK_RESULT_FAILED)
+		check.RuleId = ruleID
+		if err := protovalidate.Validate(check); err != nil {
+			t.Fatalf("valid rule identifier %q rejected: %v", ruleID, err)
+		}
+	}
+
+	for _, ruleID := range []string{"trial balance", "réconciliation", ".trial_balance"} {
+		t.Run(ruleID, func(t *testing.T) {
+			check := validFinancialCloseCheck(tammyv1.CloseCheckResult_CLOSE_CHECK_RESULT_FAILED)
+			check.RuleId = ruleID
+			assertFinancialCloseValidationRejects(t, "invalid rule identifier", check)
+		})
 	}
 }
 

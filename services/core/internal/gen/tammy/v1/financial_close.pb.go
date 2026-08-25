@@ -2280,13 +2280,12 @@ var File_tammy_v1_financial_close_proto protoreflect.FileDescriptor
 
 const file_tammy_v1_financial_close_proto_rawDesc = "" +
 	"\n" +
-	"\x1etammy/v1/financial_close.proto\x12\btammy.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15tammy/v1/common.proto\"\xc4\b\n" +
+	"\x1etammy/v1/financial_close.proto\x12\btammy.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15tammy/v1/common.proto\"\xea\b\n" +
 	"\n" +
 	"CloseCheck\x12\\\n" +
 	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12g\n" +
-	"\bclose_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\acloseId\x12#\n" +
-	"\arule_id\x18\x03 \x01(\tB\n" +
-	"\xbaH\ar\x05\x10\x01\x18\x80\x01R\x06ruleId\x12D\n" +
+	"\bclose_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\acloseId\x12I\n" +
+	"\arule_id\x18\x03 \x01(\tB0\xbaH-r+\x10\x01\x18\x80\x012$^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$R\x06ruleId\x12D\n" +
 	"\bseverity\x18\x04 \x01(\x0e2\x1c.tammy.v1.CloseCheckSeverityB\n" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\bseverity\x12>\n" +
 	"\x06result\x18\x05 \x01(\x0e2\x1a.tammy.v1.CloseCheckResultB\n" +

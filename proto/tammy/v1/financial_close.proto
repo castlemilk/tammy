@@ -83,6 +83,7 @@ message CloseCheck {
   string rule_id = 3 [(buf.validate.field).string = {
     min_len: 1
     max_len: 128
+    pattern: "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"
   }];
   // severity identifies whether the check blocks freezing.
   CloseCheckSeverity severity = 4 [(buf.validate.field).enum = {
