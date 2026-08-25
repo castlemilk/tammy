@@ -59,6 +59,16 @@ message CompanyReturnSubmissionAttempt {
     message: "attempt outcome must match its durable state"
     expression: "(this.state in [1, 2, 3, 7] && !has(this.outcome)) || (this.state == 5 && has(this.outcome) && this.outcome == 4) || (this.state in [4, 6] && has(this.outcome) && this.outcome in [1, 2, 3])"
   };
+  option (buf.validate.message).cel = {
+    id: "company_return_submission.attempt.original_operation"
+    message: "a durable attempt retains its original pre-lodge or lodge operation type"
+    expression: "this.operation_type in [1, 2]"
+  };
+  option (buf.validate.message).cel = {
+    id: "company_return_submission.attempt.retry_state"
+    message: "retry classification must exactly match the durable attempt state"
+    expression: "(this.state == 3 && this.retry_classification == 2) || (this.state == 5 && this.retry_classification == 3) || (this.state in [1, 2, 4, 6, 7] && this.retry_classification == 1)"
+  };
 
   string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
   string return_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
@@ -116,6 +126,7 @@ message CompanyReturnSubmissionReceipt {
   string encrypted_receipt_ref = 3 [(buf.validate.field).string = {
     min_len: 1
     max_len: 128
+    pattern: "^[A-Za-z0-9](?:[A-Za-z0-9_-]|[.][A-Za-z0-9_-])*$"
   }];
   string safe_display_summary = 4 [(buf.validate.field).string = {
     min_len: 1
@@ -163,6 +174,12 @@ message CompanyReturnStatusObservation {
 }
 
 message CompanyReturnSubmission {
+  option (buf.validate.message).cel = {
+    id: "company_return_submission.aggregate.identity"
+    message: "submission projections must retain one return and attempt identity"
+    expression: "has(this.latest_attempt) && this.return_id == this.latest_attempt.return_id && (!has(this.receipt) || this.receipt.attempt_id == this.latest_attempt.id) && this.status_history.all(observation, observation.attempt_id == this.latest_attempt.id)"
+  };
+
   string return_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
   CompanyReturnSubmissionAttempt latest_attempt = 2 [(buf.validate.field).required = true];
   CompanyReturnSubmissionReceipt receipt = 3;
@@ -186,8 +203,23 @@ message PreLodgeCompanyReturnRequest {
 message PreLodgeCompanyReturnResponse {
   option (buf.validate.message).cel = {
     id: "company_return_submission.prelodge.result"
-    message: "pre-lodge never delivers or creates a receipt and retains its original operation type"
-    expression: "has(this.company_return) && has(this.submission) && has(this.submission.latest_attempt) && this.submission.latest_attempt.operation_type == 1 && this.company_return.state != 10 && !has(this.submission.receipt)"
+    message: "pre-lodge retains its original operation type"
+    expression: "has(this.submission) && has(this.submission.latest_attempt) && this.submission.latest_attempt.operation_type == 1"
+  };
+  option (buf.validate.message).cel = {
+    id: "company_return_submission.prelodge.identity"
+    message: "response return identities must match"
+    expression: "has(this.company_return) && has(this.submission) && has(this.submission.latest_attempt) && this.company_return.id == this.submission.return_id && this.company_return.id == this.submission.latest_attempt.return_id"
+  };
+  option (buf.validate.message).cel = {
+    id: "company_return_submission.prelodge.matrix"
+    message: "operation, attempt state, outcome, and report state must match the lifecycle authority"
+    expression: "(this.submission.latest_attempt.operation_type == 1 && ((this.submission.latest_attempt.state in [1, 2, 4] && this.company_return.state == 5) || (this.submission.latest_attempt.state in [3, 7] && this.company_return.state == 4) || (this.submission.latest_attempt.state == 5 && this.company_return.state == 8) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 1 && this.company_return.state == 7) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 2 && this.company_return.state == 6) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 3 && this.company_return.state == 2))) || (this.submission.latest_attempt.operation_type == 2 && ((this.submission.latest_attempt.state in [1, 2, 4] && this.company_return.state == 9) || (this.submission.latest_attempt.state in [3, 7] && this.company_return.state == 7) || (this.submission.latest_attempt.state == 5 && this.company_return.state == 12) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 1 && this.company_return.state == 10) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 3 && this.company_return.state == 11)))"
+  };
+  option (buf.validate.message).cel = {
+    id: "company_return_submission.prelodge.receipt_state"
+    message: "only an accepted delivered lodge has aligned receipt and delivery identities"
+    expression: "this.company_return.state == 10 ? (has(this.submission.receipt) && has(this.company_return.delivery) && this.submission.receipt.attempt_id == this.submission.latest_attempt.id && this.company_return.delivery.latest_attempt_id == this.submission.latest_attempt.id && this.company_return.delivery.operation_type == 2 && this.company_return.delivery.outcome == 1 && has(this.company_return.delivery.receipt_id) && this.company_return.delivery.receipt_id == this.submission.receipt.id && has(this.company_return.delivery.delivered_at)) : (!has(this.submission.receipt) && !has(this.company_return.delivery))"
   };
 
   CompanyReturn company_return = 1 [(buf.validate.field).required = true];
@@ -210,14 +242,24 @@ message LodgeCompanyReturnRequest {
 
 message LodgeCompanyReturnResponse {
   option (buf.validate.message).cel = {
+    id: "company_return_submission.lodge.identity"
+    message: "response return identities must match"
+    expression: "has(this.company_return) && has(this.submission) && has(this.submission.latest_attempt) && this.company_return.id == this.submission.return_id && this.company_return.id == this.submission.latest_attempt.return_id"
+  };
+  option (buf.validate.message).cel = {
+    id: "company_return_submission.lodge.matrix"
+    message: "operation, attempt state, outcome, and report state must match the lifecycle authority"
+    expression: "(this.submission.latest_attempt.operation_type == 1 && ((this.submission.latest_attempt.state in [1, 2, 4] && this.company_return.state == 5) || (this.submission.latest_attempt.state in [3, 7] && this.company_return.state == 4) || (this.submission.latest_attempt.state == 5 && this.company_return.state == 8) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 1 && this.company_return.state == 7) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 2 && this.company_return.state == 6) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 3 && this.company_return.state == 2))) || (this.submission.latest_attempt.operation_type == 2 && ((this.submission.latest_attempt.state in [1, 2, 4] && this.company_return.state == 9) || (this.submission.latest_attempt.state in [3, 7] && this.company_return.state == 7) || (this.submission.latest_attempt.state == 5 && this.company_return.state == 12) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 1 && this.company_return.state == 10) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 3 && this.company_return.state == 11)))"
+  };
+  option (buf.validate.message).cel = {
     id: "company_return_submission.lodge.operation"
     message: "lodgment response retains the lodge operation type"
     expression: "has(this.submission) && has(this.submission.latest_attempt) && this.submission.latest_attempt.operation_type == 2"
   };
   option (buf.validate.message).cel = {
     id: "company_return_submission.lodge.receipt_state"
-    message: "a receipt exists exactly for an accepted delivered lodge"
-    expression: "has(this.company_return) && has(this.submission) && (has(this.submission.receipt) == (this.company_return.state == 10)) && (!has(this.submission.receipt) || (has(this.submission.latest_attempt) && this.submission.latest_attempt.operation_type == 2 && has(this.submission.latest_attempt.outcome) && this.submission.latest_attempt.outcome == 1))"
+    message: "only an accepted delivered lodge has aligned receipt and delivery identities"
+    expression: "this.company_return.state == 10 ? (has(this.submission.receipt) && has(this.company_return.delivery) && this.submission.receipt.attempt_id == this.submission.latest_attempt.id && this.company_return.delivery.latest_attempt_id == this.submission.latest_attempt.id && this.company_return.delivery.operation_type == 2 && this.company_return.delivery.outcome == 1 && has(this.company_return.delivery.receipt_id) && this.company_return.delivery.receipt_id == this.submission.receipt.id && has(this.company_return.delivery.delivered_at)) : (!has(this.submission.receipt) && !has(this.company_return.delivery))"
   };
 
   CompanyReturn company_return = 1 [(buf.validate.field).required = true];
@@ -232,9 +274,19 @@ message GetCompanyReturnSubmissionRequest {
 
 message GetCompanyReturnSubmissionResponse {
   option (buf.validate.message).cel = {
+    id: "company_return_submission.get.identity"
+    message: "response return identities must match"
+    expression: "has(this.company_return) && has(this.submission) && has(this.submission.latest_attempt) && this.company_return.id == this.submission.return_id && this.company_return.id == this.submission.latest_attempt.return_id"
+  };
+  option (buf.validate.message).cel = {
+    id: "company_return_submission.get.matrix"
+    message: "operation, attempt state, outcome, and report state must match the lifecycle authority"
+    expression: "(this.submission.latest_attempt.operation_type == 1 && ((this.submission.latest_attempt.state in [1, 2, 4] && this.company_return.state == 5) || (this.submission.latest_attempt.state in [3, 7] && this.company_return.state == 4) || (this.submission.latest_attempt.state == 5 && this.company_return.state == 8) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 1 && this.company_return.state == 7) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 2 && this.company_return.state == 6) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 3 && this.company_return.state == 2))) || (this.submission.latest_attempt.operation_type == 2 && ((this.submission.latest_attempt.state in [1, 2, 4] && this.company_return.state == 9) || (this.submission.latest_attempt.state in [3, 7] && this.company_return.state == 7) || (this.submission.latest_attempt.state == 5 && this.company_return.state == 12) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 1 && this.company_return.state == 10) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 3 && this.company_return.state == 11)))"
+  };
+  option (buf.validate.message).cel = {
     id: "company_return_submission.get.receipt_state"
-    message: "a receipt exists exactly for an accepted delivered lodge"
-    expression: "has(this.company_return) && has(this.submission) && (has(this.submission.receipt) == (this.company_return.state == 10)) && (!has(this.submission.receipt) || (has(this.submission.latest_attempt) && this.submission.latest_attempt.operation_type == 2 && has(this.submission.latest_attempt.outcome) && this.submission.latest_attempt.outcome == 1))"
+    message: "only an accepted delivered lodge has aligned receipt and delivery identities"
+    expression: "this.company_return.state == 10 ? (has(this.submission.receipt) && has(this.company_return.delivery) && this.submission.receipt.attempt_id == this.submission.latest_attempt.id && this.company_return.delivery.latest_attempt_id == this.submission.latest_attempt.id && this.company_return.delivery.operation_type == 2 && this.company_return.delivery.outcome == 1 && has(this.company_return.delivery.receipt_id) && this.company_return.delivery.receipt_id == this.submission.receipt.id && has(this.company_return.delivery.delivered_at)) : (!has(this.submission.receipt) && !has(this.company_return.delivery))"
   };
 
   CompanyReturn company_return = 1 [(buf.validate.field).required = true];
@@ -251,9 +303,19 @@ message RefreshCompanyReturnStatusRequest {
 
 message RefreshCompanyReturnStatusResponse {
   option (buf.validate.message).cel = {
+    id: "company_return_submission.refresh.identity"
+    message: "response return identities must match"
+    expression: "has(this.company_return) && has(this.submission) && has(this.submission.latest_attempt) && this.company_return.id == this.submission.return_id && this.company_return.id == this.submission.latest_attempt.return_id"
+  };
+  option (buf.validate.message).cel = {
+    id: "company_return_submission.refresh.matrix"
+    message: "operation, attempt state, outcome, and report state must match the lifecycle authority"
+    expression: "(this.submission.latest_attempt.operation_type == 1 && ((this.submission.latest_attempt.state in [1, 2, 4] && this.company_return.state == 5) || (this.submission.latest_attempt.state in [3, 7] && this.company_return.state == 4) || (this.submission.latest_attempt.state == 5 && this.company_return.state == 8) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 1 && this.company_return.state == 7) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 2 && this.company_return.state == 6) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 3 && this.company_return.state == 2))) || (this.submission.latest_attempt.operation_type == 2 && ((this.submission.latest_attempt.state in [1, 2, 4] && this.company_return.state == 9) || (this.submission.latest_attempt.state in [3, 7] && this.company_return.state == 7) || (this.submission.latest_attempt.state == 5 && this.company_return.state == 12) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 1 && this.company_return.state == 10) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 3 && this.company_return.state == 11)))"
+  };
+  option (buf.validate.message).cel = {
     id: "company_return_submission.refresh.receipt_state"
-    message: "a receipt exists exactly for an accepted delivered lodge"
-    expression: "has(this.company_return) && has(this.submission) && (has(this.submission.receipt) == (this.company_return.state == 10)) && (!has(this.submission.receipt) || (has(this.submission.latest_attempt) && this.submission.latest_attempt.operation_type == 2 && has(this.submission.latest_attempt.outcome) && this.submission.latest_attempt.outcome == 1))"
+    message: "only an accepted delivered lodge has aligned receipt and delivery identities"
+    expression: "this.company_return.state == 10 ? (has(this.submission.receipt) && has(this.company_return.delivery) && this.submission.receipt.attempt_id == this.submission.latest_attempt.id && this.company_return.delivery.latest_attempt_id == this.submission.latest_attempt.id && this.company_return.delivery.operation_type == 2 && this.company_return.delivery.outcome == 1 && has(this.company_return.delivery.receipt_id) && this.company_return.delivery.receipt_id == this.submission.receipt.id && has(this.company_return.delivery.delivered_at)) : (!has(this.submission.receipt) && !has(this.company_return.delivery))"
   };
 
   CompanyReturn company_return = 1 [(buf.validate.field).required = true];
@@ -276,9 +338,19 @@ message ReconcileUnknownCompanyReturnSubmissionRequest {
 
 message ReconcileUnknownCompanyReturnSubmissionResponse {
   option (buf.validate.message).cel = {
+    id: "company_return_submission.reconcile.identity"
+    message: "response return identities must match"
+    expression: "has(this.company_return) && has(this.submission) && has(this.submission.latest_attempt) && this.company_return.id == this.submission.return_id && this.company_return.id == this.submission.latest_attempt.return_id"
+  };
+  option (buf.validate.message).cel = {
+    id: "company_return_submission.reconcile.matrix"
+    message: "operation, attempt state, outcome, and report state must match the lifecycle authority"
+    expression: "(this.submission.latest_attempt.operation_type == 1 && ((this.submission.latest_attempt.state in [1, 2, 4] && this.company_return.state == 5) || (this.submission.latest_attempt.state in [3, 7] && this.company_return.state == 4) || (this.submission.latest_attempt.state == 5 && this.company_return.state == 8) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 1 && this.company_return.state == 7) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 2 && this.company_return.state == 6) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 3 && this.company_return.state == 2))) || (this.submission.latest_attempt.operation_type == 2 && ((this.submission.latest_attempt.state in [1, 2, 4] && this.company_return.state == 9) || (this.submission.latest_attempt.state in [3, 7] && this.company_return.state == 7) || (this.submission.latest_attempt.state == 5 && this.company_return.state == 12) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 1 && this.company_return.state == 10) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 3 && this.company_return.state == 11)))"
+  };
+  option (buf.validate.message).cel = {
     id: "company_return_submission.reconcile.receipt_state"
-    message: "a receipt exists exactly for an accepted delivered lodge"
-    expression: "has(this.company_return) && has(this.submission) && (has(this.submission.receipt) == (this.company_return.state == 10)) && (!has(this.submission.receipt) || (has(this.submission.latest_attempt) && this.submission.latest_attempt.operation_type == 2 && has(this.submission.latest_attempt.outcome) && this.submission.latest_attempt.outcome == 1))"
+    message: "only an accepted delivered lodge has aligned receipt and delivery identities"
+    expression: "this.company_return.state == 10 ? (has(this.submission.receipt) && has(this.company_return.delivery) && this.submission.receipt.attempt_id == this.submission.latest_attempt.id && this.company_return.delivery.latest_attempt_id == this.submission.latest_attempt.id && this.company_return.delivery.operation_type == 2 && this.company_return.delivery.outcome == 1 && has(this.company_return.delivery.receipt_id) && this.company_return.delivery.receipt_id == this.submission.receipt.id && has(this.company_return.delivery.delivered_at)) : (!has(this.submission.receipt) && !has(this.company_return.delivery))"
   };
 
   CompanyReturn company_return = 1 [(buf.validate.field).required = true];

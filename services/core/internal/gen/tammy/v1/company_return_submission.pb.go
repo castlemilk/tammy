@@ -1270,7 +1270,7 @@ var File_tammy_v1_company_return_submission_proto protoreflect.FileDescriptor
 
 const file_tammy_v1_company_return_submission_proto_rawDesc = "" +
 	"\n" +
-	"(tammy/v1/company_return_submission.proto\x12\btammy.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15tammy/v1/common.proto\x1a\x1atammy/v1/company_tax.proto\"\xf5\r\n" +
+	"(tammy/v1/company_return_submission.proto\x12\btammy.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15tammy/v1/common.proto\x1a\x1atammy/v1/company_tax.proto\"\xbe\x11\n" +
 	"\x1eCompanyReturnSubmissionAttempt\x12\\\n" +
 	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12i\n" +
 	"\treturn_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\breturnId\x12s\n" +
@@ -1296,14 +1296,15 @@ const file_tammy_v1_company_return_submission_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\tcreatedAt\x12A\n" +
 	"\n" +
-	"updated_at\x18\x11 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\tupdatedAt:\xa6\x02\xbaH\xa2\x02\x1a\x9f\x02\n" +
-	"/company_return_submission.attempt.outcome_state\x12,attempt outcome must match its durable state\x1a\xbd\x01(this.state in [1, 2, 3, 7] && !has(this.outcome)) || (this.state == 5 && has(this.outcome) && this.outcome == 4) || (this.state in [4, 6] && has(this.outcome) && this.outcome in [1, 2, 3])\"\x92\a\n" +
+	"updated_at\x18\x11 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\tupdatedAt:\xef\x05\xbaH\xeb\x05\x1a\x9f\x02\n" +
+	"/company_return_submission.attempt.outcome_state\x12,attempt outcome must match its durable state\x1a\xbd\x01(this.state in [1, 2, 3, 7] && !has(this.outcome)) || (this.state == 5 && has(this.outcome) && this.outcome == 4) || (this.state in [4, 6] && has(this.outcome) && this.outcome in [1, 2, 3])\x1a\x9f\x01\n" +
+	"4company_return_submission.attempt.original_operation\x12Ha durable attempt retains its original pre-lodge or lodge operation type\x1a\x1dthis.operation_type in [1, 2]\x1a\xa4\x02\n" +
+	"-company_return_submission.attempt.retry_state\x12Aretry classification must exactly match the durable attempt state\x1a\xaf\x01(this.state == 3 && this.retry_classification == 2) || (this.state == 5 && this.retry_classification == 3) || (this.state in [1, 2, 4, 6, 7] && this.retry_classification == 1)\"\xc4\a\n" +
 	"\x1eCompanyReturnSubmissionReceipt\x12\\\n" +
 	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12k\n" +
 	"\n" +
-	"attempt_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\tattemptId\x12>\n" +
-	"\x15encrypted_receipt_ref\x18\x03 \x01(\tB\n" +
-	"\xbaH\ar\x05\x10\x01\x18\x80\x01R\x13encryptedReceiptRef\x12<\n" +
+	"attempt_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\tattemptId\x12p\n" +
+	"\x15encrypted_receipt_ref\x18\x03 \x01(\tB<\xbaH9r7\x10\x01\x18\x80\x0120^[A-Za-z0-9](?:[A-Za-z0-9_-]|[.][A-Za-z0-9_-])*$R\x13encryptedReceiptRef\x12<\n" +
 	"\x14safe_display_summary\x18\x04 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\xd0\x0fR\x12safeDisplaySummary\x12^\n" +
 	"\x0fconversation_id\x18\x05 \x01(\tB5\xbaH-r+\x10\x01\x18\x80\x012$^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$\xaa\x01\x02\b\x01R\x0econversationId\x12Z\n" +
@@ -1325,62 +1326,76 @@ const file_tammy_v1_company_return_submission_proto_rawDesc = "" +
 	"safeStatus\x12C\n" +
 	"\vobserved_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\n" +
 	"observedAt\x12,\n" +
-	"\rresponse_hash\x18\a \x01(\fB\a\xbaH\x04z\x02h R\fresponseHash\"\xfd\x02\n" +
+	"\rresponse_hash\x18\a \x01(\fB\a\xbaH\x04z\x02h R\fresponseHash\"\xee\x05\n" +
 	"\x17CompanyReturnSubmission\x12i\n" +
 	"\treturn_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\breturnId\x12W\n" +
 	"\x0elatest_attempt\x18\x02 \x01(\v2(.tammy.v1.CompanyReturnSubmissionAttemptB\x06\xbaH\x03\xc8\x01\x01R\rlatestAttempt\x12B\n" +
 	"\areceipt\x18\x03 \x01(\v2(.tammy.v1.CompanyReturnSubmissionReceiptR\areceipt\x12Z\n" +
-	"\x0estatus_history\x18\x04 \x03(\v2(.tammy.v1.CompanyReturnStatusObservationB\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\rstatusHistory\"\xfd\x05\n" +
+	"\x0estatus_history\x18\x04 \x03(\v2(.tammy.v1.CompanyReturnStatusObservationB\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\rstatusHistory:\xee\x02\xbaH\xea\x02\x1a\xe7\x02\n" +
+	",company_return_submission.aggregate.identity\x12Bsubmission projections must retain one return and attempt identity\x1a\xf2\x01has(this.latest_attempt) && this.return_id == this.latest_attempt.return_id && (!has(this.receipt) || this.receipt.attempt_id == this.latest_attempt.id) && this.status_history.all(observation, observation.attempt_id == this.latest_attempt.id)\"\xfd\x05\n" +
 	"\x1cPreLodgeCompanyReturnRequest\x12I\n" +
 	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
 	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12i\n" +
 	"\treturn_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\breturnId\x12s\n" +
 	"\x0edeclaration_id\x18\x04 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\rdeclarationId\x12?\n" +
 	"\x17expected_return_version\x18\x05 \x01(\x04B\a\xbaH\x042\x02(\x01R\x15expectedReturnVersion:\xf9\x01\xbaH\xf5\x01\x1a\xf2\x01\n" +
-	"/company_return_submission.prelodge.fresh_factor\x12/pre-lodge requires a purpose-bound fresh factor\x1a\x8d\x01has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'company_return_prelodge'\"\x92\x04\n" +
+	"/company_return_submission.prelodge.fresh_factor\x12/pre-lodge requires a purpose-bound fresh factor\x1a\x8d\x01has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'company_return_prelodge'\"\x94\x16\n" +
 	"\x1dPreLodgeCompanyReturnResponse\x12F\n" +
 	"\x0ecompany_return\x18\x01 \x01(\v2\x17.tammy.v1.CompanyReturnB\x06\xbaH\x03\xc8\x01\x01R\rcompanyReturn\x12I\n" +
 	"\n" +
 	"submission\x18\x02 \x01(\v2!.tammy.v1.CompanyReturnSubmissionB\x06\xbaH\x03\xc8\x01\x01R\n" +
-	"submission:\xdd\x02\xbaH\xd9\x02\x1a\xd6\x02\n" +
-	")company_return_submission.prelodge.result\x12Upre-lodge never delivers or creates a receipt and retains its original operation type\x1a\xd1\x01has(this.company_return) && has(this.submission) && has(this.submission.latest_attempt) && this.submission.latest_attempt.operation_type == 1 && this.company_return.state != 10 && !has(this.submission.receipt)\"\xf3\x05\n" +
+	"submission:\xdf\x14\xbaH\xdb\x14\x1a\xcd\x01\n" +
+	")company_return_submission.prelodge.result\x12-pre-lodge retains its original operation type\x1aqhas(this.submission) && has(this.submission.latest_attempt) && this.submission.latest_attempt.operation_type == 1\x1a\xab\x02\n" +
+	"+company_return_submission.prelodge.identity\x12%response return identities must match\x1a\xd4\x01has(this.company_return) && has(this.submission) && has(this.submission.latest_attempt) && this.company_return.id == this.submission.return_id && this.company_return.id == this.submission.latest_attempt.return_id\x1a\xf9\n" +
+	"\n" +
+	")company_return_submission.prelodge.matrix\x12Voperation, attempt state, outcome, and report state must match the lifecycle authority\x1a\xf3\t(this.submission.latest_attempt.operation_type == 1 && ((this.submission.latest_attempt.state in [1, 2, 4] && this.company_return.state == 5) || (this.submission.latest_attempt.state in [3, 7] && this.company_return.state == 4) || (this.submission.latest_attempt.state == 5 && this.company_return.state == 8) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 1 && this.company_return.state == 7) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 2 && this.company_return.state == 6) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 3 && this.company_return.state == 2))) || (this.submission.latest_attempt.operation_type == 2 && ((this.submission.latest_attempt.state in [1, 2, 4] && this.company_return.state == 9) || (this.submission.latest_attempt.state in [3, 7] && this.company_return.state == 7) || (this.submission.latest_attempt.state == 5 && this.company_return.state == 12) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 1 && this.company_return.state == 10) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 3 && this.company_return.state == 11)))\x1a\xde\x05\n" +
+	"0company_return_submission.prelodge.receipt_state\x12Lonly an accepted delivered lodge has aligned receipt and delivery identities\x1a\xdb\x04this.company_return.state == 10 ? (has(this.submission.receipt) && has(this.company_return.delivery) && this.submission.receipt.attempt_id == this.submission.latest_attempt.id && this.company_return.delivery.latest_attempt_id == this.submission.latest_attempt.id && this.company_return.delivery.operation_type == 2 && this.company_return.delivery.outcome == 1 && has(this.company_return.delivery.receipt_id) && this.company_return.delivery.receipt_id == this.submission.receipt.id && has(this.company_return.delivery.delivered_at)) : (!has(this.submission.receipt) && !has(this.company_return.delivery))\"\xf3\x05\n" +
 	"\x19LodgeCompanyReturnRequest\x12I\n" +
 	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
 	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12i\n" +
 	"\treturn_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\breturnId\x12s\n" +
 	"\x0edeclaration_id\x18\x04 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\rdeclarationId\x12?\n" +
 	"\x17expected_return_version\x18\x05 \x01(\x04B\a\xbaH\x042\x02(\x01R\x15expectedReturnVersion:\xf2\x01\xbaH\xee\x01\x1a\xeb\x01\n" +
-	",company_return_submission.lodge.fresh_factor\x12.lodgment requires a purpose-bound fresh factor\x1a\x8a\x01has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'company_return_lodge'\"\xd1\x06\n" +
+	",company_return_submission.lodge.fresh_factor\x12.lodgment requires a purpose-bound fresh factor\x1a\x8a\x01has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'company_return_lodge'\"\x8d\x16\n" +
 	"\x1aLodgeCompanyReturnResponse\x12F\n" +
 	"\x0ecompany_return\x18\x01 \x01(\v2\x17.tammy.v1.CompanyReturnB\x06\xbaH\x03\xc8\x01\x01R\rcompanyReturn\x12I\n" +
 	"\n" +
 	"submission\x18\x02 \x01(\v2!.tammy.v1.CompanyReturnSubmissionB\x06\xbaH\x03\xc8\x01\x01R\n" +
-	"submission:\x9f\x05\xbaH\x9b\x05\x1a\xd2\x01\n" +
-	")company_return_submission.lodge.operation\x122lodgment response retains the lodge operation type\x1aqhas(this.submission) && has(this.submission.latest_attempt) && this.submission.latest_attempt.operation_type == 2\x1a\xc3\x03\n" +
-	"-company_return_submission.lodge.receipt_state\x128a receipt exists exactly for an accepted delivered lodge\x1a\xd7\x02has(this.company_return) && has(this.submission) && (has(this.submission.receipt) == (this.company_return.state == 10)) && (!has(this.submission.receipt) || (has(this.submission.latest_attempt) && this.submission.latest_attempt.operation_type == 2 && has(this.submission.latest_attempt.outcome) && this.submission.latest_attempt.outcome == 1))\"\xd6\x02\n" +
+	"submission:\xdb\x14\xbaH\xd7\x14\x1a\xa8\x02\n" +
+	"(company_return_submission.lodge.identity\x12%response return identities must match\x1a\xd4\x01has(this.company_return) && has(this.submission) && has(this.submission.latest_attempt) && this.company_return.id == this.submission.return_id && this.company_return.id == this.submission.latest_attempt.return_id\x1a\xf6\n" +
+	"\n" +
+	"&company_return_submission.lodge.matrix\x12Voperation, attempt state, outcome, and report state must match the lifecycle authority\x1a\xf3\t(this.submission.latest_attempt.operation_type == 1 && ((this.submission.latest_attempt.state in [1, 2, 4] && this.company_return.state == 5) || (this.submission.latest_attempt.state in [3, 7] && this.company_return.state == 4) || (this.submission.latest_attempt.state == 5 && this.company_return.state == 8) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 1 && this.company_return.state == 7) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 2 && this.company_return.state == 6) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 3 && this.company_return.state == 2))) || (this.submission.latest_attempt.operation_type == 2 && ((this.submission.latest_attempt.state in [1, 2, 4] && this.company_return.state == 9) || (this.submission.latest_attempt.state in [3, 7] && this.company_return.state == 7) || (this.submission.latest_attempt.state == 5 && this.company_return.state == 12) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 1 && this.company_return.state == 10) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 3 && this.company_return.state == 11)))\x1a\xd2\x01\n" +
+	")company_return_submission.lodge.operation\x122lodgment response retains the lodge operation type\x1aqhas(this.submission) && has(this.submission.latest_attempt) && this.submission.latest_attempt.operation_type == 2\x1a\xdb\x05\n" +
+	"-company_return_submission.lodge.receipt_state\x12Lonly an accepted delivered lodge has aligned receipt and delivery identities\x1a\xdb\x04this.company_return.state == 10 ? (has(this.submission.receipt) && has(this.company_return.delivery) && this.submission.receipt.attempt_id == this.submission.latest_attempt.id && this.company_return.delivery.latest_attempt_id == this.submission.latest_attempt.id && this.company_return.delivery.operation_type == 2 && this.company_return.delivery.outcome == 1 && has(this.company_return.delivery.receipt_id) && this.company_return.delivery.receipt_id == this.submission.receipt.id && has(this.company_return.delivery.delivered_at)) : (!has(this.submission.receipt) && !has(this.company_return.delivery))\"\xd6\x02\n" +
 	"!GetCompanyReturnSubmissionRequest\x12O\n" +
 	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12u\n" +
 	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12i\n" +
-	"\treturn_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\breturnId\"\x82\x05\n" +
+	"\treturn_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\breturnId\"\xba\x14\n" +
 	"\"GetCompanyReturnSubmissionResponse\x12F\n" +
 	"\x0ecompany_return\x18\x01 \x01(\v2\x17.tammy.v1.CompanyReturnB\x06\xbaH\x03\xc8\x01\x01R\rcompanyReturn\x12I\n" +
 	"\n" +
 	"submission\x18\x02 \x01(\v2!.tammy.v1.CompanyReturnSubmissionB\x06\xbaH\x03\xc8\x01\x01R\n" +
-	"submission:\xc8\x03\xbaH\xc4\x03\x1a\xc1\x03\n" +
-	"+company_return_submission.get.receipt_state\x128a receipt exists exactly for an accepted delivered lodge\x1a\xd7\x02has(this.company_return) && has(this.submission) && (has(this.submission.receipt) == (this.company_return.state == 10)) && (!has(this.submission.receipt) || (has(this.submission.latest_attempt) && this.submission.latest_attempt.operation_type == 2 && has(this.submission.latest_attempt.outcome) && this.submission.latest_attempt.outcome == 1))\"\xfe\x03\n" +
+	"submission:\x80\x13\xbaH\xfc\x12\x1a\xa6\x02\n" +
+	"&company_return_submission.get.identity\x12%response return identities must match\x1a\xd4\x01has(this.company_return) && has(this.submission) && has(this.submission.latest_attempt) && this.company_return.id == this.submission.return_id && this.company_return.id == this.submission.latest_attempt.return_id\x1a\xf4\n" +
+	"\n" +
+	"$company_return_submission.get.matrix\x12Voperation, attempt state, outcome, and report state must match the lifecycle authority\x1a\xf3\t(this.submission.latest_attempt.operation_type == 1 && ((this.submission.latest_attempt.state in [1, 2, 4] && this.company_return.state == 5) || (this.submission.latest_attempt.state in [3, 7] && this.company_return.state == 4) || (this.submission.latest_attempt.state == 5 && this.company_return.state == 8) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 1 && this.company_return.state == 7) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 2 && this.company_return.state == 6) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 3 && this.company_return.state == 2))) || (this.submission.latest_attempt.operation_type == 2 && ((this.submission.latest_attempt.state in [1, 2, 4] && this.company_return.state == 9) || (this.submission.latest_attempt.state in [3, 7] && this.company_return.state == 7) || (this.submission.latest_attempt.state == 5 && this.company_return.state == 12) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 1 && this.company_return.state == 10) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 3 && this.company_return.state == 11)))\x1a\xd9\x05\n" +
+	"+company_return_submission.get.receipt_state\x12Lonly an accepted delivered lodge has aligned receipt and delivery identities\x1a\xdb\x04this.company_return.state == 10 ? (has(this.submission.receipt) && has(this.company_return.delivery) && this.submission.receipt.attempt_id == this.submission.latest_attempt.id && this.company_return.delivery.latest_attempt_id == this.submission.latest_attempt.id && this.company_return.delivery.operation_type == 2 && this.company_return.delivery.outcome == 1 && has(this.company_return.delivery.receipt_id) && this.company_return.delivery.receipt_id == this.submission.receipt.id && has(this.company_return.delivery.delivered_at)) : (!has(this.submission.receipt) && !has(this.company_return.delivery))\"\xfe\x03\n" +
 	"!RefreshCompanyReturnStatusRequest\x12I\n" +
 	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
 	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12i\n" +
 	"\treturn_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\breturnId\x12k\n" +
 	"\n" +
 	"attempt_id\x18\x04 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\tattemptId\x12?\n" +
-	"\x17expected_return_version\x18\x05 \x01(\x04B\a\xbaH\x042\x02(\x01R\x15expectedReturnVersion\"\x86\x05\n" +
+	"\x17expected_return_version\x18\x05 \x01(\x04B\a\xbaH\x042\x02(\x01R\x15expectedReturnVersion\"\xc6\x14\n" +
 	"\"RefreshCompanyReturnStatusResponse\x12F\n" +
 	"\x0ecompany_return\x18\x01 \x01(\v2\x17.tammy.v1.CompanyReturnB\x06\xbaH\x03\xc8\x01\x01R\rcompanyReturn\x12I\n" +
 	"\n" +
 	"submission\x18\x02 \x01(\v2!.tammy.v1.CompanyReturnSubmissionB\x06\xbaH\x03\xc8\x01\x01R\n" +
-	"submission:\xcc\x03\xbaH\xc8\x03\x1a\xc5\x03\n" +
-	"/company_return_submission.refresh.receipt_state\x128a receipt exists exactly for an accepted delivered lodge\x1a\xd7\x02has(this.company_return) && has(this.submission) && (has(this.submission.receipt) == (this.company_return.state == 10)) && (!has(this.submission.receipt) || (has(this.submission.latest_attempt) && this.submission.latest_attempt.operation_type == 2 && has(this.submission.latest_attempt.outcome) && this.submission.latest_attempt.outcome == 1))\"\xa6\x06\n" +
+	"submission:\x8c\x13\xbaH\x88\x13\x1a\xaa\x02\n" +
+	"*company_return_submission.refresh.identity\x12%response return identities must match\x1a\xd4\x01has(this.company_return) && has(this.submission) && has(this.submission.latest_attempt) && this.company_return.id == this.submission.return_id && this.company_return.id == this.submission.latest_attempt.return_id\x1a\xf8\n" +
+	"\n" +
+	"(company_return_submission.refresh.matrix\x12Voperation, attempt state, outcome, and report state must match the lifecycle authority\x1a\xf3\t(this.submission.latest_attempt.operation_type == 1 && ((this.submission.latest_attempt.state in [1, 2, 4] && this.company_return.state == 5) || (this.submission.latest_attempt.state in [3, 7] && this.company_return.state == 4) || (this.submission.latest_attempt.state == 5 && this.company_return.state == 8) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 1 && this.company_return.state == 7) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 2 && this.company_return.state == 6) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 3 && this.company_return.state == 2))) || (this.submission.latest_attempt.operation_type == 2 && ((this.submission.latest_attempt.state in [1, 2, 4] && this.company_return.state == 9) || (this.submission.latest_attempt.state in [3, 7] && this.company_return.state == 7) || (this.submission.latest_attempt.state == 5 && this.company_return.state == 12) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 1 && this.company_return.state == 10) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 3 && this.company_return.state == 11)))\x1a\xdd\x05\n" +
+	"/company_return_submission.refresh.receipt_state\x12Lonly an accepted delivered lodge has aligned receipt and delivery identities\x1a\xdb\x04this.company_return.state == 10 ? (has(this.submission.receipt) && has(this.company_return.delivery) && this.submission.receipt.attempt_id == this.submission.latest_attempt.id && this.company_return.delivery.latest_attempt_id == this.submission.latest_attempt.id && this.company_return.delivery.operation_type == 2 && this.company_return.delivery.outcome == 1 && has(this.company_return.delivery.receipt_id) && this.company_return.delivery.receipt_id == this.submission.receipt.id && has(this.company_return.delivery.delivered_at)) : (!has(this.submission.receipt) && !has(this.company_return.delivery))\"\xa6\x06\n" +
 	".ReconcileUnknownCompanyReturnSubmissionRequest\x12I\n" +
 	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
 	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12i\n" +
@@ -1388,13 +1403,16 @@ const file_tammy_v1_company_return_submission_proto_rawDesc = "" +
 	"\n" +
 	"attempt_id\x18\x04 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\tattemptId\x12?\n" +
 	"\x17expected_return_version\x18\x05 \x01(\x04B\a\xbaH\x042\x02(\x01R\x15expectedReturnVersion:\x98\x02\xbaH\x94\x02\x1a\x91\x02\n" +
-	"0company_return_submission.reconcile.fresh_factor\x12Dunknown-outcome reconciliation requires a purpose-bound fresh factor\x1a\x96\x01has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'company_return_reconcile_unknown'\"\x95\x05\n" +
+	"0company_return_submission.reconcile.fresh_factor\x12Dunknown-outcome reconciliation requires a purpose-bound fresh factor\x1a\x96\x01has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'company_return_reconcile_unknown'\"\xd9\x14\n" +
 	"/ReconcileUnknownCompanyReturnSubmissionResponse\x12F\n" +
 	"\x0ecompany_return\x18\x01 \x01(\v2\x17.tammy.v1.CompanyReturnB\x06\xbaH\x03\xc8\x01\x01R\rcompanyReturn\x12I\n" +
 	"\n" +
 	"submission\x18\x02 \x01(\v2!.tammy.v1.CompanyReturnSubmissionB\x06\xbaH\x03\xc8\x01\x01R\n" +
-	"submission:\xce\x03\xbaH\xca\x03\x1a\xc7\x03\n" +
-	"1company_return_submission.reconcile.receipt_state\x128a receipt exists exactly for an accepted delivered lodge\x1a\xd7\x02has(this.company_return) && has(this.submission) && (has(this.submission.receipt) == (this.company_return.state == 10)) && (!has(this.submission.receipt) || (has(this.submission.latest_attempt) && this.submission.latest_attempt.operation_type == 2 && has(this.submission.latest_attempt.outcome) && this.submission.latest_attempt.outcome == 1))*\x8d\x03\n" +
+	"submission:\x92\x13\xbaH\x8e\x13\x1a\xac\x02\n" +
+	",company_return_submission.reconcile.identity\x12%response return identities must match\x1a\xd4\x01has(this.company_return) && has(this.submission) && has(this.submission.latest_attempt) && this.company_return.id == this.submission.return_id && this.company_return.id == this.submission.latest_attempt.return_id\x1a\xfa\n" +
+	"\n" +
+	"*company_return_submission.reconcile.matrix\x12Voperation, attempt state, outcome, and report state must match the lifecycle authority\x1a\xf3\t(this.submission.latest_attempt.operation_type == 1 && ((this.submission.latest_attempt.state in [1, 2, 4] && this.company_return.state == 5) || (this.submission.latest_attempt.state in [3, 7] && this.company_return.state == 4) || (this.submission.latest_attempt.state == 5 && this.company_return.state == 8) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 1 && this.company_return.state == 7) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 2 && this.company_return.state == 6) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 3 && this.company_return.state == 2))) || (this.submission.latest_attempt.operation_type == 2 && ((this.submission.latest_attempt.state in [1, 2, 4] && this.company_return.state == 9) || (this.submission.latest_attempt.state in [3, 7] && this.company_return.state == 7) || (this.submission.latest_attempt.state == 5 && this.company_return.state == 12) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 1 && this.company_return.state == 10) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 3 && this.company_return.state == 11)))\x1a\xdf\x05\n" +
+	"1company_return_submission.reconcile.receipt_state\x12Lonly an accepted delivered lodge has aligned receipt and delivery identities\x1a\xdb\x04this.company_return.state == 10 ? (has(this.submission.receipt) && has(this.company_return.delivery) && this.submission.receipt.attempt_id == this.submission.latest_attempt.id && this.company_return.delivery.latest_attempt_id == this.submission.latest_attempt.id && this.company_return.delivery.operation_type == 2 && this.company_return.delivery.outcome == 1 && has(this.company_return.delivery.receipt_id) && this.company_return.delivery.receipt_id == this.submission.receipt.id && has(this.company_return.delivery.delivered_at)) : (!has(this.submission.receipt) && !has(this.company_return.delivery))*\x8d\x03\n" +
 	"\x19CompanyReturnAttemptState\x12,\n" +
 	"(COMPANY_RETURN_ATTEMPT_STATE_UNSPECIFIED\x10\x00\x12)\n" +
 	"%COMPANY_RETURN_ATTEMPT_STATE_PREPARED\x10\x01\x12,\n" +

@@ -1557,9 +1557,8 @@ func assertCompanyReturnSubmissionFieldRules(t *testing.T, file protoreflect.Fil
 		}
 	}
 	for key, want := range map[string][2]uint64{
-		"CompanyReturnSubmissionReceipt.encrypted_receipt_ref": {1, 128},
-		"CompanyReturnSubmissionReceipt.safe_display_summary":  {1, 2000},
-		"CompanyReturnStatusObservation.safe_status":           {1, 512},
+		"CompanyReturnSubmissionReceipt.safe_display_summary": {1, 2000},
+		"CompanyReturnStatusObservation.safe_status":          {1, 512},
 	} {
 		parts := strings.Split(key, ".")
 		field := file.Messages().ByName(protoreflect.Name(parts[0])).Fields().ByName(protoreflect.Name(parts[1]))
@@ -1567,6 +1566,11 @@ func assertCompanyReturnSubmissionFieldRules(t *testing.T, file protoreflect.Fil
 		if rules.GetMinLen() != want[0] || rules.GetMaxLen() != want[1] || rules.GetPattern() != "" {
 			t.Errorf("%s string rules = min %d max %d pattern %q", field.FullName(), rules.GetMinLen(), rules.GetMaxLen(), rules.GetPattern())
 		}
+	}
+	receiptRef := file.Messages().ByName("CompanyReturnSubmissionReceipt").Fields().ByName("encrypted_receipt_ref")
+	receiptRefRules := sbrValidationRules(receiptRef).GetString_()
+	if receiptRefRules.GetMinLen() != 1 || receiptRefRules.GetMaxLen() != 128 || receiptRefRules.GetPattern() != "^[A-Za-z0-9](?:[A-Za-z0-9_-]|[.][A-Za-z0-9_-])*$" {
+		t.Errorf("%s opaque reference rules = min %d max %d pattern %q", receiptRef.FullName(), receiptRefRules.GetMinLen(), receiptRefRules.GetMaxLen(), receiptRefRules.GetPattern())
 	}
 	for _, key := range []string{"CompanyReturnSubmissionAttempt.report_snapshot_hash", "CompanyReturnSubmissionAttempt.official_payload_hash", "CompanyReturnSubmissionAttempt.product_identifier_fingerprint", "CompanyReturnSubmissionAttempt.response_hash", "CompanyReturnSubmissionReceipt.response_schema_fingerprint", "CompanyReturnSubmissionReceipt.content_hash", "CompanyReturnStatusObservation.response_hash"} {
 		parts := strings.Split(key, ".")
@@ -1643,10 +1647,17 @@ func assertCompanyReturnSubmissionRequestAuthority(t *testing.T, file protorefle
 
 func assertCompanyReturnSubmissionCELRules(t *testing.T, file protoreflect.FileDescriptor) {
 	t.Helper()
-	receiptState := "has(this.company_return) && has(this.submission) && (has(this.submission.receipt) == (this.company_return.state == 10)) && (!has(this.submission.receipt) || (has(this.submission.latest_attempt) && this.submission.latest_attempt.operation_type == 2 && has(this.submission.latest_attempt.outcome) && this.submission.latest_attempt.outcome == 1))"
+	responseIdentity := "has(this.company_return) && has(this.submission) && has(this.submission.latest_attempt) && this.company_return.id == this.submission.return_id && this.company_return.id == this.submission.latest_attempt.return_id"
+	responseMatrix := "(this.submission.latest_attempt.operation_type == 1 && ((this.submission.latest_attempt.state in [1, 2, 4] && this.company_return.state == 5) || (this.submission.latest_attempt.state in [3, 7] && this.company_return.state == 4) || (this.submission.latest_attempt.state == 5 && this.company_return.state == 8) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 1 && this.company_return.state == 7) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 2 && this.company_return.state == 6) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 3 && this.company_return.state == 2))) || (this.submission.latest_attempt.operation_type == 2 && ((this.submission.latest_attempt.state in [1, 2, 4] && this.company_return.state == 9) || (this.submission.latest_attempt.state in [3, 7] && this.company_return.state == 7) || (this.submission.latest_attempt.state == 5 && this.company_return.state == 12) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 1 && this.company_return.state == 10) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 3 && this.company_return.state == 11)))"
+	receiptState := "this.company_return.state == 10 ? (has(this.submission.receipt) && has(this.company_return.delivery) && this.submission.receipt.attempt_id == this.submission.latest_attempt.id && this.company_return.delivery.latest_attempt_id == this.submission.latest_attempt.id && this.company_return.delivery.operation_type == 2 && this.company_return.delivery.outcome == 1 && has(this.company_return.delivery.receipt_id) && this.company_return.delivery.receipt_id == this.submission.receipt.id && has(this.company_return.delivery.delivered_at)) : (!has(this.submission.receipt) && !has(this.company_return.delivery))"
 	want := map[protoreflect.Name]map[string]string{
 		"CompanyReturnSubmissionAttempt": {
-			"company_return_submission.attempt.outcome_state": "(this.state in [1, 2, 3, 7] && !has(this.outcome)) || (this.state == 5 && has(this.outcome) && this.outcome == 4) || (this.state in [4, 6] && has(this.outcome) && this.outcome in [1, 2, 3])",
+			"company_return_submission.attempt.original_operation": "this.operation_type in [1, 2]",
+			"company_return_submission.attempt.outcome_state":      "(this.state in [1, 2, 3, 7] && !has(this.outcome)) || (this.state == 5 && has(this.outcome) && this.outcome == 4) || (this.state in [4, 6] && has(this.outcome) && this.outcome in [1, 2, 3])",
+			"company_return_submission.attempt.retry_state":        "(this.state == 3 && this.retry_classification == 2) || (this.state == 5 && this.retry_classification == 3) || (this.state in [1, 2, 4, 6, 7] && this.retry_classification == 1)",
+		},
+		"CompanyReturnSubmission": {
+			"company_return_submission.aggregate.identity": "has(this.latest_attempt) && this.return_id == this.latest_attempt.return_id && (!has(this.receipt) || this.receipt.attempt_id == this.latest_attempt.id) && this.status_history.all(observation, observation.attempt_id == this.latest_attempt.id)",
 		},
 		"CompanyReturnSubmissionReceipt": {
 			"company_return_submission.receipt.external_identifier": "has(this.conversation_id) || has(this.submission_id)",
@@ -1655,25 +1666,36 @@ func assertCompanyReturnSubmissionCELRules(t *testing.T, file protoreflect.FileD
 			"company_return_submission.prelodge.fresh_factor": "has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'company_return_prelodge'",
 		},
 		"PreLodgeCompanyReturnResponse": {
-			"company_return_submission.prelodge.result": "has(this.company_return) && has(this.submission) && has(this.submission.latest_attempt) && this.submission.latest_attempt.operation_type == 1 && this.company_return.state != 10 && !has(this.submission.receipt)",
+			"company_return_submission.prelodge.identity":      responseIdentity,
+			"company_return_submission.prelodge.matrix":        responseMatrix,
+			"company_return_submission.prelodge.receipt_state": receiptState,
+			"company_return_submission.prelodge.result":        "has(this.submission) && has(this.submission.latest_attempt) && this.submission.latest_attempt.operation_type == 1",
 		},
 		"LodgeCompanyReturnRequest": {
 			"company_return_submission.lodge.fresh_factor": "has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'company_return_lodge'",
 		},
 		"LodgeCompanyReturnResponse": {
+			"company_return_submission.lodge.identity":      responseIdentity,
+			"company_return_submission.lodge.matrix":        responseMatrix,
 			"company_return_submission.lodge.operation":     "has(this.submission) && has(this.submission.latest_attempt) && this.submission.latest_attempt.operation_type == 2",
 			"company_return_submission.lodge.receipt_state": receiptState,
 		},
 		"GetCompanyReturnSubmissionResponse": {
+			"company_return_submission.get.identity":      responseIdentity,
+			"company_return_submission.get.matrix":        responseMatrix,
 			"company_return_submission.get.receipt_state": receiptState,
 		},
 		"RefreshCompanyReturnStatusResponse": {
+			"company_return_submission.refresh.identity":      responseIdentity,
+			"company_return_submission.refresh.matrix":        responseMatrix,
 			"company_return_submission.refresh.receipt_state": receiptState,
 		},
 		"ReconcileUnknownCompanyReturnSubmissionRequest": {
 			"company_return_submission.reconcile.fresh_factor": "has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'company_return_reconcile_unknown'",
 		},
 		"ReconcileUnknownCompanyReturnSubmissionResponse": {
+			"company_return_submission.reconcile.identity":      responseIdentity,
+			"company_return_submission.reconcile.matrix":        responseMatrix,
 			"company_return_submission.reconcile.receipt_state": receiptState,
 		},
 	}
@@ -1750,6 +1772,139 @@ func TestCompanyReturnSubmissionProtovalidateEnforcesAttemptOutcomeState(t *test
 	for name, attempt := range invalid {
 		t.Run(name, func(t *testing.T) {
 			assertFinancialCloseValidationRejects(t, name, attempt)
+		})
+	}
+}
+
+func TestCompanyReturnSubmissionProtovalidateBindsAggregateAndDeliveredIdentities(t *testing.T) {
+	attempt := validCompanyReturnSubmissionAttempt(tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_PRELODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_DISPATCHING, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_UNSPECIFIED)
+	submission := validCompanyReturnSubmission(attempt, nil)
+	submission.StatusHistory = []*tammyv1.CompanyReturnStatusObservation{validCompanyReturnStatusObservation()}
+	if err := protovalidate.Validate(submission); err != nil {
+		t.Fatalf("valid identity-bound submission rejected: %v", err)
+	}
+
+	for name, mutate := range map[string]func(*tammyv1.CompanyReturnSubmission){
+		"aggregate return differs from attempt": func(value *tammyv1.CompanyReturnSubmission) { value.ReturnId = companyReturnSubmissionOtherID() },
+		"receipt differs from attempt": func(value *tammyv1.CompanyReturnSubmission) {
+			value.Receipt = validCompanyReturnSubmissionReceipt()
+			value.Receipt.AttemptId = companyReturnSubmissionOtherID()
+		},
+		"status differs from attempt": func(value *tammyv1.CompanyReturnSubmission) {
+			value.StatusHistory[0].AttemptId = companyReturnSubmissionOtherID()
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			invalid := proto.Clone(submission).(*tammyv1.CompanyReturnSubmission)
+			mutate(invalid)
+			assertFinancialCloseValidationRejects(t, name, invalid)
+		})
+	}
+
+	mismatchedReturn := validCompanyReturnSubmissionGetResponse(tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_PRELODGE_PENDING, tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_PRELODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_DISPATCHING, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_UNSPECIFIED)
+	mismatchedReturn.CompanyReturn.Id = companyReturnSubmissionOtherID()
+	assertFinancialCloseValidationRejects(t, "response return differs from submission", mismatchedReturn)
+
+	validDelivered := validCompanyReturnSubmissionGetResponse(tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_DELIVERED, tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_LODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_COMMITTED, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_SUCCESS)
+	validDelivered.Submission.Receipt = validCompanyReturnSubmissionReceipt()
+	validDelivered.CompanyReturn.Delivery = validCompanyReturnDeliverySummary()
+	if err := protovalidate.Validate(validDelivered); err != nil {
+		t.Fatalf("valid identity-bound delivered response rejected: %v", err)
+	}
+	for name, mutate := range map[string]func(*tammyv1.GetCompanyReturnSubmissionResponse){
+		"delivery attempt differs": func(value *tammyv1.GetCompanyReturnSubmissionResponse) {
+			value.CompanyReturn.Delivery.LatestAttemptId = companyReturnSubmissionOtherID()
+		},
+		"delivery receipt differs": func(value *tammyv1.GetCompanyReturnSubmissionResponse) {
+			value.CompanyReturn.Delivery.ReceiptId = companyReturnSubmissionString(companyReturnSubmissionOtherID())
+		},
+		"delivery operation differs": func(value *tammyv1.GetCompanyReturnSubmissionResponse) {
+			value.CompanyReturn.Delivery.OperationType = tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_PRELODGE
+		},
+		"delivery outcome differs": func(value *tammyv1.GetCompanyReturnSubmissionResponse) {
+			value.CompanyReturn.Delivery.Outcome = tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_REJECTED
+		},
+		"delivered return omits delivery": func(value *tammyv1.GetCompanyReturnSubmissionResponse) { value.CompanyReturn.Delivery = nil },
+	} {
+		t.Run(name, func(t *testing.T) {
+			invalid := proto.Clone(validDelivered).(*tammyv1.GetCompanyReturnSubmissionResponse)
+			mutate(invalid)
+			assertFinancialCloseValidationRejects(t, name, invalid)
+		})
+	}
+}
+
+func TestCompanyReturnSubmissionProtovalidateCouplesRetryClassificationToState(t *testing.T) {
+	validNotDispatched := validCompanyReturnSubmissionAttempt(tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_PRELODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_NOT_DISPATCHED, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_UNSPECIFIED)
+	validNotDispatched.RetryClassification = tammyv1.SubmissionRetryClassification_SUBMISSION_RETRY_CLASSIFICATION_SAME_IDENTITY_AFTER_PROVEN_NOT_DISPATCHED
+	validUnknown := validCompanyReturnSubmissionAttempt(tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_LODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_OUTCOME_UNKNOWN, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_OUTCOME_UNKNOWN)
+	validUnknown.RetryClassification = tammyv1.SubmissionRetryClassification_SUBMISSION_RETRY_CLASSIFICATION_STATUS_OR_RECONCILE_ONLY
+	for _, valid := range []*tammyv1.CompanyReturnSubmissionAttempt{validNotDispatched, validUnknown} {
+		if err := protovalidate.Validate(valid); err != nil {
+			t.Fatalf("valid %s retry classification rejected: %v", valid.State, err)
+		}
+	}
+
+	invalid := []*tammyv1.CompanyReturnSubmissionAttempt{}
+	for _, classification := range []tammyv1.SubmissionRetryClassification{tammyv1.SubmissionRetryClassification_SUBMISSION_RETRY_CLASSIFICATION_NEVER, tammyv1.SubmissionRetryClassification_SUBMISSION_RETRY_CLASSIFICATION_STATUS_OR_RECONCILE_ONLY} {
+		attempt := proto.Clone(validNotDispatched).(*tammyv1.CompanyReturnSubmissionAttempt)
+		attempt.RetryClassification = classification
+		invalid = append(invalid, attempt)
+	}
+	for _, classification := range []tammyv1.SubmissionRetryClassification{tammyv1.SubmissionRetryClassification_SUBMISSION_RETRY_CLASSIFICATION_NEVER, tammyv1.SubmissionRetryClassification_SUBMISSION_RETRY_CLASSIFICATION_SAME_IDENTITY_AFTER_PROVEN_NOT_DISPATCHED} {
+		attempt := proto.Clone(validUnknown).(*tammyv1.CompanyReturnSubmissionAttempt)
+		attempt.RetryClassification = classification
+		invalid = append(invalid, attempt)
+	}
+	for _, state := range []tammyv1.CompanyReturnAttemptState{tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_PREPARED, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_DISPATCHING, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_RESULT_RECORDED, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_COMMITTED, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_ABORTED} {
+		outcome := tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_UNSPECIFIED
+		if state == tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_RESULT_RECORDED || state == tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_COMMITTED {
+			outcome = tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_REJECTED
+		}
+		for _, classification := range []tammyv1.SubmissionRetryClassification{tammyv1.SubmissionRetryClassification_SUBMISSION_RETRY_CLASSIFICATION_SAME_IDENTITY_AFTER_PROVEN_NOT_DISPATCHED, tammyv1.SubmissionRetryClassification_SUBMISSION_RETRY_CLASSIFICATION_STATUS_OR_RECONCILE_ONLY} {
+			attempt := validCompanyReturnSubmissionAttempt(tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_LODGE, state, outcome)
+			attempt.RetryClassification = classification
+			invalid = append(invalid, attempt)
+		}
+	}
+	for index, attempt := range invalid {
+		t.Run(fmt.Sprintf("invalid cross-product %d", index), func(t *testing.T) {
+			assertFinancialCloseValidationRejects(t, "retry classification/state mismatch", attempt)
+		})
+	}
+}
+
+func TestCompanyReturnSubmissionProtovalidateEnforcesOperationOutcomeReportMatrix(t *testing.T) {
+	invalid := map[string]proto.Message{
+		"pre-lodge uses lodge pending":  validCompanyReturnSubmissionGetResponse(tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_LODGE_PENDING, tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_PRELODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_DISPATCHING, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_UNSPECIFIED),
+		"pre-lodge uses lodge rejected": validCompanyReturnSubmissionGetResponse(tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_LODGE_REJECTED, tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_PRELODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_COMMITTED, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_REJECTED),
+		"pre-lodge uses lodge unknown":  validCompanyReturnSubmissionGetResponse(tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_LODGE_OUTCOME_UNKNOWN, tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_PRELODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_OUTCOME_UNKNOWN, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_OUTCOME_UNKNOWN),
+		"pre-lodge success blocks":      validCompanyReturnSubmissionGetResponse(tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_BLOCKED, tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_PRELODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_COMMITTED, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_SUCCESS),
+		"pre-lodge warnings ready":      validCompanyReturnSubmissionGetResponse(tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_READY_TO_LODGE, tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_PRELODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_COMMITTED, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_WARNINGS),
+		"pre-lodge rejection ready":     validCompanyReturnSubmissionGetResponse(tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_READY_TO_LODGE, tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_PRELODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_COMMITTED, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_REJECTED),
+		"lodge warnings":                validCompanyReturnSubmissionGetResponse(tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_LODGE_REJECTED, tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_LODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_COMMITTED, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_WARNINGS),
+		"lodge success rejected":        validCompanyReturnSubmissionGetResponse(tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_LODGE_REJECTED, tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_LODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_COMMITTED, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_SUCCESS),
+		"lodge rejection ready":         validCompanyReturnSubmissionGetResponse(tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_READY_TO_LODGE, tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_LODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_COMMITTED, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_REJECTED),
+		"lodge unknown pending":         validCompanyReturnSubmissionGetResponse(tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_LODGE_PENDING, tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_LODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_OUTCOME_UNKNOWN, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_OUTCOME_UNKNOWN),
+		"lodge dispatch ready":          validCompanyReturnSubmissionGetResponse(tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_READY_TO_LODGE, tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_LODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_DISPATCHING, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_UNSPECIFIED),
+		"reconcile replaces original operation": &tammyv1.ReconcileUnknownCompanyReturnSubmissionResponse{
+			CompanyReturn: validCompanyReturnInState(tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_LODGE_OUTCOME_UNKNOWN),
+			Submission:    validCompanyReturnSubmission(validCompanyReturnSubmissionAttempt(tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_RECONCILE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_OUTCOME_UNKNOWN, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_OUTCOME_UNKNOWN), nil),
+		},
+	}
+	for name, message := range invalid {
+		t.Run(name, func(t *testing.T) {
+			assertFinancialCloseValidationRejects(t, name, message)
+		})
+	}
+}
+
+func TestCompanyReturnSubmissionProtovalidateRejectsPathLikeReceiptReferences(t *testing.T) {
+	for _, ref := range []string{"/tmp/receipt", "../receipt", "https://receipts.example/receipt", "receipt\nref"} {
+		t.Run(ref, func(t *testing.T) {
+			receipt := validCompanyReturnSubmissionReceipt()
+			receipt.EncryptedReceiptRef = ref
+			assertFinancialCloseValidationRejects(t, "path-like encrypted receipt reference", receipt)
 		})
 	}
 }
@@ -1855,11 +2010,18 @@ func TestCompanyReturnSubmissionProtovalidateRequiresExactFreshFactorPurposes(t 
 }
 
 func validCompanyReturnSubmissionAttempt(operation tammyv1.CompanyReturnOperationType, state tammyv1.CompanyReturnAttemptState, outcome tammyv1.CompanyReturnOperationOutcome) *tammyv1.CompanyReturnSubmissionAttempt {
+	retryClassification := tammyv1.SubmissionRetryClassification_SUBMISSION_RETRY_CLASSIFICATION_NEVER
+	if state == tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_NOT_DISPATCHED {
+		retryClassification = tammyv1.SubmissionRetryClassification_SUBMISSION_RETRY_CLASSIFICATION_SAME_IDENTITY_AFTER_PROVEN_NOT_DISPATCHED
+	}
+	if state == tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_OUTCOME_UNKNOWN {
+		retryClassification = tammyv1.SubmissionRetryClassification_SUBMISSION_RETRY_CLASSIFICATION_STATUS_OR_RECONCILE_ONLY
+	}
 	attempt := &tammyv1.CompanyReturnSubmissionAttempt{
 		Id: financialCloseID(), ReturnId: financialCloseID(), DeclarationId: financialCloseID(), ReportSnapshotHash: financialCloseHash(), OfficialPayloadHash: financialCloseHash(),
 		Environment: tammyv1.SubmissionEnvironment_SUBMISSION_ENVIRONMENT_SIMULATOR, ProductIdentifierFingerprint: financialCloseHash(), ServiceId: "CompanyReturn.2026",
 		OperationType: operation, OperationId: financialCloseID(), IdempotencyIdentity: financialCloseID(), State: state,
-		RetryClassification: tammyv1.SubmissionRetryClassification_SUBMISSION_RETRY_CLASSIFICATION_NEVER, CreatedAt: financialCloseTimestamp(), UpdatedAt: financialCloseTimestamp(),
+		RetryClassification: retryClassification, CreatedAt: financialCloseTimestamp(), UpdatedAt: financialCloseTimestamp(),
 	}
 	if outcome != tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_UNSPECIFIED {
 		attempt.Outcome = &outcome
@@ -1871,9 +2033,39 @@ func validCompanyReturnSubmissionAttempt(operation tammyv1.CompanyReturnOperatio
 func validCompanyReturnSubmissionReceipt() *tammyv1.CompanyReturnSubmissionReceipt {
 	conversationID := "conversation-2026"
 	return &tammyv1.CompanyReturnSubmissionReceipt{
-		Id: financialCloseID(), AttemptId: financialCloseID(), EncryptedReceiptRef: "receipt/2026/opaque", SafeDisplaySummary: "Accepted by the official service",
+		Id: financialCloseID(), AttemptId: financialCloseID(), EncryptedReceiptRef: "receipt_2026_opaque", SafeDisplaySummary: "Accepted by the official service",
 		ConversationId: &conversationID, ReceivedAt: financialCloseTimestamp(), ResponseSchemaFingerprint: financialCloseHash(), ContentHash: financialCloseHash(),
 	}
+}
+
+func validCompanyReturnStatusObservation() *tammyv1.CompanyReturnStatusObservation {
+	return &tammyv1.CompanyReturnStatusObservation{
+		Id: financialCloseID(), AttemptId: financialCloseID(), OperationType: tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_STATUS,
+		StableResultCode: "status.accepted", SafeStatus: "Accepted", ObservedAt: financialCloseTimestamp(), ResponseHash: financialCloseHash(),
+	}
+}
+
+func validCompanyReturnDeliverySummary() *tammyv1.CompanyReturnDeliverySummary {
+	return &tammyv1.CompanyReturnDeliverySummary{
+		LatestAttemptId: financialCloseID(), OperationType: tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_LODGE,
+		Outcome: tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_SUCCESS, SafeStatusCode: "accepted",
+		DeliveredAt: financialCloseTimestamp(), ReceiptId: companyReturnSubmissionString(financialCloseID()),
+	}
+}
+
+func validCompanyReturnSubmissionGetResponse(returnState tammyv1.CompanyReturnState, operation tammyv1.CompanyReturnOperationType, attemptState tammyv1.CompanyReturnAttemptState, outcome tammyv1.CompanyReturnOperationOutcome) *tammyv1.GetCompanyReturnSubmissionResponse {
+	return &tammyv1.GetCompanyReturnSubmissionResponse{
+		CompanyReturn: validCompanyReturnInState(returnState),
+		Submission:    validCompanyReturnSubmission(validCompanyReturnSubmissionAttempt(operation, attemptState, outcome), nil),
+	}
+}
+
+func companyReturnSubmissionOtherID() string {
+	return "01890f1e-7c40-7cc0-8ef9-5d7707d34124"
+}
+
+func companyReturnSubmissionString(value string) *string {
+	return &value
 }
 
 func validCompanyReturnSubmission(attempt *tammyv1.CompanyReturnSubmissionAttempt, receipt *tammyv1.CompanyReturnSubmissionReceipt) *tammyv1.CompanyReturnSubmission {
@@ -1883,6 +2075,9 @@ func validCompanyReturnSubmission(attempt *tammyv1.CompanyReturnSubmissionAttemp
 func validCompanyReturnInState(state tammyv1.CompanyReturnState) *tammyv1.CompanyReturn {
 	companyReturn := validCompanyReturn()
 	companyReturn.State = state
+	if state == tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_DELIVERED {
+		companyReturn.Delivery = validCompanyReturnDeliverySummary()
+	}
 	return companyReturn
 }
 
