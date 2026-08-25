@@ -1,9 +1,9 @@
 # Local Accounting and SBR Registration Readiness Design
 
-**Date:** 2026-08-21  
-**Status:** Approved for planning  
-**Initial target:** macOS 14+, Apple silicon  
-**SBR delivery stage:** simulator and registration evidence first; EVTE when ATO inputs are issued; production disabled
+- **Date:** 2026-08-21
+- **Status:** Approved for planning
+- **Initial target:** macOS 14+, Apple silicon
+- **SBR delivery stage:** simulator and registration evidence first; EVTE when ATO inputs are issued; production disabled
 
 ## 1. Outcome
 
