@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -7,11 +7,33 @@ import { create, toBinary } from "@bufbuild/protobuf";
 import { FileDescriptorSetSchema } from "@bufbuild/protobuf/wkt";
 import { stringify } from "yaml";
 import { E2E_IDEMPOTENCY_MODES } from "./e2e-coverage-vocabulary.mjs";
+import { COMPANY_EOFY_DECLARED_FUTURE_RPCS } from "./slice-one-coverage-policy.mjs";
 
 const RPC = "tammy.v1.WorkspaceService.GetWorkspaceState";
 const SYSTEM_RPC = "tammy.v1.SystemService.GetDiagnostics";
 const REVIEWED_EXCEPTION = "not_applicable_pre_workspace_system_query";
 const ROLES = ["workspace_admin", "business_preparer", "business_lodger", "auditor"];
+const COMPANY_EOFY_SERVICE_PREFIXES = [
+  "tammy.v1.FinancialCloseService.",
+  "tammy.v1.CompanyTaxService.",
+  "tammy.v1.CompanyReturnSubmissionService.",
+];
+const COMPANY_EOFY_TRANSITION_PREFIXES = [
+  "tammy.v1.FinancialCloseState.",
+  "tammy.v1.CompanyReturnState.",
+  "tammy.v1.CompanyReturnAttemptState.",
+];
+
+async function repositoryValidationDescriptorPath(root) {
+  const descriptorPath = path.join(root, ".tmp/contracts/descriptors.pb");
+  try {
+    await access(descriptorPath);
+  } catch {
+    const { buildDescriptors } = await import("./build-descriptors.mjs");
+    await buildDescriptors({ mode: "validation", root });
+  }
+  return descriptorPath;
+}
 
 function validInput() {
   return {
@@ -849,6 +871,107 @@ test("rejects an unreviewed not-applicable exception", async () => {
   assert.throws(() => checkE2ECoverage(input), {
     message: "E2E_COVERAGE_MANIFEST_INVALID",
   });
+});
+
+test("real company EOFY descriptors and manifests catalogue only future surface", async () => {
+  const root = process.cwd();
+  const descriptorPath = await repositoryValidationDescriptorPath(root);
+  const { checkE2ECoverage, descriptorRpcNames, parseCoverageManifest, runE2ECoverage } =
+    await import("./check-e2e-coverage.mjs");
+
+  await assert.doesNotReject(runE2ECoverage({ descriptorPath, root }));
+
+  const [descriptorBytes, coverageSource, transitionSource, preloadSource] = await Promise.all([
+    readFile(descriptorPath),
+    readFile(path.join(root, "test/e2e/coverage.yaml"), "utf8"),
+    readFile(path.join(root, "test/e2e/transitions.yaml"), "utf8"),
+    readFile(path.join(root, "apps/desktop/src/shared/preload-methods.json"), "utf8"),
+  ]);
+  const coverage = parseCoverageManifest(coverageSource);
+  const transitionIndex = parseCoverageManifest(transitionSource);
+  const preloadMethods = JSON.parse(preloadSource);
+  const descriptorRpcs = descriptorRpcNames(descriptorBytes);
+  const transitionIds = Object.keys(transitionIndex.transitions);
+  const companyEofyDescriptorRpcs = descriptorRpcs.filter((rpcName) =>
+    COMPANY_EOFY_SERVICE_PREFIXES.some((prefix) => rpcName.startsWith(prefix)),
+  );
+  assert.deepEqual(companyEofyDescriptorRpcs, [...COMPANY_EOFY_DECLARED_FUTURE_RPCS].sort());
+
+  assert.deepEqual(coverage.scenarios["E2E-18"], {
+    cases: [],
+    futureCases: [
+      "company-eofy/contracts",
+      "company-eofy/lifecycle",
+      "company-eofy/permissions",
+      "company-eofy/financial-close",
+      "company-eofy/company-return",
+      "company-eofy/submission",
+    ],
+  });
+  for (const rpcName of companyEofyDescriptorRpcs) {
+    const rpc = coverage.rpcs[rpcName];
+    assert.equal(rpc.stage, "declared_future", rpcName);
+    assert.deepEqual(rpc.cases, [], rpcName);
+    assert.ok(!preloadMethods.includes(rpc.preload), rpcName);
+  }
+
+  const companyEofyTransitionIds = Object.keys(transitionIndex.transitions).filter((transitionId) =>
+    COMPANY_EOFY_TRANSITION_PREFIXES.some((prefix) => transitionId.startsWith(prefix)),
+  );
+  assert.equal(companyEofyTransitionIds.length, 47);
+  assert.deepEqual(
+    Object.keys(coverage.transitions).filter((transitionId) =>
+      COMPANY_EOFY_TRANSITION_PREFIXES.some((prefix) => transitionId.startsWith(prefix)),
+    ),
+    companyEofyTransitionIds,
+  );
+  for (const transitionId of companyEofyTransitionIds) {
+    assert.deepEqual(coverage.transitions[transitionId], {
+      stage: "declared_future",
+      cases: [],
+      futureCases: ["company-eofy/lifecycle"],
+    });
+  }
+
+  const missingRpc = structuredClone(coverage);
+  delete missingRpc.rpcs[COMPANY_EOFY_DECLARED_FUTURE_RPCS[0]];
+  assert.throws(
+    () =>
+      checkE2ECoverage({
+        coverage: missingRpc,
+        descriptorRpcs,
+        preloadMethods,
+        transitionIds,
+      }),
+    { message: "E2E_COVERAGE_RPC_MISSING" },
+  );
+
+  const missingTransition = structuredClone(coverage);
+  delete missingTransition.transitions[companyEofyTransitionIds[0]];
+  assert.throws(
+    () =>
+      checkE2ECoverage({
+        coverage: missingTransition,
+        descriptorRpcs,
+        preloadMethods,
+        transitionIds,
+      }),
+    { message: "E2E_COVERAGE_TRANSITION_MISSING" },
+  );
+
+  assert.throws(
+    () =>
+      checkE2ECoverage({
+        coverage,
+        descriptorRpcs,
+        preloadMethods: [
+          ...preloadMethods,
+          coverage.rpcs[COMPANY_EOFY_DECLARED_FUTURE_RPCS[0]].preload,
+        ],
+        transitionIds,
+      }),
+    { message: "E2E_COVERAGE_FUTURE_PROMOTION_REQUIRED" },
+  );
 });
 
 test("loads coverage from the descriptor and production manifests", async (context) => {

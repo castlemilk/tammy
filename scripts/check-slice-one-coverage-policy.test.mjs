@@ -110,7 +110,12 @@ test("company EOFY close, return preparation, and submission catalogue exactly 3
     "company-eofy/submission",
   ]);
   assert.deepEqual(
-    Object.keys(coverage.rpcs).filter((rpcName) => rpcName.startsWith("tammy.v1.FinancialCloseService.") || rpcName.startsWith("tammy.v1.CompanyTaxService.") || rpcName.startsWith("tammy.v1.CompanyReturnSubmissionService.")),
+    Object.keys(coverage.rpcs).filter(
+      (rpcName) =>
+        rpcName.startsWith("tammy.v1.FinancialCloseService.") ||
+        rpcName.startsWith("tammy.v1.CompanyTaxService.") ||
+        rpcName.startsWith("tammy.v1.CompanyReturnSubmissionService."),
+    ),
     expected,
   );
   for (const rpcName of expected) {
@@ -119,8 +124,30 @@ test("company EOFY close, return preparation, and submission catalogue exactly 3
     assert.deepEqual(rpc.cases, [], rpcName);
     const isClose = rpcName.includes("FinancialCloseService");
     const isSubmission = rpcName.includes("CompanyReturnSubmissionService");
-    assert.deepEqual(rpc.futureCases, ["company-eofy/contracts", "company-eofy/permissions", isClose ? "company-eofy/financial-close" : isSubmission ? "company-eofy/submission" : "company-eofy/company-return"], rpcName);
-    assert.deepEqual(rpc.routes, [isClose ? "/eofy-company-tax/close" : isSubmission ? "/eofy-company-tax/lodge" : "/eofy-company-tax/return"], rpcName);
+    assert.deepEqual(
+      rpc.futureCases,
+      [
+        "company-eofy/contracts",
+        "company-eofy/permissions",
+        isClose
+          ? "company-eofy/financial-close"
+          : isSubmission
+            ? "company-eofy/submission"
+            : "company-eofy/company-return",
+      ],
+      rpcName,
+    );
+    assert.deepEqual(
+      rpc.routes,
+      [
+        isClose
+          ? "/eofy-company-tax/close"
+          : isSubmission
+            ? "/eofy-company-tax/lodge"
+            : "/eofy-company-tax/return",
+      ],
+      rpcName,
+    );
     assert.ok(!preloadMethods.includes(rpc.preload), rpcName);
   }
 });
@@ -293,7 +320,11 @@ test("coverage conflict failures match every public request concurrency field", 
         const request = requestBodies.get(rpcMatch[2]);
         const failures = SLICE_ONE_RPC_POLICY[rpcName].principalFailures;
 
-        if (/\b(?:expected_version|expected_return_version|expected_predecessor_version|expected_latest_version)\s*=/.test(request)) {
+        if (
+          /\b(?:expected_version|expected_return_version|expected_predecessor_version|expected_latest_version)\s*=/.test(
+            request,
+          )
+        ) {
           assert.ok(failures.includes("STALE_VERSION"), rpcName);
         } else {
           assert.ok(!failures.includes("STALE_VERSION"), rpcName);
@@ -305,6 +336,76 @@ test("coverage conflict failures match every public request concurrency field", 
       }
     }
   }
+
+  const companyEofyProtoPaths = protoPaths.slice(-3);
+  const companyEofySources = new Map(
+    await Promise.all(
+      companyEofyProtoPaths.map(async (protoPath) => [
+        protoPath,
+        await readFile(protoPath, "utf8"),
+      ]),
+    ),
+  );
+  const concurrencyFieldNames = [
+    ...new Set(
+      [...companyEofySources.values()].flatMap((source) =>
+        [...source.matchAll(/\b(expected_[a-z_]+)\s*=/g)].map((match) => match[1]),
+      ),
+    ),
+  ].sort();
+  assert.deepEqual(concurrencyFieldNames, [
+    "expected_latest_version",
+    "expected_predecessor_version",
+    "expected_return_version",
+    "expected_version",
+  ]);
+
+  const positiveExamples = [
+    [
+      "proto/tammy/v1/financial_close.proto",
+      "ResolveCloseWarningRequest",
+      "expected_version",
+      "tammy.v1.FinancialCloseService.ResolveCloseWarning",
+    ],
+    [
+      "proto/tammy/v1/company_return_submission.proto",
+      "PreLodgeCompanyReturnRequest",
+      "expected_return_version",
+      "tammy.v1.CompanyReturnSubmissionService.PreLodgeCompanyReturn",
+    ],
+    [
+      "proto/tammy/v1/company_tax.proto",
+      "CreateCompanyReturnReplacementRequest",
+      "expected_predecessor_version",
+      "tammy.v1.CompanyTaxService.CreateCompanyReturnReplacement",
+    ],
+    [
+      "proto/tammy/v1/company_tax.proto",
+      "CreateCompanyReturnAmendmentRequest",
+      "expected_latest_version",
+      "tammy.v1.CompanyTaxService.CreateCompanyReturnAmendment",
+    ],
+  ];
+  for (const [protoPath, requestName, fieldName, rpcName] of positiveExamples) {
+    const request = companyEofySources
+      .get(protoPath)
+      .match(new RegExp(`^message ${requestName} \\{([\\s\\S]*?)^\\}`, "m"))?.[1];
+    assert.match(request, new RegExp(`\\b${fieldName}\\s*=`), rpcName);
+    assert.ok(SLICE_ONE_RPC_POLICY[rpcName].principalFailures.includes("STALE_VERSION"), rpcName);
+  }
+
+  const noConcurrencyRequest = companyEofySources
+    .get("proto/tammy/v1/financial_close.proto")
+    .match(/^message CreateFinancialCloseRequest \{([\s\S]*?)^\}/m)?.[1];
+  assert.doesNotMatch(
+    noConcurrencyRequest,
+    /\b(?:expected_version|expected_return_version|expected_predecessor_version|expected_latest_version)\s*=/,
+  );
+  assert.ok(
+    !SLICE_ONE_RPC_POLICY[
+      "tammy.v1.FinancialCloseService.CreateFinancialClose"
+    ].principalFailures.includes("STALE_VERSION"),
+  );
 });
 
 test("session-action authentication failures match request presence", async () => {
