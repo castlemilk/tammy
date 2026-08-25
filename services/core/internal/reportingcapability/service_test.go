@@ -150,6 +150,39 @@ func TestServiceRejectsInvalidRegistryResponse(t *testing.T) {
 	}
 }
 
+func TestServiceRejectsUnknownFieldsAnywhereInRegistryResponse(t *testing.T) {
+	tests := map[string]func(*tammyv1.ReportingCapability){
+		"top-level": func(capability *tammyv1.ReportingCapability) {
+			capability.ProtoReflect().SetUnknown([]byte{0x20, 0x01})
+		},
+		"nested mode": func(capability *tammyv1.ReportingCapability) {
+			capability.Modes[0].ProtoReflect().SetUnknown([]byte{0x20, 0x01})
+		},
+	}
+	for name, mutate := range tests {
+		t.Run(name, func(t *testing.T) {
+			capability := validCapability()
+			mutate(capability)
+			registry := &recordingRegistry{value: capability}
+			service, err := NewService(registry)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			response, callErr := service.GetReportingCapability(
+				context.Background(),
+				connect.NewRequest(validCapabilityRequest()),
+			)
+			if response != nil || connect.CodeOf(callErr) != connect.CodeInternal {
+				t.Fatalf("GetReportingCapability() = %#v, %v; want Internal", response, callErr)
+			}
+			if registry.calls != 1 {
+				t.Fatalf("Lookup() calls = %d; want 1", registry.calls)
+			}
+		})
+	}
+}
+
 func TestServiceRejectsMismatchedRegistryResponse(t *testing.T) {
 	tests := []struct {
 		name   string
