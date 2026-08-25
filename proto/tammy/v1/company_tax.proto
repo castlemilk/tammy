@@ -2,6 +2,10 @@ edition = "2023";
 
 package tammy.v1;
 
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+import "tammy/v1/common.proto";
+
 option features.field_presence = IMPLICIT;
 option go_package = "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1";
 
@@ -102,4 +106,965 @@ enum CompanyReturnOperationOutcome {
 
   // COMPANY_RETURN_OPERATION_OUTCOME_OUTCOME_UNKNOWN identifies possible acceptance with unresolved transport.
   COMPANY_RETURN_OPERATION_OUTCOME_OUTCOME_UNKNOWN = 4;
+}
+
+// RequiredAnswer is an explicit yes/no answer; omission is never inferred.
+enum RequiredAnswer {
+  REQUIRED_ANSWER_UNSPECIFIED = 0;
+  REQUIRED_ANSWER_YES = 1;
+  REQUIRED_ANSWER_NO = 2;
+}
+
+// ReturnFactProvenanceKind identifies the bounded authority for a prepared fact.
+enum ReturnFactProvenanceKind {
+  RETURN_FACT_PROVENANCE_KIND_UNSPECIFIED = 0;
+  RETURN_FACT_PROVENANCE_KIND_FROZEN_BOOK = 1;
+  RETURN_FACT_PROVENANCE_KIND_REVIEWED_TAX_ADJUSTMENT = 2;
+  RETURN_FACT_PROVENANCE_KIND_VERIFIED_PROFILE = 3;
+  RETURN_FACT_PROVENANCE_KIND_EXPLICIT_EVIDENCED_INPUT = 4;
+  RETURN_FACT_PROVENANCE_KIND_BUNDLE_ELECTION = 5;
+  RETURN_FACT_PROVENANCE_KIND_CALCULATION_RULE = 6;
+}
+
+enum ReturnFactValidationStatus {
+  RETURN_FACT_VALIDATION_STATUS_UNSPECIFIED = 0;
+  RETURN_FACT_VALIDATION_STATUS_VALID = 1;
+  RETURN_FACT_VALIDATION_STATUS_BLOCKER = 2;
+  RETURN_FACT_VALIDATION_STATUS_WARNING = 3;
+  RETURN_FACT_VALIDATION_STATUS_INFORMATION = 4;
+  RETURN_FACT_VALIDATION_STATUS_UNSUPPORTED = 5;
+}
+
+enum ReturnValidationSeverity {
+  RETURN_VALIDATION_SEVERITY_UNSPECIFIED = 0;
+  RETURN_VALIDATION_SEVERITY_BLOCKER = 1;
+  RETURN_VALIDATION_SEVERITY_WARNING = 2;
+  RETURN_VALIDATION_SEVERITY_INFORMATION = 3;
+  RETURN_VALIDATION_SEVERITY_UNSUPPORTED = 4;
+}
+
+enum TaxAdjustmentType {
+  TAX_ADJUSTMENT_TYPE_UNSPECIFIED = 0;
+  TAX_ADJUSTMENT_TYPE_NON_DEDUCTIBLE_EXPENSE = 1;
+  TAX_ADJUSTMENT_TYPE_EXEMPT_NON_ASSESSABLE_INCOME = 2;
+  TAX_ADJUSTMENT_TYPE_ACCOUNTING_TAX_DEPRECIATION = 3;
+  TAX_ADJUSTMENT_TYPE_PROVISION_ACCRUAL_REVERSAL = 4;
+  TAX_ADJUSTMENT_TYPE_TAX_PAYMENT_CREDIT = 5;
+  TAX_ADJUSTMENT_TYPE_CURRENT_YEAR_REVENUE_LOSS = 6;
+  TAX_ADJUSTMENT_TYPE_CARRIED_FORWARD_REVENUE_LOSS = 7;
+}
+
+enum TaxAdjustmentTiming {
+  TAX_ADJUSTMENT_TIMING_UNSPECIFIED = 0;
+  TAX_ADJUSTMENT_TIMING_PERMANENT = 1;
+  TAX_ADJUSTMENT_TIMING_TEMPORARY = 2;
+}
+
+enum HoldingCompanyKind {
+  HOLDING_COMPANY_KIND_UNSPECIFIED = 0;
+  HOLDING_COMPANY_KIND_NONE = 1;
+  HOLDING_COMPANY_KIND_AUSTRALIAN = 2;
+  HOLDING_COMPANY_KIND_FOREIGN = 3;
+}
+
+enum BaseRatePassiveIncomeClassification {
+  BASE_RATE_PASSIVE_INCOME_CLASSIFICATION_UNSPECIFIED = 0;
+  BASE_RATE_PASSIVE_INCOME_CLASSIFICATION_PASSIVE = 1;
+  BASE_RATE_PASSIVE_INCOME_CLASSIFICATION_NON_PASSIVE = 2;
+}
+
+enum SmallBusinessEntityChoice {
+  SMALL_BUSINESS_ENTITY_CHOICE_UNSPECIFIED = 0;
+  SMALL_BUSINESS_ENTITY_CHOICE_APPLY = 1;
+  SMALL_BUSINESS_ENTITY_CHOICE_DO_NOT_APPLY = 2;
+}
+
+enum DepreciationChoice {
+  DEPRECIATION_CHOICE_UNSPECIFIED = 0;
+  DEPRECIATION_CHOICE_STANDARD = 1;
+  DEPRECIATION_CHOICE_SUPPORTED_SMALL_BUSINESS = 2;
+}
+
+enum CompanyReturnExportKind {
+  COMPANY_RETURN_EXPORT_KIND_UNSPECIFIED = 0;
+  COMPANY_RETURN_EXPORT_KIND_REDACTED_REVIEW_PDF = 1;
+  COMPANY_RETURN_EXPORT_KIND_ENCRYPTED_HANDOFF_ARCHIVE = 2;
+}
+
+message AddressInput {
+  string line_1 = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+  }];
+  string line_2 = 2 [(buf.validate.field).string.max_len = 128];
+  string locality = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+  }];
+  string state = 4 [(buf.validate.field).string.pattern = "^(ACT|NSW|NT|QLD|SA|TAS|VIC|WA)$"];
+  string postcode = 5 [(buf.validate.field).string.pattern = "^[0-9]{4}$"];
+  string country_code = 6 [(buf.validate.field).string.const = "AU"];
+}
+
+message RelatedEntityTurnoverContribution {
+  option (buf.validate.message).cel = {
+    id: "company_tax.related_turnover.aud"
+    message: "related entity turnover must be denominated in AUD"
+    expression: "has(this.amount) && this.amount.currency_code == 'AUD'"
+  };
+  string entity_name = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 200
+  }];
+  string entity_abn = 2 [(buf.validate.field).string.pattern = "^[0-9]{11}$"];
+  Money amount = 3 [(buf.validate.field).required = true];
+  repeated SourceRef evidence = 4 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 20
+  }];
+  string reviewed_control_or_affiliate_basis = 5 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 2000
+  }];
+}
+
+message PassiveIncomeClassificationInput {
+  SourceRef income_source = 1 [(buf.validate.field).required = true];
+  BaseRatePassiveIncomeClassification classification = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  string bundle_rule_id = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+    pattern: "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"
+  }];
+  repeated SourceRef evidence = 4 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 20
+  }];
+  string reviewed_by_user_id = 5 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+}
+
+message ApplicabilityAnswers {
+  RequiredAnswer tofa_applies = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  RequiredAnswer psi_applies = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  RequiredAnswer interposed_entity_election_applies = 3 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  RequiredAnswer consolidated_group_member = 4 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  RequiredAnswer research_and_development_incentive = 5 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  RequiredAnswer international_dealings = 6 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  RequiredAnswer reportable_tax_position = 7 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  RequiredAnswer life_insurance_business = 8 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  RequiredAnswer cgt_schedule_required = 9 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  RequiredAnswer losses_schedule_required = 10 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  RequiredAnswer other_schedule_required = 11 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  RequiredAnswer fb_or_unsupported_payroll_effect = 12 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  RequiredAnswer division_7a_unresolved = 13 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  RequiredAnswer unsupported_inventory = 14 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  RequiredAnswer unsupported_multicurrency = 15 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  RequiredAnswer unsupported_crypto = 16 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+}
+
+message PriorRevenueLossInput {
+  option (buf.validate.message).cel = {
+    id: "company_tax.prior_revenue_loss.supported"
+    message: "prior revenue loss requires positive AUD balance, explicit answers, and evidence"
+    expression: "has(this.opening_balance) && this.opening_balance.currency_code == 'AUD' && this.opening_balance.minor_units > 0 && this.ownership_continuity_confirmed != 0 && this.same_or_similar_business_judgement_required != 0 && this.evidence.size() > 0"
+  };
+  Money opening_balance = 1 [(buf.validate.field).required = true];
+  RequiredAnswer ownership_continuity_confirmed = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  RequiredAnswer same_or_similar_business_judgement_required = 3 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  repeated SourceRef evidence = 4 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 20
+  }];
+}
+
+message CompanyTaxProfileInput {
+  string legal_name = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 200
+  }];
+  SecretInput tfn = 2 [(buf.validate.field).required = true];
+  AddressInput current_postal_address = 3 [(buf.validate.field).required = true];
+  AddressInput prior_postal_address = 4 [(buf.validate.field).required = true];
+  AddressInput main_business_address = 5 [(buf.validate.field).required = true];
+  RequiredAnswer australian_resident = 6 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  RequiredAnswer private_company = 7 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  string main_business_activity_code = 8 [(buf.validate.field).string.pattern = "^[0-9]{6}$"];
+  string main_business_activity_description = 9 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 200
+  }];
+  SecretInput refund_bsb = 10;
+  SecretInput refund_account_number = 11;
+  RequiredAnswer final_return = 12 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  HoldingCompanyKind holding_company_kind = 13 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  string immediate_holding_name = 14 [(buf.validate.field).string.max_len = 200];
+  string ultimate_holding_name = 15 [(buf.validate.field).string.max_len = 200];
+  repeated RelatedEntityTurnoverContribution related_turnover = 16 [(buf.validate.field).repeated.max_items = 100];
+  repeated PassiveIncomeClassificationInput passive_income_classifications = 17 [(buf.validate.field).repeated.max_items = 500];
+  SmallBusinessEntityChoice small_business_entity_choice = 18 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  DepreciationChoice depreciation_choice = 19 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  PriorRevenueLossInput prior_revenue_loss = 20;
+  ApplicabilityAnswers applicability = 21 [(buf.validate.field).required = true];
+}
+
+message CompanyReturnInput {
+  option (buf.validate.message).cel = {
+    id: "company_tax.return_input.aud"
+    message: "company return input amounts must be denominated in AUD"
+    expression: "has(this.loss_amount_to_apply) && this.loss_amount_to_apply.currency_code == 'AUD'"
+  };
+  Money loss_amount_to_apply = 1 [(buf.validate.field).required = true];
+  repeated SourceRef external_summary_evidence = 2 [(buf.validate.field).repeated.max_items = 20];
+  repeated SourceRef payroll_summary_evidence = 3 [(buf.validate.field).repeated.max_items = 20];
+  string review_note = 4 [(buf.validate.field).string.max_len = 2000];
+}
+
+message MaskedCompanyTaxProfile {
+  string organisation_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 version = 2 [(buf.validate.field).uint64.gte = 1];
+  string legal_name = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 200
+  }];
+  string masked_tfn = 4 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 16
+  }];
+  string verified_abn = 5 [(buf.validate.field).string.pattern = "^[0-9]{11}$"];
+  AddressInput current_postal_address = 6 [(buf.validate.field).required = true];
+  AddressInput prior_postal_address = 7 [(buf.validate.field).required = true];
+  AddressInput main_business_address = 8 [(buf.validate.field).required = true];
+  RequiredAnswer australian_resident = 9 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  RequiredAnswer private_company = 10 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  string main_business_activity_code = 11 [(buf.validate.field).string.pattern = "^[0-9]{6}$"];
+  string main_business_activity_description = 12 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 200
+  }];
+  string masked_refund_bsb = 13 [(buf.validate.field).string.max_len = 16];
+  string masked_refund_account = 14 [(buf.validate.field).string.max_len = 32];
+  RequiredAnswer final_return = 15 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  HoldingCompanyKind holding_company_kind = 16 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  string immediate_holding_name = 17 [(buf.validate.field).string.max_len = 200];
+  string ultimate_holding_name = 18 [(buf.validate.field).string.max_len = 200];
+  repeated RelatedEntityTurnoverContribution related_turnover = 19 [(buf.validate.field).repeated.max_items = 100];
+  repeated PassiveIncomeClassificationInput passive_income_classifications = 20 [(buf.validate.field).repeated.max_items = 500];
+  SmallBusinessEntityChoice small_business_entity_choice = 21 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  DepreciationChoice depreciation_choice = 22 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  PriorRevenueLossInput prior_revenue_loss = 23;
+  ApplicabilityAnswers applicability = 24 [(buf.validate.field).required = true];
+  string updated_by_user_id = 25 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  google.protobuf.Timestamp updated_at = 26 [(buf.validate.field).required = true];
+}
+
+message TaxAdjustment {
+  option (buf.validate.message).cel = {
+    id: "company_tax.adjustment.aud"
+    message: "tax adjustment must be denominated in AUD"
+    expression: "has(this.amount) && this.amount.currency_code == 'AUD'"
+  };
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string return_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 version = 3 [(buf.validate.field).uint64.gte = 1];
+  TaxAdjustmentType type = 4 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  string bundle_rule_id = 5 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+    pattern: "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"
+  }];
+  Money amount = 6 [(buf.validate.field).required = true];
+  TaxAdjustmentTiming timing = 7 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  string explanation = 8 [(buf.validate.field).string.max_len = 2000];
+  repeated SourceRef sources = 9 [(buf.validate.field).repeated.max_items = 100];
+  repeated SourceRef evidence = 10 [(buf.validate.field).repeated.max_items = 100];
+  string created_by_user_id = 11 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string reviewed_by_user_id = 12 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  google.protobuf.Timestamp updated_at = 13 [(buf.validate.field).required = true];
+}
+
+message TaxElectionChoice {
+  option (buf.validate.message).cel = {
+    id: "company_tax.election_choice.required"
+    message: "an election choice is required"
+    expression: "has(this.boolean_value) || has(this.string_value) || has(this.decimal_value)"
+  };
+  oneof choice {
+    bool boolean_value = 1;
+    string string_value = 2 [(buf.validate.field).string.max_len = 128];
+    Decimal decimal_value = 3;
+  }
+}
+
+message TaxElection {
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string return_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 version = 3 [(buf.validate.field).uint64.gte = 1];
+  string bundle_election_id = 4 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+    pattern: "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"
+  }];
+  TaxElectionChoice choice = 5 [(buf.validate.field).required = true];
+  string explanation = 6 [(buf.validate.field).string.max_len = 2000];
+  repeated SourceRef evidence = 7 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 100
+  }];
+  string created_by_user_id = 8 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string reviewed_by_user_id = 9 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  google.protobuf.Timestamp updated_at = 10 [(buf.validate.field).required = true];
+}
+
+message ReturnFactValue {
+  option (buf.validate.message).cel = {
+    id: "company_tax.fact_value.required"
+    message: "a return fact value is required"
+    expression: "has(this.string_value) || has(this.boolean_value) || has(this.integer_value) || has(this.money_value) || has(this.decimal_value) || has(this.date_value)"
+  };
+  oneof value {
+    string string_value = 1 [(buf.validate.field).string.max_len = 512];
+    bool boolean_value = 2;
+    sint64 integer_value = 3;
+    Money money_value = 4;
+    Decimal decimal_value = 5;
+    CivilDate date_value = 6;
+  }
+}
+
+message ReturnFact {
+  string fact_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+    pattern: "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"
+  }];
+  ReturnFactValue value = 2 [(buf.validate.field).required = true];
+  ReturnFactValue submitted_value = 3 [(buf.validate.field).required = true];
+  ReturnFactProvenanceKind provenance = 4 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  string mapping_id = 5 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+    pattern: "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"
+  }];
+  string rule_id = 6 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+    pattern: "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"
+  }];
+  repeated SourceRef sources = 7 [(buf.validate.field).repeated.max_items = 100];
+  repeated SourceRef evidence = 8 [(buf.validate.field).repeated.max_items = 100];
+  ReturnFactValidationStatus validation_status = 9 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+}
+
+message TaxReconciliationTerm {
+  option (buf.validate.message).cel = {
+    id: "company_tax.reconciliation_term.aud"
+    message: "tax reconciliation term must be denominated in AUD"
+    expression: "has(this.amount) && this.amount.currency_code == 'AUD'"
+  };
+  string stable_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+    pattern: "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"
+  }];
+  string rule_id = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+    pattern: "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"
+  }];
+  Money amount = 3 [(buf.validate.field).required = true];
+  repeated SourceRef sources = 4 [(buf.validate.field).repeated.max_items = 100];
+  repeated SourceRef evidence = 5 [(buf.validate.field).repeated.max_items = 100];
+}
+
+message TaxReconciliation {
+  option (buf.validate.message).cel = {
+    id: "company_tax.reconciliation.aud"
+    message: "tax reconciliation totals must be denominated in AUD"
+    expression: "has(this.accounting_profit_before_tax) && this.accounting_profit_before_tax.currency_code == 'AUD' && has(this.taxable_income_or_loss) && this.taxable_income_or_loss.currency_code == 'AUD' && has(this.gross_tax) && this.gross_tax.currency_code == 'AUD' && has(this.net_tax_payable_or_refund) && this.net_tax_payable_or_refund.currency_code == 'AUD'"
+  };
+  bytes content_hash = 1 [(buf.validate.field).bytes.len = 32];
+  Money accounting_profit_before_tax = 2 [(buf.validate.field).required = true];
+  repeated TaxReconciliationTerm additions = 3 [(buf.validate.field).repeated.max_items = 200];
+  repeated TaxReconciliationTerm subtractions = 4 [(buf.validate.field).repeated.max_items = 200];
+  repeated TaxReconciliationTerm eligible_applied_losses = 5 [(buf.validate.field).repeated.max_items = 100];
+  Money taxable_income_or_loss = 6 [(buf.validate.field).required = true];
+  Money gross_tax = 7 [(buf.validate.field).required = true];
+  repeated TaxReconciliationTerm payg_and_credits = 8 [(buf.validate.field).repeated.max_items = 100];
+  Money net_tax_payable_or_refund = 9 [(buf.validate.field).required = true];
+}
+
+message ReturnValidationOutcome {
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 validation_revision = 2 [(buf.validate.field).uint64.gte = 1];
+  ReturnValidationSeverity severity = 3 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  string stable_code = 4 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+    pattern: "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"
+  }];
+  repeated string fact_ids = 5 [(buf.validate.field).repeated = {
+    max_items: 100
+    items: {
+      string: {
+        min_len: 1
+        max_len: 128
+        pattern: "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"
+      }
+    }
+  }];
+  repeated SourceRef sources = 6 [(buf.validate.field).repeated.max_items = 100];
+  string safe_message = 7 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 1000
+  }];
+  bool acknowledged = 8;
+}
+
+message ValidationAcknowledgement {
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string return_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string warning_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 validation_revision = 4 [(buf.validate.field).uint64.gte = 1];
+  string actor_user_id = 5 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string fresh_factor_assertion_id = 6 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  google.protobuf.Timestamp acknowledged_at = 7 [(buf.validate.field).required = true];
+}
+
+message Declaration {
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string return_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  bytes report_hash = 3 [(buf.validate.field).bytes.len = 32];
+  uint64 validation_revision = 4 [(buf.validate.field).uint64.gte = 1];
+  repeated string acknowledgement_ids = 5 [(buf.validate.field).repeated = {
+    max_items: 200
+    items: {
+      string: {pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"}
+    }
+  }];
+  string declaration_wording_version = 6 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+    pattern: "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"
+  }];
+  bytes declaration_wording_hash = 7 [(buf.validate.field).bytes.len = 32];
+  string terms_version = 8 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+    pattern: "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"
+  }];
+  string privacy_reference_version = 9 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+    pattern: "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"
+  }];
+  string actor_user_id = 10 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string fresh_factor_assertion_id = 11 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  google.protobuf.Timestamp declared_at = 12 [(buf.validate.field).required = true];
+  string supersedes_declaration_id = 13 [
+    features.field_presence = EXPLICIT,
+    (buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  ];
+}
+
+message CompanyReturnDeliverySummary {
+  string latest_attempt_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  CompanyReturnOperationType operation_type = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  CompanyReturnOperationOutcome outcome = 3 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  string safe_status_code = 4 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+    pattern: "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"
+  }];
+  google.protobuf.Timestamp delivered_at = 5;
+  string receipt_id = 6 [
+    features.field_presence = EXPLICIT,
+    (buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  ];
+}
+
+message CompanyReturn {
+  option (buf.validate.message).cel = {
+    id: "company_tax.return.authority"
+    message: "company return must use the supported 2026 period and preparation bundle"
+    expression: "this.income_year == 2026 && has(this.period_start) && this.period_start.year == 2025 && this.period_start.month == 7 && this.period_start.day == 1 && has(this.period_end) && this.period_end.year == 2026 && this.period_end.month == 6 && this.period_end.day == 30 && this.preparation_bundle_id == 'au-company-return-2026-preparation-v1'"
+  };
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  int32 income_year = 3 [(buf.validate.field).int32.const = 2026];
+  CivilDate period_start = 4 [(buf.validate.field).required = true];
+  CivilDate period_end = 5 [(buf.validate.field).required = true];
+  CompanyReturnRelationshipKind relationship_kind = 6 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  string root_return_id = 7 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string predecessor_return_id = 8 [
+    features.field_presence = EXPLICIT,
+    (buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  ];
+  string successor_return_id = 9 [
+    features.field_presence = EXPLICIT,
+    (buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  ];
+  string related_attempt_id = 10 [
+    features.field_presence = EXPLICIT,
+    (buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  ];
+  string preparation_bundle_id = 11 [(buf.validate.field).string.const = "au-company-return-2026-preparation-v1"];
+  bytes preparation_bundle_fingerprint = 12 [(buf.validate.field).bytes.len = 32];
+  string source_close_id = 13 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  bytes source_close_hash = 14 [(buf.validate.field).bytes.len = 32];
+  bytes tax_reconciliation_hash = 15 [(buf.validate.field).bytes.len = 32];
+  CompanyReturnState state = 16 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  uint64 version = 17 [(buf.validate.field).uint64.gte = 1];
+  uint64 validation_revision = 18 [(buf.validate.field).uint64.gte = 1];
+  bytes declared_snapshot_hash = 19 [
+    features.field_presence = EXPLICIT,
+    (buf.validate.field).bytes.len = 32
+  ];
+  string current_declaration_id = 20 [
+    features.field_presence = EXPLICIT,
+    (buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  ];
+  CompanyReturnDeliverySummary delivery = 21;
+  google.protobuf.Timestamp created_at = 22 [(buf.validate.field).required = true];
+  google.protobuf.Timestamp updated_at = 23 [(buf.validate.field).required = true];
+}
+
+message TaxAdjustmentInput {
+  option (buf.validate.message).cel = {
+    id: "company_tax.adjustment_input.aud"
+    message: "tax adjustment input must be denominated in AUD"
+    expression: "has(this.amount) && this.amount.currency_code == 'AUD'"
+  };
+  string adjustment_id = 1 [
+    features.field_presence = EXPLICIT,
+    (buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  ];
+  TaxAdjustmentType type = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  string bundle_rule_id = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+    pattern: "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"
+  }];
+  Money amount = 4 [(buf.validate.field).required = true];
+  TaxAdjustmentTiming timing = 5 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  string explanation = 6 [(buf.validate.field).string.max_len = 2000];
+  repeated SourceRef sources = 7 [(buf.validate.field).repeated.max_items = 100];
+  repeated SourceRef evidence = 8 [(buf.validate.field).repeated.max_items = 100];
+}
+
+message TaxElectionInput {
+  string election_id = 1 [
+    features.field_presence = EXPLICIT,
+    (buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  ];
+  string bundle_election_id = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+    pattern: "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"
+  }];
+  TaxElectionChoice choice = 3 [(buf.validate.field).required = true];
+  string explanation = 4 [(buf.validate.field).string.max_len = 2000];
+  repeated SourceRef evidence = 5 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 100
+  }];
+}
+
+message GetCompanyTaxProfileRequest {
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+}
+message GetCompanyTaxProfileResponse {
+  MaskedCompanyTaxProfile profile = 1 [(buf.validate.field).required = true];
+}
+
+message SetCompanyTaxProfileRequest {
+  option (buf.validate.message).cel = {
+    id: "company_tax.set_profile.fresh_factor"
+    message: "setting company tax secrets requires a purpose-bound fresh factor"
+    expression: "has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'company_tax_edit_secrets'"
+  };
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 expected_version = 3;
+  CompanyTaxProfileInput input = 4 [(buf.validate.field).required = true];
+}
+message SetCompanyTaxProfileResponse {
+  MaskedCompanyTaxProfile profile = 1 [(buf.validate.field).required = true];
+}
+
+message CreateCompanyReturnRequest {
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string source_close_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  CompanyReturnInput input = 4 [(buf.validate.field).required = true];
+}
+message CreateCompanyReturnResponse {
+  CompanyReturn company_return = 1 [(buf.validate.field).required = true];
+  TaxReconciliation tax_reconciliation = 2 [(buf.validate.field).required = true];
+  repeated ReturnValidationOutcome validation = 3 [(buf.validate.field).repeated.max_items = 200];
+}
+
+message GetCompanyReturnRequest {
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string return_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+}
+message GetCompanyReturnResponse {
+  CompanyReturn company_return = 1 [(buf.validate.field).required = true];
+  TaxReconciliation tax_reconciliation = 2 [(buf.validate.field).required = true];
+  repeated ReturnValidationOutcome validation = 3 [(buf.validate.field).repeated.max_items = 200];
+}
+
+message ListCompanyReturnFactsRequest {
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string return_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  PageRequest page = 4 [(buf.validate.field).required = true];
+}
+message ListCompanyReturnFactsResponse {
+  repeated ReturnFact facts = 1 [(buf.validate.field).repeated.max_items = 200];
+  PageInfo page = 2 [(buf.validate.field).required = true];
+}
+
+message SetCompanyReturnInputRequest {
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string return_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 expected_version = 4 [(buf.validate.field).uint64.gte = 1];
+  CompanyReturnInput input = 5 [(buf.validate.field).required = true];
+}
+message SetCompanyReturnInputResponse {
+  CompanyReturn company_return = 1 [(buf.validate.field).required = true];
+  TaxReconciliation tax_reconciliation = 2 [(buf.validate.field).required = true];
+  repeated ReturnValidationOutcome validation = 3 [(buf.validate.field).repeated.max_items = 200];
+}
+
+message UpsertTaxAdjustmentRequest {
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string return_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 expected_version = 4 [(buf.validate.field).uint64.gte = 1];
+  TaxAdjustmentInput adjustment = 5 [(buf.validate.field).required = true];
+}
+message UpsertTaxAdjustmentResponse {
+  CompanyReturn company_return = 1 [(buf.validate.field).required = true];
+  TaxAdjustment adjustment = 2 [(buf.validate.field).required = true];
+  TaxReconciliation tax_reconciliation = 3 [(buf.validate.field).required = true];
+  repeated ReturnValidationOutcome validation = 4 [(buf.validate.field).repeated.max_items = 200];
+}
+
+message RemoveTaxAdjustmentRequest {
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string return_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 expected_version = 4 [(buf.validate.field).uint64.gte = 1];
+  string adjustment_id = 5 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+}
+message RemoveTaxAdjustmentResponse {
+  CompanyReturn company_return = 1 [(buf.validate.field).required = true];
+  TaxReconciliation tax_reconciliation = 2 [(buf.validate.field).required = true];
+  repeated ReturnValidationOutcome validation = 3 [(buf.validate.field).repeated.max_items = 200];
+}
+
+message UpsertTaxElectionRequest {
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string return_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 expected_version = 4 [(buf.validate.field).uint64.gte = 1];
+  TaxElectionInput election = 5 [(buf.validate.field).required = true];
+}
+message UpsertTaxElectionResponse {
+  CompanyReturn company_return = 1 [(buf.validate.field).required = true];
+  TaxElection election = 2 [(buf.validate.field).required = true];
+  TaxReconciliation tax_reconciliation = 3 [(buf.validate.field).required = true];
+  repeated ReturnValidationOutcome validation = 4 [(buf.validate.field).repeated.max_items = 200];
+}
+
+message RemoveTaxElectionRequest {
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string return_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 expected_version = 4 [(buf.validate.field).uint64.gte = 1];
+  string election_id = 5 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+}
+message RemoveTaxElectionResponse {
+  CompanyReturn company_return = 1 [(buf.validate.field).required = true];
+  TaxReconciliation tax_reconciliation = 2 [(buf.validate.field).required = true];
+  repeated ReturnValidationOutcome validation = 3 [(buf.validate.field).repeated.max_items = 200];
+}
+
+message ValidateCompanyReturnRequest {
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string return_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 expected_version = 4 [(buf.validate.field).uint64.gte = 1];
+}
+message ValidateCompanyReturnResponse {
+  CompanyReturn company_return = 1 [(buf.validate.field).required = true];
+  repeated ReturnValidationOutcome validation = 2 [(buf.validate.field).repeated.max_items = 200];
+}
+
+message AcknowledgeReturnWarningRequest {
+  option (buf.validate.message).cel = {
+    id: "company_tax.acknowledge.fresh_factor"
+    message: "warning acknowledgement requires a purpose-bound fresh factor"
+    expression: "has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'company_return_acknowledge_warning'"
+  };
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string return_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 expected_version = 4 [(buf.validate.field).uint64.gte = 1];
+  string warning_id = 5 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 validation_revision = 6 [(buf.validate.field).uint64.gte = 1];
+}
+message AcknowledgeReturnWarningResponse {
+  CompanyReturn company_return = 1 [(buf.validate.field).required = true];
+  ValidationAcknowledgement acknowledgement = 2 [(buf.validate.field).required = true];
+  repeated ReturnValidationOutcome validation = 3 [(buf.validate.field).repeated.max_items = 200];
+}
+
+message DeclareCompanyReturnRequest {
+  option (buf.validate.message).cel = {
+    id: "company_tax.declare.fresh_factor"
+    message: "declaration requires a purpose-bound fresh factor"
+    expression: "has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'company_return_declare'"
+  };
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string return_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 expected_version = 4 [(buf.validate.field).uint64.gte = 1];
+  uint64 validation_revision = 5 [(buf.validate.field).uint64.gte = 1];
+}
+message DeclareCompanyReturnResponse {
+  CompanyReturn company_return = 1 [(buf.validate.field).required = true];
+  Declaration declaration = 2 [(buf.validate.field).required = true];
+}
+
+message WithdrawCompanyReturnDeclarationRequest {
+  option (buf.validate.message).cel = {
+    id: "company_tax.withdraw.fresh_factor"
+    message: "declaration withdrawal requires a purpose-bound fresh factor"
+    expression: "has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'company_return_withdraw_declaration'"
+  };
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string return_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 expected_version = 4 [(buf.validate.field).uint64.gte = 1];
+  string reason = 5 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 2000
+  }];
+}
+message WithdrawCompanyReturnDeclarationResponse {
+  CompanyReturn company_return = 1 [(buf.validate.field).required = true];
+  Declaration retained_declaration = 2 [(buf.validate.field).required = true];
+}
+
+message ExportCompanyReturnPackRequest {
+  option (buf.validate.message).cel = {
+    id: "company_tax.export.authority"
+    message: "return export requires the exact fresh-factor purpose and passphrase shape for its export kind"
+    expression: "has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'company_return_export' && (this.kind == 2 ? has(this.export_passphrase) : !has(this.export_passphrase))"
+  };
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string return_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 expected_version = 4 [(buf.validate.field).uint64.gte = 1];
+  CompanyReturnExportKind kind = 5 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  SecretInput export_passphrase = 6;
+}
+message ExportCompanyReturnPackResponse {
+  string export_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  bytes content_hash = 2 [(buf.validate.field).bytes.len = 32];
+  string safe_filename = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 255
+    pattern: "^[^/\\\\[:cntrl:]]+$"
+  }];
+  CompanyReturnExportKind kind = 4 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+}
+
+message CreateCompanyReturnReplacementRequest {
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string predecessor_return_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 expected_predecessor_version = 4 [(buf.validate.field).uint64.gte = 1];
+  string source_close_id = 5 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string reason = 6 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 2000
+  }];
+}
+message CreateCompanyReturnReplacementResponse {
+  CompanyReturn predecessor = 1 [(buf.validate.field).required = true];
+  CompanyReturn replacement = 2 [(buf.validate.field).required = true];
+}
+
+message CreateCompanyReturnAmendmentRequest {
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string effective_original_return_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string latest_accepted_return_id = 4 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 expected_latest_version = 5 [(buf.validate.field).uint64.gte = 1];
+  string source_close_id = 6 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string reason = 7 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 2000
+  }];
+}
+message CreateCompanyReturnAmendmentResponse {
+  CompanyReturn effective_original = 1 [(buf.validate.field).required = true];
+  CompanyReturn amendment = 2 [(buf.validate.field).required = true];
+}
+
+service CompanyTaxService {
+  rpc GetCompanyTaxProfile(GetCompanyTaxProfileRequest) returns (GetCompanyTaxProfileResponse);
+  rpc SetCompanyTaxProfile(SetCompanyTaxProfileRequest) returns (SetCompanyTaxProfileResponse);
+  rpc CreateCompanyReturn(CreateCompanyReturnRequest) returns (CreateCompanyReturnResponse);
+  rpc GetCompanyReturn(GetCompanyReturnRequest) returns (GetCompanyReturnResponse);
+  rpc ListCompanyReturnFacts(ListCompanyReturnFactsRequest) returns (ListCompanyReturnFactsResponse);
+  rpc SetCompanyReturnInput(SetCompanyReturnInputRequest) returns (SetCompanyReturnInputResponse);
+  rpc UpsertTaxAdjustment(UpsertTaxAdjustmentRequest) returns (UpsertTaxAdjustmentResponse);
+  rpc RemoveTaxAdjustment(RemoveTaxAdjustmentRequest) returns (RemoveTaxAdjustmentResponse);
+  rpc UpsertTaxElection(UpsertTaxElectionRequest) returns (UpsertTaxElectionResponse);
+  rpc RemoveTaxElection(RemoveTaxElectionRequest) returns (RemoveTaxElectionResponse);
+  rpc ValidateCompanyReturn(ValidateCompanyReturnRequest) returns (ValidateCompanyReturnResponse);
+  rpc AcknowledgeReturnWarning(AcknowledgeReturnWarningRequest) returns (AcknowledgeReturnWarningResponse);
+  rpc DeclareCompanyReturn(DeclareCompanyReturnRequest) returns (DeclareCompanyReturnResponse);
+  rpc WithdrawCompanyReturnDeclaration(WithdrawCompanyReturnDeclarationRequest) returns (WithdrawCompanyReturnDeclarationResponse);
+  rpc ExportCompanyReturnPack(ExportCompanyReturnPackRequest) returns (ExportCompanyReturnPackResponse);
+  rpc CreateCompanyReturnReplacement(CreateCompanyReturnReplacementRequest) returns (CreateCompanyReturnReplacementResponse);
+  rpc CreateCompanyReturnAmendment(CreateCompanyReturnAmendmentRequest) returns (CreateCompanyReturnAmendmentResponse);
 }

@@ -29,6 +29,129 @@ type financialCloseFieldContract struct {
 	required       bool
 }
 
+func TestCompanyTaxPreparationContractHasExactServiceAndEnums(t *testing.T) {
+	file, err := protoregistry.GlobalFiles.FindFileByPath("tammy/v1/company_tax.proto")
+	if err != nil {
+		t.Fatalf("company tax descriptor missing: %v", err)
+	}
+	wantEnums := map[protoreflect.Name][]string{
+		"RequiredAnswer":                      {"REQUIRED_ANSWER_UNSPECIFIED", "REQUIRED_ANSWER_YES", "REQUIRED_ANSWER_NO"},
+		"ReturnFactProvenanceKind":            {"RETURN_FACT_PROVENANCE_KIND_UNSPECIFIED", "RETURN_FACT_PROVENANCE_KIND_FROZEN_BOOK", "RETURN_FACT_PROVENANCE_KIND_REVIEWED_TAX_ADJUSTMENT", "RETURN_FACT_PROVENANCE_KIND_VERIFIED_PROFILE", "RETURN_FACT_PROVENANCE_KIND_EXPLICIT_EVIDENCED_INPUT", "RETURN_FACT_PROVENANCE_KIND_BUNDLE_ELECTION", "RETURN_FACT_PROVENANCE_KIND_CALCULATION_RULE"},
+		"ReturnFactValidationStatus":          {"RETURN_FACT_VALIDATION_STATUS_UNSPECIFIED", "RETURN_FACT_VALIDATION_STATUS_VALID", "RETURN_FACT_VALIDATION_STATUS_BLOCKER", "RETURN_FACT_VALIDATION_STATUS_WARNING", "RETURN_FACT_VALIDATION_STATUS_INFORMATION", "RETURN_FACT_VALIDATION_STATUS_UNSUPPORTED"},
+		"ReturnValidationSeverity":            {"RETURN_VALIDATION_SEVERITY_UNSPECIFIED", "RETURN_VALIDATION_SEVERITY_BLOCKER", "RETURN_VALIDATION_SEVERITY_WARNING", "RETURN_VALIDATION_SEVERITY_INFORMATION", "RETURN_VALIDATION_SEVERITY_UNSUPPORTED"},
+		"TaxAdjustmentType":                   {"TAX_ADJUSTMENT_TYPE_UNSPECIFIED", "TAX_ADJUSTMENT_TYPE_NON_DEDUCTIBLE_EXPENSE", "TAX_ADJUSTMENT_TYPE_EXEMPT_NON_ASSESSABLE_INCOME", "TAX_ADJUSTMENT_TYPE_ACCOUNTING_TAX_DEPRECIATION", "TAX_ADJUSTMENT_TYPE_PROVISION_ACCRUAL_REVERSAL", "TAX_ADJUSTMENT_TYPE_TAX_PAYMENT_CREDIT", "TAX_ADJUSTMENT_TYPE_CURRENT_YEAR_REVENUE_LOSS", "TAX_ADJUSTMENT_TYPE_CARRIED_FORWARD_REVENUE_LOSS"},
+		"TaxAdjustmentTiming":                 {"TAX_ADJUSTMENT_TIMING_UNSPECIFIED", "TAX_ADJUSTMENT_TIMING_PERMANENT", "TAX_ADJUSTMENT_TIMING_TEMPORARY"},
+		"HoldingCompanyKind":                  {"HOLDING_COMPANY_KIND_UNSPECIFIED", "HOLDING_COMPANY_KIND_NONE", "HOLDING_COMPANY_KIND_AUSTRALIAN", "HOLDING_COMPANY_KIND_FOREIGN"},
+		"BaseRatePassiveIncomeClassification": {"BASE_RATE_PASSIVE_INCOME_CLASSIFICATION_UNSPECIFIED", "BASE_RATE_PASSIVE_INCOME_CLASSIFICATION_PASSIVE", "BASE_RATE_PASSIVE_INCOME_CLASSIFICATION_NON_PASSIVE"},
+		"SmallBusinessEntityChoice":           {"SMALL_BUSINESS_ENTITY_CHOICE_UNSPECIFIED", "SMALL_BUSINESS_ENTITY_CHOICE_APPLY", "SMALL_BUSINESS_ENTITY_CHOICE_DO_NOT_APPLY"},
+		"DepreciationChoice":                  {"DEPRECIATION_CHOICE_UNSPECIFIED", "DEPRECIATION_CHOICE_STANDARD", "DEPRECIATION_CHOICE_SUPPORTED_SMALL_BUSINESS"},
+		"CompanyReturnExportKind":             {"COMPANY_RETURN_EXPORT_KIND_UNSPECIFIED", "COMPANY_RETURN_EXPORT_KIND_REDACTED_REVIEW_PDF", "COMPANY_RETURN_EXPORT_KIND_ENCRYPTED_HANDOFF_ARCHIVE"},
+	}
+	for name, values := range wantEnums {
+		assertFinancialCloseEnum(t, name, values)
+	}
+	service := file.Services().ByName("CompanyTaxService")
+	if service == nil {
+		t.Fatal("tammy.v1.CompanyTaxService missing")
+	}
+	wantRPCs := []string{"GetCompanyTaxProfile", "SetCompanyTaxProfile", "CreateCompanyReturn", "GetCompanyReturn", "ListCompanyReturnFacts", "SetCompanyReturnInput", "UpsertTaxAdjustment", "RemoveTaxAdjustment", "UpsertTaxElection", "RemoveTaxElection", "ValidateCompanyReturn", "AcknowledgeReturnWarning", "DeclareCompanyReturn", "WithdrawCompanyReturnDeclaration", "ExportCompanyReturnPack", "CreateCompanyReturnReplacement", "CreateCompanyReturnAmendment"}
+	if service.Methods().Len() != len(wantRPCs) {
+		t.Fatalf("CompanyTaxService method count = %d, want %d", service.Methods().Len(), len(wantRPCs))
+	}
+	for index, want := range wantRPCs {
+		method := service.Methods().Get(index)
+		if string(method.Name()) != want || method.Input().FullName() != protoreflect.FullName("tammy.v1."+want+"Request") || method.Output().FullName() != protoreflect.FullName("tammy.v1."+want+"Response") {
+			t.Errorf("CompanyTaxService method %d = %s(%s) returns %s", index, method.FullName(), method.Input().FullName(), method.Output().FullName())
+		}
+		if method.IsStreamingClient() || method.IsStreamingServer() {
+			t.Errorf("%s must be unary", method.FullName())
+		}
+	}
+	for index := 0; index < file.Messages().Len(); index++ {
+		message := file.Messages().Get(index)
+		for fieldIndex := 0; fieldIndex < message.Fields().Len(); fieldIndex++ {
+			field := message.Fields().Get(fieldIndex)
+			if field.IsMap() {
+				t.Errorf("%s must not be a map", field.FullName())
+			}
+			if field.IsList() && fieldRules(t, field).GetRepeated().GetMaxItems() == 0 {
+				t.Errorf("%s repeated field must have a maximum", field.FullName())
+			}
+			if field.Kind() == protoreflect.MessageKind && (field.Message().FullName() == "google.protobuf.Any" || field.Message().FullName() == "google.protobuf.Struct" || field.Message().FullName() == "google.protobuf.Value") {
+				t.Errorf("%s uses prohibited dynamic type %s", field.FullName(), field.Message().FullName())
+			}
+		}
+	}
+}
+
+func TestCompanyTaxPreparationMessagesHaveExactFieldOrder(t *testing.T) {
+	file, err := protoregistry.GlobalFiles.FindFileByPath("tammy/v1/company_tax.proto")
+	if err != nil {
+		t.Fatalf("company tax descriptor missing: %v", err)
+	}
+	want := map[protoreflect.Name][]protoreflect.Name{
+		"AddressInput":                      {"line_1", "line_2", "locality", "state", "postcode", "country_code"},
+		"RelatedEntityTurnoverContribution": {"entity_name", "entity_abn", "amount", "evidence", "reviewed_control_or_affiliate_basis"},
+		"PassiveIncomeClassificationInput":  {"income_source", "classification", "bundle_rule_id", "evidence", "reviewed_by_user_id"},
+		"ApplicabilityAnswers":              {"tofa_applies", "psi_applies", "interposed_entity_election_applies", "consolidated_group_member", "research_and_development_incentive", "international_dealings", "reportable_tax_position", "life_insurance_business", "cgt_schedule_required", "losses_schedule_required", "other_schedule_required", "fb_or_unsupported_payroll_effect", "division_7a_unresolved", "unsupported_inventory", "unsupported_multicurrency", "unsupported_crypto"},
+		"PriorRevenueLossInput":             {"opening_balance", "ownership_continuity_confirmed", "same_or_similar_business_judgement_required", "evidence"},
+		"CompanyTaxProfileInput":            {"legal_name", "tfn", "current_postal_address", "prior_postal_address", "main_business_address", "australian_resident", "private_company", "main_business_activity_code", "main_business_activity_description", "refund_bsb", "refund_account_number", "final_return", "holding_company_kind", "immediate_holding_name", "ultimate_holding_name", "related_turnover", "passive_income_classifications", "small_business_entity_choice", "depreciation_choice", "prior_revenue_loss", "applicability"},
+		"CompanyReturnInput":                {"loss_amount_to_apply", "external_summary_evidence", "payroll_summary_evidence", "review_note"},
+		"MaskedCompanyTaxProfile":           {"organisation_id", "version", "legal_name", "masked_tfn", "verified_abn", "current_postal_address", "prior_postal_address", "main_business_address", "australian_resident", "private_company", "main_business_activity_code", "main_business_activity_description", "masked_refund_bsb", "masked_refund_account", "final_return", "holding_company_kind", "immediate_holding_name", "ultimate_holding_name", "related_turnover", "passive_income_classifications", "small_business_entity_choice", "depreciation_choice", "prior_revenue_loss", "applicability", "updated_by_user_id", "updated_at"},
+		"TaxAdjustment":                     {"id", "return_id", "version", "type", "bundle_rule_id", "amount", "timing", "explanation", "sources", "evidence", "created_by_user_id", "reviewed_by_user_id", "updated_at"},
+		"TaxElectionChoice":                 {"boolean_value", "string_value", "decimal_value"},
+		"TaxElection":                       {"id", "return_id", "version", "bundle_election_id", "choice", "explanation", "evidence", "created_by_user_id", "reviewed_by_user_id", "updated_at"},
+		"ReturnFactValue":                   {"string_value", "boolean_value", "integer_value", "money_value", "decimal_value", "date_value"},
+		"ReturnFact":                        {"fact_id", "value", "submitted_value", "provenance", "mapping_id", "rule_id", "sources", "evidence", "validation_status"},
+		"TaxReconciliationTerm":             {"stable_id", "rule_id", "amount", "sources", "evidence"},
+		"TaxReconciliation":                 {"content_hash", "accounting_profit_before_tax", "additions", "subtractions", "eligible_applied_losses", "taxable_income_or_loss", "gross_tax", "payg_and_credits", "net_tax_payable_or_refund"},
+		"ReturnValidationOutcome":           {"id", "validation_revision", "severity", "stable_code", "fact_ids", "sources", "safe_message", "acknowledged"},
+		"ValidationAcknowledgement":         {"id", "return_id", "warning_id", "validation_revision", "actor_user_id", "fresh_factor_assertion_id", "acknowledged_at"},
+		"Declaration":                       {"id", "return_id", "report_hash", "validation_revision", "acknowledgement_ids", "declaration_wording_version", "declaration_wording_hash", "terms_version", "privacy_reference_version", "actor_user_id", "fresh_factor_assertion_id", "declared_at", "supersedes_declaration_id"},
+		"CompanyReturnDeliverySummary":      {"latest_attempt_id", "operation_type", "outcome", "safe_status_code", "delivered_at", "receipt_id"},
+		"CompanyReturn":                     {"id", "organisation_id", "income_year", "period_start", "period_end", "relationship_kind", "root_return_id", "predecessor_return_id", "successor_return_id", "related_attempt_id", "preparation_bundle_id", "preparation_bundle_fingerprint", "source_close_id", "source_close_hash", "tax_reconciliation_hash", "state", "version", "validation_revision", "declared_snapshot_hash", "current_declaration_id", "delivery", "created_at", "updated_at"},
+		"TaxAdjustmentInput":                {"adjustment_id", "type", "bundle_rule_id", "amount", "timing", "explanation", "sources", "evidence"},
+		"TaxElectionInput":                  {"election_id", "bundle_election_id", "choice", "explanation", "evidence"},
+		"GetCompanyTaxProfileRequest":       {"authentication", "organisation_id"}, "GetCompanyTaxProfileResponse": {"profile"},
+		"SetCompanyTaxProfileRequest": {"command_context", "organisation_id", "expected_version", "input"}, "SetCompanyTaxProfileResponse": {"profile"},
+		"CreateCompanyReturnRequest": {"command_context", "organisation_id", "source_close_id", "input"}, "CreateCompanyReturnResponse": {"company_return", "tax_reconciliation", "validation"},
+		"GetCompanyReturnRequest": {"authentication", "organisation_id", "return_id"}, "GetCompanyReturnResponse": {"company_return", "tax_reconciliation", "validation"},
+		"ListCompanyReturnFactsRequest": {"authentication", "organisation_id", "return_id", "page"}, "ListCompanyReturnFactsResponse": {"facts", "page"},
+		"SetCompanyReturnInputRequest": {"command_context", "organisation_id", "return_id", "expected_version", "input"}, "SetCompanyReturnInputResponse": {"company_return", "tax_reconciliation", "validation"},
+		"UpsertTaxAdjustmentRequest": {"command_context", "organisation_id", "return_id", "expected_version", "adjustment"}, "UpsertTaxAdjustmentResponse": {"company_return", "adjustment", "tax_reconciliation", "validation"},
+		"RemoveTaxAdjustmentRequest": {"command_context", "organisation_id", "return_id", "expected_version", "adjustment_id"}, "RemoveTaxAdjustmentResponse": {"company_return", "tax_reconciliation", "validation"},
+		"UpsertTaxElectionRequest": {"command_context", "organisation_id", "return_id", "expected_version", "election"}, "UpsertTaxElectionResponse": {"company_return", "election", "tax_reconciliation", "validation"},
+		"RemoveTaxElectionRequest": {"command_context", "organisation_id", "return_id", "expected_version", "election_id"}, "RemoveTaxElectionResponse": {"company_return", "tax_reconciliation", "validation"},
+		"ValidateCompanyReturnRequest": {"command_context", "organisation_id", "return_id", "expected_version"}, "ValidateCompanyReturnResponse": {"company_return", "validation"},
+		"AcknowledgeReturnWarningRequest": {"command_context", "organisation_id", "return_id", "expected_version", "warning_id", "validation_revision"}, "AcknowledgeReturnWarningResponse": {"company_return", "acknowledgement", "validation"},
+		"DeclareCompanyReturnRequest": {"command_context", "organisation_id", "return_id", "expected_version", "validation_revision"}, "DeclareCompanyReturnResponse": {"company_return", "declaration"},
+		"WithdrawCompanyReturnDeclarationRequest": {"command_context", "organisation_id", "return_id", "expected_version", "reason"}, "WithdrawCompanyReturnDeclarationResponse": {"company_return", "retained_declaration"},
+		"ExportCompanyReturnPackRequest": {"command_context", "organisation_id", "return_id", "expected_version", "kind", "export_passphrase"}, "ExportCompanyReturnPackResponse": {"export_id", "content_hash", "safe_filename", "kind"},
+		"CreateCompanyReturnReplacementRequest": {"command_context", "organisation_id", "predecessor_return_id", "expected_predecessor_version", "source_close_id", "reason"}, "CreateCompanyReturnReplacementResponse": {"predecessor", "replacement"},
+		"CreateCompanyReturnAmendmentRequest": {"command_context", "organisation_id", "effective_original_return_id", "latest_accepted_return_id", "expected_latest_version", "source_close_id", "reason"}, "CreateCompanyReturnAmendmentResponse": {"effective_original", "amendment"},
+	}
+	if file.Messages().Len() != len(want) {
+		t.Fatalf("company tax message count = %d, want %d", file.Messages().Len(), len(want))
+	}
+	for messageName, fieldNames := range want {
+		message := file.Messages().ByName(messageName)
+		if message == nil {
+			t.Errorf("message tammy.v1.%s missing", messageName)
+			continue
+		}
+		if message.Fields().Len() != len(fieldNames) {
+			t.Errorf("%s field count = %d, want %d", message.FullName(), message.Fields().Len(), len(fieldNames))
+			continue
+		}
+		for index, wantName := range fieldNames {
+			field := message.Fields().Get(index)
+			if field.Name() != wantName || field.Number() != protoreflect.FieldNumber(index+1) {
+				t.Errorf("%s field %d = %s number %d, want %s number %d", message.FullName(), index, field.Name(), field.Number(), wantName, index+1)
+			}
+		}
+	}
+}
+
 func financialCloseScalar(name protoreflect.Name, kind protoreflect.Kind) financialCloseFieldContract {
 	return financialCloseFieldContract{name: name, kind: kind}
 }
@@ -729,6 +852,166 @@ func financialCloseHash() []byte {
 
 func financialCloseTimestamp() *timestamppb.Timestamp {
 	return timestamppb.New(time.Unix(1, 0))
+}
+
+func TestCompanyTaxProtovalidateEnforcesSupportedProfileAndAmounts(t *testing.T) {
+	profile := validCompanyTaxProfileInput()
+	if err := protovalidate.Validate(profile); err != nil {
+		t.Fatalf("valid profile without prior loss rejected: %v", err)
+	}
+
+	missingAnswer := proto.Clone(profile).(*tammyv1.CompanyTaxProfileInput)
+	missingAnswer.AustralianResident = tammyv1.RequiredAnswer_REQUIRED_ANSWER_UNSPECIFIED
+	assertFinancialCloseValidationRejects(t, "omitted mandatory answer", missingAnswer)
+
+	emptyAddress := proto.Clone(profile).(*tammyv1.CompanyTaxProfileInput)
+	emptyAddress.CurrentPostalAddress.Line_1 = ""
+	assertFinancialCloseValidationRejects(t, "empty address identity", emptyAddress)
+
+	withTurnover := proto.Clone(profile).(*tammyv1.CompanyTaxProfileInput)
+	withTurnover.RelatedTurnover = []*tammyv1.RelatedEntityTurnoverContribution{{
+		EntityName: "Related Pty Ltd", EntityAbn: "51824753556", Amount: companyTaxMoney("USD", 100),
+		Evidence: []*tammyv1.SourceRef{companyTaxSource()}, ReviewedControlOrAffiliateBasis: "Reviewed control relationship",
+	}}
+	assertFinancialCloseValidationRejects(t, "non-AUD profile amount", withTurnover)
+
+	for name, mutate := range map[string]func(*tammyv1.PriorRevenueLossInput){
+		"zero balance":     func(loss *tammyv1.PriorRevenueLossInput) { loss.OpeningBalance.MinorUnits = 0 },
+		"missing evidence": func(loss *tammyv1.PriorRevenueLossInput) { loss.Evidence = nil },
+		"unknown continuity": func(loss *tammyv1.PriorRevenueLossInput) {
+			loss.OwnershipContinuityConfirmed = tammyv1.RequiredAnswer_REQUIRED_ANSWER_UNSPECIFIED
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			loss := validPriorRevenueLossInput()
+			mutate(loss)
+			assertFinancialCloseValidationRejects(t, name, loss)
+		})
+	}
+	if err := protovalidate.Validate(validPriorRevenueLossInput()); err != nil {
+		t.Fatalf("valid prior loss rejected: %v", err)
+	}
+}
+
+func TestCompanyTaxProtovalidateEnforces2026ReturnBundleAndAUD(t *testing.T) {
+	companyReturn := validCompanyReturn()
+	if err := protovalidate.Validate(companyReturn); err != nil {
+		t.Fatalf("valid company return rejected: %v", err)
+	}
+
+	wrongYear := proto.Clone(companyReturn).(*tammyv1.CompanyReturn)
+	wrongYear.IncomeYear = 2025
+	assertFinancialCloseValidationRejects(t, "wrong return year", wrongYear)
+	wrongPeriod := proto.Clone(companyReturn).(*tammyv1.CompanyReturn)
+	wrongPeriod.PeriodStart.Day = 2
+	assertFinancialCloseValidationRejects(t, "wrong return period", wrongPeriod)
+	wrongBundle := proto.Clone(companyReturn).(*tammyv1.CompanyReturn)
+	wrongBundle.PreparationBundleId = "different-bundle"
+	assertFinancialCloseValidationRejects(t, "wrong preparation bundle", wrongBundle)
+
+	adjustment := &tammyv1.TaxAdjustmentInput{
+		Type:         tammyv1.TaxAdjustmentType_TAX_ADJUSTMENT_TYPE_NON_DEDUCTIBLE_EXPENSE,
+		BundleRuleId: "non_deductible_expense", Amount: companyTaxMoney("AUD", 100),
+		Timing: tammyv1.TaxAdjustmentTiming_TAX_ADJUSTMENT_TIMING_PERMANENT,
+	}
+	if err := protovalidate.Validate(adjustment); err != nil {
+		t.Fatalf("valid tax adjustment input rejected: %v", err)
+	}
+	omittedTiming := proto.Clone(adjustment).(*tammyv1.TaxAdjustmentInput)
+	omittedTiming.Timing = tammyv1.TaxAdjustmentTiming_TAX_ADJUSTMENT_TIMING_UNSPECIFIED
+	assertFinancialCloseValidationRejects(t, "omitted adjustment timing", omittedTiming)
+	nonAUDAdjustment := proto.Clone(adjustment).(*tammyv1.TaxAdjustmentInput)
+	nonAUDAdjustment.Amount.CurrencyCode = "USD"
+	assertFinancialCloseValidationRejects(t, "non-AUD adjustment", nonAUDAdjustment)
+
+	returnInput := &tammyv1.CompanyReturnInput{LossAmountToApply: companyTaxMoney("AUD", 0)}
+	if err := protovalidate.Validate(returnInput); err != nil {
+		t.Fatalf("valid company return input rejected: %v", err)
+	}
+	returnInput.LossAmountToApply.CurrencyCode = "USD"
+	assertFinancialCloseValidationRejects(t, "non-AUD return input", returnInput)
+}
+
+func TestCompanyTaxProtovalidateEnforcesExportShapeAndFreshFactorPurposes(t *testing.T) {
+	passphrase := &tammyv1.SecretInput{Utf8: []byte("correct horse battery staple")}
+	validEncrypted := &tammyv1.ExportCompanyReturnPackRequest{
+		CommandContext: validFinancialCloseCommandContext("company_return_export"), OrganisationId: financialCloseID(), ReturnId: financialCloseID(),
+		ExpectedVersion: 1, Kind: tammyv1.CompanyReturnExportKind_COMPANY_RETURN_EXPORT_KIND_ENCRYPTED_HANDOFF_ARCHIVE, ExportPassphrase: passphrase,
+	}
+	if err := protovalidate.Validate(validEncrypted); err != nil {
+		t.Fatalf("valid encrypted export rejected: %v", err)
+	}
+	missingPassphrase := proto.Clone(validEncrypted).(*tammyv1.ExportCompanyReturnPackRequest)
+	missingPassphrase.ExportPassphrase = nil
+	assertFinancialCloseValidationRejects(t, "encrypted export without passphrase", missingPassphrase)
+	redactedWithPassphrase := proto.Clone(validEncrypted).(*tammyv1.ExportCompanyReturnPackRequest)
+	redactedWithPassphrase.Kind = tammyv1.CompanyReturnExportKind_COMPANY_RETURN_EXPORT_KIND_REDACTED_REVIEW_PDF
+	assertFinancialCloseValidationRejects(t, "redacted export with passphrase", redactedWithPassphrase)
+
+	tests := []struct {
+		name, purpose string
+		build         func(*tammyv1.CommandContext) proto.Message
+	}{
+		{"profile secrets", "company_tax_edit_secrets", func(context *tammyv1.CommandContext) proto.Message {
+			return &tammyv1.SetCompanyTaxProfileRequest{CommandContext: context, OrganisationId: financialCloseID(), Input: validCompanyTaxProfileInput()}
+		}},
+		{"warning acknowledgement", "company_return_acknowledge_warning", func(context *tammyv1.CommandContext) proto.Message {
+			return &tammyv1.AcknowledgeReturnWarningRequest{CommandContext: context, OrganisationId: financialCloseID(), ReturnId: financialCloseID(), ExpectedVersion: 1, WarningId: financialCloseID(), ValidationRevision: 1}
+		}},
+		{"declaration", "company_return_declare", func(context *tammyv1.CommandContext) proto.Message {
+			return &tammyv1.DeclareCompanyReturnRequest{CommandContext: context, OrganisationId: financialCloseID(), ReturnId: financialCloseID(), ExpectedVersion: 1, ValidationRevision: 1}
+		}},
+		{"declaration withdrawal", "company_return_withdraw_declaration", func(context *tammyv1.CommandContext) proto.Message {
+			return &tammyv1.WithdrawCompanyReturnDeclarationRequest{CommandContext: context, OrganisationId: financialCloseID(), ReturnId: financialCloseID(), ExpectedVersion: 1, Reason: "Replace prior declaration"}
+		}},
+		{"export", "company_return_export", func(context *tammyv1.CommandContext) proto.Message {
+			return &tammyv1.ExportCompanyReturnPackRequest{CommandContext: context, OrganisationId: financialCloseID(), ReturnId: financialCloseID(), ExpectedVersion: 1, Kind: tammyv1.CompanyReturnExportKind_COMPANY_RETURN_EXPORT_KIND_REDACTED_REVIEW_PDF}
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if err := protovalidate.Validate(test.build(validFinancialCloseCommandContext(test.purpose))); err != nil {
+				t.Fatalf("valid request rejected: %v", err)
+			}
+			assertFinancialCloseValidationRejects(t, "missing fresh factor", test.build(validFinancialCloseCommandContext("")))
+			assertFinancialCloseValidationRejects(t, "wrong fresh-factor purpose", test.build(validFinancialCloseCommandContext(test.purpose+"_wrong")))
+		})
+	}
+}
+
+func validCompanyTaxProfileInput() *tammyv1.CompanyTaxProfileInput {
+	return &tammyv1.CompanyTaxProfileInput{
+		LegalName: "Example Pty Ltd", Tfn: &tammyv1.SecretInput{Utf8: []byte("123456789")},
+		CurrentPostalAddress: companyTaxAddress(), PriorPostalAddress: companyTaxAddress(), MainBusinessAddress: companyTaxAddress(),
+		AustralianResident: tammyv1.RequiredAnswer_REQUIRED_ANSWER_YES, PrivateCompany: tammyv1.RequiredAnswer_REQUIRED_ANSWER_YES,
+		MainBusinessActivityCode: "700000", MainBusinessActivityDescription: "Management services",
+		FinalReturn: tammyv1.RequiredAnswer_REQUIRED_ANSWER_NO, HoldingCompanyKind: tammyv1.HoldingCompanyKind_HOLDING_COMPANY_KIND_NONE,
+		SmallBusinessEntityChoice: tammyv1.SmallBusinessEntityChoice_SMALL_BUSINESS_ENTITY_CHOICE_DO_NOT_APPLY,
+		DepreciationChoice:        tammyv1.DepreciationChoice_DEPRECIATION_CHOICE_STANDARD, Applicability: companyTaxApplicability(),
+	}
+}
+
+func validPriorRevenueLossInput() *tammyv1.PriorRevenueLossInput {
+	return &tammyv1.PriorRevenueLossInput{OpeningBalance: companyTaxMoney("AUD", 100), OwnershipContinuityConfirmed: tammyv1.RequiredAnswer_REQUIRED_ANSWER_YES, SameOrSimilarBusinessJudgementRequired: tammyv1.RequiredAnswer_REQUIRED_ANSWER_NO, Evidence: []*tammyv1.SourceRef{companyTaxSource()}}
+}
+
+func validCompanyReturn() *tammyv1.CompanyReturn {
+	return &tammyv1.CompanyReturn{Id: financialCloseID(), OrganisationId: financialCloseID(), IncomeYear: 2026, PeriodStart: financialCloseDate(2025, 7, 1), PeriodEnd: financialCloseDate(2026, 6, 30), RelationshipKind: tammyv1.CompanyReturnRelationshipKind_COMPANY_RETURN_RELATIONSHIP_KIND_ORIGINAL, RootReturnId: financialCloseID(), PreparationBundleId: "au-company-return-2026-preparation-v1", PreparationBundleFingerprint: financialCloseHash(), SourceCloseId: financialCloseID(), SourceCloseHash: financialCloseHash(), TaxReconciliationHash: financialCloseHash(), State: tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_COLLECTING, Version: 1, ValidationRevision: 1, CreatedAt: financialCloseTimestamp(), UpdatedAt: financialCloseTimestamp()}
+}
+
+func companyTaxAddress() *tammyv1.AddressInput {
+	return &tammyv1.AddressInput{Line_1: "1 Example Street", Locality: "Melbourne", State: "VIC", Postcode: "3000", CountryCode: "AU"}
+}
+func companyTaxMoney(currency string, units int64) *tammyv1.Money {
+	return &tammyv1.Money{CurrencyCode: currency, MinorUnits: units}
+}
+func companyTaxSource() *tammyv1.SourceRef {
+	return &tammyv1.SourceRef{Type: "document", Id: financialCloseID(), Revision: 1, ContentHash: financialCloseHash()}
+}
+
+func companyTaxApplicability() *tammyv1.ApplicabilityAnswers {
+	no := tammyv1.RequiredAnswer_REQUIRED_ANSWER_NO
+	return &tammyv1.ApplicabilityAnswers{TofaApplies: no, PsiApplies: no, InterposedEntityElectionApplies: no, ConsolidatedGroupMember: no, ResearchAndDevelopmentIncentive: no, InternationalDealings: no, ReportableTaxPosition: no, LifeInsuranceBusiness: no, CgtScheduleRequired: no, LossesScheduleRequired: no, OtherScheduleRequired: no, FbOrUnsupportedPayrollEffect: no, Division_7AUnresolved: no, UnsupportedInventory: no, UnsupportedMulticurrency: no, UnsupportedCrypto: no}
 }
 
 type companyEOFYTransitionFixture struct {

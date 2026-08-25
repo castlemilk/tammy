@@ -7,8 +7,10 @@
 package tammyv1
 
 import (
+	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -301,11 +303,5944 @@ func (CompanyReturnOperationOutcome) EnumDescriptor() ([]byte, []int) {
 	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{3}
 }
 
+// RequiredAnswer is an explicit yes/no answer; omission is never inferred.
+type RequiredAnswer int32
+
+const (
+	RequiredAnswer_REQUIRED_ANSWER_UNSPECIFIED RequiredAnswer = 0
+	RequiredAnswer_REQUIRED_ANSWER_YES         RequiredAnswer = 1
+	RequiredAnswer_REQUIRED_ANSWER_NO          RequiredAnswer = 2
+)
+
+// Enum value maps for RequiredAnswer.
+var (
+	RequiredAnswer_name = map[int32]string{
+		0: "REQUIRED_ANSWER_UNSPECIFIED",
+		1: "REQUIRED_ANSWER_YES",
+		2: "REQUIRED_ANSWER_NO",
+	}
+	RequiredAnswer_value = map[string]int32{
+		"REQUIRED_ANSWER_UNSPECIFIED": 0,
+		"REQUIRED_ANSWER_YES":         1,
+		"REQUIRED_ANSWER_NO":          2,
+	}
+)
+
+func (x RequiredAnswer) Enum() *RequiredAnswer {
+	p := new(RequiredAnswer)
+	*p = x
+	return p
+}
+
+func (x RequiredAnswer) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (RequiredAnswer) Descriptor() protoreflect.EnumDescriptor {
+	return file_tammy_v1_company_tax_proto_enumTypes[4].Descriptor()
+}
+
+func (RequiredAnswer) Type() protoreflect.EnumType {
+	return &file_tammy_v1_company_tax_proto_enumTypes[4]
+}
+
+func (x RequiredAnswer) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use RequiredAnswer.Descriptor instead.
+func (RequiredAnswer) EnumDescriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{4}
+}
+
+// ReturnFactProvenanceKind identifies the bounded authority for a prepared fact.
+type ReturnFactProvenanceKind int32
+
+const (
+	ReturnFactProvenanceKind_RETURN_FACT_PROVENANCE_KIND_UNSPECIFIED              ReturnFactProvenanceKind = 0
+	ReturnFactProvenanceKind_RETURN_FACT_PROVENANCE_KIND_FROZEN_BOOK              ReturnFactProvenanceKind = 1
+	ReturnFactProvenanceKind_RETURN_FACT_PROVENANCE_KIND_REVIEWED_TAX_ADJUSTMENT  ReturnFactProvenanceKind = 2
+	ReturnFactProvenanceKind_RETURN_FACT_PROVENANCE_KIND_VERIFIED_PROFILE         ReturnFactProvenanceKind = 3
+	ReturnFactProvenanceKind_RETURN_FACT_PROVENANCE_KIND_EXPLICIT_EVIDENCED_INPUT ReturnFactProvenanceKind = 4
+	ReturnFactProvenanceKind_RETURN_FACT_PROVENANCE_KIND_BUNDLE_ELECTION          ReturnFactProvenanceKind = 5
+	ReturnFactProvenanceKind_RETURN_FACT_PROVENANCE_KIND_CALCULATION_RULE         ReturnFactProvenanceKind = 6
+)
+
+// Enum value maps for ReturnFactProvenanceKind.
+var (
+	ReturnFactProvenanceKind_name = map[int32]string{
+		0: "RETURN_FACT_PROVENANCE_KIND_UNSPECIFIED",
+		1: "RETURN_FACT_PROVENANCE_KIND_FROZEN_BOOK",
+		2: "RETURN_FACT_PROVENANCE_KIND_REVIEWED_TAX_ADJUSTMENT",
+		3: "RETURN_FACT_PROVENANCE_KIND_VERIFIED_PROFILE",
+		4: "RETURN_FACT_PROVENANCE_KIND_EXPLICIT_EVIDENCED_INPUT",
+		5: "RETURN_FACT_PROVENANCE_KIND_BUNDLE_ELECTION",
+		6: "RETURN_FACT_PROVENANCE_KIND_CALCULATION_RULE",
+	}
+	ReturnFactProvenanceKind_value = map[string]int32{
+		"RETURN_FACT_PROVENANCE_KIND_UNSPECIFIED":              0,
+		"RETURN_FACT_PROVENANCE_KIND_FROZEN_BOOK":              1,
+		"RETURN_FACT_PROVENANCE_KIND_REVIEWED_TAX_ADJUSTMENT":  2,
+		"RETURN_FACT_PROVENANCE_KIND_VERIFIED_PROFILE":         3,
+		"RETURN_FACT_PROVENANCE_KIND_EXPLICIT_EVIDENCED_INPUT": 4,
+		"RETURN_FACT_PROVENANCE_KIND_BUNDLE_ELECTION":          5,
+		"RETURN_FACT_PROVENANCE_KIND_CALCULATION_RULE":         6,
+	}
+)
+
+func (x ReturnFactProvenanceKind) Enum() *ReturnFactProvenanceKind {
+	p := new(ReturnFactProvenanceKind)
+	*p = x
+	return p
+}
+
+func (x ReturnFactProvenanceKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ReturnFactProvenanceKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_tammy_v1_company_tax_proto_enumTypes[5].Descriptor()
+}
+
+func (ReturnFactProvenanceKind) Type() protoreflect.EnumType {
+	return &file_tammy_v1_company_tax_proto_enumTypes[5]
+}
+
+func (x ReturnFactProvenanceKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ReturnFactProvenanceKind.Descriptor instead.
+func (ReturnFactProvenanceKind) EnumDescriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{5}
+}
+
+type ReturnFactValidationStatus int32
+
+const (
+	ReturnFactValidationStatus_RETURN_FACT_VALIDATION_STATUS_UNSPECIFIED ReturnFactValidationStatus = 0
+	ReturnFactValidationStatus_RETURN_FACT_VALIDATION_STATUS_VALID       ReturnFactValidationStatus = 1
+	ReturnFactValidationStatus_RETURN_FACT_VALIDATION_STATUS_BLOCKER     ReturnFactValidationStatus = 2
+	ReturnFactValidationStatus_RETURN_FACT_VALIDATION_STATUS_WARNING     ReturnFactValidationStatus = 3
+	ReturnFactValidationStatus_RETURN_FACT_VALIDATION_STATUS_INFORMATION ReturnFactValidationStatus = 4
+	ReturnFactValidationStatus_RETURN_FACT_VALIDATION_STATUS_UNSUPPORTED ReturnFactValidationStatus = 5
+)
+
+// Enum value maps for ReturnFactValidationStatus.
+var (
+	ReturnFactValidationStatus_name = map[int32]string{
+		0: "RETURN_FACT_VALIDATION_STATUS_UNSPECIFIED",
+		1: "RETURN_FACT_VALIDATION_STATUS_VALID",
+		2: "RETURN_FACT_VALIDATION_STATUS_BLOCKER",
+		3: "RETURN_FACT_VALIDATION_STATUS_WARNING",
+		4: "RETURN_FACT_VALIDATION_STATUS_INFORMATION",
+		5: "RETURN_FACT_VALIDATION_STATUS_UNSUPPORTED",
+	}
+	ReturnFactValidationStatus_value = map[string]int32{
+		"RETURN_FACT_VALIDATION_STATUS_UNSPECIFIED": 0,
+		"RETURN_FACT_VALIDATION_STATUS_VALID":       1,
+		"RETURN_FACT_VALIDATION_STATUS_BLOCKER":     2,
+		"RETURN_FACT_VALIDATION_STATUS_WARNING":     3,
+		"RETURN_FACT_VALIDATION_STATUS_INFORMATION": 4,
+		"RETURN_FACT_VALIDATION_STATUS_UNSUPPORTED": 5,
+	}
+)
+
+func (x ReturnFactValidationStatus) Enum() *ReturnFactValidationStatus {
+	p := new(ReturnFactValidationStatus)
+	*p = x
+	return p
+}
+
+func (x ReturnFactValidationStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ReturnFactValidationStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_tammy_v1_company_tax_proto_enumTypes[6].Descriptor()
+}
+
+func (ReturnFactValidationStatus) Type() protoreflect.EnumType {
+	return &file_tammy_v1_company_tax_proto_enumTypes[6]
+}
+
+func (x ReturnFactValidationStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ReturnFactValidationStatus.Descriptor instead.
+func (ReturnFactValidationStatus) EnumDescriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{6}
+}
+
+type ReturnValidationSeverity int32
+
+const (
+	ReturnValidationSeverity_RETURN_VALIDATION_SEVERITY_UNSPECIFIED ReturnValidationSeverity = 0
+	ReturnValidationSeverity_RETURN_VALIDATION_SEVERITY_BLOCKER     ReturnValidationSeverity = 1
+	ReturnValidationSeverity_RETURN_VALIDATION_SEVERITY_WARNING     ReturnValidationSeverity = 2
+	ReturnValidationSeverity_RETURN_VALIDATION_SEVERITY_INFORMATION ReturnValidationSeverity = 3
+	ReturnValidationSeverity_RETURN_VALIDATION_SEVERITY_UNSUPPORTED ReturnValidationSeverity = 4
+)
+
+// Enum value maps for ReturnValidationSeverity.
+var (
+	ReturnValidationSeverity_name = map[int32]string{
+		0: "RETURN_VALIDATION_SEVERITY_UNSPECIFIED",
+		1: "RETURN_VALIDATION_SEVERITY_BLOCKER",
+		2: "RETURN_VALIDATION_SEVERITY_WARNING",
+		3: "RETURN_VALIDATION_SEVERITY_INFORMATION",
+		4: "RETURN_VALIDATION_SEVERITY_UNSUPPORTED",
+	}
+	ReturnValidationSeverity_value = map[string]int32{
+		"RETURN_VALIDATION_SEVERITY_UNSPECIFIED": 0,
+		"RETURN_VALIDATION_SEVERITY_BLOCKER":     1,
+		"RETURN_VALIDATION_SEVERITY_WARNING":     2,
+		"RETURN_VALIDATION_SEVERITY_INFORMATION": 3,
+		"RETURN_VALIDATION_SEVERITY_UNSUPPORTED": 4,
+	}
+)
+
+func (x ReturnValidationSeverity) Enum() *ReturnValidationSeverity {
+	p := new(ReturnValidationSeverity)
+	*p = x
+	return p
+}
+
+func (x ReturnValidationSeverity) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ReturnValidationSeverity) Descriptor() protoreflect.EnumDescriptor {
+	return file_tammy_v1_company_tax_proto_enumTypes[7].Descriptor()
+}
+
+func (ReturnValidationSeverity) Type() protoreflect.EnumType {
+	return &file_tammy_v1_company_tax_proto_enumTypes[7]
+}
+
+func (x ReturnValidationSeverity) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ReturnValidationSeverity.Descriptor instead.
+func (ReturnValidationSeverity) EnumDescriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{7}
+}
+
+type TaxAdjustmentType int32
+
+const (
+	TaxAdjustmentType_TAX_ADJUSTMENT_TYPE_UNSPECIFIED                  TaxAdjustmentType = 0
+	TaxAdjustmentType_TAX_ADJUSTMENT_TYPE_NON_DEDUCTIBLE_EXPENSE       TaxAdjustmentType = 1
+	TaxAdjustmentType_TAX_ADJUSTMENT_TYPE_EXEMPT_NON_ASSESSABLE_INCOME TaxAdjustmentType = 2
+	TaxAdjustmentType_TAX_ADJUSTMENT_TYPE_ACCOUNTING_TAX_DEPRECIATION  TaxAdjustmentType = 3
+	TaxAdjustmentType_TAX_ADJUSTMENT_TYPE_PROVISION_ACCRUAL_REVERSAL   TaxAdjustmentType = 4
+	TaxAdjustmentType_TAX_ADJUSTMENT_TYPE_TAX_PAYMENT_CREDIT           TaxAdjustmentType = 5
+	TaxAdjustmentType_TAX_ADJUSTMENT_TYPE_CURRENT_YEAR_REVENUE_LOSS    TaxAdjustmentType = 6
+	TaxAdjustmentType_TAX_ADJUSTMENT_TYPE_CARRIED_FORWARD_REVENUE_LOSS TaxAdjustmentType = 7
+)
+
+// Enum value maps for TaxAdjustmentType.
+var (
+	TaxAdjustmentType_name = map[int32]string{
+		0: "TAX_ADJUSTMENT_TYPE_UNSPECIFIED",
+		1: "TAX_ADJUSTMENT_TYPE_NON_DEDUCTIBLE_EXPENSE",
+		2: "TAX_ADJUSTMENT_TYPE_EXEMPT_NON_ASSESSABLE_INCOME",
+		3: "TAX_ADJUSTMENT_TYPE_ACCOUNTING_TAX_DEPRECIATION",
+		4: "TAX_ADJUSTMENT_TYPE_PROVISION_ACCRUAL_REVERSAL",
+		5: "TAX_ADJUSTMENT_TYPE_TAX_PAYMENT_CREDIT",
+		6: "TAX_ADJUSTMENT_TYPE_CURRENT_YEAR_REVENUE_LOSS",
+		7: "TAX_ADJUSTMENT_TYPE_CARRIED_FORWARD_REVENUE_LOSS",
+	}
+	TaxAdjustmentType_value = map[string]int32{
+		"TAX_ADJUSTMENT_TYPE_UNSPECIFIED":                  0,
+		"TAX_ADJUSTMENT_TYPE_NON_DEDUCTIBLE_EXPENSE":       1,
+		"TAX_ADJUSTMENT_TYPE_EXEMPT_NON_ASSESSABLE_INCOME": 2,
+		"TAX_ADJUSTMENT_TYPE_ACCOUNTING_TAX_DEPRECIATION":  3,
+		"TAX_ADJUSTMENT_TYPE_PROVISION_ACCRUAL_REVERSAL":   4,
+		"TAX_ADJUSTMENT_TYPE_TAX_PAYMENT_CREDIT":           5,
+		"TAX_ADJUSTMENT_TYPE_CURRENT_YEAR_REVENUE_LOSS":    6,
+		"TAX_ADJUSTMENT_TYPE_CARRIED_FORWARD_REVENUE_LOSS": 7,
+	}
+)
+
+func (x TaxAdjustmentType) Enum() *TaxAdjustmentType {
+	p := new(TaxAdjustmentType)
+	*p = x
+	return p
+}
+
+func (x TaxAdjustmentType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (TaxAdjustmentType) Descriptor() protoreflect.EnumDescriptor {
+	return file_tammy_v1_company_tax_proto_enumTypes[8].Descriptor()
+}
+
+func (TaxAdjustmentType) Type() protoreflect.EnumType {
+	return &file_tammy_v1_company_tax_proto_enumTypes[8]
+}
+
+func (x TaxAdjustmentType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use TaxAdjustmentType.Descriptor instead.
+func (TaxAdjustmentType) EnumDescriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{8}
+}
+
+type TaxAdjustmentTiming int32
+
+const (
+	TaxAdjustmentTiming_TAX_ADJUSTMENT_TIMING_UNSPECIFIED TaxAdjustmentTiming = 0
+	TaxAdjustmentTiming_TAX_ADJUSTMENT_TIMING_PERMANENT   TaxAdjustmentTiming = 1
+	TaxAdjustmentTiming_TAX_ADJUSTMENT_TIMING_TEMPORARY   TaxAdjustmentTiming = 2
+)
+
+// Enum value maps for TaxAdjustmentTiming.
+var (
+	TaxAdjustmentTiming_name = map[int32]string{
+		0: "TAX_ADJUSTMENT_TIMING_UNSPECIFIED",
+		1: "TAX_ADJUSTMENT_TIMING_PERMANENT",
+		2: "TAX_ADJUSTMENT_TIMING_TEMPORARY",
+	}
+	TaxAdjustmentTiming_value = map[string]int32{
+		"TAX_ADJUSTMENT_TIMING_UNSPECIFIED": 0,
+		"TAX_ADJUSTMENT_TIMING_PERMANENT":   1,
+		"TAX_ADJUSTMENT_TIMING_TEMPORARY":   2,
+	}
+)
+
+func (x TaxAdjustmentTiming) Enum() *TaxAdjustmentTiming {
+	p := new(TaxAdjustmentTiming)
+	*p = x
+	return p
+}
+
+func (x TaxAdjustmentTiming) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (TaxAdjustmentTiming) Descriptor() protoreflect.EnumDescriptor {
+	return file_tammy_v1_company_tax_proto_enumTypes[9].Descriptor()
+}
+
+func (TaxAdjustmentTiming) Type() protoreflect.EnumType {
+	return &file_tammy_v1_company_tax_proto_enumTypes[9]
+}
+
+func (x TaxAdjustmentTiming) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use TaxAdjustmentTiming.Descriptor instead.
+func (TaxAdjustmentTiming) EnumDescriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{9}
+}
+
+type HoldingCompanyKind int32
+
+const (
+	HoldingCompanyKind_HOLDING_COMPANY_KIND_UNSPECIFIED HoldingCompanyKind = 0
+	HoldingCompanyKind_HOLDING_COMPANY_KIND_NONE        HoldingCompanyKind = 1
+	HoldingCompanyKind_HOLDING_COMPANY_KIND_AUSTRALIAN  HoldingCompanyKind = 2
+	HoldingCompanyKind_HOLDING_COMPANY_KIND_FOREIGN     HoldingCompanyKind = 3
+)
+
+// Enum value maps for HoldingCompanyKind.
+var (
+	HoldingCompanyKind_name = map[int32]string{
+		0: "HOLDING_COMPANY_KIND_UNSPECIFIED",
+		1: "HOLDING_COMPANY_KIND_NONE",
+		2: "HOLDING_COMPANY_KIND_AUSTRALIAN",
+		3: "HOLDING_COMPANY_KIND_FOREIGN",
+	}
+	HoldingCompanyKind_value = map[string]int32{
+		"HOLDING_COMPANY_KIND_UNSPECIFIED": 0,
+		"HOLDING_COMPANY_KIND_NONE":        1,
+		"HOLDING_COMPANY_KIND_AUSTRALIAN":  2,
+		"HOLDING_COMPANY_KIND_FOREIGN":     3,
+	}
+)
+
+func (x HoldingCompanyKind) Enum() *HoldingCompanyKind {
+	p := new(HoldingCompanyKind)
+	*p = x
+	return p
+}
+
+func (x HoldingCompanyKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (HoldingCompanyKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_tammy_v1_company_tax_proto_enumTypes[10].Descriptor()
+}
+
+func (HoldingCompanyKind) Type() protoreflect.EnumType {
+	return &file_tammy_v1_company_tax_proto_enumTypes[10]
+}
+
+func (x HoldingCompanyKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use HoldingCompanyKind.Descriptor instead.
+func (HoldingCompanyKind) EnumDescriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{10}
+}
+
+type BaseRatePassiveIncomeClassification int32
+
+const (
+	BaseRatePassiveIncomeClassification_BASE_RATE_PASSIVE_INCOME_CLASSIFICATION_UNSPECIFIED BaseRatePassiveIncomeClassification = 0
+	BaseRatePassiveIncomeClassification_BASE_RATE_PASSIVE_INCOME_CLASSIFICATION_PASSIVE     BaseRatePassiveIncomeClassification = 1
+	BaseRatePassiveIncomeClassification_BASE_RATE_PASSIVE_INCOME_CLASSIFICATION_NON_PASSIVE BaseRatePassiveIncomeClassification = 2
+)
+
+// Enum value maps for BaseRatePassiveIncomeClassification.
+var (
+	BaseRatePassiveIncomeClassification_name = map[int32]string{
+		0: "BASE_RATE_PASSIVE_INCOME_CLASSIFICATION_UNSPECIFIED",
+		1: "BASE_RATE_PASSIVE_INCOME_CLASSIFICATION_PASSIVE",
+		2: "BASE_RATE_PASSIVE_INCOME_CLASSIFICATION_NON_PASSIVE",
+	}
+	BaseRatePassiveIncomeClassification_value = map[string]int32{
+		"BASE_RATE_PASSIVE_INCOME_CLASSIFICATION_UNSPECIFIED": 0,
+		"BASE_RATE_PASSIVE_INCOME_CLASSIFICATION_PASSIVE":     1,
+		"BASE_RATE_PASSIVE_INCOME_CLASSIFICATION_NON_PASSIVE": 2,
+	}
+)
+
+func (x BaseRatePassiveIncomeClassification) Enum() *BaseRatePassiveIncomeClassification {
+	p := new(BaseRatePassiveIncomeClassification)
+	*p = x
+	return p
+}
+
+func (x BaseRatePassiveIncomeClassification) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (BaseRatePassiveIncomeClassification) Descriptor() protoreflect.EnumDescriptor {
+	return file_tammy_v1_company_tax_proto_enumTypes[11].Descriptor()
+}
+
+func (BaseRatePassiveIncomeClassification) Type() protoreflect.EnumType {
+	return &file_tammy_v1_company_tax_proto_enumTypes[11]
+}
+
+func (x BaseRatePassiveIncomeClassification) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use BaseRatePassiveIncomeClassification.Descriptor instead.
+func (BaseRatePassiveIncomeClassification) EnumDescriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{11}
+}
+
+type SmallBusinessEntityChoice int32
+
+const (
+	SmallBusinessEntityChoice_SMALL_BUSINESS_ENTITY_CHOICE_UNSPECIFIED  SmallBusinessEntityChoice = 0
+	SmallBusinessEntityChoice_SMALL_BUSINESS_ENTITY_CHOICE_APPLY        SmallBusinessEntityChoice = 1
+	SmallBusinessEntityChoice_SMALL_BUSINESS_ENTITY_CHOICE_DO_NOT_APPLY SmallBusinessEntityChoice = 2
+)
+
+// Enum value maps for SmallBusinessEntityChoice.
+var (
+	SmallBusinessEntityChoice_name = map[int32]string{
+		0: "SMALL_BUSINESS_ENTITY_CHOICE_UNSPECIFIED",
+		1: "SMALL_BUSINESS_ENTITY_CHOICE_APPLY",
+		2: "SMALL_BUSINESS_ENTITY_CHOICE_DO_NOT_APPLY",
+	}
+	SmallBusinessEntityChoice_value = map[string]int32{
+		"SMALL_BUSINESS_ENTITY_CHOICE_UNSPECIFIED":  0,
+		"SMALL_BUSINESS_ENTITY_CHOICE_APPLY":        1,
+		"SMALL_BUSINESS_ENTITY_CHOICE_DO_NOT_APPLY": 2,
+	}
+)
+
+func (x SmallBusinessEntityChoice) Enum() *SmallBusinessEntityChoice {
+	p := new(SmallBusinessEntityChoice)
+	*p = x
+	return p
+}
+
+func (x SmallBusinessEntityChoice) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (SmallBusinessEntityChoice) Descriptor() protoreflect.EnumDescriptor {
+	return file_tammy_v1_company_tax_proto_enumTypes[12].Descriptor()
+}
+
+func (SmallBusinessEntityChoice) Type() protoreflect.EnumType {
+	return &file_tammy_v1_company_tax_proto_enumTypes[12]
+}
+
+func (x SmallBusinessEntityChoice) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use SmallBusinessEntityChoice.Descriptor instead.
+func (SmallBusinessEntityChoice) EnumDescriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{12}
+}
+
+type DepreciationChoice int32
+
+const (
+	DepreciationChoice_DEPRECIATION_CHOICE_UNSPECIFIED              DepreciationChoice = 0
+	DepreciationChoice_DEPRECIATION_CHOICE_STANDARD                 DepreciationChoice = 1
+	DepreciationChoice_DEPRECIATION_CHOICE_SUPPORTED_SMALL_BUSINESS DepreciationChoice = 2
+)
+
+// Enum value maps for DepreciationChoice.
+var (
+	DepreciationChoice_name = map[int32]string{
+		0: "DEPRECIATION_CHOICE_UNSPECIFIED",
+		1: "DEPRECIATION_CHOICE_STANDARD",
+		2: "DEPRECIATION_CHOICE_SUPPORTED_SMALL_BUSINESS",
+	}
+	DepreciationChoice_value = map[string]int32{
+		"DEPRECIATION_CHOICE_UNSPECIFIED":              0,
+		"DEPRECIATION_CHOICE_STANDARD":                 1,
+		"DEPRECIATION_CHOICE_SUPPORTED_SMALL_BUSINESS": 2,
+	}
+)
+
+func (x DepreciationChoice) Enum() *DepreciationChoice {
+	p := new(DepreciationChoice)
+	*p = x
+	return p
+}
+
+func (x DepreciationChoice) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (DepreciationChoice) Descriptor() protoreflect.EnumDescriptor {
+	return file_tammy_v1_company_tax_proto_enumTypes[13].Descriptor()
+}
+
+func (DepreciationChoice) Type() protoreflect.EnumType {
+	return &file_tammy_v1_company_tax_proto_enumTypes[13]
+}
+
+func (x DepreciationChoice) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use DepreciationChoice.Descriptor instead.
+func (DepreciationChoice) EnumDescriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{13}
+}
+
+type CompanyReturnExportKind int32
+
+const (
+	CompanyReturnExportKind_COMPANY_RETURN_EXPORT_KIND_UNSPECIFIED               CompanyReturnExportKind = 0
+	CompanyReturnExportKind_COMPANY_RETURN_EXPORT_KIND_REDACTED_REVIEW_PDF       CompanyReturnExportKind = 1
+	CompanyReturnExportKind_COMPANY_RETURN_EXPORT_KIND_ENCRYPTED_HANDOFF_ARCHIVE CompanyReturnExportKind = 2
+)
+
+// Enum value maps for CompanyReturnExportKind.
+var (
+	CompanyReturnExportKind_name = map[int32]string{
+		0: "COMPANY_RETURN_EXPORT_KIND_UNSPECIFIED",
+		1: "COMPANY_RETURN_EXPORT_KIND_REDACTED_REVIEW_PDF",
+		2: "COMPANY_RETURN_EXPORT_KIND_ENCRYPTED_HANDOFF_ARCHIVE",
+	}
+	CompanyReturnExportKind_value = map[string]int32{
+		"COMPANY_RETURN_EXPORT_KIND_UNSPECIFIED":               0,
+		"COMPANY_RETURN_EXPORT_KIND_REDACTED_REVIEW_PDF":       1,
+		"COMPANY_RETURN_EXPORT_KIND_ENCRYPTED_HANDOFF_ARCHIVE": 2,
+	}
+)
+
+func (x CompanyReturnExportKind) Enum() *CompanyReturnExportKind {
+	p := new(CompanyReturnExportKind)
+	*p = x
+	return p
+}
+
+func (x CompanyReturnExportKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (CompanyReturnExportKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_tammy_v1_company_tax_proto_enumTypes[14].Descriptor()
+}
+
+func (CompanyReturnExportKind) Type() protoreflect.EnumType {
+	return &file_tammy_v1_company_tax_proto_enumTypes[14]
+}
+
+func (x CompanyReturnExportKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use CompanyReturnExportKind.Descriptor instead.
+func (CompanyReturnExportKind) EnumDescriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{14}
+}
+
+type AddressInput struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Line_1        string                 `protobuf:"bytes,1,opt,name=line_1,json=line1" json:"line_1,omitempty"`
+	Line_2        string                 `protobuf:"bytes,2,opt,name=line_2,json=line2" json:"line_2,omitempty"`
+	Locality      string                 `protobuf:"bytes,3,opt,name=locality" json:"locality,omitempty"`
+	State         string                 `protobuf:"bytes,4,opt,name=state" json:"state,omitempty"`
+	Postcode      string                 `protobuf:"bytes,5,opt,name=postcode" json:"postcode,omitempty"`
+	CountryCode   string                 `protobuf:"bytes,6,opt,name=country_code,json=countryCode" json:"country_code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AddressInput) Reset() {
+	*x = AddressInput{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddressInput) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddressInput) ProtoMessage() {}
+
+func (x *AddressInput) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddressInput.ProtoReflect.Descriptor instead.
+func (*AddressInput) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *AddressInput) GetLine_1() string {
+	if x != nil {
+		return x.Line_1
+	}
+	return ""
+}
+
+func (x *AddressInput) GetLine_2() string {
+	if x != nil {
+		return x.Line_2
+	}
+	return ""
+}
+
+func (x *AddressInput) GetLocality() string {
+	if x != nil {
+		return x.Locality
+	}
+	return ""
+}
+
+func (x *AddressInput) GetState() string {
+	if x != nil {
+		return x.State
+	}
+	return ""
+}
+
+func (x *AddressInput) GetPostcode() string {
+	if x != nil {
+		return x.Postcode
+	}
+	return ""
+}
+
+func (x *AddressInput) GetCountryCode() string {
+	if x != nil {
+		return x.CountryCode
+	}
+	return ""
+}
+
+type RelatedEntityTurnoverContribution struct {
+	state                           protoimpl.MessageState `protogen:"open.v1"`
+	EntityName                      string                 `protobuf:"bytes,1,opt,name=entity_name,json=entityName" json:"entity_name,omitempty"`
+	EntityAbn                       string                 `protobuf:"bytes,2,opt,name=entity_abn,json=entityAbn" json:"entity_abn,omitempty"`
+	Amount                          *Money                 `protobuf:"bytes,3,opt,name=amount" json:"amount,omitempty"`
+	Evidence                        []*SourceRef           `protobuf:"bytes,4,rep,name=evidence" json:"evidence,omitempty"`
+	ReviewedControlOrAffiliateBasis string                 `protobuf:"bytes,5,opt,name=reviewed_control_or_affiliate_basis,json=reviewedControlOrAffiliateBasis" json:"reviewed_control_or_affiliate_basis,omitempty"`
+	unknownFields                   protoimpl.UnknownFields
+	sizeCache                       protoimpl.SizeCache
+}
+
+func (x *RelatedEntityTurnoverContribution) Reset() {
+	*x = RelatedEntityTurnoverContribution{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RelatedEntityTurnoverContribution) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RelatedEntityTurnoverContribution) ProtoMessage() {}
+
+func (x *RelatedEntityTurnoverContribution) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RelatedEntityTurnoverContribution.ProtoReflect.Descriptor instead.
+func (*RelatedEntityTurnoverContribution) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *RelatedEntityTurnoverContribution) GetEntityName() string {
+	if x != nil {
+		return x.EntityName
+	}
+	return ""
+}
+
+func (x *RelatedEntityTurnoverContribution) GetEntityAbn() string {
+	if x != nil {
+		return x.EntityAbn
+	}
+	return ""
+}
+
+func (x *RelatedEntityTurnoverContribution) GetAmount() *Money {
+	if x != nil {
+		return x.Amount
+	}
+	return nil
+}
+
+func (x *RelatedEntityTurnoverContribution) GetEvidence() []*SourceRef {
+	if x != nil {
+		return x.Evidence
+	}
+	return nil
+}
+
+func (x *RelatedEntityTurnoverContribution) GetReviewedControlOrAffiliateBasis() string {
+	if x != nil {
+		return x.ReviewedControlOrAffiliateBasis
+	}
+	return ""
+}
+
+type PassiveIncomeClassificationInput struct {
+	state            protoimpl.MessageState              `protogen:"open.v1"`
+	IncomeSource     *SourceRef                          `protobuf:"bytes,1,opt,name=income_source,json=incomeSource" json:"income_source,omitempty"`
+	Classification   BaseRatePassiveIncomeClassification `protobuf:"varint,2,opt,name=classification,enum=tammy.v1.BaseRatePassiveIncomeClassification" json:"classification,omitempty"`
+	BundleRuleId     string                              `protobuf:"bytes,3,opt,name=bundle_rule_id,json=bundleRuleId" json:"bundle_rule_id,omitempty"`
+	Evidence         []*SourceRef                        `protobuf:"bytes,4,rep,name=evidence" json:"evidence,omitempty"`
+	ReviewedByUserId string                              `protobuf:"bytes,5,opt,name=reviewed_by_user_id,json=reviewedByUserId" json:"reviewed_by_user_id,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *PassiveIncomeClassificationInput) Reset() {
+	*x = PassiveIncomeClassificationInput{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PassiveIncomeClassificationInput) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PassiveIncomeClassificationInput) ProtoMessage() {}
+
+func (x *PassiveIncomeClassificationInput) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PassiveIncomeClassificationInput.ProtoReflect.Descriptor instead.
+func (*PassiveIncomeClassificationInput) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *PassiveIncomeClassificationInput) GetIncomeSource() *SourceRef {
+	if x != nil {
+		return x.IncomeSource
+	}
+	return nil
+}
+
+func (x *PassiveIncomeClassificationInput) GetClassification() BaseRatePassiveIncomeClassification {
+	if x != nil {
+		return x.Classification
+	}
+	return BaseRatePassiveIncomeClassification_BASE_RATE_PASSIVE_INCOME_CLASSIFICATION_UNSPECIFIED
+}
+
+func (x *PassiveIncomeClassificationInput) GetBundleRuleId() string {
+	if x != nil {
+		return x.BundleRuleId
+	}
+	return ""
+}
+
+func (x *PassiveIncomeClassificationInput) GetEvidence() []*SourceRef {
+	if x != nil {
+		return x.Evidence
+	}
+	return nil
+}
+
+func (x *PassiveIncomeClassificationInput) GetReviewedByUserId() string {
+	if x != nil {
+		return x.ReviewedByUserId
+	}
+	return ""
+}
+
+type ApplicabilityAnswers struct {
+	state                           protoimpl.MessageState `protogen:"open.v1"`
+	TofaApplies                     RequiredAnswer         `protobuf:"varint,1,opt,name=tofa_applies,json=tofaApplies,enum=tammy.v1.RequiredAnswer" json:"tofa_applies,omitempty"`
+	PsiApplies                      RequiredAnswer         `protobuf:"varint,2,opt,name=psi_applies,json=psiApplies,enum=tammy.v1.RequiredAnswer" json:"psi_applies,omitempty"`
+	InterposedEntityElectionApplies RequiredAnswer         `protobuf:"varint,3,opt,name=interposed_entity_election_applies,json=interposedEntityElectionApplies,enum=tammy.v1.RequiredAnswer" json:"interposed_entity_election_applies,omitempty"`
+	ConsolidatedGroupMember         RequiredAnswer         `protobuf:"varint,4,opt,name=consolidated_group_member,json=consolidatedGroupMember,enum=tammy.v1.RequiredAnswer" json:"consolidated_group_member,omitempty"`
+	ResearchAndDevelopmentIncentive RequiredAnswer         `protobuf:"varint,5,opt,name=research_and_development_incentive,json=researchAndDevelopmentIncentive,enum=tammy.v1.RequiredAnswer" json:"research_and_development_incentive,omitempty"`
+	InternationalDealings           RequiredAnswer         `protobuf:"varint,6,opt,name=international_dealings,json=internationalDealings,enum=tammy.v1.RequiredAnswer" json:"international_dealings,omitempty"`
+	ReportableTaxPosition           RequiredAnswer         `protobuf:"varint,7,opt,name=reportable_tax_position,json=reportableTaxPosition,enum=tammy.v1.RequiredAnswer" json:"reportable_tax_position,omitempty"`
+	LifeInsuranceBusiness           RequiredAnswer         `protobuf:"varint,8,opt,name=life_insurance_business,json=lifeInsuranceBusiness,enum=tammy.v1.RequiredAnswer" json:"life_insurance_business,omitempty"`
+	CgtScheduleRequired             RequiredAnswer         `protobuf:"varint,9,opt,name=cgt_schedule_required,json=cgtScheduleRequired,enum=tammy.v1.RequiredAnswer" json:"cgt_schedule_required,omitempty"`
+	LossesScheduleRequired          RequiredAnswer         `protobuf:"varint,10,opt,name=losses_schedule_required,json=lossesScheduleRequired,enum=tammy.v1.RequiredAnswer" json:"losses_schedule_required,omitempty"`
+	OtherScheduleRequired           RequiredAnswer         `protobuf:"varint,11,opt,name=other_schedule_required,json=otherScheduleRequired,enum=tammy.v1.RequiredAnswer" json:"other_schedule_required,omitempty"`
+	FbOrUnsupportedPayrollEffect    RequiredAnswer         `protobuf:"varint,12,opt,name=fb_or_unsupported_payroll_effect,json=fbOrUnsupportedPayrollEffect,enum=tammy.v1.RequiredAnswer" json:"fb_or_unsupported_payroll_effect,omitempty"`
+	Division_7AUnresolved           RequiredAnswer         `protobuf:"varint,13,opt,name=division_7a_unresolved,json=division7aUnresolved,enum=tammy.v1.RequiredAnswer" json:"division_7a_unresolved,omitempty"`
+	UnsupportedInventory            RequiredAnswer         `protobuf:"varint,14,opt,name=unsupported_inventory,json=unsupportedInventory,enum=tammy.v1.RequiredAnswer" json:"unsupported_inventory,omitempty"`
+	UnsupportedMulticurrency        RequiredAnswer         `protobuf:"varint,15,opt,name=unsupported_multicurrency,json=unsupportedMulticurrency,enum=tammy.v1.RequiredAnswer" json:"unsupported_multicurrency,omitempty"`
+	UnsupportedCrypto               RequiredAnswer         `protobuf:"varint,16,opt,name=unsupported_crypto,json=unsupportedCrypto,enum=tammy.v1.RequiredAnswer" json:"unsupported_crypto,omitempty"`
+	unknownFields                   protoimpl.UnknownFields
+	sizeCache                       protoimpl.SizeCache
+}
+
+func (x *ApplicabilityAnswers) Reset() {
+	*x = ApplicabilityAnswers{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ApplicabilityAnswers) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ApplicabilityAnswers) ProtoMessage() {}
+
+func (x *ApplicabilityAnswers) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ApplicabilityAnswers.ProtoReflect.Descriptor instead.
+func (*ApplicabilityAnswers) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ApplicabilityAnswers) GetTofaApplies() RequiredAnswer {
+	if x != nil {
+		return x.TofaApplies
+	}
+	return RequiredAnswer_REQUIRED_ANSWER_UNSPECIFIED
+}
+
+func (x *ApplicabilityAnswers) GetPsiApplies() RequiredAnswer {
+	if x != nil {
+		return x.PsiApplies
+	}
+	return RequiredAnswer_REQUIRED_ANSWER_UNSPECIFIED
+}
+
+func (x *ApplicabilityAnswers) GetInterposedEntityElectionApplies() RequiredAnswer {
+	if x != nil {
+		return x.InterposedEntityElectionApplies
+	}
+	return RequiredAnswer_REQUIRED_ANSWER_UNSPECIFIED
+}
+
+func (x *ApplicabilityAnswers) GetConsolidatedGroupMember() RequiredAnswer {
+	if x != nil {
+		return x.ConsolidatedGroupMember
+	}
+	return RequiredAnswer_REQUIRED_ANSWER_UNSPECIFIED
+}
+
+func (x *ApplicabilityAnswers) GetResearchAndDevelopmentIncentive() RequiredAnswer {
+	if x != nil {
+		return x.ResearchAndDevelopmentIncentive
+	}
+	return RequiredAnswer_REQUIRED_ANSWER_UNSPECIFIED
+}
+
+func (x *ApplicabilityAnswers) GetInternationalDealings() RequiredAnswer {
+	if x != nil {
+		return x.InternationalDealings
+	}
+	return RequiredAnswer_REQUIRED_ANSWER_UNSPECIFIED
+}
+
+func (x *ApplicabilityAnswers) GetReportableTaxPosition() RequiredAnswer {
+	if x != nil {
+		return x.ReportableTaxPosition
+	}
+	return RequiredAnswer_REQUIRED_ANSWER_UNSPECIFIED
+}
+
+func (x *ApplicabilityAnswers) GetLifeInsuranceBusiness() RequiredAnswer {
+	if x != nil {
+		return x.LifeInsuranceBusiness
+	}
+	return RequiredAnswer_REQUIRED_ANSWER_UNSPECIFIED
+}
+
+func (x *ApplicabilityAnswers) GetCgtScheduleRequired() RequiredAnswer {
+	if x != nil {
+		return x.CgtScheduleRequired
+	}
+	return RequiredAnswer_REQUIRED_ANSWER_UNSPECIFIED
+}
+
+func (x *ApplicabilityAnswers) GetLossesScheduleRequired() RequiredAnswer {
+	if x != nil {
+		return x.LossesScheduleRequired
+	}
+	return RequiredAnswer_REQUIRED_ANSWER_UNSPECIFIED
+}
+
+func (x *ApplicabilityAnswers) GetOtherScheduleRequired() RequiredAnswer {
+	if x != nil {
+		return x.OtherScheduleRequired
+	}
+	return RequiredAnswer_REQUIRED_ANSWER_UNSPECIFIED
+}
+
+func (x *ApplicabilityAnswers) GetFbOrUnsupportedPayrollEffect() RequiredAnswer {
+	if x != nil {
+		return x.FbOrUnsupportedPayrollEffect
+	}
+	return RequiredAnswer_REQUIRED_ANSWER_UNSPECIFIED
+}
+
+func (x *ApplicabilityAnswers) GetDivision_7AUnresolved() RequiredAnswer {
+	if x != nil {
+		return x.Division_7AUnresolved
+	}
+	return RequiredAnswer_REQUIRED_ANSWER_UNSPECIFIED
+}
+
+func (x *ApplicabilityAnswers) GetUnsupportedInventory() RequiredAnswer {
+	if x != nil {
+		return x.UnsupportedInventory
+	}
+	return RequiredAnswer_REQUIRED_ANSWER_UNSPECIFIED
+}
+
+func (x *ApplicabilityAnswers) GetUnsupportedMulticurrency() RequiredAnswer {
+	if x != nil {
+		return x.UnsupportedMulticurrency
+	}
+	return RequiredAnswer_REQUIRED_ANSWER_UNSPECIFIED
+}
+
+func (x *ApplicabilityAnswers) GetUnsupportedCrypto() RequiredAnswer {
+	if x != nil {
+		return x.UnsupportedCrypto
+	}
+	return RequiredAnswer_REQUIRED_ANSWER_UNSPECIFIED
+}
+
+type PriorRevenueLossInput struct {
+	state                                  protoimpl.MessageState `protogen:"open.v1"`
+	OpeningBalance                         *Money                 `protobuf:"bytes,1,opt,name=opening_balance,json=openingBalance" json:"opening_balance,omitempty"`
+	OwnershipContinuityConfirmed           RequiredAnswer         `protobuf:"varint,2,opt,name=ownership_continuity_confirmed,json=ownershipContinuityConfirmed,enum=tammy.v1.RequiredAnswer" json:"ownership_continuity_confirmed,omitempty"`
+	SameOrSimilarBusinessJudgementRequired RequiredAnswer         `protobuf:"varint,3,opt,name=same_or_similar_business_judgement_required,json=sameOrSimilarBusinessJudgementRequired,enum=tammy.v1.RequiredAnswer" json:"same_or_similar_business_judgement_required,omitempty"`
+	Evidence                               []*SourceRef           `protobuf:"bytes,4,rep,name=evidence" json:"evidence,omitempty"`
+	unknownFields                          protoimpl.UnknownFields
+	sizeCache                              protoimpl.SizeCache
+}
+
+func (x *PriorRevenueLossInput) Reset() {
+	*x = PriorRevenueLossInput{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PriorRevenueLossInput) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PriorRevenueLossInput) ProtoMessage() {}
+
+func (x *PriorRevenueLossInput) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PriorRevenueLossInput.ProtoReflect.Descriptor instead.
+func (*PriorRevenueLossInput) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *PriorRevenueLossInput) GetOpeningBalance() *Money {
+	if x != nil {
+		return x.OpeningBalance
+	}
+	return nil
+}
+
+func (x *PriorRevenueLossInput) GetOwnershipContinuityConfirmed() RequiredAnswer {
+	if x != nil {
+		return x.OwnershipContinuityConfirmed
+	}
+	return RequiredAnswer_REQUIRED_ANSWER_UNSPECIFIED
+}
+
+func (x *PriorRevenueLossInput) GetSameOrSimilarBusinessJudgementRequired() RequiredAnswer {
+	if x != nil {
+		return x.SameOrSimilarBusinessJudgementRequired
+	}
+	return RequiredAnswer_REQUIRED_ANSWER_UNSPECIFIED
+}
+
+func (x *PriorRevenueLossInput) GetEvidence() []*SourceRef {
+	if x != nil {
+		return x.Evidence
+	}
+	return nil
+}
+
+type CompanyTaxProfileInput struct {
+	state                           protoimpl.MessageState               `protogen:"open.v1"`
+	LegalName                       string                               `protobuf:"bytes,1,opt,name=legal_name,json=legalName" json:"legal_name,omitempty"`
+	Tfn                             *SecretInput                         `protobuf:"bytes,2,opt,name=tfn" json:"tfn,omitempty"`
+	CurrentPostalAddress            *AddressInput                        `protobuf:"bytes,3,opt,name=current_postal_address,json=currentPostalAddress" json:"current_postal_address,omitempty"`
+	PriorPostalAddress              *AddressInput                        `protobuf:"bytes,4,opt,name=prior_postal_address,json=priorPostalAddress" json:"prior_postal_address,omitempty"`
+	MainBusinessAddress             *AddressInput                        `protobuf:"bytes,5,opt,name=main_business_address,json=mainBusinessAddress" json:"main_business_address,omitempty"`
+	AustralianResident              RequiredAnswer                       `protobuf:"varint,6,opt,name=australian_resident,json=australianResident,enum=tammy.v1.RequiredAnswer" json:"australian_resident,omitempty"`
+	PrivateCompany                  RequiredAnswer                       `protobuf:"varint,7,opt,name=private_company,json=privateCompany,enum=tammy.v1.RequiredAnswer" json:"private_company,omitempty"`
+	MainBusinessActivityCode        string                               `protobuf:"bytes,8,opt,name=main_business_activity_code,json=mainBusinessActivityCode" json:"main_business_activity_code,omitempty"`
+	MainBusinessActivityDescription string                               `protobuf:"bytes,9,opt,name=main_business_activity_description,json=mainBusinessActivityDescription" json:"main_business_activity_description,omitempty"`
+	RefundBsb                       *SecretInput                         `protobuf:"bytes,10,opt,name=refund_bsb,json=refundBsb" json:"refund_bsb,omitempty"`
+	RefundAccountNumber             *SecretInput                         `protobuf:"bytes,11,opt,name=refund_account_number,json=refundAccountNumber" json:"refund_account_number,omitempty"`
+	FinalReturn                     RequiredAnswer                       `protobuf:"varint,12,opt,name=final_return,json=finalReturn,enum=tammy.v1.RequiredAnswer" json:"final_return,omitempty"`
+	HoldingCompanyKind              HoldingCompanyKind                   `protobuf:"varint,13,opt,name=holding_company_kind,json=holdingCompanyKind,enum=tammy.v1.HoldingCompanyKind" json:"holding_company_kind,omitempty"`
+	ImmediateHoldingName            string                               `protobuf:"bytes,14,opt,name=immediate_holding_name,json=immediateHoldingName" json:"immediate_holding_name,omitempty"`
+	UltimateHoldingName             string                               `protobuf:"bytes,15,opt,name=ultimate_holding_name,json=ultimateHoldingName" json:"ultimate_holding_name,omitempty"`
+	RelatedTurnover                 []*RelatedEntityTurnoverContribution `protobuf:"bytes,16,rep,name=related_turnover,json=relatedTurnover" json:"related_turnover,omitempty"`
+	PassiveIncomeClassifications    []*PassiveIncomeClassificationInput  `protobuf:"bytes,17,rep,name=passive_income_classifications,json=passiveIncomeClassifications" json:"passive_income_classifications,omitempty"`
+	SmallBusinessEntityChoice       SmallBusinessEntityChoice            `protobuf:"varint,18,opt,name=small_business_entity_choice,json=smallBusinessEntityChoice,enum=tammy.v1.SmallBusinessEntityChoice" json:"small_business_entity_choice,omitempty"`
+	DepreciationChoice              DepreciationChoice                   `protobuf:"varint,19,opt,name=depreciation_choice,json=depreciationChoice,enum=tammy.v1.DepreciationChoice" json:"depreciation_choice,omitempty"`
+	PriorRevenueLoss                *PriorRevenueLossInput               `protobuf:"bytes,20,opt,name=prior_revenue_loss,json=priorRevenueLoss" json:"prior_revenue_loss,omitempty"`
+	Applicability                   *ApplicabilityAnswers                `protobuf:"bytes,21,opt,name=applicability" json:"applicability,omitempty"`
+	unknownFields                   protoimpl.UnknownFields
+	sizeCache                       protoimpl.SizeCache
+}
+
+func (x *CompanyTaxProfileInput) Reset() {
+	*x = CompanyTaxProfileInput{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompanyTaxProfileInput) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompanyTaxProfileInput) ProtoMessage() {}
+
+func (x *CompanyTaxProfileInput) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompanyTaxProfileInput.ProtoReflect.Descriptor instead.
+func (*CompanyTaxProfileInput) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *CompanyTaxProfileInput) GetLegalName() string {
+	if x != nil {
+		return x.LegalName
+	}
+	return ""
+}
+
+func (x *CompanyTaxProfileInput) GetTfn() *SecretInput {
+	if x != nil {
+		return x.Tfn
+	}
+	return nil
+}
+
+func (x *CompanyTaxProfileInput) GetCurrentPostalAddress() *AddressInput {
+	if x != nil {
+		return x.CurrentPostalAddress
+	}
+	return nil
+}
+
+func (x *CompanyTaxProfileInput) GetPriorPostalAddress() *AddressInput {
+	if x != nil {
+		return x.PriorPostalAddress
+	}
+	return nil
+}
+
+func (x *CompanyTaxProfileInput) GetMainBusinessAddress() *AddressInput {
+	if x != nil {
+		return x.MainBusinessAddress
+	}
+	return nil
+}
+
+func (x *CompanyTaxProfileInput) GetAustralianResident() RequiredAnswer {
+	if x != nil {
+		return x.AustralianResident
+	}
+	return RequiredAnswer_REQUIRED_ANSWER_UNSPECIFIED
+}
+
+func (x *CompanyTaxProfileInput) GetPrivateCompany() RequiredAnswer {
+	if x != nil {
+		return x.PrivateCompany
+	}
+	return RequiredAnswer_REQUIRED_ANSWER_UNSPECIFIED
+}
+
+func (x *CompanyTaxProfileInput) GetMainBusinessActivityCode() string {
+	if x != nil {
+		return x.MainBusinessActivityCode
+	}
+	return ""
+}
+
+func (x *CompanyTaxProfileInput) GetMainBusinessActivityDescription() string {
+	if x != nil {
+		return x.MainBusinessActivityDescription
+	}
+	return ""
+}
+
+func (x *CompanyTaxProfileInput) GetRefundBsb() *SecretInput {
+	if x != nil {
+		return x.RefundBsb
+	}
+	return nil
+}
+
+func (x *CompanyTaxProfileInput) GetRefundAccountNumber() *SecretInput {
+	if x != nil {
+		return x.RefundAccountNumber
+	}
+	return nil
+}
+
+func (x *CompanyTaxProfileInput) GetFinalReturn() RequiredAnswer {
+	if x != nil {
+		return x.FinalReturn
+	}
+	return RequiredAnswer_REQUIRED_ANSWER_UNSPECIFIED
+}
+
+func (x *CompanyTaxProfileInput) GetHoldingCompanyKind() HoldingCompanyKind {
+	if x != nil {
+		return x.HoldingCompanyKind
+	}
+	return HoldingCompanyKind_HOLDING_COMPANY_KIND_UNSPECIFIED
+}
+
+func (x *CompanyTaxProfileInput) GetImmediateHoldingName() string {
+	if x != nil {
+		return x.ImmediateHoldingName
+	}
+	return ""
+}
+
+func (x *CompanyTaxProfileInput) GetUltimateHoldingName() string {
+	if x != nil {
+		return x.UltimateHoldingName
+	}
+	return ""
+}
+
+func (x *CompanyTaxProfileInput) GetRelatedTurnover() []*RelatedEntityTurnoverContribution {
+	if x != nil {
+		return x.RelatedTurnover
+	}
+	return nil
+}
+
+func (x *CompanyTaxProfileInput) GetPassiveIncomeClassifications() []*PassiveIncomeClassificationInput {
+	if x != nil {
+		return x.PassiveIncomeClassifications
+	}
+	return nil
+}
+
+func (x *CompanyTaxProfileInput) GetSmallBusinessEntityChoice() SmallBusinessEntityChoice {
+	if x != nil {
+		return x.SmallBusinessEntityChoice
+	}
+	return SmallBusinessEntityChoice_SMALL_BUSINESS_ENTITY_CHOICE_UNSPECIFIED
+}
+
+func (x *CompanyTaxProfileInput) GetDepreciationChoice() DepreciationChoice {
+	if x != nil {
+		return x.DepreciationChoice
+	}
+	return DepreciationChoice_DEPRECIATION_CHOICE_UNSPECIFIED
+}
+
+func (x *CompanyTaxProfileInput) GetPriorRevenueLoss() *PriorRevenueLossInput {
+	if x != nil {
+		return x.PriorRevenueLoss
+	}
+	return nil
+}
+
+func (x *CompanyTaxProfileInput) GetApplicability() *ApplicabilityAnswers {
+	if x != nil {
+		return x.Applicability
+	}
+	return nil
+}
+
+type CompanyReturnInput struct {
+	state                   protoimpl.MessageState `protogen:"open.v1"`
+	LossAmountToApply       *Money                 `protobuf:"bytes,1,opt,name=loss_amount_to_apply,json=lossAmountToApply" json:"loss_amount_to_apply,omitempty"`
+	ExternalSummaryEvidence []*SourceRef           `protobuf:"bytes,2,rep,name=external_summary_evidence,json=externalSummaryEvidence" json:"external_summary_evidence,omitempty"`
+	PayrollSummaryEvidence  []*SourceRef           `protobuf:"bytes,3,rep,name=payroll_summary_evidence,json=payrollSummaryEvidence" json:"payroll_summary_evidence,omitempty"`
+	ReviewNote              string                 `protobuf:"bytes,4,opt,name=review_note,json=reviewNote" json:"review_note,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
+}
+
+func (x *CompanyReturnInput) Reset() {
+	*x = CompanyReturnInput{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompanyReturnInput) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompanyReturnInput) ProtoMessage() {}
+
+func (x *CompanyReturnInput) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompanyReturnInput.ProtoReflect.Descriptor instead.
+func (*CompanyReturnInput) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *CompanyReturnInput) GetLossAmountToApply() *Money {
+	if x != nil {
+		return x.LossAmountToApply
+	}
+	return nil
+}
+
+func (x *CompanyReturnInput) GetExternalSummaryEvidence() []*SourceRef {
+	if x != nil {
+		return x.ExternalSummaryEvidence
+	}
+	return nil
+}
+
+func (x *CompanyReturnInput) GetPayrollSummaryEvidence() []*SourceRef {
+	if x != nil {
+		return x.PayrollSummaryEvidence
+	}
+	return nil
+}
+
+func (x *CompanyReturnInput) GetReviewNote() string {
+	if x != nil {
+		return x.ReviewNote
+	}
+	return ""
+}
+
+type MaskedCompanyTaxProfile struct {
+	state                           protoimpl.MessageState               `protogen:"open.v1"`
+	OrganisationId                  string                               `protobuf:"bytes,1,opt,name=organisation_id,json=organisationId" json:"organisation_id,omitempty"`
+	Version                         uint64                               `protobuf:"varint,2,opt,name=version" json:"version,omitempty"`
+	LegalName                       string                               `protobuf:"bytes,3,opt,name=legal_name,json=legalName" json:"legal_name,omitempty"`
+	MaskedTfn                       string                               `protobuf:"bytes,4,opt,name=masked_tfn,json=maskedTfn" json:"masked_tfn,omitempty"`
+	VerifiedAbn                     string                               `protobuf:"bytes,5,opt,name=verified_abn,json=verifiedAbn" json:"verified_abn,omitempty"`
+	CurrentPostalAddress            *AddressInput                        `protobuf:"bytes,6,opt,name=current_postal_address,json=currentPostalAddress" json:"current_postal_address,omitempty"`
+	PriorPostalAddress              *AddressInput                        `protobuf:"bytes,7,opt,name=prior_postal_address,json=priorPostalAddress" json:"prior_postal_address,omitempty"`
+	MainBusinessAddress             *AddressInput                        `protobuf:"bytes,8,opt,name=main_business_address,json=mainBusinessAddress" json:"main_business_address,omitempty"`
+	AustralianResident              RequiredAnswer                       `protobuf:"varint,9,opt,name=australian_resident,json=australianResident,enum=tammy.v1.RequiredAnswer" json:"australian_resident,omitempty"`
+	PrivateCompany                  RequiredAnswer                       `protobuf:"varint,10,opt,name=private_company,json=privateCompany,enum=tammy.v1.RequiredAnswer" json:"private_company,omitempty"`
+	MainBusinessActivityCode        string                               `protobuf:"bytes,11,opt,name=main_business_activity_code,json=mainBusinessActivityCode" json:"main_business_activity_code,omitempty"`
+	MainBusinessActivityDescription string                               `protobuf:"bytes,12,opt,name=main_business_activity_description,json=mainBusinessActivityDescription" json:"main_business_activity_description,omitempty"`
+	MaskedRefundBsb                 string                               `protobuf:"bytes,13,opt,name=masked_refund_bsb,json=maskedRefundBsb" json:"masked_refund_bsb,omitempty"`
+	MaskedRefundAccount             string                               `protobuf:"bytes,14,opt,name=masked_refund_account,json=maskedRefundAccount" json:"masked_refund_account,omitempty"`
+	FinalReturn                     RequiredAnswer                       `protobuf:"varint,15,opt,name=final_return,json=finalReturn,enum=tammy.v1.RequiredAnswer" json:"final_return,omitempty"`
+	HoldingCompanyKind              HoldingCompanyKind                   `protobuf:"varint,16,opt,name=holding_company_kind,json=holdingCompanyKind,enum=tammy.v1.HoldingCompanyKind" json:"holding_company_kind,omitempty"`
+	ImmediateHoldingName            string                               `protobuf:"bytes,17,opt,name=immediate_holding_name,json=immediateHoldingName" json:"immediate_holding_name,omitempty"`
+	UltimateHoldingName             string                               `protobuf:"bytes,18,opt,name=ultimate_holding_name,json=ultimateHoldingName" json:"ultimate_holding_name,omitempty"`
+	RelatedTurnover                 []*RelatedEntityTurnoverContribution `protobuf:"bytes,19,rep,name=related_turnover,json=relatedTurnover" json:"related_turnover,omitempty"`
+	PassiveIncomeClassifications    []*PassiveIncomeClassificationInput  `protobuf:"bytes,20,rep,name=passive_income_classifications,json=passiveIncomeClassifications" json:"passive_income_classifications,omitempty"`
+	SmallBusinessEntityChoice       SmallBusinessEntityChoice            `protobuf:"varint,21,opt,name=small_business_entity_choice,json=smallBusinessEntityChoice,enum=tammy.v1.SmallBusinessEntityChoice" json:"small_business_entity_choice,omitempty"`
+	DepreciationChoice              DepreciationChoice                   `protobuf:"varint,22,opt,name=depreciation_choice,json=depreciationChoice,enum=tammy.v1.DepreciationChoice" json:"depreciation_choice,omitempty"`
+	PriorRevenueLoss                *PriorRevenueLossInput               `protobuf:"bytes,23,opt,name=prior_revenue_loss,json=priorRevenueLoss" json:"prior_revenue_loss,omitempty"`
+	Applicability                   *ApplicabilityAnswers                `protobuf:"bytes,24,opt,name=applicability" json:"applicability,omitempty"`
+	UpdatedByUserId                 string                               `protobuf:"bytes,25,opt,name=updated_by_user_id,json=updatedByUserId" json:"updated_by_user_id,omitempty"`
+	UpdatedAt                       *timestamppb.Timestamp               `protobuf:"bytes,26,opt,name=updated_at,json=updatedAt" json:"updated_at,omitempty"`
+	unknownFields                   protoimpl.UnknownFields
+	sizeCache                       protoimpl.SizeCache
+}
+
+func (x *MaskedCompanyTaxProfile) Reset() {
+	*x = MaskedCompanyTaxProfile{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MaskedCompanyTaxProfile) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MaskedCompanyTaxProfile) ProtoMessage() {}
+
+func (x *MaskedCompanyTaxProfile) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MaskedCompanyTaxProfile.ProtoReflect.Descriptor instead.
+func (*MaskedCompanyTaxProfile) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *MaskedCompanyTaxProfile) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *MaskedCompanyTaxProfile) GetVersion() uint64 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+func (x *MaskedCompanyTaxProfile) GetLegalName() string {
+	if x != nil {
+		return x.LegalName
+	}
+	return ""
+}
+
+func (x *MaskedCompanyTaxProfile) GetMaskedTfn() string {
+	if x != nil {
+		return x.MaskedTfn
+	}
+	return ""
+}
+
+func (x *MaskedCompanyTaxProfile) GetVerifiedAbn() string {
+	if x != nil {
+		return x.VerifiedAbn
+	}
+	return ""
+}
+
+func (x *MaskedCompanyTaxProfile) GetCurrentPostalAddress() *AddressInput {
+	if x != nil {
+		return x.CurrentPostalAddress
+	}
+	return nil
+}
+
+func (x *MaskedCompanyTaxProfile) GetPriorPostalAddress() *AddressInput {
+	if x != nil {
+		return x.PriorPostalAddress
+	}
+	return nil
+}
+
+func (x *MaskedCompanyTaxProfile) GetMainBusinessAddress() *AddressInput {
+	if x != nil {
+		return x.MainBusinessAddress
+	}
+	return nil
+}
+
+func (x *MaskedCompanyTaxProfile) GetAustralianResident() RequiredAnswer {
+	if x != nil {
+		return x.AustralianResident
+	}
+	return RequiredAnswer_REQUIRED_ANSWER_UNSPECIFIED
+}
+
+func (x *MaskedCompanyTaxProfile) GetPrivateCompany() RequiredAnswer {
+	if x != nil {
+		return x.PrivateCompany
+	}
+	return RequiredAnswer_REQUIRED_ANSWER_UNSPECIFIED
+}
+
+func (x *MaskedCompanyTaxProfile) GetMainBusinessActivityCode() string {
+	if x != nil {
+		return x.MainBusinessActivityCode
+	}
+	return ""
+}
+
+func (x *MaskedCompanyTaxProfile) GetMainBusinessActivityDescription() string {
+	if x != nil {
+		return x.MainBusinessActivityDescription
+	}
+	return ""
+}
+
+func (x *MaskedCompanyTaxProfile) GetMaskedRefundBsb() string {
+	if x != nil {
+		return x.MaskedRefundBsb
+	}
+	return ""
+}
+
+func (x *MaskedCompanyTaxProfile) GetMaskedRefundAccount() string {
+	if x != nil {
+		return x.MaskedRefundAccount
+	}
+	return ""
+}
+
+func (x *MaskedCompanyTaxProfile) GetFinalReturn() RequiredAnswer {
+	if x != nil {
+		return x.FinalReturn
+	}
+	return RequiredAnswer_REQUIRED_ANSWER_UNSPECIFIED
+}
+
+func (x *MaskedCompanyTaxProfile) GetHoldingCompanyKind() HoldingCompanyKind {
+	if x != nil {
+		return x.HoldingCompanyKind
+	}
+	return HoldingCompanyKind_HOLDING_COMPANY_KIND_UNSPECIFIED
+}
+
+func (x *MaskedCompanyTaxProfile) GetImmediateHoldingName() string {
+	if x != nil {
+		return x.ImmediateHoldingName
+	}
+	return ""
+}
+
+func (x *MaskedCompanyTaxProfile) GetUltimateHoldingName() string {
+	if x != nil {
+		return x.UltimateHoldingName
+	}
+	return ""
+}
+
+func (x *MaskedCompanyTaxProfile) GetRelatedTurnover() []*RelatedEntityTurnoverContribution {
+	if x != nil {
+		return x.RelatedTurnover
+	}
+	return nil
+}
+
+func (x *MaskedCompanyTaxProfile) GetPassiveIncomeClassifications() []*PassiveIncomeClassificationInput {
+	if x != nil {
+		return x.PassiveIncomeClassifications
+	}
+	return nil
+}
+
+func (x *MaskedCompanyTaxProfile) GetSmallBusinessEntityChoice() SmallBusinessEntityChoice {
+	if x != nil {
+		return x.SmallBusinessEntityChoice
+	}
+	return SmallBusinessEntityChoice_SMALL_BUSINESS_ENTITY_CHOICE_UNSPECIFIED
+}
+
+func (x *MaskedCompanyTaxProfile) GetDepreciationChoice() DepreciationChoice {
+	if x != nil {
+		return x.DepreciationChoice
+	}
+	return DepreciationChoice_DEPRECIATION_CHOICE_UNSPECIFIED
+}
+
+func (x *MaskedCompanyTaxProfile) GetPriorRevenueLoss() *PriorRevenueLossInput {
+	if x != nil {
+		return x.PriorRevenueLoss
+	}
+	return nil
+}
+
+func (x *MaskedCompanyTaxProfile) GetApplicability() *ApplicabilityAnswers {
+	if x != nil {
+		return x.Applicability
+	}
+	return nil
+}
+
+func (x *MaskedCompanyTaxProfile) GetUpdatedByUserId() string {
+	if x != nil {
+		return x.UpdatedByUserId
+	}
+	return ""
+}
+
+func (x *MaskedCompanyTaxProfile) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+type TaxAdjustment struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Id               string                 `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
+	ReturnId         string                 `protobuf:"bytes,2,opt,name=return_id,json=returnId" json:"return_id,omitempty"`
+	Version          uint64                 `protobuf:"varint,3,opt,name=version" json:"version,omitempty"`
+	Type             TaxAdjustmentType      `protobuf:"varint,4,opt,name=type,enum=tammy.v1.TaxAdjustmentType" json:"type,omitempty"`
+	BundleRuleId     string                 `protobuf:"bytes,5,opt,name=bundle_rule_id,json=bundleRuleId" json:"bundle_rule_id,omitempty"`
+	Amount           *Money                 `protobuf:"bytes,6,opt,name=amount" json:"amount,omitempty"`
+	Timing           TaxAdjustmentTiming    `protobuf:"varint,7,opt,name=timing,enum=tammy.v1.TaxAdjustmentTiming" json:"timing,omitempty"`
+	Explanation      string                 `protobuf:"bytes,8,opt,name=explanation" json:"explanation,omitempty"`
+	Sources          []*SourceRef           `protobuf:"bytes,9,rep,name=sources" json:"sources,omitempty"`
+	Evidence         []*SourceRef           `protobuf:"bytes,10,rep,name=evidence" json:"evidence,omitempty"`
+	CreatedByUserId  string                 `protobuf:"bytes,11,opt,name=created_by_user_id,json=createdByUserId" json:"created_by_user_id,omitempty"`
+	ReviewedByUserId string                 `protobuf:"bytes,12,opt,name=reviewed_by_user_id,json=reviewedByUserId" json:"reviewed_by_user_id,omitempty"`
+	UpdatedAt        *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=updated_at,json=updatedAt" json:"updated_at,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *TaxAdjustment) Reset() {
+	*x = TaxAdjustment{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TaxAdjustment) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TaxAdjustment) ProtoMessage() {}
+
+func (x *TaxAdjustment) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TaxAdjustment.ProtoReflect.Descriptor instead.
+func (*TaxAdjustment) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *TaxAdjustment) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *TaxAdjustment) GetReturnId() string {
+	if x != nil {
+		return x.ReturnId
+	}
+	return ""
+}
+
+func (x *TaxAdjustment) GetVersion() uint64 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+func (x *TaxAdjustment) GetType() TaxAdjustmentType {
+	if x != nil {
+		return x.Type
+	}
+	return TaxAdjustmentType_TAX_ADJUSTMENT_TYPE_UNSPECIFIED
+}
+
+func (x *TaxAdjustment) GetBundleRuleId() string {
+	if x != nil {
+		return x.BundleRuleId
+	}
+	return ""
+}
+
+func (x *TaxAdjustment) GetAmount() *Money {
+	if x != nil {
+		return x.Amount
+	}
+	return nil
+}
+
+func (x *TaxAdjustment) GetTiming() TaxAdjustmentTiming {
+	if x != nil {
+		return x.Timing
+	}
+	return TaxAdjustmentTiming_TAX_ADJUSTMENT_TIMING_UNSPECIFIED
+}
+
+func (x *TaxAdjustment) GetExplanation() string {
+	if x != nil {
+		return x.Explanation
+	}
+	return ""
+}
+
+func (x *TaxAdjustment) GetSources() []*SourceRef {
+	if x != nil {
+		return x.Sources
+	}
+	return nil
+}
+
+func (x *TaxAdjustment) GetEvidence() []*SourceRef {
+	if x != nil {
+		return x.Evidence
+	}
+	return nil
+}
+
+func (x *TaxAdjustment) GetCreatedByUserId() string {
+	if x != nil {
+		return x.CreatedByUserId
+	}
+	return ""
+}
+
+func (x *TaxAdjustment) GetReviewedByUserId() string {
+	if x != nil {
+		return x.ReviewedByUserId
+	}
+	return ""
+}
+
+func (x *TaxAdjustment) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+type TaxElectionChoice struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to Choice:
+	//
+	//	*TaxElectionChoice_BooleanValue
+	//	*TaxElectionChoice_StringValue
+	//	*TaxElectionChoice_DecimalValue
+	Choice        isTaxElectionChoice_Choice `protobuf_oneof:"choice"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TaxElectionChoice) Reset() {
+	*x = TaxElectionChoice{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TaxElectionChoice) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TaxElectionChoice) ProtoMessage() {}
+
+func (x *TaxElectionChoice) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TaxElectionChoice.ProtoReflect.Descriptor instead.
+func (*TaxElectionChoice) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *TaxElectionChoice) GetChoice() isTaxElectionChoice_Choice {
+	if x != nil {
+		return x.Choice
+	}
+	return nil
+}
+
+func (x *TaxElectionChoice) GetBooleanValue() bool {
+	if x != nil {
+		if x, ok := x.Choice.(*TaxElectionChoice_BooleanValue); ok {
+			return x.BooleanValue
+		}
+	}
+	return false
+}
+
+func (x *TaxElectionChoice) GetStringValue() string {
+	if x != nil {
+		if x, ok := x.Choice.(*TaxElectionChoice_StringValue); ok {
+			return x.StringValue
+		}
+	}
+	return ""
+}
+
+func (x *TaxElectionChoice) GetDecimalValue() *Decimal {
+	if x != nil {
+		if x, ok := x.Choice.(*TaxElectionChoice_DecimalValue); ok {
+			return x.DecimalValue
+		}
+	}
+	return nil
+}
+
+type isTaxElectionChoice_Choice interface {
+	isTaxElectionChoice_Choice()
+}
+
+type TaxElectionChoice_BooleanValue struct {
+	BooleanValue bool `protobuf:"varint,1,opt,name=boolean_value,json=booleanValue,oneof"`
+}
+
+type TaxElectionChoice_StringValue struct {
+	StringValue string `protobuf:"bytes,2,opt,name=string_value,json=stringValue,oneof"`
+}
+
+type TaxElectionChoice_DecimalValue struct {
+	DecimalValue *Decimal `protobuf:"bytes,3,opt,name=decimal_value,json=decimalValue,oneof"`
+}
+
+func (*TaxElectionChoice_BooleanValue) isTaxElectionChoice_Choice() {}
+
+func (*TaxElectionChoice_StringValue) isTaxElectionChoice_Choice() {}
+
+func (*TaxElectionChoice_DecimalValue) isTaxElectionChoice_Choice() {}
+
+type TaxElection struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Id               string                 `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
+	ReturnId         string                 `protobuf:"bytes,2,opt,name=return_id,json=returnId" json:"return_id,omitempty"`
+	Version          uint64                 `protobuf:"varint,3,opt,name=version" json:"version,omitempty"`
+	BundleElectionId string                 `protobuf:"bytes,4,opt,name=bundle_election_id,json=bundleElectionId" json:"bundle_election_id,omitempty"`
+	Choice           *TaxElectionChoice     `protobuf:"bytes,5,opt,name=choice" json:"choice,omitempty"`
+	Explanation      string                 `protobuf:"bytes,6,opt,name=explanation" json:"explanation,omitempty"`
+	Evidence         []*SourceRef           `protobuf:"bytes,7,rep,name=evidence" json:"evidence,omitempty"`
+	CreatedByUserId  string                 `protobuf:"bytes,8,opt,name=created_by_user_id,json=createdByUserId" json:"created_by_user_id,omitempty"`
+	ReviewedByUserId string                 `protobuf:"bytes,9,opt,name=reviewed_by_user_id,json=reviewedByUserId" json:"reviewed_by_user_id,omitempty"`
+	UpdatedAt        *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt" json:"updated_at,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *TaxElection) Reset() {
+	*x = TaxElection{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TaxElection) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TaxElection) ProtoMessage() {}
+
+func (x *TaxElection) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TaxElection.ProtoReflect.Descriptor instead.
+func (*TaxElection) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *TaxElection) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *TaxElection) GetReturnId() string {
+	if x != nil {
+		return x.ReturnId
+	}
+	return ""
+}
+
+func (x *TaxElection) GetVersion() uint64 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+func (x *TaxElection) GetBundleElectionId() string {
+	if x != nil {
+		return x.BundleElectionId
+	}
+	return ""
+}
+
+func (x *TaxElection) GetChoice() *TaxElectionChoice {
+	if x != nil {
+		return x.Choice
+	}
+	return nil
+}
+
+func (x *TaxElection) GetExplanation() string {
+	if x != nil {
+		return x.Explanation
+	}
+	return ""
+}
+
+func (x *TaxElection) GetEvidence() []*SourceRef {
+	if x != nil {
+		return x.Evidence
+	}
+	return nil
+}
+
+func (x *TaxElection) GetCreatedByUserId() string {
+	if x != nil {
+		return x.CreatedByUserId
+	}
+	return ""
+}
+
+func (x *TaxElection) GetReviewedByUserId() string {
+	if x != nil {
+		return x.ReviewedByUserId
+	}
+	return ""
+}
+
+func (x *TaxElection) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+type ReturnFactValue struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to Value:
+	//
+	//	*ReturnFactValue_StringValue
+	//	*ReturnFactValue_BooleanValue
+	//	*ReturnFactValue_IntegerValue
+	//	*ReturnFactValue_MoneyValue
+	//	*ReturnFactValue_DecimalValue
+	//	*ReturnFactValue_DateValue
+	Value         isReturnFactValue_Value `protobuf_oneof:"value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReturnFactValue) Reset() {
+	*x = ReturnFactValue{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReturnFactValue) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReturnFactValue) ProtoMessage() {}
+
+func (x *ReturnFactValue) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReturnFactValue.ProtoReflect.Descriptor instead.
+func (*ReturnFactValue) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *ReturnFactValue) GetValue() isReturnFactValue_Value {
+	if x != nil {
+		return x.Value
+	}
+	return nil
+}
+
+func (x *ReturnFactValue) GetStringValue() string {
+	if x != nil {
+		if x, ok := x.Value.(*ReturnFactValue_StringValue); ok {
+			return x.StringValue
+		}
+	}
+	return ""
+}
+
+func (x *ReturnFactValue) GetBooleanValue() bool {
+	if x != nil {
+		if x, ok := x.Value.(*ReturnFactValue_BooleanValue); ok {
+			return x.BooleanValue
+		}
+	}
+	return false
+}
+
+func (x *ReturnFactValue) GetIntegerValue() int64 {
+	if x != nil {
+		if x, ok := x.Value.(*ReturnFactValue_IntegerValue); ok {
+			return x.IntegerValue
+		}
+	}
+	return 0
+}
+
+func (x *ReturnFactValue) GetMoneyValue() *Money {
+	if x != nil {
+		if x, ok := x.Value.(*ReturnFactValue_MoneyValue); ok {
+			return x.MoneyValue
+		}
+	}
+	return nil
+}
+
+func (x *ReturnFactValue) GetDecimalValue() *Decimal {
+	if x != nil {
+		if x, ok := x.Value.(*ReturnFactValue_DecimalValue); ok {
+			return x.DecimalValue
+		}
+	}
+	return nil
+}
+
+func (x *ReturnFactValue) GetDateValue() *CivilDate {
+	if x != nil {
+		if x, ok := x.Value.(*ReturnFactValue_DateValue); ok {
+			return x.DateValue
+		}
+	}
+	return nil
+}
+
+type isReturnFactValue_Value interface {
+	isReturnFactValue_Value()
+}
+
+type ReturnFactValue_StringValue struct {
+	StringValue string `protobuf:"bytes,1,opt,name=string_value,json=stringValue,oneof"`
+}
+
+type ReturnFactValue_BooleanValue struct {
+	BooleanValue bool `protobuf:"varint,2,opt,name=boolean_value,json=booleanValue,oneof"`
+}
+
+type ReturnFactValue_IntegerValue struct {
+	IntegerValue int64 `protobuf:"zigzag64,3,opt,name=integer_value,json=integerValue,oneof"`
+}
+
+type ReturnFactValue_MoneyValue struct {
+	MoneyValue *Money `protobuf:"bytes,4,opt,name=money_value,json=moneyValue,oneof"`
+}
+
+type ReturnFactValue_DecimalValue struct {
+	DecimalValue *Decimal `protobuf:"bytes,5,opt,name=decimal_value,json=decimalValue,oneof"`
+}
+
+type ReturnFactValue_DateValue struct {
+	DateValue *CivilDate `protobuf:"bytes,6,opt,name=date_value,json=dateValue,oneof"`
+}
+
+func (*ReturnFactValue_StringValue) isReturnFactValue_Value() {}
+
+func (*ReturnFactValue_BooleanValue) isReturnFactValue_Value() {}
+
+func (*ReturnFactValue_IntegerValue) isReturnFactValue_Value() {}
+
+func (*ReturnFactValue_MoneyValue) isReturnFactValue_Value() {}
+
+func (*ReturnFactValue_DecimalValue) isReturnFactValue_Value() {}
+
+func (*ReturnFactValue_DateValue) isReturnFactValue_Value() {}
+
+type ReturnFact struct {
+	state            protoimpl.MessageState     `protogen:"open.v1"`
+	FactId           string                     `protobuf:"bytes,1,opt,name=fact_id,json=factId" json:"fact_id,omitempty"`
+	Value            *ReturnFactValue           `protobuf:"bytes,2,opt,name=value" json:"value,omitempty"`
+	SubmittedValue   *ReturnFactValue           `protobuf:"bytes,3,opt,name=submitted_value,json=submittedValue" json:"submitted_value,omitempty"`
+	Provenance       ReturnFactProvenanceKind   `protobuf:"varint,4,opt,name=provenance,enum=tammy.v1.ReturnFactProvenanceKind" json:"provenance,omitempty"`
+	MappingId        string                     `protobuf:"bytes,5,opt,name=mapping_id,json=mappingId" json:"mapping_id,omitempty"`
+	RuleId           string                     `protobuf:"bytes,6,opt,name=rule_id,json=ruleId" json:"rule_id,omitempty"`
+	Sources          []*SourceRef               `protobuf:"bytes,7,rep,name=sources" json:"sources,omitempty"`
+	Evidence         []*SourceRef               `protobuf:"bytes,8,rep,name=evidence" json:"evidence,omitempty"`
+	ValidationStatus ReturnFactValidationStatus `protobuf:"varint,9,opt,name=validation_status,json=validationStatus,enum=tammy.v1.ReturnFactValidationStatus" json:"validation_status,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *ReturnFact) Reset() {
+	*x = ReturnFact{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReturnFact) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReturnFact) ProtoMessage() {}
+
+func (x *ReturnFact) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReturnFact.ProtoReflect.Descriptor instead.
+func (*ReturnFact) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *ReturnFact) GetFactId() string {
+	if x != nil {
+		return x.FactId
+	}
+	return ""
+}
+
+func (x *ReturnFact) GetValue() *ReturnFactValue {
+	if x != nil {
+		return x.Value
+	}
+	return nil
+}
+
+func (x *ReturnFact) GetSubmittedValue() *ReturnFactValue {
+	if x != nil {
+		return x.SubmittedValue
+	}
+	return nil
+}
+
+func (x *ReturnFact) GetProvenance() ReturnFactProvenanceKind {
+	if x != nil {
+		return x.Provenance
+	}
+	return ReturnFactProvenanceKind_RETURN_FACT_PROVENANCE_KIND_UNSPECIFIED
+}
+
+func (x *ReturnFact) GetMappingId() string {
+	if x != nil {
+		return x.MappingId
+	}
+	return ""
+}
+
+func (x *ReturnFact) GetRuleId() string {
+	if x != nil {
+		return x.RuleId
+	}
+	return ""
+}
+
+func (x *ReturnFact) GetSources() []*SourceRef {
+	if x != nil {
+		return x.Sources
+	}
+	return nil
+}
+
+func (x *ReturnFact) GetEvidence() []*SourceRef {
+	if x != nil {
+		return x.Evidence
+	}
+	return nil
+}
+
+func (x *ReturnFact) GetValidationStatus() ReturnFactValidationStatus {
+	if x != nil {
+		return x.ValidationStatus
+	}
+	return ReturnFactValidationStatus_RETURN_FACT_VALIDATION_STATUS_UNSPECIFIED
+}
+
+type TaxReconciliationTerm struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	StableId      string                 `protobuf:"bytes,1,opt,name=stable_id,json=stableId" json:"stable_id,omitempty"`
+	RuleId        string                 `protobuf:"bytes,2,opt,name=rule_id,json=ruleId" json:"rule_id,omitempty"`
+	Amount        *Money                 `protobuf:"bytes,3,opt,name=amount" json:"amount,omitempty"`
+	Sources       []*SourceRef           `protobuf:"bytes,4,rep,name=sources" json:"sources,omitempty"`
+	Evidence      []*SourceRef           `protobuf:"bytes,5,rep,name=evidence" json:"evidence,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TaxReconciliationTerm) Reset() {
+	*x = TaxReconciliationTerm{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TaxReconciliationTerm) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TaxReconciliationTerm) ProtoMessage() {}
+
+func (x *TaxReconciliationTerm) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TaxReconciliationTerm.ProtoReflect.Descriptor instead.
+func (*TaxReconciliationTerm) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *TaxReconciliationTerm) GetStableId() string {
+	if x != nil {
+		return x.StableId
+	}
+	return ""
+}
+
+func (x *TaxReconciliationTerm) GetRuleId() string {
+	if x != nil {
+		return x.RuleId
+	}
+	return ""
+}
+
+func (x *TaxReconciliationTerm) GetAmount() *Money {
+	if x != nil {
+		return x.Amount
+	}
+	return nil
+}
+
+func (x *TaxReconciliationTerm) GetSources() []*SourceRef {
+	if x != nil {
+		return x.Sources
+	}
+	return nil
+}
+
+func (x *TaxReconciliationTerm) GetEvidence() []*SourceRef {
+	if x != nil {
+		return x.Evidence
+	}
+	return nil
+}
+
+type TaxReconciliation struct {
+	state                     protoimpl.MessageState   `protogen:"open.v1"`
+	ContentHash               []byte                   `protobuf:"bytes,1,opt,name=content_hash,json=contentHash" json:"content_hash,omitempty"`
+	AccountingProfitBeforeTax *Money                   `protobuf:"bytes,2,opt,name=accounting_profit_before_tax,json=accountingProfitBeforeTax" json:"accounting_profit_before_tax,omitempty"`
+	Additions                 []*TaxReconciliationTerm `protobuf:"bytes,3,rep,name=additions" json:"additions,omitempty"`
+	Subtractions              []*TaxReconciliationTerm `protobuf:"bytes,4,rep,name=subtractions" json:"subtractions,omitempty"`
+	EligibleAppliedLosses     []*TaxReconciliationTerm `protobuf:"bytes,5,rep,name=eligible_applied_losses,json=eligibleAppliedLosses" json:"eligible_applied_losses,omitempty"`
+	TaxableIncomeOrLoss       *Money                   `protobuf:"bytes,6,opt,name=taxable_income_or_loss,json=taxableIncomeOrLoss" json:"taxable_income_or_loss,omitempty"`
+	GrossTax                  *Money                   `protobuf:"bytes,7,opt,name=gross_tax,json=grossTax" json:"gross_tax,omitempty"`
+	PaygAndCredits            []*TaxReconciliationTerm `protobuf:"bytes,8,rep,name=payg_and_credits,json=paygAndCredits" json:"payg_and_credits,omitempty"`
+	NetTaxPayableOrRefund     *Money                   `protobuf:"bytes,9,opt,name=net_tax_payable_or_refund,json=netTaxPayableOrRefund" json:"net_tax_payable_or_refund,omitempty"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
+}
+
+func (x *TaxReconciliation) Reset() {
+	*x = TaxReconciliation{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TaxReconciliation) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TaxReconciliation) ProtoMessage() {}
+
+func (x *TaxReconciliation) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TaxReconciliation.ProtoReflect.Descriptor instead.
+func (*TaxReconciliation) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *TaxReconciliation) GetContentHash() []byte {
+	if x != nil {
+		return x.ContentHash
+	}
+	return nil
+}
+
+func (x *TaxReconciliation) GetAccountingProfitBeforeTax() *Money {
+	if x != nil {
+		return x.AccountingProfitBeforeTax
+	}
+	return nil
+}
+
+func (x *TaxReconciliation) GetAdditions() []*TaxReconciliationTerm {
+	if x != nil {
+		return x.Additions
+	}
+	return nil
+}
+
+func (x *TaxReconciliation) GetSubtractions() []*TaxReconciliationTerm {
+	if x != nil {
+		return x.Subtractions
+	}
+	return nil
+}
+
+func (x *TaxReconciliation) GetEligibleAppliedLosses() []*TaxReconciliationTerm {
+	if x != nil {
+		return x.EligibleAppliedLosses
+	}
+	return nil
+}
+
+func (x *TaxReconciliation) GetTaxableIncomeOrLoss() *Money {
+	if x != nil {
+		return x.TaxableIncomeOrLoss
+	}
+	return nil
+}
+
+func (x *TaxReconciliation) GetGrossTax() *Money {
+	if x != nil {
+		return x.GrossTax
+	}
+	return nil
+}
+
+func (x *TaxReconciliation) GetPaygAndCredits() []*TaxReconciliationTerm {
+	if x != nil {
+		return x.PaygAndCredits
+	}
+	return nil
+}
+
+func (x *TaxReconciliation) GetNetTaxPayableOrRefund() *Money {
+	if x != nil {
+		return x.NetTaxPayableOrRefund
+	}
+	return nil
+}
+
+type ReturnValidationOutcome struct {
+	state              protoimpl.MessageState   `protogen:"open.v1"`
+	Id                 string                   `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
+	ValidationRevision uint64                   `protobuf:"varint,2,opt,name=validation_revision,json=validationRevision" json:"validation_revision,omitempty"`
+	Severity           ReturnValidationSeverity `protobuf:"varint,3,opt,name=severity,enum=tammy.v1.ReturnValidationSeverity" json:"severity,omitempty"`
+	StableCode         string                   `protobuf:"bytes,4,opt,name=stable_code,json=stableCode" json:"stable_code,omitempty"`
+	FactIds            []string                 `protobuf:"bytes,5,rep,name=fact_ids,json=factIds" json:"fact_ids,omitempty"`
+	Sources            []*SourceRef             `protobuf:"bytes,6,rep,name=sources" json:"sources,omitempty"`
+	SafeMessage        string                   `protobuf:"bytes,7,opt,name=safe_message,json=safeMessage" json:"safe_message,omitempty"`
+	Acknowledged       bool                     `protobuf:"varint,8,opt,name=acknowledged" json:"acknowledged,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *ReturnValidationOutcome) Reset() {
+	*x = ReturnValidationOutcome{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReturnValidationOutcome) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReturnValidationOutcome) ProtoMessage() {}
+
+func (x *ReturnValidationOutcome) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReturnValidationOutcome.ProtoReflect.Descriptor instead.
+func (*ReturnValidationOutcome) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *ReturnValidationOutcome) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ReturnValidationOutcome) GetValidationRevision() uint64 {
+	if x != nil {
+		return x.ValidationRevision
+	}
+	return 0
+}
+
+func (x *ReturnValidationOutcome) GetSeverity() ReturnValidationSeverity {
+	if x != nil {
+		return x.Severity
+	}
+	return ReturnValidationSeverity_RETURN_VALIDATION_SEVERITY_UNSPECIFIED
+}
+
+func (x *ReturnValidationOutcome) GetStableCode() string {
+	if x != nil {
+		return x.StableCode
+	}
+	return ""
+}
+
+func (x *ReturnValidationOutcome) GetFactIds() []string {
+	if x != nil {
+		return x.FactIds
+	}
+	return nil
+}
+
+func (x *ReturnValidationOutcome) GetSources() []*SourceRef {
+	if x != nil {
+		return x.Sources
+	}
+	return nil
+}
+
+func (x *ReturnValidationOutcome) GetSafeMessage() string {
+	if x != nil {
+		return x.SafeMessage
+	}
+	return ""
+}
+
+func (x *ReturnValidationOutcome) GetAcknowledged() bool {
+	if x != nil {
+		return x.Acknowledged
+	}
+	return false
+}
+
+type ValidationAcknowledgement struct {
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	Id                     string                 `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
+	ReturnId               string                 `protobuf:"bytes,2,opt,name=return_id,json=returnId" json:"return_id,omitempty"`
+	WarningId              string                 `protobuf:"bytes,3,opt,name=warning_id,json=warningId" json:"warning_id,omitempty"`
+	ValidationRevision     uint64                 `protobuf:"varint,4,opt,name=validation_revision,json=validationRevision" json:"validation_revision,omitempty"`
+	ActorUserId            string                 `protobuf:"bytes,5,opt,name=actor_user_id,json=actorUserId" json:"actor_user_id,omitempty"`
+	FreshFactorAssertionId string                 `protobuf:"bytes,6,opt,name=fresh_factor_assertion_id,json=freshFactorAssertionId" json:"fresh_factor_assertion_id,omitempty"`
+	AcknowledgedAt         *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=acknowledged_at,json=acknowledgedAt" json:"acknowledged_at,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *ValidationAcknowledgement) Reset() {
+	*x = ValidationAcknowledgement{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ValidationAcknowledgement) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ValidationAcknowledgement) ProtoMessage() {}
+
+func (x *ValidationAcknowledgement) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ValidationAcknowledgement.ProtoReflect.Descriptor instead.
+func (*ValidationAcknowledgement) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *ValidationAcknowledgement) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ValidationAcknowledgement) GetReturnId() string {
+	if x != nil {
+		return x.ReturnId
+	}
+	return ""
+}
+
+func (x *ValidationAcknowledgement) GetWarningId() string {
+	if x != nil {
+		return x.WarningId
+	}
+	return ""
+}
+
+func (x *ValidationAcknowledgement) GetValidationRevision() uint64 {
+	if x != nil {
+		return x.ValidationRevision
+	}
+	return 0
+}
+
+func (x *ValidationAcknowledgement) GetActorUserId() string {
+	if x != nil {
+		return x.ActorUserId
+	}
+	return ""
+}
+
+func (x *ValidationAcknowledgement) GetFreshFactorAssertionId() string {
+	if x != nil {
+		return x.FreshFactorAssertionId
+	}
+	return ""
+}
+
+func (x *ValidationAcknowledgement) GetAcknowledgedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.AcknowledgedAt
+	}
+	return nil
+}
+
+type Declaration struct {
+	state                     protoimpl.MessageState `protogen:"open.v1"`
+	Id                        string                 `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
+	ReturnId                  string                 `protobuf:"bytes,2,opt,name=return_id,json=returnId" json:"return_id,omitempty"`
+	ReportHash                []byte                 `protobuf:"bytes,3,opt,name=report_hash,json=reportHash" json:"report_hash,omitempty"`
+	ValidationRevision        uint64                 `protobuf:"varint,4,opt,name=validation_revision,json=validationRevision" json:"validation_revision,omitempty"`
+	AcknowledgementIds        []string               `protobuf:"bytes,5,rep,name=acknowledgement_ids,json=acknowledgementIds" json:"acknowledgement_ids,omitempty"`
+	DeclarationWordingVersion string                 `protobuf:"bytes,6,opt,name=declaration_wording_version,json=declarationWordingVersion" json:"declaration_wording_version,omitempty"`
+	DeclarationWordingHash    []byte                 `protobuf:"bytes,7,opt,name=declaration_wording_hash,json=declarationWordingHash" json:"declaration_wording_hash,omitempty"`
+	TermsVersion              string                 `protobuf:"bytes,8,opt,name=terms_version,json=termsVersion" json:"terms_version,omitempty"`
+	PrivacyReferenceVersion   string                 `protobuf:"bytes,9,opt,name=privacy_reference_version,json=privacyReferenceVersion" json:"privacy_reference_version,omitempty"`
+	ActorUserId               string                 `protobuf:"bytes,10,opt,name=actor_user_id,json=actorUserId" json:"actor_user_id,omitempty"`
+	FreshFactorAssertionId    string                 `protobuf:"bytes,11,opt,name=fresh_factor_assertion_id,json=freshFactorAssertionId" json:"fresh_factor_assertion_id,omitempty"`
+	DeclaredAt                *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=declared_at,json=declaredAt" json:"declared_at,omitempty"`
+	SupersedesDeclarationId   *string                `protobuf:"bytes,13,opt,name=supersedes_declaration_id,json=supersedesDeclarationId" json:"supersedes_declaration_id,omitempty"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
+}
+
+func (x *Declaration) Reset() {
+	*x = Declaration{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Declaration) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Declaration) ProtoMessage() {}
+
+func (x *Declaration) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Declaration.ProtoReflect.Descriptor instead.
+func (*Declaration) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *Declaration) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Declaration) GetReturnId() string {
+	if x != nil {
+		return x.ReturnId
+	}
+	return ""
+}
+
+func (x *Declaration) GetReportHash() []byte {
+	if x != nil {
+		return x.ReportHash
+	}
+	return nil
+}
+
+func (x *Declaration) GetValidationRevision() uint64 {
+	if x != nil {
+		return x.ValidationRevision
+	}
+	return 0
+}
+
+func (x *Declaration) GetAcknowledgementIds() []string {
+	if x != nil {
+		return x.AcknowledgementIds
+	}
+	return nil
+}
+
+func (x *Declaration) GetDeclarationWordingVersion() string {
+	if x != nil {
+		return x.DeclarationWordingVersion
+	}
+	return ""
+}
+
+func (x *Declaration) GetDeclarationWordingHash() []byte {
+	if x != nil {
+		return x.DeclarationWordingHash
+	}
+	return nil
+}
+
+func (x *Declaration) GetTermsVersion() string {
+	if x != nil {
+		return x.TermsVersion
+	}
+	return ""
+}
+
+func (x *Declaration) GetPrivacyReferenceVersion() string {
+	if x != nil {
+		return x.PrivacyReferenceVersion
+	}
+	return ""
+}
+
+func (x *Declaration) GetActorUserId() string {
+	if x != nil {
+		return x.ActorUserId
+	}
+	return ""
+}
+
+func (x *Declaration) GetFreshFactorAssertionId() string {
+	if x != nil {
+		return x.FreshFactorAssertionId
+	}
+	return ""
+}
+
+func (x *Declaration) GetDeclaredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.DeclaredAt
+	}
+	return nil
+}
+
+func (x *Declaration) GetSupersedesDeclarationId() string {
+	if x != nil && x.SupersedesDeclarationId != nil {
+		return *x.SupersedesDeclarationId
+	}
+	return ""
+}
+
+type CompanyReturnDeliverySummary struct {
+	state           protoimpl.MessageState        `protogen:"open.v1"`
+	LatestAttemptId string                        `protobuf:"bytes,1,opt,name=latest_attempt_id,json=latestAttemptId" json:"latest_attempt_id,omitempty"`
+	OperationType   CompanyReturnOperationType    `protobuf:"varint,2,opt,name=operation_type,json=operationType,enum=tammy.v1.CompanyReturnOperationType" json:"operation_type,omitempty"`
+	Outcome         CompanyReturnOperationOutcome `protobuf:"varint,3,opt,name=outcome,enum=tammy.v1.CompanyReturnOperationOutcome" json:"outcome,omitempty"`
+	SafeStatusCode  string                        `protobuf:"bytes,4,opt,name=safe_status_code,json=safeStatusCode" json:"safe_status_code,omitempty"`
+	DeliveredAt     *timestamppb.Timestamp        `protobuf:"bytes,5,opt,name=delivered_at,json=deliveredAt" json:"delivered_at,omitempty"`
+	ReceiptId       *string                       `protobuf:"bytes,6,opt,name=receipt_id,json=receiptId" json:"receipt_id,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *CompanyReturnDeliverySummary) Reset() {
+	*x = CompanyReturnDeliverySummary{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompanyReturnDeliverySummary) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompanyReturnDeliverySummary) ProtoMessage() {}
+
+func (x *CompanyReturnDeliverySummary) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompanyReturnDeliverySummary.ProtoReflect.Descriptor instead.
+func (*CompanyReturnDeliverySummary) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *CompanyReturnDeliverySummary) GetLatestAttemptId() string {
+	if x != nil {
+		return x.LatestAttemptId
+	}
+	return ""
+}
+
+func (x *CompanyReturnDeliverySummary) GetOperationType() CompanyReturnOperationType {
+	if x != nil {
+		return x.OperationType
+	}
+	return CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_UNSPECIFIED
+}
+
+func (x *CompanyReturnDeliverySummary) GetOutcome() CompanyReturnOperationOutcome {
+	if x != nil {
+		return x.Outcome
+	}
+	return CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_UNSPECIFIED
+}
+
+func (x *CompanyReturnDeliverySummary) GetSafeStatusCode() string {
+	if x != nil {
+		return x.SafeStatusCode
+	}
+	return ""
+}
+
+func (x *CompanyReturnDeliverySummary) GetDeliveredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.DeliveredAt
+	}
+	return nil
+}
+
+func (x *CompanyReturnDeliverySummary) GetReceiptId() string {
+	if x != nil && x.ReceiptId != nil {
+		return *x.ReceiptId
+	}
+	return ""
+}
+
+type CompanyReturn struct {
+	state                        protoimpl.MessageState        `protogen:"open.v1"`
+	Id                           string                        `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
+	OrganisationId               string                        `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId" json:"organisation_id,omitempty"`
+	IncomeYear                   int32                         `protobuf:"varint,3,opt,name=income_year,json=incomeYear" json:"income_year,omitempty"`
+	PeriodStart                  *CivilDate                    `protobuf:"bytes,4,opt,name=period_start,json=periodStart" json:"period_start,omitempty"`
+	PeriodEnd                    *CivilDate                    `protobuf:"bytes,5,opt,name=period_end,json=periodEnd" json:"period_end,omitempty"`
+	RelationshipKind             CompanyReturnRelationshipKind `protobuf:"varint,6,opt,name=relationship_kind,json=relationshipKind,enum=tammy.v1.CompanyReturnRelationshipKind" json:"relationship_kind,omitempty"`
+	RootReturnId                 string                        `protobuf:"bytes,7,opt,name=root_return_id,json=rootReturnId" json:"root_return_id,omitempty"`
+	PredecessorReturnId          *string                       `protobuf:"bytes,8,opt,name=predecessor_return_id,json=predecessorReturnId" json:"predecessor_return_id,omitempty"`
+	SuccessorReturnId            *string                       `protobuf:"bytes,9,opt,name=successor_return_id,json=successorReturnId" json:"successor_return_id,omitempty"`
+	RelatedAttemptId             *string                       `protobuf:"bytes,10,opt,name=related_attempt_id,json=relatedAttemptId" json:"related_attempt_id,omitempty"`
+	PreparationBundleId          string                        `protobuf:"bytes,11,opt,name=preparation_bundle_id,json=preparationBundleId" json:"preparation_bundle_id,omitempty"`
+	PreparationBundleFingerprint []byte                        `protobuf:"bytes,12,opt,name=preparation_bundle_fingerprint,json=preparationBundleFingerprint" json:"preparation_bundle_fingerprint,omitempty"`
+	SourceCloseId                string                        `protobuf:"bytes,13,opt,name=source_close_id,json=sourceCloseId" json:"source_close_id,omitempty"`
+	SourceCloseHash              []byte                        `protobuf:"bytes,14,opt,name=source_close_hash,json=sourceCloseHash" json:"source_close_hash,omitempty"`
+	TaxReconciliationHash        []byte                        `protobuf:"bytes,15,opt,name=tax_reconciliation_hash,json=taxReconciliationHash" json:"tax_reconciliation_hash,omitempty"`
+	State                        CompanyReturnState            `protobuf:"varint,16,opt,name=state,enum=tammy.v1.CompanyReturnState" json:"state,omitempty"`
+	Version                      uint64                        `protobuf:"varint,17,opt,name=version" json:"version,omitempty"`
+	ValidationRevision           uint64                        `protobuf:"varint,18,opt,name=validation_revision,json=validationRevision" json:"validation_revision,omitempty"`
+	DeclaredSnapshotHash         []byte                        `protobuf:"bytes,19,opt,name=declared_snapshot_hash,json=declaredSnapshotHash" json:"declared_snapshot_hash,omitempty"`
+	CurrentDeclarationId         *string                       `protobuf:"bytes,20,opt,name=current_declaration_id,json=currentDeclarationId" json:"current_declaration_id,omitempty"`
+	Delivery                     *CompanyReturnDeliverySummary `protobuf:"bytes,21,opt,name=delivery" json:"delivery,omitempty"`
+	CreatedAt                    *timestamppb.Timestamp        `protobuf:"bytes,22,opt,name=created_at,json=createdAt" json:"created_at,omitempty"`
+	UpdatedAt                    *timestamppb.Timestamp        `protobuf:"bytes,23,opt,name=updated_at,json=updatedAt" json:"updated_at,omitempty"`
+	unknownFields                protoimpl.UnknownFields
+	sizeCache                    protoimpl.SizeCache
+}
+
+func (x *CompanyReturn) Reset() {
+	*x = CompanyReturn{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompanyReturn) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompanyReturn) ProtoMessage() {}
+
+func (x *CompanyReturn) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompanyReturn.ProtoReflect.Descriptor instead.
+func (*CompanyReturn) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *CompanyReturn) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *CompanyReturn) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *CompanyReturn) GetIncomeYear() int32 {
+	if x != nil {
+		return x.IncomeYear
+	}
+	return 0
+}
+
+func (x *CompanyReturn) GetPeriodStart() *CivilDate {
+	if x != nil {
+		return x.PeriodStart
+	}
+	return nil
+}
+
+func (x *CompanyReturn) GetPeriodEnd() *CivilDate {
+	if x != nil {
+		return x.PeriodEnd
+	}
+	return nil
+}
+
+func (x *CompanyReturn) GetRelationshipKind() CompanyReturnRelationshipKind {
+	if x != nil {
+		return x.RelationshipKind
+	}
+	return CompanyReturnRelationshipKind_COMPANY_RETURN_RELATIONSHIP_KIND_UNSPECIFIED
+}
+
+func (x *CompanyReturn) GetRootReturnId() string {
+	if x != nil {
+		return x.RootReturnId
+	}
+	return ""
+}
+
+func (x *CompanyReturn) GetPredecessorReturnId() string {
+	if x != nil && x.PredecessorReturnId != nil {
+		return *x.PredecessorReturnId
+	}
+	return ""
+}
+
+func (x *CompanyReturn) GetSuccessorReturnId() string {
+	if x != nil && x.SuccessorReturnId != nil {
+		return *x.SuccessorReturnId
+	}
+	return ""
+}
+
+func (x *CompanyReturn) GetRelatedAttemptId() string {
+	if x != nil && x.RelatedAttemptId != nil {
+		return *x.RelatedAttemptId
+	}
+	return ""
+}
+
+func (x *CompanyReturn) GetPreparationBundleId() string {
+	if x != nil {
+		return x.PreparationBundleId
+	}
+	return ""
+}
+
+func (x *CompanyReturn) GetPreparationBundleFingerprint() []byte {
+	if x != nil {
+		return x.PreparationBundleFingerprint
+	}
+	return nil
+}
+
+func (x *CompanyReturn) GetSourceCloseId() string {
+	if x != nil {
+		return x.SourceCloseId
+	}
+	return ""
+}
+
+func (x *CompanyReturn) GetSourceCloseHash() []byte {
+	if x != nil {
+		return x.SourceCloseHash
+	}
+	return nil
+}
+
+func (x *CompanyReturn) GetTaxReconciliationHash() []byte {
+	if x != nil {
+		return x.TaxReconciliationHash
+	}
+	return nil
+}
+
+func (x *CompanyReturn) GetState() CompanyReturnState {
+	if x != nil {
+		return x.State
+	}
+	return CompanyReturnState_COMPANY_RETURN_STATE_UNSPECIFIED
+}
+
+func (x *CompanyReturn) GetVersion() uint64 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+func (x *CompanyReturn) GetValidationRevision() uint64 {
+	if x != nil {
+		return x.ValidationRevision
+	}
+	return 0
+}
+
+func (x *CompanyReturn) GetDeclaredSnapshotHash() []byte {
+	if x != nil {
+		return x.DeclaredSnapshotHash
+	}
+	return nil
+}
+
+func (x *CompanyReturn) GetCurrentDeclarationId() string {
+	if x != nil && x.CurrentDeclarationId != nil {
+		return *x.CurrentDeclarationId
+	}
+	return ""
+}
+
+func (x *CompanyReturn) GetDelivery() *CompanyReturnDeliverySummary {
+	if x != nil {
+		return x.Delivery
+	}
+	return nil
+}
+
+func (x *CompanyReturn) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *CompanyReturn) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+type TaxAdjustmentInput struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AdjustmentId  *string                `protobuf:"bytes,1,opt,name=adjustment_id,json=adjustmentId" json:"adjustment_id,omitempty"`
+	Type          TaxAdjustmentType      `protobuf:"varint,2,opt,name=type,enum=tammy.v1.TaxAdjustmentType" json:"type,omitempty"`
+	BundleRuleId  string                 `protobuf:"bytes,3,opt,name=bundle_rule_id,json=bundleRuleId" json:"bundle_rule_id,omitempty"`
+	Amount        *Money                 `protobuf:"bytes,4,opt,name=amount" json:"amount,omitempty"`
+	Timing        TaxAdjustmentTiming    `protobuf:"varint,5,opt,name=timing,enum=tammy.v1.TaxAdjustmentTiming" json:"timing,omitempty"`
+	Explanation   string                 `protobuf:"bytes,6,opt,name=explanation" json:"explanation,omitempty"`
+	Sources       []*SourceRef           `protobuf:"bytes,7,rep,name=sources" json:"sources,omitempty"`
+	Evidence      []*SourceRef           `protobuf:"bytes,8,rep,name=evidence" json:"evidence,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TaxAdjustmentInput) Reset() {
+	*x = TaxAdjustmentInput{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TaxAdjustmentInput) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TaxAdjustmentInput) ProtoMessage() {}
+
+func (x *TaxAdjustmentInput) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TaxAdjustmentInput.ProtoReflect.Descriptor instead.
+func (*TaxAdjustmentInput) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *TaxAdjustmentInput) GetAdjustmentId() string {
+	if x != nil && x.AdjustmentId != nil {
+		return *x.AdjustmentId
+	}
+	return ""
+}
+
+func (x *TaxAdjustmentInput) GetType() TaxAdjustmentType {
+	if x != nil {
+		return x.Type
+	}
+	return TaxAdjustmentType_TAX_ADJUSTMENT_TYPE_UNSPECIFIED
+}
+
+func (x *TaxAdjustmentInput) GetBundleRuleId() string {
+	if x != nil {
+		return x.BundleRuleId
+	}
+	return ""
+}
+
+func (x *TaxAdjustmentInput) GetAmount() *Money {
+	if x != nil {
+		return x.Amount
+	}
+	return nil
+}
+
+func (x *TaxAdjustmentInput) GetTiming() TaxAdjustmentTiming {
+	if x != nil {
+		return x.Timing
+	}
+	return TaxAdjustmentTiming_TAX_ADJUSTMENT_TIMING_UNSPECIFIED
+}
+
+func (x *TaxAdjustmentInput) GetExplanation() string {
+	if x != nil {
+		return x.Explanation
+	}
+	return ""
+}
+
+func (x *TaxAdjustmentInput) GetSources() []*SourceRef {
+	if x != nil {
+		return x.Sources
+	}
+	return nil
+}
+
+func (x *TaxAdjustmentInput) GetEvidence() []*SourceRef {
+	if x != nil {
+		return x.Evidence
+	}
+	return nil
+}
+
+type TaxElectionInput struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	ElectionId       *string                `protobuf:"bytes,1,opt,name=election_id,json=electionId" json:"election_id,omitempty"`
+	BundleElectionId string                 `protobuf:"bytes,2,opt,name=bundle_election_id,json=bundleElectionId" json:"bundle_election_id,omitempty"`
+	Choice           *TaxElectionChoice     `protobuf:"bytes,3,opt,name=choice" json:"choice,omitempty"`
+	Explanation      string                 `protobuf:"bytes,4,opt,name=explanation" json:"explanation,omitempty"`
+	Evidence         []*SourceRef           `protobuf:"bytes,5,rep,name=evidence" json:"evidence,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *TaxElectionInput) Reset() {
+	*x = TaxElectionInput{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TaxElectionInput) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TaxElectionInput) ProtoMessage() {}
+
+func (x *TaxElectionInput) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TaxElectionInput.ProtoReflect.Descriptor instead.
+func (*TaxElectionInput) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *TaxElectionInput) GetElectionId() string {
+	if x != nil && x.ElectionId != nil {
+		return *x.ElectionId
+	}
+	return ""
+}
+
+func (x *TaxElectionInput) GetBundleElectionId() string {
+	if x != nil {
+		return x.BundleElectionId
+	}
+	return ""
+}
+
+func (x *TaxElectionInput) GetChoice() *TaxElectionChoice {
+	if x != nil {
+		return x.Choice
+	}
+	return nil
+}
+
+func (x *TaxElectionInput) GetExplanation() string {
+	if x != nil {
+		return x.Explanation
+	}
+	return ""
+}
+
+func (x *TaxElectionInput) GetEvidence() []*SourceRef {
+	if x != nil {
+		return x.Evidence
+	}
+	return nil
+}
+
+type GetCompanyTaxProfileRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Authentication *AuthenticationContext `protobuf:"bytes,1,opt,name=authentication" json:"authentication,omitempty"`
+	OrganisationId string                 `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId" json:"organisation_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *GetCompanyTaxProfileRequest) Reset() {
+	*x = GetCompanyTaxProfileRequest{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCompanyTaxProfileRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCompanyTaxProfileRequest) ProtoMessage() {}
+
+func (x *GetCompanyTaxProfileRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCompanyTaxProfileRequest.ProtoReflect.Descriptor instead.
+func (*GetCompanyTaxProfileRequest) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *GetCompanyTaxProfileRequest) GetAuthentication() *AuthenticationContext {
+	if x != nil {
+		return x.Authentication
+	}
+	return nil
+}
+
+func (x *GetCompanyTaxProfileRequest) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+type GetCompanyTaxProfileResponse struct {
+	state         protoimpl.MessageState   `protogen:"open.v1"`
+	Profile       *MaskedCompanyTaxProfile `protobuf:"bytes,1,opt,name=profile" json:"profile,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCompanyTaxProfileResponse) Reset() {
+	*x = GetCompanyTaxProfileResponse{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCompanyTaxProfileResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCompanyTaxProfileResponse) ProtoMessage() {}
+
+func (x *GetCompanyTaxProfileResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCompanyTaxProfileResponse.ProtoReflect.Descriptor instead.
+func (*GetCompanyTaxProfileResponse) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *GetCompanyTaxProfileResponse) GetProfile() *MaskedCompanyTaxProfile {
+	if x != nil {
+		return x.Profile
+	}
+	return nil
+}
+
+type SetCompanyTaxProfileRequest struct {
+	state           protoimpl.MessageState  `protogen:"open.v1"`
+	CommandContext  *CommandContext         `protobuf:"bytes,1,opt,name=command_context,json=commandContext" json:"command_context,omitempty"`
+	OrganisationId  string                  `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId" json:"organisation_id,omitempty"`
+	ExpectedVersion uint64                  `protobuf:"varint,3,opt,name=expected_version,json=expectedVersion" json:"expected_version,omitempty"`
+	Input           *CompanyTaxProfileInput `protobuf:"bytes,4,opt,name=input" json:"input,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *SetCompanyTaxProfileRequest) Reset() {
+	*x = SetCompanyTaxProfileRequest{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetCompanyTaxProfileRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetCompanyTaxProfileRequest) ProtoMessage() {}
+
+func (x *SetCompanyTaxProfileRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetCompanyTaxProfileRequest.ProtoReflect.Descriptor instead.
+func (*SetCompanyTaxProfileRequest) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *SetCompanyTaxProfileRequest) GetCommandContext() *CommandContext {
+	if x != nil {
+		return x.CommandContext
+	}
+	return nil
+}
+
+func (x *SetCompanyTaxProfileRequest) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *SetCompanyTaxProfileRequest) GetExpectedVersion() uint64 {
+	if x != nil {
+		return x.ExpectedVersion
+	}
+	return 0
+}
+
+func (x *SetCompanyTaxProfileRequest) GetInput() *CompanyTaxProfileInput {
+	if x != nil {
+		return x.Input
+	}
+	return nil
+}
+
+type SetCompanyTaxProfileResponse struct {
+	state         protoimpl.MessageState   `protogen:"open.v1"`
+	Profile       *MaskedCompanyTaxProfile `protobuf:"bytes,1,opt,name=profile" json:"profile,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetCompanyTaxProfileResponse) Reset() {
+	*x = SetCompanyTaxProfileResponse{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetCompanyTaxProfileResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetCompanyTaxProfileResponse) ProtoMessage() {}
+
+func (x *SetCompanyTaxProfileResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetCompanyTaxProfileResponse.ProtoReflect.Descriptor instead.
+func (*SetCompanyTaxProfileResponse) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *SetCompanyTaxProfileResponse) GetProfile() *MaskedCompanyTaxProfile {
+	if x != nil {
+		return x.Profile
+	}
+	return nil
+}
+
+type CreateCompanyReturnRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	CommandContext *CommandContext        `protobuf:"bytes,1,opt,name=command_context,json=commandContext" json:"command_context,omitempty"`
+	OrganisationId string                 `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId" json:"organisation_id,omitempty"`
+	SourceCloseId  string                 `protobuf:"bytes,3,opt,name=source_close_id,json=sourceCloseId" json:"source_close_id,omitempty"`
+	Input          *CompanyReturnInput    `protobuf:"bytes,4,opt,name=input" json:"input,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *CreateCompanyReturnRequest) Reset() {
+	*x = CreateCompanyReturnRequest{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateCompanyReturnRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateCompanyReturnRequest) ProtoMessage() {}
+
+func (x *CreateCompanyReturnRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateCompanyReturnRequest.ProtoReflect.Descriptor instead.
+func (*CreateCompanyReturnRequest) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *CreateCompanyReturnRequest) GetCommandContext() *CommandContext {
+	if x != nil {
+		return x.CommandContext
+	}
+	return nil
+}
+
+func (x *CreateCompanyReturnRequest) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *CreateCompanyReturnRequest) GetSourceCloseId() string {
+	if x != nil {
+		return x.SourceCloseId
+	}
+	return ""
+}
+
+func (x *CreateCompanyReturnRequest) GetInput() *CompanyReturnInput {
+	if x != nil {
+		return x.Input
+	}
+	return nil
+}
+
+type CreateCompanyReturnResponse struct {
+	state             protoimpl.MessageState     `protogen:"open.v1"`
+	CompanyReturn     *CompanyReturn             `protobuf:"bytes,1,opt,name=company_return,json=companyReturn" json:"company_return,omitempty"`
+	TaxReconciliation *TaxReconciliation         `protobuf:"bytes,2,opt,name=tax_reconciliation,json=taxReconciliation" json:"tax_reconciliation,omitempty"`
+	Validation        []*ReturnValidationOutcome `protobuf:"bytes,3,rep,name=validation" json:"validation,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *CreateCompanyReturnResponse) Reset() {
+	*x = CreateCompanyReturnResponse{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateCompanyReturnResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateCompanyReturnResponse) ProtoMessage() {}
+
+func (x *CreateCompanyReturnResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateCompanyReturnResponse.ProtoReflect.Descriptor instead.
+func (*CreateCompanyReturnResponse) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *CreateCompanyReturnResponse) GetCompanyReturn() *CompanyReturn {
+	if x != nil {
+		return x.CompanyReturn
+	}
+	return nil
+}
+
+func (x *CreateCompanyReturnResponse) GetTaxReconciliation() *TaxReconciliation {
+	if x != nil {
+		return x.TaxReconciliation
+	}
+	return nil
+}
+
+func (x *CreateCompanyReturnResponse) GetValidation() []*ReturnValidationOutcome {
+	if x != nil {
+		return x.Validation
+	}
+	return nil
+}
+
+type GetCompanyReturnRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Authentication *AuthenticationContext `protobuf:"bytes,1,opt,name=authentication" json:"authentication,omitempty"`
+	OrganisationId string                 `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId" json:"organisation_id,omitempty"`
+	ReturnId       string                 `protobuf:"bytes,3,opt,name=return_id,json=returnId" json:"return_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *GetCompanyReturnRequest) Reset() {
+	*x = GetCompanyReturnRequest{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCompanyReturnRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCompanyReturnRequest) ProtoMessage() {}
+
+func (x *GetCompanyReturnRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCompanyReturnRequest.ProtoReflect.Descriptor instead.
+func (*GetCompanyReturnRequest) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *GetCompanyReturnRequest) GetAuthentication() *AuthenticationContext {
+	if x != nil {
+		return x.Authentication
+	}
+	return nil
+}
+
+func (x *GetCompanyReturnRequest) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *GetCompanyReturnRequest) GetReturnId() string {
+	if x != nil {
+		return x.ReturnId
+	}
+	return ""
+}
+
+type GetCompanyReturnResponse struct {
+	state             protoimpl.MessageState     `protogen:"open.v1"`
+	CompanyReturn     *CompanyReturn             `protobuf:"bytes,1,opt,name=company_return,json=companyReturn" json:"company_return,omitempty"`
+	TaxReconciliation *TaxReconciliation         `protobuf:"bytes,2,opt,name=tax_reconciliation,json=taxReconciliation" json:"tax_reconciliation,omitempty"`
+	Validation        []*ReturnValidationOutcome `protobuf:"bytes,3,rep,name=validation" json:"validation,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *GetCompanyReturnResponse) Reset() {
+	*x = GetCompanyReturnResponse{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCompanyReturnResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCompanyReturnResponse) ProtoMessage() {}
+
+func (x *GetCompanyReturnResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCompanyReturnResponse.ProtoReflect.Descriptor instead.
+func (*GetCompanyReturnResponse) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *GetCompanyReturnResponse) GetCompanyReturn() *CompanyReturn {
+	if x != nil {
+		return x.CompanyReturn
+	}
+	return nil
+}
+
+func (x *GetCompanyReturnResponse) GetTaxReconciliation() *TaxReconciliation {
+	if x != nil {
+		return x.TaxReconciliation
+	}
+	return nil
+}
+
+func (x *GetCompanyReturnResponse) GetValidation() []*ReturnValidationOutcome {
+	if x != nil {
+		return x.Validation
+	}
+	return nil
+}
+
+type ListCompanyReturnFactsRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Authentication *AuthenticationContext `protobuf:"bytes,1,opt,name=authentication" json:"authentication,omitempty"`
+	OrganisationId string                 `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId" json:"organisation_id,omitempty"`
+	ReturnId       string                 `protobuf:"bytes,3,opt,name=return_id,json=returnId" json:"return_id,omitempty"`
+	Page           *PageRequest           `protobuf:"bytes,4,opt,name=page" json:"page,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ListCompanyReturnFactsRequest) Reset() {
+	*x = ListCompanyReturnFactsRequest{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCompanyReturnFactsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCompanyReturnFactsRequest) ProtoMessage() {}
+
+func (x *ListCompanyReturnFactsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCompanyReturnFactsRequest.ProtoReflect.Descriptor instead.
+func (*ListCompanyReturnFactsRequest) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *ListCompanyReturnFactsRequest) GetAuthentication() *AuthenticationContext {
+	if x != nil {
+		return x.Authentication
+	}
+	return nil
+}
+
+func (x *ListCompanyReturnFactsRequest) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *ListCompanyReturnFactsRequest) GetReturnId() string {
+	if x != nil {
+		return x.ReturnId
+	}
+	return ""
+}
+
+func (x *ListCompanyReturnFactsRequest) GetPage() *PageRequest {
+	if x != nil {
+		return x.Page
+	}
+	return nil
+}
+
+type ListCompanyReturnFactsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Facts         []*ReturnFact          `protobuf:"bytes,1,rep,name=facts" json:"facts,omitempty"`
+	Page          *PageInfo              `protobuf:"bytes,2,opt,name=page" json:"page,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListCompanyReturnFactsResponse) Reset() {
+	*x = ListCompanyReturnFactsResponse{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCompanyReturnFactsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCompanyReturnFactsResponse) ProtoMessage() {}
+
+func (x *ListCompanyReturnFactsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCompanyReturnFactsResponse.ProtoReflect.Descriptor instead.
+func (*ListCompanyReturnFactsResponse) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *ListCompanyReturnFactsResponse) GetFacts() []*ReturnFact {
+	if x != nil {
+		return x.Facts
+	}
+	return nil
+}
+
+func (x *ListCompanyReturnFactsResponse) GetPage() *PageInfo {
+	if x != nil {
+		return x.Page
+	}
+	return nil
+}
+
+type SetCompanyReturnInputRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	CommandContext  *CommandContext        `protobuf:"bytes,1,opt,name=command_context,json=commandContext" json:"command_context,omitempty"`
+	OrganisationId  string                 `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId" json:"organisation_id,omitempty"`
+	ReturnId        string                 `protobuf:"bytes,3,opt,name=return_id,json=returnId" json:"return_id,omitempty"`
+	ExpectedVersion uint64                 `protobuf:"varint,4,opt,name=expected_version,json=expectedVersion" json:"expected_version,omitempty"`
+	Input           *CompanyReturnInput    `protobuf:"bytes,5,opt,name=input" json:"input,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *SetCompanyReturnInputRequest) Reset() {
+	*x = SetCompanyReturnInputRequest{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetCompanyReturnInputRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetCompanyReturnInputRequest) ProtoMessage() {}
+
+func (x *SetCompanyReturnInputRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetCompanyReturnInputRequest.ProtoReflect.Descriptor instead.
+func (*SetCompanyReturnInputRequest) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *SetCompanyReturnInputRequest) GetCommandContext() *CommandContext {
+	if x != nil {
+		return x.CommandContext
+	}
+	return nil
+}
+
+func (x *SetCompanyReturnInputRequest) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *SetCompanyReturnInputRequest) GetReturnId() string {
+	if x != nil {
+		return x.ReturnId
+	}
+	return ""
+}
+
+func (x *SetCompanyReturnInputRequest) GetExpectedVersion() uint64 {
+	if x != nil {
+		return x.ExpectedVersion
+	}
+	return 0
+}
+
+func (x *SetCompanyReturnInputRequest) GetInput() *CompanyReturnInput {
+	if x != nil {
+		return x.Input
+	}
+	return nil
+}
+
+type SetCompanyReturnInputResponse struct {
+	state             protoimpl.MessageState     `protogen:"open.v1"`
+	CompanyReturn     *CompanyReturn             `protobuf:"bytes,1,opt,name=company_return,json=companyReturn" json:"company_return,omitempty"`
+	TaxReconciliation *TaxReconciliation         `protobuf:"bytes,2,opt,name=tax_reconciliation,json=taxReconciliation" json:"tax_reconciliation,omitempty"`
+	Validation        []*ReturnValidationOutcome `protobuf:"bytes,3,rep,name=validation" json:"validation,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *SetCompanyReturnInputResponse) Reset() {
+	*x = SetCompanyReturnInputResponse{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetCompanyReturnInputResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetCompanyReturnInputResponse) ProtoMessage() {}
+
+func (x *SetCompanyReturnInputResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetCompanyReturnInputResponse.ProtoReflect.Descriptor instead.
+func (*SetCompanyReturnInputResponse) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *SetCompanyReturnInputResponse) GetCompanyReturn() *CompanyReturn {
+	if x != nil {
+		return x.CompanyReturn
+	}
+	return nil
+}
+
+func (x *SetCompanyReturnInputResponse) GetTaxReconciliation() *TaxReconciliation {
+	if x != nil {
+		return x.TaxReconciliation
+	}
+	return nil
+}
+
+func (x *SetCompanyReturnInputResponse) GetValidation() []*ReturnValidationOutcome {
+	if x != nil {
+		return x.Validation
+	}
+	return nil
+}
+
+type UpsertTaxAdjustmentRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	CommandContext  *CommandContext        `protobuf:"bytes,1,opt,name=command_context,json=commandContext" json:"command_context,omitempty"`
+	OrganisationId  string                 `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId" json:"organisation_id,omitempty"`
+	ReturnId        string                 `protobuf:"bytes,3,opt,name=return_id,json=returnId" json:"return_id,omitempty"`
+	ExpectedVersion uint64                 `protobuf:"varint,4,opt,name=expected_version,json=expectedVersion" json:"expected_version,omitempty"`
+	Adjustment      *TaxAdjustmentInput    `protobuf:"bytes,5,opt,name=adjustment" json:"adjustment,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *UpsertTaxAdjustmentRequest) Reset() {
+	*x = UpsertTaxAdjustmentRequest{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpsertTaxAdjustmentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpsertTaxAdjustmentRequest) ProtoMessage() {}
+
+func (x *UpsertTaxAdjustmentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpsertTaxAdjustmentRequest.ProtoReflect.Descriptor instead.
+func (*UpsertTaxAdjustmentRequest) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *UpsertTaxAdjustmentRequest) GetCommandContext() *CommandContext {
+	if x != nil {
+		return x.CommandContext
+	}
+	return nil
+}
+
+func (x *UpsertTaxAdjustmentRequest) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *UpsertTaxAdjustmentRequest) GetReturnId() string {
+	if x != nil {
+		return x.ReturnId
+	}
+	return ""
+}
+
+func (x *UpsertTaxAdjustmentRequest) GetExpectedVersion() uint64 {
+	if x != nil {
+		return x.ExpectedVersion
+	}
+	return 0
+}
+
+func (x *UpsertTaxAdjustmentRequest) GetAdjustment() *TaxAdjustmentInput {
+	if x != nil {
+		return x.Adjustment
+	}
+	return nil
+}
+
+type UpsertTaxAdjustmentResponse struct {
+	state             protoimpl.MessageState     `protogen:"open.v1"`
+	CompanyReturn     *CompanyReturn             `protobuf:"bytes,1,opt,name=company_return,json=companyReturn" json:"company_return,omitempty"`
+	Adjustment        *TaxAdjustment             `protobuf:"bytes,2,opt,name=adjustment" json:"adjustment,omitempty"`
+	TaxReconciliation *TaxReconciliation         `protobuf:"bytes,3,opt,name=tax_reconciliation,json=taxReconciliation" json:"tax_reconciliation,omitempty"`
+	Validation        []*ReturnValidationOutcome `protobuf:"bytes,4,rep,name=validation" json:"validation,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *UpsertTaxAdjustmentResponse) Reset() {
+	*x = UpsertTaxAdjustmentResponse{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpsertTaxAdjustmentResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpsertTaxAdjustmentResponse) ProtoMessage() {}
+
+func (x *UpsertTaxAdjustmentResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpsertTaxAdjustmentResponse.ProtoReflect.Descriptor instead.
+func (*UpsertTaxAdjustmentResponse) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *UpsertTaxAdjustmentResponse) GetCompanyReturn() *CompanyReturn {
+	if x != nil {
+		return x.CompanyReturn
+	}
+	return nil
+}
+
+func (x *UpsertTaxAdjustmentResponse) GetAdjustment() *TaxAdjustment {
+	if x != nil {
+		return x.Adjustment
+	}
+	return nil
+}
+
+func (x *UpsertTaxAdjustmentResponse) GetTaxReconciliation() *TaxReconciliation {
+	if x != nil {
+		return x.TaxReconciliation
+	}
+	return nil
+}
+
+func (x *UpsertTaxAdjustmentResponse) GetValidation() []*ReturnValidationOutcome {
+	if x != nil {
+		return x.Validation
+	}
+	return nil
+}
+
+type RemoveTaxAdjustmentRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	CommandContext  *CommandContext        `protobuf:"bytes,1,opt,name=command_context,json=commandContext" json:"command_context,omitempty"`
+	OrganisationId  string                 `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId" json:"organisation_id,omitempty"`
+	ReturnId        string                 `protobuf:"bytes,3,opt,name=return_id,json=returnId" json:"return_id,omitempty"`
+	ExpectedVersion uint64                 `protobuf:"varint,4,opt,name=expected_version,json=expectedVersion" json:"expected_version,omitempty"`
+	AdjustmentId    string                 `protobuf:"bytes,5,opt,name=adjustment_id,json=adjustmentId" json:"adjustment_id,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *RemoveTaxAdjustmentRequest) Reset() {
+	*x = RemoveTaxAdjustmentRequest{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemoveTaxAdjustmentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemoveTaxAdjustmentRequest) ProtoMessage() {}
+
+func (x *RemoveTaxAdjustmentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemoveTaxAdjustmentRequest.ProtoReflect.Descriptor instead.
+func (*RemoveTaxAdjustmentRequest) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *RemoveTaxAdjustmentRequest) GetCommandContext() *CommandContext {
+	if x != nil {
+		return x.CommandContext
+	}
+	return nil
+}
+
+func (x *RemoveTaxAdjustmentRequest) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *RemoveTaxAdjustmentRequest) GetReturnId() string {
+	if x != nil {
+		return x.ReturnId
+	}
+	return ""
+}
+
+func (x *RemoveTaxAdjustmentRequest) GetExpectedVersion() uint64 {
+	if x != nil {
+		return x.ExpectedVersion
+	}
+	return 0
+}
+
+func (x *RemoveTaxAdjustmentRequest) GetAdjustmentId() string {
+	if x != nil {
+		return x.AdjustmentId
+	}
+	return ""
+}
+
+type RemoveTaxAdjustmentResponse struct {
+	state             protoimpl.MessageState     `protogen:"open.v1"`
+	CompanyReturn     *CompanyReturn             `protobuf:"bytes,1,opt,name=company_return,json=companyReturn" json:"company_return,omitempty"`
+	TaxReconciliation *TaxReconciliation         `protobuf:"bytes,2,opt,name=tax_reconciliation,json=taxReconciliation" json:"tax_reconciliation,omitempty"`
+	Validation        []*ReturnValidationOutcome `protobuf:"bytes,3,rep,name=validation" json:"validation,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *RemoveTaxAdjustmentResponse) Reset() {
+	*x = RemoveTaxAdjustmentResponse{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemoveTaxAdjustmentResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemoveTaxAdjustmentResponse) ProtoMessage() {}
+
+func (x *RemoveTaxAdjustmentResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemoveTaxAdjustmentResponse.ProtoReflect.Descriptor instead.
+func (*RemoveTaxAdjustmentResponse) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *RemoveTaxAdjustmentResponse) GetCompanyReturn() *CompanyReturn {
+	if x != nil {
+		return x.CompanyReturn
+	}
+	return nil
+}
+
+func (x *RemoveTaxAdjustmentResponse) GetTaxReconciliation() *TaxReconciliation {
+	if x != nil {
+		return x.TaxReconciliation
+	}
+	return nil
+}
+
+func (x *RemoveTaxAdjustmentResponse) GetValidation() []*ReturnValidationOutcome {
+	if x != nil {
+		return x.Validation
+	}
+	return nil
+}
+
+type UpsertTaxElectionRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	CommandContext  *CommandContext        `protobuf:"bytes,1,opt,name=command_context,json=commandContext" json:"command_context,omitempty"`
+	OrganisationId  string                 `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId" json:"organisation_id,omitempty"`
+	ReturnId        string                 `protobuf:"bytes,3,opt,name=return_id,json=returnId" json:"return_id,omitempty"`
+	ExpectedVersion uint64                 `protobuf:"varint,4,opt,name=expected_version,json=expectedVersion" json:"expected_version,omitempty"`
+	Election        *TaxElectionInput      `protobuf:"bytes,5,opt,name=election" json:"election,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *UpsertTaxElectionRequest) Reset() {
+	*x = UpsertTaxElectionRequest{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpsertTaxElectionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpsertTaxElectionRequest) ProtoMessage() {}
+
+func (x *UpsertTaxElectionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpsertTaxElectionRequest.ProtoReflect.Descriptor instead.
+func (*UpsertTaxElectionRequest) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *UpsertTaxElectionRequest) GetCommandContext() *CommandContext {
+	if x != nil {
+		return x.CommandContext
+	}
+	return nil
+}
+
+func (x *UpsertTaxElectionRequest) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *UpsertTaxElectionRequest) GetReturnId() string {
+	if x != nil {
+		return x.ReturnId
+	}
+	return ""
+}
+
+func (x *UpsertTaxElectionRequest) GetExpectedVersion() uint64 {
+	if x != nil {
+		return x.ExpectedVersion
+	}
+	return 0
+}
+
+func (x *UpsertTaxElectionRequest) GetElection() *TaxElectionInput {
+	if x != nil {
+		return x.Election
+	}
+	return nil
+}
+
+type UpsertTaxElectionResponse struct {
+	state             protoimpl.MessageState     `protogen:"open.v1"`
+	CompanyReturn     *CompanyReturn             `protobuf:"bytes,1,opt,name=company_return,json=companyReturn" json:"company_return,omitempty"`
+	Election          *TaxElection               `protobuf:"bytes,2,opt,name=election" json:"election,omitempty"`
+	TaxReconciliation *TaxReconciliation         `protobuf:"bytes,3,opt,name=tax_reconciliation,json=taxReconciliation" json:"tax_reconciliation,omitempty"`
+	Validation        []*ReturnValidationOutcome `protobuf:"bytes,4,rep,name=validation" json:"validation,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *UpsertTaxElectionResponse) Reset() {
+	*x = UpsertTaxElectionResponse{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpsertTaxElectionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpsertTaxElectionResponse) ProtoMessage() {}
+
+func (x *UpsertTaxElectionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpsertTaxElectionResponse.ProtoReflect.Descriptor instead.
+func (*UpsertTaxElectionResponse) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{39}
+}
+
+func (x *UpsertTaxElectionResponse) GetCompanyReturn() *CompanyReturn {
+	if x != nil {
+		return x.CompanyReturn
+	}
+	return nil
+}
+
+func (x *UpsertTaxElectionResponse) GetElection() *TaxElection {
+	if x != nil {
+		return x.Election
+	}
+	return nil
+}
+
+func (x *UpsertTaxElectionResponse) GetTaxReconciliation() *TaxReconciliation {
+	if x != nil {
+		return x.TaxReconciliation
+	}
+	return nil
+}
+
+func (x *UpsertTaxElectionResponse) GetValidation() []*ReturnValidationOutcome {
+	if x != nil {
+		return x.Validation
+	}
+	return nil
+}
+
+type RemoveTaxElectionRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	CommandContext  *CommandContext        `protobuf:"bytes,1,opt,name=command_context,json=commandContext" json:"command_context,omitempty"`
+	OrganisationId  string                 `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId" json:"organisation_id,omitempty"`
+	ReturnId        string                 `protobuf:"bytes,3,opt,name=return_id,json=returnId" json:"return_id,omitempty"`
+	ExpectedVersion uint64                 `protobuf:"varint,4,opt,name=expected_version,json=expectedVersion" json:"expected_version,omitempty"`
+	ElectionId      string                 `protobuf:"bytes,5,opt,name=election_id,json=electionId" json:"election_id,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *RemoveTaxElectionRequest) Reset() {
+	*x = RemoveTaxElectionRequest{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[40]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemoveTaxElectionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemoveTaxElectionRequest) ProtoMessage() {}
+
+func (x *RemoveTaxElectionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[40]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemoveTaxElectionRequest.ProtoReflect.Descriptor instead.
+func (*RemoveTaxElectionRequest) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{40}
+}
+
+func (x *RemoveTaxElectionRequest) GetCommandContext() *CommandContext {
+	if x != nil {
+		return x.CommandContext
+	}
+	return nil
+}
+
+func (x *RemoveTaxElectionRequest) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *RemoveTaxElectionRequest) GetReturnId() string {
+	if x != nil {
+		return x.ReturnId
+	}
+	return ""
+}
+
+func (x *RemoveTaxElectionRequest) GetExpectedVersion() uint64 {
+	if x != nil {
+		return x.ExpectedVersion
+	}
+	return 0
+}
+
+func (x *RemoveTaxElectionRequest) GetElectionId() string {
+	if x != nil {
+		return x.ElectionId
+	}
+	return ""
+}
+
+type RemoveTaxElectionResponse struct {
+	state             protoimpl.MessageState     `protogen:"open.v1"`
+	CompanyReturn     *CompanyReturn             `protobuf:"bytes,1,opt,name=company_return,json=companyReturn" json:"company_return,omitempty"`
+	TaxReconciliation *TaxReconciliation         `protobuf:"bytes,2,opt,name=tax_reconciliation,json=taxReconciliation" json:"tax_reconciliation,omitempty"`
+	Validation        []*ReturnValidationOutcome `protobuf:"bytes,3,rep,name=validation" json:"validation,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *RemoveTaxElectionResponse) Reset() {
+	*x = RemoveTaxElectionResponse{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[41]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemoveTaxElectionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemoveTaxElectionResponse) ProtoMessage() {}
+
+func (x *RemoveTaxElectionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[41]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemoveTaxElectionResponse.ProtoReflect.Descriptor instead.
+func (*RemoveTaxElectionResponse) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{41}
+}
+
+func (x *RemoveTaxElectionResponse) GetCompanyReturn() *CompanyReturn {
+	if x != nil {
+		return x.CompanyReturn
+	}
+	return nil
+}
+
+func (x *RemoveTaxElectionResponse) GetTaxReconciliation() *TaxReconciliation {
+	if x != nil {
+		return x.TaxReconciliation
+	}
+	return nil
+}
+
+func (x *RemoveTaxElectionResponse) GetValidation() []*ReturnValidationOutcome {
+	if x != nil {
+		return x.Validation
+	}
+	return nil
+}
+
+type ValidateCompanyReturnRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	CommandContext  *CommandContext        `protobuf:"bytes,1,opt,name=command_context,json=commandContext" json:"command_context,omitempty"`
+	OrganisationId  string                 `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId" json:"organisation_id,omitempty"`
+	ReturnId        string                 `protobuf:"bytes,3,opt,name=return_id,json=returnId" json:"return_id,omitempty"`
+	ExpectedVersion uint64                 `protobuf:"varint,4,opt,name=expected_version,json=expectedVersion" json:"expected_version,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *ValidateCompanyReturnRequest) Reset() {
+	*x = ValidateCompanyReturnRequest{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ValidateCompanyReturnRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ValidateCompanyReturnRequest) ProtoMessage() {}
+
+func (x *ValidateCompanyReturnRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ValidateCompanyReturnRequest.ProtoReflect.Descriptor instead.
+func (*ValidateCompanyReturnRequest) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{42}
+}
+
+func (x *ValidateCompanyReturnRequest) GetCommandContext() *CommandContext {
+	if x != nil {
+		return x.CommandContext
+	}
+	return nil
+}
+
+func (x *ValidateCompanyReturnRequest) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *ValidateCompanyReturnRequest) GetReturnId() string {
+	if x != nil {
+		return x.ReturnId
+	}
+	return ""
+}
+
+func (x *ValidateCompanyReturnRequest) GetExpectedVersion() uint64 {
+	if x != nil {
+		return x.ExpectedVersion
+	}
+	return 0
+}
+
+type ValidateCompanyReturnResponse struct {
+	state         protoimpl.MessageState     `protogen:"open.v1"`
+	CompanyReturn *CompanyReturn             `protobuf:"bytes,1,opt,name=company_return,json=companyReturn" json:"company_return,omitempty"`
+	Validation    []*ReturnValidationOutcome `protobuf:"bytes,2,rep,name=validation" json:"validation,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ValidateCompanyReturnResponse) Reset() {
+	*x = ValidateCompanyReturnResponse{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[43]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ValidateCompanyReturnResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ValidateCompanyReturnResponse) ProtoMessage() {}
+
+func (x *ValidateCompanyReturnResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[43]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ValidateCompanyReturnResponse.ProtoReflect.Descriptor instead.
+func (*ValidateCompanyReturnResponse) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{43}
+}
+
+func (x *ValidateCompanyReturnResponse) GetCompanyReturn() *CompanyReturn {
+	if x != nil {
+		return x.CompanyReturn
+	}
+	return nil
+}
+
+func (x *ValidateCompanyReturnResponse) GetValidation() []*ReturnValidationOutcome {
+	if x != nil {
+		return x.Validation
+	}
+	return nil
+}
+
+type AcknowledgeReturnWarningRequest struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	CommandContext     *CommandContext        `protobuf:"bytes,1,opt,name=command_context,json=commandContext" json:"command_context,omitempty"`
+	OrganisationId     string                 `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId" json:"organisation_id,omitempty"`
+	ReturnId           string                 `protobuf:"bytes,3,opt,name=return_id,json=returnId" json:"return_id,omitempty"`
+	ExpectedVersion    uint64                 `protobuf:"varint,4,opt,name=expected_version,json=expectedVersion" json:"expected_version,omitempty"`
+	WarningId          string                 `protobuf:"bytes,5,opt,name=warning_id,json=warningId" json:"warning_id,omitempty"`
+	ValidationRevision uint64                 `protobuf:"varint,6,opt,name=validation_revision,json=validationRevision" json:"validation_revision,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *AcknowledgeReturnWarningRequest) Reset() {
+	*x = AcknowledgeReturnWarningRequest{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[44]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AcknowledgeReturnWarningRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AcknowledgeReturnWarningRequest) ProtoMessage() {}
+
+func (x *AcknowledgeReturnWarningRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[44]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AcknowledgeReturnWarningRequest.ProtoReflect.Descriptor instead.
+func (*AcknowledgeReturnWarningRequest) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{44}
+}
+
+func (x *AcknowledgeReturnWarningRequest) GetCommandContext() *CommandContext {
+	if x != nil {
+		return x.CommandContext
+	}
+	return nil
+}
+
+func (x *AcknowledgeReturnWarningRequest) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *AcknowledgeReturnWarningRequest) GetReturnId() string {
+	if x != nil {
+		return x.ReturnId
+	}
+	return ""
+}
+
+func (x *AcknowledgeReturnWarningRequest) GetExpectedVersion() uint64 {
+	if x != nil {
+		return x.ExpectedVersion
+	}
+	return 0
+}
+
+func (x *AcknowledgeReturnWarningRequest) GetWarningId() string {
+	if x != nil {
+		return x.WarningId
+	}
+	return ""
+}
+
+func (x *AcknowledgeReturnWarningRequest) GetValidationRevision() uint64 {
+	if x != nil {
+		return x.ValidationRevision
+	}
+	return 0
+}
+
+type AcknowledgeReturnWarningResponse struct {
+	state           protoimpl.MessageState     `protogen:"open.v1"`
+	CompanyReturn   *CompanyReturn             `protobuf:"bytes,1,opt,name=company_return,json=companyReturn" json:"company_return,omitempty"`
+	Acknowledgement *ValidationAcknowledgement `protobuf:"bytes,2,opt,name=acknowledgement" json:"acknowledgement,omitempty"`
+	Validation      []*ReturnValidationOutcome `protobuf:"bytes,3,rep,name=validation" json:"validation,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *AcknowledgeReturnWarningResponse) Reset() {
+	*x = AcknowledgeReturnWarningResponse{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[45]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AcknowledgeReturnWarningResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AcknowledgeReturnWarningResponse) ProtoMessage() {}
+
+func (x *AcknowledgeReturnWarningResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[45]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AcknowledgeReturnWarningResponse.ProtoReflect.Descriptor instead.
+func (*AcknowledgeReturnWarningResponse) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{45}
+}
+
+func (x *AcknowledgeReturnWarningResponse) GetCompanyReturn() *CompanyReturn {
+	if x != nil {
+		return x.CompanyReturn
+	}
+	return nil
+}
+
+func (x *AcknowledgeReturnWarningResponse) GetAcknowledgement() *ValidationAcknowledgement {
+	if x != nil {
+		return x.Acknowledgement
+	}
+	return nil
+}
+
+func (x *AcknowledgeReturnWarningResponse) GetValidation() []*ReturnValidationOutcome {
+	if x != nil {
+		return x.Validation
+	}
+	return nil
+}
+
+type DeclareCompanyReturnRequest struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	CommandContext     *CommandContext        `protobuf:"bytes,1,opt,name=command_context,json=commandContext" json:"command_context,omitempty"`
+	OrganisationId     string                 `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId" json:"organisation_id,omitempty"`
+	ReturnId           string                 `protobuf:"bytes,3,opt,name=return_id,json=returnId" json:"return_id,omitempty"`
+	ExpectedVersion    uint64                 `protobuf:"varint,4,opt,name=expected_version,json=expectedVersion" json:"expected_version,omitempty"`
+	ValidationRevision uint64                 `protobuf:"varint,5,opt,name=validation_revision,json=validationRevision" json:"validation_revision,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *DeclareCompanyReturnRequest) Reset() {
+	*x = DeclareCompanyReturnRequest{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[46]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeclareCompanyReturnRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeclareCompanyReturnRequest) ProtoMessage() {}
+
+func (x *DeclareCompanyReturnRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[46]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeclareCompanyReturnRequest.ProtoReflect.Descriptor instead.
+func (*DeclareCompanyReturnRequest) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{46}
+}
+
+func (x *DeclareCompanyReturnRequest) GetCommandContext() *CommandContext {
+	if x != nil {
+		return x.CommandContext
+	}
+	return nil
+}
+
+func (x *DeclareCompanyReturnRequest) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *DeclareCompanyReturnRequest) GetReturnId() string {
+	if x != nil {
+		return x.ReturnId
+	}
+	return ""
+}
+
+func (x *DeclareCompanyReturnRequest) GetExpectedVersion() uint64 {
+	if x != nil {
+		return x.ExpectedVersion
+	}
+	return 0
+}
+
+func (x *DeclareCompanyReturnRequest) GetValidationRevision() uint64 {
+	if x != nil {
+		return x.ValidationRevision
+	}
+	return 0
+}
+
+type DeclareCompanyReturnResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CompanyReturn *CompanyReturn         `protobuf:"bytes,1,opt,name=company_return,json=companyReturn" json:"company_return,omitempty"`
+	Declaration   *Declaration           `protobuf:"bytes,2,opt,name=declaration" json:"declaration,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeclareCompanyReturnResponse) Reset() {
+	*x = DeclareCompanyReturnResponse{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[47]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeclareCompanyReturnResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeclareCompanyReturnResponse) ProtoMessage() {}
+
+func (x *DeclareCompanyReturnResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[47]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeclareCompanyReturnResponse.ProtoReflect.Descriptor instead.
+func (*DeclareCompanyReturnResponse) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{47}
+}
+
+func (x *DeclareCompanyReturnResponse) GetCompanyReturn() *CompanyReturn {
+	if x != nil {
+		return x.CompanyReturn
+	}
+	return nil
+}
+
+func (x *DeclareCompanyReturnResponse) GetDeclaration() *Declaration {
+	if x != nil {
+		return x.Declaration
+	}
+	return nil
+}
+
+type WithdrawCompanyReturnDeclarationRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	CommandContext  *CommandContext        `protobuf:"bytes,1,opt,name=command_context,json=commandContext" json:"command_context,omitempty"`
+	OrganisationId  string                 `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId" json:"organisation_id,omitempty"`
+	ReturnId        string                 `protobuf:"bytes,3,opt,name=return_id,json=returnId" json:"return_id,omitempty"`
+	ExpectedVersion uint64                 `protobuf:"varint,4,opt,name=expected_version,json=expectedVersion" json:"expected_version,omitempty"`
+	Reason          string                 `protobuf:"bytes,5,opt,name=reason" json:"reason,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *WithdrawCompanyReturnDeclarationRequest) Reset() {
+	*x = WithdrawCompanyReturnDeclarationRequest{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[48]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WithdrawCompanyReturnDeclarationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WithdrawCompanyReturnDeclarationRequest) ProtoMessage() {}
+
+func (x *WithdrawCompanyReturnDeclarationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[48]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WithdrawCompanyReturnDeclarationRequest.ProtoReflect.Descriptor instead.
+func (*WithdrawCompanyReturnDeclarationRequest) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{48}
+}
+
+func (x *WithdrawCompanyReturnDeclarationRequest) GetCommandContext() *CommandContext {
+	if x != nil {
+		return x.CommandContext
+	}
+	return nil
+}
+
+func (x *WithdrawCompanyReturnDeclarationRequest) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *WithdrawCompanyReturnDeclarationRequest) GetReturnId() string {
+	if x != nil {
+		return x.ReturnId
+	}
+	return ""
+}
+
+func (x *WithdrawCompanyReturnDeclarationRequest) GetExpectedVersion() uint64 {
+	if x != nil {
+		return x.ExpectedVersion
+	}
+	return 0
+}
+
+func (x *WithdrawCompanyReturnDeclarationRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type WithdrawCompanyReturnDeclarationResponse struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	CompanyReturn       *CompanyReturn         `protobuf:"bytes,1,opt,name=company_return,json=companyReturn" json:"company_return,omitempty"`
+	RetainedDeclaration *Declaration           `protobuf:"bytes,2,opt,name=retained_declaration,json=retainedDeclaration" json:"retained_declaration,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *WithdrawCompanyReturnDeclarationResponse) Reset() {
+	*x = WithdrawCompanyReturnDeclarationResponse{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[49]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WithdrawCompanyReturnDeclarationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WithdrawCompanyReturnDeclarationResponse) ProtoMessage() {}
+
+func (x *WithdrawCompanyReturnDeclarationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[49]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WithdrawCompanyReturnDeclarationResponse.ProtoReflect.Descriptor instead.
+func (*WithdrawCompanyReturnDeclarationResponse) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{49}
+}
+
+func (x *WithdrawCompanyReturnDeclarationResponse) GetCompanyReturn() *CompanyReturn {
+	if x != nil {
+		return x.CompanyReturn
+	}
+	return nil
+}
+
+func (x *WithdrawCompanyReturnDeclarationResponse) GetRetainedDeclaration() *Declaration {
+	if x != nil {
+		return x.RetainedDeclaration
+	}
+	return nil
+}
+
+type ExportCompanyReturnPackRequest struct {
+	state            protoimpl.MessageState  `protogen:"open.v1"`
+	CommandContext   *CommandContext         `protobuf:"bytes,1,opt,name=command_context,json=commandContext" json:"command_context,omitempty"`
+	OrganisationId   string                  `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId" json:"organisation_id,omitempty"`
+	ReturnId         string                  `protobuf:"bytes,3,opt,name=return_id,json=returnId" json:"return_id,omitempty"`
+	ExpectedVersion  uint64                  `protobuf:"varint,4,opt,name=expected_version,json=expectedVersion" json:"expected_version,omitempty"`
+	Kind             CompanyReturnExportKind `protobuf:"varint,5,opt,name=kind,enum=tammy.v1.CompanyReturnExportKind" json:"kind,omitempty"`
+	ExportPassphrase *SecretInput            `protobuf:"bytes,6,opt,name=export_passphrase,json=exportPassphrase" json:"export_passphrase,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *ExportCompanyReturnPackRequest) Reset() {
+	*x = ExportCompanyReturnPackRequest{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[50]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExportCompanyReturnPackRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExportCompanyReturnPackRequest) ProtoMessage() {}
+
+func (x *ExportCompanyReturnPackRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[50]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExportCompanyReturnPackRequest.ProtoReflect.Descriptor instead.
+func (*ExportCompanyReturnPackRequest) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{50}
+}
+
+func (x *ExportCompanyReturnPackRequest) GetCommandContext() *CommandContext {
+	if x != nil {
+		return x.CommandContext
+	}
+	return nil
+}
+
+func (x *ExportCompanyReturnPackRequest) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *ExportCompanyReturnPackRequest) GetReturnId() string {
+	if x != nil {
+		return x.ReturnId
+	}
+	return ""
+}
+
+func (x *ExportCompanyReturnPackRequest) GetExpectedVersion() uint64 {
+	if x != nil {
+		return x.ExpectedVersion
+	}
+	return 0
+}
+
+func (x *ExportCompanyReturnPackRequest) GetKind() CompanyReturnExportKind {
+	if x != nil {
+		return x.Kind
+	}
+	return CompanyReturnExportKind_COMPANY_RETURN_EXPORT_KIND_UNSPECIFIED
+}
+
+func (x *ExportCompanyReturnPackRequest) GetExportPassphrase() *SecretInput {
+	if x != nil {
+		return x.ExportPassphrase
+	}
+	return nil
+}
+
+type ExportCompanyReturnPackResponse struct {
+	state         protoimpl.MessageState  `protogen:"open.v1"`
+	ExportId      string                  `protobuf:"bytes,1,opt,name=export_id,json=exportId" json:"export_id,omitempty"`
+	ContentHash   []byte                  `protobuf:"bytes,2,opt,name=content_hash,json=contentHash" json:"content_hash,omitempty"`
+	SafeFilename  string                  `protobuf:"bytes,3,opt,name=safe_filename,json=safeFilename" json:"safe_filename,omitempty"`
+	Kind          CompanyReturnExportKind `protobuf:"varint,4,opt,name=kind,enum=tammy.v1.CompanyReturnExportKind" json:"kind,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExportCompanyReturnPackResponse) Reset() {
+	*x = ExportCompanyReturnPackResponse{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[51]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExportCompanyReturnPackResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExportCompanyReturnPackResponse) ProtoMessage() {}
+
+func (x *ExportCompanyReturnPackResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[51]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExportCompanyReturnPackResponse.ProtoReflect.Descriptor instead.
+func (*ExportCompanyReturnPackResponse) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{51}
+}
+
+func (x *ExportCompanyReturnPackResponse) GetExportId() string {
+	if x != nil {
+		return x.ExportId
+	}
+	return ""
+}
+
+func (x *ExportCompanyReturnPackResponse) GetContentHash() []byte {
+	if x != nil {
+		return x.ContentHash
+	}
+	return nil
+}
+
+func (x *ExportCompanyReturnPackResponse) GetSafeFilename() string {
+	if x != nil {
+		return x.SafeFilename
+	}
+	return ""
+}
+
+func (x *ExportCompanyReturnPackResponse) GetKind() CompanyReturnExportKind {
+	if x != nil {
+		return x.Kind
+	}
+	return CompanyReturnExportKind_COMPANY_RETURN_EXPORT_KIND_UNSPECIFIED
+}
+
+type CreateCompanyReturnReplacementRequest struct {
+	state                      protoimpl.MessageState `protogen:"open.v1"`
+	CommandContext             *CommandContext        `protobuf:"bytes,1,opt,name=command_context,json=commandContext" json:"command_context,omitempty"`
+	OrganisationId             string                 `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId" json:"organisation_id,omitempty"`
+	PredecessorReturnId        string                 `protobuf:"bytes,3,opt,name=predecessor_return_id,json=predecessorReturnId" json:"predecessor_return_id,omitempty"`
+	ExpectedPredecessorVersion uint64                 `protobuf:"varint,4,opt,name=expected_predecessor_version,json=expectedPredecessorVersion" json:"expected_predecessor_version,omitempty"`
+	SourceCloseId              string                 `protobuf:"bytes,5,opt,name=source_close_id,json=sourceCloseId" json:"source_close_id,omitempty"`
+	Reason                     string                 `protobuf:"bytes,6,opt,name=reason" json:"reason,omitempty"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
+}
+
+func (x *CreateCompanyReturnReplacementRequest) Reset() {
+	*x = CreateCompanyReturnReplacementRequest{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[52]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateCompanyReturnReplacementRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateCompanyReturnReplacementRequest) ProtoMessage() {}
+
+func (x *CreateCompanyReturnReplacementRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[52]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateCompanyReturnReplacementRequest.ProtoReflect.Descriptor instead.
+func (*CreateCompanyReturnReplacementRequest) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{52}
+}
+
+func (x *CreateCompanyReturnReplacementRequest) GetCommandContext() *CommandContext {
+	if x != nil {
+		return x.CommandContext
+	}
+	return nil
+}
+
+func (x *CreateCompanyReturnReplacementRequest) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *CreateCompanyReturnReplacementRequest) GetPredecessorReturnId() string {
+	if x != nil {
+		return x.PredecessorReturnId
+	}
+	return ""
+}
+
+func (x *CreateCompanyReturnReplacementRequest) GetExpectedPredecessorVersion() uint64 {
+	if x != nil {
+		return x.ExpectedPredecessorVersion
+	}
+	return 0
+}
+
+func (x *CreateCompanyReturnReplacementRequest) GetSourceCloseId() string {
+	if x != nil {
+		return x.SourceCloseId
+	}
+	return ""
+}
+
+func (x *CreateCompanyReturnReplacementRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type CreateCompanyReturnReplacementResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Predecessor   *CompanyReturn         `protobuf:"bytes,1,opt,name=predecessor" json:"predecessor,omitempty"`
+	Replacement   *CompanyReturn         `protobuf:"bytes,2,opt,name=replacement" json:"replacement,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateCompanyReturnReplacementResponse) Reset() {
+	*x = CreateCompanyReturnReplacementResponse{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[53]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateCompanyReturnReplacementResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateCompanyReturnReplacementResponse) ProtoMessage() {}
+
+func (x *CreateCompanyReturnReplacementResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[53]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateCompanyReturnReplacementResponse.ProtoReflect.Descriptor instead.
+func (*CreateCompanyReturnReplacementResponse) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{53}
+}
+
+func (x *CreateCompanyReturnReplacementResponse) GetPredecessor() *CompanyReturn {
+	if x != nil {
+		return x.Predecessor
+	}
+	return nil
+}
+
+func (x *CreateCompanyReturnReplacementResponse) GetReplacement() *CompanyReturn {
+	if x != nil {
+		return x.Replacement
+	}
+	return nil
+}
+
+type CreateCompanyReturnAmendmentRequest struct {
+	state                     protoimpl.MessageState `protogen:"open.v1"`
+	CommandContext            *CommandContext        `protobuf:"bytes,1,opt,name=command_context,json=commandContext" json:"command_context,omitempty"`
+	OrganisationId            string                 `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId" json:"organisation_id,omitempty"`
+	EffectiveOriginalReturnId string                 `protobuf:"bytes,3,opt,name=effective_original_return_id,json=effectiveOriginalReturnId" json:"effective_original_return_id,omitempty"`
+	LatestAcceptedReturnId    string                 `protobuf:"bytes,4,opt,name=latest_accepted_return_id,json=latestAcceptedReturnId" json:"latest_accepted_return_id,omitempty"`
+	ExpectedLatestVersion     uint64                 `protobuf:"varint,5,opt,name=expected_latest_version,json=expectedLatestVersion" json:"expected_latest_version,omitempty"`
+	SourceCloseId             string                 `protobuf:"bytes,6,opt,name=source_close_id,json=sourceCloseId" json:"source_close_id,omitempty"`
+	Reason                    string                 `protobuf:"bytes,7,opt,name=reason" json:"reason,omitempty"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
+}
+
+func (x *CreateCompanyReturnAmendmentRequest) Reset() {
+	*x = CreateCompanyReturnAmendmentRequest{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[54]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateCompanyReturnAmendmentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateCompanyReturnAmendmentRequest) ProtoMessage() {}
+
+func (x *CreateCompanyReturnAmendmentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[54]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateCompanyReturnAmendmentRequest.ProtoReflect.Descriptor instead.
+func (*CreateCompanyReturnAmendmentRequest) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{54}
+}
+
+func (x *CreateCompanyReturnAmendmentRequest) GetCommandContext() *CommandContext {
+	if x != nil {
+		return x.CommandContext
+	}
+	return nil
+}
+
+func (x *CreateCompanyReturnAmendmentRequest) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *CreateCompanyReturnAmendmentRequest) GetEffectiveOriginalReturnId() string {
+	if x != nil {
+		return x.EffectiveOriginalReturnId
+	}
+	return ""
+}
+
+func (x *CreateCompanyReturnAmendmentRequest) GetLatestAcceptedReturnId() string {
+	if x != nil {
+		return x.LatestAcceptedReturnId
+	}
+	return ""
+}
+
+func (x *CreateCompanyReturnAmendmentRequest) GetExpectedLatestVersion() uint64 {
+	if x != nil {
+		return x.ExpectedLatestVersion
+	}
+	return 0
+}
+
+func (x *CreateCompanyReturnAmendmentRequest) GetSourceCloseId() string {
+	if x != nil {
+		return x.SourceCloseId
+	}
+	return ""
+}
+
+func (x *CreateCompanyReturnAmendmentRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type CreateCompanyReturnAmendmentResponse struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	EffectiveOriginal *CompanyReturn         `protobuf:"bytes,1,opt,name=effective_original,json=effectiveOriginal" json:"effective_original,omitempty"`
+	Amendment         *CompanyReturn         `protobuf:"bytes,2,opt,name=amendment" json:"amendment,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *CreateCompanyReturnAmendmentResponse) Reset() {
+	*x = CreateCompanyReturnAmendmentResponse{}
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[55]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateCompanyReturnAmendmentResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateCompanyReturnAmendmentResponse) ProtoMessage() {}
+
+func (x *CreateCompanyReturnAmendmentResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_tax_proto_msgTypes[55]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateCompanyReturnAmendmentResponse.ProtoReflect.Descriptor instead.
+func (*CreateCompanyReturnAmendmentResponse) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_tax_proto_rawDescGZIP(), []int{55}
+}
+
+func (x *CreateCompanyReturnAmendmentResponse) GetEffectiveOriginal() *CompanyReturn {
+	if x != nil {
+		return x.EffectiveOriginal
+	}
+	return nil
+}
+
+func (x *CreateCompanyReturnAmendmentResponse) GetAmendment() *CompanyReturn {
+	if x != nil {
+		return x.Amendment
+	}
+	return nil
+}
+
 var File_tammy_v1_company_tax_proto protoreflect.FileDescriptor
 
 const file_tammy_v1_company_tax_proto_rawDesc = "" +
 	"\n" +
-	"\x1atammy/v1/company_tax.proto\x12\btammy.v1*\xf6\x04\n" +
+	"\x1atammy/v1/company_tax.proto\x12\btammy.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15tammy/v1/common.proto\"\x96\x02\n" +
+	"\fAddressInput\x12!\n" +
+	"\x06line_1\x18\x01 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\x80\x01R\x05line1\x12\x1f\n" +
+	"\x06line_2\x18\x02 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x01R\x05line2\x12&\n" +
+	"\blocality\x18\x03 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\x80\x01R\blocality\x12=\n" +
+	"\x05state\x18\x04 \x01(\tB'\xbaH$r\"2 ^(ACT|NSW|NT|QLD|SA|TAS|VIC|WA)$R\x05state\x12-\n" +
+	"\bpostcode\x18\x05 \x01(\tB\x11\xbaH\x0er\f2\n" +
+	"^[0-9]{4}$R\bpostcode\x12,\n" +
+	"\fcountry_code\x18\x06 \x01(\tB\t\xbaH\x06r\x04\n" +
+	"\x02AUR\vcountryCode\"\xe3\x03\n" +
+	"!RelatedEntityTurnoverContribution\x12+\n" +
+	"\ventity_name\x18\x01 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xc8\x01R\n" +
+	"entityName\x121\n" +
+	"\n" +
+	"entity_abn\x18\x02 \x01(\tB\x12\xbaH\x0fr\r2\v^[0-9]{11}$R\tentityAbn\x12/\n" +
+	"\x06amount\x18\x03 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\x06amount\x12;\n" +
+	"\bevidence\x18\x04 \x03(\v2\x13.tammy.v1.SourceRefB\n" +
+	"\xbaH\a\x92\x01\x04\b\x01\x10\x14R\bevidence\x12X\n" +
+	"#reviewed_control_or_affiliate_basis\x18\x05 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xd0\x0fR\x1freviewedControlOrAffiliateBasis:\x95\x01\xbaH\x91\x01\x1a\x8e\x01\n" +
+	" company_tax.related_turnover.aud\x122related entity turnover must be denominated in AUD\x1a6has(this.amount) && this.amount.currency_code == 'AUD'\"\xd9\x03\n" +
+	" PassiveIncomeClassificationInput\x12@\n" +
+	"\rincome_source\x18\x01 \x01(\v2\x13.tammy.v1.SourceRefB\x06\xbaH\x03\xc8\x01\x01R\fincomeSource\x12a\n" +
+	"\x0eclassification\x18\x02 \x01(\x0e2-.tammy.v1.BaseRatePassiveIncomeClassificationB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x0eclassification\x12V\n" +
+	"\x0ebundle_rule_id\x18\x03 \x01(\tB0\xbaH-r+\x10\x01\x18\x80\x012$^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$R\fbundleRuleId\x12;\n" +
+	"\bevidence\x18\x04 \x03(\v2\x13.tammy.v1.SourceRefB\n" +
+	"\xbaH\a\x92\x01\x04\b\x01\x10\x14R\bevidence\x12{\n" +
+	"\x13reviewed_by_user_id\x18\x05 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x10reviewedByUserId\"\xfc\v\n" +
+	"\x14ApplicabilityAnswers\x12G\n" +
+	"\ftofa_applies\x18\x01 \x01(\x0e2\x18.tammy.v1.RequiredAnswerB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\vtofaApplies\x12E\n" +
+	"\vpsi_applies\x18\x02 \x01(\x0e2\x18.tammy.v1.RequiredAnswerB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\n" +
+	"psiApplies\x12q\n" +
+	"\"interposed_entity_election_applies\x18\x03 \x01(\x0e2\x18.tammy.v1.RequiredAnswerB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x1finterposedEntityElectionApplies\x12`\n" +
+	"\x19consolidated_group_member\x18\x04 \x01(\x0e2\x18.tammy.v1.RequiredAnswerB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x17consolidatedGroupMember\x12q\n" +
+	"\"research_and_development_incentive\x18\x05 \x01(\x0e2\x18.tammy.v1.RequiredAnswerB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x1fresearchAndDevelopmentIncentive\x12[\n" +
+	"\x16international_dealings\x18\x06 \x01(\x0e2\x18.tammy.v1.RequiredAnswerB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x15internationalDealings\x12\\\n" +
+	"\x17reportable_tax_position\x18\a \x01(\x0e2\x18.tammy.v1.RequiredAnswerB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x15reportableTaxPosition\x12\\\n" +
+	"\x17life_insurance_business\x18\b \x01(\x0e2\x18.tammy.v1.RequiredAnswerB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x15lifeInsuranceBusiness\x12X\n" +
+	"\x15cgt_schedule_required\x18\t \x01(\x0e2\x18.tammy.v1.RequiredAnswerB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x13cgtScheduleRequired\x12^\n" +
+	"\x18losses_schedule_required\x18\n" +
+	" \x01(\x0e2\x18.tammy.v1.RequiredAnswerB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x16lossesScheduleRequired\x12\\\n" +
+	"\x17other_schedule_required\x18\v \x01(\x0e2\x18.tammy.v1.RequiredAnswerB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x15otherScheduleRequired\x12l\n" +
+	" fb_or_unsupported_payroll_effect\x18\f \x01(\x0e2\x18.tammy.v1.RequiredAnswerB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x1cfbOrUnsupportedPayrollEffect\x12Z\n" +
+	"\x16division_7a_unresolved\x18\r \x01(\x0e2\x18.tammy.v1.RequiredAnswerB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x14division7aUnresolved\x12Y\n" +
+	"\x15unsupported_inventory\x18\x0e \x01(\x0e2\x18.tammy.v1.RequiredAnswerB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x14unsupportedInventory\x12a\n" +
+	"\x19unsupported_multicurrency\x18\x0f \x01(\x0e2\x18.tammy.v1.RequiredAnswerB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x18unsupportedMulticurrency\x12S\n" +
+	"\x12unsupported_crypto\x18\x10 \x01(\x0e2\x18.tammy.v1.RequiredAnswerB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x11unsupportedCrypto\"\x80\x06\n" +
+	"\x15PriorRevenueLossInput\x12@\n" +
+	"\x0fopening_balance\x18\x01 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\x0eopeningBalance\x12j\n" +
+	"\x1eownership_continuity_confirmed\x18\x02 \x01(\x0e2\x18.tammy.v1.RequiredAnswerB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x1cownershipContinuityConfirmed\x12\x81\x01\n" +
+	"+same_or_similar_business_judgement_required\x18\x03 \x01(\x0e2\x18.tammy.v1.RequiredAnswerB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R&sameOrSimilarBusinessJudgementRequired\x12;\n" +
+	"\bevidence\x18\x04 \x03(\v2\x13.tammy.v1.SourceRefB\n" +
+	"\xbaH\a\x92\x01\x04\b\x01\x10\x14R\bevidence:\xf7\x02\xbaH\xf3\x02\x1a\xf0\x02\n" +
+	"(company_tax.prior_revenue_loss.supported\x12Pprior revenue loss requires positive AUD balance, explicit answers, and evidence\x1a\xf1\x01has(this.opening_balance) && this.opening_balance.currency_code == 'AUD' && this.opening_balance.minor_units > 0 && this.ownership_continuity_confirmed != 0 && this.same_or_similar_business_judgement_required != 0 && this.evidence.size() > 0\"\xae\r\n" +
+	"\x16CompanyTaxProfileInput\x12)\n" +
+	"\n" +
+	"legal_name\x18\x01 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xc8\x01R\tlegalName\x12/\n" +
+	"\x03tfn\x18\x02 \x01(\v2\x15.tammy.v1.SecretInputB\x06\xbaH\x03\xc8\x01\x01R\x03tfn\x12T\n" +
+	"\x16current_postal_address\x18\x03 \x01(\v2\x16.tammy.v1.AddressInputB\x06\xbaH\x03\xc8\x01\x01R\x14currentPostalAddress\x12P\n" +
+	"\x14prior_postal_address\x18\x04 \x01(\v2\x16.tammy.v1.AddressInputB\x06\xbaH\x03\xc8\x01\x01R\x12priorPostalAddress\x12R\n" +
+	"\x15main_business_address\x18\x05 \x01(\v2\x16.tammy.v1.AddressInputB\x06\xbaH\x03\xc8\x01\x01R\x13mainBusinessAddress\x12U\n" +
+	"\x13australian_resident\x18\x06 \x01(\x0e2\x18.tammy.v1.RequiredAnswerB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x12australianResident\x12M\n" +
+	"\x0fprivate_company\x18\a \x01(\x0e2\x18.tammy.v1.RequiredAnswerB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x0eprivateCompany\x12P\n" +
+	"\x1bmain_business_activity_code\x18\b \x01(\tB\x11\xbaH\x0er\f2\n" +
+	"^[0-9]{6}$R\x18mainBusinessActivityCode\x12W\n" +
+	"\"main_business_activity_description\x18\t \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xc8\x01R\x1fmainBusinessActivityDescription\x124\n" +
+	"\n" +
+	"refund_bsb\x18\n" +
+	" \x01(\v2\x15.tammy.v1.SecretInputR\trefundBsb\x12I\n" +
+	"\x15refund_account_number\x18\v \x01(\v2\x15.tammy.v1.SecretInputR\x13refundAccountNumber\x12G\n" +
+	"\ffinal_return\x18\f \x01(\x0e2\x18.tammy.v1.RequiredAnswerB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\vfinalReturn\x12Z\n" +
+	"\x14holding_company_kind\x18\r \x01(\x0e2\x1c.tammy.v1.HoldingCompanyKindB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x12holdingCompanyKind\x12>\n" +
+	"\x16immediate_holding_name\x18\x0e \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\x14immediateHoldingName\x12<\n" +
+	"\x15ultimate_holding_name\x18\x0f \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\x13ultimateHoldingName\x12`\n" +
+	"\x10related_turnover\x18\x10 \x03(\v2+.tammy.v1.RelatedEntityTurnoverContributionB\b\xbaH\x05\x92\x01\x02\x10dR\x0frelatedTurnover\x12{\n" +
+	"\x1epassive_income_classifications\x18\x11 \x03(\v2*.tammy.v1.PassiveIncomeClassificationInputB\t\xbaH\x06\x92\x01\x03\x10\xf4\x03R\x1cpassiveIncomeClassifications\x12p\n" +
+	"\x1csmall_business_entity_choice\x18\x12 \x01(\x0e2#.tammy.v1.SmallBusinessEntityChoiceB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x19smallBusinessEntityChoice\x12Y\n" +
+	"\x13depreciation_choice\x18\x13 \x01(\x0e2\x1c.tammy.v1.DepreciationChoiceB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x12depreciationChoice\x12M\n" +
+	"\x12prior_revenue_loss\x18\x14 \x01(\v2\x1f.tammy.v1.PriorRevenueLossInputR\x10priorRevenueLoss\x12L\n" +
+	"\rapplicability\x18\x15 \x01(\v2\x1e.tammy.v1.ApplicabilityAnswersB\x06\xbaH\x03\xc8\x01\x01R\rapplicability\"\xf2\x03\n" +
+	"\x12CompanyReturnInput\x12H\n" +
+	"\x14loss_amount_to_apply\x18\x01 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\x11lossAmountToApply\x12Y\n" +
+	"\x19external_summary_evidence\x18\x02 \x03(\v2\x13.tammy.v1.SourceRefB\b\xbaH\x05\x92\x01\x02\x10\x14R\x17externalSummaryEvidence\x12W\n" +
+	"\x18payroll_summary_evidence\x18\x03 \x03(\v2\x13.tammy.v1.SourceRefB\b\xbaH\x05\x92\x01\x02\x10\x14R\x16payrollSummaryEvidence\x12)\n" +
+	"\vreview_note\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\n" +
+	"reviewNote:\xb2\x01\xbaH\xae\x01\x1a\xab\x01\n" +
+	"\x1ccompany_tax.return_input.aud\x127company return input amounts must be denominated in AUD\x1aRhas(this.loss_amount_to_apply) && this.loss_amount_to_apply.currency_code == 'AUD'\"\xa8\x10\n" +
+	"\x17MaskedCompanyTaxProfile\x12u\n" +
+	"\x0forganisation_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12!\n" +
+	"\aversion\x18\x02 \x01(\x04B\a\xbaH\x042\x02(\x01R\aversion\x12)\n" +
+	"\n" +
+	"legal_name\x18\x03 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xc8\x01R\tlegalName\x12(\n" +
+	"\n" +
+	"masked_tfn\x18\x04 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18\x10R\tmaskedTfn\x125\n" +
+	"\fverified_abn\x18\x05 \x01(\tB\x12\xbaH\x0fr\r2\v^[0-9]{11}$R\vverifiedAbn\x12T\n" +
+	"\x16current_postal_address\x18\x06 \x01(\v2\x16.tammy.v1.AddressInputB\x06\xbaH\x03\xc8\x01\x01R\x14currentPostalAddress\x12P\n" +
+	"\x14prior_postal_address\x18\a \x01(\v2\x16.tammy.v1.AddressInputB\x06\xbaH\x03\xc8\x01\x01R\x12priorPostalAddress\x12R\n" +
+	"\x15main_business_address\x18\b \x01(\v2\x16.tammy.v1.AddressInputB\x06\xbaH\x03\xc8\x01\x01R\x13mainBusinessAddress\x12U\n" +
+	"\x13australian_resident\x18\t \x01(\x0e2\x18.tammy.v1.RequiredAnswerB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x12australianResident\x12M\n" +
+	"\x0fprivate_company\x18\n" +
+	" \x01(\x0e2\x18.tammy.v1.RequiredAnswerB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x0eprivateCompany\x12P\n" +
+	"\x1bmain_business_activity_code\x18\v \x01(\tB\x11\xbaH\x0er\f2\n" +
+	"^[0-9]{6}$R\x18mainBusinessActivityCode\x12W\n" +
+	"\"main_business_activity_description\x18\f \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xc8\x01R\x1fmainBusinessActivityDescription\x123\n" +
+	"\x11masked_refund_bsb\x18\r \x01(\tB\a\xbaH\x04r\x02\x18\x10R\x0fmaskedRefundBsb\x12;\n" +
+	"\x15masked_refund_account\x18\x0e \x01(\tB\a\xbaH\x04r\x02\x18 R\x13maskedRefundAccount\x12G\n" +
+	"\ffinal_return\x18\x0f \x01(\x0e2\x18.tammy.v1.RequiredAnswerB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\vfinalReturn\x12Z\n" +
+	"\x14holding_company_kind\x18\x10 \x01(\x0e2\x1c.tammy.v1.HoldingCompanyKindB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x12holdingCompanyKind\x12>\n" +
+	"\x16immediate_holding_name\x18\x11 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\x14immediateHoldingName\x12<\n" +
+	"\x15ultimate_holding_name\x18\x12 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\x13ultimateHoldingName\x12`\n" +
+	"\x10related_turnover\x18\x13 \x03(\v2+.tammy.v1.RelatedEntityTurnoverContributionB\b\xbaH\x05\x92\x01\x02\x10dR\x0frelatedTurnover\x12{\n" +
+	"\x1epassive_income_classifications\x18\x14 \x03(\v2*.tammy.v1.PassiveIncomeClassificationInputB\t\xbaH\x06\x92\x01\x03\x10\xf4\x03R\x1cpassiveIncomeClassifications\x12p\n" +
+	"\x1csmall_business_entity_choice\x18\x15 \x01(\x0e2#.tammy.v1.SmallBusinessEntityChoiceB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x19smallBusinessEntityChoice\x12Y\n" +
+	"\x13depreciation_choice\x18\x16 \x01(\x0e2\x1c.tammy.v1.DepreciationChoiceB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x12depreciationChoice\x12M\n" +
+	"\x12prior_revenue_loss\x18\x17 \x01(\v2\x1f.tammy.v1.PriorRevenueLossInputR\x10priorRevenueLoss\x12L\n" +
+	"\rapplicability\x18\x18 \x01(\v2\x1e.tammy.v1.ApplicabilityAnswersB\x06\xbaH\x03\xc8\x01\x01R\rapplicability\x12y\n" +
+	"\x12updated_by_user_id\x18\x19 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0fupdatedByUserId\x12A\n" +
+	"\n" +
+	"updated_at\x18\x1a \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\tupdatedAt\"\xe7\b\n" +
+	"\rTaxAdjustment\x12\\\n" +
+	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12i\n" +
+	"\treturn_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\breturnId\x12!\n" +
+	"\aversion\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\aversion\x12;\n" +
+	"\x04type\x18\x04 \x01(\x0e2\x1b.tammy.v1.TaxAdjustmentTypeB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x04type\x12V\n" +
+	"\x0ebundle_rule_id\x18\x05 \x01(\tB0\xbaH-r+\x10\x01\x18\x80\x012$^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$R\fbundleRuleId\x12/\n" +
+	"\x06amount\x18\x06 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\x06amount\x12A\n" +
+	"\x06timing\x18\a \x01(\x0e2\x1d.tammy.v1.TaxAdjustmentTimingB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x06timing\x12*\n" +
+	"\vexplanation\x18\b \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\vexplanation\x127\n" +
+	"\asources\x18\t \x03(\v2\x13.tammy.v1.SourceRefB\b\xbaH\x05\x92\x01\x02\x10dR\asources\x129\n" +
+	"\bevidence\x18\n" +
+	" \x03(\v2\x13.tammy.v1.SourceRefB\b\xbaH\x05\x92\x01\x02\x10dR\bevidence\x12y\n" +
+	"\x12created_by_user_id\x18\v \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0fcreatedByUserId\x12{\n" +
+	"\x13reviewed_by_user_id\x18\f \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x10reviewedByUserId\x12A\n" +
+	"\n" +
+	"updated_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\tupdatedAt:\x85\x01\xbaH\x81\x01\x1a\x7f\n" +
+	"\x1acompany_tax.adjustment.aud\x12)tax adjustment must be denominated in AUD\x1a6has(this.amount) && this.amount.currency_code == 'AUD'\"\xcb\x02\n" +
+	"\x11TaxElectionChoice\x12%\n" +
+	"\rboolean_value\x18\x01 \x01(\bH\x00R\fbooleanValue\x12-\n" +
+	"\fstring_value\x18\x02 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x01H\x00R\vstringValue\x128\n" +
+	"\rdecimal_value\x18\x03 \x01(\v2\x11.tammy.v1.DecimalH\x00R\fdecimalValue:\x9b\x01\xbaH\x97\x01\x1a\x94\x01\n" +
+	"$company_tax.election_choice.required\x12\x1ean election choice is required\x1aLhas(this.boolean_value) || has(this.string_value) || has(this.decimal_value)B\b\n" +
+	"\x06choice\"\xba\x06\n" +
+	"\vTaxElection\x12\\\n" +
+	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12i\n" +
+	"\treturn_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\breturnId\x12!\n" +
+	"\aversion\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\aversion\x12^\n" +
+	"\x12bundle_election_id\x18\x04 \x01(\tB0\xbaH-r+\x10\x01\x18\x80\x012$^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$R\x10bundleElectionId\x12;\n" +
+	"\x06choice\x18\x05 \x01(\v2\x1b.tammy.v1.TaxElectionChoiceB\x06\xbaH\x03\xc8\x01\x01R\x06choice\x12*\n" +
+	"\vexplanation\x18\x06 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\vexplanation\x12;\n" +
+	"\bevidence\x18\a \x03(\v2\x13.tammy.v1.SourceRefB\n" +
+	"\xbaH\a\x92\x01\x04\b\x01\x10dR\bevidence\x12y\n" +
+	"\x12created_by_user_id\x18\b \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0fcreatedByUserId\x12{\n" +
+	"\x13reviewed_by_user_id\x18\t \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x10reviewedByUserId\x12A\n" +
+	"\n" +
+	"updated_at\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\tupdatedAt\"\xa2\x04\n" +
+	"\x0fReturnFactValue\x12-\n" +
+	"\fstring_value\x18\x01 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x04H\x00R\vstringValue\x12%\n" +
+	"\rboolean_value\x18\x02 \x01(\bH\x00R\fbooleanValue\x12%\n" +
+	"\rinteger_value\x18\x03 \x01(\x12H\x00R\fintegerValue\x122\n" +
+	"\vmoney_value\x18\x04 \x01(\v2\x0f.tammy.v1.MoneyH\x00R\n" +
+	"moneyValue\x128\n" +
+	"\rdecimal_value\x18\x05 \x01(\v2\x11.tammy.v1.DecimalH\x00R\fdecimalValue\x124\n" +
+	"\n" +
+	"date_value\x18\x06 \x01(\v2\x13.tammy.v1.CivilDateH\x00R\tdateValue:\xe4\x01\xbaH\xe0\x01\x1a\xdd\x01\n" +
+	"\x1fcompany_tax.fact_value.required\x12\x1fa return fact value is required\x1a\x98\x01has(this.string_value) || has(this.boolean_value) || has(this.integer_value) || has(this.money_value) || has(this.decimal_value) || has(this.date_value)B\a\n" +
+	"\x05value\"\x9b\x05\n" +
+	"\n" +
+	"ReturnFact\x12I\n" +
+	"\afact_id\x18\x01 \x01(\tB0\xbaH-r+\x10\x01\x18\x80\x012$^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$R\x06factId\x127\n" +
+	"\x05value\x18\x02 \x01(\v2\x19.tammy.v1.ReturnFactValueB\x06\xbaH\x03\xc8\x01\x01R\x05value\x12J\n" +
+	"\x0fsubmitted_value\x18\x03 \x01(\v2\x19.tammy.v1.ReturnFactValueB\x06\xbaH\x03\xc8\x01\x01R\x0esubmittedValue\x12N\n" +
+	"\n" +
+	"provenance\x18\x04 \x01(\x0e2\".tammy.v1.ReturnFactProvenanceKindB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\n" +
+	"provenance\x12O\n" +
+	"\n" +
+	"mapping_id\x18\x05 \x01(\tB0\xbaH-r+\x10\x01\x18\x80\x012$^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$R\tmappingId\x12I\n" +
+	"\arule_id\x18\x06 \x01(\tB0\xbaH-r+\x10\x01\x18\x80\x012$^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$R\x06ruleId\x127\n" +
+	"\asources\x18\a \x03(\v2\x13.tammy.v1.SourceRefB\b\xbaH\x05\x92\x01\x02\x10dR\asources\x129\n" +
+	"\bevidence\x18\b \x03(\v2\x13.tammy.v1.SourceRefB\b\xbaH\x05\x92\x01\x02\x10dR\bevidence\x12]\n" +
+	"\x11validation_status\x18\t \x01(\x0e2$.tammy.v1.ReturnFactValidationStatusB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x10validationStatus\"\xf1\x03\n" +
+	"\x15TaxReconciliationTerm\x12M\n" +
+	"\tstable_id\x18\x01 \x01(\tB0\xbaH-r+\x10\x01\x18\x80\x012$^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$R\bstableId\x12I\n" +
+	"\arule_id\x18\x02 \x01(\tB0\xbaH-r+\x10\x01\x18\x80\x012$^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$R\x06ruleId\x12/\n" +
+	"\x06amount\x18\x03 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\x06amount\x127\n" +
+	"\asources\x18\x04 \x03(\v2\x13.tammy.v1.SourceRefB\b\xbaH\x05\x92\x01\x02\x10dR\asources\x129\n" +
+	"\bevidence\x18\x05 \x03(\v2\x13.tammy.v1.SourceRefB\b\xbaH\x05\x92\x01\x02\x10dR\bevidence:\x98\x01\xbaH\x94\x01\x1a\x91\x01\n" +
+	"#company_tax.reconciliation_term.aud\x122tax reconciliation term must be denominated in AUD\x1a6has(this.amount) && this.amount.currency_code == 'AUD'\"\x81\t\n" +
+	"\x11TaxReconciliation\x12*\n" +
+	"\fcontent_hash\x18\x01 \x01(\fB\a\xbaH\x04z\x02h R\vcontentHash\x12X\n" +
+	"\x1caccounting_profit_before_tax\x18\x02 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\x19accountingProfitBeforeTax\x12H\n" +
+	"\tadditions\x18\x03 \x03(\v2\x1f.tammy.v1.TaxReconciliationTermB\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\tadditions\x12N\n" +
+	"\fsubtractions\x18\x04 \x03(\v2\x1f.tammy.v1.TaxReconciliationTermB\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\fsubtractions\x12a\n" +
+	"\x17eligible_applied_losses\x18\x05 \x03(\v2\x1f.tammy.v1.TaxReconciliationTermB\b\xbaH\x05\x92\x01\x02\x10dR\x15eligibleAppliedLosses\x12L\n" +
+	"\x16taxable_income_or_loss\x18\x06 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\x13taxableIncomeOrLoss\x124\n" +
+	"\tgross_tax\x18\a \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\bgrossTax\x12S\n" +
+	"\x10payg_and_credits\x18\b \x03(\v2\x1f.tammy.v1.TaxReconciliationTermB\b\xbaH\x05\x92\x01\x02\x10dR\x0epaygAndCredits\x12Q\n" +
+	"\x19net_tax_payable_or_refund\x18\t \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\x15netTaxPayableOrRefund:\xbc\x03\xbaH\xb8\x03\x1a\xb5\x03\n" +
+	"\x1ecompany_tax.reconciliation.aud\x124tax reconciliation totals must be denominated in AUD\x1a\xdc\x02has(this.accounting_profit_before_tax) && this.accounting_profit_before_tax.currency_code == 'AUD' && has(this.taxable_income_or_loss) && this.taxable_income_or_loss.currency_code == 'AUD' && has(this.gross_tax) && this.gross_tax.currency_code == 'AUD' && has(this.net_tax_payable_or_refund) && this.net_tax_payable_or_refund.currency_code == 'AUD'\"\xb0\x04\n" +
+	"\x17ReturnValidationOutcome\x12\\\n" +
+	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x128\n" +
+	"\x13validation_revision\x18\x02 \x01(\x04B\a\xbaH\x042\x02(\x01R\x12validationRevision\x12J\n" +
+	"\bseverity\x18\x03 \x01(\x0e2\".tammy.v1.ReturnValidationSeverityB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\bseverity\x12Q\n" +
+	"\vstable_code\x18\x04 \x01(\tB0\xbaH-r+\x10\x01\x18\x80\x012$^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$R\n" +
+	"stableCode\x12R\n" +
+	"\bfact_ids\x18\x05 \x03(\tB7\xbaH4\x92\x011\x10d\"-r+\x10\x01\x18\x80\x012$^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$R\afactIds\x127\n" +
+	"\asources\x18\x06 \x03(\v2\x13.tammy.v1.SourceRefB\b\xbaH\x05\x92\x01\x02\x10dR\asources\x12-\n" +
+	"\fsafe_message\x18\a \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xe8\aR\vsafeMessage\x12\"\n" +
+	"\facknowledged\x18\b \x01(\bR\facknowledged\"\xd4\x05\n" +
+	"\x19ValidationAcknowledgement\x12\\\n" +
+	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12i\n" +
+	"\treturn_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\breturnId\x12k\n" +
+	"\n" +
+	"warning_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\twarningId\x128\n" +
+	"\x13validation_revision\x18\x04 \x01(\x04B\a\xbaH\x042\x02(\x01R\x12validationRevision\x12p\n" +
+	"\ractor_user_id\x18\x05 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\vactorUserId\x12\x87\x01\n" +
+	"\x19fresh_factor_assertion_id\x18\x06 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x16freshFactorAssertionId\x12K\n" +
+	"\x0facknowledged_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\x0eacknowledgedAt\"\x8d\n" +
+	"\n" +
+	"\vDeclaration\x12\\\n" +
+	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12i\n" +
+	"\treturn_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\breturnId\x12(\n" +
+	"\vreport_hash\x18\x03 \x01(\fB\a\xbaH\x04z\x02h R\n" +
+	"reportHash\x128\n" +
+	"\x13validation_revision\x18\x04 \x01(\x04B\a\xbaH\x042\x02(\x01R\x12validationRevision\x12\x85\x01\n" +
+	"\x13acknowledgement_ids\x18\x05 \x03(\tBT\xbaHQ\x92\x01N\x10\xc8\x01\"IrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x12acknowledgementIds\x12p\n" +
+	"\x1bdeclaration_wording_version\x18\x06 \x01(\tB0\xbaH-r+\x10\x01\x18\x80\x012$^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$R\x19declarationWordingVersion\x12A\n" +
+	"\x18declaration_wording_hash\x18\a \x01(\fB\a\xbaH\x04z\x02h R\x16declarationWordingHash\x12U\n" +
+	"\rterms_version\x18\b \x01(\tB0\xbaH-r+\x10\x01\x18\x80\x012$^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$R\ftermsVersion\x12l\n" +
+	"\x19privacy_reference_version\x18\t \x01(\tB0\xbaH-r+\x10\x01\x18\x80\x012$^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$R\x17privacyReferenceVersion\x12p\n" +
+	"\ractor_user_id\x18\n" +
+	" \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\vactorUserId\x12\x87\x01\n" +
+	"\x19fresh_factor_assertion_id\x18\v \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x16freshFactorAssertionId\x12C\n" +
+	"\vdeclared_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\n" +
+	"declaredAt\x12\x8d\x01\n" +
+	"\x19supersedes_declaration_id\x18\r \x01(\tBQ\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$\xaa\x01\x02\b\x01R\x17supersedesDeclarationId\"\xcd\x04\n" +
+	"\x1cCompanyReturnDeliverySummary\x12x\n" +
+	"\x11latest_attempt_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0flatestAttemptId\x12W\n" +
+	"\x0eoperation_type\x18\x02 \x01(\x0e2$.tammy.v1.CompanyReturnOperationTypeB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\roperationType\x12M\n" +
+	"\aoutcome\x18\x03 \x01(\x0e2'.tammy.v1.CompanyReturnOperationOutcomeB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\aoutcome\x12Z\n" +
+	"\x10safe_status_code\x18\x04 \x01(\tB0\xbaH-r+\x10\x01\x18\x80\x012$^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$R\x0esafeStatusCode\x12=\n" +
+	"\fdelivered_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\vdeliveredAt\x12p\n" +
+	"\n" +
+	"receipt_id\x18\x06 \x01(\tBQ\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$\xaa\x01\x02\b\x01R\treceiptId\"\x83\x13\n" +
+	"\rCompanyReturn\x12\\\n" +
+	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12)\n" +
+	"\vincome_year\x18\x03 \x01(\x05B\b\xbaH\x05\x1a\x03\b\xea\x0fR\n" +
+	"incomeYear\x12>\n" +
+	"\fperiod_start\x18\x04 \x01(\v2\x13.tammy.v1.CivilDateB\x06\xbaH\x03\xc8\x01\x01R\vperiodStart\x12:\n" +
+	"\n" +
+	"period_end\x18\x05 \x01(\v2\x13.tammy.v1.CivilDateB\x06\xbaH\x03\xc8\x01\x01R\tperiodEnd\x12`\n" +
+	"\x11relationship_kind\x18\x06 \x01(\x0e2'.tammy.v1.CompanyReturnRelationshipKindB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x10relationshipKind\x12r\n" +
+	"\x0eroot_return_id\x18\a \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\frootReturnId\x12\x85\x01\n" +
+	"\x15predecessor_return_id\x18\b \x01(\tBQ\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$\xaa\x01\x02\b\x01R\x13predecessorReturnId\x12\x81\x01\n" +
+	"\x13successor_return_id\x18\t \x01(\tBQ\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$\xaa\x01\x02\b\x01R\x11successorReturnId\x12\x7f\n" +
+	"\x12related_attempt_id\x18\n" +
+	" \x01(\tBQ\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$\xaa\x01\x02\b\x01R\x10relatedAttemptId\x12`\n" +
+	"\x15preparation_bundle_id\x18\v \x01(\tB,\xbaH)r'\n" +
+	"%au-company-return-2026-preparation-v1R\x13preparationBundleId\x12M\n" +
+	"\x1epreparation_bundle_fingerprint\x18\f \x01(\fB\a\xbaH\x04z\x02h R\x1cpreparationBundleFingerprint\x12t\n" +
+	"\x0fsource_close_id\x18\r \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\rsourceCloseId\x123\n" +
+	"\x11source_close_hash\x18\x0e \x01(\fB\a\xbaH\x04z\x02h R\x0fsourceCloseHash\x12?\n" +
+	"\x17tax_reconciliation_hash\x18\x0f \x01(\fB\a\xbaH\x04z\x02h R\x15taxReconciliationHash\x12>\n" +
+	"\x05state\x18\x10 \x01(\x0e2\x1c.tammy.v1.CompanyReturnStateB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x05state\x12!\n" +
+	"\aversion\x18\x11 \x01(\x04B\a\xbaH\x042\x02(\x01R\aversion\x128\n" +
+	"\x13validation_revision\x18\x12 \x01(\x04B\a\xbaH\x042\x02(\x01R\x12validationRevision\x12B\n" +
+	"\x16declared_snapshot_hash\x18\x13 \x01(\fB\f\xbaH\x04z\x02h \xaa\x01\x02\b\x01R\x14declaredSnapshotHash\x12\x87\x01\n" +
+	"\x16current_declaration_id\x18\x14 \x01(\tBQ\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$\xaa\x01\x02\b\x01R\x14currentDeclarationId\x12B\n" +
+	"\bdelivery\x18\x15 \x01(\v2&.tammy.v1.CompanyReturnDeliverySummaryR\bdelivery\x12A\n" +
+	"\n" +
+	"created_at\x18\x16 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\tcreatedAt\x12A\n" +
+	"\n" +
+	"updated_at\x18\x17 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\tupdatedAt:\xc0\x03\xbaH\xbc\x03\x1a\xb9\x03\n" +
+	"\x1ccompany_tax.return.authority\x12Hcompany return must use the supported 2026 period and preparation bundle\x1a\xce\x02this.income_year == 2026 && has(this.period_start) && this.period_start.year == 2025 && this.period_start.month == 7 && this.period_start.day == 1 && has(this.period_end) && this.period_end.year == 2026 && this.period_end.month == 6 && this.period_end.day == 30 && this.preparation_bundle_id == 'au-company-return-2026-preparation-v1'\"\xca\x05\n" +
+	"\x12TaxAdjustmentInput\x12v\n" +
+	"\radjustment_id\x18\x01 \x01(\tBQ\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$\xaa\x01\x02\b\x01R\fadjustmentId\x12;\n" +
+	"\x04type\x18\x02 \x01(\x0e2\x1b.tammy.v1.TaxAdjustmentTypeB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x04type\x12V\n" +
+	"\x0ebundle_rule_id\x18\x03 \x01(\tB0\xbaH-r+\x10\x01\x18\x80\x012$^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$R\fbundleRuleId\x12/\n" +
+	"\x06amount\x18\x04 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\x06amount\x12A\n" +
+	"\x06timing\x18\x05 \x01(\x0e2\x1d.tammy.v1.TaxAdjustmentTimingB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x06timing\x12*\n" +
+	"\vexplanation\x18\x06 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\vexplanation\x127\n" +
+	"\asources\x18\a \x03(\v2\x13.tammy.v1.SourceRefB\b\xbaH\x05\x92\x01\x02\x10dR\asources\x129\n" +
+	"\bevidence\x18\b \x03(\v2\x13.tammy.v1.SourceRefB\b\xbaH\x05\x92\x01\x02\x10dR\bevidence:\x92\x01\xbaH\x8e\x01\x1a\x8b\x01\n" +
+	" company_tax.adjustment_input.aud\x12/tax adjustment input must be denominated in AUD\x1a6has(this.amount) && this.amount.currency_code == 'AUD'\"\x8c\x03\n" +
+	"\x10TaxElectionInput\x12r\n" +
+	"\velection_id\x18\x01 \x01(\tBQ\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$\xaa\x01\x02\b\x01R\n" +
+	"electionId\x12^\n" +
+	"\x12bundle_election_id\x18\x02 \x01(\tB0\xbaH-r+\x10\x01\x18\x80\x012$^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$R\x10bundleElectionId\x12;\n" +
+	"\x06choice\x18\x03 \x01(\v2\x1b.tammy.v1.TaxElectionChoiceB\x06\xbaH\x03\xc8\x01\x01R\x06choice\x12*\n" +
+	"\vexplanation\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\vexplanation\x12;\n" +
+	"\bevidence\x18\x05 \x03(\v2\x13.tammy.v1.SourceRefB\n" +
+	"\xbaH\a\x92\x01\x04\b\x01\x10dR\bevidence\"\xe5\x01\n" +
+	"\x1bGetCompanyTaxProfileRequest\x12O\n" +
+	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\"c\n" +
+	"\x1cGetCompanyTaxProfileResponse\x12C\n" +
+	"\aprofile\x18\x01 \x01(\v2!.tammy.v1.MaskedCompanyTaxProfileB\x06\xbaH\x03\xc8\x01\x01R\aprofile\"\xce\x04\n" +
+	"\x1bSetCompanyTaxProfileRequest\x12I\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12)\n" +
+	"\x10expected_version\x18\x03 \x01(\x04R\x0fexpectedVersion\x12>\n" +
+	"\x05input\x18\x04 \x01(\v2 .tammy.v1.CompanyTaxProfileInputB\x06\xbaH\x03\xc8\x01\x01R\x05input:\x81\x02\xbaH\xfd\x01\x1a\xfa\x01\n" +
+	"$company_tax.set_profile.fresh_factor\x12Asetting company tax secrets requires a purpose-bound fresh factor\x1a\x8e\x01has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'company_tax_edit_secrets'\"c\n" +
+	"\x1cSetCompanyTaxProfileResponse\x12C\n" +
+	"\aprofile\x18\x01 \x01(\v2!.tammy.v1.MaskedCompanyTaxProfileB\x06\xbaH\x03\xc8\x01\x01R\aprofile\"\x90\x03\n" +
+	"\x1aCreateCompanyReturnRequest\x12I\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12t\n" +
+	"\x0fsource_close_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\rsourceCloseId\x12:\n" +
+	"\x05input\x18\x04 \x01(\v2\x1c.tammy.v1.CompanyReturnInputB\x06\xbaH\x03\xc8\x01\x01R\x05input\"\x87\x02\n" +
+	"\x1bCreateCompanyReturnResponse\x12F\n" +
+	"\x0ecompany_return\x18\x01 \x01(\v2\x17.tammy.v1.CompanyReturnB\x06\xbaH\x03\xc8\x01\x01R\rcompanyReturn\x12R\n" +
+	"\x12tax_reconciliation\x18\x02 \x01(\v2\x1b.tammy.v1.TaxReconciliationB\x06\xbaH\x03\xc8\x01\x01R\x11taxReconciliation\x12L\n" +
+	"\n" +
+	"validation\x18\x03 \x03(\v2!.tammy.v1.ReturnValidationOutcomeB\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\n" +
+	"validation\"\xcc\x02\n" +
+	"\x17GetCompanyReturnRequest\x12O\n" +
+	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12i\n" +
+	"\treturn_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\breturnId\"\x84\x02\n" +
+	"\x18GetCompanyReturnResponse\x12F\n" +
+	"\x0ecompany_return\x18\x01 \x01(\v2\x17.tammy.v1.CompanyReturnB\x06\xbaH\x03\xc8\x01\x01R\rcompanyReturn\x12R\n" +
+	"\x12tax_reconciliation\x18\x02 \x01(\v2\x1b.tammy.v1.TaxReconciliationB\x06\xbaH\x03\xc8\x01\x01R\x11taxReconciliation\x12L\n" +
+	"\n" +
+	"validation\x18\x03 \x03(\v2!.tammy.v1.ReturnValidationOutcomeB\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\n" +
+	"validation\"\x85\x03\n" +
+	"\x1dListCompanyReturnFactsRequest\x12O\n" +
+	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12i\n" +
+	"\treturn_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\breturnId\x121\n" +
+	"\x04page\x18\x04 \x01(\v2\x15.tammy.v1.PageRequestB\x06\xbaH\x03\xc8\x01\x01R\x04page\"\x87\x01\n" +
+	"\x1eListCompanyReturnFactsResponse\x125\n" +
+	"\x05facts\x18\x01 \x03(\v2\x14.tammy.v1.ReturnFactB\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\x05facts\x12.\n" +
+	"\x04page\x18\x02 \x01(\v2\x12.tammy.v1.PageInfoB\x06\xbaH\x03\xc8\x01\x01R\x04page\"\xbb\x03\n" +
+	"\x1cSetCompanyReturnInputRequest\x12I\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12i\n" +
+	"\treturn_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\breturnId\x122\n" +
+	"\x10expected_version\x18\x04 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion\x12:\n" +
+	"\x05input\x18\x05 \x01(\v2\x1c.tammy.v1.CompanyReturnInputB\x06\xbaH\x03\xc8\x01\x01R\x05input\"\x89\x02\n" +
+	"\x1dSetCompanyReturnInputResponse\x12F\n" +
+	"\x0ecompany_return\x18\x01 \x01(\v2\x17.tammy.v1.CompanyReturnB\x06\xbaH\x03\xc8\x01\x01R\rcompanyReturn\x12R\n" +
+	"\x12tax_reconciliation\x18\x02 \x01(\v2\x1b.tammy.v1.TaxReconciliationB\x06\xbaH\x03\xc8\x01\x01R\x11taxReconciliation\x12L\n" +
+	"\n" +
+	"validation\x18\x03 \x03(\v2!.tammy.v1.ReturnValidationOutcomeB\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\n" +
+	"validation\"\xc3\x03\n" +
+	"\x1aUpsertTaxAdjustmentRequest\x12I\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12i\n" +
+	"\treturn_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\breturnId\x122\n" +
+	"\x10expected_version\x18\x04 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion\x12D\n" +
+	"\n" +
+	"adjustment\x18\x05 \x01(\v2\x1c.tammy.v1.TaxAdjustmentInputB\x06\xbaH\x03\xc8\x01\x01R\n" +
+	"adjustment\"\xc8\x02\n" +
+	"\x1bUpsertTaxAdjustmentResponse\x12F\n" +
+	"\x0ecompany_return\x18\x01 \x01(\v2\x17.tammy.v1.CompanyReturnB\x06\xbaH\x03\xc8\x01\x01R\rcompanyReturn\x12?\n" +
+	"\n" +
+	"adjustment\x18\x02 \x01(\v2\x17.tammy.v1.TaxAdjustmentB\x06\xbaH\x03\xc8\x01\x01R\n" +
+	"adjustment\x12R\n" +
+	"\x12tax_reconciliation\x18\x03 \x01(\v2\x1b.tammy.v1.TaxReconciliationB\x06\xbaH\x03\xc8\x01\x01R\x11taxReconciliation\x12L\n" +
+	"\n" +
+	"validation\x18\x04 \x03(\v2!.tammy.v1.ReturnValidationOutcomeB\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\n" +
+	"validation\"\xf0\x03\n" +
+	"\x1aRemoveTaxAdjustmentRequest\x12I\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12i\n" +
+	"\treturn_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\breturnId\x122\n" +
+	"\x10expected_version\x18\x04 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion\x12q\n" +
+	"\radjustment_id\x18\x05 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\fadjustmentId\"\x87\x02\n" +
+	"\x1bRemoveTaxAdjustmentResponse\x12F\n" +
+	"\x0ecompany_return\x18\x01 \x01(\v2\x17.tammy.v1.CompanyReturnB\x06\xbaH\x03\xc8\x01\x01R\rcompanyReturn\x12R\n" +
+	"\x12tax_reconciliation\x18\x02 \x01(\v2\x1b.tammy.v1.TaxReconciliationB\x06\xbaH\x03\xc8\x01\x01R\x11taxReconciliation\x12L\n" +
+	"\n" +
+	"validation\x18\x03 \x03(\v2!.tammy.v1.ReturnValidationOutcomeB\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\n" +
+	"validation\"\xbb\x03\n" +
+	"\x18UpsertTaxElectionRequest\x12I\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12i\n" +
+	"\treturn_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\breturnId\x122\n" +
+	"\x10expected_version\x18\x04 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion\x12>\n" +
+	"\belection\x18\x05 \x01(\v2\x1a.tammy.v1.TaxElectionInputB\x06\xbaH\x03\xc8\x01\x01R\belection\"\xc0\x02\n" +
+	"\x19UpsertTaxElectionResponse\x12F\n" +
+	"\x0ecompany_return\x18\x01 \x01(\v2\x17.tammy.v1.CompanyReturnB\x06\xbaH\x03\xc8\x01\x01R\rcompanyReturn\x129\n" +
+	"\belection\x18\x02 \x01(\v2\x15.tammy.v1.TaxElectionB\x06\xbaH\x03\xc8\x01\x01R\belection\x12R\n" +
+	"\x12tax_reconciliation\x18\x03 \x01(\v2\x1b.tammy.v1.TaxReconciliationB\x06\xbaH\x03\xc8\x01\x01R\x11taxReconciliation\x12L\n" +
+	"\n" +
+	"validation\x18\x04 \x03(\v2!.tammy.v1.ReturnValidationOutcomeB\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\n" +
+	"validation\"\xea\x03\n" +
+	"\x18RemoveTaxElectionRequest\x12I\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12i\n" +
+	"\treturn_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\breturnId\x122\n" +
+	"\x10expected_version\x18\x04 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion\x12m\n" +
+	"\velection_id\x18\x05 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\n" +
+	"electionId\"\x85\x02\n" +
+	"\x19RemoveTaxElectionResponse\x12F\n" +
+	"\x0ecompany_return\x18\x01 \x01(\v2\x17.tammy.v1.CompanyReturnB\x06\xbaH\x03\xc8\x01\x01R\rcompanyReturn\x12R\n" +
+	"\x12tax_reconciliation\x18\x02 \x01(\v2\x1b.tammy.v1.TaxReconciliationB\x06\xbaH\x03\xc8\x01\x01R\x11taxReconciliation\x12L\n" +
+	"\n" +
+	"validation\x18\x03 \x03(\v2!.tammy.v1.ReturnValidationOutcomeB\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\n" +
+	"validation\"\xff\x02\n" +
+	"\x1cValidateCompanyReturnRequest\x12I\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12i\n" +
+	"\treturn_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\breturnId\x122\n" +
+	"\x10expected_version\x18\x04 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion\"\xb5\x01\n" +
+	"\x1dValidateCompanyReturnResponse\x12F\n" +
+	"\x0ecompany_return\x18\x01 \x01(\v2\x17.tammy.v1.CompanyReturnB\x06\xbaH\x03\xc8\x01\x01R\rcompanyReturn\x12L\n" +
+	"\n" +
+	"validation\x18\x02 \x03(\v2!.tammy.v1.ReturnValidationOutcomeB\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\n" +
+	"validation\"\xb3\x06\n" +
+	"\x1fAcknowledgeReturnWarningRequest\x12I\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12i\n" +
+	"\treturn_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\breturnId\x122\n" +
+	"\x10expected_version\x18\x04 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion\x12k\n" +
+	"\n" +
+	"warning_id\x18\x05 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\twarningId\x128\n" +
+	"\x13validation_revision\x18\x06 \x01(\x04B\a\xbaH\x042\x02(\x01R\x12validationRevision:\x87\x02\xbaH\x83\x02\x1a\x80\x02\n" +
+	"$company_tax.acknowledge.fresh_factor\x12=warning acknowledgement requires a purpose-bound fresh factor\x1a\x98\x01has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'company_return_acknowledge_warning'\"\x8f\x02\n" +
+	" AcknowledgeReturnWarningResponse\x12F\n" +
+	"\x0ecompany_return\x18\x01 \x01(\v2\x17.tammy.v1.CompanyReturnB\x06\xbaH\x03\xc8\x01\x01R\rcompanyReturn\x12U\n" +
+	"\x0facknowledgement\x18\x02 \x01(\v2#.tammy.v1.ValidationAcknowledgementB\x06\xbaH\x03\xc8\x01\x01R\x0facknowledgement\x12L\n" +
+	"\n" +
+	"validation\x18\x03 \x03(\v2!.tammy.v1.ReturnValidationOutcomeB\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\n" +
+	"validation\"\xa6\x05\n" +
+	"\x1bDeclareCompanyReturnRequest\x12I\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12i\n" +
+	"\treturn_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\breturnId\x122\n" +
+	"\x10expected_version\x18\x04 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion\x128\n" +
+	"\x13validation_revision\x18\x05 \x01(\x04B\a\xbaH\x042\x02(\x01R\x12validationRevision:\xeb\x01\xbaH\xe7\x01\x1a\xe4\x01\n" +
+	" company_tax.declare.fresh_factor\x121declaration requires a purpose-bound fresh factor\x1a\x8c\x01has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'company_return_declare'\"\xa7\x01\n" +
+	"\x1cDeclareCompanyReturnResponse\x12F\n" +
+	"\x0ecompany_return\x18\x01 \x01(\v2\x17.tammy.v1.CompanyReturnB\x06\xbaH\x03\xc8\x01\x01R\rcompanyReturn\x12?\n" +
+	"\vdeclaration\x18\x02 \x01(\v2\x15.tammy.v1.DeclarationB\x06\xbaH\x03\xc8\x01\x01R\vdeclaration\"\xb5\x05\n" +
+	"'WithdrawCompanyReturnDeclarationRequest\x12I\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12i\n" +
+	"\treturn_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\breturnId\x122\n" +
+	"\x10expected_version\x18\x04 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion\x12\"\n" +
+	"\x06reason\x18\x05 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xd0\x0fR\x06reason:\x84\x02\xbaH\x80\x02\x1a\xfd\x01\n" +
+	"!company_tax.withdraw.fresh_factor\x12<declaration withdrawal requires a purpose-bound fresh factor\x1a\x99\x01has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'company_return_withdraw_declaration'\"\xc4\x01\n" +
+	"(WithdrawCompanyReturnDeclarationResponse\x12F\n" +
+	"\x0ecompany_return\x18\x01 \x01(\v2\x17.tammy.v1.CompanyReturnB\x06\xbaH\x03\xc8\x01\x01R\rcompanyReturn\x12P\n" +
+	"\x14retained_declaration\x18\x02 \x01(\v2\x15.tammy.v1.DeclarationB\x06\xbaH\x03\xc8\x01\x01R\x13retainedDeclaration\"\xef\x06\n" +
+	"\x1eExportCompanyReturnPackRequest\x12I\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12i\n" +
+	"\treturn_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\breturnId\x122\n" +
+	"\x10expected_version\x18\x04 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion\x12A\n" +
+	"\x04kind\x18\x05 \x01(\x0e2!.tammy.v1.CompanyReturnExportKindB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x04kind\x12B\n" +
+	"\x11export_passphrase\x18\x06 \x01(\v2\x15.tammy.v1.SecretInputR\x10exportPassphrase:\xe4\x02\xbaH\xe0\x02\x1a\xdd\x02\n" +
+	"\x1ccompany_tax.export.authority\x12^return export requires the exact fresh-factor purpose and passphrase shape for its export kind\x1a\xdc\x01has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'company_return_export' && (this.kind == 2 ? has(this.export_passphrase) : !has(this.export_passphrase))\"\xc0\x02\n" +
+	"\x1fExportCompanyReturnPackResponse\x12i\n" +
+	"\texport_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\bexportId\x12*\n" +
+	"\fcontent_hash\x18\x02 \x01(\fB\a\xbaH\x04z\x02h R\vcontentHash\x12C\n" +
+	"\rsafe_filename\x18\x03 \x01(\tB\x1e\xbaH\x1br\x19\x10\x01\x18\xff\x012\x12^[^/\\\\[:cntrl:]]+$R\fsafeFilename\x12A\n" +
+	"\x04kind\x18\x04 \x01(\x0e2!.tammy.v1.CompanyReturnExportKindB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x04kind\"\xd1\x04\n" +
+	"%CreateCompanyReturnReplacementRequest\x12I\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12\x80\x01\n" +
+	"\x15predecessor_return_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x13predecessorReturnId\x12I\n" +
+	"\x1cexpected_predecessor_version\x18\x04 \x01(\x04B\a\xbaH\x042\x02(\x01R\x1aexpectedPredecessorVersion\x12t\n" +
+	"\x0fsource_close_id\x18\x05 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\rsourceCloseId\x12\"\n" +
+	"\x06reason\x18\x06 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xd0\x0fR\x06reason\"\xae\x01\n" +
+	"&CreateCompanyReturnReplacementResponse\x12A\n" +
+	"\vpredecessor\x18\x01 \x01(\v2\x17.tammy.v1.CompanyReturnB\x06\xbaH\x03\xc8\x01\x01R\vpredecessor\x12A\n" +
+	"\vreplacement\x18\x02 \x01(\v2\x17.tammy.v1.CompanyReturnB\x06\xbaH\x03\xc8\x01\x01R\vreplacement\"\xdc\x05\n" +
+	"#CreateCompanyReturnAmendmentRequest\x12I\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12\x8d\x01\n" +
+	"\x1ceffective_original_return_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x19effectiveOriginalReturnId\x12\x87\x01\n" +
+	"\x19latest_accepted_return_id\x18\x04 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x16latestAcceptedReturnId\x12?\n" +
+	"\x17expected_latest_version\x18\x05 \x01(\x04B\a\xbaH\x042\x02(\x01R\x15expectedLatestVersion\x12t\n" +
+	"\x0fsource_close_id\x18\x06 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\rsourceCloseId\x12\"\n" +
+	"\x06reason\x18\a \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xd0\x0fR\x06reason\"\xb5\x01\n" +
+	"$CreateCompanyReturnAmendmentResponse\x12N\n" +
+	"\x12effective_original\x18\x01 \x01(\v2\x17.tammy.v1.CompanyReturnB\x06\xbaH\x03\xc8\x01\x01R\x11effectiveOriginal\x12=\n" +
+	"\tamendment\x18\x02 \x01(\v2\x17.tammy.v1.CompanyReturnB\x06\xbaH\x03\xc8\x01\x01R\tamendment*\xf6\x04\n" +
 	"\x12CompanyReturnState\x12$\n" +
 	" COMPANY_RETURN_STATE_UNSPECIFIED\x10\x00\x12#\n" +
 	"\x1fCOMPANY_RETURN_STATE_COLLECTING\x10\x01\x12 \n" +
@@ -339,7 +6274,84 @@ const file_tammy_v1_company_tax_proto_rawDesc = "" +
 	"(COMPANY_RETURN_OPERATION_OUTCOME_SUCCESS\x10\x01\x12-\n" +
 	")COMPANY_RETURN_OPERATION_OUTCOME_WARNINGS\x10\x02\x12-\n" +
 	")COMPANY_RETURN_OPERATION_OUTCOME_REJECTED\x10\x03\x124\n" +
-	"0COMPANY_RETURN_OPERATION_OUTCOME_OUTCOME_UNKNOWN\x10\x04BLZEgithub.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1\x92\x03\x02\b\x02b\beditionsp\xe8\a"
+	"0COMPANY_RETURN_OPERATION_OUTCOME_OUTCOME_UNKNOWN\x10\x04*b\n" +
+	"\x0eRequiredAnswer\x12\x1f\n" +
+	"\x1bREQUIRED_ANSWER_UNSPECIFIED\x10\x00\x12\x17\n" +
+	"\x13REQUIRED_ANSWER_YES\x10\x01\x12\x16\n" +
+	"\x12REQUIRED_ANSWER_NO\x10\x02*\xfc\x02\n" +
+	"\x18ReturnFactProvenanceKind\x12+\n" +
+	"'RETURN_FACT_PROVENANCE_KIND_UNSPECIFIED\x10\x00\x12+\n" +
+	"'RETURN_FACT_PROVENANCE_KIND_FROZEN_BOOK\x10\x01\x127\n" +
+	"3RETURN_FACT_PROVENANCE_KIND_REVIEWED_TAX_ADJUSTMENT\x10\x02\x120\n" +
+	",RETURN_FACT_PROVENANCE_KIND_VERIFIED_PROFILE\x10\x03\x128\n" +
+	"4RETURN_FACT_PROVENANCE_KIND_EXPLICIT_EVIDENCED_INPUT\x10\x04\x12/\n" +
+	"+RETURN_FACT_PROVENANCE_KIND_BUNDLE_ELECTION\x10\x05\x120\n" +
+	",RETURN_FACT_PROVENANCE_KIND_CALCULATION_RULE\x10\x06*\xa8\x02\n" +
+	"\x1aReturnFactValidationStatus\x12-\n" +
+	")RETURN_FACT_VALIDATION_STATUS_UNSPECIFIED\x10\x00\x12'\n" +
+	"#RETURN_FACT_VALIDATION_STATUS_VALID\x10\x01\x12)\n" +
+	"%RETURN_FACT_VALIDATION_STATUS_BLOCKER\x10\x02\x12)\n" +
+	"%RETURN_FACT_VALIDATION_STATUS_WARNING\x10\x03\x12-\n" +
+	")RETURN_FACT_VALIDATION_STATUS_INFORMATION\x10\x04\x12-\n" +
+	")RETURN_FACT_VALIDATION_STATUS_UNSUPPORTED\x10\x05*\xee\x01\n" +
+	"\x18ReturnValidationSeverity\x12*\n" +
+	"&RETURN_VALIDATION_SEVERITY_UNSPECIFIED\x10\x00\x12&\n" +
+	"\"RETURN_VALIDATION_SEVERITY_BLOCKER\x10\x01\x12&\n" +
+	"\"RETURN_VALIDATION_SEVERITY_WARNING\x10\x02\x12*\n" +
+	"&RETURN_VALIDATION_SEVERITY_INFORMATION\x10\x03\x12*\n" +
+	"&RETURN_VALIDATION_SEVERITY_UNSUPPORTED\x10\x04*\x9c\x03\n" +
+	"\x11TaxAdjustmentType\x12#\n" +
+	"\x1fTAX_ADJUSTMENT_TYPE_UNSPECIFIED\x10\x00\x12.\n" +
+	"*TAX_ADJUSTMENT_TYPE_NON_DEDUCTIBLE_EXPENSE\x10\x01\x124\n" +
+	"0TAX_ADJUSTMENT_TYPE_EXEMPT_NON_ASSESSABLE_INCOME\x10\x02\x123\n" +
+	"/TAX_ADJUSTMENT_TYPE_ACCOUNTING_TAX_DEPRECIATION\x10\x03\x122\n" +
+	".TAX_ADJUSTMENT_TYPE_PROVISION_ACCRUAL_REVERSAL\x10\x04\x12*\n" +
+	"&TAX_ADJUSTMENT_TYPE_TAX_PAYMENT_CREDIT\x10\x05\x121\n" +
+	"-TAX_ADJUSTMENT_TYPE_CURRENT_YEAR_REVENUE_LOSS\x10\x06\x124\n" +
+	"0TAX_ADJUSTMENT_TYPE_CARRIED_FORWARD_REVENUE_LOSS\x10\a*\x86\x01\n" +
+	"\x13TaxAdjustmentTiming\x12%\n" +
+	"!TAX_ADJUSTMENT_TIMING_UNSPECIFIED\x10\x00\x12#\n" +
+	"\x1fTAX_ADJUSTMENT_TIMING_PERMANENT\x10\x01\x12#\n" +
+	"\x1fTAX_ADJUSTMENT_TIMING_TEMPORARY\x10\x02*\xa0\x01\n" +
+	"\x12HoldingCompanyKind\x12$\n" +
+	" HOLDING_COMPANY_KIND_UNSPECIFIED\x10\x00\x12\x1d\n" +
+	"\x19HOLDING_COMPANY_KIND_NONE\x10\x01\x12#\n" +
+	"\x1fHOLDING_COMPANY_KIND_AUSTRALIAN\x10\x02\x12 \n" +
+	"\x1cHOLDING_COMPANY_KIND_FOREIGN\x10\x03*\xcc\x01\n" +
+	"#BaseRatePassiveIncomeClassification\x127\n" +
+	"3BASE_RATE_PASSIVE_INCOME_CLASSIFICATION_UNSPECIFIED\x10\x00\x123\n" +
+	"/BASE_RATE_PASSIVE_INCOME_CLASSIFICATION_PASSIVE\x10\x01\x127\n" +
+	"3BASE_RATE_PASSIVE_INCOME_CLASSIFICATION_NON_PASSIVE\x10\x02*\xa0\x01\n" +
+	"\x19SmallBusinessEntityChoice\x12,\n" +
+	"(SMALL_BUSINESS_ENTITY_CHOICE_UNSPECIFIED\x10\x00\x12&\n" +
+	"\"SMALL_BUSINESS_ENTITY_CHOICE_APPLY\x10\x01\x12-\n" +
+	")SMALL_BUSINESS_ENTITY_CHOICE_DO_NOT_APPLY\x10\x02*\x8d\x01\n" +
+	"\x12DepreciationChoice\x12#\n" +
+	"\x1fDEPRECIATION_CHOICE_UNSPECIFIED\x10\x00\x12 \n" +
+	"\x1cDEPRECIATION_CHOICE_STANDARD\x10\x01\x120\n" +
+	",DEPRECIATION_CHOICE_SUPPORTED_SMALL_BUSINESS\x10\x02*\xb3\x01\n" +
+	"\x17CompanyReturnExportKind\x12*\n" +
+	"&COMPANY_RETURN_EXPORT_KIND_UNSPECIFIED\x10\x00\x122\n" +
+	".COMPANY_RETURN_EXPORT_KIND_REDACTED_REVIEW_PDF\x10\x01\x128\n" +
+	"4COMPANY_RETURN_EXPORT_KIND_ENCRYPTED_HANDOFF_ARCHIVE\x10\x022\xc0\x0e\n" +
+	"\x11CompanyTaxService\x12e\n" +
+	"\x14GetCompanyTaxProfile\x12%.tammy.v1.GetCompanyTaxProfileRequest\x1a&.tammy.v1.GetCompanyTaxProfileResponse\x12e\n" +
+	"\x14SetCompanyTaxProfile\x12%.tammy.v1.SetCompanyTaxProfileRequest\x1a&.tammy.v1.SetCompanyTaxProfileResponse\x12b\n" +
+	"\x13CreateCompanyReturn\x12$.tammy.v1.CreateCompanyReturnRequest\x1a%.tammy.v1.CreateCompanyReturnResponse\x12Y\n" +
+	"\x10GetCompanyReturn\x12!.tammy.v1.GetCompanyReturnRequest\x1a\".tammy.v1.GetCompanyReturnResponse\x12k\n" +
+	"\x16ListCompanyReturnFacts\x12'.tammy.v1.ListCompanyReturnFactsRequest\x1a(.tammy.v1.ListCompanyReturnFactsResponse\x12h\n" +
+	"\x15SetCompanyReturnInput\x12&.tammy.v1.SetCompanyReturnInputRequest\x1a'.tammy.v1.SetCompanyReturnInputResponse\x12b\n" +
+	"\x13UpsertTaxAdjustment\x12$.tammy.v1.UpsertTaxAdjustmentRequest\x1a%.tammy.v1.UpsertTaxAdjustmentResponse\x12b\n" +
+	"\x13RemoveTaxAdjustment\x12$.tammy.v1.RemoveTaxAdjustmentRequest\x1a%.tammy.v1.RemoveTaxAdjustmentResponse\x12\\\n" +
+	"\x11UpsertTaxElection\x12\".tammy.v1.UpsertTaxElectionRequest\x1a#.tammy.v1.UpsertTaxElectionResponse\x12\\\n" +
+	"\x11RemoveTaxElection\x12\".tammy.v1.RemoveTaxElectionRequest\x1a#.tammy.v1.RemoveTaxElectionResponse\x12h\n" +
+	"\x15ValidateCompanyReturn\x12&.tammy.v1.ValidateCompanyReturnRequest\x1a'.tammy.v1.ValidateCompanyReturnResponse\x12q\n" +
+	"\x18AcknowledgeReturnWarning\x12).tammy.v1.AcknowledgeReturnWarningRequest\x1a*.tammy.v1.AcknowledgeReturnWarningResponse\x12e\n" +
+	"\x14DeclareCompanyReturn\x12%.tammy.v1.DeclareCompanyReturnRequest\x1a&.tammy.v1.DeclareCompanyReturnResponse\x12\x89\x01\n" +
+	" WithdrawCompanyReturnDeclaration\x121.tammy.v1.WithdrawCompanyReturnDeclarationRequest\x1a2.tammy.v1.WithdrawCompanyReturnDeclarationResponse\x12n\n" +
+	"\x17ExportCompanyReturnPack\x12(.tammy.v1.ExportCompanyReturnPackRequest\x1a).tammy.v1.ExportCompanyReturnPackResponse\x12\x83\x01\n" +
+	"\x1eCreateCompanyReturnReplacement\x12/.tammy.v1.CreateCompanyReturnReplacementRequest\x1a0.tammy.v1.CreateCompanyReturnReplacementResponse\x12}\n" +
+	"\x1cCreateCompanyReturnAmendment\x12-.tammy.v1.CreateCompanyReturnAmendmentRequest\x1a..tammy.v1.CreateCompanyReturnAmendmentResponseBLZEgithub.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1\x92\x03\x02\b\x02b\beditionsp\xe8\a"
 
 var (
 	file_tammy_v1_company_tax_proto_rawDescOnce sync.Once
@@ -353,19 +6365,306 @@ func file_tammy_v1_company_tax_proto_rawDescGZIP() []byte {
 	return file_tammy_v1_company_tax_proto_rawDescData
 }
 
-var file_tammy_v1_company_tax_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
+var file_tammy_v1_company_tax_proto_enumTypes = make([]protoimpl.EnumInfo, 15)
+var file_tammy_v1_company_tax_proto_msgTypes = make([]protoimpl.MessageInfo, 56)
 var file_tammy_v1_company_tax_proto_goTypes = []any{
-	(CompanyReturnState)(0),            // 0: tammy.v1.CompanyReturnState
-	(CompanyReturnRelationshipKind)(0), // 1: tammy.v1.CompanyReturnRelationshipKind
-	(CompanyReturnOperationType)(0),    // 2: tammy.v1.CompanyReturnOperationType
-	(CompanyReturnOperationOutcome)(0), // 3: tammy.v1.CompanyReturnOperationOutcome
+	(CompanyReturnState)(0),                          // 0: tammy.v1.CompanyReturnState
+	(CompanyReturnRelationshipKind)(0),               // 1: tammy.v1.CompanyReturnRelationshipKind
+	(CompanyReturnOperationType)(0),                  // 2: tammy.v1.CompanyReturnOperationType
+	(CompanyReturnOperationOutcome)(0),               // 3: tammy.v1.CompanyReturnOperationOutcome
+	(RequiredAnswer)(0),                              // 4: tammy.v1.RequiredAnswer
+	(ReturnFactProvenanceKind)(0),                    // 5: tammy.v1.ReturnFactProvenanceKind
+	(ReturnFactValidationStatus)(0),                  // 6: tammy.v1.ReturnFactValidationStatus
+	(ReturnValidationSeverity)(0),                    // 7: tammy.v1.ReturnValidationSeverity
+	(TaxAdjustmentType)(0),                           // 8: tammy.v1.TaxAdjustmentType
+	(TaxAdjustmentTiming)(0),                         // 9: tammy.v1.TaxAdjustmentTiming
+	(HoldingCompanyKind)(0),                          // 10: tammy.v1.HoldingCompanyKind
+	(BaseRatePassiveIncomeClassification)(0),         // 11: tammy.v1.BaseRatePassiveIncomeClassification
+	(SmallBusinessEntityChoice)(0),                   // 12: tammy.v1.SmallBusinessEntityChoice
+	(DepreciationChoice)(0),                          // 13: tammy.v1.DepreciationChoice
+	(CompanyReturnExportKind)(0),                     // 14: tammy.v1.CompanyReturnExportKind
+	(*AddressInput)(nil),                             // 15: tammy.v1.AddressInput
+	(*RelatedEntityTurnoverContribution)(nil),        // 16: tammy.v1.RelatedEntityTurnoverContribution
+	(*PassiveIncomeClassificationInput)(nil),         // 17: tammy.v1.PassiveIncomeClassificationInput
+	(*ApplicabilityAnswers)(nil),                     // 18: tammy.v1.ApplicabilityAnswers
+	(*PriorRevenueLossInput)(nil),                    // 19: tammy.v1.PriorRevenueLossInput
+	(*CompanyTaxProfileInput)(nil),                   // 20: tammy.v1.CompanyTaxProfileInput
+	(*CompanyReturnInput)(nil),                       // 21: tammy.v1.CompanyReturnInput
+	(*MaskedCompanyTaxProfile)(nil),                  // 22: tammy.v1.MaskedCompanyTaxProfile
+	(*TaxAdjustment)(nil),                            // 23: tammy.v1.TaxAdjustment
+	(*TaxElectionChoice)(nil),                        // 24: tammy.v1.TaxElectionChoice
+	(*TaxElection)(nil),                              // 25: tammy.v1.TaxElection
+	(*ReturnFactValue)(nil),                          // 26: tammy.v1.ReturnFactValue
+	(*ReturnFact)(nil),                               // 27: tammy.v1.ReturnFact
+	(*TaxReconciliationTerm)(nil),                    // 28: tammy.v1.TaxReconciliationTerm
+	(*TaxReconciliation)(nil),                        // 29: tammy.v1.TaxReconciliation
+	(*ReturnValidationOutcome)(nil),                  // 30: tammy.v1.ReturnValidationOutcome
+	(*ValidationAcknowledgement)(nil),                // 31: tammy.v1.ValidationAcknowledgement
+	(*Declaration)(nil),                              // 32: tammy.v1.Declaration
+	(*CompanyReturnDeliverySummary)(nil),             // 33: tammy.v1.CompanyReturnDeliverySummary
+	(*CompanyReturn)(nil),                            // 34: tammy.v1.CompanyReturn
+	(*TaxAdjustmentInput)(nil),                       // 35: tammy.v1.TaxAdjustmentInput
+	(*TaxElectionInput)(nil),                         // 36: tammy.v1.TaxElectionInput
+	(*GetCompanyTaxProfileRequest)(nil),              // 37: tammy.v1.GetCompanyTaxProfileRequest
+	(*GetCompanyTaxProfileResponse)(nil),             // 38: tammy.v1.GetCompanyTaxProfileResponse
+	(*SetCompanyTaxProfileRequest)(nil),              // 39: tammy.v1.SetCompanyTaxProfileRequest
+	(*SetCompanyTaxProfileResponse)(nil),             // 40: tammy.v1.SetCompanyTaxProfileResponse
+	(*CreateCompanyReturnRequest)(nil),               // 41: tammy.v1.CreateCompanyReturnRequest
+	(*CreateCompanyReturnResponse)(nil),              // 42: tammy.v1.CreateCompanyReturnResponse
+	(*GetCompanyReturnRequest)(nil),                  // 43: tammy.v1.GetCompanyReturnRequest
+	(*GetCompanyReturnResponse)(nil),                 // 44: tammy.v1.GetCompanyReturnResponse
+	(*ListCompanyReturnFactsRequest)(nil),            // 45: tammy.v1.ListCompanyReturnFactsRequest
+	(*ListCompanyReturnFactsResponse)(nil),           // 46: tammy.v1.ListCompanyReturnFactsResponse
+	(*SetCompanyReturnInputRequest)(nil),             // 47: tammy.v1.SetCompanyReturnInputRequest
+	(*SetCompanyReturnInputResponse)(nil),            // 48: tammy.v1.SetCompanyReturnInputResponse
+	(*UpsertTaxAdjustmentRequest)(nil),               // 49: tammy.v1.UpsertTaxAdjustmentRequest
+	(*UpsertTaxAdjustmentResponse)(nil),              // 50: tammy.v1.UpsertTaxAdjustmentResponse
+	(*RemoveTaxAdjustmentRequest)(nil),               // 51: tammy.v1.RemoveTaxAdjustmentRequest
+	(*RemoveTaxAdjustmentResponse)(nil),              // 52: tammy.v1.RemoveTaxAdjustmentResponse
+	(*UpsertTaxElectionRequest)(nil),                 // 53: tammy.v1.UpsertTaxElectionRequest
+	(*UpsertTaxElectionResponse)(nil),                // 54: tammy.v1.UpsertTaxElectionResponse
+	(*RemoveTaxElectionRequest)(nil),                 // 55: tammy.v1.RemoveTaxElectionRequest
+	(*RemoveTaxElectionResponse)(nil),                // 56: tammy.v1.RemoveTaxElectionResponse
+	(*ValidateCompanyReturnRequest)(nil),             // 57: tammy.v1.ValidateCompanyReturnRequest
+	(*ValidateCompanyReturnResponse)(nil),            // 58: tammy.v1.ValidateCompanyReturnResponse
+	(*AcknowledgeReturnWarningRequest)(nil),          // 59: tammy.v1.AcknowledgeReturnWarningRequest
+	(*AcknowledgeReturnWarningResponse)(nil),         // 60: tammy.v1.AcknowledgeReturnWarningResponse
+	(*DeclareCompanyReturnRequest)(nil),              // 61: tammy.v1.DeclareCompanyReturnRequest
+	(*DeclareCompanyReturnResponse)(nil),             // 62: tammy.v1.DeclareCompanyReturnResponse
+	(*WithdrawCompanyReturnDeclarationRequest)(nil),  // 63: tammy.v1.WithdrawCompanyReturnDeclarationRequest
+	(*WithdrawCompanyReturnDeclarationResponse)(nil), // 64: tammy.v1.WithdrawCompanyReturnDeclarationResponse
+	(*ExportCompanyReturnPackRequest)(nil),           // 65: tammy.v1.ExportCompanyReturnPackRequest
+	(*ExportCompanyReturnPackResponse)(nil),          // 66: tammy.v1.ExportCompanyReturnPackResponse
+	(*CreateCompanyReturnReplacementRequest)(nil),    // 67: tammy.v1.CreateCompanyReturnReplacementRequest
+	(*CreateCompanyReturnReplacementResponse)(nil),   // 68: tammy.v1.CreateCompanyReturnReplacementResponse
+	(*CreateCompanyReturnAmendmentRequest)(nil),      // 69: tammy.v1.CreateCompanyReturnAmendmentRequest
+	(*CreateCompanyReturnAmendmentResponse)(nil),     // 70: tammy.v1.CreateCompanyReturnAmendmentResponse
+	(*Money)(nil),                                    // 71: tammy.v1.Money
+	(*SourceRef)(nil),                                // 72: tammy.v1.SourceRef
+	(*SecretInput)(nil),                              // 73: tammy.v1.SecretInput
+	(*timestamppb.Timestamp)(nil),                    // 74: google.protobuf.Timestamp
+	(*Decimal)(nil),                                  // 75: tammy.v1.Decimal
+	(*CivilDate)(nil),                                // 76: tammy.v1.CivilDate
+	(*AuthenticationContext)(nil),                    // 77: tammy.v1.AuthenticationContext
+	(*CommandContext)(nil),                           // 78: tammy.v1.CommandContext
+	(*PageRequest)(nil),                              // 79: tammy.v1.PageRequest
+	(*PageInfo)(nil),                                 // 80: tammy.v1.PageInfo
 }
 var file_tammy_v1_company_tax_proto_depIdxs = []int32{
-	0, // [0:0] is the sub-list for method output_type
-	0, // [0:0] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	71,  // 0: tammy.v1.RelatedEntityTurnoverContribution.amount:type_name -> tammy.v1.Money
+	72,  // 1: tammy.v1.RelatedEntityTurnoverContribution.evidence:type_name -> tammy.v1.SourceRef
+	72,  // 2: tammy.v1.PassiveIncomeClassificationInput.income_source:type_name -> tammy.v1.SourceRef
+	11,  // 3: tammy.v1.PassiveIncomeClassificationInput.classification:type_name -> tammy.v1.BaseRatePassiveIncomeClassification
+	72,  // 4: tammy.v1.PassiveIncomeClassificationInput.evidence:type_name -> tammy.v1.SourceRef
+	4,   // 5: tammy.v1.ApplicabilityAnswers.tofa_applies:type_name -> tammy.v1.RequiredAnswer
+	4,   // 6: tammy.v1.ApplicabilityAnswers.psi_applies:type_name -> tammy.v1.RequiredAnswer
+	4,   // 7: tammy.v1.ApplicabilityAnswers.interposed_entity_election_applies:type_name -> tammy.v1.RequiredAnswer
+	4,   // 8: tammy.v1.ApplicabilityAnswers.consolidated_group_member:type_name -> tammy.v1.RequiredAnswer
+	4,   // 9: tammy.v1.ApplicabilityAnswers.research_and_development_incentive:type_name -> tammy.v1.RequiredAnswer
+	4,   // 10: tammy.v1.ApplicabilityAnswers.international_dealings:type_name -> tammy.v1.RequiredAnswer
+	4,   // 11: tammy.v1.ApplicabilityAnswers.reportable_tax_position:type_name -> tammy.v1.RequiredAnswer
+	4,   // 12: tammy.v1.ApplicabilityAnswers.life_insurance_business:type_name -> tammy.v1.RequiredAnswer
+	4,   // 13: tammy.v1.ApplicabilityAnswers.cgt_schedule_required:type_name -> tammy.v1.RequiredAnswer
+	4,   // 14: tammy.v1.ApplicabilityAnswers.losses_schedule_required:type_name -> tammy.v1.RequiredAnswer
+	4,   // 15: tammy.v1.ApplicabilityAnswers.other_schedule_required:type_name -> tammy.v1.RequiredAnswer
+	4,   // 16: tammy.v1.ApplicabilityAnswers.fb_or_unsupported_payroll_effect:type_name -> tammy.v1.RequiredAnswer
+	4,   // 17: tammy.v1.ApplicabilityAnswers.division_7a_unresolved:type_name -> tammy.v1.RequiredAnswer
+	4,   // 18: tammy.v1.ApplicabilityAnswers.unsupported_inventory:type_name -> tammy.v1.RequiredAnswer
+	4,   // 19: tammy.v1.ApplicabilityAnswers.unsupported_multicurrency:type_name -> tammy.v1.RequiredAnswer
+	4,   // 20: tammy.v1.ApplicabilityAnswers.unsupported_crypto:type_name -> tammy.v1.RequiredAnswer
+	71,  // 21: tammy.v1.PriorRevenueLossInput.opening_balance:type_name -> tammy.v1.Money
+	4,   // 22: tammy.v1.PriorRevenueLossInput.ownership_continuity_confirmed:type_name -> tammy.v1.RequiredAnswer
+	4,   // 23: tammy.v1.PriorRevenueLossInput.same_or_similar_business_judgement_required:type_name -> tammy.v1.RequiredAnswer
+	72,  // 24: tammy.v1.PriorRevenueLossInput.evidence:type_name -> tammy.v1.SourceRef
+	73,  // 25: tammy.v1.CompanyTaxProfileInput.tfn:type_name -> tammy.v1.SecretInput
+	15,  // 26: tammy.v1.CompanyTaxProfileInput.current_postal_address:type_name -> tammy.v1.AddressInput
+	15,  // 27: tammy.v1.CompanyTaxProfileInput.prior_postal_address:type_name -> tammy.v1.AddressInput
+	15,  // 28: tammy.v1.CompanyTaxProfileInput.main_business_address:type_name -> tammy.v1.AddressInput
+	4,   // 29: tammy.v1.CompanyTaxProfileInput.australian_resident:type_name -> tammy.v1.RequiredAnswer
+	4,   // 30: tammy.v1.CompanyTaxProfileInput.private_company:type_name -> tammy.v1.RequiredAnswer
+	73,  // 31: tammy.v1.CompanyTaxProfileInput.refund_bsb:type_name -> tammy.v1.SecretInput
+	73,  // 32: tammy.v1.CompanyTaxProfileInput.refund_account_number:type_name -> tammy.v1.SecretInput
+	4,   // 33: tammy.v1.CompanyTaxProfileInput.final_return:type_name -> tammy.v1.RequiredAnswer
+	10,  // 34: tammy.v1.CompanyTaxProfileInput.holding_company_kind:type_name -> tammy.v1.HoldingCompanyKind
+	16,  // 35: tammy.v1.CompanyTaxProfileInput.related_turnover:type_name -> tammy.v1.RelatedEntityTurnoverContribution
+	17,  // 36: tammy.v1.CompanyTaxProfileInput.passive_income_classifications:type_name -> tammy.v1.PassiveIncomeClassificationInput
+	12,  // 37: tammy.v1.CompanyTaxProfileInput.small_business_entity_choice:type_name -> tammy.v1.SmallBusinessEntityChoice
+	13,  // 38: tammy.v1.CompanyTaxProfileInput.depreciation_choice:type_name -> tammy.v1.DepreciationChoice
+	19,  // 39: tammy.v1.CompanyTaxProfileInput.prior_revenue_loss:type_name -> tammy.v1.PriorRevenueLossInput
+	18,  // 40: tammy.v1.CompanyTaxProfileInput.applicability:type_name -> tammy.v1.ApplicabilityAnswers
+	71,  // 41: tammy.v1.CompanyReturnInput.loss_amount_to_apply:type_name -> tammy.v1.Money
+	72,  // 42: tammy.v1.CompanyReturnInput.external_summary_evidence:type_name -> tammy.v1.SourceRef
+	72,  // 43: tammy.v1.CompanyReturnInput.payroll_summary_evidence:type_name -> tammy.v1.SourceRef
+	15,  // 44: tammy.v1.MaskedCompanyTaxProfile.current_postal_address:type_name -> tammy.v1.AddressInput
+	15,  // 45: tammy.v1.MaskedCompanyTaxProfile.prior_postal_address:type_name -> tammy.v1.AddressInput
+	15,  // 46: tammy.v1.MaskedCompanyTaxProfile.main_business_address:type_name -> tammy.v1.AddressInput
+	4,   // 47: tammy.v1.MaskedCompanyTaxProfile.australian_resident:type_name -> tammy.v1.RequiredAnswer
+	4,   // 48: tammy.v1.MaskedCompanyTaxProfile.private_company:type_name -> tammy.v1.RequiredAnswer
+	4,   // 49: tammy.v1.MaskedCompanyTaxProfile.final_return:type_name -> tammy.v1.RequiredAnswer
+	10,  // 50: tammy.v1.MaskedCompanyTaxProfile.holding_company_kind:type_name -> tammy.v1.HoldingCompanyKind
+	16,  // 51: tammy.v1.MaskedCompanyTaxProfile.related_turnover:type_name -> tammy.v1.RelatedEntityTurnoverContribution
+	17,  // 52: tammy.v1.MaskedCompanyTaxProfile.passive_income_classifications:type_name -> tammy.v1.PassiveIncomeClassificationInput
+	12,  // 53: tammy.v1.MaskedCompanyTaxProfile.small_business_entity_choice:type_name -> tammy.v1.SmallBusinessEntityChoice
+	13,  // 54: tammy.v1.MaskedCompanyTaxProfile.depreciation_choice:type_name -> tammy.v1.DepreciationChoice
+	19,  // 55: tammy.v1.MaskedCompanyTaxProfile.prior_revenue_loss:type_name -> tammy.v1.PriorRevenueLossInput
+	18,  // 56: tammy.v1.MaskedCompanyTaxProfile.applicability:type_name -> tammy.v1.ApplicabilityAnswers
+	74,  // 57: tammy.v1.MaskedCompanyTaxProfile.updated_at:type_name -> google.protobuf.Timestamp
+	8,   // 58: tammy.v1.TaxAdjustment.type:type_name -> tammy.v1.TaxAdjustmentType
+	71,  // 59: tammy.v1.TaxAdjustment.amount:type_name -> tammy.v1.Money
+	9,   // 60: tammy.v1.TaxAdjustment.timing:type_name -> tammy.v1.TaxAdjustmentTiming
+	72,  // 61: tammy.v1.TaxAdjustment.sources:type_name -> tammy.v1.SourceRef
+	72,  // 62: tammy.v1.TaxAdjustment.evidence:type_name -> tammy.v1.SourceRef
+	74,  // 63: tammy.v1.TaxAdjustment.updated_at:type_name -> google.protobuf.Timestamp
+	75,  // 64: tammy.v1.TaxElectionChoice.decimal_value:type_name -> tammy.v1.Decimal
+	24,  // 65: tammy.v1.TaxElection.choice:type_name -> tammy.v1.TaxElectionChoice
+	72,  // 66: tammy.v1.TaxElection.evidence:type_name -> tammy.v1.SourceRef
+	74,  // 67: tammy.v1.TaxElection.updated_at:type_name -> google.protobuf.Timestamp
+	71,  // 68: tammy.v1.ReturnFactValue.money_value:type_name -> tammy.v1.Money
+	75,  // 69: tammy.v1.ReturnFactValue.decimal_value:type_name -> tammy.v1.Decimal
+	76,  // 70: tammy.v1.ReturnFactValue.date_value:type_name -> tammy.v1.CivilDate
+	26,  // 71: tammy.v1.ReturnFact.value:type_name -> tammy.v1.ReturnFactValue
+	26,  // 72: tammy.v1.ReturnFact.submitted_value:type_name -> tammy.v1.ReturnFactValue
+	5,   // 73: tammy.v1.ReturnFact.provenance:type_name -> tammy.v1.ReturnFactProvenanceKind
+	72,  // 74: tammy.v1.ReturnFact.sources:type_name -> tammy.v1.SourceRef
+	72,  // 75: tammy.v1.ReturnFact.evidence:type_name -> tammy.v1.SourceRef
+	6,   // 76: tammy.v1.ReturnFact.validation_status:type_name -> tammy.v1.ReturnFactValidationStatus
+	71,  // 77: tammy.v1.TaxReconciliationTerm.amount:type_name -> tammy.v1.Money
+	72,  // 78: tammy.v1.TaxReconciliationTerm.sources:type_name -> tammy.v1.SourceRef
+	72,  // 79: tammy.v1.TaxReconciliationTerm.evidence:type_name -> tammy.v1.SourceRef
+	71,  // 80: tammy.v1.TaxReconciliation.accounting_profit_before_tax:type_name -> tammy.v1.Money
+	28,  // 81: tammy.v1.TaxReconciliation.additions:type_name -> tammy.v1.TaxReconciliationTerm
+	28,  // 82: tammy.v1.TaxReconciliation.subtractions:type_name -> tammy.v1.TaxReconciliationTerm
+	28,  // 83: tammy.v1.TaxReconciliation.eligible_applied_losses:type_name -> tammy.v1.TaxReconciliationTerm
+	71,  // 84: tammy.v1.TaxReconciliation.taxable_income_or_loss:type_name -> tammy.v1.Money
+	71,  // 85: tammy.v1.TaxReconciliation.gross_tax:type_name -> tammy.v1.Money
+	28,  // 86: tammy.v1.TaxReconciliation.payg_and_credits:type_name -> tammy.v1.TaxReconciliationTerm
+	71,  // 87: tammy.v1.TaxReconciliation.net_tax_payable_or_refund:type_name -> tammy.v1.Money
+	7,   // 88: tammy.v1.ReturnValidationOutcome.severity:type_name -> tammy.v1.ReturnValidationSeverity
+	72,  // 89: tammy.v1.ReturnValidationOutcome.sources:type_name -> tammy.v1.SourceRef
+	74,  // 90: tammy.v1.ValidationAcknowledgement.acknowledged_at:type_name -> google.protobuf.Timestamp
+	74,  // 91: tammy.v1.Declaration.declared_at:type_name -> google.protobuf.Timestamp
+	2,   // 92: tammy.v1.CompanyReturnDeliverySummary.operation_type:type_name -> tammy.v1.CompanyReturnOperationType
+	3,   // 93: tammy.v1.CompanyReturnDeliverySummary.outcome:type_name -> tammy.v1.CompanyReturnOperationOutcome
+	74,  // 94: tammy.v1.CompanyReturnDeliverySummary.delivered_at:type_name -> google.protobuf.Timestamp
+	76,  // 95: tammy.v1.CompanyReturn.period_start:type_name -> tammy.v1.CivilDate
+	76,  // 96: tammy.v1.CompanyReturn.period_end:type_name -> tammy.v1.CivilDate
+	1,   // 97: tammy.v1.CompanyReturn.relationship_kind:type_name -> tammy.v1.CompanyReturnRelationshipKind
+	0,   // 98: tammy.v1.CompanyReturn.state:type_name -> tammy.v1.CompanyReturnState
+	33,  // 99: tammy.v1.CompanyReturn.delivery:type_name -> tammy.v1.CompanyReturnDeliverySummary
+	74,  // 100: tammy.v1.CompanyReturn.created_at:type_name -> google.protobuf.Timestamp
+	74,  // 101: tammy.v1.CompanyReturn.updated_at:type_name -> google.protobuf.Timestamp
+	8,   // 102: tammy.v1.TaxAdjustmentInput.type:type_name -> tammy.v1.TaxAdjustmentType
+	71,  // 103: tammy.v1.TaxAdjustmentInput.amount:type_name -> tammy.v1.Money
+	9,   // 104: tammy.v1.TaxAdjustmentInput.timing:type_name -> tammy.v1.TaxAdjustmentTiming
+	72,  // 105: tammy.v1.TaxAdjustmentInput.sources:type_name -> tammy.v1.SourceRef
+	72,  // 106: tammy.v1.TaxAdjustmentInput.evidence:type_name -> tammy.v1.SourceRef
+	24,  // 107: tammy.v1.TaxElectionInput.choice:type_name -> tammy.v1.TaxElectionChoice
+	72,  // 108: tammy.v1.TaxElectionInput.evidence:type_name -> tammy.v1.SourceRef
+	77,  // 109: tammy.v1.GetCompanyTaxProfileRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	22,  // 110: tammy.v1.GetCompanyTaxProfileResponse.profile:type_name -> tammy.v1.MaskedCompanyTaxProfile
+	78,  // 111: tammy.v1.SetCompanyTaxProfileRequest.command_context:type_name -> tammy.v1.CommandContext
+	20,  // 112: tammy.v1.SetCompanyTaxProfileRequest.input:type_name -> tammy.v1.CompanyTaxProfileInput
+	22,  // 113: tammy.v1.SetCompanyTaxProfileResponse.profile:type_name -> tammy.v1.MaskedCompanyTaxProfile
+	78,  // 114: tammy.v1.CreateCompanyReturnRequest.command_context:type_name -> tammy.v1.CommandContext
+	21,  // 115: tammy.v1.CreateCompanyReturnRequest.input:type_name -> tammy.v1.CompanyReturnInput
+	34,  // 116: tammy.v1.CreateCompanyReturnResponse.company_return:type_name -> tammy.v1.CompanyReturn
+	29,  // 117: tammy.v1.CreateCompanyReturnResponse.tax_reconciliation:type_name -> tammy.v1.TaxReconciliation
+	30,  // 118: tammy.v1.CreateCompanyReturnResponse.validation:type_name -> tammy.v1.ReturnValidationOutcome
+	77,  // 119: tammy.v1.GetCompanyReturnRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	34,  // 120: tammy.v1.GetCompanyReturnResponse.company_return:type_name -> tammy.v1.CompanyReturn
+	29,  // 121: tammy.v1.GetCompanyReturnResponse.tax_reconciliation:type_name -> tammy.v1.TaxReconciliation
+	30,  // 122: tammy.v1.GetCompanyReturnResponse.validation:type_name -> tammy.v1.ReturnValidationOutcome
+	77,  // 123: tammy.v1.ListCompanyReturnFactsRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	79,  // 124: tammy.v1.ListCompanyReturnFactsRequest.page:type_name -> tammy.v1.PageRequest
+	27,  // 125: tammy.v1.ListCompanyReturnFactsResponse.facts:type_name -> tammy.v1.ReturnFact
+	80,  // 126: tammy.v1.ListCompanyReturnFactsResponse.page:type_name -> tammy.v1.PageInfo
+	78,  // 127: tammy.v1.SetCompanyReturnInputRequest.command_context:type_name -> tammy.v1.CommandContext
+	21,  // 128: tammy.v1.SetCompanyReturnInputRequest.input:type_name -> tammy.v1.CompanyReturnInput
+	34,  // 129: tammy.v1.SetCompanyReturnInputResponse.company_return:type_name -> tammy.v1.CompanyReturn
+	29,  // 130: tammy.v1.SetCompanyReturnInputResponse.tax_reconciliation:type_name -> tammy.v1.TaxReconciliation
+	30,  // 131: tammy.v1.SetCompanyReturnInputResponse.validation:type_name -> tammy.v1.ReturnValidationOutcome
+	78,  // 132: tammy.v1.UpsertTaxAdjustmentRequest.command_context:type_name -> tammy.v1.CommandContext
+	35,  // 133: tammy.v1.UpsertTaxAdjustmentRequest.adjustment:type_name -> tammy.v1.TaxAdjustmentInput
+	34,  // 134: tammy.v1.UpsertTaxAdjustmentResponse.company_return:type_name -> tammy.v1.CompanyReturn
+	23,  // 135: tammy.v1.UpsertTaxAdjustmentResponse.adjustment:type_name -> tammy.v1.TaxAdjustment
+	29,  // 136: tammy.v1.UpsertTaxAdjustmentResponse.tax_reconciliation:type_name -> tammy.v1.TaxReconciliation
+	30,  // 137: tammy.v1.UpsertTaxAdjustmentResponse.validation:type_name -> tammy.v1.ReturnValidationOutcome
+	78,  // 138: tammy.v1.RemoveTaxAdjustmentRequest.command_context:type_name -> tammy.v1.CommandContext
+	34,  // 139: tammy.v1.RemoveTaxAdjustmentResponse.company_return:type_name -> tammy.v1.CompanyReturn
+	29,  // 140: tammy.v1.RemoveTaxAdjustmentResponse.tax_reconciliation:type_name -> tammy.v1.TaxReconciliation
+	30,  // 141: tammy.v1.RemoveTaxAdjustmentResponse.validation:type_name -> tammy.v1.ReturnValidationOutcome
+	78,  // 142: tammy.v1.UpsertTaxElectionRequest.command_context:type_name -> tammy.v1.CommandContext
+	36,  // 143: tammy.v1.UpsertTaxElectionRequest.election:type_name -> tammy.v1.TaxElectionInput
+	34,  // 144: tammy.v1.UpsertTaxElectionResponse.company_return:type_name -> tammy.v1.CompanyReturn
+	25,  // 145: tammy.v1.UpsertTaxElectionResponse.election:type_name -> tammy.v1.TaxElection
+	29,  // 146: tammy.v1.UpsertTaxElectionResponse.tax_reconciliation:type_name -> tammy.v1.TaxReconciliation
+	30,  // 147: tammy.v1.UpsertTaxElectionResponse.validation:type_name -> tammy.v1.ReturnValidationOutcome
+	78,  // 148: tammy.v1.RemoveTaxElectionRequest.command_context:type_name -> tammy.v1.CommandContext
+	34,  // 149: tammy.v1.RemoveTaxElectionResponse.company_return:type_name -> tammy.v1.CompanyReturn
+	29,  // 150: tammy.v1.RemoveTaxElectionResponse.tax_reconciliation:type_name -> tammy.v1.TaxReconciliation
+	30,  // 151: tammy.v1.RemoveTaxElectionResponse.validation:type_name -> tammy.v1.ReturnValidationOutcome
+	78,  // 152: tammy.v1.ValidateCompanyReturnRequest.command_context:type_name -> tammy.v1.CommandContext
+	34,  // 153: tammy.v1.ValidateCompanyReturnResponse.company_return:type_name -> tammy.v1.CompanyReturn
+	30,  // 154: tammy.v1.ValidateCompanyReturnResponse.validation:type_name -> tammy.v1.ReturnValidationOutcome
+	78,  // 155: tammy.v1.AcknowledgeReturnWarningRequest.command_context:type_name -> tammy.v1.CommandContext
+	34,  // 156: tammy.v1.AcknowledgeReturnWarningResponse.company_return:type_name -> tammy.v1.CompanyReturn
+	31,  // 157: tammy.v1.AcknowledgeReturnWarningResponse.acknowledgement:type_name -> tammy.v1.ValidationAcknowledgement
+	30,  // 158: tammy.v1.AcknowledgeReturnWarningResponse.validation:type_name -> tammy.v1.ReturnValidationOutcome
+	78,  // 159: tammy.v1.DeclareCompanyReturnRequest.command_context:type_name -> tammy.v1.CommandContext
+	34,  // 160: tammy.v1.DeclareCompanyReturnResponse.company_return:type_name -> tammy.v1.CompanyReturn
+	32,  // 161: tammy.v1.DeclareCompanyReturnResponse.declaration:type_name -> tammy.v1.Declaration
+	78,  // 162: tammy.v1.WithdrawCompanyReturnDeclarationRequest.command_context:type_name -> tammy.v1.CommandContext
+	34,  // 163: tammy.v1.WithdrawCompanyReturnDeclarationResponse.company_return:type_name -> tammy.v1.CompanyReturn
+	32,  // 164: tammy.v1.WithdrawCompanyReturnDeclarationResponse.retained_declaration:type_name -> tammy.v1.Declaration
+	78,  // 165: tammy.v1.ExportCompanyReturnPackRequest.command_context:type_name -> tammy.v1.CommandContext
+	14,  // 166: tammy.v1.ExportCompanyReturnPackRequest.kind:type_name -> tammy.v1.CompanyReturnExportKind
+	73,  // 167: tammy.v1.ExportCompanyReturnPackRequest.export_passphrase:type_name -> tammy.v1.SecretInput
+	14,  // 168: tammy.v1.ExportCompanyReturnPackResponse.kind:type_name -> tammy.v1.CompanyReturnExportKind
+	78,  // 169: tammy.v1.CreateCompanyReturnReplacementRequest.command_context:type_name -> tammy.v1.CommandContext
+	34,  // 170: tammy.v1.CreateCompanyReturnReplacementResponse.predecessor:type_name -> tammy.v1.CompanyReturn
+	34,  // 171: tammy.v1.CreateCompanyReturnReplacementResponse.replacement:type_name -> tammy.v1.CompanyReturn
+	78,  // 172: tammy.v1.CreateCompanyReturnAmendmentRequest.command_context:type_name -> tammy.v1.CommandContext
+	34,  // 173: tammy.v1.CreateCompanyReturnAmendmentResponse.effective_original:type_name -> tammy.v1.CompanyReturn
+	34,  // 174: tammy.v1.CreateCompanyReturnAmendmentResponse.amendment:type_name -> tammy.v1.CompanyReturn
+	37,  // 175: tammy.v1.CompanyTaxService.GetCompanyTaxProfile:input_type -> tammy.v1.GetCompanyTaxProfileRequest
+	39,  // 176: tammy.v1.CompanyTaxService.SetCompanyTaxProfile:input_type -> tammy.v1.SetCompanyTaxProfileRequest
+	41,  // 177: tammy.v1.CompanyTaxService.CreateCompanyReturn:input_type -> tammy.v1.CreateCompanyReturnRequest
+	43,  // 178: tammy.v1.CompanyTaxService.GetCompanyReturn:input_type -> tammy.v1.GetCompanyReturnRequest
+	45,  // 179: tammy.v1.CompanyTaxService.ListCompanyReturnFacts:input_type -> tammy.v1.ListCompanyReturnFactsRequest
+	47,  // 180: tammy.v1.CompanyTaxService.SetCompanyReturnInput:input_type -> tammy.v1.SetCompanyReturnInputRequest
+	49,  // 181: tammy.v1.CompanyTaxService.UpsertTaxAdjustment:input_type -> tammy.v1.UpsertTaxAdjustmentRequest
+	51,  // 182: tammy.v1.CompanyTaxService.RemoveTaxAdjustment:input_type -> tammy.v1.RemoveTaxAdjustmentRequest
+	53,  // 183: tammy.v1.CompanyTaxService.UpsertTaxElection:input_type -> tammy.v1.UpsertTaxElectionRequest
+	55,  // 184: tammy.v1.CompanyTaxService.RemoveTaxElection:input_type -> tammy.v1.RemoveTaxElectionRequest
+	57,  // 185: tammy.v1.CompanyTaxService.ValidateCompanyReturn:input_type -> tammy.v1.ValidateCompanyReturnRequest
+	59,  // 186: tammy.v1.CompanyTaxService.AcknowledgeReturnWarning:input_type -> tammy.v1.AcknowledgeReturnWarningRequest
+	61,  // 187: tammy.v1.CompanyTaxService.DeclareCompanyReturn:input_type -> tammy.v1.DeclareCompanyReturnRequest
+	63,  // 188: tammy.v1.CompanyTaxService.WithdrawCompanyReturnDeclaration:input_type -> tammy.v1.WithdrawCompanyReturnDeclarationRequest
+	65,  // 189: tammy.v1.CompanyTaxService.ExportCompanyReturnPack:input_type -> tammy.v1.ExportCompanyReturnPackRequest
+	67,  // 190: tammy.v1.CompanyTaxService.CreateCompanyReturnReplacement:input_type -> tammy.v1.CreateCompanyReturnReplacementRequest
+	69,  // 191: tammy.v1.CompanyTaxService.CreateCompanyReturnAmendment:input_type -> tammy.v1.CreateCompanyReturnAmendmentRequest
+	38,  // 192: tammy.v1.CompanyTaxService.GetCompanyTaxProfile:output_type -> tammy.v1.GetCompanyTaxProfileResponse
+	40,  // 193: tammy.v1.CompanyTaxService.SetCompanyTaxProfile:output_type -> tammy.v1.SetCompanyTaxProfileResponse
+	42,  // 194: tammy.v1.CompanyTaxService.CreateCompanyReturn:output_type -> tammy.v1.CreateCompanyReturnResponse
+	44,  // 195: tammy.v1.CompanyTaxService.GetCompanyReturn:output_type -> tammy.v1.GetCompanyReturnResponse
+	46,  // 196: tammy.v1.CompanyTaxService.ListCompanyReturnFacts:output_type -> tammy.v1.ListCompanyReturnFactsResponse
+	48,  // 197: tammy.v1.CompanyTaxService.SetCompanyReturnInput:output_type -> tammy.v1.SetCompanyReturnInputResponse
+	50,  // 198: tammy.v1.CompanyTaxService.UpsertTaxAdjustment:output_type -> tammy.v1.UpsertTaxAdjustmentResponse
+	52,  // 199: tammy.v1.CompanyTaxService.RemoveTaxAdjustment:output_type -> tammy.v1.RemoveTaxAdjustmentResponse
+	54,  // 200: tammy.v1.CompanyTaxService.UpsertTaxElection:output_type -> tammy.v1.UpsertTaxElectionResponse
+	56,  // 201: tammy.v1.CompanyTaxService.RemoveTaxElection:output_type -> tammy.v1.RemoveTaxElectionResponse
+	58,  // 202: tammy.v1.CompanyTaxService.ValidateCompanyReturn:output_type -> tammy.v1.ValidateCompanyReturnResponse
+	60,  // 203: tammy.v1.CompanyTaxService.AcknowledgeReturnWarning:output_type -> tammy.v1.AcknowledgeReturnWarningResponse
+	62,  // 204: tammy.v1.CompanyTaxService.DeclareCompanyReturn:output_type -> tammy.v1.DeclareCompanyReturnResponse
+	64,  // 205: tammy.v1.CompanyTaxService.WithdrawCompanyReturnDeclaration:output_type -> tammy.v1.WithdrawCompanyReturnDeclarationResponse
+	66,  // 206: tammy.v1.CompanyTaxService.ExportCompanyReturnPack:output_type -> tammy.v1.ExportCompanyReturnPackResponse
+	68,  // 207: tammy.v1.CompanyTaxService.CreateCompanyReturnReplacement:output_type -> tammy.v1.CreateCompanyReturnReplacementResponse
+	70,  // 208: tammy.v1.CompanyTaxService.CreateCompanyReturnAmendment:output_type -> tammy.v1.CreateCompanyReturnAmendmentResponse
+	192, // [192:209] is the sub-list for method output_type
+	175, // [175:192] is the sub-list for method input_type
+	175, // [175:175] is the sub-list for extension type_name
+	175, // [175:175] is the sub-list for extension extendee
+	0,   // [0:175] is the sub-list for field type_name
 }
 
 func init() { file_tammy_v1_company_tax_proto_init() }
@@ -373,19 +6672,34 @@ func file_tammy_v1_company_tax_proto_init() {
 	if File_tammy_v1_company_tax_proto != nil {
 		return
 	}
+	file_tammy_v1_common_proto_init()
+	file_tammy_v1_company_tax_proto_msgTypes[9].OneofWrappers = []any{
+		(*TaxElectionChoice_BooleanValue)(nil),
+		(*TaxElectionChoice_StringValue)(nil),
+		(*TaxElectionChoice_DecimalValue)(nil),
+	}
+	file_tammy_v1_company_tax_proto_msgTypes[11].OneofWrappers = []any{
+		(*ReturnFactValue_StringValue)(nil),
+		(*ReturnFactValue_BooleanValue)(nil),
+		(*ReturnFactValue_IntegerValue)(nil),
+		(*ReturnFactValue_MoneyValue)(nil),
+		(*ReturnFactValue_DecimalValue)(nil),
+		(*ReturnFactValue_DateValue)(nil),
+	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_tammy_v1_company_tax_proto_rawDesc), len(file_tammy_v1_company_tax_proto_rawDesc)),
-			NumEnums:      4,
-			NumMessages:   0,
+			NumEnums:      15,
+			NumMessages:   56,
 			NumExtensions: 0,
-			NumServices:   0,
+			NumServices:   1,
 		},
 		GoTypes:           file_tammy_v1_company_tax_proto_goTypes,
 		DependencyIndexes: file_tammy_v1_company_tax_proto_depIdxs,
 		EnumInfos:         file_tammy_v1_company_tax_proto_enumTypes,
+		MessageInfos:      file_tammy_v1_company_tax_proto_msgTypes,
 	}.Build()
 	File_tammy_v1_company_tax_proto = out.File
 	file_tammy_v1_company_tax_proto_goTypes = nil
