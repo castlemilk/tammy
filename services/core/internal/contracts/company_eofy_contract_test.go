@@ -12,11 +12,13 @@ import (
 	"testing"
 	"time"
 
+	validate "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	"buf.build/go/protovalidate"
 	tammyv1 "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
+	"google.golang.org/protobuf/types/descriptorpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -1429,6 +1431,459 @@ func companyTaxSource() *tammyv1.SourceRef {
 func companyTaxApplicability() *tammyv1.ApplicabilityAnswers {
 	no := tammyv1.RequiredAnswer_REQUIRED_ANSWER_NO
 	return &tammyv1.ApplicabilityAnswers{TofaApplies: no, PsiApplies: no, InterposedEntityElectionApplies: no, ConsolidatedGroupMember: no, ResearchAndDevelopmentIncentive: no, InternationalDealings: no, ReportableTaxPosition: no, LifeInsuranceBusiness: no, CgtScheduleRequired: no, LossesScheduleRequired: no, OtherScheduleRequired: no, FbOrUnsupportedPayrollEffect: no, Division_7AUnresolved: no, UnsupportedInventory: no, UnsupportedMulticurrency: no, UnsupportedCrypto: no}
+}
+
+func TestCompanyReturnSubmissionContractHasExactBoundedSurface(t *testing.T) {
+	file, err := protoregistry.GlobalFiles.FindFileByPath("tammy/v1/company_return_submission.proto")
+	if err != nil {
+		t.Fatalf("company return submission descriptor missing: %v", err)
+	}
+	assertFinancialCloseEnum(t, "SubmissionEnvironment", []string{
+		"SUBMISSION_ENVIRONMENT_UNSPECIFIED", "SUBMISSION_ENVIRONMENT_SIMULATOR", "SUBMISSION_ENVIRONMENT_EVTE", "SUBMISSION_ENVIRONMENT_PRODUCTION",
+	})
+	assertFinancialCloseEnum(t, "SubmissionRetryClassification", []string{
+		"SUBMISSION_RETRY_CLASSIFICATION_UNSPECIFIED", "SUBMISSION_RETRY_CLASSIFICATION_NEVER", "SUBMISSION_RETRY_CLASSIFICATION_SAME_IDENTITY_AFTER_PROVEN_NOT_DISPATCHED", "SUBMISSION_RETRY_CLASSIFICATION_STATUS_OR_RECONCILE_ONLY",
+	})
+
+	stringField := func(name protoreflect.Name) financialCloseFieldContract {
+		return financialCloseScalar(name, protoreflect.StringKind)
+	}
+	bytesField := func(name protoreflect.Name) financialCloseFieldContract {
+		return financialCloseScalar(name, protoreflect.BytesKind)
+	}
+	uintField := func(name protoreflect.Name) financialCloseFieldContract {
+		return financialCloseScalar(name, protoreflect.Uint64Kind)
+	}
+	optionalString := func(name protoreflect.Name) financialCloseFieldContract {
+		return financialCloseOptional(name, protoreflect.StringKind)
+	}
+	optionalBytes := func(name protoreflect.Name) financialCloseFieldContract {
+		return financialCloseOptional(name, protoreflect.BytesKind)
+	}
+	optionalEnum := func(name protoreflect.Name, enum protoreflect.FullName) financialCloseFieldContract {
+		field := financialCloseEnum(name, enum)
+		field.optional = true
+		return field
+	}
+	want := map[protoreflect.Name][]financialCloseFieldContract{
+		"CompanyReturnSubmissionAttempt": {
+			stringField("id"), stringField("return_id"), stringField("declaration_id"), bytesField("report_snapshot_hash"), bytesField("official_payload_hash"),
+			financialCloseEnum("environment", "tammy.v1.SubmissionEnvironment"), bytesField("product_identifier_fingerprint"), stringField("service_id"),
+			financialCloseEnum("operation_type", "tammy.v1.CompanyReturnOperationType"), stringField("operation_id"), stringField("idempotency_identity"),
+			financialCloseEnum("state", "tammy.v1.CompanyReturnAttemptState"), optionalEnum("outcome", "tammy.v1.CompanyReturnOperationOutcome"),
+			financialCloseEnum("retry_classification", "tammy.v1.SubmissionRetryClassification"), optionalBytes("response_hash"),
+			financialCloseMessage("created_at", "google.protobuf.Timestamp", true), financialCloseMessage("updated_at", "google.protobuf.Timestamp", true),
+		},
+		"CompanyReturnSubmissionReceipt": {
+			stringField("id"), stringField("attempt_id"), stringField("encrypted_receipt_ref"), stringField("safe_display_summary"), optionalString("conversation_id"), optionalString("submission_id"),
+			financialCloseMessage("received_at", "google.protobuf.Timestamp", true), bytesField("response_schema_fingerprint"), bytesField("content_hash"),
+		},
+		"CompanyReturnStatusObservation": {
+			stringField("id"), stringField("attempt_id"), financialCloseEnum("operation_type", "tammy.v1.CompanyReturnOperationType"), stringField("stable_result_code"), stringField("safe_status"),
+			financialCloseMessage("observed_at", "google.protobuf.Timestamp", true), bytesField("response_hash"),
+		},
+		"CompanyReturnSubmission": {
+			stringField("return_id"), financialCloseMessage("latest_attempt", "tammy.v1.CompanyReturnSubmissionAttempt", true),
+			financialCloseMessage("receipt", "tammy.v1.CompanyReturnSubmissionReceipt", false), financialCloseRepeated("status_history", protoreflect.MessageKind, "tammy.v1.CompanyReturnStatusObservation"),
+		},
+		"PreLodgeCompanyReturnRequest": {
+			financialCloseMessage("command_context", "tammy.v1.CommandContext", true), stringField("organisation_id"), stringField("return_id"), stringField("declaration_id"), uintField("expected_return_version"),
+		},
+		"PreLodgeCompanyReturnResponse": {
+			financialCloseMessage("company_return", "tammy.v1.CompanyReturn", true), financialCloseMessage("submission", "tammy.v1.CompanyReturnSubmission", true),
+		},
+		"LodgeCompanyReturnRequest": {
+			financialCloseMessage("command_context", "tammy.v1.CommandContext", true), stringField("organisation_id"), stringField("return_id"), stringField("declaration_id"), uintField("expected_return_version"),
+		},
+		"LodgeCompanyReturnResponse": {
+			financialCloseMessage("company_return", "tammy.v1.CompanyReturn", true), financialCloseMessage("submission", "tammy.v1.CompanyReturnSubmission", true),
+		},
+		"GetCompanyReturnSubmissionRequest": {
+			financialCloseMessage("authentication", "tammy.v1.AuthenticationContext", true), stringField("organisation_id"), stringField("return_id"),
+		},
+		"GetCompanyReturnSubmissionResponse": {
+			financialCloseMessage("company_return", "tammy.v1.CompanyReturn", true), financialCloseMessage("submission", "tammy.v1.CompanyReturnSubmission", true),
+		},
+		"RefreshCompanyReturnStatusRequest": {
+			financialCloseMessage("command_context", "tammy.v1.CommandContext", true), stringField("organisation_id"), stringField("return_id"), stringField("attempt_id"), uintField("expected_return_version"),
+		},
+		"RefreshCompanyReturnStatusResponse": {
+			financialCloseMessage("company_return", "tammy.v1.CompanyReturn", true), financialCloseMessage("submission", "tammy.v1.CompanyReturnSubmission", true),
+		},
+		"ReconcileUnknownCompanyReturnSubmissionRequest": {
+			financialCloseMessage("command_context", "tammy.v1.CommandContext", true), stringField("organisation_id"), stringField("return_id"), stringField("attempt_id"), uintField("expected_return_version"),
+		},
+		"ReconcileUnknownCompanyReturnSubmissionResponse": {
+			financialCloseMessage("company_return", "tammy.v1.CompanyReturn", true), financialCloseMessage("submission", "tammy.v1.CompanyReturnSubmission", true),
+		},
+	}
+	assertExactFinancialCloseMessages(t, file, want)
+	assertCompanyReturnSubmissionFieldRules(t, file)
+	assertCompanyReturnSubmissionService(t, file)
+	assertCompanyReturnSubmissionRequestAuthority(t, file)
+	assertCompanyReturnSubmissionResponseGraphCannotReachSecrets(t, file)
+	assertCompanyReturnSubmissionCELRules(t, file)
+}
+
+func assertCompanyReturnSubmissionFieldRules(t *testing.T, file protoreflect.FileDescriptor) {
+	t.Helper()
+	uuid := "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+	stable := "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"
+	uuidFields := map[protoreflect.Name][]protoreflect.Name{
+		"CompanyReturnSubmissionAttempt":                 {"id", "return_id", "declaration_id", "operation_id", "idempotency_identity"},
+		"CompanyReturnSubmissionReceipt":                 {"id", "attempt_id"},
+		"CompanyReturnStatusObservation":                 {"id", "attempt_id"},
+		"CompanyReturnSubmission":                        {"return_id"},
+		"PreLodgeCompanyReturnRequest":                   {"organisation_id", "return_id", "declaration_id"},
+		"LodgeCompanyReturnRequest":                      {"organisation_id", "return_id", "declaration_id"},
+		"GetCompanyReturnSubmissionRequest":              {"organisation_id", "return_id"},
+		"RefreshCompanyReturnStatusRequest":              {"organisation_id", "return_id", "attempt_id"},
+		"ReconcileUnknownCompanyReturnSubmissionRequest": {"organisation_id", "return_id", "attempt_id"},
+	}
+	for messageName, fieldNames := range uuidFields {
+		for _, fieldName := range fieldNames {
+			field := file.Messages().ByName(messageName).Fields().ByName(fieldName)
+			if got := sbrValidationRules(field).GetString_().GetPattern(); got != uuid {
+				t.Errorf("%s UUIDv7 pattern = %q, want %q", field.FullName(), got, uuid)
+			}
+		}
+	}
+	for _, key := range []string{"CompanyReturnSubmissionAttempt.service_id", "CompanyReturnSubmissionReceipt.conversation_id", "CompanyReturnSubmissionReceipt.submission_id", "CompanyReturnStatusObservation.stable_result_code"} {
+		parts := strings.Split(key, ".")
+		field := file.Messages().ByName(protoreflect.Name(parts[0])).Fields().ByName(protoreflect.Name(parts[1]))
+		rules := sbrValidationRules(field).GetString_()
+		if rules.GetMinLen() != 1 || rules.GetMaxLen() != 128 || rules.GetPattern() != stable {
+			t.Errorf("%s stable identifier rules = min %d max %d pattern %q", field.FullName(), rules.GetMinLen(), rules.GetMaxLen(), rules.GetPattern())
+		}
+	}
+	for key, want := range map[string][2]uint64{
+		"CompanyReturnSubmissionReceipt.encrypted_receipt_ref": {1, 128},
+		"CompanyReturnSubmissionReceipt.safe_display_summary":  {1, 2000},
+		"CompanyReturnStatusObservation.safe_status":           {1, 512},
+	} {
+		parts := strings.Split(key, ".")
+		field := file.Messages().ByName(protoreflect.Name(parts[0])).Fields().ByName(protoreflect.Name(parts[1]))
+		rules := sbrValidationRules(field).GetString_()
+		if rules.GetMinLen() != want[0] || rules.GetMaxLen() != want[1] || rules.GetPattern() != "" {
+			t.Errorf("%s string rules = min %d max %d pattern %q", field.FullName(), rules.GetMinLen(), rules.GetMaxLen(), rules.GetPattern())
+		}
+	}
+	for _, key := range []string{"CompanyReturnSubmissionAttempt.report_snapshot_hash", "CompanyReturnSubmissionAttempt.official_payload_hash", "CompanyReturnSubmissionAttempt.product_identifier_fingerprint", "CompanyReturnSubmissionAttempt.response_hash", "CompanyReturnSubmissionReceipt.response_schema_fingerprint", "CompanyReturnSubmissionReceipt.content_hash", "CompanyReturnStatusObservation.response_hash"} {
+		parts := strings.Split(key, ".")
+		field := file.Messages().ByName(protoreflect.Name(parts[0])).Fields().ByName(protoreflect.Name(parts[1]))
+		if got := sbrValidationRules(field).GetBytes().GetLen(); got != 32 {
+			t.Errorf("%s bytes len = %d, want 32", field.FullName(), got)
+		}
+	}
+	for _, key := range []string{"PreLodgeCompanyReturnRequest.expected_return_version", "LodgeCompanyReturnRequest.expected_return_version", "RefreshCompanyReturnStatusRequest.expected_return_version", "ReconcileUnknownCompanyReturnSubmissionRequest.expected_return_version"} {
+		parts := strings.Split(key, ".")
+		field := file.Messages().ByName(protoreflect.Name(parts[0])).Fields().ByName(protoreflect.Name(parts[1]))
+		if got := sbrValidationRules(field).GetUint64().GetGte(); got != 1 {
+			t.Errorf("%s gte = %d, want 1", field.FullName(), got)
+		}
+	}
+	for _, messageName := range []protoreflect.Name{"CompanyReturnSubmissionAttempt", "CompanyReturnStatusObservation"} {
+		message := file.Messages().ByName(messageName)
+		for index := 0; index < message.Fields().Len(); index++ {
+			field := message.Fields().Get(index)
+			if field.Kind() == protoreflect.EnumKind {
+				rules := sbrValidationRules(field).GetEnum()
+				if !rules.GetDefinedOnly() || fmt.Sprint(rules.GetNotIn()) != "[0]" {
+					t.Errorf("%s must be defined_only and reject zero", field.FullName())
+				}
+			}
+		}
+	}
+	history := file.Messages().ByName("CompanyReturnSubmission").Fields().ByName("status_history")
+	if rules := sbrValidationRules(history).GetRepeated(); rules.GetMinItems() != 0 || rules.GetMaxItems() != 200 {
+		t.Errorf("%s repeated rules = min %d max %d, want 0/200", history.FullName(), rules.GetMinItems(), rules.GetMaxItems())
+	}
+}
+
+func assertCompanyReturnSubmissionService(t *testing.T, file protoreflect.FileDescriptor) {
+	t.Helper()
+	if file.Services().Len() != 1 {
+		t.Fatalf("company return submission service count = %d, want 1", file.Services().Len())
+	}
+	service := file.Services().ByName("CompanyReturnSubmissionService")
+	if service == nil {
+		t.Fatal("tammy.v1.CompanyReturnSubmissionService missing")
+	}
+	want := []string{"PreLodgeCompanyReturn", "LodgeCompanyReturn", "GetCompanyReturnSubmission", "RefreshCompanyReturnStatus", "ReconcileUnknownCompanyReturnSubmission"}
+	if service.Methods().Len() != len(want) {
+		t.Fatalf("CompanyReturnSubmissionService method count = %d, want %d", service.Methods().Len(), len(want))
+	}
+	for index, name := range want {
+		method := service.Methods().Get(index)
+		if method.FullName() != protoreflect.FullName("tammy.v1.CompanyReturnSubmissionService."+name) || method.Input().FullName() != protoreflect.FullName("tammy.v1."+name+"Request") || method.Output().FullName() != protoreflect.FullName("tammy.v1."+name+"Response") {
+			t.Errorf("CompanyReturnSubmissionService method %d = %s(%s) returns %s", index, method.FullName(), method.Input().FullName(), method.Output().FullName())
+		}
+		if method.IsStreamingClient() || method.IsStreamingServer() {
+			t.Errorf("%s must be unary", method.FullName())
+		}
+	}
+}
+
+func assertCompanyReturnSubmissionRequestAuthority(t *testing.T, file protoreflect.FileDescriptor) {
+	t.Helper()
+	service := file.Services().ByName("CompanyReturnSubmissionService")
+	for methodIndex := 0; methodIndex < service.Methods().Len(); methodIndex++ {
+		method := service.Methods().Get(methodIndex)
+		for fieldIndex := 0; fieldIndex < method.Input().Fields().Len(); fieldIndex++ {
+			field := method.Input().Fields().Get(fieldIndex)
+			name := strings.ToLower(string(field.Name()))
+			for _, prohibited := range []string{"environment", "product_id", "product_identifier", "service_id", "abn", "endpoint", "profile_fingerprint", "bundle_fingerprint", "payload", "credential", "password", "path"} {
+				if strings.Contains(name, prohibited) {
+					t.Errorf("%s request exposes forbidden caller authority field %q", method.FullName(), field.Name())
+				}
+			}
+		}
+	}
+}
+
+func assertCompanyReturnSubmissionCELRules(t *testing.T, file protoreflect.FileDescriptor) {
+	t.Helper()
+	receiptState := "has(this.company_return) && has(this.submission) && (has(this.submission.receipt) == (this.company_return.state == 10)) && (!has(this.submission.receipt) || (has(this.submission.latest_attempt) && this.submission.latest_attempt.operation_type == 2 && has(this.submission.latest_attempt.outcome) && this.submission.latest_attempt.outcome == 1))"
+	want := map[protoreflect.Name]map[string]string{
+		"CompanyReturnSubmissionAttempt": {
+			"company_return_submission.attempt.outcome_state": "(this.state in [1, 2, 3, 7] && !has(this.outcome)) || (this.state == 5 && has(this.outcome) && this.outcome == 4) || (this.state in [4, 6] && has(this.outcome) && this.outcome in [1, 2, 3])",
+		},
+		"CompanyReturnSubmissionReceipt": {
+			"company_return_submission.receipt.external_identifier": "has(this.conversation_id) || has(this.submission_id)",
+		},
+		"PreLodgeCompanyReturnRequest": {
+			"company_return_submission.prelodge.fresh_factor": "has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'company_return_prelodge'",
+		},
+		"PreLodgeCompanyReturnResponse": {
+			"company_return_submission.prelodge.result": "has(this.company_return) && has(this.submission) && has(this.submission.latest_attempt) && this.submission.latest_attempt.operation_type == 1 && this.company_return.state != 10 && !has(this.submission.receipt)",
+		},
+		"LodgeCompanyReturnRequest": {
+			"company_return_submission.lodge.fresh_factor": "has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'company_return_lodge'",
+		},
+		"LodgeCompanyReturnResponse": {
+			"company_return_submission.lodge.operation":     "has(this.submission) && has(this.submission.latest_attempt) && this.submission.latest_attempt.operation_type == 2",
+			"company_return_submission.lodge.receipt_state": receiptState,
+		},
+		"GetCompanyReturnSubmissionResponse": {
+			"company_return_submission.get.receipt_state": receiptState,
+		},
+		"RefreshCompanyReturnStatusResponse": {
+			"company_return_submission.refresh.receipt_state": receiptState,
+		},
+		"ReconcileUnknownCompanyReturnSubmissionRequest": {
+			"company_return_submission.reconcile.fresh_factor": "has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'company_return_reconcile_unknown'",
+		},
+		"ReconcileUnknownCompanyReturnSubmissionResponse": {
+			"company_return_submission.reconcile.receipt_state": receiptState,
+		},
+	}
+	for messageName, expected := range want {
+		message := file.Messages().ByName(messageName)
+		options, ok := message.Options().(*descriptorpb.MessageOptions)
+		if !ok || !proto.HasExtension(options, validate.E_Message) {
+			t.Errorf("%s has no message validation rules", message.FullName())
+			continue
+		}
+		rules, ok := proto.GetExtension(options, validate.E_Message).(*validate.MessageRules)
+		if !ok {
+			t.Errorf("%s message validation rules have unexpected type", message.FullName())
+			continue
+		}
+		got := map[string]string{}
+		for _, rule := range rules.GetCel() {
+			got[rule.GetId()] = rule.GetExpression()
+		}
+		if fmt.Sprint(got) != fmt.Sprint(expected) {
+			t.Errorf("%s CEL rules = %v, want %v", message.FullName(), got, expected)
+		}
+	}
+}
+
+func assertCompanyReturnSubmissionResponseGraphCannotReachSecrets(t *testing.T, file protoreflect.FileDescriptor) {
+	t.Helper()
+	service := file.Services().ByName("CompanyReturnSubmissionService")
+	for methodIndex := 0; methodIndex < service.Methods().Len(); methodIndex++ {
+		method := service.Methods().Get(methodIndex)
+		seen := map[protoreflect.FullName]bool{}
+		var walk func(protoreflect.MessageDescriptor)
+		walk = func(message protoreflect.MessageDescriptor) {
+			if seen[message.FullName()] {
+				return
+			}
+			seen[message.FullName()] = true
+			for fieldIndex := 0; fieldIndex < message.Fields().Len(); fieldIndex++ {
+				field := message.Fields().Get(fieldIndex)
+				if field.Kind() != protoreflect.MessageKind {
+					continue
+				}
+				if field.Message().FullName() == "tammy.v1.SecretInput" {
+					t.Errorf("%s response graph reaches SecretInput through %s", method.FullName(), field.FullName())
+					continue
+				}
+				walk(field.Message())
+			}
+		}
+		walk(method.Output())
+	}
+}
+
+func TestCompanyReturnSubmissionProtovalidateEnforcesAttemptOutcomeState(t *testing.T) {
+	valid := []*tammyv1.CompanyReturnSubmissionAttempt{
+		validCompanyReturnSubmissionAttempt(tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_PRELODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_DISPATCHING, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_UNSPECIFIED),
+		validCompanyReturnSubmissionAttempt(tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_LODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_OUTCOME_UNKNOWN, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_OUTCOME_UNKNOWN),
+		validCompanyReturnSubmissionAttempt(tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_LODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_COMMITTED, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_REJECTED),
+		validCompanyReturnSubmissionAttempt(tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_LODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_COMMITTED, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_SUCCESS),
+	}
+	for _, attempt := range valid {
+		if err := protovalidate.Validate(attempt); err != nil {
+			t.Fatalf("valid %s/%s attempt rejected: %v", attempt.State, attempt.GetOutcome(), err)
+		}
+	}
+
+	invalid := map[string]*tammyv1.CompanyReturnSubmissionAttempt{
+		"outcome before dispatch":               validCompanyReturnSubmissionAttempt(tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_PRELODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_PREPARED, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_SUCCESS),
+		"missing outcome after recorded result": validCompanyReturnSubmissionAttempt(tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_LODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_RESULT_RECORDED, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_UNSPECIFIED),
+		"unknown outcome on result recorded":    validCompanyReturnSubmissionAttempt(tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_LODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_RESULT_RECORDED, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_OUTCOME_UNKNOWN),
+		"unknown outcome on committed":          validCompanyReturnSubmissionAttempt(tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_LODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_COMMITTED, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_OUTCOME_UNKNOWN),
+		"definitive outcome on unknown state":   validCompanyReturnSubmissionAttempt(tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_LODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_OUTCOME_UNKNOWN, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_REJECTED),
+	}
+	for name, attempt := range invalid {
+		t.Run(name, func(t *testing.T) {
+			assertFinancialCloseValidationRejects(t, name, attempt)
+		})
+	}
+}
+
+func TestCompanyReturnSubmissionProtovalidateEnforcesReceiptAuthority(t *testing.T) {
+	missingExternalID := validCompanyReturnSubmissionReceipt()
+	missingExternalID.ConversationId = nil
+	missingExternalID.SubmissionId = nil
+	assertFinancialCloseValidationRejects(t, "receipt without an external identifier", missingExternalID)
+
+	preLodgeDelivered := &tammyv1.PreLodgeCompanyReturnResponse{
+		CompanyReturn: validCompanyReturnInState(tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_DELIVERED),
+		Submission: validCompanyReturnSubmission(
+			validCompanyReturnSubmissionAttempt(tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_PRELODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_COMMITTED, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_SUCCESS),
+			validCompanyReturnSubmissionReceipt(),
+		),
+	}
+	assertFinancialCloseValidationRejects(t, "pre-lodge delivered with receipt", preLodgeDelivered)
+
+	deliveredWithoutReceipt := &tammyv1.LodgeCompanyReturnResponse{
+		CompanyReturn: validCompanyReturnInState(tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_DELIVERED),
+		Submission: validCompanyReturnSubmission(
+			validCompanyReturnSubmissionAttempt(tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_LODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_COMMITTED, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_SUCCESS),
+			nil,
+		),
+	}
+	assertFinancialCloseValidationRejects(t, "delivered lodge without receipt", deliveredWithoutReceipt)
+
+	receiptWithoutDelivery := &tammyv1.LodgeCompanyReturnResponse{
+		CompanyReturn: validCompanyReturnInState(tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_LODGE_PENDING),
+		Submission: validCompanyReturnSubmission(
+			validCompanyReturnSubmissionAttempt(tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_LODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_COMMITTED, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_SUCCESS),
+			validCompanyReturnSubmissionReceipt(),
+		),
+	}
+	assertFinancialCloseValidationRejects(t, "receipt without delivered lodge", receiptWithoutDelivery)
+}
+
+func TestCompanyReturnSubmissionProtovalidateAcceptsBoundedLifecycleFixtures(t *testing.T) {
+	fixtures := map[string]proto.Message{
+		"pending": &tammyv1.PreLodgeCompanyReturnResponse{
+			CompanyReturn: validCompanyReturnInState(tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_PRELODGE_PENDING),
+			Submission: validCompanyReturnSubmission(
+				validCompanyReturnSubmissionAttempt(tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_PRELODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_DISPATCHING, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_UNSPECIFIED),
+				nil,
+			),
+		},
+		"unknown": &tammyv1.LodgeCompanyReturnResponse{
+			CompanyReturn: validCompanyReturnInState(tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_LODGE_OUTCOME_UNKNOWN),
+			Submission: validCompanyReturnSubmission(
+				validCompanyReturnSubmissionAttempt(tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_LODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_OUTCOME_UNKNOWN, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_OUTCOME_UNKNOWN),
+				nil,
+			),
+		},
+		"rejected": &tammyv1.LodgeCompanyReturnResponse{
+			CompanyReturn: validCompanyReturnInState(tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_LODGE_REJECTED),
+			Submission: validCompanyReturnSubmission(
+				validCompanyReturnSubmissionAttempt(tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_LODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_COMMITTED, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_REJECTED),
+				nil,
+			),
+		},
+		"delivered": &tammyv1.LodgeCompanyReturnResponse{
+			CompanyReturn: validCompanyReturnInState(tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_DELIVERED),
+			Submission: validCompanyReturnSubmission(
+				validCompanyReturnSubmissionAttempt(tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_LODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_COMMITTED, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_SUCCESS),
+				validCompanyReturnSubmissionReceipt(),
+			),
+		},
+	}
+	for name, fixture := range fixtures {
+		t.Run(name, func(t *testing.T) {
+			if err := protovalidate.Validate(fixture); err != nil {
+				t.Fatalf("valid %s fixture rejected: %v", name, err)
+			}
+		})
+	}
+}
+
+func TestCompanyReturnSubmissionProtovalidateRequiresExactFreshFactorPurposes(t *testing.T) {
+	tests := []struct {
+		name, purpose string
+		build         func(*tammyv1.CommandContext) proto.Message
+	}{
+		{"pre-lodge", "company_return_prelodge", func(context *tammyv1.CommandContext) proto.Message {
+			return &tammyv1.PreLodgeCompanyReturnRequest{CommandContext: context, OrganisationId: financialCloseID(), ReturnId: financialCloseID(), DeclarationId: financialCloseID(), ExpectedReturnVersion: 1}
+		}},
+		{"lodge", "company_return_lodge", func(context *tammyv1.CommandContext) proto.Message {
+			return &tammyv1.LodgeCompanyReturnRequest{CommandContext: context, OrganisationId: financialCloseID(), ReturnId: financialCloseID(), DeclarationId: financialCloseID(), ExpectedReturnVersion: 1}
+		}},
+		{"reconcile", "company_return_reconcile_unknown", func(context *tammyv1.CommandContext) proto.Message {
+			return &tammyv1.ReconcileUnknownCompanyReturnSubmissionRequest{CommandContext: context, OrganisationId: financialCloseID(), ReturnId: financialCloseID(), AttemptId: financialCloseID(), ExpectedReturnVersion: 1}
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if err := protovalidate.Validate(test.build(validFinancialCloseCommandContext(test.purpose))); err != nil {
+				t.Fatalf("valid request rejected: %v", err)
+			}
+			assertFinancialCloseValidationRejects(t, "missing fresh factor", test.build(validFinancialCloseCommandContext("")))
+			assertFinancialCloseValidationRejects(t, "wrong fresh-factor purpose", test.build(validFinancialCloseCommandContext(test.purpose+"_wrong")))
+		})
+	}
+}
+
+func validCompanyReturnSubmissionAttempt(operation tammyv1.CompanyReturnOperationType, state tammyv1.CompanyReturnAttemptState, outcome tammyv1.CompanyReturnOperationOutcome) *tammyv1.CompanyReturnSubmissionAttempt {
+	attempt := &tammyv1.CompanyReturnSubmissionAttempt{
+		Id: financialCloseID(), ReturnId: financialCloseID(), DeclarationId: financialCloseID(), ReportSnapshotHash: financialCloseHash(), OfficialPayloadHash: financialCloseHash(),
+		Environment: tammyv1.SubmissionEnvironment_SUBMISSION_ENVIRONMENT_SIMULATOR, ProductIdentifierFingerprint: financialCloseHash(), ServiceId: "CompanyReturn.2026",
+		OperationType: operation, OperationId: financialCloseID(), IdempotencyIdentity: financialCloseID(), State: state,
+		RetryClassification: tammyv1.SubmissionRetryClassification_SUBMISSION_RETRY_CLASSIFICATION_NEVER, CreatedAt: financialCloseTimestamp(), UpdatedAt: financialCloseTimestamp(),
+	}
+	if outcome != tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_UNSPECIFIED {
+		attempt.Outcome = &outcome
+		attempt.ResponseHash = financialCloseHash()
+	}
+	return attempt
+}
+
+func validCompanyReturnSubmissionReceipt() *tammyv1.CompanyReturnSubmissionReceipt {
+	conversationID := "conversation-2026"
+	return &tammyv1.CompanyReturnSubmissionReceipt{
+		Id: financialCloseID(), AttemptId: financialCloseID(), EncryptedReceiptRef: "receipt/2026/opaque", SafeDisplaySummary: "Accepted by the official service",
+		ConversationId: &conversationID, ReceivedAt: financialCloseTimestamp(), ResponseSchemaFingerprint: financialCloseHash(), ContentHash: financialCloseHash(),
+	}
+}
+
+func validCompanyReturnSubmission(attempt *tammyv1.CompanyReturnSubmissionAttempt, receipt *tammyv1.CompanyReturnSubmissionReceipt) *tammyv1.CompanyReturnSubmission {
+	return &tammyv1.CompanyReturnSubmission{ReturnId: financialCloseID(), LatestAttempt: attempt, Receipt: receipt}
+}
+
+func validCompanyReturnInState(state tammyv1.CompanyReturnState) *tammyv1.CompanyReturn {
+	companyReturn := validCompanyReturn()
+	companyReturn.State = state
+	return companyReturn
 }
 
 type companyEOFYTransitionFixture struct {

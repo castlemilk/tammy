@@ -2,7 +2,9 @@ edition = "2023";
 
 package tammy.v1;
 
-// buf:lint:ignore IMPORT_USED -- Task 1 freezes the required dependency direction before Task 4 adds the fields that consume the shared operation enums.
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+import "tammy/v1/common.proto";
 import "tammy/v1/company_tax.proto";
 
 option features.field_presence = IMPLICIT;
@@ -33,4 +35,260 @@ enum CompanyReturnAttemptState {
 
   // COMPANY_RETURN_ATTEMPT_STATE_ABORTED is a terminal retained attempt with proof that no request was accepted.
   COMPANY_RETURN_ATTEMPT_STATE_ABORTED = 7;
+}
+
+// SubmissionEnvironment identifies the installed, signed delivery environment selected by the trusted core.
+enum SubmissionEnvironment {
+  SUBMISSION_ENVIRONMENT_UNSPECIFIED = 0;
+  SUBMISSION_ENVIRONMENT_SIMULATOR = 1;
+  SUBMISSION_ENVIRONMENT_EVTE = 2;
+  SUBMISSION_ENVIRONMENT_PRODUCTION = 3;
+}
+
+// SubmissionRetryClassification states the only safe follow-up for a durable attempt.
+enum SubmissionRetryClassification {
+  SUBMISSION_RETRY_CLASSIFICATION_UNSPECIFIED = 0;
+  SUBMISSION_RETRY_CLASSIFICATION_NEVER = 1;
+  SUBMISSION_RETRY_CLASSIFICATION_SAME_IDENTITY_AFTER_PROVEN_NOT_DISPATCHED = 2;
+  SUBMISSION_RETRY_CLASSIFICATION_STATUS_OR_RECONCILE_ONLY = 3;
+}
+
+message CompanyReturnSubmissionAttempt {
+  option (buf.validate.message).cel = {
+    id: "company_return_submission.attempt.outcome_state"
+    message: "attempt outcome must match its durable state"
+    expression: "(this.state in [1, 2, 3, 7] && !has(this.outcome)) || (this.state == 5 && has(this.outcome) && this.outcome == 4) || (this.state in [4, 6] && has(this.outcome) && this.outcome in [1, 2, 3])"
+  };
+
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string return_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string declaration_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  bytes report_snapshot_hash = 4 [(buf.validate.field).bytes.len = 32];
+  bytes official_payload_hash = 5 [(buf.validate.field).bytes.len = 32];
+  SubmissionEnvironment environment = 6 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  bytes product_identifier_fingerprint = 7 [(buf.validate.field).bytes.len = 32];
+  string service_id = 8 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+    pattern: "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"
+  }];
+  CompanyReturnOperationType operation_type = 9 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  string operation_id = 10 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string idempotency_identity = 11 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  CompanyReturnAttemptState state = 12 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  CompanyReturnOperationOutcome outcome = 13 [
+    features.field_presence = EXPLICIT,
+    (buf.validate.field).enum = {
+      defined_only: true
+      not_in: 0
+    }
+  ];
+  SubmissionRetryClassification retry_classification = 14 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  bytes response_hash = 15 [
+    features.field_presence = EXPLICIT,
+    (buf.validate.field).bytes.len = 32
+  ];
+  google.protobuf.Timestamp created_at = 16 [(buf.validate.field).required = true];
+  google.protobuf.Timestamp updated_at = 17 [(buf.validate.field).required = true];
+}
+
+message CompanyReturnSubmissionReceipt {
+  option (buf.validate.message).cel = {
+    id: "company_return_submission.receipt.external_identifier"
+    message: "receipt requires at least one official external identifier"
+    expression: "has(this.conversation_id) || has(this.submission_id)"
+  };
+
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string attempt_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string encrypted_receipt_ref = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+  }];
+  string safe_display_summary = 4 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 2000
+  }];
+  string conversation_id = 5 [
+    features.field_presence = EXPLICIT,
+    (buf.validate.field).string = {
+      min_len: 1
+      max_len: 128
+      pattern: "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"
+    }
+  ];
+  string submission_id = 6 [
+    features.field_presence = EXPLICIT,
+    (buf.validate.field).string = {
+      min_len: 1
+      max_len: 128
+      pattern: "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"
+    }
+  ];
+  google.protobuf.Timestamp received_at = 7 [(buf.validate.field).required = true];
+  bytes response_schema_fingerprint = 8 [(buf.validate.field).bytes.len = 32];
+  bytes content_hash = 9 [(buf.validate.field).bytes.len = 32];
+}
+
+message CompanyReturnStatusObservation {
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string attempt_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  CompanyReturnOperationType operation_type = 3 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  string stable_result_code = 4 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+    pattern: "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"
+  }];
+  string safe_status = 5 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 512
+  }];
+  google.protobuf.Timestamp observed_at = 6 [(buf.validate.field).required = true];
+  bytes response_hash = 7 [(buf.validate.field).bytes.len = 32];
+}
+
+message CompanyReturnSubmission {
+  string return_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  CompanyReturnSubmissionAttempt latest_attempt = 2 [(buf.validate.field).required = true];
+  CompanyReturnSubmissionReceipt receipt = 3;
+  repeated CompanyReturnStatusObservation status_history = 4 [(buf.validate.field).repeated.max_items = 200];
+}
+
+message PreLodgeCompanyReturnRequest {
+  option (buf.validate.message).cel = {
+    id: "company_return_submission.prelodge.fresh_factor"
+    message: "pre-lodge requires a purpose-bound fresh factor"
+    expression: "has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'company_return_prelodge'"
+  };
+
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string return_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string declaration_id = 4 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 expected_return_version = 5 [(buf.validate.field).uint64.gte = 1];
+}
+
+message PreLodgeCompanyReturnResponse {
+  option (buf.validate.message).cel = {
+    id: "company_return_submission.prelodge.result"
+    message: "pre-lodge never delivers or creates a receipt and retains its original operation type"
+    expression: "has(this.company_return) && has(this.submission) && has(this.submission.latest_attempt) && this.submission.latest_attempt.operation_type == 1 && this.company_return.state != 10 && !has(this.submission.receipt)"
+  };
+
+  CompanyReturn company_return = 1 [(buf.validate.field).required = true];
+  CompanyReturnSubmission submission = 2 [(buf.validate.field).required = true];
+}
+
+message LodgeCompanyReturnRequest {
+  option (buf.validate.message).cel = {
+    id: "company_return_submission.lodge.fresh_factor"
+    message: "lodgment requires a purpose-bound fresh factor"
+    expression: "has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'company_return_lodge'"
+  };
+
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string return_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string declaration_id = 4 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 expected_return_version = 5 [(buf.validate.field).uint64.gte = 1];
+}
+
+message LodgeCompanyReturnResponse {
+  option (buf.validate.message).cel = {
+    id: "company_return_submission.lodge.operation"
+    message: "lodgment response retains the lodge operation type"
+    expression: "has(this.submission) && has(this.submission.latest_attempt) && this.submission.latest_attempt.operation_type == 2"
+  };
+  option (buf.validate.message).cel = {
+    id: "company_return_submission.lodge.receipt_state"
+    message: "a receipt exists exactly for an accepted delivered lodge"
+    expression: "has(this.company_return) && has(this.submission) && (has(this.submission.receipt) == (this.company_return.state == 10)) && (!has(this.submission.receipt) || (has(this.submission.latest_attempt) && this.submission.latest_attempt.operation_type == 2 && has(this.submission.latest_attempt.outcome) && this.submission.latest_attempt.outcome == 1))"
+  };
+
+  CompanyReturn company_return = 1 [(buf.validate.field).required = true];
+  CompanyReturnSubmission submission = 2 [(buf.validate.field).required = true];
+}
+
+message GetCompanyReturnSubmissionRequest {
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string return_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+}
+
+message GetCompanyReturnSubmissionResponse {
+  option (buf.validate.message).cel = {
+    id: "company_return_submission.get.receipt_state"
+    message: "a receipt exists exactly for an accepted delivered lodge"
+    expression: "has(this.company_return) && has(this.submission) && (has(this.submission.receipt) == (this.company_return.state == 10)) && (!has(this.submission.receipt) || (has(this.submission.latest_attempt) && this.submission.latest_attempt.operation_type == 2 && has(this.submission.latest_attempt.outcome) && this.submission.latest_attempt.outcome == 1))"
+  };
+
+  CompanyReturn company_return = 1 [(buf.validate.field).required = true];
+  CompanyReturnSubmission submission = 2 [(buf.validate.field).required = true];
+}
+
+message RefreshCompanyReturnStatusRequest {
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string return_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string attempt_id = 4 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 expected_return_version = 5 [(buf.validate.field).uint64.gte = 1];
+}
+
+message RefreshCompanyReturnStatusResponse {
+  option (buf.validate.message).cel = {
+    id: "company_return_submission.refresh.receipt_state"
+    message: "a receipt exists exactly for an accepted delivered lodge"
+    expression: "has(this.company_return) && has(this.submission) && (has(this.submission.receipt) == (this.company_return.state == 10)) && (!has(this.submission.receipt) || (has(this.submission.latest_attempt) && this.submission.latest_attempt.operation_type == 2 && has(this.submission.latest_attempt.outcome) && this.submission.latest_attempt.outcome == 1))"
+  };
+
+  CompanyReturn company_return = 1 [(buf.validate.field).required = true];
+  CompanyReturnSubmission submission = 2 [(buf.validate.field).required = true];
+}
+
+message ReconcileUnknownCompanyReturnSubmissionRequest {
+  option (buf.validate.message).cel = {
+    id: "company_return_submission.reconcile.fresh_factor"
+    message: "unknown-outcome reconciliation requires a purpose-bound fresh factor"
+    expression: "has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'company_return_reconcile_unknown'"
+  };
+
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string return_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string attempt_id = 4 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 expected_return_version = 5 [(buf.validate.field).uint64.gte = 1];
+}
+
+message ReconcileUnknownCompanyReturnSubmissionResponse {
+  option (buf.validate.message).cel = {
+    id: "company_return_submission.reconcile.receipt_state"
+    message: "a receipt exists exactly for an accepted delivered lodge"
+    expression: "has(this.company_return) && has(this.submission) && (has(this.submission.receipt) == (this.company_return.state == 10)) && (!has(this.submission.receipt) || (has(this.submission.latest_attempt) && this.submission.latest_attempt.operation_type == 2 && has(this.submission.latest_attempt.outcome) && this.submission.latest_attempt.outcome == 1))"
+  };
+
+  CompanyReturn company_return = 1 [(buf.validate.field).required = true];
+  CompanyReturnSubmission submission = 2 [(buf.validate.field).required = true];
+}
+
+service CompanyReturnSubmissionService {
+  rpc PreLodgeCompanyReturn(PreLodgeCompanyReturnRequest) returns (PreLodgeCompanyReturnResponse);
+  rpc LodgeCompanyReturn(LodgeCompanyReturnRequest) returns (LodgeCompanyReturnResponse);
+  rpc GetCompanyReturnSubmission(GetCompanyReturnSubmissionRequest) returns (GetCompanyReturnSubmissionResponse);
+  rpc RefreshCompanyReturnStatus(RefreshCompanyReturnStatusRequest) returns (RefreshCompanyReturnStatusResponse);
+  rpc ReconcileUnknownCompanyReturnSubmission(ReconcileUnknownCompanyReturnSubmissionRequest) returns (ReconcileUnknownCompanyReturnSubmissionResponse);
 }

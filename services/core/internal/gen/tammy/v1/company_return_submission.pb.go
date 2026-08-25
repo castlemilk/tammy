@@ -7,8 +7,10 @@
 package tammyv1
 
 import (
+	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -94,11 +96,1305 @@ func (CompanyReturnAttemptState) EnumDescriptor() ([]byte, []int) {
 	return file_tammy_v1_company_return_submission_proto_rawDescGZIP(), []int{0}
 }
 
+// SubmissionEnvironment identifies the installed, signed delivery environment selected by the trusted core.
+type SubmissionEnvironment int32
+
+const (
+	SubmissionEnvironment_SUBMISSION_ENVIRONMENT_UNSPECIFIED SubmissionEnvironment = 0
+	SubmissionEnvironment_SUBMISSION_ENVIRONMENT_SIMULATOR   SubmissionEnvironment = 1
+	SubmissionEnvironment_SUBMISSION_ENVIRONMENT_EVTE        SubmissionEnvironment = 2
+	SubmissionEnvironment_SUBMISSION_ENVIRONMENT_PRODUCTION  SubmissionEnvironment = 3
+)
+
+// Enum value maps for SubmissionEnvironment.
+var (
+	SubmissionEnvironment_name = map[int32]string{
+		0: "SUBMISSION_ENVIRONMENT_UNSPECIFIED",
+		1: "SUBMISSION_ENVIRONMENT_SIMULATOR",
+		2: "SUBMISSION_ENVIRONMENT_EVTE",
+		3: "SUBMISSION_ENVIRONMENT_PRODUCTION",
+	}
+	SubmissionEnvironment_value = map[string]int32{
+		"SUBMISSION_ENVIRONMENT_UNSPECIFIED": 0,
+		"SUBMISSION_ENVIRONMENT_SIMULATOR":   1,
+		"SUBMISSION_ENVIRONMENT_EVTE":        2,
+		"SUBMISSION_ENVIRONMENT_PRODUCTION":  3,
+	}
+)
+
+func (x SubmissionEnvironment) Enum() *SubmissionEnvironment {
+	p := new(SubmissionEnvironment)
+	*p = x
+	return p
+}
+
+func (x SubmissionEnvironment) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (SubmissionEnvironment) Descriptor() protoreflect.EnumDescriptor {
+	return file_tammy_v1_company_return_submission_proto_enumTypes[1].Descriptor()
+}
+
+func (SubmissionEnvironment) Type() protoreflect.EnumType {
+	return &file_tammy_v1_company_return_submission_proto_enumTypes[1]
+}
+
+func (x SubmissionEnvironment) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use SubmissionEnvironment.Descriptor instead.
+func (SubmissionEnvironment) EnumDescriptor() ([]byte, []int) {
+	return file_tammy_v1_company_return_submission_proto_rawDescGZIP(), []int{1}
+}
+
+// SubmissionRetryClassification states the only safe follow-up for a durable attempt.
+type SubmissionRetryClassification int32
+
+const (
+	SubmissionRetryClassification_SUBMISSION_RETRY_CLASSIFICATION_UNSPECIFIED                               SubmissionRetryClassification = 0
+	SubmissionRetryClassification_SUBMISSION_RETRY_CLASSIFICATION_NEVER                                     SubmissionRetryClassification = 1
+	SubmissionRetryClassification_SUBMISSION_RETRY_CLASSIFICATION_SAME_IDENTITY_AFTER_PROVEN_NOT_DISPATCHED SubmissionRetryClassification = 2
+	SubmissionRetryClassification_SUBMISSION_RETRY_CLASSIFICATION_STATUS_OR_RECONCILE_ONLY                  SubmissionRetryClassification = 3
+)
+
+// Enum value maps for SubmissionRetryClassification.
+var (
+	SubmissionRetryClassification_name = map[int32]string{
+		0: "SUBMISSION_RETRY_CLASSIFICATION_UNSPECIFIED",
+		1: "SUBMISSION_RETRY_CLASSIFICATION_NEVER",
+		2: "SUBMISSION_RETRY_CLASSIFICATION_SAME_IDENTITY_AFTER_PROVEN_NOT_DISPATCHED",
+		3: "SUBMISSION_RETRY_CLASSIFICATION_STATUS_OR_RECONCILE_ONLY",
+	}
+	SubmissionRetryClassification_value = map[string]int32{
+		"SUBMISSION_RETRY_CLASSIFICATION_UNSPECIFIED":                               0,
+		"SUBMISSION_RETRY_CLASSIFICATION_NEVER":                                     1,
+		"SUBMISSION_RETRY_CLASSIFICATION_SAME_IDENTITY_AFTER_PROVEN_NOT_DISPATCHED": 2,
+		"SUBMISSION_RETRY_CLASSIFICATION_STATUS_OR_RECONCILE_ONLY":                  3,
+	}
+)
+
+func (x SubmissionRetryClassification) Enum() *SubmissionRetryClassification {
+	p := new(SubmissionRetryClassification)
+	*p = x
+	return p
+}
+
+func (x SubmissionRetryClassification) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (SubmissionRetryClassification) Descriptor() protoreflect.EnumDescriptor {
+	return file_tammy_v1_company_return_submission_proto_enumTypes[2].Descriptor()
+}
+
+func (SubmissionRetryClassification) Type() protoreflect.EnumType {
+	return &file_tammy_v1_company_return_submission_proto_enumTypes[2]
+}
+
+func (x SubmissionRetryClassification) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use SubmissionRetryClassification.Descriptor instead.
+func (SubmissionRetryClassification) EnumDescriptor() ([]byte, []int) {
+	return file_tammy_v1_company_return_submission_proto_rawDescGZIP(), []int{2}
+}
+
+type CompanyReturnSubmissionAttempt struct {
+	state                        protoimpl.MessageState         `protogen:"open.v1"`
+	Id                           string                         `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
+	ReturnId                     string                         `protobuf:"bytes,2,opt,name=return_id,json=returnId" json:"return_id,omitempty"`
+	DeclarationId                string                         `protobuf:"bytes,3,opt,name=declaration_id,json=declarationId" json:"declaration_id,omitempty"`
+	ReportSnapshotHash           []byte                         `protobuf:"bytes,4,opt,name=report_snapshot_hash,json=reportSnapshotHash" json:"report_snapshot_hash,omitempty"`
+	OfficialPayloadHash          []byte                         `protobuf:"bytes,5,opt,name=official_payload_hash,json=officialPayloadHash" json:"official_payload_hash,omitempty"`
+	Environment                  SubmissionEnvironment          `protobuf:"varint,6,opt,name=environment,enum=tammy.v1.SubmissionEnvironment" json:"environment,omitempty"`
+	ProductIdentifierFingerprint []byte                         `protobuf:"bytes,7,opt,name=product_identifier_fingerprint,json=productIdentifierFingerprint" json:"product_identifier_fingerprint,omitempty"`
+	ServiceId                    string                         `protobuf:"bytes,8,opt,name=service_id,json=serviceId" json:"service_id,omitempty"`
+	OperationType                CompanyReturnOperationType     `protobuf:"varint,9,opt,name=operation_type,json=operationType,enum=tammy.v1.CompanyReturnOperationType" json:"operation_type,omitempty"`
+	OperationId                  string                         `protobuf:"bytes,10,opt,name=operation_id,json=operationId" json:"operation_id,omitempty"`
+	IdempotencyIdentity          string                         `protobuf:"bytes,11,opt,name=idempotency_identity,json=idempotencyIdentity" json:"idempotency_identity,omitempty"`
+	State                        CompanyReturnAttemptState      `protobuf:"varint,12,opt,name=state,enum=tammy.v1.CompanyReturnAttemptState" json:"state,omitempty"`
+	Outcome                      *CompanyReturnOperationOutcome `protobuf:"varint,13,opt,name=outcome,enum=tammy.v1.CompanyReturnOperationOutcome" json:"outcome,omitempty"`
+	RetryClassification          SubmissionRetryClassification  `protobuf:"varint,14,opt,name=retry_classification,json=retryClassification,enum=tammy.v1.SubmissionRetryClassification" json:"retry_classification,omitempty"`
+	ResponseHash                 []byte                         `protobuf:"bytes,15,opt,name=response_hash,json=responseHash" json:"response_hash,omitempty"`
+	CreatedAt                    *timestamppb.Timestamp         `protobuf:"bytes,16,opt,name=created_at,json=createdAt" json:"created_at,omitempty"`
+	UpdatedAt                    *timestamppb.Timestamp         `protobuf:"bytes,17,opt,name=updated_at,json=updatedAt" json:"updated_at,omitempty"`
+	unknownFields                protoimpl.UnknownFields
+	sizeCache                    protoimpl.SizeCache
+}
+
+func (x *CompanyReturnSubmissionAttempt) Reset() {
+	*x = CompanyReturnSubmissionAttempt{}
+	mi := &file_tammy_v1_company_return_submission_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompanyReturnSubmissionAttempt) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompanyReturnSubmissionAttempt) ProtoMessage() {}
+
+func (x *CompanyReturnSubmissionAttempt) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_return_submission_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompanyReturnSubmissionAttempt.ProtoReflect.Descriptor instead.
+func (*CompanyReturnSubmissionAttempt) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_return_submission_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *CompanyReturnSubmissionAttempt) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *CompanyReturnSubmissionAttempt) GetReturnId() string {
+	if x != nil {
+		return x.ReturnId
+	}
+	return ""
+}
+
+func (x *CompanyReturnSubmissionAttempt) GetDeclarationId() string {
+	if x != nil {
+		return x.DeclarationId
+	}
+	return ""
+}
+
+func (x *CompanyReturnSubmissionAttempt) GetReportSnapshotHash() []byte {
+	if x != nil {
+		return x.ReportSnapshotHash
+	}
+	return nil
+}
+
+func (x *CompanyReturnSubmissionAttempt) GetOfficialPayloadHash() []byte {
+	if x != nil {
+		return x.OfficialPayloadHash
+	}
+	return nil
+}
+
+func (x *CompanyReturnSubmissionAttempt) GetEnvironment() SubmissionEnvironment {
+	if x != nil {
+		return x.Environment
+	}
+	return SubmissionEnvironment_SUBMISSION_ENVIRONMENT_UNSPECIFIED
+}
+
+func (x *CompanyReturnSubmissionAttempt) GetProductIdentifierFingerprint() []byte {
+	if x != nil {
+		return x.ProductIdentifierFingerprint
+	}
+	return nil
+}
+
+func (x *CompanyReturnSubmissionAttempt) GetServiceId() string {
+	if x != nil {
+		return x.ServiceId
+	}
+	return ""
+}
+
+func (x *CompanyReturnSubmissionAttempt) GetOperationType() CompanyReturnOperationType {
+	if x != nil {
+		return x.OperationType
+	}
+	return CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_UNSPECIFIED
+}
+
+func (x *CompanyReturnSubmissionAttempt) GetOperationId() string {
+	if x != nil {
+		return x.OperationId
+	}
+	return ""
+}
+
+func (x *CompanyReturnSubmissionAttempt) GetIdempotencyIdentity() string {
+	if x != nil {
+		return x.IdempotencyIdentity
+	}
+	return ""
+}
+
+func (x *CompanyReturnSubmissionAttempt) GetState() CompanyReturnAttemptState {
+	if x != nil {
+		return x.State
+	}
+	return CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_UNSPECIFIED
+}
+
+func (x *CompanyReturnSubmissionAttempt) GetOutcome() CompanyReturnOperationOutcome {
+	if x != nil && x.Outcome != nil {
+		return *x.Outcome
+	}
+	return CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_UNSPECIFIED
+}
+
+func (x *CompanyReturnSubmissionAttempt) GetRetryClassification() SubmissionRetryClassification {
+	if x != nil {
+		return x.RetryClassification
+	}
+	return SubmissionRetryClassification_SUBMISSION_RETRY_CLASSIFICATION_UNSPECIFIED
+}
+
+func (x *CompanyReturnSubmissionAttempt) GetResponseHash() []byte {
+	if x != nil {
+		return x.ResponseHash
+	}
+	return nil
+}
+
+func (x *CompanyReturnSubmissionAttempt) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *CompanyReturnSubmissionAttempt) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+type CompanyReturnSubmissionReceipt struct {
+	state                     protoimpl.MessageState `protogen:"open.v1"`
+	Id                        string                 `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
+	AttemptId                 string                 `protobuf:"bytes,2,opt,name=attempt_id,json=attemptId" json:"attempt_id,omitempty"`
+	EncryptedReceiptRef       string                 `protobuf:"bytes,3,opt,name=encrypted_receipt_ref,json=encryptedReceiptRef" json:"encrypted_receipt_ref,omitempty"`
+	SafeDisplaySummary        string                 `protobuf:"bytes,4,opt,name=safe_display_summary,json=safeDisplaySummary" json:"safe_display_summary,omitempty"`
+	ConversationId            *string                `protobuf:"bytes,5,opt,name=conversation_id,json=conversationId" json:"conversation_id,omitempty"`
+	SubmissionId              *string                `protobuf:"bytes,6,opt,name=submission_id,json=submissionId" json:"submission_id,omitempty"`
+	ReceivedAt                *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=received_at,json=receivedAt" json:"received_at,omitempty"`
+	ResponseSchemaFingerprint []byte                 `protobuf:"bytes,8,opt,name=response_schema_fingerprint,json=responseSchemaFingerprint" json:"response_schema_fingerprint,omitempty"`
+	ContentHash               []byte                 `protobuf:"bytes,9,opt,name=content_hash,json=contentHash" json:"content_hash,omitempty"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
+}
+
+func (x *CompanyReturnSubmissionReceipt) Reset() {
+	*x = CompanyReturnSubmissionReceipt{}
+	mi := &file_tammy_v1_company_return_submission_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompanyReturnSubmissionReceipt) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompanyReturnSubmissionReceipt) ProtoMessage() {}
+
+func (x *CompanyReturnSubmissionReceipt) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_return_submission_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompanyReturnSubmissionReceipt.ProtoReflect.Descriptor instead.
+func (*CompanyReturnSubmissionReceipt) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_return_submission_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *CompanyReturnSubmissionReceipt) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *CompanyReturnSubmissionReceipt) GetAttemptId() string {
+	if x != nil {
+		return x.AttemptId
+	}
+	return ""
+}
+
+func (x *CompanyReturnSubmissionReceipt) GetEncryptedReceiptRef() string {
+	if x != nil {
+		return x.EncryptedReceiptRef
+	}
+	return ""
+}
+
+func (x *CompanyReturnSubmissionReceipt) GetSafeDisplaySummary() string {
+	if x != nil {
+		return x.SafeDisplaySummary
+	}
+	return ""
+}
+
+func (x *CompanyReturnSubmissionReceipt) GetConversationId() string {
+	if x != nil && x.ConversationId != nil {
+		return *x.ConversationId
+	}
+	return ""
+}
+
+func (x *CompanyReturnSubmissionReceipt) GetSubmissionId() string {
+	if x != nil && x.SubmissionId != nil {
+		return *x.SubmissionId
+	}
+	return ""
+}
+
+func (x *CompanyReturnSubmissionReceipt) GetReceivedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ReceivedAt
+	}
+	return nil
+}
+
+func (x *CompanyReturnSubmissionReceipt) GetResponseSchemaFingerprint() []byte {
+	if x != nil {
+		return x.ResponseSchemaFingerprint
+	}
+	return nil
+}
+
+func (x *CompanyReturnSubmissionReceipt) GetContentHash() []byte {
+	if x != nil {
+		return x.ContentHash
+	}
+	return nil
+}
+
+type CompanyReturnStatusObservation struct {
+	state            protoimpl.MessageState     `protogen:"open.v1"`
+	Id               string                     `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
+	AttemptId        string                     `protobuf:"bytes,2,opt,name=attempt_id,json=attemptId" json:"attempt_id,omitempty"`
+	OperationType    CompanyReturnOperationType `protobuf:"varint,3,opt,name=operation_type,json=operationType,enum=tammy.v1.CompanyReturnOperationType" json:"operation_type,omitempty"`
+	StableResultCode string                     `protobuf:"bytes,4,opt,name=stable_result_code,json=stableResultCode" json:"stable_result_code,omitempty"`
+	SafeStatus       string                     `protobuf:"bytes,5,opt,name=safe_status,json=safeStatus" json:"safe_status,omitempty"`
+	ObservedAt       *timestamppb.Timestamp     `protobuf:"bytes,6,opt,name=observed_at,json=observedAt" json:"observed_at,omitempty"`
+	ResponseHash     []byte                     `protobuf:"bytes,7,opt,name=response_hash,json=responseHash" json:"response_hash,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *CompanyReturnStatusObservation) Reset() {
+	*x = CompanyReturnStatusObservation{}
+	mi := &file_tammy_v1_company_return_submission_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompanyReturnStatusObservation) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompanyReturnStatusObservation) ProtoMessage() {}
+
+func (x *CompanyReturnStatusObservation) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_return_submission_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompanyReturnStatusObservation.ProtoReflect.Descriptor instead.
+func (*CompanyReturnStatusObservation) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_return_submission_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *CompanyReturnStatusObservation) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *CompanyReturnStatusObservation) GetAttemptId() string {
+	if x != nil {
+		return x.AttemptId
+	}
+	return ""
+}
+
+func (x *CompanyReturnStatusObservation) GetOperationType() CompanyReturnOperationType {
+	if x != nil {
+		return x.OperationType
+	}
+	return CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_UNSPECIFIED
+}
+
+func (x *CompanyReturnStatusObservation) GetStableResultCode() string {
+	if x != nil {
+		return x.StableResultCode
+	}
+	return ""
+}
+
+func (x *CompanyReturnStatusObservation) GetSafeStatus() string {
+	if x != nil {
+		return x.SafeStatus
+	}
+	return ""
+}
+
+func (x *CompanyReturnStatusObservation) GetObservedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ObservedAt
+	}
+	return nil
+}
+
+func (x *CompanyReturnStatusObservation) GetResponseHash() []byte {
+	if x != nil {
+		return x.ResponseHash
+	}
+	return nil
+}
+
+type CompanyReturnSubmission struct {
+	state         protoimpl.MessageState            `protogen:"open.v1"`
+	ReturnId      string                            `protobuf:"bytes,1,opt,name=return_id,json=returnId" json:"return_id,omitempty"`
+	LatestAttempt *CompanyReturnSubmissionAttempt   `protobuf:"bytes,2,opt,name=latest_attempt,json=latestAttempt" json:"latest_attempt,omitempty"`
+	Receipt       *CompanyReturnSubmissionReceipt   `protobuf:"bytes,3,opt,name=receipt" json:"receipt,omitempty"`
+	StatusHistory []*CompanyReturnStatusObservation `protobuf:"bytes,4,rep,name=status_history,json=statusHistory" json:"status_history,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CompanyReturnSubmission) Reset() {
+	*x = CompanyReturnSubmission{}
+	mi := &file_tammy_v1_company_return_submission_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompanyReturnSubmission) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompanyReturnSubmission) ProtoMessage() {}
+
+func (x *CompanyReturnSubmission) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_return_submission_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompanyReturnSubmission.ProtoReflect.Descriptor instead.
+func (*CompanyReturnSubmission) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_return_submission_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *CompanyReturnSubmission) GetReturnId() string {
+	if x != nil {
+		return x.ReturnId
+	}
+	return ""
+}
+
+func (x *CompanyReturnSubmission) GetLatestAttempt() *CompanyReturnSubmissionAttempt {
+	if x != nil {
+		return x.LatestAttempt
+	}
+	return nil
+}
+
+func (x *CompanyReturnSubmission) GetReceipt() *CompanyReturnSubmissionReceipt {
+	if x != nil {
+		return x.Receipt
+	}
+	return nil
+}
+
+func (x *CompanyReturnSubmission) GetStatusHistory() []*CompanyReturnStatusObservation {
+	if x != nil {
+		return x.StatusHistory
+	}
+	return nil
+}
+
+type PreLodgeCompanyReturnRequest struct {
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	CommandContext        *CommandContext        `protobuf:"bytes,1,opt,name=command_context,json=commandContext" json:"command_context,omitempty"`
+	OrganisationId        string                 `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId" json:"organisation_id,omitempty"`
+	ReturnId              string                 `protobuf:"bytes,3,opt,name=return_id,json=returnId" json:"return_id,omitempty"`
+	DeclarationId         string                 `protobuf:"bytes,4,opt,name=declaration_id,json=declarationId" json:"declaration_id,omitempty"`
+	ExpectedReturnVersion uint64                 `protobuf:"varint,5,opt,name=expected_return_version,json=expectedReturnVersion" json:"expected_return_version,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
+}
+
+func (x *PreLodgeCompanyReturnRequest) Reset() {
+	*x = PreLodgeCompanyReturnRequest{}
+	mi := &file_tammy_v1_company_return_submission_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PreLodgeCompanyReturnRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PreLodgeCompanyReturnRequest) ProtoMessage() {}
+
+func (x *PreLodgeCompanyReturnRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_return_submission_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PreLodgeCompanyReturnRequest.ProtoReflect.Descriptor instead.
+func (*PreLodgeCompanyReturnRequest) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_return_submission_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *PreLodgeCompanyReturnRequest) GetCommandContext() *CommandContext {
+	if x != nil {
+		return x.CommandContext
+	}
+	return nil
+}
+
+func (x *PreLodgeCompanyReturnRequest) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *PreLodgeCompanyReturnRequest) GetReturnId() string {
+	if x != nil {
+		return x.ReturnId
+	}
+	return ""
+}
+
+func (x *PreLodgeCompanyReturnRequest) GetDeclarationId() string {
+	if x != nil {
+		return x.DeclarationId
+	}
+	return ""
+}
+
+func (x *PreLodgeCompanyReturnRequest) GetExpectedReturnVersion() uint64 {
+	if x != nil {
+		return x.ExpectedReturnVersion
+	}
+	return 0
+}
+
+type PreLodgeCompanyReturnResponse struct {
+	state         protoimpl.MessageState   `protogen:"open.v1"`
+	CompanyReturn *CompanyReturn           `protobuf:"bytes,1,opt,name=company_return,json=companyReturn" json:"company_return,omitempty"`
+	Submission    *CompanyReturnSubmission `protobuf:"bytes,2,opt,name=submission" json:"submission,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PreLodgeCompanyReturnResponse) Reset() {
+	*x = PreLodgeCompanyReturnResponse{}
+	mi := &file_tammy_v1_company_return_submission_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PreLodgeCompanyReturnResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PreLodgeCompanyReturnResponse) ProtoMessage() {}
+
+func (x *PreLodgeCompanyReturnResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_return_submission_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PreLodgeCompanyReturnResponse.ProtoReflect.Descriptor instead.
+func (*PreLodgeCompanyReturnResponse) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_return_submission_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *PreLodgeCompanyReturnResponse) GetCompanyReturn() *CompanyReturn {
+	if x != nil {
+		return x.CompanyReturn
+	}
+	return nil
+}
+
+func (x *PreLodgeCompanyReturnResponse) GetSubmission() *CompanyReturnSubmission {
+	if x != nil {
+		return x.Submission
+	}
+	return nil
+}
+
+type LodgeCompanyReturnRequest struct {
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	CommandContext        *CommandContext        `protobuf:"bytes,1,opt,name=command_context,json=commandContext" json:"command_context,omitempty"`
+	OrganisationId        string                 `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId" json:"organisation_id,omitempty"`
+	ReturnId              string                 `protobuf:"bytes,3,opt,name=return_id,json=returnId" json:"return_id,omitempty"`
+	DeclarationId         string                 `protobuf:"bytes,4,opt,name=declaration_id,json=declarationId" json:"declaration_id,omitempty"`
+	ExpectedReturnVersion uint64                 `protobuf:"varint,5,opt,name=expected_return_version,json=expectedReturnVersion" json:"expected_return_version,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
+}
+
+func (x *LodgeCompanyReturnRequest) Reset() {
+	*x = LodgeCompanyReturnRequest{}
+	mi := &file_tammy_v1_company_return_submission_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LodgeCompanyReturnRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LodgeCompanyReturnRequest) ProtoMessage() {}
+
+func (x *LodgeCompanyReturnRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_return_submission_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LodgeCompanyReturnRequest.ProtoReflect.Descriptor instead.
+func (*LodgeCompanyReturnRequest) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_return_submission_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *LodgeCompanyReturnRequest) GetCommandContext() *CommandContext {
+	if x != nil {
+		return x.CommandContext
+	}
+	return nil
+}
+
+func (x *LodgeCompanyReturnRequest) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *LodgeCompanyReturnRequest) GetReturnId() string {
+	if x != nil {
+		return x.ReturnId
+	}
+	return ""
+}
+
+func (x *LodgeCompanyReturnRequest) GetDeclarationId() string {
+	if x != nil {
+		return x.DeclarationId
+	}
+	return ""
+}
+
+func (x *LodgeCompanyReturnRequest) GetExpectedReturnVersion() uint64 {
+	if x != nil {
+		return x.ExpectedReturnVersion
+	}
+	return 0
+}
+
+type LodgeCompanyReturnResponse struct {
+	state         protoimpl.MessageState   `protogen:"open.v1"`
+	CompanyReturn *CompanyReturn           `protobuf:"bytes,1,opt,name=company_return,json=companyReturn" json:"company_return,omitempty"`
+	Submission    *CompanyReturnSubmission `protobuf:"bytes,2,opt,name=submission" json:"submission,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LodgeCompanyReturnResponse) Reset() {
+	*x = LodgeCompanyReturnResponse{}
+	mi := &file_tammy_v1_company_return_submission_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LodgeCompanyReturnResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LodgeCompanyReturnResponse) ProtoMessage() {}
+
+func (x *LodgeCompanyReturnResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_return_submission_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LodgeCompanyReturnResponse.ProtoReflect.Descriptor instead.
+func (*LodgeCompanyReturnResponse) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_return_submission_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *LodgeCompanyReturnResponse) GetCompanyReturn() *CompanyReturn {
+	if x != nil {
+		return x.CompanyReturn
+	}
+	return nil
+}
+
+func (x *LodgeCompanyReturnResponse) GetSubmission() *CompanyReturnSubmission {
+	if x != nil {
+		return x.Submission
+	}
+	return nil
+}
+
+type GetCompanyReturnSubmissionRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Authentication *AuthenticationContext `protobuf:"bytes,1,opt,name=authentication" json:"authentication,omitempty"`
+	OrganisationId string                 `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId" json:"organisation_id,omitempty"`
+	ReturnId       string                 `protobuf:"bytes,3,opt,name=return_id,json=returnId" json:"return_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *GetCompanyReturnSubmissionRequest) Reset() {
+	*x = GetCompanyReturnSubmissionRequest{}
+	mi := &file_tammy_v1_company_return_submission_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCompanyReturnSubmissionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCompanyReturnSubmissionRequest) ProtoMessage() {}
+
+func (x *GetCompanyReturnSubmissionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_return_submission_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCompanyReturnSubmissionRequest.ProtoReflect.Descriptor instead.
+func (*GetCompanyReturnSubmissionRequest) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_return_submission_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *GetCompanyReturnSubmissionRequest) GetAuthentication() *AuthenticationContext {
+	if x != nil {
+		return x.Authentication
+	}
+	return nil
+}
+
+func (x *GetCompanyReturnSubmissionRequest) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *GetCompanyReturnSubmissionRequest) GetReturnId() string {
+	if x != nil {
+		return x.ReturnId
+	}
+	return ""
+}
+
+type GetCompanyReturnSubmissionResponse struct {
+	state         protoimpl.MessageState   `protogen:"open.v1"`
+	CompanyReturn *CompanyReturn           `protobuf:"bytes,1,opt,name=company_return,json=companyReturn" json:"company_return,omitempty"`
+	Submission    *CompanyReturnSubmission `protobuf:"bytes,2,opt,name=submission" json:"submission,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCompanyReturnSubmissionResponse) Reset() {
+	*x = GetCompanyReturnSubmissionResponse{}
+	mi := &file_tammy_v1_company_return_submission_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCompanyReturnSubmissionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCompanyReturnSubmissionResponse) ProtoMessage() {}
+
+func (x *GetCompanyReturnSubmissionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_return_submission_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCompanyReturnSubmissionResponse.ProtoReflect.Descriptor instead.
+func (*GetCompanyReturnSubmissionResponse) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_return_submission_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *GetCompanyReturnSubmissionResponse) GetCompanyReturn() *CompanyReturn {
+	if x != nil {
+		return x.CompanyReturn
+	}
+	return nil
+}
+
+func (x *GetCompanyReturnSubmissionResponse) GetSubmission() *CompanyReturnSubmission {
+	if x != nil {
+		return x.Submission
+	}
+	return nil
+}
+
+type RefreshCompanyReturnStatusRequest struct {
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	CommandContext        *CommandContext        `protobuf:"bytes,1,opt,name=command_context,json=commandContext" json:"command_context,omitempty"`
+	OrganisationId        string                 `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId" json:"organisation_id,omitempty"`
+	ReturnId              string                 `protobuf:"bytes,3,opt,name=return_id,json=returnId" json:"return_id,omitempty"`
+	AttemptId             string                 `protobuf:"bytes,4,opt,name=attempt_id,json=attemptId" json:"attempt_id,omitempty"`
+	ExpectedReturnVersion uint64                 `protobuf:"varint,5,opt,name=expected_return_version,json=expectedReturnVersion" json:"expected_return_version,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
+}
+
+func (x *RefreshCompanyReturnStatusRequest) Reset() {
+	*x = RefreshCompanyReturnStatusRequest{}
+	mi := &file_tammy_v1_company_return_submission_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RefreshCompanyReturnStatusRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RefreshCompanyReturnStatusRequest) ProtoMessage() {}
+
+func (x *RefreshCompanyReturnStatusRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_return_submission_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RefreshCompanyReturnStatusRequest.ProtoReflect.Descriptor instead.
+func (*RefreshCompanyReturnStatusRequest) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_return_submission_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *RefreshCompanyReturnStatusRequest) GetCommandContext() *CommandContext {
+	if x != nil {
+		return x.CommandContext
+	}
+	return nil
+}
+
+func (x *RefreshCompanyReturnStatusRequest) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *RefreshCompanyReturnStatusRequest) GetReturnId() string {
+	if x != nil {
+		return x.ReturnId
+	}
+	return ""
+}
+
+func (x *RefreshCompanyReturnStatusRequest) GetAttemptId() string {
+	if x != nil {
+		return x.AttemptId
+	}
+	return ""
+}
+
+func (x *RefreshCompanyReturnStatusRequest) GetExpectedReturnVersion() uint64 {
+	if x != nil {
+		return x.ExpectedReturnVersion
+	}
+	return 0
+}
+
+type RefreshCompanyReturnStatusResponse struct {
+	state         protoimpl.MessageState   `protogen:"open.v1"`
+	CompanyReturn *CompanyReturn           `protobuf:"bytes,1,opt,name=company_return,json=companyReturn" json:"company_return,omitempty"`
+	Submission    *CompanyReturnSubmission `protobuf:"bytes,2,opt,name=submission" json:"submission,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RefreshCompanyReturnStatusResponse) Reset() {
+	*x = RefreshCompanyReturnStatusResponse{}
+	mi := &file_tammy_v1_company_return_submission_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RefreshCompanyReturnStatusResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RefreshCompanyReturnStatusResponse) ProtoMessage() {}
+
+func (x *RefreshCompanyReturnStatusResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_return_submission_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RefreshCompanyReturnStatusResponse.ProtoReflect.Descriptor instead.
+func (*RefreshCompanyReturnStatusResponse) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_return_submission_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *RefreshCompanyReturnStatusResponse) GetCompanyReturn() *CompanyReturn {
+	if x != nil {
+		return x.CompanyReturn
+	}
+	return nil
+}
+
+func (x *RefreshCompanyReturnStatusResponse) GetSubmission() *CompanyReturnSubmission {
+	if x != nil {
+		return x.Submission
+	}
+	return nil
+}
+
+type ReconcileUnknownCompanyReturnSubmissionRequest struct {
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	CommandContext        *CommandContext        `protobuf:"bytes,1,opt,name=command_context,json=commandContext" json:"command_context,omitempty"`
+	OrganisationId        string                 `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId" json:"organisation_id,omitempty"`
+	ReturnId              string                 `protobuf:"bytes,3,opt,name=return_id,json=returnId" json:"return_id,omitempty"`
+	AttemptId             string                 `protobuf:"bytes,4,opt,name=attempt_id,json=attemptId" json:"attempt_id,omitempty"`
+	ExpectedReturnVersion uint64                 `protobuf:"varint,5,opt,name=expected_return_version,json=expectedReturnVersion" json:"expected_return_version,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
+}
+
+func (x *ReconcileUnknownCompanyReturnSubmissionRequest) Reset() {
+	*x = ReconcileUnknownCompanyReturnSubmissionRequest{}
+	mi := &file_tammy_v1_company_return_submission_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReconcileUnknownCompanyReturnSubmissionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReconcileUnknownCompanyReturnSubmissionRequest) ProtoMessage() {}
+
+func (x *ReconcileUnknownCompanyReturnSubmissionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_return_submission_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReconcileUnknownCompanyReturnSubmissionRequest.ProtoReflect.Descriptor instead.
+func (*ReconcileUnknownCompanyReturnSubmissionRequest) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_return_submission_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *ReconcileUnknownCompanyReturnSubmissionRequest) GetCommandContext() *CommandContext {
+	if x != nil {
+		return x.CommandContext
+	}
+	return nil
+}
+
+func (x *ReconcileUnknownCompanyReturnSubmissionRequest) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *ReconcileUnknownCompanyReturnSubmissionRequest) GetReturnId() string {
+	if x != nil {
+		return x.ReturnId
+	}
+	return ""
+}
+
+func (x *ReconcileUnknownCompanyReturnSubmissionRequest) GetAttemptId() string {
+	if x != nil {
+		return x.AttemptId
+	}
+	return ""
+}
+
+func (x *ReconcileUnknownCompanyReturnSubmissionRequest) GetExpectedReturnVersion() uint64 {
+	if x != nil {
+		return x.ExpectedReturnVersion
+	}
+	return 0
+}
+
+type ReconcileUnknownCompanyReturnSubmissionResponse struct {
+	state         protoimpl.MessageState   `protogen:"open.v1"`
+	CompanyReturn *CompanyReturn           `protobuf:"bytes,1,opt,name=company_return,json=companyReturn" json:"company_return,omitempty"`
+	Submission    *CompanyReturnSubmission `protobuf:"bytes,2,opt,name=submission" json:"submission,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReconcileUnknownCompanyReturnSubmissionResponse) Reset() {
+	*x = ReconcileUnknownCompanyReturnSubmissionResponse{}
+	mi := &file_tammy_v1_company_return_submission_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReconcileUnknownCompanyReturnSubmissionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReconcileUnknownCompanyReturnSubmissionResponse) ProtoMessage() {}
+
+func (x *ReconcileUnknownCompanyReturnSubmissionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_company_return_submission_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReconcileUnknownCompanyReturnSubmissionResponse.ProtoReflect.Descriptor instead.
+func (*ReconcileUnknownCompanyReturnSubmissionResponse) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_company_return_submission_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *ReconcileUnknownCompanyReturnSubmissionResponse) GetCompanyReturn() *CompanyReturn {
+	if x != nil {
+		return x.CompanyReturn
+	}
+	return nil
+}
+
+func (x *ReconcileUnknownCompanyReturnSubmissionResponse) GetSubmission() *CompanyReturnSubmission {
+	if x != nil {
+		return x.Submission
+	}
+	return nil
+}
+
 var File_tammy_v1_company_return_submission_proto protoreflect.FileDescriptor
 
 const file_tammy_v1_company_return_submission_proto_rawDesc = "" +
 	"\n" +
-	"(tammy/v1/company_return_submission.proto\x12\btammy.v1\x1a\x1atammy/v1/company_tax.proto*\x8d\x03\n" +
+	"(tammy/v1/company_return_submission.proto\x12\btammy.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15tammy/v1/common.proto\x1a\x1atammy/v1/company_tax.proto\"\xf5\r\n" +
+	"\x1eCompanyReturnSubmissionAttempt\x12\\\n" +
+	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12i\n" +
+	"\treturn_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\breturnId\x12s\n" +
+	"\x0edeclaration_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\rdeclarationId\x129\n" +
+	"\x14report_snapshot_hash\x18\x04 \x01(\fB\a\xbaH\x04z\x02h R\x12reportSnapshotHash\x12;\n" +
+	"\x15official_payload_hash\x18\x05 \x01(\fB\a\xbaH\x04z\x02h R\x13officialPayloadHash\x12M\n" +
+	"\venvironment\x18\x06 \x01(\x0e2\x1f.tammy.v1.SubmissionEnvironmentB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\venvironment\x12M\n" +
+	"\x1eproduct_identifier_fingerprint\x18\a \x01(\fB\a\xbaH\x04z\x02h R\x1cproductIdentifierFingerprint\x12O\n" +
+	"\n" +
+	"service_id\x18\b \x01(\tB0\xbaH-r+\x10\x01\x18\x80\x012$^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$R\tserviceId\x12W\n" +
+	"\x0eoperation_type\x18\t \x01(\x0e2$.tammy.v1.CompanyReturnOperationTypeB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\roperationType\x12o\n" +
+	"\foperation_id\x18\n" +
+	" \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\voperationId\x12\x7f\n" +
+	"\x14idempotency_identity\x18\v \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x13idempotencyIdentity\x12E\n" +
+	"\x05state\x18\f \x01(\x0e2#.tammy.v1.CompanyReturnAttemptStateB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x05state\x12R\n" +
+	"\aoutcome\x18\r \x01(\x0e2'.tammy.v1.CompanyReturnOperationOutcomeB\x0f\xbaH\a\x82\x01\x04\x10\x01 \x00\xaa\x01\x02\b\x01R\aoutcome\x12f\n" +
+	"\x14retry_classification\x18\x0e \x01(\x0e2'.tammy.v1.SubmissionRetryClassificationB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x13retryClassification\x121\n" +
+	"\rresponse_hash\x18\x0f \x01(\fB\f\xbaH\x04z\x02h \xaa\x01\x02\b\x01R\fresponseHash\x12A\n" +
+	"\n" +
+	"created_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\tcreatedAt\x12A\n" +
+	"\n" +
+	"updated_at\x18\x11 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\tupdatedAt:\xa6\x02\xbaH\xa2\x02\x1a\x9f\x02\n" +
+	"/company_return_submission.attempt.outcome_state\x12,attempt outcome must match its durable state\x1a\xbd\x01(this.state in [1, 2, 3, 7] && !has(this.outcome)) || (this.state == 5 && has(this.outcome) && this.outcome == 4) || (this.state in [4, 6] && has(this.outcome) && this.outcome in [1, 2, 3])\"\x92\a\n" +
+	"\x1eCompanyReturnSubmissionReceipt\x12\\\n" +
+	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12k\n" +
+	"\n" +
+	"attempt_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\tattemptId\x12>\n" +
+	"\x15encrypted_receipt_ref\x18\x03 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\x80\x01R\x13encryptedReceiptRef\x12<\n" +
+	"\x14safe_display_summary\x18\x04 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xd0\x0fR\x12safeDisplaySummary\x12^\n" +
+	"\x0fconversation_id\x18\x05 \x01(\tB5\xbaH-r+\x10\x01\x18\x80\x012$^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$\xaa\x01\x02\b\x01R\x0econversationId\x12Z\n" +
+	"\rsubmission_id\x18\x06 \x01(\tB5\xbaH-r+\x10\x01\x18\x80\x012$^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$\xaa\x01\x02\b\x01R\fsubmissionId\x12C\n" +
+	"\vreceived_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\n" +
+	"receivedAt\x12G\n" +
+	"\x1bresponse_schema_fingerprint\x18\b \x01(\fB\a\xbaH\x04z\x02h R\x19responseSchemaFingerprint\x12*\n" +
+	"\fcontent_hash\x18\t \x01(\fB\a\xbaH\x04z\x02h R\vcontentHash:\xb0\x01\xbaH\xac\x01\x1a\xa9\x01\n" +
+	"5company_return_submission.receipt.external_identifier\x12:receipt requires at least one official external identifier\x1a4has(this.conversation_id) || has(this.submission_id)\"\xc4\x04\n" +
+	"\x1eCompanyReturnStatusObservation\x12\\\n" +
+	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12k\n" +
+	"\n" +
+	"attempt_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\tattemptId\x12W\n" +
+	"\x0eoperation_type\x18\x03 \x01(\x0e2$.tammy.v1.CompanyReturnOperationTypeB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\roperationType\x12^\n" +
+	"\x12stable_result_code\x18\x04 \x01(\tB0\xbaH-r+\x10\x01\x18\x80\x012$^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$R\x10stableResultCode\x12+\n" +
+	"\vsafe_status\x18\x05 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\x80\x04R\n" +
+	"safeStatus\x12C\n" +
+	"\vobserved_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\n" +
+	"observedAt\x12,\n" +
+	"\rresponse_hash\x18\a \x01(\fB\a\xbaH\x04z\x02h R\fresponseHash\"\xfd\x02\n" +
+	"\x17CompanyReturnSubmission\x12i\n" +
+	"\treturn_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\breturnId\x12W\n" +
+	"\x0elatest_attempt\x18\x02 \x01(\v2(.tammy.v1.CompanyReturnSubmissionAttemptB\x06\xbaH\x03\xc8\x01\x01R\rlatestAttempt\x12B\n" +
+	"\areceipt\x18\x03 \x01(\v2(.tammy.v1.CompanyReturnSubmissionReceiptR\areceipt\x12Z\n" +
+	"\x0estatus_history\x18\x04 \x03(\v2(.tammy.v1.CompanyReturnStatusObservationB\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\rstatusHistory\"\xfd\x05\n" +
+	"\x1cPreLodgeCompanyReturnRequest\x12I\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12i\n" +
+	"\treturn_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\breturnId\x12s\n" +
+	"\x0edeclaration_id\x18\x04 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\rdeclarationId\x12?\n" +
+	"\x17expected_return_version\x18\x05 \x01(\x04B\a\xbaH\x042\x02(\x01R\x15expectedReturnVersion:\xf9\x01\xbaH\xf5\x01\x1a\xf2\x01\n" +
+	"/company_return_submission.prelodge.fresh_factor\x12/pre-lodge requires a purpose-bound fresh factor\x1a\x8d\x01has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'company_return_prelodge'\"\x92\x04\n" +
+	"\x1dPreLodgeCompanyReturnResponse\x12F\n" +
+	"\x0ecompany_return\x18\x01 \x01(\v2\x17.tammy.v1.CompanyReturnB\x06\xbaH\x03\xc8\x01\x01R\rcompanyReturn\x12I\n" +
+	"\n" +
+	"submission\x18\x02 \x01(\v2!.tammy.v1.CompanyReturnSubmissionB\x06\xbaH\x03\xc8\x01\x01R\n" +
+	"submission:\xdd\x02\xbaH\xd9\x02\x1a\xd6\x02\n" +
+	")company_return_submission.prelodge.result\x12Upre-lodge never delivers or creates a receipt and retains its original operation type\x1a\xd1\x01has(this.company_return) && has(this.submission) && has(this.submission.latest_attempt) && this.submission.latest_attempt.operation_type == 1 && this.company_return.state != 10 && !has(this.submission.receipt)\"\xf3\x05\n" +
+	"\x19LodgeCompanyReturnRequest\x12I\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12i\n" +
+	"\treturn_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\breturnId\x12s\n" +
+	"\x0edeclaration_id\x18\x04 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\rdeclarationId\x12?\n" +
+	"\x17expected_return_version\x18\x05 \x01(\x04B\a\xbaH\x042\x02(\x01R\x15expectedReturnVersion:\xf2\x01\xbaH\xee\x01\x1a\xeb\x01\n" +
+	",company_return_submission.lodge.fresh_factor\x12.lodgment requires a purpose-bound fresh factor\x1a\x8a\x01has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'company_return_lodge'\"\xd1\x06\n" +
+	"\x1aLodgeCompanyReturnResponse\x12F\n" +
+	"\x0ecompany_return\x18\x01 \x01(\v2\x17.tammy.v1.CompanyReturnB\x06\xbaH\x03\xc8\x01\x01R\rcompanyReturn\x12I\n" +
+	"\n" +
+	"submission\x18\x02 \x01(\v2!.tammy.v1.CompanyReturnSubmissionB\x06\xbaH\x03\xc8\x01\x01R\n" +
+	"submission:\x9f\x05\xbaH\x9b\x05\x1a\xd2\x01\n" +
+	")company_return_submission.lodge.operation\x122lodgment response retains the lodge operation type\x1aqhas(this.submission) && has(this.submission.latest_attempt) && this.submission.latest_attempt.operation_type == 2\x1a\xc3\x03\n" +
+	"-company_return_submission.lodge.receipt_state\x128a receipt exists exactly for an accepted delivered lodge\x1a\xd7\x02has(this.company_return) && has(this.submission) && (has(this.submission.receipt) == (this.company_return.state == 10)) && (!has(this.submission.receipt) || (has(this.submission.latest_attempt) && this.submission.latest_attempt.operation_type == 2 && has(this.submission.latest_attempt.outcome) && this.submission.latest_attempt.outcome == 1))\"\xd6\x02\n" +
+	"!GetCompanyReturnSubmissionRequest\x12O\n" +
+	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12i\n" +
+	"\treturn_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\breturnId\"\x82\x05\n" +
+	"\"GetCompanyReturnSubmissionResponse\x12F\n" +
+	"\x0ecompany_return\x18\x01 \x01(\v2\x17.tammy.v1.CompanyReturnB\x06\xbaH\x03\xc8\x01\x01R\rcompanyReturn\x12I\n" +
+	"\n" +
+	"submission\x18\x02 \x01(\v2!.tammy.v1.CompanyReturnSubmissionB\x06\xbaH\x03\xc8\x01\x01R\n" +
+	"submission:\xc8\x03\xbaH\xc4\x03\x1a\xc1\x03\n" +
+	"+company_return_submission.get.receipt_state\x128a receipt exists exactly for an accepted delivered lodge\x1a\xd7\x02has(this.company_return) && has(this.submission) && (has(this.submission.receipt) == (this.company_return.state == 10)) && (!has(this.submission.receipt) || (has(this.submission.latest_attempt) && this.submission.latest_attempt.operation_type == 2 && has(this.submission.latest_attempt.outcome) && this.submission.latest_attempt.outcome == 1))\"\xfe\x03\n" +
+	"!RefreshCompanyReturnStatusRequest\x12I\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12i\n" +
+	"\treturn_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\breturnId\x12k\n" +
+	"\n" +
+	"attempt_id\x18\x04 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\tattemptId\x12?\n" +
+	"\x17expected_return_version\x18\x05 \x01(\x04B\a\xbaH\x042\x02(\x01R\x15expectedReturnVersion\"\x86\x05\n" +
+	"\"RefreshCompanyReturnStatusResponse\x12F\n" +
+	"\x0ecompany_return\x18\x01 \x01(\v2\x17.tammy.v1.CompanyReturnB\x06\xbaH\x03\xc8\x01\x01R\rcompanyReturn\x12I\n" +
+	"\n" +
+	"submission\x18\x02 \x01(\v2!.tammy.v1.CompanyReturnSubmissionB\x06\xbaH\x03\xc8\x01\x01R\n" +
+	"submission:\xcc\x03\xbaH\xc8\x03\x1a\xc5\x03\n" +
+	"/company_return_submission.refresh.receipt_state\x128a receipt exists exactly for an accepted delivered lodge\x1a\xd7\x02has(this.company_return) && has(this.submission) && (has(this.submission.receipt) == (this.company_return.state == 10)) && (!has(this.submission.receipt) || (has(this.submission.latest_attempt) && this.submission.latest_attempt.operation_type == 2 && has(this.submission.latest_attempt.outcome) && this.submission.latest_attempt.outcome == 1))\"\xa6\x06\n" +
+	".ReconcileUnknownCompanyReturnSubmissionRequest\x12I\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12i\n" +
+	"\treturn_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\breturnId\x12k\n" +
+	"\n" +
+	"attempt_id\x18\x04 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\tattemptId\x12?\n" +
+	"\x17expected_return_version\x18\x05 \x01(\x04B\a\xbaH\x042\x02(\x01R\x15expectedReturnVersion:\x98\x02\xbaH\x94\x02\x1a\x91\x02\n" +
+	"0company_return_submission.reconcile.fresh_factor\x12Dunknown-outcome reconciliation requires a purpose-bound fresh factor\x1a\x96\x01has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'company_return_reconcile_unknown'\"\x95\x05\n" +
+	"/ReconcileUnknownCompanyReturnSubmissionResponse\x12F\n" +
+	"\x0ecompany_return\x18\x01 \x01(\v2\x17.tammy.v1.CompanyReturnB\x06\xbaH\x03\xc8\x01\x01R\rcompanyReturn\x12I\n" +
+	"\n" +
+	"submission\x18\x02 \x01(\v2!.tammy.v1.CompanyReturnSubmissionB\x06\xbaH\x03\xc8\x01\x01R\n" +
+	"submission:\xce\x03\xbaH\xca\x03\x1a\xc7\x03\n" +
+	"1company_return_submission.reconcile.receipt_state\x128a receipt exists exactly for an accepted delivered lodge\x1a\xd7\x02has(this.company_return) && has(this.submission) && (has(this.submission.receipt) == (this.company_return.state == 10)) && (!has(this.submission.receipt) || (has(this.submission.latest_attempt) && this.submission.latest_attempt.operation_type == 2 && has(this.submission.latest_attempt.outcome) && this.submission.latest_attempt.outcome == 1))*\x8d\x03\n" +
 	"\x19CompanyReturnAttemptState\x12,\n" +
 	"(COMPANY_RETURN_ATTEMPT_STATE_UNSPECIFIED\x10\x00\x12)\n" +
 	"%COMPANY_RETURN_ATTEMPT_STATE_PREPARED\x10\x01\x12,\n" +
@@ -107,7 +1403,23 @@ const file_tammy_v1_company_return_submission_proto_rawDesc = "" +
 	",COMPANY_RETURN_ATTEMPT_STATE_RESULT_RECORDED\x10\x04\x120\n" +
 	",COMPANY_RETURN_ATTEMPT_STATE_OUTCOME_UNKNOWN\x10\x05\x12*\n" +
 	"&COMPANY_RETURN_ATTEMPT_STATE_COMMITTED\x10\x06\x12(\n" +
-	"$COMPANY_RETURN_ATTEMPT_STATE_ABORTED\x10\aBLZEgithub.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1\x92\x03\x02\b\x02b\beditionsp\xe8\a"
+	"$COMPANY_RETURN_ATTEMPT_STATE_ABORTED\x10\a*\xad\x01\n" +
+	"\x15SubmissionEnvironment\x12&\n" +
+	"\"SUBMISSION_ENVIRONMENT_UNSPECIFIED\x10\x00\x12$\n" +
+	" SUBMISSION_ENVIRONMENT_SIMULATOR\x10\x01\x12\x1f\n" +
+	"\x1bSUBMISSION_ENVIRONMENT_EVTE\x10\x02\x12%\n" +
+	"!SUBMISSION_ENVIRONMENT_PRODUCTION\x10\x03*\x88\x02\n" +
+	"\x1dSubmissionRetryClassification\x12/\n" +
+	"+SUBMISSION_RETRY_CLASSIFICATION_UNSPECIFIED\x10\x00\x12)\n" +
+	"%SUBMISSION_RETRY_CLASSIFICATION_NEVER\x10\x01\x12M\n" +
+	"ISUBMISSION_RETRY_CLASSIFICATION_SAME_IDENTITY_AFTER_PROVEN_NOT_DISPATCHED\x10\x02\x12<\n" +
+	"8SUBMISSION_RETRY_CLASSIFICATION_STATUS_OR_RECONCILE_ONLY\x10\x032\xfe\x04\n" +
+	"\x1eCompanyReturnSubmissionService\x12h\n" +
+	"\x15PreLodgeCompanyReturn\x12&.tammy.v1.PreLodgeCompanyReturnRequest\x1a'.tammy.v1.PreLodgeCompanyReturnResponse\x12_\n" +
+	"\x12LodgeCompanyReturn\x12#.tammy.v1.LodgeCompanyReturnRequest\x1a$.tammy.v1.LodgeCompanyReturnResponse\x12w\n" +
+	"\x1aGetCompanyReturnSubmission\x12+.tammy.v1.GetCompanyReturnSubmissionRequest\x1a,.tammy.v1.GetCompanyReturnSubmissionResponse\x12w\n" +
+	"\x1aRefreshCompanyReturnStatus\x12+.tammy.v1.RefreshCompanyReturnStatusRequest\x1a,.tammy.v1.RefreshCompanyReturnStatusResponse\x12\x9e\x01\n" +
+	"'ReconcileUnknownCompanyReturnSubmission\x128.tammy.v1.ReconcileUnknownCompanyReturnSubmissionRequest\x1a9.tammy.v1.ReconcileUnknownCompanyReturnSubmissionResponseBLZEgithub.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1\x92\x03\x02\b\x02b\beditionsp\xe8\a"
 
 var (
 	file_tammy_v1_company_return_submission_proto_rawDescOnce sync.Once
@@ -121,16 +1433,77 @@ func file_tammy_v1_company_return_submission_proto_rawDescGZIP() []byte {
 	return file_tammy_v1_company_return_submission_proto_rawDescData
 }
 
-var file_tammy_v1_company_return_submission_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_tammy_v1_company_return_submission_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_tammy_v1_company_return_submission_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_tammy_v1_company_return_submission_proto_goTypes = []any{
-	(CompanyReturnAttemptState)(0), // 0: tammy.v1.CompanyReturnAttemptState
+	(CompanyReturnAttemptState)(0),                          // 0: tammy.v1.CompanyReturnAttemptState
+	(SubmissionEnvironment)(0),                              // 1: tammy.v1.SubmissionEnvironment
+	(SubmissionRetryClassification)(0),                      // 2: tammy.v1.SubmissionRetryClassification
+	(*CompanyReturnSubmissionAttempt)(nil),                  // 3: tammy.v1.CompanyReturnSubmissionAttempt
+	(*CompanyReturnSubmissionReceipt)(nil),                  // 4: tammy.v1.CompanyReturnSubmissionReceipt
+	(*CompanyReturnStatusObservation)(nil),                  // 5: tammy.v1.CompanyReturnStatusObservation
+	(*CompanyReturnSubmission)(nil),                         // 6: tammy.v1.CompanyReturnSubmission
+	(*PreLodgeCompanyReturnRequest)(nil),                    // 7: tammy.v1.PreLodgeCompanyReturnRequest
+	(*PreLodgeCompanyReturnResponse)(nil),                   // 8: tammy.v1.PreLodgeCompanyReturnResponse
+	(*LodgeCompanyReturnRequest)(nil),                       // 9: tammy.v1.LodgeCompanyReturnRequest
+	(*LodgeCompanyReturnResponse)(nil),                      // 10: tammy.v1.LodgeCompanyReturnResponse
+	(*GetCompanyReturnSubmissionRequest)(nil),               // 11: tammy.v1.GetCompanyReturnSubmissionRequest
+	(*GetCompanyReturnSubmissionResponse)(nil),              // 12: tammy.v1.GetCompanyReturnSubmissionResponse
+	(*RefreshCompanyReturnStatusRequest)(nil),               // 13: tammy.v1.RefreshCompanyReturnStatusRequest
+	(*RefreshCompanyReturnStatusResponse)(nil),              // 14: tammy.v1.RefreshCompanyReturnStatusResponse
+	(*ReconcileUnknownCompanyReturnSubmissionRequest)(nil),  // 15: tammy.v1.ReconcileUnknownCompanyReturnSubmissionRequest
+	(*ReconcileUnknownCompanyReturnSubmissionResponse)(nil), // 16: tammy.v1.ReconcileUnknownCompanyReturnSubmissionResponse
+	(CompanyReturnOperationType)(0),                         // 17: tammy.v1.CompanyReturnOperationType
+	(CompanyReturnOperationOutcome)(0),                      // 18: tammy.v1.CompanyReturnOperationOutcome
+	(*timestamppb.Timestamp)(nil),                           // 19: google.protobuf.Timestamp
+	(*CommandContext)(nil),                                  // 20: tammy.v1.CommandContext
+	(*CompanyReturn)(nil),                                   // 21: tammy.v1.CompanyReturn
+	(*AuthenticationContext)(nil),                           // 22: tammy.v1.AuthenticationContext
 }
 var file_tammy_v1_company_return_submission_proto_depIdxs = []int32{
-	0, // [0:0] is the sub-list for method output_type
-	0, // [0:0] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	1,  // 0: tammy.v1.CompanyReturnSubmissionAttempt.environment:type_name -> tammy.v1.SubmissionEnvironment
+	17, // 1: tammy.v1.CompanyReturnSubmissionAttempt.operation_type:type_name -> tammy.v1.CompanyReturnOperationType
+	0,  // 2: tammy.v1.CompanyReturnSubmissionAttempt.state:type_name -> tammy.v1.CompanyReturnAttemptState
+	18, // 3: tammy.v1.CompanyReturnSubmissionAttempt.outcome:type_name -> tammy.v1.CompanyReturnOperationOutcome
+	2,  // 4: tammy.v1.CompanyReturnSubmissionAttempt.retry_classification:type_name -> tammy.v1.SubmissionRetryClassification
+	19, // 5: tammy.v1.CompanyReturnSubmissionAttempt.created_at:type_name -> google.protobuf.Timestamp
+	19, // 6: tammy.v1.CompanyReturnSubmissionAttempt.updated_at:type_name -> google.protobuf.Timestamp
+	19, // 7: tammy.v1.CompanyReturnSubmissionReceipt.received_at:type_name -> google.protobuf.Timestamp
+	17, // 8: tammy.v1.CompanyReturnStatusObservation.operation_type:type_name -> tammy.v1.CompanyReturnOperationType
+	19, // 9: tammy.v1.CompanyReturnStatusObservation.observed_at:type_name -> google.protobuf.Timestamp
+	3,  // 10: tammy.v1.CompanyReturnSubmission.latest_attempt:type_name -> tammy.v1.CompanyReturnSubmissionAttempt
+	4,  // 11: tammy.v1.CompanyReturnSubmission.receipt:type_name -> tammy.v1.CompanyReturnSubmissionReceipt
+	5,  // 12: tammy.v1.CompanyReturnSubmission.status_history:type_name -> tammy.v1.CompanyReturnStatusObservation
+	20, // 13: tammy.v1.PreLodgeCompanyReturnRequest.command_context:type_name -> tammy.v1.CommandContext
+	21, // 14: tammy.v1.PreLodgeCompanyReturnResponse.company_return:type_name -> tammy.v1.CompanyReturn
+	6,  // 15: tammy.v1.PreLodgeCompanyReturnResponse.submission:type_name -> tammy.v1.CompanyReturnSubmission
+	20, // 16: tammy.v1.LodgeCompanyReturnRequest.command_context:type_name -> tammy.v1.CommandContext
+	21, // 17: tammy.v1.LodgeCompanyReturnResponse.company_return:type_name -> tammy.v1.CompanyReturn
+	6,  // 18: tammy.v1.LodgeCompanyReturnResponse.submission:type_name -> tammy.v1.CompanyReturnSubmission
+	22, // 19: tammy.v1.GetCompanyReturnSubmissionRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	21, // 20: tammy.v1.GetCompanyReturnSubmissionResponse.company_return:type_name -> tammy.v1.CompanyReturn
+	6,  // 21: tammy.v1.GetCompanyReturnSubmissionResponse.submission:type_name -> tammy.v1.CompanyReturnSubmission
+	20, // 22: tammy.v1.RefreshCompanyReturnStatusRequest.command_context:type_name -> tammy.v1.CommandContext
+	21, // 23: tammy.v1.RefreshCompanyReturnStatusResponse.company_return:type_name -> tammy.v1.CompanyReturn
+	6,  // 24: tammy.v1.RefreshCompanyReturnStatusResponse.submission:type_name -> tammy.v1.CompanyReturnSubmission
+	20, // 25: tammy.v1.ReconcileUnknownCompanyReturnSubmissionRequest.command_context:type_name -> tammy.v1.CommandContext
+	21, // 26: tammy.v1.ReconcileUnknownCompanyReturnSubmissionResponse.company_return:type_name -> tammy.v1.CompanyReturn
+	6,  // 27: tammy.v1.ReconcileUnknownCompanyReturnSubmissionResponse.submission:type_name -> tammy.v1.CompanyReturnSubmission
+	7,  // 28: tammy.v1.CompanyReturnSubmissionService.PreLodgeCompanyReturn:input_type -> tammy.v1.PreLodgeCompanyReturnRequest
+	9,  // 29: tammy.v1.CompanyReturnSubmissionService.LodgeCompanyReturn:input_type -> tammy.v1.LodgeCompanyReturnRequest
+	11, // 30: tammy.v1.CompanyReturnSubmissionService.GetCompanyReturnSubmission:input_type -> tammy.v1.GetCompanyReturnSubmissionRequest
+	13, // 31: tammy.v1.CompanyReturnSubmissionService.RefreshCompanyReturnStatus:input_type -> tammy.v1.RefreshCompanyReturnStatusRequest
+	15, // 32: tammy.v1.CompanyReturnSubmissionService.ReconcileUnknownCompanyReturnSubmission:input_type -> tammy.v1.ReconcileUnknownCompanyReturnSubmissionRequest
+	8,  // 33: tammy.v1.CompanyReturnSubmissionService.PreLodgeCompanyReturn:output_type -> tammy.v1.PreLodgeCompanyReturnResponse
+	10, // 34: tammy.v1.CompanyReturnSubmissionService.LodgeCompanyReturn:output_type -> tammy.v1.LodgeCompanyReturnResponse
+	12, // 35: tammy.v1.CompanyReturnSubmissionService.GetCompanyReturnSubmission:output_type -> tammy.v1.GetCompanyReturnSubmissionResponse
+	14, // 36: tammy.v1.CompanyReturnSubmissionService.RefreshCompanyReturnStatus:output_type -> tammy.v1.RefreshCompanyReturnStatusResponse
+	16, // 37: tammy.v1.CompanyReturnSubmissionService.ReconcileUnknownCompanyReturnSubmission:output_type -> tammy.v1.ReconcileUnknownCompanyReturnSubmissionResponse
+	33, // [33:38] is the sub-list for method output_type
+	28, // [28:33] is the sub-list for method input_type
+	28, // [28:28] is the sub-list for extension type_name
+	28, // [28:28] is the sub-list for extension extendee
+	0,  // [0:28] is the sub-list for field type_name
 }
 
 func init() { file_tammy_v1_company_return_submission_proto_init() }
@@ -138,20 +1511,22 @@ func file_tammy_v1_company_return_submission_proto_init() {
 	if File_tammy_v1_company_return_submission_proto != nil {
 		return
 	}
+	file_tammy_v1_common_proto_init()
 	file_tammy_v1_company_tax_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_tammy_v1_company_return_submission_proto_rawDesc), len(file_tammy_v1_company_return_submission_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   0,
+			NumEnums:      3,
+			NumMessages:   14,
 			NumExtensions: 0,
-			NumServices:   0,
+			NumServices:   1,
 		},
 		GoTypes:           file_tammy_v1_company_return_submission_proto_goTypes,
 		DependencyIndexes: file_tammy_v1_company_return_submission_proto_depIdxs,
 		EnumInfos:         file_tammy_v1_company_return_submission_proto_enumTypes,
+		MessageInfos:      file_tammy_v1_company_return_submission_proto_msgTypes,
 	}.Build()
 	File_tammy_v1_company_return_submission_proto = out.File
 	file_tammy_v1_company_return_submission_proto_goTypes = nil

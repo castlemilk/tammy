@@ -3,15 +3,540 @@
 // option features.field_presence = IMPLICIT;
 /* eslint-disable */
 
-import type { GenEnum, GenFile } from "@bufbuild/protobuf/codegenv2";
-import { enumDesc, fileDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import { file_buf_validate_validate } from "@buf/bufbuild_protovalidate.bufbuild_es/buf/validate/validate_pb.js";
+import type { Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
+import type { AuthenticationContext, CommandContext } from "./common_pb.js";
+import { file_tammy_v1_common } from "./common_pb.js";
+import type { CompanyReturn, CompanyReturnOperationOutcome, CompanyReturnOperationType } from "./company_tax_pb.js";
 import { file_tammy_v1_company_tax } from "./company_tax_pb.js";
+import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file tammy/v1/company_return_submission.proto.
  */
 export const file_tammy_v1_company_return_submission: GenFile = /*@__PURE__*/
-  fileDesc("Cih0YW1teS92MS9jb21wYW55X3JldHVybl9zdWJtaXNzaW9uLnByb3RvEgh0YW1teS52MSqNAwoZQ29tcGFueVJldHVybkF0dGVtcHRTdGF0ZRIsCihDT01QQU5ZX1JFVFVSTl9BVFRFTVBUX1NUQVRFX1VOU1BFQ0lGSUVEEAASKQolQ09NUEFOWV9SRVRVUk5fQVRURU1QVF9TVEFURV9QUkVQQVJFRBABEiwKKENPTVBBTllfUkVUVVJOX0FUVEVNUFRfU1RBVEVfRElTUEFUQ0hJTkcQAhIvCitDT01QQU5ZX1JFVFVSTl9BVFRFTVBUX1NUQVRFX05PVF9ESVNQQVRDSEVEEAMSMAosQ09NUEFOWV9SRVRVUk5fQVRURU1QVF9TVEFURV9SRVNVTFRfUkVDT1JERUQQBBIwCixDT01QQU5ZX1JFVFVSTl9BVFRFTVBUX1NUQVRFX09VVENPTUVfVU5LTk9XThAFEioKJkNPTVBBTllfUkVUVVJOX0FUVEVNUFRfU1RBVEVfQ09NTUlUVEVEEAYSKAokQ09NUEFOWV9SRVRVUk5fQVRURU1QVF9TVEFURV9BQk9SVEVEEAdCTFpFZ2l0aHViLmNvbS90YW1teWFwcC90YW1teS9zZXJ2aWNlcy9jb3JlL2ludGVybmFsL2dlbi90YW1teS92MTt0YW1teXYxkgMCCAJiCGVkaXRpb25zcOgH", [file_tammy_v1_company_tax]);
+  fileDesc("Cih0YW1teS92MS9jb21wYW55X3JldHVybl9zdWJtaXNzaW9uLnByb3RvEgh0YW1teS52MSL/CwoeQ29tcGFueVJldHVyblN1Ym1pc3Npb25BdHRlbXB0ElgKAmlkGAEgASgJQky6SElyRzJFXlswLTlhLWZdezh9LVswLTlhLWZdezR9LTdbMC05YS1mXXszfS1bODlhYl1bMC05YS1mXXszfS1bMC05YS1mXXsxMn0kEl8KCXJldHVybl9pZBgCIAEoCUJMukhJckcyRV5bMC05YS1mXXs4fS1bMC05YS1mXXs0fS03WzAtOWEtZl17M30tWzg5YWJdWzAtOWEtZl17M30tWzAtOWEtZl17MTJ9JBJkCg5kZWNsYXJhdGlvbl9pZBgDIAEoCUJMukhJckcyRV5bMC05YS1mXXs4fS1bMC05YS1mXXs0fS03WzAtOWEtZl17M30tWzg5YWJdWzAtOWEtZl17M30tWzAtOWEtZl17MTJ9JBIlChRyZXBvcnRfc25hcHNob3RfaGFzaBgEIAEoDEIHukgEegJoIBImChVvZmZpY2lhbF9wYXlsb2FkX2hhc2gYBSABKAxCB7pIBHoCaCASQAoLZW52aXJvbm1lbnQYBiABKA4yHy50YW1teS52MS5TdWJtaXNzaW9uRW52aXJvbm1lbnRCCrpIB4IBBBABIAASLwoecHJvZHVjdF9pZGVudGlmaWVyX2ZpbmdlcnByaW50GAcgASgMQge6SAR6AmggEkQKCnNlcnZpY2VfaWQYCCABKAlCMLpILXIrEAEYgAEyJF5bQS1aYS16MC05XVtBLVphLXowLTkuXzovLV17MCwxMjd9JBJICg5vcGVyYXRpb25fdHlwZRgJIAEoDjIkLnRhbW15LnYxLkNvbXBhbnlSZXR1cm5PcGVyYXRpb25UeXBlQgq6SAeCAQQQASAAEmIKDG9wZXJhdGlvbl9pZBgKIAEoCUJMukhJckcyRV5bMC05YS1mXXs4fS1bMC05YS1mXXs0fS03WzAtOWEtZl17M30tWzg5YWJdWzAtOWEtZl17M30tWzAtOWEtZl17MTJ9JBJqChRpZGVtcG90ZW5jeV9pZGVudGl0eRgLIAEoCUJMukhJckcyRV5bMC05YS1mXXs4fS1bMC05YS1mXXs0fS03WzAtOWEtZl17M30tWzg5YWJdWzAtOWEtZl17M30tWzAtOWEtZl17MTJ9JBI+CgVzdGF0ZRgMIAEoDjIjLnRhbW15LnYxLkNvbXBhbnlSZXR1cm5BdHRlbXB0U3RhdGVCCrpIB4IBBBABIAASSQoHb3V0Y29tZRgNIAEoDjInLnRhbW15LnYxLkNvbXBhbnlSZXR1cm5PcGVyYXRpb25PdXRjb21lQg+qAQIIAbpIB4IBBBABIAASUQoUcmV0cnlfY2xhc3NpZmljYXRpb24YDiABKA4yJy50YW1teS52MS5TdWJtaXNzaW9uUmV0cnlDbGFzc2lmaWNhdGlvbkIKukgHggEEEAEgABIjCg1yZXNwb25zZV9oYXNoGA8gASgMQgyqAQIIAbpIBHoCaCASNgoKY3JlYXRlZF9hdBgQIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBrpIA8gBARI2Cgp1cGRhdGVkX2F0GBEgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIGukgDyAEBOqYCukiiAhqfAgovY29tcGFueV9yZXR1cm5fc3VibWlzc2lvbi5hdHRlbXB0Lm91dGNvbWVfc3RhdGUSLGF0dGVtcHQgb3V0Y29tZSBtdXN0IG1hdGNoIGl0cyBkdXJhYmxlIHN0YXRlGr0BKHRoaXMuc3RhdGUgaW4gWzEsIDIsIDMsIDddICYmICFoYXModGhpcy5vdXRjb21lKSkgfHwgKHRoaXMuc3RhdGUgPT0gNSAmJiBoYXModGhpcy5vdXRjb21lKSAmJiB0aGlzLm91dGNvbWUgPT0gNCkgfHwgKHRoaXMuc3RhdGUgaW4gWzQsIDZdICYmIGhhcyh0aGlzLm91dGNvbWUpICYmIHRoaXMub3V0Y29tZSBpbiBbMSwgMiwgM10pIogGCh5Db21wYW55UmV0dXJuU3VibWlzc2lvblJlY2VpcHQSWAoCaWQYASABKAlCTLpISXJHMkVeWzAtOWEtZl17OH0tWzAtOWEtZl17NH0tN1swLTlhLWZdezN9LVs4OWFiXVswLTlhLWZdezN9LVswLTlhLWZdezEyfSQSYAoKYXR0ZW1wdF9pZBgCIAEoCUJMukhJckcyRV5bMC05YS1mXXs4fS1bMC05YS1mXXs0fS03WzAtOWEtZl17M30tWzg5YWJdWzAtOWEtZl17M30t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eHBlY3RlZF9yZXR1cm5fdmVyc2lvbhgFIAEoBEIHukgEMgIoATr5AbpI9QEa8gEKL2NvbXBhbnlfcmV0dXJuX3N1Ym1pc3Npb24ucHJlbG9kZ2UuZnJlc2hfZmFjdG9yEi9wcmUtbG9kZ2UgcmVxdWlyZXMgYSBwdXJwb3NlLWJvdW5kIGZyZXNoIGZhY3RvchqNAWhhcyh0aGlzLmNvbW1hbmRfY29udGV4dCkgJiYgaGFzKHRoaXMuY29tbWFuZF9jb250ZXh0LmZyZXNoX2ZhY3RvcikgJiYgdGhpcy5jb21tYW5kX2NvbnRleHQuZnJlc2hfZmFjdG9yLnB1cnBvc2UgPT0gJ2NvbXBhbnlfcmV0dXJuX3ByZWxvZGdlJyL3AwodUHJlTG9kZ2VDb21wYW55UmV0dXJuUmVzcG9uc2USNwoOY29tcGFueV9yZXR1cm4YASABKAsyFy50YW1teS52MS5Db21wYW55UmV0dXJuQga6SAPIAQESPQoKc3VibWlzc2lvbhgCIAEoCzIhLnRhbW15LnYxLkNvbXBhbnlSZXR1cm5TdWJtaXNzaW9uQga6SAPIAQE63QK6SNkCGtYCCiljb21wYW55X3JldHVybl9zdWJtaXNzaW9uLnByZWxvZGdlLnJlc3VsdBJVcHJlLWxvZGdlIG5ldmVyIGRlbGl2ZXJzIG9yIGNyZWF0ZXMgYSByZWNlaXB0IGFuZCByZXRhaW5zIGl0cyBvcmlnaW5hbCBvcGVyYXRpb24gdHlwZRrRAWhhcyh0aGlzLmNvbXBhbnlfcmV0dXJuKSAmJiBoYXModGhpcy5zdWJtaXNzaW9uKSAmJiBoYXModGhpcy5zdWJtaXNzaW9uLmxhdGVzdF9hdHRlbXB0KSAmJiB0aGlzLnN1Ym1pc3Npb24ubGF0ZXN0X2F0dGVtcHQub3BlcmF0aW9uX3R5cGUgPT0gMSAmJiB0aGlzLmNvbXBhbnlfcmV0dXJuLnN0YXRlICE9IDEwICYmICFoYXModGhpcy5zdWJtaXNzaW9uLnJlY2VpcHQpIqMFChlMb2RnZUNvbXBhbnlSZXR1cm5SZXF1ZXN0EjkKD2NvbW1hbmRfY29udGV4dBgBIAEoCzIYLnRhbW15LnYxLkNvbW1hbmRDb250ZXh0Qga6SAPIAQESZQoPb3JnYW5pc2F0aW9uX2lkGAIgASgJQky6SElyRzJFXlswLTlhLWZdezh9LVswLTlhLWZdezR9LTdbMC05YS1mXXszfS1bODlhYl1bMC05YS1mXXszfS1bMC05YS1mXXsxMn0kEl8KCXJldHVybl9pZBgDIAEoCUJMukhJckcyRV5bMC05YS1mXXs4fS1bMC05YS1mXXs0fS03WzAtOWEtZl17M30tWzg5YWJdWzAtOWEtZl17M30tWzAtOWEtZl17MTJ9JBJkCg5kZWNsYXJhdGlvbl9pZBgEIAEoCUJMukhJckcyRV5bMC05YS1mXXs4fS1bMC05YS1mXXs0fS03WzAtOWEtZl17M30tWzg5YWJdWzAtOWEtZl17M30tWzAtOWEtZl17MTJ9JBIoChdleHBlY3RlZF9yZXR1cm5fdmVyc2lvbhgFIAEoBEIHukgEMgIoATryAbpI7gEa6wEKLGNvbXBhbnlfcmV0dXJuX3N1Ym1pc3Npb24ubG9kZ2UuZnJlc2hfZmFjdG9yEi5sb2RnbWVudCByZXF1aXJlcyBhIHB1cnBvc2UtYm91bmQgZnJlc2ggZmFjdG9yGooBaGFzKHRoaXMuY29tbWFuZF9jb250ZXh0KSAmJiBoYXModGhpcy5jb21tYW5kX2NvbnRleHQuZnJlc2hfZmFjdG9yKSAmJiB0aGlzLmNvbW1hbmRfY29udGV4dC5mcmVzaF9mYWN0b3IucHVycG9zZSA9PSAnY29tcGFueV9yZXR1cm5fbG9kZ2UnIrYGChpMb2RnZUNvbXBhbnlSZXR1cm5SZXNwb25zZRI3Cg5jb21wYW55X3JldHVybhgBIAEoCzIXLnRhbW15LnYxLkNvbXBhbnlSZXR1cm5CBrpIA8gBARI9CgpzdWJtaXNzaW9uGAIgASgLMiEudGFtbXkudjEuQ29tcGFueVJldHVyblN1Ym1pc3Npb25CBrpIA8gBATqfBbpImwUa0gEKKWNvbXBhbnlfcmV0dXJuX3N1Ym1pc3Npb24ubG9kZ2Uub3BlcmF0aW9uEjJsb2RnbWVudCByZXNwb25zZSByZXRhaW5zIHRoZSBsb2RnZSBvcGVyYXRpb24gdHlwZRpxaGFzKHRoaXMuc3VibWlzc2lvbikgJiYgaGFzKHRoaXMuc3VibWlzc2lvbi5sYXRlc3RfYXR0ZW1wdCkgJiYgdGhpcy5zdWJtaXNzaW9uLmxhdGVzdF9hdHRlbXB0Lm9wZXJhdGlvbl90eXBlID09IDIawwMKLWNvbXBhbnlfcmV0dXJuX3N1Ym1pc3Npb24ubG9kZ2UucmVjZWlwdF9zdGF0ZRI4YSByZWNlaXB0IGV4aXN0cyBleGFjdGx5IGZvciBhbiBhY2NlcHRlZCBkZWxpdmVyZWQgbG9kZ2Ua1wJoYXModGhpcy5jb21wYW55X3JldHVybikgJiYgaGFzKHRoaXMuc3VibWlzc2lvbikgJiYgKGhhcyh0aGlzLnN1Ym1pc3Npb24ucmVjZWlwdCkgPT0gKHRoaXMuY29tcGFueV9yZXR1cm4uc3RhdGUgPT0gMTApKSAmJiAoIWhhcyh0aGlzLnN1Ym1pc3Npb24ucmVjZWlwdCkgfHwgKGhhcyh0aGlzLnN1Ym1pc3Npb24ubGF0ZXN0X2F0dGVtcHQpICYmIHRoaXMuc3VibWlzc2lvbi5sYXRlc3RfYXR0ZW1wdC5vcGVyYXRpb25fdHlwZSA9PSAyICYmIGhhcyh0aGlzLnN1Ym1pc3Npb24ubGF0ZXN0X2F0dGVtcHQub3V0Y29tZSkgJiYgdGhpcy5zdWJtaXNzaW9uLmxhdGVzdF9hdHRlbXB0Lm91dGNvbWUgPT0gMSkpIqwCCiFHZXRDb21wYW55UmV0dXJuU3VibWlzc2lvblJlcXVlc3QSPwoOYXV0aGVudGljYXRpb24YASABKAsyHy50YW1teS52MS5BdXRoZW50aWNhdGlvbkNvbnRleHRCBrpIA8gBARJlCg9vcmdhbmlzYXRpb25faWQYAiABKAlCTLpISXJHMkVeWzAtOWEtZl17OH0tWzAtOWEtZl17NH0tN1swLTlhLWZdezN9LVs4OWFiXVswLTlhLWZdezN9LVswLTlhLWZdezEyfSQSXwoJcmV0dXJuX2lkGAMgASgJQky6SElyRzJFXlswLTlhLWZdezh9LVswLTlhLWZdezR9LTdbMC05YS1mXXszfS1bODlhYl1bMC05YS1mXXszfS1bMC05YS1mXXsxMn0kIucECiJHZXRDb21wYW55UmV0dXJuU3VibWlzc2lvblJlc3BvbnNlEjcKDmNvbXBhbnlfcmV0dXJuGAEgASgLMhcudGFtbXkudjEuQ29tcGFueVJldHVybkIGukgDyAEBEj0KCnN1Ym1pc3Npb24YAiABKAsyIS50YW1teS52MS5Db21wYW55UmV0dXJuU3VibWlzc2lvbkIGukgDyAEBOsgDukjEAxrBAworY29tcGFueV9yZXR1cm5fc3VibWlzc2lvbi5nZXQucmVjZWlwdF9zdGF0ZRI4YSByZWNlaXB0IGV4aXN0cyBleGFjdGx5IGZvciBhbiBhY2NlcHRlZCBkZWxpdmVyZWQgbG9kZ2Ua1wJoYXModGhpcy5jb21wYW55X3JldHVybikgJiYgaGFzKHRoaXMuc3VibWlzc2lvbikgJiYgKGhhcyh0aGlzLnN1Ym1pc3Npb24ucmVjZWlwdCkgPT0gKHRoaXMuY29tcGFueV9yZXR1cm4uc3RhdGUgPT0gMTApKSAmJiAoIWhhcyh0aGlzLnN1Ym1pc3Npb24ucmVjZWlwdCkgfHwgKGhhcyh0aGlzLnN1Ym1pc3Npb24ubGF0ZXN0X2F0dGVtcHQpICYmIHRoaXMuc3VibWlzc2lvbi5sYXRlc3RfYXR0ZW1wdC5vcGVyYXRpb25fdHlwZSA9PSAyICYmIGhhcyh0aGlzLnN1Ym1pc3Npb24ubGF0ZXN0X2F0dGVtcHQub3V0Y29tZSkgJiYgdGhpcy5zdWJtaXNzaW9uLmxhdGVzdF9hdHRlbXB0Lm91dGNvbWUgPT0gMSkpIrIDCiFSZWZyZXNoQ29tcGFueVJldHVyblN0YXR1c1JlcXVlc3QSOQoPY29tbWFuZF9jb250ZXh0GAEgASgLMhgudGFtbXkudjEuQ29tbWFuZENvbnRleHRCBrpIA8gBARJlCg9vcmdhbmlzYXRpb25faWQYAiABKAlCTLpISXJHMkVeWzAtOWEtZl17OH0tWzAtOWEtZl17NH0tN1swLTlhLWZdezN9LVs4OWFiXVswLTlhLWZdezN9LVswLTlhLWZdezEyfSQSXwoJcmV0dXJuX2lkGAMgASgJQky6SElyRzJFXlswLTlhLWZdezh9LVswLTlhLWZdezR9LTdbMC05YS1mXXszfS1bODlhYl1bMC05YS1mXXszfS1bMC05YS1mXXsxMn0kEmAKCmF0dGVtcHRfaWQYBCABKAlCTLpISXJHMkVeWzAtOWEtZl17OH0tWzAtOWEtZl17NH0tN1swLTlhLWZdezN9LVs4OWFiXVswLTlhLWZdezN9LVswLTlhLWZdezEyfSQSKAoXZXhwZWN0ZWRfcmV0dXJuX3ZlcnNpb24YBSABKARCB7pIBDICKAEi6wQKIlJlZnJlc2hDb21wYW55UmV0dXJuU3RhdHVzUmVzcG9uc2USNwoOY29tcGFueV9yZXR1cm4YASABKAsyFy50YW1teS52MS5Db21wYW55UmV0dXJuQga6SAPIAQESPQoKc3VibWlzc2lvbhgCIAEoCzIhLnRhbW15LnYxLkNvbXBhbnlSZXR1cm5TdWJtaXNzaW9uQga6SAPIAQE6zAO6SMgDGsUDCi9jb21wYW55X3JldHVybl9zdWJtaXNzaW9uLnJlZnJlc2gucmVjZWlwdF9zdGF0ZRI4YSByZWNlaXB0IGV4aXN0cyBleGFjdGx5IGZvciBhbiBhY2NlcHRlZCBkZWxpdmVyZWQgbG9kZ2Ua1wJoYXModGhpcy5jb21wYW55X3JldHVybikgJiYgaGFzKHRoaXMuc3VibWlzc2lvbikgJiYgKGhhcyh0aGlzLnN1Ym1pc3Npb24ucmVjZWlwdCkgPT0gKHRoaXMuY29tcGFueV9yZXR1cm4uc3RhdGUgPT0gMTApKSAmJiAoIWhhcyh0aGlzLnN1Ym1pc3Npb24ucmVjZWlwdCkgfHwgKGhhcyh0aGlzLnN1Ym1pc3Npb24ubGF0ZXN0X2F0dGVtcHQpICYmIHRoaXMuc3VibWlzc2lvbi5sYXRlc3RfYXR0ZW1wdC5vcGVyYXRpb25fdHlwZSA9PSAyICYmIGhhcyh0aGlzLnN1Ym1pc3Npb24ubGF0ZXN0X2F0dGVtcHQub3V0Y29tZSkgJiYgdGhpcy5zdWJtaXNzaW9uLmxhdGVzdF9hdHRlbXB0Lm91dGNvbWUgPT0gMSkpItoFCi5SZWNvbmNpbGVVbmtub3duQ29tcGFueVJldHVyblN1Ym1pc3Npb25SZXF1ZXN0EjkKD2NvbW1hbmRfY29udGV4dBgBIAEoCzIYLnRhbW15LnYxLkNvbW1hbmRDb250ZXh0Qga6SAPIAQESZQoPb3JnYW5pc2F0aW9uX2lkGAIgASgJQky6SElyRzJFXlswLTlhLWZdezh9LVswLTlhLWZdezR9LTdbMC05YS1mXXszfS1bODlhYl1bMC05YS1mXXszfS1bMC05YS1mXXsxMn0kEl8KCXJldHVybl9pZBgDIAEoCUJMukhJckcyRV5bMC05YS1mXXs4fS1bMC05YS1mXXs0fS03WzAtOWEtZl17M30tWzg5YWJdWzAtOWEtZl17M30tWzAtOWEtZl17MTJ9JBJgCgphdHRlbXB0X2lkGAQgASgJQky6SElyRzJFXlswLTlhLWZdezh9LVswLTlhLWZdezR9LTdbMC05YS1mXXszfS1bODlhYl1bMC05YS1mXXszfS1bMC05YS1mXXsxMn0kEigKF2V4cGVjdGVkX3JldHVybl92ZXJzaW9uGAUgASgEQge6SAQyAigBOpgCukiUAhqRAgowY29tcGFueV9yZXR1cm5fc3VibWlzc2lvbi5yZWNvbmNpbGUuZnJlc2hfZmFjdG9yEkR1bmtub3duLW91dGNvbWUgcmVjb25jaWxpYXRpb24gcmVxdWlyZXMgYSBwdXJwb3NlLWJvdW5kIGZyZXNoIGZhY3RvchqWAWhhcyh0aGlzLmNvbW1hbmRfY29udGV4dCkgJiYgaGFzKHRoaXMuY29tbWFuZF9jb250ZXh0LmZyZXNoX2ZhY3RvcikgJiYgdGhpcy5jb21tYW5kX2NvbnRleHQuZnJlc2hfZmFjdG9yLnB1cnBvc2UgPT0gJ2NvbXBhbnlfcmV0dXJuX3JlY29uY2lsZV91bmtub3duJyL6BAovUmVjb25jaWxlVW5rbm93bkNvbXBhbnlSZXR1cm5TdWJtaXNzaW9uUmVzcG9uc2USNwoOY29tcGFueV9yZXR1cm4YASABKAsyFy50YW1teS52MS5Db21wYW55UmV0dXJuQga6SAPIAQESPQoKc3VibWlzc2lvbhgCIAEoCzIhLnRhbW15LnYxLkNvbXBhbnlSZXR1cm5TdWJtaXNzaW9uQga6SAPIAQE6zgO6SMoDGscDCjFjb21wYW55X3JldHVybl9zdWJtaXNzaW9uLnJlY29uY2lsZS5yZWNlaXB0X3N0YXRlEjhhIHJlY2VpcHQgZXhpc3RzIGV4YWN0bHkgZm9yIGFuIGFjY2VwdGVkIGRlbGl2ZXJlZCBsb2RnZRrXAmhhcyh0aGlzLmNvbXBhbnlfcmV0dXJuKSAmJiBoYXModGhpcy5zdWJtaXNzaW9uKSAmJiAoaGFzKHRoaXMuc3VibWlzc2lvbi5yZWNlaXB0KSA9PSAodGhpcy5jb21wYW55X3JldHVybi5zdGF0ZSA9PSAxMCkpICYmICghaGFzKHRoaXMuc3VibWlzc2lvbi5yZWNlaXB0KSB8fCAoaGFzKHRoaXMuc3VibWlzc2lvbi5sYXRlc3RfYXR0ZW1wdCkgJiYgdGhpcy5zdWJtaXNzaW9uLmxhdGVzdF9hdHRlbXB0Lm9wZXJhdGlvbl90eXBlID09IDIgJiYgaGFzKHRoaXMuc3VibWlzc2lvbi5sYXRlc3RfYXR0ZW1wdC5vdXRjb21lKSAmJiB0aGlzLnN1Ym1pc3Npb24ubGF0ZXN0X2F0dGVtcHQub3V0Y29tZSA9PSAxKSkqjQMKGUNvbXBhbnlSZXR1cm5BdHRlbXB0U3RhdGUSLAooQ09NUEFOWV9SRVRVUk5fQVRURU1QVF9TVEFURV9VTlNQRUNJRklFRBAAEikKJUNPTVBBTllfUkVUVVJOX0FUVEVNUFRfU1RBVEVfUFJFUEFSRUQQARIsCihDT01QQU5ZX1JFVFVSTl9BVFRFTVBUX1NUQVRFX0RJU1BBVENISU5HEAISLworQ09NUEFOWV9SRVRVUk5fQVRURU1QVF9TVEFURV9OT1RfRElTUEFUQ0hFRBADEjAKLENPTVBBTllfUkVUVVJOX0FUVEVNUFRfU1RBVEVfUkVTVUxUX1JFQ09SREVEEAQSMAosQ09NUEFOWV9SRVRVUk5fQVRURU1QVF9TVEFURV9PVVRDT01FX1VOS05PV04QBRIqCiZDT01QQU5ZX1JFVFVSTl9BVFRFTVBUX1NUQVRFX0NPTU1JVFRFRBAGEigKJENPTVBBTllfUkVUVVJOX0FUVEVNUFRfU1RBVEVfQUJPUlRFRBAHKq0BChVTdWJtaXNzaW9uRW52aXJvbm1lbnQSJgoiU1VCTUlTU0lPTl9FTlZJUk9OTUVOVF9VTlNQRUNJRklFRBAAEiQKIFNVQk1JU1NJT05fRU5WSVJPTk1FTlRfU0lNVUxBVE9SEAESHwobU1VCTUlTU0lPTl9FTlZJUk9OTUVOVF9FVlRFEAISJQohU1VCTUlTU0lPTl9FTlZJUk9OTUVOVF9QUk9EVUNUSU9OEAMqiAIKHVN1Ym1pc3Npb25SZXRyeUNsYXNzaWZpY2F0aW9uEi8KK1NVQk1JU1NJT05fUkVUUllfQ0xBU1NJRklDQVRJT05fVU5TUEVDSUZJRUQQABIpCiVTVUJNSVNTSU9OX1JFVFJZX0NMQVNTSUZJQ0FUSU9OX05FVkVSEAESTQpJU1VCTUlTU0lPTl9SRVRSWV9DTEFTU0lGSUNBVElPTl9TQU1FX0lERU5USVRZX0FGVEVSX1BST1ZFTl9OT1RfRElTUEFUQ0hFRBACEjwKOFNVQk1JU1NJT05fUkVUUllfQ0xBU1NJRklDQVRJT05fU1RBVFVTX09SX1JFQ09OQ0lMRV9PTkxZEAMy/gQKHkNvbXBhbnlSZXR1cm5TdWJtaXNzaW9uU2VydmljZRJoChVQcmVMb2RnZUNvbXBhbnlSZXR1cm4SJi50YW1teS52MS5QcmVMb2RnZUNvbXBhbnlSZXR1cm5SZXF1ZXN0GicudGFtbXkudjEuUHJlTG9kZ2VDb21wYW55UmV0dXJuUmVzcG9uc2USXwoSTG9kZ2VDb21wYW55UmV0dXJuEiMudGFtbXkudjEuTG9kZ2VDb21wYW55UmV0dXJuUmVxdWVzdBokLnRhbW15LnYxLkxvZGdlQ29tcGFueVJldHVyblJlc3BvbnNlEncKGkdldENvbXBhbnlSZXR1cm5TdWJtaXNzaW9uEisudGFtbXkudjEuR2V0Q29tcGFueVJldHVyblN1Ym1pc3Npb25SZXF1ZXN0GiwudGFtbXkudjEuR2V0Q29tcGFueVJldHVyblN1Ym1pc3Npb25SZXNwb25zZRJ3ChpSZWZyZXNoQ29tcGFueVJldHVyblN0YXR1cxIrLnRhbW15LnYxLlJlZnJlc2hDb21wYW55UmV0dXJuU3RhdHVzUmVxdWVzdBosLnRhbW15LnYxLlJlZnJlc2hDb21wYW55UmV0dXJuU3RhdHVzUmVzcG9uc2USngEKJ1JlY29uY2lsZVVua25vd25Db21wYW55UmV0dXJuU3VibWlzc2lvbhI4LnRhbW15LnYxLlJlY29uY2lsZVVua25vd25Db21wYW55UmV0dXJuU3VibWlzc2lvblJlcXVlc3QaOS50YW1teS52MS5SZWNvbmNpbGVVbmtub3duQ29tcGFueVJldHVyblN1Ym1pc3Npb25SZXNwb25zZUJMWkVnaXRodWIuY29tL3RhbW15YXBwL3RhbW15L3NlcnZpY2VzL2NvcmUvaW50ZXJuYWwvZ2VuL3RhbW15L3YxO3RhbW15djGSAwIIAmIIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_google_protobuf_timestamp, file_tammy_v1_common, file_tammy_v1_company_tax]);
+
+/**
+ * @generated from message tammy.v1.CompanyReturnSubmissionAttempt
+ */
+export type CompanyReturnSubmissionAttempt = Message<"tammy.v1.CompanyReturnSubmissionAttempt"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string return_id = 2;
+   */
+  returnId: string;
+
+  /**
+   * @generated from field: string declaration_id = 3;
+   */
+  declarationId: string;
+
+  /**
+   * @generated from field: bytes report_snapshot_hash = 4;
+   */
+  reportSnapshotHash: Uint8Array;
+
+  /**
+   * @generated from field: bytes official_payload_hash = 5;
+   */
+  officialPayloadHash: Uint8Array;
+
+  /**
+   * @generated from field: tammy.v1.SubmissionEnvironment environment = 6;
+   */
+  environment: SubmissionEnvironment;
+
+  /**
+   * @generated from field: bytes product_identifier_fingerprint = 7;
+   */
+  productIdentifierFingerprint: Uint8Array;
+
+  /**
+   * @generated from field: string service_id = 8;
+   */
+  serviceId: string;
+
+  /**
+   * @generated from field: tammy.v1.CompanyReturnOperationType operation_type = 9;
+   */
+  operationType: CompanyReturnOperationType;
+
+  /**
+   * @generated from field: string operation_id = 10;
+   */
+  operationId: string;
+
+  /**
+   * @generated from field: string idempotency_identity = 11;
+   */
+  idempotencyIdentity: string;
+
+  /**
+   * @generated from field: tammy.v1.CompanyReturnAttemptState state = 12;
+   */
+  state: CompanyReturnAttemptState;
+
+  /**
+   * @generated from field: tammy.v1.CompanyReturnOperationOutcome outcome = 13 [features.field_presence = EXPLICIT];
+   */
+  outcome: CompanyReturnOperationOutcome;
+
+  /**
+   * @generated from field: tammy.v1.SubmissionRetryClassification retry_classification = 14;
+   */
+  retryClassification: SubmissionRetryClassification;
+
+  /**
+   * @generated from field: bytes response_hash = 15 [features.field_presence = EXPLICIT];
+   */
+  responseHash: Uint8Array;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 16;
+   */
+  createdAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp updated_at = 17;
+   */
+  updatedAt?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message tammy.v1.CompanyReturnSubmissionAttempt.
+ * Use `create(CompanyReturnSubmissionAttemptSchema)` to create a new message.
+ */
+export const CompanyReturnSubmissionAttemptSchema: GenMessage<CompanyReturnSubmissionAttempt> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_company_return_submission, 0);
+
+/**
+ * @generated from message tammy.v1.CompanyReturnSubmissionReceipt
+ */
+export type CompanyReturnSubmissionReceipt = Message<"tammy.v1.CompanyReturnSubmissionReceipt"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string attempt_id = 2;
+   */
+  attemptId: string;
+
+  /**
+   * @generated from field: string encrypted_receipt_ref = 3;
+   */
+  encryptedReceiptRef: string;
+
+  /**
+   * @generated from field: string safe_display_summary = 4;
+   */
+  safeDisplaySummary: string;
+
+  /**
+   * @generated from field: string conversation_id = 5 [features.field_presence = EXPLICIT];
+   */
+  conversationId: string;
+
+  /**
+   * @generated from field: string submission_id = 6 [features.field_presence = EXPLICIT];
+   */
+  submissionId: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp received_at = 7;
+   */
+  receivedAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: bytes response_schema_fingerprint = 8;
+   */
+  responseSchemaFingerprint: Uint8Array;
+
+  /**
+   * @generated from field: bytes content_hash = 9;
+   */
+  contentHash: Uint8Array;
+};
+
+/**
+ * Describes the message tammy.v1.CompanyReturnSubmissionReceipt.
+ * Use `create(CompanyReturnSubmissionReceiptSchema)` to create a new message.
+ */
+export const CompanyReturnSubmissionReceiptSchema: GenMessage<CompanyReturnSubmissionReceipt> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_company_return_submission, 1);
+
+/**
+ * @generated from message tammy.v1.CompanyReturnStatusObservation
+ */
+export type CompanyReturnStatusObservation = Message<"tammy.v1.CompanyReturnStatusObservation"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string attempt_id = 2;
+   */
+  attemptId: string;
+
+  /**
+   * @generated from field: tammy.v1.CompanyReturnOperationType operation_type = 3;
+   */
+  operationType: CompanyReturnOperationType;
+
+  /**
+   * @generated from field: string stable_result_code = 4;
+   */
+  stableResultCode: string;
+
+  /**
+   * @generated from field: string safe_status = 5;
+   */
+  safeStatus: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp observed_at = 6;
+   */
+  observedAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: bytes response_hash = 7;
+   */
+  responseHash: Uint8Array;
+};
+
+/**
+ * Describes the message tammy.v1.CompanyReturnStatusObservation.
+ * Use `create(CompanyReturnStatusObservationSchema)` to create a new message.
+ */
+export const CompanyReturnStatusObservationSchema: GenMessage<CompanyReturnStatusObservation> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_company_return_submission, 2);
+
+/**
+ * @generated from message tammy.v1.CompanyReturnSubmission
+ */
+export type CompanyReturnSubmission = Message<"tammy.v1.CompanyReturnSubmission"> & {
+  /**
+   * @generated from field: string return_id = 1;
+   */
+  returnId: string;
+
+  /**
+   * @generated from field: tammy.v1.CompanyReturnSubmissionAttempt latest_attempt = 2;
+   */
+  latestAttempt?: CompanyReturnSubmissionAttempt | undefined;
+
+  /**
+   * @generated from field: tammy.v1.CompanyReturnSubmissionReceipt receipt = 3;
+   */
+  receipt?: CompanyReturnSubmissionReceipt | undefined;
+
+  /**
+   * @generated from field: repeated tammy.v1.CompanyReturnStatusObservation status_history = 4;
+   */
+  statusHistory: CompanyReturnStatusObservation[];
+};
+
+/**
+ * Describes the message tammy.v1.CompanyReturnSubmission.
+ * Use `create(CompanyReturnSubmissionSchema)` to create a new message.
+ */
+export const CompanyReturnSubmissionSchema: GenMessage<CompanyReturnSubmission> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_company_return_submission, 3);
+
+/**
+ * @generated from message tammy.v1.PreLodgeCompanyReturnRequest
+ */
+export type PreLodgeCompanyReturnRequest = Message<"tammy.v1.PreLodgeCompanyReturnRequest"> & {
+  /**
+   * @generated from field: tammy.v1.CommandContext command_context = 1;
+   */
+  commandContext?: CommandContext | undefined;
+
+  /**
+   * @generated from field: string organisation_id = 2;
+   */
+  organisationId: string;
+
+  /**
+   * @generated from field: string return_id = 3;
+   */
+  returnId: string;
+
+  /**
+   * @generated from field: string declaration_id = 4;
+   */
+  declarationId: string;
+
+  /**
+   * @generated from field: uint64 expected_return_version = 5;
+   */
+  expectedReturnVersion: bigint;
+};
+
+/**
+ * Describes the message tammy.v1.PreLodgeCompanyReturnRequest.
+ * Use `create(PreLodgeCompanyReturnRequestSchema)` to create a new message.
+ */
+export const PreLodgeCompanyReturnRequestSchema: GenMessage<PreLodgeCompanyReturnRequest> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_company_return_submission, 4);
+
+/**
+ * @generated from message tammy.v1.PreLodgeCompanyReturnResponse
+ */
+export type PreLodgeCompanyReturnResponse = Message<"tammy.v1.PreLodgeCompanyReturnResponse"> & {
+  /**
+   * @generated from field: tammy.v1.CompanyReturn company_return = 1;
+   */
+  companyReturn?: CompanyReturn | undefined;
+
+  /**
+   * @generated from field: tammy.v1.CompanyReturnSubmission submission = 2;
+   */
+  submission?: CompanyReturnSubmission | undefined;
+};
+
+/**
+ * Describes the message tammy.v1.PreLodgeCompanyReturnResponse.
+ * Use `create(PreLodgeCompanyReturnResponseSchema)` to create a new message.
+ */
+export const PreLodgeCompanyReturnResponseSchema: GenMessage<PreLodgeCompanyReturnResponse> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_company_return_submission, 5);
+
+/**
+ * @generated from message tammy.v1.LodgeCompanyReturnRequest
+ */
+export type LodgeCompanyReturnRequest = Message<"tammy.v1.LodgeCompanyReturnRequest"> & {
+  /**
+   * @generated from field: tammy.v1.CommandContext command_context = 1;
+   */
+  commandContext?: CommandContext | undefined;
+
+  /**
+   * @generated from field: string organisation_id = 2;
+   */
+  organisationId: string;
+
+  /**
+   * @generated from field: string return_id = 3;
+   */
+  returnId: string;
+
+  /**
+   * @generated from field: string declaration_id = 4;
+   */
+  declarationId: string;
+
+  /**
+   * @generated from field: uint64 expected_return_version = 5;
+   */
+  expectedReturnVersion: bigint;
+};
+
+/**
+ * Describes the message tammy.v1.LodgeCompanyReturnRequest.
+ * Use `create(LodgeCompanyReturnRequestSchema)` to create a new message.
+ */
+export const LodgeCompanyReturnRequestSchema: GenMessage<LodgeCompanyReturnRequest> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_company_return_submission, 6);
+
+/**
+ * @generated from message tammy.v1.LodgeCompanyReturnResponse
+ */
+export type LodgeCompanyReturnResponse = Message<"tammy.v1.LodgeCompanyReturnResponse"> & {
+  /**
+   * @generated from field: tammy.v1.CompanyReturn company_return = 1;
+   */
+  companyReturn?: CompanyReturn | undefined;
+
+  /**
+   * @generated from field: tammy.v1.CompanyReturnSubmission submission = 2;
+   */
+  submission?: CompanyReturnSubmission | undefined;
+};
+
+/**
+ * Describes the message tammy.v1.LodgeCompanyReturnResponse.
+ * Use `create(LodgeCompanyReturnResponseSchema)` to create a new message.
+ */
+export const LodgeCompanyReturnResponseSchema: GenMessage<LodgeCompanyReturnResponse> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_company_return_submission, 7);
+
+/**
+ * @generated from message tammy.v1.GetCompanyReturnSubmissionRequest
+ */
+export type GetCompanyReturnSubmissionRequest = Message<"tammy.v1.GetCompanyReturnSubmissionRequest"> & {
+  /**
+   * @generated from field: tammy.v1.AuthenticationContext authentication = 1;
+   */
+  authentication?: AuthenticationContext | undefined;
+
+  /**
+   * @generated from field: string organisation_id = 2;
+   */
+  organisationId: string;
+
+  /**
+   * @generated from field: string return_id = 3;
+   */
+  returnId: string;
+};
+
+/**
+ * Describes the message tammy.v1.GetCompanyReturnSubmissionRequest.
+ * Use `create(GetCompanyReturnSubmissionRequestSchema)` to create a new message.
+ */
+export const GetCompanyReturnSubmissionRequestSchema: GenMessage<GetCompanyReturnSubmissionRequest> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_company_return_submission, 8);
+
+/**
+ * @generated from message tammy.v1.GetCompanyReturnSubmissionResponse
+ */
+export type GetCompanyReturnSubmissionResponse = Message<"tammy.v1.GetCompanyReturnSubmissionResponse"> & {
+  /**
+   * @generated from field: tammy.v1.CompanyReturn company_return = 1;
+   */
+  companyReturn?: CompanyReturn | undefined;
+
+  /**
+   * @generated from field: tammy.v1.CompanyReturnSubmission submission = 2;
+   */
+  submission?: CompanyReturnSubmission | undefined;
+};
+
+/**
+ * Describes the message tammy.v1.GetCompanyReturnSubmissionResponse.
+ * Use `create(GetCompanyReturnSubmissionResponseSchema)` to create a new message.
+ */
+export const GetCompanyReturnSubmissionResponseSchema: GenMessage<GetCompanyReturnSubmissionResponse> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_company_return_submission, 9);
+
+/**
+ * @generated from message tammy.v1.RefreshCompanyReturnStatusRequest
+ */
+export type RefreshCompanyReturnStatusRequest = Message<"tammy.v1.RefreshCompanyReturnStatusRequest"> & {
+  /**
+   * @generated from field: tammy.v1.CommandContext command_context = 1;
+   */
+  commandContext?: CommandContext | undefined;
+
+  /**
+   * @generated from field: string organisation_id = 2;
+   */
+  organisationId: string;
+
+  /**
+   * @generated from field: string return_id = 3;
+   */
+  returnId: string;
+
+  /**
+   * @generated from field: string attempt_id = 4;
+   */
+  attemptId: string;
+
+  /**
+   * @generated from field: uint64 expected_return_version = 5;
+   */
+  expectedReturnVersion: bigint;
+};
+
+/**
+ * Describes the message tammy.v1.RefreshCompanyReturnStatusRequest.
+ * Use `create(RefreshCompanyReturnStatusRequestSchema)` to create a new message.
+ */
+export const RefreshCompanyReturnStatusRequestSchema: GenMessage<RefreshCompanyReturnStatusRequest> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_company_return_submission, 10);
+
+/**
+ * @generated from message tammy.v1.RefreshCompanyReturnStatusResponse
+ */
+export type RefreshCompanyReturnStatusResponse = Message<"tammy.v1.RefreshCompanyReturnStatusResponse"> & {
+  /**
+   * @generated from field: tammy.v1.CompanyReturn company_return = 1;
+   */
+  companyReturn?: CompanyReturn | undefined;
+
+  /**
+   * @generated from field: tammy.v1.CompanyReturnSubmission submission = 2;
+   */
+  submission?: CompanyReturnSubmission | undefined;
+};
+
+/**
+ * Describes the message tammy.v1.RefreshCompanyReturnStatusResponse.
+ * Use `create(RefreshCompanyReturnStatusResponseSchema)` to create a new message.
+ */
+export const RefreshCompanyReturnStatusResponseSchema: GenMessage<RefreshCompanyReturnStatusResponse> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_company_return_submission, 11);
+
+/**
+ * @generated from message tammy.v1.ReconcileUnknownCompanyReturnSubmissionRequest
+ */
+export type ReconcileUnknownCompanyReturnSubmissionRequest = Message<"tammy.v1.ReconcileUnknownCompanyReturnSubmissionRequest"> & {
+  /**
+   * @generated from field: tammy.v1.CommandContext command_context = 1;
+   */
+  commandContext?: CommandContext | undefined;
+
+  /**
+   * @generated from field: string organisation_id = 2;
+   */
+  organisationId: string;
+
+  /**
+   * @generated from field: string return_id = 3;
+   */
+  returnId: string;
+
+  /**
+   * @generated from field: string attempt_id = 4;
+   */
+  attemptId: string;
+
+  /**
+   * @generated from field: uint64 expected_return_version = 5;
+   */
+  expectedReturnVersion: bigint;
+};
+
+/**
+ * Describes the message tammy.v1.ReconcileUnknownCompanyReturnSubmissionRequest.
+ * Use `create(ReconcileUnknownCompanyReturnSubmissionRequestSchema)` to create a new message.
+ */
+export const ReconcileUnknownCompanyReturnSubmissionRequestSchema: GenMessage<ReconcileUnknownCompanyReturnSubmissionRequest> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_company_return_submission, 12);
+
+/**
+ * @generated from message tammy.v1.ReconcileUnknownCompanyReturnSubmissionResponse
+ */
+export type ReconcileUnknownCompanyReturnSubmissionResponse = Message<"tammy.v1.ReconcileUnknownCompanyReturnSubmissionResponse"> & {
+  /**
+   * @generated from field: tammy.v1.CompanyReturn company_return = 1;
+   */
+  companyReturn?: CompanyReturn | undefined;
+
+  /**
+   * @generated from field: tammy.v1.CompanyReturnSubmission submission = 2;
+   */
+  submission?: CompanyReturnSubmission | undefined;
+};
+
+/**
+ * Describes the message tammy.v1.ReconcileUnknownCompanyReturnSubmissionResponse.
+ * Use `create(ReconcileUnknownCompanyReturnSubmissionResponseSchema)` to create a new message.
+ */
+export const ReconcileUnknownCompanyReturnSubmissionResponseSchema: GenMessage<ReconcileUnknownCompanyReturnSubmissionResponse> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_company_return_submission, 13);
 
 /**
  * CompanyReturnAttemptState is the durable lifecycle of one bound submission operation identity.
@@ -81,4 +606,117 @@ export enum CompanyReturnAttemptState {
  */
 export const CompanyReturnAttemptStateSchema: GenEnum<CompanyReturnAttemptState> = /*@__PURE__*/
   enumDesc(file_tammy_v1_company_return_submission, 0);
+
+/**
+ * SubmissionEnvironment identifies the installed, signed delivery environment selected by the trusted core.
+ *
+ * @generated from enum tammy.v1.SubmissionEnvironment
+ */
+export enum SubmissionEnvironment {
+  /**
+   * @generated from enum value: SUBMISSION_ENVIRONMENT_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: SUBMISSION_ENVIRONMENT_SIMULATOR = 1;
+   */
+  SIMULATOR = 1,
+
+  /**
+   * @generated from enum value: SUBMISSION_ENVIRONMENT_EVTE = 2;
+   */
+  EVTE = 2,
+
+  /**
+   * @generated from enum value: SUBMISSION_ENVIRONMENT_PRODUCTION = 3;
+   */
+  PRODUCTION = 3,
+}
+
+/**
+ * Describes the enum tammy.v1.SubmissionEnvironment.
+ */
+export const SubmissionEnvironmentSchema: GenEnum<SubmissionEnvironment> = /*@__PURE__*/
+  enumDesc(file_tammy_v1_company_return_submission, 1);
+
+/**
+ * SubmissionRetryClassification states the only safe follow-up for a durable attempt.
+ *
+ * @generated from enum tammy.v1.SubmissionRetryClassification
+ */
+export enum SubmissionRetryClassification {
+  /**
+   * @generated from enum value: SUBMISSION_RETRY_CLASSIFICATION_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: SUBMISSION_RETRY_CLASSIFICATION_NEVER = 1;
+   */
+  NEVER = 1,
+
+  /**
+   * @generated from enum value: SUBMISSION_RETRY_CLASSIFICATION_SAME_IDENTITY_AFTER_PROVEN_NOT_DISPATCHED = 2;
+   */
+  SAME_IDENTITY_AFTER_PROVEN_NOT_DISPATCHED = 2,
+
+  /**
+   * @generated from enum value: SUBMISSION_RETRY_CLASSIFICATION_STATUS_OR_RECONCILE_ONLY = 3;
+   */
+  STATUS_OR_RECONCILE_ONLY = 3,
+}
+
+/**
+ * Describes the enum tammy.v1.SubmissionRetryClassification.
+ */
+export const SubmissionRetryClassificationSchema: GenEnum<SubmissionRetryClassification> = /*@__PURE__*/
+  enumDesc(file_tammy_v1_company_return_submission, 2);
+
+/**
+ * @generated from service tammy.v1.CompanyReturnSubmissionService
+ */
+export const CompanyReturnSubmissionService: GenService<{
+  /**
+   * @generated from rpc tammy.v1.CompanyReturnSubmissionService.PreLodgeCompanyReturn
+   */
+  preLodgeCompanyReturn: {
+    methodKind: "unary";
+    input: typeof PreLodgeCompanyReturnRequestSchema;
+    output: typeof PreLodgeCompanyReturnResponseSchema;
+  },
+  /**
+   * @generated from rpc tammy.v1.CompanyReturnSubmissionService.LodgeCompanyReturn
+   */
+  lodgeCompanyReturn: {
+    methodKind: "unary";
+    input: typeof LodgeCompanyReturnRequestSchema;
+    output: typeof LodgeCompanyReturnResponseSchema;
+  },
+  /**
+   * @generated from rpc tammy.v1.CompanyReturnSubmissionService.GetCompanyReturnSubmission
+   */
+  getCompanyReturnSubmission: {
+    methodKind: "unary";
+    input: typeof GetCompanyReturnSubmissionRequestSchema;
+    output: typeof GetCompanyReturnSubmissionResponseSchema;
+  },
+  /**
+   * @generated from rpc tammy.v1.CompanyReturnSubmissionService.RefreshCompanyReturnStatus
+   */
+  refreshCompanyReturnStatus: {
+    methodKind: "unary";
+    input: typeof RefreshCompanyReturnStatusRequestSchema;
+    output: typeof RefreshCompanyReturnStatusResponseSchema;
+  },
+  /**
+   * @generated from rpc tammy.v1.CompanyReturnSubmissionService.ReconcileUnknownCompanyReturnSubmission
+   */
+  reconcileUnknownCompanyReturnSubmission: {
+    methodKind: "unary";
+    input: typeof ReconcileUnknownCompanyReturnSubmissionRequestSchema;
+    output: typeof ReconcileUnknownCompanyReturnSubmissionResponseSchema;
+  },
+}> = /*@__PURE__*/
+  serviceDesc(file_tammy_v1_company_return_submission, 0);
 
