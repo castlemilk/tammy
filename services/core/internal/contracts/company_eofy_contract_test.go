@@ -304,74 +304,257 @@ func TestCompanyTaxPreparationResponseGraphCannotReachSecretInput(t *testing.T) 
 	}
 }
 
-func TestCompanyTaxPreparationFieldRulesRemainBounded(t *testing.T) {
+type companyTaxExactRule struct {
+	stringMin, stringMax uint64
+	stringPattern        string
+	stringConst          string
+	bytesLen             uint64
+	uint64GTE            uint64
+	int32Const           int32
+	repeatedMin          uint64
+	repeatedMax          uint64
+	itemStringMin        uint64
+	itemStringMax        uint64
+	itemStringPattern    string
+	enumDefinedOnly      bool
+	enumRejectZero       bool
+	required             bool
+	explicitPresence     bool
+}
+
+func TestCompanyTaxPreparationFieldRulesAreExact(t *testing.T) {
 	file, err := protoregistry.GlobalFiles.FindFileByPath("tammy/v1/company_tax.proto")
 	if err != nil {
 		t.Fatalf("company tax descriptor missing: %v", err)
 	}
-	uuidPattern := "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-	stablePattern := "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"
-	nonUUIDIDs := map[string]bool{
-		"PassiveIncomeClassificationInput.bundle_rule_id": true, "TaxAdjustment.bundle_rule_id": true, "TaxElection.bundle_election_id": true,
-		"ReturnFact.fact_id": true, "ReturnFact.mapping_id": true, "ReturnFact.rule_id": true, "TaxReconciliationTerm.stable_id": true,
-		"TaxReconciliationTerm.rule_id": true, "ReturnValidationOutcome.stable_code": true, "CompanyReturnDeliverySummary.safe_status_code": true,
-		"Declaration.declaration_wording_version": true, "Declaration.terms_version": true, "Declaration.privacy_reference_version": true,
-		"CompanyReturn.preparation_bundle_id": true, "TaxAdjustmentInput.bundle_rule_id": true, "TaxElectionInput.bundle_election_id": true,
+	uuid := "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+	stable := "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"
+	want := map[string]companyTaxExactRule{}
+	update := func(key string, mutate func(*companyTaxExactRule)) {
+		rule := want[key]
+		mutate(&rule)
+		want[key] = rule
 	}
+	stringsRule := func(key string, min, max uint64, pattern, constant string) {
+		update(key, func(rule *companyTaxExactRule) {
+			rule.stringMin, rule.stringMax, rule.stringPattern, rule.stringConst = min, max, pattern, constant
+		})
+	}
+	uuids := func(keys ...string) {
+		for _, key := range keys {
+			stringsRule(key, 0, 0, uuid, "")
+		}
+	}
+	stables := func(keys ...string) {
+		for _, key := range keys {
+			stringsRule(key, 1, 128, stable, "")
+		}
+	}
+	bytes32 := func(keys ...string) {
+		for _, key := range keys {
+			update(key, func(rule *companyTaxExactRule) { rule.bytesLen = 32 })
+		}
+	}
+	uintGTE := func(min uint64, keys ...string) {
+		for _, key := range keys {
+			update(key, func(rule *companyTaxExactRule) { rule.uint64GTE = min })
+		}
+	}
+	repeated := func(key string, min, max uint64) {
+		update(key, func(rule *companyTaxExactRule) { rule.repeatedMin, rule.repeatedMax = min, max })
+	}
+	enums := func(keys ...string) {
+		for _, key := range keys {
+			update(key, func(rule *companyTaxExactRule) { rule.enumDefinedOnly, rule.enumRejectZero = true, true })
+		}
+	}
+	required := func(keys ...string) {
+		for _, key := range keys {
+			update(key, func(rule *companyTaxExactRule) { rule.required = true })
+		}
+	}
+	explicit := func(keys ...string) {
+		for _, key := range keys {
+			update(key, func(rule *companyTaxExactRule) { rule.explicitPresence = true })
+		}
+	}
+	itemString := func(key string, min, max uint64, pattern string) {
+		update(key, func(rule *companyTaxExactRule) {
+			rule.itemStringMin, rule.itemStringMax, rule.itemStringPattern = min, max, pattern
+		})
+	}
+
+	stringsRule("AddressInput.line_1", 1, 128, "", "")
+	stringsRule("AddressInput.line_2", 0, 128, "", "")
+	stringsRule("AddressInput.locality", 1, 128, "", "")
+	stringsRule("AddressInput.state", 0, 0, "^(ACT|NSW|NT|QLD|SA|TAS|VIC|WA)$", "")
+	stringsRule("AddressInput.postcode", 0, 0, "^[0-9]{4}$", "")
+	stringsRule("AddressInput.country_code", 0, 0, "", "AU")
+	stringsRule("RelatedEntityTurnoverContribution.entity_name", 1, 200, "", "")
+	stringsRule("RelatedEntityTurnoverContribution.entity_abn", 0, 0, "^[0-9]{11}$", "")
+	stringsRule("RelatedEntityTurnoverContribution.reviewed_control_or_affiliate_basis", 1, 2000, "", "")
+	repeated("RelatedEntityTurnoverContribution.evidence", 1, 20)
+	repeated("PassiveIncomeClassificationInput.evidence", 1, 20)
+	stables("PassiveIncomeClassificationInput.bundle_rule_id")
+	uuids("PassiveIncomeClassificationInput.reviewed_by_user_id")
+	enums("PassiveIncomeClassificationInput.classification")
+	for _, field := range []string{"tofa_applies", "psi_applies", "interposed_entity_election_applies", "consolidated_group_member", "research_and_development_incentive", "international_dealings", "reportable_tax_position", "life_insurance_business", "cgt_schedule_required", "losses_schedule_required", "other_schedule_required", "fb_or_unsupported_payroll_effect", "division_7a_unresolved", "unsupported_inventory", "unsupported_multicurrency", "unsupported_crypto"} {
+		enums("ApplicabilityAnswers." + field)
+	}
+	enums("PriorRevenueLossInput.ownership_continuity_confirmed", "PriorRevenueLossInput.same_or_similar_business_judgement_required")
+	repeated("PriorRevenueLossInput.evidence", 1, 20)
+
+	stringsRule("CompanyTaxProfileInput.legal_name", 1, 200, "", "")
+	stringsRule("CompanyTaxProfileInput.main_business_activity_code", 0, 0, "^[0-9]{6}$", "")
+	stringsRule("CompanyTaxProfileInput.main_business_activity_description", 1, 200, "", "")
+	stringsRule("CompanyTaxProfileInput.immediate_holding_name", 0, 200, "", "")
+	stringsRule("CompanyTaxProfileInput.ultimate_holding_name", 0, 200, "", "")
+	repeated("CompanyTaxProfileInput.related_turnover", 0, 100)
+	repeated("CompanyTaxProfileInput.passive_income_classifications", 0, 500)
+	enums("CompanyTaxProfileInput.australian_resident", "CompanyTaxProfileInput.private_company", "CompanyTaxProfileInput.final_return", "CompanyTaxProfileInput.holding_company_kind", "CompanyTaxProfileInput.small_business_entity_choice", "CompanyTaxProfileInput.depreciation_choice")
+	repeated("CompanyReturnInput.external_summary_evidence", 0, 20)
+	repeated("CompanyReturnInput.payroll_summary_evidence", 0, 20)
+	stringsRule("CompanyReturnInput.review_note", 0, 2000, "", "")
+
+	uuids("MaskedCompanyTaxProfile.organisation_id", "MaskedCompanyTaxProfile.updated_by_user_id")
+	uintGTE(1, "MaskedCompanyTaxProfile.version")
+	stringsRule("MaskedCompanyTaxProfile.legal_name", 1, 200, "", "")
+	stringsRule("MaskedCompanyTaxProfile.masked_tfn", 1, 16, "", "")
+	stringsRule("MaskedCompanyTaxProfile.verified_abn", 0, 0, "^[0-9]{11}$", "")
+	stringsRule("MaskedCompanyTaxProfile.main_business_activity_code", 0, 0, "^[0-9]{6}$", "")
+	stringsRule("MaskedCompanyTaxProfile.main_business_activity_description", 1, 200, "", "")
+	stringsRule("MaskedCompanyTaxProfile.masked_refund_bsb", 0, 16, "", "")
+	stringsRule("MaskedCompanyTaxProfile.masked_refund_account", 0, 32, "", "")
+	stringsRule("MaskedCompanyTaxProfile.immediate_holding_name", 0, 200, "", "")
+	stringsRule("MaskedCompanyTaxProfile.ultimate_holding_name", 0, 200, "", "")
+	repeated("MaskedCompanyTaxProfile.related_turnover", 0, 100)
+	repeated("MaskedCompanyTaxProfile.passive_income_classifications", 0, 500)
+	enums("MaskedCompanyTaxProfile.australian_resident", "MaskedCompanyTaxProfile.private_company", "MaskedCompanyTaxProfile.final_return", "MaskedCompanyTaxProfile.holding_company_kind", "MaskedCompanyTaxProfile.small_business_entity_choice", "MaskedCompanyTaxProfile.depreciation_choice")
+
+	uuids("TaxAdjustment.id", "TaxAdjustment.return_id", "TaxAdjustment.created_by_user_id", "TaxAdjustment.reviewed_by_user_id")
+	uintGTE(1, "TaxAdjustment.version")
+	enums("TaxAdjustment.type", "TaxAdjustment.timing")
+	stables("TaxAdjustment.bundle_rule_id")
+	stringsRule("TaxAdjustment.explanation", 0, 2000, "", "")
+	repeated("TaxAdjustment.sources", 0, 100)
+	repeated("TaxAdjustment.evidence", 0, 100)
+	stringsRule("TaxElectionChoice.string_value", 0, 128, "", "")
+	uuids("TaxElection.id", "TaxElection.return_id", "TaxElection.created_by_user_id", "TaxElection.reviewed_by_user_id")
+	uintGTE(1, "TaxElection.version")
+	stables("TaxElection.bundle_election_id")
+	stringsRule("TaxElection.explanation", 0, 2000, "", "")
+	repeated("TaxElection.evidence", 1, 100)
+	stringsRule("ReturnFactValue.string_value", 0, 512, "", "")
+	stables("ReturnFact.fact_id", "ReturnFact.mapping_id", "ReturnFact.rule_id")
+	enums("ReturnFact.provenance", "ReturnFact.validation_status")
+	repeated("ReturnFact.sources", 0, 100)
+	repeated("ReturnFact.evidence", 0, 100)
+	stables("TaxReconciliationTerm.stable_id", "TaxReconciliationTerm.rule_id")
+	repeated("TaxReconciliationTerm.sources", 0, 100)
+	repeated("TaxReconciliationTerm.evidence", 0, 100)
+	bytes32("TaxReconciliation.content_hash")
+	repeated("TaxReconciliation.additions", 0, 200)
+	repeated("TaxReconciliation.subtractions", 0, 200)
+	repeated("TaxReconciliation.eligible_applied_losses", 0, 100)
+	repeated("TaxReconciliation.payg_and_credits", 0, 100)
+
+	uuids("ReturnValidationOutcome.id")
+	uintGTE(1, "ReturnValidationOutcome.validation_revision")
+	enums("ReturnValidationOutcome.severity")
+	stables("ReturnValidationOutcome.stable_code")
+	repeated("ReturnValidationOutcome.fact_ids", 0, 100)
+	itemString("ReturnValidationOutcome.fact_ids", 1, 128, stable)
+	repeated("ReturnValidationOutcome.sources", 0, 100)
+	stringsRule("ReturnValidationOutcome.safe_message", 1, 1000, "", "")
+	uuids("ValidationAcknowledgement.id", "ValidationAcknowledgement.return_id", "ValidationAcknowledgement.warning_id", "ValidationAcknowledgement.actor_user_id", "ValidationAcknowledgement.fresh_factor_assertion_id")
+	uintGTE(1, "ValidationAcknowledgement.validation_revision")
+	uuids("Declaration.id", "Declaration.return_id", "Declaration.actor_user_id", "Declaration.fresh_factor_assertion_id", "Declaration.supersedes_declaration_id")
+	bytes32("Declaration.report_hash", "Declaration.declaration_wording_hash")
+	uintGTE(1, "Declaration.validation_revision")
+	repeated("Declaration.acknowledgement_ids", 0, 200)
+	itemString("Declaration.acknowledgement_ids", 0, 0, uuid)
+	stables("Declaration.declaration_wording_version", "Declaration.terms_version", "Declaration.privacy_reference_version")
+	explicit("Declaration.supersedes_declaration_id")
+	uuids("CompanyReturnDeliverySummary.latest_attempt_id", "CompanyReturnDeliverySummary.receipt_id")
+	enums("CompanyReturnDeliverySummary.operation_type", "CompanyReturnDeliverySummary.outcome")
+	stables("CompanyReturnDeliverySummary.safe_status_code")
+	explicit("CompanyReturnDeliverySummary.receipt_id")
+
+	uuids("CompanyReturn.id", "CompanyReturn.organisation_id", "CompanyReturn.root_return_id", "CompanyReturn.predecessor_return_id", "CompanyReturn.successor_return_id", "CompanyReturn.related_attempt_id", "CompanyReturn.source_close_id", "CompanyReturn.current_declaration_id")
+	update("CompanyReturn.income_year", func(rule *companyTaxExactRule) { rule.int32Const = 2026 })
+	enums("CompanyReturn.relationship_kind", "CompanyReturn.state")
+	stringsRule("CompanyReturn.preparation_bundle_id", 0, 0, "", "au-company-return-2026-preparation-v1")
+	bytes32("CompanyReturn.preparation_bundle_fingerprint", "CompanyReturn.source_close_hash", "CompanyReturn.tax_reconciliation_hash", "CompanyReturn.declared_snapshot_hash")
+	uintGTE(1, "CompanyReturn.version", "CompanyReturn.validation_revision")
+	explicit("CompanyReturn.predecessor_return_id", "CompanyReturn.successor_return_id", "CompanyReturn.related_attempt_id", "CompanyReturn.declared_snapshot_hash", "CompanyReturn.current_declaration_id")
+
+	uuids("TaxAdjustmentInput.adjustment_id")
+	explicit("TaxAdjustmentInput.adjustment_id")
+	enums("TaxAdjustmentInput.type", "TaxAdjustmentInput.timing")
+	stables("TaxAdjustmentInput.bundle_rule_id")
+	stringsRule("TaxAdjustmentInput.explanation", 0, 2000, "", "")
+	repeated("TaxAdjustmentInput.sources", 0, 100)
+	repeated("TaxAdjustmentInput.evidence", 0, 100)
+	uuids("TaxElectionInput.election_id")
+	explicit("TaxElectionInput.election_id")
+	stables("TaxElectionInput.bundle_election_id")
+	stringsRule("TaxElectionInput.explanation", 0, 2000, "", "")
+	repeated("TaxElectionInput.evidence", 1, 100)
+
+	commandRequests := []string{"SetCompanyTaxProfileRequest", "CreateCompanyReturnRequest", "SetCompanyReturnInputRequest", "UpsertTaxAdjustmentRequest", "RemoveTaxAdjustmentRequest", "UpsertTaxElectionRequest", "RemoveTaxElectionRequest", "ValidateCompanyReturnRequest", "AcknowledgeReturnWarningRequest", "DeclareCompanyReturnRequest", "WithdrawCompanyReturnDeclarationRequest", "ExportCompanyReturnPackRequest", "CreateCompanyReturnReplacementRequest", "CreateCompanyReturnAmendmentRequest"}
+	for _, message := range commandRequests {
+		required(message + ".command_context")
+		uuids(message + ".organisation_id")
+	}
+	required("GetCompanyTaxProfileRequest.authentication", "GetCompanyReturnRequest.authentication", "ListCompanyReturnFactsRequest.authentication")
+	uuids("GetCompanyTaxProfileRequest.organisation_id", "GetCompanyReturnRequest.organisation_id", "GetCompanyReturnRequest.return_id", "ListCompanyReturnFactsRequest.organisation_id", "ListCompanyReturnFactsRequest.return_id")
+	required("GetCompanyTaxProfileResponse.profile", "SetCompanyTaxProfileRequest.input", "SetCompanyTaxProfileResponse.profile", "CreateCompanyReturnRequest.input", "ListCompanyReturnFactsRequest.page", "ListCompanyReturnFactsResponse.page", "SetCompanyReturnInputRequest.input", "UpsertTaxAdjustmentRequest.adjustment", "UpsertTaxElectionRequest.election", "AcknowledgeReturnWarningResponse.acknowledgement", "DeclareCompanyReturnResponse.declaration", "WithdrawCompanyReturnDeclarationResponse.retained_declaration")
+	for _, response := range []string{"CreateCompanyReturnResponse", "GetCompanyReturnResponse", "SetCompanyReturnInputResponse", "UpsertTaxAdjustmentResponse", "RemoveTaxAdjustmentResponse", "UpsertTaxElectionResponse", "RemoveTaxElectionResponse", "ValidateCompanyReturnResponse", "AcknowledgeReturnWarningResponse", "DeclareCompanyReturnResponse", "WithdrawCompanyReturnDeclarationResponse"} {
+		required(response + ".company_return")
+	}
+	for _, response := range []string{"CreateCompanyReturnResponse", "GetCompanyReturnResponse", "SetCompanyReturnInputResponse", "UpsertTaxAdjustmentResponse", "RemoveTaxAdjustmentResponse", "UpsertTaxElectionResponse", "RemoveTaxElectionResponse"} {
+		required(response + ".tax_reconciliation")
+	}
+	for _, response := range []string{"CreateCompanyReturnResponse", "GetCompanyReturnResponse", "SetCompanyReturnInputResponse", "UpsertTaxAdjustmentResponse", "RemoveTaxAdjustmentResponse", "UpsertTaxElectionResponse", "RemoveTaxElectionResponse", "ValidateCompanyReturnResponse", "AcknowledgeReturnWarningResponse"} {
+		repeated(response+".validation", 0, 200)
+	}
+	repeated("ListCompanyReturnFactsResponse.facts", 0, 200)
+	required("UpsertTaxAdjustmentResponse.adjustment", "UpsertTaxElectionResponse.election", "CreateCompanyReturnReplacementResponse.predecessor", "CreateCompanyReturnReplacementResponse.replacement", "CreateCompanyReturnAmendmentResponse.effective_original", "CreateCompanyReturnAmendmentResponse.amendment")
+
+	uuids("CreateCompanyReturnRequest.source_close_id")
+	for _, message := range []string{"SetCompanyReturnInputRequest", "UpsertTaxAdjustmentRequest", "RemoveTaxAdjustmentRequest", "UpsertTaxElectionRequest", "RemoveTaxElectionRequest", "ValidateCompanyReturnRequest", "AcknowledgeReturnWarningRequest", "DeclareCompanyReturnRequest", "WithdrawCompanyReturnDeclarationRequest", "ExportCompanyReturnPackRequest"} {
+		uuids(message + ".return_id")
+	}
+	uuids("RemoveTaxAdjustmentRequest.adjustment_id", "RemoveTaxElectionRequest.election_id", "AcknowledgeReturnWarningRequest.warning_id", "CreateCompanyReturnReplacementRequest.predecessor_return_id", "CreateCompanyReturnReplacementRequest.source_close_id", "CreateCompanyReturnAmendmentRequest.effective_original_return_id", "CreateCompanyReturnAmendmentRequest.latest_accepted_return_id", "CreateCompanyReturnAmendmentRequest.source_close_id")
+	uintGTE(1, "SetCompanyReturnInputRequest.expected_version", "UpsertTaxAdjustmentRequest.expected_version", "RemoveTaxAdjustmentRequest.expected_version", "UpsertTaxElectionRequest.expected_version", "RemoveTaxElectionRequest.expected_version", "ValidateCompanyReturnRequest.expected_version", "AcknowledgeReturnWarningRequest.expected_version", "AcknowledgeReturnWarningRequest.validation_revision", "DeclareCompanyReturnRequest.expected_version", "DeclareCompanyReturnRequest.validation_revision", "WithdrawCompanyReturnDeclarationRequest.expected_version", "ExportCompanyReturnPackRequest.expected_version", "CreateCompanyReturnReplacementRequest.expected_predecessor_version", "CreateCompanyReturnAmendmentRequest.expected_latest_version")
+	stringsRule("WithdrawCompanyReturnDeclarationRequest.reason", 1, 2000, "", "")
+	enums("ExportCompanyReturnPackRequest.kind", "ExportCompanyReturnPackResponse.kind")
+	uuids("ExportCompanyReturnPackResponse.export_id")
+	bytes32("ExportCompanyReturnPackResponse.content_hash")
+	stringsRule("ExportCompanyReturnPackResponse.safe_filename", 1, 255, "^[^/\\\\[:cntrl:]]+$", "")
+	stringsRule("CreateCompanyReturnReplacementRequest.reason", 1, 2000, "", "")
+	stringsRule("CreateCompanyReturnAmendmentRequest.reason", 1, 2000, "", "")
+
+	required("RelatedEntityTurnoverContribution.amount", "PassiveIncomeClassificationInput.income_source", "PriorRevenueLossInput.opening_balance", "CompanyTaxProfileInput.tfn", "CompanyTaxProfileInput.current_postal_address", "CompanyTaxProfileInput.prior_postal_address", "CompanyTaxProfileInput.main_business_address", "CompanyTaxProfileInput.applicability", "CompanyReturnInput.loss_amount_to_apply", "MaskedCompanyTaxProfile.current_postal_address", "MaskedCompanyTaxProfile.prior_postal_address", "MaskedCompanyTaxProfile.main_business_address", "MaskedCompanyTaxProfile.applicability", "MaskedCompanyTaxProfile.updated_at", "TaxAdjustment.amount", "TaxAdjustment.updated_at", "TaxElection.choice", "TaxElection.updated_at", "ReturnFact.value", "ReturnFact.submitted_value", "TaxReconciliationTerm.amount", "TaxReconciliation.accounting_profit_before_tax", "TaxReconciliation.taxable_income_or_loss", "TaxReconciliation.gross_tax", "TaxReconciliation.net_tax_payable_or_refund", "ValidationAcknowledgement.acknowledged_at", "Declaration.declared_at", "CompanyReturn.period_start", "CompanyReturn.period_end", "CompanyReturn.created_at", "CompanyReturn.updated_at", "TaxAdjustmentInput.amount", "TaxElectionInput.choice")
+
 	for messageIndex := 0; messageIndex < file.Messages().Len(); messageIndex++ {
 		message := file.Messages().Get(messageIndex)
 		for fieldIndex := 0; fieldIndex < message.Fields().Len(); fieldIndex++ {
 			field := message.Fields().Get(fieldIndex)
 			key := string(message.Name()) + "." + string(field.Name())
 			rules := sbrValidationRules(field)
-			if field.Kind() == protoreflect.EnumKind && (!rules.GetEnum().GetDefinedOnly() || fmt.Sprint(rules.GetEnum().GetNotIn()) != "[0]") {
-				t.Errorf("%s must be defined_only and reject zero", field.FullName())
+			got := companyTaxExactRule{
+				stringMin: rules.GetString_().GetMinLen(), stringMax: rules.GetString_().GetMaxLen(), stringPattern: rules.GetString_().GetPattern(), stringConst: rules.GetString_().GetConst(),
+				bytesLen: rules.GetBytes().GetLen(), uint64GTE: rules.GetUint64().GetGte(), int32Const: rules.GetInt32().GetConst(),
+				repeatedMin: rules.GetRepeated().GetMinItems(), repeatedMax: rules.GetRepeated().GetMaxItems(),
+				itemStringMin: rules.GetRepeated().GetItems().GetString_().GetMinLen(), itemStringMax: rules.GetRepeated().GetItems().GetString_().GetMaxLen(), itemStringPattern: rules.GetRepeated().GetItems().GetString_().GetPattern(),
+				enumDefinedOnly: rules.GetEnum().GetDefinedOnly(), enumRejectZero: fmt.Sprint(rules.GetEnum().GetNotIn()) == "[0]", required: rules.GetRequired(),
 			}
-			if field.IsList() && rules.GetRepeated().GetMaxItems() == 0 {
-				t.Errorf("%s repeated field has no maximum", field.FullName())
+			if field.Kind() != protoreflect.MessageKind && field.ContainingOneof() == nil {
+				got.explicitPresence = field.HasPresence()
 			}
-			if field.Kind() == protoreflect.StringKind && (field.Name() == "id" || strings.HasSuffix(string(field.Name()), "_id")) && !nonUUIDIDs[key] {
-				if got := rules.GetString_().GetPattern(); got != uuidPattern {
-					t.Errorf("%s UUIDv7 pattern = %q", field.FullName(), got)
-				}
-			}
-			if nonUUIDIDs[key] && key != "CompanyReturn.preparation_bundle_id" {
-				if got := rules.GetString_().GetPattern(); got != stablePattern {
-					t.Errorf("%s stable-code pattern = %q", field.FullName(), got)
-				}
-			}
-		}
-	}
-	for _, fieldName := range []protoreflect.Name{"preparation_bundle_fingerprint", "source_close_hash", "tax_reconciliation_hash", "declared_snapshot_hash"} {
-		if got := fieldRules(t, file.Messages().ByName("CompanyReturn").Fields().ByName(fieldName)).GetBytes().GetLen(); got != 32 {
-			t.Errorf("CompanyReturn.%s len = %d, want 32", fieldName, got)
-		}
-	}
-	for owner, fields := range map[protoreflect.Name][]protoreflect.Name{"TaxReconciliation": {"content_hash"}, "Declaration": {"report_hash", "declaration_wording_hash"}, "ExportCompanyReturnPackResponse": {"content_hash"}} {
-		for _, fieldName := range fields {
-			if got := fieldRules(t, file.Messages().ByName(owner).Fields().ByName(fieldName)).GetBytes().GetLen(); got != 32 {
-				t.Errorf("%s.%s len = %d, want 32", owner, fieldName, got)
-			}
-		}
-	}
-	if got := fieldRules(t, file.Messages().ByName("CompanyReturn").Fields().ByName("income_year")).GetInt32().GetConst(); got != 2026 {
-		t.Errorf("CompanyReturn.income_year const = %d", got)
-	}
-	if got := fieldRules(t, file.Messages().ByName("CompanyReturn").Fields().ByName("preparation_bundle_id")).GetString_().GetConst(); got != "au-company-return-2026-preparation-v1" {
-		t.Errorf("CompanyReturn.preparation_bundle_id const = %q", got)
-	}
-	for messageIndex := 0; messageIndex < file.Messages().Len(); messageIndex++ {
-		message := file.Messages().Get(messageIndex)
-		for fieldIndex := 0; fieldIndex < message.Fields().Len(); fieldIndex++ {
-			field := message.Fields().Get(fieldIndex)
-			if field.Kind() == protoreflect.Uint64Kind && (field.Name() == "version" || field.Name() == "validation_revision" || strings.HasPrefix(string(field.Name()), "expected_")) {
-				wantMinimum := uint64(1)
-				if field.FullName() == "tammy.v1.SetCompanyTaxProfileRequest.expected_version" {
-					wantMinimum = 0
-				}
-				if got := sbrValidationRules(field).GetUint64().GetGte(); got != wantMinimum {
-					t.Errorf("%s minimum = %d, want %d", field.FullName(), got, wantMinimum)
-				}
+			if expected := want[key]; got != expected {
+				t.Errorf("%s rules = %+v, want %+v", field.FullName(), got, expected)
 			}
 		}
 	}
