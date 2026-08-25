@@ -322,8 +322,8 @@ test("SBR readiness uses local RAM credential and deterministic simulator only",
   );
   importProductFrame.fill(0);
   removeProductFrame.fill(0);
-  expect(productBoundary.importError).toContain("Core request failed.");
-  expect(productBoundary.removeError).toContain("Core request failed.");
+  expect(productBoundary.importError).toBe("CORE_REQUEST_FAILED");
+  expect(productBoundary.removeError).toBe("CORE_REQUEST_FAILED");
 
   await navigate(page, "/settings/organisation");
   await expect(page.getByRole("heading", { name: "Organisation", exact: true })).toBeVisible();
