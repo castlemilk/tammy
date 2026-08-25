@@ -20,6 +20,8 @@ const (
 	ActionPostAccounting              Action = "post_accounting"
 	ActionManageAccounts              Action = "manage_accounts"
 	ActionPrepareTax                  Action = "prepare_tax"
+	ActionApproveFinancialClose       Action = "approve_financial_close"
+	ActionDeclareCompanyReturn        Action = "declare_company_return"
 	ActionLodge                       Action = "lodge"
 	ActionReadAudit                   Action = "read_audit"
 	ActionExportAudit                 Action = "export_audit"
@@ -44,12 +46,14 @@ var permissions = map[Action]map[tammyv1.Role]struct{}{
 		tammyv1.Role_ROLE_BUSINESS_LODGER,
 		tammyv1.Role_ROLE_AUDITOR,
 	),
-	ActionPostAccounting: roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN, tammyv1.Role_ROLE_BUSINESS_PREPARER),
-	ActionManageAccounts: roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN),
-	ActionPrepareTax:     roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN, tammyv1.Role_ROLE_BUSINESS_PREPARER),
-	ActionLodge:          roleSet(tammyv1.Role_ROLE_BUSINESS_LODGER),
-	ActionReadAudit:      roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN, tammyv1.Role_ROLE_AUDITOR),
-	ActionExportAudit:    roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN, tammyv1.Role_ROLE_AUDITOR),
+	ActionPostAccounting:        roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN, tammyv1.Role_ROLE_BUSINESS_PREPARER),
+	ActionManageAccounts:        roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN),
+	ActionPrepareTax:            roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN, tammyv1.Role_ROLE_BUSINESS_PREPARER),
+	ActionApproveFinancialClose: roleSet(tammyv1.Role_ROLE_BUSINESS_LODGER),
+	ActionDeclareCompanyReturn:  roleSet(tammyv1.Role_ROLE_BUSINESS_LODGER),
+	ActionLodge:                 roleSet(tammyv1.Role_ROLE_BUSINESS_LODGER),
+	ActionReadAudit:             roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN, tammyv1.Role_ROLE_AUDITOR),
+	ActionExportAudit:           roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN, tammyv1.Role_ROLE_AUDITOR),
 	ActionInspectSBR: roleSet(
 		tammyv1.Role_ROLE_WORKSPACE_ADMIN,
 		tammyv1.Role_ROLE_BUSINESS_LODGER,

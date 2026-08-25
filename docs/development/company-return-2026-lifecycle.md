@@ -71,3 +71,17 @@ The attempt lifecycle records delivery durability; it does not independently gra
 | Aborted or proven-not-dispatched lodge | No request bytes could be accepted | Atomically restore `READY_TO_LODGE`; retain the aborted or not-dispatched attempt and the same attempt and operation identity. |
 
 Rollback requires the requested attempt ID to equal the original attempt ID, an attempt state of `NOT_DISPATCHED` or `ABORTED`, and no outcome. A recorded result requires `RESULT_RECORDED` or `COMMITTED` plus a defined outcome. `STATUS` and `RECONCILE` may resolve only the same attempt ID and original operation class. Operation-confused outcomes, identity mismatches, and all other unlisted resolutions fail without mutation.
+
+## Permission authority
+
+The authorization action in this matrix is passed to the core authorization boundary. Fresh-factor and aggregate-state checks are additional requirements, never substitutes for role authorization.
+
+| Operation group | Authorization action | workspace_admin | business_preparer | business_lodger | auditor |
+|---|---|---:|---:|---:|---:|
+| Get/list close, statements, profile, return, facts, submission/status | `read_financial` | allow | allow | allow | allow |
+| Create/resolve/reopen/correct close; edit profile/return/adjustment/election; validate/export; create replacement/amendment | `prepare_tax` | allow | allow | deny | deny |
+| Freeze and approve exact financial statements | `approve_financial_close` | deny | deny | allow | deny |
+| Acknowledge official warning; declare; withdraw declaration | `declare_company_return` | deny | deny | allow | deny |
+| Pre-lodge, lodge, refresh delivery status, reconcile unknown outcome | `lodge` | deny | deny | allow | deny |
+
+A sole operator may hold both administrator/preparer and lodger roles. Workspace administration alone does not silently grant legal approval/declaration/lodge authority.
