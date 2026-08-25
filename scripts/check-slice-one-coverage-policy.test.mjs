@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { parseCoverageManifest } from "./check-e2e-coverage.mjs";
-import { SBR_DECLARED_FUTURE_RPCS, SLICE_ONE_RPC_POLICY } from "./slice-one-coverage-policy.mjs";
+import {
+  COMPANY_EOFY_DECLARED_FUTURE_RPCS,
+  SBR_DECLARED_FUTURE_RPCS,
+  SLICE_ONE_RPC_POLICY,
+} from "./slice-one-coverage-policy.mjs";
 
 const SYSTEM_RPC = "tammy.v1.SystemService.GetDiagnostics";
 const ALL_ROLES_ALLOWED = ["workspace_admin", "business_preparer", "business_lodger", "auditor"];
@@ -33,11 +37,11 @@ const EXPOSED_BUSINESS_RPCS = [
   "tammy.v1.TaxService.GetCurrentBasDraft",
 ];
 
-test("coverage declares the exact normative policy for all 88 non-system RPCs", async () => {
+test("coverage declares the exact normative policy for all 96 non-system RPCs", async () => {
   const coverage = parseCoverageManifest(await readFile("test/e2e/coverage.yaml", "utf8"));
   const actualRpcNames = Object.keys(coverage.rpcs).filter((rpcName) => rpcName !== SYSTEM_RPC);
 
-  assert.equal(Object.keys(SLICE_ONE_RPC_POLICY).length, 88);
+  assert.equal(Object.keys(SLICE_ONE_RPC_POLICY).length, 96);
   assert.deepEqual(actualRpcNames.sort(), Object.keys(SLICE_ONE_RPC_POLICY).sort());
 
   for (const [rpcName, expected] of Object.entries(SLICE_ONE_RPC_POLICY)) {
@@ -55,6 +59,47 @@ test("coverage declares the exact normative policy for all 88 non-system RPCs", 
       expected,
       rpcName,
     );
+  }
+});
+
+test("company EOFY financial close catalogues exactly eight declared-future RPCs", async () => {
+  const expected = [
+    "tammy.v1.FinancialCloseService.CreateFinancialClose",
+    "tammy.v1.FinancialCloseService.GetFinancialClose",
+    "tammy.v1.FinancialCloseService.ListCloseChecks",
+    "tammy.v1.FinancialCloseService.ResolveCloseWarning",
+    "tammy.v1.FinancialCloseService.FreezeFinancialClose",
+    "tammy.v1.FinancialCloseService.ReopenFinancialClose",
+    "tammy.v1.FinancialCloseService.StartFinancialCloseCorrection",
+    "tammy.v1.FinancialCloseService.GetFinancialStatements",
+  ];
+  assert.deepEqual(COMPANY_EOFY_DECLARED_FUTURE_RPCS, expected);
+
+  const coverage = parseCoverageManifest(await readFile("test/e2e/coverage.yaml", "utf8"));
+  const preloadMethods = JSON.parse(
+    await readFile("apps/desktop/src/shared/preload-methods.json", "utf8"),
+  );
+  assert.deepEqual(coverage.scenarios["E2E-18"].futureCases, [
+    "company-eofy/contracts",
+    "company-eofy/lifecycle",
+    "company-eofy/permissions",
+    "company-eofy/financial-close",
+  ]);
+  assert.deepEqual(
+    Object.keys(coverage.rpcs).filter((rpcName) => rpcName.startsWith("tammy.v1.FinancialCloseService.")),
+    expected,
+  );
+  for (const rpcName of expected) {
+    const rpc = coverage.rpcs[rpcName];
+    assert.equal(rpc.stage, "declared_future", rpcName);
+    assert.deepEqual(rpc.cases, [], rpcName);
+    assert.deepEqual(
+      rpc.futureCases,
+      ["company-eofy/contracts", "company-eofy/permissions", "company-eofy/financial-close"],
+      rpcName,
+    );
+    assert.deepEqual(rpc.routes, ["/eofy-company-tax/close"], rpcName);
+    assert.ok(!preloadMethods.includes(rpc.preload), rpcName);
   }
 });
 
@@ -205,6 +250,7 @@ test("coverage conflict failures match every public request concurrency field", 
     "proto/tammy/v1/documents.proto",
     "proto/tammy/v1/tax.proto",
     "proto/tammy/v1/audit.proto",
+    "proto/tammy/v1/financial_close.proto",
   ];
 
   for (const protoPath of protoPaths) {

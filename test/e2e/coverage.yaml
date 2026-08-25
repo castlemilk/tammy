@@ -54,7 +54,10 @@ scenarios:
   E2E-18:
     cases: []
     futureCases:
+      - company-eofy/contracts
       - company-eofy/lifecycle
+      - company-eofy/permissions
+      - company-eofy/financial-close
 rpcs:
   tammy.v1.SystemService.GetDiagnostics:
     preload: getSystemDiagnostics
@@ -2588,6 +2591,257 @@ rpcs:
       outcomes:
         - exact_replay
         - changed_request_conflict
+  tammy.v1.FinancialCloseService.CreateFinancialClose:
+    stage: declared_future
+    preload: createFinancialClose
+    cases: []
+    futureCases:
+      - company-eofy/contracts
+      - company-eofy/permissions
+      - company-eofy/financial-close
+    projections:
+      - create_financial_close_result
+    routes:
+      - /eofy-company-tax/close
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - IDEMPOTENCY_CONFLICT
+      - INVALID_PERIOD
+      - REPORT_BUNDLE_UNAVAILABLE
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - exact_replay
+        - changed_request_conflict
+  tammy.v1.FinancialCloseService.GetFinancialClose:
+    stage: declared_future
+    preload: getFinancialClose
+    cases: []
+    futureCases:
+      - company-eofy/contracts
+      - company-eofy/permissions
+      - company-eofy/financial-close
+    projections:
+      - get_financial_close_result
+    routes:
+      - /eofy-company-tax/close
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_allowed
+      auditor: planned_allowed
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - NOT_FOUND
+    list:
+      states:
+        - found
+        - not_found
+    idempotency:
+      mode: query
+      outcomes:
+        - not_applicable
+  tammy.v1.FinancialCloseService.ListCloseChecks:
+    stage: declared_future
+    preload: listCloseChecks
+    cases: []
+    futureCases:
+      - company-eofy/contracts
+      - company-eofy/permissions
+      - company-eofy/financial-close
+    projections:
+      - list_close_checks_result
+    routes:
+      - /eofy-company-tax/close
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_allowed
+      auditor: planned_allowed
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - NOT_FOUND
+      - INVALID_CURSOR
+    list:
+      states:
+        - empty
+        - populated
+        - filtered
+        - paginated
+    idempotency:
+      mode: query
+      outcomes:
+        - not_applicable
+  tammy.v1.FinancialCloseService.ResolveCloseWarning:
+    stage: declared_future
+    preload: resolveCloseWarning
+    cases: []
+    futureCases:
+      - company-eofy/contracts
+      - company-eofy/permissions
+      - company-eofy/financial-close
+    projections:
+      - resolve_close_warning_result
+    routes:
+      - /eofy-company-tax/close
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+      - IDEMPOTENCY_CONFLICT
+      - INVALID_STATE_TRANSITION
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - exact_replay
+        - changed_request_conflict
+  tammy.v1.FinancialCloseService.FreezeFinancialClose:
+    stage: declared_future
+    preload: freezeFinancialClose
+    cases: []
+    futureCases:
+      - company-eofy/contracts
+      - company-eofy/permissions
+      - company-eofy/financial-close
+    projections:
+      - freeze_financial_close_result
+    routes:
+      - /eofy-company-tax/close
+    roles:
+      workspace_admin: planned_permission_denied
+      business_preparer: planned_permission_denied
+      business_lodger: planned_allowed
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+      - IDEMPOTENCY_CONFLICT
+      - FACTOR_ASSERTION_REQUIRED
+      - FACTOR_ASSERTION_STALE
+      - FINANCIAL_CLOSE_BLOCKED
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - exact_replay
+        - changed_request_conflict
+  tammy.v1.FinancialCloseService.ReopenFinancialClose:
+    stage: declared_future
+    preload: reopenFinancialClose
+    cases: []
+    futureCases:
+      - company-eofy/contracts
+      - company-eofy/permissions
+      - company-eofy/financial-close
+    projections:
+      - reopen_financial_close_result
+    routes:
+      - /eofy-company-tax/close
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+      - IDEMPOTENCY_CONFLICT
+      - FACTOR_ASSERTION_REQUIRED
+      - FACTOR_ASSERTION_STALE
+      - INVALID_STATE_TRANSITION
+      - REPORT_REPLACEMENT_REQUIRED
+      - AMENDMENT_REQUIRED
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - exact_replay
+        - changed_request_conflict
+  tammy.v1.FinancialCloseService.StartFinancialCloseCorrection:
+    stage: declared_future
+    preload: startFinancialCloseCorrection
+    cases: []
+    futureCases:
+      - company-eofy/contracts
+      - company-eofy/permissions
+      - company-eofy/financial-close
+    projections:
+      - start_financial_close_correction_result
+    routes:
+      - /eofy-company-tax/close
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - PERMISSION_DENIED
+      - STALE_VERSION
+      - IDEMPOTENCY_CONFLICT
+      - FACTOR_ASSERTION_REQUIRED
+      - FACTOR_ASSERTION_STALE
+      - INVALID_STATE_TRANSITION
+      - DECLARATION_REQUIRED
+    list:
+      states:
+        - not_applicable
+    idempotency:
+      mode: persistent_command
+      outcomes:
+        - exact_replay
+        - changed_request_conflict
+  tammy.v1.FinancialCloseService.GetFinancialStatements:
+    stage: declared_future
+    preload: getFinancialStatements
+    cases: []
+    futureCases:
+      - company-eofy/contracts
+      - company-eofy/permissions
+      - company-eofy/financial-close
+    projections:
+      - get_financial_statements_result
+    routes:
+      - /eofy-company-tax/close
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_allowed
+      auditor: planned_allowed
+    principalFailures:
+      - AUTHENTICATION_REQUIRED
+      - NOT_FOUND
+    list:
+      states:
+        - found
+        - not_found
+    idempotency:
+      mode: query
+      outcomes:
+        - not_applicable
 transitions:
   tammy.v1.WorkspaceState.WORKSPACE_STATE_PENDING_RECOVERY->WORKSPACE_STATE_UNAUTHENTICATED:
     stage: declared_future

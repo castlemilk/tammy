@@ -75,6 +75,7 @@ const adminAndPreparer = roles("workspace_admin", "business_preparer");
 const adminAndAuditor = roles("workspace_admin", "auditor");
 const accountingRead = roles(...ROLE_NAMES);
 const authenticatedUser = roles(...ROLE_NAMES);
+const lodger = roles("business_lodger");
 const preAuthentication = preAuthenticationRoles();
 
 const authenticated = ["AUTHENTICATION_REQUIRED"];
@@ -98,6 +99,17 @@ const roleGuardedStalePersistent = [
 ];
 
 export const SBR_DECLARED_FUTURE_RPCS = [];
+
+export const COMPANY_EOFY_DECLARED_FUTURE_RPCS = [
+  "tammy.v1.FinancialCloseService.CreateFinancialClose",
+  "tammy.v1.FinancialCloseService.GetFinancialClose",
+  "tammy.v1.FinancialCloseService.ListCloseChecks",
+  "tammy.v1.FinancialCloseService.ResolveCloseWarning",
+  "tammy.v1.FinancialCloseService.FreezeFinancialClose",
+  "tammy.v1.FinancialCloseService.ReopenFinancialClose",
+  "tammy.v1.FinancialCloseService.StartFinancialCloseCorrection",
+  "tammy.v1.FinancialCloseService.GetFinancialStatements",
+];
 
 export const SLICE_ONE_RPC_POLICY = {
   "tammy.v1.ReportingCapabilityService.GetReportingCapability": rpc({
@@ -857,6 +869,83 @@ export const SLICE_ONE_RPC_POLICY = {
     mode: "query",
     failures: [...roleGuarded, "INVALID_CURSOR"],
     list: ["empty", "populated", "filtered", "paginated"],
+  }),
+  "tammy.v1.FinancialCloseService.CreateFinancialClose": rpc({
+    name: "CreateFinancialClose",
+    route: "/eofy-company-tax/close",
+    rolePolicy: adminAndPreparer,
+    mode: "persistent_command",
+    failures: [...roleGuardedPersistent, "INVALID_PERIOD", "REPORT_BUNDLE_UNAVAILABLE"],
+  }),
+  "tammy.v1.FinancialCloseService.GetFinancialClose": rpc({
+    name: "GetFinancialClose",
+    route: "/eofy-company-tax/close",
+    rolePolicy: accountingRead,
+    mode: "query",
+    failures: [...authenticated, "NOT_FOUND"],
+    list: ["found", "not_found"],
+  }),
+  "tammy.v1.FinancialCloseService.ListCloseChecks": rpc({
+    name: "ListCloseChecks",
+    route: "/eofy-company-tax/close",
+    rolePolicy: accountingRead,
+    mode: "query",
+    failures: [...authenticated, "NOT_FOUND", "INVALID_CURSOR"],
+    list: ["empty", "populated", "filtered", "paginated"],
+  }),
+  "tammy.v1.FinancialCloseService.ResolveCloseWarning": rpc({
+    name: "ResolveCloseWarning",
+    route: "/eofy-company-tax/close",
+    rolePolicy: adminAndPreparer,
+    mode: "persistent_command",
+    failures: [...roleGuardedStalePersistent, "INVALID_STATE_TRANSITION"],
+  }),
+  "tammy.v1.FinancialCloseService.FreezeFinancialClose": rpc({
+    name: "FreezeFinancialClose",
+    route: "/eofy-company-tax/close",
+    rolePolicy: lodger,
+    mode: "persistent_command",
+    failures: [
+      ...roleGuardedStalePersistent,
+      "FACTOR_ASSERTION_REQUIRED",
+      "FACTOR_ASSERTION_STALE",
+      "FINANCIAL_CLOSE_BLOCKED",
+    ],
+  }),
+  "tammy.v1.FinancialCloseService.ReopenFinancialClose": rpc({
+    name: "ReopenFinancialClose",
+    route: "/eofy-company-tax/close",
+    rolePolicy: adminAndPreparer,
+    mode: "persistent_command",
+    failures: [
+      ...roleGuardedStalePersistent,
+      "FACTOR_ASSERTION_REQUIRED",
+      "FACTOR_ASSERTION_STALE",
+      "INVALID_STATE_TRANSITION",
+      "REPORT_REPLACEMENT_REQUIRED",
+      "AMENDMENT_REQUIRED",
+    ],
+  }),
+  "tammy.v1.FinancialCloseService.StartFinancialCloseCorrection": rpc({
+    name: "StartFinancialCloseCorrection",
+    route: "/eofy-company-tax/close",
+    rolePolicy: adminAndPreparer,
+    mode: "persistent_command",
+    failures: [
+      ...roleGuardedStalePersistent,
+      "FACTOR_ASSERTION_REQUIRED",
+      "FACTOR_ASSERTION_STALE",
+      "INVALID_STATE_TRANSITION",
+      "DECLARATION_REQUIRED",
+    ],
+  }),
+  "tammy.v1.FinancialCloseService.GetFinancialStatements": rpc({
+    name: "GetFinancialStatements",
+    route: "/eofy-company-tax/close",
+    rolePolicy: accountingRead,
+    mode: "query",
+    failures: [...authenticated, "NOT_FOUND"],
+    list: ["found", "not_found"],
   }),
   "tammy.v1.SbrService.GetSbrReadiness": rpc({
     name: "GetSbrReadiness",
