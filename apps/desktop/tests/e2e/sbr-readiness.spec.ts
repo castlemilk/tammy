@@ -452,7 +452,9 @@ test("SBR readiness uses local RAM credential and deterministic simulator only",
   await expect(page.getByText("Credential status updated.", { exact: true })).toBeVisible({
     timeout: SBR_OPERATION_UI_TIMEOUT_MS,
   });
-  await expect(page.getByText(replacementCredentialSha256, { exact: true })).toBeVisible();
+  await expect(page.getByText(replacementCredentialSha256, { exact: true })).toBeVisible({
+    timeout: SBR_OPERATION_UI_TIMEOUT_MS,
+  });
   await credentialAction(page, totp, credentialPassword, "Remove credential");
   await expect(page.getByText("Missing", { exact: true }).first()).toBeVisible();
 
