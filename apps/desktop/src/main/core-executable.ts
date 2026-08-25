@@ -198,6 +198,58 @@ export function revalidateCoreExecutableForSpawn(authority: AuthenticatedCoreExe
   }
 }
 
+export function verifyMacOSPrimaryExecutableImage(
+  output: string,
+  processId: number,
+  authority: AuthenticatedCoreExecutable,
+): void {
+  try {
+    requireAuthority(authority);
+    if (!Number.isSafeInteger(processId) || processId <= 0) throw new Error();
+    const lines = output.split(/\r?\n/u).filter((line) => line.length > 0);
+    if (lines[0] !== `p${processId}` || lines.length < 5 || (lines.length - 1) % 4 !== 0) {
+      throw new Error();
+    }
+
+    let primary:
+      | { readonly device: bigint; readonly inode: bigint; readonly executablePath: string }
+      | undefined;
+    for (let index = 1; index < lines.length; index += 4) {
+      if (lines[index] !== "ftxt") throw new Error();
+      const fields = lines.slice(index + 1, index + 4);
+      const device = fields.find((field) => field.startsWith("D"));
+      const inode = fields.find((field) => field.startsWith("i"));
+      const name = fields.find((field) => field.startsWith("n"));
+      if (
+        fields.length !== 3 ||
+        device === undefined ||
+        inode === undefined ||
+        name === undefined ||
+        !/^D(?:0x[0-9a-f]+|[0-9]+)$/iu.test(device) ||
+        !/^i[1-9][0-9]*$/u.test(inode) ||
+        !path.posix.isAbsolute(name.slice(1))
+      ) {
+        throw new Error();
+      }
+      primary ??= {
+        device: BigInt(device.slice(1)),
+        inode: BigInt(inode.slice(1)),
+        executablePath: name.slice(1),
+      };
+    }
+    if (
+      primary === undefined ||
+      primary.executablePath !== authority.executablePath ||
+      primary.device !== authority.identity.dev ||
+      primary.inode !== authority.identity.ino
+    ) {
+      throw new Error();
+    }
+  } catch {
+    throw new Error("CORE_EXECUTABLE_AUTHENTICATION_FAILED");
+  }
+}
+
 export function verifySpawnedCoreExecutable(
   processId: number | undefined,
   authority: AuthenticatedCoreExecutable,
@@ -221,35 +273,7 @@ export function verifySpawnedCoreExecutable(
           windowsHide: true,
         },
       );
-      const lines = output.split(/\r?\n/u).filter((line) => line.length > 0);
-      if (lines[0] !== `p${processId}`) throw new Error();
-      let matches = 0;
-      for (let index = 1; index < lines.length; index += 4) {
-        if (lines[index] !== "ftxt") throw new Error();
-        const fields = lines.slice(index + 1, index + 4);
-        const device = fields.find((field) => field.startsWith("D"));
-        const inode = fields.find((field) => field.startsWith("i"));
-        const name = fields.find((field) => field.startsWith("n"));
-        if (
-          fields.length !== 3 ||
-          device === undefined ||
-          inode === undefined ||
-          name === undefined ||
-          !/^D(?:0x[0-9a-f]+|[0-9]+)$/iu.test(device) ||
-          !/^i[1-9][0-9]*$/u.test(inode) ||
-          !path.posix.isAbsolute(name.slice(1))
-        ) {
-          throw new Error();
-        }
-        if (
-          name.slice(1) === authority.executablePath &&
-          BigInt(device.slice(1)) === authority.identity.dev &&
-          BigInt(inode.slice(1)) === authority.identity.ino
-        ) {
-          matches += 1;
-        }
-      }
-      if (matches !== 1) throw new Error();
+      verifyMacOSPrimaryExecutableImage(output, processId as number, authority);
     }
     revalidateCoreExecutableForSpawn(authority);
   } catch {
