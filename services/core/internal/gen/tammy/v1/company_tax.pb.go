@@ -6211,13 +6211,14 @@ const file_tammy_v1_company_tax_proto_rawDesc = "" +
 	"\x04kind\x18\x05 \x01(\x0e2!.tammy.v1.CompanyReturnExportKindB\n" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x04kind\x12B\n" +
 	"\x11export_passphrase\x18\x06 \x01(\v2\x15.tammy.v1.SecretInputR\x10exportPassphrase:\xe4\x02\xbaH\xe0\x02\x1a\xdd\x02\n" +
-	"\x1ccompany_tax.export.authority\x12^return export requires the exact fresh-factor purpose and passphrase shape for its export kind\x1a\xdc\x01has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'company_return_export' && (this.kind == 2 ? has(this.export_passphrase) : !has(this.export_passphrase))\"\xc0\x02\n" +
+	"\x1ccompany_tax.export.authority\x12^return export requires the exact fresh-factor purpose and passphrase shape for its export kind\x1a\xdc\x01has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'company_return_export' && (this.kind == 2 ? has(this.export_passphrase) : !has(this.export_passphrase))\"\xd0\x03\n" +
 	"\x1fExportCompanyReturnPackResponse\x12i\n" +
 	"\texport_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\bexportId\x12*\n" +
 	"\fcontent_hash\x18\x02 \x01(\fB\a\xbaH\x04z\x02h R\vcontentHash\x12C\n" +
 	"\rsafe_filename\x18\x03 \x01(\tB\x1e\xbaH\x1br\x19\x10\x01\x18\xff\x012\x12^[^/\\\\[:cntrl:]]+$R\fsafeFilename\x12A\n" +
 	"\x04kind\x18\x04 \x01(\x0e2!.tammy.v1.CompanyReturnExportKindB\n" +
-	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x04kind\"\xd1\x04\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x04kind:\x8d\x01\xbaH\x89\x01\x1a\x86\x01\n" +
+	" company_tax.export.safe_filename\x12)export filename must not be a dot segment\x1a7this.safe_filename != '.' && this.safe_filename != '..'\"\xd1\x04\n" +
 	"%CreateCompanyReturnReplacementRequest\x12I\n" +
 	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
 	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12\x80\x01\n" +

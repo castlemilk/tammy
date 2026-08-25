@@ -1003,6 +1003,12 @@ message ExportCompanyReturnPackRequest {
   SecretInput export_passphrase = 6;
 }
 message ExportCompanyReturnPackResponse {
+  option (buf.validate.message).cel = {
+    id: "company_tax.export.safe_filename"
+    message: "export filename must not be a dot segment"
+    expression: "this.safe_filename != '.' && this.safe_filename != '..'"
+  };
+
   string export_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
   bytes content_hash = 2 [(buf.validate.field).bytes.len = 32];
   string safe_filename = 3 [(buf.validate.field).string = {

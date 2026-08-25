@@ -130,6 +130,96 @@ func TestCompanyTaxPreparationMessagesHaveExactFieldOrder(t *testing.T) {
 		"CreateCompanyReturnReplacementRequest": {"command_context", "organisation_id", "predecessor_return_id", "expected_predecessor_version", "source_close_id", "reason"}, "CreateCompanyReturnReplacementResponse": {"predecessor", "replacement"},
 		"CreateCompanyReturnAmendmentRequest": {"command_context", "organisation_id", "effective_original_return_id", "latest_accepted_return_id", "expected_latest_version", "source_close_id", "reason"}, "CreateCompanyReturnAmendmentResponse": {"effective_original", "amendment"},
 	}
+	messageTypes := map[string]protoreflect.FullName{
+		"RelatedEntityTurnoverContribution.amount": "tammy.v1.Money", "RelatedEntityTurnoverContribution.evidence": "tammy.v1.SourceRef",
+		"PassiveIncomeClassificationInput.income_source": "tammy.v1.SourceRef", "PassiveIncomeClassificationInput.evidence": "tammy.v1.SourceRef",
+		"PriorRevenueLossInput.opening_balance": "tammy.v1.Money", "PriorRevenueLossInput.evidence": "tammy.v1.SourceRef",
+		"CompanyTaxProfileInput.tfn": "tammy.v1.SecretInput", "CompanyTaxProfileInput.current_postal_address": "tammy.v1.AddressInput", "CompanyTaxProfileInput.prior_postal_address": "tammy.v1.AddressInput", "CompanyTaxProfileInput.main_business_address": "tammy.v1.AddressInput", "CompanyTaxProfileInput.refund_bsb": "tammy.v1.SecretInput", "CompanyTaxProfileInput.refund_account_number": "tammy.v1.SecretInput", "CompanyTaxProfileInput.related_turnover": "tammy.v1.RelatedEntityTurnoverContribution", "CompanyTaxProfileInput.passive_income_classifications": "tammy.v1.PassiveIncomeClassificationInput", "CompanyTaxProfileInput.prior_revenue_loss": "tammy.v1.PriorRevenueLossInput", "CompanyTaxProfileInput.applicability": "tammy.v1.ApplicabilityAnswers",
+		"CompanyReturnInput.loss_amount_to_apply": "tammy.v1.Money", "CompanyReturnInput.external_summary_evidence": "tammy.v1.SourceRef", "CompanyReturnInput.payroll_summary_evidence": "tammy.v1.SourceRef",
+		"MaskedCompanyTaxProfile.current_postal_address": "tammy.v1.AddressInput", "MaskedCompanyTaxProfile.prior_postal_address": "tammy.v1.AddressInput", "MaskedCompanyTaxProfile.main_business_address": "tammy.v1.AddressInput", "MaskedCompanyTaxProfile.related_turnover": "tammy.v1.RelatedEntityTurnoverContribution", "MaskedCompanyTaxProfile.passive_income_classifications": "tammy.v1.PassiveIncomeClassificationInput", "MaskedCompanyTaxProfile.prior_revenue_loss": "tammy.v1.PriorRevenueLossInput", "MaskedCompanyTaxProfile.applicability": "tammy.v1.ApplicabilityAnswers", "MaskedCompanyTaxProfile.updated_at": "google.protobuf.Timestamp",
+		"TaxAdjustment.amount": "tammy.v1.Money", "TaxAdjustment.sources": "tammy.v1.SourceRef", "TaxAdjustment.evidence": "tammy.v1.SourceRef", "TaxAdjustment.updated_at": "google.protobuf.Timestamp",
+		"TaxElectionChoice.decimal_value": "tammy.v1.Decimal", "TaxElection.choice": "tammy.v1.TaxElectionChoice", "TaxElection.evidence": "tammy.v1.SourceRef", "TaxElection.updated_at": "google.protobuf.Timestamp",
+		"ReturnFactValue.money_value": "tammy.v1.Money", "ReturnFactValue.decimal_value": "tammy.v1.Decimal", "ReturnFactValue.date_value": "tammy.v1.CivilDate",
+		"ReturnFact.value": "tammy.v1.ReturnFactValue", "ReturnFact.submitted_value": "tammy.v1.ReturnFactValue", "ReturnFact.sources": "tammy.v1.SourceRef", "ReturnFact.evidence": "tammy.v1.SourceRef",
+		"TaxReconciliationTerm.amount": "tammy.v1.Money", "TaxReconciliationTerm.sources": "tammy.v1.SourceRef", "TaxReconciliationTerm.evidence": "tammy.v1.SourceRef",
+		"TaxReconciliation.accounting_profit_before_tax": "tammy.v1.Money", "TaxReconciliation.additions": "tammy.v1.TaxReconciliationTerm", "TaxReconciliation.subtractions": "tammy.v1.TaxReconciliationTerm", "TaxReconciliation.eligible_applied_losses": "tammy.v1.TaxReconciliationTerm", "TaxReconciliation.taxable_income_or_loss": "tammy.v1.Money", "TaxReconciliation.gross_tax": "tammy.v1.Money", "TaxReconciliation.payg_and_credits": "tammy.v1.TaxReconciliationTerm", "TaxReconciliation.net_tax_payable_or_refund": "tammy.v1.Money",
+		"ReturnValidationOutcome.sources": "tammy.v1.SourceRef", "ValidationAcknowledgement.acknowledged_at": "google.protobuf.Timestamp", "Declaration.declared_at": "google.protobuf.Timestamp", "CompanyReturnDeliverySummary.delivered_at": "google.protobuf.Timestamp",
+		"CompanyReturn.period_start": "tammy.v1.CivilDate", "CompanyReturn.period_end": "tammy.v1.CivilDate", "CompanyReturn.delivery": "tammy.v1.CompanyReturnDeliverySummary", "CompanyReturn.created_at": "google.protobuf.Timestamp", "CompanyReturn.updated_at": "google.protobuf.Timestamp",
+		"TaxAdjustmentInput.amount": "tammy.v1.Money", "TaxAdjustmentInput.sources": "tammy.v1.SourceRef", "TaxAdjustmentInput.evidence": "tammy.v1.SourceRef", "TaxElectionInput.choice": "tammy.v1.TaxElectionChoice", "TaxElectionInput.evidence": "tammy.v1.SourceRef",
+	}
+	for _, name := range []string{"GetCompanyTaxProfileRequest.authentication", "GetCompanyReturnRequest.authentication", "ListCompanyReturnFactsRequest.authentication"} {
+		messageTypes[name] = "tammy.v1.AuthenticationContext"
+	}
+	for _, name := range []string{"SetCompanyTaxProfileRequest.command_context", "CreateCompanyReturnRequest.command_context", "SetCompanyReturnInputRequest.command_context", "UpsertTaxAdjustmentRequest.command_context", "RemoveTaxAdjustmentRequest.command_context", "UpsertTaxElectionRequest.command_context", "RemoveTaxElectionRequest.command_context", "ValidateCompanyReturnRequest.command_context", "AcknowledgeReturnWarningRequest.command_context", "DeclareCompanyReturnRequest.command_context", "WithdrawCompanyReturnDeclarationRequest.command_context", "ExportCompanyReturnPackRequest.command_context", "CreateCompanyReturnReplacementRequest.command_context", "CreateCompanyReturnAmendmentRequest.command_context"} {
+		messageTypes[name] = "tammy.v1.CommandContext"
+	}
+	for key, typeName := range map[string]protoreflect.FullName{
+		"GetCompanyTaxProfileResponse.profile": "tammy.v1.MaskedCompanyTaxProfile", "SetCompanyTaxProfileRequest.input": "tammy.v1.CompanyTaxProfileInput", "SetCompanyTaxProfileResponse.profile": "tammy.v1.MaskedCompanyTaxProfile", "CreateCompanyReturnRequest.input": "tammy.v1.CompanyReturnInput", "ListCompanyReturnFactsRequest.page": "tammy.v1.PageRequest", "ListCompanyReturnFactsResponse.facts": "tammy.v1.ReturnFact", "ListCompanyReturnFactsResponse.page": "tammy.v1.PageInfo", "SetCompanyReturnInputRequest.input": "tammy.v1.CompanyReturnInput", "UpsertTaxAdjustmentRequest.adjustment": "tammy.v1.TaxAdjustmentInput", "UpsertTaxElectionRequest.election": "tammy.v1.TaxElectionInput", "AcknowledgeReturnWarningResponse.acknowledgement": "tammy.v1.ValidationAcknowledgement", "DeclareCompanyReturnResponse.declaration": "tammy.v1.Declaration", "WithdrawCompanyReturnDeclarationResponse.retained_declaration": "tammy.v1.Declaration", "ExportCompanyReturnPackRequest.export_passphrase": "tammy.v1.SecretInput",
+	} {
+		messageTypes[key] = typeName
+	}
+	for _, response := range []string{"CreateCompanyReturnResponse", "GetCompanyReturnResponse", "SetCompanyReturnInputResponse", "UpsertTaxAdjustmentResponse", "RemoveTaxAdjustmentResponse", "UpsertTaxElectionResponse", "RemoveTaxElectionResponse", "ValidateCompanyReturnResponse", "AcknowledgeReturnWarningResponse", "DeclareCompanyReturnResponse", "WithdrawCompanyReturnDeclarationResponse"} {
+		messageTypes[response+".company_return"] = "tammy.v1.CompanyReturn"
+	}
+	for _, response := range []string{"CreateCompanyReturnResponse", "GetCompanyReturnResponse", "SetCompanyReturnInputResponse", "UpsertTaxAdjustmentResponse", "RemoveTaxAdjustmentResponse", "UpsertTaxElectionResponse", "RemoveTaxElectionResponse"} {
+		messageTypes[response+".tax_reconciliation"] = "tammy.v1.TaxReconciliation"
+	}
+	for _, response := range []string{"CreateCompanyReturnResponse", "GetCompanyReturnResponse", "SetCompanyReturnInputResponse", "UpsertTaxAdjustmentResponse", "RemoveTaxAdjustmentResponse", "UpsertTaxElectionResponse", "RemoveTaxElectionResponse", "ValidateCompanyReturnResponse", "AcknowledgeReturnWarningResponse"} {
+		messageTypes[response+".validation"] = "tammy.v1.ReturnValidationOutcome"
+	}
+	for key, typeName := range map[string]protoreflect.FullName{"UpsertTaxAdjustmentResponse.adjustment": "tammy.v1.TaxAdjustment", "UpsertTaxElectionResponse.election": "tammy.v1.TaxElection", "CreateCompanyReturnReplacementResponse.predecessor": "tammy.v1.CompanyReturn", "CreateCompanyReturnReplacementResponse.replacement": "tammy.v1.CompanyReturn", "CreateCompanyReturnAmendmentResponse.effective_original": "tammy.v1.CompanyReturn", "CreateCompanyReturnAmendmentResponse.amendment": "tammy.v1.CompanyReturn"} {
+		messageTypes[key] = typeName
+	}
+
+	enumTypes := map[string]protoreflect.FullName{
+		"PassiveIncomeClassificationInput.classification": "tammy.v1.BaseRatePassiveIncomeClassification", "PriorRevenueLossInput.ownership_continuity_confirmed": "tammy.v1.RequiredAnswer", "PriorRevenueLossInput.same_or_similar_business_judgement_required": "tammy.v1.RequiredAnswer",
+		"TaxAdjustment.type": "tammy.v1.TaxAdjustmentType", "TaxAdjustment.timing": "tammy.v1.TaxAdjustmentTiming", "ReturnFact.provenance": "tammy.v1.ReturnFactProvenanceKind", "ReturnFact.validation_status": "tammy.v1.ReturnFactValidationStatus", "ReturnValidationOutcome.severity": "tammy.v1.ReturnValidationSeverity", "CompanyReturnDeliverySummary.operation_type": "tammy.v1.CompanyReturnOperationType", "CompanyReturnDeliverySummary.outcome": "tammy.v1.CompanyReturnOperationOutcome", "CompanyReturn.relationship_kind": "tammy.v1.CompanyReturnRelationshipKind", "CompanyReturn.state": "tammy.v1.CompanyReturnState", "TaxAdjustmentInput.type": "tammy.v1.TaxAdjustmentType", "TaxAdjustmentInput.timing": "tammy.v1.TaxAdjustmentTiming", "ExportCompanyReturnPackRequest.kind": "tammy.v1.CompanyReturnExportKind", "ExportCompanyReturnPackResponse.kind": "tammy.v1.CompanyReturnExportKind",
+	}
+	for _, message := range []string{"ApplicabilityAnswers"} {
+		for _, field := range want[protoreflect.Name(message)] {
+			enumTypes[message+"."+string(field)] = "tammy.v1.RequiredAnswer"
+		}
+	}
+	for _, message := range []string{"CompanyTaxProfileInput", "MaskedCompanyTaxProfile"} {
+		for field, typeName := range map[string]protoreflect.FullName{"australian_resident": "tammy.v1.RequiredAnswer", "private_company": "tammy.v1.RequiredAnswer", "final_return": "tammy.v1.RequiredAnswer", "holding_company_kind": "tammy.v1.HoldingCompanyKind", "small_business_entity_choice": "tammy.v1.SmallBusinessEntityChoice", "depreciation_choice": "tammy.v1.DepreciationChoice"} {
+			enumTypes[message+"."+field] = typeName
+		}
+	}
+	repeated := map[string]bool{}
+	for _, key := range []string{"RelatedEntityTurnoverContribution.evidence", "PassiveIncomeClassificationInput.evidence", "PriorRevenueLossInput.evidence", "CompanyTaxProfileInput.related_turnover", "CompanyTaxProfileInput.passive_income_classifications", "CompanyReturnInput.external_summary_evidence", "CompanyReturnInput.payroll_summary_evidence", "MaskedCompanyTaxProfile.related_turnover", "MaskedCompanyTaxProfile.passive_income_classifications", "TaxAdjustment.sources", "TaxAdjustment.evidence", "TaxElection.evidence", "ReturnFact.sources", "ReturnFact.evidence", "TaxReconciliationTerm.sources", "TaxReconciliationTerm.evidence", "TaxReconciliation.additions", "TaxReconciliation.subtractions", "TaxReconciliation.eligible_applied_losses", "TaxReconciliation.payg_and_credits", "ReturnValidationOutcome.fact_ids", "ReturnValidationOutcome.sources", "Declaration.acknowledgement_ids", "TaxAdjustmentInput.sources", "TaxAdjustmentInput.evidence", "TaxElectionInput.evidence", "CreateCompanyReturnResponse.validation", "GetCompanyReturnResponse.validation", "ListCompanyReturnFactsResponse.facts", "SetCompanyReturnInputResponse.validation", "UpsertTaxAdjustmentResponse.validation", "RemoveTaxAdjustmentResponse.validation", "UpsertTaxElectionResponse.validation", "RemoveTaxElectionResponse.validation", "ValidateCompanyReturnResponse.validation", "AcknowledgeReturnWarningResponse.validation"} {
+		repeated[key] = true
+	}
+	explicitOptional := map[string]bool{}
+	for _, key := range []string{"Declaration.supersedes_declaration_id", "CompanyReturnDeliverySummary.receipt_id", "CompanyReturn.predecessor_return_id", "CompanyReturn.successor_return_id", "CompanyReturn.related_attempt_id", "CompanyReturn.declared_snapshot_hash", "CompanyReturn.current_declaration_id", "TaxAdjustmentInput.adjustment_id", "TaxElectionInput.election_id"} {
+		explicitOptional[key] = true
+	}
+	requiredMessages := map[string]bool{}
+	for key, typeName := range messageTypes {
+		if typeName == "tammy.v1.SecretInput" && (key == "CompanyTaxProfileInput.refund_bsb" || key == "CompanyTaxProfileInput.refund_account_number" || key == "ExportCompanyReturnPackRequest.export_passphrase") {
+			continue
+		}
+		if key == "CompanyTaxProfileInput.prior_revenue_loss" || key == "MaskedCompanyTaxProfile.prior_revenue_loss" || key == "CompanyReturnDeliverySummary.delivered_at" || key == "CompanyReturn.delivery" {
+			continue
+		}
+		requiredMessages[key] = true
+	}
+	// Provenance elements and oneof message alternatives are validated when present, not required individually.
+	for _, key := range []string{"RelatedEntityTurnoverContribution.evidence", "PassiveIncomeClassificationInput.income_source", "PassiveIncomeClassificationInput.evidence", "PriorRevenueLossInput.evidence", "CompanyTaxProfileInput.related_turnover", "CompanyTaxProfileInput.passive_income_classifications", "CompanyReturnInput.external_summary_evidence", "CompanyReturnInput.payroll_summary_evidence", "MaskedCompanyTaxProfile.related_turnover", "MaskedCompanyTaxProfile.passive_income_classifications", "TaxAdjustment.sources", "TaxAdjustment.evidence", "TaxElectionChoice.decimal_value", "TaxElection.evidence", "ReturnFactValue.money_value", "ReturnFactValue.decimal_value", "ReturnFactValue.date_value", "ReturnFact.sources", "ReturnFact.evidence", "TaxReconciliationTerm.sources", "TaxReconciliationTerm.evidence", "TaxReconciliation.additions", "TaxReconciliation.subtractions", "TaxReconciliation.eligible_applied_losses", "TaxReconciliation.payg_and_credits", "ReturnValidationOutcome.sources", "TaxAdjustmentInput.sources", "TaxAdjustmentInput.evidence", "TaxElectionInput.evidence", "ListCompanyReturnFactsResponse.facts", "CreateCompanyReturnResponse.validation", "GetCompanyReturnResponse.validation", "SetCompanyReturnInputResponse.validation", "UpsertTaxAdjustmentResponse.validation", "RemoveTaxAdjustmentResponse.validation", "UpsertTaxElectionResponse.validation", "RemoveTaxElectionResponse.validation", "ValidateCompanyReturnResponse.validation", "AcknowledgeReturnWarningResponse.validation"} {
+		delete(requiredMessages, key)
+	}
+	requiredMessages["PassiveIncomeClassificationInput.income_source"] = true
+	nonStringKinds := map[string]protoreflect.Kind{}
+	for _, key := range []string{"MaskedCompanyTaxProfile.version", "TaxAdjustment.version", "TaxElection.version", "ReturnValidationOutcome.validation_revision", "ValidationAcknowledgement.validation_revision", "Declaration.validation_revision", "CompanyReturn.version", "CompanyReturn.validation_revision", "SetCompanyTaxProfileRequest.expected_version", "SetCompanyReturnInputRequest.expected_version", "UpsertTaxAdjustmentRequest.expected_version", "RemoveTaxAdjustmentRequest.expected_version", "UpsertTaxElectionRequest.expected_version", "RemoveTaxElectionRequest.expected_version", "ValidateCompanyReturnRequest.expected_version", "AcknowledgeReturnWarningRequest.expected_version", "AcknowledgeReturnWarningRequest.validation_revision", "DeclareCompanyReturnRequest.expected_version", "DeclareCompanyReturnRequest.validation_revision", "WithdrawCompanyReturnDeclarationRequest.expected_version", "ExportCompanyReturnPackRequest.expected_version", "CreateCompanyReturnReplacementRequest.expected_predecessor_version", "CreateCompanyReturnAmendmentRequest.expected_latest_version"} {
+		nonStringKinds[key] = protoreflect.Uint64Kind
+	}
+	nonStringKinds["CompanyReturn.income_year"] = protoreflect.Int32Kind
+	for _, key := range []string{"TaxElectionChoice.boolean_value", "ReturnFactValue.boolean_value", "ReturnValidationOutcome.acknowledged"} {
+		nonStringKinds[key] = protoreflect.BoolKind
+	}
+	nonStringKinds["ReturnFactValue.integer_value"] = protoreflect.Sint64Kind
+	for _, key := range []string{"TaxReconciliation.content_hash", "Declaration.report_hash", "Declaration.declaration_wording_hash", "CompanyReturn.preparation_bundle_fingerprint", "CompanyReturn.source_close_hash", "CompanyReturn.tax_reconciliation_hash", "CompanyReturn.declared_snapshot_hash", "ExportCompanyReturnPackResponse.content_hash"} {
+		nonStringKinds[key] = protoreflect.BytesKind
+	}
 	if file.Messages().Len() != len(want) {
 		t.Fatalf("company tax message count = %d, want %d", file.Messages().Len(), len(want))
 	}
@@ -145,8 +235,143 @@ func TestCompanyTaxPreparationMessagesHaveExactFieldOrder(t *testing.T) {
 		}
 		for index, wantName := range fieldNames {
 			field := message.Fields().Get(index)
+			key := string(messageName) + "." + string(wantName)
 			if field.Name() != wantName || field.Number() != protoreflect.FieldNumber(index+1) {
 				t.Errorf("%s field %d = %s number %d, want %s number %d", message.FullName(), index, field.Name(), field.Number(), wantName, index+1)
+			}
+			wantKind := protoreflect.StringKind
+			var wantType protoreflect.FullName
+			if typeName, ok := messageTypes[key]; ok {
+				wantKind, wantType = protoreflect.MessageKind, typeName
+			}
+			if typeName, ok := enumTypes[key]; ok {
+				wantKind, wantType = protoreflect.EnumKind, typeName
+			}
+			if kind, ok := nonStringKinds[key]; ok {
+				wantKind = kind
+			}
+			if field.Kind() != wantKind {
+				t.Errorf("%s kind = %s, want %s", field.FullName(), field.Kind(), wantKind)
+			}
+			if wantKind == protoreflect.MessageKind && field.Message().FullName() != wantType {
+				t.Errorf("%s message type = %s, want %s", field.FullName(), field.Message().FullName(), wantType)
+			}
+			if wantKind == protoreflect.EnumKind && field.Enum().FullName() != wantType {
+				t.Errorf("%s enum type = %s, want %s", field.FullName(), field.Enum().FullName(), wantType)
+			}
+			if field.IsList() != repeated[key] {
+				t.Errorf("%s repeated = %t, want %t", field.FullName(), field.IsList(), repeated[key])
+			}
+			if field.Kind() != protoreflect.MessageKind && field.ContainingOneof() == nil && field.HasPresence() != explicitOptional[key] {
+				t.Errorf("%s explicit presence = %t, want %t", field.FullName(), field.HasPresence(), explicitOptional[key])
+			}
+			if field.Kind() == protoreflect.MessageKind && sbrValidationRules(field).GetRequired() != requiredMessages[key] {
+				t.Errorf("%s required = %t, want %t", field.FullName(), sbrValidationRules(field).GetRequired(), requiredMessages[key])
+			}
+		}
+	}
+}
+
+func TestCompanyTaxPreparationResponseGraphCannotReachSecretInput(t *testing.T) {
+	file, err := protoregistry.GlobalFiles.FindFileByPath("tammy/v1/company_tax.proto")
+	if err != nil {
+		t.Fatalf("company tax descriptor missing: %v", err)
+	}
+	service := file.Services().ByName("CompanyTaxService")
+	for methodIndex := 0; methodIndex < service.Methods().Len(); methodIndex++ {
+		method := service.Methods().Get(methodIndex)
+		seen := map[protoreflect.FullName]bool{}
+		var walk func(protoreflect.MessageDescriptor, []protoreflect.FullName)
+		walk = func(message protoreflect.MessageDescriptor, path []protoreflect.FullName) {
+			if seen[message.FullName()] {
+				return
+			}
+			seen[message.FullName()] = true
+			for fieldIndex := 0; fieldIndex < message.Fields().Len(); fieldIndex++ {
+				field := message.Fields().Get(fieldIndex)
+				if field.Kind() != protoreflect.MessageKind {
+					continue
+				}
+				next := append(append([]protoreflect.FullName{}, path...), field.FullName())
+				if field.Message().FullName() == "tammy.v1.SecretInput" {
+					t.Errorf("%s response graph reaches SecretInput via %v", method.FullName(), next)
+					continue
+				}
+				walk(field.Message(), next)
+			}
+		}
+		walk(method.Output(), []protoreflect.FullName{method.Output().FullName()})
+	}
+}
+
+func TestCompanyTaxPreparationFieldRulesRemainBounded(t *testing.T) {
+	file, err := protoregistry.GlobalFiles.FindFileByPath("tammy/v1/company_tax.proto")
+	if err != nil {
+		t.Fatalf("company tax descriptor missing: %v", err)
+	}
+	uuidPattern := "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+	stablePattern := "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"
+	nonUUIDIDs := map[string]bool{
+		"PassiveIncomeClassificationInput.bundle_rule_id": true, "TaxAdjustment.bundle_rule_id": true, "TaxElection.bundle_election_id": true,
+		"ReturnFact.fact_id": true, "ReturnFact.mapping_id": true, "ReturnFact.rule_id": true, "TaxReconciliationTerm.stable_id": true,
+		"TaxReconciliationTerm.rule_id": true, "ReturnValidationOutcome.stable_code": true, "CompanyReturnDeliverySummary.safe_status_code": true,
+		"Declaration.declaration_wording_version": true, "Declaration.terms_version": true, "Declaration.privacy_reference_version": true,
+		"CompanyReturn.preparation_bundle_id": true, "TaxAdjustmentInput.bundle_rule_id": true, "TaxElectionInput.bundle_election_id": true,
+	}
+	for messageIndex := 0; messageIndex < file.Messages().Len(); messageIndex++ {
+		message := file.Messages().Get(messageIndex)
+		for fieldIndex := 0; fieldIndex < message.Fields().Len(); fieldIndex++ {
+			field := message.Fields().Get(fieldIndex)
+			key := string(message.Name()) + "." + string(field.Name())
+			rules := sbrValidationRules(field)
+			if field.Kind() == protoreflect.EnumKind && (!rules.GetEnum().GetDefinedOnly() || fmt.Sprint(rules.GetEnum().GetNotIn()) != "[0]") {
+				t.Errorf("%s must be defined_only and reject zero", field.FullName())
+			}
+			if field.IsList() && rules.GetRepeated().GetMaxItems() == 0 {
+				t.Errorf("%s repeated field has no maximum", field.FullName())
+			}
+			if field.Kind() == protoreflect.StringKind && (field.Name() == "id" || strings.HasSuffix(string(field.Name()), "_id")) && !nonUUIDIDs[key] {
+				if got := rules.GetString_().GetPattern(); got != uuidPattern {
+					t.Errorf("%s UUIDv7 pattern = %q", field.FullName(), got)
+				}
+			}
+			if nonUUIDIDs[key] && key != "CompanyReturn.preparation_bundle_id" {
+				if got := rules.GetString_().GetPattern(); got != stablePattern {
+					t.Errorf("%s stable-code pattern = %q", field.FullName(), got)
+				}
+			}
+		}
+	}
+	for _, fieldName := range []protoreflect.Name{"preparation_bundle_fingerprint", "source_close_hash", "tax_reconciliation_hash", "declared_snapshot_hash"} {
+		if got := fieldRules(t, file.Messages().ByName("CompanyReturn").Fields().ByName(fieldName)).GetBytes().GetLen(); got != 32 {
+			t.Errorf("CompanyReturn.%s len = %d, want 32", fieldName, got)
+		}
+	}
+	for owner, fields := range map[protoreflect.Name][]protoreflect.Name{"TaxReconciliation": {"content_hash"}, "Declaration": {"report_hash", "declaration_wording_hash"}, "ExportCompanyReturnPackResponse": {"content_hash"}} {
+		for _, fieldName := range fields {
+			if got := fieldRules(t, file.Messages().ByName(owner).Fields().ByName(fieldName)).GetBytes().GetLen(); got != 32 {
+				t.Errorf("%s.%s len = %d, want 32", owner, fieldName, got)
+			}
+		}
+	}
+	if got := fieldRules(t, file.Messages().ByName("CompanyReturn").Fields().ByName("income_year")).GetInt32().GetConst(); got != 2026 {
+		t.Errorf("CompanyReturn.income_year const = %d", got)
+	}
+	if got := fieldRules(t, file.Messages().ByName("CompanyReturn").Fields().ByName("preparation_bundle_id")).GetString_().GetConst(); got != "au-company-return-2026-preparation-v1" {
+		t.Errorf("CompanyReturn.preparation_bundle_id const = %q", got)
+	}
+	for messageIndex := 0; messageIndex < file.Messages().Len(); messageIndex++ {
+		message := file.Messages().Get(messageIndex)
+		for fieldIndex := 0; fieldIndex < message.Fields().Len(); fieldIndex++ {
+			field := message.Fields().Get(fieldIndex)
+			if field.Kind() == protoreflect.Uint64Kind && (field.Name() == "version" || field.Name() == "validation_revision" || strings.HasPrefix(string(field.Name()), "expected_")) {
+				wantMinimum := uint64(1)
+				if field.FullName() == "tammy.v1.SetCompanyTaxProfileRequest.expected_version" {
+					wantMinimum = 0
+				}
+				if got := sbrValidationRules(field).GetUint64().GetGte(); got != wantMinimum {
+					t.Errorf("%s minimum = %d, want %d", field.FullName(), got, wantMinimum)
+				}
 			}
 		}
 	}
@@ -951,7 +1176,7 @@ func TestCompanyTaxProtovalidateEnforcesExportShapeAndFreshFactorPurposes(t *tes
 	if err := protovalidate.Validate(validExportResponse); err != nil {
 		t.Fatalf("valid export response rejected: %v", err)
 	}
-	for _, unsafeFilename := range []string{"nested/return.pdf", `nested\return.pdf`, "return\n.pdf"} {
+	for _, unsafeFilename := range []string{".", "..", "nested/return.pdf", `nested\return.pdf`, "return\n.pdf"} {
 		response := proto.Clone(validExportResponse).(*tammyv1.ExportCompanyReturnPackResponse)
 		response.SafeFilename = unsafeFilename
 		assertFinancialCloseValidationRejects(t, "unsafe export filename", response)
