@@ -1650,6 +1650,8 @@ func assertCompanyReturnSubmissionCELRules(t *testing.T, file protoreflect.FileD
 	responseIdentity := "has(this.company_return) && has(this.submission) && has(this.submission.latest_attempt) && this.company_return.id == this.submission.return_id && this.company_return.id == this.submission.latest_attempt.return_id"
 	responseMatrix := "(this.submission.latest_attempt.operation_type == 1 && ((this.submission.latest_attempt.state in [1, 2, 4] && this.company_return.state == 5) || (this.submission.latest_attempt.state in [3, 7] && this.company_return.state == 4) || (this.submission.latest_attempt.state == 5 && this.company_return.state == 8) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 1 && this.company_return.state == 7) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 2 && this.company_return.state == 6) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 3 && this.company_return.state == 2))) || (this.submission.latest_attempt.operation_type == 2 && ((this.submission.latest_attempt.state in [1, 2, 4] && this.company_return.state == 9) || (this.submission.latest_attempt.state in [3, 7] && this.company_return.state == 7) || (this.submission.latest_attempt.state == 5 && this.company_return.state == 12) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 1 && this.company_return.state == 10) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 3 && this.company_return.state == 11)))"
 	receiptState := "this.company_return.state == 10 ? (has(this.submission.receipt) && has(this.company_return.delivery) && this.submission.receipt.attempt_id == this.submission.latest_attempt.id && this.company_return.delivery.latest_attempt_id == this.submission.latest_attempt.id && this.company_return.delivery.operation_type == 2 && this.company_return.delivery.outcome == 1 && has(this.company_return.delivery.receipt_id) && this.company_return.delivery.receipt_id == this.submission.receipt.id && has(this.company_return.delivery.delivered_at)) : (!has(this.submission.receipt) && !has(this.company_return.delivery))"
+	getMatrix := "(" + responseMatrix + ") || (this.company_return.state == 13 && ((this.submission.latest_attempt.operation_type == 1 && ((this.submission.latest_attempt.state in [3, 7]) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome in [1, 2]))) || (this.submission.latest_attempt.operation_type == 2 && ((this.submission.latest_attempt.state in [3, 7]) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 3))))) || (this.company_return.state == 14 && this.submission.latest_attempt.operation_type == 2 && this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 1)"
+	getReceiptState := "this.company_return.state in [10, 14] ? (has(this.submission.receipt) && has(this.company_return.delivery) && this.submission.receipt.attempt_id == this.submission.latest_attempt.id && this.company_return.delivery.latest_attempt_id == this.submission.latest_attempt.id && this.company_return.delivery.operation_type == 2 && this.company_return.delivery.outcome == 1 && has(this.company_return.delivery.receipt_id) && this.company_return.delivery.receipt_id == this.submission.receipt.id && has(this.company_return.delivery.delivered_at)) : (!has(this.submission.receipt) && !has(this.company_return.delivery))"
 	want := map[protoreflect.Name]map[string]string{
 		"CompanyReturnSubmissionAttempt": {
 			"company_return_submission.attempt.original_operation": "this.operation_type in [1, 2]",
@@ -1657,7 +1659,7 @@ func assertCompanyReturnSubmissionCELRules(t *testing.T, file protoreflect.FileD
 			"company_return_submission.attempt.retry_state":        "(this.state == 3 && this.retry_classification == 2) || (this.state == 5 && this.retry_classification == 3) || (this.state in [1, 2, 4, 6, 7] && this.retry_classification == 1)",
 		},
 		"CompanyReturnSubmission": {
-			"company_return_submission.aggregate.identity": "has(this.latest_attempt) && this.return_id == this.latest_attempt.return_id && (!has(this.receipt) || this.receipt.attempt_id == this.latest_attempt.id) && this.status_history.all(observation, observation.attempt_id == this.latest_attempt.id)",
+			"company_return_submission.aggregate.identity": "has(this.latest_attempt) && this.return_id == this.latest_attempt.return_id && (!has(this.receipt) || this.receipt.attempt_id == this.latest_attempt.id)",
 		},
 		"CompanyReturnSubmissionReceipt": {
 			"company_return_submission.receipt.external_identifier": "has(this.conversation_id) || has(this.submission_id)",
@@ -1682,8 +1684,8 @@ func assertCompanyReturnSubmissionCELRules(t *testing.T, file protoreflect.FileD
 		},
 		"GetCompanyReturnSubmissionResponse": {
 			"company_return_submission.get.identity":      responseIdentity,
-			"company_return_submission.get.matrix":        responseMatrix,
-			"company_return_submission.get.receipt_state": receiptState,
+			"company_return_submission.get.matrix":        getMatrix,
+			"company_return_submission.get.receipt_state": getReceiptState,
 		},
 		"RefreshCompanyReturnStatusResponse": {
 			"company_return_submission.refresh.identity":      responseIdentity,
@@ -1790,9 +1792,6 @@ func TestCompanyReturnSubmissionProtovalidateBindsAggregateAndDeliveredIdentitie
 			value.Receipt = validCompanyReturnSubmissionReceipt()
 			value.Receipt.AttemptId = companyReturnSubmissionOtherID()
 		},
-		"status differs from attempt": func(value *tammyv1.CompanyReturnSubmission) {
-			value.StatusHistory[0].AttemptId = companyReturnSubmissionOtherID()
-		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			invalid := proto.Clone(submission).(*tammyv1.CompanyReturnSubmission)
@@ -1831,6 +1830,23 @@ func TestCompanyReturnSubmissionProtovalidateBindsAggregateAndDeliveredIdentitie
 			mutate(invalid)
 			assertFinancialCloseValidationRejects(t, name, invalid)
 		})
+	}
+}
+
+func TestCompanyReturnSubmissionProtovalidateDelegatesHistoryAttemptReferentialIntegrityToPersistence(t *testing.T) {
+	submission := validCompanyReturnSubmission(
+		validCompanyReturnSubmissionAttempt(tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_LODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_COMMITTED, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_SUCCESS),
+		validCompanyReturnSubmissionReceipt(),
+	)
+	historicalObservation := validCompanyReturnStatusObservation()
+	historicalObservation.AttemptId = companyReturnSubmissionOtherID()
+	submission.StatusHistory = []*tammyv1.CompanyReturnStatusObservation{historicalObservation}
+
+	// The projection intentionally carries only latest_attempt, not the retained-attempt
+	// collection. The persistence/handler boundary must resolve every observation's
+	// attempt_id to a retained attempt and preserve append order before returning it.
+	if err := protovalidate.Validate(submission); err != nil {
+		t.Fatalf("valid observation for a retained non-latest attempt rejected: %v", err)
 	}
 }
 
@@ -1895,6 +1911,105 @@ func TestCompanyReturnSubmissionProtovalidateEnforcesOperationOutcomeReportMatri
 	for name, message := range invalid {
 		t.Run(name, func(t *testing.T) {
 			assertFinancialCloseValidationRejects(t, name, message)
+		})
+	}
+}
+
+func TestCompanyReturnSubmissionProtovalidateAllowsLegalHistoricalGetProjections(t *testing.T) {
+	superseded := validCompanyReturnSubmissionGetResponse(tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_DELIVERED, tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_LODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_COMMITTED, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_SUCCESS)
+	superseded.CompanyReturn.State = tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_SUPERSEDED_BY_AMENDMENT
+	superseded.Submission.Receipt = validCompanyReturnSubmissionReceipt()
+
+	fixtures := map[string]*tammyv1.GetCompanyReturnSubmissionResponse{
+		"superseded retains accepted lodge evidence": superseded,
+		"replaced after pre-lodge non-dispatch": validHistoricalCompanyReturnSubmissionGetResponse(
+			tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_PRELODGE,
+			tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_NOT_DISPATCHED,
+			tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_UNSPECIFIED,
+		),
+		"replaced after pre-lodge abort": validHistoricalCompanyReturnSubmissionGetResponse(
+			tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_PRELODGE,
+			tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_ABORTED,
+			tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_UNSPECIFIED,
+		),
+		"replaced after accepted pre-lodge": validHistoricalCompanyReturnSubmissionGetResponse(
+			tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_PRELODGE,
+			tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_COMMITTED,
+			tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_SUCCESS,
+		),
+		"replaced after pre-lodge warnings": validHistoricalCompanyReturnSubmissionGetResponse(
+			tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_PRELODGE,
+			tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_COMMITTED,
+			tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_WARNINGS,
+		),
+		"replaced after lodge non-dispatch": validHistoricalCompanyReturnSubmissionGetResponse(
+			tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_LODGE,
+			tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_NOT_DISPATCHED,
+			tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_UNSPECIFIED,
+		),
+		"replaced after lodge abort": validHistoricalCompanyReturnSubmissionGetResponse(
+			tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_LODGE,
+			tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_ABORTED,
+			tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_UNSPECIFIED,
+		),
+		"replaced after rejected lodge": validHistoricalCompanyReturnSubmissionGetResponse(
+			tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_LODGE,
+			tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_COMMITTED,
+			tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_REJECTED,
+		),
+	}
+	for name, fixture := range fixtures {
+		t.Run(name, func(t *testing.T) {
+			if err := protovalidate.Validate(fixture); err != nil {
+				t.Fatalf("valid historical query projection rejected: %v", err)
+			}
+		})
+	}
+}
+
+func TestCompanyReturnSubmissionProtovalidateRejectsContradictoryHistoricalGetProjections(t *testing.T) {
+	superseded := validCompanyReturnSubmissionGetResponse(tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_DELIVERED, tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_LODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_COMMITTED, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_SUCCESS)
+	superseded.CompanyReturn.State = tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_SUPERSEDED_BY_AMENDMENT
+	superseded.Submission.Receipt = validCompanyReturnSubmissionReceipt()
+
+	invalid := map[string]*tammyv1.GetCompanyReturnSubmissionResponse{
+		"superseded rejected lodge": validHistoricalCompanyReturnSubmissionGetResponse(
+			tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_LODGE,
+			tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_COMMITTED,
+			tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_REJECTED,
+		),
+		"superseded accepted lodge without receipt": validCompanyReturnSubmissionGetResponse(
+			tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_SUPERSEDED_BY_AMENDMENT,
+			tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_LODGE,
+			tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_COMMITTED,
+			tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_SUCCESS,
+		),
+		"replaced accepted lodge": func() *tammyv1.GetCompanyReturnSubmissionResponse {
+			value := proto.Clone(superseded).(*tammyv1.GetCompanyReturnSubmissionResponse)
+			value.CompanyReturn.State = tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_REPLACED
+			return value
+		}(),
+		"replaced rejected pre-lodge": validHistoricalCompanyReturnSubmissionGetResponse(
+			tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_PRELODGE,
+			tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_COMMITTED,
+			tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_REJECTED,
+		),
+		"superseded mismatched delivery receipt": func() *tammyv1.GetCompanyReturnSubmissionResponse {
+			value := proto.Clone(superseded).(*tammyv1.GetCompanyReturnSubmissionResponse)
+			value.CompanyReturn.Delivery.ReceiptId = companyReturnSubmissionString(companyReturnSubmissionOtherID())
+			return value
+		}(),
+		"superseded mismatched delivery attempt": func() *tammyv1.GetCompanyReturnSubmissionResponse {
+			value := proto.Clone(superseded).(*tammyv1.GetCompanyReturnSubmissionResponse)
+			value.CompanyReturn.Delivery.LatestAttemptId = companyReturnSubmissionOtherID()
+			return value
+		}(),
+	}
+	invalid["superseded rejected lodge"].CompanyReturn.State = tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_SUPERSEDED_BY_AMENDMENT
+
+	for name, fixture := range invalid {
+		t.Run(name, func(t *testing.T) {
+			assertFinancialCloseValidationRejects(t, name, fixture)
 		})
 	}
 }
@@ -2058,6 +2173,10 @@ func validCompanyReturnSubmissionGetResponse(returnState tammyv1.CompanyReturnSt
 		CompanyReturn: validCompanyReturnInState(returnState),
 		Submission:    validCompanyReturnSubmission(validCompanyReturnSubmissionAttempt(operation, attemptState, outcome), nil),
 	}
+}
+
+func validHistoricalCompanyReturnSubmissionGetResponse(operation tammyv1.CompanyReturnOperationType, attemptState tammyv1.CompanyReturnAttemptState, outcome tammyv1.CompanyReturnOperationOutcome) *tammyv1.GetCompanyReturnSubmissionResponse {
+	return validCompanyReturnSubmissionGetResponse(tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_REPLACED, operation, attemptState, outcome)
 }
 
 func companyReturnSubmissionOtherID() string {
