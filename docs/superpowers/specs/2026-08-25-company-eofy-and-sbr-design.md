@@ -62,19 +62,21 @@ The first production scope supports one reporting party that is:
 
 The product supports straightforward fixed-asset disposals and capital gains only while the 2026 bundle determines that no separately required CGT schedule, rollover, small-business concession, foreign asset, or specialist calculation is triggered.
 
-The company tax profile requires the legal company name, encrypted TFN, ABN, current and prior postal address, main business address, Australian resident/private status, main business activity code and description, final-return answer, Australian refund-account details where applicable, connected entities/affiliates, annual and aggregated turnover, assessable income, base-rate-entity passive income, small-business-entity choice, ownership continuity, and all explicit applicability questions below. TFN and refund-account values are masked after entry, encrypted at rest, excluded from ordinary logs/support output, and revealed only through a fresh-authenticated edit flow.
+The company tax profile requires the legal company name, encrypted TFN, ABN, current and prior postal address, main business address, Australian resident/private status, main business activity code and description, final-return answer, Australian refund-account details where applicable, connected entities/affiliates and their reviewed turnover contributions, passive-income classification for supported income facts, small-business-entity choice, ownership continuity, and all explicit applicability questions below. TFN and refund-account values are masked after entry, encrypted at rest, excluded from ordinary logs/support output, and revealed only through a fresh-authenticated edit flow.
+
+The frozen books and tax reconciliation are authoritative for Tammy's annual turnover, assessable income, and base-rate-entity passive income. The user cannot enter alternative totals for the tax-rate calculation. The engine derives those totals from supported return facts, adds only evidence-backed connected-entity/affiliate turnover contributions to calculate aggregated turnover, and shows the full composition. A user-supplied external summary is comparison evidence only; any mismatch blocks validation until the underlying facts or related-entity contributions are corrected.
 
 ### 3.2 Supported 2026 rule and input matrix
 
 | Rule area | Required reviewed inputs | Supported result | Fail-closed condition |
 |---|---|---|---|
 | Company identity and status | Legal name, TFN, ABN, addresses, activity code, resident/private answers, final-return answer | Core identity/status facts for one Australian private company | Missing identity, non-resident/public/special company status, substituted period, or profile/ABN mismatch |
-| Holding and related entities | Immediate/ultimate holding answers, connected entities and affiliates, each entity's turnover contribution | Aggregated turnover with an evidence-backed entity list | Foreign holding detail, uncertain control/affiliate assessment, non-market associate dealing, or incomplete turnover evidence |
-| Company tax rate | Aggregated turnover, assessable income, and classified base-rate-entity passive income | 25% when turnover is below $50 million and passive income is no more than 80%; otherwise 30% | User cannot classify connected entities/passive income, or a source category is unsupported; numeric thresholds remain checksum-pinned in the 2026 rule bundle |
+| Holding and related entities | Immediate/ultimate holding answers, connected entities and affiliates, each related entity's reviewed turnover contribution | Aggregated turnover equals derived company annual turnover plus the evidence-backed related-entity contributions | Foreign holding detail, uncertain control/affiliate assessment, non-market associate dealing, incomplete turnover evidence, or comparison-summary mismatch |
+| Company tax rate | Derived aggregated turnover, derived assessable income, and bundle classification of each supported income fact as base-rate-entity passive/non-passive | 25% when turnover is below $50 million and passive income is no more than 80%; otherwise 30% | A source classification is unknown/unsupported or derived totals do not reconcile to the declared return; numeric thresholds remain checksum-pinned in the 2026 rule bundle |
 | Accounting profit/loss | Frozen profit-and-loss facts mapped to supported ordinary Australian income and expense categories | Company-return profit/loss facts and reconciliation starting amount | An unmapped material account, unsupported income/deduction category, or unreviewed evidence |
 | Deductions and add-backs | Reviewed expense mappings, private/non-deductible portions, provisions/accruals, and evidence | Ordinary deductions plus explicit permanent/temporary add-backs and subtractions | Legal characterisation is uncertain or a bundle rule does not cover the adjustment |
-| Depreciation | Asset cost/date, business use, disposal, accounting method, tax method/election, and evidence | Prime-cost/diminishing-value tax depreciation and bundle-supported simplified/instant write-off treatment | Unsupported pool/election, private-use change, rollover, intangible, balancing adjustment, or missing evidence |
-| Capital gains | Supported asset disposal proceeds/cost base and bundle CGT-schedule predicate | Core return capital-gain facts only when no CGT schedule or concession is required | CGT schedule threshold, rollover, small-business concession, foreign asset, share/unit, crypto, or uncertain cost base |
+| Depreciation and depreciating-asset disposal | Asset cost/date, business use, disposal proceeds/date, accounting method, tax method/election, opening adjustable value, and evidence | Prime-cost/diminishing-value tax depreciation, bundle-supported simplified/instant write-off treatment, and a deterministic simple balancing adjustment for a wholly business-use depreciating asset outside a pool | Unsupported pool/election, private-use change, rollover, intangible, non-arm's-length disposal, missing adjustable value/evidence, or other complex balancing treatment |
+| Capital gains | Supported non-depreciating capital-asset disposal proceeds/cost base and bundle CGT-schedule predicate | Core return capital-gain facts only when no CGT schedule or concession is required; depreciating-asset disposals use the preceding balancing-adjustment rule instead | CGT schedule threshold, rollover, small-business concession, foreign asset, share/unit, crypto, or uncertain cost base |
 | Revenue losses | Current-year result; imported prior-year balance; ownership/continuity answers and evidence | Current-year revenue loss and application of a verified carried-forward revenue loss | Ownership change, same/similar-business judgment, losses schedule requirement, capital loss use, or uncertain eligibility |
 | Dividends and franking | Dividends paid, franking credits allocated, tax payments/refunds, and opening franking balance evidence | Simple franking-account reconciliation and ordinary dividends paid | Dividend income, franking deficit, streaming, off-market distribution, benchmark issue, or unexplained franking difference |
 | PAYG and tax credits | Posted PAYG instalments/tax payments plus retained ATO/payment evidence | Credits and expected company tax payable/refund reconciliation | Unsupported offset/credit, foreign credit, missing evidence, or ledger/ATO mismatch |
@@ -235,7 +237,7 @@ The production lodge action is present only when the exact return is declared an
 
 The user unlocks the machine credential through the helper using transient password input and a purpose-bound fresh factor. The renderer receives only redacted credential status. The core asks the helper to pre-lodge the already frozen canonical report. Official information outcomes append without changing authority. A new official warning requiring acknowledgement moves the report to `PRELODGE_REVIEW`, supersedes the current declaration authority without changing report facts/payload, and requires `AcknowledgeReturnWarning` plus a new purpose-bound `DeclareCompanyReturn`; every declaration version remains retained. A blocker requiring value changes creates a replacement draft and cannot mutate the declared snapshot. The final lodge action shows the exact company, ABN, income year, report version, tax result, service, environment, current declaration, and acknowledged warnings before dispatch.
 
-After dispatch, the screen shows queued, sent, processing, accepted, rejected, or outcome unknown. Tammy stores and displays the ATO conversation/submission identifier, timestamps, response codes, label-linked validation outcomes, status history, and official receipt. It never represents payment, refund, or ATO account balance as controlled by Tammy.
+The screen labels pre-lodge separately as validating, validated, warning review, blocked, or validation outcome unknown; none of those states says lodged or delivered. After a lodge dispatch, the screen shows lodge queued, sent, processing, accepted, rejected, or lodge outcome unknown. Tammy stores and displays the operation type, ATO conversation/submission identifier, timestamps, response codes, label-linked validation outcomes, status history, and—only for an accepted lodge—the official receipt. It never represents payment, refund, or ATO account balance as controlled by Tammy.
 
 ## 6. Domain model and ownership
 
@@ -294,7 +296,7 @@ Each fact records its rule/mapping ID and source references. Unknown official fi
 
 ### 6.5 Submission records
 
-`SubmissionAttempt` owns return snapshot hash, official payload hash, environment, product identifier fingerprint, service ID, operation ID, idempotency identity, dispatch state, status, and response hashes. It never stores credential bytes, credential passwords, Product ID bytes, raw endpoint secrets, or unrestricted local paths.
+`SubmissionAttempt` owns return snapshot hash, official payload hash, environment, product identifier fingerprint, service ID, operation type (`PRELODGE`, `LODGE`, `STATUS`, or `RECONCILE`), operation ID, idempotency identity, dispatch state, operation-specific status, and response hashes. Pre-lodge attempts cannot create delivery status/receipts; only a lodge attempt can. It never stores credential bytes, credential passwords, Product ID bytes, raw endpoint secrets, or unrestricted local paths.
 
 `SubmissionReceipt` owns the bounded encrypted official response/receipt, safe display projection, conversation/submission identifier, received time, response schema fingerprint, and content hash. Status observations append; they do not overwrite history.
 
@@ -350,24 +352,28 @@ COLLECTING
 BLOCKED
 REVIEW_READY
 DECLARED
+PRELODGE_PENDING
 PRELODGE_REVIEW
-SUBMISSION_PENDING
+READY_TO_LODGE
+PRELODGE_OUTCOME_UNKNOWN
+LODGE_PENDING
 DELIVERED
-REJECTED
-OUTCOME_UNKNOWN
+LODGE_REJECTED
+LODGE_OUTCOME_UNKNOWN
 REPLACED
 SUPERSEDED_BY_AMENDMENT
 ```
 
-`BLOCKED` and `REVIEW_READY` are persisted report states updated from deterministic validation, not cosmetic renderer states. `DECLARED` freezes facts, rules, calculations, evidence manifest, and payload input and points to the current immutable declaration version. `PRELODGE_REVIEW` means official warnings require acknowledgement and a fresh declaration over the same immutable report. `SUBMISSION_PENDING` begins before helper dispatch is committed. `DELIVERED` requires an accepted official status/receipt. `REJECTED` means the ATO definitively did not accept that attempt. `OUTCOME_UNKNOWN` prevents any replacement, amendment, or blind second lodge until official reconciliation resolves it. `REPLACED` and `SUPERSEDED_BY_AMENDMENT` retain links to the successor.
+`BLOCKED` and `REVIEW_READY` are persisted report states updated from deterministic validation, not cosmetic renderer states. `DECLARED` freezes facts, rules, calculations, evidence manifest, and payload input and points to the current immutable declaration version. `PRELODGE_PENDING` begins before pre-lodge helper dispatch. A definitive successful pre-lodge becomes `READY_TO_LODGE`, never `DELIVERED`. `PRELODGE_REVIEW` means official warnings require acknowledgement and a fresh declaration over the same immutable report. `PRELODGE_OUTCOME_UNKNOWN` blocks lodge until pre-lodge status/reconciliation proves a successful validation or definitive non-acceptance; because pre-lodge is non-lodgment, it can never produce a legal delivery receipt. `LODGE_PENDING` begins only before the lodge dispatch. `DELIVERED` requires an accepted lodge status and official receipt. `LODGE_REJECTED` means the ATO definitively did not accept the lodge attempt. `LODGE_OUTCOME_UNKNOWN` prevents any replacement, amendment, or blind second lodge until official lodgment reconciliation resolves it. `REPLACED` and `SUPERSEDED_BY_AMENDMENT` retain links to the successor.
 
 Correction semantics are explicit:
 
 - A collecting or review-ready return is edited in place under expected-version/idempotency rules.
 - A declared report that was never dispatched may have its declaration withdrawn. The immutable declared snapshot remains retained, becomes `REPLACED`, and a new `REPLACEMENT` draft starts from an existing or corrected close. It uses the original-lodgment operation because no ATO acceptance occurred.
-- A definitively rejected attempt remains rejected. Corrections create a `REPLACEMENT` linked to the rejected attempt and use the original/resubmission operation prescribed by the 2026 bundle; they are not labelled amendments.
-- An `OUTCOME_UNKNOWN` report is locked. If status proves acceptance it becomes delivered; if status proves non-acceptance it becomes rejected and may be replaced. If the official status service cannot resolve it, the UI requires ATO/DSP support and never creates another submission identity.
-- Only a delivered, accepted original can create an `AMENDMENT`. It states a reason, uses a newly frozen close where book corrections are needed, calculates exact fact/tax differences, undergoes full validation/declaration, and invokes the official 2026 amendment operation.
+- A definitively rejected lodge attempt remains `LODGE_REJECTED`. Corrections create a `REPLACEMENT` linked to the rejected attempt and use the original/resubmission operation prescribed by the 2026 bundle; they are not labelled amendments.
+- A `PRELODGE_OUTCOME_UNKNOWN` or `LODGE_OUTCOME_UNKNOWN` report is locked to its operation type. Pre-lodge reconciliation can produce `READY_TO_LODGE` or return to declared/review state but never `DELIVERED`. Lodge reconciliation can produce `DELIVERED` or `LODGE_REJECTED`. If the official status service cannot resolve the operation, the UI requires ATO/DSP support and never creates another submission identity.
+- Any delivered, accepted `ORIGINAL` or `REPLACEMENT` is the effective original and can create the first `AMENDMENT`. It states a reason, uses a newly frozen close where book corrections are needed, calculates exact fact/tax differences, undergoes full validation/declaration, and invokes the official 2026 amendment operation.
+- A delivered amendment can create a subsequent amendment linked to the root effective original and the latest accepted amendment only when the installed 2026 bundle explicitly supports amendment chaining. Otherwise Tammy returns `SUBSEQUENT_AMENDMENT_UNSUPPORTED`, preserves the chain, and requires deterministic handoff/professional processing.
 
 `StartFinancialCloseCorrection` creates the new source revision used by a replacement or amendment while preserving the original books, close, return, declaration, payload, response, and receipt. An edited copy is never presented as the original report.
 
@@ -393,7 +399,7 @@ The helper returns a bounded generated response with outcome, stable code, safe 
 
 The existing prepare/commit/abort/reconcile mutation protocol is extended to report operations. Before network dispatch, core records an intent tied to the immutable report and the helper durably prepares the operation. After a definitive response, core records the result and tells the helper to commit. If either process crashes, startup reconciliation compares the pending IDs and hashes before allowing another action.
 
-Automatic retry is allowed only when the helper proves that no request bytes could have been accepted and the bundle marks the operation retryable. A timeout, connection loss after dispatch, or malformed response after a possible acceptance becomes `OUTCOME_UNKNOWN`; Tammy invokes the official status/reconciliation service before another lodge. The identical report cannot acquire a second submission identity merely because the UI action is repeated.
+Automatic retry is allowed only when the helper proves that no request bytes could have been accepted and the bundle marks the operation retryable. A timeout, connection loss after dispatch, or malformed response after possible acceptance becomes `PRELODGE_OUTCOME_UNKNOWN` or `LODGE_OUTCOME_UNKNOWN` according to the prepared operation. Tammy invokes the matching official status/reconciliation operation. A successful pre-lodge reconciliation authorises lodge but never marks delivery; only accepted lodge reconciliation can create `DELIVERED`. The identical report cannot acquire a second submission identity merely because the UI action is repeated.
 
 ### 9.3 Environments
 
@@ -512,9 +518,11 @@ Public failures use stable codes and safe messages. At minimum:
 | `SBR_CREDENTIAL_NOT_READY` | Missing, locked, expired, revoked, inaccessible, or mismatched credential; open SBR readiness |
 | `SBR_PRODUCT_SERVICE_NOT_READY` | Product/service registration, conformance, or runtime evidence is absent or stale |
 | `ATO_VALIDATION_FAILED` | Official pre-lodge/lodge validation rejected the payload; attach label-linked outcomes |
-| `SUBMISSION_OUTCOME_UNKNOWN` | Acceptance cannot be determined; status reconciliation is required and blind retry is blocked |
+| `PRELODGE_OUTCOME_UNKNOWN` | Pre-lodge validation outcome cannot be determined; reconcile validation status, never mark delivered, and block lodge meanwhile |
+| `LODGE_OUTCOME_UNKNOWN` | Legal lodgment acceptance cannot be determined; reconcile lodge status and block replacement/amendment/blind retry meanwhile |
 | `REPORT_REPLACEMENT_REQUIRED` | A declared but unaccepted return cannot be edited; withdraw/supersede authority and create a linked replacement |
 | `AMENDMENT_REQUIRED` | An accepted delivered return cannot be edited; create a linked amendment from a new close when books changed |
+| `SUBSEQUENT_AMENDMENT_UNSUPPORTED` | The installed 2026 bundle does not authorise another amendment in the chain; preserve state and export a deterministic handoff |
 
 Parser and external response details are reduced to reviewed stable codes before crossing into the renderer. Logs contain operation IDs and hashes, never document contents, report values, TFNs, credential material, passwords, or raw official payloads.
 
@@ -542,7 +550,7 @@ Every task summary states its data root, supported platform, network authority, 
 
 - Unit tests cover every rule, mapping, rounding boundary, validation, lifecycle transition, permission, replay, conflict, stale-source, and unsupported-scenario branch.
 - Property tests prove double-entry balance, close/report immutability, tax-reconciliation equations, provenance completeness, deterministic recalculation, and original/amendment preservation.
-- Golden return fixtures cover at least: profitable service company, trading company with receivables/payables, current-year loss, eligible imported revenue loss, asset purchase/depreciation/disposal, ordinary dividend/franking activity, PAYG instalments/credits, ATO validation rejection, transport outcome unknown, and amendment.
+- Golden return fixtures cover at least: profitable service company, trading company with receivables/payables, current-year loss, eligible imported revenue loss, simple wholly-business-use depreciating-asset disposal with deterministic balancing adjustment, supported non-depreciating capital-asset disposal, ordinary dividend-paid/franking activity, PAYG instalments/credits, ATO validation rejection, operation-specific transport outcome unknown, and amendment.
 - Each unsupported condition in section 3.3 has a fixture proving declaration and lodge are blocked without silent omission.
 - Bundle tests prove exact year/service matching, signature/checksum verification, no fallback, change-impact manifests, and byte-identical output for identical inputs.
 - `compliance/traceability/company-return-2026.csv` maps every section 3.2 requirement and 2026 supported return fact to its rule ID, official source/artefact ID, Protobuf fact, golden fixture, unit test, integration test, packaged E2E step, and activation mode. CI fails on an unmapped rule, fact, fixture, or capability.
@@ -572,6 +580,8 @@ The canonical macOS packaged E2E must use public renderer actions and generated 
 12. exit with zero unexpected sockets, helpers, core processes, plaintext temporary files, secrets, paths, or fixture canaries in logs/support output.
 
 Separate packaged negative journeys cover every high-risk blocker and crash boundary. Tests must not seed final screen state directly in the renderer or database.
+
+Named packaged lifecycle journeys additionally prove: pre-lodge warning acknowledgement and redeclaration over an unchanged payload; declaration withdrawal plus replacement before dispatch; definitive lodge rejection plus original-operation replacement; pre-lodge unknown reconciliation that can never create delivery; lodge unknown reconciliation to accepted and rejected terminal outcomes; corrected-close replacement; corrected-close first amendment from an accepted original/replacement; and fail-closed subsequent amendment when the installed bundle does not support chaining.
 
 ### 14.4 EVTE, conformance, and production evidence
 
@@ -635,6 +645,7 @@ Direct production company-return lodgment is additionally complete only when eve
 - [ATO machine credentials and RAM](https://softwaredevelopers.ato.gov.au/usingmygovidramandmachinecredentials)
 - [ATO machine-to-machine authentication](https://softwaredevelopers.ato.gov.au/M2M)
 - [ATO Software Developers Product Register](https://softwaredevelopers.ato.gov.au/product-register)
+- [ATO Company tax return 2026 instructions](https://www.ato.gov.au/forms-and-instructions/company-tax-return-2026-instructions)
 - [ATO company tax rates](https://www.ato.gov.au/tax-rates-and-codes/company-tax-rates)
 
 Official artefacts issued through authenticated DSP channels are authoritative for the exact registered service and override public explanatory material where they differ. Tammy records that precedence in the accepted report bundle and release evidence.
