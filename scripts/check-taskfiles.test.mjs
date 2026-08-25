@@ -611,6 +611,8 @@ test("local Task front door preserves the safe development contract", async () =
     [
       "run-test",
       [
+        "mise exec -- pnpm sqlcipher:test",
+        "mise exec -- pnpm sqlcipher:build",
         "mise exec -- go test -race ./services/sbr-helper/... -count=1",
         "mise exec -- go test -race ./services/core/internal/sbrprofile ./services/core/internal/sbrhelper ./services/core/internal/sbr -count=1",
         "mise exec -- go test -race -tags tammy_sqlcipher ./services/core/internal/storage/migrations ./services/core/internal/sbr ./services/core/internal/backup ./services/core/internal/restore ./services/core/internal/app ./services/core/cmd/tammy-core -count=1",

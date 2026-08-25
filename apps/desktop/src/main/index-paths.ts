@@ -1,4 +1,5 @@
-import { lstat, realpath } from "node:fs/promises";
+import { constants as fsConstants } from "node:fs";
+import { lstat, open, realpath } from "node:fs/promises";
 import path from "node:path";
 
 import { type AuthenticatedCoreExecutable, authenticateCoreExecutable } from "./core-executable";
@@ -15,6 +16,61 @@ const CORE_TARGETS: Readonly<Record<string, string>> = Object.freeze({
   "darwin/arm64": "tammy-core",
   "win32/x64": "tammy-core.exe",
 });
+const MAX_BUILD_MANIFEST_BYTES = 65_536;
+
+async function pinnedCoreDigest(
+  resourcesRoot: string,
+  physicalResources: string,
+  target: string,
+): Promise<string> {
+  const buildRoot = path.join(resourcesRoot, "build");
+  const physicalBuild = await requirePhysicalDirectory(buildRoot, "INVALID_CORE_BINARY");
+  if (!isContained(physicalResources, physicalBuild)) throw new Error("INVALID_CORE_BINARY");
+  const manifestPath = path.join(physicalBuild, "build-manifest.json");
+  let handle: Awaited<ReturnType<typeof open>> | undefined;
+  try {
+    handle = await open(manifestPath, fsConstants.O_RDONLY | (fsConstants.O_NOFOLLOW ?? 0));
+    const before = await handle.stat({ bigint: true });
+    if (
+      !before.isFile() ||
+      before.isSymbolicLink() ||
+      before.nlink !== 1n ||
+      before.size <= 0n ||
+      before.size > BigInt(MAX_BUILD_MANIFEST_BYTES)
+    ) {
+      throw new Error();
+    }
+    const bytes = await handle.readFile();
+    const after = await handle.stat({ bigint: true });
+    if (
+      before.dev !== after.dev ||
+      before.ino !== after.ino ||
+      before.mode !== after.mode ||
+      before.nlink !== after.nlink ||
+      before.size !== after.size ||
+      before.mtimeNs !== after.mtimeNs ||
+      before.ctimeNs !== after.ctimeNs ||
+      BigInt(bytes.byteLength) !== before.size
+    ) {
+      throw new Error();
+    }
+    const manifest: unknown = JSON.parse(bytes.toString("utf8"));
+    if (
+      manifest === null ||
+      typeof manifest !== "object" ||
+      (manifest as Record<string, unknown>).schema !== "tammy-build-manifest-v1" ||
+      (manifest as Record<string, unknown>).target !== target ||
+      !/^[0-9a-f]{64}$/.test(String((manifest as Record<string, unknown>).core_sha256))
+    ) {
+      throw new Error();
+    }
+    return String((manifest as Record<string, unknown>).core_sha256);
+  } catch {
+    throw new Error("INVALID_CORE_BINARY");
+  } finally {
+    await handle?.close().catch(() => undefined);
+  }
+}
 
 function isContained(parent: string, candidate: string): boolean {
   const relative = path.relative(parent, candidate);
@@ -87,7 +143,14 @@ export async function resolveBundledCorePath(
   ) {
     throw new Error("INVALID_CORE_BINARY");
   }
-  return authenticateCoreExecutable(physicalCandidate);
+  const expectedDigest = await pinnedCoreDigest(
+    resourcesRoot,
+    physicalResources,
+    `${options.platform}-${options.arch}`,
+  );
+  const authenticated = await authenticateCoreExecutable(physicalCandidate);
+  if (authenticated.sha256 !== expectedDigest) throw new Error("INVALID_CORE_BINARY");
+  return authenticated;
 }
 
 export interface BundledSbrProfileLocation {

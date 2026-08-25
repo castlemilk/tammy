@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   closeSync,
@@ -13,6 +14,8 @@ import path from "node:path";
 const MAX_CORE_BYTES = 512 * 1024 * 1024;
 const READ_BUFFER_BYTES = 1024 * 1024;
 const READ_ONLY_NO_FOLLOW = fsConstants.O_RDONLY | (fsConstants.O_NOFOLLOW ?? 0);
+const LIVE_IDENTITY_OUTPUT_BYTES = 65_536;
+const LIVE_IDENTITY_TIMEOUT_MS = 2_000;
 
 export interface CoreExecutableIdentity {
   readonly ctimeNs: bigint;
@@ -192,5 +195,64 @@ export function revalidateCoreExecutableForSpawn(authority: AuthenticatedCoreExe
     throw new Error("CORE_EXECUTABLE_AUTHENTICATION_FAILED");
   } finally {
     if (descriptor !== undefined) closeSync(descriptor);
+  }
+}
+
+export function verifySpawnedCoreExecutable(
+  processId: number | undefined,
+  authority: AuthenticatedCoreExecutable,
+  platform = process.platform,
+): void {
+  requireAuthority(authority);
+  if (!Number.isSafeInteger(processId) || (processId ?? 0) <= 0) {
+    throw new Error("CORE_EXECUTABLE_AUTHENTICATION_FAILED");
+  }
+  try {
+    if (platform === "darwin") {
+      const output = execFileSync(
+        "/usr/sbin/lsof",
+        ["-nP", "-a", "-p", String(processId), "-d", "txt", "-FDin"],
+        {
+          encoding: "utf8",
+          env: { LANG: "C" },
+          maxBuffer: LIVE_IDENTITY_OUTPUT_BYTES,
+          shell: false,
+          timeout: LIVE_IDENTITY_TIMEOUT_MS,
+          windowsHide: true,
+        },
+      );
+      const lines = output.split(/\r?\n/u).filter((line) => line.length > 0);
+      if (lines[0] !== `p${processId}`) throw new Error();
+      let matches = 0;
+      for (let index = 1; index < lines.length; index += 4) {
+        if (lines[index] !== "ftxt") throw new Error();
+        const fields = lines.slice(index + 1, index + 4);
+        const device = fields.find((field) => field.startsWith("D"));
+        const inode = fields.find((field) => field.startsWith("i"));
+        const name = fields.find((field) => field.startsWith("n"));
+        if (
+          fields.length !== 3 ||
+          device === undefined ||
+          inode === undefined ||
+          name === undefined ||
+          !/^D(?:0x[0-9a-f]+|[0-9]+)$/iu.test(device) ||
+          !/^i[1-9][0-9]*$/u.test(inode) ||
+          !path.posix.isAbsolute(name.slice(1))
+        ) {
+          throw new Error();
+        }
+        if (
+          name.slice(1) === authority.executablePath &&
+          BigInt(device.slice(1)) === authority.identity.dev &&
+          BigInt(inode.slice(1)) === authority.identity.ino
+        ) {
+          matches += 1;
+        }
+      }
+      if (matches !== 1) throw new Error();
+    }
+    revalidateCoreExecutableForSpawn(authority);
+  } catch {
+    throw new Error("CORE_EXECUTABLE_AUTHENTICATION_FAILED");
   }
 }

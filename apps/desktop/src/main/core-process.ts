@@ -8,6 +8,7 @@ import { type CoreReadiness, parseReadiness } from "../shared/readiness";
 import {
   type AuthenticatedCoreExecutable,
   revalidateCoreExecutableForSpawn,
+  verifySpawnedCoreExecutable,
 } from "./core-executable";
 
 const MAX_READINESS_BYTES = 65_536;
@@ -110,6 +111,10 @@ export interface CoreProcessOptions {
   readonly sourceEnvironment?: Readonly<NodeJS.ProcessEnv>;
   readonly readinessTimeoutMs?: number;
   readonly verifyBinary?: (binary: AuthenticatedCoreExecutable) => void;
+  readonly verifyLiveChild?: (
+    processId: number | undefined,
+    binary: AuthenticatedCoreExecutable,
+  ) => void;
 }
 
 export interface CoreProcessDiagnostic {
@@ -159,12 +164,17 @@ export class CoreProcess {
   readonly #environment: Readonly<Record<string, string>>;
   readonly #readinessTimeoutMs: number;
   readonly #verifyBinary: (binary: AuthenticatedCoreExecutable) => void;
+  readonly #verifyLiveChild: (
+    processId: number | undefined,
+    binary: AuthenticatedCoreExecutable,
+  ) => void;
 
   #state: CoreProcessState = "IDLE";
   #failure: CoreProcessError | undefined;
   #child: CoreChildProcess | undefined;
   #readiness: Readonly<CoreReadiness> | undefined;
   #readinessAccepted = false;
+  #liveIdentityVerified = false;
   #readinessBytes = Buffer.alloc(0);
   #stderrBytes = Buffer.alloc(0);
   #droppingStderrLine = false;
@@ -202,6 +212,7 @@ export class CoreProcess {
     this.#environment = Object.freeze(allowedEnvironment(options.sourceEnvironment ?? process.env));
     this.#readinessTimeoutMs = options.readinessTimeoutMs ?? DEFAULT_READINESS_TIMEOUT_MS;
     this.#verifyBinary = options.verifyBinary ?? revalidateCoreExecutableForSpawn;
+    this.#verifyLiveChild = options.verifyLiveChild ?? verifySpawnedCoreExecutable;
   }
 
   public start(): Promise<Readonly<CoreReadiness>> {
@@ -220,6 +231,7 @@ export class CoreProcess {
 
     this.#state = "STARTING";
     this.#readinessAccepted = false;
+    this.#liveIdentityVerified = false;
     this.#exitObserved = false;
     const startPromise = new Promise<Readonly<CoreReadiness>>((resolve, reject) => {
       this.#resolveStart = resolve;
@@ -236,16 +248,20 @@ export class CoreProcess {
         stdio: ["pipe", "pipe", "pipe"],
         env: this.#environment,
       });
+      this.#readinessTimer = this.#timers.setTimeout(
+        () => this.#fail(new CoreProcessError("READINESS_TIMEOUT")),
+        this.#readinessTimeoutMs,
+      );
+      this.#attachListeners(this.#child);
+      if (this.#child.pid !== undefined) {
+        this.#verifyLiveChild(this.#child.pid, this.#binary);
+        this.#liveIdentityVerified = true;
+        this.#acceptReadiness();
+      }
     } catch {
       this.#fail(new CoreProcessError("SPAWN_FAILED"));
       return startPromise;
     }
-
-    this.#readinessTimer = this.#timers.setTimeout(
-      () => this.#fail(new CoreProcessError("READINESS_TIMEOUT")),
-      this.#readinessTimeoutMs,
-    );
-    this.#attachListeners(this.#child);
     return startPromise;
   }
 
@@ -350,6 +366,11 @@ export class CoreProcess {
 
     this.#readinessBytes = Buffer.alloc(0);
     this.#readiness = readiness;
+    this.#acceptReadiness();
+  };
+
+  #acceptReadiness(): void {
+    if (this.#state !== "STARTING" || !this.#liveIdentityVerified || !this.#readiness) return;
     this.#readinessAccepted = true;
     this.#state = "READY";
     this.#clearReadinessTimer();
@@ -357,8 +378,8 @@ export class CoreProcess {
     this.#resolveStart = undefined;
     this.#rejectStart = undefined;
     this.#startPromise = undefined;
-    resolve?.(readiness);
-  };
+    resolve?.(this.#readiness);
+  }
 
   readonly #onStderr = (chunk: Buffer | Uint8Array | string): void => {
     if (this.#state !== "READY") {
@@ -516,6 +537,7 @@ export class CoreProcess {
     this.#failure = error;
     this.#readiness = undefined;
     this.#readinessAccepted = false;
+    this.#liveIdentityVerified = false;
     this.#readinessBytes = Buffer.alloc(0);
     this.#stderrBytes = Buffer.alloc(0);
     this.#droppingStderrLine = false;

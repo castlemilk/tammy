@@ -593,6 +593,19 @@ describe("bundled resource resolver", () => {
     return { development, packaged, root };
   }
 
+  async function writeCoreManifest(resources: string, target: string, bytes: Uint8Array) {
+    const build = path.join(resources, "build");
+    await mkdir(build, { recursive: true });
+    await writeFile(
+      path.join(build, "build-manifest.json"),
+      `${JSON.stringify({
+        schema: "tammy-build-manifest-v1",
+        target,
+        core_sha256: createHash("sha256").update(bytes).digest("hex"),
+      })}\n`,
+    );
+  }
+
   it.each([
     ["darwin", "arm64", "tammy-core"],
     ["win32", "x64", "tammy-core.exe"],
@@ -602,8 +615,10 @@ describe("bundled resource resolver", () => {
       const { development, packaged, root } = await resourcesFixture();
       for (const resources of [development, packaged]) {
         const binary = path.join(resources, "core", `${platform}-${arch}`, name);
+        const bytes = Buffer.from("binary");
         await mkdir(path.dirname(binary), { recursive: true });
-        await writeFile(binary, "binary");
+        await writeFile(binary, bytes);
+        await writeCoreManifest(resources, `${platform}-${arch}`, bytes);
       }
 
       const developmentBinary = path.join(development, "core", `${platform}-${arch}`, name);
@@ -635,6 +650,7 @@ describe("bundled resource resolver", () => {
     const bytes = Buffer.from("authenticated-core");
     await mkdir(path.dirname(binary), { recursive: true });
     await writeFile(binary, bytes);
+    await writeCoreManifest(development, "darwin-arm64", bytes);
 
     await expect(
       resolveBundledCorePath({
@@ -653,6 +669,24 @@ describe("bundled resource resolver", () => {
       },
       sha256: createHash("sha256").update(bytes).digest("hex"),
     });
+  });
+
+  it("rejects a core whose authenticated digest is not pinned by the build manifest", async () => {
+    const { development, packaged } = await resourcesFixture();
+    const binary = path.join(development, "core/darwin-arm64/tammy-core");
+    await mkdir(path.dirname(binary), { recursive: true });
+    await writeFile(binary, "replacement-core");
+    await writeCoreManifest(development, "darwin-arm64", Buffer.from("expected-core"));
+
+    await expect(
+      resolveBundledCorePath({
+        arch: "arm64",
+        developmentResourcesPath: development,
+        isPackaged: false,
+        platform: "darwin",
+        resourcesPath: packaged,
+      }),
+    ).rejects.toThrow("INVALID_CORE_BINARY");
   });
 
   it.each([

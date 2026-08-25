@@ -298,6 +298,18 @@ export async function runDesktopScenarioOwner(arguments_, overrides = {}) {
   await runOwnedProcess("pnpm", ["core:build"], dependencies, "LOCAL_SCENARIO_CORE_BUILD_FAILED");
   await runOwnedProcess(
     "pnpm",
+    ["sbr-helper:build"],
+    dependencies,
+    "LOCAL_SCENARIO_HELPER_BUILD_FAILED",
+  );
+  await runOwnedProcess(
+    "pnpm",
+    ["build:manifest"],
+    dependencies,
+    "LOCAL_SCENARIO_MANIFEST_BUILD_FAILED",
+  );
+  await runOwnedProcess(
+    "pnpm",
     [
       "--dir",
       "apps/desktop",

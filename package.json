@@ -22,7 +22,7 @@
     "contracts:production": "pnpm proto:format:check && pnpm proto:lint && pnpm proto:breaking && pnpm proto:generate && node scripts/check-contracts.mjs --require-production",
     "desktop:package": "node scripts/package-desktop.mjs",
     "desktop:make:mas": "node scripts/package-macos-store.mjs",
-    "desktop:start": "pnpm core:build && pnpm --dir apps/desktop start",
+    "desktop:start": "pnpm core:build && pnpm sbr-helper:build && pnpm build:manifest && pnpm --dir apps/desktop start",
     "desktop:start:scenario": "node scripts/launch-local-scenario.mjs --electron-forge",
     "desktop:e2e": "pnpm desktop:package && pnpm --dir apps/desktop e2e",
     "test:proto-breaking": "node --test scripts/check-proto-breaking.test.mjs",

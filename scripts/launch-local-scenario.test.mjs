@@ -306,7 +306,7 @@ test("an error followed by close finalizes and reports a retained root exactly o
 });
 
 test("desktop package owner forwards only validated Electron Forge arguments", async () => {
-  const children = [new FakeChild(), new FakeChild()];
+  const children = [new FakeChild(), new FakeChild(), new FakeChild(), new FakeChild()];
   const calls = [];
   const processRunner = (command, arguments_, options) => {
     calls.push([command, arguments_, options]);
@@ -328,6 +328,8 @@ test("desktop package owner forwards only validated Electron Forge arguments", a
   );
   assert.deepEqual(calls, [
     ["pnpm", ["core:build"], { cwd: repositoryRoot, shell: false, stdio: "inherit" }],
+    ["pnpm", ["sbr-helper:build"], { cwd: repositoryRoot, shell: false, stdio: "inherit" }],
+    ["pnpm", ["build:manifest"], { cwd: repositoryRoot, shell: false, stdio: "inherit" }],
     [
       "pnpm",
       [
@@ -344,7 +346,7 @@ test("desktop package owner forwards only validated Electron Forge arguments", a
 });
 
 test("desktop package owner accepts only the owned SBR simulator root and explicit authority", async () => {
-  const children = [new FakeChild(), new FakeChild()];
+  const children = [new FakeChild(), new FakeChild(), new FakeChild(), new FakeChild()];
   const calls = [];
   const processRunner = (command, arguments_, options) => {
     calls.push([command, arguments_, options]);
@@ -365,8 +367,8 @@ test("desktop package owner accepts only the owned SBR simulator root and explic
     },
   );
 
-  assert.equal(calls.length, 2);
-  assert.deepEqual(calls[1][1], [
+  assert.equal(calls.length, 4);
+  assert.deepEqual(calls[3][1], [
     "--dir",
     "apps/desktop",
     "start",

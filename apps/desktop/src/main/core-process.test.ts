@@ -11,6 +11,7 @@ import { authenticateCoreExecutable } from "./core-executable";
 import {
   CoreProcess,
   CoreProcessError,
+  type CoreProcessOptions,
   type CoreProcessTimers,
   type SpawnCoreProcess,
 } from "./core-process";
@@ -120,6 +121,7 @@ function testRig(
     readonly args?: readonly string[];
     readonly spawn?: SpawnCoreProcess;
     readonly readinessTimeoutMs?: number;
+    readonly verifyLiveChild?: CoreProcessOptions["verifyLiveChild"];
   } = {},
 ) {
   const child = new FakeChild();
@@ -156,6 +158,7 @@ function testRig(
     },
     readinessTimeoutMs: overrides.readinessTimeoutMs ?? 10_000,
     verifyBinary: () => undefined,
+    verifyLiveChild: overrides.verifyLiveChild ?? (() => undefined),
   });
   return {
     child,
@@ -229,6 +232,48 @@ describe("CoreProcess construction and spawning", () => {
       ],
     ]);
     expect(now).not.toHaveBeenCalled();
+  });
+
+  it("verifies the live child identity before accepting readiness", async () => {
+    const order: string[] = [];
+    const child = new FakeChild();
+    const supervisor = new CoreProcess({
+      binary: testBinary(),
+      spawn: () => {
+        order.push("spawn");
+        return child;
+      },
+      verifyBinary: () => order.push("verify-path"),
+      verifyLiveChild: (processId, binary) => {
+        expect(processId).toBe(child.pid);
+        expect(binary).toBeDefined();
+        order.push("verify-live");
+      },
+    });
+
+    const start = supervisor.start();
+    child.stdout.write(readinessLine());
+
+    await expect(start).resolves.toMatchObject({ port: PORT });
+    expect(order).toEqual(["verify-path", "spawn", "verify-live"]);
+  });
+
+  it("fails closed when the spawned image does not match the authenticated authority", async () => {
+    const child = new FakeChild();
+    const supervisor = new CoreProcess({
+      binary: testBinary(),
+      spawn: () => child,
+      verifyBinary: () => undefined,
+      verifyLiveChild: () => {
+        throw new Error("replacement image");
+      },
+    });
+
+    const start = supervisor.start();
+    child.stdout.write(readinessLine());
+
+    await expectCoreError(start, "SPAWN_FAILED", "Core process could not be started.");
+    expect(supervisor.getDiagnostic()).toEqual({ state: "FAILED", errorCode: "SPAWN_FAILED" });
   });
 
   it("rejects same-digest path substitution between resolution and spawn", async () => {
@@ -371,6 +416,7 @@ describe("CoreProcess real subprocess lifecycle", () => {
       binary: testBinary(process.execPath),
       spawn,
       verifyBinary: () => undefined,
+      verifyLiveChild: () => undefined,
     });
     await supervisor.start();
     const stopStartedAt = Date.now();
