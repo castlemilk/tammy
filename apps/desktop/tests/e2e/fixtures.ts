@@ -248,7 +248,10 @@ export async function requestGracefulElectronQuit(
   application: Pick<ElectronApplication, "close" | "evaluate">,
 ): Promise<void> {
   await application.evaluate(({ app }) => {
-    setTimeout(() => app.quit(), 0);
+    // Give Playwright's close request time to detach its Node inspector before
+    // Electron begins native shutdown. Otherwise Electron can wait forever for
+    // the still-attached debugger after app.quit().
+    setTimeout(() => app.quit(), 250);
   });
   void application.close().catch(() => undefined);
 }

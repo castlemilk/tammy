@@ -442,7 +442,9 @@ describe("packaged Electron main-process observation", () => {
 
       expect(close).toHaveBeenCalledOnce();
       expect(quit).not.toHaveBeenCalled();
-      await vi.runAllTimersAsync();
+      await vi.advanceTimersByTimeAsync(249);
+      expect(quit).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
       expect(quit).toHaveBeenCalledOnce();
     } finally {
       vi.useRealTimers();
