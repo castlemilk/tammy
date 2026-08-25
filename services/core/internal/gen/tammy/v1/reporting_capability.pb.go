@@ -87,6 +87,124 @@ func (ReportingCapabilityStatus) EnumDescriptor() ([]byte, []int) {
 	return file_tammy_v1_reporting_capability_proto_rawDescGZIP(), []int{0}
 }
 
+// ReportingCapabilityMode identifies one independently available reporting workflow mode.
+type ReportingCapabilityMode int32
+
+const (
+	// REPORTING_CAPABILITY_MODE_UNSPECIFIED indicates that no mode was supplied.
+	ReportingCapabilityMode_REPORTING_CAPABILITY_MODE_UNSPECIFIED ReportingCapabilityMode = 0
+	// REPORTING_CAPABILITY_MODE_PREPARATION covers local return preparation and validation.
+	ReportingCapabilityMode_REPORTING_CAPABILITY_MODE_PREPARATION ReportingCapabilityMode = 1
+	// REPORTING_CAPABILITY_MODE_SIMULATOR covers deterministic local delivery simulation.
+	ReportingCapabilityMode_REPORTING_CAPABILITY_MODE_SIMULATOR ReportingCapabilityMode = 2
+	// REPORTING_CAPABILITY_MODE_EVTE covers official external validation test environment delivery.
+	ReportingCapabilityMode_REPORTING_CAPABILITY_MODE_EVTE ReportingCapabilityMode = 3
+	// REPORTING_CAPABILITY_MODE_PRODUCTION covers official production delivery.
+	ReportingCapabilityMode_REPORTING_CAPABILITY_MODE_PRODUCTION ReportingCapabilityMode = 4
+)
+
+// Enum value maps for ReportingCapabilityMode.
+var (
+	ReportingCapabilityMode_name = map[int32]string{
+		0: "REPORTING_CAPABILITY_MODE_UNSPECIFIED",
+		1: "REPORTING_CAPABILITY_MODE_PREPARATION",
+		2: "REPORTING_CAPABILITY_MODE_SIMULATOR",
+		3: "REPORTING_CAPABILITY_MODE_EVTE",
+		4: "REPORTING_CAPABILITY_MODE_PRODUCTION",
+	}
+	ReportingCapabilityMode_value = map[string]int32{
+		"REPORTING_CAPABILITY_MODE_UNSPECIFIED": 0,
+		"REPORTING_CAPABILITY_MODE_PREPARATION": 1,
+		"REPORTING_CAPABILITY_MODE_SIMULATOR":   2,
+		"REPORTING_CAPABILITY_MODE_EVTE":        3,
+		"REPORTING_CAPABILITY_MODE_PRODUCTION":  4,
+	}
+)
+
+func (x ReportingCapabilityMode) Enum() *ReportingCapabilityMode {
+	p := new(ReportingCapabilityMode)
+	*p = x
+	return p
+}
+
+func (x ReportingCapabilityMode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ReportingCapabilityMode) Descriptor() protoreflect.EnumDescriptor {
+	return file_tammy_v1_reporting_capability_proto_enumTypes[1].Descriptor()
+}
+
+func (ReportingCapabilityMode) Type() protoreflect.EnumType {
+	return &file_tammy_v1_reporting_capability_proto_enumTypes[1]
+}
+
+func (x ReportingCapabilityMode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ReportingCapabilityMode.Descriptor instead.
+func (ReportingCapabilityMode) EnumDescriptor() ([]byte, []int) {
+	return file_tammy_v1_reporting_capability_proto_rawDescGZIP(), []int{1}
+}
+
+// ReportingModeAvailability describes the exact implementation boundary for one mode.
+type ReportingModeAvailability int32
+
+const (
+	// REPORTING_MODE_AVAILABILITY_UNSPECIFIED indicates that no availability was supplied.
+	ReportingModeAvailability_REPORTING_MODE_AVAILABILITY_UNSPECIFIED ReportingModeAvailability = 0
+	// REPORTING_MODE_AVAILABILITY_NOT_IMPLEMENTED means required Tammy behavior is absent.
+	ReportingModeAvailability_REPORTING_MODE_AVAILABILITY_NOT_IMPLEMENTED ReportingModeAvailability = 1
+	// REPORTING_MODE_AVAILABILITY_AVAILABLE means the current build implements the mode.
+	ReportingModeAvailability_REPORTING_MODE_AVAILABILITY_AVAILABLE ReportingModeAvailability = 2
+	// REPORTING_MODE_AVAILABILITY_EXTERNAL_GATED means Tammy implements the mode but an external prerequisite remains.
+	ReportingModeAvailability_REPORTING_MODE_AVAILABILITY_EXTERNAL_GATED ReportingModeAvailability = 3
+)
+
+// Enum value maps for ReportingModeAvailability.
+var (
+	ReportingModeAvailability_name = map[int32]string{
+		0: "REPORTING_MODE_AVAILABILITY_UNSPECIFIED",
+		1: "REPORTING_MODE_AVAILABILITY_NOT_IMPLEMENTED",
+		2: "REPORTING_MODE_AVAILABILITY_AVAILABLE",
+		3: "REPORTING_MODE_AVAILABILITY_EXTERNAL_GATED",
+	}
+	ReportingModeAvailability_value = map[string]int32{
+		"REPORTING_MODE_AVAILABILITY_UNSPECIFIED":     0,
+		"REPORTING_MODE_AVAILABILITY_NOT_IMPLEMENTED": 1,
+		"REPORTING_MODE_AVAILABILITY_AVAILABLE":       2,
+		"REPORTING_MODE_AVAILABILITY_EXTERNAL_GATED":  3,
+	}
+)
+
+func (x ReportingModeAvailability) Enum() *ReportingModeAvailability {
+	p := new(ReportingModeAvailability)
+	*p = x
+	return p
+}
+
+func (x ReportingModeAvailability) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ReportingModeAvailability) Descriptor() protoreflect.EnumDescriptor {
+	return file_tammy_v1_reporting_capability_proto_enumTypes[2].Descriptor()
+}
+
+func (ReportingModeAvailability) Type() protoreflect.EnumType {
+	return &file_tammy_v1_reporting_capability_proto_enumTypes[2]
+}
+
+func (x ReportingModeAvailability) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ReportingModeAvailability.Descriptor instead.
+func (ReportingModeAvailability) EnumDescriptor() ([]byte, []int) {
+	return file_tammy_v1_reporting_capability_proto_rawDescGZIP(), []int{2}
+}
+
 // ReportingEntityType identifies the Australian entity class requesting a report.
 type ReportingEntityType int32
 
@@ -97,6 +215,8 @@ const (
 	ReportingEntityType_REPORTING_ENTITY_TYPE_AU_BUSINESS ReportingEntityType = 1
 	// REPORTING_ENTITY_TYPE_AU_INDIVIDUAL identifies an Australian individual.
 	ReportingEntityType_REPORTING_ENTITY_TYPE_AU_INDIVIDUAL ReportingEntityType = 2
+	// REPORTING_ENTITY_TYPE_AU_PRIVATE_COMPANY identifies an Australian private company.
+	ReportingEntityType_REPORTING_ENTITY_TYPE_AU_PRIVATE_COMPANY ReportingEntityType = 3
 )
 
 // Enum value maps for ReportingEntityType.
@@ -105,11 +225,13 @@ var (
 		0: "REPORTING_ENTITY_TYPE_UNSPECIFIED",
 		1: "REPORTING_ENTITY_TYPE_AU_BUSINESS",
 		2: "REPORTING_ENTITY_TYPE_AU_INDIVIDUAL",
+		3: "REPORTING_ENTITY_TYPE_AU_PRIVATE_COMPANY",
 	}
 	ReportingEntityType_value = map[string]int32{
-		"REPORTING_ENTITY_TYPE_UNSPECIFIED":   0,
-		"REPORTING_ENTITY_TYPE_AU_BUSINESS":   1,
-		"REPORTING_ENTITY_TYPE_AU_INDIVIDUAL": 2,
+		"REPORTING_ENTITY_TYPE_UNSPECIFIED":        0,
+		"REPORTING_ENTITY_TYPE_AU_BUSINESS":        1,
+		"REPORTING_ENTITY_TYPE_AU_INDIVIDUAL":      2,
+		"REPORTING_ENTITY_TYPE_AU_PRIVATE_COMPANY": 3,
 	}
 )
 
@@ -124,11 +246,11 @@ func (x ReportingEntityType) String() string {
 }
 
 func (ReportingEntityType) Descriptor() protoreflect.EnumDescriptor {
-	return file_tammy_v1_reporting_capability_proto_enumTypes[1].Descriptor()
+	return file_tammy_v1_reporting_capability_proto_enumTypes[3].Descriptor()
 }
 
 func (ReportingEntityType) Type() protoreflect.EnumType {
-	return &file_tammy_v1_reporting_capability_proto_enumTypes[1]
+	return &file_tammy_v1_reporting_capability_proto_enumTypes[3]
 }
 
 func (x ReportingEntityType) Number() protoreflect.EnumNumber {
@@ -137,7 +259,7 @@ func (x ReportingEntityType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ReportingEntityType.Descriptor instead.
 func (ReportingEntityType) EnumDescriptor() ([]byte, []int) {
-	return file_tammy_v1_reporting_capability_proto_rawDescGZIP(), []int{1}
+	return file_tammy_v1_reporting_capability_proto_rawDescGZIP(), []int{3}
 }
 
 // ReportKind identifies one reporting product boundary.
@@ -152,6 +274,8 @@ const (
 	ReportKind_REPORT_KIND_BAS ReportKind = 2
 	// REPORT_KIND_INDIVIDUAL_INCOME_TAX_RETURN identifies an individual income tax return.
 	ReportKind_REPORT_KIND_INDIVIDUAL_INCOME_TAX_RETURN ReportKind = 3
+	// REPORT_KIND_COMPANY_TAX_RETURN identifies an Australian company income tax return.
+	ReportKind_REPORT_KIND_COMPANY_TAX_RETURN ReportKind = 4
 )
 
 // Enum value maps for ReportKind.
@@ -161,12 +285,14 @@ var (
 		1: "REPORT_KIND_GST_WORKPAPER",
 		2: "REPORT_KIND_BAS",
 		3: "REPORT_KIND_INDIVIDUAL_INCOME_TAX_RETURN",
+		4: "REPORT_KIND_COMPANY_TAX_RETURN",
 	}
 	ReportKind_value = map[string]int32{
 		"REPORT_KIND_UNSPECIFIED":                  0,
 		"REPORT_KIND_GST_WORKPAPER":                1,
 		"REPORT_KIND_BAS":                          2,
 		"REPORT_KIND_INDIVIDUAL_INCOME_TAX_RETURN": 3,
+		"REPORT_KIND_COMPANY_TAX_RETURN":           4,
 	}
 )
 
@@ -181,11 +307,11 @@ func (x ReportKind) String() string {
 }
 
 func (ReportKind) Descriptor() protoreflect.EnumDescriptor {
-	return file_tammy_v1_reporting_capability_proto_enumTypes[2].Descriptor()
+	return file_tammy_v1_reporting_capability_proto_enumTypes[4].Descriptor()
 }
 
 func (ReportKind) Type() protoreflect.EnumType {
-	return &file_tammy_v1_reporting_capability_proto_enumTypes[2]
+	return &file_tammy_v1_reporting_capability_proto_enumTypes[4]
 }
 
 func (x ReportKind) Number() protoreflect.EnumNumber {
@@ -194,7 +320,7 @@ func (x ReportKind) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ReportKind.Descriptor instead.
 func (ReportKind) EnumDescriptor() ([]byte, []int) {
-	return file_tammy_v1_reporting_capability_proto_rawDescGZIP(), []int{2}
+	return file_tammy_v1_reporting_capability_proto_rawDescGZIP(), []int{4}
 }
 
 // GetReportingCapabilityRequest asks about one exact report, entity, and tax year combination.
@@ -261,6 +387,106 @@ func (x *GetReportingCapabilityRequest) GetEntityType() ReportingEntityType {
 	return ReportingEntityType_REPORTING_ENTITY_TYPE_UNSPECIFIED
 }
 
+// ReportingModeCapability describes one independently fail-closed reporting mode.
+type ReportingModeCapability struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// mode identifies the reporting workflow mode.
+	Mode ReportingCapabilityMode `protobuf:"varint,1,opt,name=mode,enum=tammy.v1.ReportingCapabilityMode" json:"mode,omitempty"`
+	// availability identifies the current build's exact implementation boundary.
+	Availability ReportingModeAvailability `protobuf:"varint,2,opt,name=availability,enum=tammy.v1.ReportingModeAvailability" json:"availability,omitempty"`
+	// required_bundle_id identifies the bounded rules bundle required by this mode.
+	RequiredBundleId *string `protobuf:"bytes,3,opt,name=required_bundle_id,json=requiredBundleId" json:"required_bundle_id,omitempty"`
+	// activated_bundle_fingerprint identifies the exact installed bundle only when activated.
+	ActivatedBundleFingerprint []byte `protobuf:"bytes,4,opt,name=activated_bundle_fingerprint,json=activatedBundleFingerprint" json:"activated_bundle_fingerprint,omitempty"`
+	// required_service_name names the official external service required by this mode.
+	RequiredServiceName *string `protobuf:"bytes,5,opt,name=required_service_name,json=requiredServiceName" json:"required_service_name,omitempty"`
+	// summary is bounded user-facing text describing this mode's support boundary.
+	Summary string `protobuf:"bytes,6,opt,name=summary" json:"summary,omitempty"`
+	// blockers are bounded stable codes explaining why this mode is unavailable.
+	Blockers      []string `protobuf:"bytes,7,rep,name=blockers" json:"blockers,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReportingModeCapability) Reset() {
+	*x = ReportingModeCapability{}
+	mi := &file_tammy_v1_reporting_capability_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReportingModeCapability) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReportingModeCapability) ProtoMessage() {}
+
+func (x *ReportingModeCapability) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_reporting_capability_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReportingModeCapability.ProtoReflect.Descriptor instead.
+func (*ReportingModeCapability) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_reporting_capability_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *ReportingModeCapability) GetMode() ReportingCapabilityMode {
+	if x != nil {
+		return x.Mode
+	}
+	return ReportingCapabilityMode_REPORTING_CAPABILITY_MODE_UNSPECIFIED
+}
+
+func (x *ReportingModeCapability) GetAvailability() ReportingModeAvailability {
+	if x != nil {
+		return x.Availability
+	}
+	return ReportingModeAvailability_REPORTING_MODE_AVAILABILITY_UNSPECIFIED
+}
+
+func (x *ReportingModeCapability) GetRequiredBundleId() string {
+	if x != nil && x.RequiredBundleId != nil {
+		return *x.RequiredBundleId
+	}
+	return ""
+}
+
+func (x *ReportingModeCapability) GetActivatedBundleFingerprint() []byte {
+	if x != nil {
+		return x.ActivatedBundleFingerprint
+	}
+	return nil
+}
+
+func (x *ReportingModeCapability) GetRequiredServiceName() string {
+	if x != nil && x.RequiredServiceName != nil {
+		return *x.RequiredServiceName
+	}
+	return ""
+}
+
+func (x *ReportingModeCapability) GetSummary() string {
+	if x != nil {
+		return x.Summary
+	}
+	return ""
+}
+
+func (x *ReportingModeCapability) GetBlockers() []string {
+	if x != nil {
+		return x.Blockers
+	}
+	return nil
+}
+
 // ReportingCapability reports the immutable support boundary for one exact request and build.
 type ReportingCapability struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -277,14 +503,16 @@ type ReportingCapability struct {
 	// summary is bounded user-facing text describing the support boundary.
 	Summary string `protobuf:"bytes,6,opt,name=summary" json:"summary,omitempty"`
 	// limitations contains at most eight bounded user-facing qualifications.
-	Limitations   []string `protobuf:"bytes,7,rep,name=limitations" json:"limitations,omitempty"`
+	Limitations []string `protobuf:"bytes,7,rep,name=limitations" json:"limitations,omitempty"`
+	// modes contains the authoritative independently evaluated four-mode support boundary.
+	Modes         []*ReportingModeCapability `protobuf:"bytes,8,rep,name=modes" json:"modes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ReportingCapability) Reset() {
 	*x = ReportingCapability{}
-	mi := &file_tammy_v1_reporting_capability_proto_msgTypes[1]
+	mi := &file_tammy_v1_reporting_capability_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -296,7 +524,7 @@ func (x *ReportingCapability) String() string {
 func (*ReportingCapability) ProtoMessage() {}
 
 func (x *ReportingCapability) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_reporting_capability_proto_msgTypes[1]
+	mi := &file_tammy_v1_reporting_capability_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -309,7 +537,7 @@ func (x *ReportingCapability) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReportingCapability.ProtoReflect.Descriptor instead.
 func (*ReportingCapability) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_reporting_capability_proto_rawDescGZIP(), []int{1}
+	return file_tammy_v1_reporting_capability_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *ReportingCapability) GetReport() ReportKind {
@@ -361,6 +589,13 @@ func (x *ReportingCapability) GetLimitations() []string {
 	return nil
 }
 
+func (x *ReportingCapability) GetModes() []*ReportingModeCapability {
+	if x != nil {
+		return x.Modes
+	}
+	return nil
+}
+
 // GetReportingCapabilityResponse returns one exact build-pinned capability.
 type GetReportingCapabilityResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -372,7 +607,7 @@ type GetReportingCapabilityResponse struct {
 
 func (x *GetReportingCapabilityResponse) Reset() {
 	*x = GetReportingCapabilityResponse{}
-	mi := &file_tammy_v1_reporting_capability_proto_msgTypes[2]
+	mi := &file_tammy_v1_reporting_capability_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -384,7 +619,7 @@ func (x *GetReportingCapabilityResponse) String() string {
 func (*GetReportingCapabilityResponse) ProtoMessage() {}
 
 func (x *GetReportingCapabilityResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_reporting_capability_proto_msgTypes[2]
+	mi := &file_tammy_v1_reporting_capability_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -397,7 +632,7 @@ func (x *GetReportingCapabilityResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetReportingCapabilityResponse.ProtoReflect.Descriptor instead.
 func (*GetReportingCapabilityResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_reporting_capability_proto_rawDescGZIP(), []int{2}
+	return file_tammy_v1_reporting_capability_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *GetReportingCapabilityResponse) GetCapability() *ReportingCapability {
@@ -418,7 +653,18 @@ const file_tammy_v1_reporting_capability_proto_rawDesc = "" +
 	"\btax_year\x18\x02 \x01(\x05B\v\xbaH\b\x1a\x06\x18\x8fN(\xd0\x0fR\ataxYear\x12J\n" +
 	"\ventity_type\x18\x03 \x01(\x0e2\x1d.tammy.v1.ReportingEntityTypeB\n" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\n" +
-	"entityType\"\x94\x03\n" +
+	"entityType\"\xa2\x04\n" +
+	"\x17ReportingModeCapability\x12A\n" +
+	"\x04mode\x18\x01 \x01(\x0e2!.tammy.v1.ReportingCapabilityModeB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x04mode\x12S\n" +
+	"\favailability\x18\x02 \x01(\x0e2#.tammy.v1.ReportingModeAvailabilityB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\favailability\x12a\n" +
+	"\x12required_bundle_id\x18\x03 \x01(\tB3\xbaH+r)\x18\x80\x012$^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$\xaa\x01\x02\b\x01R\x10requiredBundleId\x12N\n" +
+	"\x1cactivated_bundle_fingerprint\x18\x04 \x01(\fB\f\xbaH\x04z\x02h \xaa\x01\x02\b\x01R\x1aactivatedBundleFingerprint\x12A\n" +
+	"\x15required_service_name\x18\x05 \x01(\tB\r\xbaH\x05r\x03\x18\x80\x01\xaa\x01\x02\b\x01R\x13requiredServiceName\x12$\n" +
+	"\asummary\x18\x06 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\x80\x04R\asummary\x12S\n" +
+	"\bblockers\x18\a \x03(\tB7\xbaH4\x92\x011\x10\x10\"-r+\x10\x01\x18\x80\x012$^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$R\bblockers\"\xb5\x06\n" +
 	"\x13ReportingCapability\x128\n" +
 	"\x06report\x18\x01 \x01(\x0e2\x14.tammy.v1.ReportKindB\n" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x06report\x12&\n" +
@@ -433,7 +679,10 @@ const file_tammy_v1_reporting_capability_proto_rawDesc = "" +
 	"appVersion\x12$\n" +
 	"\asummary\x18\x06 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\x80\x04R\asummary\x123\n" +
-	"\vlimitations\x18\a \x03(\tB\x11\xbaH\x0e\x92\x01\v\x10\b\"\ar\x05\x10\x01\x18\x80\x02R\vlimitations\"g\n" +
+	"\vlimitations\x18\a \x03(\tB\x11\xbaH\x0e\x92\x01\v\x10\b\"\ar\x05\x10\x01\x18\x80\x02R\vlimitations\x12C\n" +
+	"\x05modes\x18\b \x03(\v2!.tammy.v1.ReportingModeCapabilityB\n" +
+	"\xbaH\a\x92\x01\x04\b\x04\x10\x04R\x05modes:\xd9\x02\xbaH\xd5\x02\x1a\xd2\x02\n" +
+	" reporting_capability.exact_modes\x12Qmodes must contain exactly one preparation, simulator, EVTE, and production entry\x1a\xda\x01this.modes.size() == 4 && this.modes.filter(m, m.mode == 1).size() == 1 && this.modes.filter(m, m.mode == 2).size() == 1 && this.modes.filter(m, m.mode == 3).size() == 1 && this.modes.filter(m, m.mode == 4).size() == 1\"g\n" +
 	"\x1eGetReportingCapabilityResponse\x12E\n" +
 	"\n" +
 	"capability\x18\x01 \x01(\v2\x1d.tammy.v1.ReportingCapabilityB\x06\xbaH\x03\xc8\x01\x01R\n" +
@@ -444,17 +693,30 @@ const file_tammy_v1_reporting_capability_proto_rawDesc = "" +
 	",REPORTING_CAPABILITY_STATUS_PREPARATION_ONLY\x10\x02\x12,\n" +
 	"(REPORTING_CAPABILITY_STATUS_HANDOFF_ONLY\x10\x03\x120\n" +
 	",REPORTING_CAPABILITY_STATUS_DIRECT_LODGEMENT\x10\x04\x12+\n" +
-	"'REPORTING_CAPABILITY_STATUS_UNSUPPORTED\x10\x05*\x8c\x01\n" +
+	"'REPORTING_CAPABILITY_STATUS_UNSUPPORTED\x10\x05*\xe6\x01\n" +
+	"\x17ReportingCapabilityMode\x12)\n" +
+	"%REPORTING_CAPABILITY_MODE_UNSPECIFIED\x10\x00\x12)\n" +
+	"%REPORTING_CAPABILITY_MODE_PREPARATION\x10\x01\x12'\n" +
+	"#REPORTING_CAPABILITY_MODE_SIMULATOR\x10\x02\x12\"\n" +
+	"\x1eREPORTING_CAPABILITY_MODE_EVTE\x10\x03\x12(\n" +
+	"$REPORTING_CAPABILITY_MODE_PRODUCTION\x10\x04*\xd4\x01\n" +
+	"\x19ReportingModeAvailability\x12+\n" +
+	"'REPORTING_MODE_AVAILABILITY_UNSPECIFIED\x10\x00\x12/\n" +
+	"+REPORTING_MODE_AVAILABILITY_NOT_IMPLEMENTED\x10\x01\x12)\n" +
+	"%REPORTING_MODE_AVAILABILITY_AVAILABLE\x10\x02\x12.\n" +
+	"*REPORTING_MODE_AVAILABILITY_EXTERNAL_GATED\x10\x03*\xba\x01\n" +
 	"\x13ReportingEntityType\x12%\n" +
 	"!REPORTING_ENTITY_TYPE_UNSPECIFIED\x10\x00\x12%\n" +
 	"!REPORTING_ENTITY_TYPE_AU_BUSINESS\x10\x01\x12'\n" +
-	"#REPORTING_ENTITY_TYPE_AU_INDIVIDUAL\x10\x02*\x8b\x01\n" +
+	"#REPORTING_ENTITY_TYPE_AU_INDIVIDUAL\x10\x02\x12,\n" +
+	"(REPORTING_ENTITY_TYPE_AU_PRIVATE_COMPANY\x10\x03*\xaf\x01\n" +
 	"\n" +
 	"ReportKind\x12\x1b\n" +
 	"\x17REPORT_KIND_UNSPECIFIED\x10\x00\x12\x1d\n" +
 	"\x19REPORT_KIND_GST_WORKPAPER\x10\x01\x12\x13\n" +
 	"\x0fREPORT_KIND_BAS\x10\x02\x12,\n" +
-	"(REPORT_KIND_INDIVIDUAL_INCOME_TAX_RETURN\x10\x032\x89\x01\n" +
+	"(REPORT_KIND_INDIVIDUAL_INCOME_TAX_RETURN\x10\x03\x12\"\n" +
+	"\x1eREPORT_KIND_COMPANY_TAX_RETURN\x10\x042\x89\x01\n" +
 	"\x1aReportingCapabilityService\x12k\n" +
 	"\x16GetReportingCapability\x12'.tammy.v1.GetReportingCapabilityRequest\x1a(.tammy.v1.GetReportingCapabilityResponseBLZEgithub.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1\x92\x03\x02\b\x02b\beditionsp\xe8\a"
 
@@ -470,30 +732,36 @@ func file_tammy_v1_reporting_capability_proto_rawDescGZIP() []byte {
 	return file_tammy_v1_reporting_capability_proto_rawDescData
 }
 
-var file_tammy_v1_reporting_capability_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_tammy_v1_reporting_capability_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_tammy_v1_reporting_capability_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
+var file_tammy_v1_reporting_capability_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_tammy_v1_reporting_capability_proto_goTypes = []any{
 	(ReportingCapabilityStatus)(0),         // 0: tammy.v1.ReportingCapabilityStatus
-	(ReportingEntityType)(0),               // 1: tammy.v1.ReportingEntityType
-	(ReportKind)(0),                        // 2: tammy.v1.ReportKind
-	(*GetReportingCapabilityRequest)(nil),  // 3: tammy.v1.GetReportingCapabilityRequest
-	(*ReportingCapability)(nil),            // 4: tammy.v1.ReportingCapability
-	(*GetReportingCapabilityResponse)(nil), // 5: tammy.v1.GetReportingCapabilityResponse
+	(ReportingCapabilityMode)(0),           // 1: tammy.v1.ReportingCapabilityMode
+	(ReportingModeAvailability)(0),         // 2: tammy.v1.ReportingModeAvailability
+	(ReportingEntityType)(0),               // 3: tammy.v1.ReportingEntityType
+	(ReportKind)(0),                        // 4: tammy.v1.ReportKind
+	(*GetReportingCapabilityRequest)(nil),  // 5: tammy.v1.GetReportingCapabilityRequest
+	(*ReportingModeCapability)(nil),        // 6: tammy.v1.ReportingModeCapability
+	(*ReportingCapability)(nil),            // 7: tammy.v1.ReportingCapability
+	(*GetReportingCapabilityResponse)(nil), // 8: tammy.v1.GetReportingCapabilityResponse
 }
 var file_tammy_v1_reporting_capability_proto_depIdxs = []int32{
-	2, // 0: tammy.v1.GetReportingCapabilityRequest.report:type_name -> tammy.v1.ReportKind
-	1, // 1: tammy.v1.GetReportingCapabilityRequest.entity_type:type_name -> tammy.v1.ReportingEntityType
-	2, // 2: tammy.v1.ReportingCapability.report:type_name -> tammy.v1.ReportKind
-	1, // 3: tammy.v1.ReportingCapability.entity_type:type_name -> tammy.v1.ReportingEntityType
-	0, // 4: tammy.v1.ReportingCapability.status:type_name -> tammy.v1.ReportingCapabilityStatus
-	4, // 5: tammy.v1.GetReportingCapabilityResponse.capability:type_name -> tammy.v1.ReportingCapability
-	3, // 6: tammy.v1.ReportingCapabilityService.GetReportingCapability:input_type -> tammy.v1.GetReportingCapabilityRequest
-	5, // 7: tammy.v1.ReportingCapabilityService.GetReportingCapability:output_type -> tammy.v1.GetReportingCapabilityResponse
-	7, // [7:8] is the sub-list for method output_type
-	6, // [6:7] is the sub-list for method input_type
-	6, // [6:6] is the sub-list for extension type_name
-	6, // [6:6] is the sub-list for extension extendee
-	0, // [0:6] is the sub-list for field type_name
+	4,  // 0: tammy.v1.GetReportingCapabilityRequest.report:type_name -> tammy.v1.ReportKind
+	3,  // 1: tammy.v1.GetReportingCapabilityRequest.entity_type:type_name -> tammy.v1.ReportingEntityType
+	1,  // 2: tammy.v1.ReportingModeCapability.mode:type_name -> tammy.v1.ReportingCapabilityMode
+	2,  // 3: tammy.v1.ReportingModeCapability.availability:type_name -> tammy.v1.ReportingModeAvailability
+	4,  // 4: tammy.v1.ReportingCapability.report:type_name -> tammy.v1.ReportKind
+	3,  // 5: tammy.v1.ReportingCapability.entity_type:type_name -> tammy.v1.ReportingEntityType
+	0,  // 6: tammy.v1.ReportingCapability.status:type_name -> tammy.v1.ReportingCapabilityStatus
+	6,  // 7: tammy.v1.ReportingCapability.modes:type_name -> tammy.v1.ReportingModeCapability
+	7,  // 8: tammy.v1.GetReportingCapabilityResponse.capability:type_name -> tammy.v1.ReportingCapability
+	5,  // 9: tammy.v1.ReportingCapabilityService.GetReportingCapability:input_type -> tammy.v1.GetReportingCapabilityRequest
+	8,  // 10: tammy.v1.ReportingCapabilityService.GetReportingCapability:output_type -> tammy.v1.GetReportingCapabilityResponse
+	10, // [10:11] is the sub-list for method output_type
+	9,  // [9:10] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_tammy_v1_reporting_capability_proto_init() }
@@ -506,8 +774,8 @@ func file_tammy_v1_reporting_capability_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_tammy_v1_reporting_capability_proto_rawDesc), len(file_tammy_v1_reporting_capability_proto_rawDesc)),
-			NumEnums:      3,
-			NumMessages:   3,
+			NumEnums:      5,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

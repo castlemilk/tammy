@@ -1,10 +1,13 @@
 import { readFileSync } from "node:fs";
-import { create } from "@bufbuild/protobuf";
+import { create, isFieldSet } from "@bufbuild/protobuf";
 import {
   GetReportingCapabilityRequestSchema,
   GetReportingCapabilityResponseSchema,
+  ReportingCapabilityMode,
   ReportingCapabilityStatus,
   ReportingEntityType,
+  ReportingModeAvailability,
+  ReportingModeCapabilitySchema,
   ReportKind,
 } from "@tammy/connect-client/tammy/v1/reporting_capability_pb.js";
 import { createProtoMethodCodec } from "../../src/shared/proto-ipc";
@@ -51,7 +54,12 @@ test("runs the packaged first-run journey offline and exits cleanly", async ({
     page.getByText("Tammy does not prepare, declare, or lodge a complete BAS."),
   ).toBeVisible();
 
-  const gstWorkpaper = await windowReportingCapability(page, ReportKind.GST_WORKPAPER);
+  const gstWorkpaper = await windowReportingCapability(
+    page,
+    ReportKind.GST_WORKPAPER,
+    ReportingEntityType.AU_BUSINESS,
+    2024,
+  );
   expect(gstWorkpaper.capability).toMatchObject({
     report: ReportKind.GST_WORKPAPER,
     taxYear: 2024,
@@ -59,7 +67,12 @@ test("runs the packaged first-run journey offline and exits cleanly", async ({
     status: ReportingCapabilityStatus.AVAILABLE,
   });
   expect(gstWorkpaper.capability?.appVersion).toBeTruthy();
-  const bas = await windowReportingCapability(page, ReportKind.BAS);
+  const bas = await windowReportingCapability(
+    page,
+    ReportKind.BAS,
+    ReportingEntityType.AU_BUSINESS,
+    2024,
+  );
   expect(bas.capability).toMatchObject({
     report: ReportKind.BAS,
     taxYear: 2024,
@@ -67,6 +80,67 @@ test("runs the packaged first-run journey offline and exits cleanly", async ({
     status: ReportingCapabilityStatus.UNSUPPORTED,
   });
   expect(bas.capability?.appVersion).toBe(gstWorkpaper.capability?.appVersion);
+
+  const companyReturn = await windowReportingCapability(
+    page,
+    ReportKind.COMPANY_TAX_RETURN,
+    ReportingEntityType.AU_PRIVATE_COMPANY,
+    2026,
+  );
+  expect(companyReturn.capability).toMatchObject({
+    report: ReportKind.COMPANY_TAX_RETURN,
+    taxYear: 2026,
+    entityType: ReportingEntityType.AU_PRIVATE_COMPANY,
+    status: ReportingCapabilityStatus.UNSUPPORTED,
+  });
+  expect(companyReturn.capability?.appVersion).toBe(gstWorkpaper.capability?.appVersion);
+  expect(companyReturn.capability?.modes.map(({ mode }) => mode)).toEqual([
+    ReportingCapabilityMode.PREPARATION,
+    ReportingCapabilityMode.SIMULATOR,
+    ReportingCapabilityMode.EVTE,
+    ReportingCapabilityMode.PRODUCTION,
+  ]);
+  expect(companyReturn.capability?.modes.map(({ availability }) => availability)).toEqual([
+    ReportingModeAvailability.NOT_IMPLEMENTED,
+    ReportingModeAvailability.NOT_IMPLEMENTED,
+    ReportingModeAvailability.NOT_IMPLEMENTED,
+    ReportingModeAvailability.NOT_IMPLEMENTED,
+  ]);
+  expect(companyReturn.capability?.modes.map(({ blockers }) => blockers)).toEqual([
+    ["COMPANY_RETURN_PREPARATION_NOT_IMPLEMENTED"],
+    ["COMPANY_RETURN_SIMULATOR_NOT_IMPLEMENTED"],
+    [
+      "COMPANY_RETURN_DELIVERY_NOT_IMPLEMENTED",
+      "DSP_REGISTRATION_REQUIRED",
+      "OFFICIAL_SERVICE_ARTEFACTS_REQUIRED",
+      "EVTE_ACCESS_REQUIRED",
+      "CONFORMANCE_REQUIRED",
+    ],
+    [
+      "COMPANY_RETURN_DELIVERY_NOT_IMPLEMENTED",
+      "DSP_REGISTRATION_REQUIRED",
+      "OFFICIAL_SERVICE_ARTEFACTS_REQUIRED",
+      "EVTE_ACCESS_REQUIRED",
+      "CONFORMANCE_REQUIRED",
+      "PRODUCT_ID_REQUIRED",
+      "PRODUCTION_ACCESS_REQUIRED",
+      "RAM_MACHINE_CREDENTIAL_REQUIRED",
+      "RELEASE_APPROVAL_REQUIRED",
+    ],
+  ]);
+  expect(companyReturn.capability?.modes[0]?.requiredBundleId).toBe(
+    "au-company-return-2026-preparation-v1",
+  );
+  expect(companyReturn.capability?.modes[1]?.requiredBundleId).toBe(
+    "au-company-return-2026-preparation-v1",
+  );
+  expect(companyReturn.capability?.modes[2]?.requiredServiceName).toBe("Company return 2026");
+  expect(companyReturn.capability?.modes[3]?.requiredServiceName).toBe("Company return 2026");
+  for (const mode of companyReturn.capability?.modes ?? []) {
+    expect(isFieldSet(mode, ReportingModeCapabilitySchema.field.activatedBundleFingerprint)).toBe(
+      false,
+    );
+  }
 
   expect(await page.evaluate(() => Object.keys(window.tammy))).toEqual(preloadMethods);
   expect(
@@ -140,12 +214,14 @@ async function windowDiagnostics(page: import("@playwright/test").Page) {
 async function windowReportingCapability(
   page: import("@playwright/test").Page,
   report: ReportKind,
+  entityType: ReportingEntityType,
+  taxYear: number,
 ) {
   const request = reportingCodec.encodeRequest(
     create(GetReportingCapabilityRequestSchema, {
       report,
-      taxYear: 2024,
-      entityType: ReportingEntityType.AU_BUSINESS,
+      taxYear,
+      entityType,
     }),
   );
   const response = await page.evaluate(

@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file tammy/v1/reporting_capability.proto.
  */
 export const file_tammy_v1_reporting_capability: GenFile = /*@__PURE__*/
-  fileDesc("CiN0YW1teS92MS9yZXBvcnRpbmdfY2FwYWJpbGl0eS5wcm90bxIIdGFtbXkudjEisAEKHUdldFJlcG9ydGluZ0NhcGFiaWxpdHlSZXF1ZXN0EjAKBnJlcG9ydBgBIAEoDjIULnRhbW15LnYxLlJlcG9ydEtpbmRCCrpIB4IBBBABIAASHQoIdGF4X3llYXIYAiABKAVCC7pICBoGGI9OKNAPEj4KC2VudGl0eV90eXBlGAMgASgOMh0udGFtbXkudjEuUmVwb3J0aW5nRW50aXR5VHlwZUIKukgHggEEEAEgACLNAgoTUmVwb3J0aW5nQ2FwYWJpbGl0eRIwCgZyZXBvcnQYASABKA4yFC50YW1teS52MS5SZXBvcnRLaW5kQgq6SAeCAQQQASAAEh0KCHRheF95ZWFyGAIgASgFQgu6SAgaBhiPTijQDxI+CgtlbnRpdHlfdHlwZRgDIAEoDjIdLnRhbW15LnYxLlJlcG9ydGluZ0VudGl0eVR5cGVCCrpIB4IBBBABIAASPwoGc3RhdHVzGAQgASgOMiMudGFtbXkudjEuUmVwb3J0aW5nQ2FwYWJpbGl0eVN0YXR1c0IKukgHggEEEAEgABIfCgthcHBfdmVyc2lvbhgFIAEoCUIKukgHcgUQASiAARIbCgdzdW1tYXJ5GAYgASgJQgq6SAdyBRABGIAEEiYKC2xpbWl0YXRpb25zGAcgAygJQhG6SA6SAQsQCCIHcgUQARiAAiJbCh5HZXRSZXBvcnRpbmdDYXBhYmlsaXR5UmVzcG9uc2USOQoKY2FwYWJpbGl0eRgBIAEoCzIdLnRhbW15LnYxLlJlcG9ydGluZ0NhcGFiaWxpdHlCBrpIA8gBASqyAgoZUmVwb3J0aW5nQ2FwYWJpbGl0eVN0YXR1cxIrCidSRVBPUlRJTkdfQ0FQQUJJTElUWV9TVEFUVVNfVU5TUEVDSUZJRUQQABIpCiVSRVBPUlRJTkdfQ0FQQUJJTElUWV9TVEFUVVNfQVZBSUxBQkxFEAESMAosUkVQT1JUSU5HX0NBUEFCSUxJVFlfU1RBVFVTX1BSRVBBUkFUSU9OX09OTFkQAhIsCihSRVBPUlRJTkdfQ0FQQUJJTElUWV9TVEFUVVNfSEFORE9GRl9PTkxZEAMSMAosUkVQT1JUSU5HX0NBUEFCSUxJVFlfU1RBVFVTX0RJUkVDVF9MT0RHRU1FTlQQBBIrCidSRVBPUlRJTkdfQ0FQQUJJTElUWV9TVEFUVVNfVU5TVVBQT1JURUQQBSqMAQoTUmVwb3J0aW5nRW50aXR5VHlwZRIlCiFSRVBPUlRJTkdfRU5USVRZX1RZUEVfVU5TUEVDSUZJRUQQABIlCiFSRVBPUlRJTkdfRU5USVRZX1RZUEVfQVVfQlVTSU5FU1MQARInCiNSRVBPUlRJTkdfRU5USVRZX1RZUEVfQVVfSU5ESVZJRFVBTBACKosBCgpSZXBvcnRLaW5kEhsKF1JFUE9SVF9LSU5EX1VOU1BFQ0lGSUVEEAASHQoZUkVQT1JUX0tJTkRfR1NUX1dPUktQQVBFUhABEhMKD1JFUE9SVF9LSU5EX0JBUxACEiwKKFJFUE9SVF9LSU5EX0lORElWSURVQUxfSU5DT01FX1RBWF9SRVRVUk4QAzKJAQoaUmVwb3J0aW5nQ2FwYWJpbGl0eVNlcnZpY2USawoWR2V0UmVwb3J0aW5nQ2FwYWJpbGl0eRInLnRhbW15LnYxLkdldFJlcG9ydGluZ0NhcGFiaWxpdHlSZXF1ZXN0GigudGFtbXkudjEuR2V0UmVwb3J0aW5nQ2FwYWJpbGl0eVJlc3BvbnNlQkxaRWdpdGh1Yi5jb20vdGFtbXlhcHAvdGFtbXkvc2VydmljZXMvY29yZS9pbnRlcm5hbC9nZW4vdGFtbXkvdjE7dGFtbXl2MZIDAggCYghlZGl0aW9uc3DoBw", [file_buf_validate_validate]);
+  fileDesc("CiN0YW1teS92MS9yZXBvcnRpbmdfY2FwYWJpbGl0eS5wcm90bxIIdGFtbXkudjEisAEKHUdldFJlcG9ydGluZ0NhcGFiaWxpdHlSZXF1ZXN0EjAKBnJlcG9ydBgBIAEoDjIULnRhbW15LnYxLlJlcG9ydEtpbmRCCrpIB4IBBBABIAASHQoIdGF4X3llYXIYAiABKAVCC7pICBoGGI9OKNAPEj4KC2VudGl0eV90eXBlGAMgASgOMh0udGFtbXkudjEuUmVwb3J0aW5nRW50aXR5VHlwZUIKukgHggEEEAEgACK4AwoXUmVwb3J0aW5nTW9kZUNhcGFiaWxpdHkSOwoEbW9kZRgBIAEoDjIhLnRhbW15LnYxLlJlcG9ydGluZ0NhcGFiaWxpdHlNb2RlQgq6SAeCAQQQASAAEkUKDGF2YWlsYWJpbGl0eRgCIAEoDjIjLnRhbW15LnYxLlJlcG9ydGluZ01vZGVBdmFpbGFiaWxpdHlCCrpIB4IBBBABIAASTwoScmVxdWlyZWRfYnVuZGxlX2lkGAMgASgJQjOqAQIIAbpIK3IpGIABMiReW0EtWmEtejAtOV1bQS1aYS16MC05Ll86Ly1dezAsMTI3fSQSMgocYWN0aXZhdGVkX2J1bmRsZV9maW5nZXJwcmludBgEIAEoDEIMqgECCAG6SAR6AmggEiwKFXJlcXVpcmVkX3NlcnZpY2VfbmFtZRgFIAEoCUINqgECCAG6SAVyAxiAARIbCgdzdW1tYXJ5GAYgASgJQgq6SAdyBRABGIAEEkkKCGJsb2NrZXJzGAcgAygJQje6SDSSATEQECItcisQARiAATIkXltBLVphLXowLTldW0EtWmEtejAtOS5fOi8tXXswLDEyN30kIucFChNSZXBvcnRpbmdDYXBhYmlsaXR5EjAKBnJlcG9ydBgBIAEoDjIULnRhbW15LnYxLlJlcG9ydEtpbmRCCrpIB4IBBBABIAASHQoIdGF4X3llYXIYAiABKAVCC7pICBoGGI9OKNAPEj4KC2VudGl0eV90eXBlGAMgASgOMh0udGFtbXkudjEuUmVwb3J0aW5nRW50aXR5VHlwZUIKukgHggEEEAEgABI/CgZzdGF0dXMYBCABKA4yIy50YW1teS52MS5SZXBvcnRpbmdDYXBhYmlsaXR5U3RhdHVzQgq6SAeCAQQQASAAEh8KC2FwcF92ZXJzaW9uGAUgASgJQgq6SAdyBRABKIABEhsKB3N1bW1hcnkYBiABKAlCCrpIB3IFEAEYgAQSJgoLbGltaXRhdGlvbnMYByADKAlCEbpIDpIBCxAIIgdyBRABGIACEjwKBW1vZGVzGAggAygLMiEudGFtbXkudjEuUmVwb3J0aW5nTW9kZUNhcGFiaWxpdHlCCrpIB5IBBAgEEAQ62QK6SNUCGtICCiByZXBvcnRpbmdfY2FwYWJpbGl0eS5leGFjdF9tb2RlcxJRbW9kZXMgbXVzdCBjb250YWluIGV4YWN0bHkgb25lIHByZXBhcmF0aW9uLCBzaW11bGF0b3IsIEVWVEUsIGFuZCBwcm9kdWN0aW9uIGVudHJ5GtoBdGhpcy5tb2Rlcy5zaXplKCkgPT0gNCAmJiB0aGlzLm1vZGVzLmZpbHRlcihtLCBtLm1vZGUgPT0gMSkuc2l6ZSgpID09IDEgJiYgdGhpcy5tb2Rlcy5maWx0ZXIobSwgbS5tb2RlID09IDIpLnNpemUoKSA9PSAxICYmIHRoaXMubW9kZXMuZmlsdGVyKG0sIG0ubW9kZSA9PSAzKS5zaXplKCkgPT0gMSAmJiB0aGlzLm1vZGVzLmZpbHRlcihtLCBtLm1vZGUgPT0gNCkuc2l6ZSgpID09IDEiWwoeR2V0UmVwb3J0aW5nQ2FwYWJpbGl0eVJlc3BvbnNlEjkKCmNhcGFiaWxpdHkYASABKAsyHS50YW1teS52MS5SZXBvcnRpbmdDYXBhYmlsaXR5Qga6SAPIAQEqsgIKGVJlcG9ydGluZ0NhcGFiaWxpdHlTdGF0dXMSKwonUkVQT1JUSU5HX0NBUEFCSUxJVFlfU1RBVFVTX1VOU1BFQ0lGSUVEEAASKQolUkVQT1JUSU5HX0NBUEFCSUxJVFlfU1RBVFVTX0FWQUlMQUJMRRABEjAKLFJFUE9SVElOR19DQVBBQklMSVRZX1NUQVRVU19QUkVQQVJBVElPTl9PTkxZEAISLAooUkVQT1JUSU5HX0NBUEFCSUxJVFlfU1RBVFVTX0hBTkRPRkZfT05MWRADEjAKLFJFUE9SVElOR19DQVBBQklMSVRZX1NUQVRVU19ESVJFQ1RfTE9ER0VNRU5UEAQSKwonUkVQT1JUSU5HX0NBUEFCSUxJVFlfU1RBVFVTX1VOU1VQUE9SVEVEEAUq5gEKF1JlcG9ydGluZ0NhcGFiaWxpdHlNb2RlEikKJVJFUE9SVElOR19DQVBBQklMSVRZX01PREVfVU5TUEVDSUZJRUQQABIpCiVSRVBPUlRJTkdfQ0FQQUJJTElUWV9NT0RFX1BSRVBBUkFUSU9OEAESJwojUkVQT1JUSU5HX0NBUEFCSUxJVFlfTU9ERV9TSU1VTEFUT1IQAhIiCh5SRVBPUlRJTkdfQ0FQQUJJTElUWV9NT0RFX0VWVEUQAxIoCiRSRVBPUlRJTkdfQ0FQQUJJTElUWV9NT0RFX1BST0RVQ1RJT04QBCrUAQoZUmVwb3J0aW5nTW9kZUF2YWlsYWJpbGl0eRIrCidSRVBPUlRJTkdfTU9ERV9BVkFJTEFCSUxJVFlfVU5TUEVDSUZJRUQQABIvCitSRVBPUlRJTkdfTU9ERV9BVkFJTEFCSUxJVFlfTk9UX0lNUExFTUVOVEVEEAESKQolUkVQT1JUSU5HX01PREVfQVZBSUxBQklMSVRZX0FWQUlMQUJMRRACEi4KKlJFUE9SVElOR19NT0RFX0FWQUlMQUJJTElUWV9FWFRFUk5BTF9HQVRFRBADKroBChNSZXBvcnRpbmdFbnRpdHlUeXBlEiUKIVJFUE9SVElOR19FTlRJVFlfVFlQRV9VTlNQRUNJRklFRBAAEiUKIVJFUE9SVElOR19FTlRJVFlfVFlQRV9BVV9CVVNJTkVTUxABEicKI1JFUE9SVElOR19FTlRJVFlfVFlQRV9BVV9JTkRJVklEVUFMEAISLAooUkVQT1JUSU5HX0VOVElUWV9UWVBFX0FVX1BSSVZBVEVfQ09NUEFOWRADKq8BCgpSZXBvcnRLaW5kEhsKF1JFUE9SVF9LSU5EX1VOU1BFQ0lGSUVEEAASHQoZUkVQT1JUX0tJTkRfR1NUX1dPUktQQVBFUhABEhMKD1JFUE9SVF9LSU5EX0JBUxACEiwKKFJFUE9SVF9LSU5EX0lORElWSURVQUxfSU5DT01FX1RBWF9SRVRVUk4QAxIiCh5SRVBPUlRfS0lORF9DT01QQU5ZX1RBWF9SRVRVUk4QBDKJAQoaUmVwb3J0aW5nQ2FwYWJpbGl0eVNlcnZpY2USawoWR2V0UmVwb3J0aW5nQ2FwYWJpbGl0eRInLnRhbW15LnYxLkdldFJlcG9ydGluZ0NhcGFiaWxpdHlSZXF1ZXN0GigudGFtbXkudjEuR2V0UmVwb3J0aW5nQ2FwYWJpbGl0eVJlc3BvbnNlQkxaRWdpdGh1Yi5jb20vdGFtbXlhcHAvdGFtbXkvc2VydmljZXMvY29yZS9pbnRlcm5hbC9nZW4vdGFtbXkvdjE7dGFtbXl2MZIDAggCYghlZGl0aW9uc3DoBw", [file_buf_validate_validate]);
 
 /**
  * GetReportingCapabilityRequest asks about one exact report, entity, and tax year combination.
@@ -48,6 +48,69 @@ export type GetReportingCapabilityRequest = Message<"tammy.v1.GetReportingCapabi
  */
 export const GetReportingCapabilityRequestSchema: GenMessage<GetReportingCapabilityRequest> = /*@__PURE__*/
   messageDesc(file_tammy_v1_reporting_capability, 0);
+
+/**
+ * ReportingModeCapability describes one independently fail-closed reporting mode.
+ *
+ * @generated from message tammy.v1.ReportingModeCapability
+ */
+export type ReportingModeCapability = Message<"tammy.v1.ReportingModeCapability"> & {
+  /**
+   * mode identifies the reporting workflow mode.
+   *
+   * @generated from field: tammy.v1.ReportingCapabilityMode mode = 1;
+   */
+  mode: ReportingCapabilityMode;
+
+  /**
+   * availability identifies the current build's exact implementation boundary.
+   *
+   * @generated from field: tammy.v1.ReportingModeAvailability availability = 2;
+   */
+  availability: ReportingModeAvailability;
+
+  /**
+   * required_bundle_id identifies the bounded rules bundle required by this mode.
+   *
+   * @generated from field: string required_bundle_id = 3 [features.field_presence = EXPLICIT];
+   */
+  requiredBundleId: string;
+
+  /**
+   * activated_bundle_fingerprint identifies the exact installed bundle only when activated.
+   *
+   * @generated from field: bytes activated_bundle_fingerprint = 4 [features.field_presence = EXPLICIT];
+   */
+  activatedBundleFingerprint: Uint8Array;
+
+  /**
+   * required_service_name names the official external service required by this mode.
+   *
+   * @generated from field: string required_service_name = 5 [features.field_presence = EXPLICIT];
+   */
+  requiredServiceName: string;
+
+  /**
+   * summary is bounded user-facing text describing this mode's support boundary.
+   *
+   * @generated from field: string summary = 6;
+   */
+  summary: string;
+
+  /**
+   * blockers are bounded stable codes explaining why this mode is unavailable.
+   *
+   * @generated from field: repeated string blockers = 7;
+   */
+  blockers: string[];
+};
+
+/**
+ * Describes the message tammy.v1.ReportingModeCapability.
+ * Use `create(ReportingModeCapabilitySchema)` to create a new message.
+ */
+export const ReportingModeCapabilitySchema: GenMessage<ReportingModeCapability> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_reporting_capability, 1);
 
 /**
  * ReportingCapability reports the immutable support boundary for one exact request and build.
@@ -103,6 +166,13 @@ export type ReportingCapability = Message<"tammy.v1.ReportingCapability"> & {
    * @generated from field: repeated string limitations = 7;
    */
   limitations: string[];
+
+  /**
+   * modes contains the authoritative independently evaluated four-mode support boundary.
+   *
+   * @generated from field: repeated tammy.v1.ReportingModeCapability modes = 8;
+   */
+  modes: ReportingModeCapability[];
 };
 
 /**
@@ -110,7 +180,7 @@ export type ReportingCapability = Message<"tammy.v1.ReportingCapability"> & {
  * Use `create(ReportingCapabilitySchema)` to create a new message.
  */
 export const ReportingCapabilitySchema: GenMessage<ReportingCapability> = /*@__PURE__*/
-  messageDesc(file_tammy_v1_reporting_capability, 1);
+  messageDesc(file_tammy_v1_reporting_capability, 2);
 
 /**
  * GetReportingCapabilityResponse returns one exact build-pinned capability.
@@ -131,7 +201,7 @@ export type GetReportingCapabilityResponse = Message<"tammy.v1.GetReportingCapab
  * Use `create(GetReportingCapabilityResponseSchema)` to create a new message.
  */
 export const GetReportingCapabilityResponseSchema: GenMessage<GetReportingCapabilityResponse> = /*@__PURE__*/
-  messageDesc(file_tammy_v1_reporting_capability, 2);
+  messageDesc(file_tammy_v1_reporting_capability, 3);
 
 /**
  * ReportingCapabilityStatus describes the exact reporting action available in this build.
@@ -189,6 +259,95 @@ export const ReportingCapabilityStatusSchema: GenEnum<ReportingCapabilityStatus>
   enumDesc(file_tammy_v1_reporting_capability, 0);
 
 /**
+ * ReportingCapabilityMode identifies one independently available reporting workflow mode.
+ *
+ * @generated from enum tammy.v1.ReportingCapabilityMode
+ */
+export enum ReportingCapabilityMode {
+  /**
+   * REPORTING_CAPABILITY_MODE_UNSPECIFIED indicates that no mode was supplied.
+   *
+   * @generated from enum value: REPORTING_CAPABILITY_MODE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * REPORTING_CAPABILITY_MODE_PREPARATION covers local return preparation and validation.
+   *
+   * @generated from enum value: REPORTING_CAPABILITY_MODE_PREPARATION = 1;
+   */
+  PREPARATION = 1,
+
+  /**
+   * REPORTING_CAPABILITY_MODE_SIMULATOR covers deterministic local delivery simulation.
+   *
+   * @generated from enum value: REPORTING_CAPABILITY_MODE_SIMULATOR = 2;
+   */
+  SIMULATOR = 2,
+
+  /**
+   * REPORTING_CAPABILITY_MODE_EVTE covers official external validation test environment delivery.
+   *
+   * @generated from enum value: REPORTING_CAPABILITY_MODE_EVTE = 3;
+   */
+  EVTE = 3,
+
+  /**
+   * REPORTING_CAPABILITY_MODE_PRODUCTION covers official production delivery.
+   *
+   * @generated from enum value: REPORTING_CAPABILITY_MODE_PRODUCTION = 4;
+   */
+  PRODUCTION = 4,
+}
+
+/**
+ * Describes the enum tammy.v1.ReportingCapabilityMode.
+ */
+export const ReportingCapabilityModeSchema: GenEnum<ReportingCapabilityMode> = /*@__PURE__*/
+  enumDesc(file_tammy_v1_reporting_capability, 1);
+
+/**
+ * ReportingModeAvailability describes the exact implementation boundary for one mode.
+ *
+ * @generated from enum tammy.v1.ReportingModeAvailability
+ */
+export enum ReportingModeAvailability {
+  /**
+   * REPORTING_MODE_AVAILABILITY_UNSPECIFIED indicates that no availability was supplied.
+   *
+   * @generated from enum value: REPORTING_MODE_AVAILABILITY_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * REPORTING_MODE_AVAILABILITY_NOT_IMPLEMENTED means required Tammy behavior is absent.
+   *
+   * @generated from enum value: REPORTING_MODE_AVAILABILITY_NOT_IMPLEMENTED = 1;
+   */
+  NOT_IMPLEMENTED = 1,
+
+  /**
+   * REPORTING_MODE_AVAILABILITY_AVAILABLE means the current build implements the mode.
+   *
+   * @generated from enum value: REPORTING_MODE_AVAILABILITY_AVAILABLE = 2;
+   */
+  AVAILABLE = 2,
+
+  /**
+   * REPORTING_MODE_AVAILABILITY_EXTERNAL_GATED means Tammy implements the mode but an external prerequisite remains.
+   *
+   * @generated from enum value: REPORTING_MODE_AVAILABILITY_EXTERNAL_GATED = 3;
+   */
+  EXTERNAL_GATED = 3,
+}
+
+/**
+ * Describes the enum tammy.v1.ReportingModeAvailability.
+ */
+export const ReportingModeAvailabilitySchema: GenEnum<ReportingModeAvailability> = /*@__PURE__*/
+  enumDesc(file_tammy_v1_reporting_capability, 2);
+
+/**
  * ReportingEntityType identifies the Australian entity class requesting a report.
  *
  * @generated from enum tammy.v1.ReportingEntityType
@@ -214,13 +373,20 @@ export enum ReportingEntityType {
    * @generated from enum value: REPORTING_ENTITY_TYPE_AU_INDIVIDUAL = 2;
    */
   AU_INDIVIDUAL = 2,
+
+  /**
+   * REPORTING_ENTITY_TYPE_AU_PRIVATE_COMPANY identifies an Australian private company.
+   *
+   * @generated from enum value: REPORTING_ENTITY_TYPE_AU_PRIVATE_COMPANY = 3;
+   */
+  AU_PRIVATE_COMPANY = 3,
 }
 
 /**
  * Describes the enum tammy.v1.ReportingEntityType.
  */
 export const ReportingEntityTypeSchema: GenEnum<ReportingEntityType> = /*@__PURE__*/
-  enumDesc(file_tammy_v1_reporting_capability, 1);
+  enumDesc(file_tammy_v1_reporting_capability, 3);
 
 /**
  * ReportKind identifies one reporting product boundary.
@@ -255,13 +421,20 @@ export enum ReportKind {
    * @generated from enum value: REPORT_KIND_INDIVIDUAL_INCOME_TAX_RETURN = 3;
    */
   INDIVIDUAL_INCOME_TAX_RETURN = 3,
+
+  /**
+   * REPORT_KIND_COMPANY_TAX_RETURN identifies an Australian company income tax return.
+   *
+   * @generated from enum value: REPORT_KIND_COMPANY_TAX_RETURN = 4;
+   */
+  COMPANY_TAX_RETURN = 4,
 }
 
 /**
  * Describes the enum tammy.v1.ReportKind.
  */
 export const ReportKindSchema: GenEnum<ReportKind> = /*@__PURE__*/
-  enumDesc(file_tammy_v1_reporting_capability, 2);
+  enumDesc(file_tammy_v1_reporting_capability, 4);
 
 /**
  * ReportingCapabilityService exposes reporting support before workspace setup or authentication.

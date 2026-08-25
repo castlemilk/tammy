@@ -44,6 +44,12 @@ func validCapability() *tammyv1.ReportingCapability {
 		Status:     tammyv1.ReportingCapabilityStatus_REPORTING_CAPABILITY_STATUS_AVAILABLE,
 		AppVersion: "0.1.0-test",
 		Summary:    "Tammy supports a local reviewed-document GST workpaper only.",
+		Modes: []*tammyv1.ReportingModeCapability{
+			{Mode: tammyv1.ReportingCapabilityMode_REPORTING_CAPABILITY_MODE_PREPARATION, Availability: tammyv1.ReportingModeAvailability_REPORTING_MODE_AVAILABILITY_AVAILABLE, Summary: "Local reviewed-document GST workpaper preparation is available."},
+			{Mode: tammyv1.ReportingCapabilityMode_REPORTING_CAPABILITY_MODE_SIMULATOR, Availability: tammyv1.ReportingModeAvailability_REPORTING_MODE_AVAILABILITY_NOT_IMPLEMENTED, Summary: "GST workpaper simulation is not implemented.", Blockers: []string{"GST_WORKPAPER_SIMULATOR_NOT_IMPLEMENTED"}},
+			{Mode: tammyv1.ReportingCapabilityMode_REPORTING_CAPABILITY_MODE_EVTE, Availability: tammyv1.ReportingModeAvailability_REPORTING_MODE_AVAILABILITY_NOT_IMPLEMENTED, Summary: "GST workpaper EVTE delivery is not implemented.", Blockers: []string{"GST_WORKPAPER_EVTE_NOT_IMPLEMENTED"}},
+			{Mode: tammyv1.ReportingCapabilityMode_REPORTING_CAPABILITY_MODE_PRODUCTION, Availability: tammyv1.ReportingModeAvailability_REPORTING_MODE_AVAILABILITY_NOT_IMPLEMENTED, Summary: "GST workpaper production delivery is not implemented.", Blockers: []string{"GST_WORKPAPER_PRODUCTION_NOT_IMPLEMENTED"}},
+		},
 	}
 }
 
@@ -72,7 +78,9 @@ func TestServiceLooksUpCapabilityOnceAndReturnsOwnedResponse(t *testing.T) {
 	}
 
 	response.Msg.Capability.Summary = "changed"
-	if capability.GetSummary() != "Tammy supports a local reviewed-document GST workpaper only." {
+	response.Msg.Capability.Modes[1].Blockers[0] = "CHANGED"
+	if capability.GetSummary() != "Tammy supports a local reviewed-document GST workpaper only." ||
+		capability.GetModes()[1].GetBlockers()[0] != "GST_WORKPAPER_SIMULATOR_NOT_IMPLEMENTED" {
 		t.Fatal("service response aliases registry-owned data")
 	}
 }
