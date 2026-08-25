@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
-import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { promisify } from "node:util";
 import { create, toBinary } from "@bufbuild/protobuf";
 import { FileDescriptorSetSchema } from "@bufbuild/protobuf/wkt";
 import { stringify } from "yaml";
@@ -23,15 +25,18 @@ const COMPANY_EOFY_TRANSITION_PREFIXES = [
   "tammy.v1.CompanyReturnState.",
   "tammy.v1.CompanyReturnAttemptState.",
 ];
+const execFileAsync = promisify(execFile);
 
-async function repositoryValidationDescriptorPath(root) {
-  const descriptorPath = path.join(root, ".tmp/contracts/descriptors.pb");
-  try {
-    await access(descriptorPath);
-  } catch {
-    const { buildDescriptors } = await import("./build-descriptors.mjs");
-    await buildDescriptors({ mode: "validation", root });
-  }
+async function buildRepositoryValidationDescriptor(root, context) {
+  const outputDirectory = await mkdtemp(path.join(os.tmpdir(), "tammy-company-eofy-descriptors-"));
+  context.after(() => rm(outputDirectory, { force: true, recursive: true }));
+  const { createDescriptorBuildPlan, validateDescriptorOutput } = await import(
+    "./build-descriptors.mjs"
+  );
+  const plan = createDescriptorBuildPlan({ mode: "validation", outputDirectory, root });
+  await execFileAsync(plan.command, plan.args, { cwd: root, shell: plan.shell });
+  const descriptorPath = path.join(outputDirectory, "descriptors.pb");
+  validateDescriptorOutput(await readFile(descriptorPath));
   return descriptorPath;
 }
 
@@ -873,9 +878,10 @@ test("rejects an unreviewed not-applicable exception", async () => {
   });
 });
 
-test("real company EOFY descriptors and manifests catalogue only future surface", async () => {
+test("real company EOFY descriptors and manifests catalogue only future surface", async (context) => {
   const root = process.cwd();
-  const descriptorPath = await repositoryValidationDescriptorPath(root);
+  const descriptorPath = await buildRepositoryValidationDescriptor(root, context);
+  assert.notEqual(descriptorPath, path.join(root, ".tmp/contracts/descriptors.pb"));
   const { checkE2ECoverage, descriptorRpcNames, parseCoverageManifest, runE2ECoverage } =
     await import("./check-e2e-coverage.mjs");
 
