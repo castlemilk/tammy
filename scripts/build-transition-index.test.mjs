@@ -36,7 +36,9 @@ test("sorts reserved reporting and tax fixtures with other slices by fully-quali
   await writeFile(
     path.join(root, "test/fixtures/tax/transitions.pb.json"),
     JSON.stringify({
-      transitions: [{ enum: "tammy.v1.CompanyReturnState", transition: "DECLARED->PRELODGE_PENDING" }],
+      transitions: [
+        { enum: "tammy.v1.CompanyReturnState", transition: "DECLARED->PRELODGE_PENDING" },
+      ],
     }),
   );
   const { buildTransitionIndex } = await import("./build-transition-index.mjs");

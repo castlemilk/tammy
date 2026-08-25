@@ -1,14 +1,12 @@
 import {
   create,
-  fromBinary,
-  toBinary,
   type DescFile,
   type DescMessage,
   type DescService,
+  fromBinary,
+  toBinary,
 } from "@bufbuild/protobuf";
 import { timestampFromDate } from "@bufbuild/protobuf/wkt";
-import { describe, expect, test } from "vitest";
-
 import {
   AuthenticationContextSchema,
   CivilDateSchema,
@@ -16,32 +14,33 @@ import {
   PageRequestSchema,
 } from "@tammy/connect-client/tammy/v1/common_pb.js";
 import {
-  FinancialCloseService,
-  ListCloseChecksRequestSchema,
-  ListCloseChecksResponseSchema,
-  file_tammy_v1_financial_close,
-} from "@tammy/connect-client/tammy/v1/financial_close_pb.js";
+  CompanyReturnAttemptState,
+  CompanyReturnSubmissionAttemptSchema,
+  CompanyReturnSubmissionSchema,
+  CompanyReturnSubmissionService,
+  file_tammy_v1_company_return_submission,
+  GetCompanyReturnSubmissionRequestSchema,
+  GetCompanyReturnSubmissionResponseSchema,
+  SubmissionEnvironment,
+  SubmissionRetryClassification,
+} from "@tammy/connect-client/tammy/v1/company_return_submission_pb.js";
 import {
   CompanyReturnOperationType,
   CompanyReturnRelationshipKind,
   CompanyReturnSchema,
   CompanyReturnState,
   CompanyTaxService,
+  file_tammy_v1_company_tax,
   ListCompanyReturnFactsRequestSchema,
   ListCompanyReturnFactsResponseSchema,
-  file_tammy_v1_company_tax,
 } from "@tammy/connect-client/tammy/v1/company_tax_pb.js";
 import {
-  CompanyReturnAttemptState,
-  CompanyReturnSubmissionAttemptSchema,
-  CompanyReturnSubmissionSchema,
-  CompanyReturnSubmissionService,
-  GetCompanyReturnSubmissionRequestSchema,
-  GetCompanyReturnSubmissionResponseSchema,
-  SubmissionEnvironment,
-  SubmissionRetryClassification,
-  file_tammy_v1_company_return_submission,
-} from "@tammy/connect-client/tammy/v1/company_return_submission_pb.js";
+  FinancialCloseService,
+  file_tammy_v1_financial_close,
+  ListCloseChecksRequestSchema,
+  ListCloseChecksResponseSchema,
+} from "@tammy/connect-client/tammy/v1/financial_close_pb.js";
+import { describe, expect, test } from "vitest";
 
 const organisationId = "018f0c4a-7b9d-7abc-8def-0123456789ab";
 const actorUserId = "018f0c4a-7b9d-7abc-8def-0123456789ac";
@@ -92,16 +91,10 @@ describe("company EOFY generated contracts", () => {
     });
 
     expect(
-      fromBinary(
-        ListCloseChecksRequestSchema,
-        toBinary(ListCloseChecksRequestSchema, request),
-      ),
+      fromBinary(ListCloseChecksRequestSchema, toBinary(ListCloseChecksRequestSchema, request)),
     ).toEqual(request);
     expect(
-      fromBinary(
-        ListCloseChecksResponseSchema,
-        toBinary(ListCloseChecksResponseSchema, response),
-      ),
+      fromBinary(ListCloseChecksResponseSchema, toBinary(ListCloseChecksResponseSchema, response)),
     ).toEqual(response);
   });
 
