@@ -58,6 +58,7 @@ scenarios:
       - company-eofy/lifecycle
       - company-eofy/permissions
       - company-eofy/financial-close
+      - company-eofy/company-return
 rpcs:
   tammy.v1.SystemService.GetDiagnostics:
     preload: getSystemDiagnostics
@@ -2842,6 +2843,193 @@ rpcs:
       mode: query
       outcomes:
         - not_applicable
+  tammy.v1.CompanyTaxService.GetCompanyTaxProfile:
+    stage: declared_future
+    preload: getCompanyTaxProfile
+    cases: []
+    futureCases: [company-eofy/contracts, company-eofy/permissions, company-eofy/company-return]
+    projections: [get_company_tax_profile_result]
+    routes: [/eofy-company-tax/return]
+    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_allowed, auditor: planned_allowed}
+    principalFailures: [AUTHENTICATION_REQUIRED, NOT_FOUND]
+    list: {states: [found, not_found]}
+    idempotency: {mode: query, outcomes: [not_applicable]}
+  tammy.v1.CompanyTaxService.SetCompanyTaxProfile:
+    stage: declared_future
+    preload: setCompanyTaxProfile
+    cases: []
+    futureCases: [company-eofy/contracts, company-eofy/permissions, company-eofy/company-return]
+    projections: [set_company_tax_profile_result]
+    routes: [/eofy-company-tax/return]
+    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_permission_denied, auditor: planned_permission_denied}
+    principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, STALE_VERSION, IDEMPOTENCY_CONFLICT, FACTOR_ASSERTION_REQUIRED, FACTOR_ASSERTION_STALE, UNSUPPORTED_COMPANY_SCENARIO]
+    list: {states: [not_applicable]}
+    idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
+  tammy.v1.CompanyTaxService.CreateCompanyReturn:
+    stage: declared_future
+    preload: createCompanyReturn
+    cases: []
+    futureCases: [company-eofy/contracts, company-eofy/permissions, company-eofy/company-return]
+    projections: [create_company_return_result]
+    routes: [/eofy-company-tax/return]
+    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_permission_denied, auditor: planned_permission_denied}
+    principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, IDEMPOTENCY_CONFLICT, SOURCE_CLOSE_STALE, UNSUPPORTED_COMPANY_SCENARIO, REPORT_BUNDLE_UNAVAILABLE]
+    list: {states: [not_applicable]}
+    idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
+  tammy.v1.CompanyTaxService.GetCompanyReturn:
+    stage: declared_future
+    preload: getCompanyReturn
+    cases: []
+    futureCases: [company-eofy/contracts, company-eofy/permissions, company-eofy/company-return]
+    projections: [get_company_return_result]
+    routes: [/eofy-company-tax/return]
+    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_allowed, auditor: planned_allowed}
+    principalFailures: [AUTHENTICATION_REQUIRED, NOT_FOUND]
+    list: {states: [found, not_found]}
+    idempotency: {mode: query, outcomes: [not_applicable]}
+  tammy.v1.CompanyTaxService.ListCompanyReturnFacts:
+    stage: declared_future
+    preload: listCompanyReturnFacts
+    cases: []
+    futureCases: [company-eofy/contracts, company-eofy/permissions, company-eofy/company-return]
+    projections: [list_company_return_facts_result]
+    routes: [/eofy-company-tax/return]
+    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_allowed, auditor: planned_allowed}
+    principalFailures: [AUTHENTICATION_REQUIRED, NOT_FOUND, INVALID_CURSOR]
+    list: {states: [empty, populated, paginated]}
+    idempotency: {mode: query, outcomes: [not_applicable]}
+  tammy.v1.CompanyTaxService.SetCompanyReturnInput:
+    stage: declared_future
+    preload: setCompanyReturnInput
+    cases: []
+    futureCases: [company-eofy/contracts, company-eofy/permissions, company-eofy/company-return]
+    projections: [set_company_return_input_result]
+    routes: [/eofy-company-tax/return]
+    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_permission_denied, auditor: planned_permission_denied}
+    principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, STALE_VERSION, IDEMPOTENCY_CONFLICT, SOURCE_CLOSE_STALE, UNSUPPORTED_COMPANY_SCENARIO, REPORT_BUNDLE_UNAVAILABLE]
+    list: {states: [not_applicable]}
+    idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
+  tammy.v1.CompanyTaxService.UpsertTaxAdjustment:
+    stage: declared_future
+    preload: upsertTaxAdjustment
+    cases: []
+    futureCases: [company-eofy/contracts, company-eofy/permissions, company-eofy/company-return]
+    projections: [upsert_tax_adjustment_result]
+    routes: [/eofy-company-tax/return]
+    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_permission_denied, auditor: planned_permission_denied}
+    principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, STALE_VERSION, IDEMPOTENCY_CONFLICT, UNSUPPORTED_COMPANY_SCENARIO, REPORT_BUNDLE_UNAVAILABLE, INVALID_STATE_TRANSITION]
+    list: {states: [not_applicable]}
+    idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
+  tammy.v1.CompanyTaxService.RemoveTaxAdjustment:
+    stage: declared_future
+    preload: removeTaxAdjustment
+    cases: []
+    futureCases: [company-eofy/contracts, company-eofy/permissions, company-eofy/company-return]
+    projections: [remove_tax_adjustment_result]
+    routes: [/eofy-company-tax/return]
+    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_permission_denied, auditor: planned_permission_denied}
+    principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, STALE_VERSION, IDEMPOTENCY_CONFLICT, NOT_FOUND, INVALID_STATE_TRANSITION]
+    list: {states: [not_applicable]}
+    idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
+  tammy.v1.CompanyTaxService.UpsertTaxElection:
+    stage: declared_future
+    preload: upsertTaxElection
+    cases: []
+    futureCases: [company-eofy/contracts, company-eofy/permissions, company-eofy/company-return]
+    projections: [upsert_tax_election_result]
+    routes: [/eofy-company-tax/return]
+    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_permission_denied, auditor: planned_permission_denied}
+    principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, STALE_VERSION, IDEMPOTENCY_CONFLICT, UNSUPPORTED_COMPANY_SCENARIO, REPORT_BUNDLE_UNAVAILABLE, INVALID_STATE_TRANSITION]
+    list: {states: [not_applicable]}
+    idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
+  tammy.v1.CompanyTaxService.RemoveTaxElection:
+    stage: declared_future
+    preload: removeTaxElection
+    cases: []
+    futureCases: [company-eofy/contracts, company-eofy/permissions, company-eofy/company-return]
+    projections: [remove_tax_election_result]
+    routes: [/eofy-company-tax/return]
+    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_permission_denied, auditor: planned_permission_denied}
+    principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, STALE_VERSION, IDEMPOTENCY_CONFLICT, NOT_FOUND, INVALID_STATE_TRANSITION]
+    list: {states: [not_applicable]}
+    idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
+  tammy.v1.CompanyTaxService.ValidateCompanyReturn:
+    stage: declared_future
+    preload: validateCompanyReturn
+    cases: []
+    futureCases: [company-eofy/contracts, company-eofy/permissions, company-eofy/company-return]
+    projections: [validate_company_return_result]
+    routes: [/eofy-company-tax/return]
+    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_permission_denied, auditor: planned_permission_denied}
+    principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, STALE_VERSION, IDEMPOTENCY_CONFLICT, SOURCE_CLOSE_STALE, UNSUPPORTED_COMPANY_SCENARIO, REPORT_BUNDLE_UNAVAILABLE, REPORT_VALIDATION_FAILED]
+    list: {states: [not_applicable]}
+    idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
+  tammy.v1.CompanyTaxService.AcknowledgeReturnWarning:
+    stage: declared_future
+    preload: acknowledgeReturnWarning
+    cases: []
+    futureCases: [company-eofy/contracts, company-eofy/permissions, company-eofy/company-return]
+    projections: [acknowledge_return_warning_result]
+    routes: [/eofy-company-tax/return]
+    roles: {workspace_admin: planned_permission_denied, business_preparer: planned_permission_denied, business_lodger: planned_allowed, auditor: planned_permission_denied}
+    principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, STALE_VERSION, IDEMPOTENCY_CONFLICT, FACTOR_ASSERTION_REQUIRED, FACTOR_ASSERTION_STALE, NOT_FOUND, REPORT_VALIDATION_FAILED, INVALID_STATE_TRANSITION]
+    list: {states: [not_applicable]}
+    idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
+  tammy.v1.CompanyTaxService.DeclareCompanyReturn:
+    stage: declared_future
+    preload: declareCompanyReturn
+    cases: []
+    futureCases: [company-eofy/contracts, company-eofy/permissions, company-eofy/company-return]
+    projections: [declare_company_return_result]
+    routes: [/eofy-company-tax/return]
+    roles: {workspace_admin: planned_permission_denied, business_preparer: planned_permission_denied, business_lodger: planned_allowed, auditor: planned_permission_denied}
+    principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, STALE_VERSION, IDEMPOTENCY_CONFLICT, FACTOR_ASSERTION_REQUIRED, FACTOR_ASSERTION_STALE, SOURCE_CLOSE_STALE, UNSUPPORTED_COMPANY_SCENARIO, REPORT_BUNDLE_UNAVAILABLE, REPORT_VALIDATION_FAILED]
+    list: {states: [not_applicable]}
+    idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
+  tammy.v1.CompanyTaxService.WithdrawCompanyReturnDeclaration:
+    stage: declared_future
+    preload: withdrawCompanyReturnDeclaration
+    cases: []
+    futureCases: [company-eofy/contracts, company-eofy/permissions, company-eofy/company-return]
+    projections: [withdraw_company_return_declaration_result]
+    routes: [/eofy-company-tax/return]
+    roles: {workspace_admin: planned_permission_denied, business_preparer: planned_permission_denied, business_lodger: planned_allowed, auditor: planned_permission_denied}
+    principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, STALE_VERSION, IDEMPOTENCY_CONFLICT, FACTOR_ASSERTION_REQUIRED, FACTOR_ASSERTION_STALE, DECLARATION_REQUIRED, INVALID_STATE_TRANSITION, REPORT_REPLACEMENT_REQUIRED]
+    list: {states: [not_applicable]}
+    idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
+  tammy.v1.CompanyTaxService.ExportCompanyReturnPack:
+    stage: declared_future
+    preload: exportCompanyReturnPack
+    cases: []
+    futureCases: [company-eofy/contracts, company-eofy/permissions, company-eofy/company-return]
+    projections: [export_company_return_pack_result]
+    routes: [/eofy-company-tax/return]
+    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_permission_denied, auditor: planned_permission_denied}
+    principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, STALE_VERSION, IDEMPOTENCY_CONFLICT, FACTOR_ASSERTION_REQUIRED, FACTOR_ASSERTION_STALE, NOT_FOUND, REPORT_BUNDLE_UNAVAILABLE]
+    list: {states: [not_applicable]}
+    idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
+  tammy.v1.CompanyTaxService.CreateCompanyReturnReplacement:
+    stage: declared_future
+    preload: createCompanyReturnReplacement
+    cases: []
+    futureCases: [company-eofy/contracts, company-eofy/permissions, company-eofy/company-return]
+    projections: [create_company_return_replacement_result]
+    routes: [/eofy-company-tax/return]
+    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_permission_denied, auditor: planned_permission_denied}
+    principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, STALE_VERSION, IDEMPOTENCY_CONFLICT, REPORT_REPLACEMENT_REQUIRED, PRELODGE_OUTCOME_UNKNOWN, LODGE_OUTCOME_UNKNOWN, SOURCE_CLOSE_STALE, INVALID_STATE_TRANSITION]
+    list: {states: [not_applicable]}
+    idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
+  tammy.v1.CompanyTaxService.CreateCompanyReturnAmendment:
+    stage: declared_future
+    preload: createCompanyReturnAmendment
+    cases: []
+    futureCases: [company-eofy/contracts, company-eofy/permissions, company-eofy/company-return]
+    projections: [create_company_return_amendment_result]
+    routes: [/eofy-company-tax/return]
+    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_permission_denied, auditor: planned_permission_denied}
+    principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, STALE_VERSION, IDEMPOTENCY_CONFLICT, AMENDMENT_REQUIRED, SUBSEQUENT_AMENDMENT_UNSUPPORTED, LODGE_OUTCOME_UNKNOWN, SOURCE_CLOSE_STALE, INVALID_STATE_TRANSITION]
+    list: {states: [not_applicable]}
+    idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
 transitions:
   tammy.v1.WorkspaceState.WORKSPACE_STATE_PENDING_RECOVERY->WORKSPACE_STATE_UNAUTHENTICATED:
     stage: declared_future

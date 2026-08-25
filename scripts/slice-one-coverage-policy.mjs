@@ -109,6 +109,23 @@ export const COMPANY_EOFY_DECLARED_FUTURE_RPCS = [
   "tammy.v1.FinancialCloseService.ReopenFinancialClose",
   "tammy.v1.FinancialCloseService.StartFinancialCloseCorrection",
   "tammy.v1.FinancialCloseService.GetFinancialStatements",
+  "tammy.v1.CompanyTaxService.GetCompanyTaxProfile",
+  "tammy.v1.CompanyTaxService.SetCompanyTaxProfile",
+  "tammy.v1.CompanyTaxService.CreateCompanyReturn",
+  "tammy.v1.CompanyTaxService.GetCompanyReturn",
+  "tammy.v1.CompanyTaxService.ListCompanyReturnFacts",
+  "tammy.v1.CompanyTaxService.SetCompanyReturnInput",
+  "tammy.v1.CompanyTaxService.UpsertTaxAdjustment",
+  "tammy.v1.CompanyTaxService.RemoveTaxAdjustment",
+  "tammy.v1.CompanyTaxService.UpsertTaxElection",
+  "tammy.v1.CompanyTaxService.RemoveTaxElection",
+  "tammy.v1.CompanyTaxService.ValidateCompanyReturn",
+  "tammy.v1.CompanyTaxService.AcknowledgeReturnWarning",
+  "tammy.v1.CompanyTaxService.DeclareCompanyReturn",
+  "tammy.v1.CompanyTaxService.WithdrawCompanyReturnDeclaration",
+  "tammy.v1.CompanyTaxService.ExportCompanyReturnPack",
+  "tammy.v1.CompanyTaxService.CreateCompanyReturnReplacement",
+  "tammy.v1.CompanyTaxService.CreateCompanyReturnAmendment",
 ];
 
 export const SLICE_ONE_RPC_POLICY = {
@@ -946,6 +963,74 @@ export const SLICE_ONE_RPC_POLICY = {
     mode: "query",
     failures: [...authenticated, "NOT_FOUND"],
     list: ["found", "not_found"],
+  }),
+  "tammy.v1.CompanyTaxService.GetCompanyTaxProfile": rpc({
+    name: "GetCompanyTaxProfile", route: "/eofy-company-tax/return", rolePolicy: accountingRead,
+    mode: "query", failures: [...authenticated, "NOT_FOUND"], list: ["found", "not_found"],
+  }),
+  "tammy.v1.CompanyTaxService.SetCompanyTaxProfile": rpc({
+    name: "SetCompanyTaxProfile", route: "/eofy-company-tax/return", rolePolicy: adminAndPreparer,
+    mode: "persistent_command", failures: [...roleGuardedStalePersistent, "FACTOR_ASSERTION_REQUIRED", "FACTOR_ASSERTION_STALE", "UNSUPPORTED_COMPANY_SCENARIO"],
+  }),
+  "tammy.v1.CompanyTaxService.CreateCompanyReturn": rpc({
+    name: "CreateCompanyReturn", route: "/eofy-company-tax/return", rolePolicy: adminAndPreparer,
+    mode: "persistent_command", failures: [...roleGuardedPersistent, "SOURCE_CLOSE_STALE", "UNSUPPORTED_COMPANY_SCENARIO", "REPORT_BUNDLE_UNAVAILABLE"],
+  }),
+  "tammy.v1.CompanyTaxService.GetCompanyReturn": rpc({
+    name: "GetCompanyReturn", route: "/eofy-company-tax/return", rolePolicy: accountingRead,
+    mode: "query", failures: [...authenticated, "NOT_FOUND"], list: ["found", "not_found"],
+  }),
+  "tammy.v1.CompanyTaxService.ListCompanyReturnFacts": rpc({
+    name: "ListCompanyReturnFacts", route: "/eofy-company-tax/return", rolePolicy: accountingRead,
+    mode: "query", failures: [...authenticated, "NOT_FOUND", "INVALID_CURSOR"], list: ["empty", "populated", "paginated"],
+  }),
+  "tammy.v1.CompanyTaxService.SetCompanyReturnInput": rpc({
+    name: "SetCompanyReturnInput", route: "/eofy-company-tax/return", rolePolicy: adminAndPreparer,
+    mode: "persistent_command", failures: [...roleGuardedStalePersistent, "SOURCE_CLOSE_STALE", "UNSUPPORTED_COMPANY_SCENARIO", "REPORT_BUNDLE_UNAVAILABLE"],
+  }),
+  "tammy.v1.CompanyTaxService.UpsertTaxAdjustment": rpc({
+    name: "UpsertTaxAdjustment", route: "/eofy-company-tax/return", rolePolicy: adminAndPreparer,
+    mode: "persistent_command", failures: [...roleGuardedStalePersistent, "UNSUPPORTED_COMPANY_SCENARIO", "REPORT_BUNDLE_UNAVAILABLE", "INVALID_STATE_TRANSITION"],
+  }),
+  "tammy.v1.CompanyTaxService.RemoveTaxAdjustment": rpc({
+    name: "RemoveTaxAdjustment", route: "/eofy-company-tax/return", rolePolicy: adminAndPreparer,
+    mode: "persistent_command", failures: [...roleGuardedStalePersistent, "NOT_FOUND", "INVALID_STATE_TRANSITION"],
+  }),
+  "tammy.v1.CompanyTaxService.UpsertTaxElection": rpc({
+    name: "UpsertTaxElection", route: "/eofy-company-tax/return", rolePolicy: adminAndPreparer,
+    mode: "persistent_command", failures: [...roleGuardedStalePersistent, "UNSUPPORTED_COMPANY_SCENARIO", "REPORT_BUNDLE_UNAVAILABLE", "INVALID_STATE_TRANSITION"],
+  }),
+  "tammy.v1.CompanyTaxService.RemoveTaxElection": rpc({
+    name: "RemoveTaxElection", route: "/eofy-company-tax/return", rolePolicy: adminAndPreparer,
+    mode: "persistent_command", failures: [...roleGuardedStalePersistent, "NOT_FOUND", "INVALID_STATE_TRANSITION"],
+  }),
+  "tammy.v1.CompanyTaxService.ValidateCompanyReturn": rpc({
+    name: "ValidateCompanyReturn", route: "/eofy-company-tax/return", rolePolicy: adminAndPreparer,
+    mode: "persistent_command", failures: [...roleGuardedStalePersistent, "SOURCE_CLOSE_STALE", "UNSUPPORTED_COMPANY_SCENARIO", "REPORT_BUNDLE_UNAVAILABLE", "REPORT_VALIDATION_FAILED"],
+  }),
+  "tammy.v1.CompanyTaxService.AcknowledgeReturnWarning": rpc({
+    name: "AcknowledgeReturnWarning", route: "/eofy-company-tax/return", rolePolicy: lodger,
+    mode: "persistent_command", failures: [...roleGuardedStalePersistent, "FACTOR_ASSERTION_REQUIRED", "FACTOR_ASSERTION_STALE", "NOT_FOUND", "REPORT_VALIDATION_FAILED", "INVALID_STATE_TRANSITION"],
+  }),
+  "tammy.v1.CompanyTaxService.DeclareCompanyReturn": rpc({
+    name: "DeclareCompanyReturn", route: "/eofy-company-tax/return", rolePolicy: lodger,
+    mode: "persistent_command", failures: [...roleGuardedStalePersistent, "FACTOR_ASSERTION_REQUIRED", "FACTOR_ASSERTION_STALE", "SOURCE_CLOSE_STALE", "UNSUPPORTED_COMPANY_SCENARIO", "REPORT_BUNDLE_UNAVAILABLE", "REPORT_VALIDATION_FAILED"],
+  }),
+  "tammy.v1.CompanyTaxService.WithdrawCompanyReturnDeclaration": rpc({
+    name: "WithdrawCompanyReturnDeclaration", route: "/eofy-company-tax/return", rolePolicy: lodger,
+    mode: "persistent_command", failures: [...roleGuardedStalePersistent, "FACTOR_ASSERTION_REQUIRED", "FACTOR_ASSERTION_STALE", "DECLARATION_REQUIRED", "INVALID_STATE_TRANSITION", "REPORT_REPLACEMENT_REQUIRED"],
+  }),
+  "tammy.v1.CompanyTaxService.ExportCompanyReturnPack": rpc({
+    name: "ExportCompanyReturnPack", route: "/eofy-company-tax/return", rolePolicy: adminAndPreparer,
+    mode: "persistent_command", failures: [...roleGuardedStalePersistent, "FACTOR_ASSERTION_REQUIRED", "FACTOR_ASSERTION_STALE", "NOT_FOUND", "REPORT_BUNDLE_UNAVAILABLE"],
+  }),
+  "tammy.v1.CompanyTaxService.CreateCompanyReturnReplacement": rpc({
+    name: "CreateCompanyReturnReplacement", route: "/eofy-company-tax/return", rolePolicy: adminAndPreparer,
+    mode: "persistent_command", failures: [...roleGuardedStalePersistent, "REPORT_REPLACEMENT_REQUIRED", "PRELODGE_OUTCOME_UNKNOWN", "LODGE_OUTCOME_UNKNOWN", "SOURCE_CLOSE_STALE", "INVALID_STATE_TRANSITION"],
+  }),
+  "tammy.v1.CompanyTaxService.CreateCompanyReturnAmendment": rpc({
+    name: "CreateCompanyReturnAmendment", route: "/eofy-company-tax/return", rolePolicy: adminAndPreparer,
+    mode: "persistent_command", failures: [...roleGuardedStalePersistent, "AMENDMENT_REQUIRED", "SUBSEQUENT_AMENDMENT_UNSUPPORTED", "LODGE_OUTCOME_UNKNOWN", "SOURCE_CLOSE_STALE", "INVALID_STATE_TRANSITION"],
   }),
   "tammy.v1.SbrService.GetSbrReadiness": rpc({
     name: "GetSbrReadiness",
