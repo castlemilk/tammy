@@ -575,6 +575,7 @@ test("a timed-out command leaves no stubborn grandchild", async () => {
     'const { spawn } = require("node:child_process");',
     "const child = spawn(process.execPath, [process.argv[2], process.argv[1]],",
     '  { stdio: "ignore" });',
+    'require("node:fs").writeFileSync(process.argv[1], String(child.pid));',
     "setInterval(() => {}, 1000);",
   ].join("\n");
   let grandchildPid;
