@@ -51,6 +51,10 @@ scenarios:
   E2E-17:
     cases:
       - sbr-readiness-simulator
+  E2E-18:
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
 rpcs:
   tammy.v1.SystemService.GetDiagnostics:
     preload: getSystemDiagnostics
@@ -2910,3 +2914,238 @@ transitions:
     cases: []
     futureCases:
       - slice-1/backup-audit-contracts
+  tammy.v1.CompanyReturnAttemptState.COMPANY_RETURN_ATTEMPT_STATE_DISPATCHING->COMPANY_RETURN_ATTEMPT_STATE_NOT_DISPATCHED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnAttemptState.COMPANY_RETURN_ATTEMPT_STATE_DISPATCHING->COMPANY_RETURN_ATTEMPT_STATE_OUTCOME_UNKNOWN:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnAttemptState.COMPANY_RETURN_ATTEMPT_STATE_DISPATCHING->COMPANY_RETURN_ATTEMPT_STATE_RESULT_RECORDED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnAttemptState.COMPANY_RETURN_ATTEMPT_STATE_NOT_DISPATCHED->COMPANY_RETURN_ATTEMPT_STATE_ABORTED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnAttemptState.COMPANY_RETURN_ATTEMPT_STATE_NOT_DISPATCHED->COMPANY_RETURN_ATTEMPT_STATE_PREPARED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnAttemptState.COMPANY_RETURN_ATTEMPT_STATE_OUTCOME_UNKNOWN->COMPANY_RETURN_ATTEMPT_STATE_RESULT_RECORDED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnAttemptState.COMPANY_RETURN_ATTEMPT_STATE_PREPARED->COMPANY_RETURN_ATTEMPT_STATE_ABORTED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnAttemptState.COMPANY_RETURN_ATTEMPT_STATE_PREPARED->COMPANY_RETURN_ATTEMPT_STATE_DISPATCHING:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnAttemptState.COMPANY_RETURN_ATTEMPT_STATE_RESULT_RECORDED->COMPANY_RETURN_ATTEMPT_STATE_COMMITTED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnState.COMPANY_RETURN_STATE_BLOCKED->COMPANY_RETURN_STATE_COLLECTING:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnState.COMPANY_RETURN_STATE_BLOCKED->COMPANY_RETURN_STATE_REVIEW_READY:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnState.COMPANY_RETURN_STATE_COLLECTING->COMPANY_RETURN_STATE_BLOCKED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnState.COMPANY_RETURN_STATE_COLLECTING->COMPANY_RETURN_STATE_REVIEW_READY:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnState.COMPANY_RETURN_STATE_DECLARED->COMPANY_RETURN_STATE_PRELODGE_PENDING:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnState.COMPANY_RETURN_STATE_DECLARED->COMPANY_RETURN_STATE_REPLACED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnState.COMPANY_RETURN_STATE_DELIVERED->COMPANY_RETURN_STATE_SUPERSEDED_BY_AMENDMENT:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnState.COMPANY_RETURN_STATE_LODGE_OUTCOME_UNKNOWN->COMPANY_RETURN_STATE_DELIVERED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnState.COMPANY_RETURN_STATE_LODGE_OUTCOME_UNKNOWN->COMPANY_RETURN_STATE_LODGE_REJECTED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnState.COMPANY_RETURN_STATE_LODGE_PENDING->COMPANY_RETURN_STATE_DELIVERED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnState.COMPANY_RETURN_STATE_LODGE_PENDING->COMPANY_RETURN_STATE_LODGE_OUTCOME_UNKNOWN:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnState.COMPANY_RETURN_STATE_LODGE_PENDING->COMPANY_RETURN_STATE_LODGE_REJECTED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnState.COMPANY_RETURN_STATE_LODGE_PENDING->COMPANY_RETURN_STATE_READY_TO_LODGE:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnState.COMPANY_RETURN_STATE_LODGE_REJECTED->COMPANY_RETURN_STATE_REPLACED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnState.COMPANY_RETURN_STATE_PRELODGE_OUTCOME_UNKNOWN->COMPANY_RETURN_STATE_BLOCKED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnState.COMPANY_RETURN_STATE_PRELODGE_OUTCOME_UNKNOWN->COMPANY_RETURN_STATE_DECLARED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnState.COMPANY_RETURN_STATE_PRELODGE_OUTCOME_UNKNOWN->COMPANY_RETURN_STATE_PRELODGE_REVIEW:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnState.COMPANY_RETURN_STATE_PRELODGE_OUTCOME_UNKNOWN->COMPANY_RETURN_STATE_READY_TO_LODGE:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnState.COMPANY_RETURN_STATE_PRELODGE_PENDING->COMPANY_RETURN_STATE_BLOCKED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnState.COMPANY_RETURN_STATE_PRELODGE_PENDING->COMPANY_RETURN_STATE_DECLARED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnState.COMPANY_RETURN_STATE_PRELODGE_PENDING->COMPANY_RETURN_STATE_PRELODGE_OUTCOME_UNKNOWN:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnState.COMPANY_RETURN_STATE_PRELODGE_PENDING->COMPANY_RETURN_STATE_PRELODGE_REVIEW:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnState.COMPANY_RETURN_STATE_PRELODGE_PENDING->COMPANY_RETURN_STATE_READY_TO_LODGE:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnState.COMPANY_RETURN_STATE_PRELODGE_REVIEW->COMPANY_RETURN_STATE_DECLARED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnState.COMPANY_RETURN_STATE_PRELODGE_REVIEW->COMPANY_RETURN_STATE_REPLACED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnState.COMPANY_RETURN_STATE_READY_TO_LODGE->COMPANY_RETURN_STATE_LODGE_PENDING:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnState.COMPANY_RETURN_STATE_READY_TO_LODGE->COMPANY_RETURN_STATE_REPLACED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnState.COMPANY_RETURN_STATE_REVIEW_READY->COMPANY_RETURN_STATE_BLOCKED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnState.COMPANY_RETURN_STATE_REVIEW_READY->COMPANY_RETURN_STATE_COLLECTING:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.CompanyReturnState.COMPANY_RETURN_STATE_REVIEW_READY->COMPANY_RETURN_STATE_DECLARED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.FinancialCloseState.FINANCIAL_CLOSE_STATE_BLOCKED->FINANCIAL_CLOSE_STATE_COLLECTING:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.FinancialCloseState.FINANCIAL_CLOSE_STATE_BLOCKED->FINANCIAL_CLOSE_STATE_REVIEW_READY:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.FinancialCloseState.FINANCIAL_CLOSE_STATE_COLLECTING->FINANCIAL_CLOSE_STATE_BLOCKED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.FinancialCloseState.FINANCIAL_CLOSE_STATE_COLLECTING->FINANCIAL_CLOSE_STATE_REVIEW_READY:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.FinancialCloseState.FINANCIAL_CLOSE_STATE_FROZEN->FINANCIAL_CLOSE_STATE_COLLECTING:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.FinancialCloseState.FINANCIAL_CLOSE_STATE_REVIEW_READY->FINANCIAL_CLOSE_STATE_BLOCKED:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.FinancialCloseState.FINANCIAL_CLOSE_STATE_REVIEW_READY->FINANCIAL_CLOSE_STATE_COLLECTING:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
+  tammy.v1.FinancialCloseState.FINANCIAL_CLOSE_STATE_REVIEW_READY->FINANCIAL_CLOSE_STATE_FROZEN:
+    stage: declared_future
+    cases: []
+    futureCases:
+      - company-eofy/lifecycle
