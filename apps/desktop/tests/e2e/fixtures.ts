@@ -37,7 +37,7 @@ import {
 import { removeSbrE2eResult, type SbrE2ePassedResult, writePassedSbrE2eResult } from "./sbr-result";
 
 const execFileAsync = promisify(execFile);
-const CLOSE_TIMEOUT_MS = 5_000;
+const CLOSE_TIMEOUT_MS = 10_000;
 const ORPHAN_POLL_INTERVAL_MS = 100;
 const ORPHAN_POLL_TIMEOUT_MS = 5_000;
 const STARTUP_DIAGNOSTIC_DELAY_MS = 2_000;
