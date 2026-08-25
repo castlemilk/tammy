@@ -947,6 +947,15 @@ func TestCompanyTaxProtovalidateEnforcesExportShapeAndFreshFactorPurposes(t *tes
 	redactedWithPassphrase := proto.Clone(validEncrypted).(*tammyv1.ExportCompanyReturnPackRequest)
 	redactedWithPassphrase.Kind = tammyv1.CompanyReturnExportKind_COMPANY_RETURN_EXPORT_KIND_REDACTED_REVIEW_PDF
 	assertFinancialCloseValidationRejects(t, "redacted export with passphrase", redactedWithPassphrase)
+	validExportResponse := &tammyv1.ExportCompanyReturnPackResponse{ExportId: financialCloseID(), ContentHash: financialCloseHash(), SafeFilename: "company-return-2026.pdf", Kind: tammyv1.CompanyReturnExportKind_COMPANY_RETURN_EXPORT_KIND_REDACTED_REVIEW_PDF}
+	if err := protovalidate.Validate(validExportResponse); err != nil {
+		t.Fatalf("valid export response rejected: %v", err)
+	}
+	for _, unsafeFilename := range []string{"nested/return.pdf", `nested\return.pdf`, "return\n.pdf"} {
+		response := proto.Clone(validExportResponse).(*tammyv1.ExportCompanyReturnPackResponse)
+		response.SafeFilename = unsafeFilename
+		assertFinancialCloseValidationRejects(t, "unsafe export filename", response)
+	}
 
 	tests := []struct {
 		name, purpose string
