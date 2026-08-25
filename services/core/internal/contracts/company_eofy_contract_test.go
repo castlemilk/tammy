@@ -1650,7 +1650,7 @@ func assertCompanyReturnSubmissionCELRules(t *testing.T, file protoreflect.FileD
 	responseIdentity := "has(this.company_return) && has(this.submission) && has(this.submission.latest_attempt) && this.company_return.id == this.submission.return_id && this.company_return.id == this.submission.latest_attempt.return_id"
 	responseMatrix := "(this.submission.latest_attempt.operation_type == 1 && ((this.submission.latest_attempt.state in [1, 2, 4] && this.company_return.state == 5) || (this.submission.latest_attempt.state in [3, 7] && this.company_return.state == 4) || (this.submission.latest_attempt.state == 5 && this.company_return.state == 8) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 1 && this.company_return.state == 7) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 2 && this.company_return.state == 6) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 3 && this.company_return.state == 2))) || (this.submission.latest_attempt.operation_type == 2 && ((this.submission.latest_attempt.state in [1, 2, 4] && this.company_return.state == 9) || (this.submission.latest_attempt.state in [3, 7] && this.company_return.state == 7) || (this.submission.latest_attempt.state == 5 && this.company_return.state == 12) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 1 && this.company_return.state == 10) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 3 && this.company_return.state == 11)))"
 	receiptState := "this.company_return.state == 10 ? (has(this.submission.receipt) && has(this.company_return.delivery) && this.submission.receipt.attempt_id == this.submission.latest_attempt.id && this.company_return.delivery.latest_attempt_id == this.submission.latest_attempt.id && this.company_return.delivery.operation_type == 2 && this.company_return.delivery.outcome == 1 && has(this.company_return.delivery.receipt_id) && this.company_return.delivery.receipt_id == this.submission.receipt.id && has(this.company_return.delivery.delivered_at)) : (!has(this.submission.receipt) && !has(this.company_return.delivery))"
-	getMatrix := "(" + responseMatrix + ") || (this.company_return.state == 13 && ((this.submission.latest_attempt.operation_type == 1 && ((this.submission.latest_attempt.state in [3, 7]) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome in [1, 2]))) || (this.submission.latest_attempt.operation_type == 2 && ((this.submission.latest_attempt.state in [3, 7]) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 3))))) || (this.company_return.state == 14 && this.submission.latest_attempt.operation_type == 2 && this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 1)"
+	getMatrix := "(" + responseMatrix + ") || (this.company_return.state == 4 && this.submission.latest_attempt.operation_type == 1 && this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 2) || (this.company_return.state == 13 && ((this.submission.latest_attempt.operation_type == 1 && ((this.submission.latest_attempt.state in [3, 7]) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome in [1, 2]))) || (this.submission.latest_attempt.operation_type == 2 && ((this.submission.latest_attempt.state in [3, 7]) || (this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 3))))) || (this.company_return.state == 14 && this.submission.latest_attempt.operation_type == 2 && this.submission.latest_attempt.state == 6 && this.submission.latest_attempt.outcome == 1)"
 	getReceiptState := "this.company_return.state in [10, 14] ? (has(this.submission.receipt) && has(this.company_return.delivery) && this.submission.receipt.attempt_id == this.submission.latest_attempt.id && this.company_return.delivery.latest_attempt_id == this.submission.latest_attempt.id && this.company_return.delivery.operation_type == 2 && this.company_return.delivery.outcome == 1 && has(this.company_return.delivery.receipt_id) && this.company_return.delivery.receipt_id == this.submission.receipt.id && has(this.company_return.delivery.delivered_at)) : (!has(this.submission.receipt) && !has(this.company_return.delivery))"
 	want := map[protoreflect.Name]map[string]string{
 		"CompanyReturnSubmissionAttempt": {
@@ -1922,6 +1922,12 @@ func TestCompanyReturnSubmissionProtovalidateAllowsLegalHistoricalGetProjections
 
 	fixtures := map[string]*tammyv1.GetCompanyReturnSubmissionResponse{
 		"superseded retains accepted lodge evidence": superseded,
+		"redeclared retains acknowledged pre-lodge warnings": validCompanyReturnSubmissionGetResponse(
+			tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_DECLARED,
+			tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_PRELODGE,
+			tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_COMMITTED,
+			tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_WARNINGS,
+		),
 		"replaced after pre-lodge non-dispatch": validHistoricalCompanyReturnSubmissionGetResponse(
 			tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_PRELODGE,
 			tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_NOT_DISPATCHED,
@@ -1971,6 +1977,7 @@ func TestCompanyReturnSubmissionProtovalidateRejectsContradictoryHistoricalGetPr
 	superseded := validCompanyReturnSubmissionGetResponse(tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_DELIVERED, tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_LODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_COMMITTED, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_SUCCESS)
 	superseded.CompanyReturn.State = tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_SUPERSEDED_BY_AMENDMENT
 	superseded.Submission.Receipt = validCompanyReturnSubmissionReceipt()
+	redeclaredWarnings := validCompanyReturnSubmissionGetResponse(tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_DECLARED, tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_PRELODGE, tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_COMMITTED, tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_WARNINGS)
 
 	invalid := map[string]*tammyv1.GetCompanyReturnSubmissionResponse{
 		"superseded rejected lodge": validHistoricalCompanyReturnSubmissionGetResponse(
@@ -1994,6 +2001,28 @@ func TestCompanyReturnSubmissionProtovalidateRejectsContradictoryHistoricalGetPr
 			tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_COMMITTED,
 			tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_REJECTED,
 		),
+		"declared with pre-lodge success": validCompanyReturnSubmissionGetResponse(
+			tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_DECLARED,
+			tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_PRELODGE,
+			tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_COMMITTED,
+			tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_SUCCESS,
+		),
+		"declared with pre-lodge rejection": validCompanyReturnSubmissionGetResponse(
+			tammyv1.CompanyReturnState_COMPANY_RETURN_STATE_DECLARED,
+			tammyv1.CompanyReturnOperationType_COMPANY_RETURN_OPERATION_TYPE_PRELODGE,
+			tammyv1.CompanyReturnAttemptState_COMPANY_RETURN_ATTEMPT_STATE_COMMITTED,
+			tammyv1.CompanyReturnOperationOutcome_COMPANY_RETURN_OPERATION_OUTCOME_REJECTED,
+		),
+		"redeclared warnings with receipt": func() *tammyv1.GetCompanyReturnSubmissionResponse {
+			value := proto.Clone(redeclaredWarnings).(*tammyv1.GetCompanyReturnSubmissionResponse)
+			value.Submission.Receipt = validCompanyReturnSubmissionReceipt()
+			return value
+		}(),
+		"redeclared warnings with delivery": func() *tammyv1.GetCompanyReturnSubmissionResponse {
+			value := proto.Clone(redeclaredWarnings).(*tammyv1.GetCompanyReturnSubmissionResponse)
+			value.CompanyReturn.Delivery = validCompanyReturnDeliverySummary()
+			return value
+		}(),
 		"superseded mismatched delivery receipt": func() *tammyv1.GetCompanyReturnSubmissionResponse {
 			value := proto.Clone(superseded).(*tammyv1.GetCompanyReturnSubmissionResponse)
 			value.CompanyReturn.Delivery.ReceiptId = companyReturnSubmissionString(companyReturnSubmissionOtherID())
