@@ -1,0 +1,36 @@
+edition = "2023";
+
+package tammy.v1;
+
+// buf:lint:ignore IMPORT_USED -- Task 1 freezes the required dependency direction before Task 4 adds the fields that consume the shared operation enums.
+import "tammy/v1/company_tax.proto";
+
+option features.field_presence = IMPLICIT;
+option go_package = "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1";
+
+// CompanyReturnAttemptState is the durable lifecycle of one bound submission operation identity.
+enum CompanyReturnAttemptState {
+  // COMPANY_RETURN_ATTEMPT_STATE_UNSPECIFIED indicates that no valid attempt state was supplied.
+  COMPANY_RETURN_ATTEMPT_STATE_UNSPECIFIED = 0;
+
+  // COMPANY_RETURN_ATTEMPT_STATE_PREPARED is durable but has not begun helper dispatch.
+  COMPANY_RETURN_ATTEMPT_STATE_PREPARED = 1;
+
+  // COMPANY_RETURN_ATTEMPT_STATE_DISPATCHING has begun helper dispatch without a bounded result.
+  COMPANY_RETURN_ATTEMPT_STATE_DISPATCHING = 2;
+
+  // COMPANY_RETURN_ATTEMPT_STATE_NOT_DISPATCHED proves that no request bytes could be accepted.
+  COMPANY_RETURN_ATTEMPT_STATE_NOT_DISPATCHED = 3;
+
+  // COMPANY_RETURN_ATTEMPT_STATE_RESULT_RECORDED retains a definitive bounded result before core commit acknowledgement.
+  COMPANY_RETURN_ATTEMPT_STATE_RESULT_RECORDED = 4;
+
+  // COMPANY_RETURN_ATTEMPT_STATE_OUTCOME_UNKNOWN records possible acceptance requiring same-identity resolution.
+  COMPANY_RETURN_ATTEMPT_STATE_OUTCOME_UNKNOWN = 5;
+
+  // COMPANY_RETURN_ATTEMPT_STATE_COMMITTED is a terminal retained attempt acknowledged by the core.
+  COMPANY_RETURN_ATTEMPT_STATE_COMMITTED = 6;
+
+  // COMPANY_RETURN_ATTEMPT_STATE_ABORTED is a terminal retained attempt with proof that no request was accepted.
+  COMPANY_RETURN_ATTEMPT_STATE_ABORTED = 7;
+}

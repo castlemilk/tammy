@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "transitions": [
+    {
+      "enum": "tammy.v1.FinancialCloseState",
+      "transition": "FINANCIAL_CLOSE_STATE_BLOCKED->FINANCIAL_CLOSE_STATE_COLLECTING"
+    },
+    {
+      "enum": "tammy.v1.FinancialCloseState",
+      "transition": "FINANCIAL_CLOSE_STATE_BLOCKED->FINANCIAL_CLOSE_STATE_REVIEW_READY"
+    },
+    {
+      "enum": "tammy.v1.FinancialCloseState",
+      "transition": "FINANCIAL_CLOSE_STATE_COLLECTING->FINANCIAL_CLOSE_STATE_BLOCKED"
+    },
+    {
+      "enum": "tammy.v1.FinancialCloseState",
+      "transition": "FINANCIAL_CLOSE_STATE_COLLECTING->FINANCIAL_CLOSE_STATE_REVIEW_READY"
+    },
+    {
+      "enum": "tammy.v1.FinancialCloseState",
+      "transition": "FINANCIAL_CLOSE_STATE_FROZEN->FINANCIAL_CLOSE_STATE_COLLECTING"
+    },
+    {
+      "enum": "tammy.v1.FinancialCloseState",
+      "transition": "FINANCIAL_CLOSE_STATE_REVIEW_READY->FINANCIAL_CLOSE_STATE_BLOCKED"
+    },
+    {
+      "enum": "tammy.v1.FinancialCloseState",
+      "transition": "FINANCIAL_CLOSE_STATE_REVIEW_READY->FINANCIAL_CLOSE_STATE_COLLECTING"
+    },
+    {
+      "enum": "tammy.v1.FinancialCloseState",
+      "transition": "FINANCIAL_CLOSE_STATE_REVIEW_READY->FINANCIAL_CLOSE_STATE_FROZEN"
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+edition = "2023";
+
+package tammy.v1;
+
+option features.field_presence = IMPLICIT;
+option go_package = "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1";
+
+// FinancialCloseState is the persisted lifecycle of one mutable financial-close aggregate.
+enum FinancialCloseState {
+  // FINANCIAL_CLOSE_STATE_UNSPECIFIED indicates that no valid close state was supplied.
+  FINANCIAL_CLOSE_STATE_UNSPECIFIED = 0;
+
+  // FINANCIAL_CLOSE_STATE_COLLECTING accepts source and resolution changes.
+  FINANCIAL_CLOSE_STATE_COLLECTING = 1;
+
+  // FINANCIAL_CLOSE_STATE_BLOCKED records deterministic close blockers.
+  FINANCIAL_CLOSE_STATE_BLOCKED = 2;
+
+  // FINANCIAL_CLOSE_STATE_REVIEW_READY has passed deterministic validation and can be frozen.
+  FINANCIAL_CLOSE_STATE_REVIEW_READY = 3;
+
+  // FINANCIAL_CLOSE_STATE_FROZEN retains an immutable, addressable close snapshot.
+  FINANCIAL_CLOSE_STATE_FROZEN = 4;
+}

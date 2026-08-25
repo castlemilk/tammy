@@ -1,0 +1,105 @@
+edition = "2023";
+
+package tammy.v1;
+
+option features.field_presence = IMPLICIT;
+option go_package = "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1";
+
+// CompanyReturnState is the persisted lifecycle of one immutable-on-declaration company return.
+enum CompanyReturnState {
+  // COMPANY_RETURN_STATE_UNSPECIFIED indicates that no valid return state was supplied.
+  COMPANY_RETURN_STATE_UNSPECIFIED = 0;
+
+  // COMPANY_RETURN_STATE_COLLECTING accepts supported inputs and source changes.
+  COMPANY_RETURN_STATE_COLLECTING = 1;
+
+  // COMPANY_RETURN_STATE_BLOCKED records deterministic validation blockers.
+  COMPANY_RETURN_STATE_BLOCKED = 2;
+
+  // COMPANY_RETURN_STATE_REVIEW_READY has passed deterministic validation and can be declared.
+  COMPANY_RETURN_STATE_REVIEW_READY = 3;
+
+  // COMPANY_RETURN_STATE_DECLARED identifies an immutable freshly authorised report snapshot.
+  COMPANY_RETURN_STATE_DECLARED = 4;
+
+  // COMPANY_RETURN_STATE_PRELODGE_PENDING identifies a bound pre-lodge operation before resolution.
+  COMPANY_RETURN_STATE_PRELODGE_PENDING = 5;
+
+  // COMPANY_RETURN_STATE_PRELODGE_REVIEW requires acknowledgement of official warnings and redeclaration.
+  COMPANY_RETURN_STATE_PRELODGE_REVIEW = 6;
+
+  // COMPANY_RETURN_STATE_READY_TO_LODGE has passed definitive pre-lodge validation.
+  COMPANY_RETURN_STATE_READY_TO_LODGE = 7;
+
+  // COMPANY_RETURN_STATE_PRELODGE_OUTCOME_UNKNOWN blocks lodge until the same pre-lodge identity is resolved.
+  COMPANY_RETURN_STATE_PRELODGE_OUTCOME_UNKNOWN = 8;
+
+  // COMPANY_RETURN_STATE_LODGE_PENDING identifies a bound lodge operation before resolution.
+  COMPANY_RETURN_STATE_LODGE_PENDING = 9;
+
+  // COMPANY_RETURN_STATE_DELIVERED requires accepted lodge status and an official receipt.
+  COMPANY_RETURN_STATE_DELIVERED = 10;
+
+  // COMPANY_RETURN_STATE_LODGE_REJECTED records definitive rejection of the lodge operation.
+  COMPANY_RETURN_STATE_LODGE_REJECTED = 11;
+
+  // COMPANY_RETURN_STATE_LODGE_OUTCOME_UNKNOWN blocks retry and correction until the same lodge identity is resolved.
+  COMPANY_RETURN_STATE_LODGE_OUTCOME_UNKNOWN = 12;
+
+  // COMPANY_RETURN_STATE_REPLACED is a terminal retained predecessor linked to its replacement.
+  COMPANY_RETURN_STATE_REPLACED = 13;
+
+  // COMPANY_RETURN_STATE_SUPERSEDED_BY_AMENDMENT is a terminal predecessor of an accepted amendment.
+  COMPANY_RETURN_STATE_SUPERSEDED_BY_AMENDMENT = 14;
+}
+
+// CompanyReturnRelationshipKind identifies a return's position in its immutable correction chain.
+enum CompanyReturnRelationshipKind {
+  // COMPANY_RETURN_RELATIONSHIP_KIND_UNSPECIFIED indicates that no valid relationship was supplied.
+  COMPANY_RETURN_RELATIONSHIP_KIND_UNSPECIFIED = 0;
+
+  // COMPANY_RETURN_RELATIONSHIP_KIND_ORIGINAL identifies the first return in a chain.
+  COMPANY_RETURN_RELATIONSHIP_KIND_ORIGINAL = 1;
+
+  // COMPANY_RETURN_RELATIONSHIP_KIND_REPLACEMENT identifies a successor created before acceptance.
+  COMPANY_RETURN_RELATIONSHIP_KIND_REPLACEMENT = 2;
+
+  // COMPANY_RETURN_RELATIONSHIP_KIND_AMENDMENT identifies a correction of an accepted delivered return.
+  COMPANY_RETURN_RELATIONSHIP_KIND_AMENDMENT = 3;
+}
+
+// CompanyReturnOperationType identifies the bound report-delivery operation.
+enum CompanyReturnOperationType {
+  // COMPANY_RETURN_OPERATION_TYPE_UNSPECIFIED indicates that no valid operation was supplied.
+  COMPANY_RETURN_OPERATION_TYPE_UNSPECIFIED = 0;
+
+  // COMPANY_RETURN_OPERATION_TYPE_PRELODGE performs official validation without legal lodgment.
+  COMPANY_RETURN_OPERATION_TYPE_PRELODGE = 1;
+
+  // COMPANY_RETURN_OPERATION_TYPE_LODGE performs legal lodgment.
+  COMPANY_RETURN_OPERATION_TYPE_LODGE = 2;
+
+  // COMPANY_RETURN_OPERATION_TYPE_STATUS queries the status of the same bound operation identity.
+  COMPANY_RETURN_OPERATION_TYPE_STATUS = 3;
+
+  // COMPANY_RETURN_OPERATION_TYPE_RECONCILE resolves an unknown outcome for the same bound operation identity.
+  COMPANY_RETURN_OPERATION_TYPE_RECONCILE = 4;
+}
+
+// CompanyReturnOperationOutcome is the bounded semantic result of a company-return operation.
+enum CompanyReturnOperationOutcome {
+  // COMPANY_RETURN_OPERATION_OUTCOME_UNSPECIFIED indicates that no definitive outcome was supplied.
+  COMPANY_RETURN_OPERATION_OUTCOME_UNSPECIFIED = 0;
+
+  // COMPANY_RETURN_OPERATION_OUTCOME_SUCCESS identifies successful validation or accepted lodgment.
+  COMPANY_RETURN_OPERATION_OUTCOME_SUCCESS = 1;
+
+  // COMPANY_RETURN_OPERATION_OUTCOME_WARNINGS identifies pre-lodge warnings requiring acknowledgement.
+  COMPANY_RETURN_OPERATION_OUTCOME_WARNINGS = 2;
+
+  // COMPANY_RETURN_OPERATION_OUTCOME_REJECTED identifies definitive validation or lodgment rejection.
+  COMPANY_RETURN_OPERATION_OUTCOME_REJECTED = 3;
+
+  // COMPANY_RETURN_OPERATION_OUTCOME_OUTCOME_UNKNOWN identifies possible acceptance with unresolved transport.
+  COMPANY_RETURN_OPERATION_OUTCOME_OUTCOME_UNKNOWN = 4;
+}
