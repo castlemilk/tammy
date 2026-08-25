@@ -37,11 +37,11 @@ const EXPOSED_BUSINESS_RPCS = [
   "tammy.v1.TaxService.GetCurrentBasDraft",
 ];
 
-test("coverage declares the exact normative policy for all 113 non-system RPCs", async () => {
+test("coverage declares the exact normative policy for all 118 non-system RPCs", async () => {
   const coverage = parseCoverageManifest(await readFile("test/e2e/coverage.yaml", "utf8"));
   const actualRpcNames = Object.keys(coverage.rpcs).filter((rpcName) => rpcName !== SYSTEM_RPC);
 
-  assert.equal(Object.keys(SLICE_ONE_RPC_POLICY).length, 113);
+  assert.equal(Object.keys(SLICE_ONE_RPC_POLICY).length, 118);
   assert.deepEqual(actualRpcNames.sort(), Object.keys(SLICE_ONE_RPC_POLICY).sort());
 
   for (const [rpcName, expected] of Object.entries(SLICE_ONE_RPC_POLICY)) {
@@ -62,7 +62,7 @@ test("coverage declares the exact normative policy for all 113 non-system RPCs",
   }
 });
 
-test("company EOFY close and return preparation catalogue exactly 25 declared-future RPCs", async () => {
+test("company EOFY close, return preparation, and submission catalogue exactly 30 declared-future RPCs", async () => {
   const expected = [
     "tammy.v1.FinancialCloseService.CreateFinancialClose",
     "tammy.v1.FinancialCloseService.GetFinancialClose",
@@ -89,6 +89,11 @@ test("company EOFY close and return preparation catalogue exactly 25 declared-fu
     "tammy.v1.CompanyTaxService.ExportCompanyReturnPack",
     "tammy.v1.CompanyTaxService.CreateCompanyReturnReplacement",
     "tammy.v1.CompanyTaxService.CreateCompanyReturnAmendment",
+    "tammy.v1.CompanyReturnSubmissionService.PreLodgeCompanyReturn",
+    "tammy.v1.CompanyReturnSubmissionService.LodgeCompanyReturn",
+    "tammy.v1.CompanyReturnSubmissionService.GetCompanyReturnSubmission",
+    "tammy.v1.CompanyReturnSubmissionService.RefreshCompanyReturnStatus",
+    "tammy.v1.CompanyReturnSubmissionService.ReconcileUnknownCompanyReturnSubmission",
   ];
   assert.deepEqual(COMPANY_EOFY_DECLARED_FUTURE_RPCS, expected);
 
@@ -102,9 +107,10 @@ test("company EOFY close and return preparation catalogue exactly 25 declared-fu
     "company-eofy/permissions",
     "company-eofy/financial-close",
     "company-eofy/company-return",
+    "company-eofy/submission",
   ]);
   assert.deepEqual(
-    Object.keys(coverage.rpcs).filter((rpcName) => rpcName.startsWith("tammy.v1.FinancialCloseService.") || rpcName.startsWith("tammy.v1.CompanyTaxService.")),
+    Object.keys(coverage.rpcs).filter((rpcName) => rpcName.startsWith("tammy.v1.FinancialCloseService.") || rpcName.startsWith("tammy.v1.CompanyTaxService.") || rpcName.startsWith("tammy.v1.CompanyReturnSubmissionService.")),
     expected,
   );
   for (const rpcName of expected) {
@@ -112,8 +118,9 @@ test("company EOFY close and return preparation catalogue exactly 25 declared-fu
     assert.equal(rpc.stage, "declared_future", rpcName);
     assert.deepEqual(rpc.cases, [], rpcName);
     const isClose = rpcName.includes("FinancialCloseService");
-    assert.deepEqual(rpc.futureCases, ["company-eofy/contracts", "company-eofy/permissions", isClose ? "company-eofy/financial-close" : "company-eofy/company-return"], rpcName);
-    assert.deepEqual(rpc.routes, [isClose ? "/eofy-company-tax/close" : "/eofy-company-tax/return"], rpcName);
+    const isSubmission = rpcName.includes("CompanyReturnSubmissionService");
+    assert.deepEqual(rpc.futureCases, ["company-eofy/contracts", "company-eofy/permissions", isClose ? "company-eofy/financial-close" : isSubmission ? "company-eofy/submission" : "company-eofy/company-return"], rpcName);
+    assert.deepEqual(rpc.routes, [isClose ? "/eofy-company-tax/close" : isSubmission ? "/eofy-company-tax/lodge" : "/eofy-company-tax/return"], rpcName);
     assert.ok(!preloadMethods.includes(rpc.preload), rpcName);
   }
 });
@@ -267,6 +274,7 @@ test("coverage conflict failures match every public request concurrency field", 
     "proto/tammy/v1/audit.proto",
     "proto/tammy/v1/financial_close.proto",
     "proto/tammy/v1/company_tax.proto",
+    "proto/tammy/v1/company_return_submission.proto",
   ];
 
   for (const protoPath of protoPaths) {

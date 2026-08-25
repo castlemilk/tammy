@@ -59,6 +59,7 @@ scenarios:
       - company-eofy/permissions
       - company-eofy/financial-close
       - company-eofy/company-return
+      - company-eofy/submission
 rpcs:
   tammy.v1.SystemService.GetDiagnostics:
     preload: getSystemDiagnostics
@@ -3028,6 +3029,61 @@ rpcs:
     routes: [/eofy-company-tax/return]
     roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_permission_denied, auditor: planned_permission_denied}
     principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, STALE_VERSION, IDEMPOTENCY_CONFLICT, AMENDMENT_REQUIRED, SUBSEQUENT_AMENDMENT_UNSUPPORTED, LODGE_OUTCOME_UNKNOWN, SOURCE_CLOSE_STALE, INVALID_STATE_TRANSITION]
+    list: {states: [not_applicable]}
+    idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
+  tammy.v1.CompanyReturnSubmissionService.PreLodgeCompanyReturn:
+    stage: declared_future
+    preload: preLodgeCompanyReturn
+    cases: []
+    futureCases: [company-eofy/contracts, company-eofy/permissions, company-eofy/submission]
+    projections: [pre_lodge_company_return_result]
+    routes: [/eofy-company-tax/lodge]
+    roles: {workspace_admin: planned_permission_denied, business_preparer: planned_permission_denied, business_lodger: planned_allowed, auditor: planned_permission_denied}
+    principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, STALE_VERSION, IDEMPOTENCY_CONFLICT, FACTOR_ASSERTION_REQUIRED, FACTOR_ASSERTION_STALE, DECLARATION_REQUIRED, SOURCE_CLOSE_STALE, REPORT_BUNDLE_UNAVAILABLE, SBR_CREDENTIAL_NOT_READY, SBR_PRODUCT_SERVICE_NOT_READY, PRELODGE_OUTCOME_UNKNOWN]
+    list: {states: [not_applicable]}
+    idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
+  tammy.v1.CompanyReturnSubmissionService.LodgeCompanyReturn:
+    stage: declared_future
+    preload: lodgeCompanyReturn
+    cases: []
+    futureCases: [company-eofy/contracts, company-eofy/permissions, company-eofy/submission]
+    projections: [lodge_company_return_result]
+    routes: [/eofy-company-tax/lodge]
+    roles: {workspace_admin: planned_permission_denied, business_preparer: planned_permission_denied, business_lodger: planned_allowed, auditor: planned_permission_denied}
+    principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, STALE_VERSION, IDEMPOTENCY_CONFLICT, FACTOR_ASSERTION_REQUIRED, FACTOR_ASSERTION_STALE, DECLARATION_REQUIRED, PRELODGE_REVIEW_REQUIRED, PRELODGE_OUTCOME_UNKNOWN, REPORT_BUNDLE_UNAVAILABLE, SBR_CREDENTIAL_NOT_READY, SBR_PRODUCT_SERVICE_NOT_READY, ATO_VALIDATION_FAILED, LODGE_OUTCOME_UNKNOWN]
+    list: {states: [not_applicable]}
+    idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
+  tammy.v1.CompanyReturnSubmissionService.GetCompanyReturnSubmission:
+    stage: declared_future
+    preload: getCompanyReturnSubmission
+    cases: []
+    futureCases: [company-eofy/contracts, company-eofy/permissions, company-eofy/submission]
+    projections: [get_company_return_submission_result]
+    routes: [/eofy-company-tax/lodge]
+    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_allowed, auditor: planned_allowed}
+    principalFailures: [AUTHENTICATION_REQUIRED, NOT_FOUND]
+    list: {states: [found, not_found]}
+    idempotency: {mode: query, outcomes: [not_applicable]}
+  tammy.v1.CompanyReturnSubmissionService.RefreshCompanyReturnStatus:
+    stage: declared_future
+    preload: refreshCompanyReturnStatus
+    cases: []
+    futureCases: [company-eofy/contracts, company-eofy/permissions, company-eofy/submission]
+    projections: [refresh_company_return_status_result]
+    routes: [/eofy-company-tax/lodge]
+    roles: {workspace_admin: planned_permission_denied, business_preparer: planned_permission_denied, business_lodger: planned_allowed, auditor: planned_permission_denied}
+    principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, STALE_VERSION, IDEMPOTENCY_CONFLICT, SBR_CREDENTIAL_NOT_READY, SBR_PRODUCT_SERVICE_NOT_READY, PRELODGE_OUTCOME_UNKNOWN, LODGE_OUTCOME_UNKNOWN]
+    list: {states: [not_applicable]}
+    idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
+  tammy.v1.CompanyReturnSubmissionService.ReconcileUnknownCompanyReturnSubmission:
+    stage: declared_future
+    preload: reconcileUnknownCompanyReturnSubmission
+    cases: []
+    futureCases: [company-eofy/contracts, company-eofy/permissions, company-eofy/submission]
+    projections: [reconcile_unknown_company_return_submission_result]
+    routes: [/eofy-company-tax/lodge]
+    roles: {workspace_admin: planned_permission_denied, business_preparer: planned_permission_denied, business_lodger: planned_allowed, auditor: planned_permission_denied}
+    principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, STALE_VERSION, IDEMPOTENCY_CONFLICT, FACTOR_ASSERTION_REQUIRED, FACTOR_ASSERTION_STALE, SBR_CREDENTIAL_NOT_READY, SBR_PRODUCT_SERVICE_NOT_READY, PRELODGE_OUTCOME_UNKNOWN, LODGE_OUTCOME_UNKNOWN, INVALID_STATE_TRANSITION]
     list: {states: [not_applicable]}
     idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
 transitions:

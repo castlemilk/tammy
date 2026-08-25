@@ -126,6 +126,11 @@ export const COMPANY_EOFY_DECLARED_FUTURE_RPCS = [
   "tammy.v1.CompanyTaxService.ExportCompanyReturnPack",
   "tammy.v1.CompanyTaxService.CreateCompanyReturnReplacement",
   "tammy.v1.CompanyTaxService.CreateCompanyReturnAmendment",
+  "tammy.v1.CompanyReturnSubmissionService.PreLodgeCompanyReturn",
+  "tammy.v1.CompanyReturnSubmissionService.LodgeCompanyReturn",
+  "tammy.v1.CompanyReturnSubmissionService.GetCompanyReturnSubmission",
+  "tammy.v1.CompanyReturnSubmissionService.RefreshCompanyReturnStatus",
+  "tammy.v1.CompanyReturnSubmissionService.ReconcileUnknownCompanyReturnSubmission",
 ];
 
 export const SLICE_ONE_RPC_POLICY = {
@@ -1031,6 +1036,26 @@ export const SLICE_ONE_RPC_POLICY = {
   "tammy.v1.CompanyTaxService.CreateCompanyReturnAmendment": rpc({
     name: "CreateCompanyReturnAmendment", route: "/eofy-company-tax/return", rolePolicy: adminAndPreparer,
     mode: "persistent_command", failures: [...roleGuardedStalePersistent, "AMENDMENT_REQUIRED", "SUBSEQUENT_AMENDMENT_UNSUPPORTED", "LODGE_OUTCOME_UNKNOWN", "SOURCE_CLOSE_STALE", "INVALID_STATE_TRANSITION"],
+  }),
+  "tammy.v1.CompanyReturnSubmissionService.PreLodgeCompanyReturn": rpc({
+    name: "PreLodgeCompanyReturn", route: "/eofy-company-tax/lodge", rolePolicy: lodger,
+    mode: "persistent_command", failures: [...roleGuardedStalePersistent, "FACTOR_ASSERTION_REQUIRED", "FACTOR_ASSERTION_STALE", "DECLARATION_REQUIRED", "SOURCE_CLOSE_STALE", "REPORT_BUNDLE_UNAVAILABLE", "SBR_CREDENTIAL_NOT_READY", "SBR_PRODUCT_SERVICE_NOT_READY", "PRELODGE_OUTCOME_UNKNOWN"],
+  }),
+  "tammy.v1.CompanyReturnSubmissionService.LodgeCompanyReturn": rpc({
+    name: "LodgeCompanyReturn", route: "/eofy-company-tax/lodge", rolePolicy: lodger,
+    mode: "persistent_command", failures: [...roleGuardedStalePersistent, "FACTOR_ASSERTION_REQUIRED", "FACTOR_ASSERTION_STALE", "DECLARATION_REQUIRED", "PRELODGE_REVIEW_REQUIRED", "PRELODGE_OUTCOME_UNKNOWN", "REPORT_BUNDLE_UNAVAILABLE", "SBR_CREDENTIAL_NOT_READY", "SBR_PRODUCT_SERVICE_NOT_READY", "ATO_VALIDATION_FAILED", "LODGE_OUTCOME_UNKNOWN"],
+  }),
+  "tammy.v1.CompanyReturnSubmissionService.GetCompanyReturnSubmission": rpc({
+    name: "GetCompanyReturnSubmission", route: "/eofy-company-tax/lodge", rolePolicy: accountingRead,
+    mode: "query", failures: [...authenticated, "NOT_FOUND"], list: ["found", "not_found"],
+  }),
+  "tammy.v1.CompanyReturnSubmissionService.RefreshCompanyReturnStatus": rpc({
+    name: "RefreshCompanyReturnStatus", route: "/eofy-company-tax/lodge", rolePolicy: lodger,
+    mode: "persistent_command", failures: [...roleGuardedStalePersistent, "SBR_CREDENTIAL_NOT_READY", "SBR_PRODUCT_SERVICE_NOT_READY", "PRELODGE_OUTCOME_UNKNOWN", "LODGE_OUTCOME_UNKNOWN"],
+  }),
+  "tammy.v1.CompanyReturnSubmissionService.ReconcileUnknownCompanyReturnSubmission": rpc({
+    name: "ReconcileUnknownCompanyReturnSubmission", route: "/eofy-company-tax/lodge", rolePolicy: lodger,
+    mode: "persistent_command", failures: [...roleGuardedStalePersistent, "FACTOR_ASSERTION_REQUIRED", "FACTOR_ASSERTION_STALE", "SBR_CREDENTIAL_NOT_READY", "SBR_PRODUCT_SERVICE_NOT_READY", "PRELODGE_OUTCOME_UNKNOWN", "LODGE_OUTCOME_UNKNOWN", "INVALID_STATE_TRANSITION"],
   }),
   "tammy.v1.SbrService.GetSbrReadiness": rpc({
     name: "GetSbrReadiness",
