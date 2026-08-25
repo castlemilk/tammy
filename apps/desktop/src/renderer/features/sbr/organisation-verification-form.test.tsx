@@ -89,8 +89,8 @@ it("records bounded evidence bytes and renders core-authored expiry without disp
   const file = new File([new Uint8Array([1, 2, 3])], "evidence.pdf", { type: "application/pdf" });
   await user.upload(screen.getByLabelText("Independent evidence"), file);
   await user.click(screen.getByRole("button", { name: "Record verification" }));
-  expect(recordEntityVerification).toHaveBeenCalledOnce();
   expect(await screen.findByText(/evidence expiry/i)).toBeTruthy();
+  expect(recordEntityVerification).toHaveBeenCalledOnce();
   expect(document.body.textContent).not.toContain("1,2,3");
 });
 
