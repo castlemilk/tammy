@@ -7,8 +7,10 @@
 package tammyv1
 
 import (
+	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -82,17 +84,2438 @@ func (FinancialCloseState) EnumDescriptor() ([]byte, []int) {
 	return file_tammy_v1_financial_close_proto_rawDescGZIP(), []int{0}
 }
 
+// CloseCheckSeverity identifies whether one close check blocks freezing.
+type CloseCheckSeverity int32
+
+const (
+	// CLOSE_CHECK_SEVERITY_UNSPECIFIED indicates that no supported severity was supplied.
+	CloseCheckSeverity_CLOSE_CHECK_SEVERITY_UNSPECIFIED CloseCheckSeverity = 0
+	// CLOSE_CHECK_SEVERITY_BLOCKER prevents the financial close from being frozen.
+	CloseCheckSeverity_CLOSE_CHECK_SEVERITY_BLOCKER CloseCheckSeverity = 1
+	// CLOSE_CHECK_SEVERITY_WARNING requires explicit resolution before freezing.
+	CloseCheckSeverity_CLOSE_CHECK_SEVERITY_WARNING CloseCheckSeverity = 2
+)
+
+// Enum value maps for CloseCheckSeverity.
+var (
+	CloseCheckSeverity_name = map[int32]string{
+		0: "CLOSE_CHECK_SEVERITY_UNSPECIFIED",
+		1: "CLOSE_CHECK_SEVERITY_BLOCKER",
+		2: "CLOSE_CHECK_SEVERITY_WARNING",
+	}
+	CloseCheckSeverity_value = map[string]int32{
+		"CLOSE_CHECK_SEVERITY_UNSPECIFIED": 0,
+		"CLOSE_CHECK_SEVERITY_BLOCKER":     1,
+		"CLOSE_CHECK_SEVERITY_WARNING":     2,
+	}
+)
+
+func (x CloseCheckSeverity) Enum() *CloseCheckSeverity {
+	p := new(CloseCheckSeverity)
+	*p = x
+	return p
+}
+
+func (x CloseCheckSeverity) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (CloseCheckSeverity) Descriptor() protoreflect.EnumDescriptor {
+	return file_tammy_v1_financial_close_proto_enumTypes[1].Descriptor()
+}
+
+func (CloseCheckSeverity) Type() protoreflect.EnumType {
+	return &file_tammy_v1_financial_close_proto_enumTypes[1]
+}
+
+func (x CloseCheckSeverity) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use CloseCheckSeverity.Descriptor instead.
+func (CloseCheckSeverity) EnumDescriptor() ([]byte, []int) {
+	return file_tammy_v1_financial_close_proto_rawDescGZIP(), []int{1}
+}
+
+// CloseCheckResult is the bounded outcome of one deterministic close rule.
+type CloseCheckResult int32
+
+const (
+	// CLOSE_CHECK_RESULT_UNSPECIFIED indicates that no supported result was supplied.
+	CloseCheckResult_CLOSE_CHECK_RESULT_UNSPECIFIED CloseCheckResult = 0
+	// CLOSE_CHECK_RESULT_FAILED indicates that the rule currently fails.
+	CloseCheckResult_CLOSE_CHECK_RESULT_FAILED CloseCheckResult = 1
+	// CLOSE_CHECK_RESULT_PASSED indicates that the rule currently passes.
+	CloseCheckResult_CLOSE_CHECK_RESULT_PASSED CloseCheckResult = 2
+	// CLOSE_CHECK_RESULT_RESOLVED indicates that a warning was explicitly resolved.
+	CloseCheckResult_CLOSE_CHECK_RESULT_RESOLVED CloseCheckResult = 3
+)
+
+// Enum value maps for CloseCheckResult.
+var (
+	CloseCheckResult_name = map[int32]string{
+		0: "CLOSE_CHECK_RESULT_UNSPECIFIED",
+		1: "CLOSE_CHECK_RESULT_FAILED",
+		2: "CLOSE_CHECK_RESULT_PASSED",
+		3: "CLOSE_CHECK_RESULT_RESOLVED",
+	}
+	CloseCheckResult_value = map[string]int32{
+		"CLOSE_CHECK_RESULT_UNSPECIFIED": 0,
+		"CLOSE_CHECK_RESULT_FAILED":      1,
+		"CLOSE_CHECK_RESULT_PASSED":      2,
+		"CLOSE_CHECK_RESULT_RESOLVED":    3,
+	}
+)
+
+func (x CloseCheckResult) Enum() *CloseCheckResult {
+	p := new(CloseCheckResult)
+	*p = x
+	return p
+}
+
+func (x CloseCheckResult) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (CloseCheckResult) Descriptor() protoreflect.EnumDescriptor {
+	return file_tammy_v1_financial_close_proto_enumTypes[2].Descriptor()
+}
+
+func (CloseCheckResult) Type() protoreflect.EnumType {
+	return &file_tammy_v1_financial_close_proto_enumTypes[2]
+}
+
+func (x CloseCheckResult) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use CloseCheckResult.Descriptor instead.
+func (CloseCheckResult) EnumDescriptor() ([]byte, []int) {
+	return file_tammy_v1_financial_close_proto_rawDescGZIP(), []int{2}
+}
+
+// FinancialStatementKind identifies one bounded rendered financial statement.
+type FinancialStatementKind int32
+
+const (
+	// FINANCIAL_STATEMENT_KIND_UNSPECIFIED indicates that no supported statement kind was supplied.
+	FinancialStatementKind_FINANCIAL_STATEMENT_KIND_UNSPECIFIED FinancialStatementKind = 0
+	// FINANCIAL_STATEMENT_KIND_PROFIT_AND_LOSS is the profit and loss statement.
+	FinancialStatementKind_FINANCIAL_STATEMENT_KIND_PROFIT_AND_LOSS FinancialStatementKind = 1
+	// FINANCIAL_STATEMENT_KIND_BALANCE_SHEET is the balance sheet.
+	FinancialStatementKind_FINANCIAL_STATEMENT_KIND_BALANCE_SHEET FinancialStatementKind = 2
+	// FINANCIAL_STATEMENT_KIND_CASH_FLOW is the cash flow statement.
+	FinancialStatementKind_FINANCIAL_STATEMENT_KIND_CASH_FLOW FinancialStatementKind = 3
+	// FINANCIAL_STATEMENT_KIND_TRIAL_BALANCE is the trial balance.
+	FinancialStatementKind_FINANCIAL_STATEMENT_KIND_TRIAL_BALANCE FinancialStatementKind = 4
+	// FINANCIAL_STATEMENT_KIND_GENERAL_LEDGER is the general ledger report.
+	FinancialStatementKind_FINANCIAL_STATEMENT_KIND_GENERAL_LEDGER FinancialStatementKind = 5
+	// FINANCIAL_STATEMENT_KIND_GST_DETAIL is the GST detail report.
+	FinancialStatementKind_FINANCIAL_STATEMENT_KIND_GST_DETAIL FinancialStatementKind = 6
+	// FINANCIAL_STATEMENT_KIND_FIXED_ASSET_SCHEDULE is the fixed asset schedule.
+	FinancialStatementKind_FINANCIAL_STATEMENT_KIND_FIXED_ASSET_SCHEDULE FinancialStatementKind = 7
+	// FINANCIAL_STATEMENT_KIND_FRANKING_RECONCILIATION is the franking reconciliation.
+	FinancialStatementKind_FINANCIAL_STATEMENT_KIND_FRANKING_RECONCILIATION FinancialStatementKind = 8
+)
+
+// Enum value maps for FinancialStatementKind.
+var (
+	FinancialStatementKind_name = map[int32]string{
+		0: "FINANCIAL_STATEMENT_KIND_UNSPECIFIED",
+		1: "FINANCIAL_STATEMENT_KIND_PROFIT_AND_LOSS",
+		2: "FINANCIAL_STATEMENT_KIND_BALANCE_SHEET",
+		3: "FINANCIAL_STATEMENT_KIND_CASH_FLOW",
+		4: "FINANCIAL_STATEMENT_KIND_TRIAL_BALANCE",
+		5: "FINANCIAL_STATEMENT_KIND_GENERAL_LEDGER",
+		6: "FINANCIAL_STATEMENT_KIND_GST_DETAIL",
+		7: "FINANCIAL_STATEMENT_KIND_FIXED_ASSET_SCHEDULE",
+		8: "FINANCIAL_STATEMENT_KIND_FRANKING_RECONCILIATION",
+	}
+	FinancialStatementKind_value = map[string]int32{
+		"FINANCIAL_STATEMENT_KIND_UNSPECIFIED":             0,
+		"FINANCIAL_STATEMENT_KIND_PROFIT_AND_LOSS":         1,
+		"FINANCIAL_STATEMENT_KIND_BALANCE_SHEET":           2,
+		"FINANCIAL_STATEMENT_KIND_CASH_FLOW":               3,
+		"FINANCIAL_STATEMENT_KIND_TRIAL_BALANCE":           4,
+		"FINANCIAL_STATEMENT_KIND_GENERAL_LEDGER":          5,
+		"FINANCIAL_STATEMENT_KIND_GST_DETAIL":              6,
+		"FINANCIAL_STATEMENT_KIND_FIXED_ASSET_SCHEDULE":    7,
+		"FINANCIAL_STATEMENT_KIND_FRANKING_RECONCILIATION": 8,
+	}
+)
+
+func (x FinancialStatementKind) Enum() *FinancialStatementKind {
+	p := new(FinancialStatementKind)
+	*p = x
+	return p
+}
+
+func (x FinancialStatementKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (FinancialStatementKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_tammy_v1_financial_close_proto_enumTypes[3].Descriptor()
+}
+
+func (FinancialStatementKind) Type() protoreflect.EnumType {
+	return &file_tammy_v1_financial_close_proto_enumTypes[3]
+}
+
+func (x FinancialStatementKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use FinancialStatementKind.Descriptor instead.
+func (FinancialStatementKind) EnumDescriptor() ([]byte, []int) {
+	return file_tammy_v1_financial_close_proto_rawDescGZIP(), []int{3}
+}
+
+// CloseCheck is one deterministic close rule result pinned to source revisions.
+type CloseCheck struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// id is the opaque UUIDv7 check identifier.
+	Id string `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
+	// close_id identifies the owning financial close.
+	CloseId string `protobuf:"bytes,2,opt,name=close_id,json=closeId" json:"close_id,omitempty"`
+	// rule_id is the stable bounded rule code.
+	RuleId string `protobuf:"bytes,3,opt,name=rule_id,json=ruleId" json:"rule_id,omitempty"`
+	// severity identifies whether the check blocks freezing.
+	Severity CloseCheckSeverity `protobuf:"varint,4,opt,name=severity,enum=tammy.v1.CloseCheckSeverity" json:"severity,omitempty"`
+	// result is the current bounded outcome.
+	Result CloseCheckResult `protobuf:"varint,5,opt,name=result,enum=tammy.v1.CloseCheckResult" json:"result,omitempty"`
+	// source_revision pins the financial source revision checked.
+	SourceRevision uint64 `protobuf:"varint,6,opt,name=source_revision,json=sourceRevision" json:"source_revision,omitempty"`
+	// affected_sources identifies at most 100 immutable source records.
+	AffectedSources []*SourceRef `protobuf:"bytes,7,rep,name=affected_sources,json=affectedSources" json:"affected_sources,omitempty"`
+	// resolution is the bounded human resolution for a resolved warning.
+	Resolution *string `protobuf:"bytes,8,opt,name=resolution" json:"resolution,omitempty"`
+	// resolved_by_user_id identifies the user who resolved the warning.
+	ResolvedByUserId *string `protobuf:"bytes,9,opt,name=resolved_by_user_id,json=resolvedByUserId" json:"resolved_by_user_id,omitempty"`
+	// resolved_at is the core-authored resolution instant.
+	ResolvedAt    *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=resolved_at,json=resolvedAt" json:"resolved_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CloseCheck) Reset() {
+	*x = CloseCheck{}
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CloseCheck) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CloseCheck) ProtoMessage() {}
+
+func (x *CloseCheck) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CloseCheck.ProtoReflect.Descriptor instead.
+func (*CloseCheck) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_financial_close_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *CloseCheck) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *CloseCheck) GetCloseId() string {
+	if x != nil {
+		return x.CloseId
+	}
+	return ""
+}
+
+func (x *CloseCheck) GetRuleId() string {
+	if x != nil {
+		return x.RuleId
+	}
+	return ""
+}
+
+func (x *CloseCheck) GetSeverity() CloseCheckSeverity {
+	if x != nil {
+		return x.Severity
+	}
+	return CloseCheckSeverity_CLOSE_CHECK_SEVERITY_UNSPECIFIED
+}
+
+func (x *CloseCheck) GetResult() CloseCheckResult {
+	if x != nil {
+		return x.Result
+	}
+	return CloseCheckResult_CLOSE_CHECK_RESULT_UNSPECIFIED
+}
+
+func (x *CloseCheck) GetSourceRevision() uint64 {
+	if x != nil {
+		return x.SourceRevision
+	}
+	return 0
+}
+
+func (x *CloseCheck) GetAffectedSources() []*SourceRef {
+	if x != nil {
+		return x.AffectedSources
+	}
+	return nil
+}
+
+func (x *CloseCheck) GetResolution() string {
+	if x != nil && x.Resolution != nil {
+		return *x.Resolution
+	}
+	return ""
+}
+
+func (x *CloseCheck) GetResolvedByUserId() string {
+	if x != nil && x.ResolvedByUserId != nil {
+		return *x.ResolvedByUserId
+	}
+	return ""
+}
+
+func (x *CloseCheck) GetResolvedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ResolvedAt
+	}
+	return nil
+}
+
+// StatementHash binds one statement kind to its exact rendered content hash.
+type StatementHash struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// kind identifies the rendered statement.
+	Kind FinancialStatementKind `protobuf:"varint,1,opt,name=kind,enum=tammy.v1.FinancialStatementKind" json:"kind,omitempty"`
+	// content_hash is the exact 32-byte SHA-256 digest of the rendered statement.
+	ContentHash   []byte `protobuf:"bytes,2,opt,name=content_hash,json=contentHash" json:"content_hash,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StatementHash) Reset() {
+	*x = StatementHash{}
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StatementHash) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StatementHash) ProtoMessage() {}
+
+func (x *StatementHash) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StatementHash.ProtoReflect.Descriptor instead.
+func (*StatementHash) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_financial_close_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *StatementHash) GetKind() FinancialStatementKind {
+	if x != nil {
+		return x.Kind
+	}
+	return FinancialStatementKind_FINANCIAL_STATEMENT_KIND_UNSPECIFIED
+}
+
+func (x *StatementHash) GetContentHash() []byte {
+	if x != nil {
+		return x.ContentHash
+	}
+	return nil
+}
+
+// FinancialStatementApproval records the exact statements and wording approved by a user.
+type FinancialStatementApproval struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// id is the opaque UUIDv7 approval identifier.
+	Id string `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
+	// period_start is the inclusive first civil date approved.
+	PeriodStart *CivilDate `protobuf:"bytes,2,opt,name=period_start,json=periodStart" json:"period_start,omitempty"`
+	// period_end is the inclusive final civil date approved.
+	PeriodEnd *CivilDate `protobuf:"bytes,3,opt,name=period_end,json=periodEnd" json:"period_end,omitempty"`
+	// financial_revision pins the approved working financial revision.
+	FinancialRevision uint64 `protobuf:"varint,4,opt,name=financial_revision,json=financialRevision" json:"financial_revision,omitempty"`
+	// approval_wording_version identifies the bounded core-owned wording version.
+	ApprovalWordingVersion string `protobuf:"bytes,5,opt,name=approval_wording_version,json=approvalWordingVersion" json:"approval_wording_version,omitempty"`
+	// approval_wording_hash is the exact 32-byte hash of the approved wording.
+	ApprovalWordingHash []byte `protobuf:"bytes,6,opt,name=approval_wording_hash,json=approvalWordingHash" json:"approval_wording_hash,omitempty"`
+	// statement_hashes identifies every statement approved by content hash.
+	StatementHashes []*StatementHash `protobuf:"bytes,7,rep,name=statement_hashes,json=statementHashes" json:"statement_hashes,omitempty"`
+	// approved_by_user_id identifies the approving user.
+	ApprovedByUserId string `protobuf:"bytes,8,opt,name=approved_by_user_id,json=approvedByUserId" json:"approved_by_user_id,omitempty"`
+	// fresh_factor_assertion_id pins the single-use factor assertion consumed by approval.
+	FreshFactorAssertionId string `protobuf:"bytes,9,opt,name=fresh_factor_assertion_id,json=freshFactorAssertionId" json:"fresh_factor_assertion_id,omitempty"`
+	// approved_at is the core-authored approval instant.
+	ApprovedAt    *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=approved_at,json=approvedAt" json:"approved_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FinancialStatementApproval) Reset() {
+	*x = FinancialStatementApproval{}
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FinancialStatementApproval) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FinancialStatementApproval) ProtoMessage() {}
+
+func (x *FinancialStatementApproval) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FinancialStatementApproval.ProtoReflect.Descriptor instead.
+func (*FinancialStatementApproval) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_financial_close_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *FinancialStatementApproval) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *FinancialStatementApproval) GetPeriodStart() *CivilDate {
+	if x != nil {
+		return x.PeriodStart
+	}
+	return nil
+}
+
+func (x *FinancialStatementApproval) GetPeriodEnd() *CivilDate {
+	if x != nil {
+		return x.PeriodEnd
+	}
+	return nil
+}
+
+func (x *FinancialStatementApproval) GetFinancialRevision() uint64 {
+	if x != nil {
+		return x.FinancialRevision
+	}
+	return 0
+}
+
+func (x *FinancialStatementApproval) GetApprovalWordingVersion() string {
+	if x != nil {
+		return x.ApprovalWordingVersion
+	}
+	return ""
+}
+
+func (x *FinancialStatementApproval) GetApprovalWordingHash() []byte {
+	if x != nil {
+		return x.ApprovalWordingHash
+	}
+	return nil
+}
+
+func (x *FinancialStatementApproval) GetStatementHashes() []*StatementHash {
+	if x != nil {
+		return x.StatementHashes
+	}
+	return nil
+}
+
+func (x *FinancialStatementApproval) GetApprovedByUserId() string {
+	if x != nil {
+		return x.ApprovedByUserId
+	}
+	return ""
+}
+
+func (x *FinancialStatementApproval) GetFreshFactorAssertionId() string {
+	if x != nil {
+		return x.FreshFactorAssertionId
+	}
+	return ""
+}
+
+func (x *FinancialStatementApproval) GetApprovedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ApprovedAt
+	}
+	return nil
+}
+
+// SourceRevision pins one bounded subledger owner to immutable content.
+type SourceRevision struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// owner is the stable bounded source owner code.
+	Owner string `protobuf:"bytes,1,opt,name=owner" json:"owner,omitempty"`
+	// revision is the immutable source revision and begins at one.
+	Revision uint64 `protobuf:"varint,2,opt,name=revision" json:"revision,omitempty"`
+	// content_hash is the exact 32-byte SHA-256 digest of the source content.
+	ContentHash   []byte `protobuf:"bytes,3,opt,name=content_hash,json=contentHash" json:"content_hash,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SourceRevision) Reset() {
+	*x = SourceRevision{}
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SourceRevision) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SourceRevision) ProtoMessage() {}
+
+func (x *SourceRevision) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SourceRevision.ProtoReflect.Descriptor instead.
+func (*SourceRevision) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_financial_close_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *SourceRevision) GetOwner() string {
+	if x != nil {
+		return x.Owner
+	}
+	return ""
+}
+
+func (x *SourceRevision) GetRevision() uint64 {
+	if x != nil {
+		return x.Revision
+	}
+	return 0
+}
+
+func (x *SourceRevision) GetContentHash() []byte {
+	if x != nil {
+		return x.ContentHash
+	}
+	return nil
+}
+
+// FinancialCloseSnapshot is the immutable evidence boundary for one frozen close.
+type FinancialCloseSnapshot struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// id is the opaque UUIDv7 snapshot identifier.
+	Id string `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
+	// close_id identifies the owning financial close.
+	CloseId string `protobuf:"bytes,2,opt,name=close_id,json=closeId" json:"close_id,omitempty"`
+	// organisation_id identifies the owning organisation.
+	OrganisationId string `protobuf:"bytes,3,opt,name=organisation_id,json=organisationId" json:"organisation_id,omitempty"`
+	// verified_abn is the exact verified 11-digit Australian Business Number.
+	VerifiedAbn string `protobuf:"bytes,4,opt,name=verified_abn,json=verifiedAbn" json:"verified_abn,omitempty"`
+	// income_year is the only supported company income year.
+	IncomeYear int32 `protobuf:"varint,5,opt,name=income_year,json=incomeYear" json:"income_year,omitempty"`
+	// period_start is the inclusive first civil date frozen.
+	PeriodStart *CivilDate `protobuf:"bytes,6,opt,name=period_start,json=periodStart" json:"period_start,omitempty"`
+	// period_end is the inclusive final civil date frozen.
+	PeriodEnd *CivilDate `protobuf:"bytes,7,opt,name=period_end,json=periodEnd" json:"period_end,omitempty"`
+	// currency is the only supported reporting currency.
+	Currency string `protobuf:"bytes,8,opt,name=currency" json:"currency,omitempty"`
+	// snapshot_hash is the exact 32-byte hash of this canonical snapshot.
+	SnapshotHash []byte `protobuf:"bytes,9,opt,name=snapshot_hash,json=snapshotHash" json:"snapshot_hash,omitempty"`
+	// financial_revision pins the complete frozen financial inputs.
+	FinancialRevision uint64 `protobuf:"varint,10,opt,name=financial_revision,json=financialRevision" json:"financial_revision,omitempty"`
+	// subledger_revisions pins at most 32 contributing source owners.
+	SubledgerRevisions []*SourceRevision `protobuf:"bytes,11,rep,name=subledger_revisions,json=subledgerRevisions" json:"subledger_revisions,omitempty"`
+	// statement_hashes contains every frozen statement hash.
+	StatementHashes []*StatementHash `protobuf:"bytes,12,rep,name=statement_hashes,json=statementHashes" json:"statement_hashes,omitempty"`
+	// trial_balance_hash is the exact 32-byte frozen trial-balance hash.
+	TrialBalanceHash []byte `protobuf:"bytes,13,opt,name=trial_balance_hash,json=trialBalanceHash" json:"trial_balance_hash,omitempty"`
+	// checklist_hash is the exact 32-byte frozen checklist hash.
+	ChecklistHash []byte `protobuf:"bytes,14,opt,name=checklist_hash,json=checklistHash" json:"checklist_hash,omitempty"`
+	// reconciliation_hash is the exact 32-byte frozen reconciliation hash.
+	ReconciliationHash []byte `protobuf:"bytes,15,opt,name=reconciliation_hash,json=reconciliationHash" json:"reconciliation_hash,omitempty"`
+	// accounting_rule_fingerprint pins the exact accounting rule bundle.
+	AccountingRuleFingerprint []byte `protobuf:"bytes,16,opt,name=accounting_rule_fingerprint,json=accountingRuleFingerprint" json:"accounting_rule_fingerprint,omitempty"`
+	// gst_rule_fingerprint pins the exact GST rule bundle.
+	GstRuleFingerprint []byte `protobuf:"bytes,17,opt,name=gst_rule_fingerprint,json=gstRuleFingerprint" json:"gst_rule_fingerprint,omitempty"`
+	// asset_rule_fingerprint pins the exact fixed-asset rule bundle.
+	AssetRuleFingerprint []byte `protobuf:"bytes,18,opt,name=asset_rule_fingerprint,json=assetRuleFingerprint" json:"asset_rule_fingerprint,omitempty"`
+	// evidence_manifest_hash is the exact 32-byte retained-evidence manifest hash.
+	EvidenceManifestHash []byte `protobuf:"bytes,19,opt,name=evidence_manifest_hash,json=evidenceManifestHash" json:"evidence_manifest_hash,omitempty"`
+	// audit_head_hash pins the exact 32-byte audit chain head.
+	AuditHeadHash []byte `protobuf:"bytes,20,opt,name=audit_head_hash,json=auditHeadHash" json:"audit_head_hash,omitempty"`
+	// approval records the exact user approval frozen into this snapshot.
+	Approval *FinancialStatementApproval `protobuf:"bytes,21,opt,name=approval" json:"approval,omitempty"`
+	// corrects_close_id identifies the frozen close corrected by this snapshot, when any.
+	CorrectsCloseId *string `protobuf:"bytes,22,opt,name=corrects_close_id,json=correctsCloseId" json:"corrects_close_id,omitempty"`
+	// frozen_at is the core-authored freeze instant.
+	FrozenAt      *timestamppb.Timestamp `protobuf:"bytes,23,opt,name=frozen_at,json=frozenAt" json:"frozen_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FinancialCloseSnapshot) Reset() {
+	*x = FinancialCloseSnapshot{}
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FinancialCloseSnapshot) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FinancialCloseSnapshot) ProtoMessage() {}
+
+func (x *FinancialCloseSnapshot) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FinancialCloseSnapshot.ProtoReflect.Descriptor instead.
+func (*FinancialCloseSnapshot) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_financial_close_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *FinancialCloseSnapshot) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *FinancialCloseSnapshot) GetCloseId() string {
+	if x != nil {
+		return x.CloseId
+	}
+	return ""
+}
+
+func (x *FinancialCloseSnapshot) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *FinancialCloseSnapshot) GetVerifiedAbn() string {
+	if x != nil {
+		return x.VerifiedAbn
+	}
+	return ""
+}
+
+func (x *FinancialCloseSnapshot) GetIncomeYear() int32 {
+	if x != nil {
+		return x.IncomeYear
+	}
+	return 0
+}
+
+func (x *FinancialCloseSnapshot) GetPeriodStart() *CivilDate {
+	if x != nil {
+		return x.PeriodStart
+	}
+	return nil
+}
+
+func (x *FinancialCloseSnapshot) GetPeriodEnd() *CivilDate {
+	if x != nil {
+		return x.PeriodEnd
+	}
+	return nil
+}
+
+func (x *FinancialCloseSnapshot) GetCurrency() string {
+	if x != nil {
+		return x.Currency
+	}
+	return ""
+}
+
+func (x *FinancialCloseSnapshot) GetSnapshotHash() []byte {
+	if x != nil {
+		return x.SnapshotHash
+	}
+	return nil
+}
+
+func (x *FinancialCloseSnapshot) GetFinancialRevision() uint64 {
+	if x != nil {
+		return x.FinancialRevision
+	}
+	return 0
+}
+
+func (x *FinancialCloseSnapshot) GetSubledgerRevisions() []*SourceRevision {
+	if x != nil {
+		return x.SubledgerRevisions
+	}
+	return nil
+}
+
+func (x *FinancialCloseSnapshot) GetStatementHashes() []*StatementHash {
+	if x != nil {
+		return x.StatementHashes
+	}
+	return nil
+}
+
+func (x *FinancialCloseSnapshot) GetTrialBalanceHash() []byte {
+	if x != nil {
+		return x.TrialBalanceHash
+	}
+	return nil
+}
+
+func (x *FinancialCloseSnapshot) GetChecklistHash() []byte {
+	if x != nil {
+		return x.ChecklistHash
+	}
+	return nil
+}
+
+func (x *FinancialCloseSnapshot) GetReconciliationHash() []byte {
+	if x != nil {
+		return x.ReconciliationHash
+	}
+	return nil
+}
+
+func (x *FinancialCloseSnapshot) GetAccountingRuleFingerprint() []byte {
+	if x != nil {
+		return x.AccountingRuleFingerprint
+	}
+	return nil
+}
+
+func (x *FinancialCloseSnapshot) GetGstRuleFingerprint() []byte {
+	if x != nil {
+		return x.GstRuleFingerprint
+	}
+	return nil
+}
+
+func (x *FinancialCloseSnapshot) GetAssetRuleFingerprint() []byte {
+	if x != nil {
+		return x.AssetRuleFingerprint
+	}
+	return nil
+}
+
+func (x *FinancialCloseSnapshot) GetEvidenceManifestHash() []byte {
+	if x != nil {
+		return x.EvidenceManifestHash
+	}
+	return nil
+}
+
+func (x *FinancialCloseSnapshot) GetAuditHeadHash() []byte {
+	if x != nil {
+		return x.AuditHeadHash
+	}
+	return nil
+}
+
+func (x *FinancialCloseSnapshot) GetApproval() *FinancialStatementApproval {
+	if x != nil {
+		return x.Approval
+	}
+	return nil
+}
+
+func (x *FinancialCloseSnapshot) GetCorrectsCloseId() string {
+	if x != nil && x.CorrectsCloseId != nil {
+		return *x.CorrectsCloseId
+	}
+	return ""
+}
+
+func (x *FinancialCloseSnapshot) GetFrozenAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.FrozenAt
+	}
+	return nil
+}
+
+// FinancialClose is one mutable company financial-close aggregate.
+type FinancialClose struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// id is the opaque UUIDv7 financial-close identifier.
+	Id string `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
+	// organisation_id identifies the owning organisation.
+	OrganisationId string `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId" json:"organisation_id,omitempty"`
+	// income_year is the only supported company income year.
+	IncomeYear int32 `protobuf:"varint,3,opt,name=income_year,json=incomeYear" json:"income_year,omitempty"`
+	// period_start is the inclusive first civil date of the close.
+	PeriodStart *CivilDate `protobuf:"bytes,4,opt,name=period_start,json=periodStart" json:"period_start,omitempty"`
+	// period_end is the inclusive final civil date of the close.
+	PeriodEnd *CivilDate `protobuf:"bytes,5,opt,name=period_end,json=periodEnd" json:"period_end,omitempty"`
+	// currency is the only supported reporting currency.
+	Currency string `protobuf:"bytes,6,opt,name=currency" json:"currency,omitempty"`
+	// version is the monotonic optimistic-concurrency version.
+	Version uint64 `protobuf:"varint,7,opt,name=version" json:"version,omitempty"`
+	// state is the current bounded close lifecycle state.
+	State FinancialCloseState `protobuf:"varint,8,opt,name=state,enum=tammy.v1.FinancialCloseState" json:"state,omitempty"`
+	// financial_revision pins the current complete working financial inputs.
+	FinancialRevision uint64 `protobuf:"varint,9,opt,name=financial_revision,json=financialRevision" json:"financial_revision,omitempty"`
+	// latest_frozen_snapshot retains the latest immutable snapshot when one exists.
+	LatestFrozenSnapshot *FinancialCloseSnapshot `protobuf:"bytes,10,opt,name=latest_frozen_snapshot,json=latestFrozenSnapshot" json:"latest_frozen_snapshot,omitempty"`
+	// created_at is the core-authored creation instant.
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=created_at,json=createdAt" json:"created_at,omitempty"`
+	// updated_at is the core-authored latest mutation instant.
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=updated_at,json=updatedAt" json:"updated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FinancialClose) Reset() {
+	*x = FinancialClose{}
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FinancialClose) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FinancialClose) ProtoMessage() {}
+
+func (x *FinancialClose) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FinancialClose.ProtoReflect.Descriptor instead.
+func (*FinancialClose) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_financial_close_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *FinancialClose) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *FinancialClose) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *FinancialClose) GetIncomeYear() int32 {
+	if x != nil {
+		return x.IncomeYear
+	}
+	return 0
+}
+
+func (x *FinancialClose) GetPeriodStart() *CivilDate {
+	if x != nil {
+		return x.PeriodStart
+	}
+	return nil
+}
+
+func (x *FinancialClose) GetPeriodEnd() *CivilDate {
+	if x != nil {
+		return x.PeriodEnd
+	}
+	return nil
+}
+
+func (x *FinancialClose) GetCurrency() string {
+	if x != nil {
+		return x.Currency
+	}
+	return ""
+}
+
+func (x *FinancialClose) GetVersion() uint64 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+func (x *FinancialClose) GetState() FinancialCloseState {
+	if x != nil {
+		return x.State
+	}
+	return FinancialCloseState_FINANCIAL_CLOSE_STATE_UNSPECIFIED
+}
+
+func (x *FinancialClose) GetFinancialRevision() uint64 {
+	if x != nil {
+		return x.FinancialRevision
+	}
+	return 0
+}
+
+func (x *FinancialClose) GetLatestFrozenSnapshot() *FinancialCloseSnapshot {
+	if x != nil {
+		return x.LatestFrozenSnapshot
+	}
+	return nil
+}
+
+func (x *FinancialClose) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *FinancialClose) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+// FinancialStatementLine is one bounded rendered statement line with immutable provenance.
+type FinancialStatementLine struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// stable_code is the bounded stable semantic line code.
+	StableCode string `protobuf:"bytes,1,opt,name=stable_code,json=stableCode" json:"stable_code,omitempty"`
+	// label is bounded safe presentation text.
+	Label string `protobuf:"bytes,2,opt,name=label" json:"label,omitempty"`
+	// amount is the exact signed amount in Australian dollars.
+	Amount *Money `protobuf:"bytes,3,opt,name=amount" json:"amount,omitempty"`
+	// sources contains at most 100 immutable provenance records.
+	Sources       []*SourceRef `protobuf:"bytes,4,rep,name=sources" json:"sources,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FinancialStatementLine) Reset() {
+	*x = FinancialStatementLine{}
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FinancialStatementLine) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FinancialStatementLine) ProtoMessage() {}
+
+func (x *FinancialStatementLine) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FinancialStatementLine.ProtoReflect.Descriptor instead.
+func (*FinancialStatementLine) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_financial_close_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *FinancialStatementLine) GetStableCode() string {
+	if x != nil {
+		return x.StableCode
+	}
+	return ""
+}
+
+func (x *FinancialStatementLine) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
+func (x *FinancialStatementLine) GetAmount() *Money {
+	if x != nil {
+		return x.Amount
+	}
+	return nil
+}
+
+func (x *FinancialStatementLine) GetSources() []*SourceRef {
+	if x != nil {
+		return x.Sources
+	}
+	return nil
+}
+
+// FinancialStatement is one bounded rendered statement.
+type FinancialStatement struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// kind identifies the rendered statement.
+	Kind FinancialStatementKind `protobuf:"varint,1,opt,name=kind,enum=tammy.v1.FinancialStatementKind" json:"kind,omitempty"`
+	// content_hash is the exact 32-byte hash of the rendered statement.
+	ContentHash []byte `protobuf:"bytes,2,opt,name=content_hash,json=contentHash" json:"content_hash,omitempty"`
+	// lines contains at most 2,000 rendered statement lines.
+	Lines         []*FinancialStatementLine `protobuf:"bytes,3,rep,name=lines" json:"lines,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FinancialStatement) Reset() {
+	*x = FinancialStatement{}
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FinancialStatement) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FinancialStatement) ProtoMessage() {}
+
+func (x *FinancialStatement) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FinancialStatement.ProtoReflect.Descriptor instead.
+func (*FinancialStatement) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_financial_close_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *FinancialStatement) GetKind() FinancialStatementKind {
+	if x != nil {
+		return x.Kind
+	}
+	return FinancialStatementKind_FINANCIAL_STATEMENT_KIND_UNSPECIFIED
+}
+
+func (x *FinancialStatement) GetContentHash() []byte {
+	if x != nil {
+		return x.ContentHash
+	}
+	return nil
+}
+
+func (x *FinancialStatement) GetLines() []*FinancialStatementLine {
+	if x != nil {
+		return x.Lines
+	}
+	return nil
+}
+
+// FinancialStatements is the bounded rendered statement set for one immutable snapshot.
+type FinancialStatements struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// close_id identifies the owning financial close.
+	CloseId string `protobuf:"bytes,1,opt,name=close_id,json=closeId" json:"close_id,omitempty"`
+	// snapshot_id identifies the exact immutable snapshot rendered.
+	SnapshotId string `protobuf:"bytes,2,opt,name=snapshot_id,json=snapshotId" json:"snapshot_id,omitempty"`
+	// financial_revision pins the rendered financial inputs.
+	FinancialRevision uint64 `protobuf:"varint,3,opt,name=financial_revision,json=financialRevision" json:"financial_revision,omitempty"`
+	// statements contains the bounded required statement set.
+	Statements    []*FinancialStatement `protobuf:"bytes,4,rep,name=statements" json:"statements,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FinancialStatements) Reset() {
+	*x = FinancialStatements{}
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FinancialStatements) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FinancialStatements) ProtoMessage() {}
+
+func (x *FinancialStatements) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FinancialStatements.ProtoReflect.Descriptor instead.
+func (*FinancialStatements) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_financial_close_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *FinancialStatements) GetCloseId() string {
+	if x != nil {
+		return x.CloseId
+	}
+	return ""
+}
+
+func (x *FinancialStatements) GetSnapshotId() string {
+	if x != nil {
+		return x.SnapshotId
+	}
+	return ""
+}
+
+func (x *FinancialStatements) GetFinancialRevision() uint64 {
+	if x != nil {
+		return x.FinancialRevision
+	}
+	return 0
+}
+
+func (x *FinancialStatements) GetStatements() []*FinancialStatement {
+	if x != nil {
+		return x.Statements
+	}
+	return nil
+}
+
+// CreateFinancialCloseRequest creates the single supported company close period.
+type CreateFinancialCloseRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// command_context carries authorization and idempotency metadata.
+	CommandContext *CommandContext `protobuf:"bytes,1,opt,name=command_context,json=commandContext" json:"command_context,omitempty"`
+	// organisation_id identifies the owning organisation.
+	OrganisationId string `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId" json:"organisation_id,omitempty"`
+	// income_year is the only supported company income year.
+	IncomeYear int32 `protobuf:"varint,3,opt,name=income_year,json=incomeYear" json:"income_year,omitempty"`
+	// period_start is the inclusive first civil date requested.
+	PeriodStart *CivilDate `protobuf:"bytes,4,opt,name=period_start,json=periodStart" json:"period_start,omitempty"`
+	// period_end is the inclusive final civil date requested.
+	PeriodEnd     *CivilDate `protobuf:"bytes,5,opt,name=period_end,json=periodEnd" json:"period_end,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateFinancialCloseRequest) Reset() {
+	*x = CreateFinancialCloseRequest{}
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateFinancialCloseRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateFinancialCloseRequest) ProtoMessage() {}
+
+func (x *CreateFinancialCloseRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateFinancialCloseRequest.ProtoReflect.Descriptor instead.
+func (*CreateFinancialCloseRequest) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_financial_close_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *CreateFinancialCloseRequest) GetCommandContext() *CommandContext {
+	if x != nil {
+		return x.CommandContext
+	}
+	return nil
+}
+
+func (x *CreateFinancialCloseRequest) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *CreateFinancialCloseRequest) GetIncomeYear() int32 {
+	if x != nil {
+		return x.IncomeYear
+	}
+	return 0
+}
+
+func (x *CreateFinancialCloseRequest) GetPeriodStart() *CivilDate {
+	if x != nil {
+		return x.PeriodStart
+	}
+	return nil
+}
+
+func (x *CreateFinancialCloseRequest) GetPeriodEnd() *CivilDate {
+	if x != nil {
+		return x.PeriodEnd
+	}
+	return nil
+}
+
+// CreateFinancialCloseResponse returns the created close.
+type CreateFinancialCloseResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// close is the created bounded close aggregate.
+	Close         *FinancialClose `protobuf:"bytes,1,opt,name=close" json:"close,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateFinancialCloseResponse) Reset() {
+	*x = CreateFinancialCloseResponse{}
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateFinancialCloseResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateFinancialCloseResponse) ProtoMessage() {}
+
+func (x *CreateFinancialCloseResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateFinancialCloseResponse.ProtoReflect.Descriptor instead.
+func (*CreateFinancialCloseResponse) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_financial_close_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *CreateFinancialCloseResponse) GetClose() *FinancialClose {
+	if x != nil {
+		return x.Close
+	}
+	return nil
+}
+
+// GetFinancialCloseRequest requests one organisation-owned close.
+type GetFinancialCloseRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// authentication identifies the principal with financial-close read permission.
+	Authentication *AuthenticationContext `protobuf:"bytes,1,opt,name=authentication" json:"authentication,omitempty"`
+	// organisation_id identifies the owning organisation.
+	OrganisationId string `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId" json:"organisation_id,omitempty"`
+	// close_id identifies the requested financial close.
+	CloseId       string `protobuf:"bytes,3,opt,name=close_id,json=closeId" json:"close_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetFinancialCloseRequest) Reset() {
+	*x = GetFinancialCloseRequest{}
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetFinancialCloseRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetFinancialCloseRequest) ProtoMessage() {}
+
+func (x *GetFinancialCloseRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetFinancialCloseRequest.ProtoReflect.Descriptor instead.
+func (*GetFinancialCloseRequest) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_financial_close_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *GetFinancialCloseRequest) GetAuthentication() *AuthenticationContext {
+	if x != nil {
+		return x.Authentication
+	}
+	return nil
+}
+
+func (x *GetFinancialCloseRequest) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *GetFinancialCloseRequest) GetCloseId() string {
+	if x != nil {
+		return x.CloseId
+	}
+	return ""
+}
+
+// GetFinancialCloseResponse returns one organisation-owned close.
+type GetFinancialCloseResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// close is the requested bounded close aggregate.
+	Close         *FinancialClose `protobuf:"bytes,1,opt,name=close" json:"close,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetFinancialCloseResponse) Reset() {
+	*x = GetFinancialCloseResponse{}
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetFinancialCloseResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetFinancialCloseResponse) ProtoMessage() {}
+
+func (x *GetFinancialCloseResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetFinancialCloseResponse.ProtoReflect.Descriptor instead.
+func (*GetFinancialCloseResponse) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_financial_close_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *GetFinancialCloseResponse) GetClose() *FinancialClose {
+	if x != nil {
+		return x.Close
+	}
+	return nil
+}
+
+// ListCloseChecksRequest requests one stable bounded page of close checks.
+type ListCloseChecksRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// authentication identifies the principal with financial-close read permission.
+	Authentication *AuthenticationContext `protobuf:"bytes,1,opt,name=authentication" json:"authentication,omitempty"`
+	// organisation_id identifies the owning organisation.
+	OrganisationId string `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId" json:"organisation_id,omitempty"`
+	// close_id identifies the requested financial close.
+	CloseId string `protobuf:"bytes,3,opt,name=close_id,json=closeId" json:"close_id,omitempty"`
+	// page requests a bounded stable page.
+	Page          *PageRequest `protobuf:"bytes,4,opt,name=page" json:"page,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListCloseChecksRequest) Reset() {
+	*x = ListCloseChecksRequest{}
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCloseChecksRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCloseChecksRequest) ProtoMessage() {}
+
+func (x *ListCloseChecksRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCloseChecksRequest.ProtoReflect.Descriptor instead.
+func (*ListCloseChecksRequest) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_financial_close_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *ListCloseChecksRequest) GetAuthentication() *AuthenticationContext {
+	if x != nil {
+		return x.Authentication
+	}
+	return nil
+}
+
+func (x *ListCloseChecksRequest) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *ListCloseChecksRequest) GetCloseId() string {
+	if x != nil {
+		return x.CloseId
+	}
+	return ""
+}
+
+func (x *ListCloseChecksRequest) GetPage() *PageRequest {
+	if x != nil {
+		return x.Page
+	}
+	return nil
+}
+
+// ListCloseChecksResponse returns one stable bounded page of close checks.
+type ListCloseChecksResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// checks contains at most 200 close checks.
+	Checks []*CloseCheck `protobuf:"bytes,1,rep,name=checks" json:"checks,omitempty"`
+	// page describes the returned stable page.
+	Page          *PageInfo `protobuf:"bytes,2,opt,name=page" json:"page,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListCloseChecksResponse) Reset() {
+	*x = ListCloseChecksResponse{}
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCloseChecksResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCloseChecksResponse) ProtoMessage() {}
+
+func (x *ListCloseChecksResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCloseChecksResponse.ProtoReflect.Descriptor instead.
+func (*ListCloseChecksResponse) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_financial_close_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *ListCloseChecksResponse) GetChecks() []*CloseCheck {
+	if x != nil {
+		return x.Checks
+	}
+	return nil
+}
+
+func (x *ListCloseChecksResponse) GetPage() *PageInfo {
+	if x != nil {
+		return x.Page
+	}
+	return nil
+}
+
+// ResolveCloseWarningRequest resolves one warning with bounded human reasoning.
+type ResolveCloseWarningRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// command_context carries authorization and idempotency metadata.
+	CommandContext *CommandContext `protobuf:"bytes,1,opt,name=command_context,json=commandContext" json:"command_context,omitempty"`
+	// organisation_id identifies the owning organisation.
+	OrganisationId string `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId" json:"organisation_id,omitempty"`
+	// close_id identifies the financial close to mutate.
+	CloseId string `protobuf:"bytes,3,opt,name=close_id,json=closeId" json:"close_id,omitempty"`
+	// expected_version is the required optimistic-concurrency version.
+	ExpectedVersion uint64 `protobuf:"varint,4,opt,name=expected_version,json=expectedVersion" json:"expected_version,omitempty"`
+	// check_id identifies the warning check to resolve.
+	CheckId string `protobuf:"bytes,5,opt,name=check_id,json=checkId" json:"check_id,omitempty"`
+	// resolution is the bounded human resolution.
+	Resolution    string `protobuf:"bytes,6,opt,name=resolution" json:"resolution,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResolveCloseWarningRequest) Reset() {
+	*x = ResolveCloseWarningRequest{}
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResolveCloseWarningRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResolveCloseWarningRequest) ProtoMessage() {}
+
+func (x *ResolveCloseWarningRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResolveCloseWarningRequest.ProtoReflect.Descriptor instead.
+func (*ResolveCloseWarningRequest) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_financial_close_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *ResolveCloseWarningRequest) GetCommandContext() *CommandContext {
+	if x != nil {
+		return x.CommandContext
+	}
+	return nil
+}
+
+func (x *ResolveCloseWarningRequest) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *ResolveCloseWarningRequest) GetCloseId() string {
+	if x != nil {
+		return x.CloseId
+	}
+	return ""
+}
+
+func (x *ResolveCloseWarningRequest) GetExpectedVersion() uint64 {
+	if x != nil {
+		return x.ExpectedVersion
+	}
+	return 0
+}
+
+func (x *ResolveCloseWarningRequest) GetCheckId() string {
+	if x != nil {
+		return x.CheckId
+	}
+	return ""
+}
+
+func (x *ResolveCloseWarningRequest) GetResolution() string {
+	if x != nil {
+		return x.Resolution
+	}
+	return ""
+}
+
+// ResolveCloseWarningResponse returns the bounded mutation projection.
+type ResolveCloseWarningResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// close is the updated financial close.
+	Close *FinancialClose `protobuf:"bytes,1,opt,name=close" json:"close,omitempty"`
+	// check is the resolved warning check.
+	Check         *CloseCheck `protobuf:"bytes,2,opt,name=check" json:"check,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResolveCloseWarningResponse) Reset() {
+	*x = ResolveCloseWarningResponse{}
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResolveCloseWarningResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResolveCloseWarningResponse) ProtoMessage() {}
+
+func (x *ResolveCloseWarningResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResolveCloseWarningResponse.ProtoReflect.Descriptor instead.
+func (*ResolveCloseWarningResponse) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_financial_close_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *ResolveCloseWarningResponse) GetClose() *FinancialClose {
+	if x != nil {
+		return x.Close
+	}
+	return nil
+}
+
+func (x *ResolveCloseWarningResponse) GetCheck() *CloseCheck {
+	if x != nil {
+		return x.Check
+	}
+	return nil
+}
+
+// FreezeFinancialCloseRequest freezes one review-ready close with fresh-factor authorization.
+type FreezeFinancialCloseRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// command_context carries authorization, idempotency, and the fresh factor.
+	CommandContext *CommandContext `protobuf:"bytes,1,opt,name=command_context,json=commandContext" json:"command_context,omitempty"`
+	// organisation_id identifies the owning organisation.
+	OrganisationId string `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId" json:"organisation_id,omitempty"`
+	// close_id identifies the financial close to freeze.
+	CloseId string `protobuf:"bytes,3,opt,name=close_id,json=closeId" json:"close_id,omitempty"`
+	// expected_version is the required optimistic-concurrency version.
+	ExpectedVersion uint64 `protobuf:"varint,4,opt,name=expected_version,json=expectedVersion" json:"expected_version,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *FreezeFinancialCloseRequest) Reset() {
+	*x = FreezeFinancialCloseRequest{}
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FreezeFinancialCloseRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FreezeFinancialCloseRequest) ProtoMessage() {}
+
+func (x *FreezeFinancialCloseRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FreezeFinancialCloseRequest.ProtoReflect.Descriptor instead.
+func (*FreezeFinancialCloseRequest) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_financial_close_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *FreezeFinancialCloseRequest) GetCommandContext() *CommandContext {
+	if x != nil {
+		return x.CommandContext
+	}
+	return nil
+}
+
+func (x *FreezeFinancialCloseRequest) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *FreezeFinancialCloseRequest) GetCloseId() string {
+	if x != nil {
+		return x.CloseId
+	}
+	return ""
+}
+
+func (x *FreezeFinancialCloseRequest) GetExpectedVersion() uint64 {
+	if x != nil {
+		return x.ExpectedVersion
+	}
+	return 0
+}
+
+// FreezeFinancialCloseResponse returns the frozen close and immutable snapshot.
+type FreezeFinancialCloseResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// close is the updated frozen financial close.
+	Close *FinancialClose `protobuf:"bytes,1,opt,name=close" json:"close,omitempty"`
+	// snapshot is the immutable close snapshot created by the mutation.
+	Snapshot      *FinancialCloseSnapshot `protobuf:"bytes,2,opt,name=snapshot" json:"snapshot,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FreezeFinancialCloseResponse) Reset() {
+	*x = FreezeFinancialCloseResponse{}
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FreezeFinancialCloseResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FreezeFinancialCloseResponse) ProtoMessage() {}
+
+func (x *FreezeFinancialCloseResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FreezeFinancialCloseResponse.ProtoReflect.Descriptor instead.
+func (*FreezeFinancialCloseResponse) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_financial_close_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *FreezeFinancialCloseResponse) GetClose() *FinancialClose {
+	if x != nil {
+		return x.Close
+	}
+	return nil
+}
+
+func (x *FreezeFinancialCloseResponse) GetSnapshot() *FinancialCloseSnapshot {
+	if x != nil {
+		return x.Snapshot
+	}
+	return nil
+}
+
+// ReopenFinancialCloseRequest reopens one frozen close with fresh-factor authorization.
+type ReopenFinancialCloseRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// command_context carries authorization, idempotency, and the fresh factor.
+	CommandContext *CommandContext `protobuf:"bytes,1,opt,name=command_context,json=commandContext" json:"command_context,omitempty"`
+	// organisation_id identifies the owning organisation.
+	OrganisationId string `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId" json:"organisation_id,omitempty"`
+	// close_id identifies the frozen financial close to reopen.
+	CloseId string `protobuf:"bytes,3,opt,name=close_id,json=closeId" json:"close_id,omitempty"`
+	// expected_version is the required optimistic-concurrency version.
+	ExpectedVersion uint64 `protobuf:"varint,4,opt,name=expected_version,json=expectedVersion" json:"expected_version,omitempty"`
+	// reason is the bounded human reason for reopening.
+	Reason        string `protobuf:"bytes,5,opt,name=reason" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReopenFinancialCloseRequest) Reset() {
+	*x = ReopenFinancialCloseRequest{}
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReopenFinancialCloseRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReopenFinancialCloseRequest) ProtoMessage() {}
+
+func (x *ReopenFinancialCloseRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReopenFinancialCloseRequest.ProtoReflect.Descriptor instead.
+func (*ReopenFinancialCloseRequest) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_financial_close_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *ReopenFinancialCloseRequest) GetCommandContext() *CommandContext {
+	if x != nil {
+		return x.CommandContext
+	}
+	return nil
+}
+
+func (x *ReopenFinancialCloseRequest) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *ReopenFinancialCloseRequest) GetCloseId() string {
+	if x != nil {
+		return x.CloseId
+	}
+	return ""
+}
+
+func (x *ReopenFinancialCloseRequest) GetExpectedVersion() uint64 {
+	if x != nil {
+		return x.ExpectedVersion
+	}
+	return 0
+}
+
+func (x *ReopenFinancialCloseRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+// ReopenFinancialCloseResponse returns the reopened close and preserved snapshot identifier.
+type ReopenFinancialCloseResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// close is the reopened collecting close.
+	Close *FinancialClose `protobuf:"bytes,1,opt,name=close" json:"close,omitempty"`
+	// preserved_snapshot_id identifies the immutable snapshot retained by reopening.
+	PreservedSnapshotId string `protobuf:"bytes,2,opt,name=preserved_snapshot_id,json=preservedSnapshotId" json:"preserved_snapshot_id,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *ReopenFinancialCloseResponse) Reset() {
+	*x = ReopenFinancialCloseResponse{}
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReopenFinancialCloseResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReopenFinancialCloseResponse) ProtoMessage() {}
+
+func (x *ReopenFinancialCloseResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReopenFinancialCloseResponse.ProtoReflect.Descriptor instead.
+func (*ReopenFinancialCloseResponse) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_financial_close_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *ReopenFinancialCloseResponse) GetClose() *FinancialClose {
+	if x != nil {
+		return x.Close
+	}
+	return nil
+}
+
+func (x *ReopenFinancialCloseResponse) GetPreservedSnapshotId() string {
+	if x != nil {
+		return x.PreservedSnapshotId
+	}
+	return ""
+}
+
+// StartFinancialCloseCorrectionRequest creates a correction close with fresh-factor authorization.
+type StartFinancialCloseCorrectionRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// command_context carries authorization, idempotency, and the fresh factor.
+	CommandContext *CommandContext `protobuf:"bytes,1,opt,name=command_context,json=commandContext" json:"command_context,omitempty"`
+	// organisation_id identifies the owning organisation.
+	OrganisationId string `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId" json:"organisation_id,omitempty"`
+	// close_id identifies the frozen financial close to correct.
+	CloseId string `protobuf:"bytes,3,opt,name=close_id,json=closeId" json:"close_id,omitempty"`
+	// expected_version is the required optimistic-concurrency version.
+	ExpectedVersion uint64 `protobuf:"varint,4,opt,name=expected_version,json=expectedVersion" json:"expected_version,omitempty"`
+	// reason is the bounded human reason for correction.
+	Reason        string `protobuf:"bytes,5,opt,name=reason" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StartFinancialCloseCorrectionRequest) Reset() {
+	*x = StartFinancialCloseCorrectionRequest{}
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StartFinancialCloseCorrectionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StartFinancialCloseCorrectionRequest) ProtoMessage() {}
+
+func (x *StartFinancialCloseCorrectionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StartFinancialCloseCorrectionRequest.ProtoReflect.Descriptor instead.
+func (*StartFinancialCloseCorrectionRequest) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_financial_close_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *StartFinancialCloseCorrectionRequest) GetCommandContext() *CommandContext {
+	if x != nil {
+		return x.CommandContext
+	}
+	return nil
+}
+
+func (x *StartFinancialCloseCorrectionRequest) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *StartFinancialCloseCorrectionRequest) GetCloseId() string {
+	if x != nil {
+		return x.CloseId
+	}
+	return ""
+}
+
+func (x *StartFinancialCloseCorrectionRequest) GetExpectedVersion() uint64 {
+	if x != nil {
+		return x.ExpectedVersion
+	}
+	return 0
+}
+
+func (x *StartFinancialCloseCorrectionRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+// StartFinancialCloseCorrectionResponse returns the original and new correction closes.
+type StartFinancialCloseCorrectionResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// original_close is the preserved frozen close.
+	OriginalClose *FinancialClose `protobuf:"bytes,1,opt,name=original_close,json=originalClose" json:"original_close,omitempty"`
+	// correction_close is the new collecting correction close.
+	CorrectionClose *FinancialClose `protobuf:"bytes,2,opt,name=correction_close,json=correctionClose" json:"correction_close,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *StartFinancialCloseCorrectionResponse) Reset() {
+	*x = StartFinancialCloseCorrectionResponse{}
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StartFinancialCloseCorrectionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StartFinancialCloseCorrectionResponse) ProtoMessage() {}
+
+func (x *StartFinancialCloseCorrectionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StartFinancialCloseCorrectionResponse.ProtoReflect.Descriptor instead.
+func (*StartFinancialCloseCorrectionResponse) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_financial_close_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *StartFinancialCloseCorrectionResponse) GetOriginalClose() *FinancialClose {
+	if x != nil {
+		return x.OriginalClose
+	}
+	return nil
+}
+
+func (x *StartFinancialCloseCorrectionResponse) GetCorrectionClose() *FinancialClose {
+	if x != nil {
+		return x.CorrectionClose
+	}
+	return nil
+}
+
+// GetFinancialStatementsRequest requests statements for one exact immutable snapshot.
+type GetFinancialStatementsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// authentication identifies the principal with financial-close read permission.
+	Authentication *AuthenticationContext `protobuf:"bytes,1,opt,name=authentication" json:"authentication,omitempty"`
+	// organisation_id identifies the owning organisation.
+	OrganisationId string `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId" json:"organisation_id,omitempty"`
+	// close_id identifies the requested financial close.
+	CloseId string `protobuf:"bytes,3,opt,name=close_id,json=closeId" json:"close_id,omitempty"`
+	// snapshot_id identifies the exact immutable snapshot to render.
+	SnapshotId    string `protobuf:"bytes,4,opt,name=snapshot_id,json=snapshotId" json:"snapshot_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetFinancialStatementsRequest) Reset() {
+	*x = GetFinancialStatementsRequest{}
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetFinancialStatementsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetFinancialStatementsRequest) ProtoMessage() {}
+
+func (x *GetFinancialStatementsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetFinancialStatementsRequest.ProtoReflect.Descriptor instead.
+func (*GetFinancialStatementsRequest) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_financial_close_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *GetFinancialStatementsRequest) GetAuthentication() *AuthenticationContext {
+	if x != nil {
+		return x.Authentication
+	}
+	return nil
+}
+
+func (x *GetFinancialStatementsRequest) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *GetFinancialStatementsRequest) GetCloseId() string {
+	if x != nil {
+		return x.CloseId
+	}
+	return ""
+}
+
+func (x *GetFinancialStatementsRequest) GetSnapshotId() string {
+	if x != nil {
+		return x.SnapshotId
+	}
+	return ""
+}
+
+// GetFinancialStatementsResponse returns the bounded rendered statement set.
+type GetFinancialStatementsResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// statements is the bounded rendered statement set for the requested snapshot.
+	Statements    *FinancialStatements `protobuf:"bytes,1,opt,name=statements" json:"statements,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetFinancialStatementsResponse) Reset() {
+	*x = GetFinancialStatementsResponse{}
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetFinancialStatementsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetFinancialStatementsResponse) ProtoMessage() {}
+
+func (x *GetFinancialStatementsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_financial_close_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetFinancialStatementsResponse.ProtoReflect.Descriptor instead.
+func (*GetFinancialStatementsResponse) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_financial_close_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *GetFinancialStatementsResponse) GetStatements() *FinancialStatements {
+	if x != nil {
+		return x.Statements
+	}
+	return nil
+}
+
 var File_tammy_v1_financial_close_proto protoreflect.FileDescriptor
 
 const file_tammy_v1_financial_close_proto_rawDesc = "" +
 	"\n" +
-	"\x1etammy/v1/financial_close.proto\x12\btammy.v1*\xcf\x01\n" +
+	"\x1etammy/v1/financial_close.proto\x12\btammy.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15tammy/v1/common.proto\"\xc4\b\n" +
+	"\n" +
+	"CloseCheck\x12\\\n" +
+	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12g\n" +
+	"\bclose_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\acloseId\x12#\n" +
+	"\arule_id\x18\x03 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\x80\x01R\x06ruleId\x12D\n" +
+	"\bseverity\x18\x04 \x01(\x0e2\x1c.tammy.v1.CloseCheckSeverityB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\bseverity\x12>\n" +
+	"\x06result\x18\x05 \x01(\x0e2\x1a.tammy.v1.CloseCheckResultB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x06result\x120\n" +
+	"\x0fsource_revision\x18\x06 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0esourceRevision\x12H\n" +
+	"\x10affected_sources\x18\a \x03(\v2\x13.tammy.v1.SourceRefB\b\xbaH\x05\x92\x01\x02\x10dR\x0faffectedSources\x12/\n" +
+	"\n" +
+	"resolution\x18\b \x01(\tB\x0f\xbaH\ar\x05\x10\x01\x18\xd0\x0f\xaa\x01\x02\b\x01R\n" +
+	"resolution\x12\x80\x01\n" +
+	"\x13resolved_by_user_id\x18\t \x01(\tBQ\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$\xaa\x01\x02\b\x01R\x10resolvedByUserId\x12;\n" +
+	"\vresolved_at\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"resolvedAt:\xd6\x02\xbaH\xd2\x02\x1a\xcf\x02\n" +
+	",financial_close.close_check.resolution_tuple\x12cresolution, resolved_by_user_id, and resolved_at must be present together only for a resolved check\x1a\xb9\x01this.result == 3 ? (has(this.resolution) && has(this.resolved_by_user_id) && has(this.resolved_at)) : (!has(this.resolution) && !has(this.resolved_by_user_id) && !has(this.resolved_at))\"}\n" +
+	"\rStatementHash\x12@\n" +
+	"\x04kind\x18\x01 \x01(\x0e2 .tammy.v1.FinancialStatementKindB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x04kind\x12*\n" +
+	"\fcontent_hash\x18\x02 \x01(\fB\a\xbaH\x04z\x02h R\vcontentHash\"\x9b\t\n" +
+	"\x1aFinancialStatementApproval\x12\\\n" +
+	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12>\n" +
+	"\fperiod_start\x18\x02 \x01(\v2\x13.tammy.v1.CivilDateB\x06\xbaH\x03\xc8\x01\x01R\vperiodStart\x12:\n" +
+	"\n" +
+	"period_end\x18\x03 \x01(\v2\x13.tammy.v1.CivilDateB\x06\xbaH\x03\xc8\x01\x01R\tperiodEnd\x126\n" +
+	"\x12financial_revision\x18\x04 \x01(\x04B\a\xbaH\x042\x02(\x01R\x11financialRevision\x12D\n" +
+	"\x18approval_wording_version\x18\x05 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\x80\x01R\x16approvalWordingVersion\x12;\n" +
+	"\x15approval_wording_hash\x18\x06 \x01(\fB\a\xbaH\x04z\x02h R\x13approvalWordingHash\x12N\n" +
+	"\x10statement_hashes\x18\a \x03(\v2\x17.tammy.v1.StatementHashB\n" +
+	"\xbaH\a\x92\x01\x04\b\x01\x10\x10R\x0fstatementHashes\x12{\n" +
+	"\x13approved_by_user_id\x18\b \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x10approvedByUserId\x12\x87\x01\n" +
+	"\x19fresh_factor_assertion_id\x18\t \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x16freshFactorAssertionId\x12C\n" +
+	"\vapproved_at\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\n" +
+	"approvedAt:\xcb\x02\xbaH\xc7\x02\x1a\xc4\x02\n" +
+	"\x1ffinancial_close.approval.period\x125approval period must be 2025-07-01 through 2026-06-30\x1a\xe9\x01has(this.period_start) && this.period_start.year == 2025 && this.period_start.month == 7 && this.period_start.day == 1 && has(this.period_end) && this.period_end.year == 2026 && this.period_end.month == 6 && this.period_end.day == 30\"\x82\x01\n" +
+	"\x0eSourceRevision\x12\x1f\n" +
+	"\x05owner\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\x05owner\x12#\n" +
+	"\brevision\x18\x02 \x01(\x04B\a\xbaH\x042\x02(\x01R\brevision\x12*\n" +
+	"\fcontent_hash\x18\x03 \x01(\fB\a\xbaH\x04z\x02h R\vcontentHash\"\x93\x0f\n" +
+	"\x16FinancialCloseSnapshot\x12\\\n" +
+	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12g\n" +
+	"\bclose_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\acloseId\x12u\n" +
+	"\x0forganisation_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x125\n" +
+	"\fverified_abn\x18\x04 \x01(\tB\x12\xbaH\x0fr\r2\v^[0-9]{11}$R\vverifiedAbn\x12)\n" +
+	"\vincome_year\x18\x05 \x01(\x05B\b\xbaH\x05\x1a\x03\b\xea\x0fR\n" +
+	"incomeYear\x12>\n" +
+	"\fperiod_start\x18\x06 \x01(\v2\x13.tammy.v1.CivilDateB\x06\xbaH\x03\xc8\x01\x01R\vperiodStart\x12:\n" +
+	"\n" +
+	"period_end\x18\a \x01(\v2\x13.tammy.v1.CivilDateB\x06\xbaH\x03\xc8\x01\x01R\tperiodEnd\x12&\n" +
+	"\bcurrency\x18\b \x01(\tB\n" +
+	"\xbaH\ar\x05\n" +
+	"\x03AUDR\bcurrency\x12,\n" +
+	"\rsnapshot_hash\x18\t \x01(\fB\a\xbaH\x04z\x02h R\fsnapshotHash\x126\n" +
+	"\x12financial_revision\x18\n" +
+	" \x01(\x04B\a\xbaH\x042\x02(\x01R\x11financialRevision\x12S\n" +
+	"\x13subledger_revisions\x18\v \x03(\v2\x18.tammy.v1.SourceRevisionB\b\xbaH\x05\x92\x01\x02\x10 R\x12subledgerRevisions\x12N\n" +
+	"\x10statement_hashes\x18\f \x03(\v2\x17.tammy.v1.StatementHashB\n" +
+	"\xbaH\a\x92\x01\x04\b\x04\x10\x10R\x0fstatementHashes\x125\n" +
+	"\x12trial_balance_hash\x18\r \x01(\fB\a\xbaH\x04z\x02h R\x10trialBalanceHash\x12.\n" +
+	"\x0echecklist_hash\x18\x0e \x01(\fB\a\xbaH\x04z\x02h R\rchecklistHash\x128\n" +
+	"\x13reconciliation_hash\x18\x0f \x01(\fB\a\xbaH\x04z\x02h R\x12reconciliationHash\x12G\n" +
+	"\x1baccounting_rule_fingerprint\x18\x10 \x01(\fB\a\xbaH\x04z\x02h R\x19accountingRuleFingerprint\x129\n" +
+	"\x14gst_rule_fingerprint\x18\x11 \x01(\fB\a\xbaH\x04z\x02h R\x12gstRuleFingerprint\x12=\n" +
+	"\x16asset_rule_fingerprint\x18\x12 \x01(\fB\a\xbaH\x04z\x02h R\x14assetRuleFingerprint\x12=\n" +
+	"\x16evidence_manifest_hash\x18\x13 \x01(\fB\a\xbaH\x04z\x02h R\x14evidenceManifestHash\x12/\n" +
+	"\x0faudit_head_hash\x18\x14 \x01(\fB\a\xbaH\x04z\x02h R\rauditHeadHash\x12H\n" +
+	"\bapproval\x18\x15 \x01(\v2$.tammy.v1.FinancialStatementApprovalB\x06\xbaH\x03\xc8\x01\x01R\bapproval\x12}\n" +
+	"\x11corrects_close_id\x18\x16 \x01(\tBQ\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$\xaa\x01\x02\b\x01R\x0fcorrectsCloseId\x12?\n" +
+	"\tfrozen_at\x18\x17 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\bfrozenAt:\xcb\x02\xbaH\xc7\x02\x1a\xc4\x02\n" +
+	"\x1ffinancial_close.snapshot.period\x125snapshot period must be 2025-07-01 through 2026-06-30\x1a\xe9\x01has(this.period_start) && this.period_start.year == 2025 && this.period_start.month == 7 && this.period_start.day == 1 && has(this.period_end) && this.period_end.year == 2026 && this.period_end.month == 6 && this.period_end.day == 30\"\x89\f\n" +
+	"\x0eFinancialClose\x12\\\n" +
+	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12)\n" +
+	"\vincome_year\x18\x03 \x01(\x05B\b\xbaH\x05\x1a\x03\b\xea\x0fR\n" +
+	"incomeYear\x12>\n" +
+	"\fperiod_start\x18\x04 \x01(\v2\x13.tammy.v1.CivilDateB\x06\xbaH\x03\xc8\x01\x01R\vperiodStart\x12:\n" +
+	"\n" +
+	"period_end\x18\x05 \x01(\v2\x13.tammy.v1.CivilDateB\x06\xbaH\x03\xc8\x01\x01R\tperiodEnd\x12&\n" +
+	"\bcurrency\x18\x06 \x01(\tB\n" +
+	"\xbaH\ar\x05\n" +
+	"\x03AUDR\bcurrency\x12!\n" +
+	"\aversion\x18\a \x01(\x04B\a\xbaH\x042\x02(\x01R\aversion\x12?\n" +
+	"\x05state\x18\b \x01(\x0e2\x1d.tammy.v1.FinancialCloseStateB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x05state\x126\n" +
+	"\x12financial_revision\x18\t \x01(\x04B\a\xbaH\x042\x02(\x01R\x11financialRevision\x12V\n" +
+	"\x16latest_frozen_snapshot\x18\n" +
+	" \x01(\v2 .tammy.v1.FinancialCloseSnapshotR\x14latestFrozenSnapshot\x12A\n" +
+	"\n" +
+	"created_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\tcreatedAt\x12A\n" +
+	"\n" +
+	"updated_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\tupdatedAt:\xd8\x05\xbaH\xd4\x05\x1a\xc2\x02\n" +
+	"\x16financial_close.period\x12<financial close period must be 2025-07-01 through 2026-06-30\x1a\xe9\x01has(this.period_start) && this.period_start.year == 2025 && this.period_start.month == 7 && this.period_start.day == 1 && has(this.period_end) && this.period_end.year == 2026 && this.period_end.month == 6 && this.period_end.day == 30\x1a\x8c\x03\n" +
+	"(financial_close.frozen_snapshot_revision\x12Xa frozen close requires a snapshot whose snapshot and approval revisions match the close\x1a\x85\x02this.state != 4 || (has(this.latest_frozen_snapshot) && has(this.latest_frozen_snapshot.approval) && this.latest_frozen_snapshot.financial_revision == this.financial_revision && this.latest_frozen_snapshot.approval.financial_revision == this.financial_revision)\"\xe7\x02\n" +
+	"\x16FinancialStatementLine\x12+\n" +
+	"\vstable_code\x18\x01 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\x80\x01R\n" +
+	"stableCode\x12 \n" +
+	"\x05label\x18\x02 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\x80\x02R\x05label\x12/\n" +
+	"\x06amount\x18\x03 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\x06amount\x127\n" +
+	"\asources\x18\x04 \x03(\v2\x13.tammy.v1.SourceRefB\b\xbaH\x05\x92\x01\x02\x10dR\asources:\x93\x01\xbaH\x8f\x01\x1a\x8c\x01\n" +
+	"\"financial_close.statement_line.aud\x12-financial statement line amounts must use AUD\x1a7!has(this.amount) || this.amount.currency_code == 'AUD'\"\xc5\x01\n" +
+	"\x12FinancialStatement\x12@\n" +
+	"\x04kind\x18\x01 \x01(\x0e2 .tammy.v1.FinancialStatementKindB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x04kind\x12*\n" +
+	"\fcontent_hash\x18\x02 \x01(\fB\a\xbaH\x04z\x02h R\vcontentHash\x12A\n" +
+	"\x05lines\x18\x03 \x03(\v2 .tammy.v1.FinancialStatementLineB\t\xbaH\x06\x92\x01\x03\x10\xd0\x0fR\x05lines\"\xef\x02\n" +
+	"\x13FinancialStatements\x12g\n" +
+	"\bclose_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\acloseId\x12m\n" +
+	"\vsnapshot_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\n" +
+	"snapshotId\x126\n" +
+	"\x12financial_revision\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\x11financialRevision\x12H\n" +
+	"\n" +
+	"statements\x18\x04 \x03(\v2\x1c.tammy.v1.FinancialStatementB\n" +
+	"\xbaH\a\x92\x01\x04\b\x04\x10\bR\n" +
+	"statements\"\xd9\x05\n" +
+	"\x1bCreateFinancialCloseRequest\x12I\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12)\n" +
+	"\vincome_year\x18\x03 \x01(\x05B\b\xbaH\x05\x1a\x03\b\xea\x0fR\n" +
+	"incomeYear\x12>\n" +
+	"\fperiod_start\x18\x04 \x01(\v2\x13.tammy.v1.CivilDateB\x06\xbaH\x03\xc8\x01\x01R\vperiodStart\x12:\n" +
+	"\n" +
+	"period_end\x18\x05 \x01(\v2\x13.tammy.v1.CivilDateB\x06\xbaH\x03\xc8\x01\x01R\tperiodEnd:\xd0\x02\xbaH\xcc\x02\x1a\xc9\x02\n" +
+	"\x1dfinancial_close.create.period\x12<financial close period must be 2025-07-01 through 2026-06-30\x1a\xe9\x01has(this.period_start) && this.period_start.year == 2025 && this.period_start.month == 7 && this.period_start.day == 1 && has(this.period_end) && this.period_end.year == 2026 && this.period_end.month == 6 && this.period_end.day == 30\"V\n" +
+	"\x1cCreateFinancialCloseResponse\x126\n" +
+	"\x05close\x18\x01 \x01(\v2\x18.tammy.v1.FinancialCloseB\x06\xbaH\x03\xc8\x01\x01R\x05close\"\xcb\x02\n" +
+	"\x18GetFinancialCloseRequest\x12O\n" +
+	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12g\n" +
+	"\bclose_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\acloseId\"S\n" +
+	"\x19GetFinancialCloseResponse\x126\n" +
+	"\x05close\x18\x01 \x01(\v2\x18.tammy.v1.FinancialCloseB\x06\xbaH\x03\xc8\x01\x01R\x05close\"\xfc\x02\n" +
+	"\x16ListCloseChecksRequest\x12O\n" +
+	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12g\n" +
+	"\bclose_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\acloseId\x121\n" +
+	"\x04page\x18\x04 \x01(\v2\x15.tammy.v1.PageRequestB\x06\xbaH\x03\xc8\x01\x01R\x04page\"\x82\x01\n" +
+	"\x17ListCloseChecksResponse\x127\n" +
+	"\x06checks\x18\x01 \x03(\v2\x14.tammy.v1.CloseCheckB\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\x06checks\x12.\n" +
+	"\x04page\x18\x02 \x01(\v2\x12.tammy.v1.PageInfoB\x06\xbaH\x03\xc8\x01\x01R\x04page\"\x90\x04\n" +
+	"\x1aResolveCloseWarningRequest\x12I\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12g\n" +
+	"\bclose_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\acloseId\x122\n" +
+	"\x10expected_version\x18\x04 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion\x12g\n" +
+	"\bcheck_id\x18\x05 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\acheckId\x12*\n" +
+	"\n" +
+	"resolution\x18\x06 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xd0\x0fR\n" +
+	"resolution\"\x89\x01\n" +
+	"\x1bResolveCloseWarningResponse\x126\n" +
+	"\x05close\x18\x01 \x01(\v2\x18.tammy.v1.FinancialCloseB\x06\xbaH\x03\xc8\x01\x01R\x05close\x122\n" +
+	"\x05check\x18\x02 \x01(\v2\x14.tammy.v1.CloseCheckB\x06\xbaH\x03\xc8\x01\x01R\x05check\"\xfe\x04\n" +
+	"\x1bFreezeFinancialCloseRequest\x12I\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12g\n" +
+	"\bclose_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\acloseId\x122\n" +
+	"\x10expected_version\x18\x04 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion:\xff\x01\xbaH\xfb\x01\x1a\xf8\x01\n" +
+	"#financial_close.freeze.fresh_factor\x12Bfreeze requires a fresh factor reserved for financial_close_freeze\x1a\x8c\x01has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'financial_close_freeze'\"\x9c\x01\n" +
+	"\x1cFreezeFinancialCloseResponse\x126\n" +
+	"\x05close\x18\x01 \x01(\v2\x18.tammy.v1.FinancialCloseB\x06\xbaH\x03\xc8\x01\x01R\x05close\x12D\n" +
+	"\bsnapshot\x18\x02 \x01(\v2 .tammy.v1.FinancialCloseSnapshotB\x06\xbaH\x03\xc8\x01\x01R\bsnapshot\"\xa2\x05\n" +
+	"\x1bReopenFinancialCloseRequest\x12I\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12g\n" +
+	"\bclose_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\acloseId\x122\n" +
+	"\x10expected_version\x18\x04 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion\x12\"\n" +
+	"\x06reason\x18\x05 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xd0\x0fR\x06reason:\xff\x01\xbaH\xfb\x01\x1a\xf8\x01\n" +
+	"#financial_close.reopen.fresh_factor\x12Breopen requires a fresh factor reserved for financial_close_reopen\x1a\x8c\x01has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'financial_close_reopen'\"\xd9\x01\n" +
+	"\x1cReopenFinancialCloseResponse\x126\n" +
+	"\x05close\x18\x01 \x01(\v2\x18.tammy.v1.FinancialCloseB\x06\xbaH\x03\xc8\x01\x01R\x05close\x12\x80\x01\n" +
+	"\x15preserved_snapshot_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x13preservedSnapshotId\"\xd8\x05\n" +
+	"$StartFinancialCloseCorrectionRequest\x12I\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12g\n" +
+	"\bclose_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\acloseId\x122\n" +
+	"\x10expected_version\x18\x04 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion\x12\"\n" +
+	"\x06reason\x18\x05 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xd0\x0fR\x06reason:\xac\x02\xbaH\xa8\x02\x1a\xa5\x02\n" +
+	"-financial_close.start_correction.fresh_factor\x12[starting a correction requires a fresh factor reserved for financial_close_start_correction\x1a\x96\x01has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'financial_close_start_correction'\"\xbd\x01\n" +
+	"%StartFinancialCloseCorrectionResponse\x12G\n" +
+	"\x0eoriginal_close\x18\x01 \x01(\v2\x18.tammy.v1.FinancialCloseB\x06\xbaH\x03\xc8\x01\x01R\roriginalClose\x12K\n" +
+	"\x10correction_close\x18\x02 \x01(\v2\x18.tammy.v1.FinancialCloseB\x06\xbaH\x03\xc8\x01\x01R\x0fcorrectionClose\"\xbf\x03\n" +
+	"\x1dGetFinancialStatementsRequest\x12O\n" +
+	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12g\n" +
+	"\bclose_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\acloseId\x12m\n" +
+	"\vsnapshot_id\x18\x04 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\n" +
+	"snapshotId\"g\n" +
+	"\x1eGetFinancialStatementsResponse\x12E\n" +
+	"\n" +
+	"statements\x18\x01 \x01(\v2\x1d.tammy.v1.FinancialStatementsB\x06\xbaH\x03\xc8\x01\x01R\n" +
+	"statements*\xcf\x01\n" +
 	"\x13FinancialCloseState\x12%\n" +
 	"!FINANCIAL_CLOSE_STATE_UNSPECIFIED\x10\x00\x12$\n" +
 	" FINANCIAL_CLOSE_STATE_COLLECTING\x10\x01\x12!\n" +
 	"\x1dFINANCIAL_CLOSE_STATE_BLOCKED\x10\x02\x12&\n" +
 	"\"FINANCIAL_CLOSE_STATE_REVIEW_READY\x10\x03\x12 \n" +
-	"\x1cFINANCIAL_CLOSE_STATE_FROZEN\x10\x04BLZEgithub.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1\x92\x03\x02\b\x02b\beditionsp\xe8\a"
+	"\x1cFINANCIAL_CLOSE_STATE_FROZEN\x10\x04*~\n" +
+	"\x12CloseCheckSeverity\x12$\n" +
+	" CLOSE_CHECK_SEVERITY_UNSPECIFIED\x10\x00\x12 \n" +
+	"\x1cCLOSE_CHECK_SEVERITY_BLOCKER\x10\x01\x12 \n" +
+	"\x1cCLOSE_CHECK_SEVERITY_WARNING\x10\x02*\x95\x01\n" +
+	"\x10CloseCheckResult\x12\"\n" +
+	"\x1eCLOSE_CHECK_RESULT_UNSPECIFIED\x10\x00\x12\x1d\n" +
+	"\x19CLOSE_CHECK_RESULT_FAILED\x10\x01\x12\x1d\n" +
+	"\x19CLOSE_CHECK_RESULT_PASSED\x10\x02\x12\x1f\n" +
+	"\x1bCLOSE_CHECK_RESULT_RESOLVED\x10\x03*\xaf\x03\n" +
+	"\x16FinancialStatementKind\x12(\n" +
+	"$FINANCIAL_STATEMENT_KIND_UNSPECIFIED\x10\x00\x12,\n" +
+	"(FINANCIAL_STATEMENT_KIND_PROFIT_AND_LOSS\x10\x01\x12*\n" +
+	"&FINANCIAL_STATEMENT_KIND_BALANCE_SHEET\x10\x02\x12&\n" +
+	"\"FINANCIAL_STATEMENT_KIND_CASH_FLOW\x10\x03\x12*\n" +
+	"&FINANCIAL_STATEMENT_KIND_TRIAL_BALANCE\x10\x04\x12+\n" +
+	"'FINANCIAL_STATEMENT_KIND_GENERAL_LEDGER\x10\x05\x12'\n" +
+	"#FINANCIAL_STATEMENT_KIND_GST_DETAIL\x10\x06\x121\n" +
+	"-FINANCIAL_STATEMENT_KIND_FIXED_ASSET_SCHEDULE\x10\a\x124\n" +
+	"0FINANCIAL_STATEMENT_KIND_FRANKING_RECONCILIATION\x10\b2\xd6\x06\n" +
+	"\x15FinancialCloseService\x12e\n" +
+	"\x14CreateFinancialClose\x12%.tammy.v1.CreateFinancialCloseRequest\x1a&.tammy.v1.CreateFinancialCloseResponse\x12\\\n" +
+	"\x11GetFinancialClose\x12\".tammy.v1.GetFinancialCloseRequest\x1a#.tammy.v1.GetFinancialCloseResponse\x12V\n" +
+	"\x0fListCloseChecks\x12 .tammy.v1.ListCloseChecksRequest\x1a!.tammy.v1.ListCloseChecksResponse\x12b\n" +
+	"\x13ResolveCloseWarning\x12$.tammy.v1.ResolveCloseWarningRequest\x1a%.tammy.v1.ResolveCloseWarningResponse\x12e\n" +
+	"\x14FreezeFinancialClose\x12%.tammy.v1.FreezeFinancialCloseRequest\x1a&.tammy.v1.FreezeFinancialCloseResponse\x12e\n" +
+	"\x14ReopenFinancialClose\x12%.tammy.v1.ReopenFinancialCloseRequest\x1a&.tammy.v1.ReopenFinancialCloseResponse\x12\x80\x01\n" +
+	"\x1dStartFinancialCloseCorrection\x12..tammy.v1.StartFinancialCloseCorrectionRequest\x1a/.tammy.v1.StartFinancialCloseCorrectionResponse\x12k\n" +
+	"\x16GetFinancialStatements\x12'.tammy.v1.GetFinancialStatementsRequest\x1a(.tammy.v1.GetFinancialStatementsResponseBLZEgithub.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1\x92\x03\x02\b\x02b\beditionsp\xe8\a"
 
 var (
 	file_tammy_v1_financial_close_proto_rawDescOnce sync.Once
@@ -106,16 +2529,118 @@ func file_tammy_v1_financial_close_proto_rawDescGZIP() []byte {
 	return file_tammy_v1_financial_close_proto_rawDescData
 }
 
-var file_tammy_v1_financial_close_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_tammy_v1_financial_close_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
+var file_tammy_v1_financial_close_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
 var file_tammy_v1_financial_close_proto_goTypes = []any{
-	(FinancialCloseState)(0), // 0: tammy.v1.FinancialCloseState
+	(FinancialCloseState)(0),                      // 0: tammy.v1.FinancialCloseState
+	(CloseCheckSeverity)(0),                       // 1: tammy.v1.CloseCheckSeverity
+	(CloseCheckResult)(0),                         // 2: tammy.v1.CloseCheckResult
+	(FinancialStatementKind)(0),                   // 3: tammy.v1.FinancialStatementKind
+	(*CloseCheck)(nil),                            // 4: tammy.v1.CloseCheck
+	(*StatementHash)(nil),                         // 5: tammy.v1.StatementHash
+	(*FinancialStatementApproval)(nil),            // 6: tammy.v1.FinancialStatementApproval
+	(*SourceRevision)(nil),                        // 7: tammy.v1.SourceRevision
+	(*FinancialCloseSnapshot)(nil),                // 8: tammy.v1.FinancialCloseSnapshot
+	(*FinancialClose)(nil),                        // 9: tammy.v1.FinancialClose
+	(*FinancialStatementLine)(nil),                // 10: tammy.v1.FinancialStatementLine
+	(*FinancialStatement)(nil),                    // 11: tammy.v1.FinancialStatement
+	(*FinancialStatements)(nil),                   // 12: tammy.v1.FinancialStatements
+	(*CreateFinancialCloseRequest)(nil),           // 13: tammy.v1.CreateFinancialCloseRequest
+	(*CreateFinancialCloseResponse)(nil),          // 14: tammy.v1.CreateFinancialCloseResponse
+	(*GetFinancialCloseRequest)(nil),              // 15: tammy.v1.GetFinancialCloseRequest
+	(*GetFinancialCloseResponse)(nil),             // 16: tammy.v1.GetFinancialCloseResponse
+	(*ListCloseChecksRequest)(nil),                // 17: tammy.v1.ListCloseChecksRequest
+	(*ListCloseChecksResponse)(nil),               // 18: tammy.v1.ListCloseChecksResponse
+	(*ResolveCloseWarningRequest)(nil),            // 19: tammy.v1.ResolveCloseWarningRequest
+	(*ResolveCloseWarningResponse)(nil),           // 20: tammy.v1.ResolveCloseWarningResponse
+	(*FreezeFinancialCloseRequest)(nil),           // 21: tammy.v1.FreezeFinancialCloseRequest
+	(*FreezeFinancialCloseResponse)(nil),          // 22: tammy.v1.FreezeFinancialCloseResponse
+	(*ReopenFinancialCloseRequest)(nil),           // 23: tammy.v1.ReopenFinancialCloseRequest
+	(*ReopenFinancialCloseResponse)(nil),          // 24: tammy.v1.ReopenFinancialCloseResponse
+	(*StartFinancialCloseCorrectionRequest)(nil),  // 25: tammy.v1.StartFinancialCloseCorrectionRequest
+	(*StartFinancialCloseCorrectionResponse)(nil), // 26: tammy.v1.StartFinancialCloseCorrectionResponse
+	(*GetFinancialStatementsRequest)(nil),         // 27: tammy.v1.GetFinancialStatementsRequest
+	(*GetFinancialStatementsResponse)(nil),        // 28: tammy.v1.GetFinancialStatementsResponse
+	(*SourceRef)(nil),                             // 29: tammy.v1.SourceRef
+	(*timestamppb.Timestamp)(nil),                 // 30: google.protobuf.Timestamp
+	(*CivilDate)(nil),                             // 31: tammy.v1.CivilDate
+	(*Money)(nil),                                 // 32: tammy.v1.Money
+	(*CommandContext)(nil),                        // 33: tammy.v1.CommandContext
+	(*AuthenticationContext)(nil),                 // 34: tammy.v1.AuthenticationContext
+	(*PageRequest)(nil),                           // 35: tammy.v1.PageRequest
+	(*PageInfo)(nil),                              // 36: tammy.v1.PageInfo
 }
 var file_tammy_v1_financial_close_proto_depIdxs = []int32{
-	0, // [0:0] is the sub-list for method output_type
-	0, // [0:0] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	1,  // 0: tammy.v1.CloseCheck.severity:type_name -> tammy.v1.CloseCheckSeverity
+	2,  // 1: tammy.v1.CloseCheck.result:type_name -> tammy.v1.CloseCheckResult
+	29, // 2: tammy.v1.CloseCheck.affected_sources:type_name -> tammy.v1.SourceRef
+	30, // 3: tammy.v1.CloseCheck.resolved_at:type_name -> google.protobuf.Timestamp
+	3,  // 4: tammy.v1.StatementHash.kind:type_name -> tammy.v1.FinancialStatementKind
+	31, // 5: tammy.v1.FinancialStatementApproval.period_start:type_name -> tammy.v1.CivilDate
+	31, // 6: tammy.v1.FinancialStatementApproval.period_end:type_name -> tammy.v1.CivilDate
+	5,  // 7: tammy.v1.FinancialStatementApproval.statement_hashes:type_name -> tammy.v1.StatementHash
+	30, // 8: tammy.v1.FinancialStatementApproval.approved_at:type_name -> google.protobuf.Timestamp
+	31, // 9: tammy.v1.FinancialCloseSnapshot.period_start:type_name -> tammy.v1.CivilDate
+	31, // 10: tammy.v1.FinancialCloseSnapshot.period_end:type_name -> tammy.v1.CivilDate
+	7,  // 11: tammy.v1.FinancialCloseSnapshot.subledger_revisions:type_name -> tammy.v1.SourceRevision
+	5,  // 12: tammy.v1.FinancialCloseSnapshot.statement_hashes:type_name -> tammy.v1.StatementHash
+	6,  // 13: tammy.v1.FinancialCloseSnapshot.approval:type_name -> tammy.v1.FinancialStatementApproval
+	30, // 14: tammy.v1.FinancialCloseSnapshot.frozen_at:type_name -> google.protobuf.Timestamp
+	31, // 15: tammy.v1.FinancialClose.period_start:type_name -> tammy.v1.CivilDate
+	31, // 16: tammy.v1.FinancialClose.period_end:type_name -> tammy.v1.CivilDate
+	0,  // 17: tammy.v1.FinancialClose.state:type_name -> tammy.v1.FinancialCloseState
+	8,  // 18: tammy.v1.FinancialClose.latest_frozen_snapshot:type_name -> tammy.v1.FinancialCloseSnapshot
+	30, // 19: tammy.v1.FinancialClose.created_at:type_name -> google.protobuf.Timestamp
+	30, // 20: tammy.v1.FinancialClose.updated_at:type_name -> google.protobuf.Timestamp
+	32, // 21: tammy.v1.FinancialStatementLine.amount:type_name -> tammy.v1.Money
+	29, // 22: tammy.v1.FinancialStatementLine.sources:type_name -> tammy.v1.SourceRef
+	3,  // 23: tammy.v1.FinancialStatement.kind:type_name -> tammy.v1.FinancialStatementKind
+	10, // 24: tammy.v1.FinancialStatement.lines:type_name -> tammy.v1.FinancialStatementLine
+	11, // 25: tammy.v1.FinancialStatements.statements:type_name -> tammy.v1.FinancialStatement
+	33, // 26: tammy.v1.CreateFinancialCloseRequest.command_context:type_name -> tammy.v1.CommandContext
+	31, // 27: tammy.v1.CreateFinancialCloseRequest.period_start:type_name -> tammy.v1.CivilDate
+	31, // 28: tammy.v1.CreateFinancialCloseRequest.period_end:type_name -> tammy.v1.CivilDate
+	9,  // 29: tammy.v1.CreateFinancialCloseResponse.close:type_name -> tammy.v1.FinancialClose
+	34, // 30: tammy.v1.GetFinancialCloseRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	9,  // 31: tammy.v1.GetFinancialCloseResponse.close:type_name -> tammy.v1.FinancialClose
+	34, // 32: tammy.v1.ListCloseChecksRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	35, // 33: tammy.v1.ListCloseChecksRequest.page:type_name -> tammy.v1.PageRequest
+	4,  // 34: tammy.v1.ListCloseChecksResponse.checks:type_name -> tammy.v1.CloseCheck
+	36, // 35: tammy.v1.ListCloseChecksResponse.page:type_name -> tammy.v1.PageInfo
+	33, // 36: tammy.v1.ResolveCloseWarningRequest.command_context:type_name -> tammy.v1.CommandContext
+	9,  // 37: tammy.v1.ResolveCloseWarningResponse.close:type_name -> tammy.v1.FinancialClose
+	4,  // 38: tammy.v1.ResolveCloseWarningResponse.check:type_name -> tammy.v1.CloseCheck
+	33, // 39: tammy.v1.FreezeFinancialCloseRequest.command_context:type_name -> tammy.v1.CommandContext
+	9,  // 40: tammy.v1.FreezeFinancialCloseResponse.close:type_name -> tammy.v1.FinancialClose
+	8,  // 41: tammy.v1.FreezeFinancialCloseResponse.snapshot:type_name -> tammy.v1.FinancialCloseSnapshot
+	33, // 42: tammy.v1.ReopenFinancialCloseRequest.command_context:type_name -> tammy.v1.CommandContext
+	9,  // 43: tammy.v1.ReopenFinancialCloseResponse.close:type_name -> tammy.v1.FinancialClose
+	33, // 44: tammy.v1.StartFinancialCloseCorrectionRequest.command_context:type_name -> tammy.v1.CommandContext
+	9,  // 45: tammy.v1.StartFinancialCloseCorrectionResponse.original_close:type_name -> tammy.v1.FinancialClose
+	9,  // 46: tammy.v1.StartFinancialCloseCorrectionResponse.correction_close:type_name -> tammy.v1.FinancialClose
+	34, // 47: tammy.v1.GetFinancialStatementsRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	12, // 48: tammy.v1.GetFinancialStatementsResponse.statements:type_name -> tammy.v1.FinancialStatements
+	13, // 49: tammy.v1.FinancialCloseService.CreateFinancialClose:input_type -> tammy.v1.CreateFinancialCloseRequest
+	15, // 50: tammy.v1.FinancialCloseService.GetFinancialClose:input_type -> tammy.v1.GetFinancialCloseRequest
+	17, // 51: tammy.v1.FinancialCloseService.ListCloseChecks:input_type -> tammy.v1.ListCloseChecksRequest
+	19, // 52: tammy.v1.FinancialCloseService.ResolveCloseWarning:input_type -> tammy.v1.ResolveCloseWarningRequest
+	21, // 53: tammy.v1.FinancialCloseService.FreezeFinancialClose:input_type -> tammy.v1.FreezeFinancialCloseRequest
+	23, // 54: tammy.v1.FinancialCloseService.ReopenFinancialClose:input_type -> tammy.v1.ReopenFinancialCloseRequest
+	25, // 55: tammy.v1.FinancialCloseService.StartFinancialCloseCorrection:input_type -> tammy.v1.StartFinancialCloseCorrectionRequest
+	27, // 56: tammy.v1.FinancialCloseService.GetFinancialStatements:input_type -> tammy.v1.GetFinancialStatementsRequest
+	14, // 57: tammy.v1.FinancialCloseService.CreateFinancialClose:output_type -> tammy.v1.CreateFinancialCloseResponse
+	16, // 58: tammy.v1.FinancialCloseService.GetFinancialClose:output_type -> tammy.v1.GetFinancialCloseResponse
+	18, // 59: tammy.v1.FinancialCloseService.ListCloseChecks:output_type -> tammy.v1.ListCloseChecksResponse
+	20, // 60: tammy.v1.FinancialCloseService.ResolveCloseWarning:output_type -> tammy.v1.ResolveCloseWarningResponse
+	22, // 61: tammy.v1.FinancialCloseService.FreezeFinancialClose:output_type -> tammy.v1.FreezeFinancialCloseResponse
+	24, // 62: tammy.v1.FinancialCloseService.ReopenFinancialClose:output_type -> tammy.v1.ReopenFinancialCloseResponse
+	26, // 63: tammy.v1.FinancialCloseService.StartFinancialCloseCorrection:output_type -> tammy.v1.StartFinancialCloseCorrectionResponse
+	28, // 64: tammy.v1.FinancialCloseService.GetFinancialStatements:output_type -> tammy.v1.GetFinancialStatementsResponse
+	57, // [57:65] is the sub-list for method output_type
+	49, // [49:57] is the sub-list for method input_type
+	49, // [49:49] is the sub-list for extension type_name
+	49, // [49:49] is the sub-list for extension extendee
+	0,  // [0:49] is the sub-list for field type_name
 }
 
 func init() { file_tammy_v1_financial_close_proto_init() }
@@ -123,19 +2648,21 @@ func file_tammy_v1_financial_close_proto_init() {
 	if File_tammy_v1_financial_close_proto != nil {
 		return
 	}
+	file_tammy_v1_common_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_tammy_v1_financial_close_proto_rawDesc), len(file_tammy_v1_financial_close_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   0,
+			NumEnums:      4,
+			NumMessages:   25,
 			NumExtensions: 0,
-			NumServices:   0,
+			NumServices:   1,
 		},
 		GoTypes:           file_tammy_v1_financial_close_proto_goTypes,
 		DependencyIndexes: file_tammy_v1_financial_close_proto_depIdxs,
 		EnumInfos:         file_tammy_v1_financial_close_proto_enumTypes,
+		MessageInfos:      file_tammy_v1_financial_close_proto_msgTypes,
 	}.Build()
 	File_tammy_v1_financial_close_proto = out.File
 	file_tammy_v1_financial_close_proto_goTypes = nil

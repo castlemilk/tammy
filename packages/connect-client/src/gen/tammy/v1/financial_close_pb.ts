@@ -3,14 +3,1210 @@
 // option features.field_presence = IMPLICIT;
 /* eslint-disable */
 
-import type { GenEnum, GenFile } from "@bufbuild/protobuf/codegenv2";
-import { enumDesc, fileDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import { file_buf_validate_validate } from "@buf/bufbuild_protovalidate.bufbuild_es/buf/validate/validate_pb.js";
+import type { Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
+import type { AuthenticationContext, CivilDate, CommandContext, Money, PageInfo, PageRequest, SourceRef } from "./common_pb.js";
+import { file_tammy_v1_common } from "./common_pb.js";
+import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file tammy/v1/financial_close.proto.
  */
 export const file_tammy_v1_financial_close: GenFile = /*@__PURE__*/
-  fileDesc("Ch50YW1teS92MS9maW5hbmNpYWxfY2xvc2UucHJvdG8SCHRhbW15LnYxKs8BChNGaW5hbmNpYWxDbG9zZVN0YXRlEiUKIUZJTkFOQ0lBTF9DTE9TRV9TVEFURV9VTlNQRUNJRklFRBAAEiQKIEZJTkFOQ0lBTF9DTE9TRV9TVEFURV9DT0xMRUNUSU5HEAESIQodRklOQU5DSUFMX0NMT1NFX1NUQVRFX0JMT0NLRUQQAhImCiJGSU5BTkNJQUxfQ0xPU0VfU1RBVEVfUkVWSUVXX1JFQURZEAMSIAocRklOQU5DSUFMX0NMT1NFX1NUQVRFX0ZST1pFThAEQkxaRWdpdGh1Yi5jb20vdGFtbXlhcHAvdGFtbXkvc2VydmljZXMvY29yZS9pbnRlcm5hbC9nZW4vdGFtbXkvdjE7dGFtbXl2MZIDAggCYghlZGl0aW9uc3DoBw");
+  fileDesc("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X2VuZBgHIAEoCzITLnRhbW15LnYxLkNpdmlsRGF0ZUIGukgDyAEBEhwKCGN1cnJlbmN5GAggASgJQgq6SAdyBQoDQVVEEh4KDXNuYXBzaG90X2hhc2gYCSABKAxCB7pIBHoCaCASIwoSZmluYW5jaWFsX3JldmlzaW9uGAogASgEQge6SAQyAigBEj8KE3N1YmxlZGdlcl9yZXZpc2lvbnMYCyADKAsyGC50YW1teS52MS5Tb3VyY2VSZXZpc2lvbkIIukgFkgECECASPQoQc3RhdGVtZW50X2hhc2hlcxgMIAMoCzIXLnRhbW15LnYxLlN0YXRlbWVudEhhc2hCCrpIB5IBBAgEEBASIwoSdHJpYWxfYmFsYW5jZV9oYXNoGA0gASgMQge6SAR6AmggEh8KDmNoZWNrbGlzdF9oYXNoGA4gASgMQge6SAR6AmggEiQKE3JlY29uY2lsaWF0aW9uX2hhc2gYDyABKAxCB7pIBHoCaCASLAobYWNjb3VudGluZ19ydWxlX2ZpbmdlcnByaW50GBAgASgMQge6SAR6AmggEiUKFGdzdF9ydWxlX2ZpbmdlcnByaW50GBEgASgMQge6SAR6AmggEicKFmFzc2V0X3J1bGVfZmluZ2VycHJpbnQYEiABKAxCB7pIBHoCaCASJwoWZXZpZGVuY2VfbWFuaWZlc3RfaGFzaBgTIAEoDEIHukgEegJoIBIgCg9hdWRpdF9oZWFkX2hhc2gYFCABKAxCB7pIBHoCaCASPgoIYXBwcm92YWwYFSABKAsyJC50YW1teS52MS5GaW5hbmNpYWxTdGF0ZW1lbnRBcHByb3ZhbEIGukgDyAEBEmwKEWNvcnJlY3RzX2Nsb3NlX2lkGBYgASgJQlGqAQIIAbpISXJHMkVeWzAtOWEtZl17OH0tWzAtOWEtZl17NH0tN1swLTlhLWZdezN9LVs4OWFiXVswLTlhLWZdezN9LVswLTlhLWZdezEyfSQSNQoJZnJvemVuX2F0GBcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIGukgDyAEBOssCukjHAhrEAgofZmluYW5jaWFsX2Nsb3NlLnNuYXBzaG90LnBlcmlvZBI1c25hcHNob3QgcGVyaW9kIG11c3QgYmUgMjAyNS0wNy0wMSB0aHJvdWdoIDIwMjYtMDYtMzAa6QFoYXModGhpcy5wZXJpb2Rfc3RhcnQpICYmIHRoaXMucGVyaW9kX3N0YXJ0LnllYXIgPT0gMjAyNSAmJiB0aGlzLnBlcmlvZF9zdGFydC5tb250aCA9PSA3ICYmIHRoaXMucGVyaW9kX3N0YXJ0LmRheSA9PSAxICYmIGhhcyh0aGlzLnBlcmlvZF9lbmQpICYmIHRoaXMucGVyaW9kX2VuZC55ZWFyID09IDIwMjYgJiYgdGhpcy5wZXJpb2RfZW5kLm1vbnRoID09IDYgJiYgdGhpcy5wZXJpb2RfZW5kLmRheSA9PSAzMCL4CgoORmluYW5jaWFsQ2xvc2USWAoCaWQYASABKAlCTLpISXJHMkVeWzAtOWEtZl17OH0tWzAtOWEtZl17NH0tN1swLTlhLWZdezN9LVs4OWFiXVswLTlhLWZdezN9LVswLTlhLWZdezEyfSQSZQoPb3JnYW5pc2F0aW9uX2lkGAIgASgJQky6SElyRzJFXlswLTlhLWZdezh9LVswLTlhLWZdezR9LTdbMC05YS1mXXszfS1bODlhYl1bMC05YS1mXXszfS1bMC05YS1mXXsxMn0kEh0KC2luY29tZV95ZWFyGAMgASgFQgi6SAUaAwjqDxIxCgxwZXJpb2Rfc3RhcnQYBCABKAsyEy50YW1teS52MS5DaXZpbERhdGVCBrpIA8gBARIvCgpwZXJpb2RfZW5kGAUgASgLMhMudGFtbXkudjEuQ2l2aWxEYXRlQga6SAPIAQESHAoIY3VycmVuY3kYBiABKAlCCrpIB3IFCgNBVUQSGAoHdmVyc2lvbhgHIAEoBEIHukgEMgIoARI4CgVzdGF0ZRgIIAEoDjIdLnRhbW15LnYxLkZpbmFuY2lhbENsb3NlU3RhdGVCCrpIB4IBBBABIAASIwoSZmluYW5jaWFsX3JldmlzaW9uGAkgASgEQge6SAQyAigBEkAKFmxhdGVzdF9mcm96ZW5fc25hcHNob3QYCiABKAsyIC50YW1teS52MS5GaW5hbmNpYWxDbG9zZVNuYXBzaG90EjYKCmNyZWF0ZWRfYXQYCyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQga6SAPIAQESNgoKdXBkYXRlZF9hdBgMIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBrpIA8gBATrYBbpI1AUawgIKFmZpbmFuY2lhbF9jbG9zZS5wZXJpb2QSPGZpbmFuY2lhbCBjbG9zZSBwZXJpb2QgbXVzdCBiZSAyMDI1LTA3LTAxIHRocm91Z2ggMjAyNi0wNi0zMBrpAWhhcyh0aGlzLnBlcmlvZF9zdGFydCkgJiYgdGhpcy5wZXJpb2Rfc3RhcnQueWVhciA9PSAyMDI1ICYmIHRoaXMucGVyaW9kX3N0YXJ0Lm1vbnRoID09IDcgJiYgdGhpcy5wZXJpb2Rfc3RhcnQuZGF5ID09IDEgJiYgaGFzKHRoaXMucGVyaW9kX2VuZCkgJiYgdGhpcy5wZXJpb2RfZW5kLnllYXIgPT0gMjAyNiAmJiB0aGlzLnBlcmlvZF9lbmQubW9udGggPT0gNiAmJiB0aGlzLnBlcmlvZF9lbmQuZGF5ID09IDMwGowDCihmaW5hbmNpYWxfY2xvc2UuZnJvemVuX3NuYXBzaG90X3JldmlzaW9uElhhIGZyb3plbiBjbG9zZSByZXF1aXJlcyBhIHNuYXBzaG90IHdob3NlIHNuYXBzaG90IGFuZCBhcHByb3ZhbCByZXZpc2lvbnMgbWF0Y2ggdGhlIGNsb3NlGoUCdGhpcy5zdGF0ZSAhPSA0IHx8IChoYXModGhpcy5sYXRlc3RfZnJvemVuX3NuYXBzaG90KSAmJiBoYXModGhpcy5sYXRlc3RfZnJvemVuX3NuYXBzaG90LmFwcHJvdmFsKSAmJiB0aGlzLmxhdGVzdF9mcm96ZW5fc25hcHNob3QuZmluYW5jaWFsX3JldmlzaW9uID09IHRoaXMuZmluYW5jaWFsX3JldmlzaW9uICYmIHRoaXMubGF0ZXN0X2Zyb3plbl9zbmFwc2hvdC5hcHByb3ZhbC5maW5hbmNpYWxfcmV2aXNpb24gPT0gdGhpcy5maW5hbmNpYWxfcmV2aXNpb24pIsMCChZGaW5hbmNpYWxTdGF0ZW1lbnRMaW5lEh8KC3N0YWJsZV9jb2RlGAEgASgJQgq6SAdyBRABGIABEhkKBWxhYmVsGAIgASgJQgq6SAdyBRABGIACEicKBmFtb3VudBgDIAEoCzIPLnRhbW15LnYxLk1vbmV5Qga6SAPIAQESLgoHc291cmNlcxgEIAMoCzITLnRhbW15LnYxLlNvdXJjZVJlZkIIukgFkgECEGQ6kwG6SI8BGowBCiJmaW5hbmNpYWxfY2xvc2Uuc3RhdGVtZW50X2xpbmUuYXVkEi1maW5hbmNpYWwgc3RhdGVtZW50IGxpbmUgYW1vdW50cyBtdXN0IHVzZSBBVUQaNyFoYXModGhpcy5hbW91bnQpIHx8IHRoaXMuYW1vdW50LmN1cnJlbmN5X2NvZGUgPT0gJ0FVRCciqwEKEkZpbmFuY2lhbFN0YXRlbWVudBI6CgRraW5kGAEgASgOMiAudGFtbXkudjEuRmluYW5jaWFsU3RhdGVtZW50S2luZEIKukgHggEEEAEgABIdCgxjb250ZW50X2hhc2gYAiABKAxCB7pIBHoCaCASOgoFbGluZXMYAyADKAsyIC50YW1teS52MS5GaW5hbmNpYWxTdGF0ZW1lbnRMaW5lQgm6SAaSAQMQ0A8iuwIKE0ZpbmFuY2lhbFN0YXRlbWVudHMSXgoIY2xvc2VfaWQYASABKAlCTLpISXJHMkVeWzAtOWEtZl17OH0tWzAtOWEtZl17NH0tN1swLTlhLWZdezN9LVs4OWFiXVswLTlhLWZdezN9LVswLTlhLWZdezEyfSQSYQoLc25hcHNob3RfaWQYAiABKAlCTLpISXJHMkVeWzAtOWEtZl17OH0tWzAtOWEtZl17NH0tN1swLTlhLWZdezN9LVs4OWFiXVswLTlhLWZdezN9LVswLTlhLWZdezEyfSQSIwoSZmluYW5jaWFsX3JldmlzaW9uGAMgASgEQge6SAQyAigBEjwKCnN0YXRlbWVudHMYBCADKAsyHC50YW1teS52MS5GaW5hbmNpYWxTdGF0ZW1lbnRCCrpIB5IBBAgEEAgilQUKG0NyZWF0ZUZpbmFuY2lhbENsb3NlUmVxdWVzdBI5Cg9jb21tYW5kX2NvbnRleHQYASABKAsyGC50YW1teS52MS5Db21tYW5kQ29udGV4dEIGukgDyAEBEmUKD29yZ2FuaXNhdGlvbl9pZBgCIAEoCUJMukhJckcyRV5bMC05YS1mXXs4fS1bMC05YS1mXXs0fS03WzAtOWEtZl17M30tWzg5YWJdWzAtOWEtZl17M30tWzAtOWEtZl17MTJ9JBIdCgtpbmNvbWVfeWVhchgDIAEoBUIIukgFGgMI6g8SMQoMcGVyaW9kX3N0YXJ0GAQgASgLMhMudGFtbXkudjEuQ2l2aWxEYXRlQga6SAPIAQESLwoKcGVyaW9kX2VuZBgFIAEoCzITLnRhbW15LnYxLkNpdmlsRGF0ZUIGukgDyAEBOtACukjMAhrJAgodZmluYW5jaWFsX2Nsb3NlLmNyZWF0ZS5wZXJpb2QSPGZpbmFuY2lhbCBjbG9zZSBwZXJpb2QgbXVzdCBiZSAyMDI1LTA3LTAxIHRocm91Z2ggMjAyNi0wNi0zMBrpAWhhcyh0aGlzLnBlcmlvZF9zdGFydCkgJiYgdGhpcy5wZXJpb2Rfc3RhcnQueWVhciA9PSAyMDI1ICYmIHRoaXMucGVyaW9kX3N0YXJ0Lm1vbnRoID09IDcgJiYgdGhpcy5wZXJpb2Rfc3RhcnQuZGF5ID09IDEgJiYgaGFzKHRoaXMucGVyaW9kX2VuZCkgJiYgdGhpcy5wZXJpb2RfZW5kLnllYXIgPT0gMjAyNiAmJiB0aGlzLnBlcmlvZF9lbmQubW9udGggPT0gNiAmJiB0aGlzLnBlcmlvZF9lbmQuZGF5ID09IDMwIk8KHENyZWF0ZUZpbmFuY2lhbENsb3NlUmVzcG9uc2USLwoFY2xvc2UYASABKAsyGC50YW1teS52MS5GaW5hbmNpYWxDbG9zZUIGukgDyAEBIqICChhHZXRGaW5hbmNpYWxDbG9zZVJlcXVlc3QSPwoOYXV0aGVudGljYXRpb24YASABKAsyHy50YW1teS52MS5BdXRoZW50aWNhdGlvbkNvbnRleHRCBrpIA8gBARJlCg9vcmdhbmlzYXRpb25faWQYAiABKAlCTLpISXJHMkVeWzAtOWEtZl17OH0tWzAtOWEtZl17NH0tN1swLTlhLWZdezN9LVs4OWFiXVswLTlhLWZdezN9LVswLTlhLWZdezEyfSQSXgoIY2xvc2VfaWQYAyABKAlCTLpISXJHMkVeWzAtOWEtZl17OH0tWzAtOWEtZl17NH0tN1swLTlhLWZdezN9LVs4OWFiXVswLTlhLWZdezN9LVswLTlhLWZdezEyfSQiTAoZR2V0RmluYW5jaWFsQ2xvc2VSZXNwb25zZRIvCgVjbG9zZRgBIAEoCzIYLnRhbW15LnYxLkZpbmFuY2lhbENsb3NlQga6SAPIAQEizQIKFkxpc3RDbG9zZUNoZWNrc1JlcXVlc3QSPwoOYXV0aGVudGljYXRpb24YASABKAsyHy50YW1teS52MS5BdXRoZW50aWNhdGlvbkNvbnRleHRCBrpIA8gBARJlCg9vcmdhbmlzYXRpb25faWQYAiABKAlCTLpISXJHMkVeWzAtOWEtZl17OH0tWzAtOWEtZl17NH0tN1swLTlhLWZdezN9LVs4OWFiXVswLTlhLWZdezN9LVswLTlhLWZdezEyfSQSXgoIY2xvc2VfaWQYAyABKAlCTLpISXJHMkVeWzAtOWEtZl17OH0tWzAtOWEtZl17NH0tN1swLTlhLWZdezN9LVs4OWFiXVswLTlhLWZdezN9LVswLTlhLWZdezEyfSQSKwoEcGFnZRgEIAEoCzIVLnRhbW15LnYxLlBhZ2VSZXF1ZXN0Qga6SAPIAQEidAoXTGlzdENsb3NlQ2hlY2tzUmVzcG9uc2USLwoGY2hlY2tzGAEgAygLMhQudGFtbXkudjEuQ2xvc2VDaGVja0IJukgGkgEDEMgBEigKBHBhZ2UYAiABKAsyEi50YW1teS52MS5QYWdlSW5mb0IGukgDyAEBIsEDChpSZXNvbHZlQ2xvc2VXYXJuaW5nUmVxdWVzdBI5Cg9jb21tYW5kX2NvbnRleHQYASABKAsyGC50YW1teS52MS5Db21tYW5kQ29udGV4dEIGukgDyAEBEmUKD29yZ2FuaXNhdGlvbl9pZBgCIAEoCUJMukhJckcyRV5bMC05YS1mXXs4fS1bMC05YS1mXXs0fS03WzAtOWEtZl17M30tWzg5YWJdWzAtOWEtZl17M30tWzAtOWEtZl17MTJ9JBJeCghjbG9zZV9pZBgDIAEoCUJMukhJckcyRV5bMC05YS1mXXs4fS1bMC05YS1mXXs0fS03WzAtOWEtZl17M30tWzg5YWJdWzAtOWEtZl17M30tWzAtOWEtZl17MTJ9JBIhChBleHBlY3RlZF92ZXJzaW9uGAQgASgEQge6SAQyAigBEl4KCGNoZWNrX2lkGAUgASgJQky6SElyRzJFXlswLTlhLWZdezh9LVswLTlhLWZdezR9LTdbMC05YS1mXXszfS1bODlhYl1bMC05YS1mXXszfS1bMC05YS1mXXsxMn0kEh4KCnJlc29sdXRpb24YBiABKAlCCrpIB3IFEAEY0A8iewobUmVzb2x2ZUNsb3NlV2FybmluZ1Jlc3BvbnNlEi8KBWNsb3NlGAEgASgLMhgudGFtbXkudjEuRmluYW5jaWFsQ2xvc2VCBrpIA8gBARIrCgVjaGVjaxgCIAEoCzIULnRhbW15LnYxLkNsb3NlQ2hlY2tCBrpIA8gBASLEBAobRnJlZXplRmluYW5jaWFsQ2xvc2VSZXF1ZXN0EjkKD2NvbW1hbmRfY29udGV4dBgBIAEoCzIYLnRhbW15LnYxLkNvbW1hbmRDb250ZXh0Qga6SAPIAQESZQoPb3JnYW5pc2F0aW9uX2lkGAIgASgJQky6SElyRzJFXlswLTlhLWZdezh9LVswLTlhLWZdezR9LTdbMC05YS1mXXszfS1bODlhYl1bMC05YS1mXXszfS1bMC05YS1mXXsxMn0kEl4KCGNsb3NlX2lkGAMgASgJQky6SElyRzJFXlswLTlhLWZdezh9LVswLTlhLWZdezR9LTdbMC05YS1mXXszfS1bODlhYl1bMC05YS1mXXszfS1bMC05YS1mXXsxMn0kEiEKEGV4cGVjdGVkX3ZlcnNpb24YBCABKARCB7pIBDICKAE6/wG6SPsBGvgBCiNmaW5hbmNpYWxfY2xvc2UuZnJlZXplLmZyZXNoX2ZhY3RvchJCZnJlZXplIHJlcXVpcmVzIGEgZnJlc2ggZmFjdG9yIHJlc2VydmVkIGZvciBmaW5hbmNpYWxfY2xvc2VfZnJlZXplGowBaGFzKHRoaXMuY29tbWFuZF9jb250ZXh0KSAmJiBoYXModGhpcy5jb21tYW5kX2NvbnRleHQuZnJlc2hfZmFjdG9yKSAmJiB0aGlzLmNvbW1hbmRfY29udGV4dC5mcmVzaF9mYWN0b3IucHVycG9zZSA9PSAnZmluYW5jaWFsX2Nsb3NlX2ZyZWV6ZSciiwEKHEZyZWV6ZUZpbmFuY2lhbENsb3NlUmVzcG9uc2USLwoFY2xvc2UYASABKAsyGC50YW1teS52MS5GaW5hbmNpYWxDbG9zZUIGukgDyAEBEjoKCHNuYXBzaG90GAIgASgLMiAudGFtbXkudjEuRmluYW5jaWFsQ2xvc2VTbmFwc2hvdEIGukgDyAEBIuAEChtSZW9wZW5GaW5hbmNpYWxDbG9zZVJlcXVlc3QSOQoPY29tbWFuZF9jb250ZXh0GAEgASgLMhgudGFtbXkudjEuQ29tbWFuZENvbnRleHRCBrpIA8gBARJlCg9vcmdhbmlzYXRpb25faWQYAiABKAlCTLpISXJHMkVeWzAtOWEtZl17OH0tWzAtOWEtZl17NH0tN1swLTlhLWZdezN9LVs4OWFiXVswLTlhLWZdezN9LVswLTlhLWZdezEyfSQSXgoIY2xvc2VfaWQYAyABKAlCTLpISXJHMkVeWzAtOWEtZl17OH0tWzAtOWEtZl17NH0tN1swLTlhLWZdezN9LVs4OWFiXVswLTlhLWZdezN9LVswLTlhLWZdezEyfSQSIQoQZXhwZWN0ZWRfdmVyc2lvbhgEIAEoBEIHukgEMgIoARIaCgZyZWFzb24YBSABKAlCCrpIB3IFEAEY0A86/wG6SPsBGvgBCiNmaW5hbmNpYWxfY2xvc2UucmVvcGVuLmZyZXNoX2ZhY3RvchJCcmVvcGVuIHJlcXVpcmVzIGEgZnJlc2ggZmFjdG9yIHJlc2VydmVkIGZvciBmaW5hbmNpYWxfY2xvc2VfcmVvcGVuGowBaGFzKHRoaXMuY29tbWFuZF9jb250ZXh0KSAmJiBoYXModGhpcy5jb21tYW5kX2NvbnRleHQuZnJlc2hfZmFjdG9yKSAmJiB0aGlzLmNvbW1hbmRfY29udGV4dC5mcmVzaF9mYWN0b3IucHVycG9zZSA9PSAnZmluYW5jaWFsX2Nsb3NlX3Jlb3BlbicivAEKHFJlb3BlbkZpbmFuY2lhbENsb3NlUmVzcG9uc2USLwoFY2xvc2UYASABKAsyGC50YW1teS52MS5GaW5hbmNpYWxDbG9zZUIGukgDyAEBEmsKFXByZXNlcnZlZF9zbmFwc2hvdF9pZBgCIAEoCUJMukhJckcyRV5bMC05YS1mXXs4fS1bMC05YS1mXXs0fS03WzAtOWEtZl17M30tWzg5YWJdWzAtOWEtZl17M30tWzAtOWEtZl17MTJ9JCKWBQokU3RhcnRGaW5hbmNpYWxDbG9zZUNvcnJlY3Rpb25SZXF1ZXN0EjkKD2NvbW1hbmRfY29udGV4dBgBIAEoCzIYLnRhbW15LnYxLkNvbW1hbmRDb250ZXh0Qga6SAPIAQESZQoPb3JnYW5pc2F0aW9uX2lkGAIgASgJQky6SElyRzJFXlswLTlhLWZdezh9LVswLTlhLWZdezR9LTdbMC05YS1mXXszfS1bODlhYl1bMC05YS1mXXszfS1bMC05YS1mXXsxMn0kEl4KCGNsb3NlX2lkGAMgASgJQky6SElyRzJFXlswLTlhLWZdezh9LVswLTlhLWZdezR9LTdbMC05YS1mXXszfS1bODlhYl1bMC05YS1mXXszfS1bMC05YS1mXXsxMn0kEiEKEGV4cGVjdGVkX3ZlcnNpb24YBCABKARCB7pIBDICKAESGgoGcmVhc29uGAUgASgJQgq6SAdyBRABGNAPOqwCukioAhqlAgotZmluYW5jaWFsX2Nsb3NlLnN0YXJ0X2NvcnJlY3Rpb24uZnJlc2hfZmFjdG9yEltzdGFydGluZyBhIGNvcnJlY3Rpb24gcmVxdWlyZXMgYSBmcmVzaCBmYWN0b3IgcmVzZXJ2ZWQgZm9yIGZpbmFuY2lhbF9jbG9zZV9zdGFydF9jb3JyZWN0aW9uGpYBaGFzKHRoaXMuY29tbWFuZF9jb250ZXh0KSAmJiBoYXModGhpcy5jb21tYW5kX2NvbnRleHQuZnJlc2hfZmFjdG9yKSAmJiB0aGlzLmNvbW1hbmRfY29udGV4dC5mcmVzaF9mYWN0b3IucHVycG9zZSA9PSAnZmluYW5jaWFsX2Nsb3NlX3N0YXJ0X2NvcnJlY3Rpb24nIp0BCiVTdGFydEZpbmFuY2lhbENsb3NlQ29ycmVjdGlvblJlc3BvbnNlEjgKDm9yaWdpbmFsX2Nsb3NlGAEgASgLMhgudGFtbXkudjEuRmluYW5jaWFsQ2xvc2VCBrpIA8gBARI6ChBjb3JyZWN0aW9uX2Nsb3NlGAIgASgLMhgudGFtbXkudjEuRmluYW5jaWFsQ2xvc2VCBrpIA8gBASKKAwodR2V0RmluYW5jaWFsU3RhdGVtZW50c1JlcXVlc3QSPwoOYXV0aGVudGljYXRpb24YASABKAsyHy50YW1teS52MS5BdXRoZW50aWNhdGlvbkNvbnRleHRCBrpIA8gBARJlCg9vcmdhbmlzYXRpb25faWQYAiABKAlCTLpISXJHMkVeWzAtOWEtZl17OH0tWzAtOWEtZl17NH0tN1swLTlhLWZdezN9LVs4OWFiXVswLTlhLWZdezN9LVswLTlhLWZdezEyfSQSXgoIY2xvc2VfaWQYAyABKAlCTLpISXJHMkVeWzAtOWEtZl17OH0tWzAtOWEtZl17NH0tN1swLTlhLWZdezN9LVs4OWFiXVswLTlhLWZdezN9LVswLTlhLWZdezEyfSQSYQoLc25hcHNob3RfaWQYBCABKAlCTLpISXJHMkVeWzAtOWEtZl17OH0tWzAtOWEtZl17NH0tN1swLTlhLWZdezN9LVs4OWFiXVswLTlhLWZdezN9LVswLTlhLWZdezEyfSQiWwoeR2V0RmluYW5jaWFsU3RhdGVtZW50c1Jlc3BvbnNlEjkKCnN0YXRlbWVudHMYASABKAsyHS50YW1teS52MS5GaW5hbmNpYWxTdGF0ZW1lbnRzQga6SAPIAQEqzwEKE0ZpbmFuY2lhbENsb3NlU3RhdGUSJQohRklOQU5DSUFMX0NMT1NFX1NUQVRFX1VOU1BFQ0lGSUVEEAASJAogRklOQU5DSUFMX0NMT1NFX1NUQVRFX0NPTExFQ1RJTkcQARIhCh1GSU5BTkNJQUxfQ0xPU0VfU1RBVEVfQkxPQ0tFRBACEiYKIkZJTkFOQ0lBTF9DTE9TRV9TVEFURV9SRVZJRVdfUkVBRFkQAxIgChxGSU5BTkNJQUxfQ0xPU0VfU1RBVEVfRlJPWkVOEAQqfgoSQ2xvc2VDaGVja1NldmVyaXR5EiQKIENMT1NFX0NIRUNLX1NFVkVSSVRZX1VOU1BFQ0lGSUVEEAASIAocQ0xPU0VfQ0hFQ0tfU0VWRVJJVFlfQkxPQ0tFUhABEiAKHENMT1NFX0NIRUNLX1NFVkVSSVRZX1dBUk5JTkcQAiqVAQoQQ2xvc2VDaGVja1Jlc3VsdBIiCh5DTE9TRV9DSEVDS19SRVNVTFRfVU5TUEVDSUZJRUQQABIdChlDTE9TRV9DSEVDS19SRVNVTFRfRkFJTEVEEAESHQoZQ0xPU0VfQ0hFQ0tfUkVTVUxUX1BBU1NFRBACEh8KG0NMT1NFX0NIRUNLX1JFU1VMVF9SRVNPTFZFRBADKq8DChZGaW5hbmNpYWxTdGF0ZW1lbnRLaW5kEigKJEZJTkFOQ0lBTF9TVEFURU1FTlRfS0lORF9VTlNQRUNJRklFRBAAEiwKKEZJTkFOQ0lBTF9TVEFURU1FTlRfS0lORF9QUk9GSVRfQU5EX0xPU1MQARIqCiZGSU5BTkNJQUxfU1RBVEVNRU5UX0tJTkRfQkFMQU5DRV9TSEVFVBACEiYKIkZJTkFOQ0lBTF9TVEFURU1FTlRfS0lORF9DQVNIX0ZMT1cQAxIqCiZGSU5BTkNJQUxfU1RBVEVNRU5UX0tJTkRfVFJJQUxfQkFMQU5DRRAEEisKJ0ZJTkFOQ0lBTF9TVEFURU1FTlRfS0lORF9HRU5FUkFMX0xFREdFUhAFEicKI0ZJTkFOQ0lBTF9TVEFURU1FTlRfS0lORF9HU1RfREVUQUlMEAYSMQotRklOQU5DSUFMX1NUQVRFTUVOVF9LSU5EX0ZJWEVEX0FTU0VUX1NDSEVEVUxFEAcSNAowRklOQU5DSUFMX1NUQVRFTUVOVF9LSU5EX0ZSQU5LSU5HX1JFQ09OQ0lMSUFUSU9OEAgy1gYKFUZpbmFuY2lhbENsb3NlU2VydmljZRJlChRDcmVhdGVGaW5hbmNpYWxDbG9zZRIlLnRhbW15LnYxLkNyZWF0ZUZpbmFuY2lhbENsb3NlUmVxdWVzdBomLnRhbW15LnYxLkNyZWF0ZUZpbmFuY2lhbENsb3NlUmVzcG9uc2USXAoRR2V0RmluYW5jaWFsQ2xvc2USIi50YW1teS52MS5HZXRGaW5hbmNpYWxDbG9zZVJlcXVlc3QaIy50YW1teS52MS5HZXRGaW5hbmNpYWxDbG9zZVJlc3BvbnNlElYKD0xpc3RDbG9zZUNoZWNrcxIgLnRhbW15LnYxLkxpc3RDbG9zZUNoZWNrc1JlcXVlc3QaIS50YW1teS52MS5MaXN0Q2xvc2VDaGVja3NSZXNwb25zZRJiChNSZXNvbHZlQ2xvc2VXYXJuaW5nEiQudGFtbXkudjEuUmVzb2x2ZUNsb3NlV2FybmluZ1JlcXVlc3QaJS50YW1teS52MS5SZXNvbHZlQ2xvc2VXYXJuaW5nUmVzcG9uc2USZQoURnJlZXplRmluYW5jaWFsQ2xvc2USJS50YW1teS52MS5GcmVlemVGaW5hbmNpYWxDbG9zZVJlcXVlc3QaJi50YW1teS52MS5GcmVlemVGaW5hbmNpYWxDbG9zZVJlc3BvbnNlEmUKFFJlb3BlbkZpbmFuY2lhbENsb3NlEiUudGFtbXkudjEuUmVvcGVuRmluYW5jaWFsQ2xvc2VSZXF1ZXN0GiYudGFtbXkudjEuUmVvcGVuRmluYW5jaWFsQ2xvc2VSZXNwb25zZRKAAQodU3RhcnRGaW5hbmNpYWxDbG9zZUNvcnJlY3Rpb24SLi50YW1teS52MS5TdGFydEZpbmFuY2lhbENsb3NlQ29ycmVjdGlvblJlcXVlc3QaLy50YW1teS52MS5TdGFydEZpbmFuY2lhbENsb3NlQ29ycmVjdGlvblJlc3BvbnNlEmsKFkdldEZpbmFuY2lhbFN0YXRlbWVudHMSJy50YW1teS52MS5HZXRGaW5hbmNpYWxTdGF0ZW1lbnRzUmVxdWVzdBooLnRhbW15LnYxLkdldEZpbmFuY2lhbFN0YXRlbWVudHNSZXNwb25zZUJMWkVnaXRodWIuY29tL3RhbW15YXBwL3RhbW15L3NlcnZpY2VzL2NvcmUvaW50ZXJuYWwvZ2VuL3RhbW15L3YxO3RhbW15djGSAwIIAmIIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_google_protobuf_timestamp, file_tammy_v1_common]);
+
+/**
+ * CloseCheck is one deterministic close rule result pinned to source revisions.
+ *
+ * @generated from message tammy.v1.CloseCheck
+ */
+export type CloseCheck = Message<"tammy.v1.CloseCheck"> & {
+  /**
+   * id is the opaque UUIDv7 check identifier.
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * close_id identifies the owning financial close.
+   *
+   * @generated from field: string close_id = 2;
+   */
+  closeId: string;
+
+  /**
+   * rule_id is the stable bounded rule code.
+   *
+   * @generated from field: string rule_id = 3;
+   */
+  ruleId: string;
+
+  /**
+   * severity identifies whether the check blocks freezing.
+   *
+   * @generated from field: tammy.v1.CloseCheckSeverity severity = 4;
+   */
+  severity: CloseCheckSeverity;
+
+  /**
+   * result is the current bounded outcome.
+   *
+   * @generated from field: tammy.v1.CloseCheckResult result = 5;
+   */
+  result: CloseCheckResult;
+
+  /**
+   * source_revision pins the financial source revision checked.
+   *
+   * @generated from field: uint64 source_revision = 6;
+   */
+  sourceRevision: bigint;
+
+  /**
+   * affected_sources identifies at most 100 immutable source records.
+   *
+   * @generated from field: repeated tammy.v1.SourceRef affected_sources = 7;
+   */
+  affectedSources: SourceRef[];
+
+  /**
+   * resolution is the bounded human resolution for a resolved warning.
+   *
+   * @generated from field: string resolution = 8 [features.field_presence = EXPLICIT];
+   */
+  resolution: string;
+
+  /**
+   * resolved_by_user_id identifies the user who resolved the warning.
+   *
+   * @generated from field: string resolved_by_user_id = 9 [features.field_presence = EXPLICIT];
+   */
+  resolvedByUserId: string;
+
+  /**
+   * resolved_at is the core-authored resolution instant.
+   *
+   * @generated from field: google.protobuf.Timestamp resolved_at = 10;
+   */
+  resolvedAt?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message tammy.v1.CloseCheck.
+ * Use `create(CloseCheckSchema)` to create a new message.
+ */
+export const CloseCheckSchema: GenMessage<CloseCheck> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_financial_close, 0);
+
+/**
+ * StatementHash binds one statement kind to its exact rendered content hash.
+ *
+ * @generated from message tammy.v1.StatementHash
+ */
+export type StatementHash = Message<"tammy.v1.StatementHash"> & {
+  /**
+   * kind identifies the rendered statement.
+   *
+   * @generated from field: tammy.v1.FinancialStatementKind kind = 1;
+   */
+  kind: FinancialStatementKind;
+
+  /**
+   * content_hash is the exact 32-byte SHA-256 digest of the rendered statement.
+   *
+   * @generated from field: bytes content_hash = 2;
+   */
+  contentHash: Uint8Array;
+};
+
+/**
+ * Describes the message tammy.v1.StatementHash.
+ * Use `create(StatementHashSchema)` to create a new message.
+ */
+export const StatementHashSchema: GenMessage<StatementHash> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_financial_close, 1);
+
+/**
+ * FinancialStatementApproval records the exact statements and wording approved by a user.
+ *
+ * @generated from message tammy.v1.FinancialStatementApproval
+ */
+export type FinancialStatementApproval = Message<"tammy.v1.FinancialStatementApproval"> & {
+  /**
+   * id is the opaque UUIDv7 approval identifier.
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * period_start is the inclusive first civil date approved.
+   *
+   * @generated from field: tammy.v1.CivilDate period_start = 2;
+   */
+  periodStart?: CivilDate | undefined;
+
+  /**
+   * period_end is the inclusive final civil date approved.
+   *
+   * @generated from field: tammy.v1.CivilDate period_end = 3;
+   */
+  periodEnd?: CivilDate | undefined;
+
+  /**
+   * financial_revision pins the approved working financial revision.
+   *
+   * @generated from field: uint64 financial_revision = 4;
+   */
+  financialRevision: bigint;
+
+  /**
+   * approval_wording_version identifies the bounded core-owned wording version.
+   *
+   * @generated from field: string approval_wording_version = 5;
+   */
+  approvalWordingVersion: string;
+
+  /**
+   * approval_wording_hash is the exact 32-byte hash of the approved wording.
+   *
+   * @generated from field: bytes approval_wording_hash = 6;
+   */
+  approvalWordingHash: Uint8Array;
+
+  /**
+   * statement_hashes identifies every statement approved by content hash.
+   *
+   * @generated from field: repeated tammy.v1.StatementHash statement_hashes = 7;
+   */
+  statementHashes: StatementHash[];
+
+  /**
+   * approved_by_user_id identifies the approving user.
+   *
+   * @generated from field: string approved_by_user_id = 8;
+   */
+  approvedByUserId: string;
+
+  /**
+   * fresh_factor_assertion_id pins the single-use factor assertion consumed by approval.
+   *
+   * @generated from field: string fresh_factor_assertion_id = 9;
+   */
+  freshFactorAssertionId: string;
+
+  /**
+   * approved_at is the core-authored approval instant.
+   *
+   * @generated from field: google.protobuf.Timestamp approved_at = 10;
+   */
+  approvedAt?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message tammy.v1.FinancialStatementApproval.
+ * Use `create(FinancialStatementApprovalSchema)` to create a new message.
+ */
+export const FinancialStatementApprovalSchema: GenMessage<FinancialStatementApproval> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_financial_close, 2);
+
+/**
+ * SourceRevision pins one bounded subledger owner to immutable content.
+ *
+ * @generated from message tammy.v1.SourceRevision
+ */
+export type SourceRevision = Message<"tammy.v1.SourceRevision"> & {
+  /**
+   * owner is the stable bounded source owner code.
+   *
+   * @generated from field: string owner = 1;
+   */
+  owner: string;
+
+  /**
+   * revision is the immutable source revision and begins at one.
+   *
+   * @generated from field: uint64 revision = 2;
+   */
+  revision: bigint;
+
+  /**
+   * content_hash is the exact 32-byte SHA-256 digest of the source content.
+   *
+   * @generated from field: bytes content_hash = 3;
+   */
+  contentHash: Uint8Array;
+};
+
+/**
+ * Describes the message tammy.v1.SourceRevision.
+ * Use `create(SourceRevisionSchema)` to create a new message.
+ */
+export const SourceRevisionSchema: GenMessage<SourceRevision> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_financial_close, 3);
+
+/**
+ * FinancialCloseSnapshot is the immutable evidence boundary for one frozen close.
+ *
+ * @generated from message tammy.v1.FinancialCloseSnapshot
+ */
+export type FinancialCloseSnapshot = Message<"tammy.v1.FinancialCloseSnapshot"> & {
+  /**
+   * id is the opaque UUIDv7 snapshot identifier.
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * close_id identifies the owning financial close.
+   *
+   * @generated from field: string close_id = 2;
+   */
+  closeId: string;
+
+  /**
+   * organisation_id identifies the owning organisation.
+   *
+   * @generated from field: string organisation_id = 3;
+   */
+  organisationId: string;
+
+  /**
+   * verified_abn is the exact verified 11-digit Australian Business Number.
+   *
+   * @generated from field: string verified_abn = 4;
+   */
+  verifiedAbn: string;
+
+  /**
+   * income_year is the only supported company income year.
+   *
+   * @generated from field: int32 income_year = 5;
+   */
+  incomeYear: number;
+
+  /**
+   * period_start is the inclusive first civil date frozen.
+   *
+   * @generated from field: tammy.v1.CivilDate period_start = 6;
+   */
+  periodStart?: CivilDate | undefined;
+
+  /**
+   * period_end is the inclusive final civil date frozen.
+   *
+   * @generated from field: tammy.v1.CivilDate period_end = 7;
+   */
+  periodEnd?: CivilDate | undefined;
+
+  /**
+   * currency is the only supported reporting currency.
+   *
+   * @generated from field: string currency = 8;
+   */
+  currency: string;
+
+  /**
+   * snapshot_hash is the exact 32-byte hash of this canonical snapshot.
+   *
+   * @generated from field: bytes snapshot_hash = 9;
+   */
+  snapshotHash: Uint8Array;
+
+  /**
+   * financial_revision pins the complete frozen financial inputs.
+   *
+   * @generated from field: uint64 financial_revision = 10;
+   */
+  financialRevision: bigint;
+
+  /**
+   * subledger_revisions pins at most 32 contributing source owners.
+   *
+   * @generated from field: repeated tammy.v1.SourceRevision subledger_revisions = 11;
+   */
+  subledgerRevisions: SourceRevision[];
+
+  /**
+   * statement_hashes contains every frozen statement hash.
+   *
+   * @generated from field: repeated tammy.v1.StatementHash statement_hashes = 12;
+   */
+  statementHashes: StatementHash[];
+
+  /**
+   * trial_balance_hash is the exact 32-byte frozen trial-balance hash.
+   *
+   * @generated from field: bytes trial_balance_hash = 13;
+   */
+  trialBalanceHash: Uint8Array;
+
+  /**
+   * checklist_hash is the exact 32-byte frozen checklist hash.
+   *
+   * @generated from field: bytes checklist_hash = 14;
+   */
+  checklistHash: Uint8Array;
+
+  /**
+   * reconciliation_hash is the exact 32-byte frozen reconciliation hash.
+   *
+   * @generated from field: bytes reconciliation_hash = 15;
+   */
+  reconciliationHash: Uint8Array;
+
+  /**
+   * accounting_rule_fingerprint pins the exact accounting rule bundle.
+   *
+   * @generated from field: bytes accounting_rule_fingerprint = 16;
+   */
+  accountingRuleFingerprint: Uint8Array;
+
+  /**
+   * gst_rule_fingerprint pins the exact GST rule bundle.
+   *
+   * @generated from field: bytes gst_rule_fingerprint = 17;
+   */
+  gstRuleFingerprint: Uint8Array;
+
+  /**
+   * asset_rule_fingerprint pins the exact fixed-asset rule bundle.
+   *
+   * @generated from field: bytes asset_rule_fingerprint = 18;
+   */
+  assetRuleFingerprint: Uint8Array;
+
+  /**
+   * evidence_manifest_hash is the exact 32-byte retained-evidence manifest hash.
+   *
+   * @generated from field: bytes evidence_manifest_hash = 19;
+   */
+  evidenceManifestHash: Uint8Array;
+
+  /**
+   * audit_head_hash pins the exact 32-byte audit chain head.
+   *
+   * @generated from field: bytes audit_head_hash = 20;
+   */
+  auditHeadHash: Uint8Array;
+
+  /**
+   * approval records the exact user approval frozen into this snapshot.
+   *
+   * @generated from field: tammy.v1.FinancialStatementApproval approval = 21;
+   */
+  approval?: FinancialStatementApproval | undefined;
+
+  /**
+   * corrects_close_id identifies the frozen close corrected by this snapshot, when any.
+   *
+   * @generated from field: string corrects_close_id = 22 [features.field_presence = EXPLICIT];
+   */
+  correctsCloseId: string;
+
+  /**
+   * frozen_at is the core-authored freeze instant.
+   *
+   * @generated from field: google.protobuf.Timestamp frozen_at = 23;
+   */
+  frozenAt?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message tammy.v1.FinancialCloseSnapshot.
+ * Use `create(FinancialCloseSnapshotSchema)` to create a new message.
+ */
+export const FinancialCloseSnapshotSchema: GenMessage<FinancialCloseSnapshot> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_financial_close, 4);
+
+/**
+ * FinancialClose is one mutable company financial-close aggregate.
+ *
+ * @generated from message tammy.v1.FinancialClose
+ */
+export type FinancialClose = Message<"tammy.v1.FinancialClose"> & {
+  /**
+   * id is the opaque UUIDv7 financial-close identifier.
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * organisation_id identifies the owning organisation.
+   *
+   * @generated from field: string organisation_id = 2;
+   */
+  organisationId: string;
+
+  /**
+   * income_year is the only supported company income year.
+   *
+   * @generated from field: int32 income_year = 3;
+   */
+  incomeYear: number;
+
+  /**
+   * period_start is the inclusive first civil date of the close.
+   *
+   * @generated from field: tammy.v1.CivilDate period_start = 4;
+   */
+  periodStart?: CivilDate | undefined;
+
+  /**
+   * period_end is the inclusive final civil date of the close.
+   *
+   * @generated from field: tammy.v1.CivilDate period_end = 5;
+   */
+  periodEnd?: CivilDate | undefined;
+
+  /**
+   * currency is the only supported reporting currency.
+   *
+   * @generated from field: string currency = 6;
+   */
+  currency: string;
+
+  /**
+   * version is the monotonic optimistic-concurrency version.
+   *
+   * @generated from field: uint64 version = 7;
+   */
+  version: bigint;
+
+  /**
+   * state is the current bounded close lifecycle state.
+   *
+   * @generated from field: tammy.v1.FinancialCloseState state = 8;
+   */
+  state: FinancialCloseState;
+
+  /**
+   * financial_revision pins the current complete working financial inputs.
+   *
+   * @generated from field: uint64 financial_revision = 9;
+   */
+  financialRevision: bigint;
+
+  /**
+   * latest_frozen_snapshot retains the latest immutable snapshot when one exists.
+   *
+   * @generated from field: tammy.v1.FinancialCloseSnapshot latest_frozen_snapshot = 10;
+   */
+  latestFrozenSnapshot?: FinancialCloseSnapshot | undefined;
+
+  /**
+   * created_at is the core-authored creation instant.
+   *
+   * @generated from field: google.protobuf.Timestamp created_at = 11;
+   */
+  createdAt?: Timestamp | undefined;
+
+  /**
+   * updated_at is the core-authored latest mutation instant.
+   *
+   * @generated from field: google.protobuf.Timestamp updated_at = 12;
+   */
+  updatedAt?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message tammy.v1.FinancialClose.
+ * Use `create(FinancialCloseSchema)` to create a new message.
+ */
+export const FinancialCloseSchema: GenMessage<FinancialClose> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_financial_close, 5);
+
+/**
+ * FinancialStatementLine is one bounded rendered statement line with immutable provenance.
+ *
+ * @generated from message tammy.v1.FinancialStatementLine
+ */
+export type FinancialStatementLine = Message<"tammy.v1.FinancialStatementLine"> & {
+  /**
+   * stable_code is the bounded stable semantic line code.
+   *
+   * @generated from field: string stable_code = 1;
+   */
+  stableCode: string;
+
+  /**
+   * label is bounded safe presentation text.
+   *
+   * @generated from field: string label = 2;
+   */
+  label: string;
+
+  /**
+   * amount is the exact signed amount in Australian dollars.
+   *
+   * @generated from field: tammy.v1.Money amount = 3;
+   */
+  amount?: Money | undefined;
+
+  /**
+   * sources contains at most 100 immutable provenance records.
+   *
+   * @generated from field: repeated tammy.v1.SourceRef sources = 4;
+   */
+  sources: SourceRef[];
+};
+
+/**
+ * Describes the message tammy.v1.FinancialStatementLine.
+ * Use `create(FinancialStatementLineSchema)` to create a new message.
+ */
+export const FinancialStatementLineSchema: GenMessage<FinancialStatementLine> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_financial_close, 6);
+
+/**
+ * FinancialStatement is one bounded rendered statement.
+ *
+ * @generated from message tammy.v1.FinancialStatement
+ */
+export type FinancialStatement = Message<"tammy.v1.FinancialStatement"> & {
+  /**
+   * kind identifies the rendered statement.
+   *
+   * @generated from field: tammy.v1.FinancialStatementKind kind = 1;
+   */
+  kind: FinancialStatementKind;
+
+  /**
+   * content_hash is the exact 32-byte hash of the rendered statement.
+   *
+   * @generated from field: bytes content_hash = 2;
+   */
+  contentHash: Uint8Array;
+
+  /**
+   * lines contains at most 2,000 rendered statement lines.
+   *
+   * @generated from field: repeated tammy.v1.FinancialStatementLine lines = 3;
+   */
+  lines: FinancialStatementLine[];
+};
+
+/**
+ * Describes the message tammy.v1.FinancialStatement.
+ * Use `create(FinancialStatementSchema)` to create a new message.
+ */
+export const FinancialStatementSchema: GenMessage<FinancialStatement> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_financial_close, 7);
+
+/**
+ * FinancialStatements is the bounded rendered statement set for one immutable snapshot.
+ *
+ * @generated from message tammy.v1.FinancialStatements
+ */
+export type FinancialStatements = Message<"tammy.v1.FinancialStatements"> & {
+  /**
+   * close_id identifies the owning financial close.
+   *
+   * @generated from field: string close_id = 1;
+   */
+  closeId: string;
+
+  /**
+   * snapshot_id identifies the exact immutable snapshot rendered.
+   *
+   * @generated from field: string snapshot_id = 2;
+   */
+  snapshotId: string;
+
+  /**
+   * financial_revision pins the rendered financial inputs.
+   *
+   * @generated from field: uint64 financial_revision = 3;
+   */
+  financialRevision: bigint;
+
+  /**
+   * statements contains the bounded required statement set.
+   *
+   * @generated from field: repeated tammy.v1.FinancialStatement statements = 4;
+   */
+  statements: FinancialStatement[];
+};
+
+/**
+ * Describes the message tammy.v1.FinancialStatements.
+ * Use `create(FinancialStatementsSchema)` to create a new message.
+ */
+export const FinancialStatementsSchema: GenMessage<FinancialStatements> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_financial_close, 8);
+
+/**
+ * CreateFinancialCloseRequest creates the single supported company close period.
+ *
+ * @generated from message tammy.v1.CreateFinancialCloseRequest
+ */
+export type CreateFinancialCloseRequest = Message<"tammy.v1.CreateFinancialCloseRequest"> & {
+  /**
+   * command_context carries authorization and idempotency metadata.
+   *
+   * @generated from field: tammy.v1.CommandContext command_context = 1;
+   */
+  commandContext?: CommandContext | undefined;
+
+  /**
+   * organisation_id identifies the owning organisation.
+   *
+   * @generated from field: string organisation_id = 2;
+   */
+  organisationId: string;
+
+  /**
+   * income_year is the only supported company income year.
+   *
+   * @generated from field: int32 income_year = 3;
+   */
+  incomeYear: number;
+
+  /**
+   * period_start is the inclusive first civil date requested.
+   *
+   * @generated from field: tammy.v1.CivilDate period_start = 4;
+   */
+  periodStart?: CivilDate | undefined;
+
+  /**
+   * period_end is the inclusive final civil date requested.
+   *
+   * @generated from field: tammy.v1.CivilDate period_end = 5;
+   */
+  periodEnd?: CivilDate | undefined;
+};
+
+/**
+ * Describes the message tammy.v1.CreateFinancialCloseRequest.
+ * Use `create(CreateFinancialCloseRequestSchema)` to create a new message.
+ */
+export const CreateFinancialCloseRequestSchema: GenMessage<CreateFinancialCloseRequest> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_financial_close, 9);
+
+/**
+ * CreateFinancialCloseResponse returns the created close.
+ *
+ * @generated from message tammy.v1.CreateFinancialCloseResponse
+ */
+export type CreateFinancialCloseResponse = Message<"tammy.v1.CreateFinancialCloseResponse"> & {
+  /**
+   * close is the created bounded close aggregate.
+   *
+   * @generated from field: tammy.v1.FinancialClose close = 1;
+   */
+  close?: FinancialClose | undefined;
+};
+
+/**
+ * Describes the message tammy.v1.CreateFinancialCloseResponse.
+ * Use `create(CreateFinancialCloseResponseSchema)` to create a new message.
+ */
+export const CreateFinancialCloseResponseSchema: GenMessage<CreateFinancialCloseResponse> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_financial_close, 10);
+
+/**
+ * GetFinancialCloseRequest requests one organisation-owned close.
+ *
+ * @generated from message tammy.v1.GetFinancialCloseRequest
+ */
+export type GetFinancialCloseRequest = Message<"tammy.v1.GetFinancialCloseRequest"> & {
+  /**
+   * authentication identifies the principal with financial-close read permission.
+   *
+   * @generated from field: tammy.v1.AuthenticationContext authentication = 1;
+   */
+  authentication?: AuthenticationContext | undefined;
+
+  /**
+   * organisation_id identifies the owning organisation.
+   *
+   * @generated from field: string organisation_id = 2;
+   */
+  organisationId: string;
+
+  /**
+   * close_id identifies the requested financial close.
+   *
+   * @generated from field: string close_id = 3;
+   */
+  closeId: string;
+};
+
+/**
+ * Describes the message tammy.v1.GetFinancialCloseRequest.
+ * Use `create(GetFinancialCloseRequestSchema)` to create a new message.
+ */
+export const GetFinancialCloseRequestSchema: GenMessage<GetFinancialCloseRequest> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_financial_close, 11);
+
+/**
+ * GetFinancialCloseResponse returns one organisation-owned close.
+ *
+ * @generated from message tammy.v1.GetFinancialCloseResponse
+ */
+export type GetFinancialCloseResponse = Message<"tammy.v1.GetFinancialCloseResponse"> & {
+  /**
+   * close is the requested bounded close aggregate.
+   *
+   * @generated from field: tammy.v1.FinancialClose close = 1;
+   */
+  close?: FinancialClose | undefined;
+};
+
+/**
+ * Describes the message tammy.v1.GetFinancialCloseResponse.
+ * Use `create(GetFinancialCloseResponseSchema)` to create a new message.
+ */
+export const GetFinancialCloseResponseSchema: GenMessage<GetFinancialCloseResponse> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_financial_close, 12);
+
+/**
+ * ListCloseChecksRequest requests one stable bounded page of close checks.
+ *
+ * @generated from message tammy.v1.ListCloseChecksRequest
+ */
+export type ListCloseChecksRequest = Message<"tammy.v1.ListCloseChecksRequest"> & {
+  /**
+   * authentication identifies the principal with financial-close read permission.
+   *
+   * @generated from field: tammy.v1.AuthenticationContext authentication = 1;
+   */
+  authentication?: AuthenticationContext | undefined;
+
+  /**
+   * organisation_id identifies the owning organisation.
+   *
+   * @generated from field: string organisation_id = 2;
+   */
+  organisationId: string;
+
+  /**
+   * close_id identifies the requested financial close.
+   *
+   * @generated from field: string close_id = 3;
+   */
+  closeId: string;
+
+  /**
+   * page requests a bounded stable page.
+   *
+   * @generated from field: tammy.v1.PageRequest page = 4;
+   */
+  page?: PageRequest | undefined;
+};
+
+/**
+ * Describes the message tammy.v1.ListCloseChecksRequest.
+ * Use `create(ListCloseChecksRequestSchema)` to create a new message.
+ */
+export const ListCloseChecksRequestSchema: GenMessage<ListCloseChecksRequest> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_financial_close, 13);
+
+/**
+ * ListCloseChecksResponse returns one stable bounded page of close checks.
+ *
+ * @generated from message tammy.v1.ListCloseChecksResponse
+ */
+export type ListCloseChecksResponse = Message<"tammy.v1.ListCloseChecksResponse"> & {
+  /**
+   * checks contains at most 200 close checks.
+   *
+   * @generated from field: repeated tammy.v1.CloseCheck checks = 1;
+   */
+  checks: CloseCheck[];
+
+  /**
+   * page describes the returned stable page.
+   *
+   * @generated from field: tammy.v1.PageInfo page = 2;
+   */
+  page?: PageInfo | undefined;
+};
+
+/**
+ * Describes the message tammy.v1.ListCloseChecksResponse.
+ * Use `create(ListCloseChecksResponseSchema)` to create a new message.
+ */
+export const ListCloseChecksResponseSchema: GenMessage<ListCloseChecksResponse> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_financial_close, 14);
+
+/**
+ * ResolveCloseWarningRequest resolves one warning with bounded human reasoning.
+ *
+ * @generated from message tammy.v1.ResolveCloseWarningRequest
+ */
+export type ResolveCloseWarningRequest = Message<"tammy.v1.ResolveCloseWarningRequest"> & {
+  /**
+   * command_context carries authorization and idempotency metadata.
+   *
+   * @generated from field: tammy.v1.CommandContext command_context = 1;
+   */
+  commandContext?: CommandContext | undefined;
+
+  /**
+   * organisation_id identifies the owning organisation.
+   *
+   * @generated from field: string organisation_id = 2;
+   */
+  organisationId: string;
+
+  /**
+   * close_id identifies the financial close to mutate.
+   *
+   * @generated from field: string close_id = 3;
+   */
+  closeId: string;
+
+  /**
+   * expected_version is the required optimistic-concurrency version.
+   *
+   * @generated from field: uint64 expected_version = 4;
+   */
+  expectedVersion: bigint;
+
+  /**
+   * check_id identifies the warning check to resolve.
+   *
+   * @generated from field: string check_id = 5;
+   */
+  checkId: string;
+
+  /**
+   * resolution is the bounded human resolution.
+   *
+   * @generated from field: string resolution = 6;
+   */
+  resolution: string;
+};
+
+/**
+ * Describes the message tammy.v1.ResolveCloseWarningRequest.
+ * Use `create(ResolveCloseWarningRequestSchema)` to create a new message.
+ */
+export const ResolveCloseWarningRequestSchema: GenMessage<ResolveCloseWarningRequest> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_financial_close, 15);
+
+/**
+ * ResolveCloseWarningResponse returns the bounded mutation projection.
+ *
+ * @generated from message tammy.v1.ResolveCloseWarningResponse
+ */
+export type ResolveCloseWarningResponse = Message<"tammy.v1.ResolveCloseWarningResponse"> & {
+  /**
+   * close is the updated financial close.
+   *
+   * @generated from field: tammy.v1.FinancialClose close = 1;
+   */
+  close?: FinancialClose | undefined;
+
+  /**
+   * check is the resolved warning check.
+   *
+   * @generated from field: tammy.v1.CloseCheck check = 2;
+   */
+  check?: CloseCheck | undefined;
+};
+
+/**
+ * Describes the message tammy.v1.ResolveCloseWarningResponse.
+ * Use `create(ResolveCloseWarningResponseSchema)` to create a new message.
+ */
+export const ResolveCloseWarningResponseSchema: GenMessage<ResolveCloseWarningResponse> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_financial_close, 16);
+
+/**
+ * FreezeFinancialCloseRequest freezes one review-ready close with fresh-factor authorization.
+ *
+ * @generated from message tammy.v1.FreezeFinancialCloseRequest
+ */
+export type FreezeFinancialCloseRequest = Message<"tammy.v1.FreezeFinancialCloseRequest"> & {
+  /**
+   * command_context carries authorization, idempotency, and the fresh factor.
+   *
+   * @generated from field: tammy.v1.CommandContext command_context = 1;
+   */
+  commandContext?: CommandContext | undefined;
+
+  /**
+   * organisation_id identifies the owning organisation.
+   *
+   * @generated from field: string organisation_id = 2;
+   */
+  organisationId: string;
+
+  /**
+   * close_id identifies the financial close to freeze.
+   *
+   * @generated from field: string close_id = 3;
+   */
+  closeId: string;
+
+  /**
+   * expected_version is the required optimistic-concurrency version.
+   *
+   * @generated from field: uint64 expected_version = 4;
+   */
+  expectedVersion: bigint;
+};
+
+/**
+ * Describes the message tammy.v1.FreezeFinancialCloseRequest.
+ * Use `create(FreezeFinancialCloseRequestSchema)` to create a new message.
+ */
+export const FreezeFinancialCloseRequestSchema: GenMessage<FreezeFinancialCloseRequest> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_financial_close, 17);
+
+/**
+ * FreezeFinancialCloseResponse returns the frozen close and immutable snapshot.
+ *
+ * @generated from message tammy.v1.FreezeFinancialCloseResponse
+ */
+export type FreezeFinancialCloseResponse = Message<"tammy.v1.FreezeFinancialCloseResponse"> & {
+  /**
+   * close is the updated frozen financial close.
+   *
+   * @generated from field: tammy.v1.FinancialClose close = 1;
+   */
+  close?: FinancialClose | undefined;
+
+  /**
+   * snapshot is the immutable close snapshot created by the mutation.
+   *
+   * @generated from field: tammy.v1.FinancialCloseSnapshot snapshot = 2;
+   */
+  snapshot?: FinancialCloseSnapshot | undefined;
+};
+
+/**
+ * Describes the message tammy.v1.FreezeFinancialCloseResponse.
+ * Use `create(FreezeFinancialCloseResponseSchema)` to create a new message.
+ */
+export const FreezeFinancialCloseResponseSchema: GenMessage<FreezeFinancialCloseResponse> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_financial_close, 18);
+
+/**
+ * ReopenFinancialCloseRequest reopens one frozen close with fresh-factor authorization.
+ *
+ * @generated from message tammy.v1.ReopenFinancialCloseRequest
+ */
+export type ReopenFinancialCloseRequest = Message<"tammy.v1.ReopenFinancialCloseRequest"> & {
+  /**
+   * command_context carries authorization, idempotency, and the fresh factor.
+   *
+   * @generated from field: tammy.v1.CommandContext command_context = 1;
+   */
+  commandContext?: CommandContext | undefined;
+
+  /**
+   * organisation_id identifies the owning organisation.
+   *
+   * @generated from field: string organisation_id = 2;
+   */
+  organisationId: string;
+
+  /**
+   * close_id identifies the frozen financial close to reopen.
+   *
+   * @generated from field: string close_id = 3;
+   */
+  closeId: string;
+
+  /**
+   * expected_version is the required optimistic-concurrency version.
+   *
+   * @generated from field: uint64 expected_version = 4;
+   */
+  expectedVersion: bigint;
+
+  /**
+   * reason is the bounded human reason for reopening.
+   *
+   * @generated from field: string reason = 5;
+   */
+  reason: string;
+};
+
+/**
+ * Describes the message tammy.v1.ReopenFinancialCloseRequest.
+ * Use `create(ReopenFinancialCloseRequestSchema)` to create a new message.
+ */
+export const ReopenFinancialCloseRequestSchema: GenMessage<ReopenFinancialCloseRequest> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_financial_close, 19);
+
+/**
+ * ReopenFinancialCloseResponse returns the reopened close and preserved snapshot identifier.
+ *
+ * @generated from message tammy.v1.ReopenFinancialCloseResponse
+ */
+export type ReopenFinancialCloseResponse = Message<"tammy.v1.ReopenFinancialCloseResponse"> & {
+  /**
+   * close is the reopened collecting close.
+   *
+   * @generated from field: tammy.v1.FinancialClose close = 1;
+   */
+  close?: FinancialClose | undefined;
+
+  /**
+   * preserved_snapshot_id identifies the immutable snapshot retained by reopening.
+   *
+   * @generated from field: string preserved_snapshot_id = 2;
+   */
+  preservedSnapshotId: string;
+};
+
+/**
+ * Describes the message tammy.v1.ReopenFinancialCloseResponse.
+ * Use `create(ReopenFinancialCloseResponseSchema)` to create a new message.
+ */
+export const ReopenFinancialCloseResponseSchema: GenMessage<ReopenFinancialCloseResponse> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_financial_close, 20);
+
+/**
+ * StartFinancialCloseCorrectionRequest creates a correction close with fresh-factor authorization.
+ *
+ * @generated from message tammy.v1.StartFinancialCloseCorrectionRequest
+ */
+export type StartFinancialCloseCorrectionRequest = Message<"tammy.v1.StartFinancialCloseCorrectionRequest"> & {
+  /**
+   * command_context carries authorization, idempotency, and the fresh factor.
+   *
+   * @generated from field: tammy.v1.CommandContext command_context = 1;
+   */
+  commandContext?: CommandContext | undefined;
+
+  /**
+   * organisation_id identifies the owning organisation.
+   *
+   * @generated from field: string organisation_id = 2;
+   */
+  organisationId: string;
+
+  /**
+   * close_id identifies the frozen financial close to correct.
+   *
+   * @generated from field: string close_id = 3;
+   */
+  closeId: string;
+
+  /**
+   * expected_version is the required optimistic-concurrency version.
+   *
+   * @generated from field: uint64 expected_version = 4;
+   */
+  expectedVersion: bigint;
+
+  /**
+   * reason is the bounded human reason for correction.
+   *
+   * @generated from field: string reason = 5;
+   */
+  reason: string;
+};
+
+/**
+ * Describes the message tammy.v1.StartFinancialCloseCorrectionRequest.
+ * Use `create(StartFinancialCloseCorrectionRequestSchema)` to create a new message.
+ */
+export const StartFinancialCloseCorrectionRequestSchema: GenMessage<StartFinancialCloseCorrectionRequest> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_financial_close, 21);
+
+/**
+ * StartFinancialCloseCorrectionResponse returns the original and new correction closes.
+ *
+ * @generated from message tammy.v1.StartFinancialCloseCorrectionResponse
+ */
+export type StartFinancialCloseCorrectionResponse = Message<"tammy.v1.StartFinancialCloseCorrectionResponse"> & {
+  /**
+   * original_close is the preserved frozen close.
+   *
+   * @generated from field: tammy.v1.FinancialClose original_close = 1;
+   */
+  originalClose?: FinancialClose | undefined;
+
+  /**
+   * correction_close is the new collecting correction close.
+   *
+   * @generated from field: tammy.v1.FinancialClose correction_close = 2;
+   */
+  correctionClose?: FinancialClose | undefined;
+};
+
+/**
+ * Describes the message tammy.v1.StartFinancialCloseCorrectionResponse.
+ * Use `create(StartFinancialCloseCorrectionResponseSchema)` to create a new message.
+ */
+export const StartFinancialCloseCorrectionResponseSchema: GenMessage<StartFinancialCloseCorrectionResponse> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_financial_close, 22);
+
+/**
+ * GetFinancialStatementsRequest requests statements for one exact immutable snapshot.
+ *
+ * @generated from message tammy.v1.GetFinancialStatementsRequest
+ */
+export type GetFinancialStatementsRequest = Message<"tammy.v1.GetFinancialStatementsRequest"> & {
+  /**
+   * authentication identifies the principal with financial-close read permission.
+   *
+   * @generated from field: tammy.v1.AuthenticationContext authentication = 1;
+   */
+  authentication?: AuthenticationContext | undefined;
+
+  /**
+   * organisation_id identifies the owning organisation.
+   *
+   * @generated from field: string organisation_id = 2;
+   */
+  organisationId: string;
+
+  /**
+   * close_id identifies the requested financial close.
+   *
+   * @generated from field: string close_id = 3;
+   */
+  closeId: string;
+
+  /**
+   * snapshot_id identifies the exact immutable snapshot to render.
+   *
+   * @generated from field: string snapshot_id = 4;
+   */
+  snapshotId: string;
+};
+
+/**
+ * Describes the message tammy.v1.GetFinancialStatementsRequest.
+ * Use `create(GetFinancialStatementsRequestSchema)` to create a new message.
+ */
+export const GetFinancialStatementsRequestSchema: GenMessage<GetFinancialStatementsRequest> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_financial_close, 23);
+
+/**
+ * GetFinancialStatementsResponse returns the bounded rendered statement set.
+ *
+ * @generated from message tammy.v1.GetFinancialStatementsResponse
+ */
+export type GetFinancialStatementsResponse = Message<"tammy.v1.GetFinancialStatementsResponse"> & {
+  /**
+   * statements is the bounded rendered statement set for the requested snapshot.
+   *
+   * @generated from field: tammy.v1.FinancialStatements statements = 1;
+   */
+  statements?: FinancialStatements | undefined;
+};
+
+/**
+ * Describes the message tammy.v1.GetFinancialStatementsResponse.
+ * Use `create(GetFinancialStatementsResponseSchema)` to create a new message.
+ */
+export const GetFinancialStatementsResponseSchema: GenMessage<GetFinancialStatementsResponse> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_financial_close, 24);
 
 /**
  * FinancialCloseState is the persisted lifecycle of one mutable financial-close aggregate.
@@ -59,4 +1255,244 @@ export enum FinancialCloseState {
  */
 export const FinancialCloseStateSchema: GenEnum<FinancialCloseState> = /*@__PURE__*/
   enumDesc(file_tammy_v1_financial_close, 0);
+
+/**
+ * CloseCheckSeverity identifies whether one close check blocks freezing.
+ *
+ * @generated from enum tammy.v1.CloseCheckSeverity
+ */
+export enum CloseCheckSeverity {
+  /**
+   * CLOSE_CHECK_SEVERITY_UNSPECIFIED indicates that no supported severity was supplied.
+   *
+   * @generated from enum value: CLOSE_CHECK_SEVERITY_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * CLOSE_CHECK_SEVERITY_BLOCKER prevents the financial close from being frozen.
+   *
+   * @generated from enum value: CLOSE_CHECK_SEVERITY_BLOCKER = 1;
+   */
+  BLOCKER = 1,
+
+  /**
+   * CLOSE_CHECK_SEVERITY_WARNING requires explicit resolution before freezing.
+   *
+   * @generated from enum value: CLOSE_CHECK_SEVERITY_WARNING = 2;
+   */
+  WARNING = 2,
+}
+
+/**
+ * Describes the enum tammy.v1.CloseCheckSeverity.
+ */
+export const CloseCheckSeveritySchema: GenEnum<CloseCheckSeverity> = /*@__PURE__*/
+  enumDesc(file_tammy_v1_financial_close, 1);
+
+/**
+ * CloseCheckResult is the bounded outcome of one deterministic close rule.
+ *
+ * @generated from enum tammy.v1.CloseCheckResult
+ */
+export enum CloseCheckResult {
+  /**
+   * CLOSE_CHECK_RESULT_UNSPECIFIED indicates that no supported result was supplied.
+   *
+   * @generated from enum value: CLOSE_CHECK_RESULT_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * CLOSE_CHECK_RESULT_FAILED indicates that the rule currently fails.
+   *
+   * @generated from enum value: CLOSE_CHECK_RESULT_FAILED = 1;
+   */
+  FAILED = 1,
+
+  /**
+   * CLOSE_CHECK_RESULT_PASSED indicates that the rule currently passes.
+   *
+   * @generated from enum value: CLOSE_CHECK_RESULT_PASSED = 2;
+   */
+  PASSED = 2,
+
+  /**
+   * CLOSE_CHECK_RESULT_RESOLVED indicates that a warning was explicitly resolved.
+   *
+   * @generated from enum value: CLOSE_CHECK_RESULT_RESOLVED = 3;
+   */
+  RESOLVED = 3,
+}
+
+/**
+ * Describes the enum tammy.v1.CloseCheckResult.
+ */
+export const CloseCheckResultSchema: GenEnum<CloseCheckResult> = /*@__PURE__*/
+  enumDesc(file_tammy_v1_financial_close, 2);
+
+/**
+ * FinancialStatementKind identifies one bounded rendered financial statement.
+ *
+ * @generated from enum tammy.v1.FinancialStatementKind
+ */
+export enum FinancialStatementKind {
+  /**
+   * FINANCIAL_STATEMENT_KIND_UNSPECIFIED indicates that no supported statement kind was supplied.
+   *
+   * @generated from enum value: FINANCIAL_STATEMENT_KIND_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * FINANCIAL_STATEMENT_KIND_PROFIT_AND_LOSS is the profit and loss statement.
+   *
+   * @generated from enum value: FINANCIAL_STATEMENT_KIND_PROFIT_AND_LOSS = 1;
+   */
+  PROFIT_AND_LOSS = 1,
+
+  /**
+   * FINANCIAL_STATEMENT_KIND_BALANCE_SHEET is the balance sheet.
+   *
+   * @generated from enum value: FINANCIAL_STATEMENT_KIND_BALANCE_SHEET = 2;
+   */
+  BALANCE_SHEET = 2,
+
+  /**
+   * FINANCIAL_STATEMENT_KIND_CASH_FLOW is the cash flow statement.
+   *
+   * @generated from enum value: FINANCIAL_STATEMENT_KIND_CASH_FLOW = 3;
+   */
+  CASH_FLOW = 3,
+
+  /**
+   * FINANCIAL_STATEMENT_KIND_TRIAL_BALANCE is the trial balance.
+   *
+   * @generated from enum value: FINANCIAL_STATEMENT_KIND_TRIAL_BALANCE = 4;
+   */
+  TRIAL_BALANCE = 4,
+
+  /**
+   * FINANCIAL_STATEMENT_KIND_GENERAL_LEDGER is the general ledger report.
+   *
+   * @generated from enum value: FINANCIAL_STATEMENT_KIND_GENERAL_LEDGER = 5;
+   */
+  GENERAL_LEDGER = 5,
+
+  /**
+   * FINANCIAL_STATEMENT_KIND_GST_DETAIL is the GST detail report.
+   *
+   * @generated from enum value: FINANCIAL_STATEMENT_KIND_GST_DETAIL = 6;
+   */
+  GST_DETAIL = 6,
+
+  /**
+   * FINANCIAL_STATEMENT_KIND_FIXED_ASSET_SCHEDULE is the fixed asset schedule.
+   *
+   * @generated from enum value: FINANCIAL_STATEMENT_KIND_FIXED_ASSET_SCHEDULE = 7;
+   */
+  FIXED_ASSET_SCHEDULE = 7,
+
+  /**
+   * FINANCIAL_STATEMENT_KIND_FRANKING_RECONCILIATION is the franking reconciliation.
+   *
+   * @generated from enum value: FINANCIAL_STATEMENT_KIND_FRANKING_RECONCILIATION = 8;
+   */
+  FRANKING_RECONCILIATION = 8,
+}
+
+/**
+ * Describes the enum tammy.v1.FinancialStatementKind.
+ */
+export const FinancialStatementKindSchema: GenEnum<FinancialStatementKind> = /*@__PURE__*/
+  enumDesc(file_tammy_v1_financial_close, 3);
+
+/**
+ * FinancialCloseService exposes the bounded company financial-close workflow.
+ *
+ * @generated from service tammy.v1.FinancialCloseService
+ */
+export const FinancialCloseService: GenService<{
+  /**
+   * CreateFinancialClose creates the single supported company close period.
+   *
+   * @generated from rpc tammy.v1.FinancialCloseService.CreateFinancialClose
+   */
+  createFinancialClose: {
+    methodKind: "unary";
+    input: typeof CreateFinancialCloseRequestSchema;
+    output: typeof CreateFinancialCloseResponseSchema;
+  },
+  /**
+   * GetFinancialClose returns one organisation-owned close.
+   *
+   * @generated from rpc tammy.v1.FinancialCloseService.GetFinancialClose
+   */
+  getFinancialClose: {
+    methodKind: "unary";
+    input: typeof GetFinancialCloseRequestSchema;
+    output: typeof GetFinancialCloseResponseSchema;
+  },
+  /**
+   * ListCloseChecks returns one stable bounded page of close checks.
+   *
+   * @generated from rpc tammy.v1.FinancialCloseService.ListCloseChecks
+   */
+  listCloseChecks: {
+    methodKind: "unary";
+    input: typeof ListCloseChecksRequestSchema;
+    output: typeof ListCloseChecksResponseSchema;
+  },
+  /**
+   * ResolveCloseWarning records the explicit resolution of one warning.
+   *
+   * @generated from rpc tammy.v1.FinancialCloseService.ResolveCloseWarning
+   */
+  resolveCloseWarning: {
+    methodKind: "unary";
+    input: typeof ResolveCloseWarningRequestSchema;
+    output: typeof ResolveCloseWarningResponseSchema;
+  },
+  /**
+   * FreezeFinancialClose freezes one review-ready close into an immutable snapshot.
+   *
+   * @generated from rpc tammy.v1.FinancialCloseService.FreezeFinancialClose
+   */
+  freezeFinancialClose: {
+    methodKind: "unary";
+    input: typeof FreezeFinancialCloseRequestSchema;
+    output: typeof FreezeFinancialCloseResponseSchema;
+  },
+  /**
+   * ReopenFinancialClose reopens one frozen close while retaining its latest snapshot.
+   *
+   * @generated from rpc tammy.v1.FinancialCloseService.ReopenFinancialClose
+   */
+  reopenFinancialClose: {
+    methodKind: "unary";
+    input: typeof ReopenFinancialCloseRequestSchema;
+    output: typeof ReopenFinancialCloseResponseSchema;
+  },
+  /**
+   * StartFinancialCloseCorrection creates a correction close from one frozen close.
+   *
+   * @generated from rpc tammy.v1.FinancialCloseService.StartFinancialCloseCorrection
+   */
+  startFinancialCloseCorrection: {
+    methodKind: "unary";
+    input: typeof StartFinancialCloseCorrectionRequestSchema;
+    output: typeof StartFinancialCloseCorrectionResponseSchema;
+  },
+  /**
+   * GetFinancialStatements returns bounded rendered statements for one immutable snapshot.
+   *
+   * @generated from rpc tammy.v1.FinancialCloseService.GetFinancialStatements
+   */
+  getFinancialStatements: {
+    methodKind: "unary";
+    input: typeof GetFinancialStatementsRequestSchema;
+    output: typeof GetFinancialStatementsResponseSchema;
+  },
+}> = /*@__PURE__*/
+  serviceDesc(file_tammy_v1_financial_close, 0);
 
