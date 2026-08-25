@@ -12,7 +12,7 @@ Tammy will let an authorised user of a mainstream Australian private company:
 
 1. collect accounting records through bounded batch document and transaction-file intake;
 2. review extracted facts before they affect the books;
-3. complete the financial close and retain signed financial statements;
+3. complete the financial close and retain approved, hash-bound financial statements;
 4. reconcile accounting profit to taxable income through explicit, evidenced adjustments;
 5. prepare and validate a versioned company tax return;
 6. review the exact return and accept the required declarations using fresh authentication;
@@ -38,7 +38,13 @@ The new slice closes these gaps without claiming support for unrelated accountin
 
 ## 3. Supported company boundary
 
-### 3.1 Included
+### 3.1 Initial report identity and included company
+
+The first implementation target is the income year ending **30 June 2026** (`2025-07-01` through `2026-06-30`). Its repository preparation bundle ID is `au-company-return-2026-preparation-v1`; its public capability key is `COMPANY_TAX_RETURN / AU_PRIVATE_COMPANY / 2026`. The official ATO Product Register names the delivery service **Company return 2026**. The machine service identifier, schema entry points, and external bundle version must be copied from the issued 2026 service artefacts and are external release inputs, never invented Tammy constants.
+
+The preparation bundle supports the core Company tax return 2026 form only. It supports no attached schedule in its first release. A condition requiring a dividend and interest, CGT, losses, international dealings, R&D incentive, reportable tax position, consolidated-groups, PAYG payment-summary, or other separately lodged schedule blocks declaration. The capability registry exposes preparation, simulator, EVTE, and production as distinct modes; `2026` is the only available company-return year until another independently reviewed bundle is installed.
+
+Within that core form, the supported coverage is company identity/EFT; item 1 only for an Australian or absent holding company with fully reviewed identity; item 2 main business activity; item 3 Australian-resident private-company status; item 4 only when no interposed-entity election applies; item 5 only when TOFA does not apply; item 6 supported ordinary income/expense calculation; item 7 taxable-income reconciliation; item 8 supported financial/other information derived from the frozen books; item 9 supported capital allowances; item 10 only for a supported small-business depreciation choice; item 11 not applicable because consolidation is excluded; item 12 only when no unsupported offset applies; item 13 limited revenue-loss information that does not trigger a losses schedule; items 14 onward only where the 2026 core form accepts an explicit `not applicable` answer under section 3.2; and the supported calculation statement/declaration. Bundle acceptance compares this list with every issued 2026 form field and service fact. A new or changed mandatory field stops the build and requires a reviewed spec/bundle change rather than an implicit blank or zero.
 
 The first production scope supports one reporting party that is:
 
@@ -48,15 +54,36 @@ The first production scope supports one reporting party that is:
 - using a standard 1 July to 30 June income year;
 - carrying on an ordinary service or trading business;
 - using the supported chart, journals, sales, purchases, settlements, banking, fixed assets, GST, PAYG, and evidence features;
-- reporting ordinary Australian trading income, interest, and dividends;
+- reporting ordinary Australian trading income and business-bank interest, but not dividend or trust/partnership distribution income;
 - claiming ordinary operating deductions and supported tax depreciation;
 - carrying forward a reviewed revenue-loss balance only where the user confirms that no ownership or business-continuity complexity requires professional assessment;
 - recording ordinary dividends and simple franking-account debits and credits; and
 - lodging an original return or a linked amendment.
 
-The product supports straightforward fixed-asset disposals and capital gains only while no separately required CGT schedule, rollover, small-business concession, foreign asset, or specialist calculation is triggered.
+The product supports straightforward fixed-asset disposals and capital gains only while the 2026 bundle determines that no separately required CGT schedule, rollover, small-business concession, foreign asset, or specialist calculation is triggered.
 
-### 3.2 Fail-closed exclusions
+The company tax profile requires the legal company name, encrypted TFN, ABN, current and prior postal address, main business address, Australian resident/private status, main business activity code and description, final-return answer, Australian refund-account details where applicable, connected entities/affiliates, annual and aggregated turnover, assessable income, base-rate-entity passive income, small-business-entity choice, ownership continuity, and all explicit applicability questions below. TFN and refund-account values are masked after entry, encrypted at rest, excluded from ordinary logs/support output, and revealed only through a fresh-authenticated edit flow.
+
+### 3.2 Supported 2026 rule and input matrix
+
+| Rule area | Required reviewed inputs | Supported result | Fail-closed condition |
+|---|---|---|---|
+| Company identity and status | Legal name, TFN, ABN, addresses, activity code, resident/private answers, final-return answer | Core identity/status facts for one Australian private company | Missing identity, non-resident/public/special company status, substituted period, or profile/ABN mismatch |
+| Holding and related entities | Immediate/ultimate holding answers, connected entities and affiliates, each entity's turnover contribution | Aggregated turnover with an evidence-backed entity list | Foreign holding detail, uncertain control/affiliate assessment, non-market associate dealing, or incomplete turnover evidence |
+| Company tax rate | Aggregated turnover, assessable income, and classified base-rate-entity passive income | 25% when turnover is below $50 million and passive income is no more than 80%; otherwise 30% | User cannot classify connected entities/passive income, or a source category is unsupported; numeric thresholds remain checksum-pinned in the 2026 rule bundle |
+| Accounting profit/loss | Frozen profit-and-loss facts mapped to supported ordinary Australian income and expense categories | Company-return profit/loss facts and reconciliation starting amount | An unmapped material account, unsupported income/deduction category, or unreviewed evidence |
+| Deductions and add-backs | Reviewed expense mappings, private/non-deductible portions, provisions/accruals, and evidence | Ordinary deductions plus explicit permanent/temporary add-backs and subtractions | Legal characterisation is uncertain or a bundle rule does not cover the adjustment |
+| Depreciation | Asset cost/date, business use, disposal, accounting method, tax method/election, and evidence | Prime-cost/diminishing-value tax depreciation and bundle-supported simplified/instant write-off treatment | Unsupported pool/election, private-use change, rollover, intangible, balancing adjustment, or missing evidence |
+| Capital gains | Supported asset disposal proceeds/cost base and bundle CGT-schedule predicate | Core return capital-gain facts only when no CGT schedule or concession is required | CGT schedule threshold, rollover, small-business concession, foreign asset, share/unit, crypto, or uncertain cost base |
+| Revenue losses | Current-year result; imported prior-year balance; ownership/continuity answers and evidence | Current-year revenue loss and application of a verified carried-forward revenue loss | Ownership change, same/similar-business judgment, losses schedule requirement, capital loss use, or uncertain eligibility |
+| Dividends and franking | Dividends paid, franking credits allocated, tax payments/refunds, and opening franking balance evidence | Simple franking-account reconciliation and ordinary dividends paid | Dividend income, franking deficit, streaming, off-market distribution, benchmark issue, or unexplained franking difference |
+| PAYG and tax credits | Posted PAYG instalments/tax payments plus retained ATO/payment evidence | Credits and expected company tax payable/refund reconciliation | Unsupported offset/credit, foreign credit, missing evidence, or ledger/ATO mismatch |
+| Payroll summary reconciliation | Ledger wages, deductible super, PAYGW and clearing balances; imported EOFY summary totals | Evidence-only comparison; the return consumes reviewed ledger/tax-adjustment facts | Tammy does not calculate payroll or STP; any mismatch, employee-level adjustment, FBT/PSI issue, or unsupported payroll tax effect blocks close |
+| Applicability questions | Explicit answers for TOFA, PSI, interposed elections, consolidation, R&D, international dealings, clubs, life insurance, and every 2026 schedule predicate | Supported `not applicable` facts with evidence/attestation | Any affirmative or unknown answer outside the supported matrix |
+
+The numeric rate, threshold, rounding, label, and schedule-predicate values in this table must also exist as exact checksum-pinned 2026 bundle data with official source references and golden cases. Code must not contain a fallback value when the accepted bundle is absent or disagrees.
+
+### 3.3 Fail-closed exclusions
 
 Tammy must block declaration and submission when it detects or the user identifies:
 
@@ -73,7 +100,7 @@ Tammy must block declaration and submission when it detects or the user identifi
 
 A blocked return remains usable as an EOFY workpaper and export pack. The UI names each unsupported condition and the affected return area. It does not estimate, omit, coerce to zero, or silently fall back to a previous income year's rule.
 
-### 3.3 Deferred products
+### 3.4 Deferred products
 
 Sole-trader, partnership, trust, SMSF, FBT, TPAR, STP finalisation, complete BAS/IAS lodgment, inventory, payroll, multi-currency, and cloud collaboration are separate product slices. iOS is also separate: this slice ships on the existing macOS desktop architecture because the current secure workspace, native helpers, and machine-credential boundary are macOS-owned. Protobuf contracts remain platform-neutral so a later iOS review/upload client does not require a second tax model.
 
@@ -86,7 +113,7 @@ The selected approach completes only the accounting, evidence, close, tax, and d
 The rejected alternatives are:
 
 - **Complete every accounting module first.** This has strong breadth but delays an end-to-end user outcome and makes report provenance difficult to verify until late.
-- **Build a manual company-return form first.** This creates duplicate data entry, weak reconciliation, and return values that cannot be traced to signed books.
+- **Build a manual company-return form first.** This creates duplicate data entry, weak reconciliation, and return values that cannot be traced to approved books.
 - **Send directly from the renderer or core.** This would expose credential use and transport parsing to larger, less isolated processes and would break the approved machine-credential boundary.
 
 ### 4.2 Process responsibilities
@@ -130,7 +157,9 @@ The primary navigation gains **EOFY & Company Tax**. The screen is one workbench
 
 The user can select or drop a bounded batch of PDF, PNG, JPEG, CSV, OFX, and QFX files. The native boundary gives the renderer opaque item IDs and safe display metadata only. Main transfers each selected source to its owning helper/core operation through a one-shot, expiring handle; no local path is returned to React or stored in business records.
 
-Each item shows one of: queued, hashing, extracting, needs review, ready, duplicate, unsupported, or failed. A failure retains the encrypted original when policy permits and offers manual reviewed entry. It never creates a journal automatically.
+Each item shows one of: queued, hashing, extracting, needs review, ready, duplicate, unsupported, or failed. It never creates a journal automatically.
+
+Retention is deterministic. Symlinks, FIFOs/devices, unstable or swapped files, oversize inputs, MIME/magic mismatches, polyglots, disallowed embedded content, decompression-limit failures, and hash/length mismatches are rejected before an `EvidenceDocument` is committed; all temporary bytes are removed. User cancellation before durable commit also retains nothing. A supported, bounded, stable file that passes intake but is corrupt, password-protected, or fails extraction is stored only as the encrypted original with status `NEEDS_MANUAL_REVIEW`; no plaintext derivative is retained. Parser crash or timeout follows the same rule after helper cleanup. Unlinked, undeclared evidence may be explicitly deleted with an audit event; evidence linked to a posted transaction, frozen close, declared return, or receipt is immutable and may only be archived under retention policy.
 
 Document review shows:
 
@@ -152,15 +181,15 @@ The close checklist covers:
 - every bank and credit-card account reconciled to a retained statement;
 - receivables and payables control accounts reconciled to source subledgers;
 - uncategorised, suspense, clearing, evidence-pending, and duplicate-review balances cleared;
-- GST, PAYG, payroll-clearing, super, FBT, and tax-payment accounts reconciled where present;
+- GST, PAYG, wages, super, payroll-clearing, FBT, and tax-payment accounts reconciled where present; payroll/STP is evidence-only and a non-zero FBT or unsupported payroll effect blocks this slice;
 - fixed-asset acquisitions, disposals, accounting depreciation, and tax depreciation reviewed;
 - shareholder/director loan, dividend, franking, and equity accounts reviewed;
 - trial balance balanced and all journals within the period posted; and
 - backup plus audit-chain verification completed for the reporting revision.
 
-Blocking checks prevent close. Warnings require an explicit resolution note. A successful close freezes a `FinancialCloseSnapshot` containing the exact financial revision, trial balance, statements, report parameters, checklist results, rule fingerprints, evidence manifest hash, and sign-off identity/time.
+Blocking checks prevent close. Warnings require an explicit resolution note. A successful close creates a `FinancialStatementApproval`: an authorised director/user views the exact statement hashes, attests that the books and statements are approved for company-tax preparation, and confirms with purpose-bound fresh authentication. This is a product sign-off, not a handwritten, qualified electronic, or cryptographic company-law signature. The resulting `FinancialCloseSnapshot` contains the exact financial revision, trial balance, statements, report parameters, checklist results, rule fingerprints, evidence manifest hash, approval wording/version/hash, and approving identity/time.
 
-Reopening the period preserves the snapshot, marks dependent undeclared returns stale, and requires a reason plus fresh authentication. A declared or submitted return is never reopened; changes use an amendment.
+Before declaration, reopening the period preserves the snapshot, marks dependent draft returns stale, and requires a reason plus fresh authentication. After a declaration exists, corrected books use `StartFinancialCloseCorrection`: it preserves the original period, journals, close, statements, approval, and return; creates a new correction working revision; accepts only explicit correction/reversal entries; and freezes a new close snapshot with a new approval. The new close feeds a replacement return when no return was accepted by the ATO, or an amendment when an original was accepted. The original close and return are never rewritten.
 
 ### 5.3 Tax adjustments
 
@@ -185,7 +214,9 @@ The review stage shows:
 - source-to-label drill-down to accounting facts, adjustments, elections, rules, and evidence;
 - tax calculation, PAYG instalments, credits, payments, expected payable/refund, and differences from the prior return version;
 - validation outcomes classified as blocker, warning, information, or unsupported; and
-- a deterministic PDF and machine-readable handoff pack.
+- a deterministic redacted review PDF and encrypted full handoff pack.
+
+Exports use a trusted-main save dialog and return no destination path to React. The default review PDF masks TFN, refund-account details, credential/service identifiers, and unrestricted evidence content. A full accountant handoff uses the existing authenticated encrypted-backup envelope in a `.tammy-eofy` archive, requires a new user passphrase plus fresh authentication, and includes the complete return, statements, reconciliation, supported evidence manifest, descriptors, rule/bundle fingerprints, and verification instructions. The passphrase is never stored or logged. Main writes a mode-`0600` temporary file in the chosen destination directory, fsyncs, atomically renames, and refuses overwrite unless the native dialog explicitly confirms it; cancellation or failure removes the temporary file. Audit retains only export type, return ID, content hash, safe destination classification, actor, and time. Tammy does not manage or delete the user's successfully exported plaintext review PDF or encrypted archive.
 
 Declaration freezes the return. It requires no blockers, explicit acknowledgement of all warnings, the exact installed declaration and SBR end-user terms, a link to the current SBR privacy statement, and a purpose-bound fresh authentication factor. Tammy retains the declaration text/version/hash, accepted terms versions, user, organisation, return ID, timestamp, and report hash.
 
@@ -202,7 +233,7 @@ The production lodge action is present only when the exact return is declared an
 - no expired registration/profile/component evidence; and
 - a supported packaged macOS build profile.
 
-The user unlocks the machine credential through the helper using transient password input and a purpose-bound fresh factor. The renderer receives only redacted credential status. The core asks the helper to pre-lodge the already frozen canonical report; warnings return to review, while blockers prevent lodge. The final lodge action shows the exact company, ABN, income year, report version, tax result, service, environment, and declaration before dispatch.
+The user unlocks the machine credential through the helper using transient password input and a purpose-bound fresh factor. The renderer receives only redacted credential status. The core asks the helper to pre-lodge the already frozen canonical report. Official information outcomes append without changing authority. A new official warning requiring acknowledgement moves the report to `PRELODGE_REVIEW`, supersedes the current declaration authority without changing report facts/payload, and requires `AcknowledgeReturnWarning` plus a new purpose-bound `DeclareCompanyReturn`; every declaration version remains retained. A blocker requiring value changes creates a replacement draft and cannot mutate the declared snapshot. The final lodge action shows the exact company, ABN, income year, report version, tax result, service, environment, current declaration, and acknowledged warnings before dispatch.
 
 After dispatch, the screen shows queued, sent, processing, accepted, rejected, or outcome unknown. Tammy stores and displays the ATO conversation/submission identifier, timestamps, response codes, label-linked validation outcomes, status history, and official receipt. It never represents payment, refund, or ATO account balance as controlled by Tammy.
 
@@ -212,7 +243,7 @@ After dispatch, the screen shows queued, sent, processing, accepted, rejected, o
 
 `ImportBatch` owns source kind, safe display metadata, size, hash, parser version, duplicate relation, job status, diagnostics, and reviewed/committed state. `EvidenceDocument` owns encrypted-blob identity, MIME, hash, safe name, extraction result identity, review status, retention policy, and links to targets. `EvidenceCandidate` is immutable extractor output; `EvidenceReview` is the user's versioned interpretation.
 
-The document module owns evidence metadata and encrypted blob references. The banking module owns transaction import batches and statement lines. Sales, purchases, accounting, assets, payroll, and annual tax own the business objects created from a review. Modules communicate through narrow read/write ports in one unit of work; no module writes another module's tables.
+The document module owns evidence metadata and encrypted blob references. The banking module owns transaction import batches and statement lines. Sales, purchases, accounting, assets, and annual tax own the business objects created from a review. An imported payroll summary remains evidence plus bounded reconciliation totals; this slice creates no payroll domain object, employee record, pay run, or STP fact. Modules communicate through narrow read/write ports in one unit of work; no module writes another module's tables.
 
 ### 6.2 Financial close
 
@@ -220,7 +251,7 @@ The document module owns evidence metadata and encrypted blob references. The ba
 
 - organisation, ABN, currency, period, and income year;
 - financial revision and all owned subledger revisions;
-- signed statement and trial-balance hashes;
+- approved statement and trial-balance hashes;
 - checklist and reconciliation results;
 - accounting-rule, GST-rule, and asset-rule fingerprints;
 - evidence-manifest and audit-head hashes; and
@@ -246,7 +277,7 @@ Every term has money/currency, sign convention, tax year, rule ID, provenance ki
 
 ### 6.4 Company return
 
-`CompanyReturn` owns organisation, reporting period, income year, original/amendment relationship, report-bundle fingerprint, source close ID/hash, tax-reconciliation hash, status, validation revision, declared snapshot hash, and delivery summary.
+`CompanyReturn` owns organisation, reporting period, income year, relationship kind (`ORIGINAL`, `REPLACEMENT`, or `AMENDMENT`), related return/attempt IDs, report-bundle fingerprint, source close ID/hash, tax-reconciliation hash, status, validation revision, declared snapshot hash, and delivery summary.
 
 `ReturnFact` stores a bundle-defined fact ID and typed value. Its provenance is exactly one of:
 
@@ -258,6 +289,8 @@ Every term has money/currency, sign convention, tax year, rule ID, provenance ki
 - derived by a deterministic calculation rule.
 
 Each fact records its rule/mapping ID and source references. Unknown official fields are not stored as generic key/value input. A report bundle must declare every supported field and its value type, cardinality, validation, mapping, and user presentation.
+
+`CompanyTaxProfileInput` and `CompanyReturnInput` accept only the typed fields declared by `au-company-return-2026-preparation-v1`; they retain source/evidence and reviewer identity. `TaxElection` accepts only a bundle-declared election ID and typed choice, with required explanation/evidence. `ValidationAcknowledgement` binds a specific warning ID and validation revision to an actor and fresh factor. `Declaration` is append-only and binds the immutable report hash, current validation revision, all warning acknowledgements, exact wording/terms/privacy versions, actor, fresh factor, and time. A newer declaration supersedes authority from the older declaration without deleting it or changing the report payload.
 
 ### 6.5 Submission records
 
@@ -317,16 +350,26 @@ COLLECTING
 BLOCKED
 REVIEW_READY
 DECLARED
+PRELODGE_REVIEW
 SUBMISSION_PENDING
 DELIVERED
 REJECTED
 OUTCOME_UNKNOWN
-SUPERSEDED
+REPLACED
+SUPERSEDED_BY_AMENDMENT
 ```
 
-`BLOCKED` and `REVIEW_READY` are persisted report states updated from deterministic validation, not cosmetic renderer states. `DECLARED` freezes facts, rules, calculations, declarations, evidence manifest, and payload input. `SUBMISSION_PENDING` begins before helper dispatch is committed. `DELIVERED` requires an accepted official status/receipt. `REJECTED` retains the attempted report and validation response. `OUTCOME_UNKNOWN` prevents a blind second lodge. `SUPERSEDED` points to a linked amendment or replacement.
+`BLOCKED` and `REVIEW_READY` are persisted report states updated from deterministic validation, not cosmetic renderer states. `DECLARED` freezes facts, rules, calculations, evidence manifest, and payload input and points to the current immutable declaration version. `PRELODGE_REVIEW` means official warnings require acknowledgement and a fresh declaration over the same immutable report. `SUBMISSION_PENDING` begins before helper dispatch is committed. `DELIVERED` requires an accepted official status/receipt. `REJECTED` means the ATO definitively did not accept that attempt. `OUTCOME_UNKNOWN` prevents any replacement, amendment, or blind second lodge until official reconciliation resolves it. `REPLACED` and `SUPERSEDED_BY_AMENDMENT` retain links to the successor.
 
-An amendment starts from a delivered or rejected report, retains the original, states a reason, rereads current source facts, computes exact differences, undergoes full validation and declaration, and uses the official amendment operation defined by the installed bundle. An edited copy is never presented as the original return.
+Correction semantics are explicit:
+
+- A collecting or review-ready return is edited in place under expected-version/idempotency rules.
+- A declared report that was never dispatched may have its declaration withdrawn. The immutable declared snapshot remains retained, becomes `REPLACED`, and a new `REPLACEMENT` draft starts from an existing or corrected close. It uses the original-lodgment operation because no ATO acceptance occurred.
+- A definitively rejected attempt remains rejected. Corrections create a `REPLACEMENT` linked to the rejected attempt and use the original/resubmission operation prescribed by the 2026 bundle; they are not labelled amendments.
+- An `OUTCOME_UNKNOWN` report is locked. If status proves acceptance it becomes delivered; if status proves non-acceptance it becomes rejected and may be replaced. If the official status service cannot resolve it, the UI requires ATO/DSP support and never creates another submission identity.
+- Only a delivered, accepted original can create an `AMENDMENT`. It states a reason, uses a newly frozen close where book corrections are needed, calculates exact fact/tax differences, undergoes full validation/declaration, and invokes the official 2026 amendment operation.
+
+`StartFinancialCloseCorrection` creates the new source revision used by a replacement or amendment while preserving the original books, close, return, declaration, payload, response, and receipt. An edited copy is never presented as the original report.
 
 ## 9. SBR delivery design
 
@@ -377,7 +420,7 @@ The SBR privacy statement and end-user terms shown at declaration must come from
 
 ## 11. Public application contracts
 
-The exact Protobuf field layout belongs in the implementation plan, but the public use-case catalogue is fixed here.
+Generated field numbers and filenames are implementation-plan mechanics. The semantic operations, authority, ownership, and outputs below are fixed: every command identifies one organisation and aggregate, carries authentication/idempotency/expected version, accepts only bundle-defined typed input, and returns the new aggregate version plus safe validation/status projections.
 
 ### 11.1 Native intake
 
@@ -385,6 +428,7 @@ The exact Protobuf field layout belongs in the implementation plan, but the publ
 - `RegisterDroppedEvidenceFiles`
 - `SelectTransactionFile`
 - `CancelIntakeSelection`
+- `SelectReturnExportDestination`
 
 These are trusted-main channels, not Connect RPCs. They return opaque expiring handles and safe metadata only.
 
@@ -416,18 +460,27 @@ These are trusted-main channels, not Connect RPCs. They return opaque expiring h
 - `ResolveCloseWarning`
 - `FreezeFinancialClose`
 - `ReopenFinancialClose`
+- `StartFinancialCloseCorrection`
 - `GetFinancialStatements`
 
 ### 11.5 Company tax
 
+- `GetCompanyTaxProfile`
+- `SetCompanyTaxProfile`
 - `CreateCompanyReturn`
 - `GetCompanyReturn`
 - `ListCompanyReturnFacts`
+- `SetCompanyReturnInput`
 - `UpsertTaxAdjustment`
 - `RemoveTaxAdjustment`
+- `UpsertTaxElection`
+- `RemoveTaxElection`
 - `ValidateCompanyReturn`
+- `AcknowledgeReturnWarning`
 - `DeclareCompanyReturn`
+- `WithdrawCompanyReturnDeclaration`
 - `ExportCompanyReturnPack`
+- `CreateCompanyReturnReplacement`
 - `CreateCompanyReturnAmendment`
 
 ### 11.6 Submission
@@ -455,11 +508,13 @@ Public failures use stable codes and safe messages. At minimum:
 | `REPORT_BUNDLE_UNAVAILABLE` | No exact accepted bundle for this income year/service; preparation or delivery remains unavailable as indicated |
 | `REPORT_VALIDATION_FAILED` | One or more official or Tammy-owned blockers exist; link to facts and sources |
 | `DECLARATION_REQUIRED` | The current immutable report has not been freshly declared |
+| `PRELODGE_REVIEW_REQUIRED` | A new official warning superseded declaration authority; acknowledge it and create a new declaration over the unchanged report |
 | `SBR_CREDENTIAL_NOT_READY` | Missing, locked, expired, revoked, inaccessible, or mismatched credential; open SBR readiness |
 | `SBR_PRODUCT_SERVICE_NOT_READY` | Product/service registration, conformance, or runtime evidence is absent or stale |
 | `ATO_VALIDATION_FAILED` | Official pre-lodge/lodge validation rejected the payload; attach label-linked outcomes |
 | `SUBMISSION_OUTCOME_UNKNOWN` | Acceptance cannot be determined; status reconciliation is required and blind retry is blocked |
-| `AMENDMENT_REQUIRED` | A declared or delivered report cannot be edited; create a linked amendment |
+| `REPORT_REPLACEMENT_REQUIRED` | A declared but unaccepted return cannot be edited; withdraw/supersede authority and create a linked replacement |
+| `AMENDMENT_REQUIRED` | An accepted delivered return cannot be edited; create a linked amendment from a new close when books changed |
 
 Parser and external response details are reduced to reviewed stable codes before crossing into the renderer. Logs contain operation IDs and hashes, never document contents, report values, TFNs, credential material, passwords, or raw official payloads.
 
@@ -488,8 +543,9 @@ Every task summary states its data root, supported platform, network authority, 
 - Unit tests cover every rule, mapping, rounding boundary, validation, lifecycle transition, permission, replay, conflict, stale-source, and unsupported-scenario branch.
 - Property tests prove double-entry balance, close/report immutability, tax-reconciliation equations, provenance completeness, deterministic recalculation, and original/amendment preservation.
 - Golden return fixtures cover at least: profitable service company, trading company with receivables/payables, current-year loss, eligible imported revenue loss, asset purchase/depreciation/disposal, ordinary dividend/franking activity, PAYG instalments/credits, ATO validation rejection, transport outcome unknown, and amendment.
-- Each unsupported condition in section 3.2 has a fixture proving declaration and lodge are blocked without silent omission.
+- Each unsupported condition in section 3.3 has a fixture proving declaration and lodge are blocked without silent omission.
 - Bundle tests prove exact year/service matching, signature/checksum verification, no fallback, change-impact manifests, and byte-identical output for identical inputs.
+- `compliance/traceability/company-return-2026.csv` maps every section 3.2 requirement and 2026 supported return fact to its rule ID, official source/artefact ID, Protobuf fact, golden fixture, unit test, integration test, packaged E2E step, and activation mode. CI fails on an unmapped rule, fact, fixture, or capability.
 
 ### 14.2 Storage and integration tests
 
@@ -525,12 +581,12 @@ Production activation requires a clean release candidate built from the exact co
 
 ## 15. Delivery decomposition
 
-The work remains one product slice but is implemented in dependency order:
+This section is the programme index. Each numbered dependency stage receives its own focused implementation plan, acceptance gate, and final integration evidence; no single implementation plan spans multiple independent stages. The work remains one product outcome and is implemented in dependency order:
 
 1. **Contracts and capability registry:** add company entity/report kinds, report lifecycle, generated use cases, transition fixtures, permissions, and fail-closed capability entries.
 2. **Bounded batch intake:** replace renderer-owned single-file reading and pasted CSV with trusted-main intake, document/transaction helpers, encrypted evidence, review jobs, and duplicate controls.
 3. **Accounting prerequisites:** complete the minimum sales, purchases, settlements, banking, financial reports, fixed assets, period controls, and cross-reconciliation needed by the supported company boundary.
-4. **Financial close:** implement checklist, resolutions, freeze/reopen, signed statements, evidence manifest, and stale-dependent-report behaviour.
+4. **Financial close:** implement checklist, resolutions, freeze/correction, approved statements, evidence manifest, and stale-dependent-report behaviour.
 5. **Annual tax reconciliation:** implement adjustments, elections, tax facts, deterministic book-to-tax calculation, provenance, and unsupported-condition guardrails.
 6. **Company return preparation:** implement versioned bundle loading, report facts, supported schedules, calculation, validation, source drill-down, export, declaration, and amendments.
 7. **SBR company-return simulator:** extend the core/helper journaled mutation contract with official-shaped pre-lodge/lodge/status/reconcile operations and deterministic fixtures.
@@ -542,7 +598,7 @@ Each implementation increment starts with a named failing test, implements the s
 
 ## 16. External gates
 
-The following are externally owned release gates rather than unfinished implementation placeholders:
+The following are externally owned release gates rather than repository implementation work:
 
 1. Register Tammy as a digital service provider through Online services for DSPs using myID and RAM authority.
 2. Confirm in the ATO Service Registry and applicable Business Implementation Guide that the reporting party may use the selected company-return service for the intended self-lodgment flow.
@@ -578,6 +634,7 @@ Direct production company-return lodgment is additionally complete only when eve
 - [SBR disclaimer and conditions of use](https://www.sbr.gov.au/digital-service-providers/developer-tools/sbr-disclaimer-and-conditions-use)
 - [ATO machine credentials and RAM](https://softwaredevelopers.ato.gov.au/usingmygovidramandmachinecredentials)
 - [ATO machine-to-machine authentication](https://softwaredevelopers.ato.gov.au/M2M)
-- [ATO Company tax return instructions](https://www.ato.gov.au/forms-and-instructions/company-tax-return-2025-instructions)
+- [ATO Software Developers Product Register](https://softwaredevelopers.ato.gov.au/product-register)
+- [ATO company tax rates](https://www.ato.gov.au/tax-rates-and-codes/company-tax-rates)
 
 Official artefacts issued through authenticated DSP channels are authoritative for the exact registered service and override public explanatory material where they differ. Tammy records that precedence in the accepted report bundle and release evidence.
