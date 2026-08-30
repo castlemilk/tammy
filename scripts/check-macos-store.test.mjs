@@ -15,6 +15,7 @@ import {
   validateMacOSReleaseEnvironment,
   validateMacOSStoreMetadata,
   validateMacOSStorePlists,
+  validateCompanyControllerAttestation,
 } from "./check-macos-store.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -55,6 +56,40 @@ test("repository inspection binds Tammy identity, store resources and operator g
     "signed-build-privacy-report",
     "screenshots",
   ]);
+  assert.deepEqual(result.blockers, []);
+});
+
+test("company-controller attestations require the exact redacted accountable record", () => {
+  const valid = {
+    schemaVersion: 1,
+    kind: "publisher-controller-authority",
+    company: "Gamma Systems Pty Ltd",
+    accountablePerson: "Ben Ebsworth",
+    controlsPrivacyPolicy: true,
+    controlsSupportAddress: true,
+    supportEmail: "ben.ebsworth@gmail.com",
+    confirmedAt: "2026-08-30T00:00:00.000Z",
+    evidenceReference: "user-confirmation-in-task",
+  };
+
+  assert.doesNotThrow(() => validateCompanyControllerAttestation(valid));
+
+  for (const attestation of [
+    Object.fromEntries(Object.entries(valid).filter(([key]) => key !== "confirmedAt")),
+    { ...valid, controlsPrivacyPolicy: false },
+    { ...valid, controlsSupportAddress: false },
+    { ...valid, company: "Tammy Pty Ltd" },
+    { ...valid, supportEmail: "support@example.com" },
+    { ...valid, confirmedAt: "not-a-time" },
+    { ...valid, confirmedAt: "2026-02-30T00:00:00Z" },
+    { ...valid, extra: true },
+    { ...valid, apiToken: "redacted" },
+  ]) {
+    assert.throws(
+      () => validateCompanyControllerAttestation(attestation),
+      /MACOS_STORE_COMPANY_AUTHORITY_INVALID/,
+    );
+  }
 });
 
 test("PNG dimension reader rejects malformed and non-square app icons", async () => {

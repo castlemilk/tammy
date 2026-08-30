@@ -108,6 +108,62 @@ function isRecord(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+const COMPANY_CONTROLLER_ATTESTATION = Object.freeze({
+  accountablePerson: "Ben Ebsworth",
+  company: "Gamma Systems Pty Ltd",
+  controlsPrivacyPolicy: true,
+  controlsSupportAddress: true,
+  evidenceReference: "user-confirmation-in-task",
+  kind: "publisher-controller-authority",
+  schemaVersion: 1,
+  supportEmail: "ben.ebsworth@gmail.com",
+});
+const COMPANY_CONTROLLER_ATTESTATION_KEYS = Object.freeze([
+  "schemaVersion",
+  "kind",
+  "company",
+  "accountablePerson",
+  "controlsPrivacyPolicy",
+  "controlsSupportAddress",
+  "supportEmail",
+  "confirmedAt",
+  "evidenceReference",
+]);
+const SENSITIVE_KEY = /secret|token|password|credential/i;
+const UTC_RFC3339 = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?Z$/;
+
+function isValidUtcRfc3339(value) {
+  const match = typeof value === "string" ? value.match(UTC_RFC3339) : undefined;
+  if (match === null || match === undefined) return false;
+  const date = new Date(value);
+  return (
+    Number.isFinite(date.getTime()) &&
+    date.getUTCFullYear() === Number(match[1]) &&
+    date.getUTCMonth() + 1 === Number(match[2]) &&
+    date.getUTCDate() === Number(match[3]) &&
+    date.getUTCHours() === Number(match[4]) &&
+    date.getUTCMinutes() === Number(match[5]) &&
+    date.getUTCSeconds() === Number(match[6])
+  );
+}
+
+export function validateCompanyControllerAttestation(attestation) {
+  if (
+    !isRecord(attestation) ||
+    Object.keys(attestation).length !== COMPANY_CONTROLLER_ATTESTATION_KEYS.length ||
+    Object.keys(attestation).some(
+      (key) => !COMPANY_CONTROLLER_ATTESTATION_KEYS.includes(key) || SENSITIVE_KEY.test(key),
+    ) ||
+    !COMPANY_CONTROLLER_ATTESTATION_KEYS.every((key) => Object.hasOwn(attestation, key)) ||
+    Object.entries(COMPANY_CONTROLLER_ATTESTATION).some(
+      ([key, value]) => attestation[key] !== value,
+    ) ||
+    !isValidUtcRfc3339(attestation.confirmedAt)
+  ) {
+    fail("MACOS_STORE_COMPANY_AUTHORITY_INVALID");
+  }
+}
+
 export function validateMacOSProvisioningProfile(profile, { mode, teamID, now = new Date() }) {
   const entitlements = isRecord(profile) ? profile.Entitlements : undefined;
   const appIdentifierPrefixes = isRecord(profile) ? profile.ApplicationIdentifierPrefix : undefined;
@@ -382,6 +438,13 @@ export async function inspectMacOSStoreRepository(root) {
   const releaseRoot = path.join(desktopRoot, "release", "macos");
   const paths = {
     appEntitlements: path.join(releaseRoot, "entitlements.mas.plist"),
+    companyControllerAttestation: path.join(
+      root,
+      "docs",
+      "release",
+      "authority",
+      "publisher-controller.json",
+    ),
     childEntitlements: path.join(releaseRoot, "entitlements.mas.child.plist"),
     coreEntitlements: path.join(releaseRoot, "entitlements.mas.core.plist"),
     sbrHelperEntitlements: path.join(releaseRoot, "entitlements.mas.sbr-helper.plist"),
@@ -428,6 +491,15 @@ export async function inspectMacOSStoreRepository(root) {
   ]).catch(() => fail());
 
   const desktopPackage = JSON.parse(packageBytes.toString("utf8"));
+  let companyControllerAttestationValid = false;
+  try {
+    validateCompanyControllerAttestation(
+      JSON.parse(await readFile(paths.companyControllerAttestation, "utf8")),
+    );
+    companyControllerAttestationValid = true;
+  } catch {
+    // This gate deliberately reports only the blocker, never record contents.
+  }
   const icon = readPngDimensions(iconBytes);
   const metadataStatus = validateMacOSStoreMetadata(metadata);
   validateMacOSStorePlists({
@@ -473,6 +545,7 @@ export async function inspectMacOSStoreRepository(root) {
     icon,
     metadataComplete: metadataStatus.complete,
     metadata: metadataStatus,
+    blockers: companyControllerAttestationValid ? [] : ["company-controller-attestation"],
     operatorRequirements: [
       "app-store-connect-record",
       "certificates-and-profiles",
@@ -500,6 +573,9 @@ async function main() {
   const result = await inspectMacOSStoreRepository(root);
   let releaseInput;
   if (release[0] === "--release") {
+    if (result.blockers.includes("company-controller-attestation")) {
+      fail("MACOS_STORE_COMPANY_AUTHORITY_MISSING");
+    }
     if (!result.metadataComplete) fail("MACOS_RELEASE_METADATA_INCOMPLETE");
     releaseInput = validateMacOSReleaseEnvironment(process.env);
     assertMacOSReleaseMetadata(result.metadata, process.env);
@@ -515,7 +591,12 @@ async function main() {
     `${JSON.stringify({
       ...result,
       ...(releaseInput === undefined ? {} : { release: releaseInput }),
-      status: releaseInput === undefined ? "REPOSITORY_READY" : "SIGNED_BUILD_INPUTS_READY",
+      status:
+        releaseInput === undefined
+          ? result.blockers.length === 0
+            ? "REPOSITORY_READY"
+            : "REPOSITORY_BLOCKED"
+          : "SIGNED_BUILD_INPUTS_READY",
     })}\n`,
   );
 }

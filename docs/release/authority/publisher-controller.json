@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "kind": "publisher-controller-authority",
+  "company": "Gamma Systems Pty Ltd",
+  "accountablePerson": "Ben Ebsworth",
+  "controlsPrivacyPolicy": true,
+  "controlsSupportAddress": true,
+  "supportEmail": "ben.ebsworth@gmail.com",
+  "confirmedAt": "2026-08-30T07:18:32Z",
+  "evidenceReference": "user-confirmation-in-task"
+}
