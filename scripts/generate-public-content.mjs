@@ -2,6 +2,7 @@ import { open, readFile, rename, rm } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { validateMacOSStoreIdentity } from "./check-macos-store.mjs";
+import { validateDataRemovalInventory } from "./macos-data-removal.mjs";
 
 const policyError = (message) => new Error(`Invalid policy Markdown: ${message}`);
 const semver = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(?:(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
@@ -102,10 +103,20 @@ export function parsePolicyMarkdown(source) {
   return { effectiveDate, sections };
 }
 
-export function generatePublicContent({ identity, privacy, desktopPackage }) {
+export function generatePublicContent({ identity, privacy, desktopPackage, dataRemoval }) {
   validateMacOSStoreIdentity(identity);
+  validateDataRemovalInventory(dataRemoval);
   if (!semver.test(desktopPackage?.version ?? "")) throw new Error("Desktop package version must be a semantic version");
-  const content = { identity: { schemaVersion: identity.schemaVersion, appStoreName: identity.appStoreName, installedName: identity.installedName, bundleIdentifier: identity.bundleIdentifier, publisher: identity.publisher, supportEmail: identity.supportEmail, locale: identity.locale, primaryCategory: identity.primaryCategory, secondaryCategory: identity.secondaryCategory, minimumMacOSVersion: identity.minimumMacOSVersion, architectures: identity.architectures, copyright: identity.copyright, capabilityBoundary: identity.capabilityBoundary }, marketingVersion: desktopPackage.version, policy: parsePolicyMarkdown(privacy) };
+  const content = {
+    identity: { schemaVersion: identity.schemaVersion, appStoreName: identity.appStoreName, installedName: identity.installedName, bundleIdentifier: identity.bundleIdentifier, publisher: identity.publisher, supportEmail: identity.supportEmail, locale: identity.locale, primaryCategory: identity.primaryCategory, secondaryCategory: identity.secondaryCategory, minimumMacOSVersion: identity.minimumMacOSVersion, architectures: identity.architectures, copyright: identity.copyright, capabilityBoundary: identity.capabilityBoundary },
+    marketingVersion: desktopPackage.version,
+    policy: parsePolicyMarkdown(privacy),
+    deletionGuidance: {
+      containerDisplayPath: `~/${dataRemoval.containerRelativePath}`,
+      groupContainerSuffix: dataRemoval.groupContainerSuffix,
+      keychainServices: [...dataRemoval.keychainServices],
+    },
+  };
   return `export type PolicyInline =\n  | { readonly type: "text" | "emphasis" | "code"; readonly value: string }\n  | { readonly type: "link"; readonly text: string; readonly href: string };\n\nexport interface PolicySection {\n  readonly heading: string;\n  readonly blocks: readonly (\n    | { readonly kind: "paragraph"; readonly inlines: readonly PolicyInline[] }\n    | { readonly kind: "list"; readonly items: readonly (readonly PolicyInline[])[] }\n  )[];\n}\n\nexport const publicContent = ${JSON.stringify(content, null, 2)} as const;\n`;
 }
 
@@ -140,9 +151,9 @@ async function replaceAtomically(outputPath, output, fileSystem) {
   }
 }
 
-export async function run({ policyPath = "PRIVACY.md", identityPath = "apps/desktop/release/macos/store-identity.json", packagePath = "apps/desktop/package.json", outputPath = "apps/site/content/public-content.generated.ts", fileSystem = defaultFileSystem } = {}) {
-  const [privacy, identityText, packageText] = await Promise.all([fileSystem.readFile(policyPath, "utf8"), fileSystem.readFile(identityPath, "utf8"), fileSystem.readFile(packagePath, "utf8")]);
-  const output = generatePublicContent({ identity: JSON.parse(identityText), privacy, desktopPackage: JSON.parse(packageText) });
+export async function run({ policyPath = "PRIVACY.md", identityPath = "apps/desktop/release/macos/store-identity.json", packagePath = "apps/desktop/package.json", dataRemovalPath = "apps/desktop/release/macos/data-removal.json", outputPath = "apps/site/content/public-content.generated.ts", fileSystem = defaultFileSystem } = {}) {
+  const [privacy, identityText, packageText, dataRemovalText] = await Promise.all([fileSystem.readFile(policyPath, "utf8"), fileSystem.readFile(identityPath, "utf8"), fileSystem.readFile(packagePath, "utf8"), fileSystem.readFile(dataRemovalPath, "utf8")]);
+  const output = generatePublicContent({ identity: JSON.parse(identityText), privacy, desktopPackage: JSON.parse(packageText), dataRemoval: JSON.parse(dataRemovalText) });
   try {
     if (await fileSystem.readFile(outputPath, "utf8") === output) return { written: false };
   } catch (error) {

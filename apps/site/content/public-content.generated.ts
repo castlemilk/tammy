@@ -179,5 +179,15 @@ export const publicContent = {
         ]
       }
     ]
+  },
+  "deletionGuidance": {
+    "containerDisplayPath": "~/Library/Containers/com.tammy.desktop",
+    "groupContainerSuffix": "com.tammy.desktop",
+    "keychainServices": [
+      "com.tammy.workspace",
+      "com.tammy.attempt-journal-anchor.v1",
+      "com.tammy.audit-mirror",
+      "com.tammy.sbr.production"
+    ]
   }
 } as const;

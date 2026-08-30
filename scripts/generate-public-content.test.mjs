@@ -26,6 +26,18 @@ const identity = {
   capabilityBoundary: { reporting: "preparation-only", atoLodgement: "not-lodged" },
 };
 
+const dataRemoval = {
+  schemaVersion: 1,
+  containerRelativePath: "Library/Containers/com.tammy.desktop",
+  groupContainerSuffix: "com.tammy.desktop",
+  keychainServices: [
+    "com.tammy.workspace",
+    "com.tammy.attempt-journal-anchor.v1",
+    "com.tammy.audit-mirror",
+    "com.tammy.sbr.production",
+  ],
+};
+
 const privacy = `# Tammy privacy policy
 
 Effective 30 August 2026.
@@ -119,8 +131,8 @@ for (const [name, markdown] of [
 }
 
 test("generates safe deterministic TypeScript from trusted JSON inputs and parsed policy", () => {
-  const output = generatePublicContent({ identity, privacy, desktopPackage: { version: "0.1.0" } });
-  assert.equal(output, generatePublicContent({ identity, privacy, desktopPackage: { version: "0.1.0" } }));
+  const output = generatePublicContent({ identity, privacy, desktopPackage: { version: "0.1.0" }, dataRemoval });
+  assert.equal(output, generatePublicContent({ identity, privacy, desktopPackage: { version: "0.1.0" }, dataRemoval }));
   assert.match(output, /export interface PolicySection/);
   assert.match(output, /export type PolicyInline/);
   assert.match(output, /readonly kind: "paragraph"/);
@@ -129,6 +141,10 @@ test("generates safe deterministic TypeScript from trusted JSON inputs and parse
   assert.match(output, /"marketingVersion": "0.1.0"/);
   assert.match(output, /"schemaVersion": 1/);
   assert.match(output, /"effectiveDate": "30 August 2026"/);
+  assert.match(output, /"containerDisplayPath": "~\/Library\/Containers\/com\.tammy\.desktop"/);
+  assert.match(output, /"groupContainerSuffix": "com\.tammy\.desktop"/);
+  for (const service of dataRemoval.keychainServices) assert.ok(output.includes(JSON.stringify(service)));
+  assert.doesNotMatch(output, /com\.tammy\.sbr\.(?:development|simulator)|com\.tammy\.workspace\.dev/);
   assert.doesNotMatch(output, /<script>|<b>|!\[/);
   for (const value of ["Tammy Accounting", "Tammy", "com.tammy.desktop", "Gamma Systems Pty Ltd", "ben.ebsworth@gmail.com", "en-AU", "Finance", "Business", "14.0", "arm64", "© 2026 Gamma Systems Pty Ltd", "preparation-only", "not-lodged", "https://example.com/support"]) {
     assert.ok(output.includes(JSON.stringify(value)), `${value} must be a JSON string literal`);
@@ -145,7 +161,7 @@ for (const [name, changedIdentity] of [
 ]) {
   test(`rejects canonical identity drift: ${name}`, () => {
     assert.throws(
-      () => generatePublicContent({ identity: changedIdentity, privacy, desktopPackage: { version: "0.1.0" } }),
+      () => generatePublicContent({ identity: changedIdentity, privacy, desktopPackage: { version: "0.1.0" }, dataRemoval }),
       /MACOS_STORE_IDENTITY_INVALID/,
     );
   });
@@ -154,7 +170,7 @@ for (const [name, changedIdentity] of [
 for (const version of ["0.1", "01.1.0", "1.01.0", "1.0.01", "1.0.0-", "1.0.0-alpha..1", "1.0.0+build..1"]) {
   test(`rejects invalid desktop semantic version ${version}`, () => {
   assert.throws(
-    () => generatePublicContent({ identity, privacy, desktopPackage: { version } }),
+    () => generatePublicContent({ identity, privacy, desktopPackage: { version }, dataRemoval }),
     /semantic version/i,
   );
   });
@@ -167,21 +183,23 @@ test("writes byte-stable generated content to an explicit temporary output path"
   const policyPath = path.join(temporaryDirectory, "PRIVACY.md");
   const identityPath = path.join(temporaryDirectory, "store-identity.json");
   const packagePath = path.join(temporaryDirectory, "package.json");
+  const dataRemovalPath = path.join(temporaryDirectory, "data-removal.json");
   await Promise.all([
     writeFile(policyPath, privacy),
     writeFile(identityPath, JSON.stringify(identity)),
     writeFile(packagePath, JSON.stringify({ version: "0.1.0" })),
+    writeFile(dataRemovalPath, JSON.stringify(dataRemoval)),
   ]);
 
-  assert.deepEqual(await run({ policyPath, identityPath, packagePath, outputPath }), { written: true });
+  assert.deepEqual(await run({ policyPath, identityPath, packagePath, dataRemovalPath, outputPath }), { written: true });
   const first = await readFile(outputPath, "utf8");
   const firstStat = await stat(outputPath);
-  assert.deepEqual(await run({ policyPath, identityPath, packagePath, outputPath }), { written: false });
+  assert.deepEqual(await run({ policyPath, identityPath, packagePath, dataRemovalPath, outputPath }), { written: false });
   assert.equal(await readFile(outputPath, "utf8"), first);
   assert.equal((await stat(outputPath)).ino, firstStat.ino, "unchanged output is not replaced");
 
   await writeFile(policyPath, privacy.replace("Plain text", "Changed text"));
-  assert.deepEqual(await run({ policyPath, identityPath, packagePath, outputPath }), { written: true });
+  assert.deepEqual(await run({ policyPath, identityPath, packagePath, dataRemovalPath, outputPath }), { written: true });
   assert.notEqual((await stat(outputPath)).ino, firstStat.ino, "changed output is atomically replaced");
   assert.match(await readFile(outputPath, "utf8"), /Changed text/);
 });
@@ -192,8 +210,9 @@ test("cleans up an exclusively-created sibling temporary file after rename failu
   const policyPath = path.join(temporaryDirectory, "PRIVACY.md");
   const identityPath = path.join(temporaryDirectory, "store-identity.json");
   const packagePath = path.join(temporaryDirectory, "package.json");
+  const dataRemovalPath = path.join(temporaryDirectory, "data-removal.json");
   const outputPath = path.join(temporaryDirectory, "public-content.generated.ts");
-  await Promise.all([writeFile(policyPath, privacy), writeFile(identityPath, JSON.stringify(identity)), writeFile(packagePath, JSON.stringify({ version: "0.1.0" }))]);
+  await Promise.all([writeFile(policyPath, privacy), writeFile(identityPath, JSON.stringify(identity)), writeFile(packagePath, JSON.stringify({ version: "0.1.0" })), writeFile(dataRemovalPath, JSON.stringify(dataRemoval))]);
   const cleaned = [];
   const fileSystem = {
     async open(filePath, flags) {
@@ -204,7 +223,7 @@ test("cleans up an exclusively-created sibling temporary file after rename failu
     async rename() { throw new Error("rename failed"); },
     async rm(filePath) { cleaned.push(filePath); },
   };
-  await assert.rejects(() => run({ policyPath, identityPath, packagePath, outputPath, fileSystem }), /rename failed/);
+  await assert.rejects(() => run({ policyPath, identityPath, packagePath, dataRemovalPath, outputPath, fileSystem }), /rename failed/);
   assert.equal(cleaned.length, 1);
   assert.equal(path.dirname(cleaned[0]), temporaryDirectory);
 });
@@ -215,8 +234,9 @@ test("retries a temporary-name collision before atomically replacing output", as
   const policyPath = path.join(temporaryDirectory, "PRIVACY.md");
   const identityPath = path.join(temporaryDirectory, "store-identity.json");
   const packagePath = path.join(temporaryDirectory, "package.json");
+  const dataRemovalPath = path.join(temporaryDirectory, "data-removal.json");
   const outputPath = path.join(temporaryDirectory, "public-content.generated.ts");
-  await Promise.all([writeFile(policyPath, privacy), writeFile(identityPath, JSON.stringify(identity)), writeFile(packagePath, JSON.stringify({ version: "0.1.0" }))]);
+  await Promise.all([writeFile(policyPath, privacy), writeFile(identityPath, JSON.stringify(identity)), writeFile(packagePath, JSON.stringify({ version: "0.1.0" })), writeFile(dataRemovalPath, JSON.stringify(dataRemoval))]);
   let attempts = 0;
   const renamed = [];
   const fileSystem = {
@@ -233,19 +253,34 @@ test("retries a temporary-name collision before atomically replacing output", as
     async rename(source, destination) { renamed.push([source, destination]); },
     async rm() {},
   };
-  assert.deepEqual(await run({ policyPath, identityPath, packagePath, outputPath, fileSystem }), { written: true });
+  assert.deepEqual(await run({ policyPath, identityPath, packagePath, dataRemovalPath, outputPath, fileSystem }), { written: true });
   assert.equal(attempts, 2);
   assert.deepEqual(renamed[0].slice(1), [outputPath]);
 });
 
-test("canonical repository policy and identity generate deterministic public content", async () => {
-  const [canonicalPrivacy, canonicalIdentity, desktopPackage] = await Promise.all([
+test("canonical repository policy, identity, and removal inventory generate deterministic public content", async () => {
+  const [canonicalPrivacy, canonicalIdentity, desktopPackage, canonicalDataRemoval] = await Promise.all([
     readFile("PRIVACY.md", "utf8"),
     readFile("apps/desktop/release/macos/store-identity.json", "utf8"),
     readFile("apps/desktop/package.json", "utf8"),
+    readFile("apps/desktop/release/macos/data-removal.json", "utf8"),
   ]);
   for (const heading of ["## Publisher and scope", "## Website and hosting", "## Support email", "## Retention and deletion", "## Reporting boundary"]) assert.ok(canonicalPrivacy.includes(heading));
   for (const claim of ["Gamma Systems Pty Ltd", "ben.ebsworth@gmail.com", "Local records remain on your Mac until you remove them", "does not lodge ATO or SBR submissions"]) assert.ok(canonicalPrivacy.includes(claim));
-  const input = { identity: JSON.parse(canonicalIdentity), privacy: canonicalPrivacy, desktopPackage: JSON.parse(desktopPackage) };
+  const input = { identity: JSON.parse(canonicalIdentity), privacy: canonicalPrivacy, desktopPackage: JSON.parse(desktopPackage), dataRemoval: JSON.parse(canonicalDataRemoval) };
   assert.equal(generatePublicContent(input), generatePublicContent(input));
 });
+
+for (const [name, changedDataRemoval] of [
+  ["additional path", { ...dataRemoval, extraPath: "Library/Application Support/Other" }],
+  ["changed container path", { ...dataRemoval, containerRelativePath: "Library/Containers/com.example.other" }],
+  ["additional service", { ...dataRemoval, keychainServices: [...dataRemoval.keychainServices, "com.example.sentinel"] }],
+  ["development service", { ...dataRemoval, keychainServices: dataRemoval.keychainServices.map((service) => service === "com.tammy.sbr.production" ? "com.tammy.sbr.development" : service) }],
+]) {
+  test(`rejects invented public deletion guidance: ${name}`, () => {
+    assert.throws(
+      () => generatePublicContent({ identity, privacy, desktopPackage: { version: "0.1.0" }, dataRemoval: changedDataRemoval }),
+      /MACOS_DATA_REMOVAL_INVENTORY_INVALID/,
+    );
+  });
+}
