@@ -35,7 +35,7 @@ const LIFECYCLE_KINDS = new Set([
   "approved",
   "rejected",
 ]);
-const CONSUMING_KINDS = new Set(["uploaded", "rejected", "superseded"]);
+const CONSUMING_KINDS = new Set(["uploaded", "expired", "rejected", "superseded"]);
 
 function fail(code) {
   throw new Error(code);
@@ -50,6 +50,16 @@ function assertExactKeys(value, expected) {
   if (actual.length !== keys.length || actual.some((key, index) => key !== keys[index])) {
     fail("MACOS_BUILD_LEDGER_INVALID");
   }
+}
+
+function exactKeys(value, expected) {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    Object.keys(value).length === expected.length &&
+    expected.every((key) => Object.hasOwn(value, key))
+  );
 }
 
 function isUtcTime(value) {
@@ -110,21 +120,58 @@ export function validateConsumedBuildNumbers(ledger, events) {
   const reservations = new Map(
     ledger.entries.map((entry) => [`${entry.marketingVersion}\0${entry.buildNumber}`, entry]),
   );
-  const priorEvents = new Map();
+  const lifecycleByBuild = new Map();
   const consumed = new Set();
-  for (const event of events) {
+  for (const record of events) {
+    if (!exactKeys(record, ["event", "relativePath"]) || typeof record.relativePath !== "string") {
+      fail("MACOS_BUILD_EVENT_LEDGER_MISMATCH");
+    }
+    const event = record.event;
     const key = `${event?.releaseVersion}\0${event?.buildNumber}`;
-    const prior = priorEvents.get(key) ?? [];
+    const lifecycle = lifecycleByBuild.get(key) ?? {
+      prior: [],
+      uploaded: false,
+      submitted: false,
+      reviewed: false,
+      terminal: false,
+    };
+    const expectedPath = `${event?.releaseVersion}/build-${event?.buildNumber}/events/${event?.occurredAt?.replaceAll(":", "-")}-${event?.kind}.json`;
     try {
-      validateReleaseLifecycleEvent(event, { priorEvents: prior });
+      validateReleaseLifecycleEvent(event, { priorEvents: lifecycle.prior });
     } catch {
       fail("MACOS_BUILD_EVENT_LEDGER_MISMATCH");
     }
-    if (!reservations.has(key) || (prior.at(-1)?.occurredAt ?? "") >= event.occurredAt) {
+    if (
+      record.relativePath !== expectedPath ||
+      !reservations.has(key) ||
+      (lifecycle.prior.at(-1)?.occurredAt ?? "") >= event.occurredAt
+    ) {
       fail("MACOS_BUILD_EVENT_LEDGER_MISMATCH");
     }
-    prior.push(event);
-    priorEvents.set(key, prior);
+    if (event.kind === "uploaded") {
+      if (lifecycle.uploaded || lifecycle.submitted || lifecycle.reviewed || lifecycle.terminal) {
+        fail("MACOS_BUILD_EVENT_LEDGER_MISMATCH");
+      }
+      lifecycle.uploaded = true;
+    } else if (event.kind === "submitted") {
+      if (!lifecycle.uploaded || lifecycle.submitted || lifecycle.reviewed || lifecycle.terminal) {
+        fail("MACOS_BUILD_EVENT_LEDGER_MISMATCH");
+      }
+      lifecycle.submitted = true;
+    } else if (event.kind === "approved" || event.kind === "rejected") {
+      if (!lifecycle.submitted || lifecycle.reviewed || lifecycle.terminal) {
+        fail("MACOS_BUILD_EVENT_LEDGER_MISMATCH");
+      }
+      lifecycle.reviewed = true;
+      lifecycle.terminal = true;
+    } else if (event.kind === "expired" || event.kind === "superseded") {
+      if (lifecycle.submitted || lifecycle.reviewed || lifecycle.terminal) {
+        fail("MACOS_BUILD_EVENT_LEDGER_MISMATCH");
+      }
+      lifecycle.terminal = true;
+    }
+    lifecycle.prior.push(event);
+    lifecycleByBuild.set(key, lifecycle);
     if (CONSUMING_KINDS.has(event.kind)) consumed.add(event.buildNumber);
   }
   return [...consumed].sort((left, right) => (BigInt(left) < BigInt(right) ? -1 : 1));
@@ -158,7 +205,15 @@ export async function readMacOSLifecycleEvents(recordsRoot = defaultRecordsRoot)
         } catch {
           fail("MACOS_BUILD_EVENT_LEDGER_MISMATCH");
         }
-        if (LIFECYCLE_KINDS.has(record?.kind)) events.push(record);
+        const relativePath = path.relative(recordsRoot, entryPath).split(path.sep).join("/");
+        const isEventPath = relativePath.split("/").includes("events");
+        const isLifecycle = LIFECYCLE_KINDS.has(record?.kind);
+        if (isEventPath || isLifecycle) {
+          if (!isLifecycle) fail("MACOS_BUILD_EVENT_LEDGER_MISMATCH");
+          const expectedPath = `${record.releaseVersion}/build-${record.buildNumber}/events/${record.occurredAt?.replaceAll(":", "-")}-${record.kind}.json`;
+          if (relativePath !== expectedPath) fail("MACOS_BUILD_EVENT_LEDGER_MISMATCH");
+          events.push({ event: record, relativePath });
+        }
       }
     }
   }

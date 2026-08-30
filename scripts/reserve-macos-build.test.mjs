@@ -114,12 +114,102 @@ test("derives consumed build numbers from immutable lifecycle events and binds t
     `${JSON.stringify(uploaded, null, 2)}\n`,
   );
   const events = await readMacOSLifecycleEvents(directory);
-  assert.deepEqual(events, [uploaded]);
+  assert.deepEqual(events, [
+    {
+      relativePath: "0.1.0/build-1/events/2026-08-30T01-00-00.000Z-uploaded.json",
+      event: uploaded,
+    },
+  ]);
   assert.deepEqual(validateConsumedBuildNumbers(ledger([entry("1")]), events), ["1"]);
   assert.throws(
     () => validateConsumedBuildNumbers(ledger(), events),
     /MACOS_BUILD_EVENT_LEDGER_MISMATCH/,
   );
+
+  const expired = {
+    schemaVersion: 1,
+    kind: "expired",
+    releaseVersion: "0.1.0",
+    buildNumber: "1",
+    operator: "Ben Ebsworth",
+    occurredAt: "2026-08-30T00:30:00.000Z",
+    reason: "candidate-timeout",
+  };
+  assert.deepEqual(
+    validateConsumedBuildNumbers(ledger([entry("1")]), [
+      {
+        relativePath: "0.1.0/build-1/events/2026-08-30T00-30-00.000Z-expired.json",
+        event: expired,
+      },
+    ]),
+    ["1"],
+  );
+
+  const submitted = {
+    schemaVersion: 1,
+    kind: "submitted",
+    releaseVersion: "0.1.0",
+    buildNumber: "1",
+    operator: "Ben Ebsworth",
+    occurredAt: "2026-08-30T02:00:00.000Z",
+    appStoreSubmissionReference: "apple/submission.json",
+  };
+  const rejected = {
+    schemaVersion: 1,
+    kind: "rejected",
+    releaseVersion: "0.1.0",
+    buildNumber: "1",
+    operator: "Ben Ebsworth",
+    occurredAt: "2026-08-30T03:00:00.000Z",
+    reviewReference: "apple/review.json",
+    submittedEventPath: "events/2026-08-30T02-00-00.000Z-submitted.json",
+  };
+  assert.throws(
+    () =>
+      validateConsumedBuildNumbers(ledger([entry("1")]), [
+        {
+          relativePath: "0.1.0/build-1/events/2026-08-30T02-00-00.000Z-submitted.json",
+          event: submitted,
+        },
+        {
+          relativePath: "0.1.0/build-1/events/2026-08-30T03-00-00.000Z-rejected.json",
+          event: rejected,
+        },
+      ]),
+    /MACOS_BUILD_EVENT_LEDGER_MISMATCH/,
+  );
+});
+
+test("rejects misplaced, misnamed, and unknown lifecycle event files", async (context) => {
+  const uploaded = {
+    schemaVersion: 1,
+    kind: "uploaded",
+    releaseVersion: "0.1.0",
+    buildNumber: "1",
+    operator: "Ben Ebsworth",
+    occurredAt: "2026-08-30T01:00:00.000Z",
+    productSourceCommit: "a".repeat(40),
+    productSourceTree: "b".repeat(40),
+    packageSha256: "c".repeat(64),
+    appStoreConnectBuildId: "1234567890",
+  };
+  for (const [relativePath, record] of [
+    ["0.1.0/build-1/uploaded.json", uploaded],
+    ["0.1.0/build-1/events/wrong-uploaded.json", uploaded],
+    [
+      "0.1.0/build-1/events/2026-08-30T01-00-00.000Z-uploded.json",
+      { ...uploaded, kind: "uploded" },
+    ],
+  ]) {
+    const directory = await mkdtemp(
+      path.join(process.env.TMPDIR ?? os.tmpdir(), "tammy-invalid-build-events-"),
+    );
+    context.after(() => rm(directory, { recursive: true, force: true }));
+    const file = path.join(directory, relativePath);
+    await mkdir(path.dirname(file), { recursive: true });
+    await writeFile(file, `${JSON.stringify(record, null, 2)}\n`);
+    await assert.rejects(readMacOSLifecycleEvents(directory), /MACOS_BUILD_EVENT_LEDGER_MISMATCH/);
+  }
 });
 
 test("atomically reserves a greater build number without phase-two facts", async (context) => {
