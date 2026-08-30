@@ -13,12 +13,13 @@ import {
   readMacOSProvisioningProfilePlist,
   readMacOSRepositoryPlist,
   readPngDimensions,
+  validateCompanyControllerAttestation,
+  validateCurrentPublicSite,
   validateMacOSProvisioningProfile,
   validateMacOSReleaseEnvironment,
+  validateMacOSStoreIdentity,
   validateMacOSStoreMetadata,
   validateMacOSStorePlists,
-  validateCompanyControllerAttestation,
-  validateMacOSStoreIdentity,
 } from "./check-macos-store.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -107,35 +108,85 @@ test("repository inspection binds Tammy identity, store resources and operator g
   assert.equal(result.icon.width, 1024);
   assert.equal(result.icon.height, 1024);
   assert.deepEqual(result.operatorRequirements, [
-    "app-store-connect-record",
     "certificates-and-profiles",
+    "age-rating",
+    "app-store-warning-review",
     "export-compliance",
-    "legal-and-commercial-metadata",
-    "privacy-and-support-urls",
-    "signed-build-privacy-report",
+    "metadata-assets-entered",
+    "pricing-availability",
+    "privacy-answer",
+    "processed-build",
+    "seller-eligibility",
     "screenshots",
+    "signed-build-privacy-report",
   ]);
-  assert.deepEqual(result.passed, ["publisher-authority", "store-identity"]);
+  assert.deepEqual(result.passed, [
+    "metadata",
+    "policy",
+    "public-site",
+    "publisher-authority",
+    "schemas",
+    "store-identity",
+    "tests",
+  ]);
   assert.deepEqual(result.blockers, [
-    "CANONICAL_SCREENSHOTS_NOT_RECORDED",
-    "PUBLIC_SITE_NOT_RECORDED",
-    "RELEASE_STATE_NOT_RECORDED",
+    "PLATFORM_IDENTITY_NOT_VERIFIED",
+    "SCREENSHOT_DEFINITIONS_NOT_READY",
   ]);
+  assert.equal(result.releaseState.state, "NOT_READY");
 });
 
 test("non-signing check reports repository blockers without release input leakage", async () => {
-  const { stdout } = await execFile(process.execPath, ["scripts/check-macos-store.mjs"], { cwd: root });
+  const { stdout } = await execFile(process.execPath, ["scripts/check-macos-store.mjs"], {
+    cwd: root,
+  });
   const result = JSON.parse(stdout);
 
   assert.equal(result.status, "NOT_READY");
-  assert.deepEqual(result.passed, ["publisher-authority", "store-identity"]);
+  assert.deepEqual(result.passed, [
+    "metadata",
+    "policy",
+    "public-site",
+    "publisher-authority",
+    "schemas",
+    "store-identity",
+    "tests",
+  ]);
   assert.deepEqual(result.blockers, [
-    "CANONICAL_SCREENSHOTS_NOT_RECORDED",
-    "PUBLIC_SITE_NOT_RECORDED",
-    "RELEASE_STATE_NOT_RECORDED",
+    "PLATFORM_IDENTITY_NOT_VERIFIED",
+    "SCREENSHOT_DEFINITIONS_NOT_READY",
   ]);
   assert.deepEqual(result.identity, validStoreIdentity);
   assert.equal(stdout.includes("TAMMY_MACOS_"), false);
+});
+
+test("repository readiness binds the exact deployed public site to the canonical policy", async () => {
+  const recordsRoot = path.join(root, "docs/release/public-site");
+  const pointer = JSON.parse(await readFile(path.join(recordsRoot, "current.json"), "utf8"));
+  const deployment = JSON.parse(
+    await readFile(path.join(recordsRoot, pointer.deploymentEvidence), "utf8"),
+  );
+  const policy = await readFile(path.join(root, "PRIVACY.md"));
+  assert.deepEqual(validateCurrentPublicSite(pointer, deployment, policy), {
+    deploymentEvidence: pointer.deploymentEvidence,
+    origin: "https://tammy-accounting.castlemilk.chatgpt.site",
+    policySha256: deployment.policySha256,
+    privacyPolicy: "https://tammy-accounting.castlemilk.chatgpt.site/privacy",
+    support: "https://tammy-accounting.castlemilk.chatgpt.site/support",
+  });
+  assert.throws(
+    () => validateCurrentPublicSite(pointer, deployment, Buffer.from("changed policy\n")),
+    /MACOS_PUBLIC_SITE_INVALID/,
+  );
+  assert.throws(
+    () =>
+      validateCurrentPublicSite(
+        { ...pointer, deploymentEvidence: "../outside.json" },
+        deployment,
+        policy,
+      ),
+    /MACOS_PUBLIC_SITE_INVALID/,
+  );
 });
 
 test("repository inspection rejects installed-name drift from the desktop product name", async () => {
@@ -154,10 +205,14 @@ test("repository inspection rejects installed-name drift from the desktop produc
         recursive: true,
       }),
       cp(path.join(root, "README.md"), path.join(fixtureRoot, "README.md")),
+      cp(path.join(root, "PRIVACY.md"), path.join(fixtureRoot, "PRIVACY.md")),
     ]);
     const packagePath = path.join(fixtureRoot, "apps", "desktop", "package.json");
     const desktopPackage = JSON.parse(await readFile(packagePath, "utf8"));
-    await writeFile(packagePath, `${JSON.stringify({ ...desktopPackage, productName: "Tammy Drift" }, null, 2)}\n`);
+    await writeFile(
+      packagePath,
+      `${JSON.stringify({ ...desktopPackage, productName: "Tammy Drift" }, null, 2)}\n`,
+    );
 
     await assert.rejects(
       () => inspectMacOSStoreRepository(fixtureRoot),
@@ -420,36 +475,69 @@ test("development signing does not require an installer identity", () => {
   );
 });
 
-test("store metadata is complete and still rejects operator placeholders", async () => {
+test("store metadata is truthful, public-site bound, and leaves Apple facts operator-owned", async () => {
   const metadata = await readFile(
     path.join(root, "apps/desktop/release/macos/store-metadata.md"),
     "utf8",
   );
   assert.deepEqual(validateMacOSStoreMetadata(metadata), {
     complete: true,
-    privacyPolicy: "https://github.com/castlemilk/tammy/blob/master/PRIVACY.md",
-    support: "https://github.com/castlemilk/tammy/issues",
+    marketingVersion: "0.1.0",
+    operatorConfirmations: [
+      "age-rating",
+      "app-store-warning-review",
+      "export-compliance",
+      "metadata-assets-entered",
+      "pricing-availability",
+      "privacy-answer",
+      "processed-build",
+      "seller-eligibility",
+    ],
+    privacyPolicy: "https://tammy-accounting.castlemilk.chatgpt.site/privacy",
+    publisher: "Gamma Systems Pty Ltd",
+    support: "https://tammy-accounting.castlemilk.chatgpt.site/support",
+    supportEmail: "ben.ebsworth@gmail.com",
   });
-  assert.deepEqual(
-    validateMacOSStoreMetadata(
-      metadata.replace(
-        "**Privacy policy URL:** `https://github.com/castlemilk/tammy/blob/master/PRIVACY.md`",
-        "**Privacy policy URL:** `OPERATOR_REQUIRED`",
-      ),
+  for (const drift of [
+    metadata.replace(
+      "https://tammy-accounting.castlemilk.chatgpt.site/privacy",
+      "https://github.com/castlemilk/tammy/blob/master/PRIVACY.md",
     ),
-    { complete: false },
-  );
+    metadata.replace("- **Publisher:** `Gamma Systems Pty Ltd`", "- **Publisher:** `Ben Ebsworth`"),
+    metadata.replace("ben.ebsworth@gmail.com", "support@example.com"),
+    metadata.replaceAll("BAS draft — not lodged", "BAS report"),
+    metadata.replace("Apple silicon", "Intel"),
+    metadata.replace(
+      "- **Seller eligibility:** `OPERATOR_CONFIRMATION_REQUIRED`",
+      "- **Seller eligibility:** `Complete`",
+    ),
+  ]) {
+    assert.throws(() => validateMacOSStoreMetadata(drift), /MACOS_STORE_REPOSITORY_INVALID/);
+  }
+  for (const prohibited of [
+    "TestFlight invitation",
+    "production SBR enabled",
+    "company tax return submission enabled",
+  ]) {
+    assert.throws(
+      () => validateMacOSStoreMetadata(`${metadata}\n${prohibited}\n`),
+      /MACOS_STORE_REPOSITORY_INVALID/,
+    );
+  }
 });
 
-test("public privacy policy states the shipped offline data lifecycle", async () => {
+test("public privacy policy states the shipped app, site, support, and cleanup boundaries", async () => {
   const privacy = await readFile(path.join(root, "PRIVACY.md"), "utf8");
   for (const statement of [
-    "does not collect or transmit",
+    "does not transmit your accounting records",
     "encrypted workspace",
     "macOS Keychain",
     "Files you choose to import",
-    "deleting the workspace",
-    "GitHub Issues",
+    "no Gamma-owned analytics, cookies, accounts, or forms",
+    "Sending an email is user initiated",
+    "Removing the Tammy app alone does not promise deletion",
+    "machine credentials",
+    "/support",
   ]) {
     assert.match(privacy, new RegExp(statement, "i"));
   }

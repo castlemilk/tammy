@@ -16,24 +16,31 @@ mise exec -- task release:check
 
 `release:check` validates the repository-owned bundle identity, category, icon, privacy manifest, sandbox entitlements, packaging profile, and metadata template without signing credentials. `mise exec -- task verify:release` adds the supported release-readiness verification but does not sign a candidate. `mise exec -- task package` remains an ordinary local package smoke test, not an App Store build.
 
-## One-time Apple setup
+## Apple-controlled setup and confirmations
 
-Complete these steps in the Apple Developer portal and App Store Connect. Do not store certificates, private keys, provisioning profiles, credentials, or session tokens in this repository.
+The repository records the product identifiers and canonical copy, but it does not infer current Apple account state from those files. An accountable operator must observe and record each Apple-controlled fact for the exact build. Do not store certificates, private keys, provisioning profiles, credentials, session tokens, or receipt bodies in this repository.
 
-- [ ] Confirm that the legal entity responsible for Tammy owns the Apple Developer membership and will submit the financial app.
-- [x] Register the explicit Mac App ID `com.tammy.desktop` (`DXP9QHD7JH`). App Sandbox remains a mandatory signed-build entitlement and release-check requirement.
-- [x] Create the required application and installer certificates. Apple Development and Apple Distribution are the current unified names; this candidate uses the valid Mac App Distribution and Mac Installer Distribution certificates shown in the current keychain under their legacy 3rd Party Mac Developer names.
-- [x] Create the `Tammy Mac App Store 20260813` distribution provisioning profile for the App ID. Keep separate Mac App Store development and distribution provisioning profiles when local sandbox testing is required; the development profile remains optional for this upload-only candidate.
-- [x] Create App Store Connect record `6800226692` for **Tammy Accounting**, version `0.1.0`, English (Australia), SKU `tammy-macos-001`, primary Finance and secondary Business categories, with manual release.
-- [x] Publish the HTTPS [privacy policy](https://tammy-accounting.castlemilk.chatgpt.site/privacy) and [support page](https://tammy-accounting.castlemilk.chatgpt.site/support), then replace every `OPERATOR_REQUIRED` value in [store-metadata.md](../../apps/desktop/release/macos/store-metadata.md).
-- [x] Record the Australia-only export-compliance determination for industry-standard SQLCipher and TLS. Set the build input and App Store Connect answers to `exempt`; expanding availability requires a fresh review.
-- [ ] Assign a monotonically increasing positive decimal `CFBundleVersion` for every upload. Marketing version comes from `apps/desktop/package.json`.
+- **Seller eligibility and legal entity:** `OPERATOR_CONFIRMATION_REQUIRED`
+- **Active agreements:** `OPERATOR_CONFIRMATION_REQUIRED`
+- **Application and installer certificates:** `OPERATOR_CONFIRMATION_REQUIRED`
+- **Distribution provisioning profile:** `OPERATOR_CONFIRMATION_REQUIRED`
+- **Export compliance:** `OPERATOR_CONFIRMATION_REQUIRED`
+- **Pricing and Australia availability:** `OPERATOR_CONFIRMATION_REQUIRED`
+- **App privacy answer:** `OPERATOR_CONFIRMATION_REQUIRED`
+- **Age rating:** `OPERATOR_CONFIRMATION_REQUIRED`
+- **Processed build selection:** `OPERATOR_CONFIRMATION_REQUIRED`
+- **Metadata and assets entered:** `OPERATOR_CONFIRMATION_REQUIRED`
+- **App Store warning review:** `OPERATOR_CONFIRMATION_REQUIRED`
+
+The explicit Mac App ID is `com.tammy.desktop` (`DXP9QHD7JH`), and the App Store Connect record is `6800226692` for **Tammy Accounting** 0.1.0. These identifiers do not prove seller eligibility, agreement status, declaration answers, build processing, or submission readiness. The public [privacy policy](https://tammy-accounting.castlemilk.chatgpt.site/privacy) and [support page](https://tammy-accounting.castlemilk.chatgpt.site/support) are bound to the immutable deployment record checked by `release:check`.
+
+Reserve each positive decimal `CFBundleVersion` with `mise exec -- pnpm macos:build:reserve -- --version <semver> --operator <name> --number <N>` only after candidate-affecting repository changes are committed. Marketing version comes from `apps/desktop/package.json`; never reuse a number across versions.
 
 Apple's current signing, provisioning, upload, metadata, screenshot, privacy, and review requirements remain authoritative. Re-check them for every release.
 
 ## Build inputs
 
-The signed Task scenarios accept only explicit inputs and never print their values. Certificate identity names are selected from the operator's keychain; the provisioning profile must be an absolute path outside the repository. Finalize and commit the metadata worksheet before invoking a signed-build scenario: repository mode accepts its visible template placeholders, while `--release` rejects them.
+The signed Task scenarios accept only explicit inputs and never print their values. Certificate identity names are selected from the operator's keychain; the provisioning profile must be an absolute path outside the repository. Finalize and commit the repository-owned metadata before invoking a signed-build scenario. The visible `OPERATOR_CONFIRMATION_REQUIRED` lines are deliberate gates and remain until immutable accountable attestations are recorded; they are not product-copy placeholders.
 
 ```sh
 export TAMMY_MACOS_BUILD_NUMBER='1'
@@ -108,7 +115,8 @@ Record the `spctl` output as observational local Gatekeeper evidence. A pre-subm
 
 Use [store-metadata.md](../../apps/desktop/release/macos/store-metadata.md) as the submission worksheet.
 
-- [ ] Replace every operator placeholder; publish the in-app privacy statement's matching public policy and support URL.
+- [ ] Confirm the canonical privacy and support URLs still match the passing immutable public-site record; do not substitute mutable or repository-hosted URLs.
+- [ ] Record accountable attestations for seller eligibility, export, pricing, privacy, age rating, processed build, entered metadata/assets, and warning review without storing credentials or session material.
 - [ ] Open `/privacy` before sign-in and confirm both exact HTTPS links open in the external browser while every other new-window URL remains denied.
 - [ ] Capture one to ten factual screenshots using only fictional business data. Apple currently accepts Mac screenshots at 1280×800, 1440×900, 2560×1600, or 2880×1800, without alpha.
 - [ ] Keep “BAS draft — not lodged” visible and do not claim ATO lodgement, bank feeds, cloud OCR, or other deferred capability.

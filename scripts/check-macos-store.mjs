@@ -1,9 +1,12 @@
 import { execFile as nodeExecFile } from "node:child_process";
+import { createHash } from "node:crypto";
 import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { isDeepStrictEqual, promisify } from "node:util";
+
+import { evaluateReleaseState } from "./macos-release-state.mjs";
 
 const execFile = promisify(nodeExecFile);
 const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
@@ -330,32 +333,99 @@ export function validateMacOSStorePlists({
   }
 }
 
-const METADATA_FIELDS = Object.freeze([
-  /- \*\*SKU:\*\* `([^`]+)`/,
-  /- \*\*Privacy policy URL:\*\* `([^`]+)`/,
-  /- \*\*Support URL:\*\* `([^`]+)`/,
-  /- \*\*Copyright:\*\* `([^`]+)`/,
-  /- \*\*Price and availability:\*\* `([^`]+)`/,
-  /For review support contact: `([^`]+)`\./,
-  /- \*\*Encryption\/export compliance:\*\* `([^`]+)`/,
-  /- \*\*Financial-services developer entity:\*\* `([^`]+)`/,
+const PUBLIC_ORIGIN = "https://tammy-accounting.castlemilk.chatgpt.site";
+const METADATA_OPERATOR_CONFIRMATIONS = Object.freeze([
+  "age-rating",
+  "app-store-warning-review",
+  "export-compliance",
+  "metadata-assets-entered",
+  "pricing-availability",
+  "privacy-answer",
+  "processed-build",
+  "seller-eligibility",
 ]);
+const METADATA_CONFIRMATION_LABELS = Object.freeze({
+  "age-rating": "Age rating",
+  "app-store-warning-review": "App Store warning review",
+  "export-compliance": "Export compliance",
+  "metadata-assets-entered": "Metadata and assets entered",
+  "pricing-availability": "Pricing and availability",
+  "privacy-answer": "App privacy answer",
+  "processed-build": "Processed build selection",
+  "seller-eligibility": "Seller eligibility",
+});
+const REQUIRED_METADATA_COPY = Object.freeze([
+  "encrypted local workspace",
+  "organisation and chart of accounts",
+  "balanced journals",
+  "trial balance",
+  "upload and review source documents",
+  "bank statement transactions",
+  "GST and BAS drafts",
+  "retained local activity",
+  "does not require a cloud account",
+  "advertising, analytics, tracking, in-app purchases, or ATO lodgement",
+  "BAS draft — not lodged",
+  "no remote account or demo credentials",
+]);
+
+function metadataField(source, label) {
+  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  // biome-ignore lint/style/useTemplate: Backticks are literal Markdown delimiters in this matcher.
+  return source.match(new RegExp("^- \\*\\*" + escapedLabel + ":\\*\\* `([^`]+)`$", "m"))?.[1];
+}
 
 export function validateMacOSStoreMetadata(source) {
   if (typeof source !== "string") fail();
-  const values = METADATA_FIELDS.map((pattern) => source.match(pattern)?.[1]);
-  if (values.some((value) => typeof value !== "string" || value.trim() !== value)) fail();
-  const complete = values.every((value) => value !== "OPERATOR_REQUIRED");
-  if (!complete) return { complete: false };
-  let privacyPolicy;
-  let support;
-  try {
-    privacyPolicy = requiredHttps({ value: values[1] }, "value");
-    support = requiredHttps({ value: values[2] }, "value");
-  } catch {
+  const exactFields = {
+    "App Store Connect ID": "6800226692",
+    "Apple Developer identifier ID": "DXP9QHD7JH",
+    "Bundle identifier": "com.tammy.desktop",
+    Name: "Tammy Accounting",
+    "Installed name": "Tammy",
+    Version: "0.1.0",
+    "Minimum macOS version": "14.0 or later",
+    Architectures: "Apple silicon (arm64)",
+    Publisher: "Gamma Systems Pty Ltd",
+    Subtitle: "Local accounting for Australia",
+    "Primary category": "Finance",
+    "Secondary category": "Business",
+    "Default language": "English (Australia) — en-AU",
+    SKU: "tammy-macos-001",
+    "Release method": "Manual",
+    "Privacy policy URL": `${PUBLIC_ORIGIN}/privacy`,
+    "Support URL": `${PUBLIC_ORIGIN}/support`,
+    Copyright: "© 2026 Gamma Systems Pty Ltd",
+    "Intended price and availability": "Free — Australia",
+    "Review support email": "ben.ebsworth@gmail.com",
+  };
+  if (
+    Object.entries(exactFields).some(
+      ([label, expected]) => metadataField(source, label) !== expected,
+    ) ||
+    REQUIRED_METADATA_COPY.some((copy) => !source.includes(copy)) ||
+    source.includes("OPERATOR_REQUIRED") ||
+    /\[[ xX]\]/.test(source) ||
+    /github\.com\/castlemilk\/tammy|Ben Ebsworth — individual|TestFlight invitation|production SBR enabled|company tax return submission enabled/i.test(
+      source,
+    ) ||
+    METADATA_OPERATOR_CONFIRMATIONS.some(
+      (kind) =>
+        metadataField(source, METADATA_CONFIRMATION_LABELS[kind]) !==
+        "OPERATOR_CONFIRMATION_REQUIRED",
+    )
+  ) {
     fail();
   }
-  return { complete: true, privacyPolicy, support };
+  return {
+    complete: true,
+    marketingVersion: exactFields.Version,
+    operatorConfirmations: [...METADATA_OPERATOR_CONFIRMATIONS],
+    privacyPolicy: exactFields["Privacy policy URL"],
+    publisher: exactFields.Publisher,
+    support: exactFields["Support URL"],
+    supportEmail: exactFields["Review support email"],
+  };
 }
 
 export function assertMacOSReleaseMetadata(metadata, environment) {
@@ -458,6 +528,62 @@ export async function readMacOSRepositoryPlist(file, read = readFile) {
   }
 }
 
+function exactKeys(value, expected) {
+  return (
+    isRecord(value) &&
+    Object.keys(value).length === expected.length &&
+    expected.every((key) => Object.hasOwn(value, key))
+  );
+}
+
+export function validateCurrentPublicSite(pointer, deployment, policyBytes) {
+  const deploymentKeys = [
+    "schemaVersion",
+    "provider",
+    "access",
+    "projectId",
+    "versionId",
+    "deploymentId",
+    "origin",
+    "deployedAt",
+    "sourceCommit",
+    "policySha256",
+    "routes",
+  ];
+  const policySha256 = createHash("sha256").update(policyBytes).digest("hex");
+  if (
+    !exactKeys(pointer, ["schemaVersion", "deploymentEvidence"]) ||
+    pointer.schemaVersion !== 1 ||
+    !/^deployments\/appgdep_[a-z0-9]+\.json$/.test(pointer.deploymentEvidence) ||
+    !exactKeys(deployment, deploymentKeys) ||
+    deployment.schemaVersion !== 1 ||
+    deployment.provider !== "OpenAI Sites" ||
+    deployment.access !== "public" ||
+    deployment.origin !== PUBLIC_ORIGIN ||
+    deployment.policySha256 !== policySha256 ||
+    pointer.deploymentEvidence !== `deployments/${deployment.deploymentId}.json` ||
+    !/^appgprj_[a-z0-9]+$/.test(deployment.projectId) ||
+    !/^appgprj_[a-z0-9]+~appgver_[a-z0-9]+$/.test(deployment.versionId) ||
+    !/^appgdep_[a-z0-9]+$/.test(deployment.deploymentId) ||
+    !/^[0-9a-f]{40}$/.test(deployment.sourceCommit) ||
+    !isValidUtcRfc3339(deployment.deployedAt) ||
+    !isDeepStrictEqual(deployment.routes, [
+      { path: "/", status: 200, contentType: "text/html", check: "passed" },
+      { path: "/privacy", status: 200, contentType: "text/html", check: "passed" },
+      { path: "/support", status: 200, contentType: "text/html", check: "passed" },
+    ])
+  ) {
+    fail("MACOS_PUBLIC_SITE_INVALID");
+  }
+  return {
+    deploymentEvidence: pointer.deploymentEvidence,
+    origin: deployment.origin,
+    policySha256,
+    privacyPolicy: `${deployment.origin}/privacy`,
+    support: `${deployment.origin}/support`,
+  };
+}
+
 export async function inspectMacOSStoreRepository(root) {
   if (!path.isAbsolute(root)) fail();
   const desktopRoot = path.join(root, "apps", "desktop");
@@ -480,8 +606,11 @@ export async function inspectMacOSStoreRepository(root) {
     metadata: path.join(releaseRoot, "store-metadata.md"),
     package: path.join(desktopRoot, "package.json"),
     privacy: path.join(releaseRoot, "PrivacyInfo.xcprivacy"),
+    privacyPolicy: path.join(root, "PRIVACY.md"),
     profile: path.join(releaseRoot, "profile.ts"),
+    publicSiteCurrent: path.join(root, "docs", "release", "public-site", "current.json"),
     readme: path.join(root, "README.md"),
+    releaseStateSchema: path.join(releaseRoot, "release-state.schema.json"),
     runbook: path.join(root, "docs", "release", "macos-app-store.md"),
     techState: path.join(root, "docs", "development", "tech-state.md"),
     identity: path.join(releaseRoot, "store-identity.json"),
@@ -498,8 +627,11 @@ export async function inspectMacOSStoreRepository(root) {
     metadata,
     packageBytes,
     privacy,
+    privacyPolicyBytes,
     profile,
+    publicSiteCurrentBytes,
     readme,
+    releaseStateSchemaBytes,
     runbook,
     techState,
   ] = await Promise.all([
@@ -513,14 +645,27 @@ export async function inspectMacOSStoreRepository(root) {
     readFile(paths.metadata, "utf8"),
     readFile(paths.package),
     readMacOSRepositoryPlist(paths.privacy),
+    readFile(paths.privacyPolicy),
     readFile(paths.profile, "utf8"),
+    readFile(paths.publicSiteCurrent),
     readFile(paths.readme, "utf8"),
+    readFile(paths.releaseStateSchema),
     readFile(paths.runbook, "utf8"),
     readFile(paths.techState, "utf8"),
   ]).catch(() => fail());
 
   const desktopPackage = JSON.parse(packageBytes.toString("utf8"));
   const identity = validateMacOSStoreIdentity(JSON.parse(identityBytes.toString("utf8")));
+  const publicSitePointer = JSON.parse(publicSiteCurrentBytes.toString("utf8"));
+  const publicSiteRoot = path.dirname(paths.publicSiteCurrent);
+  const deploymentPath = path.resolve(publicSiteRoot, publicSitePointer.deploymentEvidence ?? "");
+  if (!deploymentPath.startsWith(`${publicSiteRoot}${path.sep}`)) fail("MACOS_PUBLIC_SITE_INVALID");
+  const publicSite = validateCurrentPublicSite(
+    publicSitePointer,
+    JSON.parse(await readFile(deploymentPath, "utf8")),
+    privacyPolicyBytes,
+  );
+  const releaseStateSchema = JSON.parse(releaseStateSchemaBytes.toString("utf8"));
   let companyControllerAttestationValid = false;
   try {
     validateCompanyControllerAttestation(
@@ -546,6 +691,17 @@ export async function inspectMacOSStoreRepository(root) {
     identity.architectures.join(",") !== "arm64"
   ) {
     fail("MACOS_STORE_IDENTITY_MISMATCH");
+  }
+  if (
+    metadataStatus.marketingVersion !== desktopPackage.version ||
+    metadataStatus.publisher !== identity.publisher ||
+    metadataStatus.supportEmail !== identity.supportEmail ||
+    metadataStatus.privacyPolicy !== publicSite.privacyPolicy ||
+    metadataStatus.support !== publicSite.support ||
+    releaseStateSchema?.$schema !== "https://json-schema.org/draft/2020-12/schema" ||
+    !Array.isArray(releaseStateSchema?.oneOf)
+  ) {
+    fail("MACOS_STORE_METADATA_OWNER_MISMATCH");
   }
   if (
     desktopPackage?.productName !== "Tammy" ||
@@ -577,14 +733,29 @@ export async function inspectMacOSStoreRepository(root) {
     fail();
   }
 
+  const releaseState = evaluateReleaseState({
+    releaseVersion: desktopPackage.version,
+    buildNumber: "1",
+    repository: {
+      storeIdentity: true,
+      publicSite: true,
+      metadata: true,
+      platformIdentity: false,
+      policy: true,
+      schemas: true,
+      screenshotDefinitions: false,
+      tests: true,
+    },
+    candidate: null,
+    attestations: [],
+    events: [],
+  });
   const blockers = [
-    "CANONICAL_SCREENSHOTS_NOT_RECORDED",
-    "PUBLIC_SITE_NOT_RECORDED",
-    "RELEASE_STATE_NOT_RECORDED",
+    ...releaseState.blockers.map(({ code }) => code),
     ...(companyControllerAttestationValid ? [] : ["company-controller-attestation"]),
   ].sort();
   const passed = [
-    "store-identity",
+    ...releaseState.passed,
     ...(companyControllerAttestationValid ? ["publisher-authority"] : []),
   ].sort();
 
@@ -595,15 +766,14 @@ export async function inspectMacOSStoreRepository(root) {
     identity,
     metadataComplete: metadataStatus.complete,
     metadata: metadataStatus,
+    publicSite,
+    releaseState,
     blockers,
     operatorRequirements: [
-      "app-store-connect-record",
       "certificates-and-profiles",
-      "export-compliance",
-      "legal-and-commercial-metadata",
-      "privacy-and-support-urls",
-      "signed-build-privacy-report",
+      ...METADATA_OPERATOR_CONFIRMATIONS,
       "screenshots",
+      "signed-build-privacy-report",
     ],
     passed,
     version: desktopPackage.version,
@@ -642,10 +812,7 @@ async function main() {
     `${JSON.stringify({
       ...result,
       ...(releaseInput === undefined ? {} : { release: releaseInput }),
-      status:
-        releaseInput === undefined
-          ? "NOT_READY"
-          : "SIGNED_BUILD_INPUTS_READY",
+      status: releaseInput === undefined ? "NOT_READY" : "SIGNED_BUILD_INPUTS_READY",
     })}\n`,
   );
 }
