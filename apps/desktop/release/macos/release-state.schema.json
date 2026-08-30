@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tammy-accounting.castlemilk.chatgpt.site/schemas/macos-release-state-v1.json",
+  "title": "Tammy macOS release state and redacted evidence contract",
+  "oneOf": [
+    { "$ref": "#/$defs/releaseStateRecord" },
+    { "$ref": "#/$defs/releaseAttestation" },
+    { "$ref": "#/$defs/lifecycleEvent" }
+  ],
+  "$defs": {
+    "readinessState": {
+      "enum": ["NOT_READY", "REPOSITORY_READY", "CANDIDATE_READY", "PRE_UPLOAD_READY", "UPLOADED", "PRE_SUBMIT_READY"]
+    },
+    "attestationKind": {
+      "enum": ["company-controller", "seller-eligibility", "content-rights", "export-compliance", "pricing-availability", "privacy-answer", "age-rating", "processed-build", "metadata-assets-entered", "app-store-warning-review"]
+    },
+    "lifecycleKind": {
+      "enum": ["uploaded", "expired", "superseded", "submitted", "approved", "rejected"]
+    },
+    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "buildNumber": { "type": "string", "pattern": "^[1-9][0-9]*$" },
+    "utcTime": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"
+    },
+    "sha40": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "redactedReference": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "not": { "pattern": "^(?:/|[A-Za-z]:[\\\\/])|OPERATOR_REQUIRED" }
+    },
+    "blocker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "owner", "remediation"],
+      "properties": {
+        "code": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]+$" },
+        "owner": { "enum": ["repository", "candidate", "operator", "apple"] },
+        "remediation": { "type": "string", "minLength": 1 }
+      }
+    },
+    "releaseStateRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "state", "releaseVersion", "buildNumber", "passed", "blockers"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "state": { "$ref": "#/$defs/readinessState" },
+        "releaseVersion": { "$ref": "#/$defs/version" },
+        "buildNumber": { "$ref": "#/$defs/buildNumber" },
+        "passed": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+        "blockers": { "type": "array", "items": { "$ref": "#/$defs/blocker" } }
+      }
+    },
+    "releaseAttestation": {
+      "type": "object",
+      "unevaluatedProperties": false,
+      "required": ["schemaVersion", "kind", "releaseVersion", "buildNumber", "accountablePerson", "confirmedAt", "evidenceReference", "outcome"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "kind": { "$ref": "#/$defs/attestationKind" },
+        "releaseVersion": { "$ref": "#/$defs/version" },
+        "buildNumber": { "$ref": "#/$defs/buildNumber" },
+        "accountablePerson": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "confirmedAt": { "$ref": "#/$defs/utcTime" },
+        "evidenceReference": { "$ref": "#/$defs/redactedReference" },
+        "outcome": { "enum": ["confirmed", "eligible", "owned", "exempt", "non-exempt", "no-data-collected-no-tracking", "completed", "selected", "entered", "clear", "resolved"] },
+        "eligibilityBranch": { "enum": ["company-organization", "written-apple-exception"] },
+        "teamId": { "type": "string", "pattern": "^[A-Z0-9]{10}$" },
+        "sellerName": { "type": "string", "minLength": 2 },
+        "accountHolder": { "type": "string", "minLength": 2 },
+        "activeAgreements": { "const": true },
+        "appId": { "const": "com.tammy.desktop" },
+        "appleDeveloperIdentifierId": { "type": "string" },
+        "appStoreConnectId": { "type": "string", "pattern": "^[1-9][0-9]{5,19}$" },
+        "applicationGroup": { "type": "string" },
+        "helperIdentifiers": {
+          "const": ["com.tammy.desktop.helper", "com.tammy.desktop.helper.GPU", "com.tammy.desktop.helper.Plugin", "com.tammy.desktop.helper.Renderer"]
+        },
+        "certificateClasses": {
+          "const": ["Apple Development", "Apple Distribution", "Mac Installer Distribution"]
+        },
+        "profilesReissued": { "const": true },
+        "writtenAppleExceptionReference": { "$ref": "#/$defs/redactedReference" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "seller-eligibility" } }, "required": ["kind"] },
+          "then": {
+            "required": ["eligibilityBranch", "teamId", "sellerName", "accountHolder", "activeAgreements", "appId", "appleDeveloperIdentifierId", "appStoreConnectId", "applicationGroup", "helperIdentifiers", "certificateClasses", "profilesReissued"],
+            "properties": { "outcome": { "const": "eligible" } }
+          }
+        },
+        {
+          "if": { "properties": { "eligibilityBranch": { "const": "written-apple-exception" } }, "required": ["eligibilityBranch"] },
+          "then": { "required": ["writtenAppleExceptionReference"] }
+        }
+      ]
+    },
+    "lifecycleEvent": {
+      "type": "object",
+      "unevaluatedProperties": false,
+      "required": ["schemaVersion", "kind", "releaseVersion", "buildNumber", "operator", "occurredAt"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "kind": { "$ref": "#/$defs/lifecycleKind" },
+        "releaseVersion": { "$ref": "#/$defs/version" },
+        "buildNumber": { "$ref": "#/$defs/buildNumber" },
+        "operator": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "occurredAt": { "$ref": "#/$defs/utcTime" },
+        "productSourceCommit": { "$ref": "#/$defs/sha40" },
+        "productSourceTree": { "$ref": "#/$defs/sha40" },
+        "packageSha256": { "$ref": "#/$defs/sha256" },
+        "appStoreConnectBuildId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "reason": { "enum": ["certificate-expired", "profile-expired", "candidate-timeout"] },
+        "sourceReference": { "$ref": "#/$defs/redactedReference" },
+        "replacementVersion": { "$ref": "#/$defs/version" },
+        "replacementBuildNumber": { "$ref": "#/$defs/buildNumber" },
+        "appStoreSubmissionReference": { "$ref": "#/$defs/redactedReference" },
+        "reviewReference": { "$ref": "#/$defs/redactedReference" },
+        "submittedEventPath": { "$ref": "#/$defs/redactedReference" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "uploaded" } }, "required": ["kind"] },
+          "then": { "required": ["productSourceCommit", "productSourceTree", "packageSha256", "appStoreConnectBuildId"] }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "submitted" } }, "required": ["kind"] },
+          "then": { "required": ["appStoreSubmissionReference"] }
+        },
+        {
+          "if": { "properties": { "kind": { "enum": ["approved", "rejected"] } }, "required": ["kind"] },
+          "then": { "required": ["reviewReference", "submittedEventPath"] }
+        }
+      ]
+    }
+  },
+  "$comment": "scripts/macos-release-state.mjs is the executable strict validator, including exact per-kind keys and outcomes, secret-field rejection, seller tagged unions, and event ordering."
+}
