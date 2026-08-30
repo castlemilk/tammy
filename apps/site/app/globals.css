@@ -110,6 +110,9 @@ h1 {
 }
 
 .wordmark {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
   font-size: 1.55rem;
   font-weight: 700;
   letter-spacing: -0.025em;

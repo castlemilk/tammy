@@ -106,6 +106,54 @@ test("rejects failures, non-HTML responses, and off-origin redirects", async () 
   }
 });
 
+test("rejects an off-origin intermediate redirect even if it could return", async () => {
+  const calls = [];
+  const fetchImpl = async (url, options) => {
+    calls.push({ url, options });
+    if (calls.length === 1) {
+      return new Response(null, {
+        status: 302,
+        headers: { location: "https://attacker.example/bounce" },
+      });
+    }
+    return new Response(pages["/"], {
+      status: 200,
+      headers: { "content-type": "text/html" },
+    });
+  };
+
+  await assert.rejects(
+    checkPublicSite({ origin, mode: "deployed", fetchImpl }),
+    /redirect.*origin/i,
+  );
+  assert.equal(calls.length, 1);
+});
+
+test("follows a bounded same-origin redirect manually", async () => {
+  const calls = [];
+  const fetchImpl = async (url, options) => {
+    calls.push({ url, options });
+    const parsed = new URL(url);
+    if (calls.length === 1) {
+      return new Response(null, {
+        status: 302,
+        headers: { location: "/home" },
+      });
+    }
+    const pathname = parsed.pathname === "/home" ? "/" : parsed.pathname;
+    const response = new Response(pages[pathname], {
+      status: 200,
+      headers: { "content-type": "text/html" },
+    });
+    Object.defineProperty(response, "url", { value: url });
+    return response;
+  };
+
+  await checkPublicSite({ origin, mode: "deployed", fetchImpl });
+  assert.equal(calls[0].options.redirect, "manual");
+  assert.equal(new URL(calls[1].url).pathname, "/home");
+});
+
 test("requires canonical identity, navigation, privacy, support, platform, and boundary copy", async () => {
   for (const [path, needle] of [
     ["/", "Tammy Accounting"],

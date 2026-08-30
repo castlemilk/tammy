@@ -7,6 +7,7 @@ const ROUTES = ["/", "/privacy", "/support"];
 const MAX_RESPONSE_BYTES = 1_000_000;
 const MAX_PREVIEW_OUTPUT_BYTES = 65_536;
 const PREVIEW_TIMEOUT_MS = 30_000;
+const MAX_REDIRECT_HOPS = 5;
 
 function validateOrigin(origin, mode) {
   let parsed;
@@ -125,19 +126,42 @@ function validatePage(pathname, html) {
   }
 }
 
+async function fetchSameOrigin(requestedUrl, canonicalOrigin, fetchImpl) {
+  let currentUrl = requestedUrl;
+  for (let hop = 0; hop <= MAX_REDIRECT_HOPS; hop += 1) {
+    const response = await fetchImpl(currentUrl, { redirect: "manual" });
+    if (response.status >= 300 && response.status < 400 && response.status !== 304) {
+      const location = response.headers.get("location");
+      if (!location) throw new Error("Redirect response is missing its Location header");
+      const nextUrl = new URL(location, currentUrl);
+      if (nextUrl.origin !== canonicalOrigin) {
+        throw new Error("Redirect leaves the expected origin");
+      }
+      if (hop === MAX_REDIRECT_HOPS) {
+        throw new Error("Redirect chain exceeds the maximum hop count");
+      }
+      currentUrl = nextUrl.href;
+      continue;
+    }
+
+    const finalUrl = new URL(response.url || currentUrl);
+    if (finalUrl.origin !== canonicalOrigin) {
+      throw new Error("Response leaves the expected origin");
+    }
+    return response;
+  }
+  throw new Error("Redirect chain exceeds the maximum hop count");
+}
+
 export async function checkPublicSite({ origin, mode = "deployed", fetchImpl = fetch }) {
   const canonicalOrigin = validateOrigin(origin, mode);
   const routes = [];
 
   for (const pathname of ROUTES) {
     const requestedUrl = new URL(pathname, `${canonicalOrigin}/`).href;
-    const response = await fetchImpl(requestedUrl, { redirect: "follow" });
+    const response = await fetchSameOrigin(requestedUrl, canonicalOrigin, fetchImpl);
     if (response.status !== 200) {
       throw new Error(`${pathname} returned unexpected status ${response.status}`);
-    }
-    const finalUrl = new URL(response.url || requestedUrl);
-    if (finalUrl.origin !== canonicalOrigin) {
-      throw new Error(`${pathname} redirected off the expected origin`);
     }
     const contentType = response.headers.get("content-type") ?? "";
     if (!/^text\/html(?:;|$)/i.test(contentType)) {
