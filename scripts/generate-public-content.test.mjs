@@ -46,7 +46,7 @@ test("parses the intentionally small policy Markdown contract", () => {
         heading: "Data handled by Tammy",
         blocks: [
           {
-            type: "paragraph",
+            kind: "paragraph",
             inlines: [
               { type: "text", value: "Use " },
               { type: "emphasis", value: "local" },
@@ -58,7 +58,7 @@ test("parses the intentionally small policy Markdown contract", () => {
             ],
           },
           {
-            type: "list",
+            kind: "list",
             items: [
               [
                 { type: "text", value: "An " },
@@ -72,6 +72,27 @@ test("parses the intentionally small policy Markdown contract", () => {
     ],
   });
 });
+
+for (const [name, line] of [
+  ["indented ATX heading", "  ## Not a section"],
+  ["indented blockquote", "   > quoted"],
+  ["indented alternate list", " + alternate"],
+  ["indented numbered list", "  1. numbered"],
+  ["indented code", "    code"],
+  ["fenced code", "```"],
+  ["table", "| header |"],
+  ["thematic break", "  ---"],
+  ["setext dash heading", "---"],
+  ["setext equals heading", "==="],
+  ["indented approved list", " - still unsupported"],
+]) {
+  test(`rejects ${name}`, () => {
+    assert.throws(
+      () => parsePolicyMarkdown(privacy.replace("Use *local*", `${line}\n\nUse *local*`)),
+      /policy Markdown/i,
+    );
+  });
+}
 
 for (const [name, markdown] of [
   ["raw HTML", privacy.replace("Use", "<b>Use</b>" )],
@@ -102,6 +123,9 @@ test("generates safe deterministic TypeScript from trusted JSON inputs and parse
   assert.equal(output, generatePublicContent({ identity, privacy, desktopPackage: { version: "0.1.0" } }));
   assert.match(output, /export interface PolicySection/);
   assert.match(output, /export type PolicyInline/);
+  assert.match(output, /readonly kind: "paragraph"/);
+  assert.match(output, /"kind": "list"/);
+  assert.doesNotMatch(output, /"type": "paragraph"|"type": "list"/);
   assert.match(output, /"marketingVersion": "0.1.0"/);
   assert.match(output, /"schemaVersion": 1/);
   assert.match(output, /"effectiveDate": "30 August 2026"/);
@@ -110,6 +134,22 @@ test("generates safe deterministic TypeScript from trusted JSON inputs and parse
     assert.ok(output.includes(JSON.stringify(value)), `${value} must be a JSON string literal`);
   }
 });
+
+for (const [name, changedIdentity] of [
+  ["schema version", { ...identity, schemaVersion: 2 }],
+  ["extra top-level field", { ...identity, extra: "drift" }],
+  ["bundle identifier", { ...identity, bundleIdentifier: "com.example.tammy" }],
+  ["architecture", { ...identity, architectures: ["x64"] }],
+  ["nested capability", { ...identity, capabilityBoundary: { ...identity.capabilityBoundary, reporting: "lodged" } }],
+  ["nested capability extra field", { ...identity, capabilityBoundary: { ...identity.capabilityBoundary, extra: "drift" } }],
+]) {
+  test(`rejects canonical identity drift: ${name}`, () => {
+    assert.throws(
+      () => generatePublicContent({ identity: changedIdentity, privacy, desktopPackage: { version: "0.1.0" } }),
+      /MACOS_STORE_IDENTITY_INVALID/,
+    );
+  });
+}
 
 for (const version of ["0.1", "01.1.0", "1.01.0", "1.0.01", "1.0.0-", "1.0.0-alpha..1", "1.0.0+build..1"]) {
   test(`rejects invalid desktop semantic version ${version}`, () => {
@@ -144,4 +184,68 @@ test("writes byte-stable generated content to an explicit temporary output path"
   assert.deepEqual(await run({ policyPath, identityPath, packagePath, outputPath }), { written: true });
   assert.notEqual((await stat(outputPath)).ino, firstStat.ino, "changed output is atomically replaced");
   assert.match(await readFile(outputPath, "utf8"), /Changed text/);
+});
+
+test("cleans up an exclusively-created sibling temporary file after rename failure", async (context) => {
+  const temporaryDirectory = await mkdtemp(path.join(process.env.TMPDIR ?? os.tmpdir(), "tammy-public-content-"));
+  context.after(() => rm(temporaryDirectory, { recursive: true, force: true }));
+  const policyPath = path.join(temporaryDirectory, "PRIVACY.md");
+  const identityPath = path.join(temporaryDirectory, "store-identity.json");
+  const packagePath = path.join(temporaryDirectory, "package.json");
+  const outputPath = path.join(temporaryDirectory, "public-content.generated.ts");
+  await Promise.all([writeFile(policyPath, privacy), writeFile(identityPath, JSON.stringify(identity)), writeFile(packagePath, JSON.stringify({ version: "0.1.0" }))]);
+  const cleaned = [];
+  const fileSystem = {
+    async open(filePath, flags) {
+      assert.equal(flags, "wx");
+      return { async writeFile() {}, async sync() {}, async close() {} };
+    },
+    readFile,
+    async rename() { throw new Error("rename failed"); },
+    async rm(filePath) { cleaned.push(filePath); },
+  };
+  await assert.rejects(() => run({ policyPath, identityPath, packagePath, outputPath, fileSystem }), /rename failed/);
+  assert.equal(cleaned.length, 1);
+  assert.equal(path.dirname(cleaned[0]), temporaryDirectory);
+});
+
+test("retries a temporary-name collision before atomically replacing output", async (context) => {
+  const temporaryDirectory = await mkdtemp(path.join(process.env.TMPDIR ?? os.tmpdir(), "tammy-public-content-"));
+  context.after(() => rm(temporaryDirectory, { recursive: true, force: true }));
+  const policyPath = path.join(temporaryDirectory, "PRIVACY.md");
+  const identityPath = path.join(temporaryDirectory, "store-identity.json");
+  const packagePath = path.join(temporaryDirectory, "package.json");
+  const outputPath = path.join(temporaryDirectory, "public-content.generated.ts");
+  await Promise.all([writeFile(policyPath, privacy), writeFile(identityPath, JSON.stringify(identity)), writeFile(packagePath, JSON.stringify({ version: "0.1.0" }))]);
+  let attempts = 0;
+  const renamed = [];
+  const fileSystem = {
+    async open(filePath) {
+      attempts += 1;
+      if (attempts === 1) {
+        const error = new Error("exists");
+        error.code = "EEXIST";
+        throw error;
+      }
+      return { async writeFile() {}, async sync() {}, async close() {} };
+    },
+    readFile,
+    async rename(source, destination) { renamed.push([source, destination]); },
+    async rm() {},
+  };
+  assert.deepEqual(await run({ policyPath, identityPath, packagePath, outputPath, fileSystem }), { written: true });
+  assert.equal(attempts, 2);
+  assert.deepEqual(renamed[0].slice(1), [outputPath]);
+});
+
+test("canonical repository policy and identity generate deterministic public content", async () => {
+  const [canonicalPrivacy, canonicalIdentity, desktopPackage] = await Promise.all([
+    readFile("PRIVACY.md", "utf8"),
+    readFile("apps/desktop/release/macos/store-identity.json", "utf8"),
+    readFile("apps/desktop/package.json", "utf8"),
+  ]);
+  for (const heading of ["## Publisher and scope", "## Website and hosting", "## Support email", "## Retention and deletion", "## Reporting boundary"]) assert.ok(canonicalPrivacy.includes(heading));
+  for (const claim of ["Gamma Systems Pty Ltd", "ben.ebsworth@gmail.com", "Local records remain on your Mac until you remove them", "does not lodge ATO or SBR submissions"]) assert.ok(canonicalPrivacy.includes(claim));
+  const input = { identity: JSON.parse(canonicalIdentity), privacy: canonicalPrivacy, desktopPackage: JSON.parse(desktopPackage) };
+  assert.equal(generatePublicContent(input), generatePublicContent(input));
 });

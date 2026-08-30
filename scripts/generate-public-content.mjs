@@ -1,5 +1,7 @@
-import { readFile, rename, writeFile } from "node:fs/promises";
+import { open, readFile, rename, rm } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import path from "node:path";
+import { validateMacOSStoreIdentity } from "./check-macos-store.mjs";
 
 const policyError = (message) => new Error(`Invalid policy Markdown: ${message}`);
 const semver = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(?:(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
@@ -86,13 +88,13 @@ export function parsePolicyMarkdown(source) {
       sections.push(section);
     } else {
       if (!section) throw policyError("content must appear in an H2 section");
-      if (/^#{1,6}\s|^[+*]\s|^\d+\.\s|^>|^---+$/.test(line)) throw policyError("unsupported Markdown syntax");
+      if (/^\s|^#{1,6}\s|^[+*]\s|^\d+[.)]\s|^>|^`{3,}|^~{3,}|\||^(?:-{3,}|={3,})$/.test(line)) throw policyError("unsupported Markdown syntax");
       if (line.startsWith("- ")) {
         const previous = section.blocks.at(-1);
-        const list = previous?.type === "list" ? previous : { type: "list", items: [] };
+        const list = previous?.kind === "list" ? previous : { kind: "list", items: [] };
         if (list !== previous) section.blocks.push(list);
         list.items.push(parseInlines(line.slice(2)));
-      } else section.blocks.push({ type: "paragraph", inlines: parseInlines(line) });
+      } else section.blocks.push({ kind: "paragraph", inlines: parseInlines(line) });
     }
   }
   if (sections.length === 0) throw policyError("at least one H2 section is required");
@@ -100,31 +102,53 @@ export function parsePolicyMarkdown(source) {
   return { effectiveDate, sections };
 }
 
-function assertIdentity(identity) {
-  if (!Number.isInteger(identity?.schemaVersion) || identity.schemaVersion < 1) throw new Error("Invalid identity schemaVersion");
-  for (const key of ["appStoreName", "installedName", "bundleIdentifier", "publisher", "supportEmail", "locale", "primaryCategory", "secondaryCategory", "minimumMacOSVersion", "copyright"]) if (typeof identity?.[key] !== "string" || !identity[key]) throw new Error(`Invalid identity ${key}`);
-  if (!Array.isArray(identity.architectures) || identity.architectures.some((value) => typeof value !== "string")) throw new Error("Invalid identity architectures");
-  if (typeof identity.capabilityBoundary?.reporting !== "string" || typeof identity.capabilityBoundary?.atoLodgement !== "string") throw new Error("Invalid identity capability boundary");
-}
-
 export function generatePublicContent({ identity, privacy, desktopPackage }) {
-  assertIdentity(identity);
+  validateMacOSStoreIdentity(identity);
   if (!semver.test(desktopPackage?.version ?? "")) throw new Error("Desktop package version must be a semantic version");
   const content = { identity: { schemaVersion: identity.schemaVersion, appStoreName: identity.appStoreName, installedName: identity.installedName, bundleIdentifier: identity.bundleIdentifier, publisher: identity.publisher, supportEmail: identity.supportEmail, locale: identity.locale, primaryCategory: identity.primaryCategory, secondaryCategory: identity.secondaryCategory, minimumMacOSVersion: identity.minimumMacOSVersion, architectures: identity.architectures, copyright: identity.copyright, capabilityBoundary: identity.capabilityBoundary }, marketingVersion: desktopPackage.version, policy: parsePolicyMarkdown(privacy) };
-  return `export type PolicyInline =\n  | { readonly type: "text" | "emphasis" | "code"; readonly value: string }\n  | { readonly type: "link"; readonly text: string; readonly href: string };\n\nexport interface PolicySection {\n  readonly heading: string;\n  readonly blocks: readonly (\n    | { readonly type: "paragraph"; readonly inlines: readonly PolicyInline[] }\n    | { readonly type: "list"; readonly items: readonly (readonly PolicyInline[])[] }\n  )[];\n}\n\nexport const publicContent = ${JSON.stringify(content, null, 2)} as const;\n`;
+  return `export type PolicyInline =\n  | { readonly type: "text" | "emphasis" | "code"; readonly value: string }\n  | { readonly type: "link"; readonly text: string; readonly href: string };\n\nexport interface PolicySection {\n  readonly heading: string;\n  readonly blocks: readonly (\n    | { readonly kind: "paragraph"; readonly inlines: readonly PolicyInline[] }\n    | { readonly kind: "list"; readonly items: readonly (readonly PolicyInline[])[] }\n  )[];\n}\n\nexport const publicContent = ${JSON.stringify(content, null, 2)} as const;\n`;
 }
 
-export async function run({ policyPath = "PRIVACY.md", identityPath = "apps/desktop/release/macos/store-identity.json", packagePath = "apps/desktop/package.json", outputPath = "apps/site/content/public-content.generated.ts" } = {}) {
-  const [privacy, identityText, packageText] = await Promise.all([readFile(policyPath, "utf8"), readFile(identityPath, "utf8"), readFile(packagePath, "utf8")]);
+const defaultFileSystem = { open, readFile, rename, rm };
+
+async function createSiblingTemporaryFile(outputPath, fileSystem) {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const temporaryPath = path.join(path.dirname(outputPath), `.${path.basename(outputPath)}.tmp-${randomUUID()}`);
+    try {
+      return { handle: await fileSystem.open(temporaryPath, "wx"), temporaryPath };
+    } catch (error) {
+      if (error?.code !== "EEXIST") throw error;
+    }
+  }
+  throw new Error("Unable to create a unique public-content temporary file");
+}
+
+async function replaceAtomically(outputPath, output, fileSystem) {
+  let temporaryPath;
+  let handle;
+  try {
+    ({ temporaryPath, handle } = await createSiblingTemporaryFile(outputPath, fileSystem));
+    await handle.writeFile(output, "utf8");
+    await handle.sync();
+    await handle.close();
+    handle = undefined;
+    await fileSystem.rename(temporaryPath, outputPath);
+    temporaryPath = undefined;
+  } finally {
+    if (handle) await handle.close().catch(() => {});
+    if (temporaryPath) await fileSystem.rm(temporaryPath, { force: true }).catch(() => {});
+  }
+}
+
+export async function run({ policyPath = "PRIVACY.md", identityPath = "apps/desktop/release/macos/store-identity.json", packagePath = "apps/desktop/package.json", outputPath = "apps/site/content/public-content.generated.ts", fileSystem = defaultFileSystem } = {}) {
+  const [privacy, identityText, packageText] = await Promise.all([fileSystem.readFile(policyPath, "utf8"), fileSystem.readFile(identityPath, "utf8"), fileSystem.readFile(packagePath, "utf8")]);
   const output = generatePublicContent({ identity: JSON.parse(identityText), privacy, desktopPackage: JSON.parse(packageText) });
   try {
-    if (await readFile(outputPath, "utf8") === output) return { written: false };
+    if (await fileSystem.readFile(outputPath, "utf8") === output) return { written: false };
   } catch (error) {
     if (error?.code !== "ENOENT") throw error;
   }
-  const temporaryPath = path.join(path.dirname(outputPath), `.${path.basename(outputPath)}.tmp-${process.pid}-${Date.now()}`);
-  await writeFile(temporaryPath, output, "utf8");
-  await rename(temporaryPath, outputPath);
+  await replaceAtomically(outputPath, output, fileSystem);
   return { written: true };
 }
 
