@@ -143,6 +143,25 @@ test("refuses unsafe isolated-home and Team ID inputs", async () => {
   }
 });
 
+test("refuses absolute isolated-home paths containing glob syntax", () => {
+  for (const globPath of [
+    "/private/tmp/tammy-*",
+    "/private/tmp/tammy-?",
+    "/private/tmp/tammy-[ab]",
+    "/private/tmp/tammy-]",
+    "/private/tmp/tammy-{one,two}",
+    "/private/tmp/tammy-@(one|two)",
+    "/private/tmp/tammy-+(one|two)",
+    "/private/tmp/tammy-!(one|two)",
+  ]) {
+    assert.throws(() => validateIsolatedHome(globPath), /glob/i);
+  }
+  assert.equal(
+    validateIsolatedHome("/private/tmp/Tammy safe (isolated) + @ !"),
+    "/private/tmp/Tammy safe (isolated) + @ !",
+  );
+});
+
 for (const targetName of ["tammyContainer", "tammyGroup"]) {
   test(`refuses a symlinked ${targetName} before deleting any data`, async (context) => {
     const { isolatedHome, targets } = await createFixture(context);

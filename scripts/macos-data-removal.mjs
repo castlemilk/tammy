@@ -65,6 +65,12 @@ export function validateIsolatedHome(isolatedHome) {
   if (typeof isolatedHome !== "string" || !path.isAbsolute(isolatedHome)) {
     throw new Error("A safe absolute isolated home is required");
   }
+  if (
+    ["*", "?", "[", "]", "{", "}"].some((character) => isolatedHome.includes(character)) ||
+    /[!+@]\(/.test(isolatedHome)
+  ) {
+    throw new Error("The isolated home must not contain glob syntax");
+  }
   const normalized = path.resolve(isolatedHome);
   if (normalized === path.parse(normalized).root || normalized === path.resolve(os.homedir())) {
     throw new Error("The isolated home cannot be a filesystem root or the real user home");
