@@ -1,11 +1,14 @@
 import { randomUUID } from "node:crypto";
-import { open, readFile, rename, rm } from "node:fs/promises";
+import { open, readdir, readFile, rename, rm } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { validateReleaseLifecycleEvent } from "./macos-release-state.mjs";
+
 const LEDGER_KEYS = ["entries", "schemaVersion"];
 const ENTRY_KEYS = ["buildNumber", "marketingVersion", "reservedAt", "reservedBy", "state"];
-const VERSION = /^[0-9]+\.[0-9]+\.[0-9]+$/;
+const VERSION =
+  /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(?:(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
 const BUILD = /^[1-9][0-9]*$/;
 const UTC_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 const SECRET_VALUE_PATTERNS = [
@@ -20,6 +23,19 @@ const defaultLedgerPath = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../apps/desktop/release/macos/build-numbers.json",
 );
+const defaultRecordsRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../docs/release/records/macos",
+);
+const LIFECYCLE_KINDS = new Set([
+  "uploaded",
+  "expired",
+  "superseded",
+  "submitted",
+  "approved",
+  "rejected",
+]);
+const CONSUMING_KINDS = new Set(["uploaded", "rejected", "superseded"]);
 
 function fail(code) {
   throw new Error(code);
@@ -88,6 +104,68 @@ export function validateBuildLedger(ledger) {
   return ledger;
 }
 
+export function validateConsumedBuildNumbers(ledger, events) {
+  validateBuildLedger(ledger);
+  if (!Array.isArray(events)) fail("MACOS_BUILD_EVENT_LEDGER_MISMATCH");
+  const reservations = new Map(
+    ledger.entries.map((entry) => [`${entry.marketingVersion}\0${entry.buildNumber}`, entry]),
+  );
+  const priorEvents = new Map();
+  const consumed = new Set();
+  for (const event of events) {
+    const key = `${event?.releaseVersion}\0${event?.buildNumber}`;
+    const prior = priorEvents.get(key) ?? [];
+    try {
+      validateReleaseLifecycleEvent(event, { priorEvents: prior });
+    } catch {
+      fail("MACOS_BUILD_EVENT_LEDGER_MISMATCH");
+    }
+    if (!reservations.has(key) || (prior.at(-1)?.occurredAt ?? "") >= event.occurredAt) {
+      fail("MACOS_BUILD_EVENT_LEDGER_MISMATCH");
+    }
+    prior.push(event);
+    priorEvents.set(key, prior);
+    if (CONSUMING_KINDS.has(event.kind)) consumed.add(event.buildNumber);
+  }
+  return [...consumed].sort((left, right) => (BigInt(left) < BigInt(right) ? -1 : 1));
+}
+
+export async function readMacOSLifecycleEvents(recordsRoot = defaultRecordsRoot) {
+  if (typeof recordsRoot !== "string" || !path.isAbsolute(recordsRoot)) {
+    fail("MACOS_BUILD_EVENT_LEDGER_MISMATCH");
+  }
+  const events = [];
+  async function visit(directory) {
+    let entries;
+    try {
+      entries = await readdir(directory, { withFileTypes: true });
+    } catch (error) {
+      if (error?.code === "ENOENT") return;
+      fail("MACOS_BUILD_EVENT_LEDGER_MISMATCH");
+    }
+    for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
+      const entryPath = path.join(directory, entry.name);
+      if (entry.isSymbolicLink()) fail("MACOS_BUILD_EVENT_LEDGER_MISMATCH");
+      if (entry.isDirectory()) await visit(entryPath);
+      else if (
+        entry.isFile() &&
+        entry.name.endsWith(".json") &&
+        !entry.name.endsWith(".example.json")
+      ) {
+        let record;
+        try {
+          record = JSON.parse(await readFile(entryPath, "utf8"));
+        } catch {
+          fail("MACOS_BUILD_EVENT_LEDGER_MISMATCH");
+        }
+        if (LIFECYCLE_KINDS.has(record?.kind)) events.push(record);
+      }
+    }
+  }
+  await visit(recordsRoot);
+  return events;
+}
+
 export function parseReservationArguments(argv) {
   if (argv.length === 1 && argv[0] === "--check") return { mode: "check" };
   if (
@@ -120,6 +198,7 @@ export async function reserveMacOSBuild({
   operator,
   number,
   reservedAt = new Date().toISOString(),
+  consumedEvents = [],
 }) {
   if (
     typeof ledgerPath !== "string" ||
@@ -144,10 +223,15 @@ export async function reserveMacOSBuild({
   const temporaryPath = `${ledgerPath}.tmp-${randomUUID()}`;
   try {
     const current = validateBuildLedger(JSON.parse(await readFile(ledgerPath, "utf8")));
+    const consumedBuildNumbers = validateConsumedBuildNumbers(current, consumedEvents);
     if (current.entries.some((entry) => entry.buildNumber === number)) {
       fail("MACOS_BUILD_RESERVATION_CONFLICT");
     }
-    const largest = current.entries.length === 0 ? 0n : BigInt(current.entries.at(-1).buildNumber);
+    const largestReserved =
+      current.entries.length === 0 ? 0n : BigInt(current.entries.at(-1).buildNumber);
+    const largestConsumed =
+      consumedBuildNumbers.length === 0 ? 0n : BigInt(consumedBuildNumbers.at(-1));
+    const largest = largestReserved > largestConsumed ? largestReserved : largestConsumed;
     if (BigInt(number) <= largest) fail("MACOS_BUILD_NUMBER_NOT_MONOTONIC");
 
     const next = validateBuildLedger({
@@ -182,8 +266,10 @@ export async function reserveMacOSBuild({
 
 async function main(argv) {
   const input = parseReservationArguments(argv);
+  const consumedEvents = await readMacOSLifecycleEvents();
   if (input.mode === "check") {
     const ledger = validateBuildLedger(JSON.parse(await readFile(defaultLedgerPath, "utf8")));
+    validateConsumedBuildNumbers(ledger, consumedEvents);
     process.stdout.write(
       `${JSON.stringify({ status: "valid", entries: ledger.entries.length })}\n`,
     );
@@ -194,6 +280,7 @@ async function main(argv) {
     version: input.version,
     operator: input.operator,
     number: input.number,
+    consumedEvents,
   });
   process.stdout.write(`${JSON.stringify(ledger.entries.at(-1))}\n`);
 }

@@ -121,6 +121,7 @@ test("creates an exact phase-two event without mutating the phase-one ledger", a
     { marketingVersion: "0.2.0" },
     { packageSha256: "not-a-hash" },
     { apiToken: "redacted" },
+    { marketingVersion: "01.2.3" },
   ]) {
     assert.throws(
       () =>

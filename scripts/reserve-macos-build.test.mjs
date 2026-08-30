@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -7,8 +7,10 @@ import { fileURLToPath } from "node:url";
 
 import {
   parseReservationArguments,
+  readMacOSLifecycleEvents,
   reserveMacOSBuild,
   validateBuildLedger,
+  validateConsumedBuildNumbers,
 } from "./reserve-macos-build.mjs";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -40,6 +42,7 @@ test("validates the strict monotonic build-number ledger", () => {
     ledger([{ ...entry("1"), extra: true }]),
     ledger([entry("0")]),
     ledger([entry("01")]),
+    ledger([entry("1", { marketingVersion: "01.2.3" })]),
     ledger([entry("2"), entry("1", { reservedAt: "2026-08-30T00:01:00.000Z" })]),
     ledger([entry("1"), entry("1", { marketingVersion: "0.2.0" })]),
     ledger([entry("1", { reservedAt: "not-a-time" })]),
@@ -54,6 +57,10 @@ test("validates the strict monotonic build-number ledger", () => {
   ]) {
     assert.throws(() => validateBuildLedger(invalid), /MACOS_BUILD_LEDGER_INVALID/);
   }
+  assert.deepEqual(
+    validateBuildLedger(ledger([entry("1", { marketingVersion: "1.2.3-rc.1+build.5" })])),
+    ledger([entry("1", { marketingVersion: "1.2.3-rc.1+build.5" })]),
+  );
 });
 
 test("parses only the explicit reservation or read-only check CLI", () => {
@@ -75,11 +82,44 @@ test("parses only the explicit reservation or read-only check CLI", () => {
     ["--number", "1", "--version", "0.1.0", "--operator", "Ben Ebsworth"],
     ["--version", "0.1.0", "--operator", "Ben Ebsworth", "--number", "1", "--latest-from-apple"],
     ["--check", "--number", "1"],
+    ["--version", "01.2.3", "--operator", "Ben Ebsworth", "--number", "1"],
     ["--version", "0.1.0", "--operator", `ghp_${"a".repeat(20)}`, "--number", "1"],
     ["--version", "0.1.0", "--operator", "a".repeat(40), "--number", "1"],
   ]) {
     assert.throws(() => parseReservationArguments(argv), /MACOS_BUILD_RESERVATION_INPUT_INVALID/);
   }
+});
+
+test("derives consumed build numbers from immutable lifecycle events and binds them to reservations", async (context) => {
+  const directory = await mkdtemp(
+    path.join(process.env.TMPDIR ?? os.tmpdir(), "tammy-build-events-"),
+  );
+  context.after(() => rm(directory, { recursive: true, force: true }));
+  const eventsDirectory = path.join(directory, "0.1.0", "build-1", "events");
+  await mkdir(eventsDirectory, { recursive: true });
+  const uploaded = {
+    schemaVersion: 1,
+    kind: "uploaded",
+    releaseVersion: "0.1.0",
+    buildNumber: "1",
+    operator: "Ben Ebsworth",
+    occurredAt: "2026-08-30T01:00:00.000Z",
+    productSourceCommit: "a".repeat(40),
+    productSourceTree: "b".repeat(40),
+    packageSha256: "c".repeat(64),
+    appStoreConnectBuildId: "1234567890",
+  };
+  await writeFile(
+    path.join(eventsDirectory, "2026-08-30T01-00-00.000Z-uploaded.json"),
+    `${JSON.stringify(uploaded, null, 2)}\n`,
+  );
+  const events = await readMacOSLifecycleEvents(directory);
+  assert.deepEqual(events, [uploaded]);
+  assert.deepEqual(validateConsumedBuildNumbers(ledger([entry("1")]), events), ["1"]);
+  assert.throws(
+    () => validateConsumedBuildNumbers(ledger(), events),
+    /MACOS_BUILD_EVENT_LEDGER_MISMATCH/,
+  );
 });
 
 test("atomically reserves a greater build number without phase-two facts", async (context) => {

@@ -8,7 +8,8 @@ import { validateBuildLedger } from "./reserve-macos-build.mjs";
 const execFileAsync = promisify(execFile);
 const SHA40 = /^[0-9a-f]{40}$/;
 const SHA256 = /^[0-9a-f]{64}$/;
-const VERSION = /^[0-9]+\.[0-9]+\.[0-9]+$/;
+const VERSION =
+  /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(?:(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
 const BUILD = /^[1-9][0-9]*$/;
 const SOURCE_KEYS = ["ledger", "marketingVersion", "productSourceCommit", "productSourceTree"];
 const EVENT_INPUT_KEYS = [
