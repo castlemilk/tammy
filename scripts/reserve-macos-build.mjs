@@ -10,6 +10,8 @@ const ENTRY_KEYS = ["buildNumber", "marketingVersion", "reservedAt", "reservedBy
 const VERSION =
   /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(?:(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
 const BUILD = /^[1-9][0-9]*$/;
+const SHA40 = /^[0-9a-f]{40}$/;
+const SHA256 = /^[0-9a-f]{64}$/;
 const UTC_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 const SECRET_VALUE_PATTERNS = [
   /\b(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{16,}\b/i,
@@ -36,6 +38,16 @@ const LIFECYCLE_KINDS = new Set([
   "rejected",
 ]);
 const CONSUMING_KINDS = new Set(["uploaded", "expired", "rejected", "superseded"]);
+const CANDIDATE_BUILT_KEYS = [
+  "appSha256",
+  "buildNumber",
+  "kind",
+  "marketingVersion",
+  "packageSha256",
+  "productSourceCommit",
+  "productSourceTree",
+  "unsignedContentManifestSha256",
+];
 
 function fail(code) {
   throw new Error(code);
@@ -59,6 +71,31 @@ function exactKeys(value, expected) {
     !Array.isArray(value) &&
     Object.keys(value).length === expected.length &&
     expected.every((key) => Object.hasOwn(value, key))
+  );
+}
+
+function isCandidateBuiltMarker(record, relativePath) {
+  const parts = relativePath.split("/");
+  const filename = parts.at(-1) ?? "";
+  const timestampParts = filename.match(
+    /^(\d{4}-\d{2}-\d{2}T)(\d{2})-(\d{2})-(\d{2}\.\d{3}Z)-candidate-built\.json$/,
+  );
+  const timestamp = timestampParts
+    ? `${timestampParts[1]}${timestampParts[2]}:${timestampParts[3]}:${timestampParts[4]}`
+    : "";
+  return (
+    exactKeys(record, CANDIDATE_BUILT_KEYS) &&
+    record.kind === "candidate-built" &&
+    VERSION.test(record.marketingVersion) &&
+    BUILD.test(record.buildNumber) &&
+    SHA40.test(record.productSourceCommit) &&
+    SHA40.test(record.productSourceTree) &&
+    [record.unsignedContentManifestSha256, record.appSha256, record.packageSha256].every((hash) =>
+      SHA256.test(hash),
+    ) &&
+    timestampParts !== null &&
+    isUtcTime(timestamp) &&
+    relativePath === `${record.marketingVersion}/build-${record.buildNumber}/events/${filename}`
   );
 }
 
@@ -209,6 +246,12 @@ export async function readMacOSLifecycleEvents(recordsRoot = defaultRecordsRoot)
         const isEventPath = relativePath.split("/").includes("events");
         const isLifecycle = LIFECYCLE_KINDS.has(record?.kind);
         if (isEventPath || isLifecycle) {
+          if (record?.kind === "candidate-built") {
+            if (!isCandidateBuiltMarker(record, relativePath)) {
+              fail("MACOS_BUILD_EVENT_LEDGER_MISMATCH");
+            }
+            continue;
+          }
           if (!isLifecycle) fail("MACOS_BUILD_EVENT_LEDGER_MISMATCH");
           const expectedPath = `${record.releaseVersion}/build-${record.buildNumber}/events/${record.occurredAt?.replaceAll(":", "-")}-${record.kind}.json`;
           if (relativePath !== expectedPath) fail("MACOS_BUILD_EVENT_LEDGER_MISMATCH");

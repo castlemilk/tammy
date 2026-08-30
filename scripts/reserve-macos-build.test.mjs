@@ -212,6 +212,32 @@ test("rejects misplaced, misnamed, and unknown lifecycle event files", async (co
   }
 });
 
+test("recognizes an exact candidate-built marker without treating it as consumption", async (context) => {
+  const directory = await mkdtemp(
+    path.join(process.env.TMPDIR ?? os.tmpdir(), "tammy-candidate-build-event-"),
+  );
+  context.after(() => rm(directory, { recursive: true, force: true }));
+  const candidateBuilt = {
+    kind: "candidate-built",
+    buildNumber: "1",
+    marketingVersion: "0.1.0",
+    productSourceCommit: "a".repeat(40),
+    productSourceTree: "b".repeat(40),
+    unsignedContentManifestSha256: "c".repeat(64),
+    appSha256: "d".repeat(64),
+    packageSha256: "e".repeat(64),
+  };
+  const file = path.join(
+    directory,
+    "0.1.0/build-1/events/2026-08-30T04-00-00.000Z-candidate-built.json",
+  );
+  await mkdir(path.dirname(file), { recursive: true });
+  await writeFile(file, `${JSON.stringify(candidateBuilt, null, 2)}\n`);
+  assert.deepEqual(await readMacOSLifecycleEvents(directory), []);
+  await writeFile(file, `${JSON.stringify({ ...candidateBuilt, extra: true }, null, 2)}\n`);
+  await assert.rejects(readMacOSLifecycleEvents(directory), /MACOS_BUILD_EVENT_LEDGER_MISMATCH/);
+});
+
 test("atomically reserves a greater build number without phase-two facts", async (context) => {
   const directory = await mkdtemp(
     path.join(process.env.TMPDIR ?? os.tmpdir(), "tammy-build-ledger-"),
