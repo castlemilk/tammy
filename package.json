@@ -10,6 +10,8 @@
   "scripts": {
     "check:toolchain": "node scripts/check-toolchain.mjs",
     "check:macos-store": "node scripts/check-macos-store.mjs",
+    "macos:build:check": "node scripts/reserve-macos-build.mjs --check",
+    "macos:build:reserve": "node scripts/reserve-macos-build.mjs",
     "compliance:foundation": "node scripts/check-foundation-evidence.mjs",
     "sqlcipher:vendor": "node scripts/vendor-sqlcipher.mjs",
     "sqlcipher:build": "node scripts/build-sqlcipher.mjs",
