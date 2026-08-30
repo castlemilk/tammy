@@ -12,13 +12,16 @@ From a clean checkout, install the pinned toolchain once and check the repositor
 mise install
 mise exec -- task setup
 mise exec -- task release:check
+mise exec -- task release:state
 ```
 
-`release:check` validates the repository-owned bundle identity, category, icon, privacy manifest, sandbox entitlements, packaging profile, and metadata template without signing credentials. `mise exec -- task verify:release` adds the supported release-readiness verification but does not sign a candidate. `mise exec -- task package` remains an ordinary local package smoke test, not an App Store build.
+`release:check` validates the repository-owned bundle identity, category, icon, privacy manifest, sandbox entitlements, packaging profile, and metadata template without signing credentials. `release:state` prints only the validated state, passed gates, and redacted blockers. Neither task signs, uploads, publishes, or submits. `mise exec -- task verify:release` adds the supported release-readiness verification but does not sign a candidate. `mise exec -- task package` remains an ordinary local package smoke test, not an App Store build.
 
 ## Apple-controlled setup and confirmations
 
 The repository records the product identifiers and canonical copy, but it does not infer current Apple account state from those files. An accountable operator must observe and record each Apple-controlled fact for the exact build. Do not store certificates, private keys, provisioning profiles, credentials, session tokens, or receipt bodies in this repository.
+
+The accountable Apple setup needs Apple Development and Apple Distribution certificate identities and separate Mac App Store development and distribution provisioning profiles for the explicit Mac App ID. Their Team ID, application identifier, app group, and keychain group must match the release profile; repository copy alone cannot prove that they exist or remain valid.
 
 - **Seller eligibility and legal entity:** `OPERATOR_CONFIRMATION_REQUIRED`
 - **Active agreements:** `OPERATOR_CONFIRMATION_REQUIRED`
@@ -34,13 +37,21 @@ The repository records the product identifiers and canonical copy, but it does n
 
 The explicit Mac App ID is `com.tammy.desktop` (`DXP9QHD7JH`), and the App Store Connect record is `6800226692` for **Tammy Accounting** 0.1.0. These identifiers do not prove seller eligibility, agreement status, declaration answers, build processing, or submission readiness. The public [privacy policy](https://tammy-accounting.castlemilk.chatgpt.site/privacy) and [support page](https://tammy-accounting.castlemilk.chatgpt.site/support) are bound to the immutable deployment record checked by `release:check`.
 
-Reserve each positive decimal `CFBundleVersion` with `mise exec -- pnpm macos:build:reserve -- --version <semver> --operator <name> --number <N>` only after candidate-affecting repository changes are committed. Marketing version comes from `apps/desktop/package.json`; never reuse a number across versions.
+Reserve each positive decimal `CFBundleVersion` only after candidate-affecting repository changes are committed:
+
+```sh
+mise exec -- task release:reserve-build VERSION=0.1.0 OPERATOR='Accountable operator' NUMBER=1
+```
+
+The task passes the three explicit values to the ledger owner and never guesses a number. Marketing version comes from `apps/desktop/package.json`; never reuse a number across versions.
 
 Apple's current signing, provisioning, upload, metadata, screenshot, privacy, and review requirements remain authoritative. Re-check them for every release.
 
 ## Build inputs
 
 The signed Task scenarios accept only explicit inputs and never print their values. Certificate identity names are selected from the operator's keychain; the provisioning profile must be an absolute path outside the repository. Finalize and commit the repository-owned metadata before invoking a signed-build scenario. The visible `OPERATOR_CONFIRMATION_REQUIRED` lines are deliberate gates and remain until immutable accountable attestations are recorded; they are not product-copy placeholders.
+
+Record the accountable export-compliance determination for the exact release as either exempt or non-exempt before signing. The current repository profile emits `ITSAppUsesNonExemptEncryption: false` only for the recorded exempt branch.
 
 ```sh
 export TAMMY_MACOS_BUILD_NUMBER='1'
@@ -64,7 +75,7 @@ export TAMMY_MACOS_EXPORT_COMPLIANCE='exempt' # or non-exempt
 export TAMMY_MACOS_PROVISIONING_PROFILE='/absolute/path/Tammy_MAS_Distribution.provisionprofile'
 export TAMMY_MACOS_PRIVACY_POLICY_URL='https://tammy-accounting.castlemilk.chatgpt.site/privacy'
 export TAMMY_MACOS_SIGNING_IDENTITY='Apple Distribution: Example Company Pty Ltd (TEAMID1234)'
-export TAMMY_MACOS_INSTALLER_IDENTITY='3rd Party Mac Developer Installer: Example Company Pty Ltd (TEAMID1234)'
+export TAMMY_MACOS_INSTALLER_IDENTITY='Mac Installer Distribution: Example Company Pty Ltd (TEAMID1234)'
 export TAMMY_MACOS_SUPPORT_URL='https://tammy-accounting.castlemilk.chatgpt.site/support'
 export TAMMY_MACOS_TEAM_ID='TEAMID1234'
 
@@ -74,6 +85,15 @@ mise exec -- task deploy:mas
 ```
 
 `release:candidate` and `deploy:mas` force distribution signing. They check the clean tree, finalized metadata, and release inputs; rebuild the Go core and authenticate its SQLCipher runtime before signing; verify the Apple signature and record the signed core hash without executing that inherited child outside its sandbox parent; package and sign the outer MAS app without signing the core a second time; verify the actual `Tammy-mas-arm64` core/manifest equality; and use Apple's `/usr/bin/productbuild` to create `apps/desktop/out/make/pkg/arm64/Tammy-<version>-build.<number>.pkg`. They print local package evidence and never upload. A distribution-signed app is for App Store upload; use the Apple Development build for local execution.
+
+Before an accountable operator uploads or submits, run the matching read-only state gate:
+
+```sh
+mise exec -- task release:pre-upload-check
+mise exec -- task release:pre-submit-check
+```
+
+These tasks do not sign, upload, publish, or submit. They fail unless the exact release record has reached `PRE_UPLOAD_READY` or `PRE_SUBMIT_READY`; a failure names the missing repository, seller, candidate, or Apple-controlled evidence without printing sensitive inputs.
 
 ## Inspect the signed build
 

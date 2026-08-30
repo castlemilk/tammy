@@ -98,8 +98,8 @@ tasks:
   deploy:mas:
     desc: Create a signed macOS App Store package candidate for manual submission.
     summary: |
-      Builds and locally validates the macOS package only; manual App Store submission
-      remains outside this task.
+      Signs and locally validates the macOS package only. It does not upload, publish,
+      or submit anything; accountable manual App Store submission remains separate.
     vars:
       NODE_TARGET:
         sh: >-

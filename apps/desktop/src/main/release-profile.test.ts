@@ -7,25 +7,52 @@ import { describe, expect, it } from "vitest";
 import {
   createMacOSReleaseProfile,
   MACOS_APP_BUNDLE_ID,
+  type MacOSReleaseFacts,
   normalizeMacOSPackagedResourcePermissions,
 } from "../../release/macos/profile";
 
 const desktopRoot = path.resolve(__dirname, "../..");
 const provisioningProfile = path.join(desktopRoot, "test.provisionprofile");
+const releaseFacts: MacOSReleaseFacts = {
+  identity: {
+    appStoreName: "Tammy Accounting",
+    architectures: ["arm64"],
+    bundleIdentifier: "com.tammy.desktop",
+    copyright: "© 2026 Gamma Systems Pty Ltd",
+    installedName: "Tammy",
+    minimumMacOSVersion: "14.0",
+    publisher: "Gamma Systems Pty Ltd",
+    supportEmail: "ben.ebsworth@gmail.com",
+  },
+  marketingVersion: "0.1.0",
+  publicLinks: {
+    privacyPolicy: "https://tammy-accounting.castlemilk.chatgpt.site/privacy",
+    support: "https://tammy-accounting.castlemilk.chatgpt.site/support",
+  },
+  target: "mas/arm64",
+};
 
 function distributionEnvironment(): NodeJS.ProcessEnv {
   return {
     TAMMY_MACOS_BUILD_NUMBER: "42",
     TAMMY_MACOS_EXPORT_COMPLIANCE: "exempt",
-    TAMMY_MACOS_INSTALLER_IDENTITY: "3rd Party Mac Developer Installer: Tammy Pty Ltd (ABCDE12345)",
+    TAMMY_MACOS_INSTALLER_IDENTITY: "Mac Installer Distribution: Tammy Pty Ltd (ABCDE12345)",
     TAMMY_MACOS_PROVISIONING_PROFILE: provisioningProfile,
-    TAMMY_MACOS_PRIVACY_POLICY_URL: "https://example.com/tammy/privacy",
+    TAMMY_MACOS_PRIVACY_POLICY_URL: "https://tammy-accounting.castlemilk.chatgpt.site/privacy",
     TAMMY_MACOS_SIGNING_IDENTITY: "Apple Distribution: Tammy Pty Ltd (ABCDE12345)",
     TAMMY_MACOS_SIGNING_MODE: "distribution",
-    TAMMY_MACOS_SUPPORT_URL: "https://example.com/tammy/support",
+    TAMMY_MACOS_SUPPORT_URL: "https://tammy-accounting.castlemilk.chatgpt.site/support",
+    TAMMY_MACOS_TARGET: "mas/arm64",
     TAMMY_MACOS_TEAM_ID: "ABCDE12345",
     TAMMY_RELEASE_PROFILE: "mas",
   };
+}
+
+function createTestProfile(
+  environment: NodeJS.ProcessEnv,
+  facts: MacOSReleaseFacts = releaseFacts,
+) {
+  return createMacOSReleaseProfile(environment, desktopRoot, facts);
 }
 
 describe("createMacOSReleaseProfile", () => {
@@ -48,6 +75,7 @@ describe("createMacOSReleaseProfile", () => {
     "TAMMY_MACOS_SIGNING_IDENTITY",
     "TAMMY_MACOS_SIGNING_MODE",
     "TAMMY_MACOS_SUPPORT_URL",
+    "TAMMY_MACOS_TARGET",
     "TAMMY_MACOS_TEAM_ID",
   ])("rejects a MAS profile with missing %s", (key) => {
     const environment = distributionEnvironment();
@@ -61,31 +89,34 @@ describe("createMacOSReleaseProfile", () => {
     "rejects invalid App Store build number %s",
     (buildNumber) => {
       expect(() =>
-        createMacOSReleaseProfile(
-          { ...distributionEnvironment(), TAMMY_MACOS_BUILD_NUMBER: buildNumber },
-          desktopRoot,
-        ),
+        createTestProfile({
+          ...distributionEnvironment(),
+          TAMMY_MACOS_BUILD_NUMBER: buildNumber,
+        }),
       ).toThrow("MACOS_RELEASE_INPUT_INVALID");
     },
   );
 
   it("builds a pinned distribution profile with separate executable entitlements", () => {
-    const profile = createMacOSReleaseProfile(distributionEnvironment(), desktopRoot);
+    const profile = createTestProfile(distributionEnvironment());
     expect(profile.kind).toBe("mas");
     if (profile.kind !== "mas") throw new Error("expected MAS profile");
 
     expect(profile.appBundleId).toBe(MACOS_APP_BUNDLE_ID);
     expect(profile.buildVersion).toBe("42");
     expect(profile.category).toBe("public.app-category.finance");
-    expect(profile.installerIdentity).toContain("3rd Party Mac Developer Installer");
+    expect(profile.installerIdentity).toContain("Mac Installer Distribution");
     expect(profile.info).toEqual({
+      CFBundleDisplayName: "Tammy",
       ElectronTeamID: "ABCDE12345",
       ITSAppUsesNonExemptEncryption: false,
+      LSMinimumSystemVersion: "14.0",
+      NSHumanReadableCopyright: "© 2026 Gamma Systems Pty Ltd",
     });
     expect(Object.isExtensible(profile.info)).toBe(true);
     expect(profile.publicLinks).toEqual({
-      privacyPolicy: "https://example.com/tammy/privacy",
-      support: "https://example.com/tammy/support",
+      privacyPolicy: "https://tammy-accounting.castlemilk.chatgpt.site/privacy",
+      support: "https://tammy-accounting.castlemilk.chatgpt.site/support",
     });
     expect(profile.sign.type).toBe("distribution");
     expect(profile.sign.provisioningProfile).toBe(provisioningProfile);
@@ -125,17 +156,23 @@ describe("createMacOSReleaseProfile", () => {
     ).toMatch(/entitlements\.mas\.child\.plist$/);
   });
 
-  it("accepts Apple's Mac App Distribution certificate identity", () => {
-    const profile = createMacOSReleaseProfile(
-      {
+  it("does not trust serialized release facts supplied through the environment", () => {
+    expect(() =>
+      createMacOSReleaseProfile(
+        { ...distributionEnvironment(), TAMMY_MACOS_RELEASE_FACTS: "{}" },
+        desktopRoot,
+      ),
+    ).toThrow("MACOS_RELEASE_INPUT_INVALID");
+  });
+
+  it("rejects legacy Mac App Distribution certificate identity aliases", () => {
+    expect(() =>
+      createTestProfile({
         ...distributionEnvironment(),
         TAMMY_MACOS_SIGNING_IDENTITY:
           "3rd Party Mac Developer Application: Tammy Pty Ltd (ABCDE12345)",
-      },
-      desktopRoot,
-    );
-
-    expect(profile.kind).toBe("mas");
+      }),
+    ).toThrow("MACOS_RELEASE_INPUT_INVALID");
   });
 
   it("supports a locally runnable development-signed MAS profile without an installer identity", () => {
@@ -144,7 +181,7 @@ describe("createMacOSReleaseProfile", () => {
     environment.TAMMY_MACOS_SIGNING_IDENTITY = "Apple Development: Tammy Pty Ltd (ABCDE12345)";
     delete environment.TAMMY_MACOS_INSTALLER_IDENTITY;
 
-    const profile = createMacOSReleaseProfile(environment, desktopRoot);
+    const profile = createTestProfile(environment);
     expect(profile.kind).toBe("mas");
     if (profile.kind !== "mas") throw new Error("expected MAS profile");
     expect(profile.installerIdentity).toBeUndefined();
@@ -166,8 +203,21 @@ describe("createMacOSReleaseProfile", () => {
         "3rd Party Mac Developer Installer: Tammy Pty Ltd (OTHER12345)",
     },
   ])("rejects signing identities not bound to the selected mode and Team ID", (change) => {
+    expect(() => createTestProfile({ ...distributionEnvironment(), ...change })).toThrow(
+      "MACOS_RELEASE_INPUT_INVALID",
+    );
+  });
+
+  it.each([
+    { marketingVersion: "0.2.0" },
+    { target: "mas/x64" },
+    { publicLinks: { ...releaseFacts.publicLinks, support: "https://example.com/support" } },
+  ])("rejects release fact drift %#", (change) => {
     expect(() =>
-      createMacOSReleaseProfile({ ...distributionEnvironment(), ...change }, desktopRoot),
+      createTestProfile(distributionEnvironment(), {
+        ...releaseFacts,
+        ...change,
+      }),
     ).toThrow("MACOS_RELEASE_INPUT_INVALID");
   });
 });

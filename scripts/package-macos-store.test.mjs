@@ -13,22 +13,24 @@ const { createMacOSStoreBuildPlan } = packageMacOSStore;
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 function environment(mode = "distribution") {
+  const privacyPolicy = "https://tammy-accounting.castlemilk.chatgpt.site/privacy";
+  const support = "https://tammy-accounting.castlemilk.chatgpt.site/support";
   return {
     TAMMY_MACOS_BUILD_NUMBER: "42",
     TAMMY_MACOS_EXPORT_COMPLIANCE: "exempt",
     ...(mode === "distribution"
       ? {
-          TAMMY_MACOS_INSTALLER_IDENTITY:
-            "3rd Party Mac Developer Installer: Tammy Pty Ltd (ABCDE12345)",
+          TAMMY_MACOS_INSTALLER_IDENTITY: "Mac Installer Distribution: Tammy Pty Ltd (ABCDE12345)",
         }
       : {}),
     TAMMY_MACOS_PROVISIONING_PROFILE: "/private/tmp/tammy.provisionprofile",
-    TAMMY_MACOS_PRIVACY_POLICY_URL: "https://example.com/tammy/privacy",
+    TAMMY_MACOS_PRIVACY_POLICY_URL: privacyPolicy,
     TAMMY_MACOS_SIGNING_IDENTITY: `${
       mode === "distribution" ? "Apple Distribution" : "Apple Development"
     }: Tammy Pty Ltd (ABCDE12345)`,
     TAMMY_MACOS_SIGNING_MODE: mode,
-    TAMMY_MACOS_SUPPORT_URL: "https://example.com/tammy/support",
+    TAMMY_MACOS_SUPPORT_URL: support,
+    TAMMY_MACOS_TARGET: "mas/arm64",
     TAMMY_MACOS_TEAM_ID: "ABCDE12345",
   };
 }
@@ -115,6 +117,7 @@ test("distribution plan checks, builds, packages MAS and creates a signed flat p
     ],
   ]);
   assert.equal(plan.environment.TAMMY_RELEASE_PROFILE, "mas");
+  assert.equal(plan.environment.TAMMY_MACOS_TARGET, "mas/arm64");
   assert.equal(
     plan.environment.VITE_TAMMY_PRIVACY_POLICY_URL,
     environment().TAMMY_MACOS_PRIVACY_POLICY_URL,

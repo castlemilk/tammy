@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { chmod, lstat, readdir } from "node:fs/promises";
 import path from "node:path";
 
@@ -16,8 +17,11 @@ export interface MacOSStoreProfile {
   readonly category: typeof MACOS_APP_CATEGORY;
   readonly icon: string;
   readonly info: Readonly<{
+    CFBundleDisplayName: "Tammy";
     ElectronTeamID: string;
     ITSAppUsesNonExemptEncryption: boolean;
+    LSMinimumSystemVersion: "14.0";
+    NSHumanReadableCopyright: "© 2026 Gamma Systems Pty Ltd";
   }>;
   readonly installerIdentity?: string;
   readonly kind: "mas";
@@ -35,6 +39,77 @@ export interface MacOSStoreProfile {
 }
 
 export type MacOSReleaseProfile = DevelopmentProfile | MacOSStoreProfile;
+
+export interface MacOSReleaseFacts {
+  readonly identity: Readonly<{
+    appStoreName: "Tammy Accounting";
+    architectures: readonly ["arm64"];
+    bundleIdentifier: "com.tammy.desktop";
+    copyright: "© 2026 Gamma Systems Pty Ltd";
+    installedName: "Tammy";
+    minimumMacOSVersion: "14.0";
+    publisher: "Gamma Systems Pty Ltd";
+    supportEmail: "ben.ebsworth@gmail.com";
+  }>;
+  readonly marketingVersion: string;
+  readonly publicLinks: Readonly<{ privacyPolicy: string; support: string }>;
+  readonly target: string;
+}
+
+const PUBLIC_ORIGIN = "https://tammy-accounting.castlemilk.chatgpt.site";
+
+function exactKeys(value: unknown, expected: readonly string[]): value is Record<string, unknown> {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    Object.keys(value).length === expected.length &&
+    expected.every((key) => Object.hasOwn(value, key))
+  );
+}
+
+function validateReleaseFacts(value: unknown): MacOSReleaseFacts {
+  if (
+    !exactKeys(value, ["identity", "marketingVersion", "publicLinks", "target"]) ||
+    !exactKeys(value.identity, [
+      "appStoreName",
+      "architectures",
+      "bundleIdentifier",
+      "copyright",
+      "installedName",
+      "minimumMacOSVersion",
+      "publisher",
+      "supportEmail",
+    ]) ||
+    !exactKeys(value.publicLinks, ["privacyPolicy", "support"])
+  ) {
+    throw new Error("MACOS_RELEASE_INPUT_INVALID");
+  }
+  return value as unknown as MacOSReleaseFacts;
+}
+
+function releaseFactsFromChecker(
+  environment: NodeJS.ProcessEnv,
+  desktopRoot: string,
+): MacOSReleaseFacts {
+  try {
+    const repositoryRoot = path.resolve(desktopRoot, "../..");
+    const checker = path.join(repositoryRoot, "scripts", "check-macos-store.mjs");
+    return validateReleaseFacts(
+      JSON.parse(
+        execFileSync(process.execPath, [checker, "--profile-facts"], {
+          cwd: repositoryRoot,
+          encoding: "utf8",
+          env: environment,
+          maxBuffer: 1024 * 1024,
+          stdio: ["ignore", "pipe", "ignore"],
+        }),
+      ),
+    );
+  } catch {
+    throw new Error("MACOS_RELEASE_INPUT_INVALID");
+  }
+}
 
 export async function normalizeMacOSPackagedResourcePermissions(buildPath: string): Promise<void> {
   if (!path.isAbsolute(buildPath)) throw new Error("MACOS_PACKAGED_RESOURCES_INVALID");
@@ -119,6 +194,7 @@ function matchesIdentity(value: string, certificateClass: string, teamID: string
 export function createMacOSReleaseProfile(
   environment: NodeJS.ProcessEnv,
   desktopRoot: string,
+  suppliedFacts?: MacOSReleaseFacts,
 ): MacOSReleaseProfile {
   if (environment.TAMMY_RELEASE_PROFILE === undefined) {
     return Object.freeze({ kind: "development" });
@@ -136,6 +212,7 @@ export function createMacOSReleaseProfile(
   const signingMode = required(environment, "TAMMY_MACOS_SIGNING_MODE");
   const teamID = required(environment, "TAMMY_MACOS_TEAM_ID");
   const support = requiredHttpsUrl(environment, "TAMMY_MACOS_SUPPORT_URL");
+  const target = required(environment, "TAMMY_MACOS_TARGET");
 
   if (
     !/^[1-9][0-9]*$/.test(buildVersion) ||
@@ -148,19 +225,40 @@ export function createMacOSReleaseProfile(
   }
 
   const type = signingMode as SigningMode;
+  const facts = validateReleaseFacts(
+    suppliedFacts ?? releaseFactsFromChecker(environment, desktopRoot),
+  );
+  if (
+    facts.marketingVersion !== "0.1.0" ||
+    target !== "mas/arm64" ||
+    facts.target !== target ||
+    facts.identity.appStoreName !== "Tammy Accounting" ||
+    facts.identity.installedName !== "Tammy" ||
+    facts.identity.bundleIdentifier !== MACOS_APP_BUNDLE_ID ||
+    facts.identity.publisher !== "Gamma Systems Pty Ltd" ||
+    facts.identity.supportEmail !== "ben.ebsworth@gmail.com" ||
+    facts.identity.minimumMacOSVersion !== "14.0" ||
+    facts.identity.copyright !== "© 2026 Gamma Systems Pty Ltd" ||
+    facts.identity.architectures.length !== 1 ||
+    facts.identity.architectures[0] !== "arm64" ||
+    facts.publicLinks.privacyPolicy !== `${PUBLIC_ORIGIN}/privacy` ||
+    facts.publicLinks.support !== `${PUBLIC_ORIGIN}/support` ||
+    privacyPolicy !== facts.publicLinks.privacyPolicy ||
+    support !== facts.publicLinks.support
+  ) {
+    throw new Error("MACOS_RELEASE_INPUT_INVALID");
+  }
   const installerIdentity =
     type === "distribution" ? required(environment, "TAMMY_MACOS_INSTALLER_IDENTITY") : undefined;
   const signingCertificateClasses =
-    type === "distribution"
-      ? ["Apple Distribution", "3rd Party Mac Developer Application"]
-      : ["Apple Development"];
+    type === "distribution" ? ["Apple Distribution"] : ["Apple Development"];
   if (
     !signingCertificateClasses.some((certificateClass) =>
       matchesIdentity(identity, certificateClass, teamID),
     ) ||
     (installerIdentity !== undefined &&
-      !["Mac Installer Distribution", "3rd Party Mac Developer Installer"].some(
-        (certificateClass) => matchesIdentity(installerIdentity, certificateClass, teamID),
+      !["Mac Installer Distribution"].some((certificateClass) =>
+        matchesIdentity(installerIdentity, certificateClass, teamID),
       ))
   ) {
     throw new Error("MACOS_RELEASE_INPUT_INVALID");
@@ -185,9 +283,12 @@ export function createMacOSReleaseProfile(
     category: MACOS_APP_CATEGORY,
     icon: path.join(desktopRoot, "assets", "icon.icns"),
     info: {
+      CFBundleDisplayName: "Tammy",
       ElectronTeamID: teamID,
       ITSAppUsesNonExemptEncryption: exportCompliance === "non-exempt",
-    },
+      LSMinimumSystemVersion: "14.0",
+      NSHumanReadableCopyright: "© 2026 Gamma Systems Pty Ltd",
+    } as const,
     ...(installerIdentity === undefined ? {} : { installerIdentity }),
     kind: "mas",
     privacyManifest: path.join(releaseRoot, "PrivacyInfo.xcprivacy"),

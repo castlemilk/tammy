@@ -1,6 +1,15 @@
 import { execFile as nodeExecFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { access, lstat, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import {
+  access,
+  lstat,
+  mkdtemp,
+  readdir,
+  readFile,
+  realpath,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -8,15 +17,49 @@ import { isDeepStrictEqual, promisify } from "node:util";
 
 import Ajv2020 from "ajv/dist/2020.js";
 
-import { evaluateReleaseState } from "./macos-release-state.mjs";
+import { evaluateReleaseState, validateReleaseAttestation } from "./macos-release-state.mjs";
+import {
+  readMacOSLifecycleEvents,
+  validateBuildLedger,
+  validateConsumedBuildNumbers,
+} from "./reserve-macos-build.mjs";
 
 const execFile = promisify(nodeExecFile);
 const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 const APP_BUNDLE_ID = "com.tammy.desktop";
 const APP_CATEGORY = "public.app-category.finance";
+const CANONICAL_METADATA_SHA256 =
+  "346eb61962f8d2aa2b0ffe6144f6fbcd5825859f9525765ef129d1a970ca5f23";
 
 function fail(code = "MACOS_STORE_REPOSITORY_INVALID") {
   throw new Error(code);
+}
+
+async function assertContainedPath(repositoryRoot, target, type, code) {
+  const relative = path.relative(repositoryRoot, target);
+  if (relative === "" || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    fail(code);
+  }
+  const rootStatus = await lstat(repositoryRoot).catch(() => fail(code));
+  if (!rootStatus.isDirectory() || rootStatus.isSymbolicLink()) fail(code);
+  let current = repositoryRoot;
+  for (const segment of relative.split(path.sep)) {
+    current = path.join(current, segment);
+    const status = await lstat(current).catch(() => fail(code));
+    if (status.isSymbolicLink()) fail(code);
+  }
+  const status = await lstat(target).catch(() => fail(code));
+  if ((type === "file" && !status.isFile()) || (type === "directory" && !status.isDirectory())) {
+    fail(code);
+  }
+  const resolvedRoot = await realpath(repositoryRoot).catch(() => fail(code));
+  const resolvedTarget = await realpath(target).catch(() => fail(code));
+  if (!resolvedTarget.startsWith(`${resolvedRoot}${path.sep}`)) fail(code);
+}
+
+async function readContainedFile(repositoryRoot, target, code) {
+  await assertContainedPath(repositoryRoot, target, "file", code);
+  return readFile(target);
 }
 
 function required(environment, key) {
@@ -79,29 +122,29 @@ export function validateMacOSReleaseEnvironment(environment) {
   const signingIdentity = required(environment, "TAMMY_MACOS_SIGNING_IDENTITY");
   const mode = required(environment, "TAMMY_MACOS_SIGNING_MODE");
   const teamID = required(environment, "TAMMY_MACOS_TEAM_ID");
+  const target = required(environment, "TAMMY_MACOS_TARGET");
   requiredHttps(environment, "TAMMY_MACOS_SUPPORT_URL");
   if (
     !/^[1-9][0-9]*$/.test(buildNumber) ||
     !["exempt", "non-exempt"].includes(exportCompliance) ||
     !["development", "distribution"].includes(mode) ||
     !path.isAbsolute(provisioningProfile) ||
-    !/^[A-Z0-9]{10}$/.test(teamID)
+    !/^[A-Z0-9]{10}$/.test(teamID) ||
+    target !== "mas/arm64"
   ) {
     fail("MACOS_RELEASE_INPUT_INVALID");
   }
   const installerIdentity =
     mode === "distribution" ? required(environment, "TAMMY_MACOS_INSTALLER_IDENTITY") : undefined;
   const signingCertificateClasses =
-    mode === "distribution"
-      ? ["Apple Distribution", "3rd Party Mac Developer Application"]
-      : ["Apple Development"];
+    mode === "distribution" ? ["Apple Distribution"] : ["Apple Development"];
   if (
     !signingCertificateClasses.some((certificateClass) =>
       matchesIdentity(signingIdentity, certificateClass, teamID),
     ) ||
     (installerIdentity !== undefined &&
-      !["Mac Installer Distribution", "3rd Party Mac Developer Installer"].some(
-        (certificateClass) => matchesIdentity(installerIdentity, certificateClass, teamID),
+      !["Mac Installer Distribution"].some((certificateClass) =>
+        matchesIdentity(installerIdentity, certificateClass, teamID),
       ))
   ) {
     fail("MACOS_RELEASE_INPUT_INVALID");
@@ -380,7 +423,12 @@ function metadataField(source, label) {
 }
 
 export function validateMacOSStoreMetadata(source) {
-  if (typeof source !== "string") fail();
+  if (
+    typeof source !== "string" ||
+    createHash("sha256").update(source, "utf8").digest("hex") !== CANONICAL_METADATA_SHA256
+  ) {
+    fail();
+  }
   const exactFields = {
     "App Store Connect ID": "6800226692",
     "Apple Developer identifier ID": "DXP9QHD7JH",
@@ -410,15 +458,6 @@ export function validateMacOSStoreMetadata(source) {
     REQUIRED_METADATA_COPY.some((copy) => !source.includes(copy)) ||
     source.includes("OPERATOR_REQUIRED") ||
     /\[[ xX]\]/.test(source) ||
-    /github\.com\/castlemilk\/tammy|Ben Ebsworth — individual|TestFlight invitation/i.test(
-      source,
-    ) ||
-    /(?<!does not )\b(?:submits?|lodges?)\b[^\n.]{0,100}\b(?:ATO|SBR|BAS|company tax returns?)\b|\bproduction SBR\b[^\n.]{0,100}\b(?:supported|enabled|available)\b|\bcompany tax returns?\b[^\n.]{0,60}\b(?:submitted|lodged|supported|enabled)\b/i.test(
-      source,
-    ) ||
-    /\bactive agreements?\b[^\n.]{0,50}\b(?:active|confirmed|completed|in force)\b|\bapp privacy\b[^\n.]{0,50}\b(?:complete|completed|submitted)\b|\bprocessed build\b[^\n.]{0,50}\b(?:selected|attached|complete|completed)\b|\bage rating\b[^\n.]{0,50}\b(?:complete|completed|submitted)\b|\bseller eligibility\b[^\n.]{0,50}\b(?:confirmed|complete|eligible)\b/i.test(
-      source,
-    ) ||
     METADATA_OPERATOR_CONFIRMATIONS.some(
       (kind) =>
         metadataField(source, METADATA_CONFIRMATION_LABELS[kind]) !==
@@ -446,6 +485,112 @@ export function assertMacOSReleaseMetadata(metadata, environment) {
   ) {
     fail("MACOS_RELEASE_METADATA_MISMATCH");
   }
+}
+
+export function validateMacOSBuildReservation(ledger, releaseVersion, buildNumber) {
+  try {
+    validateBuildLedger(ledger);
+  } catch {
+    fail("MACOS_BUILD_NOT_RESERVED");
+  }
+  if (
+    !ledger.entries.some(
+      (entry) => entry.buildNumber === buildNumber && entry.marketingVersion === releaseVersion,
+    )
+  ) {
+    fail("MACOS_BUILD_NOT_RESERVED");
+  }
+}
+
+export function validateMacOSSellerEligibility(
+  attestation,
+  { buildNumber, releaseVersion, teamID },
+) {
+  try {
+    validateReleaseAttestation(attestation);
+  } catch {
+    fail("MACOS_SELLER_ELIGIBILITY_MISSING");
+  }
+  if (
+    attestation.kind !== "seller-eligibility" ||
+    attestation.buildNumber !== buildNumber ||
+    attestation.releaseVersion !== releaseVersion ||
+    attestation.teamId !== teamID
+  ) {
+    fail("MACOS_SELLER_ELIGIBILITY_MISSING");
+  }
+}
+
+export async function readValidatedMacOSReleaseFacts(root, environment, inspectedResult) {
+  const result =
+    inspectedResult ?? (await inspectMacOSStoreRepository(root, { repositoryTestsPassed: false }));
+  if (result.blockers.includes("company-controller-attestation")) {
+    fail("MACOS_STORE_COMPANY_AUTHORITY_MISSING");
+  }
+  if (!result.metadataComplete) fail("MACOS_RELEASE_METADATA_INCOMPLETE");
+  const release = validateMacOSReleaseEnvironment(environment);
+  if (
+    !result.buildReservations.some(
+      (entry) =>
+        entry.buildNumber === release.buildNumber && entry.marketingVersion === result.version,
+    )
+  ) {
+    fail("MACOS_BUILD_NOT_RESERVED");
+  }
+  if (result.consumedBuildNumbers.includes(release.buildNumber)) {
+    fail("MACOS_BUILD_CONSUMED");
+  }
+  assertMacOSReleaseMetadata(result.metadata, environment);
+  if (release.mode === "distribution") {
+    const sellerPath = path.join(
+      root,
+      "docs",
+      "release",
+      "records",
+      "macos",
+      result.version,
+      `build-${release.buildNumber}`,
+      "attestations",
+      "seller-eligibility.json",
+    );
+    let seller;
+    try {
+      seller = JSON.parse(
+        (await readContainedFile(root, sellerPath, "MACOS_SELLER_ELIGIBILITY_MISSING")).toString(
+          "utf8",
+        ),
+      );
+    } catch {
+      fail("MACOS_SELLER_ELIGIBILITY_MISSING");
+    }
+    const teamID = required(environment, "TAMMY_MACOS_TEAM_ID");
+    validateMacOSSellerEligibility(seller, {
+      buildNumber: release.buildNumber,
+      releaseVersion: result.version,
+      teamID,
+    });
+  }
+  return {
+    facts: {
+      identity: {
+        appStoreName: result.identity.appStoreName,
+        architectures: result.identity.architectures,
+        bundleIdentifier: result.identity.bundleIdentifier,
+        copyright: result.identity.copyright,
+        installedName: result.identity.installedName,
+        minimumMacOSVersion: result.identity.minimumMacOSVersion,
+        publisher: result.identity.publisher,
+        supportEmail: result.identity.supportEmail,
+      },
+      marketingVersion: result.version,
+      publicLinks: {
+        privacyPolicy: result.publicSite.privacyPolicy,
+        support: result.publicSite.support,
+      },
+      target: "mas/arm64",
+    },
+    release,
+  };
 }
 
 function decodePlistText(value) {
@@ -573,6 +718,7 @@ export function validateCurrentPublicSite(pointer, deployment, policyBytes) {
     deployment.policySha256 !== policySha256 ||
     pointer.deploymentEvidence !== `deployments/${deployment.deploymentId}.json` ||
     !/^appgprj_[a-z0-9]+$/.test(deployment.projectId) ||
+    !deployment.versionId.startsWith(`${deployment.projectId}~appgver_`) ||
     !/^appgprj_[a-z0-9]+~appgver_[a-z0-9]+$/.test(deployment.versionId) ||
     !/^appgdep_[a-z0-9]+$/.test(deployment.deploymentId) ||
     !/^[0-9a-f]{40}$/.test(deployment.sourceCommit) ||
@@ -594,12 +740,111 @@ export function validateCurrentPublicSite(pointer, deployment, policyBytes) {
   };
 }
 
-export async function inspectMacOSStoreRepository(root, { repositoryTestsPassed = false } = {}) {
+async function optionalDirectoryEntries(repositoryRoot, directory, code) {
+  let status;
+  try {
+    status = await lstat(directory);
+  } catch (error) {
+    if (error?.code === "ENOENT") return [];
+    fail(code);
+  }
+  if (!status.isDirectory() || status.isSymbolicLink()) fail(code);
+  await assertContainedPath(repositoryRoot, directory, "directory", code);
+  return readdir(directory, { withFileTypes: true });
+}
+
+async function readMacOSReleaseRecord(
+  root,
+  recordsRoot,
+  releaseVersion,
+  buildNumber,
+  lifecycleRecords,
+) {
+  const code = "MACOS_RELEASE_RECORD_INVALID";
+  const buildRoot = path.join(recordsRoot, releaseVersion, `build-${buildNumber}`);
+  const attestations = [];
+  const attestationRoot = path.join(buildRoot, "attestations");
+  for (const entry of await optionalDirectoryEntries(root, attestationRoot, code)) {
+    if (
+      !entry.isFile() ||
+      entry.isSymbolicLink() ||
+      !entry.name.endsWith(".json") ||
+      entry.name.endsWith(".example.json")
+    ) {
+      fail(code);
+    }
+    const attestation = JSON.parse(
+      (await readContainedFile(root, path.join(attestationRoot, entry.name), code)).toString(
+        "utf8",
+      ),
+    );
+    try {
+      validateReleaseAttestation(attestation);
+    } catch {
+      fail(code);
+    }
+    attestations.push(attestation);
+  }
+
+  const candidateMarkers = lifecycleRecords.filter(
+    ({ event }) =>
+      event.kind === "candidate-built" &&
+      event.marketingVersion === releaseVersion &&
+      event.buildNumber === buildNumber,
+  );
+  const candidates = [];
+  const candidateRoot = path.join(buildRoot, "evidence", "candidate");
+  for (const entry of await optionalDirectoryEntries(root, candidateRoot, code)) {
+    if (!entry.isDirectory() || entry.isSymbolicLink()) fail(code);
+    const candidatePath = path.join(candidateRoot, entry.name, "candidate.json");
+    let candidateStatus;
+    try {
+      candidateStatus = await lstat(candidatePath);
+    } catch (error) {
+      if (error?.code === "ENOENT") continue;
+      fail(code);
+    }
+    if (!candidateStatus.isFile() || candidateStatus.isSymbolicLink()) fail(code);
+    const candidate = JSON.parse(
+      (await readContainedFile(root, candidatePath, code)).toString("utf8"),
+    );
+    if (
+      candidateMarkers.some(
+        ({ event }) =>
+          event.productSourceCommit === candidate.sourceCommit &&
+          event.productSourceTree === candidate.sourceTree &&
+          event.appSha256 === candidate.appSha256 &&
+          event.packageSha256 === candidate.packageSha256,
+      )
+    ) {
+      candidates.push(candidate);
+    }
+  }
+  if (candidateMarkers.length !== candidates.length || candidates.length > 1) fail(code);
+  return {
+    attestations,
+    candidate: candidates[0] ?? null,
+    events: lifecycleRecords
+      .map(({ event }) => event)
+      .filter(
+        (event) =>
+          event.kind !== "candidate-built" &&
+          event.releaseVersion === releaseVersion &&
+          event.buildNumber === buildNumber,
+      ),
+  };
+}
+
+export async function inspectMacOSStoreRepository(
+  root,
+  { repositoryTestsPassed = false, screenshotDefinitionsPassed = false } = {},
+) {
   if (!path.isAbsolute(root)) fail();
   const desktopRoot = path.join(root, "apps", "desktop");
   const releaseRoot = path.join(desktopRoot, "release", "macos");
   const paths = {
     appEntitlements: path.join(releaseRoot, "entitlements.mas.plist"),
+    buildLedger: path.join(releaseRoot, "build-numbers.json"),
     companyControllerAttestation: path.join(
       root,
       "docs",
@@ -621,6 +866,7 @@ export async function inspectMacOSStoreRepository(root, { repositoryTestsPassed 
     publicSiteCurrent: path.join(root, "docs", "release", "public-site", "current.json"),
     readme: path.join(root, "README.md"),
     releaseStateSchema: path.join(releaseRoot, "release-state.schema.json"),
+    releaseRecords: path.join(root, "docs", "release", "records", "macos"),
     runbook: path.join(root, "docs", "release", "macos-app-store.md"),
     techState: path.join(root, "docs", "development", "tech-state.md"),
     identity: path.join(releaseRoot, "store-identity.json"),
@@ -628,6 +874,7 @@ export async function inspectMacOSStoreRepository(root, { repositoryTestsPassed 
   await access(paths.icns).catch(() => fail());
   const [
     appEntitlements,
+    buildLedgerBytes,
     childEntitlements,
     coreEntitlements,
     sbrHelperEntitlements,
@@ -646,6 +893,7 @@ export async function inspectMacOSStoreRepository(root, { repositoryTestsPassed 
     techState,
   ] = await Promise.all([
     readMacOSRepositoryPlist(paths.appEntitlements),
+    readContainedFile(root, paths.buildLedger, "MACOS_BUILD_LEDGER_INVALID"),
     readMacOSRepositoryPlist(paths.childEntitlements),
     readMacOSRepositoryPlist(paths.coreEntitlements),
     readMacOSRepositoryPlist(paths.sbrHelperEntitlements),
@@ -662,13 +910,41 @@ export async function inspectMacOSStoreRepository(root, { repositoryTestsPassed 
     readFile(paths.releaseStateSchema),
     readFile(paths.runbook, "utf8"),
     readFile(paths.techState, "utf8"),
-  ]).catch(() => fail());
+  ]).catch((error) => {
+    if (error instanceof Error && /^MACOS_[A-Z0-9_]+$/.test(error.message)) throw error;
+    fail();
+  });
 
   const desktopPackage = JSON.parse(packageBytes.toString("utf8"));
+  const buildLedger = validateBuildLedger(JSON.parse(buildLedgerBytes.toString("utf8")));
+  await assertContainedPath(
+    root,
+    paths.releaseRecords,
+    "directory",
+    "MACOS_RELEASE_RECORD_INVALID",
+  );
+  const lifecycleRecords = await readMacOSLifecycleEvents(paths.releaseRecords);
+  const consumedBuildNumbers = validateConsumedBuildNumbers(buildLedger, lifecycleRecords);
   const identity = validateMacOSStoreIdentity(JSON.parse(identityBytes.toString("utf8")));
   const publicSitePointer = JSON.parse(publicSiteCurrentBytes.toString("utf8"));
   const publicSiteRoot = path.dirname(paths.publicSiteCurrent);
+  const repositoryStatus = await lstat(root).catch(() => fail("MACOS_PUBLIC_SITE_INVALID"));
+  const publicSiteRootStatus = await lstat(publicSiteRoot).catch(() =>
+    fail("MACOS_PUBLIC_SITE_INVALID"),
+  );
+  const resolvedRepositoryRoot = await realpath(root).catch(() =>
+    fail("MACOS_PUBLIC_SITE_INVALID"),
+  );
   const resolvedPublicSiteRoot = await realpath(publicSiteRoot);
+  if (
+    !repositoryStatus.isDirectory() ||
+    repositoryStatus.isSymbolicLink() ||
+    !publicSiteRootStatus.isDirectory() ||
+    publicSiteRootStatus.isSymbolicLink() ||
+    !resolvedPublicSiteRoot.startsWith(`${resolvedRepositoryRoot}${path.sep}`)
+  ) {
+    fail("MACOS_PUBLIC_SITE_INVALID");
+  }
   const deploymentsDirectory = path.join(publicSiteRoot, "deployments");
   const deploymentsStatus = await lstat(deploymentsDirectory).catch(() =>
     fail("MACOS_PUBLIC_SITE_INVALID"),
@@ -745,7 +1021,14 @@ export async function inspectMacOSStoreRepository(root, { repositoryTestsPassed 
     !/^[0-9]+\.[0-9]+\.[0-9]+$/.test(desktopPackage.version) ||
     icon.width !== 1024 ||
     icon.height !== 1024 ||
-    !includesAll(profile, [APP_BUNDLE_ID, APP_CATEGORY, "TAMMY_MACOS_BUILD_NUMBER"]) ||
+    !includesAll(profile, [
+      APP_BUNDLE_ID,
+      APP_CATEGORY,
+      "TAMMY_MACOS_BUILD_NUMBER",
+      'CFBundleDisplayName: "Tammy"',
+      'LSMinimumSystemVersion: "14.0"',
+      'NSHumanReadableCopyright: "© 2026 Gamma Systems Pty Ltd"',
+    ]) ||
     !includesAll(forge, [
       "createMacOSReleaseProfile",
       '"darwin-arm64"',
@@ -769,22 +1052,33 @@ export async function inspectMacOSStoreRepository(root, { repositoryTestsPassed 
     fail();
   }
 
+  const selectedReservation = buildLedger.entries
+    .filter((entry) => entry.marketingVersion === desktopPackage.version)
+    .at(-1);
+  const selectedBuildNumber = selectedReservation?.buildNumber ?? "1";
+  const releaseRecord = await readMacOSReleaseRecord(
+    root,
+    paths.releaseRecords,
+    desktopPackage.version,
+    selectedBuildNumber,
+    lifecycleRecords,
+  );
   const releaseState = evaluateReleaseState({
     releaseVersion: desktopPackage.version,
-    buildNumber: "1",
+    buildNumber: selectedBuildNumber,
     repository: {
       storeIdentity: true,
       publicSite: true,
       metadata: true,
-      platformIdentity: false,
+      platformIdentity: true,
       policy: true,
       schemas: true,
-      screenshotDefinitions: false,
+      screenshotDefinitions: screenshotDefinitionsPassed === true,
       tests: repositoryTestsPassed === true,
     },
-    candidate: null,
-    attestations: [],
-    events: [],
+    candidate: releaseRecord.candidate,
+    attestations: releaseRecord.attestations,
+    events: releaseRecord.events,
   });
   const blockers = [
     ...releaseState.blockers.map(({ code }) => code),
@@ -797,6 +1091,11 @@ export async function inspectMacOSStoreRepository(root, { repositoryTestsPassed 
 
   return {
     appBundleId: APP_BUNDLE_ID,
+    buildReservations: buildLedger.entries.map(({ buildNumber, marketingVersion }) => ({
+      buildNumber,
+      marketingVersion,
+    })),
+    consumedBuildNumbers,
     category: APP_CATEGORY,
     icon,
     identity,
@@ -804,6 +1103,7 @@ export async function inspectMacOSStoreRepository(root, { repositoryTestsPassed 
     metadata: metadataStatus,
     publicSite,
     releaseState,
+    selectedBuildNumber: selectedReservation?.buildNumber ?? null,
     blockers,
     operatorRequirements: [
       "certificates-and-profiles",
@@ -816,23 +1116,85 @@ export async function inspectMacOSStoreRepository(root, { repositoryTestsPassed 
   };
 }
 
-async function requireCleanTree(root) {
-  const { stdout } = await execFile("git", ["status", "--porcelain"], { cwd: root });
+export function sanitizeMacOSStoreGitEnvironment(environment) {
+  return {
+    ...Object.fromEntries(Object.entries(environment).filter(([key]) => !key.startsWith("GIT_"))),
+    LANG: "C",
+    LC_ALL: "C",
+  };
+}
+
+async function gitStatus(root, pathspec = []) {
+  return execFile(
+    "/usr/bin/git",
+    ["status", "--porcelain=v1", "--untracked-files=all", ...pathspec],
+    {
+      cwd: root,
+      env: sanitizeMacOSStoreGitEnvironment(process.env),
+    },
+  );
+}
+
+export async function assertMacOSReleaseTreeClean(root) {
+  const { stdout } = await gitStatus(root);
   if (stdout !== "") fail("MACOS_RELEASE_TREE_DIRTY");
+}
+
+async function requireReleaseEvidenceClean(root, result, release) {
+  const releaseRecord = path.join(
+    "docs",
+    "release",
+    "records",
+    "macos",
+    result.version,
+    `build-${release.buildNumber}`,
+  );
+  const evidencePaths = [
+    path.join("apps", "desktop", "package.json"),
+    path.join("apps", "desktop", "release", "macos", "build-numbers.json"),
+    path.join("apps", "desktop", "release", "macos", "store-identity.json"),
+    path.join("apps", "desktop", "release", "macos", "store-metadata.md"),
+    path.join("docs", "release", "authority", "publisher-controller.json"),
+    path.join("docs", "release", "public-site", "current.json"),
+    path.join("docs", "release", "public-site", result.publicSite.deploymentEvidence),
+    releaseRecord,
+  ];
+  const { stdout } = await gitStatus(root, ["--", ...evidencePaths]);
+  if (stdout !== "") fail("MACOS_RELEASE_EVIDENCE_DIRTY");
+}
+
+export function assertMacOSRequiredState(state, requiredState) {
+  if (state.buildNumber === null) fail("MACOS_BUILD_NOT_RESERVED");
+  if (state.state !== requiredState || state.blockers.length > 0) {
+    fail(`MACOS_RELEASE_STATE_GATE_FAILED:${requiredState}`);
+  }
 }
 
 async function main() {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
   const arguments_ = process.argv.slice(2);
-  const release = arguments_.includes("--release");
-  const runTests = arguments_.includes("--run-tests");
-  const verifyTests = runTests || release;
+  const release = isDeepStrictEqual(arguments_, ["--release"]);
+  const profileFacts = isDeepStrictEqual(arguments_, ["--profile-facts"]);
+  const runTests = isDeepStrictEqual(arguments_, ["--run-tests"]);
+  const stateOnly = isDeepStrictEqual(arguments_, ["--state"]);
+  const requiredState =
+    arguments_.length === 2 &&
+    arguments_[0] === "--require-state" &&
+    ["PRE_UPLOAD_READY", "PRE_SUBMIT_READY"].includes(arguments_[1])
+      ? arguments_[1]
+      : undefined;
   if (
-    new Set(arguments_).size !== arguments_.length ||
-    arguments_.some((argument) => !["--release", "--run-tests"].includes(argument))
+    arguments_.length > 0 &&
+    !release &&
+    !profileFacts &&
+    !runTests &&
+    !stateOnly &&
+    requiredState === undefined
   ) {
     fail("MACOS_STORE_ARGUMENT_INVALID");
   }
+  const verifyTests =
+    runTests || release || profileFacts || stateOnly || requiredState !== undefined;
   if (verifyTests) {
     try {
       await execFile(
@@ -845,21 +1207,63 @@ async function main() {
     }
   }
   const result = await inspectMacOSStoreRepository(root, { repositoryTestsPassed: verifyTests });
+  if (profileFacts) {
+    const { facts, release: profileRelease } = await readValidatedMacOSReleaseFacts(
+      root,
+      process.env,
+      result,
+    );
+    const provisioningProfile = required(process.env, "TAMMY_MACOS_PROVISIONING_PROFILE");
+    await access(provisioningProfile);
+    validateMacOSProvisioningProfile(await readMacOSProvisioningProfile(provisioningProfile), {
+      mode: profileRelease.mode,
+      teamID: required(process.env, "TAMMY_MACOS_TEAM_ID"),
+    });
+    await requireReleaseEvidenceClean(root, result, profileRelease);
+    process.stdout.write(`${JSON.stringify(facts)}\n`);
+    return;
+  }
+  if (stateOnly || requiredState !== undefined) {
+    const state = {
+      blockers: [
+        ...result.releaseState.blockers,
+        ...(result.selectedBuildNumber === null
+          ? [
+              {
+                code: "BUILD_NUMBER_NOT_RESERVED",
+                owner: "repository",
+                remediation: "Reserve an explicit build number for the release.",
+              },
+            ]
+          : []),
+        ...(result.blockers.includes("company-controller-attestation")
+          ? [
+              {
+                code: "COMPANY_CONTROLLER_ATTESTATION_MISSING",
+                owner: "operator",
+                remediation: "Record the confirmed company-controller authority attestation.",
+              },
+            ]
+          : []),
+      ],
+      buildNumber: result.selectedBuildNumber,
+      passed: result.passed,
+      state: result.releaseState.state,
+    };
+    process.stdout.write(`${JSON.stringify(state)}\n`);
+    if (requiredState !== undefined) assertMacOSRequiredState(state, requiredState);
+    return;
+  }
   let releaseInput;
   if (release) {
-    if (result.blockers.includes("company-controller-attestation")) {
-      fail("MACOS_STORE_COMPANY_AUTHORITY_MISSING");
-    }
-    if (!result.metadataComplete) fail("MACOS_RELEASE_METADATA_INCOMPLETE");
-    releaseInput = validateMacOSReleaseEnvironment(process.env);
-    assertMacOSReleaseMetadata(result.metadata, process.env);
+    ({ release: releaseInput } = await readValidatedMacOSReleaseFacts(root, process.env, result));
     const provisioningProfile = required(process.env, "TAMMY_MACOS_PROVISIONING_PROFILE");
     await access(provisioningProfile);
     validateMacOSProvisioningProfile(await readMacOSProvisioningProfile(provisioningProfile), {
       mode: releaseInput.mode,
       teamID: required(process.env, "TAMMY_MACOS_TEAM_ID"),
     });
-    await requireCleanTree(root);
+    await assertMacOSReleaseTreeClean(root);
   }
   process.stdout.write(
     `${JSON.stringify({

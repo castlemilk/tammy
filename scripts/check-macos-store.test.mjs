@@ -9,14 +9,20 @@ import { promisify } from "node:util";
 
 import {
   assertMacOSReleaseMetadata,
+  assertMacOSReleaseTreeClean,
+  assertMacOSRequiredState,
   inspectMacOSStoreRepository,
   readMacOSProvisioningProfilePlist,
   readMacOSRepositoryPlist,
   readPngDimensions,
+  readValidatedMacOSReleaseFacts,
+  sanitizeMacOSStoreGitEnvironment,
   validateCompanyControllerAttestation,
   validateCurrentPublicSite,
+  validateMacOSBuildReservation,
   validateMacOSProvisioningProfile,
   validateMacOSReleaseEnvironment,
+  validateMacOSSellerEligibility,
   validateMacOSStoreIdentity,
   validateMacOSStoreMetadata,
   validateMacOSStorePlists,
@@ -24,6 +30,8 @@ import {
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const execFile = promisify(nodeExecFile);
+const desktopFixtureFilter = (source) =>
+  !source.split(path.sep).some((segment) => ["node_modules", "out", ".vite"].includes(segment));
 const validStoreIdentity = {
   schemaVersion: 1,
   appStoreName: "Tammy Accounting",
@@ -42,6 +50,88 @@ const validStoreIdentity = {
     atoLodgement: "not-lodged",
   },
 };
+
+test("required release-state gates reject blockers even when the state label matches", () => {
+  assert.doesNotThrow(() =>
+    assertMacOSRequiredState(
+      { blockers: [], buildNumber: "42", state: "PRE_UPLOAD_READY" },
+      "PRE_UPLOAD_READY",
+    ),
+  );
+  assert.throws(
+    () =>
+      assertMacOSRequiredState(
+        {
+          blockers: [{ code: "COMPANY_CONTROLLER_ATTESTATION_MISSING" }],
+          buildNumber: "42",
+          state: "PRE_UPLOAD_READY",
+        },
+        "PRE_UPLOAD_READY",
+      ),
+    /MACOS_RELEASE_STATE_GATE_FAILED:PRE_UPLOAD_READY/,
+  );
+  assert.throws(
+    () =>
+      assertMacOSRequiredState(
+        { blockers: [], buildNumber: null, state: "PRE_UPLOAD_READY" },
+        "PRE_UPLOAD_READY",
+      ),
+    /MACOS_BUILD_NOT_RESERVED/,
+  );
+});
+
+test("release cleanliness ignores inherited Git repository and index redirection", async () => {
+  const suppliedRoot = await mkdtemp(path.join(tmpdir(), "tammy-macos-git-supplied-"));
+  const foreignRoot = await mkdtemp(path.join(tmpdir(), "tammy-macos-git-foreign-"));
+  const initialize = async (repository) => {
+    await execFile("/usr/bin/git", ["init", "-q"], { cwd: repository });
+    await writeFile(path.join(repository, "tracked.txt"), "tracked\n");
+    await execFile("/usr/bin/git", ["add", "tracked.txt"], { cwd: repository });
+    await execFile(
+      "/usr/bin/git",
+      [
+        "-c",
+        "user.name=Tammy Tests",
+        "-c",
+        "user.email=tammy-tests@example.invalid",
+        "commit",
+        "-qm",
+        "fixture",
+      ],
+      { cwd: repository },
+    );
+  };
+  try {
+    await initialize(suppliedRoot);
+    await initialize(foreignRoot);
+    await writeFile(path.join(suppliedRoot, "dirty.txt"), "dirty\n");
+    const previous = {
+      GIT_DIR: process.env.GIT_DIR,
+      GIT_INDEX_FILE: process.env.GIT_INDEX_FILE,
+      GIT_WORK_TREE: process.env.GIT_WORK_TREE,
+    };
+    process.env.GIT_DIR = path.join(foreignRoot, ".git");
+    process.env.GIT_INDEX_FILE = path.join(foreignRoot, ".git", "index");
+    process.env.GIT_WORK_TREE = foreignRoot;
+    try {
+      await assert.rejects(assertMacOSReleaseTreeClean(suppliedRoot), /MACOS_RELEASE_TREE_DIRTY/);
+      const sanitized = sanitizeMacOSStoreGitEnvironment(process.env);
+      assert.equal(
+        Object.keys(sanitized).some((key) => key.startsWith("GIT_")),
+        false,
+      );
+      assert.equal(sanitized.LC_ALL, "C");
+    } finally {
+      for (const [key, value] of Object.entries(previous)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+    }
+  } finally {
+    await rm(suppliedRoot, { force: true, recursive: true });
+    await rm(foreignRoot, { force: true, recursive: true });
+  }
+});
 
 test("accepts the canonical Gamma Systems release identity", () => {
   assert.deepEqual(validateMacOSStoreIdentity(validStoreIdentity), validStoreIdentity);
@@ -123,6 +213,7 @@ test("repository inspection binds Tammy identity, store resources and operator g
   ]);
   assert.deepEqual(result.passed, [
     "metadata",
+    "platform-identity",
     "policy",
     "public-site",
     "publisher-authority",
@@ -130,11 +221,197 @@ test("repository inspection binds Tammy identity, store resources and operator g
     "store-identity",
     "tests",
   ]);
-  assert.deepEqual(result.blockers, [
-    "PLATFORM_IDENTITY_NOT_VERIFIED",
-    "SCREENSHOT_DEFINITIONS_NOT_READY",
-  ]);
+  assert.deepEqual(result.blockers, ["SCREENSHOT_DEFINITIONS_NOT_READY"]);
   assert.equal(result.releaseState.state, "NOT_READY");
+});
+
+test("repository inspection derives pre-upload and pre-submit states from canonical build records", async () => {
+  const fixtureRoot = await mkdtemp(path.join(tmpdir(), "tammy-macos-state-integration-"));
+  const releaseVersion = "0.1.0";
+  const buildNumber = "42";
+  const sourceCommit = "a".repeat(40);
+  const sourceTree = "b".repeat(40);
+  const packageSha256 = "c".repeat(64);
+  const appSha256 = "d".repeat(64);
+  const unsignedContentManifestSha256 = "e".repeat(64);
+  const outcomes = {
+    "age-rating": "completed",
+    "app-store-warning-review": "clear",
+    "company-controller": "confirmed",
+    "content-rights": "owned",
+    "export-compliance": "exempt",
+    "metadata-assets-entered": "entered",
+    "pricing-availability": "confirmed",
+    "privacy-answer": "no-data-collected-no-tracking",
+    "processed-build": "selected",
+  };
+  const attestation = (kind) => ({
+    schemaVersion: 1,
+    kind,
+    releaseVersion,
+    buildNumber,
+    accountablePerson: "Ben Ebsworth",
+    confirmedAt: "2026-08-30T10:00:00.000Z",
+    evidenceReference:
+      kind === "company-controller"
+        ? "../../../../../authority/publisher-controller.json"
+        : `apple/${kind}.png`,
+    outcome: outcomes[kind],
+  });
+  const sellerAttestation = {
+    ...attestation("seller-eligibility"),
+    outcome: "eligible",
+    eligibilityBranch: "company-organization",
+    teamId: "ABCDEFGHIJ",
+    sellerName: "Gamma Systems Pty Ltd",
+    accountHolder: "Ben Ebsworth",
+    activeAgreements: true,
+    appId: "com.tammy.desktop",
+    appleDeveloperIdentifierId: "ABCDEFGHIJ.com.tammy.desktop",
+    appStoreConnectId: "1234567890",
+    applicationGroup: "ABCDEFGHIJ.com.tammy.desktop",
+    helperIdentifiers: [
+      "com.tammy.desktop.helper",
+      "com.tammy.desktop.helper.GPU",
+      "com.tammy.desktop.helper.Plugin",
+      "com.tammy.desktop.helper.Renderer",
+    ],
+    certificateClasses: ["Apple Development", "Apple Distribution", "Mac Installer Distribution"],
+    profilesReissued: true,
+  };
+  try {
+    await mkdir(path.join(fixtureRoot, "apps"), { recursive: true });
+    await mkdir(path.join(fixtureRoot, "docs"), { recursive: true });
+    await Promise.all([
+      cp(path.join(root, "apps", "desktop"), path.join(fixtureRoot, "apps", "desktop"), {
+        filter: desktopFixtureFilter,
+        recursive: true,
+      }),
+      cp(path.join(root, "docs", "development"), path.join(fixtureRoot, "docs", "development"), {
+        recursive: true,
+      }),
+      cp(path.join(root, "docs", "release"), path.join(fixtureRoot, "docs", "release"), {
+        recursive: true,
+      }),
+      cp(path.join(root, "README.md"), path.join(fixtureRoot, "README.md")),
+      cp(path.join(root, "PRIVACY.md"), path.join(fixtureRoot, "PRIVACY.md")),
+    ]);
+    await writeFile(
+      path.join(fixtureRoot, "apps", "desktop", "release", "macos", "build-numbers.json"),
+      `${JSON.stringify({
+        entries: [
+          {
+            buildNumber,
+            marketingVersion: releaseVersion,
+            reservedAt: "2026-08-30T09:00:00.000Z",
+            reservedBy: "Ben Ebsworth",
+            state: "reserved",
+          },
+        ],
+        schemaVersion: 1,
+      })}\n`,
+    );
+    const buildRoot = path.join(
+      fixtureRoot,
+      "docs",
+      "release",
+      "records",
+      "macos",
+      releaseVersion,
+      `build-${buildNumber}`,
+    );
+    const attestationRoot = path.join(buildRoot, "attestations");
+    const eventRoot = path.join(buildRoot, "events");
+    const candidateRoot = path.join(buildRoot, "evidence", "candidate", "candidate-1");
+    await Promise.all([
+      mkdir(attestationRoot, { recursive: true }),
+      mkdir(eventRoot, { recursive: true }),
+      mkdir(candidateRoot, { recursive: true }),
+    ]);
+    const candidate = {
+      releaseVersion,
+      sourceCommit,
+      sourceTree,
+      buildNumber,
+      appSha256,
+      packageSha256,
+      buildNumberReserved: true,
+      signingProfilePassed: true,
+      publicUrlsMatch: true,
+      privacyEvidencePassed: true,
+      runtimeEgressEvidencePassed: true,
+      screenshotsLinked: true,
+    };
+    await writeFile(path.join(candidateRoot, "candidate.json"), `${JSON.stringify(candidate)}\n`);
+    await writeFile(
+      path.join(eventRoot, "2026-08-30T12-00-00.000Z-candidate-built.json"),
+      `${JSON.stringify({
+        appSha256,
+        buildNumber,
+        kind: "candidate-built",
+        marketingVersion: releaseVersion,
+        packageSha256,
+        productSourceCommit: sourceCommit,
+        productSourceTree: sourceTree,
+        unsignedContentManifestSha256,
+      })}\n`,
+    );
+    for (const record of [
+      attestation("company-controller"),
+      sellerAttestation,
+      attestation("content-rights"),
+      attestation("export-compliance"),
+      attestation("pricing-availability"),
+      attestation("privacy-answer"),
+    ]) {
+      await writeFile(
+        path.join(attestationRoot, `${record.kind}.json`),
+        `${JSON.stringify(record)}\n`,
+      );
+    }
+
+    const preUpload = await inspectMacOSStoreRepository(fixtureRoot, {
+      repositoryTestsPassed: true,
+      screenshotDefinitionsPassed: true,
+    });
+    assert.equal(preUpload.selectedBuildNumber, buildNumber);
+    assert.equal(preUpload.releaseState.state, "PRE_UPLOAD_READY");
+
+    await writeFile(
+      path.join(eventRoot, "2026-08-30T13-00-00.000Z-uploaded.json"),
+      `${JSON.stringify({
+        schemaVersion: 1,
+        kind: "uploaded",
+        releaseVersion,
+        buildNumber,
+        operator: "Ben Ebsworth",
+        occurredAt: "2026-08-30T13:00:00.000Z",
+        productSourceCommit: sourceCommit,
+        productSourceTree: sourceTree,
+        packageSha256,
+        appStoreConnectBuildId: "1234567890",
+      })}\n`,
+    );
+    for (const kind of [
+      "processed-build",
+      "metadata-assets-entered",
+      "age-rating",
+      "app-store-warning-review",
+    ]) {
+      await writeFile(
+        path.join(attestationRoot, `${kind}.json`),
+        `${JSON.stringify(attestation(kind))}\n`,
+      );
+    }
+    const preSubmit = await inspectMacOSStoreRepository(fixtureRoot, {
+      repositoryTestsPassed: true,
+      screenshotDefinitionsPassed: true,
+    });
+    assert.deepEqual(preSubmit.consumedBuildNumbers, [buildNumber]);
+    assert.equal(preSubmit.releaseState.state, "PRE_SUBMIT_READY");
+  } finally {
+    await rm(fixtureRoot, { force: true, recursive: true });
+  }
 });
 
 test("non-signing check reports repository blockers without release input leakage", async () => {
@@ -146,6 +423,7 @@ test("non-signing check reports repository blockers without release input leakag
   assert.equal(result.status, "NOT_READY");
   assert.deepEqual(result.passed, [
     "metadata",
+    "platform-identity",
     "policy",
     "public-site",
     "publisher-authority",
@@ -153,7 +431,6 @@ test("non-signing check reports repository blockers without release input leakag
     "store-identity",
   ]);
   assert.deepEqual(result.blockers, [
-    "PLATFORM_IDENTITY_NOT_VERIFIED",
     "REPOSITORY_TESTS_NOT_PASSED",
     "SCREENSHOT_DEFINITIONS_NOT_READY",
   ]);
@@ -188,6 +465,18 @@ test("repository readiness binds the exact deployed public site to the canonical
       ),
     /MACOS_PUBLIC_SITE_INVALID/,
   );
+  assert.throws(
+    () =>
+      validateCurrentPublicSite(
+        pointer,
+        {
+          ...deployment,
+          projectId: "appgprj_other",
+        },
+        policy,
+      ),
+    /MACOS_PUBLIC_SITE_INVALID/,
+  );
 });
 
 test("repository readiness rejects deployment evidence through a symlinked ancestor", async () => {
@@ -198,6 +487,7 @@ test("repository readiness rejects deployment evidence through a symlinked ances
     await mkdir(path.join(fixtureRoot, "docs"), { recursive: true });
     await Promise.all([
       cp(path.join(root, "apps", "desktop"), path.join(fixtureRoot, "apps", "desktop"), {
+        filter: desktopFixtureFilter,
         recursive: true,
       }),
       cp(path.join(root, "docs", "development"), path.join(fixtureRoot, "docs", "development"), {
@@ -227,6 +517,91 @@ test("repository readiness rejects deployment evidence through a symlinked ances
   }
 });
 
+test("repository readiness rejects a symlinked public-site root", async () => {
+  const fixtureRoot = await mkdtemp(path.join(tmpdir(), "tammy-macos-public-site-root-"));
+  const outside = await mkdtemp(path.join(tmpdir(), "tammy-macos-public-site-root-outside-"));
+  try {
+    await mkdir(path.join(fixtureRoot, "apps"), { recursive: true });
+    await mkdir(path.join(fixtureRoot, "docs", "release"), { recursive: true });
+    await Promise.all([
+      cp(path.join(root, "apps", "desktop"), path.join(fixtureRoot, "apps", "desktop"), {
+        filter: desktopFixtureFilter,
+        recursive: true,
+      }),
+      cp(path.join(root, "docs", "development"), path.join(fixtureRoot, "docs", "development"), {
+        recursive: true,
+      }),
+      cp(
+        path.join(root, "docs", "release", "macos-app-store.md"),
+        path.join(fixtureRoot, "docs", "release", "macos-app-store.md"),
+      ),
+      cp(
+        path.join(root, "docs", "release", "authority"),
+        path.join(fixtureRoot, "docs", "release", "authority"),
+        { recursive: true },
+      ),
+      cp(
+        path.join(root, "docs", "release", "records"),
+        path.join(fixtureRoot, "docs", "release", "records"),
+        { recursive: true },
+      ),
+      cp(path.join(root, "docs", "release", "public-site"), outside, { recursive: true }),
+      cp(path.join(root, "README.md"), path.join(fixtureRoot, "README.md")),
+      cp(path.join(root, "PRIVACY.md"), path.join(fixtureRoot, "PRIVACY.md")),
+    ]);
+    await symlink(outside, path.join(fixtureRoot, "docs", "release", "public-site"));
+    await assert.rejects(
+      inspectMacOSStoreRepository(fixtureRoot, { repositoryTestsPassed: true }),
+      /MACOS_PUBLIC_SITE_INVALID/,
+    );
+  } finally {
+    await rm(fixtureRoot, { force: true, recursive: true });
+    await rm(outside, { force: true, recursive: true });
+  }
+});
+
+test("repository readiness rejects a symlinked build ledger", async () => {
+  const fixtureRoot = await mkdtemp(path.join(tmpdir(), "tammy-macos-ledger-symlink-"));
+  const outside = await mkdtemp(path.join(tmpdir(), "tammy-macos-ledger-outside-"));
+  try {
+    await mkdir(path.join(fixtureRoot, "apps"), { recursive: true });
+    await mkdir(path.join(fixtureRoot, "docs"), { recursive: true });
+    await Promise.all([
+      cp(path.join(root, "apps", "desktop"), path.join(fixtureRoot, "apps", "desktop"), {
+        filter: desktopFixtureFilter,
+        recursive: true,
+      }),
+      cp(path.join(root, "docs", "development"), path.join(fixtureRoot, "docs", "development"), {
+        recursive: true,
+      }),
+      cp(path.join(root, "docs", "release"), path.join(fixtureRoot, "docs", "release"), {
+        recursive: true,
+      }),
+      cp(path.join(root, "README.md"), path.join(fixtureRoot, "README.md")),
+      cp(path.join(root, "PRIVACY.md"), path.join(fixtureRoot, "PRIVACY.md")),
+    ]);
+    const ledger = path.join(
+      fixtureRoot,
+      "apps",
+      "desktop",
+      "release",
+      "macos",
+      "build-numbers.json",
+    );
+    const outsideLedger = path.join(outside, "build-numbers.json");
+    await cp(ledger, outsideLedger);
+    await rm(ledger);
+    await symlink(outsideLedger, ledger);
+    await assert.rejects(
+      inspectMacOSStoreRepository(fixtureRoot, { repositoryTestsPassed: true }),
+      /MACOS_BUILD_LEDGER_INVALID/,
+    );
+  } finally {
+    await rm(fixtureRoot, { force: true, recursive: true });
+    await rm(outside, { force: true, recursive: true });
+  }
+});
+
 test("repository inspection rejects installed-name drift from the desktop product name", async () => {
   const fixtureRoot = await mkdtemp(path.join(tmpdir(), "tammy-macos-identity-test-"));
   try {
@@ -234,6 +609,7 @@ test("repository inspection rejects installed-name drift from the desktop produc
     await mkdir(path.join(fixtureRoot, "docs"), { recursive: true });
     await Promise.all([
       cp(path.join(root, "apps", "desktop"), path.join(fixtureRoot, "apps", "desktop"), {
+        filter: desktopFixtureFilter,
         recursive: true,
       }),
       cp(path.join(root, "docs", "development"), path.join(fixtureRoot, "docs", "development"), {
@@ -314,23 +690,16 @@ test("distribution inputs require absolute paths, explicit compliance and a posi
     TAMMY_MACOS_SIGNING_IDENTITY: "Apple Distribution: Tammy Pty Ltd (ABCDE12345)",
     TAMMY_MACOS_SIGNING_MODE: "distribution",
     TAMMY_MACOS_SUPPORT_URL: "https://example.com/tammy/support",
+    TAMMY_MACOS_TARGET: "mas/arm64",
     TAMMY_MACOS_TEAM_ID: "ABCDE12345",
   };
   assert.deepEqual(validateMacOSReleaseEnvironment(valid), {
     buildNumber: "42",
     mode: "distribution",
   });
-  assert.deepEqual(
-    validateMacOSReleaseEnvironment({
-      ...valid,
-      TAMMY_MACOS_SIGNING_IDENTITY:
-        "3rd Party Mac Developer Application: Tammy Pty Ltd (ABCDE12345)",
-    }),
-    { buildNumber: "42", mode: "distribution" },
-  );
-
   for (const environment of [
     { ...valid, TAMMY_MACOS_BUILD_NUMBER: "0" },
+    { ...valid, TAMMY_MACOS_TARGET: "mas/x64" },
     { ...valid, TAMMY_MACOS_PROVISIONING_PROFILE: "relative.provisionprofile" },
     { ...valid, TAMMY_MACOS_EXPORT_COMPLIANCE: "unknown" },
     { ...valid, TAMMY_MACOS_INSTALLER_IDENTITY: "" },
@@ -338,7 +707,17 @@ test("distribution inputs require absolute paths, explicit compliance and a posi
     { ...valid, TAMMY_MACOS_SIGNING_IDENTITY: "Apple Distribution: Tammy Pty Ltd (OTHER12345)" },
     {
       ...valid,
+      TAMMY_MACOS_SIGNING_IDENTITY:
+        "3rd Party Mac Developer Application: Tammy Pty Ltd (ABCDE12345)",
+    },
+    {
+      ...valid,
       TAMMY_MACOS_INSTALLER_IDENTITY: "Developer ID Installer: Tammy Pty Ltd (ABCDE12345)",
+    },
+    {
+      ...valid,
+      TAMMY_MACOS_INSTALLER_IDENTITY:
+        "3rd Party Mac Developer Installer: Tammy Pty Ltd (ABCDE12345)",
     },
   ]) {
     assert.throws(
@@ -507,9 +886,169 @@ test("development signing does not require an installer identity", () => {
       TAMMY_MACOS_SIGNING_IDENTITY: "Apple Development: Tammy Pty Ltd (ABCDE12345)",
       TAMMY_MACOS_SIGNING_MODE: "development",
       TAMMY_MACOS_SUPPORT_URL: "https://example.com/tammy/support",
+      TAMMY_MACOS_TARGET: "mas/arm64",
       TAMMY_MACOS_TEAM_ID: "ABCDE12345",
     }),
     { buildNumber: "7", mode: "development" },
+  );
+});
+
+test("the repository checker emits the only release facts consumed by Forge", async () => {
+  const inspected = await inspectMacOSStoreRepository(root, { repositoryTestsPassed: true });
+  const environment = {
+    TAMMY_MACOS_BUILD_NUMBER: "42",
+    TAMMY_MACOS_EXPORT_COMPLIANCE: "exempt",
+    TAMMY_MACOS_PROVISIONING_PROFILE: "/private/tmp/tammy.provisionprofile",
+    TAMMY_MACOS_PRIVACY_POLICY_URL: "https://tammy-accounting.castlemilk.chatgpt.site/privacy",
+    TAMMY_MACOS_SIGNING_IDENTITY: "Apple Development: Tammy (ABCDE12345)",
+    TAMMY_MACOS_SIGNING_MODE: "development",
+    TAMMY_MACOS_SUPPORT_URL: "https://tammy-accounting.castlemilk.chatgpt.site/support",
+    TAMMY_MACOS_TARGET: "mas/arm64",
+    TAMMY_MACOS_TEAM_ID: "ABCDE12345",
+  };
+  const { facts, release } = await readValidatedMacOSReleaseFacts(root, environment, {
+    ...inspected,
+    buildReservations: [{ buildNumber: "42", marketingVersion: "0.1.0" }],
+  });
+  assert.deepEqual(release, { buildNumber: "42", mode: "development" });
+  assert.deepEqual(facts, {
+    identity: {
+      appStoreName: "Tammy Accounting",
+      architectures: ["arm64"],
+      bundleIdentifier: "com.tammy.desktop",
+      copyright: "© 2026 Gamma Systems Pty Ltd",
+      installedName: "Tammy",
+      minimumMacOSVersion: "14.0",
+      publisher: "Gamma Systems Pty Ltd",
+      supportEmail: "ben.ebsworth@gmail.com",
+    },
+    marketingVersion: "0.1.0",
+    publicLinks: {
+      privacyPolicy: "https://tammy-accounting.castlemilk.chatgpt.site/privacy",
+      support: "https://tammy-accounting.castlemilk.chatgpt.site/support",
+    },
+    target: "mas/arm64",
+  });
+  await assert.rejects(
+    readValidatedMacOSReleaseFacts(root, environment, {
+      ...inspected,
+      buildReservations: [{ buildNumber: "42", marketingVersion: "0.1.0" }],
+      consumedBuildNumbers: ["42"],
+    }),
+    /MACOS_BUILD_CONSUMED/,
+  );
+});
+
+test("seller eligibility cannot be supplied through a symlink", async () => {
+  const fixtureRoot = await mkdtemp(path.join(tmpdir(), "tammy-macos-seller-symlink-"));
+  const outsideRoot = await mkdtemp(path.join(tmpdir(), "tammy-macos-seller-outside-"));
+  const outside = path.join(outsideRoot, "seller.json");
+  const sellerRoot = path.join(
+    fixtureRoot,
+    "docs",
+    "release",
+    "records",
+    "macos",
+    "0.1.0",
+    "build-42",
+    "attestations",
+  );
+  try {
+    await mkdir(sellerRoot, { recursive: true });
+    await writeFile(outside, "{}\n");
+    await symlink(outside, path.join(sellerRoot, "seller-eligibility.json"));
+    const inspected = await inspectMacOSStoreRepository(root, { repositoryTestsPassed: true });
+    await assert.rejects(
+      readValidatedMacOSReleaseFacts(
+        fixtureRoot,
+        {
+          TAMMY_MACOS_BUILD_NUMBER: "42",
+          TAMMY_MACOS_EXPORT_COMPLIANCE: "exempt",
+          TAMMY_MACOS_INSTALLER_IDENTITY:
+            "Mac Installer Distribution: Gamma Systems Pty Ltd (ABCDE12345)",
+          TAMMY_MACOS_PROVISIONING_PROFILE: "/private/tmp/tammy.provisionprofile",
+          TAMMY_MACOS_PRIVACY_POLICY_URL:
+            "https://tammy-accounting.castlemilk.chatgpt.site/privacy",
+          TAMMY_MACOS_SIGNING_IDENTITY: "Apple Distribution: Gamma Systems Pty Ltd (ABCDE12345)",
+          TAMMY_MACOS_SIGNING_MODE: "distribution",
+          TAMMY_MACOS_SUPPORT_URL: "https://tammy-accounting.castlemilk.chatgpt.site/support",
+          TAMMY_MACOS_TARGET: "mas/arm64",
+          TAMMY_MACOS_TEAM_ID: "ABCDE12345",
+        },
+        {
+          ...inspected,
+          buildReservations: [{ buildNumber: "42", marketingVersion: "0.1.0" }],
+          consumedBuildNumbers: [],
+        },
+      ),
+      /MACOS_SELLER_ELIGIBILITY_MISSING/,
+    );
+  } finally {
+    await rm(fixtureRoot, { force: true, recursive: true });
+    await rm(outsideRoot, { force: true, recursive: true });
+  }
+});
+
+test("build reservations and seller eligibility bind the exact version, build, and Team ID", () => {
+  const ledger = {
+    schemaVersion: 1,
+    entries: [
+      {
+        buildNumber: "42",
+        marketingVersion: "0.1.0",
+        reservedAt: "2026-08-30T00:00:00.000Z",
+        reservedBy: "Ben Ebsworth",
+        state: "reserved",
+      },
+    ],
+  };
+  assert.doesNotThrow(() => validateMacOSBuildReservation(ledger, "0.1.0", "42"));
+  assert.throws(
+    () => validateMacOSBuildReservation(ledger, "0.1.0", "43"),
+    /MACOS_BUILD_NOT_RESERVED/,
+  );
+  const seller = {
+    schemaVersion: 1,
+    kind: "seller-eligibility",
+    releaseVersion: "0.1.0",
+    buildNumber: "42",
+    accountablePerson: "Ben Ebsworth",
+    confirmedAt: "2026-08-30T10:00:00.000Z",
+    evidenceReference: "apple/seller.png",
+    outcome: "eligible",
+    eligibilityBranch: "company-organization",
+    teamId: "ABCDE12345",
+    sellerName: "Gamma Systems Pty Ltd",
+    accountHolder: "Ben Ebsworth",
+    activeAgreements: true,
+    appId: "com.tammy.desktop",
+    appleDeveloperIdentifierId: "ABCDE12345.com.tammy.desktop",
+    appStoreConnectId: "1234567890",
+    applicationGroup: "ABCDE12345.com.tammy.desktop",
+    helperIdentifiers: [
+      "com.tammy.desktop.helper",
+      "com.tammy.desktop.helper.GPU",
+      "com.tammy.desktop.helper.Plugin",
+      "com.tammy.desktop.helper.Renderer",
+    ],
+    certificateClasses: ["Apple Development", "Apple Distribution", "Mac Installer Distribution"],
+    profilesReissued: true,
+  };
+  assert.doesNotThrow(() =>
+    validateMacOSSellerEligibility(seller, {
+      buildNumber: "42",
+      releaseVersion: "0.1.0",
+      teamID: "ABCDE12345",
+    }),
+  );
+  assert.throws(
+    () =>
+      validateMacOSSellerEligibility(seller, {
+        buildNumber: "42",
+        releaseVersion: "0.1.0",
+        teamID: "OTHER12345",
+      }),
+    /MACOS_SELLER_ELIGIBILITY_MISSING/,
   );
 });
 
@@ -562,6 +1101,17 @@ test("store metadata is truthful, public-site bound, and leaves Apple facts oper
     "Active agreements are confirmed.",
     "App Privacy is completed.",
     "The processed build is selected.",
+    "ATO lodgement is supported.",
+    "SBR is available in production.",
+    "Company return submission is available.",
+    "Send BAS reports directly to the ATO.",
+    "Tammy files BAS reports with the ATO.",
+    "Agreements are active.",
+    "All Apple agreements are in force.",
+    "The privacy declaration was submitted.",
+    "Build 1 is attached to the version.",
+    "Build 42 has been processed and selected in App Store Connect.",
+    "All Apple warnings are clear.",
   ]) {
     assert.throws(
       () => validateMacOSStoreMetadata(`${metadata}\n${prohibited}\n`),

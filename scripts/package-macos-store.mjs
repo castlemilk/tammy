@@ -16,7 +16,11 @@ function command(command, args) {
 
 export function createMacOSStoreBuildPlan(root, sourceEnvironment) {
   if (!path.isAbsolute(root)) throw new Error("MACOS_RELEASE_INPUT_INVALID");
-  const release = validateMacOSReleaseEnvironment(sourceEnvironment);
+  const releaseEnvironment = {
+    ...sourceEnvironment,
+    TAMMY_MACOS_TARGET: "mas/arm64",
+  };
+  const release = validateMacOSReleaseEnvironment(releaseEnvironment);
   const desktopPackage = JSON.parse(
     readFileSync(path.join(root, "apps", "desktop", "package.json"), "utf8"),
   );
@@ -157,7 +161,7 @@ export function createMacOSStoreBuildPlan(root, sourceEnvironment) {
     app,
     commands: Object.freeze(commands),
     environment: Object.freeze({
-      ...sourceEnvironment,
+      ...releaseEnvironment,
       TAMMY_RELEASE_PROFILE: "mas",
       VITE_TAMMY_PRIVACY_POLICY_URL: sourceEnvironment.TAMMY_MACOS_PRIVACY_POLICY_URL,
       VITE_TAMMY_SUPPORT_URL: sourceEnvironment.TAMMY_MACOS_SUPPORT_URL,
@@ -308,7 +312,8 @@ export async function executeMacOSStoreBuild(
 
 async function main() {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-  const plan = createMacOSStoreBuildPlan(root, process.env);
+  const releaseEnvironment = { ...process.env, TAMMY_MACOS_TARGET: "mas/arm64" };
+  const plan = createMacOSStoreBuildPlan(root, releaseEnvironment);
   if (plan.pkg !== undefined) await mkdir(path.dirname(plan.pkg), { recursive: true });
   await executeMacOSStoreBuild(plan);
 }

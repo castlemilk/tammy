@@ -1,8 +1,34 @@
 version: '3'
 
 tasks:
+  state:
+    desc: Report the redacted macOS App Store release state and blockers.
+    summary: |
+      Read-only repository and release-record inspection. It does not sign, upload,
+      publish, or submit anything.
+    cmds:
+      - mise exec -- node scripts/check-macos-store.mjs --state
+
+  reserve-build:
+    desc: Reserve one explicit App Store build number in the immutable ledger.
+    summary: |
+      Writes only the explicit version, operator, and positive build number to the
+      repository ledger. It does not guess, sign, upload, publish, or submit anything.
+    requires:
+      vars: [VERSION, OPERATOR, NUMBER]
+    env:
+      TAMMY_RELEASE_VERSION: '{{.VERSION}}'
+      TAMMY_RELEASE_OPERATOR: '{{.OPERATOR}}'
+      TAMMY_RELEASE_BUILD_NUMBER: '{{.NUMBER}}'
+    cmds:
+      - >-
+        mise exec -- node scripts/reserve-macos-build.mjs --version "$TAMMY_RELEASE_VERSION" --operator "$TAMMY_RELEASE_OPERATOR" --number "$TAMMY_RELEASE_BUILD_NUMBER"
+
   check:
     desc: Check repository-owned App Store readiness inputs without signing.
+    summary: |
+      Runs repository-owned tests and validates canonical App Store inputs. It does
+      not sign, upload, publish, or submit anything.
     cmds:
       - mise exec -- pnpm check:macos-store
 
@@ -10,7 +36,8 @@ tasks:
     desc: Create a locally signed macOS development MAS app for device testing.
     summary: |
       Produces apps/desktop/out/Tammy-mas-arm64/Tammy.app for local development testing.
-      It produces no installer or upload.
+      It signs a development app, produces no installer, and does not upload,
+      publish, or submit anything.
     vars:
       NODE_TARGET:
         sh: >-
@@ -51,7 +78,8 @@ tasks:
     desc: Create and locally validate a signed macOS distribution package candidate.
     summary: |
       Emits the validated JSON pkg path, SHA-256, and Gatekeeper assessment for
-      local release evidence; manual App Store submission remains outside this task.
+      local release evidence. It signs a distribution candidate but does not upload,
+      publish, or submit anything.
     vars:
       NODE_TARGET:
         sh: >-
@@ -87,3 +115,19 @@ tasks:
     cmds:
       - mise exec -- node scripts/check-clean-tree.mjs
       - TAMMY_MACOS_SIGNING_MODE=distribution mise exec -- pnpm desktop:make:mas
+
+  pre-upload-check:
+    desc: Require the recorded release to reach the pre-upload state gate.
+    summary: |
+      Read-only state validation for accountable candidate evidence. It does not
+      sign, upload, publish, or submit anything.
+    cmds:
+      - mise exec -- node scripts/check-macos-store.mjs --require-state PRE_UPLOAD_READY
+
+  pre-submit-check:
+    desc: Require the recorded release to reach the pre-submission state gate.
+    summary: |
+      Read-only state validation for Apple-processed build evidence. It does not
+      sign, upload, publish, or submit anything.
+    cmds:
+      - mise exec -- node scripts/check-macos-store.mjs --require-state PRE_SUBMIT_READY

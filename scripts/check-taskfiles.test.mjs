@@ -32,6 +32,9 @@ const allowedExecutablePatterns = [
   /^mise exec -- pnpm --dir apps\/desktop package$/,
   /^mise exec -- go test -race -tags tammy_sqlcipher \.\/services\/core\/internal\/storage\/sqlcipher\/\.\.\. -count=1$/,
   /^mise exec -- node scripts\/check-clean-tree\.mjs$/,
+  /^mise exec -- node scripts\/check-macos-store\.mjs --state$/,
+  /^mise exec -- node scripts\/check-macos-store\.mjs --require-state (?:PRE_UPLOAD_READY|PRE_SUBMIT_READY)$/,
+  /^mise exec -- node scripts\/reserve-macos-build\.mjs --version "\$TAMMY_RELEASE_VERSION" --operator "\$TAMMY_RELEASE_OPERATOR" --number "\$TAMMY_RELEASE_BUILD_NUMBER"$/,
   /^mise exec -- node scripts\/launch-local-scenario\.mjs (?:accounting-fresh|sbr-simulator|sbr-doctor|sbr-evte)$/,
   /^mise exec -- node scripts\/check-sbr-registration\.mjs(?: --doctor-preflight)?$/,
   /^mise exec -- node scripts\/write-sbr-evidence\.mjs$/,
@@ -233,6 +236,7 @@ test("documentation presents Task scenarios as the local command front door", as
         "test",
         "verify",
         "package:e2e",
+        "release:state",
         "release:check",
         "release:development",
         "release:candidate",
@@ -247,7 +251,16 @@ test("documentation presents Task scenarios as the local command front door", as
     [
       releaseRunbook,
       "release runbook",
-      ["release:check", "release:development", "release:candidate", "deploy:mas"],
+      [
+        "release:state",
+        "release:reserve-build",
+        "release:check",
+        "release:development",
+        "release:candidate",
+        "release:pre-upload-check",
+        "release:pre-submit-check",
+        "deploy:mas",
+      ],
     ],
   ]) {
     for (const taskName of taskNames) {
@@ -298,13 +311,13 @@ test("documentation presents Task scenarios as the local command front door", as
     assert.match(releaseRunbook, new RegExp(variable), `release runbook retains ${variable}`);
   }
   for (const phrase of [
-    "## One-time Apple setup",
+    "## Apple-controlled setup and confirmations",
     "legal entity",
     "Mac App ID",
     "Apple Development and Apple Distribution",
     "separate Mac App Store development and distribution provisioning profiles",
     "App Store Connect record",
-    "OPERATOR_REQUIRED",
+    "OPERATOR_CONFIRMATION_REQUIRED",
     "export-compliance determination",
     "CFBundleVersion",
     "forces development signing",
@@ -994,7 +1007,31 @@ test("local Task front door preserves the safe development contract", async () =
   assert.deepEqual(shellCommands(packageTasks.e2e), ["mise exec -- pnpm desktop:e2e"]);
 
   const releaseTasks = (await readTaskfile("taskfiles/release.yml")).tasks;
-  assert.deepEqual(Object.keys(releaseTasks), ["check", "development", "candidate"]);
+  assert.deepEqual(Object.keys(releaseTasks), [
+    "state",
+    "reserve-build",
+    "check",
+    "development",
+    "candidate",
+    "pre-upload-check",
+    "pre-submit-check",
+  ]);
+  assert.deepEqual(shellCommands(releaseTasks.state), [
+    "mise exec -- node scripts/check-macos-store.mjs --state",
+  ]);
+  assert.deepEqual(releaseTasks["reserve-build"].requires?.vars, [
+    "VERSION",
+    "OPERATOR",
+    "NUMBER",
+  ]);
+  assert.deepEqual(releaseTasks["reserve-build"].env, {
+    TAMMY_RELEASE_VERSION: "{{.VERSION}}",
+    TAMMY_RELEASE_OPERATOR: "{{.OPERATOR}}",
+    TAMMY_RELEASE_BUILD_NUMBER: "{{.NUMBER}}",
+  });
+  assert.deepEqual(shellCommands(releaseTasks["reserve-build"]), [
+    'mise exec -- node scripts/reserve-macos-build.mjs --version "$TAMMY_RELEASE_VERSION" --operator "$TAMMY_RELEASE_OPERATOR" --number "$TAMMY_RELEASE_BUILD_NUMBER"',
+  ]);
   assert.equal(releaseTasks.check.preconditions, undefined);
   assert.deepEqual(shellCommands(releaseTasks.check), ["mise exec -- pnpm check:macos-store"]);
   for (const [taskName, signingMode, requiredVariables] of [
@@ -1152,8 +1189,20 @@ test("local Task front door preserves the safe development contract", async () =
   );
   assert.match(releaseTasks.development.summary ?? "", /no installer.*upload/i);
   assert.match(releaseTasks.candidate.summary ?? "", /JSON.*pkg.*SHA-256.*Gatekeeper/is);
+  assert.deepEqual(shellCommands(releaseTasks["pre-upload-check"]), [
+    "mise exec -- node scripts/check-macos-store.mjs --require-state PRE_UPLOAD_READY",
+  ]);
+  assert.deepEqual(shellCommands(releaseTasks["pre-submit-check"]), [
+    "mise exec -- node scripts/check-macos-store.mjs --require-state PRE_SUBMIT_READY",
+  ]);
+  for (const task of Object.values(releaseTasks)) {
+    assert.match(task.summary ?? "", /sign/i);
+    assert.match(task.summary ?? "", /upload/i);
+    assert.match(task.summary ?? "", /publish/i);
+    assert.match(task.summary ?? "", /submit/i);
+  }
   const releaseCommands = Object.values(releaseTasks).flatMap(shellCommands).join("\n");
-  assert.doesNotMatch(releaseCommands, /upload|Transporter|xcrun|API/i);
+  assert.doesNotMatch(releaseCommands, /--upload|Transporter|xcrun|AppStoreConnect/i);
 
   if (process.platform === "darwin") {
     const signingFixtureDirectory = await mkdtemp(
