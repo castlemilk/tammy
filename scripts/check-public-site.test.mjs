@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -16,6 +16,7 @@ const origin = "https://tammy-accounting.castlemilk.chatgpt.site";
 
 const pages = {
   "/": `<!doctype html><html><head>
+    <link rel="canonical" href="${origin}/">
     <meta property="og:image" content="${origin}/og.png">
     <meta name="twitter:image" content="${origin}/og.png">
     <meta name="twitter:card" content="summary_large_image">
@@ -26,13 +27,17 @@ const pages = {
     <p>Requires macOS 14 or later on arm64.</p>
     <p>Reporting is preparation-only and submissions are not lodged.</p>
   </body></html>`,
-  "/privacy": `<!doctype html><html><body>
+  "/privacy": `<!doctype html><html><head>
+    <link rel="canonical" href="${origin}/privacy">
+  </head><body>
     <nav><a href="/">Tammy</a><a href="/privacy">Privacy</a><a href="/support">Support</a></nav>
     <h1>Privacy policy</h1><p>Effective 30 August 2026.</p>
     <p>Gamma Systems Pty Ltd does not transmit your accounting records.</p>
     <a href="${origin}/support">Deletion support</a>
   </body></html>`,
-  "/support": `<!doctype html><html><body>
+  "/support": `<!doctype html><html><head>
+    <link rel="canonical" href="${origin}/support">
+  </head><body>
     <nav><a href="/">Tammy</a><a href="/privacy">Privacy</a><a href="/support">Support</a></nav>
     <h1>Support</h1><a href="mailto:ben.ebsworth@gmail.com">ben.ebsworth@gmail.com</a>
     <p>Tammy Accounting version 0.1.0.</p>
@@ -234,6 +239,36 @@ test("requires absolute trusted Open Graph and X image metadata", async () => {
   }
 });
 
+test("requires exactly one trusted absolute canonical URL on every route", async () => {
+  for (const pathname of Object.keys(pages)) {
+    const expected = `${origin}${pathname}`;
+    const canonical = `<link rel="canonical" href="${expected}">`;
+    for (const body of [
+      pages[pathname].replace(canonical, ""),
+      pages[pathname].replace(canonical, `<link rel="canonical" href="https://attacker.example${pathname}">`),
+      pages[pathname].replace(canonical, `${canonical}${canonical}`),
+    ]) {
+      const { fetchImpl } = mockFetch({ [pathname]: { body } });
+      await assert.rejects(
+        checkPublicSite({ origin, mode: "deployed", fetchImpl }),
+        /canonical/i,
+      );
+    }
+  }
+});
+
+test("accepts the equivalent origin form for the root canonical URL", async () => {
+  const { fetchImpl } = mockFetch({
+    "/": {
+      body: pages["/"].replace(
+        `<link rel="canonical" href="${origin}/">`,
+        `<link rel="canonical" href="${origin}">`,
+      ),
+    },
+  });
+  await checkPublicSite({ origin, mode: "deployed", fetchImpl });
+});
+
 test("rejects placeholders, TestFlight copy, and positive production lodgement claims", async () => {
   for (const forbidden of [
     "TODO",
@@ -377,4 +412,82 @@ test("rollback event requires a distinct existing prior passing deployment", asy
     }),
     /prior|distinct|exist/i,
   );
+});
+
+test("deployment evidence rejects a symlinked deployments directory", async (context) => {
+  const recordsRoot = await mkdtemp(
+    path.join(process.env.TMPDIR ?? os.tmpdir(), "tammy-public-site-deployment-link-"),
+  );
+  const outside = await mkdtemp(
+    path.join(process.env.TMPDIR ?? os.tmpdir(), "tammy-public-site-deployment-outside-"),
+  );
+  context.after(() => Promise.all([
+    rm(recordsRoot, { recursive: true, force: true }),
+    rm(outside, { recursive: true, force: true }),
+  ]));
+  await symlink(outside, path.join(recordsRoot, "deployments"));
+
+  await assert.rejects(
+    writePublicSiteDeployment({ record: deployment(), recordsRoot }),
+    /symbolic link|symlink/i,
+  );
+  assert.deepEqual(await readdir(outside), []);
+});
+
+test("current pointer rejects a pre-existing symbolic link", async (context) => {
+  const recordsRoot = await mkdtemp(
+    path.join(process.env.TMPDIR ?? os.tmpdir(), "tammy-public-site-pointer-link-"),
+  );
+  const outside = path.join(
+    await mkdtemp(path.join(process.env.TMPDIR ?? os.tmpdir(), "tammy-public-site-pointer-outside-")),
+    "outside.json",
+  );
+  context.after(() => Promise.all([
+    rm(recordsRoot, { recursive: true, force: true }),
+    rm(path.dirname(outside), { recursive: true, force: true }),
+  ]));
+  await writeFile(outside, "outside\n");
+  const record = deployment();
+  const evidencePath = await writePublicSiteDeployment({ record, recordsRoot });
+  await symlink(outside, path.join(recordsRoot, "current.json"));
+
+  await assert.rejects(
+    writeCurrentPublicSitePointer({ record, evidencePath, recordsRoot }),
+    /symbolic link|symlink/i,
+  );
+  assert.equal(await readFile(outside, "utf8"), "outside\n");
+});
+
+test("rollback evidence rejects a symlinked events directory", async (context) => {
+  const recordsRoot = await mkdtemp(
+    path.join(process.env.TMPDIR ?? os.tmpdir(), "tammy-public-site-event-link-"),
+  );
+  const outside = await mkdtemp(
+    path.join(process.env.TMPDIR ?? os.tmpdir(), "tammy-public-site-event-outside-"),
+  );
+  context.after(() => Promise.all([
+    rm(recordsRoot, { recursive: true, force: true }),
+    rm(outside, { recursive: true, force: true }),
+  ]));
+  const prior = deployment({ versionId: "version-prior", deploymentId: "deployment-prior" });
+  const priorEvidencePath = await writePublicSiteDeployment({ record: prior, recordsRoot });
+  await symlink(outside, path.join(recordsRoot, "events"));
+
+  await assert.rejects(
+    createRollbackEvent({
+      fromDeployment: deployment({
+        versionId: "version-current",
+        deploymentId: "deployment-current",
+      }),
+      rollbackDeployment: deployment({
+        versionId: prior.versionId,
+        deploymentId: "deployment-rollback",
+        deployedAt: "2026-08-30T09:00:00.000Z",
+      }),
+      priorEvidencePath,
+      recordsRoot,
+    }),
+    /symbolic link|symlink/i,
+  );
+  assert.deepEqual(await readdir(outside), []);
 });

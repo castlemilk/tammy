@@ -46,7 +46,7 @@ const allowedExecutablePatterns = [
   /^mise exec -- node --test scripts\/generate-public-content\.test\.mjs scripts\/check-public-site\.test\.mjs$/,
   /^mise exec -- node scripts\/generate-public-content\.mjs --check$/,
   /^mise exec -- node scripts\/check-public-site\.mjs --built-preview apps\/site$/,
-  /^mise exec -- node scripts\/check-public-site\.mjs --origin \{\{\.SITE_ORIGIN\}\} --(?:write-evidence|read-only)$/,
+  /^mise exec -- node scripts\/check-public-site\.mjs --origin "\$SITE_ORIGIN" --(?:write-evidence|read-only)$/,
   /^git diff --check$/,
   /^mise exec -- task --(?:list|version)$/,
   /^mise exec -- node --version$/,
@@ -178,6 +178,43 @@ function nodePrintScript(lines) {
 function nodePrintCommand(lines) {
   return `mise exec -- node -e '${nodePrintScript(lines)}'`;
 }
+
+test("site deployment tasks pass adversarial origins as one literal argument", async (context) => {
+  const taskLookup = await run("mise", ["which", "task"]);
+  assert.equal(taskLookup.code, 0, taskLookup.stderr);
+  const taskBinary = taskLookup.stdout.trim();
+  assert.notEqual(taskBinary, "", "mise must resolve the pinned Task binary");
+
+  const fixtureRoot = await mkdtemp(path.join("/private/tmp", "tammy-site-task-injection-"));
+  context.after(() => rm(fixtureRoot, { recursive: true, force: true }));
+  const fakeMise = path.join(fixtureRoot, "mise");
+  const argumentLog = path.join(fixtureRoot, "arguments.txt");
+  const injectedMarker = path.join(fixtureRoot, "injected");
+  await writeFile(fakeMise, '#!/bin/sh\nprintf \'%s\\n\' "$@" > "$ARG_LOG"\n');
+  await chmod(fakeMise, 0o755);
+  const adversarialOrigin = `https://example.com; touch ${injectedMarker} #`;
+
+  const result = await run(
+    taskBinary,
+    ["site:verify-deployed", `SITE_ORIGIN=${adversarialOrigin}`],
+    {
+      ARG_LOG: argumentLog,
+      PATH: `${fixtureRoot}:${process.env.PATH}`,
+    },
+    { clearTaskEnvironment: true },
+  );
+  assert.equal(result.code, 0, `${result.stdout}${result.stderr}`);
+  assert.equal(existsSync(injectedMarker), false, "SITE_ORIGIN must not execute shell syntax");
+  assert.deepEqual((await readFile(argumentLog, "utf8")).trim().split("\n"), [
+    "exec",
+    "--",
+    "node",
+    "scripts/check-public-site.mjs",
+    "--origin",
+    adversarialOrigin,
+    "--read-only",
+  ]);
+});
 
 test("documentation presents Task scenarios as the local command front door", async () => {
   const [readme, foundation, releaseRunbook] = await Promise.all([
@@ -524,7 +561,14 @@ test("local Task front door preserves the safe development contract", async () =
   assert.deepEqual(taskReferences(site.tasks["publish-check"]), ["build"]);
   for (const taskName of ["post-deploy-check", "verify-deployed"]) {
     assert.deepEqual(site.tasks[taskName].requires?.vars, ["SITE_ORIGIN"]);
+    assert.equal(site.tasks[taskName].env?.SITE_ORIGIN, "{{.SITE_ORIGIN}}");
   }
+  assert.deepEqual(shellCommands(site.tasks["post-deploy-check"]), [
+    'mise exec -- node scripts/check-public-site.mjs --origin "$SITE_ORIGIN" --write-evidence',
+  ]);
+  assert.deepEqual(shellCommands(site.tasks["verify-deployed"]), [
+    'mise exec -- node scripts/check-public-site.mjs --origin "$SITE_ORIGIN" --read-only',
+  ]);
   const deployMas = rootTasks["deploy:mas"];
   assert.match(deployMas.summary ?? "", /locally validates.*package/i);
   assert.match(deployMas.summary ?? "", /manual.*submission/i);

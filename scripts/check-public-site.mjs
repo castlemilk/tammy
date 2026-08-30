@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readFile, realpath, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -111,6 +111,23 @@ function visibleText(html) {
 }
 
 function validatePage(pathname, html) {
+  const canonicalTags = [...html.matchAll(/<link\b[^>]*>/gi)]
+    .map(([tag]) => tag)
+    .filter((tag) => /\brel=["']canonical["']/i.test(tag));
+  const expectedCanonical = `${TRUSTED_PUBLIC_ORIGIN}${pathname}`;
+  const canonicalHref = canonicalTags[0]?.match(/\bhref=["']([^"']+)["']/i)?.[1];
+  let canonicalMatches = false;
+  try {
+    canonicalMatches = new URL(canonicalHref).href === new URL(expectedCanonical).href;
+  } catch {
+    canonicalMatches = false;
+  }
+  if (canonicalTags.length !== 1 || !canonicalMatches) {
+    throw new Error(
+      `${pathname} must contain exactly one trusted absolute canonical URL: ${expectedCanonical}`,
+    );
+  }
+
   for (const route of ROUTES) {
     const escapedRoute = route.replaceAll("/", "\\/");
     if (!new RegExp(`href=["']${escapedRoute}["']`, "i").test(html)) {
@@ -320,13 +337,84 @@ function deploymentEvidencePath(recordsRoot, deploymentId) {
   return path.join(path.resolve(recordsRoot), "deployments", `${deploymentId}.json`);
 }
 
+function assertContainedPath(root, candidate, label) {
+  const relative = path.relative(root, candidate);
+  if (relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative))) return;
+  throw new Error(`${label} escapes the public site records directory`);
+}
+
+async function assertDirectoryChainHasNoSymbolicLinks(directory) {
+  const resolved = path.resolve(directory);
+  const parsed = path.parse(resolved);
+  let current = parsed.root;
+  for (const segment of resolved.slice(parsed.root.length).split(path.sep).filter(Boolean)) {
+    current = path.join(current, segment);
+    const metadata = await lstat(current);
+    if (metadata.isSymbolicLink()) {
+      throw new Error(`Public site records path contains a symbolic link: ${current}`);
+    }
+    if (!metadata.isDirectory()) {
+      throw new Error(`Public site records path component is not a directory: ${current}`);
+    }
+  }
+}
+
+async function prepareRecordsRoot(recordsRoot) {
+  const root = path.resolve(recordsRoot);
+  await mkdir(root, { recursive: true });
+  await assertDirectoryChainHasNoSymbolicLinks(root);
+  return { root, realRoot: await realpath(root) };
+}
+
+async function prepareRecordsDirectory(recordsRoot, name) {
+  const prepared = await prepareRecordsRoot(recordsRoot);
+  const directory = path.join(prepared.root, name);
+  assertContainedPath(prepared.root, directory, "Public site records directory");
+  try {
+    const metadata = await lstat(directory);
+    if (metadata.isSymbolicLink()) {
+      throw new Error(`Public site records path contains a symbolic link: ${directory}`);
+    }
+    if (!metadata.isDirectory()) {
+      throw new Error(`Public site records path component is not a directory: ${directory}`);
+    }
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+    await mkdir(directory);
+  }
+  await assertDirectoryChainHasNoSymbolicLinks(directory);
+  const realDirectory = await realpath(directory);
+  assertContainedPath(prepared.realRoot, realDirectory, "Public site records directory");
+  return { ...prepared, directory };
+}
+
+async function assertSafeRecordsFile({ root, realRoot, filePath, required }) {
+  const resolvedFile = path.resolve(filePath);
+  assertContainedPath(root, resolvedFile, "Public site records file");
+  await assertDirectoryChainHasNoSymbolicLinks(path.dirname(resolvedFile));
+  try {
+    const metadata = await lstat(resolvedFile);
+    if (metadata.isSymbolicLink()) {
+      throw new Error(`Public site records file is a symbolic link: ${resolvedFile}`);
+    }
+    if (!metadata.isFile()) {
+      throw new Error(`Public site records path is not a file: ${resolvedFile}`);
+    }
+    assertContainedPath(realRoot, await realpath(resolvedFile), "Public site records file");
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+    if (required) throw new Error(`Public site records file does not exist: ${resolvedFile}`);
+  }
+}
+
 export async function writePublicSiteDeployment({
   record,
   recordsRoot = "docs/release/public-site",
 }) {
   validatePublicSiteDeployment(record);
-  const evidencePath = deploymentEvidencePath(recordsRoot, record.deploymentId);
-  await mkdir(path.dirname(evidencePath), { recursive: true });
+  const prepared = await prepareRecordsDirectory(recordsRoot, "deployments");
+  const evidencePath = deploymentEvidencePath(prepared.root, record.deploymentId);
+  await assertSafeRecordsFile({ ...prepared, filePath: evidencePath, required: false });
   await writeFile(evidencePath, `${JSON.stringify(record, null, 2)}\n`, { flag: "wx" });
   return evidencePath;
 }
@@ -337,24 +425,31 @@ export async function writeCurrentPublicSitePointer({
   recordsRoot = "docs/release/public-site",
 }) {
   validatePublicSiteDeployment(record);
-  const expectedEvidencePath = deploymentEvidencePath(recordsRoot, record.deploymentId);
+  const prepared = await prepareRecordsDirectory(recordsRoot, "deployments");
+  const expectedEvidencePath = deploymentEvidencePath(prepared.root, record.deploymentId);
   if (path.resolve(evidencePath) !== expectedEvidencePath) {
     throw new Error("Public site deployment evidence path does not match its deployment ID");
   }
+  await assertSafeRecordsFile({
+    ...prepared,
+    filePath: expectedEvidencePath,
+    required: true,
+  });
   const persisted = JSON.parse(await readFile(expectedEvidencePath, "utf8"));
   validatePublicSiteDeployment(persisted, { expectedProjectId: record.projectId });
   if (JSON.stringify(persisted) !== JSON.stringify(record)) {
     throw new Error("Public site deployment evidence does not match the current record");
   }
 
-  const root = path.resolve(recordsRoot);
+  const { root } = prepared;
   const pointerPath = path.join(root, "current.json");
   const temporaryPath = path.join(root, `.current.json.tmp-${randomUUID()}`);
   const pointer = {
     schemaVersion: 1,
     deploymentEvidence: `deployments/${record.deploymentId}.json`,
   };
-  await mkdir(root, { recursive: true });
+  await assertSafeRecordsFile({ ...prepared, filePath: pointerPath, required: false });
+  await assertSafeRecordsFile({ ...prepared, filePath: temporaryPath, required: false });
   try {
     await writeFile(temporaryPath, `${JSON.stringify(pointer, null, 2)}\n`, { flag: "wx" });
     await rename(temporaryPath, pointerPath);
@@ -374,13 +469,19 @@ export async function createRollbackEvent({
   validatePublicSiteDeployment(rollbackDeployment, {
     expectedProjectId: fromDeployment.projectId,
   });
-  const root = path.resolve(recordsRoot);
+  const prepared = await prepareRecordsDirectory(recordsRoot, "deployments");
+  const { root } = prepared;
   const relativePriorPath = path.relative(root, path.resolve(priorEvidencePath));
   if (!/^deployments\/[A-Za-z0-9][A-Za-z0-9._-]{0,127}\.json$/.test(relativePriorPath)) {
     throw new Error("Prior deployment evidence path is invalid");
   }
   let priorDeployment;
   try {
+    await assertSafeRecordsFile({
+      ...prepared,
+      filePath: path.resolve(priorEvidencePath),
+      required: true,
+    });
     priorDeployment = JSON.parse(await readFile(path.resolve(priorEvidencePath), "utf8"));
   } catch (error) {
     if (error?.code === "ENOENT") {
@@ -419,7 +520,8 @@ export async function createRollbackEvent({
     "events",
     `${timestamp}-rollback-to-${rollbackDeployment.versionId}.json`,
   );
-  await mkdir(path.dirname(eventPath), { recursive: true });
+  const eventDirectory = await prepareRecordsDirectory(root, "events");
+  await assertSafeRecordsFile({ ...eventDirectory, filePath: eventPath, required: false });
   await writeFile(eventPath, `${JSON.stringify(event, null, 2)}\n`, { flag: "wx" });
   return { event, eventPath };
 }

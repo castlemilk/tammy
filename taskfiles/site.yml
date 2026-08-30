@@ -28,12 +28,16 @@ tasks:
     desc: Verify the deployed public site and write redacted local evidence.
     requires:
       vars: [SITE_ORIGIN]
+    env:
+      SITE_ORIGIN: '{{.SITE_ORIGIN}}'
     cmds:
-      - mise exec -- node scripts/check-public-site.mjs --origin {{.SITE_ORIGIN}} --write-evidence
+      - mise exec -- node scripts/check-public-site.mjs --origin "$SITE_ORIGIN" --write-evidence
 
   verify-deployed:
     desc: Read-only verification of the deployed public site.
     requires:
       vars: [SITE_ORIGIN]
+    env:
+      SITE_ORIGIN: '{{.SITE_ORIGIN}}'
     cmds:
-      - mise exec -- node scripts/check-public-site.mjs --origin {{.SITE_ORIGIN}} --read-only
+      - mise exec -- node scripts/check-public-site.mjs --origin "$SITE_ORIGIN" --read-only
