@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile as nodeExecFile } from "node:child_process";
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -99,7 +99,7 @@ test("repository plist reader is portable and never shells out to plutil", async
 });
 
 test("repository inspection binds Tammy identity, store resources and operator gates", async () => {
-  const result = await inspectMacOSStoreRepository(root);
+  const result = await inspectMacOSStoreRepository(root, { repositoryTestsPassed: true });
 
   assert.equal(result.appBundleId, "com.tammy.desktop");
   assert.equal(result.category, "public.app-category.finance");
@@ -109,6 +109,7 @@ test("repository inspection binds Tammy identity, store resources and operator g
   assert.equal(result.icon.height, 1024);
   assert.deepEqual(result.operatorRequirements, [
     "certificates-and-profiles",
+    "active-agreements",
     "age-rating",
     "app-store-warning-review",
     "export-compliance",
@@ -150,10 +151,10 @@ test("non-signing check reports repository blockers without release input leakag
     "publisher-authority",
     "schemas",
     "store-identity",
-    "tests",
   ]);
   assert.deepEqual(result.blockers, [
     "PLATFORM_IDENTITY_NOT_VERIFIED",
+    "REPOSITORY_TESTS_NOT_PASSED",
     "SCREENSHOT_DEFINITIONS_NOT_READY",
   ]);
   assert.deepEqual(result.identity, validStoreIdentity);
@@ -187,6 +188,43 @@ test("repository readiness binds the exact deployed public site to the canonical
       ),
     /MACOS_PUBLIC_SITE_INVALID/,
   );
+});
+
+test("repository readiness rejects deployment evidence through a symlinked ancestor", async () => {
+  const fixtureRoot = await mkdtemp(path.join(tmpdir(), "tammy-macos-public-site-symlink-"));
+  const outside = await mkdtemp(path.join(tmpdir(), "tammy-macos-public-site-outside-"));
+  try {
+    await mkdir(path.join(fixtureRoot, "apps"), { recursive: true });
+    await mkdir(path.join(fixtureRoot, "docs"), { recursive: true });
+    await Promise.all([
+      cp(path.join(root, "apps", "desktop"), path.join(fixtureRoot, "apps", "desktop"), {
+        recursive: true,
+      }),
+      cp(path.join(root, "docs", "development"), path.join(fixtureRoot, "docs", "development"), {
+        recursive: true,
+      }),
+      cp(path.join(root, "docs", "release"), path.join(fixtureRoot, "docs", "release"), {
+        recursive: true,
+      }),
+      cp(path.join(root, "README.md"), path.join(fixtureRoot, "README.md")),
+      cp(path.join(root, "PRIVACY.md"), path.join(fixtureRoot, "PRIVACY.md")),
+    ]);
+    const publicSiteRoot = path.join(fixtureRoot, "docs/release/public-site");
+    const pointer = JSON.parse(await readFile(path.join(publicSiteRoot, "current.json"), "utf8"));
+    await cp(
+      path.join(publicSiteRoot, pointer.deploymentEvidence),
+      path.join(outside, path.basename(pointer.deploymentEvidence)),
+    );
+    await rm(path.join(publicSiteRoot, "deployments"), { recursive: true });
+    await symlink(outside, path.join(publicSiteRoot, "deployments"));
+    await assert.rejects(
+      inspectMacOSStoreRepository(fixtureRoot, { repositoryTestsPassed: true }),
+      /MACOS_PUBLIC_SITE_INVALID/,
+    );
+  } finally {
+    await rm(fixtureRoot, { force: true, recursive: true });
+    await rm(outside, { force: true, recursive: true });
+  }
 });
 
 test("repository inspection rejects installed-name drift from the desktop product name", async () => {
@@ -484,6 +522,7 @@ test("store metadata is truthful, public-site bound, and leaves Apple facts oper
     complete: true,
     marketingVersion: "0.1.0",
     operatorConfirmations: [
+      "active-agreements",
       "age-rating",
       "app-store-warning-review",
       "export-compliance",
@@ -516,8 +555,13 @@ test("store metadata is truthful, public-site bound, and leaves Apple facts oper
   }
   for (const prohibited of [
     "TestFlight invitation",
-    "production SBR enabled",
-    "company tax return submission enabled",
+    "Production SBR submission is supported.",
+    "Tammy submits company tax returns.",
+    "Tammy lodges reports with the ATO.",
+    "Tammy submits BAS directly to the ATO.",
+    "Active agreements are confirmed.",
+    "App Privacy is completed.",
+    "The processed build is selected.",
   ]) {
     assert.throws(
       () => validateMacOSStoreMetadata(`${metadata}\n${prohibited}\n`),

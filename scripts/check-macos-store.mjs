@@ -1,10 +1,12 @@
 import { execFile as nodeExecFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, lstat, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { isDeepStrictEqual, promisify } from "node:util";
+
+import Ajv2020 from "ajv/dist/2020.js";
 
 import { evaluateReleaseState } from "./macos-release-state.mjs";
 
@@ -335,6 +337,7 @@ export function validateMacOSStorePlists({
 
 const PUBLIC_ORIGIN = "https://tammy-accounting.castlemilk.chatgpt.site";
 const METADATA_OPERATOR_CONFIRMATIONS = Object.freeze([
+  "active-agreements",
   "age-rating",
   "app-store-warning-review",
   "export-compliance",
@@ -345,6 +348,7 @@ const METADATA_OPERATOR_CONFIRMATIONS = Object.freeze([
   "seller-eligibility",
 ]);
 const METADATA_CONFIRMATION_LABELS = Object.freeze({
+  "active-agreements": "Active agreements",
   "age-rating": "Age rating",
   "app-store-warning-review": "App Store warning review",
   "export-compliance": "Export compliance",
@@ -406,7 +410,13 @@ export function validateMacOSStoreMetadata(source) {
     REQUIRED_METADATA_COPY.some((copy) => !source.includes(copy)) ||
     source.includes("OPERATOR_REQUIRED") ||
     /\[[ xX]\]/.test(source) ||
-    /github\.com\/castlemilk\/tammy|Ben Ebsworth — individual|TestFlight invitation|production SBR enabled|company tax return submission enabled/i.test(
+    /github\.com\/castlemilk\/tammy|Ben Ebsworth — individual|TestFlight invitation/i.test(
+      source,
+    ) ||
+    /(?<!does not )\b(?:submits?|lodges?)\b[^\n.]{0,100}\b(?:ATO|SBR|BAS|company tax returns?)\b|\bproduction SBR\b[^\n.]{0,100}\b(?:supported|enabled|available)\b|\bcompany tax returns?\b[^\n.]{0,60}\b(?:submitted|lodged|supported|enabled)\b/i.test(
+      source,
+    ) ||
+    /\bactive agreements?\b[^\n.]{0,50}\b(?:active|confirmed|completed|in force)\b|\bapp privacy\b[^\n.]{0,50}\b(?:complete|completed|submitted)\b|\bprocessed build\b[^\n.]{0,50}\b(?:selected|attached|complete|completed)\b|\bage rating\b[^\n.]{0,50}\b(?:complete|completed|submitted)\b|\bseller eligibility\b[^\n.]{0,50}\b(?:confirmed|complete|eligible)\b/i.test(
       source,
     ) ||
     METADATA_OPERATOR_CONFIRMATIONS.some(
@@ -584,7 +594,7 @@ export function validateCurrentPublicSite(pointer, deployment, policyBytes) {
   };
 }
 
-export async function inspectMacOSStoreRepository(root) {
+export async function inspectMacOSStoreRepository(root, { repositoryTestsPassed = false } = {}) {
   if (!path.isAbsolute(root)) fail();
   const desktopRoot = path.join(root, "apps", "desktop");
   const releaseRoot = path.join(desktopRoot, "release", "macos");
@@ -658,14 +668,40 @@ export async function inspectMacOSStoreRepository(root) {
   const identity = validateMacOSStoreIdentity(JSON.parse(identityBytes.toString("utf8")));
   const publicSitePointer = JSON.parse(publicSiteCurrentBytes.toString("utf8"));
   const publicSiteRoot = path.dirname(paths.publicSiteCurrent);
+  const resolvedPublicSiteRoot = await realpath(publicSiteRoot);
+  const deploymentsDirectory = path.join(publicSiteRoot, "deployments");
+  const deploymentsStatus = await lstat(deploymentsDirectory).catch(() =>
+    fail("MACOS_PUBLIC_SITE_INVALID"),
+  );
+  if (!deploymentsStatus.isDirectory() || deploymentsStatus.isSymbolicLink()) {
+    fail("MACOS_PUBLIC_SITE_INVALID");
+  }
   const deploymentPath = path.resolve(publicSiteRoot, publicSitePointer.deploymentEvidence ?? "");
   if (!deploymentPath.startsWith(`${publicSiteRoot}${path.sep}`)) fail("MACOS_PUBLIC_SITE_INVALID");
+  const deploymentStatus = await lstat(deploymentPath).catch(() =>
+    fail("MACOS_PUBLIC_SITE_INVALID"),
+  );
+  const resolvedDeploymentPath = await realpath(deploymentPath).catch(() =>
+    fail("MACOS_PUBLIC_SITE_INVALID"),
+  );
+  if (
+    !deploymentStatus.isFile() ||
+    deploymentStatus.isSymbolicLink() ||
+    !resolvedDeploymentPath.startsWith(`${resolvedPublicSiteRoot}${path.sep}`)
+  ) {
+    fail("MACOS_PUBLIC_SITE_INVALID");
+  }
   const publicSite = validateCurrentPublicSite(
     publicSitePointer,
     JSON.parse(await readFile(deploymentPath, "utf8")),
     privacyPolicyBytes,
   );
   const releaseStateSchema = JSON.parse(releaseStateSchemaBytes.toString("utf8"));
+  try {
+    new Ajv2020({ strict: true }).compile(releaseStateSchema);
+  } catch {
+    fail("MACOS_RELEASE_SCHEMA_INVALID");
+  }
   let companyControllerAttestationValid = false;
   try {
     validateCompanyControllerAttestation(
@@ -744,7 +780,7 @@ export async function inspectMacOSStoreRepository(root) {
       policy: true,
       schemas: true,
       screenshotDefinitions: false,
-      tests: true,
+      tests: repositoryTestsPassed === true,
     },
     candidate: null,
     attestations: [],
@@ -787,13 +823,30 @@ async function requireCleanTree(root) {
 
 async function main() {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-  const release = process.argv.slice(2);
-  if (release.some((argument) => argument !== "--release") || release.length > 1) {
+  const arguments_ = process.argv.slice(2);
+  const release = arguments_.includes("--release");
+  const runTests = arguments_.includes("--run-tests");
+  const verifyTests = runTests || release;
+  if (
+    new Set(arguments_).size !== arguments_.length ||
+    arguments_.some((argument) => !["--release", "--run-tests"].includes(argument))
+  ) {
     fail("MACOS_STORE_ARGUMENT_INVALID");
   }
-  const result = await inspectMacOSStoreRepository(root);
+  if (verifyTests) {
+    try {
+      await execFile(
+        process.execPath,
+        ["--test", "scripts/check-macos-store.test.mjs", "scripts/macos-release-state.test.mjs"],
+        { cwd: root, maxBuffer: 4 * 1024 * 1024 },
+      );
+    } catch {
+      fail("MACOS_REPOSITORY_TESTS_FAILED");
+    }
+  }
+  const result = await inspectMacOSStoreRepository(root, { repositoryTestsPassed: verifyTests });
   let releaseInput;
-  if (release[0] === "--release") {
+  if (release) {
     if (result.blockers.includes("company-controller-attestation")) {
       fail("MACOS_STORE_COMPANY_AUTHORITY_MISSING");
     }
@@ -812,7 +865,7 @@ async function main() {
     `${JSON.stringify({
       ...result,
       ...(releaseInput === undefined ? {} : { release: releaseInput }),
-      status: releaseInput === undefined ? "NOT_READY" : "SIGNED_BUILD_INPUTS_READY",
+      status: releaseInput === undefined ? result.releaseState.state : "SIGNED_BUILD_INPUTS_READY",
     })}\n`,
   );
 }

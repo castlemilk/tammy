@@ -9,7 +9,7 @@
   },
   "scripts": {
     "check:toolchain": "node scripts/check-toolchain.mjs",
-    "check:macos-store": "node scripts/check-macos-store.mjs",
+    "check:macos-store": "node scripts/check-macos-store.mjs --run-tests",
     "macos:build:check": "node scripts/reserve-macos-build.mjs --check",
     "macos:build:reserve": "node scripts/reserve-macos-build.mjs",
     "compliance:foundation": "node scripts/check-foundation-evidence.mjs",

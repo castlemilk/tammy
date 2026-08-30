@@ -45,9 +45,9 @@ The reporting screen is labelled **BAS draft — not lodged**. Tammy prepares lo
 
 For review support contact, email `ben.ebsworth@gmail.com`. Do not send real accounting records, recovery codes, passwords, machine credentials, or keys.
 
-## Screenshot sequence
+## Planned screenshot sequence
 
-Use the canonical fictional Gamma Office Supplies fixture and the validated 1440×900 capture definitions:
+Screenshot fixture ownership, 1440×900 capture definitions, and validated images are pending. When those owners exist, use fictional Australian business data and this planned sequence:
 
 1. Overview with documents, banking, and BAS attention cards.
 2. Reviewed source document with extracted accounting details.
@@ -58,6 +58,7 @@ Use the canonical fictional Gamma Office Supplies fixture and the validated 1440
 ## Apple-controlled confirmations
 
 - **Seller eligibility:** `OPERATOR_CONFIRMATION_REQUIRED`
+- **Active agreements:** `OPERATOR_CONFIRMATION_REQUIRED`
 - **Export compliance:** `OPERATOR_CONFIRMATION_REQUIRED`
 - **Pricing and availability:** `OPERATOR_CONFIRMATION_REQUIRED`
 - **App privacy answer:** `OPERATOR_CONFIRMATION_REQUIRED`
