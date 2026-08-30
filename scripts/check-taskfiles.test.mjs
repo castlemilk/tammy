@@ -21,6 +21,7 @@ const scenarioFiles = [
   "taskfiles/ci.yml",
   "taskfiles/sbr.yml",
   "taskfiles/sbr-helper.yml",
+  "taskfiles/site.yml",
 ];
 const allowedExecutablePatterns = [
   /^mise install$/,
@@ -41,6 +42,11 @@ const allowedExecutablePatterns = [
   /^mise exec -- node --test scripts\/check-slice-one-coverage-policy\.test\.mjs scripts\/check-e2e-coverage\.test\.mjs$/,
   /^mise exec -- pnpm --dir apps\/desktop exec vitest run --maxWorkers=1 .+$/,
   /^mise exec -- node scripts\/build-sbr-helper\.mjs$/,
+  /^mise exec -- pnpm --dir apps\/site (?:dev|test|build)$/,
+  /^mise exec -- node --test scripts\/generate-public-content\.test\.mjs scripts\/check-public-site\.test\.mjs$/,
+  /^mise exec -- node scripts\/generate-public-content\.mjs --check$/,
+  /^mise exec -- node scripts\/check-public-site\.mjs --built-preview apps\/site$/,
+  /^mise exec -- node scripts\/check-public-site\.mjs --origin \{\{\.SITE_ORIGIN\}\} --(?:write-evidence|read-only)$/,
   /^git diff --check$/,
   /^mise exec -- task --(?:list|version)$/,
   /^mise exec -- node --version$/,
@@ -414,7 +420,8 @@ test("local Task front door preserves the safe development contract", async () =
   const dev = await readTaskfile("taskfiles/dev.yml");
   const diagnostics = await readTaskfile("taskfiles/diagnostics.yml");
   const sbr = await readTaskfile("taskfiles/sbr.yml");
-  for (const taskfile of [setup, dev, diagnostics, sbr]) assert.equal(taskfile.version, "3");
+  const site = await readTaskfile("taskfiles/site.yml");
+  for (const taskfile of [setup, dev, diagnostics, sbr, site]) assert.equal(taskfile.version, "3");
   const taskGraph = await collectTaskGraph("Taskfile.yml");
 
   const rootTasks = root.tasks ?? {};
@@ -497,6 +504,27 @@ test("local Task front door preserves the safe development contract", async () =
   assert.deepEqual(taskReferences(rootTasks["verify:release"]), ["test:verify:release"]);
   assert.deepEqual(taskReferences(rootTasks.build), ["build:desktop"]);
   assert.deepEqual(taskReferences(rootTasks.package), ["package:verify"]);
+  assert.deepEqual(Object.keys(site.tasks ?? {}), [
+    "dev",
+    "test",
+    "build",
+    "publish-check",
+    "post-deploy-check",
+    "verify-deployed",
+  ]);
+  assert.deepEqual(shellCommands(site.tasks.dev), ["mise exec -- pnpm --dir apps/site dev"]);
+  assert.deepEqual(shellCommands(site.tasks.test), [
+    "mise exec -- node --test scripts/generate-public-content.test.mjs scripts/check-public-site.test.mjs",
+    "mise exec -- pnpm --dir apps/site test",
+  ]);
+  assert.deepEqual(shellCommands(site.tasks.build), [
+    "mise exec -- node scripts/generate-public-content.mjs --check",
+    "mise exec -- pnpm --dir apps/site build",
+  ]);
+  assert.deepEqual(taskReferences(site.tasks["publish-check"]), ["build"]);
+  for (const taskName of ["post-deploy-check", "verify-deployed"]) {
+    assert.deepEqual(site.tasks[taskName].requires?.vars, ["SITE_ORIGIN"]);
+  }
   const deployMas = rootTasks["deploy:mas"];
   assert.match(deployMas.summary ?? "", /locally validates.*package/i);
   assert.match(deployMas.summary ?? "", /manual.*submission/i);

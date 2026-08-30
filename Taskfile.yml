@@ -21,6 +21,8 @@ includes:
     taskfile: taskfiles/sbr.yml
   sbr-helper:
     taskfile: taskfiles/sbr-helper.yml
+  site:
+    taskfile: taskfiles/site.yml
 
 tasks:
   default:

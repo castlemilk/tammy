@@ -9,6 +9,7 @@
     "dev": "vinext dev",
     "build": "vinext build",
     "start": "wrangler dev --config dist/server/wrangler.json",
+    "preview": "vinext start --hostname 127.0.0.1 --port 0",
     "test": "vitest run --config vitest.config.ts",
     "lint": "oxlint .",
     "typecheck": "tsc --noEmit",

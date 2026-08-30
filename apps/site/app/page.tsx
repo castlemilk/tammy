@@ -14,6 +14,9 @@ const minimumMacOSLabel = identity.minimumMacOSVersion.replace(/\.0$/, '');
 export default function Home() {
   return (
     <div className="site-shell">
+      <a className="skip-link" href="#main-content">
+        Skip to content
+      </a>
       <header className="site-header">
         <a
           className="wordmark"
@@ -28,7 +31,7 @@ export default function Home() {
         </nav>
       </header>
 
-      <main>
+      <main id="main-content">
         <section className="hero" aria-labelledby="hero-heading">
           <p className="eyebrow">Private desktop accounting</p>
           <h1 id="hero-heading">Local accounting for Australia</h1>
@@ -51,7 +54,7 @@ export default function Home() {
           </div>
           <p className="platform-note">
             {identity.installedName} requires macOS {minimumMacOSLabel} or later
-            on {architectureLabel}.
+            on {architectureLabel} (arm64).
           </p>
         </section>
 

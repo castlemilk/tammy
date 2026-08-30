@@ -8,7 +8,7 @@ Tammy Accounting is published by Gamma Systems Pty Ltd. This policy applies to t
 
 ## Data handled by Tammy
 
-For this release, Tammy does not transmit accounting records, credentials, analytics, advertising identifiers, or tracking data to Gamma Systems Pty Ltd or third parties.
+For this release, Tammy does not transmit your accounting records, credentials, analytics, advertising identifiers, or tracking data to Gamma Systems Pty Ltd or third parties.
 
 Accounting records are stored locally in Tammy's encrypted workspace on your Mac. Workspace secrets are stored in the macOS Keychain where applicable. Files you choose to import are read only after you select them and their accounting content remains in the local encrypted workspace.
 

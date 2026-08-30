@@ -5,7 +5,10 @@ import './globals.css';
 const { identity } = publicContent;
 
 export const metadata: Metadata = {
-  title: `${identity.appStoreName} — Local accounting for Australia`,
+  title: {
+    default: `${identity.appStoreName} — Local accounting for Australia`,
+    template: `%s — ${identity.appStoreName}`,
+  },
   description: `${identity.installedName} is private desktop accounting software for encrypted workspaces, journals, source-document review, bank reconciliation, and local GST workpapers.`,
 };
 

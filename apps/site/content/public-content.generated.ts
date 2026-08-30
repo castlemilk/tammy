@@ -57,7 +57,7 @@ export const publicContent = {
             "inlines": [
               {
                 "type": "text",
-                "value": "For this release, Tammy does not transmit accounting records, credentials, analytics, advertising identifiers, or tracking data to Gamma Systems Pty Ltd or third parties."
+                "value": "For this release, Tammy does not transmit your accounting records, credentials, analytics, advertising identifiers, or tracking data to Gamma Systems Pty Ltd or third parties."
               }
             ]
           },

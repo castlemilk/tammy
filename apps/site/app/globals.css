@@ -65,6 +65,25 @@ a:focus-visible {
   outline-offset: 4px;
 }
 
+.skip-link {
+  position: fixed;
+  z-index: 10;
+  top: 0.75rem;
+  left: 0.75rem;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0.65rem 0.9rem;
+  border-radius: 0.35rem;
+  background: var(--forest);
+  color: var(--warm-white);
+  transform: translateY(-160%);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
 .site-shell {
   width: min(1160px, calc(100% - 40px));
   min-height: 100vh;
@@ -107,6 +126,18 @@ h1 {
 
 .site-header nav a:hover {
   color: var(--forest);
+}
+
+.site-header nav a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.site-header nav a[aria-current='page'] {
+  color: var(--forest);
+  text-decoration: underline;
+  text-underline-offset: 0.35rem;
 }
 
 main {
@@ -239,6 +270,91 @@ h1 {
   font-size: 0.78rem;
 }
 
+.document-page {
+  width: min(100%, 760px);
+  padding: clamp(4rem, 10vw, 7rem) 0;
+}
+
+.document-heading {
+  padding-bottom: 2.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.document-heading h1 {
+  font-size: clamp(3rem, 8vw, 5.5rem);
+}
+
+.document-heading > p:last-child {
+  margin: 1.5rem 0 0;
+  color: var(--muted-foreground);
+  line-height: 1.6;
+}
+
+.document-page a:not(.skip-link) {
+  color: var(--forest);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2rem;
+}
+
+.policy-section {
+  padding: 2.4rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.policy-section h2 {
+  margin: 0 0 1rem;
+  font-family:
+    Iowan Old Style,
+    Baskerville,
+    'Times New Roman',
+    serif;
+  font-size: clamp(1.65rem, 4vw, 2.25rem);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+
+.policy-section p,
+.policy-section li,
+.document-contact {
+  color: #344c42;
+  font-size: 1rem;
+  line-height: 1.75;
+}
+
+.policy-section p {
+  margin: 0.85rem 0 0;
+}
+
+.policy-section ol,
+.policy-section ul {
+  padding-left: 1.4rem;
+}
+
+.policy-section li + li {
+  margin-top: 0.65rem;
+}
+
+.policy-section code {
+  overflow-wrap: anywhere;
+  padding: 0.12rem 0.3rem;
+  border-radius: 0.25rem;
+  background: var(--sage-soft);
+  font-size: 0.88em;
+}
+
+.warning {
+  padding: 1rem 1.1rem;
+  border-left: 4px solid var(--forest);
+  background: var(--sage-soft);
+  font-weight: 650;
+}
+
+.document-contact {
+  margin: 2.5rem 0 0;
+}
+
 @media (max-width: 640px) {
   .site-shell {
     width: min(100% - 28px, 1160px);
@@ -254,6 +370,10 @@ h1 {
 
   .hero {
     padding-top: 4.5rem;
+  }
+
+  .document-page {
+    padding-top: 3.5rem;
   }
 
   h1 {

@@ -1,0 +1,39 @@
+version: '3'
+
+tasks:
+  dev:
+    desc: Launch the Tammy public site locally with hot reload.
+    cmds:
+      - mise exec -- pnpm --dir apps/site dev
+
+  test:
+    desc: Test canonical public content, routes, and deployment boundaries.
+    cmds:
+      - mise exec -- node --test scripts/generate-public-content.test.mjs scripts/check-public-site.test.mjs
+      - mise exec -- pnpm --dir apps/site test
+
+  build:
+    desc: Verify generated content and build the deployable public site.
+    cmds:
+      - mise exec -- node scripts/generate-public-content.mjs --check
+      - mise exec -- pnpm --dir apps/site build
+
+  publish-check:
+    desc: Build and verify all public routes through the real local preview server.
+    cmds:
+      - task: build
+      - mise exec -- node scripts/check-public-site.mjs --built-preview apps/site
+
+  post-deploy-check:
+    desc: Verify the deployed public site and write redacted local evidence.
+    requires:
+      vars: [SITE_ORIGIN]
+    cmds:
+      - mise exec -- node scripts/check-public-site.mjs --origin {{.SITE_ORIGIN}} --write-evidence
+
+  verify-deployed:
+    desc: Read-only verification of the deployed public site.
+    requires:
+      vars: [SITE_ORIGIN]
+    cmds:
+      - mise exec -- node scripts/check-public-site.mjs --origin {{.SITE_ORIGIN}} --read-only
