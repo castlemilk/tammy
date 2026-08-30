@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import {
   RELEASE_STATES,
@@ -191,6 +191,14 @@ test("documents readiness, attestation, and lifecycle records in the release sch
       "utf8",
     ),
   );
+  const { default: Ajv2020 } = await import(
+    pathToFileURL(
+      path.join(
+        repositoryRoot,
+        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/2020.js",
+      ),
+    ).href
+  );
   assert.deepEqual(schema.$defs.readinessState.enum, RELEASE_STATES);
   assert.deepEqual(schema.$defs.attestationKind.enum, [
     "company-controller",
@@ -237,6 +245,27 @@ test("documents readiness, attestation, and lifecycle records in the release sch
   });
   assert.equal(schema.$defs.redactedReference.oneOf.length, 2);
   assert.deepEqual(schema.$defs.releaseStateRecord.required, ["state", "passed", "blockers"]);
+
+  const validate = new Ajv2020({ strict: true }).compile(schema);
+  for (const valid of [
+    { state: "NOT_READY", passed: [], blockers: [] },
+    attestation("company-controller"),
+    sellerAttestation(),
+    uploadedEvent(),
+  ]) {
+    assert.equal(validate(valid), true, JSON.stringify(validate.errors));
+  }
+  for (const invalid of [
+    attestation("company-controller", {
+      accountablePerson: "sk_live_12345678901234567890",
+    }),
+    uploadedEvent({ operator: "sk_live_12345678901234567890" }),
+    uploadedEvent({ appStoreConnectBuildId: "sk_live_12345678901234567890" }),
+    attestation("content-rights", { outcome: "confirmed" }),
+    { ...attestation("company-controller"), sellerName: "Gamma Systems Pty Ltd" },
+  ]) {
+    assert.equal(validate(invalid), false, JSON.stringify(invalid));
+  }
 });
 
 test("derives readiness without requiring signing credentials for repository readiness", () => {
@@ -562,7 +591,7 @@ test("reordered lifecycle events are an explicit non-passing sequence", () => {
       uploadedEvent(),
     ],
   }));
-  assert.equal(result.state, "PRE_UPLOAD_READY");
+  assert.equal(result.state, "UPLOADED");
   assert.equal(
     result.blockers.some(({ code }) => code === "RELEASE_LIFECYCLE_SEQUENCE_INVALID"),
     true,
@@ -605,7 +634,7 @@ test("terminal lifecycle events consume readiness and submitted cannot precede u
       attestations: [...preUploadAttestations, ...preSubmitAttestations],
       events: [uploadedEvent(), terminalEvent],
     }));
-    assert.equal(result.state, "NOT_READY", terminalEvent.kind);
+    assert.equal(result.state, "PRE_SUBMIT_READY", terminalEvent.kind);
     assert.equal(
       result.blockers.some(({ code }) =>
         ["BUILD_NUMBER_CONSUMED", "APP_STORE_SUBMISSION_ALREADY_RECORDED"].includes(code)),
@@ -621,9 +650,21 @@ test("terminal lifecycle events consume readiness and submitted cannot precede u
       uploadedEvent(),
     ],
   }));
-  assert.equal(submittedBeforeUpload.state, "PRE_UPLOAD_READY");
+  assert.equal(submittedBeforeUpload.state, "UPLOADED");
   assert.equal(
     submittedBeforeUpload.blockers.some(
+      ({ code }) => code === "RELEASE_LIFECYCLE_SEQUENCE_INVALID",
+    ),
+    true,
+  );
+
+  const submissionWithoutDeclarations = evaluateReleaseState(releaseInputs({
+    attestations: preUploadAttestations,
+    events: [uploadedEvent(), submitted],
+  }));
+  assert.equal(submissionWithoutDeclarations.state, "UPLOADED");
+  assert.equal(
+    submissionWithoutDeclarations.blockers.some(
       ({ code }) => code === "RELEASE_LIFECYCLE_SEQUENCE_INVALID",
     ),
     true,

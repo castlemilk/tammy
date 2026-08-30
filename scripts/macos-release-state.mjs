@@ -638,7 +638,18 @@ export function evaluateReleaseState(inputs) {
 
   const lifecycle = collectValidEvents(inputs?.events, releaseVersion, buildNumber);
   const { events } = lifecycle;
-  if (lifecycle.sequenceInvalid) {
+  const preSubmitAttestationsComplete = PRE_SUBMIT_KINDS.every(
+    (kind) => attestations.get(kind)?.length === 1,
+  );
+  const submittedWithoutPrerequisites =
+    ["submitted", "approved", "rejected"].includes(lifecycle.terminalKind) &&
+    !preSubmitAttestationsComplete;
+  const lifecycleSequenceInvalid =
+    lifecycle.sequenceInvalid || submittedWithoutPrerequisites;
+  const effectiveTerminalKind = submittedWithoutPrerequisites
+    ? undefined
+    : lifecycle.terminalKind;
+  if (lifecycleSequenceInvalid) {
     blockers.push(
       blocker(
         "RELEASE_LIFECYCLE_SEQUENCE_INVALID",
@@ -665,7 +676,6 @@ export function evaluateReleaseState(inputs) {
   );
   const uploaded =
     preUploadReady &&
-    !lifecycle.sequenceInvalid &&
     lifecycle.uploadCount === 1 &&
     exactUploads.length === 1;
   if (preUploadReady && !uploaded) {
@@ -698,12 +708,12 @@ export function evaluateReleaseState(inputs) {
     }
   }
 
-  if (lifecycle.terminalKind) {
+  if (effectiveTerminalKind) {
     blockers.push(
       blocker(
-        lifecycle.terminalKind === "expired" || lifecycle.terminalKind === "superseded"
+        effectiveTerminalKind === "expired" || effectiveTerminalKind === "superseded"
           ? "BUILD_NUMBER_CONSUMED"
-          : lifecycle.terminalKind === "submitted"
+          : effectiveTerminalKind === "submitted"
             ? "APP_STORE_SUBMISSION_ALREADY_RECORDED"
             : "APP_STORE_REVIEW_OUTCOME_RECORDED",
         "operator",
@@ -711,19 +721,17 @@ export function evaluateReleaseState(inputs) {
       ),
     );
   }
-  const state = lifecycle.terminalKind
-    ? "NOT_READY"
-    : preSubmitReady
-      ? "PRE_SUBMIT_READY"
-      : uploaded
-        ? "UPLOADED"
-        : preUploadReady
-          ? "PRE_UPLOAD_READY"
-          : candidateReady
-            ? "CANDIDATE_READY"
-            : repositoryReady
-              ? "REPOSITORY_READY"
-              : "NOT_READY";
+  const state = preSubmitReady
+    ? "PRE_SUBMIT_READY"
+    : uploaded
+      ? "UPLOADED"
+      : preUploadReady
+        ? "PRE_UPLOAD_READY"
+        : candidateReady
+          ? "CANDIDATE_READY"
+          : repositoryReady
+            ? "REPOSITORY_READY"
+            : "NOT_READY";
   validateReleaseState(state);
   const passedSet = new Set(passed);
   const blockerCodes = new Set(blockers.map(({ code }) => code));
