@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
+import { execFile as nodeExecFile } from "node:child_process";
 import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 
 import {
   assertMacOSReleaseMetadata,
@@ -20,6 +22,7 @@ import {
 } from "./check-macos-store.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const execFile = promisify(nodeExecFile);
 const validStoreIdentity = {
   schemaVersion: 1,
   appStoreName: "Tammy Accounting",
@@ -112,7 +115,27 @@ test("repository inspection binds Tammy identity, store resources and operator g
     "signed-build-privacy-report",
     "screenshots",
   ]);
-  assert.deepEqual(result.blockers, []);
+  assert.deepEqual(result.passed, ["publisher-authority", "store-identity"]);
+  assert.deepEqual(result.blockers, [
+    "CANONICAL_SCREENSHOTS_NOT_RECORDED",
+    "PUBLIC_SITE_NOT_RECORDED",
+    "RELEASE_STATE_NOT_RECORDED",
+  ]);
+});
+
+test("non-signing check reports repository blockers without release input leakage", async () => {
+  const { stdout } = await execFile(process.execPath, ["scripts/check-macos-store.mjs"], { cwd: root });
+  const result = JSON.parse(stdout);
+
+  assert.equal(result.status, "NOT_READY");
+  assert.deepEqual(result.passed, ["publisher-authority", "store-identity"]);
+  assert.deepEqual(result.blockers, [
+    "CANONICAL_SCREENSHOTS_NOT_RECORDED",
+    "PUBLIC_SITE_NOT_RECORDED",
+    "RELEASE_STATE_NOT_RECORDED",
+  ]);
+  assert.deepEqual(result.identity, validStoreIdentity);
+  assert.equal(stdout.includes("TAMMY_MACOS_"), false);
 });
 
 test("repository inspection rejects installed-name drift from the desktop product name", async () => {

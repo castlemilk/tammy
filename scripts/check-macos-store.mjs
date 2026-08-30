@@ -577,6 +577,17 @@ export async function inspectMacOSStoreRepository(root) {
     fail();
   }
 
+  const blockers = [
+    "CANONICAL_SCREENSHOTS_NOT_RECORDED",
+    "PUBLIC_SITE_NOT_RECORDED",
+    "RELEASE_STATE_NOT_RECORDED",
+    ...(companyControllerAttestationValid ? [] : ["company-controller-attestation"]),
+  ].sort();
+  const passed = [
+    "store-identity",
+    ...(companyControllerAttestationValid ? ["publisher-authority"] : []),
+  ].sort();
+
   return {
     appBundleId: APP_BUNDLE_ID,
     category: APP_CATEGORY,
@@ -584,7 +595,7 @@ export async function inspectMacOSStoreRepository(root) {
     identity,
     metadataComplete: metadataStatus.complete,
     metadata: metadataStatus,
-    blockers: companyControllerAttestationValid ? [] : ["company-controller-attestation"],
+    blockers,
     operatorRequirements: [
       "app-store-connect-record",
       "certificates-and-profiles",
@@ -594,6 +605,7 @@ export async function inspectMacOSStoreRepository(root) {
       "signed-build-privacy-report",
       "screenshots",
     ],
+    passed,
     version: desktopPackage.version,
   };
 }
