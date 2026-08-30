@@ -1364,7 +1364,7 @@ Use `@app-store-review:app-store-review`, `@security-best-practices`, `@superpow
 - Modify: `scripts/check-taskfiles.test.mjs`
 - Modify: `docs/release/macos-app-store.md`
 
-- [ ] **Step 1: Write failing promotion, accountable-fact, and candidate-state tests**
+- [x] **Step 1: Write failing promotion, accountable-fact, and candidate-state tests**
 
 Test an exclusive-create-only promotion from `.tmp/macos-release/0.1.0/build-<N>/evidence/<event-id>/` into one previously absent durable candidate record. Require exact agreement among:
 
@@ -1385,11 +1385,11 @@ Write failing tests for `inspect-macos-release-package.mjs --package <absolute a
 
 Extend `macos-release-provenance.mjs` with read-only `--verify-frozen --version <semver> --build <N>`. Test a clean current tree whose changes from the recorded Task 16 product-source commit are limited to the validated canonical screenshot directory and exact build-record directory. Reject any changed dependency, product/UI/build/profile/metadata/site/tool/test/runbook path, unexpected release-record sibling, or unvalidated screenshot/record file. This lets later verification prove that bookkeeping commits did not mutate the frozen candidate source.
 
-- [ ] **Step 2: Write failing `CANDIDATE_READY` evaluation tests**
+- [x] **Step 2: Write failing `CANDIDATE_READY` evaluation tests**
 
 Prove the state remains `REPOSITORY_READY` when any candidate artifact/evidence item is absent or mismatched. It reaches `CANDIDATE_READY` only for the complete promoted record, passing seller/controller attestations, a clean tracking commit, and proof that the commit is reachable from the configured fetched trusted remote. Apply the same durability rule to every attestation/event consumed for `PRE_UPLOAD_READY`, `UPLOADED`, and `PRE_SUBMIT_READY`; the fact recorder also rejects a new fact whose required prerequisite event/attestation is not already durable. Test untracked, committed-but-unpushed, stale remote ref, wrong remote, and passing remote ancestry at every readiness level. Candidate readiness does not imply content-rights, export, price/availability, App Privacy answers, upload, processing, or submission.
 
-- [ ] **Step 3: Verify promotion/state tests are RED**
+- [x] **Step 3: Verify promotion/state tests are RED**
 
 Run:
 
@@ -1399,13 +1399,13 @@ rtk mise exec -- node --test scripts/promote-macos-release-evidence.test.mjs scr
 
 Expected: FAIL because durable candidate evidence cannot yet be produced.
 
-- [ ] **Step 4: Implement redacted evidence staging and crash-consistent promotion**
+- [x] **Step 4: Implement redacted evidence staging and crash-consistent promotion**
 
 The package owner writes raw bounded command output only under the gitignored run directory, then derives the complete strict non-secret JSON set. Promotion uses stable file reads, rehashes the app/package/screenshots, validates every schema against the staging set, and writes all evidence below a unique sibling staging directory. It fsyncs and atomically renames that directory to `evidence/candidate/<event-id>/`, then fsyncs the renamed evidence directory and its parent. It creates `events/<UTC>-candidate-built.json` last with exclusive semantics as the commit marker, fsyncs the marker file and `events/` directory, and only then reports promotion success. Validators ignore and report orphan evidence directories without a commit marker; a recovery command may remove only a validated orphan. An event never points to a partial set. Existing durable events/evidence are immutable; a correction needs a new event or a new build number. The README links hashes and explains which facts remain Apple/operator controlled.
 
 `evaluateReleaseState` also verifies that every candidate event/evidence file and every later attestation/event it consumes is tracked by a clean Git commit reachable from the configured fetched trusted remote (`origin` unless the runbook records another exact remote). Before the relevant commit is pushed and fetched, it reports the state-specific `*_RECORD_NOT_DURABLE` blocker and cannot advance to `CANDIDATE_READY`, `PRE_UPLOAD_READY`, `UPLOADED`, or `PRE_SUBMIT_READY`.
 
-- [ ] **Step 5: Add the scenario-oriented Taskfile surface**
+- [x] **Step 5: Add the scenario-oriented Taskfile surface**
 
 Implement direct delegation only:
 
@@ -1421,7 +1421,7 @@ Implement direct delegation only:
 
 Every summary says whether it builds, signs, captures, validates, publishes, uploads, or submits. No task may deploy Sites or contact App Store Connect implicitly.
 
-- [ ] **Step 6: Run promotion/state/Taskfile tests GREEN before freeze**
+- [x] **Step 6: Run promotion/state/Taskfile tests GREEN before freeze**
 
 Run:
 
@@ -1433,7 +1433,7 @@ rtk mise exec -- task release:state
 
 Expected: tests pass against synthetic complete/partial/crashed records. Repository state remains no higher than `REPOSITORY_READY` and names exact candidate/signing blockers.
 
-- [ ] **Step 7: Commit every evidence owner before the freeze**
+- [x] **Step 7: Commit every evidence owner before the freeze**
 
 ```bash
 rtk git add scripts/promote-macos-release-evidence.mjs scripts/promote-macos-release-evidence.test.mjs scripts/record-macos-app-store-fact.mjs scripts/record-macos-app-store-fact.test.mjs scripts/inspect-macos-release-package.mjs scripts/inspect-macos-release-package.test.mjs scripts/macos-release-provenance.mjs scripts/macos-release-provenance.test.mjs scripts/macos-release-state.mjs scripts/macos-release-state.test.mjs scripts/check-macos-store.mjs scripts/check-macos-store.test.mjs scripts/check-app-store-screenshots.mjs taskfiles/release.yml scripts/check-taskfiles.test.mjs docs/release/macos-app-store.md

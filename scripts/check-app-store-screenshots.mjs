@@ -1280,7 +1280,14 @@ export async function promoteScreenshotSet({
 
 async function main() {
   const args = process.argv.slice(2);
-  if (args.length !== 2 || args[0] !== "--source" || !path.isAbsolute(args[1])) {
+  const mode = args[0];
+  const hasSource = args.length === 3 && args[1] === "--source" && path.isAbsolute(args[2]);
+  if (
+    !(
+      (new Set(["--validate", "--promote"]).has(mode) && hasSource) ||
+      (mode === "--check" && args.length === 1)
+    )
+  ) {
     fail("APP_STORE_SCREENSHOT_ARGUMENTS_INVALID");
   }
   const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -1291,12 +1298,25 @@ async function main() {
   const storeMetadataBytes = await readFile(
     path.join(repositoryRoot, "apps/desktop/release/macos/store-metadata.md"),
   );
+  const sourceDirectory = mode === "--check" ? path.join(destinationRoot, "en-AU") : args[2];
+  if (mode !== "--promote") {
+    await validateScreenshotManifest({
+      captureDirectory: sourceDirectory,
+      fixture,
+      fixtureBytes,
+      storeMetadataBytes,
+    });
+    process.stdout.write(
+      `${JSON.stringify({ captureDirectory: sourceDirectory, outcome: "validated" })}\n`,
+    );
+    return;
+  }
   const canonical = await promoteScreenshotSet({
     destinationRoot,
     fixture,
     fixtureBytes,
     repositoryRoot,
-    sourceDirectory: args[1],
+    sourceDirectory,
     storeMetadataBytes,
   });
   process.stdout.write(`${JSON.stringify({ canonical })}\n`);

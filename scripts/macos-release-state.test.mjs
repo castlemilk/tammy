@@ -1,18 +1,24 @@
 import assert from "node:assert/strict";
-import { readdir, readFile } from "node:fs/promises";
+import { execFile as nodeExecFile } from "node:child_process";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 
 import Ajv2020 from "ajv/dist/2020.js";
 
 import {
   evaluateReleaseState,
+  inspectReleaseRecordDurability,
   RELEASE_STATES,
   validateReleaseAttestation,
   validateReleaseLifecycleEvent,
   validateReleaseState,
 } from "./macos-release-state.mjs";
+
+const execFile = promisify(nodeExecFile);
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const releaseVersion = "0.1.0";
@@ -324,6 +330,139 @@ test("requires every exact candidate evidence boundary before candidate readines
       evaluateReleaseState(releaseInputs({ candidate: changed })).state,
       "REPOSITORY_READY",
     );
+  }
+});
+
+test("requires candidate, attestation, and lifecycle facts to be durable on the trusted remote", () => {
+  const candidateLocal = evaluateReleaseState(
+    releaseInputs({
+      durability: { attestationKinds: [], candidate: false, eventKinds: [] },
+    }),
+  );
+  assert.equal(candidateLocal.state, "REPOSITORY_READY");
+  assert.equal(
+    candidateLocal.blockers.some(({ code }) => code === "CANDIDATE_RECORD_NOT_DURABLE"),
+    true,
+  );
+
+  const attestationsLocal = evaluateReleaseState(
+    releaseInputs({
+      attestations: preUploadAttestations,
+      durability: { attestationKinds: [], candidate: true, eventKinds: [] },
+    }),
+  );
+  assert.equal(attestationsLocal.state, "CANDIDATE_READY");
+  assert.equal(
+    attestationsLocal.blockers.some(
+      ({ code }) => code === "ATTESTATION_CONTENT_RIGHTS_RECORD_NOT_DURABLE",
+    ),
+    true,
+  );
+
+  const uploadLocal = evaluateReleaseState(
+    releaseInputs({
+      attestations: preUploadAttestations,
+      durability: {
+        attestationKinds: preUploadAttestations.map(({ kind }) => kind),
+        candidate: true,
+        eventKinds: [],
+      },
+      events: [uploadedEvent()],
+    }),
+  );
+  assert.equal(uploadLocal.state, "PRE_UPLOAD_READY");
+  assert.equal(
+    uploadLocal.blockers.some(({ code }) => code === "APP_STORE_UPLOAD_RECORD_NOT_DURABLE"),
+    true,
+  );
+});
+
+test("derives candidate durability from clean records reachable on the trusted Git remote", async () => {
+  const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), "tammy-release-durability-"));
+  const local = path.join(temporaryRoot, "local");
+  const remote = path.join(temporaryRoot, "remote.git");
+  const buildRoot = path.join(local, "docs/release/records/macos/0.1.0/build-42");
+  const evidenceRoot = path.join(
+    buildRoot,
+    "evidence/candidate/018f3d8c-7b2a-7abc-8def-1234567890ab",
+  );
+  const eventsRoot = path.join(buildRoot, "events");
+  const runGit = async (cwd, arguments_) =>
+    execFile("/usr/bin/git", arguments_, { cwd, encoding: "utf8" });
+  try {
+    await mkdir(evidenceRoot, { recursive: true });
+    await mkdir(eventsRoot, { recursive: true });
+    await writeFile(path.join(evidenceRoot, "candidate.json"), `${JSON.stringify(candidate)}\n`);
+    for (const name of [
+      "metadata-snapshot.json",
+      "privacy-evidence.json",
+      "runtime-egress.json",
+      "screenshots.json",
+    ]) {
+      await writeFile(path.join(evidenceRoot, name), "{}\n");
+    }
+    await writeFile(path.join(evidenceRoot, "summary.md"), "# Candidate\n");
+    await writeFile(
+      path.join(eventsRoot, "2026-08-30T10-00-00.000Z-candidate-built.json"),
+      `${JSON.stringify({
+        appSha256: candidate.appSha256,
+        buildNumber,
+        kind: "candidate-built",
+        marketingVersion: releaseVersion,
+        packageSha256,
+        productSourceCommit: sourceCommit,
+        productSourceTree: sourceTree,
+      })}\n`,
+    );
+    await runGit(temporaryRoot, ["init", "--bare", remote]);
+    await runGit(temporaryRoot, ["init", "-b", "main", local]);
+    await runGit(local, ["config", "user.name", "Tammy Tests"]);
+    await runGit(local, ["config", "user.email", "tests@tammy.invalid"]);
+
+    assert.equal(
+      (await inspectReleaseRecordDurability({ repositoryRoot: local, buildRoot })).candidate,
+      false,
+    );
+    await runGit(local, ["add", "."]);
+    await runGit(local, ["commit", "-m", "candidate"]);
+    await runGit(local, ["remote", "add", "origin", remote]);
+    assert.equal(
+      (await inspectReleaseRecordDurability({ repositoryRoot: local, buildRoot })).candidate,
+      false,
+    );
+
+    await runGit(local, ["push", "-u", "origin", "main"]);
+    assert.equal(
+      (await inspectReleaseRecordDurability({ repositoryRoot: local, buildRoot })).candidate,
+      true,
+    );
+
+    const unexpectedEvidence = path.join(evidenceRoot, "operator-notes.txt");
+    await writeFile(unexpectedEvidence, "not part of the exact evidence schema\n");
+    assert.equal(
+      (await inspectReleaseRecordDurability({ repositoryRoot: local, buildRoot })).candidate,
+      false,
+    );
+    await rm(unexpectedEvidence);
+
+    await writeFile(path.join(evidenceRoot, "summary.md"), "# Updated candidate\n");
+    assert.equal(
+      (await inspectReleaseRecordDurability({ repositoryRoot: local, buildRoot })).candidate,
+      false,
+    );
+    await runGit(local, ["add", "."]);
+    await runGit(local, ["commit", "-m", "update candidate summary"]);
+    assert.equal(
+      (await inspectReleaseRecordDurability({ repositoryRoot: local, buildRoot })).candidate,
+      false,
+    );
+    await runGit(local, ["push", "origin", "main"]);
+    assert.equal(
+      (await inspectReleaseRecordDurability({ repositoryRoot: local, buildRoot })).candidate,
+      true,
+    );
+  } finally {
+    await rm(temporaryRoot, { force: true, recursive: true });
   }
 });
 

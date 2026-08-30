@@ -1,4 +1,9 @@
+import { execFile as nodeExecFile } from "node:child_process";
+import { readdir, readFile, realpath } from "node:fs/promises";
 import path from "node:path";
+import { promisify } from "node:util";
+
+const execFile = promisify(nodeExecFile);
 
 export const RELEASE_STATES = Object.freeze([
   "NOT_READY",
@@ -153,6 +158,169 @@ const PRE_SUBMIT_KINDS = [
 
 function fail(code) {
   throw new Error(code);
+}
+
+async function durabilityGit(repositoryRoot, arguments_) {
+  try {
+    const environment = Object.fromEntries(
+      Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_")),
+    );
+    return (
+      await execFile("/usr/bin/git", arguments_, {
+        cwd: repositoryRoot,
+        encoding: "utf8",
+        env: { ...environment, LANG: "C", LC_ALL: "C" },
+        killSignal: "SIGKILL",
+        maxBuffer: 1024 * 1024,
+        timeout: 10_000,
+      })
+    ).stdout;
+  } catch {
+    return undefined;
+  }
+}
+
+async function trackedOnRemote(repositoryRoot, relativePath, trustedRemote) {
+  const status = await durabilityGit(repositoryRoot, [
+    "status",
+    "--porcelain=v1",
+    "--untracked-files=all",
+    "--",
+    relativePath,
+  ]);
+  if (status !== "") return false;
+  if (
+    (await durabilityGit(repositoryRoot, ["ls-files", "--error-unmatch", "--", relativePath])) ===
+    undefined
+  ) {
+    return false;
+  }
+  const commit = (
+    (await durabilityGit(repositoryRoot, ["log", "-1", "--format=%H", "--", relativePath])) ?? ""
+  ).trim();
+  if (!SHA40.test(commit)) return false;
+  const remoteRefs = await durabilityGit(repositoryRoot, [
+    "for-each-ref",
+    "--format=%(refname)",
+    "--contains",
+    commit,
+    `refs/remotes/${trustedRemote}`,
+  ]);
+  return typeof remoteRefs === "string" && remoteRefs.trim().length > 0;
+}
+
+async function containedRecordFiles(repositoryRoot, buildRoot) {
+  const [resolvedRepository, resolvedBuild] = await Promise.all([
+    realpath(repositoryRoot).catch(() => undefined),
+    realpath(buildRoot).catch(() => undefined),
+  ]);
+  if (!resolvedRepository || !resolvedBuild?.startsWith(`${resolvedRepository}${path.sep}`)) {
+    return [];
+  }
+  const result = [];
+  const visit = async (directory, depth) => {
+    if (depth > 8 || result.length > 512) fail("RELEASE_DURABILITY_INVALID");
+    for (const entry of await readdir(directory, { withFileTypes: true })) {
+      if (entry.isSymbolicLink()) fail("RELEASE_DURABILITY_INVALID");
+      const target = path.join(directory, entry.name);
+      if (entry.isDirectory()) await visit(target, depth + 1);
+      else if (entry.isFile()) result.push(target);
+    }
+  };
+  try {
+    await visit(buildRoot, 0);
+    return result;
+  } catch {
+    return [];
+  }
+}
+
+export async function inspectReleaseRecordDurability({
+  repositoryRoot,
+  buildRoot,
+  trustedRemote = "origin",
+}) {
+  if (
+    typeof repositoryRoot !== "string" ||
+    !path.isAbsolute(repositoryRoot) ||
+    path.normalize(repositoryRoot) !== repositoryRoot ||
+    typeof buildRoot !== "string" ||
+    !path.isAbsolute(buildRoot) ||
+    path.normalize(buildRoot) !== buildRoot ||
+    !/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/u.test(trustedRemote)
+  ) {
+    fail("RELEASE_DURABILITY_INVALID");
+  }
+  const files = await containedRecordFiles(repositoryRoot, buildRoot);
+  const durable = new Map();
+  for (const file of files) {
+    const relativePath = path.relative(repositoryRoot, file).split(path.sep).join("/");
+    durable.set(file, await trackedOnRemote(repositoryRoot, relativePath, trustedRemote));
+  }
+  const attestationKinds = [];
+  const eventKinds = [];
+  const candidateGroups = new Map();
+  const candidateMarkers = [];
+  for (const file of files) {
+    const relative = path.relative(buildRoot, file).split(path.sep).join("/");
+    const candidateMatch = relative.match(/^evidence\/candidate\/([^/]+)\/([^/]+)$/u);
+    if (candidateMatch) {
+      const group = candidateGroups.get(candidateMatch[1]) ?? [];
+      group.push({ file, name: candidateMatch[2] });
+      candidateGroups.set(candidateMatch[1], group);
+    }
+    if (!file.endsWith(".json")) continue;
+    let value;
+    try {
+      value = JSON.parse(await readFile(file, "utf8"));
+    } catch {
+      continue;
+    }
+    if (relative.startsWith("attestations/") && ATTESTATION_OUTCOMES.has(value.kind)) {
+      if (durable.get(file)) attestationKinds.push(value.kind);
+    } else if (relative.startsWith("events/") && value.kind === "candidate-built") {
+      candidateMarkers.push({ file, value });
+    } else if (relative.startsWith("events/") && LIFECYCLE_KINDS.has(value.kind)) {
+      if (durable.get(file)) eventKinds.push(value.kind);
+    }
+  }
+  const expectedCandidateFiles = [
+    "candidate.json",
+    "metadata-snapshot.json",
+    "privacy-evidence.json",
+    "runtime-egress.json",
+    "screenshots.json",
+    "summary.md",
+  ];
+  let candidate = false;
+  if (candidateGroups.size === 1 && candidateMarkers.length === 1) {
+    const candidateFiles = [...candidateGroups.values()][0];
+    const candidateNames = candidateFiles.map(({ name }) => name).sort();
+    const candidateRecord = candidateFiles.find(({ name }) => name === "candidate.json");
+    const marker = candidateMarkers[0];
+    let candidateValue;
+    try {
+      candidateValue = JSON.parse(await readFile(candidateRecord?.file ?? "", "utf8"));
+    } catch {
+      candidateValue = undefined;
+    }
+    candidate =
+      candidateNames.length === expectedCandidateFiles.length &&
+      candidateNames.every((name, index) => name === expectedCandidateFiles[index]) &&
+      durable.get(marker.file) === true &&
+      candidateFiles.every(({ file }) => durable.get(file) === true) &&
+      candidateValue?.releaseVersion === marker.value.marketingVersion &&
+      candidateValue?.buildNumber === marker.value.buildNumber &&
+      candidateValue?.sourceCommit === marker.value.productSourceCommit &&
+      candidateValue?.sourceTree === marker.value.productSourceTree &&
+      candidateValue?.appSha256 === marker.value.appSha256 &&
+      candidateValue?.packageSha256 === marker.value.packageSha256;
+  }
+  return {
+    attestationKinds: [...new Set(attestationKinds)].sort(),
+    candidate,
+    eventKinds: [...new Set(eventKinds)].sort(),
+  };
 }
 
 function assertExactKeys(value, keys, code) {
@@ -568,11 +736,47 @@ function collectValidEvents(events, releaseVersion, buildNumber) {
   return { events: valid, sequenceInvalid, terminalKind, uploadCount };
 }
 
+function releaseDurability(inputs) {
+  const supplied = inputs?.durability;
+  if (supplied === undefined) {
+    return {
+      attestationKinds: new Set(
+        (Array.isArray(inputs?.attestations) ? inputs.attestations : []).map(({ kind }) => kind),
+      ),
+      candidate: true,
+      eventKinds: new Set(
+        (Array.isArray(inputs?.events) ? inputs.events : []).map(({ kind }) => kind),
+      ),
+    };
+  }
+  if (
+    !supplied ||
+    typeof supplied !== "object" ||
+    Array.isArray(supplied) ||
+    Object.keys(supplied).sort().join(",") !== "attestationKinds,candidate,eventKinds" ||
+    typeof supplied.candidate !== "boolean" ||
+    !Array.isArray(supplied.attestationKinds) ||
+    !Array.isArray(supplied.eventKinds) ||
+    new Set(supplied.attestationKinds).size !== supplied.attestationKinds.length ||
+    new Set(supplied.eventKinds).size !== supplied.eventKinds.length ||
+    supplied.attestationKinds.some((kind) => !ATTESTATION_OUTCOMES.has(kind)) ||
+    supplied.eventKinds.some((kind) => !LIFECYCLE_KINDS.has(kind))
+  ) {
+    fail("RELEASE_DURABILITY_INVALID");
+  }
+  return {
+    attestationKinds: new Set(supplied.attestationKinds),
+    candidate: supplied.candidate,
+    eventKinds: new Set(supplied.eventKinds),
+  };
+}
+
 export function evaluateReleaseState(inputs) {
   const releaseVersion = inputs?.releaseVersion;
   const buildNumber = inputs?.buildNumber;
   const repository = inputs?.repository ?? {};
   const candidateEvidence = inputs?.candidate;
+  const durability = releaseDurability(inputs);
   const passed = [];
   const blockers = [];
 
@@ -624,28 +828,55 @@ export function evaluateReleaseState(inputs) {
           blockers.push(blocker(code, "candidate", remediation));
         }
       }
-    }
-  }
-
-  const attestations = collectValidAttestations(inputs?.attestations, releaseVersion, buildNumber);
-  let preUploadReady = candidateReady;
-  if (candidateReady) {
-    for (const kind of PRE_UPLOAD_KINDS) {
-      if (attestations.get(kind)?.length === 1) passed.push(`attestation-${kind}`);
-      else {
-        preUploadReady = false;
+      if (!durability.candidate) {
+        candidateReady = false;
         blockers.push(
           blocker(
-            `ATTESTATION_${kind.toUpperCase().replaceAll("-", "_")}_MISSING`,
-            "operator",
-            `Record the accountable ${kind} attestation.`,
+            "CANDIDATE_RECORD_NOT_DURABLE",
+            "candidate",
+            "Commit, push, and fetch the exact candidate event and evidence from the trusted remote.",
           ),
         );
       }
     }
   }
 
-  const lifecycle = collectValidEvents(inputs?.events, releaseVersion, buildNumber);
+  const localAttestations = collectValidAttestations(
+    inputs?.attestations,
+    releaseVersion,
+    buildNumber,
+  );
+  const attestations = new Map(
+    [...localAttestations].filter(([kind]) => durability.attestationKinds.has(kind)),
+  );
+  let preUploadReady = candidateReady;
+  if (candidateReady) {
+    for (const kind of PRE_UPLOAD_KINDS) {
+      if (attestations.get(kind)?.length === 1) passed.push(`attestation-${kind}`);
+      else {
+        preUploadReady = false;
+        const locallyPresent = localAttestations.get(kind)?.length === 1;
+        blockers.push(
+          blocker(
+            locallyPresent
+              ? `ATTESTATION_${kind.toUpperCase().replaceAll("-", "_")}_RECORD_NOT_DURABLE`
+              : `ATTESTATION_${kind.toUpperCase().replaceAll("-", "_")}_MISSING`,
+            "operator",
+            locallyPresent
+              ? `Commit, push, and fetch the accountable ${kind} attestation from the trusted remote.`
+              : `Record the accountable ${kind} attestation.`,
+          ),
+        );
+      }
+    }
+  }
+
+  const localEvents = Array.isArray(inputs?.events) ? inputs.events : [];
+  const lifecycle = collectValidEvents(
+    localEvents.filter(({ kind }) => durability.eventKinds.has(kind)),
+    releaseVersion,
+    buildNumber,
+  );
   const { events } = lifecycle;
   const preSubmitAttestationsComplete = PRE_SUBMIT_KINDS.every(
     (kind) => attestations.get(kind)?.length === 1,
@@ -682,7 +913,16 @@ export function evaluateReleaseState(inputs) {
   );
   const uploaded = preUploadReady && lifecycle.uploadCount === 1 && exactUploads.length === 1;
   if (preUploadReady && !uploaded) {
-    if (lifecycle.uploadCount <= 1) {
+    const localUpload = localEvents.some(({ kind }) => kind === "uploaded");
+    if (localUpload && !durability.eventKinds.has("uploaded")) {
+      blockers.push(
+        blocker(
+          "APP_STORE_UPLOAD_RECORD_NOT_DURABLE",
+          "operator",
+          "Commit, push, and fetch the uploaded event from the trusted remote.",
+        ),
+      );
+    } else if (lifecycle.uploadCount <= 1) {
       blockers.push(
         blocker(
           "APP_STORE_UPLOAD_NOT_RECORDED",
@@ -700,11 +940,16 @@ export function evaluateReleaseState(inputs) {
       if (attestations.get(kind)?.length === 1) passed.push(`attestation-${kind}`);
       else {
         preSubmitReady = false;
+        const locallyPresent = localAttestations.get(kind)?.length === 1;
         blockers.push(
           blocker(
-            `ATTESTATION_${kind.toUpperCase().replaceAll("-", "_")}_MISSING`,
+            locallyPresent
+              ? `ATTESTATION_${kind.toUpperCase().replaceAll("-", "_")}_RECORD_NOT_DURABLE`
+              : `ATTESTATION_${kind.toUpperCase().replaceAll("-", "_")}_MISSING`,
             "operator",
-            `Record the accountable ${kind} attestation.`,
+            locallyPresent
+              ? `Commit, push, and fetch the accountable ${kind} attestation from the trusted remote.`
+              : `Record the accountable ${kind} attestation.`,
           ),
         );
       }

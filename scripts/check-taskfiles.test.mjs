@@ -34,6 +34,11 @@ const allowedExecutablePatterns = [
   /^mise exec -- node scripts\/check-clean-tree\.mjs$/,
   /^mise exec -- node scripts\/check-macos-store\.mjs --state$/,
   /^mise exec -- node scripts\/check-macos-store\.mjs --require-state (?:PRE_UPLOAD_READY|PRE_SUBMIT_READY)$/,
+  /^mise exec -- node scripts\/capture-app-store-screenshots\.mjs --build "\$TAMMY_RELEASE_BUILD_NUMBER" --source-commit "\$TAMMY_PRODUCT_SOURCE_COMMIT" --source-tree "\$TAMMY_PRODUCT_SOURCE_TREE" --run-id "\$TAMMY_SCREENSHOT_RUN_ID"$/,
+  /^mise exec -- node scripts\/check-app-store-screenshots\.mjs --(?:validate|promote) --source "\$TAMMY_CAPTURE_DIR"$/,
+  /^mise exec -- node scripts\/check-app-store-screenshots\.mjs --check$/,
+  /^mise exec -- node scripts\/promote-macos-release-evidence\.mjs --mode "\$TAMMY_EVIDENCE_MODE" --evidence-dir "\$TAMMY_EVIDENCE_DIR" --source-dir "\$TAMMY_EVIDENCE_SOURCE_DIR"$/,
+  /^mise exec -- node scripts\/inspect-macos-release-package\.mjs --package "\$TAMMY_ARCHIVE_PKG" --record "\$TAMMY_RECORD_DIR"$/,
   /^mise exec -- node scripts\/reserve-macos-build\.mjs --version "\$TAMMY_RELEASE_VERSION" --operator "\$TAMMY_RELEASE_OPERATOR" --number "\$TAMMY_RELEASE_BUILD_NUMBER"$/,
   /^mise exec -- node scripts\/launch-local-scenario\.mjs (?:accounting-fresh|sbr-simulator|sbr-doctor|sbr-evte)$/,
   /^mise exec -- node scripts\/check-sbr-registration\.mjs(?: --doctor-preflight)?$/,
@@ -256,7 +261,13 @@ test("documentation presents Task scenarios as the local command front door", as
         "release:reserve-build",
         "release:check",
         "release:development",
+        "release:screenshots",
+        "release:screenshots:validate",
+        "release:screenshots:promote",
+        "release:screenshots:check",
         "release:candidate",
+        "release:evidence",
+        "release:inspect-package",
         "release:pre-upload-check",
         "release:pre-submit-check",
         "deploy:mas",
@@ -1012,18 +1023,20 @@ test("local Task front door preserves the safe development contract", async () =
     "reserve-build",
     "check",
     "development",
+    "screenshots",
+    "screenshots:validate",
+    "screenshots:promote",
+    "screenshots:check",
     "candidate",
+    "evidence",
+    "inspect-package",
     "pre-upload-check",
     "pre-submit-check",
   ]);
   assert.deepEqual(shellCommands(releaseTasks.state), [
     "mise exec -- node scripts/check-macos-store.mjs --state",
   ]);
-  assert.deepEqual(releaseTasks["reserve-build"].requires?.vars, [
-    "VERSION",
-    "OPERATOR",
-    "NUMBER",
-  ]);
+  assert.deepEqual(releaseTasks["reserve-build"].requires?.vars, ["VERSION", "OPERATOR", "NUMBER"]);
   assert.deepEqual(releaseTasks["reserve-build"].env, {
     TAMMY_RELEASE_VERSION: "{{.VERSION}}",
     TAMMY_RELEASE_OPERATOR: "{{.OPERATOR}}",
@@ -1108,6 +1121,35 @@ test("local Task front door preserves the safe development contract", async () =
     releaseTasks.development.preconditions?.[8]?.sh,
     `mise exec -- node -e '${macosReleaseDevelopmentInstallerScript}'`,
   );
+  assert.deepEqual(releaseTasks.screenshots.requires?.vars, [
+    "BUILD",
+    "SOURCE_COMMIT",
+    "SOURCE_TREE",
+    "RUN_ID",
+  ]);
+  assert.deepEqual(shellCommands(releaseTasks.screenshots), [
+    'mise exec -- node scripts/capture-app-store-screenshots.mjs --build "$TAMMY_RELEASE_BUILD_NUMBER" --source-commit "$TAMMY_PRODUCT_SOURCE_COMMIT" --source-tree "$TAMMY_PRODUCT_SOURCE_TREE" --run-id "$TAMMY_SCREENSHOT_RUN_ID"',
+  ]);
+  for (const [taskName, mode] of [
+    ["screenshots:validate", "validate"],
+    ["screenshots:promote", "promote"],
+  ]) {
+    assert.deepEqual(releaseTasks[taskName].requires?.vars, ["CAPTURE_DIR"]);
+    assert.deepEqual(shellCommands(releaseTasks[taskName]), [
+      `mise exec -- node scripts/check-app-store-screenshots.mjs --${mode} --source "$TAMMY_CAPTURE_DIR"`,
+    ]);
+  }
+  assert.deepEqual(shellCommands(releaseTasks["screenshots:check"]), [
+    "mise exec -- node scripts/check-app-store-screenshots.mjs --check",
+  ]);
+  assert.deepEqual(releaseTasks.evidence.requires?.vars, ["MODE", "EVIDENCE_DIR"]);
+  assert.deepEqual(shellCommands(releaseTasks.evidence), [
+    'mise exec -- node scripts/promote-macos-release-evidence.mjs --mode "$TAMMY_EVIDENCE_MODE" --evidence-dir "$TAMMY_EVIDENCE_DIR" --source-dir "$TAMMY_EVIDENCE_SOURCE_DIR"',
+  ]);
+  assert.deepEqual(releaseTasks["inspect-package"].requires?.vars, ["ARCHIVE_PKG", "RECORD_DIR"]);
+  assert.deepEqual(shellCommands(releaseTasks["inspect-package"]), [
+    'mise exec -- node scripts/inspect-macos-release-package.mjs --package "$TAMMY_ARCHIVE_PKG" --record "$TAMMY_RECORD_DIR"',
+  ]);
   const developmentInstaller = await runTargetPrecondition(
     releaseTasks.development.preconditions[8],
     "darwin/arm64",

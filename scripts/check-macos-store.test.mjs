@@ -372,6 +372,18 @@ test("repository inspection derives pre-upload and pre-submit states from canoni
     }
 
     const preUpload = await inspectMacOSStoreRepository(fixtureRoot, {
+      recordDurability: {
+        attestationKinds: [
+          "company-controller",
+          "content-rights",
+          "export-compliance",
+          "pricing-availability",
+          "privacy-answer",
+          "seller-eligibility",
+        ],
+        candidate: true,
+        eventKinds: [],
+      },
       repositoryTestsPassed: true,
       screenshotDefinitionsPassed: true,
     });
@@ -405,6 +417,22 @@ test("repository inspection derives pre-upload and pre-submit states from canoni
       );
     }
     const preSubmit = await inspectMacOSStoreRepository(fixtureRoot, {
+      recordDurability: {
+        attestationKinds: [
+          "age-rating",
+          "app-store-warning-review",
+          "company-controller",
+          "content-rights",
+          "export-compliance",
+          "metadata-assets-entered",
+          "pricing-availability",
+          "privacy-answer",
+          "processed-build",
+          "seller-eligibility",
+        ],
+        candidate: true,
+        eventKinds: ["uploaded"],
+      },
       repositoryTestsPassed: true,
       screenshotDefinitionsPassed: true,
     });

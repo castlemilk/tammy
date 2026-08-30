@@ -17,7 +17,11 @@ import { isDeepStrictEqual, promisify } from "node:util";
 
 import Ajv2020 from "ajv/dist/2020.js";
 
-import { evaluateReleaseState, validateReleaseAttestation } from "./macos-release-state.mjs";
+import {
+  evaluateReleaseState,
+  inspectReleaseRecordDurability,
+  validateReleaseAttestation,
+} from "./macos-release-state.mjs";
 import {
   readMacOSLifecycleEvents,
   validateBuildLedger,
@@ -29,7 +33,7 @@ const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 const APP_BUNDLE_ID = "com.tammy.desktop";
 const APP_CATEGORY = "public.app-category.finance";
 const CANONICAL_METADATA_SHA256 =
-  "346eb61962f8d2aa2b0ffe6144f6fbcd5825859f9525765ef129d1a970ca5f23";
+  "e43b2639003bf25a7885ba925e96a5f93862017ec0090dc8f4a3e85501bf06ce";
 
 function fail(code = "MACOS_STORE_REPOSITORY_INVALID") {
   throw new Error(code);
@@ -870,7 +874,7 @@ async function readMacOSReleaseRecord(
 
 export async function inspectMacOSStoreRepository(
   root,
-  { repositoryTestsPassed = false, screenshotDefinitionsPassed = false } = {},
+  { recordDurability, repositoryTestsPassed = false, screenshotDefinitionsPassed = false } = {},
 ) {
   if (!path.isAbsolute(root)) fail();
   const desktopRoot = path.join(root, "apps", "desktop");
@@ -1096,6 +1100,16 @@ export async function inspectMacOSStoreRepository(
     selectedBuildNumber,
     lifecycleRecords,
   );
+  const durability =
+    recordDurability ??
+    (await inspectReleaseRecordDurability({
+      buildRoot: path.join(
+        paths.releaseRecords,
+        desktopPackage.version,
+        `build-${selectedBuildNumber}`,
+      ),
+      repositoryRoot: root,
+    }));
   const releaseState = evaluateReleaseState({
     releaseVersion: desktopPackage.version,
     buildNumber: selectedBuildNumber,
@@ -1111,6 +1125,7 @@ export async function inspectMacOSStoreRepository(
     },
     candidate: releaseRecord.candidate,
     attestations: releaseRecord.attestations,
+    durability,
     events: releaseRecord.events,
   });
   const blockers = [
@@ -1239,14 +1254,22 @@ async function main() {
     try {
       await execFile(
         process.execPath,
-        ["--test", "scripts/check-macos-store.test.mjs", "scripts/macos-release-state.test.mjs"],
+        [
+          "--test",
+          "scripts/check-macos-store.test.mjs",
+          "scripts/macos-release-state.test.mjs",
+          "scripts/check-app-store-screenshots.test.mjs",
+        ],
         { cwd: root, maxBuffer: 4 * 1024 * 1024 },
       );
     } catch {
       fail("MACOS_REPOSITORY_TESTS_FAILED");
     }
   }
-  const result = await inspectMacOSStoreRepository(root, { repositoryTestsPassed: verifyTests });
+  const result = await inspectMacOSStoreRepository(root, {
+    repositoryTestsPassed: verifyTests,
+    screenshotDefinitionsPassed: verifyTests,
+  });
   if (unsignedProfileFacts) {
     const { facts, release: unsignedRelease } = await readValidatedMacOSUnsignedFacts(
       root,

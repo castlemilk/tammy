@@ -706,12 +706,34 @@ export async function executeScreenshotCapture(
 }
 
 async function main() {
-  if (process.argv.length !== 3 || process.argv[2] !== "--help") {
+  const arguments_ = process.argv.slice(2);
+  if (arguments_.length === 1 && arguments_[0] === "--help") {
+    process.stdout.write(
+      "Capture an existing exact development-signed app with --build, --source-commit, --source-tree, and --run-id.\n",
+    );
+    return;
+  }
+  const keys = ["--build", "--source-commit", "--source-tree", "--run-id"];
+  if (
+    arguments_.length !== 8 ||
+    keys.some((key) => {
+      const index = arguments_.indexOf(key);
+      return index < 0 || index % 2 !== 0 || index === arguments_.length - 1;
+    })
+  ) {
     fail("APP_STORE_SCREENSHOT_CAPTURE_ARGUMENTS_INVALID");
   }
-  process.stdout.write(
-    "Capture execution is owned by the release task with immutable build inputs.\n",
-  );
+  const value = (key) => arguments_[arguments_.indexOf(key) + 1];
+  const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+  const plan = await createScreenshotCapturePlan({
+    buildNumber: value("--build"),
+    productSourceCommit: value("--source-commit"),
+    productSourceTree: value("--source-tree"),
+    repositoryRoot,
+    runId: value("--run-id"),
+  });
+  const result = await executeScreenshotCapture(plan);
+  process.stdout.write(`${JSON.stringify(result)}\n`);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

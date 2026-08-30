@@ -67,6 +67,17 @@ mise exec -- task release:development
 
 `release:development` forces development signing and produces `apps/desktop/out/Tammy-mas-arm64/Tammy.app`. Use it for a local sandbox smoke test. It deliberately does not produce an installer package or upload.
 
+After the exact development app and unsigned-content manifest have been copied into the reserved `.tmp/macos-release/<version>/build-<number>/` run, capture and review screenshots as separate scenarios:
+
+```sh
+mise exec -- task release:screenshots BUILD=1 SOURCE_COMMIT=<40-hex-product-commit> SOURCE_TREE=<40-hex-product-tree> RUN_ID=<UUIDv7>
+mise exec -- task release:screenshots:validate CAPTURE_DIR=/absolute/path/to/the/reported/capture
+mise exec -- task release:screenshots:promote CAPTURE_DIR=/absolute/path/to/the/reported/capture
+mise exec -- task release:screenshots:check
+```
+
+`release:screenshots` launches only the existing development-signed artifact and prints its new capture directory. Validation is read-only. Promotion is a separate reviewed action that atomically replaces the canonical `en-AU` set, and `release:screenshots:check` subsequently checks only that canonical set. None of these tasks builds, signs, deploys the public site, uploads, or submits.
+
 For an upload candidate, use the distribution profile and identities:
 
 ```sh
@@ -85,6 +96,16 @@ mise exec -- task deploy:mas
 ```
 
 `release:candidate` and `deploy:mas` force distribution signing. They check the clean tree, finalized metadata, and release inputs; rebuild the Go core and authenticate its SQLCipher runtime before signing; verify the Apple signature and record the signed core hash without executing that inherited child outside its sandbox parent; package and sign the outer MAS app without signing the core a second time; verify the actual `Tammy-mas-arm64` core/manifest equality; and use Apple's `/usr/bin/productbuild` to create `apps/desktop/out/make/pkg/arm64/Tammy-<version>-build.<number>.pkg`. They print local package evidence and never upload. A distribution-signed app is for App Store upload; use the Apple Development build for local execution.
+
+Assemble the five redacted JSON evidence owners in one temporary source directory, then collect, check, and promote that exact set explicitly:
+
+```sh
+mise exec -- task release:evidence MODE=collect SOURCE_DIR=/absolute/path/to/assembled-json EVIDENCE_DIR=/absolute/path/to/.tmp/macos-release/0.1.0/build-2/evidence/<UUIDv7>
+mise exec -- task release:evidence MODE=check EVIDENCE_DIR=/absolute/path/to/.tmp/macos-release/0.1.0/build-2/evidence/<UUIDv7>
+mise exec -- task release:evidence MODE=promote EVIDENCE_DIR=/absolute/path/to/.tmp/macos-release/0.1.0/build-2/evidence/<UUIDv7>
+```
+
+The source directory must contain exactly `candidate.json`, `metadata-snapshot.json`, `privacy-evidence.json`, `runtime-egress.json`, and `screenshots.json`. Collection exclusively creates the local staging directory and prints it. Check is read-only. Promotion creates the six-file durable candidate bundle and its `candidate-built` marker atomically; it never uploads or submits. Commit and push the promoted record, then fetch the trusted `origin` remote before expecting `CANDIDATE_READY`.
 
 Before an accountable operator uploads or submits, run the matching read-only state gate:
 
@@ -129,6 +150,15 @@ pkgutil --check-signature "$PKG"
 spctl --assess --type install --verbose=4 "$PKG"
 ```
 
+Once its durable candidate record exists, authenticate the unchanged archive against that one exact record:
+
+```sh
+RECORD='/absolute/path/to/docs/release/records/macos/0.1.0/build-2'
+mise exec -- task release:inspect-package ARCHIVE_PKG="$PKG" RECORD_DIR="$RECORD"
+```
+
+This read-only task verifies the stable package hash, installer signature, Gatekeeper observation, version/build, app and helper identifiers, arm64 architecture, minimum macOS version, public URLs, export setting, and frozen source linkage. It does not rebuild, resign, unpack into the repository, upload, or submit.
+
 Record the `spctl` output as observational local Gatekeeper evidence. A pre-submission Mac App Store candidate may not be accepted like a notarized Developer ID build before Apple processing, so do not treat that local classification as a substitute for App Store Connect validation.
 
 ## Metadata and App Review
@@ -148,7 +178,7 @@ Manually upload the signed `.pkg` with Apple's Transporter app, wait for App Sto
 
 ## Release record and rollback
 
-Record the commit, marketing version, build number, signing/profile names, package SHA-256, validation results, screenshots, privacy report, App Store Connect build identifier, and reviewer notes. Do not record private key material or credentials.
+Record the commit, marketing version, build number, signing/profile names, package SHA-256, validation results, screenshots, privacy report, App Store Connect build identifier, and reviewer notes. Do not record private key material or credentials. Every candidate, attestation, and lifecycle fact consumed by a readiness gate must be in a clean commit reachable from the fetched trusted remote; local or merely committed evidence reports a `*_RECORD_NOT_DURABLE` blocker.
 
 The public privacy/support site has a separate immutable record under `docs/release/public-site`. A successful public deployment exclusively creates `deployments/<deployment-id>.json`; `current.json` is only an atomic pointer to the latest passing record. Credentials, source-write URLs, account-user IDs, tokens, and mutable deployment URLs never belong in those files.
 

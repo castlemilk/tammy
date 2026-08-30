@@ -74,6 +74,54 @@ tasks:
       - mise exec -- node scripts/check-clean-tree.mjs
       - TAMMY_MACOS_SIGNING_MODE=development mise exec -- pnpm desktop:make:mas
 
+  screenshots:
+    desc: Capture App Store screenshots from an existing exact development-signed app.
+    summary: |
+      Launches the existing development-signed app and captures one isolated en-AU
+      screenshot run. It does not build, sign, promote, publish, upload, or submit.
+    requires:
+      vars: [BUILD, SOURCE_COMMIT, SOURCE_TREE, RUN_ID]
+    env:
+      TAMMY_RELEASE_BUILD_NUMBER: '{{.BUILD}}'
+      TAMMY_PRODUCT_SOURCE_COMMIT: '{{.SOURCE_COMMIT}}'
+      TAMMY_PRODUCT_SOURCE_TREE: '{{.SOURCE_TREE}}'
+      TAMMY_SCREENSHOT_RUN_ID: '{{.RUN_ID}}'
+    cmds:
+      - >-
+        mise exec -- node scripts/capture-app-store-screenshots.mjs --build "$TAMMY_RELEASE_BUILD_NUMBER" --source-commit "$TAMMY_PRODUCT_SOURCE_COMMIT" --source-tree "$TAMMY_PRODUCT_SOURCE_TREE" --run-id "$TAMMY_SCREENSHOT_RUN_ID"
+
+  screenshots:validate:
+    desc: Validate one temporary App Store screenshot run without promotion.
+    summary: |
+      Read-only validation of an exact capture directory. It does not build, sign,
+      capture, promote, publish, upload, or submit.
+    requires:
+      vars: [CAPTURE_DIR]
+    env:
+      TAMMY_CAPTURE_DIR: '{{.CAPTURE_DIR}}'
+    cmds:
+      - mise exec -- node scripts/check-app-store-screenshots.mjs --validate --source "$TAMMY_CAPTURE_DIR"
+
+  screenshots:promote:
+    desc: Promote one reviewed App Store screenshot run into the canonical directory.
+    summary: |
+      Validates and atomically promotes an existing capture. It does not build, sign,
+      capture, publish, upload, or submit.
+    requires:
+      vars: [CAPTURE_DIR]
+    env:
+      TAMMY_CAPTURE_DIR: '{{.CAPTURE_DIR}}'
+    cmds:
+      - mise exec -- node scripts/check-app-store-screenshots.mjs --promote --source "$TAMMY_CAPTURE_DIR"
+
+  screenshots:check:
+    desc: Check the canonical App Store screenshot set.
+    summary: |
+      Read-only canonical screenshot validation. It does not build, sign, capture,
+      promote, publish, upload, or submit.
+    cmds:
+      - mise exec -- node scripts/check-app-store-screenshots.mjs --check
+
   candidate:
     desc: Create and locally validate a signed macOS distribution package candidate.
     summary: |
@@ -115,6 +163,37 @@ tasks:
     cmds:
       - mise exec -- node scripts/check-clean-tree.mjs
       - TAMMY_MACOS_SIGNING_MODE=distribution mise exec -- pnpm desktop:make:mas
+
+  evidence:
+    desc: Collect, check, or promote one exact macOS release evidence set.
+    summary: |
+      MODE=collect copies exact local evidence into a new staging directory;
+      MODE=check validates it read-only; MODE=promote atomically records it. This
+      task does not build, sign, capture, publish, upload, or submit.
+    requires:
+      vars: [MODE, EVIDENCE_DIR]
+    vars:
+      SOURCE_DIR: '{{default .EVIDENCE_DIR .SOURCE_DIR}}'
+    env:
+      TAMMY_EVIDENCE_MODE: '{{.MODE}}'
+      TAMMY_EVIDENCE_DIR: '{{.EVIDENCE_DIR}}'
+      TAMMY_EVIDENCE_SOURCE_DIR: '{{.SOURCE_DIR}}'
+    cmds:
+      - >-
+        mise exec -- node scripts/promote-macos-release-evidence.mjs --mode "$TAMMY_EVIDENCE_MODE" --evidence-dir "$TAMMY_EVIDENCE_DIR" --source-dir "$TAMMY_EVIDENCE_SOURCE_DIR"
+
+  inspect-package:
+    desc: Compare an existing App Store package with one exact durable build record.
+    summary: |
+      Read-only archive, signature, identity, architecture, URL, and provenance
+      inspection. It does not rebuild, sign, capture, publish, upload, or submit.
+    requires:
+      vars: [ARCHIVE_PKG, RECORD_DIR]
+    env:
+      TAMMY_ARCHIVE_PKG: '{{.ARCHIVE_PKG}}'
+      TAMMY_RECORD_DIR: '{{.RECORD_DIR}}'
+    cmds:
+      - mise exec -- node scripts/inspect-macos-release-package.mjs --package "$TAMMY_ARCHIVE_PKG" --record "$TAMMY_RECORD_DIR"
 
   pre-upload-check:
     desc: Require the recorded release to reach the pre-upload state gate.
