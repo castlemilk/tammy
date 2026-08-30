@@ -152,6 +152,30 @@ export function validateMacOSReleaseEnvironment(environment) {
   return { buildNumber, mode };
 }
 
+export function validateMacOSUnsignedEnvironment(environment) {
+  const buildNumber = required(environment, "TAMMY_MACOS_BUILD_NUMBER");
+  const exportCompliance = required(environment, "TAMMY_MACOS_EXPORT_COMPLIANCE");
+  requiredHttps(environment, "TAMMY_MACOS_PRIVACY_POLICY_URL");
+  const teamID = required(environment, "TAMMY_MACOS_TEAM_ID");
+  const target = required(environment, "TAMMY_MACOS_TARGET");
+  requiredHttps(environment, "TAMMY_MACOS_SUPPORT_URL");
+  if (
+    !/^[1-9][0-9]*$/.test(buildNumber) ||
+    !["exempt", "non-exempt"].includes(exportCompliance) ||
+    !/^[A-Z0-9]{10}$/.test(teamID) ||
+    target !== "mas/arm64" ||
+    [
+      "TAMMY_MACOS_INSTALLER_IDENTITY",
+      "TAMMY_MACOS_PROVISIONING_PROFILE",
+      "TAMMY_MACOS_SIGNING_IDENTITY",
+      "TAMMY_MACOS_SIGNING_MODE",
+    ].some((key) => environment[key] !== undefined)
+  ) {
+    fail("MACOS_RELEASE_INPUT_INVALID");
+  }
+  return { buildNumber };
+}
+
 function isRecord(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
@@ -521,14 +545,11 @@ export function validateMacOSSellerEligibility(
   }
 }
 
-export async function readValidatedMacOSReleaseFacts(root, environment, inspectedResult) {
-  const result =
-    inspectedResult ?? (await inspectMacOSStoreRepository(root, { repositoryTestsPassed: false }));
+function validateSelectedReleaseFacts(result, environment, release) {
   if (result.blockers.includes("company-controller-attestation")) {
     fail("MACOS_STORE_COMPANY_AUTHORITY_MISSING");
   }
   if (!result.metadataComplete) fail("MACOS_RELEASE_METADATA_INCOMPLETE");
-  const release = validateMacOSReleaseEnvironment(environment);
   if (
     !result.buildReservations.some(
       (entry) =>
@@ -541,6 +562,31 @@ export async function readValidatedMacOSReleaseFacts(root, environment, inspecte
     fail("MACOS_BUILD_CONSUMED");
   }
   assertMacOSReleaseMetadata(result.metadata, environment);
+  return {
+    identity: {
+      appStoreName: result.identity.appStoreName,
+      architectures: result.identity.architectures,
+      bundleIdentifier: result.identity.bundleIdentifier,
+      copyright: result.identity.copyright,
+      installedName: result.identity.installedName,
+      minimumMacOSVersion: result.identity.minimumMacOSVersion,
+      publisher: result.identity.publisher,
+      supportEmail: result.identity.supportEmail,
+    },
+    marketingVersion: result.version,
+    publicLinks: {
+      privacyPolicy: result.publicSite.privacyPolicy,
+      support: result.publicSite.support,
+    },
+    target: "mas/arm64",
+  };
+}
+
+export async function readValidatedMacOSReleaseFacts(root, environment, inspectedResult) {
+  const result =
+    inspectedResult ?? (await inspectMacOSStoreRepository(root, { repositoryTestsPassed: false }));
+  const release = validateMacOSReleaseEnvironment(environment);
+  const facts = validateSelectedReleaseFacts(result, environment, release);
   if (release.mode === "distribution") {
     const sellerPath = path.join(
       root,
@@ -570,27 +616,14 @@ export async function readValidatedMacOSReleaseFacts(root, environment, inspecte
       teamID,
     });
   }
-  return {
-    facts: {
-      identity: {
-        appStoreName: result.identity.appStoreName,
-        architectures: result.identity.architectures,
-        bundleIdentifier: result.identity.bundleIdentifier,
-        copyright: result.identity.copyright,
-        installedName: result.identity.installedName,
-        minimumMacOSVersion: result.identity.minimumMacOSVersion,
-        publisher: result.identity.publisher,
-        supportEmail: result.identity.supportEmail,
-      },
-      marketingVersion: result.version,
-      publicLinks: {
-        privacyPolicy: result.publicSite.privacyPolicy,
-        support: result.publicSite.support,
-      },
-      target: "mas/arm64",
-    },
-    release,
-  };
+  return { facts, release };
+}
+
+export async function readValidatedMacOSUnsignedFacts(root, environment, inspectedResult) {
+  const result =
+    inspectedResult ?? (await inspectMacOSStoreRepository(root, { repositoryTestsPassed: false }));
+  const release = validateMacOSUnsignedEnvironment(environment);
+  return { facts: validateSelectedReleaseFacts(result, environment, release), release };
 }
 
 function decodePlistText(value) {
@@ -1175,6 +1208,7 @@ async function main() {
   const arguments_ = process.argv.slice(2);
   const release = isDeepStrictEqual(arguments_, ["--release"]);
   const profileFacts = isDeepStrictEqual(arguments_, ["--profile-facts"]);
+  const unsignedProfileFacts = isDeepStrictEqual(arguments_, ["--unsigned-profile-facts"]);
   const runTests = isDeepStrictEqual(arguments_, ["--run-tests"]);
   const stateOnly = isDeepStrictEqual(arguments_, ["--state"]);
   const requiredState =
@@ -1187,6 +1221,7 @@ async function main() {
     arguments_.length > 0 &&
     !release &&
     !profileFacts &&
+    !unsignedProfileFacts &&
     !runTests &&
     !stateOnly &&
     requiredState === undefined
@@ -1194,7 +1229,12 @@ async function main() {
     fail("MACOS_STORE_ARGUMENT_INVALID");
   }
   const verifyTests =
-    runTests || release || profileFacts || stateOnly || requiredState !== undefined;
+    runTests ||
+    release ||
+    profileFacts ||
+    unsignedProfileFacts ||
+    stateOnly ||
+    requiredState !== undefined;
   if (verifyTests) {
     try {
       await execFile(
@@ -1207,6 +1247,17 @@ async function main() {
     }
   }
   const result = await inspectMacOSStoreRepository(root, { repositoryTestsPassed: verifyTests });
+  if (unsignedProfileFacts) {
+    const { facts, release: unsignedRelease } = await readValidatedMacOSUnsignedFacts(
+      root,
+      process.env,
+      result,
+    );
+    await assertMacOSReleaseTreeClean(root);
+    await requireReleaseEvidenceClean(root, result, unsignedRelease);
+    process.stdout.write(`${JSON.stringify(facts)}\n`);
+    return;
+  }
   if (profileFacts) {
     const { facts, release: profileRelease } = await readValidatedMacOSReleaseFacts(
       root,

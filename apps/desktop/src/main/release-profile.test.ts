@@ -112,6 +112,8 @@ describe("createMacOSReleaseProfile", () => {
       ITSAppUsesNonExemptEncryption: false,
       LSMinimumSystemVersion: "14.0",
       NSHumanReadableCopyright: "© 2026 Gamma Systems Pty Ltd",
+      TammyPrivacyPolicyURL: "https://tammy-accounting.castlemilk.chatgpt.site/privacy",
+      TammySupportURL: "https://tammy-accounting.castlemilk.chatgpt.site/support",
     });
     expect(Object.isExtensible(profile.info)).toBe(true);
     expect(profile.publicLinks).toEqual({
@@ -186,6 +188,38 @@ describe("createMacOSReleaseProfile", () => {
     if (profile.kind !== "mas") throw new Error("expected MAS profile");
     expect(profile.installerIdentity).toBeUndefined();
     expect(profile.sign.type).toBe("development");
+  });
+
+  it("creates an unsigned MAS staging profile without accepting signing material", () => {
+    const environment = distributionEnvironment();
+    environment.TAMMY_MACOS_ARTIFACT_PHASE = "unsigned-staging";
+    delete environment.TAMMY_MACOS_INSTALLER_IDENTITY;
+    delete environment.TAMMY_MACOS_PROVISIONING_PROFILE;
+    delete environment.TAMMY_MACOS_SIGNING_IDENTITY;
+    delete environment.TAMMY_MACOS_SIGNING_MODE;
+
+    const profile = createTestProfile(environment);
+    expect(profile.kind).toBe("mas-unsigned-staging");
+    if (profile.kind !== "mas-unsigned-staging") throw new Error("expected unsigned staging");
+    expect(profile.buildVersion).toBe("42");
+    expect(profile.info.ElectronTeamID).toBe("ABCDE12345");
+    expect("sign" in profile).toBe(false);
+    expect("installerIdentity" in profile).toBe(false);
+  });
+
+  it.each([
+    "TAMMY_MACOS_INSTALLER_IDENTITY",
+    "TAMMY_MACOS_PROVISIONING_PROFILE",
+    "TAMMY_MACOS_SIGNING_IDENTITY",
+    "TAMMY_MACOS_SIGNING_MODE",
+  ])("rejects %s in unsigned staging", (key) => {
+    expect(() =>
+      createTestProfile({
+        ...distributionEnvironment(),
+        TAMMY_MACOS_ARTIFACT_PHASE: "unsigned-staging",
+        [key]: "must-not-be-accepted",
+      }),
+    ).toThrow("MACOS_RELEASE_INPUT_INVALID");
   });
 
   it.each([

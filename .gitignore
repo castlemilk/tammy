@@ -2,6 +2,7 @@
 .worktrees/
 /.tmp/contracts/
 /.tmp/descriptor-evidence/
+/.tmp/macos-release/
 /.tmp/sqlcipher/
 /.tmp/sbr-build-owner/
 .tmp/sbr-helper-build/

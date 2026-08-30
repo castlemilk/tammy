@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -91,6 +92,9 @@ test("Forge conditionally packages exact SBR resources and preserves helper byte
   );
   assert.match(source, /packagedSbrHelperSuffix/);
   assert.match(source, /isManifestBoundExecutable/);
+  assert.match(source, /mas-unsigned-staging/);
+  assert.match(source, /TAMMY_MACOS_UNSIGNED_OUTPUT_ROOT/);
+  assert.match(source, /delete packagerConfig\.osxSign/);
   assert.doesNotMatch(source, /config\/sbr\/evte/);
 });
 
@@ -98,6 +102,7 @@ test("generated helper, staged profiles, and provenance never dirty the source t
   const source = await readFile(".gitignore", "utf8");
   for (const entry of [
     ".tmp/sbr-helper-build/",
+    "/.tmp/macos-release/",
     "apps/desktop/resources/sbr-helper/",
     "apps/desktop/resources/sbr/",
   ])
@@ -202,6 +207,70 @@ test("MAS profile owner binds final signed bytes without mutating tracked runtim
         ),
       ).helper_sha256,
       result.helper_sha256,
+    );
+  } finally {
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
+test("unsigned MAS staging profile binds the exact raw helper bytes", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "tammy-mas-unsigned-profile-"));
+  try {
+    const helper = path.join(
+      root,
+      "apps/desktop/resources/sbr-helper/darwin-arm64/tammy-sbr-helper",
+    );
+    const sessionRoot = path.join(root, ".tmp/sbr-helper-build");
+    const configRoot = path.join(root, "config/sbr/simulator");
+    const helperBytes = Buffer.from("raw unsigned MAS helper\n");
+    await Promise.all([
+      mkdir(path.dirname(helper), { recursive: true }),
+      mkdir(sessionRoot, { recursive: true }),
+      mkdir(configRoot, { recursive: true }),
+      mkdir(path.join(root, "services/sbr-helper"), { recursive: true }),
+      mkdir(path.join(root, "test/fixtures/sbr"), { recursive: true }),
+    ]);
+    await Promise.all([
+      writeFile(helper, helperBytes),
+      writeFile(path.join(root, "services/sbr-helper/go.mod"), "module fixture\n"),
+      writeFile(
+        path.join(configRoot, "profile-public-key.pem"),
+        await readFile("config/sbr/simulator/profile-public-key.pem"),
+      ),
+      writeFile(
+        path.join(root, "test/fixtures/sbr/simulator-profile-private-key.pem"),
+        await readFile("test/fixtures/sbr/simulator-profile-private-key.pem"),
+      ),
+    ]);
+    const helperRawSha256 = createHash("sha256").update(helperBytes).digest("hex");
+    const session = {
+      helper_raw_sha256: helperRawSha256,
+      mode: "MAS_RAW",
+      session_nonce: "2".repeat(32),
+      source_revision: "a".repeat(40),
+      source_tree_sha256: await hashSbrHelperSourceTree(path.join(root, "services/sbr-helper")),
+      target: "darwin-arm64",
+    };
+    await writeFile(
+      path.join(sessionRoot, "session.json"),
+      `${JSON.stringify(session, null, 2)}\n`,
+    );
+    const result = await buildMasSimulatorProfile({
+      allowUnsigned: true,
+      root,
+      commandRunner: async (command) =>
+        command === "git" ? { stdout: `${"a".repeat(40)}\n` } : { stdout: "" },
+    });
+    assert.equal(result.helper_sha256, helperRawSha256);
+    assert.equal(result.helper_raw_sha256, helperRawSha256);
+    assert.equal(
+      JSON.parse(
+        await readFile(
+          path.join(root, "apps/desktop/resources/sbr/simulator/sbr-profile-v1.json"),
+          "utf8",
+        ),
+      ).helper_sha256,
+      helperRawSha256,
     );
   } finally {
     await rm(root, { force: true, recursive: true });

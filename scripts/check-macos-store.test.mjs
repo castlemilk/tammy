@@ -26,6 +26,7 @@ import {
   validateMacOSStoreIdentity,
   validateMacOSStoreMetadata,
   validateMacOSStorePlists,
+  validateMacOSUnsignedEnvironment,
 } from "./check-macos-store.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -722,6 +723,29 @@ test("distribution inputs require absolute paths, explicit compliance and a posi
   ]) {
     assert.throws(
       () => validateMacOSReleaseEnvironment(environment),
+      /MACOS_RELEASE_INPUT_INVALID/,
+    );
+  }
+});
+
+test("unsigned staging accepts product facts but rejects every signing input", () => {
+  const valid = {
+    TAMMY_MACOS_BUILD_NUMBER: "42",
+    TAMMY_MACOS_EXPORT_COMPLIANCE: "exempt",
+    TAMMY_MACOS_PRIVACY_POLICY_URL: "https://example.com/tammy/privacy",
+    TAMMY_MACOS_SUPPORT_URL: "https://example.com/tammy/support",
+    TAMMY_MACOS_TARGET: "mas/arm64",
+    TAMMY_MACOS_TEAM_ID: "ABCDE12345",
+  };
+  assert.deepEqual(validateMacOSUnsignedEnvironment(valid), { buildNumber: "42" });
+  for (const key of [
+    "TAMMY_MACOS_INSTALLER_IDENTITY",
+    "TAMMY_MACOS_PROVISIONING_PROFILE",
+    "TAMMY_MACOS_SIGNING_IDENTITY",
+    "TAMMY_MACOS_SIGNING_MODE",
+  ]) {
+    assert.throws(
+      () => validateMacOSUnsignedEnvironment({ ...valid, [key]: "not-accepted" }),
       /MACOS_RELEASE_INPUT_INVALID/,
     );
   }

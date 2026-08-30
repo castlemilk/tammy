@@ -1,4 +1,5 @@
 import { execFile as nodeExecFile } from "node:child_process";
+import { existsSync, lstatSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { promisify } from "node:util";
 
@@ -19,6 +20,9 @@ import {
 const desktopRoot = import.meta.dirname;
 const releaseProfile = createMacOSReleaseProfile(process.env, desktopRoot);
 const execFile = promisify(nodeExecFile);
+const isMacOSStoreProfile =
+  releaseProfile.kind === "mas" || releaseProfile.kind === "mas-unsigned-staging";
+let unsignedOutputRoot: string | undefined;
 
 const UNUSED_MACOS_INFO_KEYS = Object.freeze([
   "NSAppTransportSecurity",
@@ -115,7 +119,7 @@ const packagerConfig: PackagerConfig = {
     "resources/build",
     "resources/sqlcipher",
     ...(process.platform === "darwin" ? ["resources/sbr-helper", "resources/sbr"] : []),
-    ...(releaseProfile.kind === "mas" ? [releaseProfile.privacyManifest] : []),
+    ...(isMacOSStoreProfile ? [releaseProfile.privacyManifest] : []),
   ],
   osxSign: developmentSign,
 };
@@ -127,28 +131,55 @@ if (process.platform === "darwin") {
   packagerConfig.icon = path.join(desktopRoot, "assets", "icon.icns");
 }
 
-if (releaseProfile.kind === "mas") {
+if (isMacOSStoreProfile) {
   packagerConfig.appBundleId = releaseProfile.appBundleId;
   packagerConfig.appCategoryType = releaseProfile.category;
   packagerConfig.buildVersion = releaseProfile.buildVersion;
   packagerConfig.extendInfo = releaseProfile.info;
   packagerConfig.helperBundleId = `${releaseProfile.appBundleId}.helper`;
   packagerConfig.icon = releaseProfile.icon;
-  packagerConfig.osxSign = {
-    identity: releaseProfile.sign.identity,
-    identityValidation: true,
-    // Core and the SBR helper are signed before their hashes are written into
-    // authenticated manifests. Forge must preserve those exact bytes.
-    ignore: isManifestBoundExecutable,
-    optionsForFile: (file: string) => ({
-      entitlements: releaseProfile.sign.entitlementsFor(file),
-    }),
-    provisioningProfile: releaseProfile.sign.provisioningProfile,
-    type: releaseProfile.sign.type,
-  };
+  if (releaseProfile.kind === "mas") {
+    packagerConfig.osxSign = {
+      identity: releaseProfile.sign.identity,
+      identityValidation: true,
+      // Core and the SBR helper are signed before their hashes are written into
+      // authenticated manifests. Forge must preserve those exact bytes.
+      ignore: isManifestBoundExecutable,
+      optionsForFile: (file: string) => ({
+        entitlements: releaseProfile.sign.entitlementsFor(file),
+      }),
+      provisioningProfile: releaseProfile.sign.provisioningProfile,
+      type: releaseProfile.sign.type,
+    };
+  } else {
+    const outputRoot = process.env.TAMMY_MACOS_UNSIGNED_OUTPUT_ROOT;
+    const repositoryRoot = path.resolve(desktopRoot, "../..");
+    const expectedRoot = path.join(
+      repositoryRoot,
+      ".tmp",
+      "macos-release",
+      "0.1.0",
+      `build-${releaseProfile.buildVersion}`,
+      ".forge-unsigned",
+    );
+    if (outputRoot !== expectedRoot) throw new Error("MACOS_RELEASE_INPUT_INVALID");
+    const outputParent = path.dirname(expectedRoot);
+    const outputParentStatus = lstatSync(outputParent);
+    if (
+      !outputParentStatus.isDirectory() ||
+      outputParentStatus.isSymbolicLink() ||
+      realpathSync.native(outputParent) !== outputParent ||
+      existsSync(expectedRoot)
+    ) {
+      throw new Error("MACOS_RELEASE_INPUT_INVALID");
+    }
+    unsignedOutputRoot = outputRoot;
+    delete packagerConfig.osxSign;
+  }
 }
 
 const config: ForgeConfig = {
+  ...(unsignedOutputRoot === undefined ? {} : { outDir: unsignedOutputRoot }),
   packagerConfig,
   makers: [
     new MakerSquirrel(

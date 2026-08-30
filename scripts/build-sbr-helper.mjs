@@ -231,7 +231,11 @@ function assertMasSession(session) {
     throw new Error("SBR_HELPER_SESSION_INVALID");
 }
 
-export async function buildMasSimulatorProfile({ root, commandRunner = run }) {
+export async function buildMasSimulatorProfile({
+  root,
+  commandRunner = run,
+  allowUnsigned = false,
+}) {
   if (process.platform !== "darwin" || process.arch !== "arm64")
     throw new Error(`UNSUPPORTED_SBR_TARGET:${process.platform}/${process.arch}`);
   const sessionRoot = path.join(root, ".tmp/sbr-helper-build");
@@ -251,8 +255,16 @@ export async function buildMasSimulatorProfile({ root, commandRunner = run }) {
   const plan = createSbrHelperBuildPlan(root);
   const helperBytes = await readFile(plan.destination);
   const helperSha256 = sha256(helperBytes);
-  if (helperSha256 === session.helper_raw_sha256)
-    throw new Error("SBR_HELPER_MAS_SIGNATURE_MISSING");
+  if (
+    (allowUnsigned === true && helperSha256 !== session.helper_raw_sha256) ||
+    (allowUnsigned !== true && helperSha256 === session.helper_raw_sha256)
+  ) {
+    throw new Error(
+      allowUnsigned === true
+        ? "SBR_HELPER_UNSIGNED_STAGING_INVALID"
+        : "SBR_HELPER_MAS_SIGNATURE_MISSING",
+    );
+  }
   const profileRoot = path.join(root, "apps/desktop/resources/sbr/simulator");
   const profilePath = path.join(profileRoot, "sbr-profile-v1.json");
   const signaturePath = path.join(profileRoot, "sbr-profile-v1.sig");
@@ -475,7 +487,9 @@ export async function executeSbrHelperBuild({
 }) {
   if (
     args.length > 1 ||
-    args.some((argument) => !["--mas-raw", "--mas-profile"].includes(argument))
+    args.some(
+      (argument) => !["--mas-raw", "--mas-profile", "--mas-profile-unsigned"].includes(argument),
+    )
   )
     throw new Error("SBR_HELPER_BUILD_ARGUMENTS_INVALID");
   if (args.length === 1 && environment[SBR_BUILD_LOCK_ENV] === undefined) {
@@ -485,9 +499,11 @@ export async function executeSbrHelperBuild({
   try {
     return args.includes("--mas-raw")
       ? await buildMasRawHelper({ root, commandRunner })
-      : args.includes("--mas-profile")
-        ? await buildMasSimulatorProfile({ root, commandRunner })
-        : await buildSbrHelper({ root, commandRunner });
+      : args.includes("--mas-profile-unsigned")
+        ? await buildMasSimulatorProfile({ root, commandRunner, allowUnsigned: true })
+        : args.includes("--mas-profile")
+          ? await buildMasSimulatorProfile({ root, commandRunner })
+          : await buildSbrHelper({ root, commandRunner });
   } finally {
     await ownership.release();
   }

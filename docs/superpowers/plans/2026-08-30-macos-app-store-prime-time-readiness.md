@@ -1031,7 +1031,7 @@ rtk git commit -m "feat: gate App Store candidate readiness"
 
 - Create `scripts/macos-unsigned-content.mjs` and `scripts/macos-unsigned-content.test.mjs` for the authenticated, mode-independent staging manifest and signed-copy equivalence.
 - Modify `scripts/package-macos-store.mjs` and `scripts/package-macos-store.test.mjs` so development and distribution artifacts originate from separate copies of one frozen unsigned staging result.
-- Modify `apps/desktop/forge.config.ts` and `apps/desktop/release/macos/profile.ts` only as needed to expose an unsigned staging mode without weakening ordinary or MAS signing.
+- Modify `apps/desktop/forge.config.ts`, `apps/desktop/release/macos/profile.ts`, the release checker, and the SBR profile owner as needed to expose an unsigned staging mode without weakening ordinary or MAS signing. Pin direct plist/code-signing dependencies at the workspace root.
 - Create `apps/desktop/release/macos/screenshots/fixture.json` as the canonical fictional screenshot fixture and provenance owner.
 - Create `scripts/check-app-store-screenshots.mjs` and `scripts/check-app-store-screenshots.test.mjs` for fixture, PNG, manifest, sensitive-data, and packaged-content checks.
 - Create `apps/desktop/tests/e2e/app-store-screenshots.spec.ts` and `apps/desktop/playwright.app-store-screenshots.config.ts` for the five real packaged-renderer captures.
@@ -1056,15 +1056,23 @@ Use `@superpowers:test-driven-development` and `@app-store-review:app-store-revi
 - Modify: `scripts/package-macos-store.test.mjs`
 - Modify: `apps/desktop/forge.config.ts`
 - Modify: `apps/desktop/release/macos/profile.ts`
+- Modify: `apps/desktop/src/main/release-profile.test.ts`
+- Modify: `scripts/build-sbr-helper.mjs`
+- Modify: `scripts/build-sbr-helper.test.mjs`
+- Modify: `scripts/check-macos-store.mjs`
+- Modify: `scripts/check-macos-store.test.mjs`
+- Modify: `package.json`
+- Modify: `pnpm-lock.yaml`
 - Modify: `.gitignore`
+- Modify: `docs/superpowers/plans/2026-08-30-macos-app-store-prime-time-readiness.md`
 
-- [ ] **Step 1: Write failing canonical-manifest tests**
+- [x] **Step 1: Write failing canonical-manifest tests**
 
 Define a strict manifest with schema version, marketing/build version, product-source commit/tree, public URLs, bundle identifiers, staging directory hash, and sorted entries containing relative POSIX path, file kind, byte size, executable bit, and SHA-256. Preserve safe relative symlinks used inside Electron frameworks and record their link targets; reject absolute, escaping, broken, cyclic, or changed symlinks, traversal paths, devices, sockets, duplicate or unsorted paths, timestamps, ownership fields, unknown keys, files outside the staging root, and any source identity other than the reserved clean product source.
 
 The manifest must include every runtime-relevant file before signing, including `app.asar`, native modules, core/helper unsigned inputs, privacy manifest, icons, generated build/profile inputs, and `Info.plist`. Hashing is stable against filesystem timestamps and user/group ownership.
 
-- [ ] **Step 2: Write failing equivalence tests**
+- [x] **Step 2: Write failing equivalence tests**
 
 Test `compareSignedCopies({ developmentApp, distributionApp, unsignedManifest })` using synthetic bundles. It must compare:
 
@@ -1076,7 +1084,7 @@ Test `compareSignedCopies({ developmentApp, distributionApp, unsignedManifest })
 
 Permit only `_CodeSignature/**`, code-directory bytes reported by `codesign`, the embedded provisioning profile, certificate/signature metadata, and the enumerated development-versus-distribution entitlement values. Reject any added/removed resource, changed application code, native/core/helper input, URL, identifier, version, privacy file, entitlement key, or unlisted manifest difference. Do not use a broad path or byte-pattern exclusion.
 
-- [ ] **Step 3: Verify the staging/equivalence tests are RED**
+- [x] **Step 3: Verify the staging/equivalence tests are RED**
 
 Run:
 
@@ -1086,33 +1094,33 @@ rtk mise exec -- node --test scripts/macos-unsigned-content.test.mjs scripts/pac
 
 Expected: FAIL because staging and equivalence ownership do not exist.
 
-- [ ] **Step 4: Add an explicit unsigned Forge staging mode**
+- [x] **Step 4: Add an explicit unsigned Forge staging mode**
 
 Add one internal `TAMMY_MACOS_ARTIFACT_PHASE=unsigned-staging` branch used only by `package-macos-store.mjs`. It packages the MAS layout with signing disabled, writes only below `.tmp/macos-release/<version>/build-<N>/unsigned/`, and, when executed after the freeze, is rejected unless the source commit/tree and reserved build match Task 16. It must never become a public Taskfile scenario or a distributable artifact.
 
 Keep the current ordinary-package and signed MAS branches unchanged. The unsigned branch still applies the release profile's bundle IDs, versions, public URLs, privacy manifest, resource permission normalization, fuses, and arm64 target. It must not accept a provisioning profile, signing identity, or installer identity.
 
-- [ ] **Step 5: Refactor the packaging owner into stage, clone, sign, and verify phases**
+- [x] **Step 5: Refactor the packaging owner into stage, clone, sign, and verify phases**
 
 The first invocation builds core, helper, SQLCipher inputs, renderer/main/preload output, and one unsigned MAS staging app; records its canonical manifest; then makes separate copies for `development` and `distribution` that preserve and revalidate only safe in-root framework symlinks. Each copy receives only its required core/helper/app signing, generated authenticated signed-byte manifests, entitlements, and provisioning profile. Distribution additionally runs `productbuild`.
 
 Authenticate the unsigned manifest before and after every clone. Refuse to reuse a staging directory whose source commit/tree, version/build, public URLs, or manifest hash differ. Use an exclusive build lock, temporary directories, fsync/rename for the final manifest, and preserve the last passing artifacts when a later phase fails.
 
-- [ ] **Step 6: Verify unit-level staging and command ordering GREEN**
+- [x] **Step 6: Verify unit-level staging and command ordering GREEN**
 
 Run:
 
 ```bash
 rtk mise exec -- node --test scripts/macos-unsigned-content.test.mjs scripts/package-macos-store.test.mjs
-rtk mise exec -- pnpm --dir apps/desktop test -- release-profile.test.ts
+rtk mise exec -- pnpm --dir apps/desktop exec vitest run src/main/release-profile.test.ts --maxWorkers=1
 ```
 
 Expected: PASS; tests prove one stage feeds both copies, distribution cannot reuse development bytes, and signing never changes a mode-independent input.
 
-- [ ] **Step 7: Commit the shared-payload pipeline**
+- [x] **Step 7: Commit the shared-payload pipeline**
 
 ```bash
-rtk git add .gitignore scripts/macos-unsigned-content.mjs scripts/macos-unsigned-content.test.mjs scripts/package-macos-store.mjs scripts/package-macos-store.test.mjs apps/desktop/forge.config.ts apps/desktop/release/macos/profile.ts
+rtk git add .gitignore package.json pnpm-lock.yaml apps/desktop/forge.config.ts apps/desktop/release/macos/profile.ts apps/desktop/src/main/release-profile.test.ts scripts/build-sbr-helper.mjs scripts/build-sbr-helper.test.mjs scripts/check-macos-store.mjs scripts/check-macos-store.test.mjs scripts/macos-unsigned-content.mjs scripts/macos-unsigned-content.test.mjs scripts/package-macos-store.mjs scripts/package-macos-store.test.mjs docs/superpowers/plans/2026-08-30-macos-app-store-prime-time-readiness.md
 rtk git commit -m "feat: bind macOS signing modes to one payload"
 ```
 
