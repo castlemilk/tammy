@@ -9,10 +9,28 @@
   ],
   "$defs": {
     "readinessState": {
-      "enum": ["NOT_READY", "REPOSITORY_READY", "CANDIDATE_READY", "PRE_UPLOAD_READY", "UPLOADED", "PRE_SUBMIT_READY"]
+      "enum": [
+        "NOT_READY",
+        "REPOSITORY_READY",
+        "CANDIDATE_READY",
+        "PRE_UPLOAD_READY",
+        "UPLOADED",
+        "PRE_SUBMIT_READY"
+      ]
     },
     "attestationKind": {
-      "enum": ["company-controller", "seller-eligibility", "content-rights", "export-compliance", "pricing-availability", "privacy-answer", "age-rating", "processed-build", "metadata-assets-entered", "app-store-warning-review"]
+      "enum": [
+        "company-controller",
+        "seller-eligibility",
+        "content-rights",
+        "export-compliance",
+        "pricing-availability",
+        "privacy-answer",
+        "age-rating",
+        "processed-build",
+        "metadata-assets-entered",
+        "app-store-warning-review"
+      ]
     },
     "lifecycleKind": {
       "enum": ["uploaded", "expired", "superseded", "submitted", "approved", "rejected"]
@@ -30,7 +48,7 @@
       "minLength": 1,
       "maxLength": 512,
       "not": {
-        "pattern": "(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{16,}|(?:ghp|github_pat)_[A-Za-z0-9_]{16,}|AKIA[A-Z0-9]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|(?:password|token|secret)="
+        "pattern": "(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{16,}|(?:ghp|github_pat)_[A-Za-z0-9_]{16,}|AKIA[A-Z0-9]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|(?:[pP][aA][sS][sS][wW][oO][rR][dD]|[tT][oO][kK][eE][nN]|[sS][eE][cC][rR][eE][tT])="
       }
     },
     "redactedReference": {
@@ -38,7 +56,7 @@
       "minLength": 1,
       "maxLength": 512,
       "not": {
-        "pattern": "(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{16,}|(?:ghp|github_pat)_[A-Za-z0-9_]{16,}|AKIA[A-Z0-9]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|(?:password|token|secret)="
+        "pattern": "(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{16,}|(?:ghp|github_pat)_[A-Za-z0-9_]{16,}|AKIA[A-Z0-9]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|(?:[pP][aA][sS][sS][wW][oO][rR][dD]|[tT][oO][kK][eE][nN]|[sS][eE][cC][rR][eE][tT])="
       },
       "oneOf": [
         {
@@ -71,13 +89,32 @@
     },
     "attestationBase": {
       "type": "object",
-      "required": ["schemaVersion", "kind", "releaseVersion", "buildNumber", "accountablePerson", "confirmedAt", "evidenceReference", "outcome"],
+      "required": [
+        "schemaVersion",
+        "kind",
+        "releaseVersion",
+        "buildNumber",
+        "accountablePerson",
+        "confirmedAt",
+        "evidenceReference",
+        "outcome"
+      ],
       "properties": {
         "schemaVersion": { "const": 1 },
         "kind": { "$ref": "#/$defs/attestationKind" },
         "releaseVersion": { "$ref": "#/$defs/version" },
         "buildNumber": { "$ref": "#/$defs/buildNumber" },
-        "accountablePerson": { "allOf": [{ "$ref": "#/$defs/redactedText" }, { "type": "string", "minLength": 2, "maxLength": 100, "not": { "pattern": "OPERATOR_REQUIRED" } }] },
+        "accountablePerson": {
+          "allOf": [
+            { "$ref": "#/$defs/redactedText" },
+            {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 100,
+              "not": { "pattern": "OPERATOR_REQUIRED" }
+            }
+          ]
+        },
         "confirmedAt": { "$ref": "#/$defs/utcTime" },
         "evidenceReference": { "$ref": "#/$defs/redactedReference" },
         "outcome": { "type": "string" }
@@ -87,7 +124,12 @@
       "type": "object",
       "allOf": [
         { "$ref": "#/$defs/attestationBase" },
-        { "properties": { "kind": { "const": "company-controller" }, "outcome": { "const": "confirmed" } } }
+        {
+          "properties": {
+            "kind": { "const": "company-controller" },
+            "outcome": { "const": "confirmed" }
+          }
+        }
       ],
       "unevaluatedProperties": false
     },
@@ -103,7 +145,12 @@
       "type": "object",
       "allOf": [
         { "$ref": "#/$defs/attestationBase" },
-        { "properties": { "kind": { "const": "export-compliance" }, "outcome": { "enum": ["exempt", "non-exempt"] } } }
+        {
+          "properties": {
+            "kind": { "const": "export-compliance" },
+            "outcome": { "enum": ["exempt", "non-exempt"] }
+          }
+        }
       ],
       "unevaluatedProperties": false
     },
@@ -111,7 +158,12 @@
       "type": "object",
       "allOf": [
         { "$ref": "#/$defs/attestationBase" },
-        { "properties": { "kind": { "const": "pricing-availability" }, "outcome": { "const": "confirmed" } } }
+        {
+          "properties": {
+            "kind": { "const": "pricing-availability" },
+            "outcome": { "const": "confirmed" }
+          }
+        }
       ],
       "unevaluatedProperties": false
     },
@@ -119,7 +171,12 @@
       "type": "object",
       "allOf": [
         { "$ref": "#/$defs/attestationBase" },
-        { "properties": { "kind": { "const": "privacy-answer" }, "outcome": { "const": "no-data-collected-no-tracking" } } }
+        {
+          "properties": {
+            "kind": { "const": "privacy-answer" },
+            "outcome": { "const": "no-data-collected-no-tracking" }
+          }
+        }
       ],
       "unevaluatedProperties": false
     },
@@ -135,7 +192,12 @@
       "type": "object",
       "allOf": [
         { "$ref": "#/$defs/attestationBase" },
-        { "properties": { "kind": { "const": "processed-build" }, "outcome": { "const": "selected" } } }
+        {
+          "properties": {
+            "kind": { "const": "processed-build" },
+            "outcome": { "const": "selected" }
+          }
+        }
       ],
       "unevaluatedProperties": false
     },
@@ -143,7 +205,12 @@
       "type": "object",
       "allOf": [
         { "$ref": "#/$defs/attestationBase" },
-        { "properties": { "kind": { "const": "metadata-assets-entered" }, "outcome": { "const": "entered" } } }
+        {
+          "properties": {
+            "kind": { "const": "metadata-assets-entered" },
+            "outcome": { "const": "entered" }
+          }
+        }
       ],
       "unevaluatedProperties": false
     },
@@ -151,27 +218,64 @@
       "type": "object",
       "allOf": [
         { "$ref": "#/$defs/attestationBase" },
-        { "properties": { "kind": { "const": "app-store-warning-review" }, "outcome": { "enum": ["clear", "resolved"] } } }
+        {
+          "properties": {
+            "kind": { "const": "app-store-warning-review" },
+            "outcome": { "enum": ["clear", "resolved"] }
+          }
+        }
       ],
       "unevaluatedProperties": false
     },
     "sellerBase": {
       "type": "object",
-      "required": ["eligibilityBranch", "teamId", "sellerName", "accountHolder", "activeAgreements", "appId", "appleDeveloperIdentifierId", "appStoreConnectId", "applicationGroup", "helperIdentifiers", "certificateClasses", "profilesReissued"],
+      "required": [
+        "eligibilityBranch",
+        "teamId",
+        "sellerName",
+        "accountHolder",
+        "activeAgreements",
+        "appId",
+        "appleDeveloperIdentifierId",
+        "appStoreConnectId",
+        "applicationGroup",
+        "helperIdentifiers",
+        "certificateClasses",
+        "profilesReissued"
+      ],
       "properties": {
         "kind": { "const": "seller-eligibility" },
         "outcome": { "const": "eligible" },
         "eligibilityBranch": { "enum": ["company-organization", "written-apple-exception"] },
         "teamId": { "type": "string", "pattern": "^[A-Z0-9]{10}$" },
-        "sellerName": { "allOf": [{ "$ref": "#/$defs/redactedText" }, { "type": "string", "minLength": 2, "maxLength": 100 }] },
-        "accountHolder": { "allOf": [{ "$ref": "#/$defs/redactedText" }, { "type": "string", "minLength": 2, "maxLength": 100 }] },
+        "sellerName": {
+          "allOf": [
+            { "$ref": "#/$defs/redactedText" },
+            { "type": "string", "minLength": 2, "maxLength": 100 }
+          ]
+        },
+        "accountHolder": {
+          "allOf": [
+            { "$ref": "#/$defs/redactedText" },
+            { "type": "string", "minLength": 2, "maxLength": 100 }
+          ]
+        },
         "activeAgreements": { "const": true },
         "appId": { "const": "com.tammy.desktop" },
-        "appleDeveloperIdentifierId": { "type": "string" },
+        "appleDeveloperIdentifierId": { "$ref": "#/$defs/redactedText" },
         "appStoreConnectId": { "type": "string", "pattern": "^[1-9][0-9]{5,19}$" },
-        "applicationGroup": { "type": "string" },
-        "helperIdentifiers": { "const": ["com.tammy.desktop.helper", "com.tammy.desktop.helper.GPU", "com.tammy.desktop.helper.Plugin", "com.tammy.desktop.helper.Renderer"] },
-        "certificateClasses": { "const": ["Apple Development", "Apple Distribution", "Mac Installer Distribution"] },
+        "applicationGroup": { "$ref": "#/$defs/redactedText" },
+        "helperIdentifiers": {
+          "const": [
+            "com.tammy.desktop.helper",
+            "com.tammy.desktop.helper.GPU",
+            "com.tammy.desktop.helper.Plugin",
+            "com.tammy.desktop.helper.Renderer"
+          ]
+        },
+        "certificateClasses": {
+          "const": ["Apple Development", "Apple Distribution", "Mac Installer Distribution"]
+        },
         "profilesReissued": { "const": true }
       }
     },
@@ -204,7 +308,16 @@
             "accountHolder": { "const": "Ben Ebsworth" },
             "appleDeveloperIdentifierId": { "const": "WFTX6CN23F.com.tammy.desktop" },
             "applicationGroup": { "const": "WFTX6CN23F.com.tammy.desktop" },
-            "writtenAppleExceptionReference": { "allOf": [{ "$ref": "#/$defs/redactedReference" }, { "type": "string", "pattern": "written[-_ ](?:apple[-_ ])?exception", "not": { "pattern": "publisher-controller" } }] }
+            "writtenAppleExceptionReference": {
+              "allOf": [
+                { "$ref": "#/$defs/redactedReference" },
+                {
+                  "type": "string",
+                  "pattern": "written[-_ ](?:apple[-_ ])?exception",
+                  "not": { "pattern": "publisher-controller" }
+                }
+              ]
+            }
           }
         }
       ],
@@ -234,13 +347,25 @@
     },
     "eventBase": {
       "type": "object",
-      "required": ["schemaVersion", "kind", "releaseVersion", "buildNumber", "operator", "occurredAt"],
+      "required": [
+        "schemaVersion",
+        "kind",
+        "releaseVersion",
+        "buildNumber",
+        "operator",
+        "occurredAt"
+      ],
       "properties": {
         "schemaVersion": { "const": 1 },
         "kind": { "$ref": "#/$defs/lifecycleKind" },
         "releaseVersion": { "$ref": "#/$defs/version" },
         "buildNumber": { "$ref": "#/$defs/buildNumber" },
-        "operator": { "allOf": [{ "$ref": "#/$defs/redactedText" }, { "type": "string", "minLength": 2, "maxLength": 100 }] },
+        "operator": {
+          "allOf": [
+            { "$ref": "#/$defs/redactedText" },
+            { "type": "string", "minLength": 2, "maxLength": 100 }
+          ]
+        },
         "occurredAt": { "$ref": "#/$defs/utcTime" }
       }
     },
@@ -249,13 +374,23 @@
       "allOf": [
         { "$ref": "#/$defs/eventBase" },
         {
-          "required": ["productSourceCommit", "productSourceTree", "packageSha256", "appStoreConnectBuildId"],
+          "required": [
+            "productSourceCommit",
+            "productSourceTree",
+            "packageSha256",
+            "appStoreConnectBuildId"
+          ],
           "properties": {
             "kind": { "const": "uploaded" },
             "productSourceCommit": { "$ref": "#/$defs/sha40" },
             "productSourceTree": { "$ref": "#/$defs/sha40" },
             "packageSha256": { "$ref": "#/$defs/sha256" },
-            "appStoreConnectBuildId": { "allOf": [{ "$ref": "#/$defs/redactedText" }, { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" }] }
+            "appStoreConnectBuildId": {
+              "allOf": [
+                { "$ref": "#/$defs/redactedText" },
+                { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" }
+              ]
+            }
           }
         }
       ],
@@ -267,7 +402,10 @@
         { "$ref": "#/$defs/eventBase" },
         {
           "required": ["reason"],
-          "dependentRequired": { "sourceReference": ["packageSha256"], "packageSha256": ["sourceReference"] },
+          "dependentRequired": {
+            "sourceReference": ["packageSha256"],
+            "packageSha256": ["sourceReference"]
+          },
           "properties": {
             "kind": { "const": "expired" },
             "reason": { "enum": ["certificate-expired", "profile-expired", "candidate-timeout"] },
@@ -283,7 +421,10 @@
       "allOf": [
         { "$ref": "#/$defs/eventBase" },
         {
-          "dependentRequired": { "replacementVersion": ["replacementBuildNumber"], "replacementBuildNumber": ["replacementVersion"] },
+          "dependentRequired": {
+            "replacementVersion": ["replacementBuildNumber"],
+            "replacementBuildNumber": ["replacementVersion"]
+          },
           "properties": {
             "kind": { "const": "superseded" },
             "replacementVersion": { "$ref": "#/$defs/version" },
@@ -297,7 +438,13 @@
       "type": "object",
       "allOf": [
         { "$ref": "#/$defs/eventBase" },
-        { "required": ["appStoreSubmissionReference"], "properties": { "kind": { "const": "submitted" }, "appStoreSubmissionReference": { "$ref": "#/$defs/redactedReference" } } }
+        {
+          "required": ["appStoreSubmissionReference"],
+          "properties": {
+            "kind": { "const": "submitted" },
+            "appStoreSubmissionReference": { "$ref": "#/$defs/redactedReference" }
+          }
+        }
       ],
       "unevaluatedProperties": false
     },
@@ -305,7 +452,14 @@
       "type": "object",
       "allOf": [
         { "$ref": "#/$defs/eventBase" },
-        { "required": ["reviewReference", "submittedEventPath"], "properties": { "kind": { "const": "approved" }, "reviewReference": { "$ref": "#/$defs/redactedReference" }, "submittedEventPath": { "$ref": "#/$defs/redactedReference" } } }
+        {
+          "required": ["reviewReference", "submittedEventPath"],
+          "properties": {
+            "kind": { "const": "approved" },
+            "reviewReference": { "$ref": "#/$defs/redactedReference" },
+            "submittedEventPath": { "$ref": "#/$defs/redactedReference" }
+          }
+        }
       ],
       "unevaluatedProperties": false
     },
@@ -313,7 +467,14 @@
       "type": "object",
       "allOf": [
         { "$ref": "#/$defs/eventBase" },
-        { "required": ["reviewReference", "submittedEventPath"], "properties": { "kind": { "const": "rejected" }, "reviewReference": { "$ref": "#/$defs/redactedReference" }, "submittedEventPath": { "$ref": "#/$defs/redactedReference" } } }
+        {
+          "required": ["reviewReference", "submittedEventPath"],
+          "properties": {
+            "kind": { "const": "rejected" },
+            "reviewReference": { "$ref": "#/$defs/redactedReference" },
+            "submittedEventPath": { "$ref": "#/$defs/redactedReference" }
+          }
+        }
       ],
       "unevaluatedProperties": false
     },

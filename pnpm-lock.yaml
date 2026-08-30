@@ -25,6 +25,9 @@ importers:
       '@bufbuild/protoc-gen-es':
         specifier: 2.12.1
         version: 2.12.1(@bufbuild/protobuf@2.12.1)(supports-color@10.2.2)
+      ajv:
+        specifier: 8.20.0
+        version: 8.20.0
       canonicalize:
         specifier: 2.1.0
         version: 2.1.0

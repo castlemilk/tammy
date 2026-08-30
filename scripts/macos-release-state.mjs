@@ -94,7 +94,11 @@ const REPOSITORY_REQUIREMENTS = [
   ["policy", "PRIVACY_POLICY_NOT_FINAL", "Finalize the canonical privacy policy."],
   ["publicSite", "PUBLIC_SITE_NOT_RECORDED", "Publish and verify the Sites version."],
   ["schemas", "RELEASE_SCHEMAS_NOT_READY", "Validate the release schemas."],
-  ["screenshotDefinitions", "SCREENSHOT_DEFINITIONS_NOT_READY", "Validate the screenshot definitions."],
+  [
+    "screenshotDefinitions",
+    "SCREENSHOT_DEFINITIONS_NOT_READY",
+    "Validate the screenshot definitions.",
+  ],
   ["storeIdentity", "STORE_IDENTITY_NOT_READY", "Validate the canonical store identity."],
   ["tests", "REPOSITORY_TESTS_NOT_PASSED", "Run the repository release tests."],
 ];
@@ -106,8 +110,16 @@ const CANDIDATE_REQUIREMENTS = [
   ["buildNumberReserved", "CANDIDATE_BUILD_NOT_RESERVED", "Verify the build-number reservation."],
   ["signingProfilePassed", "CANDIDATE_SIGNING_NOT_VERIFIED", "Verify signing and provisioning."],
   ["publicUrlsMatch", "CANDIDATE_PUBLIC_URLS_MISMATCH", "Verify the embedded public URLs."],
-  ["privacyEvidencePassed", "CANDIDATE_PRIVACY_EVIDENCE_MISSING", "Record candidate privacy evidence."],
-  ["runtimeEgressEvidencePassed", "CANDIDATE_EGRESS_EVIDENCE_MISSING", "Record runtime egress evidence."],
+  [
+    "privacyEvidencePassed",
+    "CANDIDATE_PRIVACY_EVIDENCE_MISSING",
+    "Record candidate privacy evidence.",
+  ],
+  [
+    "runtimeEgressEvidencePassed",
+    "CANDIDATE_EGRESS_EVIDENCE_MISSING",
+    "Record runtime egress evidence.",
+  ],
   ["screenshotsLinked", "CANDIDATE_SCREENSHOTS_NOT_LINKED", "Link the validated screenshots."],
 ];
 const CANDIDATE_KEYS = [
@@ -178,13 +190,20 @@ function isUtcTime(value) {
   }
 }
 
+function hasControlCharacters(value) {
+  return [...value].some((character) => {
+    const codePoint = character.codePointAt(0);
+    return codePoint < 32 || codePoint === 127;
+  });
+}
+
 function isPerson(value) {
   return (
     typeof value === "string" &&
     value.trim() === value &&
     value.length >= 2 &&
     value.length <= 100 &&
-    !/[\u0000-\u001f\u007f]/.test(value)
+    !hasControlCharacters(value)
   );
 }
 
@@ -194,7 +213,7 @@ function isSafeReference(value) {
     value.trim() !== value ||
     value.length === 0 ||
     value.length > 512 ||
-    /[\u0000-\u001f\u007f]/.test(value) ||
+    hasControlCharacters(value) ||
     path.isAbsolute(value)
   ) {
     return false;
@@ -202,13 +221,7 @@ function isSafeReference(value) {
   if (!/^[A-Za-z][A-Za-z0-9+.-]*:/.test(value)) return true;
   try {
     const url = new URL(value);
-    return (
-      url.protocol === "https:" &&
-      !url.username &&
-      !url.password &&
-      !url.search &&
-      !url.hash
-    );
+    return url.protocol === "https:" && !url.username && !url.password && !url.search && !url.hash;
   } catch {
     return false;
   }
@@ -249,11 +262,7 @@ export function validateReleaseState(state) {
     fail("RELEASE_STATE_INVALID");
   }
   for (const currentBlocker of state.blockers) {
-    assertExactKeys(
-      currentBlocker,
-      ["code", "owner", "remediation"],
-      "RELEASE_STATE_INVALID",
-    );
+    assertExactKeys(currentBlocker, ["code", "owner", "remediation"], "RELEASE_STATE_INVALID");
     if (
       !/^[A-Z][A-Z0-9_]+$/.test(currentBlocker.code) ||
       !["repository", "candidate", "operator", "apple"].includes(currentBlocker.owner) ||
@@ -296,9 +305,7 @@ export function validateReleaseAttestation(attestation) {
   const sellerCode = "SELLER_ELIGIBILITY_INVALID";
   const expectedPrefix = `${attestation.teamId}.com.tammy.desktop`;
   if (
-    !["company-organization", "written-apple-exception"].includes(
-      attestation.eligibilityBranch,
-    ) ||
+    !["company-organization", "written-apple-exception"].includes(attestation.eligibilityBranch) ||
     !TEAM_ID.test(attestation.teamId) ||
     !isPerson(attestation.sellerName) ||
     !isPerson(attestation.accountHolder) ||
@@ -315,8 +322,7 @@ export function validateReleaseAttestation(attestation) {
   }
   if (
     attestation.eligibilityBranch === "company-organization" &&
-    (attestation.sellerName !== "Gamma Systems Pty Ltd" ||
-      attestation.teamId === "WFTX6CN23F")
+    (attestation.sellerName !== "Gamma Systems Pty Ltd" || attestation.teamId === "WFTX6CN23F")
   ) {
     fail(sellerCode);
   }
@@ -359,8 +365,7 @@ function eventKeys(event) {
     ];
   }
   if (event.kind === "superseded") {
-    const hasReplacement =
-      "replacementVersion" in event || "replacementBuildNumber" in event;
+    const hasReplacement = "replacementVersion" in event || "replacementBuildNumber" in event;
     return [
       ...EVENT_BASE_KEYS,
       ...(hasReplacement ? ["replacementBuildNumber", "replacementVersion"] : []),
@@ -394,31 +399,34 @@ export function validateReleaseLifecycleEvent(event, { priorEvents = [] } = {}) 
     if (!isSafeReference(event.appStoreSubmissionReference)) fail(code);
   } else if (event.kind === "approved" || event.kind === "rejected") {
     if (!isSafeReference(event.reviewReference)) fail(code);
-    const submitted = priorEvents.find(
-      (prior) => {
-        try {
-          validateReleaseLifecycleEvent(prior);
-        } catch {
-          return false;
-        }
-        return (
-          prior.kind === "submitted" &&
-          prior.releaseVersion === event.releaseVersion &&
-          prior.buildNumber === event.buildNumber &&
-          prior.occurredAt < event.occurredAt &&
-          submittedEventFilename(prior) === event.submittedEventPath
-        );
-      },
-    );
+    const submitted = priorEvents.find((prior) => {
+      try {
+        validateReleaseLifecycleEvent(prior);
+      } catch {
+        return false;
+      }
+      return (
+        prior.kind === "submitted" &&
+        prior.releaseVersion === event.releaseVersion &&
+        prior.buildNumber === event.buildNumber &&
+        prior.occurredAt < event.occurredAt &&
+        submittedEventFilename(prior) === event.submittedEventPath
+      );
+    });
     if (!submitted) fail(code);
   } else if (event.kind === "expired") {
-    if (!new Set(["certificate-expired", "profile-expired", "candidate-timeout"]).has(event.reason)) {
+    if (
+      !new Set(["certificate-expired", "profile-expired", "candidate-timeout"]).has(event.reason)
+    ) {
       fail(code);
     }
     const hasSource = "sourceReference" in event;
     const hasPackage = "packageSha256" in event;
     if (hasSource !== hasPackage) fail(code);
-    if (hasSource && (!isSafeReference(event.sourceReference) || !SHA256.test(event.packageSha256))) {
+    if (
+      hasSource &&
+      (!isSafeReference(event.sourceReference) || !SHA256.test(event.packageSha256))
+    ) {
       fail(code);
     }
   } else if (event.kind === "superseded") {
@@ -584,7 +592,8 @@ export function evaluateReleaseState(inputs) {
 
   let repositoryReady = true;
   for (const [key, code, remediation] of REPOSITORY_REQUIREMENTS) {
-    if (repository[key] === true) passed.push(key.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`));
+    if (repository[key] === true)
+      passed.push(key.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`));
     else {
       repositoryReady = false;
       blockers.push(blocker(code, "repository", remediation));
@@ -644,11 +653,8 @@ export function evaluateReleaseState(inputs) {
   const submittedWithoutPrerequisites =
     ["submitted", "approved", "rejected"].includes(lifecycle.terminalKind) &&
     !preSubmitAttestationsComplete;
-  const lifecycleSequenceInvalid =
-    lifecycle.sequenceInvalid || submittedWithoutPrerequisites;
-  const effectiveTerminalKind = submittedWithoutPrerequisites
-    ? undefined
-    : lifecycle.terminalKind;
+  const lifecycleSequenceInvalid = lifecycle.sequenceInvalid || submittedWithoutPrerequisites;
+  const effectiveTerminalKind = submittedWithoutPrerequisites ? undefined : lifecycle.terminalKind;
   if (lifecycleSequenceInvalid) {
     blockers.push(
       blocker(
@@ -674,10 +680,7 @@ export function evaluateReleaseState(inputs) {
       event.productSourceTree === candidateEvidence?.sourceTree &&
       event.packageSha256 === candidateEvidence?.packageSha256,
   );
-  const uploaded =
-    preUploadReady &&
-    lifecycle.uploadCount === 1 &&
-    exactUploads.length === 1;
+  const uploaded = preUploadReady && lifecycle.uploadCount === 1 && exactUploads.length === 1;
   if (preUploadReady && !uploaded) {
     if (lifecycle.uploadCount <= 1) {
       blockers.push(
@@ -721,17 +724,20 @@ export function evaluateReleaseState(inputs) {
       ),
     );
   }
-  const state = preSubmitReady
-    ? "PRE_SUBMIT_READY"
-    : uploaded
-      ? "UPLOADED"
-      : preUploadReady
-        ? "PRE_UPLOAD_READY"
-        : candidateReady
-          ? "CANDIDATE_READY"
-          : repositoryReady
-            ? "REPOSITORY_READY"
-            : "NOT_READY";
+  const state =
+    lifecycleSequenceInvalid || effectiveTerminalKind
+      ? "NOT_READY"
+      : preSubmitReady
+        ? "PRE_SUBMIT_READY"
+        : uploaded
+          ? "UPLOADED"
+          : preUploadReady
+            ? "PRE_UPLOAD_READY"
+            : candidateReady
+              ? "CANDIDATE_READY"
+              : repositoryReady
+                ? "REPOSITORY_READY"
+                : "NOT_READY";
   validateReleaseState(state);
   const passedSet = new Set(passed);
   const blockerCodes = new Set(blockers.map(({ code }) => code));

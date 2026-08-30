@@ -1,12 +1,14 @@
 import assert from "node:assert/strict";
-import { readFile, readdir } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
+
+import Ajv2020 from "ajv/dist/2020.js";
 
 import {
-  RELEASE_STATES,
   evaluateReleaseState,
+  RELEASE_STATES,
   validateReleaseAttestation,
   validateReleaseLifecycleEvent,
   validateReleaseState,
@@ -18,6 +20,7 @@ const buildNumber = "42";
 const sourceCommit = "a".repeat(40);
 const sourceTree = "b".repeat(40);
 const packageSha256 = "c".repeat(64);
+const secretShapedValue = "TOKEN=abcdefgh";
 
 const repositoryRequirements = {
   storeIdentity: true,
@@ -92,11 +95,7 @@ function sellerAttestation(overrides = {}) {
       "com.tammy.desktop.helper.Plugin",
       "com.tammy.desktop.helper.Renderer",
     ],
-    certificateClasses: [
-      "Apple Development",
-      "Apple Distribution",
-      "Mac Installer Distribution",
-    ],
+    certificateClasses: ["Apple Development", "Apple Distribution", "Mac Installer Distribution"],
     profilesReissued: true,
     ...overrides,
   };
@@ -156,10 +155,11 @@ test("exposes only the monotonic readiness states", () => {
     "PRE_SUBMIT_READY",
   ]);
   for (const state of RELEASE_STATES) assert.equal(validateReleaseState(state), state);
-  assert.deepEqual(
-    validateReleaseState({ state: "NOT_READY", passed: [], blockers: [] }),
-    { state: "NOT_READY", passed: [], blockers: [] },
-  );
+  assert.deepEqual(validateReleaseState({ state: "NOT_READY", passed: [], blockers: [] }), {
+    state: "NOT_READY",
+    passed: [],
+    blockers: [],
+  });
   for (const lifecycleKind of [
     "uploaded",
     "expired",
@@ -171,15 +171,18 @@ test("exposes only the monotonic readiness states", () => {
     assert.throws(() => validateReleaseState(lifecycleKind), /RELEASE_STATE_INVALID/);
   }
   assert.throws(
-    () => validateReleaseState({
-      state: "NOT_READY",
-      passed: ["PUBLIC_SITE_NOT_RECORDED"],
-      blockers: [{
-        code: "PUBLIC_SITE_NOT_RECORDED",
-        owner: "repository",
-        remediation: "Publish the site.",
-      }],
-    }),
+    () =>
+      validateReleaseState({
+        state: "NOT_READY",
+        passed: ["PUBLIC_SITE_NOT_RECORDED"],
+        blockers: [
+          {
+            code: "PUBLIC_SITE_NOT_RECORDED",
+            owner: "repository",
+            remediation: "Publish the site.",
+          },
+        ],
+      }),
     /RELEASE_STATE_INVALID/,
   );
 });
@@ -190,14 +193,6 @@ test("documents readiness, attestation, and lifecycle records in the release sch
       path.join(repositoryRoot, "apps/desktop/release/macos/release-state.schema.json"),
       "utf8",
     ),
-  );
-  const { default: Ajv2020 } = await import(
-    pathToFileURL(
-      path.join(
-        repositoryRoot,
-        "node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/2020.js",
-      ),
-    ).href
   );
   assert.deepEqual(schema.$defs.readinessState.enum, RELEASE_STATES);
   assert.deepEqual(schema.$defs.attestationKind.enum, [
@@ -221,9 +216,9 @@ test("documents readiness, attestation, and lifecycle records in the release sch
     "rejected",
   ]);
   assert.deepEqual(schema.oneOf, [
-    { "$ref": "#/$defs/releaseStateRecord" },
-    { "$ref": "#/$defs/releaseAttestation" },
-    { "$ref": "#/$defs/lifecycleEvent" },
+    { $ref: "#/$defs/releaseStateRecord" },
+    { $ref: "#/$defs/releaseAttestation" },
+    { $ref: "#/$defs/lifecycleEvent" },
   ]);
   assert.equal(schema.$defs.releaseAttestation.unevaluatedProperties, false);
   assert.equal(schema.$defs.lifecycleEvent.unevaluatedProperties, false);
@@ -234,10 +229,10 @@ test("documents readiness, attestation, and lifecycle records in the release sch
     schema.$defs.companyControllerAttestation.allOf[1].properties.outcome.const,
     "confirmed",
   );
-  assert.deepEqual(
-    schema.$defs.exportComplianceAttestation.allOf[1].properties.outcome.enum,
-    ["exempt", "non-exempt"],
-  );
+  assert.deepEqual(schema.$defs.exportComplianceAttestation.allOf[1].properties.outcome.enum, [
+    "exempt",
+    "non-exempt",
+  ]);
   assert.equal(schema.$defs.expiredEvent.allOf[1].required.includes("reason"), true);
   assert.deepEqual(schema.$defs.supersededEvent.allOf[1].dependentRequired, {
     replacementVersion: ["replacementBuildNumber"],
@@ -261,6 +256,9 @@ test("documents readiness, attestation, and lifecycle records in the release sch
     }),
     uploadedEvent({ operator: "sk_live_12345678901234567890" }),
     uploadedEvent({ appStoreConnectBuildId: "sk_live_12345678901234567890" }),
+    attestation("company-controller", { accountablePerson: secretShapedValue }),
+    sellerAttestation({ appleDeveloperIdentifierId: secretShapedValue }),
+    sellerAttestation({ applicationGroup: secretShapedValue }),
     attestation("content-rights", { outcome: "confirmed" }),
     { ...attestation("company-controller"), sellerName: "Gamma Systems Pty Ltd" },
   ]) {
@@ -281,7 +279,10 @@ test("derives readiness without requiring signing credentials for repository rea
       }),
     );
     assert.equal(result.state, "NOT_READY", requirement);
-    assert.equal(result.blockers.some(({ owner }) => owner === "repository"), true);
+    assert.equal(
+      result.blockers.some(({ owner }) => owner === "repository"),
+      true,
+    );
   }
 });
 
@@ -299,7 +300,15 @@ test("requires every exact candidate evidence boundary before candidate readines
     "runtimeEgressEvidencePassed",
     "screenshotsLinked",
   ]) {
-    const changed = { ...candidate, [requirement]: requirement.endsWith("Passed") || requirement.endsWith("Match") || requirement.endsWith("Linked") ? false : "" };
+    const changed = {
+      ...candidate,
+      [requirement]:
+        requirement.endsWith("Passed") ||
+        requirement.endsWith("Match") ||
+        requirement.endsWith("Linked")
+          ? false
+          : "",
+    };
     assert.equal(
       evaluateReleaseState(releaseInputs({ candidate: changed })).state,
       "REPOSITORY_READY",
@@ -344,13 +353,16 @@ test("derives uploaded only from an exact candidate-bound uploaded event", () =>
     uploadedEvent({ packageSha256: "e".repeat(64) }),
     uploadedEvent({ productSourceCommit: "e".repeat(40) }),
     uploadedEvent({ productSourceTree: "e".repeat(40) }),
-    uploadedEvent({ appStoreConnectBuildId: "" }),
   ]) {
-    assert.equal(
-      evaluateReleaseState({ ...ready, events: [event] }).state,
-      "PRE_UPLOAD_READY",
-    );
+    assert.equal(evaluateReleaseState({ ...ready, events: [event] }).state, "PRE_UPLOAD_READY");
   }
+  assert.equal(
+    evaluateReleaseState({
+      ...ready,
+      events: [uploadedEvent({ appStoreConnectBuildId: "" })],
+    }).state,
+    "NOT_READY",
+  );
 });
 
 test("requires processed build and declaration assets before pre-submit readiness", () => {
@@ -372,9 +384,12 @@ test("validates exact redacted common attestation schemas and kind-specific outc
   for (const [kind, outcome] of Object.entries(outcomes)) {
     assert.deepEqual(validateReleaseAttestation(attestation(kind)), attestation(kind));
     assert.throws(
-      () => validateReleaseAttestation(attestation(kind, {
-        outcome: outcome === "confirmed" ? "owned" : "confirmed",
-      })),
+      () =>
+        validateReleaseAttestation(
+          attestation(kind, {
+            outcome: outcome === "confirmed" ? "owned" : "confirmed",
+          }),
+        ),
       /ATTESTATION_INVALID/,
     );
     assert.equal(outcome, attestation(kind).outcome);
@@ -400,11 +415,18 @@ test("rejects unknown fields, secrets, free-form blobs, unsafe references, and r
     { ...valid, evidenceReference: "https://user:password@example.com/evidence" },
     { ...valid, evidenceReference: "https://example.com/evidence?token=value" },
     { ...valid, evidenceReference: "sk_live_12345678901234567890" },
+    { ...valid, accountablePerson: secretShapedValue },
     { ...valid, releaseVersion: "0.2" },
     { ...valid, buildNumber: "042" },
     { ...valid, confirmedAt: "not-a-time" },
   ]) {
     assert.throws(() => validateReleaseAttestation(invalid), /ATTESTATION_INVALID/);
+  }
+  for (const field of ["appleDeveloperIdentifierId", "applicationGroup"]) {
+    assert.throws(
+      () => validateReleaseAttestation(sellerAttestation({ [field]: secretShapedValue })),
+      /ATTESTATION_INVALID/,
+    );
   }
 });
 
@@ -433,21 +455,23 @@ test("validates both seller eligibility branches and rejects the individual team
     /SELLER_ELIGIBILITY_INVALID/,
   );
   assert.throws(
-    () => validateReleaseAttestation({
-      ...exception,
-      writtenAppleExceptionReference: "../../../../../authority/publisher-controller.json",
-    }),
+    () =>
+      validateReleaseAttestation({
+        ...exception,
+        writtenAppleExceptionReference: "../../../../../authority/publisher-controller.json",
+      }),
     /SELLER_ELIGIBILITY_INVALID/,
   );
   assert.throws(
-    () => validateReleaseAttestation({
-      ...exception,
-      teamId: "ZZZZZZZZZZ",
-      sellerName: "Other Person",
-      accountHolder: "Other Person",
-      appleDeveloperIdentifierId: "ZZZZZZZZZZ.com.tammy.desktop",
-      applicationGroup: "ZZZZZZZZZZ.com.tammy.desktop",
-    }),
+    () =>
+      validateReleaseAttestation({
+        ...exception,
+        teamId: "ZZZZZZZZZZ",
+        sellerName: "Other Person",
+        accountHolder: "Other Person",
+        appleDeveloperIdentifierId: "ZZZZZZZZZZ.com.tammy.desktop",
+        applicationGroup: "ZZZZZZZZZZ.com.tammy.desktop",
+      }),
     /SELLER_ELIGIBILITY_INVALID/,
   );
 });
@@ -497,18 +521,16 @@ test("validates strict immutable lifecycle events", () => {
   for (const event of [uploadedEvent(), submitted, expired, superseded]) {
     assert.deepEqual(validateReleaseLifecycleEvent(event), event);
   }
-  assert.deepEqual(
-    validateReleaseLifecycleEvent(approved, { priorEvents: [submitted] }),
-    approved,
-  );
+  assert.deepEqual(validateReleaseLifecycleEvent(approved, { priorEvents: [submitted] }), approved);
   assert.throws(
     () => validateReleaseLifecycleEvent(approved, { priorEvents: [] }),
     /LIFECYCLE_EVENT_INVALID/,
   );
   assert.throws(
-    () => validateReleaseLifecycleEvent(approved, {
-      priorEvents: [{ ...submitted, apiToken: "redacted" }],
-    }),
+    () =>
+      validateReleaseLifecycleEvent(approved, {
+        priorEvents: [{ ...submitted, apiToken: "redacted" }],
+      }),
     /LIFECYCLE_EVENT_INVALID/,
   );
   for (const invalid of [
@@ -539,17 +561,19 @@ test("sorts redacted blockers and never lets lifecycle events skip readiness pre
 });
 
 test("duplicate upload events cannot advance readiness", () => {
-  const result = evaluateReleaseState(releaseInputs({
-    attestations: preUploadAttestations,
-    events: [
-      uploadedEvent(),
-      uploadedEvent({
-        occurredAt: "2026-08-30T11:01:00.000Z",
-        appStoreConnectBuildId: "1234567891",
-      }),
-    ],
-  }));
-  assert.equal(result.state, "PRE_UPLOAD_READY");
+  const result = evaluateReleaseState(
+    releaseInputs({
+      attestations: preUploadAttestations,
+      events: [
+        uploadedEvent(),
+        uploadedEvent({
+          occurredAt: "2026-08-30T11:01:00.000Z",
+          appStoreConnectBuildId: "1234567891",
+        }),
+      ],
+    }),
+  );
+  assert.equal(result.state, "NOT_READY");
   assert.equal(
     result.blockers.some(({ code }) => code === "APP_STORE_UPLOAD_EVENT_AMBIGUOUS"),
     true,
@@ -557,18 +581,20 @@ test("duplicate upload events cannot advance readiness", () => {
 });
 
 test("a conflicting second upload is ambiguous even when it targets different bytes", () => {
-  const result = evaluateReleaseState(releaseInputs({
-    attestations: preUploadAttestations,
-    events: [
-      uploadedEvent(),
-      uploadedEvent({
-        occurredAt: "2026-08-30T11:01:00.000Z",
-        appStoreConnectBuildId: "1234567891",
-        packageSha256: "f".repeat(64),
-      }),
-    ],
-  }));
-  assert.equal(result.state, "PRE_UPLOAD_READY");
+  const result = evaluateReleaseState(
+    releaseInputs({
+      attestations: preUploadAttestations,
+      events: [
+        uploadedEvent(),
+        uploadedEvent({
+          occurredAt: "2026-08-30T11:01:00.000Z",
+          appStoreConnectBuildId: "1234567891",
+          packageSha256: "f".repeat(64),
+        }),
+      ],
+    }),
+  );
+  assert.equal(result.state, "NOT_READY");
   assert.equal(
     result.blockers.some(({ code }) => code === "APP_STORE_UPLOAD_EVENT_AMBIGUOUS"),
     true,
@@ -576,22 +602,24 @@ test("a conflicting second upload is ambiguous even when it targets different by
 });
 
 test("reordered lifecycle events are an explicit non-passing sequence", () => {
-  const result = evaluateReleaseState(releaseInputs({
-    attestations: preUploadAttestations,
-    events: [
-      {
-        schemaVersion: 1,
-        kind: "submitted",
-        releaseVersion,
-        buildNumber,
-        operator: "Ben Ebsworth",
-        occurredAt: "2026-08-30T12:00:00.000Z",
-        appStoreSubmissionReference: "apple/submission-123.json",
-      },
-      uploadedEvent(),
-    ],
-  }));
-  assert.equal(result.state, "UPLOADED");
+  const result = evaluateReleaseState(
+    releaseInputs({
+      attestations: preUploadAttestations,
+      events: [
+        {
+          schemaVersion: 1,
+          kind: "submitted",
+          releaseVersion,
+          buildNumber,
+          operator: "Ben Ebsworth",
+          occurredAt: "2026-08-30T12:00:00.000Z",
+          appStoreSubmissionReference: "apple/submission-123.json",
+        },
+        uploadedEvent(),
+      ],
+    }),
+  );
+  assert.equal(result.state, "NOT_READY");
   assert.equal(
     result.blockers.some(({ code }) => code === "RELEASE_LIFECYCLE_SEQUENCE_INVALID"),
     true,
@@ -630,27 +658,29 @@ test("terminal lifecycle events consume readiness and submitted cannot precede u
     appStoreSubmissionReference: "apple/submission-123.json",
   };
   for (const terminalEvent of [expired, superseded, submitted]) {
-    const result = evaluateReleaseState(releaseInputs({
-      attestations: [...preUploadAttestations, ...preSubmitAttestations],
-      events: [uploadedEvent(), terminalEvent],
-    }));
-    assert.equal(result.state, "PRE_SUBMIT_READY", terminalEvent.kind);
+    const result = evaluateReleaseState(
+      releaseInputs({
+        attestations: [...preUploadAttestations, ...preSubmitAttestations],
+        events: [uploadedEvent(), terminalEvent],
+      }),
+    );
+    assert.equal(result.state, "NOT_READY", terminalEvent.kind);
     assert.equal(
       result.blockers.some(({ code }) =>
-        ["BUILD_NUMBER_CONSUMED", "APP_STORE_SUBMISSION_ALREADY_RECORDED"].includes(code)),
+        ["BUILD_NUMBER_CONSUMED", "APP_STORE_SUBMISSION_ALREADY_RECORDED"].includes(code),
+      ),
       true,
       terminalEvent.kind,
     );
   }
 
-  const submittedBeforeUpload = evaluateReleaseState(releaseInputs({
-    attestations: preUploadAttestations,
-    events: [
-      { ...submitted, occurredAt: "2026-08-30T10:00:00.000Z" },
-      uploadedEvent(),
-    ],
-  }));
-  assert.equal(submittedBeforeUpload.state, "UPLOADED");
+  const submittedBeforeUpload = evaluateReleaseState(
+    releaseInputs({
+      attestations: preUploadAttestations,
+      events: [{ ...submitted, occurredAt: "2026-08-30T10:00:00.000Z" }, uploadedEvent()],
+    }),
+  );
+  assert.equal(submittedBeforeUpload.state, "NOT_READY");
   assert.equal(
     submittedBeforeUpload.blockers.some(
       ({ code }) => code === "RELEASE_LIFECYCLE_SEQUENCE_INVALID",
@@ -658,11 +688,13 @@ test("terminal lifecycle events consume readiness and submitted cannot precede u
     true,
   );
 
-  const submissionWithoutDeclarations = evaluateReleaseState(releaseInputs({
-    attestations: preUploadAttestations,
-    events: [uploadedEvent(), submitted],
-  }));
-  assert.equal(submissionWithoutDeclarations.state, "UPLOADED");
+  const submissionWithoutDeclarations = evaluateReleaseState(
+    releaseInputs({
+      attestations: preUploadAttestations,
+      events: [uploadedEvent(), submitted],
+    }),
+  );
+  assert.equal(submissionWithoutDeclarations.state, "NOT_READY");
   assert.equal(
     submissionWithoutDeclarations.blockers.some(
       ({ code }) => code === "RELEASE_LIFECYCLE_SEQUENCE_INVALID",
