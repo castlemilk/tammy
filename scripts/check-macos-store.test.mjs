@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -113,6 +113,36 @@ test("repository inspection binds Tammy identity, store resources and operator g
     "screenshots",
   ]);
   assert.deepEqual(result.blockers, []);
+});
+
+test("repository inspection rejects installed-name drift from the desktop product name", async () => {
+  const fixtureRoot = await mkdtemp(path.join(tmpdir(), "tammy-macos-identity-test-"));
+  try {
+    await mkdir(path.join(fixtureRoot, "apps"), { recursive: true });
+    await mkdir(path.join(fixtureRoot, "docs"), { recursive: true });
+    await Promise.all([
+      cp(path.join(root, "apps", "desktop"), path.join(fixtureRoot, "apps", "desktop"), {
+        recursive: true,
+      }),
+      cp(path.join(root, "docs", "development"), path.join(fixtureRoot, "docs", "development"), {
+        recursive: true,
+      }),
+      cp(path.join(root, "docs", "release"), path.join(fixtureRoot, "docs", "release"), {
+        recursive: true,
+      }),
+      cp(path.join(root, "README.md"), path.join(fixtureRoot, "README.md")),
+    ]);
+    const packagePath = path.join(fixtureRoot, "apps", "desktop", "package.json");
+    const desktopPackage = JSON.parse(await readFile(packagePath, "utf8"));
+    await writeFile(packagePath, `${JSON.stringify({ ...desktopPackage, productName: "Tammy Drift" }, null, 2)}\n`);
+
+    await assert.rejects(
+      () => inspectMacOSStoreRepository(fixtureRoot),
+      /MACOS_STORE_IDENTITY_MISMATCH/,
+    );
+  } finally {
+    await rm(fixtureRoot, { force: true, recursive: true });
+  }
 });
 
 test("company-controller attestations require the exact redacted accountable record", () => {

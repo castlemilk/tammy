@@ -540,11 +540,15 @@ export async function inspectMacOSStoreRepository(root) {
     privacy,
   });
   if (
-    desktopPackage?.productName !== "Tammy" ||
     identity.installedName !== desktopPackage.productName ||
     identity.bundleIdentifier !== APP_BUNDLE_ID ||
     identity.minimumMacOSVersion !== "14.0" ||
-    identity.architectures.join(",") !== "arm64" ||
+    identity.architectures.join(",") !== "arm64"
+  ) {
+    fail("MACOS_STORE_IDENTITY_MISMATCH");
+  }
+  if (
+    desktopPackage?.productName !== "Tammy" ||
     typeof desktopPackage?.version !== "string" ||
     !/^[0-9]+\.[0-9]+\.[0-9]+$/.test(desktopPackage.version) ||
     icon.width !== 1024 ||
