@@ -29,7 +29,9 @@ The release uses these canonical values:
 
 The release checker must keep the repository copy, packaged `Info.plist`, public links, App Store worksheet, privacy policy, screenshots, and release evidence consistent with these values. `LSMinimumSystemVersion`, architecture, marketing version, build number, and copyright are candidate evidence, not documentation-only claims.
 
-Gamma Systems Pty Ltd ownership is a legal submission prerequisite, not a string-replacement exercise. Before the site represents Gamma Systems Pty Ltd as publisher, an authorised company controller records a redacted attestation that the company controls the policy and support address. Before upload, the operator must verify the Apple Developer membership type, App Store Connect seller name, Account Holder, active agreements, copyright authority, and any authorization Apple requires for the app's accounting/financial scope. The pre-upload check blocks if that attestation is absent or if the seller is still an individual without documented company authority. The repository reports the mismatch; it never edits Apple account identity or treats a matching display string as evidence.
+Gamma Systems Pty Ltd ownership is a legal submission prerequisite, not a string-replacement exercise. Before the site represents Gamma Systems Pty Ltd as publisher, an authorised company controller records a redacted attestation that the company controls the policy and support address. Before upload, the Apple Developer organization and App Store seller must be Gamma Systems Pty Ltd. The only permitted exception is explicit written Apple approval for the individual seller to submit this exact app and financial/accounting scope; general company authorization alone is insufficient. The operator must also verify the Account Holder, active agreements, copyright authority, and any authorization Apple requires. The pre-upload check blocks without that evidence. The repository reports mismatches; it never edits Apple account identity or treats a matching display string as evidence.
+
+The existing App ID and App Store Connect record belong to an individual team until verified otherwise, so the design includes an explicit migration branch. If Gamma Systems Pty Ltd has or creates an organization membership, the operator must use Apple's supported app-transfer path where eligible or create a company-owned replacement record where transfer is unavailable. After transfer/recreation, Tammy must adopt the company Team ID and reissue the explicit App ID, application groups, distribution/development certificates, installer certificate, and provisioning profiles. Release checks then update and verify `ElectronTeamID`, application identifier, keychain/application groups, helper identifiers, embedded profile, App Store Connect ID, and seller metadata together. No candidate built with the current individual team's materials qualifies for `PRE_UPLOAD_READY` unless the written-Apple-exception branch is recorded.
 
 ## Non-goals
 
@@ -81,6 +83,12 @@ A deterministic consistency test prevents the rendered policy, site identity, in
 After public deployment, the resulting HTTPS `/privacy` and `/support` URLs replace the GitHub links in the App Store worksheet and become the exact `TAMMY_MACOS_PRIVACY_POLICY_URL` and `TAMMY_MACOS_SUPPORT_URL` inputs embedded in the candidate. Tammy continues to allow only those validated URLs to open externally from the store build.
 
 The site is published publicly because Apple reviewers and customers must be able to reach both pages without authentication. The user has approved an initial public Sites URL; a custom domain is deferred.
+
+### Intentional publication and rollback
+
+Publishing is an explicit Sites-owner operation after `task site:build` and `task site:publish-check` pass; no repository build or app release task deploys the site. The owner uses the Sites hosting workflow with the already approved public access, records the returned deployment identifier, immutable site version, UTC time, and public origin, then runs `task site:post-deploy-check SITE_ORIGIN=<https-origin>`. That check performs bounded HTTPS requests to `/`, `/privacy`, and `/support`, verifies status/content type, canonical identity and policy version, internal links, and the support address, and writes a redacted deployment-evidence file. Only a passing deployed origin may enter store metadata or candidate inputs.
+
+Rollback is also intentional: the Sites owner selects the last recorded passing site version, redeploys it through Sites, reruns the post-deploy check, and records a new rollback event without deleting prior deployment evidence. If publication or verification fails, the release remains on the last passing public origin and the candidate/store worksheet are not updated.
 
 ## App Store metadata package
 
@@ -137,6 +145,8 @@ Capture writes to a new temporary directory and replaces the canonical set only 
 
 The existing Mac App Store profile remains the sole candidate builder. It continues to require an arm64 Mac, a monotonically increasing `CFBundleVersion`, an explicit export-compliance value, a distribution provisioning profile outside the repository, matching Apple Distribution and Mac Installer Distribution identities, the Team ID, and the exact deployed privacy/support URLs.
 
+“Existing profile” means the repository packaging implementation, not the current individual's signing materials. The profile accepts only the verified company team materials or the recorded written-Apple-exception branch described above.
+
 Candidate production must:
 
 - refuse a dirty or internally inconsistent source tree;
@@ -147,6 +157,12 @@ Candidate production must:
 - create the signed installer package with `productbuild`;
 - validate the package signature and record local Gatekeeper output as observational evidence only; and
 - emit a SHA-256 digest and release-evidence record without exposing credential material.
+
+### Two-phase provenance
+
+Build-number reservation is deliberately non-self-referential. Phase one adds a ledger entry containing only the build number, marketing version, `reserved` state, UTC time, and operator identity, then commits it. That clean reservation commit becomes the immutable product-source commit and tree digest for both development and distribution builds. Phase two occurs after candidate creation: a new release-record event links the already reserved number to the product-source commit/tree digest, unsigned-content manifest, signed app/package hashes, and outcome. Later screenshot, upload, and review-record commits are bookkeeping commits and never replace the product-source identity.
+
+Development and distribution artifacts are created from separate copies of one authenticated unsigned-content staging result. Before signing, a canonical manifest hashes every runtime-relevant file and records its mode-independent metadata. After signing, an equivalence check compares resources, packaged application JavaScript, native modules, core/helper input hashes, bundle identifiers, versions, public URLs, and entitlement intent. It excludes only documented signature containers, code-directory bytes, embedded provisioning profiles, and signing-mode entitlement differences. The screenshot manifest links to the development-signed app hash and the shared unsigned-content manifest; the distribution evidence links the same unsigned-content manifest and package hash. Any other payload difference invalidates the screenshots and candidate.
 
 The evidence collector first writes under a gitignored version/build staging directory. It records commands and outcomes in structured JSON plus a readable summary. It may record certificate/profile display names, expiry dates, identifiers, and hashes, but never private keys, certificate exports, passwords, tokens, profile contents, or environment values. It fails closed when required evidence is missing, stale, belongs to another commit/build, or contradicts the repository metadata. Complete non-secret evidence is promoted into the durable release record defined below.
 
@@ -163,6 +179,8 @@ If current Apple/Xcode tooling can generate a privacy report for the exact Elect
 The top-level Taskfile exposes scenario-oriented commands while keeping individual checks composable:
 
 - `task site:dev`, `task site:test`, and `task site:build` operate the public compliance site locally.
+- `task site:publish-check` validates the exact built site before the Sites owner intentionally publishes it.
+- `task site:post-deploy-check SITE_ORIGIN=<https-origin>` validates and records the deployed public routes; it does not deploy.
 - `task release:check` validates repository-owned Mac App Store inputs without credentials.
 - `task release:screenshots` creates the canonical fictional screenshot set.
 - `task release:screenshots:check` validates screenshot count, format, size, manifest, and captions without recapturing.
@@ -223,7 +241,7 @@ The public site and candidate are versioned independently but linked in the rele
 
 ### Durable records and build-number authority
 
-The Git repository is the authority for non-secret release records and screenshots. `apps/desktop/release/macos/build-numbers.json` is the monotonic build-number ledger; a clean-tree candidate can use only a number reserved for its marketing version and source commit. Upload changes its ledger state to `uploaded`; rejected, expired, or superseded numbers remain permanently consumed. The checker validates the ledger against `CFBundleVersion`, package filename, `Info.plist`, evidence, and the App Store Connect build attestation.
+The Git repository is the authority for non-secret release records and screenshots. `apps/desktop/release/macos/build-numbers.json` is the monotonic build-number ledger; a clean-tree candidate can use only a number reserved for its marketing version by the two-phase flow above. The reservation entry does not contain its own commit. A later build event binds it to the immutable product-source commit/tree digest and artifact hashes. Upload adds an `uploaded` event; rejected, expired, or superseded numbers remain permanently consumed. The checker validates the ledger and events against `CFBundleVersion`, package filename, `Info.plist`, evidence, and the App Store Connect build attestation.
 
 Actual records live under `docs/release/records/macos/<version>/build-<number>/` and are committed and pushed to the trusted repository remote. They contain the redacted state/attestation JSON, metadata snapshot, screenshot manifest and image hashes, privacy/network evidence, package hash, public-site deployment URL, App Store Connect build identifier, and lifecycle events. Large signed packages remain in the operator's access-controlled release archive through review and are also retained by App Store Connect after upload; they are not committed. The release owner is Gamma Systems Pty Ltd's authorised App Store Account Holder or delegate, who verifies that record commits are backed up by the trusted remote.
 
@@ -236,12 +254,13 @@ Every uploaded build keeps its source commit, build number, package digest, scre
 The work is complete when:
 
 - the public Sites URL serves unauthenticated product, privacy, and support pages over HTTPS;
+- the public deployment has an intentional Sites version/deployment record, passing post-deploy evidence, and a tested rollback procedure;
 - all public and in-app legal identity/support references say Gamma Systems Pty Ltd and `ben.ebsworth@gmail.com`;
 - the company-controller and Apple seller/agreement prerequisites are recorded rather than inferred from display strings;
-- `Info.plist`, store metadata, and release evidence agree on version `0.1.0`, the reserved build number, macOS 14+, and arm64;
+- `Info.plist`, store metadata, and release evidence agree on version `0.1.0`, the two-phase reserved build number, immutable product-source tree, macOS 14+, and arm64;
 - the candidate embeds the exact public privacy/support URLs and denies all other new-window URLs;
 - the App Store worksheet contains final truthful copy and no unresolved repository-owned placeholders;
-- five validated real-UI screenshots with fictional data exist in one accepted Mac size;
+- five validated real-UI screenshots with fictional data exist in one accepted Mac size and share an authenticated unsigned-content manifest with the distribution candidate;
 - repository, screenshot, privacy/network, and candidate evidence tasks pass for the exact source revision and build;
 - the signed package, candidate-bound privacy/network evidence, and release record are ready for operator inspection;
 - the release runbook can be followed from a clean checkout without undocumented repository steps; and
