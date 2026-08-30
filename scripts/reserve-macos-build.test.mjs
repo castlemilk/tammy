@@ -233,9 +233,32 @@ test("recognizes an exact candidate-built marker without treating it as consumpt
   );
   await mkdir(path.dirname(file), { recursive: true });
   await writeFile(file, `${JSON.stringify(candidateBuilt, null, 2)}\n`);
-  assert.deepEqual(await readMacOSLifecycleEvents(directory), []);
+  const records = await readMacOSLifecycleEvents(directory);
+  assert.deepEqual(records, [
+    {
+      relativePath: "0.1.0/build-1/events/2026-08-30T04-00-00.000Z-candidate-built.json",
+      event: candidateBuilt,
+    },
+  ]);
+  assert.deepEqual(validateConsumedBuildNumbers(ledger([entry("1")]), records), []);
+  assert.throws(
+    () => validateConsumedBuildNumbers(ledger(), records),
+    /MACOS_BUILD_EVENT_LEDGER_MISMATCH/,
+  );
   await writeFile(file, `${JSON.stringify({ ...candidateBuilt, extra: true }, null, 2)}\n`);
   await assert.rejects(readMacOSLifecycleEvents(directory), /MACOS_BUILD_EVENT_LEDGER_MISMATCH/);
+
+  const misplacedDirectory = await mkdtemp(
+    path.join(process.env.TMPDIR ?? os.tmpdir(), "tammy-misplaced-candidate-event-"),
+  );
+  context.after(() => rm(misplacedDirectory, { recursive: true, force: true }));
+  const misplacedFile = path.join(misplacedDirectory, "0.1.0/build-1/candidate-built.json");
+  await mkdir(path.dirname(misplacedFile), { recursive: true });
+  await writeFile(misplacedFile, `${JSON.stringify(candidateBuilt, null, 2)}\n`);
+  await assert.rejects(
+    readMacOSLifecycleEvents(misplacedDirectory),
+    /MACOS_BUILD_EVENT_LEDGER_MISMATCH/,
+  );
 });
 
 test("atomically reserves a greater build number without phase-two facts", async (context) => {

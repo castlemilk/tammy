@@ -164,6 +164,13 @@ export function validateConsumedBuildNumbers(ledger, events) {
       fail("MACOS_BUILD_EVENT_LEDGER_MISMATCH");
     }
     const event = record.event;
+    if (event?.kind === "candidate-built") {
+      const key = `${event.marketingVersion}\0${event.buildNumber}`;
+      if (!isCandidateBuiltMarker(event, record.relativePath) || !reservations.has(key)) {
+        fail("MACOS_BUILD_EVENT_LEDGER_MISMATCH");
+      }
+      continue;
+    }
     const key = `${event?.releaseVersion}\0${event?.buildNumber}`;
     const lifecycle = lifecycleByBuild.get(key) ?? {
       prior: [],
@@ -245,11 +252,13 @@ export async function readMacOSLifecycleEvents(recordsRoot = defaultRecordsRoot)
         const relativePath = path.relative(recordsRoot, entryPath).split(path.sep).join("/");
         const isEventPath = relativePath.split("/").includes("events");
         const isLifecycle = LIFECYCLE_KINDS.has(record?.kind);
-        if (isEventPath || isLifecycle) {
-          if (record?.kind === "candidate-built") {
+        const isCandidateBuilt = record?.kind === "candidate-built";
+        if (isEventPath || isLifecycle || isCandidateBuilt) {
+          if (isCandidateBuilt) {
             if (!isCandidateBuiltMarker(record, relativePath)) {
               fail("MACOS_BUILD_EVENT_LEDGER_MISMATCH");
             }
+            events.push({ event: record, relativePath });
             continue;
           }
           if (!isLifecycle) fail("MACOS_BUILD_EVENT_LEDGER_MISMATCH");
