@@ -33,9 +33,9 @@ export default function Home() {
           <p className="eyebrow">Private desktop accounting</p>
           <h1 id="hero-heading">Local accounting for Australia</h1>
           <p className="hero-copy">
-            Import source documents, review transactions, and prepare company
-            EOFY and company tax return working papers in one focused workspace
-            on your Mac.
+            Create an encrypted workspace, post and inspect journals, review
+            source documents, reconcile bank transactions, and build a local GST
+            workpaper draft on your Mac.
           </p>
           <p className="boundary-note">
             Reporting is {identity.capabilityBoundary.reporting}; ATO and SBR

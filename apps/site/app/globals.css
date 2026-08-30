@@ -61,7 +61,7 @@ a {
 }
 
 a:focus-visible {
-  outline: 3px solid var(--sage);
+  outline: 3px solid var(--forest);
   outline-offset: 4px;
 }
 

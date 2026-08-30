@@ -6,7 +6,7 @@ const { identity } = publicContent;
 
 export const metadata: Metadata = {
   title: `${identity.appStoreName} — Local accounting for Australia`,
-  description: `${identity.installedName} is private desktop accounting software for Australian company EOFY and tax return preparation.`,
+  description: `${identity.installedName} is private desktop accounting software for encrypted workspaces, journals, source-document review, bank reconciliation, and local GST workpapers.`,
 };
 
 export default function RootLayout({
@@ -15,7 +15,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en-AU">
+    <html lang={identity.locale}>
       <body>{children}</body>
     </html>
   );
