@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -11,12 +11,18 @@ import {
 } from "./generate-public-content.mjs";
 
 const identity = {
+  schemaVersion: 1,
   appStoreName: "Tammy Accounting",
   installedName: "Tammy",
+  bundleIdentifier: "com.tammy.desktop",
   publisher: "Gamma Systems Pty Ltd",
   supportEmail: "ben.ebsworth@gmail.com",
+  locale: "en-AU",
+  primaryCategory: "Finance",
+  secondaryCategory: "Business",
   minimumMacOSVersion: "14.0",
   architectures: ["arm64"],
+  copyright: "© 2026 Gamma Systems Pty Ltd",
   capabilityBoundary: { reporting: "preparation-only", atoLodgement: "not-lodged" },
 };
 
@@ -75,7 +81,15 @@ for (const [name, markdown] of [
   ["duplicate headings", privacy.replace("## Data handled by Tammy", "## Data handled by Tammy\n\n## Data handled by Tammy")],
   ["unsupported syntax", privacy.replace("Use", "> Use")],
   ["malformed inline syntax", privacy.replace("Use", "Use ]")],
+  ["underscore emphasis", privacy.replace("Use", "_Use_")],
+  ["strikethrough", privacy.replace("Use", "~~Use~~")],
+  ["backslash escapes", privacy.replace("Use", "\\Use")],
   ["malformed link URLs", privacy.replace("mailto:ben.ebsworth@gmail.com", "mailto:not an email")],
+  ["mailto recipient other than support", privacy.replace("mailto:ben.ebsworth@gmail.com", "mailto:other@example.com")],
+  ["mailto header payload", privacy.replace("mailto:ben.ebsworth@gmail.com", "mailto:ben.ebsworth@gmail.com?subject=hello")],
+  ["raw HTML in H1", privacy.replace("Tammy privacy policy", "Tammy <b>privacy</b> policy")],
+  ["unsupported syntax in effective date", privacy.replace("30 August 2026", "*30 August 2026*")],
+  ["raw HTML in H2", privacy.replace("Data handled by Tammy", "Data <b>handled</b> by Tammy")],
   ["missing effective date", privacy.replace("Effective 30 August 2026.\n\n", "")],
 ]) {
   test(`rejects ${name}`, () => {
@@ -89,19 +103,22 @@ test("generates safe deterministic TypeScript from trusted JSON inputs and parse
   assert.match(output, /export interface PolicySection/);
   assert.match(output, /export type PolicyInline/);
   assert.match(output, /"marketingVersion": "0.1.0"/);
+  assert.match(output, /"schemaVersion": 1/);
   assert.match(output, /"effectiveDate": "30 August 2026"/);
   assert.doesNotMatch(output, /<script>|<b>|!\[/);
-  for (const value of ["Tammy Accounting", "Gamma Systems Pty Ltd", "ben.ebsworth@gmail.com", "https://example.com/support"]) {
+  for (const value of ["Tammy Accounting", "Tammy", "com.tammy.desktop", "Gamma Systems Pty Ltd", "ben.ebsworth@gmail.com", "en-AU", "Finance", "Business", "14.0", "arm64", "© 2026 Gamma Systems Pty Ltd", "preparation-only", "not-lodged", "https://example.com/support"]) {
     assert.ok(output.includes(JSON.stringify(value)), `${value} must be a JSON string literal`);
   }
 });
 
-test("rejects an invalid desktop semantic version", () => {
+for (const version of ["0.1", "01.1.0", "1.01.0", "1.0.01", "1.0.0-", "1.0.0-alpha..1", "1.0.0+build..1"]) {
+  test(`rejects invalid desktop semantic version ${version}`, () => {
   assert.throws(
-    () => generatePublicContent({ identity, privacy, desktopPackage: { version: "0.1" } }),
+    () => generatePublicContent({ identity, privacy, desktopPackage: { version } }),
     /semantic version/i,
   );
-});
+  });
+}
 
 test("writes byte-stable generated content to an explicit temporary output path", async (context) => {
   const temporaryDirectory = await mkdtemp(path.join(process.env.TMPDIR ?? os.tmpdir(), "tammy-public-content-"));
@@ -111,13 +128,20 @@ test("writes byte-stable generated content to an explicit temporary output path"
   const identityPath = path.join(temporaryDirectory, "store-identity.json");
   const packagePath = path.join(temporaryDirectory, "package.json");
   await Promise.all([
-    import("node:fs/promises").then(({ writeFile }) => writeFile(policyPath, privacy)),
-    import("node:fs/promises").then(({ writeFile }) => writeFile(identityPath, JSON.stringify(identity))),
-    import("node:fs/promises").then(({ writeFile }) => writeFile(packagePath, JSON.stringify({ version: "0.1.0" }))),
+    writeFile(policyPath, privacy),
+    writeFile(identityPath, JSON.stringify(identity)),
+    writeFile(packagePath, JSON.stringify({ version: "0.1.0" })),
   ]);
 
-  await run({ policyPath, identityPath, packagePath, outputPath });
+  assert.deepEqual(await run({ policyPath, identityPath, packagePath, outputPath }), { written: true });
   const first = await readFile(outputPath, "utf8");
-  await run({ policyPath, identityPath, packagePath, outputPath });
+  const firstStat = await stat(outputPath);
+  assert.deepEqual(await run({ policyPath, identityPath, packagePath, outputPath }), { written: false });
   assert.equal(await readFile(outputPath, "utf8"), first);
+  assert.equal((await stat(outputPath)).ino, firstStat.ino, "unchanged output is not replaced");
+
+  await writeFile(policyPath, privacy.replace("Plain text", "Changed text"));
+  assert.deepEqual(await run({ policyPath, identityPath, packagePath, outputPath }), { written: true });
+  assert.notEqual((await stat(outputPath)).ino, firstStat.ino, "changed output is atomically replaced");
+  assert.match(await readFile(outputPath, "utf8"), /Changed text/);
 });

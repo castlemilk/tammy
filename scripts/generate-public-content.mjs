@@ -2,6 +2,11 @@ import { readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const policyError = (message) => new Error(`Invalid policy Markdown: ${message}`);
+const semver = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(?:(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
+
+function assertPlainPolicyText(value, label) {
+  if (!value || /[<>!\[\]()*`_~\\]/.test(value)) throw policyError(`${label} contains unsupported Markdown syntax`);
+}
 
 function parseLinkUrl(value) {
   if (/\s/.test(value)) throw policyError("link URLs cannot contain whitespace");
@@ -13,7 +18,7 @@ function parseLinkUrl(value) {
   }
   if (value.startsWith("mailto:")) {
     const email = value.slice(7);
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw policyError("mailto link URL is malformed");
+    if (email !== "ben.ebsworth@gmail.com") throw policyError("mailto links must use the published support address without headers");
     return value;
   }
   throw policyError("links must use HTTPS or mailto URLs");
@@ -21,6 +26,7 @@ function parseLinkUrl(value) {
 
 function parseInlines(value) {
   if (!value || /[<>]/.test(value) || value.includes("![")) throw policyError("raw HTML and images are not supported");
+  if (/[_~\\]/.test(value)) throw policyError("unsupported Markdown syntax");
   const inlines = [];
   let cursor = 0;
   const appendText = (text) => {
@@ -61,8 +67,10 @@ export function parsePolicyMarkdown(source) {
   if (typeof source !== "string" || source.includes("\r")) throw policyError("source must use LF line endings");
   const lines = source.split("\n");
   if (!/^# [^#].+$/.test(lines[0] ?? "")) throw policyError("exactly one H1 is required as the first line");
+  assertPlainPolicyText(lines[0].slice(2), "H1");
   if (lines[1] !== "" || !/^Effective [^.]+\.$/.test(lines[2] ?? "") || lines[3] !== "") throw policyError("an effective-date paragraph is required after the H1");
   const effectiveDate = lines[2].slice(10, -1);
+  assertPlainPolicyText(effectiveDate, "effective date");
   const sections = [];
   const headings = new Set();
   let section;
@@ -72,6 +80,7 @@ export function parsePolicyMarkdown(source) {
     const heading = /^## ([^#].+)$/.exec(line);
     if (heading) {
       if (headings.has(heading[1])) throw policyError("duplicate section heading");
+      assertPlainPolicyText(heading[1], "H2 heading");
       headings.add(heading[1]);
       section = { heading: heading[1], blocks: [] };
       sections.push(section);
@@ -92,24 +101,31 @@ export function parsePolicyMarkdown(source) {
 }
 
 function assertIdentity(identity) {
-  for (const key of ["appStoreName", "installedName", "publisher", "supportEmail", "minimumMacOSVersion"]) if (typeof identity?.[key] !== "string" || !identity[key]) throw new Error(`Invalid identity ${key}`);
+  if (!Number.isInteger(identity?.schemaVersion) || identity.schemaVersion < 1) throw new Error("Invalid identity schemaVersion");
+  for (const key of ["appStoreName", "installedName", "bundleIdentifier", "publisher", "supportEmail", "locale", "primaryCategory", "secondaryCategory", "minimumMacOSVersion", "copyright"]) if (typeof identity?.[key] !== "string" || !identity[key]) throw new Error(`Invalid identity ${key}`);
   if (!Array.isArray(identity.architectures) || identity.architectures.some((value) => typeof value !== "string")) throw new Error("Invalid identity architectures");
   if (typeof identity.capabilityBoundary?.reporting !== "string" || typeof identity.capabilityBoundary?.atoLodgement !== "string") throw new Error("Invalid identity capability boundary");
 }
 
 export function generatePublicContent({ identity, privacy, desktopPackage }) {
   assertIdentity(identity);
-  if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.test(desktopPackage?.version ?? "")) throw new Error("Desktop package version must be a semantic version");
-  const content = { identity: { appStoreName: identity.appStoreName, installedName: identity.installedName, publisher: identity.publisher, supportEmail: identity.supportEmail, minimumMacOSVersion: identity.minimumMacOSVersion, architectures: identity.architectures, capabilityBoundary: identity.capabilityBoundary }, marketingVersion: desktopPackage.version, policy: parsePolicyMarkdown(privacy) };
+  if (!semver.test(desktopPackage?.version ?? "")) throw new Error("Desktop package version must be a semantic version");
+  const content = { identity: { schemaVersion: identity.schemaVersion, appStoreName: identity.appStoreName, installedName: identity.installedName, bundleIdentifier: identity.bundleIdentifier, publisher: identity.publisher, supportEmail: identity.supportEmail, locale: identity.locale, primaryCategory: identity.primaryCategory, secondaryCategory: identity.secondaryCategory, minimumMacOSVersion: identity.minimumMacOSVersion, architectures: identity.architectures, copyright: identity.copyright, capabilityBoundary: identity.capabilityBoundary }, marketingVersion: desktopPackage.version, policy: parsePolicyMarkdown(privacy) };
   return `export type PolicyInline =\n  | { readonly type: "text" | "emphasis" | "code"; readonly value: string }\n  | { readonly type: "link"; readonly text: string; readonly href: string };\n\nexport interface PolicySection {\n  readonly heading: string;\n  readonly blocks: readonly (\n    | { readonly type: "paragraph"; readonly inlines: readonly PolicyInline[] }\n    | { readonly type: "list"; readonly items: readonly (readonly PolicyInline[])[] }\n  )[];\n}\n\nexport const publicContent = ${JSON.stringify(content, null, 2)} as const;\n`;
 }
 
 export async function run({ policyPath = "PRIVACY.md", identityPath = "apps/desktop/release/macos/store-identity.json", packagePath = "apps/desktop/package.json", outputPath = "apps/site/content/public-content.generated.ts" } = {}) {
   const [privacy, identityText, packageText] = await Promise.all([readFile(policyPath, "utf8"), readFile(identityPath, "utf8"), readFile(packagePath, "utf8")]);
   const output = generatePublicContent({ identity: JSON.parse(identityText), privacy, desktopPackage: JSON.parse(packageText) });
-  const temporaryPath = `${outputPath}.tmp-${process.pid}`;
+  try {
+    if (await readFile(outputPath, "utf8") === output) return { written: false };
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+  }
+  const temporaryPath = path.join(path.dirname(outputPath), `.${path.basename(outputPath)}.tmp-${process.pid}-${Date.now()}`);
   await writeFile(temporaryPath, output, "utf8");
   await rename(temporaryPath, outputPath);
+  return { written: true };
 }
 
 if (import.meta.main) {
