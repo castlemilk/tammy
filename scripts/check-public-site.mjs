@@ -8,6 +8,7 @@ const MAX_RESPONSE_BYTES = 1_000_000;
 const MAX_PREVIEW_OUTPUT_BYTES = 65_536;
 const PREVIEW_TIMEOUT_MS = 30_000;
 const MAX_REDIRECT_HOPS = 5;
+const REQUEST_TIMEOUT_MS = 15_000;
 
 function validateOrigin(origin, mode) {
   let parsed;
@@ -34,7 +35,7 @@ function validateOrigin(origin, mode) {
   return parsed.origin;
 }
 
-async function readBoundedHtml(response) {
+async function readBoundedHtml(response, signal) {
   const declaredLength = Number(response.headers.get("content-length"));
   if (Number.isFinite(declaredLength) && declaredLength > MAX_RESPONSE_BYTES) {
     throw new Error("Site response exceeds the maximum response size in bytes");
@@ -44,6 +45,10 @@ async function readBoundedHtml(response) {
   }
 
   const reader = response.body.getReader();
+  const cancelOnAbort = () => {
+    void reader.cancel(signal.reason).catch(() => {});
+  };
+  signal.addEventListener("abort", cancelOnAbort, { once: true });
   const chunks = [];
   let byteLength = 0;
   try {
@@ -58,6 +63,7 @@ async function readBoundedHtml(response) {
       chunks.push(value);
     }
   } finally {
+    signal.removeEventListener("abort", cancelOnAbort);
     reader.releaseLock();
   }
   const bytes = new Uint8Array(byteLength);
@@ -126,10 +132,10 @@ function validatePage(pathname, html) {
   }
 }
 
-async function fetchSameOrigin(requestedUrl, canonicalOrigin, fetchImpl) {
+async function fetchSameOrigin(requestedUrl, canonicalOrigin, fetchImpl, signal) {
   let currentUrl = requestedUrl;
   for (let hop = 0; hop <= MAX_REDIRECT_HOPS; hop += 1) {
-    const response = await fetchImpl(currentUrl, { redirect: "manual" });
+    const response = await fetchImpl(currentUrl, { redirect: "manual", signal });
     if (response.status >= 300 && response.status < 400 && response.status !== 304) {
       const location = response.headers.get("location");
       if (!location) throw new Error("Redirect response is missing its Location header");
@@ -153,21 +159,48 @@ async function fetchSameOrigin(requestedUrl, canonicalOrigin, fetchImpl) {
   throw new Error("Redirect chain exceeds the maximum hop count");
 }
 
-export async function checkPublicSite({ origin, mode = "deployed", fetchImpl = fetch }) {
+async function withDeadline(label, timeoutMs, operation) {
+  const controller = new AbortController();
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      const error = new Error(`${label} timed out after ${timeoutMs}ms`);
+      controller.abort(error);
+      reject(error);
+    }, timeoutMs);
+  });
+  try {
+    return await Promise.race([operation(controller.signal), timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export async function checkPublicSite({
+  origin,
+  mode = "deployed",
+  fetchImpl = fetch,
+  timeoutMs = REQUEST_TIMEOUT_MS,
+}) {
+  if (!Number.isInteger(timeoutMs) || timeoutMs <= 0) {
+    throw new Error("Site request timeout must be a positive integer");
+  }
   const canonicalOrigin = validateOrigin(origin, mode);
   const routes = [];
 
   for (const pathname of ROUTES) {
     const requestedUrl = new URL(pathname, `${canonicalOrigin}/`).href;
-    const response = await fetchSameOrigin(requestedUrl, canonicalOrigin, fetchImpl);
-    if (response.status !== 200) {
-      throw new Error(`${pathname} returned unexpected status ${response.status}`);
-    }
-    const contentType = response.headers.get("content-type") ?? "";
-    if (!/^text\/html(?:;|$)/i.test(contentType)) {
-      throw new Error(`${pathname} did not return HTML`);
-    }
-    const html = await readBoundedHtml(response);
+    const { html } = await withDeadline(pathname, timeoutMs, async (signal) => {
+      const response = await fetchSameOrigin(requestedUrl, canonicalOrigin, fetchImpl, signal);
+      if (response.status !== 200) {
+        throw new Error(`${pathname} returned unexpected status ${response.status}`);
+      }
+      const contentType = response.headers.get("content-type") ?? "";
+      if (!/^text\/html(?:;|$)/i.test(contentType)) {
+        throw new Error(`${pathname} did not return HTML`);
+      }
+      return { html: await readBoundedHtml(response, signal) };
+    });
     validatePage(pathname, html);
     routes.push({ path: pathname, status: 200, contentType: "text/html", check: "passed" });
   }

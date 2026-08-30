@@ -206,3 +206,30 @@ test("bounds response bodies", async () => {
     /large|size|bytes/i,
   );
 });
+
+test("times out a fetch that never returns headers", async () => {
+  await assert.rejects(
+    checkPublicSite({
+      origin,
+      mode: "deployed",
+      fetchImpl: async () => new Promise(() => {}),
+      timeoutMs: 20,
+    }),
+    /timed out/i,
+  );
+});
+
+test("times out a response body that never completes", async () => {
+  const fetchImpl = async (url) => {
+    const response = new Response(new ReadableStream({ start() {} }), {
+      status: 200,
+      headers: { "content-type": "text/html" },
+    });
+    Object.defineProperty(response, "url", { value: url });
+    return response;
+  };
+  await assert.rejects(
+    checkPublicSite({ origin, mode: "deployed", fetchImpl, timeoutMs: 20 }),
+    /timed out/i,
+  );
+});

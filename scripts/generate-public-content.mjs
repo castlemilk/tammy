@@ -122,6 +122,27 @@ export function generatePublicContent({ identity, privacy, desktopPackage, dataR
 
 const defaultFileSystem = { open, readFile, rename, rm };
 
+async function renderFromFiles({
+  policyPath,
+  identityPath,
+  packagePath,
+  dataRemovalPath,
+  fileSystem,
+}) {
+  const [privacy, identityText, packageText, dataRemovalText] = await Promise.all([
+    fileSystem.readFile(policyPath, "utf8"),
+    fileSystem.readFile(identityPath, "utf8"),
+    fileSystem.readFile(packagePath, "utf8"),
+    fileSystem.readFile(dataRemovalPath, "utf8"),
+  ]);
+  return generatePublicContent({
+    identity: JSON.parse(identityText),
+    privacy,
+    desktopPackage: JSON.parse(packageText),
+    dataRemoval: JSON.parse(dataRemovalText),
+  });
+}
+
 async function createSiblingTemporaryFile(outputPath, fileSystem) {
   for (let attempt = 0; attempt < 8; attempt += 1) {
     const temporaryPath = path.join(path.dirname(outputPath), `.${path.basename(outputPath)}.tmp-${randomUUID()}`);
@@ -152,8 +173,13 @@ async function replaceAtomically(outputPath, output, fileSystem) {
 }
 
 export async function run({ policyPath = "PRIVACY.md", identityPath = "apps/desktop/release/macos/store-identity.json", packagePath = "apps/desktop/package.json", dataRemovalPath = "apps/desktop/release/macos/data-removal.json", outputPath = "apps/site/content/public-content.generated.ts", fileSystem = defaultFileSystem } = {}) {
-  const [privacy, identityText, packageText, dataRemovalText] = await Promise.all([fileSystem.readFile(policyPath, "utf8"), fileSystem.readFile(identityPath, "utf8"), fileSystem.readFile(packagePath, "utf8"), fileSystem.readFile(dataRemovalPath, "utf8")]);
-  const output = generatePublicContent({ identity: JSON.parse(identityText), privacy, desktopPackage: JSON.parse(packageText), dataRemoval: JSON.parse(dataRemovalText) });
+  const output = await renderFromFiles({
+    policyPath,
+    identityPath,
+    packagePath,
+    dataRemovalPath,
+    fileSystem,
+  });
   try {
     if (await fileSystem.readFile(outputPath, "utf8") === output) return { written: false };
   } catch (error) {
@@ -163,8 +189,36 @@ export async function run({ policyPath = "PRIVACY.md", identityPath = "apps/desk
   return { written: true };
 }
 
+export async function check({ policyPath = "PRIVACY.md", identityPath = "apps/desktop/release/macos/store-identity.json", packagePath = "apps/desktop/package.json", dataRemovalPath = "apps/desktop/release/macos/data-removal.json", outputPath = "apps/site/content/public-content.generated.ts", fileSystem = defaultFileSystem } = {}) {
+  const expected = await renderFromFiles({
+    policyPath,
+    identityPath,
+    packagePath,
+    dataRemovalPath,
+    fileSystem,
+  });
+  let actual;
+  try {
+    actual = await fileSystem.readFile(outputPath, "utf8");
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      throw new Error(`Generated public content is missing: ${outputPath}`);
+    }
+    throw error;
+  }
+  if (actual !== expected) {
+    throw new Error(`Generated public content is stale: ${outputPath}`);
+  }
+  return { current: true };
+}
+
 if (import.meta.main) {
   const outputIndex = process.argv.indexOf("--output");
   if (outputIndex !== -1 && !process.argv[outputIndex + 1]) throw new Error("--output requires a path");
-  await run(outputIndex === -1 ? {} : { outputPath: path.resolve(process.argv[outputIndex + 1]) });
+  const checkOnly = process.argv.includes("--check");
+  if (checkOnly && process.argv.includes("--write")) {
+    throw new Error("Choose only one of --check or --write");
+  }
+  const options = outputIndex === -1 ? {} : { outputPath: path.resolve(process.argv[outputIndex + 1]) };
+  await (checkOnly ? check(options) : run(options));
 }

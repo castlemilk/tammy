@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 import {
   generatePublicContent,
@@ -49,6 +51,9 @@ Use *local* records, \`Keychain\`, and [support](mailto:ben.ebsworth@gmail.com).
 - An [HTTPS link](https://example.com/support)
 - Plain text
 `;
+
+const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const generatorPath = path.join(repositoryRoot, "scripts/generate-public-content.mjs");
 
 test("parses the intentionally small policy Markdown contract", () => {
   assert.deepEqual(parsePolicyMarkdown(privacy), {
@@ -202,6 +207,31 @@ test("writes byte-stable generated content to an explicit temporary output path"
   assert.deepEqual(await run({ policyPath, identityPath, packagePath, dataRemovalPath, outputPath }), { written: true });
   assert.notEqual((await stat(outputPath)).ino, firstStat.ino, "changed output is atomically replaced");
   assert.match(await readFile(outputPath, "utf8"), /Changed text/);
+});
+
+test("CLI --check never creates or changes generated output", async (context) => {
+  const temporaryDirectory = await mkdtemp(
+    path.join(process.env.TMPDIR ?? os.tmpdir(), "tammy-public-content-check-"),
+  );
+  context.after(() => rm(temporaryDirectory, { recursive: true, force: true }));
+  const outputPath = path.join(temporaryDirectory, "public-content.generated.ts");
+
+  const missing = spawnSync(
+    process.execPath,
+    [generatorPath, "--check", "--output", outputPath],
+    { cwd: repositoryRoot, encoding: "utf8" },
+  );
+  assert.notEqual(missing.status, 0);
+  await assert.rejects(stat(outputPath), { code: "ENOENT" });
+
+  await writeFile(outputPath, "stale-content\n");
+  const stale = spawnSync(
+    process.execPath,
+    [generatorPath, "--check", "--output", outputPath],
+    { cwd: repositoryRoot, encoding: "utf8" },
+  );
+  assert.notEqual(stale.status, 0);
+  assert.equal(await readFile(outputPath, "utf8"), "stale-content\n");
 });
 
 test("cleans up an exclusively-created sibling temporary file after rename failure", async (context) => {
