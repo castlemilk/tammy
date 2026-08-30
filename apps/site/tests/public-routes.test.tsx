@@ -21,6 +21,7 @@ describe('Tammy public routes', () => {
       ),
     ).toBeTruthy();
     expect(screen.queryByText(/company (?:EOFY|tax return)/i)).toBeNull();
-    expect(String(metadata.description)).not.toMatch(/company tax return/i);
+    expect(String(metadata.description)).not.toMatch(/company\s+EOFY/i);
+    expect(String(metadata.description)).not.toMatch(/tax return preparation/i);
   });
 });

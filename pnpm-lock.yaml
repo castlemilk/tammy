@@ -146,6 +146,9 @@ importers:
 
   apps/site:
     dependencies:
+      clsx:
+        specifier: 2.1.1
+        version: 2.1.1
       react:
         specifier: 19.2.6
         version: 19.2.6
@@ -158,6 +161,9 @@ importers:
       shadcn:
         specifier: 4.18.0
         version: 4.18.0(supports-color@10.2.2)(typescript@5.9.3)
+      tailwind-merge:
+        specifier: 3.6.0
+        version: 3.6.0
       tw-animate-css:
         specifier: 1.4.0
         version: 1.4.0
