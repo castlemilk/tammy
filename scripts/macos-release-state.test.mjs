@@ -26,15 +26,18 @@ const repositoryRequirements = {
   platformIdentity: true,
   policy: true,
   schemas: true,
+  screenshotDefinitions: true,
   tests: true,
 };
 
 const candidate = {
+  releaseVersion,
   sourceCommit,
   sourceTree,
   buildNumber,
   appSha256: "d".repeat(64),
   packageSha256,
+  buildNumberReserved: true,
   signingProfilePassed: true,
   publicUrlsMatch: true,
   privacyEvidencePassed: true,
@@ -153,6 +156,10 @@ test("exposes only the monotonic readiness states", () => {
     "PRE_SUBMIT_READY",
   ]);
   for (const state of RELEASE_STATES) assert.equal(validateReleaseState(state), state);
+  assert.deepEqual(
+    validateReleaseState({ state: "NOT_READY", passed: [], blockers: [] }),
+    { state: "NOT_READY", passed: [], blockers: [] },
+  );
   for (const lifecycleKind of [
     "uploaded",
     "expired",
@@ -212,6 +219,24 @@ test("documents readiness, attestation, and lifecycle records in the release sch
   ]);
   assert.equal(schema.$defs.releaseAttestation.unevaluatedProperties, false);
   assert.equal(schema.$defs.lifecycleEvent.unevaluatedProperties, false);
+  assert.equal(schema.$defs.releaseAttestation.oneOf.length, 10);
+  assert.equal(schema.$defs.lifecycleEvent.oneOf.length, 6);
+  assert.equal(schema.$defs.sellerEligibilityAttestation.oneOf.length, 2);
+  assert.equal(
+    schema.$defs.companyControllerAttestation.allOf[1].properties.outcome.const,
+    "confirmed",
+  );
+  assert.deepEqual(
+    schema.$defs.exportComplianceAttestation.allOf[1].properties.outcome.enum,
+    ["exempt", "non-exempt"],
+  );
+  assert.equal(schema.$defs.expiredEvent.allOf[1].required.includes("reason"), true);
+  assert.deepEqual(schema.$defs.supersededEvent.allOf[1].dependentRequired, {
+    replacementVersion: ["replacementBuildNumber"],
+    replacementBuildNumber: ["replacementVersion"],
+  });
+  assert.equal(schema.$defs.redactedReference.oneOf.length, 2);
+  assert.deepEqual(schema.$defs.releaseStateRecord.required, ["state", "passed", "blockers"]);
 });
 
 test("derives readiness without requiring signing credentials for repository readiness", () => {
@@ -238,6 +263,7 @@ test("requires every exact candidate evidence boundary before candidate readines
     "sourceTree",
     "appSha256",
     "packageSha256",
+    "buildNumberReserved",
     "signingProfilePassed",
     "publicUrlsMatch",
     "privacyEvidencePassed",
@@ -249,6 +275,16 @@ test("requires every exact candidate evidence boundary before candidate readines
       evaluateReleaseState(releaseInputs({ candidate: changed })).state,
       "REPOSITORY_READY",
       requirement,
+    );
+  }
+  for (const changed of [
+    { ...candidate, releaseVersion: "0.2.0" },
+    { ...candidate, extra: true },
+    { ...candidate, apiToken: "redacted" },
+  ]) {
+    assert.equal(
+      evaluateReleaseState(releaseInputs({ candidate: changed })).state,
+      "REPOSITORY_READY",
     );
   }
 });
@@ -334,6 +370,7 @@ test("rejects unknown fields, secrets, free-form blobs, unsafe references, and r
     { ...valid, evidenceReference: "C:\\private\\evidence.json" },
     { ...valid, evidenceReference: "https://user:password@example.com/evidence" },
     { ...valid, evidenceReference: "https://example.com/evidence?token=value" },
+    { ...valid, evidenceReference: "sk_live_12345678901234567890" },
     { ...valid, releaseVersion: "0.2" },
     { ...valid, buildNumber: "042" },
     { ...valid, confirmedAt: "not-a-time" },
@@ -370,6 +407,17 @@ test("validates both seller eligibility branches and rejects the individual team
     () => validateReleaseAttestation({
       ...exception,
       writtenAppleExceptionReference: "../../../../../authority/publisher-controller.json",
+    }),
+    /SELLER_ELIGIBILITY_INVALID/,
+  );
+  assert.throws(
+    () => validateReleaseAttestation({
+      ...exception,
+      teamId: "ZZZZZZZZZZ",
+      sellerName: "Other Person",
+      accountHolder: "Other Person",
+      appleDeveloperIdentifierId: "ZZZZZZZZZZ.com.tammy.desktop",
+      applicationGroup: "ZZZZZZZZZZ.com.tammy.desktop",
     }),
     /SELLER_ELIGIBILITY_INVALID/,
   );
@@ -479,6 +527,25 @@ test("duplicate upload events cannot advance readiness", () => {
   );
 });
 
+test("a conflicting second upload is ambiguous even when it targets different bytes", () => {
+  const result = evaluateReleaseState(releaseInputs({
+    attestations: preUploadAttestations,
+    events: [
+      uploadedEvent(),
+      uploadedEvent({
+        occurredAt: "2026-08-30T11:01:00.000Z",
+        appStoreConnectBuildId: "1234567891",
+        packageSha256: "f".repeat(64),
+      }),
+    ],
+  }));
+  assert.equal(result.state, "PRE_UPLOAD_READY");
+  assert.equal(
+    result.blockers.some(({ code }) => code === "APP_STORE_UPLOAD_EVENT_AMBIGUOUS"),
+    true,
+  );
+});
+
 test("reordered lifecycle events are an explicit non-passing sequence", () => {
   const result = evaluateReleaseState(releaseInputs({
     attestations: preUploadAttestations,
@@ -498,6 +565,67 @@ test("reordered lifecycle events are an explicit non-passing sequence", () => {
   assert.equal(result.state, "PRE_UPLOAD_READY");
   assert.equal(
     result.blockers.some(({ code }) => code === "RELEASE_LIFECYCLE_SEQUENCE_INVALID"),
+    true,
+  );
+});
+
+test("terminal lifecycle events consume readiness and submitted cannot precede upload", () => {
+  const expired = {
+    schemaVersion: 1,
+    kind: "expired",
+    releaseVersion,
+    buildNumber,
+    operator: "Ben Ebsworth",
+    occurredAt: "2026-08-30T12:00:00.000Z",
+    reason: "candidate-timeout",
+    sourceReference: "candidate/evidence.json",
+    packageSha256,
+  };
+  const superseded = {
+    schemaVersion: 1,
+    kind: "superseded",
+    releaseVersion,
+    buildNumber,
+    operator: "Ben Ebsworth",
+    occurredAt: "2026-08-30T12:00:00.000Z",
+    replacementVersion: "0.1.1",
+    replacementBuildNumber: "43",
+  };
+  const submitted = {
+    schemaVersion: 1,
+    kind: "submitted",
+    releaseVersion,
+    buildNumber,
+    operator: "Ben Ebsworth",
+    occurredAt: "2026-08-30T12:00:00.000Z",
+    appStoreSubmissionReference: "apple/submission-123.json",
+  };
+  for (const terminalEvent of [expired, superseded, submitted]) {
+    const result = evaluateReleaseState(releaseInputs({
+      attestations: [...preUploadAttestations, ...preSubmitAttestations],
+      events: [uploadedEvent(), terminalEvent],
+    }));
+    assert.equal(result.state, "NOT_READY", terminalEvent.kind);
+    assert.equal(
+      result.blockers.some(({ code }) =>
+        ["BUILD_NUMBER_CONSUMED", "APP_STORE_SUBMISSION_ALREADY_RECORDED"].includes(code)),
+      true,
+      terminalEvent.kind,
+    );
+  }
+
+  const submittedBeforeUpload = evaluateReleaseState(releaseInputs({
+    attestations: preUploadAttestations,
+    events: [
+      { ...submitted, occurredAt: "2026-08-30T10:00:00.000Z" },
+      uploadedEvent(),
+    ],
+  }));
+  assert.equal(submittedBeforeUpload.state, "PRE_UPLOAD_READY");
+  assert.equal(
+    submittedBeforeUpload.blockers.some(
+      ({ code }) => code === "RELEASE_LIFECYCLE_SEQUENCE_INVALID",
+    ),
     true,
   );
 });

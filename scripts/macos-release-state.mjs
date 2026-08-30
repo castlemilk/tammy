@@ -10,6 +10,13 @@ export const RELEASE_STATES = Object.freeze([
 ]);
 
 const SECRET_KEY = /secret|token|password|credential|privatekey/i;
+const SECRET_VALUE_PATTERNS = [
+  /\b(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{16,}\b/,
+  /\b(?:ghp|github_pat)_[A-Za-z0-9_]{16,}\b/,
+  /\bAKIA[A-Z0-9]{16}\b/,
+  /-----BEGIN [A-Z ]*PRIVATE KEY-----/,
+  /\b(?:password|token|secret)=[^&\s]{8,}/i,
+];
 const VERSION = /^[0-9]+\.[0-9]+\.[0-9]+$/;
 const BUILD = /^[1-9][0-9]*$/;
 const SHA40 = /^[0-9a-f]{40}$/;
@@ -87,6 +94,7 @@ const REPOSITORY_REQUIREMENTS = [
   ["policy", "PRIVACY_POLICY_NOT_FINAL", "Finalize the canonical privacy policy."],
   ["publicSite", "PUBLIC_SITE_NOT_RECORDED", "Publish and verify the Sites version."],
   ["schemas", "RELEASE_SCHEMAS_NOT_READY", "Validate the release schemas."],
+  ["screenshotDefinitions", "SCREENSHOT_DEFINITIONS_NOT_READY", "Validate the screenshot definitions."],
   ["storeIdentity", "STORE_IDENTITY_NOT_READY", "Validate the canonical store identity."],
   ["tests", "REPOSITORY_TESTS_NOT_PASSED", "Run the repository release tests."],
 ];
@@ -95,11 +103,26 @@ const CANDIDATE_REQUIREMENTS = [
   ["sourceTree", "CANDIDATE_SOURCE_TREE_MISSING", "Bind the candidate to a source tree."],
   ["appSha256", "CANDIDATE_APP_HASH_MISSING", "Record the signed app hash."],
   ["packageSha256", "CANDIDATE_PACKAGE_HASH_MISSING", "Record the installer package hash."],
+  ["buildNumberReserved", "CANDIDATE_BUILD_NOT_RESERVED", "Verify the build-number reservation."],
   ["signingProfilePassed", "CANDIDATE_SIGNING_NOT_VERIFIED", "Verify signing and provisioning."],
   ["publicUrlsMatch", "CANDIDATE_PUBLIC_URLS_MISMATCH", "Verify the embedded public URLs."],
   ["privacyEvidencePassed", "CANDIDATE_PRIVACY_EVIDENCE_MISSING", "Record candidate privacy evidence."],
   ["runtimeEgressEvidencePassed", "CANDIDATE_EGRESS_EVIDENCE_MISSING", "Record runtime egress evidence."],
   ["screenshotsLinked", "CANDIDATE_SCREENSHOTS_NOT_LINKED", "Link the validated screenshots."],
+];
+const CANDIDATE_KEYS = [
+  "appSha256",
+  "buildNumber",
+  "buildNumberReserved",
+  "packageSha256",
+  "privacyEvidencePassed",
+  "publicUrlsMatch",
+  "releaseVersion",
+  "runtimeEgressEvidencePassed",
+  "screenshotsLinked",
+  "signingProfilePassed",
+  "sourceCommit",
+  "sourceTree",
 ];
 const PRE_UPLOAD_KINDS = [
   "company-controller",
@@ -135,6 +158,15 @@ function assertNoSecretKeys(value, code) {
     if (SECRET_KEY.test(key)) fail(code);
     assertNoSecretKeys(child, code);
   }
+}
+
+function assertNoSecretMaterial(value, code) {
+  if (typeof value === "string") {
+    if (SECRET_VALUE_PATTERNS.some((pattern) => pattern.test(value))) fail(code);
+    return;
+  }
+  if (!value || typeof value !== "object") return;
+  for (const child of Object.values(value)) assertNoSecretMaterial(child, code);
 }
 
 function isUtcTime(value) {
@@ -238,6 +270,7 @@ export function validateReleaseState(state) {
 export function validateReleaseAttestation(attestation) {
   const code = "RELEASE_ATTESTATION_INVALID";
   assertNoSecretKeys(attestation, code);
+  assertNoSecretMaterial(attestation, code);
   if (!attestation || !ATTESTATION_OUTCOMES.has(attestation.kind)) fail(code);
   const seller = attestation.kind === "seller-eligibility";
   const keys = seller
@@ -292,7 +325,10 @@ export function validateReleaseAttestation(attestation) {
     if (
       !isSafeReference(reference) ||
       !/written[-_ ](?:apple[-_ ])?exception/i.test(reference) ||
-      /publisher-controller/i.test(reference)
+      /publisher-controller/i.test(reference) ||
+      attestation.teamId !== "WFTX6CN23F" ||
+      attestation.sellerName !== "Ben Ebsworth" ||
+      attestation.accountHolder !== "Ben Ebsworth"
     ) {
       fail(sellerCode);
     }
@@ -340,6 +376,7 @@ function submittedEventFilename(event) {
 export function validateReleaseLifecycleEvent(event, { priorEvents = [] } = {}) {
   const code = "RELEASE_LIFECYCLE_EVENT_INVALID";
   assertNoSecretKeys(event, code);
+  assertNoSecretMaterial(event, code);
   if (!event || !LIFECYCLE_KINDS.has(event.kind)) fail(code);
   assertExactKeys(event, eventKeys(event), code);
   assertCommonRecord(event, "occurredAt", "operator", code);
@@ -408,6 +445,35 @@ function candidateRequirementPassed(candidate, key, buildNumber) {
   return candidate[key] === true;
 }
 
+function isCandidateEvidenceValid(candidate, releaseVersion, buildNumber) {
+  try {
+    assertNoSecretKeys(candidate, "MACOS_CANDIDATE_EVIDENCE_INVALID");
+    assertNoSecretMaterial(candidate, "MACOS_CANDIDATE_EVIDENCE_INVALID");
+    assertExactKeys(candidate, CANDIDATE_KEYS, "MACOS_CANDIDATE_EVIDENCE_INVALID");
+    if (
+      candidate.releaseVersion !== releaseVersion ||
+      candidate.buildNumber !== buildNumber ||
+      !SHA40.test(candidate.sourceCommit) ||
+      !SHA40.test(candidate.sourceTree) ||
+      !SHA256.test(candidate.appSha256) ||
+      !SHA256.test(candidate.packageSha256) ||
+      ![
+        "signingProfilePassed",
+        "publicUrlsMatch",
+        "privacyEvidencePassed",
+        "runtimeEgressEvidencePassed",
+        "screenshotsLinked",
+        "buildNumberReserved",
+      ].every((key) => typeof candidate[key] === "boolean")
+    ) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function blocker(code, owner, remediation) {
   return { code, owner, remediation };
 }
@@ -437,6 +503,12 @@ function collectValidEvents(events, releaseVersion, buildNumber) {
   const valid = [];
   let previousTime = "";
   let sequenceInvalid = false;
+  let uploadCount = 0;
+  let uploadedSeen = false;
+  let submittedSeen = false;
+  let reviewed = false;
+  let consumed = false;
+  let terminalKind;
   for (const candidateEvent of Array.isArray(events) ? events : []) {
     try {
       validateReleaseLifecycleEvent(candidateEvent, { priorEvents: valid });
@@ -450,13 +522,42 @@ function collectValidEvents(events, releaseVersion, buildNumber) {
         sequenceInvalid = true;
         continue;
       }
+      if (candidateEvent.kind === "uploaded") {
+        uploadCount += 1;
+        if (uploadedSeen || submittedSeen || consumed || reviewed) {
+          sequenceInvalid = true;
+          continue;
+        }
+        uploadedSeen = true;
+      } else if (candidateEvent.kind === "submitted") {
+        if (!uploadedSeen || submittedSeen || consumed || reviewed) {
+          sequenceInvalid = true;
+          continue;
+        }
+        submittedSeen = true;
+        terminalKind = "submitted";
+      } else if (candidateEvent.kind === "approved" || candidateEvent.kind === "rejected") {
+        if (!submittedSeen || reviewed || consumed) {
+          sequenceInvalid = true;
+          continue;
+        }
+        reviewed = true;
+        terminalKind = candidateEvent.kind;
+      } else if (candidateEvent.kind === "expired" || candidateEvent.kind === "superseded") {
+        if (submittedSeen || reviewed || consumed) {
+          sequenceInvalid = true;
+          continue;
+        }
+        consumed = true;
+        terminalKind = candidateEvent.kind;
+      }
       previousTime = candidateEvent.occurredAt;
       valid.push(candidateEvent);
     } catch {
       sequenceInvalid = true;
     }
   }
-  return { events: valid, sequenceInvalid };
+  return { events: valid, sequenceInvalid, terminalKind, uploadCount };
 }
 
 export function evaluateReleaseState(inputs) {
@@ -490,14 +591,29 @@ export function evaluateReleaseState(inputs) {
     }
   }
 
-  let candidateReady = repositoryReady;
+  const candidateEvidenceValid = isCandidateEvidenceValid(
+    candidateEvidence,
+    releaseVersion,
+    buildNumber,
+  );
+  let candidateReady = repositoryReady && candidateEvidenceValid;
   if (repositoryReady) {
-    for (const [key, code, remediation] of CANDIDATE_REQUIREMENTS) {
-      if (candidateRequirementPassed(candidateEvidence, key, buildNumber)) {
-        passed.push(`candidate-${key.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`)}`);
-      } else {
-        candidateReady = false;
-        blockers.push(blocker(code, "candidate", remediation));
+    if (!candidateEvidenceValid) {
+      blockers.push(
+        blocker(
+          "CANDIDATE_EVIDENCE_INVALID",
+          "candidate",
+          "Provide exact version-and-build-bound candidate evidence without extra fields.",
+        ),
+      );
+    } else {
+      for (const [key, code, remediation] of CANDIDATE_REQUIREMENTS) {
+        if (candidateRequirementPassed(candidateEvidence, key, buildNumber)) {
+          passed.push(`candidate-${key.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`)}`);
+        } else {
+          candidateReady = false;
+          blockers.push(blocker(code, "candidate", remediation));
+        }
       }
     }
   }
@@ -531,6 +647,15 @@ export function evaluateReleaseState(inputs) {
       ),
     );
   }
+  if (lifecycle.uploadCount > 1) {
+    blockers.push(
+      blocker(
+        "APP_STORE_UPLOAD_EVENT_AMBIGUOUS",
+        "operator",
+        "Retain one immutable uploaded event for the release build and investigate conflicts.",
+      ),
+    );
+  }
   const exactUploads = events.filter(
     (event) =>
       event.kind === "uploaded" &&
@@ -538,19 +663,21 @@ export function evaluateReleaseState(inputs) {
       event.productSourceTree === candidateEvidence?.sourceTree &&
       event.packageSha256 === candidateEvidence?.packageSha256,
   );
-  const uploaded = preUploadReady && !lifecycle.sequenceInvalid && exactUploads.length === 1;
+  const uploaded =
+    preUploadReady &&
+    !lifecycle.sequenceInvalid &&
+    lifecycle.uploadCount === 1 &&
+    exactUploads.length === 1;
   if (preUploadReady && !uploaded) {
-    blockers.push(
-      blocker(
-        exactUploads.length > 1
-          ? "APP_STORE_UPLOAD_EVENT_AMBIGUOUS"
-          : "APP_STORE_UPLOAD_NOT_RECORDED",
-        "operator",
-        exactUploads.length > 1
-          ? "Retain one immutable uploaded event for the exact package and investigate duplicates."
-          : "Upload the exact package and record App Store Connect's build identifier.",
-      ),
-    );
+    if (lifecycle.uploadCount <= 1) {
+      blockers.push(
+        blocker(
+          "APP_STORE_UPLOAD_NOT_RECORDED",
+          "operator",
+          "Upload the exact package and record App Store Connect's build identifier.",
+        ),
+      );
+    }
   }
   if (uploaded) passed.push("app-store-upload");
 
@@ -571,17 +698,32 @@ export function evaluateReleaseState(inputs) {
     }
   }
 
-  const state = preSubmitReady
-    ? "PRE_SUBMIT_READY"
-    : uploaded
-      ? "UPLOADED"
-      : preUploadReady
-        ? "PRE_UPLOAD_READY"
-        : candidateReady
-          ? "CANDIDATE_READY"
-          : repositoryReady
-            ? "REPOSITORY_READY"
-            : "NOT_READY";
+  if (lifecycle.terminalKind) {
+    blockers.push(
+      blocker(
+        lifecycle.terminalKind === "expired" || lifecycle.terminalKind === "superseded"
+          ? "BUILD_NUMBER_CONSUMED"
+          : lifecycle.terminalKind === "submitted"
+            ? "APP_STORE_SUBMISSION_ALREADY_RECORDED"
+            : "APP_STORE_REVIEW_OUTCOME_RECORDED",
+        "operator",
+        "This build has a terminal lifecycle event and is no longer in a readiness state.",
+      ),
+    );
+  }
+  const state = lifecycle.terminalKind
+    ? "NOT_READY"
+    : preSubmitReady
+      ? "PRE_SUBMIT_READY"
+      : uploaded
+        ? "UPLOADED"
+        : preUploadReady
+          ? "PRE_UPLOAD_READY"
+          : candidateReady
+            ? "CANDIDATE_READY"
+            : repositoryReady
+              ? "REPOSITORY_READY"
+              : "NOT_READY";
   validateReleaseState(state);
   const passedSet = new Set(passed);
   const blockerCodes = new Set(blockers.map(({ code }) => code));
