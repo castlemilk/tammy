@@ -1,12 +1,25 @@
 import assert from "node:assert/strict";
+import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import test from "node:test";
 
-import { checkPublicSite } from "./check-public-site.mjs";
+import {
+  checkPublicSite,
+  createRollbackEvent,
+  validatePublicSiteDeployment,
+  writeCurrentPublicSitePointer,
+  writePublicSiteDeployment,
+} from "./check-public-site.mjs";
 
-const origin = "https://tammy.example";
+const origin = "https://tammy-accounting.castlemilk.chatgpt.site";
 
 const pages = {
-  "/": `<!doctype html><html><body>
+  "/": `<!doctype html><html><head>
+    <meta property="og:image" content="${origin}/og.png">
+    <meta name="twitter:image" content="${origin}/og.png">
+    <meta name="twitter:card" content="summary_large_image">
+  </head><body>
     <nav><a href="/">Tammy</a><a href="/privacy">Privacy</a><a href="/support">Support</a></nav>
     <h1>Local accounting for Australia</h1>
     <p>Tammy Accounting by Gamma Systems Pty Ltd.</p>
@@ -17,6 +30,7 @@ const pages = {
     <nav><a href="/">Tammy</a><a href="/privacy">Privacy</a><a href="/support">Support</a></nav>
     <h1>Privacy policy</h1><p>Effective 30 August 2026.</p>
     <p>Gamma Systems Pty Ltd does not transmit your accounting records.</p>
+    <a href="${origin}/support">Deletion support</a>
   </body></html>`,
   "/support": `<!doctype html><html><body>
     <nav><a href="/">Tammy</a><a href="/privacy">Privacy</a><a href="/support">Support</a></nav>
@@ -24,6 +38,27 @@ const pages = {
     <p>Tammy Accounting version 0.1.0.</p>
   </body></html>`,
 };
+
+function deployment(overrides = {}) {
+  return {
+    schemaVersion: 1,
+    provider: "OpenAI Sites",
+    access: "public",
+    projectId: "project-1",
+    versionId: "project-1~version-1",
+    deploymentId: "deployment-1",
+    origin,
+    deployedAt: "2026-08-30T08:00:00.000Z",
+    sourceCommit: "a".repeat(40),
+    policySha256: "b".repeat(64),
+    routes: [
+      { path: "/", status: 200, contentType: "text/html", check: "passed" },
+      { path: "/privacy", status: 200, contentType: "text/html", check: "passed" },
+      { path: "/support", status: 200, contentType: "text/html", check: "passed" },
+    ],
+    ...overrides,
+  };
+}
 
 function mockFetch(overrides = {}) {
   const calls = [];
@@ -163,6 +198,7 @@ test("requires canonical identity, navigation, privacy, support, platform, and b
     ["/", "preparation-only"],
     ["/", "not lodged"],
     ["/privacy", "30 August 2026"],
+    ["/privacy", `href="${origin}/support"`],
     ["/support", "mailto:ben.ebsworth@gmail.com"],
   ]) {
     const { fetchImpl } = mockFetch({
@@ -179,6 +215,22 @@ test("requires canonical identity, navigation, privacy, support, platform, and b
       [route]: { body: pages[route].replace(`href="/support"`, "") },
     });
     await assert.rejects(checkPublicSite({ origin, mode: "deployed", fetchImpl }), /navigation/i);
+  }
+});
+
+test("requires absolute trusted Open Graph and X image metadata", async () => {
+  for (const needle of [
+    `<meta property="og:image" content="${origin}/og.png">`,
+    `<meta name="twitter:image" content="${origin}/og.png">`,
+    `<meta name="twitter:card" content="summary_large_image">`,
+  ]) {
+    const { fetchImpl } = mockFetch({
+      "/": { body: pages["/"].replace(needle, "") },
+    });
+    await assert.rejects(
+      checkPublicSite({ origin, mode: "deployed", fetchImpl }),
+      /social|metadata/i,
+    );
   }
 });
 
@@ -231,5 +283,98 @@ test("times out a response body that never completes", async () => {
   await assert.rejects(
     checkPublicSite({ origin, mode: "deployed", fetchImpl, timeoutMs: 20 }),
     /timed out/i,
+  );
+});
+
+test("validates the strict public Sites deployment record", () => {
+  assert.deepEqual(
+    validatePublicSiteDeployment(deployment(), { expectedProjectId: "project-1" }),
+    deployment(),
+  );
+
+  for (const invalid of [
+    deployment({ provider: "Other" }),
+    deployment({ access: "private" }),
+    deployment({ origin: "http://tammy.example" }),
+    deployment({ origin: "https://tammy.example/?mutable=1" }),
+    deployment({ origin: "https://tammy.example/#mutable" }),
+    deployment({ routes: deployment().routes.slice(1) }),
+    deployment({ routes: [...deployment().routes, deployment().routes[0]] }),
+    deployment({ routes: deployment().routes.map((route, index) => index ? route : { ...route, check: "failed" }) }),
+    { ...deployment(), token: "secret" },
+    { ...deployment(), sourceWriteUrl: "https://example.com/write?token=secret" },
+  ]) {
+    assert.throws(
+      () => validatePublicSiteDeployment(invalid, { expectedProjectId: "project-1" }),
+      /deployment/i,
+    );
+  }
+  assert.throws(
+    () => validatePublicSiteDeployment(deployment(), { expectedProjectId: "different-project" }),
+    /project/i,
+  );
+});
+
+test("first deployment is immutable and creates no rollback event", async (context) => {
+  const recordsRoot = await mkdtemp(
+    path.join(process.env.TMPDIR ?? os.tmpdir(), "tammy-public-site-records-"),
+  );
+  context.after(() => rm(recordsRoot, { recursive: true, force: true }));
+  const record = deployment();
+  const evidencePath = await writePublicSiteDeployment({ record, recordsRoot });
+  await writeCurrentPublicSitePointer({ record, evidencePath, recordsRoot });
+
+  assert.deepEqual(JSON.parse(await readFile(evidencePath, "utf8")), record);
+  assert.deepEqual(
+    JSON.parse(await readFile(path.join(recordsRoot, "current.json"), "utf8")),
+    { schemaVersion: 1, deploymentEvidence: "deployments/deployment-1.json" },
+  );
+  await assert.rejects(writePublicSiteDeployment({ record, recordsRoot }), /exist/i);
+  await assert.rejects(readdir(path.join(recordsRoot, "events")), { code: "ENOENT" });
+});
+
+test("rollback event requires a distinct existing prior passing deployment", async (context) => {
+  const recordsRoot = await mkdtemp(
+    path.join(process.env.TMPDIR ?? os.tmpdir(), "tammy-public-site-rollback-"),
+  );
+  context.after(() => rm(recordsRoot, { recursive: true, force: true }));
+  const prior = deployment({
+    versionId: "version-prior",
+    deploymentId: "deployment-prior",
+    sourceCommit: "c".repeat(40),
+  });
+  const priorPath = await writePublicSiteDeployment({ record: prior, recordsRoot });
+  const current = deployment({ versionId: "version-current", deploymentId: "deployment-current" });
+  const rollbackDeployment = deployment({
+    versionId: prior.versionId,
+    deploymentId: "deployment-rollback",
+    deployedAt: "2026-08-30T09:00:00.000Z",
+    sourceCommit: prior.sourceCommit,
+  });
+
+  const { event, eventPath } = await createRollbackEvent({
+    fromDeployment: current,
+    rollbackDeployment,
+    priorEvidencePath: priorPath,
+    recordsRoot,
+  });
+  assert.deepEqual(JSON.parse(await readFile(eventPath, "utf8")), event);
+  assert.equal(event.kind, "rollback");
+  assert.equal(event.deploymentId, "deployment-rollback");
+  assert.equal(event.versionId, "version-prior");
+  assert.equal(event.fromVersionId, "version-current");
+  assert.equal(event.toVersionId, "version-prior");
+  assert.equal(event.priorDeploymentEvidence, "deployments/deployment-prior.json");
+  assert.deepEqual(event.routes, rollbackDeployment.routes);
+  assert.deepEqual(JSON.parse(await readFile(priorPath, "utf8")), prior);
+
+  await assert.rejects(
+    createRollbackEvent({
+      fromDeployment: current,
+      rollbackDeployment: current,
+      priorEvidencePath: path.join(recordsRoot, "deployments/missing.json"),
+      recordsRoot,
+    }),
+    /prior|distinct|exist/i,
   );
 });

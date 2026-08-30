@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
-import { mkdir, rename, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -9,6 +10,22 @@ const MAX_PREVIEW_OUTPUT_BYTES = 65_536;
 const PREVIEW_TIMEOUT_MS = 30_000;
 const MAX_REDIRECT_HOPS = 5;
 const REQUEST_TIMEOUT_MS = 15_000;
+const DEPLOYMENT_KEYS = [
+  "access",
+  "deployedAt",
+  "deploymentId",
+  "origin",
+  "policySha256",
+  "projectId",
+  "provider",
+  "routes",
+  "schemaVersion",
+  "sourceCommit",
+  "versionId",
+];
+const ROUTE_KEYS = ["check", "contentType", "path", "status"];
+const SAFE_IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9._~-]{0,255}$/;
+const TRUSTED_PUBLIC_ORIGIN = "https://tammy-accounting.castlemilk.chatgpt.site";
 
 function validateOrigin(origin, mode) {
   let parsed;
@@ -121,10 +138,23 @@ function validatePage(pathname, html) {
     requireText(text, /arm64/i, "architecture", pathname);
     requireText(text, /preparation-only/i, "preparation-only boundary", pathname);
     requireText(text, /not lodged/i, "not-lodged boundary", pathname);
+    const socialImage = `${TRUSTED_PUBLIC_ORIGIN}/og.png`;
+    for (const [label, fragment] of [
+      ["Open Graph image metadata", `property="og:image" content="${socialImage}"`],
+      ["X image metadata", `name="twitter:image" content="${socialImage}"`],
+      ["X card metadata", 'name="twitter:card" content="summary_large_image"'],
+    ]) {
+      if (!html.includes(fragment)) {
+        throw new Error(`/ is missing required social metadata: ${label}`);
+      }
+    }
   } else if (pathname === "/privacy") {
     requireText(text, /Privacy policy/i, "privacy heading", pathname);
     requireText(text, /30 August 2026/i, "policy effective date", pathname);
     requireText(text, /does not transmit your accounting records/i, "data boundary", pathname);
+    if (!html.includes(`href="${TRUSTED_PUBLIC_ORIGIN}/support"`)) {
+      throw new Error("/privacy is missing required canonical support link");
+    }
   } else {
     requireText(text, /Support/i, "support heading", pathname);
     requireText(html, /mailto:ben\.ebsworth@gmail\.com/i, "support email", pathname);
@@ -206,6 +236,192 @@ export async function checkPublicSite({
   }
 
   return { schemaVersion: 1, origin: canonicalOrigin, routes };
+}
+
+function assertExactKeys(value, expected, label) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`Public site deployment ${label} must be an object`);
+  }
+  const actual = Object.keys(value).sort();
+  if (actual.length !== expected.length || actual.some((key, index) => key !== expected[index])) {
+    throw new Error(`Public site deployment ${label} has unexpected or missing fields`);
+  }
+}
+
+function assertIdentifier(value, label) {
+  if (typeof value !== "string" || !SAFE_IDENTIFIER.test(value)) {
+    throw new Error(`Public site deployment ${label} is invalid`);
+  }
+}
+
+export function validatePublicSiteDeployment(record, { expectedProjectId } = {}) {
+  assertExactKeys(record, DEPLOYMENT_KEYS, "record");
+  if (record.schemaVersion !== 1 || record.provider !== "OpenAI Sites") {
+    throw new Error("Public site deployment provider/schema is invalid");
+  }
+  if (record.access !== "public") {
+    throw new Error("Public site deployment access must be public");
+  }
+  for (const field of ["projectId", "versionId", "deploymentId"]) {
+    assertIdentifier(record[field], field);
+  }
+  if (expectedProjectId !== undefined && record.projectId !== expectedProjectId) {
+    throw new Error("Public site deployment project ID does not match");
+  }
+  let origin;
+  try {
+    origin = new URL(record.origin);
+  } catch {
+    throw new Error("Public site deployment origin is invalid");
+  }
+  if (
+    origin.protocol !== "https:" ||
+    !origin.hostname ||
+    origin.username ||
+    origin.password ||
+    origin.pathname !== "/" ||
+    origin.search ||
+    origin.hash ||
+    origin.origin !== record.origin
+  ) {
+    throw new Error("Public site deployment origin must be an immutable HTTPS origin");
+  }
+  if (
+    typeof record.deployedAt !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(record.deployedAt) ||
+    new Date(record.deployedAt).toISOString() !== record.deployedAt
+  ) {
+    throw new Error("Public site deployment time must be UTC RFC3339");
+  }
+  if (!/^[0-9a-f]{40}$/.test(record.sourceCommit)) {
+    throw new Error("Public site deployment source commit is invalid");
+  }
+  if (!/^[0-9a-f]{64}$/.test(record.policySha256)) {
+    throw new Error("Public site deployment policy hash is invalid");
+  }
+  if (!Array.isArray(record.routes) || record.routes.length !== ROUTES.length) {
+    throw new Error("Public site deployment routes are invalid");
+  }
+  for (const [index, route] of record.routes.entries()) {
+    assertExactKeys(route, ROUTE_KEYS, "route");
+    if (
+      route.path !== ROUTES[index] ||
+      route.status !== 200 ||
+      route.contentType !== "text/html" ||
+      route.check !== "passed"
+    ) {
+      throw new Error("Public site deployment route evidence is invalid");
+    }
+  }
+  return record;
+}
+
+function deploymentEvidencePath(recordsRoot, deploymentId) {
+  return path.join(path.resolve(recordsRoot), "deployments", `${deploymentId}.json`);
+}
+
+export async function writePublicSiteDeployment({
+  record,
+  recordsRoot = "docs/release/public-site",
+}) {
+  validatePublicSiteDeployment(record);
+  const evidencePath = deploymentEvidencePath(recordsRoot, record.deploymentId);
+  await mkdir(path.dirname(evidencePath), { recursive: true });
+  await writeFile(evidencePath, `${JSON.stringify(record, null, 2)}\n`, { flag: "wx" });
+  return evidencePath;
+}
+
+export async function writeCurrentPublicSitePointer({
+  record,
+  evidencePath,
+  recordsRoot = "docs/release/public-site",
+}) {
+  validatePublicSiteDeployment(record);
+  const expectedEvidencePath = deploymentEvidencePath(recordsRoot, record.deploymentId);
+  if (path.resolve(evidencePath) !== expectedEvidencePath) {
+    throw new Error("Public site deployment evidence path does not match its deployment ID");
+  }
+  const persisted = JSON.parse(await readFile(expectedEvidencePath, "utf8"));
+  validatePublicSiteDeployment(persisted, { expectedProjectId: record.projectId });
+  if (JSON.stringify(persisted) !== JSON.stringify(record)) {
+    throw new Error("Public site deployment evidence does not match the current record");
+  }
+
+  const root = path.resolve(recordsRoot);
+  const pointerPath = path.join(root, "current.json");
+  const temporaryPath = path.join(root, `.current.json.tmp-${randomUUID()}`);
+  const pointer = {
+    schemaVersion: 1,
+    deploymentEvidence: `deployments/${record.deploymentId}.json`,
+  };
+  await mkdir(root, { recursive: true });
+  try {
+    await writeFile(temporaryPath, `${JSON.stringify(pointer, null, 2)}\n`, { flag: "wx" });
+    await rename(temporaryPath, pointerPath);
+  } finally {
+    await rm(temporaryPath, { force: true }).catch(() => {});
+  }
+  return pointerPath;
+}
+
+export async function createRollbackEvent({
+  fromDeployment,
+  rollbackDeployment,
+  priorEvidencePath,
+  recordsRoot = "docs/release/public-site",
+}) {
+  validatePublicSiteDeployment(fromDeployment);
+  validatePublicSiteDeployment(rollbackDeployment, {
+    expectedProjectId: fromDeployment.projectId,
+  });
+  const root = path.resolve(recordsRoot);
+  const relativePriorPath = path.relative(root, path.resolve(priorEvidencePath));
+  if (!/^deployments\/[A-Za-z0-9][A-Za-z0-9._-]{0,127}\.json$/.test(relativePriorPath)) {
+    throw new Error("Prior deployment evidence path is invalid");
+  }
+  let priorDeployment;
+  try {
+    priorDeployment = JSON.parse(await readFile(path.resolve(priorEvidencePath), "utf8"));
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      throw new Error("Prior deployment evidence does not exist");
+    }
+    throw error;
+  }
+  validatePublicSiteDeployment(priorDeployment, {
+    expectedProjectId: fromDeployment.projectId,
+  });
+  if (
+    priorDeployment.versionId === fromDeployment.versionId ||
+    rollbackDeployment.versionId !== priorDeployment.versionId ||
+    rollbackDeployment.deploymentId === fromDeployment.deploymentId
+  ) {
+    throw new Error("Rollback requires a distinct prior passing deployment version");
+  }
+  if (path.resolve(priorEvidencePath) !== deploymentEvidencePath(root, priorDeployment.deploymentId)) {
+    throw new Error("Prior deployment evidence filename does not match its deployment ID");
+  }
+
+  const event = {
+    schemaVersion: 1,
+    kind: "rollback",
+    deploymentId: rollbackDeployment.deploymentId,
+    versionId: rollbackDeployment.versionId,
+    deployedAt: rollbackDeployment.deployedAt,
+    fromVersionId: fromDeployment.versionId,
+    toVersionId: priorDeployment.versionId,
+    priorDeploymentEvidence: relativePriorPath,
+    routes: rollbackDeployment.routes,
+  };
+  const timestamp = rollbackDeployment.deployedAt.replaceAll(":", "-");
+  const eventPath = path.join(
+    root,
+    "events",
+    `${timestamp}-rollback-to-${rollbackDeployment.versionId}.json`,
+  );
+  await mkdir(path.dirname(eventPath), { recursive: true });
+  await writeFile(eventPath, `${JSON.stringify(event, null, 2)}\n`, { flag: "wx" });
+  return { event, eventPath };
 }
 
 function waitForExit(child) {

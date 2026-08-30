@@ -1,4 +1,5 @@
 /* oxlint-disable next/no-html-link-for-pages -- Vinext serves these static same-origin routes without a Next runtime. */
+import type { Metadata } from 'next';
 import { publicContent } from '../content/public-content.generated';
 
 const { identity } = publicContent;
@@ -10,6 +11,10 @@ const lodgementBoundary = identity.capabilityBoundary.atoLodgement.replaceAll(
   ' ',
 );
 const minimumMacOSLabel = identity.minimumMacOSVersion.replace(/\.0$/, '');
+
+export const metadata: Metadata = {
+  alternates: { canonical: '/' },
+};
 
 export default function Home() {
   return (

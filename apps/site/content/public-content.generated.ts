@@ -140,7 +140,7 @@ export const publicContent = {
               {
                 "type": "link",
                 "text": "/support",
-                "href": "https://tammyaccounting.com/support"
+                "href": "https://tammy-accounting.castlemilk.chatgpt.site/support"
               },
               {
                 "type": "text",

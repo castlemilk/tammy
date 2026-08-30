@@ -8,6 +8,7 @@ const { identity, policy } = publicContent;
 export const metadata: Metadata = {
   title: 'Privacy policy',
   description: `${identity.appStoreName}'s privacy policy for the macOS app and public website.`,
+  alternates: { canonical: '/privacy' },
 };
 
 export default function PrivacyPage() {

@@ -8,6 +8,7 @@ const minimumMacOSLabel = identity.minimumMacOSVersion.replace(/\.0$/, '');
 export const metadata: Metadata = {
   title: 'Support',
   description: `Support, diagnostics, and safe local-data removal guidance for ${identity.appStoreName}.`,
+  alternates: { canonical: '/support' },
 };
 
 export default function SupportPage() {

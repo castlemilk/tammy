@@ -26,7 +26,7 @@ Do not email accounting data, recovery codes, passwords, machine credentials, or
 
 ## Retention and deletion
 
-Local records remain on your Mac until you remove them. Removing the Tammy app alone does not promise deletion of its encrypted workspace or macOS Keychain items. For tested macOS cleanup steps, see [/support](https://tammyaccounting.com/support).
+Local records remain on your Mac until you remove them. Removing the Tammy app alone does not promise deletion of its encrypted workspace or macOS Keychain items. For tested macOS cleanup steps, see [/support](https://tammy-accounting.castlemilk.chatgpt.site/support).
 
 ## Reporting boundary
 

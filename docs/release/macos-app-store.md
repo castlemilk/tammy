@@ -25,7 +25,7 @@ Complete these steps in the Apple Developer portal and App Store Connect. Do not
 - [x] Create the required application and installer certificates. Apple Development and Apple Distribution are the current unified names; this candidate uses the valid Mac App Distribution and Mac Installer Distribution certificates shown in the current keychain under their legacy 3rd Party Mac Developer names.
 - [x] Create the `Tammy Mac App Store 20260813` distribution provisioning profile for the App ID. Keep separate Mac App Store development and distribution provisioning profiles when local sandbox testing is required; the development profile remains optional for this upload-only candidate.
 - [x] Create App Store Connect record `6800226692` for **Tammy Accounting**, version `0.1.0`, English (Australia), SKU `tammy-macos-001`, primary Finance and secondary Business categories, with manual release.
-- [x] Publish the HTTPS [privacy policy](../../PRIVACY.md) and [support page](https://github.com/castlemilk/tammy/issues), then replace every `OPERATOR_REQUIRED` value in [store-metadata.md](../../apps/desktop/release/macos/store-metadata.md).
+- [x] Publish the HTTPS [privacy policy](https://tammy-accounting.castlemilk.chatgpt.site/privacy) and [support page](https://tammy-accounting.castlemilk.chatgpt.site/support), then replace every `OPERATOR_REQUIRED` value in [store-metadata.md](../../apps/desktop/release/macos/store-metadata.md).
 - [x] Record the Australia-only export-compliance determination for industry-standard SQLCipher and TLS. Set the build input and App Store Connect answers to `exempt`; expanding availability requires a fresh review.
 - [ ] Assign a monotonically increasing positive decimal `CFBundleVersion` for every upload. Marketing version comes from `apps/desktop/package.json`.
 
@@ -39,9 +39,9 @@ The signed Task scenarios accept only explicit inputs and never print their valu
 export TAMMY_MACOS_BUILD_NUMBER='1'
 export TAMMY_MACOS_EXPORT_COMPLIANCE='exempt' # or non-exempt, from the legal determination
 export TAMMY_MACOS_PROVISIONING_PROFILE='/absolute/path/Tammy_MAS_Development.provisionprofile'
-export TAMMY_MACOS_PRIVACY_POLICY_URL='https://example.com/tammy/privacy'
+export TAMMY_MACOS_PRIVACY_POLICY_URL='https://tammy-accounting.castlemilk.chatgpt.site/privacy'
 export TAMMY_MACOS_SIGNING_IDENTITY='Apple Development: Example Person (TEAMID1234)'
-export TAMMY_MACOS_SUPPORT_URL='https://example.com/tammy/support'
+export TAMMY_MACOS_SUPPORT_URL='https://tammy-accounting.castlemilk.chatgpt.site/support'
 export TAMMY_MACOS_TEAM_ID='TEAMID1234'
 
 mise exec -- task release:development
@@ -55,10 +55,10 @@ For an upload candidate, use the distribution profile and identities:
 export TAMMY_MACOS_BUILD_NUMBER='2'
 export TAMMY_MACOS_EXPORT_COMPLIANCE='exempt' # or non-exempt
 export TAMMY_MACOS_PROVISIONING_PROFILE='/absolute/path/Tammy_MAS_Distribution.provisionprofile'
-export TAMMY_MACOS_PRIVACY_POLICY_URL='https://example.com/tammy/privacy'
+export TAMMY_MACOS_PRIVACY_POLICY_URL='https://tammy-accounting.castlemilk.chatgpt.site/privacy'
 export TAMMY_MACOS_SIGNING_IDENTITY='Apple Distribution: Example Company Pty Ltd (TEAMID1234)'
 export TAMMY_MACOS_INSTALLER_IDENTITY='3rd Party Mac Developer Installer: Example Company Pty Ltd (TEAMID1234)'
-export TAMMY_MACOS_SUPPORT_URL='https://example.com/tammy/support'
+export TAMMY_MACOS_SUPPORT_URL='https://tammy-accounting.castlemilk.chatgpt.site/support'
 export TAMMY_MACOS_TEAM_ID='TEAMID1234'
 
 mise exec -- task release:candidate
@@ -121,6 +121,10 @@ Manually upload the signed `.pkg` with Apple's Transporter app, wait for App Sto
 ## Release record and rollback
 
 Record the commit, marketing version, build number, signing/profile names, package SHA-256, validation results, screenshots, privacy report, App Store Connect build identifier, and reviewer notes. Do not record private key material or credentials.
+
+The public privacy/support site has a separate immutable record under `docs/release/public-site`. A successful public deployment exclusively creates `deployments/<deployment-id>.json`; `current.json` is only an atomic pointer to the latest passing record. Credentials, source-write URLs, account-user IDs, tokens, and mutable deployment URLs never belong in those files.
+
+To roll the public site back, first confirm that at least one distinct prior deployment file has a passing result for `/`, `/privacy`, and `/support`. Select that immutable prior Sites version intentionally, deploy it, and poll the returned deployment ID until it succeeds or fails. After success, run `mise exec -- task site:post-deploy-check SITE_ORIGIN=<exact-canonical-origin>`. Exclusively create one immutable rollback event under `docs/release/public-site/events` that identifies the new deployment ID/version/time, the version rolled back from, the prior version restored, the exact prior deployment-evidence path, and the new passing three-route result. Atomically update `current.json` only after the event and passing deployment record exist. Never delete or modify an earlier deployment or rollback file. If deployment or route verification fails, leave `current.json` and App Store metadata unchanged.
 
 App Store rollback means selecting a previously approved version where Apple permits it or shipping a higher build/version with the corrective change. Never reuse an uploaded build number. Preserve the release record and exact source commit for every submitted candidate.
 
