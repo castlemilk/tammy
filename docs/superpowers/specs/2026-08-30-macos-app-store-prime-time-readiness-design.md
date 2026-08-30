@@ -1,7 +1,7 @@
 # macOS App Store prime-time readiness design
 
 **Date:** 30 August 2026  
-**Status:** Approved; specification review iteration 1  
+**Status:** Approved for implementation  
 **Scope:** Public compliance pages, truthful App Store assets and metadata, signed macOS release evidence, and submission-readiness tooling
 
 ## Goal
