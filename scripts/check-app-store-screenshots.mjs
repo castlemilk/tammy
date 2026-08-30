@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isDeepStrictEqual } from "node:util";
 import { inflateSync } from "node:zlib";
+import { parse as parseYaml } from "yaml";
 
 const MAX_PNG_BYTES = 16 * 1024 * 1024;
 const MAX_TEXT_BYTES = 256 * 1024;
@@ -30,6 +31,7 @@ const CAPTIONS = [
 ];
 const SHELL_ACCESSIBILITY_TEXT = [
   "Tammy",
+  "Primary",
   "Overview",
   "Documents",
   "Banking",
@@ -68,25 +70,26 @@ const ACCESSIBILITY_TEXT = [
     "Choose File",
     "Upload document",
     "Needs review",
-    "Harbour Office Supplies Pty Ltd",
-    "WCS-2024Q4-001 · 12/05/2024",
-    "$319.00",
-    "Reviewed",
+    "Harbour Office Supplies Pty Ltd WCS-2024Q4-001 · 12/05/2024 $319.00 Reviewed",
     "Source document",
     "wattle-office-supplies-invoice.pdf",
     "49 B · retained locally",
-    "Reviewed",
-    "Harbour Office Supplies Pty Ltd Invoice WCS-2024Q4-001 Subtotal $290.00 GST $29.00 Total $319.00",
+    "Reviewed Harbour Office Supplies Pty Ltd Invoice WCS-2024Q4-001 Subtotal $290.00 GST $29.00 Total $319.00 Supplier",
     "Supplier",
     "Harbour Office Supplies Pty Ltd",
     "Invoice number",
+    "Invoice number",
     "WCS-2024Q4-001",
+    "Date",
     "Date",
     "2024-05-12",
     "Subtotal",
+    "Subtotal",
     "290.00",
     "GST",
+    "GST",
     "29.00",
+    "Total",
     "Total",
     "319.00",
     "Review saved",
@@ -95,15 +98,19 @@ const ACCESSIBILITY_TEXT = [
     ...SHELL_ACCESSIBILITY_TEXT,
     "Trial balance",
     "Debit and credit balances as at 12/05/2024.",
+    "Account Debit (AUD) Credit (AUD)",
     "Account",
     "Debit (AUD)",
     "Credit (AUD)",
+    "3100Owner contributions $0.00 $319.00",
     "3100Owner contributions",
     "$0.00",
     "$319.00",
+    "6100Office expenses $319.00 $0.00",
     "6100Office expenses",
     "$319.00",
     "$0.00",
+    "Total $319.00 $319.00",
     "Total",
     "$319.00",
     "$319.00",
@@ -117,7 +124,9 @@ const ACCESSIBILITY_TEXT = [
     "Statement import",
     "Business transaction account",
     "Opening balance",
+    "Opening balance",
     "1000.00",
+    "CSV rows",
     "CSV rows",
     "2024-05-12,HARBOUR OFFICE SUPPLIES WCS-2024Q4-001,-319.00",
     "Format: date, description, signed amount. Nothing is matched automatically.",
@@ -125,11 +134,13 @@ const ACCESSIBILITY_TEXT = [
     "Statement lines",
     "0 unmatched · 0 unreconciled",
     "Complete reconciliation",
+    "Date Description Amount State Action",
     "Date",
     "Description",
     "Amount",
     "State",
     "Action",
+    "12/05/2024 HARBOUR OFFICE SUPPLIES WCS-2024Q4-001 -$319.00 Reconciled",
     "12/05/2024",
     "HARBOUR OFFICE SUPPLIES WCS-2024Q4-001",
     "-$319.00",
@@ -141,6 +152,7 @@ const ACCESSIBILITY_TEXT = [
     "A local workpaper from reviewed documents. Tammy does not lodge this BAS.",
     "Draft — not lodged",
     "Review locally when ready.",
+    "Reporting support",
     "Available in this build",
     "Tammy supports a local reviewed-document GST workpaper only.",
     "Unsupported in this build",
@@ -156,11 +168,13 @@ const ACCESSIBILITY_TEXT = [
     "Reviewed source documents",
     "01/04/2024 – 30/06/2024",
     "1 source",
+    "Date Supplier Invoice Gross GST credit",
     "Date",
     "Supplier",
     "Invoice",
     "Gross",
     "GST credit",
+    "12/05/2024 Harbour Office Supplies Pty Ltd WCS-2024Q4-001 $319.00 $29.00",
     "12/05/2024",
     "Harbour Office Supplies Pty Ltd",
     "WCS-2024Q4-001",
@@ -210,6 +224,62 @@ function collectStrings(value, output = []) {
   return output;
 }
 
+export function normalizeAccessibilitySnapshot(snapshot) {
+  if (typeof snapshot !== "string" || snapshot.length === 0 || snapshot.length > MAX_TEXT_BYTES) {
+    fail("APP_STORE_SCREENSHOT_ACCESSIBILITY_INVALID");
+  }
+  let parsed;
+  try {
+    parsed = parseYaml(snapshot);
+  } catch {
+    fail("APP_STORE_SCREENSHOT_ACCESSIBILITY_INVALID");
+  }
+  const output = [];
+  const rolePattern = /^[a-z][a-z0-9 ]*(?: ("(?:[^"\\]|\\.)*"))?(?: \[[^\]\r\n]+\])*$/u;
+  const append = (value) => {
+    if (
+      !["string", "number"].includes(typeof value) ||
+      String(value).length === 0 ||
+      String(value).includes("\0")
+    ) {
+      fail("APP_STORE_SCREENSHOT_ACCESSIBILITY_INVALID");
+    }
+    const text = String(value);
+    output.push(text);
+  };
+  const appendRoleName = (value) => {
+    const role = value.match(rolePattern);
+    if (!role) fail("APP_STORE_SCREENSHOT_ACCESSIBILITY_INVALID");
+    if (role[1]) {
+      try {
+        append(JSON.parse(role[1]));
+      } catch {
+        fail("APP_STORE_SCREENSHOT_ACCESSIBILITY_INVALID");
+      }
+    }
+  };
+  const visit = (value, arrayItem = false) => {
+    if (["string", "number"].includes(typeof value)) {
+      if (arrayItem && typeof value === "string") appendRoleName(value);
+      else append(value);
+      return;
+    }
+    if (Array.isArray(value)) {
+      for (const item of value) visit(item, true);
+      return;
+    }
+    if (!record(value)) fail("APP_STORE_SCREENSHOT_ACCESSIBILITY_INVALID");
+    for (const [key, child] of Object.entries(value)) {
+      if (key.startsWith("/")) continue;
+      appendRoleName(key);
+      visit(child);
+    }
+  };
+  visit(parsed);
+  if (output.length === 0) fail("APP_STORE_SCREENSHOT_ACCESSIBILITY_INVALID");
+  return output;
+}
+
 export function scanScreenshotInputs(value, { allowSetupOnlyAbn = false } = {}) {
   for (const text of collectStrings(value)) {
     const lower = text.toLowerCase();
@@ -233,6 +303,7 @@ export function scanScreenshotInputs(value, { allowSetupOnlyAbn = false } = {}) 
         text,
       ) &&
         text !== "Invoice number" &&
+        text !== "Date Supplier Invoice Gross GST credit" &&
         !text.includes("WCS-2024Q4-001"))
     ) {
       fail("APP_STORE_SCREENSHOT_INPUT_UNSAFE");
@@ -376,7 +447,7 @@ export function validateScreenshotFixture(value) {
       screenshot.caption !== CAPTIONS[index] ||
       !isDeepStrictEqual(screenshot.completeAccessibilityText, ACCESSIBILITY_TEXT[index])
     ) {
-      fail("APP_STORE_SCREENSHOT_FIXTURE_INVALID");
+      fail(`APP_STORE_SCREENSHOT_FIXTURE_INVALID_${index + 1}`);
     }
   }
   try {

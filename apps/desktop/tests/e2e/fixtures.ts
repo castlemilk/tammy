@@ -1,6 +1,7 @@
 import type { ChildProcess } from "node:child_process";
 import { execFile } from "node:child_process";
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { lstat, mkdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 
@@ -13,7 +14,11 @@ import {
   type Page,
   type TestInfo,
 } from "@playwright/test";
-
+import {
+  hashAppBundle,
+  type ScreenshotCaptureContract,
+  validateScreenshotCaptureContract,
+} from "../../../../scripts/capture-app-store-screenshots.mjs";
 import { TAMMY_LAUNCH_SCENARIO_SWITCH } from "../../src/shared/launch-scenario";
 
 import {
@@ -113,12 +118,38 @@ export function createElectronLaunchArguments(
   target: PackagedLayout["target"],
   continuousIntegration: boolean,
   launchScenario?: "sbr-simulator",
+  appStoreScreenshotCapture = false,
 ): string[] {
   return [
     `--user-data-dir=${userDataPath}`,
-    ...(continuousIntegration && target === "darwin-arm64" ? ["--disable-gpu"] : []),
+    ...((continuousIntegration || appStoreScreenshotCapture) && target === "darwin-arm64"
+      ? ["--disable-gpu"]
+      : []),
+    ...(appStoreScreenshotCapture ? ["--force-device-scale-factor=1", "--lang=en-AU"] : []),
     ...(launchScenario ? [`${TAMMY_LAUNCH_SCENARIO_SWITCH}${launchScenario}`] : []),
   ];
+}
+
+function appStoreScreenshotElectronEnvironment(source: NodeJS.ProcessEnv): Record<string, string> {
+  const home = source.HOME;
+  if (!home || !path.isAbsolute(home) || home.includes("\0")) {
+    throw new Error("APP_STORE_SCREENSHOT_ENVIRONMENT_INVALID");
+  }
+  const environment: Record<string, string> = {
+    HOME: home,
+    LANG: "en_AU.UTF-8",
+    LC_ALL: "en_AU.UTF-8",
+    TZ: "Australia/Melbourne",
+  };
+  for (const name of ["TMPDIR", "USER", "LOGNAME"] as const) {
+    const value = source[name];
+    if (!value) continue;
+    if (value.includes("\0") || (name === "TMPDIR" && !path.isAbsolute(value))) {
+      throw new Error("APP_STORE_SCREENSHOT_ENVIRONMENT_INVALID");
+    }
+    environment[name] = value;
+  }
+  return environment;
 }
 
 export function shouldRecordElectronVideo(
@@ -175,6 +206,93 @@ async function locatePackagedApplication(): Promise<PackagedLayout> {
   return value;
 }
 
+async function stableFileBytes(file: string, maximumBytes: number): Promise<Buffer> {
+  const before = await lstat(file, { bigint: true });
+  if (!before.isFile() || before.isSymbolicLink() || before.size > BigInt(maximumBytes)) {
+    throw new Error("APP_STORE_SCREENSHOT_CAPTURE_INPUT_CHANGED");
+  }
+  const bytes = await readFile(file);
+  const after = await lstat(file, { bigint: true });
+  if (
+    before.dev !== after.dev ||
+    before.ino !== after.ino ||
+    before.size !== after.size ||
+    before.mtimeNs !== after.mtimeNs ||
+    bytes.length !== Number(before.size)
+  ) {
+    throw new Error("APP_STORE_SCREENSHOT_CAPTURE_INPUT_CHANGED");
+  }
+  return bytes;
+}
+
+async function sha256File(file: string): Promise<string> {
+  return createHash("sha256")
+    .update(await stableFileBytes(file, 1024 * 1024 * 1024))
+    .digest("hex");
+}
+
+async function locateScreenshotCaptureApplication(): Promise<PackagedLayout> {
+  const contractPath = process.env.TAMMY_APP_STORE_SCREENSHOT_CONTRACT;
+  if (
+    !contractPath ||
+    !path.isAbsolute(contractPath) ||
+    path.normalize(contractPath) !== contractPath
+  ) {
+    throw new Error("APP_STORE_SCREENSHOT_CAPTURE_CONTRACT_MISSING");
+  }
+  let contract: ScreenshotCaptureContract;
+  try {
+    contract = validateScreenshotCaptureContract(
+      JSON.parse((await stableFileBytes(contractPath, 128 * 1024)).toString("utf8")),
+    );
+  } catch {
+    throw new Error("APP_STORE_SCREENSHOT_CAPTURE_CONTRACT_INVALID");
+  }
+  const appStatus = await lstat(contract.developmentApp);
+  if (
+    !appStatus.isDirectory() ||
+    appStatus.isSymbolicLink() ||
+    (await realpath(contract.developmentApp)) !== contract.developmentApp
+  ) {
+    throw new Error("APP_STORE_SCREENSHOT_DEVELOPMENT_APP_INVALID");
+  }
+  const appExecutable = path.join(contract.developmentApp, "Contents/MacOS/Tammy");
+  const coreExecutable = path.join(
+    contract.developmentApp,
+    "Contents/Resources/core/darwin-arm64/tammy-core",
+  );
+  const helperExecutable = path.join(
+    contract.developmentApp,
+    "Contents/Resources/sbr-helper/darwin-arm64/tammy-sbr-helper",
+  );
+  const profile = path.join(
+    contract.developmentApp,
+    "Contents/Resources/sbr/simulator/sbr-profile-v1.json",
+  );
+  const [appSha256, coreSha256, helperSha256, profileSha256] = await Promise.all([
+    hashAppBundle(contract.developmentApp),
+    sha256File(coreExecutable),
+    sha256File(helperExecutable),
+    sha256File(profile),
+  ]);
+  if (appSha256 !== contract.developmentSignedAppSha256) {
+    throw new Error("APP_STORE_SCREENSHOT_DEVELOPMENT_APP_CHANGED");
+  }
+  return {
+    appExecutable,
+    appSha256,
+    coreExecutable,
+    coreSha256,
+    helperExecutable,
+    helperSha256,
+    profileFingerprint: profileSha256,
+    profileSha256,
+    releaseKind: "mas",
+    sourceRevision: contract.productSourceCommit,
+    target: "darwin-arm64",
+  };
+}
+
 function sbrResultPath(): string {
   return path.resolve(import.meta.dirname, "../../../..", ".tmp/sbr-e2e/latest/result.json");
 }
@@ -186,6 +304,9 @@ export async function locatePackagedApplicationForProject(
     readonly resultPath?: string;
   } = {},
 ): Promise<PackagedLayout> {
+  if (projectName === "darwin-arm64-app-store-screenshots") {
+    return locateScreenshotCaptureApplication();
+  }
   if (projectName === "darwin-arm64-sbr") {
     await removeSbrE2eResult(options.resultPath ?? sbrResultPath());
   }
@@ -453,15 +574,23 @@ function fixtureOperations(
     setup: async (state) => {
       const launch = async () => {
         const continuousIntegration = process.env.CI !== undefined;
+        const appStoreScreenshotCapture =
+          testInfo.project.name === "darwin-arm64-app-store-screenshots";
         const application = await _electron.launch({
           args: createElectronLaunchArguments(
             state.currentUserDataPath,
             state.packagedLayout.target,
             continuousIntegration,
             testInfo.project.name === "darwin-arm64-sbr" ? "sbr-simulator" : undefined,
+            appStoreScreenshotCapture,
           ),
           artifactsDir: path.join(state.rawArtifacts, "playwright"),
           chromiumSandbox: true,
+          ...(appStoreScreenshotCapture
+            ? {
+                env: appStoreScreenshotElectronEnvironment(process.env),
+              }
+            : {}),
           executablePath: state.packagedLayout.appExecutable,
           offline: true,
           ...(shouldRecordElectronVideo(state.packagedLayout.target, continuousIntegration)

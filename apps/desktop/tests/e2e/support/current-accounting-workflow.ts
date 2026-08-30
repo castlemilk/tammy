@@ -211,8 +211,40 @@ export interface AuthenticatedAccountingWorkspace {
 export async function setupAndRunCurrentAccountingWorkflow(
   initialPage: import("@playwright/test").Page,
   electronHarness: ElectronHarness,
+  { fixedRendererClock = false }: { readonly fixedRendererClock?: boolean } = {},
 ): Promise<AuthenticatedAccountingWorkspace> {
   let page = initialPage;
+  const fixedInstant = `${WORKFLOW_FIXTURE.period.postingDate}T02:00:00.000Z`;
+  const installFixtureClock = (instant: string) => {
+    const NativeDate = Date;
+    const timestamp = new NativeDate(instant).getTime();
+    class FixedDate extends NativeDate {
+      constructor(...args: unknown[]) {
+        if (args.length === 0) super(timestamp);
+        else if (args.length === 1) super(args[0] as string);
+        else {
+          const [year, month, date, hours, minutes, seconds, milliseconds] = args as number[];
+          super(
+            year ?? 0,
+            month ?? 0,
+            date ?? 1,
+            hours ?? 0,
+            minutes ?? 0,
+            seconds ?? 0,
+            milliseconds ?? 0,
+          );
+        }
+      }
+      static override now() {
+        return timestamp;
+      }
+    }
+    globalThis.Date = FixedDate as DateConstructor;
+  };
+  if (fixedRendererClock) {
+    await electronHarness.application.context().addInitScript(installFixtureClock, fixedInstant);
+    await page.evaluate(installFixtureClock, fixedInstant);
+  }
   await page.evaluate(() => {
     window.history.replaceState(null, "", "/setup/workspace");
     window.dispatchEvent(new PopStateEvent("popstate"));
@@ -243,6 +275,7 @@ export async function setupAndRunCurrentAccountingWorkflow(
   expect(createdWorkspace.organisationId).toMatch(UUID_V7);
 
   page = await electronHarness.restart("accounting-workflow-restart");
+  if (fixedRendererClock) await page.evaluate(installFixtureClock, fixedInstant);
   await page.evaluate(() => {
     window.history.replaceState(null, "", "/unlock");
     window.dispatchEvent(new PopStateEvent("popstate"));

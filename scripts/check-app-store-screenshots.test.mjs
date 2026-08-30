@@ -19,6 +19,7 @@ import { deflateSync } from "node:zlib";
 
 import {
   inspectPng,
+  normalizeAccessibilitySnapshot,
   promoteScreenshotSet,
   scanScreenshotInputs,
   validateScreenshotFixture,
@@ -33,6 +34,34 @@ const storeMetadataBytes = await readFile(
   path.join(root, "apps/desktop/release/macos/store-metadata.md"),
 );
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
+
+test("normalizes the complete ARIA tree including accessibility-only names", () => {
+  const snapshot = `- complementary:
+  - text: Tammy
+  - navigation "Primary":
+    - link "Overview":
+      - /url: /overview
+- main:
+  - heading "Banking" [level=1]
+  - text: Opening balance
+  - spinbutton "Opening balance": "1000.00"
+  - button "Complete reconciliation" [disabled]
+`;
+  assert.deepEqual(normalizeAccessibilitySnapshot(snapshot), [
+    "Tammy",
+    "Primary",
+    "Overview",
+    "Banking",
+    "Opening balance",
+    "Opening balance",
+    "1000.00",
+    "Complete reconciliation",
+  ]);
+  assert.throws(
+    () => normalizeAccessibilitySnapshot(`${snapshot}- reviewer-mode: hidden\n`),
+    /APP_STORE_SCREENSHOT_ACCESSIBILITY_INVALID/,
+  );
+});
 
 function crc32(bytes) {
   let crc = 0xffffffff;

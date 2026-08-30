@@ -1211,22 +1211,28 @@ Use `@superpowers:test-driven-development` and `@app-store-review:app-store-revi
 - Create: `apps/desktop/tests/e2e/app-store-screenshots.spec.ts`
 - Create: `apps/desktop/playwright.app-store-screenshots.config.ts`
 - Create: `scripts/capture-app-store-screenshots.mjs`
+- Create: `scripts/capture-app-store-screenshots.d.mts`
 - Create: `scripts/capture-app-store-screenshots.test.mjs`
 - Modify: `apps/desktop/tests/e2e/fixtures.ts`
+- Modify: `apps/desktop/tests/e2e/current-workflows.spec.ts`
+- Modify: `apps/desktop/tests/e2e/support/current-accounting-workflow.ts`
+- Modify: `apps/desktop/release/macos/screenshots/fixture.json`
 - Modify: `apps/desktop/tests/e2e/electron-lifecycle.ts` only if a general fixed-window helper is required.
 - Modify: `scripts/check-app-store-screenshots.mjs`
+- Modify: `scripts/check-app-store-screenshots.d.mts`
+- Modify: `scripts/check-app-store-screenshots.test.mjs`
 
-- [ ] **Step 1: Write the release screenshot E2E RED**
+- [x] **Step 1: Write the release screenshot E2E RED**
 
 When executed in Task 17, launch only the development-signed MAS copy from the immutable Task 16 product source. Use a fresh temporary user-data root and encrypted workspace. Fix viewport/content bounds at 1440×900, device scale 1, locale `en-AU`, timezone `Australia/Melbourne`, UTC fixture clock, reduced motion, colour scheme, and font readiness. Fail if the host display cannot produce the exact pixels.
 
 Exercise actual setup, sign-in, document ingestion/review, journal posting/trial balance, statement import/reconciliation, and BAS draft. Navigate through the UI, not renderer-only mocks or direct route injection after setup. Before each screenshot, assert the expected headings, seeded values, no loading/error state, and the visible `Draft — not lodged` boundary for BAS.
 
-- [ ] **Step 2: Add a test proving screenshot orchestration is external to the app**
+- [x] **Step 2: Add a test proving screenshot orchestration is external to the app**
 
 Inspect `app.asar`, unpacked resources, executable strings, and packaged file inventory. Reject the fixture JSON, screenshot spec/config, Playwright package, capture filenames, a screenshot-only launch switch, a hidden reviewer mode, or fixture-only labels in the signed app. The harness may call the authenticated local API from Playwright, but no test bypass or seed endpoint may exist in the packaged application.
 
-- [ ] **Step 3: Write and run a genuinely failing capture-orchestrator test**
+- [x] **Step 3: Write and run a genuinely failing capture-orchestrator test**
 
 Run:
 
@@ -1236,11 +1242,11 @@ rtk mise exec -- node --test scripts/capture-app-store-screenshots.test.mjs scri
 
 Expected: FAIL because `createScreenshotCapturePlan` and its strict artifact/fixture/temporary-output checks do not exist. The unit test must execute the owner; Playwright `--list` is only an additional discovery check and is not accepted as RED evidence.
 
-- [ ] **Step 4: Implement bounded capture and manifest creation**
+- [x] **Step 4: Implement bounded capture and manifest creation**
 
 Write images and a candidate manifest to a new `.tmp/macos-release/0.1.0/build-<N>/screenshots/<run-id>/` directory. Hash the development app, unsigned-content manifest, fixture, and images from stable file handles. Wait for two identical layout snapshots and loaded fonts before capture. Do not alter the packaged renderer or store persistent data outside the temporary workspace.
 
-- [ ] **Step 5: Validate the capture implementation without promoting images**
+- [x] **Step 5: Validate the capture implementation without promoting images**
 
 Use synthetic image fixtures plus the existing ordinary packaged E2E only; the signed release capture cannot run until Task 16 freezes the exact product source.
 
@@ -1251,10 +1257,12 @@ rtk mise exec -- pnpm --dir apps/desktop exec playwright test --config playwrigh
 
 Expected: unit tests pass and Playwright discovers exactly one serial five-image journey. No canonical image is created or promoted.
 
-- [ ] **Step 6: Commit capture automation before the freeze**
+Observed on 2026-08-31: the combined capture/evidence suite passes `23/23`, desktop TypeScript checking passes, and the screenshot config discovers exactly one test in one project. The packaged `darwin-arm64` accounting workflow passes `1/1` while navigating and exact-comparing the normalized real ARIA tree for all five target screens. The capture journey enforces `en-AU`, `Australia/Melbourne`, one CPU-rendering mode, device scale `1`, light colour scheme, reduced motion, exact 1440×900 content bounds, a pre-workflow UTC fixture clock that survives restart, font readiness, two identical layout snapshots, exact complete accessibility evidence, and empty console/page-error sets. The owner reuses Task 11 signed-copy equivalence, hashes the complete development app bundle before and after capture, scans the full packaged inventory/content for forbidden orchestration, rederives and validates every plan path, creates output through non-symlink realpath-checked ancestors, invokes the absolute Playwright CLI with a secret-free environment allowlist and bounded process-tree timeout, reaps stubborn descendants after abnormal leader exit, and rejects hostile `PATH`/`NODE_OPTIONS` input. The exact development-signed capture remains deferred until Task 17 as required; no canonical image was created or promoted.
+
+- [x] **Step 6: Commit capture automation before the freeze**
 
 ```bash
-rtk git add apps/desktop/tests/e2e/app-store-screenshots.spec.ts apps/desktop/playwright.app-store-screenshots.config.ts apps/desktop/tests/e2e/fixtures.ts apps/desktop/tests/e2e/electron-lifecycle.ts scripts/capture-app-store-screenshots.mjs scripts/capture-app-store-screenshots.test.mjs scripts/check-app-store-screenshots.mjs
+rtk git add apps/desktop/release/macos/screenshots/fixture.json apps/desktop/tests/e2e/app-store-screenshots.spec.ts apps/desktop/tests/e2e/current-workflows.spec.ts apps/desktop/tests/e2e/fixtures.ts apps/desktop/tests/e2e/support/current-accounting-workflow.ts apps/desktop/playwright.app-store-screenshots.config.ts scripts/capture-app-store-screenshots.d.mts scripts/capture-app-store-screenshots.mjs scripts/capture-app-store-screenshots.test.mjs scripts/check-app-store-screenshots.d.mts scripts/check-app-store-screenshots.mjs scripts/check-app-store-screenshots.test.mjs docs/superpowers/plans/2026-08-30-macos-app-store-prime-time-readiness.md
 rtk git commit -m "feat: automate real App Store screenshots"
 ```
 
