@@ -217,6 +217,37 @@ test("refuses a target whose ancestor resolves outside the isolated home", async
   assert.equal(await pathExists(targets.tammyGroup), true);
 });
 
+for (const [ancestorRelativePath, untouchedTargetName] of [
+  ["Library/Containers", "tammyGroup"],
+  ["Library/Group Containers", "tammyContainer"],
+]) {
+  test(`refuses symlinked ${ancestorRelativePath} when the Tammy leaf is absent`, async (context) => {
+    const { isolatedHome, targets } = await createFixture(context);
+    const outside = await mkdtemp(path.join(process.env.TMPDIR ?? os.tmpdir(), "tammy-outside-"));
+    context.after(() => rm(outside, { recursive: true, force: true }));
+    const ancestor = path.join(isolatedHome, ancestorRelativePath);
+    await rm(ancestor, { recursive: true });
+    await symlink(outside, ancestor, "dir");
+    let keychainCalls = 0;
+
+    await assert.rejects(
+      () =>
+        removeTammyData({
+          isolatedHome,
+          teamID: "TEAM123456",
+          keychain: {
+            async deleteGenericPasswords() {
+              keychainCalls += 1;
+            },
+          },
+        }),
+      /symbolic link/i,
+    );
+    assert.equal(await pathExists(targets[untouchedTargetName]), true);
+    assert.equal(keychainCalls, 0);
+  });
+}
+
 test("refuses unknown and development Keychain services", () => {
   for (const service of [
     "com.example.sentinel",

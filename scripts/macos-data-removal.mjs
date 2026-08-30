@@ -102,9 +102,34 @@ function isContained(home, target) {
   );
 }
 
+async function validateExistingAncestors(isolatedHomeRealPath, target) {
+  const relativeParent = path.relative(isolatedHomeRealPath, path.dirname(target));
+  let ancestor = isolatedHomeRealPath;
+  for (const segment of relativeParent.split(path.sep)) {
+    ancestor = path.join(ancestor, segment);
+    let metadata;
+    try {
+      metadata = await lstat(ancestor);
+    } catch (error) {
+      if (error?.code === "ENOENT") return;
+      throw error;
+    }
+    if (metadata.isSymbolicLink()) {
+      throw new Error(
+        "Removal target ancestor is a symbolic link and may resolve outside the isolated home",
+      );
+    }
+    if (!metadata.isDirectory()) throw new Error("Removal target ancestor must be a directory");
+    if (!isContained(isolatedHomeRealPath, await realpath(ancestor))) {
+      throw new Error("Removal target ancestor resolves outside the isolated home");
+    }
+  }
+}
+
 async function validateTarget(isolatedHomeRealPath, target) {
   if (!isContained(isolatedHomeRealPath, target))
     throw new Error("Removal target escapes the isolated home");
+  await validateExistingAncestors(isolatedHomeRealPath, target);
   let metadata;
   try {
     metadata = await lstat(target);
