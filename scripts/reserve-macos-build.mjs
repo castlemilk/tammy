@@ -8,7 +8,14 @@ const ENTRY_KEYS = ["buildNumber", "marketingVersion", "reservedAt", "reservedBy
 const VERSION = /^[0-9]+\.[0-9]+\.[0-9]+$/;
 const BUILD = /^[1-9][0-9]*$/;
 const UTC_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
-const SECRET_VALUE = /(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{16,}|(?:password|token|secret)=/i;
+const SECRET_VALUE_PATTERNS = [
+  /\b(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{16,}\b/i,
+  /\b(?:ghp|github_pat)_[A-Za-z0-9_]{16,}\b/i,
+  /\bAKIA[A-Z0-9]{16}\b/i,
+  /-----BEGIN [A-Z ]*PRIVATE KEY-----/i,
+  /\b(?:password|token|secret)=[^&\s]{8,}/i,
+];
+const SHA_FACT = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i;
 const defaultLedgerPath = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../apps/desktop/release/macos/build-numbers.json",
@@ -52,7 +59,8 @@ function isOperator(value) {
     value.length >= 2 &&
     value.length <= 100 &&
     !hasControlCharacters(value) &&
-    !SECRET_VALUE.test(value)
+    !SECRET_VALUE_PATTERNS.some((pattern) => pattern.test(value)) &&
+    !SHA_FACT.test(value)
   );
 }
 

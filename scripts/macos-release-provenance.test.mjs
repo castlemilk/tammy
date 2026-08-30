@@ -72,6 +72,24 @@ test("rejects dirty or uncommitted product-source facts", async (context) => {
   await assert.rejects(readProductSource(root), /MACOS_PRODUCT_SOURCE_DIRTY/);
 });
 
+test("ignores inherited Git repository overrides and verifies the supplied root", async (context) => {
+  const suppliedRoot = await createRepository(context);
+  const foreignRoot = await createRepository(context);
+  await writeFile(path.join(suppliedRoot, "dirty.txt"), "dirty\n");
+  const previousGitDir = process.env.GIT_DIR;
+  const previousGitWorkTree = process.env.GIT_WORK_TREE;
+  process.env.GIT_DIR = path.join(foreignRoot, ".git");
+  process.env.GIT_WORK_TREE = foreignRoot;
+  try {
+    await assert.rejects(readProductSource(suppliedRoot), /MACOS_PRODUCT_SOURCE_DIRTY/);
+  } finally {
+    if (previousGitDir === undefined) delete process.env.GIT_DIR;
+    else process.env.GIT_DIR = previousGitDir;
+    if (previousGitWorkTree === undefined) delete process.env.GIT_WORK_TREE;
+    else process.env.GIT_WORK_TREE = previousGitWorkTree;
+  }
+});
+
 test("creates an exact phase-two event without mutating the phase-one ledger", async (context) => {
   const root = await createRepository(context);
   const source = await readProductSource(root);

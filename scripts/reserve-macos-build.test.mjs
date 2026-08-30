@@ -44,6 +44,11 @@ test("validates the strict monotonic build-number ledger", () => {
     ledger([entry("1"), entry("1", { marketingVersion: "0.2.0" })]),
     ledger([entry("1", { reservedAt: "not-a-time" })]),
     ledger([entry("1", { reservedBy: "" })]),
+    ledger([entry("1", { reservedBy: `ghp_${"a".repeat(20)}` })]),
+    ledger([entry("1", { reservedBy: "AKIAABCDEFGHIJKLMNOP" })]),
+    ledger([entry("1", { reservedBy: "-----BEGIN PRIVATE KEY-----" })]),
+    ledger([entry("1", { reservedBy: "a".repeat(40) })]),
+    ledger([entry("1", { reservedBy: "b".repeat(64) })]),
     ledger([entry("1", { state: "uploaded" })]),
     ledger([{ ...entry("1"), apiToken: "redacted" }]),
   ]) {
@@ -70,6 +75,8 @@ test("parses only the explicit reservation or read-only check CLI", () => {
     ["--number", "1", "--version", "0.1.0", "--operator", "Ben Ebsworth"],
     ["--version", "0.1.0", "--operator", "Ben Ebsworth", "--number", "1", "--latest-from-apple"],
     ["--check", "--number", "1"],
+    ["--version", "0.1.0", "--operator", `ghp_${"a".repeat(20)}`, "--number", "1"],
+    ["--version", "0.1.0", "--operator", "a".repeat(40), "--number", "1"],
   ]) {
     assert.throws(() => parseReservationArguments(argv), /MACOS_BUILD_RESERVATION_INPUT_INVALID/);
   }
@@ -95,6 +102,8 @@ test("atomically reserves a greater build number without phase-two facts", async
   assert.deepEqual(await readdir(directory), ["build-numbers.json"]);
   assert.equal(JSON.stringify(result).includes("Commit"), false);
   assert.equal(JSON.stringify(result).includes("Sha256"), false);
+  assert.equal(JSON.stringify(result).includes("a".repeat(40)), false);
+  assert.equal(JSON.stringify(result).includes("b".repeat(64)), false);
 
   const before = await readFile(ledgerPath, "utf8");
   await assert.rejects(

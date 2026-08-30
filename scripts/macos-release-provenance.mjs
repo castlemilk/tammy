@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { realpath } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 
@@ -32,9 +33,13 @@ function assertExactKeys(value, expected, code) {
 
 async function git(root, args) {
   try {
+    const environment = Object.fromEntries(
+      Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_")),
+    );
     const { stdout } = await execFileAsync("git", args, {
       cwd: root,
       encoding: "utf8",
+      env: environment,
       maxBuffer: 1_000_000,
     });
     return stdout;
@@ -45,6 +50,14 @@ async function git(root, args) {
 
 export async function readProductSource(root) {
   if (typeof root !== "string" || !path.isAbsolute(root)) fail("MACOS_PRODUCT_SOURCE_INVALID");
+  const [resolvedRoot, topLevel] = await Promise.all([
+    realpath(root).catch(() => fail("MACOS_PRODUCT_SOURCE_INVALID")),
+    git(root, ["rev-parse", "--show-toplevel"]),
+  ]);
+  const resolvedTopLevel = await realpath(topLevel.trim()).catch(() =>
+    fail("MACOS_PRODUCT_SOURCE_INVALID"),
+  );
+  if (resolvedTopLevel !== resolvedRoot) fail("MACOS_PRODUCT_SOURCE_INVALID");
   const statusBefore = await git(root, ["status", "--porcelain=v1", "--untracked-files=all"]);
   if (statusBefore !== "") fail("MACOS_PRODUCT_SOURCE_DIRTY");
   const productSourceCommit = (await git(root, ["rev-parse", "--verify", "HEAD"])).trim();
