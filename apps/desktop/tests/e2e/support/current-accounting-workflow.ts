@@ -63,30 +63,34 @@ import {
   GetCurrentBasDraftRequestSchema,
   GetCurrentBasDraftResponseSchema,
 } from "@tammy/connect-client/tammy/v1/tax_pb.js";
+import { validateScreenshotFixture } from "../../../../../scripts/check-app-store-screenshots.mjs";
+import screenshotFixture from "../../../release/macos/screenshots/fixture.json" with {
+  type: "json",
+};
 import type { TammyDesktopAPI } from "../../../src/shared/desktop-api";
 import { createProtoMethodCodec, type ProtoMethodCodec } from "../../../src/shared/proto-ipc";
 import { type ElectronHarness, expect } from "../fixtures";
 
 const UUID_V7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
-export const CURRENT_WORKFLOW_USERNAME = "admin@tammy.local";
+const WORKFLOW_FIXTURE = validateScreenshotFixture(screenshotFixture);
+const EXPENSE_ACCOUNT = requiredFixtureAccount("expense");
+const EQUITY_ACCOUNT = requiredFixtureAccount("equity");
+export const CURRENT_WORKFLOW_USERNAME = WORKFLOW_FIXTURE.operator.username;
 export const CURRENT_WORKFLOW_PASSPHRASE = "workspace-passphrase-long-enough";
 export const CURRENT_WORKFLOW_ADMIN_PASSWORD = "administrator-password-long-enough";
-const PERIOD_START = create(CivilDateSchema, { year: 2024, month: 4, day: 1 });
-const PERIOD_END = create(CivilDateSchema, { year: 2024, month: 6, day: 30 });
-const POSTING_DATE = create(CivilDateSchema, { year: 2024, month: 5, day: 12 });
-const CASE_IDS = {
-  expenseAccount: "01900000-0000-7000-8000-000000000001",
-  equityAccount: "01900000-0000-7000-8000-000000000002",
-  journal: "01900000-0000-7000-8000-000000000003",
-  journalDebit: "01900000-0000-7000-8000-000000000004",
-  journalCredit: "01900000-0000-7000-8000-000000000005",
-  bankImport: "01900000-0000-7000-8000-000000000006",
-  bankMatch: "01900000-0000-7000-8000-000000000007",
-  bankReconciliation: "01900000-0000-7000-8000-000000000008",
-  document: "01900000-0000-7000-8000-000000000009",
-  documentReview: "01900000-0000-7000-8000-00000000000a",
-  bas: "01900000-0000-7000-8000-00000000000b",
-} as const;
+const PERIOD_START = civilDate(WORKFLOW_FIXTURE.period.start);
+const PERIOD_END = civilDate(WORKFLOW_FIXTURE.period.end);
+const POSTING_DATE = civilDate(WORKFLOW_FIXTURE.period.postingDate);
+const CASE_IDS = WORKFLOW_FIXTURE.ids;
+
+function requiredFixtureAccount(role: "expense" | "equity") {
+  const accounts = WORKFLOW_FIXTURE.accounts.filter((account) => account.role === role);
+  const account = accounts[0];
+  if (accounts.length !== 1 || !account) {
+    throw new Error("SCREENSHOT_FIXTURE_ACCOUNTS_INVALID");
+  }
+  return account;
+}
 
 const createAccountCodec = createProtoMethodCodec({
   input: CreateAccountRequestSchema,
@@ -216,11 +220,11 @@ export async function setupAndRunCurrentAccountingWorkflow(
   await expect(page).toHaveURL(/\/setup\/workspace$/);
   await expect(page.getByRole("heading", { name: "Create your local workspace" })).toBeVisible();
 
-  await page.getByLabel("Your name").fill("Tammy Admin");
+  await page.getByLabel("Your name").fill(WORKFLOW_FIXTURE.operator.displayName);
   await page.getByLabel("Email or username").fill(CURRENT_WORKFLOW_USERNAME);
-  await page.getByLabel("Business legal name").fill("Wattle & Co Test Pty Ltd");
-  await page.getByLabel("Business display name").fill("Wattle & Co Test Pty Ltd");
-  await page.getByLabel("ABN").fill("11000000560");
+  await page.getByLabel("Business legal name").fill(WORKFLOW_FIXTURE.business.legalName);
+  await page.getByLabel("Business display name").fill(WORKFLOW_FIXTURE.business.displayName);
+  await page.getByLabel("ABN").fill(WORKFLOW_FIXTURE.business.abn.value);
   await page.getByLabel("Workspace passphrase").fill(CURRENT_WORKFLOW_PASSPHRASE);
   await page.getByLabel("Administrator password").fill(CURRENT_WORKFLOW_ADMIN_PASSWORD);
   await page.getByRole("button", { name: "Create local workspace" }).click();
@@ -269,19 +273,19 @@ export async function setupAndRunCurrentAccountingWorkflow(
     create(CreateAccountRequestSchema, {
       commandContext: command(authentication, CASE_IDS.expenseAccount),
       organisationId,
-      code: "6100",
-      name: "Office expenses",
+      code: EXPENSE_ACCOUNT.code,
+      name: EXPENSE_ACCOUNT.name,
       type: AccountType.EXPENSE,
       normalBalance: NormalBalance.DEBIT,
-      reportClassification: "profit_loss.manual",
-      cashFlowClassification: "noncash",
+      reportClassification: EXPENSE_ACCOUNT.reportClassification,
+      cashFlowClassification: EXPENSE_ACCOUNT.cashFlowClassification,
     }),
   );
   expect(expense.account).toMatchObject({
     organisationId,
     version: 1n,
-    code: "6100",
-    name: "Office expenses",
+    code: EXPENSE_ACCOUNT.code,
+    name: EXPENSE_ACCOUNT.name,
   });
   expect(expense.account?.id).toMatch(UUID_V7);
   const expenseAccount = expense.account;
@@ -294,19 +298,19 @@ export async function setupAndRunCurrentAccountingWorkflow(
     create(CreateAccountRequestSchema, {
       commandContext: command(authentication, CASE_IDS.equityAccount),
       organisationId,
-      code: "3100",
-      name: "Owner contributions",
+      code: EQUITY_ACCOUNT.code,
+      name: EQUITY_ACCOUNT.name,
       type: AccountType.EQUITY,
       normalBalance: NormalBalance.CREDIT,
-      reportClassification: "balance_sheet.manual",
-      cashFlowClassification: "noncash",
+      reportClassification: EQUITY_ACCOUNT.reportClassification,
+      cashFlowClassification: EQUITY_ACCOUNT.cashFlowClassification,
     }),
   );
   expect(equity.account).toMatchObject({
     organisationId,
     version: 1n,
-    code: "3100",
-    name: "Owner contributions",
+    code: EQUITY_ACCOUNT.code,
+    name: EQUITY_ACCOUNT.name,
   });
   expect(equity.account?.id).toMatch(UUID_V7);
   const equityAccount = equity.account;
@@ -336,21 +340,21 @@ export async function setupAndRunCurrentAccountingWorkflow(
       commandContext: command(authentication, CASE_IDS.journal),
       organisationId,
       postingDate: POSTING_DATE,
-      memo: "Office supplies paid personally",
+      memo: WORKFLOW_FIXTURE.journal.memo,
       lines: [
         {
           clientLineId: CASE_IDS.journalDebit,
           accountId: expenseAccount.id,
-          debit: aud(31_900n),
+          debit: aud(BigInt(WORKFLOW_FIXTURE.journal.amountMinorUnits)),
           credit: aud(0n),
-          description: "Office supplies",
+          description: WORKFLOW_FIXTURE.journal.debitDescription,
         },
         {
           clientLineId: CASE_IDS.journalCredit,
           accountId: equityAccount.id,
           debit: aud(0n),
-          credit: aud(31_900n),
-          description: "Owner contribution",
+          credit: aud(BigInt(WORKFLOW_FIXTURE.journal.amountMinorUnits)),
+          description: WORKFLOW_FIXTURE.journal.creditDescription,
         },
       ],
     }),
@@ -360,11 +364,15 @@ export async function setupAndRunCurrentAccountingWorkflow(
     version: 1n,
     state: JournalState.POSTED,
     source: JournalSource.MANUAL,
-    memo: "Office supplies paid personally",
+    memo: WORKFLOW_FIXTURE.journal.memo,
   });
   expect(posted.journal?.id).toMatch(UUID_V7);
-  expect(posted.journal?.totalDebits?.minorUnits).toBe(31_900n);
-  expect(posted.journal?.totalCredits?.minorUnits).toBe(31_900n);
+  expect(posted.journal?.totalDebits?.minorUnits).toBe(
+    BigInt(WORKFLOW_FIXTURE.journal.amountMinorUnits),
+  );
+  expect(posted.journal?.totalCredits?.minorUnits).toBe(
+    BigInt(WORKFLOW_FIXTURE.journal.amountMinorUnits),
+  );
   const postedJournal = posted.journal;
   if (!postedJournal) throw new Error("POSTED_JOURNAL_MISSING");
 
@@ -404,8 +412,12 @@ export async function setupAndRunCurrentAccountingWorkflow(
     }),
   );
   expect(trialBalance.lines).toHaveLength(2);
-  expect(trialBalance.totalDebits?.minorUnits).toBe(31_900n);
-  expect(trialBalance.totalCredits?.minorUnits).toBe(31_900n);
+  expect(trialBalance.totalDebits?.minorUnits).toBe(
+    BigInt(WORKFLOW_FIXTURE.journal.amountMinorUnits),
+  );
+  expect(trialBalance.totalCredits?.minorUnits).toBe(
+    BigInt(WORKFLOW_FIXTURE.journal.amountMinorUnits),
+  );
   expect(trialBalance.financialRevision).toBe(1n);
 
   const statement = await invokeProto(
@@ -415,20 +427,24 @@ export async function setupAndRunCurrentAccountingWorkflow(
     create(ImportBankStatementRequestSchema, {
       commandContext: command(authentication, CASE_IDS.bankImport),
       organisationId,
-      openingBalance: aud(100_000n),
+      openingBalance: aud(BigInt(WORKFLOW_FIXTURE.banking.openingBalanceMinorUnits)),
       lines: [
         create(BankStatementLineInputSchema, {
           transactionDate: POSTING_DATE,
-          description: "Officeworks INV-029847",
-          amount: aud(-31_900n),
+          description: WORKFLOW_FIXTURE.banking.lineDescription,
+          amount: aud(BigInt(WORKFLOW_FIXTURE.banking.lineAmountMinorUnits)),
         }),
       ],
     }),
   );
   expect(statement.statementImport?.id).toMatch(UUID_V7);
   expect(statement.statementImport).toMatchObject({ organisationId, lineCount: 1 });
-  expect(statement.statementImport?.openingBalance?.minorUnits).toBe(100_000n);
-  expect(statement.statementImport?.closingBalance?.minorUnits).toBe(68_100n);
+  expect(statement.statementImport?.openingBalance?.minorUnits).toBe(
+    BigInt(WORKFLOW_FIXTURE.banking.openingBalanceMinorUnits),
+  );
+  expect(statement.statementImport?.closingBalance?.minorUnits).toBe(
+    BigInt(WORKFLOW_FIXTURE.banking.closingBalanceMinorUnits),
+  );
 
   const importedLines = await invokeProto(
     page,
@@ -445,7 +461,7 @@ export async function setupAndRunCurrentAccountingWorkflow(
   expect(importedLines.lines[0]).toMatchObject({
     version: 1n,
     status: BankStatementLineStatus.UNMATCHED,
-    description: "Officeworks INV-029847",
+    description: WORKFLOW_FIXTURE.banking.lineDescription,
   });
   expect(importedLines.lines[0]?.id).toMatch(UUID_V7);
   const importedLine = importedLines.lines[0];
@@ -459,13 +475,13 @@ export async function setupAndRunCurrentAccountingWorkflow(
       commandContext: command(authentication, CASE_IDS.bankMatch),
       lineId: importedLine.id,
       expectedVersion: importedLine.version,
-      matchReference: "Reviewed accounting source",
+      matchReference: WORKFLOW_FIXTURE.banking.matchReference,
     }),
   );
   expect(matched.line).toMatchObject({
     version: 2n,
     status: BankStatementLineStatus.MATCHED,
-    matchReference: "Reviewed accounting source",
+    matchReference: WORKFLOW_FIXTURE.banking.matchReference,
   });
 
   const beforeReconciliation = await invokeProto(
@@ -479,7 +495,9 @@ export async function setupAndRunCurrentAccountingWorkflow(
     unmatchedLineCount: 0,
     unreconciledLineCount: 1,
   });
-  expect(beforeReconciliation.latestClosingBalance?.minorUnits).toBe(68_100n);
+  expect(beforeReconciliation.latestClosingBalance?.minorUnits).toBe(
+    BigInt(WORKFLOW_FIXTURE.banking.closingBalanceMinorUnits),
+  );
 
   const reconciliation = await invokeProto(
     page,
@@ -491,7 +509,9 @@ export async function setupAndRunCurrentAccountingWorkflow(
     }),
   );
   expect(reconciliation.reconciledLineCount).toBe(1);
-  expect(reconciliation.closingBalance?.minorUnits).toBe(68_100n);
+  expect(reconciliation.closingBalance?.minorUnits).toBe(
+    BigInt(WORKFLOW_FIXTURE.banking.closingBalanceMinorUnits),
+  );
 
   const reconciledLines = await invokeProto(
     page,
@@ -518,16 +538,18 @@ export async function setupAndRunCurrentAccountingWorkflow(
     unmatchedLineCount: 0,
     unreconciledLineCount: 0,
   });
-  expect(bankingSummary.latestClosingBalance?.minorUnits).toBe(68_100n);
+  expect(bankingSummary.latestClosingBalance?.minorUnits).toBe(
+    BigInt(WORKFLOW_FIXTURE.banking.closingBalanceMinorUnits),
+  );
 
-  const invoiceBytes = new TextEncoder().encode("%PDF-1.4\nTammy native-text fixture\n%%EOF");
+  const invoiceBytes = new TextEncoder().encode(WORKFLOW_FIXTURE.sourceDocument.syntheticPdfText);
   const candidate = create(DocumentCandidateSchema, {
-    supplierName: "Officeworks Ltd",
-    invoiceNumber: "INV-029847",
+    supplierName: WORKFLOW_FIXTURE.sourceDocument.supplierName,
+    invoiceNumber: WORKFLOW_FIXTURE.sourceDocument.invoiceNumber,
     documentDate: POSTING_DATE,
-    subtotal: aud(29_000n),
-    gst: aud(2_900n),
-    total: aud(31_900n),
+    subtotal: aud(BigInt(WORKFLOW_FIXTURE.sourceDocument.subtotalMinorUnits)),
+    gst: aud(BigInt(WORKFLOW_FIXTURE.sourceDocument.gstMinorUnits)),
+    total: aud(BigInt(WORKFLOW_FIXTURE.sourceDocument.totalMinorUnits)),
   });
   const retained = await invokeProto(
     page,
@@ -536,10 +558,10 @@ export async function setupAndRunCurrentAccountingWorkflow(
     create(IngestDocumentRequestSchema, {
       commandContext: command(authentication, CASE_IDS.document),
       organisationId,
-      sourceDisplayName: "officeworks-invoice.pdf",
-      mimeType: "application/pdf",
+      sourceDisplayName: WORKFLOW_FIXTURE.sourceDocument.sourceDisplayName,
+      mimeType: WORKFLOW_FIXTURE.sourceDocument.mimeType,
       original: invoiceBytes,
-      extractedText: "Officeworks Ltd Invoice INV-029847 Subtotal $290.00 GST $29.00 Total $319.00",
+      extractedText: WORKFLOW_FIXTURE.sourceDocument.extractedText,
       candidate,
     }),
   );
@@ -548,7 +570,7 @@ export async function setupAndRunCurrentAccountingWorkflow(
     organisationId,
     version: 1n,
     status: DocumentStatus.NEEDS_REVIEW,
-    sourceDisplayName: "officeworks-invoice.pdf",
+    sourceDisplayName: WORKFLOW_FIXTURE.sourceDocument.sourceDisplayName,
     byteLength: BigInt(invoiceBytes.byteLength),
   });
   expect(retained.document?.sha256).toHaveLength(32);
@@ -595,7 +617,9 @@ export async function setupAndRunCurrentAccountingWorkflow(
     }),
   );
   expect(storedDocument.document?.id).toBe(retainedDocument.id);
-  expect(storedDocument.document?.candidate?.invoiceNumber).toBe("INV-029847");
+  expect(storedDocument.document?.candidate?.invoiceNumber).toBe(
+    WORKFLOW_FIXTURE.sourceDocument.invoiceNumber,
+  );
   expect(storedDocument.document?.status).toBe(DocumentStatus.REVIEWED);
 
   const createdBas = await invokeProto(
@@ -617,13 +641,17 @@ export async function setupAndRunCurrentAccountingWorkflow(
   });
   expect(createdBas.workpaper?.salesG1?.minorUnits).toBe(0n);
   expect(createdBas.workpaper?.gstOnSales1a?.minorUnits).toBe(0n);
-  expect(createdBas.workpaper?.gstCredits1b?.minorUnits).toBe(2_900n);
-  expect(createdBas.workpaper?.netGstPayable?.minorUnits).toBe(-2_900n);
+  expect(createdBas.workpaper?.gstCredits1b?.minorUnits).toBe(
+    BigInt(WORKFLOW_FIXTURE.bas.gstCreditsMinorUnits),
+  );
+  expect(createdBas.workpaper?.netGstPayable?.minorUnits).toBe(
+    BigInt(WORKFLOW_FIXTURE.bas.netGstPayableMinorUnits),
+  );
   expect(createdBas.workpaper?.sources).toHaveLength(1);
   expect(createdBas.workpaper?.sources[0]).toMatchObject({
     documentId: retainedDocument.id,
-    supplierName: "Officeworks Ltd",
-    invoiceNumber: "INV-029847",
+    supplierName: WORKFLOW_FIXTURE.sourceDocument.supplierName,
+    invoiceNumber: WORKFLOW_FIXTURE.sourceDocument.invoiceNumber,
   });
 
   const currentBas = await invokeProto(
@@ -665,22 +693,26 @@ export async function setupAndRunCurrentAccountingWorkflow(
   expect(attention.attentionItems).toHaveLength(0);
 
   await assertRoute(page, "Documents", "/documents", "Documents");
-  await expect(page.getByText("officeworks-invoice.pdf")).toBeVisible();
+  await expect(page.getByText(WORKFLOW_FIXTURE.sourceDocument.sourceDisplayName)).toBeVisible();
   await expect(page.getByText("Reviewed", { exact: true }).first()).toBeVisible();
   await assertRoute(page, "Banking", "/banking", "Banking");
   await expect(page.getByText("$681.00", { exact: true })).toBeVisible();
   await expect(page.getByText("Reconciled", { exact: true })).toBeVisible();
   await assertRoute(page, "Chart of accounts", "/accounting/chart", "Chart of accounts");
-  await expect(page.getByText("Office expenses", { exact: true })).toBeVisible();
+  await expect(page.getByText(EXPENSE_ACCOUNT.name, { exact: true })).toBeVisible();
   await assertRoute(page, "Journals", "/accounting/journals", "Journals");
-  await expect(page.getByText("Office supplies paid personally", { exact: true })).toBeVisible();
+  await expect(page.getByText(WORKFLOW_FIXTURE.journal.memo, { exact: true })).toBeVisible();
   await assertRoute(page, "Trial balance", "/accounting/trial-balance", "Trial balance");
   await expect(page.getByText("$319.00", { exact: true }).first()).toBeVisible();
   await assertRoute(page, "GST & BAS", "/gst-bas", "GST & BAS");
-  await expect(page.getByText("Draft — not lodged", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText("Officeworks Ltd", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText(WORKFLOW_FIXTURE.bas.statusLabel, { exact: true }).first(),
+  ).toBeVisible();
+  await expect(
+    page.getByText(WORKFLOW_FIXTURE.sourceDocument.supplierName, { exact: true }),
+  ).toBeVisible();
   await assertRoute(page, "Overview", "/overview", "Overview");
-  await expect(page.getByText("Draft — not lodged", { exact: true })).toBeVisible();
+  await expect(page.getByText(WORKFLOW_FIXTURE.bas.statusLabel, { exact: true })).toBeVisible();
 
   expect(electronHarness.consoleErrors).toEqual([]);
   expect(electronHarness.pageErrors).toEqual([]);
@@ -723,6 +755,12 @@ function command(
 
 function aud(minorUnits: bigint) {
   return create(MoneySchema, { currencyCode: "AUD", minorUnits });
+}
+
+function civilDate(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) throw new Error("SCREENSHOT_FIXTURE_DATE_INVALID");
+  return create(CivilDateSchema, { day, month, year });
 }
 
 async function authenticatedWorkspace(page: import("@playwright/test").Page) {

@@ -1133,11 +1133,12 @@ Use `@superpowers:test-driven-development` and `@app-store-review:app-store-revi
 **Files:**
 - Create: `apps/desktop/release/macos/screenshots/fixture.json`
 - Create: `scripts/check-app-store-screenshots.mjs`
+- Create: `scripts/check-app-store-screenshots.d.mts`
 - Create: `scripts/check-app-store-screenshots.test.mjs`
 - Modify: `apps/desktop/tests/e2e/support/current-accounting-workflow.ts`
 - Modify: `apps/desktop/release/macos/store-metadata.md`
 
-- [ ] **Step 1: Write failing strict fixture tests**
+- [x] **Step 1: Write failing strict fixture tests**
 
 Require a versioned fixture named `Wattle & Co Supplies Pty Ltd` with an explicit `fictional: true` marker, fixed 2024 Q4 Australian dates, deterministic UUIDs, accounts, journal lines, source-document fields, bank lines, reconciliation state, BAS draft, and expected captions. Remove the current `Wattle & Co Test Pty Ltd` duplication by making the reusable workflow consume this file.
 
@@ -1149,7 +1150,7 @@ Identifiers displayed in screenshots must either cite a committed official ATO t
 - unapproved ABNs, BSB/account numbers, invoice references, or person names;
 - mutable current dates, random IDs, or fixture fields not consumed by the scenario.
 
-- [ ] **Step 2: Write failing PNG and manifest tests**
+- [x] **Step 2: Write failing PNG and manifest tests**
 
 Require exactly these files and order, plus one complete visible-text/accessibility snapshot per image:
 
@@ -1165,23 +1166,23 @@ Each must be a valid non-interlaced PNG at exactly 1440×900, RGB without alpha,
 
 Also specify failing promotion/recovery tests for a crash before and after each backup/staging rename and parent fsync. Require deterministic recovery to the last complete validated set. Reject an unvalidated existing canonical directory or backup, including unexpected files or symlinks, before either may be renamed, removed, or replaced; recovery must never delete unknown user-owned content.
 
-- [ ] **Step 3: Verify fixture/image tests are RED**
+- [x] **Step 3: Verify fixture/image tests are RED**
 
 Run: `rtk mise exec -- node --test scripts/check-app-store-screenshots.test.mjs`
 
 Expected: FAIL because fixture and validator do not exist.
 
-- [ ] **Step 4: Implement the fixture and pure validators**
+- [x] **Step 4: Implement the fixture and pure validators**
 
 Export `validateScreenshotFixture`, `inspectPng`, `validateScreenshotManifest`, and `scanScreenshotInputs`. Parse PNG chunks directly with bounded reads; do not add an image-processing dependency for validation. Validate every textual fixture value before the app launches and every resulting image/manifest before promotion.
 
 Extract only reusable current-workflow setup primitives. Ordinary E2E remains on its existing test fixture unless its assertions are deliberately updated in the same commit.
 
-- [ ] **Step 5: Implement crash-recoverable canonical-set promotion**
+- [x] **Step 5: Implement crash-recoverable canonical-set promotion**
 
 The CLI validates a caller-supplied temporary capture directory, copies it into a new sibling staging directory, fsyncs files, and revalidates. Under an exclusive lock it renames an existing canonical directory to a unique backup, fsyncs the parent, renames staging to `en-AU`, fsyncs the parent again, revalidates canonical output, and only then removes the backup and fsyncs the parent. A recovery test covers a crash at every boundary: the next invocation restores the backup when canonical is absent, retains canonical when it is complete, and refuses to guess when both are invalid. Before the first rename, any error deletes only new staging and preserves the old set. Reject destination paths outside `apps/desktop/release/macos/screenshots/` and never follow symlinks.
 
-- [ ] **Step 6: Run validator and ordinary accounting workflow tests GREEN**
+- [x] **Step 6: Run validator and ordinary accounting workflow tests GREEN**
 
 Run:
 
@@ -1193,10 +1194,12 @@ rtk mise exec -- pnpm --dir apps/desktop exec playwright test tests/e2e/current-
 
 Expected: unit tests pass and the existing current accounting workflow remains functional. If the platform-specific packaged test cannot run on the current host, record the named host blocker rather than fabricating a pass.
 
-- [ ] **Step 7: Commit the fixture and validator**
+Observed on 2026-08-30: screenshot validator `13/13`, desktop typecheck, and the packaged `darwin-arm64` current-accounting-workflow E2E `1/1` pass. A packaged UI probe bound all five complete accessibility-text contracts to the current shell and screen language plus fixture-controlled values. The validator includes real child-process death at lock, reclaim-marker, release-claim, and promotion boundaries; a barrier-controlled two-process stale-lock reclamation race; and exact zlib input-consumption checks. The broad desktop suite passes `668/669`; its unrelated `security.asar.integration.test.ts` Electron harness reaches `TAMMY_ASAR_READY_WAIT` but the host never delivers `app.whenReady()` before the pinned 20-second timeout. The real packaged accounting app launches and completes the changed workflow successfully on the same host.
+
+- [x] **Step 7: Commit the fixture and validator**
 
 ```bash
-rtk git add apps/desktop/release/macos/screenshots/fixture.json scripts/check-app-store-screenshots.mjs scripts/check-app-store-screenshots.test.mjs apps/desktop/tests/e2e/support/current-accounting-workflow.ts apps/desktop/release/macos/store-metadata.md
+rtk git add apps/desktop/release/macos/screenshots/fixture.json scripts/check-app-store-screenshots.d.mts scripts/check-app-store-screenshots.mjs scripts/check-app-store-screenshots.test.mjs apps/desktop/tests/e2e/support/current-accounting-workflow.ts apps/desktop/release/macos/store-metadata.md docs/superpowers/plans/2026-08-30-macos-app-store-prime-time-readiness.md
 rtk git commit -m "feat: define App Store screenshot evidence"
 ```
 

@@ -45,15 +45,17 @@ The reporting screen is labelled **BAS draft — not lodged**. Tammy prepares lo
 
 For review support contact, email `ben.ebsworth@gmail.com`. Do not send real accounting records, recovery codes, passwords, machine credentials, or keys.
 
-## Planned screenshot sequence
+## Screenshot sequence
 
-Screenshot fixture ownership, 1440×900 capture definitions, and validated images are pending. When those owners exist, use fictional Australian business data and this planned sequence:
+The canonical `en-AU` capture uses the versioned, explicitly fictional **Wattle & Co Supplies Pty Ltd** fixture at 1440×900. Its ABN is setup-only and must not appear in an image. The five captions, filenames, and order are fixed:
 
-1. Overview with documents, banking, and BAS attention cards.
-2. Reviewed source document with extracted accounting details.
-3. Balanced journal and linked trial balance.
-4. Imported bank statement transaction reconciliation.
-5. GST and BAS draft with the visible **BAS draft — not lodged** status.
+1. `01-overview.png` — See documents, banking and BAS work that needs attention at a glance.
+2. `02-document-review.png` — Review a fictional source document and its extracted accounting details.
+3. `03-journal-trial-balance.png` — Trace a balanced journal through to the trial balance.
+4. `04-bank-reconciliation.png` — Match and reconcile an imported fictional bank transaction.
+5. `05-bas-draft.png` — Prepare GST figures in a BAS draft that is clearly marked not lodged.
+
+Every image requires its complete accessibility-text snapshot and candidate-bound manifest. Only the development-signed app may produce captures; the distribution package is linked later and is never represented as the capture source.
 
 ## Apple-controlled confirmations
 
