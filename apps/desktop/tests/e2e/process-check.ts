@@ -58,9 +58,30 @@ export type ProcessQueryExecFile = (
 ) => unknown;
 
 export interface ProcessQueryDependencies {
+  readonly authenticateExecutable?: (executablePath: string) => Promise<string>;
   readonly environment?: NodeJS.ProcessEnv;
   readonly execFile?: ProcessQueryExecFile;
   readonly timeoutMs?: number;
+}
+
+export interface MacOSProcessTreeAuthority {
+  readonly executables: Readonly<Record<string, string>>;
+  readonly rootExecutable: string;
+  readonly rootProcessId: number;
+}
+
+export interface MacOSProcessTreePin {
+  readonly executablePath: string;
+  readonly sha256: string;
+}
+
+export interface MacOSProcessTreeSnapshot {
+  readonly processPaths: readonly string[];
+  readonly processes: readonly {
+    readonly executablePath: string;
+    readonly parentProcessId: number;
+    readonly processId: number;
+  }[];
 }
 
 const WINDOWS_PROCESS_QUERY = `
@@ -843,5 +864,132 @@ export async function sampleAuthenticatedStagedHelperSockets(
     processIds: processes.map((process) => process.processId),
     samples,
     violations,
+  };
+}
+
+function parseMacOSProcessTreeRows(stdout: string): readonly {
+  readonly executablePath: string;
+  readonly parentProcessId: number;
+  readonly processId: number;
+}[] {
+  if (stdout.length === 0 || stdout.length > 1024 * 1024) {
+    throw new Error("INVALID_PROCESS_TREE_EVIDENCE");
+  }
+  const result = parseLines(stdout).map((line) => {
+    const match = line.match(/^\s*([1-9][0-9]*)\s+([0-9]+)\s+(.+)$/u);
+    if (!match) throw new Error("INVALID_PROCESS_TREE_EVIDENCE");
+    const [, processIdText, parentProcessIdText, executablePath] = match;
+    if (
+      processIdText === undefined ||
+      parentProcessIdText === undefined ||
+      executablePath === undefined ||
+      executablePath.length === 0
+    ) {
+      throw new Error("INVALID_PROCESS_TREE_EVIDENCE");
+    }
+    const processId = Number(processIdText);
+    const parentProcessId = Number(parentProcessIdText);
+    if (
+      !Number.isSafeInteger(processId) ||
+      !Number.isSafeInteger(parentProcessId) ||
+      parentProcessId < 0 ||
+      !path.posix.isAbsolute(executablePath) ||
+      path.posix.normalize(executablePath) !== executablePath ||
+      executablePath.includes("\0")
+    ) {
+      throw new Error("INVALID_PROCESS_TREE_EVIDENCE");
+    }
+    return { executablePath, parentProcessId, processId };
+  });
+  if (new Set(result.map(({ processId }) => processId)).size !== result.length) {
+    throw new Error("INVALID_PROCESS_TREE_EVIDENCE");
+  }
+  return result;
+}
+
+function descendantsOf(
+  rows: ReturnType<typeof parseMacOSProcessTreeRows>,
+  rootProcessId: number,
+): readonly (typeof rows)[number][] {
+  const root = rows.find(({ processId }) => processId === rootProcessId);
+  if (!root) throw new Error("PROCESS_TREE_ROOT_MISSING");
+  const included = new Set([rootProcessId]);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const row of rows) {
+      if (!included.has(row.processId) && included.has(row.parentProcessId)) {
+        included.add(row.processId);
+        changed = true;
+      }
+    }
+  }
+  return rows.filter(({ processId }) => included.has(processId));
+}
+
+function requireMacOSProcessTreeAuthority(
+  authority: MacOSProcessTreeAuthority,
+): MacOSProcessTreeAuthority {
+  if (
+    !Number.isSafeInteger(authority.rootProcessId) ||
+    authority.rootProcessId <= 1 ||
+    !path.posix.isAbsolute(authority.rootExecutable) ||
+    path.posix.normalize(authority.rootExecutable) !== authority.rootExecutable ||
+    !Object.hasOwn(authority.executables, authority.rootExecutable) ||
+    Object.keys(authority.executables).length === 0 ||
+    Object.keys(authority.executables).length > 64
+  ) {
+    throw new Error("INVALID_PROCESS_TREE_AUTHORITY");
+  }
+  for (const [executablePath, digest] of Object.entries(authority.executables)) {
+    if (
+      !path.posix.isAbsolute(executablePath) ||
+      path.posix.normalize(executablePath) !== executablePath ||
+      !/^[0-9a-f]{64}$/u.test(digest)
+    ) {
+      throw new Error("INVALID_PROCESS_TREE_AUTHORITY");
+    }
+  }
+  return authority;
+}
+
+export async function observeAuthenticatedMacOSProcessTree(
+  authority: MacOSProcessTreeAuthority,
+  pinned: Map<number, MacOSProcessTreePin>,
+  dependencies: ProcessQueryDependencies = {},
+): Promise<MacOSProcessTreeSnapshot> {
+  const trusted = requireMacOSProcessTreeAuthority(authority);
+  const stdout = await runBoundedQuery("/bin/ps", ["-axo", "pid=,ppid=,comm="], dependencies).catch(
+    () => {
+      throw new Error("PROCESS_TREE_OBSERVER_FAILED");
+    },
+  );
+  const processes = descendantsOf(parseMacOSProcessTreeRows(stdout), trusted.rootProcessId);
+  const root = processes.find(({ processId }) => processId === trusted.rootProcessId);
+  if (root?.executablePath !== trusted.rootExecutable) {
+    throw new Error("UNAUTHENTICATED_PROCESS_TREE");
+  }
+  const authenticate =
+    dependencies.authenticateExecutable ??
+    ((executablePath) => authenticatedFileDigest(executablePath));
+  for (const process of processes) {
+    const expectedSha256 = trusted.executables[process.executablePath];
+    if (!expectedSha256) throw new Error("UNPINNED_PROCESS_EXECUTABLE");
+    const sha256 = await authenticate(process.executablePath).catch(() => {
+      throw new Error("UNAUTHENTICATED_PROCESS_TREE");
+    });
+    if (sha256 !== expectedSha256) throw new Error("UNAUTHENTICATED_PROCESS_TREE");
+    const prior = pinned.get(process.processId);
+    if (
+      prior &&
+      (prior.executablePath !== process.executablePath || prior.sha256 !== expectedSha256)
+    ) {
+      throw new Error("PROCESS_TREE_INSTANCE_CHANGED");
+    }
+    pinned.set(process.processId, { executablePath: process.executablePath, sha256 });
+  }
+  return {
+    processPaths: [...new Set(processes.map(({ executablePath }) => executablePath))].sort(),
+    processes: [...processes].sort((left, right) => left.processId - right.processId),
   };
 }

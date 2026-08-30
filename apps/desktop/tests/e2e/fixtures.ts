@@ -19,6 +19,10 @@ import {
   type ScreenshotCaptureContract,
   validateScreenshotCaptureContract,
 } from "../../../../scripts/capture-app-store-screenshots.mjs";
+import {
+  detectMacOSEgressEnforcer,
+  MACOS_RUNTIME_EGRESS_SANDBOX_PROFILE,
+} from "../../../../scripts/macos-runtime-egress.mjs";
 import { TAMMY_LAUNCH_SCENARIO_SWITCH } from "../../src/shared/launch-scenario";
 
 import {
@@ -35,6 +39,9 @@ import {
   type CoreProcessInstancePin,
   findAuthenticatedCoreProcesses,
   findAuthenticatedStagedHelperProcesses,
+  type MacOSProcessTreeAuthority,
+  type MacOSProcessTreePin,
+  observeAuthenticatedMacOSProcessTree,
   type PackagedCoreAuthority,
   type StagedHelperAuthority,
   sampleAuthenticatedStagedHelperSockets,
@@ -105,12 +112,17 @@ interface FixtureLifecycleState {
   helperSamples?: number;
   helperViolations?: number;
   helperOrphans?: number;
+  privacyProcessObserver?: PrivacyProcessObserver;
   sbrFixtureSha256?: string;
 }
 
 interface HelperObserver {
   survivors(): Promise<readonly { readonly executablePath: string; readonly processId: number }[]>;
   stop(): Promise<{ readonly samples: number; readonly violations: number }>;
+}
+
+interface PrivacyProcessObserver {
+  stop(): Promise<{ readonly processPaths: readonly string[]; readonly samples: number }>;
 }
 
 export function createElectronLaunchArguments(
@@ -304,7 +316,10 @@ export async function locatePackagedApplicationForProject(
     readonly resultPath?: string;
   } = {},
 ): Promise<PackagedLayout> {
-  if (projectName === "darwin-arm64-app-store-screenshots") {
+  if (
+    projectName === "darwin-arm64-app-store-screenshots" ||
+    projectName === "darwin-arm64-app-store-privacy"
+  ) {
     return locateScreenshotCaptureApplication();
   }
   if (projectName === "darwin-arm64-sbr") {
@@ -340,6 +355,73 @@ function startHelperObserver(authority: StagedHelperAuthority): HelperObserver {
       await loop;
       if (failure) throw failure;
       return { samples, violations };
+    },
+  };
+}
+
+async function macOSProcessTreeAuthority(
+  layout: PackagedLayout,
+  rootProcessId: number,
+): Promise<MacOSProcessTreeAuthority> {
+  if (
+    layout.target !== "darwin-arm64" ||
+    !Number.isSafeInteger(rootProcessId) ||
+    rootProcessId <= 1
+  ) {
+    throw new Error("INVALID_PROCESS_TREE_AUTHORITY");
+  }
+  const appRoot = path.resolve(path.dirname(layout.appExecutable), "../..");
+  const executablePaths = [
+    layout.appExecutable,
+    layout.coreExecutable,
+    path.join(
+      appRoot,
+      "Contents/Frameworks/Electron Framework.framework/Versions/A/Helpers/chrome_crashpad_handler",
+    ),
+    ...["", " (GPU)", " (Plugin)", " (Renderer)"].map((suffix) =>
+      path.join(
+        appRoot,
+        `Contents/Frameworks/Tammy Helper${suffix}.app/Contents/MacOS/Tammy Helper${suffix}`,
+      ),
+    ),
+  ];
+  const executables = Object.fromEntries(
+    await Promise.all(executablePaths.map(async (file) => [file, await sha256File(file)] as const)),
+  );
+  return { executables, rootExecutable: layout.appExecutable, rootProcessId };
+}
+
+function startPrivacyProcessObserver(
+  authority: MacOSProcessTreeAuthority,
+  mainProcess: ChildProcess,
+): PrivacyProcessObserver {
+  let stopping = false;
+  let samples = 0;
+  let failure: unknown;
+  const paths = new Set<string>();
+  const pinned = new Map<number, MacOSProcessTreePin>();
+  const loop = (async () => {
+    while (!stopping) {
+      if (mainProcess.exitCode !== null || mainProcess.signalCode !== null) break;
+      try {
+        const snapshot = await observeAuthenticatedMacOSProcessTree(authority, pinned);
+        samples += 1;
+        for (const executablePath of snapshot.processPaths) paths.add(executablePath);
+      } catch (error) {
+        if (mainProcess.exitCode !== null || mainProcess.signalCode !== null) break;
+        failure = error;
+        stopping = true;
+        break;
+      }
+      await new Promise<void>((resolve) => setTimeout(resolve, 25));
+    }
+  })();
+  return {
+    stop: async () => {
+      stopping = true;
+      await loop;
+      if (failure) throw failure;
+      return { processPaths: [...paths].sort(), samples };
     },
   };
 }
@@ -500,6 +582,17 @@ function fixtureOperations(
         if (survivors.length > 0) throw new Error("SBR_HELPER_PROCESS_ORPHAN");
         if (observed.violations > 0) throw new Error("SBR_HELPER_SOCKET_VIOLATION");
       }
+      if (state.privacyProcessObserver) {
+        const observed = await state.privacyProcessObserver.stop();
+        delete state.privacyProcessObserver;
+        if (
+          observed.samples <= 0 ||
+          !observed.processPaths.includes(state.packagedLayout.appExecutable) ||
+          !observed.processPaths.includes(state.packagedLayout.coreExecutable)
+        ) {
+          throw new Error("APP_STORE_PRIVACY_PROCESS_TREE_UNVERIFIED");
+        }
+      }
     },
     attachArtifact: async (state, artifact) => {
       assertOwnedStagedArtifact(state.stagedArtifactsRoot, artifact);
@@ -574,24 +667,36 @@ function fixtureOperations(
     setup: async (state) => {
       const launch = async () => {
         const continuousIntegration = process.env.CI !== undefined;
-        const appStoreScreenshotCapture =
-          testInfo.project.name === "darwin-arm64-app-store-screenshots";
+        const appStorePrivacyJourney = testInfo.project.name === "darwin-arm64-app-store-privacy";
+        const appStoreDevelopmentEvidence =
+          testInfo.project.name === "darwin-arm64-app-store-screenshots" || appStorePrivacyJourney;
+        if (appStorePrivacyJourney) await detectMacOSEgressEnforcer();
+        const appArguments = createElectronLaunchArguments(
+          state.currentUserDataPath,
+          state.packagedLayout.target,
+          continuousIntegration,
+          testInfo.project.name === "darwin-arm64-sbr" ? "sbr-simulator" : undefined,
+          appStoreDevelopmentEvidence,
+        );
         const application = await _electron.launch({
-          args: createElectronLaunchArguments(
-            state.currentUserDataPath,
-            state.packagedLayout.target,
-            continuousIntegration,
-            testInfo.project.name === "darwin-arm64-sbr" ? "sbr-simulator" : undefined,
-            appStoreScreenshotCapture,
-          ),
+          args: appStorePrivacyJourney
+            ? [
+                "-p",
+                MACOS_RUNTIME_EGRESS_SANDBOX_PROFILE,
+                state.packagedLayout.appExecutable,
+                ...appArguments,
+              ]
+            : appArguments,
           artifactsDir: path.join(state.rawArtifacts, "playwright"),
           chromiumSandbox: true,
-          ...(appStoreScreenshotCapture
+          ...(appStoreDevelopmentEvidence
             ? {
                 env: appStoreScreenshotElectronEnvironment(process.env),
               }
             : {}),
-          executablePath: state.packagedLayout.appExecutable,
+          executablePath: appStorePrivacyJourney
+            ? "/usr/bin/sandbox-exec"
+            : state.packagedLayout.appExecutable,
           offline: true,
           ...(shouldRecordElectronVideo(state.packagedLayout.target, continuousIntegration)
             ? { recordVideo: { dir: path.join(state.rawArtifacts, "video") } }
@@ -600,6 +705,13 @@ function fixtureOperations(
         state.application = application;
         state.mainProcess = application.process();
         state.mainClosed = observeMainExit(state.mainProcess);
+        if (appStorePrivacyJourney) {
+          if (!state.mainProcess.pid) throw new Error("ELECTRON_MAIN_PROCESS_MISSING");
+          state.privacyProcessObserver = startPrivacyProcessObserver(
+            await macOSProcessTreeAuthority(state.packagedLayout, state.mainProcess.pid),
+            state.mainProcess,
+          );
+        }
 
         const context = application.context();
         const observed = new WeakSet<Page>();

@@ -1283,7 +1283,7 @@ Use `@security-best-practices`, `@app-store-review:app-store-review`, and `@supe
 - Modify: `apps/desktop/tests/e2e/process-check.ts`
 - Modify: `apps/desktop/src/main/security.test.ts`
 
-- [ ] **Step 1: Write failing static privacy-evidence tests**
+- [x] **Step 1: Write failing static privacy-evidence tests**
 
 Require evidence bound to source commit/tree, version/build, unsigned-content-manifest hash, development app hash, distribution app hash, and package hash. Inventory, with path/hash/type:
 
@@ -1295,7 +1295,7 @@ Require evidence bound to source commit/tree, version/build, unsigned-content-ma
 
 Reject known or policy-defined updater, crash-reporting, analytics, telemetry, advertising, tracking, fingerprinting, dynamic remote-code, undeclared networking, or web-content SDKs unless the canonical privacy/store design is changed and re-approved before a new build reservation. Reject missing hashes, stale artifacts, extra secret-like keys, raw environment dumps, profile contents, certificate bytes, accounting data, and unbounded command output.
 
-- [ ] **Step 2: Write failing active-containment and runtime-egress tests**
+- [x] **Step 2: Write failing active-containment and runtime-egress tests**
 
 Create `detectMacOSEgressEnforcer()` and a general process-tree observer. The supported local implementation must actively deny non-loopback networking for the exact development app process tree while allowing only the authenticated loopback core channel, and it must supply a reliable audit of denied connection and DNS attempts. Pin exact signed app/core/helper paths and hashes. Use `/usr/bin/sandbox-exec` only when a preflight positive/negative probe proves that this macOS release supports nested process-scoped denial, loopback allowance, child inheritance, and bounded sandbox-violation audit collection; sampled `/usr/sbin/lsof` is supplemental and cannot establish zero attempts.
 
@@ -1303,7 +1303,7 @@ Fail on unavailable/unproven containment with `MACOS_RUNTIME_EGRESS_CONTAINMENT_
 
 Model the two approved external-link actions separately as explicit Electron `shell.openExternal` handoff events. Validate exact equality with the recorded HTTPS privacy/support URLs, user gesture, timestamp within the journey, and no app-owned socket to those hosts. Do not whitelist arbitrary browser traffic or turn off the user's network globally.
 
-- [ ] **Step 3: Run privacy/egress tests RED**
+- [x] **Step 3: Run privacy/egress tests RED**
 
 Run:
 
@@ -1314,15 +1314,15 @@ rtk mise exec -- pnpm --dir apps/desktop test -- security.test.ts
 
 Expected: FAIL because the exact-artifact collectors and handoff seam are absent.
 
-- [ ] **Step 4: Implement bounded static inspection**
+- [x] **Step 4: Implement bounded static inspection**
 
 Use stable file descriptors and explicit size/count/depth limits. Read the production lockfile and ASAR inventory; inspect Mach-O headers and platform tools with argument arrays, never a shell. Store only redacted structured facts. If the installed Xcode version exposes a privacy-report command for this exact `.app` or `.pkg`, attach the generated report and SHA-256 as `supplemental`; otherwise record `not-supported-by-detected-toolchain` with the checked tool/version. Never call the Electron package an Xcode archive.
 
-- [ ] **Step 5: Implement the contained packaged privacy journey**
+- [x] **Step 5: Implement the contained packaged privacy journey**
 
 Plan the same development-signed equivalent and immutable fixture through setup, sign-in, document review, banking, BAS draft, a bounded idle interval, clicks on privacy/support, and clean quit. Start active containment and audit before Electron launch and stop only after all pinned processes exit. Record counts and destinations but no request payloads, page content, workspace paths, credentials, or accounting fields.
 
-- [ ] **Step 6: Run unit tests and journey discovery GREEN before freeze**
+- [x] **Step 6: Run unit tests and journey discovery GREEN before freeze**
 
 Run:
 
@@ -1333,7 +1333,7 @@ rtk mise exec -- pnpm --dir apps/desktop exec playwright test --config playwrigh
 
 Expected: unit tests pass against positive/negative enforcer probes and Playwright discovers exactly one serial privacy journey. The exact signed journey runs only after Task 16 freezes the product source.
 
-- [ ] **Step 7: Commit collectors and tests, not transient evidence**
+- [x] **Step 7: Commit collectors and tests, not transient evidence**
 
 ```bash
 rtk git add scripts/collect-macos-privacy-evidence.mjs scripts/collect-macos-privacy-evidence.test.mjs scripts/macos-runtime-egress.mjs scripts/macos-runtime-egress.test.mjs apps/desktop/tests/e2e/app-store-privacy.spec.ts apps/desktop/playwright.app-store-privacy.config.ts apps/desktop/tests/e2e/fixtures.ts apps/desktop/tests/e2e/process-check.ts apps/desktop/src/main/security.test.ts

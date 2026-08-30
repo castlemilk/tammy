@@ -1127,4 +1127,42 @@ describe("Electron boundary installation", () => {
     expect(webContents.removeListener).not.toHaveBeenCalled();
     expect(windowOpenHandler?.({ url: "https://example.com/other" })).toEqual({ action: "deny" });
   });
+
+  it("records only allowed external-link handoffs before opening them", () => {
+    let windowOpenHandler: ((details: { url: string }) => { action: "deny" }) | undefined;
+    const openExternal = vi.fn(async () => undefined);
+    const recordHandoff = vi.fn();
+    const now = vi.fn(() => new Date("2026-08-31T03:14:15.926Z"));
+    const privacyUrl = "https://tammy-accounting.castlemilk.chatgpt.site/privacy";
+    const supportUrl = "https://tammy-accounting.castlemilk.chatgpt.site/support";
+    const webContents = {
+      getURL: vi.fn(() => PRODUCTION_APP_URL),
+      on: vi.fn(),
+      removeListener: vi.fn(),
+      setWindowOpenHandler: vi.fn((handler: typeof windowOpenHandler) => {
+        windowOpenHandler = handler;
+      }),
+    };
+
+    installWindowGuards(webContents as never, PRODUCTION_APP_URL, {
+      allowedExternalUrls: [supportUrl, privacyUrl],
+      now,
+      openExternal,
+      recordHandoff,
+    });
+
+    expect(windowOpenHandler?.({ url: "https://example.com/not-allowed" })).toEqual({
+      action: "deny",
+    });
+    expect(recordHandoff).not.toHaveBeenCalled();
+    expect(openExternal).not.toHaveBeenCalled();
+
+    expect(windowOpenHandler?.({ url: privacyUrl })).toEqual({ action: "deny" });
+    expect(recordHandoff).toHaveBeenCalledExactlyOnceWith({
+      occurredAt: "2026-08-31T03:14:15.926Z",
+      url: privacyUrl,
+      userGesture: true,
+    });
+    expect(openExternal).toHaveBeenCalledExactlyOnceWith(privacyUrl);
+  });
 });

@@ -139,7 +139,15 @@ interface ContentSecurityRecord extends LeaseRecord {
 interface WindowGuardRecord extends LeaseRecord {
   readonly applicationUrl: string;
   readonly externalUrls: string;
+  readonly now?: () => Date;
   readonly openExternal?: (url: string) => Promise<unknown>;
+  readonly recordHandoff?: (event: ExternalHandoffEvent) => void;
+}
+
+export interface ExternalHandoffEvent {
+  readonly occurredAt: string;
+  readonly url: string;
+  readonly userGesture: true;
 }
 
 type SchemeApp = Pick<App, "enableSandbox" | "isReady">;
@@ -1095,7 +1103,9 @@ export function installWindowGuards(
   applicationUrl: string,
   external: Readonly<{
     allowedExternalUrls: readonly string[];
+    now?: () => Date;
     openExternal: (url: string) => Promise<unknown>;
+    recordHandoff?: (event: ExternalHandoffEvent) => void;
   }> = { allowedExternalUrls: [], openExternal: ignoreExternalUrl },
 ): () => void {
   if (!isTrustedApplicationURL(applicationUrl)) {
@@ -1127,7 +1137,9 @@ export function installWindowGuards(
     if (
       existing.applicationUrl !== applicationUrl ||
       existing.externalUrls !== externalUrls ||
-      existing.openExternal !== external.openExternal
+      existing.now !== external.now ||
+      existing.openExternal !== external.openExternal ||
+      existing.recordHandoff !== external.recordHandoff
     ) {
       throw new Error("WINDOW_GUARDS_ALREADY_CONFIGURED");
     }
@@ -1149,6 +1161,8 @@ export function installWindowGuards(
   const allowed = new Set(allowedExternalUrls);
   const openAllowedExternal = (details: { readonly url: string }): { readonly action: "deny" } => {
     if (allowed.has(details.url)) {
+      const occurredAt = (external.now?.() ?? new Date()).toISOString();
+      external.recordHandoff?.({ occurredAt, url: details.url, userGesture: true });
       void external.openExternal(details.url).catch(() => undefined);
     }
     return denyWindowOpen();
@@ -1163,6 +1177,8 @@ export function installWindowGuards(
     externalUrls,
     leases: new Set(),
     openExternal: external.openExternal,
+    ...(external.now ? { now: external.now } : {}),
+    ...(external.recordHandoff ? { recordHandoff: external.recordHandoff } : {}),
   };
   electronSecurityRegistrar.windows.set(webContents, record);
   return createLease(record);
