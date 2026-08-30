@@ -108,6 +108,32 @@ function isRecord(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+const MACOS_STORE_IDENTITY = Object.freeze({
+  schemaVersion: 1,
+  appStoreName: "Tammy Accounting",
+  installedName: "Tammy",
+  bundleIdentifier: APP_BUNDLE_ID,
+  publisher: "Gamma Systems Pty Ltd",
+  supportEmail: "ben.ebsworth@gmail.com",
+  locale: "en-AU",
+  primaryCategory: "Finance",
+  secondaryCategory: "Business",
+  minimumMacOSVersion: "14.0",
+  architectures: Object.freeze(["arm64"]),
+  copyright: "© 2026 Gamma Systems Pty Ltd",
+  capabilityBoundary: Object.freeze({
+    reporting: "preparation-only",
+    atoLodgement: "not-lodged",
+  }),
+});
+
+export function validateMacOSStoreIdentity(value) {
+  if (!isDeepStrictEqual(value, MACOS_STORE_IDENTITY)) {
+    fail("MACOS_STORE_IDENTITY_INVALID");
+  }
+  return value;
+}
+
 const COMPANY_CONTROLLER_ATTESTATION = Object.freeze({
   accountablePerson: "Ben Ebsworth",
   company: "Gamma Systems Pty Ltd",
@@ -458,6 +484,7 @@ export async function inspectMacOSStoreRepository(root) {
     readme: path.join(root, "README.md"),
     runbook: path.join(root, "docs", "release", "macos-app-store.md"),
     techState: path.join(root, "docs", "development", "tech-state.md"),
+    identity: path.join(releaseRoot, "store-identity.json"),
   };
   await access(paths.icns).catch(() => fail());
   const [
@@ -467,6 +494,7 @@ export async function inspectMacOSStoreRepository(root) {
     sbrHelperEntitlements,
     forge,
     iconBytes,
+    identityBytes,
     metadata,
     packageBytes,
     privacy,
@@ -481,6 +509,7 @@ export async function inspectMacOSStoreRepository(root) {
     readMacOSRepositoryPlist(paths.sbrHelperEntitlements),
     readFile(paths.forge, "utf8"),
     readFile(paths.icon),
+    readFile(paths.identity),
     readFile(paths.metadata, "utf8"),
     readFile(paths.package),
     readMacOSRepositoryPlist(paths.privacy),
@@ -491,6 +520,7 @@ export async function inspectMacOSStoreRepository(root) {
   ]).catch(() => fail());
 
   const desktopPackage = JSON.parse(packageBytes.toString("utf8"));
+  const identity = validateMacOSStoreIdentity(JSON.parse(identityBytes.toString("utf8")));
   let companyControllerAttestationValid = false;
   try {
     validateCompanyControllerAttestation(
@@ -511,6 +541,10 @@ export async function inspectMacOSStoreRepository(root) {
   });
   if (
     desktopPackage?.productName !== "Tammy" ||
+    identity.installedName !== desktopPackage.productName ||
+    identity.bundleIdentifier !== APP_BUNDLE_ID ||
+    identity.minimumMacOSVersion !== "14.0" ||
+    identity.architectures.join(",") !== "arm64" ||
     typeof desktopPackage?.version !== "string" ||
     !/^[0-9]+\.[0-9]+\.[0-9]+$/.test(desktopPackage.version) ||
     icon.width !== 1024 ||
@@ -543,6 +577,7 @@ export async function inspectMacOSStoreRepository(root) {
     appBundleId: APP_BUNDLE_ID,
     category: APP_CATEGORY,
     icon,
+    identity,
     metadataComplete: metadataStatus.complete,
     metadata: metadataStatus,
     blockers: companyControllerAttestationValid ? [] : ["company-controller-attestation"],
@@ -593,9 +628,7 @@ async function main() {
       ...(releaseInput === undefined ? {} : { release: releaseInput }),
       status:
         releaseInput === undefined
-          ? result.blockers.length === 0
-            ? "REPOSITORY_READY"
-            : "REPOSITORY_BLOCKED"
+          ? "NOT_READY"
           : "SIGNED_BUILD_INPUTS_READY",
     })}\n`,
   );

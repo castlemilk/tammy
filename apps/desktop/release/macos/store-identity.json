@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "appStoreName": "Tammy Accounting",
+  "installedName": "Tammy",
+  "bundleIdentifier": "com.tammy.desktop",
+  "publisher": "Gamma Systems Pty Ltd",
+  "supportEmail": "ben.ebsworth@gmail.com",
+  "locale": "en-AU",
+  "primaryCategory": "Finance",
+  "secondaryCategory": "Business",
+  "minimumMacOSVersion": "14.0",
+  "architectures": ["arm64"],
+  "copyright": "© 2026 Gamma Systems Pty Ltd",
+  "capabilityBoundary": {
+    "reporting": "preparation-only",
+    "atoLodgement": "not-lodged"
+  }
+}

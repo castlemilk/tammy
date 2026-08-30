@@ -16,9 +16,64 @@ import {
   validateMacOSStoreMetadata,
   validateMacOSStorePlists,
   validateCompanyControllerAttestation,
+  validateMacOSStoreIdentity,
 } from "./check-macos-store.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const validStoreIdentity = {
+  schemaVersion: 1,
+  appStoreName: "Tammy Accounting",
+  installedName: "Tammy",
+  bundleIdentifier: "com.tammy.desktop",
+  publisher: "Gamma Systems Pty Ltd",
+  supportEmail: "ben.ebsworth@gmail.com",
+  locale: "en-AU",
+  primaryCategory: "Finance",
+  secondaryCategory: "Business",
+  minimumMacOSVersion: "14.0",
+  architectures: ["arm64"],
+  copyright: "© 2026 Gamma Systems Pty Ltd",
+  capabilityBoundary: {
+    reporting: "preparation-only",
+    atoLodgement: "not-lodged",
+  },
+};
+
+test("accepts the canonical Gamma Systems release identity", () => {
+  assert.deepEqual(validateMacOSStoreIdentity(validStoreIdentity), validStoreIdentity);
+});
+
+test("release identity requires the exact shape and capability boundary", () => {
+  for (const identity of [
+    Object.fromEntries(Object.entries(validStoreIdentity).filter(([key]) => key !== "locale")),
+    { ...validStoreIdentity, extra: true },
+    {
+      ...validStoreIdentity,
+      capabilityBoundary: { reporting: "preparation-only" },
+    },
+    {
+      ...validStoreIdentity,
+      capabilityBoundary: { ...validStoreIdentity.capabilityBoundary, atoLodgement: "lodged" },
+    },
+    { ...validStoreIdentity, architectures: ["arm64", "x64"] },
+  ]) {
+    assert.throws(() => validateMacOSStoreIdentity(identity), /MACOS_STORE_IDENTITY_INVALID/);
+  }
+});
+
+for (const [key, value] of [
+  ["publisher", "Ben Ebsworth"],
+  ["supportEmail", "support@example.com"],
+  ["minimumMacOSVersion", "13.0"],
+  ["architectures", ["x64"]],
+]) {
+  test(`rejects release identity drift in ${key}`, () => {
+    assert.throws(
+      () => validateMacOSStoreIdentity({ ...validStoreIdentity, [key]: value }),
+      /MACOS_STORE_IDENTITY_INVALID/,
+    );
+  });
+}
 
 test("repository plist reader is portable and never shells out to plutil", async () => {
   let reads = 0;
@@ -45,6 +100,7 @@ test("repository inspection binds Tammy identity, store resources and operator g
   assert.equal(result.appBundleId, "com.tammy.desktop");
   assert.equal(result.category, "public.app-category.finance");
   assert.equal(result.version, "0.1.0");
+  assert.deepEqual(result.identity, validStoreIdentity);
   assert.equal(result.icon.width, 1024);
   assert.equal(result.icon.height, 1024);
   assert.deepEqual(result.operatorRequirements, [
