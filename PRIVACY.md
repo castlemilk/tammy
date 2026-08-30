@@ -1,27 +1,37 @@
 # Tammy privacy policy
 
-Effective 13 August 2026.
+Effective 30 August 2026.
 
-Tammy is local-first accounting software published by Ben Ebsworth. This policy applies to the current macOS release of Tammy.
+## Publisher and scope
+
+Tammy Accounting is published by Gamma Systems Pty Ltd. This policy applies to the current macOS release of Tammy and the Tammy public website.
 
 ## Data handled by Tammy
 
-Tammy does not collect or transmit your accounting records, credentials, usage data, analytics, advertising identifiers, or tracking data to Tammy or to third parties.
+For this release, Tammy does not transmit accounting records, credentials, analytics, advertising identifiers, or tracking data to Gamma Systems Pty Ltd or third parties.
 
-Accounting records are stored in an encrypted workspace on your Mac. Workspace secrets are stored using the macOS Keychain. Files you choose to import are read only after you select them and their accounting content remains in the local encrypted workspace.
+Accounting records are stored locally in Tammy's encrypted workspace on your Mac. Workspace secrets are stored in the macOS Keychain where applicable. Files you choose to import are read only after you select them and their accounting content remains in the local encrypted workspace.
 
-The bundled Tammy core communicates with the desktop application over an authenticated local connection. It is not a cloud service. The app opens this privacy policy and the support page in your browser only when you choose those links.
+Tammy's bundled core communicates with the desktop application over an authenticated local connection. It is not a cloud service. The app opens this privacy policy and the support page in your browser only when you choose those links.
+
+## Website and hosting
+
+The Tammy public website has no Gamma-owned analytics, cookies, accounts, or forms. Hosting infrastructure may process request and security logs to operate and protect the site.
+
+## Support email
+
+Support is available at [ben.ebsworth@gmail.com](mailto:ben.ebsworth@gmail.com). Sending an email is user initiated and messages are processed by the relevant email providers, not by the Tammy app.
+
+Do not email accounting data, recovery codes, passwords, machine credentials, or cryptographic keys.
 
 ## Retention and deletion
 
-Local records remain on your Mac until you remove them. You can delete Tammy data by deleting the workspace and removing Tammy's application data from the Mac. Tammy has no server-side copy to retain or delete.
+Removing the Tammy app alone does not promise deletion of its encrypted workspace or macOS Keychain items. For tested macOS cleanup steps, see [/support](https://tammyaccounting.com/support).
 
-## Sharing and third parties
+## Reporting boundary
 
-The current release contains no advertising, analytics, tracking, cloud account, or third-party data-processing service. Tammy does not sell or share personal information.
+Tammy currently prepares reporting information only. It does not lodge ATO or SBR submissions in this release.
 
-## Support
-
-For support, use [Tammy GitHub Issues](https://github.com/castlemilk/tammy/issues). Do not include accounting records, credentials, recovery codes, or other sensitive information in a public issue.
+## Changes to this policy
 
 Material changes to Tammy's data handling will be reflected in the app, its privacy manifest, its App Store privacy disclosures, and this policy before release.
