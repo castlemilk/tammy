@@ -99,6 +99,34 @@ export async function readProductSource(root) {
   };
 }
 
+export function createProductSourceRecord(productSource, request) {
+  const code = "MACOS_PRODUCT_SOURCE_RESERVATION_INVALID";
+  assertExactKeys(productSource, SOURCE_KEYS, code);
+  assertExactKeys(request, ["buildNumber", "marketingVersion"], code);
+  const { buildNumber, marketingVersion } = request;
+  validateBuildLedger(productSource.ledger);
+  const reservations = productSource.ledger.entries.filter(
+    (entry) => entry.buildNumber === buildNumber && entry.marketingVersion === marketingVersion,
+  );
+  if (
+    reservations.length !== 1 ||
+    productSource.marketingVersion !== marketingVersion ||
+    !VERSION.test(marketingVersion) ||
+    !BUILD.test(buildNumber) ||
+    !SHA40.test(productSource.productSourceCommit) ||
+    !SHA40.test(productSource.productSourceTree)
+  ) {
+    fail(code);
+  }
+  return {
+    buildNumber,
+    marketingVersion,
+    productSourceCommit: productSource.productSourceCommit,
+    productSourceTree: productSource.productSourceTree,
+    status: "frozen-source",
+  };
+}
+
 export function createCandidateBuiltEvent(input) {
   const code = "MACOS_CANDIDATE_PROVENANCE_INVALID";
   assertExactKeys(input, EVENT_INPUT_KEYS, code);
@@ -238,25 +266,43 @@ export async function verifyFrozenProductSource(root, { marketingVersion, buildN
   };
 }
 
+function parseCommandArguments(arguments_, mode, code) {
+  if (!Array.isArray(arguments_) || arguments_.length !== 5 || arguments_[0] !== mode) fail(code);
+  const values = new Map();
+  for (let index = 1; index < arguments_.length; index += 2) {
+    const key = arguments_[index];
+    const value = arguments_[index + 1];
+    if (!["--build", "--version"].includes(key) || values.has(key) || !value) fail(code);
+    values.set(key, value);
+  }
+  if (values.size !== 2) fail(code);
+  return {
+    buildNumber: values.get("--build"),
+    marketingVersion: values.get("--version"),
+  };
+}
+
+export async function runProductSourceCommand(root, arguments_) {
+  if (arguments_?.[0] === "--source") {
+    const request = parseCommandArguments(
+      arguments_,
+      "--source",
+      "MACOS_PRODUCT_SOURCE_ARGUMENT_INVALID",
+    );
+    return createProductSourceRecord(await readProductSource(root), request);
+  }
+  const request = parseCommandArguments(
+    arguments_,
+    "--verify-frozen",
+    "MACOS_FROZEN_SOURCE_ARGUMENT_INVALID",
+  );
+  return verifyFrozenProductSource(root, request);
+}
+
 async function main() {
   const arguments_ = process.argv.slice(2);
-  const versionIndex = arguments_.indexOf("--version");
-  const buildIndex = arguments_.indexOf("--build");
-  if (
-    arguments_[0] !== "--verify-frozen" ||
-    arguments_.length !== 5 ||
-    versionIndex < 0 ||
-    buildIndex < 0 ||
-    versionIndex === arguments_.length - 1 ||
-    buildIndex === arguments_.length - 1
-  ) {
-    fail("MACOS_FROZEN_SOURCE_ARGUMENT_INVALID");
-  }
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-  const result = await verifyFrozenProductSource(root, {
-    buildNumber: arguments_[buildIndex + 1],
-    marketingVersion: arguments_[versionIndex + 1],
-  });
+  const result = await runProductSourceCommand(root, arguments_);
   process.stdout.write(`${JSON.stringify(result)}\n`);
 }
 

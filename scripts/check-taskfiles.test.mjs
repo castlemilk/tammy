@@ -40,6 +40,7 @@ const allowedExecutablePatterns = [
   /^mise exec -- node scripts\/promote-macos-release-evidence\.mjs --mode "\$TAMMY_EVIDENCE_MODE" --evidence-dir "\$TAMMY_EVIDENCE_DIR" --source-dir "\$TAMMY_EVIDENCE_SOURCE_DIR"$/,
   /^mise exec -- node scripts\/inspect-macos-release-package\.mjs --package "\$TAMMY_ARCHIVE_PKG" --record "\$TAMMY_RECORD_DIR"$/,
   /^mise exec -- node scripts\/reserve-macos-build\.mjs --version "\$TAMMY_RELEASE_VERSION" --operator "\$TAMMY_RELEASE_OPERATOR" --number "\$TAMMY_RELEASE_BUILD_NUMBER"$/,
+  /^mise exec -- node scripts\/macos-release-provenance\.mjs --source --build "\$TAMMY_RELEASE_BUILD_NUMBER" --version "\$TAMMY_RELEASE_VERSION"$/,
   /^mise exec -- node scripts\/launch-local-scenario\.mjs (?:accounting-fresh|sbr-simulator|sbr-doctor|sbr-evte)$/,
   /^mise exec -- node scripts\/check-sbr-registration\.mjs(?: --doctor-preflight)?$/,
   /^mise exec -- node scripts\/write-sbr-evidence\.mjs$/,
@@ -259,6 +260,7 @@ test("documentation presents Task scenarios as the local command front door", as
       [
         "release:state",
         "release:reserve-build",
+        "release:freeze-source",
         "release:check",
         "release:development",
         "release:screenshots",
@@ -1021,6 +1023,7 @@ test("local Task front door preserves the safe development contract", async () =
   assert.deepEqual(Object.keys(releaseTasks), [
     "state",
     "reserve-build",
+    "freeze-source",
     "check",
     "development",
     "screenshots",
@@ -1044,6 +1047,14 @@ test("local Task front door preserves the safe development contract", async () =
   });
   assert.deepEqual(shellCommands(releaseTasks["reserve-build"]), [
     'mise exec -- node scripts/reserve-macos-build.mjs --version "$TAMMY_RELEASE_VERSION" --operator "$TAMMY_RELEASE_OPERATOR" --number "$TAMMY_RELEASE_BUILD_NUMBER"',
+  ]);
+  assert.deepEqual(releaseTasks["freeze-source"].requires?.vars, ["VERSION", "BUILD"]);
+  assert.deepEqual(releaseTasks["freeze-source"].env, {
+    TAMMY_RELEASE_VERSION: "{{.VERSION}}",
+    TAMMY_RELEASE_BUILD_NUMBER: "{{.BUILD}}",
+  });
+  assert.deepEqual(shellCommands(releaseTasks["freeze-source"]), [
+    'mise exec -- node scripts/macos-release-provenance.mjs --source --build "$TAMMY_RELEASE_BUILD_NUMBER" --version "$TAMMY_RELEASE_VERSION"',
   ]);
   assert.equal(releaseTasks.check.preconditions, undefined);
   assert.deepEqual(shellCommands(releaseTasks.check), ["mise exec -- pnpm check:macos-store"]);

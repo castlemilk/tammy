@@ -24,6 +24,20 @@ tasks:
       - >-
         mise exec -- node scripts/reserve-macos-build.mjs --version "$TAMMY_RELEASE_VERSION" --operator "$TAMMY_RELEASE_OPERATOR" --number "$TAMMY_RELEASE_BUILD_NUMBER"
 
+  freeze-source:
+    desc: Print the immutable product-source identity for one reserved App Store build.
+    summary: |
+      Reads a clean committed checkout and prints only the reserved version, build,
+      source commit, and source tree. It does not write, sign, publish, upload, or submit.
+    requires:
+      vars: [VERSION, BUILD]
+    env:
+      TAMMY_RELEASE_VERSION: '{{.VERSION}}'
+      TAMMY_RELEASE_BUILD_NUMBER: '{{.BUILD}}'
+    cmds:
+      - >-
+        mise exec -- node scripts/macos-release-provenance.mjs --source --build "$TAMMY_RELEASE_BUILD_NUMBER" --version "$TAMMY_RELEASE_VERSION"
+
   check:
     desc: Check repository-owned App Store readiness inputs without signing.
     summary: |

@@ -1454,9 +1454,20 @@ Use `@app-store-review:app-store-review`. This is the final candidate-affecting 
 - Create: `docs/release/records/macos/0.1.0/build-<N>/attestations/company-controller.json`
 - Create: `docs/release/records/macos/0.1.0/build-<N>/attestations/seller-eligibility.json`
 
-- [ ] **Step 1: Inspect the signed-in Apple seller/account facts without guessing**
+- [x] **Step 1: Inspect the signed-in Apple seller/account facts without guessing**
 
 As the root agent, inspect Apple Developer and App Store Connect for the seller name, membership type, Team ID, Account Holder, active agreements, `com.tammy.desktop` App ID, Apple identifier ID, App Store Connect record ID, application group, certificates, profiles, and transfer eligibility. Record only non-secret identifiers and outcomes. Do not expose sessions, cookies, certificate bytes, profile bytes, or personal account data not required by the schema.
+
+Observed read-only on 2026-08-31: the seller and Apple Developer team remain the
+individual `Ben Ebsworth` account (`WFTX6CN23F`), with Ben Ebsworth as Account
+Holder. The Free Apps Agreement is active and the Paid Apps Agreement is pending
+user information. Tammy is App Store Connect record `6800226692`; its explicit App
+ID is `DXP9QHD7JH` / `com.tammy.desktop` with prefix `WFTX6CN23F`. No App Groups
+are registered and the App Groups capability is not enabled. Mac App Distribution
+and Mac Installer Distribution certificate classes exist, and `Tammy Mac App Store
+20260813` is a valid macOS App Store profile. App Store Connect has build `1` for
+version `0.1.0`, Ready to Submit. No Transfer App action or written Apple exception
+was present. Outcome: `APPLE_SELLER_ELIGIBILITY_BLOCKED`; do not reserve build `2`.
 
 - [ ] **Step 2: Resolve exactly one eligible seller branch**
 

@@ -8,7 +8,9 @@ import { promisify } from "node:util";
 
 import {
   createCandidateBuiltEvent,
+  createProductSourceRecord,
   readProductSource,
+  runProductSourceCommand,
   verifyFrozenProductSource,
 } from "./macos-release-provenance.mjs";
 
@@ -113,6 +115,74 @@ test("reads a clean committed product source and ledger reservation", async (con
   assert.equal(source.marketingVersion, "0.1.0");
   assert.equal(source.ledger.entries[0].buildNumber, "1");
   assert.equal(JSON.stringify(source).includes("reservedBy"), true);
+});
+
+test("creates a redacted product-source record for one exact reservation", async (context) => {
+  const root = await createRepository(context);
+  const source = await readProductSource(root);
+  const record = createProductSourceRecord(source, {
+    buildNumber: "1",
+    marketingVersion: "0.1.0",
+  });
+  assert.deepEqual(record, {
+    buildNumber: "1",
+    marketingVersion: "0.1.0",
+    productSourceCommit: source.productSourceCommit,
+    productSourceTree: source.productSourceTree,
+    status: "frozen-source",
+  });
+  assert.equal(JSON.stringify(record).includes("ledger"), false);
+  assert.equal(JSON.stringify(record).includes("reservedBy"), false);
+});
+
+test("rejects a product-source record for an unreserved build or mismatched version", async (context) => {
+  const root = await createRepository(context);
+  const source = await readProductSource(root);
+  for (const requested of [
+    { buildNumber: "2", marketingVersion: "0.1.0" },
+    { buildNumber: "1", marketingVersion: "0.2.0" },
+    { buildNumber: "01", marketingVersion: "0.1.0" },
+  ]) {
+    assert.throws(
+      () => createProductSourceRecord(source, requested),
+      /MACOS_PRODUCT_SOURCE_RESERVATION_INVALID/,
+    );
+  }
+});
+
+test("runs the read-only source command for an exact committed reservation", async (context) => {
+  const root = await createRepository(context);
+  const result = await runProductSourceCommand(root, [
+    "--source",
+    "--build",
+    "1",
+    "--version",
+    "0.1.0",
+  ]);
+  assert.equal(result?.status, "frozen-source");
+  assert.equal(result?.buildNumber, "1");
+  assert.equal(result?.marketingVersion, "0.1.0");
+  assert.deepEqual(Object.keys(result ?? {}).sort(), [
+    "buildNumber",
+    "marketingVersion",
+    "productSourceCommit",
+    "productSourceTree",
+    "status",
+  ]);
+});
+
+test("rejects ambiguous product-source command arguments", async (context) => {
+  const root = await createRepository(context);
+  for (const arguments_ of [
+    ["--source", "--build", "1", "--version", "0.1.0", "extra"],
+    ["--source", "--build", "1", "--build", "2", "--version", "0.1.0"],
+    ["--source", "--build", "1"],
+  ]) {
+    await assert.rejects(
+      async () => runProductSourceCommand(root, arguments_),
+      /MACOS_PRODUCT_SOURCE_ARGUMENT_INVALID/,
+    );
+  }
 });
 
 test("rejects dirty or uncommitted product-source facts", async (context) => {

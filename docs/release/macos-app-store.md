@@ -45,6 +45,17 @@ mise exec -- task release:reserve-build VERSION=0.1.0 OPERATOR='Accountable oper
 
 The task passes the three explicit values to the ledger owner and never guesses a number. Marketing version comes from `apps/desktop/package.json`; never reuse a number across versions.
 
+After committing the reservation and all candidate-affecting inputs, print the exact
+clean product-source identity without writing any files:
+
+```sh
+mise exec -- task release:freeze-source VERSION=0.1.0 BUILD=2
+```
+
+`release:freeze-source` rejects a dirty checkout, an unreserved build, or a version
+that differs from the committed desktop package. Its redacted JSON contains only the
+version, build number, source commit, source tree, and `frozen-source` status.
+
 Apple's current signing, provisioning, upload, metadata, screenshot, privacy, and review requirements remain authoritative. Re-check them for every release.
 
 ## Build inputs
