@@ -569,12 +569,14 @@ test("rejects unknown fields, secrets, free-form blobs, unsafe references, and r
   }
 });
 
-test("validates both seller eligibility branches and rejects the individual team as company-owned", () => {
+test("validates seller eligibility from the verified membership branch, not historical Team ID", () => {
   assert.deepEqual(validateReleaseAttestation(sellerAttestation()), sellerAttestation());
-  assert.throws(
-    () => validateReleaseAttestation(sellerAttestation({ teamId: "WFTX6CN23F" })),
-    /SELLER_ELIGIBILITY_INVALID/,
-  );
+  const convertedMembership = sellerAttestation({
+    teamId: "WFTX6CN23F",
+    appleDeveloperIdentifierId: "WFTX6CN23F.com.tammy.desktop",
+    applicationGroup: "WFTX6CN23F.com.tammy.desktop",
+  });
+  assert.deepEqual(validateReleaseAttestation(convertedMembership), convertedMembership);
   assert.throws(
     () => validateReleaseAttestation(sellerAttestation({ sellerName: "Ben Ebsworth" })),
     /SELLER_ELIGIBILITY_INVALID/,

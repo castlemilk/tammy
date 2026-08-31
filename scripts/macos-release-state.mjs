@@ -490,7 +490,7 @@ export function validateReleaseAttestation(attestation) {
   }
   if (
     attestation.eligibilityBranch === "company-organization" &&
-    (attestation.sellerName !== "Gamma Systems Pty Ltd" || attestation.teamId === "WFTX6CN23F")
+    attestation.sellerName !== "Gamma Systems Pty Ltd"
   ) {
     fail(sellerCode);
   }

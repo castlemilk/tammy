@@ -770,7 +770,7 @@ Lifecycle events are separate exact schemas stored with exclusive creation under
 
 All events reject extra/secret-bearing fields. Ledger consumption is derived from reservations plus `uploaded`, `expired`, `superseded`, and later review events; no event mutates the reservation entry.
 
-`seller-eligibility` is a strict tagged union with two branches. Both bind `teamId`, `sellerName`, `accountHolder`, `activeAgreements: true`, `appId: "com.tammy.desktop"`, `appleDeveloperIdentifierId`, `appStoreConnectId`, `applicationGroup`, exact helper identifiers, required certificate classes, and `profilesReissued: true` to the release. The `company-organization` branch additionally requires `sellerName: "Gamma Systems Pty Ltd"` and rejects the known individual team `WFTX6CN23F`. The `written-apple-exception` branch requires the current seller/team plus a non-secret reference to Apple's written approval for this exact app and accounting scope. A general company authorization cannot satisfy either branch.
+`seller-eligibility` is a strict tagged union with two branches. Both bind `teamId`, `sellerName`, `accountHolder`, `activeAgreements: true`, `appId: "com.tammy.desktop"`, `appleDeveloperIdentifierId`, `appStoreConnectId`, `applicationGroup`, exact helper identifiers, required certificate classes, and `profilesReissued: true` to the release. The `company-organization` branch additionally requires Apple's verified seller name `Gamma Systems Pty Ltd`; it does not infer membership type from a historical Team ID because Apple may preserve identifiers when updating an existing membership. The `written-apple-exception` branch requires the current individual seller/team plus a non-secret reference to Apple's written approval for this exact app and accounting scope. A general company authorization cannot satisfy either branch.
 
 - [ ] **Step 3: Run state tests RED**
 
@@ -1462,16 +1462,33 @@ Observed read-only on 2026-08-31: the seller and Apple Developer team remain the
 individual `Ben Ebsworth` account (`WFTX6CN23F`), with Ben Ebsworth as Account
 Holder. The Free Apps Agreement is active and the Paid Apps Agreement is pending
 user information. Tammy is App Store Connect record `6800226692`; its explicit App
-ID is `DXP9QHD7JH` / `com.tammy.desktop` with prefix `WFTX6CN23F`. No App Groups
-are registered and the App Groups capability is not enabled. Mac App Distribution
-and Mac Installer Distribution certificate classes exist, and `Tammy Mac App Store
-20260813` is a valid macOS App Store profile. App Store Connect has build `1` for
-version `0.1.0`, Ready to Submit. No Transfer App action or written Apple exception
-was present. Outcome: `APPLE_SELLER_ELIGIBILITY_BLOCKED`; do not reserve build `2`.
+ID is `DXP9QHD7JH` / `com.tammy.desktop` with prefix `WFTX6CN23F`. Tammy uses the
+macOS Team-ID App Group `WFTX6CN23F.com.tammy.desktop`; Apple documents that this
+form does not need App Group registration in Certificates, Identifiers & Profiles.
+The downloaded `Tammy Mac App Store 20260813` profile is active and correctly
+authorizes the explicit App ID and wildcard keychain group; Tammy's signed app still
+requires its exact App Group and SBR keychain subgroup. Mac App Distribution and Mac
+Installer Distribution certificate classes exist. App Store Connect has build `1`
+for version `0.1.0`, Ready to Submit. No written Apple exception was present. The
+membership page provides Apple's individual-to-organization update workflow, but it
+requires the company's D-U-N-S/business details and declarations. Outcome:
+`APPLE_SELLER_ELIGIBILITY_BLOCKED`; do not reserve build `2`.
+
+App Store Connect preparation advanced on 2026-08-31 without selecting or submitting
+a build: Tammy's canonical 0.1.0 description, keywords, public support/marketing URLs,
+copyright, manual-release setting, offline reviewer workflow, and review contact were
+saved. The product age rating is 4+ with every feature/content answer set from the
+implemented local accounting boundary. The canonical privacy-policy URL and the
+repository-verified `Data Not Collected` response were published. Pricing is free with
+Australia as the base region, public distribution, and Australia as the only available
+country on release. Content Rights remains unset because its legal declaration needs an
+accountable decision for user-selected business documents. Screenshots remain empty,
+and no current-source build has been selected. These app-level observations do not
+replace build-bound attestations after build `2` is reserved and processed.
 
 - [ ] **Step 2: Resolve exactly one eligible seller branch**
 
-- Company branch: Apple Developer organization/App Store seller is Gamma Systems Pty Ltd, all IDs/groups/certificates/profiles belong to that team, and the record has transferred or been recreated successfully.
+- Company branch: Apple Developer organization/App Store seller is Gamma Systems Pty Ltd after Apple's membership update (or Apple-directed transfer/recreation), and all IDs, certificates, and freshly issued profiles bind the resulting organization-controlled team. The Team ID may be retained or replaced by Apple.
 - Exception branch: retain the current individual seller/team only when explicit written Apple approval names this exact app and accounting scope.
 
 If neither branch is evidenced, stop before reservation with `APPLE_SELLER_ELIGIBILITY_BLOCKED`. Do not create a seller attestation or distribution candidate. Follow Apple's supported transfer/recreation flow; if IDs change, update identity/metadata/profile expectations, rerun all Chunk 2–3 tests, and commit those candidate-affecting changes before continuing.

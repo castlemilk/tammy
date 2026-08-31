@@ -287,8 +287,7 @@
         {
           "properties": {
             "eligibilityBranch": { "const": "company-organization" },
-            "sellerName": { "const": "Gamma Systems Pty Ltd" },
-            "teamId": { "not": { "const": "WFTX6CN23F" } }
+            "sellerName": { "const": "Gamma Systems Pty Ltd" }
           }
         }
       ],

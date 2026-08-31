@@ -21,7 +21,7 @@ mise exec -- task release:state
 
 The repository records the product identifiers and canonical copy, but it does not infer current Apple account state from those files. An accountable operator must observe and record each Apple-controlled fact for the exact build. Do not store certificates, private keys, provisioning profiles, credentials, session tokens, or receipt bodies in this repository.
 
-The accountable Apple setup needs Apple Development and Apple Distribution certificate identities and separate Mac App Store development and distribution provisioning profiles for the explicit Mac App ID. Their Team ID, application identifier, app group, and keychain group must match the release profile; repository copy alone cannot prove that they exist or remain valid.
+The accountable Apple setup needs Apple Development and Apple Distribution certificate identities and separate Mac App Store development and distribution provisioning profiles for the explicit Mac App ID. Each profile must bind the selected Team ID and exact application identifier, omit an unexpected registered App Group, and authorize the Team's wildcard keychain group. Tammy's signed app is stricter: it must contain the exact Team-ID App Group and SBR keychain subgroup from the release profile. Apple permits the `<TeamIdentifier>.<group>` macOS App Group form without registering it in Certificates, Identifiers & Profiles. Repository copy alone cannot prove that the Apple-controlled profile exists or remains valid.
 
 - **Seller eligibility and legal entity:** `OPERATOR_CONFIRMATION_REQUIRED`
 - **Active agreements:** `OPERATOR_CONFIRMATION_REQUIRED`
@@ -146,7 +146,7 @@ Verify, rather than assume, all of the following:
 - [ ] The main app has App Sandbox, network client/server, and user-selected read-only file access.
 - [ ] Electron helpers inherit the sandbox.
 - [ ] `Contents/Resources/core/darwin-arm64/tammy-core` is signed with exactly App Sandbox and inheritance; it receives network-server access from the parent sandbox for the authenticated local transport.
-- [ ] `ElectronTeamID`, the provisioning application identifier, and application groups agree for the main app and every nested executable.
+- [ ] `ElectronTeamID` and the provisioning application identifier agree; the main app has the exact Team-ID App Group and SBR keychain subgroup, and every nested executable has only its expected entitlements.
 - [ ] `PrivacyInfo.xcprivacy`, the build manifest, SQLCipher libraries, the core, and the icon are present.
 - [ ] Every nested framework, helper, library, and executable has a valid Apple signature.
 - [ ] Xcode's privacy report for the signed archive agrees with the manifest and the App Store privacy answers.

@@ -784,10 +784,9 @@ test("provisioning profiles bind the team, app identifier, mode, and expiry", ()
     ApplicationIdentifierPrefix: ["LEGACY1234"],
     Entitlements: {
       "com.apple.application-identifier": "LEGACY1234.com.tammy.desktop",
-      "com.apple.security.application-groups": ["ABCDE12345.com.tammy.desktop"],
       "com.apple.developer.team-identifier": "ABCDE12345",
       "get-task-allow": true,
-      "keychain-access-groups": ["LEGACY1234.com.tammy.desktop.sbr"],
+      "keychain-access-groups": ["LEGACY1234.*"],
     },
     ExpirationDate: "2027-08-11T00:00:00.000Z",
     ProvisionedDevices: ["device-id"],
@@ -813,9 +812,8 @@ test("provisioning profiles bind the team, app identifier, mode, and expiry", ()
     ...development,
     Entitlements: {
       "com.apple.application-identifier": "LEGACY1234.com.tammy.desktop",
-      "com.apple.security.application-groups": ["ABCDE12345.com.tammy.desktop"],
       "com.apple.developer.team-identifier": "ABCDE12345",
-      "keychain-access-groups": ["LEGACY1234.com.tammy.desktop.sbr"],
+      "keychain-access-groups": ["LEGACY1234.*"],
     },
     ProvisionedDevices: undefined,
   };
@@ -878,7 +876,7 @@ test("provisioning profiles bind the team, app identifier, mode, and expiry", ()
       ...development,
       Entitlements: {
         ...development.Entitlements,
-        "keychain-access-groups": ["LEGACY1234.com.tammy.desktop.sbr", "LEGACY1234.com.other.app"],
+        "keychain-access-groups": ["LEGACY1234.*", "LEGACY1234.com.other.app"],
       },
     },
   ]) {
@@ -902,9 +900,8 @@ test("decoded Apple profiles retain validation fields without converting certifi
 <key>DeveloperCertificates</key><array><data>AQID</data></array>
 <key>Entitlements</key><dict>
 <key>com.apple.application-identifier</key><string>WFTX6CN23F.com.tammy.desktop</string>
-<key>com.apple.security.application-groups</key><array><string>WFTX6CN23F.com.tammy.desktop</string></array>
 <key>com.apple.developer.team-identifier</key><string>WFTX6CN23F</string>
-<key>keychain-access-groups</key><array><string>WFTX6CN23F.com.tammy.desktop.sbr</string></array>
+<key>keychain-access-groups</key><array><string>WFTX6CN23F.*</string></array>
 </dict>
 <key>ExpirationDate</key><date>2027-05-13T11:58:20Z</date>
 <key>TeamIdentifier</key><array><string>WFTX6CN23F</string></array>
@@ -916,9 +913,8 @@ test("decoded Apple profiles retain validation fields without converting certifi
       ApplicationIdentifierPrefix: ["WFTX6CN23F"],
       Entitlements: {
         "com.apple.application-identifier": "WFTX6CN23F.com.tammy.desktop",
-        "com.apple.security.application-groups": ["WFTX6CN23F.com.tammy.desktop"],
         "com.apple.developer.team-identifier": "WFTX6CN23F",
-        "keychain-access-groups": ["WFTX6CN23F.com.tammy.desktop.sbr"],
+        "keychain-access-groups": ["WFTX6CN23F.*"],
       },
       ExpirationDate: "2027-05-13T11:58:20Z",
       TeamIdentifier: ["WFTX6CN23F"],

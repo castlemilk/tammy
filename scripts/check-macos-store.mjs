@@ -294,12 +294,8 @@ export function validateMacOSProvisioningProfile(profile, { mode, teamID, now = 
     entitlements["com.apple.developer.team-identifier"] !== teamID ||
     entitlements["com.apple.application-identifier"] !==
       `${appIdentifierPrefix}.${APP_BUNDLE_ID}` ||
-    !isDeepStrictEqual(entitlements["com.apple.security.application-groups"], [
-      `${teamID}.${APP_BUNDLE_ID}`,
-    ]) ||
-    !isDeepStrictEqual(entitlements["keychain-access-groups"], [
-      `${appIdentifierPrefix}.${APP_BUNDLE_ID}.sbr`,
-    ]) ||
+    entitlements["com.apple.security.application-groups"] !== undefined ||
+    !isDeepStrictEqual(entitlements["keychain-access-groups"], [`${appIdentifierPrefix}.*`]) ||
     profile.ProvisionsAllDevices === true ||
     !Number.isFinite(expiry.getTime()) ||
     expiry.getTime() <= now.getTime() ||
