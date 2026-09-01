@@ -67,6 +67,41 @@ const removeUnusedMacOSInfoKeys: PackagerHook = (
     );
 };
 
+const normalizeMacOSHelperBundleIdentifiers: PackagerHook = (
+  buildPath,
+  _electronVersion,
+  platform,
+  _arch,
+  callback,
+) => {
+  if (platform !== "darwin" && platform !== "mas") {
+    callback();
+    return;
+  }
+  const frameworks = path.join(buildPath, "Tammy.app", "Contents", "Frameworks");
+  const helperIdentifiers: ReadonlyArray<readonly [string, string]> = [
+    ["Tammy Helper.app", `${MACOS_APP_BUNDLE_ID}.helper`],
+    ["Tammy Helper (GPU).app", `${MACOS_APP_BUNDLE_ID}.helper.GPU`],
+    ["Tammy Helper (Plugin).app", `${MACOS_APP_BUNDLE_ID}.helper.Plugin`],
+    ["Tammy Helper (Renderer).app", `${MACOS_APP_BUNDLE_ID}.helper.Renderer`],
+  ];
+  void Promise.all(
+    helperIdentifiers.map(([bundle, identifier]) =>
+      execFile("/usr/bin/plutil", [
+        "-replace",
+        "CFBundleIdentifier",
+        "-string",
+        identifier,
+        path.join(frameworks, bundle, "Contents", "Info.plist"),
+      ]),
+    ),
+  ).then(
+    () => callback(),
+    (error: unknown) =>
+      callback(error instanceof Error ? error : new Error("MACOS_HELPER_IDENTIFIERS_INVALID")),
+  );
+};
+
 const normalizePackagedResourcePermissions: PackagerHook = (
   buildPath,
   _electronVersion,
@@ -111,7 +146,11 @@ const developmentSign: NonNullable<ForgeConfig["packagerConfig"]>["osxSign"] = {
 };
 
 const packagerConfig: PackagerConfig = {
-  afterCopyExtraResources: [removeUnusedMacOSInfoKeys, normalizePackagedResourcePermissions],
+  afterCopyExtraResources: [
+    removeUnusedMacOSInfoKeys,
+    normalizeMacOSHelperBundleIdentifiers,
+    normalizePackagedResourcePermissions,
+  ],
   asar: true,
   executableName: "Tammy",
   extraResource: [

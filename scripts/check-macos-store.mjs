@@ -1064,6 +1064,7 @@ export async function inspectMacOSStoreRepository(
     ]) ||
     !includesAll(forge, [
       "createMacOSReleaseProfile",
+      "normalizeMacOSHelperBundleIdentifiers",
       '"darwin-arm64"',
       "ignore: isManifestBoundExecutable",
       "packagedSbrHelperSuffix",
