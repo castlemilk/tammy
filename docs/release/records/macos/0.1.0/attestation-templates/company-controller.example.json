@@ -1,1 +1,10 @@
-{"schemaVersion":1,"kind":"company-controller","releaseVersion":"0.1.0","buildNumber":"OPERATOR_REQUIRED","accountablePerson":"OPERATOR_REQUIRED","confirmedAt":"OPERATOR_REQUIRED","evidenceReference":"../../../../../authority/publisher-controller.json","outcome":"confirmed"}
+{
+  "schemaVersion": 1,
+  "kind": "company-controller",
+  "releaseVersion": "0.1.0",
+  "buildNumber": "OPERATOR_REQUIRED",
+  "accountablePerson": "OPERATOR_REQUIRED",
+  "confirmedAt": "OPERATOR_REQUIRED",
+  "evidenceReference": "../../../../../authority/publisher-controller.json",
+  "outcome": "confirmed"
+}

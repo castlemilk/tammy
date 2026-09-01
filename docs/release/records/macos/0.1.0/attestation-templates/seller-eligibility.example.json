@@ -1,1 +1,27 @@
-{"schemaVersion":1,"kind":"seller-eligibility","releaseVersion":"0.1.0","buildNumber":"OPERATOR_REQUIRED","accountablePerson":"OPERATOR_REQUIRED","confirmedAt":"OPERATOR_REQUIRED","evidenceReference":"OPERATOR_REQUIRED","outcome":"eligible","eligibilityBranch":"OPERATOR_REQUIRED","teamId":"OPERATOR_REQUIRED","sellerName":"OPERATOR_REQUIRED","accountHolder":"OPERATOR_REQUIRED","activeAgreements":true,"appId":"com.tammy.desktop","appleDeveloperIdentifierId":"OPERATOR_REQUIRED","appStoreConnectId":"OPERATOR_REQUIRED","applicationGroup":"OPERATOR_REQUIRED","helperIdentifiers":["com.tammy.desktop.helper","com.tammy.desktop.helper.GPU","com.tammy.desktop.helper.Plugin","com.tammy.desktop.helper.Renderer"],"certificateClasses":["Apple Development","Apple Distribution","Mac Installer Distribution"],"profilesReissued":true}
+{
+  "schemaVersion": 1,
+  "kind": "seller-eligibility",
+  "releaseVersion": "0.1.0",
+  "buildNumber": "OPERATOR_REQUIRED",
+  "accountablePerson": "OPERATOR_REQUIRED",
+  "confirmedAt": "OPERATOR_REQUIRED",
+  "evidenceReference": "OPERATOR_REQUIRED",
+  "outcome": "eligible",
+  "eligibilityBranch": "OPERATOR_REQUIRED",
+  "teamId": "OPERATOR_REQUIRED",
+  "sellerName": "OPERATOR_REQUIRED",
+  "accountHolder": "OPERATOR_REQUIRED",
+  "activeAgreements": true,
+  "appId": "com.tammy.desktop",
+  "appleDeveloperIdentifierId": "OPERATOR_REQUIRED",
+  "appStoreConnectId": "OPERATOR_REQUIRED",
+  "applicationGroup": "OPERATOR_REQUIRED",
+  "helperIdentifiers": [
+    "com.tammy.desktop.helper",
+    "com.tammy.desktop.helper.GPU",
+    "com.tammy.desktop.helper.Plugin",
+    "com.tammy.desktop.helper.Renderer"
+  ],
+  "certificateClasses": ["Apple Development", "Apple Distribution", "Mac Installer Distribution"],
+  "profilesReissued": true
+}

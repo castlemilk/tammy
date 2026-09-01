@@ -1,51 +1,41 @@
-import type {
-  PolicyInline,
-  PolicySection,
-} from '../content/public-content.generated';
+import type { PolicyInline, PolicySection } from "../content/public-content.generated";
 
 function PolicyInlineContent({ inline }: { inline: PolicyInline }) {
   switch (inline.type) {
-    case 'text':
+    case "text":
       return inline.value;
-    case 'emphasis':
+    case "emphasis":
       return <em>{inline.value}</em>;
-    case 'code':
+    case "code":
       return <code>{inline.value}</code>;
-    case 'link':
+    case "link":
       return <a href={inline.href}>{inline.text}</a>;
   }
 }
 
 function InlineSequence({ inlines }: { inlines: readonly PolicyInline[] }) {
-  return inlines.map((inline, index) => (
-    <PolicyInlineContent
-      key={`${inline.type}-${'value' in inline ? inline.value : inline.href}-${index}`}
-      inline={inline}
-    />
+  return inlines.map((inline) => (
+    <PolicyInlineContent key={`${inline.type}-${JSON.stringify(inline)}`} inline={inline} />
   ));
 }
 
-export function PolicyDocument({
-  sections,
-}: {
-  sections: readonly PolicySection[];
-}) {
+export function PolicyDocument({ sections }: { sections: readonly PolicySection[] }) {
   return sections.map((section) => (
     <section className="policy-section" key={section.heading}>
       <h2>{section.heading}</h2>
-      {section.blocks.map((block, blockIndex) => {
-        if (block.kind === 'paragraph') {
+      {section.blocks.map((block) => {
+        if (block.kind === "paragraph") {
           return (
-            <p key={`${section.heading}-paragraph-${blockIndex}`}>
+            <p key={`${section.heading}-${JSON.stringify(block)}`}>
               <InlineSequence inlines={block.inlines} />
             </p>
           );
         }
 
         return (
-          <ul key={`${section.heading}-list-${blockIndex}`}>
-            {block.items.map((item, itemIndex) => (
-              <li key={`${section.heading}-item-${itemIndex}`}>
+          <ul key={`${section.heading}-${JSON.stringify(block)}`}>
+            {block.items.map((item) => (
+              <li key={`${section.heading}-${JSON.stringify(item)}`}>
                 <InlineSequence inlines={item} />
               </li>
             ))}

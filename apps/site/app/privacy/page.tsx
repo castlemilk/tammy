@@ -1,14 +1,14 @@
 /* oxlint-disable next/no-html-link-for-pages -- Vinext serves these static same-origin routes without a Next runtime. */
-import type { Metadata } from 'next';
-import { PolicyDocument } from '../../components/policy-document';
-import { publicContent } from '../../content/public-content.generated';
+import type { Metadata } from "next";
+import { PolicyDocument } from "../../components/policy-document";
+import { publicContent } from "../../content/public-content.generated";
 
 const { identity, policy } = publicContent;
 
 export const metadata: Metadata = {
-  title: 'Privacy policy',
+  title: "Privacy policy",
   description: `${identity.appStoreName}'s privacy policy for the macOS app and public website.`,
-  alternates: { canonical: '/privacy' },
+  alternates: { canonical: "/privacy" },
 };
 
 export default function PrivacyPage() {
@@ -18,11 +18,7 @@ export default function PrivacyPage() {
         Skip to content
       </a>
       <header className="site-header">
-        <a
-          className="wordmark"
-          href="/"
-          aria-label={`${identity.installedName} home`}
-        >
+        <a className="wordmark" href="/" aria-label={`${identity.installedName} home`}>
           {identity.installedName}
         </a>
         <nav aria-label="Primary navigation">
@@ -38,8 +34,7 @@ export default function PrivacyPage() {
           <p className="eyebrow">Your data, clearly explained</p>
           <h1>Privacy policy</h1>
           <p>
-            Effective {policy.effectiveDate}. Last updated{' '}
-            {policy.effectiveDate}.
+            Effective {policy.effectiveDate}. Last updated {policy.effectiveDate}.
           </p>
         </header>
         <PolicyDocument sections={policy.sections} />

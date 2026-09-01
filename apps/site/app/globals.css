@@ -1,6 +1,6 @@
-@import 'tailwindcss';
-@import 'tw-animate-css';
-@import 'shadcn/tailwind.css';
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
 @theme inline {
   --color-background: var(--background);
@@ -44,7 +44,7 @@
 html {
   background: var(--background);
   color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   text-rendering: optimizeLegibility;
 }
 
@@ -105,7 +105,7 @@ h1 {
   font-family:
     Iowan Old Style,
     Baskerville,
-    'Times New Roman',
+    "Times New Roman",
     serif;
 }
 
@@ -137,7 +137,7 @@ h1 {
   align-items: center;
 }
 
-.site-header nav a[aria-current='page'] {
+.site-header nav a[aria-current="page"] {
   color: var(--forest);
   text-decoration: underline;
   text-underline-offset: 0.35rem;
@@ -311,7 +311,7 @@ h1 {
   font-family:
     Iowan Old Style,
     Baskerville,
-    'Times New Roman',
+    "Times New Roman",
     serif;
   font-size: clamp(1.65rem, 4vw, 2.25rem);
   font-weight: 600;
@@ -394,6 +394,7 @@ h1 {
   *,
   *::before,
   *::after {
+    /* biome-ignore lint/complexity/noImportantStyles: reduced-motion preference must override authored scrolling */
     scroll-behavior: auto !important;
   }
 }

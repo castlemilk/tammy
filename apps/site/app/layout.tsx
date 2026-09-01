@@ -1,9 +1,9 @@
-import type { Metadata } from 'next';
-import { publicContent } from '../content/public-content.generated';
-import './globals.css';
+import type { Metadata } from "next";
+import { publicContent } from "../content/public-content.generated";
+import "./globals.css";
 
 const { identity } = publicContent;
-const publicOrigin = 'https://tammy-accounting.castlemilk.chatgpt.site';
+const publicOrigin = "https://tammy-accounting.castlemilk.chatgpt.site";
 const socialImage = `${publicOrigin}/og.png`;
 
 export const metadata: Metadata = {
@@ -14,8 +14,8 @@ export const metadata: Metadata = {
   },
   description: `${identity.installedName} is private desktop accounting software for encrypted workspaces, journals, source-document review, bank reconciliation, and local GST workpapers.`,
   openGraph: {
-    type: 'website',
-    locale: identity.locale.replace('-', '_'),
+    type: "website",
+    locale: identity.locale.replace("-", "_"),
     url: publicOrigin,
     siteName: identity.appStoreName,
     title: `${identity.appStoreName} — Local accounting for Australia`,
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     ],
   },
   twitter: {
-    card: 'summary_large_image',
+    card: "summary_large_image",
     title: `${identity.appStoreName} — Local accounting for Australia`,
     description: `${identity.installedName} is private desktop accounting software for Australian businesses.`,
     images: [socialImage],

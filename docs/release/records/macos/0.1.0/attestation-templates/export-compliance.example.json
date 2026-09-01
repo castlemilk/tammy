@@ -1,1 +1,10 @@
-{"schemaVersion":1,"kind":"export-compliance","releaseVersion":"0.1.0","buildNumber":"OPERATOR_REQUIRED","accountablePerson":"OPERATOR_REQUIRED","confirmedAt":"OPERATOR_REQUIRED","evidenceReference":"OPERATOR_REQUIRED","outcome":"exempt"}
+{
+  "schemaVersion": 1,
+  "kind": "export-compliance",
+  "releaseVersion": "0.1.0",
+  "buildNumber": "OPERATOR_REQUIRED",
+  "accountablePerson": "OPERATOR_REQUIRED",
+  "confirmedAt": "OPERATOR_REQUIRED",
+  "evidenceReference": "OPERATOR_REQUIRED",
+  "outcome": "exempt"
+}

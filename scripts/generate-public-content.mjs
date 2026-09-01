@@ -1,34 +1,42 @@
-import { open, readFile, rename, rm } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
+import { open, readFile, rename, rm } from "node:fs/promises";
 import path from "node:path";
 import { validateMacOSStoreIdentity } from "./check-macos-store.mjs";
 import { validateDataRemovalInventory } from "./macos-data-removal.mjs";
 
 const policyError = (message) => new Error(`Invalid policy Markdown: ${message}`);
-const semver = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(?:(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
+const semver =
+  /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(?:(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
 
 function assertPlainPolicyText(value, label) {
-  if (!value || /[<>!\[\]()*`_~\\]/.test(value)) throw policyError(`${label} contains unsupported Markdown syntax`);
+  if (!value || /[<>![\]()*`_~\\]/.test(value))
+    throw policyError(`${label} contains unsupported Markdown syntax`);
 }
 
 function parseLinkUrl(value) {
   if (/\s/.test(value)) throw policyError("link URLs cannot contain whitespace");
   if (value.startsWith("https://")) {
     let url;
-    try { url = new URL(value); } catch { throw policyError("HTTPS link URL is malformed"); }
+    try {
+      url = new URL(value);
+    } catch {
+      throw policyError("HTTPS link URL is malformed");
+    }
     if (url.protocol !== "https:" || !url.hostname) throw policyError("link must use HTTPS");
     return value;
   }
   if (value.startsWith("mailto:")) {
     const email = value.slice(7);
-    if (email !== "ben.ebsworth@gmail.com") throw policyError("mailto links must use the published support address without headers");
+    if (email !== "ben.ebsworth@gmail.com")
+      throw policyError("mailto links must use the published support address without headers");
     return value;
   }
   throw policyError("links must use HTTPS or mailto URLs");
 }
 
 function parseInlines(value) {
-  if (!value || /[<>]/.test(value) || value.includes("![")) throw policyError("raw HTML and images are not supported");
+  if (!value || /[<>]/.test(value) || value.includes("!["))
+    throw policyError("raw HTML and images are not supported");
   if (/[_~\\]/.test(value)) throw policyError("unsupported Markdown syntax");
   const inlines = [];
   let cursor = 0;
@@ -40,8 +48,8 @@ function parseInlines(value) {
   };
   while (cursor < value.length) {
     const marker = value[cursor];
-    if (!"*`[\]()".includes(marker)) {
-      const next = value.slice(cursor).search(/[\[\]()*`]/);
+    if (!"*`[]()".includes(marker)) {
+      const next = value.slice(cursor).search(/[[\]()*`]/);
       const end = next === -1 ? value.length : cursor + next;
       appendText(value.slice(cursor, end));
       cursor = end;
@@ -49,7 +57,8 @@ function parseInlines(value) {
       throw policyError("malformed inline syntax");
     } else if (marker === "*" || marker === "`") {
       const closing = value.indexOf(marker, cursor + 1);
-      if (closing === -1 || closing === cursor + 1) throw policyError(`unclosed ${marker === "*" ? "emphasis" : "code span"}`);
+      if (closing === -1 || closing === cursor + 1)
+        throw policyError(`unclosed ${marker === "*" ? "emphasis" : "code span"}`);
       const content = value.slice(cursor + 1, closing);
       if (content.includes(marker)) throw policyError("nested inline syntax is not supported");
       inlines.push({ type: marker === "*" ? "emphasis" : "code", value: content });
@@ -58,7 +67,7 @@ function parseInlines(value) {
       const textEnd = value.indexOf("](", cursor + 1);
       const urlEnd = textEnd === -1 ? -1 : value.indexOf(")", textEnd + 2);
       const text = value.slice(cursor + 1, textEnd);
-      if (urlEnd === -1 || !text || /[\[*`\]]/.test(text)) throw policyError("malformed link");
+      if (urlEnd === -1 || !text || /[[*`\]]/.test(text)) throw policyError("malformed link");
       inlines.push({ type: "link", text, href: parseLinkUrl(value.slice(textEnd + 2, urlEnd)) });
       cursor = urlEnd + 1;
     }
@@ -67,11 +76,14 @@ function parseInlines(value) {
 }
 
 export function parsePolicyMarkdown(source) {
-  if (typeof source !== "string" || source.includes("\r")) throw policyError("source must use LF line endings");
+  if (typeof source !== "string" || source.includes("\r"))
+    throw policyError("source must use LF line endings");
   const lines = source.split("\n");
-  if (!/^# [^#].+$/.test(lines[0] ?? "")) throw policyError("exactly one H1 is required as the first line");
+  if (!/^# [^#].+$/.test(lines[0] ?? ""))
+    throw policyError("exactly one H1 is required as the first line");
   assertPlainPolicyText(lines[0].slice(2), "H1");
-  if (lines[1] !== "" || !/^Effective [^.]+\.$/.test(lines[2] ?? "") || lines[3] !== "") throw policyError("an effective-date paragraph is required after the H1");
+  if (lines[1] !== "" || !/^Effective [^.]+\.$/.test(lines[2] ?? "") || lines[3] !== "")
+    throw policyError("an effective-date paragraph is required after the H1");
   const effectiveDate = lines[2].slice(10, -1);
   assertPlainPolicyText(effectiveDate, "effective date");
   const sections = [];
@@ -89,7 +101,8 @@ export function parsePolicyMarkdown(source) {
       sections.push(section);
     } else {
       if (!section) throw policyError("content must appear in an H2 section");
-      if (/^\s|^#{1,6}\s|^[+*]\s|^\d+[.)]\s|^>|^`{3,}|^~{3,}|\||^(?:-{3,}|={3,})$/.test(line)) throw policyError("unsupported Markdown syntax");
+      if (/^\s|^#{1,6}\s|^[+*]\s|^\d+[.)]\s|^>|^`{3,}|^~{3,}|\||^(?:-{3,}|={3,})$/.test(line))
+        throw policyError("unsupported Markdown syntax");
       if (line.startsWith("- ")) {
         const previous = section.blocks.at(-1);
         const list = previous?.kind === "list" ? previous : { kind: "list", items: [] };
@@ -99,16 +112,32 @@ export function parsePolicyMarkdown(source) {
     }
   }
   if (sections.length === 0) throw policyError("at least one H2 section is required");
-  if (lines.filter((line) => /^# /.test(line)).length !== 1) throw policyError("exactly one H1 is required");
+  if (lines.filter((line) => /^# /.test(line)).length !== 1)
+    throw policyError("exactly one H1 is required");
   return { effectiveDate, sections };
 }
 
 export function generatePublicContent({ identity, privacy, desktopPackage, dataRemoval }) {
   validateMacOSStoreIdentity(identity);
   validateDataRemovalInventory(dataRemoval);
-  if (!semver.test(desktopPackage?.version ?? "")) throw new Error("Desktop package version must be a semantic version");
+  if (!semver.test(desktopPackage?.version ?? ""))
+    throw new Error("Desktop package version must be a semantic version");
   const content = {
-    identity: { schemaVersion: identity.schemaVersion, appStoreName: identity.appStoreName, installedName: identity.installedName, bundleIdentifier: identity.bundleIdentifier, publisher: identity.publisher, supportEmail: identity.supportEmail, locale: identity.locale, primaryCategory: identity.primaryCategory, secondaryCategory: identity.secondaryCategory, minimumMacOSVersion: identity.minimumMacOSVersion, architectures: identity.architectures, copyright: identity.copyright, capabilityBoundary: identity.capabilityBoundary },
+    identity: {
+      schemaVersion: identity.schemaVersion,
+      appStoreName: identity.appStoreName,
+      installedName: identity.installedName,
+      bundleIdentifier: identity.bundleIdentifier,
+      publisher: identity.publisher,
+      supportEmail: identity.supportEmail,
+      locale: identity.locale,
+      primaryCategory: identity.primaryCategory,
+      secondaryCategory: identity.secondaryCategory,
+      minimumMacOSVersion: identity.minimumMacOSVersion,
+      architectures: identity.architectures,
+      copyright: identity.copyright,
+      capabilityBoundary: identity.capabilityBoundary,
+    },
     marketingVersion: desktopPackage.version,
     policy: parsePolicyMarkdown(privacy),
     deletionGuidance: {
@@ -145,7 +174,10 @@ async function renderFromFiles({
 
 async function createSiblingTemporaryFile(outputPath, fileSystem) {
   for (let attempt = 0; attempt < 8; attempt += 1) {
-    const temporaryPath = path.join(path.dirname(outputPath), `.${path.basename(outputPath)}.tmp-${randomUUID()}`);
+    const temporaryPath = path.join(
+      path.dirname(outputPath),
+      `.${path.basename(outputPath)}.tmp-${randomUUID()}`,
+    );
     try {
       return { handle: await fileSystem.open(temporaryPath, "wx"), temporaryPath };
     } catch (error) {
@@ -172,7 +204,14 @@ async function replaceAtomically(outputPath, output, fileSystem) {
   }
 }
 
-export async function run({ policyPath = "PRIVACY.md", identityPath = "apps/desktop/release/macos/store-identity.json", packagePath = "apps/desktop/package.json", dataRemovalPath = "apps/desktop/release/macos/data-removal.json", outputPath = "apps/site/content/public-content.generated.ts", fileSystem = defaultFileSystem } = {}) {
+export async function run({
+  policyPath = "PRIVACY.md",
+  identityPath = "apps/desktop/release/macos/store-identity.json",
+  packagePath = "apps/desktop/package.json",
+  dataRemovalPath = "apps/desktop/release/macos/data-removal.json",
+  outputPath = "apps/site/content/public-content.generated.ts",
+  fileSystem = defaultFileSystem,
+} = {}) {
   const output = await renderFromFiles({
     policyPath,
     identityPath,
@@ -181,7 +220,7 @@ export async function run({ policyPath = "PRIVACY.md", identityPath = "apps/desk
     fileSystem,
   });
   try {
-    if (await fileSystem.readFile(outputPath, "utf8") === output) return { written: false };
+    if ((await fileSystem.readFile(outputPath, "utf8")) === output) return { written: false };
   } catch (error) {
     if (error?.code !== "ENOENT") throw error;
   }
@@ -189,7 +228,14 @@ export async function run({ policyPath = "PRIVACY.md", identityPath = "apps/desk
   return { written: true };
 }
 
-export async function check({ policyPath = "PRIVACY.md", identityPath = "apps/desktop/release/macos/store-identity.json", packagePath = "apps/desktop/package.json", dataRemovalPath = "apps/desktop/release/macos/data-removal.json", outputPath = "apps/site/content/public-content.generated.ts", fileSystem = defaultFileSystem } = {}) {
+export async function check({
+  policyPath = "PRIVACY.md",
+  identityPath = "apps/desktop/release/macos/store-identity.json",
+  packagePath = "apps/desktop/package.json",
+  dataRemovalPath = "apps/desktop/release/macos/data-removal.json",
+  outputPath = "apps/site/content/public-content.generated.ts",
+  fileSystem = defaultFileSystem,
+} = {}) {
   const expected = await renderFromFiles({
     policyPath,
     identityPath,
@@ -214,11 +260,13 @@ export async function check({ policyPath = "PRIVACY.md", identityPath = "apps/de
 
 if (import.meta.main) {
   const outputIndex = process.argv.indexOf("--output");
-  if (outputIndex !== -1 && !process.argv[outputIndex + 1]) throw new Error("--output requires a path");
+  if (outputIndex !== -1 && !process.argv[outputIndex + 1])
+    throw new Error("--output requires a path");
   const checkOnly = process.argv.includes("--check");
   if (checkOnly && process.argv.includes("--write")) {
     throw new Error("Choose only one of --check or --write");
   }
-  const options = outputIndex === -1 ? {} : { outputPath: path.resolve(process.argv[outputIndex + 1]) };
+  const options =
+    outputIndex === -1 ? {} : { outputPath: path.resolve(process.argv[outputIndex + 1]) };
   await (checkOnly ? check(options) : run(options));
 }

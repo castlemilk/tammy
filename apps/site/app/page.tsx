@@ -1,19 +1,16 @@
 /* oxlint-disable next/no-html-link-for-pages -- Vinext serves these static same-origin routes without a Next runtime. */
-import type { Metadata } from 'next';
-import { publicContent } from '../content/public-content.generated';
+import type { Metadata } from "next";
+import { publicContent } from "../content/public-content.generated";
 
 const { identity } = publicContent;
-const architectureLabel = identity.architectures.includes('arm64')
-  ? 'Apple silicon'
-  : identity.architectures.join(', ');
-const lodgementBoundary = identity.capabilityBoundary.atoLodgement.replaceAll(
-  '-',
-  ' ',
-);
-const minimumMacOSLabel = identity.minimumMacOSVersion.replace(/\.0$/, '');
+const architectureLabel = identity.architectures.includes("arm64")
+  ? "Apple silicon"
+  : identity.architectures.join(", ");
+const lodgementBoundary = identity.capabilityBoundary.atoLodgement.replaceAll("-", " ");
+const minimumMacOSLabel = identity.minimumMacOSVersion.replace(/\.0$/, "");
 
 export const metadata: Metadata = {
-  alternates: { canonical: '/' },
+  alternates: { canonical: "/" },
 };
 
 export default function Home() {
@@ -23,11 +20,7 @@ export default function Home() {
         Skip to content
       </a>
       <header className="site-header">
-        <a
-          className="wordmark"
-          href="/"
-          aria-label={`${identity.installedName} home`}
-        >
+        <a className="wordmark" href="/" aria-label={`${identity.installedName} home`}>
           {identity.installedName}
         </a>
         <nav aria-label="Primary navigation">
@@ -41,25 +34,24 @@ export default function Home() {
           <p className="eyebrow">Private desktop accounting</p>
           <h1 id="hero-heading">Local accounting for Australia</h1>
           <p className="hero-copy">
-            Create an encrypted workspace, post and inspect journals, review
-            source documents, reconcile bank transactions, and build a local GST
-            workpaper draft on your Mac.
+            Create an encrypted workspace, post and inspect journals, review source documents,
+            reconcile bank transactions, and build a local GST workpaper draft on your Mac.
           </p>
           <p className="boundary-note">
-            Reporting is {identity.capabilityBoundary.reporting}; ATO and SBR
-            submissions are {lodgementBoundary} in this release.
+            Reporting is {identity.capabilityBoundary.reporting}; ATO and SBR submissions are{" "}
+            {lodgementBoundary} in this release.
           </p>
-          <div className="hero-actions" aria-label="Learn more">
+          <nav className="hero-actions" aria-label="Learn more">
             <a className="primary-link" href="/privacy">
               Read our privacy policy
             </a>
             <a className="secondary-link" href="/support">
               Get support
             </a>
-          </div>
+          </nav>
           <p className="platform-note">
-            {identity.installedName} requires macOS {minimumMacOSLabel} or later
-            on {architectureLabel} (arm64).
+            {identity.installedName} requires macOS {minimumMacOSLabel} or later on{" "}
+            {architectureLabel} (arm64).
           </p>
         </section>
 
@@ -68,8 +60,7 @@ export default function Home() {
           <div>
             <p>Your records stay on this Mac</p>
             <span>
-              Accounting records remain in your local encrypted workspace for
-              this release.
+              Accounting records remain in your local encrypted workspace for this release.
             </span>
           </div>
         </aside>

@@ -499,7 +499,9 @@ export async function createRollbackEvent({
   ) {
     throw new Error("Rollback requires a distinct prior passing deployment version");
   }
-  if (path.resolve(priorEvidencePath) !== deploymentEvidencePath(root, priorDeployment.deploymentId)) {
+  if (
+    path.resolve(priorEvidencePath) !== deploymentEvidencePath(root, priorDeployment.deploymentId)
+  ) {
     throw new Error("Prior deployment evidence filename does not match its deployment ID");
   }
 

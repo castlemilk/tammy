@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -245,14 +245,14 @@ test("requires exactly one trusted absolute canonical URL on every route", async
     const canonical = `<link rel="canonical" href="${expected}">`;
     for (const body of [
       pages[pathname].replace(canonical, ""),
-      pages[pathname].replace(canonical, `<link rel="canonical" href="https://attacker.example${pathname}">`),
+      pages[pathname].replace(
+        canonical,
+        `<link rel="canonical" href="https://attacker.example${pathname}">`,
+      ),
       pages[pathname].replace(canonical, `${canonical}${canonical}`),
     ]) {
       const { fetchImpl } = mockFetch({ [pathname]: { body } });
-      await assert.rejects(
-        checkPublicSite({ origin, mode: "deployed", fetchImpl }),
-        /canonical/i,
-      );
+      await assert.rejects(checkPublicSite({ origin, mode: "deployed", fetchImpl }), /canonical/i);
     }
   }
 });
@@ -335,7 +335,11 @@ test("validates the strict public Sites deployment record", () => {
     deployment({ origin: "https://tammy.example/#mutable" }),
     deployment({ routes: deployment().routes.slice(1) }),
     deployment({ routes: [...deployment().routes, deployment().routes[0]] }),
-    deployment({ routes: deployment().routes.map((route, index) => index ? route : { ...route, check: "failed" }) }),
+    deployment({
+      routes: deployment().routes.map((route, index) =>
+        index ? route : { ...route, check: "failed" },
+      ),
+    }),
     { ...deployment(), token: "secret" },
     { ...deployment(), sourceWriteUrl: "https://example.com/write?token=secret" },
   ]) {
@@ -360,10 +364,10 @@ test("first deployment is immutable and creates no rollback event", async (conte
   await writeCurrentPublicSitePointer({ record, evidencePath, recordsRoot });
 
   assert.deepEqual(JSON.parse(await readFile(evidencePath, "utf8")), record);
-  assert.deepEqual(
-    JSON.parse(await readFile(path.join(recordsRoot, "current.json"), "utf8")),
-    { schemaVersion: 1, deploymentEvidence: "deployments/deployment-1.json" },
-  );
+  assert.deepEqual(JSON.parse(await readFile(path.join(recordsRoot, "current.json"), "utf8")), {
+    schemaVersion: 1,
+    deploymentEvidence: "deployments/deployment-1.json",
+  });
   await assert.rejects(writePublicSiteDeployment({ record, recordsRoot }), /exist/i);
   await assert.rejects(readdir(path.join(recordsRoot, "events")), { code: "ENOENT" });
 });
@@ -421,10 +425,12 @@ test("deployment evidence rejects a symlinked deployments directory", async (con
   const outside = await mkdtemp(
     path.join(process.env.TMPDIR ?? os.tmpdir(), "tammy-public-site-deployment-outside-"),
   );
-  context.after(() => Promise.all([
-    rm(recordsRoot, { recursive: true, force: true }),
-    rm(outside, { recursive: true, force: true }),
-  ]));
+  context.after(() =>
+    Promise.all([
+      rm(recordsRoot, { recursive: true, force: true }),
+      rm(outside, { recursive: true, force: true }),
+    ]),
+  );
   await symlink(outside, path.join(recordsRoot, "deployments"));
 
   await assert.rejects(
@@ -439,13 +445,17 @@ test("current pointer rejects a pre-existing symbolic link", async (context) => 
     path.join(process.env.TMPDIR ?? os.tmpdir(), "tammy-public-site-pointer-link-"),
   );
   const outside = path.join(
-    await mkdtemp(path.join(process.env.TMPDIR ?? os.tmpdir(), "tammy-public-site-pointer-outside-")),
+    await mkdtemp(
+      path.join(process.env.TMPDIR ?? os.tmpdir(), "tammy-public-site-pointer-outside-"),
+    ),
     "outside.json",
   );
-  context.after(() => Promise.all([
-    rm(recordsRoot, { recursive: true, force: true }),
-    rm(path.dirname(outside), { recursive: true, force: true }),
-  ]));
+  context.after(() =>
+    Promise.all([
+      rm(recordsRoot, { recursive: true, force: true }),
+      rm(path.dirname(outside), { recursive: true, force: true }),
+    ]),
+  );
   await writeFile(outside, "outside\n");
   const record = deployment();
   const evidencePath = await writePublicSiteDeployment({ record, recordsRoot });
@@ -465,10 +475,12 @@ test("rollback evidence rejects a symlinked events directory", async (context) =
   const outside = await mkdtemp(
     path.join(process.env.TMPDIR ?? os.tmpdir(), "tammy-public-site-event-outside-"),
   );
-  context.after(() => Promise.all([
-    rm(recordsRoot, { recursive: true, force: true }),
-    rm(outside, { recursive: true, force: true }),
-  ]));
+  context.after(() =>
+    Promise.all([
+      rm(recordsRoot, { recursive: true, force: true }),
+      rm(outside, { recursive: true, force: true }),
+    ]),
+  );
   const prior = deployment({ versionId: "version-prior", deploymentId: "deployment-prior" });
   const priorEvidencePath = await writePublicSiteDeployment({ record: prior, recordsRoot });
   await symlink(outside, path.join(recordsRoot, "events"));

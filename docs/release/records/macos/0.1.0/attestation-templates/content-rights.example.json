@@ -1,1 +1,10 @@
-{"schemaVersion":1,"kind":"content-rights","releaseVersion":"0.1.0","buildNumber":"OPERATOR_REQUIRED","accountablePerson":"OPERATOR_REQUIRED","confirmedAt":"OPERATOR_REQUIRED","evidenceReference":"OPERATOR_REQUIRED","outcome":"owned"}
+{
+  "schemaVersion": 1,
+  "kind": "content-rights",
+  "releaseVersion": "0.1.0",
+  "buildNumber": "OPERATOR_REQUIRED",
+  "accountablePerson": "OPERATOR_REQUIRED",
+  "confirmedAt": "OPERATOR_REQUIRED",
+  "evidenceReference": "OPERATOR_REQUIRED",
+  "outcome": "owned"
+}
