@@ -219,7 +219,8 @@ export function createMacOSReleaseProfile(
   }
   if (
     environment.TAMMY_RELEASE_PROFILE !== "mas" ||
-    (artifactPhase !== undefined && artifactPhase !== "unsigned-staging")
+    (artifactPhase !== undefined && artifactPhase !== "unsigned-staging") ||
+    environment.TAMMY_MACOS_RELEASE_FACTS !== undefined
   ) {
     throw new Error("MACOS_RELEASE_INPUT_INVALID");
   }
@@ -239,6 +240,40 @@ export function createMacOSReleaseProfile(
   ) {
     throw new Error("MACOS_RELEASE_INPUT_INVALID");
   }
+
+  const signing =
+    artifactPhase === "unsigned-staging"
+      ? undefined
+      : (() => {
+          const provisioningProfile = required(environment, "TAMMY_MACOS_PROVISIONING_PROFILE");
+          const identity = required(environment, "TAMMY_MACOS_SIGNING_IDENTITY");
+          const signingMode = required(environment, "TAMMY_MACOS_SIGNING_MODE");
+          if (
+            !["development", "distribution"].includes(signingMode) ||
+            !isAbsoluteFileInput(provisioningProfile)
+          ) {
+            throw new Error("MACOS_RELEASE_INPUT_INVALID");
+          }
+          const type = signingMode as SigningMode;
+          const installerIdentity =
+            type === "distribution"
+              ? required(environment, "TAMMY_MACOS_INSTALLER_IDENTITY")
+              : undefined;
+          const signingCertificateClasses =
+            type === "distribution" ? ["Apple Distribution"] : ["Apple Development"];
+          if (
+            !signingCertificateClasses.some((certificateClass) =>
+              matchesIdentity(identity, certificateClass, teamID),
+            ) ||
+            (installerIdentity !== undefined &&
+              !["Mac Installer Distribution"].some((certificateClass) =>
+                matchesIdentity(installerIdentity, certificateClass, teamID),
+              ))
+          ) {
+            throw new Error("MACOS_RELEASE_INPUT_INVALID");
+          }
+          return { identity, installerIdentity, provisioningProfile, type };
+        })();
 
   const facts = validateReleaseFacts(
     suppliedFacts ??
@@ -299,32 +334,8 @@ export function createMacOSReleaseProfile(
     }
     return Object.freeze({ ...common, kind: "mas-unsigned-staging" });
   }
-
-  const provisioningProfile = required(environment, "TAMMY_MACOS_PROVISIONING_PROFILE");
-  const identity = required(environment, "TAMMY_MACOS_SIGNING_IDENTITY");
-  const signingMode = required(environment, "TAMMY_MACOS_SIGNING_MODE");
-  if (
-    !["development", "distribution"].includes(signingMode) ||
-    !isAbsoluteFileInput(provisioningProfile)
-  ) {
-    throw new Error("MACOS_RELEASE_INPUT_INVALID");
-  }
-  const type = signingMode as SigningMode;
-  const installerIdentity =
-    type === "distribution" ? required(environment, "TAMMY_MACOS_INSTALLER_IDENTITY") : undefined;
-  const signingCertificateClasses =
-    type === "distribution" ? ["Apple Distribution"] : ["Apple Development"];
-  if (
-    !signingCertificateClasses.some((certificateClass) =>
-      matchesIdentity(identity, certificateClass, teamID),
-    ) ||
-    (installerIdentity !== undefined &&
-      !["Mac Installer Distribution"].some((certificateClass) =>
-        matchesIdentity(installerIdentity, certificateClass, teamID),
-      ))
-  ) {
-    throw new Error("MACOS_RELEASE_INPUT_INVALID");
-  }
+  if (signing === undefined) throw new Error("MACOS_RELEASE_INPUT_INVALID");
+  const { identity, installerIdentity, provisioningProfile, type } = signing;
   const mainEntitlements = path.join(releaseRoot, "entitlements.mas.plist");
   const childEntitlements = path.join(releaseRoot, "entitlements.mas.child.plist");
   const coreEntitlements = path.join(releaseRoot, "entitlements.mas.core.plist");

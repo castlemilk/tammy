@@ -6,12 +6,19 @@
   "type": "module",
   "main": ".vite/build/main.js",
   "scripts": {
+    "prepare:runtime": "node ../../scripts/prepare-electron-runtime.mjs",
+    "prestart": "pnpm prepare:runtime",
     "start": "electron-forge start",
+    "prepackage": "pnpm prepare:runtime",
     "package": "electron-forge package",
+    "premake": "pnpm prepare:runtime",
     "make": "electron-forge make",
+    "pretest": "pnpm prepare:runtime",
     "test": "vitest run --maxWorkers=1",
+    "pretest:watch": "pnpm prepare:runtime",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
+    "pree2e": "pnpm prepare:runtime",
     "e2e": "playwright test"
   },
   "dependencies": {
