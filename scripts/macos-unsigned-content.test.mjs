@@ -28,15 +28,10 @@ const sourceCommit = "a".repeat(40);
 const sourceTree = "b".repeat(40);
 const standardFrameworkExecutables = [
   "Contents/Frameworks/Electron Framework.framework/Versions/A/Electron Framework",
-  "Contents/Frameworks/Electron Framework.framework/Versions/A/Helpers/chrome_crashpad_handler",
   "Contents/Frameworks/Electron Framework.framework/Versions/A/Libraries/libEGL.dylib",
   "Contents/Frameworks/Electron Framework.framework/Versions/A/Libraries/libGLESv2.dylib",
   "Contents/Frameworks/Electron Framework.framework/Versions/A/Libraries/libffmpeg.dylib",
   "Contents/Frameworks/Electron Framework.framework/Versions/A/Libraries/libvk_swiftshader.dylib",
-  "Contents/Frameworks/Mantle.framework/Versions/A/Mantle",
-  "Contents/Frameworks/ReactiveObjC.framework/Versions/A/ReactiveObjC",
-  "Contents/Frameworks/Squirrel.framework/Versions/A/Resources/ShipIt",
-  "Contents/Frameworks/Squirrel.framework/Versions/A/Squirrel",
 ];
 const requiredRuntimePaths = [
   "Contents/Info.plist",

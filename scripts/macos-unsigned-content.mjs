@@ -61,15 +61,10 @@ const SIGNING_ARTIFACT_FILES = new Set([
 ]);
 const STANDARD_FRAMEWORK_EXECUTABLES = [
   "Contents/Frameworks/Electron Framework.framework/Versions/A/Electron Framework",
-  "Contents/Frameworks/Electron Framework.framework/Versions/A/Helpers/chrome_crashpad_handler",
   "Contents/Frameworks/Electron Framework.framework/Versions/A/Libraries/libEGL.dylib",
   "Contents/Frameworks/Electron Framework.framework/Versions/A/Libraries/libGLESv2.dylib",
   "Contents/Frameworks/Electron Framework.framework/Versions/A/Libraries/libffmpeg.dylib",
   "Contents/Frameworks/Electron Framework.framework/Versions/A/Libraries/libvk_swiftshader.dylib",
-  "Contents/Frameworks/Mantle.framework/Versions/A/Mantle",
-  "Contents/Frameworks/ReactiveObjC.framework/Versions/A/ReactiveObjC",
-  "Contents/Frameworks/Squirrel.framework/Versions/A/Resources/ShipIt",
-  "Contents/Frameworks/Squirrel.framework/Versions/A/Squirrel",
 ];
 const REQUIRED_RUNTIME_FILES = [
   ["Contents/Info.plist", false],
