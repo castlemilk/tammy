@@ -7,7 +7,7 @@ Agents cannot self-attest company control, seller eligibility, legal declaration
 Evidence sources:
 
 - Company controller: the repository authority record confirmed by Gamma Systems Pty Ltd.
-- Seller eligibility and active agreements: Apple Developer membership and App Store Connect Agreements screens, plus written Apple approval if using the exception branch.
+- Seller eligibility and active agreements: Apple Developer membership and App Store Connect Agreements screens. The active-developer-account branch also requires the authorised publisher's explicit launch decision.
 - Content rights, export compliance, pricing/availability, privacy, and age rating: the corresponding App Store Connect declaration screen or retained legal document.
 - Processed build, metadata/assets, and warning review: the exact App Store Connect version/build screen immediately before submission.
 

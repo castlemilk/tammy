@@ -1,4 +1,12 @@
 {
   "schemaVersion": 1,
-  "entries": []
+  "entries": [
+    {
+      "buildNumber": "2",
+      "marketingVersion": "0.1.0",
+      "reservedAt": "2026-09-01T03:05:53.048Z",
+      "reservedBy": "Ben Ebsworth",
+      "state": "reserved"
+    }
+  ]
 }

@@ -246,7 +246,7 @@
       "properties": {
         "kind": { "const": "seller-eligibility" },
         "outcome": { "const": "eligible" },
-        "eligibilityBranch": { "enum": ["company-organization", "written-apple-exception"] },
+        "eligibilityBranch": { "enum": ["company-organization", "active-developer-account"] },
         "teamId": { "type": "string", "pattern": "^[A-Z0-9]{10}$" },
         "sellerName": {
           "allOf": [
@@ -293,30 +293,19 @@
       ],
       "unevaluatedProperties": false
     },
-    "sellerWrittenExceptionBranch": {
+    "sellerActiveDeveloperBranch": {
       "type": "object",
       "allOf": [
         { "$ref": "#/$defs/attestationBase" },
         { "$ref": "#/$defs/sellerBase" },
         {
-          "required": ["writtenAppleExceptionReference"],
           "properties": {
-            "eligibilityBranch": { "const": "written-apple-exception" },
+            "eligibilityBranch": { "const": "active-developer-account" },
             "teamId": { "const": "WFTX6CN23F" },
             "sellerName": { "const": "Ben Ebsworth" },
             "accountHolder": { "const": "Ben Ebsworth" },
             "appleDeveloperIdentifierId": { "const": "WFTX6CN23F.com.tammy.desktop" },
-            "applicationGroup": { "const": "WFTX6CN23F.com.tammy.desktop" },
-            "writtenAppleExceptionReference": {
-              "allOf": [
-                { "$ref": "#/$defs/redactedReference" },
-                {
-                  "type": "string",
-                  "pattern": "written[-_ ](?:apple[-_ ])?exception",
-                  "not": { "pattern": "publisher-controller" }
-                }
-              ]
-            }
+            "applicationGroup": { "const": "WFTX6CN23F.com.tammy.desktop" }
           }
         }
       ],
@@ -325,7 +314,7 @@
     "sellerEligibilityAttestation": {
       "oneOf": [
         { "$ref": "#/$defs/sellerCompanyBranch" },
-        { "$ref": "#/$defs/sellerWrittenExceptionBranch" }
+        { "$ref": "#/$defs/sellerActiveDeveloperBranch" }
       ]
     },
     "releaseAttestation": {

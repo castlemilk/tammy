@@ -450,14 +450,7 @@ export function validateReleaseAttestation(attestation) {
   assertNoSecretMaterial(attestation, code);
   if (!attestation || !ATTESTATION_OUTCOMES.has(attestation.kind)) fail(code);
   const seller = attestation.kind === "seller-eligibility";
-  const keys = seller
-    ? [
-        ...SELLER_KEYS,
-        ...(attestation.eligibilityBranch === "written-apple-exception"
-          ? ["writtenAppleExceptionReference"]
-          : []),
-      ]
-    : BASE_ATTESTATION_KEYS;
+  const keys = seller ? SELLER_KEYS : BASE_ATTESTATION_KEYS;
   assertExactKeys(attestation, keys, seller ? "SELLER_ELIGIBILITY_INVALID" : code);
   assertCommonRecord(attestation, "confirmedAt", "accountablePerson", code);
   if (
@@ -473,7 +466,7 @@ export function validateReleaseAttestation(attestation) {
   const sellerCode = "SELLER_ELIGIBILITY_INVALID";
   const expectedPrefix = `${attestation.teamId}.com.tammy.desktop`;
   if (
-    !["company-organization", "written-apple-exception"].includes(attestation.eligibilityBranch) ||
+    !["company-organization", "active-developer-account"].includes(attestation.eligibilityBranch) ||
     !TEAM_ID.test(attestation.teamId) ||
     !isPerson(attestation.sellerName) ||
     !isPerson(attestation.accountHolder) ||
@@ -494,12 +487,8 @@ export function validateReleaseAttestation(attestation) {
   ) {
     fail(sellerCode);
   }
-  if (attestation.eligibilityBranch === "written-apple-exception") {
-    const reference = attestation.writtenAppleExceptionReference;
+  if (attestation.eligibilityBranch === "active-developer-account") {
     if (
-      !isSafeReference(reference) ||
-      !/written[-_ ](?:apple[-_ ])?exception/i.test(reference) ||
-      /publisher-controller/i.test(reference) ||
       attestation.teamId !== "WFTX6CN23F" ||
       attestation.sellerName !== "Ben Ebsworth" ||
       attestation.accountHolder !== "Ben Ebsworth"

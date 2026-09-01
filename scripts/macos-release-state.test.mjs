@@ -569,7 +569,7 @@ test("rejects unknown fields, secrets, free-form blobs, unsafe references, and r
   }
 });
 
-test("validates seller eligibility from the verified membership branch, not historical Team ID", () => {
+test("validates seller eligibility from the authorised active developer account", () => {
   assert.deepEqual(validateReleaseAttestation(sellerAttestation()), sellerAttestation());
   const convertedMembership = sellerAttestation({
     teamId: "WFTX6CN23F",
@@ -582,31 +582,18 @@ test("validates seller eligibility from the verified membership branch, not hist
     /SELLER_ELIGIBILITY_INVALID/,
   );
 
-  const exception = sellerAttestation({
-    eligibilityBranch: "written-apple-exception",
+  const developerAccount = sellerAttestation({
+    eligibilityBranch: "active-developer-account",
     teamId: "WFTX6CN23F",
     sellerName: "Ben Ebsworth",
     appleDeveloperIdentifierId: "WFTX6CN23F.com.tammy.desktop",
     applicationGroup: "WFTX6CN23F.com.tammy.desktop",
-    writtenAppleExceptionReference: "apple/written-exception.pdf",
   });
-  assert.deepEqual(validateReleaseAttestation(exception), exception);
-  assert.throws(
-    () => validateReleaseAttestation({ ...exception, writtenAppleExceptionReference: undefined }),
-    /SELLER_ELIGIBILITY_INVALID/,
-  );
+  assert.deepEqual(validateReleaseAttestation(developerAccount), developerAccount);
   assert.throws(
     () =>
       validateReleaseAttestation({
-        ...exception,
-        writtenAppleExceptionReference: "../../../../../authority/publisher-controller.json",
-      }),
-    /SELLER_ELIGIBILITY_INVALID/,
-  );
-  assert.throws(
-    () =>
-      validateReleaseAttestation({
-        ...exception,
+        ...developerAccount,
         teamId: "ZZZZZZZZZZ",
         sellerName: "Other Person",
         accountHolder: "Other Person",
