@@ -242,6 +242,19 @@ describe("createMacOSReleaseProfile", () => {
     );
   });
 
+  it("accepts Apple's legacy Mac Installer Distribution certificate name", () => {
+    const profile = createTestProfile({
+      ...distributionEnvironment(),
+      TAMMY_MACOS_INSTALLER_IDENTITY:
+        "3rd Party Mac Developer Installer: Tammy Pty Ltd (ABCDE12345)",
+    });
+    expect(profile.kind).toBe("mas");
+    if (profile.kind !== "mas") throw new Error("expected MAS profile");
+    expect(profile.installerIdentity).toBe(
+      "3rd Party Mac Developer Installer: Tammy Pty Ltd (ABCDE12345)",
+    );
+  });
+
   it.each([
     { marketingVersion: "0.2.0" },
     { target: "mas/x64" },

@@ -147,8 +147,8 @@ export function validateMacOSReleaseEnvironment(environment) {
       matchesIdentity(signingIdentity, certificateClass, teamID),
     ) ||
     (installerIdentity !== undefined &&
-      !["Mac Installer Distribution"].some((certificateClass) =>
-        matchesIdentity(installerIdentity, certificateClass, teamID),
+      !["Mac Installer Distribution", "3rd Party Mac Developer Installer"].some(
+        (certificateClass) => matchesIdentity(installerIdentity, certificateClass, teamID),
       ))
   ) {
     fail("MACOS_RELEASE_INPUT_INVALID");

@@ -726,6 +726,17 @@ test("distribution inputs require absolute paths, explicit compliance and a posi
     buildNumber: "42",
     mode: "distribution",
   });
+  assert.deepEqual(
+    validateMacOSReleaseEnvironment({
+      ...valid,
+      TAMMY_MACOS_INSTALLER_IDENTITY:
+        "3rd Party Mac Developer Installer: Tammy Pty Ltd (ABCDE12345)",
+    }),
+    {
+      buildNumber: "42",
+      mode: "distribution",
+    },
+  );
   for (const environment of [
     { ...valid, TAMMY_MACOS_BUILD_NUMBER: "0" },
     { ...valid, TAMMY_MACOS_TARGET: "mas/x64" },
@@ -746,7 +757,7 @@ test("distribution inputs require absolute paths, explicit compliance and a posi
     {
       ...valid,
       TAMMY_MACOS_INSTALLER_IDENTITY:
-        "3rd Party Mac Developer Installer: Tammy Pty Ltd (ABCDE12345)",
+        "3rd Party Mac Developer Installer: Tammy Pty Ltd (OTHER12345)",
     },
   ]) {
     assert.throws(
