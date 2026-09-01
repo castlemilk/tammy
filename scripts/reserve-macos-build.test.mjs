@@ -326,14 +326,21 @@ test("parallel reservation attempts never duplicate or corrupt the ledger", asyn
   assert.deepEqual(await readdir(directory), ["build-numbers.json"]);
 });
 
-test("the committed empty ledger and package scripts expose no implicit reservation", async () => {
+test("the committed ledger exposes only the explicit build 2 reservation", async () => {
   const committedLedger = JSON.parse(
     await readFile(
       path.join(repositoryRoot, "apps/desktop/release/macos/build-numbers.json"),
       "utf8",
     ),
   );
-  assert.deepEqual(validateBuildLedger(committedLedger), ledger());
+  assert.deepEqual(
+    validateBuildLedger(committedLedger),
+    ledger([
+      entry("2", {
+        reservedAt: "2026-09-01T03:05:53.048Z",
+      }),
+    ]),
+  );
   const rootPackage = JSON.parse(await readFile(path.join(repositoryRoot, "package.json"), "utf8"));
   assert.equal(rootPackage.scripts["macos:build:reserve"], "node scripts/reserve-macos-build.mjs");
   assert.equal(
