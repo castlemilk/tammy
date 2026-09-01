@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "kind": "company-controller",
+  "releaseVersion": "0.1.0",
+  "buildNumber": "4",
+  "accountablePerson": "Ben Ebsworth",
+  "confirmedAt": "2026-09-01T09:16:29.000Z",
+  "evidenceReference": "../../../../../authority/publisher-controller.json",
+  "outcome": "confirmed"
+}

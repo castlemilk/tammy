@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "kind": "seller-eligibility",
+  "releaseVersion": "0.1.0",
+  "buildNumber": "4",
+  "accountablePerson": "Ben Ebsworth",
+  "confirmedAt": "2026-09-01T09:16:29.000Z",
+  "evidenceReference": "apple-developer-account-and-app-store-connect-ui-observed-2026-09-01",
+  "outcome": "eligible",
+  "eligibilityBranch": "active-developer-account",
+  "teamId": "WFTX6CN23F",
+  "sellerName": "Ben Ebsworth",
+  "accountHolder": "Ben Ebsworth",
+  "activeAgreements": true,
+  "appId": "com.tammy.desktop",
+  "appleDeveloperIdentifierId": "WFTX6CN23F.com.tammy.desktop",
+  "appStoreConnectId": "6800226692",
+  "applicationGroup": "WFTX6CN23F.com.tammy.desktop",
+  "helperIdentifiers": [
+    "com.tammy.desktop.helper",
+    "com.tammy.desktop.helper.GPU",
+    "com.tammy.desktop.helper.Plugin",
+    "com.tammy.desktop.helper.Renderer"
+  ],
+  "certificateClasses": ["Apple Development", "Apple Distribution", "Mac Installer Distribution"],
+  "profilesReissued": true
+}
