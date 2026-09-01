@@ -302,24 +302,20 @@ test("rejects an unknown coverage stage", async () => {
   });
 });
 
-test("production mode rejects declared future RPC coverage", async () => {
+test("production mode permits an unexposed declared future RPC", async () => {
   const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
   const input = futureInput();
   input.requireProduction = true;
 
-  assert.throws(() => checkE2ECoverage(input), {
-    message: "E2E_COVERAGE_FUTURE_PROMOTION_REQUIRED",
-  });
+  assert.doesNotThrow(() => checkE2ECoverage(input));
 });
 
-test("production mode rejects declared future transition coverage", async () => {
+test("production mode permits a declared future transition", async () => {
   const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
   const input = futureTransitionInput();
   input.requireProduction = true;
 
-  assert.throws(() => checkE2ECoverage(input), {
-    message: "E2E_COVERAGE_FUTURE_PROMOTION_REQUIRED",
-  });
+  assert.doesNotThrow(() => checkE2ECoverage(input));
 });
 
 test("production RPC coverage requires an executed case", async () => {

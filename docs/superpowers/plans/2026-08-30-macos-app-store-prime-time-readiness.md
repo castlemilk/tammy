@@ -1477,6 +1477,12 @@ launch under the active developer account while Apple handles any membership upd
 The active account is therefore the selected seller branch for build `2`; the app's
 Gamma Systems Pty Ltd product identity and copyright do not change.
 
+For build `2`, `contracts:production` validates only the shipping surface. A production
+RPC or transition still requires an executed packaged case, and any renderer-exposed
+future RPC still fails closed. Complete declared-future catalogue entries may remain as
+non-shipping design declarations only while they have no executed case and no preload
+exposure; their presence alone does not turn unimplemented work into App Store scope.
+
 App Store Connect preparation advanced on 2026-08-31 without selecting or submitting
 a build: Tammy's canonical 0.1.0 description, keywords, public support/marketing URLs,
 copyright, manual-release setting, offline reviewer workflow, and review contact were

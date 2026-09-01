@@ -283,19 +283,6 @@ export function checkE2ECoverage({
       throw new Error("E2E_COVERAGE_TRANSITION_UNKNOWN");
     }
   }
-  if (
-    requireProduction &&
-    (Object.entries(coverage.rpcs).some(
-      ([rpcName, rpcCoverage]) =>
-        coverageStage(rpcCoverage, rpcName, "rpc") === DECLARED_FUTURE_STAGE,
-    ) ||
-      Object.entries(coverage.transitions).some(
-        ([transitionId, transitionCoverage]) =>
-          coverageStage(transitionCoverage, transitionId, "transition") === DECLARED_FUTURE_STAGE,
-      ))
-  ) {
-    throw new Error("E2E_COVERAGE_FUTURE_PROMOTION_REQUIRED");
-  }
   const scenarioCases = Object.values(coverage.scenarios).flatMap((scenario) => scenario.cases);
   const scenarioFutureCases = Object.values(coverage.scenarios).flatMap(
     (scenario) => scenario.futureCases ?? [],
