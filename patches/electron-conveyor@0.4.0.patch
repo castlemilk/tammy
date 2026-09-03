@@ -3,7 +3,7 @@ index ef236250da2fff24d7cc5c93423082d0123cf1ae..a737f83ec9aaa23857862170a9f0ac2d
 --- a/dist/main.cjs
 +++ b/dist/main.cjs
 @@ -149,10 +149,29 @@ var isDev = !electron.app.isPackaged;
- 
+
  // src/main/stream.ts
  var active = /* @__PURE__ */ new Map();
 -function registerStreamHandlers(byId, createContext, globals = []) {
@@ -59,7 +59,7 @@ index ef236250da2fff24d7cc5c93423082d0123cf1ae..a737f83ec9aaa23857862170a9f0ac2d
    const signal = controller.signal;
 @@ -306,34 +330,122 @@ function setupPersistence(def, getState) {
  }
- 
+
  // src/main/router.ts
 +var routerOwnership = /* @__PURE__ */ new WeakMap();
 +function ownershipFor(boundary) {
@@ -197,7 +197,7 @@ index ef236250da2fff24d7cc5c93423082d0123cf1ae..a737f83ec9aaa23857862170a9f0ac2d
 +  registeredHandlers.push(channel);
 +  if (ownership) ownership.handlers.set(channel, token);
  }
- 
+
  // src/main/window-manager.ts
 diff --git a/dist/main.d.cts b/dist/main.d.cts
 index bcbcfdcafbfb9d987597b8c3468ce4d383e4866b..c8745645f74358ce5a1f276038570a7c227964d7 100644
@@ -229,13 +229,13 @@ index bcbcfdcafbfb9d987597b8c3468ce4d383e4866b..c8745645f74358ce5a1f276038570a7c
      stores: StoreHandlesOf<TStores>;
 -};
 +} & OwnedRouter;
- 
+
  /** A single window, or a resolver for the current set — so `broadcast`/`to`/`except` stay live. */
  type EmitTarget = BrowserWindow | (() => BrowserWindow[]);
 @@ -86,4 +94,4 @@ declare function createEmitter<TModule extends AnyModule>(mod: TModule, target:
   */
  declare const devLogger: Middleware<object, object>;
- 
+
 -export { type ConveyorWindowManager, type EmitTarget, type RouterOptions, type StoreHandle, type StoreHandlesOf, createEmitter, createRouter, createWindowManager, devLogger, registerStore, resolveTargets };
 +export { type ConveyorWindowManager, type EmitTarget, type OwnedRouter, type RouterOptions, type StoreHandle, type StoreHandlesOf, type TammyRouterOptions, createEmitter, createRouter, createWindowManager, devLogger, registerStore, resolveTargets };
 diff --git a/dist/main.d.ts b/dist/main.d.ts
@@ -268,13 +268,13 @@ index 83bdf0f2fbd9b8e08d4bf43403954475e1d8347e..0fcb6f2583176043a54d0e1d9286bb2f
      stores: StoreHandlesOf<TStores>;
 -};
 +} & OwnedRouter;
- 
+
  /** A single window, or a resolver for the current set — so `broadcast`/`to`/`except` stay live. */
  type EmitTarget = BrowserWindow | (() => BrowserWindow[]);
 @@ -86,4 +94,4 @@ declare function createEmitter<TModule extends AnyModule>(mod: TModule, target:
   */
  declare const devLogger: Middleware<object, object>;
- 
+
 -export { type ConveyorWindowManager, type EmitTarget, type RouterOptions, type StoreHandle, type StoreHandlesOf, createEmitter, createRouter, createWindowManager, devLogger, registerStore, resolveTargets };
 +export { type ConveyorWindowManager, type EmitTarget, type OwnedRouter, type RouterOptions, type StoreHandle, type StoreHandlesOf, type TammyRouterOptions, createEmitter, createRouter, createWindowManager, devLogger, registerStore, resolveTargets };
 diff --git a/dist/main.js b/dist/main.js
@@ -338,7 +338,7 @@ index eec356b7ed0a63cdc33883bffa86366425981e52..cd278fa050e9a204816723576b4832c7
    const signal = controller.signal;
 @@ -176,34 +200,122 @@ function setupPersistence(def, getState) {
  }
- 
+
  // src/main/router.ts
 +var routerOwnership = /* @__PURE__ */ new WeakMap();
 +function ownershipFor(boundary) {
