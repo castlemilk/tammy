@@ -1,8 +1,8 @@
 diff --git a/dist/main.cjs b/dist/main.cjs
-index ef236250da2fff24d7cc5c93423082d0123cf1ae..cf17067c6a4d0cac787e6a4702c99d03cb97f442 100644
+index ef236250da2fff24d7cc5c93423082d0123cf1ae..c3b34f1c41f1e3df811367b45bea904cc800fb14 100644
 --- a/dist/main.cjs
 +++ b/dist/main.cjs
-@@ -149,10 +149,22 @@ var isDev = !electron.app.isPackaged;
+@@ -149,10 +149,29 @@ var isDev = !electron.app.isPackaged;
  
  // src/main/stream.ts
  var active = /* @__PURE__ */ new Map();
@@ -11,25 +11,32 @@ index ef236250da2fff24d7cc5c93423082d0123cf1ae..cf17067c6a4d0cac787e6a4702c99d03
 -  electron.ipcMain.removeHandler(STREAM_CANCEL);
 -  electron.ipcMain.handle(STREAM_START, async (event, _streamId, req) => {
 +function senderRejected() {
-+  return { ok: false, error: { code: "IPC_SENDER_REJECTED", message: "IPC sender rejected" } };
++  return { ok: false, error: { code: "IPC_SENDER_REJECTED", message: "IPC_SENDER_REJECTED" } };
 +}
 +function isAuthorized(event, authorize) {
 +  try {
-+    authorize?.(event);
++    const result = authorize?.(event);
++    if (result && typeof result.then === "function") {
++      Promise.resolve(result).catch(() => {
++      });
++      return false;
++    }
 +    return true;
 +  } catch {
 +    return false;
 +  }
 +}
-+function registerStreamHandlers(byId, createContext, globals = [], boundary = electron.ipcMain, authorize) {
-+  boundary.removeHandler(STREAM_START);
-+  boundary.removeHandler(STREAM_CANCEL);
++function registerStreamHandlers(byId, createContext, globals = [], boundary = electron.ipcMain, authorize, replaceHandlers = true) {
++  if (replaceHandlers) {
++    boundary.removeHandler(STREAM_START);
++    boundary.removeHandler(STREAM_CANCEL);
++  }
 +  boundary.handle(STREAM_START, async (event, _streamId, req) => {
 +    if (!isAuthorized(event, authorize)) return senderRejected();
      const sender = event.sender;
      const key = `${sender.id}:${req.streamId}`;
      const channel = channels.stream(req.streamId);
-@@ -175,7 +187,8 @@ function registerStreamHandlers(byId, createContext, globals = []) {
+@@ -175,7 +194,8 @@ function registerStreamHandlers(byId, createContext, globals = []) {
      }
      void pump(key, setup.stream, setup.returns, controller, send);
    });
@@ -39,7 +46,7 @@ index ef236250da2fff24d7cc5c93423082d0123cf1ae..cf17067c6a4d0cac787e6a4702c99d03
      const key = `${event.sender.id}:${streamId}`;
      const controller = active.get(key);
      if (controller) {
-@@ -306,10 +319,41 @@ function setupPersistence(def, getState) {
+@@ -306,10 +326,41 @@ function setupPersistence(def, getState) {
  }
  
  // src/main/router.ts
@@ -81,7 +88,7 @@ index ef236250da2fff24d7cc5c93423082d0123cf1ae..cf17067c6a4d0cac787e6a4702c99d03
    const byId = /* @__PURE__ */ new Map();
    for (const key of Object.keys(modules)) {
      const mod = modules[key];
-@@ -317,23 +361,65 @@ function createRouter(modules, ...opts) {
+@@ -317,23 +368,65 @@ function createRouter(modules, ...opts) {
        throw new Error(`[conveyor] module already registered as '${mod.id}' \u2014 cannot re-register as '${key}'`);
      }
      mod.id = key;
@@ -91,7 +98,7 @@ index ef236250da2fff24d7cc5c93423082d0123cf1ae..cf17067c6a4d0cac787e6a4702c99d03
    }
 -  registerStreamHandlers(byId, createContext, globals);
 +  if (options?.streams !== false) {
-+    registerStreamHandlers(byId, createContext, globals, boundary, authorize);
++    registerStreamHandlers(byId, createContext, globals, boundary, authorize, !ownership);
 +    if (ownership) {
 +      ownership.handlers.set(STREAM_START, token);
 +      ownership.handlers.set(STREAM_CANCEL, token);
@@ -157,7 +164,7 @@ index ef236250da2fff24d7cc5c93423082d0123cf1ae..cf17067c6a4d0cac787e6a4702c99d03
      const ctx = await buildContext(event, createContext);
      const result = await dispatchProcedure(mod, method, input, ctx, isDev, globals);
      if (!result.ok && isDev) {
-@@ -341,6 +427,7 @@ function registerModule(mod, createContext, globals) {
+@@ -341,6 +434,7 @@ function registerModule(mod, createContext, globals) {
      }
      return result;
    });
@@ -244,10 +251,10 @@ index 83bdf0f2fbd9b8e08d4bf43403954475e1d8347e..0fcb6f2583176043a54d0e1d9286bb2f
 -export { type ConveyorWindowManager, type EmitTarget, type RouterOptions, type StoreHandle, type StoreHandlesOf, createEmitter, createRouter, createWindowManager, devLogger, registerStore, resolveTargets };
 +export { type ConveyorWindowManager, type EmitTarget, type OwnedRouter, type RouterOptions, type StoreHandle, type StoreHandlesOf, type TammyRouterOptions, createEmitter, createRouter, createWindowManager, devLogger, registerStore, resolveTargets };
 diff --git a/dist/main.js b/dist/main.js
-index eec356b7ed0a63cdc33883bffa86366425981e52..b5b252cf7a43f4aa499de2a4d810cce4329e51c9 100644
+index eec356b7ed0a63cdc33883bffa86366425981e52..c9e79b4369e5ba66c9f559c9309b38a91ab5b8ec 100644
 --- a/dist/main.js
 +++ b/dist/main.js
-@@ -19,10 +19,22 @@ var isDev = !app.isPackaged;
+@@ -19,10 +19,29 @@ var isDev = !app.isPackaged;
  
  // src/main/stream.ts
  var active = /* @__PURE__ */ new Map();
@@ -256,25 +263,32 @@ index eec356b7ed0a63cdc33883bffa86366425981e52..b5b252cf7a43f4aa499de2a4d810cce4
 -  ipcMain.removeHandler(STREAM_CANCEL);
 -  ipcMain.handle(STREAM_START, async (event, _streamId, req) => {
 +function senderRejected() {
-+  return { ok: false, error: { code: "IPC_SENDER_REJECTED", message: "IPC sender rejected" } };
++  return { ok: false, error: { code: "IPC_SENDER_REJECTED", message: "IPC_SENDER_REJECTED" } };
 +}
 +function isAuthorized(event, authorize) {
 +  try {
-+    authorize?.(event);
++    const result = authorize?.(event);
++    if (result && typeof result.then === "function") {
++      Promise.resolve(result).catch(() => {
++      });
++      return false;
++    }
 +    return true;
 +  } catch {
 +    return false;
 +  }
 +}
-+function registerStreamHandlers(byId, createContext, globals = [], boundary = ipcMain, authorize) {
-+  boundary.removeHandler(STREAM_START);
-+  boundary.removeHandler(STREAM_CANCEL);
++function registerStreamHandlers(byId, createContext, globals = [], boundary = ipcMain, authorize, replaceHandlers = true) {
++  if (replaceHandlers) {
++    boundary.removeHandler(STREAM_START);
++    boundary.removeHandler(STREAM_CANCEL);
++  }
 +  boundary.handle(STREAM_START, async (event, _streamId, req) => {
 +    if (!isAuthorized(event, authorize)) return senderRejected();
      const sender = event.sender;
      const key = `${sender.id}:${req.streamId}`;
      const channel = channels.stream(req.streamId);
-@@ -45,7 +57,8 @@ function registerStreamHandlers(byId, createContext, globals = []) {
+@@ -45,7 +64,8 @@ function registerStreamHandlers(byId, createContext, globals = []) {
      }
      void pump(key, setup.stream, setup.returns, controller, send);
    });
@@ -284,7 +298,7 @@ index eec356b7ed0a63cdc33883bffa86366425981e52..b5b252cf7a43f4aa499de2a4d810cce4
      const key = `${event.sender.id}:${streamId}`;
      const controller = active.get(key);
      if (controller) {
-@@ -176,10 +189,41 @@ function setupPersistence(def, getState) {
+@@ -176,10 +196,41 @@ function setupPersistence(def, getState) {
  }
  
  // src/main/router.ts
@@ -326,7 +340,7 @@ index eec356b7ed0a63cdc33883bffa86366425981e52..b5b252cf7a43f4aa499de2a4d810cce4
    const byId = /* @__PURE__ */ new Map();
    for (const key of Object.keys(modules)) {
      const mod = modules[key];
-@@ -187,23 +231,65 @@ function createRouter(modules, ...opts) {
+@@ -187,23 +238,65 @@ function createRouter(modules, ...opts) {
        throw new Error(`[conveyor] module already registered as '${mod.id}' \u2014 cannot re-register as '${key}'`);
      }
      mod.id = key;
@@ -336,7 +350,7 @@ index eec356b7ed0a63cdc33883bffa86366425981e52..b5b252cf7a43f4aa499de2a4d810cce4
    }
 -  registerStreamHandlers(byId, createContext, globals);
 +  if (options?.streams !== false) {
-+    registerStreamHandlers(byId, createContext, globals, boundary, authorize);
++    registerStreamHandlers(byId, createContext, globals, boundary, authorize, !ownership);
 +    if (ownership) {
 +      ownership.handlers.set(STREAM_START, token);
 +      ownership.handlers.set(STREAM_CANCEL, token);
@@ -402,7 +416,7 @@ index eec356b7ed0a63cdc33883bffa86366425981e52..b5b252cf7a43f4aa499de2a4d810cce4
      const ctx = await buildContext(event, createContext);
      const result = await dispatchProcedure(mod, method, input, ctx, isDev, globals);
      if (!result.ok && isDev) {
-@@ -211,6 +297,7 @@ function registerModule(mod, createContext, globals) {
+@@ -211,6 +304,7 @@ function registerModule(mod, createContext, globals) {
      }
      return result;
    });

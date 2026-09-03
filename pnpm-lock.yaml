@@ -10,7 +10,7 @@ overrides:
   tmp: 0.2.7
 
 patchedDependencies:
-  electron-conveyor@0.4.0: 473ceff0db4258098929934bf3863a3a8c70bfbbafcffe0125713efd48be534e
+  electron-conveyor@0.4.0: e8afc7caf236354ef45439a5fda70f362062f1ae382ef8aab00be798f08861fa
 
 importers:
 
@@ -78,7 +78,7 @@ importers:
         version: 2.1.1
       electron-conveyor:
         specifier: 0.4.0
-        version: 0.4.0(patch_hash=473ceff0db4258098929934bf3863a3a8c70bfbbafcffe0125713efd48be534e)(@tanstack/react-query@5.101.4(react@19.2.7))(electron@43.1.1(supports-color@10.2.2))(react@19.2.7)(zod@4.4.3)
+        version: 0.4.0(patch_hash=e8afc7caf236354ef45439a5fda70f362062f1ae382ef8aab00be798f08861fa)(@tanstack/react-query@5.101.4(react@19.2.7))(electron@43.1.1(supports-color@10.2.2))(react@19.2.7)(zod@4.4.3)
       lucide-react:
         specifier: 1.25.0
         version: 1.25.0(react@19.2.7)
@@ -9075,7 +9075,7 @@ snapshots:
       - electron-builder-squirrel-windows
       - supports-color
 
-  electron-conveyor@0.4.0(patch_hash=473ceff0db4258098929934bf3863a3a8c70bfbbafcffe0125713efd48be534e)(@tanstack/react-query@5.101.4(react@19.2.7))(electron@43.1.1(supports-color@10.2.2))(react@19.2.7)(zod@4.4.3):
+  electron-conveyor@0.4.0(patch_hash=e8afc7caf236354ef45439a5fda70f362062f1ae382ef8aab00be798f08861fa)(@tanstack/react-query@5.101.4(react@19.2.7))(electron@43.1.1(supports-color@10.2.2))(react@19.2.7)(zod@4.4.3):
     dependencies:
       electron: 43.1.1(supports-color@10.2.2)
     optionalDependencies:
