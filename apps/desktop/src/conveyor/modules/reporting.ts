@@ -1,12 +1,9 @@
 import { GetAttentionSummaryRequestSchema, GetAttentionSummaryResponseSchema } from "@tammy/connect-client/tammy/v1/overview_pb.js";
-import type { StandardSchemaV1 } from "electron-conveyor/define";
 import { GetReportingCapabilityRequestSchema, GetReportingCapabilityResponseSchema } from "@tammy/connect-client/tammy/v1/reporting_capability_pb.js";
 import { CreateBasDraftRequestSchema, CreateBasDraftResponseSchema, GetCurrentBasDraftRequestSchema, GetCurrentBasDraftResponseSchema } from "@tammy/connect-client/tammy/v1/tax_pb.js";
 import { createProtoMethodCodec } from "../../shared/proto-ipc";
 import { command, defineModule, query } from "../init";
-import { boundedProtoFrame, invokeCore } from "../proto";
-
-const conveyorProtoFrame = (maximumBytes: number): StandardSchemaV1<Uint8Array, Uint8Array> => boundedProtoFrame(maximumBytes) as unknown as StandardSchemaV1<Uint8Array, Uint8Array>;
+import { conveyorProtoFrame, invokeCore } from "../proto";
 
 const currentBas = createProtoMethodCodec({ input: GetCurrentBasDraftRequestSchema, maximumRequestBytes: 16_384, maximumResponseBytes: 262_144, output: GetCurrentBasDraftResponseSchema });
 const capability = createProtoMethodCodec({ input: GetReportingCapabilityRequestSchema, maximumRequestBytes: 8_192, maximumResponseBytes: 32_768, output: GetReportingCapabilityResponseSchema });

@@ -1,10 +1,7 @@
 import { CompleteBankReconciliationRequestSchema, CompleteBankReconciliationResponseSchema, GetBankingSummaryRequestSchema, GetBankingSummaryResponseSchema, ImportBankStatementRequestSchema, ImportBankStatementResponseSchema, ListBankStatementLinesRequestSchema, ListBankStatementLinesResponseSchema, MatchBankStatementLineRequestSchema, MatchBankStatementLineResponseSchema } from "@tammy/connect-client/tammy/v1/banking_pb.js";
-import type { StandardSchemaV1 } from "electron-conveyor/define";
 import { createProtoMethodCodec } from "../../shared/proto-ipc";
 import { command, defineModule, query } from "../init";
-import { boundedProtoFrame, invokeCore } from "../proto";
-
-const conveyorProtoFrame = (maximumBytes: number): StandardSchemaV1<Uint8Array, Uint8Array> => boundedProtoFrame(maximumBytes) as unknown as StandardSchemaV1<Uint8Array, Uint8Array>;
+import { conveyorProtoFrame, invokeCore } from "../proto";
 
 const listLines = createProtoMethodCodec({ input: ListBankStatementLinesRequestSchema, maximumRequestBytes: 16_384, maximumResponseBytes: 262_144, output: ListBankStatementLinesResponseSchema });
 const summary = createProtoMethodCodec({ input: GetBankingSummaryRequestSchema, maximumRequestBytes: 16_384, maximumResponseBytes: 16_384, output: GetBankingSummaryResponseSchema });

@@ -5,9 +5,7 @@ import { GetMachineCredentialStatusRequestSchema, GetMachineCredentialStatusResp
 import { isBoundedUtf8String, type MachineCredentialFileSelection } from "../../shared/conveyor-contract";
 import { createProtoMethodCodec } from "../../shared/proto-ipc";
 import { command, defineModule, query } from "../init";
-import { boundedProtoFrame, invokeCore } from "../proto";
-
-const conveyorProtoFrame = (maximumBytes: number): StandardSchemaV1<Uint8Array, Uint8Array> => boundedProtoFrame(maximumBytes) as unknown as StandardSchemaV1<Uint8Array, Uint8Array>;
+import { boundedProtoFrame, conveyorProtoFrame, invokeCore } from "../proto";
 const zeroInput = z.undefined() as unknown as StandardSchemaV1<void, void>;
 
 const UUID_V7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;

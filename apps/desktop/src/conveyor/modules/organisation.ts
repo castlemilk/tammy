@@ -1,11 +1,8 @@
 import { AssertTOTPRequestSchema, AssertTOTPResponseSchema, ConfirmTOTPRequestSchema, ConfirmTOTPResponseSchema, EnrolTOTPRequestSchema, EnrolTOTPResponseSchema, GetCurrentUserRequestSchema, GetCurrentUserResponseSchema } from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import { CreateOrganisationRequestSchema, CreateOrganisationResponseSchema, GetOrganisationRequestSchema, GetOrganisationResponseSchema, RecordEntityVerificationRequestSchema, RecordEntityVerificationResponseSchema } from "@tammy/connect-client/tammy/v1/organisation_pb.js";
-import type { StandardSchemaV1 } from "electron-conveyor/define";
 import { createProtoMethodCodec } from "../../shared/proto-ipc";
 import { command, defineModule, query } from "../init";
-import { boundedProtoFrame, invokeCore } from "../proto";
-
-const conveyorProtoFrame = (maximumBytes: number): StandardSchemaV1<Uint8Array, Uint8Array> => boundedProtoFrame(maximumBytes) as unknown as StandardSchemaV1<Uint8Array, Uint8Array>;
+import { conveyorProtoFrame, invokeCore } from "../proto";
 
 const currentUser = createProtoMethodCodec({ input: GetCurrentUserRequestSchema, maximumRequestBytes: 8_192, maximumResponseBytes: 32_768, output: GetCurrentUserResponseSchema });
 const organisation = createProtoMethodCodec({ input: GetOrganisationRequestSchema, maximumRequestBytes: 8_192, maximumResponseBytes: 32_768, output: GetOrganisationResponseSchema });

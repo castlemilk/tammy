@@ -1,4 +1,4 @@
-import { ConveyorError } from "electron-conveyor/define";
+import { ConveyorError, type StandardSchemaV1 } from "electron-conveyor/define";
 import { z } from "zod";
 
 interface ProtoCodec<Request, Response> {
@@ -18,6 +18,15 @@ function copyFrame(value: unknown, maximumBytes: number): Uint8Array | undefined
 
 export function boundedProtoFrame(maximumBytes: number) {
   return z.custom<Uint8Array>((value) => copyFrame(value, maximumBytes) !== undefined, { message: "Invalid binary frame" }).transform((value) => copyFrame(value, maximumBytes)!);
+}
+
+export function conveyorProtoFrame(
+  maximumBytes: number,
+): StandardSchemaV1<Uint8Array, Uint8Array> {
+  return boundedProtoFrame(maximumBytes) as unknown as StandardSchemaV1<
+    Uint8Array,
+    Uint8Array
+  >;
 }
 
 export async function invokeCore<Request, Response>(codec: ProtoCodec<Request, Response>, frame: Uint8Array, call: (request: Request) => Promise<Response>): Promise<Uint8Array> {

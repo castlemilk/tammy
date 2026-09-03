@@ -1,10 +1,7 @@
 import { CreateAccountRequestSchema, CreateAccountResponseSchema, GetJournalRequestSchema, GetJournalResponseSchema, GetTrialBalanceRequestSchema, GetTrialBalanceResponseSchema, ListAccountsRequestSchema, ListAccountsResponseSchema, ListJournalsRequestSchema, ListJournalsResponseSchema, PostManualJournalRequestSchema, PostManualJournalResponseSchema } from "@tammy/connect-client/tammy/v1/accounting_pb.js";
-import type { StandardSchemaV1 } from "electron-conveyor/define";
 import { createProtoMethodCodec } from "../../shared/proto-ipc";
 import { command, defineModule, query } from "../init";
-import { boundedProtoFrame, invokeCore } from "../proto";
-
-const conveyorProtoFrame = (maximumBytes: number): StandardSchemaV1<Uint8Array, Uint8Array> => boundedProtoFrame(maximumBytes) as unknown as StandardSchemaV1<Uint8Array, Uint8Array>;
+import { conveyorProtoFrame, invokeCore } from "../proto";
 
 const listAccounts = createProtoMethodCodec({ input: ListAccountsRequestSchema, maximumRequestBytes: 16_384, maximumResponseBytes: 131_072, output: ListAccountsResponseSchema });
 const listJournals = createProtoMethodCodec({ input: ListJournalsRequestSchema, maximumRequestBytes: 16_384, maximumResponseBytes: 262_144, output: ListJournalsResponseSchema });
