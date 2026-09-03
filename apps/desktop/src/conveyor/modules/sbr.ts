@@ -8,6 +8,7 @@ import { command, defineModule, query } from "../init";
 import { boundedProtoFrame, invokeCore } from "../proto";
 
 const conveyorProtoFrame = (maximumBytes: number): StandardSchemaV1<Uint8Array, Uint8Array> => boundedProtoFrame(maximumBytes) as unknown as StandardSchemaV1<Uint8Array, Uint8Array>;
+const zeroInput = z.undefined() as unknown as StandardSchemaV1<void, void>;
 
 const UUID_V7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const textEncoder = new TextEncoder();
@@ -77,7 +78,7 @@ async function enrichCredential<Request, Response>(options: {
 export const sbr = defineModule({
   getSbrReadiness: query(conveyorProtoFrame(8_192), ({ input, ctx }) => invokeCore(readiness, input, ctx.client.getSbrReadiness)),
   getMachineCredentialStatus: query(conveyorProtoFrame(8_192), ({ input, ctx }) => invokeCore(credentialStatus, input, ctx.client.getMachineCredentialStatus)),
-  selectMachineCredentialFile: command(async ({ ctx }) => {
+  selectMachineCredentialFile: command(zeroInput, async ({ ctx }) => {
     try { return validateSelection(await ctx.fileIntake.selectMachineCredentialFile()); } catch { throw new ConveyorError("CORE_REQUEST_FAILED", "CORE_REQUEST_FAILED"); }
   }),
   importMachineCredential: command(credentialMutationInput, ({ input, ctx }) => enrichCredential({
