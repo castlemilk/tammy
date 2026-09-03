@@ -1,3 +1,5 @@
+import type { ConveyorBridge } from "electron-conveyor/renderer";
+
 import type { DesktopLaunchScenario } from "./launch-scenario";
 import manifest from "./conveyor-manifest.json";
 
@@ -70,15 +72,11 @@ function deepFreeze<T>(value: T): T {
 export const CONVEYOR_MANIFEST: ConveyorManifest = deepFreeze(cloneManifest(manifest));
 export const CONVEYOR_PROCEDURE_CHANNELS = Object.freeze(EXPECTED_MODULES.map((module) => `conveyor:${module}` as const));
 
-export interface ConveyorBridge {
-  invoke(channel: string, method: string, ...args: readonly unknown[]): Promise<unknown>;
-  manifest(): ConveyorManifest;
-  subscribe(channel: string, listener: (payload: unknown) => void): () => void;
-}
+export type { ConveyorBridge } from "electron-conveyor/renderer";
 
 declare global {
   interface Window {
-    readonly conveyor: ConveyorBridge;
+    conveyor: ConveyorBridge;
     readonly tammyLaunchScenario?: DesktopLaunchScenario;
   }
 }
