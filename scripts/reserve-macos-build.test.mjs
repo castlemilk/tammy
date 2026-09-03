@@ -326,7 +326,7 @@ test("parallel reservation attempts never duplicate or corrupt the ledger", asyn
   assert.deepEqual(await readdir(directory), ["build-numbers.json"]);
 });
 
-test("the committed ledger exposes only the explicit build 2 reservation", async () => {
+test("the committed ledger exposes the explicit build 2–5 reservations", async () => {
   const committedLedger = JSON.parse(
     await readFile(
       path.join(repositoryRoot, "apps/desktop/release/macos/build-numbers.json"),
@@ -338,6 +338,15 @@ test("the committed ledger exposes only the explicit build 2 reservation", async
     ledger([
       entry("2", {
         reservedAt: "2026-09-01T03:05:53.048Z",
+      }),
+      entry("3", {
+        reservedAt: "2026-09-01T08:58:52.399Z",
+      }),
+      entry("4", {
+        reservedAt: "2026-09-01T09:16:12.678Z",
+      }),
+      entry("5", {
+        reservedAt: "2026-09-01T09:26:18.015Z",
       }),
     ]),
   );
