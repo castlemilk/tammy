@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("electron", () => ({
   app: { isPackaged: true },
@@ -6,6 +6,11 @@ vi.mock("electron", () => ({
 }));
 
 import { registerTammyConveyor } from "./registration";
+
+afterEach(() => {
+  vi.doUnmock("electron-conveyor/main");
+  vi.resetModules();
+});
 
 type Handler = (event: unknown, ...args: unknown[]) => Promise<unknown>;
 type Listener = (event: { returnValue?: unknown }) => void;
@@ -40,6 +45,48 @@ function options(ipcMain: ReturnType<typeof createIpcMain>, getWindow = () => cr
 }
 
 describe("owned Conveyor registration", () => {
+  it("passes a shared frozen context and a live window authorizer to the router", async () => {
+    const createRouter = vi.fn((..._args: unknown[]) => ({ dispose: vi.fn() }));
+    vi.resetModules();
+    vi.doMock("electron-conveyor/main", () => ({ createRouter }));
+    const { registerTammyConveyor: register } = await import("./registration");
+    const ipcMain = createIpcMain();
+    const first = createWindow();
+    const second = createWindow();
+    let currentWindow = first.window;
+    const client = { getDiagnostics: vi.fn() };
+    const fileIntake = { clear: vi.fn(), selectMachineCredentialFile: vi.fn(), consumeMachineCredentialFile: vi.fn() };
+
+    register({
+      applicationUrl: "tammy://app/",
+      client: client as never,
+      fileIntake: fileIntake as never,
+      getWindow: () => currentWindow as never,
+      ipcMain: ipcMain as never,
+    });
+
+    expect(createRouter).toHaveBeenCalledOnce();
+    const configuration = createRouter.mock.calls[0]?.[1] as unknown as {
+      authorize(event: unknown): void;
+      createContext(): { client: unknown; fileIntake: unknown };
+      ipcMain: unknown;
+      streams: boolean;
+    };
+    const firstContext = configuration.createContext();
+    const secondContext = configuration.createContext();
+    expect(firstContext).toBe(secondContext);
+    expect(Object.isFrozen(firstContext)).toBe(true);
+    expect(firstContext.client).toBe(client);
+    expect(firstContext.fileIntake).toBe(fileIntake);
+    expect(configuration.ipcMain).toBe(ipcMain);
+    expect(configuration.streams).toBe(false);
+
+    expect(() => configuration.authorize(first.event)).not.toThrow();
+    currentWindow = second.window;
+    expect(() => configuration.authorize(first.event)).toThrow("IPC_SENDER_REJECTED");
+    expect(() => configuration.authorize(second.event)).not.toThrow();
+  });
+
   it("registers exactly eight procedure handlers and one guarded manifest with streams disabled", () => {
     const ipcMain = createIpcMain();
     const harness = createWindow();

@@ -42,7 +42,9 @@ function exactDataObject(value: unknown, expectedKeys: readonly string[]): Recor
   if (typeof value !== "object" || value === null || Array.isArray(value) || Object.getPrototypeOf(value) !== Object.prototype) {
     return invalidManifest();
   }
-  const actualKeys = Object.keys(value).sort();
+  const ownKeys = Reflect.ownKeys(value);
+  if (ownKeys.some((key) => typeof key !== "string")) return invalidManifest();
+  const actualKeys = (ownKeys as string[]).sort();
   const sortedExpected = [...expectedKeys].sort();
   if (actualKeys.length !== sortedExpected.length || actualKeys.some((key, index) => key !== sortedExpected[index])) {
     return invalidManifest();
@@ -96,7 +98,15 @@ export function createRestrictedConveyorBridge(ipcRenderer: RestrictedIpcRendere
         throw new Error(TRANSPORT_FAILURE);
       }
     },
-    manifest: () => freezeManifest(ipcRenderer.sendSync("conveyor:manifest")),
+    manifest: () => {
+      let received: unknown;
+      try {
+        received = ipcRenderer.sendSync("conveyor:manifest");
+      } catch {
+        throw new Error(TRANSPORT_FAILURE);
+      }
+      return freezeManifest(received);
+    },
     subscribe: () => { throw new Error(SUBSCRIPTIONS_DISABLED); },
   };
   return Object.freeze(bridge);

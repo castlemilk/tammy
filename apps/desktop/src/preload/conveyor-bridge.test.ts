@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import manifest from "../shared/conveyor-manifest.json";
 import { createRestrictedConveyorBridge, exposeRestrictedConveyorBridge } from "./conveyor-bridge";
@@ -78,6 +78,43 @@ describe("restricted Conveyor preload bridge", () => {
       const bridge = createRestrictedConveyorBridge({ invoke: vi.fn(), sendSync: vi.fn(() => response) });
       expect(() => bridge.manifest()).toThrow("INVALID_CONVEYOR_MANIFEST");
     }
+  });
+
+  it("rejects hidden own manifest keys and accessors without invoking them", () => {
+    const nonEnumerable = structuredClone(manifest);
+    Object.defineProperty(nonEnumerable, "hidden", { enumerable: false, value: "query" });
+    const symbolKey = structuredClone(manifest);
+    Object.defineProperty(symbolKey, Symbol("hidden"), { enumerable: false, value: "query" });
+    const accessor = structuredClone(manifest);
+    let getterCalled = false;
+    Object.defineProperty(accessor, "system", {
+      enumerable: true,
+      get: () => {
+        getterCalled = true;
+        throw new Error("accessor must not execute");
+      },
+    });
+
+    for (const response of [nonEnumerable, symbolKey, accessor]) {
+      const bridge = createRestrictedConveyorBridge({ invoke: vi.fn(), sendSync: vi.fn(() => response) });
+      expect(() => bridge.manifest()).toThrow("INVALID_CONVEYOR_MANIFEST");
+    }
+    expect(getterCalled).toBe(false);
+  });
+
+  it("maps synchronous manifest transport throws to a stable code without invoking another IPC path", () => {
+    const invoke = vi.fn();
+    const sendSync = vi.fn(() => { throw new Error("secret /private/path from core"); });
+    const bridge = createRestrictedConveyorBridge({ invoke, sendSync });
+
+    expect(() => bridge.manifest()).toThrow("IPC_TRANSPORT_FAILED");
+    try {
+      bridge.manifest();
+    } catch (error) {
+      expect(error).toMatchObject({ message: "IPC_TRANSPORT_FAILED" });
+    }
+    expect(sendSync).toHaveBeenCalledTimes(2);
+    expect(invoke).not.toHaveBeenCalled();
   });
 
   it("does not attach a listener because subscriptions are disabled", () => {
