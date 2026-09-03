@@ -76,3 +76,34 @@ test("every SBR procedure reaches only its exact Core method", async () => {
     expect(calls.at(-1)).toBe(core);
   }
 });
+
+test("SBR replace and Product ID import are mediated through main-only inputs", async () => {
+  const pb = await import("@tammy/connect-client/tammy/v1/sbr_pb.js");
+  const handle = "018fcb44-a5b7-7b8c-8123-123456789abc";
+  const received: Array<{ method: string; request: any }> = [];
+  const client = {
+    replaceMachineCredential: async (request: any) => {
+      received.push({ method: "replaceMachineCredential", request });
+      return create(pb.ReplaceMachineCredentialResponseSchema);
+    },
+    importSbrProductId: async (request: any) => {
+      received.push({ method: "importSbrProductId", request });
+      return create(pb.ImportSbrProductIdResponseSchema);
+    },
+  };
+  const bookmark = new Uint8Array([1, 2, 3]);
+  const intake = {
+    clear() {}, selectMachineCredentialFile: async () => ({ selected: false as const }),
+    consumeMachineCredentialFile: vi.fn(async () => ({ selectedLocalPath: "/private/replace.p12", securityScopedBookmark: bookmark })),
+  };
+  const caller = createCaller(createTammyRouter(), { ctx: { client: client as never, fileIntake: intake } });
+  const replace = createProtoMethodCodec({ input: pb.ReplaceMachineCredentialRequestSchema, output: pb.ReplaceMachineCredentialResponseSchema, maximumRequestBytes: 8_192, maximumResponseBytes: 32_768 });
+  const product = createProtoMethodCodec({ input: pb.ImportSbrProductIdRequestSchema, output: pb.ImportSbrProductIdResponseSchema, maximumRequestBytes: 8_192, maximumResponseBytes: 32_768 });
+  await caller.sbr.replaceMachineCredential({ command: replace.encodeRequest(create(pb.ReplaceMachineCredentialRequestSchema)), handle, password: "replace-password" });
+  await caller.sbr.importSbrProductId({ command: product.encodeRequest(create(pb.ImportSbrProductIdRequestSchema)), productId: "product-id" });
+  expect(received.map(({ method }) => method)).toEqual(["replaceMachineCredential", "importSbrProductId"]);
+  expect(received[0]?.request).toMatchObject({ selectedLocalPath: "/private/replace.p12" });
+  expect(received[0]?.request.securityScopedBookmark).not.toBe(bookmark);
+  expect([...received[0]?.request.password ?? []]).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+  expect(received[1]?.request.productIdValue).toBe("product-id");
+});
