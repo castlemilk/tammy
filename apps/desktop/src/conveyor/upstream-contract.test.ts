@@ -257,11 +257,12 @@ test("router fails closed for promise and thenable authorizers", async () => {
 test("injected boundaries preserve unrelated stream lifecycle handlers", () => {
   const ipcMain = createFakeIpcMain({ rejectDuplicateHandlers: true });
   const streamStartSentinel = () => undefined;
+  const modules = { secure: defineModule({ lookup: query(() => "ok") }) };
   ipcMain.handlers.set("conveyor:stream:start", streamStartSentinel);
 
   expect(() =>
     createRouter(
-      { secure: defineModule({ lookup: query(() => "ok") }) },
+      modules,
       {
         ipcMain: ipcMain as unknown as Pick<
           Electron.IpcMain,
@@ -272,6 +273,20 @@ test("injected boundaries preserve unrelated stream lifecycle handlers", () => {
   ).toThrow(/Handler already registered/);
   expect(ipcMain.handlers.get("conveyor:stream:start")).toBe(streamStartSentinel);
   expect(ipcMain.removedHandlers).not.toContain("conveyor:stream:start");
+  expect(ipcMain.handlers.has("conveyor:secure")).toBe(false);
+
+  ipcMain.handlers.delete("conveyor:stream:start");
+  const router = createRouter(modules, {
+    ipcMain: ipcMain as unknown as Pick<
+      Electron.IpcMain,
+      "handle" | "removeHandler" | "on" | "removeListener"
+    >,
+  });
+  expect(ipcMain.handlers.has("conveyor:secure")).toBe(true);
+  router.dispose();
+  expect(ipcMain.handlers.has("conveyor:secure")).toBe(false);
+  expect(ipcMain.handlers.has("conveyor:stream:start")).toBe(false);
+  expect(ipcMain.handlers.has("conveyor:stream:cancel")).toBe(false);
 });
 
 test("router keeps streams enabled when options are absent", () => {

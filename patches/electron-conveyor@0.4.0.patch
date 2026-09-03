@@ -1,5 +1,5 @@
 diff --git a/dist/main.cjs b/dist/main.cjs
-index ef236250da2fff24d7cc5c93423082d0123cf1ae..c3b34f1c41f1e3df811367b45bea904cc800fb14 100644
+index ef236250da2fff24d7cc5c93423082d0123cf1ae..a737f83ec9aaa23857862170a9f0ac2df7a2c942 100644
 --- a/dist/main.cjs
 +++ b/dist/main.cjs
 @@ -149,10 +149,29 @@ var isDev = !electron.app.isPackaged;
@@ -26,7 +26,7 @@ index ef236250da2fff24d7cc5c93423082d0123cf1ae..c3b34f1c41f1e3df811367b45bea904c
 +    return false;
 +  }
 +}
-+function registerStreamHandlers(byId, createContext, globals = [], boundary = electron.ipcMain, authorize, replaceHandlers = true) {
++function registerStreamHandlers(byId, createContext, globals = [], boundary = electron.ipcMain, authorize, replaceHandlers = true, registeredHandlers, ownership, token) {
 +  if (replaceHandlers) {
 +    boundary.removeHandler(STREAM_START);
 +    boundary.removeHandler(STREAM_CANCEL);
@@ -36,17 +36,28 @@ index ef236250da2fff24d7cc5c93423082d0123cf1ae..c3b34f1c41f1e3df811367b45bea904c
      const sender = event.sender;
      const key = `${sender.id}:${req.streamId}`;
      const channel = channels.stream(req.streamId);
-@@ -175,7 +194,8 @@ function registerStreamHandlers(byId, createContext, globals = []) {
+@@ -175,7 +194,10 @@ function registerStreamHandlers(byId, createContext, globals = []) {
      }
      void pump(key, setup.stream, setup.returns, controller, send);
    });
 -  electron.ipcMain.handle(STREAM_CANCEL, (event, streamId) => {
++  registeredHandlers.push(STREAM_START);
++  if (ownership) ownership.handlers.set(STREAM_START, token);
 +  boundary.handle(STREAM_CANCEL, (event, streamId) => {
 +    if (!isAuthorized(event, authorize)) return senderRejected();
      const key = `${event.sender.id}:${streamId}`;
      const controller = active.get(key);
      if (controller) {
-@@ -306,10 +326,41 @@ function setupPersistence(def, getState) {
+@@ -183,6 +205,8 @@ function registerStreamHandlers(byId, createContext, globals = []) {
+       active.delete(key);
+     }
+   });
++  registeredHandlers.push(STREAM_CANCEL);
++  if (ownership) ownership.handlers.set(STREAM_CANCEL, token);
+ }
+ async function pump(key, stream, returns, controller, send) {
+   const signal = controller.signal;
+@@ -306,34 +330,122 @@ function setupPersistence(def, getState) {
  }
  
  // src/main/router.ts
@@ -67,6 +78,18 @@ index ef236250da2fff24d7cc5c93423082d0123cf1ae..c3b34f1c41f1e3df811367b45bea904c
 +function invalidArity() {
 +  return { ok: false, error: { code: "INVALID_INPUT", message: "IPC procedures require a method and zero or one input argument" } };
 +}
++function rollbackRouterSetup(boundary, ownership, token, registeredHandlers, manifestListener) {
++  if (manifestListener && (!ownership || ownership.listeners.get(MANIFEST) === token)) {
++    boundary.removeListener(MANIFEST, manifestListener);
++    ownership?.listeners.delete(MANIFEST);
++  }
++  for (const channel of registeredHandlers.reverse()) {
++    if (!ownership || ownership.handlers.get(channel) === token) {
++      boundary.removeHandler(channel);
++      ownership?.handlers.delete(channel);
++    }
++  }
++}
  function createRouter(modules, ...opts) {
    const options = opts[0];
    const createContext = options?.createContext;
@@ -86,30 +109,29 @@ index ef236250da2fff24d7cc5c93423082d0123cf1ae..c3b34f1c41f1e3df811367b45bea904c
 +    assertUnowned(ownership, MANIFEST, "listeners");
 +  }
    const byId = /* @__PURE__ */ new Map();
++  const registeredHandlers = [];
++  let manifestListener;
++  try {
    for (const key of Object.keys(modules)) {
      const mod = modules[key];
-@@ -317,23 +368,65 @@ function createRouter(modules, ...opts) {
+     if (mod.id !== void 0 && mod.id !== key) {
        throw new Error(`[conveyor] module already registered as '${mod.id}' \u2014 cannot re-register as '${key}'`);
      }
      mod.id = key;
 -    registerModule(mod, createContext, globals);
-+    registerModule(mod, createContext, globals, boundary, authorize, ownership, token);
++    registerModule(mod, createContext, globals, boundary, authorize, ownership, token, registeredHandlers);
      byId.set(key, mod);
    }
 -  registerStreamHandlers(byId, createContext, globals);
 +  if (options?.streams !== false) {
-+    registerStreamHandlers(byId, createContext, globals, boundary, authorize, !ownership);
-+    if (ownership) {
-+      ownership.handlers.set(STREAM_START, token);
-+      ownership.handlers.set(STREAM_CANCEL, token);
-+    }
++    registerStreamHandlers(byId, createContext, globals, boundary, authorize, !ownership, registeredHandlers, ownership, token);
 +  }
    const manifest = buildManifest(modules);
 -  electron.ipcMain.removeAllListeners(MANIFEST);
 -  electron.ipcMain.on(MANIFEST, (event) => {
 -    event.returnValue = manifest;
 -  });
-+  const manifestListener = (event) => {
++  manifestListener = (event) => {
 +    event.returnValue = isAuthorized(event, authorize) ? manifest : {};
 +  };
 +  if (ownership) {
@@ -150,9 +172,13 @@ index ef236250da2fff24d7cc5c93423082d0123cf1ae..c3b34f1c41f1e3df811367b45bea904c
 +      }
 +    }
 +  };
++  } catch (error) {
++    rollbackRouterSetup(boundary, ownership, token, registeredHandlers, manifestListener);
++    throw error;
++  }
  }
 -function registerModule(mod, createContext, globals) {
-+function registerModule(mod, createContext, globals, boundary, authorize, ownership, token) {
++function registerModule(mod, createContext, globals, boundary, authorize, ownership, token, registeredHandlers) {
    const channel = channels.procedure(mod.id);
 -  electron.ipcMain.removeHandler(channel);
 -  electron.ipcMain.handle(channel, async (event, method, input) => {
@@ -164,10 +190,11 @@ index ef236250da2fff24d7cc5c93423082d0123cf1ae..c3b34f1c41f1e3df811367b45bea904c
      const ctx = await buildContext(event, createContext);
      const result = await dispatchProcedure(mod, method, input, ctx, isDev, globals);
      if (!result.ok && isDev) {
-@@ -341,6 +434,7 @@ function registerModule(mod, createContext, globals) {
+@@ -341,6 +453,8 @@ function registerModule(mod, createContext, globals) {
      }
      return result;
    });
++  registeredHandlers.push(channel);
 +  if (ownership) ownership.handlers.set(channel, token);
  }
  
@@ -251,7 +278,7 @@ index 83bdf0f2fbd9b8e08d4bf43403954475e1d8347e..0fcb6f2583176043a54d0e1d9286bb2f
 -export { type ConveyorWindowManager, type EmitTarget, type RouterOptions, type StoreHandle, type StoreHandlesOf, createEmitter, createRouter, createWindowManager, devLogger, registerStore, resolveTargets };
 +export { type ConveyorWindowManager, type EmitTarget, type OwnedRouter, type RouterOptions, type StoreHandle, type StoreHandlesOf, type TammyRouterOptions, createEmitter, createRouter, createWindowManager, devLogger, registerStore, resolveTargets };
 diff --git a/dist/main.js b/dist/main.js
-index eec356b7ed0a63cdc33883bffa86366425981e52..c9e79b4369e5ba66c9f559c9309b38a91ab5b8ec 100644
+index eec356b7ed0a63cdc33883bffa86366425981e52..cd278fa050e9a204816723576b4832c77a1f64a6 100644
 --- a/dist/main.js
 +++ b/dist/main.js
 @@ -19,10 +19,29 @@ var isDev = !app.isPackaged;
@@ -278,7 +305,7 @@ index eec356b7ed0a63cdc33883bffa86366425981e52..c9e79b4369e5ba66c9f559c9309b38a9
 +    return false;
 +  }
 +}
-+function registerStreamHandlers(byId, createContext, globals = [], boundary = ipcMain, authorize, replaceHandlers = true) {
++function registerStreamHandlers(byId, createContext, globals = [], boundary = ipcMain, authorize, replaceHandlers = true, registeredHandlers, ownership, token) {
 +  if (replaceHandlers) {
 +    boundary.removeHandler(STREAM_START);
 +    boundary.removeHandler(STREAM_CANCEL);
@@ -288,17 +315,28 @@ index eec356b7ed0a63cdc33883bffa86366425981e52..c9e79b4369e5ba66c9f559c9309b38a9
      const sender = event.sender;
      const key = `${sender.id}:${req.streamId}`;
      const channel = channels.stream(req.streamId);
-@@ -45,7 +64,8 @@ function registerStreamHandlers(byId, createContext, globals = []) {
+@@ -45,7 +64,10 @@ function registerStreamHandlers(byId, createContext, globals = []) {
      }
      void pump(key, setup.stream, setup.returns, controller, send);
    });
 -  ipcMain.handle(STREAM_CANCEL, (event, streamId) => {
++  registeredHandlers.push(STREAM_START);
++  if (ownership) ownership.handlers.set(STREAM_START, token);
 +  boundary.handle(STREAM_CANCEL, (event, streamId) => {
 +    if (!isAuthorized(event, authorize)) return senderRejected();
      const key = `${event.sender.id}:${streamId}`;
      const controller = active.get(key);
      if (controller) {
-@@ -176,10 +196,41 @@ function setupPersistence(def, getState) {
+@@ -53,6 +75,8 @@ function registerStreamHandlers(byId, createContext, globals = []) {
+       active.delete(key);
+     }
+   });
++  registeredHandlers.push(STREAM_CANCEL);
++  if (ownership) ownership.handlers.set(STREAM_CANCEL, token);
+ }
+ async function pump(key, stream, returns, controller, send) {
+   const signal = controller.signal;
+@@ -176,34 +200,122 @@ function setupPersistence(def, getState) {
  }
  
  // src/main/router.ts
@@ -319,6 +357,18 @@ index eec356b7ed0a63cdc33883bffa86366425981e52..c9e79b4369e5ba66c9f559c9309b38a9
 +function invalidArity() {
 +  return { ok: false, error: { code: "INVALID_INPUT", message: "IPC procedures require a method and zero or one input argument" } };
 +}
++function rollbackRouterSetup(boundary, ownership, token, registeredHandlers, manifestListener) {
++  if (manifestListener && (!ownership || ownership.listeners.get(MANIFEST) === token)) {
++    boundary.removeListener(MANIFEST, manifestListener);
++    ownership?.listeners.delete(MANIFEST);
++  }
++  for (const channel of registeredHandlers.reverse()) {
++    if (!ownership || ownership.handlers.get(channel) === token) {
++      boundary.removeHandler(channel);
++      ownership?.handlers.delete(channel);
++    }
++  }
++}
  function createRouter(modules, ...opts) {
    const options = opts[0];
    const createContext = options?.createContext;
@@ -338,30 +388,29 @@ index eec356b7ed0a63cdc33883bffa86366425981e52..c9e79b4369e5ba66c9f559c9309b38a9
 +    assertUnowned(ownership, MANIFEST, "listeners");
 +  }
    const byId = /* @__PURE__ */ new Map();
++  const registeredHandlers = [];
++  let manifestListener;
++  try {
    for (const key of Object.keys(modules)) {
      const mod = modules[key];
-@@ -187,23 +238,65 @@ function createRouter(modules, ...opts) {
+     if (mod.id !== void 0 && mod.id !== key) {
        throw new Error(`[conveyor] module already registered as '${mod.id}' \u2014 cannot re-register as '${key}'`);
      }
      mod.id = key;
 -    registerModule(mod, createContext, globals);
-+    registerModule(mod, createContext, globals, boundary, authorize, ownership, token);
++    registerModule(mod, createContext, globals, boundary, authorize, ownership, token, registeredHandlers);
      byId.set(key, mod);
    }
 -  registerStreamHandlers(byId, createContext, globals);
 +  if (options?.streams !== false) {
-+    registerStreamHandlers(byId, createContext, globals, boundary, authorize, !ownership);
-+    if (ownership) {
-+      ownership.handlers.set(STREAM_START, token);
-+      ownership.handlers.set(STREAM_CANCEL, token);
-+    }
++    registerStreamHandlers(byId, createContext, globals, boundary, authorize, !ownership, registeredHandlers, ownership, token);
 +  }
    const manifest = buildManifest(modules);
 -  ipcMain.removeAllListeners(MANIFEST);
 -  ipcMain.on(MANIFEST, (event) => {
 -    event.returnValue = manifest;
 -  });
-+  const manifestListener = (event) => {
++  manifestListener = (event) => {
 +    event.returnValue = isAuthorized(event, authorize) ? manifest : {};
 +  };
 +  if (ownership) {
@@ -402,9 +451,13 @@ index eec356b7ed0a63cdc33883bffa86366425981e52..c9e79b4369e5ba66c9f559c9309b38a9
 +      }
 +    }
 +  };
++  } catch (error) {
++    rollbackRouterSetup(boundary, ownership, token, registeredHandlers, manifestListener);
++    throw error;
++  }
  }
 -function registerModule(mod, createContext, globals) {
-+function registerModule(mod, createContext, globals, boundary, authorize, ownership, token) {
++function registerModule(mod, createContext, globals, boundary, authorize, ownership, token, registeredHandlers) {
    const channel = channels.procedure(mod.id);
 -  ipcMain.removeHandler(channel);
 -  ipcMain.handle(channel, async (event, method, input) => {
@@ -416,10 +469,11 @@ index eec356b7ed0a63cdc33883bffa86366425981e52..c9e79b4369e5ba66c9f559c9309b38a9
      const ctx = await buildContext(event, createContext);
      const result = await dispatchProcedure(mod, method, input, ctx, isDev, globals);
      if (!result.ok && isDev) {
-@@ -211,6 +304,7 @@ function registerModule(mod, createContext, globals) {
+@@ -211,6 +323,8 @@ function registerModule(mod, createContext, globals) {
      }
      return result;
    });
++  registeredHandlers.push(channel);
 +  if (ownership) ownership.handlers.set(channel, token);
  }
  
