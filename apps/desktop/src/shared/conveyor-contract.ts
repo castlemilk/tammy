@@ -25,12 +25,11 @@ export function isBoundedUtf8String(value: unknown, maximumBytes: number): value
       index += 1;
     } else if (codeUnit >= 0xdc00 && codeUnit <= 0xdfff) return false;
   }
-  const scratch = new Uint8Array(maximumBytes + 1);
+  const encoded = new TextEncoder().encode(value);
   try {
-    const encoded = new TextEncoder().encodeInto(value, scratch);
-    return encoded.read === value.length && encoded.written <= maximumBytes;
+    return encoded.byteLength <= maximumBytes;
   } finally {
-    scratch.fill(0);
+    encoded.fill(0);
   }
 }
 

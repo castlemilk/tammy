@@ -32,3 +32,10 @@ it("exports a frozen complete eight-module Conveyor contract", () => {
   expect(isBoundedUtf8String("😀", 4)).toBe(true);
   expect(isBoundedUtf8String("😀", 3)).toBe(false);
 });
+
+it("validates UTF-8 bounds without allocating from an untrusted maximum", () => {
+  expect(isBoundedUtf8String("ok", Number.MAX_SAFE_INTEGER)).toBe(true);
+  for (const maximumBytes of [-1, Number.NaN, Number.POSITIVE_INFINITY, 1.5]) {
+    expect(isBoundedUtf8String("ok", maximumBytes)).toBe(false);
+  }
+});

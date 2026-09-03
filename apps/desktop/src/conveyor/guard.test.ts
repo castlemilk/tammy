@@ -5,7 +5,7 @@ import { createConveyorAuthorizer } from "./guard";
 
 interface FakeFrame {
   readonly isDestroyed: () => boolean;
-  readonly url: string;
+  url: string;
 }
 
 interface FakeContents {
@@ -45,6 +45,16 @@ describe("createConveyorAuthorizer", () => {
     const authorize = createConveyorAuthorizer({ applicationUrl: "tammy://app/", getWindow: harness.getWindow });
 
     expect(() => authorize(harness.event)).not.toThrow();
+  });
+
+  it("rejects routes and fragments on the same live main-frame object", () => {
+    const harness = createHarness();
+    const authorize = createConveyorAuthorizer({ applicationUrl: "tammy://app/", getWindow: harness.getWindow });
+
+    for (const url of ["tammy://app/overview", "tammy://app/#overview"]) {
+      harness.window.webContents.mainFrame.url = url;
+      expectRejected(authorize, harness.event);
+    }
   });
 
   it("rejects before any context, schema, or domain callback for every ownership mismatch", () => {
