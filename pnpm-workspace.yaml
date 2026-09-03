@@ -20,3 +20,6 @@ minimumReleaseAge: 1440
 onlyBuiltDependencies: ["@bufbuild/buf", "electron", "electron-winstaller", "esbuild"]
 
 publicHoistPattern: ["@electron-forge/*"]
+
+patchedDependencies:
+  electron-conveyor@0.4.0: patches/electron-conveyor@0.4.0.patch

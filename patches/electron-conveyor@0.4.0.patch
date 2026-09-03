@@ -1,0 +1,412 @@
+diff --git a/dist/main.cjs b/dist/main.cjs
+index ef236250da2fff24d7cc5c93423082d0123cf1ae..cf17067c6a4d0cac787e6a4702c99d03cb97f442 100644
+--- a/dist/main.cjs
++++ b/dist/main.cjs
+@@ -149,10 +149,22 @@ var isDev = !electron.app.isPackaged;
+ 
+ // src/main/stream.ts
+ var active = /* @__PURE__ */ new Map();
+-function registerStreamHandlers(byId, createContext, globals = []) {
+-  electron.ipcMain.removeHandler(STREAM_START);
+-  electron.ipcMain.removeHandler(STREAM_CANCEL);
+-  electron.ipcMain.handle(STREAM_START, async (event, _streamId, req) => {
++function senderRejected() {
++  return { ok: false, error: { code: "IPC_SENDER_REJECTED", message: "IPC sender rejected" } };
++}
++function isAuthorized(event, authorize) {
++  try {
++    authorize?.(event);
++    return true;
++  } catch {
++    return false;
++  }
++}
++function registerStreamHandlers(byId, createContext, globals = [], boundary = electron.ipcMain, authorize) {
++  boundary.removeHandler(STREAM_START);
++  boundary.removeHandler(STREAM_CANCEL);
++  boundary.handle(STREAM_START, async (event, _streamId, req) => {
++    if (!isAuthorized(event, authorize)) return senderRejected();
+     const sender = event.sender;
+     const key = `${sender.id}:${req.streamId}`;
+     const channel = channels.stream(req.streamId);
+@@ -175,7 +187,8 @@ function registerStreamHandlers(byId, createContext, globals = []) {
+     }
+     void pump(key, setup.stream, setup.returns, controller, send);
+   });
+-  electron.ipcMain.handle(STREAM_CANCEL, (event, streamId) => {
++  boundary.handle(STREAM_CANCEL, (event, streamId) => {
++    if (!isAuthorized(event, authorize)) return senderRejected();
+     const key = `${event.sender.id}:${streamId}`;
+     const controller = active.get(key);
+     if (controller) {
+@@ -306,10 +319,41 @@ function setupPersistence(def, getState) {
+ }
+ 
+ // src/main/router.ts
++var routerOwnership = /* @__PURE__ */ new WeakMap();
++function ownershipFor(boundary) {
++  let ownership = routerOwnership.get(boundary);
++  if (!ownership) {
++    ownership = { handlers: /* @__PURE__ */ new Map(), listeners: /* @__PURE__ */ new Map() };
++    routerOwnership.set(boundary, ownership);
++  }
++  return ownership;
++}
++function assertUnowned(ownership, channel, kind) {
++  if (ownership[kind].has(channel)) {
++    throw new Error(`[conveyor] IPC channel '${channel}' is already owned by another router`);
++  }
++}
++function invalidArity() {
++  return { ok: false, error: { code: "INVALID_INPUT", message: "IPC procedures require a method and zero or one input argument" } };
++}
+ function createRouter(modules, ...opts) {
+   const options = opts[0];
+   const createContext = options?.createContext;
+   const globals = options?.use ?? [];
++  const boundary = options?.ipcMain ?? electron.ipcMain;
++  const authorize = options?.authorize;
++  const ownsBoundary = options?.ipcMain !== void 0;
++  const token = ownsBoundary ? {} : void 0;
++  const ownership = ownsBoundary ? ownershipFor(boundary) : void 0;
++  const procedureChannels = Object.keys(modules).map((key) => channels.procedure(key));
++  if (ownership) {
++    for (const channel of procedureChannels) assertUnowned(ownership, channel, "handlers");
++    if (options?.streams !== false) {
++      assertUnowned(ownership, STREAM_START, "handlers");
++      assertUnowned(ownership, STREAM_CANCEL, "handlers");
++    }
++    assertUnowned(ownership, MANIFEST, "listeners");
++  }
+   const byId = /* @__PURE__ */ new Map();
+   for (const key of Object.keys(modules)) {
+     const mod = modules[key];
+@@ -317,23 +361,65 @@ function createRouter(modules, ...opts) {
+       throw new Error(`[conveyor] module already registered as '${mod.id}' \u2014 cannot re-register as '${key}'`);
+     }
+     mod.id = key;
+-    registerModule(mod, createContext, globals);
++    registerModule(mod, createContext, globals, boundary, authorize, ownership, token);
+     byId.set(key, mod);
+   }
+-  registerStreamHandlers(byId, createContext, globals);
++  if (options?.streams !== false) {
++    registerStreamHandlers(byId, createContext, globals, boundary, authorize);
++    if (ownership) {
++      ownership.handlers.set(STREAM_START, token);
++      ownership.handlers.set(STREAM_CANCEL, token);
++    }
++  }
+   const manifest = buildManifest(modules);
+-  electron.ipcMain.removeAllListeners(MANIFEST);
+-  electron.ipcMain.on(MANIFEST, (event) => {
+-    event.returnValue = manifest;
+-  });
++  const manifestListener = (event) => {
++    event.returnValue = isAuthorized(event, authorize) ? manifest : {};
++  };
++  if (ownership) {
++    boundary.on(MANIFEST, manifestListener);
++    ownership.listeners.set(MANIFEST, token);
++  } else {
++    boundary.removeAllListeners(MANIFEST);
++    boundary.on(MANIFEST, manifestListener);
++  }
+   const stores = {};
+   for (const store of options?.stores ?? []) stores[store.id] = registerStore(store);
+-  return { modules, stores };
++  let disposed = false;
++  return {
++    modules,
++    stores,
++    dispose() {
++      if (disposed) return;
++      disposed = true;
++      if (!ownership) return;
++      for (const channel of procedureChannels) {
++        if (ownership.handlers.get(channel) === token) {
++          boundary.removeHandler(channel);
++          ownership.handlers.delete(channel);
++        }
++      }
++      if (options?.streams !== false) {
++        for (const channel of [STREAM_START, STREAM_CANCEL]) {
++          if (ownership.handlers.get(channel) === token) {
++            boundary.removeHandler(channel);
++            ownership.handlers.delete(channel);
++          }
++        }
++      }
++      if (ownership.listeners.get(MANIFEST) === token) {
++        boundary.removeListener(MANIFEST, manifestListener);
++        ownership.listeners.delete(MANIFEST);
++      }
++    }
++  };
+ }
+-function registerModule(mod, createContext, globals) {
++function registerModule(mod, createContext, globals, boundary, authorize, ownership, token) {
+   const channel = channels.procedure(mod.id);
+-  electron.ipcMain.removeHandler(channel);
+-  electron.ipcMain.handle(channel, async (event, method, input) => {
++  if (!ownership) boundary.removeHandler(channel);
++  boundary.handle(channel, async (event, ...args) => {
++    if (!isAuthorized(event, authorize)) return senderRejected();
++    if (args.length < 1 || args.length > 2) return invalidArity();
++    const [method, input] = args;
+     const ctx = await buildContext(event, createContext);
+     const result = await dispatchProcedure(mod, method, input, ctx, isDev, globals);
+     if (!result.ok && isDev) {
+@@ -341,6 +427,7 @@ function registerModule(mod, createContext, globals) {
+     }
+     return result;
+   });
++  if (ownership) ownership.handlers.set(channel, token);
+ }
+ 
+ // src/main/window-manager.ts
+diff --git a/dist/main.d.cts b/dist/main.d.cts
+index bcbcfdcafbfb9d987597b8c3468ce4d383e4866b..c8745645f74358ce5a1f276038570a7c227964d7 100644
+--- a/dist/main.d.cts
++++ b/dist/main.d.cts
+@@ -38,9 +38,17 @@ interface RouterConfig<TAppCtx extends object, TStores extends readonly AnyStore
+     /** Router-global middleware, run before each def's own chain (e.g. `use: [devLogger]`). */
+     use?: ReadonlyArray<Middleware<BaseContext & TAppCtx, object>>;
+ }
+-type RouterOptions<TAppCtx extends object, TStores extends readonly AnyStoreDef[]> = keyof TAppCtx extends never ? RouterConfig<TAppCtx, TStores> : RouterConfig<TAppCtx, TStores> & {
++interface TammyRouterOptions {
++    ipcMain?: Pick<Electron.IpcMain, 'handle' | 'removeHandler' | 'on' | 'removeListener'>;
++    authorize?: (event: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent) => void;
++    streams?: boolean;
++}
++interface OwnedRouter {
++    dispose(): void;
++}
++type RouterOptions<TAppCtx extends object, TStores extends readonly AnyStoreDef[]> = (keyof TAppCtx extends never ? RouterConfig<TAppCtx, TStores> : RouterConfig<TAppCtx, TStores> & {
+     createContext: (base: BaseContext) => TAppCtx | Promise<TAppCtx>;
+-};
++}) & TammyRouterOptions;
+ /**
+  * Register the app's whole IPC surface on main: every module's procedures/streams (one
+  * `ipcMain.handle` per module, `conveyor:${key}`, dispatched by method), the kind manifest the
+@@ -50,7 +58,7 @@ type RouterOptions<TAppCtx extends object, TStores extends readonly AnyStoreDef[
+  */
+ declare function createRouter<TModules extends ModuleMap, const TStores extends readonly AnyStoreDef[] = readonly []>(modules: TModules, ...opts: keyof AppCtxOf<TModules> extends never ? [options?: RouterOptions<AppCtxOf<TModules>, TStores>] : [options: RouterOptions<AppCtxOf<TModules>, TStores>]): Router<TModules> & {
+     stores: StoreHandlesOf<TStores>;
+-};
++} & OwnedRouter;
+ 
+ /** A single window, or a resolver for the current set — so `broadcast`/`to`/`except` stay live. */
+ type EmitTarget = BrowserWindow | (() => BrowserWindow[]);
+@@ -86,4 +94,4 @@ declare function createEmitter<TModule extends AnyModule>(mod: TModule, target:
+  */
+ declare const devLogger: Middleware<object, object>;
+ 
+-export { type ConveyorWindowManager, type EmitTarget, type RouterOptions, type StoreHandle, type StoreHandlesOf, createEmitter, createRouter, createWindowManager, devLogger, registerStore, resolveTargets };
++export { type ConveyorWindowManager, type EmitTarget, type OwnedRouter, type RouterOptions, type StoreHandle, type StoreHandlesOf, type TammyRouterOptions, createEmitter, createRouter, createWindowManager, devLogger, registerStore, resolveTargets };
+diff --git a/dist/main.d.ts b/dist/main.d.ts
+index 83bdf0f2fbd9b8e08d4bf43403954475e1d8347e..0fcb6f2583176043a54d0e1d9286bb2f4f94f32d 100644
+--- a/dist/main.d.ts
++++ b/dist/main.d.ts
+@@ -38,9 +38,17 @@ interface RouterConfig<TAppCtx extends object, TStores extends readonly AnyStore
+     /** Router-global middleware, run before each def's own chain (e.g. `use: [devLogger]`). */
+     use?: ReadonlyArray<Middleware<BaseContext & TAppCtx, object>>;
+ }
+-type RouterOptions<TAppCtx extends object, TStores extends readonly AnyStoreDef[]> = keyof TAppCtx extends never ? RouterConfig<TAppCtx, TStores> : RouterConfig<TAppCtx, TStores> & {
++interface TammyRouterOptions {
++    ipcMain?: Pick<Electron.IpcMain, 'handle' | 'removeHandler' | 'on' | 'removeListener'>;
++    authorize?: (event: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent) => void;
++    streams?: boolean;
++}
++interface OwnedRouter {
++    dispose(): void;
++}
++type RouterOptions<TAppCtx extends object, TStores extends readonly AnyStoreDef[]> = (keyof TAppCtx extends never ? RouterConfig<TAppCtx, TStores> : RouterConfig<TAppCtx, TStores> & {
+     createContext: (base: BaseContext) => TAppCtx | Promise<TAppCtx>;
+-};
++}) & TammyRouterOptions;
+ /**
+  * Register the app's whole IPC surface on main: every module's procedures/streams (one
+  * `ipcMain.handle` per module, `conveyor:${key}`, dispatched by method), the kind manifest the
+@@ -50,7 +58,7 @@ type RouterOptions<TAppCtx extends object, TStores extends readonly AnyStoreDef[
+  */
+ declare function createRouter<TModules extends ModuleMap, const TStores extends readonly AnyStoreDef[] = readonly []>(modules: TModules, ...opts: keyof AppCtxOf<TModules> extends never ? [options?: RouterOptions<AppCtxOf<TModules>, TStores>] : [options: RouterOptions<AppCtxOf<TModules>, TStores>]): Router<TModules> & {
+     stores: StoreHandlesOf<TStores>;
+-};
++} & OwnedRouter;
+ 
+ /** A single window, or a resolver for the current set — so `broadcast`/`to`/`except` stay live. */
+ type EmitTarget = BrowserWindow | (() => BrowserWindow[]);
+@@ -86,4 +94,4 @@ declare function createEmitter<TModule extends AnyModule>(mod: TModule, target:
+  */
+ declare const devLogger: Middleware<object, object>;
+ 
+-export { type ConveyorWindowManager, type EmitTarget, type RouterOptions, type StoreHandle, type StoreHandlesOf, createEmitter, createRouter, createWindowManager, devLogger, registerStore, resolveTargets };
++export { type ConveyorWindowManager, type EmitTarget, type OwnedRouter, type RouterOptions, type StoreHandle, type StoreHandlesOf, type TammyRouterOptions, createEmitter, createRouter, createWindowManager, devLogger, registerStore, resolveTargets };
+diff --git a/dist/main.js b/dist/main.js
+index eec356b7ed0a63cdc33883bffa86366425981e52..b5b252cf7a43f4aa499de2a4d810cce4329e51c9 100644
+--- a/dist/main.js
++++ b/dist/main.js
+@@ -19,10 +19,22 @@ var isDev = !app.isPackaged;
+ 
+ // src/main/stream.ts
+ var active = /* @__PURE__ */ new Map();
+-function registerStreamHandlers(byId, createContext, globals = []) {
+-  ipcMain.removeHandler(STREAM_START);
+-  ipcMain.removeHandler(STREAM_CANCEL);
+-  ipcMain.handle(STREAM_START, async (event, _streamId, req) => {
++function senderRejected() {
++  return { ok: false, error: { code: "IPC_SENDER_REJECTED", message: "IPC sender rejected" } };
++}
++function isAuthorized(event, authorize) {
++  try {
++    authorize?.(event);
++    return true;
++  } catch {
++    return false;
++  }
++}
++function registerStreamHandlers(byId, createContext, globals = [], boundary = ipcMain, authorize) {
++  boundary.removeHandler(STREAM_START);
++  boundary.removeHandler(STREAM_CANCEL);
++  boundary.handle(STREAM_START, async (event, _streamId, req) => {
++    if (!isAuthorized(event, authorize)) return senderRejected();
+     const sender = event.sender;
+     const key = `${sender.id}:${req.streamId}`;
+     const channel = channels.stream(req.streamId);
+@@ -45,7 +57,8 @@ function registerStreamHandlers(byId, createContext, globals = []) {
+     }
+     void pump(key, setup.stream, setup.returns, controller, send);
+   });
+-  ipcMain.handle(STREAM_CANCEL, (event, streamId) => {
++  boundary.handle(STREAM_CANCEL, (event, streamId) => {
++    if (!isAuthorized(event, authorize)) return senderRejected();
+     const key = `${event.sender.id}:${streamId}`;
+     const controller = active.get(key);
+     if (controller) {
+@@ -176,10 +189,41 @@ function setupPersistence(def, getState) {
+ }
+ 
+ // src/main/router.ts
++var routerOwnership = /* @__PURE__ */ new WeakMap();
++function ownershipFor(boundary) {
++  let ownership = routerOwnership.get(boundary);
++  if (!ownership) {
++    ownership = { handlers: /* @__PURE__ */ new Map(), listeners: /* @__PURE__ */ new Map() };
++    routerOwnership.set(boundary, ownership);
++  }
++  return ownership;
++}
++function assertUnowned(ownership, channel, kind) {
++  if (ownership[kind].has(channel)) {
++    throw new Error(`[conveyor] IPC channel '${channel}' is already owned by another router`);
++  }
++}
++function invalidArity() {
++  return { ok: false, error: { code: "INVALID_INPUT", message: "IPC procedures require a method and zero or one input argument" } };
++}
+ function createRouter(modules, ...opts) {
+   const options = opts[0];
+   const createContext = options?.createContext;
+   const globals = options?.use ?? [];
++  const boundary = options?.ipcMain ?? ipcMain;
++  const authorize = options?.authorize;
++  const ownsBoundary = options?.ipcMain !== void 0;
++  const token = ownsBoundary ? {} : void 0;
++  const ownership = ownsBoundary ? ownershipFor(boundary) : void 0;
++  const procedureChannels = Object.keys(modules).map((key) => channels.procedure(key));
++  if (ownership) {
++    for (const channel of procedureChannels) assertUnowned(ownership, channel, "handlers");
++    if (options?.streams !== false) {
++      assertUnowned(ownership, STREAM_START, "handlers");
++      assertUnowned(ownership, STREAM_CANCEL, "handlers");
++    }
++    assertUnowned(ownership, MANIFEST, "listeners");
++  }
+   const byId = /* @__PURE__ */ new Map();
+   for (const key of Object.keys(modules)) {
+     const mod = modules[key];
+@@ -187,23 +231,65 @@ function createRouter(modules, ...opts) {
+       throw new Error(`[conveyor] module already registered as '${mod.id}' \u2014 cannot re-register as '${key}'`);
+     }
+     mod.id = key;
+-    registerModule(mod, createContext, globals);
++    registerModule(mod, createContext, globals, boundary, authorize, ownership, token);
+     byId.set(key, mod);
+   }
+-  registerStreamHandlers(byId, createContext, globals);
++  if (options?.streams !== false) {
++    registerStreamHandlers(byId, createContext, globals, boundary, authorize);
++    if (ownership) {
++      ownership.handlers.set(STREAM_START, token);
++      ownership.handlers.set(STREAM_CANCEL, token);
++    }
++  }
+   const manifest = buildManifest(modules);
+-  ipcMain.removeAllListeners(MANIFEST);
+-  ipcMain.on(MANIFEST, (event) => {
+-    event.returnValue = manifest;
+-  });
++  const manifestListener = (event) => {
++    event.returnValue = isAuthorized(event, authorize) ? manifest : {};
++  };
++  if (ownership) {
++    boundary.on(MANIFEST, manifestListener);
++    ownership.listeners.set(MANIFEST, token);
++  } else {
++    boundary.removeAllListeners(MANIFEST);
++    boundary.on(MANIFEST, manifestListener);
++  }
+   const stores = {};
+   for (const store of options?.stores ?? []) stores[store.id] = registerStore(store);
+-  return { modules, stores };
++  let disposed = false;
++  return {
++    modules,
++    stores,
++    dispose() {
++      if (disposed) return;
++      disposed = true;
++      if (!ownership) return;
++      for (const channel of procedureChannels) {
++        if (ownership.handlers.get(channel) === token) {
++          boundary.removeHandler(channel);
++          ownership.handlers.delete(channel);
++        }
++      }
++      if (options?.streams !== false) {
++        for (const channel of [STREAM_START, STREAM_CANCEL]) {
++          if (ownership.handlers.get(channel) === token) {
++            boundary.removeHandler(channel);
++            ownership.handlers.delete(channel);
++          }
++        }
++      }
++      if (ownership.listeners.get(MANIFEST) === token) {
++        boundary.removeListener(MANIFEST, manifestListener);
++        ownership.listeners.delete(MANIFEST);
++      }
++    }
++  };
+ }
+-function registerModule(mod, createContext, globals) {
++function registerModule(mod, createContext, globals, boundary, authorize, ownership, token) {
+   const channel = channels.procedure(mod.id);
+-  ipcMain.removeHandler(channel);
+-  ipcMain.handle(channel, async (event, method, input) => {
++  if (!ownership) boundary.removeHandler(channel);
++  boundary.handle(channel, async (event, ...args) => {
++    if (!isAuthorized(event, authorize)) return senderRejected();
++    if (args.length < 1 || args.length > 2) return invalidArity();
++    const [method, input] = args;
+     const ctx = await buildContext(event, createContext);
+     const result = await dispatchProcedure(mod, method, input, ctx, isDev, globals);
+     if (!result.ok && isDev) {
+@@ -211,6 +297,7 @@ function registerModule(mod, createContext, globals) {
+     }
+     return result;
+   });
++  if (ownership) ownership.handlers.set(channel, token);
+ }
+ 
+ // src/main/window-manager.ts
