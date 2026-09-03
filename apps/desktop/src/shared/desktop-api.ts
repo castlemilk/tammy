@@ -1,12 +1,12 @@
 import type { DesktopLaunchScenario } from "./launch-scenario";
+import {
+  isBoundedUtf8String,
+  type MachineCredentialFileSelection,
+  type SystemDiagnostics,
+} from "./conveyor-contract";
 import preloadMethods from "./preload-methods.json";
 
-export interface SystemDiagnostics {
-  readonly apiVersion: string;
-  readonly coreVersion: string;
-  readonly runtimeMode: "offline";
-  readonly networkRequired: false;
-}
+export { isBoundedUtf8String, type MachineCredentialFileSelection, type SystemDiagnostics } from "./conveyor-contract";
 
 export const SYSTEM_DIAGNOSTICS_CHANNEL = "tammy:system-diagnostics";
 export const CREATE_WORKSPACE_CHANNEL = "tammy:workspace-create";
@@ -138,10 +138,6 @@ export const DESKTOP_MEDIATED_CHANNELS = Object.freeze([
   IMPORT_SBR_PRODUCT_ID_CHANNEL,
 ] as const);
 
-export type MachineCredentialFileSelection =
-  | Readonly<{ selected: false }>
-  | Readonly<{ selected: true; handle: string }>;
-
 export interface MachineCredentialMutationInput {
   readonly command: Uint8Array;
   readonly handle: string;
@@ -156,37 +152,6 @@ export interface MachineCredentialUnlockInput {
 export interface SbrProductIdImportInput {
   readonly command: Uint8Array;
   readonly productId: string;
-}
-
-export function isBoundedUtf8String(value: unknown, maximumBytes: number): value is string {
-  if (
-    typeof value !== "string" ||
-    !Number.isSafeInteger(maximumBytes) ||
-    maximumBytes < 0 ||
-    value.length > maximumBytes
-  ) {
-    return false;
-  }
-
-  for (let index = 0; index < value.length; index += 1) {
-    const codeUnit = value.charCodeAt(index);
-    if (codeUnit >= 0xd800 && codeUnit <= 0xdbff) {
-      if (index + 1 >= value.length) return false;
-      const trailing = value.charCodeAt(index + 1);
-      if (trailing < 0xdc00 || trailing > 0xdfff) return false;
-      index += 1;
-    } else if (codeUnit >= 0xdc00 && codeUnit <= 0xdfff) {
-      return false;
-    }
-  }
-
-  const scratch = new Uint8Array(maximumBytes + 1);
-  try {
-    const encoded = new TextEncoder().encodeInto(value, scratch);
-    return encoded.read === value.length && encoded.written <= maximumBytes;
-  } finally {
-    scratch.fill(0);
-  }
 }
 
 export interface TammyDesktopAPI {

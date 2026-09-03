@@ -2,8 +2,7 @@ import { randomBytes } from "node:crypto";
 import { lstat as nodeLstat } from "node:fs/promises";
 import path from "node:path";
 
-import type { MachineCredentialFileSelection } from "../shared/desktop-api";
-import type { TrustedSbrMainBoundary } from "./rpc-router";
+import type { MachineCredentialFileSelection } from "../shared/conveyor-contract";
 
 export type SbrFileReleaseKind = "development" | "ordinary-package" | "mas";
 
@@ -31,8 +30,15 @@ export interface SbrNativeFileDialog {
   }>;
 }
 
-export interface SbrFileIntake extends TrustedSbrMainBoundary {
+export interface SbrFileIntake {
   clear(): void;
+  selectMachineCredentialFile(): Promise<MachineCredentialFileSelection>;
+  consumeMachineCredentialFile(handle: string): Promise<
+    Readonly<{
+      selectedLocalPath: string;
+      securityScopedBookmark?: Uint8Array;
+    }>
+  >;
 }
 
 interface SbrFileIntakeOptions {

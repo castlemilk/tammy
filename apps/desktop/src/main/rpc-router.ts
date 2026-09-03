@@ -240,6 +240,7 @@ import {
   UNLOCK_WORKSPACE_CHANNEL,
 } from "../shared/desktop-api";
 import { createProtoMethodCodec } from "../shared/proto-ipc";
+import type { SbrFileIntake } from "./sbr-file-intake";
 
 export { ATTENTION_SUMMARY_CHANNEL } from "../shared/desktop-api";
 
@@ -582,16 +583,6 @@ export interface DesktopRpcRouter {
   importSbrProductId(input: SbrProductIdImportInput): Promise<Uint8Array>;
 }
 
-export interface TrustedSbrMainBoundary {
-  selectMachineCredentialFile(): Promise<MachineCredentialFileSelection>;
-  consumeMachineCredentialFile(handle: string): Promise<
-    Readonly<{
-      selectedLocalPath: string;
-      securityScopedBookmark?: Uint8Array;
-    }>
-  >;
-}
-
 interface DesktopRpcCodec<Request, Response> {
   decodeRequest(frame: Uint8Array): Request;
   encodeResponse(response: Response): Uint8Array;
@@ -618,7 +609,10 @@ async function invokeDesktopRpc<Request, Response>(
 
 const UUID_V7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const textEncoder = new TextEncoder();
-const unavailableTrustedSbrBoundary: TrustedSbrMainBoundary = Object.freeze({
+const unavailableTrustedSbrBoundary: Pick<
+  SbrFileIntake,
+  "selectMachineCredentialFile" | "consumeMachineCredentialFile"
+> = Object.freeze({
   selectMachineCredentialFile: async () => Object.freeze({ selected: false as const }),
   consumeMachineCredentialFile: async () => {
     throw new Error("SBR_FILE_INTAKE_UNAVAILABLE");
@@ -724,7 +718,10 @@ function validateTrustedFile(
 
 export function createDesktopRpcRouter(
   client: DesktopRpcClient,
-  trustedSbr: TrustedSbrMainBoundary = unavailableTrustedSbrBoundary,
+  trustedSbr: Pick<
+    SbrFileIntake,
+    "selectMachineCredentialFile" | "consumeMachineCredentialFile"
+  > = unavailableTrustedSbrBoundary,
 ): Readonly<DesktopRpcRouter> {
   return Object.freeze({
     invoke: async (channel: string, request: Uint8Array): Promise<Uint8Array> => {

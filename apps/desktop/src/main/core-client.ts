@@ -110,10 +110,10 @@ import type {
 } from "@tammy/connect-client/tammy/v1/workspace_pb.js";
 import { WorkspaceService } from "@tammy/connect-client/tammy/v1/workspace_pb.js";
 
-import type { SystemDiagnostics } from "../shared/desktop-api";
+import type { SystemDiagnostics } from "../shared/conveyor-contract";
 import type { CoreReadiness } from "../shared/readiness";
 
-export type { SystemDiagnostics } from "../shared/desktop-api";
+export type { SystemDiagnostics } from "../shared/conveyor-contract";
 
 const CAPABILITY_HEADER = "X-Tammy-Capability";
 const EXPECTED_API_VERSION = "tammy.v1";
