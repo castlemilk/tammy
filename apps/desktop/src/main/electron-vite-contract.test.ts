@@ -52,6 +52,8 @@ describe("electron-vite configuration", () => {
     expect(isElectronRuntimeExternal(builtinModules[0] ?? "fs")).toBe(true);
     expect(isElectronRuntimeExternal("@tammy/connect-client")).toBe(false);
     expect(isElectronRuntimeExternal("electron-conveyor")).toBe(false);
+    expect(config.main?.build?.externalizeDeps).toBe(false);
+    expect(config.preload?.build?.externalizeDeps).toBe(false);
     expect(config.renderer?.base).toBe("./");
     expect(pluginNames(config.renderer?.plugins)).toEqual(
       expect.arrayContaining(["@tailwindcss/vite:scan", "vite:react-babel"]),

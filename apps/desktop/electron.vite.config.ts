@@ -21,6 +21,7 @@ const aliases = {
 export default defineConfig({
   main: {
     build: {
+      externalizeDeps: false,
       outDir: resolve(desktopRoot, "out/main"),
       lib: {
         entry: resolve(desktopRoot, "src/main/index.ts"),
@@ -34,6 +35,7 @@ export default defineConfig({
   },
   preload: {
     build: {
+      externalizeDeps: false,
       outDir: resolve(desktopRoot, "out/preload"),
       lib: {
         entry: resolve(desktopRoot, "src/preload/index.ts"),
