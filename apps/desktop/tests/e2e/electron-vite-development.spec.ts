@@ -92,10 +92,23 @@ async function startRendererServer(root: string): Promise<{ readonly close: () =
 test("runs the real electron-vite development runtime offline and cleans up Core", async () => {
   test.skip(process.platform !== "darwin" && process.platform !== "win32", "unsupported Electron smoke target");
 
-  const userDataPath = await mkdtemp(path.join(process.env.TMPDIR ?? "/private/tmp", "tammy-electron-vite-"));
-  const server = await startRendererServer(rendererRoot);
+  let userDataPath: string | undefined;
+  let server: Awaited<ReturnType<typeof startRendererServer>> | undefined;
   let application: Awaited<ReturnType<typeof _electron.launch>> | undefined;
+  let bodyFailure: unknown;
+  const cleanupFailures: Error[] = [];
+
+  const recordCleanupFailure = (operation: string, failure: unknown) => {
+    cleanupFailures.push(
+      failure instanceof Error
+        ? new Error(`${operation}: ${failure.message}`, { cause: failure })
+        : new Error(`${operation}: ${String(failure)}`),
+    );
+  };
+
   try {
+    userDataPath = await mkdtemp(path.join(process.env.TMPDIR ?? "/private/tmp", "tammy-electron-vite-"));
+    server = await startRendererServer(rendererRoot);
     application = await _electron.launch({
       args: [mainEntry, `--user-data-dir=${userDataPath}`],
       chromiumSandbox: true,
@@ -117,14 +130,42 @@ test("runs the real electron-vite development runtime offline and cleans up Core
     expect(await page.evaluate(() => typeof process)).toBe("undefined");
     expect(new URL(page.url()).origin).toBe(server.origin);
     expect((await findExactCoreProcesses(coreExecutable)).length).toBeGreaterThan(0);
+  } catch (failure) {
+    bodyFailure = failure;
+    throw failure;
   } finally {
-    if (application) await application.close();
-    await pollForNoCoreProcesses({
-      intervalMs: 100,
-      query: () => findExactCoreProcesses(coreExecutable),
-      timeoutMs: 5_000,
-    });
-    await server.close();
-    await rm(userDataPath, { force: true, recursive: true });
+    if (application) {
+      try {
+        await application.close();
+      } catch (failure) {
+        recordCleanupFailure("Electron application close failed", failure);
+      }
+    }
+    try {
+      await pollForNoCoreProcesses({
+        intervalMs: 100,
+        query: () => findExactCoreProcesses(coreExecutable),
+        timeoutMs: 5_000,
+      });
+    } catch (failure) {
+      recordCleanupFailure("Core process cleanup failed", failure);
+    }
+    if (server) {
+      try {
+        await server.close();
+      } catch (failure) {
+        recordCleanupFailure("Renderer server close failed", failure);
+      }
+    }
+    if (userDataPath) {
+      try {
+        await rm(userDataPath, { force: true, recursive: true });
+      } catch (failure) {
+        recordCleanupFailure("Electron user-data cleanup failed", failure);
+      }
+    }
+    if (bodyFailure === undefined && cleanupFailures.length > 0) {
+      throw new AggregateError(cleanupFailures, "ELECTRON_VITE_SMOKE_CLEANUP_FAILED");
+    }
   }
 });

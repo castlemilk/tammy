@@ -871,8 +871,8 @@ test("local Task front door preserves the safe development contract", async () =
   const rootPackage = JSON.parse(await readFile(path.join(repositoryRoot, "package.json"), "utf8"));
   assert.equal(
     rootPackage.scripts?.["desktop:start:scenario"],
-    "node scripts/launch-local-scenario.mjs --electron-forge",
-    "the launcher owns one narrow Electron Forge package scenario",
+    "node scripts/launch-local-scenario.mjs --electron-vite",
+    "the launcher owns one narrow electron-vite package scenario",
   );
 
   const testTasks = (await readTaskfile("taskfiles/test.yml")).tasks;
