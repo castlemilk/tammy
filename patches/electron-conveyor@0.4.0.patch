@@ -282,7 +282,7 @@ index eec356b7ed0a63cdc33883bffa86366425981e52..cd278fa050e9a204816723576b4832c7
 --- a/dist/main.js
 +++ b/dist/main.js
 @@ -19,10 +19,29 @@ var isDev = !app.isPackaged;
- 
+
  // src/main/stream.ts
  var active = /* @__PURE__ */ new Map();
 -function registerStreamHandlers(byId, createContext, globals = []) {
