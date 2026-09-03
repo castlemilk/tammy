@@ -13,6 +13,20 @@ function libraryFileName(library: false | LibraryOptions | undefined) {
   return typeof fileName === "function" ? fileName("es", "index") : fileName;
 }
 
+function pluginNames(plugins: unknown): string[] {
+  if (!Array.isArray(plugins)) {
+    return [];
+  }
+
+  return plugins
+    .flatMap((plugin) => (Array.isArray(plugin) ? plugin : [plugin]))
+    .flatMap((plugin) =>
+      typeof plugin === "object" && plugin !== null && "name" in plugin && typeof plugin.name === "string"
+        ? [plugin.name]
+        : [],
+    );
+}
+
 describe("electron-vite configuration", () => {
   test("uses the fixed Tammy build contract", () => {
     expect(config.main?.build?.outDir).toBe(resolve(desktopRoot, "out/main"));
@@ -24,6 +38,8 @@ describe("electron-vite configuration", () => {
     );
     expect(libraryFileName(config.main?.build?.lib)).toBe("index.js");
     expect(libraryFileName(config.preload?.build?.lib)).toBe("index.cjs");
+    expect(config.main?.build?.lib && config.main.build.lib.formats).toEqual(["es"]);
+    expect(config.preload?.build?.lib && config.preload.build.lib.formats).toEqual(["cjs"]);
     expect(Object.keys(config.main?.resolve?.alias ?? {})).toEqual([
       "@/app",
       "@/conveyor",
@@ -37,7 +53,9 @@ describe("electron-vite configuration", () => {
     expect(isElectronRuntimeExternal("@tammy/connect-client")).toBe(false);
     expect(isElectronRuntimeExternal("electron-conveyor")).toBe(false);
     expect(config.renderer?.base).toBe("./");
-    expect(config.renderer?.plugins).toHaveLength(2);
+    expect(pluginNames(config.renderer?.plugins)).toEqual(
+      expect.arrayContaining(["@tailwindcss/vite:scan", "vite:react-babel"]),
+    );
     expect(config.main?.build?.sourcemap).toBe(false);
     expect(config.preload?.build?.sourcemap).toBe(false);
     expect(config.renderer?.build?.sourcemap).toBe(false);
