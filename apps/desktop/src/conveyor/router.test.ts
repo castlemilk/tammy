@@ -14,4 +14,6 @@ test("the router composes exactly the fixed eight-module manifest and cannot dis
   expect(router.manifest).toEqual(manifest);
   expect(Object.keys(router.modules)).toEqual(Object.keys(manifest));
   await expect((caller.workspace as unknown as { missing(): Promise<unknown> }).missing()).rejects.toMatchObject({ code: "UNKNOWN_PROCEDURE" });
+  expect(() => (caller as unknown as { missing: { getSystemDiagnostics(): Promise<unknown> } }).missing.getSystemDiagnostics()).toThrow(/Unknown module/);
+  await expect((caller.workspace as unknown as { getSystemDiagnostics(): Promise<unknown> }).getSystemDiagnostics()).rejects.toMatchObject({ code: "UNKNOWN_PROCEDURE" });
 });

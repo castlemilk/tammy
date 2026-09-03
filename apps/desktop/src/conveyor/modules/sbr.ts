@@ -44,6 +44,18 @@ function validateSelection(value: MachineCredentialFileSelection): MachineCreden
   throw new ConveyorError("CORE_REQUEST_FAILED", "CORE_REQUEST_FAILED");
 }
 
+function validateTrustedFile(value: Readonly<{ selectedLocalPath: string; securityScopedBookmark?: Uint8Array }>): Readonly<{ selectedLocalPath: string; securityScopedBookmark?: Uint8Array }> {
+  try {
+    if (typeof value.selectedLocalPath !== "string" || !value.selectedLocalPath.startsWith("/") || textEncoder.encode(value.selectedLocalPath).byteLength > 4_096) throw new Error();
+    const bookmark = value.securityScopedBookmark;
+    if (bookmark === undefined) return Object.freeze({ selectedLocalPath: value.selectedLocalPath });
+    if (Object.getPrototypeOf(bookmark) !== Uint8Array.prototype || bookmark.byteLength === 0 || bookmark.byteLength > 65_536) throw new Error();
+    return Object.freeze({ selectedLocalPath: value.selectedLocalPath, securityScopedBookmark: new Uint8Array(bookmark) });
+  } catch {
+    throw new ConveyorError("CORE_REQUEST_FAILED", "CORE_REQUEST_FAILED");
+  }
+}
+
 async function enrichCredential<Request, Response>(options: {
   readonly call: (request: Request) => Promise<Response>;
   readonly codec: { decodeRequest(frame: Uint8Array): Request; encodeResponse(response: Response): Uint8Array };
@@ -57,8 +69,7 @@ async function enrichCredential<Request, Response>(options: {
   if (!options.validateRequest(decoded)) throw new ConveyorError("INVALID_RPC_REQUEST", "INVALID_RPC_REQUEST");
   const password = textEncoder.encode(options.input.password);
   try {
-    const file = await options.fileIntake.consumeMachineCredentialFile(options.input.handle);
-    if (!file.selectedLocalPath.startsWith("/") || textEncoder.encode(file.selectedLocalPath).byteLength > 4_096 || (file.securityScopedBookmark !== undefined && (file.securityScopedBookmark.byteLength === 0 || file.securityScopedBookmark.byteLength > 65_536))) throw new Error();
+    const file = validateTrustedFile(await options.fileIntake.consumeMachineCredentialFile(options.input.handle));
     return new Uint8Array(options.codec.encodeResponse(await options.call(options.createRequest(decoded, file, password))));
   } catch { throw new ConveyorError("CORE_REQUEST_FAILED", "CORE_REQUEST_FAILED"); } finally { password.fill(0); }
 }
@@ -83,19 +94,29 @@ export const sbr = defineModule({
       return create(ReplaceMachineCredentialRequestSchema, { commandContext: request.commandContext, selectedLocalPath: file.selectedLocalPath, securityScopedBookmark: file.securityScopedBookmark, password });
     },
   })),
-  unlockMachineCredential: command(credentialUnlockInput, ({ input, ctx }) => {
+  unlockMachineCredential: command(credentialUnlockInput, async ({ input, ctx }) => {
     let request;
     try { request = unlockCredential.decodeRequest(input.command); } catch { throw new ConveyorError("INVALID_RPC_REQUEST", "INVALID_RPC_REQUEST"); }
     if (request.password.byteLength !== 0) throw new ConveyorError("INVALID_RPC_REQUEST", "INVALID_RPC_REQUEST");
     const password = textEncoder.encode(input.password);
-    return ctx.client.unlockMachineCredential(create(UnlockMachineCredentialRequestSchema, { commandContext: request.commandContext, password })).then((response) => new Uint8Array(unlockCredential.encodeResponse(response))).catch(() => { throw new ConveyorError("CORE_REQUEST_FAILED", "CORE_REQUEST_FAILED"); }).finally(() => password.fill(0));
+    try {
+      return new Uint8Array(unlockCredential.encodeResponse(await ctx.client.unlockMachineCredential(create(UnlockMachineCredentialRequestSchema, { commandContext: request.commandContext, password }))));
+    } catch {
+      throw new ConveyorError("CORE_REQUEST_FAILED", "CORE_REQUEST_FAILED");
+    } finally {
+      password.fill(0);
+    }
   }),
   removeMachineCredential: command(conveyorProtoFrame(8_192), ({ input, ctx }) => invokeCore(removeCredential, input, ctx.client.removeMachineCredential)),
-  importSbrProductId: command(productIdInput, ({ input, ctx }) => {
+  importSbrProductId: command(productIdInput, async ({ input, ctx }) => {
     let request;
     try { request = importProductId.decodeRequest(input.command); } catch { throw new ConveyorError("INVALID_RPC_REQUEST", "INVALID_RPC_REQUEST"); }
     if (request.productIdValue !== "") throw new ConveyorError("INVALID_RPC_REQUEST", "INVALID_RPC_REQUEST");
-    return ctx.client.importSbrProductId(create(ImportSbrProductIdRequestSchema, { commandContext: request.commandContext, productIdValue: input.productId, evteProductIdentifier: request.evteProductIdentifier, evteServiceIdentifier: request.evteServiceIdentifier })).then((response) => new Uint8Array(importProductId.encodeResponse(response))).catch(() => { throw new ConveyorError("CORE_REQUEST_FAILED", "CORE_REQUEST_FAILED"); });
+    try {
+      return new Uint8Array(importProductId.encodeResponse(await ctx.client.importSbrProductId(create(ImportSbrProductIdRequestSchema, { commandContext: request.commandContext, productIdValue: input.productId, evteProductIdentifier: request.evteProductIdentifier, evteServiceIdentifier: request.evteServiceIdentifier }))));
+    } catch {
+      throw new ConveyorError("CORE_REQUEST_FAILED", "CORE_REQUEST_FAILED");
+    }
   }),
   removeSbrProductId: command(conveyorProtoFrame(8_192), ({ input, ctx }) => invokeCore(removeProductId, input, ctx.client.removeSbrProductId)),
   runSbrReadinessFixture: command(conveyorProtoFrame(8_192), ({ input, ctx }) => invokeCore(readinessFixture, input, ctx.client.runSbrReadinessFixture)),
