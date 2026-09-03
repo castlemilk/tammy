@@ -44,7 +44,7 @@ const diagnostics: SystemDiagnostics = {
   networkRequired: false,
 };
 
-const rendererStyles = readFileSync(resolve(process.cwd(), "src/renderer/styles.css"), "utf8");
+const rendererStyles = readFileSync(resolve(process.cwd(), "src/app/styles.css"), "utf8");
 const currentUserCodec = createProtoMethodCodec({
   input: GetCurrentUserRequestSchema,
   maximumRequestBytes: 8_192,

@@ -11,7 +11,7 @@ export default defineConfig({
     globals: false,
     restoreMocks: true,
     clearMocks: true,
-    setupFiles: ["src/renderer/test/setup.ts"],
+    setupFiles: ["src/app/test/setup.ts"],
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
   },
 });
