@@ -74,8 +74,12 @@ export function createProductionDependencies(
   }
   const buildDirectory = path.dirname(fileURLToPath(import.meta.url));
   const developmentResourcesPath = path.resolve(buildDirectory, "../../resources");
+  const developmentRendererUrl = process.env.ELECTRON_RENDERER_URL;
+  if (!app.isPackaged && developmentRendererUrl === undefined) {
+    throw new Error("INVALID_VITE_ORIGIN");
+  }
   const policy = createRendererSecurityPolicy(
-    app.isPackaged ? undefined : MAIN_WINDOW_VITE_DEV_SERVER_URL,
+    app.isPackaged ? undefined : developmentRendererUrl,
   );
   const publicLinks = readPublicLinks();
   const allowedExternalUrls = [publicLinks.privacyPolicy, publicLinks.support].filter(
@@ -147,7 +151,7 @@ export function createProductionDependencies(
         minWidth: 900,
         show: false,
         webPreferences: {
-          ...createSecureWebPreferences(path.join(buildDirectory, "preload.cjs")),
+          ...createSecureWebPreferences(path.resolve(buildDirectory, "../preload/index.cjs")),
           additionalArguments: rendererLaunchScenarioArguments(localLaunch.kind),
         },
         width: 1180,
@@ -181,7 +185,7 @@ export function createProductionDependencies(
             app,
             fetchFile: (url) => net.fetch(url),
             protocol,
-            rendererRoot: path.join(app.getAppPath(), ".vite/renderer/main_window"),
+            rendererRoot: path.join(app.getAppPath(), "out/renderer"),
           }),
         );
       }

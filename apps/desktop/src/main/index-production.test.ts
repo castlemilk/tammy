@@ -1,7 +1,12 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const electron = vi.hoisted(() => ({
   app: {
+    getAppPath: vi.fn(() => "/Applications/Tammy.app/Contents/Resources/app"),
     getPath: vi.fn(() => "/Users/test/Library/Application Support/Tammy"),
     isPackaged: true,
     setPath: vi.fn(),
@@ -25,8 +30,11 @@ import type { createSbrFileIntake } from "./sbr-file-intake";
 
 describe("createProductionDependencies local scenario ownership", () => {
   beforeEach(() => {
+    electron.app.getAppPath.mockClear();
+    electron.app.isPackaged = true;
     electron.app.setPath.mockClear();
     electron.dialog.showOpenDialog.mockReset();
+    delete process.env.ELECTRON_RENDERER_URL;
   });
 
   it("sets the validated accounting-fresh user-data root before production dependencies start", () => {
@@ -99,5 +107,46 @@ describe("createProductionDependencies local scenario ownership", () => {
     dependencies.cleanupSensitiveState();
 
     expect(clear).toHaveBeenCalledOnce();
+  });
+});
+
+describe("createProductionDependencies electron-vite runtime paths", () => {
+  beforeEach(() => {
+    electron.app.isPackaged = false;
+    delete process.env.ELECTRON_RENDERER_URL;
+  });
+
+  it("uses the one canonical ELECTRON_RENDERER_URL origin in development", () => {
+    process.env.ELECTRON_RENDERER_URL = "http://127.0.0.1:43123";
+
+    const dependencies = createProductionDependencies(["tammy"]);
+
+    expect(dependencies.applicationUrl).toBe("http://127.0.0.1:43123/");
+  });
+
+  it.each([
+    undefined,
+    "http://user@127.0.0.1:43123",
+    "http://example.com:43123",
+    "http://127.0.0.1:43123/app",
+    "http://127.0.0.1:43123/?query=value",
+    "http://127.0.0.1:43123/#fragment",
+  ])("fails closed for an invalid development renderer URL: %s", (url) => {
+    if (url === undefined) delete process.env.ELECTRON_RENDERER_URL;
+    else process.env.ELECTRON_RENDERER_URL = url;
+
+    expect(() => createProductionDependencies(["tammy"])).toThrow("INVALID_VITE_ORIGIN");
+  });
+
+  it("resolves the sandbox preload from out/main to out/preload/index.cjs", () => {
+    const source = readFileSync(
+      path.join(path.dirname(fileURLToPath(import.meta.url)), "index-production.ts"),
+      "utf8",
+    );
+
+    expect(source).toContain('path.resolve(buildDirectory, "../preload/index.cjs")');
+    expect(source).toContain('path.resolve(buildDirectory, "../../resources")');
+    expect(source).toContain('path.join(app.getAppPath(), "out/renderer")');
+    expect(source).not.toContain("MAIN_WINDOW_VITE_");
   });
 });

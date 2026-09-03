@@ -323,7 +323,7 @@ export async function runDesktopScenarioOwner(arguments_, overrides = {}) {
 
 async function main() {
   const [scenario, ...extras] = process.argv.slice(2);
-  if (scenario === "--electron-forge") {
+  if (scenario === "--electron-vite") {
     await runDesktopScenarioOwner(extras);
     return;
   }

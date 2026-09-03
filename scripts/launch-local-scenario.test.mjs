@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { EventEmitter } from "node:events";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { PassThrough } from "node:stream";
@@ -305,7 +305,7 @@ test("an error followed by close finalizes and reports a retained root exactly o
   assert.equal(harness.signals.listenerCount("SIGTERM"), 0);
 });
 
-test("desktop package owner forwards only validated Electron Forge arguments", async () => {
+test("desktop package owner forwards only validated electron-vite arguments", async () => {
   const children = [new FakeChild(), new FakeChild(), new FakeChild(), new FakeChild()];
   const calls = [];
   const processRunner = (command, arguments_, options) => {
@@ -343,6 +343,15 @@ test("desktop package owner forwards only validated Electron Forge arguments", a
       { cwd: repositoryRoot, shell: false, stdio: "inherit" },
     ],
   ]);
+});
+
+test("scenario owner reserves the electron-vite sentinel and rejects the Forge sentinel", async () => {
+  const source = await readFile(new URL("./launch-local-scenario.mjs", import.meta.url), "utf8");
+  const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
+
+  assert.match(source, /scenario === "--electron-vite"/u);
+  assert.doesNotMatch(source, /scenario === "--electron-forge"/u);
+  assert.equal(packageJson.scripts["desktop:start:scenario"], "node scripts/launch-local-scenario.mjs --electron-vite");
 });
 
 test("desktop package owner accepts only the owned SBR simulator root and explicit authority", async () => {

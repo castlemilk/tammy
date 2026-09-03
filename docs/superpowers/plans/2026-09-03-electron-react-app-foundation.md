@@ -345,7 +345,7 @@ Create a dedicated one-worker Playwright config. Its single test must:
 1. bind a static server to an OS-assigned `127.0.0.1` port and serve only `out/renderer`, rejecting traversal and non-GET requests;
 2. launch the installed Electron binary through Playwright with `out/main/index.js`, isolated temporary user data, and `ELECTRON_RENDERER_URL` set to that canonical loopback origin;
 3. wait for the first real window and call system diagnostics through the current public bridge;
-4. assert `runtimeMode: "offline"`, `process.sandboxed === true` in the renderer, and the exact loopback page origin;
+4. assert `runtimeMode: "offline"`, the first BrowserWindow's authoritative `webContents.getLastWebPreferences().sandbox === true`, `typeof process === "undefined"` in the renderer (Node is intentionally not exposed), and the exact loopback page origin;
 5. close Electron gracefully, verify Core exits, close the server, and remove the temporary user-data directory in `finally`.
 
 The config has a 30-second timeout, one worker, no retries, no external URL, and no mocked Electron or Core boundary. Chunk 2 updates the one bridge call from the legacy API to Conveyor.

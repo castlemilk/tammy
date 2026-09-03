@@ -15,6 +15,7 @@
     "electron.vite.config.ts",
     "vitest.config.ts",
     "forge.config.ts",
-    "playwright.config.ts"
+    "playwright.config.ts",
+    "playwright.electron-vite.config.ts"
   ]
 }
