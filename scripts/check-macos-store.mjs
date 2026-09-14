@@ -16,6 +16,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { isDeepStrictEqual, promisify } from "node:util";
 
 import Ajv2020 from "ajv/dist/2020.js";
+import { parse as parseYaml } from "yaml";
 
 import {
   evaluateReleaseState,
@@ -163,11 +164,15 @@ export function validateMacOSUnsignedEnvironment(environment) {
   const teamID = required(environment, "TAMMY_MACOS_TEAM_ID");
   const target = required(environment, "TAMMY_MACOS_TARGET");
   requiredHttps(environment, "TAMMY_MACOS_SUPPORT_URL");
+  const builderOutputRoot = required(environment, "TAMMY_ELECTRON_BUILDER_OUTPUT");
   if (
     !/^[1-9][0-9]*$/.test(buildNumber) ||
     !["exempt", "non-exempt"].includes(exportCompliance) ||
     !/^[A-Z0-9]{10}$/.test(teamID) ||
     target !== "mas/arm64" ||
+    !path.isAbsolute(builderOutputRoot) ||
+    path.normalize(builderOutputRoot) !== builderOutputRoot ||
+    Object.hasOwn(environment, "TAMMY_MACOS_" + "UNSIGNED_OUTPUT_ROOT") ||
     [
       "TAMMY_MACOS_INSTALLER_IDENTITY",
       "TAMMY_MACOS_PROVISIONING_PROFILE",
@@ -177,7 +182,7 @@ export function validateMacOSUnsignedEnvironment(environment) {
   ) {
     fail("MACOS_RELEASE_INPUT_INVALID");
   }
-  return { buildNumber };
+  return { buildNumber, builderOutputRoot };
 }
 
 function isRecord(value) {
@@ -888,7 +893,8 @@ export async function inspectMacOSStoreRepository(
     childEntitlements: path.join(releaseRoot, "entitlements.mas.child.plist"),
     coreEntitlements: path.join(releaseRoot, "entitlements.mas.core.plist"),
     sbrHelperEntitlements: path.join(releaseRoot, "entitlements.mas.sbr-helper.plist"),
-    forge: path.join(desktopRoot, "forge.config.ts"),
+    builder: path.join(desktopRoot, "electron-builder.yml"),
+    builderAfterPack: path.join(desktopRoot, "scripts", "electron-builder-after-pack.cjs"),
     icon: path.join(desktopRoot, "assets", "icon-source.png"),
     icns: path.join(desktopRoot, "assets", "icon.icns"),
     metadata: path.join(releaseRoot, "store-metadata.md"),
@@ -911,7 +917,8 @@ export async function inspectMacOSStoreRepository(
     childEntitlements,
     coreEntitlements,
     sbrHelperEntitlements,
-    forge,
+    builder,
+    builderAfterPack,
     iconBytes,
     identityBytes,
     metadata,
@@ -930,7 +937,8 @@ export async function inspectMacOSStoreRepository(
     readMacOSRepositoryPlist(paths.childEntitlements),
     readMacOSRepositoryPlist(paths.coreEntitlements),
     readMacOSRepositoryPlist(paths.sbrHelperEntitlements),
-    readFile(paths.forge, "utf8"),
+    readFile(paths.builder, "utf8"),
+    readFile(paths.builderAfterPack, "utf8"),
     readFile(paths.icon),
     readFile(paths.identity),
     readFile(paths.metadata, "utf8"),
@@ -949,6 +957,12 @@ export async function inspectMacOSStoreRepository(
   });
 
   const desktopPackage = JSON.parse(packageBytes.toString("utf8"));
+  let builderConfig;
+  try {
+    builderConfig = parseYaml(builder);
+  } catch {
+    fail("MACOS_BUILDER_CONFIG_INVALID");
+  }
   const buildLedger = validateBuildLedger(JSON.parse(buildLedgerBytes.toString("utf8")));
   await assertContainedPath(
     root,
@@ -1048,6 +1062,44 @@ export async function inspectMacOSStoreRepository(
   ) {
     fail("MACOS_STORE_METADATA_OWNER_MISMATCH");
   }
+  const builderResourcePairs = (value) =>
+    Array.isArray(value) &&
+    value.every((resource) => isRecord(resource) && typeof resource.from === "string" && typeof resource.to === "string")
+      ? value.map(({ from, to }) => ({ from, to }))
+      : undefined;
+  const builderTarget = (value) =>
+    Array.isArray(value) &&
+    value.length === 1 &&
+    isRecord(value[0]) &&
+    value[0].target === "dir" &&
+    Array.isArray(value[0].arch) &&
+    value[0].arch.length === 1
+      ? value[0].arch[0]
+      : undefined;
+  const expectedFuses = {
+    runAsNode: false,
+    enableCookieEncryption: true,
+    enableNodeOptionsEnvironmentVariable: false,
+    enableNodeCliInspectArguments: true,
+    enableEmbeddedAsarIntegrityValidation: true,
+    onlyLoadAppFromAsar: true,
+  };
+  const expectedMacResources = [
+    { from: "resources/build", to: "build" },
+    { from: "resources/core", to: "core" },
+    { from: "resources/sqlcipher", to: "sqlcipher" },
+    { from: "resources/sbr", to: "sbr" },
+    { from: "resources/sbr-helper", to: "sbr-helper" },
+  ];
+  const expectedWinResources = [
+    { from: "resources/build", to: "build" },
+    { from: "resources/core", to: "core" },
+    { from: "resources/sqlcipher", to: "sqlcipher" },
+  ];
+  const expectedMasResources = [
+    ...expectedMacResources,
+    { from: "release/macos/PrivacyInfo.xcprivacy", to: "PrivacyInfo.xcprivacy" },
+  ];
   if (
     desktopPackage?.productName !== "Tammy" ||
     typeof desktopPackage?.version !== "string" ||
@@ -1062,15 +1114,53 @@ export async function inspectMacOSStoreRepository(
       'LSMinimumSystemVersion: "14.0"',
       'NSHumanReadableCopyright: "© 2026 Gamma Systems Pty Ltd"',
     ]) ||
-    !includesAll(forge, [
-      "createMacOSReleaseProfile",
-      "normalizeMacOSHelperBundleIdentifiers",
-      '"darwin-arm64"',
-      "ignore: isManifestBoundExecutable",
-      "packagedSbrHelperSuffix",
-      "releaseProfile.privacyManifest",
+    !isRecord(builderConfig) ||
+    builderConfig.appId !== APP_BUNDLE_ID ||
+    builderConfig.productName !== "Tammy" ||
+    builderConfig.copyright !== "© 2026 Gamma Systems Pty Ltd" ||
+    builderConfig.directories?.output !== "${env.TAMMY_ELECTRON_BUILDER_OUTPUT}" ||
+    builderConfig.directories?.buildResources !== "assets" ||
+    !isDeepStrictEqual(builderConfig.files, ["out/main/**", "out/preload/**", "out/renderer/**", "package.json"]) ||
+    builderConfig.asar !== true ||
+    builderConfig.npmRebuild !== false ||
+    builderConfig.afterPack !== "scripts/electron-builder-after-pack.cjs" ||
+    !isDeepStrictEqual(builderConfig.electronFuses, expectedFuses) ||
+    builderConfig.mac?.category !== APP_CATEGORY ||
+    builderTarget(builderConfig.mac?.target) !== "arm64" ||
+    builderConfig.mac?.icon !== "assets/icon.icns" ||
+    builderConfig.mac?.minimumSystemVersion !== "14.0" ||
+    builderConfig.mac?.identity !== "-" ||
+    builderConfig.mac?.helperBundleId !== `${APP_BUNDLE_ID}.helper` ||
+    !isDeepStrictEqual(builderConfig.mac?.signIgnore, [
+      "Contents/Resources/core/darwin-arm64/tammy-core$",
+      "Contents/Resources/sbr-helper/darwin-arm64/tammy-sbr-helper$",
     ]) ||
-    forge.includes("process.arch") ||
+    !isDeepStrictEqual(builderResourcePairs(builderConfig.mac?.extraResources), expectedMacResources) ||
+    builderTarget(builderConfig.win?.target) !== "x64" ||
+    !isDeepStrictEqual(builderResourcePairs(builderConfig.win?.extraResources), expectedWinResources) ||
+    builderConfig.mas?.category !== APP_CATEGORY ||
+    builderTarget(builderConfig.mas?.target) !== "arm64" ||
+    builderConfig.mas?.identity !== null ||
+    builderConfig.mas?.helperBundleId !== `${APP_BUNDLE_ID}.helper` ||
+    builderConfig.mas?.bundleVersion !== "${env.TAMMY_MACOS_BUILD_NUMBER}" ||
+    builderConfig.mas?.minimumSystemVersion !== "14.0" ||
+    !isDeepStrictEqual(builderConfig.mas?.extendInfo, {
+      ElectronTeamID: "${env.TAMMY_MACOS_TEAM_ID}",
+      TammyPrivacyPolicyURL: "${env.TAMMY_MACOS_PRIVACY_POLICY_URL}",
+      TammySupportURL: "${env.TAMMY_MACOS_SUPPORT_URL}",
+    }) ||
+    !isDeepStrictEqual(builderResourcePairs(builderConfig.mas?.extraResources), expectedMasResources) ||
+    !includesAll(builderAfterPack, [
+      "TAMMY_ELECTRON_BUILDER_OUTPUT",
+      "TAMMY_MACOS_ARTIFACT_PHASE",
+      '"unsigned-staging"',
+      "TAMMY_MACOS_TARGET",
+      "ElectronTeamID",
+      "ITSAppUsesNonExemptEncryption",
+      "assertRegularExecutable",
+    ]) ||
+    builder.includes("process.arch") ||
+    builderAfterPack.includes("process.arch") ||
     !readme.includes("docs/release/macos-app-store.md") ||
     !["pnpm check:macos-store", "task release:check"].some((command) => readme.includes(command)) ||
     !includesAll(runbook, [

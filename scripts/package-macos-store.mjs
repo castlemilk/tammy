@@ -129,8 +129,8 @@ export function createMacOSStoreBuildPlan(root, sourceEnvironment) {
     desktopPackage.version,
     `build-${release.buildNumber}`,
   );
-  const forgeOutputRoot = path.join(releaseRoot, ".forge-unsigned");
-  const forgeApp = path.join(forgeOutputRoot, "Tammy-mas-arm64", "Tammy.app");
+  const builderOutputRoot = path.join(releaseRoot, ".builder-unsigned");
+  const builderApp = path.join(builderOutputRoot, "mas-arm64", "Tammy.app");
   const unsignedRoot = path.join(releaseRoot, "unsigned");
   const unsignedApp = path.join(unsignedRoot, "Tammy.app");
   const unsignedManifest = path.join(unsignedRoot, "unsigned-content.json");
@@ -189,11 +189,7 @@ export function createMacOSStoreBuildPlan(root, sourceEnvironment) {
     ]),
     command("pnpm", ["core:build"]),
     command("pnpm", ["build:manifest"]),
-    command(
-      "pnpm",
-      ["--dir", "apps/desktop", "package", "--platform=mas", "--arch=arm64"],
-      "unsigned",
-    ),
+    command("pnpm", ["--dir", "apps/desktop", "package:mas:unsigned"], "unsigned"),
   ];
   const resourceSignCommands = [
     command("/usr/bin/codesign", [
@@ -270,8 +266,8 @@ export function createMacOSStoreBuildPlan(root, sourceEnvironment) {
       VITE_TAMMY_SUPPORT_URL: sourceEnvironment.TAMMY_MACOS_SUPPORT_URL,
     }),
     finalCommands: Object.freeze(finalCommands),
-    forgeApp,
-    forgeOutputRoot,
+    builderApp,
+    builderOutputRoot,
     mode: release.mode,
     modeRoot,
     releaseRoot,
@@ -292,7 +288,7 @@ export function createMacOSStoreBuildPlan(root, sourceEnvironment) {
       TAMMY_MACOS_SUPPORT_URL: sourceEnvironment.TAMMY_MACOS_SUPPORT_URL,
       TAMMY_MACOS_TARGET: "mas/arm64",
       TAMMY_MACOS_TEAM_ID: sourceEnvironment.TAMMY_MACOS_TEAM_ID,
-      TAMMY_MACOS_UNSIGNED_OUTPUT_ROOT: forgeOutputRoot,
+      TAMMY_ELECTRON_BUILDER_OUTPUT: builderOutputRoot,
       TAMMY_RELEASE_PROFILE: "mas",
       VITE_TAMMY_PRIVACY_POLICY_URL: sourceEnvironment.TAMMY_MACOS_PRIVACY_POLICY_URL,
       VITE_TAMMY_SUPPORT_URL: sourceEnvironment.TAMMY_MACOS_SUPPORT_URL,
@@ -407,13 +403,13 @@ export async function publishUnsignedMacOSStaging(plan) {
   ) {
     throw new Error("MACOS_UNSIGNED_PRODUCT_SOURCE_INVALID");
   }
-  await assertSafeOutputDirectory(plan, plan.forgeApp).catch(() => {
-    throw new Error("MACOS_UNSIGNED_FORGE_OUTPUT_INVALID");
+  await assertSafeOutputDirectory(plan, plan.builderApp).catch(() => {
+    throw new Error("MACOS_UNSIGNED_BUILDER_OUTPUT_INVALID");
   });
   const staging = await mkdtemp(path.join(plan.releaseRoot, ".unsigned-staging-"));
   const stagedApp = path.join(staging, "Tammy.app");
   try {
-    await cp(plan.forgeApp, stagedApp, {
+    await cp(plan.builderApp, stagedApp, {
       dereference: false,
       preserveTimestamps: false,
       recursive: true,
@@ -454,7 +450,7 @@ export async function publishUnsignedMacOSStaging(plan) {
     return manifest;
   } finally {
     await safeRemoveOutputDirectory(plan, staging).catch(() => {});
-    await safeRemoveOutputDirectory(plan, plan.forgeOutputRoot).catch(() => {});
+      await safeRemoveOutputDirectory(plan, plan.builderOutputRoot).catch(() => {});
   }
 }
 
@@ -879,7 +875,7 @@ export async function executeMacOSStoreBuild(
   await ensureReleaseRoot(plan);
   const lock = await acquireSbrBuildLock(plan.root);
   try {
-    await safeRemoveOutputDirectory(plan, plan.forgeOutputRoot);
+    await safeRemoveOutputDirectory(plan, plan.builderOutputRoot);
     const commandOptions = {
       cwd: plan.root,
       environment: { ...plan.environment, [SBR_BUILD_LOCK_ENV]: lock.token },

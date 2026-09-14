@@ -55,7 +55,7 @@ async function executeMacOSStoreBuild(plan, options = {}) {
     : {
         ...plan,
         finalCommands: [],
-        forgeOutputRoot: path.join(plan.root, ".tmp/macos-release/test/build-1/.forge-unsigned"),
+        builderOutputRoot: path.join(plan.root, ".tmp/macos-release/test/build-1/.builder-unsigned"),
         releaseRoot: path.join(plan.root, ".tmp/macos-release/test/build-1"),
         resourceSignCommands: [],
         signingApp: plan.app,
@@ -199,16 +199,16 @@ async function createUnsignedStagingRepository(context) {
     ...environment("development"),
     TAMMY_MACOS_BUILD_NUMBER: "1",
   });
-  const forgeResources = path.join(plan.forgeApp, "Contents/Resources");
-  await mkdir(path.join(plan.forgeApp, "Contents/MacOS"), { recursive: true });
-  await cp(resources, forgeResources, { recursive: true });
+  const builderResources = path.join(plan.builderApp, "Contents/Resources");
+  await mkdir(path.join(plan.builderApp, "Contents/MacOS"), { recursive: true });
+  await cp(resources, builderResources, { recursive: true });
   for (const [bundle, executable, bundleIdentifier] of [
     ["Tammy Helper.app", "Tammy Helper", "com.tammy.desktop.helper"],
     ["Tammy Helper (GPU).app", "Tammy Helper (GPU)", "com.tammy.desktop.helper.GPU"],
     ["Tammy Helper (Plugin).app", "Tammy Helper (Plugin)", "com.tammy.desktop.helper.Plugin"],
     ["Tammy Helper (Renderer).app", "Tammy Helper (Renderer)", "com.tammy.desktop.helper.Renderer"],
   ]) {
-    const contents = path.join(plan.forgeApp, "Contents/Frameworks", bundle, "Contents");
+    const contents = path.join(plan.builderApp, "Contents/Frameworks", bundle, "Contents");
     await mkdir(path.join(contents, "MacOS"), { recursive: true });
     await writeFile(
       path.join(contents, "Info.plist"),
@@ -218,25 +218,25 @@ async function createUnsignedStagingRepository(context) {
     await chmod(path.join(contents, "MacOS", executable), 0o755);
   }
   for (const relativePath of standardFrameworkExecutables) {
-    const file = path.join(plan.forgeApp, ...relativePath.split("/"));
+    const file = path.join(plan.builderApp, ...relativePath.split("/"));
     await mkdir(path.dirname(file), { recursive: true });
     await writeFile(file, `${path.basename(file)}\n`);
     await chmod(file, 0o755);
   }
   await Promise.all([
     writeFile(
-      path.join(plan.forgeApp, "Contents/Info.plist"),
+      path.join(plan.builderApp, "Contents/Info.plist"),
       fixturePlist({ bundleIdentifier: "com.tammy.desktop", executable: "Tammy" }),
     ),
-    writeFile(path.join(plan.forgeApp, "Contents/MacOS/Tammy"), "unsigned app\n"),
-    writeFile(path.join(forgeResources, "app.asar"), "unsigned asar\n"),
-    writeFile(path.join(forgeResources, "PrivacyInfo.xcprivacy"), "privacy\n"),
-    writeFile(path.join(forgeResources, "icon.icns"), "icon\n"),
+    writeFile(path.join(plan.builderApp, "Contents/MacOS/Tammy"), "unsigned app\n"),
+    writeFile(path.join(builderResources, "app.asar"), "unsigned asar\n"),
+    writeFile(path.join(builderResources, "PrivacyInfo.xcprivacy"), "privacy\n"),
+    writeFile(path.join(builderResources, "icon.icns"), "icon\n"),
   ]);
   await Promise.all([
-    chmod(path.join(plan.forgeApp, "Contents/MacOS/Tammy"), 0o755),
-    chmod(path.join(forgeResources, "core/darwin-arm64/tammy-core"), 0o755),
-    chmod(path.join(forgeResources, "sbr-helper/darwin-arm64/tammy-sbr-helper"), 0o755),
+    chmod(path.join(plan.builderApp, "Contents/MacOS/Tammy"), 0o755),
+    chmod(path.join(builderResources, "core/darwin-arm64/tammy-core"), 0o755),
+    chmod(path.join(builderResources, "sbr-helper/darwin-arm64/tammy-sbr-helper"), 0o755),
   ]);
   return { plan, resources };
 }
@@ -252,6 +252,17 @@ test("distribution plan checks, builds, packages MAS and creates a signed flat p
     plan.app,
     path.join(root, ".tmp/macos-release/0.1.0/build-42/distribution/Tammy.app"),
   );
+  assert.equal(
+    plan.builderOutputRoot,
+    path.join(root, ".tmp/macos-release/0.1.0/build-42/.builder-unsigned"),
+  );
+  assert.equal(
+    plan.builderApp,
+    path.join(
+      root,
+      ".tmp/macos-release/0.1.0/build-42/.builder-unsigned/mas-arm64/Tammy.app",
+    ),
+  );
   assert.match(plan.pkg ?? "", /Tammy-0\.1\.0-build\.42\.pkg$/);
   assert.deepEqual(
     plan.stageCommands.map(({ command, args }) => [command, ...args]),
@@ -261,7 +272,7 @@ test("distribution plan checks, builds, packages MAS and creates a signed flat p
       [process.execPath, path.join(root, "scripts/build-sbr-helper.mjs"), "--mas-profile-unsigned"],
       ["pnpm", "core:build"],
       ["pnpm", "build:manifest"],
-      ["pnpm", "--dir", "apps/desktop", "package", "--platform=mas", "--arch=arm64"],
+      ["pnpm", "--dir", "apps/desktop", "package:mas:unsigned"],
     ],
   );
   assert.deepEqual(commands, [
@@ -270,7 +281,7 @@ test("distribution plan checks, builds, packages MAS and creates a signed flat p
     [process.execPath, path.join(root, "scripts/build-sbr-helper.mjs"), "--mas-profile-unsigned"],
     ["pnpm", "core:build"],
     ["pnpm", "build:manifest"],
-    ["pnpm", "--dir", "apps/desktop", "package", "--platform=mas", "--arch=arm64"],
+    ["pnpm", "--dir", "apps/desktop", "package:mas:unsigned"],
     [
       "/usr/bin/codesign",
       "--force",
@@ -335,6 +346,8 @@ test("distribution plan checks, builds, packages MAS and creates a signed flat p
   assert.equal(plan.environment.TAMMY_RELEASE_PROFILE, "mas");
   assert.equal(plan.environment.TAMMY_MACOS_TARGET, "mas/arm64");
   assert.equal(plan.unsignedEnvironment.TAMMY_MACOS_ARTIFACT_PHASE, "unsigned-staging");
+  assert.equal(plan.unsignedEnvironment.TAMMY_ELECTRON_BUILDER_OUTPUT, plan.builderOutputRoot);
+  assert.equal(Object.hasOwn(plan.unsignedEnvironment, "TAMMY_MACOS_UNSIGNED_OUTPUT_ROOT"), false);
   for (const key of [
     "TAMMY_MACOS_INSTALLER_IDENTITY",
     "TAMMY_MACOS_PROVISIONING_PROFILE",
@@ -360,7 +373,8 @@ test("distribution plan checks, builds, packages MAS and creates a signed flat p
     ([command, ...args]) => command === "pnpm" && args.join(" ") === "build:manifest",
   );
   const packageIndex = commands.findIndex(
-    ([command, ...args]) => command === "pnpm" && args.includes("--platform=mas"),
+    ([command, ...args]) =>
+      command === "pnpm" && args.join(" ") === "--dir apps/desktop package:mas:unsigned",
   );
   assert.ok(packageIndex > 0 && packageIndex < helperSignIndex);
   assert.ok(helperSignIndex < profileIndex && profileIndex < manifestIndex);
@@ -434,22 +448,22 @@ test("release output rejects a symlinked ignored ancestor before locking or clea
   assert.equal(await readFile(path.join(external, "preserve.txt"), "utf8"), "external data\n");
 });
 
-test("release output rejects a direct Forge output symlink before Forge can overwrite it", async (context) => {
-  const fixtureRoot = await mkdtemp(path.join(tmpdir(), "tammy-macos-forge-root-"));
-  const external = await mkdtemp(path.join(tmpdir(), "tammy-macos-forge-external-"));
+test("release output rejects a direct Builder output symlink before Builder can overwrite it", async (context) => {
+  const fixtureRoot = await mkdtemp(path.join(tmpdir(), "tammy-macos-builder-root-"));
+  const external = await mkdtemp(path.join(tmpdir(), "tammy-macos-builder-external-"));
   context.after(async () => {
     await rm(fixtureRoot, { force: true, recursive: true });
     await rm(external, { force: true, recursive: true });
   });
   const releaseRoot = path.join(fixtureRoot, ".tmp/macos-release/0.1.0/build-1");
-  const forgeOutputRoot = path.join(releaseRoot, ".forge-unsigned");
+  const builderOutputRoot = path.join(releaseRoot, ".builder-unsigned");
   await mkdir(releaseRoot, { recursive: true });
-  await writeFile(path.join(external, "preserve.txt"), "external Forge data\n");
-  await symlink(external, forgeOutputRoot);
+  await writeFile(path.join(external, "preserve.txt"), "external Builder data\n");
+  await symlink(external, builderOutputRoot);
   let commandRan = false;
   await assert.rejects(
     packageMacOSStore.executeMacOSStoreBuild(
-      { environment: {}, forgeOutputRoot, releaseRoot, root: fixtureRoot },
+      { environment: {}, builderOutputRoot, releaseRoot, root: fixtureRoot },
       {
         commandRunner: async () => {
           commandRan = true;
@@ -461,7 +475,7 @@ test("release output rejects a direct Forge output symlink before Forge can over
   assert.equal(commandRan, false);
   assert.equal(
     await readFile(path.join(external, "preserve.txt"), "utf8"),
-    "external Forge data\n",
+    "external Builder data\n",
   );
 });
 
@@ -504,8 +518,8 @@ test("publishes one authenticated unsigned payload and transactionally derives a
   assert.match(first.productSourceCommit, /^[0-9a-f]{40}$/u);
   assert.deepEqual(JSON.parse(await readFile(plan.unsignedManifest, "utf8")), first);
 
-  await mkdir(path.dirname(plan.forgeApp), { recursive: true });
-  await cp(plan.unsignedApp, plan.forgeApp, { recursive: true });
+  await mkdir(path.dirname(plan.builderApp), { recursive: true });
+  await cp(plan.unsignedApp, plan.builderApp, { recursive: true });
   assert.deepEqual(await publishUnsignedMacOSStaging(plan), first);
 
   await writeFile(path.join(plan.root, "release-note.txt"), "new committed source\n");
@@ -523,13 +537,13 @@ test("publishes one authenticated unsigned payload and transactionally derives a
     ],
     { cwd: plan.root },
   );
-  await mkdir(path.dirname(plan.forgeApp), { recursive: true });
-  await cp(plan.unsignedApp, plan.forgeApp, { recursive: true });
+  await mkdir(path.dirname(plan.builderApp), { recursive: true });
+  await cp(plan.unsignedApp, plan.builderApp, { recursive: true });
   await assert.rejects(publishUnsignedMacOSStaging(plan), /MACOS_UNSIGNED_STAGING_CONFLICT/);
 
-  await mkdir(path.dirname(plan.forgeApp), { recursive: true });
-  await cp(plan.unsignedApp, plan.forgeApp, { recursive: true });
-  await writeFile(path.join(plan.forgeApp, "Contents/Resources/app.asar"), "payload drift\n");
+  await mkdir(path.dirname(plan.builderApp), { recursive: true });
+  await cp(plan.unsignedApp, plan.builderApp, { recursive: true });
+  await writeFile(path.join(plan.builderApp, "Contents/Resources/app.asar"), "payload drift\n");
   await assert.rejects(publishUnsignedMacOSStaging(plan), /MACOS_UNSIGNED_STAGING_CONFLICT/);
 
   await Promise.all([
@@ -600,6 +614,7 @@ test("mode-bound build and SBR manifests authenticate the exact packaged signed 
   const build = JSON.parse(
     await readFile(path.join(root, "apps/desktop/resources/build/build-manifest.json"), "utf8"),
   );
+  build.source_dirty = false;
   build.source_revision = manifest.productSourceCommit;
   build.core_sha256 = hash(coreBytes);
   build.sqlcipher.library_sha256 = hash(sqlcipherBytes);
@@ -660,7 +675,7 @@ test("execution authenticates one unsigned stage before signing and publishing i
   await executeMacOSStoreBuild(plan, {
     appSigner: async () => events.push("app-sign"),
     commandRunner: async ({ command, environment }, options) => {
-      events.push(command === "pnpm" && environment === "unsigned" ? "forge-unsigned" : command);
+      events.push(command === "pnpm" && environment === "unsigned" ? "builder-unsigned" : command);
       if (environment === "unsigned") {
         assert.equal(options.environment.TAMMY_MACOS_SIGNING_IDENTITY, undefined);
       }
@@ -678,7 +693,7 @@ test("execution authenticates one unsigned stage before signing and publishing i
     },
     write: () => {},
   });
-  assert.ok(events.indexOf("forge-unsigned") < events.indexOf("unsigned-manifest"));
+  assert.ok(events.indexOf("builder-unsigned") < events.indexOf("unsigned-manifest"));
   assert.ok(events.indexOf("unsigned-manifest") < events.indexOf("app-sign"));
   assert.ok(events.indexOf("app-sign") < events.indexOf("equivalence"));
   assert.ok(events.indexOf("equivalence") < events.indexOf("publish"));

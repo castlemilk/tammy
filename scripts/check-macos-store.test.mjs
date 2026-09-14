@@ -775,13 +775,18 @@ test("unsigned staging accepts product facts but rejects every signing input", (
     TAMMY_MACOS_SUPPORT_URL: "https://example.com/tammy/support",
     TAMMY_MACOS_TARGET: "mas/arm64",
     TAMMY_MACOS_TEAM_ID: "ABCDE12345",
+    TAMMY_ELECTRON_BUILDER_OUTPUT: "/private/tmp/tammy-builder-output",
   };
-  assert.deepEqual(validateMacOSUnsignedEnvironment(valid), { buildNumber: "42" });
+  assert.deepEqual(validateMacOSUnsignedEnvironment(valid), {
+    buildNumber: "42",
+    builderOutputRoot: "/private/tmp/tammy-builder-output",
+  });
   for (const key of [
     "TAMMY_MACOS_INSTALLER_IDENTITY",
     "TAMMY_MACOS_PROVISIONING_PROFILE",
     "TAMMY_MACOS_SIGNING_IDENTITY",
     "TAMMY_MACOS_SIGNING_MODE",
+    "TAMMY_MACOS_UNSIGNED_OUTPUT_ROOT",
   ]) {
     assert.throws(
       () => validateMacOSUnsignedEnvironment({ ...valid, [key]: "not-accepted" }),
@@ -952,7 +957,7 @@ test("development signing does not require an installer identity", () => {
   );
 });
 
-test("the repository checker emits the only release facts consumed by Forge", async () => {
+test("the repository checker emits the only release facts consumed by Builder", async () => {
   const inspected = await inspectMacOSStoreRepository(root, { repositoryTestsPassed: true });
   const environment = {
     TAMMY_MACOS_BUILD_NUMBER: "42",

@@ -14,6 +14,7 @@
     "preview": "electron-vite preview",
     "prepackage": "pnpm prepare:runtime",
     "package": "pnpm build && electron-builder --config electron-builder.yml --dir --publish never",
+    "package:mas:unsigned": "pnpm build && electron-builder --config electron-builder.yml --mac mas --arm64 --publish never",
     "premake": "pnpm prepare:runtime",
     "make": "electron-forge make",
     "pretest": "pnpm prepare:runtime",

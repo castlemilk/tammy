@@ -76,7 +76,8 @@ test("simulator profile generator binds exact helper bytes and a test-only signe
 test("production source contains no simulator private key material", async () => {
   for (const file of [
     "scripts/build-sbr-helper.mjs",
-    "apps/desktop/forge.config.ts",
+    "apps/desktop/electron-builder.yml",
+    "apps/desktop/scripts/electron-builder-after-pack.cjs",
     "scripts/write-build-manifest.mjs",
   ]) {
     const source = await readFile(file, "utf8");
@@ -84,17 +85,20 @@ test("production source contains no simulator private key material", async () =>
   }
 });
 
-test("Forge conditionally packages exact SBR resources and preserves helper bytes", async () => {
-  const source = await readFile("apps/desktop/forge.config.ts", "utf8");
+test("Builder conditionally packages exact SBR resources and preserves helper bytes", async () => {
+  const source = await readFile("apps/desktop/electron-builder.yml", "utf8");
+  const afterPack = await readFile("apps/desktop/scripts/electron-builder-after-pack.cjs", "utf8");
   assert.match(
     source,
-    /process\.platform === "darwin"[\s\S]*"resources\/sbr-helper"[\s\S]*"resources\/sbr"/,
+    /mac:[\s\S]*resources\/sbr-helper[\s\S]*resources\/sbr/,
   );
-  assert.match(source, /packagedSbrHelperSuffix/);
-  assert.match(source, /isManifestBoundExecutable/);
-  assert.match(source, /mas-unsigned-staging/);
-  assert.match(source, /TAMMY_MACOS_UNSIGNED_OUTPUT_ROOT/);
-  assert.match(source, /delete packagerConfig\.osxSign/);
+  assert.match(source, /mas:[\s\S]*release\/macos\/PrivacyInfo\.xcprivacy/);
+  assert.match(source, /signIgnore:/);
+  assert.match(source, /TAMMY_ELECTRON_BUILDER_OUTPUT/);
+  assert.match(source, /identity: null/);
+  assert.match(afterPack, /TAMMY_MACOS_ARTIFACT_PHASE/);
+  assert.match(afterPack, /unsigned-staging/);
+  assert.match(afterPack, /sbr-helper/);
   assert.doesNotMatch(source, /config\/sbr\/evte/);
 });
 
