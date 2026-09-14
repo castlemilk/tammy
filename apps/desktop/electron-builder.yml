@@ -1,0 +1,94 @@
+appId: com.tammy.desktop
+productName: Tammy
+category: public.app-category.finance
+copyright: © 2026 Gamma Systems Pty Ltd
+
+directories:
+  output: ${env.TAMMY_ELECTRON_BUILDER_OUTPUT}
+  buildResources: assets
+
+files:
+  - out/**
+  - package.json
+  - "!src/**"
+  - "!tests/**"
+  - "!*.config.*"
+  - "!electron-builder.yml"
+  - "!forge.config.ts"
+
+asar: true
+npmRebuild: false
+afterPack: scripts/electron-builder-after-pack.cjs
+
+electronFuses:
+  runAsNode: false
+  enableCookieEncryption: true
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: true
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
+
+mac:
+  target:
+    - target: dir
+      arch:
+        - arm64
+  icon: assets/icon.icns
+  minimumSystemVersion: '14.0'
+  identity: '-'
+  hardenedRuntime: false
+  helperBundleId: com.tammy.desktop.helper
+  signIgnore:
+    - 'Contents/Resources/core/darwin-arm64/tammy-core$'
+    - 'Contents/Resources/sbr-helper/darwin-arm64/tammy-sbr-helper$'
+  extraResources:
+    - from: resources/build
+      to: build
+    - from: resources/core
+      to: core
+    - from: resources/sqlcipher
+      to: sqlcipher
+    - from: resources/sbr
+      to: sbr
+    - from: resources/sbr-helper
+      to: sbr-helper
+
+win:
+  target:
+    - target: dir
+      arch:
+        - x64
+  extraResources:
+    - from: resources/build
+      to: build
+    - from: resources/core
+      to: core
+    - from: resources/sqlcipher
+      to: sqlcipher
+
+mas:
+  target:
+    - target: dir
+      arch:
+        - arm64
+  identity: null
+  helperBundleId: com.tammy.desktop.helper
+  bundleVersion: ${env.TAMMY_MACOS_BUILD_NUMBER}
+  minimumSystemVersion: '14.0'
+  extendInfo:
+    ElectronTeamID: ${env.TAMMY_MACOS_TEAM_ID}
+    TammyPrivacyPolicyURL: ${env.TAMMY_MACOS_PRIVACY_POLICY_URL}
+    TammySupportURL: ${env.TAMMY_MACOS_SUPPORT_URL}
+  extraResources:
+    - from: resources/build
+      to: build
+    - from: resources/core
+      to: core
+    - from: resources/sqlcipher
+      to: sqlcipher
+    - from: resources/sbr
+      to: sbr
+    - from: resources/sbr-helper
+      to: sbr-helper
+    - from: release/macos/PrivacyInfo.xcprivacy
+      to: PrivacyInfo.xcprivacy
