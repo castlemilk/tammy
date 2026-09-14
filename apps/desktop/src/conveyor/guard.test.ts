@@ -47,6 +47,21 @@ describe("createConveyorAuthorizer", () => {
     expect(() => authorize(harness.event)).not.toThrow();
   });
 
+  it("accepts Electron wrapper instances that identify the same main frame", () => {
+    const frame = { isDestroyed: () => false, url: "tammy://app/", frameTreeNodeId: 7 };
+    const webContents = { isDestroyed: () => false, mainFrame: frame };
+    const window = { isDestroyed: () => false, webContents };
+    const authorize = createConveyorAuthorizer({
+      applicationUrl: "tammy://app/",
+      getWindow: vi.fn(() => window),
+    });
+
+    expect(() => authorize({
+      sender: webContents,
+      senderFrame: { ...frame },
+    })).not.toThrow();
+  });
+
   it("rejects routes and fragments on the same live main-frame object", () => {
     const harness = createHarness();
     const authorize = createConveyorAuthorizer({ applicationUrl: "tammy://app/", getWindow: harness.getWindow });

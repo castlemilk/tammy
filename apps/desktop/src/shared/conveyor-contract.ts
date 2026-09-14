@@ -1,7 +1,7 @@
 import type { ConveyorBridge } from "electron-conveyor/renderer";
 
 import type { DesktopLaunchScenario } from "./launch-scenario";
-import manifest from "./conveyor-manifest.json";
+import manifest from "./conveyor-manifest.json" with { type: "json" };
 
 export interface SystemDiagnostics {
   readonly apiVersion: string;
