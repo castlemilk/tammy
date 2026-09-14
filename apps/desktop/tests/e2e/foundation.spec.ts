@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import { create, isFieldSet } from "@bufbuild/protobuf";
 import {
   GetReportingCapabilityRequestSchema,
@@ -13,11 +12,9 @@ import {
 import { createProtoMethodCodec } from "../../src/shared/proto-ipc";
 import { consumeExpectedCspViolations } from "./csp-console";
 import { expect, test } from "./fixtures";
+import { invokeConveyorFrame, invokeConveyorValue } from "./support/conveyor";
 
 const expectedTarget = `${process.platform}-${process.arch}`;
-const preloadMethods = JSON.parse(
-  readFileSync(new URL("../../src/shared/preload-methods.json", import.meta.url), "utf8"),
-) as readonly string[];
 const probeUrls = [
   "https://example.com/tammy-csp-probe",
   "http://example.com/tammy-csp-probe",
@@ -142,7 +139,43 @@ test("runs the packaged first-run journey offline and exits cleanly", async ({
     );
   }
 
-  expect(await page.evaluate(() => Object.keys(window.tammy))).toEqual(preloadMethods);
+  const bridgeEvidence = await page.evaluate(async () => {
+    const bridgeKeys = Object.keys(window.conveyor).sort();
+    const manifest = window.conveyor.manifest();
+    let unknownCallError = "";
+    try {
+      await window.conveyor.invoke("conveyor:unknown", "unknown");
+    } catch (error) {
+      unknownCallError = error instanceof Error ? error.message : String(error);
+    }
+    let subscriptionError = "";
+    try {
+      window.conveyor.subscribe("conveyor:system", () => undefined);
+    } catch (error) {
+      subscriptionError = error instanceof Error ? error.message : String(error);
+    }
+    return {
+      bridgeKeys,
+      manifest,
+      subscriptionError,
+      legacyFacadeType: typeof (window as unknown as Record<string, unknown>)["tammy"],
+      unknownCallError,
+    };
+  });
+  expect(bridgeEvidence.bridgeKeys).toEqual(["invoke", "manifest", "subscribe"]);
+  expect(Object.keys(bridgeEvidence.manifest).sort()).toEqual([
+    "accounting",
+    "banking",
+    "documents",
+    "organisation",
+    "reporting",
+    "sbr",
+    "system",
+    "workspace",
+  ]);
+  expect(bridgeEvidence.legacyFacadeType).toBe("undefined");
+  expect(bridgeEvidence.unknownCallError).toBe("INVALID_CONVEYOR_REQUEST");
+  expect(bridgeEvidence.subscriptionError).toBe("IPC_SUBSCRIPTIONS_DISABLED");
   expect(
     await page.evaluate(() => ({
       Buffer: typeof (globalThis as { Buffer?: unknown }).Buffer,
@@ -203,7 +236,11 @@ test("runs the packaged first-run journey offline and exits cleanly", async ({
 });
 
 async function windowDiagnostics(page: import("@playwright/test").Page) {
-  const diagnostics = await page.evaluate(() => window.tammy.getSystemDiagnostics());
+  const diagnostics = (await invokeConveyorValue(page, "system", "getSystemDiagnostics")) as {
+    apiVersion: string;
+    networkRequired: boolean;
+    runtimeMode: string;
+  };
   return {
     apiVersion: diagnostics.apiVersion,
     networkRequired: diagnostics.networkRequired,
@@ -224,12 +261,6 @@ async function windowReportingCapability(
       entityType,
     }),
   );
-  const response = await page.evaluate(
-    async (requestBytes) => {
-      const frame = await window.tammy.getReportingCapability(Uint8Array.from(requestBytes));
-      return [...frame];
-    },
-    [...request],
-  );
-  return reportingCodec.decodeResponse(Uint8Array.from(response));
+  const response = await invokeConveyorFrame(page, "reporting", "getReportingCapability", request);
+  return reportingCodec.decodeResponse(response);
 }

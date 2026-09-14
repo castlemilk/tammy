@@ -67,9 +67,9 @@ import { validateScreenshotFixture } from "../../../../../scripts/check-app-stor
 import screenshotFixture from "../../../release/macos/screenshots/fixture.json" with {
   type: "json",
 };
-import type { TammyDesktopAPI } from "../../../src/shared/desktop-api";
 import { createProtoMethodCodec, type ProtoMethodCodec } from "../../../src/shared/proto-ipc";
 import { type ElectronHarness, expect } from "../fixtures";
+import { type ConveyorModule, invokeConveyorFrame } from "./conveyor";
 
 const UUID_V7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const WORKFLOW_FIXTURE = validateScreenshotFixture(screenshotFixture);
@@ -752,15 +752,27 @@ export async function setupAndRunCurrentAccountingWorkflow(
   return workspace;
 }
 
-type BinaryMethod = Exclude<
-  keyof TammyDesktopAPI,
-  | "getSystemDiagnostics"
-  | "selectMachineCredentialFile"
-  | "importMachineCredential"
-  | "replaceMachineCredential"
-  | "unlockMachineCredential"
-  | "importSbrProductId"
->;
+const METHOD_MODULES = {
+  completeBankReconciliation: "banking",
+  createAccount: "accounting",
+  createBasDraft: "reporting",
+  getAttentionSummary: "reporting",
+  getBankingSummary: "banking",
+  getCurrentBasDraft: "reporting",
+  getDocument: "documents",
+  getJournal: "accounting",
+  getTrialBalance: "accounting",
+  importBankStatement: "banking",
+  ingestDocument: "documents",
+  listAccounts: "accounting",
+  listBankStatementLines: "banking",
+  listDocuments: "documents",
+  listJournals: "accounting",
+  matchBankStatementLine: "banking",
+  postManualJournal: "accounting",
+  saveDocumentReview: "documents",
+} as const satisfies Record<string, ConveyorModule>;
+type BinaryMethod = keyof typeof METHOD_MODULES;
 
 async function invokeProto<Input extends DescMessage, Output extends DescMessage>(
   page: import("@playwright/test").Page,
@@ -768,15 +780,13 @@ async function invokeProto<Input extends DescMessage, Output extends DescMessage
   codec: Readonly<ProtoMethodCodec<Input, Output>>,
   request: MessageShape<Input>,
 ): Promise<MessageShape<Output>> {
-  const requestBytes = [...codec.encodeRequest(request)];
-  const responseBytes = await page.evaluate(
-    async ({ methodName, bytes }) => {
-      const response = await window.tammy[methodName](Uint8Array.from(bytes));
-      return [...response];
-    },
-    { methodName: method, bytes: requestBytes },
+  const responseBytes = await invokeConveyorFrame(
+    page,
+    METHOD_MODULES[method],
+    method,
+    codec.encodeRequest(request),
   );
-  return codec.decodeResponse(Uint8Array.from(responseBytes));
+  return codec.decodeResponse(responseBytes);
 }
 
 function command(

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { parseCoverageManifest } from "./check-e2e-coverage.mjs";
+import { flattenConveyorManifest, parseCoverageManifest } from "./check-e2e-coverage.mjs";
 import {
   COMPANY_EOFY_DECLARED_FUTURE_RPCS,
   SBR_DECLARED_FUTURE_RPCS,
@@ -98,8 +98,8 @@ test("company EOFY close, return preparation, and submission catalogue exactly 3
   assert.deepEqual(COMPANY_EOFY_DECLARED_FUTURE_RPCS, expected);
 
   const coverage = parseCoverageManifest(await readFile("test/e2e/coverage.yaml", "utf8"));
-  const preloadMethods = JSON.parse(
-    await readFile("apps/desktop/src/shared/preload-methods.json", "utf8"),
+  const preloadMethods = flattenConveyorManifest(
+    JSON.parse(await readFile("apps/desktop/src/shared/conveyor-manifest.json", "utf8")),
   );
   assert.deepEqual(coverage.scenarios["E2E-18"].futureCases, [
     "company-eofy/contracts",

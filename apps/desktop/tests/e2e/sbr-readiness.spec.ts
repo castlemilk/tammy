@@ -20,6 +20,7 @@ import {
 
 import { createProtoMethodCodec } from "../../src/shared/proto-ipc";
 import { expect, test } from "./fixtures";
+import { invokeConveyorCommandWithFrame, invokeConveyorFrame } from "./support/conveyor";
 import {
   CURRENT_WORKFLOW_ADMIN_PASSWORD,
   CURRENT_WORKFLOW_PASSPHRASE,
@@ -298,28 +299,24 @@ test("SBR readiness uses local RAM credential and deterministic simulator only",
       evteServiceIdentifier: "EVTE.TEST.SERVICE",
     }),
   );
-  const productBoundary = await page.evaluate(
-    async ({ importBytes, removeBytes }) => {
-      const capture = async (operation: Promise<Uint8Array>): Promise<string> => {
-        try {
-          await operation;
-          return "UNEXPECTED_SUCCESS";
-        } catch (error) {
-          return error instanceof Error ? error.message : String(error);
-        }
-      };
-      return {
-        importError: await capture(
-          window.tammy.importSbrProductId({
-            command: Uint8Array.from(importBytes),
-            productId: "SYNTHETIC-NON-ATO-PRODUCT-ID",
-          }),
-        ),
-        removeError: await capture(window.tammy.removeSbrProductId(Uint8Array.from(removeBytes))),
-      };
-    },
-    { importBytes: [...importProductFrame], removeBytes: [...removeProductFrame] },
-  );
+  const capture = async (operation: Promise<unknown>): Promise<string> => {
+    try {
+      await operation;
+      return "UNEXPECTED_SUCCESS";
+    } catch (error) {
+      return error instanceof Error ? error.message : String(error);
+    }
+  };
+  const productBoundary = {
+    importError: await capture(
+      invokeConveyorCommandWithFrame(page, "sbr", "importSbrProductId", importProductFrame, {
+        productId: "SYNTHETIC-NON-ATO-PRODUCT-ID",
+      }),
+    ),
+    removeError: await capture(
+      invokeConveyorFrame(page, "sbr", "removeSbrProductId", removeProductFrame),
+    ),
+  };
   importProductFrame.fill(0);
   removeProductFrame.fill(0);
   expect(productBoundary.importError).toBe("CORE_REQUEST_FAILED");
@@ -416,16 +413,14 @@ test("SBR readiness uses local RAM credential and deterministic simulator only",
       }),
     }),
   );
-  const secondaryStatusBytes = await page.evaluate(
-    async (bytes) => {
-      return [...(await window.tammy.getMachineCredentialStatus(Uint8Array.from(bytes)))];
-    },
-    [...statusFrame],
+  const secondaryStatusBytes = await invokeConveyorFrame(
+    page,
+    "sbr",
+    "getMachineCredentialStatus",
+    statusFrame,
   );
   statusFrame.fill(0);
-  const secondaryStatus = credentialStatusCodec.decodeResponse(
-    Uint8Array.from(secondaryStatusBytes),
-  );
+  const secondaryStatus = credentialStatusCodec.decodeResponse(secondaryStatusBytes);
   expect(secondaryStatus.credentialStatus?.state).toBe(MachineCredentialState.MISSING);
   await navigate(page, "/settings/sbr");
   await expect(page.getByRole("button", { name: "Run simulator fixture" })).toHaveCount(0);

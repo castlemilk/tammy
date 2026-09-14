@@ -33,6 +33,16 @@ const RPC_KEYS = [
   "idempotency",
 ];
 const TRANSITION_KEYS = ["stage", "cases", "futureCases"];
+const CONVEYOR_MODULES = [
+  "system",
+  "workspace",
+  "organisation",
+  "accounting",
+  "banking",
+  "documents",
+  "reporting",
+  "sbr",
+];
 
 function isRecord(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -40,6 +50,54 @@ function isRecord(value) {
 
 function isStringArray(value) {
   return Array.isArray(value) && value.every((entry) => typeof entry === "string");
+}
+
+function parseConveyorManifestValue(source) {
+  let value;
+  try {
+    value = typeof source === "string" ? JSON.parse(source) : source;
+  } catch {
+    throw new Error("E2E_COVERAGE_CONVEYOR_MANIFEST_INVALID");
+  }
+  if (!isRecord(value)) throw new Error("E2E_COVERAGE_CONVEYOR_MANIFEST_INVALID");
+  const moduleNames = Object.keys(value).sort();
+  if (
+    moduleNames.length !== CONVEYOR_MODULES.length ||
+    moduleNames.some((module, index) => module !== [...CONVEYOR_MODULES].sort()[index])
+  ) {
+    throw new Error("E2E_COVERAGE_CONVEYOR_MANIFEST_INVALID");
+  }
+  const methods = new Set();
+  const manifest = {};
+  for (const module of CONVEYOR_MODULES) {
+    const procedures = value[module];
+    if (!isRecord(procedures) || Object.keys(procedures).length === 0) {
+      throw new Error("E2E_COVERAGE_CONVEYOR_MANIFEST_INVALID");
+    }
+    const copy = {};
+    for (const [method, kind] of Object.entries(procedures)) {
+      if (
+        !matchesPattern(method, PRELOAD_NAME_PATTERN) ||
+        (kind !== "query" && kind !== "command") ||
+        methods.has(method)
+      ) {
+        throw new Error("E2E_COVERAGE_CONVEYOR_MANIFEST_INVALID");
+      }
+      methods.add(method);
+      copy[method] = kind;
+    }
+    manifest[module] = copy;
+  }
+  return manifest;
+}
+
+export function parseConveyorManifest(source) {
+  return parseConveyorManifestValue(source);
+}
+
+export function flattenConveyorManifest(source) {
+  const manifest = parseConveyorManifestValue(source);
+  return CONVEYOR_MODULES.flatMap((module) => Object.keys(manifest[module])).sort();
 }
 
 function matchesPattern(value, pattern) {
@@ -249,15 +307,27 @@ export function descriptorRpcNames(bytes) {
 
 export function checkE2ECoverage({
   coverage,
+  conveyorManifest,
   descriptorRpcs,
   preloadMethods,
   requireProduction = false,
   transitionIds,
 }) {
+  let expectedPreloadMethods = preloadMethods;
+  if (conveyorManifest !== undefined) {
+    expectedPreloadMethods = flattenConveyorManifest(conveyorManifest);
+    if (
+      !isStringArray(preloadMethods) ||
+      preloadMethods.length !== expectedPreloadMethods.length ||
+      preloadMethods.some((method, index) => method !== expectedPreloadMethods[index])
+    ) {
+      throw new Error("E2E_COVERAGE_CONVEYOR_MANIFEST_INVALID");
+    }
+  }
   if (
     !hasValidManifestShape(coverage) ||
     !isStringArray(descriptorRpcs) ||
-    !isStringArray(preloadMethods) ||
+    !isStringArray(expectedPreloadMethods) ||
     typeof requireProduction !== "boolean" ||
     !isStringArray(transitionIds)
   ) {
@@ -331,10 +401,10 @@ export function checkE2ECoverage({
       }
     }
     if (coverageStage(rpcCoverage, rpcName, "rpc") === DECLARED_FUTURE_STAGE) {
-      if (preloadMethods.includes(rpcCoverage.preload)) {
+      if (expectedPreloadMethods.includes(rpcCoverage.preload)) {
         throw new Error("E2E_COVERAGE_FUTURE_PROMOTION_REQUIRED");
       }
-    } else if (!preloadMethods.includes(rpcCoverage.preload)) {
+    } else if (!expectedPreloadMethods.includes(rpcCoverage.preload)) {
       throw new Error("E2E_COVERAGE_PRELOAD_MISSING");
     }
     for (const scenarioCase of rpcCoverage.cases) {
@@ -348,6 +418,15 @@ export function checkE2ECoverage({
       }
     }
   }
+  const coveredProductionPreloads = Object.entries(coverage.rpcs)
+    .filter(([rpcName, rpcCoverage]) => coverageStage(rpcCoverage, rpcName, "rpc") === PRODUCTION_STAGE)
+    .map(([, rpcCoverage]) => rpcCoverage.preload)
+    .sort();
+  for (const method of expectedPreloadMethods) {
+    if (!coveredProductionPreloads.includes(method)) {
+      throw new Error("E2E_COVERAGE_PRELOAD_UNKNOWN");
+    }
+  }
 }
 
 export async function runE2ECoverage({
@@ -355,25 +434,27 @@ export async function runE2ECoverage({
   requireProduction = false,
   root = process.cwd(),
 }) {
-  const [descriptorBytes, coverageSource, transitionsSource, preloadSource] = await Promise.all([
+  const [descriptorBytes, coverageSource, transitionsSource, conveyorManifestSource] = await Promise.all([
     readFile(descriptorPath),
     readFile(path.join(root, "test/e2e/coverage.yaml"), "utf8"),
     readFile(path.join(root, "test/e2e/transitions.yaml"), "utf8"),
-    readFile(path.join(root, "apps/desktop/src/shared/preload-methods.json"), "utf8"),
+    readFile(path.join(root, "apps/desktop/src/shared/conveyor-manifest.json"), "utf8"),
   ]);
   const coverage = parseCoverageManifest(coverageSource);
   const transitionIndex = parseCoverageManifest(transitionsSource);
-  let preloadMethods;
+  let conveyorManifest;
   try {
-    preloadMethods = JSON.parse(preloadSource);
+    conveyorManifest = parseConveyorManifest(conveyorManifestSource);
   } catch {
-    throw new Error("E2E_COVERAGE_MANIFEST_INVALID");
+    throw new Error("E2E_COVERAGE_CONVEYOR_MANIFEST_INVALID");
   }
-  if (!isRecord(transitionIndex?.transitions) || !Array.isArray(preloadMethods)) {
+  const preloadMethods = flattenConveyorManifest(conveyorManifest);
+  if (!isRecord(transitionIndex?.transitions)) {
     throw new Error("E2E_COVERAGE_MANIFEST_INVALID");
   }
   checkE2ECoverage({
     coverage,
+    conveyorManifest,
     descriptorRpcs: descriptorRpcNames(descriptorBytes),
     preloadMethods,
     requireProduction,

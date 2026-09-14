@@ -157,7 +157,7 @@ test("runs the real electron-vite development runtime offline and cleans up Core
         diagnosticsResult,
         manifestModules: Object.keys(manifest).sort(),
         subscriptionError,
-        tammyType: typeof (window as unknown as { tammy?: unknown }).tammy,
+        legacyFacadeType: typeof (window as unknown as Record<string, unknown>)["tammy"],
         unknownCallError,
       };
     });
@@ -180,7 +180,7 @@ test("runs the real electron-vite development runtime offline and cleans up Core
       "system",
       "workspace",
     ]);
-    expect(bridgeEvidence.tammyType).toBe("undefined");
+    expect(bridgeEvidence.legacyFacadeType).toBe("undefined");
     expect(bridgeEvidence.unknownCallError).toBe("INVALID_CONVEYOR_REQUEST");
     expect(bridgeEvidence.subscriptionError).toBe("IPC_SUBSCRIPTIONS_DISABLED");
     expect(bridgeEvidence.diagnosticsResult).toMatchObject({

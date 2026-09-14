@@ -115,6 +115,19 @@ function futureTransitionInput() {
   return input;
 }
 
+function validConveyorManifest() {
+  return {
+    accounting: { listAccounts: "query" },
+    banking: { getBankingSummary: "query" },
+    documents: { listDocuments: "query" },
+    organisation: { getCurrentUser: "query" },
+    reporting: { getAttentionSummary: "query" },
+    sbr: { getSbrReadiness: "query" },
+    system: { getSystemDiagnostics: "query" },
+    workspace: { getWorkspaceState: "query" },
+  };
+}
+
 function ambiguousSemanticValues(validValue) {
   return [
     " ",
@@ -132,6 +145,50 @@ test("checker module exists", async () => {
   const checker = await import("./check-e2e-coverage.mjs");
 
   assert.equal(typeof checker.checkE2ECoverage, "function");
+});
+
+test("Conveyor manifest flattens the fixed module surface", async () => {
+  const { flattenConveyorManifest, parseConveyorManifest } = await import(
+    "./check-e2e-coverage.mjs"
+  );
+  const manifest = validConveyorManifest();
+  assert.deepEqual(Object.keys(parseConveyorManifest(JSON.stringify(manifest))).sort(), [
+    "accounting",
+    "banking",
+    "documents",
+    "organisation",
+    "reporting",
+    "sbr",
+    "system",
+    "workspace",
+  ]);
+  assert.deepEqual(flattenConveyorManifest(manifest), [
+    "getAttentionSummary",
+    "getBankingSummary",
+    "getCurrentUser",
+    "getSbrReadiness",
+    "getSystemDiagnostics",
+    "getWorkspaceState",
+    "listAccounts",
+    "listDocuments",
+  ]);
+});
+
+test("Conveyor manifest rejects unknown modules, kinds, and duplicate procedures", async () => {
+  const { parseConveyorManifest } = await import("./check-e2e-coverage.mjs");
+  const unknownModule = validConveyorManifest();
+  unknownModule.future = { futureMethod: "query" };
+  const unknownKind = validConveyorManifest();
+  unknownKind.system.getSystemDiagnostics = "stream";
+  const duplicateMethod = validConveyorManifest();
+  duplicateMethod.workspace.getWorkspaceState = "query";
+  duplicateMethod.accounting.getWorkspaceState = "query";
+
+  for (const invalid of [unknownModule, unknownKind, duplicateMethod]) {
+    assert.throws(() => parseConveyorManifest(invalid), {
+      message: "E2E_COVERAGE_CONVEYOR_MANIFEST_INVALID",
+    });
+  }
 });
 
 test("parses the production-only coverage CLI option", async () => {
@@ -804,7 +861,6 @@ test("reports a deterministic error for invalid descriptor wire data", async () 
 test("permits only the reviewed pre-workspace system-query exception", async () => {
   const { checkE2ECoverage } = await import("./check-e2e-coverage.mjs");
   const input = systemQueryInput();
-
   assert.doesNotThrow(() => checkE2ECoverage(input));
 });
 
@@ -878,20 +934,28 @@ test("real company EOFY descriptors and manifests catalogue only future surface"
   const root = process.cwd();
   const descriptorPath = await buildRepositoryValidationDescriptor(root, context);
   assert.notEqual(descriptorPath, path.join(root, ".tmp/contracts/descriptors.pb"));
-  const { checkE2ECoverage, descriptorRpcNames, parseCoverageManifest, runE2ECoverage } =
+  const {
+    checkE2ECoverage,
+    descriptorRpcNames,
+    flattenConveyorManifest,
+    parseCoverageManifest,
+    parseConveyorManifest,
+    runE2ECoverage,
+  } =
     await import("./check-e2e-coverage.mjs");
 
   await assert.doesNotReject(runE2ECoverage({ descriptorPath, root }));
 
-  const [descriptorBytes, coverageSource, transitionSource, preloadSource] = await Promise.all([
+  const [descriptorBytes, coverageSource, transitionSource, conveyorManifestSource] = await Promise.all([
     readFile(descriptorPath),
     readFile(path.join(root, "test/e2e/coverage.yaml"), "utf8"),
     readFile(path.join(root, "test/e2e/transitions.yaml"), "utf8"),
-    readFile(path.join(root, "apps/desktop/src/shared/preload-methods.json"), "utf8"),
+    readFile(path.join(root, "apps/desktop/src/shared/conveyor-manifest.json"), "utf8"),
   ]);
   const coverage = parseCoverageManifest(coverageSource);
   const transitionIndex = parseCoverageManifest(transitionSource);
-  const preloadMethods = JSON.parse(preloadSource);
+  const conveyorManifest = parseConveyorManifest(conveyorManifestSource);
+  const preloadMethods = flattenConveyorManifest(conveyorManifest);
   const descriptorRpcs = descriptorRpcNames(descriptorBytes);
   const transitionIds = Object.keys(transitionIndex.transitions);
   const companyEofyDescriptorRpcs = descriptorRpcs.filter((rpcName) =>
@@ -941,6 +1005,7 @@ test("real company EOFY descriptors and manifests catalogue only future surface"
     () =>
       checkE2ECoverage({
         coverage: missingRpc,
+        conveyorManifest,
         descriptorRpcs,
         preloadMethods,
         transitionIds,
@@ -954,6 +1019,7 @@ test("real company EOFY descriptors and manifests catalogue only future surface"
     () =>
       checkE2ECoverage({
         coverage: missingTransition,
+        conveyorManifest,
         descriptorRpcs,
         preloadMethods,
         transitionIds,
@@ -961,15 +1027,20 @@ test("real company EOFY descriptors and manifests catalogue only future surface"
     { message: "E2E_COVERAGE_TRANSITION_MISSING" },
   );
 
+  const promotedManifest = {
+    ...conveyorManifest,
+    reporting: {
+      ...conveyorManifest.reporting,
+      [coverage.rpcs[COMPANY_EOFY_DECLARED_FUTURE_RPCS[0]].preload]: "command",
+    },
+  };
   assert.throws(
     () =>
       checkE2ECoverage({
         coverage,
+        conveyorManifest: promotedManifest,
         descriptorRpcs,
-        preloadMethods: [
-          ...preloadMethods,
-          coverage.rpcs[COMPANY_EOFY_DECLARED_FUTURE_RPCS[0]].preload,
-        ],
+        preloadMethods: flattenConveyorManifest(promotedManifest),
         transitionIds,
       }),
     { message: "E2E_COVERAGE_FUTURE_PROMOTION_REQUIRED" },
@@ -982,20 +1053,61 @@ test("loads coverage from the descriptor and production manifests", async (conte
   await mkdir(path.join(root, "test/e2e"), { recursive: true });
   await mkdir(path.join(root, "apps/desktop/src/shared"), { recursive: true });
   const input = systemQueryInput();
+  const fixtureRpcs = [
+    ["tammy.v1.AccountingService.ListAccounts", "listAccounts"],
+    ["tammy.v1.BankingService.GetBankingSummary", "getBankingSummary"],
+    ["tammy.v1.DocumentService.ListDocuments", "listDocuments"],
+    ["tammy.v1.IdentityService.GetCurrentUser", "getCurrentUser"],
+    ["tammy.v1.OverviewService.GetAttentionSummary", "getAttentionSummary"],
+    ["tammy.v1.SbrService.GetSbrReadiness", "getSbrReadiness"],
+    ["tammy.v1.WorkspaceService.GetWorkspaceState", "getWorkspaceState"],
+  ];
+  for (const [rpcName, preload] of fixtureRpcs) {
+    input.coverage.rpcs[rpcName] = {
+      stage: "production",
+      preload,
+      cases: ["foundation/offline-ready"],
+      projections: [`${preload}_result`],
+      routes: ["/unlock"],
+      roles: Object.fromEntries(ROLES.map((role) => [role, "allowed"])),
+      principalFailures: ["AUTHENTICATION_REQUIRED"],
+      list: { states: ["found"] },
+      idempotency: { mode: "query", outcomes: ["not_applicable"] },
+    };
+  }
   await writeFile(path.join(root, "test/e2e/coverage.yaml"), stringify(input.coverage));
   await writeFile(
     path.join(root, "test/e2e/transitions.yaml"),
     stringify({ schemaVersion: 1, transitions: {} }),
   );
+  const conveyorManifest = {
+    accounting: { listAccounts: "query" },
+    banking: { getBankingSummary: "query" },
+    documents: { listDocuments: "query" },
+    organisation: { getCurrentUser: "query" },
+    reporting: { getAttentionSummary: "query" },
+    sbr: { getSbrReadiness: "query" },
+    system: { getSystemDiagnostics: "query" },
+    workspace: { getWorkspaceState: "query" },
+  };
   await writeFile(
-    path.join(root, "apps/desktop/src/shared/preload-methods.json"),
-    JSON.stringify(["getSystemDiagnostics"]),
+    path.join(root, "apps/desktop/src/shared/conveyor-manifest.json"),
+    JSON.stringify(conveyorManifest),
   );
   const descriptorSet = create(FileDescriptorSetSchema, {
     file: [
       {
         package: "tammy.v1",
-        service: [{ name: "SystemService", method: [{ name: "GetDiagnostics" }] }],
+        service: [
+          { name: "SystemService", method: [{ name: "GetDiagnostics" }] },
+          { name: "AccountingService", method: [{ name: "ListAccounts" }] },
+          { name: "BankingService", method: [{ name: "GetBankingSummary" }] },
+          { name: "DocumentService", method: [{ name: "ListDocuments" }] },
+          { name: "IdentityService", method: [{ name: "GetCurrentUser" }] },
+          { name: "OverviewService", method: [{ name: "GetAttentionSummary" }] },
+          { name: "SbrService", method: [{ name: "GetSbrReadiness" }] },
+          { name: "WorkspaceService", method: [{ name: "GetWorkspaceState" }] },
+        ],
       },
     ],
   });
