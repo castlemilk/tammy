@@ -27,8 +27,9 @@ function plist(values) {
 
 async function createAppRoot(prefix = "tammy-builder-hook-") {
   const outputRoot = await mkdtemp(path.join(os.tmpdir(), prefix));
-  const appOutDir = path.join(outputRoot, "mac-arm64", "Tammy.app");
-  const contents = path.join(appOutDir, "Contents");
+  const appOutDir = path.join(outputRoot, "mac-arm64");
+  const appBundle = path.join(appOutDir, "Tammy.app");
+  const contents = path.join(appBundle, "Contents");
   const resources = path.join(contents, "Resources");
   const frameworks = path.join(contents, "Frameworks");
   await mkdir(path.join(resources, "core", "darwin-arm64"), { recursive: true });
@@ -59,7 +60,7 @@ async function createAppRoot(prefix = "tammy-builder-hook-") {
   );
   await chmod(path.join(resources, "core", "darwin-arm64", "tammy-core"), 0o644);
   await chmod(path.join(resources, "sbr-helper", "darwin-arm64", "tammy-sbr-helper"), 0o644);
-  return { appOutDir, outputRoot };
+  return { appBundle, appOutDir, outputRoot };
 }
 
 async function readPlist(file) {
@@ -68,13 +69,13 @@ async function readPlist(file) {
 }
 
 test("normalizes an ordinary macOS app without signing or leaking macOS usage keys", async (context) => {
-  const { appOutDir, outputRoot } = await createAppRoot();
+  const { appBundle, appOutDir, outputRoot } = await createAppRoot();
   context.after(() => rm(outputRoot, { force: true, recursive: true }));
   await createAfterPackHook({
     environment: { TAMMY_ELECTRON_BUILDER_OUTPUT: outputRoot },
   })({ appOutDir, arch: "arm64", electronPlatformName: "darwin" });
 
-  const info = await readPlist(path.join(appOutDir, "Contents", "Info.plist"));
+  const info = await readPlist(path.join(appBundle, "Contents", "Info.plist"));
   assert.equal(info.NSAppTransportSecurity, undefined);
   assert.equal(info.NSCameraUsageDescription, undefined);
   assert.equal(info.CFBundleIdentifier, "com.tammy.desktop");
@@ -85,14 +86,14 @@ test("normalizes an ordinary macOS app without signing or leaking macOS usage ke
     ["Tammy Helper (Renderer).app", "com.tammy.desktop.helper.Renderer"],
   ]) {
     const helper = await readPlist(
-      path.join(appOutDir, "Contents", "Frameworks", name, "Contents", "Info.plist"),
+      path.join(appBundle, "Contents", "Frameworks", name, "Contents", "Info.plist"),
     );
     assert.equal(helper.CFBundleIdentifier, identifier);
   }
   for (const file of [
-    path.join(appOutDir, "Contents", "Resources", "core", "darwin-arm64", "tammy-core"),
+    path.join(appBundle, "Contents", "Resources", "core", "darwin-arm64", "tammy-core"),
     path.join(
-      appOutDir,
+      appBundle,
       "Contents",
       "Resources",
       "sbr-helper",
@@ -105,7 +106,7 @@ test("normalizes an ordinary macOS app without signing or leaking macOS usage ke
 });
 
 test("writes the exact unsigned MAS release profile and export-compliance boolean", async (context) => {
-  const { appOutDir, outputRoot } = await createAppRoot("tammy-builder-mas-");
+  const { appBundle, appOutDir, outputRoot } = await createAppRoot("tammy-builder-mas-");
   context.after(() => rm(outputRoot, { force: true, recursive: true }));
   await createAfterPackHook({
     environment: {
@@ -120,7 +121,7 @@ test("writes the exact unsigned MAS release profile and export-compliance boolea
     },
   })({ appOutDir, arch: "arm64", electronPlatformName: "mas" });
 
-  const info = await readPlist(path.join(appOutDir, "Contents", "Info.plist"));
+  const info = await readPlist(path.join(appBundle, "Contents", "Info.plist"));
   assert.deepEqual(
     {
       CFBundleVersion: info.CFBundleVersion,
@@ -168,7 +169,7 @@ test("does not invoke macOS plist tooling for Windows and rejects unsupported ta
 });
 
 test("rejects symlinked output app roots and resources", async (context) => {
-  const { appOutDir, outputRoot } = await createAppRoot("tammy-builder-symlink-");
+  const { appBundle, appOutDir, outputRoot } = await createAppRoot("tammy-builder-symlink-");
   context.after(() => rm(outputRoot, { force: true, recursive: true }));
   const linkRoot = path.join(outputRoot, "link");
   await symlink(appOutDir, linkRoot);
@@ -178,7 +179,7 @@ test("rejects symlinked output app roots and resources", async (context) => {
     })({ appOutDir: linkRoot, arch: "arm64", electronPlatformName: "darwin" }),
     { message: "BUILDER_APP_OUT_DIR_INVALID" },
   );
-  const core = path.join(appOutDir, "Contents", "Resources", "core", "darwin-arm64", "tammy-core");
+  const core = path.join(appBundle, "Contents", "Resources", "core", "darwin-arm64", "tammy-core");
   const replacement = `${core}.real`;
   await symlink(core, replacement);
   await rm(core);

@@ -12,7 +12,7 @@ import { hashAppBundle } from "./capture-app-store-screenshots.mjs";
 import { validateUnsignedContentManifest } from "./macos-unsigned-content.mjs";
 
 const execFile = promisify(nodeExecFile);
-const require = createRequire(import.meta.url);
+const desktopRequire = createRequire(path.resolve(import.meta.dirname, "../apps/desktop/package.json"));
 
 const SHA256 = /^[0-9a-f]{64}$/u;
 const SHA40 = /^[0-9a-f]{40}$/u;
@@ -580,10 +580,7 @@ async function inspectEntitlements(app, payload) {
 }
 
 function asarLibrary() {
-  const forgeRequire = createRequire(
-    require.resolve("@electron-forge/cli/package.json", { paths: ["./apps/desktop"] }),
-  );
-  return forgeRequire("@electron/asar");
+  return desktopRequire("@electron/asar");
 }
 
 function packageRootForManifest(manifestPath) {
@@ -751,7 +748,9 @@ function collectFirstPartyNetworkStrings(asar, asarPath, entries, externalFiles)
   const firstPartyEntries = entries.filter(
     (entry) =>
       !entry.includes("/node_modules/") &&
-      /(?:^|\/)(?:\.vite|package\.json)(?:\/|$)|\.(?:c?js|json|mjs)$/u.test(entry),
+      /(?:^|\/)(?:out\/(?:main|preload|renderer)|package\.json)(?:\/|$)|\.(?:c?js|json|mjs)$/u.test(
+        entry,
+      ),
   );
   if (firstPartyEntries.length > 2048) fail("MACOS_PRIVACY_INSPECTION_LIMIT_EXCEEDED");
   for (const entry of firstPartyEntries) {

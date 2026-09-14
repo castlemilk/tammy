@@ -1,8 +1,54 @@
 import { spawn } from "node:child_process";
+import { lstat, mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { acquireSbrBuildLock, SBR_BUILD_LOCK_ENV } from "./sbr-build-lock.mjs";
+
+export const ELECTRON_BUILDER_OUTPUT_ROOT = ".tmp/electron-builder/ordinary";
+
+function assertContained(parent, candidate) {
+  const relative = path.relative(parent, candidate);
+  if (
+    relative === "" ||
+    relative === ".." ||
+    relative.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relative)
+  ) {
+    throw new Error("DESKTOP_PACKAGE_OUTPUT_INVALID");
+  }
+}
+
+async function assertRealDirectory(directory, code) {
+  const stats = await lstat(directory).catch(() => null);
+  if (!stats?.isDirectory() || stats.isSymbolicLink()) throw new Error(code);
+}
+
+export function ordinaryBuilderOutputRoot(root) {
+  if (typeof root !== "string" || !path.isAbsolute(root) || path.normalize(root) !== root) {
+    throw new Error("DESKTOP_PACKAGE_INPUT_INVALID");
+  }
+  const output = path.join(root, ELECTRON_BUILDER_OUTPUT_ROOT);
+  assertContained(root, output);
+  return output;
+}
+
+async function prepareOrdinaryBuilderOutput(root) {
+  const tmpRoot = path.join(root, ".tmp");
+  await mkdir(tmpRoot, { recursive: true });
+  await assertRealDirectory(tmpRoot, "DESKTOP_PACKAGE_OUTPUT_INVALID");
+  const output = ordinaryBuilderOutputRoot(root);
+  const existing = await lstat(output).catch(() => null);
+  if (existing) {
+    if (!existing.isDirectory() || existing.isSymbolicLink()) {
+      throw new Error("DESKTOP_PACKAGE_OUTPUT_INVALID");
+    }
+    await rm(output, { force: true, recursive: true });
+  }
+  await mkdir(output, { recursive: true });
+  await assertRealDirectory(output, "DESKTOP_PACKAGE_OUTPUT_INVALID");
+  return output;
+}
 
 export function createDesktopPackagePlan(root) {
   if (!path.isAbsolute(root) || path.normalize(root) !== root) {
@@ -43,7 +89,12 @@ function run(command, args, options) {
 export async function executeDesktopPackage(root, commandRunner = run) {
   const ownership = await acquireSbrBuildLock(root);
   try {
-    const environment = { ...process.env, [SBR_BUILD_LOCK_ENV]: ownership.token };
+    const outputRoot = await prepareOrdinaryBuilderOutput(root);
+    const environment = {
+      ...process.env,
+      [SBR_BUILD_LOCK_ENV]: ownership.token,
+      TAMMY_ELECTRON_BUILDER_OUTPUT: outputRoot,
+    };
     for (const { command, args } of createDesktopPackagePlan(root)) {
       await commandRunner(command, args, { cwd: root, env: environment });
     }

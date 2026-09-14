@@ -21,12 +21,13 @@ const MAX_PACKAGED_FILE_BYTES = 512 * 1024 * 1024;
 
 const TARGETS = Object.freeze({
   "darwin/arm64": Object.freeze({
-    app: "out/Tammy-darwin-arm64/Tammy.app/Contents/MacOS/Tammy",
-    asar: "out/Tammy-darwin-arm64/Tammy.app/Contents/Resources/app.asar",
-    build: "out/Tammy-darwin-arm64/Tammy.app/Contents/Resources/build",
-    core: "out/Tammy-darwin-arm64/Tammy.app/Contents/Resources/core",
+    app: "../../.tmp/electron-builder/ordinary/mac-arm64/Tammy.app/Contents/MacOS/Tammy",
+    asar: "../../.tmp/electron-builder/ordinary/mac-arm64/Tammy.app/Contents/Resources/app.asar",
+    build: "../../.tmp/electron-builder/ordinary/mac-arm64/Tammy.app/Contents/Resources/build",
+    core: "../../.tmp/electron-builder/ordinary/mac-arm64/Tammy.app/Contents/Resources/core",
     executable: "tammy-core",
-    resourceBase: "out/Tammy-darwin-arm64/Tammy.app/Contents/Resources",
+    resourceBase:
+      "../../.tmp/electron-builder/ordinary/mac-arm64/Tammy.app/Contents/Resources",
     target: "darwin-arm64",
   }),
   "mas/arm64": Object.freeze({
@@ -39,12 +40,12 @@ const TARGETS = Object.freeze({
     target: "darwin-arm64",
   }),
   "win32/x64": Object.freeze({
-    app: "out/Tammy-win32-x64/Tammy.exe",
-    asar: "out/Tammy-win32-x64/resources/app.asar",
-    build: "out/Tammy-win32-x64/resources/build",
-    core: "out/Tammy-win32-x64/resources/core",
+    app: "../../.tmp/electron-builder/ordinary/win-unpacked/Tammy.exe",
+    asar: "../../.tmp/electron-builder/ordinary/win-unpacked/resources/app.asar",
+    build: "../../.tmp/electron-builder/ordinary/win-unpacked/resources/build",
+    core: "../../.tmp/electron-builder/ordinary/win-unpacked/resources/core",
     executable: "tammy-core.exe",
-    resourceBase: "out/Tammy-win32-x64/resources",
+    resourceBase: "../../.tmp/electron-builder/ordinary/win-unpacked/resources",
     target: "win32-x64",
   }),
 });
@@ -78,9 +79,80 @@ function assertContained(parent, candidate, code) {
   }
 }
 
+function isContainedOrEqual(parent, candidate) {
+  const relative = path.relative(parent, candidate);
+  return (
+    relative === "" ||
+    (relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative))
+  );
+}
+
+async function assertRealDirectoryChain(root, candidate, code) {
+  if (!isContainedOrEqual(root, candidate)) throw new Error(code);
+  let current = candidate;
+  while (true) {
+    const stats = await lstat(current, { bigint: true }).catch(() => null);
+    if (!stats?.isDirectory() || stats.isSymbolicLink()) throw new Error(code);
+    if (current === root) return;
+    const parent = path.dirname(current);
+    if (parent === current || !isContainedOrEqual(root, parent)) throw new Error(code);
+    current = parent;
+  }
+}
+
+async function assertOrdinaryBuilderOutput({ desktopRoot, platform, layout }) {
+  const repositoryRoot = path.resolve(desktopRoot, "../..");
+  const outputRoot = path.join(repositoryRoot, ".tmp", "electron-builder", "ordinary");
+  const outputDirectory = platform === "darwin" ? "mac-arm64" : "win-unpacked";
+  const outputTargetRoot = path.join(outputRoot, outputDirectory);
+  await assertRealDirectoryChain(repositoryRoot, outputRoot, "PACKAGED_OUTPUT_LAYOUT_INVALID");
+  const outputEntries = await readdir(outputRoot, { withFileTypes: true });
+  const outputTargetEntry = outputEntries.find((entry) => entry.name === outputDirectory);
+  const outputMetadataEntries = outputEntries.filter((entry) => entry.name === "builder-debug.yml");
+  if (
+    outputTargetEntry === undefined ||
+    !outputTargetEntry.isDirectory() ||
+    outputMetadataEntries.length > 1 ||
+    outputEntries.some(
+      (entry) => entry.name !== outputDirectory && entry.name !== "builder-debug.yml",
+    )
+  ) {
+    throw new Error("PACKAGED_OUTPUT_LAYOUT_INVALID");
+  }
+  if (outputMetadataEntries.length === 1) {
+    const metadata = await lstat(path.join(outputRoot, "builder-debug.yml"), { bigint: true });
+    if (!metadata.isFile() || metadata.isSymbolicLink()) {
+      throw new Error("PACKAGED_OUTPUT_LAYOUT_INVALID");
+    }
+  }
+  await assertRealDirectoryChain(outputRoot, outputTargetRoot, "PACKAGED_OUTPUT_LAYOUT_INVALID");
+  const targetEntries = await readdir(outputTargetRoot, { withFileTypes: true });
+  if (targetEntries.some((entry) => entry.isSymbolicLink())) {
+    throw new Error("PACKAGED_OUTPUT_LAYOUT_INVALID");
+  }
+  const appCandidates = targetEntries.filter((entry) =>
+    platform === "darwin" ? entry.name.endsWith(".app") : entry.name.toLowerCase().endsWith(".exe"),
+  );
+  const expectedCandidate = platform === "darwin" ? "Tammy.app" : "Tammy.exe";
+  if (
+    appCandidates.length !== 1 ||
+    appCandidates[0].name !== expectedCandidate ||
+    (platform === "darwin" && !appCandidates[0].isDirectory()) ||
+    (platform === "win32" && !appCandidates[0].isFile())
+  ) {
+    throw new Error("PACKAGED_OUTPUT_LAYOUT_INVALID");
+  }
+  await assertRealDirectoryChain(
+    repositoryRoot,
+    path.dirname(layout.appExecutable),
+    "PACKAGED_OUTPUT_LAYOUT_INVALID",
+  );
+}
+
 export function resolvePackagedLayout({ desktopRoot, platform, arch }) {
   assertAbsoluteDirectoryPath(desktopRoot);
   const selected = selectTarget(platform, arch);
+  const repositoryRoot = path.resolve(desktopRoot, "../..");
   const sourceCoreRoot = path.join(desktopRoot, "resources", "core");
   const sourceBuildRoot = path.join(desktopRoot, "resources", "build");
   const packagedCoreRoot = path.join(desktopRoot, selected.core);
@@ -136,7 +208,7 @@ export function resolvePackagedLayout({ desktopRoot, platform, arch }) {
     appExecutable,
     ...Object.values(sbrLayout),
   ]) {
-    assertContained(desktopRoot, candidate, "PACKAGE_PATH_TRAVERSAL");
+    assertContained(repositoryRoot, candidate, "PACKAGE_PATH_TRAVERSAL");
   }
   return {
     appAsar,
@@ -526,6 +598,9 @@ export async function verifyPackagedLayout({
   ) {
     throw new Error("SOURCE_MANIFEST_PATH_INVALID");
   }
+  if (platform !== "mas") {
+    await assertOrdinaryBuilderOutput({ desktopRoot, layout, platform });
+  }
   const executable = path.basename(layout.sourceCore);
   const targetDirectory = path.basename(path.dirname(layout.sourceCore));
   const coreAllowlist = [".gitkeep", `${targetDirectory}/`, `${targetDirectory}/${executable}`];
@@ -541,13 +616,15 @@ export async function verifyPackagedLayout({
   );
   const packagedCoreTree = await assertExactTree(
     layout.packagedCoreRoot,
-    coreAllowlist,
+    [`${targetDirectory}/`, `${targetDirectory}/${executable}`],
     "PACKAGED_CORE_LAYOUT_INVALID",
+    false,
   );
   const packagedBuildTree = await assertExactTree(
     layout.packagedBuildRoot,
-    [".gitkeep", "build-manifest.json"],
+    ["build-manifest.json"],
     "PACKAGED_BUILD_LAYOUT_INVALID",
+    false,
   );
   const sbrTrees = [];
   if (layout.sourceSbrHelper) {
@@ -608,9 +685,19 @@ export async function verifyPackagedLayout({
     if ((packagedCoreStats.mode & 0o111) === 0) {
       throw new Error("PACKAGED_CORE_NOT_EXECUTABLE");
     }
-    for (const helper of [layout.sourceSbrHelper, layout.packagedSbrHelper]) {
-      const stats = await assertRegularFile(helper, "SBR_HELPER_LAYOUT_INVALID");
-      if ((stats.mode & 0o777) !== 0o500) throw new Error("SBR_HELPER_MODE_INVALID");
+    const sourceHelperStats = await assertRegularFile(
+      layout.sourceSbrHelper,
+      "SBR_HELPER_LAYOUT_INVALID",
+    );
+    const packagedHelperStats = await assertRegularFile(
+      layout.packagedSbrHelper,
+      "SBR_HELPER_LAYOUT_INVALID",
+    );
+    if ((sourceHelperStats.mode & 0o777) !== 0o500) {
+      throw new Error("SBR_HELPER_MODE_INVALID");
+    }
+    if ((packagedHelperStats.mode & 0o777) !== 0o755) {
+      throw new Error("SBR_HELPER_MODE_INVALID");
     }
   }
 

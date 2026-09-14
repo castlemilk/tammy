@@ -17,13 +17,11 @@ test("electron-builder configuration is a deterministic Tammy package contract",
   assert.deepEqual(
     {
       appId: config.appId,
-      category: config.category,
       productName: config.productName,
       copyright: config.copyright,
     },
     {
       appId: "com.tammy.desktop",
-      category: "public.app-category.finance",
       productName: "Tammy",
       copyright: "© 2026 Gamma Systems Pty Ltd",
     },
@@ -34,13 +32,10 @@ test("electron-builder configuration is a deterministic Tammy package contract",
   assert.equal(config.asar, true);
   assert.equal(config.afterPack, "scripts/electron-builder-after-pack.cjs");
   assert.deepEqual(config.files, [
-    "out/**",
+    "out/main/**",
+    "out/preload/**",
+    "out/renderer/**",
     "package.json",
-    "!src/**",
-    "!tests/**",
-    "!*.config.*",
-    "!electron-builder.yml",
-    "!forge.config.ts",
   ]);
   assert.deepEqual(config.electronFuses, {
     runAsNode: false,
@@ -52,6 +47,7 @@ test("electron-builder configuration is a deterministic Tammy package contract",
   });
 
   assert.deepEqual(config.mac.target, [{ target: "dir", arch: ["arm64"] }]);
+  assert.equal(config.mac.category, "public.app-category.finance");
   assert.equal(config.mac.icon, "assets/icon.icns");
   assert.equal(config.mac.minimumSystemVersion, "14.0");
   assert.equal(config.mac.identity, "-");
@@ -77,6 +73,7 @@ test("electron-builder configuration is a deterministic Tammy package contract",
   ]);
 
   assert.deepEqual(config.mas.target, [{ target: "dir", arch: ["arm64"] }]);
+  assert.equal(config.mas.category, "public.app-category.finance");
   assert.equal(config.mas.identity, null);
   assert.equal(config.mas.helperBundleId, "com.tammy.desktop.helper");
   assert.equal(config.mas.bundleVersion, "${env.TAMMY_MACOS_BUILD_NUMBER}");

@@ -1,6 +1,5 @@
 appId: com.tammy.desktop
 productName: Tammy
-category: public.app-category.finance
 copyright: © 2026 Gamma Systems Pty Ltd
 
 directories:
@@ -8,13 +7,10 @@ directories:
   buildResources: assets
 
 files:
-  - out/**
+  - out/main/**
+  - out/preload/**
+  - out/renderer/**
   - package.json
-  - "!src/**"
-  - "!tests/**"
-  - "!*.config.*"
-  - "!electron-builder.yml"
-  - "!forge.config.ts"
 
 asar: true
 npmRebuild: false
@@ -29,6 +25,7 @@ electronFuses:
   onlyLoadAppFromAsar: true
 
 mac:
+  category: public.app-category.finance
   target:
     - target: dir
       arch:
@@ -67,6 +64,7 @@ win:
       to: sqlcipher
 
 mas:
+  category: public.app-category.finance
   target:
     - target: dir
       arch:

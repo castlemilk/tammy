@@ -1,5 +1,6 @@
 .superpowers/
 .worktrees/
+.tmp/electron-builder/
 /.tmp/contracts/
 /.tmp/descriptor-evidence/
 /.tmp/macos-release/

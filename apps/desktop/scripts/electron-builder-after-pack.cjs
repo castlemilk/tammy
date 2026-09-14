@@ -216,16 +216,25 @@ function createAfterPackHook({ environment = process.env, fs = nodeFs, runComman
       return;
     }
 
+    const appBundle = path.join(appOutDir, "Tammy.app");
+    await assertRealContainedDirectory(fs, outputRoot, appBundle);
     const masEnvironment = platform === "mas" ? requireMasEnvironment(environment) : undefined;
-    await normalizeMacOSPlists(fs, runCommand, appOutDir, masEnvironment);
+    await normalizeMacOSPlists(fs, runCommand, appBundle, masEnvironment);
     await assertRegularExecutable(
       fs,
-      path.join(appOutDir, "Contents", "Resources", "core", "darwin-arm64", "tammy-core"),
+      path.join(appBundle, "Contents", "Resources", "core", "darwin-arm64", "tammy-core"),
       "BUILDER_CORE_RESOURCE_INVALID",
     );
     await assertRegularExecutable(
       fs,
-      path.join(appOutDir, "Contents", "Resources", "sbr-helper", "darwin-arm64", "tammy-sbr-helper"),
+      path.join(
+        appBundle,
+        "Contents",
+        "Resources",
+        "sbr-helper",
+        "darwin-arm64",
+        "tammy-sbr-helper",
+      ),
       "BUILDER_SBR_HELPER_RESOURCE_INVALID",
     );
   };

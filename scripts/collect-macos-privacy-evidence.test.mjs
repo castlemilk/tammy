@@ -11,7 +11,9 @@ import {
   validateMacOSPrivacyEvidence,
 } from "./collect-macos-privacy-evidence.mjs";
 
-const require = createRequire(import.meta.url);
+const desktopRequire = createRequire(
+  path.resolve(import.meta.dirname, "../apps/desktop/package.json"),
+);
 
 const sha = (digit) => digit.repeat(64);
 const identity = {
@@ -149,13 +151,13 @@ test("binds a bundled ASAR to the pinned production manifest and license metadat
     const lockfilePath = path.join(directory, "pnpm-lock.yaml");
     const desktop = path.join(directory, "apps/desktop");
     await Promise.all([
-      mkdir(path.join(source, ".vite/build"), { recursive: true }),
-      mkdir(path.join(source, ".vite/renderer"), { recursive: true }),
+      mkdir(path.join(source, "out/main"), { recursive: true }),
+      mkdir(path.join(source, "out/renderer"), { recursive: true }),
       mkdir(path.join(desktop, "node_modules/react"), { recursive: true }),
     ]);
     await Promise.all([
-      writeFile(path.join(source, ".vite/build/main.js"), "export const react = true;\n"),
-      writeFile(path.join(source, ".vite/renderer/index.js"), "export const ui = true;\n"),
+      writeFile(path.join(source, "out/main/index.js"), "export const react = true;\n"),
+      writeFile(path.join(source, "out/renderer/index.js"), "export const ui = true;\n"),
       writeFile(path.join(source, "package.json"), '{"name":"tammy-fixture"}\n'),
       writeFile(path.join(desktop, "package.json"), '{"dependencies":{"react":"19.2.7"}}\n'),
       writeFile(
@@ -168,16 +170,13 @@ test("binds a bundled ASAR to the pinned production manifest and license metadat
       ),
     ]);
     const asarPath = path.join(directory, "app.asar");
-    const forgeRequire = createRequire(
-      require.resolve("@electron-forge/cli/package.json", { paths: ["./apps/desktop"] }),
-    );
-    await forgeRequire("@electron/asar").createPackage(source, asarPath);
+    await desktopRequire("@electron/asar").createPackage(source, asarPath);
 
     assert.deepEqual(await inspectBundledProductionPackages({ asarPath, lockfilePath }), [
       {
         license: "MIT",
         name: "react",
-        representedPaths: ["/.vite/build/main.js", "/.vite/renderer/index.js"],
+        representedPaths: ["/out/main/index.js", "/out/renderer/index.js"],
         version: "19.2.7",
       },
     ]);

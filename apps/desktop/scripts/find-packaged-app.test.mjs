@@ -13,6 +13,9 @@ const VERSION_PINS = {
   connect_es: "2.1.2",
   connect_go: "1.20.0",
   electron: "43.1.1",
+  electron_builder: "26.15.3",
+  electron_conveyor: "0.4.0",
+  electron_vite: "5.0.0",
   go: "1.26.4",
   node: "24.18.0",
   playwright: "1.61.1",
@@ -142,8 +145,6 @@ async function withFixture(platform, arch, callback) {
   await mkdir(path.dirname(layout.packagedManifest), { recursive: true });
   await writeFile(path.join(layout.sourceCoreRoot, ".gitkeep"), "");
   await writeFile(path.join(layout.sourceBuildRoot, ".gitkeep"), "");
-  await writeFile(path.join(layout.packagedCoreRoot, ".gitkeep"), "");
-  await writeFile(path.join(layout.packagedBuildRoot, ".gitkeep"), "");
   await writeFile(layout.sourceCore, coreBytes);
   await writeFile(layout.packagedCore, coreBytes);
   await writeFile(layout.appExecutable, "application");
@@ -189,7 +190,7 @@ async function withFixture(platform, arch, callback) {
     await chmod(layout.sourceCore, 0o755);
     await chmod(layout.packagedCore, 0o755);
     await chmod(layout.sourceSbrHelper, 0o500);
-    await chmod(layout.packagedSbrHelper, 0o500);
+    await chmod(layout.packagedSbrHelper, 0o755);
   }
   try {
     await callback({ desktopRoot, layout, manifestBytes });
@@ -202,27 +203,33 @@ test("resolves the exact macOS arm64 package paths", () => {
   const desktopRoot = path.resolve("/workspace/apps/desktop");
   const layout = resolvePackagedLayout({ desktopRoot, platform: "darwin", arch: "arm64" });
   assert.deepEqual(layout, {
-    appAsar: path.join(desktopRoot, "out/Tammy-darwin-arm64/Tammy.app/Contents/Resources/app.asar"),
-    appExecutable: path.join(desktopRoot, "out/Tammy-darwin-arm64/Tammy.app/Contents/MacOS/Tammy"),
+    appAsar: path.join(
+      desktopRoot,
+      "../../.tmp/electron-builder/ordinary/mac-arm64/Tammy.app/Contents/Resources/app.asar",
+    ),
+    appExecutable: path.join(
+      desktopRoot,
+      "../../.tmp/electron-builder/ordinary/mac-arm64/Tammy.app/Contents/MacOS/Tammy",
+    ),
     packagedBuildRoot: path.join(
       desktopRoot,
-      "out/Tammy-darwin-arm64/Tammy.app/Contents/Resources/build",
+      "../../.tmp/electron-builder/ordinary/mac-arm64/Tammy.app/Contents/Resources/build",
     ),
     packagedCore: path.join(
       desktopRoot,
-      "out/Tammy-darwin-arm64/Tammy.app/Contents/Resources/core/darwin-arm64/tammy-core",
+      "../../.tmp/electron-builder/ordinary/mac-arm64/Tammy.app/Contents/Resources/core/darwin-arm64/tammy-core",
     ),
     packagedCoreRoot: path.join(
       desktopRoot,
-      "out/Tammy-darwin-arm64/Tammy.app/Contents/Resources/core",
+      "../../.tmp/electron-builder/ordinary/mac-arm64/Tammy.app/Contents/Resources/core",
     ),
     packagedResourceBase: path.join(
       desktopRoot,
-      "out/Tammy-darwin-arm64/Tammy.app/Contents/Resources",
+      "../../.tmp/electron-builder/ordinary/mac-arm64/Tammy.app/Contents/Resources",
     ),
     packagedManifest: path.join(
       desktopRoot,
-      "out/Tammy-darwin-arm64/Tammy.app/Contents/Resources/build/build-manifest.json",
+      "../../.tmp/electron-builder/ordinary/mac-arm64/Tammy.app/Contents/Resources/build/build-manifest.json",
     ),
     sourceBuildRoot: path.join(desktopRoot, "resources/build"),
     sourceCore: path.join(desktopRoot, "resources/core/darwin-arm64/tammy-core"),
@@ -235,23 +242,23 @@ test("resolves the exact macOS arm64 package paths", () => {
     sourceSbrSignature: path.join(desktopRoot, "resources/sbr/simulator/sbr-profile-v1.sig"),
     packagedSbrHelper: path.join(
       desktopRoot,
-      "out/Tammy-darwin-arm64/Tammy.app/Contents/Resources/sbr-helper/darwin-arm64/tammy-sbr-helper",
+      "../../.tmp/electron-builder/ordinary/mac-arm64/Tammy.app/Contents/Resources/sbr-helper/darwin-arm64/tammy-sbr-helper",
     ),
     packagedSbrHelperRoot: path.join(
       desktopRoot,
-      "out/Tammy-darwin-arm64/Tammy.app/Contents/Resources/sbr-helper",
+      "../../.tmp/electron-builder/ordinary/mac-arm64/Tammy.app/Contents/Resources/sbr-helper",
     ),
     packagedSbrRoot: path.join(
       desktopRoot,
-      "out/Tammy-darwin-arm64/Tammy.app/Contents/Resources/sbr",
+      "../../.tmp/electron-builder/ordinary/mac-arm64/Tammy.app/Contents/Resources/sbr",
     ),
     packagedSbrProfile: path.join(
       desktopRoot,
-      "out/Tammy-darwin-arm64/Tammy.app/Contents/Resources/sbr/simulator/sbr-profile-v1.json",
+      "../../.tmp/electron-builder/ordinary/mac-arm64/Tammy.app/Contents/Resources/sbr/simulator/sbr-profile-v1.json",
     ),
     packagedSbrSignature: path.join(
       desktopRoot,
-      "out/Tammy-darwin-arm64/Tammy.app/Contents/Resources/sbr/simulator/sbr-profile-v1.sig",
+      "../../.tmp/electron-builder/ordinary/mac-arm64/Tammy.app/Contents/Resources/sbr/simulator/sbr-profile-v1.sig",
     ),
     target: "darwin-arm64",
   });
@@ -289,15 +296,27 @@ test("resolves and verifies the exact Mac App Store arm64 package paths", async 
 test("resolves the exact Windows x64 package paths", () => {
   const desktopRoot = path.resolve("/workspace/apps/desktop");
   const layout = resolvePackagedLayout({ desktopRoot, platform: "win32", arch: "x64" });
-  assert.equal(layout.appExecutable, path.join(desktopRoot, "out/Tammy-win32-x64/Tammy.exe"));
-  assert.equal(layout.appAsar, path.join(desktopRoot, "out/Tammy-win32-x64/resources/app.asar"));
+  assert.equal(
+    layout.appExecutable,
+    path.join(desktopRoot, "../../.tmp/electron-builder/ordinary/win-unpacked/Tammy.exe"),
+  );
+  assert.equal(
+    layout.appAsar,
+    path.join(desktopRoot, "../../.tmp/electron-builder/ordinary/win-unpacked/resources/app.asar"),
+  );
   assert.equal(
     layout.packagedCore,
-    path.join(desktopRoot, "out/Tammy-win32-x64/resources/core/win32-x64/tammy-core.exe"),
+    path.join(
+      desktopRoot,
+      "../../.tmp/electron-builder/ordinary/win-unpacked/resources/core/win32-x64/tammy-core.exe",
+    ),
   );
   assert.equal(
     layout.packagedManifest,
-    path.join(desktopRoot, "out/Tammy-win32-x64/resources/build/build-manifest.json"),
+    path.join(
+      desktopRoot,
+      "../../.tmp/electron-builder/ordinary/win-unpacked/resources/build/build-manifest.json",
+    ),
   );
 });
 
@@ -319,6 +338,91 @@ test("rejects unsupported targets, traversal tokens, and relative roots", () => 
     () => resolvePackagedLayout({ desktopRoot: "../desktop", platform: "darwin", arch: "arm64" }),
     /INVALID_DESKTOP_ROOT/,
   );
+});
+
+test("rejects additional Builder output directories and application candidates", async () => {
+  await withFixture("darwin", "arm64", async ({ desktopRoot, layout }) => {
+    const outputRoot = path.resolve(desktopRoot, "../../.tmp/electron-builder/ordinary");
+    await mkdir(path.join(outputRoot, "stale-output"), { recursive: true });
+    await assert.rejects(
+      verifyPackagedLayout({
+        desktopRoot,
+        platform: "darwin",
+        arch: "arm64",
+        sourceManifestPath: layout.sourceManifest,
+      }),
+      /PACKAGED_OUTPUT_LAYOUT_INVALID/,
+    );
+  });
+  await withFixture("win32", "x64", async ({ desktopRoot, layout }) => {
+    await writeFile(
+      path.join(
+        desktopRoot,
+        "../../.tmp/electron-builder/ordinary/win-unpacked/AnotherTammy.exe",
+      ),
+      "not-tammy",
+    );
+    await assert.rejects(
+      verifyPackagedLayout({
+        desktopRoot,
+        platform: "win32",
+        arch: "x64",
+        sourceManifestPath: layout.sourceManifest,
+      }),
+      /PACKAGED_OUTPUT_LAYOUT_INVALID/,
+    );
+  });
+});
+
+test("allows only Builder debug metadata beside the ordinary target", async () => {
+  await withFixture("darwin", "arm64", async ({ desktopRoot, layout }) => {
+    await writeFile(
+      path.join(desktopRoot, "../../.tmp/electron-builder/ordinary/builder-debug.yml"),
+      "appId: com.tammy.desktop",
+    );
+    const result = await verifyPackagedLayout({
+      desktopRoot,
+      platform: "darwin",
+      arch: "arm64",
+      sourceManifestPath: layout.sourceManifest,
+    });
+    assert.equal(result.appExecutable, layout.appExecutable);
+  });
+  await withFixture("win32", "x64", async ({ desktopRoot, layout }) => {
+    await writeFile(
+      path.join(desktopRoot, "../../.tmp/electron-builder/ordinary/builder-debug.yml"),
+      "appId: com.tammy.desktop",
+    );
+    const result = await verifyPackagedLayout({
+      desktopRoot,
+      platform: "win32",
+      arch: "x64",
+      sourceManifestPath: layout.sourceManifest,
+    });
+    assert.equal(result.appExecutable, layout.appExecutable);
+  });
+});
+
+test("rejects a symlinked Builder output ancestor", async () => {
+  await withFixture("darwin", "arm64", async ({ desktopRoot, layout }) => {
+    const outputRoot = path.resolve(desktopRoot, "../../.tmp/electron-builder/ordinary");
+    const external = await mkdtemp(path.join(tmpdir(), "tammy-package-output-external-"));
+    try {
+      await rm(outputRoot, { force: true, recursive: true });
+      await symlink(external, outputRoot);
+      await assert.rejects(
+        verifyPackagedLayout({
+          desktopRoot,
+          platform: "darwin",
+          arch: "arm64",
+          sourceManifestPath: layout.sourceManifest,
+        }),
+        /PACKAGED_OUTPUT_LAYOUT_INVALID/,
+      );
+    } finally {
+      await rm(external, { force: true, recursive: true });
+    }
+  });
 });
 
 for (const [platform, arch] of [

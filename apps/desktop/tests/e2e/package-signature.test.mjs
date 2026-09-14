@@ -2,13 +2,18 @@ import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { lstat, readdir, readFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import path from "node:path";
 import test from "node:test";
 import { promisify } from "node:util";
 
+import { getCurrentFuseWire, FuseState, FuseV1Options, FuseVersion } from "@electron/fuses";
 import { verifySbrHelperSignature } from "../../../../scripts/verify-sbr-helper-signature.mjs";
+import { resolvePackagedLayout } from "../../scripts/find-packaged-app.mjs";
 
 const execFileAsync = promisify(execFile);
+const desktopRequire = createRequire(path.resolve(import.meta.dirname, "../../package.json"));
+const asar = desktopRequire("@electron/asar");
 
 async function listRegularResourceFiles(root) {
   const files = [];
@@ -30,32 +35,20 @@ async function listRegularResourceFiles(root) {
 }
 
 function packagedResources(desktopRoot) {
-  if (process.platform === "darwin") {
-    return path.join(
-      desktopRoot,
-      "out",
-      `Tammy-${process.platform}-${process.arch}`,
-      "Tammy.app",
-      "Contents",
-      "Resources",
-    );
-  }
-  if (process.platform === "win32") {
-    return path.join(desktopRoot, "out", `Tammy-${process.platform}-${process.arch}`, "resources");
-  }
-  throw new Error("UNSUPPORTED_PACKAGED_TARGET");
+  const platform = process.platform === "darwin" ? "darwin" : process.platform;
+  return resolvePackagedLayout({ arch: process.arch, desktopRoot, platform }).packagedResourceBase;
+}
+
+function packagedAppBundle(desktopRoot) {
+  const resources = packagedResources(desktopRoot);
+  return path.dirname(path.dirname(resources));
 }
 
 test("the macOS application bundle has a valid signature", {
-  skip: process.platform !== "darwin",
+  skip: process.platform !== "darwin" || process.arch !== "arm64",
 }, async () => {
   const desktopRoot = path.resolve(import.meta.dirname, "../..");
-  const appBundle = path.join(
-    desktopRoot,
-    "out",
-    `Tammy-${process.platform}-${process.arch}`,
-    "Tammy.app",
-  );
+  const appBundle = packagedAppBundle(desktopRoot);
 
   await execFileAsync(
     "/usr/bin/codesign",
@@ -65,18 +58,14 @@ test("the macOS application bundle has a valid signature", {
 });
 
 test("the ad-hoc macOS executable does not enable hardened runtime", {
-  skip: process.platform !== "darwin",
+  skip: process.platform !== "darwin" || process.arch !== "arm64",
 }, async () => {
   const desktopRoot = path.resolve(import.meta.dirname, "../..");
-  const appExecutable = path.join(
+  const appExecutable = resolvePackagedLayout({
+    arch: process.arch,
     desktopRoot,
-    "out",
-    `Tammy-${process.platform}-${process.arch}`,
-    "Tammy.app",
-    "Contents",
-    "MacOS",
-    "Tammy",
-  );
+    platform: "darwin",
+  }).appExecutable;
 
   const { stderr } = await execFileAsync("/usr/bin/codesign", ["-dvvv", appExecutable], {
     encoding: "utf8",
@@ -91,7 +80,7 @@ test("the ordinary macOS package preserves the authenticated ad-hoc SBR helper",
   skip: process.platform !== "darwin" || process.arch !== "arm64",
 }, async () => {
   const desktopRoot = path.resolve(import.meta.dirname, "../..");
-  const appBundle = path.join(desktopRoot, "out", "Tammy-darwin-arm64", "Tammy.app");
+  const appBundle = packagedAppBundle(desktopRoot);
   const result = await verifySbrHelperSignature({ appBundle, mode: "ordinary" });
   assert.equal(result.identifier, "com.tammy.desktop.sbr-helper");
 });
@@ -110,17 +99,10 @@ test("Windows packages contain no SBR helper resources and declare exact unavail
 });
 
 test("the macOS bundle omits unused sensitive permissions and unrestricted transport", {
-  skip: process.platform !== "darwin",
+  skip: process.platform !== "darwin" || process.arch !== "arm64",
 }, async () => {
   const desktopRoot = path.resolve(import.meta.dirname, "../..");
-  const infoPlist = path.join(
-    desktopRoot,
-    "out",
-    `Tammy-${process.platform}-${process.arch}`,
-    "Tammy.app",
-    "Contents",
-    "Info.plist",
-  );
+  const infoPlist = path.join(packagedAppBundle(desktopRoot), "Contents", "Info.plist");
   const { stdout } = await execFileAsync(
     "/usr/bin/plutil",
     ["-convert", "json", "-o", "-", infoPlist],
@@ -138,6 +120,55 @@ test("the macOS bundle omits unused sensitive permissions and unrestricted trans
   ]) {
     assert.equal(Object.hasOwn(info, key), false, `${key} must not be shipped`);
   }
+});
+
+test("the packaged executable carries the approved Electron fuse contract", {
+  skip: process.platform !== "darwin" || process.arch !== "arm64",
+}, async () => {
+  const desktopRoot = path.resolve(import.meta.dirname, "../..");
+  const { appExecutable } = resolvePackagedLayout({
+    arch: process.arch,
+    desktopRoot,
+    platform: "darwin",
+  });
+  const wire = await getCurrentFuseWire(appExecutable);
+  assert.equal(wire.version, FuseVersion.V1);
+  for (const [key, expected] of [
+    [FuseV1Options.RunAsNode, FuseState.DISABLE],
+    [FuseV1Options.EnableCookieEncryption, FuseState.ENABLE],
+    [FuseV1Options.EnableNodeOptionsEnvironmentVariable, FuseState.DISABLE],
+    [FuseV1Options.EnableNodeCliInspectArguments, FuseState.ENABLE],
+    [FuseV1Options.EnableEmbeddedAsarIntegrityValidation, FuseState.ENABLE],
+    [FuseV1Options.OnlyLoadAppFromAsar, FuseState.ENABLE],
+  ]) {
+    assert.equal(wire[key], expected, `fuse ${key} mismatch`);
+  }
+});
+
+test("the ASAR contains only the built application graph and has embedded integrity metadata", {
+  skip: process.platform !== "darwin" || process.arch !== "arm64",
+}, async () => {
+  const desktopRoot = path.resolve(import.meta.dirname, "../..");
+  const layout = resolvePackagedLayout({ arch: process.arch, desktopRoot, platform: "darwin" });
+  const entries = asar.listPackage(layout.appAsar);
+  for (const required of [
+    "/out/main/index.js",
+    "/out/preload/index.cjs",
+    "/out/renderer/index.html",
+  ]) {
+    assert.ok(entries.includes(required), `missing ${required}`);
+  }
+  assert.equal(entries.some((entry) => entry === "/app" || entry.startsWith("/app/")), false);
+
+  const infoPlist = path.join(path.dirname(layout.packagedResourceBase), "Info.plist");
+  const { stdout } = await execFileAsync(
+    "/usr/bin/plutil",
+    ["-convert", "json", "-o", "-", infoPlist],
+    { encoding: "utf8", maxBuffer: 1024 * 1024, timeout: 10_000 },
+  );
+  const info = JSON.parse(stdout);
+  assert.match(info.ElectronAsarIntegrity?.["Resources/app.asar"]?.hash ?? "", /^[0-9a-f]{64}$/);
+  assert.equal(info.ElectronAsarIntegrity?.["Resources/app.asar"]?.algorithm, "SHA256");
 });
 
 test("the package authenticates its SQLCipher core and licence resources", async () => {
