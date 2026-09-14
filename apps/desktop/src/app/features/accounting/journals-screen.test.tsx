@@ -18,12 +18,12 @@ import {
   MoneySchema,
   PageInfoSchema,
 } from "@tammy/connect-client/tammy/v1/common_pb.js";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, it, vi } from "vitest";
 
-import type { TammyDesktopAPI } from "../../../shared/desktop-api";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
+import { createConveyorFixture, renderWithConveyor as render } from "../../test/conveyor-fixtures";
 import { JournalsScreen } from "./journals-screen";
 
 const accountsCodec = createProtoMethodCodec({
@@ -81,37 +81,31 @@ it("renders retained journals and exposes the balanced manual journal action", a
     totalCredits: create(MoneySchema, { currencyCode: "AUD", minorUnits: 31900n }),
     financialRevision: 1n,
   });
-  const api = {
-    listAccounts: vi.fn(async (frame: Uint8Array) => {
-      expect(accountsCodec.decodeRequest(frame).organisationId).toBe(organisationId);
-      return accountsCodec.encodeResponse(
-        create(ListAccountsResponseSchema, {
-          accounts,
-          page: create(PageInfoSchema, { returnedCount: 2 }),
-        }),
-      );
-    }),
-    listJournals: vi.fn(async (frame: Uint8Array) => {
-      expect(journalsCodec.decodeRequest(frame).organisationId).toBe(organisationId);
-      return journalsCodec.encodeResponse(
-        create(ListJournalsResponseSchema, {
-          journals: [journal],
-          page: create(PageInfoSchema, { returnedCount: 1 }),
-        }),
-      );
-    }),
-    getJournal: vi.fn(),
-    postManualJournal: vi.fn(),
-  } satisfies Pick<
-    TammyDesktopAPI,
-    "getJournal" | "listAccounts" | "listJournals" | "postManualJournal"
-  >;
+  const fixture = createConveyorFixture();
+  fixture.procedures.accounting.listAccounts.mockImplementation(async (frame: Uint8Array) => {
+    expect(accountsCodec.decodeRequest(frame).organisationId).toBe(organisationId);
+    return accountsCodec.encodeResponse(
+      create(ListAccountsResponseSchema, {
+        accounts,
+        page: create(PageInfoSchema, { returnedCount: 2 }),
+      }),
+    );
+  });
+  fixture.procedures.accounting.listJournals.mockImplementation(async (frame: Uint8Array) => {
+    expect(journalsCodec.decodeRequest(frame).organisationId).toBe(organisationId);
+    return journalsCodec.encodeResponse(
+      create(ListJournalsResponseSchema, {
+        journals: [journal],
+        page: create(PageInfoSchema, { returnedCount: 1 }),
+      }),
+    );
+  });
   const onNavigate = vi.fn();
   const user = userEvent.setup();
 
   render(
     <JournalsScreen
-      api={api}
+      api={fixture.conveyor.accounting}
       onNavigate={onNavigate}
       path="/accounting/journals"
       workspace={{

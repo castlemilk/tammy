@@ -8,11 +8,12 @@ import {
   GetAttentionSummaryRequestSchema,
   GetAttentionSummaryResponseSchema,
 } from "@tammy/connect-client/tammy/v1/overview_pb.js";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
-import { expect, it, vi } from "vitest";
+import { expect, it } from "vitest";
 
-import type { TammyDesktopAPI } from "../../../shared/desktop-api";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
+import { createConveyorFixture } from "../../test/conveyor-fixtures";
 import { OverviewScreen } from "./overview-screen";
 
 const codec = createProtoMethodCodec({
@@ -23,7 +24,8 @@ const codec = createProtoMethodCodec({
 });
 
 it("renders the live local attention summary through the named protobuf method", async () => {
-  const getAttentionSummary = vi.fn(async (frame: Uint8Array) => {
+  const fixture = createConveyorFixture();
+  fixture.procedures.reporting.getAttentionSummary.mockImplementation(async (frame: Uint8Array) => {
     const request = codec.decodeRequest(frame);
     expect(request.organisationId).toBe("018f0000-0000-7000-8000-000000000004");
     expect(request.authentication?.actorUserId).toBe("018f0000-0000-7000-8000-000000000002");
@@ -57,24 +59,24 @@ it("renders the live local attention summary through the named protobuf method",
       }),
     );
   });
-  const api = { getAttentionSummary } satisfies Pick<TammyDesktopAPI, "getAttentionSummary">;
-
   render(
-    <OverviewScreen
-      api={api}
-      now={new Date("2026-08-10T12:00:00+10:00")}
-      workspace={{
-        sessionId: "018f0000-0000-7000-8000-000000000003",
-        userId: "018f0000-0000-7000-8000-000000000002",
-        workspaceId: "018f0000-0000-7000-8000-000000000001",
-        organisationId: "018f0000-0000-7000-8000-000000000004",
-      }}
-    />,
+    <QueryClientProvider client={fixture.queryClient}>
+      <OverviewScreen
+        api={fixture.conveyor.reporting}
+        now={new Date("2026-08-10T12:00:00+10:00")}
+        workspace={{
+          sessionId: "018f0000-0000-7000-8000-000000000003",
+          userId: "018f0000-0000-7000-8000-000000000002",
+          workspaceId: "018f0000-0000-7000-8000-000000000001",
+          organisationId: "018f0000-0000-7000-8000-000000000004",
+        }}
+      />
+    </QueryClientProvider>,
   );
 
   expect(await screen.findByText("8 reviewed this quarter")).toBeTruthy();
   expect(screen.getByText("5 unreconciled this quarter")).toBeTruthy();
   expect(screen.getByText("Draft — not lodged")).toBeTruthy();
   expect(screen.getByText("Officeworks invoice")).toBeTruthy();
-  expect(getAttentionSummary).toHaveBeenCalledOnce();
+  expect(fixture.procedures.reporting.getAttentionSummary).toHaveBeenCalledOnce();
 });

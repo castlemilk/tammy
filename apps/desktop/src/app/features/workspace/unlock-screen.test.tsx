@@ -18,12 +18,12 @@ import {
   UnlockWorkspaceResponseSchema,
   WorkspaceSchema,
 } from "@tammy/connect-client/tammy/v1/workspace_pb.js";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, it, vi } from "vitest";
 
-import type { TammyDesktopAPI } from "../../../shared/desktop-api";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
+import { createConveyorFixture, renderWithConveyor as render } from "../../test/conveyor-fixtures";
 import { UnlockScreen } from "./unlock-screen";
 
 const unlockCodec = createProtoMethodCodec({
@@ -83,80 +83,47 @@ it("unlocks and signs in to an existing local workspace through named protobuf m
       }),
     );
   });
-  const api = {
-    createWorkspace: vi.fn(),
-    confirmRecovery: vi.fn(),
-    unlockWorkspace,
-    signIn,
-    createOrganisation: vi.fn(),
-    createAccount: vi.fn(),
-    listAccounts: vi.fn(),
-    postManualJournal: vi.fn(),
-    listJournals: vi.fn(),
-    getJournal: vi.fn(),
-    getTrialBalance: vi.fn(),
-    importBankStatement: vi.fn(),
-    listBankStatementLines: vi.fn(),
-    matchBankStatementLine: vi.fn(),
-    completeBankReconciliation: vi.fn(),
-    getBankingSummary: vi.fn(),
-    ingestDocument: vi.fn(),
-    listDocuments: vi.fn(),
-    getDocument: vi.fn(),
-    saveDocumentReview: vi.fn(),
-    createBasDraft: vi.fn(),
-    getCurrentBasDraft: vi.fn(),
-    getReportingCapability: vi.fn(),
-    getAttentionSummary: vi.fn(),
-    getCurrentUser: vi.fn(async (frame: Uint8Array) => {
-      const request = currentUserCodec.decodeRequest(frame);
-      expect(request.authentication?.actorUserId).toBe("01900f3c-7b2e-7cc4-98c4-dc0c0c073992");
-      return currentUserCodec.encodeResponse(
-        create(GetCurrentUserResponseSchema, {
-          user: create(UserSchema, {
-            id: "01900f3c-7b2e-7cc4-98c4-dc0c0c073992",
-            username: "admin@tammy.local",
-            roles: [Role.WORKSPACE_ADMIN],
-          }),
+  const fixture = createConveyorFixture();
+  fixture.procedures.workspace.unlockWorkspace.mockImplementation(unlockWorkspace);
+  fixture.procedures.workspace.signIn.mockImplementation(signIn);
+  fixture.procedures.organisation.getCurrentUser.mockImplementation(async (frame: Uint8Array) => {
+    const request = currentUserCodec.decodeRequest(frame);
+    expect(request.authentication?.actorUserId).toBe("01900f3c-7b2e-7cc4-98c4-dc0c0c073992");
+    return currentUserCodec.encodeResponse(
+      create(GetCurrentUserResponseSchema, {
+        user: create(UserSchema, {
+          id: "01900f3c-7b2e-7cc4-98c4-dc0c0c073992",
+          username: "admin@tammy.local",
+          roles: [Role.WORKSPACE_ADMIN],
         }),
-      );
-    }),
-    enrolTotp: vi.fn(),
-    confirmTotp: vi.fn(),
-    assertTotp: vi.fn(),
-    getOrganisation: vi.fn(async (frame: Uint8Array) => {
-      const request = organisationCodec.decodeRequest(frame);
-      expect(request.organisationId).toBe("01900f3c-7b2e-7cc4-98c4-dc0c0c073994");
-      return organisationCodec.encodeResponse(
-        create(GetOrganisationResponseSchema, {
-          organisation: create(OrganisationSchema, {
-            id: request.organisationId,
-            displayName: "Tammy Business",
-            legalName: "Tammy Business Pty Ltd",
-            abn: "51824753556",
-          }),
+      }),
+    );
+  });
+  fixture.procedures.organisation.getOrganisation.mockImplementation(async (frame: Uint8Array) => {
+    const request = organisationCodec.decodeRequest(frame);
+    expect(request.organisationId).toBe("01900f3c-7b2e-7cc4-98c4-dc0c0c073994");
+    return organisationCodec.encodeResponse(
+      create(GetOrganisationResponseSchema, {
+        organisation: create(OrganisationSchema, {
+          id: request.organisationId,
+          displayName: "Tammy Business",
+          legalName: "Tammy Business Pty Ltd",
+          abn: "51824753556",
         }),
-      );
-    }),
-    recordEntityVerification: vi.fn(),
-    getSbrReadiness: vi.fn(),
-    getMachineCredentialStatus: vi.fn(),
-    removeMachineCredential: vi.fn(),
-    removeSbrProductId: vi.fn(),
-    runSbrReadinessFixture: vi.fn(),
-    selectMachineCredentialFile: vi.fn(async () => ({ selected: false as const })),
-    importMachineCredential: vi.fn(),
-    replaceMachineCredential: vi.fn(),
-    unlockMachineCredential: vi.fn(),
-    importSbrProductId: vi.fn(),
-    getSystemDiagnostics: vi.fn(),
-  } satisfies TammyDesktopAPI;
+      }),
+    );
+  });
   const onAuthenticated = vi.fn();
   const user = userEvent.setup();
 
   const organisationId = "01900f3c-7b2e-7cc4-98c4-dc0c0c073994";
   render(
-    <UnlockScreen api={api} onAuthenticated={onAuthenticated} organisationId={organisationId} />,
+    <UnlockScreen
+      onAuthenticated={onAuthenticated}
+      organisation={fixture.conveyor.organisation}
+      organisationId={organisationId}
+      workspace={fixture.conveyor.workspace}
+    />,
   );
   await user.type(
     screen.getByLabelText("Workspace passphrase"),

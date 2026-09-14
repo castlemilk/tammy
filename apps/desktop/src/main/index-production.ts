@@ -12,21 +12,18 @@ import {
   session,
   shell,
 } from "electron";
-
+import { registerTammyConveyor } from "../conveyor/registration";
 import { readPublicLinks } from "../shared/public-links";
-
 import { createCoreClient } from "./core-client";
 import { createCoreLaunchArguments } from "./core-launch";
 import { CoreProcess } from "./core-process";
 import type { DesktopDependencies, DesktopWindow } from "./index-lifecycle";
 import { resolveBundledCorePath, resolveBundledSbrProfileLocation } from "./index-paths";
-import { registerDesktopIpc } from "./ipc";
 import {
   parseDesktopLaunchScenario,
   rendererLaunchScenarioArguments,
   requiresSimulatorProfile,
 } from "./launch-scenario";
-import { createDesktopRpcRouter } from "./rpc-router";
 import {
   createSbrFileIntake,
   type SbrFileIntake,
@@ -78,9 +75,7 @@ export function createProductionDependencies(
   if (!app.isPackaged && developmentRendererUrl === undefined) {
     throw new Error("INVALID_VITE_ORIGIN");
   }
-  const policy = createRendererSecurityPolicy(
-    app.isPackaged ? undefined : developmentRendererUrl,
-  );
+  const policy = createRendererSecurityPolicy(app.isPackaged ? undefined : developmentRendererUrl);
   const publicLinks = readPublicLinks();
   const allowedExternalUrls = [publicLinks.privacyPolicy, publicLinks.support].filter(
     (value): value is string => value !== undefined,
@@ -215,19 +210,16 @@ export function createProductionDependencies(
     logger: { error: (message) => console.error(message) },
     ready: () => app.whenReady(),
     releaseKind,
-    registerIpc: (getWindow, client) =>
-      registerDesktopIpc({
+    registerConveyor: (getWindow, client) =>
+      registerTammyConveyor({
         applicationUrl: policy.applicationUrl,
-        getSystemDiagnostics: client.getDiagnostics,
+        client,
+        fileIntake,
         ipcMain,
-        mainWindow: {
-          get webContents() {
-            if (!nativeWindow || getWindow() === undefined) throw new Error("WINDOW_NOT_CREATED");
-            return nativeWindow.webContents;
-          },
-          isDestroyed: () => !nativeWindow || nativeWindow.isDestroyed(),
-        },
-        router: createDesktopRpcRouter(client, fileIntake),
+        getWindow: () =>
+          getWindow() !== undefined && nativeWindow && !nativeWindow.isDestroyed()
+            ? nativeWindow
+            : undefined,
       }),
     registerScheme: () => installApplicationScheme({ app, protocol }),
   };

@@ -5,11 +5,12 @@ import {
   TrialBalanceLineSchema,
 } from "@tammy/connect-client/tammy/v1/accounting_pb.js";
 import { MoneySchema, SourceRefSchema } from "@tammy/connect-client/tammy/v1/common_pb.js";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
-import { expect, it, vi } from "vitest";
+import { expect, it } from "vitest";
 
-import type { TammyDesktopAPI } from "../../../shared/desktop-api";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
+import { createConveyorFixture } from "../../test/conveyor-fixtures";
 import { TrialBalanceScreen } from "./trial-balance-screen";
 
 const codec = createProtoMethodCodec({
@@ -20,7 +21,8 @@ const codec = createProtoMethodCodec({
 });
 
 it("renders the authoritative local trial balance without calculating totals", async () => {
-  const getTrialBalance = vi.fn(async (frame: Uint8Array) => {
+  const fixture = createConveyorFixture();
+  fixture.procedures.accounting.getTrialBalance.mockImplementation(async (frame: Uint8Array) => {
     const request = codec.decodeRequest(frame);
     expect(request.organisationId).toBe("018f0000-0000-7000-8000-000000000004");
     expect(request.asOfDate).toMatchObject({ year: 2026, month: 8, day: 10 });
@@ -47,20 +49,21 @@ it("renders the authoritative local trial balance without calculating totals", a
       }),
     );
   });
-  const api = { getTrialBalance } satisfies Pick<TammyDesktopAPI, "getTrialBalance">;
   render(
-    <TrialBalanceScreen
-      api={api}
-      now={new Date("2026-08-10T12:00:00+10:00")}
-      workspace={{
-        workspaceId: "018f0000-0000-7000-8000-000000000001",
-        userId: "018f0000-0000-7000-8000-000000000002",
-        sessionId: "018f0000-0000-7000-8000-000000000003",
-        organisationId: "018f0000-0000-7000-8000-000000000004",
-      }}
-    />,
+    <QueryClientProvider client={fixture.queryClient}>
+      <TrialBalanceScreen
+        api={fixture.conveyor.accounting}
+        now={new Date("2026-08-10T12:00:00+10:00")}
+        workspace={{
+          workspaceId: "018f0000-0000-7000-8000-000000000001",
+          userId: "018f0000-0000-7000-8000-000000000002",
+          sessionId: "018f0000-0000-7000-8000-000000000003",
+          organisationId: "018f0000-0000-7000-8000-000000000004",
+        }}
+      />
+    </QueryClientProvider>,
   );
   expect(await screen.findByText("Office expenses")).toBeTruthy();
   expect(screen.getAllByText("$319.00").length).toBeGreaterThanOrEqual(2);
-  expect(getTrialBalance).toHaveBeenCalledOnce();
+  expect(fixture.procedures.accounting.getTrialBalance).toHaveBeenCalledOnce();
 });

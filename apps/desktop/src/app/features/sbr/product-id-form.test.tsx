@@ -12,11 +12,12 @@ import {
   RemoveSbrProductIdRequestSchema,
   RemoveSbrProductIdResponseSchema,
 } from "@tammy/connect-client/tammy/v1/sbr_pb.js";
-import { act, render, screen } from "@testing-library/react";
+import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { StrictMode } from "react";
 import { expect, it, vi } from "vitest";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
+import { createConveyorFixture, renderWithConveyor as render } from "../../test/conveyor-fixtures";
 import { ProductIdForm } from "./product-id-form";
 
 const workspace = {
@@ -51,6 +52,20 @@ function deferred<T>() {
   return { promise, resolve };
 }
 
+function productModules(handlers: Record<string, unknown>) {
+  const fixture = createConveyorFixture();
+  fixture.procedures.organisation.assertTotp.mockImplementation(
+    handlers.assertTotp as (frame: Uint8Array) => Promise<Uint8Array>,
+  );
+  fixture.procedures.sbr.importSbrProductId.mockImplementation(
+    handlers.importSbrProductId as never,
+  );
+  fixture.procedures.sbr.removeSbrProductId.mockImplementation(
+    handlers.removeSbrProductId as (frame: Uint8Array) => Promise<Uint8Array>,
+  );
+  return fixture.conveyor;
+}
+
 it("sends a Product ID once for the exact authenticated scope and never renders the value", async () => {
   const assertTotp = vi.fn((frame: Uint8Array) => {
     const request = assertCodec.decodeRequest(frame);
@@ -80,14 +95,16 @@ it("sends a Product ID once for the exact authenticated scope and never renders 
       );
     },
   );
+  const modules = productModules({ assertTotp, importSbrProductId, removeSbrProductId: vi.fn() });
   const user = userEvent.setup();
   render(
     <StrictMode>
       <ProductIdForm
-        api={{ assertTotp, importSbrProductId, removeSbrProductId: vi.fn() }}
+        organisation={modules.organisation}
         onChanged={vi.fn()}
         productIdentifier="TAMMY.EVTE"
         serviceIdentifier="BAS.LODGE"
+        sbr={modules.sbr}
         state={ProductIdState.MISSING}
         workspace={workspace}
       />
@@ -103,17 +120,19 @@ it("sends a Product ID once for the exact authenticated scope and never renders 
 
 it("fails closed before mutation for permission or stale-factor failure", async () => {
   const importSbrProductId = vi.fn();
+  const modules = productModules({
+    assertTotp: vi.fn().mockRejectedValue(new Error("permission secret")),
+    importSbrProductId,
+    removeSbrProductId: vi.fn(),
+  });
   const user = userEvent.setup();
   render(
     <ProductIdForm
-      api={{
-        assertTotp: vi.fn().mockRejectedValue(new Error("permission secret")),
-        importSbrProductId,
-        removeSbrProductId: vi.fn(),
-      }}
+      organisation={modules.organisation}
       onChanged={vi.fn()}
       productIdentifier="TAMMY.EVTE"
       serviceIdentifier="BAS.LODGE"
+      sbr={modules.sbr}
       state={ProductIdState.MISSING}
       workspace={workspace}
     />,
@@ -153,13 +172,15 @@ it("removes the Product ID once with the exact authenticated scope", async () =>
       ),
     );
   });
+  const modules = productModules({ assertTotp, importSbrProductId: vi.fn(), removeSbrProductId });
   const user = userEvent.setup();
   render(
     <ProductIdForm
-      api={{ assertTotp, importSbrProductId: vi.fn(), removeSbrProductId }}
+      organisation={modules.organisation}
       onChanged={vi.fn()}
       productIdentifier="TAMMY.EVTE"
       serviceIdentifier="BAS.LODGE"
+      sbr={modules.sbr}
       state={ProductIdState.PRESENT}
       workspace={workspace}
     />,
@@ -173,17 +194,19 @@ it("removes the Product ID once with the exact authenticated scope", async () =>
 it("does not dispatch a Product ID mutation when unmounted during factor assertion", async () => {
   const factor = deferred<Uint8Array>();
   const importSbrProductId = vi.fn();
+  const modules = productModules({
+    assertTotp: vi.fn(() => factor.promise),
+    importSbrProductId,
+    removeSbrProductId: vi.fn(),
+  });
   const user = userEvent.setup();
   const view = render(
     <ProductIdForm
-      api={{
-        assertTotp: vi.fn(() => factor.promise),
-        importSbrProductId,
-        removeSbrProductId: vi.fn(),
-      }}
+      organisation={modules.organisation}
       onChanged={vi.fn()}
       productIdentifier="TAMMY.EVTE"
       serviceIdentifier="BAS.LODGE"
+      sbr={modules.sbr}
       state={ProductIdState.MISSING}
       workspace={workspace}
     />,
@@ -233,13 +256,15 @@ it("fails closed when Product ID import does not report PRESENT", async () => {
       ),
     ),
   );
+  const modules = productModules({ assertTotp, importSbrProductId, removeSbrProductId: vi.fn() });
   const user = userEvent.setup();
   render(
     <ProductIdForm
-      api={{ assertTotp, importSbrProductId, removeSbrProductId: vi.fn() }}
+      organisation={modules.organisation}
       onChanged={changed}
       productIdentifier="TAMMY.EVTE"
       serviceIdentifier="BAS.LODGE"
+      sbr={modules.sbr}
       state={ProductIdState.MISSING}
       workspace={workspace}
     />,
@@ -256,17 +281,19 @@ it("fails closed when Product ID import does not report PRESENT", async () => {
 });
 
 it("keeps its live status region mounted across a known authorization failure", async () => {
+  const modules = productModules({
+    assertTotp: vi.fn().mockRejectedValue(new Error("denied")),
+    importSbrProductId: vi.fn(),
+    removeSbrProductId: vi.fn(),
+  });
   const user = userEvent.setup();
   render(
     <ProductIdForm
-      api={{
-        assertTotp: vi.fn().mockRejectedValue(new Error("denied")),
-        importSbrProductId: vi.fn(),
-        removeSbrProductId: vi.fn(),
-      }}
+      organisation={modules.organisation}
       onChanged={vi.fn()}
       productIdentifier="TAMMY.EVTE"
       serviceIdentifier="BAS.LODGE"
+      sbr={modules.sbr}
       state={ProductIdState.MISSING}
       workspace={workspace}
     />,
@@ -296,13 +323,15 @@ it("terminal-locks after a dispatched Product ID promise rejects", async () => {
       ),
     );
   });
+  const modules = productModules({ assertTotp, importSbrProductId, removeSbrProductId: vi.fn() });
   const user = userEvent.setup();
   render(
     <ProductIdForm
-      api={{ assertTotp, importSbrProductId, removeSbrProductId: vi.fn() }}
+      organisation={modules.organisation}
       onChanged={vi.fn()}
       productIdentifier="TAMMY.EVTE"
       serviceIdentifier="BAS.LODGE"
+      sbr={modules.sbr}
       state={ProductIdState.MISSING}
       workspace={workspace}
     />,

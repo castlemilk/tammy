@@ -28,14 +28,19 @@ import {
   SbrReadinessSchema,
   SbrReadinessState,
 } from "@tammy/connect-client/tammy/v1/sbr_pb.js";
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { SystemDiagnostics, TammyDesktopAPI } from "../shared/desktop-api";
+import type { SystemDiagnostics } from "../shared/conveyor-contract";
 import { createProtoMethodCodec } from "../shared/proto-ipc";
-import { App } from "./app";
+import { App as ActualApp } from "./app";
+import {
+  type ConveyorFixtureProcedures,
+  createConveyorFixture,
+  renderWithConveyor as render,
+} from "./test/conveyor-fixtures";
 
 const diagnostics: SystemDiagnostics = {
   apiVersion: "tammy.v1",
@@ -81,7 +86,19 @@ function deferred<T>() {
   return { promise, reject, resolve };
 }
 
-function installDesktopAPI(getSystemDiagnostics: TammyDesktopAPI["getSystemDiagnostics"]) {
+let fixture: ReturnType<typeof createConveyorFixture> | undefined;
+
+function App() {
+  if (!fixture) throw new Error("installConveyorFixture() must run before rendering App");
+  return <ActualApp conveyor={fixture.conveyor} />;
+}
+
+function procedures(): ConveyorFixtureProcedures {
+  if (!fixture) throw new Error("installConveyorFixture() must run before configuring procedures");
+  return fixture.procedures;
+}
+
+function installConveyorFixture(getSystemDiagnostics: () => Promise<SystemDiagnostics>) {
   window.sessionStorage.setItem(
     "tammy.session.active",
     JSON.stringify({
@@ -94,107 +111,16 @@ function installDesktopAPI(getSystemDiagnostics: TammyDesktopAPI["getSystemDiagn
       roles: [1],
     }),
   );
-  Object.defineProperty(window, "tammy", {
-    configurable: true,
-    value: Object.freeze({
-      createWorkspace: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      confirmRecovery: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      unlockWorkspace: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      signIn: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      createOrganisation: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      createAccount: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      listAccounts: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      postManualJournal: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      listJournals: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      getJournal: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      getTrialBalance: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      importBankStatement: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      listBankStatementLines: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      matchBankStatementLine: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      completeBankReconciliation: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      getBankingSummary: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      ingestDocument: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      listDocuments: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      getDocument: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      saveDocumentReview: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      createBasDraft: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      getCurrentBasDraft: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      getReportingCapability: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      getAttentionSummary: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      getCurrentUser: vi.fn(),
-      enrolTotp: vi.fn(),
-      confirmTotp: vi.fn(),
-      assertTotp: vi.fn(),
-      getOrganisation: vi.fn(),
-      recordEntityVerification: vi.fn(),
-      getSbrReadiness: vi.fn(),
-      getMachineCredentialStatus: vi.fn(),
-      removeMachineCredential: vi.fn(),
-      removeSbrProductId: vi.fn(),
-      runSbrReadinessFixture: vi.fn(),
-      selectMachineCredentialFile: vi.fn(async () => ({ selected: false as const })),
-      importMachineCredential: vi.fn(),
-      replaceMachineCredential: vi.fn(),
-      unlockMachineCredential: vi.fn(),
-      importSbrProductId: vi.fn(),
-      getSystemDiagnostics,
-    } satisfies TammyDesktopAPI),
-  });
+  fixture = createConveyorFixture();
+  fixture.procedures.system.getSystemDiagnostics.mockImplementation(getSystemDiagnostics);
+  fixture.procedures.sbr.selectMachineCredentialFile.mockResolvedValue({ selected: false });
 }
 
 function mockAuthoritativeSettings(
   roles: readonly Role[],
   organisationDisplayName = "Authoritative Tammy Business",
 ) {
-  vi.mocked(window.tammy.getCurrentUser).mockImplementation(async (frame) => {
+  procedures().organisation.getCurrentUser.mockImplementation(async (frame) => {
     const request = currentUserCodec.decodeRequest(frame);
     expect(request.authentication).toMatchObject({
       actorUserId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073992",
@@ -212,7 +138,7 @@ function mockAuthoritativeSettings(
       }),
     );
   });
-  vi.mocked(window.tammy.getOrganisation).mockImplementation(async (frame) => {
+  procedures().organisation.getOrganisation.mockImplementation(async (frame) => {
     const request = organisationCodec.decodeRequest(frame);
     expect(request.organisationId).toBe("01900f3c-7b2e-7cc4-98c4-dc0c0c073994");
     return organisationCodec.encodeResponse(
@@ -232,7 +158,7 @@ function mockAuthoritativeSettings(
 }
 
 function mockUnavailableReadiness() {
-  vi.mocked(window.tammy.getSbrReadiness).mockImplementation(async (frame) => {
+  procedures().sbr.getSbrReadiness.mockImplementation(async (frame) => {
     readinessCodec.decodeRequest(frame);
     return readinessCodec.encodeResponse(
       create(GetSbrReadinessResponseSchema, {
@@ -248,7 +174,8 @@ function mockUnavailableReadiness() {
 }
 
 afterEach(() => {
-  Reflect.deleteProperty(window, "tammy");
+  fixture?.queryClient.clear();
+  fixture = undefined;
   Reflect.deleteProperty(window, "tammyLaunchScenario");
   window.history.replaceState(null, "", "/");
   window.sessionStorage.clear();
@@ -257,7 +184,7 @@ afterEach(() => {
 
 describe("App", () => {
   it("keeps the simulator warning visible and opens authenticated doctor readiness", async () => {
-    installDesktopAPI(vi.fn().mockResolvedValue(diagnostics));
+    installConveyorFixture(vi.fn().mockResolvedValue(diagnostics));
     mockAuthoritativeSettings([Role.WORKSPACE_ADMIN]);
     mockUnavailableReadiness();
     Object.defineProperty(window, "tammyLaunchScenario", {
@@ -274,7 +201,7 @@ describe("App", () => {
   });
 
   it("shows privacy and support information before workspace setup", () => {
-    installDesktopAPI(vi.fn().mockResolvedValue(diagnostics));
+    installConveyorFixture(vi.fn().mockResolvedValue(diagnostics));
     window.sessionStorage.clear();
     window.history.replaceState(null, "", "/privacy");
 
@@ -286,7 +213,7 @@ describe("App", () => {
 
   it("announces the local engine while diagnostics are loading", () => {
     const pending = deferred<SystemDiagnostics>();
-    installDesktopAPI(vi.fn(() => pending.promise));
+    installConveyorFixture(vi.fn(() => pending.promise));
 
     render(<App />);
 
@@ -296,7 +223,7 @@ describe("App", () => {
   });
 
   it("shows the offline-ready accounting shell without unavailable modules", async () => {
-    installDesktopAPI(vi.fn().mockResolvedValue(diagnostics));
+    installConveyorFixture(vi.fn().mockResolvedValue(diagnostics));
 
     render(<App />);
 
@@ -320,7 +247,7 @@ describe("App", () => {
   });
 
   it("canonicalizes a rejected authenticated deep link to Overview", async () => {
-    installDesktopAPI(vi.fn().mockResolvedValue(diagnostics));
+    installConveyorFixture(vi.fn().mockResolvedValue(diagnostics));
     window.history.replaceState(null, "", "/accounting/general-ledger");
 
     render(<App />);
@@ -330,22 +257,22 @@ describe("App", () => {
   });
 
   it("runs the authenticated doctor route once without exposing another capability", async () => {
-    installDesktopAPI(vi.fn().mockResolvedValue(diagnostics));
+    installConveyorFixture(vi.fn().mockResolvedValue(diagnostics));
     mockAuthoritativeSettings([Role.WORKSPACE_ADMIN]);
-    vi.mocked(window.tammy.getSbrReadiness).mockRejectedValue(new Error("unavailable"));
+    procedures().sbr.getSbrReadiness.mockRejectedValue(new Error("unavailable"));
     window.history.replaceState(null, "", "/settings/sbr?doctor=1");
 
     render(<App />);
 
     expect(await screen.findByRole("heading", { level: 1, name: "SBR readiness" })).toBeTruthy();
     await screen.findByText("Readiness unavailable");
-    expect(window.tammy.getSbrReadiness).toHaveBeenCalledOnce();
+    expect(procedures().sbr.getSbrReadiness).toHaveBeenCalledOnce();
     expect(window.location.search).toBe("?doctor=1");
     expect(screen.queryByRole("button", { name: /doctor/i })).toBeNull();
   });
 
   it("refreshes cached roles and organisation before rendering privileged SBR settings", async () => {
-    installDesktopAPI(vi.fn().mockResolvedValue(diagnostics));
+    installConveyorFixture(vi.fn().mockResolvedValue(diagnostics));
     mockAuthoritativeSettings([Role.BUSINESS_PREPARER]);
     mockUnavailableReadiness();
     window.history.replaceState(null, "", "/settings/sbr");
@@ -357,8 +284,8 @@ describe("App", () => {
     );
 
     expect(await screen.findByText("Authoritative Tammy Business · ABN 51824753556")).toBeTruthy();
-    expect(window.tammy.getCurrentUser).toHaveBeenCalledOnce();
-    expect(window.tammy.getOrganisation).toHaveBeenCalledOnce();
+    expect(procedures().organisation.getCurrentUser).toHaveBeenCalledOnce();
+    expect(procedures().organisation.getOrganisation).toHaveBeenCalledOnce();
     expect(screen.queryByText("Tammy Business · ABN 51824753556")).toBeNull();
     expect(screen.queryByRole("button", { name: /machine credential/i })).toBeNull();
     expect(JSON.parse(window.sessionStorage.getItem("tammy.session.active") ?? "{}")).toMatchObject(
@@ -370,9 +297,9 @@ describe("App", () => {
   });
 
   it("fails closed when authoritative settings projections cannot be refreshed", async () => {
-    installDesktopAPI(vi.fn().mockResolvedValue(diagnostics));
-    vi.mocked(window.tammy.getCurrentUser).mockRejectedValue(new Error("unavailable"));
-    vi.mocked(window.tammy.getOrganisation).mockRejectedValue(new Error("unavailable"));
+    installConveyorFixture(vi.fn().mockResolvedValue(diagnostics));
+    procedures().organisation.getCurrentUser.mockRejectedValue(new Error("unavailable"));
+    procedures().organisation.getOrganisation.mockRejectedValue(new Error("unavailable"));
     window.history.replaceState(null, "", "/settings/organisation");
 
     render(<App />);
@@ -383,9 +310,9 @@ describe("App", () => {
   });
 
   it("fails closed when retained verification expiry metadata is malformed", async () => {
-    installDesktopAPI(vi.fn().mockResolvedValue(diagnostics));
+    installConveyorFixture(vi.fn().mockResolvedValue(diagnostics));
     mockAuthoritativeSettings([Role.WORKSPACE_ADMIN]);
-    vi.mocked(window.tammy.getOrganisation).mockImplementation(async (frame) => {
+    procedures().organisation.getOrganisation.mockImplementation(async (frame) => {
       const request = organisationCodec.decodeRequest(frame);
       return organisationCodec.encodeResponse(
         create(GetOrganisationResponseSchema, {
@@ -412,7 +339,7 @@ describe("App", () => {
   });
 
   it("wraps an authoritative 256-character organisation display name", async () => {
-    installDesktopAPI(vi.fn().mockResolvedValue(diagnostics));
+    installConveyorFixture(vi.fn().mockResolvedValue(diagnostics));
     const displayName = "W".repeat(256);
     mockAuthoritativeSettings([Role.WORKSPACE_ADMIN], displayName);
     window.history.replaceState(null, "", "/settings/organisation");
@@ -425,7 +352,7 @@ describe("App", () => {
   });
 
   it("renders independent verification on the authenticated organisation route", async () => {
-    installDesktopAPI(vi.fn().mockResolvedValue(diagnostics));
+    installConveyorFixture(vi.fn().mockResolvedValue(diagnostics));
     mockAuthoritativeSettings([Role.WORKSPACE_ADMIN]);
     window.history.replaceState(null, "", "/settings/organisation");
     render(<App />);
@@ -436,9 +363,9 @@ describe("App", () => {
   });
 
   it("keeps successful verification visible while refreshing authoritative settings", async () => {
-    installDesktopAPI(vi.fn().mockResolvedValue(diagnostics));
+    installConveyorFixture(vi.fn().mockResolvedValue(diagnostics));
     mockAuthoritativeSettings([Role.WORKSPACE_ADMIN]);
-    vi.mocked(window.tammy.recordEntityVerification).mockImplementation(async (frame) => {
+    procedures().organisation.recordEntityVerification.mockImplementation(async (frame) => {
       const request = recordVerificationCodec.decodeRequest(frame);
       return recordVerificationCodec.encodeResponse(
         create(RecordEntityVerificationResponseSchema, {
@@ -463,27 +390,27 @@ describe("App", () => {
 
     const refreshedUser = deferred<Uint8Array>();
     const refreshedOrganisation = deferred<Uint8Array>();
-    vi.mocked(window.tammy.getCurrentUser).mockReturnValueOnce(refreshedUser.promise);
-    vi.mocked(window.tammy.getOrganisation).mockReturnValueOnce(refreshedOrganisation.promise);
+    procedures().organisation.getCurrentUser.mockReturnValueOnce(refreshedUser.promise);
+    procedures().organisation.getOrganisation.mockReturnValueOnce(refreshedOrganisation.promise);
     await user.upload(
       screen.getByLabelText("Independent evidence"),
       new File([new Uint8Array([1])], "evidence.pdf", { type: "application/pdf" }),
     );
     await user.click(screen.getByRole("button", { name: "Record verification" }));
-    await waitFor(() => expect(window.tammy.getOrganisation).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(procedures().organisation.getOrganisation).toHaveBeenCalledTimes(2));
     expect(screen.getByText("Entity verification evidence recorded.")).toBeTruthy();
   });
 
   it("ignores an authoritative settings refresh that resolves after unmount", async () => {
-    installDesktopAPI(vi.fn().mockResolvedValue(diagnostics));
+    installConveyorFixture(vi.fn().mockResolvedValue(diagnostics));
     const currentUser = deferred<Uint8Array>();
     const organisation = deferred<Uint8Array>();
-    vi.mocked(window.tammy.getCurrentUser).mockReturnValue(currentUser.promise);
-    vi.mocked(window.tammy.getOrganisation).mockReturnValue(organisation.promise);
+    procedures().organisation.getCurrentUser.mockReturnValue(currentUser.promise);
+    procedures().organisation.getOrganisation.mockReturnValue(organisation.promise);
     window.history.replaceState(null, "", "/settings/organisation");
 
     const view = render(<App />);
-    await waitFor(() => expect(window.tammy.getCurrentUser).toHaveBeenCalledOnce());
+    await waitFor(() => expect(procedures().organisation.getCurrentUser).toHaveBeenCalledOnce());
     view.unmount();
 
     await act(async () => {
@@ -520,7 +447,7 @@ describe("App", () => {
   });
 
   it("rejects a doctor fragment at the app boundary before any settings RPC", async () => {
-    installDesktopAPI(vi.fn().mockResolvedValue(diagnostics));
+    installConveyorFixture(vi.fn().mockResolvedValue(diagnostics));
     window.history.replaceState(null, "", "/settings/sbr?doctor=1#fragment");
 
     render(<App />);
@@ -529,12 +456,12 @@ describe("App", () => {
     expect(window.location.pathname).toBe("/overview");
     expect(window.location.search).toBe("");
     expect(window.location.hash).toBe("");
-    expect(window.tammy.getCurrentUser).not.toHaveBeenCalled();
-    expect(window.tammy.getSbrReadiness).not.toHaveBeenCalled();
+    expect(procedures().organisation.getCurrentUser).not.toHaveBeenCalled();
+    expect(procedures().sbr.getSbrReadiness).not.toHaveBeenCalled();
   });
 
   it("rejects a tampered retained role projection instead of authenticating it", () => {
-    installDesktopAPI(vi.fn().mockResolvedValue(diagnostics));
+    installConveyorFixture(vi.fn().mockResolvedValue(diagnostics));
     window.sessionStorage.setItem(
       "tammy.session.active",
       JSON.stringify({
@@ -555,7 +482,7 @@ describe("App", () => {
   });
 
   it("canonicalizes rejected popstate routes while preserving valid history paths", async () => {
-    installDesktopAPI(vi.fn().mockResolvedValue(diagnostics));
+    installConveyorFixture(vi.fn().mockResolvedValue(diagnostics));
     window.history.replaceState(null, "", "/overview");
     render(<App />);
 
@@ -577,7 +504,7 @@ describe("App", () => {
   it("keeps valid 128-character version values intact in wrap-safe cells", async () => {
     const longApiVersion = "a".repeat(128);
     const longCoreVersion = "9".repeat(128);
-    installDesktopAPI(
+    installConveyorFixture(
       vi.fn().mockResolvedValue({
         ...diagnostics,
         apiVersion: longApiVersion,
@@ -601,12 +528,12 @@ describe("App", () => {
   it("keeps failure copy safe and retries through the typed desktop method", async () => {
     const retry = deferred<SystemDiagnostics>();
     const getSystemDiagnostics = vi
-      .fn<TammyDesktopAPI["getSystemDiagnostics"]>()
+      .fn<() => Promise<SystemDiagnostics>>()
       .mockRejectedValueOnce(
         new Error("capability=secret-token certificatePin=sha256:raw 127.0.0.1:45000 readiness"),
       )
       .mockImplementationOnce(() => retry.promise);
-    installDesktopAPI(getSystemDiagnostics);
+    installConveyorFixture(getSystemDiagnostics);
     const user = userEvent.setup();
 
     render(<App />);
@@ -629,7 +556,7 @@ describe("App", () => {
   });
 
   it("uses semantic landmarks, heading order, and keyboard focus order", async () => {
-    installDesktopAPI(vi.fn().mockRejectedValue(new Error("unavailable")));
+    installConveyorFixture(vi.fn().mockRejectedValue(new Error("unavailable")));
     const user = userEvent.setup();
 
     render(<App />);

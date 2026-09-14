@@ -6,9 +6,9 @@ import {
 } from "@tammy/connect-client/tammy/v1/accounting_pb.js";
 import { CivilDateSchema } from "@tammy/connect-client/tammy/v1/common_pb.js";
 import { LoaderCircle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 
-import type { TammyDesktopAPI } from "../../../shared/desktop-api";
+import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
 
@@ -20,7 +20,7 @@ const codec = createProtoMethodCodec({
 });
 
 interface TrialBalanceScreenProps {
-  readonly api: Pick<TammyDesktopAPI, "getTrialBalance">;
+  readonly api: Pick<TammyConveyorModule<"accounting">, "getTrialBalance">;
   readonly now?: Date;
   readonly workspace: AuthenticatedWorkspace | undefined;
 }
@@ -35,38 +35,34 @@ export function TrialBalanceScreen({ api, now, workspace }: TrialBalanceScreenPr
   const year = instant.getFullYear();
   const month = instant.getMonth() + 1;
   const day = instant.getDate();
-  const [state, setState] = useState<State>(
-    workspace?.organisationId ? { status: "loading" } : { status: "unavailable" },
+  const organisationId = workspace?.organisationId ?? "";
+  const userId = workspace?.userId ?? "";
+  const sessionId = workspace?.sessionId ?? "";
+  const input = useMemo(
+    () =>
+      codec.encodeRequest(
+        create(GetTrialBalanceRequestSchema, {
+          authentication: { actorUserId: userId, sessionId },
+          organisationId,
+          asOfDate: create(CivilDateSchema, { year, month, day }),
+        }),
+      ),
+    [day, month, organisationId, sessionId, userId, year],
   );
-  useEffect(() => {
-    if (!workspace?.organisationId) {
-      setState({ status: "unavailable" });
-      return;
+  const trialBalance = api.getTrialBalance.useQuery({
+    enabled: organisationId.length > 0,
+    input,
+    retry: false,
+  });
+  const state = useMemo<State>(() => {
+    if (!organisationId || trialBalance.isError) return { status: "unavailable" };
+    if (!trialBalance.data) return { status: "loading" };
+    try {
+      return { status: "ready", value: codec.decodeResponse(trialBalance.data) };
+    } catch {
+      return { status: "unavailable" };
     }
-    let active = true;
-    const request = create(GetTrialBalanceRequestSchema, {
-      authentication: { actorUserId: workspace.userId, sessionId: workspace.sessionId },
-      organisationId: workspace.organisationId,
-      asOfDate: create(CivilDateSchema, {
-        year,
-        month,
-        day,
-      }),
-    });
-    setState({ status: "loading" });
-    void api
-      .getTrialBalance(codec.encodeRequest(request))
-      .then((frame) => codec.decodeResponse(frame))
-      .then((value) => {
-        if (active) setState({ status: "ready", value });
-      })
-      .catch(() => {
-        if (active) setState({ status: "unavailable" });
-      });
-    return () => {
-      active = false;
-    };
-  }, [api, day, month, workspace, year]);
+  }, [organisationId, trialBalance.data, trialBalance.isError]);
   return (
     <div className="mx-auto grid w-full max-w-[920px] gap-5">
       <div>

@@ -18,14 +18,59 @@ import {
   SbrReadinessSchema,
   SbrReadinessState,
 } from "@tammy/connect-client/tammy/v1/sbr_pb.js";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { act, fireEvent, screen, render as testingRender } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { StrictMode } from "react";
+import { createContext, StrictMode, useContext } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
+import { createConveyorFixture } from "../../test/conveyor-fixtures";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
-import { SbrSimulatorPanel } from "./sbr-simulator-panel";
+import { SbrSimulatorPanel as ActualSbrSimulatorPanel } from "./sbr-simulator-panel";
+
+const FixtureContext = createContext<ReturnType<typeof createConveyorFixture> | undefined>(
+  undefined,
+);
+
+function render(ui: React.ReactElement) {
+  const fixture = createConveyorFixture();
+  const view = testingRender(
+    <FixtureContext.Provider value={fixture}>
+      <QueryClientProvider client={fixture.queryClient}>{ui}</QueryClientProvider>
+    </FixtureContext.Provider>,
+  );
+  return {
+    ...view,
+    rerender: (nextUi: React.ReactElement) =>
+      view.rerender(
+        <FixtureContext.Provider value={fixture}>
+          <QueryClientProvider client={fixture.queryClient}>{nextUi}</QueryClientProvider>
+        </FixtureContext.Provider>,
+      ),
+  };
+}
+
+function SbrSimulatorPanel({
+  api,
+  ...props
+}: Omit<React.ComponentProps<typeof ActualSbrSimulatorPanel>, "organisation" | "sbr"> & {
+  readonly api: Record<string, unknown>;
+}) {
+  const fixture = useContext(FixtureContext);
+  if (!fixture) throw new Error("SbrSimulatorPanel tests require a Conveyor fixture");
+  fixture.procedures.organisation.assertTotp.mockImplementation(api.assertTotp as never);
+  fixture.procedures.sbr.runSbrReadinessFixture.mockImplementation(
+    api.runSbrReadinessFixture as never,
+  );
+  return (
+    <ActualSbrSimulatorPanel
+      {...props}
+      organisation={fixture.conveyor.organisation}
+      sbr={fixture.conveyor.sbr}
+    />
+  );
+}
 
 const FIXTURE_ID = "SIM-SBR-READINESS-V1";
 const assertCodec = createProtoMethodCodec({

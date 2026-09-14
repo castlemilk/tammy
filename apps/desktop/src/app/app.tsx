@@ -12,7 +12,8 @@ import {
   OrganisationVerificationState,
 } from "@tammy/connect-client/tammy/v1/organisation_pb.js";
 import { AlertTriangle, LoaderCircle, RefreshCw } from "lucide-react";
-import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { type TammyConveyor, tammyConveyor } from "../conveyor/client";
 import type { DesktopLaunchScenario } from "../shared/launch-scenario";
 import { createProtoMethodCodec } from "../shared/proto-ipc";
 import { AppShell } from "./app-shell/app-shell";
@@ -187,9 +188,8 @@ function hasSbrWorkspaceProjection(
   );
 }
 
-export function App() {
+export function App({ conveyor = tammyConveyor }: { readonly conveyor?: TammyConveyor } = {}) {
   const launchScenario = window.tammyLaunchScenario ?? "accounting";
-  const [diagnosticsState, setDiagnosticsState] = useState<DiagnosticsState>({ status: "loading" });
   const [access, setAccess] = useState<WorkspaceAccess>(initialAccess);
   const [workspace, setWorkspace] = useState<AuthenticatedWorkspace | undefined>(
     storedAuthenticatedWorkspace,
@@ -199,14 +199,6 @@ export function App() {
       ? "/settings/sbr?doctor=1"
       : resolveAppLocation(currentLocation(), initialAccess()).path,
   );
-  const requestSequence = useRef(0);
-  const appMounted = useRef(false);
-  const settingsRequestSequence = useRef(0);
-  const settingsRequestedKey = useRef<string | undefined>(undefined);
-  const [settingsProjection, setSettingsProjection] = useState<SettingsProjectionState>({
-    status: "idle",
-  });
-  const [settingsReload, setSettingsReload] = useState(0);
   const settingsRoute =
     activePath === "/settings/organisation" ||
     activePath === "/settings/sbr" ||
@@ -215,147 +207,143 @@ export function App() {
     settingsRoute && hasSbrWorkspaceProjection(workspace)
       ? `${workspace.sessionId}:${workspace.userId}:${workspace.organisationId}`
       : undefined;
-  const settingsRequestKey = settingsAuthorityKey
-    ? `${settingsAuthorityKey}:${settingsReload}`
-    : undefined;
-
-  const loadDiagnostics = useCallback(async () => {
-    const request = requestSequence.current + 1;
-    requestSequence.current = request;
-    setDiagnosticsState({ status: "loading" });
-    try {
-      const diagnostics = await window.tammy.getSystemDiagnostics();
-      if (requestSequence.current === request)
-        setDiagnosticsState({ diagnostics, status: "ready" });
-    } catch {
-      if (requestSequence.current === request) setDiagnosticsState({ status: "unavailable" });
-    }
-  }, []);
-
-  useEffect(() => {
-    appMounted.current = true;
-    return () => {
-      appMounted.current = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    void loadDiagnostics();
-    return () => {
-      requestSequence.current += 1;
-    };
-  }, [loadDiagnostics]);
-
-  useEffect(() => {
-    if (!settingsRequestKey || !hasSbrWorkspaceProjection(workspace)) {
-      settingsRequestSequence.current += 1;
-      settingsRequestedKey.current = undefined;
-      setSettingsProjection({ status: "idle" });
-      return;
-    }
-    if (settingsRequestedKey.current === settingsRequestKey) return;
-    settingsRequestedKey.current = settingsRequestKey;
-    const sequence = settingsRequestSequence.current + 1;
-    settingsRequestSequence.current = sequence;
-    setSettingsProjection((current) =>
-      current.status === "ready" && current.key.startsWith(`${settingsAuthorityKey}:`)
-        ? current
-        : { key: settingsRequestKey, status: "loading" },
-    );
+  const diagnosticsQuery = conveyor.system.getSystemDiagnostics.useQuery({ retry: false });
+  const diagnosticsState = useMemo<DiagnosticsState>(() => {
+    if (diagnosticsQuery.isError) return { status: "unavailable" };
+    if (!diagnosticsQuery.data) return { status: "loading" };
+    return { diagnostics: diagnosticsQuery.data, status: "ready" };
+  }, [diagnosticsQuery.data, diagnosticsQuery.isError]);
+  const loadDiagnostics = useCallback(() => {
+    void conveyor.system.getSystemDiagnostics.invalidate();
+  }, [conveyor.system.getSystemDiagnostics]);
+  const settingsInputs = useMemo(() => {
     const authentication = create(AuthenticationContextSchema, {
-      actorUserId: workspace.userId,
-      sessionId: workspace.sessionId,
+      actorUserId: workspace?.userId ?? "",
+      sessionId: workspace?.sessionId ?? "",
     });
-    const currentWorkspace = workspace;
+    return {
+      organisation: organisationCodec.encodeRequest(
+        create(GetOrganisationRequestSchema, {
+          authentication,
+          organisationId: workspace?.organisationId ?? "",
+        }),
+      ),
+      user: currentUserCodec.encodeRequest(create(GetCurrentUserRequestSchema, { authentication })),
+    };
+  }, [workspace?.organisationId, workspace?.sessionId, workspace?.userId]);
+  const settingsEnabled = Boolean(settingsAuthorityKey);
+  const currentUserQuery = conveyor.organisation.getCurrentUser.useQuery({
+    enabled: settingsEnabled,
+    input: settingsInputs.user,
+    retry: false,
+  });
+  const currentOrganisationQuery = conveyor.organisation.getOrganisation.useQuery({
+    enabled: settingsEnabled,
+    input: settingsInputs.organisation,
+    retry: false,
+  });
+  const settingsProjection = useMemo<SettingsProjectionState>(() => {
+    if (!settingsAuthorityKey || !hasSbrWorkspaceProjection(workspace)) return { status: "idle" };
+    if (currentUserQuery.isError || currentOrganisationQuery.isError)
+      return { key: settingsAuthorityKey, status: "unavailable" };
+    if (!currentUserQuery.data || !currentOrganisationQuery.data)
+      return { key: settingsAuthorityKey, status: "loading" };
+    try {
+      const currentUser = currentUserCodec.decodeResponse(currentUserQuery.data);
+      const currentOrganisation = organisationCodec.decodeResponse(currentOrganisationQuery.data);
+      if (
+        !currentUser.user ||
+        currentUser.user.id !== workspace.userId ||
+        !validRoles(currentUser.user.roles) ||
+        !currentOrganisation.organisation ||
+        currentOrganisation.organisation.id !== workspace.organisationId ||
+        !currentOrganisation.organisation.displayName.trim() ||
+        currentOrganisation.organisation.displayName.length > 256 ||
+        !/^[0-9]{11}$/.test(currentOrganisation.organisation.abn) ||
+        currentOrganisation.organisation.version < 1n ||
+        !currentOrganisation.organisation.legalName.trim() ||
+        currentOrganisation.organisation.legalName.length > 256 ||
+        !currentOrganisation.organisation.entityType.trim() ||
+        currentOrganisation.organisation.entityType.length > 96 ||
+        !validOrganisationVerificationState(currentOrganisation.organisation.verificationState) ||
+        (currentUser.user.factorState !== undefined &&
+          currentUser.user.factorState !== FactorState.PENDING_CONFIRMATION &&
+          currentUser.user.factorState !== FactorState.ENABLED &&
+          currentUser.user.factorState !== FactorState.DISABLED) ||
+        (currentOrganisation.currentVerification !== undefined &&
+          (!validOrganisationVerificationState(currentOrganisation.currentVerification.state) ||
+            !validTimestamp(currentOrganisation.currentVerification.expiresAt)))
+      ) {
+        return { key: settingsAuthorityKey, status: "unavailable" };
+      }
+      const refreshed: CompleteSettingsWorkspace = {
+        ...workspace,
+        organisationCanonicalAbn: currentOrganisation.organisation.abn,
+        organisationDisplayName: currentOrganisation.organisation.displayName,
+        organisationId: currentOrganisation.organisation.id,
+        roles: [...currentUser.user.roles],
+        ...(currentUser.user.factorState === undefined
+          ? {}
+          : { userFactorState: currentUser.user.factorState }),
+        organisationVersion: currentOrganisation.organisation.version,
+        organisationLegalName: currentOrganisation.organisation.legalName,
+        organisationEntityType: currentOrganisation.organisation.entityType,
+        organisationVerificationState: currentOrganisation.organisation.verificationState,
+        ...(currentOrganisation.currentVerification?.expiresAt === undefined
+          ? {}
+          : {
+              organisationVerificationExpiresAt: currentOrganisation.currentVerification.expiresAt,
+            }),
+      };
+      return { key: settingsAuthorityKey, status: "ready", workspace: refreshed };
+    } catch {
+      return { key: settingsAuthorityKey, status: "unavailable" };
+    }
+  }, [
+    currentOrganisationQuery.data,
+    currentOrganisationQuery.isError,
+    currentUserQuery.data,
+    currentUserQuery.isError,
+    settingsAuthorityKey,
+    workspace,
+  ]);
+  useEffect(() => {
+    if (settingsProjection.status !== "ready") return;
+    const refreshed = settingsProjection.workspace;
+    window.sessionStorage.setItem(
+      SESSION_STORAGE,
+      JSON.stringify({
+        workspaceId: refreshed.workspaceId,
+        userId: refreshed.userId,
+        sessionId: refreshed.sessionId,
+        organisationId: refreshed.organisationId,
+        organisationDisplayName: refreshed.organisationDisplayName,
+        organisationCanonicalAbn: refreshed.organisationCanonicalAbn,
+        roles: refreshed.roles,
+      } satisfies AuthenticatedWorkspace),
+    );
+    setWorkspace((current) =>
+      current?.organisationDisplayName === refreshed.organisationDisplayName &&
+      current.organisationCanonicalAbn === refreshed.organisationCanonicalAbn &&
+      current.roles?.join(",") === refreshed.roles.join(",") &&
+      (current as Partial<CompleteSettingsWorkspace>).organisationVersion ===
+        refreshed.organisationVersion &&
+      (current as Partial<CompleteSettingsWorkspace>).userFactorState === refreshed.userFactorState
+        ? current
+        : refreshed,
+    );
+  }, [settingsProjection]);
+  const reloadSettings = useCallback(() => {
     void Promise.all([
-      Promise.resolve()
-        .then(() =>
-          window.tammy.getCurrentUser(
-            currentUserCodec.encodeRequest(create(GetCurrentUserRequestSchema, { authentication })),
-          ),
-        )
-        .then((frame) => currentUserCodec.decodeResponse(frame)),
-      Promise.resolve()
-        .then(() =>
-          window.tammy.getOrganisation(
-            organisationCodec.encodeRequest(
-              create(GetOrganisationRequestSchema, {
-                authentication,
-                organisationId: workspace.organisationId,
-              }),
-            ),
-          ),
-        )
-        .then((frame) => organisationCodec.decodeResponse(frame)),
-    ])
-      .then(([currentUser, currentOrganisation]) => {
-        if (
-          !currentUser.user ||
-          currentUser.user.id !== currentWorkspace.userId ||
-          !validRoles(currentUser.user.roles) ||
-          !currentOrganisation.organisation ||
-          currentOrganisation.organisation.id !== currentWorkspace.organisationId ||
-          !currentOrganisation.organisation.displayName.trim() ||
-          currentOrganisation.organisation.displayName.length > 256 ||
-          !/^[0-9]{11}$/.test(currentOrganisation.organisation.abn) ||
-          currentOrganisation.organisation.version < 1n ||
-          !currentOrganisation.organisation.legalName.trim() ||
-          currentOrganisation.organisation.legalName.length > 256 ||
-          !currentOrganisation.organisation.entityType.trim() ||
-          currentOrganisation.organisation.entityType.length > 96 ||
-          !validOrganisationVerificationState(currentOrganisation.organisation.verificationState) ||
-          (currentUser.user.factorState !== undefined &&
-            currentUser.user.factorState !== FactorState.PENDING_CONFIRMATION &&
-            currentUser.user.factorState !== FactorState.ENABLED &&
-            currentUser.user.factorState !== FactorState.DISABLED) ||
-          (currentOrganisation.currentVerification !== undefined &&
-            (!validOrganisationVerificationState(currentOrganisation.currentVerification.state) ||
-              !validTimestamp(currentOrganisation.currentVerification.expiresAt)))
-        ) {
-          throw new Error("invalid authoritative workspace projection");
-        }
-        const refreshed: CompleteSettingsWorkspace = {
-          ...currentWorkspace,
-          organisationCanonicalAbn: currentOrganisation.organisation.abn,
-          organisationDisplayName: currentOrganisation.organisation.displayName,
-          organisationId: currentOrganisation.organisation.id,
-          roles: [...currentUser.user.roles],
-          ...(currentUser.user.factorState === undefined
-            ? {}
-            : { userFactorState: currentUser.user.factorState }),
-          organisationVersion: currentOrganisation.organisation.version,
-          organisationLegalName: currentOrganisation.organisation.legalName,
-          organisationEntityType: currentOrganisation.organisation.entityType,
-          organisationVerificationState: currentOrganisation.organisation.verificationState,
-          ...(currentOrganisation.currentVerification?.expiresAt === undefined
-            ? {}
-            : {
-                organisationVerificationExpiresAt:
-                  currentOrganisation.currentVerification.expiresAt,
-              }),
-        };
-        if (!appMounted.current || settingsRequestSequence.current !== sequence) return;
-        window.sessionStorage.setItem(
-          SESSION_STORAGE,
-          JSON.stringify({
-            workspaceId: refreshed.workspaceId,
-            userId: refreshed.userId,
-            sessionId: refreshed.sessionId,
-            organisationId: refreshed.organisationId,
-            organisationDisplayName: refreshed.organisationDisplayName,
-            organisationCanonicalAbn: refreshed.organisationCanonicalAbn,
-            roles: refreshed.roles,
-          } satisfies AuthenticatedWorkspace),
-        );
-        setWorkspace(refreshed);
-        setSettingsProjection({ key: settingsRequestKey, status: "ready", workspace: refreshed });
-      })
-      .catch(() => {
-        if (appMounted.current && settingsRequestSequence.current === sequence) {
-          setSettingsProjection({ key: settingsRequestKey, status: "unavailable" });
-        }
-      });
-  }, [settingsAuthorityKey, settingsRequestKey, workspace]);
+      conveyor.organisation.getCurrentUser.invalidate(settingsInputs.user),
+      conveyor.organisation.getOrganisation.invalidate(settingsInputs.organisation),
+    ]);
+  }, [
+    conveyor.organisation.getCurrentUser,
+    conveyor.organisation.getOrganisation,
+    settingsInputs.organisation,
+    settingsInputs.user,
+  ]);
 
   useEffect(() => {
     const restore = () => {
@@ -411,9 +399,11 @@ export function App() {
     return (
       <ScenarioFrame scenario={launchScenario}>
         <SetupScreen
-          api={window.tammy}
+          organisation={conveyor.organisation}
           onAuthenticated={authenticated}
           onPrivacy={() => navigate("/privacy")}
+          reporting={conveyor.reporting}
+          workspace={conveyor.workspace}
         />
       </ScenarioFrame>
     );
@@ -425,9 +415,11 @@ export function App() {
       return (
         <ScenarioFrame scenario={launchScenario}>
           <SetupScreen
-            api={window.tammy}
+            organisation={conveyor.organisation}
             onAuthenticated={authenticated}
             onPrivacy={() => navigate("/privacy")}
+            reporting={conveyor.reporting}
+            workspace={conveyor.workspace}
           />
         </ScenarioFrame>
       );
@@ -435,10 +427,11 @@ export function App() {
     return (
       <ScenarioFrame scenario={launchScenario}>
         <UnlockScreen
-          api={window.tammy}
+          organisation={conveyor.organisation}
           onAuthenticated={authenticated}
           onPrivacy={() => navigate("/privacy")}
           organisationId={organisationId}
+          workspace={conveyor.workspace}
         />
       </ScenarioFrame>
     );
@@ -449,12 +442,13 @@ export function App() {
       <AppShell activePath={activePath} onNavigate={navigate}>
         <EngineStatus onRetry={loadDiagnostics} state={diagnosticsState} />
         <RouteContent
+          conveyor={conveyor}
           onNavigate={navigate}
           path={activePath}
           state={diagnosticsState}
           settingsProjection={settingsProjection}
           settingsAuthorityKey={settingsAuthorityKey}
-          onReloadSettings={() => setSettingsReload((value) => value + 1)}
+          onReloadSettings={reloadSettings}
           workspace={workspace}
         />
       </AppShell>
@@ -512,6 +506,7 @@ function EngineStatus({
 }
 
 function RouteContent({
+  conveyor,
   onNavigate,
   path,
   settingsAuthorityKey,
@@ -520,6 +515,7 @@ function RouteContent({
   state,
   workspace,
 }: {
+  readonly conveyor: TammyConveyor;
   readonly onNavigate: (path: string) => void;
   readonly path: string;
   readonly settingsAuthorityKey: string | undefined;
@@ -528,17 +524,45 @@ function RouteContent({
   readonly state: DiagnosticsState;
   readonly workspace: AuthenticatedWorkspace | undefined;
 }) {
-  if (path === "/overview") return <OverviewScreen api={window.tammy} workspace={workspace} />;
-  if (path === "/documents") return <DocumentsScreen api={window.tammy} workspace={workspace} />;
-  if (path === "/banking") return <BankingScreen api={window.tammy} workspace={workspace} />;
-  if (path === "/gst-bas") return <BasScreen api={window.tammy} workspace={workspace} />;
+  if (path === "/overview")
+    return <OverviewScreen api={conveyor.reporting} workspace={workspace} />;
+  if (path === "/documents")
+    return (
+      <DocumentsScreen
+        api={conveyor.documents}
+        onDocumentsChanged={() => conveyor.reporting.getAttentionSummary.invalidate()}
+        workspace={workspace}
+      />
+    );
+  if (path === "/banking")
+    return (
+      <BankingScreen
+        api={conveyor.banking}
+        onBankingChanged={() => conveyor.reporting.getAttentionSummary.invalidate()}
+        workspace={workspace}
+      />
+    );
+  if (path === "/gst-bas")
+    return (
+      <BasScreen
+        api={conveyor.reporting}
+        onBasDraftChanged={() => conveyor.reporting.getAttentionSummary.invalidate()}
+        workspace={workspace}
+      />
+    );
   if (path === "/accounting/chart") {
-    return <ChartScreen api={window.tammy} workspace={workspace} />;
+    return <ChartScreen api={conveyor.accounting} workspace={workspace} />;
   }
   if (path.startsWith("/accounting/journals")) {
     return (
       <JournalsScreen
-        api={window.tammy}
+        api={conveyor.accounting}
+        onJournalPosted={() =>
+          Promise.all([
+            conveyor.accounting.getTrialBalance.invalidate(),
+            conveyor.reporting.getAttentionSummary.invalidate(),
+          ]).then(() => undefined)
+        }
         onNavigate={onNavigate}
         path={path}
         workspace={workspace}
@@ -546,10 +570,18 @@ function RouteContent({
     );
   }
   if (path === "/accounting/trial-balance") {
-    return <TrialBalanceScreen api={window.tammy} workspace={workspace} />;
+    return <TrialBalanceScreen api={conveyor.accounting} workspace={workspace} />;
   }
   if (path === "/audit") {
-    return <AuditScreen api={window.tammy} workspace={workspace} />;
+    return (
+      <AuditScreen
+        accounting={conveyor.accounting}
+        banking={conveyor.banking}
+        documents={conveyor.documents}
+        reporting={conveyor.reporting}
+        workspace={workspace}
+      />
+    );
   }
   if (path === "/settings") {
     return (
@@ -566,10 +598,7 @@ function RouteContent({
     );
   }
   if (path === "/settings/organisation") {
-    if (
-      settingsProjection.status !== "ready" ||
-      !settingsProjection.key.startsWith(`${settingsAuthorityKey}:`)
-    ) {
+    if (settingsProjection.status !== "ready" || settingsProjection.key !== settingsAuthorityKey) {
       return <SettingsProjectionStatus state={settingsProjection} />;
     }
     const trustedWorkspace = settingsProjection.workspace;
@@ -598,7 +627,7 @@ function RouteContent({
           </div>
         </dl>
         <OrganisationVerificationForm
-          api={window.tammy}
+          api={conveyor.organisation}
           onChanged={onReloadSettings}
           workspace={trustedWorkspace}
         />
@@ -606,17 +635,15 @@ function RouteContent({
     );
   }
   if (path === "/settings/sbr" || path === "/settings/sbr?doctor=1") {
-    if (
-      settingsProjection.status !== "ready" ||
-      !settingsProjection.key.startsWith(`${settingsAuthorityKey}:`)
-    ) {
+    if (settingsProjection.status !== "ready" || settingsProjection.key !== settingsAuthorityKey) {
       return <SettingsProjectionStatus state={settingsProjection} />;
     }
     return (
       <SbrReadinessScreen
-        api={window.tammy}
         doctorMode={path === "/settings/sbr?doctor=1"}
         onNavigate={onNavigate}
+        organisation={conveyor.organisation}
+        sbr={conveyor.sbr}
         workspace={settingsProjection.workspace}
       />
     );

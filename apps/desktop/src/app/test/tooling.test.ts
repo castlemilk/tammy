@@ -2,9 +2,9 @@
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import config from "../../../electron.vite.config";
 import { describe, expect, test } from "vitest";
 import type { ToolingAliasProbe } from "@/app/test/tooling.fixture";
+import config from "../../../electron.vite.config";
 
 const desktopRoot = process.cwd();
 const aliasProbe: ToolingAliasProbe = { resolved: true };

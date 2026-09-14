@@ -9,7 +9,7 @@ import {
 import { LoaderCircle } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 
-import type { SbrProductIdImportInput, TammyDesktopAPI } from "../../../shared/desktop-api";
+import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import { Button } from "../../components/ui/button";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
@@ -35,20 +35,19 @@ const removeCodec = createProtoMethodCodec({
 });
 
 export function ProductIdForm({
-  api,
   onChanged,
+  organisation,
   productIdentifier,
   serviceIdentifier,
+  sbr,
   state,
   workspace,
 }: {
-  readonly api: Pick<TammyDesktopAPI, "assertTotp"> & {
-    readonly importSbrProductId: (input: SbrProductIdImportInput) => Promise<Uint8Array>;
-    readonly removeSbrProductId: (request: Uint8Array) => Promise<Uint8Array>;
-  };
   readonly onChanged: () => void;
+  readonly organisation: Pick<TammyConveyorModule<"organisation">, "assertTotp">;
   readonly productIdentifier: string;
   readonly serviceIdentifier: string;
+  readonly sbr: Pick<TammyConveyorModule<"sbr">, "importSbrProductId" | "removeSbrProductId">;
   readonly state: ProductIdState;
   readonly workspace: AuthenticatedWorkspace;
 }) {
@@ -87,7 +86,7 @@ export function ProductIdForm({
     let mutationStarted = false;
     try {
       const purpose = action === "import" ? SBR_PURPOSE.importProduct : SBR_PURPOSE.removeProduct;
-      const fresh = await assertFreshFactor(api, workspace, totp, purpose);
+      const fresh = await assertFreshFactor(organisation, workspace, totp, purpose);
       if (!mounted.current) return;
       const context = commandContext(workspace, fresh);
       let result: ProductIdState;
@@ -100,7 +99,7 @@ export function ProductIdForm({
           }),
         );
         try {
-          const pending = api.importSbrProductId({ command, productId });
+          const pending = sbr.importSbrProductId({ command, productId });
           mutationStarted = true;
           clear();
           result = importCodec.decodeResponse(await pending).productIdState;
@@ -116,7 +115,7 @@ export function ProductIdForm({
           }),
         );
         try {
-          const pending = api.removeSbrProductId(command);
+          const pending = sbr.removeSbrProductId(command);
           mutationStarted = true;
           clear();
           result = removeCodec.decodeResponse(await pending).productIdState;

@@ -4,6 +4,11 @@ import { fileURLToPath } from "node:url";
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+type CapturedConveyorRegistration = {
+  readonly client: unknown;
+  readonly getWindow: () => unknown;
+};
+
 const electron = vi.hoisted(() => ({
   app: {
     getAppPath: vi.fn(() => "/Applications/Tammy.app/Contents/Resources/app"),
@@ -11,12 +16,43 @@ const electron = vi.hoisted(() => ({
     isPackaged: true,
     setPath: vi.fn(),
   },
+  browserWindows: [] as Array<{ destroyed: boolean }>,
   dialog: { showOpenDialog: vi.fn() },
 }));
 
+const conveyor = vi.hoisted(() => ({
+  registerTammyConveyor: vi.fn<(options: CapturedConveyorRegistration) => () => void>(() =>
+    vi.fn(),
+  ),
+}));
+
+vi.mock("../conveyor/registration", () => conveyor);
+
 vi.mock("electron", () => ({
   app: electron.app,
-  BrowserWindow: class {},
+  BrowserWindow: class {
+    public destroyed = false;
+    public readonly webContents = {};
+    public constructor(_options: unknown) {
+      electron.browserWindows.push(this);
+    }
+    public destroy() {
+      this.destroyed = true;
+    }
+    public isDestroyed() {
+      return this.destroyed;
+    }
+    public loadURL() {
+      return Promise.resolve();
+    }
+    public on() {
+      return this;
+    }
+    public once() {
+      return this;
+    }
+    public show() {}
+  },
   dialog: electron.dialog,
   ipcMain: {},
   net: {},
@@ -34,6 +70,8 @@ describe("createProductionDependencies local scenario ownership", () => {
     electron.app.isPackaged = true;
     electron.app.setPath.mockClear();
     electron.dialog.showOpenDialog.mockReset();
+    electron.browserWindows.length = 0;
+    conveyor.registerTammyConveyor.mockClear();
     delete process.env.ELECTRON_RENDERER_URL;
   });
 
@@ -107,6 +145,28 @@ describe("createProductionDependencies local scenario ownership", () => {
     dependencies.cleanupSensitiveState();
 
     expect(clear).toHaveBeenCalledOnce();
+  });
+
+  it("registers Conveyor against only the lifecycle-owned live native window", () => {
+    const dependencies = createProductionDependencies([
+      "/Applications/Tammy.app/Contents/MacOS/Tammy",
+    ]);
+    const lifecycleWindow = dependencies.createWindow();
+    const getWindow = vi.fn<() => typeof lifecycleWindow | undefined>(() => undefined);
+    const client = {} as Parameters<typeof dependencies.registerConveyor>[1];
+
+    dependencies.registerConveyor(getWindow, client);
+
+    const registration = conveyor.registerTammyConveyor.mock.calls[0]?.[0];
+    expect(registration?.client).toBe(client);
+    expect(registration?.getWindow()).toBeUndefined();
+    getWindow.mockReturnValue(lifecycleWindow);
+    const nativeWindow = electron.browserWindows[0];
+    expect(nativeWindow).toBeDefined();
+    if (!nativeWindow) throw new Error("EXPECTED_LIVE_BROWSER_WINDOW");
+    expect(registration?.getWindow()).toBe(nativeWindow);
+    nativeWindow.destroyed = true;
+    expect(registration?.getWindow()).toBeUndefined();
   });
 });
 

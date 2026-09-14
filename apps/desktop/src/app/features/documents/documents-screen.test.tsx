@@ -9,12 +9,12 @@ import {
   SaveDocumentReviewRequestSchema,
   SaveDocumentReviewResponseSchema,
 } from "@tammy/connect-client/tammy/v1/documents_pb.js";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { expect, it, vi } from "vitest";
+import { expect, it } from "vitest";
 
-import type { TammyDesktopAPI } from "../../../shared/desktop-api";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
+import { createConveyorFixture, renderWithConveyor as render } from "../../test/conveyor-fixtures";
 import { DocumentsScreen } from "./documents-screen";
 
 const listCodec = createProtoMethodCodec({
@@ -50,14 +50,15 @@ it("lists retained documents and saves a human-reviewed candidate through named 
     extractedText: "Officeworks Invoice INV-029847 Total $319.00",
     candidate,
   });
-  const listDocuments = vi.fn(async (frame: Uint8Array) => {
+  const fixture = createConveyorFixture();
+  fixture.procedures.documents.listDocuments.mockImplementation(async (frame: Uint8Array) => {
     const request = listCodec.decodeRequest(frame);
     expect(request.organisationId).toBe(document.organisationId);
     return listCodec.encodeResponse(
       create(ListDocumentsResponseSchema, { documents: [document], page: { returnedCount: 1 } }),
     );
   });
-  const saveDocumentReview = vi.fn(async (frame: Uint8Array) => {
+  fixture.procedures.documents.saveDocumentReview.mockImplementation(async (frame: Uint8Array) => {
     const request = reviewCodec.decodeRequest(frame);
     expect(request.documentId).toBe(document.id);
     expect(request.expectedVersion).toBe(1n);
@@ -73,16 +74,11 @@ it("lists retained documents and saves a human-reviewed candidate through named 
       }),
     );
   });
-  const api = {
-    ingestDocument: vi.fn(),
-    listDocuments,
-    saveDocumentReview,
-  } satisfies Pick<TammyDesktopAPI, "ingestDocument" | "listDocuments" | "saveDocumentReview">;
   const user = userEvent.setup();
 
   render(
     <DocumentsScreen
-      api={api}
+      api={fixture.conveyor.documents}
       workspace={{
         workspaceId: "018f0000-0000-7000-8000-000000000001",
         userId: "018f0000-0000-7000-8000-000000000002",
@@ -97,5 +93,5 @@ it("lists retained documents and saves a human-reviewed candidate through named 
   await user.clear(supplier);
   await user.type(supplier, "Officeworks Ltd");
   await user.click(screen.getByRole("button", { name: "Save review" }));
-  expect(saveDocumentReview).toHaveBeenCalledOnce();
+  expect(fixture.procedures.documents.saveDocumentReview).toHaveBeenCalledOnce();
 });

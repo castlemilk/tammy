@@ -29,13 +29,30 @@ import {
   CreateWorkspaceResponseSchema,
   WorkspaceSchema,
 } from "@tammy/connect-client/tammy/v1/workspace_pb.js";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, it, vi } from "vitest";
 
-import type { TammyDesktopAPI } from "../../../shared/desktop-api";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
+import { createConveyorFixture, renderWithConveyor as render } from "../../test/conveyor-fixtures";
 import { SetupScreen } from "./setup-screen";
+
+function cachedQueryMaterial(
+  queryClient: ReturnType<typeof createConveyorFixture>["queryClient"],
+): unknown[] {
+  return queryClient
+    .getQueryCache()
+    .getAll()
+    .flatMap((query) => [query.queryKey, query.state.data]);
+}
+
+function containsText(value: unknown, text: string, seen = new WeakSet<object>()): boolean {
+  if (typeof value === "string") return value.includes(text);
+  if (value instanceof Uint8Array) return new TextDecoder().decode(value).includes(text);
+  if (typeof value !== "object" || value === null || seen.has(value)) return false;
+  seen.add(value);
+  return Object.values(value).some((child) => containsText(child, text, seen));
+}
 
 const createCodec = createProtoMethodCodec({
   input: CreateWorkspaceRequestSchema,
@@ -141,30 +158,13 @@ it("creates, confirms, and signs in to a real local workspace through named prot
       }),
     );
   });
-  const api = {
-    createWorkspace,
-    confirmRecovery,
-    unlockWorkspace: vi.fn(),
-    signIn,
-    createOrganisation,
-    createAccount: vi.fn(),
-    listAccounts: vi.fn(),
-    postManualJournal: vi.fn(),
-    listJournals: vi.fn(),
-    getJournal: vi.fn(),
-    getTrialBalance: vi.fn(),
-    importBankStatement: vi.fn(),
-    listBankStatementLines: vi.fn(),
-    matchBankStatementLine: vi.fn(),
-    completeBankReconciliation: vi.fn(),
-    getBankingSummary: vi.fn(),
-    ingestDocument: vi.fn(),
-    listDocuments: vi.fn(),
-    getDocument: vi.fn(),
-    saveDocumentReview: vi.fn(),
-    createBasDraft: vi.fn(),
-    getCurrentBasDraft: vi.fn(),
-    getReportingCapability: vi.fn(async (frame: Uint8Array) => {
+  const fixture = createConveyorFixture();
+  fixture.procedures.workspace.createWorkspace.mockImplementation(createWorkspace);
+  fixture.procedures.workspace.confirmRecovery.mockImplementation(confirmRecovery);
+  fixture.procedures.workspace.signIn.mockImplementation(signIn);
+  fixture.procedures.organisation.createOrganisation.mockImplementation(createOrganisation);
+  fixture.procedures.reporting.getReportingCapability.mockImplementation(
+    async (frame: Uint8Array) => {
       const request = reportingCodec.decodeRequest(frame);
       expect(request).toMatchObject({
         report: ReportKind.GST_WORKPAPER,
@@ -183,46 +183,36 @@ it("creates, confirms, and signs in to a real local workspace through named prot
           }),
         }),
       );
-    }),
-    getAttentionSummary: vi.fn(),
-    getCurrentUser: vi.fn(async (frame: Uint8Array) => {
-      const request = currentUserCodec.decodeRequest(frame);
-      expect(request.authentication).toMatchObject({
-        actorUserId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073992",
-        sessionId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073993",
-      });
-      return currentUserCodec.encodeResponse(
-        create(GetCurrentUserResponseSchema, {
-          user: create(UserSchema, {
-            id: "01900f3c-7b2e-7cc4-98c4-dc0c0c073992",
-            username: "admin@tammy.local",
-            displayName: "Tammy Admin",
-            roles: [Role.WORKSPACE_ADMIN],
-          }),
+    },
+  );
+  fixture.procedures.organisation.getCurrentUser.mockImplementation(async (frame: Uint8Array) => {
+    const request = currentUserCodec.decodeRequest(frame);
+    expect(request.authentication).toMatchObject({
+      actorUserId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073992",
+      sessionId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073993",
+    });
+    return currentUserCodec.encodeResponse(
+      create(GetCurrentUserResponseSchema, {
+        user: create(UserSchema, {
+          id: "01900f3c-7b2e-7cc4-98c4-dc0c0c073992",
+          username: "admin@tammy.local",
+          displayName: "Tammy Admin",
+          roles: [Role.WORKSPACE_ADMIN],
         }),
-      );
-    }),
-    enrolTotp: vi.fn(),
-    confirmTotp: vi.fn(),
-    assertTotp: vi.fn(),
-    getOrganisation: vi.fn(),
-    recordEntityVerification: vi.fn(),
-    getSbrReadiness: vi.fn(),
-    getMachineCredentialStatus: vi.fn(),
-    removeMachineCredential: vi.fn(),
-    removeSbrProductId: vi.fn(),
-    runSbrReadinessFixture: vi.fn(),
-    selectMachineCredentialFile: vi.fn(async () => ({ selected: false as const })),
-    importMachineCredential: vi.fn(),
-    replaceMachineCredential: vi.fn(),
-    unlockMachineCredential: vi.fn(),
-    importSbrProductId: vi.fn(),
-    getSystemDiagnostics: vi.fn(),
-  } satisfies TammyDesktopAPI;
+      }),
+    );
+  });
   const onAuthenticated = vi.fn();
   const user = userEvent.setup();
 
-  render(<SetupScreen api={api} onAuthenticated={onAuthenticated} />);
+  render(
+    <SetupScreen
+      onAuthenticated={onAuthenticated}
+      organisation={fixture.conveyor.organisation}
+      reporting={fixture.conveyor.reporting}
+      workspace={fixture.conveyor.workspace}
+    />,
+  );
   expect(
     await screen.findByText("Tammy supports a local reviewed-document GST workpaper only."),
   ).toBeTruthy();
@@ -250,7 +240,6 @@ it("creates, confirms, and signs in to a real local workspace through named prot
   expect(createWorkspace).toHaveBeenCalledOnce();
   expect(confirmRecovery).toHaveBeenCalledOnce();
   expect(signIn).toHaveBeenCalledOnce();
-  expect(createOrganisation).toHaveBeenCalledOnce();
   await vi.waitFor(() =>
     expect(onAuthenticated).toHaveBeenCalledWith({
       sessionId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073993",
@@ -262,4 +251,13 @@ it("creates, confirms, and signs in to a real local workspace through named prot
       roles: [Role.WORKSPACE_ADMIN],
     }),
   );
+  expect(createOrganisation).toHaveBeenCalledOnce();
+  const cached = cachedQueryMaterial(fixture.queryClient);
+  for (const secret of [
+    "workspace-passphrase-long-enough",
+    "administrator-password-long-enough",
+    "ABCD-EFGH-IJKL-MNOP",
+  ]) {
+    expect(cached.some((value) => containsText(value, secret))).toBe(false);
+  }
 });

@@ -6,9 +6,9 @@ import {
   type ReportingEntityType,
   type ReportKind,
 } from "@tammy/connect-client/tammy/v1/reporting_capability_pb.js";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo } from "react";
 
-import type { TammyDesktopAPI } from "../../../shared/desktop-api";
+import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 
 const codec = createProtoMethodCodec({
@@ -21,7 +21,7 @@ const codec = createProtoMethodCodec({
 const unavailableCopy = "Reporting support is unavailable in this build.";
 
 interface ReportingCapabilityNoticeProps {
-  readonly api: Pick<TammyDesktopAPI, "getReportingCapability">;
+  readonly api: Pick<TammyConveyorModule<"reporting">, "getReportingCapability">;
   readonly entityType: ReportingEntityType;
   readonly fallbackCopy?: string;
   readonly onStatusChange?: (
@@ -45,43 +45,49 @@ export function ReportingCapabilityNotice({
   report,
   taxYear,
 }: ReportingCapabilityNoticeProps) {
-  const [copy, setCopy] = useState<CapabilityCopy>();
-  const [failed, setFailed] = useState(false);
+  const input = useMemo(
+    () =>
+      codec.encodeRequest(
+        create(GetReportingCapabilityRequestSchema, { entityType, report, taxYear }),
+      ),
+    [entityType, report, taxYear],
+  );
+  const capabilityQuery = api.getReportingCapability.useQuery({ input, retry: false });
+  const result = useMemo<
+    | { readonly copy: CapabilityCopy; readonly status: ReportingCapabilityStatus }
+    | { readonly failed: true }
+    | undefined
+  >(() => {
+    if (capabilityQuery.isError) return { failed: true };
+    if (!capabilityQuery.data) return undefined;
+    try {
+      const capability = codec.decodeResponse(capabilityQuery.data).capability;
+      if (
+        !capability ||
+        capability.report !== report ||
+        capability.entityType !== entityType ||
+        capability.taxYear !== taxYear ||
+        capability.status === ReportingCapabilityStatus.UNSPECIFIED
+      ) {
+        return { failed: true };
+      }
+      return {
+        copy: { status: statusCopy(capability.status), summary: capability.summary },
+        status: capability.status,
+      };
+    } catch {
+      return { failed: true };
+    }
+  }, [capabilityQuery.data, capabilityQuery.isError, entityType, report, taxYear]);
+  const failed = result !== undefined && "failed" in result;
+  const copy = result !== undefined && "copy" in result ? result.copy : undefined;
 
   useEffect(() => {
-    let active = true;
-    setCopy(undefined);
-    setFailed(false);
-    onStatusChange?.(taxYear, undefined);
-    const request = create(GetReportingCapabilityRequestSchema, { entityType, report, taxYear });
-    void api
-      .getReportingCapability(codec.encodeRequest(request))
-      .then((frame) => {
-        const capability = codec.decodeResponse(frame).capability;
-        if (
-          !capability ||
-          capability.report !== report ||
-          capability.entityType !== entityType ||
-          capability.taxYear !== taxYear ||
-          capability.status === ReportingCapabilityStatus.UNSPECIFIED
-        ) {
-          throw new Error("INVALID_REPORTING_CAPABILITY");
-        }
-        if (active) {
-          setCopy({ status: statusCopy(capability.status), summary: capability.summary });
-          onStatusChange?.(taxYear, capability.status);
-        }
-      })
-      .catch(() => {
-        if (active) {
-          setFailed(true);
-          onStatusChange?.(taxYear, undefined);
-        }
-      });
-    return () => {
-      active = false;
-    };
-  }, [api, entityType, onStatusChange, report, taxYear]);
+    onStatusChange?.(
+      taxYear,
+      result !== undefined && "status" in result ? result.status : undefined,
+    );
+  }, [onStatusChange, result, taxYear]);
 
   return (
     <section className="rounded-[6px] border border-border bg-background px-3 py-3 text-[10px]">

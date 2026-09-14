@@ -14,9 +14,9 @@ import {
   GetCurrentBasDraftResponseSchema,
 } from "@tammy/connect-client/tammy/v1/tax_pb.js";
 import { Calculator, FileCheck2 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
-import type { TammyDesktopAPI } from "../../../shared/desktop-api";
+import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import { Button } from "../../components/ui/button";
 import { ReportingCapabilityNotice } from "../reporting/reporting-capability-notice";
@@ -35,18 +35,19 @@ const getCodec = createProtoMethodCodec({
   output: GetCurrentBasDraftResponseSchema,
 });
 type BasAPI = Pick<
-  TammyDesktopAPI,
+  TammyConveyorModule<"reporting">,
   "createBasDraft" | "getCurrentBasDraft" | "getReportingCapability"
 >;
 
 export function BasScreen({
   api,
+  onBasDraftChanged,
   workspace,
 }: {
   readonly api: BasAPI;
+  readonly onBasDraftChanged?: () => Promise<void>;
   readonly workspace: AuthenticatedWorkspace | undefined;
 }) {
-  const [workpaper, setWorkpaper] = useState<BasWorkpaper>();
   const [start, setStart] = useState("2024-04-01");
   const [end, setEnd] = useState("2024-06-30");
   const [busy, setBusy] = useState(false);
@@ -67,17 +68,32 @@ export function BasScreen({
     [],
   );
 
-  useEffect(() => {
-    if (!workspace?.organisationId) return;
-    const request = create(GetCurrentBasDraftRequestSchema, {
-      authentication: { actorUserId: workspace.userId, sessionId: workspace.sessionId },
-      organisationId: workspace.organisationId,
-    });
-    void api
-      .getCurrentBasDraft(getCodec.encodeRequest(request))
-      .then((frame) => setWorkpaper(getCodec.decodeResponse(frame).workpaper))
-      .catch(() => undefined);
-  }, [api, workspace]);
+  const organisationId = workspace?.organisationId ?? "";
+  const userId = workspace?.userId ?? "";
+  const sessionId = workspace?.sessionId ?? "";
+  const currentBasInput = useMemo(
+    () =>
+      getCodec.encodeRequest(
+        create(GetCurrentBasDraftRequestSchema, {
+          authentication: { actorUserId: userId, sessionId },
+          organisationId,
+        }),
+      ),
+    [organisationId, sessionId, userId],
+  );
+  const currentBas = api.getCurrentBasDraft.useQuery({
+    enabled: organisationId.length > 0,
+    input: currentBasInput,
+    retry: false,
+  });
+  const workpaper = useMemo<BasWorkpaper | undefined>(() => {
+    if (!currentBas.data) return undefined;
+    try {
+      return getCodec.decodeResponse(currentBas.data).workpaper;
+    } catch {
+      return undefined;
+    }
+  }, [currentBas.data]);
 
   const createDraft = async () => {
     if (!workspace?.organisationId) return;
@@ -106,7 +122,11 @@ export function BasScreen({
       const response = createCodec.decodeResponse(
         await api.createBasDraft(createCodec.encodeRequest(request)),
       );
-      setWorkpaper(response.workpaper);
+      if (!response.workpaper) throw new Error("missing workpaper");
+      await Promise.all([
+        api.getCurrentBasDraft.invalidate(currentBasInput),
+        onBasDraftChanged?.(),
+      ]);
     } catch {
       setError("The local BAS draft could not be created.");
     } finally {

@@ -9,11 +9,12 @@ import {
   NormalBalance,
 } from "@tammy/connect-client/tammy/v1/accounting_pb.js";
 import { PageInfoSchema } from "@tammy/connect-client/tammy/v1/common_pb.js";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
-import { expect, it, vi } from "vitest";
+import { expect, it } from "vitest";
 
-import type { TammyDesktopAPI } from "../../../shared/desktop-api";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
+import { createConveyorFixture } from "../../test/conveyor-fixtures";
 import { ChartScreen } from "./chart-screen";
 
 const codec = createProtoMethodCodec({
@@ -24,7 +25,8 @@ const codec = createProtoMethodCodec({
 });
 
 it("renders the installed local chart through the named accounting method", async () => {
-  const listAccounts = vi.fn(async (frame: Uint8Array) => {
+  const fixture = createConveyorFixture();
+  fixture.procedures.accounting.listAccounts.mockImplementation(async (frame: Uint8Array) => {
     const request = codec.decodeRequest(frame);
     expect(request.organisationId).toBe("018f0000-0000-7000-8000-000000000004");
     expect(request.authentication).toMatchObject({
@@ -66,21 +68,19 @@ it("renders the installed local chart through the named accounting method", asyn
       }),
     );
   });
-  const api = {
-    createAccount: vi.fn(),
-    listAccounts,
-  } satisfies Pick<TammyDesktopAPI, "createAccount" | "listAccounts">;
 
   render(
-    <ChartScreen
-      api={api}
-      workspace={{
-        sessionId: "018f0000-0000-7000-8000-000000000003",
-        userId: "018f0000-0000-7000-8000-000000000002",
-        workspaceId: "018f0000-0000-7000-8000-000000000001",
-        organisationId: "018f0000-0000-7000-8000-000000000004",
-      }}
-    />,
+    <QueryClientProvider client={fixture.queryClient}>
+      <ChartScreen
+        api={fixture.conveyor.accounting}
+        workspace={{
+          sessionId: "018f0000-0000-7000-8000-000000000003",
+          userId: "018f0000-0000-7000-8000-000000000002",
+          workspaceId: "018f0000-0000-7000-8000-000000000001",
+          organisationId: "018f0000-0000-7000-8000-000000000004",
+        }}
+      />
+    </QueryClientProvider>,
   );
 
   expect(await screen.findByText("Business bank")).toBeTruthy();
@@ -88,5 +88,5 @@ it("renders the installed local chart through the named accounting method", asyn
   expect(screen.getByText("2 accounts")).toBeTruthy();
   expect(screen.getByText("Asset")).toBeTruthy();
   expect(screen.getByText("Liability")).toBeTruthy();
-  expect(listAccounts).toHaveBeenCalledOnce();
+  expect(fixture.procedures.accounting.listAccounts).toHaveBeenCalledOnce();
 });

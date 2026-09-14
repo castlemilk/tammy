@@ -17,16 +17,12 @@ import {
   GetCurrentBasDraftResponseSchema,
 } from "@tammy/connect-client/tammy/v1/tax_pb.js";
 import { FileClock, LoaderCircle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 
-import type { TammyDesktopAPI } from "../../../shared/desktop-api";
+import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
 
-type AuditAPI = Pick<
-  TammyDesktopAPI,
-  "getCurrentBasDraft" | "listBankStatementLines" | "listDocuments" | "listJournals"
->;
 interface Activity {
   readonly at: number;
   readonly detail: string;
@@ -61,111 +57,126 @@ const basCodec = createProtoMethodCodec({
 });
 
 export function AuditScreen({
-  api,
+  accounting,
+  banking,
+  documents,
+  reporting,
   workspace,
 }: {
-  readonly api: AuditAPI;
+  readonly accounting: Pick<TammyConveyorModule<"accounting">, "listJournals">;
+  readonly banking: Pick<TammyConveyorModule<"banking">, "listBankStatementLines">;
+  readonly documents: Pick<TammyConveyorModule<"documents">, "listDocuments">;
+  readonly reporting: Pick<TammyConveyorModule<"reporting">, "getCurrentBasDraft">;
   readonly workspace: AuthenticatedWorkspace | undefined;
 }) {
-  const [activities, setActivities] = useState<readonly Activity[]>();
-  const [unavailable, setUnavailable] = useState(false);
-  useEffect(() => {
-    if (!workspace?.organisationId) {
-      setUnavailable(true);
-      return;
-    }
-    let active = true;
-    const authentication = { actorUserId: workspace.userId, sessionId: workspace.sessionId };
+  const organisationId = workspace?.organisationId ?? "";
+  const userId = workspace?.userId ?? "";
+  const sessionId = workspace?.sessionId ?? "";
+  const inputs = useMemo(() => {
+    const authentication = { actorUserId: userId, sessionId };
     const page = create(PageRequestSchema, { pageSize: 200 });
-    void Promise.allSettled([
-      api.listJournals(
-        journalsCodec.encodeRequest(
-          create(ListJournalsRequestSchema, {
-            authentication,
-            organisationId: workspace.organisationId,
-            page,
-          }),
-        ),
+    return {
+      banking: bankingCodec.encodeRequest(
+        create(ListBankStatementLinesRequestSchema, { authentication, organisationId, page }),
       ),
-      api.listBankStatementLines(
-        bankingCodec.encodeRequest(
-          create(ListBankStatementLinesRequestSchema, {
-            authentication,
-            organisationId: workspace.organisationId,
-            page,
-          }),
-        ),
+      bas: basCodec.encodeRequest(
+        create(GetCurrentBasDraftRequestSchema, { authentication, organisationId }),
       ),
-      api.listDocuments(
-        documentsCodec.encodeRequest(
-          create(ListDocumentsRequestSchema, {
-            authentication,
-            organisationId: workspace.organisationId,
-            page,
-          }),
-        ),
+      documents: documentsCodec.encodeRequest(
+        create(ListDocumentsRequestSchema, { authentication, organisationId, page }),
       ),
-      api.getCurrentBasDraft(
-        basCodec.encodeRequest(
-          create(GetCurrentBasDraftRequestSchema, {
-            authentication,
-            organisationId: workspace.organisationId,
-          }),
-        ),
+      journals: journalsCodec.encodeRequest(
+        create(ListJournalsRequestSchema, { authentication, organisationId, page }),
       ),
-    ])
-      .then((results) => {
-        if (!active) return;
-        const items: Activity[] = [];
-        if (results[0]?.status === "fulfilled")
-          for (const journal of journalsCodec.decodeResponse(results[0].value).journals)
-            items.push({
-              at: civilTime(journal.postingDate),
-              detail: `${money(journal.totalDebits?.minorUnits)} debits and credits`,
-              id: journal.id,
-              kind: "Journal",
-              label: journal.memo,
-            });
-        if (results[1]?.status === "fulfilled")
-          for (const line of bankingCodec.decodeResponse(results[1].value).lines)
-            items.push({
-              at: civilTime(line.transactionDate),
-              detail: `${money(line.amount?.minorUnits)} · ${statusLabel(line.status)}`,
-              id: line.id,
-              kind: "Banking",
-              label: line.description,
-            });
-        if (results[2]?.status === "fulfilled")
-          for (const document of documentsCodec.decodeResponse(results[2].value).documents)
-            items.push({
-              at: document.createdAt ? Number(document.createdAt.seconds) * 1000 : 0,
-              detail: `${document.candidate?.invoiceNumber || "No invoice number"} · ${document.status === 2 ? "Reviewed" : "Needs review"}`,
-              id: document.id,
-              kind: "Document",
-              label: document.candidate?.supplierName || document.sourceDisplayName,
-            });
-        if (results[3]?.status === "fulfilled") {
-          const workpaper = basCodec.decodeResponse(results[3].value).workpaper;
-          if (workpaper)
-            items.push({
-              at: workpaper.createdAt ? Number(workpaper.createdAt.seconds) * 1000 : 0,
-              detail: `GST credits ${money(workpaper.gstCredits1b?.minorUnits)} · Draft — not lodged`,
-              id: workpaper.id,
-              kind: "GST & BAS",
-              label: `${civilLabel(workpaper.periodStart)} – ${civilLabel(workpaper.periodEnd)}`,
-            });
-        }
-        setActivities(
-          items.sort((left, right) => right.at - left.at || left.id.localeCompare(right.id)),
-        );
-      })
-      .catch(() => {
-        if (active) setUnavailable(true);
-      });
-    return () => {
-      active = false;
     };
-  }, [api, workspace]);
+  }, [organisationId, sessionId, userId]);
+  const enabled = organisationId.length > 0;
+  const journals = accounting.listJournals.useQuery({
+    enabled,
+    input: inputs.journals,
+    retry: false,
+  });
+  const bankLines = banking.listBankStatementLines.useQuery({
+    enabled,
+    input: inputs.banking,
+    retry: false,
+  });
+  const documentList = documents.listDocuments.useQuery({
+    enabled,
+    input: inputs.documents,
+    retry: false,
+  });
+  const currentBas = reporting.getCurrentBasDraft.useQuery({
+    enabled,
+    input: inputs.bas,
+    retry: false,
+  });
+  const pending =
+    enabled && [journals, bankLines, documentList, currentBas].some((query) => query.isPending);
+  const activities = useMemo<readonly Activity[] | undefined>(() => {
+    if (!enabled || pending) return undefined;
+    const items: Activity[] = [];
+    try {
+      if (journals.data)
+        for (const journal of journalsCodec.decodeResponse(journals.data).journals)
+          items.push({
+            at: civilTime(journal.postingDate),
+            detail: `${money(journal.totalDebits?.minorUnits)} debits and credits`,
+            id: journal.id,
+            kind: "Journal",
+            label: journal.memo,
+          });
+    } catch {
+      /* one unavailable projection must not hide the others */
+    }
+    try {
+      if (bankLines.data)
+        for (const line of bankingCodec.decodeResponse(bankLines.data).lines)
+          items.push({
+            at: civilTime(line.transactionDate),
+            detail: `${money(line.amount?.minorUnits)} · ${statusLabel(line.status)}`,
+            id: line.id,
+            kind: "Banking",
+            label: line.description,
+          });
+    } catch {
+      /* one unavailable projection must not hide the others */
+    }
+    try {
+      if (documentList.data)
+        for (const document of documentsCodec.decodeResponse(documentList.data).documents)
+          items.push({
+            at: document.createdAt ? Number(document.createdAt.seconds) * 1000 : 0,
+            detail: `${document.candidate?.invoiceNumber || "No invoice number"} · ${document.status === 2 ? "Reviewed" : "Needs review"}`,
+            id: document.id,
+            kind: "Document",
+            label: document.candidate?.supplierName || document.sourceDisplayName,
+          });
+    } catch {
+      /* one unavailable projection must not hide the others */
+    }
+    try {
+      if (currentBas.data) {
+        const workpaper = basCodec.decodeResponse(currentBas.data).workpaper;
+        if (workpaper)
+          items.push({
+            at: workpaper.createdAt ? Number(workpaper.createdAt.seconds) * 1000 : 0,
+            detail: `GST credits ${money(workpaper.gstCredits1b?.minorUnits)} · Draft — not lodged`,
+            id: workpaper.id,
+            kind: "GST & BAS",
+            label: `${civilLabel(workpaper.periodStart)} – ${civilLabel(workpaper.periodEnd)}`,
+          });
+      }
+    } catch {
+      /* one unavailable projection must not hide the others */
+    }
+    return items.sort((left, right) => right.at - left.at || left.id.localeCompare(right.id));
+  }, [bankLines.data, currentBas.data, documentList.data, enabled, journals.data, pending]);
+  const unavailable =
+    !enabled ||
+    (!pending &&
+      activities?.length === 0 &&
+      [journals, bankLines, documentList, currentBas].every((query) => query.isError));
 
   return (
     <div className="mx-auto grid w-full max-w-[980px] gap-4">

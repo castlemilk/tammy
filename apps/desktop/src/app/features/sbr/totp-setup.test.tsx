@@ -12,11 +12,12 @@ import {
   GetCurrentUserResponseSchema,
   UserSchema,
 } from "@tammy/connect-client/tammy/v1/identity_pb.js";
-import { act, render, screen } from "@testing-library/react";
+import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { StrictMode } from "react";
 import { expect, it, vi } from "vitest";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
+import { createConveyorFixture, renderWithConveyor as render } from "../../test/conveyor-fixtures";
 import { TotpSetup } from "./totp-setup";
 
 const workspace = {
@@ -57,6 +58,46 @@ function deferred<T>() {
     resolve = promiseResolve;
   });
   return { promise, resolve };
+}
+
+const fixtureByHandlers = new WeakMap<object, ReturnType<typeof createConveyorFixture>>();
+function fixtureFor(handlers: Record<string, unknown>) {
+  const cached = fixtureByHandlers.get(handlers);
+  if (cached) return cached;
+  const fixture = createConveyorFixture();
+  fixture.procedures.organisation.enrolTotp.mockImplementation(
+    handlers.enrolTotp as (frame: Uint8Array) => Promise<Uint8Array>,
+  );
+  fixture.procedures.organisation.confirmTotp.mockImplementation(
+    handlers.confirmTotp as (frame: Uint8Array) => Promise<Uint8Array>,
+  );
+  fixture.procedures.organisation.getCurrentUser.mockImplementation(
+    handlers.getCurrentUser as (frame: Uint8Array) => Promise<Uint8Array>,
+  );
+  fixtureByHandlers.set(handlers, fixture);
+  return fixture;
+}
+
+function organisationFor(handlers: Record<string, unknown>) {
+  return fixtureFor(handlers).conveyor.organisation;
+}
+
+function queryCacheContains(
+  fixture: ReturnType<typeof createConveyorFixture>,
+  text: string,
+): boolean {
+  const decoder = new TextDecoder();
+  const contains = (value: unknown, seen = new WeakSet<object>()): boolean => {
+    if (typeof value === "string") return value.includes(text);
+    if (value instanceof Uint8Array) return decoder.decode(value).includes(text);
+    if (typeof value !== "object" || value === null || seen.has(value)) return false;
+    seen.add(value);
+    return Object.values(value).some((child) => contains(child, seen));
+  };
+  return fixture.queryClient
+    .getQueryCache()
+    .getAll()
+    .some((query) => contains(query.queryKey) || contains(query.state.data));
 }
 
 it("shows provisioning material once, confirms it, and removes it permanently", async () => {
@@ -105,7 +146,7 @@ it("shows provisioning material once, confirms it, and removes it permanently", 
   const user = userEvent.setup();
   render(
     <StrictMode>
-      <TotpSetup api={api} onEnabled={enabled} workspace={workspace} />
+      <TotpSetup api={organisationFor(api)} onEnabled={enabled} workspace={workspace} />
     </StrictMode>,
   );
   await user.type(
@@ -121,6 +162,10 @@ it("shows provisioning material once, confirms it, and removes it permanently", 
   expect(api.confirmTotp).toHaveBeenCalledOnce();
   expect(enabled).toHaveBeenCalledOnce();
   expect(screen.queryByText(secret)).toBeNull();
+  const fixture = fixtureFor(api);
+  for (const sensitive of ["administrator-password", "123456", secret]) {
+    expect(queryCacheContains(fixture, sensitive)).toBe(false);
+  }
 });
 
 it("drops provisioning material on unmount and never renders a rejected password", async () => {
@@ -130,7 +175,9 @@ it("drops provisioning material on unmount and never renders a rejected password
     getCurrentUser: vi.fn(() => Promise.resolve(currentUser(FactorState.DISABLED))),
   };
   const user = userEvent.setup();
-  const view = render(<TotpSetup api={api} onEnabled={vi.fn()} workspace={workspace} />);
+  const view = render(
+    <TotpSetup api={organisationFor(api)} onEnabled={vi.fn()} workspace={workspace} />,
+  );
   await user.type(screen.getByLabelText("Current administrator password"), "PRIVATE-PASSWORD");
   await user.click(screen.getByRole("button", { name: "Begin TOTP setup" }));
   expect((await screen.findByRole("alert")).textContent).toMatch(/begin setup again/i);
@@ -145,7 +192,7 @@ it("keeps one live error region mounted from first paint", async () => {
     getCurrentUser: vi.fn().mockRejectedValue(new Error("core restarted")),
   };
   const user = userEvent.setup();
-  render(<TotpSetup api={api} onEnabled={vi.fn()} workspace={workspace} />);
+  render(<TotpSetup api={organisationFor(api)} onEnabled={vi.fn()} workspace={workspace} />);
   const liveRegion = screen.getByRole("alert");
   expect(liveRegion.textContent).toBe("");
 
@@ -164,7 +211,9 @@ it("ignores an enrolment response that arrives after unmount", async () => {
     getCurrentUser: vi.fn(),
   };
   const user = userEvent.setup();
-  const view = render(<TotpSetup api={api} onEnabled={vi.fn()} workspace={workspace} />);
+  const view = render(
+    <TotpSetup api={organisationFor(api)} onEnabled={vi.fn()} workspace={workspace} />,
+  );
   await user.type(screen.getByLabelText("Current administrator password"), "PRIVATE-PASSWORD");
   await user.click(screen.getByRole("button", { name: "Begin TOTP setup" }));
   view.unmount();
@@ -200,13 +249,15 @@ it("does not install enrolment material returned for a previous principal", asyn
   };
   const user = userEvent.setup();
   const enabled = vi.fn();
-  const view = render(<TotpSetup api={api} onEnabled={enabled} workspace={workspace} />);
+  const view = render(
+    <TotpSetup api={organisationFor(api)} onEnabled={enabled} workspace={workspace} />,
+  );
   await user.type(screen.getByLabelText("Current administrator password"), "password");
   await user.click(screen.getByRole("button", { name: "Begin TOTP setup" }));
 
   view.rerender(
     <TotpSetup
-      api={api}
+      api={organisationFor(api)}
       onEnabled={enabled}
       workspace={{
         ...workspace,
@@ -271,7 +322,9 @@ it("does not enable a renewed session from a previous session confirmation", asy
   };
   const user = userEvent.setup();
   const enabled = vi.fn();
-  const view = render(<TotpSetup api={api} onEnabled={enabled} workspace={workspace} />);
+  const view = render(
+    <TotpSetup api={organisationFor(api)} onEnabled={enabled} workspace={workspace} />,
+  );
   await user.type(screen.getByLabelText("Current administrator password"), "password");
   await user.click(screen.getByRole("button", { name: "Begin TOTP setup" }));
   await screen.findByText(secret);
@@ -280,7 +333,7 @@ it("does not enable a renewed session from a previous session confirmation", asy
 
   view.rerender(
     <TotpSetup
-      api={api}
+      api={organisationFor(api)}
       onEnabled={enabled}
       workspace={{
         ...workspace,
@@ -320,7 +373,9 @@ it("does not apply a nested security refresh returned for a previous principal",
   };
   const user = userEvent.setup();
   const enabled = vi.fn();
-  const view = render(<TotpSetup api={api} onEnabled={enabled} workspace={workspace} />);
+  const view = render(
+    <TotpSetup api={organisationFor(api)} onEnabled={enabled} workspace={workspace} />,
+  );
   await user.type(screen.getByLabelText("Current administrator password"), "password");
   await user.click(screen.getByRole("button", { name: "Begin TOTP setup" }));
   expect(api.getCurrentUser).toHaveBeenCalledOnce();
@@ -330,7 +385,9 @@ it("does not apply a nested security refresh returned for a previous principal",
     sessionId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073995",
     userId: "01900f3c-7b2e-7cc4-98c4-dc0c0c073996",
   };
-  view.rerender(<TotpSetup api={api} onEnabled={enabled} workspace={nextWorkspace} />);
+  view.rerender(
+    <TotpSetup api={organisationFor(api)} onEnabled={enabled} workspace={nextWorkspace} />,
+  );
   await act(async () => {
     lateRefresh.resolve(currentUser(FactorState.ENABLED, workspace.userId));
     await lateRefresh.promise;
@@ -365,7 +422,7 @@ it("rejects malformed factor metadata without displaying returned provisioning m
     getCurrentUser: vi.fn(() => Promise.resolve(currentUser(FactorState.DISABLED))),
   };
   const user = userEvent.setup();
-  render(<TotpSetup api={api} onEnabled={vi.fn()} workspace={workspace} />);
+  render(<TotpSetup api={organisationFor(api)} onEnabled={vi.fn()} workspace={workspace} />);
   await user.type(screen.getByLabelText("Current administrator password"), "PRIVATE-PASSWORD");
   await user.click(screen.getByRole("button", { name: "Begin TOTP setup" }));
   expect(await screen.findByRole("alert")).toBeTruthy();
@@ -398,7 +455,7 @@ it("restarts an authoritative pending setup and requests atomic seed rotation", 
     getCurrentUser: vi.fn(),
   };
   const user = userEvent.setup();
-  render(<TotpSetup api={api} onEnabled={vi.fn()} workspace={pendingWorkspace} />);
+  render(<TotpSetup api={organisationFor(api)} onEnabled={vi.fn()} workspace={pendingWorkspace} />);
   await user.type(screen.getByLabelText("Current administrator password"), "password");
   await user.click(screen.getByRole("button", { name: "Restart TOTP setup" }));
   expect(await screen.findByTestId("totp-provisioning-material")).toBeTruthy();
@@ -412,7 +469,7 @@ it("locks an ambiguous enrolment until an authoritative refresh succeeds", async
     getCurrentUser: vi.fn().mockRejectedValue(new Error("core restarted")),
   };
   const user = userEvent.setup();
-  render(<TotpSetup api={api} onEnabled={vi.fn()} workspace={workspace} />);
+  render(<TotpSetup api={organisationFor(api)} onEnabled={vi.fn()} workspace={workspace} />);
   await user.type(screen.getByLabelText("Current administrator password"), "password");
   await user.click(screen.getByRole("button", { name: "Begin TOTP setup" }));
   expect(await screen.findByRole("button", { name: "Refresh security status" })).toBeTruthy();
@@ -448,7 +505,7 @@ it("rejects non-base32 provisioning shapes without ever displaying them", async 
     getCurrentUser: vi.fn(() => Promise.resolve(currentUser(FactorState.DISABLED))),
   };
   const user = userEvent.setup();
-  render(<TotpSetup api={api} onEnabled={vi.fn()} workspace={workspace} />);
+  render(<TotpSetup api={organisationFor(api)} onEnabled={vi.fn()} workspace={workspace} />);
   await user.type(screen.getByLabelText("Current administrator password"), "password");
   await user.click(screen.getByRole("button", { name: "Begin TOTP setup" }));
   await screen.findByRole("alert");
@@ -481,7 +538,7 @@ it("refreshes authoritative factor state after an ambiguous confirmation", async
   };
   const enabled = vi.fn();
   const user = userEvent.setup();
-  render(<TotpSetup api={api} onEnabled={enabled} workspace={workspace} />);
+  render(<TotpSetup api={organisationFor(api)} onEnabled={enabled} workspace={workspace} />);
   await user.type(screen.getByLabelText("Current administrator password"), "password");
   await user.click(screen.getByRole("button", { name: "Begin TOTP setup" }));
   await screen.findByText(secret);
@@ -517,14 +574,16 @@ it("does not redisplay provisioning material after navigation", async () => {
     getCurrentUser: vi.fn(),
   };
   const user = userEvent.setup();
-  const view = render(<TotpSetup api={api} onEnabled={vi.fn()} workspace={workspace} />);
+  const view = render(
+    <TotpSetup api={organisationFor(api)} onEnabled={vi.fn()} workspace={workspace} />,
+  );
   await user.type(screen.getByLabelText("Current administrator password"), "password");
   await user.click(screen.getByRole("button", { name: "Begin TOTP setup" }));
   await screen.findByText(secret);
   view.unmount();
   render(
     <TotpSetup
-      api={api}
+      api={organisationFor(api)}
       onEnabled={vi.fn()}
       workspace={{ ...workspace, userFactorState: FactorState.PENDING_CONFIRMATION }}
     />,

@@ -15,9 +15,9 @@ import {
   PageRequestSchema,
 } from "@tammy/connect-client/tammy/v1/common_pb.js";
 import { LoaderCircle, Plus } from "lucide-react";
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useMemo, useState } from "react";
 
-import type { TammyDesktopAPI } from "../../../shared/desktop-api";
+import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import { Button } from "../../components/ui/button";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
@@ -36,7 +36,7 @@ const createAccountCodec = createProtoMethodCodec({
 });
 
 interface ChartScreenProps {
-  readonly api: Pick<TammyDesktopAPI, "createAccount" | "listAccounts">;
+  readonly api: Pick<TammyConveyorModule<"accounting">, "createAccount" | "listAccounts">;
   readonly workspace: AuthenticatedWorkspace | undefined;
 }
 
@@ -46,46 +46,40 @@ type ChartState =
   | { readonly accounts: readonly Account[]; readonly status: "ready" };
 
 export function ChartScreen({ api, workspace }: ChartScreenProps) {
-  const [chart, setChart] = useState<ChartState>(
-    workspace?.organisationId ? { status: "loading" } : { status: "unavailable" },
+  const organisationId = workspace?.organisationId ?? "";
+  const userId = workspace?.userId ?? "";
+  const sessionId = workspace?.sessionId ?? "";
+  const listAccountsInput = useMemo(
+    () =>
+      codec.encodeRequest(
+        create(ListAccountsRequestSchema, {
+          authentication: { actorUserId: userId, sessionId },
+          organisationId,
+          page: create(PageRequestSchema, { pageSize: 200 }),
+        }),
+      ),
+    [organisationId, sessionId, userId],
   );
+  const accountsQuery = api.listAccounts.useQuery({
+    enabled: organisationId.length > 0,
+    input: listAccountsInput,
+    retry: false,
+  });
+  const chart = useMemo<ChartState>(() => {
+    if (!organisationId || accountsQuery.isError) return { status: "unavailable" };
+    if (!accountsQuery.data) return { status: "loading" };
+    try {
+      return { accounts: codec.decodeResponse(accountsQuery.data).accounts, status: "ready" };
+    } catch {
+      return { status: "unavailable" };
+    }
+  }, [accountsQuery.data, accountsQuery.isError, organisationId]);
   const [adding, setAdding] = useState(false);
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [type, setType] = useState<AccountType>(AccountType.EXPENSE);
   const [saving, setSaving] = useState(false);
-  const [reload, setReload] = useState(0);
   const [error, setError] = useState<string>();
-
-  useEffect(() => {
-    void reload;
-    if (!workspace?.organisationId) {
-      setChart({ status: "unavailable" });
-      return;
-    }
-    let active = true;
-    const request = create(ListAccountsRequestSchema, {
-      authentication: {
-        actorUserId: workspace.userId,
-        sessionId: workspace.sessionId,
-      },
-      organisationId: workspace.organisationId,
-      page: create(PageRequestSchema, { pageSize: 200 }),
-    });
-    setChart({ status: "loading" });
-    void api
-      .listAccounts(codec.encodeRequest(request))
-      .then((frame) => codec.decodeResponse(frame))
-      .then((response) => {
-        if (active) setChart({ accounts: response.accounts, status: "ready" });
-      })
-      .catch(() => {
-        if (active) setChart({ status: "unavailable" });
-      });
-    return () => {
-      active = false;
-    };
-  }, [api, reload, workspace]);
 
   const addAccount = async (event: FormEvent) => {
     event.preventDefault();
@@ -118,7 +112,7 @@ export function ChartScreen({ api, workspace }: ChartScreenProps) {
       setCode("");
       setName("");
       setAdding(false);
-      setReload((value) => value + 1);
+      await api.listAccounts.invalidate(listAccountsInput);
     } catch {
       setError("The account could not be created. Check the code and try again.");
     } finally {

@@ -13,7 +13,7 @@ import {
 import { KeyRound, LoaderCircle, Trash2 } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 
-import type { TammyDesktopAPI } from "../../../shared/desktop-api";
+import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import { Button } from "../../components/ui/button";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
@@ -52,8 +52,7 @@ const removeCodec = createProtoMethodCodec({
 
 type Action = "import" | "remove" | "replace" | "unlock";
 type CredentialAPI = Pick<
-  TammyDesktopAPI,
-  | "assertTotp"
+  TammyConveyorModule<"sbr">,
   | "importMachineCredential"
   | "removeMachineCredential"
   | "replaceMachineCredential"
@@ -62,14 +61,16 @@ type CredentialAPI = Pick<
 >;
 
 export function MachineCredentialForm({
-  api,
   credentialState,
   onChanged,
+  organisation,
+  sbr,
   workspace,
 }: {
-  readonly api: CredentialAPI;
   readonly credentialState: MachineCredentialState;
   readonly onChanged: () => void;
+  readonly organisation: Pick<TammyConveyorModule<"organisation">, "assertTotp">;
+  readonly sbr: CredentialAPI;
   readonly workspace: AuthenticatedWorkspace &
     Required<Pick<AuthenticatedWorkspace, "organisationCanonicalAbn" | "organisationDisplayName">>;
 }) {
@@ -122,7 +123,7 @@ export function MachineCredentialForm({
     setNotice(undefined);
     clearTransient();
     try {
-      const selection = await api.selectMachineCredentialFile();
+      const selection = await sbr.selectMachineCredentialFile();
       if (!mounted.current) return;
       if (!selection.selected) {
         setNotice("No credential was selected.");
@@ -164,7 +165,7 @@ export function MachineCredentialForm({
             : action === "unlock"
               ? SBR_PURPOSE.unlockCredential
               : SBR_PURPOSE.removeCredential;
-      const fresh = await assertFreshFactor(api, workspace, totp, purpose);
+      const fresh = await assertFreshFactor(organisation, workspace, totp, purpose);
       if (!mounted.current) return;
       const context = commandContext(workspace, fresh);
       let responseState: MachineCredentialState | undefined;
@@ -173,7 +174,7 @@ export function MachineCredentialForm({
           create(ImportMachineCredentialRequestSchema, { commandContext: context }),
         );
         try {
-          const pending = api.importMachineCredential({
+          const pending = sbr.importMachineCredential({
             command,
             handle: operationHandle,
             password,
@@ -189,7 +190,7 @@ export function MachineCredentialForm({
           create(ReplaceMachineCredentialRequestSchema, { commandContext: context }),
         );
         try {
-          const pending = api.replaceMachineCredential({
+          const pending = sbr.replaceMachineCredential({
             command,
             handle: operationHandle,
             password,
@@ -205,7 +206,7 @@ export function MachineCredentialForm({
           create(UnlockMachineCredentialRequestSchema, { commandContext: context }),
         );
         try {
-          const pending = api.unlockMachineCredential({ command, password });
+          const pending = sbr.unlockMachineCredential({ command, password });
           mutationStarted = true;
           clearTransient();
           responseState = unlockCodec.decodeResponse(await pending).credentialStatus?.state;
@@ -217,7 +218,7 @@ export function MachineCredentialForm({
           create(RemoveMachineCredentialRequestSchema, { commandContext: context }),
         );
         try {
-          const pending = api.removeMachineCredential(command);
+          const pending = sbr.removeMachineCredential(command);
           mutationStarted = true;
           clearTransient();
           responseState = removeCodec.decodeResponse(await pending).credentialStatus?.state;

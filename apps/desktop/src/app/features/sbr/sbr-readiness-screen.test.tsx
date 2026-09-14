@@ -24,15 +24,88 @@ import {
   SbrReadinessSchema,
   SbrReadinessState,
 } from "@tammy/connect-client/tammy/v1/sbr_pb.js";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { act, screen, render as testingRender, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { StrictMode } from "react";
+import { createContext, StrictMode, useContext } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { TammyDesktopAPI } from "../../../shared/desktop-api";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
+import { createConveyorFixture } from "../../test/conveyor-fixtures";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
-import { SbrReadinessScreen } from "./sbr-readiness-screen";
+import { SbrReadinessScreen as ActualSbrReadinessScreen } from "./sbr-readiness-screen";
+
+const FixtureContext = createContext<ReturnType<typeof createConveyorFixture> | undefined>(
+  undefined,
+);
+
+function render(ui: React.ReactElement) {
+  const fixture = createConveyorFixture();
+  const view = testingRender(
+    <FixtureContext.Provider value={fixture}>
+      <QueryClientProvider client={fixture.queryClient}>{ui}</QueryClientProvider>
+    </FixtureContext.Provider>,
+  );
+  return {
+    ...view,
+    rerender: (nextUi: React.ReactElement) =>
+      view.rerender(
+        <FixtureContext.Provider value={fixture}>
+          <QueryClientProvider client={fixture.queryClient}>{nextUi}</QueryClientProvider>
+        </FixtureContext.Provider>,
+      ),
+  };
+}
+
+function SbrReadinessScreen({
+  api,
+  ...props
+}: Omit<React.ComponentProps<typeof ActualSbrReadinessScreen>, "organisation" | "sbr"> & {
+  readonly api: Record<string, unknown>;
+}) {
+  const fixture = useContext(FixtureContext);
+  if (!fixture) throw new Error("SbrReadinessScreen tests require a Conveyor fixture");
+  const organisation = fixture.procedures.organisation;
+  const sbr = fixture.procedures.sbr;
+  if (api.assertTotp) organisation.assertTotp.mockImplementation(api.assertTotp as never);
+  if (api.confirmTotp) organisation.confirmTotp.mockImplementation(api.confirmTotp as never);
+  if (api.enrolTotp) organisation.enrolTotp.mockImplementation(api.enrolTotp as never);
+  if (api.getCurrentUser)
+    organisation.getCurrentUser.mockImplementation(api.getCurrentUser as never);
+  if (api.getMachineCredentialStatus) {
+    sbr.getMachineCredentialStatus.mockImplementation(api.getMachineCredentialStatus as never);
+  }
+  if (api.getSbrReadiness) sbr.getSbrReadiness.mockImplementation(api.getSbrReadiness as never);
+  if (api.importMachineCredential) {
+    sbr.importMachineCredential.mockImplementation(api.importMachineCredential as never);
+  }
+  if (api.importSbrProductId)
+    sbr.importSbrProductId.mockImplementation(api.importSbrProductId as never);
+  if (api.removeMachineCredential) {
+    sbr.removeMachineCredential.mockImplementation(api.removeMachineCredential as never);
+  }
+  if (api.removeSbrProductId)
+    sbr.removeSbrProductId.mockImplementation(api.removeSbrProductId as never);
+  if (api.replaceMachineCredential) {
+    sbr.replaceMachineCredential.mockImplementation(api.replaceMachineCredential as never);
+  }
+  if (api.runSbrReadinessFixture) {
+    sbr.runSbrReadinessFixture.mockImplementation(api.runSbrReadinessFixture as never);
+  }
+  if (api.selectMachineCredentialFile) {
+    sbr.selectMachineCredentialFile.mockImplementation(api.selectMachineCredentialFile as never);
+  }
+  if (api.unlockMachineCredential) {
+    sbr.unlockMachineCredential.mockImplementation(api.unlockMachineCredential as never);
+  }
+  return (
+    <ActualSbrReadinessScreen
+      {...props}
+      organisation={fixture.conveyor.organisation}
+      sbr={fixture.conveyor.sbr}
+    />
+  );
+}
 
 const codec = createProtoMethodCodec({
   input: GetSbrReadinessRequestSchema,
@@ -97,15 +170,7 @@ function credentialStatusFrame(state = MachineCredentialState.PRESENT) {
 function apiFor(
   readiness: NonNullable<Parameters<typeof create<typeof SbrReadinessSchema>>[1]>,
   defaultEvteScope = true,
-): Pick<
-  TammyDesktopAPI,
-  | "assertTotp"
-  | "getCurrentUser"
-  | "getMachineCredentialStatus"
-  | "getSbrReadiness"
-  | "importSbrProductId"
-  | "removeSbrProductId"
-> {
+) {
   const projected =
     readiness.environment === SbrEnvironment.EVTE && defaultEvteScope
       ? {

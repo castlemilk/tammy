@@ -10,7 +10,7 @@ import {
   AssertTOTPResponseSchema,
 } from "@tammy/connect-client/tammy/v1/identity_pb.js";
 
-import type { TammyDesktopAPI } from "../../../shared/desktop-api";
+import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
 
@@ -32,7 +32,7 @@ const assertCodec = createProtoMethodCodec({
   output: AssertTOTPResponseSchema,
 });
 
-export function authentication(workspace: AuthenticatedWorkspace) {
+export function authentication(workspace: Pick<AuthenticatedWorkspace, "sessionId" | "userId">) {
   return create(AuthenticationContextSchema, {
     actorUserId: workspace.userId,
     sessionId: workspace.sessionId,
@@ -69,7 +69,7 @@ export function validTimestamp(
 }
 
 export async function assertFreshFactor(
-  api: Pick<TammyDesktopAPI, "assertTotp">,
+  api: Pick<TammyConveyorModule<"organisation">, "assertTotp">,
   workspace: AuthenticatedWorkspace,
   code: string,
   purpose: string,

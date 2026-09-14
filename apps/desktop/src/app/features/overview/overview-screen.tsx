@@ -8,9 +8,9 @@ import {
   ReportingPeriodSchema,
 } from "@tammy/connect-client/tammy/v1/overview_pb.js";
 import { Building2, Calculator, FileText, LoaderCircle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 
-import type { TammyDesktopAPI } from "../../../shared/desktop-api";
+import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
 
@@ -22,7 +22,7 @@ const attentionCodec = createProtoMethodCodec({
 });
 
 interface OverviewScreenProps {
-  readonly api: Pick<TammyDesktopAPI, "getAttentionSummary">;
+  readonly api: Pick<TammyConveyorModule<"reporting">, "getAttentionSummary">;
   readonly now?: Date;
   readonly workspace: AuthenticatedWorkspace | undefined;
 }
@@ -37,31 +37,31 @@ export function OverviewScreen({ api, now, workspace }: OverviewScreenProps) {
   const year = instant.getFullYear();
   const month = instant.getMonth();
   const day = instant.getDate();
-  const [summary, setSummary] = useState<SummaryState>(
-    api && workspace ? { status: "loading" } : { status: "unavailable" },
+  const workspaceId = workspace?.workspaceId ?? "";
+  const organisationId = workspace?.organisationId ?? workspaceId;
+  const userId = workspace?.userId ?? "";
+  const sessionId = workspace?.sessionId ?? "";
+  const input = useMemo(
+    () =>
+      attentionCodec.encodeRequest(
+        attentionRequest({ organisationId, sessionId, userId }, new Date(year, month, day)),
+      ),
+    [day, month, organisationId, sessionId, userId, year],
   );
-
-  useEffect(() => {
-    if (!api || !workspace) {
-      setSummary({ status: "unavailable" });
-      return;
+  const attention = api.getAttentionSummary.useQuery({
+    enabled: workspaceId.length > 0,
+    input,
+    retry: false,
+  });
+  const summary = useMemo<SummaryState>(() => {
+    if (workspaceId.length === 0 || attention.isError) return { status: "unavailable" };
+    if (!attention.data) return { status: "loading" };
+    try {
+      return { status: "ready", value: attentionCodec.decodeResponse(attention.data) };
+    } catch {
+      return { status: "unavailable" };
     }
-    let active = true;
-    const request = attentionRequest(workspace, new Date(year, month, day));
-    setSummary({ status: "loading" });
-    void api
-      .getAttentionSummary(attentionCodec.encodeRequest(request))
-      .then((frame) => attentionCodec.decodeResponse(frame))
-      .then((value) => {
-        if (active) setSummary({ status: "ready", value });
-      })
-      .catch(() => {
-        if (active) setSummary({ status: "unavailable" });
-      });
-    return () => {
-      active = false;
-    };
-  }, [api, day, month, workspace, year]);
+  }, [attention.data, attention.isError, workspaceId]);
 
   const cards = attentionCards(summary);
   return (
@@ -135,7 +135,14 @@ export function OverviewScreen({ api, now, workspace }: OverviewScreenProps) {
   );
 }
 
-function attentionRequest(workspace: AuthenticatedWorkspace, instant: Date) {
+function attentionRequest(
+  authority: {
+    readonly organisationId: string;
+    readonly sessionId: string;
+    readonly userId: string;
+  },
+  instant: Date,
+) {
   const year = instant.getFullYear();
   const month = instant.getMonth() + 1;
   const day = instant.getDate();
@@ -144,10 +151,10 @@ function attentionRequest(workspace: AuthenticatedWorkspace, instant: Date) {
   const quarterEndDay = new Date(year, quarterEndMonth, 0).getDate();
   return create(GetAttentionSummaryRequestSchema, {
     authentication: {
-      actorUserId: workspace.userId,
-      sessionId: workspace.sessionId,
+      actorUserId: authority.userId,
+      sessionId: authority.sessionId,
     },
-    organisationId: workspace.organisationId ?? workspace.workspaceId,
+    organisationId: authority.organisationId,
     asOfDate: create(CivilDateSchema, { year, month, day }),
     reportingPeriod: create(ReportingPeriodSchema, {
       startDate: create(CivilDateSchema, { year, month: quarterStartMonth, day: 1 }),

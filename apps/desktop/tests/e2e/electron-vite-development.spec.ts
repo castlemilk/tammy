@@ -1,5 +1,5 @@
-import { createServer, type Server } from "node:http";
 import { lstat, mkdtemp, readFile, realpath, rm } from "node:fs/promises";
+import { createServer, type Server } from "node:http";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -46,7 +46,10 @@ async function sendStaticAsset(
     return;
   }
   const candidate = path.resolve(root, `.${pathname === "/" ? "/index.html" : pathname}`);
-  if (path.relative(root, candidate).startsWith("..") || path.isAbsolute(path.relative(root, candidate))) {
+  if (
+    path.relative(root, candidate).startsWith("..") ||
+    path.isAbsolute(path.relative(root, candidate))
+  ) {
     response.writeHead(404).end();
     return;
   }
@@ -64,13 +67,17 @@ async function sendStaticAsset(
       response.writeHead(404).end();
       return;
     }
-    response.writeHead(200, { "Content-Type": contentType(candidatePath) }).end(await readFile(candidatePath));
+    response
+      .writeHead(200, { "Content-Type": contentType(candidatePath) })
+      .end(await readFile(candidatePath));
   } catch {
     response.writeHead(404).end();
   }
 }
 
-async function startRendererServer(root: string): Promise<{ readonly close: () => Promise<void>; readonly origin: string }> {
+async function startRendererServer(
+  root: string,
+): Promise<{ readonly close: () => Promise<void>; readonly origin: string }> {
   const server: Server = createServer((request, response) => {
     void sendStaticAsset(request, response, root);
   });
@@ -84,13 +91,19 @@ async function startRendererServer(root: string): Promise<{ readonly close: () =
     throw new Error("ELECTRON_VITE_STATIC_SERVER_ADDRESS_INVALID");
   }
   return {
-    close: () => new Promise((resolve, reject) => server.close((error) => (error ? reject(error) : resolve()))),
+    close: () =>
+      new Promise((resolve, reject) =>
+        server.close((error) => (error ? reject(error) : resolve())),
+      ),
     origin: `http://127.0.0.1:${address.port}`,
   };
 }
 
 test("runs the real electron-vite development runtime offline and cleans up Core", async () => {
-  test.skip(process.platform !== "darwin" && process.platform !== "win32", "unsupported Electron smoke target");
+  test.skip(
+    process.platform !== "darwin" && process.platform !== "win32",
+    "unsupported Electron smoke target",
+  );
 
   let userDataPath: string | undefined;
   let server: Awaited<ReturnType<typeof startRendererServer>> | undefined;
@@ -107,7 +120,9 @@ test("runs the real electron-vite development runtime offline and cleans up Core
   };
 
   try {
-    userDataPath = await mkdtemp(path.join(process.env.TMPDIR ?? "/private/tmp", "tammy-electron-vite-"));
+    userDataPath = await mkdtemp(
+      path.join(process.env.TMPDIR ?? "/private/tmp", "tammy-electron-vite-"),
+    );
     server = await startRendererServer(rendererRoot);
     application = await _electron.launch({
       args: [mainEntry, `--user-data-dir=${userDataPath}`],
@@ -116,7 +131,36 @@ test("runs the real electron-vite development runtime offline and cleans up Core
       executablePath: electronExecutable,
     });
     const page = await application.firstWindow();
-    const diagnostics = await page.evaluate(() => window.tammy.getSystemDiagnostics());
+    const bridgeEvidence = await page.evaluate(async () => {
+      const bridgeKeys = Object.keys(window.conveyor).sort();
+      const manifest = window.conveyor.manifest();
+      const diagnosticsResult = (await window.conveyor.invoke(
+        "conveyor:system",
+        "getSystemDiagnostics",
+      )) as
+        | { readonly data: { readonly runtimeMode?: string }; readonly ok: true }
+        | { readonly error: unknown; readonly ok: false };
+      let unknownCallError = "";
+      try {
+        await window.conveyor.invoke("conveyor:unknown", "unknown");
+      } catch (error) {
+        unknownCallError = error instanceof Error ? error.message : String(error);
+      }
+      let subscriptionError = "";
+      try {
+        window.conveyor.subscribe("conveyor:system", () => undefined);
+      } catch (error) {
+        subscriptionError = error instanceof Error ? error.message : String(error);
+      }
+      return {
+        bridgeKeys,
+        diagnosticsResult,
+        manifestModules: Object.keys(manifest).sort(),
+        subscriptionError,
+        tammyType: typeof (window as unknown as { tammy?: unknown }).tammy,
+        unknownCallError,
+      };
+    });
     const sandboxEnabled = await application.evaluate(({ BrowserWindow }) => {
       const [window] = BrowserWindow.getAllWindows();
       const webContents = window?.webContents as unknown as
@@ -125,47 +169,71 @@ test("runs the real electron-vite development runtime offline and cleans up Core
       return webContents?.getLastWebPreferences().sandbox;
     });
 
-    expect(diagnostics.runtimeMode).toBe("offline");
+    expect(bridgeEvidence.bridgeKeys).toEqual(["invoke", "manifest", "subscribe"]);
+    expect(bridgeEvidence.manifestModules).toEqual([
+      "accounting",
+      "banking",
+      "documents",
+      "organisation",
+      "reporting",
+      "sbr",
+      "system",
+      "workspace",
+    ]);
+    expect(bridgeEvidence.tammyType).toBe("undefined");
+    expect(bridgeEvidence.unknownCallError).toBe("INVALID_CONVEYOR_REQUEST");
+    expect(bridgeEvidence.subscriptionError).toBe("IPC_SUBSCRIPTIONS_DISABLED");
+    expect(bridgeEvidence.diagnosticsResult).toMatchObject({
+      data: { runtimeMode: "offline" },
+      ok: true,
+    });
     expect(sandboxEnabled).toBe(true);
     expect(await page.evaluate(() => typeof process)).toBe("undefined");
     expect(new URL(page.url()).origin).toBe(server.origin);
     expect((await findExactCoreProcesses(coreExecutable)).length).toBeGreaterThan(0);
   } catch (failure) {
     bodyFailure = failure;
-    throw failure;
-  } finally {
-    if (application) {
-      try {
-        await application.close();
-      } catch (failure) {
-        recordCleanupFailure("Electron application close failed", failure);
-      }
-    }
+  }
+  if (application) {
     try {
-      await pollForNoCoreProcesses({
-        intervalMs: 100,
-        query: () => findExactCoreProcesses(coreExecutable),
-        timeoutMs: 5_000,
-      });
+      await application.close();
     } catch (failure) {
-      recordCleanupFailure("Core process cleanup failed", failure);
+      recordCleanupFailure("Electron application close failed", failure);
     }
-    if (server) {
-      try {
-        await server.close();
-      } catch (failure) {
-        recordCleanupFailure("Renderer server close failed", failure);
-      }
+  }
+  try {
+    await pollForNoCoreProcesses({
+      intervalMs: 100,
+      query: () => findExactCoreProcesses(coreExecutable),
+      timeoutMs: 5_000,
+    });
+  } catch (failure) {
+    recordCleanupFailure("Core process cleanup failed", failure);
+  }
+  if (server) {
+    try {
+      await server.close();
+    } catch (failure) {
+      recordCleanupFailure("Renderer server close failed", failure);
     }
-    if (userDataPath) {
-      try {
-        await rm(userDataPath, { force: true, recursive: true });
-      } catch (failure) {
-        recordCleanupFailure("Electron user-data cleanup failed", failure);
-      }
+  }
+  if (userDataPath) {
+    try {
+      await rm(userDataPath, { force: true, recursive: true });
+    } catch (failure) {
+      recordCleanupFailure("Electron user-data cleanup failed", failure);
     }
-    if (bodyFailure === undefined && cleanupFailures.length > 0) {
-      throw new AggregateError(cleanupFailures, "ELECTRON_VITE_SMOKE_CLEANUP_FAILED");
+  }
+  if (bodyFailure !== undefined) {
+    if (cleanupFailures.length > 0) {
+      throw new AggregateError(
+        [bodyFailure, ...cleanupFailures],
+        "ELECTRON_VITE_SMOKE_AND_CLEANUP_FAILED",
+      );
     }
+    throw bodyFailure;
+  }
+  if (cleanupFailures.length > 0) {
+    throw new AggregateError(cleanupFailures, "ELECTRON_VITE_SMOKE_CLEANUP_FAILED");
   }
 });

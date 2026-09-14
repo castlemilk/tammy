@@ -21,9 +21,9 @@ import {
   WorkspaceUnlockProofSchema,
 } from "@tammy/connect-client/tammy/v1/workspace_pb.js";
 import { KeyRound, LoaderCircle } from "lucide-react";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
-import type { TammyDesktopAPI } from "../../../shared/desktop-api";
+import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import { Button } from "../../components/ui/button";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
@@ -54,13 +54,14 @@ const organisationCodec = createProtoMethodCodec({
 });
 
 interface UnlockScreenProps {
-  readonly api: Pick<
-    TammyDesktopAPI,
-    "getCurrentUser" | "getOrganisation" | "signIn" | "unlockWorkspace"
+  readonly organisation: Pick<
+    TammyConveyorModule<"organisation">,
+    "getCurrentUser" | "getOrganisation"
   >;
   readonly onAuthenticated: (workspace: AuthenticatedWorkspace) => void;
   readonly onPrivacy?: () => void;
   readonly organisationId: string;
+  readonly workspace: Pick<TammyConveyorModule<"workspace">, "signIn" | "unlockWorkspace">;
 }
 
 function fieldClassName(): string {
@@ -68,16 +69,101 @@ function fieldClassName(): string {
 }
 
 export function UnlockScreen({
-  api,
+  organisation,
   onAuthenticated,
   onPrivacy,
   organisationId,
+  workspace,
 }: UnlockScreenProps) {
   const [workspacePassphrase, setWorkspacePassphrase] = useState("");
   const [username, setUsername] = useState("");
   const [administratorPassword, setAdministratorPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
+  const [pendingAuthentication, setPendingAuthentication] = useState<{
+    readonly sessionId: string;
+    readonly userId: string;
+    readonly workspaceId: string;
+  }>();
+  const completing = useRef<string | undefined>(undefined);
+  const queryInputs = useMemo(() => {
+    const authentication = create(AuthenticationContextSchema, {
+      actorUserId: pendingAuthentication?.userId ?? "",
+      sessionId: pendingAuthentication?.sessionId ?? "",
+    });
+    return {
+      organisation: organisationCodec.encodeRequest(
+        create(GetOrganisationRequestSchema, { authentication, organisationId }),
+      ),
+      user: currentUserCodec.encodeRequest(create(GetCurrentUserRequestSchema, { authentication })),
+    };
+  }, [organisationId, pendingAuthentication?.sessionId, pendingAuthentication?.userId]);
+  const currentUserQuery = organisation.getCurrentUser.useQuery({
+    enabled: Boolean(pendingAuthentication),
+    input: queryInputs.user,
+    retry: false,
+  });
+  const currentOrganisationQuery = organisation.getOrganisation.useQuery({
+    enabled: Boolean(pendingAuthentication),
+    input: queryInputs.organisation,
+    retry: false,
+  });
+
+  useEffect(() => {
+    if (!pendingAuthentication) return;
+    const key = `${pendingAuthentication.sessionId}:${pendingAuthentication.userId}`;
+    if (currentUserQuery.isError || currentOrganisationQuery.isError) {
+      setPendingAuthentication(undefined);
+      setBusy(false);
+      setError("The workspace could not be unlocked. Check your passphrase and sign-in details.");
+      return;
+    }
+    if (!currentUserQuery.data || !currentOrganisationQuery.data || completing.current === key)
+      return;
+    completing.current = key;
+    try {
+      const currentUser = currentUserCodec.decodeResponse(currentUserQuery.data);
+      const currentOrganisation = organisationCodec.decodeResponse(currentOrganisationQuery.data);
+      if (
+        !currentUser.user ||
+        currentUser.user.id !== pendingAuthentication.userId ||
+        !validRoles(currentUser.user.roles)
+      )
+        throw new Error("invalid current user");
+      if (
+        !currentOrganisation.organisation ||
+        currentOrganisation.organisation.id !== organisationId ||
+        !currentOrganisation.organisation.displayName ||
+        !/^[0-9]{11}$/.test(currentOrganisation.organisation.abn)
+      )
+        throw new Error("invalid organisation");
+      setWorkspacePassphrase("");
+      setAdministratorPassword("");
+      onAuthenticated({
+        sessionId: pendingAuthentication.sessionId,
+        userId: pendingAuthentication.userId,
+        workspaceId: pendingAuthentication.workspaceId,
+        organisationId,
+        organisationDisplayName: currentOrganisation.organisation.displayName,
+        organisationCanonicalAbn: currentOrganisation.organisation.abn,
+        roles: [...currentUser.user.roles],
+      });
+    } catch {
+      setError("The workspace could not be unlocked. Check your passphrase and sign-in details.");
+    } finally {
+      completing.current = undefined;
+      setPendingAuthentication(undefined);
+      setBusy(false);
+    }
+  }, [
+    currentOrganisationQuery.data,
+    currentOrganisationQuery.isError,
+    currentUserQuery.data,
+    currentUserQuery.isError,
+    onAuthenticated,
+    organisationId,
+    pendingAuthentication,
+  ]);
 
   const unlockAndSignIn = async (event: FormEvent) => {
     event.preventDefault();
@@ -97,7 +183,7 @@ export function UnlockScreen({
         proof,
       });
       const opened = unlockCodec.decodeResponse(
-        await api.unlockWorkspace(unlockCodec.encodeRequest(unlock)),
+        await workspace.unlockWorkspace(unlockCodec.encodeRequest(unlock)),
       );
       if (!opened.workspace?.id) throw new Error("invalid workspace");
 
@@ -108,56 +194,16 @@ export function UnlockScreen({
         }),
       });
       const authenticated = signInCodec.decodeResponse(
-        await api.signIn(signInCodec.encodeRequest(signIn)),
+        await workspace.signIn(signInCodec.encodeRequest(signIn)),
       );
       if (!authenticated.user || !authenticated.session) throw new Error("invalid session");
-      const authentication = create(AuthenticationContextSchema, {
-        actorUserId: authenticated.user.id,
-        sessionId: authenticated.session.id,
-      });
-      const [currentUser, currentOrganisation] = await Promise.all([
-        api
-          .getCurrentUser(
-            currentUserCodec.encodeRequest(create(GetCurrentUserRequestSchema, { authentication })),
-          )
-          .then((frame) => currentUserCodec.decodeResponse(frame)),
-        api
-          .getOrganisation(
-            organisationCodec.encodeRequest(
-              create(GetOrganisationRequestSchema, { authentication, organisationId }),
-            ),
-          )
-          .then((frame) => organisationCodec.decodeResponse(frame)),
-      ]);
-      if (
-        !currentUser.user ||
-        currentUser.user.id !== authenticated.user.id ||
-        !validRoles(currentUser.user.roles)
-      ) {
-        throw new Error("invalid current user");
-      }
-      if (
-        !currentOrganisation.organisation ||
-        currentOrganisation.organisation.id !== organisationId ||
-        !currentOrganisation.organisation.displayName ||
-        !/^[0-9]{11}$/.test(currentOrganisation.organisation.abn)
-      ) {
-        throw new Error("invalid organisation");
-      }
-      setWorkspacePassphrase("");
-      setAdministratorPassword("");
-      onAuthenticated({
+      setPendingAuthentication({
         sessionId: authenticated.session.id,
         userId: authenticated.user.id,
         workspaceId: opened.workspace.id,
-        organisationId,
-        organisationDisplayName: currentOrganisation.organisation.displayName,
-        organisationCanonicalAbn: currentOrganisation.organisation.abn,
-        roles: [...currentUser.user.roles],
       });
     } catch {
       setError("The workspace could not be unlocked. Check your passphrase and sign-in details.");
-    } finally {
       setBusy(false);
     }
   };

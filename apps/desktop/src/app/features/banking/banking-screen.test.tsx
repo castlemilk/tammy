@@ -16,12 +16,12 @@ import {
   MoneySchema,
   PageInfoSchema,
 } from "@tammy/connect-client/tammy/v1/common_pb.js";
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { expect, it, vi } from "vitest";
+import { expect, it } from "vitest";
 
-import type { TammyDesktopAPI } from "../../../shared/desktop-api";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
+import { createConveyorFixture, renderWithConveyor as render } from "../../test/conveyor-fixtures";
 import { BankingScreen } from "./banking-screen";
 
 const listCodec = createProtoMethodCodec({
@@ -63,27 +63,27 @@ it("keeps matching distinct from reconciliation and only enables completion afte
       amount: create(MoneySchema, { currencyCode: "AUD", minorUnits: -31900n }),
       status,
     });
-  const api = {
-    importBankStatement: vi.fn(),
-    listBankStatementLines: vi.fn(async () =>
-      listCodec.encodeResponse(
-        create(ListBankStatementLinesResponseSchema, {
-          lines: [line()],
-          page: create(PageInfoSchema, { returnedCount: 1 }),
-        }),
-      ),
+  const fixture = createConveyorFixture();
+  fixture.procedures.banking.listBankStatementLines.mockImplementation(async () =>
+    listCodec.encodeResponse(
+      create(ListBankStatementLinesResponseSchema, {
+        lines: [line()],
+        page: create(PageInfoSchema, { returnedCount: 1 }),
+      }),
     ),
-    getBankingSummary: vi.fn(async () =>
-      summaryCodec.encodeResponse(
-        create(GetBankingSummaryResponseSchema, {
-          importedLineCount: 1,
-          unmatchedLineCount: status === BankStatementLineStatus.UNMATCHED ? 1 : 0,
-          unreconciledLineCount: status === BankStatementLineStatus.RECONCILED ? 0 : 1,
-          latestClosingBalance: create(MoneySchema, { currencyCode: "AUD", minorUnits: 68100n }),
-        }),
-      ),
+  );
+  fixture.procedures.banking.getBankingSummary.mockImplementation(async () =>
+    summaryCodec.encodeResponse(
+      create(GetBankingSummaryResponseSchema, {
+        importedLineCount: 1,
+        unmatchedLineCount: status === BankStatementLineStatus.UNMATCHED ? 1 : 0,
+        unreconciledLineCount: status === BankStatementLineStatus.RECONCILED ? 0 : 1,
+        latestClosingBalance: create(MoneySchema, { currencyCode: "AUD", minorUnits: 68100n }),
+      }),
     ),
-    matchBankStatementLine: vi.fn(async (frame: Uint8Array) => {
+  );
+  fixture.procedures.banking.matchBankStatementLine.mockImplementation(
+    async (frame: Uint8Array) => {
       const request = matchCodec.decodeRequest(frame);
       expect(request.lineId).toBe(line().id);
       expect(request.expectedVersion).toBe(1n);
@@ -91,8 +91,10 @@ it("keeps matching distinct from reconciliation and only enables completion afte
       return matchCodec.encodeResponse(
         create(MatchBankStatementLineResponseSchema, { line: line() }),
       );
-    }),
-    completeBankReconciliation: vi.fn(async (frame: Uint8Array) => {
+    },
+  );
+  fixture.procedures.banking.completeBankReconciliation.mockImplementation(
+    async (frame: Uint8Array) => {
       expect(reconcileCodec.decodeRequest(frame).organisationId).toBe(organisationId);
       status = BankStatementLineStatus.RECONCILED;
       return reconcileCodec.encodeResponse(
@@ -101,20 +103,13 @@ it("keeps matching distinct from reconciliation and only enables completion afte
           closingBalance: create(MoneySchema, { currencyCode: "AUD", minorUnits: 68100n }),
         }),
       );
-    }),
-  } satisfies Pick<
-    TammyDesktopAPI,
-    | "completeBankReconciliation"
-    | "getBankingSummary"
-    | "importBankStatement"
-    | "listBankStatementLines"
-    | "matchBankStatementLine"
-  >;
+    },
+  );
   const user = userEvent.setup();
 
   render(
     <BankingScreen
-      api={api}
+      api={fixture.conveyor.banking}
       workspace={{
         workspaceId: "018f0000-0000-7000-8000-000000000001",
         userId: "018f0000-0000-7000-8000-000000000002",
@@ -133,6 +128,6 @@ it("keeps matching distinct from reconciliation and only enables completion afte
   expect((complete as HTMLButtonElement).disabled).toBe(false);
   await user.click(complete);
   expect(await screen.findByText("Reconciled")).toBeTruthy();
-  expect(api.matchBankStatementLine).toHaveBeenCalledOnce();
-  expect(api.completeBankReconciliation).toHaveBeenCalledOnce();
+  expect(fixture.procedures.banking.matchBankStatementLine).toHaveBeenCalledOnce();
+  expect(fixture.procedures.banking.completeBankReconciliation).toHaveBeenCalledOnce();
 });

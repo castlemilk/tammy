@@ -9,11 +9,12 @@ import {
   RecordEntityVerificationResponseSchema,
   VerificationSourceMethod,
 } from "@tammy/connect-client/tammy/v1/organisation_pb.js";
-import { act, render, screen } from "@testing-library/react";
+import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { StrictMode } from "react";
 import { expect, it, vi } from "vitest";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
+import { createConveyorFixture, renderWithConveyor as render } from "../../test/conveyor-fixtures";
 import { OrganisationVerificationForm } from "./organisation-verification-form";
 
 const organisationId = "01900f3c-7b2e-7cc4-98c4-dc0c0c073994";
@@ -43,6 +44,14 @@ function deferred<T>() {
     resolve = promiseResolve;
   });
   return { promise, resolve };
+}
+
+function organisationWith(handler: (frame: Uint8Array) => Promise<Uint8Array> | Uint8Array) {
+  const fixture = createConveyorFixture();
+  fixture.procedures.organisation.recordEntityVerification.mockImplementation(
+    handler as (frame: Uint8Array) => Promise<Uint8Array>,
+  );
+  return fixture.conveyor.organisation;
 }
 
 it("records bounded evidence bytes and renders core-authored expiry without displaying content", async () => {
@@ -80,7 +89,7 @@ it("records bounded evidence bytes and renders core-authored expiry without disp
   render(
     <StrictMode>
       <OrganisationVerificationForm
-        api={{ recordEntityVerification }}
+        api={organisationWith(recordEntityVerification)}
         onChanged={vi.fn()}
         workspace={workspace}
       />
@@ -99,7 +108,7 @@ it("rejects oversized or unapproved evidence before invoking core", async () => 
   const user = userEvent.setup();
   render(
     <OrganisationVerificationForm
-      api={{ recordEntityVerification }}
+      api={organisationWith(recordEntityVerification)}
       onChanged={vi.fn()}
       workspace={workspace}
     />,
@@ -118,7 +127,7 @@ it("synchronously prevents duplicate verification submits", async () => {
   const user = userEvent.setup();
   render(
     <OrganisationVerificationForm
-      api={{ recordEntityVerification }}
+      api={organisationWith(recordEntityVerification)}
       onChanged={vi.fn()}
       workspace={workspace}
     />,
@@ -154,7 +163,7 @@ it("fails closed for an unknown verification state returned by core", async () =
   const user = userEvent.setup();
   render(
     <OrganisationVerificationForm
-      api={{ recordEntityVerification }}
+      api={organisationWith(recordEntityVerification)}
       onChanged={vi.fn()}
       workspace={workspace}
     />,
@@ -176,7 +185,7 @@ it("keeps its live status region mounted across evidence validation", async () =
   const user = userEvent.setup();
   render(
     <OrganisationVerificationForm
-      api={{ recordEntityVerification: vi.fn() }}
+      api={organisationWith(vi.fn())}
       onChanged={vi.fn()}
       workspace={workspace}
     />,
@@ -197,7 +206,7 @@ it("terminal-locks after a dispatched verification promise rejects", async () =>
   const user = userEvent.setup();
   render(
     <OrganisationVerificationForm
-      api={{ recordEntityVerification }}
+      api={organisationWith(recordEntityVerification)}
       onChanged={vi.fn()}
       workspace={workspace}
     />,
@@ -221,7 +230,7 @@ it("does not dispatch verification after unmount during evidence read", async ()
   const user = userEvent.setup();
   const view = render(
     <OrganisationVerificationForm
-      api={{ recordEntityVerification }}
+      api={organisationWith(recordEntityVerification)}
       onChanged={vi.fn()}
       workspace={workspace}
     />,

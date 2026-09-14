@@ -20,9 +20,9 @@ import {
   PageRequestSchema,
 } from "@tammy/connect-client/tammy/v1/common_pb.js";
 import { ArrowLeft, LoaderCircle, Plus } from "lucide-react";
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useMemo, useState } from "react";
 
-import type { TammyDesktopAPI } from "../../../shared/desktop-api";
+import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import { Button } from "../../components/ui/button";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
@@ -54,9 +54,10 @@ const postCodec = createProtoMethodCodec({
 
 interface JournalsScreenProps {
   readonly api: Pick<
-    TammyDesktopAPI,
+    TammyConveyorModule<"accounting">,
     "getJournal" | "listAccounts" | "listJournals" | "postManualJournal"
   >;
+  readonly onJournalPosted?: () => Promise<void>;
   readonly onNavigate: (path: string) => void;
   readonly path: string;
   readonly workspace: AuthenticatedWorkspace | undefined;
@@ -71,11 +72,13 @@ type JournalState =
       readonly status: "ready";
     };
 
-export function JournalsScreen({ api, onNavigate, path, workspace }: JournalsScreenProps) {
-  const [state, setState] = useState<JournalState>(
-    workspace?.organisationId ? { status: "loading" } : { status: "unavailable" },
-  );
-  const [selected, setSelected] = useState<Journal>();
+export function JournalsScreen({
+  api,
+  onJournalPosted,
+  onNavigate,
+  path,
+  workspace,
+}: JournalsScreenProps) {
   const [adding, setAdding] = useState(false);
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState<string>();
@@ -88,68 +91,84 @@ export function JournalsScreen({ api, onNavigate, path, workspace }: JournalsScr
     () => new URL(path, "https://tammy.invalid").searchParams.get("journal"),
     [path],
   );
-
-  useEffect(() => {
-    if (!workspace?.organisationId) {
-      setState({ status: "unavailable" });
-      return;
+  const organisationId = workspace?.organisationId ?? "";
+  const userId = workspace?.userId ?? "";
+  const sessionId = workspace?.sessionId ?? "";
+  const accountsInput = useMemo(
+    () =>
+      accountsCodec.encodeRequest(
+        create(ListAccountsRequestSchema, {
+          authentication: { actorUserId: userId, sessionId },
+          organisationId,
+          page: create(PageRequestSchema, { pageSize: 200 }),
+        }),
+      ),
+    [organisationId, sessionId, userId],
+  );
+  const journalsInput = useMemo(
+    () =>
+      journalsCodec.encodeRequest(
+        create(ListJournalsRequestSchema, {
+          authentication: { actorUserId: userId, sessionId },
+          organisationId,
+          page: create(PageRequestSchema, { pageSize: 200 }),
+        }),
+      ),
+    [organisationId, sessionId, userId],
+  );
+  const journalInput = useMemo(
+    () =>
+      journalCodec.encodeRequest(
+        create(GetJournalRequestSchema, {
+          authentication: { actorUserId: userId, sessionId },
+          journalId: journalID ?? "",
+        }),
+      ),
+    [journalID, sessionId, userId],
+  );
+  const accountsQuery = api.listAccounts.useQuery({
+    enabled: organisationId.length > 0,
+    input: accountsInput,
+    retry: false,
+  });
+  const journalsQuery = api.listJournals.useQuery({
+    enabled: organisationId.length > 0,
+    input: journalsInput,
+    retry: false,
+  });
+  const journalQuery = api.getJournal.useQuery({
+    enabled: Boolean(journalID && workspace),
+    input: journalInput,
+    retry: false,
+  });
+  const state = useMemo<JournalState>(() => {
+    if (!organisationId || accountsQuery.isError || journalsQuery.isError)
+      return { status: "unavailable" };
+    if (!accountsQuery.data || !journalsQuery.data) return { status: "loading" };
+    try {
+      return {
+        accounts: accountsCodec.decodeResponse(accountsQuery.data).accounts,
+        journals: journalsCodec.decodeResponse(journalsQuery.data).journals,
+        status: "ready",
+      };
+    } catch {
+      return { status: "unavailable" };
     }
-    let active = true;
-    const authentication = { actorUserId: workspace.userId, sessionId: workspace.sessionId };
-    const accountsRequest = create(ListAccountsRequestSchema, {
-      authentication,
-      organisationId: workspace.organisationId,
-      page: create(PageRequestSchema, { pageSize: 200 }),
-    });
-    const journalsRequest = create(ListJournalsRequestSchema, {
-      authentication,
-      organisationId: workspace.organisationId,
-      page: create(PageRequestSchema, { pageSize: 200 }),
-    });
-    setState({ status: "loading" });
-    void Promise.all([
-      api
-        .listAccounts(accountsCodec.encodeRequest(accountsRequest))
-        .then((frame) => accountsCodec.decodeResponse(frame)),
-      api
-        .listJournals(journalsCodec.encodeRequest(journalsRequest))
-        .then((frame) => journalsCodec.decodeResponse(frame)),
-    ])
-      .then(([accounts, journals]) => {
-        if (active)
-          setState({ accounts: accounts.accounts, journals: journals.journals, status: "ready" });
-      })
-      .catch(() => {
-        if (active) setState({ status: "unavailable" });
-      });
-    return () => {
-      active = false;
-    };
-  }, [api, workspace]);
-
-  useEffect(() => {
-    if (!workspace || !journalID) {
-      setSelected(undefined);
-      return;
+  }, [
+    accountsQuery.data,
+    accountsQuery.isError,
+    journalsQuery.data,
+    journalsQuery.isError,
+    organisationId,
+  ]);
+  const selected = useMemo(() => {
+    if (!journalQuery.data) return undefined;
+    try {
+      return journalCodec.decodeResponse(journalQuery.data).journal;
+    } catch {
+      return undefined;
     }
-    let active = true;
-    const request = create(GetJournalRequestSchema, {
-      authentication: { actorUserId: workspace.userId, sessionId: workspace.sessionId },
-      journalId: journalID,
-    });
-    void api
-      .getJournal(journalCodec.encodeRequest(request))
-      .then((frame) => journalCodec.decodeResponse(frame))
-      .then((response) => {
-        if (active) setSelected(response.journal);
-      })
-      .catch(() => {
-        if (active) setError("The journal could not be read.");
-      });
-    return () => {
-      active = false;
-    };
-  }, [api, journalID, workspace]);
+  }, [journalQuery.data]);
 
   const ordinaryAccounts =
     state.status === "ready"
@@ -198,8 +217,8 @@ export function JournalsScreen({ api, onNavigate, path, workspace }: JournalsScr
         await api.postManualJournal(postCodec.encodeRequest(request)),
       );
       if (!response.journal?.id) throw new Error("invalid journal");
+      await Promise.all([api.listJournals.invalidate(journalsInput), onJournalPosted?.()]);
       onNavigate(`/accounting/journals?journal=${response.journal.id}`);
-      setSelected(response.journal);
       setAdding(false);
       setMemo("");
       setAmount("");

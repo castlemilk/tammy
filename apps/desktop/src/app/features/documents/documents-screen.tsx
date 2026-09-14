@@ -19,7 +19,7 @@ import {
 import { Check, FileText, LoaderCircle, Upload } from "lucide-react";
 import { type ChangeEvent, type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
-import type { TammyDesktopAPI } from "../../../shared/desktop-api";
+import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import { Button } from "../../components/ui/button";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
@@ -45,7 +45,11 @@ const reviewCodec = createProtoMethodCodec({
 });
 
 interface DocumentsScreenProps {
-  readonly api: Pick<TammyDesktopAPI, "ingestDocument" | "listDocuments" | "saveDocumentReview">;
+  readonly api: Pick<
+    TammyConveyorModule<"documents">,
+    "ingestDocument" | "listDocuments" | "saveDocumentReview"
+  >;
+  readonly onDocumentsChanged?: () => Promise<void>;
   readonly workspace: AuthenticatedWorkspace | undefined;
 }
 
@@ -63,51 +67,53 @@ interface ReviewFields {
   readonly total: string;
 }
 
-export function DocumentsScreen({ api, workspace }: DocumentsScreenProps) {
-  const [state, setState] = useState<DocumentState>(
-    workspace?.organisationId ? { status: "loading" } : { status: "unavailable" },
-  );
+export function DocumentsScreen({ api, onDocumentsChanged, workspace }: DocumentsScreenProps) {
   const [selectedID, setSelectedID] = useState<string>();
-  const [reload, setReload] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const input = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    void reload;
-    if (!workspace?.organisationId) {
-      setState({ status: "unavailable" });
-      return;
+  const organisationId = workspace?.organisationId ?? "";
+  const userId = workspace?.userId ?? "";
+  const sessionId = workspace?.sessionId ?? "";
+  const listInput = useMemo(
+    () =>
+      listCodec.encodeRequest(
+        create(ListDocumentsRequestSchema, {
+          authentication: { actorUserId: userId, sessionId },
+          organisationId,
+          page: create(PageRequestSchema, { pageSize: 200 }),
+        }),
+      ),
+    [organisationId, sessionId, userId],
+  );
+  const documentsQuery = api.listDocuments.useQuery({
+    enabled: organisationId.length > 0,
+    input: listInput,
+    retry: false,
+  });
+  const state = useMemo<DocumentState>(() => {
+    if (!organisationId || documentsQuery.isError) return { status: "unavailable" };
+    if (!documentsQuery.data) return { status: "loading" };
+    try {
+      return {
+        documents: listCodec.decodeResponse(documentsQuery.data).documents,
+        status: "ready",
+      };
+    } catch {
+      return { status: "unavailable" };
     }
-    let active = true;
-    const request = create(ListDocumentsRequestSchema, {
-      authentication: { actorUserId: workspace.userId, sessionId: workspace.sessionId },
-      organisationId: workspace.organisationId,
-      page: create(PageRequestSchema, { pageSize: 200 }),
-    });
-    setState({ status: "loading" });
-    void api
-      .listDocuments(listCodec.encodeRequest(request))
-      .then((frame) => listCodec.decodeResponse(frame))
-      .then((response) => {
-        if (!active) return;
-        setState({ documents: response.documents, status: "ready" });
-        setSelectedID((current) =>
-          current && response.documents.some((item) => item.id === current)
-            ? current
-            : response.documents[0]?.id,
-        );
-      })
-      .catch(() => {
-        if (active) setState({ status: "unavailable" });
-      });
-    return () => {
-      active = false;
-    };
-  }, [api, reload, workspace]);
+  }, [documentsQuery.data, documentsQuery.isError, organisationId]);
+  const effectiveSelectedID =
+    state.status === "ready" && state.documents.some((item) => item.id === selectedID)
+      ? selectedID
+      : state.status === "ready"
+        ? state.documents[0]?.id
+        : undefined;
 
   const selected =
-    state.status === "ready" ? state.documents.find((item) => item.id === selectedID) : undefined;
+    state.status === "ready"
+      ? state.documents.find((item) => item.id === effectiveSelectedID)
+      : undefined;
 
   const upload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -143,7 +149,7 @@ export function DocumentsScreen({ api, workspace }: DocumentsScreenProps) {
       );
       if (!response.document) throw new Error("missing document");
       setSelectedID(response.document.id);
-      setReload((value) => value + 1);
+      await Promise.all([api.listDocuments.invalidate(listInput), onDocumentsChanged?.()]);
     } catch {
       setError("The document could not be retained. It has not left this device.");
     } finally {
@@ -198,7 +204,7 @@ export function DocumentsScreen({ api, workspace }: DocumentsScreenProps) {
               {state.documents.map((document) => (
                 <li key={document.id}>
                   <button
-                    className={`grid w-full grid-cols-[1fr_auto] gap-3 px-3 py-3 text-left ${selectedID === document.id ? "bg-success-soft" : "hover:bg-muted"}`}
+                    className={`grid w-full grid-cols-[1fr_auto] gap-3 px-3 py-3 text-left ${effectiveSelectedID === document.id ? "bg-success-soft" : "hover:bg-muted"}`}
                     onClick={() => setSelectedID(document.id)}
                     type="button"
                   >
@@ -232,7 +238,11 @@ export function DocumentsScreen({ api, workspace }: DocumentsScreenProps) {
         <ReviewPanel
           api={api}
           document={selected}
-          onSaved={() => setReload((value) => value + 1)}
+          onSaved={() =>
+            Promise.all([api.listDocuments.invalidate(listInput), onDocumentsChanged?.()]).then(
+              () => undefined,
+            )
+          }
           workspace={workspace}
         />
       </div>
@@ -246,9 +256,9 @@ function ReviewPanel({
   onSaved,
   workspace,
 }: {
-  readonly api: Pick<TammyDesktopAPI, "saveDocumentReview">;
+  readonly api: Pick<TammyConveyorModule<"documents">, "saveDocumentReview">;
   readonly document: Document | undefined;
-  readonly onSaved: () => void;
+  readonly onSaved: () => Promise<void>;
   readonly workspace: AuthenticatedWorkspace | undefined;
 }) {
   const initial = useMemo(() => fieldsFor(document), [document]);
@@ -289,7 +299,7 @@ function ReviewPanel({
       );
       if (!response.document || response.document.status !== DocumentStatus.REVIEWED)
         throw new Error("review failed");
-      onSaved();
+      await onSaved();
     } catch {
       setError("The review could not be saved. Reload and try again.");
     } finally {

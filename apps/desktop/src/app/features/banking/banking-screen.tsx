@@ -19,9 +19,9 @@ import {
   PageRequestSchema,
 } from "@tammy/connect-client/tammy/v1/common_pb.js";
 import { Check, Landmark, Upload } from "lucide-react";
-import { type FormEvent, useCallback, useEffect, useState } from "react";
+import { type FormEvent, useMemo, useState } from "react";
 
-import type { TammyDesktopAPI } from "../../../shared/desktop-api";
+import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import { Button } from "../../components/ui/button";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
@@ -58,7 +58,7 @@ const summaryCodec = createProtoMethodCodec({
 });
 
 type BankingAPI = Pick<
-  TammyDesktopAPI,
+  TammyConveyorModule<"banking">,
   | "completeBankReconciliation"
   | "getBankingSummary"
   | "importBankStatement"
@@ -68,50 +68,73 @@ type BankingAPI = Pick<
 
 export function BankingScreen({
   api,
+  onBankingChanged,
   workspace,
 }: {
   readonly api: BankingAPI;
+  readonly onBankingChanged?: () => Promise<void>;
   readonly workspace: AuthenticatedWorkspace | undefined;
 }) {
   const [openingBalance, setOpeningBalance] = useState("1000.00");
   const [rows, setRows] = useState("2024-05-12,Officeworks INV-029847,-319.00");
-  const [lines, setLines] = useState<
-    readonly import("@tammy/connect-client/tammy/v1/banking_pb.js").BankStatementLine[]
-  >([]);
-  const [summary, setSummary] =
-    useState<import("@tammy/connect-client/tammy/v1/banking_pb.js").GetBankingSummaryResponse>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
-
-  const load = useCallback(async () => {
-    if (!workspace?.organisationId) return;
-    const authentication = { actorUserId: workspace.userId, sessionId: workspace.sessionId };
-    const [lineFrame, summaryFrame] = await Promise.all([
-      api.listBankStatementLines(
-        listCodec.encodeRequest(
-          create(ListBankStatementLinesRequestSchema, {
-            authentication,
-            organisationId: workspace.organisationId,
-            page: create(PageRequestSchema, { pageSize: 200 }),
-          }),
-        ),
+  const organisationId = workspace?.organisationId ?? "";
+  const userId = workspace?.userId ?? "";
+  const sessionId = workspace?.sessionId ?? "";
+  const linesInput = useMemo(
+    () =>
+      listCodec.encodeRequest(
+        create(ListBankStatementLinesRequestSchema, {
+          authentication: { actorUserId: userId, sessionId },
+          organisationId,
+          page: create(PageRequestSchema, { pageSize: 200 }),
+        }),
       ),
-      api.getBankingSummary(
-        summaryCodec.encodeRequest(
-          create(GetBankingSummaryRequestSchema, {
-            authentication,
-            organisationId: workspace.organisationId,
-          }),
-        ),
+    [organisationId, sessionId, userId],
+  );
+  const summaryInput = useMemo(
+    () =>
+      summaryCodec.encodeRequest(
+        create(GetBankingSummaryRequestSchema, {
+          authentication: { actorUserId: userId, sessionId },
+          organisationId,
+        }),
       ),
+    [organisationId, sessionId, userId],
+  );
+  const linesQuery = api.listBankStatementLines.useQuery({
+    enabled: organisationId.length > 0,
+    input: linesInput,
+    retry: false,
+  });
+  const summaryQuery = api.getBankingSummary.useQuery({
+    enabled: organisationId.length > 0,
+    input: summaryInput,
+    retry: false,
+  });
+  const lines = useMemo(() => {
+    if (!linesQuery.data) return [];
+    try {
+      return listCodec.decodeResponse(linesQuery.data).lines;
+    } catch {
+      return [];
+    }
+  }, [linesQuery.data]);
+  const summary = useMemo(() => {
+    if (!summaryQuery.data) return undefined;
+    try {
+      return summaryCodec.decodeResponse(summaryQuery.data);
+    } catch {
+      return undefined;
+    }
+  }, [summaryQuery.data]);
+  const invalidateReads = () =>
+    Promise.all([
+      api.listBankStatementLines.invalidate(linesInput),
+      api.getBankingSummary.invalidate(summaryInput),
+      onBankingChanged?.(),
     ]);
-    setLines(listCodec.decodeResponse(lineFrame).lines);
-    setSummary(summaryCodec.decodeResponse(summaryFrame));
-  }, [api, workspace]);
-
-  useEffect(() => {
-    void load().catch(() => setError("Banking data is unavailable."));
-  }, [load]);
 
   const importStatement = async (event: FormEvent) => {
     event.preventDefault();
@@ -149,7 +172,7 @@ export function BankingScreen({
         lines: inputs,
       });
       await api.importBankStatement(importCodec.encodeRequest(request));
-      await load();
+      await invalidateReads();
     } catch {
       setError("Use one row per line: YYYY-MM-DD,description,amount.");
     } finally {
@@ -174,7 +197,7 @@ export function BankingScreen({
           }),
         ),
       );
-      await load();
+      await invalidateReads();
     } catch {
       setError("The statement line could not be matched.");
     } finally {
@@ -195,7 +218,7 @@ export function BankingScreen({
           }),
         ),
       );
-      await load();
+      await invalidateReads();
     } catch {
       setError("Match every imported line before completing reconciliation.");
     } finally {

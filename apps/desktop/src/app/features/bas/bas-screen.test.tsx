@@ -16,12 +16,12 @@ import {
   GetCurrentBasDraftRequestSchema,
   GetCurrentBasDraftResponseSchema,
 } from "@tammy/connect-client/tammy/v1/tax_pb.js";
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { expect, it, vi } from "vitest";
+import { expect, it } from "vitest";
 
-import type { TammyDesktopAPI } from "../../../shared/desktop-api";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
+import { createConveyorFixture, renderWithConveyor as render } from "../../test/conveyor-fixtures";
 import { BasScreen } from "./bas-screen";
 
 const getCodec = createProtoMethodCodec({
@@ -67,18 +67,23 @@ it("creates a local BAS draft from reviewed sources without exposing lodgement a
       }),
     ],
   });
-  const api = {
-    getCurrentBasDraft: vi.fn(async () =>
-      getCodec.encodeResponse(create(GetCurrentBasDraftResponseSchema)),
+  const fixture = createConveyorFixture();
+  let currentWorkpaper: typeof workpaper | undefined;
+  fixture.procedures.reporting.getCurrentBasDraft.mockImplementation(async () =>
+    getCodec.encodeResponse(
+      create(GetCurrentBasDraftResponseSchema, { workpaper: currentWorkpaper }),
     ),
-    createBasDraft: vi.fn(async (frame: Uint8Array) => {
-      const request = createCodec.decodeRequest(frame);
-      expect(request.organisationId).toBe(organisationId);
-      expect(request.periodStart).toMatchObject({ year: 2024, month: 4, day: 1 });
-      expect(request.periodEnd).toMatchObject({ year: 2024, month: 6, day: 30 });
-      return createCodec.encodeResponse(create(CreateBasDraftResponseSchema, { workpaper }));
-    }),
-    getReportingCapability: vi.fn(async (frame: Uint8Array) => {
+  );
+  fixture.procedures.reporting.createBasDraft.mockImplementation(async (frame: Uint8Array) => {
+    const request = createCodec.decodeRequest(frame);
+    expect(request.organisationId).toBe(organisationId);
+    expect(request.periodStart).toMatchObject({ year: 2024, month: 4, day: 1 });
+    expect(request.periodEnd).toMatchObject({ year: 2024, month: 6, day: 30 });
+    currentWorkpaper = workpaper;
+    return createCodec.encodeResponse(create(CreateBasDraftResponseSchema, { workpaper }));
+  });
+  fixture.procedures.reporting.getReportingCapability.mockImplementation(
+    async (frame: Uint8Array) => {
       const request = reportingCodec.decodeRequest(frame);
       const available = request.report === ReportKind.GST_WORKPAPER;
       return reportingCodec.encodeResponse(
@@ -97,16 +102,13 @@ it("creates a local BAS draft from reviewed sources without exposing lodgement a
           }),
         }),
       );
-    }),
-  } satisfies Pick<
-    TammyDesktopAPI,
-    "createBasDraft" | "getCurrentBasDraft" | "getReportingCapability"
-  >;
+    },
+  );
   const user = userEvent.setup();
 
   render(
     <BasScreen
-      api={api}
+      api={fixture.conveyor.reporting}
       workspace={{
         workspaceId: "018f0000-0000-7000-8000-000000000001",
         userId: "018f0000-0000-7000-8000-000000000002",
@@ -122,7 +124,7 @@ it("creates a local BAS draft from reviewed sources without exposing lodgement a
   expect(
     screen.getByText("Complete BAS preparation, declaration, and lodgement are unavailable."),
   ).toBeTruthy();
-  expect(api.getReportingCapability).toHaveBeenCalledTimes(2);
+  expect(fixture.procedures.reporting.getReportingCapability).toHaveBeenCalledTimes(2);
 
   await user.click(await screen.findByRole("button", { name: "Create local draft" }));
   expect(await screen.findByText("Draft — not lodged", { selector: "p" })).toBeTruthy();
@@ -130,16 +132,16 @@ it("creates a local BAS draft from reviewed sources without exposing lodgement a
   expect(screen.getByRole("cell", { name: "$29.00" })).toBeTruthy();
   expect(screen.queryByRole("button", { name: /lodge|submit|declare/i })).toBeNull();
   expect(screen.getByText(/no lodge, submit or declaration control/i)).toBeTruthy();
-  expect(api.createBasDraft).toHaveBeenCalledOnce();
+  expect(fixture.procedures.reporting.createBasDraft).toHaveBeenCalledOnce();
 });
 
 it("queries the selected AU tax year and blocks an unavailable workpaper year", async () => {
-  const api = {
-    getCurrentBasDraft: vi.fn(async () =>
-      getCodec.encodeResponse(create(GetCurrentBasDraftResponseSchema)),
-    ),
-    createBasDraft: vi.fn(),
-    getReportingCapability: vi.fn(async (frame: Uint8Array) => {
+  const fixture = createConveyorFixture();
+  fixture.procedures.reporting.getCurrentBasDraft.mockImplementation(async () =>
+    getCodec.encodeResponse(create(GetCurrentBasDraftResponseSchema)),
+  );
+  fixture.procedures.reporting.getReportingCapability.mockImplementation(
+    async (frame: Uint8Array) => {
       const request = reportingCodec.decodeRequest(frame);
       const available = request.report === ReportKind.GST_WORKPAPER && request.taxYear === 2024;
       return reportingCodec.encodeResponse(
@@ -158,16 +160,13 @@ it("queries the selected AU tax year and blocks an unavailable workpaper year", 
           }),
         }),
       );
-    }),
-  } satisfies Pick<
-    TammyDesktopAPI,
-    "createBasDraft" | "getCurrentBasDraft" | "getReportingCapability"
-  >;
+    },
+  );
   const user = userEvent.setup();
 
   render(
     <BasScreen
-      api={api}
+      api={fixture.conveyor.reporting}
       workspace={{
         workspaceId: "018f0000-0000-7000-8000-000000000001",
         userId: "018f0000-0000-7000-8000-000000000002",
@@ -185,7 +184,7 @@ it("queries the selected AU tax year and blocks an unavailable workpaper year", 
   await user.type(end, "2025-06-30");
 
   await waitFor(() => {
-    const requests = api.getReportingCapability.mock.calls.map(([frame]) =>
+    const requests = fixture.procedures.reporting.getReportingCapability.mock.calls.map(([frame]) =>
       reportingCodec.decodeRequest(frame),
     );
     expect(requests.slice(-2).map((request) => request.taxYear)).toEqual([2025, 2025]);
@@ -195,5 +194,5 @@ it("queries the selected AU tax year and blocks an unavailable workpaper year", 
   const createButton = screen.getByRole("button", { name: "Create local draft" });
   expect((createButton as HTMLButtonElement).disabled).toBe(true);
   await user.click(createButton);
-  expect(api.createBasDraft).not.toHaveBeenCalled();
+  expect(fixture.procedures.reporting.createBasDraft).not.toHaveBeenCalled();
 });

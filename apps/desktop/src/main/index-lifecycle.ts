@@ -44,7 +44,7 @@ export interface DesktopDependencies {
   readonly logger: { error(message: string): void };
   readonly ready: () => Promise<void>;
   readonly releaseKind: SbrFileReleaseKind;
-  readonly registerIpc: (
+  readonly registerConveyor: (
     getWindow: () => DesktopWindow | undefined,
     client: Readonly<CoreClient>,
   ) => Release;
@@ -81,7 +81,7 @@ export async function startDesktopApplication(
   let unlistenQuit: Release | undefined;
   let releaseRuntime: Release | undefined;
   let releaseWindow: Release | undefined;
-  let unregisterIpc: Release | undefined;
+  let unregisterConveyor: Release | undefined;
   let pendingRuntime: Promise<Release> | undefined;
   let pendingCore: Promise<Readonly<CoreReadiness>> | undefined;
   let coreReady = false;
@@ -96,7 +96,7 @@ export async function startDesktopApplication(
     if (shutdownPromise) return shutdownPromise;
     const coreWasPending = pendingCore !== undefined && !coreReady;
     shutdownPromise = (async () => {
-      releaseSafely(unregisterIpc);
+      releaseSafely(unregisterConveyor);
       releaseSafely(cleanupSensitiveState);
       releaseSafely(releaseWindow);
       if (window && !window.isDestroyed()) window.close();
@@ -168,7 +168,7 @@ export async function startDesktopApplication(
     const client = dependencies.createClient(readiness);
     await client.getDiagnostics();
     ensureOpen();
-    unregisterIpc = onceRelease(dependencies.registerIpc(() => window, client));
+    unregisterConveyor = onceRelease(dependencies.registerConveyor(() => window, client));
     window = dependencies.createWindow();
     releaseWindow = onceRelease(dependencies.installWindowSecurity(window));
     window.once("ready-to-show", () => {

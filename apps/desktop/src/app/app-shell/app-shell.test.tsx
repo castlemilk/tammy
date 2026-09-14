@@ -1,9 +1,10 @@
-import { render, screen, within } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, expect, it } from "vitest";
 
-import type { SystemDiagnostics, TammyDesktopAPI } from "../../shared/desktop-api";
-import { App } from "../app";
+import type { SystemDiagnostics } from "../../shared/conveyor-contract";
+import { App as ActualApp } from "../app";
+import { createConveyorFixture, renderWithConveyor as render } from "../test/conveyor-fixtures";
 
 const diagnostics: SystemDiagnostics = {
   apiVersion: "tammy.v1",
@@ -12,7 +13,14 @@ const diagnostics: SystemDiagnostics = {
   runtimeMode: "offline",
 };
 
-function installDesktopAPI() {
+let fixture: ReturnType<typeof createConveyorFixture> | undefined;
+
+function App() {
+  if (!fixture) throw new Error("installConveyorFixture() must run before rendering App");
+  return <ActualApp conveyor={fixture.conveyor} />;
+}
+
+function installConveyorFixture() {
   window.sessionStorage.setItem(
     "tammy.session.active",
     JSON.stringify({
@@ -25,113 +33,18 @@ function installDesktopAPI() {
       roles: [1],
     }),
   );
-  Object.defineProperty(window, "tammy", {
-    configurable: true,
-    value: Object.freeze({
-      createWorkspace: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      confirmRecovery: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      unlockWorkspace: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      signIn: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      createOrganisation: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      createAccount: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      listAccounts: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      postManualJournal: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      listJournals: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      getJournal: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      getTrialBalance: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      importBankStatement: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      listBankStatementLines: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      matchBankStatementLine: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      completeBankReconciliation: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      getBankingSummary: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      ingestDocument: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      listDocuments: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      getDocument: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      saveDocumentReview: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      createBasDraft: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      getCurrentBasDraft: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      getReportingCapability: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      getAttentionSummary: vi.fn(async () => {
-        throw new Error("unavailable");
-      }),
-      getCurrentUser: vi.fn(),
-      enrolTotp: vi.fn(),
-      confirmTotp: vi.fn(),
-      assertTotp: vi.fn(),
-      getOrganisation: vi.fn(),
-      recordEntityVerification: vi.fn(),
-      getSbrReadiness: vi.fn(),
-      getMachineCredentialStatus: vi.fn(),
-      removeMachineCredential: vi.fn(),
-      removeSbrProductId: vi.fn(),
-      runSbrReadinessFixture: vi.fn(),
-      selectMachineCredentialFile: vi.fn(async () => ({ selected: false as const })),
-      importMachineCredential: vi.fn(),
-      replaceMachineCredential: vi.fn(),
-      unlockMachineCredential: vi.fn(),
-      importSbrProductId: vi.fn(),
-      getSystemDiagnostics: vi
-        .fn<TammyDesktopAPI["getSystemDiagnostics"]>()
-        .mockResolvedValue(diagnostics),
-    } satisfies TammyDesktopAPI),
-  });
+  fixture = createConveyorFixture();
+  fixture.procedures.system.getSystemDiagnostics.mockResolvedValue(diagnostics);
 }
 
 afterEach(() => {
-  Reflect.deleteProperty(window, "tammy");
   window.history.replaceState(null, "", "/");
   window.sessionStorage.clear();
   window.localStorage.clear();
 });
 
 it("renders the walkthrough app shell", async () => {
-  installDesktopAPI();
+  installConveyorFixture();
   const user = userEvent.setup();
 
   render(<App />);

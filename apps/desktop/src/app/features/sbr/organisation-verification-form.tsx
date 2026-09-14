@@ -12,7 +12,7 @@ import {
 import { LoaderCircle } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 
-import type { TammyDesktopAPI } from "../../../shared/desktop-api";
+import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import { Button } from "../../components/ui/button";
 import {
@@ -73,7 +73,7 @@ export function OrganisationVerificationForm({
   onChanged,
   workspace,
 }: {
-  readonly api: Pick<TammyDesktopAPI, "recordEntityVerification">;
+  readonly api: Pick<TammyConveyorModule<"organisation">, "recordEntityVerification">;
   readonly onChanged: () => void;
   readonly workspace: OrganisationVerificationWorkspace;
 }) {

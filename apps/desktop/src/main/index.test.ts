@@ -237,9 +237,9 @@ function rig(overrides: Partial<DesktopDependencies> = {}) {
     ready: vi.fn(async () => {
       calls.push("app:ready");
     }),
-    registerIpc: vi.fn(() => {
-      calls.push("ipc:register");
-      return () => calls.push("ipc:unregister");
+    registerConveyor: vi.fn(() => {
+      calls.push("conveyor:register");
+      return () => calls.push("conveyor:unregister");
     }),
     registerScheme: vi.fn(() => {
       calls.push("scheme");
@@ -268,7 +268,7 @@ describe("desktop application composition", () => {
       "security:runtime",
       "core:start",
       "diagnostics",
-      "ipc:register",
+      "conveyor:register",
       "window:create",
       "security:window",
     ]);
@@ -281,14 +281,20 @@ describe("desktop application composition", () => {
     expect(
       calls.filter((call) =>
         [
-          "ipc:unregister",
+          "conveyor:unregister",
           "credential-intake:clear",
           "window:close",
           "core:stop",
           "exit:0",
         ].includes(call),
       ),
-    ).toEqual(["ipc:unregister", "credential-intake:clear", "window:close", "core:stop", "exit:0"]);
+    ).toEqual([
+      "conveyor:unregister",
+      "credential-intake:clear",
+      "window:close",
+      "core:stop",
+      "exit:0",
+    ]);
     expect(window.close).toHaveBeenCalledOnce();
   });
 
@@ -364,7 +370,7 @@ describe("desktop application composition", () => {
     expect(dependencies.core.stop).toHaveBeenCalledOnce();
     resolveStop?.();
     await second;
-    expect(calls.filter((call) => call === "ipc:unregister")).toHaveLength(1);
+    expect(calls.filter((call) => call === "conveyor:unregister")).toHaveLength(1);
     expect(calls.filter((call) => call === "exit:0")).toHaveLength(1);
   });
 
@@ -487,7 +493,7 @@ describe("desktop application composition", () => {
     expect(calls.lastIndexOf("core:stop")).toBeLessThan(calls.indexOf("exit:0"));
   });
 
-  it("does not register IPC or create a window after quit during diagnostics", async () => {
+  it("does not register Conveyor or create a window after quit during diagnostics", async () => {
     const diagnostics = deferred<{
       apiVersion: string;
       coreVersion: string;
@@ -516,12 +522,34 @@ describe("desktop application composition", () => {
     });
 
     await expect(startup).rejects.toEqual(new DesktopApplicationError("APPLICATION_CLOSING"));
-    expect(dependencies.registerIpc).not.toHaveBeenCalled();
+    expect(dependencies.registerConveyor).not.toHaveBeenCalled();
     expect(dependencies.createWindow).not.toHaveBeenCalled();
     expect(occurrences(calls, "security:runtime:release")).toBe(1);
     expect(occurrences(calls, "scheme:release")).toBe(1);
     expect(occurrences(calls, "quit:unlisten")).toBe(1);
     expect(occurrences(calls, "exit:0")).toBe(1);
+  });
+
+  it("disposes Conveyor before sensitive state and Core after window creation fails", async () => {
+    const { calls, dependencies } = rig({
+      createWindow: vi.fn(() => {
+        calls.push("window:create");
+        throw new Error("private window failure");
+      }),
+    });
+
+    await expect(startDesktopApplication(dependencies)).rejects.toEqual(
+      new DesktopApplicationError("LOCAL_ENGINE_UNAVAILABLE"),
+    );
+
+    expect(
+      calls.filter((call) =>
+        ["conveyor:unregister", "credential-intake:clear", "core:stop", "exit:1"].includes(call),
+      ),
+    ).toEqual(["conveyor:unregister", "credential-intake:clear", "core:stop", "exit:1"]);
+    expect(occurrences(calls, "conveyor:unregister")).toBe(1);
+    expect(occurrences(calls, "credential-intake:clear")).toBe(1);
+    expect(occurrences(calls, "core:stop")).toBe(1);
   });
 
   it("cannot finish startup after quit while the application URL is loading", async () => {
@@ -538,7 +566,7 @@ describe("desktop application composition", () => {
     await expect(startup).rejects.toEqual(new DesktopApplicationError("APPLICATION_CLOSING"));
     expect(window.show).not.toHaveBeenCalled();
     expect(window.close).toHaveBeenCalledOnce();
-    expect(occurrences(calls, "ipc:unregister")).toBe(1);
+    expect(occurrences(calls, "conveyor:unregister")).toBe(1);
     expect(occurrences(calls, "security:window:release")).toBe(1);
     expect(occurrences(calls, "security:runtime:release")).toBe(1);
     expect(occurrences(calls, "scheme:release")).toBe(1);

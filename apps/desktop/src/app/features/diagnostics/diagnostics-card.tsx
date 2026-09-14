@@ -1,5 +1,4 @@
 import { AlertTriangle, CheckCircle2, LoaderCircle, RefreshCw, WifiOff } from "lucide-react";
-import type { SystemDiagnostics } from "../../../shared/desktop-api";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader } from "../../components/ui/card";
@@ -7,8 +6,13 @@ import { Separator } from "../../components/ui/separator";
 
 export type DiagnosticsState =
   | { readonly status: "loading" }
-  | { readonly diagnostics: SystemDiagnostics; readonly status: "ready" }
+  | { readonly diagnostics: DiagnosticsSummary; readonly status: "ready" }
   | { readonly status: "unavailable" };
+
+interface DiagnosticsSummary {
+  readonly apiVersion: string;
+  readonly coreVersion: string;
+}
 
 interface DiagnosticsCardProps {
   readonly onRetry: () => void;
@@ -63,7 +67,7 @@ function LoadingState() {
   );
 }
 
-function ReadyState({ diagnostics }: { readonly diagnostics: SystemDiagnostics }) {
+function ReadyState({ diagnostics }: { readonly diagnostics: DiagnosticsSummary }) {
   const versionRows = [
     { label: diagnosticLabels.apiVersion, value: diagnostics.apiVersion },
     { label: diagnosticLabels.coreVersion, value: diagnostics.coreVersion },

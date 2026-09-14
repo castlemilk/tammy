@@ -31,9 +31,9 @@ import {
   RecoveryGroupConfirmationSchema,
 } from "@tammy/connect-client/tammy/v1/workspace_pb.js";
 import { CheckCircle2, KeyRound, LoaderCircle } from "lucide-react";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
-import type { TammyDesktopAPI } from "../../../shared/desktop-api";
+import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import { Button } from "../../components/ui/button";
 import { ReportingCapabilityNotice } from "../reporting/reporting-capability-notice";
@@ -80,17 +80,17 @@ export interface AuthenticatedWorkspace {
 }
 
 interface SetupScreenProps {
-  readonly api: Pick<
-    TammyDesktopAPI,
-    | "confirmRecovery"
-    | "createOrganisation"
-    | "createWorkspace"
-    | "getCurrentUser"
-    | "getReportingCapability"
-    | "signIn"
+  readonly organisation: Pick<
+    TammyConveyorModule<"organisation">,
+    "createOrganisation" | "getCurrentUser"
   >;
   readonly onAuthenticated: (workspace: AuthenticatedWorkspace) => void;
   readonly onPrivacy?: () => void;
+  readonly reporting: Pick<TammyConveyorModule<"reporting">, "getReportingCapability">;
+  readonly workspace: Pick<
+    TammyConveyorModule<"workspace">,
+    "confirmRecovery" | "createWorkspace" | "signIn"
+  >;
 }
 
 interface PendingSetup {
@@ -102,6 +102,12 @@ interface PendingSetup {
   readonly setupId: string;
   readonly username: string;
   readonly workspaceId: string;
+}
+
+interface PendingAuthentication {
+  readonly sessionId: string;
+  readonly setup: PendingSetup;
+  readonly userId: string;
 }
 
 function uuidV7(): string {
@@ -121,7 +127,13 @@ function fieldClassName(): string {
   return "focus-ring h-9 w-full rounded-[6px] border border-border bg-surface px-3 text-[12px] text-foreground outline-none placeholder:text-muted-foreground";
 }
 
-export function SetupScreen({ api, onAuthenticated, onPrivacy }: SetupScreenProps) {
+export function SetupScreen({
+  organisation,
+  onAuthenticated,
+  onPrivacy,
+  reporting,
+  workspace,
+}: SetupScreenProps) {
   const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
   const [businessLegalName, setBusinessLegalName] = useState("");
@@ -132,6 +144,107 @@ export function SetupScreen({ api, onAuthenticated, onPrivacy }: SetupScreenProp
   const [pending, setPending] = useState<PendingSetup>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
+  const [pendingAuthentication, setPendingAuthentication] = useState<PendingAuthentication>();
+  const completing = useRef<string | undefined>(undefined);
+  const currentUserInput = useMemo(
+    () =>
+      currentUserCodec.encodeRequest(
+        create(GetCurrentUserRequestSchema, {
+          authentication: create(AuthenticationContextSchema, {
+            actorUserId: pendingAuthentication?.userId ?? "",
+            sessionId: pendingAuthentication?.sessionId ?? "",
+          }),
+        }),
+      ),
+    [pendingAuthentication?.sessionId, pendingAuthentication?.userId],
+  );
+  const currentUserQuery = organisation.getCurrentUser.useQuery({
+    enabled: Boolean(pendingAuthentication),
+    input: currentUserInput,
+    retry: false,
+  });
+
+  useEffect(() => {
+    if (!pendingAuthentication) return;
+    const key = `${pendingAuthentication.sessionId}:${pendingAuthentication.userId}`;
+    if (currentUserQuery.isError) {
+      setPendingAuthentication(undefined);
+      setBusy(false);
+      setError("Recovery confirmation or sign in failed. Your workspace remains on this device.");
+      return;
+    }
+    if (!currentUserQuery.data || completing.current === key) return;
+    completing.current = key;
+    void (async () => {
+      try {
+        const currentUser = currentUserCodec.decodeResponse(currentUserQuery.data);
+        if (
+          !currentUser.user ||
+          currentUser.user.id !== pendingAuthentication.userId ||
+          !validRoles(currentUser.user.roles)
+        )
+          throw new Error("invalid current user");
+        const authentication = create(AuthenticationContextSchema, {
+          actorUserId: pendingAuthentication.userId,
+          sessionId: pendingAuthentication.sessionId,
+        });
+        const setup = pendingAuthentication.setup;
+        const request = create(CreateOrganisationRequestSchema, {
+          commandContext: create(CommandContextSchema, {
+            idempotencyKey: uuidV7(),
+            authentication,
+          }),
+          abn: setup.abn,
+          legalName: setup.businessLegalName,
+          displayName: setup.businessDisplayName,
+          entityType: "AU_PRIVATE_COMPANY",
+          gstBasis: GstBasis.NON_CASH,
+          gstReportingFrequency: GstReportingFrequency.QUARTERLY,
+          financialYearEndMonth: 6,
+          activeTaxRuleBundle: create(SourceRefSchema, {
+            type: "tax_rule_bundle",
+            id: "018f0000-0000-7000-8000-000000000022",
+            revision: 1n,
+            contentHash: hexBytes(
+              "e2f9cde094db43c30260dc54f089a1ab835912e75e8c29add5c7a240e90497e4",
+            ),
+          }),
+        });
+        const created = createOrganisationCodec.decodeResponse(
+          await organisation.createOrganisation(createOrganisationCodec.encodeRequest(request)),
+        );
+        if (
+          !created.organisation?.id ||
+          !created.organisation.displayName ||
+          !/^[0-9]{11}$/.test(created.organisation.abn)
+        )
+          throw new Error("invalid organisation");
+        setAdministratorPassword("");
+        setWorkspacePassphrase("");
+        onAuthenticated({
+          sessionId: pendingAuthentication.sessionId,
+          userId: pendingAuthentication.userId,
+          workspaceId: setup.workspaceId,
+          organisationId: created.organisation.id,
+          organisationDisplayName: created.organisation.displayName,
+          organisationCanonicalAbn: created.organisation.abn,
+          roles: [...currentUser.user.roles],
+        });
+      } catch {
+        setError("Recovery confirmation or sign in failed. Your workspace remains on this device.");
+      } finally {
+        completing.current = undefined;
+        setPendingAuthentication(undefined);
+        setBusy(false);
+      }
+    })();
+  }, [
+    currentUserQuery.data,
+    currentUserQuery.isError,
+    onAuthenticated,
+    organisation,
+    pendingAuthentication,
+  ]);
 
   const createWorkspace = async (event: FormEvent) => {
     event.preventDefault();
@@ -152,7 +265,7 @@ export function SetupScreen({ api, onAuthenticated, onPrivacy }: SetupScreenProp
         }),
       });
       const response = createCodec.decodeResponse(
-        await api.createWorkspace(createCodec.encodeRequest(request)),
+        await workspace.createWorkspace(createCodec.encodeRequest(request)),
       );
       if (!response.workspace || !response.recoverySecret?.utf8.byteLength)
         throw new Error("invalid");
@@ -193,7 +306,7 @@ export function SetupScreen({ api, onAuthenticated, onPrivacy }: SetupScreenProp
         ),
       });
       const confirmed = confirmCodec.decodeResponse(
-        await api.confirmRecovery(confirmCodec.encodeRequest(confirmation)),
+        await workspace.confirmRecovery(confirmCodec.encodeRequest(confirmation)),
       );
       if (confirmed.workspace?.id !== pending.workspaceId) throw new Error("invalid workspace");
       const signIn = create(SignInRequestSchema, {
@@ -203,68 +316,16 @@ export function SetupScreen({ api, onAuthenticated, onPrivacy }: SetupScreenProp
         }),
       });
       const authenticated = signInCodec.decodeResponse(
-        await api.signIn(signInCodec.encodeRequest(signIn)),
+        await workspace.signIn(signInCodec.encodeRequest(signIn)),
       );
       if (!authenticated.user || !authenticated.session) throw new Error("invalid session");
-      const authentication = create(AuthenticationContextSchema, {
-        actorUserId: authenticated.user.id,
+      setPendingAuthentication({
         sessionId: authenticated.session.id,
-      });
-      const currentUser = currentUserCodec.decodeResponse(
-        await api.getCurrentUser(
-          currentUserCodec.encodeRequest(create(GetCurrentUserRequestSchema, { authentication })),
-        ),
-      );
-      if (
-        !currentUser.user ||
-        currentUser.user.id !== authenticated.user.id ||
-        !validRoles(currentUser.user.roles)
-      ) {
-        throw new Error("invalid current user");
-      }
-      const organisation = create(CreateOrganisationRequestSchema, {
-        commandContext: create(CommandContextSchema, {
-          idempotencyKey: uuidV7(),
-          authentication,
-        }),
-        abn: pending.abn,
-        legalName: pending.businessLegalName,
-        displayName: pending.businessDisplayName,
-        entityType: "AU_PRIVATE_COMPANY",
-        gstBasis: GstBasis.NON_CASH,
-        gstReportingFrequency: GstReportingFrequency.QUARTERLY,
-        financialYearEndMonth: 6,
-        activeTaxRuleBundle: create(SourceRefSchema, {
-          type: "tax_rule_bundle",
-          id: "018f0000-0000-7000-8000-000000000022",
-          revision: 1n,
-          contentHash: hexBytes("e2f9cde094db43c30260dc54f089a1ab835912e75e8c29add5c7a240e90497e4"),
-        }),
-      });
-      const createdOrganisation = createOrganisationCodec.decodeResponse(
-        await api.createOrganisation(createOrganisationCodec.encodeRequest(organisation)),
-      );
-      if (
-        !createdOrganisation.organisation?.id ||
-        !createdOrganisation.organisation.displayName ||
-        !/^[0-9]{11}$/.test(createdOrganisation.organisation.abn)
-      ) {
-        throw new Error("invalid organisation");
-      }
-      setAdministratorPassword("");
-      setWorkspacePassphrase("");
-      onAuthenticated({
-        sessionId: authenticated.session.id,
+        setup: pending,
         userId: authenticated.user.id,
-        workspaceId: pending.workspaceId,
-        organisationId: createdOrganisation.organisation.id,
-        organisationDisplayName: createdOrganisation.organisation.displayName,
-        organisationCanonicalAbn: createdOrganisation.organisation.abn,
-        roles: [...currentUser.user.roles],
       });
     } catch {
       setError("Recovery confirmation or sign in failed. Your workspace remains on this device.");
-    } finally {
       setBusy(false);
     }
   };
@@ -291,7 +352,7 @@ export function SetupScreen({ api, onAuthenticated, onPrivacy }: SetupScreenProp
 
         <div className="mb-5">
           <ReportingCapabilityNotice
-            api={api}
+            api={reporting}
             entityType={ReportingEntityType.AU_BUSINESS}
             fallbackCopy="Tammy does not prepare, declare, or lodge a complete BAS."
             report={ReportKind.GST_WORKPAPER}

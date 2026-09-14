@@ -17,11 +17,12 @@ import {
   UnlockMachineCredentialRequestSchema,
   UnlockMachineCredentialResponseSchema,
 } from "@tammy/connect-client/tammy/v1/sbr_pb.js";
-import { act, render, screen } from "@testing-library/react";
+import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { StrictMode } from "react";
 import { expect, it, vi } from "vitest";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
+import { createConveyorFixture, renderWithConveyor as render } from "../../test/conveyor-fixtures";
 import { MachineCredentialForm } from "./machine-credential-form";
 
 const workspace = {
@@ -90,6 +91,39 @@ function deferred<T>() {
   return { promise, resolve };
 }
 
+function credentialModules(api: Record<string, unknown>) {
+  const fixture = createConveyorFixture();
+  fixture.procedures.organisation.assertTotp.mockImplementation(
+    api.assertTotp as (frame: Uint8Array) => Promise<Uint8Array>,
+  );
+  fixture.procedures.sbr.selectMachineCredentialFile.mockImplementation(
+    api.selectMachineCredentialFile as () => Promise<
+      { selected: false } | { selected: true; handle: string }
+    >,
+  );
+  fixture.procedures.sbr.importMachineCredential.mockImplementation(
+    api.importMachineCredential as (input: {
+      command: Uint8Array;
+      handle: string;
+      password: string;
+    }) => Promise<Uint8Array>,
+  );
+  fixture.procedures.sbr.replaceMachineCredential.mockImplementation(
+    api.replaceMachineCredential as (input: {
+      command: Uint8Array;
+      handle: string;
+      password: string;
+    }) => Promise<Uint8Array>,
+  );
+  fixture.procedures.sbr.unlockMachineCredential.mockImplementation(
+    api.unlockMachineCredential as never,
+  );
+  fixture.procedures.sbr.removeMachineCredential.mockImplementation(
+    api.removeMachineCredential as (frame: Uint8Array) => Promise<Uint8Array>,
+  );
+  return fixture.conveyor;
+}
+
 it("uses the native picker, purpose-bound factor, and invokes import once without rendering path or secrets", async () => {
   const importMachineCredential = vi.fn(() =>
     Promise.resolve(
@@ -110,11 +144,13 @@ it("uses the native picker, purpose-bound factor, and invokes import once withou
     unlockMachineCredential: unused(),
     removeMachineCredential: unused(),
   };
+  const modules = credentialModules(api);
   const user = userEvent.setup();
   render(
     <StrictMode>
       <MachineCredentialForm
-        api={api}
+        organisation={modules.organisation}
+        sbr={modules.sbr}
         credentialState={MachineCredentialState.MISSING}
         onChanged={vi.fn()}
         workspace={workspace}
@@ -143,10 +179,12 @@ it("does not mutate after picker cancel or failed factor assertion", async () =>
     unlockMachineCredential: unused(),
     removeMachineCredential: unused(),
   };
+  const modules = credentialModules(api);
   const user = userEvent.setup();
   render(
     <MachineCredentialForm
-      api={api}
+      organisation={modules.organisation}
+      sbr={modules.sbr}
       credentialState={MachineCredentialState.MISSING}
       onChanged={vi.fn()}
       workspace={workspace}
@@ -177,10 +215,12 @@ it.each([
       unlockMachineCredential: unused(),
       removeMachineCredential: unused(),
     };
+    const modules = credentialModules(api);
     const user = userEvent.setup();
     render(
       <MachineCredentialForm
-        api={api}
+        organisation={modules.organisation}
+        sbr={modules.sbr}
         credentialState={MachineCredentialState.MISSING}
         onChanged={vi.fn()}
         workspace={workspace}
@@ -212,10 +252,12 @@ it("keeps one live status region mounted from first paint through picker rejecti
     unlockMachineCredential: unused(),
     removeMachineCredential: unused(),
   };
+  const modules = credentialModules(api);
   const user = userEvent.setup();
   render(
     <MachineCredentialForm
-      api={api}
+      organisation={modules.organisation}
+      sbr={modules.sbr}
       credentialState={MachineCredentialState.MISSING}
       onChanged={vi.fn()}
       workspace={workspace}
@@ -237,10 +279,12 @@ it("names the organisation and ABN in both replace and remove confirmations", as
     unlockMachineCredential: unused(),
     removeMachineCredential: unused(),
   };
+  const modules = credentialModules(api);
   const user = userEvent.setup();
   render(
     <MachineCredentialForm
-      api={api}
+      organisation={modules.organisation}
+      sbr={modules.sbr}
       credentialState={MachineCredentialState.PRESENT}
       onChanged={vi.fn()}
       workspace={workspace}
@@ -291,10 +335,12 @@ it("replaces through a fresh native selection and removes through separate purpo
     unlockMachineCredential: unused(),
     removeMachineCredential,
   };
+  const modules = credentialModules(api);
   const user = userEvent.setup();
   const view = render(
     <MachineCredentialForm
-      api={api}
+      organisation={modules.organisation}
+      sbr={modules.sbr}
       credentialState={MachineCredentialState.PRESENT}
       onChanged={vi.fn()}
       workspace={workspace}
@@ -309,7 +355,8 @@ it("replaces through a fresh native selection and removes through separate purpo
   expect(replaceMachineCredential).toHaveBeenCalledOnce();
   view.rerender(
     <MachineCredentialForm
-      api={api}
+      organisation={modules.organisation}
+      sbr={modules.sbr}
       credentialState={MachineCredentialState.PRESENT}
       onChanged={vi.fn()}
       workspace={workspace}
@@ -348,10 +395,12 @@ it("unlocks once with the exact purpose and reports that no network request star
     unlockMachineCredential,
     removeMachineCredential: unused(),
   };
+  const modules = credentialModules(api);
   const user = userEvent.setup();
   render(
     <MachineCredentialForm
-      api={api}
+      organisation={modules.organisation}
+      sbr={modules.sbr}
       credentialState={MachineCredentialState.PRESENT}
       onChanged={vi.fn()}
       workspace={workspace}
@@ -376,10 +425,12 @@ it("fences a late mutation response after unmount", async () => {
     unlockMachineCredential: unused(),
     removeMachineCredential: unused(),
   };
+  const modules = credentialModules(api);
   const user = userEvent.setup();
   const view = render(
     <MachineCredentialForm
-      api={api}
+      organisation={modules.organisation}
+      sbr={modules.sbr}
       credentialState={MachineCredentialState.MISSING}
       onChanged={changed}
       workspace={workspace}
@@ -418,10 +469,12 @@ it("does not dispatch a credential mutation when unmounted during factor asserti
     unlockMachineCredential: unused(),
     removeMachineCredential: unused(),
   };
+  const modules = credentialModules(api);
   const user = userEvent.setup();
   const view = render(
     <MachineCredentialForm
-      api={api}
+      organisation={modules.organisation}
+      sbr={modules.sbr}
       credentialState={MachineCredentialState.MISSING}
       onChanged={vi.fn()}
       workspace={workspace}
@@ -470,10 +523,12 @@ it("fails closed when an import response does not report the exact terminal stat
     unlockMachineCredential: unused(),
     removeMachineCredential: unused(),
   };
+  const modules = credentialModules(api);
   const user = userEvent.setup();
   render(
     <MachineCredentialForm
-      api={api}
+      organisation={modules.organisation}
+      sbr={modules.sbr}
       credentialState={MachineCredentialState.MISSING}
       onChanged={changed}
       workspace={workspace}

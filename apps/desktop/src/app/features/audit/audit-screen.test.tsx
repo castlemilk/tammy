@@ -11,11 +11,11 @@ import {
   MoneySchema,
   PageInfoSchema,
 } from "@tammy/connect-client/tammy/v1/common_pb.js";
-import { render, screen } from "@testing-library/react";
-import { expect, it, vi } from "vitest";
+import { screen } from "@testing-library/react";
+import { expect, it } from "vitest";
 
-import type { TammyDesktopAPI } from "../../../shared/desktop-api";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
+import { createConveyorFixture, renderWithConveyor as render } from "../../test/conveyor-fixtures";
 import { AuditScreen } from "./audit-screen";
 
 const journalsCodec = createProtoMethodCodec({
@@ -27,38 +27,34 @@ const journalsCodec = createProtoMethodCodec({
 
 it("keeps available retained activity visible when another local projection is unavailable", async () => {
   const organisationId = "018f0000-0000-7000-8000-000000000004";
-  const api = {
-    listJournals: vi.fn(async () =>
-      journalsCodec.encodeResponse(
-        create(ListJournalsResponseSchema, {
-          journals: [
-            create(JournalSchema, {
-              id: "018f0000-0000-7000-8000-000000000501",
-              organisationId,
-              version: 1n,
-              state: JournalState.POSTED,
-              source: JournalSource.MANUAL,
-              postingDate: create(CivilDateSchema, { year: 2026, month: 8, day: 10 }),
-              memo: "Office supplies paid personally",
-              totalDebits: create(MoneySchema, { currencyCode: "AUD", minorUnits: 31900n }),
-              totalCredits: create(MoneySchema, { currencyCode: "AUD", minorUnits: 31900n }),
-            }),
-          ],
-          page: create(PageInfoSchema, { returnedCount: 1 }),
-        }),
-      ),
+  const fixture = createConveyorFixture();
+  fixture.procedures.accounting.listJournals.mockImplementation(async () =>
+    journalsCodec.encodeResponse(
+      create(ListJournalsResponseSchema, {
+        journals: [
+          create(JournalSchema, {
+            id: "018f0000-0000-7000-8000-000000000501",
+            organisationId,
+            version: 1n,
+            state: JournalState.POSTED,
+            source: JournalSource.MANUAL,
+            postingDate: create(CivilDateSchema, { year: 2026, month: 8, day: 10 }),
+            memo: "Office supplies paid personally",
+            totalDebits: create(MoneySchema, { currencyCode: "AUD", minorUnits: 31900n }),
+            totalCredits: create(MoneySchema, { currencyCode: "AUD", minorUnits: 31900n }),
+          }),
+        ],
+        page: create(PageInfoSchema, { returnedCount: 1 }),
+      }),
     ),
-    listBankStatementLines: vi.fn().mockRejectedValue(new Error("unavailable")),
-    listDocuments: vi.fn().mockRejectedValue(new Error("unavailable")),
-    getCurrentBasDraft: vi.fn().mockRejectedValue(new Error("unavailable")),
-  } satisfies Pick<
-    TammyDesktopAPI,
-    "getCurrentBasDraft" | "listBankStatementLines" | "listDocuments" | "listJournals"
-  >;
+  );
 
   render(
     <AuditScreen
-      api={api}
+      accounting={fixture.conveyor.accounting}
+      banking={fixture.conveyor.banking}
+      documents={fixture.conveyor.documents}
+      reporting={fixture.conveyor.reporting}
       workspace={{
         workspaceId: "018f0000-0000-7000-8000-000000000001",
         userId: "018f0000-0000-7000-8000-000000000002",

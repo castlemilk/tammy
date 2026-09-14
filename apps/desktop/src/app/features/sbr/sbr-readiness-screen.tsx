@@ -14,9 +14,9 @@ import {
   SbrReadinessState,
 } from "@tammy/connect-client/tammy/v1/sbr_pb.js";
 import { AlertTriangle, CheckCircle2, CircleDashed, LockKeyhole, RadioTower } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-import type { TammyDesktopAPI } from "../../../shared/desktop-api";
+import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import { Badge } from "../../components/ui/badge";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
@@ -84,26 +84,23 @@ const issueCopy: Readonly<Record<string, string>> = {
 };
 
 interface SbrReadinessScreenProps {
-  readonly api: Pick<
-    TammyDesktopAPI,
-    "getCurrentUser" | "getMachineCredentialStatus" | "getSbrReadiness"
-  > &
-    Partial<
-      Pick<
-        TammyDesktopAPI,
-        | "assertTotp"
-        | "confirmTotp"
-        | "enrolTotp"
-        | "importMachineCredential"
-        | "importSbrProductId"
-        | "removeMachineCredential"
-        | "removeSbrProductId"
-        | "replaceMachineCredential"
-        | "runSbrReadinessFixture"
-        | "selectMachineCredentialFile"
-        | "unlockMachineCredential"
-      >
-    >;
+  readonly organisation: Pick<
+    TammyConveyorModule<"organisation">,
+    "assertTotp" | "confirmTotp" | "enrolTotp" | "getCurrentUser"
+  >;
+  readonly sbr: Pick<
+    TammyConveyorModule<"sbr">,
+    | "getMachineCredentialStatus"
+    | "getSbrReadiness"
+    | "importMachineCredential"
+    | "importSbrProductId"
+    | "removeMachineCredential"
+    | "removeSbrProductId"
+    | "replaceMachineCredential"
+    | "runSbrReadinessFixture"
+    | "selectMachineCredentialFile"
+    | "unlockMachineCredential"
+  >;
   readonly doctorMode?: boolean;
   readonly onNavigate?: (path: string) => void;
   readonly workspace: AuthenticatedWorkspace &
@@ -272,15 +269,13 @@ function validCredentialStatus(status: MachineCredentialStatus, readiness: SbrRe
 }
 
 export function SbrReadinessScreen({
-  api,
   doctorMode = false,
   onNavigate = () => undefined,
+  organisation,
+  sbr,
   workspace,
 }: SbrReadinessScreenProps) {
-  const [state, setState] = useState<ScreenState>({ status: "loading" });
-  const requestSequence = useRef(0);
-  const requestedKey = useRef<string | undefined>(undefined);
-  const [refresh, setRefresh] = useState(0);
+  void doctorMode;
   const [factorEnabled, setFactorEnabled] = useState(
     workspace.userFactorState === FactorState.ENABLED,
   );
@@ -289,50 +284,72 @@ export function SbrReadinessScreen({
     if (factorPrincipal.current !== workspace.userId) factorPrincipal.current = workspace.userId;
     setFactorEnabled(workspace.userFactorState === FactorState.ENABLED);
   }, [workspace.userFactorState, workspace.userId]);
-  const requestKey = `${workspace.sessionId}:${workspace.userId}:${doctorMode ? "doctor" : "screen"}:${refresh}`;
-
-  useEffect(() => {
-    if (requestedKey.current === requestKey) return;
-    requestedKey.current = requestKey;
-    const sequence = requestSequence.current + 1;
-    requestSequence.current = sequence;
-    setState((current) => (current.status === "ready" ? current : { status: "loading" }));
-    const request = create(GetSbrReadinessRequestSchema, {
-      authentication: create(AuthenticationContextSchema, {
-        actorUserId: workspace.userId,
-        sessionId: workspace.sessionId,
-      }),
+  const queryInputs = useMemo(() => {
+    const authentication = create(AuthenticationContextSchema, {
+      actorUserId: workspace.userId,
+      sessionId: workspace.sessionId,
     });
-    const authentication = request.authentication;
-    const statusRequest = create(GetMachineCredentialStatusRequestSchema, { authentication });
+    return {
+      readiness: readinessCodec.encodeRequest(
+        create(GetSbrReadinessRequestSchema, { authentication }),
+      ),
+      status: credentialStatusCodec.encodeRequest(
+        create(GetMachineCredentialStatusRequestSchema, { authentication }),
+      ),
+    };
+  }, [workspace.sessionId, workspace.userId]);
+  const readinessQuery = sbr.getSbrReadiness.useQuery({
+    input: queryInputs.readiness,
+    retry: false,
+  });
+  const statusQuery = sbr.getMachineCredentialStatus.useQuery({
+    input: queryInputs.status,
+    retry: false,
+  });
+  const principalKey = `${workspace.userId}\u0000${workspace.sessionId}`;
+  const lastSettledReady = useRef<
+    | {
+        readonly principalKey: string;
+        readonly state: Extract<ScreenState, { status: "ready" }>;
+      }
+    | undefined
+  >(undefined);
+  const projectedState = useMemo<ScreenState>(() => {
+    if (readinessQuery.isError || statusQuery.isError) return { status: "unavailable" };
+    if (!readinessQuery.data || !statusQuery.data) return { status: "loading" };
+    try {
+      const response = readinessCodec.decodeResponse(readinessQuery.data);
+      const statusResponse = credentialStatusCodec.decodeResponse(statusQuery.data);
+      if (!response.readiness || !validReadiness(response.readiness))
+        return { status: "unavailable" };
+      if (
+        !statusResponse.credentialStatus ||
+        !validCredentialStatus(statusResponse.credentialStatus, response.readiness)
+      )
+        return { status: "unavailable" };
+      return {
+        credentialStatus: statusResponse.credentialStatus,
+        readiness: response.readiness,
+        status: "ready",
+      };
+    } catch {
+      return { status: "unavailable" };
+    }
+  }, [readinessQuery.data, readinessQuery.isError, statusQuery.data, statusQuery.isError]);
+  if (projectedState.status === "ready" && !readinessQuery.isFetching && !statusQuery.isFetching) {
+    lastSettledReady.current = { principalKey, state: projectedState };
+  }
+  const state =
+    (readinessQuery.isFetching || statusQuery.isFetching) &&
+    lastSettledReady.current?.principalKey === principalKey
+      ? lastSettledReady.current.state
+      : projectedState;
+  const refresh = () => {
     void Promise.all([
-      api.getSbrReadiness(readinessCodec.encodeRequest(request)),
-      api.getMachineCredentialStatus(credentialStatusCodec.encodeRequest(statusRequest)),
-    ])
-      .then(([readinessFrame, statusFrame]) => {
-        const response = readinessCodec.decodeResponse(readinessFrame);
-        const statusResponse = credentialStatusCodec.decodeResponse(statusFrame);
-        if (!response.readiness || !validReadiness(response.readiness)) {
-          throw new Error("invalid readiness response");
-        }
-        if (
-          !statusResponse.credentialStatus ||
-          !validCredentialStatus(statusResponse.credentialStatus, response.readiness)
-        ) {
-          throw new Error("invalid credential status response");
-        }
-        if (requestSequence.current === sequence) {
-          setState({
-            credentialStatus: statusResponse.credentialStatus,
-            readiness: response.readiness,
-            status: "ready",
-          });
-        }
-      })
-      .catch(() => {
-        if (requestSequence.current === sequence) setState({ status: "unavailable" });
-      });
-  }, [api, requestKey, workspace.sessionId, workspace.userId]);
+      sbr.getSbrReadiness.invalidate(queryInputs.readiness),
+      sbr.getMachineCredentialStatus.invalidate(queryInputs.status),
+    ]);
+  };
 
   const announcement =
     state.status === "loading"
@@ -368,14 +385,15 @@ export function SbrReadinessScreen({
       {state.status === "unavailable" ? <UnavailableSurface /> : null}
       {state.status === "ready" ? (
         <ReadinessSurface
-          api={api}
           credentialStatus={state.credentialStatus}
           factorEnabled={factorEnabled}
           onFactorEnabled={() => setFactorEnabled(true)}
           onNavigate={onNavigate}
-          onRefresh={() => setRefresh((value) => value + 1)}
+          onRefresh={refresh}
+          organisation={organisation}
           readiness={state.readiness}
           roles={workspace.roles}
+          sbr={sbr}
           workspace={workspace}
         />
       ) : null}
@@ -413,24 +431,26 @@ function UnavailableSurface() {
 }
 
 function ReadinessSurface({
-  api,
   credentialStatus,
   factorEnabled,
   onFactorEnabled,
   onNavigate,
   onRefresh,
+  organisation,
   readiness,
   roles,
+  sbr,
   workspace,
 }: {
-  readonly api: SbrReadinessScreenProps["api"];
   readonly credentialStatus: MachineCredentialStatus;
   readonly factorEnabled: boolean;
   readonly onFactorEnabled: () => void;
   readonly onNavigate: (path: string) => void;
   readonly onRefresh: () => void;
+  readonly organisation: SbrReadinessScreenProps["organisation"];
   readonly readiness: SbrReadiness;
   readonly roles: readonly Role[];
+  readonly sbr: SbrReadinessScreenProps["sbr"];
   readonly workspace: SbrReadinessScreenProps["workspace"];
 }) {
   const environment = environmentCopy(readiness.environment);
@@ -571,17 +591,14 @@ function ReadinessSurface({
       {roles.includes(Role.WORKSPACE_ADMIN) ? (
         factorEnabled ? (
           <MachineCredentialForm
-            api={api as Parameters<typeof MachineCredentialForm>[0]["api"]}
             credentialState={readiness.machineCredentialState}
             onChanged={onRefresh}
+            organisation={organisation}
+            sbr={sbr}
             workspace={workspace}
           />
         ) : (
-          <TotpSetup
-            api={api as Parameters<typeof TotpSetup>[0]["api"]}
-            onEnabled={onFactorEnabled}
-            workspace={workspace}
-          />
+          <TotpSetup onEnabled={onFactorEnabled} api={organisation} workspace={workspace} />
         )
       ) : null}
 
@@ -589,29 +606,24 @@ function ReadinessSurface({
       factorEnabled &&
       readiness.environment === SbrEnvironment.EVTE &&
       readiness.evteProductIdentifier &&
-      readiness.evteServiceIdentifier &&
-      api.assertTotp &&
-      api.importSbrProductId &&
-      api.removeSbrProductId ? (
+      readiness.evteServiceIdentifier ? (
         <ProductIdForm
-          api={{
-            assertTotp: api.assertTotp,
-            importSbrProductId: api.importSbrProductId,
-            removeSbrProductId: api.removeSbrProductId,
-          }}
           onChanged={onRefresh}
+          organisation={organisation}
           productIdentifier={readiness.evteProductIdentifier}
           serviceIdentifier={readiness.evteServiceIdentifier}
+          sbr={sbr}
           state={readiness.productIdState}
           workspace={workspace}
         />
       ) : null}
 
       <SbrSimulatorPanel
-        api={api as Parameters<typeof SbrSimulatorPanel>[0]["api"]}
         factorEnabled={factorEnabled}
         onRefresh={onRefresh}
+        organisation={organisation}
         readiness={readiness}
+        sbr={sbr}
         workspace={workspace}
       />
 

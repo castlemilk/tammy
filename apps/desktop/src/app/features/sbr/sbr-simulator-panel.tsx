@@ -15,7 +15,7 @@ import {
 import { FlaskConical, LoaderCircle, RotateCcw } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 
-import type { TammyDesktopAPI } from "../../../shared/desktop-api";
+import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import { Button } from "../../components/ui/button";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
@@ -70,7 +70,6 @@ type ResultName =
   | "EXACT_REPLAY"
   | "IDEMPOTENCY_CONFLICT"
   | "UNKNOWN";
-type SimulatorAPI = Pick<TammyDesktopAPI, "assertTotp" | "runSbrReadinessFixture">;
 type Operation = {
   readonly command: CommandContext;
   readonly failureCase: SbrReadinessFixtureFailure;
@@ -194,16 +193,18 @@ function resultDetail(result: ResultName | undefined, authoritativeUnknown = fal
 }
 
 export function SbrSimulatorPanel({
-  api,
   factorEnabled = true,
   onRefresh,
+  organisation,
   readiness,
+  sbr,
   workspace,
 }: {
-  readonly api: SimulatorAPI;
   readonly factorEnabled?: boolean;
   readonly onRefresh: () => void;
+  readonly organisation: Pick<TammyConveyorModule<"organisation">, "assertTotp">;
   readonly readiness: SbrReadiness;
+  readonly sbr: Pick<TammyConveyorModule<"sbr">, "runSbrReadinessFixture">;
   readonly workspace: AuthenticatedWorkspace & { readonly roles: readonly Role[] };
 }) {
   const [selectedCase, setSelectedCase] = useState<DiagnosticName>("ACCEPTED");
@@ -279,7 +280,7 @@ export function SbrSimulatorPanel({
         fixtureId: SBR_SIMULATOR_FIXTURE_ID,
       });
       frame = runCodec.encodeRequest(request);
-      const pending = api.runSbrReadinessFixture(frame);
+      const pending = sbr.runSbrReadinessFixture(frame);
       const responseFrame = await pending;
       const response = runCodec.decodeResponse(responseFrame);
       const returned = response.result;
@@ -334,7 +335,12 @@ export function SbrSimulatorPanel({
     const capturedGeneration = generation.current;
     const capturedAction = actionKey;
     try {
-      const freshFactor = await assertFreshFactor(api, workspace, totp, SBR_PURPOSE.useCredential);
+      const freshFactor = await assertFreshFactor(
+        organisation,
+        workspace,
+        totp,
+        SBR_PURPOSE.useCredential,
+      );
       if (!isCurrent(capturedGeneration, capturedAction) || !actionable) return;
       setTotp("");
       const pendingOperation: Operation = {

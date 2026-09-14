@@ -13,9 +13,9 @@ import {
   GetCurrentUserResponseSchema,
 } from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import { LoaderCircle, ShieldCheck } from "lucide-react";
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
-import type { TammyDesktopAPI } from "../../../shared/desktop-api";
+import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import { Button } from "../../components/ui/button";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
@@ -57,7 +57,10 @@ export function TotpSetup({
   onEnabled,
   workspace,
 }: {
-  readonly api: Pick<TammyDesktopAPI, "confirmTotp" | "enrolTotp" | "getCurrentUser">;
+  readonly api: Pick<
+    TammyConveyorModule<"organisation">,
+    "confirmTotp" | "enrolTotp" | "getCurrentUser"
+  >;
   readonly onEnabled: () => void;
   readonly workspace: AuthenticatedWorkspace & { readonly userFactorState?: FactorState };
 }) {
@@ -76,7 +79,22 @@ export function TotpSetup({
   const inFlight = useRef(false);
   const refreshInFlight = useRef(false);
   const mounted = useRef(true);
-  const principalKey = `${workspace.userId}\u0000${workspace.sessionId}`;
+  const { sessionId, userId } = workspace;
+  const principalKey = `${userId}\u0000${sessionId}`;
+  const currentUserInput = useMemo(
+    () =>
+      currentUserCodec.encodeRequest(
+        create(GetCurrentUserRequestSchema, {
+          authentication: authentication({ sessionId, userId }),
+        }),
+      ),
+    [sessionId, userId],
+  );
+  const currentUserQuery = api.getCurrentUser.useQuery({
+    enabled: false,
+    input: currentUserInput,
+    retry: false,
+  });
   const factorPrincipal = useRef(principalKey);
   const principalGeneration = useRef(0);
   const mutationOperation = useRef(0);
@@ -138,11 +156,10 @@ export function TotpSetup({
     refreshOperation.current = operation;
     refreshInFlight.current = true;
     try {
-      const frame = currentUserCodec.encodeRequest(
-        create(GetCurrentUserRequestSchema, { authentication: authentication(workspace) }),
-      );
-      const responseFrame = await api.getCurrentUser(frame);
-      const response = currentUserCodec.decodeResponse(responseFrame);
+      await api.getCurrentUser.invalidate(currentUserInput);
+      const refreshed = await currentUserQuery.refetch();
+      if (refreshed.error || !refreshed.data) throw new Error("current user unavailable");
+      const response = currentUserCodec.decodeResponse(refreshed.data);
       if (!isCurrentPrincipal(principal) || refreshOperation.current !== operation) return;
       const state = response.user?.factorState;
       if (
