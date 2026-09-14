@@ -1,5 +1,5 @@
 import { ConveyorError } from "electron-conveyor/define";
-import { isAllowedApplicationURL } from "../main/security";
+import { isAllowedApplicationDocumentURL } from "../main/security";
 
 interface SenderFrame {
   readonly frameTreeNodeId?: number;
@@ -42,7 +42,7 @@ export function createConveyorAuthorizer(options: Readonly<{ applicationUrl: str
         senderFrame === null ||
         !isRegisteredMainFrame(senderFrame, contents.mainFrame) ||
         senderFrame.isDestroyed() ||
-        !isAllowedApplicationURL(senderFrame.url, options.applicationUrl)
+        !isAllowedApplicationDocumentURL(senderFrame.url, options.applicationUrl)
       ) {
         throw new Error("REJECTED");
       }

@@ -62,11 +62,13 @@ describe("createConveyorAuthorizer", () => {
     })).not.toThrow();
   });
 
-  it("rejects routes and fragments on the same live main-frame object", () => {
+  it("accepts trusted routes but rejects fragments and foreign documents", () => {
     const harness = createHarness();
     const authorize = createConveyorAuthorizer({ applicationUrl: "tammy://app/", getWindow: harness.getWindow });
 
-    for (const url of ["tammy://app/overview", "tammy://app/#overview"]) {
+    harness.window.webContents.mainFrame.url = "tammy://app/overview";
+    expect(() => authorize(harness.event)).not.toThrow();
+    for (const url of ["tammy://app/#overview", "https://example.com/"]) {
       harness.window.webContents.mainFrame.url = url;
       expectRejected(authorize, harness.event);
     }
