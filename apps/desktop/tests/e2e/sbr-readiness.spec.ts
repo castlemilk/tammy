@@ -304,7 +304,10 @@ test("SBR readiness uses local RAM credential and deterministic simulator only",
       await operation;
       return "UNEXPECTED_SUCCESS";
     } catch (error) {
-      return error instanceof Error ? error.message : String(error);
+      const message = error instanceof Error ? error.message : String(error);
+      // Playwright prefixes errors raised inside page.evaluate; keep the
+      // product error code stable for the boundary assertion.
+      return /(?:^|Error: )([A-Z][A-Z0-9_]+)(?:$|\n)/u.exec(message)?.[1] ?? message;
     }
   };
   const productBoundary = {
