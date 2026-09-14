@@ -5,6 +5,7 @@ import test from "node:test";
 import { parse } from "yaml";
 
 const root = path.resolve(import.meta.dirname, "..");
+const repositoryRoot = path.resolve(root, "../..");
 const configPath = path.join(root, "electron-builder.yml");
 
 function resourceNames(resources) {
@@ -90,4 +91,22 @@ test("electron-builder configuration is a deterministic Tammy package contract",
   assert.equal(config.publish, undefined);
   assert.equal(config.dmg, undefined);
   assert.equal(config.linux, undefined);
+});
+
+test("the active desktop toolchain has no Electron Forge compatibility surface", async () => {
+  const desktopPackage = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
+  const workspace = await readFile(path.join(repositoryRoot, "pnpm-workspace.yaml"), "utf8");
+  const rootPackage = JSON.parse(await readFile(path.join(repositoryRoot, "package.json"), "utf8"));
+
+  assert.deepEqual(
+    Object.keys(desktopPackage.devDependencies).filter((name) =>
+      name.startsWith("@electron-forge/"),
+    ),
+    [],
+  );
+  assert.equal(desktopPackage.scripts.make, undefined);
+  assert.equal(desktopPackage.scripts.premake, undefined);
+  assert.doesNotMatch(workspace, /@electron-forge|electron-winstaller|publicHoistPattern/u);
+  assert.match(rootPackage.scripts.test, /node --test apps\/desktop\/scripts\/\*\.test\.mjs/u);
+  await assert.rejects(readFile(path.join(root, "forge.config.ts")), { code: "ENOENT" });
 });

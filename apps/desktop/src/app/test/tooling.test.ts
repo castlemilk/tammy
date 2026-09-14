@@ -29,7 +29,7 @@ describe("desktop tooling", () => {
     expect(html).not.toMatch(/http-equiv=["']Content-Security-Policy["']/u);
   });
 
-  test("keeps strict pnpm peers local to desktop while hoisting only Forge tooling", async () => {
+  test("keeps strict pnpm peers local to desktop without package hoisting", async () => {
     const desktopPackage = JSON.parse(
       await readFile(path.join(desktopRoot, "package.json"), "utf8"),
     );
@@ -39,7 +39,7 @@ describe("desktop tooling", () => {
       "@radix-ui/react-compose-refs": "1.1.3",
       scheduler: "0.27.0",
     });
-    expect(workspace).toContain('publicHoistPattern: ["@electron-forge/*"]');
-    expect(workspace).not.toMatch(/publicHoistPattern:.*(?:react-compose-refs|scheduler)/u);
+    expect(workspace).not.toMatch(/publicHoistPattern:/u);
+    expect(workspace).not.toMatch(/@electron-forge|electron-winstaller/u);
   });
 });

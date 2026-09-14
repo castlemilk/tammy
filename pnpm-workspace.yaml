@@ -2,24 +2,22 @@ packages:
   - apps/*
   - packages/*
 
+autoInstallPeers: false
+
 allowBuilds:
   "@bufbuild/buf": true
   electron: true
-  electron-winstaller: true
   esbuild: true
   sharp: true
   workerd: true
 
 overrides:
-  electron-winstaller: 5.4.4
   tar: 7.5.20
   tmp: 0.2.7
 
 minimumReleaseAge: 1440
 
-onlyBuiltDependencies: ["@bufbuild/buf", "electron", "electron-winstaller", "esbuild"]
-
-publicHoistPattern: ["@electron-forge/*"]
+onlyBuiltDependencies: [ "@bufbuild/buf", "electron", "esbuild" ]
 
 patchedDependencies:
   electron-conveyor@0.4.0: patches/electron-conveyor@0.4.0.patch
