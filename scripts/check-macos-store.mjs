@@ -1097,7 +1097,6 @@ export async function inspectMacOSStoreRepository(
     { from: "resources/sqlcipher", to: "sqlcipher" },
   ];
   const expectedMasResources = [
-    ...expectedMacResources,
     { from: "release/macos/PrivacyInfo.xcprivacy", to: "PrivacyInfo.xcprivacy" },
   ];
   if (

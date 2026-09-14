@@ -84,11 +84,6 @@ test("electron-builder configuration is a deterministic Tammy package contract",
     TammySupportURL: "${env.TAMMY_MACOS_SUPPORT_URL}",
   });
   assert.deepEqual(resourceNames(config.mas.extraResources), [
-    { from: "resources/build", to: "build" },
-    { from: "resources/core", to: "core" },
-    { from: "resources/sqlcipher", to: "sqlcipher" },
-    { from: "resources/sbr", to: "sbr" },
-    { from: "resources/sbr-helper", to: "sbr-helper" },
     { from: "release/macos/PrivacyInfo.xcprivacy", to: "PrivacyInfo.xcprivacy" },
   ]);
 
