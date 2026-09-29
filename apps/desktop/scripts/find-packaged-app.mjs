@@ -30,15 +30,6 @@ const TARGETS = Object.freeze({
       "../../.tmp/electron-builder/ordinary/mac-arm64/Tammy.app/Contents/Resources",
     target: "darwin-arm64",
   }),
-  "mas/arm64": Object.freeze({
-    app: "out/Tammy-mas-arm64/Tammy.app/Contents/MacOS/Tammy",
-    asar: "out/Tammy-mas-arm64/Tammy.app/Contents/Resources/app.asar",
-    build: "out/Tammy-mas-arm64/Tammy.app/Contents/Resources/build",
-    core: "out/Tammy-mas-arm64/Tammy.app/Contents/Resources/core",
-    executable: "tammy-core",
-    resourceBase: "out/Tammy-mas-arm64/Tammy.app/Contents/Resources",
-    target: "darwin-arm64",
-  }),
   "win32/x64": Object.freeze({
     app: "../../.tmp/electron-builder/ordinary/win-unpacked/Tammy.exe",
     asar: "../../.tmp/electron-builder/ordinary/win-unpacked/resources/app.asar",
@@ -598,9 +589,7 @@ export async function verifyPackagedLayout({
   ) {
     throw new Error("SOURCE_MANIFEST_PATH_INVALID");
   }
-  if (platform !== "mas") {
-    await assertOrdinaryBuilderOutput({ desktopRoot, layout, platform });
-  }
+  await assertOrdinaryBuilderOutput({ desktopRoot, layout, platform });
   const executable = path.basename(layout.sourceCore);
   const targetDirectory = path.basename(path.dirname(layout.sourceCore));
   const coreAllowlist = [".gitkeep", `${targetDirectory}/`, `${targetDirectory}/${executable}`];
@@ -677,7 +666,7 @@ export async function verifyPackagedLayout({
   );
   await assertRegularFile(layout.sourceManifest, "SOURCE_BUILD_LAYOUT_INVALID");
   await assertRegularFile(layout.packagedManifest, "PACKAGED_BUILD_LAYOUT_INVALID");
-  if (platform === "darwin" || platform === "mas") {
+  if (platform === "darwin") {
     if ((appStats.mode & 0o111) === 0) throw new Error("PACKAGE_APP_NOT_EXECUTABLE");
     if ((sourceCoreStats.mode & 0o111) === 0) {
       throw new Error("SOURCE_CORE_NOT_EXECUTABLE");
@@ -799,7 +788,7 @@ export async function verifyPackagedLayout({
     coreSha256: packagedCoreHash,
     manifest: layout.packagedManifest,
     manifestSha256: createHash("sha256").update(sourceManifest).digest("hex"),
-    releaseKind: platform === "mas" ? "mas" : "ordinary-package",
+    releaseKind: "ordinary-package",
     sourceRevision: manifest.source_revision,
     ...sbrResult,
     target: layout.target,

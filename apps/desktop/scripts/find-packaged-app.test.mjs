@@ -264,33 +264,12 @@ test("resolves the exact macOS arm64 package paths", () => {
   });
 });
 
-test("resolves and verifies the exact Mac App Store arm64 package paths", async () => {
+test("leaves Mac App Store artifacts under the dedicated release verifier", () => {
   const desktopRoot = path.resolve("/workspace/apps/desktop");
-  const layout = resolvePackagedLayout({ desktopRoot, platform: "mas", arch: "arm64" });
-  assert.equal(
-    layout.appExecutable,
-    path.join(desktopRoot, "out/Tammy-mas-arm64/Tammy.app/Contents/MacOS/Tammy"),
+  assert.throws(
+    () => resolvePackagedLayout({ desktopRoot, platform: "mas", arch: "arm64" }),
+    /UNSUPPORTED_PACKAGE_TARGET/,
   );
-  assert.equal(
-    layout.packagedCore,
-    path.join(
-      desktopRoot,
-      "out/Tammy-mas-arm64/Tammy.app/Contents/Resources/core/darwin-arm64/tammy-core",
-    ),
-  );
-  assert.equal(layout.target, "darwin-arm64");
-
-  await withFixture("mas", "arm64", async ({ desktopRoot: fixtureRoot, layout: fixture }) => {
-    const result = await verifyPackagedLayout({
-      arch: "arm64",
-      desktopRoot: fixtureRoot,
-      platform: "mas",
-      sourceManifestPath: fixture.sourceManifest,
-    });
-    assert.equal(result.appExecutable, fixture.appExecutable);
-    assert.equal(result.coreExecutable, fixture.packagedCore);
-    assert.equal(result.target, "darwin-arm64");
-  });
 });
 
 test("resolves the exact Windows x64 package paths", () => {
