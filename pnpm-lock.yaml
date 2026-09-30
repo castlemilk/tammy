@@ -66,6 +66,9 @@ importers:
       '@tammy/connect-client':
         specifier: workspace:*
         version: link:../../packages/connect-client
+      '@tammy/local-api':
+        specifier: workspace:*
+        version: link:../../packages/local-api
       '@tanstack/react-query':
         specifier: 5.101.4
         version: 5.101.4(react@19.2.7)
@@ -258,6 +261,19 @@ importers:
       vitest:
         specifier: 4.1.10
         version: 4.1.10(@types/node@26.1.1)(jsdom@29.1.1(@noble/hashes@2.4.0))(vite@8.0.13(@types/node@26.1.1)(esbuild@0.27.3)(jiti@2.7.0)(yaml@2.8.1))
+
+  packages/local-api:
+    dependencies:
+      '@modelcontextprotocol/sdk':
+        specifier: 1.29.0
+        version: 1.29.0(supports-color@10.2.2)(zod@3.25.76)
+      zod:
+        specifier: 3.25.76
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: 26.1.1
+        version: 26.1.1
 
 packages:
 

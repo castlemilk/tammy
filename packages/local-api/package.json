@@ -1,0 +1,26 @@
+{
+  "name": "@tammy/local-api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "mcp": "node src/cli.ts",
+    "test": "node --test src/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "26.1.1"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./broker": "./src/broker.ts",
+    "./catalog": "./src/catalog.ts",
+    "./connection": "./src/connection.ts",
+    "./mcp": "./src/mcp.ts",
+    "./request": "./src/request.ts"
+  }
+}
