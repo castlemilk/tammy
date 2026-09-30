@@ -22,6 +22,7 @@ const scenarioFiles = [
   "taskfiles/sbr.yml",
   "taskfiles/sbr-helper.yml",
   "taskfiles/site.yml",
+  "taskfiles/integrations.yml",
 ];
 const allowedExecutablePatterns = [
   /^mise install$/,
@@ -29,6 +30,8 @@ const allowedExecutablePatterns = [
   /^mise exec -- pnpm (?:--version|install --frozen-lockfile|check:toolchain|check:macos-store|test|core:build|build:manifest|desktop:start|desktop:test|desktop:typecheck|contracts|contracts:production|lint|sqlcipher:test|sqlcipher:build|desktop:package|desktop:e2e|desktop:e2e:dev)$/,
   /^TAMMY_MACOS_SIGNING_MODE=(?:development|distribution) mise exec -- pnpm desktop:make:mas$/,
   /^mise exec -- pnpm --filter @tammy\/connect-client typecheck$/,
+  /^mise exec -- pnpm --filter @tammy\/local-api (?:test|typecheck)$/,
+  /^mise exec -- node packages\/local-api\/src\/cli\.ts --connection "\$TAMMY_LOCAL_CONNECTION_FILE"$/,
   /^mise exec -- pnpm --dir apps\/desktop package$/,
   /^mise exec -- go test -race -tags tammy_sqlcipher \.\/services\/core\/internal\/storage\/sqlcipher\/\.\.\. -count=1$/,
   /^mise exec -- node scripts\/check-clean-tree\.mjs$/,
@@ -223,6 +226,28 @@ test("site deployment tasks pass adversarial origins as one literal argument", a
     adversarialOrigin,
     "--read-only",
   ]);
+});
+
+test("MCP task requires a private connection file and passes its path literally", async (context) => {
+  const missing = await runTask("integrations:mcp");
+  assert.notEqual(missing.code, 0);
+  assert.match(`${missing.stdout}${missing.stderr}`, /CONNECTION_FILE/);
+  assert.doesNotMatch(
+    `${missing.stdout}${missing.stderr}`,
+    /node packages\/local-api\/src\/cli\.ts/,
+  );
+
+  const fixtureRoot = await mkdtemp(path.join("/private/tmp", "tammy-mcp-task-injection-"));
+  context.after(() => rm(fixtureRoot, { recursive: true, force: true }));
+  const injectedMarker = path.join(fixtureRoot, "injected");
+  const connectionPath = `${fixtureRoot}/missing connection.json; touch ${injectedMarker} #`;
+  const invalid = await runTask("integrations:mcp", undefined, [
+    `CONNECTION_FILE=${connectionPath}`,
+  ]);
+  assert.notEqual(invalid.code, 0);
+  assert.match(`${invalid.stdout}${invalid.stderr}`, /INVALID_CONNECTION_FILE/);
+  assert.equal(existsSync(injectedMarker), false, "CONNECTION_FILE must not execute shell syntax");
+  assert.equal(`${invalid.stdout}${invalid.stderr}`.includes(connectionPath), false);
 });
 
 test("documentation presents Task scenarios as the local command front door", async () => {
@@ -485,8 +510,21 @@ test("local Task front door preserves the safe development contract", async () =
   const diagnostics = await readTaskfile("taskfiles/diagnostics.yml");
   const sbr = await readTaskfile("taskfiles/sbr.yml");
   const site = await readTaskfile("taskfiles/site.yml");
-  for (const taskfile of [setup, dev, diagnostics, sbr, site]) assert.equal(taskfile.version, "3");
+  const integrations = await readTaskfile("taskfiles/integrations.yml");
+  for (const taskfile of [setup, dev, diagnostics, sbr, site, integrations]) {
+    assert.equal(taskfile.version, "3");
+  }
   const taskGraph = await collectTaskGraph("Taskfile.yml");
+
+  assert.deepEqual(shellCommands(integrations.tasks.test), [
+    "mise exec -- pnpm --filter @tammy/local-api test",
+    "mise exec -- pnpm --filter @tammy/local-api typecheck",
+  ]);
+  assert.deepEqual(integrations.tasks.mcp.requires?.vars, ["CONNECTION_FILE"]);
+  assert.equal(integrations.tasks.mcp.env?.TAMMY_LOCAL_CONNECTION_FILE, "{{.CONNECTION_FILE}}");
+  assert.deepEqual(shellCommands(integrations.tasks.mcp), [
+    'mise exec -- node packages/local-api/src/cli.ts --connection "$TAMMY_LOCAL_CONNECTION_FILE"',
+  ]);
 
   const rootTasks = root.tasks ?? {};
   for (const taskName of [
@@ -877,6 +915,8 @@ test("local Task front door preserves the safe development contract", async () =
   }
 
   const rootPackage = JSON.parse(await readFile(path.join(repositoryRoot, "package.json"), "utf8"));
+  assert.match(rootPackage.scripts.test, /pnpm --filter @tammy\/local-api test/);
+  assert.match(rootPackage.scripts.typecheck, /pnpm --filter @tammy\/local-api typecheck/);
   assert.equal(
     rootPackage.scripts?.["desktop:start:scenario"],
     "node scripts/launch-local-scenario.mjs --electron-vite",
@@ -949,6 +989,7 @@ test("local Task front door preserves the safe development contract", async () =
     "mise exec -- pnpm check:toolchain",
     "mise exec -- pnpm test",
     "mise exec -- pnpm --filter @tammy/connect-client typecheck",
+    "mise exec -- pnpm --filter @tammy/local-api typecheck",
     "mise exec -- pnpm desktop:typecheck",
     "mise exec -- pnpm contracts",
     "mise exec -- pnpm lint",

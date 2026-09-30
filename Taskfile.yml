@@ -23,6 +23,8 @@ includes:
     taskfile: taskfiles/sbr-helper.yml
   site:
     taskfile: taskfiles/site.yml
+  integrations:
+    taskfile: taskfiles/integrations.yml
 
 tasks:
   default:

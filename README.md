@@ -4,6 +4,8 @@ Tammy is a local-first Australian accounting desktop application. The current de
 
 Today the connected application can create and reopen an encrypted workspace, confirm its recovery code, sign in, create the organisation and AU chart of accounts, post balanced manual journals, show a trial balance, review retained documents, import and reconcile bank-statement rows, create a local BAS draft, and show consolidated local activity.
 
+The native Integrations menu can enable a session-scoped, read-only local API and stdio MCP adapter for the signed-in organisation. Access requires Tammy's private connection file; there are no integration write commands. See [Local API and MCP](docs/development/local-api-mcp.md) for pairing and client setup.
+
 This is development software, not a production release. BAS workpapers are **drafts only**: there is no production SBR path and no BAS submit or lodge action. Local macOS packages use ad-hoc development signing and are not App Store approval or external assurance evidence.
 
 The desktop foundation builds with electron-vite into `apps/desktop/out/main/index.js`, `apps/desktop/out/preload/index.cjs`, and `apps/desktop/out/renderer/index.html`. The app receives one fixed `window.conveyor` surface with exactly system, workspace, organisation, accounting, banking, documents, reporting, and sbr modules. Ordinary electron-builder artifacts live at `.tmp/electron-builder/ordinary/mac-arm64/Tammy.app` on macOS and `.tmp/electron-builder/ordinary/win-unpacked/Tammy.exe` on Windows.
@@ -28,6 +30,7 @@ mise exec -- task test
 mise exec -- task verify:quick
 mise exec -- task verify:full
 mise exec -- task test:desktop:dev
+mise exec -- task integrations:test
 mise exec -- task build
 mise exec -- task package
 mise exec -- task package:e2e
@@ -54,6 +57,7 @@ Inspect the redacted Mac App Store state with `mise exec -- task release:state` 
 - [Current technical state](docs/development/tech-state.md) — implemented, development-only, deferred, and external boundaries.
 - [Developer handbook](docs/development/foundation.md) — setup, commands, repository map, local data, and safe changes.
 - [Local SBR readiness](docs/development/sbr-local-readiness.md) — accounting, simulator, credential handling, and external registration scenarios.
+- [Local API and MCP](docs/development/local-api-mcp.md) — private connection-file pairing, read coverage, revocation, and stdio client setup.
 - [Local accounting walkthrough](docs/development/local-accounting-walkthrough.md) — the current setup-to-audit journey.
 - [User journey test matrix](docs/development/user-journey-test-matrix.md) — executable coverage by renderer, local core, and packaged Electron layer.
 - [macOS App Store release runbook](docs/release/macos-app-store.md) — repository checks, signing inputs, packaging, inspection, metadata, upload, and remaining operator gates.

@@ -1,0 +1,24 @@
+version: '3'
+
+tasks:
+  test:
+    desc: Test and type-check the local read-only API and MCP adapter.
+    summary: |
+      Runs the package's HTTP, connection-file, request, catalog, and MCP tests.
+      Desktop acceptance remains in test:desktop:dev; these checks do not enable access.
+    cmds:
+      - mise exec -- pnpm --filter @tammy/local-api test
+      - mise exec -- pnpm --filter @tammy/local-api typecheck
+
+  mcp:
+    desc: Start the stdio MCP adapter using Tammy's private connection file.
+    summary: |
+      Open and unlock Tammy, sign in, complete organisation setup, then enable access
+      from Integrations → Enable local API & MCP. Supply only the absolute connection
+      file path, not its capability or any credential. The adapter exposes read-only access.
+    requires:
+      vars: [CONNECTION_FILE]
+    env:
+      TAMMY_LOCAL_CONNECTION_FILE: '{{.CONNECTION_FILE}}'
+    cmds:
+      - mise exec -- node packages/local-api/src/cli.ts --connection "$TAMMY_LOCAL_CONNECTION_FILE"
