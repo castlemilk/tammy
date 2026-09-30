@@ -7,10 +7,10 @@ This walkthrough exercises the current development UI. It is not a production, l
 From the repository root:
 
 ```sh
-rtk mise exec -- pnpm desktop:start
+rtk mise exec -- task dev
 ```
 
-The first build may take several minutes because it builds the vendored SQLCipher-backed Go core. Keep the owning terminal open.
+The first build may take several minutes because it builds the vendored SQLCipher-backed Go core, the SBR helper inputs, the manifest, and the electron-vite bundles. Keep the owning terminal open. The resulting app uses the fixed `window.conveyor` surface; it does not expose Node or a generic renderer transport.
 
 ## 2. Create the encrypted workspace
 
@@ -20,7 +20,7 @@ On **Create your local workspace**, enter:
 - the business legal name, display name, and a checksum-valid 11-digit ABN;
 - a workspace passphrase and administrator password that satisfy the displayed minimums.
 
-Choose **Create local workspace**. Tammy creates the workspace only inside its approved local application-data capability; the renderer does not choose a raw database path.
+Choose **Create local workspace**. Tammy creates the workspace only inside its approved local application-data capability; the app does not choose a raw database path. The workspace call crosses the allowlisted workspace Conveyor module and is authorized against the live main frame before Electron main contacts Core.
 
 ## 3. Save and confirm recovery
 

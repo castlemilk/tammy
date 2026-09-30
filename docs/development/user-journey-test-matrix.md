@@ -4,16 +4,17 @@ This matrix keeps Tammy's development walkthrough tied to executable evidence. I
 
 ## Coverage layers
 
-- **Packaged Electron** proves the real app bundle launches offline, exposes only the typed preload API, renders the first-run form, opens privacy/support, and exits without an orphaned core.
-- **Renderer journeys** exercise the screens with protobuf frames at the preload boundary. These tests cover interaction, validation, state labels, and failure presentation without replacing core integration.
+- **Development Electron** proves the electron-vite main, preload, and app outputs launch together with the real supervised Core before packaging.
+- **Packaged Electron** proves the ordinary electron-builder app authenticates its ASAR, Electron fuses, resources, and signature state; launches offline; exposes only the fixed `window.conveyor` bridge; and exits without an orphaned Core.
+- **App journeys** exercise screens through the allowlisted Conveyor modules with typed protobuf data. These tests cover interaction, validation, state labels, and failure presentation without replacing Core integration.
 - **Local-core integration** runs generated Connect clients through the real TLS server and SQLCipher workspace where a test is listed below.
 
 ## Current journeys
 
 | Journey | Renderer evidence | Local-core evidence | Packaged evidence |
 | --- | --- | --- | --- |
-| Launch offline and review privacy | `app.test.tsx`, privacy tests | System transport tests | `foundation.spec.ts` |
-| Create workspace, save recovery, sign in, create organisation | `setup-screen.test.tsx` | `TestLocalCompositionCreatesConfirmsAndAuthenticatesRealWorkspace` | First-run form and typed preload smoke |
+| Launch offline and review privacy | `app.test.tsx`, privacy tests | System transport tests | `electron-vite-development.spec.ts`, `foundation.spec.ts`, `app-store-privacy.spec.ts` |
+| Create workspace, save recovery, sign in, create organisation | `setup-screen.test.tsx` | `TestLocalCompositionCreatesConfirmsAndAuthenticatesRealWorkspace` | First-run form and Conveyor smoke |
 | Reopen workspace and sign in | `unlock-screen.test.tsx` | `TestLocalCompositionReopensAndAuthenticatesExistingWorkspaceAfterRestart` | Not destructive-tested in the package suite |
 | Inspect and extend the AU chart | `chart-screen.test.tsx` | `TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealServer` | Covered after authentication, not in first-run smoke |
 | Post a journal, open its detail, and inspect the trial balance | `journals-screen.test.tsx`, `trial-balance-screen.test.tsx` | `TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealServer` | Covered after authentication, not in first-run smoke |
@@ -29,12 +30,12 @@ The journal list regression also proves retained rows are keyboard focusable and
 From the repository root:
 
 ```sh
-rtk mise exec -- pnpm --dir apps/desktop test
-rtk mise exec -- pnpm --dir apps/desktop typecheck
-rtk mise exec -- pnpm desktop:e2e
+rtk mise exec -- task test
+rtk mise exec -- task test:desktop:dev
+rtk mise exec -- task package:e2e
 ```
 
-The complete desktop test command includes an integration suite that compiles the Go core with a fixed timeout. A timeout is a failed gate, not permission to mark the suite green. Focused renderer results may still be reported separately while the build environment is repaired.
+The complete desktop test command includes an integration suite that compiles the Go core with a fixed timeout. A timeout is a failed gate, not permission to mark the suite green. `test:desktop:dev` exercises `apps/desktop/out/main/index.js`, `apps/desktop/out/preload/index.cjs`, and `apps/desktop/out/renderer/index.html` through real Electron. Focused app results may still be reported separately while the build environment is repaired.
 
 For the direct local-core journeys:
 
@@ -52,4 +53,4 @@ Keep these commands bounded and serial. Do not repeatedly launch duplicate SQLCi
 
 ## Release rule
 
-Do not describe a journey as packaged-E2E verified unless `desktop:e2e` completes against the newly built bundle. Renderer success, Playwright test discovery, or an older package is not equivalent evidence.
+Do not describe a journey as packaged-E2E verified unless `task package:e2e` completes against the newly built Builder application at `.tmp/electron-builder/ordinary/mac-arm64/Tammy.app` or `.tmp/electron-builder/ordinary/win-unpacked/Tammy.exe`. App-test success, development Playwright discovery, or an older package is not equivalent evidence.

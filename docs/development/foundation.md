@@ -19,14 +19,18 @@ mise exec -- task dev
 ```sh
 mise exec -- task --list
 mise exec -- task test
-mise exec -- task verify
+mise exec -- task verify:quick
+mise exec -- task verify:full
+mise exec -- task test:desktop:dev
 mise exec -- task build
 mise exec -- task package
 mise exec -- task package:e2e
 mise exec -- task diagnose:data
 ```
 
-`build` is a raw local bundle for diagnosis. `package` verifies the ordinary local package artifact, manifest, core, signatures, and resources but does not launch it. `package:e2e` adds isolated Electron user data, runtime acceptance, and orphan-process evidence. None is production or App Store evidence.
+`build` and `package` build and verify the ordinary electron-builder application through the authenticated package owner. They check the manifest, Core, signatures, fuses, ASAR, and resources without launching it. `test:desktop:dev` launches the electron-vite bundles through the real development Electron/Core runtime. `package:e2e` adds isolated Electron user data, runtime acceptance, and orphan-process evidence. None is production or App Store evidence.
+
+For bundle-only diagnosis, `mise exec -- pnpm --dir apps/desktop build` compiles only the three electron-vite bundles. It does not build native resources or verify a packaged application.
 
 ### Accounting and SBR scenarios
 
@@ -79,7 +83,19 @@ Check the repository-owned Mac App Store inputs:
 mise exec -- pnpm check:macos-store
 ```
 
-The ordinary start/package/E2E commands are development commands. They do not sign, upload, or obtain App Store/ATO approval. The store checker is also local evidence only; Apple signing and submission follow the [macOS App Store runbook](../release/macos-app-store.md).
+The ordinary start/package/E2E commands are development commands. Local macOS packages use ad-hoc signing; these commands do not perform Apple distribution signing, upload, or obtain App Store/ATO approval. The store checker is also local evidence only; Apple signing and submission follow the [macOS App Store runbook](../release/macos-app-store.md).
+
+### Desktop build and package layout
+
+electron-vite owns the three compiled entries:
+
+- `apps/desktop/out/main/index.js`
+- `apps/desktop/out/preload/index.cjs`
+- `apps/desktop/out/renderer/index.html`
+
+The preload exposes only the fixed `window.conveyor` bridge. Its eight modules are system, workspace, organisation, accounting, banking, documents, reporting, and sbr; the committed manifest and preload allowlist reject unknown modules, methods, arities, streams, and events.
+
+The ordinary package owner writes `.tmp/electron-builder/ordinary/mac-arm64/Tammy.app` on macOS arm64 or `.tmp/electron-builder/ordinary/win-unpacked/Tammy.exe` on Windows x64. Mac App Store work never reuses those paths. A reserved build uses `.tmp/macos-release/<version>/build-<number>/`; `release:development` writes `development/Tammy.app`, while `release:candidate` and `deploy:mas` write `distribution/Tammy.app` and `distribution/Tammy-<version>-build.<number>.pkg`. None of these scenarios uploads or submits.
 
 ## Development workspace
 
@@ -95,9 +111,10 @@ Do not manually delete individual files. For a deliberate blank-workspace reset,
 
 | Path | Ownership |
 | --- | --- |
-| `apps/desktop/src/main` | Electron lifecycle, core supervision, IPC routing, CSP, and packaged-path checks. |
-| `apps/desktop/src/preload` | Named, bounded renderer API; no raw transport or filesystem surface. |
-| `apps/desktop/src/renderer` | Setup, workspace shell, accounting, documents, banking, BAS, and activity UI. |
+| `apps/desktop/src/main` | Electron lifecycle, core supervision, CSP, file intake, and packaged-path checks. |
+| `apps/desktop/src/conveyor` | Fixed eight-module router, sender authorization, schemas, and Core adapters. |
+| `apps/desktop/src/preload` | Restricted Conveyor bridge; no raw transport, stream, event, or filesystem surface. |
+| `apps/desktop/src/app` | Setup, workspace shell, accounting, documents, banking, BAS, SBR readiness, and activity UI. |
 | `proto/tammy/v1` | Versioned protobuf contracts and validation annotations. |
 | `services/core/cmd/tammy-core` | Core process entry point and development/process configuration. |
 | `services/core/internal/app` | Production/local composition and ordinary-command coordination. |

@@ -109,8 +109,9 @@ const PRODUCT_BOUNDARY_SCHEMA = Object.freeze({
   COMPLIANCE_CHECK_COMMAND: Object.freeze(["pnpm compliance:foundation"]),
   DPO_OSF_EVTE_CONFORMANCE_PVT_WHITELISTING_STATUS: Object.freeze(["NOT_PRODUCED"]),
   FOUNDATION_PRODUCT_BOUNDARY_STATUS: Object.freeze(["FOUNDATION_ONLY"]),
+  LOCAL_MACHINE_CREDENTIAL_READINESS_STATUS: Object.freeze(["IMPLEMENTED_VERIFIED"]),
   LOCAL_TEST_COMMAND: Object.freeze(["node --test scripts/check-foundation-evidence.test.mjs"]),
-  MACHINE_CREDENTIAL_IMPLEMENTATION_STATUS: Object.freeze(["NOT_IMPLEMENTED"]),
+  PRODUCTION_MACHINE_CREDENTIAL_STATUS: Object.freeze(["NOT_IMPLEMENTED"]),
   SBR_APPROVAL_STATUS: Object.freeze(["NOT_CLAIMED"]),
 });
 const PRODUCT_BOUNDARY_STATE = Object.freeze(

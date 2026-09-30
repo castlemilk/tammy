@@ -67,7 +67,7 @@ const notYetVerifiedTargetEvidence =
   "LOCAL_DARWIN_ARM64_PACKAGED_E2E_STATUS NOT_YET_VERIFIED; HOSTED_MACOS_TARGET_STATUS NOT_YET_VERIFIED; HOSTED_MACOS_PACKAGED_E2E_STATUS NOT_PRODUCED; HOSTED_MACOS_FAILURE_ARTIFACT_NAME macos14-arm64-foundation-failure-evidence; HOSTED_MACOS_FAILURE_ARTIFACT_STATUS NOT_PRODUCED; WINDOWS11_TARGET_STATUS NOT_YET_VERIFIED; WINDOWS11_PACKAGED_E2E_STATUS NOT_PRODUCED; WINDOWS11_FOUNDATION_ARTIFACT_NAME windows11-x64-foundation-evidence; WINDOWS11_FOUNDATION_EVIDENCE_STATUS NOT_PRODUCED; WINDOWS_SERVER_SMOKE_ARTIFACT_NAME WINDOWS_SERVER_SMOKE_ONLY-squirrel-windows-x64; WINDOWS_SERVER_SMOKE_STATUS NOT_PRODUCED; WINDOWS_SERVER_SMOKE_CLASSIFICATION NOT_WINDOWS_11_EVIDENCE";
 
 const productBoundaryEvidence =
-  "FOUNDATION_PRODUCT_BOUNDARY_STATUS FOUNDATION_ONLY; ACTIVITY_STATEMENT_IMPLEMENTATION_STATUS NOT_IMPLEMENTED; MACHINE_CREDENTIAL_IMPLEMENTATION_STATUS NOT_IMPLEMENTED; ATO_TRANSPORT_IMPLEMENTATION_STATUS NOT_IMPLEMENTED; SBR_APPROVAL_STATUS NOT_CLAIMED; LOCAL_TEST_COMMAND node --test scripts/check-foundation-evidence.test.mjs; COMPLIANCE_CHECK_COMMAND pnpm compliance:foundation; DPO_OSF_EVTE_CONFORMANCE_PVT_WHITELISTING_STATUS NOT_PRODUCED";
+  "FOUNDATION_PRODUCT_BOUNDARY_STATUS FOUNDATION_ONLY; ACTIVITY_STATEMENT_IMPLEMENTATION_STATUS NOT_IMPLEMENTED; LOCAL_MACHINE_CREDENTIAL_READINESS_STATUS IMPLEMENTED_VERIFIED; PRODUCTION_MACHINE_CREDENTIAL_STATUS NOT_IMPLEMENTED; ATO_TRANSPORT_IMPLEMENTATION_STATUS NOT_IMPLEMENTED; SBR_APPROVAL_STATUS NOT_CLAIMED; LOCAL_TEST_COMMAND node --test scripts/check-foundation-evidence.test.mjs; COMPLIANCE_CHECK_COMMAND pnpm compliance:foundation; DPO_OSF_EVTE_CONFORMANCE_PVT_WHITELISTING_STATUS NOT_PRODUCED";
 
 const CHECKOUT_ACTION = "actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd";
 const NODE_ACTION = "actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444";
@@ -78,6 +78,17 @@ const SUBJECT_REVISION = "$" + "{{ github.event.pull_request.head.sha || github.
 const WINDOWS_LLVM_AR = "$" + "{{ vars.TAMMY_WINDOWS_LLVM_AR }}";
 const WINDOWS_NMAKE = "$" + "{{ vars.TAMMY_WINDOWS_NMAKE }}";
 const WINDOWS_ARTIFACT_CONDITION = "$" + "{{ always() && steps.checkout.outcome == 'success' }}";
+
+const CURRENT_DOCUMENTATION_PATHS = [
+  "README.md",
+  "docs/development/foundation.md",
+  "docs/development/tech-state.md",
+  "docs/development/local-accounting-walkthrough.md",
+  "docs/development/sbr-local-readiness.md",
+  "docs/development/user-journey-test-matrix.md",
+  "docs/development/self-reporting-backlog.md",
+  "docs/release/macos-app-store.md",
+];
 
 function requiredStep(job, name) {
   const matches = job.steps.filter((step) => step.name === name);
@@ -222,6 +233,185 @@ test("retains runner provisioning, evidence classification, and artifacts around
   assert.match(
     windows11Workflow,
     /Upload Windows 11 manifest and results[\s\S]*if: \$\{\{ always\(\) && steps\.checkout\.outcome == 'success' \}\}[\s\S]*windows11-x64-foundation-evidence[\s\S]*apps\/desktop\/resources\/build\/build-manifest\.json[\s\S]*apps\/desktop\/test-results\/\*\*[\s\S]*if-no-files-found: error[\s\S]*retention-days: 30/,
+  );
+});
+
+test("records the pinned electron-vite Builder and Conveyor toolchain", async () => {
+  const toolchain = JSON.parse(
+    await readFile(
+      path.resolve(import.meta.dirname, "../compliance/build/toolchain.lock.json"),
+      "utf8",
+    ),
+  );
+  const versions = new Map(
+    toolchain.components.map((component) => [component.package_or_module, component.version]),
+  );
+
+  for (const [packageName, version] of [
+    ["electron-vite", "5.0.0"],
+    ["electron-builder", "26.15.3"],
+    ["electron-conveyor", "0.4.0"],
+    ["vite", "7.3.6"],
+    ["@vitejs/plugin-react", "5.2.0"],
+  ]) {
+    assert.equal(versions.get(packageName), version, `${packageName}@${version}`);
+  }
+  for (const removedPackage of ["@electron-forge/cli", "electron-winstaller"]) {
+    assert.equal(versions.has(removedPackage), false, removedPackage);
+  }
+});
+
+test("keeps foundation traceability on the current build transport and tests", async () => {
+  const traceability = await readFile(
+    path.resolve(import.meta.dirname, "../compliance/traceability/foundation.csv"),
+    "utf8",
+  );
+  for (const currentReference of [
+    "apps/desktop/electron.vite.config.ts",
+    "apps/desktop/electron-builder.yml",
+    "apps/desktop/src/app",
+    "apps/desktop/src/conveyor/guard.ts",
+    "apps/desktop/src/conveyor/modules/system.ts",
+    "apps/desktop/src/conveyor/modules/workspace.ts",
+    "apps/desktop/src/conveyor/modules/organisation.ts",
+    "apps/desktop/src/conveyor/modules/accounting.ts",
+    "apps/desktop/src/conveyor/modules/banking.ts",
+    "apps/desktop/src/conveyor/modules/documents.ts",
+    "apps/desktop/src/conveyor/modules/reporting.ts",
+    "apps/desktop/src/conveyor/modules/sbr.ts",
+    "apps/desktop/src/preload/conveyor-bridge.ts",
+    "apps/desktop/src/conveyor/guard.test.ts",
+    "apps/desktop/src/conveyor/registration.test.ts",
+    "apps/desktop/src/preload/conveyor-bridge.test.ts",
+    "apps/desktop/scripts/electron-builder-config.test.mjs",
+    "apps/desktop/tests/e2e/package-signature.test.mjs",
+  ]) {
+    assert.equal(traceability.includes(currentReference), true, currentReference);
+  }
+  for (const removedReference of [
+    "apps/desktop/forge.config.ts",
+    "apps/desktop/src/renderer",
+    "apps/desktop/src/main/ipc.ts",
+    "apps/desktop/src/main/ipc.test.ts",
+  ]) {
+    assert.equal(traceability.includes(removedReference), false, removedReference);
+  }
+  for (const targetRequirement of ["DESIGN-2.4", "DESIGN-13.5"]) {
+    const row = traceability.split("\n").find((line) => line.startsWith(`${targetRequirement},`));
+    assert.ok(row, targetRequirement);
+    assert.equal(
+      row.includes("LOCAL_DARWIN_ARM64_PACKAGED_E2E_STATUS NOT_YET_VERIFIED"),
+      true,
+      targetRequirement,
+    );
+    assert.equal(row.includes(",NOT_YET_VERIFIED,"), true, targetRequirement);
+  }
+  assert.equal(
+    traceability.includes("LOCAL_MACHINE_CREDENTIAL_READINESS_STATUS IMPLEMENTED_VERIFIED"),
+    true,
+  );
+  assert.equal(traceability.includes("PRODUCTION_MACHINE_CREDENTIAL_STATUS NOT_IMPLEMENTED"), true);
+  assert.equal(traceability.includes("MACHINE_CREDENTIAL_IMPLEMENTATION_STATUS"), false);
+});
+
+test("documents the current Conveyor and packaged-runtime security controls", async () => {
+  const threatModel = await readFile(
+    path.resolve(import.meta.dirname, "../compliance/threat-model/local-api-foundation.md"),
+    "utf8",
+  );
+  for (const requiredControl of [
+    "Conveyor sender authorization",
+    "fixed method allowlist",
+    "no streams or events",
+    "opaque machine-credential handles",
+    "ASAR integrity",
+    "fuse verification",
+  ]) {
+    assert.equal(threatModel.includes(requiredControl), true, requiredControl);
+  }
+});
+
+test("keeps current operator documentation on electron-vite Conveyor and Builder paths", async () => {
+  const currentDocumentation = (
+    await Promise.all(
+      CURRENT_DOCUMENTATION_PATHS.map(async (relativePath) =>
+        readFile(path.resolve(import.meta.dirname, "..", relativePath), "utf8"),
+      ),
+    )
+  ).join("\n");
+
+  for (const removedReference of [
+    ".vite/",
+    "src/renderer",
+    "forge.config.ts",
+    "window.tammy",
+    "apps/desktop/out/Tammy-mas-arm64",
+  ]) {
+    assert.equal(currentDocumentation.includes(removedReference), false, removedReference);
+  }
+  for (const currentReference of [
+    "apps/desktop/out/main/index.js",
+    "apps/desktop/out/preload/index.cjs",
+    "apps/desktop/out/renderer/index.html",
+    "window.conveyor",
+    "system, workspace, organisation, accounting, banking, documents, reporting, and sbr",
+    ".tmp/electron-builder/ordinary/mac-arm64/Tammy.app",
+    ".tmp/electron-builder/ordinary/win-unpacked/Tammy.exe",
+    ".tmp/macos-release/<version>/build-<number>/development/Tammy.app",
+    ".tmp/macos-release/<version>/build-<number>/distribution/Tammy.app",
+    ".tmp/macos-release/<version>/build-<number>/distribution/Tammy-<version>-build.<number>.pkg",
+  ]) {
+    assert.equal(currentDocumentation.includes(currentReference), true, currentReference);
+  }
+  for (const scenario of [
+    "dev",
+    "dev:accounting:fresh",
+    "dev:sbr:simulator",
+    "dev:sbr:evte",
+    "test",
+    "verify:quick",
+    "verify:full",
+    "test:desktop:dev",
+    "build",
+    "package",
+    "package:e2e",
+    "release:development",
+    "release:candidate",
+    "deploy:mas",
+  ]) {
+    assert.equal(currentDocumentation.includes(`mise exec -- task ${scenario}`), true, scenario);
+  }
+});
+
+test("keeps self-reporting and external approval boundaries explicitly open", async () => {
+  const backlog = await readFile(
+    path.resolve(import.meta.dirname, "../docs/development/self-reporting-backlog.md"),
+    "utf8",
+  );
+  for (const openBoundary of [
+    "Company EOFY preparation remains open.",
+    "The company tax return remains open.",
+    "Production ATO/SBR lodgement remains open.",
+    "DSP registration and conformance remain open.",
+    "Apple signing, upload, and review remain open.",
+  ]) {
+    assert.equal(backlog.includes(openBoundary), true, openBoundary);
+  }
+});
+
+test("distinguishes the authenticated Task build from raw bundle compilation", async () => {
+  const handbook = await readFile(
+    path.resolve(import.meta.dirname, "../docs/development/foundation.md"),
+    "utf8",
+  );
+  assert.equal(handbook.includes("`build` and `package` build and verify"), true);
+  assert.equal(handbook.includes("mise exec -- pnpm --dir apps/desktop build"), true);
+  assert.equal(handbook.includes("compiles only the three electron-vite bundles"), true);
+  assert.equal(
+    handbook.includes(
+      "The ordinary start/package/E2E commands are development commands. They do not sign",
+    ),
+    false,
   );
 });
 
@@ -849,7 +1039,8 @@ test("requires the complete no-claim product boundary in DESIGN-14", () => {
   for (const marker of [
     "FOUNDATION_PRODUCT_BOUNDARY_STATUS FOUNDATION_ONLY; ",
     "ACTIVITY_STATEMENT_IMPLEMENTATION_STATUS NOT_IMPLEMENTED; ",
-    "MACHINE_CREDENTIAL_IMPLEMENTATION_STATUS NOT_IMPLEMENTED; ",
+    "LOCAL_MACHINE_CREDENTIAL_READINESS_STATUS IMPLEMENTED_VERIFIED; ",
+    "PRODUCTION_MACHINE_CREDENTIAL_STATUS NOT_IMPLEMENTED; ",
     "ATO_TRANSPORT_IMPLEMENTATION_STATUS NOT_IMPLEMENTED; ",
     "SBR_APPROVAL_STATUS NOT_CLAIMED; ",
     "LOCAL_TEST_COMMAND node --test scripts/check-foundation-evidence.test.mjs; ",
@@ -888,7 +1079,8 @@ test("binds the foundation-only product boundary to partial-target status", () =
 test("rejects contradictory product-boundary values for every protected capability", () => {
   for (const contradiction of [
     "ACTIVITY_STATEMENT_IMPLEMENTATION_STATUS IMPLEMENTED",
-    "MACHINE_CREDENTIAL_IMPLEMENTATION_STATUS IMPLEMENTED",
+    "LOCAL_MACHINE_CREDENTIAL_READINESS_STATUS NOT_IMPLEMENTED",
+    "PRODUCTION_MACHINE_CREDENTIAL_STATUS IMPLEMENTED",
     "ATO_TRANSPORT_IMPLEMENTATION_STATUS IMPLEMENTED",
     "SBR_APPROVAL_STATUS APPROVAL_GRANTED",
   ]) {
@@ -911,6 +1103,7 @@ test("rejects contradictory product-boundary values for every protected capabili
 test("rejects duplicate, unknown, and legacy product-boundary assertions", () => {
   for (const assertion of [
     "LOCAL_TEST_COMMAND node --test scripts/check-foundation-evidence.test.mjs",
+    "MACHINE_CREDENTIAL_IMPLEMENTATION_STATUS NOT_IMPLEMENTED",
     "SBR_APPROVAL_STATUS UNKNOWN",
     "SIGNED_RELEASE_STATUS APPROVED",
     "NO_APPROVAL_CLAIM",

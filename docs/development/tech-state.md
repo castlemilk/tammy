@@ -16,15 +16,18 @@ This page is the source of truth for what the application exposes today. Design 
 | Overview and activity | Overview attention counts and a consolidated chronological activity screen read journals, banking lines, documents, and the current BAS draft. | The activity screen is a product projection, not a replacement for audit-chain export and verification evidence. |
 | Backup, restore, and audit core | Encrypted backup/restore, authenticated recovery journals, audit-chain, and evidence-export components exist in the Go core and tests. | Their complete desktop workflows are not connected in this vertical slice. Do not infer UI availability from generated routes. |
 | SBR readiness | The macOS arm64 build has an authenticated, network-disabled simulator; TOTP-gated RAM machine-credential lifecycle UI; redacted readiness checks; and packaged fixture coverage. | EVTE is blocked pending externally issued signed registration, component, endpoint, service, and access inputs. There is no production SBR path and no BAS submit or lodge action. |
-| Packaging | Electron Forge development start, ad-hoc signed local macOS package, and packaged E2E commands exist. A separate fail-closed Mac App Store profile owns the bundle ID, icon, sandbox entitlements, privacy manifest, signing inputs, build number, repository check, and package orchestration. Apple Developer identifier `DXP9QHD7JH` and draft App Store Connect record `6800226692` now exist, with the safe product-page copy and categories seeded. | Apple distribution certificates/profiles, signed-build sandbox and privacy inspection, public privacy/support URLs, legal/export/price declarations, upload, and App Review remain external gates. |
+| Packaging | electron-vite produces explicit main, preload, and app bundles. electron-builder produces ordinary macOS arm64 and Windows x64 directory applications; local package E2E authenticates the app, ASAR, fuses, resources, runtime, and exact-process cleanup. A separate fail-closed Mac App Store profile owns the bundle ID, icon, sandbox entitlements, privacy manifest, signing inputs, build number, repository checks, and deterministic release root. Apple Developer identifier `DXP9QHD7JH` and draft App Store Connect record `6800226692` exist, with safe product-page copy and categories seeded. | Hosted target results and Apple certificates/profiles, signed-build inspection, legal/export/price declarations, upload, processing, and App Review remain external gates. |
 
 ## Architecture now
 
 - Electron main supervises the bundled Go core and terminates the exact child process on shutdown.
-- The renderer calls named protobuf methods through the preload boundary; Electron main forwards framed requests to the generated Connect handlers on an authenticated local transport.
+- The app calls the fixed `window.conveyor` bridge. Its system, workspace, organisation, accounting, banking, documents, reporting, and sbr modules expose only committed query/command methods; the preload provides no stream, event, Node, or raw transport primitive.
+- Electron main authorizes the exact live main frame before routing a Conveyor call and forwards typed protobuf requests to the generated Connect handlers over the authenticated local transport.
 - The Go core owns SQLCipher workspace opening, migrations, authorization, transactions, idempotency, accounting invariants, and local audit records.
 - Module-owned repositories and typed ports preserve ownership boundaries. Files enter through bounded capability/byte interfaces rather than arbitrary renderer-supplied paths.
 - Money is integer minor units in AUD; accounting and GST calculations avoid binary floating point.
+
+electron-vite writes `apps/desktop/out/main/index.js`, `apps/desktop/out/preload/index.cjs`, and `apps/desktop/out/renderer/index.html`. Ordinary Builder outputs are `.tmp/electron-builder/ordinary/mac-arm64/Tammy.app` and `.tmp/electron-builder/ordinary/win-unpacked/Tammy.exe`; deterministic Mac App Store runs use `.tmp/macos-release/<version>/build-<number>/` instead.
 
 ## Development-only behavior
 
@@ -36,9 +39,9 @@ Local macOS packages are ad-hoc signed development artifacts. The current suppor
 
 ## Deferred and external boundaries
 
-Deferred repository work includes connecting the placeholder accounting/Settings routes and exposing the complete backup/restore and audit-evidence workflows. The repository-owned Mac App Store inputs and checks exist; the signed-build and external validation gates are listed in the [macOS App Store runbook](../release/macos-app-store.md).
+Deferred repository work includes connecting the remaining accounting/Settings routes and exposing the complete backup/restore and audit-evidence workflows. Company EOFY preparation and the company tax return remain backlog work. The repository-owned Mac App Store inputs and checks exist; the signed-build and external validation gates are listed in the [macOS App Store runbook](../release/macos-app-store.md).
 
-External work includes Apple approval, legal/support/privacy completion, signing certificates and provisioning, ATO/SBR conformance, production credentials, and submission authorization. The Apple identifier and draft App Store record now exist; that setup does not replace the remaining external evidence.
+External work includes Apple signing, upload, processing, and review; ATO/SBR production lodgement; DSP registration; conformance; production credentials; and submission authorization. The Apple identifier and draft App Store record exist; that setup does not replace the remaining external evidence.
 
 For SBR, the authenticated simulator proves only local credential and transport-state behavior. EVTE cannot launch until its signed external evidence is installed and accepted. Actual ATO credential-component integration follows under a separately approved implementation after issuance; editable repository examples cannot enable it. See [Local SBR readiness](sbr-local-readiness.md).
 

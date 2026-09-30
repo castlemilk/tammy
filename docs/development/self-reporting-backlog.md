@@ -36,6 +36,10 @@ It uses four priorities:
 | Individual tax | No | Entire taxpayer, income, deduction, investment, calculation, and myTax handoff domain required. |
 | ATO/SBR transport | No | DSP registration, machine credential, conformance, transport, operations required. |
 
+### Desktop-foundation migration status
+
+The electron-vite, Conveyor, and Builder migration gives the desktop a typed reporting-safe transport boundary and real development/package verification. It does not complete any self-reporting backlog item by itself. Company EOFY preparation remains open. The company tax return remains open. Production ATO/SBR lodgement remains open. DSP registration and conformance remain open. Apple signing, upload, and review remain open.
+
 ## 3. Programme backlog
 
 ### SR-00 — Product truth and unsupported-situation guardrails

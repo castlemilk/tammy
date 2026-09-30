@@ -2,6 +2,8 @@
 
 Tammy separates local accounting, the deterministic SBR simulator, and externally authorised EVTE work. The simulator is visibly synthetic and network-disabled. It is useful for local machine-credential lifecycle and transport-state tests, but it is not ATO approval or conformance evidence. There is no production SBR path and no BAS submit or lodge action.
 
+The desktop app reaches SBR readiness only through the allowlisted sbr module on `window.conveyor`. Streams and events are disabled. A native machine-credential selection returns an opaque single-use handle to the app; the selected path and any security-scoped bookmark stay in Electron main and expire if they are not consumed. This local boundary does not complete DSP registration, ATO/SBR production transport, service conformance, or approval.
+
 All commands run from the repository root. Fresh ordinary accounting supports macOS arm64 and
 Windows x64. SBR simulator, doctor, registration, and evidence scenarios require macOS arm64.
 
@@ -89,7 +91,7 @@ EVTE is non-production. The sequence does not connect the current BAS draft to S
 
 Launch EVTE only after signed readiness passes. Then sign in normally and perform import, inspect, unlock-for-use, replace, and remove in Settings → SBR.
 
-1. Select the credential with Tammy's native file chooser. Do not use a Task argument or a terminal path.
+1. Select the credential with Tammy's native file chooser. Do not use a Task argument or a terminal path. The app receives only the opaque machine-credential handle, never the selected filesystem path or bookmark.
 2. Enter the credential password and fresh TOTP only in Tammy. Task accepts no live credential.
 3. Continue commits the import; there is no pre-import preview or separate accept step. After commit, confirm the machine-credential state and displayed fingerprint. The redacted status shows safe issuer, serial, creation and expiry dates, component version, and fingerprint. The screen does not expose the credential ABN or credential bytes.
 4. The core validates the binding against the authenticated installation, workspace, organisation, and independently verified ABN and rejects a mismatch before credential use.

@@ -76,7 +76,7 @@ export TAMMY_MACOS_TEAM_ID='TEAMID1234'
 mise exec -- task release:development
 ```
 
-`release:development` forces development signing and produces `apps/desktop/out/Tammy-mas-arm64/Tammy.app`. Use it for a local sandbox smoke test. It deliberately does not produce an installer package or upload.
+`release:development` forces development signing and produces `.tmp/macos-release/<version>/build-<number>/development/Tammy.app`. The package owner first confines electron-builder's raw unsigned output to `.tmp/macos-release/<version>/build-<number>/.builder-unsigned/mas-arm64/Tammy.app`, authenticates and copies the canonical unsigned app to `unsigned/Tammy.app`, then signs through a private staging directory before atomically publishing the development app. Use the development app for a local sandbox smoke test. This scenario deliberately does not produce an installer package or upload.
 
 After the exact development app and unsigned-content manifest have been copied into the reserved `.tmp/macos-release/<version>/build-<number>/` run, capture and review screenshots as separate scenarios:
 
@@ -106,7 +106,7 @@ mise exec -- task release:candidate
 mise exec -- task deploy:mas
 ```
 
-`release:candidate` and `deploy:mas` force distribution signing. They check the clean tree, finalized metadata, and release inputs; rebuild the Go core and authenticate its SQLCipher runtime before signing; verify the Apple signature and record the signed core hash without executing that inherited child outside its sandbox parent; package and sign the outer MAS app without signing the core a second time; verify the actual `Tammy-mas-arm64` core/manifest equality; and use Apple's `/usr/bin/productbuild` to create `apps/desktop/out/make/pkg/arm64/Tammy-<version>-build.<number>.pkg`. They print local package evidence and never upload. A distribution-signed app is for App Store upload; use the Apple Development build for local execution.
+`release:candidate` and `deploy:mas` force distribution signing. They check the clean tree, finalized metadata, and release inputs; rebuild the Go core and authenticate its SQLCipher runtime before signing; verify the Apple signature and record the signed core hash without executing that inherited child outside its sandbox parent; package and sign the outer MAS app without signing the core a second time; verify the deterministic Builder core/manifest equality; and use Apple's `/usr/bin/productbuild` to create `.tmp/macos-release/<version>/build-<number>/distribution/Tammy-<version>-build.<number>.pkg` beside `.tmp/macos-release/<version>/build-<number>/distribution/Tammy.app`. They print local package evidence and never upload. A distribution-signed app is for App Store upload; use the Apple Development build for local execution.
 
 Assemble the five redacted JSON evidence owners in one temporary source directory, then collect, check, and promote that exact set explicitly:
 
@@ -132,7 +132,7 @@ These tasks do not sign, upload, publish, or submit. They fail unless the exact 
 Set `APP` to the development or distribution app path and inspect the actual output:
 
 ```sh
-APP='apps/desktop/out/Tammy-mas-arm64/Tammy.app'
+APP='.tmp/macos-release/0.1.0/build-1/development/Tammy.app'
 
 codesign --verify --deep --strict --verbose=2 "$APP"
 codesign -d --entitlements :- "$APP"
@@ -156,7 +156,7 @@ For a development-signed build, launch the app and exercise create/reopen worksp
 For a distribution package:
 
 ```sh
-PKG='apps/desktop/out/make/pkg/arm64/Tammy-0.1.0-build.2.pkg'
+PKG='.tmp/macos-release/0.1.0/build-2/distribution/Tammy-0.1.0-build.2.pkg'
 pkgutil --check-signature "$PKG"
 spctl --assess --type install --verbose=4 "$PKG"
 ```
@@ -200,7 +200,7 @@ App Store rollback means selecting a previously approved version where Apple per
 ## Primary references
 
 - [Electron Mac App Store submission guide](https://www.electronjs.org/docs/latest/tutorial/mac-app-store-submission-guide/)
-- [Electron Packager options](https://electron.github.io/packager/main/interfaces/Options.html)
+- [electron-builder configuration](https://www.electron.build/configuration.html)
 - [Apple App Sandbox](https://developer.apple.com/documentation/security/app-sandbox)
 - [Apple user-selected file access](https://developer.apple.com/documentation/security/accessing-files-from-the-macos-app-sandbox)
 - [Apple privacy manifests](https://developer.apple.com/documentation/bundleresources/privacy-manifest-files)

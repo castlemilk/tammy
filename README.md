@@ -6,6 +6,8 @@ Today the connected application can create and reopen an encrypted workspace, co
 
 This is development software, not a production release. BAS workpapers are **drafts only**: there is no production SBR path and no BAS submit or lodge action. Local macOS packages use ad-hoc development signing and are not App Store approval or external assurance evidence.
 
+The desktop foundation builds with electron-vite into `apps/desktop/out/main/index.js`, `apps/desktop/out/preload/index.cjs`, and `apps/desktop/out/renderer/index.html`. The app receives one fixed `window.conveyor` surface with exactly system, workspace, organisation, accounting, banking, documents, reporting, and sbr modules. Ordinary electron-builder artifacts live at `.tmp/electron-builder/ordinary/mac-arm64/Tammy.app` on macOS and `.tmp/electron-builder/ordinary/win-unpacked/Tammy.exe` on Windows.
+
 ## Quick start
 
 Install the pinned toolchain once, then use Task scenarios from the repository root:
@@ -23,7 +25,10 @@ mise exec -- task dev
 ```sh
 mise exec -- task --list
 mise exec -- task test
-mise exec -- task verify
+mise exec -- task verify:quick
+mise exec -- task verify:full
+mise exec -- task test:desktop:dev
+mise exec -- task build
 mise exec -- task package
 mise exec -- task package:e2e
 mise exec -- task diagnose:data
@@ -37,11 +42,12 @@ For the macOS SBR readiness work, use the scenario-specific front doors:
 mise exec -- task dev:accounting:fresh
 mise exec -- task dev:sbr:simulator
 mise exec -- task sbr:registration:check
+mise exec -- task dev:sbr:evte
 ```
 
 The first scenario retains a new isolated accounting root; the second is synthetic and network-disabled; the third prints the static external registration handoff checklist without accepting credentials and exits non-zero while blocked. EVTE remains blocked until externally issued signed inputs are installed. See [Local SBR readiness](docs/development/sbr-local-readiness.md) before handling a RAM machine credential.
 
-Inspect the redacted Mac App Store state with `mise exec -- task release:state` and check the repository-owned profile with `mise exec -- task release:check`. Signed packaging uses `mise exec -- task release:development` or `mise exec -- task release:candidate`; `mise exec -- task deploy:mas` produces and locally validates a candidate only. Apple certificates, profiles, legal decisions, metadata, upload, and approval remain operator-owned; follow the [macOS App Store runbook](docs/release/macos-app-store.md).
+Inspect the redacted Mac App Store state with `mise exec -- task release:state` and check the repository-owned profile with `mise exec -- task release:check`. Signed packaging uses `mise exec -- task release:development` or `mise exec -- task release:candidate`; `mise exec -- task deploy:mas` produces and locally validates a candidate only. These scenarios use the deterministic `.tmp/macos-release/<version>/build-<number>/` root. Apple certificates, profiles, legal decisions, signing, upload, review, and approval remain operator-owned; follow the [macOS App Store runbook](docs/release/macos-app-store.md).
 
 ## Documentation
 
