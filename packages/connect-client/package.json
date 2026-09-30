@@ -27,6 +27,7 @@
     "./tammy/v1/financial_close_pb.js": "./src/gen/tammy/v1/financial_close_pb.ts",
     "./tammy/v1/fixtures_pb.js": "./src/gen/tammy/v1/fixtures_pb.ts",
     "./tammy/v1/identity_pb.js": "./src/gen/tammy/v1/identity_pb.ts",
+    "./tammy/v1/invoices_pb.js": "./src/gen/tammy/v1/invoices_pb.ts",
     "./tammy/v1/organisation_pb.js": "./src/gen/tammy/v1/organisation_pb.ts",
     "./tammy/v1/overview_pb.js": "./src/gen/tammy/v1/overview_pb.ts",
     "./tammy/v1/reporting_capability_pb.js": "./src/gen/tammy/v1/reporting_capability_pb.ts",

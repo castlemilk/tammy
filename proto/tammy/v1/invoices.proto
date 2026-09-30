@@ -1,0 +1,153 @@
+syntax = "proto3";
+
+package tammy.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+import "tammy/v1/accounting.proto";
+import "tammy/v1/common.proto";
+
+option go_package = "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1";
+
+// InvoiceState describes a document, not a ledger posting or delivery status.
+enum InvoiceState {
+  INVOICE_STATE_UNSPECIFIED = 0;
+  INVOICE_STATE_DRAFT = 1;
+  INVOICE_STATE_ISSUED = 2;
+}
+
+// InvoiceLineInput stores exact AUD ex-GST prices and three-decimal quantities.
+message InvoiceLineInput {
+  string description = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 500
+  }];
+  uint32 quantity_milli = 2 [(buf.validate.field).uint32 = {
+    gte: 1
+    lte: 1000000
+  }];
+  int64 unit_price_minor = 3 [(buf.validate.field).int64 = {
+    gte: 0
+    lte: 100000000
+  }];
+  optional int64 unit_cost_minor = 4 [(buf.validate.field).int64 = {
+    gte: 0
+    lte: 100000000
+  }];
+  TaxTreatment tax_treatment = 5 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  optional string source_document_id = 6 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+}
+
+// InvoiceDraft permits incomplete customer details until explicit issue.
+message InvoiceDraft {
+  string number = 1 [(buf.validate.field).string.max_len = 40];
+  string issue_date = 2 [(buf.validate.field).string.max_len = 10];
+  string due_date = 3 [(buf.validate.field).string.max_len = 10];
+  string customer_name = 4 [(buf.validate.field).string.max_len = 200];
+  string customer_address = 5 [(buf.validate.field).string.max_len = 1000];
+  string customer_abn = 6 [(buf.validate.field).string.max_len = 11];
+  string seller_address = 7 [(buf.validate.field).string.max_len = 1000];
+  // gst_registered is a user assertion; organisation verification does not verify it.
+  bool gst_registered = 8;
+  string notes = 9 [(buf.validate.field).string.max_len = 2000];
+  string payment_instructions = 10 [(buf.validate.field).string.max_len = 1000];
+  repeated InvoiceLineInput lines = 11 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 50
+  }];
+}
+
+message InvoiceLineTotal {
+  int64 subtotal_minor = 1 [(buf.validate.field).int64 = {
+    gte: 0
+    lte: 1000000000000
+  }];
+  int64 gst_minor = 2 [(buf.validate.field).int64 = {
+    gte: 0
+    lte: 1000000000000
+  }];
+  int64 total_minor = 3 [(buf.validate.field).int64 = {
+    gte: 0
+    lte: 1000000000000
+  }];
+  optional int64 cost_minor = 4 [(buf.validate.field).int64 = {
+    gte: 0
+    lte: 1000000000000
+  }];
+}
+
+message Invoice {
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 version = 3 [(buf.validate.field).uint64.gte = 1];
+  InvoiceState state = 4 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  string seller_name = 5 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 256
+  }];
+  string seller_abn = 6 [(buf.validate.field).string.len = 11];
+  InvoiceDraft draft = 7 [(buf.validate.field).required = true];
+  repeated InvoiceLineTotal line_totals = 8 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 50
+  }];
+  int64 subtotal_minor = 9;
+  int64 gst_minor = 10;
+  int64 total_minor = 11;
+  // cost_minor sums only explicitly known internal costs, never customer charges.
+  int64 cost_minor = 12;
+  google.protobuf.Timestamp created_at = 13 [(buf.validate.field).required = true];
+  google.protobuf.Timestamp updated_at = 14 [(buf.validate.field).required = true];
+}
+
+message SaveInvoiceDraftRequest {
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  // Empty invoice_id and expected_version zero create a draft.
+  string invoice_id = 3 [(buf.validate.field).string.max_len = 36];
+  uint64 expected_version = 4;
+  InvoiceDraft draft = 5 [(buf.validate.field).required = true];
+}
+message SaveInvoiceDraftResponse {
+  Invoice invoice = 1 [(buf.validate.field).required = true];
+}
+message GetInvoiceRequest {
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string invoice_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+}
+message GetInvoiceResponse {
+  Invoice invoice = 1 [(buf.validate.field).required = true];
+}
+message ListInvoicesRequest {
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  PageRequest page = 3 [(buf.validate.field).required = true];
+}
+message ListInvoicesResponse {
+  repeated Invoice invoices = 1 [(buf.validate.field).repeated.max_items = 200];
+  PageInfo page = 2 [(buf.validate.field).required = true];
+}
+message IssueInvoiceRequest {
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string invoice_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 expected_version = 4 [(buf.validate.field).uint64.gte = 1];
+}
+message IssueInvoiceResponse {
+  Invoice invoice = 1 [(buf.validate.field).required = true];
+}
+
+service InvoiceService {
+  rpc SaveInvoiceDraft(SaveInvoiceDraftRequest) returns (SaveInvoiceDraftResponse);
+  rpc GetInvoice(GetInvoiceRequest) returns (GetInvoiceResponse);
+  rpc ListInvoices(ListInvoicesRequest) returns (ListInvoicesResponse);
+  // Issue freezes the document. It never sends it, records payment, or posts a journal.
+  rpc IssueInvoice(IssueInvoiceRequest) returns (IssueInvoiceResponse);
+}
