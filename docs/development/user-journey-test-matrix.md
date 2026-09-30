@@ -11,7 +11,7 @@ This matrix keeps Tammy's development walkthrough tied to executable evidence. I
 
 ## Current journeys
 
-| Journey | Renderer evidence | Local-core evidence | Packaged evidence |
+| Journey | App evidence | Local-core evidence | Desktop runtime evidence |
 | --- | --- | --- | --- |
 | Launch offline and review privacy | `app.test.tsx`, privacy tests | System transport tests | `electron-vite-development.spec.ts`, `foundation.spec.ts`, `app-store-privacy.spec.ts` |
 | Create workspace, save recovery, sign in, create organisation | `setup-screen.test.tsx` | `TestLocalCompositionCreatesConfirmsAndAuthenticatesRealWorkspace` | First-run form and Conveyor smoke |

@@ -78,7 +78,7 @@ tasks:
       - task: test:verify:full
 
   verify:release:
-    desc: Run the macOS arm64 release-readiness verification scenario without signing.
+    desc: Verify macOS arm64 release readiness without Apple distribution signing or upload.
     cmds:
       - task: test:verify:release
 

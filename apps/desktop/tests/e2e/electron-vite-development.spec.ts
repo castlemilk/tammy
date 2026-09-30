@@ -1,6 +1,7 @@
 import { lstat, mkdtemp, readFile, realpath, rm } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
 import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -120,9 +121,7 @@ test("runs the real electron-vite development runtime offline and cleans up Core
   };
 
   try {
-    userDataPath = await mkdtemp(
-      path.join(process.env.TMPDIR ?? "/private/tmp", "tammy-electron-vite-"),
-    );
+    userDataPath = await mkdtemp(path.join(tmpdir(), "tammy-electron-vite-"));
     server = await startRendererServer(rendererRoot);
     application = await _electron.launch({
       args: [mainEntry, `--user-data-dir=${userDataPath}`],

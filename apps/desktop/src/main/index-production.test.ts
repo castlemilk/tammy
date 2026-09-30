@@ -18,6 +18,11 @@ const electron = vi.hoisted(() => ({
   },
   browserWindows: [] as Array<{ destroyed: boolean }>,
   dialog: { showOpenDialog: vi.fn() },
+  Menu: {
+    buildFromTemplate: vi.fn((template: unknown) => template),
+    getApplicationMenu: vi.fn(() => null),
+    setApplicationMenu: vi.fn(),
+  },
 }));
 
 const conveyor = vi.hoisted(() => ({
@@ -54,6 +59,7 @@ vi.mock("electron", () => ({
     public show() {}
   },
   dialog: electron.dialog,
+  Menu: electron.Menu,
   ipcMain: {},
   net: {},
   protocol: {},
@@ -72,6 +78,8 @@ describe("createProductionDependencies local scenario ownership", () => {
     electron.dialog.showOpenDialog.mockReset();
     electron.browserWindows.length = 0;
     conveyor.registerTammyConveyor.mockClear();
+    electron.Menu.buildFromTemplate.mockClear();
+    electron.Menu.setApplicationMenu.mockClear();
     delete process.env.ELECTRON_RENDERER_URL;
   });
 
@@ -167,6 +175,34 @@ describe("createProductionDependencies local scenario ownership", () => {
     expect(registration?.getWindow()).toBe(nativeWindow);
     nativeWindow.destroyed = true;
     expect(registration?.getWindow()).toBeUndefined();
+  });
+
+  it("installs app-owned API pairing and revocation after Core client creation", () => {
+    const dependencies = createProductionDependencies([
+      "/Applications/Tammy.app/Contents/MacOS/Tammy",
+    ]);
+    dependencies.createClient({
+      protocol: "tammy-core-ready-v1",
+      port: 43123,
+      caPem: "certificate",
+      capability: "A".repeat(43),
+    });
+    dependencies.createWindow();
+    expect(electron.Menu.buildFromTemplate).toHaveBeenCalledOnce();
+    const template = electron.Menu.buildFromTemplate.mock.calls[0]?.[0] as Array<{
+      label?: string;
+      submenu?: Array<{ id?: string }>;
+    }>;
+    expect(
+      template.find((entry) => entry.label === "Integrations")?.submenu?.map((item) => item.id),
+    ).toEqual([
+      "tammy-integrations-pair",
+      "tammy-integrations-revoke",
+      "tammy-integrations-show-connection",
+    ]);
+    expect(electron.Menu.setApplicationMenu).toHaveBeenCalledOnce();
+    dependencies.cleanupSensitiveState();
+    expect(electron.Menu.setApplicationMenu).toHaveBeenLastCalledWith(null);
   });
 });
 

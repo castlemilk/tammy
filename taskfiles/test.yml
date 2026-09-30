@@ -48,6 +48,7 @@ tasks:
       - mise exec -- pnpm check:toolchain
       - mise exec -- pnpm test
       - mise exec -- pnpm --filter @tammy/connect-client typecheck
+      - mise exec -- pnpm --filter @tammy/local-api typecheck
       - mise exec -- pnpm desktop:typecheck
       - mise exec -- pnpm contracts
       - mise exec -- pnpm lint
@@ -69,7 +70,7 @@ tasks:
     summary: |
       Requires a clean tree, verifies production contracts, real electron-vite development,
       and ordinary packaged E2E, then checks repository-owned App Store inputs. It does not
-      sign or upload anything.
+      perform Apple distribution signing or upload anything.
     preconditions:
       - sh: >-
           mise exec -- node -e 'const target = process.argv[1] ?? `${process.platform}/${process.arch}`; if (target !== "darwin/arm64") { console.error(`UNSUPPORTED_MACOS_RELEASE_TARGET:${target}`); process.exit(1); }'

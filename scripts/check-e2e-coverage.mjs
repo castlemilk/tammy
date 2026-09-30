@@ -11,6 +11,9 @@ const REVIEWED_EXCEPTION = "not_applicable_pre_workspace_system_query";
 const PRE_WORKSPACE_SYSTEM_QUERY = "tammy.v1.SystemService.GetDiagnostics";
 const PRODUCTION_STAGE = "production";
 const DECLARED_FUTURE_STAGE = "declared_future";
+// Native file selection has no Core RPC; its cancellation/handle lifetime is
+// tested at the Conveyor and real desktop boundaries instead.
+const NATIVE_ONLY_PROCEDURES = new Set(["selectMachineCredentialFile"]);
 const CASE_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)+$/;
 const SBR_SIMULATOR_CASE = "sbr-readiness-simulator";
 const PRELOAD_NAME_PATTERN = /^[a-z][A-Za-z0-9]*$/;
@@ -97,7 +100,8 @@ export function parseConveyorManifest(source) {
 
 export function flattenConveyorManifest(source) {
   const manifest = parseConveyorManifestValue(source);
-  return CONVEYOR_MODULES.flatMap((module) => Object.keys(manifest[module])).sort();
+  return CONVEYOR_MODULES.flatMap((module) => Object.keys(manifest[module]))
+    .filter((name) => !NATIVE_ONLY_PROCEDURES.has(name)).sort();
 }
 
 function matchesPattern(value, pattern) {

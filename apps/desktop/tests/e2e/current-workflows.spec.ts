@@ -5,6 +5,7 @@ import {
 import screenshotFixture from "../../release/macos/screenshots/fixture.json" with { type: "json" };
 import { expect, test } from "./fixtures";
 import { setupAndRunCurrentAccountingWorkflow } from "./support/current-accounting-workflow";
+import { callPairedApi, runPairedMcpSmoke } from "./support/local-api";
 
 test("runs the current accounting workflows through the packaged app", async ({
   electronHarness,
@@ -45,4 +46,65 @@ test("runs the current accounting workflows through the packaged app", async ({
   }
   expect(electronHarness.consoleErrors).toEqual([]);
   expect(electronHarness.pageErrors).toEqual([]);
+  const userData = await electronHarness.application.evaluate(({ app, dialog, Menu }) => {
+    dialog.showMessageBox = async () => ({ response: 0, checkboxChecked: false });
+    const menu = Menu.getApplicationMenu();
+    const item = menu?.getMenuItemById("tammy-integrations-pair");
+    if (!item) throw new Error("PAIRED_API_MENU_MISSING");
+    item.click(item, null, {} as KeyboardEvent);
+    return app.getPath("userData");
+  });
+  const connectionPath = path.join(userData, "local-integrations/connection.json");
+  await expect
+    .poll(async () =>
+      readFile(connectionPath).then(
+        () => true,
+        () => false,
+      ),
+    )
+    .toBe(true);
+  const accounts = await callPairedApi(connectionPath, "tammy.accounting.list_accounts");
+  expect(accounts).toMatchObject({
+    ok: true,
+    data: {
+      accounts: expect.arrayContaining([
+        expect.objectContaining({ name: fixture.accounts[0]?.name }),
+      ]),
+    },
+  });
+  const documents = await callPairedApi(connectionPath, "tammy.documents.list_metadata");
+  expect(documents).toMatchObject({
+    ok: true,
+    data: {
+      documents: [
+        expect.objectContaining({ sourceDisplayName: fixture.sourceDocument.sourceDisplayName }),
+      ],
+    },
+  });
+  expect(JSON.stringify(documents)).not.toContain("extractedText");
+  const mcp = await runPairedMcpSmoke(connectionPath);
+  expect(mcp.tools).toMatchObject({
+    tools: expect.arrayContaining([
+      expect.objectContaining({ name: "tammy.accounting.list_accounts" }),
+    ]),
+  });
+  expect(mcp.result).not.toHaveProperty("isError", true);
+  expect(JSON.stringify(mcp.result)).toContain(fixture.accounts[0]?.name);
+  expect(JSON.stringify(mcp.resource)).toContain(fixture.business.legalName);
+  await electronHarness.application.evaluate(({ Menu }) => {
+    const item = Menu.getApplicationMenu()?.getMenuItemById("tammy-integrations-revoke");
+    if (!item) throw new Error("PAIRED_API_MENU_MISSING");
+    item.click(item, null, {} as KeyboardEvent);
+  });
+  await expect
+    .poll(async () =>
+      readFile(connectionPath).then(
+        () => false,
+        () => true,
+      ),
+    )
+    .toBe(true);
 });
+
+import { readFile } from "node:fs/promises";
+import path from "node:path";

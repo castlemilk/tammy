@@ -1,6 +1,7 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "allowImportingTsExtensions": true,
     // Keep dependency declarations strict for the desktop application bundle.
     "skipLibCheck": true,
     "types": ["node", "vite/client"],

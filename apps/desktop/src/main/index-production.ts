@@ -7,6 +7,7 @@ import {
   dialog,
   type Event,
   ipcMain,
+  Menu,
   net,
   protocol,
   session,
@@ -24,6 +25,12 @@ import {
   rendererLaunchScenarioArguments,
   requiresSimulatorProfile,
 } from "./launch-scenario";
+import { createDesktopLocalIntegration, type DesktopLocalIntegration } from "./local-integration";
+import { createLocalIntegrationMenuItems } from "./local-integration-menu";
+import {
+  createLocalIntegrationSession,
+  type LocalIntegrationSession,
+} from "./local-integration-session";
 import {
   createSbrFileIntake,
   type SbrFileIntake,
@@ -83,6 +90,9 @@ export function createProductionDependencies(
   let core: CoreProcess | undefined;
   let nativeWindow: BrowserWindow | undefined;
   let requestQuit: (() => void) | undefined;
+  let integration: DesktopLocalIntegration | undefined;
+  let integrationSession: LocalIntegrationSession | undefined;
+  let releaseIntegrationMenu: (() => void) | undefined;
   const releaseKind = resolveSbrFileReleaseKind({
     isMas:
       overrides.isMas ?? (process as NodeJS.Process & Readonly<{ mas?: boolean }>).mas === true,
@@ -129,15 +139,33 @@ export function createProductionDependencies(
       return core.start();
     },
     stop: async () => {
-      if (core) await core.stop();
+      try {
+        await integration?.revoke();
+      } finally {
+        if (core) await core.stop();
+      }
     },
   };
 
   return {
     applicationUrl: policy.applicationUrl,
-    cleanupSensitiveState: fileIntake.clear,
+    cleanupSensitiveState: () => {
+      fileIntake.clear();
+      integrationSession?.clear();
+      releaseIntegrationMenu?.();
+      releaseIntegrationMenu = undefined;
+    },
     core: coreBoundary,
-    createClient: createCoreClient,
+    createClient: (readiness) => {
+      integrationSession = createLocalIntegrationSession(createCoreClient(readiness), () => {
+        void integration?.revoke().catch(() => undefined);
+      });
+      integration = createDesktopLocalIntegration(
+        app.getPath("userData"),
+        integrationSession.createReader,
+      );
+      return integrationSession.client;
+    },
     createWindow: () => {
       const browser = new BrowserWindow({
         backgroundColor: "#f6f7f8",
@@ -152,6 +180,28 @@ export function createProductionDependencies(
         width: 1180,
       });
       nativeWindow = browser;
+      if (integration) {
+        const previousMenu = Menu.getApplicationMenu();
+        Menu.setApplicationMenu(
+          Menu.buildFromTemplate([
+            ...(process.platform === "darwin" ? [{ role: "appMenu" as const }] : []),
+            { role: "fileMenu" },
+            { role: "editMenu" },
+            { role: "viewMenu" },
+            {
+              label: "Integrations",
+              submenu: [
+                ...createLocalIntegrationMenuItems(integration, {
+                  showMessageBox: (options) => dialog.showMessageBox(browser, options),
+                  showItemInFolder: (filePath) => shell.showItemInFolder(filePath),
+                }),
+              ],
+            },
+            { role: "windowMenu" },
+          ]),
+        );
+        releaseIntegrationMenu = () => Menu.setApplicationMenu(previousMenu);
+      }
       browser.on("close", (event: Event) => {
         event.preventDefault();
         requestQuit?.();

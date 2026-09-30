@@ -1067,7 +1067,7 @@ test("loads coverage from the descriptor and production manifests", async (conte
       stage: "production",
       preload,
       cases: ["foundation/offline-ready"],
-      projections: [`${preload}_result`],
+      projections: [`${preload.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)}_result`],
       routes: ["/unlock"],
       roles: Object.fromEntries(ROLES.map((role) => [role, "allowed"])),
       principalFailures: ["AUTHENTICATION_REQUIRED"],
