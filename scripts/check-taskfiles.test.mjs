@@ -26,7 +26,7 @@ const scenarioFiles = [
 const allowedExecutablePatterns = [
   /^mise install$/,
   /^mise exec -- corepack prepare pnpm@11\.15\.0 --activate$/,
-  /^mise exec -- pnpm (?:--version|install --frozen-lockfile|check:toolchain|check:macos-store|test|core:build|build:manifest|desktop:start|desktop:test|desktop:typecheck|contracts|contracts:production|lint|sqlcipher:test|sqlcipher:build|desktop:package|desktop:e2e)$/,
+  /^mise exec -- pnpm (?:--version|install --frozen-lockfile|check:toolchain|check:macos-store|test|core:build|build:manifest|desktop:start|desktop:test|desktop:typecheck|contracts|contracts:production|lint|sqlcipher:test|sqlcipher:build|desktop:package|desktop:e2e|desktop:e2e:dev)$/,
   /^TAMMY_MACOS_SIGNING_MODE=(?:development|distribution) mise exec -- pnpm desktop:make:mas$/,
   /^mise exec -- pnpm --filter @tammy\/connect-client typecheck$/,
   /^mise exec -- pnpm --dir apps\/desktop package$/,
@@ -335,8 +335,9 @@ test("documentation presents Task scenarios as the local command front door", as
     "CFBundleVersion",
     "forces development signing",
     "force(?:s)? distribution signing",
-    "apps/desktop/out/Tammy-mas-arm64/Tammy.app",
-    "apps/desktop/out/make/pkg/arm64/Tammy-<version>-build.<number>.pkg",
+    ".tmp/macos-release/<version>/build-<number>/development/Tammy.app",
+    ".tmp/macos-release/<version>/build-<number>/distribution/Tammy.app",
+    ".tmp/macos-release/<version>/build-<number>/distribution/Tammy-<version>-build.<number>.pkg",
     "## Inspect the signed build",
     "codesign --verify",
     "App Sandbox",
@@ -567,6 +568,10 @@ test("local Task front door preserves the safe development contract", async () =
   assert.deepEqual(taskReferences(rootTasks["verify:release"]), ["test:verify:release"]);
   assert.deepEqual(taskReferences(rootTasks.build), ["build:desktop"]);
   assert.deepEqual(taskReferences(rootTasks.package), ["package:verify"]);
+  assert.match(rootTasks.dev.summary ?? "", /electron-vite/i);
+  assert.match(rootTasks.dev.summary ?? "", /persistent local accounting data/i);
+  assert.match(rootTasks.build.desc ?? "", /Builder directory application/i);
+  assert.match(rootTasks.package.desc ?? "", /Builder application/i);
   assert.deepEqual(Object.keys(site.tasks ?? {}), [
     "dev",
     "test",
@@ -684,6 +689,9 @@ test("local Task front door preserves the safe development contract", async () =
   }
   assert.deepEqual(shellCommands(dev.tasks.core), ["mise exec -- pnpm core:build"]);
   assert.deepEqual(shellCommands(dev.tasks.launch), ["mise exec -- pnpm desktop:start"]);
+  assert.match(dev.tasks.launch.summary ?? "", /electron-vite/i);
+  assert.match(dev.tasks.launch.summary ?? "", /persistent local accounting data/i);
+  assert.match(dev.tasks["accounting:fresh"].summary ?? "", /electron-vite scenario owner/i);
 
   const sbrLeaves = new Map([
     [
@@ -874,11 +882,22 @@ test("local Task front door preserves the safe development contract", async () =
     "node scripts/launch-local-scenario.mjs --electron-vite",
     "the launcher owns one narrow electron-vite package scenario",
   );
+  assert.equal(
+    rootPackage.scripts?.["desktop:start"],
+    "pnpm core:build && pnpm sbr-helper:build && pnpm build:manifest && pnpm --dir apps/desktop start",
+    "persistent development builds native Core, simulator inputs, and the manifest before electron-vite",
+  );
+  assert.equal(
+    rootPackage.scripts?.["desktop:e2e:dev"],
+    "pnpm core:build && pnpm sbr-helper:build && pnpm build:manifest && pnpm --dir apps/desktop build && pnpm --dir apps/desktop exec playwright test --config playwright.electron-vite.config.ts",
+    "the root owns one focused real electron-vite development smoke",
+  );
 
   const testTasks = (await readTaskfile("taskfiles/test.yml")).tasks;
   for (const taskName of [
     "core",
     "desktop",
+    "desktop:dev",
     "contracts",
     "sqlcipher",
     "verify:quick",
@@ -895,6 +914,12 @@ test("local Task front door preserves the safe development contract", async () =
   }
   assert.deepEqual(shellCommands(testTasks.core), ["mise exec -- pnpm test"]);
   assert.deepEqual(shellCommands(testTasks.desktop), ["mise exec -- pnpm desktop:test"]);
+  assert.deepEqual(taskReferences(testTasks["desktop:dev"]), []);
+  assert.deepEqual(shellCommands(testTasks["desktop:dev"]), ["mise exec -- pnpm desktop:e2e:dev"]);
+  assert.match(testTasks["desktop:dev"].summary ?? "", /real electron-vite/i);
+  assert.match(testTasks["desktop:dev"].summary ?? "", /isolated user data/i);
+  assert.match(testTasks["desktop:dev"].summary ?? "", /Electron.*Core.*cleanup/is);
+  assert.match(testTasks["desktop:dev"].summary ?? "", /not packaged evidence/i);
   assert.deepEqual(shellCommands(testTasks.contracts), ["mise exec -- pnpm contracts"]);
   const sqlcipherPrecondition = testTasks.sqlcipher.preconditions?.[0];
   assert.equal(sqlcipherPrecondition?.sh, `mise exec -- node -e '${targetPreconditionScript}'`);
@@ -947,6 +972,7 @@ test("local Task front door preserves the safe development contract", async () =
   }
   assert.deepEqual(taskReferences(testTasks["verify:release"]), [
     "verify:full",
+    "desktop:dev",
     ":package:e2e",
     ":release:check",
   ]);
@@ -954,6 +980,7 @@ test("local Task front door preserves the safe development contract", async () =
     "mise exec -- node scripts/check-clean-tree.mjs",
     "mise exec -- pnpm contracts:production",
     { task: "verify:full" },
+    { task: "desktop:dev" },
     { task: ":package:e2e" },
     { task: ":release:check" },
   ]);
@@ -983,6 +1010,8 @@ test("local Task front door preserves the safe development contract", async () =
     /sbr-helper:build|build:manifest|apps\/desktop package/,
   );
   assert.match(buildTasks.desktop.summary ?? "", /verified.*single build owner/i);
+  assert.match(buildTasks.desktop.summary ?? "", /electron-builder/i);
+  assert.doesNotMatch(buildTasks.desktop.summary ?? "", /Forge/i);
 
   const packageTasks = (await readTaskfile("taskfiles/package.yml")).tasks;
   assert.equal(packageTasks.launch, undefined, "package:launch must not exist");
@@ -1018,6 +1047,8 @@ test("local Task front door preserves the safe development contract", async () =
   );
   assert.deepEqual(shellCommands(packageTasks.verify), ["mise exec -- pnpm desktop:package"]);
   assert.deepEqual(shellCommands(packageTasks.e2e), ["mise exec -- pnpm desktop:e2e"]);
+  assert.match(packageTasks.verify.summary ?? "", /Builder directory application/i);
+  assert.match(packageTasks.e2e.summary ?? "", /real Builder application/i);
 
   const releaseTasks = (await readTaskfile("taskfiles/release.yml")).tasks;
   assert.deepEqual(Object.keys(releaseTasks), [
@@ -1238,10 +1269,19 @@ test("local Task front door preserves the safe development contract", async () =
   );
   assert.match(
     releaseTasks.development.summary ?? "",
-    /apps\/desktop\/out\/Tammy-mas-arm64\/Tammy\.app/,
+    /\.tmp\/macos-release\/<version>\/build-<number>\/development\/Tammy\.app/,
   );
   assert.match(releaseTasks.development.summary ?? "", /no installer.*upload/i);
   assert.match(releaseTasks.candidate.summary ?? "", /JSON.*pkg.*SHA-256.*Gatekeeper/is);
+  assert.match(
+    releaseTasks.candidate.summary ?? "",
+    /\.tmp\/macos-release\/<version>\/build-<number>\/distribution\/Tammy\.app/,
+  );
+  assert.match(
+    releaseTasks.candidate.summary ?? "",
+    /\.tmp\/macos-release\/<version>\/build-<number>\/distribution\/Tammy-<version>-build\.<number>\.pkg/,
+  );
+  assert.match(releaseTasks.candidate.summary ?? "", /never upload.*submit/is);
   assert.deepEqual(shellCommands(releaseTasks["pre-upload-check"]), [
     "mise exec -- node scripts/check-macos-store.mjs --require-state PRE_UPLOAD_READY",
   ]);
@@ -1380,6 +1420,7 @@ test("local Task front door preserves the safe development contract", async () =
     ...ciBaseCommands,
     "TAMMY_SQLCIPHER_REPRODUCIBILITY=1 pnpm sqlcipher:test",
     "go test -race -tags tammy_sqlcipher ./services/core/internal/storage/sqlcipher/... -count=1",
+    "pnpm desktop:e2e:dev",
     "pnpm desktop:e2e",
   ]);
   assert.deepEqual(shellCommands(ciTasks["windows-smoke"]), [

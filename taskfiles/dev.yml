@@ -16,8 +16,8 @@ tasks:
   launch:
     desc: Start the supported local Electron development application.
     summary: |
-      Development uses persistent local-core-development data and development-memory-anchor
-      resets; it is not production or package evidence.
+      electron-vite uses persistent local accounting data under local-core-development
+      and development-memory-anchor resets; it is not production or package evidence.
     preconditions:
       - sh: >-
           mise exec -- node -e 'const target = process.argv[1] ?? `${process.platform}/${process.arch}`; if (!new Set(["darwin/arm64", "win32/x64"]).has(target)) { console.error(`UNSUPPORTED_SQLCIPHER_TARGET:${target}`); process.exit(1); }'
@@ -42,7 +42,8 @@ tasks:
     summary: |
       The simulator is synthetic and network-disabled. EVTE is non-production and requires signed external inputs.
       No live credential is accepted by Task. BAS remains preparation-only with no submit or lodge action.
-      Production SBR is unavailable. The isolated retained root is printed after exit.
+      Production SBR is unavailable. The electron-vite scenario owner prints the isolated
+      retained root after exit.
     preconditions:
       - sh: >-
           mise exec -- node -e 'const target = process.argv[1] ?? `${process.platform}/${process.arch}`; if (!new Set(["darwin/arm64", "win32/x64"]).has(target)) { console.error(`UNSUPPORTED_SQLCIPHER_TARGET:${target}`); process.exit(1); }'

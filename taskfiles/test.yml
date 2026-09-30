@@ -11,6 +11,15 @@ tasks:
     cmds:
       - mise exec -- pnpm desktop:test
 
+  desktop:dev:
+    desc: Run real Electron development acceptance through electron-vite.
+    summary: |
+      Builds the native resources, manifest, and outputs, then launches the real electron-vite
+      development runtime with isolated user data and proves Electron and Core cleanup.
+      This smoke is not packaged evidence.
+    cmds:
+      - mise exec -- pnpm desktop:e2e:dev
+
   contracts:
     desc: Check protobuf contracts, generated outputs, and contract evidence policy.
     cmds:
@@ -58,8 +67,9 @@ tasks:
   verify:release:
     desc: Run macOS arm64 release-readiness checks without creating a signed candidate.
     summary: |
-      Requires a clean tree, verifies production contracts and ordinary packaged E2E,
-      then checks repository-owned App Store inputs. It does not sign or upload anything.
+      Requires a clean tree, verifies production contracts, real electron-vite development,
+      and ordinary packaged E2E, then checks repository-owned App Store inputs. It does not
+      sign or upload anything.
     preconditions:
       - sh: >-
           mise exec -- node -e 'const target = process.argv[1] ?? `${process.platform}/${process.arch}`; if (target !== "darwin/arm64") { console.error(`UNSUPPORTED_MACOS_RELEASE_TARGET:${target}`); process.exit(1); }'
@@ -68,5 +78,6 @@ tasks:
       - mise exec -- node scripts/check-clean-tree.mjs
       - mise exec -- pnpm contracts:production
       - task: verify:full
+      - task: desktop:dev
       - task: :package:e2e
       - task: :release:check

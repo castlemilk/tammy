@@ -4,8 +4,8 @@ tasks:
   verify:
     desc: Build and verify an ordinary supported local desktop package.
     summary: |
-      Authenticates the local package artifact, source manifest, native core, and package
-      signatures/resources. It deliberately excludes runtime launch, isolated Electron
+      Authenticates the local Builder directory application artifact, source manifest, native core,
+      and package signatures/resources. It deliberately excludes runtime launch, isolated Electron
       userData, and orphan proof; package:e2e owns that evidence. This ordinary local
       package is not production or App Store evidence.
     preconditions:
@@ -18,7 +18,7 @@ tasks:
   e2e:
     desc: Run packaged Electron acceptance on a supported native target.
     summary: |
-      Authenticates the source manifest, native core, and package signatures/resources;
+      Authenticates the source manifest, native core, and real Builder application;
       it provides isolated Electron userData, runtime, and orphan evidence through packaged
       acceptance. This ordinary local package is not production or App Store evidence.
     preconditions:

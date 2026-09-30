@@ -25,10 +25,11 @@ tasks:
       - mise exec -- pnpm build:manifest
 
   desktop:
-    desc: Build and verify the supported Electron package.
+    desc: Build and verify the supported Electron Builder directory application.
     summary: |
       Produces a verified local desktop package under a single build owner.
-      The owner protects helper staging through manifest publication, Forge packaging, and verification.
+      The owner protects helper staging through manifest publication, electron-builder assembly,
+      and verification.
     preconditions:
       - sh: >-
           mise exec -- node -e 'const target = process.argv[1] ?? `${process.platform}/${process.arch}`; if (!new Set(["darwin/arm64", "win32/x64"]).has(target)) { console.error(`UNSUPPORTED_SQLCIPHER_TARGET:${target}`); process.exit(1); }'

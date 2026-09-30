@@ -49,8 +49,8 @@ tasks:
   development:
     desc: Create a locally signed macOS development MAS app for device testing.
     summary: |
-      Produces apps/desktop/out/Tammy-mas-arm64/Tammy.app for local development testing.
-      It signs a development app, produces no installer, and does not upload,
+      Produces .tmp/macos-release/<version>/build-<number>/development/Tammy.app for local
+      development testing. It signs a development app, produces no installer, and does not upload,
       publish, or submit anything.
     vars:
       NODE_TARGET:
@@ -139,9 +139,10 @@ tasks:
   candidate:
     desc: Create and locally validate a signed macOS distribution package candidate.
     summary: |
-      Emits the validated JSON pkg path, SHA-256, and Gatekeeper assessment for
-      local release evidence. It signs a distribution candidate but does not upload,
-      publish, or submit anything.
+      Produces .tmp/macos-release/<version>/build-<number>/distribution/Tammy.app and
+      .tmp/macos-release/<version>/build-<number>/distribution/Tammy-<version>-build.<number>.pkg,
+      then emits the validated JSON pkg path, SHA-256, and Gatekeeper assessment for local release
+      evidence. It signs a distribution candidate but will never upload, publish, or submit anything.
     vars:
       NODE_TARGET:
         sh: >-

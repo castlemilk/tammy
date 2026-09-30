@@ -27,7 +27,7 @@ tasks:
       - pnpm lint
 
   macos:
-    desc: Run the canonical macOS arm64 SQLCipher and packaged CI scenario.
+    desc: Run canonical macOS arm64 SQLCipher, development, and packaged CI scenarios.
     cmds:
       - >-
         task --version | node -e 'let output=""; process.stdin.on("data", (chunk) => output += chunk); process.stdin.on("end", () => { if (output.trim() !== "3.52.0") { console.error(`UNSUPPORTED_TASK_VERSION:${output.trim()}`); process.exit(1); } })'
@@ -35,6 +35,7 @@ tasks:
       - node scripts/check-clean-tree.mjs
       - TAMMY_SQLCIPHER_REPRODUCIBILITY=1 pnpm sqlcipher:test
       - go test -race -tags tammy_sqlcipher ./services/core/internal/storage/sqlcipher/... -count=1
+      - pnpm desktop:e2e:dev
       - pnpm desktop:e2e
 
   windows-smoke:
