@@ -1,4 +1,4 @@
-import { mkdir, readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { pdfStreams } from "../../../../packages/invoices/test-support/pdf-text.ts";
@@ -47,6 +47,11 @@ test("runs the current accounting workflows through the packaged app", async ({
   );
   const fixture = validateScreenshotFixture(screenshotFixture);
   let page = electronHarness.currentPage();
+  const screenshotDirectory = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "../../../../.tmp/invoice-cost-table-e2e",
+  );
+  await mkdir(screenshotDirectory, { recursive: true });
   const targets = [
     { heading: "Overview", link: "Overview", ready: "Nothing needs review" },
     {
@@ -75,23 +80,22 @@ test("runs the current accounting workflows through the packaged app", async ({
     const actualSnapshot = normalizeAccessibilitySnapshot(
       await page.locator("body").ariaSnapshot(),
     );
+    const accessibilityPath = path.join(screenshotDirectory, `current-workflow-${index + 1}.json`);
+    const screenPath = path.join(screenshotDirectory, `current-workflow-${index + 1}.png`);
+    await writeFile(accessibilityPath, JSON.stringify(actualSnapshot, null, 2));
+    await page.screenshot({ animations: "disabled", path: screenPath });
     await testInfo.attach(`current-workflow-${index + 1}-accessibility`, {
-      body: JSON.stringify(actualSnapshot, null, 2),
+      path: accessibilityPath,
       contentType: "text/plain",
     });
     await testInfo.attach(`current-workflow-${index + 1}-screen`, {
-      body: await page.screenshot({ animations: "disabled" }),
+      path: screenPath,
       contentType: "image/png",
     });
     expect.soft(actualSnapshot).toEqual(definition.completeAccessibilityText);
   }
   expect(electronHarness.consoleErrors).toEqual([]);
   expect(electronHarness.pageErrors).toEqual([]);
-  const screenshotDirectory = path.resolve(
-    path.dirname(fileURLToPath(import.meta.url)),
-    "../../../../.tmp/invoice-cost-table-e2e",
-  );
-  await mkdir(screenshotDirectory, { recursive: true });
   const userData = await electronHarness.application.evaluate(({ app, dialog, Menu }) => {
     dialog.showMessageBox = async () => ({ response: 0, checkboxChecked: false });
     const menu = Menu.getApplicationMenu();
@@ -413,7 +417,9 @@ test("runs the current accounting workflows through the packaged app", async ({
   await expect(page.getByTestId("business-invoice-income")).toContainText("$600.33");
   await expect(page.getByTestId("business-outstanding")).toContainText("$660.37");
   await page.getByRole("link", { name: "Journals", exact: true }).click();
-  await expect(page.getByText(/INV-MCP-001/).first()).toBeVisible();
+  await expect(
+    page.getByRole("row", { name: "30/09/2026 Invoice INV-MCP-001 $660.37 Posted", exact: true }),
+  ).toBeVisible();
   await regenerateInvoiceBas(page, "2026-07-01", "2026-09-30", "$660.37", "$60.04");
   await expect(page.getByRole("table", { name: "BAS sales sources", exact: true })).toContainText(
     "Issued invoice",

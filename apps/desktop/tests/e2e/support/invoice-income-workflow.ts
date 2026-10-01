@@ -171,7 +171,9 @@ export async function recordInvoiceReceipt(
   await page.getByRole("button", { name: "Record payment", exact: true }).click();
   await page.getByLabel("Payment date", { exact: true }).fill(paymentDate);
   await page.getByLabel("Amount received (AUD)", { exact: true }).fill(amount);
-  await expect(page.getByLabel("Bank account", { exact: true })).not.toHaveValue("");
+  await expect(page.getByRole("combobox", { name: "Bank account", exact: true })).not.toHaveValue(
+    "",
+  );
   await page.getByLabel("Payment reference (optional)", { exact: true }).fill(reference);
   await page.getByRole("button", { name: "Save payment", exact: true }).click();
   await expect(page.getByText("Payment recorded.", { exact: true })).toBeVisible();
