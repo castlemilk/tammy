@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
+	"database/sql"
 	"fmt"
 	"io"
 	"net/http"
@@ -149,6 +150,32 @@ func TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealSer
 	if err != nil || verified.Msg.Verification == nil || verified.Msg.Organisation == nil ||
 		verified.Msg.Organisation.VerificationState != tammyv1.OrganisationVerificationState_ORGANISATION_VERIFICATION_STATE_VERIFIED {
 		t.Fatalf("RecordEntityVerification() = %#v, %v", verified, err)
+	}
+	if !t.Run("organisation read preserves the committed snapshot while another writer is active", func(t *testing.T) {
+		writer, err := module.db.BeginEncryptedTx(context.Background(), &sql.TxOptions{Isolation: sql.LevelSerializable})
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer writer.Rollback()
+		if _, err := writer.ExecContext(context.Background(), `UPDATE organisations SET legal_name=? WHERE id=?`, "Uncommitted seller change", created.Msg.Organisation.Id); err != nil {
+			t.Fatal(err)
+		}
+
+		// The settings refresh reads the organisation alongside GetCurrentUser,
+		// which writes a session touch. Reading must not reserve the writer slot.
+		read, err := organisationClient.GetOrganisation(context.Background(), get)
+		if err != nil {
+			t.Fatalf("GetOrganisation must read while another transaction owns the writer reservation: %v", err)
+		}
+		if !proto.Equal(read.Msg.Organisation, verified.Msg.Organisation) {
+			t.Fatalf("GetOrganisation did not retain the committed profile snapshot: %v", read.Msg.Organisation)
+		}
+		if read.Msg.CurrentVerification == nil || read.Msg.CurrentVerification.State != verified.Msg.Verification.State ||
+			!proto.Equal(read.Msg.CurrentVerification.ExpiresAt, verified.Msg.Verification.ExpiresAt) {
+			t.Fatalf("GetOrganisation did not retain the committed verification summary: %v", read.Msg.CurrentVerification)
+		}
+	}) {
+		return
 	}
 	if installed := module.InstalledAccountCount(context.Background()); installed != 12 {
 		t.Fatalf("installed account count = %d, want 12", installed)

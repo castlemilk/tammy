@@ -1170,7 +1170,9 @@ func (handler *organisationHandler) GetOrganisation(ctx context.Context, request
 	if err := handler.identity.RequireActiveSessionReadOnly(ctx, request.Msg.Authentication); err != nil {
 		return nil, connect.NewError(connect.CodePermissionDenied, ErrLedgerModule)
 	}
-	tx, err := handler.database.BeginEncryptedTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	// Keep profile and evidence in one read snapshot without reserving SQLite's
+	// writer slot, which concurrent session-touch transactions also need.
+	tx, err := handler.database.BeginEncryptedTx(ctx, nil)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
 	}
