@@ -38,6 +38,7 @@ describe("electron-vite configuration", () => {
         target ?? {},
       );
       expect(merged.build.rollupOptions.external).toContain("@formepdf/core");
+      expect(merged.build.rollupOptions.external).toContain("@formepdf/react");
       expect(
         merged.build.rollupOptions.external.some((entry: unknown) => typeof entry === "function"),
       ).toBe(false);

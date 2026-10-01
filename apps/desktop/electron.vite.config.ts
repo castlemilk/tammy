@@ -6,11 +6,20 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "electron-vite";
 
 const desktopRoot = dirname(fileURLToPath(import.meta.url));
-const electronRuntimeExternals = ["electron", "@formepdf/core", /^node:/, ...builtinModules];
+// Forme loads WASM beside its package and compares component function identities.
+// Keep both packages external in an array that survives Electron preset merging.
+const electronRuntimeExternals = [
+  "electron",
+  "@formepdf/core",
+  "@formepdf/react",
+  /^node:/,
+  ...builtinModules,
+];
 
 export const isElectronRuntimeExternal = (id: string): boolean =>
   id === "electron" ||
   id === "@formepdf/core" ||
+  id === "@formepdf/react" ||
   id.startsWith("node:") ||
   builtinModules.includes(id);
 
