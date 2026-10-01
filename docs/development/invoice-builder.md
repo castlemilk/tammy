@@ -13,13 +13,17 @@ mise exec -- task dev
 
 Create or unlock a workspace, sign in, and complete the organisation profile. Open **Invoices** in the sidebar. Seller name and ABN come from the current organisation; enter the seller address, customer details, invoice number, issue/due dates, payment instructions and line items.
 
-For expense-based lines, first upload a document in **Documents** and complete its review. The invoice expense picker uses only reviewed documents from the same organisation. Choose a source and review the description, quantity, cost, markup and selling price. Source costs do not establish the tax treatment of the onward sale: choose that explicitly. Changes to an invoice do not modify the source expense.
+Edit the invoice in the **Invoice line items** table. Enter description, quantity, private unit cost, selling price and GST treatment; line totals include GST. Costs are optional, but private profit remains unknown until every line has a cost, including an explicit zero when appropriate. The live summary shows subtotal, GST, total due, private cost and profit before GST. Partial input stays visible for correction before saving.
+
+For expense-based lines, first upload a document in **Documents** and complete its review. The **Reviewed expenses** table uses only reviewed documents from the same organisation. Search by description, select one or more expenses, enter a markup percentage and choose **Add selected expenses**. Each selected expense becomes a quantity-one line linked to its original document, with the net expense as private cost and markup applied to its selling price. Already-linked expenses are marked **Added**; removing their invoice line makes them available again. Refreshing expenses preserves invoice edits.
+
+Review selling price and GST treatment after importing expenses. Source GST does not establish the tax treatment of the onward sale: choose that explicitly. Editing private invoice costs does not modify the source expense or ledger. An invalid markup or selection exceeding the 50-line limit adds no expenses and preserves the selection for correction.
 
 Enable the GST-registered checkbox only when the seller is registered. Tammy does not infer GST registration from an ABN or the organisation's GST accounting basis. Choose taxable, GST-free, input-taxed or out-of-scope treatment for each line. Prices and costs are ex-GST AUD amounts.
 
 Save the draft before exporting. Draft PDFs are clearly marked as not issued. **Issue invoice** validates the seller/customer details and dates, then requires confirmation. Issued documents are immutable. If the organisation's legal name or ABN has changed since saving, save and review the draft again before issuing; the core will not silently replace the reviewed seller identity. Reopening the workspace retains saved drafts and issued documents; optimistic versions prevent silently overwriting another edit.
 
-Use **Export PDF** to choose a destination in the native save dialog. Cancellation saves nothing. Internal costs, margins and source-document IDs are excluded from customer PDFs. Export does not send the document or store a payment.
+Use **Export PDF** to choose a destination in the native save dialog. Save any edits first: export uses the saved version and stays disabled while the editor has unsaved changes. Cancellation saves nothing. Internal costs, profit and source-document IDs are excluded from customer PDFs. Export does not send the document or store a payment.
 
 ## Generate a proposal through MCP
 

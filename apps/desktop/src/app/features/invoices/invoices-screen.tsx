@@ -6,10 +6,23 @@ import {
   validateInvoiceForIssue,
 } from "@tammy/invoices/model";
 import { assertInvoicePdfReady } from "@tammy/invoices/pdf-policy";
-import { Download, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Download, Plus, RefreshCw } from "lucide-react";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 
 import { Button } from "../../components/ui/button";
+import {
+  appendExpenseLines,
+  blankLine,
+  type EditorDraft,
+  type EditorLine,
+  editorToDraft,
+  type InvoiceExpense,
+  toEditor,
+} from "./invoice-editor";
+import { InvoiceLineTable, invoiceFieldClass } from "./invoice-line-table";
+import { ReviewedExpenseTable } from "./reviewed-expense-table";
+
+export type { InvoiceExpense } from "./invoice-editor";
 
 export interface InvoiceRecord {
   readonly id: string;
@@ -18,13 +31,6 @@ export interface InvoiceRecord {
   readonly sellerName: string;
   readonly sellerAbn: string;
   readonly draft: InvoiceDraftData;
-}
-
-export interface InvoiceExpense {
-  readonly id: string;
-  readonly description: string;
-  readonly subtotalMinor: number;
-  readonly gstMinor: number;
 }
 
 export interface InvoicesApi {
@@ -36,21 +42,9 @@ export interface InvoicesApi {
   getProposal(): Promise<InvoiceDraftData | undefined>;
 }
 
-type DraftLine = InvoiceDraftData["lines"][number];
-interface EditorLine {
-  readonly key: string;
-  readonly description: string;
-  readonly quantity: string;
-  readonly unitPrice: string;
-  readonly unitCost: string;
-  readonly taxTreatment: DraftLine["taxTreatment"];
-  readonly sourceDocumentId?: string;
-}
-type EditorDraft = Omit<InvoiceDraftData, "lines"> & { readonly lines: readonly EditorLine[] };
 type Replacement = { readonly editor: EditorDraft; readonly record?: InvoiceRecord };
 
-const fieldClass =
-  "focus-ring h-8 w-full min-w-0 rounded-[4px] border border-border bg-background px-2 text-[11px] text-foreground disabled:opacity-70";
+const fieldClass = invoiceFieldClass;
 const labelClass = "grid min-w-0 gap-1 text-[10px] font-medium text-foreground";
 
 export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
@@ -63,13 +57,22 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
-  const [expenseId, setExpenseId] = useState("");
+  const [selectedExpenseIds, setSelectedExpenseIds] = useState<readonly string[]>([]);
+  const [expensesLoading, setExpensesLoading] = useState(true);
+  const [expensesError, setExpensesError] = useState<string>();
   const [markup, setMarkup] = useState("0");
   const [replacement, setReplacement] = useState<Replacement>();
   const [confirmIssue, setConfirmIssue] = useState(false);
   const dirty = JSON.stringify(editor) !== baseline;
   const issued = current?.state === "issued";
   const fullyCosted = editor.lines.every((line) => line.unitCost.trim().length > 0);
+  const linkedExpenseIds = useMemo(
+    () =>
+      new Set(
+        editor.lines.flatMap((line) => (line.sourceDocumentId ? [line.sourceDocumentId] : [])),
+      ),
+    [editor.lines],
+  );
   const totals = useMemo(() => {
     try {
       return calculateInvoice(editorToDraft(editor));
@@ -92,6 +95,8 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
       .finally(() => {
         if (active) setLoading(false);
       });
+    setExpensesLoading(true);
+    setExpensesError(undefined);
     void api
       .listExpenses()
       .then((value) => {
@@ -99,12 +104,25 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
       })
       .catch(() => {
         if (active)
-          setError("Reviewed expenses could not be loaded. Manual line items are still available.");
+          setExpensesError(
+            "Reviewed expenses could not be loaded. Retry to refresh the list. Manual line items are still available.",
+          );
+      })
+      .finally(() => {
+        if (active) setExpensesLoading(false);
       });
     return () => {
       active = false;
     };
   }, [api]);
+
+  useEffect(() => {
+    const available = new Set(expenses.map((expense) => expense.id));
+    setSelectedExpenseIds((previous) => {
+      const next = previous.filter((id) => available.has(id) && !linkedExpenseIds.has(id));
+      return next.length === previous.length ? previous : next;
+    });
+  }, [expenses, linkedExpenseIds]);
 
   function edit(value: Partial<EditorDraft>) {
     setEditor((previous) => ({ ...previous, ...value }));
@@ -113,7 +131,13 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
   }
 
   function editLine(key: string, value: Partial<EditorLine>) {
-    edit({ lines: editor.lines.map((line) => (line.key === key ? { ...line, ...value } : line)) });
+    edit({
+      lines: editor.lines.map((line) =>
+        line.key === key
+          ? { ...line, ...value, ...(line.untouched ? { untouched: false } : {}) }
+          : line,
+      ),
+    });
   }
 
   function replace(next: Replacement) {
@@ -124,6 +148,7 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
     setConfirmIssue(false);
     setError(undefined);
     setNotice(next.record ? undefined : "Review this draft before saving.");
+    setSelectedExpenseIds([]);
   }
 
   function requestReplacement(next: Replacement) {
@@ -161,15 +186,17 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
   }
 
   async function refreshExpenses() {
-    setBusy(true);
-    setError(undefined);
+    if (expensesLoading || busy) return;
+    setExpensesLoading(true);
+    setExpensesError(undefined);
     try {
       setExpenses(await api.listExpenses());
-      setExpenseId("");
     } catch {
-      setError("Reviewed expenses could not be loaded. Your invoice edits are unchanged.");
+      setExpensesError(
+        "Reviewed expenses could not be loaded. Retry to refresh the list. Your invoice edits and previous expenses are still here.",
+      );
     } finally {
-      setBusy(false);
+      setExpensesLoading(false);
     }
   }
 
@@ -257,48 +284,22 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
     }
   }
 
-  function addExpense() {
-    const expense = expenses.find((item) => item.id === expenseId);
-    if (!expense) return;
+  function addExpenses() {
+    if (busy || issued || expensesLoading) return;
+    const selected = expenses.filter((expense) => selectedExpenseIds.includes(expense.id));
+    if (!selected.length) return;
     try {
-      const percent = decimalToInteger(markup, 2, "Markup", 100_000);
-      if (!Number.isSafeInteger(expense.subtotalMinor) || expense.subtotalMinor < 0)
-        throw new Error("Expense cost is invalid.");
-      const price =
-        expense.subtotalMinor + Math.floor((expense.subtotalMinor * percent + 5_000) / 10_000);
-      if (price > 100_000_000) throw new Error("The marked-up unit price is too large.");
-      const first = editor.lines[0];
-      const emptyPlaceholder =
-        editor.lines.length === 1 &&
-        first &&
-        !first.description.trim() &&
-        first.quantity === "1" &&
-        first.unitPrice === "0.00" &&
-        first.unitCost === "" &&
-        !first.sourceDocumentId;
-      edit({
-        lines: [
-          ...(emptyPlaceholder ? [] : editor.lines),
-          {
-            ...blankLine(editor.gstRegistered),
-            description: expense.description,
-            unitPrice: decimalText(price, 2),
-            unitCost: decimalText(expense.subtotalMinor, 2),
-            sourceDocumentId: expense.id,
-          },
-        ],
-      });
+      edit({ lines: appendExpenseLines(editor, selected, markup) });
+      setSelectedExpenseIds([]);
       setError(undefined);
-      setNotice(
-        "Expense added as a billable line. Review the selling price and GST treatment; the expense itself is unchanged.",
-      );
+      setNotice("Expenses added as billable lines. Review the selling price and GST treatment.");
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : "Check the expense and markup.");
+      setError(failure instanceof Error ? failure.message : "Check the expenses and markup.");
     }
   }
 
   return (
-    <div className="mx-auto grid w-full max-w-[1100px] gap-5">
+    <div className="mx-auto grid w-full max-w-[1200px] gap-5">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-[18px] font-semibold tracking-[-0.02em] text-foreground">Invoices</h1>
@@ -360,7 +361,7 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
         </p>
       ) : null}
 
-      <div className="grid grid-cols-[minmax(0,1fr)_220px] gap-5 max-[900px]:grid-cols-1">
+      <div className="grid grid-cols-[minmax(0,1fr)_220px] gap-5 max-[1180px]:grid-cols-1">
         <form className="grid min-w-0 gap-5" onSubmit={save}>
           <fieldset
             className="grid gap-4 rounded-[6px] border border-border bg-surface p-4"
@@ -469,173 +470,42 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
             </p>
           </fieldset>
 
-          <section className="grid gap-3" aria-labelledby="invoice-lines-heading">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-[12px] font-semibold" id="invoice-lines-heading">
-                Line items
-              </h2>
-              <Button
-                className="h-8 text-[10px]"
-                disabled={busy || issued || editor.lines.length >= 50}
-                onClick={() => edit({ lines: [...editor.lines, blankLine(editor.gstRegistered)] })}
-                type="button"
-                variant="outline"
-              >
-                <Plus aria-hidden="true" className="size-3" /> Add line item
-              </Button>
-            </div>
-            {editor.lines.map((line, index) => (
-              <fieldset
-                className="grid gap-3 rounded-[6px] border border-border bg-surface p-3"
-                disabled={busy || issued}
-                key={line.key}
-              >
-                <legend className="px-1 text-[10px] font-semibold text-muted-foreground">
-                  Line item {index + 1}
-                </legend>
-                <div className="flex items-end gap-2">
-                  <label className={`${labelClass} flex-1`}>
-                    Description
-                    <input
-                      aria-label={`Description ${index + 1}`}
-                      className={fieldClass}
-                      maxLength={500}
-                      onChange={(event) => editLine(line.key, { description: event.target.value })}
-                      value={line.description}
-                    />
-                  </label>
-                  <Button
-                    aria-label={`Remove line ${index + 1}`}
-                    className="h-8 px-2"
-                    disabled={editor.lines.length === 1}
-                    onClick={() =>
-                      edit({ lines: editor.lines.filter((item) => item.key !== line.key) })
-                    }
-                    type="button"
-                    variant="ghost"
-                  >
-                    <Trash2 aria-hidden="true" className="size-3.5" />
-                  </Button>
-                </div>
-                <div className="grid grid-cols-[90px_1fr_1fr_150px] gap-3 max-[620px]:grid-cols-2">
-                  <label className={labelClass}>
-                    Quantity
-                    <input
-                      aria-label={`Quantity ${index + 1}`}
-                      className={fieldClass}
-                      inputMode="decimal"
-                      onChange={(event) => editLine(line.key, { quantity: event.target.value })}
-                      value={line.quantity}
-                    />
-                  </label>
-                  <label className={labelClass}>
-                    Unit price (AUD)
-                    <input
-                      aria-label={`Unit price ${index + 1}`}
-                      className={fieldClass}
-                      inputMode="decimal"
-                      onChange={(event) => editLine(line.key, { unitPrice: event.target.value })}
-                      value={line.unitPrice}
-                    />
-                  </label>
-                  <label className={labelClass}>
-                    Unit cost (private)
-                    <input
-                      aria-label={`Unit cost ${index + 1}`}
-                      className={fieldClass}
-                      inputMode="decimal"
-                      onChange={(event) => editLine(line.key, { unitCost: event.target.value })}
-                      value={line.unitCost}
-                    />
-                  </label>
-                  <label className={labelClass}>
-                    GST treatment
-                    <select
-                      aria-label={`GST treatment ${index + 1}`}
-                      className={fieldClass}
-                      onChange={(event) =>
-                        editLine(line.key, {
-                          taxTreatment: event.target.value as DraftLine["taxTreatment"],
-                        })
-                      }
-                      value={line.taxTreatment}
-                    >
-                      <option disabled={!editor.gstRegistered} value="taxable">
-                        Taxable · 10%
-                      </option>
-                      <option value="gst-free">GST-free</option>
-                      <option value="input-taxed">Input-taxed</option>
-                      <option value="out-of-scope">Out of scope</option>
-                    </select>
-                  </label>
-                </div>
-                <div className="flex items-center justify-between gap-3 text-[10px] text-muted-foreground">
-                  <span>
-                    {line.sourceDocumentId
-                      ? "Linked to a reviewed expense · internal only"
-                      : "Manual line item"}
-                  </span>
-                  <span>
-                    Line total {totals ? formatAud(totals.lines[index]?.totalMinor ?? 0) : "—"}
-                  </span>
-                </div>
-              </fieldset>
-            ))}
-          </section>
-
+          <InvoiceLineTable
+            busy={busy}
+            gstRegistered={editor.gstRegistered}
+            lines={editor.lines}
+            onAdd={() => edit({ lines: [...editor.lines, blankLine(editor.gstRegistered)] })}
+            onEdit={editLine}
+            onRemove={(key) => edit({ lines: editor.lines.filter((line) => line.key !== key) })}
+            readOnly={Boolean(issued)}
+            totals={totals}
+          />
           {!issued ? (
-            <fieldset className="grid gap-3 border-t border-border pt-4" disabled={busy}>
-              <legend className="text-[11px] font-semibold">Build from an expense</legend>
-              <Button
-                className="h-7 justify-self-end text-[10px]"
-                onClick={refreshExpenses}
-                type="button"
-                variant="ghost"
-              >
-                <RefreshCw aria-hidden="true" className="size-3" /> Refresh expenses
-              </Button>
-              <div className="grid grid-cols-[minmax(0,1fr)_120px_auto] items-end gap-3 max-[620px]:grid-cols-1">
-                <label className={labelClass}>
-                  Reviewed expense
-                  <select
-                    className={fieldClass}
-                    onChange={(event) => setExpenseId(event.target.value)}
-                    value={expenseId}
-                  >
-                    <option value="">Choose an expense…</option>
-                    {expenses.map((expense) => (
-                      <option key={expense.id} value={expense.id}>
-                        {expense.description} · {formatAud(expense.subtotalMinor)} cost
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className={labelClass}>
-                  Markup percentage
-                  <input
-                    className={fieldClass}
-                    inputMode="decimal"
-                    onChange={(event) => setMarkup(event.target.value)}
-                    value={markup}
-                  />
-                </label>
-                <Button
-                  className="h-8 text-[10px]"
-                  disabled={!expenseId || editor.lines.length >= 50}
-                  onClick={addExpense}
-                  type="button"
-                  variant="outline"
-                >
-                  Add expense as line
-                </Button>
-              </div>
-              <p className="text-[10px] leading-5 text-muted-foreground">
-                {expenses.length
-                  ? "Uses the expense’s net cost. Markup affects your selling price, not the original expense or ledger."
-                  : "Review an expense document first, or enter a cost directly on a manual line."}
-              </p>
-            </fieldset>
+            <ReviewedExpenseTable
+              busy={busy}
+              error={expensesError}
+              expenses={expenses}
+              linkedIds={linkedExpenseIds}
+              loading={expensesLoading}
+              markup={markup}
+              onAdd={addExpenses}
+              onMarkup={setMarkup}
+              onRefresh={refreshExpenses}
+              onSelect={(id, selected) =>
+                setSelectedExpenseIds((previous) =>
+                  selected
+                    ? [...previous.filter((value) => value !== id), id]
+                    : previous.filter((value) => value !== id),
+                )
+              }
+              selectedIds={selectedExpenseIds}
+            />
           ) : null}
+          <p className="text-[10px] leading-5 text-muted-foreground">
+            Unit costs are private invoice estimates. Import uses the expense’s net cost; markup
+            changes your selling price. Editing a cost leaves the original reviewed document and
+            ledger unchanged.
+          </p>
 
           <fieldset
             className="grid grid-cols-2 gap-3 max-[620px]:grid-cols-1"
@@ -746,18 +616,18 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
             <div className="grid gap-2 border-t border-border pt-3">
               <h3 className="text-[10px] font-semibold">Internal · never on the PDF</h3>
               <MoneyRow
-                label={fullyCosted ? "Cost" : "Known cost"}
+                label={fullyCosted ? "Private cost" : "Known private cost"}
                 minor={totals?.costMinor}
                 testId="invoice-cost"
               />
               <MoneyRow
-                label="Margin (ex GST)"
+                label="Profit (ex GST)"
                 minor={fullyCosted ? totals?.marginMinor : undefined}
                 testId="invoice-margin"
               />
               {!fullyCosted ? (
                 <p className="text-[10px] leading-5 text-muted-foreground">
-                  Add a cost to every line to calculate margin. Enter 0 only for a known zero cost.
+                  Add a cost to every line to calculate profit. Enter 0 only for a known zero cost.
                 </p>
               ) : null}
             </div>
@@ -856,80 +726,4 @@ function newEditor(): EditorDraft {
     paymentInstructions: "",
     lines: [blankLine(false)],
   };
-}
-
-function blankLine(gstRegistered: boolean): EditorLine {
-  return {
-    key: crypto.randomUUID(),
-    description: "",
-    quantity: "1",
-    unitPrice: "0.00",
-    unitCost: "",
-    taxTreatment: gstRegistered ? "taxable" : "out-of-scope",
-  };
-}
-
-function toEditor(draft: InvoiceDraftData): EditorDraft {
-  return {
-    ...draft,
-    lines: draft.lines.map((line) => ({
-      key: crypto.randomUUID(),
-      description: line.description,
-      quantity: decimalText(line.quantityMilli, 3).replace(/\.?0+$/, ""),
-      unitPrice: decimalText(line.unitPriceMinor, 2),
-      unitCost: line.unitCostMinor === undefined ? "" : decimalText(line.unitCostMinor, 2),
-      taxTreatment: line.taxTreatment,
-      ...(line.sourceDocumentId ? { sourceDocumentId: line.sourceDocumentId } : {}),
-    })),
-  };
-}
-
-function editorToDraft(editor: EditorDraft): InvoiceDraftData {
-  return {
-    ...editor,
-    lines: editor.lines.map((line, index) => {
-      const quantityMilli = decimalToInteger(line.quantity, 3, `Quantity ${index + 1}`, 1_000_000);
-      if (quantityMilli < 1) throw new Error(`Quantity ${index + 1} must be greater than zero.`);
-      return {
-        description: line.description,
-        quantityMilli,
-        unitPriceMinor: decimalToInteger(line.unitPrice, 2, `Unit price ${index + 1}`, 100_000_000),
-        ...(line.unitCost.trim()
-          ? {
-              unitCostMinor: decimalToInteger(
-                line.unitCost,
-                2,
-                `Unit cost ${index + 1}`,
-                100_000_000,
-              ),
-            }
-          : {}),
-        taxTreatment: line.taxTreatment,
-        ...(line.sourceDocumentId ? { sourceDocumentId: line.sourceDocumentId } : {}),
-      };
-    }),
-  };
-}
-
-function decimalText(value: number, precision: number): string {
-  const scale = 10 ** precision;
-  return `${Math.floor(value / scale)}.${String(value % scale).padStart(precision, "0")}`;
-}
-
-function decimalToInteger(
-  value: string,
-  precision: number,
-  label: string,
-  maximum: number,
-): number {
-  const clean = value.trim();
-  if (!new RegExp(`^(?:\\d+(?:\\.\\d{0,${precision}})?|\\.\\d{1,${precision}})$`).test(clean))
-    throw new Error(
-      `${label} must be a non-negative number with at most ${precision === 2 ? "two" : "three"} decimal places.`,
-    );
-  const [whole = "0", fraction = ""] = clean.split(".");
-  const integer = Number(`${whole || "0"}${fraction.padEnd(precision, "0")}`);
-  if (!Number.isSafeInteger(integer) || integer > maximum)
-    throw new Error(`${label} is too large.`);
-  return integer;
 }

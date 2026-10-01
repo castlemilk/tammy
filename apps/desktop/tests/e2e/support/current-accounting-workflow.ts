@@ -752,6 +752,57 @@ export async function setupAndRunCurrentAccountingWorkflow(
   return workspace;
 }
 
+export async function addReviewedInvoiceExpense(
+  page: import("@playwright/test").Page,
+  workspace: AuthenticatedAccountingWorkspace,
+) {
+  const authentication = create(AuthenticationContextSchema, {
+    actorUserId: workspace.userId,
+    sessionId: workspace.sessionId,
+  });
+  const supplierName = "Invoice acceptance training";
+  const invoiceNumber = "TRAIN-001";
+  const candidate = create(DocumentCandidateSchema, {
+    supplierName,
+    invoiceNumber,
+    documentDate: POSTING_DATE,
+    subtotal: aud(6000n),
+    gst: aud(0n),
+    total: aud(6000n),
+  });
+  const extractedText = `${supplierName}\n${invoiceNumber}\nSubtotal 60.00\nGST 0.00\nTotal 60.00`;
+  const retained = await invokeProto(
+    page,
+    "ingestDocument",
+    ingestDocumentCodec,
+    create(IngestDocumentRequestSchema, {
+      commandContext: command(authentication, "019bb2ec-9500-7000-8000-000000000001"),
+      organisationId: workspace.organisationId,
+      sourceDisplayName: "invoice-acceptance-training.pdf",
+      mimeType: "application/pdf",
+      original: new TextEncoder().encode(`%PDF-1.7\n${extractedText}\n%%EOF`),
+      extractedText,
+      candidate,
+    }),
+  );
+  const document = retained.document;
+  if (!document) throw new Error("INVOICE_ACCEPTANCE_EXPENSE_MISSING");
+  expect(document.id).toMatch(UUID_V7);
+  const reviewed = await invokeProto(
+    page,
+    "saveDocumentReview",
+    saveDocumentReviewCodec,
+    create(SaveDocumentReviewRequestSchema, {
+      commandContext: command(authentication, "019bb2ec-9500-7000-8000-000000000002"),
+      documentId: document.id,
+      expectedVersion: document.version,
+      candidate,
+    }),
+  );
+  expect(reviewed.document).toMatchObject({ id: document.id, status: DocumentStatus.REVIEWED });
+  return { id: document.id, description: `${supplierName} · ${invoiceNumber}` };
+}
+
 const METHOD_MODULES = {
   completeBankReconciliation: "banking",
   createAccount: "accounting",
