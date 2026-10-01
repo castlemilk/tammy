@@ -13,7 +13,11 @@ const PRODUCTION_STAGE = "production";
 const DECLARED_FUTURE_STAGE = "declared_future";
 // Native file selection has no Core RPC; its cancellation/handle lifetime is
 // tested at the Conveyor and real desktop boundaries instead.
-const NATIVE_ONLY_PROCEDURES = new Set(["selectMachineCredentialFile"]);
+const NATIVE_ONLY_PROCEDURES = new Set([
+  "selectMachineCredentialFile",
+  "exportInvoicePdf",
+  "getInvoiceProposal",
+]);
 const CASE_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)+$/;
 const SBR_SIMULATOR_CASE = "sbr-readiness-simulator";
 const PRELOAD_NAME_PATTERN = /^[a-z][A-Za-z0-9]*$/;
@@ -101,7 +105,8 @@ export function parseConveyorManifest(source) {
 export function flattenConveyorManifest(source) {
   const manifest = parseConveyorManifestValue(source);
   return CONVEYOR_MODULES.flatMap((module) => Object.keys(manifest[module]))
-    .filter((name) => !NATIVE_ONLY_PROCEDURES.has(name)).sort();
+    .filter((name) => !NATIVE_ONLY_PROCEDURES.has(name))
+    .sort();
 }
 
 function matchesPattern(value, pattern) {
@@ -423,7 +428,9 @@ export function checkE2ECoverage({
     }
   }
   const coveredProductionPreloads = Object.entries(coverage.rpcs)
-    .filter(([rpcName, rpcCoverage]) => coverageStage(rpcCoverage, rpcName, "rpc") === PRODUCTION_STAGE)
+    .filter(
+      ([rpcName, rpcCoverage]) => coverageStage(rpcCoverage, rpcName, "rpc") === PRODUCTION_STAGE,
+    )
     .map(([, rpcCoverage]) => rpcCoverage.preload)
     .sort();
   for (const method of expectedPreloadMethods) {
@@ -438,12 +445,13 @@ export async function runE2ECoverage({
   requireProduction = false,
   root = process.cwd(),
 }) {
-  const [descriptorBytes, coverageSource, transitionsSource, conveyorManifestSource] = await Promise.all([
-    readFile(descriptorPath),
-    readFile(path.join(root, "test/e2e/coverage.yaml"), "utf8"),
-    readFile(path.join(root, "test/e2e/transitions.yaml"), "utf8"),
-    readFile(path.join(root, "apps/desktop/src/shared/conveyor-manifest.json"), "utf8"),
-  ]);
+  const [descriptorBytes, coverageSource, transitionsSource, conveyorManifestSource] =
+    await Promise.all([
+      readFile(descriptorPath),
+      readFile(path.join(root, "test/e2e/coverage.yaml"), "utf8"),
+      readFile(path.join(root, "test/e2e/transitions.yaml"), "utf8"),
+      readFile(path.join(root, "apps/desktop/src/shared/conveyor-manifest.json"), "utf8"),
+    ]);
   const coverage = parseCoverageManifest(coverageSource);
   const transitionIndex = parseCoverageManifest(transitionsSource);
   let conveyorManifest;

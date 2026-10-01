@@ -9,13 +9,17 @@ import {
   McpError,
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-
+import { INVOICE_DRAFT_JSON_SCHEMA } from "@tammy/invoices/model";
 import {
   LOCAL_API_DEADLINE_MS,
   LOCAL_API_MAX_REQUEST_BYTES,
   LOCAL_API_MAX_RESPONSE_BYTES,
 } from "./broker.ts";
-import { LOCAL_API_READ_RESOURCES, LOCAL_API_READ_TOOLS } from "./catalog.ts";
+import {
+  INVOICE_PROPOSAL_TOOL,
+  LOCAL_API_READ_RESOURCES,
+  LOCAL_API_READ_TOOLS,
+} from "./catalog.ts";
 import { type LocalApiConnection, validateLocalApiConnection } from "./connection.ts";
 import { validateLocalApiRequest } from "./request.ts";
 
@@ -166,11 +170,11 @@ async function brokerRequest(
 export function createLocalApiMcpServer(value: LocalApiConnection): Server {
   const connection = validateLocalApiConnection(value);
   const server = new Server(
-    { name: "tammy-local-read", version: "0.0.0" },
+    { name: "tammy-local", version: "0.0.0" },
     {
       capabilities: { resources: {}, tools: {} },
       instructions:
-        "Read-only access to the paired, unlocked Tammy desktop's current organisation. Writes and credentials are unavailable.",
+        "Read the paired, unlocked Tammy desktop's current organisation and propose editable invoice drafts. The user must review and save proposals in Tammy. No invoice save, issue, ledger posting, sending or credential access is available.",
     },
   );
   server.setRequestHandler(ListToolsRequestSchema, async () => {
@@ -180,17 +184,30 @@ export function createLocalApiMcpServer(value: LocalApiConnection): Server {
       throw new McpError(ErrorCode.InternalError, errorCode(error));
     }
     return {
-      tools: LOCAL_API_READ_TOOLS.map((tool) => ({
-        annotations: {
-          destructiveHint: false,
-          idempotentHint: true,
-          openWorldHint: false,
-          readOnlyHint: true,
+      tools: [
+        ...LOCAL_API_READ_TOOLS.map((tool) => ({
+          annotations: {
+            destructiveHint: false,
+            idempotentHint: true,
+            openWorldHint: false,
+            readOnlyHint: true,
+          },
+          description: tool.description,
+          inputSchema: { additionalProperties: false, properties: {}, type: "object" as const },
+          name: tool.name,
+        })),
+        {
+          name: INVOICE_PROPOSAL_TOOL.name,
+          description: INVOICE_PROPOSAL_TOOL.description,
+          inputSchema: INVOICE_DRAFT_JSON_SCHEMA,
+          annotations: {
+            destructiveHint: false,
+            idempotentHint: true,
+            openWorldHint: false,
+            readOnlyHint: false,
+          },
         },
-        description: tool.description,
-        inputSchema: { additionalProperties: false, properties: {}, type: "object" as const },
-        name: tool.name,
-      })),
+      ],
     };
   });
   server.setRequestHandler(ListResourcesRequestSchema, async () => {

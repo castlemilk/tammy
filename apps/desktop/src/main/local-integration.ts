@@ -16,6 +16,7 @@ export interface DesktopLocalIntegration {
 export function createDesktopLocalIntegration(
   userData: string,
   createReader: () => Promise<Reader>,
+  onRevoke: () => void = () => {},
 ): DesktopLocalIntegration {
   const directory = path.join(userData, "local-integrations");
   const connectionPath = path.join(directory, "connection.json");
@@ -25,6 +26,7 @@ export function createDesktopLocalIntegration(
   let published = false;
   const revoke = (): Promise<void> => {
     generation += 1;
+    onRevoke();
     const previous = broker;
     broker = undefined;
     let cleanupFailed = false;
@@ -37,7 +39,9 @@ export function createDesktopLocalIntegration(
         else cleanupFailed = true;
       }
     }
-    closing = Promise.all([closing.catch(() => undefined), previous?.close()]).then(() => undefined);
+    closing = Promise.all([closing.catch(() => undefined), previous?.close()]).then(
+      () => undefined,
+    );
     return closing.then(() => {
       if (cleanupFailed) throw new Error("LOCAL_CONNECTION_CLEANUP_FAILED");
     });

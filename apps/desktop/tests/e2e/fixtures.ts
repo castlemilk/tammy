@@ -766,7 +766,10 @@ function fixtureOperations(
         });
       };
       const harness: ElectronHarness = {
-        application: launched.application,
+        get application() {
+          if (!state.application) throw new Error("ELECTRON_APPLICATION_MISSING");
+          return state.application;
+        },
         consoleErrors: state.consoleErrors,
         page: launched.page,
         pageErrors: state.pageErrors,

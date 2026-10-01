@@ -24,7 +24,7 @@ describe("native local integration menu", () => {
     await click("tammy-integrations-pair");
     expect(showMessageBox).toHaveBeenCalledWith(
       expect.objectContaining({
-        buttons: ["Enable read access", "Cancel"],
+        buttons: ["Enable access", "Cancel"],
         defaultId: 1,
         cancelId: 1,
       }),

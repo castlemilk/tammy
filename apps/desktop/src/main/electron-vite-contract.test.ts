@@ -2,9 +2,9 @@
 
 import { builtinModules } from "node:module";
 import { resolve } from "node:path";
-import config, { isElectronRuntimeExternal } from "../../electron.vite.config";
-import type { LibraryOptions } from "vite";
+import { type LibraryOptions, mergeConfig } from "vite";
 import { describe, expect, test } from "vitest";
+import config, { isElectronRuntimeExternal } from "../../electron.vite.config";
 
 const desktopRoot = process.cwd();
 
@@ -21,13 +21,29 @@ function pluginNames(plugins: unknown): string[] {
   return plugins
     .flatMap((plugin) => (Array.isArray(plugin) ? plugin : [plugin]))
     .flatMap((plugin) =>
-      typeof plugin === "object" && plugin !== null && "name" in plugin && typeof plugin.name === "string"
+      typeof plugin === "object" &&
+      plugin !== null &&
+      "name" in plugin &&
+      typeof plugin.name === "string"
         ? [plugin.name]
         : [],
     );
 }
 
 describe("electron-vite configuration", () => {
+  test("keeps the PDF engine external when Electron presets merge their external list", () => {
+    for (const target of [config.main, config.preload]) {
+      const merged = mergeConfig(
+        { build: { rollupOptions: { external: ["electron"] } } },
+        target ?? {},
+      );
+      expect(merged.build.rollupOptions.external).toContain("@formepdf/core");
+      expect(
+        merged.build.rollupOptions.external.some((entry: unknown) => typeof entry === "function"),
+      ).toBe(false);
+    }
+  });
+
   test("uses the fixed Tammy build contract", () => {
     expect(config.main?.build?.outDir).toBe(resolve(desktopRoot, "out/main"));
     expect(config.preload?.build?.outDir).toBe(resolve(desktopRoot, "out/preload"));

@@ -11,6 +11,13 @@ tasks:
     cmds:
       - mise exec -- pnpm desktop:test
 
+  invoices:
+    desc: Validate exact invoice arithmetic, offline pdfcn rendering and invoice editor behaviour.
+    cmds:
+      - mise exec -- pnpm --filter @tammy/invoices test
+      - mise exec -- pnpm --filter @tammy/invoices typecheck
+      - mise exec -- pnpm --filter @tammy/desktop exec vitest run src/app/features/invoices src/main/invoice-export.test.ts src/main/invoice-issue.test.ts src/main/core-client-invoices.test.ts src/main/local-integration-session.test.ts
+
   desktop:dev:
     desc: Run real Electron development acceptance through electron-vite.
     summary: |
@@ -48,6 +55,7 @@ tasks:
       - mise exec -- pnpm check:toolchain
       - mise exec -- pnpm test
       - mise exec -- pnpm --filter @tammy/connect-client typecheck
+      - mise exec -- pnpm --filter @tammy/invoices typecheck
       - mise exec -- pnpm --filter @tammy/local-api typecheck
       - mise exec -- pnpm desktop:typecheck
       - mise exec -- pnpm contracts

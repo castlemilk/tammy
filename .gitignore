@@ -8,6 +8,7 @@
 /.tmp/sbr-build-owner/
 .tmp/sbr-helper-build/
 .tmp/sbr-e2e/
+/.tmp/invoice-preview/
 node_modules/
 .pnpm-store/
 **/.vite/

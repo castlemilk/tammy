@@ -1,0 +1,25 @@
+{
+  "name": "@tammy/invoices",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test src/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@formepdf/core": "0.25.0",
+    "@formepdf/react": "0.25.0",
+    "react": "19.2.7"
+  },
+  "devDependencies": {
+    "@types/node": "26.1.1",
+    "@types/react": "19.2.17"
+  },
+  "exports": {
+    ".": "./src/model.ts",
+    "./model": "./src/model.ts",
+    "./pdf": "./src/pdf.ts",
+    "./pdf-policy": "./src/pdf-policy.ts"
+  }
+}

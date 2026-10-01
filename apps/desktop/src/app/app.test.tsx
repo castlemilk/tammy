@@ -3,12 +3,20 @@ import { resolve } from "node:path";
 import { create } from "@bufbuild/protobuf";
 import { TimestampSchema } from "@bufbuild/protobuf/wkt";
 import {
+  ListDocumentsRequestSchema,
+  ListDocumentsResponseSchema,
+} from "@tammy/connect-client/tammy/v1/documents_pb.js";
+import {
   FactorState,
   GetCurrentUserRequestSchema,
   GetCurrentUserResponseSchema,
   Role,
   UserSchema,
 } from "@tammy/connect-client/tammy/v1/identity_pb.js";
+import {
+  ListInvoicesRequestSchema,
+  ListInvoicesResponseSchema,
+} from "@tammy/connect-client/tammy/v1/invoices_pb.js";
 import {
   EntityVerificationSchema,
   GetOrganisationRequestSchema,
@@ -173,6 +181,29 @@ function mockUnavailableReadiness() {
   });
 }
 
+function mockEmptyInvoicesAndDocuments() {
+  const invoices = createProtoMethodCodec({
+    input: ListInvoicesRequestSchema,
+    maximumRequestBytes: 8_192,
+    maximumResponseBytes: 16_777_216,
+    output: ListInvoicesResponseSchema,
+  });
+  const documents = createProtoMethodCodec({
+    input: ListDocumentsRequestSchema,
+    maximumRequestBytes: 16_384,
+    maximumResponseBytes: 4 * 1024 * 1024,
+    output: ListDocumentsResponseSchema,
+  });
+  procedures().accounting.listInvoices.mockImplementation(async (frame) => {
+    invoices.decodeRequest(frame);
+    return invoices.encodeResponse(create(ListInvoicesResponseSchema));
+  });
+  procedures().documents.listDocuments.mockImplementation(async (frame) => {
+    documents.decodeRequest(frame);
+    return documents.encodeResponse(create(ListDocumentsResponseSchema));
+  });
+}
+
 afterEach(() => {
   fixture?.queryClient.clear();
   fixture = undefined;
@@ -183,6 +214,77 @@ afterEach(() => {
 });
 
 describe("App", () => {
+  it("retains unsaved invoice edits while looking up documents without exposing the hidden editor", async () => {
+    installConveyorFixture(vi.fn().mockResolvedValue(diagnostics));
+    mockEmptyInvoicesAndDocuments();
+    const user = userEvent.setup();
+    render(<App />);
+    const navigation = screen.getByRole("navigation", { name: "Primary" });
+
+    await user.click(within(navigation).getByRole("link", { name: "Invoices" }));
+    await screen.findByRole("heading", { name: "Invoices", level: 1 });
+    await user.type(screen.getByRole("textbox", { name: "Customer name" }), "Unsaved customer");
+    await user.type(screen.getByRole("textbox", { name: "Description 1" }), "Expense follow-up");
+
+    await user.click(within(navigation).getByRole("link", { name: "Documents" }));
+    expect(await screen.findByRole("heading", { name: "Documents", level: 1 })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Invoices", level: 1 })).toBeNull();
+    expect(screen.queryByRole("textbox", { name: "Customer name" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Save draft" })).toBeNull();
+    const hiddenCustomer = screen.getByDisplayValue("Unsaved customer");
+    expect(hiddenCustomer.closest("[inert]")?.getAttribute("aria-hidden")).toBe("true");
+    expect((hiddenCustomer.closest("[hidden]") as HTMLElement).hidden).toBe(true);
+
+    await user.click(within(navigation).getByRole("link", { name: "Invoices" }));
+    expect((screen.getByRole("textbox", { name: "Customer name" }) as HTMLInputElement).value).toBe(
+      "Unsaved customer",
+    );
+    expect((screen.getByRole("textbox", { name: "Description 1" }) as HTMLInputElement).value).toBe(
+      "Expense follow-up",
+    );
+    expect(procedures().accounting.listInvoices).toHaveBeenCalledOnce();
+    expect(procedures().accounting.saveInvoiceDraft).not.toHaveBeenCalled();
+    expect(window.sessionStorage.getItem("tammy.session.active")).not.toContain("Unsaved customer");
+  });
+
+  it("does not fetch invoice data before the editor is visited", async () => {
+    installConveyorFixture(vi.fn().mockResolvedValue(diagnostics));
+    render(<App />);
+    await screen.findByText(/Local engine ready/);
+    expect(procedures().accounting.listInvoices).not.toHaveBeenCalled();
+  });
+
+  it("clears ephemeral invoice edits when the authenticated app session is replaced", async () => {
+    installConveyorFixture(vi.fn().mockResolvedValue(diagnostics));
+    mockEmptyInvoicesAndDocuments();
+    window.history.replaceState(null, "", "/invoices");
+    const user = userEvent.setup();
+    const view = render(<App />);
+    await user.type(
+      screen.getByRole("textbox", { name: "Customer name" }),
+      "Previous session customer",
+    );
+    view.unmount();
+
+    const retained = JSON.parse(window.sessionStorage.getItem("tammy.session.active") ?? "{}");
+    window.sessionStorage.setItem(
+      "tammy.session.active",
+      JSON.stringify({
+        ...retained,
+        sessionId: "01900f3c-7b2e-7cc4-98c4-dc0c0c074003",
+        organisationId: "01900f3c-7b2e-7cc4-98c4-dc0c0c074004",
+      }),
+    );
+    render(<App />);
+    expect((screen.getByRole("textbox", { name: "Customer name" }) as HTMLInputElement).value).toBe(
+      "",
+    );
+    expect(window.sessionStorage.getItem("tammy.session.active")).not.toContain(
+      "Previous session customer",
+    );
+    expect(procedures().accounting.saveInvoiceDraft).not.toHaveBeenCalled();
+  });
+
   it("keeps the simulator warning visible and opens authenticated doctor readiness", async () => {
     installConveyorFixture(vi.fn().mockResolvedValue(diagnostics));
     mockAuthoritativeSettings([Role.WORKSPACE_ADMIN]);
@@ -571,6 +673,8 @@ describe("App", () => {
     expect(document.activeElement).toBe(screen.getByRole("link", { name: "Overview" }));
     await user.tab();
     expect(document.activeElement).toBe(screen.getByRole("link", { name: "Documents" }));
+    await user.tab();
+    expect(document.activeElement).toBe(screen.getByRole("link", { name: "Invoices" }));
     await user.tab();
     expect(document.activeElement).toBe(screen.getByRole("link", { name: "Banking" }));
   });

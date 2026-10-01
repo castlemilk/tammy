@@ -52,6 +52,17 @@ import type {
   SignInResponse,
 } from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import { IdentityService } from "@tammy/connect-client/tammy/v1/identity_pb.js";
+import {
+  type GetInvoiceRequest,
+  type GetInvoiceResponse,
+  InvoiceService,
+  type IssueInvoiceRequest,
+  type IssueInvoiceResponse,
+  type ListInvoicesRequest,
+  type ListInvoicesResponse,
+  type SaveInvoiceDraftRequest,
+  type SaveInvoiceDraftResponse,
+} from "@tammy/connect-client/tammy/v1/invoices_pb.js";
 import type {
   CreateOrganisationRequest,
   CreateOrganisationResponse,
@@ -120,6 +131,12 @@ const EXPECTED_API_VERSION = "tammy.v1";
 const CORE_VERSION_PATTERN = /^[\x20-\x7e]{1,128}$/;
 
 export interface CoreClient {
+  readonly saveInvoiceDraft: (
+    request: SaveInvoiceDraftRequest,
+  ) => Promise<SaveInvoiceDraftResponse>;
+  readonly getInvoice: (request: GetInvoiceRequest) => Promise<GetInvoiceResponse>;
+  readonly listInvoices: (request: ListInvoicesRequest) => Promise<ListInvoicesResponse>;
+  readonly issueInvoice: (request: IssueInvoiceRequest) => Promise<IssueInvoiceResponse>;
   readonly createAccount: (request: CreateAccountRequest) => Promise<CreateAccountResponse>;
   readonly listAccounts: (request: ListAccountsRequest) => Promise<ListAccountsResponse>;
   readonly postManualJournal: (
@@ -250,6 +267,7 @@ export function createCoreClient(
   });
   const systemClient = createClient(SystemService, transport);
   const accountingClient = createClient(AccountingService, transport);
+  const invoiceClient = createClient(InvoiceService, transport);
   const bankingClient = createClient(BankingService, transport);
   const documentClient = createClient(DocumentService, transport);
   const overviewClient = createClient(OverviewService, transport);
@@ -269,6 +287,14 @@ export function createCoreClient(
   };
 
   return Object.freeze({
+    saveInvoiceDraft: (request: SaveInvoiceDraftRequest) =>
+      coreRequest(() => invoiceClient.saveInvoiceDraft(request)),
+    getInvoice: (request: GetInvoiceRequest) =>
+      coreRequest(() => invoiceClient.getInvoice(request)),
+    listInvoices: (request: ListInvoicesRequest) =>
+      coreRequest(() => invoiceClient.listInvoices(request)),
+    issueInvoice: (request: IssueInvoiceRequest) =>
+      coreRequest(() => invoiceClient.issueInvoice(request)),
     createAccount: (request: CreateAccountRequest) =>
       coreRequest(() => accountingClient.createAccount(request)),
     listAccounts: (request: ListAccountsRequest) =>

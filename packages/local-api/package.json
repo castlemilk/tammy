@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@tammy/invoices": "workspace:*",
     "@modelcontextprotocol/sdk": "1.29.0",
     "zod": "3.25.76"
   },

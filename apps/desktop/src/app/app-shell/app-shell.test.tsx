@@ -60,6 +60,7 @@ it("renders the walkthrough app shell", async () => {
   ).toEqual([
     "Overview",
     "Documents",
+    "Invoices",
     "Banking",
     "Chart of accounts",
     "Journals",

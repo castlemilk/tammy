@@ -138,6 +138,8 @@ The electron-vite, Conveyor, and Builder migration gives the desktop a typed rep
 - [ ] Aged receivables, overdue workflow, and source-to-journal/GST provenance.
 - [ ] PDF generation and local email/share handoff without requiring vendor cloud storage.
 
+Implemented first invoice-document slice: versioned encrypted drafts, editable manual/reviewed-expense lines, exact ex-GST AUD calculations, mixed tax treatments, immutable issued snapshots, offline pdfcn PDFs and human-reviewed MCP proposals. See [Invoice builder](invoice-builder.md). This does not complete BOOK-02: customer registers, quotes, recurring billing, credit notes, settlements, receivables posting and delivery remain outstanding.
+
 **Exit:** Sales documents, settlements, receivables control, bank matches, financial reports, and GST labels reconcile exactly.
 
 ### BOOK-03 — Purchases, payables, and expenses

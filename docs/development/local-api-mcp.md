@@ -1,6 +1,6 @@
 # Local API and MCP
 
-The development desktop can grant read-only access to its current signed-in organisation through a loopback HTTP API and a stdio MCP adapter. Access is off until you enable it in Tammy. The adapter uses the same API and cannot run accounting commands, import files, or submit a BAS.
+The desktop can grant access to its current signed-in organisation through a loopback HTTP API and a stdio MCP adapter. Access is off until you enable it in Tammy. Clients can read connected workflows and stage an editable invoice proposal. They cannot save or issue invoices, post accounting commands, import files, or submit a BAS.
 
 ## Enable access
 
@@ -10,7 +10,7 @@ Start the supported development app from the repository root:
 mise exec -- task dev
 ```
 
-Create or open and unlock your encrypted workspace, sign in, and complete organisation setup. Choose `Integrations → Enable local API & MCP…` in the native application menu and confirm `Enable read access`. Tammy shows the absolute private connection-file path. `Integrations → Show local connection file` reveals it in the file manager.
+Create or open and unlock your encrypted workspace, sign in, and complete organisation setup. Choose `Integrations → Enable local API & MCP…` in the native application menu and confirm `Enable access`. Tammy shows the absolute private connection-file path. `Integrations → Show local connection file` reveals it in the file manager.
 
 The file is `local-integrations/connection.json` below Electron's user-data directory. The usual macOS path is `~/Library/Application Support/Tammy/local-integrations/connection.json`; use the path Tammy displays for your running app. It has mode `0600` and contains `version`, a random loopback `origin`, and a private `capability`. A client with this file can read the current organisation's data. Keep it out of Git, logs, screenshots, and shared folders. Do not copy the capability into client configuration or a shell argument.
 
@@ -57,8 +57,8 @@ The broker listens only at the file's `http://127.0.0.1:<port>` origin. Each req
 
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| `GET /v1/capabilities` | No body | API version, 12 read tools, and 9 read resources. |
-| `POST /v1/read` | JSON tool call or resource read | `{ "ok": true, "data": ... }`, or a redacted error code. |
+| `GET /v1/capabilities` | No body | API version, 14 read tools, one invoice proposal tool, and 10 resources. |
+| `POST /v1/read` | JSON tool call, invoice proposal, or resource read | `{ "ok": true, "data": ... }`, or a redacted error code. |
 
 This example reads the organisation without displaying the bearer capability. Run it from the repository root after enabling access:
 
@@ -85,7 +85,7 @@ if (!response.ok) process.exitCode = 1;
 NODE
 ```
 
-A resource read uses `{ "version": "v1", "operation": "resource.read", "uri": "tammy://current/organisation" }` as the body instead. Tool arguments are empty; requests cannot supply an organisation ID, date, page cursor, or arbitrary Core procedure.
+A resource read uses `{ "version": "v1", "operation": "resource.read", "uri": "tammy://current/organisation" }` as the body instead. Read-tool arguments are empty; requests cannot supply an organisation ID, authentication context, page cursor, or arbitrary Core procedure. `tammy.invoices.propose_draft` accepts the strict invoice draft fields described in [Invoice builder](invoice-builder.md).
 
 ## Read coverage and limits
 
@@ -97,6 +97,8 @@ A resource read uses `{ "version": "v1", "operation": "resource.read", "uri": "t
 | `tammy.banking.get_summary` | None |
 | `tammy.documents.list_metadata` | None |
 | `tammy.identity.get_current_user` | `tammy://current/user` |
+| `tammy.invoices.list_cost_sources` | None |
+| `tammy.invoices.list_invoices` | `tammy://current/invoices` |
 | `tammy.organisation.get_current` | `tammy://current/organisation` |
 | `tammy.reporting.get_attention_summary` | `tammy://current/reporting/attention` |
 | `tammy.reporting.get_current_bas_draft` | `tammy://current/reporting/bas-draft` |
@@ -104,11 +106,11 @@ A resource read uses `{ "version": "v1", "operation": "resource.read", "uri": "t
 | `tammy.sbr.get_readiness` | `tammy://current/sbr/readiness` |
 | `tammy.system.get_diagnostics` | `tammy://system/diagnostics` |
 
-List reads return only the first page, with a maximum of 200 entries. The current adapter cannot request the next page even if the response contains a next cursor. Trial balance uses today's Australia/Melbourne date; attention uses the current calendar quarter. This is bounded inspection, not a complete accounting export.
+List reads return only the first page, with a maximum of 200 entries (20 for saved invoices). The current adapter cannot request the next page even if the response contains a next cursor. Trial balance uses today's Australia/Melbourne date; attention uses the current calendar quarter. This is bounded inspection, not a complete accounting export.
 
-Document metadata excludes `extractedText` and `candidate`; the API does not return retained document bytes. SBR readiness excludes credential material. BAS remains a draft, with no submit or lodge action. Write-command coverage is the next tranche and is not implemented by this interface.
+Document metadata excludes `extractedText` and `candidate`; the cost-source tool separately projects reviewed supplier references and AUD amounts, never document bodies. Saved invoice reads include internal costs for the paired accounting client. SBR readiness excludes credential material. BAS remains a draft, with no submit or lodge action. Persistent write commands are not exposed by this interface; invoice proposals exist only in memory until the user explicitly reviews and saves them in Tammy.
 
-The broker limits request bodies to 16 KiB, responses to 1 MiB, and requests to five seconds. Clients should treat revocation, a closed broker, or a rejected session as a reason to stop and ask the operator to re-enable access. Do not log the connection file or authorization header when diagnosing failures.
+The broker limits request bodies to 128 KiB, responses to 1 MiB, and requests to five seconds. Clients should treat revocation, a closed broker, or a rejected session as a reason to stop and ask the operator to re-enable access. Do not log the connection file or authorization header when diagnosing failures.
 
 ## Verify the integration
 
@@ -117,4 +119,4 @@ mise exec -- task integrations:test
 mise exec -- task test:desktop:dev
 ```
 
-The focused task runs the local API package's tests and type-check. Desktop development acceptance exercises the real Electron integration path. The root test and type-check gates also include the package. These checks validate the local read-only boundary; they do not establish production release, Apple distribution signing, or ATO submission evidence.
+The focused task runs the local API package's tests and type-check. The packaged current-workflow acceptance exercises real HTTP and stdio MCP pairing, invoice proposal review, persistence and PDF export. The root gates include both packages. These checks do not establish production release, Apple distribution signing, or ATO submission evidence.

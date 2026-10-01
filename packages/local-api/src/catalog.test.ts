@@ -26,6 +26,8 @@ const expectedTools = [
   "tammy.banking.get_summary",
   "tammy.documents.list_metadata",
   "tammy.identity.get_current_user",
+  "tammy.invoices.list_cost_sources",
+  "tammy.invoices.list_invoices",
   "tammy.organisation.get_current",
   "tammy.reporting.get_attention_summary",
   "tammy.reporting.get_capability",
@@ -36,6 +38,7 @@ const expectedTools = [
 
 const expectedResources = [
   "tammy://current/accounts",
+  "tammy://current/invoices",
   "tammy://current/journals",
   "tammy://current/organisation",
   "tammy://current/reporting/attention",

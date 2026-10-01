@@ -37,11 +37,11 @@ const EXPOSED_BUSINESS_RPCS = [
   "tammy.v1.TaxService.GetCurrentBasDraft",
 ];
 
-test("coverage declares the exact normative policy for all 118 non-system RPCs", async () => {
+test("coverage declares the exact normative policy for all 122 non-system RPCs", async () => {
   const coverage = parseCoverageManifest(await readFile("test/e2e/coverage.yaml", "utf8"));
   const actualRpcNames = Object.keys(coverage.rpcs).filter((rpcName) => rpcName !== SYSTEM_RPC);
 
-  assert.equal(Object.keys(SLICE_ONE_RPC_POLICY).length, 118);
+  assert.equal(Object.keys(SLICE_ONE_RPC_POLICY).length, 122);
   assert.deepEqual(actualRpcNames.sort(), Object.keys(SLICE_ONE_RPC_POLICY).sort());
 
   for (const [rpcName, expected] of Object.entries(SLICE_ONE_RPC_POLICY)) {
@@ -59,6 +59,26 @@ test("coverage declares the exact normative policy for all 118 non-system RPCs",
       expected,
       rpcName,
     );
+  }
+});
+
+test("invoice draft and issue policy uses accounting-preparer roles and the dedicated invoice journey", async () => {
+  const coverage = parseCoverageManifest(await readFile("test/e2e/coverage.yaml", "utf8"));
+  assert.deepEqual(coverage.scenarios["E2E-19"].cases, ["invoices/mcp-builder-pdf"]);
+  for (const name of ["SaveInvoiceDraft", "IssueInvoice", "GetInvoice", "ListInvoices"]) {
+    const rpcName = `tammy.v1.InvoiceService.${name}`;
+    const policy = SLICE_ONE_RPC_POLICY[rpcName];
+    const write = name === "SaveInvoiceDraft" || name === "IssueInvoice";
+    assert.deepEqual(coverage.rpcs[rpcName].cases, ["invoices/mcp-builder-pdf"]);
+    assert.deepEqual(policy.routes, ["/invoices"]);
+    assert.equal(policy.roles.workspace_admin, "planned_allowed");
+    assert.equal(policy.roles.business_preparer, "planned_allowed");
+    assert.equal(
+      policy.roles.business_lodger,
+      write ? "planned_permission_denied" : "planned_allowed",
+    );
+    assert.equal(policy.roles.auditor, write ? "planned_permission_denied" : "planned_allowed");
+    assert.equal(policy.idempotency.mode, write ? "persistent_command" : "query");
   }
 });
 
@@ -297,6 +317,7 @@ test("coverage conflict failures match every public request concurrency field", 
     "proto/tammy/v1/accounting.proto",
     "proto/tammy/v1/banking.proto",
     "proto/tammy/v1/documents.proto",
+    "proto/tammy/v1/invoices.proto",
     "proto/tammy/v1/tax.proto",
     "proto/tammy/v1/audit.proto",
     "proto/tammy/v1/financial_close.proto",

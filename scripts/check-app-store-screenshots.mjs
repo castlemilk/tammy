@@ -34,6 +34,7 @@ const SHELL_ACCESSIBILITY_TEXT = [
   "Primary",
   "Overview",
   "Documents",
+  "Invoices",
   "Banking",
   "Chart of accounts",
   "Journals",

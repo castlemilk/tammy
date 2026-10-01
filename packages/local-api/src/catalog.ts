@@ -79,6 +79,22 @@ export const LOCAL_API_READ_TOOLS = deepFreeze([
     target: target("documents", "listDocuments"),
   },
   {
+    description:
+      "List reviewed expenses as invoice cost sources (AUD amounts and references only, no document bodies). Costs do not determine the correct GST treatment of your sale; the user must review it.",
+    input: emptyInput(),
+    name: "tammy.invoices.list_cost_sources",
+    readOnly: true,
+    target: target("documents", "listDocuments"),
+  },
+  {
+    description:
+      "List saved draft and issued invoices for the current organisation, including internal costs. Issued here means an immutable document, not delivery or ledger posting.",
+    input: emptyInput(),
+    name: "tammy.invoices.list_invoices",
+    readOnly: true,
+    target: target("accounting", "listInvoices"),
+  },
+  {
     description: "Read the signed-in user's public profile.",
     input: emptyInput(),
     name: "tammy.identity.get_current_user",
@@ -130,6 +146,13 @@ export const LOCAL_API_READ_TOOLS = deepFreeze([
 ] as const satisfies readonly LocalApiReadTool[]);
 
 export const LOCAL_API_READ_RESOURCES = deepFreeze([
+  {
+    description: "Saved invoices for the current organisation.",
+    mimeType: "application/json",
+    name: "Invoices",
+    target: target("accounting", "listInvoices"),
+    uri: "tammy://current/invoices",
+  },
   {
     description: "Accounts for the current organisation.",
     mimeType: "application/json",
@@ -197,3 +220,13 @@ export const LOCAL_API_READ_RESOURCES = deepFreeze([
 
 export type LocalApiReadToolName = (typeof LOCAL_API_READ_TOOLS)[number]["name"];
 export type LocalApiReadResourceUri = (typeof LOCAL_API_READ_RESOURCES)[number]["uri"];
+
+export const INVOICE_PROPOSAL_TOOL = deepFreeze({
+  name: "tammy.invoices.propose_draft",
+  description:
+    "Generate an editable AUD invoice proposal from line items, expenses or costs. Stages one proposal in Tammy for the signed-in user to review and save. Never saves, issues, posts or sends an invoice. Prices are ex GST; quantityMilli uses 1000 units per quantity of 1. Costs remain internal and are excluded from PDFs.",
+  readOnly: false,
+  input: { kind: "invoice-draft" },
+} as const);
+
+export const LOCAL_API_TOOLS = deepFreeze([...LOCAL_API_READ_TOOLS, INVOICE_PROPOSAL_TOOL]);

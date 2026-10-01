@@ -19,12 +19,18 @@ import {
 } from "@tammy/connect-client/tammy/v1/common_pb.js";
 import {
   DocumentSchema,
+  DocumentStatus,
+  GetDocumentRequestSchema,
   ListDocumentsRequestSchema,
 } from "@tammy/connect-client/tammy/v1/documents_pb.js";
 import {
   GetCurrentUserRequestSchema,
   GetCurrentUserResponseSchema,
 } from "@tammy/connect-client/tammy/v1/identity_pb.js";
+import {
+  ListInvoicesRequestSchema,
+  ListInvoicesResponseSchema,
+} from "@tammy/connect-client/tammy/v1/invoices_pb.js";
 import {
   GetOrganisationRequestSchema,
   GetOrganisationResponseSchema,
@@ -48,8 +54,12 @@ import {
   GetCurrentBasDraftRequestSchema,
   GetCurrentBasDraftResponseSchema,
 } from "@tammy/connect-client/tammy/v1/tax_pb.js";
+import {
+  calculateInvoice,
+  type InvoiceDraftData,
+  validateInvoiceDraft,
+} from "@tammy/invoices/model";
 import type { ValidatedLocalApiRequest } from "@tammy/local-api/request";
-
 import type { CoreClient } from "./core-client";
 
 const UUID_V7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
@@ -57,6 +67,15 @@ const UUID_V7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f
 export interface LocalIntegrationSession {
   readonly client: Readonly<CoreClient>;
   clear(): void;
+  clearInvoiceProposal(): void;
+  getInvoiceProposal(
+    authentication: Pick<AuthenticationContext, "actorUserId" | "sessionId">,
+    organisationId: string,
+  ): InvoiceDraftData | undefined;
+  captureCurrent(
+    authentication: Pick<AuthenticationContext, "actorUserId" | "sessionId">,
+    organisationId: string,
+  ): () => void;
   createReader(): Promise<(request: ValidatedLocalApiRequest) => Promise<unknown>>;
 }
 
@@ -68,13 +87,17 @@ export function createLocalIntegrationSession(
   let generation = 0;
   let authentication: AuthenticationContext | undefined;
   let organisationId: string | undefined;
+  let invoiceProposal: InvoiceDraftData | undefined;
+  let proposalGeneration = 0;
   const clear = () => {
     generation += 1;
     authentication = undefined;
     organisationId = undefined;
+    invoiceProposal = undefined;
+    proposalGeneration += 1;
     onInvalidate();
   };
-  const matches = (value: AuthenticationContext | undefined) =>
+  const matches = (value: Pick<AuthenticationContext, "actorUserId" | "sessionId"> | undefined) =>
     authentication !== undefined &&
     value?.actorUserId === authentication.actorUserId &&
     value.sessionId === authentication.sessionId;
@@ -82,6 +105,7 @@ export function createLocalIntegrationSession(
     if (!matches(auth) || !id || !UUID_V7.test(id)) return;
     if (organisationId !== undefined && organisationId !== id) {
       generation += 1;
+      invoiceProposal = undefined;
       onInvalidate();
     }
     organisationId = id;
@@ -135,6 +159,24 @@ export function createLocalIntegrationSession(
   return {
     client,
     clear,
+    clearInvoiceProposal: () => {
+      proposalGeneration += 1;
+      invoiceProposal = undefined;
+    },
+    captureCurrent: (auth, organisation) => {
+      if (!matches(auth) || organisation !== organisationId)
+        throw new Error("LOCAL_SESSION_REQUIRED");
+      const captured = generation;
+      return () => {
+        if (captured !== generation || !matches(auth) || organisation !== organisationId)
+          throw new Error("LOCAL_SESSION_REQUIRED");
+      };
+    },
+    getInvoiceProposal: (auth, organisation) => {
+      if (!matches(auth) || organisation !== organisationId)
+        throw new Error("LOCAL_SESSION_REQUIRED");
+      return invoiceProposal ? validateInvoiceDraft(invoiceProposal) : undefined;
+    },
     createReader: async () => {
       if (!authentication || !organisationId) throw new Error("LOCAL_SESSION_REQUIRED");
       const started = generation;
@@ -158,8 +200,58 @@ export function createLocalIntegrationSession(
       }
       return async (request) => {
         if (started !== generation) throw new Error("LOCAL_PAIRING_REVOKED");
+        if (request.operation === "invoice.propose") {
+          const stagedAt = proposalGeneration;
+          const draft = validateInvoiceDraft(request.draft);
+          for (const id of new Set(
+            draft.lines
+              .map((line) => line.sourceDocumentId)
+              .filter((id): id is string => Boolean(id)),
+          )) {
+            const { document } = await core.getDocument(
+              create(GetDocumentRequestSchema, { authentication: principal, documentId: id }),
+            );
+            if (
+              !document ||
+              document.organisationId !== organisation ||
+              document.status !== DocumentStatus.REVIEWED
+            )
+              throw new Error("LOCAL_READ_FAILED");
+          }
+          if (started !== generation || stagedAt !== proposalGeneration)
+            throw new Error("LOCAL_PAIRING_REVOKED");
+          invoiceProposal = draft;
+          return { staged: true, reviewRequired: true, draft, totals: calculateInvoice(draft) };
+        }
         const target =
           request.operation === "tool.call" ? request.tool.target : request.resource.target;
+        if (
+          request.operation === "tool.call" &&
+          request.tool.name === "tammy.invoices.list_cost_sources"
+        ) {
+          const response = await core.listDocuments(
+            create(ListDocumentsRequestSchema, {
+              authentication: principal,
+              organisationId: organisation,
+              page: create(PageRequestSchema, { pageSize: 200 }),
+            }),
+          );
+          if (started !== generation) throw new Error("LOCAL_PAIRING_REVOKED");
+          return {
+            expenses: response.documents
+              .filter(
+                (document) => document.status === DocumentStatus.REVIEWED && document.candidate,
+              )
+              .map((document) => ({
+                id: document.id,
+                description: `${document.candidate?.supplierName || document.sourceDisplayName}${document.candidate?.invoiceNumber ? ` · ${document.candidate.invoiceNumber}` : ""}`,
+                subtotalMinor: Number(document.candidate?.subtotal?.minorUnits ?? 0n),
+                gstMinor: Number(document.candidate?.gst?.minorUnits ?? 0n),
+                totalMinor: Number(document.candidate?.total?.minorUnits ?? 0n),
+                currency: "AUD",
+              })),
+          };
+        }
         const result = await executeRead(
           core,
           principal,
@@ -210,6 +302,16 @@ async function executeRead(
       return toJson(
         ListAccountsResponseSchema,
         await client.listAccounts(create(ListAccountsRequestSchema, { ...context, page })),
+      );
+    case "accounting.listInvoices":
+      return toJson(
+        ListInvoicesResponseSchema,
+        await client.listInvoices(
+          create(ListInvoicesRequestSchema, {
+            ...context,
+            page: create(PageRequestSchema, { pageSize: 20 }),
+          }),
+        ),
       );
     case "accounting.listJournals":
       return toJson(

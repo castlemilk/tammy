@@ -1,10 +1,63 @@
 {
   "system": { "getSystemDiagnostics": "query" },
-  "workspace": { "createWorkspace": "command", "confirmRecovery": "command", "unlockWorkspace": "command", "signIn": "command" },
-  "organisation": { "getCurrentUser": "query", "getOrganisation": "query", "createOrganisation": "command", "enrolTotp": "command", "confirmTotp": "command", "assertTotp": "command", "recordEntityVerification": "command" },
-  "accounting": { "listAccounts": "query", "listJournals": "query", "getJournal": "query", "getTrialBalance": "query", "createAccount": "command", "postManualJournal": "command" },
-  "banking": { "listBankStatementLines": "query", "getBankingSummary": "query", "importBankStatement": "command", "matchBankStatementLine": "command", "completeBankReconciliation": "command" },
-  "documents": { "listDocuments": "query", "getDocument": "query", "ingestDocument": "command", "saveDocumentReview": "command" },
-  "reporting": { "getCurrentBasDraft": "query", "getReportingCapability": "query", "getAttentionSummary": "query", "createBasDraft": "command" },
-  "sbr": { "getSbrReadiness": "query", "getMachineCredentialStatus": "query", "selectMachineCredentialFile": "command", "importMachineCredential": "command", "replaceMachineCredential": "command", "unlockMachineCredential": "command", "removeMachineCredential": "command", "importSbrProductId": "command", "removeSbrProductId": "command", "runSbrReadinessFixture": "command" }
+  "workspace": {
+    "createWorkspace": "command",
+    "confirmRecovery": "command",
+    "unlockWorkspace": "command",
+    "signIn": "command"
+  },
+  "organisation": {
+    "getCurrentUser": "query",
+    "getOrganisation": "query",
+    "createOrganisation": "command",
+    "enrolTotp": "command",
+    "confirmTotp": "command",
+    "assertTotp": "command",
+    "recordEntityVerification": "command"
+  },
+  "accounting": {
+    "listAccounts": "query",
+    "listJournals": "query",
+    "getJournal": "query",
+    "getTrialBalance": "query",
+    "createAccount": "command",
+    "postManualJournal": "command",
+    "listInvoices": "query",
+    "getInvoice": "query",
+    "saveInvoiceDraft": "command",
+    "issueInvoice": "command",
+    "exportInvoicePdf": "command",
+    "getInvoiceProposal": "query"
+  },
+  "banking": {
+    "listBankStatementLines": "query",
+    "getBankingSummary": "query",
+    "importBankStatement": "command",
+    "matchBankStatementLine": "command",
+    "completeBankReconciliation": "command"
+  },
+  "documents": {
+    "listDocuments": "query",
+    "getDocument": "query",
+    "ingestDocument": "command",
+    "saveDocumentReview": "command"
+  },
+  "reporting": {
+    "getCurrentBasDraft": "query",
+    "getReportingCapability": "query",
+    "getAttentionSummary": "query",
+    "createBasDraft": "command"
+  },
+  "sbr": {
+    "getSbrReadiness": "query",
+    "getMachineCredentialStatus": "query",
+    "selectMachineCredentialFile": "command",
+    "importMachineCredential": "command",
+    "replaceMachineCredential": "command",
+    "unlockMachineCredential": "command",
+    "removeMachineCredential": "command",
+    "importSbrProductId": "command",
+    "removeSbrProductId": "command",
+    "runSbrReadinessFixture": "command"
+  }
 }

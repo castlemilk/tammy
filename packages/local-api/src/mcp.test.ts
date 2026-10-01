@@ -31,6 +31,7 @@ async function connect(t: TestContext, connection: LocalApiConnection) {
 }
 
 function targetOf(request: ValidatedLocalApiRequest) {
+  if (request.operation === "invoice.propose") return { draft: request.draft };
   return request.operation === "tool.call" ? request.tool.target : request.resource.target;
 }
 
@@ -45,14 +46,15 @@ test("SDK initialization and discovery expose exactly the safe read-only catalog
   const broker = await startLocalApiBroker({ execute: async () => ({}) });
   t.after(() => broker.close());
   const client = await connect(t, broker.connection);
-  assert.equal(client.getServerVersion()?.name, "tammy-local-read");
+  assert.equal(client.getServerVersion()?.name, "tammy-local");
   assert.deepEqual(client.getServerCapabilities(), { resources: {}, tools: {} });
   const { tools } = await client.listTools();
   assert.deepEqual(
-    tools.map((tool) => tool.name),
+    tools.filter((tool) => tool.name !== "tammy.invoices.propose_draft").map((tool) => tool.name),
     LOCAL_API_READ_TOOLS.map((tool) => tool.name),
   );
   for (const tool of tools) {
+    if (tool.name === "tammy.invoices.propose_draft") continue;
     assert.equal(tool.annotations?.readOnlyHint, true);
     assert.equal(tool.annotations?.destructiveHint, false);
     assert.equal(tool.annotations?.openWorldHint, false);
@@ -90,7 +92,7 @@ test("SDK tool calls and resource reads traverse the actual authenticated HTTP b
       { uri: resource.uri, mimeType: "application/json", text: JSON.stringify(resource.target) },
     ]);
   }
-  assert.equal(received.length, 21);
+  assert.equal(received.length, 24);
 });
 
 test("MCP rejects nonempty arguments and unknown/write reads without executing them", async (t) => {
@@ -208,8 +210,8 @@ test("spawned stdio CLI supports SDK initialize/list/call/read end to end and no
   await client.connect(transport);
   t.after(() => client.close());
   assert.ok(transport.pid !== null);
-  assert.equal((await client.listTools()).tools.length, 12);
-  assert.equal((await client.listResources()).resources.length, 9);
+  assert.equal((await client.listTools()).tools.length, 15);
+  assert.equal((await client.listResources()).resources.length, 10);
   assert.deepEqual(
     textData(await client.callTool({ name: "tammy.accounting.list_accounts", arguments: {} })),
     {

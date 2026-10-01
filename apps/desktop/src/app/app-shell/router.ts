@@ -12,6 +12,7 @@ const ROUTER_ORIGIN = "https://tammy.invalid";
 export const COMPLETE_ROUTES = Object.freeze([
   "/overview",
   "/documents",
+  "/invoices",
   "/banking",
   "/gst-bas",
   "/workspace-trust",

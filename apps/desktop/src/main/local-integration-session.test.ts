@@ -7,6 +7,9 @@ import {
 import { AuthenticationContextSchema } from "@tammy/connect-client/tammy/v1/common_pb.js";
 import {
   DocumentSchema,
+  DocumentStatus,
+  type GetDocumentResponse,
+  GetDocumentResponseSchema,
   ListDocumentsResponseSchema,
 } from "@tammy/connect-client/tammy/v1/documents_pb.js";
 import {
@@ -55,6 +58,7 @@ function fixture() {
     getCurrentUser: vi.fn(async () => create(GetCurrentUserResponseSchema, { user })),
     getOrganisation: vi.fn(async () => create(GetOrganisationResponseSchema, { organisation })),
     listAccounts: vi.fn(async () => create(ListAccountsResponseSchema, { accounts: [] })),
+    getDocument: vi.fn(async () => create(GetDocumentResponseSchema)),
     listDocuments: vi.fn(async () =>
       create(ListDocumentsResponseSchema, {
         documents: [
@@ -79,6 +83,141 @@ function fixture() {
 }
 
 describe("local integration session", () => {
+  it("returns only reviewed expense costs without retained document bodies", async () => {
+    const { core, session, signIn } = fixture();
+    vi.mocked(core.listDocuments).mockResolvedValue(
+      create(ListDocumentsResponseSchema, {
+        documents: [
+          {
+            id: organisationId,
+            organisationId,
+            status: DocumentStatus.REVIEWED,
+            extractedText: "secret body",
+            candidate: {
+              supplierName: "Supplier",
+              invoiceNumber: "EXP-1",
+              subtotal: { minorUnits: 10000n, currencyCode: "AUD" },
+              gst: { minorUnits: 1000n, currencyCode: "AUD" },
+              total: { minorUnits: 11000n, currencyCode: "AUD" },
+            },
+          },
+          {
+            id: actorUserId,
+            organisationId,
+            extractedText: "unreviewed body",
+            candidate: { supplierName: "Unreviewed" },
+          },
+        ],
+      }),
+    );
+    await signIn();
+    const execute = await session.createReader();
+    const result = await execute(read("tammy.invoices.list_cost_sources"));
+    expect(result).toEqual({
+      expenses: [
+        {
+          id: organisationId,
+          description: "Supplier · EXP-1",
+          subtotalMinor: 10000,
+          gstMinor: 1000,
+          totalMinor: 11000,
+          currency: "AUD",
+        },
+      ],
+    });
+    expect(JSON.stringify(result)).not.toMatch(/secret|body|candidate|Unreviewed/);
+  });
+  it("cannot restore a pending proposal after local access is revoked", async () => {
+    const { core, session, signIn } = fixture();
+    await signIn();
+    const execute = await session.createReader();
+    let finish!: (value: GetDocumentResponse) => void;
+    vi.mocked(core.getDocument).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const input = validateLocalApiRequest({
+      version: "v1",
+      operation: "tool.call",
+      name: "tammy.invoices.propose_draft",
+      arguments: {
+        number: "INV-001",
+        issueDate: "2026-09-30",
+        dueDate: "2026-10-14",
+        customerName: "",
+        customerAddress: "",
+        sellerAddress: "",
+        gstRegistered: false,
+        notes: "",
+        paymentInstructions: "",
+        lines: [
+          {
+            description: "Expense",
+            quantityMilli: 1000,
+            unitPriceMinor: 10000,
+            taxTreatment: "out-of-scope",
+            sourceDocumentId: organisationId,
+          },
+        ],
+      },
+    });
+    if (!input.ok) throw new Error(input.error.code);
+    const pending = execute(input.value);
+    session.clearInvoiceProposal();
+    finish(
+      create(GetDocumentResponseSchema, {
+        document: { id: organisationId, organisationId, status: DocumentStatus.REVIEWED },
+      }),
+    );
+    await expect(pending).rejects.toThrow("LOCAL_PAIRING_REVOKED");
+    expect(session.getInvoiceProposal(authentication, organisationId)).toBeUndefined();
+  });
+  it("stages an MCP draft for native review without saving and clears it on session change", async () => {
+    const { session, signIn } = fixture();
+    await signIn();
+    const execute = await session.createReader();
+    const draft = {
+      number: "INV-001",
+      issueDate: "2026-09-30",
+      dueDate: "2026-10-14",
+      customerName: "Buyer",
+      customerAddress: "Melbourne",
+      sellerAddress: "Mooroolbark",
+      gstRegistered: true,
+      notes: "",
+      paymentInstructions: "",
+      lines: [
+        {
+          description: "Services",
+          quantityMilli: 1000,
+          unitPriceMinor: 10000,
+          unitCostMinor: 5000,
+          taxTreatment: "taxable",
+        },
+      ],
+    };
+    const input = validateLocalApiRequest({
+      version: "v1",
+      operation: "tool.call",
+      name: "tammy.invoices.propose_draft",
+      arguments: draft,
+    });
+    if (!input.ok) throw new Error(input.error.code);
+    await expect(execute(input.value)).resolves.toMatchObject({
+      staged: true,
+      reviewRequired: true,
+      totals: { totalMinor: 11000 },
+    });
+    expect(() =>
+      session.getInvoiceProposal({ actorUserId: organisationId, sessionId }, organisationId),
+    ).toThrow("LOCAL_SESSION_REQUIRED");
+    expect(session.getInvoiceProposal(authentication, organisationId)).toEqual(draft);
+    session.clear();
+    await signIn();
+    expect(session.getInvoiceProposal(authentication, organisationId)).toBeUndefined();
+  });
   it("requires a native app sign-in and verified organisation before pairing", async () => {
     const { session } = fixture();
     await expect(session.createReader()).rejects.toThrow("LOCAL_SESSION_REQUIRED");

@@ -6,9 +6,13 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "electron-vite";
 
 const desktopRoot = dirname(fileURLToPath(import.meta.url));
+const electronRuntimeExternals = ["electron", "@formepdf/core", /^node:/, ...builtinModules];
 
 export const isElectronRuntimeExternal = (id: string): boolean =>
-  id === "electron" || id.startsWith("node:") || builtinModules.includes(id);
+  id === "electron" ||
+  id === "@formepdf/core" ||
+  id.startsWith("node:") ||
+  builtinModules.includes(id);
 
 const aliases = {
   "@/app": resolve(desktopRoot, "src/app"),
@@ -28,7 +32,7 @@ export default defineConfig({
         fileName: () => "index.js",
         formats: ["es"],
       },
-      rollupOptions: { external: isElectronRuntimeExternal },
+      rollupOptions: { external: electronRuntimeExternals },
       sourcemap: false,
     },
     resolve: { alias: aliases },
@@ -42,7 +46,7 @@ export default defineConfig({
         fileName: () => "index.cjs",
         formats: ["cjs"],
       },
-      rollupOptions: { external: isElectronRuntimeExternal },
+      rollupOptions: { external: electronRuntimeExternals },
       sourcemap: false,
     },
     resolve: { alias: aliases },

@@ -66,6 +66,9 @@ importers:
       '@tammy/connect-client':
         specifier: workspace:*
         version: link:../../packages/connect-client
+      '@tammy/invoices':
+        specifier: workspace:*
+        version: link:../../packages/invoices
       '@tammy/local-api':
         specifier: workspace:*
         version: link:../../packages/local-api
@@ -262,11 +265,33 @@ importers:
         specifier: 4.1.10
         version: 4.1.10(@types/node@26.1.1)(jsdom@29.1.1(@noble/hashes@2.4.0))(vite@8.0.13(@types/node@26.1.1)(esbuild@0.27.3)(jiti@2.7.0)(yaml@2.8.1))
 
+  packages/invoices:
+    dependencies:
+      '@formepdf/core':
+        specifier: 0.25.0
+        version: 0.25.0(react@19.2.7)
+      '@formepdf/react':
+        specifier: 0.25.0
+        version: 0.25.0(react@19.2.7)
+      react:
+        specifier: 19.2.7
+        version: 19.2.7
+    devDependencies:
+      '@types/node':
+        specifier: 26.1.1
+        version: 26.1.1
+      '@types/react':
+        specifier: 19.2.17
+        version: 19.2.17
+
   packages/local-api:
     dependencies:
       '@modelcontextprotocol/sdk':
         specifier: 1.29.0
         version: 1.29.0(supports-color@10.2.2)(zod@3.25.76)
+      '@tammy/invoices':
+        specifier: workspace:*
+        version: link:../invoices
       zod:
         specifier: 3.25.76
         version: 3.25.76
@@ -1063,6 +1088,19 @@ packages:
     peerDependenciesMeta:
       '@noble/hashes':
         optional: true
+
+  '@formepdf/core@0.25.0':
+    resolution: {integrity: sha512-elxPOq5BT9X9vCBH9nx1Q9sYiizvRKu70cGRXC4nDOJGt482QcUye7R2OUHq5lCqoNTl3HElGhNcW0t/1Eh+PA==}
+    peerDependencies:
+      react: ^18 || ^19
+
+  '@formepdf/react@0.25.0':
+    resolution: {integrity: sha512-ZcM/807fuuxyk1vTUJu9rsj9vpM1IjSfV6iTh2kHxHTi+Md9L/rFmiCh/YTsUbYJ2c1Dmz33z9f66C8EzFCHzw==}
+    peerDependencies:
+      react: ^18 || ^19
+
+  '@formepdf/shared@0.25.0':
+    resolution: {integrity: sha512-0S3Vs3m6nev/XsDRR9LGmeZSXqFxCtHVnjVBTlyPhPQeeAPIE0S7DrvdneQqrhNMx2D6+58irR5eUOoyY3jsgg==}
 
   '@hono/node-server@1.19.14':
     resolution: {integrity: sha512-GwtvgtXxnWsucXvbQXkRgqksiH2Qed37H9xHZocE5sA3N8O8O8/8FA3uclQXxXVzc9XBZuEOMK7+r02FmSpHtw==}
@@ -2977,6 +3015,10 @@ packages:
     resolution: {integrity: sha512-rRqJg/6gd538VHvR3PSrdRBb/1Vy2YfzHqzvbhGIQpDRKIa4FgV/54b5Q1xYSxOOwKvjXweS26E0Q+nAMwp2pQ==}
     engines: {node: '>=8.6'}
 
+  entities@6.0.1:
+    resolution: {integrity: sha512-aN97NXWF6AWBTahfVOIrB/NShkzi5H7F9r1s9mD3cDj4Ko5f2qhhVoYMibXF7GlLveb/D2ioWay8lxI97Ven3g==}
+    engines: {node: '>=0.12'}
+
   entities@8.0.0:
     resolution: {integrity: sha512-zwfzJecQ/Uej6tusMqwAqU/6KL2XaB2VZ2Jg54Je6ahNBGNH6Ek6g3jjNCF0fG9EWQKGZNddNjU5F1ZQn/sBnA==}
     engines: {node: '>=20.19.0'}
@@ -3993,6 +4035,9 @@ packages:
   parse-ms@4.0.0:
     resolution: {integrity: sha512-TXfryirbmq34y8QBwgqCVLi+8oA3oWx2eAnSn62ITyEhEYaWRlVZ2DvMM9eZbMs/RfxPu/PK/aBLyGj4IrqMHw==}
     engines: {node: '>=18'}
+
+  parse5@7.3.0:
+    resolution: {integrity: sha512-IInvU7fabl34qmi9gY8XOVxhYyMyuH2xUNpb2q8/Y+7552KlejkRvqvD19nMoUW/uQGGbqNpA6Tufu5FL5BZgw==}
 
   parse5@8.0.1:
     resolution: {integrity: sha512-z1e/HMG90obSGeidlli3hj7cbocou0/wa5HacvI3ASx34PecNjNQeaHNo5WIZpWofN9kgkqV1q5YvXe3F0FoPw==}
@@ -5686,6 +5731,20 @@ snapshots:
     optionalDependencies:
       '@noble/hashes': 2.4.0
 
+  '@formepdf/core@0.25.0(react@19.2.7)':
+    dependencies:
+      '@formepdf/react': 0.25.0(react@19.2.7)
+      react: 19.2.7
+
+  '@formepdf/react@0.25.0(react@19.2.7)':
+    dependencies:
+      '@formepdf/shared': 0.25.0
+      react: 19.2.7
+
+  '@formepdf/shared@0.25.0':
+    dependencies:
+      parse5: 7.3.0
+
   '@hono/node-server@1.19.14(hono@4.12.30)':
     dependencies:
       hono: 4.12.30
@@ -7258,6 +7317,8 @@ snapshots:
       ansi-colors: 4.1.3
       strip-ansi: 6.0.1
 
+  entities@6.0.1: {}
+
   entities@8.0.0: {}
 
   env-paths@2.2.1: {}
@@ -8282,6 +8343,10 @@ snapshots:
       lines-and-columns: 1.2.4
 
   parse-ms@4.0.0: {}
+
+  parse5@7.3.0:
+    dependencies:
+      entities: 6.0.1
 
   parse5@8.0.1:
     dependencies:

@@ -283,6 +283,25 @@ test("validates the one strict fictional screenshot fixture", () => {
   );
 });
 
+test("requires the current invoice navigation without accepting stale shell snapshots", () => {
+  for (const definition of fixture.screenshots) {
+    const navigation = definition.completeAccessibilityText;
+    assert.equal(navigation.filter((label) => label === "Invoices").length, 1);
+    assert.equal(navigation[navigation.indexOf("Invoices") - 1], "Documents");
+    assert.equal(navigation[navigation.indexOf("Invoices") + 1], "Banking");
+  }
+  const staleFixture = structuredClone(fixture);
+  for (const definition of staleFixture.screenshots) {
+    definition.completeAccessibilityText = definition.completeAccessibilityText.filter(
+      (label) => label !== "Invoices",
+    );
+  }
+  assert.throws(
+    () => validateScreenshotFixture(staleFixture),
+    /APP_STORE_SCREENSHOT_FIXTURE_INVALID/,
+  );
+});
+
 test("accepts only complete 1440 by 900 RGB non-interlaced PNG bytes", () => {
   const raster = Buffer.alloc((1440 * 3 + 1) * 900);
   assert.deepEqual(inspectPng(png()), {

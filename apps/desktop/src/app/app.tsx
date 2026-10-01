@@ -28,6 +28,7 @@ import { BankingScreen } from "./features/banking/banking-screen";
 import { BasScreen } from "./features/bas/bas-screen";
 import { DiagnosticsCard, type DiagnosticsState } from "./features/diagnostics/diagnostics-card";
 import { DocumentsScreen } from "./features/documents/documents-screen";
+import { ConnectedInvoicesScreen } from "./features/invoices/connected-invoices-screen";
 import { EmptyLedgerScreen } from "./features/ledger/empty-ledger-screen";
 import { OverviewScreen } from "./features/overview/overview-screen";
 import { PrivacyScreen, PrivacyStatement } from "./features/privacy/privacy-statement";
@@ -505,7 +506,37 @@ function EngineStatus({
   );
 }
 
-function RouteContent({
+function RouteContent(props: Parameters<typeof ActiveRouteContent>[0]) {
+  const authorityKey = props.workspace
+    ? `${props.workspace.workspaceId}:${props.workspace.userId}:${props.workspace.sessionId}:${props.workspace.organisationId ?? ""}`
+    : undefined;
+  const [invoiceVisitedFor, setInvoiceVisitedFor] = useState<string>();
+  const showingInvoice = props.path === "/invoices";
+  const retainInvoice = Boolean(
+    authorityKey && (showingInvoice || invoiceVisitedFor === authorityKey),
+  );
+  useEffect(() => {
+    if (showingInvoice) setInvoiceVisitedFor(authorityKey);
+    else if (invoiceVisitedFor !== authorityKey) setInvoiceVisitedFor(undefined);
+  }, [authorityKey, invoiceVisitedFor, showingInvoice]);
+
+  return (
+    <>
+      <div aria-hidden={!showingInvoice} hidden={!showingInvoice} inert={!showingInvoice}>
+        {retainInvoice ? (
+          <ConnectedInvoicesScreen
+            conveyor={props.conveyor}
+            key={authorityKey}
+            workspace={props.workspace}
+          />
+        ) : null}
+      </div>
+      {!showingInvoice ? <ActiveRouteContent {...props} /> : null}
+    </>
+  );
+}
+
+function ActiveRouteContent({
   conveyor,
   onNavigate,
   path,

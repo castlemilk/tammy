@@ -1,4 +1,6 @@
+import { type InvoiceDraftData, validateInvoiceDraft } from "@tammy/invoices/model";
 import {
+  INVOICE_PROPOSAL_TOOL,
   LOCAL_API_READ_RESOURCES,
   LOCAL_API_READ_TOOLS,
   type LocalApiReadResource,
@@ -28,7 +30,16 @@ export interface ValidatedLocalApiResourceRead {
   readonly version: typeof LOCAL_API_VERSION;
 }
 
-export type ValidatedLocalApiRequest = ValidatedLocalApiResourceRead | ValidatedLocalApiToolCall;
+export interface ValidatedInvoiceProposal {
+  readonly operation: "invoice.propose";
+  readonly draft: InvoiceDraftData;
+  readonly version: typeof LOCAL_API_VERSION;
+}
+
+export type ValidatedLocalApiRequest =
+  | ValidatedLocalApiResourceRead
+  | ValidatedLocalApiToolCall
+  | ValidatedInvoiceProposal;
 
 export type LocalApiValidationResult =
   | Readonly<{ ok: true; value: ValidatedLocalApiRequest }>
@@ -74,6 +85,17 @@ export function validateLocalApiRequest(input: unknown): LocalApiValidationResul
   if (input.operation === "tool.call") {
     if (!hasOnlyKeys(input, TOOL_KEYS) || typeof input.name !== "string") {
       return failure("INVALID_REQUEST");
+    }
+    if (input.name === INVOICE_PROPOSAL_TOOL.name) {
+      try {
+        const draft = validateInvoiceDraft(input.arguments);
+        return {
+          ok: true,
+          value: { operation: "invoice.propose", draft, version: LOCAL_API_VERSION },
+        };
+      } catch {
+        return failure("INVALID_ARGUMENTS");
+      }
     }
     const tool = toolsByName.get(input.name);
     if (tool === undefined) return failure("UNKNOWN_TOOL");

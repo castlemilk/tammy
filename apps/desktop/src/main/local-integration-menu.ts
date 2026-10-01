@@ -32,10 +32,10 @@ export function createLocalIntegrationMenuItems(
       click: async () => {
         const { response } = await native.showMessageBox({
           type: "question",
-          message: "Enable local read access?",
+          message: "Enable local API & MCP access?",
           detail:
-            "Clients on this computer with the private connection file can read your current organisation's accounting data. Access ends when you revoke it, sign in again, or close Tammy.",
-          buttons: ["Enable read access", "Cancel"],
+            "Clients on this computer with the private connection file can read your current organisation's accounting data and stage editable invoice proposals. You must review and save proposals in Tammy. Clients cannot save, issue, post or send invoices. Access ends when you revoke it, sign in again, or close Tammy.",
+          buttons: ["Enable access", "Cancel"],
           defaultId: 1,
           cancelId: 1,
         });

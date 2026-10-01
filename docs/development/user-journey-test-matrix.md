@@ -19,6 +19,7 @@ This matrix keeps Tammy's development walkthrough tied to executable evidence. I
 | Inspect and extend the AU chart | `chart-screen.test.tsx` | `TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealServer` | Covered after authentication, not in first-run smoke |
 | Post a journal, open its detail, and inspect the trial balance | `journals-screen.test.tsx`, `trial-balance-screen.test.tsx` | `TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealServer` | Covered after authentication, not in first-run smoke |
 | Retain and review a document | `documents-screen.test.tsx`, PDF text tests | `TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealServer` | Covered after authentication, not in first-run smoke |
+| Build an invoice from costs/MCP, review, save, issue, export and reopen | Invoice editor and App navigation tests; native export/issue tests; `packages/invoices` actual PDF tests; local API SDK tests | Invoice SQLCipher repositories and the real LedgerModule server journey (auth, replay, versions, source ownership, seller drift and immutable issue) | `current-workflows.spec.ts` exercises real broker/stdin MCP, reviewed expense linkage, sidebar retention, PDF export and restart |
 | Import, match, then reconcile banking rows | `banking-screen.test.tsx` | Repository/module integration is the next backend journey gap | Covered after authentication, not in first-run smoke |
 | Create and review a BAS workpaper | `bas-screen.test.tsx` | Reporting/module integration is the next backend journey gap | Covered after authentication, not in first-run smoke |
 | Review retained local activity | `audit-screen.test.tsx` | The view is a product projection; audit-chain verification is tested separately | Covered after authentication, not in first-run smoke |
@@ -32,6 +33,7 @@ From the repository root:
 ```sh
 rtk mise exec -- task test
 rtk mise exec -- task test:desktop:dev
+rtk mise exec -- task test:invoices
 rtk mise exec -- task package:e2e
 ```
 

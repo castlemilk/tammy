@@ -1,6 +1,12 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-
+import { create } from "@bufbuild/protobuf";
+import { GetCurrentUserRequestSchema } from "@tammy/connect-client/tammy/v1/identity_pb.js";
+import {
+  type GetInvoiceRequest,
+  GetInvoiceRequestSchema,
+} from "@tammy/connect-client/tammy/v1/invoices_pb.js";
+import { renderInvoicePdf } from "@tammy/invoices/pdf";
 import {
   app,
   BrowserWindow,
@@ -14,12 +20,15 @@ import {
   shell,
 } from "electron";
 import { registerTammyConveyor } from "../conveyor/registration";
+import { invoiceToRecord } from "../shared/invoices";
 import { readPublicLinks } from "../shared/public-links";
 import { createCoreClient } from "./core-client";
 import { createCoreLaunchArguments } from "./core-launch";
 import { CoreProcess } from "./core-process";
 import type { DesktopDependencies, DesktopWindow } from "./index-lifecycle";
 import { resolveBundledCorePath, resolveBundledSbrProfileLocation } from "./index-paths";
+import { createInvoiceExport, type InvoiceExport } from "./invoice-export";
+import { createInvoiceIssuer } from "./invoice-issue";
 import {
   parseDesktopLaunchScenario,
   rendererLaunchScenarioArguments,
@@ -92,6 +101,7 @@ export function createProductionDependencies(
   let requestQuit: (() => void) | undefined;
   let integration: DesktopLocalIntegration | undefined;
   let integrationSession: LocalIntegrationSession | undefined;
+  let invoiceExport: InvoiceExport<GetInvoiceRequest> | undefined;
   let releaseIntegrationMenu: (() => void) | undefined;
   const releaseKind = resolveSbrFileReleaseKind({
     isMas:
@@ -163,8 +173,45 @@ export function createProductionDependencies(
       integration = createDesktopLocalIntegration(
         app.getPath("userData"),
         integrationSession.createReader,
+        integrationSession.clearInvoiceProposal,
       );
-      return integrationSession.client;
+      const current = integrationSession;
+      invoiceExport = createInvoiceExport({
+        prepare: async (request: GetInvoiceRequest) => {
+          if (!request.authentication) throw new Error("LOCAL_SESSION_REQUIRED");
+          const guard = current.captureCurrent(request.authentication, request.organisationId);
+          const result = await current.client.getInvoice(create(GetInvoiceRequestSchema, request));
+          guard();
+          if (!result.invoice || result.invoice.organisationId !== request.organisationId)
+            throw new Error("INVOICE_EXPORT_FAILED");
+          const record = invoiceToRecord(result.invoice);
+          return {
+            invoice: {
+              ...record.draft,
+              id: record.id,
+              state: record.state,
+              sellerName: record.sellerName,
+              sellerAbn: record.sellerAbn,
+            },
+            guard,
+          };
+        },
+        render: renderInvoicePdf,
+        select: (defaultPath) =>
+          dialog.showSaveDialog({
+            defaultPath,
+            title: "Export invoice PDF",
+            filters: [{ name: "PDF", extensions: ["pdf"] }],
+          }),
+      });
+      return Object.freeze({
+        ...current.client,
+        issueInvoice: createInvoiceIssuer({
+          client: current.client,
+          capture: current.captureCurrent,
+          render: renderInvoicePdf,
+        }),
+      });
     },
     createWindow: () => {
       const browser = new BrowserWindow({
@@ -265,6 +312,23 @@ export function createProductionDependencies(
         applicationUrl: policy.applicationUrl,
         client,
         fileIntake,
+        invoiceExport,
+        invoiceProposal: async (request) => {
+          if (!integrationSession || !request.authentication)
+            throw new Error("LOCAL_SESSION_REQUIRED");
+          const guard = integrationSession.captureCurrent(
+            request.authentication,
+            request.organisationId,
+          );
+          await integrationSession.client.getCurrentUser(
+            create(GetCurrentUserRequestSchema, { authentication: request.authentication }),
+          );
+          guard();
+          return integrationSession.getInvoiceProposal(
+            request.authentication,
+            request.organisationId,
+          );
+        },
         ipcMain,
         getWindow: () =>
           getWindow() !== undefined && nativeWindow && !nativeWindow.isDestroyed()

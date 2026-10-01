@@ -60,7 +60,66 @@ scenarios:
       - company-eofy/financial-close
       - company-eofy/company-return
       - company-eofy/submission
+  E2E-19:
+    cases:
+      - invoices/mcp-builder-pdf
 rpcs:
+  tammy.v1.InvoiceService.SaveInvoiceDraft:
+    stage: production
+    preload: saveInvoiceDraft
+    cases: [invoices/mcp-builder-pdf]
+    projections: [saved_invoice_draft]
+    routes: [/invoices]
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, IDEMPOTENCY_CONFLICT, STALE_VERSION, INVALID_INVOICE]
+    list: {states: [not_applicable]}
+    idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
+  tammy.v1.InvoiceService.IssueInvoice:
+    stage: production
+    preload: issueInvoice
+    cases: [invoices/mcp-builder-pdf]
+    projections: [issued_invoice]
+    routes: [/invoices]
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, IDEMPOTENCY_CONFLICT, STALE_VERSION, INVALID_INVOICE]
+    list: {states: [not_applicable]}
+    idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
+  tammy.v1.InvoiceService.GetInvoice:
+    stage: production
+    preload: getInvoice
+    cases: [invoices/mcp-builder-pdf]
+    projections: [invoice]
+    routes: [/invoices]
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_allowed
+      auditor: planned_allowed
+    principalFailures: [AUTHENTICATION_REQUIRED, NOT_FOUND]
+    list: {states: [found, not_found]}
+    idempotency: {mode: query, outcomes: [not_applicable]}
+  tammy.v1.InvoiceService.ListInvoices:
+    stage: production
+    preload: listInvoices
+    cases: [invoices/mcp-builder-pdf]
+    projections: [invoices]
+    routes: [/invoices]
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_allowed
+      auditor: planned_allowed
+    principalFailures: [AUTHENTICATION_REQUIRED, INVALID_CURSOR]
+    list: {states: [empty, populated]}
+    idempotency: {mode: query, outcomes: [not_applicable]}
   tammy.v1.SystemService.GetDiagnostics:
     preload: getSystemDiagnostics
     cases:

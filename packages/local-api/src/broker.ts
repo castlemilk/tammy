@@ -1,14 +1,14 @@
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 
-import { LOCAL_API_READ_RESOURCES, LOCAL_API_READ_TOOLS } from "./catalog.ts";
+import { LOCAL_API_READ_RESOURCES, LOCAL_API_TOOLS } from "./catalog.ts";
 import type { LocalApiConnection } from "./connection.ts";
 import { type ValidatedLocalApiRequest, validateLocalApiRequest } from "./request.ts";
 
 export type { LocalApiConnection } from "./connection.ts";
 export { readLocalApiConnectionFile, validateLocalApiConnection } from "./connection.ts";
 
-export const LOCAL_API_MAX_REQUEST_BYTES = 16 * 1024;
+export const LOCAL_API_MAX_REQUEST_BYTES = 128 * 1024;
 export const LOCAL_API_MAX_RESPONSE_BYTES = 1024 * 1024;
 export const LOCAL_API_DEADLINE_MS = 5_000;
 
@@ -130,7 +130,7 @@ export async function startLocalApiBroker(options: {
       }
       return JSON.stringify({
         version: "v1",
-        tools: LOCAL_API_READ_TOOLS,
+        tools: LOCAL_API_TOOLS,
         resources: LOCAL_API_READ_RESOURCES,
       });
     }

@@ -7,6 +7,7 @@ import {
   Landmark,
   ListTree,
   RadioTower,
+  Receipt,
   Scale,
   Settings,
   ShieldCheck,
@@ -16,6 +17,7 @@ import type { MouseEvent } from "react";
 export const PRIMARY_NAVIGATION = Object.freeze([
   { href: "/overview", icon: House, label: "Overview" },
   { href: "/documents", icon: FileText, label: "Documents" },
+  { href: "/invoices", icon: Receipt, label: "Invoices" },
   { href: "/banking", icon: Landmark, label: "Banking" },
   { href: "/accounting/chart", icon: ListTree, label: "Chart of accounts" },
   { href: "/accounting/journals", icon: BookOpen, label: "Journals" },
@@ -24,7 +26,7 @@ export const PRIMARY_NAVIGATION = Object.freeze([
   { href: "/audit", icon: ShieldCheck, label: "Audit trail" },
   { href: "/settings", icon: Settings, label: "Settings" },
 ] as const);
-const SETTINGS_NAVIGATION = PRIMARY_NAVIGATION[8];
+const SETTINGS_NAVIGATION = PRIMARY_NAVIGATION[9];
 const SETTINGS_ROUTES = Object.freeze([
   { href: "/settings/organisation", icon: Building2, label: "Organisation" },
   { href: "/settings/sbr", icon: RadioTower, label: "SBR readiness" },

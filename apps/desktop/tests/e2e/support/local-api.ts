@@ -17,7 +17,10 @@ export async function callPairedApi(connectionPath: string, name: string) {
   return response.json();
 }
 
-export async function runPairedMcpSmoke(connectionPath: string) {
+export async function runPairedMcpSmoke(
+  connectionPath: string,
+  invoiceDraft?: Record<string, unknown>,
+) {
   const child = spawn(
     process.execPath,
     [path.join(root, "packages/local-api/src/cli.ts"), "--connection", connectionPath],
@@ -88,7 +91,13 @@ export async function runPairedMcpSmoke(connectionPath: string) {
       arguments: {},
     });
     const resource = await request("resources/read", { uri: "tammy://current/organisation" });
-    return { initialized, tools, result, resource };
+    const proposal = invoiceDraft
+      ? await request("tools/call", {
+          name: "tammy.invoices.propose_draft",
+          arguments: invoiceDraft,
+        })
+      : undefined;
+    return { initialized, tools, result, resource, proposal };
   } finally {
     lines.close();
     const closed = exited

@@ -2,7 +2,7 @@ version: '3'
 
 tasks:
   test:
-    desc: Test and type-check the local read-only API and MCP adapter.
+    desc: Test and type-check the local API and MCP invoice-proposal adapter.
     summary: |
       Runs the package's HTTP, connection-file, request, catalog, and MCP tests.
       Desktop acceptance remains in test:desktop:dev; these checks do not enable access.
@@ -15,7 +15,7 @@ tasks:
     summary: |
       Open and unlock Tammy, sign in, complete organisation setup, then enable access
       from Integrations → Enable local API & MCP. Supply only the absolute connection
-      file path, not its capability or any credential. The adapter exposes read-only access.
+      file path, not its capability or any credential. It exposes reads and review-only invoice proposals.
     requires:
       vars: [CONNECTION_FILE]
     env:

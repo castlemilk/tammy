@@ -4,7 +4,9 @@ Tammy is a local-first Australian accounting desktop application. The current de
 
 Today the connected application can create and reopen an encrypted workspace, confirm its recovery code, sign in, create the organisation and AU chart of accounts, post balanced manual journals, show a trial balance, review retained documents, import and reconcile bank-statement rows, create a local BAS draft, and show consolidated local activity.
 
-The native Integrations menu can enable a session-scoped, read-only local API and stdio MCP adapter for the signed-in organisation. Access requires Tammy's private connection file; there are no integration write commands. See [Local API and MCP](docs/development/local-api-mcp.md) for pairing and client setup.
+The invoice builder supports reviewed expense costs, editable line items, exact AUD/GST totals, encrypted drafts, immutable issued invoices, and offline customer PDFs adapted from pdfcn. Issuing freezes the invoice document; it does not post a receivable, send email, or track payment. See [Invoice builder](docs/development/invoice-builder.md).
+
+The native Integrations menu can enable a session-scoped local API and stdio MCP adapter for the signed-in organisation. Clients can read data and stage an invoice proposal for human review; they cannot save or issue invoices or post accounting entries. Access requires Tammy's private connection file. See [Local API and MCP](docs/development/local-api-mcp.md) for pairing and client setup.
 
 This is development software, not a production release. BAS workpapers are **drafts only**: there is no production SBR path and no BAS submit or lodge action. Local macOS packages use ad-hoc development signing and are not App Store approval or external assurance evidence.
 
@@ -31,6 +33,7 @@ mise exec -- task verify:quick
 mise exec -- task verify:full
 mise exec -- task test:desktop:dev
 mise exec -- task integrations:test
+mise exec -- task test:invoices
 mise exec -- task build
 mise exec -- task package
 mise exec -- task package:e2e
@@ -58,6 +61,7 @@ Inspect the redacted Mac App Store state with `mise exec -- task release:state` 
 - [Developer handbook](docs/development/foundation.md) — setup, commands, repository map, local data, and safe changes.
 - [Local SBR readiness](docs/development/sbr-local-readiness.md) — accounting, simulator, credential handling, and external registration scenarios.
 - [Local API and MCP](docs/development/local-api-mcp.md) — private connection-file pairing, read coverage, revocation, and stdio client setup.
+- [Invoice builder](docs/development/invoice-builder.md) — expense-based line items, MCP proposals, draft/issue workflow, and customer PDFs.
 - [Local accounting walkthrough](docs/development/local-accounting-walkthrough.md) — the current setup-to-audit journey.
 - [User journey test matrix](docs/development/user-journey-test-matrix.md) — executable coverage by renderer, local core, and packaged Electron layer.
 - [macOS App Store release runbook](docs/release/macos-app-store.md) — repository checks, signing inputs, packaging, inspection, metadata, upload, and remaining operator gates.

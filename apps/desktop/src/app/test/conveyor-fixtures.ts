@@ -50,6 +50,12 @@ function createProcedures(): ConveyorFixtureProcedures {
       getTrialBalance: unavailable(),
       createAccount: unavailable(),
       postManualJournal: unavailable(),
+      listInvoices: unavailable(),
+      getInvoice: unavailable(),
+      saveInvoiceDraft: unavailable(),
+      issueInvoice: unavailable(),
+      exportInvoicePdf: unavailable(),
+      getInvoiceProposal: unavailable(),
     },
     banking: {
       listBankStatementLines: unavailable(),

@@ -134,6 +134,40 @@ export const COMPANY_EOFY_DECLARED_FUTURE_RPCS = [
 ];
 
 export const SLICE_ONE_RPC_POLICY = {
+  "tammy.v1.InvoiceService.SaveInvoiceDraft": rpc({
+    name: "SaveInvoiceDraft",
+    projection: "saved_invoice_draft",
+    route: "/invoices",
+    rolePolicy: adminAndPreparer,
+    mode: "persistent_command",
+    failures: [...roleGuardedPersistent, "STALE_VERSION", "INVALID_INVOICE"],
+  }),
+  "tammy.v1.InvoiceService.IssueInvoice": rpc({
+    name: "IssueInvoice",
+    projection: "issued_invoice",
+    route: "/invoices",
+    rolePolicy: adminAndPreparer,
+    mode: "persistent_command",
+    failures: [...roleGuardedPersistent, "STALE_VERSION", "INVALID_INVOICE"],
+  }),
+  "tammy.v1.InvoiceService.GetInvoice": rpc({
+    name: "GetInvoice",
+    projection: "invoice",
+    route: "/invoices",
+    rolePolicy: accountingRead,
+    mode: "query",
+    failures: [...authenticated, "NOT_FOUND"],
+    list: ["found", "not_found"],
+  }),
+  "tammy.v1.InvoiceService.ListInvoices": rpc({
+    name: "ListInvoices",
+    projection: "invoices",
+    route: "/invoices",
+    rolePolicy: accountingRead,
+    mode: "query",
+    failures: [...authenticated, "INVALID_CURSOR"],
+    list: ["empty", "populated"],
+  }),
   "tammy.v1.ReportingCapabilityService.GetReportingCapability": rpc({
     name: "GetReportingCapability",
     preload: "getReportingCapability",

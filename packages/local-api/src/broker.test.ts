@@ -110,7 +110,7 @@ test("broker binds ephemeral IPv4 loopback and serves only validated catalog rea
   assert.deepEqual(capabilities, {
     body: {
       version: "v1",
-      tools: api.LOCAL_API_READ_TOOLS,
+      tools: api.LOCAL_API_TOOLS,
       resources: api.LOCAL_API_READ_RESOURCES,
     },
     status: 200,
@@ -250,7 +250,7 @@ test("broker requires JSON, rejects malformed/write envelopes and bounds request
     ["{malformed-secret", "INVALID_REQUEST"],
     [JSON.stringify({ ...read, name: "tammy.accounting.create_journal" }), "UNKNOWN_TOOL"],
     [JSON.stringify({ ...read, arguments: { organisationId: "other" } }), "INVALID_ARGUMENTS"],
-    [" ".repeat(16 * 1024 + 1), "PAYLOAD_TOO_LARGE"],
+    [" ".repeat(128 * 1024 + 1), "PAYLOAD_TOO_LARGE"],
   ] as const) {
     const response = await call(origin, capability, { body });
     assert.deepEqual(response.body, { ok: false, error: { code } });
@@ -327,7 +327,7 @@ test("broker bounds chunked bodies and rejects missing or duplicate Host headers
   t.after(() => broker.close());
   const { origin, capability } = broker.connection;
   const host = new URL(origin).host;
-  const chunk = " ".repeat(16 * 1024 + 1);
+  const chunk = " ".repeat(128 * 1024 + 1);
   const oversized = await rawHttp(
     origin,
     `POST /v1/read HTTP/1.1\r\nHost: ${host}\r\nAuthorization: Bearer ${capability}\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n\r\n${chunk.length.toString(16)}\r\n${chunk}\r\n0\r\n\r\n`,
