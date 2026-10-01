@@ -9,6 +9,7 @@
 .tmp/sbr-helper-build/
 .tmp/sbr-e2e/
 /.tmp/invoice-preview/
+/.tmp/invoice-cost-table-e2e/
 node_modules/
 .pnpm-store/
 **/.vite/

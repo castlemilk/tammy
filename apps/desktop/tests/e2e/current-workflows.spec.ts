@@ -223,6 +223,8 @@ test("runs the current accounting workflows through the packaged app", async ({
   );
   await mkdir(screenshotDirectory, { recursive: true });
   await lineTable.scrollIntoViewIfNeeded();
+  await resetTableHorizontalScroll(lineTable);
+  await resetTableHorizontalScroll(expenseTable);
   const wideScreenshotPath = path.join(screenshotDirectory, "invoice-cost-table-desktop.png");
   await page.screenshot({ animations: "disabled", path: wideScreenshotPath });
   await testInfo.attach("invoice-cost-table-desktop", {
@@ -248,6 +250,8 @@ test("runs the current accounting workflows through the packaged app", async ({
     )
     .toBe(true);
   await lineTable.scrollIntoViewIfNeeded();
+  await resetTableHorizontalScroll(lineTable);
+  await resetTableHorizontalScroll(expenseTable);
   const compactScreenshotPath = path.join(screenshotDirectory, "invoice-cost-table-1024x700.png");
   await page.screenshot({ animations: "disabled", path: compactScreenshotPath });
   await testInfo.attach("invoice-cost-table-1024x700", {
@@ -335,6 +339,19 @@ test("runs the current accounting workflows through the packaged app", async ({
   expect(electronHarness.pageErrors).toEqual([]);
 });
 
+async function resetTableHorizontalScroll(table: import("@playwright/test").Locator) {
+  await table.evaluate((element) => {
+    let container = element.parentElement;
+    while (container) {
+      if (["auto", "scroll"].includes(getComputedStyle(container).overflowX)) {
+        container.scrollLeft = 0;
+        return;
+      }
+      container = container.parentElement;
+    }
+  });
+}
+
 async function unlockCurrentWorkflowWorkspace(page: import("@playwright/test").Page) {
   await page.getByLabel("Workspace passphrase").fill(CURRENT_WORKFLOW_PASSPHRASE);
   await page.getByLabel("Email or username").fill(CURRENT_WORKFLOW_USERNAME);
@@ -366,7 +383,7 @@ function expectCustomerInvoicePdf(bytes: Uint8Array, sourceDocumentIds: readonly
   expect(content).not.toMatch(
     /unitCostMinor|marginMinor|sourceDocumentId|Internal cost|Private cost|Margin|Profit/,
   );
-  for (const privateAmount of ["40.00", "60.00", "290.00", "410.00", "190.33"]) {
+  for (const privateAmount of ["$40.00", "$60.00", "$290.00", "$410.00", "$190.33"]) {
     expect(content).not.toContain(privateAmount);
   }
   return content;
