@@ -319,6 +319,30 @@ describe("desktop application composition", () => {
     expect(dependencies.cleanupSensitiveState).toHaveBeenCalledOnce();
   });
 
+  it("deduplicates a synchronous window-all-closed quit during window destruction", async () => {
+    const stopped = deferred<void>();
+    const { calls, dependencies, requestQuit, window } = rig();
+    dependencies.core.stop = vi.fn(() => stopped.promise);
+    window.close.mockImplementation(() => {
+      calls.push("window:close");
+      window.isDestroyed.mockReturnValue(true);
+      requestQuit();
+      return calls.length;
+    });
+    const application = await startDesktopApplication(dependencies);
+
+    const closed = application.shutdown();
+    await Promise.resolve();
+
+    expect(window.close).toHaveBeenCalledOnce();
+    expect(dependencies.core.stop).toHaveBeenCalledOnce();
+    expect(dependencies.exit).not.toHaveBeenCalled();
+    stopped.resolve();
+    await closed;
+    expect(dependencies.exit).toHaveBeenCalledExactlyOnceWith(0);
+    expect(dependencies.cleanupSensitiveState).toHaveBeenCalledOnce();
+  });
+
   it.each(["start", "diagnostics"] as const)(
     "maps %s failure to one stable local-engine path without creating a window or leaking details",
     async (failure) => {

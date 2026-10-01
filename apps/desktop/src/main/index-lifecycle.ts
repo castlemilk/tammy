@@ -95,7 +95,8 @@ export async function startDesktopApplication(
     closing = true;
     if (shutdownPromise) return shutdownPromise;
     const coreWasPending = pendingCore !== undefined && !coreReady;
-    shutdownPromise = (async () => {
+    // Publish the promise before closing the window can synchronously request quit again.
+    shutdownPromise = Promise.resolve().then(async () => {
       releaseSafely(unregisterConveyor);
       releaseSafely(cleanupSensitiveState);
       releaseSafely(releaseWindow);
@@ -138,7 +139,7 @@ export async function startDesktopApplication(
       releaseSafely(releaseScheme);
       releaseSafely(unlistenQuit);
       dependencies.exit(exitCode);
-    })();
+    });
     void shutdownPromise.catch(() => undefined);
     return shutdownPromise;
   };
