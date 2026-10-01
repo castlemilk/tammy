@@ -55,8 +55,8 @@ func TestLocalAttemptAnchorIDsAreScopedToOneInstallation(t *testing.T) {
 }
 
 func TestLocalCompositionCreatesConfirmsAndAuthenticatesRealWorkspace(t *testing.T) {
-	if localMigrationTarget != 7 {
-		t.Fatalf("localMigrationTarget = %d, want 7", localMigrationTarget)
+	if localMigrationTarget != 8 {
+		t.Fatalf("localMigrationTarget = %d, want 8", localMigrationTarget)
 	}
 	migrationCapture := &localMigrationCaptureModule{}
 	composition, err := NewLocalComposition(LocalCompositionConfig{
@@ -122,8 +122,8 @@ func TestLocalCompositionCreatesConfirmsAndAuthenticatesRealWorkspace(t *testing
 		`SELECT COALESCE(MAX(version), 0) FROM schema_migrations`).Scan(&migrationVersion); err != nil {
 		t.Fatalf("read migration version: %v", err)
 	}
-	if migrationVersion != 7 {
-		t.Fatalf("migration version = %d, want 7", migrationVersion)
+	if migrationVersion != 8 {
+		t.Fatalf("migration version = %d, want 8", migrationVersion)
 	}
 	for _, table := range []string{
 		"sbr_credential_bindings_v1",

@@ -596,6 +596,8 @@ func TestOrdinaryOperationRegistryContainsOnlyPlannedMutationClasses(t *testing.
 		{OrdinaryOperationReverseJournal, "tammy.v1.AccountingService.ReverseJournal", authorisation.ActionPostAccounting},
 		{OrdinaryOperationClosePeriod, "tammy.v1.AccountingService.ClosePeriod", authorisation.ActionPostAccounting},
 		{OrdinaryOperationReopenPeriod, "tammy.v1.AccountingService.ReopenPeriod", authorisation.ActionPostAccounting},
+		{OrdinaryOperationSaveInvoiceDraft, "tammy.v1.InvoiceService.SaveInvoiceDraft", authorisation.ActionPostAccounting},
+		{OrdinaryOperationIssueInvoice, "tammy.v1.InvoiceService.IssueInvoice", authorisation.ActionPostAccounting},
 	} {
 		definition, ok := ordinaryOperationDefinitionFor(test.operation)
 		if !ok || definition.rpcName != test.rpc || definition.action != test.action ||

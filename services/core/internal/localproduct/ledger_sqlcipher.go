@@ -43,6 +43,7 @@ type LedgerModule struct {
 	bankingRoute      *bankingRoute
 	documentRoute     *documentRoute
 	taxRoute          *taxRoute
+	invoiceRoute      *invoiceRoute
 	mu                sync.RWMutex
 	db                *sqlcipher.Database
 }
@@ -54,12 +55,13 @@ func NewLedgerModule() (*LedgerModule, error) {
 		bankingRoute:      &bankingRoute{},
 		documentRoute:     &documentRoute{},
 		taxRoute:          &taxRoute{},
+		invoiceRoute:      &invoiceRoute{},
 	}, nil
 }
 
 func (module *LedgerModule) HandlerFactories() []transport.GeneratedHandlerFactory {
 	if module == nil || module.organisationRoute == nil || module.accountingRoute == nil || module.bankingRoute == nil ||
-		module.documentRoute == nil || module.taxRoute == nil {
+		module.documentRoute == nil || module.taxRoute == nil || module.invoiceRoute == nil {
 		return nil
 	}
 	return []transport.GeneratedHandlerFactory{
@@ -68,12 +70,13 @@ func (module *LedgerModule) HandlerFactories() []transport.GeneratedHandlerFacto
 		module.bankingRoute.factory,
 		module.documentRoute.factory,
 		module.taxRoute.factory,
+		module.invoiceRoute.factory,
 	}
 }
 
 func (module *LedgerModule) Activate(activation app.LocalWorkspaceActivation) error {
 	if module == nil || module.organisationRoute == nil || module.accountingRoute == nil || module.bankingRoute == nil ||
-		module.documentRoute == nil || module.taxRoute == nil ||
+		module.documentRoute == nil || module.taxRoute == nil || module.invoiceRoute == nil ||
 		activation.Database == nil || activation.Identity == nil ||
 		activation.Now == nil || activation.NewID == nil {
 		return ErrLedgerModule
@@ -200,6 +203,10 @@ func (module *LedgerModule) Activate(activation app.LocalWorkspaceActivation) er
 		return err
 	}
 	module.mu.Lock()
+	if err := activateInvoices(activation, module.invoiceRoute); err != nil {
+		module.mu.Unlock()
+		return err
+	}
 	module.db = activation.Database
 	module.mu.Unlock()
 	return nil

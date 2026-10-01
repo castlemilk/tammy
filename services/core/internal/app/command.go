@@ -215,6 +215,8 @@ const (
 	OrdinaryOperationReverseJournal           OrdinaryOperation = "tammy.v1.AccountingService.ReverseJournal"
 	OrdinaryOperationClosePeriod              OrdinaryOperation = "tammy.v1.AccountingService.ClosePeriod"
 	OrdinaryOperationReopenPeriod             OrdinaryOperation = "tammy.v1.AccountingService.ReopenPeriod"
+	OrdinaryOperationSaveInvoiceDraft         OrdinaryOperation = "tammy.v1.InvoiceService.SaveInvoiceDraft"
+	OrdinaryOperationIssueInvoice             OrdinaryOperation = "tammy.v1.InvoiceService.IssueInvoice"
 )
 
 type ordinaryOperationDefinition struct {
@@ -531,6 +533,14 @@ func ordinaryOperationDefinitionFor(operation OrdinaryOperation) (ordinaryOperat
 		definition.action = authorisation.ActionPostAccounting
 		definition.requestType = "tammy.v1.ReopenPeriodRequest"
 		definition.resultType = "tammy.v1.ReopenPeriodResponse"
+	case OrdinaryOperationSaveInvoiceDraft:
+		definition.action = authorisation.ActionPostAccounting
+		definition.requestType = "tammy.v1.SaveInvoiceDraftRequest"
+		definition.resultType = "tammy.v1.SaveInvoiceDraftResponse"
+	case OrdinaryOperationIssueInvoice:
+		definition.action = authorisation.ActionPostAccounting
+		definition.requestType = "tammy.v1.IssueInvoiceRequest"
+		definition.resultType = "tammy.v1.IssueInvoiceResponse"
 	default:
 		return ordinaryOperationDefinition{}, false
 	}
