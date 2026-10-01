@@ -52,13 +52,15 @@ export async function configureCompanyInvoiceTemplate(
   await expectCompanyTemplate(page, ORIGINAL_COMPANY_TEMPLATE, true);
   await template.getByRole("button", { name: "Save template", exact: true }).click();
   await expect(template.getByRole("status")).toHaveText("Company template saved.");
-  await expect(page.getByLabel("Seller address", { exact: true })).toHaveValue(
+  await expect(page.getByRole("textbox", { name: "Seller address", exact: true })).toHaveValue(
     "27 Cambridge Road, Mooroolbark VIC 3138",
   );
-  await expect(page.getByLabel("Notes", { exact: true })).toHaveValue("Invoice acceptance");
-  await expect(page.getByLabel("Payment instructions", { exact: true })).toHaveValue(
-    "Bank transfer",
+  await expect(page.getByRole("textbox", { name: "Notes", exact: true })).toHaveValue(
+    "Invoice acceptance",
   );
+  await expect(
+    page.getByRole("textbox", { name: "Payment instructions", exact: true }),
+  ).toHaveValue("Bank transfer");
   await expect(page.getByLabel("Due date", { exact: true })).toHaveValue("2026-10-14");
   await expect(page.getByRole("img", { name: "Invoice logo", exact: true })).toHaveCount(0);
   await captureCompanyTemplate(page, directory, "invoice-template-desktop", testInfo);
@@ -89,13 +91,15 @@ export async function updateCompanyInvoiceTemplate(page: Page) {
 
 export async function expectCompanyTemplate(page: Page, values: TemplateValues, hasLogo: boolean) {
   const template = page.getByRole("region", { name: "Company invoice template", exact: true });
-  await expect(template.getByLabel("Template seller address", { exact: true })).toHaveValue(
-    values.sellerAddress,
+  await expect(
+    template.getByRole("textbox", { name: "Template seller address", exact: true }),
+  ).toHaveValue(values.sellerAddress);
+  await expect(template.getByRole("textbox", { name: "Default notes", exact: true })).toHaveValue(
+    values.notes,
   );
-  await expect(template.getByLabel("Default notes", { exact: true })).toHaveValue(values.notes);
-  await expect(template.getByLabel("Default payment instructions", { exact: true })).toHaveValue(
-    values.paymentInstructions,
-  );
+  await expect(
+    template.getByRole("textbox", { name: "Default payment instructions", exact: true }),
+  ).toHaveValue(values.paymentInstructions);
   await expect(template.getByLabel("Payment terms (days)", { exact: true })).toHaveValue(
     String(values.paymentTermsDays),
   );
@@ -115,13 +119,13 @@ export async function expectInvoiceTemplateSnapshot(
   dueDate: string,
   hasLogo: boolean,
 ) {
-  await expect(page.getByLabel("Seller address", { exact: true })).toHaveValue(
+  await expect(page.getByRole("textbox", { name: "Seller address", exact: true })).toHaveValue(
     values.sellerAddress,
   );
-  await expect(page.getByLabel("Notes", { exact: true })).toHaveValue(values.notes);
-  await expect(page.getByLabel("Payment instructions", { exact: true })).toHaveValue(
-    values.paymentInstructions,
-  );
+  await expect(page.getByRole("textbox", { name: "Notes", exact: true })).toHaveValue(values.notes);
+  await expect(
+    page.getByRole("textbox", { name: "Payment instructions", exact: true }),
+  ).toHaveValue(values.paymentInstructions);
   await expect(page.getByLabel("Due date", { exact: true })).toHaveValue(dueDate);
   if (hasLogo) await expectLogo(page, "Invoice logo");
   else await expect(page.getByRole("img", { name: "Invoice logo", exact: true })).toHaveCount(0);
@@ -143,10 +147,12 @@ export async function captureCompanyTemplate(
 
 async function fillTemplate(page: Page, values: TemplateValues) {
   const template = page.getByRole("region", { name: "Company invoice template", exact: true });
-  await template.getByLabel("Template seller address", { exact: true }).fill(values.sellerAddress);
-  await template.getByLabel("Default notes", { exact: true }).fill(values.notes);
   await template
-    .getByLabel("Default payment instructions", { exact: true })
+    .getByRole("textbox", { name: "Template seller address", exact: true })
+    .fill(values.sellerAddress);
+  await template.getByRole("textbox", { name: "Default notes", exact: true }).fill(values.notes);
+  await template
+    .getByRole("textbox", { name: "Default payment instructions", exact: true })
     .fill(values.paymentInstructions);
   await template
     .getByLabel("Payment terms (days)", { exact: true })

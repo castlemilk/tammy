@@ -334,7 +334,7 @@ test("runs the current accounting workflows through the packaged app", async ({
   await page.getByLabel("Invoice number", { exact: true }).fill("INV-TEMPLATE-002");
   await page.getByLabel("Customer name", { exact: true }).fill("Updated template customer");
   await page
-    .getByLabel("Customer address", { exact: true })
+    .getByRole("textbox", { name: "Customer address", exact: true })
     .fill("2 Customer Road, Melbourne VIC 3000");
   await page.getByLabel("Description 1", { exact: true }).fill("Template defaults service");
   await page.getByLabel("Unit price 1", { exact: true }).fill("50.00");
@@ -359,9 +359,11 @@ test("runs the current accounting workflows through the packaged app", async ({
   await expect(page.getByText("Invoice issued.", { exact: true })).toBeVisible();
   await expect(page.getByLabel("Customer name", { exact: true })).toBeDisabled();
   await expect(lineTable.getByLabel(`Unit price ${expenseLine}`, { exact: true })).toBeDisabled();
-  await expect(page.getByLabel("Seller address", { exact: true })).toBeDisabled();
-  await expect(page.getByLabel("Notes", { exact: true })).toBeDisabled();
-  await expect(page.getByLabel("Payment instructions", { exact: true })).toBeDisabled();
+  await expect(page.getByRole("textbox", { name: "Seller address", exact: true })).toBeDisabled();
+  await expect(page.getByRole("textbox", { name: "Notes", exact: true })).toBeDisabled();
+  await expect(
+    page.getByRole("textbox", { name: "Payment instructions", exact: true }),
+  ).toBeDisabled();
   await expect(page.getByRole("button", { name: "Remove invoice logo", exact: true })).toHaveCount(
     0,
   );
