@@ -32,6 +32,10 @@ describe("invoice branding generated contracts", () => {
       "SaveInvoiceTemplate",
       "UploadInvoiceLogo",
       "GetInvoiceLogo",
+      "GetInvoiceAccounting",
+      "PostInvoiceIncome",
+      "RecordInvoicePayment",
+      "GetBusinessIncomeSummary",
     ]);
   });
 });

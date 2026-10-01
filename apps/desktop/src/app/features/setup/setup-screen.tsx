@@ -94,6 +94,7 @@ interface SetupScreenProps {
 }
 
 interface PendingSetup {
+  readonly gstBasis: GstBasis;
   readonly administratorPassword: string;
   readonly abn: string;
   readonly businessDisplayName: string;
@@ -139,6 +140,7 @@ export function SetupScreen({
   const [businessLegalName, setBusinessLegalName] = useState("");
   const [businessDisplayName, setBusinessDisplayName] = useState("");
   const [abn, setAbn] = useState("");
+  const [gstBasis, setGstBasis] = useState(GstBasis.NON_CASH);
   const [workspacePassphrase, setWorkspacePassphrase] = useState("");
   const [administratorPassword, setAdministratorPassword] = useState("");
   const [pending, setPending] = useState<PendingSetup>();
@@ -198,7 +200,7 @@ export function SetupScreen({
           legalName: setup.businessLegalName,
           displayName: setup.businessDisplayName,
           entityType: "AU_PRIVATE_COMPANY",
-          gstBasis: GstBasis.NON_CASH,
+          gstBasis: setup.gstBasis,
           gstReportingFrequency: GstReportingFrequency.QUARTERLY,
           financialYearEndMonth: 6,
           activeTaxRuleBundle: create(SourceRefSchema, {
@@ -270,6 +272,7 @@ export function SetupScreen({
       if (!response.workspace || !response.recoverySecret?.utf8.byteLength)
         throw new Error("invalid");
       setPending({
+        gstBasis,
         administratorPassword,
         abn,
         businessDisplayName,
@@ -434,6 +437,26 @@ export function SetupScreen({
                 required
                 value={abn}
               />
+            </label>
+            <label className="grid gap-1.5 text-[11px] font-medium text-foreground">
+              GST accounting basis
+              <select
+                aria-label="GST accounting basis"
+                aria-describedby="gst-basis-description"
+                className={fieldClassName()}
+                onChange={(event) => setGstBasis(Number(event.target.value) as GstBasis)}
+                value={gstBasis}
+              >
+                <option value={GstBasis.NON_CASH}>Non-cash (accrual)</option>
+                <option value={GstBasis.CASH}>Cash</option>
+              </select>
+              <span
+                id="gst-basis-description"
+                className="text-[10px] font-normal leading-5 text-muted-foreground"
+              >
+                Use the basis your business reports to the ATO. Cash-basis invoice GST follows
+                recorded receipts; cash purchase credits require payment evidence.
+              </span>
             </label>
             <label className="grid gap-1.5 text-[11px] font-medium text-foreground">
               Workspace passphrase

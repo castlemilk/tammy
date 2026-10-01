@@ -6,6 +6,7 @@ import "buf/validate/validate.proto";
 import "google/protobuf/timestamp.proto";
 import "tammy/v1/accounting.proto";
 import "tammy/v1/common.proto";
+import "tammy/v1/organisation.proto";
 
 option go_package = "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1";
 
@@ -235,14 +236,107 @@ message GetInvoiceLogoResponse {
   }];
 }
 
+// Immutable dated receipts belong to the accounting link, not the invoice document.
+message InvoicePayment {
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string invoice_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  CivilDate payment_date = 4 [(buf.validate.field).required = true];
+  Money amount = 5 [(buf.validate.field).required = true];
+  Money allocated_gst = 6 [(buf.validate.field).required = true];
+  Money bas_sales_gross = 7 [(buf.validate.field).required = true];
+  string bank_account_id = 8 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string reference = 9 [(buf.validate.field).string.max_len = 200];
+  string journal_id = 10 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  google.protobuf.Timestamp created_at = 11 [(buf.validate.field).required = true];
+}
+
+// Version zero denotes an invoice not yet linked to business accounts.
+message InvoiceAccounting {
+  string invoice_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 version = 3;
+  bool posted = 4;
+  optional string revenue_account_id = 5 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  optional string journal_id = 6 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  GstBasis gst_basis = 7 [(buf.validate.field).enum.defined_only = true];
+  int64 received_minor = 8 [(buf.validate.field).int64.gte = 0];
+  int64 outstanding_minor = 9 [(buf.validate.field).int64.gte = 0];
+  repeated InvoicePayment payments = 10 [(buf.validate.field).repeated.max_items = 200];
+  uint64 payment_count = 11;
+}
+message GetInvoiceAccountingRequest {
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string invoice_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+}
+message GetInvoiceAccountingResponse {
+  InvoiceAccounting accounting = 1 [(buf.validate.field).required = true];
+}
+message PostInvoiceIncomeRequest {
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string invoice_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 expected_version = 4 [(buf.validate.field).uint64.gte = 1];
+}
+message PostInvoiceIncomeResponse {
+  InvoiceAccounting accounting = 1 [(buf.validate.field).required = true];
+}
+message RecordInvoicePaymentRequest {
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string invoice_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 expected_accounting_version = 4 [(buf.validate.field).uint64.gte = 1];
+  CivilDate payment_date = 5 [(buf.validate.field).required = true];
+  Money amount = 6 [(buf.validate.field).required = true];
+  string bank_account_id = 7 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string reference = 8 [(buf.validate.field).string.max_len = 200];
+}
+message RecordInvoicePaymentResponse {
+  InvoiceAccounting accounting = 1 [(buf.validate.field).required = true];
+  InvoicePayment payment = 2 [(buf.validate.field).required = true];
+}
+
+// Period activity and outstanding debt use separate dates to retain older debt.
+message BusinessIncomeSummary {
+  string organisation_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  CivilDate period_start = 2 [(buf.validate.field).required = true];
+  CivilDate period_end = 3 [(buf.validate.field).required = true];
+  CivilDate as_of_date = 4 [(buf.validate.field).required = true];
+  Money business_income = 5 [(buf.validate.field).required = true];
+  Money invoice_income = 6 [(buf.validate.field).required = true];
+  Money payments_received = 7 [(buf.validate.field).required = true];
+  Money outstanding = 8 [(buf.validate.field).required = true];
+  Money invoice_gst = 9 [(buf.validate.field).required = true];
+  uint64 issued_count = 10;
+  uint64 unposted_issued_count = 11;
+  GstBasis gst_basis = 12 [(buf.validate.field).enum.defined_only = true];
+  uint64 financial_revision = 13;
+  Money unposted_income = 14 [(buf.validate.field).required = true];
+}
+message GetBusinessIncomeSummaryRequest {
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  CivilDate period_start = 3 [(buf.validate.field).required = true];
+  CivilDate period_end = 4 [(buf.validate.field).required = true];
+  CivilDate as_of_date = 5 [(buf.validate.field).required = true];
+}
+message GetBusinessIncomeSummaryResponse {
+  BusinessIncomeSummary summary = 1 [(buf.validate.field).required = true];
+}
+
 service InvoiceService {
   rpc SaveInvoiceDraft(SaveInvoiceDraftRequest) returns (SaveInvoiceDraftResponse);
   rpc GetInvoice(GetInvoiceRequest) returns (GetInvoiceResponse);
   rpc ListInvoices(ListInvoicesRequest) returns (ListInvoicesResponse);
-  // Issue freezes the document. It never sends it, records payment, or posts a journal.
+  // Issue freezes the document and atomically records income. It never sends it or records payment.
   rpc IssueInvoice(IssueInvoiceRequest) returns (IssueInvoiceResponse);
   rpc GetInvoiceTemplate(GetInvoiceTemplateRequest) returns (GetInvoiceTemplateResponse);
   rpc SaveInvoiceTemplate(SaveInvoiceTemplateRequest) returns (SaveInvoiceTemplateResponse);
   rpc UploadInvoiceLogo(UploadInvoiceLogoRequest) returns (UploadInvoiceLogoResponse);
   rpc GetInvoiceLogo(GetInvoiceLogoRequest) returns (GetInvoiceLogoResponse);
+  rpc GetInvoiceAccounting(GetInvoiceAccountingRequest) returns (GetInvoiceAccountingResponse);
+  rpc PostInvoiceIncome(PostInvoiceIncomeRequest) returns (PostInvoiceIncomeResponse);
+  rpc RecordInvoicePayment(RecordInvoicePaymentRequest) returns (RecordInvoicePaymentResponse);
+  rpc GetBusinessIncomeSummary(GetBusinessIncomeSummaryRequest) returns (GetBusinessIncomeSummaryResponse);
 }

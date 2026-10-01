@@ -55,7 +55,7 @@ func TestLocalAttemptAnchorIDsAreScopedToOneInstallation(t *testing.T) {
 }
 
 func TestLocalCompositionCreatesConfirmsAndAuthenticatesRealWorkspace(t *testing.T) {
-	if localMigrationTarget != 9 {
+	if localMigrationTarget != 10 {
 		t.Fatalf("localMigrationTarget = %d, want 9", localMigrationTarget)
 	}
 	migrationCapture := &localMigrationCaptureModule{}
@@ -122,7 +122,7 @@ func TestLocalCompositionCreatesConfirmsAndAuthenticatesRealWorkspace(t *testing
 		`SELECT COALESCE(MAX(version), 0) FROM schema_migrations`).Scan(&migrationVersion); err != nil {
 		t.Fatalf("read migration version: %v", err)
 	}
-	if migrationVersion != 9 {
+	if migrationVersion != 10 {
 		t.Fatalf("migration version = %d, want 9", migrationVersion)
 	}
 	for _, table := range []string{

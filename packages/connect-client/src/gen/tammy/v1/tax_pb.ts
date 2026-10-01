@@ -9,13 +9,15 @@ import type { Timestamp } from "@bufbuild/protobuf/wkt";
 import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { AuthenticationContext, CivilDate, CommandContext, Money } from "./common_pb.js";
 import { file_tammy_v1_common } from "./common_pb.js";
+import type { GstBasis } from "./organisation_pb.js";
+import { file_tammy_v1_organisation } from "./organisation_pb.js";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file tammy/v1/tax.proto.
  */
 export const file_tammy_v1_tax: GenFile = /*@__PURE__*/
-  fileDesc("ChJ0YW1teS92MS90YXgucHJvdG8SCHRhbW15LnYxIr4CCg1CYXNTb3VyY2VMaW5lEmEKC2RvY3VtZW50X2lkGAEgASgJQky6SElyRzJFXlswLTlhLWZdezh9LVswLTlhLWZdezR9LTdbMC05YS1mXXszfS1bODlhYl1bMC05YS1mXXszfS1bMC05YS1mXXsxMn0kEh8KDXN1cHBsaWVyX25hbWUYAiABKAlCCLpIBXIDGIACEiAKDmludm9pY2VfbnVtYmVyGAMgASgJQgi6SAVyAxiAARIyCg1kb2N1bWVudF9kYXRlGAQgASgLMhMudGFtbXkudjEuQ2l2aWxEYXRlQga6SAPIAQESJgoFZ3Jvc3MYBSABKAsyDy50YW1teS52MS5Nb25leUIGukgDyAEBEisKCmdzdF9jcmVkaXQYBiABKAsyDy50YW1teS52MS5Nb25leUIGukgDyAEBIrIFCgxCYXNXb3JrcGFwZXISWAoCaWQYASABKAlCTLpISXJHMkVeWzAtOWEtZl17OH0tWzAtOWEtZl17NH0tN1swLTlhLWZdezN9LVs4OWFiXVswLTlhLWZdezN9LVswLTlhLWZdezEyfSQSZQoPb3JnYW5pc2F0aW9uX2lkGAIgASgJQky6SElyRzJFXlswLTlhLWZdezh9LVswLTlhLWZdezR9LTdbMC05YS1mXXszfS1bODlhYl1bMC05YS1mXXszfS1bMC05YS1mXXsxMn0kEhgKB3ZlcnNpb24YAyABKARCB7pIBDICKAESMQoMcGVyaW9kX3N0YXJ0GAQgASgLMhMudGFtbXkudjEuQ2l2aWxEYXRlQga6SAPIAQESLwoKcGVyaW9kX2VuZBgFIAEoCzITLnRhbW15LnYxLkNpdmlsRGF0ZUIGukgDyAEBEjYKBnN0YXR1cxgGIAEoDjIcLnRhbW15LnYxLkJhc1dvcmtwYXBlclN0YXR1c0IIukgFggECEAESKQoIc2FsZXNfZzEYByABKAsyDy50YW1teS52MS5Nb25leUIGukgDyAEBEjAKD2dzdF9vbl9zYWxlc18xYRgIIAEoCzIPLnRhbW15LnYxLk1vbmV5Qga6SAPIAQESLwoOZ3N0X2NyZWRpdHNfMWIYCSABKAsyDy50YW1teS52MS5Nb25leUIGukgDyAEBEjAKD25ldF9nc3RfcGF5YWJsZRgKIAEoCzIPLnRhbW15LnYxLk1vbmV5Qga6SAPIAQESMwoHc291cmNlcxgLIAMoCzIXLnRhbW15LnYxLkJhc1NvdXJjZUxpbmVCCbpIBpIBAxDoBxI2CgpjcmVhdGVkX2F0GAwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIGukgDyAEBIp0CChVDcmVhdGVCYXNEcmFmdFJlcXVlc3QSOQoPY29tbWFuZF9jb250ZXh0GAEgASgLMhgudGFtbXkudjEuQ29tbWFuZENvbnRleHRCBrpIA8gBARJlCg9vcmdhbmlzYXRpb25faWQYAiABKAlCTLpISXJHMkVeWzAtOWEtZl17OH0tWzAtOWEtZl17NH0tN1swLTlhLWZdezN9LVs4OWFiXVswLTlhLWZdezN9LVswLTlhLWZdezEyfSQSMQoMcGVyaW9kX3N0YXJ0GAMgASgLMhMudGFtbXkudjEuQ2l2aWxEYXRlQga6SAPIAQESLwoKcGVyaW9kX2VuZBgEIAEoCzITLnRhbW15LnYxLkNpdmlsRGF0ZUIGukgDyAEBIksKFkNyZWF0ZUJhc0RyYWZ0UmVzcG9uc2USMQoJd29ya3BhcGVyGAEgASgLMhYudGFtbXkudjEuQmFzV29ya3BhcGVyQga6SAPIAQEiwwEKGUdldEN1cnJlbnRCYXNEcmFmdFJlcXVlc3QSPwoOYXV0aGVudGljYXRpb24YASABKAsyHy50YW1teS52MS5BdXRoZW50aWNhdGlvbkNvbnRleHRCBrpIA8gBARJlCg9vcmdhbmlzYXRpb25faWQYAiABKAlCTLpISXJHMkVeWzAtOWEtZl17OH0tWzAtOWEtZl17NH0tN1swLTlhLWZdezN9LVs4OWFiXVswLTlhLWZdezN9LVswLTlhLWZdezEyfSQiTwoaR2V0Q3VycmVudEJhc0RyYWZ0UmVzcG9uc2USMQoJd29ya3BhcGVyGAEgASgLMhYudGFtbXkudjEuQmFzV29ya3BhcGVyQga6SAPIAQEqZQoSQmFzV29ya3BhcGVyU3RhdHVzEiQKIEJBU19XT1JLUEFQRVJfU1RBVFVTX1VOU1BFQ0lGSUVEEAASKQolQkFTX1dPUktQQVBFUl9TVEFUVVNfRFJBRlRfTk9UX0xPREdFRBABMsIBCgpUYXhTZXJ2aWNlElMKDkNyZWF0ZUJhc0RyYWZ0Eh8udGFtbXkudjEuQ3JlYXRlQmFzRHJhZnRSZXF1ZXN0GiAudGFtbXkudjEuQ3JlYXRlQmFzRHJhZnRSZXNwb25zZRJfChJHZXRDdXJyZW50QmFzRHJhZnQSIy50YW1teS52MS5HZXRDdXJyZW50QmFzRHJhZnRSZXF1ZXN0GiQudGFtbXkudjEuR2V0Q3VycmVudEJhc0RyYWZ0UmVzcG9uc2VCR1pFZ2l0aHViLmNvbS90YW1teWFwcC90YW1teS9zZXJ2aWNlcy9jb3JlL2ludGVybmFsL2dlbi90YW1teS92MTt0YW1teXYxYgZwcm90bzM", [file_buf_validate_validate, file_google_protobuf_timestamp, file_tammy_v1_common]);
+  fileDesc("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ZWF0ZUJhc0RyYWZ0UmVxdWVzdBI5Cg9jb21tYW5kX2NvbnRleHQYASABKAsyGC50YW1teS52MS5Db21tYW5kQ29udGV4dEIGukgDyAEBEmUKD29yZ2FuaXNhdGlvbl9pZBgCIAEoCUJMukhJckcyRV5bMC05YS1mXXs4fS1bMC05YS1mXXs0fS03WzAtOWEtZl17M30tWzg5YWJdWzAtOWEtZl17M30tWzAtOWEtZl17MTJ9JBIxCgxwZXJpb2Rfc3RhcnQYAyABKAsyEy50YW1teS52MS5DaXZpbERhdGVCBrpIA8gBARIvCgpwZXJpb2RfZW5kGAQgASgLMhMudGFtbXkudjEuQ2l2aWxEYXRlQga6SAPIAQEiSwoWQ3JlYXRlQmFzRHJhZnRSZXNwb25zZRIxCgl3b3JrcGFwZXIYASABKAsyFi50YW1teS52MS5CYXNXb3JrcGFwZXJCBrpIA8gBASLDAQoZR2V0Q3VycmVudEJhc0RyYWZ0UmVxdWVzdBI/Cg5hdXRoZW50aWNhdGlvbhgBIAEoCzIfLnRhbW15LnYxLkF1dGhlbnRpY2F0aW9uQ29udGV4dEIGukgDyAEBEmUKD29yZ2FuaXNhdGlvbl9pZBgCIAEoCUJMukhJckcyRV5bMC05YS1mXXs4fS1bMC05YS1mXXs0fS03WzAtOWEtZl17M30tWzg5YWJdWzAtOWEtZl17M30tWzAtOWEtZl17MTJ9JCJPChpHZXRDdXJyZW50QmFzRHJhZnRSZXNwb25zZRIxCgl3b3JrcGFwZXIYASABKAsyFi50YW1teS52MS5CYXNXb3JrcGFwZXJCBrpIA8gBASplChJCYXNXb3JrcGFwZXJTdGF0dXMSJAogQkFTX1dPUktQQVBFUl9TVEFUVVNfVU5TUEVDSUZJRUQQABIpCiVCQVNfV09SS1BBUEVSX1NUQVRVU19EUkFGVF9OT1RfTE9ER0VEEAEywgEKClRheFNlcnZpY2USUwoOQ3JlYXRlQmFzRHJhZnQSHy50YW1teS52MS5DcmVhdGVCYXNEcmFmdFJlcXVlc3QaIC50YW1teS52MS5DcmVhdGVCYXNEcmFmdFJlc3BvbnNlEl8KEkdldEN1cnJlbnRCYXNEcmFmdBIjLnRhbW15LnYxLkdldEN1cnJlbnRCYXNEcmFmdFJlcXVlc3QaJC50YW1teS52MS5HZXRDdXJyZW50QmFzRHJhZnRSZXNwb25zZUJHWkVnaXRodWIuY29tL3RhbW15YXBwL3RhbW15L3NlcnZpY2VzL2NvcmUvaW50ZXJuYWwvZ2VuL3RhbW15L3YxO3RhbW15djFiBnByb3RvMw", [file_buf_validate_validate, file_google_protobuf_timestamp, file_tammy_v1_common, file_tammy_v1_organisation]);
 
 /**
  * @generated from message tammy.v1.BasSourceLine
@@ -58,6 +60,63 @@ export type BasSourceLine = Message<"tammy.v1.BasSourceLine"> & {
  */
 export const BasSourceLineSchema: GenMessage<BasSourceLine> = /*@__PURE__*/
   messageDesc(file_tammy_v1_tax, 0);
+
+/**
+ * @generated from message tammy.v1.BasSalesSourceLine
+ */
+export type BasSalesSourceLine = Message<"tammy.v1.BasSalesSourceLine"> & {
+  /**
+   * @generated from field: string invoice_id = 1;
+   */
+  invoiceId: string;
+
+  /**
+   * @generated from field: string invoice_number = 2;
+   */
+  invoiceNumber: string;
+
+  /**
+   * @generated from field: string customer_name = 3;
+   */
+  customerName: string;
+
+  /**
+   * @generated from field: tammy.v1.CivilDate tax_date = 4;
+   */
+  taxDate?: CivilDate | undefined;
+
+  /**
+   * @generated from field: tammy.v1.Money gross = 5;
+   */
+  gross?: Money | undefined;
+
+  /**
+   * @generated from field: tammy.v1.Money gst = 6;
+   */
+  gst?: Money | undefined;
+
+  /**
+   * @generated from field: optional string payment_id = 7;
+   */
+  paymentId?: string | undefined;
+
+  /**
+   * @generated from field: uint64 source_revision = 8;
+   */
+  sourceRevision: bigint;
+
+  /**
+   * @generated from field: bytes source_hash = 9;
+   */
+  sourceHash: Uint8Array;
+};
+
+/**
+ * Describes the message tammy.v1.BasSalesSourceLine.
+ * Use `create(BasSalesSourceLineSchema)` to create a new message.
+ */
+export const BasSalesSourceLineSchema: GenMessage<BasSalesSourceLine> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_tax, 1);
 
 /**
  * @generated from message tammy.v1.BasWorkpaper
@@ -122,6 +181,38 @@ export type BasWorkpaper = Message<"tammy.v1.BasWorkpaper"> & {
    * @generated from field: google.protobuf.Timestamp created_at = 12;
    */
   createdAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: tammy.v1.GstBasis gst_basis = 13;
+   */
+  gstBasis: GstBasis;
+
+  /**
+   * @generated from field: repeated tammy.v1.BasSalesSourceLine sales_sources = 14;
+   */
+  salesSources: BasSalesSourceLine[];
+
+  /**
+   * Empty on a legacy snapshot; regenerate to retain complete provenance.
+   *
+   * @generated from field: bytes source_fingerprint = 15;
+   */
+  sourceFingerprint: Uint8Array;
+
+  /**
+   * @generated from field: bool sources_changed = 16;
+   */
+  sourcesChanged: boolean;
+
+  /**
+   * @generated from field: repeated string review_warnings = 17;
+   */
+  reviewWarnings: string[];
+
+  /**
+   * @generated from field: uint64 excluded_cash_purchase_count = 18;
+   */
+  excludedCashPurchaseCount: bigint;
 };
 
 /**
@@ -129,7 +220,7 @@ export type BasWorkpaper = Message<"tammy.v1.BasWorkpaper"> & {
  * Use `create(BasWorkpaperSchema)` to create a new message.
  */
 export const BasWorkpaperSchema: GenMessage<BasWorkpaper> = /*@__PURE__*/
-  messageDesc(file_tammy_v1_tax, 1);
+  messageDesc(file_tammy_v1_tax, 2);
 
 /**
  * @generated from message tammy.v1.CreateBasDraftRequest
@@ -161,7 +252,7 @@ export type CreateBasDraftRequest = Message<"tammy.v1.CreateBasDraftRequest"> & 
  * Use `create(CreateBasDraftRequestSchema)` to create a new message.
  */
 export const CreateBasDraftRequestSchema: GenMessage<CreateBasDraftRequest> = /*@__PURE__*/
-  messageDesc(file_tammy_v1_tax, 2);
+  messageDesc(file_tammy_v1_tax, 3);
 
 /**
  * @generated from message tammy.v1.CreateBasDraftResponse
@@ -178,7 +269,7 @@ export type CreateBasDraftResponse = Message<"tammy.v1.CreateBasDraftResponse"> 
  * Use `create(CreateBasDraftResponseSchema)` to create a new message.
  */
 export const CreateBasDraftResponseSchema: GenMessage<CreateBasDraftResponse> = /*@__PURE__*/
-  messageDesc(file_tammy_v1_tax, 3);
+  messageDesc(file_tammy_v1_tax, 4);
 
 /**
  * @generated from message tammy.v1.GetCurrentBasDraftRequest
@@ -200,7 +291,7 @@ export type GetCurrentBasDraftRequest = Message<"tammy.v1.GetCurrentBasDraftRequ
  * Use `create(GetCurrentBasDraftRequestSchema)` to create a new message.
  */
 export const GetCurrentBasDraftRequestSchema: GenMessage<GetCurrentBasDraftRequest> = /*@__PURE__*/
-  messageDesc(file_tammy_v1_tax, 4);
+  messageDesc(file_tammy_v1_tax, 5);
 
 /**
  * @generated from message tammy.v1.GetCurrentBasDraftResponse
@@ -217,7 +308,7 @@ export type GetCurrentBasDraftResponse = Message<"tammy.v1.GetCurrentBasDraftRes
  * Use `create(GetCurrentBasDraftResponseSchema)` to create a new message.
  */
 export const GetCurrentBasDraftResponseSchema: GenMessage<GetCurrentBasDraftResponse> = /*@__PURE__*/
-  messageDesc(file_tammy_v1_tax, 5);
+  messageDesc(file_tammy_v1_tax, 6);
 
 /**
  * @generated from enum tammy.v1.BasWorkpaperStatus

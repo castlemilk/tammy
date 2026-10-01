@@ -19,7 +19,7 @@ import { conveyorProtoFrame, invokeCore } from "../proto";
 const currentBas = createProtoMethodCodec({
   input: GetCurrentBasDraftRequestSchema,
   maximumRequestBytes: 16_384,
-  maximumResponseBytes: 262_144,
+  maximumResponseBytes: 4_194_304,
   output: GetCurrentBasDraftResponseSchema,
 });
 const capability = createProtoMethodCodec({
@@ -37,7 +37,7 @@ const attention = createProtoMethodCodec({
 const createBas = createProtoMethodCodec({
   input: CreateBasDraftRequestSchema,
   maximumRequestBytes: 16_384,
-  maximumResponseBytes: 262_144,
+  maximumResponseBytes: 4_194_304,
   output: CreateBasDraftResponseSchema,
 });
 

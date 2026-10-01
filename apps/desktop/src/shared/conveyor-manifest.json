@@ -16,6 +16,11 @@
     "recordEntityVerification": "command"
   },
   "accounting": {
+    "getInvoiceAccounting": "query",
+    "postInvoiceIncome": "command",
+    "recordInvoicePayment": "command",
+    "getBusinessIncomeSummary": "query",
+
     "listAccounts": "query",
     "listJournals": "query",
     "getJournal": "query",

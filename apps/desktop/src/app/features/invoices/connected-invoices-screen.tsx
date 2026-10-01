@@ -1,11 +1,19 @@
 import { create } from "@bufbuild/protobuf";
-import { PageRequestSchema } from "@tammy/connect-client/tammy/v1/common_pb.js";
+import {
+  AccountStatus,
+  AccountType,
+  ListAccountsRequestSchema,
+  ListAccountsResponseSchema,
+} from "@tammy/connect-client/tammy/v1/accounting_pb.js";
+import { CivilDateSchema, PageRequestSchema } from "@tammy/connect-client/tammy/v1/common_pb.js";
 import {
   DocumentStatus,
   ListDocumentsRequestSchema,
   ListDocumentsResponseSchema,
 } from "@tammy/connect-client/tammy/v1/documents_pb.js";
 import {
+  GetInvoiceAccountingRequestSchema,
+  GetInvoiceAccountingResponseSchema,
   GetInvoiceLogoRequestSchema,
   GetInvoiceLogoResponseSchema,
   GetInvoiceRequestSchema,
@@ -16,6 +24,10 @@ import {
   IssueInvoiceResponseSchema,
   ListInvoicesRequestSchema,
   ListInvoicesResponseSchema,
+  PostInvoiceIncomeRequestSchema,
+  PostInvoiceIncomeResponseSchema,
+  RecordInvoicePaymentRequestSchema,
+  RecordInvoicePaymentResponseSchema,
   SaveInvoiceDraftRequestSchema,
   SaveInvoiceDraftResponseSchema,
   SaveInvoiceTemplateRequestSchema,
@@ -26,6 +38,7 @@ import {
 import { validateInvoiceDraft } from "@tammy/invoices/model";
 import { useMemo } from "react";
 import type { TammyConveyor } from "../../../conveyor/client";
+import { invoiceAccountingToRecord } from "../../../shared/invoice-accounting";
 import { invoiceLogoToPreview, invoiceTemplateFromProto } from "../../../shared/invoice-template";
 import { invoiceDraftToProto, invoiceToRecord } from "../../../shared/invoices";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
@@ -86,6 +99,30 @@ const getLogo = createProtoMethodCodec({
   maximumRequestBytes: 8192,
   maximumResponseBytes: 1179648,
 });
+const getAccounting = createProtoMethodCodec({
+  input: GetInvoiceAccountingRequestSchema,
+  output: GetInvoiceAccountingResponseSchema,
+  maximumRequestBytes: 8192,
+  maximumResponseBytes: 262144,
+});
+const postIncome = createProtoMethodCodec({
+  input: PostInvoiceIncomeRequestSchema,
+  output: PostInvoiceIncomeResponseSchema,
+  maximumRequestBytes: 8192,
+  maximumResponseBytes: 262144,
+});
+const recordPayment = createProtoMethodCodec({
+  input: RecordInvoicePaymentRequestSchema,
+  output: RecordInvoicePaymentResponseSchema,
+  maximumRequestBytes: 16384,
+  maximumResponseBytes: 262144,
+});
+const accounts = createProtoMethodCodec({
+  input: ListAccountsRequestSchema,
+  output: ListAccountsResponseSchema,
+  maximumRequestBytes: 16384,
+  maximumResponseBytes: 131072,
+});
 
 export function ConnectedInvoicesScreen({
   conveyor,
@@ -94,21 +131,147 @@ export function ConnectedInvoicesScreen({
   readonly conveyor: TammyConveyor;
   readonly workspace: AuthenticatedWorkspace | undefined;
 }) {
-  const api = useMemo<InvoicesApi>(
-    () => ({
+  const api = useMemo<InvoicesApi>(() => {
+    const paymentAttempts = new Map<
+      string,
+      { readonly identity: string; readonly frame: Uint8Array }
+    >();
+    return {
+      accounting: {
+        beginPayment: (invoiceId) => {
+          paymentAttempts.delete(invoiceId);
+        },
+        get: async (invoiceId) => {
+          const response = getAccounting.decodeResponse(
+            await conveyor.accounting.getInvoiceAccounting(
+              getAccounting.encodeRequest(
+                create(GetInvoiceAccountingRequestSchema, { ...authority(workspace), invoiceId }),
+              ),
+            ),
+          );
+          if (!response.accounting) throw new Error("INVOICE_ACCOUNTING_UNAVAILABLE");
+          return invoiceAccountingToRecord(response.accounting);
+        },
+        post: async (invoiceId, expectedVersion) => {
+          const context = authority(workspace);
+          const response = postIncome.decodeResponse(
+            await conveyor.accounting.postInvoiceIncome(
+              postIncome.encodeRequest(
+                create(PostInvoiceIncomeRequestSchema, {
+                  organisationId: context.organisationId,
+                  commandContext: {
+                    authentication: context.authentication,
+                    idempotencyKey: uuidV7(),
+                  },
+                  invoiceId,
+                  expectedVersion: BigInt(expectedVersion),
+                }),
+              ),
+            ),
+          );
+          if (!response.accounting) throw new Error("INVOICE_ACCOUNTING_UNAVAILABLE");
+          await invalidateIncome(conveyor);
+          return invoiceAccountingToRecord(response.accounting);
+        },
+        recordPayment: async (invoiceId, expectedAccountingVersion, payment) => {
+          const context = authority(workspace);
+          const [year, month, day] = payment.date.split("-").map(Number);
+          const identity = JSON.stringify(payment);
+          let attempt = paymentAttempts.get(invoiceId);
+          if (attempt?.identity !== identity) {
+            attempt = {
+              identity,
+              frame: recordPayment.encodeRequest(
+                create(RecordInvoicePaymentRequestSchema, {
+                  organisationId: context.organisationId,
+                  commandContext: {
+                    authentication: context.authentication,
+                    idempotencyKey: uuidV7(),
+                  },
+                  invoiceId,
+                  expectedAccountingVersion: BigInt(expectedAccountingVersion),
+                  paymentDate: create(CivilDateSchema, {
+                    year: year ?? 0,
+                    month: month ?? 0,
+                    day: day ?? 0,
+                  }),
+                  amount: { currencyCode: "AUD", minorUnits: BigInt(payment.amountMinor) },
+                  bankAccountId: payment.bankAccountId,
+                  reference: payment.reference,
+                }),
+              ),
+            };
+            paymentAttempts.set(invoiceId, attempt);
+          }
+          // Keep the original version and operation key together when a success
+          // response is lost. A refreshed version must not create another receipt.
+          const response = recordPayment.decodeResponse(
+            await conveyor.accounting.recordInvoicePayment(attempt.frame),
+          );
+          if (!response.accounting) throw new Error("INVOICE_ACCOUNTING_UNAVAILABLE");
+          const value = invoiceAccountingToRecord(response.accounting);
+          paymentAttempts.delete(invoiceId);
+          // The committed receipt remains successful if a derived cache cannot refresh.
+          await invalidateIncome(conveyor);
+          return value;
+        },
+        listBankAccounts: async () => {
+          const result: { id: string; code: string; name: string }[] = [];
+          const seen = new Set<string>();
+          let cursor: string | undefined;
+          do {
+            const response = accounts.decodeResponse(
+              await conveyor.accounting.listAccounts(
+                accounts.encodeRequest(
+                  create(ListAccountsRequestSchema, {
+                    ...authority(workspace),
+                    status: AccountStatus.ACTIVE,
+                    type: AccountType.ASSET,
+                    page: { pageSize: 200, ...(cursor ? { cursor } : {}) },
+                  }),
+                ),
+              ),
+            );
+            result.push(
+              ...response.accounts
+                .filter(
+                  (account) =>
+                    account.status === AccountStatus.ACTIVE &&
+                    ["balance_sheet.cash", "balance_sheet.cash_equivalent"].includes(
+                      account.reportClassification,
+                    ),
+                )
+                .map(({ id, code, name }) => ({ id, code, name })),
+            );
+            cursor = response.page?.nextCursor;
+            if (cursor && seen.has(cursor)) throw new Error("BANK_ACCOUNTS_UNAVAILABLE");
+            if (cursor) seen.add(cursor);
+          } while (cursor);
+          return result;
+        },
+      },
       list: async () => {
         const context = authority(workspace);
-        const response = list.decodeResponse(
-          await conveyor.accounting.listInvoices(
-            list.encodeRequest(
-              create(ListInvoicesRequestSchema, {
-                ...context,
-                page: create(PageRequestSchema, { pageSize: 200 }),
-              }),
+        const result: ReturnType<typeof invoiceToRecord>[] = [];
+        const seen = new Set<string>();
+        let cursor: string | undefined;
+        do {
+          const response = list.decodeResponse(
+            await conveyor.accounting.listInvoices(
+              list.encodeRequest(
+                create(ListInvoicesRequestSchema, {
+                  ...context,
+                  page: create(PageRequestSchema, { pageSize: 200, ...(cursor ? { cursor } : {}) }),
+                }),
+              ),
             ),
-          ),
-        );
-        return response.invoices.map(invoiceToRecord);
+          );
+          result.push(...response.invoices.map(invoiceToRecord));
+          cursor = response.page?.nextCursor;
+          if (cursor && seen.has(cursor)) throw new Error("INVOICES_UNAVAILABLE");
+          if (cursor) seen.add(cursor);
+        } while (cursor);
+        return result;
       },
       save: async (draft, invoiceId = "", expectedVersion = 0, logoAssetId) => {
         const context = authority(workspace);
@@ -150,6 +313,7 @@ export function ConnectedInvoicesScreen({
           ),
         );
         if (!response.invoice) throw new Error("INVOICE_UNAVAILABLE");
+        await invalidateIncome(conveyor);
         return invoiceToRecord(response.invoice);
       },
       exportPdf: async (invoiceId) => {
@@ -259,9 +423,8 @@ export function ConnectedInvoicesScreen({
             gstMinor: Number(document.candidate?.gst?.minorUnits ?? 0n),
           }));
       },
-    }),
-    [conveyor, workspace],
-  );
+    };
+  }, [conveyor, workspace]);
   return (
     <InvoicesScreen
       api={api}
@@ -281,6 +444,18 @@ function readFile(file: File): Promise<Uint8Array> {
     reader.onabort = () => reject(new Error("INVOICE_LOGO_UNAVAILABLE"));
     reader.readAsArrayBuffer(file);
   });
+}
+
+async function invalidateIncome(conveyor: TammyConveyor) {
+  const refreshes = [
+    () => conveyor.accounting.getBusinessIncomeSummary.invalidate(),
+    () => conveyor.accounting.listAccounts.invalidate(),
+    () => conveyor.accounting.listJournals.invalidate(),
+    () => conveyor.accounting.getTrialBalance.invalidate(),
+    () => conveyor.reporting.getAttentionSummary.invalidate(),
+    () => conveyor.reporting.getCurrentBasDraft.invalidate(),
+  ];
+  await Promise.allSettled(refreshes.map((refresh) => Promise.resolve().then(refresh)));
 }
 
 function authority(workspace: AuthenticatedWorkspace | undefined) {

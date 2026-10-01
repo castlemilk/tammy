@@ -1,8 +1,10 @@
 package reporting
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -14,9 +16,11 @@ import (
 )
 
 var (
-	ErrRepository = errors.New("reporting: repository failure")
-	ErrNotFound   = errors.New("reporting: BAS draft not found")
-	ErrConflict   = errors.New("reporting: BAS draft conflict")
+	ErrRepository  = errors.New("reporting: repository failure")
+	ErrNotFound    = errors.New("reporting: BAS draft not found")
+	ErrConflict    = errors.New("reporting: BAS draft conflict")
+	ErrGSTBasis    = errors.New("reporting: GST basis history requires review")
+	ErrSourceBound = errors.New("reporting: more than 1000 sources; choose a shorter reporting period")
 )
 
 type Repository struct{ executor app.CommandSQLExecutor }
@@ -50,58 +54,48 @@ func (repository *Repository) CreateBASDraft(
 	} else if !errors.Is(err, ErrNotFound) {
 		return nil, err
 	}
-	rows, err := repository.executor.QueryContext(ctx, `
-		SELECT id, version, supplier_name, invoice_number, document_date, total_minor, gst_minor
-		FROM documents
-		WHERE organisation_id = ? AND status = 'REVIEWED' AND document_date BETWEEN ? AND ?
-		ORDER BY document_date, id LIMIT 1000`, organisationID, start, end)
+	captured, err := repository.collectBASSources(ctx, organisationID, start, end)
+	if err != nil {
+		return nil, err
+	}
+	var sales, gst, credits int64
+	for _, source := range captured.sales {
+		sales += source.Gross.MinorUnits
+		gst += source.Gst.MinorUnits
+	}
+	purchases := captured.purchases
+	if captured.basis == tammyv1.GstBasis_GST_BASIS_CASH {
+		purchases = nil
+	}
+	for _, source := range purchases {
+		credits += source.GstCredit.MinorUnits
+	}
+	warningsJSON, err := json.Marshal(captured.warnings)
 	if err != nil {
 		return nil, ErrRepository
-	}
-	sources := make([]*tammyv1.BasSourceLine, 0)
-	versions := make([]uint64, 0)
-	for rows.Next() {
-		line := &tammyv1.BasSourceLine{Gross: aud(0), GstCredit: aud(0)}
-		var date string
-		var version uint64
-		if err := rows.Scan(&line.DocumentId, &version, &line.SupplierName, &line.InvoiceNumber, &date, &line.Gross.MinorUnits, &line.GstCredit.MinorUnits); err != nil {
-			rows.Close()
-			return nil, ErrRepository
-		}
-		line.DocumentDate = parseCivilDate(date)
-		if line.DocumentDate == nil {
-			rows.Close()
-			return nil, ErrRepository
-		}
-		sources = append(sources, line)
-		versions = append(versions, version)
-	}
-	if err := rows.Err(); err != nil {
-		rows.Close()
-		return nil, ErrRepository
-	}
-	rows.Close()
-	var credits int64
-	for _, source := range sources {
-		credits += source.GstCredit.MinorUnits
 	}
 	createdAt := now.UTC().Format(time.RFC3339Nano)
 	if _, err := repository.executor.ExecContext(ctx, `
 		INSERT INTO bas_workpapers(
 			id, operation_key, organisation_id, version, period_start, period_end, status,
-			sales_g1_minor, gst_on_sales_1a_minor, gst_credits_1b_minor, net_gst_payable_minor, created_at
-		) VALUES (?, ?, ?, 1, ?, ?, 'DRAFT_NOT_LODGED', 0, 0, ?, ?, ?)`,
-		workpaperID, operationKey, organisationID, start, end, credits, -credits, createdAt); err != nil {
+			sales_g1_minor, gst_on_sales_1a_minor, gst_credits_1b_minor, net_gst_payable_minor, created_at,gst_basis,source_fingerprint,review_warnings_json,excluded_cash_purchase_count
+		) VALUES (?, ?, ?, 1, ?, ?, 'DRAFT_NOT_LODGED', ?, ?, ?, ?, ?,?,?,?,?)`,
+		workpaperID, operationKey, organisationID, start, end, sales, gst, credits, gst-credits, createdAt, int32(captured.basis), captured.fingerprint, string(warningsJSON), captured.excludedCashPurchases); err != nil {
 		return nil, ErrRepository
 	}
-	for index, source := range sources {
+	for index, source := range purchases {
 		if _, err := repository.executor.ExecContext(ctx, `
 			INSERT INTO bas_workpaper_sources(
 				workpaper_id, sequence, document_id, document_version, supplier_name,
 				invoice_number, document_date, gross_minor, gst_credit_minor
 			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, workpaperID, index+1, source.DocumentId,
-			versions[index], source.SupplierName, source.InvoiceNumber, civilDateString(source.DocumentDate),
+			captured.purchaseVersions[index], source.SupplierName, source.InvoiceNumber, civilDateString(source.DocumentDate),
 			source.Gross.MinorUnits, source.GstCredit.MinorUnits); err != nil {
+			return nil, ErrRepository
+		}
+	}
+	for index, source := range captured.sales {
+		if _, err := repository.executor.ExecContext(ctx, `INSERT INTO bas_workpaper_sales_sources_v1(workpaper_id,sequence,invoice_id,invoice_number,customer_name,tax_date,gross_minor,gst_minor,payment_id,source_revision,source_hash) VALUES(?,?,?,?,?,?,?,?,?,?,?)`, workpaperID, index+1, source.InvoiceId, source.InvoiceNumber, source.CustomerName, civilDateString(source.TaxDate), source.Gross.MinorUnits, source.Gst.MinorUnits, source.PaymentId, source.SourceRevision, source.SourceHash); err != nil {
 			return nil, ErrRepository
 		}
 	}
@@ -109,8 +103,9 @@ func (repository *Repository) CreateBASDraft(
 		Id: workpaperID, OrganisationId: organisationID, Version: 1,
 		PeriodStart: periodStart, PeriodEnd: periodEnd,
 		Status:  tammyv1.BasWorkpaperStatus_BAS_WORKPAPER_STATUS_DRAFT_NOT_LODGED,
-		SalesG1: aud(0), GstOnSales_1A: aud(0), GstCredits_1B: aud(credits),
-		NetGstPayable: aud(-credits), Sources: sources, CreatedAt: timestamppb.New(now),
+		SalesG1: aud(sales), GstOnSales_1A: aud(gst), GstCredits_1B: aud(credits),
+		NetGstPayable: aud(gst - credits), Sources: purchases, CreatedAt: timestamppb.New(now),
+		GstBasis: captured.basis, SalesSources: captured.sales, SourceFingerprint: captured.fingerprint, ReviewWarnings: captured.warnings, ExcludedCashPurchaseCount: captured.excludedCashPurchases,
 	}, nil
 }
 
@@ -130,14 +125,15 @@ func (repository *Repository) getOne(ctx context.Context, predicate string, valu
 		SalesG1: aud(0), GstOnSales_1A: aud(0), GstCredits_1B: aud(0), NetGstPayable: aud(0),
 		Status: tammyv1.BasWorkpaperStatus_BAS_WORKPAPER_STATUS_DRAFT_NOT_LODGED,
 	}
-	var start, end, createdAt, status string
+	var start, end, createdAt, status, warningsJSON string
+	var basis int32
 	err := querySingle(repository.executor, ctx, `
 		SELECT id, organisation_id, version, period_start, period_end, status,
 		       sales_g1_minor, gst_on_sales_1a_minor, gst_credits_1b_minor,
-		       net_gst_payable_minor, created_at FROM bas_workpapers `+predicate, []any{value},
+		       net_gst_payable_minor, created_at,gst_basis,source_fingerprint,review_warnings_json,excluded_cash_purchase_count FROM bas_workpapers `+predicate, []any{value},
 		&workpaper.Id, &workpaper.OrganisationId, &workpaper.Version, &start, &end, &status,
 		&workpaper.SalesG1.MinorUnits, &workpaper.GstOnSales_1A.MinorUnits,
-		&workpaper.GstCredits_1B.MinorUnits, &workpaper.NetGstPayable.MinorUnits, &createdAt)
+		&workpaper.GstCredits_1B.MinorUnits, &workpaper.NetGstPayable.MinorUnits, &createdAt, &basis, &workpaper.SourceFingerprint, &warningsJSON, &workpaper.ExcludedCashPurchaseCount)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -150,24 +146,68 @@ func (repository *Repository) getOne(ctx context.Context, predicate string, valu
 		return nil, ErrRepository
 	}
 	workpaper.CreatedAt = timestamppb.New(created)
+	workpaper.GstBasis = tammyv1.GstBasis(basis)
+	if workpaper.PeriodStart == nil || workpaper.PeriodEnd == nil || json.Unmarshal([]byte(warningsJSON), &workpaper.ReviewWarnings) != nil {
+		return nil, ErrRepository
+	}
 	rows, err := repository.executor.QueryContext(ctx, `
 		SELECT document_id, supplier_name, invoice_number, document_date, gross_minor, gst_credit_minor
 		FROM bas_workpaper_sources WHERE workpaper_id = ? ORDER BY sequence`, workpaper.Id)
 	if err != nil {
 		return nil, ErrRepository
 	}
-	defer rows.Close()
 	for rows.Next() {
 		line := &tammyv1.BasSourceLine{Gross: aud(0), GstCredit: aud(0)}
 		var date string
 		if err := rows.Scan(&line.DocumentId, &line.SupplierName, &line.InvoiceNumber, &date, &line.Gross.MinorUnits, &line.GstCredit.MinorUnits); err != nil {
+			rows.Close()
 			return nil, ErrRepository
 		}
 		line.DocumentDate = parseCivilDate(date)
 		workpaper.Sources = append(workpaper.Sources, line)
 	}
 	if err := rows.Err(); err != nil {
+		rows.Close()
 		return nil, ErrRepository
+	}
+	rows.Close()
+	salesRows, err := repository.executor.QueryContext(ctx, `SELECT invoice_id,invoice_number,customer_name,tax_date,gross_minor,gst_minor,payment_id,source_revision,source_hash FROM bas_workpaper_sales_sources_v1 WHERE workpaper_id=? ORDER BY sequence`, workpaper.Id)
+	if err != nil {
+		return nil, ErrRepository
+	}
+	for salesRows.Next() {
+		source := &tammyv1.BasSalesSourceLine{Gross: aud(0), Gst: aud(0)}
+		var date string
+		if err := salesRows.Scan(&source.InvoiceId, &source.InvoiceNumber, &source.CustomerName, &date, &source.Gross.MinorUnits, &source.Gst.MinorUnits, &source.PaymentId, &source.SourceRevision, &source.SourceHash); err != nil {
+			salesRows.Close()
+			return nil, ErrRepository
+		}
+		source.TaxDate = parseCivilDate(date)
+		if source.TaxDate == nil {
+			salesRows.Close()
+			return nil, ErrRepository
+		}
+		workpaper.SalesSources = append(workpaper.SalesSources, source)
+	}
+	if err := salesRows.Err(); err != nil {
+		salesRows.Close()
+		return nil, ErrRepository
+	}
+	salesRows.Close()
+	current, err := repository.collectBASSources(ctx, workpaper.OrganisationId, start, end)
+	if errors.Is(err, ErrGSTBasis) {
+		workpaper.SourcesChanged = true
+		workpaper.ReviewWarnings = append(workpaper.ReviewWarnings, "GST basis history needs review before regenerating this workpaper. Saved figures have been retained.")
+	} else if errors.Is(err, ErrSourceBound) {
+		workpaper.SourcesChanged = true
+		workpaper.ReviewWarnings = append(workpaper.ReviewWarnings, "The current source count exceeds 1000. Choose a shorter period when regenerating this workpaper.")
+	} else if err != nil {
+		return nil, err
+	} else {
+		workpaper.SourcesChanged = len(workpaper.SourceFingerprint) != 32 || !bytes.Equal(workpaper.SourceFingerprint, current.fingerprint)
+	}
+	if len(workpaper.SourceFingerprint) == 0 {
+		workpaper.ReviewWarnings = append(workpaper.ReviewWarnings, "This older workpaper has no complete sales fingerprint. Regenerate it to include linked invoice income.")
 	}
 	return workpaper, nil
 }

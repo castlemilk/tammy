@@ -46,7 +46,7 @@ func NewRegistry(appVersion string) (*Registry, error) {
 		return nil, ErrInvalidAppVersion
 	}
 
-	return &Registry{
+	registry := &Registry{
 		appVersion: appVersion,
 		entries: map[capabilityKey]capabilityEntry{
 			{
@@ -55,9 +55,9 @@ func NewRegistry(appVersion string) (*Registry, error) {
 				year:   2024,
 			}: {
 				status:  tammyv1.ReportingCapabilityStatus_REPORTING_CAPABILITY_STATUS_AVAILABLE,
-				summary: "Tammy supports a local reviewed-document GST workpaper only.",
+				summary: "Tammy supports a local invoice and reviewed-expense GST workpaper only.",
 				modes: reportingModes(
-					availableMode(tammyv1.ReportingCapabilityMode_REPORTING_CAPABILITY_MODE_PREPARATION, "Local reviewed-document GST workpaper preparation is available."),
+					availableMode(tammyv1.ReportingCapabilityMode_REPORTING_CAPABILITY_MODE_PREPARATION, "Local invoice and reviewed-expense GST workpaper preparation is available."),
 					unavailableMode(tammyv1.ReportingCapabilityMode_REPORTING_CAPABILITY_MODE_SIMULATOR, "GST workpaper simulation is not implemented.", "GST_WORKPAPER_SIMULATOR_NOT_IMPLEMENTED"),
 					unavailableMode(tammyv1.ReportingCapabilityMode_REPORTING_CAPABILITY_MODE_EVTE, "GST workpaper EVTE delivery is not implemented.", "GST_WORKPAPER_EVTE_NOT_IMPLEMENTED"),
 					unavailableMode(tammyv1.ReportingCapabilityMode_REPORTING_CAPABILITY_MODE_PRODUCTION, "GST workpaper production delivery is not implemented.", "GST_WORKPAPER_PRODUCTION_NOT_IMPLEMENTED"),
@@ -118,7 +118,11 @@ func NewRegistry(appVersion string) (*Registry, error) {
 				),
 			},
 		},
-	}, nil
+	}
+	for year := int32(2025); year <= 2027; year++ {
+		registry.entries[capabilityKey{report: tammyv1.ReportKind_REPORT_KIND_GST_WORKPAPER, entity: tammyv1.ReportingEntityType_REPORTING_ENTITY_TYPE_AU_BUSINESS, year: year}] = registry.entries[capabilityKey{report: tammyv1.ReportKind_REPORT_KIND_GST_WORKPAPER, entity: tammyv1.ReportingEntityType_REPORTING_ENTITY_TYPE_AU_BUSINESS, year: 2024}]
+	}
+	return registry, nil
 }
 
 // Lookup returns an owned capability for the exact key, failing closed when the key is unlisted.

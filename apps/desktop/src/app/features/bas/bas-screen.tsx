@@ -1,5 +1,6 @@
 import { create } from "@bufbuild/protobuf";
 import { CivilDateSchema, CommandContextSchema } from "@tammy/connect-client/tammy/v1/common_pb.js";
+import { GstBasis } from "@tammy/connect-client/tammy/v1/organisation_pb.js";
 import {
   ReportingCapabilityStatus,
   ReportingEntityType,
@@ -14,7 +15,7 @@ import {
   GetCurrentBasDraftResponseSchema,
 } from "@tammy/connect-client/tammy/v1/tax_pb.js";
 import { Calculator, FileCheck2 } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
@@ -25,13 +26,13 @@ import type { AuthenticatedWorkspace } from "../setup/setup-screen";
 const createCodec = createProtoMethodCodec({
   input: CreateBasDraftRequestSchema,
   maximumRequestBytes: 16_384,
-  maximumResponseBytes: 262_144,
+  maximumResponseBytes: 4_194_304,
   output: CreateBasDraftResponseSchema,
 });
 const getCodec = createProtoMethodCodec({
   input: GetCurrentBasDraftRequestSchema,
   maximumRequestBytes: 16_384,
-  maximumResponseBytes: 262_144,
+  maximumResponseBytes: 4_194_304,
   output: GetCurrentBasDraftResponseSchema,
 });
 type BasAPI = Pick<
@@ -41,15 +42,18 @@ type BasAPI = Pick<
 
 export function BasScreen({
   api,
+  now,
   onBasDraftChanged,
   workspace,
 }: {
   readonly api: BasAPI;
+  readonly now?: Date;
   readonly onBasDraftChanged?: () => Promise<void>;
   readonly workspace: AuthenticatedWorkspace | undefined;
 }) {
-  const [start, setStart] = useState("2024-04-01");
-  const [end, setEnd] = useState("2024-06-30");
+  const [start, setStart] = useState(() => currentQuarter(now ?? new Date()).start);
+  const [end, setEnd] = useState(() => currentQuarter(now ?? new Date()).end);
+  const periodEdited = useRef(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [gstCapability, setGstCapability] = useState<{
@@ -95,6 +99,12 @@ export function BasScreen({
     }
   }, [currentBas.data]);
 
+  useEffect(() => {
+    if (!workpaper || periodEdited.current) return;
+    setStart(isoDate(workpaper.periodStart));
+    setEnd(isoDate(workpaper.periodEnd));
+  }, [workpaper]);
+
   const createDraft = async () => {
     if (!workspace?.organisationId) return;
     if (!gstWorkpaperAvailable) {
@@ -103,7 +113,7 @@ export function BasScreen({
     }
     const periodStart = parseDate(start);
     const periodEnd = parseDate(end);
-    if (!periodStart || !periodEnd) {
+    if (!periodStart || !periodEnd || start > end) {
       setError("Choose a valid reporting period.");
       return;
     }
@@ -123,12 +133,15 @@ export function BasScreen({
         await api.createBasDraft(createCodec.encodeRequest(request)),
       );
       if (!response.workpaper) throw new Error("missing workpaper");
+      periodEdited.current = false;
       await Promise.all([
         api.getCurrentBasDraft.invalidate(currentBasInput),
         onBasDraftChanged?.(),
       ]);
     } catch {
-      setError("The local BAS draft could not be created.");
+      setError(
+        "The local BAS draft could not be created. Check the selected period and source records, then try again.",
+      );
     } finally {
       setBusy(false);
     }
@@ -140,7 +153,8 @@ export function BasScreen({
         <div>
           <h1 className="text-[18px] font-semibold tracking-[-0.02em]">GST &amp; BAS</h1>
           <p className="mt-1 text-[11px] text-muted-foreground">
-            A local workpaper from reviewed documents. Tammy does not lodge this BAS.
+            A local workpaper from invoice sales and reviewed expenses. Tammy does not lodge this
+            BAS.
           </p>
         </div>
         {workpaper ? (
@@ -173,6 +187,42 @@ export function BasScreen({
           </>
         )}
       </section>
+      <section
+        className="flex flex-wrap items-end gap-3 rounded-[6px] border border-border bg-surface p-3"
+        aria-label="BAS reporting period"
+      >
+        <DateField
+          label="Period start"
+          onChange={(date) => {
+            periodEdited.current = true;
+            setStart(date);
+          }}
+          value={start}
+        />
+        <DateField
+          label="Period end"
+          onChange={(date) => {
+            periodEdited.current = true;
+            setEnd(date);
+          }}
+          value={end}
+        />
+        <Button
+          className="h-8 text-[10px]"
+          disabled={
+            busy || !gstWorkpaperAvailable || !parseDate(start) || !parseDate(end) || start > end
+          }
+          onClick={createDraft}
+          type="button"
+        >
+          {busy ? "Creating…" : workpaper ? "Regenerate local draft" : "Create local draft"}
+        </Button>
+        {workpaper ? (
+          <p className="text-[9px] leading-4 text-muted-foreground">
+            Saved figures remain visible until the new draft is created.
+          </p>
+        ) : null}
+      </section>
       {error ? (
         <p
           className="rounded-[6px] border border-warning-border bg-warning-soft px-3 py-2 text-[10px]"
@@ -187,21 +237,9 @@ export function BasScreen({
             <Calculator className="mx-auto size-7 text-forest" />
             <h2 className="mt-3 text-[13px] font-semibold">Create a BAS workpaper</h2>
             <p className="mt-2 text-[10px] leading-5 text-muted-foreground">
-              Reviewed purchase documents in the period contribute to GST credits. No declaration or
-              transmission is performed.
+              Issued invoice sales and recorded receipts contribute according to the business’s GST
+              basis. Reviewed purchases need appropriate evidence for GST credits.
             </p>
-            <div className="mx-auto mt-5 grid max-w-sm grid-cols-2 gap-2">
-              <DateField label="Period start" onChange={setStart} value={start} />
-              <DateField label="Period end" onChange={setEnd} value={end} />
-            </div>
-            <Button
-              className="mt-4"
-              disabled={busy || !gstWorkpaperAvailable}
-              onClick={createDraft}
-              type="button"
-            >
-              {busy ? "Creating…" : "Create local draft"}
-            </Button>
           </div>
         </section>
       ) : (
@@ -214,9 +252,47 @@ export function BasScreen({
 function Workpaper({ value }: { readonly value: BasWorkpaper }) {
   return (
     <div className="grid gap-4">
+      <section
+        className="grid gap-2 rounded-[6px] border border-border bg-surface p-3"
+        aria-label="BAS source review"
+      >
+        <p className="text-[10px] font-medium">
+          {value.gstBasis === GstBasis.CASH
+            ? "Cash basis · sales follow recorded payments"
+            : value.gstBasis === GstBasis.NON_CASH
+              ? "Non-cash basis · sales follow invoice issue dates"
+              : "Legacy workpaper · regenerate to review income and GST basis"}
+        </p>
+        <p className="text-[9px] text-muted-foreground">
+          Saved reporting period: {formatDate(value.periodStart)} – {formatDate(value.periodEnd)}
+        </p>
+        {value.sourcesChanged ? (
+          <p className="text-[10px] text-warning" role="status">
+            Sources changed since this workpaper was saved. Regenerate the local draft to include
+            current income and GST. The figures below are the saved snapshot.
+          </p>
+        ) : null}
+        {value.reviewWarnings.map((warning) => (
+          <p className="text-[10px] leading-5 text-warning" key={warning}>
+            {warning}
+          </p>
+        ))}
+        {value.excludedCashPurchaseCount > 0n ? (
+          <p className="text-[9px] text-muted-foreground">
+            {value.excludedCashPurchaseCount} reviewed purchase
+            {value.excludedCashPurchaseCount === 1n ? " has" : "s have"} no recorded payment
+            evidence and {value.excludedCashPurchaseCount === 1n ? "is" : "are"} excluded from GST
+            credits in this cash-basis draft.
+          </p>
+        ) : null}
+      </section>
       <section className="grid grid-cols-4 gap-3 max-[760px]:grid-cols-2">
-        <Metric label="Sales (G1)" value={value.salesG1?.minorUnits} />
-        <Metric label="GST on sales (1A)" value={value.gstOnSales1a?.minorUnits} />
+        <Metric label="Sales (G1)" testId="bas-sales-g1" value={value.salesG1?.minorUnits} />
+        <Metric
+          label="GST on sales (1A)"
+          testId="bas-gst-on-sales-1a"
+          value={value.gstOnSales1a?.minorUnits}
+        />
         <Metric label="GST credits (1B)" value={value.gstCredits1b?.minorUnits} />
         <Metric
           emphasis
@@ -225,6 +301,56 @@ function Workpaper({ value }: { readonly value: BasWorkpaper }) {
           }
           value={abs(value.netGstPayable?.minorUnits)}
         />
+      </section>
+      <section className="overflow-hidden rounded-[6px] border border-border bg-surface">
+        <div className="border-b border-border px-3 py-3">
+          <h2 className="text-[11px] font-semibold">Invoice sales sources</h2>
+          <p className="mt-1 text-[9px] text-muted-foreground">
+            GST-inclusive sales and GST attributed to this period. Out-of-scope lines are excluded.
+          </p>
+        </div>
+        {value.salesSources.length === 0 ? (
+          <p className="p-5 text-center text-[10px] text-muted-foreground">
+            No eligible invoice sales are attributed to this period.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table
+              aria-label="BAS sales sources"
+              className="w-full border-collapse text-left text-[9px]"
+            >
+              <thead>
+                <tr className="border-b border-border text-muted-foreground">
+                  <th className="px-3 py-2">Tax date</th>
+                  <th className="px-3 py-2">Customer</th>
+                  <th className="px-3 py-2">Invoice</th>
+                  <th className="px-3 py-2">Source</th>
+                  <th className="px-3 py-2 text-right">Sales (G1)</th>
+                  <th className="px-3 py-2 text-right">GST (1A)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {value.salesSources.map((source) => (
+                  <tr
+                    className="border-b border-border last:border-0"
+                    key={`${source.invoiceId}-${source.paymentId ?? "issue"}`}
+                  >
+                    <td className="px-3 py-2">{formatDate(source.taxDate)}</td>
+                    <td className="px-3 py-2 font-medium">{source.customerName}</td>
+                    <td className="px-3 py-2">{source.invoiceNumber}</td>
+                    <td className="px-3 py-2">
+                      {source.paymentId ? "Recorded receipt" : "Issued invoice"}
+                    </td>
+                    <td className="px-3 py-2 text-right">{money(source.gross?.minorUnits)}</td>
+                    <td className="px-3 py-2 text-right font-semibold text-forest">
+                      {money(source.gst?.minorUnits)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
       <section className="overflow-hidden rounded-[6px] border border-border bg-surface">
         <div className="flex items-center justify-between border-b border-border px-3 py-3">
@@ -241,7 +367,7 @@ function Workpaper({ value }: { readonly value: BasWorkpaper }) {
         </div>
         {value.sources.length === 0 ? (
           <p className="p-8 text-center text-[10px] text-muted-foreground">
-            No reviewed purchase documents fall in this period.
+            No reviewed purchase documents are included in GST credits for this period.
           </p>
         ) : (
           <table className="w-full border-collapse text-left text-[9px]">
@@ -283,14 +409,17 @@ function Workpaper({ value }: { readonly value: BasWorkpaper }) {
 function Metric({
   emphasis = false,
   label,
+  testId,
   value,
 }: {
   readonly emphasis?: boolean;
   readonly label: string;
+  readonly testId?: string;
   readonly value: bigint | undefined;
 }) {
   return (
     <div
+      data-testid={testId}
       className={`rounded-[6px] border p-4 ${emphasis ? "border-success-border bg-success-soft" : "border-border bg-surface"}`}
     >
       <p className="text-[8px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
@@ -327,13 +456,30 @@ function DateField({
 }
 function parseDate(value: string) {
   const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  return match
+  const date = new Date(`${value}T00:00:00Z`);
+  return match && Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value
     ? create(CivilDateSchema, {
         year: Number(match[1]),
         month: Number(match[2]),
         day: Number(match[3]),
       })
     : undefined;
+}
+function isoDate(
+  value: { readonly year: number; readonly month: number; readonly day: number } | undefined,
+) {
+  return value
+    ? `${value.year}-${String(value.month).padStart(2, "0")}-${String(value.day).padStart(2, "0")}`
+    : "";
+}
+function currentQuarter(date: Date) {
+  const month = Math.floor(date.getMonth() / 3) * 3;
+  const format = (value: Date) =>
+    `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
+  return {
+    start: format(new Date(date.getFullYear(), month, 1)),
+    end: format(new Date(date.getFullYear(), month + 3, 0)),
+  };
 }
 function auTaxYear(
   value: { readonly year: number; readonly month: number } | undefined,

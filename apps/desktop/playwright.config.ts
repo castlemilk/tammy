@@ -10,7 +10,10 @@ export default defineConfig({
   outputDir: "test-results",
   preserveOutput: "failures-only",
   projects: [
-    { name: target, testMatch: ["foundation.spec.ts", "current-workflows.spec.ts"] },
+    {
+      name: target,
+      testMatch: ["foundation.spec.ts", "current-workflows.spec.ts", "invoice-income.spec.ts"],
+    },
     ...(target === "darwin-arm64"
       ? [{ name: "darwin-arm64-sbr", testMatch: ["sbr-readiness.spec.ts"] }]
       : []),

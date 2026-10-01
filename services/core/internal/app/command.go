@@ -217,6 +217,8 @@ const (
 	OrdinaryOperationReopenPeriod             OrdinaryOperation = "tammy.v1.AccountingService.ReopenPeriod"
 	OrdinaryOperationSaveInvoiceDraft         OrdinaryOperation = "tammy.v1.InvoiceService.SaveInvoiceDraft"
 	OrdinaryOperationIssueInvoice             OrdinaryOperation = "tammy.v1.InvoiceService.IssueInvoice"
+	OrdinaryOperationPostInvoiceIncome        OrdinaryOperation = "tammy.v1.InvoiceService.PostInvoiceIncome"
+	OrdinaryOperationRecordInvoicePayment     OrdinaryOperation = "tammy.v1.InvoiceService.RecordInvoicePayment"
 	OrdinaryOperationSaveInvoiceTemplate      OrdinaryOperation = "tammy.v1.InvoiceService.SaveInvoiceTemplate"
 	OrdinaryOperationUploadInvoiceLogo        OrdinaryOperation = "tammy.v1.InvoiceService.UploadInvoiceLogo"
 )
@@ -543,6 +545,14 @@ func ordinaryOperationDefinitionFor(operation OrdinaryOperation) (ordinaryOperat
 		definition.action = authorisation.ActionPostAccounting
 		definition.requestType = "tammy.v1.IssueInvoiceRequest"
 		definition.resultType = "tammy.v1.IssueInvoiceResponse"
+	case OrdinaryOperationPostInvoiceIncome:
+		definition.action = authorisation.ActionPostAccounting
+		definition.requestType = "tammy.v1.PostInvoiceIncomeRequest"
+		definition.resultType = "tammy.v1.PostInvoiceIncomeResponse"
+	case OrdinaryOperationRecordInvoicePayment:
+		definition.action = authorisation.ActionPostAccounting
+		definition.requestType = "tammy.v1.RecordInvoicePaymentRequest"
+		definition.resultType = "tammy.v1.RecordInvoicePaymentResponse"
 	case OrdinaryOperationSaveInvoiceTemplate:
 		definition.action = authorisation.ActionPostAccounting
 		definition.requestType = "tammy.v1.SaveInvoiceTemplateRequest"

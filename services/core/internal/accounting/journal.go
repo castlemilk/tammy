@@ -42,7 +42,7 @@ func ValidateJournal(journal *tammyv1.Journal, accounts map[string]*tammyv1.Acco
 	if journal == nil || !ids.IsCanonicalV7(journal.Id) || !ids.IsCanonicalV7(journal.OrganisationId) ||
 		journal.Version == 0 || journal.State != tammyv1.JournalState_JOURNAL_STATE_POSTED ||
 		journal.Source < tammyv1.JournalSource_JOURNAL_SOURCE_OPENING_CONVERSION ||
-		journal.Source > tammyv1.JournalSource_JOURNAL_SOURCE_REVERSAL || !validCivilDate(journal.PostingDate) ||
+		journal.Source > tammyv1.JournalSource_JOURNAL_SOURCE_INVOICE_PAYMENT || !validCivilDate(journal.PostingDate) ||
 		len(journal.Memo) > 512 || strings.TrimSpace(journal.Memo) != journal.Memo ||
 		len(journal.Lines) < 2 || len(journal.Lines) > 1000 || journal.TotalDebits == nil ||
 		journal.TotalCredits == nil || journal.TotalDebits.CurrencyCode != "AUD" ||

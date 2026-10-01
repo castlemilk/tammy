@@ -13,6 +13,7 @@ import { useMemo } from "react";
 import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
+import { BusinessIncomePanel } from "./business-income-panel";
 
 const attentionCodec = createProtoMethodCodec({
   input: GetAttentionSummaryRequestSchema,
@@ -23,6 +24,8 @@ const attentionCodec = createProtoMethodCodec({
 
 interface OverviewScreenProps {
   readonly api: Pick<TammyConveyorModule<"reporting">, "getAttentionSummary">;
+  readonly accountingApi?: Pick<TammyConveyorModule<"accounting">, "getBusinessIncomeSummary">;
+  readonly onReviewInvoices?: () => void;
   readonly now?: Date;
   readonly workspace: AuthenticatedWorkspace | undefined;
 }
@@ -32,7 +35,13 @@ type SummaryState =
   | { readonly status: "unavailable" }
   | { readonly status: "ready"; readonly value: GetAttentionSummaryResponse };
 
-export function OverviewScreen({ api, now, workspace }: OverviewScreenProps) {
+export function OverviewScreen({
+  api,
+  accountingApi,
+  now,
+  onReviewInvoices,
+  workspace,
+}: OverviewScreenProps) {
   const instant = now ?? new Date();
   const year = instant.getFullYear();
   const month = instant.getMonth();
@@ -94,6 +103,15 @@ export function OverviewScreen({ api, now, workspace }: OverviewScreenProps) {
           );
         })}
       </div>
+
+      {accountingApi ? (
+        <BusinessIncomePanel
+          api={accountingApi}
+          {...(now ? { now } : {})}
+          {...(onReviewInvoices ? { onReviewInvoices } : {})}
+          workspace={workspace}
+        />
+      ) : null}
 
       <section className="overflow-hidden rounded-[6px] border border-border bg-surface">
         <div className="border-b border-border px-3 py-2.5">

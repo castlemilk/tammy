@@ -240,7 +240,9 @@ it("requires an explicit issue confirmation and keeps issued invoices immutable"
   await userEvent.click(await screen.findByRole("button", { name: "Open INV-100" }));
   await userEvent.click(screen.getByRole("button", { name: "Issue invoice" }));
   expect(calls.issued).toEqual([]);
-  expect(screen.getByText(/does not post to the ledger or send it/)).toBeTruthy();
+  expect(
+    screen.getByText(/records sales, GST and the amount owing in the business ledger/),
+  ).toBeTruthy();
   await userEvent.click(screen.getByRole("button", { name: "Confirm issue" }));
   await screen.findByText("Invoice issued.");
   expect(calls.issued).toEqual(["saved-1"]);

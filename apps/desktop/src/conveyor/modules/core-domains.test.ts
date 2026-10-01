@@ -3,6 +3,7 @@ import * as accountingProto from "@tammy/connect-client/tammy/v1/accounting_pb.j
 import * as bankingProto from "@tammy/connect-client/tammy/v1/banking_pb.js";
 import * as documentsProto from "@tammy/connect-client/tammy/v1/documents_pb.js";
 import * as identityProto from "@tammy/connect-client/tammy/v1/identity_pb.js";
+import * as invoicesProto from "@tammy/connect-client/tammy/v1/invoices_pb.js";
 import * as organisationProto from "@tammy/connect-client/tammy/v1/organisation_pb.js";
 import * as overviewProto from "@tammy/connect-client/tammy/v1/overview_pb.js";
 import * as reportingCapabilityProto from "@tammy/connect-client/tammy/v1/reporting_capability_pb.js";
@@ -58,6 +59,43 @@ interface OrdinaryCase {
 }
 
 const ORDINARY_CASES = [
+  {
+    module: "accounting",
+    method: "getInvoiceAccounting",
+    coreMethod: "getInvoiceAccounting",
+    input: invoicesProto.GetInvoiceAccountingRequestSchema,
+    output: invoicesProto.GetInvoiceAccountingResponseSchema,
+    maximumRequestBytes: 16_384,
+    maximumResponseBytes: 262_144,
+  },
+  {
+    module: "accounting",
+    method: "postInvoiceIncome",
+    coreMethod: "postInvoiceIncome",
+    input: invoicesProto.PostInvoiceIncomeRequestSchema,
+    output: invoicesProto.PostInvoiceIncomeResponseSchema,
+    maximumRequestBytes: 16_384,
+    maximumResponseBytes: 262_144,
+  },
+  {
+    module: "accounting",
+    method: "recordInvoicePayment",
+    coreMethod: "recordInvoicePayment",
+    input: invoicesProto.RecordInvoicePaymentRequestSchema,
+    output: invoicesProto.RecordInvoicePaymentResponseSchema,
+    maximumRequestBytes: 16_384,
+    maximumResponseBytes: 262_144,
+  },
+  {
+    module: "accounting",
+    method: "getBusinessIncomeSummary",
+    coreMethod: "getBusinessIncomeSummary",
+    input: invoicesProto.GetBusinessIncomeSummaryRequestSchema,
+    output: invoicesProto.GetBusinessIncomeSummaryResponseSchema,
+    maximumRequestBytes: 16_384,
+    maximumResponseBytes: 16_384,
+  },
+
   {
     module: "workspace",
     method: "createWorkspace",
@@ -299,7 +337,7 @@ const ORDINARY_CASES = [
     input: taxProto.GetCurrentBasDraftRequestSchema,
     output: taxProto.GetCurrentBasDraftResponseSchema,
     maximumRequestBytes: 16_384,
-    maximumResponseBytes: 262_144,
+    maximumResponseBytes: 4_194_304,
   },
   {
     module: "reporting",
@@ -326,7 +364,7 @@ const ORDINARY_CASES = [
     input: taxProto.CreateBasDraftRequestSchema,
     output: taxProto.CreateBasDraftResponseSchema,
     maximumRequestBytes: 16_384,
-    maximumResponseBytes: 262_144,
+    maximumResponseBytes: 4_194_304,
   },
 ] as const satisfies readonly OrdinaryCase[];
 

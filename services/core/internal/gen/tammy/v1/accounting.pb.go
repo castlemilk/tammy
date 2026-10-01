@@ -454,6 +454,10 @@ const (
 	JournalSource_JOURNAL_SOURCE_MANUAL JournalSource = 2
 	// JOURNAL_SOURCE_REVERSAL is a linked reversing journal.
 	JournalSource_JOURNAL_SOURCE_REVERSAL JournalSource = 3
+	// JOURNAL_SOURCE_RECEIVABLE is owned by invoice income posting.
+	JournalSource_JOURNAL_SOURCE_RECEIVABLE JournalSource = 4
+	// JOURNAL_SOURCE_INVOICE_PAYMENT is owned by dated invoice receipts.
+	JournalSource_JOURNAL_SOURCE_INVOICE_PAYMENT JournalSource = 5
 )
 
 // Enum value maps for JournalSource.
@@ -463,12 +467,16 @@ var (
 		1: "JOURNAL_SOURCE_OPENING_CONVERSION",
 		2: "JOURNAL_SOURCE_MANUAL",
 		3: "JOURNAL_SOURCE_REVERSAL",
+		4: "JOURNAL_SOURCE_RECEIVABLE",
+		5: "JOURNAL_SOURCE_INVOICE_PAYMENT",
 	}
 	JournalSource_value = map[string]int32{
 		"JOURNAL_SOURCE_UNSPECIFIED":        0,
 		"JOURNAL_SOURCE_OPENING_CONVERSION": 1,
 		"JOURNAL_SOURCE_MANUAL":             2,
 		"JOURNAL_SOURCE_REVERSAL":           3,
+		"JOURNAL_SOURCE_RECEIVABLE":         4,
+		"JOURNAL_SOURCE_INVOICE_PAYMENT":    5,
 	}
 )
 
@@ -4405,12 +4413,14 @@ const file_tammy_v1_accounting_proto_rawDesc = "" +
 	"\fJournalState\x12\x1d\n" +
 	"\x19JOURNAL_STATE_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14JOURNAL_STATE_POSTED\x10\x01\x12\x1a\n" +
-	"\x16JOURNAL_STATE_REVERSED\x10\x02*\x8e\x01\n" +
+	"\x16JOURNAL_STATE_REVERSED\x10\x02*\xd1\x01\n" +
 	"\rJournalSource\x12\x1e\n" +
 	"\x1aJOURNAL_SOURCE_UNSPECIFIED\x10\x00\x12%\n" +
 	"!JOURNAL_SOURCE_OPENING_CONVERSION\x10\x01\x12\x19\n" +
 	"\x15JOURNAL_SOURCE_MANUAL\x10\x02\x12\x1b\n" +
-	"\x17JOURNAL_SOURCE_REVERSAL\x10\x03*[\n" +
+	"\x17JOURNAL_SOURCE_REVERSAL\x10\x03\x12\x1d\n" +
+	"\x19JOURNAL_SOURCE_RECEIVABLE\x10\x04\x12\"\n" +
+	"\x1eJOURNAL_SOURCE_INVOICE_PAYMENT\x10\x05*[\n" +
 	"\vPeriodState\x12\x1c\n" +
 	"\x18PERIOD_STATE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11PERIOD_STATE_OPEN\x10\x01\x12\x17\n" +

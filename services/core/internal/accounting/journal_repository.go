@@ -72,7 +72,7 @@ func (repository *JournalRepository) Post(
 ) error {
 	if repository == nil || repository.executor == nil || ctx == nil || journal == nil ||
 		!ids.IsCanonicalV7(sourceID) || sourceRevision == 0 || now.IsZero() ||
-		(sourceType != "MANUAL" && sourceType != "REVERSAL" && sourceType != "OPENING") {
+		(sourceType != "MANUAL" && sourceType != "REVERSAL" && sourceType != "OPENING" && sourceType != "RECEIVABLE" && sourceType != "BANKING") {
 		return ErrJournalRepository
 	}
 	periods, err := NewPeriodRepository(repository.executor)
@@ -294,6 +294,9 @@ func (repository *JournalRepository) Reverse(ctx context.Context, journalID stri
 	original, err := repository.Get(ctx, journalID)
 	if err != nil {
 		return nil, nil, err
+	}
+	if original.Source == tammyv1.JournalSource_JOURNAL_SOURCE_RECEIVABLE || original.Source == tammyv1.JournalSource_JOURNAL_SOURCE_INVOICE_PAYMENT {
+		return nil, nil, ErrJournalSourceConflict
 	}
 	if original.Version != expectedVersion || original.State != tammyv1.JournalState_JOURNAL_STATE_POSTED || original.ReversedByJournalId != nil {
 		return nil, nil, ErrJournalSourceConflict
@@ -652,7 +655,7 @@ func parseTaxTreatment(value string) tammyv1.TaxTreatment {
 
 func parseJournalSource(value string) tammyv1.JournalSource {
 	return map[string]tammyv1.JournalSource{"OPENING": tammyv1.JournalSource_JOURNAL_SOURCE_OPENING_CONVERSION,
-		"MANUAL": tammyv1.JournalSource_JOURNAL_SOURCE_MANUAL, "REVERSAL": tammyv1.JournalSource_JOURNAL_SOURCE_REVERSAL}[value]
+		"MANUAL": tammyv1.JournalSource_JOURNAL_SOURCE_MANUAL, "REVERSAL": tammyv1.JournalSource_JOURNAL_SOURCE_REVERSAL, "RECEIVABLE": tammyv1.JournalSource_JOURNAL_SOURCE_RECEIVABLE, "BANKING": tammyv1.JournalSource_JOURNAL_SOURCE_INVOICE_PAYMENT}[value]
 }
 
 func parseJournalState(value string) tammyv1.JournalState {

@@ -211,7 +211,10 @@ export interface AuthenticatedAccountingWorkspace {
 export async function setupAndRunCurrentAccountingWorkflow(
   initialPage: import("@playwright/test").Page,
   electronHarness: ElectronHarness,
-  { fixedRendererClock = false }: { readonly fixedRendererClock?: boolean } = {},
+  {
+    fixedRendererClock = false,
+    gstBasis = "non-cash",
+  }: { readonly fixedRendererClock?: boolean; readonly gstBasis?: "cash" | "non-cash" } = {},
 ): Promise<AuthenticatedAccountingWorkspace> {
   let page = initialPage;
   const fixedInstant = `${WORKFLOW_FIXTURE.period.postingDate}T02:00:00.000Z`;
@@ -257,6 +260,9 @@ export async function setupAndRunCurrentAccountingWorkflow(
   await page.getByLabel("Business legal name").fill(WORKFLOW_FIXTURE.business.legalName);
   await page.getByLabel("Business display name").fill(WORKFLOW_FIXTURE.business.displayName);
   await page.getByLabel("ABN").fill(WORKFLOW_FIXTURE.business.abn.value);
+  await page
+    .getByRole("combobox", { name: "GST accounting basis", exact: true })
+    .selectOption(gstBasis === "cash" ? "1" : "2");
   await page.getByLabel("Workspace passphrase").fill(CURRENT_WORKFLOW_PASSPHRASE);
   await page.getByLabel("Administrator password").fill(CURRENT_WORKFLOW_ADMIN_PASSWORD);
   await page.getByRole("button", { name: "Create local workspace" }).click();
@@ -675,17 +681,19 @@ export async function setupAndRunCurrentAccountingWorkflow(
   expect(createdBas.workpaper?.salesG1?.minorUnits).toBe(0n);
   expect(createdBas.workpaper?.gstOnSales1a?.minorUnits).toBe(0n);
   expect(createdBas.workpaper?.gstCredits1b?.minorUnits).toBe(
-    BigInt(WORKFLOW_FIXTURE.bas.gstCreditsMinorUnits),
+    gstBasis === "cash" ? 0n : BigInt(WORKFLOW_FIXTURE.bas.gstCreditsMinorUnits),
   );
   expect(createdBas.workpaper?.netGstPayable?.minorUnits).toBe(
-    BigInt(WORKFLOW_FIXTURE.bas.netGstPayableMinorUnits),
+    gstBasis === "cash" ? 0n : BigInt(WORKFLOW_FIXTURE.bas.netGstPayableMinorUnits),
   );
-  expect(createdBas.workpaper?.sources).toHaveLength(1);
-  expect(createdBas.workpaper?.sources[0]).toMatchObject({
-    documentId: retainedDocument.id,
-    supplierName: WORKFLOW_FIXTURE.sourceDocument.supplierName,
-    invoiceNumber: WORKFLOW_FIXTURE.sourceDocument.invoiceNumber,
-  });
+  expect(createdBas.workpaper?.sources).toHaveLength(gstBasis === "cash" ? 0 : 1);
+  if (gstBasis === "cash") expect(createdBas.workpaper?.excludedCashPurchaseCount).toBe(1n);
+  else
+    expect(createdBas.workpaper?.sources[0]).toMatchObject({
+      documentId: retainedDocument.id,
+      supplierName: WORKFLOW_FIXTURE.sourceDocument.supplierName,
+      invoiceNumber: WORKFLOW_FIXTURE.sourceDocument.invoiceNumber,
+    });
 
   const currentBas = await invokeProto(
     page,
@@ -741,9 +749,10 @@ export async function setupAndRunCurrentAccountingWorkflow(
   await expect(
     page.getByText(WORKFLOW_FIXTURE.bas.statusLabel, { exact: true }).first(),
   ).toBeVisible();
-  await expect(
-    page.getByText(WORKFLOW_FIXTURE.sourceDocument.supplierName, { exact: true }),
-  ).toBeVisible();
+  if (gstBasis !== "cash")
+    await expect(
+      page.getByText(WORKFLOW_FIXTURE.sourceDocument.supplierName, { exact: true }),
+    ).toBeVisible();
   await assertRoute(page, "Overview", "/overview", "Overview");
   await expect(page.getByText(WORKFLOW_FIXTURE.bas.statusLabel, { exact: true })).toBeVisible();
 
@@ -857,7 +866,7 @@ function civilDate(value: string) {
   return create(CivilDateSchema, { day, month, year });
 }
 
-async function authenticatedWorkspace(page: import("@playwright/test").Page) {
+export async function authenticatedWorkspace(page: import("@playwright/test").Page) {
   return page.evaluate(() => {
     const retained = window.sessionStorage.getItem("tammy.session.active");
     if (!retained) throw new Error("AUTHENTICATED_WORKSPACE_MISSING");

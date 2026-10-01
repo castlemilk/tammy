@@ -25,7 +25,7 @@ func invoiceDB(t *testing.T) *sqlcipher.Database {
 	ctx := context.Background()
 	path := filepath.Join(t.TempDir(), "workspace.db")
 	key := make([]byte, 32)
-	if _, err := sqlcipher.MigrateWorkspace(ctx, path, key, 9); err != nil {
+	if _, err := sqlcipher.MigrateWorkspace(ctx, path, key, 10); err != nil {
 		t.Fatal(err)
 	}
 	db, err := sqlcipher.Open(ctx, path, key)

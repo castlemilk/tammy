@@ -44,6 +44,11 @@ function createProcedures(): ConveyorFixtureProcedures {
       recordEntityVerification: unavailable(),
     },
     accounting: {
+      getInvoiceAccounting: unavailable(),
+      postInvoiceIncome: unavailable(),
+      recordInvoicePayment: unavailable(),
+      getBusinessIncomeSummary: unavailable(),
+
       listAccounts: unavailable(),
       listJournals: unavailable(),
       getJournal: unavailable(),

@@ -1,8 +1,17 @@
 import { create, toBinary } from "@bufbuild/protobuf";
+import {
+  ListAccountsRequestSchema,
+  ListAccountsResponseSchema,
+  TaxTreatment,
+} from "@tammy/connect-client/tammy/v1/accounting_pb.js";
 import { ListDocumentsResponseSchema } from "@tammy/connect-client/tammy/v1/documents_pb.js";
 import {
+  GetInvoiceAccountingRequestSchema,
+  GetInvoiceAccountingResponseSchema,
   GetInvoiceLogoRequestSchema,
   GetInvoiceLogoResponseSchema,
+  GetInvoiceRequestSchema,
+  GetInvoiceResponseSchema,
   GetInvoiceTemplateRequestSchema,
   GetInvoiceTemplateResponseSchema,
   InvoiceLogoSchema,
@@ -10,6 +19,7 @@ import {
   InvoiceState,
   InvoiceTemplateInputSchema,
   InvoiceTemplateSchema,
+  ListInvoicesRequestSchema,
   ListInvoicesResponseSchema,
   SaveInvoiceDraftRequestSchema,
   SaveInvoiceDraftResponseSchema,
@@ -18,6 +28,7 @@ import {
   UploadInvoiceLogoRequestSchema,
   UploadInvoiceLogoResponseSchema,
 } from "@tammy/connect-client/tammy/v1/invoices_pb.js";
+import { GstBasis } from "@tammy/connect-client/tammy/v1/organisation_pb.js";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, it } from "vitest";
@@ -61,6 +72,129 @@ const save = createProtoMethodCodec({
   output: SaveInvoiceDraftResponseSchema,
   maximumRequestBytes: 131072,
   maximumResponseBytes: 131072,
+});
+
+it("opens older invoices across pages and reads the full bounded Unicode payment history", async () => {
+  const invoiceId = "01900f3c-7b2e-7cc4-98c4-dc0c0c073906";
+  const invoice = create(InvoiceSchema, {
+    id: invoiceId,
+    organisationId: workspace.organisationId,
+    version: 2n,
+    state: InvoiceState.ISSUED,
+    sellerName: "Gamma Systems Pty Ltd",
+    sellerAbn: "51824753556",
+    subtotalMinor: 10000n,
+    gstMinor: 1000n,
+    totalMinor: 11000n,
+    draft: {
+      number: "OLD-001",
+      issueDate: "2026-09-30",
+      dueDate: "2026-10-14",
+      customerName: "Customer",
+      customerAddress: "Melbourne",
+      sellerAddress: "Melbourne",
+      gstRegistered: true,
+      lines: [
+        {
+          description: "Consulting",
+          quantityMilli: 1000,
+          unitPriceMinor: 10000n,
+          taxTreatment: TaxTreatment.TAXABLE,
+        },
+      ],
+    },
+  });
+  const accounting = create(GetInvoiceAccountingResponseSchema, {
+    accounting: {
+      invoiceId,
+      organisationId: workspace.organisationId,
+      posted: true,
+      version: 202n,
+      gstBasis: GstBasis.CASH,
+      receivedMinor: 201n,
+      outstandingMinor: 10799n,
+      paymentCount: 201n,
+      payments: Array.from({ length: 200 }, (_, index) => ({
+        id: `01900f3c-7b2e-7cc4-98c4-${(index + 1).toString(16).padStart(12, "0")}`,
+        organisationId: workspace.organisationId,
+        invoiceId,
+        paymentDate: { year: 2026, month: 10, day: 2 },
+        amount: { currencyCode: "AUD", minorUnits: 1n },
+        allocatedGst: { currencyCode: "AUD", minorUnits: 0n },
+        basSalesGross: { currencyCode: "AUD", minorUnits: 1n },
+        bankAccountId: workspace.organisationId,
+        journalId: workspace.organisationId,
+        reference: "🧾".repeat(200),
+      })),
+    },
+  });
+  const accountingBytes = toBinary(GetInvoiceAccountingResponseSchema, accounting);
+  expect(accountingBytes.byteLength).toBeGreaterThan(131072);
+  const accountingCodec = createProtoMethodCodec({
+    input: GetInvoiceAccountingRequestSchema,
+    output: GetInvoiceAccountingResponseSchema,
+    maximumRequestBytes: 8192,
+    maximumResponseBytes: 262144,
+  });
+  const invoiceCodec = createProtoMethodCodec({
+    input: GetInvoiceRequestSchema,
+    output: GetInvoiceResponseSchema,
+    maximumRequestBytes: 8192,
+    maximumResponseBytes: 131072,
+  });
+  const accountsCodec = createProtoMethodCodec({
+    input: ListAccountsRequestSchema,
+    output: ListAccountsResponseSchema,
+    maximumRequestBytes: 16384,
+    maximumResponseBytes: 131072,
+  });
+  const listRequests = createProtoMethodCodec({
+    input: ListInvoicesRequestSchema,
+    output: ListInvoicesResponseSchema,
+    maximumRequestBytes: 8192,
+    maximumResponseBytes: 16777216,
+  });
+  const requestedCursors: string[] = [];
+  const conveyor = {
+    accounting: {
+      listInvoices: async (frame: Parameters<typeof listRequests.decodeRequest>[0]) => {
+        const request = listRequests.decodeRequest(frame);
+        requestedCursors.push(request.page?.cursor ?? "");
+        expect(request.organisationId).toBe(workspace.organisationId);
+        return listRequests.encodeResponse(
+          create(
+            ListInvoicesResponseSchema,
+            request.page?.cursor
+              ? { invoices: [invoice] }
+              : { invoices: [], page: { nextCursor: "older-invoices" } },
+          ),
+        );
+      },
+      getInvoice: async () =>
+        invoiceCodec.encodeResponse(create(GetInvoiceResponseSchema, { invoice })),
+      getInvoiceAccounting: async () => accountingCodec.encodeResponse(accounting),
+      listAccounts: async () => accountsCodec.encodeResponse(create(ListAccountsResponseSchema)),
+      getInvoiceTemplate: async () =>
+        getTemplate.encodeResponse(create(GetInvoiceTemplateResponseSchema)),
+    },
+    documents: {
+      listDocuments: async () => ({
+        bytes: toBinary(ListDocumentsResponseSchema, create(ListDocumentsResponseSchema)),
+      }),
+    },
+  } as unknown as TammyConveyor;
+  render(<ConnectedInvoicesScreen conveyor={conveyor} workspace={workspace} />);
+  await userEvent.click(await screen.findByRole("button", { name: "Open OLD-001" }));
+  expect(await screen.findByTestId("invoice-received")).toHaveProperty(
+    "textContent",
+    expect.stringContaining("$2.01"),
+  );
+  expect(screen.getByTestId("invoice-outstanding").textContent).toContain("$107.99");
+  expect(screen.getByText(/Showing 200 of 201 receipts/)).toBeTruthy();
+  expect(
+    within(screen.getByRole("table", { name: "Recorded invoice payments" })).getAllByRole("row"),
+  ).toHaveLength(201);
+  expect(requestedCursors).toEqual(["", "older-invoices"]);
 });
 
 it("loads and saves company defaults with organisation, authentication and optimistic version through protobuf", async () => {

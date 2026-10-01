@@ -10,11 +10,20 @@ import screenshotFixture from "../../release/macos/screenshots/fixture.json" wit
 import { expect, test } from "./fixtures";
 import {
   addReviewedInvoiceExpense,
+  authenticatedWorkspace,
   CURRENT_WORKFLOW_ADMIN_PASSWORD,
   CURRENT_WORKFLOW_PASSPHRASE,
   CURRENT_WORKFLOW_USERNAME,
   setupAndRunCurrentAccountingWorkflow,
 } from "./support/current-accounting-workflow";
+import {
+  expectInvoiceJournal,
+  readBusinessIncome,
+  readInvoiceAccounting,
+  recordInvoiceReceipt,
+  regenerateInvoiceBas,
+  showBusinessIncome,
+} from "./support/invoice-income-workflow";
 import {
   captureCompanyTemplate,
   configureCompanyInvoiceTemplate,
@@ -63,9 +72,18 @@ test("runs the current accounting workflows through the packaged app", async ({
     await expect(page.getByText(/^(?:Loading|Checking)\b/iu)).toHaveCount(0);
     const definition = fixture.screenshots[index];
     if (!definition) throw new Error("APP_STORE_SCREENSHOT_FIXTURE_INVALID");
-    expect(normalizeAccessibilitySnapshot(await page.locator("body").ariaSnapshot())).toEqual(
-      definition.completeAccessibilityText,
+    const actualSnapshot = normalizeAccessibilitySnapshot(
+      await page.locator("body").ariaSnapshot(),
     );
+    await testInfo.attach(`current-workflow-${index + 1}-accessibility`, {
+      body: JSON.stringify(actualSnapshot, null, 2),
+      contentType: "text/plain",
+    });
+    await testInfo.attach(`current-workflow-${index + 1}-screen`, {
+      body: await page.screenshot({ animations: "disabled" }),
+      contentType: "image/png",
+    });
+    expect.soft(actualSnapshot).toEqual(definition.completeAccessibilityText);
   }
   expect(electronHarness.consoleErrors).toEqual([]);
   expect(electronHarness.pageErrors).toEqual([]);
@@ -290,6 +308,16 @@ test("runs the current accounting workflows through the packaged app", async ({
     trainingExpense.id,
   ]);
   expect(draftPdf).toContain("DRAFT");
+  const beforeIssueIncome = await readBusinessIncome(
+    page,
+    workspace,
+    "2026-07-01",
+    "2026-09-30",
+    "2026-10-02",
+  );
+  expect(beforeIssueIncome.invoiceIncome?.minorUnits).toBe(0n);
+  expect(beforeIssueIncome.businessIncome?.minorUnits).toBe(0n);
+  expect(beforeIssueIncome.outstanding?.minorUnits).toBe(0n);
   page = await electronHarness.restart("accounting-workflow-restart");
   await unlockCurrentWorkflowWorkspace(page);
   await page.getByRole("link", { name: "Invoices", exact: true }).click();
@@ -378,6 +406,29 @@ test("runs the current accounting workflows through the packaged app", async ({
     trainingExpense.id,
   ]);
   expect(issuedPdf).not.toContain("DRAFT");
+  const issuedWorkspace = await authenticatedWorkspace(page);
+  await expectInvoiceJournal(page, issuedWorkspace, "INV-MCP-001", 60033n, 66037n, 6004n);
+  await showBusinessIncome(page, "2026-07-01", "2026-09-30", "2026-10-02");
+  await expect(page.getByTestId("business-income-total")).toContainText("$600.33");
+  await expect(page.getByTestId("business-invoice-income")).toContainText("$600.33");
+  await expect(page.getByTestId("business-outstanding")).toContainText("$660.37");
+  await page.getByRole("link", { name: "Journals", exact: true }).click();
+  await expect(page.getByText(/INV-MCP-001/).first()).toBeVisible();
+  await regenerateInvoiceBas(page, "2026-07-01", "2026-09-30", "$660.37", "$60.04");
+  await expect(page.getByRole("table", { name: "BAS sales sources", exact: true })).toContainText(
+    "Issued invoice",
+  );
+  await recordInvoiceReceipt(page, "INV-MCP-001", "2026-10-02", "330.18", "First actual receipt");
+  await expect(page.getByTestId("invoice-outstanding")).toContainText("$330.19");
+  await showBusinessIncome(page, "2026-10-01", "2026-12-31", "2026-10-02");
+  await expect(page.getByTestId("business-income-total")).toContainText("$0.00");
+  await expect(page.getByTestId("business-payments-received")).toContainText("$330.18");
+  await expect(page.getByTestId("business-outstanding")).toContainText("$330.19");
+  await testInfo.attach("invoice-income-overview", {
+    body: await page.screenshot({ animations: "disabled" }),
+    contentType: "image/png",
+  });
+  await regenerateInvoiceBas(page, "2026-10-01", "2026-12-31", "$0.00", "$0.00");
   await electronHarness.application.evaluate(({ Menu }) => {
     const item = Menu.getApplicationMenu()?.getMenuItemById("tammy-integrations-revoke");
     if (!item) throw new Error("PAIRED_API_MENU_MISSING");
@@ -406,6 +457,15 @@ test("runs the current accounting workflows through the packaged app", async ({
     "75.00",
   );
   await expect(restarted.getByTestId("invoice-total")).toContainText("$660.37");
+  await expect(restarted.getByTestId("invoice-received")).toContainText("$330.18");
+  await expect(restarted.getByTestId("invoice-outstanding")).toContainText("$330.19");
+  const retainedAccounting = await readInvoiceAccounting(
+    restarted,
+    await authenticatedWorkspace(restarted),
+    "INV-MCP-001",
+  );
+  expect(retainedAccounting.accounting.paymentCount).toBe(1n);
+  expect(retainedAccounting.accounting.payments[0]?.reference).toBe("First actual receipt");
   await expectInvoiceTemplateSnapshot(restarted, ORIGINAL_COMPANY_TEMPLATE, "2026-10-30", true);
   await restarted.getByRole("button", { name: "Manage invoice template", exact: true }).click();
   await expectCompanyTemplate(restarted, UPDATED_COMPANY_TEMPLATE, false);

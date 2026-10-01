@@ -9,15 +9,17 @@ import type { Timestamp } from "@bufbuild/protobuf/wkt";
 import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { TaxTreatment } from "./accounting_pb.js";
 import { file_tammy_v1_accounting } from "./accounting_pb.js";
-import type { AuthenticationContext, CommandContext, PageInfo, PageRequest } from "./common_pb.js";
+import type { AuthenticationContext, CivilDate, CommandContext, Money, PageInfo, PageRequest } from "./common_pb.js";
 import { file_tammy_v1_common } from "./common_pb.js";
+import type { GstBasis } from "./organisation_pb.js";
+import { file_tammy_v1_organisation } from "./organisation_pb.js";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file tammy/v1/invoices.proto.
  */
 export const file_tammy_v1_invoices: GenFile = /*@__PURE__*/
-  fileDesc("Chd0YW1teS92MS9pbnZvaWNlcy5wcm90bxIIdGFtbXkudjEigQMKEEludm9pY2VMaW5lSW5wdXQSHwoLZGVzY3JpcHRpb24YASABKAlCCrpIB3IFEAEY9AMSIwoOcXVhbnRpdHlfbWlsbGkYAiABKA1CC7pICCoGGMCEPSgBEiYKEHVuaXRfcHJpY2VfbWlub3IYAyABKANCDLpICSIHGIDC1y8oABIqCg91bml0X2Nvc3RfbWlub3IYBCABKANCDLpICSIHGIDC1y8oAEgAiAEBEjkKDXRheF90cmVhdG1lbnQYBSABKA4yFi50YW1teS52MS5UYXhUcmVhdG1lbnRCCrpIB4IBBBABIAASbQoSc291cmNlX2RvY3VtZW50X2lkGAYgASgJQky6SElyRzJFXlswLTlhLWZdezh9LVswLTlhLWZdezR9LTdbMC05YS1mXXszfS1bODlhYl1bMC05YS1mXXszfS1bMC05YS1mXXsxMn0kSAGIAQFCEgoQX3VuaXRfY29zdF9taW5vckIVChNfc291cmNlX2RvY3VtZW50X2lkIvUCCgxJbnZvaWNlRHJhZnQSFwoGbnVtYmVyGAEgASgJQge6SARyAhgoEhsKCmlzc3VlX2RhdGUYAiABKAlCB7pIBHICGAoSGQoIZHVlX2RhdGUYAyABKAlCB7pIBHICGAoSHwoNY3VzdG9tZXJfbmFtZRgEIAEoCUIIukgFcgMYyAESIgoQY3VzdG9tZXJfYWRkcmVzcxgFIAEoCUIIukgFcgMY6AcSHQoMY3VzdG9tZXJfYWJuGAYgASgJQge6SARyAhgLEiAKDnNlbGxlcl9hZGRyZXNzGAcgASgJQgi6SAVyAxjoBxIWCg5nc3RfcmVnaXN0ZXJlZBgIIAEoCBIXCgVub3RlcxgJIAEoCUIIukgFcgMY0A8SJgoUcGF5bWVudF9pbnN0cnVjdGlvbnMYCiABKAlCCLpIBXIDGOgHEjUKBWxpbmVzGAsgAygLMhoudGFtbXkudjEuSW52b2ljZUxpbmVJbnB1dEIKukgHkgEECAEQMiK6AQoQSW52b2ljZUxpbmVUb3RhbBImCg5zdWJ0b3RhbF9taW5vchgBIAEoA0IOukgLIgkYgKCUpY0dKAASIQoJZ3N0X21pbm9yGAIgASgDQg66SAsiCRiAoJSljR0oABIjCgt0b3RhbF9taW5vchgDIAEoA0IOukgLIgkYgKCUpY0dKAASJwoKY29zdF9taW5vchgEIAEoA0IOukgLIgkYgKCUpY0dKABIAIgBAUINCgtfY29zdF9taW5vciKCBgoHSW52b2ljZRJYCgJpZBgBIAEoCUJMukhJckcyRV5bMC05YS1mXXs4fS1bMC05YS1mXXs0fS03WzAtOWEtZl17M30tWzg5YWJdWzAtOWEtZl17M30tWzAtOWEtZl17MTJ9JBJlCg9vcmdhbmlzYXRpb25faWQYAiABKAlCTLpISXJHMkVeWzAtOWEtZl17OH0tWzAtOWEtZl17NH0tN1swLTlhLWZdezN9LVs4OWFiXVswLTlhLWZdezN9LVswLTlhLWZdezEyfSQSGAoHdmVyc2lvbhgDIAEoBEIHukgEMgIoARIxCgVzdGF0ZRgEIAEoDjIWLnRhbW15LnYxLkludm9pY2VTdGF0ZUIKukgHggEEEAEgABIfCgtzZWxsZXJfbmFtZRgFIAEoCUIKukgHcgUQARiAAhIcCgpzZWxsZXJfYWJuGAYgASgJQgi6SAVyA5gBCxItCgVkcmFmdBgHIAEoCzIWLnRhbW15LnYxLkludm9pY2VEcmFmdEIGukgDyAEBEjsKC2xpbmVfdG90YWxzGAggAygLMhoudGFtbXkudjEuSW52b2ljZUxpbmVUb3RhbEIKukgHkgEECAEQMhIWCg5zdWJ0b3RhbF9taW5vchgJIAEoAxIRCglnc3RfbWlub3IYCiABKAMSEwoLdG90YWxfbWlub3IYCyABKAMSEgoKY29zdF9taW5vchgMIAEoAxI2CgpjcmVhdGVkX2F0GA0gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIGukgDyAEBEjYKCnVwZGF0ZWRfYXQYDiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQga6SAPIAQESaAoNbG9nb19hc3NldF9pZBgPIAEoCUJMukhJckcyRV5bMC05YS1mXXs4fS1bMC05YS1mXXs0fS03WzAtOWEtZl17M30tWzg5YWJdWzAtOWEtZl17M30tWzAtOWEtZl17MTJ9JEgAiAEBQhAKDl9sb2dvX2Fzc2V0X2lkItgCChdTYXZlSW52b2ljZURyYWZ0UmVxdWVzdBI5Cg9jb21tYW5kX2NvbnRleHQYASABKAsyGC50YW1teS52MS5Db21tYW5kQ29udGV4dEIGukgDyAEBEmUKD29yZ2FuaXNhdGlvbl9pZBgCIAEoCUJMukhJckcyRV5bMC05YS1mXXs4fS1bMC05YS1mXXs0fS03WzAtOWEtZl17M30tWzg5YWJdWzAtOWEtZl17M30tWzAtOWEtZl17MTJ9JBIbCgppbnZvaWNlX2lkGAMgASgJQge6SARyAhgkEhgKEGV4cGVjdGVkX3ZlcnNpb24YBCABKAQSLQoFZHJhZnQYBSABKAsyFi50YW1teS52MS5JbnZvaWNlRHJhZnRCBrpIA8gBARIjCg1sb2dvX2Fzc2V0X2lkGAYgASgJQge6SARyAhgkSACIAQFCEAoOX2xvZ29fYXNzZXRfaWQiRgoYU2F2ZUludm9pY2VEcmFmdFJlc3BvbnNlEioKB2ludm9pY2UYASABKAsyES50YW1teS52MS5JbnZvaWNlQga6SAPIAQEinQIKEUdldEludm9pY2VSZXF1ZXN0Ej8KDmF1dGhlbnRpY2F0aW9uGAEgASgLMh8udGFtbXkudjEuQXV0aGVudGljYXRpb25Db250ZXh0Qga6SAPIAQESZQoPb3JnYW5pc2F0aW9uX2lkGAIgASgJQky6SElyRzJFXlswLTlhLWZdezh9LVswLTlhLWZdezR9LTdbMC05YS1mXXszfS1bODlhYl1bMC05YS1mXXszfS1bMC05YS1mXXsxMn0kEmAKCmludm9pY2VfaWQYAyABKAlCTLpISXJHMkVeWzAtOWEtZl17OH0tWzAtOWEtZl17NH0tN1swLTlhLWZdezN9LVs4OWFiXVswLTlhLWZdezN9LVswLTlhLWZdezEyfSQiQAoSR2V0SW52b2ljZVJlc3BvbnNlEioKB2ludm9pY2UYASABKAsyES50YW1teS52MS5JbnZvaWNlQga6SAPIAQEi6gEKE0xpc3RJbnZvaWNlc1JlcXVlc3QSPwoOYXV0aGVudGljYXRpb24YASABKAsyHy50YW1teS52MS5BdXRoZW50aWNhdGlvbkNvbnRleHRCBrpIA8gBARJlCg9vcmdhbmlzYXRpb25faWQYAiABKAlCTLpISXJHMkVeWzAtOWEtZl17OH0tWzAtOWEtZl17NH0tN1swLTlhLWZdezN9LVs4OWFiXVswLTlhLWZdezN9LVswLTlhLWZdezEyfSQSKwoEcGFnZRgDIAEoCzIVLnRhbW15LnYxLlBhZ2VSZXF1ZXN0Qga6SAPIAQEicAoUTGlzdEludm9pY2VzUmVzcG9uc2USLgoIaW52b2ljZXMYASADKAsyES50YW1teS52MS5JbnZvaWNlQgm6SAaSAQMQyAESKAoEcGFnZRgCIAEoCzISLnRhbW15LnYxLlBhZ2VJbmZvQga6SAPIAQEivAIKE0lzc3VlSW52b2ljZVJlcXVlc3QSOQoPY29tbWFuZF9jb250ZXh0GAEgASgLMhgudGFtbXkudjEuQ29tbWFuZENvbnRleHRCBrpIA8gBARJlCg9vcmdhbmlzYXRpb25faWQYAiABKAlCTLpISXJHMkVeWzAtOWEtZl17OH0tWzAtOWEtZl17NH0tN1swLTlhLWZdezN9LVs4OWFiXVswLTlhLWZdezN9LVswLTlhLWZdezEyfSQSYAoKaW52b2ljZV9pZBgDIAEoCUJMukhJckcyRV5bMC05YS1mXXs4fS1bMC05YS1mXXs0fS03WzAtOWEtZl17M30tWzg5YWJdWzAtOWEtZl17M30tWzAtOWEtZl17MTJ9JBIhChBleHBlY3RlZF92ZXJzaW9uGAQgASgEQge6SAQyAigBIkIKFElzc3VlSW52b2ljZVJlc3BvbnNlEioKB2ludm9pY2UYASABKAsyES50YW1teS52MS5JbnZvaWNlQga6SAPIAQEimwIKFEludm9pY2VUZW1wbGF0ZUlucHV0EiAKDnNlbGxlcl9hZGRyZXNzGAEgASgJQgi6SAVyAxjoBxIXCgVub3RlcxgCIAEoCUIIukgFcgMY0A8SJgoUcGF5bWVudF9pbnN0cnVjdGlvbnMYAyABKAlCCLpIBXIDGOgHEiQKEnBheW1lbnRfdGVybXNfZGF5cxgEIAEoDUIIukgFKgMY7QISaAoNbG9nb19hc3NldF9pZBgFIAEoCUJMukhJckcyRV5bMC05YS1mXXs4fS1bMC05YS1mXXs0fS03WzAtOWEtZl17M30tWzg5YWJdWzAtOWEtZl17M30tWzAtOWEtZl17MTJ9JEgAiAEBQhAKDl9sb2dvX2Fzc2V0X2lkIsMBCg9JbnZvaWNlVGVtcGxhdGUSZQoPb3JnYW5pc2F0aW9uX2lkGAEgASgJQky6SElyRzJFXlswLTlhLWZdezh9LVswLTlhLWZdezR9LTdbMC05YS1mXXszfS1bODlhYl1bMC05YS1mXXszfS1bMC05YS1mXXsxMn0kEg8KB3ZlcnNpb24YAiABKAQSOAoIZGVmYXVsdHMYAyABKAsyHi50YW1teS52MS5JbnZvaWNlVGVtcGxhdGVJbnB1dEIGukgDyAEBIsMBChlHZXRJbnZvaWNlVGVtcGxhdGVSZXF1ZXN0Ej8KDmF1dGhlbnRpY2F0aW9uGAEgASgLMh8udGFtbXkudjEuQXV0aGVudGljYXRpb25Db250ZXh0Qga6SAPIAQESZQoPb3JnYW5pc2F0aW9uX2lkGAIgASgJQky6SElyRzJFXlswLTlhLWZdezh9LVswLTlhLWZdezR9LTdbMC05YS1mXXszfS1bODlhYl1bMC05YS1mXXszfS1bMC05YS1mXXsxMn0kIlEKGkdldEludm9pY2VUZW1wbGF0ZVJlc3BvbnNlEjMKCHRlbXBsYXRlGAEgASgLMhkudGFtbXkudjEuSW52b2ljZVRlbXBsYXRlQga6SAPIAQEikgIKGlNhdmVJbnZvaWNlVGVtcGxhdGVSZXF1ZXN0EjkKD2NvbW1hbmRfY29udGV4dBgBIAEoCzIYLnRhbW15LnYxLkNvbW1hbmRDb250ZXh0Qga6SAPIAQESZQoPb3JnYW5pc2F0aW9uX2lkGAIgASgJQky6SElyRzJFXlswLTlhLWZdezh9LVswLTlhLWZdezR9LTdbMC05YS1mXXszfS1bODlhYl1bMC05YS1mXXszfS1bMC05YS1mXXsxMn0kEhgKEGV4cGVjdGVkX3ZlcnNpb24YAyABKAQSOAoIZGVmYXVsdHMYBCABKAsyHi50YW1teS52MS5JbnZvaWNlVGVtcGxhdGVJbnB1dEIGukgDyAEBIlIKG1NhdmVJbnZvaWNlVGVtcGxhdGVSZXNwb25zZRIzCgh0ZW1wbGF0ZRgBIAEoCzIZLnRhbW15LnYxLkludm9pY2VUZW1wbGF0ZUIGukgDyAEBIqkDCgtJbnZvaWNlTG9nbxJYCgJpZBgBIAEoCUJMukhJckcyRV5bMC05YS1mXXs4fS1bMC05YS1mXXs0fS03WzAtOWEtZl17M30tWzg5YWJdWzAtOWEtZl17M30tWzAtOWEtZl17MTJ9JBJlCg9vcmdhbmlzYXRpb25faWQYAiABKAlCTLpISXJHMkVeWzAtOWEtZl17OH0tWzAtOWEtZl17NH0tN1swLTlhLWZdezN9LVs4OWFiXVswLTlhLWZdezN9LVswLTlhLWZdezEyfSQSLwoJbWltZV90eXBlGAMgASgJQhy6SBlyF1IJaW1hZ2UvcG5nUgppbWFnZS9qcGVnEiAKC2J5dGVfbGVuZ3RoGAQgASgNQgu6SAgqBhiAgEAoARIXCgZzaGEyNTYYBSABKAxCB7pIBHoCaCASGQoFd2lkdGgYBiABKA1CCrpIByoFGIAgKAESGgoGaGVpZ2h0GAcgASgNQgq6SAcqBRiAICgBEjYKCmNyZWF0ZWRfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQga6SAPIAQEiiwIKGFVwbG9hZEludm9pY2VMb2dvUmVxdWVzdBI5Cg9jb21tYW5kX2NvbnRleHQYASABKAsyGC50YW1teS52MS5Db21tYW5kQ29udGV4dEIGukgDyAEBEmUKD29yZ2FuaXNhdGlvbl9pZBgCIAEoCUJMukhJckcyRV5bMC05YS1mXXs4fS1bMC05YS1mXXs0fS03WzAtOWEtZl17M30tWzg5YWJdWzAtOWEtZl17M30tWzAtOWEtZl17MTJ9JBIvCgltaW1lX3R5cGUYAyABKAlCHLpIGXIXUglpbWFnZS9wbmdSCmltYWdlL2pwZWcSHAoHY29udGVudBgEIAEoDEILukgIegYQARiAgEAiSAoZVXBsb2FkSW52b2ljZUxvZ29SZXNwb25zZRIrCgRsb2dvGAEgASgLMhUudGFtbXkudjEuSW52b2ljZUxvZ29CBrpIA8gBASKkAgoVR2V0SW52b2ljZUxvZ29SZXF1ZXN0Ej8KDmF1dGhlbnRpY2F0aW9uGAEgASgLMh8udGFtbXkudjEuQXV0aGVudGljYXRpb25Db250ZXh0Qga6SAPIAQESZQoPb3JnYW5pc2F0aW9uX2lkGAIgASgJQky6SElyRzJFXlswLTlhLWZdezh9LVswLTlhLWZdezR9LTdbMC05YS1mXXszfS1bODlhYl1bMC05YS1mXXszfS1bMC05YS1mXXsxMn0kEmMKDWxvZ29fYXNzZXRfaWQYAyABKAlCTLpISXJHMkVeWzAtOWEtZl17OH0tWzAtOWEtZl17NH0tN1swLTlhLWZdezN9LVs4OWFiXVswLTlhLWZdezN9LVswLTlhLWZdezEyfSQiYwoWR2V0SW52b2ljZUxvZ29SZXNwb25zZRIrCgRsb2dvGAEgASgLMhUudGFtbXkudjEuSW52b2ljZUxvZ29CBrpIA8gBARIcCgdjb250ZW50GAIgASgMQgu6SAh6BhABGICAQCpgCgxJbnZvaWNlU3RhdGUSHQoZSU5WT0lDRV9TVEFURV9VTlNQRUNJRklFRBAAEhcKE0lOVk9JQ0VfU1RBVEVfRFJBRlQQARIYChRJTlZPSUNFX1NUQVRFX0lTU1VFRBACMsoFCg5JbnZvaWNlU2VydmljZRJZChBTYXZlSW52b2ljZURyYWZ0EiEudGFtbXkudjEuU2F2ZUludm9pY2VEcmFmdFJlcXVlc3QaIi50YW1teS52MS5TYXZlSW52b2ljZURyYWZ0UmVzcG9uc2USRwoKR2V0SW52b2ljZRIbLnRhbW15LnYxLkdldEludm9pY2VSZXF1ZXN0GhwudGFtbXkudjEuR2V0SW52b2ljZVJlc3BvbnNlEk0KDExpc3RJbnZvaWNlcxIdLnRhbW15LnYxLkxpc3RJbnZvaWNlc1JlcXVlc3QaHi50YW1teS52MS5MaXN0SW52b2ljZXNSZXNwb25zZRJNCgxJc3N1ZUludm9pY2USHS50YW1teS52MS5Jc3N1ZUludm9pY2VSZXF1ZXN0Gh4udGFtbXkudjEuSXNzdWVJbnZvaWNlUmVzcG9uc2USXwoSR2V0SW52b2ljZVRlbXBsYXRlEiMudGFtbXkudjEuR2V0SW52b2ljZVRlbXBsYXRlUmVxdWVzdBokLnRhbW15LnYxLkdldEludm9pY2VUZW1wbGF0ZVJlc3BvbnNlEmIKE1NhdmVJbnZvaWNlVGVtcGxhdGUSJC50YW1teS52MS5TYXZlSW52b2ljZVRlbXBsYXRlUmVxdWVzdBolLnRhbW15LnYxLlNhdmVJbnZvaWNlVGVtcGxhdGVSZXNwb25zZRJcChFVcGxvYWRJbnZvaWNlTG9nbxIiLnRhbW15LnYxLlVwbG9hZEludm9pY2VMb2dvUmVxdWVzdBojLnRhbW15LnYxLlVwbG9hZEludm9pY2VMb2dvUmVzcG9uc2USUwoOR2V0SW52b2ljZUxvZ28SHy50YW1teS52MS5HZXRJbnZvaWNlTG9nb1JlcXVlc3QaIC50YW1teS52MS5HZXRJbnZvaWNlTG9nb1Jlc3BvbnNlQkdaRWdpdGh1Yi5jb20vdGFtbXlhcHAvdGFtbXkvc2VydmljZXMvY29yZS9pbnRlcm5hbC9nZW4vdGFtbXkvdjE7dGFtbXl2MWIGcHJvdG8z", [file_buf_validate_validate, file_google_protobuf_timestamp, file_tammy_v1_accounting, file_tammy_v1_common]);
+  fileDesc("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GAggASgLMg8udGFtbXkudjEuTW9uZXlCBrpIA8gBARIsCgtpbnZvaWNlX2dzdBgJIAEoCzIPLnRhbW15LnYxLk1vbmV5Qga6SAPIAQESFAoMaXNzdWVkX2NvdW50GAogASgEEh0KFXVucG9zdGVkX2lzc3VlZF9jb3VudBgLIAEoBBIvCglnc3RfYmFzaXMYDCABKA4yEi50YW1teS52MS5Hc3RCYXNpc0IIukgFggECEAESGgoSZmluYW5jaWFsX3JldmlzaW9uGA0gASgEEjAKD3VucG9zdGVkX2luY29tZRgOIAEoCzIPLnRhbW15LnYxLk1vbmV5Qga6SAPIAQEi3gIKH0dldEJ1c2luZXNzSW5jb21lU3VtbWFyeVJlcXVlc3QSPwoOYXV0aGVudGljYXRpb24YASABKAsyHy50YW1teS52MS5BdXRoZW50aWNhdGlvbkNvbnRleHRCBrpIA8gBARJlCg9vcmdhbmlzYXRpb25faWQYAiABKAlCTLpISXJHMkVeWzAtOWEtZl17OH0tWzAtOWEtZl17NH0tN1swLTlhLWZdezN9LVs4OWFiXVswLTlhLWZdezN9LVswLTlhLWZdezEyfSQSMQoMcGVyaW9kX3N0YXJ0GAMgASgLMhMudGFtbXkudjEuQ2l2aWxEYXRlQga6SAPIAQESLwoKcGVyaW9kX2VuZBgEIAEoCzITLnRhbW15LnYxLkNpdmlsRGF0ZUIGukgDyAEBEi8KCmFzX29mX2RhdGUYBSABKAsyEy50YW1teS52MS5DaXZpbERhdGVCBrpIA8gBASJcCiBHZXRCdXNpbmVzc0luY29tZVN1bW1hcnlSZXNwb25zZRI4CgdzdW1tYXJ5GAEgASgLMh8udGFtbXkudjEuQnVzaW5lc3NJbmNvbWVTdW1tYXJ5Qga6SAPIAQEqYAoMSW52b2ljZVN0YXRlEh0KGUlOVk9JQ0VfU1RBVEVfVU5TUEVDSUZJRUQQABIXChNJTlZPSUNFX1NUQVRFX0RSQUZUEAESGAoUSU5WT0lDRV9TVEFURV9JU1NVRUQQAjLpCAoOSW52b2ljZVNlcnZpY2USWQoQU2F2ZUludm9pY2VEcmFmdBIhLnRhbW15LnYxLlNhdmVJbnZvaWNlRHJhZnRSZXF1ZXN0GiIudGFtbXkudjEuU2F2ZUludm9pY2VEcmFmdFJlc3BvbnNlEkcKCkdldEludm9pY2USGy50YW1teS52MS5HZXRJbnZvaWNlUmVxdWVzdBocLnRhbW15LnYxLkdldEludm9pY2VSZXNwb25zZRJNCgxMaXN0SW52b2ljZXMSHS50YW1teS52MS5MaXN0SW52b2ljZXNSZXF1ZXN0Gh4udGFtbXkudjEuTGlzdEludm9pY2VzUmVzcG9uc2USTQoMSXNzdWVJbnZvaWNlEh0udGFtbXkudjEuSXNzdWVJbnZvaWNlUmVxdWVzdBoeLnRhbW15LnYxLklzc3VlSW52b2ljZVJlc3BvbnNlEl8KEkdldEludm9pY2VUZW1wbGF0ZRIjLnRhbW15LnYxLkdldEludm9pY2VUZW1wbGF0ZVJlcXVlc3QaJC50YW1teS52MS5HZXRJbnZvaWNlVGVtcGxhdGVSZXNwb25zZRJiChNTYXZlSW52b2ljZVRlbXBsYXRlEiQudGFtbXkudjEuU2F2ZUludm9pY2VUZW1wbGF0ZVJlcXVlc3QaJS50YW1teS52MS5TYXZlSW52b2ljZVRlbXBsYXRlUmVzcG9uc2USXAoRVXBsb2FkSW52b2ljZUxvZ28SIi50YW1teS52MS5VcGxvYWRJbnZvaWNlTG9nb1JlcXVlc3QaIy50YW1teS52MS5VcGxvYWRJbnZvaWNlTG9nb1Jlc3BvbnNlElMKDkdldEludm9pY2VMb2dvEh8udGFtbXkudjEuR2V0SW52b2ljZUxvZ29SZXF1ZXN0GiAudGFtbXkudjEuR2V0SW52b2ljZUxvZ29SZXNwb25zZRJlChRHZXRJbnZvaWNlQWNjb3VudGluZxIlLnRhbW15LnYxLkdldEludm9pY2VBY2NvdW50aW5nUmVxdWVzdBomLnRhbW15LnYxLkdldEludm9pY2VBY2NvdW50aW5nUmVzcG9uc2USXAoRUG9zdEludm9pY2VJbmNvbWUSIi50YW1teS52MS5Qb3N0SW52b2ljZUluY29tZVJlcXVlc3QaIy50YW1teS52MS5Qb3N0SW52b2ljZUluY29tZVJlc3BvbnNlEmUKFFJlY29yZEludm9pY2VQYXltZW50EiUudGFtbXkudjEuUmVjb3JkSW52b2ljZVBheW1lbnRSZXF1ZXN0GiYudGFtbXkudjEuUmVjb3JkSW52b2ljZVBheW1lbnRSZXNwb25zZRJxChhHZXRCdXNpbmVzc0luY29tZVN1bW1hcnkSKS50YW1teS52MS5HZXRCdXNpbmVzc0luY29tZVN1bW1hcnlSZXF1ZXN0GioudGFtbXkudjEuR2V0QnVzaW5lc3NJbmNvbWVTdW1tYXJ5UmVzcG9uc2VCR1pFZ2l0aHViLmNvbS90YW1teWFwcC90YW1teS9zZXJ2aWNlcy9jb3JlL2ludGVybmFsL2dlbi90YW1teS92MTt0YW1teXYxYgZwcm90bzM", [file_buf_validate_validate, file_google_protobuf_timestamp, file_tammy_v1_accounting, file_tammy_v1_common, file_tammy_v1_organisation]);
 
 /**
  * InvoiceLineInput stores exact AUD ex-GST prices and three-decimal quantities.
@@ -771,6 +773,449 @@ export const GetInvoiceLogoResponseSchema: GenMessage<GetInvoiceLogoResponse> = 
   messageDesc(file_tammy_v1_invoices, 22);
 
 /**
+ * Immutable dated receipts belong to the accounting link, not the invoice document.
+ *
+ * @generated from message tammy.v1.InvoicePayment
+ */
+export type InvoicePayment = Message<"tammy.v1.InvoicePayment"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string organisation_id = 2;
+   */
+  organisationId: string;
+
+  /**
+   * @generated from field: string invoice_id = 3;
+   */
+  invoiceId: string;
+
+  /**
+   * @generated from field: tammy.v1.CivilDate payment_date = 4;
+   */
+  paymentDate?: CivilDate | undefined;
+
+  /**
+   * @generated from field: tammy.v1.Money amount = 5;
+   */
+  amount?: Money | undefined;
+
+  /**
+   * @generated from field: tammy.v1.Money allocated_gst = 6;
+   */
+  allocatedGst?: Money | undefined;
+
+  /**
+   * @generated from field: tammy.v1.Money bas_sales_gross = 7;
+   */
+  basSalesGross?: Money | undefined;
+
+  /**
+   * @generated from field: string bank_account_id = 8;
+   */
+  bankAccountId: string;
+
+  /**
+   * @generated from field: string reference = 9;
+   */
+  reference: string;
+
+  /**
+   * @generated from field: string journal_id = 10;
+   */
+  journalId: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 11;
+   */
+  createdAt?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message tammy.v1.InvoicePayment.
+ * Use `create(InvoicePaymentSchema)` to create a new message.
+ */
+export const InvoicePaymentSchema: GenMessage<InvoicePayment> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_invoices, 23);
+
+/**
+ * Version zero denotes an invoice not yet linked to business accounts.
+ *
+ * @generated from message tammy.v1.InvoiceAccounting
+ */
+export type InvoiceAccounting = Message<"tammy.v1.InvoiceAccounting"> & {
+  /**
+   * @generated from field: string invoice_id = 1;
+   */
+  invoiceId: string;
+
+  /**
+   * @generated from field: string organisation_id = 2;
+   */
+  organisationId: string;
+
+  /**
+   * @generated from field: uint64 version = 3;
+   */
+  version: bigint;
+
+  /**
+   * @generated from field: bool posted = 4;
+   */
+  posted: boolean;
+
+  /**
+   * @generated from field: optional string revenue_account_id = 5;
+   */
+  revenueAccountId?: string | undefined;
+
+  /**
+   * @generated from field: optional string journal_id = 6;
+   */
+  journalId?: string | undefined;
+
+  /**
+   * @generated from field: tammy.v1.GstBasis gst_basis = 7;
+   */
+  gstBasis: GstBasis;
+
+  /**
+   * @generated from field: int64 received_minor = 8;
+   */
+  receivedMinor: bigint;
+
+  /**
+   * @generated from field: int64 outstanding_minor = 9;
+   */
+  outstandingMinor: bigint;
+
+  /**
+   * @generated from field: repeated tammy.v1.InvoicePayment payments = 10;
+   */
+  payments: InvoicePayment[];
+
+  /**
+   * @generated from field: uint64 payment_count = 11;
+   */
+  paymentCount: bigint;
+};
+
+/**
+ * Describes the message tammy.v1.InvoiceAccounting.
+ * Use `create(InvoiceAccountingSchema)` to create a new message.
+ */
+export const InvoiceAccountingSchema: GenMessage<InvoiceAccounting> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_invoices, 24);
+
+/**
+ * @generated from message tammy.v1.GetInvoiceAccountingRequest
+ */
+export type GetInvoiceAccountingRequest = Message<"tammy.v1.GetInvoiceAccountingRequest"> & {
+  /**
+   * @generated from field: tammy.v1.AuthenticationContext authentication = 1;
+   */
+  authentication?: AuthenticationContext | undefined;
+
+  /**
+   * @generated from field: string organisation_id = 2;
+   */
+  organisationId: string;
+
+  /**
+   * @generated from field: string invoice_id = 3;
+   */
+  invoiceId: string;
+};
+
+/**
+ * Describes the message tammy.v1.GetInvoiceAccountingRequest.
+ * Use `create(GetInvoiceAccountingRequestSchema)` to create a new message.
+ */
+export const GetInvoiceAccountingRequestSchema: GenMessage<GetInvoiceAccountingRequest> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_invoices, 25);
+
+/**
+ * @generated from message tammy.v1.GetInvoiceAccountingResponse
+ */
+export type GetInvoiceAccountingResponse = Message<"tammy.v1.GetInvoiceAccountingResponse"> & {
+  /**
+   * @generated from field: tammy.v1.InvoiceAccounting accounting = 1;
+   */
+  accounting?: InvoiceAccounting | undefined;
+};
+
+/**
+ * Describes the message tammy.v1.GetInvoiceAccountingResponse.
+ * Use `create(GetInvoiceAccountingResponseSchema)` to create a new message.
+ */
+export const GetInvoiceAccountingResponseSchema: GenMessage<GetInvoiceAccountingResponse> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_invoices, 26);
+
+/**
+ * @generated from message tammy.v1.PostInvoiceIncomeRequest
+ */
+export type PostInvoiceIncomeRequest = Message<"tammy.v1.PostInvoiceIncomeRequest"> & {
+  /**
+   * @generated from field: tammy.v1.CommandContext command_context = 1;
+   */
+  commandContext?: CommandContext | undefined;
+
+  /**
+   * @generated from field: string organisation_id = 2;
+   */
+  organisationId: string;
+
+  /**
+   * @generated from field: string invoice_id = 3;
+   */
+  invoiceId: string;
+
+  /**
+   * @generated from field: uint64 expected_version = 4;
+   */
+  expectedVersion: bigint;
+};
+
+/**
+ * Describes the message tammy.v1.PostInvoiceIncomeRequest.
+ * Use `create(PostInvoiceIncomeRequestSchema)` to create a new message.
+ */
+export const PostInvoiceIncomeRequestSchema: GenMessage<PostInvoiceIncomeRequest> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_invoices, 27);
+
+/**
+ * @generated from message tammy.v1.PostInvoiceIncomeResponse
+ */
+export type PostInvoiceIncomeResponse = Message<"tammy.v1.PostInvoiceIncomeResponse"> & {
+  /**
+   * @generated from field: tammy.v1.InvoiceAccounting accounting = 1;
+   */
+  accounting?: InvoiceAccounting | undefined;
+};
+
+/**
+ * Describes the message tammy.v1.PostInvoiceIncomeResponse.
+ * Use `create(PostInvoiceIncomeResponseSchema)` to create a new message.
+ */
+export const PostInvoiceIncomeResponseSchema: GenMessage<PostInvoiceIncomeResponse> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_invoices, 28);
+
+/**
+ * @generated from message tammy.v1.RecordInvoicePaymentRequest
+ */
+export type RecordInvoicePaymentRequest = Message<"tammy.v1.RecordInvoicePaymentRequest"> & {
+  /**
+   * @generated from field: tammy.v1.CommandContext command_context = 1;
+   */
+  commandContext?: CommandContext | undefined;
+
+  /**
+   * @generated from field: string organisation_id = 2;
+   */
+  organisationId: string;
+
+  /**
+   * @generated from field: string invoice_id = 3;
+   */
+  invoiceId: string;
+
+  /**
+   * @generated from field: uint64 expected_accounting_version = 4;
+   */
+  expectedAccountingVersion: bigint;
+
+  /**
+   * @generated from field: tammy.v1.CivilDate payment_date = 5;
+   */
+  paymentDate?: CivilDate | undefined;
+
+  /**
+   * @generated from field: tammy.v1.Money amount = 6;
+   */
+  amount?: Money | undefined;
+
+  /**
+   * @generated from field: string bank_account_id = 7;
+   */
+  bankAccountId: string;
+
+  /**
+   * @generated from field: string reference = 8;
+   */
+  reference: string;
+};
+
+/**
+ * Describes the message tammy.v1.RecordInvoicePaymentRequest.
+ * Use `create(RecordInvoicePaymentRequestSchema)` to create a new message.
+ */
+export const RecordInvoicePaymentRequestSchema: GenMessage<RecordInvoicePaymentRequest> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_invoices, 29);
+
+/**
+ * @generated from message tammy.v1.RecordInvoicePaymentResponse
+ */
+export type RecordInvoicePaymentResponse = Message<"tammy.v1.RecordInvoicePaymentResponse"> & {
+  /**
+   * @generated from field: tammy.v1.InvoiceAccounting accounting = 1;
+   */
+  accounting?: InvoiceAccounting | undefined;
+
+  /**
+   * @generated from field: tammy.v1.InvoicePayment payment = 2;
+   */
+  payment?: InvoicePayment | undefined;
+};
+
+/**
+ * Describes the message tammy.v1.RecordInvoicePaymentResponse.
+ * Use `create(RecordInvoicePaymentResponseSchema)` to create a new message.
+ */
+export const RecordInvoicePaymentResponseSchema: GenMessage<RecordInvoicePaymentResponse> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_invoices, 30);
+
+/**
+ * Period activity and outstanding debt use separate dates to retain older debt.
+ *
+ * @generated from message tammy.v1.BusinessIncomeSummary
+ */
+export type BusinessIncomeSummary = Message<"tammy.v1.BusinessIncomeSummary"> & {
+  /**
+   * @generated from field: string organisation_id = 1;
+   */
+  organisationId: string;
+
+  /**
+   * @generated from field: tammy.v1.CivilDate period_start = 2;
+   */
+  periodStart?: CivilDate | undefined;
+
+  /**
+   * @generated from field: tammy.v1.CivilDate period_end = 3;
+   */
+  periodEnd?: CivilDate | undefined;
+
+  /**
+   * @generated from field: tammy.v1.CivilDate as_of_date = 4;
+   */
+  asOfDate?: CivilDate | undefined;
+
+  /**
+   * @generated from field: tammy.v1.Money business_income = 5;
+   */
+  businessIncome?: Money | undefined;
+
+  /**
+   * @generated from field: tammy.v1.Money invoice_income = 6;
+   */
+  invoiceIncome?: Money | undefined;
+
+  /**
+   * @generated from field: tammy.v1.Money payments_received = 7;
+   */
+  paymentsReceived?: Money | undefined;
+
+  /**
+   * @generated from field: tammy.v1.Money outstanding = 8;
+   */
+  outstanding?: Money | undefined;
+
+  /**
+   * @generated from field: tammy.v1.Money invoice_gst = 9;
+   */
+  invoiceGst?: Money | undefined;
+
+  /**
+   * @generated from field: uint64 issued_count = 10;
+   */
+  issuedCount: bigint;
+
+  /**
+   * @generated from field: uint64 unposted_issued_count = 11;
+   */
+  unpostedIssuedCount: bigint;
+
+  /**
+   * @generated from field: tammy.v1.GstBasis gst_basis = 12;
+   */
+  gstBasis: GstBasis;
+
+  /**
+   * @generated from field: uint64 financial_revision = 13;
+   */
+  financialRevision: bigint;
+
+  /**
+   * @generated from field: tammy.v1.Money unposted_income = 14;
+   */
+  unpostedIncome?: Money | undefined;
+};
+
+/**
+ * Describes the message tammy.v1.BusinessIncomeSummary.
+ * Use `create(BusinessIncomeSummarySchema)` to create a new message.
+ */
+export const BusinessIncomeSummarySchema: GenMessage<BusinessIncomeSummary> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_invoices, 31);
+
+/**
+ * @generated from message tammy.v1.GetBusinessIncomeSummaryRequest
+ */
+export type GetBusinessIncomeSummaryRequest = Message<"tammy.v1.GetBusinessIncomeSummaryRequest"> & {
+  /**
+   * @generated from field: tammy.v1.AuthenticationContext authentication = 1;
+   */
+  authentication?: AuthenticationContext | undefined;
+
+  /**
+   * @generated from field: string organisation_id = 2;
+   */
+  organisationId: string;
+
+  /**
+   * @generated from field: tammy.v1.CivilDate period_start = 3;
+   */
+  periodStart?: CivilDate | undefined;
+
+  /**
+   * @generated from field: tammy.v1.CivilDate period_end = 4;
+   */
+  periodEnd?: CivilDate | undefined;
+
+  /**
+   * @generated from field: tammy.v1.CivilDate as_of_date = 5;
+   */
+  asOfDate?: CivilDate | undefined;
+};
+
+/**
+ * Describes the message tammy.v1.GetBusinessIncomeSummaryRequest.
+ * Use `create(GetBusinessIncomeSummaryRequestSchema)` to create a new message.
+ */
+export const GetBusinessIncomeSummaryRequestSchema: GenMessage<GetBusinessIncomeSummaryRequest> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_invoices, 32);
+
+/**
+ * @generated from message tammy.v1.GetBusinessIncomeSummaryResponse
+ */
+export type GetBusinessIncomeSummaryResponse = Message<"tammy.v1.GetBusinessIncomeSummaryResponse"> & {
+  /**
+   * @generated from field: tammy.v1.BusinessIncomeSummary summary = 1;
+   */
+  summary?: BusinessIncomeSummary | undefined;
+};
+
+/**
+ * Describes the message tammy.v1.GetBusinessIncomeSummaryResponse.
+ * Use `create(GetBusinessIncomeSummaryResponseSchema)` to create a new message.
+ */
+export const GetBusinessIncomeSummaryResponseSchema: GenMessage<GetBusinessIncomeSummaryResponse> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_invoices, 33);
+
+/**
  * InvoiceState describes a document, not a ledger posting or delivery status.
  *
  * @generated from enum tammy.v1.InvoiceState
@@ -827,7 +1272,7 @@ export const InvoiceService: GenService<{
     output: typeof ListInvoicesResponseSchema;
   },
   /**
-   * Issue freezes the document. It never sends it, records payment, or posts a journal.
+   * Issue freezes the document and atomically records income. It never sends it or records payment.
    *
    * @generated from rpc tammy.v1.InvoiceService.IssueInvoice
    */
@@ -867,6 +1312,38 @@ export const InvoiceService: GenService<{
     methodKind: "unary";
     input: typeof GetInvoiceLogoRequestSchema;
     output: typeof GetInvoiceLogoResponseSchema;
+  },
+  /**
+   * @generated from rpc tammy.v1.InvoiceService.GetInvoiceAccounting
+   */
+  getInvoiceAccounting: {
+    methodKind: "unary";
+    input: typeof GetInvoiceAccountingRequestSchema;
+    output: typeof GetInvoiceAccountingResponseSchema;
+  },
+  /**
+   * @generated from rpc tammy.v1.InvoiceService.PostInvoiceIncome
+   */
+  postInvoiceIncome: {
+    methodKind: "unary";
+    input: typeof PostInvoiceIncomeRequestSchema;
+    output: typeof PostInvoiceIncomeResponseSchema;
+  },
+  /**
+   * @generated from rpc tammy.v1.InvoiceService.RecordInvoicePayment
+   */
+  recordInvoicePayment: {
+    methodKind: "unary";
+    input: typeof RecordInvoicePaymentRequestSchema;
+    output: typeof RecordInvoicePaymentResponseSchema;
+  },
+  /**
+   * @generated from rpc tammy.v1.InvoiceService.GetBusinessIncomeSummary
+   */
+  getBusinessIncomeSummary: {
+    methodKind: "unary";
+    input: typeof GetBusinessIncomeSummaryRequestSchema;
+    output: typeof GetBusinessIncomeSummaryResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_tammy_v1_invoices, 0);

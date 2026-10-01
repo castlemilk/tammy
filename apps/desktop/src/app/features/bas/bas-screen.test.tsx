@@ -1,5 +1,6 @@
 import { create } from "@bufbuild/protobuf";
 import { CivilDateSchema, MoneySchema } from "@tammy/connect-client/tammy/v1/common_pb.js";
+import { GstBasis } from "@tammy/connect-client/tammy/v1/organisation_pb.js";
 import {
   GetReportingCapabilityRequestSchema,
   GetReportingCapabilityResponseSchema,
@@ -8,6 +9,7 @@ import {
   ReportKind,
 } from "@tammy/connect-client/tammy/v1/reporting_capability_pb.js";
 import {
+  BasSalesSourceLineSchema,
   BasSourceLineSchema,
   BasWorkpaperSchema,
   BasWorkpaperStatus,
@@ -109,6 +111,7 @@ it("creates a local BAS draft from reviewed sources without exposing lodgement a
   render(
     <BasScreen
       api={fixture.conveyor.reporting}
+      now={new Date(2024, 4, 12)}
       workspace={{
         workspaceId: "018f0000-0000-7000-8000-000000000001",
         userId: "018f0000-0000-7000-8000-000000000002",
@@ -167,6 +170,7 @@ it("queries the selected AU tax year and blocks an unavailable workpaper year", 
   render(
     <BasScreen
       api={fixture.conveyor.reporting}
+      now={new Date(2024, 4, 12)}
       workspace={{
         workspaceId: "018f0000-0000-7000-8000-000000000001",
         userId: "018f0000-0000-7000-8000-000000000002",
@@ -195,4 +199,99 @@ it("queries the selected AU tax year and blocks an unavailable workpaper year", 
   expect((createButton as HTMLButtonElement).disabled).toBe(true);
   await user.click(createButton);
   expect(fixture.procedures.reporting.createBasDraft).not.toHaveBeenCalled();
+});
+
+it("keeps saved BAS figures and sales provenance visible until a stale draft is regenerated", async () => {
+  const fixture = createConveyorFixture();
+  const organisationId = "018f0000-0000-7000-8000-000000000004";
+  let workpaper = create(BasWorkpaperSchema, {
+    id: "018f0000-0000-7000-8000-000000000401",
+    organisationId,
+    version: 1n,
+    periodStart: { year: 2026, month: 7, day: 1 },
+    periodEnd: { year: 2026, month: 9, day: 30 },
+    status: BasWorkpaperStatus.DRAFT_NOT_LODGED,
+    gstBasis: GstBasis.CASH,
+    sourcesChanged: true,
+    salesG1: { currencyCode: "AUD", minorUnits: 5500n },
+    gstOnSales1a: { currencyCode: "AUD", minorUnits: 500n },
+    gstCredits1b: { currencyCode: "AUD", minorUnits: 0n },
+    netGstPayable: { currencyCode: "AUD", minorUnits: 500n },
+    reviewWarnings: ["Reviewed cash purchases need payment evidence."],
+    excludedCashPurchaseCount: 2n,
+    salesSources: [
+      create(BasSalesSourceLineSchema, {
+        invoiceId: "018f0000-0000-7000-8000-000000000402",
+        invoiceNumber: "INV-100",
+        customerName: "Receipt customer",
+        taxDate: { year: 2026, month: 9, day: 30 },
+        gross: { currencyCode: "AUD", minorUnits: 5500n },
+        gst: { currencyCode: "AUD", minorUnits: 500n },
+        paymentId: "018f0000-0000-7000-8000-000000000403",
+        sourceRevision: 1n,
+        sourceHash: new Uint8Array(32),
+      }),
+    ],
+  });
+  fixture.procedures.reporting.getCurrentBasDraft.mockImplementation(async () =>
+    getCodec.encodeResponse(create(GetCurrentBasDraftResponseSchema, { workpaper })),
+  );
+  fixture.procedures.reporting.getReportingCapability.mockImplementation(
+    async (frame: Uint8Array) => {
+      const request = reportingCodec.decodeRequest(frame);
+      return reportingCodec.encodeResponse(
+        create(GetReportingCapabilityResponseSchema, {
+          capability: {
+            report: request.report,
+            taxYear: request.taxYear,
+            entityType: request.entityType,
+            status:
+              request.report === ReportKind.GST_WORKPAPER
+                ? ReportingCapabilityStatus.AVAILABLE
+                : ReportingCapabilityStatus.UNSUPPORTED,
+            appVersion: "test",
+            summary: "Local workpaper",
+          },
+        }),
+      );
+    },
+  );
+  fixture.procedures.reporting.createBasDraft.mockImplementation(async (frame: Uint8Array) => {
+    const request = createCodec.decodeRequest(frame);
+    expect(request.periodStart).toMatchObject({ year: 2026, month: 7, day: 1 });
+    expect(request.periodEnd).toMatchObject({ year: 2026, month: 9, day: 30 });
+    workpaper = create(BasWorkpaperSchema, {
+      ...workpaper,
+      version: 2n,
+      sourcesChanged: false,
+      salesG1: create(MoneySchema, { currencyCode: "AUD", minorUnits: 11000n }),
+    });
+    return createCodec.encodeResponse(create(CreateBasDraftResponseSchema, { workpaper }));
+  });
+  render(
+    <BasScreen
+      api={fixture.conveyor.reporting}
+      now={new Date(2026, 9, 2)}
+      workspace={{
+        workspaceId: "018f0000-0000-7000-8000-000000000001",
+        userId: "018f0000-0000-7000-8000-000000000002",
+        sessionId: "018f0000-0000-7000-8000-000000000003",
+        organisationId,
+      }}
+    />,
+  );
+  expect(await screen.findByText(/Sources changed since this workpaper was saved/)).toBeTruthy();
+  expect(screen.getByText("Cash basis · sales follow recorded payments")).toBeTruthy();
+  expect(screen.getByText("Reviewed cash purchases need payment evidence.")).toBeTruthy();
+  expect(screen.getByRole("table", { name: "BAS sales sources" }).textContent).toContain(
+    "Receipt customer",
+  );
+  expect(screen.getByTestId("bas-sales-g1").textContent).toContain("$55.00");
+  expect(screen.getByLabelText("Period start")).toHaveProperty("value", "2026-07-01");
+  await userEvent.click(await screen.findByRole("button", { name: "Regenerate local draft" }));
+  await expect(
+    fixture.procedures.reporting.createBasDraft.mock.results[0]?.value,
+  ).resolves.toBeInstanceOf(Uint8Array);
+  await waitFor(() => expect(screen.getByTestId("bas-sales-g1").textContent).toContain("$110.00"));
+  expect(screen.queryByText(/Sources changed since this workpaper was saved/)).toBeNull();
 });

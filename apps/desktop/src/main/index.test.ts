@@ -41,6 +41,18 @@ function occurrences(calls: readonly string[], value: string): number {
 
 function unusedCoreMethods() {
   return {
+    getInvoiceAccounting: vi.fn(async () => {
+      throw new Error("unavailable");
+    }),
+    postInvoiceIncome: vi.fn(async () => {
+      throw new Error("unavailable");
+    }),
+    recordInvoicePayment: vi.fn(async () => {
+      throw new Error("unavailable");
+    }),
+    getBusinessIncomeSummary: vi.fn(async () => {
+      throw new Error("unavailable");
+    }),
     getInvoiceTemplate: vi.fn(async () => {
       throw new Error("unused");
     }),

@@ -13,6 +13,10 @@ import {
   PostManualJournalResponseSchema,
 } from "@tammy/connect-client/tammy/v1/accounting_pb.js";
 import {
+  GetBusinessIncomeSummaryRequestSchema,
+  GetBusinessIncomeSummaryResponseSchema,
+  GetInvoiceAccountingRequestSchema,
+  GetInvoiceAccountingResponseSchema,
   GetInvoiceLogoRequestSchema,
   GetInvoiceLogoResponseSchema,
   GetInvoiceRequestSchema,
@@ -23,6 +27,10 @@ import {
   IssueInvoiceResponseSchema,
   ListInvoicesRequestSchema,
   ListInvoicesResponseSchema,
+  PostInvoiceIncomeRequestSchema,
+  PostInvoiceIncomeResponseSchema,
+  RecordInvoicePaymentRequestSchema,
+  RecordInvoicePaymentResponseSchema,
   SaveInvoiceDraftRequestSchema,
   SaveInvoiceDraftResponseSchema,
   SaveInvoiceTemplateRequestSchema,
@@ -120,7 +128,45 @@ const getInvoiceLogo = createProtoMethodCodec({
   maximumResponseBytes: 1179648,
 });
 
+const getInvoiceAccounting = createProtoMethodCodec({
+  input: GetInvoiceAccountingRequestSchema,
+  output: GetInvoiceAccountingResponseSchema,
+  maximumRequestBytes: 16_384,
+  maximumResponseBytes: 262_144,
+});
+const postInvoiceIncome = createProtoMethodCodec({
+  input: PostInvoiceIncomeRequestSchema,
+  output: PostInvoiceIncomeResponseSchema,
+  maximumRequestBytes: 16_384,
+  maximumResponseBytes: 262_144,
+});
+const recordInvoicePayment = createProtoMethodCodec({
+  input: RecordInvoicePaymentRequestSchema,
+  output: RecordInvoicePaymentResponseSchema,
+  maximumRequestBytes: 16_384,
+  maximumResponseBytes: 262_144,
+});
+const getBusinessIncomeSummary = createProtoMethodCodec({
+  input: GetBusinessIncomeSummaryRequestSchema,
+  output: GetBusinessIncomeSummaryResponseSchema,
+  maximumRequestBytes: 16_384,
+  maximumResponseBytes: 16_384,
+});
+
 export const accounting = defineModule({
+  getInvoiceAccounting: query(conveyorProtoFrame(16_384), ({ input, ctx }) =>
+    invokeCore(getInvoiceAccounting, input, ctx.client.getInvoiceAccounting),
+  ),
+  postInvoiceIncome: command(conveyorProtoFrame(16_384), ({ input, ctx }) =>
+    invokeCore(postInvoiceIncome, input, ctx.client.postInvoiceIncome),
+  ),
+  recordInvoicePayment: command(conveyorProtoFrame(16_384), ({ input, ctx }) =>
+    invokeCore(recordInvoicePayment, input, ctx.client.recordInvoicePayment),
+  ),
+  getBusinessIncomeSummary: query(conveyorProtoFrame(16_384), ({ input, ctx }) =>
+    invokeCore(getBusinessIncomeSummary, input, ctx.client.getBusinessIncomeSummary),
+  ),
+
   listAccounts: query(conveyorProtoFrame(16_384), ({ input, ctx }) =>
     invokeCore(listAccounts, input, ctx.client.listAccounts),
   ),

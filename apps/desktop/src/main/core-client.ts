@@ -53,6 +53,10 @@ import type {
 } from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import { IdentityService } from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import {
+  type GetBusinessIncomeSummaryRequest,
+  type GetBusinessIncomeSummaryResponse,
+  type GetInvoiceAccountingRequest,
+  type GetInvoiceAccountingResponse,
   type GetInvoiceLogoRequest,
   type GetInvoiceLogoResponse,
   type GetInvoiceRequest,
@@ -64,6 +68,10 @@ import {
   type IssueInvoiceResponse,
   type ListInvoicesRequest,
   type ListInvoicesResponse,
+  type PostInvoiceIncomeRequest,
+  type PostInvoiceIncomeResponse,
+  type RecordInvoicePaymentRequest,
+  type RecordInvoicePaymentResponse,
   type SaveInvoiceDraftRequest,
   type SaveInvoiceDraftResponse,
   type SaveInvoiceTemplateRequest,
@@ -139,6 +147,19 @@ const EXPECTED_API_VERSION = "tammy.v1";
 const CORE_VERSION_PATTERN = /^[\x20-\x7e]{1,128}$/;
 
 export interface CoreClient {
+  readonly getInvoiceAccounting: (
+    request: GetInvoiceAccountingRequest,
+  ) => Promise<GetInvoiceAccountingResponse>;
+  readonly postInvoiceIncome: (
+    request: PostInvoiceIncomeRequest,
+  ) => Promise<PostInvoiceIncomeResponse>;
+  readonly recordInvoicePayment: (
+    request: RecordInvoicePaymentRequest,
+  ) => Promise<RecordInvoicePaymentResponse>;
+  readonly getBusinessIncomeSummary: (
+    request: GetBusinessIncomeSummaryRequest,
+  ) => Promise<GetBusinessIncomeSummaryResponse>;
+
   readonly saveInvoiceDraft: (
     request: SaveInvoiceDraftRequest,
   ) => Promise<SaveInvoiceDraftResponse>;
@@ -305,6 +326,14 @@ export function createCoreClient(
   };
 
   return Object.freeze({
+    getInvoiceAccounting: (request: GetInvoiceAccountingRequest) =>
+      coreRequest(() => invoiceClient.getInvoiceAccounting(request)),
+    postInvoiceIncome: (request: PostInvoiceIncomeRequest) =>
+      coreRequest(() => invoiceClient.postInvoiceIncome(request)),
+    recordInvoicePayment: (request: RecordInvoicePaymentRequest) =>
+      coreRequest(() => invoiceClient.recordInvoicePayment(request)),
+    getBusinessIncomeSummary: (request: GetBusinessIncomeSummaryRequest) =>
+      coreRequest(() => invoiceClient.getBusinessIncomeSummary(request)),
     saveInvoiceDraft: (request: SaveInvoiceDraftRequest) =>
       coreRequest(() => invoiceClient.saveInvoiceDraft(request)),
     getInvoice: (request: GetInvoiceRequest) =>

@@ -153,6 +153,114 @@ func (x *BasSourceLine) GetGstCredit() *Money {
 	return nil
 }
 
+type BasSalesSourceLine struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	InvoiceId      string                 `protobuf:"bytes,1,opt,name=invoice_id,json=invoiceId,proto3" json:"invoice_id,omitempty"`
+	InvoiceNumber  string                 `protobuf:"bytes,2,opt,name=invoice_number,json=invoiceNumber,proto3" json:"invoice_number,omitempty"`
+	CustomerName   string                 `protobuf:"bytes,3,opt,name=customer_name,json=customerName,proto3" json:"customer_name,omitempty"`
+	TaxDate        *CivilDate             `protobuf:"bytes,4,opt,name=tax_date,json=taxDate,proto3" json:"tax_date,omitempty"`
+	Gross          *Money                 `protobuf:"bytes,5,opt,name=gross,proto3" json:"gross,omitempty"`
+	Gst            *Money                 `protobuf:"bytes,6,opt,name=gst,proto3" json:"gst,omitempty"`
+	PaymentId      *string                `protobuf:"bytes,7,opt,name=payment_id,json=paymentId,proto3,oneof" json:"payment_id,omitempty"`
+	SourceRevision uint64                 `protobuf:"varint,8,opt,name=source_revision,json=sourceRevision,proto3" json:"source_revision,omitempty"`
+	SourceHash     []byte                 `protobuf:"bytes,9,opt,name=source_hash,json=sourceHash,proto3" json:"source_hash,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *BasSalesSourceLine) Reset() {
+	*x = BasSalesSourceLine{}
+	mi := &file_tammy_v1_tax_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BasSalesSourceLine) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BasSalesSourceLine) ProtoMessage() {}
+
+func (x *BasSalesSourceLine) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_tax_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BasSalesSourceLine.ProtoReflect.Descriptor instead.
+func (*BasSalesSourceLine) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_tax_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *BasSalesSourceLine) GetInvoiceId() string {
+	if x != nil {
+		return x.InvoiceId
+	}
+	return ""
+}
+
+func (x *BasSalesSourceLine) GetInvoiceNumber() string {
+	if x != nil {
+		return x.InvoiceNumber
+	}
+	return ""
+}
+
+func (x *BasSalesSourceLine) GetCustomerName() string {
+	if x != nil {
+		return x.CustomerName
+	}
+	return ""
+}
+
+func (x *BasSalesSourceLine) GetTaxDate() *CivilDate {
+	if x != nil {
+		return x.TaxDate
+	}
+	return nil
+}
+
+func (x *BasSalesSourceLine) GetGross() *Money {
+	if x != nil {
+		return x.Gross
+	}
+	return nil
+}
+
+func (x *BasSalesSourceLine) GetGst() *Money {
+	if x != nil {
+		return x.Gst
+	}
+	return nil
+}
+
+func (x *BasSalesSourceLine) GetPaymentId() string {
+	if x != nil && x.PaymentId != nil {
+		return *x.PaymentId
+	}
+	return ""
+}
+
+func (x *BasSalesSourceLine) GetSourceRevision() uint64 {
+	if x != nil {
+		return x.SourceRevision
+	}
+	return 0
+}
+
+func (x *BasSalesSourceLine) GetSourceHash() []byte {
+	if x != nil {
+		return x.SourceHash
+	}
+	return nil
+}
+
 type BasWorkpaper struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -167,13 +275,20 @@ type BasWorkpaper struct {
 	NetGstPayable  *Money                 `protobuf:"bytes,10,opt,name=net_gst_payable,json=netGstPayable,proto3" json:"net_gst_payable,omitempty"`
 	Sources        []*BasSourceLine       `protobuf:"bytes,11,rep,name=sources,proto3" json:"sources,omitempty"`
 	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	GstBasis       GstBasis               `protobuf:"varint,13,opt,name=gst_basis,json=gstBasis,proto3,enum=tammy.v1.GstBasis" json:"gst_basis,omitempty"`
+	SalesSources   []*BasSalesSourceLine  `protobuf:"bytes,14,rep,name=sales_sources,json=salesSources,proto3" json:"sales_sources,omitempty"`
+	// Empty on a legacy snapshot; regenerate to retain complete provenance.
+	SourceFingerprint         []byte   `protobuf:"bytes,15,opt,name=source_fingerprint,json=sourceFingerprint,proto3" json:"source_fingerprint,omitempty"`
+	SourcesChanged            bool     `protobuf:"varint,16,opt,name=sources_changed,json=sourcesChanged,proto3" json:"sources_changed,omitempty"`
+	ReviewWarnings            []string `protobuf:"bytes,17,rep,name=review_warnings,json=reviewWarnings,proto3" json:"review_warnings,omitempty"`
+	ExcludedCashPurchaseCount uint64   `protobuf:"varint,18,opt,name=excluded_cash_purchase_count,json=excludedCashPurchaseCount,proto3" json:"excluded_cash_purchase_count,omitempty"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
 }
 
 func (x *BasWorkpaper) Reset() {
 	*x = BasWorkpaper{}
-	mi := &file_tammy_v1_tax_proto_msgTypes[1]
+	mi := &file_tammy_v1_tax_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -185,7 +300,7 @@ func (x *BasWorkpaper) String() string {
 func (*BasWorkpaper) ProtoMessage() {}
 
 func (x *BasWorkpaper) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_tax_proto_msgTypes[1]
+	mi := &file_tammy_v1_tax_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -198,7 +313,7 @@ func (x *BasWorkpaper) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BasWorkpaper.ProtoReflect.Descriptor instead.
 func (*BasWorkpaper) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_tax_proto_rawDescGZIP(), []int{1}
+	return file_tammy_v1_tax_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *BasWorkpaper) GetId() string {
@@ -285,6 +400,48 @@ func (x *BasWorkpaper) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *BasWorkpaper) GetGstBasis() GstBasis {
+	if x != nil {
+		return x.GstBasis
+	}
+	return GstBasis_GST_BASIS_UNSPECIFIED
+}
+
+func (x *BasWorkpaper) GetSalesSources() []*BasSalesSourceLine {
+	if x != nil {
+		return x.SalesSources
+	}
+	return nil
+}
+
+func (x *BasWorkpaper) GetSourceFingerprint() []byte {
+	if x != nil {
+		return x.SourceFingerprint
+	}
+	return nil
+}
+
+func (x *BasWorkpaper) GetSourcesChanged() bool {
+	if x != nil {
+		return x.SourcesChanged
+	}
+	return false
+}
+
+func (x *BasWorkpaper) GetReviewWarnings() []string {
+	if x != nil {
+		return x.ReviewWarnings
+	}
+	return nil
+}
+
+func (x *BasWorkpaper) GetExcludedCashPurchaseCount() uint64 {
+	if x != nil {
+		return x.ExcludedCashPurchaseCount
+	}
+	return 0
+}
+
 type CreateBasDraftRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	CommandContext *CommandContext        `protobuf:"bytes,1,opt,name=command_context,json=commandContext,proto3" json:"command_context,omitempty"`
@@ -297,7 +454,7 @@ type CreateBasDraftRequest struct {
 
 func (x *CreateBasDraftRequest) Reset() {
 	*x = CreateBasDraftRequest{}
-	mi := &file_tammy_v1_tax_proto_msgTypes[2]
+	mi := &file_tammy_v1_tax_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -309,7 +466,7 @@ func (x *CreateBasDraftRequest) String() string {
 func (*CreateBasDraftRequest) ProtoMessage() {}
 
 func (x *CreateBasDraftRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_tax_proto_msgTypes[2]
+	mi := &file_tammy_v1_tax_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -322,7 +479,7 @@ func (x *CreateBasDraftRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateBasDraftRequest.ProtoReflect.Descriptor instead.
 func (*CreateBasDraftRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_tax_proto_rawDescGZIP(), []int{2}
+	return file_tammy_v1_tax_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *CreateBasDraftRequest) GetCommandContext() *CommandContext {
@@ -362,7 +519,7 @@ type CreateBasDraftResponse struct {
 
 func (x *CreateBasDraftResponse) Reset() {
 	*x = CreateBasDraftResponse{}
-	mi := &file_tammy_v1_tax_proto_msgTypes[3]
+	mi := &file_tammy_v1_tax_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -374,7 +531,7 @@ func (x *CreateBasDraftResponse) String() string {
 func (*CreateBasDraftResponse) ProtoMessage() {}
 
 func (x *CreateBasDraftResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_tax_proto_msgTypes[3]
+	mi := &file_tammy_v1_tax_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -387,7 +544,7 @@ func (x *CreateBasDraftResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateBasDraftResponse.ProtoReflect.Descriptor instead.
 func (*CreateBasDraftResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_tax_proto_rawDescGZIP(), []int{3}
+	return file_tammy_v1_tax_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *CreateBasDraftResponse) GetWorkpaper() *BasWorkpaper {
@@ -407,7 +564,7 @@ type GetCurrentBasDraftRequest struct {
 
 func (x *GetCurrentBasDraftRequest) Reset() {
 	*x = GetCurrentBasDraftRequest{}
-	mi := &file_tammy_v1_tax_proto_msgTypes[4]
+	mi := &file_tammy_v1_tax_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -419,7 +576,7 @@ func (x *GetCurrentBasDraftRequest) String() string {
 func (*GetCurrentBasDraftRequest) ProtoMessage() {}
 
 func (x *GetCurrentBasDraftRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_tax_proto_msgTypes[4]
+	mi := &file_tammy_v1_tax_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -432,7 +589,7 @@ func (x *GetCurrentBasDraftRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCurrentBasDraftRequest.ProtoReflect.Descriptor instead.
 func (*GetCurrentBasDraftRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_tax_proto_rawDescGZIP(), []int{4}
+	return file_tammy_v1_tax_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *GetCurrentBasDraftRequest) GetAuthentication() *AuthenticationContext {
@@ -458,7 +615,7 @@ type GetCurrentBasDraftResponse struct {
 
 func (x *GetCurrentBasDraftResponse) Reset() {
 	*x = GetCurrentBasDraftResponse{}
-	mi := &file_tammy_v1_tax_proto_msgTypes[5]
+	mi := &file_tammy_v1_tax_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -470,7 +627,7 @@ func (x *GetCurrentBasDraftResponse) String() string {
 func (*GetCurrentBasDraftResponse) ProtoMessage() {}
 
 func (x *GetCurrentBasDraftResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_tax_proto_msgTypes[5]
+	mi := &file_tammy_v1_tax_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -483,7 +640,7 @@ func (x *GetCurrentBasDraftResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCurrentBasDraftResponse.ProtoReflect.Descriptor instead.
 func (*GetCurrentBasDraftResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_tax_proto_rawDescGZIP(), []int{5}
+	return file_tammy_v1_tax_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *GetCurrentBasDraftResponse) GetWorkpaper() *BasWorkpaper {
@@ -497,7 +654,7 @@ var File_tammy_v1_tax_proto protoreflect.FileDescriptor
 
 const file_tammy_v1_tax_proto_rawDesc = "" +
 	"\n" +
-	"\x12tammy/v1/tax.proto\x12\btammy.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15tammy/v1/common.proto\"\x87\x03\n" +
+	"\x12tammy/v1/tax.proto\x12\btammy.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15tammy/v1/common.proto\x1a\x1btammy/v1/organisation.proto\"\x87\x03\n" +
 	"\rBasSourceLine\x12m\n" +
 	"\vdocument_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\n" +
 	"documentId\x12-\n" +
@@ -506,7 +663,21 @@ const file_tammy_v1_tax_proto_rawDesc = "" +
 	"\rdocument_date\x18\x04 \x01(\v2\x13.tammy.v1.CivilDateB\x06\xbaH\x03\xc8\x01\x01R\fdocumentDate\x12-\n" +
 	"\x05gross\x18\x05 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\x05gross\x126\n" +
 	"\n" +
-	"gst_credit\x18\x06 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\tgstCredit\"\xb7\x06\n" +
+	"gst_credit\x18\x06 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\tgstCredit\"\xcf\x04\n" +
+	"\x12BasSalesSourceLine\x12k\n" +
+	"\n" +
+	"invoice_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\tinvoiceId\x12.\n" +
+	"\x0einvoice_number\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18(R\rinvoiceNumber\x12-\n" +
+	"\rcustomer_name\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\fcustomerName\x126\n" +
+	"\btax_date\x18\x04 \x01(\v2\x13.tammy.v1.CivilDateB\x06\xbaH\x03\xc8\x01\x01R\ataxDate\x12-\n" +
+	"\x05gross\x18\x05 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\x05gross\x12)\n" +
+	"\x03gst\x18\x06 \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\x03gst\x12p\n" +
+	"\n" +
+	"payment_id\x18\a \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$H\x00R\tpaymentId\x88\x01\x01\x120\n" +
+	"\x0fsource_revision\x18\b \x01(\x04B\a\xbaH\x042\x02(\x01R\x0esourceRevision\x12(\n" +
+	"\vsource_hash\x18\t \x01(\fB\a\xbaH\x04z\x02h R\n" +
+	"sourceHashB\r\n" +
+	"\v_payment_id\"\x9c\t\n" +
 	"\fBasWorkpaper\x12\\\n" +
 	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12u\n" +
 	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12!\n" +
@@ -522,7 +693,14 @@ const file_tammy_v1_tax_proto_rawDesc = "" +
 	" \x01(\v2\x0f.tammy.v1.MoneyB\x06\xbaH\x03\xc8\x01\x01R\rnetGstPayable\x12<\n" +
 	"\asources\x18\v \x03(\v2\x17.tammy.v1.BasSourceLineB\t\xbaH\x06\x92\x01\x03\x10\xe8\aR\asources\x12A\n" +
 	"\n" +
-	"created_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\tcreatedAt\"\xd5\x02\n" +
+	"created_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\tcreatedAt\x129\n" +
+	"\tgst_basis\x18\r \x01(\x0e2\x12.tammy.v1.GstBasisB\b\xbaH\x05\x82\x01\x02\x10\x01R\bgstBasis\x12L\n" +
+	"\rsales_sources\x18\x0e \x03(\v2\x1c.tammy.v1.BasSalesSourceLineB\t\xbaH\x06\x92\x01\x03\x10\xe8\aR\fsalesSources\x126\n" +
+	"\x12source_fingerprint\x18\x0f \x01(\fB\a\xbaH\x04z\x02\x18 R\x11sourceFingerprint\x12'\n" +
+	"\x0fsources_changed\x18\x10 \x01(\bR\x0esourcesChanged\x128\n" +
+	"\x0freview_warnings\x18\x11 \x03(\tB\x0f\xbaH\f\x92\x01\t\x10\n" +
+	"\"\x05r\x03\x18\xf4\x03R\x0ereviewWarnings\x12?\n" +
+	"\x1cexcluded_cash_purchase_count\x18\x12 \x01(\x04R\x19excludedCashPurchaseCount\"\xd5\x02\n" +
 	"\x15CreateBasDraftRequest\x12I\n" +
 	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
 	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12>\n" +
@@ -557,49 +735,56 @@ func file_tammy_v1_tax_proto_rawDescGZIP() []byte {
 }
 
 var file_tammy_v1_tax_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_tammy_v1_tax_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_tammy_v1_tax_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_tammy_v1_tax_proto_goTypes = []any{
 	(BasWorkpaperStatus)(0),            // 0: tammy.v1.BasWorkpaperStatus
 	(*BasSourceLine)(nil),              // 1: tammy.v1.BasSourceLine
-	(*BasWorkpaper)(nil),               // 2: tammy.v1.BasWorkpaper
-	(*CreateBasDraftRequest)(nil),      // 3: tammy.v1.CreateBasDraftRequest
-	(*CreateBasDraftResponse)(nil),     // 4: tammy.v1.CreateBasDraftResponse
-	(*GetCurrentBasDraftRequest)(nil),  // 5: tammy.v1.GetCurrentBasDraftRequest
-	(*GetCurrentBasDraftResponse)(nil), // 6: tammy.v1.GetCurrentBasDraftResponse
-	(*CivilDate)(nil),                  // 7: tammy.v1.CivilDate
-	(*Money)(nil),                      // 8: tammy.v1.Money
-	(*timestamppb.Timestamp)(nil),      // 9: google.protobuf.Timestamp
-	(*CommandContext)(nil),             // 10: tammy.v1.CommandContext
-	(*AuthenticationContext)(nil),      // 11: tammy.v1.AuthenticationContext
+	(*BasSalesSourceLine)(nil),         // 2: tammy.v1.BasSalesSourceLine
+	(*BasWorkpaper)(nil),               // 3: tammy.v1.BasWorkpaper
+	(*CreateBasDraftRequest)(nil),      // 4: tammy.v1.CreateBasDraftRequest
+	(*CreateBasDraftResponse)(nil),     // 5: tammy.v1.CreateBasDraftResponse
+	(*GetCurrentBasDraftRequest)(nil),  // 6: tammy.v1.GetCurrentBasDraftRequest
+	(*GetCurrentBasDraftResponse)(nil), // 7: tammy.v1.GetCurrentBasDraftResponse
+	(*CivilDate)(nil),                  // 8: tammy.v1.CivilDate
+	(*Money)(nil),                      // 9: tammy.v1.Money
+	(*timestamppb.Timestamp)(nil),      // 10: google.protobuf.Timestamp
+	(GstBasis)(0),                      // 11: tammy.v1.GstBasis
+	(*CommandContext)(nil),             // 12: tammy.v1.CommandContext
+	(*AuthenticationContext)(nil),      // 13: tammy.v1.AuthenticationContext
 }
 var file_tammy_v1_tax_proto_depIdxs = []int32{
-	7,  // 0: tammy.v1.BasSourceLine.document_date:type_name -> tammy.v1.CivilDate
-	8,  // 1: tammy.v1.BasSourceLine.gross:type_name -> tammy.v1.Money
-	8,  // 2: tammy.v1.BasSourceLine.gst_credit:type_name -> tammy.v1.Money
-	7,  // 3: tammy.v1.BasWorkpaper.period_start:type_name -> tammy.v1.CivilDate
-	7,  // 4: tammy.v1.BasWorkpaper.period_end:type_name -> tammy.v1.CivilDate
-	0,  // 5: tammy.v1.BasWorkpaper.status:type_name -> tammy.v1.BasWorkpaperStatus
-	8,  // 6: tammy.v1.BasWorkpaper.sales_g1:type_name -> tammy.v1.Money
-	8,  // 7: tammy.v1.BasWorkpaper.gst_on_sales_1a:type_name -> tammy.v1.Money
-	8,  // 8: tammy.v1.BasWorkpaper.gst_credits_1b:type_name -> tammy.v1.Money
-	8,  // 9: tammy.v1.BasWorkpaper.net_gst_payable:type_name -> tammy.v1.Money
-	1,  // 10: tammy.v1.BasWorkpaper.sources:type_name -> tammy.v1.BasSourceLine
-	9,  // 11: tammy.v1.BasWorkpaper.created_at:type_name -> google.protobuf.Timestamp
-	10, // 12: tammy.v1.CreateBasDraftRequest.command_context:type_name -> tammy.v1.CommandContext
-	7,  // 13: tammy.v1.CreateBasDraftRequest.period_start:type_name -> tammy.v1.CivilDate
-	7,  // 14: tammy.v1.CreateBasDraftRequest.period_end:type_name -> tammy.v1.CivilDate
-	2,  // 15: tammy.v1.CreateBasDraftResponse.workpaper:type_name -> tammy.v1.BasWorkpaper
-	11, // 16: tammy.v1.GetCurrentBasDraftRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	2,  // 17: tammy.v1.GetCurrentBasDraftResponse.workpaper:type_name -> tammy.v1.BasWorkpaper
-	3,  // 18: tammy.v1.TaxService.CreateBasDraft:input_type -> tammy.v1.CreateBasDraftRequest
-	5,  // 19: tammy.v1.TaxService.GetCurrentBasDraft:input_type -> tammy.v1.GetCurrentBasDraftRequest
-	4,  // 20: tammy.v1.TaxService.CreateBasDraft:output_type -> tammy.v1.CreateBasDraftResponse
-	6,  // 21: tammy.v1.TaxService.GetCurrentBasDraft:output_type -> tammy.v1.GetCurrentBasDraftResponse
-	20, // [20:22] is the sub-list for method output_type
-	18, // [18:20] is the sub-list for method input_type
-	18, // [18:18] is the sub-list for extension type_name
-	18, // [18:18] is the sub-list for extension extendee
-	0,  // [0:18] is the sub-list for field type_name
+	8,  // 0: tammy.v1.BasSourceLine.document_date:type_name -> tammy.v1.CivilDate
+	9,  // 1: tammy.v1.BasSourceLine.gross:type_name -> tammy.v1.Money
+	9,  // 2: tammy.v1.BasSourceLine.gst_credit:type_name -> tammy.v1.Money
+	8,  // 3: tammy.v1.BasSalesSourceLine.tax_date:type_name -> tammy.v1.CivilDate
+	9,  // 4: tammy.v1.BasSalesSourceLine.gross:type_name -> tammy.v1.Money
+	9,  // 5: tammy.v1.BasSalesSourceLine.gst:type_name -> tammy.v1.Money
+	8,  // 6: tammy.v1.BasWorkpaper.period_start:type_name -> tammy.v1.CivilDate
+	8,  // 7: tammy.v1.BasWorkpaper.period_end:type_name -> tammy.v1.CivilDate
+	0,  // 8: tammy.v1.BasWorkpaper.status:type_name -> tammy.v1.BasWorkpaperStatus
+	9,  // 9: tammy.v1.BasWorkpaper.sales_g1:type_name -> tammy.v1.Money
+	9,  // 10: tammy.v1.BasWorkpaper.gst_on_sales_1a:type_name -> tammy.v1.Money
+	9,  // 11: tammy.v1.BasWorkpaper.gst_credits_1b:type_name -> tammy.v1.Money
+	9,  // 12: tammy.v1.BasWorkpaper.net_gst_payable:type_name -> tammy.v1.Money
+	1,  // 13: tammy.v1.BasWorkpaper.sources:type_name -> tammy.v1.BasSourceLine
+	10, // 14: tammy.v1.BasWorkpaper.created_at:type_name -> google.protobuf.Timestamp
+	11, // 15: tammy.v1.BasWorkpaper.gst_basis:type_name -> tammy.v1.GstBasis
+	2,  // 16: tammy.v1.BasWorkpaper.sales_sources:type_name -> tammy.v1.BasSalesSourceLine
+	12, // 17: tammy.v1.CreateBasDraftRequest.command_context:type_name -> tammy.v1.CommandContext
+	8,  // 18: tammy.v1.CreateBasDraftRequest.period_start:type_name -> tammy.v1.CivilDate
+	8,  // 19: tammy.v1.CreateBasDraftRequest.period_end:type_name -> tammy.v1.CivilDate
+	3,  // 20: tammy.v1.CreateBasDraftResponse.workpaper:type_name -> tammy.v1.BasWorkpaper
+	13, // 21: tammy.v1.GetCurrentBasDraftRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	3,  // 22: tammy.v1.GetCurrentBasDraftResponse.workpaper:type_name -> tammy.v1.BasWorkpaper
+	4,  // 23: tammy.v1.TaxService.CreateBasDraft:input_type -> tammy.v1.CreateBasDraftRequest
+	6,  // 24: tammy.v1.TaxService.GetCurrentBasDraft:input_type -> tammy.v1.GetCurrentBasDraftRequest
+	5,  // 25: tammy.v1.TaxService.CreateBasDraft:output_type -> tammy.v1.CreateBasDraftResponse
+	7,  // 26: tammy.v1.TaxService.GetCurrentBasDraft:output_type -> tammy.v1.GetCurrentBasDraftResponse
+	25, // [25:27] is the sub-list for method output_type
+	23, // [23:25] is the sub-list for method input_type
+	23, // [23:23] is the sub-list for extension type_name
+	23, // [23:23] is the sub-list for extension extendee
+	0,  // [0:23] is the sub-list for field type_name
 }
 
 func init() { file_tammy_v1_tax_proto_init() }
@@ -608,13 +793,15 @@ func file_tammy_v1_tax_proto_init() {
 		return
 	}
 	file_tammy_v1_common_proto_init()
+	file_tammy_v1_organisation_proto_init()
+	file_tammy_v1_tax_proto_msgTypes[1].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_tammy_v1_tax_proto_rawDesc), len(file_tammy_v1_tax_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   6,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

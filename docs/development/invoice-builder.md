@@ -1,6 +1,6 @@
 # Invoice builder
 
-Tammy's desktop invoice builder creates customer-facing AUD invoice documents from manual line items, reviewed expenses, or an MCP-generated proposal. The Go core stores drafts and issued snapshots in the encrypted workspace. This is document invoicing, not a complete accounts-receivable subsystem.
+Tammy's desktop invoice builder creates customer-facing AUD invoice documents from manual line items, reviewed expenses, or an MCP-generated proposal. The Go core stores drafts and issued snapshots in the encrypted workspace. Issued invoices post sales, GST and receivables in the business ledger; dated receipts reduce their balances.
 
 ## Launch and use
 
@@ -21,7 +21,7 @@ Review selling price and GST treatment after importing expenses. Source GST does
 
 Enable the GST-registered checkbox only when the seller is registered. Tammy does not infer GST registration from an ABN or the organisation's GST accounting basis. Choose taxable, GST-free, input-taxed or out-of-scope treatment for each line. Prices and costs are ex-GST AUD amounts.
 
-Save the draft before exporting. Draft PDFs are clearly marked as not issued. **Issue invoice** validates the seller/customer details and dates, then requires confirmation. Issued documents are immutable. If the organisation's legal name or ABN has changed since saving, save and review the draft again before issuing; the core will not silently replace the reviewed seller identity. Reopening the workspace retains saved drafts and issued documents; optimistic versions prevent silently overwriting another edit.
+Save the draft before exporting. Draft PDFs are clearly marked as not issued. **Issue invoice** validates the seller/customer details and dates, then requires confirmation. Issue atomically posts business income and receivables; a closed accounting period leaves the saved draft unchanged. Issued documents are immutable. If the organisation's legal name or ABN has changed since saving, save and review the draft again before issuing; the core will not silently replace the reviewed seller identity. Reopening the workspace retains saved drafts and issued documents; optimistic versions prevent silently overwriting another edit.
 
 Use **Export PDF** to choose a destination in the native save dialog. Save any edits first: export uses the saved version and stays disabled while the editor has unsaved changes. Cancellation saves nothing. Internal costs, profit and source-document IDs are excluded from customer PDFs. Export does not send the document or store a payment.
 
@@ -32,6 +32,18 @@ Choose **Manage invoice template** on the invoice page to save company defaults 
 Upload a static PNG or JPEG logo, then choose **Save template**. Logos may be up to 1 MiB, 4096 pixels per dimension and four million pixels. The preview shows the selected logo. **Remove logo** removes it from future defaults; **Remove invoice logo** removes it only from the current editable draft. Save the invoice to retain that change. Issued invoices retain their original logo and text.
 
 The encrypted workspace stores immutable, organisation-scoped logo assets and versioned defaults. Upload validation checks the actual format, structure, decoded dimensions and pixels. PDF generation reads the saved invoice's asset, preserves its aspect ratio and uses only local image bytes. Template and logo management require the same admin/preparer authority as invoice writing; the MCP proposal schema remains unchanged.
+
+## Business income, receipts and BAS
+
+After issue, the invoice's accounting panel shows its posting, received amount and balance owing. **Record payment** accepts the actual receipt date, AUD amount, business bank account and reference. Partial payments retain their exact cents and line-level GST allocations. A receipt reduces receivables and records the bank movement without adding sales again. Overpayments, receipts before invoice issue, stale versions and closed-period postings are rejected. Private invoice costs remain pricing estimates and are never reposted as expenses.
+
+**Overview** shows posted business revenue excluding GST, invoice income, payments received and invoices owing. Choose a quarter, financial year or custom period. **Balances as of** includes debt from earlier periods and subtracts receipts through that date. Totals read all retained sources. The invoice browser follows authenticated pages so older invoices remain available for review and payment recording.
+
+Older issued documents created before accounting integration remain unposted. Review whether they were already entered manually, then use **Add to accounts** only when appropriate. Reads, migration and reopening do not create historical financial entries.
+
+**GST & BAS** includes invoice sales and retained source references. Non-cash GST uses issue dates; cash GST uses dated receipt allocations. Taxable, GST-free and input-taxed sales contribute to G1; out-of-scope lines do not. Saved workpapers retain their figures and show a source-change notice when regeneration is needed. Cash purchase credits require typed payment evidence, which the current reviewed-expense workflow does not retain; those credits are excluded with a warning. Workpapers remain drafts, without declaration or lodgement.
+
+GST basis is captured at posting. Historical basis changes whose effective treatment cannot be reconstructed are rejected for review, rather than attributed using a guessed date. Invoice-before-payment is supported; deposits before issue, credit notes, refunds and invoice reversals require a later typed workflow.
 
 ## Generate a proposal through MCP
 
@@ -91,4 +103,4 @@ Focused tests cover integer calculations, validation, PDF pagination/privacy, ed
 
 Company-template checks cover defaults-load races, explicit application, logo upload/removal, optimistic conflicts, malformed images, organisation isolation, an exact 1 MiB upload through the real TLS server, and unchanged invoice branding after defaults change. Packaged acceptance uploads a real transparent PNG, verifies embedded PDF images and payment instructions, changes the defaults, and reopens both the original invoice and a new draft after restart.
 
-Issuing currently performs no ledger posting, customer delivery, payment tracking, credit note, ATO/SBR submission or automatic recurring billing. Those workflows need separate implementation and verification; an issued document is not evidence of tax lodgement or App Store release.
+Customer delivery, credit notes, refunds, ATO/SBR submission and recurring billing remain unavailable. Issued sales and dated receipts are retained in the business ledger and local BAS workpapers; an issued document is not evidence of tax lodgement or App Store release.

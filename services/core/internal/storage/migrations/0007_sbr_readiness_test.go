@@ -10,8 +10,8 @@ func TestSBRReadinessMigrationIsEmbeddedAndContainsOnlyRedactedState(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(steps) != 9 {
-		t.Fatalf("migration count = %d, want 9", len(steps))
+	if len(steps) != 10 {
+		t.Fatalf("migration count = %d, want 10", len(steps))
 	}
 	if steps[6].Version != 7 || steps[6].Name != "0007_sbr_readiness.sql" {
 		t.Fatalf("last migration = %#v, want version 7 SBR readiness", steps[6])

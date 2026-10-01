@@ -467,6 +467,7 @@ function EngineStatus({
   if (state.status === "ready") {
     return (
       <p
+        aria-label="Local engine"
         aria-live="polite"
         className="sr-only"
         data-startup-transition="starting-to-ready"
@@ -480,6 +481,7 @@ function EngineStatus({
     return (
       <div
         aria-live="polite"
+        aria-label="Local engine"
         className="mb-4 flex items-center gap-2 text-[10px] text-muted-foreground"
         role="status"
       >
@@ -491,6 +493,7 @@ function EngineStatus({
   return (
     <div
       aria-live="polite"
+      aria-label="Local engine"
       className="mb-4 flex items-center justify-between gap-4 rounded-[6px] border border-warning-border bg-warning-soft px-3 py-2"
       role="status"
     >
@@ -556,7 +559,14 @@ function ActiveRouteContent({
   readonly workspace: AuthenticatedWorkspace | undefined;
 }) {
   if (path === "/overview")
-    return <OverviewScreen api={conveyor.reporting} workspace={workspace} />;
+    return (
+      <OverviewScreen
+        accountingApi={conveyor.accounting}
+        api={conveyor.reporting}
+        onReviewInvoices={() => onNavigate("/invoices")}
+        workspace={workspace}
+      />
+    );
   if (path === "/documents")
     return (
       <DocumentsScreen

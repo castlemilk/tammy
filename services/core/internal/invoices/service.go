@@ -18,8 +18,9 @@ type ProfileStore interface {
 	Get(context.Context, string) (*tammyv1.Organisation, error)
 }
 type CommandRepositories struct {
-	Invoices *Repository
-	Profiles ProfileStore
+	Invoices   *Repository
+	Profiles   ProfileStore
+	Accounting AccountingPort
 	// Authorization is supplied by the transaction adapter, never by the caller.
 	Authorize func(context.Context, *tammyv1.AuthenticationContext, authorisation.Action) error
 }
@@ -210,7 +211,7 @@ func (s *Service) Issue(ctx context.Context, request *tammyv1.IssueInvoiceReques
 	result, err := s.commands.Execute(ctx, app.OrdinaryCommand[CommandRepositories]{Operation: app.OrdinaryOperationIssueInvoice, OperationKey: request.CommandContext.IdempotencyKey, Authentication: request.CommandContext.Authentication, Request: request, NewResult: func() proto.Message { return &tammyv1.IssueInvoiceResponse{} },
 		SaveSource: func(ctx context.Context, repos CommandRepositories, owned proto.Message) error {
 			r := owned.(*tammyv1.IssueInvoiceRequest)
-			if repos.Invoices == nil || repos.Profiles == nil {
+			if repos.Invoices == nil || repos.Profiles == nil || repos.Accounting == nil {
 				return ErrRepository
 			}
 			var err error
@@ -236,7 +237,11 @@ func (s *Service) Issue(ctx context.Context, request *tammyv1.IssueInvoiceReques
 			issued.State = tammyv1.InvoiceState_INVOICE_STATE_ISSUED
 			issued.Version++
 			issued.UpdatedAt = timestamppb.New(s.now())
-			return repos.Invoices.Save(ctx, issued, r.ExpectedVersion)
+			if err := repos.Invoices.Save(ctx, issued, r.ExpectedVersion); err != nil {
+				return err
+			}
+			_, err = repos.Accounting.Post(ctx, issued, profile, r.CommandContext.IdempotencyKey)
+			return err
 		}, BuildResult: func(ctx context.Context, _ CommandRepositories, owned proto.Message) (app.CommandResult, error) {
 			r := owned.(*tammyv1.IssueInvoiceRequest)
 			if issued == nil {

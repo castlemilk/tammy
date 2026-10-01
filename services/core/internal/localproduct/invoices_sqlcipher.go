@@ -4,13 +4,17 @@ package localproduct
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
 	"database/sql"
 	"errors"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/tammyapp/tammy/services/core/internal/accounting"
 	"github.com/tammyapp/tammy/services/core/internal/app"
 	"github.com/tammyapp/tammy/services/core/internal/authorisation"
 	tammyv1 "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1"
@@ -20,6 +24,7 @@ import (
 	"github.com/tammyapp/tammy/services/core/internal/organisations"
 	"github.com/tammyapp/tammy/services/core/internal/platform/clock"
 	"github.com/tammyapp/tammy/services/core/internal/platform/faults"
+	"github.com/tammyapp/tammy/services/core/internal/platform/paging"
 	"github.com/tammyapp/tammy/services/core/internal/storage/sqlcipher"
 )
 
@@ -77,7 +82,16 @@ func activateInvoices(activation app.LocalWorkspaceActivation, route *invoiceRou
 	if err != nil {
 		return err
 	}
-	return route.set(&invoiceHandler{service: service, database: activation.Database, identity: activation.Identity})
+	if len(activation.InstallationKey) < sha256.Size {
+		return ErrLedgerModule
+	}
+	mac := hmac.New(sha256.New, activation.InstallationKey)
+	_, _ = mac.Write([]byte("tammy.invoice-page.v1\x00" + activation.WorkspaceID))
+	cursors, err := paging.NewCodec(mac.Sum(nil))
+	if err != nil {
+		return err
+	}
+	return route.set(&invoiceHandler{service: service, database: activation.Database, identity: activation.Identity, now: activation.Now, newID: activation.NewID, cursors: cursors})
 }
 
 type invoiceCommandTransaction struct {
@@ -112,11 +126,15 @@ func (s *invoiceTransactionStarter) Begin(ctx context.Context) (app.OwnedCommand
 	if err != nil {
 		return fail(err)
 	}
+	accounting, err := invoices.NewAccountingRepository(tx, s.activation.Now, s.activation.NewID)
+	if err != nil {
+		return fail(err)
+	}
 	id, err := s.activation.NewID()
 	if err != nil {
 		return fail(err)
 	}
-	return &invoiceCommandTransaction{Transaction: tx, id: id, repositories: invoices.CommandRepositories{Invoices: repo, Profiles: profiles, Authorize: func(ctx context.Context, authentication *tammyv1.AuthenticationContext, action authorisation.Action) error {
+	return &invoiceCommandTransaction{Transaction: tx, id: id, repositories: invoices.CommandRepositories{Invoices: repo, Profiles: profiles, Accounting: accounting, Authorize: func(ctx context.Context, authentication *tammyv1.AuthenticationContext, action authorisation.Action) error {
 		return s.activation.Identity.AuthorizeWithin(ctx, tx, authentication, action)
 	}}}, nil
 }
@@ -145,6 +163,8 @@ func (a invoiceCommandAuditor) Append(ctx context.Context, executor app.CommandS
 	case app.OrdinaryOperationSaveInvoiceDraft, app.OrdinaryOperationIssueInvoice:
 	case app.OrdinaryOperationSaveInvoiceTemplate, app.OrdinaryOperationUploadInvoiceLogo:
 		statement = `INSERT INTO invoice_branding_command_audit_v1(operation_key,workspace_id,actor_user_id,session_id,command_type,result_sha256,payload_proto,occurred_at) VALUES (?,?,?,?,?,?,?,?)`
+	case app.OrdinaryOperationPostInvoiceIncome, app.OrdinaryOperationRecordInvoicePayment:
+		statement = `INSERT INTO invoice_income_command_audit_v1(operation_key,workspace_id,actor_user_id,session_id,command_type,result_sha256,payload_proto,occurred_at) VALUES (?,?,?,?,?,?,?,?)`
 	default:
 		return ErrLedgerModule
 	}
@@ -157,6 +177,9 @@ type invoiceHandler struct {
 	service  *invoices.Service
 	database *sqlcipher.Database
 	identity app.LocalModuleIdentity
+	now      func() time.Time
+	newID    func() (string, error)
+	cursors  *paging.Codec
 }
 
 func (h *invoiceHandler) SaveInvoiceDraft(ctx context.Context, r *connect.Request[tammyv1.SaveInvoiceDraftRequest]) (*connect.Response[tammyv1.SaveInvoiceDraftResponse], error) {
@@ -202,7 +225,7 @@ func (h *invoiceHandler) GetInvoice(ctx context.Context, r *connect.Request[tamm
 	return connect.NewResponse(&tammyv1.GetInvoiceResponse{Invoice: value}), nil
 }
 func (h *invoiceHandler) ListInvoices(ctx context.Context, r *connect.Request[tammyv1.ListInvoicesRequest]) (*connect.Response[tammyv1.ListInvoicesResponse], error) {
-	if h == nil || h.database == nil || h.identity == nil || r == nil || r.Msg == nil || r.Msg.Authentication == nil || r.Msg.Page == nil || r.Msg.Page.Cursor != nil {
+	if h == nil || h.database == nil || h.identity == nil || r == nil || r.Msg == nil || r.Msg.Authentication == nil || r.Msg.Page == nil {
 		return nil, invoiceError(invoices.ErrInvalidDraft)
 	}
 	if err := h.identity.RequireActiveSessionReadOnly(ctx, r.Msg.Authentication); err != nil {
@@ -215,29 +238,46 @@ func (h *invoiceHandler) ListInvoices(ctx context.Context, r *connect.Request[ta
 	if limit < 1 || limit > 200 {
 		return nil, invoiceError(invoices.ErrInvalidDraft)
 	}
+	queryHash := sha256.Sum256([]byte("tammy.v1.InvoiceService.ListInvoices\x00" + r.Msg.OrganisationId + "\x00" + r.Msg.Authentication.ActorUserId + "\x00" + strconv.Itoa(limit)))
+	position := ""
+	if r.Msg.Page.Cursor != nil {
+		cursor, err := h.cursors.Decode(*r.Msg.Page.Cursor, queryHash)
+		if err != nil || cursor.Snapshot != "invoices-v1" {
+			return nil, invoiceError(invoices.ErrInvalidDraft)
+		}
+		position = cursor.Position
+	}
 	tx, err := h.database.BeginEncryptedTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {
 		return nil, invoiceError(err)
 	}
 	defer tx.Rollback()
 	repo, _ := invoices.NewRepository(tx)
-	values, err := repo.List(ctx, r.Msg.OrganisationId, limit)
+	values, next, err := repo.ListPage(ctx, r.Msg.OrganisationId, position, limit)
 	if err != nil {
 		return nil, invoiceError(err)
 	}
 	if err := tx.Commit(); err != nil {
 		return nil, invoiceError(err)
 	}
-	return connect.NewResponse(&tammyv1.ListInvoicesResponse{Invoices: values, Page: &tammyv1.PageInfo{ReturnedCount: uint32(len(values))}}), nil
+	page := &tammyv1.PageInfo{ReturnedCount: uint32(len(values))}
+	if next != "" {
+		signed, err := h.cursors.Encode(paging.Cursor{Snapshot: "invoices-v1", Position: next, QueryHash: queryHash})
+		if err != nil {
+			return nil, invoiceError(err)
+		}
+		page.NextCursor = &signed
+	}
+	return connect.NewResponse(&tammyv1.ListInvoicesResponse{Invoices: values, Page: page}), nil
 }
 func invoiceError(err error) error {
 	code := connect.CodeInternal
 	switch {
-	case errors.Is(err, invoices.ErrInvalidDraft), errors.Is(err, invoices.ErrLogoAsset):
+	case errors.Is(err, invoices.ErrInvalidDraft), errors.Is(err, invoices.ErrLogoAsset), errors.Is(err, invoices.ErrPayment):
 		code = connect.CodeInvalidArgument
 	case errors.Is(err, invoices.ErrNotFound):
 		code = connect.CodeNotFound
-	case errors.Is(err, invoices.ErrConflict), errors.Is(err, invoices.ErrSourceDocument):
+	case errors.Is(err, invoices.ErrConflict), errors.Is(err, invoices.ErrSourceDocument), errors.Is(err, invoices.ErrGSTBasisHistory), errors.Is(err, accounting.ErrClosedPeriod), errors.Is(err, accounting.ErrAccountNotPostable):
 		code = connect.CodeFailedPrecondition
 	case errors.Is(err, invoices.ErrNumberConflict), errors.Is(err, idempotency.ErrConflict):
 		code = connect.CodeAlreadyExists

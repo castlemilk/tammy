@@ -421,12 +421,36 @@ func TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealSer
 	if _, err := module.db.ExecContext(context.Background(), `UPDATE organisations SET legal_name=? WHERE id=?`, savedInvoice.Msg.Invoice.SellerName, created.Msg.Organisation.Id); err != nil {
 		t.Fatal(err)
 	}
+	// Issuing must roll back the document transition when its accounting date
+	// belongs to a closed period, including revenue-account/revision changes.
+	if _, err := module.db.ExecContext(context.Background(), `INSERT INTO accounting_periods(id,organisation_id,start_date,end_date,state,version,closed_at,reopened_at) VALUES('018f0000-0000-7000-8000-000000000870',?,'0001-01-01','2026-12-31','CLOSED',1,'2026-10-02',NULL)`, created.Msg.Organisation.Id); err != nil {
+		t.Fatal(err)
+	}
+	closedIssue := proto.Clone(issueInvoice.Msg).(*tammyv1.IssueInvoiceRequest)
+	closedIssue.CommandContext.IdempotencyKey = "018f0000-0000-7000-8000-000000000871"
+	if _, err := invoiceClient.IssueInvoice(context.Background(), brandingRequest(closedIssue, ready.Capability)); connect.CodeOf(err) != connect.CodeFailedPrecondition {
+		t.Fatalf("closed period issue=%v", err)
+	}
+	if value, err := invoiceClient.GetInvoice(context.Background(), getInvoice); err != nil || value.Msg.Invoice.State != tammyv1.InvoiceState_INVOICE_STATE_DRAFT || value.Msg.Invoice.Version != 4 {
+		t.Fatalf("closed issue did not roll back document=%v error=%v", value, err)
+	}
+	var closedPostingCount int
+	if err := module.db.QueryRowContext(context.Background(), `SELECT count(*) FROM invoice_income_postings_v1`).Scan(&closedPostingCount); err != nil || closedPostingCount != 0 {
+		t.Fatalf("closed issue left posting=%d error=%v", closedPostingCount, err)
+	}
+	if _, err := module.db.ExecContext(context.Background(), `UPDATE accounting_periods SET state='OPEN',version=2,reopened_at='2026-10-02' WHERE id='018f0000-0000-7000-8000-000000000870'`); err != nil {
+		t.Fatal(err)
+	}
 	issuedInvoice, err := invoiceClient.IssueInvoice(context.Background(), issueInvoice)
 	if err != nil || issuedInvoice.Msg.Invoice.State != tammyv1.InvoiceState_INVOICE_STATE_ISSUED || issuedInvoice.Msg.Invoice.Version != 5 || issuedInvoice.Msg.Invoice.GetLogoAssetId() != logo.Id {
 		t.Fatalf("IssueInvoice=%v %v", issuedInvoice, err)
 	}
 	if replay, err := invoiceClient.IssueInvoice(context.Background(), issueInvoice); err != nil || !proto.Equal(replay.Msg, issuedInvoice.Msg) {
 		t.Fatalf("issue replay=%v %v", replay, err)
+	}
+	var incomeJournalCount int
+	if err := module.db.QueryRowContext(context.Background(), `SELECT count(*) FROM journals WHERE organisation_id=? AND source_type='RECEIVABLE' AND source_id=? AND total_credits_minor=38500`, created.Msg.Organisation.Id, issuedInvoice.Msg.Invoice.Id).Scan(&incomeJournalCount); err != nil || incomeJournalCount != 1 {
+		t.Fatalf("issuing and replay must create exactly one balanced income journal: count=%d error=%v", incomeJournalCount, err)
 	}
 	editInvoice := connect.NewRequest(proto.Clone(saveInvoice.Msg).(*tammyv1.SaveInvoiceDraftRequest))
 	editInvoice.Msg.InvoiceId = savedInvoice.Msg.Invoice.Id
@@ -448,6 +472,7 @@ func TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealSer
 	if _, err := module.db.ExecContext(context.Background(), `DELETE FROM invoice_command_audit_v1`); err == nil {
 		t.Fatal("invoice command audit was deletable")
 	}
+	assertInvoiceIncomeThroughRealServer(t, module, invoiceClient, authentication, issuedInvoice.Msg.Invoice, ready.Capability)
 
 	importStatement := connect.NewRequest(&tammyv1.ImportBankStatementRequest{
 		CommandContext: &tammyv1.CommandContext{
@@ -546,8 +571,8 @@ func TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealSer
 	if err != nil || attention.Msg.Revisions == nil {
 		t.Fatalf("GetAttentionSummary() = %#v, %v", attention, err)
 	}
-	if attention.Msg.Revisions.BankingRevision != 3 || attention.Msg.Revisions.TaxSourceRevision != 3 ||
-		attention.Msg.Revisions.FinancialRevision != 8 {
-		t.Fatalf("revisions = %#v, want financial=8 banking=3 tax-source=3", attention.Msg.Revisions)
+	if attention.Msg.Revisions.BankingRevision != 3 || attention.Msg.Revisions.TaxSourceRevision != 6 ||
+		attention.Msg.Revisions.FinancialRevision != 11 || attention.Msg.Revisions.SettlementRevision != 1 {
+		t.Fatalf("revisions = %#v, want financial=11 banking=3 tax-source=6 settlement=1", attention.Msg.Revisions)
 	}
 }

@@ -63,7 +63,66 @@ scenarios:
   E2E-19:
     cases:
       - invoices/mcp-builder-pdf
+  E2E-20:
+    cases:
+      - invoices/income-payments-bas
 rpcs:
+  tammy.v1.InvoiceService.GetInvoiceAccounting:
+    stage: production
+    preload: getInvoiceAccounting
+    cases: [invoices/income-payments-bas]
+    projections: [invoice_accounting]
+    routes: [/invoices]
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_allowed
+      auditor: planned_allowed
+    principalFailures: [AUTHENTICATION_REQUIRED, NOT_FOUND]
+    list: {states: [found, not_found]}
+    idempotency: {mode: query, outcomes: [not_applicable]}
+  tammy.v1.InvoiceService.PostInvoiceIncome:
+    stage: production
+    preload: postInvoiceIncome
+    cases: [invoices/income-payments-bas]
+    projections: [posted_invoice_income]
+    routes: [/invoices]
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, IDEMPOTENCY_CONFLICT, STALE_VERSION, CLOSED_PERIOD, INVALID_INVOICE_ACCOUNTING]
+    list: {states: [not_applicable]}
+    idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
+  tammy.v1.InvoiceService.RecordInvoicePayment:
+    stage: production
+    preload: recordInvoicePayment
+    cases: [invoices/income-payments-bas]
+    projections: [invoice_payment]
+    routes: [/invoices]
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, IDEMPOTENCY_CONFLICT, STALE_VERSION, CLOSED_PERIOD, INVALID_INVOICE_ACCOUNTING]
+    list: {states: [not_applicable]}
+    idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
+  tammy.v1.InvoiceService.GetBusinessIncomeSummary:
+    stage: production
+    preload: getBusinessIncomeSummary
+    cases: [invoices/income-payments-bas]
+    projections: [business_income]
+    routes: [/overview]
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_allowed
+      auditor: planned_allowed
+    principalFailures: [AUTHENTICATION_REQUIRED, NOT_FOUND]
+    list: {states: [found, not_found]}
+    idempotency: {mode: query, outcomes: [not_applicable]}
   tammy.v1.InvoiceService.GetInvoiceTemplate:
     stage: production
     preload: getInvoiceTemplate

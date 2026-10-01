@@ -142,6 +142,12 @@ enum JournalSource {
 
   // JOURNAL_SOURCE_REVERSAL is a linked reversing journal.
   JOURNAL_SOURCE_REVERSAL = 3;
+
+  // JOURNAL_SOURCE_RECEIVABLE is owned by invoice income posting.
+  JOURNAL_SOURCE_RECEIVABLE = 4;
+
+  // JOURNAL_SOURCE_INVOICE_PAYMENT is owned by dated invoice receipts.
+  JOURNAL_SOURCE_INVOICE_PAYMENT = 5;
 }
 
 // PeriodState is the accounting period lifecycle.

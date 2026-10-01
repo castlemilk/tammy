@@ -319,7 +319,7 @@ describe("App", () => {
 
     render(<App />);
 
-    const status = screen.getByRole("status");
+    const status = screen.getByRole("status", { name: "Local engine" });
     expect(status.getAttribute("aria-live")).toBe("polite");
     expect(status.textContent).toContain("Starting local engine");
   });
@@ -330,7 +330,7 @@ describe("App", () => {
     render(<App />);
 
     await screen.findByText(/Local engine ready/);
-    const status = screen.getByRole("status");
+    const status = screen.getByRole("status", { name: "Local engine" });
     expect(status.getAttribute("data-startup-transition")).toBe("starting-to-ready");
     expect(status.textContent).toContain("Offline");
     expect(status.textContent).toContain("No cloud required");
@@ -641,7 +641,7 @@ describe("App", () => {
     render(<App />);
 
     await screen.findByText(/Local engine unavailable/, { selector: "div" });
-    let status = screen.getByRole("status");
+    let status = screen.getByRole("status", { name: "Local engine" });
     expect(document.body.textContent).not.toContain("secret-token");
     expect(document.body.textContent).not.toContain("certificatePin");
     expect(document.body.textContent).not.toContain("127.0.0.1");
@@ -650,7 +650,7 @@ describe("App", () => {
     const retryButton = screen.getByRole("button", { name: "Retry local engine" });
     await user.click(retryButton);
     expect(getSystemDiagnostics).toHaveBeenCalledTimes(2);
-    status = screen.getByRole("status");
+    status = screen.getByRole("status", { name: "Local engine" });
     expect(status.textContent).toContain("Starting local engine");
 
     retry.resolve(diagnostics);

@@ -475,6 +475,9 @@ func (handler *taxHandler) CreateBasDraft(ctx context.Context, request *connect.
 	instant := handler.now()
 	workpaper, err := repository.CreateBASDraft(ctx, request.Msg.CommandContext.IdempotencyKey, id, request.Msg.OrganisationId, request.Msg.PeriodStart, request.Msg.PeriodEnd, instant)
 	if err != nil {
+		if errors.Is(err, reporting.ErrSourceBound) || errors.Is(err, reporting.ErrGSTBasis) {
+			return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+		}
 		return nil, connect.NewError(connect.CodeFailedPrecondition, ErrLedgerModule)
 	}
 	if workpaper.Id == id {
@@ -503,7 +506,10 @@ func (handler *taxHandler) GetCurrentBasDraft(ctx context.Context, request *conn
 	repository, _ := reporting.NewRepository(tx)
 	workpaper, err := repository.GetCurrentBASDraft(ctx, request.Msg.OrganisationId)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeNotFound, ErrLedgerModule)
+		if errors.Is(err, reporting.ErrNotFound) {
+			return nil, connect.NewError(connect.CodeNotFound, ErrLedgerModule)
+		}
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
 	}
 	if err := tx.Commit(); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
