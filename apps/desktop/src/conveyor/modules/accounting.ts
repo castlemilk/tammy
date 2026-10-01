@@ -13,14 +13,22 @@ import {
   PostManualJournalResponseSchema,
 } from "@tammy/connect-client/tammy/v1/accounting_pb.js";
 import {
+  GetInvoiceLogoRequestSchema,
+  GetInvoiceLogoResponseSchema,
   GetInvoiceRequestSchema,
   GetInvoiceResponseSchema,
+  GetInvoiceTemplateRequestSchema,
+  GetInvoiceTemplateResponseSchema,
   IssueInvoiceRequestSchema,
   IssueInvoiceResponseSchema,
   ListInvoicesRequestSchema,
   ListInvoicesResponseSchema,
   SaveInvoiceDraftRequestSchema,
   SaveInvoiceDraftResponseSchema,
+  SaveInvoiceTemplateRequestSchema,
+  SaveInvoiceTemplateResponseSchema,
+  UploadInvoiceLogoRequestSchema,
+  UploadInvoiceLogoResponseSchema,
 } from "@tammy/connect-client/tammy/v1/invoices_pb.js";
 import { ConveyorError } from "electron-conveyor/define";
 import { createProtoMethodCodec } from "../../shared/proto-ipc";
@@ -87,6 +95,30 @@ const issueInvoice = createProtoMethodCodec({
   maximumResponseBytes: 131_072,
   output: IssueInvoiceResponseSchema,
 });
+const getInvoiceTemplate = createProtoMethodCodec({
+  input: GetInvoiceTemplateRequestSchema,
+  output: GetInvoiceTemplateResponseSchema,
+  maximumRequestBytes: 8192,
+  maximumResponseBytes: 32768,
+});
+const saveInvoiceTemplate = createProtoMethodCodec({
+  input: SaveInvoiceTemplateRequestSchema,
+  output: SaveInvoiceTemplateResponseSchema,
+  maximumRequestBytes: 32768,
+  maximumResponseBytes: 32768,
+});
+const uploadInvoiceLogo = createProtoMethodCodec({
+  input: UploadInvoiceLogoRequestSchema,
+  output: UploadInvoiceLogoResponseSchema,
+  maximumRequestBytes: 1179648,
+  maximumResponseBytes: 8192,
+});
+const getInvoiceLogo = createProtoMethodCodec({
+  input: GetInvoiceLogoRequestSchema,
+  output: GetInvoiceLogoResponseSchema,
+  maximumRequestBytes: 8192,
+  maximumResponseBytes: 1179648,
+});
 
 export const accounting = defineModule({
   listAccounts: query(conveyorProtoFrame(16_384), ({ input, ctx }) =>
@@ -118,6 +150,18 @@ export const accounting = defineModule({
   ),
   issueInvoice: command(conveyorProtoFrame(8_192), ({ input, ctx }) =>
     invokeCore(issueInvoice, input, ctx.client.issueInvoice),
+  ),
+  getInvoiceTemplate: query(conveyorProtoFrame(8192), ({ input, ctx }) =>
+    invokeCore(getInvoiceTemplate, input, ctx.client.getInvoiceTemplate),
+  ),
+  saveInvoiceTemplate: command(conveyorProtoFrame(32768), ({ input, ctx }) =>
+    invokeCore(saveInvoiceTemplate, input, ctx.client.saveInvoiceTemplate),
+  ),
+  uploadInvoiceLogo: command(conveyorProtoFrame(1179648), ({ input, ctx }) =>
+    invokeCore(uploadInvoiceLogo, input, ctx.client.uploadInvoiceLogo),
+  ),
+  getInvoiceLogo: query(conveyorProtoFrame(8192), ({ input, ctx }) =>
+    invokeCore(getInvoiceLogo, input, ctx.client.getInvoiceLogo),
   ),
   exportInvoicePdf: command(conveyorProtoFrame(8_192), async ({ input, ctx }) => {
     try {

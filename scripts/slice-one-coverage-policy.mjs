@@ -134,6 +134,40 @@ export const COMPANY_EOFY_DECLARED_FUTURE_RPCS = [
 ];
 
 export const SLICE_ONE_RPC_POLICY = {
+  "tammy.v1.InvoiceService.GetInvoiceTemplate": rpc({
+    name: "GetInvoiceTemplate",
+    projection: "invoice_template",
+    route: "/invoices",
+    rolePolicy: accountingRead,
+    mode: "query",
+    failures: [...authenticated, "NOT_FOUND"],
+    list: ["found", "not_found"],
+  }),
+  "tammy.v1.InvoiceService.SaveInvoiceTemplate": rpc({
+    name: "SaveInvoiceTemplate",
+    projection: "saved_invoice_template",
+    route: "/invoices",
+    rolePolicy: adminAndPreparer,
+    mode: "persistent_command",
+    failures: [...roleGuardedPersistent, "STALE_VERSION", "INVALID_INVOICE_TEMPLATE"],
+  }),
+  "tammy.v1.InvoiceService.UploadInvoiceLogo": rpc({
+    name: "UploadInvoiceLogo",
+    projection: "uploaded_invoice_logo",
+    route: "/invoices",
+    rolePolicy: adminAndPreparer,
+    mode: "persistent_command",
+    failures: [...roleGuardedPersistent, "INVALID_INVOICE_LOGO"],
+  }),
+  "tammy.v1.InvoiceService.GetInvoiceLogo": rpc({
+    name: "GetInvoiceLogo",
+    projection: "invoice_logo",
+    route: "/invoices",
+    rolePolicy: accountingRead,
+    mode: "query",
+    failures: [...authenticated, "NOT_FOUND"],
+    list: ["found", "not_found"],
+  }),
   "tammy.v1.InvoiceService.SaveInvoiceDraft": rpc({
     name: "SaveInvoiceDraft",
     projection: "saved_invoice_draft",

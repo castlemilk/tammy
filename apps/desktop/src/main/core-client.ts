@@ -53,8 +53,12 @@ import type {
 } from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import { IdentityService } from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import {
+  type GetInvoiceLogoRequest,
+  type GetInvoiceLogoResponse,
   type GetInvoiceRequest,
   type GetInvoiceResponse,
+  type GetInvoiceTemplateRequest,
+  type GetInvoiceTemplateResponse,
   InvoiceService,
   type IssueInvoiceRequest,
   type IssueInvoiceResponse,
@@ -62,6 +66,10 @@ import {
   type ListInvoicesResponse,
   type SaveInvoiceDraftRequest,
   type SaveInvoiceDraftResponse,
+  type SaveInvoiceTemplateRequest,
+  type SaveInvoiceTemplateResponse,
+  type UploadInvoiceLogoRequest,
+  type UploadInvoiceLogoResponse,
 } from "@tammy/connect-client/tammy/v1/invoices_pb.js";
 import type {
   CreateOrganisationRequest,
@@ -137,6 +145,16 @@ export interface CoreClient {
   readonly getInvoice: (request: GetInvoiceRequest) => Promise<GetInvoiceResponse>;
   readonly listInvoices: (request: ListInvoicesRequest) => Promise<ListInvoicesResponse>;
   readonly issueInvoice: (request: IssueInvoiceRequest) => Promise<IssueInvoiceResponse>;
+  readonly getInvoiceTemplate: (
+    request: GetInvoiceTemplateRequest,
+  ) => Promise<GetInvoiceTemplateResponse>;
+  readonly saveInvoiceTemplate: (
+    request: SaveInvoiceTemplateRequest,
+  ) => Promise<SaveInvoiceTemplateResponse>;
+  readonly uploadInvoiceLogo: (
+    request: UploadInvoiceLogoRequest,
+  ) => Promise<UploadInvoiceLogoResponse>;
+  readonly getInvoiceLogo: (request: GetInvoiceLogoRequest) => Promise<GetInvoiceLogoResponse>;
   readonly createAccount: (request: CreateAccountRequest) => Promise<CreateAccountResponse>;
   readonly listAccounts: (request: ListAccountsRequest) => Promise<ListAccountsResponse>;
   readonly postManualJournal: (
@@ -295,6 +313,14 @@ export function createCoreClient(
       coreRequest(() => invoiceClient.listInvoices(request)),
     issueInvoice: (request: IssueInvoiceRequest) =>
       coreRequest(() => invoiceClient.issueInvoice(request)),
+    getInvoiceTemplate: (request: GetInvoiceTemplateRequest) =>
+      coreRequest(() => invoiceClient.getInvoiceTemplate(request)),
+    saveInvoiceTemplate: (request: SaveInvoiceTemplateRequest) =>
+      coreRequest(() => invoiceClient.saveInvoiceTemplate(request)),
+    uploadInvoiceLogo: (request: UploadInvoiceLogoRequest) =>
+      coreRequest(() => invoiceClient.uploadInvoiceLogo(request)),
+    getInvoiceLogo: (request: GetInvoiceLogoRequest) =>
+      coreRequest(() => invoiceClient.getInvoiceLogo(request)),
     createAccount: (request: CreateAccountRequest) =>
       coreRequest(() => accountingClient.createAccount(request)),
     listAccounts: (request: ListAccountsRequest) =>

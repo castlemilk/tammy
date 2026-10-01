@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { extractData } from "@formepdf/core";
+import { jpegLogo, pngChunk, pngLogo } from "../test-support/logo-fixtures.ts";
 import { pdfStreams } from "../test-support/pdf-text.ts";
 import { renderInvoicePdf } from "./pdf.ts";
 import { draftFixture } from "./test-fixtures.ts";
@@ -10,6 +11,58 @@ const pdfInput = () => ({
   sellerName: "Gamma Systems Pty Ltd",
   sellerAbn: "51824753556",
   state: "draft" as const,
+});
+
+test("embeds a real transparent company PNG while retaining invoice identity and customer privacy", async () => {
+  const input = pdfInput();
+  const first = input.lines[0];
+  assert.ok(first);
+  const bytes = await renderInvoicePdf({
+    ...input,
+    logo: pngLogo(),
+    lines: [
+      { ...first, unitCostMinor: 777777, sourceDocumentId: "019fdab5-4704-7d72-8d37-0645f45b2ad3" },
+    ],
+  });
+  const content = pdfStreams(bytes);
+  assert.match(content, /\/Subtype\s*\/Image\b/);
+  assert.match(content, /\/SMask\b/);
+  assert.match(content, /Company logo/);
+  for (const text of ["Gamma Systems Pty Ltd", "ABN 51824753556", "Tax Invoice", "DRAFT"])
+    assert.ok(content.includes(text), `missing ${text}`);
+  assert.equal(content.includes("7,777.77"), false);
+  assert.equal(content.includes("019fdab5-4704-7d72-8d37-0645f45b2ad3"), false);
+  assert.equal(extractData(bytes), null);
+});
+
+test("embeds a real company JPEG without accessing the network", async () => {
+  const originalFetch = globalThis.fetch;
+  let fetches = 0;
+  globalThis.fetch = async () => {
+    fetches++;
+    throw new Error("Unexpected image network access");
+  };
+  try {
+    const bytes = await renderInvoicePdf({ ...pdfInput(), logo: jpegLogo() });
+    assert.match(pdfStreams(bytes), /\/Subtype\s*\/Image\b/);
+    assert.equal(fetches, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("fails rather than silently returning a PDF when valid PNG chunks contain invalid image data", async () => {
+  const logo = pngLogo();
+  const original = Buffer.from(logo.dataBase64, "base64");
+  const corrupt = Buffer.concat([
+    original.subarray(0, 33),
+    pngChunk("IDAT", Buffer.from("invalid zlib raster")),
+    pngChunk("IEND", new Uint8Array()),
+  ]);
+  await assert.rejects(
+    renderInvoicePdf({ ...pdfInput(), logo: { ...logo, dataBase64: corrupt.toString("base64") } }),
+    /logo.*(?:invalid|render)/i,
+  );
 });
 
 test("renders an actual offline A4 pdfcn invoice with draft label, AUD and GST totals", async () => {
@@ -139,6 +192,7 @@ test("keeps a standard three-line mixed-GST invoice and its payment instructions
   const content = pdfStreams(
     await renderInvoicePdf({
       ...input,
+      logo: pngLogo(),
       lines: [
         {
           description:
@@ -166,5 +220,9 @@ test("keeps a standard three-line mixed-GST invoice and its payment instructions
   );
   assert.match(content, /\/Type\s*\/Pages\b[\s\S]*?\/Count\s+1\b/);
   assert.match(content, /Thank you for your business\./);
+  assert.match(content, /\/Subtype\s*\/Image\b/);
+  assert.match(content, /BSB: 000-000/);
+  assert.match(content, /Account: 123456789/);
+  assert.match(content, /Use INV-2026-001 as your payment reference\./);
   assert.match(content, /471\.53/);
 });

@@ -2,6 +2,8 @@ package invoices
 
 import (
 	"context"
+	"crypto/sha256"
+	"math"
 	"time"
 
 	"github.com/tammyapp/tammy/services/core/internal/app"
@@ -45,7 +47,7 @@ func validCommand(c *tammyv1.CommandContext) bool {
 }
 
 func (s *Service) SaveDraft(ctx context.Context, request *tammyv1.SaveInvoiceDraftRequest) (*tammyv1.SaveInvoiceDraftResponse, error) {
-	if s == nil || request == nil || !validCommand(request.CommandContext) || !ids.IsCanonicalV7(request.OrganisationId) || (request.InvoiceId == "" && request.ExpectedVersion != 0) || (request.InvoiceId != "" && (!ids.IsCanonicalV7(request.InvoiceId) || request.ExpectedVersion == 0)) {
+	if s == nil || request == nil || !validCommand(request.CommandContext) || !ids.IsCanonicalV7(request.OrganisationId) || request.ExpectedVersion >= math.MaxInt64 || (request.InvoiceId == "" && request.ExpectedVersion != 0) || (request.InvoiceId != "" && (!ids.IsCanonicalV7(request.InvoiceId) || request.ExpectedVersion == 0)) || (request.LogoAssetId != nil && *request.LogoAssetId != "" && !ids.IsCanonicalV7(*request.LogoAssetId)) {
 		return nil, ErrInvalidDraft
 	}
 	if _, err := Calculate(request.Draft); err != nil {
@@ -90,6 +92,14 @@ func (s *Service) SaveDraft(ctx context.Context, request *tammyv1.SaveInvoiceDra
 					return ErrConflict
 				}
 				saved.CreatedAt = before.CreatedAt
+				// Older clients omit this field; keep the reviewed logo snapshot.
+				saved.LogoAssetId = before.LogoAssetId
+			}
+			if r.LogoAssetId != nil {
+				saved.LogoAssetId = nil
+				if *r.LogoAssetId != "" {
+					saved.LogoAssetId = proto.String(*r.LogoAssetId)
+				}
 			}
 			return repos.Invoices.Save(ctx, saved, r.ExpectedVersion)
 		}, BuildResult: func(ctx context.Context, _ CommandRepositories, owned proto.Message) (app.CommandResult, error) {
@@ -105,6 +115,89 @@ func (s *Service) SaveDraft(ctx context.Context, request *tammyv1.SaveInvoiceDra
 	}
 	response, ok := result.(*tammyv1.SaveInvoiceDraftResponse)
 	if !ok || response.Invoice == nil {
+		return nil, ErrRepository
+	}
+	return response, nil
+}
+
+func (s *Service) SaveTemplate(ctx context.Context, request *tammyv1.SaveInvoiceTemplateRequest) (*tammyv1.SaveInvoiceTemplateResponse, error) {
+	if s == nil || request == nil || !validCommand(request.CommandContext) || !ids.IsCanonicalV7(request.OrganisationId) || request.ExpectedVersion >= math.MaxInt64 || ValidateTemplate(request.Defaults) != nil {
+		return nil, ErrInvalidDraft
+	}
+	var saved *tammyv1.InvoiceTemplate
+	result, err := s.commands.Execute(ctx, app.OrdinaryCommand[CommandRepositories]{
+		Operation: app.OrdinaryOperationSaveInvoiceTemplate, OperationKey: request.CommandContext.IdempotencyKey,
+		Authentication: request.CommandContext.Authentication, Request: request,
+		NewResult: func() proto.Message { return &tammyv1.SaveInvoiceTemplateResponse{} },
+		SaveSource: func(ctx context.Context, repos CommandRepositories, owned proto.Message) error {
+			r := owned.(*tammyv1.SaveInvoiceTemplateRequest)
+			if repos.Invoices == nil {
+				return ErrRepository
+			}
+			saved = &tammyv1.InvoiceTemplate{OrganisationId: r.OrganisationId, Version: r.ExpectedVersion + 1, Defaults: proto.Clone(r.Defaults).(*tammyv1.InvoiceTemplateInput)}
+			return repos.Invoices.SaveTemplate(ctx, saved, r.ExpectedVersion, s.now())
+		},
+		BuildResult: func(ctx context.Context, _ CommandRepositories, owned proto.Message) (app.CommandResult, error) {
+			r := owned.(*tammyv1.SaveInvoiceTemplateRequest)
+			if saved == nil {
+				return app.CommandResult{}, ErrRepository
+			}
+			return s.audit.Build(ctx, app.OrdinaryOperationSaveInvoiceTemplate, r.CommandContext.Authentication, r.CommandContext.IdempotencyKey, saved.OrganisationId, &tammyv1.SaveInvoiceTemplateResponse{Template: saved}, saved)
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+	response, ok := result.(*tammyv1.SaveInvoiceTemplateResponse)
+	if !ok || response.Template == nil {
+		return nil, ErrRepository
+	}
+	return response, nil
+}
+
+func (s *Service) UploadLogo(ctx context.Context, request *tammyv1.UploadInvoiceLogoRequest) (*tammyv1.UploadInvoiceLogoResponse, error) {
+	if s == nil || request == nil || !validCommand(request.CommandContext) || !ids.IsCanonicalV7(request.OrganisationId) {
+		return nil, ErrInvalidDraft
+	}
+	if _, _, err := ValidateLogo(request.MimeType, request.Content); err != nil {
+		return nil, err
+	}
+	var saved *tammyv1.InvoiceLogo
+	result, err := s.commands.Execute(ctx, app.OrdinaryCommand[CommandRepositories]{
+		Operation: app.OrdinaryOperationUploadInvoiceLogo, OperationKey: request.CommandContext.IdempotencyKey,
+		Authentication: request.CommandContext.Authentication, Request: request,
+		NewResult: func() proto.Message { return &tammyv1.UploadInvoiceLogoResponse{} },
+		SaveSource: func(ctx context.Context, repos CommandRepositories, owned proto.Message) error {
+			r := owned.(*tammyv1.UploadInvoiceLogoRequest)
+			if repos.Invoices == nil {
+				return ErrRepository
+			}
+			width, height, err := ValidateLogo(r.MimeType, r.Content)
+			if err != nil {
+				return err
+			}
+			identifier, err := s.newID()
+			if err != nil {
+				return ErrRepository
+			}
+			digest := sha256.Sum256(r.Content)
+			saved = &tammyv1.InvoiceLogo{Id: identifier, OrganisationId: r.OrganisationId, MimeType: r.MimeType, ByteLength: uint32(len(r.Content)), Sha256: digest[:], Width: width, Height: height, CreatedAt: timestamppb.New(s.now())}
+			return repos.Invoices.SaveLogo(ctx, saved, r.Content, r.CommandContext.Authentication.ActorUserId)
+		},
+		BuildResult: func(ctx context.Context, _ CommandRepositories, owned proto.Message) (app.CommandResult, error) {
+			r := owned.(*tammyv1.UploadInvoiceLogoRequest)
+			if saved == nil {
+				return app.CommandResult{}, ErrRepository
+			}
+			// Audit and idempotency results contain metadata, never logo bytes.
+			return s.audit.Build(ctx, app.OrdinaryOperationUploadInvoiceLogo, r.CommandContext.Authentication, r.CommandContext.IdempotencyKey, saved.Id, &tammyv1.UploadInvoiceLogoResponse{Logo: saved}, saved)
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+	response, ok := result.(*tammyv1.UploadInvoiceLogoResponse)
+	if !ok || response.Logo == nil {
 		return nil, ErrRepository
 	}
 	return response, nil

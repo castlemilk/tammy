@@ -45,6 +45,18 @@ const (
 	// InvoiceServiceIssueInvoiceProcedure is the fully-qualified name of the InvoiceService's
 	// IssueInvoice RPC.
 	InvoiceServiceIssueInvoiceProcedure = "/tammy.v1.InvoiceService/IssueInvoice"
+	// InvoiceServiceGetInvoiceTemplateProcedure is the fully-qualified name of the InvoiceService's
+	// GetInvoiceTemplate RPC.
+	InvoiceServiceGetInvoiceTemplateProcedure = "/tammy.v1.InvoiceService/GetInvoiceTemplate"
+	// InvoiceServiceSaveInvoiceTemplateProcedure is the fully-qualified name of the InvoiceService's
+	// SaveInvoiceTemplate RPC.
+	InvoiceServiceSaveInvoiceTemplateProcedure = "/tammy.v1.InvoiceService/SaveInvoiceTemplate"
+	// InvoiceServiceUploadInvoiceLogoProcedure is the fully-qualified name of the InvoiceService's
+	// UploadInvoiceLogo RPC.
+	InvoiceServiceUploadInvoiceLogoProcedure = "/tammy.v1.InvoiceService/UploadInvoiceLogo"
+	// InvoiceServiceGetInvoiceLogoProcedure is the fully-qualified name of the InvoiceService's
+	// GetInvoiceLogo RPC.
+	InvoiceServiceGetInvoiceLogoProcedure = "/tammy.v1.InvoiceService/GetInvoiceLogo"
 )
 
 // InvoiceServiceClient is a client for the tammy.v1.InvoiceService service.
@@ -54,6 +66,10 @@ type InvoiceServiceClient interface {
 	ListInvoices(context.Context, *connect.Request[v1.ListInvoicesRequest]) (*connect.Response[v1.ListInvoicesResponse], error)
 	// Issue freezes the document. It never sends it, records payment, or posts a journal.
 	IssueInvoice(context.Context, *connect.Request[v1.IssueInvoiceRequest]) (*connect.Response[v1.IssueInvoiceResponse], error)
+	GetInvoiceTemplate(context.Context, *connect.Request[v1.GetInvoiceTemplateRequest]) (*connect.Response[v1.GetInvoiceTemplateResponse], error)
+	SaveInvoiceTemplate(context.Context, *connect.Request[v1.SaveInvoiceTemplateRequest]) (*connect.Response[v1.SaveInvoiceTemplateResponse], error)
+	UploadInvoiceLogo(context.Context, *connect.Request[v1.UploadInvoiceLogoRequest]) (*connect.Response[v1.UploadInvoiceLogoResponse], error)
+	GetInvoiceLogo(context.Context, *connect.Request[v1.GetInvoiceLogoRequest]) (*connect.Response[v1.GetInvoiceLogoResponse], error)
 }
 
 // NewInvoiceServiceClient constructs a client for the tammy.v1.InvoiceService service. By default,
@@ -91,15 +107,43 @@ func NewInvoiceServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(invoiceServiceMethods.ByName("IssueInvoice")),
 			connect.WithClientOptions(opts...),
 		),
+		getInvoiceTemplate: connect.NewClient[v1.GetInvoiceTemplateRequest, v1.GetInvoiceTemplateResponse](
+			httpClient,
+			baseURL+InvoiceServiceGetInvoiceTemplateProcedure,
+			connect.WithSchema(invoiceServiceMethods.ByName("GetInvoiceTemplate")),
+			connect.WithClientOptions(opts...),
+		),
+		saveInvoiceTemplate: connect.NewClient[v1.SaveInvoiceTemplateRequest, v1.SaveInvoiceTemplateResponse](
+			httpClient,
+			baseURL+InvoiceServiceSaveInvoiceTemplateProcedure,
+			connect.WithSchema(invoiceServiceMethods.ByName("SaveInvoiceTemplate")),
+			connect.WithClientOptions(opts...),
+		),
+		uploadInvoiceLogo: connect.NewClient[v1.UploadInvoiceLogoRequest, v1.UploadInvoiceLogoResponse](
+			httpClient,
+			baseURL+InvoiceServiceUploadInvoiceLogoProcedure,
+			connect.WithSchema(invoiceServiceMethods.ByName("UploadInvoiceLogo")),
+			connect.WithClientOptions(opts...),
+		),
+		getInvoiceLogo: connect.NewClient[v1.GetInvoiceLogoRequest, v1.GetInvoiceLogoResponse](
+			httpClient,
+			baseURL+InvoiceServiceGetInvoiceLogoProcedure,
+			connect.WithSchema(invoiceServiceMethods.ByName("GetInvoiceLogo")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // invoiceServiceClient implements InvoiceServiceClient.
 type invoiceServiceClient struct {
-	saveInvoiceDraft *connect.Client[v1.SaveInvoiceDraftRequest, v1.SaveInvoiceDraftResponse]
-	getInvoice       *connect.Client[v1.GetInvoiceRequest, v1.GetInvoiceResponse]
-	listInvoices     *connect.Client[v1.ListInvoicesRequest, v1.ListInvoicesResponse]
-	issueInvoice     *connect.Client[v1.IssueInvoiceRequest, v1.IssueInvoiceResponse]
+	saveInvoiceDraft    *connect.Client[v1.SaveInvoiceDraftRequest, v1.SaveInvoiceDraftResponse]
+	getInvoice          *connect.Client[v1.GetInvoiceRequest, v1.GetInvoiceResponse]
+	listInvoices        *connect.Client[v1.ListInvoicesRequest, v1.ListInvoicesResponse]
+	issueInvoice        *connect.Client[v1.IssueInvoiceRequest, v1.IssueInvoiceResponse]
+	getInvoiceTemplate  *connect.Client[v1.GetInvoiceTemplateRequest, v1.GetInvoiceTemplateResponse]
+	saveInvoiceTemplate *connect.Client[v1.SaveInvoiceTemplateRequest, v1.SaveInvoiceTemplateResponse]
+	uploadInvoiceLogo   *connect.Client[v1.UploadInvoiceLogoRequest, v1.UploadInvoiceLogoResponse]
+	getInvoiceLogo      *connect.Client[v1.GetInvoiceLogoRequest, v1.GetInvoiceLogoResponse]
 }
 
 // SaveInvoiceDraft calls tammy.v1.InvoiceService.SaveInvoiceDraft.
@@ -122,6 +166,26 @@ func (c *invoiceServiceClient) IssueInvoice(ctx context.Context, req *connect.Re
 	return c.issueInvoice.CallUnary(ctx, req)
 }
 
+// GetInvoiceTemplate calls tammy.v1.InvoiceService.GetInvoiceTemplate.
+func (c *invoiceServiceClient) GetInvoiceTemplate(ctx context.Context, req *connect.Request[v1.GetInvoiceTemplateRequest]) (*connect.Response[v1.GetInvoiceTemplateResponse], error) {
+	return c.getInvoiceTemplate.CallUnary(ctx, req)
+}
+
+// SaveInvoiceTemplate calls tammy.v1.InvoiceService.SaveInvoiceTemplate.
+func (c *invoiceServiceClient) SaveInvoiceTemplate(ctx context.Context, req *connect.Request[v1.SaveInvoiceTemplateRequest]) (*connect.Response[v1.SaveInvoiceTemplateResponse], error) {
+	return c.saveInvoiceTemplate.CallUnary(ctx, req)
+}
+
+// UploadInvoiceLogo calls tammy.v1.InvoiceService.UploadInvoiceLogo.
+func (c *invoiceServiceClient) UploadInvoiceLogo(ctx context.Context, req *connect.Request[v1.UploadInvoiceLogoRequest]) (*connect.Response[v1.UploadInvoiceLogoResponse], error) {
+	return c.uploadInvoiceLogo.CallUnary(ctx, req)
+}
+
+// GetInvoiceLogo calls tammy.v1.InvoiceService.GetInvoiceLogo.
+func (c *invoiceServiceClient) GetInvoiceLogo(ctx context.Context, req *connect.Request[v1.GetInvoiceLogoRequest]) (*connect.Response[v1.GetInvoiceLogoResponse], error) {
+	return c.getInvoiceLogo.CallUnary(ctx, req)
+}
+
 // InvoiceServiceHandler is an implementation of the tammy.v1.InvoiceService service.
 type InvoiceServiceHandler interface {
 	SaveInvoiceDraft(context.Context, *connect.Request[v1.SaveInvoiceDraftRequest]) (*connect.Response[v1.SaveInvoiceDraftResponse], error)
@@ -129,6 +193,10 @@ type InvoiceServiceHandler interface {
 	ListInvoices(context.Context, *connect.Request[v1.ListInvoicesRequest]) (*connect.Response[v1.ListInvoicesResponse], error)
 	// Issue freezes the document. It never sends it, records payment, or posts a journal.
 	IssueInvoice(context.Context, *connect.Request[v1.IssueInvoiceRequest]) (*connect.Response[v1.IssueInvoiceResponse], error)
+	GetInvoiceTemplate(context.Context, *connect.Request[v1.GetInvoiceTemplateRequest]) (*connect.Response[v1.GetInvoiceTemplateResponse], error)
+	SaveInvoiceTemplate(context.Context, *connect.Request[v1.SaveInvoiceTemplateRequest]) (*connect.Response[v1.SaveInvoiceTemplateResponse], error)
+	UploadInvoiceLogo(context.Context, *connect.Request[v1.UploadInvoiceLogoRequest]) (*connect.Response[v1.UploadInvoiceLogoResponse], error)
+	GetInvoiceLogo(context.Context, *connect.Request[v1.GetInvoiceLogoRequest]) (*connect.Response[v1.GetInvoiceLogoResponse], error)
 }
 
 // NewInvoiceServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -162,6 +230,30 @@ func NewInvoiceServiceHandler(svc InvoiceServiceHandler, opts ...connect.Handler
 		connect.WithSchema(invoiceServiceMethods.ByName("IssueInvoice")),
 		connect.WithHandlerOptions(opts...),
 	)
+	invoiceServiceGetInvoiceTemplateHandler := connect.NewUnaryHandler(
+		InvoiceServiceGetInvoiceTemplateProcedure,
+		svc.GetInvoiceTemplate,
+		connect.WithSchema(invoiceServiceMethods.ByName("GetInvoiceTemplate")),
+		connect.WithHandlerOptions(opts...),
+	)
+	invoiceServiceSaveInvoiceTemplateHandler := connect.NewUnaryHandler(
+		InvoiceServiceSaveInvoiceTemplateProcedure,
+		svc.SaveInvoiceTemplate,
+		connect.WithSchema(invoiceServiceMethods.ByName("SaveInvoiceTemplate")),
+		connect.WithHandlerOptions(opts...),
+	)
+	invoiceServiceUploadInvoiceLogoHandler := connect.NewUnaryHandler(
+		InvoiceServiceUploadInvoiceLogoProcedure,
+		svc.UploadInvoiceLogo,
+		connect.WithSchema(invoiceServiceMethods.ByName("UploadInvoiceLogo")),
+		connect.WithHandlerOptions(opts...),
+	)
+	invoiceServiceGetInvoiceLogoHandler := connect.NewUnaryHandler(
+		InvoiceServiceGetInvoiceLogoProcedure,
+		svc.GetInvoiceLogo,
+		connect.WithSchema(invoiceServiceMethods.ByName("GetInvoiceLogo")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/tammy.v1.InvoiceService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case InvoiceServiceSaveInvoiceDraftProcedure:
@@ -172,6 +264,14 @@ func NewInvoiceServiceHandler(svc InvoiceServiceHandler, opts ...connect.Handler
 			invoiceServiceListInvoicesHandler.ServeHTTP(w, r)
 		case InvoiceServiceIssueInvoiceProcedure:
 			invoiceServiceIssueInvoiceHandler.ServeHTTP(w, r)
+		case InvoiceServiceGetInvoiceTemplateProcedure:
+			invoiceServiceGetInvoiceTemplateHandler.ServeHTTP(w, r)
+		case InvoiceServiceSaveInvoiceTemplateProcedure:
+			invoiceServiceSaveInvoiceTemplateHandler.ServeHTTP(w, r)
+		case InvoiceServiceUploadInvoiceLogoProcedure:
+			invoiceServiceUploadInvoiceLogoHandler.ServeHTTP(w, r)
+		case InvoiceServiceGetInvoiceLogoProcedure:
+			invoiceServiceGetInvoiceLogoHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -195,4 +295,20 @@ func (UnimplementedInvoiceServiceHandler) ListInvoices(context.Context, *connect
 
 func (UnimplementedInvoiceServiceHandler) IssueInvoice(context.Context, *connect.Request[v1.IssueInvoiceRequest]) (*connect.Response[v1.IssueInvoiceResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("tammy.v1.InvoiceService.IssueInvoice is not implemented"))
+}
+
+func (UnimplementedInvoiceServiceHandler) GetInvoiceTemplate(context.Context, *connect.Request[v1.GetInvoiceTemplateRequest]) (*connect.Response[v1.GetInvoiceTemplateResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("tammy.v1.InvoiceService.GetInvoiceTemplate is not implemented"))
+}
+
+func (UnimplementedInvoiceServiceHandler) SaveInvoiceTemplate(context.Context, *connect.Request[v1.SaveInvoiceTemplateRequest]) (*connect.Response[v1.SaveInvoiceTemplateResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("tammy.v1.InvoiceService.SaveInvoiceTemplate is not implemented"))
+}
+
+func (UnimplementedInvoiceServiceHandler) UploadInvoiceLogo(context.Context, *connect.Request[v1.UploadInvoiceLogoRequest]) (*connect.Response[v1.UploadInvoiceLogoResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("tammy.v1.InvoiceService.UploadInvoiceLogo is not implemented"))
+}
+
+func (UnimplementedInvoiceServiceHandler) GetInvoiceLogo(context.Context, *connect.Request[v1.GetInvoiceLogoRequest]) (*connect.Response[v1.GetInvoiceLogoResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("tammy.v1.InvoiceService.GetInvoiceLogo is not implemented"))
 }

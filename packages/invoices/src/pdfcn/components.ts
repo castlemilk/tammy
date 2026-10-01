@@ -3,9 +3,18 @@
  */
 
 import type { Style } from "@formepdf/react";
-import { Cell, Fixed, Table as FormeTable, Text as FormeText, Row, View } from "@formepdf/react";
+import {
+  Cell,
+  Fixed,
+  Table as FormeTable,
+  Text as FormeText,
+  Image,
+  Row,
+  View,
+} from "@formepdf/react";
 import type { ReactNode } from "react";
 import { createElement as h } from "react";
+import type { InvoicePdfLogo } from "../pdf-logo.ts";
 
 export const theme = {
   colors: {
@@ -41,25 +50,18 @@ export function PageHeader({
   title,
   subtitle,
   rightText,
+  logo,
 }: {
   title: string;
   subtitle: string;
   rightText: string;
+  logo?: InvoicePdfLogo;
 }) {
-  return h(
-    View,
-    {
-      wrap: false,
-      style: {
-        backgroundColor: theme.colors.primary,
-        padding: 16,
-        marginBottom: theme.spacing.sectionGap,
-        borderRadius: 4,
-      },
-    },
+  const heading = [
     h(
       Text,
       {
+        key: "title",
         style: {
           fontSize: 22,
           fontWeight: 700,
@@ -71,9 +73,54 @@ export function PageHeader({
     ),
     h(
       Text,
-      { style: { fontSize: 9, color: theme.colors.primaryForeground, marginBottom: 0 } },
+      {
+        key: "subtitle",
+        style: { fontSize: 9, color: theme.colors.primaryForeground, marginBottom: 0 },
+      },
       subtitle,
     ),
+  ];
+  const scale = logo ? Math.min(120 / logo.width, 56 / logo.height) : 1;
+  return h(
+    View,
+    {
+      wrap: false,
+      style: {
+        backgroundColor: theme.colors.primary,
+        padding: 16,
+        marginBottom: theme.spacing.sectionGap,
+        borderRadius: 4,
+      },
+    },
+    ...(logo
+      ? [
+          h(
+            View,
+            { key: "brand", style: { flexDirection: "row", gap: 16, alignItems: "flex-start" } },
+            h(View, { style: { flex: 1 } }, ...heading),
+            h(
+              View,
+              {
+                style: {
+                  width: 128,
+                  height: 64,
+                  padding: 4,
+                  backgroundColor: "#ffffff",
+                  borderRadius: 2,
+                  alignItems: "center",
+                  justifyContent: "center",
+                },
+              },
+              h(Image, {
+                src: `data:${logo.mimeType};base64,${logo.dataBase64}`,
+                width: logo.width * scale,
+                height: logo.height * scale,
+                alt: "Company logo",
+              }),
+            ),
+          ),
+        ]
+      : heading),
     h(
       Text,
       {

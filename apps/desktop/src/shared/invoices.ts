@@ -38,7 +38,11 @@ export function invoiceToRecord(invoice: Invoice) {
     !invoice.draft ||
     ![InvoiceState.DRAFT, InvoiceState.ISSUED].includes(invoice.state) ||
     invoice.version < 1n ||
-    invoice.version > BigInt(Number.MAX_SAFE_INTEGER)
+    invoice.version > BigInt(Number.MAX_SAFE_INTEGER) ||
+    (invoice.logoAssetId !== undefined &&
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(
+        invoice.logoAssetId,
+      ))
   )
     throw new Error("INVALID_INVOICE");
   const draft = validateInvoiceDraft({
@@ -77,6 +81,7 @@ export function invoiceToRecord(invoice: Invoice) {
     state: invoice.state === InvoiceState.ISSUED ? ("issued" as const) : ("draft" as const),
     sellerName: invoice.sellerName,
     sellerAbn: invoice.sellerAbn,
+    ...(invoice.logoAssetId ? { logoAssetId: invoice.logoAssetId } : {}),
     draft,
   };
 }

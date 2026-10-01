@@ -15,6 +15,15 @@ import {
   CURRENT_WORKFLOW_USERNAME,
   setupAndRunCurrentAccountingWorkflow,
 } from "./support/current-accounting-workflow";
+import {
+  captureCompanyTemplate,
+  configureCompanyInvoiceTemplate,
+  expectCompanyTemplate,
+  expectInvoiceTemplateSnapshot,
+  ORIGINAL_COMPANY_TEMPLATE,
+  UPDATED_COMPANY_TEMPLATE,
+  updateCompanyInvoiceTemplate,
+} from "./support/invoice-template-workflow";
 import { callPairedApi, runPairedMcpSmoke } from "./support/local-api";
 
 test("runs the current accounting workflows through the packaged app", async ({
@@ -60,6 +69,11 @@ test("runs the current accounting workflows through the packaged app", async ({
   }
   expect(electronHarness.consoleErrors).toEqual([]);
   expect(electronHarness.pageErrors).toEqual([]);
+  const screenshotDirectory = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "../../../../.tmp/invoice-cost-table-e2e",
+  );
+  await mkdir(screenshotDirectory, { recursive: true });
   const userData = await electronHarness.application.evaluate(({ app, dialog, Menu }) => {
     dialog.showMessageBox = async () => ({ response: 0, checkboxChecked: false });
     const menu = Menu.getApplicationMenu();
@@ -154,6 +168,7 @@ test("runs the current accounting workflows through the packaged app", async ({
   await expect(page.getByRole("heading", { name: "Invoices", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Use MCP draft" }).click();
   await expect(page.getByLabel("Invoice number")).toHaveValue("INV-MCP-001");
+  await configureCompanyInvoiceTemplate(page, screenshotDirectory, testInfo);
   await expect(page.getByTestId("invoice-total")).toContainText("$455.09");
   await expect(page.getByTestId("invoice-cost")).toContainText("$350.00");
   let lineTable = page.getByRole("table", { name: "Invoice line items", exact: true });
@@ -217,11 +232,6 @@ test("runs the current accounting workflows through the packaged app", async ({
   );
   await page.getByRole("button", { name: "Save draft", exact: true }).click();
   await expect(page.getByText("Draft saved.", { exact: true })).toBeVisible();
-  const screenshotDirectory = path.resolve(
-    path.dirname(fileURLToPath(import.meta.url)),
-    "../../../../.tmp/invoice-cost-table-e2e",
-  );
-  await mkdir(screenshotDirectory, { recursive: true });
   await lineTable.scrollIntoViewIfNeeded();
   await resetTableHorizontalScroll(lineTable);
   await resetTableHorizontalScroll(expenseTable);
@@ -258,6 +268,10 @@ test("runs the current accounting workflows through the packaged app", async ({
     contentType: "image/png",
     path: compactScreenshotPath,
   });
+  await page.getByRole("button", { name: "Manage invoice template", exact: true }).click();
+  await expectCompanyTemplate(page, ORIGINAL_COMPANY_TEMPLATE, true);
+  await captureCompanyTemplate(page, screenshotDirectory, "invoice-template-1024x700", testInfo);
+  await page.getByRole("button", { name: "Close template editor", exact: true }).click();
   await electronHarness.application.evaluate(({ BrowserWindow }, size) => {
     const window = BrowserWindow.getAllWindows()[0];
     if (!window || size[0] === undefined || size[1] === undefined) {
@@ -291,11 +305,66 @@ test("runs the current accounting workflows through the packaged app", async ({
   await expect(page.getByLabel("Quantity 1", { exact: true })).toHaveValue("1.5");
   await expect(page.getByTestId("invoice-total")).toContainText("$660.37");
   await expect(page.getByTestId("invoice-cost")).toContainText("$410.00");
+  await expectInvoiceTemplateSnapshot(page, ORIGINAL_COMPANY_TEMPLATE, "2026-10-30", true);
+  await page.getByRole("button", { name: "Manage invoice template", exact: true }).click();
+  await expectCompanyTemplate(page, ORIGINAL_COMPANY_TEMPLATE, true);
+  await updateCompanyInvoiceTemplate(page);
+  await captureCompanyTemplate(page, screenshotDirectory, "invoice-template-updated", testInfo);
+  const snapshotPdfPath = path.join(userData, "invoice-acceptance-template-snapshot.pdf");
+  await electronHarness.application.evaluate(({ dialog }, filePath) => {
+    dialog.showSaveDialog = async () => ({ canceled: false, filePath });
+  }, snapshotPdfPath);
+  await page.getByRole("button", { name: "Export PDF", exact: true }).click();
+  await expect(page.getByText("Invoice PDF saved.", { exact: true })).toBeVisible();
+  const snapshotPdf = expectCustomerInvoicePdf(await readFile(snapshotPdfPath), [
+    expense.id,
+    trainingExpense.id,
+  ]);
+  expect(snapshotPdf).toContain("DRAFT");
+  await page.getByRole("button", { name: "New invoice", exact: true }).click();
+  const newIssueDate = await page.getByLabel("Issue date", { exact: true }).inputValue();
+  const updatedDueDate = new Date(`${newIssueDate}T00:00:00Z`);
+  updatedDueDate.setUTCDate(updatedDueDate.getUTCDate() + 7);
+  await expectInvoiceTemplateSnapshot(
+    page,
+    UPDATED_COMPANY_TEMPLATE,
+    updatedDueDate.toISOString().slice(0, 10),
+    false,
+  );
+  await page.getByLabel("Invoice number", { exact: true }).fill("INV-TEMPLATE-002");
+  await page.getByLabel("Customer name", { exact: true }).fill("Updated template customer");
+  await page
+    .getByLabel("Customer address", { exact: true })
+    .fill("2 Customer Road, Melbourne VIC 3000");
+  await page.getByLabel("Description 1", { exact: true }).fill("Template defaults service");
+  await page.getByLabel("Unit price 1", { exact: true }).fill("50.00");
+  await page.getByRole("button", { name: "Save draft", exact: true }).click();
+  await expect(page.getByText("Draft saved.", { exact: true })).toBeVisible();
+  const updatedPdfPath = path.join(userData, "invoice-acceptance-updated-template.pdf");
+  await electronHarness.application.evaluate(({ dialog }, filePath) => {
+    dialog.showSaveDialog = async () => ({ canceled: false, filePath });
+  }, updatedPdfPath);
+  await page.getByRole("button", { name: "Export PDF", exact: true }).click();
+  await expect(page.getByText("Invoice PDF saved.", { exact: true })).toBeVisible();
+  const updatedPdfBytes = await readFile(updatedPdfPath);
+  const updatedPdf = expectInvoicePdfBranding(updatedPdfBytes, UPDATED_COMPANY_TEMPLATE, false);
+  expect(updatedPdf).toContain("INV-TEMPLATE-002");
+  expect(updatedPdf).toContain("Updated template customer");
+  expect(updatedPdf).not.toContain(ORIGINAL_COMPANY_TEMPLATE.paymentInstructions);
+  await page.getByRole("button", { name: "Close template editor", exact: true }).click();
+  await page.getByRole("button", { name: "Open INV-MCP-001", exact: true }).click();
+  await expectInvoiceTemplateSnapshot(page, ORIGINAL_COMPANY_TEMPLATE, "2026-10-30", true);
   await page.getByRole("button", { name: "Issue invoice", exact: true }).click();
   await page.getByRole("button", { name: "Confirm issue", exact: true }).click();
   await expect(page.getByText("Invoice issued.", { exact: true })).toBeVisible();
   await expect(page.getByLabel("Customer name", { exact: true })).toBeDisabled();
   await expect(lineTable.getByLabel(`Unit price ${expenseLine}`, { exact: true })).toBeDisabled();
+  await expect(page.getByLabel("Seller address", { exact: true })).toBeDisabled();
+  await expect(page.getByLabel("Notes", { exact: true })).toBeDisabled();
+  await expect(page.getByLabel("Payment instructions", { exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Remove invoice logo", exact: true })).toHaveCount(
+    0,
+  );
   const issuedPdfPath = path.join(userData, "invoice-acceptance-issued.pdf");
   await electronHarness.application.evaluate(({ dialog }, filePath) => {
     dialog.showSaveDialog = async () => ({ canceled: false, filePath });
@@ -335,6 +404,12 @@ test("runs the current accounting workflows through the packaged app", async ({
     "75.00",
   );
   await expect(restarted.getByTestId("invoice-total")).toContainText("$660.37");
+  await expectInvoiceTemplateSnapshot(restarted, ORIGINAL_COMPANY_TEMPLATE, "2026-10-30", true);
+  await restarted.getByRole("button", { name: "Manage invoice template", exact: true }).click();
+  await expectCompanyTemplate(restarted, UPDATED_COMPANY_TEMPLATE, false);
+  await expect(
+    restarted.getByRole("button", { name: "Apply saved template", exact: true }),
+  ).toBeDisabled();
   expect(electronHarness.consoleErrors).toEqual([]);
   expect(electronHarness.pageErrors).toEqual([]);
 });
@@ -361,9 +436,7 @@ async function unlockCurrentWorkflowWorkspace(page: import("@playwright/test").P
 }
 
 function expectCustomerInvoicePdf(bytes: Uint8Array, sourceDocumentIds: readonly string[]): string {
-  expect(Buffer.from(bytes).subarray(0, 5).toString()).toBe("%PDF-");
-  expect(bytes.byteLength).toBeGreaterThan(1000);
-  const content = pdfStreams(bytes);
+  const content = expectInvoicePdfBranding(bytes, ORIGINAL_COMPANY_TEMPLATE, true);
   for (const expected of [
     "Tax Invoice",
     "INV-MCP-001",
@@ -385,6 +458,34 @@ function expectCustomerInvoicePdf(bytes: Uint8Array, sourceDocumentIds: readonly
   );
   for (const privateAmount of ["$40.00", "$60.00", "$290.00", "$410.00", "$190.33"]) {
     expect(content).not.toContain(privateAmount);
+  }
+  return content;
+}
+
+function expectInvoicePdfBranding(
+  bytes: Uint8Array,
+  values: {
+    readonly sellerAddress: string;
+    readonly notes: string;
+    readonly paymentInstructions: string;
+  },
+  hasLogo: boolean,
+): string {
+  expect(Buffer.from(bytes).subarray(0, 5).toString()).toBe("%PDF-");
+  expect(bytes.byteLength).toBeGreaterThan(1000);
+  const content = pdfStreams(bytes);
+  expect(content).toContain(values.sellerAddress);
+  expect(content).toContain(values.notes);
+  expect(content).toContain(values.paymentInstructions);
+  const source = Buffer.from(bytes).toString("latin1");
+  if (hasLogo) {
+    expect(source).toMatch(/\/Subtype\s*\/Image\b/);
+    expect(source).toMatch(/\/Width\s+240\b/);
+    expect(source).toMatch(/\/Height\s+96\b/);
+    expect(source).toMatch(/\/SMask\s+\d+\s+0\s+R/);
+    expect(content).not.toContain(UPDATED_COMPANY_TEMPLATE.paymentInstructions);
+  } else {
+    expect(source).not.toMatch(/\/Subtype\s*\/Image\b/);
   }
   return content;
 }

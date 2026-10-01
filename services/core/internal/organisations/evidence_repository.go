@@ -11,10 +11,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"hash/crc32"
-	"image"
-	_ "image/jpeg"
-	_ "image/png"
 	"regexp"
 	"strconv"
 	"time"
@@ -351,146 +347,11 @@ func validEvidenceContent(mimeType string, content []byte) bool {
 	case "application/pdf":
 		return validPDF(content)
 	case "image/jpeg", "image/png":
-		if (mimeType == "image/jpeg" && !validJPEGStructure(content)) ||
-			(mimeType == "image/png" && !validPNGStructure(content)) {
-			return false
-		}
-		configurationReader := newEvidenceCountingReader(content)
-		configuration, format, err := image.DecodeConfig(configurationReader)
-		if err != nil || configuration.Width <= 0 || configuration.Height <= 0 ||
-			configuration.Width > maxEvidenceImageDimension || configuration.Height > maxEvidenceImageDimension ||
-			uint64(configuration.Width)*uint64(configuration.Height) > maxEvidenceImagePixels {
-			return false
-		}
-		decodedReader := newEvidenceCountingReader(content)
-		decoded, decodedFormat, err := image.Decode(decodedReader)
-		if err != nil || decoded.Bounds().Dx() <= 0 || decoded.Bounds().Dy() <= 0 {
-			return false
-		}
-		expectedFormat := "png"
-		if mimeType == "image/jpeg" {
-			expectedFormat = "jpeg"
-		}
-		return format == expectedFormat && decodedFormat == expectedFormat && decodedReader.count == len(content)
+		_, _, err := ValidateRasterImage(mimeType, content, maxEvidenceImageDimension, maxEvidenceImagePixels)
+		return err == nil
 	default:
 		return false
 	}
-}
-
-type evidenceCountingReader struct {
-	reader *bytes.Reader
-	count  int
-}
-
-func newEvidenceCountingReader(content []byte) *evidenceCountingReader {
-	return &evidenceCountingReader{reader: bytes.NewReader(content)}
-}
-
-func (reader *evidenceCountingReader) Read(destination []byte) (int, error) {
-	count, err := reader.reader.Read(destination)
-	reader.count += count
-	return count, err
-}
-
-func validPNGStructure(content []byte) bool {
-	signature := []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}
-	if !bytes.HasPrefix(content, signature) {
-		return false
-	}
-	position := len(signature)
-	seenHeader := false
-	seenImageData := false
-	for position < len(content) {
-		if len(content)-position < 12 {
-			return false
-		}
-		length := uint64(binary.BigEndian.Uint32(content[position : position+4]))
-		if length > uint64(len(content)-position-12) {
-			return false
-		}
-		typeStart := position + 4
-		dataEnd := typeStart + 4 + int(length)
-		chunkEnd := dataEnd + 4
-		chunkType := string(content[typeStart : typeStart+4])
-		if crc32.ChecksumIEEE(content[typeStart:dataEnd]) != binary.BigEndian.Uint32(content[dataEnd:chunkEnd]) {
-			return false
-		}
-		position = chunkEnd
-		switch chunkType {
-		case "IHDR":
-			if seenHeader || length != 13 || typeStart != len(signature)+4 {
-				return false
-			}
-			seenHeader = true
-		case "IDAT":
-			if !seenHeader {
-				return false
-			}
-			seenImageData = true
-		case "IEND":
-			return seenHeader && seenImageData && length == 0 && position == len(content)
-		}
-	}
-	return false
-}
-
-func validJPEGStructure(content []byte) bool {
-	if len(content) < 4 || content[0] != 0xff || content[1] != 0xd8 {
-		return false
-	}
-	position := 2
-	inScan := false
-	for position < len(content) {
-		if inScan && content[position] != 0xff {
-			position++
-			continue
-		}
-		if content[position] != 0xff {
-			return false
-		}
-		for position < len(content) && content[position] == 0xff {
-			position++
-		}
-		if position >= len(content) {
-			return false
-		}
-		marker := content[position]
-		position++
-		if inScan {
-			switch {
-			case marker == 0x00:
-				continue
-			case marker >= 0xd0 && marker <= 0xd7:
-				continue
-			case marker == 0xd9:
-				return position == len(content)
-			}
-			inScan = false
-		} else if marker == 0x00 {
-			return false
-		}
-		if marker == 0xd9 {
-			return position == len(content)
-		}
-		if marker == 0xd8 {
-			return false
-		}
-		if marker == 0x01 || (marker >= 0xd0 && marker <= 0xd7) {
-			continue
-		}
-		if len(content)-position < 2 {
-			return false
-		}
-		segmentLength := int(binary.BigEndian.Uint16(content[position : position+2]))
-		if segmentLength < 2 || segmentLength > len(content)-position {
-			return false
-		}
-		position += segmentLength
-		if marker == 0xda {
-			inScan = true
-		}
-	}
-	return false
 }
 
 func validPDF(content []byte) bool {

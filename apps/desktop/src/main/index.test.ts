@@ -41,6 +41,18 @@ function occurrences(calls: readonly string[], value: string): number {
 
 function unusedCoreMethods() {
   return {
+    getInvoiceTemplate: vi.fn(async () => {
+      throw new Error("unused");
+    }),
+    saveInvoiceTemplate: vi.fn(async () => {
+      throw new Error("unused");
+    }),
+    uploadInvoiceLogo: vi.fn(async () => {
+      throw new Error("unused");
+    }),
+    getInvoiceLogo: vi.fn(async () => {
+      throw new Error("unused");
+    }),
     saveInvoiceDraft: vi.fn(async () => {
       throw new Error("unused");
     }),

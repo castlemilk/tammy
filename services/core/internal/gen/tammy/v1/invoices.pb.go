@@ -366,9 +366,11 @@ type Invoice struct {
 	GstMinor       int64                  `protobuf:"varint,10,opt,name=gst_minor,json=gstMinor,proto3" json:"gst_minor,omitempty"`
 	TotalMinor     int64                  `protobuf:"varint,11,opt,name=total_minor,json=totalMinor,proto3" json:"total_minor,omitempty"`
 	// cost_minor sums only explicitly known internal costs, never customer charges.
-	CostMinor     int64                  `protobuf:"varint,12,opt,name=cost_minor,json=costMinor,proto3" json:"cost_minor,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	CostMinor int64                  `protobuf:"varint,12,opt,name=cost_minor,json=costMinor,proto3" json:"cost_minor,omitempty"`
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// logo_asset_id is the reviewed immutable logo snapshot, never current branding.
+	LogoAssetId   *string `protobuf:"bytes,15,opt,name=logo_asset_id,json=logoAssetId,proto3,oneof" json:"logo_asset_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -501,6 +503,13 @@ func (x *Invoice) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *Invoice) GetLogoAssetId() string {
+	if x != nil && x.LogoAssetId != nil {
+		return *x.LogoAssetId
+	}
+	return ""
+}
+
 type SaveInvoiceDraftRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	CommandContext *CommandContext        `protobuf:"bytes,1,opt,name=command_context,json=commandContext,proto3" json:"command_context,omitempty"`
@@ -509,8 +518,10 @@ type SaveInvoiceDraftRequest struct {
 	InvoiceId       string        `protobuf:"bytes,3,opt,name=invoice_id,json=invoiceId,proto3" json:"invoice_id,omitempty"`
 	ExpectedVersion uint64        `protobuf:"varint,4,opt,name=expected_version,json=expectedVersion,proto3" json:"expected_version,omitempty"`
 	Draft           *InvoiceDraft `protobuf:"bytes,5,opt,name=draft,proto3" json:"draft,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Omission preserves an existing draft's logo. Empty explicitly removes it.
+	LogoAssetId   *string `protobuf:"bytes,6,opt,name=logo_asset_id,json=logoAssetId,proto3,oneof" json:"logo_asset_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *SaveInvoiceDraftRequest) Reset() {
@@ -576,6 +587,13 @@ func (x *SaveInvoiceDraftRequest) GetDraft() *InvoiceDraft {
 		return x.Draft
 	}
 	return nil
+}
+
+func (x *SaveInvoiceDraftRequest) GetLogoAssetId() string {
+	if x != nil && x.LogoAssetId != nil {
+		return *x.LogoAssetId
+	}
+	return ""
 }
 
 type SaveInvoiceDraftResponse struct {
@@ -950,6 +968,677 @@ func (x *IssueInvoiceResponse) GetInvoice() *Invoice {
 	return nil
 }
 
+// InvoiceTemplateInput initializes future invoices; it never rewrites saved documents.
+type InvoiceTemplateInput struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	SellerAddress       string                 `protobuf:"bytes,1,opt,name=seller_address,json=sellerAddress,proto3" json:"seller_address,omitempty"`
+	Notes               string                 `protobuf:"bytes,2,opt,name=notes,proto3" json:"notes,omitempty"`
+	PaymentInstructions string                 `protobuf:"bytes,3,opt,name=payment_instructions,json=paymentInstructions,proto3" json:"payment_instructions,omitempty"`
+	PaymentTermsDays    uint32                 `protobuf:"varint,4,opt,name=payment_terms_days,json=paymentTermsDays,proto3" json:"payment_terms_days,omitempty"`
+	LogoAssetId         *string                `protobuf:"bytes,5,opt,name=logo_asset_id,json=logoAssetId,proto3,oneof" json:"logo_asset_id,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *InvoiceTemplateInput) Reset() {
+	*x = InvoiceTemplateInput{}
+	mi := &file_tammy_v1_invoices_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InvoiceTemplateInput) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InvoiceTemplateInput) ProtoMessage() {}
+
+func (x *InvoiceTemplateInput) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_invoices_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InvoiceTemplateInput.ProtoReflect.Descriptor instead.
+func (*InvoiceTemplateInput) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_invoices_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *InvoiceTemplateInput) GetSellerAddress() string {
+	if x != nil {
+		return x.SellerAddress
+	}
+	return ""
+}
+
+func (x *InvoiceTemplateInput) GetNotes() string {
+	if x != nil {
+		return x.Notes
+	}
+	return ""
+}
+
+func (x *InvoiceTemplateInput) GetPaymentInstructions() string {
+	if x != nil {
+		return x.PaymentInstructions
+	}
+	return ""
+}
+
+func (x *InvoiceTemplateInput) GetPaymentTermsDays() uint32 {
+	if x != nil {
+		return x.PaymentTermsDays
+	}
+	return 0
+}
+
+func (x *InvoiceTemplateInput) GetLogoAssetId() string {
+	if x != nil && x.LogoAssetId != nil {
+		return *x.LogoAssetId
+	}
+	return ""
+}
+
+// Version zero denotes the unsaved built-in defaults (14-day payment terms).
+type InvoiceTemplate struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganisationId string                 `protobuf:"bytes,1,opt,name=organisation_id,json=organisationId,proto3" json:"organisation_id,omitempty"`
+	Version        uint64                 `protobuf:"varint,2,opt,name=version,proto3" json:"version,omitempty"`
+	Defaults       *InvoiceTemplateInput  `protobuf:"bytes,3,opt,name=defaults,proto3" json:"defaults,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *InvoiceTemplate) Reset() {
+	*x = InvoiceTemplate{}
+	mi := &file_tammy_v1_invoices_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InvoiceTemplate) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InvoiceTemplate) ProtoMessage() {}
+
+func (x *InvoiceTemplate) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_invoices_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InvoiceTemplate.ProtoReflect.Descriptor instead.
+func (*InvoiceTemplate) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_invoices_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *InvoiceTemplate) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *InvoiceTemplate) GetVersion() uint64 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+func (x *InvoiceTemplate) GetDefaults() *InvoiceTemplateInput {
+	if x != nil {
+		return x.Defaults
+	}
+	return nil
+}
+
+type GetInvoiceTemplateRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Authentication *AuthenticationContext `protobuf:"bytes,1,opt,name=authentication,proto3" json:"authentication,omitempty"`
+	OrganisationId string                 `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId,proto3" json:"organisation_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *GetInvoiceTemplateRequest) Reset() {
+	*x = GetInvoiceTemplateRequest{}
+	mi := &file_tammy_v1_invoices_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetInvoiceTemplateRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetInvoiceTemplateRequest) ProtoMessage() {}
+
+func (x *GetInvoiceTemplateRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_invoices_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetInvoiceTemplateRequest.ProtoReflect.Descriptor instead.
+func (*GetInvoiceTemplateRequest) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_invoices_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *GetInvoiceTemplateRequest) GetAuthentication() *AuthenticationContext {
+	if x != nil {
+		return x.Authentication
+	}
+	return nil
+}
+
+func (x *GetInvoiceTemplateRequest) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+type GetInvoiceTemplateResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Template      *InvoiceTemplate       `protobuf:"bytes,1,opt,name=template,proto3" json:"template,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetInvoiceTemplateResponse) Reset() {
+	*x = GetInvoiceTemplateResponse{}
+	mi := &file_tammy_v1_invoices_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetInvoiceTemplateResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetInvoiceTemplateResponse) ProtoMessage() {}
+
+func (x *GetInvoiceTemplateResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_invoices_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetInvoiceTemplateResponse.ProtoReflect.Descriptor instead.
+func (*GetInvoiceTemplateResponse) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_invoices_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *GetInvoiceTemplateResponse) GetTemplate() *InvoiceTemplate {
+	if x != nil {
+		return x.Template
+	}
+	return nil
+}
+
+type SaveInvoiceTemplateRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	CommandContext  *CommandContext        `protobuf:"bytes,1,opt,name=command_context,json=commandContext,proto3" json:"command_context,omitempty"`
+	OrganisationId  string                 `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId,proto3" json:"organisation_id,omitempty"`
+	ExpectedVersion uint64                 `protobuf:"varint,3,opt,name=expected_version,json=expectedVersion,proto3" json:"expected_version,omitempty"`
+	Defaults        *InvoiceTemplateInput  `protobuf:"bytes,4,opt,name=defaults,proto3" json:"defaults,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *SaveInvoiceTemplateRequest) Reset() {
+	*x = SaveInvoiceTemplateRequest{}
+	mi := &file_tammy_v1_invoices_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SaveInvoiceTemplateRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SaveInvoiceTemplateRequest) ProtoMessage() {}
+
+func (x *SaveInvoiceTemplateRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_invoices_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SaveInvoiceTemplateRequest.ProtoReflect.Descriptor instead.
+func (*SaveInvoiceTemplateRequest) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_invoices_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *SaveInvoiceTemplateRequest) GetCommandContext() *CommandContext {
+	if x != nil {
+		return x.CommandContext
+	}
+	return nil
+}
+
+func (x *SaveInvoiceTemplateRequest) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *SaveInvoiceTemplateRequest) GetExpectedVersion() uint64 {
+	if x != nil {
+		return x.ExpectedVersion
+	}
+	return 0
+}
+
+func (x *SaveInvoiceTemplateRequest) GetDefaults() *InvoiceTemplateInput {
+	if x != nil {
+		return x.Defaults
+	}
+	return nil
+}
+
+type SaveInvoiceTemplateResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Template      *InvoiceTemplate       `protobuf:"bytes,1,opt,name=template,proto3" json:"template,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SaveInvoiceTemplateResponse) Reset() {
+	*x = SaveInvoiceTemplateResponse{}
+	mi := &file_tammy_v1_invoices_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SaveInvoiceTemplateResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SaveInvoiceTemplateResponse) ProtoMessage() {}
+
+func (x *SaveInvoiceTemplateResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_invoices_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SaveInvoiceTemplateResponse.ProtoReflect.Descriptor instead.
+func (*SaveInvoiceTemplateResponse) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_invoices_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *SaveInvoiceTemplateResponse) GetTemplate() *InvoiceTemplate {
+	if x != nil {
+		return x.Template
+	}
+	return nil
+}
+
+// Logo metadata is safe to include without adding image bytes to invoice lists.
+type InvoiceLogo struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	OrganisationId string                 `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId,proto3" json:"organisation_id,omitempty"`
+	MimeType       string                 `protobuf:"bytes,3,opt,name=mime_type,json=mimeType,proto3" json:"mime_type,omitempty"`
+	ByteLength     uint32                 `protobuf:"varint,4,opt,name=byte_length,json=byteLength,proto3" json:"byte_length,omitempty"`
+	Sha256         []byte                 `protobuf:"bytes,5,opt,name=sha256,proto3" json:"sha256,omitempty"`
+	Width          uint32                 `protobuf:"varint,6,opt,name=width,proto3" json:"width,omitempty"`
+	Height         uint32                 `protobuf:"varint,7,opt,name=height,proto3" json:"height,omitempty"`
+	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *InvoiceLogo) Reset() {
+	*x = InvoiceLogo{}
+	mi := &file_tammy_v1_invoices_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InvoiceLogo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InvoiceLogo) ProtoMessage() {}
+
+func (x *InvoiceLogo) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_invoices_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InvoiceLogo.ProtoReflect.Descriptor instead.
+func (*InvoiceLogo) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_invoices_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *InvoiceLogo) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *InvoiceLogo) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *InvoiceLogo) GetMimeType() string {
+	if x != nil {
+		return x.MimeType
+	}
+	return ""
+}
+
+func (x *InvoiceLogo) GetByteLength() uint32 {
+	if x != nil {
+		return x.ByteLength
+	}
+	return 0
+}
+
+func (x *InvoiceLogo) GetSha256() []byte {
+	if x != nil {
+		return x.Sha256
+	}
+	return nil
+}
+
+func (x *InvoiceLogo) GetWidth() uint32 {
+	if x != nil {
+		return x.Width
+	}
+	return 0
+}
+
+func (x *InvoiceLogo) GetHeight() uint32 {
+	if x != nil {
+		return x.Height
+	}
+	return 0
+}
+
+func (x *InvoiceLogo) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+type UploadInvoiceLogoRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	CommandContext *CommandContext        `protobuf:"bytes,1,opt,name=command_context,json=commandContext,proto3" json:"command_context,omitempty"`
+	OrganisationId string                 `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId,proto3" json:"organisation_id,omitempty"`
+	MimeType       string                 `protobuf:"bytes,3,opt,name=mime_type,json=mimeType,proto3" json:"mime_type,omitempty"`
+	Content        []byte                 `protobuf:"bytes,4,opt,name=content,proto3" json:"content,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *UploadInvoiceLogoRequest) Reset() {
+	*x = UploadInvoiceLogoRequest{}
+	mi := &file_tammy_v1_invoices_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UploadInvoiceLogoRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UploadInvoiceLogoRequest) ProtoMessage() {}
+
+func (x *UploadInvoiceLogoRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_invoices_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UploadInvoiceLogoRequest.ProtoReflect.Descriptor instead.
+func (*UploadInvoiceLogoRequest) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_invoices_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *UploadInvoiceLogoRequest) GetCommandContext() *CommandContext {
+	if x != nil {
+		return x.CommandContext
+	}
+	return nil
+}
+
+func (x *UploadInvoiceLogoRequest) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *UploadInvoiceLogoRequest) GetMimeType() string {
+	if x != nil {
+		return x.MimeType
+	}
+	return ""
+}
+
+func (x *UploadInvoiceLogoRequest) GetContent() []byte {
+	if x != nil {
+		return x.Content
+	}
+	return nil
+}
+
+type UploadInvoiceLogoResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Logo          *InvoiceLogo           `protobuf:"bytes,1,opt,name=logo,proto3" json:"logo,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UploadInvoiceLogoResponse) Reset() {
+	*x = UploadInvoiceLogoResponse{}
+	mi := &file_tammy_v1_invoices_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UploadInvoiceLogoResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UploadInvoiceLogoResponse) ProtoMessage() {}
+
+func (x *UploadInvoiceLogoResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_invoices_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UploadInvoiceLogoResponse.ProtoReflect.Descriptor instead.
+func (*UploadInvoiceLogoResponse) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_invoices_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *UploadInvoiceLogoResponse) GetLogo() *InvoiceLogo {
+	if x != nil {
+		return x.Logo
+	}
+	return nil
+}
+
+type GetInvoiceLogoRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Authentication *AuthenticationContext `protobuf:"bytes,1,opt,name=authentication,proto3" json:"authentication,omitempty"`
+	OrganisationId string                 `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId,proto3" json:"organisation_id,omitempty"`
+	LogoAssetId    string                 `protobuf:"bytes,3,opt,name=logo_asset_id,json=logoAssetId,proto3" json:"logo_asset_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *GetInvoiceLogoRequest) Reset() {
+	*x = GetInvoiceLogoRequest{}
+	mi := &file_tammy_v1_invoices_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetInvoiceLogoRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetInvoiceLogoRequest) ProtoMessage() {}
+
+func (x *GetInvoiceLogoRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_invoices_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetInvoiceLogoRequest.ProtoReflect.Descriptor instead.
+func (*GetInvoiceLogoRequest) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_invoices_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *GetInvoiceLogoRequest) GetAuthentication() *AuthenticationContext {
+	if x != nil {
+		return x.Authentication
+	}
+	return nil
+}
+
+func (x *GetInvoiceLogoRequest) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *GetInvoiceLogoRequest) GetLogoAssetId() string {
+	if x != nil {
+		return x.LogoAssetId
+	}
+	return ""
+}
+
+type GetInvoiceLogoResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Logo          *InvoiceLogo           `protobuf:"bytes,1,opt,name=logo,proto3" json:"logo,omitempty"`
+	Content       []byte                 `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetInvoiceLogoResponse) Reset() {
+	*x = GetInvoiceLogoResponse{}
+	mi := &file_tammy_v1_invoices_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetInvoiceLogoResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetInvoiceLogoResponse) ProtoMessage() {}
+
+func (x *GetInvoiceLogoResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_invoices_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetInvoiceLogoResponse.ProtoReflect.Descriptor instead.
+func (*GetInvoiceLogoResponse) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_invoices_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *GetInvoiceLogoResponse) GetLogo() *InvoiceLogo {
+	if x != nil {
+		return x.Logo
+	}
+	return nil
+}
+
+func (x *GetInvoiceLogoResponse) GetContent() []byte {
+	if x != nil {
+		return x.Content
+	}
+	return nil
+}
+
 var File_tammy_v1_invoices_proto protoreflect.FileDescriptor
 
 const file_tammy_v1_invoices_proto_rawDesc = "" +
@@ -990,7 +1679,7 @@ const file_tammy_v1_invoices_proto_rawDesc = "" +
 	"totalMinor\x122\n" +
 	"\n" +
 	"cost_minor\x18\x04 \x01(\x03B\x0e\xbaH\v\"\t\x18\x80\xa0\x94\xa5\x8d\x1d(\x00H\x00R\tcostMinor\x88\x01\x01B\r\n" +
-	"\v_cost_minor\"\x9a\x06\n" +
+	"\v_cost_minor\"\xa3\a\n" +
 	"\aInvoice\x12\\\n" +
 	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12u\n" +
 	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12!\n" +
@@ -1016,14 +1705,18 @@ const file_tammy_v1_invoices_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\tcreatedAt\x12A\n" +
 	"\n" +
-	"updated_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\tupdatedAt\"\xe4\x02\n" +
+	"updated_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\tupdatedAt\x12u\n" +
+	"\rlogo_asset_id\x18\x0f \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$H\x00R\vlogoAssetId\x88\x01\x01B\x10\n" +
+	"\x0e_logo_asset_id\"\xa8\x03\n" +
 	"\x17SaveInvoiceDraftRequest\x12I\n" +
 	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
 	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12&\n" +
 	"\n" +
 	"invoice_id\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x18$R\tinvoiceId\x12)\n" +
 	"\x10expected_version\x18\x04 \x01(\x04R\x0fexpectedVersion\x124\n" +
-	"\x05draft\x18\x05 \x01(\v2\x16.tammy.v1.InvoiceDraftB\x06\xbaH\x03\xc8\x01\x01R\x05draft\"O\n" +
+	"\x05draft\x18\x05 \x01(\v2\x16.tammy.v1.InvoiceDraftB\x06\xbaH\x03\xc8\x01\x01R\x05draft\x120\n" +
+	"\rlogo_asset_id\x18\x06 \x01(\tB\a\xbaH\x04r\x02\x18$H\x00R\vlogoAssetId\x88\x01\x01B\x10\n" +
+	"\x0e_logo_asset_id\"O\n" +
 	"\x18SaveInvoiceDraftResponse\x123\n" +
 	"\ainvoice\x18\x01 \x01(\v2\x11.tammy.v1.InvoiceB\x06\xbaH\x03\xc8\x01\x01R\ainvoice\"\xc8\x02\n" +
 	"\x11GetInvoiceRequest\x12O\n" +
@@ -1047,17 +1740,73 @@ const file_tammy_v1_invoices_proto_rawDesc = "" +
 	"invoice_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\tinvoiceId\x122\n" +
 	"\x10expected_version\x18\x04 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0fexpectedVersion\"K\n" +
 	"\x14IssueInvoiceResponse\x123\n" +
-	"\ainvoice\x18\x01 \x01(\v2\x11.tammy.v1.InvoiceB\x06\xbaH\x03\xc8\x01\x01R\ainvoice*`\n" +
+	"\ainvoice\x18\x01 \x01(\v2\x11.tammy.v1.InvoiceB\x06\xbaH\x03\xc8\x01\x01R\ainvoice\"\xe5\x02\n" +
+	"\x14InvoiceTemplateInput\x12/\n" +
+	"\x0eseller_address\x18\x01 \x01(\tB\b\xbaH\x05r\x03\x18\xe8\aR\rsellerAddress\x12\x1e\n" +
+	"\x05notes\x18\x02 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\x05notes\x12;\n" +
+	"\x14payment_instructions\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xe8\aR\x13paymentInstructions\x126\n" +
+	"\x12payment_terms_days\x18\x04 \x01(\rB\b\xbaH\x05*\x03\x18\xed\x02R\x10paymentTermsDays\x12u\n" +
+	"\rlogo_asset_id\x18\x05 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$H\x00R\vlogoAssetId\x88\x01\x01B\x10\n" +
+	"\x0e_logo_asset_id\"\xe6\x01\n" +
+	"\x0fInvoiceTemplate\x12u\n" +
+	"\x0forganisation_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12\x18\n" +
+	"\aversion\x18\x02 \x01(\x04R\aversion\x12B\n" +
+	"\bdefaults\x18\x03 \x01(\v2\x1e.tammy.v1.InvoiceTemplateInputB\x06\xbaH\x03\xc8\x01\x01R\bdefaults\"\xe3\x01\n" +
+	"\x19GetInvoiceTemplateRequest\x12O\n" +
+	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\"[\n" +
+	"\x1aGetInvoiceTemplateResponse\x12=\n" +
+	"\btemplate\x18\x01 \x01(\v2\x19.tammy.v1.InvoiceTemplateB\x06\xbaH\x03\xc8\x01\x01R\btemplate\"\xcd\x02\n" +
+	"\x1aSaveInvoiceTemplateRequest\x12I\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12)\n" +
+	"\x10expected_version\x18\x03 \x01(\x04R\x0fexpectedVersion\x12B\n" +
+	"\bdefaults\x18\x04 \x01(\v2\x1e.tammy.v1.InvoiceTemplateInputB\x06\xbaH\x03\xc8\x01\x01R\bdefaults\"\\\n" +
+	"\x1bSaveInvoiceTemplateResponse\x12=\n" +
+	"\btemplate\x18\x01 \x01(\v2\x19.tammy.v1.InvoiceTemplateB\x06\xbaH\x03\xc8\x01\x01R\btemplate\"\xf5\x03\n" +
+	"\vInvoiceLogo\x12\\\n" +
+	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x129\n" +
+	"\tmime_type\x18\x03 \x01(\tB\x1c\xbaH\x19r\x17R\timage/pngR\n" +
+	"image/jpegR\bmimeType\x12,\n" +
+	"\vbyte_length\x18\x04 \x01(\rB\v\xbaH\b*\x06\x18\x80\x80@(\x01R\n" +
+	"byteLength\x12\x1f\n" +
+	"\x06sha256\x18\x05 \x01(\fB\a\xbaH\x04z\x02h R\x06sha256\x12 \n" +
+	"\x05width\x18\x06 \x01(\rB\n" +
+	"\xbaH\a*\x05\x18\x80 (\x01R\x05width\x12\"\n" +
+	"\x06height\x18\a \x01(\rB\n" +
+	"\xbaH\a*\x05\x18\x80 (\x01R\x06height\x12A\n" +
+	"\n" +
+	"created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\tcreatedAt\"\xbe\x02\n" +
+	"\x18UploadInvoiceLogoRequest\x12I\n" +
+	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x129\n" +
+	"\tmime_type\x18\x03 \x01(\tB\x1c\xbaH\x19r\x17R\timage/pngR\n" +
+	"image/jpegR\bmimeType\x12%\n" +
+	"\acontent\x18\x04 \x01(\fB\v\xbaH\bz\x06\x10\x01\x18\x80\x80@R\acontent\"N\n" +
+	"\x19UploadInvoiceLogoResponse\x121\n" +
+	"\x04logo\x18\x01 \x01(\v2\x15.tammy.v1.InvoiceLogoB\x06\xbaH\x03\xc8\x01\x01R\x04logo\"\xd1\x02\n" +
+	"\x15GetInvoiceLogoRequest\x12O\n" +
+	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12p\n" +
+	"\rlogo_asset_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\vlogoAssetId\"r\n" +
+	"\x16GetInvoiceLogoResponse\x121\n" +
+	"\x04logo\x18\x01 \x01(\v2\x15.tammy.v1.InvoiceLogoB\x06\xbaH\x03\xc8\x01\x01R\x04logo\x12%\n" +
+	"\acontent\x18\x02 \x01(\fB\v\xbaH\bz\x06\x10\x01\x18\x80\x80@R\acontent*`\n" +
 	"\fInvoiceState\x12\x1d\n" +
 	"\x19INVOICE_STATE_UNSPECIFIED\x10\x00\x12\x17\n" +
 	"\x13INVOICE_STATE_DRAFT\x10\x01\x12\x18\n" +
-	"\x14INVOICE_STATE_ISSUED\x10\x022\xd2\x02\n" +
+	"\x14INVOICE_STATE_ISSUED\x10\x022\xca\x05\n" +
 	"\x0eInvoiceService\x12Y\n" +
 	"\x10SaveInvoiceDraft\x12!.tammy.v1.SaveInvoiceDraftRequest\x1a\".tammy.v1.SaveInvoiceDraftResponse\x12G\n" +
 	"\n" +
 	"GetInvoice\x12\x1b.tammy.v1.GetInvoiceRequest\x1a\x1c.tammy.v1.GetInvoiceResponse\x12M\n" +
 	"\fListInvoices\x12\x1d.tammy.v1.ListInvoicesRequest\x1a\x1e.tammy.v1.ListInvoicesResponse\x12M\n" +
-	"\fIssueInvoice\x12\x1d.tammy.v1.IssueInvoiceRequest\x1a\x1e.tammy.v1.IssueInvoiceResponseBGZEgithub.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1b\x06proto3"
+	"\fIssueInvoice\x12\x1d.tammy.v1.IssueInvoiceRequest\x1a\x1e.tammy.v1.IssueInvoiceResponse\x12_\n" +
+	"\x12GetInvoiceTemplate\x12#.tammy.v1.GetInvoiceTemplateRequest\x1a$.tammy.v1.GetInvoiceTemplateResponse\x12b\n" +
+	"\x13SaveInvoiceTemplate\x12$.tammy.v1.SaveInvoiceTemplateRequest\x1a%.tammy.v1.SaveInvoiceTemplateResponse\x12\\\n" +
+	"\x11UploadInvoiceLogo\x12\".tammy.v1.UploadInvoiceLogoRequest\x1a#.tammy.v1.UploadInvoiceLogoResponse\x12S\n" +
+	"\x0eGetInvoiceLogo\x12\x1f.tammy.v1.GetInvoiceLogoRequest\x1a .tammy.v1.GetInvoiceLogoResponseBGZEgithub.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1b\x06proto3"
 
 var (
 	file_tammy_v1_invoices_proto_rawDescOnce sync.Once
@@ -1072,60 +1821,90 @@ func file_tammy_v1_invoices_proto_rawDescGZIP() []byte {
 }
 
 var file_tammy_v1_invoices_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_tammy_v1_invoices_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_tammy_v1_invoices_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
 var file_tammy_v1_invoices_proto_goTypes = []any{
-	(InvoiceState)(0),                // 0: tammy.v1.InvoiceState
-	(*InvoiceLineInput)(nil),         // 1: tammy.v1.InvoiceLineInput
-	(*InvoiceDraft)(nil),             // 2: tammy.v1.InvoiceDraft
-	(*InvoiceLineTotal)(nil),         // 3: tammy.v1.InvoiceLineTotal
-	(*Invoice)(nil),                  // 4: tammy.v1.Invoice
-	(*SaveInvoiceDraftRequest)(nil),  // 5: tammy.v1.SaveInvoiceDraftRequest
-	(*SaveInvoiceDraftResponse)(nil), // 6: tammy.v1.SaveInvoiceDraftResponse
-	(*GetInvoiceRequest)(nil),        // 7: tammy.v1.GetInvoiceRequest
-	(*GetInvoiceResponse)(nil),       // 8: tammy.v1.GetInvoiceResponse
-	(*ListInvoicesRequest)(nil),      // 9: tammy.v1.ListInvoicesRequest
-	(*ListInvoicesResponse)(nil),     // 10: tammy.v1.ListInvoicesResponse
-	(*IssueInvoiceRequest)(nil),      // 11: tammy.v1.IssueInvoiceRequest
-	(*IssueInvoiceResponse)(nil),     // 12: tammy.v1.IssueInvoiceResponse
-	(TaxTreatment)(0),                // 13: tammy.v1.TaxTreatment
-	(*timestamppb.Timestamp)(nil),    // 14: google.protobuf.Timestamp
-	(*CommandContext)(nil),           // 15: tammy.v1.CommandContext
-	(*AuthenticationContext)(nil),    // 16: tammy.v1.AuthenticationContext
-	(*PageRequest)(nil),              // 17: tammy.v1.PageRequest
-	(*PageInfo)(nil),                 // 18: tammy.v1.PageInfo
+	(InvoiceState)(0),                   // 0: tammy.v1.InvoiceState
+	(*InvoiceLineInput)(nil),            // 1: tammy.v1.InvoiceLineInput
+	(*InvoiceDraft)(nil),                // 2: tammy.v1.InvoiceDraft
+	(*InvoiceLineTotal)(nil),            // 3: tammy.v1.InvoiceLineTotal
+	(*Invoice)(nil),                     // 4: tammy.v1.Invoice
+	(*SaveInvoiceDraftRequest)(nil),     // 5: tammy.v1.SaveInvoiceDraftRequest
+	(*SaveInvoiceDraftResponse)(nil),    // 6: tammy.v1.SaveInvoiceDraftResponse
+	(*GetInvoiceRequest)(nil),           // 7: tammy.v1.GetInvoiceRequest
+	(*GetInvoiceResponse)(nil),          // 8: tammy.v1.GetInvoiceResponse
+	(*ListInvoicesRequest)(nil),         // 9: tammy.v1.ListInvoicesRequest
+	(*ListInvoicesResponse)(nil),        // 10: tammy.v1.ListInvoicesResponse
+	(*IssueInvoiceRequest)(nil),         // 11: tammy.v1.IssueInvoiceRequest
+	(*IssueInvoiceResponse)(nil),        // 12: tammy.v1.IssueInvoiceResponse
+	(*InvoiceTemplateInput)(nil),        // 13: tammy.v1.InvoiceTemplateInput
+	(*InvoiceTemplate)(nil),             // 14: tammy.v1.InvoiceTemplate
+	(*GetInvoiceTemplateRequest)(nil),   // 15: tammy.v1.GetInvoiceTemplateRequest
+	(*GetInvoiceTemplateResponse)(nil),  // 16: tammy.v1.GetInvoiceTemplateResponse
+	(*SaveInvoiceTemplateRequest)(nil),  // 17: tammy.v1.SaveInvoiceTemplateRequest
+	(*SaveInvoiceTemplateResponse)(nil), // 18: tammy.v1.SaveInvoiceTemplateResponse
+	(*InvoiceLogo)(nil),                 // 19: tammy.v1.InvoiceLogo
+	(*UploadInvoiceLogoRequest)(nil),    // 20: tammy.v1.UploadInvoiceLogoRequest
+	(*UploadInvoiceLogoResponse)(nil),   // 21: tammy.v1.UploadInvoiceLogoResponse
+	(*GetInvoiceLogoRequest)(nil),       // 22: tammy.v1.GetInvoiceLogoRequest
+	(*GetInvoiceLogoResponse)(nil),      // 23: tammy.v1.GetInvoiceLogoResponse
+	(TaxTreatment)(0),                   // 24: tammy.v1.TaxTreatment
+	(*timestamppb.Timestamp)(nil),       // 25: google.protobuf.Timestamp
+	(*CommandContext)(nil),              // 26: tammy.v1.CommandContext
+	(*AuthenticationContext)(nil),       // 27: tammy.v1.AuthenticationContext
+	(*PageRequest)(nil),                 // 28: tammy.v1.PageRequest
+	(*PageInfo)(nil),                    // 29: tammy.v1.PageInfo
 }
 var file_tammy_v1_invoices_proto_depIdxs = []int32{
-	13, // 0: tammy.v1.InvoiceLineInput.tax_treatment:type_name -> tammy.v1.TaxTreatment
+	24, // 0: tammy.v1.InvoiceLineInput.tax_treatment:type_name -> tammy.v1.TaxTreatment
 	1,  // 1: tammy.v1.InvoiceDraft.lines:type_name -> tammy.v1.InvoiceLineInput
 	0,  // 2: tammy.v1.Invoice.state:type_name -> tammy.v1.InvoiceState
 	2,  // 3: tammy.v1.Invoice.draft:type_name -> tammy.v1.InvoiceDraft
 	3,  // 4: tammy.v1.Invoice.line_totals:type_name -> tammy.v1.InvoiceLineTotal
-	14, // 5: tammy.v1.Invoice.created_at:type_name -> google.protobuf.Timestamp
-	14, // 6: tammy.v1.Invoice.updated_at:type_name -> google.protobuf.Timestamp
-	15, // 7: tammy.v1.SaveInvoiceDraftRequest.command_context:type_name -> tammy.v1.CommandContext
+	25, // 5: tammy.v1.Invoice.created_at:type_name -> google.protobuf.Timestamp
+	25, // 6: tammy.v1.Invoice.updated_at:type_name -> google.protobuf.Timestamp
+	26, // 7: tammy.v1.SaveInvoiceDraftRequest.command_context:type_name -> tammy.v1.CommandContext
 	2,  // 8: tammy.v1.SaveInvoiceDraftRequest.draft:type_name -> tammy.v1.InvoiceDraft
 	4,  // 9: tammy.v1.SaveInvoiceDraftResponse.invoice:type_name -> tammy.v1.Invoice
-	16, // 10: tammy.v1.GetInvoiceRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	27, // 10: tammy.v1.GetInvoiceRequest.authentication:type_name -> tammy.v1.AuthenticationContext
 	4,  // 11: tammy.v1.GetInvoiceResponse.invoice:type_name -> tammy.v1.Invoice
-	16, // 12: tammy.v1.ListInvoicesRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	17, // 13: tammy.v1.ListInvoicesRequest.page:type_name -> tammy.v1.PageRequest
+	27, // 12: tammy.v1.ListInvoicesRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	28, // 13: tammy.v1.ListInvoicesRequest.page:type_name -> tammy.v1.PageRequest
 	4,  // 14: tammy.v1.ListInvoicesResponse.invoices:type_name -> tammy.v1.Invoice
-	18, // 15: tammy.v1.ListInvoicesResponse.page:type_name -> tammy.v1.PageInfo
-	15, // 16: tammy.v1.IssueInvoiceRequest.command_context:type_name -> tammy.v1.CommandContext
+	29, // 15: tammy.v1.ListInvoicesResponse.page:type_name -> tammy.v1.PageInfo
+	26, // 16: tammy.v1.IssueInvoiceRequest.command_context:type_name -> tammy.v1.CommandContext
 	4,  // 17: tammy.v1.IssueInvoiceResponse.invoice:type_name -> tammy.v1.Invoice
-	5,  // 18: tammy.v1.InvoiceService.SaveInvoiceDraft:input_type -> tammy.v1.SaveInvoiceDraftRequest
-	7,  // 19: tammy.v1.InvoiceService.GetInvoice:input_type -> tammy.v1.GetInvoiceRequest
-	9,  // 20: tammy.v1.InvoiceService.ListInvoices:input_type -> tammy.v1.ListInvoicesRequest
-	11, // 21: tammy.v1.InvoiceService.IssueInvoice:input_type -> tammy.v1.IssueInvoiceRequest
-	6,  // 22: tammy.v1.InvoiceService.SaveInvoiceDraft:output_type -> tammy.v1.SaveInvoiceDraftResponse
-	8,  // 23: tammy.v1.InvoiceService.GetInvoice:output_type -> tammy.v1.GetInvoiceResponse
-	10, // 24: tammy.v1.InvoiceService.ListInvoices:output_type -> tammy.v1.ListInvoicesResponse
-	12, // 25: tammy.v1.InvoiceService.IssueInvoice:output_type -> tammy.v1.IssueInvoiceResponse
-	22, // [22:26] is the sub-list for method output_type
-	18, // [18:22] is the sub-list for method input_type
-	18, // [18:18] is the sub-list for extension type_name
-	18, // [18:18] is the sub-list for extension extendee
-	0,  // [0:18] is the sub-list for field type_name
+	13, // 18: tammy.v1.InvoiceTemplate.defaults:type_name -> tammy.v1.InvoiceTemplateInput
+	27, // 19: tammy.v1.GetInvoiceTemplateRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	14, // 20: tammy.v1.GetInvoiceTemplateResponse.template:type_name -> tammy.v1.InvoiceTemplate
+	26, // 21: tammy.v1.SaveInvoiceTemplateRequest.command_context:type_name -> tammy.v1.CommandContext
+	13, // 22: tammy.v1.SaveInvoiceTemplateRequest.defaults:type_name -> tammy.v1.InvoiceTemplateInput
+	14, // 23: tammy.v1.SaveInvoiceTemplateResponse.template:type_name -> tammy.v1.InvoiceTemplate
+	25, // 24: tammy.v1.InvoiceLogo.created_at:type_name -> google.protobuf.Timestamp
+	26, // 25: tammy.v1.UploadInvoiceLogoRequest.command_context:type_name -> tammy.v1.CommandContext
+	19, // 26: tammy.v1.UploadInvoiceLogoResponse.logo:type_name -> tammy.v1.InvoiceLogo
+	27, // 27: tammy.v1.GetInvoiceLogoRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	19, // 28: tammy.v1.GetInvoiceLogoResponse.logo:type_name -> tammy.v1.InvoiceLogo
+	5,  // 29: tammy.v1.InvoiceService.SaveInvoiceDraft:input_type -> tammy.v1.SaveInvoiceDraftRequest
+	7,  // 30: tammy.v1.InvoiceService.GetInvoice:input_type -> tammy.v1.GetInvoiceRequest
+	9,  // 31: tammy.v1.InvoiceService.ListInvoices:input_type -> tammy.v1.ListInvoicesRequest
+	11, // 32: tammy.v1.InvoiceService.IssueInvoice:input_type -> tammy.v1.IssueInvoiceRequest
+	15, // 33: tammy.v1.InvoiceService.GetInvoiceTemplate:input_type -> tammy.v1.GetInvoiceTemplateRequest
+	17, // 34: tammy.v1.InvoiceService.SaveInvoiceTemplate:input_type -> tammy.v1.SaveInvoiceTemplateRequest
+	20, // 35: tammy.v1.InvoiceService.UploadInvoiceLogo:input_type -> tammy.v1.UploadInvoiceLogoRequest
+	22, // 36: tammy.v1.InvoiceService.GetInvoiceLogo:input_type -> tammy.v1.GetInvoiceLogoRequest
+	6,  // 37: tammy.v1.InvoiceService.SaveInvoiceDraft:output_type -> tammy.v1.SaveInvoiceDraftResponse
+	8,  // 38: tammy.v1.InvoiceService.GetInvoice:output_type -> tammy.v1.GetInvoiceResponse
+	10, // 39: tammy.v1.InvoiceService.ListInvoices:output_type -> tammy.v1.ListInvoicesResponse
+	12, // 40: tammy.v1.InvoiceService.IssueInvoice:output_type -> tammy.v1.IssueInvoiceResponse
+	16, // 41: tammy.v1.InvoiceService.GetInvoiceTemplate:output_type -> tammy.v1.GetInvoiceTemplateResponse
+	18, // 42: tammy.v1.InvoiceService.SaveInvoiceTemplate:output_type -> tammy.v1.SaveInvoiceTemplateResponse
+	21, // 43: tammy.v1.InvoiceService.UploadInvoiceLogo:output_type -> tammy.v1.UploadInvoiceLogoResponse
+	23, // 44: tammy.v1.InvoiceService.GetInvoiceLogo:output_type -> tammy.v1.GetInvoiceLogoResponse
+	37, // [37:45] is the sub-list for method output_type
+	29, // [29:37] is the sub-list for method input_type
+	29, // [29:29] is the sub-list for extension type_name
+	29, // [29:29] is the sub-list for extension extendee
+	0,  // [0:29] is the sub-list for field type_name
 }
 
 func init() { file_tammy_v1_invoices_proto_init() }
@@ -1137,13 +1916,16 @@ func file_tammy_v1_invoices_proto_init() {
 	file_tammy_v1_common_proto_init()
 	file_tammy_v1_invoices_proto_msgTypes[0].OneofWrappers = []any{}
 	file_tammy_v1_invoices_proto_msgTypes[2].OneofWrappers = []any{}
+	file_tammy_v1_invoices_proto_msgTypes[3].OneofWrappers = []any{}
+	file_tammy_v1_invoices_proto_msgTypes[4].OneofWrappers = []any{}
+	file_tammy_v1_invoices_proto_msgTypes[12].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_tammy_v1_invoices_proto_rawDesc), len(file_tammy_v1_invoices_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   12,
+			NumMessages:   23,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -6,18 +6,27 @@ import {
   ListDocumentsResponseSchema,
 } from "@tammy/connect-client/tammy/v1/documents_pb.js";
 import {
+  GetInvoiceLogoRequestSchema,
+  GetInvoiceLogoResponseSchema,
   GetInvoiceRequestSchema,
   GetInvoiceResponseSchema,
+  GetInvoiceTemplateRequestSchema,
+  GetInvoiceTemplateResponseSchema,
   IssueInvoiceRequestSchema,
   IssueInvoiceResponseSchema,
   ListInvoicesRequestSchema,
   ListInvoicesResponseSchema,
   SaveInvoiceDraftRequestSchema,
   SaveInvoiceDraftResponseSchema,
+  SaveInvoiceTemplateRequestSchema,
+  SaveInvoiceTemplateResponseSchema,
+  UploadInvoiceLogoRequestSchema,
+  UploadInvoiceLogoResponseSchema,
 } from "@tammy/connect-client/tammy/v1/invoices_pb.js";
 import { validateInvoiceDraft } from "@tammy/invoices/model";
 import { useMemo } from "react";
 import type { TammyConveyor } from "../../../conveyor/client";
+import { invoiceLogoToPreview, invoiceTemplateFromProto } from "../../../shared/invoice-template";
 import { invoiceDraftToProto, invoiceToRecord } from "../../../shared/invoices";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
@@ -53,6 +62,30 @@ const documents = createProtoMethodCodec({
   maximumRequestBytes: 16384,
   maximumResponseBytes: 4194304,
 });
+const getTemplate = createProtoMethodCodec({
+  input: GetInvoiceTemplateRequestSchema,
+  output: GetInvoiceTemplateResponseSchema,
+  maximumRequestBytes: 8192,
+  maximumResponseBytes: 32768,
+});
+const saveTemplate = createProtoMethodCodec({
+  input: SaveInvoiceTemplateRequestSchema,
+  output: SaveInvoiceTemplateResponseSchema,
+  maximumRequestBytes: 32768,
+  maximumResponseBytes: 32768,
+});
+const uploadLogo = createProtoMethodCodec({
+  input: UploadInvoiceLogoRequestSchema,
+  output: UploadInvoiceLogoResponseSchema,
+  maximumRequestBytes: 1179648,
+  maximumResponseBytes: 8192,
+});
+const getLogo = createProtoMethodCodec({
+  input: GetInvoiceLogoRequestSchema,
+  output: GetInvoiceLogoResponseSchema,
+  maximumRequestBytes: 8192,
+  maximumResponseBytes: 1179648,
+});
 
 export function ConnectedInvoicesScreen({
   conveyor,
@@ -77,7 +110,7 @@ export function ConnectedInvoicesScreen({
         );
         return response.invoices.map(invoiceToRecord);
       },
-      save: async (draft, invoiceId = "", expectedVersion = 0) => {
+      save: async (draft, invoiceId = "", expectedVersion = 0, logoAssetId) => {
         const context = authority(workspace);
         const response = save.decodeResponse(
           await conveyor.accounting.saveInvoiceDraft(
@@ -91,6 +124,7 @@ export function ConnectedInvoicesScreen({
                 invoiceId,
                 expectedVersion: BigInt(expectedVersion),
                 draft: invoiceDraftToProto(draft),
+                ...(logoAssetId === undefined ? {} : { logoAssetId }),
               }),
             ),
           ),
@@ -131,6 +165,80 @@ export function ConnectedInvoicesScreen({
         );
         return response.draft ? validateInvoiceDraft(response.draft) : undefined;
       },
+      getTemplate: async () => {
+        const context = authority(workspace);
+        const response = getTemplate.decodeResponse(
+          await conveyor.accounting.getInvoiceTemplate(
+            getTemplate.encodeRequest(create(GetInvoiceTemplateRequestSchema, context)),
+          ),
+        );
+        return invoiceTemplateFromProto(response.template, context.organisationId);
+      },
+      saveTemplate: async (defaults, expectedVersion) => {
+        const context = authority(workspace);
+        const response = saveTemplate.decodeResponse(
+          await conveyor.accounting.saveInvoiceTemplate(
+            saveTemplate.encodeRequest(
+              create(SaveInvoiceTemplateRequestSchema, {
+                organisationId: context.organisationId,
+                commandContext: {
+                  authentication: context.authentication,
+                  idempotencyKey: uuidV7(),
+                },
+                expectedVersion: BigInt(expectedVersion),
+                defaults,
+              }),
+            ),
+          ),
+        );
+        return invoiceTemplateFromProto(response.template, context.organisationId);
+      },
+      uploadLogo: async (file) => {
+        const context = authority(workspace);
+        if (
+          !["image/png", "image/jpeg"].includes(file.type) ||
+          file.size < 1 ||
+          file.size > 1048576
+        )
+          throw new Error("INVALID_INVOICE_LOGO");
+        const content = await readFile(file);
+        const response = uploadLogo.decodeResponse(
+          await conveyor.accounting.uploadInvoiceLogo(
+            uploadLogo.encodeRequest(
+              create(UploadInvoiceLogoRequestSchema, {
+                organisationId: context.organisationId,
+                commandContext: {
+                  authentication: context.authentication,
+                  idempotencyKey: uuidV7(),
+                },
+                mimeType: file.type,
+                content,
+              }),
+            ),
+          ),
+        );
+        if (!response.logo) throw new Error("INVOICE_LOGO_UNAVAILABLE");
+        return invoiceLogoToPreview(
+          response.logo,
+          content,
+          context.organisationId,
+          response.logo.id,
+        ).id;
+      },
+      getLogo: async (logoAssetId) => {
+        const context = authority(workspace);
+        const response = getLogo.decodeResponse(
+          await conveyor.accounting.getInvoiceLogo(
+            getLogo.encodeRequest(create(GetInvoiceLogoRequestSchema, { ...context, logoAssetId })),
+          ),
+        );
+        return invoiceLogoToPreview(
+          response.logo,
+          response.content,
+          context.organisationId,
+          logoAssetId,
+        );
+      },
       listExpenses: async () => {
         const response = documents.decodeResponse(
           await conveyor.documents.listDocuments(
@@ -160,6 +268,19 @@ export function ConnectedInvoicesScreen({
       key={`${workspace?.userId}:${workspace?.sessionId}:${workspace?.organisationId}`}
     />
   );
+}
+
+function readFile(file: File): Promise<Uint8Array> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (reader.result instanceof ArrayBuffer) resolve(new Uint8Array(reader.result));
+      else reject(new Error("INVOICE_LOGO_UNAVAILABLE"));
+    };
+    reader.onerror = () => reject(new Error("INVOICE_LOGO_UNAVAILABLE"));
+    reader.onabort = () => reject(new Error("INVOICE_LOGO_UNAVAILABLE"));
+    reader.readAsArrayBuffer(file);
+  });
 }
 
 function authority(workspace: AuthenticatedWorkspace | undefined) {

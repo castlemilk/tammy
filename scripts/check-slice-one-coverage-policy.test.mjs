@@ -37,11 +37,11 @@ const EXPOSED_BUSINESS_RPCS = [
   "tammy.v1.TaxService.GetCurrentBasDraft",
 ];
 
-test("coverage declares the exact normative policy for all 122 non-system RPCs", async () => {
+test("coverage declares the exact normative policy for all 126 non-system RPCs", async () => {
   const coverage = parseCoverageManifest(await readFile("test/e2e/coverage.yaml", "utf8"));
   const actualRpcNames = Object.keys(coverage.rpcs).filter((rpcName) => rpcName !== SYSTEM_RPC);
 
-  assert.equal(Object.keys(SLICE_ONE_RPC_POLICY).length, 122);
+  assert.equal(Object.keys(SLICE_ONE_RPC_POLICY).length, 126);
   assert.deepEqual(actualRpcNames.sort(), Object.keys(SLICE_ONE_RPC_POLICY).sort());
 
   for (const [rpcName, expected] of Object.entries(SLICE_ONE_RPC_POLICY)) {
@@ -65,10 +65,24 @@ test("coverage declares the exact normative policy for all 122 non-system RPCs",
 test("invoice draft and issue policy uses accounting-preparer roles and the dedicated invoice journey", async () => {
   const coverage = parseCoverageManifest(await readFile("test/e2e/coverage.yaml", "utf8"));
   assert.deepEqual(coverage.scenarios["E2E-19"].cases, ["invoices/mcp-builder-pdf"]);
-  for (const name of ["SaveInvoiceDraft", "IssueInvoice", "GetInvoice", "ListInvoices"]) {
+  for (const name of [
+    "SaveInvoiceDraft",
+    "IssueInvoice",
+    "GetInvoice",
+    "ListInvoices",
+    "GetInvoiceTemplate",
+    "SaveInvoiceTemplate",
+    "UploadInvoiceLogo",
+    "GetInvoiceLogo",
+  ]) {
     const rpcName = `tammy.v1.InvoiceService.${name}`;
     const policy = SLICE_ONE_RPC_POLICY[rpcName];
-    const write = name === "SaveInvoiceDraft" || name === "IssueInvoice";
+    const write = [
+      "SaveInvoiceDraft",
+      "IssueInvoice",
+      "SaveInvoiceTemplate",
+      "UploadInvoiceLogo",
+    ].includes(name);
     assert.deepEqual(coverage.rpcs[rpcName].cases, ["invoices/mcp-builder-pdf"]);
     assert.deepEqual(policy.routes, ["/invoices"]);
     assert.equal(policy.roles.workspace_admin, "planned_allowed");

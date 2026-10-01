@@ -1,7 +1,9 @@
 // @vitest-environment node
 import { create } from "@bufbuild/protobuf";
 import {
+  GetInvoiceLogoResponseSchema,
   GetInvoiceResponseSchema,
+  InvoiceLogoSchema,
   InvoiceSchema,
   InvoiceState,
   IssueInvoiceRequestSchema,
@@ -9,6 +11,7 @@ import {
 } from "@tammy/connect-client/tammy/v1/invoices_pb.js";
 import { renderInvoicePdf } from "@tammy/invoices/pdf";
 import { describe, expect, it, vi } from "vitest";
+import { pngLogo } from "../../../../packages/invoices/test-support/logo-fixtures";
 import { invoiceDraftToProto } from "../shared/invoices";
 import { createInvoiceIssuer } from "./invoice-issue";
 
@@ -44,6 +47,7 @@ function fixture(customerName = "Customer") {
     totalMinor: 10000n,
   });
   const client = {
+    getInvoiceLogo: vi.fn(async () => create(GetInvoiceLogoResponseSchema)),
     getInvoice: vi.fn(async () => create(GetInvoiceResponseSchema, { invoice })),
     issueInvoice: vi.fn(async () =>
       create(IssueInvoiceResponseSchema, {
@@ -71,6 +75,49 @@ function fixture(customerName = "Customer") {
 }
 
 describe("native invoice issue preflight", () => {
+  it("renders the immutable saved logo without consulting current company defaults", async () => {
+    const { invoice, client, request, render, issue } = fixture();
+    const logo = pngLogo();
+    invoice.logoAssetId = "01900000-0000-7000-8000-000000000006";
+    const content = new Uint8Array(Buffer.from(logo.dataBase64, "base64"));
+    client.getInvoiceLogo.mockResolvedValue(
+      create(GetInvoiceLogoResponseSchema, {
+        logo: create(InvoiceLogoSchema, {
+          id: invoice.logoAssetId,
+          organisationId: invoice.organisationId,
+          mimeType: logo.mimeType,
+          width: logo.width,
+          height: logo.height,
+          byteLength: content.length,
+          sha256: new Uint8Array(32),
+        }),
+        content,
+      }),
+    );
+    await issue(request);
+    expect(client.getInvoiceLogo).toHaveBeenCalledWith(
+      expect.objectContaining({
+        logoAssetId: invoice.logoAssetId,
+        organisationId: invoice.organisationId,
+        authentication: request.commandContext?.authentication,
+      }),
+    );
+    expect(render).toHaveBeenCalledWith(expect.objectContaining({ logo }));
+  });
+  it("does not issue when the saved logo is unavailable or the session changes during retrieval", async () => {
+    const { invoice, client, request, render, issue, guard } = fixture();
+    invoice.logoAssetId = "01900000-0000-7000-8000-000000000006";
+    await expect(issue(request)).rejects.toThrow();
+    expect(render).not.toHaveBeenCalled();
+    client.getInvoiceLogo.mockImplementation(async () => {
+      guard.mockImplementation(() => {
+        throw new Error("LOCAL_SESSION_REQUIRED");
+      });
+      return create(GetInvoiceLogoResponseSchema);
+    });
+    await expect(issue(request)).rejects.toThrow("LOCAL_SESSION_REQUIRED");
+    expect(client.issueInvoice).not.toHaveBeenCalled();
+  });
   it("renders the persisted draft and reviewed seller before issuing the unchanged command", async () => {
     const { issue, request, client, render } = fixture();
     expect((await issue(request)).invoice?.state).toBe(InvoiceState.ISSUED);

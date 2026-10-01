@@ -1,4 +1,5 @@
 import type { InvoiceDraftData } from "@tammy/invoices/model";
+import type { InvoiceTemplateDefaults } from "../../../shared/invoice-template";
 
 export interface InvoiceExpense {
   readonly id: string;
@@ -21,6 +22,23 @@ export interface EditorLine {
 export type EditorDraft = Omit<InvoiceDraftData, "lines"> & {
   readonly lines: readonly EditorLine[];
 };
+
+export function applyInvoiceTemplate(
+  editor: EditorDraft,
+  defaults: InvoiceTemplateDefaults,
+): EditorDraft {
+  const due = new Date(`${editor.issueDate}T00:00:00Z`);
+  if (!Number.isFinite(due.getTime()) || due.toISOString().slice(0, 10) !== editor.issueDate)
+    throw new Error("Enter a valid issue date before applying the template.");
+  due.setUTCDate(due.getUTCDate() + defaults.paymentTermsDays);
+  return {
+    ...editor,
+    sellerAddress: defaults.sellerAddress,
+    notes: defaults.notes,
+    paymentInstructions: defaults.paymentInstructions,
+    dueDate: due.toISOString().slice(0, 10),
+  };
+}
 
 export function blankLine(gstRegistered: boolean): EditorLine {
   return {

@@ -64,6 +64,62 @@ scenarios:
     cases:
       - invoices/mcp-builder-pdf
 rpcs:
+  tammy.v1.InvoiceService.GetInvoiceTemplate:
+    stage: production
+    preload: getInvoiceTemplate
+    cases: [invoices/mcp-builder-pdf]
+    projections: [invoice_template]
+    routes: [/invoices]
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_allowed
+      auditor: planned_allowed
+    principalFailures: [AUTHENTICATION_REQUIRED, NOT_FOUND]
+    list: {states: [found, not_found]}
+    idempotency: {mode: query, outcomes: [not_applicable]}
+  tammy.v1.InvoiceService.SaveInvoiceTemplate:
+    stage: production
+    preload: saveInvoiceTemplate
+    cases: [invoices/mcp-builder-pdf]
+    projections: [saved_invoice_template]
+    routes: [/invoices]
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, IDEMPOTENCY_CONFLICT, STALE_VERSION, INVALID_INVOICE_TEMPLATE]
+    list: {states: [not_applicable]}
+    idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
+  tammy.v1.InvoiceService.UploadInvoiceLogo:
+    stage: production
+    preload: uploadInvoiceLogo
+    cases: [invoices/mcp-builder-pdf]
+    projections: [uploaded_invoice_logo]
+    routes: [/invoices]
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_permission_denied
+      auditor: planned_permission_denied
+    principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, IDEMPOTENCY_CONFLICT, INVALID_INVOICE_LOGO]
+    list: {states: [not_applicable]}
+    idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
+  tammy.v1.InvoiceService.GetInvoiceLogo:
+    stage: production
+    preload: getInvoiceLogo
+    cases: [invoices/mcp-builder-pdf]
+    projections: [invoice_logo]
+    routes: [/invoices]
+    roles:
+      workspace_admin: planned_allowed
+      business_preparer: planned_allowed
+      business_lodger: planned_allowed
+      auditor: planned_allowed
+    principalFailures: [AUTHENTICATION_REQUIRED, NOT_FOUND]
+    list: {states: [found, not_found]}
+    idempotency: {mode: query, outcomes: [not_applicable]}
   tammy.v1.InvoiceService.SaveInvoiceDraft:
     stage: production
     preload: saveInvoiceDraft

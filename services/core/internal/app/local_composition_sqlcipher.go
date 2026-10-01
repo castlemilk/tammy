@@ -40,7 +40,7 @@ func localAttemptAnchorID(master []byte, purpose string) string {
 const (
 	LocalWorkspaceDirectoryCapability = "local-workspace-directory"
 	LocalWorkspaceFileCapability      = "local-workspace-file"
-	localMigrationTarget              = 8
+	localMigrationTarget              = 9
 )
 
 type LocalCompositionConfig struct {

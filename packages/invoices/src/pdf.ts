@@ -13,6 +13,7 @@ import {
   validateInvoiceDraft,
   validateInvoiceForIssue,
 } from "./model.ts";
+import { type InvoicePdfLogo, validateInvoicePdfLogo } from "./pdf-logo.ts";
 import { assertInvoicePdfReady } from "./pdf-policy.ts";
 import {
   KeyValue,
@@ -25,6 +26,7 @@ import {
   theme,
 } from "./pdfcn/components.ts";
 
+export { type InvoicePdfLogo, validateInvoicePdfLogo } from "./pdf-logo.ts";
 export { InvoicePdfUnsupportedTextError } from "./pdf-policy.ts";
 
 export interface InvoicePdfData extends InvoiceDraftData {
@@ -32,6 +34,7 @@ export interface InvoicePdfData extends InvoiceDraftData {
   sellerName: string;
   sellerAbn: string;
   state: "draft" | "issued";
+  logo?: InvoicePdfLogo;
 }
 
 function metadata(label: string, value: string, width?: number) {
@@ -62,7 +65,7 @@ const treatmentLabels: Record<InvoiceTaxTreatment, string> = {
 };
 
 function validatePdfInput(value: InvoicePdfData): InvoicePdfData {
-  const { id, sellerName, sellerAbn, state, ...draftValue } = value;
+  const { id, sellerName, sellerAbn, state, logo, ...draftValue } = value;
   if (state !== "draft" && state !== "issued")
     throw new InvoiceValidationError("state: must be draft or issued");
   if (
@@ -89,13 +92,14 @@ function validatePdfInput(value: InvoicePdfData): InvoicePdfData {
     sellerName: sellerName.trim(),
     sellerAbn: abn,
     state,
+    ...(logo === undefined ? {} : { logo: validateInvoicePdfLogo(logo) }),
   };
 }
 
 /** Customer-facing projection deliberately never renders cost, margin, source IDs or embedded input JSON. */
 export async function renderInvoicePdf(value: InvoicePdfData): Promise<Uint8Array> {
   const data = validatePdfInput(value);
-  assertInvoicePdfReady(data, data.sellerName);
+  assertInvoicePdfReady(data, data.sellerName, data.logo);
   const totals = calculateInvoice(data);
   const invoiceLabel = data.gstRegistered ? "Tax Invoice" : "Invoice";
   const title = `${data.state === "draft" ? "DRAFT · " : ""}${invoiceLabel}`;
@@ -139,6 +143,7 @@ export async function renderInvoicePdf(value: InvoicePdfData): Promise<Uint8Arra
         title,
         subtitle: data.sellerName,
         rightText: `ABN ${data.sellerAbn} · All amounts in Australian dollars (AUD)`,
+        ...(data.logo ? { logo: data.logo } : {}),
       }),
       h(
         View,
@@ -214,5 +219,10 @@ export async function renderInvoicePdf(value: InvoicePdfData): Promise<Uint8Arra
         : null,
     ),
   );
-  return renderDocument(document);
+  const bytes = await renderDocument(document);
+  // Forme may silently omit undecodable raster data. A requested logo must be
+  // represented by an actual PDF image object before export or issue succeeds.
+  if (data.logo && !/\/Subtype\s*\/Image\b/.test(new TextDecoder("latin1").decode(bytes)))
+    throw new InvoiceValidationError("logo: image could not be rendered");
+  return bytes;
 }

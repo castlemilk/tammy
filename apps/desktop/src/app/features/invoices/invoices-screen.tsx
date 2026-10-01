@@ -7,11 +7,17 @@ import {
 } from "@tammy/invoices/model";
 import { assertInvoicePdfReady } from "@tammy/invoices/pdf-policy";
 import { Download, Plus, RefreshCw } from "lucide-react";
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
+import type {
+  CompanyInvoiceTemplate,
+  InvoiceLogoPreview,
+  InvoiceTemplateDefaults,
+} from "../../../shared/invoice-template";
 import { Button } from "../../components/ui/button";
 import {
   appendExpenseLines,
+  applyInvoiceTemplate,
   blankLine,
   type EditorDraft,
   type EditorLine,
@@ -20,6 +26,8 @@ import {
   toEditor,
 } from "./invoice-editor";
 import { InvoiceLineTable, invoiceFieldClass } from "./invoice-line-table";
+import { InvoiceLogo } from "./invoice-logo";
+import { InvoiceTemplatePanel } from "./invoice-template-panel";
 import { ReviewedExpenseTable } from "./reviewed-expense-table";
 
 export type { InvoiceExpense } from "./invoice-editor";
@@ -31,25 +39,48 @@ export interface InvoiceRecord {
   readonly sellerName: string;
   readonly sellerAbn: string;
   readonly draft: InvoiceDraftData;
+  readonly logoAssetId?: string;
 }
 
 export interface InvoicesApi {
   list(): Promise<readonly InvoiceRecord[]>;
-  save(draft: InvoiceDraftData, id?: string, expectedVersion?: number): Promise<InvoiceRecord>;
+  save(
+    draft: InvoiceDraftData,
+    id?: string,
+    expectedVersion?: number,
+    logoAssetId?: string,
+  ): Promise<InvoiceRecord>;
   issue(id: string, expectedVersion: number): Promise<InvoiceRecord>;
   exportPdf(id: string): Promise<{ readonly saved: boolean }>;
   listExpenses(): Promise<readonly InvoiceExpense[]>;
   getProposal(): Promise<InvoiceDraftData | undefined>;
+  getTemplate(): Promise<CompanyInvoiceTemplate>;
+  saveTemplate(
+    defaults: InvoiceTemplateDefaults,
+    expectedVersion: number,
+  ): Promise<CompanyInvoiceTemplate>;
+  uploadLogo(file: File): Promise<string>;
+  getLogo(id: string): Promise<InvoiceLogoPreview>;
 }
 
-type Replacement = { readonly editor: EditorDraft; readonly record?: InvoiceRecord };
+type Replacement = {
+  readonly editor: EditorDraft;
+  readonly record?: InvoiceRecord;
+  readonly logoAssetId?: string;
+};
 
 const fieldClass = invoiceFieldClass;
 const labelClass = "grid min-w-0 gap-1 text-[10px] font-medium text-foreground";
 
 export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
   const [editor, setEditor] = useState<EditorDraft>(newEditor);
-  const [baseline, setBaseline] = useState(() => JSON.stringify(editor));
+  const [logoAssetId, setLogoAssetId] = useState<string>();
+  const [baseline, setBaseline] = useState(() => snapshot(editor));
+  const untouchedInitialDraft = useRef(true);
+  const [template, setTemplate] = useState<CompanyInvoiceTemplate>();
+  const [templateLoading, setTemplateLoading] = useState(true);
+  const [templateError, setTemplateError] = useState<string>();
+  const [templateAttempt, setTemplateAttempt] = useState(0);
   const [current, setCurrent] = useState<InvoiceRecord>();
   const [records, setRecords] = useState<readonly InvoiceRecord[]>([]);
   const [expenses, setExpenses] = useState<readonly InvoiceExpense[]>([]);
@@ -63,7 +94,7 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
   const [markup, setMarkup] = useState("0");
   const [replacement, setReplacement] = useState<Replacement>();
   const [confirmIssue, setConfirmIssue] = useState(false);
-  const dirty = JSON.stringify(editor) !== baseline;
+  const dirty = snapshot(editor, logoAssetId) !== baseline;
   const issued = current?.state === "issued";
   const fullyCosted = editor.lines.every((line) => line.unitCost.trim().length > 0);
   const linkedExpenseIds = useMemo(
@@ -116,6 +147,38 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
     };
   }, [api]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: The retry counter deliberately reloads failed defaults.
+  useEffect(() => {
+    let active = true;
+    setTemplateLoading(true);
+    setTemplateError(undefined);
+    void api
+      .getTemplate()
+      .then((value) => {
+        if (!active) return;
+        setTemplate(value);
+        if (untouchedInitialDraft.current) {
+          untouchedInitialDraft.current = false;
+          const next = applyInvoiceTemplate(newEditor(), value.defaults);
+          setEditor(next);
+          setLogoAssetId(value.defaults.logoAssetId);
+          setBaseline(snapshot(next, value.defaults.logoAssetId));
+        }
+      })
+      .catch(() => {
+        if (active)
+          setTemplateError(
+            "Company defaults could not be loaded. Your invoice edits are unchanged.",
+          );
+      })
+      .finally(() => {
+        if (active) setTemplateLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [api, templateAttempt]);
+
   useEffect(() => {
     const available = new Set(expenses.map((expense) => expense.id));
     setSelectedExpenseIds((previous) => {
@@ -125,6 +188,7 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
   }, [expenses, linkedExpenseIds]);
 
   function edit(value: Partial<EditorDraft>) {
+    untouchedInitialDraft.current = false;
     setEditor((previous) => ({ ...previous, ...value }));
     setConfirmIssue(false);
     setNotice(undefined);
@@ -141,9 +205,11 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
   }
 
   function replace(next: Replacement) {
+    untouchedInitialDraft.current = false;
     setEditor(next.editor);
+    setLogoAssetId(next.logoAssetId ?? next.record?.logoAssetId);
     setCurrent(next.record);
-    setBaseline(JSON.stringify(next.editor));
+    setBaseline(snapshot(next.editor, next.logoAssetId ?? next.record?.logoAssetId));
     setReplacement(undefined);
     setConfirmIssue(false);
     setError(undefined);
@@ -157,6 +223,7 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
   }
 
   async function loadProposal() {
+    untouchedInitialDraft.current = false;
     setBusy(true);
     setError(undefined);
     try {
@@ -201,10 +268,12 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
   }
 
   function acceptRecord(record: InvoiceRecord) {
+    untouchedInitialDraft.current = false;
     const next = toEditor(record.draft);
     setCurrent(record);
     setEditor(next);
-    setBaseline(JSON.stringify(next));
+    setLogoAssetId(record.logoAssetId);
+    setBaseline(snapshot(next, record.logoAssetId));
     setRecords((previous) => [record, ...previous.filter((item) => item.id !== record.id)]);
   }
 
@@ -224,7 +293,7 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
     }
     setBusy(true);
     try {
-      acceptRecord(await api.save(draft, current?.id, current?.version));
+      acceptRecord(await api.save(draft, current?.id, current?.version, logoAssetId ?? ""));
       setNotice("Draft saved.");
     } catch {
       setError(
@@ -298,6 +367,22 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
     }
   }
 
+  function applyTemplate() {
+    if (!template || busy || issued) return;
+    try {
+      edit(applyInvoiceTemplate(editor, template.defaults));
+      setLogoAssetId(template.defaults.logoAssetId);
+      setError(undefined);
+      setNotice("Saved company template applied. Review this draft before saving.");
+    } catch (failure) {
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : "Check the issue date before applying the template.",
+      );
+    }
+  }
+
   return (
     <div className="mx-auto grid w-full max-w-[1200px] gap-5">
       <header className="flex flex-wrap items-end justify-between gap-3">
@@ -320,7 +405,16 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
           <Button
             className="h-8 text-[10px]"
             disabled={busy}
-            onClick={() => requestReplacement({ editor: newEditor() })}
+            onClick={() =>
+              requestReplacement({
+                editor: template
+                  ? applyInvoiceTemplate(newEditor(), template.defaults)
+                  : newEditor(),
+                ...(template?.defaults.logoAssetId
+                  ? { logoAssetId: template.defaults.logoAssetId }
+                  : {}),
+              })
+            }
             type="button"
             variant="outline"
           >
@@ -379,6 +473,26 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
                 Seller name and ABN come from your signed-in organisation when you save.
               </p>
             )}
+            {logoAssetId ? (
+              <div className="flex flex-wrap items-center gap-4">
+                <InvoiceLogo api={api} id={logoAssetId} label="Invoice logo" />
+                {!issued ? (
+                  <Button
+                    className="h-7 text-[10px]"
+                    onClick={() => {
+                      untouchedInitialDraft.current = false;
+                      setLogoAssetId(undefined);
+                      setConfirmIssue(false);
+                      setNotice(undefined);
+                    }}
+                    type="button"
+                    variant="outline"
+                  >
+                    Remove invoice logo
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
             <div className="grid grid-cols-3 gap-3 max-[620px]:grid-cols-1">
               <label className={labelClass}>
                 Invoice number
@@ -506,6 +620,18 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
             changes your selling price. Editing a cost leaves the original reviewed document and
             ledger unchanged.
           </p>
+
+          <InvoiceTemplatePanel
+            api={api}
+            canApply={!issued}
+            disabled={busy}
+            error={templateError}
+            loading={templateLoading}
+            onApply={applyTemplate}
+            onRetry={() => setTemplateAttempt((value) => value + 1)}
+            onSaved={setTemplate}
+            template={template}
+          />
 
           <fieldset
             className="grid grid-cols-2 gap-3 max-[620px]:grid-cols-1"
@@ -726,4 +852,8 @@ function newEditor(): EditorDraft {
     paymentInstructions: "",
     lines: [blankLine(false)],
   };
+}
+
+function snapshot(editor: EditorDraft, logoAssetId?: string): string {
+  return JSON.stringify({ editor, logoAssetId });
 }

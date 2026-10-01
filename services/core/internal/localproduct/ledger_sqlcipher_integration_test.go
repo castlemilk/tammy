@@ -323,9 +323,11 @@ func TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealSer
 		t.Fatalf("GetDocument() = %#v, %v", storedDocument, err)
 	}
 
+	logo := assertInvoiceBrandingThroughRealServer(t, module, invoiceClient, authentication, created.Msg.Organisation.Id, ready.Capability)
 	saveInvoice := connect.NewRequest(&tammyv1.SaveInvoiceDraftRequest{
 		CommandContext: &tammyv1.CommandContext{IdempotencyKey: "018f0000-0000-7000-8000-000000000180", Authentication: authentication},
 		OrganisationId: created.Msg.Organisation.Id,
+		LogoAssetId:    &logo.Id,
 		Draft: &tammyv1.InvoiceDraft{Number: "INV-100", IssueDate: "2026-09-30", DueDate: "2026-10-14", CustomerName: "Customer Pty Ltd", CustomerAddress: "1 Customer Street", SellerAddress: "27 Cambridge Road", GstRegistered: true,
 			Lines: []*tammyv1.InvoiceLineInput{{Description: "Reviewed office supplies recharge", QuantityMilli: 1000, UnitPriceMinor: 35000, UnitCostMinor: proto.Int64(29000), TaxTreatment: tammyv1.TaxTreatment_TAX_TREATMENT_TAXABLE, SourceDocumentId: &storedDocument.Msg.Document.Id}}},
 	})
@@ -346,7 +348,7 @@ func TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealSer
 		t.Fatal(err)
 	}
 	savedInvoice, err := invoiceClient.SaveInvoiceDraft(context.Background(), saveInvoice)
-	if err != nil || savedInvoice.Msg.Invoice == nil || savedInvoice.Msg.Invoice.TotalMinor != 38500 || savedInvoice.Msg.Invoice.CostMinor != 29000 || savedInvoice.Msg.Invoice.SellerAbn != created.Msg.Organisation.Abn {
+	if err != nil || savedInvoice.Msg.Invoice == nil || savedInvoice.Msg.Invoice.TotalMinor != 38500 || savedInvoice.Msg.Invoice.CostMinor != 29000 || savedInvoice.Msg.Invoice.SellerAbn != created.Msg.Organisation.Abn || savedInvoice.Msg.Invoice.GetLogoAssetId() != logo.Id {
 		t.Fatalf("SaveInvoiceDraft() = %#v, %v", savedInvoice, err)
 	}
 	replayedInvoice, err := invoiceClient.SaveInvoiceDraft(context.Background(), saveInvoice)
@@ -364,6 +366,36 @@ func TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealSer
 	if value, err := invoiceClient.GetInvoice(context.Background(), getInvoice); err != nil || value.Msg.Invoice.Id != savedInvoice.Msg.Invoice.Id {
 		t.Fatalf("GetInvoice=%v %v", value, err)
 	}
+	// Omitted branding preserves older clients' saved snapshot; an explicit
+	// empty value removes it, and only an owned retained asset can be restored.
+	editLogo := proto.Clone(saveInvoice.Msg).(*tammyv1.SaveInvoiceDraftRequest)
+	editLogo.InvoiceId = savedInvoice.Msg.Invoice.Id
+	editLogo.ExpectedVersion = 1
+	editLogo.LogoAssetId = nil
+	editLogo.CommandContext.IdempotencyKey = "018f0000-0000-7000-8000-000000000185"
+	preserved, err := invoiceClient.SaveInvoiceDraft(context.Background(), brandingRequest(editLogo, ready.Capability))
+	if err != nil || preserved.Msg.Invoice.GetLogoAssetId() != logo.Id || preserved.Msg.Invoice.Version != 2 {
+		t.Fatalf("omitted logo must preserve snapshot: %v %v", preserved, err)
+	}
+	editLogo.ExpectedVersion = 2
+	editLogo.LogoAssetId = proto.String("")
+	editLogo.CommandContext.IdempotencyKey = "018f0000-0000-7000-8000-000000000186"
+	removed, err := invoiceClient.SaveInvoiceDraft(context.Background(), brandingRequest(editLogo, ready.Capability))
+	if err != nil || removed.Msg.Invoice.LogoAssetId != nil || removed.Msg.Invoice.Version != 3 {
+		t.Fatalf("empty logo must remove snapshot: %v %v", removed, err)
+	}
+	editLogo.ExpectedVersion = 3
+	editLogo.LogoAssetId = proto.String("018f0000-0000-7000-8000-000000000999")
+	editLogo.CommandContext.IdempotencyKey = "018f0000-0000-7000-8000-000000000187"
+	if _, err := invoiceClient.SaveInvoiceDraft(context.Background(), brandingRequest(editLogo, ready.Capability)); connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatalf("missing or foreign logo accepted: %v", err)
+	}
+	editLogo.LogoAssetId = &logo.Id
+	editLogo.CommandContext.IdempotencyKey = "018f0000-0000-7000-8000-000000000188"
+	savedInvoice, err = invoiceClient.SaveInvoiceDraft(context.Background(), brandingRequest(editLogo, ready.Capability))
+	if err != nil || savedInvoice.Msg.Invoice.GetLogoAssetId() != logo.Id || savedInvoice.Msg.Invoice.Version != 4 {
+		t.Fatalf("owned logo restore: %v %v", savedInvoice, err)
+	}
 	staleInvoice := connect.NewRequest(proto.Clone(saveInvoice.Msg).(*tammyv1.SaveInvoiceDraftRequest))
 	staleInvoice.Msg.InvoiceId = savedInvoice.Msg.Invoice.Id
 	staleInvoice.Msg.ExpectedVersion = 99
@@ -372,7 +404,7 @@ func TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealSer
 	if _, err := invoiceClient.SaveInvoiceDraft(context.Background(), staleInvoice); connect.CodeOf(err) != connect.CodeFailedPrecondition {
 		t.Fatalf("stale invoice command=%v", err)
 	}
-	issueInvoice := connect.NewRequest(&tammyv1.IssueInvoiceRequest{CommandContext: &tammyv1.CommandContext{IdempotencyKey: "018f0000-0000-7000-8000-000000000181", Authentication: authentication}, OrganisationId: created.Msg.Organisation.Id, InvoiceId: savedInvoice.Msg.Invoice.Id, ExpectedVersion: 1})
+	issueInvoice := connect.NewRequest(&tammyv1.IssueInvoiceRequest{CommandContext: &tammyv1.CommandContext{IdempotencyKey: "018f0000-0000-7000-8000-000000000181", Authentication: authentication}, OrganisationId: created.Msg.Organisation.Id, InvoiceId: savedInvoice.Msg.Invoice.Id, ExpectedVersion: 4})
 	issueInvoice.Header().Set(transport.CapabilityHeader, ready.Capability)
 	if _, err := module.db.ExecContext(context.Background(), `UPDATE organisations SET legal_name=? WHERE id=?`, "Changed seller 王伟", created.Msg.Organisation.Id); err != nil {
 		t.Fatal(err)
@@ -383,14 +415,14 @@ func TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealSer
 	if _, err := invoiceClient.IssueInvoice(context.Background(), driftedSeller); connect.CodeOf(err) != connect.CodeFailedPrecondition {
 		t.Fatalf("changed seller must not replace the reviewed invoice snapshot: %v", err)
 	}
-	if value, err := invoiceClient.GetInvoice(context.Background(), getInvoice); err != nil || value.Msg.Invoice.State != tammyv1.InvoiceState_INVOICE_STATE_DRAFT || value.Msg.Invoice.Version != 1 || value.Msg.Invoice.SellerName != savedInvoice.Msg.Invoice.SellerName {
+	if value, err := invoiceClient.GetInvoice(context.Background(), getInvoice); err != nil || value.Msg.Invoice.State != tammyv1.InvoiceState_INVOICE_STATE_DRAFT || value.Msg.Invoice.Version != 4 || value.Msg.Invoice.SellerName != savedInvoice.Msg.Invoice.SellerName {
 		t.Fatalf("seller drift changed saved invoice: %v %v", value, err)
 	}
 	if _, err := module.db.ExecContext(context.Background(), `UPDATE organisations SET legal_name=? WHERE id=?`, savedInvoice.Msg.Invoice.SellerName, created.Msg.Organisation.Id); err != nil {
 		t.Fatal(err)
 	}
 	issuedInvoice, err := invoiceClient.IssueInvoice(context.Background(), issueInvoice)
-	if err != nil || issuedInvoice.Msg.Invoice.State != tammyv1.InvoiceState_INVOICE_STATE_ISSUED || issuedInvoice.Msg.Invoice.Version != 2 {
+	if err != nil || issuedInvoice.Msg.Invoice.State != tammyv1.InvoiceState_INVOICE_STATE_ISSUED || issuedInvoice.Msg.Invoice.Version != 5 || issuedInvoice.Msg.Invoice.GetLogoAssetId() != logo.Id {
 		t.Fatalf("IssueInvoice=%v %v", issuedInvoice, err)
 	}
 	if replay, err := invoiceClient.IssueInvoice(context.Background(), issueInvoice); err != nil || !proto.Equal(replay.Msg, issuedInvoice.Msg) {
@@ -398,7 +430,7 @@ func TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealSer
 	}
 	editInvoice := connect.NewRequest(proto.Clone(saveInvoice.Msg).(*tammyv1.SaveInvoiceDraftRequest))
 	editInvoice.Msg.InvoiceId = savedInvoice.Msg.Invoice.Id
-	editInvoice.Msg.ExpectedVersion = 2
+	editInvoice.Msg.ExpectedVersion = 5
 	editInvoice.Msg.CommandContext.IdempotencyKey = "018f0000-0000-7000-8000-000000000182"
 	editInvoice.Header().Set(transport.CapabilityHeader, ready.Capability)
 	if _, err := invoiceClient.SaveInvoiceDraft(context.Background(), editInvoice); connect.CodeOf(err) != connect.CodeFailedPrecondition {
@@ -410,8 +442,8 @@ func TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealSer
 		t.Fatalf("invoice list=%v %v", page, err)
 	}
 	var commandAuditCount int
-	if err := module.db.QueryRowContext(context.Background(), `SELECT count(*) FROM invoice_command_audit_v1`).Scan(&commandAuditCount); err != nil || commandAuditCount != 2 {
-		t.Fatalf("invoice command audit count=%d err=%v; want save and issue only", commandAuditCount, err)
+	if err := module.db.QueryRowContext(context.Background(), `SELECT count(*) FROM invoice_command_audit_v1`).Scan(&commandAuditCount); err != nil || commandAuditCount != 5 {
+		t.Fatalf("invoice command audit count=%d err=%v; want four saves and issue only", commandAuditCount, err)
 	}
 	if _, err := module.db.ExecContext(context.Background(), `DELETE FROM invoice_command_audit_v1`); err == nil {
 		t.Fatal("invoice command audit was deletable")

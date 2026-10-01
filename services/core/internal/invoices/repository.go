@@ -33,6 +33,9 @@ func (r *Repository) Save(ctx context.Context, v *tammyv1.Invoice, expected uint
 	if r == nil || r.executor == nil || ctx == nil || !validInvoice(v) || v.Version != expected+1 || (expected == 0 && v.State != tammyv1.InvoiceState_INVOICE_STATE_DRAFT) {
 		return ErrRepository
 	}
+	if err := r.requireLogo(ctx, v.OrganisationId, v.LogoAssetId); err != nil {
+		return err
+	}
 	for _, line := range v.Draft.Lines {
 		if line.SourceDocumentId == nil {
 			continue
@@ -146,6 +149,9 @@ func scanInvoice(row interface{ Scan(...any) error }) (*tammyv1.Invoice, error) 
 }
 func validInvoice(v *tammyv1.Invoice) bool {
 	if v == nil || !ids.IsCanonicalV7(v.Id) || !ids.IsCanonicalV7(v.OrganisationId) || v.Version < 1 || !text(v.SellerName, 256, true) || organisations.ValidateABN(v.SellerAbn) != nil || v.CreatedAt == nil || v.CreatedAt.CheckValid() != nil || v.UpdatedAt == nil || v.UpdatedAt.CheckValid() != nil || v.UpdatedAt.AsTime().Before(v.CreatedAt.AsTime()) || (v.State != tammyv1.InvoiceState_INVOICE_STATE_DRAFT && v.State != tammyv1.InvoiceState_INVOICE_STATE_ISSUED) {
+		return false
+	}
+	if v.LogoAssetId != nil && !ids.IsCanonicalV7(*v.LogoAssetId) {
 		return false
 	}
 	computed, err := Calculate(v.Draft)

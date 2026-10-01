@@ -140,7 +140,15 @@ func (a invoiceCommandAuditor) Append(ctx context.Context, executor app.CommandS
 	if event == nil || event.Actor == nil || event.IdempotencyKey == nil || event.Result == nil || len(payload) == 0 {
 		return ErrLedgerModule
 	}
-	_, err := executor.ExecContext(ctx, `INSERT INTO invoice_command_audit_v1(operation_key,workspace_id,actor_user_id,session_id,command_type,result_sha256,payload_proto,occurred_at) VALUES (?,?,?,?,?,?,?,?)`, *event.IdempotencyKey, event.WorkspaceId, event.Actor.ActorUserId, event.Actor.SessionId, event.CommandType, event.Result.DeterministicSha256, payload, a.now().UTC().Format(time.RFC3339Nano))
+	statement := `INSERT INTO invoice_command_audit_v1(operation_key,workspace_id,actor_user_id,session_id,command_type,result_sha256,payload_proto,occurred_at) VALUES (?,?,?,?,?,?,?,?)`
+	switch app.OrdinaryOperation(event.CommandType) {
+	case app.OrdinaryOperationSaveInvoiceDraft, app.OrdinaryOperationIssueInvoice:
+	case app.OrdinaryOperationSaveInvoiceTemplate, app.OrdinaryOperationUploadInvoiceLogo:
+		statement = `INSERT INTO invoice_branding_command_audit_v1(operation_key,workspace_id,actor_user_id,session_id,command_type,result_sha256,payload_proto,occurred_at) VALUES (?,?,?,?,?,?,?,?)`
+	default:
+		return ErrLedgerModule
+	}
+	_, err := executor.ExecContext(ctx, statement, *event.IdempotencyKey, event.WorkspaceId, event.Actor.ActorUserId, event.Actor.SessionId, event.CommandType, event.Result.DeterministicSha256, payload, a.now().UTC().Format(time.RFC3339Nano))
 	return err
 }
 
@@ -225,7 +233,7 @@ func (h *invoiceHandler) ListInvoices(ctx context.Context, r *connect.Request[ta
 func invoiceError(err error) error {
 	code := connect.CodeInternal
 	switch {
-	case errors.Is(err, invoices.ErrInvalidDraft):
+	case errors.Is(err, invoices.ErrInvalidDraft), errors.Is(err, invoices.ErrLogoAsset):
 		code = connect.CodeInvalidArgument
 	case errors.Is(err, invoices.ErrNotFound):
 		code = connect.CodeNotFound

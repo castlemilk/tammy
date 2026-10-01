@@ -29,6 +29,7 @@ import type { DesktopDependencies, DesktopWindow } from "./index-lifecycle";
 import { resolveBundledCorePath, resolveBundledSbrProfileLocation } from "./index-paths";
 import { createInvoiceExport, type InvoiceExport } from "./invoice-export";
 import { createInvoiceIssuer } from "./invoice-issue";
+import { loadInvoiceLogo } from "./invoice-logo";
 import {
   parseDesktopLaunchScenario,
   rendererLaunchScenarioArguments,
@@ -185,6 +186,13 @@ export function createProductionDependencies(
           if (!result.invoice || result.invoice.organisationId !== request.organisationId)
             throw new Error("INVOICE_EXPORT_FAILED");
           const record = invoiceToRecord(result.invoice);
+          const logo = await loadInvoiceLogo(
+            current.client,
+            request.authentication,
+            request.organisationId,
+            record.logoAssetId,
+            guard,
+          );
           return {
             invoice: {
               ...record.draft,
@@ -192,6 +200,7 @@ export function createProductionDependencies(
               state: record.state,
               sellerName: record.sellerName,
               sellerAbn: record.sellerAbn,
+              ...(logo ? { logo } : {}),
             },
             guard,
           };

@@ -26,6 +26,10 @@
     "getInvoice": "query",
     "saveInvoiceDraft": "command",
     "issueInvoice": "command",
+    "getInvoiceTemplate": "query",
+    "saveInvoiceTemplate": "command",
+    "uploadInvoiceLogo": "command",
+    "getInvoiceLogo": "query",
     "exportInvoicePdf": "command",
     "getInvoiceProposal": "query"
   },

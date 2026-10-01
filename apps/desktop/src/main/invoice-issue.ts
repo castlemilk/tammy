@@ -7,12 +7,13 @@ import {
 import type { InvoicePdfData } from "@tammy/invoices/pdf";
 import { invoiceToRecord } from "../shared/invoices";
 import type { CoreClient } from "./core-client";
+import { loadInvoiceLogo } from "./invoice-logo";
 
 /** Check the real saved document can produce a customer PDF before freezing it.
  * Core still owns authorisation, versions, idempotency and the issue transaction.
  */
 export function createInvoiceIssuer(options: {
-  client: Pick<CoreClient, "getInvoice" | "issueInvoice">;
+  client: Pick<CoreClient, "getInvoice" | "issueInvoice" | "getInvoiceLogo">;
   capture: (authentication: AuthenticationContext, organisationId: string) => () => void;
   render: (invoice: InvoicePdfData) => Promise<Uint8Array>;
 }) {
@@ -31,11 +32,19 @@ export function createInvoiceIssuer(options: {
     if (!response.invoice || response.invoice.organisationId !== request.organisationId)
       throw new Error("INVALID_INVOICE");
     const record = invoiceToRecord(response.invoice);
+    const logo = await loadInvoiceLogo(
+      options.client,
+      authentication,
+      request.organisationId,
+      record.logoAssetId,
+      guard,
+    );
     await options.render({
       ...record.draft,
       sellerName: record.sellerName,
       sellerAbn: record.sellerAbn,
       state: "issued",
+      ...(logo ? { logo } : {}),
     });
     guard();
     return options.client.issueInvoice(request);

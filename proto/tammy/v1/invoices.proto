@@ -104,6 +104,8 @@ message Invoice {
   int64 cost_minor = 12;
   google.protobuf.Timestamp created_at = 13 [(buf.validate.field).required = true];
   google.protobuf.Timestamp updated_at = 14 [(buf.validate.field).required = true];
+  // logo_asset_id is the reviewed immutable logo snapshot, never current branding.
+  optional string logo_asset_id = 15 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 }
 
 message SaveInvoiceDraftRequest {
@@ -113,6 +115,8 @@ message SaveInvoiceDraftRequest {
   string invoice_id = 3 [(buf.validate.field).string.max_len = 36];
   uint64 expected_version = 4;
   InvoiceDraft draft = 5 [(buf.validate.field).required = true];
+  // Omission preserves an existing draft's logo. Empty explicitly removes it.
+  optional string logo_asset_id = 6 [(buf.validate.field).string.max_len = 36];
 }
 message SaveInvoiceDraftResponse {
   Invoice invoice = 1 [(buf.validate.field).required = true];
@@ -144,10 +148,101 @@ message IssueInvoiceResponse {
   Invoice invoice = 1 [(buf.validate.field).required = true];
 }
 
+// InvoiceTemplateInput initializes future invoices; it never rewrites saved documents.
+message InvoiceTemplateInput {
+  string seller_address = 1 [(buf.validate.field).string.max_len = 1000];
+  string notes = 2 [(buf.validate.field).string.max_len = 2000];
+  string payment_instructions = 3 [(buf.validate.field).string.max_len = 1000];
+  uint32 payment_terms_days = 4 [(buf.validate.field).uint32.lte = 365];
+  optional string logo_asset_id = 5 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+}
+
+// Version zero denotes the unsaved built-in defaults (14-day payment terms).
+message InvoiceTemplate {
+  string organisation_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 version = 2;
+  InvoiceTemplateInput defaults = 3 [(buf.validate.field).required = true];
+}
+message GetInvoiceTemplateRequest {
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+}
+message GetInvoiceTemplateResponse {
+  InvoiceTemplate template = 1 [(buf.validate.field).required = true];
+}
+message SaveInvoiceTemplateRequest {
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 expected_version = 3;
+  InvoiceTemplateInput defaults = 4 [(buf.validate.field).required = true];
+}
+message SaveInvoiceTemplateResponse {
+  InvoiceTemplate template = 1 [(buf.validate.field).required = true];
+}
+
+// Logo metadata is safe to include without adding image bytes to invoice lists.
+message InvoiceLogo {
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string mime_type = 3 [(buf.validate.field).string = {
+    in: [
+      "image/png",
+      "image/jpeg"
+    ]
+  }];
+  uint32 byte_length = 4 [(buf.validate.field).uint32 = {
+    gte: 1
+    lte: 1048576
+  }];
+  bytes sha256 = 5 [(buf.validate.field).bytes.len = 32];
+  uint32 width = 6 [(buf.validate.field).uint32 = {
+    gte: 1
+    lte: 4096
+  }];
+  uint32 height = 7 [(buf.validate.field).uint32 = {
+    gte: 1
+    lte: 4096
+  }];
+  google.protobuf.Timestamp created_at = 8 [(buf.validate.field).required = true];
+}
+message UploadInvoiceLogoRequest {
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string mime_type = 3 [(buf.validate.field).string = {
+    in: [
+      "image/png",
+      "image/jpeg"
+    ]
+  }];
+  bytes content = 4 [(buf.validate.field).bytes = {
+    min_len: 1
+    max_len: 1048576
+  }];
+}
+message UploadInvoiceLogoResponse {
+  InvoiceLogo logo = 1 [(buf.validate.field).required = true];
+}
+message GetInvoiceLogoRequest {
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string logo_asset_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+}
+message GetInvoiceLogoResponse {
+  InvoiceLogo logo = 1 [(buf.validate.field).required = true];
+  bytes content = 2 [(buf.validate.field).bytes = {
+    min_len: 1
+    max_len: 1048576
+  }];
+}
+
 service InvoiceService {
   rpc SaveInvoiceDraft(SaveInvoiceDraftRequest) returns (SaveInvoiceDraftResponse);
   rpc GetInvoice(GetInvoiceRequest) returns (GetInvoiceResponse);
   rpc ListInvoices(ListInvoicesRequest) returns (ListInvoicesResponse);
   // Issue freezes the document. It never sends it, records payment, or posts a journal.
   rpc IssueInvoice(IssueInvoiceRequest) returns (IssueInvoiceResponse);
+  rpc GetInvoiceTemplate(GetInvoiceTemplateRequest) returns (GetInvoiceTemplateResponse);
+  rpc SaveInvoiceTemplate(SaveInvoiceTemplateRequest) returns (SaveInvoiceTemplateResponse);
+  rpc UploadInvoiceLogo(UploadInvoiceLogoRequest) returns (UploadInvoiceLogoResponse);
+  rpc GetInvoiceLogo(GetInvoiceLogoRequest) returns (GetInvoiceLogoResponse);
 }

@@ -58,6 +58,13 @@ function fixture(initial: InvoiceRecord[] = [], expenses: readonly InvoiceExpens
     list: async () => structuredClone(records),
     listExpenses: async () => structuredClone(expenses),
     getProposal: async () => draft(),
+    getTemplate: async () => ({
+      version: 0,
+      defaults: { sellerAddress: "", paymentInstructions: "", notes: "", paymentTermsDays: 14 },
+    }),
+    saveTemplate: async (defaults, expectedVersion) => ({ version: expectedVersion + 1, defaults }),
+    uploadLogo: async () => "logo-1",
+    getLogo: async (id) => ({ id, dataUrl: "data:image/png;base64,aGVsbG8=" }),
     save: async (value, id, expectedVersion) => {
       calls.saved.push(structuredClone(value));
       const existing = records.find((record) => record.id === id);

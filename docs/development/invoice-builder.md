@@ -25,6 +25,14 @@ Save the draft before exporting. Draft PDFs are clearly marked as not issued. **
 
 Use **Export PDF** to choose a destination in the native save dialog. Save any edits first: export uses the saved version and stays disabled while the editor has unsaved changes. Cancellation saves nothing. Internal costs, profit and source-document IDs are excluded from customer PDFs. Export does not send the document or store a payment.
 
+## Company template and logo
+
+Choose **Manage invoice template** on the invoice page to save company defaults for seller address, payment instructions, notes and payment terms. Terms range from 0 to 365 days after the issue date; the initial default is 14 days. New invoices inherit the saved defaults. **Apply saved template** explicitly replaces those fields, the due date and logo on the editable draft in view. Customer details and line items remain as entered. Existing invoices retain their saved values when company defaults change.
+
+Upload a static PNG or JPEG logo, then choose **Save template**. Logos may be up to 1 MiB, 4096 pixels per dimension and four million pixels. The preview shows the selected logo. **Remove logo** removes it from future defaults; **Remove invoice logo** removes it only from the current editable draft. Save the invoice to retain that change. Issued invoices retain their original logo and text.
+
+The encrypted workspace stores immutable, organisation-scoped logo assets and versioned defaults. Upload validation checks the actual format, structure, decoded dimensions and pixels. PDF generation reads the saved invoice's asset, preserves its aspect ratio and uses only local image bytes. Template and logo management require the same admin/preparer authority as invoice writing; the MCP proposal schema remains unchanged.
+
 ## Generate a proposal through MCP
 
 Follow [Local API and MCP](local-api-mcp.md) to enable and pair the current signed-in organisation. The relevant tools are:
@@ -80,5 +88,7 @@ mise exec -- task package:e2e
 ```
 
 Focused tests cover integer calculations, validation, PDF pagination/privacy, editor behavior, native export and session revocation. Tagged SQLCipher invoice integration tests additionally cover authorisation, exact idempotent replay, stale versions, reviewed-source ownership and issued-document immutability. Packaged acceptance covers pairing over real HTTP/stdin MCP, human review, save, draft/issued PDF export and reopening an issued document after restart.
+
+Company-template checks cover defaults-load races, explicit application, logo upload/removal, optimistic conflicts, malformed images, organisation isolation, an exact 1 MiB upload through the real TLS server, and unchanged invoice branding after defaults change. Packaged acceptance uploads a real transparent PNG, verifies embedded PDF images and payment instructions, changes the defaults, and reopens both the original invoice and a new draft after restart.
 
 Issuing currently performs no ledger posting, customer delivery, payment tracking, credit note, ATO/SBR submission or automatic recurring billing. Those workflows need separate implementation and verification; an issued document is not evidence of tax lodgement or App Store release.

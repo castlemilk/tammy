@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	tammyv1connect "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1/tammyv1connect"
 )
 
 type serverConfig struct {
@@ -52,6 +53,9 @@ const (
 	localAPIConnectEnvelopeBytes   = 5
 	localAPIRequestBodyMaxBytes    = localAPIConnectMessageMaxBytes +
 		localAPIConnectEnvelopeBytes
+	// Logo content is capped separately at 1 MiB. Allow only this RPC another
+	// 1 KiB for its bounded authentication, organisation, and protobuf fields.
+	localAPIInvoiceLogoMessageMaxBytes = localAPIConnectMessageMaxBytes + 1024
 )
 
 // WithClock injects the clock used for the ephemeral certificate validity
@@ -129,7 +133,13 @@ func NewServer(
 	}
 	handler, err := registrar.Handler(
 		connect.WithInterceptors(interceptor),
-		connect.WithReadMaxBytes(localAPIConnectMessageMaxBytes),
+		connect.WithConditionalHandlerOptions(func(spec connect.Spec) []connect.HandlerOption {
+			maximum := localAPIConnectMessageMaxBytes
+			if spec.Procedure == tammyv1connect.InvoiceServiceUploadInvoiceLogoProcedure {
+				maximum = localAPIInvoiceLogoMessageMaxBytes
+			}
+			return []connect.HandlerOption{connect.WithReadMaxBytes(maximum)}
+		}),
 	)
 	if err != nil || nilInterface(handler) {
 		return nil, errors.Join(ErrRegistrar, err)
@@ -164,8 +174,16 @@ func NewServer(
 		serveDone:    make(chan struct{}),
 		shutdownDone: make(chan struct{}),
 	}
+	ordinaryHandler := http.MaxBytesHandler(handler, localAPIRequestBodyMaxBytes)
+	logoHandler := http.MaxBytesHandler(handler, localAPIInvoiceLogoMessageMaxBytes+localAPIConnectEnvelopeBytes)
 	server.httpServer = &http.Server{
-		Handler:           http.MaxBytesHandler(handler, localAPIRequestBodyMaxBytes),
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == tammyv1connect.InvoiceServiceUploadInvoiceLogoProcedure {
+				logoHandler.ServeHTTP(w, r)
+				return
+			}
+			ordinaryHandler.ServeHTTP(w, r)
+		}),
 		ReadHeaderTimeout: localAPIReadHeaderTimeout,
 		ReadTimeout:       localAPIReadTimeout,
 		WriteTimeout:      localAPIWriteTimeout,
