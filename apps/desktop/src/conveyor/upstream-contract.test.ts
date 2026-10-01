@@ -1,7 +1,7 @@
-import { defineModule, query } from "electron-conveyor/define";
 import type { StandardSchemaV1 } from "electron-conveyor/define";
-import { z } from "zod";
+import { defineModule, query } from "electron-conveyor/define";
 import { expect, test, vi } from "vitest";
+import { z } from "zod";
 
 vi.mock("electron", () => ({
   app: { isPackaged: true },
@@ -142,7 +142,9 @@ test("router enforces the injected-boundary security and ownership contract", as
 
   calls.length = 0;
   contextCalls.length = 0;
-  await expect(ipcMain.invoke("conveyor:secure", acceptedEvent, "lookup", "invalid")).resolves.toMatchObject({
+  await expect(
+    ipcMain.invoke("conveyor:secure", acceptedEvent, "lookup", "invalid"),
+  ).resolves.toMatchObject({
     ok: false,
     error: { code: "INVALID_INPUT" },
   });
@@ -231,7 +233,12 @@ test("router fails closed for promise and thenable authorizers", async () => {
       calls.push("authorize");
       if ((event as FakeEvent).asyncAuthorizer) return Promise.resolve() as never;
       if ((event as FakeEvent).thenableAuthorizer) {
-        return { then(resolve: (value: undefined) => void) { resolve(undefined); } } as never;
+        return {
+          // biome-ignore lint/suspicious/noThenProperty: This fixture verifies rejection of a non-Promise thenable authorizer.
+          then(resolve: (value: undefined) => void) {
+            resolve(undefined);
+          },
+        } as never;
       }
     },
   });
@@ -261,15 +268,12 @@ test("injected boundaries preserve unrelated stream lifecycle handlers", () => {
   ipcMain.handlers.set("conveyor:stream:start", streamStartSentinel);
 
   expect(() =>
-    createRouter(
-      modules,
-      {
-        ipcMain: ipcMain as unknown as Pick<
-          Electron.IpcMain,
-          "handle" | "removeHandler" | "on" | "removeListener"
-        >,
-      },
-    ),
+    createRouter(modules, {
+      ipcMain: ipcMain as unknown as Pick<
+        Electron.IpcMain,
+        "handle" | "removeHandler" | "on" | "removeListener"
+      >,
+    }),
   ).toThrow(/Handler already registered/);
   expect(ipcMain.handlers.get("conveyor:stream:start")).toBe(streamStartSentinel);
   expect(ipcMain.removedHandlers).not.toContain("conveyor:stream:start");

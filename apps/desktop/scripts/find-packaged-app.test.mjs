@@ -335,10 +335,7 @@ test("rejects additional Builder output directories and application candidates",
   });
   await withFixture("win32", "x64", async ({ desktopRoot, layout }) => {
     await writeFile(
-      path.join(
-        desktopRoot,
-        "../../.tmp/electron-builder/ordinary/win-unpacked/AnotherTammy.exe",
-      ),
+      path.join(desktopRoot, "../../.tmp/electron-builder/ordinary/win-unpacked/AnotherTammy.exe"),
       "not-tammy",
     );
     await assert.rejects(
@@ -586,6 +583,55 @@ test("rejects manifest byte mismatch, core hash mismatch, and ASAR-contained cor
       }),
       /PACKAGED_CORE_HASH_MISMATCH/,
     );
+  });
+});
+
+test("allows quoted PEM delimiters used by bundled parsers", async () => {
+  await withFixture("darwin", "arm64", async ({ desktopRoot, layout }) => {
+    const source = Buffer.from(
+      ["PRIVATE KEY", "RSA PRIVATE KEY", "EC PRIVATE KEY"]
+        .flatMap((type) =>
+          ["'", '"', "`"].map((quote) => `${quote}-----BEGIN ${type}-----${quote}`),
+        )
+        .join(";\n"),
+    );
+    await writeFile(
+      layout.appAsar,
+      encodeAsar({ files: { "parser.js": { offset: "0", size: source.length } } }, source),
+    );
+    await verifyPackagedLayout({
+      desktopRoot,
+      platform: "darwin",
+      arch: "arm64",
+      sourceManifestPath: layout.sourceManifest,
+    });
+  });
+});
+
+test("checks PEM delimiters across read boundaries and after harmless parser strings", async () => {
+  await withFixture("darwin", "arm64", async ({ desktopRoot, layout }) => {
+    const file = path.join(layout.packagedResourceBase, "parser.dat");
+    const verify = () =>
+      verifyPackagedLayout({
+        desktopRoot,
+        platform: "darwin",
+        arch: "arm64",
+        sourceManifestPath: layout.sourceManifest,
+      });
+    for (const type of ["PRIVATE KEY", "RSA PRIVATE KEY", "EC PRIVATE KEY"]) {
+      const marker = `-----BEGIN ${type}-----`;
+      for (const shift of [-1, 0, 1]) {
+        const prefix = "x".repeat(64 * 1024 - marker.length - 1 + shift);
+        await writeFile(file, `${prefix}'${marker}'${"x".repeat(64 * 1024)}`);
+        await verify();
+        await writeFile(file, `${prefix}'${marker}\\nnot-shippable`);
+        await assert.rejects(verify(), /PACKAGED_PRIVATE_KEY_LEAK/);
+      }
+      for (const suffix of ["", "\nnot-shippable", "\r\nnot-shippable", "\\nnot-shippable", '"']) {
+        await writeFile(file, `'${marker}';'${marker}${suffix}`);
+        await assert.rejects(verify(), /PACKAGED_PRIVATE_KEY_LEAK/);
+      }
+    }
   });
 });
 

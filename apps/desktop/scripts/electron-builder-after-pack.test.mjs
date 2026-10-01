@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { chmod, lstat, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { chmod, lstat, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
-import { promisify } from "node:util";
 import test from "node:test";
-import { createRequire } from "node:module";
+import { promisify } from "node:util";
 
 const require = createRequire(import.meta.url);
 const { createAfterPackHook } = require("./electron-builder-after-pack.cjs");
@@ -54,10 +54,7 @@ async function createAppRoot(prefix = "tammy-builder-hook-") {
     await writeFile(path.join(helperContents, "Info.plist"), plist({ CFBundleIdentifier: "old" }));
   }
   await writeFile(path.join(resources, "core", "darwin-arm64", "tammy-core"), "core");
-  await writeFile(
-    path.join(resources, "sbr-helper", "darwin-arm64", "tammy-sbr-helper"),
-    "helper",
-  );
+  await writeFile(path.join(resources, "sbr-helper", "darwin-arm64", "tammy-sbr-helper"), "helper");
   await chmod(path.join(resources, "core", "darwin-arm64", "tammy-core"), 0o644);
   await chmod(path.join(resources, "sbr-helper", "darwin-arm64", "tammy-sbr-helper"), 0o644);
   return { appBundle, appOutDir, outputRoot };
@@ -92,14 +89,7 @@ test("normalizes an ordinary macOS app without signing or leaking macOS usage ke
   }
   for (const file of [
     path.join(appBundle, "Contents", "Resources", "core", "darwin-arm64", "tammy-core"),
-    path.join(
-      appBundle,
-      "Contents",
-      "Resources",
-      "sbr-helper",
-      "darwin-arm64",
-      "tammy-sbr-helper",
-    ),
+    path.join(appBundle, "Contents", "Resources", "sbr-helper", "darwin-arm64", "tammy-sbr-helper"),
   ]) {
     assert.equal((await lstat(file)).mode & 0o777, 0o755);
   }
@@ -166,6 +156,34 @@ test("does not invoke macOS plist tooling for Windows and rejects unsupported ta
     }),
     { message: "BUILDER_TARGET_INVALID" },
   );
+});
+
+test("rejects every ASCII control character in MAS public URLs", async (context) => {
+  const { appOutDir, outputRoot } = await createAppRoot("tammy-builder-url-");
+  context.after(() => rm(outputRoot, { force: true, recursive: true }));
+  const environment = {
+    TAMMY_ELECTRON_BUILDER_OUTPUT: outputRoot,
+    TAMMY_MACOS_ARTIFACT_PHASE: "unsigned-staging",
+    TAMMY_MACOS_BUILD_NUMBER: "42",
+    TAMMY_MACOS_EXPORT_COMPLIANCE: "exempt",
+    TAMMY_MACOS_PRIVACY_POLICY_URL: "https://example.com/privacy",
+    TAMMY_MACOS_SUPPORT_URL: "https://example.com/support",
+    TAMMY_MACOS_TARGET: "mas/arm64",
+    TAMMY_MACOS_TEAM_ID: "ABCDE12345",
+  };
+  for (const key of ["TAMMY_MACOS_PRIVACY_POLICY_URL", "TAMMY_MACOS_SUPPORT_URL"]) {
+    for (const code of [...Array.from({ length: 32 }, (_, index) => index), 127]) {
+      await assert.rejects(
+        createAfterPackHook({
+          environment: {
+            ...environment,
+            [key]: `https://example.com/a${String.fromCharCode(code)}b`,
+          },
+        })({ appOutDir, arch: "arm64", electronPlatformName: "mas" }),
+        { message: "BUILDER_MAS_ENV_INVALID" },
+      );
+    }
+  }
 });
 
 test("rejects symlinked output app roots and resources", async (context) => {

@@ -55,7 +55,10 @@ async function executeMacOSStoreBuild(plan, options = {}) {
     : {
         ...plan,
         finalCommands: [],
-        builderOutputRoot: path.join(plan.root, ".tmp/macos-release/test/build-1/.builder-unsigned"),
+        builderOutputRoot: path.join(
+          plan.root,
+          ".tmp/macos-release/test/build-1/.builder-unsigned",
+        ),
         releaseRoot: path.join(plan.root, ".tmp/macos-release/test/build-1"),
         resourceSignCommands: [],
         signingApp: plan.app,
@@ -258,10 +261,7 @@ test("distribution plan checks, builds, packages MAS and creates a signed flat p
   );
   assert.equal(
     plan.builderApp,
-    path.join(
-      root,
-      ".tmp/macos-release/0.1.0/build-42/.builder-unsigned/mas-arm64/Tammy.app",
-    ),
+    path.join(root, ".tmp/macos-release/0.1.0/build-42/.builder-unsigned/mas-arm64/Tammy.app"),
   );
   assert.match(plan.pkg ?? "", /Tammy-0\.1\.0-build\.42\.pkg$/);
   assert.deepEqual(

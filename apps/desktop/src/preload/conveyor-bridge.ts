@@ -22,12 +22,14 @@ const INVALID_MANIFEST = "INVALID_CONVEYOR_MANIFEST";
 const TRANSPORT_FAILURE = "IPC_TRANSPORT_FAILED";
 const SUBSCRIPTIONS_DISABLED = "IPC_SUBSCRIPTIONS_DISABLED";
 
-const channelModules = Object.freeze(Object.fromEntries(
-  CONVEYOR_PROCEDURE_CHANNELS.map((channel) => [channel, channel.slice("conveyor:".length)]),
-));
+const channelModules = Object.freeze(
+  Object.fromEntries(
+    CONVEYOR_PROCEDURE_CHANNELS.map((channel) => [channel, channel.slice("conveyor:".length)]),
+  ),
+);
 
 function hasOwn(value: object, key: string): boolean {
-  return Object.prototype.hasOwnProperty.call(value, key);
+  return Object.hasOwn(value, key);
 }
 
 function invalidRequest(): never {
@@ -39,14 +41,22 @@ function invalidManifest(): never {
 }
 
 function exactDataObject(value: unknown, expectedKeys: readonly string[]): Record<string, unknown> {
-  if (typeof value !== "object" || value === null || Array.isArray(value) || Object.getPrototypeOf(value) !== Object.prototype) {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    Array.isArray(value) ||
+    Object.getPrototypeOf(value) !== Object.prototype
+  ) {
     return invalidManifest();
   }
   const ownKeys = Reflect.ownKeys(value);
   if (ownKeys.some((key) => typeof key !== "string")) return invalidManifest();
   const actualKeys = (ownKeys as string[]).sort();
   const sortedExpected = [...expectedKeys].sort();
-  if (actualKeys.length !== sortedExpected.length || actualKeys.some((key, index) => key !== sortedExpected[index])) {
+  if (
+    actualKeys.length !== sortedExpected.length ||
+    actualKeys.some((key, index) => key !== sortedExpected[index])
+  ) {
     return invalidManifest();
   }
   const copy: Record<string, unknown> = {};
@@ -67,7 +77,8 @@ function freezeManifest(value: unknown): ConveyorManifest {
     const procedureCopy: Record<string, ConveyorProcedureKind> = {};
     for (const method of Object.keys(expectedProcedures)) {
       const kind = procedures[method];
-      if ((kind !== "query" && kind !== "command") || kind !== expectedProcedures[method]) return invalidManifest();
+      if ((kind !== "query" && kind !== "command") || kind !== expectedProcedures[method])
+        return invalidManifest();
       procedureCopy[method] = kind;
     }
     copy[module] = Object.freeze(procedureCopy);
@@ -82,7 +93,8 @@ function expectedArity(channel: string, method: string): 0 | 1 {
 }
 
 function validateProcedure(channel: unknown, method: unknown, args: readonly unknown[]): void {
-  if (typeof channel !== "string" || typeof method !== "string" || !hasOwn(channelModules, channel)) invalidRequest();
+  if (typeof channel !== "string" || typeof method !== "string" || !hasOwn(channelModules, channel))
+    invalidRequest();
   const module = channelModules[channel];
   if (module === undefined || !hasOwn(CONVEYOR_MANIFEST[module]!, method)) invalidRequest();
   if (args.length !== expectedArity(channel, method)) invalidRequest();
@@ -107,11 +119,16 @@ export function createRestrictedConveyorBridge(ipcRenderer: RestrictedIpcRendere
       }
       return freezeManifest(received);
     },
-    subscribe: () => { throw new Error(SUBSCRIPTIONS_DISABLED); },
+    subscribe: () => {
+      throw new Error(SUBSCRIPTIONS_DISABLED);
+    },
   };
   return Object.freeze(bridge);
 }
 
-export function exposeRestrictedConveyorBridge(contextBridge: RestrictedContextBridge, bridge: ConveyorBridge): void {
+export function exposeRestrictedConveyorBridge(
+  contextBridge: RestrictedContextBridge,
+  bridge: ConveyorBridge,
+): void {
   contextBridge.exposeInMainWorld("conveyor", bridge);
 }

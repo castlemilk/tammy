@@ -12,7 +12,9 @@ import { hashAppBundle } from "./capture-app-store-screenshots.mjs";
 import { validateUnsignedContentManifest } from "./macos-unsigned-content.mjs";
 
 const execFile = promisify(nodeExecFile);
-const desktopRequire = createRequire(path.resolve(import.meta.dirname, "../apps/desktop/package.json"));
+const desktopRequire = createRequire(
+  path.resolve(import.meta.dirname, "../apps/desktop/package.json"),
+);
 
 const SHA256 = /^[0-9a-f]{64}$/u;
 const SHA40 = /^[0-9a-f]{40}$/u;

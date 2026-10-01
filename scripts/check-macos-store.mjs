@@ -1064,7 +1064,10 @@ export async function inspectMacOSStoreRepository(
   }
   const builderResourcePairs = (value) =>
     Array.isArray(value) &&
-    value.every((resource) => isRecord(resource) && typeof resource.from === "string" && typeof resource.to === "string")
+    value.every(
+      (resource) =>
+        isRecord(resource) && typeof resource.from === "string" && typeof resource.to === "string",
+    )
       ? value.map(({ from, to }) => ({ from, to }))
       : undefined;
   const builderTarget = (value) =>
@@ -1119,7 +1122,12 @@ export async function inspectMacOSStoreRepository(
     builderConfig.copyright !== "© 2026 Gamma Systems Pty Ltd" ||
     builderConfig.directories?.output !== "${env.TAMMY_ELECTRON_BUILDER_OUTPUT}" ||
     builderConfig.directories?.buildResources !== "assets" ||
-    !isDeepStrictEqual(builderConfig.files, ["out/main/**", "out/preload/**", "out/renderer/**", "package.json"]) ||
+    !isDeepStrictEqual(builderConfig.files, [
+      "out/main/**",
+      "out/preload/**",
+      "out/renderer/**",
+      "package.json",
+    ]) ||
     builderConfig.asar !== true ||
     builderConfig.npmRebuild !== false ||
     builderConfig.afterPack !== "scripts/electron-builder-after-pack.cjs" ||
@@ -1134,9 +1142,15 @@ export async function inspectMacOSStoreRepository(
       "Contents/Resources/core/darwin-arm64/tammy-core$",
       "Contents/Resources/sbr-helper/darwin-arm64/tammy-sbr-helper$",
     ]) ||
-    !isDeepStrictEqual(builderResourcePairs(builderConfig.mac?.extraResources), expectedMacResources) ||
+    !isDeepStrictEqual(
+      builderResourcePairs(builderConfig.mac?.extraResources),
+      expectedMacResources,
+    ) ||
     builderTarget(builderConfig.win?.target) !== "x64" ||
-    !isDeepStrictEqual(builderResourcePairs(builderConfig.win?.extraResources), expectedWinResources) ||
+    !isDeepStrictEqual(
+      builderResourcePairs(builderConfig.win?.extraResources),
+      expectedWinResources,
+    ) ||
     builderConfig.mas?.category !== APP_CATEGORY ||
     builderTarget(builderConfig.mas?.target) !== "arm64" ||
     builderConfig.mas?.identity !== null ||
@@ -1148,7 +1162,10 @@ export async function inspectMacOSStoreRepository(
       TammyPrivacyPolicyURL: "${env.TAMMY_MACOS_PRIVACY_POLICY_URL}",
       TammySupportURL: "${env.TAMMY_MACOS_SUPPORT_URL}",
     }) ||
-    !isDeepStrictEqual(builderResourcePairs(builderConfig.mas?.extraResources), expectedMasResources) ||
+    !isDeepStrictEqual(
+      builderResourcePairs(builderConfig.mas?.extraResources),
+      expectedMasResources,
+    ) ||
     !includesAll(builderAfterPack, [
       "TAMMY_ELECTRON_BUILDER_OUTPUT",
       "TAMMY_MACOS_ARTIFACT_PHASE",

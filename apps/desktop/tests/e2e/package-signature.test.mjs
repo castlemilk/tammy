@@ -7,7 +7,7 @@ import path from "node:path";
 import test from "node:test";
 import { promisify } from "node:util";
 
-import { getCurrentFuseWire, FuseState, FuseV1Options, FuseVersion } from "@electron/fuses";
+import { FuseState, FuseV1Options, FuseVersion, getCurrentFuseWire } from "@electron/fuses";
 import { verifySbrHelperSignature } from "../../../../scripts/verify-sbr-helper-signature.mjs";
 import { resolvePackagedLayout } from "../../scripts/find-packaged-app.mjs";
 
@@ -158,7 +158,10 @@ test("the ASAR contains only the built application graph and has embedded integr
   ]) {
     assert.ok(entries.includes(required), `missing ${required}`);
   }
-  assert.equal(entries.some((entry) => entry === "/app" || entry.startsWith("/app/")), false);
+  assert.equal(
+    entries.some((entry) => entry === "/app" || entry.startsWith("/app/")),
+    false,
+  );
 
   const infoPlist = path.join(path.dirname(layout.packagedResourceBase), "Info.plist");
   const { stdout } = await execFileAsync(

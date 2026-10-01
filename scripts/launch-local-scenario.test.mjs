@@ -347,11 +347,16 @@ test("desktop package owner forwards only validated electron-vite arguments", as
 
 test("scenario owner reserves the electron-vite sentinel and rejects the Forge sentinel", async () => {
   const source = await readFile(new URL("./launch-local-scenario.mjs", import.meta.url), "utf8");
-  const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
+  const packageJson = JSON.parse(
+    await readFile(new URL("../package.json", import.meta.url), "utf8"),
+  );
 
   assert.match(source, /scenario === "--electron-vite"/u);
   assert.doesNotMatch(source, /scenario === "--electron-forge"/u);
-  assert.equal(packageJson.scripts["desktop:start:scenario"], "node scripts/launch-local-scenario.mjs --electron-vite");
+  assert.equal(
+    packageJson.scripts["desktop:start:scenario"],
+    "node scripts/launch-local-scenario.mjs --electron-vite",
+  );
 });
 
 test("desktop package owner accepts only the owned SBR simulator root and explicit authority", async () => {

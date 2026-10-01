@@ -60,7 +60,7 @@ async function assertRealContainedDirectory(fs, root, candidate) {
     const realPath = await fs.realpath(cursor).catch(() => fail("BUILDER_APP_OUT_DIR_INVALID"));
     if (realPath !== cursor) fail("BUILDER_APP_OUT_DIR_INVALID");
     const parent = path.dirname(cursor);
-    if (parent === cursor || !isContained(root, parent) && parent !== root) {
+    if (parent === cursor || (!isContained(root, parent) && parent !== root)) {
       fail("BUILDER_APP_OUT_DIR_INVALID");
     }
     cursor = parent;
@@ -132,7 +132,9 @@ function requireMasEnvironment(environment) {
     "TAMMY_MACOS_TEAM_ID",
     "TAMMY_MACOS_TARGET",
   ];
-  if (required.some((name) => typeof environment?.[name] !== "string" || !environment[name].trim())) {
+  if (
+    required.some((name) => typeof environment?.[name] !== "string" || !environment[name].trim())
+  ) {
     fail("BUILDER_MAS_ENV_INVALID");
   }
   if (
@@ -152,7 +154,12 @@ function requireMasEnvironment(environment) {
 function isHttpsUrl(value) {
   try {
     const parsed = new URL(value);
-    return parsed.protocol === "https:" && !/[\u0000-\u001f\u007f]/u.test(value);
+    if (parsed.protocol !== "https:") return false;
+    for (const character of value) {
+      const code = character.charCodeAt(0);
+      if (code <= 0x1f || code === 0x7f) return false;
+    }
+    return true;
   } catch {
     return false;
   }
@@ -186,7 +193,11 @@ async function writeMasInfo(_fs, runCommand, infoPlist, environment) {
   }
 }
 
-function createAfterPackHook({ environment = process.env, fs = nodeFs, runCommand = runNodeCommand } = {}) {
+function createAfterPackHook({
+  environment = process.env,
+  fs = nodeFs,
+  runCommand = runNodeCommand,
+} = {}) {
   return async function afterPack(context) {
     const platform = context?.electronPlatformName;
     const architecture = normalizeArchitecture(context?.arch);
@@ -202,7 +213,11 @@ function createAfterPackHook({ environment = process.env, fs = nodeFs, runComman
     }
     const outputRoot = validateEnvironmentRoot(environment);
     const appOutDir = context?.appOutDir;
-    if (typeof appOutDir !== "string" || !path.isAbsolute(appOutDir) || path.normalize(appOutDir) !== appOutDir) {
+    if (
+      typeof appOutDir !== "string" ||
+      !path.isAbsolute(appOutDir) ||
+      path.normalize(appOutDir) !== appOutDir
+    ) {
       fail("BUILDER_APP_OUT_DIR_INVALID");
     }
     await assertRealContainedDirectory(fs, outputRoot, appOutDir);

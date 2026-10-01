@@ -450,7 +450,7 @@ export async function publishUnsignedMacOSStaging(plan) {
     return manifest;
   } finally {
     await safeRemoveOutputDirectory(plan, staging).catch(() => {});
-      await safeRemoveOutputDirectory(plan, plan.builderOutputRoot).catch(() => {});
+    await safeRemoveOutputDirectory(plan, plan.builderOutputRoot).catch(() => {});
   }
 }
 

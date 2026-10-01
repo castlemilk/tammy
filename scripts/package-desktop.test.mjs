@@ -83,9 +83,14 @@ test("ordinary output rejects a symlink before Builder can overwrite it", async 
   const external = await mkdtemp(path.join(tmpdir(), "tammy-desktop-package-external-"));
   try {
     const output = ordinaryBuilderOutputRoot(root);
-    await import("node:fs/promises").then(({ mkdir }) => mkdir(path.dirname(output), { recursive: true }));
+    await import("node:fs/promises").then(({ mkdir }) =>
+      mkdir(path.dirname(output), { recursive: true }),
+    );
     await symlink(external, output);
-    await assert.rejects(executeDesktopPackage(root, async () => {}), /DESKTOP_PACKAGE_OUTPUT_INVALID/);
+    await assert.rejects(
+      executeDesktopPackage(root, async () => {}),
+      /DESKTOP_PACKAGE_OUTPUT_INVALID/,
+    );
     assert.equal((await lstat(output)).isSymbolicLink(), true);
     assert.equal((await lstat(external)).isDirectory(), true);
   } finally {

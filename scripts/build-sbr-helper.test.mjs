@@ -88,10 +88,7 @@ test("production source contains no simulator private key material", async () =>
 test("Builder conditionally packages exact SBR resources and preserves helper bytes", async () => {
   const source = await readFile("apps/desktop/electron-builder.yml", "utf8");
   const afterPack = await readFile("apps/desktop/scripts/electron-builder-after-pack.cjs", "utf8");
-  assert.match(
-    source,
-    /mac:[\s\S]*resources\/sbr[\s\S]*resources\/sbr-helper/,
-  );
+  assert.match(source, /mac:[\s\S]*resources\/sbr[\s\S]*resources\/sbr-helper/);
   assert.match(source, /mas:[\s\S]*release\/macos\/PrivacyInfo\.xcprivacy/);
   assert.match(source, /signIgnore:/);
   assert.match(source, /TAMMY_ELECTRON_BUILDER_OUTPUT/);

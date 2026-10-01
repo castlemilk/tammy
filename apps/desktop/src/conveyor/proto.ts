@@ -7,9 +7,16 @@ interface ProtoCodec<Request, Response> {
 }
 
 function copyFrame(value: unknown, maximumBytes: number): Uint8Array | undefined {
-  if (!Number.isSafeInteger(maximumBytes) || maximumBytes < 1 || !(value instanceof Uint8Array) || Object.getPrototypeOf(value) !== Uint8Array.prototype) return undefined;
+  if (
+    !Number.isSafeInteger(maximumBytes) ||
+    maximumBytes < 1 ||
+    !(value instanceof Uint8Array) ||
+    Object.getPrototypeOf(value) !== Uint8Array.prototype
+  )
+    return undefined;
   try {
-    if (value.byteLength === 0 || value.byteLength > maximumBytes || value.byteOffset < 0) return undefined;
+    if (value.byteLength === 0 || value.byteLength > maximumBytes || value.byteOffset < 0)
+      return undefined;
     return new Uint8Array(value);
   } catch {
     return undefined;
@@ -17,19 +24,22 @@ function copyFrame(value: unknown, maximumBytes: number): Uint8Array | undefined
 }
 
 export function boundedProtoFrame(maximumBytes: number) {
-  return z.custom<Uint8Array>((value) => copyFrame(value, maximumBytes) !== undefined, { message: "Invalid binary frame" }).transform((value) => copyFrame(value, maximumBytes)!);
+  return z
+    .custom<Uint8Array>((value) => copyFrame(value, maximumBytes) !== undefined, {
+      message: "Invalid binary frame",
+    })
+    .transform((value) => copyFrame(value, maximumBytes)!);
 }
 
-export function conveyorProtoFrame(
-  maximumBytes: number,
-): StandardSchemaV1<Uint8Array, Uint8Array> {
-  return boundedProtoFrame(maximumBytes) as unknown as StandardSchemaV1<
-    Uint8Array,
-    Uint8Array
-  >;
+export function conveyorProtoFrame(maximumBytes: number): StandardSchemaV1<Uint8Array, Uint8Array> {
+  return boundedProtoFrame(maximumBytes) as unknown as StandardSchemaV1<Uint8Array, Uint8Array>;
 }
 
-export async function invokeCore<Request, Response>(codec: ProtoCodec<Request, Response>, frame: Uint8Array, call: (request: Request) => Promise<Response>): Promise<Uint8Array> {
+export async function invokeCore<Request, Response>(
+  codec: ProtoCodec<Request, Response>,
+  frame: Uint8Array,
+  call: (request: Request) => Promise<Response>,
+): Promise<Uint8Array> {
   let request: Request;
   try {
     const copiedFrame = copyFrame(frame, Number.MAX_SAFE_INTEGER);

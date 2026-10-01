@@ -18,7 +18,10 @@ async function directory() {
 
 describe("desktop API pairing", () => {
   it("closes access and permits cleanup retry after a connection unlink failure", async () => {
-    const integration = createDesktopLocalIntegration(await directory(), async () => async () => ({}));
+    const integration = createDesktopLocalIntegration(
+      await directory(),
+      async () => async () => ({}),
+    );
     await integration.enable();
     const connection = JSON.parse(await readFile(integration.connectionPath, "utf8"));
     const retained = `${integration.connectionPath}.retained`;

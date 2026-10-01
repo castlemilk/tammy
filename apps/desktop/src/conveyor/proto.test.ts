@@ -53,7 +53,10 @@ describe("boundedProtoFrame", () => {
     ]) {
       const result = schema.safeParse(value);
       expect(result.success).toBe(false);
-      if (!result.success) expect(result.error.issues).toEqual([{ code: "custom", message: "Invalid binary frame", path: [] }]);
+      if (!result.success)
+        expect(result.error.issues).toEqual([
+          { code: "custom", message: "Invalid binary frame", path: [] },
+        ]);
     }
   });
 });
@@ -83,9 +86,9 @@ describe("invokeCore", () => {
   });
 
   it("maps canonical request failures to INVALID_RPC_REQUEST", async () => {
-    await expect(invokeCore(codec, new Uint8Array([1]), async () => create(GetDiagnosticsResponseSchema))).rejects.toSatisfy(
-      (error: unknown) => hasCode(error, "INVALID_RPC_REQUEST"),
-    );
+    await expect(
+      invokeCore(codec, new Uint8Array([1]), async () => create(GetDiagnosticsResponseSchema)),
+    ).rejects.toSatisfy((error: unknown) => hasCode(error, "INVALID_RPC_REQUEST"));
   });
 
   it("maps Core and response encoding failures to CORE_REQUEST_FAILED without leaking details", async () => {
@@ -97,7 +100,12 @@ describe("invokeCore", () => {
     ).rejects.toSatisfy((error: unknown) => hasCode(error, "CORE_REQUEST_FAILED"));
     await expect(
       invokeCore(
-        { ...codec, encodeResponse: () => { throw new Error(secret); } },
+        {
+          ...codec,
+          encodeResponse: () => {
+            throw new Error(secret);
+          },
+        },
         frame(),
         async () => create(GetDiagnosticsResponseSchema),
       ),
@@ -116,6 +124,8 @@ it("sanitizes every handler failure without serializing sensitive details", () =
   for (const value of dangerous) {
     const error = sanitizeHandlerError(value);
     expect(error).toMatchObject({ code: "CORE_REQUEST_FAILED", message: "CORE_REQUEST_FAILED" });
-    expect(JSON.stringify(error)).not.toMatch(/private|password|subprocess|bookmark|handle|unknown/i);
+    expect(JSON.stringify(error)).not.toMatch(
+      /private|password|subprocess|bookmark|handle|unknown/i,
+    );
   }
 });

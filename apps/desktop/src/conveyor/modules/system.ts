@@ -1,6 +1,6 @@
-import { defineModule, query } from "../init";
 import { ConveyorError, type StandardSchemaV1 } from "electron-conveyor/define";
 import { z } from "zod";
+import { defineModule, query } from "../init";
 
 const zeroInput = z.undefined() as unknown as StandardSchemaV1<void, void>;
 

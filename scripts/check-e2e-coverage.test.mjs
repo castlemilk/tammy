@@ -941,17 +941,17 @@ test("real company EOFY descriptors and manifests catalogue only future surface"
     parseCoverageManifest,
     parseConveyorManifest,
     runE2ECoverage,
-  } =
-    await import("./check-e2e-coverage.mjs");
+  } = await import("./check-e2e-coverage.mjs");
 
   await assert.doesNotReject(runE2ECoverage({ descriptorPath, root }));
 
-  const [descriptorBytes, coverageSource, transitionSource, conveyorManifestSource] = await Promise.all([
-    readFile(descriptorPath),
-    readFile(path.join(root, "test/e2e/coverage.yaml"), "utf8"),
-    readFile(path.join(root, "test/e2e/transitions.yaml"), "utf8"),
-    readFile(path.join(root, "apps/desktop/src/shared/conveyor-manifest.json"), "utf8"),
-  ]);
+  const [descriptorBytes, coverageSource, transitionSource, conveyorManifestSource] =
+    await Promise.all([
+      readFile(descriptorPath),
+      readFile(path.join(root, "test/e2e/coverage.yaml"), "utf8"),
+      readFile(path.join(root, "test/e2e/transitions.yaml"), "utf8"),
+      readFile(path.join(root, "apps/desktop/src/shared/conveyor-manifest.json"), "utf8"),
+    ]);
   const coverage = parseCoverageManifest(coverageSource);
   const transitionIndex = parseCoverageManifest(transitionSource);
   const conveyorManifest = parseConveyorManifest(conveyorManifestSource);

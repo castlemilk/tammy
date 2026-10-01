@@ -26,8 +26,7 @@ const TARGETS = Object.freeze({
     build: "../../.tmp/electron-builder/ordinary/mac-arm64/Tammy.app/Contents/Resources/build",
     core: "../../.tmp/electron-builder/ordinary/mac-arm64/Tammy.app/Contents/Resources/core",
     executable: "tammy-core",
-    resourceBase:
-      "../../.tmp/electron-builder/ordinary/mac-arm64/Tammy.app/Contents/Resources",
+    resourceBase: "../../.tmp/electron-builder/ordinary/mac-arm64/Tammy.app/Contents/Resources",
     target: "darwin-arm64",
   }),
   "win32/x64": Object.freeze({
@@ -415,7 +414,7 @@ async function fileContainsPrivateKey(file) {
     { code: "PACKAGED_PRIVATE_KEY_LEAK", maxBytes: MAX_PACKAGED_FILE_BYTES },
     async (handle, size) => {
       const chunk = Buffer.alloc(64 * 1024);
-      const overlapLength = Math.max(...PRIVATE_KEY_MARKERS.map((marker) => marker.length)) - 1;
+      const overlapLength = Math.max(...PRIVATE_KEY_MARKERS.map((marker) => marker.length)) + 1;
       let overlap = Buffer.alloc(0);
       let position = 0;
       while (position < size) {
@@ -427,7 +426,20 @@ async function fileContainsPrivateKey(file) {
         );
         if (bytesRead === 0) throw new Error("PACKAGED_PRIVATE_KEY_LEAK");
         const window = Buffer.concat([overlap, chunk.subarray(0, bytesRead)]);
-        if (PRIVATE_KEY_MARKERS.some((marker) => window.includes(marker))) return true;
+        for (const marker of PRIVATE_KEY_MARKERS) {
+          let start = window.indexOf(marker);
+          while (start !== -1) {
+            const end = start + marker.length;
+            // Previously classified matches can remain in the overlap without their prefix.
+            if (end >= overlap.length && (end < window.length || position + bytesRead === size)) {
+              const quote = window[start - 1];
+              // Parser libraries contain quoted PEM delimiters without a key body.
+              // Raw blocks, escaped newlines and incomplete headers still fail closed.
+              if (!([0x22, 0x27, 0x60].includes(quote) && window[end] === quote)) return true;
+            }
+            start = window.indexOf(marker, start + 1);
+          }
+        }
         overlap = window.subarray(Math.max(0, window.length - overlapLength));
         position += bytesRead;
       }

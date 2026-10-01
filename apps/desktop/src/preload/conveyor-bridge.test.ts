@@ -6,7 +6,10 @@ import { createRestrictedConveyorBridge, exposeRestrictedConveyorBridge } from "
 describe("restricted Conveyor preload bridge", () => {
   it("exposes only the structural Conveyor bridge members", () => {
     const exposeInMainWorld = vi.fn();
-    const bridge = createRestrictedConveyorBridge({ invoke: vi.fn(), sendSync: vi.fn(() => manifest) });
+    const bridge = createRestrictedConveyorBridge({
+      invoke: vi.fn(),
+      sendSync: vi.fn(() => manifest),
+    });
 
     exposeRestrictedConveyorBridge({ exposeInMainWorld }, bridge);
 
@@ -19,12 +22,20 @@ describe("restricted Conveyor preload bridge", () => {
     const invoke = vi.fn(async () => ({ ok: true }));
     const bridge = createRestrictedConveyorBridge({ invoke, sendSync: vi.fn(() => manifest) });
 
-    await expect(bridge.invoke("conveyor:system", "getSystemDiagnostics")).resolves.toEqual({ ok: true });
-    await expect(bridge.invoke("conveyor:sbr", "selectMachineCredentialFile")).resolves.toEqual({ ok: true });
-    await expect(bridge.invoke("conveyor:workspace", "createWorkspace", { name: "Tammy" })).resolves.toEqual({ ok: true });
+    await expect(bridge.invoke("conveyor:system", "getSystemDiagnostics")).resolves.toEqual({
+      ok: true,
+    });
+    await expect(bridge.invoke("conveyor:sbr", "selectMachineCredentialFile")).resolves.toEqual({
+      ok: true,
+    });
+    await expect(
+      bridge.invoke("conveyor:workspace", "createWorkspace", { name: "Tammy" }),
+    ).resolves.toEqual({ ok: true });
     expect(invoke).toHaveBeenNthCalledWith(1, "conveyor:system", "getSystemDiagnostics");
     expect(invoke).toHaveBeenNthCalledWith(2, "conveyor:sbr", "selectMachineCredentialFile");
-    expect(invoke).toHaveBeenNthCalledWith(3, "conveyor:workspace", "createWorkspace", { name: "Tammy" });
+    expect(invoke).toHaveBeenNthCalledWith(3, "conveyor:workspace", "createWorkspace", {
+      name: "Tammy",
+    });
 
     for (const [channel, method, args] of [
       ["constructor", "getSystemDiagnostics", []],
@@ -35,7 +46,9 @@ describe("restricted Conveyor preload bridge", () => {
       ["conveyor:workspace", "createWorkspace", []],
       ["conveyor:workspace", "createWorkspace", [{}, {}]],
     ] as const) {
-      await expect(bridge.invoke(channel, method, ...args)).rejects.toThrow("INVALID_CONVEYOR_REQUEST");
+      await expect(bridge.invoke(channel, method, ...args)).rejects.toThrow(
+        "INVALID_CONVEYOR_REQUEST",
+      );
     }
     expect(invoke).toHaveBeenCalledTimes(3);
   });
@@ -43,7 +56,8 @@ describe("restricted Conveyor preload bridge", () => {
   it("uses only the guarded synchronous manifest IPC and returns an independent deep-frozen copy", () => {
     const source = structuredClone(manifest);
     const secondSource = structuredClone(manifest);
-    const sendSync = vi.fn()
+    const sendSync = vi
+      .fn()
       .mockReturnValueOnce(source)
       .mockReturnValueOnce(secondSource)
       .mockReturnValueOnce(source);
@@ -62,7 +76,9 @@ describe("restricted Conveyor preload bridge", () => {
     expect(first).not.toBe(second);
     expect(first.system).not.toBe(second.system);
     expect(() => bridge.manifest()).toThrow("INVALID_CONVEYOR_MANIFEST");
-    expect(() => { (first.system as Record<string, unknown>).getSystemDiagnostics = "command"; }).toThrow();
+    expect(() => {
+      (first.system as Record<string, unknown>).getSystemDiagnostics = "command";
+    }).toThrow();
   });
 
   it("rejects malformed, extra, nested, mutated, and prototype-bearing manifests", () => {
@@ -71,11 +87,17 @@ describe("restricted Conveyor preload bridge", () => {
       { ...manifest, system: { ...manifest.system, extra: "query" } },
       { ...manifest, extra: {} },
       Object.assign(Object.create({ system: manifest.system }), manifest),
-      { ...manifest, system: Object.assign(Object.create({ inherited: "query" }), manifest.system) },
+      {
+        ...manifest,
+        system: Object.assign(Object.create({ inherited: "query" }), manifest.system),
+      },
     ];
 
     for (const response of invalids) {
-      const bridge = createRestrictedConveyorBridge({ invoke: vi.fn(), sendSync: vi.fn(() => response) });
+      const bridge = createRestrictedConveyorBridge({
+        invoke: vi.fn(),
+        sendSync: vi.fn(() => response),
+      });
       expect(() => bridge.manifest()).toThrow("INVALID_CONVEYOR_MANIFEST");
     }
   });
@@ -96,7 +118,10 @@ describe("restricted Conveyor preload bridge", () => {
     });
 
     for (const response of [nonEnumerable, symbolKey, accessor]) {
-      const bridge = createRestrictedConveyorBridge({ invoke: vi.fn(), sendSync: vi.fn(() => response) });
+      const bridge = createRestrictedConveyorBridge({
+        invoke: vi.fn(),
+        sendSync: vi.fn(() => response),
+      });
       expect(() => bridge.manifest()).toThrow("INVALID_CONVEYOR_MANIFEST");
     }
     expect(getterCalled).toBe(false);
@@ -104,7 +129,9 @@ describe("restricted Conveyor preload bridge", () => {
 
   it("maps synchronous manifest transport throws to a stable code without invoking another IPC path", () => {
     const invoke = vi.fn();
-    const sendSync = vi.fn(() => { throw new Error("secret /private/path from core"); });
+    const sendSync = vi.fn(() => {
+      throw new Error("secret /private/path from core");
+    });
     const bridge = createRestrictedConveyorBridge({ invoke, sendSync });
 
     expect(() => bridge.manifest()).toThrow("IPC_TRANSPORT_FAILED");
@@ -119,9 +146,15 @@ describe("restricted Conveyor preload bridge", () => {
 
   it("does not attach a listener because subscriptions are disabled", () => {
     const on = vi.fn();
-    const bridge = createRestrictedConveyorBridge({ invoke: vi.fn(), on, sendSync: vi.fn(() => manifest) });
+    const bridge = createRestrictedConveyorBridge({
+      invoke: vi.fn(),
+      on,
+      sendSync: vi.fn(() => manifest),
+    });
 
-    expect(() => bridge.subscribe("conveyor:system", vi.fn())).toThrow("IPC_SUBSCRIPTIONS_DISABLED");
+    expect(() => bridge.subscribe("conveyor:system", vi.fn())).toThrow(
+      "IPC_SUBSCRIPTIONS_DISABLED",
+    );
     expect(on).not.toHaveBeenCalled();
   });
 
@@ -131,7 +164,11 @@ describe("restricted Conveyor preload bridge", () => {
       sendSync: vi.fn(() => manifest),
     });
 
-    await expect(bridge.invoke("conveyor:system", "getSystemDiagnostics")).rejects.toThrow("IPC_TRANSPORT_FAILED");
-    await expect(bridge.invoke("conveyor:system", "getSystemDiagnostics")).rejects.not.toThrow(/secret|path|core/i);
+    await expect(bridge.invoke("conveyor:system", "getSystemDiagnostics")).rejects.toThrow(
+      "IPC_TRANSPORT_FAILED",
+    );
+    await expect(bridge.invoke("conveyor:system", "getSystemDiagnostics")).rejects.not.toThrow(
+      /secret|path|core/i,
+    );
   });
 });
