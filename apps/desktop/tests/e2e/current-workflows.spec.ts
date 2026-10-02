@@ -52,6 +52,11 @@ test("runs the current accounting workflows through the packaged app", async ({
     "../../../../.tmp/invoice-cost-table-e2e",
   );
   await mkdir(screenshotDirectory, { recursive: true });
+  const incomeEvidenceDirectory = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "../../../../.tmp/invoice-income-bas-e2e",
+  );
+  await mkdir(incomeEvidenceDirectory, { recursive: true });
   const targets = [
     { heading: "Overview", link: "Overview", ready: "Nothing needs review" },
     {
@@ -424,17 +429,34 @@ test("runs the current accounting workflows through the packaged app", async ({
   await expect(page.getByRole("table", { name: "BAS sales sources", exact: true })).toContainText(
     "Issued invoice",
   );
+  const invoiceBasPath = path.join(incomeEvidenceDirectory, "non-cash-issued-q3-bas.png");
+  await page.screenshot({ animations: "disabled", path: invoiceBasPath });
+  await testInfo.attach("non-cash-issued-q3-bas", {
+    path: invoiceBasPath,
+    contentType: "image/png",
+  });
   await recordInvoiceReceipt(page, "INV-MCP-001", "2026-10-02", "330.18", "First actual receipt");
   await expect(page.getByTestId("invoice-outstanding")).toContainText("$330.19");
   await showBusinessIncome(page, "2026-10-01", "2026-12-31", "2026-10-02");
   await expect(page.getByTestId("business-income-total")).toContainText("$0.00");
   await expect(page.getByTestId("business-payments-received")).toContainText("$330.18");
   await expect(page.getByTestId("business-outstanding")).toContainText("$330.19");
+  const incomeOverviewPath = path.join(
+    incomeEvidenceDirectory,
+    "non-cash-receipts-q4-overview.png",
+  );
+  await page.screenshot({ animations: "disabled", path: incomeOverviewPath });
   await testInfo.attach("invoice-income-overview", {
-    body: await page.screenshot({ animations: "disabled" }),
+    path: incomeOverviewPath,
     contentType: "image/png",
   });
   await regenerateInvoiceBas(page, "2026-10-01", "2026-12-31", "$0.00", "$0.00");
+  const receiptsBasPath = path.join(incomeEvidenceDirectory, "non-cash-receipts-q4-bas.png");
+  await page.screenshot({ animations: "disabled", path: receiptsBasPath });
+  await testInfo.attach("non-cash-receipts-q4-bas", {
+    path: receiptsBasPath,
+    contentType: "image/png",
+  });
   await electronHarness.application.evaluate(({ Menu }) => {
     const item = Menu.getApplicationMenu()?.getMenuItemById("tammy-integrations-revoke");
     if (!item) throw new Error("PAIRED_API_MENU_MISSING");

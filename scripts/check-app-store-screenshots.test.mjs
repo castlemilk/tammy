@@ -283,6 +283,47 @@ test("validates the one strict fictional screenshot fixture", () => {
   );
 });
 
+test("accepts approved invoice interface copy while rejecting unknown invoice references", () => {
+  for (const text of ["Invoice income (ex GST)", "Invoice sales sources"]) {
+    assert.doesNotThrow(() => scanScreenshotInputs(text));
+    assert.throws(
+      () => scanScreenshotInputs(`${text} Invoice INV-PRIVATE-123`),
+      /APP_STORE_SCREENSHOT_INPUT_UNSAFE/,
+    );
+  }
+  assert.throws(
+    () => scanScreenshotInputs("Invoice PRIVATE123"),
+    /APP_STORE_SCREENSHOT_INPUT_UNSAFE/,
+  );
+  for (const label of ["Invoice", "Invoice number"]) {
+    for (const separator of ["\n", "\r\n"]) {
+      assert.throws(
+        () => scanScreenshotInputs(`${label}${separator}PRIVATE123`),
+        /APP_STORE_SCREENSHOT_INPUT_UNSAFE/,
+      );
+      assert.throws(
+        () =>
+          scanScreenshotInputs(`Invoice sales sources${separator}${label}${separator}PRIVATE123`),
+        /APP_STORE_SCREENSHOT_INPUT_UNSAFE/,
+      );
+    }
+  }
+  for (const secret of [
+    "password",
+    "access token abcdefghijklmnop",
+    "TFN 123456789",
+    "123-456",
+    "11000000560",
+    "AKIAIOSFODNN7EXAMPLE",
+    "-----BEGIN PRIVATE KEY-----",
+  ]) {
+    assert.throws(
+      () => scanScreenshotInputs(`Invoice income (ex GST)\n${secret}`),
+      /APP_STORE_SCREENSHOT_INPUT_UNSAFE/,
+    );
+  }
+});
+
 test("requires the current invoice navigation without accepting stale shell snapshots", () => {
   for (const definition of fixture.screenshots) {
     const navigation = definition.completeAccessibilityText;

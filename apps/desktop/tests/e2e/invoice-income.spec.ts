@@ -1,3 +1,6 @@
+import { mkdir } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { expect, test } from "./fixtures";
 import {
   authenticatedWorkspace,
@@ -18,6 +21,10 @@ import {
 test("invoices/income-payments-bas: cash receipts, mixed GST and balances persist through restart", async ({
   electronHarness,
 }, testInfo) => {
+  const screenshotDirectory = fileURLToPath(
+    new URL("../../../../.tmp/invoice-income-bas-e2e/", import.meta.url),
+  );
+  await mkdir(screenshotDirectory, { recursive: true });
   const workspace = await setupAndRunCurrentAccountingWorkflow(
     electronHarness.page,
     electronHarness,
@@ -83,8 +90,10 @@ test("invoices/income-payments-bas: cash receipts, mixed GST and balances persis
   await expect(page.getByRole("table", { name: "BAS sales sources", exact: true })).toContainText(
     "Recorded receipt",
   );
+  const firstReceiptScreenshot = path.join(screenshotDirectory, "cash-basis-first-receipt-bas.png");
+  await page.screenshot({ animations: "disabled", path: firstReceiptScreenshot });
   await testInfo.attach("cash-basis-first-receipt-bas", {
-    body: await page.screenshot({ animations: "disabled" }),
+    path: firstReceiptScreenshot,
     contentType: "image/png",
   });
   await recordInvoiceReceipt(page, "CASH-2026-001", "2026-10-02", "90.00", "Final half received");
@@ -128,8 +137,10 @@ test("invoices/income-payments-bas: cash receipts, mixed GST and balances persis
   await page.getByRole("link", { name: "GST & BAS", exact: true }).click();
   await expect(page.getByTestId("bas-sales-g1")).toContainText("$160.00");
   await expect(page.getByTestId("bas-gst-on-sales-1a")).toContainText("$10.00");
+  const finalScreenshot = path.join(screenshotDirectory, "cash-basis-final-bas-after-restart.png");
+  await page.screenshot({ animations: "disabled", path: finalScreenshot });
   await testInfo.attach("cash-basis-final-bas-after-restart", {
-    body: await page.screenshot({ animations: "disabled" }),
+    path: finalScreenshot,
     contentType: "image/png",
   });
   expect(electronHarness.consoleErrors).toEqual([]);

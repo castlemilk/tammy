@@ -44,6 +44,7 @@ const SHELL_ACCESSIBILITY_TEXT = [
   "Settings",
   "Local data",
   "TB Tammy Business",
+  "Local engine",
   "Local engine ready. Offline. No cloud required.",
 ];
 const ACCESSIBILITY_TEXT = [
@@ -60,6 +61,33 @@ const ACCESSIBILITY_TEXT = [
     "GST & BAS",
     "Draft",
     "Draft — not lodged",
+    "Business income",
+    "Business income",
+    "Posted revenue excluding GST, with invoice receipts and balances.",
+    "Refresh income",
+    "Income period",
+    "Income period",
+    "This quarter",
+    "This financial year",
+    "Custom period",
+    "Income period start",
+    "Income period start",
+    "2024-04-01",
+    "Income period end",
+    "Income period end",
+    "2024-06-30",
+    "Balances as of",
+    "Balances as of",
+    "2024-05-12",
+    "Business income (ex GST)",
+    "$0.00",
+    "Invoice income (ex GST)",
+    "$0.00",
+    "Payments received",
+    "$0.00",
+    "Invoices owing",
+    "$0.00",
+    "Income and receipts cover 2024-04-01 to 2024-06-30. Invoices owing include earlier unpaid invoices as of 2024-05-12. Invoice GST attributed in this period: $0.00 (non-cash basis).",
     "Needs review",
     "Nothing needs review",
     "Your retained local workflows are up to date.",
@@ -150,14 +178,26 @@ const ACCESSIBILITY_TEXT = [
   [
     ...SHELL_ACCESSIBILITY_TEXT,
     "GST & BAS",
-    "A local workpaper from reviewed documents. Tammy does not lodge this BAS.",
+    "A local workpaper from invoice sales and reviewed expenses. Tammy does not lodge this BAS.",
     "Draft — not lodged",
     "Review locally when ready.",
     "Reporting support",
     "Available in this build",
-    "Tammy supports a local reviewed-document GST workpaper only.",
+    "Tammy supports a local invoice and reviewed-expense GST workpaper only.",
     "Unsupported in this build",
     "Complete BAS preparation, declaration, and lodgement are unavailable.",
+    "BAS reporting period",
+    "Period start",
+    "Period start",
+    "2024-04-01",
+    "Period end",
+    "Period end",
+    "2024-06-30",
+    "Regenerate local draft",
+    "Saved figures remain visible until the new draft is created.",
+    "BAS source review",
+    "Non-cash basis · sales follow invoice issue dates",
+    "Saved reporting period: 01/04/2024 – 30/06/2024",
     "Sales (G1)",
     "$0.00",
     "GST on sales (1A)",
@@ -166,6 +206,9 @@ const ACCESSIBILITY_TEXT = [
     "$29.00",
     "Net GST refundable",
     "$29.00",
+    "Invoice sales sources",
+    "GST-inclusive sales and GST attributed to this period. Out-of-scope lines are excluded.",
+    "No eligible invoice sales are attributed to this period.",
     "Reviewed source documents",
     "01/04/2024 – 30/06/2024",
     "1 source",
@@ -184,6 +227,16 @@ const ACCESSIBILITY_TEXT = [
     "Status: Draft — not lodged. This screen has no lodge, submit or declaration control.",
   ],
 ];
+
+// Exact approved interface text may contain "invoice" followed by a word.
+// Keep reference labels so unknown values on the next line still fail the scan.
+const APPROVED_INVOICE_INTERFACE_COPY = new Set(
+  ACCESSIBILITY_TEXT.flat().filter(
+    (text) =>
+      /\binvoice[^\S\r\n]+\S/iu.test(text) &&
+      !/\binvoice(?:[^\S\r\n]+(?:no\.?|number|#))?[^\S\r\n]*$/iu.test(text),
+  ),
+);
 const EXPECTED_IDS = {
   bas: "01900000-0000-7000-8000-00000000000b",
   bankImport: "01900000-0000-7000-8000-000000000006",
@@ -284,6 +337,10 @@ export function normalizeAccessibilitySnapshot(snapshot) {
 export function scanScreenshotInputs(value, { allowSetupOnlyAbn = false } = {}) {
   for (const text of collectStrings(value)) {
     const lower = text.toLowerCase();
+    const invoiceReferenceText = text
+      .split(/\r?\n/u)
+      .filter((line) => !APPROVED_INVOICE_INTERFACE_COPY.has(line))
+      .join("\n");
     if (
       lower.includes("gamma systems pty ltd") ||
       lower.includes("ben.ebsworth@gmail.com") ||
@@ -301,7 +358,7 @@ export function scanScreenshotInputs(value, { allowSetupOnlyAbn = false } = {}) 
       /\b\d{3}-\d{3}\b/u.test(text) ||
       (/\b\d{11}\b/u.test(text) && !(allowSetupOnlyAbn && text === "11000000560")) ||
       (/\b(?:INV[-:#][A-Z0-9-]{3,}|invoice\s+(?:(?:no\.?|number|#)\s*)?[A-Z0-9-]{3,})/iu.test(
-        text,
+        invoiceReferenceText,
       ) &&
         text !== "Invoice number" &&
         text !== "Date Supplier Invoice Gross GST credit" &&

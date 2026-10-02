@@ -18,7 +18,7 @@ import {
   GetCurrentBasDraftRequestSchema,
   GetCurrentBasDraftResponseSchema,
 } from "@tammy/connect-client/tammy/v1/tax_pb.js";
-import { screen, waitFor } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, it } from "vitest";
 
@@ -295,3 +295,91 @@ it("keeps saved BAS figures and sales provenance visible until a stale draft is 
   await waitFor(() => expect(screen.getByTestId("bas-sales-g1").textContent).toContain("$110.00"));
   expect(screen.queryByText(/Sources changed since this workpaper was saved/)).toBeNull();
 });
+
+it.each(["Period start", "Period end"])(
+  "preserves the current quarter when %s is focused before an older draft arrives",
+  async (label) => {
+    const organisationId = "018f0000-0000-7000-8000-000000000004";
+    const saved = create(BasWorkpaperSchema, {
+      id: "018f0000-0000-7000-8000-000000000401",
+      organisationId,
+      version: 1n,
+      periodStart: { year: 2026, month: 7, day: 1 },
+      periodEnd: { year: 2026, month: 9, day: 30 },
+      status: BasWorkpaperStatus.DRAFT_NOT_LODGED,
+      gstBasis: GstBasis.NON_CASH,
+      salesG1: { currencyCode: "AUD", minorUnits: 11000n },
+    });
+    const deferred = Promise.withResolvers<Uint8Array>();
+    const fixture = createConveyorFixture();
+    let current = saved;
+    fixture.procedures.reporting.getCurrentBasDraft
+      .mockImplementationOnce(() => deferred.promise)
+      .mockImplementation(async () =>
+        getCodec.encodeResponse(create(GetCurrentBasDraftResponseSchema, { workpaper: current })),
+      );
+    fixture.procedures.reporting.createBasDraft.mockImplementation(async (frame: Uint8Array) => {
+      const request = createCodec.decodeRequest(frame);
+      expect(request.periodStart).toMatchObject({ year: 2026, month: 10, day: 1 });
+      expect(request.periodEnd).toMatchObject({ year: 2026, month: 12, day: 31 });
+      current = create(BasWorkpaperSchema, {
+        ...saved,
+        id: "018f0000-0000-7000-8000-000000000402",
+        periodStart: request.periodStart,
+        periodEnd: request.periodEnd,
+        salesG1: create(MoneySchema, { currencyCode: "AUD", minorUnits: 0n }),
+      });
+      return createCodec.encodeResponse(
+        create(CreateBasDraftResponseSchema, { workpaper: current }),
+      );
+    });
+    fixture.procedures.reporting.getReportingCapability.mockImplementation(
+      async (frame: Uint8Array) => {
+        const request = reportingCodec.decodeRequest(frame);
+        return reportingCodec.encodeResponse(
+          create(GetReportingCapabilityResponseSchema, {
+            capability: {
+              report: request.report,
+              taxYear: request.taxYear,
+              entityType: request.entityType,
+              status: ReportingCapabilityStatus.AVAILABLE,
+              appVersion: "test",
+              summary: "Local workpaper",
+            },
+          }),
+        );
+      },
+    );
+    render(
+      <BasScreen
+        api={fixture.conveyor.reporting}
+        now={new Date(2026, 9, 2)}
+        workspace={{
+          workspaceId: "018f0000-0000-7000-8000-000000000001",
+          userId: "018f0000-0000-7000-8000-000000000002",
+          sessionId: "018f0000-0000-7000-8000-000000000003",
+          organisationId,
+        }}
+      />,
+    );
+    const user = userEvent.setup();
+    const start = screen.getByLabelText("Period start");
+    const end = screen.getByLabelText("Period end");
+    expect(start).toHaveProperty("value", "2026-10-01");
+    expect(end).toHaveProperty("value", "2026-12-31");
+    await user.click(screen.getByLabelText(label));
+    await act(async () =>
+      deferred.resolve(
+        getCodec.encodeResponse(create(GetCurrentBasDraftResponseSchema, { workpaper: saved })),
+      ),
+    );
+    expect(await screen.findByText("Saved reporting period: 01/07/2026 – 30/09/2026")).toBeTruthy();
+    expect(start).toHaveProperty("value", "2026-10-01");
+    expect(end).toHaveProperty("value", "2026-12-31");
+    expect(screen.getByTestId("bas-sales-g1").textContent).toContain("$110.00");
+    await user.click(screen.getByRole("button", { name: "Regenerate local draft" }));
+    expect(await screen.findByText("Saved reporting period: 01/10/2026 – 31/12/2026")).toBeTruthy();
+    expect(screen.getByTestId("bas-sales-g1").textContent).toContain("$0.00");
+    expect(fixture.procedures.reporting.createBasDraft).toHaveBeenCalledOnce();
+  },
+);

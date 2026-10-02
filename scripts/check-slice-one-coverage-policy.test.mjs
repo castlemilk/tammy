@@ -37,11 +37,11 @@ const EXPOSED_BUSINESS_RPCS = [
   "tammy.v1.TaxService.GetCurrentBasDraft",
 ];
 
-test("coverage declares the exact normative policy for all 126 non-system RPCs", async () => {
+test("coverage declares the exact normative policy for all 130 non-system RPCs", async () => {
   const coverage = parseCoverageManifest(await readFile("test/e2e/coverage.yaml", "utf8"));
   const actualRpcNames = Object.keys(coverage.rpcs).filter((rpcName) => rpcName !== SYSTEM_RPC);
 
-  assert.equal(Object.keys(SLICE_ONE_RPC_POLICY).length, 126);
+  assert.equal(Object.keys(SLICE_ONE_RPC_POLICY).length, 130);
   assert.deepEqual(actualRpcNames.sort(), Object.keys(SLICE_ONE_RPC_POLICY).sort());
 
   for (const [rpcName, expected] of Object.entries(SLICE_ONE_RPC_POLICY)) {
@@ -356,7 +356,7 @@ test("coverage conflict failures match every public request concurrency field", 
         const failures = SLICE_ONE_RPC_POLICY[rpcName].principalFailures;
 
         if (
-          /\b(?:expected_version|expected_return_version|expected_predecessor_version|expected_latest_version)\s*=/.test(
+          /\b(?:expected_version|expected_accounting_version|expected_return_version|expected_predecessor_version|expected_latest_version)\s*=/.test(
             request,
           )
         ) {

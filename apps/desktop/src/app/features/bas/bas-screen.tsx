@@ -197,6 +197,9 @@ export function BasScreen({
             periodEdited.current = true;
             setStart(date);
           }}
+          onFocus={() => {
+            periodEdited.current = true;
+          }}
           value={start}
         />
         <DateField
@@ -204,6 +207,9 @@ export function BasScreen({
           onChange={(date) => {
             periodEdited.current = true;
             setEnd(date);
+          }}
+          onFocus={() => {
+            periodEdited.current = true;
           }}
           value={end}
         />
@@ -436,10 +442,12 @@ function Metric({
 function DateField({
   label,
   onChange,
+  onFocus,
   value,
 }: {
   readonly label: string;
   readonly onChange: (value: string) => void;
+  readonly onFocus: () => void;
   readonly value: string;
 }) {
   return (
@@ -448,6 +456,7 @@ function DateField({
       <input
         className="focus-ring h-8 rounded-[5px] border border-border px-2 text-[10px]"
         onChange={(event) => onChange(event.target.value)}
+        onFocus={onFocus}
         type="date"
         value={value}
       />

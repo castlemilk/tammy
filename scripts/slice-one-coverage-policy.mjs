@@ -134,6 +134,50 @@ export const COMPANY_EOFY_DECLARED_FUTURE_RPCS = [
 ];
 
 export const SLICE_ONE_RPC_POLICY = {
+  "tammy.v1.InvoiceService.GetInvoiceAccounting": rpc({
+    name: "GetInvoiceAccounting",
+    projection: "invoice_accounting",
+    route: "/invoices",
+    rolePolicy: accountingRead,
+    mode: "query",
+    failures: [...authenticated, "NOT_FOUND"],
+    list: ["found", "not_found"],
+  }),
+  "tammy.v1.InvoiceService.PostInvoiceIncome": rpc({
+    name: "PostInvoiceIncome",
+    projection: "posted_invoice_income",
+    route: "/invoices",
+    rolePolicy: adminAndPreparer,
+    mode: "persistent_command",
+    failures: [
+      ...roleGuardedPersistent,
+      "STALE_VERSION",
+      "CLOSED_PERIOD",
+      "INVALID_INVOICE_ACCOUNTING",
+    ],
+  }),
+  "tammy.v1.InvoiceService.RecordInvoicePayment": rpc({
+    name: "RecordInvoicePayment",
+    projection: "invoice_payment",
+    route: "/invoices",
+    rolePolicy: adminAndPreparer,
+    mode: "persistent_command",
+    failures: [
+      ...roleGuardedPersistent,
+      "STALE_VERSION",
+      "CLOSED_PERIOD",
+      "INVALID_INVOICE_ACCOUNTING",
+    ],
+  }),
+  "tammy.v1.InvoiceService.GetBusinessIncomeSummary": rpc({
+    name: "GetBusinessIncomeSummary",
+    projection: "business_income",
+    route: "/overview",
+    rolePolicy: accountingRead,
+    mode: "query",
+    failures: [...authenticated, "NOT_FOUND"],
+    list: ["found", "not_found"],
+  }),
   "tammy.v1.InvoiceService.GetInvoiceTemplate": rpc({
     name: "GetInvoiceTemplate",
     projection: "invoice_template",
