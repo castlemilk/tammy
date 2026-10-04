@@ -113,7 +113,11 @@ func (repository *Repository) GetCurrentBASDraft(ctx context.Context, organisati
 	if repository == nil || repository.executor == nil || ctx == nil || !ids.IsCanonicalV7(organisationID) {
 		return nil, ErrRepository
 	}
-	return repository.getOne(ctx, `WHERE organisation_id = ? ORDER BY created_at DESC, id DESC LIMIT 1`, organisationID)
+	return repository.getOne(ctx, `WHERE id = (
+		SELECT save_order.workpaper_id FROM bas_workpaper_save_order_v1 AS save_order
+		JOIN bas_workpapers AS saved ON saved.id = save_order.workpaper_id
+		WHERE saved.organisation_id = ? ORDER BY save_order.sequence DESC LIMIT 1
+	)`, organisationID)
 }
 
 func (repository *Repository) getByOperation(ctx context.Context, operationKey string) (*tammyv1.BasWorkpaper, error) {

@@ -65,7 +65,9 @@ func TestSandboxedProcessRetainsBoundedStdoutOnNonzeroExit(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	want := []byte{0, 0, 0, 3, 0x0a, 0x01, 'x'}
-	output, err := runSandboxedProcess(ctx, "/bin/sh", []string{"-c", "cat >/dev/null; printf '\\000\\000\\000\\003\\012\\001x'; exit 31"}, nil,
+	// A real helper consumes the retained profile before finishing. Drain its
+	// descriptor so this fixture cannot race the profile writer with process exit.
+	output, err := runSandboxedProcess(ctx, "/bin/sh", []string{"-c", "cat <&4 >/dev/null; cat >/dev/null; printf '\\000\\000\\000\\003\\012\\001x'; exit 31"}, nil,
 		[]*os.File{helperFile, profileFile}, func() error { return nil }, func(context.Context, int, bool) error { return nil })
 	if !errors.Is(err, errProcessExited) {
 		t.Fatalf("process exit error = %v", err)

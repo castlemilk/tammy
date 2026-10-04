@@ -24,6 +24,8 @@ Use the existing invoice command coordinator and caller-owned SQLCipher transact
 
 Additive invoice RPCs: `GetInvoiceAccounting`, `PostInvoiceIncome`, `RecordInvoicePayment`, `GetBusinessIncomeSummary`. Existing invoice draft/MCP schemas and issue request stay unchanged. Add typed receivable/payment journal source enums. Extend BAS workpapers with sales sources, GST basis, source fingerprint, live staleness and review warnings. Keep errors bounded, authenticated and organisation-scoped.
 
+Select the current BAS workpaper by a durable committed save sequence, independent of timestamp formatting, equal clocks or clock rollback. Migration 0011 preserves retained insertion order, and exact command replay does not make an older snapshot current. Date fields derive from the saved workpaper until the user focuses or edits them; an explicit selection remains intact through asynchronous loading and regeneration.
+
 ## Alternatives
 
 A reporting-only sum of invoices could expose sales quickly, but would leave the trial balance and business ledger disconnected. Manual journals would preserve accounting mechanics but keep the duplication burden on users. Atomic typed postings give income, receipts, overview and BAS a shared accounting source and are the selected implementation.

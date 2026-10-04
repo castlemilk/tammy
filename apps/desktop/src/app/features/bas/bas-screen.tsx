@@ -15,7 +15,7 @@ import {
   GetCurrentBasDraftResponseSchema,
 } from "@tammy/connect-client/tammy/v1/tax_pb.js";
 import { Calculator, FileCheck2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
@@ -51,20 +51,17 @@ export function BasScreen({
   readonly onBasDraftChanged?: () => Promise<void>;
   readonly workspace: AuthenticatedWorkspace | undefined;
 }) {
-  const [start, setStart] = useState(() => currentQuarter(now ?? new Date()).start);
-  const [end, setEnd] = useState(() => currentQuarter(now ?? new Date()).end);
-  const periodEdited = useRef(false);
+  const [defaultPeriod] = useState(() => currentQuarter(now ?? new Date()));
+  const [editedPeriod, setEditedPeriod] = useState<{
+    readonly start: string;
+    readonly end: string;
+  }>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [gstCapability, setGstCapability] = useState<{
     readonly status: ReportingCapabilityStatus | undefined;
     readonly taxYear: number;
   }>();
-  const taxYear = auTaxYear(parseDate(end));
-  const gstWorkpaperAvailable =
-    taxYear !== undefined &&
-    gstCapability?.taxYear === taxYear &&
-    gstCapability.status === ReportingCapabilityStatus.AVAILABLE;
   const updateGstCapability = useCallback(
     (queriedTaxYear: number, status: ReportingCapabilityStatus | undefined) => {
       setGstCapability({ status, taxYear: queriedTaxYear });
@@ -99,11 +96,14 @@ export function BasScreen({
     }
   }, [currentBas.data]);
 
-  useEffect(() => {
-    if (!workpaper || periodEdited.current) return;
-    setStart(isoDate(workpaper.periodStart));
-    setEnd(isoDate(workpaper.periodEnd));
-  }, [workpaper]);
+  const start =
+    editedPeriod?.start ?? (workpaper ? isoDate(workpaper.periodStart) : defaultPeriod.start);
+  const end = editedPeriod?.end ?? (workpaper ? isoDate(workpaper.periodEnd) : defaultPeriod.end);
+  const taxYear = auTaxYear(parseDate(end));
+  const gstWorkpaperAvailable =
+    taxYear !== undefined &&
+    gstCapability?.taxYear === taxYear &&
+    gstCapability.status === ReportingCapabilityStatus.AVAILABLE;
 
   const createDraft = async () => {
     if (!workspace?.organisationId) return;
@@ -133,7 +133,6 @@ export function BasScreen({
         await api.createBasDraft(createCodec.encodeRequest(request)),
       );
       if (!response.workpaper) throw new Error("missing workpaper");
-      periodEdited.current = false;
       await Promise.all([
         api.getCurrentBasDraft.invalidate(currentBasInput),
         onBasDraftChanged?.(),
@@ -194,22 +193,20 @@ export function BasScreen({
         <DateField
           label="Period start"
           onChange={(date) => {
-            periodEdited.current = true;
-            setStart(date);
+            setEditedPeriod((current) => ({ start: date, end: current?.end ?? end }));
           }}
           onFocus={() => {
-            periodEdited.current = true;
+            setEditedPeriod((current) => current ?? { start, end });
           }}
           value={start}
         />
         <DateField
           label="Period end"
           onChange={(date) => {
-            periodEdited.current = true;
-            setEnd(date);
+            setEditedPeriod((current) => ({ start: current?.start ?? start, end: date }));
           }}
           onFocus={() => {
-            periodEdited.current = true;
+            setEditedPeriod((current) => current ?? { start, end });
           }}
           value={end}
         />

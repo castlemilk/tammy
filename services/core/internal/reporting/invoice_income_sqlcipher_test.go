@@ -66,16 +66,22 @@ func TestBASInvoiceSourcesRetainSavedFiguresAndDetectNewSources(t *testing.T) {
 
 func reportFixture(t *testing.T, basis tammyv1.GstBasis) (*sqlcipher.Transaction, *Repository) {
 	t.Helper()
+	tx, repository, _, _, _ := reportFixtureAtVersion(t, basis, 11)
+	return tx, repository
+}
+
+func reportFixtureAtVersion(t *testing.T, basis tammyv1.GstBasis, version uint32) (*sqlcipher.Transaction, *Repository, *sqlcipher.Database, string, []byte) {
+	t.Helper()
 	path := filepath.Join(t.TempDir(), "report.db")
 	key := make([]byte, sqlcipher.KeySize)
 	for index := range key {
 		key[index] = byte(index + 1)
 	}
-	if _, err := sqlcipher.MigrateWorkspace(context.Background(), path, key, 10); err != nil {
+	if _, err := sqlcipher.MigrateWorkspace(context.Background(), path, key, version); err != nil {
 		t.Fatal(err)
 	}
 	database, err := sqlcipher.Open(context.Background(), path, key)
-	clear(key)
+	t.Cleanup(func() { clear(key) })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,7 +111,7 @@ func reportFixture(t *testing.T, basis tammyv1.GstBasis) (*sqlcipher.Transaction
 	if err != nil {
 		t.Fatal(err)
 	}
-	return tx, repository
+	return tx, repository, database, path, key
 }
 
 func addReportInvoice(t *testing.T, tx *sqlcipher.Transaction, number int, date string, net, gst, total, basGross int64, posted bool, basis tammyv1.GstBasis) {

@@ -20,6 +20,7 @@ import {
 } from "@tammy/connect-client/tammy/v1/tax_pb.js";
 import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useEffect } from "react";
 import { expect, it } from "vitest";
 
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
@@ -383,3 +384,109 @@ it.each(["Period start", "Period end"])(
     expect(fixture.procedures.reporting.createBasDraft).toHaveBeenCalledOnce();
   },
 );
+
+it("submits the edited quarter when cached-draft hydration and input interaction share a commit", async () => {
+  const organisationId = "018f0000-0000-7000-8000-000000000004";
+  const workspace = {
+    workspaceId: "018f0000-0000-7000-8000-000000000001",
+    userId: "018f0000-0000-7000-8000-000000000002",
+    sessionId: "018f0000-0000-7000-8000-000000000003",
+    organisationId,
+  };
+  const saved = create(BasWorkpaperSchema, {
+    id: "018f0000-0000-7000-8000-000000000401",
+    organisationId,
+    periodStart: { year: 2026, month: 7, day: 1 },
+    periodEnd: { year: 2026, month: 9, day: 30 },
+    status: BasWorkpaperStatus.DRAFT_NOT_LODGED,
+  });
+  const fixture = createConveyorFixture();
+  const input = getCodec.encodeRequest(
+    create(GetCurrentBasDraftRequestSchema, {
+      organisationId,
+      authentication: { actorUserId: workspace.userId, sessionId: workspace.sessionId },
+    }),
+  );
+  const savedFrame = getCodec.encodeResponse(
+    create(GetCurrentBasDraftResponseSchema, { workpaper: saved }),
+  );
+  fixture.queryClient.setQueryData(
+    fixture.conveyor.reporting.getCurrentBasDraft.key(input),
+    savedFrame,
+  );
+  let current = saved;
+  fixture.procedures.reporting.getCurrentBasDraft.mockImplementation(async () =>
+    getCodec.encodeResponse(create(GetCurrentBasDraftResponseSchema, { workpaper: current })),
+  );
+  fixture.procedures.reporting.getReportingCapability.mockImplementation(
+    async (frame: Uint8Array) => {
+      const request = reportingCodec.decodeRequest(frame);
+      return reportingCodec.encodeResponse(
+        create(GetReportingCapabilityResponseSchema, {
+          capability: {
+            report: request.report,
+            taxYear: request.taxYear,
+            entityType: request.entityType,
+            status: ReportingCapabilityStatus.AVAILABLE,
+            appVersion: "test",
+            summary: "Local workpaper",
+          },
+        }),
+      );
+    },
+  );
+  fixture.procedures.reporting.createBasDraft.mockImplementation(async (frame: Uint8Array) => {
+    const request = createCodec.decodeRequest(frame);
+    expect(request.periodStart).toMatchObject({ year: 2026, month: 10, day: 1 });
+    expect(request.periodEnd).toMatchObject({ year: 2026, month: 12, day: 31 });
+    current = create(BasWorkpaperSchema, {
+      ...saved,
+      id: "018f0000-0000-7000-8000-000000000402",
+      periodStart: request.periodStart,
+      periodEnd: request.periodEnd,
+    });
+    return createCodec.encodeResponse(create(CreateBasDraftResponseSchema, { workpaper: current }));
+  });
+  function EditPeriodDuringHydration() {
+    useEffect(() => {
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+      if (!setter) throw new Error("DATE_INPUT_SETTER_MISSING");
+      for (const [label, value] of [
+        ["Period start", "2026-10-01"],
+        ["Period end", "2026-12-31"],
+      ]) {
+        const field = screen.getByLabelText(label ?? "");
+        field.focus();
+        setter.call(field, value);
+        field.dispatchEvent(new Event("input", { bubbles: true }));
+        field.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    }, []);
+    return null;
+  }
+  render(
+    <>
+      <BasScreen
+        api={fixture.conveyor.reporting}
+        now={new Date(2026, 9, 2)}
+        workspace={workspace}
+      />
+      <EditPeriodDuringHydration />
+    </>,
+  );
+  await waitFor(() =>
+    expect(
+      (screen.getByRole("button", { name: "Regenerate local draft" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(false),
+  );
+  expect(screen.getByLabelText("Period start")).toHaveProperty("value", "2026-10-01");
+  expect(screen.getByLabelText("Period end")).toHaveProperty("value", "2026-12-31");
+  await userEvent.click(screen.getByRole("button", { name: "Regenerate local draft" }));
+  await expect(
+    fixture.procedures.reporting.createBasDraft.mock.results[0]?.value,
+  ).resolves.toBeInstanceOf(Uint8Array);
+  expect(await screen.findByText("Saved reporting period: 01/10/2026 – 31/12/2026")).toBeTruthy();
+  expect(screen.getByLabelText("Period start")).toHaveProperty("value", "2026-10-01");
+  expect(screen.getByLabelText("Period end")).toHaveProperty("value", "2026-12-31");
+});
