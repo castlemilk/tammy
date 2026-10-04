@@ -32,7 +32,9 @@ Files: `apps/desktop/src/{shared,main,conveyor,app/features}/`, `apps/desktop/te
 
 - [x] Write failing bridge/projection/UI tests, then implement income/payment API wiring, invoice accounting panel and business Overview summary with explicit periods.
 - [x] Add BAS sales source rows, basis and staleness guidance, regeneration and safe period inputs. Update issue confirmation to explain that issuing records business income.
-- [ ] Extend actual packaged accounting acceptance with invoice issue → income/ledger → payment → BAS → restart. Verify draft exclusion and immutable branded export behavior.
-- [ ] Run desktop/package tests and typechecks, Go checks, protobuf/contracts, lint and independent code review. Commit clean source, package, run E2E, inspect screenshots and record results.
+- [x] Extend actual packaged accounting acceptance with invoice issue → income/ledger → payment → BAS → restart. Verify draft exclusion and immutable branded export behavior.
+- [x] Run desktop/package tests and typechecks, Go checks, protobuf/contracts, lint and independent code review. Commit clean source, package, run E2E, inspect screenshots and record results.
 
 Commands use `rtk` prefixes. JavaScript tooling uses `rtk proxy mise exec -- pnpm …`; Go SQLCipher checks use `rtk proxy mise exec -- go test -race -tags tammy_sqlcipher …`. Source must be committed and clean before packaging.
+
+Final evidence: [Invoice income and BAS acceptance](../../development/invoice-income-bas-acceptance-2026-10-04.md).
