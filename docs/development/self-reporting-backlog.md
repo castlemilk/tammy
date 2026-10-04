@@ -1,6 +1,7 @@
 # Business and individual self-reporting backlog
 
 **Baseline date:** 11 August 2026  
+**Invoice income/BAS review:** 4 October 2026
 **Normative design:** [Business and individual self-reporting design](../superpowers/specs/2026-08-11-business-individual-self-reporting-design.md)  
 **Current capability source:** [Current technical state](tech-state.md)
 
@@ -26,9 +27,9 @@ It uses four priorities:
 | Chart, journals, trial balance | Partial | Opening balances, reversals, periods, complete ledger, financial statements, source subledgers. |
 | Document evidence | Partial | Broader evidence types, extraction/review provenance, deductions/assets/income binding, retention UX. |
 | Banking | Partial | Standard import formats, transfers, automated suggestions with human approval, full reconciliation reports. |
-| GST/BAS | Draft subset | Complete labels, adjustments, IAS, validation, declaration, amendment, delivery, receipt. |
+| GST/BAS | Local cash/non-cash GST workpapers with invoice sales, purchase sources, provenance and regeneration | Complete labels, cash purchase payment evidence, adjustments, IAS, validation, declaration, amendment, delivery, receipt. |
 | Audit/backup/restore core | Backend components | Complete user journeys, evidence exports, release validation. |
-| Sales and receivables | No | Full module required. |
+| Sales and receivables | Invoice issue posts sales/receivables/GST; dated partial/full receipts and root income/balance reporting | Customer register, quotes, credit notes, overpayments/refunds, bank matching, ageing and delivery. |
 | Purchases and payables | Narrow reviewed documents only | Full bills, credits, payments, allocations, ageing required. |
 | Fixed assets and depreciation | No | Required for business accounts and annual tax. |
 | Payroll/STP/super | No | Full employer-reporting programme required. |
@@ -138,7 +139,9 @@ The electron-vite, Conveyor, and Builder migration gives the desktop a typed rep
 - [ ] Aged receivables, overdue workflow, and source-to-journal/GST provenance.
 - [ ] PDF generation and local email/share handoff without requiring vendor cloud storage.
 
-Implemented first invoice-document slice: versioned encrypted drafts, editable manual/reviewed-expense lines, exact ex-GST AUD calculations, mixed tax treatments, immutable issued snapshots, offline pdfcn PDFs and human-reviewed MCP proposals. See [Invoice builder](invoice-builder.md). This does not complete BOOK-02: customer registers, quotes, recurring billing, credit notes, settlements, receivables posting and delivery remain outstanding.
+Implemented invoice and income slices: versioned encrypted drafts, editable manual/reviewed-expense lines, exact ex-GST AUD calculations, mixed tax treatments, immutable issued snapshots, company templates/logos, offline pdfcn PDFs and human-reviewed MCP proposals. Issue atomically posts sales, receivables and basis-aware GST. Dated partial/full receipts retain exact allocations and reduce receivables without posting income again. Overview reports business revenue, invoice income, receipts and as-of balances across all retained sources. Older issued invoices require explicit review before linking. See [Invoice builder](invoice-builder.md) and [packaged income/BAS acceptance](invoice-income-bas-acceptance-2026-10-04.md).
+
+BOOK-02 remains incomplete: customer registers, quotes, recurring billing, credit notes, write-offs, deposits, overpayments/refunds, invoice/payment reversals, bank matching, ageing, customer statements and delivery remain outstanding. The grouped checkboxes above cover these complete workflows rather than the implemented subsets.
 
 **Exit:** Sales documents, settlements, receivables control, bank matches, financial reports, and GST labels reconcile exactly.
 
@@ -173,6 +176,8 @@ Implemented first invoice-document slice: versioned encrypted drafts, editable m
 
 **Priority:** P0  
 **Users:** GST/PAYG-registered businesses
+
+Implemented local GST workpapers for 2024–2027 attribute non-cash invoice sales on issue dates and cash sales on actual receipt dates, with G1/1A sales provenance, retained figures, source-change notices and regeneration. Eligible reviewed purchases contribute credits on the non-cash basis; cash purchase credits without payment evidence are excluded with a visible warning. This does not complete BAS-01 or enable declaration/lodgement. See [packaged income/BAS acceptance](invoice-income-bas-acceptance-2026-10-04.md).
 
 - [ ] Support cash and non-cash GST bases, monthly/quarterly/annual cycles, branches, and period transitions.
 - [ ] Calculate and explain G1, G2, G3, G10, G11, G21-G24, 1A, 1B, and derived totals as applicable.
