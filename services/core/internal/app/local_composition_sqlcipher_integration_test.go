@@ -18,6 +18,7 @@ import (
 	"github.com/tammyapp/tammy/services/core/internal/buildinfo"
 	tammyv1 "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1"
 	tammyv1connect "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1/tammyv1connect"
+	"github.com/tammyapp/tammy/services/core/internal/storage/migrations"
 	"github.com/tammyapp/tammy/services/core/internal/storage/sqlcipher"
 	"github.com/tammyapp/tammy/services/core/internal/transport"
 	"github.com/tammyapp/tammy/services/core/internal/workspace"
@@ -55,8 +56,13 @@ func TestLocalAttemptAnchorIDsAreScopedToOneInstallation(t *testing.T) {
 }
 
 func TestLocalCompositionCreatesConfirmsAndAuthenticatesRealWorkspace(t *testing.T) {
-	if localMigrationTarget != 10 {
-		t.Fatalf("localMigrationTarget = %d, want 9", localMigrationTarget)
+	steps, err := migrations.All()
+	if err != nil {
+		t.Fatal(err)
+	}
+	latestMigrationVersion := steps[len(steps)-1].Version
+	if localMigrationTarget != latestMigrationVersion {
+		t.Fatalf("localMigrationTarget = %d, want latest embedded migration %d", localMigrationTarget, latestMigrationVersion)
 	}
 	migrationCapture := &localMigrationCaptureModule{}
 	composition, err := NewLocalComposition(LocalCompositionConfig{
@@ -122,8 +128,8 @@ func TestLocalCompositionCreatesConfirmsAndAuthenticatesRealWorkspace(t *testing
 		`SELECT COALESCE(MAX(version), 0) FROM schema_migrations`).Scan(&migrationVersion); err != nil {
 		t.Fatalf("read migration version: %v", err)
 	}
-	if migrationVersion != 10 {
-		t.Fatalf("migration version = %d, want 9", migrationVersion)
+	if migrationVersion != int(latestMigrationVersion) {
+		t.Fatalf("migration version = %d, want latest embedded migration %d", migrationVersion, latestMigrationVersion)
 	}
 	for _, table := range []string{
 		"sbr_credential_bindings_v1",

@@ -553,8 +553,23 @@ func TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealSer
 		PeriodEnd:      &tammyv1.CivilDate{Year: 2026, Month: 9, Day: 30},
 	})
 	createBAS.Header().Set(transport.CapabilityHeader, ready.Capability)
-	if _, err := taxClient.CreateBasDraft(context.Background(), createBAS); err != nil {
+	createdBAS, err := taxClient.CreateBasDraft(context.Background(), createBAS)
+	if err != nil {
 		t.Fatalf("CreateBasDraft() error = %v", err)
+	}
+	getCurrentBAS := connect.NewRequest(&tammyv1.GetCurrentBasDraftRequest{
+		Authentication: authentication,
+		OrganisationId: created.Msg.Organisation.Id,
+	})
+	getCurrentBAS.Header().Set(transport.CapabilityHeader, ready.Capability)
+	currentBAS, err := taxClient.GetCurrentBasDraft(context.Background(), getCurrentBAS)
+	if err != nil {
+		var sequence int64
+		storageErr := module.db.QueryRowContext(context.Background(), `SELECT sequence FROM bas_workpaper_save_order_v1 LIMIT 1`).Scan(&sequence)
+		t.Fatalf("GetCurrentBasDraft() error = %v; save-order storage diagnostic = %v", err, storageErr)
+	}
+	if currentBAS.Msg.Workpaper == nil || !proto.Equal(currentBAS.Msg.Workpaper, createdBAS.Msg.Workpaper) {
+		t.Fatalf("GetCurrentBasDraft() = %v; want saved workpaper %v", currentBAS.Msg.Workpaper, createdBAS.Msg.Workpaper)
 	}
 
 	attentionRequest := connect.NewRequest(&tammyv1.GetAttentionSummaryRequest{
