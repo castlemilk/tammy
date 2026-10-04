@@ -26,6 +26,41 @@ func TestOpenFailsClosedWithoutKey(t *testing.T) {
 	}
 }
 
+func TestExistingOnlyConnectorCannotRecreateAFileRemovedAtSQLiteCall(t *testing.T) {
+	ctx := context.Background()
+	path := filepath.Join(t.TempDir(), "workspace.db")
+	key := testKey(0x68)
+	original, err := Open(ctx, path, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := original.Close(); err != nil {
+		t.Fatal(err)
+	}
+	opened, err := openDatabase(ctx, path, key, openBoundaryHooks{existingOnly: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer opened.Close()
+	var removeErr error
+	opened.connector.hooks.beforeSQLiteCall = func() {
+		removeErr = os.Rename(path, path+".retained")
+	}
+	connection, err := opened.connector.Connect(ctx)
+	if connection != nil {
+		_ = connection.Close()
+	}
+	if removeErr != nil {
+		t.Fatal(removeErr)
+	}
+	if err == nil {
+		t.Fatal("connector admitted a file removed after its final identity check")
+	}
+	if _, err := os.Lstat(path); !os.IsNotExist(err) {
+		t.Fatalf("existing-only SQLite open recreated the removed source: %v", err)
+	}
+}
+
 func TestTypedBindingsPreparedStatementsAndTransactions(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()

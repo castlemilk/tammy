@@ -18,7 +18,7 @@ import {
   GetCurrentBasDraftRequestSchema,
   GetCurrentBasDraftResponseSchema,
 } from "@tammy/connect-client/tammy/v1/tax_pb.js";
-import { act, screen, waitFor } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useEffect } from "react";
 import { expect, it } from "vitest";
@@ -128,6 +128,17 @@ it("creates a local BAS draft from reviewed sources without exposing lodgement a
   expect(
     screen.getByText("Complete BAS preparation, declaration, and lodgement are unavailable."),
   ).toBeTruthy();
+  const workpaperSupport = screen.getByRole("heading", { level: 2, name: "GST workpaper" });
+  const returnSupport = screen.getByRole("heading", { level: 2, name: "Full BAS return" });
+  if (!workpaperSupport.parentElement || !returnSupport.parentElement) {
+    throw new Error("REPORTING_SUPPORT_GROUP_MISSING");
+  }
+  expect(within(workpaperSupport.parentElement).getByText("Available in this build")).toBeTruthy();
+  expect(
+    within(workpaperSupport.parentElement).queryByText("Unsupported in this build"),
+  ).toBeNull();
+  expect(within(returnSupport.parentElement).getByText("Unsupported in this build")).toBeTruthy();
+  expect(within(returnSupport.parentElement).queryByText("Available in this build")).toBeNull();
   expect(fixture.procedures.reporting.getReportingCapability).toHaveBeenCalledTimes(2);
 
   await user.click(await screen.findByRole("button", { name: "Create local draft" }));

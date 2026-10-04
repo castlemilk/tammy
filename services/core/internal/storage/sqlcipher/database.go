@@ -58,6 +58,7 @@ type openBoundaryHooks struct {
 	afterPing                func() error
 	beforeFinalIdentityCheck func()
 	withoutWorkspaceLock     bool
+	existingOnly             bool
 }
 
 // Open creates or opens a database using an exact 32-byte SQLCipher raw key.
@@ -88,7 +89,12 @@ func openDatabase(
 			return nil, err
 		}
 	}
-	identity, _, err := retainDatabaseFile(cleaned)
+	var identity *databaseFileIdentity
+	if hooks.existingOnly {
+		identity, err = retainExistingDatabaseFile(cleaned)
+	} else {
+		identity, _, err = retainDatabaseFile(cleaned)
+	}
 	if err != nil {
 		zeroBytes(ownedKey)
 		if workspaceLock != nil {
@@ -97,6 +103,7 @@ func openDatabase(
 		return nil, err
 	}
 	connectorInstance := &connector{
+		existingOnly:   hooks.existingOnly,
 		fileIdentity:   identity.file,
 		key:            ownedKey,
 		parentIdentity: identity.parent,
@@ -134,6 +141,22 @@ func openDatabase(
 		return failOpen(err)
 	}
 	return database, nil
+}
+
+func retainExistingDatabaseFile(candidate string) (*databaseFileIdentity, error) {
+	parent, err := os.Lstat(filepath.Dir(candidate))
+	if err != nil || validateDatabaseParentSecurity(parent) != nil {
+		return nil, ErrDatabasePermissions
+	}
+	file, err := os.Lstat(candidate)
+	if err != nil {
+		return nil, ErrDatabaseIdentity
+	}
+	handle, err := retainExpectedDatabaseFile(candidate, file, parent)
+	if err != nil {
+		return nil, err
+	}
+	return &databaseFileIdentity{handle: handle, parent: parent, file: file}, nil
 }
 
 func retainDatabaseFile(candidate string) (*databaseFileIdentity, bool, error) {

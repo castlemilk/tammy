@@ -216,9 +216,60 @@ type migrationBoundaryHooks struct {
 }
 
 type workspaceMigrationOptions struct {
-	hooks  migrationBoundaryHooks
-	steps  []migrations.Migration
-	target uint32
+	hooks           migrationBoundaryHooks
+	steps           []migrations.Migration
+	target          uint32
+	requireExisting bool
+}
+
+// OpenMigratedWorkspace admits only an existing authenticated workspace with a
+// verified schema prefix. Current workspaces keep a shared lock. Older ones are
+// closed before the existing exclusive copy-migration boundary is entered.
+func OpenMigratedWorkspace(ctx context.Context, path string, key []byte, target uint32) (*Database, error) {
+	steps, err := migrations.All()
+	if err != nil {
+		return nil, err
+	}
+	if err := validateMigrationPlan(steps, target); err != nil {
+		return nil, err
+	}
+	for attempt := 0; attempt < 2; attempt++ {
+		database, err := openDatabase(ctx, path, key, openBoundaryHooks{existingOnly: true})
+		if err != nil {
+			return nil, err
+		}
+		applied, inspectErr := readAppliedMigrations(ctx, database)
+		if inspectErr == nil && len(applied) == 0 {
+			inspectErr = ErrMigrationPlan
+		}
+		if inspectErr == nil {
+			inspectErr = verifyAppliedMigrations(applied, steps, target)
+		}
+		if inspectErr == nil {
+			inspectErr = database.IntegrityCheck(ctx)
+		}
+		if inspectErr == nil {
+			inspectErr = migrationRelationalIntegrityCheck(ctx, database)
+		}
+		if inspectErr != nil {
+			return nil, errors.Join(inspectErr, database.Close())
+		}
+		if len(applied) == int(target) {
+			return database, nil
+		}
+		if err := database.Close(); err != nil {
+			return nil, err
+		}
+		if attempt != 0 {
+			return nil, ErrMigrationPlan
+		}
+		if _, err := migrateWorkspace(ctx, path, key, workspaceMigrationOptions{
+			steps: steps, target: target, requireExisting: true,
+		}); err != nil {
+			return nil, err
+		}
+	}
+	return nil, ErrMigrationPlan
 }
 
 // MigrateWorkspace copy-migrates an encrypted file and atomically activates it.
@@ -266,6 +317,9 @@ func migrateWorkspace(
 	exists, err := workspaceFileExists(cleaned)
 	if err != nil {
 		return result, err
+	}
+	if options.requireExisting && !exists {
+		return result, ErrDatabaseIdentity
 	}
 	if exists {
 		currentVersion, inspectErr := inspectWorkspaceBeforeCopy(ctx, cleaned, key, options.steps, options.target)
@@ -352,7 +406,7 @@ func inspectWorkspaceBeforeCopy(
 	steps []migrations.Migration,
 	target uint32,
 ) (version uint32, runErr error) {
-	database, err := openDatabase(ctx, path, key, openBoundaryHooks{withoutWorkspaceLock: true})
+	database, err := openDatabase(ctx, path, key, openBoundaryHooks{withoutWorkspaceLock: true, existingOnly: true})
 	if err != nil {
 		return 0, err
 	}
@@ -446,8 +500,8 @@ func stageEncryptedWorkspace(activePath string, copyExisting bool) (string, erro
 		return stagedPath, ErrMigrationStorage
 	}
 	if copyExisting {
-		identity, created, err := retainDatabaseFile(activePath)
-		if err != nil || created {
+		identity, err := retainExistingDatabaseFile(activePath)
+		if err != nil {
 			return stagedPath, ErrMigrationStorage
 		}
 		var copyErr error

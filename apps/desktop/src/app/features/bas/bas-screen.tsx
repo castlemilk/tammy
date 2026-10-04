@@ -170,19 +170,25 @@ export function BasScreen({
           </p>
         ) : (
           <>
-            <ReportingCapabilityNotice
-              api={api}
-              entityType={ReportingEntityType.AU_BUSINESS}
-              onStatusChange={updateGstCapability}
-              report={ReportKind.GST_WORKPAPER}
-              taxYear={taxYear}
-            />
-            <ReportingCapabilityNotice
-              api={api}
-              entityType={ReportingEntityType.AU_BUSINESS}
-              report={ReportKind.BAS}
-              taxYear={taxYear}
-            />
+            <div className="grid gap-1">
+              <h2 className="text-[10px] font-semibold">GST workpaper</h2>
+              <ReportingCapabilityNotice
+                api={api}
+                entityType={ReportingEntityType.AU_BUSINESS}
+                onStatusChange={updateGstCapability}
+                report={ReportKind.GST_WORKPAPER}
+                taxYear={taxYear}
+              />
+            </div>
+            <div className="grid gap-1">
+              <h2 className="text-[10px] font-semibold">Full BAS return</h2>
+              <ReportingCapabilityNotice
+                api={api}
+                entityType={ReportingEntityType.AU_BUSINESS}
+                report={ReportKind.BAS}
+                taxYear={taxYear}
+              />
+            </div>
           </>
         )}
       </section>

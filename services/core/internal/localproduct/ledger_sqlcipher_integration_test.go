@@ -29,14 +29,16 @@ import (
 )
 
 func TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealServer(t *testing.T) {
+	root := t.TempDir()
+	anchors := workspace.NewMemoryAnchorStore()
 	module, err := NewLedgerModule()
 	if err != nil {
 		t.Fatal(err)
 	}
 	composition, err := app.NewLocalComposition(app.LocalCompositionConfig{
 		Info:           buildinfo.Info{Version: "local-ledger-integration"},
-		Root:           t.TempDir(),
-		AttemptAnchors: workspace.NewMemoryAnchorStore(),
+		Root:           root,
+		AttemptAnchors: anchors,
 		Modules:        []app.LocalWorkspaceModule{module},
 	})
 	if err != nil {
@@ -590,4 +592,7 @@ func TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealSer
 		attention.Msg.Revisions.FinancialRevision != 11 || attention.Msg.Revisions.SettlementRevision != 1 {
 		t.Fatalf("revisions = %#v, want financial=11 banking=3 tax-source=6 settlement=1", attention.Msg.Revisions)
 	}
+	t.Run("upgrades version 10 on authenticated unlock after restart", func(t *testing.T) {
+		assertVersion10UpgradeAfterRestart(t, root, anchors, composition, server, module, issuedInvoice.Msg.Invoice, currentBAS.Msg.Workpaper)
+	})
 }

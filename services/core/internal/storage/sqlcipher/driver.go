@@ -106,6 +106,7 @@ func (driverInstance *sqlcipherDriver) Open(string) (driver.Conn, error) {
 }
 
 type connector struct {
+	existingOnly   bool
 	fileIdentity   os.FileInfo
 	hooks          connectorBoundaryHooks
 	key            []byte
@@ -117,6 +118,7 @@ type connector struct {
 type connectorBoundaryHooks struct {
 	afterSQLiteOpen  func()
 	beforeSQLiteOpen func()
+	beforeSQLiteCall func()
 }
 
 func (item *connector) Connect(ctx context.Context) (_ driver.Conn, returnedError error) {
@@ -149,7 +151,10 @@ func (item *connector) Connect(ctx context.Context) (_ driver.Conn, returnedErro
 	pathValue := C.CString(item.path)
 	defer C.free(unsafe.Pointer(pathValue))
 	var database *C.sqlite3
-	flags := C.int(C.SQLITE_OPEN_READWRITE | C.SQLITE_OPEN_CREATE | C.SQLITE_OPEN_FULLMUTEX | C.SQLITE_OPEN_NOFOLLOW)
+	flags := C.int(C.SQLITE_OPEN_READWRITE | C.SQLITE_OPEN_FULLMUTEX | C.SQLITE_OPEN_NOFOLLOW)
+	if !item.existingOnly {
+		flags |= C.SQLITE_OPEN_CREATE
+	}
 	if item.hooks.beforeSQLiteOpen != nil {
 		item.hooks.beforeSQLiteOpen()
 	}
@@ -158,6 +163,9 @@ func (item *connector) Connect(ctx context.Context) (_ driver.Conn, returnedErro
 			item.hooks.afterSQLiteOpen()
 		}
 		return nil, err
+	}
+	if item.hooks.beforeSQLiteCall != nil {
+		item.hooks.beforeSQLiteCall()
 	}
 	result := C.sqlite3_open_v2(pathValue, &database, flags, nil)
 	if item.hooks.afterSQLiteOpen != nil {

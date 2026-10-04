@@ -403,7 +403,7 @@ func (factory sqlCipherStorageFactory) Create(ctx context.Context, path string, 
 }
 
 func (factory sqlCipherStorageFactory) Open(ctx context.Context, path string, key []byte) (StorageHandle, error) {
-	database, err := sqlcipher.Open(ctx, path, key)
+	database, err := sqlcipher.OpenMigratedWorkspace(ctx, path, key, factory.target)
 	if err != nil {
 		return nil, err
 	}

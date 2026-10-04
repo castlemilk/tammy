@@ -26,6 +26,8 @@ Additive invoice RPCs: `GetInvoiceAccounting`, `PostInvoiceIncome`, `RecordInvoi
 
 Select the current BAS workpaper by a durable committed save sequence, independent of timestamp formatting, equal clocks or clock rollback. Migration 0011 preserves retained insertion order, and exact command replay does not make an older snapshot current. Date fields derive from the saved workpaper until the user focuses or edits them; an explicit selection remains intact through asynchronous loading and regeneration.
 
+Production creation and reopening use the current embedded schema. Reopening verifies the existing encrypted file and its migration checksums first; a current workspace retains shared access, while an older workspace uses the existing copy-migration boundary under an exclusive lock. Missing files, wrong keys, altered migration history and actively held older workspaces fail without creating or replacing accounting data. Upgrade retains invoice and BAS records and does not create financial postings.
+
 ## Alternatives
 
 A reporting-only sum of invoices could expose sales quickly, but would leave the trial balance and business ledger disconnected. Manual journals would preserve accounting mechanics but keep the duplication burden on users. Atomic typed postings give income, receipts, overview and BAS a shared accounting source and are the selected implementation.

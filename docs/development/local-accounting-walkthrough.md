@@ -18,6 +18,7 @@ On **Create your local workspace**, enter:
 
 - an administrator display name and username;
 - the business legal name, display name, and a checksum-valid 11-digit ABN;
+- the business’s cash or non-cash GST accounting basis;
 - a workspace passphrase and administrator password that satisfy the displayed minimums.
 
 Choose **Create local workspace**. Tammy creates the workspace only inside its approved local application-data capability; the app does not choose a raw database path. The workspace call crosses the allowlisted workspace Conveyor module and is authorized against the live main frame before Electron main contacts Core.
@@ -36,7 +37,7 @@ Development startup intentionally resets only its private workspace/identity att
 
 ## 5. Inspect the organisation and chart
 
-Setup creates one AU private-company organisation using Australia/Melbourne, AUD, non-cash GST, quarterly reporting, a June year end, and the retained AU GST rule bundle.
+Setup creates one AU private-company organisation using Australia/Melbourne, AUD, the selected GST basis, quarterly reporting, a June year end, and the retained AU GST rule bundle.
 
 Open **Accounting → Chart of accounts**. The installed chart includes protected bank, receivable/payable, current/deferred/evidence/adjustment GST, earnings, retained earnings, and opening-equity accounts. Add at least two ordinary accounts before creating a manual journal; protected system/control accounts cannot be selected for manual posting.
 
@@ -52,7 +53,7 @@ Open **Accounting → Trial balance**, choose an as-of date on or after the jour
 
 Open **Documents** and choose a local PDF, PNG, or JPEG no larger than 10 MiB. PDF text is extracted locally where supported; images do not use a cloud OCR service. Review the proposed supplier, invoice, date, subtotal, GST, and total, correct them if necessary, and save the review.
 
-The retained document remains local. A reviewed purchase document within the chosen reporting period becomes an eligible source for the BAS draft.
+The retained document remains local. On a non-cash basis, eligible reviewed purchases within the chosen reporting period contribute to GST credits. Cash-basis purchases need recorded payment evidence; the current reviewed-document workflow excludes their credits and explains the missing evidence.
 
 ## 8. Import, match, and reconcile banking
 
@@ -69,6 +70,8 @@ This walkthrough uses pasted local rows. It does not claim bank feeds, automatic
 ## 9. Create a BAS draft
 
 Open **GST & BAS**, select a period containing the reviewed document, and choose **Create local draft**. Review G1, 1A, 1B, net GST, and the retained source list.
+
+To include sales, save and issue an invoice in **Invoices**. Issue records the sale in the business ledger; a saved draft does not. Record any actual receipts with their payment date and bank account. **Overview** shows income excluding GST, receipts, and invoices owing for the selected period and balance date. Non-cash GST sales follow issue dates, while cash GST sales follow recorded receipts. Regenerate the GST workpaper after its sources change and check the invoice references and dates against those records.
 
 The status must read **Draft — not lodged**. The screen has no declaration, lodge, submit, or ATO transport action. Reconciliation state does not convert a local draft into a lodged BAS.
 
