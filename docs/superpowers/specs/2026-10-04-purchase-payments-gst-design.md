@@ -1,6 +1,6 @@
 # Purchase payments and GST credits
 
-Date: 2026-10-04. Status: proposed design; detailed approval and implementation plan are pending. This document authorizes no implementation by itself.
+Date: 2026-10-04. Status: implementation authorised by the user's 2026-10-05 programme continuation instruction; see [execution plan](../plans/2026-10-05-purchase-payments-gst.md). Execute after export-phase acceptance.
 
 ## Outcome and scope
 
@@ -154,4 +154,4 @@ Required tests, implemented as meaningful RED → GREEN cycles after design appr
 
 The design's paid-extent guard follows [ATO GSTR 2000/13](https://www.ato.gov.au/law/view/document?LocID=%22GST%2FGSTR200013%2FNAT%2FATO%2Ffp24%22&PiT=20241204000001). Eligibility, business-use and tax-invoice review follow the [ATO GST credit guidance](https://www.ato.gov.au/api/public/content/0-1e92db95-a75c-4f4e-a3d4-39f43b1a3b25). Claim deadlines follow the [ATO time-limit guidance](https://www.ato.gov.au/api/public/content/0-a7296cdd-cec8-49dc-b597-1d94ac991a01), with the earliest otherwise eligible period retained independently of the date evidence was obtained. These sources support the claim guards; the software does not treat user-confirmed eligibility or timing as an automatic tax ruling.
 
-Detailed approval must confirm the explicit posting/payment flow, private account allocations, evidence/claim-period review and legacy non-cash preparation block before an implementation plan is executed.
+The 2026-10-05 continuation instruction approves this explicit posting/payment flow, private account allocations, evidence/claim-period review and legacy-source preparation safeguards. No bank transfer or ATO submission is authorised by this workflow.

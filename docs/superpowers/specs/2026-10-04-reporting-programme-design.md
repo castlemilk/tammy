@@ -1,6 +1,8 @@
 # Income, purchase payments and BAS preparation programme
 
-Date: 2026-10-04. Status: concrete proposed design for the user's request to continue with all three reporting improvements. Implementation follows review of these designs.
+Date: 2026-10-04. Status: implementation authorised by the user's 2026-10-05 instruction to continue this programme. Delivery remains phased with independent validation before dependent changes.
+
+Execution plans: [income/BAS exports](../plans/2026-10-05-income-bas-exports.md), [purchase payments/GST](../plans/2026-10-05-purchase-payments-gst.md), and [BAS preparation/manual handoff](../plans/2026-10-05-bas-preparation-lifecycle.md). Completion is recorded only after the corresponding tests and packaged acceptance.
 
 ## Delivery order and review boundaries
 

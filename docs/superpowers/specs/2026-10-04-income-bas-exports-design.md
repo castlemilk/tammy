@@ -1,6 +1,6 @@
 # Income and BAS exports design
 
-Status: proposed design for the authorised reporting programme; implementation has not started.
+Status: implementation authorised by the user's 2026-10-05 programme continuation instruction; see [execution plan](../plans/2026-10-05-income-bas-exports.md).
 
 ## Outcome and sequence
 
