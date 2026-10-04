@@ -2,7 +2,9 @@
 
 **Baseline date:** 11 August 2026  
 **Invoice income/BAS review:** 4 October 2026
-**Normative design:** [Business and individual self-reporting design](../superpowers/specs/2026-08-11-business-individual-self-reporting-design.md)  
+
+**Programme scope:** [Programme backlog](#3-programme-backlog)
+
 **Current capability source:** [Current technical state](tech-state.md)
 
 ## 1. Outcome and prioritisation
