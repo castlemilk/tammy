@@ -191,6 +191,22 @@ test("Conveyor manifest rejects unknown modules, kinds, and duplicate procedures
   }
 });
 
+test("native report exports remain in the desktop manifest without invented Core RPCs", async () => {
+  const { flattenConveyorManifest, parseConveyorManifest } = await import(
+    "./check-e2e-coverage.mjs"
+  );
+  const manifest = validConveyorManifest();
+  manifest.reporting.exportIncome = "command";
+  manifest.reporting.exportBas = "command";
+  const parsed = parseConveyorManifest(manifest);
+  assert.equal(parsed.reporting.exportIncome, "command");
+  assert.equal(parsed.reporting.exportBas, "command");
+  assert.deepEqual(
+    flattenConveyorManifest(manifest),
+    flattenConveyorManifest(validConveyorManifest()),
+  );
+});
+
 test("parses the production-only coverage CLI option", async () => {
   const { coverageCliOptions } = await import("./check-e2e-coverage.mjs");
   const descriptorPath = path.join(process.cwd(), "descriptors.pb");

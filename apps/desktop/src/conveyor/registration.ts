@@ -15,6 +15,7 @@ export interface TammyConveyorRegistrationOptions {
   readonly fileIntake: SbrFileIntake;
   readonly getWindow: () => BrowserWindow | undefined;
   readonly ipcMain: IpcBoundary;
+  readonly reportExports?: TammyConveyorContext["reportExports"];
   readonly invoiceExport?: TammyConveyorContext["invoiceExport"];
   readonly invoiceProposal?: TammyConveyorContext["invoiceProposal"];
 }
@@ -27,6 +28,7 @@ export function registerTammyConveyor(options: TammyConveyorRegistrationOptions)
   const context = Object.freeze({
     client: options.client,
     fileIntake: options.fileIntake,
+    ...(options.reportExports ? { reportExports: options.reportExports } : {}),
     ...(options.invoiceExport ? { invoiceExport: options.invoiceExport } : {}),
     ...(options.invoiceProposal ? { invoiceProposal: options.invoiceProposal } : {}),
   });

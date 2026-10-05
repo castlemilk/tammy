@@ -10,6 +10,10 @@ import type { TammyConveyorModule } from "../../../conveyor/client";
 import { businessIncomeToRecord } from "../../../shared/invoice-accounting";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import { Button } from "../../components/ui/button";
+import {
+  ReportExportActions,
+  type ReportOrganisationApi,
+} from "../reporting/report-export-actions";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
 
 const codec = createProtoMethodCodec({
@@ -24,9 +28,13 @@ export function BusinessIncomePanel({
   api,
   now,
   onReviewInvoices,
+  exportApi,
+  organisationApi,
   workspace,
 }: {
   readonly api: IncomeApi;
+  readonly exportApi?: Pick<TammyConveyorModule<"reporting">, "exportIncome">;
+  readonly organisationApi?: ReportOrganisationApi;
   readonly now?: Date;
   readonly onReviewInvoices?: () => void;
   readonly workspace: AuthenticatedWorkspace | undefined;
@@ -63,11 +71,15 @@ export function BusinessIncomePanel({
     if (!query.data || query.isError || !valid) return undefined;
     try {
       const summary = codec.decodeResponse(query.data).summary;
-      return summary ? businessIncomeToRecord(summary) : undefined;
+      if (!summary || summary.organisationId !== organisationId) return undefined;
+      const record = businessIncomeToRecord(summary);
+      return record.periodStart === start && record.periodEnd === end && record.asOfDate === asOf
+        ? record
+        : undefined;
     } catch {
       return undefined;
     }
-  }, [query.data, query.isError, valid]);
+  }, [query.data, query.isError, valid, organisationId, start, end, asOf]);
 
   function choosePeriod(next: string) {
     setMode(next);
@@ -196,6 +208,26 @@ export function BusinessIncomePanel({
             : "Business income could not be read. Refresh to try again."}
         </p>
       )}
+      {exportApi && organisationApi ? (
+        <ReportExportActions
+          organisationApi={organisationApi}
+          workspace={workspace}
+          label="Income"
+          disabled={!valid || query.isFetching || !value}
+          execute={(format, expectedOrganisationVersion) =>
+            exportApi.exportIncome({
+              authentication: { actorUserId: userId, sessionId },
+              organisationId,
+              expectedOrganisationVersion,
+              format,
+              periodStart: start,
+              periodEnd: end,
+              asOfDate: asOf,
+              expectedFinancialRevision: String(value?.financialRevision ?? 0),
+            })
+          }
+        />
+      ) : null}
     </section>
   );
 }

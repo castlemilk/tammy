@@ -16,6 +16,8 @@ const DECLARED_FUTURE_STAGE = "declared_future";
 const NATIVE_ONLY_PROCEDURES = new Set([
   "selectMachineCredentialFile",
   "exportInvoicePdf",
+  "exportIncome",
+  "exportBas",
   "getInvoiceProposal",
 ]);
 const CASE_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)+$/;

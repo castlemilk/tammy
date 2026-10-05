@@ -11,6 +11,7 @@
 /.tmp/invoice-preview/
 /.tmp/invoice-cost-table-e2e/
 /.tmp/invoice-income-bas-e2e/
+/.tmp/reporting-exports-e2e/
 node_modules/
 .pnpm-store/
 **/.vite/

@@ -44,7 +44,8 @@
     "scheduler": "0.27.0",
     "tailwind-merge": "3.6.0",
     "zod": "4.4.3",
-    "zustand": "5.0.14"
+    "zustand": "5.0.14",
+    "@tammy/reporting": "workspace:*"
   },
   "devDependencies": {
     "@electron/asar": "3.4.1",
@@ -65,6 +66,8 @@
     "shadcn": "4.13.1",
     "tailwindcss": "4.3.3",
     "vite": "7.3.6",
-    "vitest": "4.1.10"
+    "vitest": "4.1.10",
+    "csv-parse": "7.0.3",
+    "pdfjs-dist": "6.4.299"
   }
 }

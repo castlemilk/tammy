@@ -1,0 +1,28 @@
+{
+  "name": "@tammy/reporting",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test src/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "2.12.1",
+    "@tammy/connect-client": "workspace:*",
+    "@tammy/invoices": "workspace:*",
+    "@formepdf/core": "0.25.0",
+    "@formepdf/react": "0.25.0",
+    "react": "19.2.7"
+  },
+  "devDependencies": {
+    "@types/node": "26.1.1",
+    "@types/react": "19.2.17",
+    "csv-parse": "7.0.3",
+    "pdfjs-dist": "6.4.299"
+  },
+  "exports": {
+    ".": "./src/reports.ts",
+    "./model": "./src/model.ts"
+  }
+}

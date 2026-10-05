@@ -14,12 +14,17 @@ import {
   GetCurrentBasDraftRequestSchema,
   GetCurrentBasDraftResponseSchema,
 } from "@tammy/connect-client/tammy/v1/tax_pb.js";
+import { validateBasSnapshot } from "@tammy/reporting/model";
 import { Calculator, FileCheck2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 
 import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import { Button } from "../../components/ui/button";
+import {
+  ReportExportActions,
+  type ReportOrganisationApi,
+} from "../reporting/report-export-actions";
 import { ReportingCapabilityNotice } from "../reporting/reporting-capability-notice";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
 
@@ -38,15 +43,18 @@ const getCodec = createProtoMethodCodec({
 type BasAPI = Pick<
   TammyConveyorModule<"reporting">,
   "createBasDraft" | "getCurrentBasDraft" | "getReportingCapability"
->;
+> &
+  Partial<Pick<TammyConveyorModule<"reporting">, "exportBas">>;
 
 export function BasScreen({
   api,
   now,
   onBasDraftChanged,
+  organisationApi,
   workspace,
 }: {
   readonly api: BasAPI;
+  readonly organisationApi?: ReportOrganisationApi;
   readonly now?: Date;
   readonly onBasDraftChanged?: () => Promise<void>;
   readonly workspace: AuthenticatedWorkspace | undefined;
@@ -88,13 +96,13 @@ export function BasScreen({
     retry: false,
   });
   const workpaper = useMemo<BasWorkpaper | undefined>(() => {
-    if (!currentBas.data) return undefined;
+    if (!currentBas.data || currentBas.isError) return undefined;
     try {
       return getCodec.decodeResponse(currentBas.data).workpaper;
     } catch {
       return undefined;
     }
-  }, [currentBas.data]);
+  }, [currentBas.data, currentBas.isError]);
 
   const start =
     editedPeriod?.start ?? (workpaper ? isoDate(workpaper.periodStart) : defaultPeriod.start);
@@ -146,6 +154,7 @@ export function BasScreen({
     }
   };
 
+  const exportBas = api.exportBas;
   return (
     <div className="mx-auto grid w-full max-w-[1120px] gap-4">
       <div className="flex items-end justify-between gap-4">
@@ -163,6 +172,36 @@ export function BasScreen({
           </div>
         ) : null}
       </div>
+      {exportBas && organisationApi ? (
+        <ReportExportActions
+          organisationApi={organisationApi}
+          workspace={workspace}
+          label="BAS"
+          validateReport={(organisation) => {
+            if (!workpaper) throw new Error();
+            validateBasSnapshot({ organisation, workpaper, acquiredAt: new Date().toISOString() });
+          }}
+          disabled={
+            busy ||
+            currentBas.isFetching ||
+            currentBas.isError ||
+            !workpaper ||
+            workpaper?.status !== BasWorkpaperStatus.DRAFT_NOT_LODGED
+          }
+          execute={(format, expectedOrganisationVersion) =>
+            exportBas({
+              authentication: { actorUserId: userId, sessionId },
+              organisationId,
+              expectedOrganisationVersion,
+              format,
+              periodStart: isoDate(workpaper?.periodStart),
+              periodEnd: isoDate(workpaper?.periodEnd),
+              expectedWorkpaperId: workpaper?.id ?? "",
+              expectedWorkpaperVersion: String(workpaper?.version ?? 0n),
+            })
+          }
+        />
+      ) : null}
       <section className="grid gap-2" aria-label="Reporting support">
         {taxYear === undefined ? (
           <p aria-live="polite" role="status">

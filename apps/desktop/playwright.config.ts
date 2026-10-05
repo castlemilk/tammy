@@ -12,7 +12,12 @@ export default defineConfig({
   projects: [
     {
       name: target,
-      testMatch: ["foundation.spec.ts", "current-workflows.spec.ts", "invoice-income.spec.ts"],
+      testMatch: [
+        "foundation.spec.ts",
+        "current-workflows.spec.ts",
+        "invoice-income.spec.ts",
+        "reporting-exports.spec.ts",
+      ],
     },
     ...(target === "darwin-arm64"
       ? [{ name: "darwin-arm64-sbr", testMatch: ["sbr-readiness.spec.ts"] }]

@@ -12,7 +12,15 @@ import {
   GetCurrentBasDraftRequestSchema,
   GetCurrentBasDraftResponseSchema,
 } from "@tammy/connect-client/tammy/v1/tax_pb.js";
+import { ConveyorError, type StandardSchemaV1 } from "electron-conveyor/define";
 import { createProtoMethodCodec } from "../../shared/proto-ipc";
+import {
+  type BasExportRequest,
+  basExportRequest,
+  type IncomeExportRequest,
+  incomeExportRequest,
+  reportExportError,
+} from "../../shared/report-export";
 import { command, defineModule, query } from "../init";
 import { conveyorProtoFrame, invokeCore } from "../proto";
 
@@ -41,7 +49,44 @@ const createBas = createProtoMethodCodec({
   output: CreateBasDraftResponseSchema,
 });
 
+function exportRequest<Request>(schema: {
+  safeParse(input: unknown): { success: true; data: Request } | { success: false };
+}): StandardSchemaV1<Request, Request> {
+  return {
+    "~standard": {
+      version: 1,
+      vendor: "tammy-report-export",
+      validate: (input) => {
+        const result = schema.safeParse(input);
+        return result.success
+          ? { value: result.data }
+          : { issues: [{ message: "INVALID_REPORT_EXPORT_REQUEST" }] };
+      },
+    },
+  };
+}
 export const reporting = defineModule({
+  exportIncome: command(
+    exportRequest<IncomeExportRequest>(incomeExportRequest),
+    async ({ input, ctx }) => {
+      try {
+        if (!ctx.reportExports) throw new Error();
+        return await ctx.reportExports.exportIncome(input);
+      } catch (error) {
+        const bounded = reportExportError(error, "REPORT_SAVE_FAILED");
+        throw new ConveyorError(bounded.message, bounded.message);
+      }
+    },
+  ),
+  exportBas: command(exportRequest<BasExportRequest>(basExportRequest), async ({ input, ctx }) => {
+    try {
+      if (!ctx.reportExports) throw new Error();
+      return await ctx.reportExports.exportBas(input);
+    } catch (error) {
+      const bounded = reportExportError(error, "REPORT_SAVE_FAILED");
+      throw new ConveyorError(bounded.message, bounded.message);
+    }
+  }),
   getCurrentBasDraft: query(conveyorProtoFrame(16_384), ({ input, ctx }) =>
     invokeCore(currentBas, input, ctx.client.getCurrentBasDraft),
   ),

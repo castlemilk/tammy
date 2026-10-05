@@ -1,5 +1,7 @@
 {
-  "system": { "getSystemDiagnostics": "query" },
+  "system": {
+    "getSystemDiagnostics": "query"
+  },
   "workspace": {
     "createWorkspace": "command",
     "confirmRecovery": "command",
@@ -20,7 +22,6 @@
     "postInvoiceIncome": "command",
     "recordInvoicePayment": "command",
     "getBusinessIncomeSummary": "query",
-
     "listAccounts": "query",
     "listJournals": "query",
     "getJournal": "query",
@@ -52,6 +53,8 @@
     "saveDocumentReview": "command"
   },
   "reporting": {
+    "exportIncome": "command",
+    "exportBas": "command",
     "getCurrentBasDraft": "query",
     "getReportingCapability": "query",
     "getAttentionSummary": "query",

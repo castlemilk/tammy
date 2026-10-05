@@ -22,6 +22,7 @@ import {
 import { registerTammyConveyor } from "../conveyor/registration";
 import { invoiceToRecord } from "../shared/invoices";
 import { readPublicLinks } from "../shared/public-links";
+import type { ReportExports } from "../shared/report-export";
 import { createCoreClient } from "./core-client";
 import { createCoreLaunchArguments } from "./core-launch";
 import { CoreProcess } from "./core-process";
@@ -41,6 +42,7 @@ import {
   createLocalIntegrationSession,
   type LocalIntegrationSession,
 } from "./local-integration-session";
+import { createReportExports } from "./report-export";
 import {
   createSbrFileIntake,
   type SbrFileIntake,
@@ -102,6 +104,7 @@ export function createProductionDependencies(
   let requestQuit: (() => void) | undefined;
   let integration: DesktopLocalIntegration | undefined;
   let integrationSession: LocalIntegrationSession | undefined;
+  let reportExports: ReportExports | undefined;
   let invoiceExport: InvoiceExport<GetInvoiceRequest> | undefined;
   let releaseIntegrationMenu: (() => void) | undefined;
   const releaseKind = resolveSbrFileReleaseKind({
@@ -177,6 +180,16 @@ export function createProductionDependencies(
         integrationSession.clearInvoiceProposal,
       );
       const current = integrationSession;
+      reportExports = createReportExports({
+        client: current.client,
+        capture: current.captureCurrent,
+        select: (defaultPath, format) =>
+          dialog.showSaveDialog({
+            defaultPath,
+            title: `Export ${format.toUpperCase()} report`,
+            filters: [{ name: format.toUpperCase(), extensions: [format] }],
+          }),
+      });
       invoiceExport = createInvoiceExport({
         prepare: async (request: GetInvoiceRequest) => {
           if (!request.authentication) throw new Error("LOCAL_SESSION_REQUIRED");
@@ -322,6 +335,7 @@ export function createProductionDependencies(
         client,
         fileIntake,
         invoiceExport,
+        reportExports,
         invoiceProposal: async (request) => {
           if (!integrationSession || !request.authentication)
             throw new Error("LOCAL_SESSION_REQUIRED");

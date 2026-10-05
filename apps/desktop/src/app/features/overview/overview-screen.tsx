@@ -12,6 +12,7 @@ import { useMemo } from "react";
 
 import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
+import type { ReportOrganisationApi } from "../reporting/report-export-actions";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
 import { BusinessIncomePanel } from "./business-income-panel";
 
@@ -23,7 +24,9 @@ const attentionCodec = createProtoMethodCodec({
 });
 
 interface OverviewScreenProps {
-  readonly api: Pick<TammyConveyorModule<"reporting">, "getAttentionSummary">;
+  readonly api: Pick<TammyConveyorModule<"reporting">, "getAttentionSummary"> &
+    Partial<Pick<TammyConveyorModule<"reporting">, "exportIncome">>;
+  readonly organisationApi?: ReportOrganisationApi;
   readonly accountingApi?: Pick<TammyConveyorModule<"accounting">, "getBusinessIncomeSummary">;
   readonly onReviewInvoices?: () => void;
   readonly now?: Date;
@@ -38,6 +41,7 @@ type SummaryState =
 export function OverviewScreen({
   api,
   accountingApi,
+  organisationApi,
   now,
   onReviewInvoices,
   workspace,
@@ -107,6 +111,8 @@ export function OverviewScreen({
       {accountingApi ? (
         <BusinessIncomePanel
           api={accountingApi}
+          {...(api.exportIncome ? { exportApi: { exportIncome: api.exportIncome } } : {})}
+          {...(organisationApi ? { organisationApi } : {})}
           {...(now ? { now } : {})}
           {...(onReviewInvoices ? { onReviewInvoices } : {})}
           workspace={workspace}

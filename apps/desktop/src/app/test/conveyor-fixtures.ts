@@ -80,6 +80,8 @@ function createProcedures(): ConveyorFixtureProcedures {
       saveDocumentReview: unavailable(),
     },
     reporting: {
+      exportIncome: unavailable(),
+      exportBas: unavailable(),
       getCurrentBasDraft: unavailable(),
       getReportingCapability: unavailable(),
       getAttentionSummary: unavailable(),

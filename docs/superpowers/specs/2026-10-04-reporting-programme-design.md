@@ -22,7 +22,7 @@ The proposed supported statement includes Simpler BAS GST, small or medium PAYG 
 
 Monthly and quarterly periods are supported where the applicable obligations share the statement period. Applicability and eligibility must be confirmed. Unknown answers, unsupported reporting methods or obligations, unresolved source evidence and unclassified journal tax facts block finalisation while remaining visible in draft review.
 
-This scope is proposed because the app currently calculates GST only. A complete local preparation workflow does not imply every BAS tax is implemented. Annual/mixed-cadence statements, large withholding, variations, FBT, WET, LCT and fuel tax credits require separate rules and remain explicitly unsupported in this release. The pending obligation-scope question can change this boundary before implementation.
+This scope extends the app's existing GST calculation. A complete local preparation workflow does not imply every BAS tax is implemented. Annual/mixed-cadence statements, large withholding, variations, FBT, WET, LCT and fuel tax credits require separate rules and remain explicitly unsupported in this release.
 
 ## UI and accounting acceptance
 

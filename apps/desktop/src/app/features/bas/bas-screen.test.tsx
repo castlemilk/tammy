@@ -1,6 +1,10 @@
 import { create } from "@bufbuild/protobuf";
 import { CivilDateSchema, MoneySchema } from "@tammy/connect-client/tammy/v1/common_pb.js";
-import { GstBasis } from "@tammy/connect-client/tammy/v1/organisation_pb.js";
+import {
+  GetOrganisationRequestSchema,
+  GetOrganisationResponseSchema,
+  GstBasis,
+} from "@tammy/connect-client/tammy/v1/organisation_pb.js";
 import {
   GetReportingCapabilityRequestSchema,
   GetReportingCapabilityResponseSchema,
@@ -26,6 +30,93 @@ import { expect, it } from "vitest";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import { createConveyorFixture, renderWithConveyor as render } from "../../test/conveyor-fixtures";
 import { BasScreen } from "./bas-screen";
+
+it("exports the displayed stale saved workpaper period while creation dates are edited or invalid", async () => {
+  const f = createConveyorFixture(),
+    organisationId = "018f0000-0000-7000-8000-000000000004",
+    id = "018f0000-0000-7000-8000-000000000401";
+  const orgCodec = createProtoMethodCodec({
+    input: GetOrganisationRequestSchema,
+    output: GetOrganisationResponseSchema,
+    maximumRequestBytes: 8192,
+    maximumResponseBytes: 32768,
+  });
+  f.procedures.organisation.getOrganisation.mockResolvedValue(
+    orgCodec.encodeResponse(
+      create(GetOrganisationResponseSchema, {
+        organisation: {
+          id: organisationId,
+          version: 7n,
+          legalName: "Trusted Name",
+          displayName: "Trusted",
+          abn: "51824753556",
+        },
+      }),
+    ),
+  );
+  const money = { currencyCode: "AUD", minorUnits: 0n };
+  f.procedures.reporting.getCurrentBasDraft.mockResolvedValue(
+    getCodec.encodeResponse(
+      create(GetCurrentBasDraftResponseSchema, {
+        workpaper: {
+          id,
+          organisationId,
+          version: 3n,
+          periodStart: { year: 2026, month: 10, day: 1 },
+          periodEnd: { year: 2026, month: 12, day: 31 },
+          status: BasWorkpaperStatus.DRAFT_NOT_LODGED,
+          gstBasis: GstBasis.CASH,
+          salesG1: money,
+          gstOnSales1a: money,
+          gstCredits1b: money,
+          netGstPayable: money,
+          createdAt: { seconds: 1791165784n, nanos: 123456789 },
+          sourceFingerprint: new Uint8Array(32),
+          sourcesChanged: true,
+          reviewWarnings: ["Saved warning"],
+        },
+      }),
+    ),
+  );
+  f.procedures.reporting.exportBas.mockResolvedValue({ saved: false });
+  const workspace = {
+    workspaceId: "018f0000-0000-7000-8000-000000000001",
+    userId: "018f0000-0000-7000-8000-000000000002",
+    sessionId: "018f0000-0000-7000-8000-000000000003",
+    organisationId,
+  };
+  render(
+    <BasScreen
+      api={f.conveyor.reporting}
+      organisationApi={f.conveyor.organisation}
+      workspace={workspace}
+    />,
+  );
+  const user = userEvent.setup();
+  await screen.findByText(/Trusted Name/);
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Export CSV" })).toHaveProperty("disabled", false),
+  );
+  for (const edited of ["2027-01-01", ""]) {
+    await user.clear(screen.getByLabelText("Period start"));
+    if (edited) await user.type(screen.getByLabelText("Period start"), edited);
+    await user.click(screen.getByRole("button", { name: "Export CSV" }));
+    await waitFor(() =>
+      expect(f.procedures.reporting.exportBas).toHaveBeenCalledWith({
+        authentication: { actorUserId: workspace.userId, sessionId: workspace.sessionId },
+        organisationId,
+        expectedOrganisationVersion: "7",
+        format: "csv",
+        periodStart: "2026-10-01",
+        periodEnd: "2026-12-31",
+        expectedWorkpaperId: id,
+        expectedWorkpaperVersion: "3",
+      }),
+    );
+  }
+  expect(f.procedures.reporting.createBasDraft).not.toHaveBeenCalled();
+  expect(await screen.findByText("BAS export cancelled.")).toBeTruthy();
+});
 
 const getCodec = createProtoMethodCodec({
   input: GetCurrentBasDraftRequestSchema,

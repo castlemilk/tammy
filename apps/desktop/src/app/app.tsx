@@ -562,6 +562,7 @@ function ActiveRouteContent({
     return (
       <OverviewScreen
         accountingApi={conveyor.accounting}
+        organisationApi={conveyor.organisation}
         api={conveyor.reporting}
         onReviewInvoices={() => onNavigate("/invoices")}
         workspace={workspace}
@@ -587,6 +588,7 @@ function ActiveRouteContent({
     return (
       <BasScreen
         api={conveyor.reporting}
+        organisationApi={conveyor.organisation}
         onBasDraftChanged={() => conveyor.reporting.getAttentionSummary.invalidate()}
         workspace={workspace}
       />

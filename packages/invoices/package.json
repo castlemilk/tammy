@@ -20,6 +20,8 @@
     ".": "./src/model.ts",
     "./model": "./src/model.ts",
     "./pdf": "./src/pdf.ts",
-    "./pdf-policy": "./src/pdf-policy.ts"
+    "./pdf-policy": "./src/pdf-policy.ts",
+    "./pdf-components": "./src/pdfcn/components.ts",
+    "./pdf-text-policy": "./src/pdfcn/font-coverage.ts"
   }
 }

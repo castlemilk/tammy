@@ -57,6 +57,7 @@ tasks:
       - mise exec -- pnpm --filter @tammy/connect-client typecheck
       - mise exec -- pnpm --filter @tammy/invoices typecheck
       - mise exec -- pnpm --filter @tammy/local-api typecheck
+      - mise exec -- pnpm --filter @tammy/reporting typecheck
       - mise exec -- pnpm desktop:typecheck
       - mise exec -- pnpm contracts
       - mise exec -- pnpm lint
