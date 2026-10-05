@@ -62,7 +62,7 @@ export function reportExportMessage(error: unknown): string {
   if (message.includes("REPORT_SESSION_CHANGED"))
     return "The session changed. Unlock this workspace and refresh before exporting.";
   if (message.includes("REPORT_PDF_UNSUPPORTED_TEXT"))
-    return "The PDF font cannot display some report text. Export CSV to preserve all characters.";
+    return "The PDF exporter cannot preserve some report text. Export CSV to preserve all characters.";
   if (message.includes("REPORT_SOURCE_LIMIT"))
     return "This report exceeds the supported source limit. No file was saved.";
   if (message.includes("REPORT_SIZE_LIMIT"))

@@ -16,6 +16,12 @@ asar: true
 npmRebuild: false
 afterPack: scripts/electron-builder-after-pack.cjs
 
+extraResources:
+  - from: ../../packages/reporting/fonts/OFL-NOTO-SANS.txt
+    to: licenses/OFL-NOTO-SANS.txt
+  - from: ../../packages/reporting/fonts/README.md
+    to: licenses/reporting-fonts.md
+
 electronFuses:
   runAsNode: false
   enableCookieEncryption: true

@@ -29,6 +29,7 @@ const CAPTIONS = [
   "Match and reconcile an imported fictional bank transaction.",
   "Prepare GST figures in a BAS draft that is clearly marked not lodged.",
 ];
+const APPROVED_REPORT_EXPORT_IDENTITY = "Wattle & Co Supplies Pty Ltd · ABN 11000000560";
 const SHELL_ACCESSIBILITY_TEXT = [
   "Tammy",
   "Primary",
@@ -88,6 +89,11 @@ const ACCESSIBILITY_TEXT = [
     "Invoices owing",
     "$0.00",
     "Income and receipts cover 2024-04-01 to 2024-06-30. Invoices owing include earlier unpaid invoices as of 2024-05-12. Invoice GST attributed in this period: $0.00 (non-cash basis).",
+    "Income export",
+    "Export PDF",
+    "Export CSV",
+    "Refresh export identity",
+    APPROVED_REPORT_EXPORT_IDENTITY,
     "Needs review",
     "Nothing needs review",
     "Your retained local workflows are up to date.",
@@ -181,6 +187,11 @@ const ACCESSIBILITY_TEXT = [
     "A local workpaper from invoice sales and reviewed expenses. Tammy does not lodge this BAS.",
     "Draft — not lodged",
     "Review locally when ready.",
+    "BAS export",
+    "Export PDF",
+    "Export CSV",
+    "Refresh export identity",
+    APPROVED_REPORT_EXPORT_IDENTITY,
     "Reporting support",
     "GST workpaper",
     "Available in this build",
@@ -343,6 +354,10 @@ export function scanScreenshotInputs(value, { allowSetupOnlyAbn = false } = {}) 
       .split(/\r?\n/u)
       .filter((line) => !APPROVED_INVOICE_INTERFACE_COPY.has(line))
       .join("\n");
+    const abnReferenceText = text
+      .split(/\r?\n/u)
+      .filter((line) => line !== APPROVED_REPORT_EXPORT_IDENTITY)
+      .join("\n");
     if (
       lower.includes("gamma systems pty ltd") ||
       lower.includes("ben.ebsworth@gmail.com") ||
@@ -358,7 +373,7 @@ export function scanScreenshotInputs(value, { allowSetupOnlyAbn = false } = {}) 
       /\b(?:bearer|token)\s+[A-Za-z0-9._~+/=-]{12,}\b/iu.test(text) ||
       /\b\d{3}[- ]?\d{3}[- ]?\d{3}\b/u.test(text) ||
       /\b\d{3}-\d{3}\b/u.test(text) ||
-      (/\b\d{11}\b/u.test(text) && !(allowSetupOnlyAbn && text === "11000000560")) ||
+      (/\b\d{11}\b/u.test(abnReferenceText) && !(allowSetupOnlyAbn && text === "11000000560")) ||
       (/\b(?:INV[-:#][A-Z0-9-]{3,}|invoice\s+(?:(?:no\.?|number|#)\s*)?[A-Z0-9-]{3,})/iu.test(
         invoiceReferenceText,
       ) &&

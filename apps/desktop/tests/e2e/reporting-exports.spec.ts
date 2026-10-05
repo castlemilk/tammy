@@ -83,11 +83,9 @@ const reviewCodec = createProtoMethodCodec({
 for (const gstBasis of ["cash", "non-cash"] as const) {
   test(`reporting/exports: ${gstBasis} income and retained BAS files reconcile through cancellation, regeneration and restart`, async ({
     electronHarness,
-  }, testInfo) => {
+  }) => {
     test.setTimeout(180_000);
-    const directory = fileURLToPath(
-      new URL(`../../../../.tmp/reporting-exports-e2e/${gstBasis}/`, import.meta.url),
-    );
+    const directory = exportDirectory(gstBasis);
     await rm(directory, { recursive: true, force: true });
     await mkdir(directory, { recursive: true });
     const workspace = await setupAndRunCurrentAccountingWorkflow(
@@ -113,8 +111,14 @@ for (const gstBasis of ["cash", "non-cash"] as const) {
     const incomePdfPath = path.join(directory, "income.pdf");
     await saveExport(electronHarness, incomePanel, "CSV", incomeCsvPath);
     await saveExport(electronHarness, incomePanel, "PDF", incomePdfPath);
-    assertIncomeCsv(await parseReportCsv(incomeCsvPath), income, organisation);
-    assertIncomePdf(await parseReportPdf(incomePdfPath), income, organisation);
+    await page.screenshot({
+      animations: "disabled",
+      path: path.join(directory, "initial-income.png"),
+    });
+    await retainComparison(directory, "initial-income", { organisation, income }, async () => {
+      assertIncomeCsv(await parseReportCsv(incomeCsvPath), income, organisation);
+      assertIncomePdf(await parseReportPdf(incomePdfPath), income, organisation);
+    });
     await expectIncomeDates(page);
 
     await regenerateInvoiceBas(
@@ -133,8 +137,19 @@ for (const gstBasis of ["cash", "non-cash"] as const) {
     const basPdfPath = path.join(directory, "bas.pdf");
     await saveExport(electronHarness, page.locator("main"), "CSV", basCsvPath);
     await saveExport(electronHarness, page.locator("main"), "PDF", basPdfPath);
-    assertBasCsv(await parseReportCsv(basCsvPath), initialBas, organisation);
-    assertBasPdf(await parseReportPdf(basPdfPath), initialBas, organisation);
+    await page.screenshot({
+      animations: "disabled",
+      path: path.join(directory, "initial-bas.png"),
+    });
+    await retainComparison(
+      directory,
+      "initial-bas",
+      { organisation, bas: initialBas },
+      async () => {
+        assertBasCsv(await parseReportCsv(basCsvPath), initialBas, organisation);
+        assertBasPdf(await parseReportPdf(basPdfPath), initialBas, organisation);
+      },
+    );
     const beforeExport = await readBas(page, workspace);
     expect(beforeExport).toEqual(initialBas);
 
@@ -181,8 +196,11 @@ for (const gstBasis of ["cash", "non-cash"] as const) {
     const stalePdfPath = path.join(directory, "stale-bas.pdf");
     await saveExport(electronHarness, page.locator("main"), "CSV", staleCsvPath);
     await saveExport(electronHarness, page.locator("main"), "PDF", stalePdfPath);
-    assertBasCsv(await parseReportCsv(staleCsvPath), staleBas, organisation);
-    assertBasPdf(await parseReportPdf(stalePdfPath), staleBas, organisation);
+    await page.screenshot({ animations: "disabled", path: path.join(directory, "stale-bas.png") });
+    await retainComparison(directory, "stale-bas", { organisation, bas: staleBas }, async () => {
+      assertBasCsv(await parseReportCsv(staleCsvPath), staleBas, organisation);
+      assertBasPdf(await parseReportPdf(stalePdfPath), staleBas, organisation);
+    });
     expect(await readBas(page, workspace)).toEqual(staleBas);
 
     await regenerateInvoiceBas(
@@ -206,14 +224,20 @@ for (const gstBasis of ["cash", "non-cash"] as const) {
     const regeneratedPdfPath = path.join(directory, "regenerated-bas.pdf");
     await saveExport(electronHarness, page.locator("main"), "CSV", regeneratedCsvPath);
     await saveExport(electronHarness, page.locator("main"), "PDF", regeneratedPdfPath);
-    assertBasCsv(await parseReportCsv(regeneratedCsvPath), regenerated, organisation);
-    assertBasPdf(await parseReportPdf(regeneratedPdfPath), regenerated, organisation);
+    await retainComparison(
+      directory,
+      "regenerated-bas",
+      { organisation, bas: regenerated },
+      async () => {
+        assertBasCsv(await parseReportCsv(regeneratedCsvPath), regenerated, organisation);
+        assertBasPdf(await parseReportPdf(regeneratedPdfPath), regenerated, organisation);
+      },
+    );
     // Saved exports themselves remain immutable after both ledger and document changes.
     assertBasCsv(await parseReportCsv(basCsvPath), initialBas, organisation);
     assertIncomeCsv(await parseReportCsv(incomeCsvPath), income, organisation);
     const screenshot = path.join(directory, "regenerated-bas.png");
     await page.screenshot({ animations: "disabled", path: screenshot });
-    await testInfo.attach("regenerated-bas", { contentType: "image/png", path: screenshot });
 
     page = await electronHarness.restart("accounting-workflow-restart");
     await unlockWorkspace(page);
@@ -222,7 +246,14 @@ for (const gstBasis of ["cash", "non-cash"] as const) {
     expect(await readBas(page, restartedWorkspace)).toEqual(regenerated);
     const restartedCsvPath = path.join(directory, "restarted-bas.csv");
     await saveExport(electronHarness, page.locator("main"), "CSV", restartedCsvPath);
-    assertBasCsv(await parseReportCsv(restartedCsvPath), regenerated, organisation);
+    await retainComparison(
+      directory,
+      "restarted-bas",
+      { organisation, bas: regenerated },
+      async () => {
+        assertBasCsv(await parseReportCsv(restartedCsvPath), regenerated, organisation);
+      },
+    );
     await showBusinessIncome(page, periodStart, periodEnd, asOfDate);
     const retainedIncome = await readBusinessIncome(
       page,
@@ -240,31 +271,80 @@ for (const gstBasis of ["cash", "non-cash"] as const) {
       "CSV",
       restartedIncomePath,
     );
-    assertIncomeCsv(await parseReportCsv(restartedIncomePath), retainedIncome, organisation);
+    await retainComparison(
+      directory,
+      "restarted-income",
+      { organisation, income: retainedIncome },
+      async () => {
+        assertIncomeCsv(await parseReportCsv(restartedIncomePath), retainedIncome, organisation);
+      },
+    );
     await expectIncomeDates(page);
-    const artifacts = [
-      incomeCsvPath,
-      incomePdfPath,
-      basCsvPath,
-      basPdfPath,
-      staleCsvPath,
-      stalePdfPath,
-      regeneratedCsvPath,
-      regeneratedPdfPath,
-      restartedCsvPath,
-      restartedIncomePath,
-    ];
-    await retainEvidence(electronHarness, testInfo, directory, artifacts, {
-      gstBasis,
-      organisationId: workspace.organisationId,
-      incomeFinancialRevision: income.financialRevision.toString(),
-      initialWorkpaperId: initialBas.id,
-      regeneratedWorkpaperId: regenerated.id,
-    });
     expect((await readdir(directory)).filter((entry) => entry.startsWith(".tammy-"))).toEqual([]);
     expect(electronHarness.consoleErrors).toEqual([]);
     expect(electronHarness.pageErrors).toEqual([]);
   });
+}
+
+test.afterEach(async ({ electronHarness }, testInfo) => {
+  const gstBasis = testInfo.title.includes("exports: non-cash ") ? "non-cash" : "cash";
+  const directory = exportDirectory(gstBasis);
+  const entries = await readdir(directory).catch((error: unknown) => {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT") {
+      return undefined;
+    }
+    throw error;
+  });
+  // A harness/setup failure must remain the primary error when no report was created.
+  if (!entries) return;
+  const files = entries.filter((file) => /\.(?:csv|pdf|png|json)$/.test(file));
+  await retainEvidence(
+    electronHarness,
+    testInfo,
+    directory,
+    files.map((file) => path.join(directory, file)),
+    { gstBasis, status: testInfo.status ?? "unknown" },
+  );
+});
+
+function exportDirectory(gstBasis: "cash" | "non-cash") {
+  return fileURLToPath(
+    new URL(`../../../../.tmp/reporting-exports-e2e/${gstBasis}/`, import.meta.url),
+  );
+}
+
+async function retainComparison(
+  directory: string,
+  label: string,
+  authority: {
+    readonly organisation: Organisation;
+    readonly income?: BusinessIncomeSummary;
+    readonly bas?: BasWorkpaper;
+  },
+  compare: () => Promise<void>,
+) {
+  const file = path.join(directory, `${label}-comparison.json`);
+  const write = (status: "started" | "passed" | "failed", error?: string) =>
+    writeFile(
+      file,
+      JSON.stringify(
+        { label, status, authority, error },
+        (_key, value: unknown) => {
+          if (typeof value === "bigint") return value.toString();
+          if (value instanceof Uint8Array) return Buffer.from(value).toString("hex");
+          return value;
+        },
+        2,
+      ),
+    );
+  await write("started");
+  try {
+    await compare();
+    await write("passed");
+  } catch (error) {
+    await write("failed", error instanceof Error ? error.message : String(error));
+    throw error;
+  }
 }
 
 async function issueExportInvoice(page: Page, number: string) {
@@ -508,14 +588,21 @@ function assertIncomeCsv(
   expect(csvMetric(csv, "unposted_income")?.value).toBe(
     exactDecimal(income.unpostedIncome?.minorUnits),
   );
+  expect(csvMetric(csv, "report_type")?.value).toBe("Income summary");
+  const warnings = csv.rows.filter((row) => row.metric === "warning");
+  expect(warnings).toHaveLength(income.unpostedIssuedCount > 0n ? 1 : 0);
   expect(Number.isFinite(Date.parse(csvMetric(csv, "acquired_at")?.value ?? ""))).toBe(true);
 }
 
 function assertIncomePdf(text: string, income: BusinessIncomeSummary, organisation: Organisation) {
   const normalized = text.replace(/\s+/g, " ");
+  const tokens = text.replace(/\s+/g, "");
   expect(normalized).toContain("Income summary");
+  expect(normalized).toContain(organisation.legalName);
   expect(normalized).toContain(organisation.displayName);
   expect(normalized).toContain(organisation.abn);
+  expect(tokens).toContain(`organisationid${organisation.id}`);
+  expect(tokens).toContain(`organisationversion${organisation.version}`);
   for (const date of [periodStart, periodEnd, asOfDate]) expect(normalized).toContain(date);
   for (const amount of [
     income.businessIncome,
@@ -527,6 +614,9 @@ function assertIncomePdf(text: string, income: BusinessIncomeSummary, organisati
     expect(normalized).toContain(exactDecimal(amount?.minorUnits));
   expect(normalized).toMatch(income.gstBasis === 1 ? /cash/i : /non-cash/i);
   expect(normalized).toContain(income.financialRevision.toString());
+  expect(tokens).toContain(`financialrevision${income.financialRevision}`);
+  expect(tokens).toContain(`issuedcount${income.issuedCount}`);
+  expect(tokens).toContain(`unpostedissuedcount${income.unpostedIssuedCount}`);
 }
 
 function assertBasCsv(csv: ParsedReportCsv, bas: BasWorkpaper, organisation: Organisation) {
@@ -561,6 +651,12 @@ function assertBasCsv(csv: ParsedReportCsv, bas: BasWorkpaper, organisation: Org
   expect(csvMetric(csv, "organisation_version", "metadata")?.value).toBe(
     organisation.version.toString(),
   );
+  expect(csvMetric(csv, "organisation_legal_name", "metadata")?.value).toBe(organisation.legalName);
+  expect(csvMetric(csv, "organisation_display_name", "metadata")?.value).toBe(
+    organisation.displayName,
+  );
+  expect(csvMetric(csv, "organisation_abn", "metadata")?.value).toBe(organisation.abn);
+  expect(csvMetric(csv, "report_type", "metadata")?.value).toBe("GST workpaper");
   expect(csvMetric(csv, "workpaper_id", "metadata")?.value).toBe(bas.id);
   expect(csvMetric(csv, "workpaper_version", "metadata")?.value).toBe(bas.version.toString());
   expect(csvMetric(csv, "period_start", "metadata")?.value).toBe(periodStart);
@@ -583,7 +679,13 @@ function assertBasCsv(csv: ParsedReportCsv, bas: BasWorkpaper, organisation: Org
   const sales = csv.rows.filter((row) => row.kind === "sales");
   expect(sales).toHaveLength(bas.salesSources.length);
   for (const [index, source] of bas.salesSources.entries())
-    expect(sales[index]).toMatchObject({
+    expect(sales[index]).toEqual({
+      kind: "sales",
+      metric: "",
+      value: "",
+      currency: "AUD",
+      context: "",
+      document_id: "",
       invoice_id: source.invoiceId,
       invoice_number: source.invoiceNumber,
       party: source.customerName,
@@ -597,7 +699,12 @@ function assertBasCsv(csv: ParsedReportCsv, bas: BasWorkpaper, organisation: Org
   const purchases = csv.rows.filter((row) => row.kind === "purchases");
   expect(purchases).toHaveLength(bas.sources.length);
   for (const [index, source] of bas.sources.entries())
-    expect(purchases[index]).toMatchObject({
+    expect(purchases[index]).toEqual({
+      kind: "purchases",
+      metric: "",
+      value: "",
+      currency: "AUD",
+      context: "",
       document_id: source.documentId,
       invoice_number: source.invoiceNumber,
       party: `'${source.supplierName}`,
@@ -619,9 +726,19 @@ function assertBasPdf(text: string, bas: BasWorkpaper, organisation: Organisatio
   const normalized = text.replace(/\s+/g, " ");
   const tokens = text.replace(/\s+/g, "");
   expect(normalized).toContain("Draft — not lodged");
+  expect(normalized).toContain(organisation.legalName);
   expect(normalized).toContain(organisation.displayName);
   expect(normalized).toContain(organisation.abn);
+  expect(tokens).toContain(`organisationid${organisation.id}`);
+  expect(tokens).toContain(`organisationversion${organisation.version}`);
   expect(normalized).toContain(bas.id);
+  expect(tokens).toContain(`workpaperversion${bas.version}`);
+  expect(tokens).toContain(
+    `sourcefingerprint${Buffer.from(bas.sourceFingerprint).toString("hex")}`,
+  );
+  expect(tokens).toContain(`sourceschanged${bas.sourcesChanged}`);
+  expect(tokens).toContain(`excludedcashpurchasecount${bas.excludedCashPurchaseCount}`);
+  expect(tokens).toContain(`gstbasis${bas.gstBasis === 1 ? "Cash" : "Non-cash"}`);
   const created = normalized.match(
     /\bcreated at\s+(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?Z)\b/,
   );
@@ -679,7 +796,13 @@ async function retainEvidence(
     hashes.push({ file: path.basename(file), sha256: await reportArtifactHash(file) });
     await testInfo.attach(path.basename(file), {
       path: file,
-      contentType: file.endsWith(".pdf") ? "application/pdf" : "text/csv",
+      contentType: file.endsWith(".pdf")
+        ? "application/pdf"
+        : file.endsWith(".png")
+          ? "image/png"
+          : file.endsWith(".json")
+            ? "application/json"
+            : "text/csv",
     });
   }
   const evidence = path.join(directory, "evidence.json");
@@ -687,6 +810,7 @@ async function retainEvidence(
     await readFile(new URL("../../resources/build/build-manifest.json", import.meta.url), "utf8"),
   ) as { source_revision?: string; source_dirty?: boolean };
   expect(buildManifest.source_revision).toBe(harness.packagedLayout.sourceRevision);
+  expect(buildManifest.source_dirty).toBe(false);
   await writeFile(
     evidence,
     JSON.stringify(

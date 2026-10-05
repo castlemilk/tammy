@@ -517,3 +517,170 @@ test("each BAS source keeps its exact amount and retained identity together acro
     await loading.destroy();
   }
 });
+
+test("PDF text preserves Latin ligature sequences in every retained identity and provenance field", async () => {
+  const { renderIncomePdf, renderBasPdf } = await renderer();
+  const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const identity = "018f0000-0000-7ff1-8000-000000000004";
+  const sourceHash = "ff".repeat(32);
+  const ordinary = "ff fi fl ffi ffl office affinity coffee";
+  const summary = income(),
+    workpaper = bas();
+  for (const value of [summary, workpaper]) {
+    value.organisation.id = identity;
+    value.organisation.legalName = ordinary;
+    value.organisation.displayName = ordinary;
+  }
+  summary.summary.organisationId = identity;
+  workpaper.workpaper.organisationId = identity;
+  workpaper.workpaper.id = "018f0000-0000-7ff1-8000-000000000005";
+  workpaper.workpaper.sourceFingerprint = new Uint8Array(32).fill(255);
+  const sale = first(workpaper.workpaper.salesSources),
+    purchase = first(workpaper.workpaper.sources);
+  sale.invoiceId = "018f0000-0000-7ff1-8000-000000000006";
+  sale.paymentId = "018f0000-0000-7ff1-8000-000000000007";
+  sale.sourceHash = new Uint8Array(32).fill(255);
+  sale.customerName = ordinary;
+  sale.invoiceNumber = ordinary;
+  purchase.documentId = "018f0000-0000-7ff1-8000-000000000008";
+  purchase.supplierName = ordinary;
+  purchase.invoiceNumber = ordinary;
+  workpaper.workpaper.reviewWarnings = [ordinary];
+  for (const [kind, bytes] of [
+    ["income", await renderIncomePdf(summary)],
+    ["bas", await renderBasPdf(workpaper)],
+  ] as const) {
+    const loading = getDocument({
+      data: new Uint8Array(bytes),
+      verbosity: 0,
+      useSystemFonts: false,
+      useWorkerFetch: false,
+    });
+    const document = await loading.promise;
+    try {
+      let content = "";
+      for (let number = 1; number <= document.numPages; number++) {
+        const page = await document.getPage(number),
+          text = await page.getTextContent();
+        content += text.items.flatMap((item) => ("str" in item ? [item.str] : [])).join("\n");
+        page.cleanup();
+      }
+      assert.ok(content.includes(identity), `${kind} retains the exact organisation identifier`);
+      assert.ok(content.includes(ordinary), `${kind} retains every ordinary text glyph`);
+      assert.equal(
+        content.split(ordinary).length - 1,
+        kind === "bas" ? 8 : 3,
+        `${kind} retains every ordinary text field`,
+      );
+      if (kind === "income")
+        assert.ok(content.includes("financial revision"), "financial revision label remains exact");
+      if (kind === "bas") {
+        for (const retained of [
+          workpaper.workpaper.id,
+          sale.invoiceId,
+          sale.paymentId,
+          purchase.documentId,
+          sourceHash,
+          "source fingerprint",
+        ]) {
+          assert.ok(content.includes(retained), `BAS retains exact provenance ${retained}`);
+        }
+      }
+    } finally {
+      await loading.destroy();
+    }
+  }
+});
+
+test("combining marks remain exact in CSV and fail visibly in PDF rather than losing characters", async () => {
+  const { renderIncomePdf, renderBasPdf, renderIncomeCsv, renderBasCsv } = await renderer();
+  const supported = "Cafe\u0301 Δοκιμη\u0301 Привет A\u0308 Ε\u0301 И\u0306";
+  const summary = income(),
+    workpaper = bas();
+  for (const value of [summary, workpaper]) {
+    value.organisation.legalName = supported;
+    value.organisation.displayName = supported;
+  }
+  first(workpaper.workpaper.salesSources).customerName = supported;
+  first(workpaper.workpaper.sources).supplierName = supported;
+  workpaper.workpaper.reviewWarnings = [supported];
+  assert.equal(
+    csv(renderIncomeCsv(summary)).find((row) => row[0] === "organisation_legal_name")?.[1],
+    supported,
+  );
+  assert.equal(
+    csv(renderBasCsv(workpaper)).find((row) => row[1] === "organisation_legal_name")?.[2],
+    supported,
+  );
+  await assert.rejects(() => renderIncomePdf(summary), /REPORT_PDF_UNSUPPORTED_TEXT/);
+  await assert.rejects(() => renderBasPdf(workpaper), /REPORT_PDF_UNSUPPORTED_TEXT/);
+  for (const mark of ["\u0301", "\u20dd", "\u034f", "\ufe00"]) {
+    const value = income();
+    value.organisation.legalName = `Retained ${mark}`;
+    assert.equal(
+      csv(renderIncomeCsv(value)).find((row) => row[0] === "organisation_legal_name")?.[1],
+      `Retained ${mark}`,
+    );
+    await assert.rejects(() => renderIncomePdf(value), /REPORT_PDF_UNSUPPORTED_TEXT/);
+  }
+});
+
+test("report fonts preserve precomposed Latin, Greek and Cyrillic text exactly", async () => {
+  const { renderIncomePdf, renderBasPdf } = await renderer();
+  const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const supported = "Élodie Δοκιμή Привет Ä Έ Й K K Ω Ω Å Å";
+  const summary = income(),
+    workpaper = bas();
+  for (const value of [summary, workpaper]) {
+    value.organisation.legalName = supported;
+    value.organisation.displayName = supported;
+  }
+  first(workpaper.workpaper.salesSources).customerName = supported;
+  first(workpaper.workpaper.sources).supplierName = supported;
+  workpaper.workpaper.reviewWarnings = [supported];
+  for (const bytes of [await renderIncomePdf(summary), await renderBasPdf(workpaper)]) {
+    const loading = getDocument({
+      data: new Uint8Array(bytes),
+      verbosity: 0,
+      useSystemFonts: false,
+      useWorkerFetch: false,
+    });
+    const document = await loading.promise;
+    try {
+      let content = "";
+      for (let number = 1; number <= document.numPages; number++) {
+        const page = await document.getPage(number),
+          text = await page.getTextContent({ disableNormalization: true });
+        content += text.items.flatMap((item) => ("str" in item ? [item.str] : [])).join("\n");
+        page.cleanup();
+      }
+      assert.ok(
+        content.includes(supported),
+        "every supported precomposed code point remains exact",
+      );
+    } finally {
+      await loading.destroy();
+    }
+  }
+});
+
+test("format controls stay exact in CSV and fail visibly in PDF", async () => {
+  const { renderIncomePdf, renderBasPdf, renderIncomeCsv, renderBasCsv } = await renderer();
+  for (const character of ["\u200b", "\u200c", "\u200d", "\u2060", "\u2066", "\u2069", "\ufeff"]) {
+    const retained = `BEFORE${character}AFTER`,
+      summary = income(),
+      workpaper = bas();
+    summary.organisation.legalName = retained;
+    const sale = first(workpaper.workpaper.salesSources);
+    sale.customerName = retained;
+    assert.equal(
+      csv(renderIncomeCsv(summary)).find((row) => row[0] === "organisation_legal_name")?.[1],
+      retained,
+    );
+    const records = csv(renderBasCsv(workpaper)),
+      header = first(records);
+    assert.equal(records.find((row) => row[0] === "sales")?.[header.indexOf("party")], retained);
+    await assert.rejects(() => renderIncomePdf(summary), /REPORT_PDF_UNSUPPORTED_TEXT/);
+    await assert.rejects(() => renderBasPdf(workpaper), /REPORT_PDF_UNSUPPORTED_TEXT/);
+  }
+});

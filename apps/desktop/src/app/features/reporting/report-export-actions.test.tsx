@@ -76,7 +76,11 @@ it("exports CSV for the full 256 Unicode code point legal name and reports unsup
   fireEvent.click(screen.getByRole("button", { name: "Export CSV" }));
   expect(await screen.findByText("Income CSV exported.")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Export PDF" }));
-  expect(await screen.findByText(/Export CSV to preserve all characters/)).toBeTruthy();
+  expect(
+    await screen.findByText(
+      "The PDF exporter cannot preserve some report text. Export CSV to preserve all characters.",
+    ),
+  ).toBeTruthy();
   expect(execute.mock.calls).toEqual([
     ["csv", "3"],
     ["pdf", "3"],

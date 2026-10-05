@@ -32,6 +32,10 @@ test("electron-builder configuration is a deterministic Tammy package contract",
   assert.equal(config.npmRebuild, false);
   assert.equal(config.asar, true);
   assert.equal(config.afterPack, "scripts/electron-builder-after-pack.cjs");
+  assert.deepEqual(resourceNames(config.extraResources), [
+    { from: "../../packages/reporting/fonts/OFL-NOTO-SANS.txt", to: "licenses/OFL-NOTO-SANS.txt" },
+    { from: "../../packages/reporting/fonts/README.md", to: "licenses/reporting-fonts.md" },
+  ]);
   assert.deepEqual(config.files, [
     "out/main/**",
     "out/preload/**",

@@ -283,6 +283,62 @@ test("validates the one strict fictional screenshot fixture", () => {
   );
 });
 
+test("requires the reviewed reporting export controls and identity on only Overview and BAS", () => {
+  const identity = "Wattle & Co Supplies Pty Ltd · ABN 11000000560";
+  for (const [index, region] of [
+    [0, "Income export"],
+    [4, "BAS export"],
+  ]) {
+    const labels = fixture.screenshots[index].completeAccessibilityText;
+    const start = labels.indexOf(region);
+    assert.deepEqual(labels.slice(start, start + 5), [
+      region,
+      "Export PDF",
+      "Export CSV",
+      "Refresh export identity",
+      identity,
+    ]);
+    assert.equal(validateScreenshotFixture(fixture), fixture);
+    for (const altered of [
+      "Wattle & Co Supplies Pty Ltd · ABN 11000000561",
+      "Unapproved company · ABN 11000000560",
+      "Wattle & Co Supplies Pty Ltd · ABN 11000000560 (verified)",
+    ]) {
+      const changed = structuredClone(fixture);
+      changed.screenshots[index].completeAccessibilityText[start + 4] = altered;
+      assert.throws(
+        () => validateScreenshotFixture(changed),
+        /APP_STORE_SCREENSHOT_FIXTURE_INVALID/,
+      );
+    }
+    const changed = structuredClone(fixture);
+    changed.screenshots[index].completeAccessibilityText[start + 1] = "Export accountant pack";
+    assert.throws(() => validateScreenshotFixture(changed), /APP_STORE_SCREENSHOT_FIXTURE_INVALID/);
+  }
+  const changed = structuredClone(fixture);
+  changed.screenshots[1].completeAccessibilityText.push("Export CSV");
+  assert.throws(() => validateScreenshotFixture(changed), /APP_STORE_SCREENSHOT_FIXTURE_INVALID_2/);
+});
+
+test("scans only the exact reviewed fictional reporting identity without admitting other ABNs", () => {
+  const identity = "Wattle & Co Supplies Pty Ltd · ABN 11000000560";
+  assert.doesNotThrow(() => scanScreenshotInputs(identity));
+  assert.doesNotThrow(() =>
+    scanScreenshotInputs(`Export CSV\n${identity}\nRefresh export identity`),
+  );
+  for (const changed of [
+    "11000000560",
+    "Wattle & Co Supplies Pty Ltd · ABN 11000000561",
+    "Unapproved company · ABN 11000000560",
+    `${identity} (verified)`,
+    `${identity}\n11000000560`,
+    `${identity}\nABN 22000000000`,
+    `${identity}\naccess token abcdefghijklmnop`,
+  ]) {
+    assert.throws(() => scanScreenshotInputs(changed), /APP_STORE_SCREENSHOT_INPUT_UNSAFE/);
+  }
+});
+
 test("accepts approved invoice interface copy while rejecting unknown invoice references", () => {
   for (const text of ["Invoice income (ex GST)", "Invoice sales sources"]) {
     assert.doesNotThrow(() => scanScreenshotInputs(text));

@@ -3,6 +3,8 @@ import { Cell, Document, Page, Table, View } from "@formepdf/react";
 import { PageFooter, PageHeader, TableRow, Text, theme } from "@tammy/invoices/pdf-components";
 import { assertInvoicePdfTextSupported } from "@tammy/invoices/pdf-text-policy";
 import { createElement as h } from "react";
+import { notoSansBold } from "./fonts/noto-sans-bold.ts";
+import { notoSansRegular } from "./fonts/noto-sans-regular.ts";
 
 import {
   type BasSnapshot,
@@ -327,6 +329,9 @@ function reportTable(
 function preflight(strings: readonly string[]) {
   for (const value of strings) {
     try {
+      // Forme's ToUnicode CMap cannot retain multi-character shaping clusters.
+      // Reject combining/format text explicitly; CSV retains every code point.
+      if (/[\p{M}\p{Cf}]/u.test(value)) throw new Error("unsupported shaping cluster");
       assertInvoicePdfTextSupported(value, "report");
     } catch {
       throw new Error("REPORT_PDF_UNSUPPORTED_TEXT");
@@ -351,6 +356,10 @@ async function pdf(
           creator: "Tammy · pdfcn / Forme",
           lang: "en-AU",
           tagged: true,
+          fonts: [
+            { family: "Noto Sans", fontWeight: 400, src: notoSansRegular },
+            { family: "Noto Sans", fontWeight: 700, src: notoSansBold },
+          ],
           style: { fontFamily: "Noto Sans", fontSize: 10, color: theme.colors.foreground },
         },
         h(
