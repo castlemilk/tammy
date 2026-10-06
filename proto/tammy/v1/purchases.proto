@@ -308,6 +308,10 @@ message PurchasePosting {
   string actor_user_id = 23 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
   google.protobuf.Timestamp posted_at = 24 [(buf.validate.field).required = true];
   bytes source_hash = 25 [(buf.validate.field).bytes.len = 32];
+  // Core-discovered matches retained with the reviewed decision and posting hash.
+  // The command does not accept these collections as authoritative input.
+  repeated SourceRef duplicate_candidates = 26 [(buf.validate.field).repeated.max_items = 50];
+  repeated SourceRef prior_accounting_sources = 27 [(buf.validate.field).repeated.max_items = 50];
 }
 
 message PurchaseAccountingReviewOutcomes {

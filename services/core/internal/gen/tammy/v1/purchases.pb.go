@@ -1171,8 +1171,12 @@ type PurchasePosting struct {
 	ActorUserId           string                         `protobuf:"bytes,23,opt,name=actor_user_id,json=actorUserId,proto3" json:"actor_user_id,omitempty"`
 	PostedAt              *timestamppb.Timestamp         `protobuf:"bytes,24,opt,name=posted_at,json=postedAt,proto3" json:"posted_at,omitempty"`
 	SourceHash            []byte                         `protobuf:"bytes,25,opt,name=source_hash,json=sourceHash,proto3" json:"source_hash,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	// Core-discovered matches retained with the reviewed decision and posting hash.
+	// The command does not accept these collections as authoritative input.
+	DuplicateCandidates    []*SourceRef `protobuf:"bytes,26,rep,name=duplicate_candidates,json=duplicateCandidates,proto3" json:"duplicate_candidates,omitempty"`
+	PriorAccountingSources []*SourceRef `protobuf:"bytes,27,rep,name=prior_accounting_sources,json=priorAccountingSources,proto3" json:"prior_accounting_sources,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *PurchasePosting) Reset() {
@@ -1376,6 +1380,20 @@ func (x *PurchasePosting) GetPostedAt() *timestamppb.Timestamp {
 func (x *PurchasePosting) GetSourceHash() []byte {
 	if x != nil {
 		return x.SourceHash
+	}
+	return nil
+}
+
+func (x *PurchasePosting) GetDuplicateCandidates() []*SourceRef {
+	if x != nil {
+		return x.DuplicateCandidates
+	}
+	return nil
+}
+
+func (x *PurchasePosting) GetPriorAccountingSources() []*SourceRef {
+	if x != nil {
+		return x.PriorAccountingSources
 	}
 	return nil
 }
@@ -4128,7 +4146,7 @@ const file_tammy_v1_purchases_proto_rawDesc = "" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\bdecision\x12\\\n" +
 	"&reviewed_existing_accounting_confirmed\x18\x02 \x01(\bB\a\xbaH\x04j\x02\b\x01R#reviewedExistingAccountingConfirmed\x12\"\n" +
 	"\x06reason\x18\x03 \x01(\tB\n" +
-	"\xbaH\ar\x05\x10\x01\x18\x80\x04R\x06reason\"\xf9\x14\n" +
+	"\xbaH\ar\x05\x10\x01\x18\x80\x04R\x06reason\"\xa4\x16\n" +
 	"\x0fPurchasePosting\x12\\\n" +
 	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12u\n" +
 	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12m\n" +
@@ -4163,7 +4181,9 @@ const file_tammy_v1_purchases_proto_rawDesc = "" +
 	"\ractor_user_id\x18\x17 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\vactorUserId\x12?\n" +
 	"\tposted_at\x18\x18 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\bpostedAt\x12(\n" +
 	"\vsource_hash\x18\x19 \x01(\fB\a\xbaH\x04z\x02h R\n" +
-	"sourceHash:\xbd\x01\xbaH\xb9\x01\x1a\xb6\x01\n" +
+	"sourceHash\x12P\n" +
+	"\x14duplicate_candidates\x18\x1a \x03(\v2\x13.tammy.v1.SourceRefB\b\xbaH\x05\x92\x01\x02\x102R\x13duplicateCandidates\x12W\n" +
+	"\x18prior_accounting_sources\x18\x1b \x03(\v2\x13.tammy.v1.SourceRefB\b\xbaH\x05\x92\x01\x02\x102R\x16priorAccountingSources:\xbd\x01\xbaH\xb9\x01\x1a\xb6\x01\n" +
 	"#purchase.posting.reviewed_gst_basis\x12TGST-bearing purchases need a reviewed GST basis even when their GST is noncreditable\x1a9this.supplier_gst.minor_units == 0 || this.gst_basis != 0B\x14\n" +
 	"\x12_supplier_identityB\r\n" +
 	"\v_journal_id\"\x93\x03\n" +
@@ -4613,11 +4633,12 @@ var file_tammy_v1_purchases_proto_goTypes = []any{
 	(*timestamppb.Timestamp)(nil),               // 50: google.protobuf.Timestamp
 	(*Money)(nil),                               // 51: tammy.v1.Money
 	(GstBasis)(0),                               // 52: tammy.v1.GstBasis
-	(*AuthenticationContext)(nil),               // 53: tammy.v1.AuthenticationContext
-	(*CommandContext)(nil),                      // 54: tammy.v1.CommandContext
-	(*Journal)(nil),                             // 55: tammy.v1.Journal
-	(*PageRequest)(nil),                         // 56: tammy.v1.PageRequest
-	(*PageInfo)(nil),                            // 57: tammy.v1.PageInfo
+	(*SourceRef)(nil),                           // 53: tammy.v1.SourceRef
+	(*AuthenticationContext)(nil),               // 54: tammy.v1.AuthenticationContext
+	(*CommandContext)(nil),                      // 55: tammy.v1.CommandContext
+	(*Journal)(nil),                             // 56: tammy.v1.Journal
+	(*PageRequest)(nil),                         // 57: tammy.v1.PageRequest
+	(*PageInfo)(nil),                            // 58: tammy.v1.PageInfo
 }
 var file_tammy_v1_purchases_proto_depIdxs = []int32{
 	49,  // 0: tammy.v1.PurchaseClaimPeriod.period_start:type_name -> tammy.v1.CivilDate
@@ -4649,124 +4670,126 @@ var file_tammy_v1_purchases_proto_depIdxs = []int32{
 	15,  // 26: tammy.v1.PurchasePosting.duplicate_review:type_name -> tammy.v1.PurchaseDuplicateReview
 	16,  // 27: tammy.v1.PurchasePosting.prior_accounting_review:type_name -> tammy.v1.PurchasePriorAccountingReview
 	50,  // 28: tammy.v1.PurchasePosting.posted_at:type_name -> google.protobuf.Timestamp
-	6,   // 29: tammy.v1.PurchaseAccountingReviewOutcomes.evidence:type_name -> tammy.v1.PurchaseReviewStatus
-	6,   // 30: tammy.v1.PurchaseAccountingReviewOutcomes.timing:type_name -> tammy.v1.PurchaseReviewStatus
-	6,   // 31: tammy.v1.PurchaseAccountingReviewOutcomes.duplicate:type_name -> tammy.v1.PurchaseReviewStatus
-	6,   // 32: tammy.v1.PurchaseAccountingReviewOutcomes.prior_accounting:type_name -> tammy.v1.PurchaseReviewStatus
-	6,   // 33: tammy.v1.PurchaseAccountingReviewOutcomes.legacy:type_name -> tammy.v1.PurchaseReviewStatus
-	17,  // 34: tammy.v1.PurchaseAccounting.posting:type_name -> tammy.v1.PurchasePosting
-	51,  // 35: tammy.v1.PurchaseAccounting.paid:type_name -> tammy.v1.Money
-	51,  // 36: tammy.v1.PurchaseAccounting.outstanding:type_name -> tammy.v1.Money
-	51,  // 37: tammy.v1.PurchaseAccounting.eligible_gst:type_name -> tammy.v1.Money
-	51,  // 38: tammy.v1.PurchaseAccounting.deferred_gst:type_name -> tammy.v1.Money
-	51,  // 39: tammy.v1.PurchaseAccounting.suspense_gst:type_name -> tammy.v1.Money
-	51,  // 40: tammy.v1.PurchaseAccounting.attributed_gst:type_name -> tammy.v1.Money
-	18,  // 41: tammy.v1.PurchaseAccounting.review_outcomes:type_name -> tammy.v1.PurchaseAccountingReviewOutcomes
-	51,  // 42: tammy.v1.PurchasePaymentAllocation.gross:type_name -> tammy.v1.Money
-	51,  // 43: tammy.v1.PurchasePaymentAllocation.supplier_gst:type_name -> tammy.v1.Money
-	51,  // 44: tammy.v1.PurchasePaymentAllocation.eligible_gst:type_name -> tammy.v1.Money
-	0,   // 45: tammy.v1.PurchasePaymentAllocation.use:type_name -> tammy.v1.PurchaseUse
-	1,   // 46: tammy.v1.PurchasePaymentAllocation.bas_classification:type_name -> tammy.v1.PurchaseBasClassification
-	2,   // 47: tammy.v1.PurchasePaymentAllocation.cash_flow_classification:type_name -> tammy.v1.PurchaseCashFlowClassification
-	49,  // 48: tammy.v1.PurchasePayment.actual_payment_date:type_name -> tammy.v1.CivilDate
-	51,  // 49: tammy.v1.PurchasePayment.amount:type_name -> tammy.v1.Money
-	20,  // 50: tammy.v1.PurchasePayment.allocations:type_name -> tammy.v1.PurchasePaymentAllocation
-	50,  // 51: tammy.v1.PurchasePayment.recorded_at:type_name -> google.protobuf.Timestamp
-	22,  // 52: tammy.v1.PurchaseGstSourcePortion.posting:type_name -> tammy.v1.PurchasePostingPortionRef
-	23,  // 53: tammy.v1.PurchaseGstSourcePortion.payment:type_name -> tammy.v1.PurchasePaymentPortionRef
-	49,  // 54: tammy.v1.PurchaseGstSourcePortion.normal_event_date:type_name -> tammy.v1.CivilDate
-	10,  // 55: tammy.v1.PurchaseGstSourcePortion.earliest_otherwise_eligible_period:type_name -> tammy.v1.PurchaseClaimPeriod
-	49,  // 56: tammy.v1.PurchaseGstSourcePortion.required_return_due_date:type_name -> tammy.v1.CivilDate
-	9,   // 57: tammy.v1.PurchaseGstSourcePortion.due_date_evidence:type_name -> tammy.v1.PurchaseRetainedSourceRef
-	49,  // 58: tammy.v1.PurchaseGstSourcePortion.ordinary_last_claim_date:type_name -> tammy.v1.CivilDate
-	49,  // 59: tammy.v1.PurchaseGstSourcePortion.evidence_held_date:type_name -> tammy.v1.CivilDate
-	49,  // 60: tammy.v1.PurchaseClaimTimingReview.reviewed_as_of:type_name -> tammy.v1.CivilDate
-	24,  // 61: tammy.v1.PurchaseGstAttribution.portion:type_name -> tammy.v1.PurchaseGstSourcePortion
-	10,  // 62: tammy.v1.PurchaseGstAttribution.claim_period:type_name -> tammy.v1.PurchaseClaimPeriod
-	49,  // 63: tammy.v1.PurchaseGstAttribution.release_posting_date:type_name -> tammy.v1.CivilDate
-	25,  // 64: tammy.v1.PurchaseGstAttribution.timing_review:type_name -> tammy.v1.PurchaseClaimTimingReview
-	51,  // 65: tammy.v1.PurchaseGstAttribution.claimed_gst:type_name -> tammy.v1.Money
-	50,  // 66: tammy.v1.PurchaseGstAttribution.recorded_at:type_name -> google.protobuf.Timestamp
-	24,  // 67: tammy.v1.PurchaseGstDeferral.portions:type_name -> tammy.v1.PurchaseGstSourcePortion
-	10,  // 68: tammy.v1.PurchaseGstDeferral.affected_period:type_name -> tammy.v1.PurchaseClaimPeriod
-	25,  // 69: tammy.v1.PurchaseGstDeferral.timing_review:type_name -> tammy.v1.PurchaseClaimTimingReview
-	51,  // 70: tammy.v1.PurchaseGstDeferral.deferred_gst:type_name -> tammy.v1.Money
-	49,  // 71: tammy.v1.PurchaseGstDeferral.ordinary_last_claim_date:type_name -> tammy.v1.CivilDate
-	50,  // 72: tammy.v1.PurchaseGstDeferral.recorded_at:type_name -> google.protobuf.Timestamp
-	28,  // 73: tammy.v1.LegacyPurchaseSourceRef.document:type_name -> tammy.v1.LegacyPurchaseDocumentRef
-	29,  // 74: tammy.v1.LegacyPurchaseSourceRef.opening_payable:type_name -> tammy.v1.LegacyPurchaseOpeningPayableRef
-	30,  // 75: tammy.v1.LegacyPurchaseReviewInput.source:type_name -> tammy.v1.LegacyPurchaseSourceRef
-	10,  // 76: tammy.v1.LegacyPurchaseReviewInput.affected_period:type_name -> tammy.v1.PurchaseClaimPeriod
-	49,  // 77: tammy.v1.LegacyPurchaseReviewInput.reporting_balance_date:type_name -> tammy.v1.CivilDate
-	7,   // 78: tammy.v1.LegacyPurchaseReviewInput.disposition:type_name -> tammy.v1.LegacyPurchaseDisposition
-	9,   // 79: tammy.v1.LegacyPurchaseReviewInput.supporting_payments:type_name -> tammy.v1.PurchaseRetainedSourceRef
-	10,  // 80: tammy.v1.LegacyPurchaseReviewInput.previously_claimed_period:type_name -> tammy.v1.PurchaseClaimPeriod
-	9,   // 81: tammy.v1.LegacyPurchaseReviewInput.claim_evidence:type_name -> tammy.v1.PurchaseRetainedSourceRef
-	9,   // 82: tammy.v1.LegacyPurchaseReviewInput.supporting_evidence:type_name -> tammy.v1.PurchaseRetainedSourceRef
-	31,  // 83: tammy.v1.LegacyPurchaseReview.review:type_name -> tammy.v1.LegacyPurchaseReviewInput
-	50,  // 84: tammy.v1.LegacyPurchaseReview.recorded_at:type_name -> google.protobuf.Timestamp
-	53,  // 85: tammy.v1.GetPurchaseAccountingRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	19,  // 86: tammy.v1.GetPurchaseAccountingResponse.accounting:type_name -> tammy.v1.PurchaseAccounting
-	54,  // 87: tammy.v1.PostReviewedPurchaseRequest.command_context:type_name -> tammy.v1.CommandContext
-	14,  // 88: tammy.v1.PostReviewedPurchaseRequest.allocations:type_name -> tammy.v1.PurchaseAllocationInput
-	12,  // 89: tammy.v1.PostReviewedPurchaseRequest.evidence:type_name -> tammy.v1.PurchaseEvidenceInput
-	15,  // 90: tammy.v1.PostReviewedPurchaseRequest.duplicate_review:type_name -> tammy.v1.PurchaseDuplicateReview
-	16,  // 91: tammy.v1.PostReviewedPurchaseRequest.prior_accounting_review:type_name -> tammy.v1.PurchasePriorAccountingReview
-	17,  // 92: tammy.v1.PostReviewedPurchaseResponse.posting:type_name -> tammy.v1.PurchasePosting
-	55,  // 93: tammy.v1.PostReviewedPurchaseResponse.journal:type_name -> tammy.v1.Journal
-	19,  // 94: tammy.v1.PostReviewedPurchaseResponse.accounting:type_name -> tammy.v1.PurchaseAccounting
-	54,  // 95: tammy.v1.RecordPurchasePaymentRequest.command_context:type_name -> tammy.v1.CommandContext
-	49,  // 96: tammy.v1.RecordPurchasePaymentRequest.actual_payment_date:type_name -> tammy.v1.CivilDate
-	51,  // 97: tammy.v1.RecordPurchasePaymentRequest.amount:type_name -> tammy.v1.Money
-	21,  // 98: tammy.v1.RecordPurchasePaymentResponse.payment:type_name -> tammy.v1.PurchasePayment
-	55,  // 99: tammy.v1.RecordPurchasePaymentResponse.journal:type_name -> tammy.v1.Journal
-	19,  // 100: tammy.v1.RecordPurchasePaymentResponse.accounting:type_name -> tammy.v1.PurchaseAccounting
-	53,  // 101: tammy.v1.ListPurchasePaymentsRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	56,  // 102: tammy.v1.ListPurchasePaymentsRequest.page:type_name -> tammy.v1.PageRequest
-	21,  // 103: tammy.v1.ListPurchasePaymentsResponse.payments:type_name -> tammy.v1.PurchasePayment
-	57,  // 104: tammy.v1.ListPurchasePaymentsResponse.page:type_name -> tammy.v1.PageInfo
-	54,  // 105: tammy.v1.RecordPurchaseTaxEvidenceRequest.command_context:type_name -> tammy.v1.CommandContext
-	12,  // 106: tammy.v1.RecordPurchaseTaxEvidenceRequest.evidence:type_name -> tammy.v1.PurchaseEvidenceInput
-	13,  // 107: tammy.v1.RecordPurchaseTaxEvidenceResponse.evidence:type_name -> tammy.v1.PurchaseTaxEvidence
-	19,  // 108: tammy.v1.RecordPurchaseTaxEvidenceResponse.accounting:type_name -> tammy.v1.PurchaseAccounting
-	54,  // 109: tammy.v1.AttributePurchaseGstRequest.command_context:type_name -> tammy.v1.CommandContext
-	24,  // 110: tammy.v1.AttributePurchaseGstRequest.portions:type_name -> tammy.v1.PurchaseGstSourcePortion
-	10,  // 111: tammy.v1.AttributePurchaseGstRequest.claim_period:type_name -> tammy.v1.PurchaseClaimPeriod
-	49,  // 112: tammy.v1.AttributePurchaseGstRequest.release_posting_date:type_name -> tammy.v1.CivilDate
-	25,  // 113: tammy.v1.AttributePurchaseGstRequest.timing_review:type_name -> tammy.v1.PurchaseClaimTimingReview
-	26,  // 114: tammy.v1.AttributePurchaseGstResponse.attributions:type_name -> tammy.v1.PurchaseGstAttribution
-	55,  // 115: tammy.v1.AttributePurchaseGstResponse.journal:type_name -> tammy.v1.Journal
-	19,  // 116: tammy.v1.AttributePurchaseGstResponse.accounting:type_name -> tammy.v1.PurchaseAccounting
-	54,  // 117: tammy.v1.DeferPurchaseGstClaimRequest.command_context:type_name -> tammy.v1.CommandContext
-	24,  // 118: tammy.v1.DeferPurchaseGstClaimRequest.portions:type_name -> tammy.v1.PurchaseGstSourcePortion
-	10,  // 119: tammy.v1.DeferPurchaseGstClaimRequest.affected_period:type_name -> tammy.v1.PurchaseClaimPeriod
-	25,  // 120: tammy.v1.DeferPurchaseGstClaimRequest.timing_review:type_name -> tammy.v1.PurchaseClaimTimingReview
-	27,  // 121: tammy.v1.DeferPurchaseGstClaimResponse.deferral:type_name -> tammy.v1.PurchaseGstDeferral
-	19,  // 122: tammy.v1.DeferPurchaseGstClaimResponse.accounting:type_name -> tammy.v1.PurchaseAccounting
-	54,  // 123: tammy.v1.ResolveLegacyPurchaseReviewRequest.command_context:type_name -> tammy.v1.CommandContext
-	31,  // 124: tammy.v1.ResolveLegacyPurchaseReviewRequest.review:type_name -> tammy.v1.LegacyPurchaseReviewInput
-	32,  // 125: tammy.v1.ResolveLegacyPurchaseReviewResponse.review:type_name -> tammy.v1.LegacyPurchaseReview
-	33,  // 126: tammy.v1.PurchaseService.GetPurchaseAccounting:input_type -> tammy.v1.GetPurchaseAccountingRequest
-	35,  // 127: tammy.v1.PurchaseService.PostReviewedPurchase:input_type -> tammy.v1.PostReviewedPurchaseRequest
-	37,  // 128: tammy.v1.PurchaseService.RecordPurchasePayment:input_type -> tammy.v1.RecordPurchasePaymentRequest
-	39,  // 129: tammy.v1.PurchaseService.ListPurchasePayments:input_type -> tammy.v1.ListPurchasePaymentsRequest
-	41,  // 130: tammy.v1.PurchaseService.RecordPurchaseTaxEvidence:input_type -> tammy.v1.RecordPurchaseTaxEvidenceRequest
-	43,  // 131: tammy.v1.PurchaseService.AttributePurchaseGst:input_type -> tammy.v1.AttributePurchaseGstRequest
-	45,  // 132: tammy.v1.PurchaseService.DeferPurchaseGstClaim:input_type -> tammy.v1.DeferPurchaseGstClaimRequest
-	47,  // 133: tammy.v1.PurchaseService.ResolveLegacyPurchaseReview:input_type -> tammy.v1.ResolveLegacyPurchaseReviewRequest
-	34,  // 134: tammy.v1.PurchaseService.GetPurchaseAccounting:output_type -> tammy.v1.GetPurchaseAccountingResponse
-	36,  // 135: tammy.v1.PurchaseService.PostReviewedPurchase:output_type -> tammy.v1.PostReviewedPurchaseResponse
-	38,  // 136: tammy.v1.PurchaseService.RecordPurchasePayment:output_type -> tammy.v1.RecordPurchasePaymentResponse
-	40,  // 137: tammy.v1.PurchaseService.ListPurchasePayments:output_type -> tammy.v1.ListPurchasePaymentsResponse
-	42,  // 138: tammy.v1.PurchaseService.RecordPurchaseTaxEvidence:output_type -> tammy.v1.RecordPurchaseTaxEvidenceResponse
-	44,  // 139: tammy.v1.PurchaseService.AttributePurchaseGst:output_type -> tammy.v1.AttributePurchaseGstResponse
-	46,  // 140: tammy.v1.PurchaseService.DeferPurchaseGstClaim:output_type -> tammy.v1.DeferPurchaseGstClaimResponse
-	48,  // 141: tammy.v1.PurchaseService.ResolveLegacyPurchaseReview:output_type -> tammy.v1.ResolveLegacyPurchaseReviewResponse
-	134, // [134:142] is the sub-list for method output_type
-	126, // [126:134] is the sub-list for method input_type
-	126, // [126:126] is the sub-list for extension type_name
-	126, // [126:126] is the sub-list for extension extendee
-	0,   // [0:126] is the sub-list for field type_name
+	53,  // 29: tammy.v1.PurchasePosting.duplicate_candidates:type_name -> tammy.v1.SourceRef
+	53,  // 30: tammy.v1.PurchasePosting.prior_accounting_sources:type_name -> tammy.v1.SourceRef
+	6,   // 31: tammy.v1.PurchaseAccountingReviewOutcomes.evidence:type_name -> tammy.v1.PurchaseReviewStatus
+	6,   // 32: tammy.v1.PurchaseAccountingReviewOutcomes.timing:type_name -> tammy.v1.PurchaseReviewStatus
+	6,   // 33: tammy.v1.PurchaseAccountingReviewOutcomes.duplicate:type_name -> tammy.v1.PurchaseReviewStatus
+	6,   // 34: tammy.v1.PurchaseAccountingReviewOutcomes.prior_accounting:type_name -> tammy.v1.PurchaseReviewStatus
+	6,   // 35: tammy.v1.PurchaseAccountingReviewOutcomes.legacy:type_name -> tammy.v1.PurchaseReviewStatus
+	17,  // 36: tammy.v1.PurchaseAccounting.posting:type_name -> tammy.v1.PurchasePosting
+	51,  // 37: tammy.v1.PurchaseAccounting.paid:type_name -> tammy.v1.Money
+	51,  // 38: tammy.v1.PurchaseAccounting.outstanding:type_name -> tammy.v1.Money
+	51,  // 39: tammy.v1.PurchaseAccounting.eligible_gst:type_name -> tammy.v1.Money
+	51,  // 40: tammy.v1.PurchaseAccounting.deferred_gst:type_name -> tammy.v1.Money
+	51,  // 41: tammy.v1.PurchaseAccounting.suspense_gst:type_name -> tammy.v1.Money
+	51,  // 42: tammy.v1.PurchaseAccounting.attributed_gst:type_name -> tammy.v1.Money
+	18,  // 43: tammy.v1.PurchaseAccounting.review_outcomes:type_name -> tammy.v1.PurchaseAccountingReviewOutcomes
+	51,  // 44: tammy.v1.PurchasePaymentAllocation.gross:type_name -> tammy.v1.Money
+	51,  // 45: tammy.v1.PurchasePaymentAllocation.supplier_gst:type_name -> tammy.v1.Money
+	51,  // 46: tammy.v1.PurchasePaymentAllocation.eligible_gst:type_name -> tammy.v1.Money
+	0,   // 47: tammy.v1.PurchasePaymentAllocation.use:type_name -> tammy.v1.PurchaseUse
+	1,   // 48: tammy.v1.PurchasePaymentAllocation.bas_classification:type_name -> tammy.v1.PurchaseBasClassification
+	2,   // 49: tammy.v1.PurchasePaymentAllocation.cash_flow_classification:type_name -> tammy.v1.PurchaseCashFlowClassification
+	49,  // 50: tammy.v1.PurchasePayment.actual_payment_date:type_name -> tammy.v1.CivilDate
+	51,  // 51: tammy.v1.PurchasePayment.amount:type_name -> tammy.v1.Money
+	20,  // 52: tammy.v1.PurchasePayment.allocations:type_name -> tammy.v1.PurchasePaymentAllocation
+	50,  // 53: tammy.v1.PurchasePayment.recorded_at:type_name -> google.protobuf.Timestamp
+	22,  // 54: tammy.v1.PurchaseGstSourcePortion.posting:type_name -> tammy.v1.PurchasePostingPortionRef
+	23,  // 55: tammy.v1.PurchaseGstSourcePortion.payment:type_name -> tammy.v1.PurchasePaymentPortionRef
+	49,  // 56: tammy.v1.PurchaseGstSourcePortion.normal_event_date:type_name -> tammy.v1.CivilDate
+	10,  // 57: tammy.v1.PurchaseGstSourcePortion.earliest_otherwise_eligible_period:type_name -> tammy.v1.PurchaseClaimPeriod
+	49,  // 58: tammy.v1.PurchaseGstSourcePortion.required_return_due_date:type_name -> tammy.v1.CivilDate
+	9,   // 59: tammy.v1.PurchaseGstSourcePortion.due_date_evidence:type_name -> tammy.v1.PurchaseRetainedSourceRef
+	49,  // 60: tammy.v1.PurchaseGstSourcePortion.ordinary_last_claim_date:type_name -> tammy.v1.CivilDate
+	49,  // 61: tammy.v1.PurchaseGstSourcePortion.evidence_held_date:type_name -> tammy.v1.CivilDate
+	49,  // 62: tammy.v1.PurchaseClaimTimingReview.reviewed_as_of:type_name -> tammy.v1.CivilDate
+	24,  // 63: tammy.v1.PurchaseGstAttribution.portion:type_name -> tammy.v1.PurchaseGstSourcePortion
+	10,  // 64: tammy.v1.PurchaseGstAttribution.claim_period:type_name -> tammy.v1.PurchaseClaimPeriod
+	49,  // 65: tammy.v1.PurchaseGstAttribution.release_posting_date:type_name -> tammy.v1.CivilDate
+	25,  // 66: tammy.v1.PurchaseGstAttribution.timing_review:type_name -> tammy.v1.PurchaseClaimTimingReview
+	51,  // 67: tammy.v1.PurchaseGstAttribution.claimed_gst:type_name -> tammy.v1.Money
+	50,  // 68: tammy.v1.PurchaseGstAttribution.recorded_at:type_name -> google.protobuf.Timestamp
+	24,  // 69: tammy.v1.PurchaseGstDeferral.portions:type_name -> tammy.v1.PurchaseGstSourcePortion
+	10,  // 70: tammy.v1.PurchaseGstDeferral.affected_period:type_name -> tammy.v1.PurchaseClaimPeriod
+	25,  // 71: tammy.v1.PurchaseGstDeferral.timing_review:type_name -> tammy.v1.PurchaseClaimTimingReview
+	51,  // 72: tammy.v1.PurchaseGstDeferral.deferred_gst:type_name -> tammy.v1.Money
+	49,  // 73: tammy.v1.PurchaseGstDeferral.ordinary_last_claim_date:type_name -> tammy.v1.CivilDate
+	50,  // 74: tammy.v1.PurchaseGstDeferral.recorded_at:type_name -> google.protobuf.Timestamp
+	28,  // 75: tammy.v1.LegacyPurchaseSourceRef.document:type_name -> tammy.v1.LegacyPurchaseDocumentRef
+	29,  // 76: tammy.v1.LegacyPurchaseSourceRef.opening_payable:type_name -> tammy.v1.LegacyPurchaseOpeningPayableRef
+	30,  // 77: tammy.v1.LegacyPurchaseReviewInput.source:type_name -> tammy.v1.LegacyPurchaseSourceRef
+	10,  // 78: tammy.v1.LegacyPurchaseReviewInput.affected_period:type_name -> tammy.v1.PurchaseClaimPeriod
+	49,  // 79: tammy.v1.LegacyPurchaseReviewInput.reporting_balance_date:type_name -> tammy.v1.CivilDate
+	7,   // 80: tammy.v1.LegacyPurchaseReviewInput.disposition:type_name -> tammy.v1.LegacyPurchaseDisposition
+	9,   // 81: tammy.v1.LegacyPurchaseReviewInput.supporting_payments:type_name -> tammy.v1.PurchaseRetainedSourceRef
+	10,  // 82: tammy.v1.LegacyPurchaseReviewInput.previously_claimed_period:type_name -> tammy.v1.PurchaseClaimPeriod
+	9,   // 83: tammy.v1.LegacyPurchaseReviewInput.claim_evidence:type_name -> tammy.v1.PurchaseRetainedSourceRef
+	9,   // 84: tammy.v1.LegacyPurchaseReviewInput.supporting_evidence:type_name -> tammy.v1.PurchaseRetainedSourceRef
+	31,  // 85: tammy.v1.LegacyPurchaseReview.review:type_name -> tammy.v1.LegacyPurchaseReviewInput
+	50,  // 86: tammy.v1.LegacyPurchaseReview.recorded_at:type_name -> google.protobuf.Timestamp
+	54,  // 87: tammy.v1.GetPurchaseAccountingRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	19,  // 88: tammy.v1.GetPurchaseAccountingResponse.accounting:type_name -> tammy.v1.PurchaseAccounting
+	55,  // 89: tammy.v1.PostReviewedPurchaseRequest.command_context:type_name -> tammy.v1.CommandContext
+	14,  // 90: tammy.v1.PostReviewedPurchaseRequest.allocations:type_name -> tammy.v1.PurchaseAllocationInput
+	12,  // 91: tammy.v1.PostReviewedPurchaseRequest.evidence:type_name -> tammy.v1.PurchaseEvidenceInput
+	15,  // 92: tammy.v1.PostReviewedPurchaseRequest.duplicate_review:type_name -> tammy.v1.PurchaseDuplicateReview
+	16,  // 93: tammy.v1.PostReviewedPurchaseRequest.prior_accounting_review:type_name -> tammy.v1.PurchasePriorAccountingReview
+	17,  // 94: tammy.v1.PostReviewedPurchaseResponse.posting:type_name -> tammy.v1.PurchasePosting
+	56,  // 95: tammy.v1.PostReviewedPurchaseResponse.journal:type_name -> tammy.v1.Journal
+	19,  // 96: tammy.v1.PostReviewedPurchaseResponse.accounting:type_name -> tammy.v1.PurchaseAccounting
+	55,  // 97: tammy.v1.RecordPurchasePaymentRequest.command_context:type_name -> tammy.v1.CommandContext
+	49,  // 98: tammy.v1.RecordPurchasePaymentRequest.actual_payment_date:type_name -> tammy.v1.CivilDate
+	51,  // 99: tammy.v1.RecordPurchasePaymentRequest.amount:type_name -> tammy.v1.Money
+	21,  // 100: tammy.v1.RecordPurchasePaymentResponse.payment:type_name -> tammy.v1.PurchasePayment
+	56,  // 101: tammy.v1.RecordPurchasePaymentResponse.journal:type_name -> tammy.v1.Journal
+	19,  // 102: tammy.v1.RecordPurchasePaymentResponse.accounting:type_name -> tammy.v1.PurchaseAccounting
+	54,  // 103: tammy.v1.ListPurchasePaymentsRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	57,  // 104: tammy.v1.ListPurchasePaymentsRequest.page:type_name -> tammy.v1.PageRequest
+	21,  // 105: tammy.v1.ListPurchasePaymentsResponse.payments:type_name -> tammy.v1.PurchasePayment
+	58,  // 106: tammy.v1.ListPurchasePaymentsResponse.page:type_name -> tammy.v1.PageInfo
+	55,  // 107: tammy.v1.RecordPurchaseTaxEvidenceRequest.command_context:type_name -> tammy.v1.CommandContext
+	12,  // 108: tammy.v1.RecordPurchaseTaxEvidenceRequest.evidence:type_name -> tammy.v1.PurchaseEvidenceInput
+	13,  // 109: tammy.v1.RecordPurchaseTaxEvidenceResponse.evidence:type_name -> tammy.v1.PurchaseTaxEvidence
+	19,  // 110: tammy.v1.RecordPurchaseTaxEvidenceResponse.accounting:type_name -> tammy.v1.PurchaseAccounting
+	55,  // 111: tammy.v1.AttributePurchaseGstRequest.command_context:type_name -> tammy.v1.CommandContext
+	24,  // 112: tammy.v1.AttributePurchaseGstRequest.portions:type_name -> tammy.v1.PurchaseGstSourcePortion
+	10,  // 113: tammy.v1.AttributePurchaseGstRequest.claim_period:type_name -> tammy.v1.PurchaseClaimPeriod
+	49,  // 114: tammy.v1.AttributePurchaseGstRequest.release_posting_date:type_name -> tammy.v1.CivilDate
+	25,  // 115: tammy.v1.AttributePurchaseGstRequest.timing_review:type_name -> tammy.v1.PurchaseClaimTimingReview
+	26,  // 116: tammy.v1.AttributePurchaseGstResponse.attributions:type_name -> tammy.v1.PurchaseGstAttribution
+	56,  // 117: tammy.v1.AttributePurchaseGstResponse.journal:type_name -> tammy.v1.Journal
+	19,  // 118: tammy.v1.AttributePurchaseGstResponse.accounting:type_name -> tammy.v1.PurchaseAccounting
+	55,  // 119: tammy.v1.DeferPurchaseGstClaimRequest.command_context:type_name -> tammy.v1.CommandContext
+	24,  // 120: tammy.v1.DeferPurchaseGstClaimRequest.portions:type_name -> tammy.v1.PurchaseGstSourcePortion
+	10,  // 121: tammy.v1.DeferPurchaseGstClaimRequest.affected_period:type_name -> tammy.v1.PurchaseClaimPeriod
+	25,  // 122: tammy.v1.DeferPurchaseGstClaimRequest.timing_review:type_name -> tammy.v1.PurchaseClaimTimingReview
+	27,  // 123: tammy.v1.DeferPurchaseGstClaimResponse.deferral:type_name -> tammy.v1.PurchaseGstDeferral
+	19,  // 124: tammy.v1.DeferPurchaseGstClaimResponse.accounting:type_name -> tammy.v1.PurchaseAccounting
+	55,  // 125: tammy.v1.ResolveLegacyPurchaseReviewRequest.command_context:type_name -> tammy.v1.CommandContext
+	31,  // 126: tammy.v1.ResolveLegacyPurchaseReviewRequest.review:type_name -> tammy.v1.LegacyPurchaseReviewInput
+	32,  // 127: tammy.v1.ResolveLegacyPurchaseReviewResponse.review:type_name -> tammy.v1.LegacyPurchaseReview
+	33,  // 128: tammy.v1.PurchaseService.GetPurchaseAccounting:input_type -> tammy.v1.GetPurchaseAccountingRequest
+	35,  // 129: tammy.v1.PurchaseService.PostReviewedPurchase:input_type -> tammy.v1.PostReviewedPurchaseRequest
+	37,  // 130: tammy.v1.PurchaseService.RecordPurchasePayment:input_type -> tammy.v1.RecordPurchasePaymentRequest
+	39,  // 131: tammy.v1.PurchaseService.ListPurchasePayments:input_type -> tammy.v1.ListPurchasePaymentsRequest
+	41,  // 132: tammy.v1.PurchaseService.RecordPurchaseTaxEvidence:input_type -> tammy.v1.RecordPurchaseTaxEvidenceRequest
+	43,  // 133: tammy.v1.PurchaseService.AttributePurchaseGst:input_type -> tammy.v1.AttributePurchaseGstRequest
+	45,  // 134: tammy.v1.PurchaseService.DeferPurchaseGstClaim:input_type -> tammy.v1.DeferPurchaseGstClaimRequest
+	47,  // 135: tammy.v1.PurchaseService.ResolveLegacyPurchaseReview:input_type -> tammy.v1.ResolveLegacyPurchaseReviewRequest
+	34,  // 136: tammy.v1.PurchaseService.GetPurchaseAccounting:output_type -> tammy.v1.GetPurchaseAccountingResponse
+	36,  // 137: tammy.v1.PurchaseService.PostReviewedPurchase:output_type -> tammy.v1.PostReviewedPurchaseResponse
+	38,  // 138: tammy.v1.PurchaseService.RecordPurchasePayment:output_type -> tammy.v1.RecordPurchasePaymentResponse
+	40,  // 139: tammy.v1.PurchaseService.ListPurchasePayments:output_type -> tammy.v1.ListPurchasePaymentsResponse
+	42,  // 140: tammy.v1.PurchaseService.RecordPurchaseTaxEvidence:output_type -> tammy.v1.RecordPurchaseTaxEvidenceResponse
+	44,  // 141: tammy.v1.PurchaseService.AttributePurchaseGst:output_type -> tammy.v1.AttributePurchaseGstResponse
+	46,  // 142: tammy.v1.PurchaseService.DeferPurchaseGstClaim:output_type -> tammy.v1.DeferPurchaseGstClaimResponse
+	48,  // 143: tammy.v1.PurchaseService.ResolveLegacyPurchaseReview:output_type -> tammy.v1.ResolveLegacyPurchaseReviewResponse
+	136, // [136:144] is the sub-list for method output_type
+	128, // [128:136] is the sub-list for method input_type
+	128, // [128:128] is the sub-list for extension type_name
+	128, // [128:128] is the sub-list for extension extendee
+	0,   // [0:128] is the sub-list for field type_name
 }
 
 func init() { file_tammy_v1_purchases_proto_init() }

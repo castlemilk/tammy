@@ -27,6 +27,49 @@ func purchaseDescriptor(t *testing.T, name string) protoreflect.MessageDescripto
 	return d.(protoreflect.MessageDescriptor)
 }
 
+func TestPurchasePostingRetainsBoundedServerDiscoveredProvenance(t *testing.T) {
+	d := purchaseDescriptor(t, "PurchasePosting")
+	request := purchaseDescriptor(t, "PostReviewedPurchaseRequest")
+	for index, name := range []string{"duplicate_candidates", "prior_accounting_sources"} {
+		t.Run(name, func(t *testing.T) {
+			field := d.Fields().ByName(protoreflect.Name(name))
+			if field == nil || !field.IsList() || field.Kind() != protoreflect.MessageKind || field.Message().FullName() != "tammy.v1.SourceRef" || field.Number() != protoreflect.FieldNumber(26+index) {
+				t.Fatal("posting must append typed discovered source IDs, revisions and hashes")
+			}
+			if request.Fields().ByName(protoreflect.Name(name)) != nil {
+				t.Fatal("discovered accounting provenance must be loaded by core")
+			}
+			message := purchaseFixture(d)
+			list := message.Mutable(field).List()
+			list.Truncate(0)
+			for i := 0; i < 50; i++ {
+				list.Append(protoreflect.ValueOfMessage(purchaseFixture(field.Message())))
+			}
+			if err := protovalidate.Validate(message); err != nil {
+				t.Fatalf("bounded discovered provenance rejected: %v", err)
+			}
+			encoded, err := proto.MarshalOptions{Deterministic: true}.Marshal(message)
+			if err != nil {
+				t.Fatal(err)
+			}
+			decoded := dynamicpb.NewMessage(d)
+			if err := proto.Unmarshal(encoded, decoded); err != nil || !proto.Equal(message, decoded) {
+				t.Fatal("retained source provenance lost in round trip")
+			}
+			list.Append(protoreflect.ValueOfMessage(purchaseFixture(field.Message())))
+			if err := protovalidate.Validate(message); err == nil {
+				t.Fatal("unbounded discovered provenance accepted")
+			}
+			list.Truncate(1)
+			ref := list.Get(0).Message()
+			ref.Set(ref.Descriptor().Fields().ByName("content_hash"), protoreflect.ValueOfBytes([]byte{1}))
+			if err := protovalidate.Validate(message); err == nil {
+				t.Fatal("discovered source without complete retained hash accepted")
+			}
+		})
+	}
+}
+
 // Populate real generated descriptors with deterministic, valid retained facts.
 func purchaseFixture(d protoreflect.MessageDescriptor) *dynamicpb.Message {
 	m := dynamicpb.NewMessage(d)

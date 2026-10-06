@@ -7,6 +7,27 @@ import { BasWorkpaperSchema } from "@tammy/connect-client/tammy/v1/tax_pb.js";
 import { describe, expect, test } from "vitest";
 
 describe("purchase generated contracts", () => {
+  test("retains server-discovered duplicate and prior-accounting provenance", () => {
+    const posting = file_tammy_v1_purchases.messages.find(
+      (message) => message.typeName === "tammy.v1.PurchasePosting",
+    );
+    expect(posting).toBeDefined();
+    for (const [index, name] of ["duplicate_candidates", "prior_accounting_sources"].entries()) {
+      const field = posting?.fields.find((candidate) => candidate.name === name);
+      expect(field?.number).toBe(26 + index);
+      expect(field?.fieldKind).toBe("list");
+      if (field?.fieldKind !== "list" || field.listKind !== "message")
+        throw new Error("Missing retained source provenance");
+      expect(field.message.typeName).toBe("tammy.v1.SourceRef");
+      expect(PurchaseService.method.postReviewedPurchase.input.fields.some((f) => f.name === name)).toBe(
+        false,
+      );
+    }
+    if (!posting) throw new Error("Missing posting");
+    const message = populated(posting);
+    expect(fromBinary(posting, toBinary(posting, message))).toEqual(message);
+  });
+
   test("round-trips saved per-portion future claims and globally bounded legacy support", () => {
     const schema: DescMessage = BasWorkpaperSchema;
     const workpaper = populated(schema);
