@@ -4,6 +4,7 @@ package identity
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/tammyapp/tammy/services/core/internal/storage/sqlcipher"
 	"github.com/tammyapp/tammy/services/core/internal/workspace"
@@ -55,10 +56,20 @@ func (repository *DatabaseRepository) Save(ctx context.Context, state repository
 }
 
 func (repository *DatabaseRepository) Mutate(ctx context.Context, work func(context.Context, workspace.MutationExecutor, *repositoryState) error) error {
+	return repository.mutate(ctx, nil, work)
+}
+
+// MutateSerialized waits for the writer before taking the read snapshot, so a
+// session touch cannot fail while upgrading a deferred read transaction.
+func (repository *DatabaseRepository) MutateSerialized(ctx context.Context, work func(context.Context, workspace.MutationExecutor, *repositoryState) error) error {
+	return repository.mutate(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable}, work)
+}
+
+func (repository *DatabaseRepository) mutate(ctx context.Context, options *sql.TxOptions, work func(context.Context, workspace.MutationExecutor, *repositoryState) error) error {
 	if work == nil {
 		return ErrRepositoryIntegrity
 	}
-	transaction, err := repository.database.BeginEncryptedTx(ctx, nil)
+	transaction, err := repository.database.BeginEncryptedTx(ctx, options)
 	if err != nil {
 		return err
 	}

@@ -68,6 +68,10 @@ var errRetainedElection = errors.New("identity: retained result elected")
 const retainedElectionConflictRetries = 8
 
 type Service struct {
+	// Repository-owned operations enter this gate before mu. A session read
+	// holds only the gate while waiting for SQLite's writer, leaving mu free
+	// for authorization in a caller-owned transaction to finish.
+	operationMu           sync.Mutex
 	mu                    sync.Mutex
 	repository            Repository
 	passwords             *workspace.PasswordPolicy
@@ -82,6 +86,16 @@ type Service struct {
 	sessionLifecycle      WorkspaceSessionLifecycle
 	passwordVerify        func([]byte, workspace.PasswordVerifier) bool
 	dummyPassword         workspace.PasswordVerifier
+}
+
+func (service *Service) lockOwnedIdentity() {
+	service.operationMu.Lock()
+	service.mu.Lock()
+}
+
+func (service *Service) unlockOwnedIdentity() {
+	service.mu.Unlock()
+	service.operationMu.Unlock()
 }
 
 type sessionLifecycleContextKey struct{}
@@ -140,8 +154,8 @@ func NewService(config Config) (*Service, error) {
 }
 
 func (service *Service) Close() error {
-	service.mu.Lock()
-	defer service.mu.Unlock()
+	service.lockOwnedIdentity()
+	defer service.unlockOwnedIdentity()
 	state, loadErr := service.repository.Load(context.Background())
 	if loadErr == nil {
 		now := service.clock.Now().UTC()
@@ -204,8 +218,8 @@ func validUsername(value string) bool {
 }
 
 func (service *Service) BootstrapAdministrator(ctx context.Context, username, displayName string, password []byte) (*tammyv1.User, error) {
-	service.mu.Lock()
-	defer service.mu.Unlock()
+	service.lockOwnedIdentity()
+	defer service.unlockOwnedIdentity()
 	if !validUsername(username) || displayName == "" || len([]rune(displayName)) > 128 {
 		return nil, faults.New(faults.CodeValidation, nil)
 	}
@@ -287,11 +301,11 @@ func (service *Service) SignIn(ctx context.Context, request *connect.Request[tam
 	if ctx.Value(sessionLifecycleContextKey{}) != nil {
 		return nil, ErrRepositoryIntegrity
 	}
-	service.mu.Lock()
+	service.lockOwnedIdentity()
 	locked := true
 	defer func() {
 		if locked {
-			service.mu.Unlock()
+			service.unlockOwnedIdentity()
 		}
 	}()
 	if request == nil || request.Msg == nil || request.Msg.Password == nil {
@@ -395,7 +409,7 @@ func (service *Service) SignIn(ctx context.Context, request *connect.Request[tam
 		}
 		return nil, faults.New(faults.CodeAuthenticationRequired, nil)
 	}
-	service.mu.Unlock()
+	service.unlockOwnedIdentity()
 	locked = false
 	if err := service.sessionLifecycle.SessionStartedCommitted(ctx); err != nil {
 		return nil, err
@@ -404,8 +418,8 @@ func (service *Service) SignIn(ctx context.Context, request *connect.Request[tam
 }
 
 func (service *Service) CreateUser(ctx context.Context, request *connect.Request[tammyv1.CreateUserRequest]) (*connect.Response[tammyv1.CreateUserResponse], error) {
-	service.mu.Lock()
-	defer service.mu.Unlock()
+	service.lockOwnedIdentity()
+	defer service.unlockOwnedIdentity()
 	if request == nil || request.Msg == nil || request.Msg.CommandContext == nil ||
 		!ids.IsCanonicalV7(request.Msg.CommandContext.IdempotencyKey) || !validUsername(request.Msg.Username) ||
 		request.Msg.DisplayName == "" || len([]rune(request.Msg.DisplayName)) > 128 || !validRoles(request.Msg.Roles) {
@@ -481,11 +495,11 @@ func (service *Service) ActivateUser(ctx context.Context, request *connect.Reque
 	if ctx.Value(sessionLifecycleContextKey{}) != nil {
 		return nil, ErrRepositoryIntegrity
 	}
-	service.mu.Lock()
+	service.lockOwnedIdentity()
 	locked := true
 	defer func() {
 		if locked {
-			service.mu.Unlock()
+			service.unlockOwnedIdentity()
 		}
 	}()
 	if request == nil || request.Msg == nil || request.Msg.ActivationCode == nil || request.Msg.NewPassword == nil || !validUsername(request.Msg.Username) {
@@ -597,7 +611,7 @@ func (service *Service) ActivateUser(ctx context.Context, request *connect.Reque
 	if err != nil {
 		return nil, err
 	}
-	service.mu.Unlock()
+	service.unlockOwnedIdentity()
 	locked = false
 	if err := service.sessionLifecycle.SessionStartedCommitted(ctx); err != nil {
 		return nil, err
@@ -606,8 +620,8 @@ func (service *Service) ActivateUser(ctx context.Context, request *connect.Reque
 }
 
 func (service *Service) ChangePassword(ctx context.Context, request *connect.Request[tammyv1.ChangePasswordRequest]) (*connect.Response[tammyv1.ChangePasswordResponse], error) {
-	service.mu.Lock()
-	defer service.mu.Unlock()
+	service.lockOwnedIdentity()
+	defer service.unlockOwnedIdentity()
 	if request == nil || request.Msg == nil || request.Msg.CommandContext == nil || request.Msg.CurrentPassword == nil ||
 		request.Msg.NewPassword == nil || !ids.IsCanonicalV7(request.Msg.CommandContext.IdempotencyKey) || request.Msg.ExpectedVersion == 0 {
 		return nil, faults.New(faults.CodeValidation, nil)
@@ -673,8 +687,8 @@ func (service *Service) ChangePassword(ctx context.Context, request *connect.Req
 }
 
 func (service *Service) EnrolTOTP(ctx context.Context, request *connect.Request[tammyv1.EnrolTOTPRequest]) (*connect.Response[tammyv1.EnrolTOTPResponse], error) {
-	service.mu.Lock()
-	defer service.mu.Unlock()
+	service.lockOwnedIdentity()
+	defer service.unlockOwnedIdentity()
 	if request == nil || request.Msg == nil || request.Msg.CommandContext == nil || request.Msg.CurrentPassword == nil ||
 		!ids.IsCanonicalV7(request.Msg.CommandContext.IdempotencyKey) {
 		return nil, faults.New(faults.CodeValidation, nil)
@@ -812,8 +826,8 @@ func (service *Service) electEnrolTOTP(operationKey, digest, actorID string,
 }
 
 func (service *Service) ConfirmTOTP(ctx context.Context, request *connect.Request[tammyv1.ConfirmTOTPRequest]) (*connect.Response[tammyv1.ConfirmTOTPResponse], error) {
-	service.mu.Lock()
-	defer service.mu.Unlock()
+	service.lockOwnedIdentity()
+	defer service.unlockOwnedIdentity()
 	if request == nil || request.Msg == nil || request.Msg.Authentication == nil || request.Msg.Code == nil || !ids.IsCanonicalV7(request.Msg.FactorId) {
 		return nil, faults.New(faults.CodeAuthenticationRequired, nil)
 	}
@@ -878,8 +892,8 @@ func (service *Service) ConfirmTOTP(ctx context.Context, request *connect.Reques
 }
 
 func (service *Service) AssertTOTP(ctx context.Context, request *connect.Request[tammyv1.AssertTOTPRequest]) (*connect.Response[tammyv1.AssertTOTPResponse], error) {
-	service.mu.Lock()
-	defer service.mu.Unlock()
+	service.lockOwnedIdentity()
+	defer service.unlockOwnedIdentity()
 	if request == nil || request.Msg == nil || request.Msg.Authentication == nil || request.Msg.Code == nil ||
 		request.Msg.Purpose == "" || len(request.Msg.Purpose) > 96 {
 		return nil, faults.New(faults.CodeAuthenticationRequired, nil)
@@ -947,8 +961,8 @@ func (service *Service) AssertTOTP(ctx context.Context, request *connect.Request
 }
 
 func (service *Service) DisableTOTP(ctx context.Context, request *connect.Request[tammyv1.DisableTOTPRequest]) (*connect.Response[tammyv1.DisableTOTPResponse], error) {
-	service.mu.Lock()
-	defer service.mu.Unlock()
+	service.lockOwnedIdentity()
+	defer service.unlockOwnedIdentity()
 	if request == nil || request.Msg == nil || request.Msg.CommandContext == nil || request.Msg.CurrentPassword == nil ||
 		!ids.IsCanonicalV7(request.Msg.CommandContext.IdempotencyKey) || !ids.IsCanonicalV7(request.Msg.FactorId) || request.Msg.ExpectedVersion == 0 {
 		return nil, faults.New(faults.CodeValidation, nil)
@@ -1050,8 +1064,8 @@ func (service *Service) electDisableTOTP(operationKey, digest, actorID string,
 }
 
 func (service *Service) ResetUserAuthentication(ctx context.Context, request *connect.Request[tammyv1.ResetUserAuthenticationRequest]) (*connect.Response[tammyv1.ResetUserAuthenticationResponse], error) {
-	service.mu.Lock()
-	defer service.mu.Unlock()
+	service.lockOwnedIdentity()
+	defer service.unlockOwnedIdentity()
 	if request == nil || request.Msg == nil || request.Msg.CommandContext == nil ||
 		!ids.IsCanonicalV7(request.Msg.CommandContext.IdempotencyKey) || !ids.IsCanonicalV7(request.Msg.UserId) || request.Msg.ExpectedVersion == 0 {
 		return nil, faults.New(faults.CodeValidation, nil)
@@ -1154,8 +1168,8 @@ func (service *Service) ResetUserAuthentication(ctx context.Context, request *co
 }
 
 func (service *Service) AssignRoles(ctx context.Context, request *connect.Request[tammyv1.AssignRolesRequest]) (*connect.Response[tammyv1.AssignRolesResponse], error) {
-	service.mu.Lock()
-	defer service.mu.Unlock()
+	service.lockOwnedIdentity()
+	defer service.unlockOwnedIdentity()
 	if request == nil || request.Msg == nil || request.Msg.CommandContext == nil ||
 		!ids.IsCanonicalV7(request.Msg.CommandContext.IdempotencyKey) || !ids.IsCanonicalV7(request.Msg.UserId) ||
 		request.Msg.ExpectedVersion == 0 || !validRoles(request.Msg.Roles) {
@@ -1214,10 +1228,10 @@ func (service *Service) AssignRoles(ctx context.Context, request *connect.Reques
 }
 
 func (service *Service) ExpireIdle(ctx context.Context) error {
-	service.mu.Lock()
+	service.lockOwnedIdentity()
 	lockWorkspace := false
 	defer func() {
-		service.mu.Unlock()
+		service.unlockOwnedIdentity()
 		if lockWorkspace && service.onWorkspaceLock != nil {
 			service.onWorkspaceLock()
 		}
@@ -1245,10 +1259,10 @@ func (service *Service) ExpireIdle(ctx context.Context) error {
 }
 
 func (service *Service) HandleOSLock(ctx context.Context) error {
-	service.mu.Lock()
+	service.lockOwnedIdentity()
 	lockWorkspace := false
 	defer func() {
-		service.mu.Unlock()
+		service.unlockOwnedIdentity()
 		if lockWorkspace && service.onWorkspaceLock != nil {
 			service.onWorkspaceLock()
 		}
@@ -1276,8 +1290,8 @@ func (service *Service) HandleOSLock(ctx context.Context) error {
 }
 
 func (service *Service) GetSession(ctx context.Context, request *connect.Request[tammyv1.GetSessionRequest]) (*connect.Response[tammyv1.GetSessionResponse], error) {
-	service.mu.Lock()
-	defer service.mu.Unlock()
+	service.lockOwnedIdentity()
+	defer service.unlockOwnedIdentity()
 	if request == nil || request.Msg == nil {
 		return nil, faults.New(faults.CodeAuthenticationRequired, nil)
 	}
@@ -1299,10 +1313,10 @@ func (service *Service) GetSession(ctx context.Context, request *connect.Request
 }
 
 func (service *Service) SignOut(ctx context.Context, request *connect.Request[tammyv1.SignOutRequest]) (*connect.Response[tammyv1.SignOutResponse], error) {
-	service.mu.Lock()
+	service.lockOwnedIdentity()
 	lockWorkspace := false
 	defer func() {
-		service.mu.Unlock()
+		service.unlockOwnedIdentity()
 		if lockWorkspace && service.onWorkspaceLock != nil {
 			service.onWorkspaceLock()
 		}
@@ -1328,28 +1342,54 @@ func (service *Service) SignOut(ctx context.Context, request *connect.Request[ta
 }
 
 func (service *Service) GetCurrentUser(ctx context.Context, request *connect.Request[tammyv1.GetCurrentUserRequest]) (*connect.Response[tammyv1.GetCurrentUserResponse], error) {
-	service.mu.Lock()
-	defer service.mu.Unlock()
 	if request == nil || request.Msg == nil {
 		return nil, faults.New(faults.CodeAuthenticationRequired, nil)
 	}
-	state, err := service.repository.Load(ctx)
-	if err != nil {
+	var currentUser *tammyv1.User
+	readAndTouch := func(ctx context.Context, executor workspace.MutationExecutor, state *repositoryState) error {
+		user, _, err := service.authenticateLocked(state, request.Msg.Authentication)
+		if err != nil {
+			return err
+		}
+		if err := service.audit.Record(ctx, executor, "session_touched", request.Msg.Authentication.GetSessionId()); err != nil {
+			return err
+		}
+		currentUser = userProjection(user, *state)
+		return nil
+	}
+	if err := service.mutateSessionRead(ctx, readAndTouch); err != nil {
 		return nil, err
 	}
-	user, _, err := service.authenticateLocked(&state, request.Msg.Authentication)
-	if err != nil {
-		return nil, err
+	return connect.NewResponse(&tammyv1.GetCurrentUserResponse{User: currentUser}), nil
+}
+
+func (service *Service) mutateSessionRead(ctx context.Context,
+	work func(context.Context, workspace.MutationExecutor, *repositoryState) error) error {
+	service.operationMu.Lock()
+	defer service.operationMu.Unlock()
+	if repository, ok := service.repository.(serializedMutationRepository); ok {
+		locked := false
+		defer func() {
+			if locked {
+				service.mu.Unlock()
+			}
+		}()
+		return repository.MutateSerialized(ctx, func(ctx context.Context, executor workspace.MutationExecutor, state *repositoryState) error {
+			// The gate excludes other repository-owned snapshots. Caller-owned
+			// transactions retain their existing database-writer -> mu order.
+			service.mu.Lock()
+			locked = true
+			return work(ctx, executor, state)
+		})
 	}
-	if err := service.persistState(ctx, state, "session_touched", request.Msg.Authentication.GetSessionId()); err != nil {
-		return nil, err
-	}
-	return connect.NewResponse(&tammyv1.GetCurrentUserResponse{User: userProjection(user, state)}), nil
+	service.mu.Lock()
+	defer service.mu.Unlock()
+	return service.repository.Mutate(ctx, work)
 }
 
 func (service *Service) GetUser(ctx context.Context, request *connect.Request[tammyv1.GetUserRequest]) (*connect.Response[tammyv1.GetUserResponse], error) {
-	service.mu.Lock()
-	defer service.mu.Unlock()
+	service.lockOwnedIdentity()
+	defer service.unlockOwnedIdentity()
 	if request == nil || request.Msg == nil || !ids.IsCanonicalV7(request.Msg.UserId) {
 		return nil, faults.New(faults.CodeValidation, nil)
 	}
@@ -1377,8 +1417,8 @@ func (service *Service) GetUser(ctx context.Context, request *connect.Request[ta
 }
 
 func (service *Service) ListUsers(ctx context.Context, request *connect.Request[tammyv1.ListUsersRequest]) (*connect.Response[tammyv1.ListUsersResponse], error) {
-	service.mu.Lock()
-	defer service.mu.Unlock()
+	service.lockOwnedIdentity()
+	defer service.unlockOwnedIdentity()
 	if request == nil || request.Msg == nil || request.Msg.Page == nil || request.Msg.Page.GetCursor() != "" {
 		return nil, faults.New(faults.CodeValidation, nil)
 	}
@@ -1428,8 +1468,8 @@ func (service *Service) ListUsers(ctx context.Context, request *connect.Request[
 }
 
 func (service *Service) RequireAdministrator(ctx context.Context, authentication *tammyv1.AuthenticationContext) error {
-	service.mu.Lock()
-	defer service.mu.Unlock()
+	service.lockOwnedIdentity()
+	defer service.unlockOwnedIdentity()
 	state, err := service.repository.Load(ctx)
 	if err != nil {
 		return err
@@ -1448,8 +1488,8 @@ func (service *Service) RequireAdministrator(ctx context.Context, authentication
 // without extending it. Workspace command handlers use this before retained
 // result election so replay, conflict, and pre-transaction failures are pure.
 func (service *Service) RequireAdministratorReadOnly(ctx context.Context, authentication *tammyv1.AuthenticationContext) error {
-	service.mu.Lock()
-	defer service.mu.Unlock()
+	service.lockOwnedIdentity()
+	defer service.unlockOwnedIdentity()
 	state, err := service.repository.Load(ctx)
 	if err != nil {
 		return err
@@ -1465,8 +1505,8 @@ func (service *Service) RequireAdministratorReadOnly(ctx context.Context, authen
 // without extending it or writing an audit row. It is used for command
 // preflight and terminal replay paths that must remain pure.
 func (service *Service) RequireActiveSessionReadOnly(ctx context.Context, authentication *tammyv1.AuthenticationContext) error {
-	service.mu.Lock()
-	defer service.mu.Unlock()
+	service.lockOwnedIdentity()
+	defer service.unlockOwnedIdentity()
 	state, err := service.repository.Load(ctx)
 	if err != nil {
 		return err
@@ -1481,8 +1521,8 @@ func (service *Service) RequireActiveSessionReadOnly(ctx context.Context, authen
 // operation; this method never touches or reactivates the session.
 func (service *Service) ValidateAdministratorReplayBinding(ctx context.Context, authentication *tammyv1.AuthenticationContext,
 	boundActorUserID, boundSessionID string) error {
-	service.mu.Lock()
-	defer service.mu.Unlock()
+	service.lockOwnedIdentity()
+	defer service.unlockOwnedIdentity()
 	if authentication == nil || boundActorUserID == "" || boundSessionID == "" ||
 		authentication.ActorUserId != boundActorUserID || authentication.SessionId != boundSessionID {
 		return faults.New(faults.CodeAuthenticationRequired, nil)
@@ -1603,8 +1643,8 @@ func (service *Service) RequireActiveSessionWithin(ctx context.Context, executor
 }
 
 func (service *Service) IsActiveAdministrator(ctx context.Context, userID string) bool {
-	service.mu.Lock()
-	defer service.mu.Unlock()
+	service.lockOwnedIdentity()
+	defer service.unlockOwnedIdentity()
 	state, err := service.repository.Load(ctx)
 	if err != nil {
 		return false
@@ -1628,8 +1668,8 @@ func (service *Service) IsActiveAdministratorWithin(ctx context.Context, executo
 }
 
 func (service *Service) InvalidateAllSessions(ctx context.Context) error {
-	service.mu.Lock()
-	defer service.mu.Unlock()
+	service.lockOwnedIdentity()
+	defer service.unlockOwnedIdentity()
 	state, err := service.repository.Load(ctx)
 	if err != nil {
 		return err
@@ -1678,8 +1718,8 @@ func (service *Service) InvalidateAllSessionsWithin(ctx context.Context, executo
 // operation is retained so a crash-safe workspace recovery replay cannot reset
 // credentials or factors twice.
 func (service *Service) BreakGlassResetAdministrator(ctx context.Context, operationID, username string, password []byte) (*tammyv1.User, error) {
-	service.mu.Lock()
-	defer service.mu.Unlock()
+	service.lockOwnedIdentity()
+	defer service.unlockOwnedIdentity()
 	return service.breakGlassResetAdministratorLocked(ctx, nil, operationID, username, password)
 }
 
@@ -1844,8 +1884,8 @@ func (service *Service) consumeAssertionLocked(state *repositoryState, authentic
 // high-risk command owner such as workspace or organisations.
 func (service *Service) ConsumeFreshFactor(ctx context.Context, authentication *tammyv1.AuthenticationContext,
 	marker *tammyv1.FreshFactorContext, purpose string) error {
-	service.mu.Lock()
-	defer service.mu.Unlock()
+	service.lockOwnedIdentity()
+	defer service.unlockOwnedIdentity()
 	state, err := service.repository.Load(ctx)
 	if err != nil {
 		return err

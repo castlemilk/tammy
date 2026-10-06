@@ -7,6 +7,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -422,7 +423,9 @@ func (handle *sqlCipherStorageHandle) CommitWorkspaceMutation(
 		(mutation.HeaderOperation && mutation.Kind != "CREATE" && mutation.Kind != "PASSPHRASE_CHANGE" && mutation.Kind != "RECOVERY" && mutation.Kind != "ADMIN_RECOVERY") {
 		return ErrHeaderOperation
 	}
-	transaction, err := handle.database.BeginEncryptedTx(ctx, nil)
+	// Reserve the writer before dependencies read their source or acquire identity
+	// state locks. A deferred read cannot safely upgrade after another writer commits.
+	transaction, err := handle.database.BeginEncryptedTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {
 		return err
 	}

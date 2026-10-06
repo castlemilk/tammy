@@ -182,6 +182,13 @@ type Repository interface {
 	Mutate(context.Context, func(context.Context, workspace.MutationExecutor, *repositoryState) error) error
 }
 
+// serializedMutationRepository reserves the database writer before reading a
+// state that will be changed. Session reads wait for it without Service.mu:
+// caller-owned transactions may already own that writer while authorizing.
+type serializedMutationRepository interface {
+	MutateSerialized(context.Context, func(context.Context, workspace.MutationExecutor, *repositoryState) error) error
+}
+
 type executorRepository interface {
 	LoadFrom(context.Context, workspace.MutationExecutor) (repositoryState, error)
 	SaveTo(context.Context, workspace.MutationExecutor, repositoryState) error
