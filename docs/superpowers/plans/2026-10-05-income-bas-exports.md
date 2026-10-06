@@ -38,4 +38,4 @@
 - [x] Extend the real packaged invoice/accounting journey with all four exports, native cancellation, stale saved workpaper export, explicit regeneration and restart. Compare independently parsed PDF/CSV fields and every source row to authoritative core records; cover cash/non-cash attribution.
 - [x] Run packaged acceptance and existing invoice/template/SBR regression journeys; inspect screenshots and PDF pages and record artifact hashes/source revision/results.
 - [x] Obtain spec compliance review, fix/reverify findings, then code quality review before marking this phase complete. Commit the validated phase and update programme/backlog status with evidence.
-- [ ] Proceed to a separate purchase-payment implementation plan, reserving migration 0012 for purchase storage and 0013 for the BAS lifecycle. Do not implement the shared source/storage contracts concurrently.
+- [x] Proceed to a separate purchase-payment implementation plan, reserving migration 0012 for purchase storage and 0013 for the BAS lifecycle. Do not implement the shared source/storage contracts concurrently.
