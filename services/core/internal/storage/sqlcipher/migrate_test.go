@@ -18,7 +18,7 @@ import (
 
 func TestApplyMigrationsSupportsEveryEncryptedSchemaPrefix(t *testing.T) {
 	t.Parallel()
-	for _, target := range []uint32{1, 2} {
+	for _, target := range []uint32{1, 2, 11, 12} {
 		t.Run(fmt.Sprintf("prefix_%d", target), func(t *testing.T) {
 			t.Parallel()
 			ctx := context.Background()
@@ -45,7 +45,7 @@ func TestApplyMigrationsSupportsEveryEncryptedSchemaPrefix(t *testing.T) {
 func TestExistingWorkspaceMigrationCannotCreateAMissingSource(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "missing.db")
 	_, err := migrateWorkspace(context.Background(), path, testKey(0x98), workspaceMigrationOptions{
-		steps: allMigrations(t), target: 11, requireExisting: true,
+		steps: allMigrations(t), target: 12, requireExisting: true,
 	})
 	if !errors.Is(err, ErrDatabaseIdentity) {
 		t.Fatalf("missing source migration error = %v; want identity rejection", err)
@@ -53,7 +53,7 @@ func TestExistingWorkspaceMigrationCannotCreateAMissingSource(t *testing.T) {
 	if _, err := os.Lstat(path); !os.IsNotExist(err) {
 		t.Fatalf("required existing source was created: %v", err)
 	}
-	if _, err := inspectWorkspaceBeforeCopy(context.Background(), path, testKey(0x98), allMigrations(t), 11); err == nil {
+	if _, err := inspectWorkspaceBeforeCopy(context.Background(), path, testKey(0x98), allMigrations(t), 12); err == nil {
 		t.Fatal("existing source inspection accepted a missing file")
 	}
 	if _, err := os.Lstat(path); !os.IsNotExist(err) {

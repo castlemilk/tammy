@@ -66,7 +66,7 @@ func TestBASInvoiceSourcesRetainSavedFiguresAndDetectNewSources(t *testing.T) {
 
 func reportFixture(t *testing.T, basis tammyv1.GstBasis) (*sqlcipher.Transaction, *Repository) {
 	t.Helper()
-	tx, repository, _, _, _ := reportFixtureAtVersion(t, basis, 11)
+	tx, repository, _, _, _ := reportFixtureAtVersion(t, basis, 12)
 	return tx, repository
 }
 

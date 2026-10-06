@@ -593,6 +593,6 @@ func TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealSer
 		t.Fatalf("revisions = %#v, want financial=11 banking=3 tax-source=6 settlement=1", attention.Msg.Revisions)
 	}
 	t.Run("upgrades version 10 on authenticated unlock after restart", func(t *testing.T) {
-		assertVersion10UpgradeAfterRestart(t, root, anchors, composition, server, module, issuedInvoice.Msg.Invoice, currentBAS.Msg.Workpaper)
+		assertHistoricalPrefixUpgradeAfterRestart(t, root, anchors, composition, server, module, issuedInvoice.Msg.Invoice, currentBAS.Msg.Workpaper)
 	})
 }

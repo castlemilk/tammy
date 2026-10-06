@@ -24,27 +24,13 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func assertVersion10UpgradeAfterRestart(t *testing.T, root string, anchors workspace.AnchorStore,
+func assertHistoricalPrefixUpgradeAfterRestart(t *testing.T, root string, anchors workspace.AnchorStore,
 	previous *app.Composition, previousServer *transport.Server, previousModule *LedgerModule,
 	invoice *tammyv1.Invoice, workpaper *tammyv1.BasWorkpaper,
 ) {
 	t.Helper()
 	ctx := context.Background()
-	// The tested invoice, journal, payment and BAS source schemas are unchanged
-	// from version 10. Remove only step 11 to construct that historical prefix.
-	for _, statement := range []string{
-		`DROP TRIGGER bas_workpapers_capture_save_order`,
-		`DROP TABLE bas_workpaper_save_order_v1`,
-		`DELETE FROM schema_migrations WHERE version=11`,
-	} {
-		if _, err := previousModule.db.ExecContext(ctx, statement); err != nil {
-			t.Fatal(err)
-		}
-	}
 	var version int
-	if err := previousModule.db.QueryRowContext(ctx, `SELECT max(version) FROM schema_migrations`).Scan(&version); err != nil || version != 10 {
-		t.Fatalf("historical fixture version = %d, %v; want 10", version, err)
-	}
 	shutdownContext, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 	if err := previousServer.Shutdown(shutdownContext); err != nil {
@@ -53,6 +39,7 @@ func assertVersion10UpgradeAfterRestart(t *testing.T, root string, anchors works
 	if err := previous.Close(); err != nil {
 		t.Fatal(err)
 	}
+	replaceWorkspaceWithHistoricalPrefix(t, ctx, root, []byte("workspace-passphrase-long-enough"), 11)
 	path := filepath.Join(root, "core", "workspace", "tammy-workspace.db")
 	lockedBytes, err := os.ReadFile(path)
 	if err != nil {
@@ -110,8 +97,15 @@ func assertVersion10UpgradeAfterRestart(t *testing.T, root string, anchors works
 	if err := unlock("workspace-passphrase-long-enough"); err != nil {
 		t.Fatal(err)
 	}
-	if err := module.db.QueryRowContext(ctx, `SELECT max(version) FROM schema_migrations`).Scan(&version); err != nil || version != 11 {
-		t.Fatalf("unlocked schema version = %d, %v; want 11", version, err)
+	if err := module.db.QueryRowContext(ctx, `SELECT max(version) FROM schema_migrations`).Scan(&version); err != nil || version != 12 {
+		t.Fatalf("unlocked schema version = %d, %v; want 12", version, err)
+	}
+	assertHistoricalFixtureIntegrity(t, ctx, module.db)
+	for _, table := range []string{"purchase_postings_v1", "purchase_posting_allocations_v1", "purchase_payments_v1", "purchase_payment_allocations_v1", "purchase_tax_evidence_v1", "purchase_gst_attributions_v1", "purchase_gst_deferrals_v1", "purchase_gst_deferral_portions_v1", "purchase_legacy_reviews_v1", "purchase_accounting_events_v1", "purchase_command_audit_v1", "bas_workpaper_purchase_sources_v1", "bas_workpaper_purchase_reviews_v1", "bas_workpaper_purchase_support_v1", "bas_workpaper_purchase_metadata_v1"} {
+		var count int
+		if err := module.db.QueryRowContext(ctx, `SELECT count(*) FROM `+table).Scan(&count); err != nil || count != 0 {
+			t.Fatalf("upgrade created %s rows: %d, %v", table, count, err)
+		}
 	}
 	identityClient := tammyv1connect.NewIdentityServiceClient(httpClient, baseURL)
 	signedIn, err := identityClient.SignIn(ctx, brandingRequest(&tammyv1.SignInRequest{
