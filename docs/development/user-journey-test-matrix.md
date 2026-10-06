@@ -15,13 +15,14 @@ This matrix keeps Tammy's development walkthrough tied to executable evidence. I
 | --- | --- | --- | --- |
 | Launch offline and review privacy | `app.test.tsx`, privacy tests | System transport tests | `electron-vite-development.spec.ts`, `foundation.spec.ts`, `app-store-privacy.spec.ts` |
 | Create workspace, save recovery, sign in, create organisation | `setup-screen.test.tsx` | `TestLocalCompositionCreatesConfirmsAndAuthenticatesRealWorkspace` | First-run form and Conveyor smoke |
-| Reopen workspace and sign in | `unlock-screen.test.tsx` | `TestLocalCompositionReopensAndAuthenticatesExistingWorkspaceAfterRestart` | Not destructive-tested in the package suite |
+| Reopen workspace and sign in | `unlock-screen.test.tsx` | `TestLocalCompositionReopensAndAuthenticatesExistingWorkspaceAfterRestart`; native identity/workspace writer-admission and revocation regressions | `current-workflows.spec.ts`, `invoice-income.spec.ts`, `reporting-exports.spec.ts` and `sbr-readiness.spec.ts` retain state through real restart/reopen |
 | Inspect and extend the AU chart | `chart-screen.test.tsx` | `TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealServer` | Covered after authentication, not in first-run smoke |
 | Post a journal, open its detail, and inspect the trial balance | `journals-screen.test.tsx`, `trial-balance-screen.test.tsx` | `TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealServer` | Covered after authentication, not in first-run smoke |
 | Retain and review a document | `documents-screen.test.tsx`, PDF text tests | `TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealServer` | Covered after authentication, not in first-run smoke |
 | Build an invoice from costs/MCP, review, save, issue, export and reopen | Invoice editor and App navigation tests; native export/issue tests; `packages/invoices` actual PDF tests; local API SDK tests | Invoice SQLCipher repositories and the real LedgerModule server journey (auth, replay, versions, source ownership, seller drift and immutable issue) | `current-workflows.spec.ts` exercises real broker/stdin MCP, reviewed expense linkage, sidebar retention, PDF export and restart |
 | Import, match, then reconcile banking rows | `banking-screen.test.tsx` | Repository/module integration is the next backend journey gap | Covered after authentication, not in first-run smoke |
-| Create and review a BAS workpaper | `bas-screen.test.tsx` | Reporting/module integration is the next backend journey gap | Covered after authentication, not in first-run smoke |
+| Invoice income, receipts and retained BAS workpapers | Invoice accounting, Overview and `bas-screen.test.tsx` | `invoice_income_sqlcipher_integration_test.go`; reporting source/save-order and SQLCipher repository tests | `invoice-income.spec.ts` asserts real cash/non-cash postings, receipt allocations, balances, saved BAS figures and restart |
+| Export income summary and saved BAS as PDF/CSV | `report-export.test.ts`, `report-export-actions.test.tsx`, `packages/reporting` exact renderer/PDF tests and native writer regressions | Existing authenticated transactional income/BAS reads; native current-user/writer-admission/revocation tests | `reporting-exports.spec.ts` reconciles actual PDF/CSV and every retained source to Core for both bases; cancellation, invalid save/retry, stale originals, regeneration and restart. [Acceptance](income-bas-exports-acceptance-2026-10-06.md) records the six-journey clean-build gate and artifact audit. |
 | Review retained local activity | `audit-screen.test.tsx` | The view is a product projection; audit-chain verification is tested separately | Covered after authentication, not in first-run smoke |
 
 The journal list regression also proves retained rows are keyboard focusable and open with Enter, rather than being mouse-only.
@@ -31,10 +32,10 @@ The journal list regression also proves retained rows are keyboard focusable and
 From the repository root:
 
 ```sh
-rtk mise exec -- task test
-rtk mise exec -- task test:desktop:dev
-rtk mise exec -- task test:invoices
-rtk mise exec -- task package:e2e
+rtk proxy mise exec -- task test
+rtk proxy mise exec -- task test:desktop:dev
+rtk proxy mise exec -- task test:invoices
+rtk proxy mise exec -- task package:e2e
 ```
 
 The complete desktop test command includes an integration suite that compiles the Go core with a fixed timeout. A timeout is a failed gate, not permission to mark the suite green. `test:desktop:dev` exercises `apps/desktop/out/main/index.js`, `apps/desktop/out/preload/index.cjs`, and `apps/desktop/out/renderer/index.html` through real Electron. Focused app results may still be reported separately while the build environment is repaired.
@@ -42,11 +43,11 @@ The complete desktop test command includes an integration suite that compiles th
 For the direct local-core journeys:
 
 ```sh
-rtk go test -tags tammy_sqlcipher ./services/core/internal/app \
+rtk proxy mise exec -- go test -tags tammy_sqlcipher ./services/core/internal/app \
   -run '^TestLocalComposition(CreatesConfirmsAndAuthenticatesRealWorkspace|ReopensAndAuthenticatesExistingWorkspaceAfterRestart)$' \
   -count=1 -timeout=3m
 
-rtk go test -tags tammy_sqlcipher ./services/core/internal/localproduct \
+rtk proxy mise exec -- go test -tags tammy_sqlcipher ./services/core/internal/localproduct \
   -run '^TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealServer$' \
   -count=1 -timeout=3m
 ```

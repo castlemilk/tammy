@@ -1,7 +1,7 @@
 # Business and individual self-reporting backlog
 
 **Baseline date:** 11 August 2026  
-**Invoice income/BAS review:** 4 October 2026
+**Invoice income/BAS and export review:** 6 October 2026
 
 **Programme scope:** [Programme backlog](#3-programme-backlog)
 
@@ -29,7 +29,7 @@ It uses four priorities:
 | Chart, journals, trial balance | Partial | Opening balances, reversals, periods, complete ledger, financial statements, source subledgers. |
 | Document evidence | Partial | Broader evidence types, extraction/review provenance, deductions/assets/income binding, retention UX. |
 | Banking | Partial | Standard import formats, transfers, automated suggestions with human approval, full reconciliation reports. |
-| GST/BAS | Local cash/non-cash GST workpapers with invoice sales, purchase sources, provenance and regeneration | Complete labels, cash purchase payment evidence, adjustments, IAS, validation, declaration, amendment, delivery, receipt. |
+| GST/BAS | Local cash/non-cash GST workpapers with invoice sales, purchase sources, provenance, regeneration and exact saved PDF/CSV exports | Complete labels, cash purchase payment evidence, adjustments, IAS, validation, declaration, amendment, delivery, receipt. |
 | Audit/backup/restore core | Backend components | Complete user journeys, evidence exports, release validation. |
 | Sales and receivables | Invoice issue posts sales/receivables/GST; dated partial/full receipts and root income/balance reporting | Customer register, quotes, credit notes, overpayments/refunds, bank matching, ageing and delivery. |
 | Purchases and payables | Narrow reviewed documents only | Full bills, credits, payments, allocations, ageing required. |
@@ -179,7 +179,7 @@ BOOK-02 remains incomplete: customer registers, quotes, recurring billing, credi
 **Priority:** P0  
 **Users:** GST/PAYG-registered businesses
 
-Implemented local GST workpapers for 2024–2027 attribute non-cash invoice sales on issue dates and cash sales on actual receipt dates, with G1/1A sales provenance, retained figures, source-change notices and regeneration. Eligible reviewed purchases contribute credits on the non-cash basis; cash purchase credits without payment evidence are excluded with a visible warning. This does not complete BAS-01 or enable declaration/lodgement. See [packaged income/BAS acceptance](invoice-income-bas-acceptance-2026-10-04.md).
+Implemented local GST workpapers for 2024–2027 attribute non-cash invoice sales on issue dates and cash sales on actual receipt dates, with G1/1A sales provenance, retained figures, source-change notices and regeneration. Eligible reviewed purchases contribute credits on the non-cash basis; cash purchase credits without payment evidence are excluded with a visible warning. Overview income summaries and displayed saved workpapers now export exact PDF/CSV files through the authenticated native save boundary. Stale sources never silently regenerate an export; complete retained rows and identities survive restart. This does not complete BAS-01 or enable declaration/lodgement. See [packaged income/BAS acceptance](invoice-income-bas-acceptance-2026-10-04.md) and [export acceptance](income-bas-exports-acceptance-2026-10-06.md). The authorised reporting programme proceeds to purchase accounting, then the supported BAS preparation lifecycle.
 
 - [ ] Support cash and non-cash GST bases, monthly/quarterly/annual cycles, branches, and period transitions.
 - [ ] Calculate and explain G1, G2, G3, G10, G11, G21-G24, 1A, 1B, and derived totals as applicable.

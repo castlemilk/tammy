@@ -4,6 +4,8 @@ Date: 2026-10-04. Status: implementation authorised by the user's 2026-10-05 ins
 
 Execution plans: [income/BAS exports](../plans/2026-10-05-income-bas-exports.md), [purchase payments/GST](../plans/2026-10-05-purchase-payments-gst.md), and [BAS preparation/manual handoff](../plans/2026-10-05-bas-preparation-lifecycle.md). Completion is recorded only after the corresponding tests and packaged acceptance.
 
+Implementation status, 2026-10-06: phase one is validated at clean source `d04a532295e977c3a88b3550e7935cdbf52c6272`, with all six freshly built packaged journeys passing and exact PDF/CSV artifacts independently reconciled and visually inspected. See [export acceptance](../../development/income-bas-exports-acceptance-2026-10-06.md). Phase two purchase contracts are next; purchase storage uses migration 0012, and phase three retains 0013. The programme is not yet complete.
+
 ## Delivery order and review boundaries
 
 Deliver three focused changes in the existing accounting style. Each receives its own implementation plan, focused tests and packaged desktop acceptance before the next depends on it.

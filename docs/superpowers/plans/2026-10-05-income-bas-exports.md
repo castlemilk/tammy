@@ -10,6 +10,8 @@
 
 **Authority:** The user's 2026-10-05 instruction to continue the reporting programme authorises implementing its three linked designs. No ATO submission is authorised. Reuse `issue/sbr-registration-ready`; do not create another checkout.
 
+**Acceptance:** Phase one validated on 2026-10-06 at clean source `d04a532295e977c3a88b3550e7935cdbf52c6272`: all six fresh packaged journeys passed, exact artifacts independently reconciled and visually inspected. See [acceptance evidence](../../development/income-bas-exports-acceptance-2026-10-06.md). Purchase contracts are the next task after this record is committed.
+
 ## Chunk 1: Exact renderers
 
 - [x] Add a focused reporting package with snapshot validation, integer-cent formatting, RFC 4180 CSV escaping and text-formula neutralisation. Use the existing income/BAS read fields; do not invent absent purchase provenance.
@@ -29,11 +31,11 @@
 - [x] Add typed bounded income/BAS export requests to the reporting Conveyor module/context and production registration. React cannot supply bytes, templates or paths.
 - [x] Add actions to Overview and GST & BAS, retaining authoritative organisation version, selected dates, financial revision and displayed BAS identity. Disable actions while invalid/loading and retain dates on completion/error/cancellation.
 - [x] Write renderer integration tests for action payloads, dates, disabled states, session changes and error guidance.
-- [ ] Run pinned toolchain reporting tests, invoice regression tests, desktop unit tests/typecheck/build and contract checks appropriate to unchanged read RPCs. Use `rtk proxy mise exec -- ...` from the worktree.
+- [x] Run pinned toolchain reporting tests, invoice regression tests, desktop unit tests/typecheck/build and contract checks appropriate to unchanged read RPCs. Use `rtk proxy mise exec -- ...` from the worktree.
 
 ## Chunk 4: Packaged acceptance and handoff
 
-- [ ] Extend the real packaged invoice/accounting journey with all four exports, native cancellation, stale saved workpaper export, explicit regeneration and restart. Compare independently parsed PDF/CSV fields and every source row to authoritative core records; cover cash/non-cash attribution.
-- [ ] Run packaged acceptance and existing invoice/template/SBR regression journeys; inspect screenshots and PDF pages and record artifact hashes/source revision/results.
-- [ ] Obtain spec compliance review, fix/reverify findings, then code quality review before marking this phase complete. Commit the validated phase and update programme/backlog status with evidence.
+- [x] Extend the real packaged invoice/accounting journey with all four exports, native cancellation, stale saved workpaper export, explicit regeneration and restart. Compare independently parsed PDF/CSV fields and every source row to authoritative core records; cover cash/non-cash attribution.
+- [x] Run packaged acceptance and existing invoice/template/SBR regression journeys; inspect screenshots and PDF pages and record artifact hashes/source revision/results.
+- [x] Obtain spec compliance review, fix/reverify findings, then code quality review before marking this phase complete. Commit the validated phase and update programme/backlog status with evidence.
 - [ ] Proceed to a separate purchase-payment implementation plan, reserving migration 0012 for purchase storage and 0013 for the BAS lifecycle. Do not implement the shared source/storage contracts concurrently.
