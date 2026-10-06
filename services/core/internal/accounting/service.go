@@ -11,7 +11,6 @@ import (
 	"github.com/tammyapp/tammy/services/core/internal/banking"
 	tammyv1 "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1"
 	"github.com/tammyapp/tammy/services/core/internal/platform/ids"
-	"github.com/tammyapp/tammy/services/core/internal/purchases"
 	"github.com/tammyapp/tammy/services/core/internal/sales"
 	"google.golang.org/protobuf/proto"
 )
@@ -24,6 +23,11 @@ type AccountStore interface {
 	Update(context.Context, uint64, *tammyv1.Account, time.Time) error
 }
 
+// OpeningPayablePort is the accounting consumer's supplier-opening boundary.
+type OpeningPayablePort interface {
+	RecordOpeningPayable(context.Context, string, *tammyv1.OpeningBalanceInput, time.Time) error
+}
+
 type CommandRepositories struct {
 	Accounts      AccountStore
 	Journals      JournalStore
@@ -31,7 +35,7 @@ type CommandRepositories struct {
 	Periods       PeriodStore
 	Openings      OpeningStore
 	Sales         sales.OpeningReceivablePort
-	Purchases     purchases.OpeningPayablePort
+	Purchases     OpeningPayablePort
 	Banking       banking.OpeningFinancialAccountPort
 	Factors       FreshFactorConsumer
 	Reports       TaxReportImpactPort
