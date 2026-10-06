@@ -148,6 +148,11 @@ enum JournalSource {
 
   // JOURNAL_SOURCE_INVOICE_PAYMENT is owned by dated invoice receipts.
   JOURNAL_SOURCE_INVOICE_PAYMENT = 5;
+
+  // Purchase workflow owns the following immutable journals.
+  JOURNAL_SOURCE_PURCHASE = 6;
+  JOURNAL_SOURCE_PURCHASE_PAYMENT = 7;
+  JOURNAL_SOURCE_PURCHASE_GST_ATTRIBUTION = 8;
 }
 
 // PeriodState is the accounting period lifecycle.

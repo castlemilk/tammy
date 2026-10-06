@@ -1,0 +1,867 @@
+syntax = "proto3";
+
+package tammy.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+import "tammy/v1/accounting.proto";
+import "tammy/v1/common.proto";
+import "tammy/v1/organisation.proto";
+
+option go_package = "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1";
+
+enum PurchaseUse {
+  PURCHASE_USE_UNSPECIFIED = 0;
+  PURCHASE_USE_BUSINESS = 1;
+  PURCHASE_USE_PRIVATE = 2;
+}
+
+enum PurchaseBasClassification {
+  PURCHASE_BAS_CLASSIFICATION_UNSPECIFIED = 0;
+  PURCHASE_BAS_CLASSIFICATION_CAPITAL = 1;
+  PURCHASE_BAS_CLASSIFICATION_NON_CAPITAL = 2;
+  PURCHASE_BAS_CLASSIFICATION_EXCLUDED = 3;
+}
+
+enum PurchaseCashFlowClassification {
+  PURCHASE_CASH_FLOW_CLASSIFICATION_UNSPECIFIED = 0;
+  PURCHASE_CASH_FLOW_CLASSIFICATION_OPERATING = 1;
+  PURCHASE_CASH_FLOW_CLASSIFICATION_INVESTING = 2;
+  PURCHASE_CASH_FLOW_CLASSIFICATION_FINANCING = 3;
+}
+
+enum PurchaseEvidenceClassification {
+  PURCHASE_EVIDENCE_CLASSIFICATION_UNSPECIFIED = 0;
+  PURCHASE_EVIDENCE_CLASSIFICATION_UNKNOWN = 1;
+  PURCHASE_EVIDENCE_CLASSIFICATION_TAX_INVOICE = 2;
+  PURCHASE_EVIDENCE_CLASSIFICATION_SUPPORTED_EXCEPTION = 3;
+}
+
+enum PurchaseDuplicateDecision {
+  PURCHASE_DUPLICATE_DECISION_UNSPECIFIED = 0;
+  PURCHASE_DUPLICATE_DECISION_NO_MATCH = 1;
+  PURCHASE_DUPLICATE_DECISION_DISTINCT_TRANSACTION = 2;
+}
+
+enum PurchasePriorAccountingDecision {
+  PURCHASE_PRIOR_ACCOUNTING_DECISION_UNSPECIFIED = 0;
+  PURCHASE_PRIOR_ACCOUNTING_DECISION_NOT_PREVIOUSLY_ACCOUNTED_OR_CLAIMED = 1;
+}
+
+enum PurchaseReviewStatus {
+  PURCHASE_REVIEW_STATUS_UNSPECIFIED = 0;
+  PURCHASE_REVIEW_STATUS_CLEAR = 1;
+  PURCHASE_REVIEW_STATUS_NEEDS_EVIDENCE = 2;
+  PURCHASE_REVIEW_STATUS_NEEDS_TIMING_REVIEW = 3;
+  PURCHASE_REVIEW_STATUS_UNRESOLVED_LEGACY = 4;
+  PURCHASE_REVIEW_STATUS_UNSUPPORTED = 5;
+  PURCHASE_REVIEW_STATUS_DEFERRED = 6;
+}
+
+enum LegacyPurchaseDisposition {
+  LEGACY_PURCHASE_DISPOSITION_UNSPECIFIED = 0;
+  LEGACY_PURCHASE_DISPOSITION_CONFIRMED_UNPAID_THROUGH_BALANCE = 1;
+  LEGACY_PURCHASE_DISPOSITION_ALREADY_CLAIMED = 2;
+  LEGACY_PURCHASE_DISPOSITION_DUPLICATE = 3;
+  LEGACY_PURCHASE_DISPOSITION_NONCREDITABLE = 4;
+  LEGACY_PURCHASE_DISPOSITION_EVIDENCE_ONLY_LINKED_PURCHASE = 5;
+  LEGACY_PURCHASE_DISPOSITION_UNSUPPORTED_EXISTING_SETTLEMENT = 6;
+}
+
+// Hash-only retained provenance. Original evidence bytes remain server-owned.
+
+message PurchaseRetainedSourceRef {
+  string source_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 source_version = 2 [(buf.validate.field).uint64.gte = 1];
+  bytes source_hash = 3 [(buf.validate.field).bytes.len = 32];
+}
+
+message PurchaseClaimPeriod {
+  option (buf.validate.message).cel = {
+    id: "purchase.period.order"
+    message: "Period end must not precede its start"
+    expression: "this.period_start.year * 10000 + this.period_start.month * 100 + this.period_start.day <= this.period_end.year * 10000 + this.period_end.month * 100 + this.period_end.day"
+  };
+  CivilDate period_start = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "PurchaseClaimPeriod.period_start.calendar"
+      message: "Date must exist in the Gregorian calendar"
+      expression: "this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))"
+    }
+  ];
+  CivilDate period_end = 2 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "PurchaseClaimPeriod.period_end.calendar"
+      message: "Date must exist in the Gregorian calendar"
+      expression: "this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))"
+    }
+  ];
+}
+
+enum PurchaseTaxInvoiceExceptionKind {
+  PURCHASE_TAX_INVOICE_EXCEPTION_KIND_UNSPECIFIED = 0;
+  PURCHASE_TAX_INVOICE_EXCEPTION_KIND_LOW_VALUE_ACQUISITION = 1;
+  PURCHASE_TAX_INVOICE_EXCEPTION_KIND_SPECIFIC_RETAINED_WAIVER = 2;
+}
+
+// The core verifies these facts against the retained rule; size/OCR alone never authorizes an exception.
+message PurchaseTaxInvoiceExceptionReview {
+  PurchaseTaxInvoiceExceptionKind kind = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  PurchaseRetainedSourceRef rule = 2 [(buf.validate.field).required = true];
+  repeated PurchaseRetainedSourceRef supporting_records = 3 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 50
+  }];
+  bool tax_invoice_not_required_review_confirmed = 4 [(buf.validate.field).bool.const = true];
+  bool supporting_record_requirements_review_confirmed = 5 [(buf.validate.field).bool.const = true];
+  string reason = 6 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 512
+  }];
+}
+
+message PurchaseEvidenceInput {
+  option (buf.validate.message).cel = {
+    id: "purchase.evidence.known"
+    message: "Known evidence needs a retained source and actual held date"
+    expression: "this.classification == 1 || (has(this.source) && has(this.held_date))"
+  };
+  option (buf.validate.message).cel = {
+    id: "purchase.evidence.exception"
+    message: "Supported exception needs typed reviewed facts and rule provenance"
+    expression: "(this.classification == 3) == has(this.exception_review)"
+  };
+  optional PurchaseRetainedSourceRef source = 1;
+  PurchaseEvidenceClassification classification = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  optional CivilDate held_date = 3 [(buf.validate.field).cel = {
+    id: "PurchaseEvidenceInput.held_date.calendar"
+    message: "Date must exist in the Gregorian calendar"
+    expression: "this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))"
+  }];
+  bool registration_review_confirmed = 4 [(buf.validate.field).bool.const = true];
+  bool business_use_review_confirmed = 5 [(buf.validate.field).bool.const = true];
+  bool evidence_review_confirmed = 6 [(buf.validate.field).bool.const = true];
+  string reason = 7 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 512
+  }];
+  optional PurchaseTaxInvoiceExceptionReview exception_review = 8;
+}
+
+message PurchaseTaxEvidence {
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string document_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 accounting_version = 4;
+  PurchaseEvidenceInput review = 5 [(buf.validate.field).required = true];
+  string actor_user_id = 6 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  google.protobuf.Timestamp recorded_at = 7 [(buf.validate.field).required = true];
+  bytes source_hash = 8 [(buf.validate.field).bytes.len = 32];
+}
+
+message PurchaseAllocationInput {
+  option (buf.validate.message).cel = {
+    id: "purchase.allocation.eligibility"
+    message: "GST must conserve the allocation and private/noncreditable decisions must be explicit"
+    expression: "this.eligible_gst.minor_units <= this.supplier_gst.minor_units && this.supplier_gst.minor_units <= this.gross.minor_units && (this.use != 2 || (this.eligible_gst.minor_units == 0 && this.bas_classification == 3)) && (this.eligible_gst.minor_units == this.supplier_gst.minor_units || size(this.noncreditable_reason) > 0)"
+  };
+  string account_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 account_version = 2 [(buf.validate.field).uint64.gte = 1];
+  uint32 sequence = 3 [(buf.validate.field).uint32.gte = 1];
+  Money gross = 4 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "PurchaseAllocationInput.gross.aud"
+      message: "Exact nonnegative AUD money is required"
+      expression: "this.currency_code == 'AUD' && this.minor_units >= 0"
+    }
+  ];
+  Money supplier_gst = 5 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "PurchaseAllocationInput.supplier_gst.aud"
+      message: "Exact nonnegative AUD money is required"
+      expression: "this.currency_code == 'AUD' && this.minor_units >= 0"
+    }
+  ];
+  Money eligible_gst = 6 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "PurchaseAllocationInput.eligible_gst.aud"
+      message: "Exact nonnegative AUD money is required"
+      expression: "this.currency_code == 'AUD' && this.minor_units >= 0"
+    }
+  ];
+  PurchaseUse use = 7 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  PurchaseBasClassification bas_classification = 8 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  PurchaseCashFlowClassification cash_flow_classification = 9 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  bool eligibility_review_confirmed = 10 [(buf.validate.field).bool.const = true];
+  bool evidence_review_confirmed = 11 [(buf.validate.field).bool.const = true];
+  string noncreditable_reason = 12 [(buf.validate.field).string = {max_len: 512}];
+}
+
+message PurchaseDuplicateReview {
+  option (buf.validate.message).cel = {
+    id: "purchase.duplicate.distinct"
+    message: "Distinct transaction review needs the matched posting and reason"
+    expression: "this.decision != 2 || (has(this.matched_posting_id) && size(this.reason) > 0)"
+  };
+  PurchaseDuplicateDecision decision = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  optional string matched_posting_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string reason = 3 [(buf.validate.field).string = {max_len: 512}];
+}
+
+message PurchasePriorAccountingReview {
+  PurchasePriorAccountingDecision decision = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  bool reviewed_existing_accounting_confirmed = 2 [(buf.validate.field).bool.const = true];
+  string reason = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 512
+  }];
+}
+
+// Immutable shallow retained posting; snapshots and original content are server-owned, never embedded.
+
+message PurchasePosting {
+  option (buf.validate.message).cel = {
+    id: "purchase.posting.reviewed_gst_basis"
+    message: "GST-bearing purchases need a reviewed GST basis even when their GST is noncreditable"
+    expression: "this.supplier_gst.minor_units == 0 || this.gst_basis != 0"
+  };
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string document_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 reviewed_version = 4 [(buf.validate.field).uint64.gte = 1];
+  bytes original_content_hash = 5 [(buf.validate.field).bytes.len = 32];
+  bytes reviewed_snapshot_hash = 6 [(buf.validate.field).bytes.len = 32];
+  string supplier_name = 7 [(buf.validate.field).string = {max_len: 512}];
+  optional string supplier_identity = 8 [(buf.validate.field).string = {max_len: 512}];
+  string invoice_number = 9 [(buf.validate.field).string = {max_len: 128}];
+  CivilDate invoice_date = 10 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "PurchasePosting.invoice_date.calendar"
+      message: "Date must exist in the Gregorian calendar"
+      expression: "this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))"
+    }
+  ];
+  GstBasis gst_basis = 11 [(buf.validate.field).enum.defined_only = true];
+  uint64 gst_profile_version = 12 [(buf.validate.field).uint64.gte = 1];
+  // Zero is the genuine watermark of a fresh organisation with no profile-change audit rows.
+  uint64 gst_history_watermark = 13;
+  Money gross = 14 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "PurchasePosting.gross.aud"
+      message: "Exact nonnegative AUD money is required"
+      expression: "this.currency_code == 'AUD' && this.minor_units >= 0"
+    }
+  ];
+  Money supplier_gst = 15 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "PurchasePosting.supplier_gst.aud"
+      message: "Exact nonnegative AUD money is required"
+      expression: "this.currency_code == 'AUD' && this.minor_units >= 0"
+    }
+  ];
+  Money eligible_gst = 16 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "PurchasePosting.eligible_gst.aud"
+      message: "Exact nonnegative AUD money is required"
+      expression: "this.currency_code == 'AUD' && this.minor_units >= 0"
+    }
+  ];
+  repeated PurchaseAllocationInput allocations = 17 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 50
+  }];
+  PurchaseEvidenceInput evidence = 18 [(buf.validate.field).required = true];
+  PurchaseDuplicateReview duplicate_review = 19 [(buf.validate.field).required = true];
+  PurchasePriorAccountingReview prior_accounting_review = 20 [(buf.validate.field).required = true];
+  optional string journal_id = 21 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 financial_revision = 22 [(buf.validate.field).uint64.gte = 1];
+  string actor_user_id = 23 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  google.protobuf.Timestamp posted_at = 24 [(buf.validate.field).required = true];
+  bytes source_hash = 25 [(buf.validate.field).bytes.len = 32];
+}
+
+message PurchaseAccountingReviewOutcomes {
+  PurchaseReviewStatus evidence = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  PurchaseReviewStatus timing = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  PurchaseReviewStatus duplicate = 3 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  PurchaseReviewStatus prior_accounting = 4 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  PurchaseReviewStatus legacy = 5 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+}
+
+// All-row monetary totals with bounded shallow state; no embedded histories. Version/count may be zero for unposted state.
+
+message PurchaseAccounting {
+  option (buf.validate.message).cel = {
+    id: "purchase.accounting.posted"
+    message: "Posting presence must match the authoritative posted state"
+    expression: "this.posted == has(this.posting)"
+  };
+  string organisation_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string document_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  bool posted = 3;
+  uint64 accounting_version = 4;
+  optional PurchasePosting posting = 5;
+  Money paid = 6 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "PurchaseAccounting.paid.aud"
+      message: "Exact nonnegative AUD money is required"
+      expression: "this.currency_code == 'AUD' && this.minor_units >= 0"
+    }
+  ];
+  Money outstanding = 7 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "PurchaseAccounting.outstanding.aud"
+      message: "Exact nonnegative AUD money is required"
+      expression: "this.currency_code == 'AUD' && this.minor_units >= 0"
+    }
+  ];
+  Money eligible_gst = 8 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "PurchaseAccounting.eligible_gst.aud"
+      message: "Exact nonnegative AUD money is required"
+      expression: "this.currency_code == 'AUD' && this.minor_units >= 0"
+    }
+  ];
+  Money deferred_gst = 9 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "PurchaseAccounting.deferred_gst.aud"
+      message: "Exact nonnegative AUD money is required"
+      expression: "this.currency_code == 'AUD' && this.minor_units >= 0"
+    }
+  ];
+  Money suspense_gst = 10 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "PurchaseAccounting.suspense_gst.aud"
+      message: "Exact nonnegative AUD money is required"
+      expression: "this.currency_code == 'AUD' && this.minor_units >= 0"
+    }
+  ];
+  Money attributed_gst = 11 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "PurchaseAccounting.attributed_gst.aud"
+      message: "Exact nonnegative AUD money is required"
+      expression: "this.currency_code == 'AUD' && this.minor_units >= 0"
+    }
+  ];
+  uint64 payment_count = 12;
+  PurchaseAccountingReviewOutcomes review_outcomes = 13 [(buf.validate.field).required = true];
+}
+
+message PurchasePaymentAllocation {
+  uint32 sequence = 1 [(buf.validate.field).uint32.gte = 1];
+  string account_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 account_version = 3 [(buf.validate.field).uint64.gte = 1];
+  Money gross = 4 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "PurchasePaymentAllocation.gross.aud"
+      message: "Exact nonnegative AUD money is required"
+      expression: "this.currency_code == 'AUD' && this.minor_units >= 0"
+    }
+  ];
+  Money supplier_gst = 5 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "PurchasePaymentAllocation.supplier_gst.aud"
+      message: "Exact nonnegative AUD money is required"
+      expression: "this.currency_code == 'AUD' && this.minor_units >= 0"
+    }
+  ];
+  Money eligible_gst = 6 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "PurchasePaymentAllocation.eligible_gst.aud"
+      message: "Exact nonnegative AUD money is required"
+      expression: "this.currency_code == 'AUD' && this.minor_units >= 0"
+    }
+  ];
+  PurchaseUse use = 7 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  PurchaseBasClassification bas_classification = 8 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  PurchaseCashFlowClassification cash_flow_classification = 9 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+}
+
+message PurchasePayment {
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string posting_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string document_id = 4 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 accounting_version = 5 [(buf.validate.field).uint64.gte = 1];
+  CivilDate actual_payment_date = 6 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "PurchasePayment.actual_payment_date.calendar"
+      message: "Date must exist in the Gregorian calendar"
+      expression: "this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))"
+    }
+  ];
+  Money amount = 7 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "PurchasePayment.amount.aud"
+      message: "Exact nonnegative AUD money is required"
+      expression: "this.currency_code == 'AUD' && this.minor_units > 0"
+    }
+  ];
+  string bank_account_id = 8 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string reference = 9 [(buf.validate.field).string = {max_len: 512}];
+  string journal_id = 10 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  bytes source_hash = 11 [(buf.validate.field).bytes.len = 32];
+  repeated PurchasePaymentAllocation allocations = 12 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 50
+  }];
+  uint64 financial_revision = 13 [(buf.validate.field).uint64.gte = 1];
+  string actor_user_id = 14 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  google.protobuf.Timestamp recorded_at = 15 [(buf.validate.field).required = true];
+}
+
+message PurchasePostingPortionRef {
+  string posting_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  bytes posting_hash = 2 [(buf.validate.field).bytes.len = 32];
+  uint32 allocation_sequence = 3 [(buf.validate.field).uint32.gte = 1];
+}
+
+message PurchasePaymentPortionRef {
+  string posting_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  bytes posting_hash = 2 [(buf.validate.field).bytes.len = 32];
+  string payment_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  bytes payment_hash = 4 [(buf.validate.field).bytes.len = 32];
+  uint32 allocation_sequence = 5 [(buf.validate.field).uint32.gte = 1];
+}
+
+// Each selected immutable allocation portion has its own normal event and deadline provenance.
+message PurchaseGstSourcePortion {
+  oneof source {
+    option (buf.validate.oneof).required = true;
+    PurchasePostingPortionRef posting = 1;
+    PurchasePaymentPortionRef payment = 2;
+  }
+  CivilDate normal_event_date = 3 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "PurchaseGstSourcePortion.normal_event_date.calendar"
+      message: "Date must exist in the Gregorian calendar"
+      expression: "this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))"
+    }
+  ];
+  PurchaseClaimPeriod earliest_otherwise_eligible_period = 4 [(buf.validate.field).required = true];
+  CivilDate required_return_due_date = 5 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "PurchaseGstSourcePortion.required_return_due_date.calendar"
+      message: "Date must exist in the Gregorian calendar"
+      expression: "this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))"
+    }
+  ];
+  PurchaseRetainedSourceRef due_date_evidence = 6 [(buf.validate.field).required = true];
+  CivilDate ordinary_last_claim_date = 7 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "PurchaseGstSourcePortion.ordinary_last_claim_date.calendar"
+      message: "Date must exist in the Gregorian calendar"
+      expression: "this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))"
+    }
+  ];
+  string evidence_id = 8 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  CivilDate evidence_held_date = 9 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "PurchaseGstSourcePortion.evidence_held_date.calendar"
+      message: "Date must exist in the Gregorian calendar"
+      expression: "this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))"
+    }
+  ];
+}
+
+message PurchaseClaimTimingReview {
+  CivilDate reviewed_as_of = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "PurchaseClaimTimingReview.reviewed_as_of.calendar"
+      message: "Date must exist in the Gregorian calendar"
+      expression: "this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))"
+    }
+  ];
+  bool allowable_period_confirmed = 2 [(buf.validate.field).bool.const = true];
+  bool ordinary_time_limit_confirmed = 3 [(buf.validate.field).bool.const = true];
+  bool evidence_held_confirmed = 4 [(buf.validate.field).bool.const = true];
+  string reason = 5 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 512
+  }];
+}
+
+message PurchaseGstAttribution {
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string posting_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string document_id = 4 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 accounting_version = 5 [(buf.validate.field).uint64.gte = 1];
+  PurchaseGstSourcePortion portion = 6 [(buf.validate.field).required = true];
+  PurchaseClaimPeriod claim_period = 7 [(buf.validate.field).required = true];
+  CivilDate release_posting_date = 8 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "PurchaseGstAttribution.release_posting_date.calendar"
+      message: "Date must exist in the Gregorian calendar"
+      expression: "this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))"
+    }
+  ];
+  PurchaseClaimTimingReview timing_review = 9 [(buf.validate.field).required = true];
+  Money claimed_gst = 10 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "PurchaseGstAttribution.claimed_gst.aud"
+      message: "Exact nonnegative AUD money is required"
+      expression: "this.currency_code == 'AUD' && this.minor_units >= 0"
+    }
+  ];
+  optional string closes_deferral_id = 11 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string journal_id = 12 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 financial_revision = 13 [(buf.validate.field).uint64.gte = 1];
+  bytes source_hash = 14 [(buf.validate.field).bytes.len = 32];
+  string actor_user_id = 15 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  google.protobuf.Timestamp recorded_at = 16 [(buf.validate.field).required = true];
+}
+
+// Immutable future claim obligation. Outstanding state is derived from linked attributions, never rewritten.
+
+message PurchaseGstDeferral {
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string posting_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string document_id = 4 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 accounting_version = 5 [(buf.validate.field).uint64.gte = 1];
+  repeated PurchaseGstSourcePortion portions = 6 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 200
+  }];
+  PurchaseClaimPeriod affected_period = 7 [(buf.validate.field).required = true];
+  PurchaseClaimTimingReview timing_review = 8 [(buf.validate.field).required = true];
+  Money deferred_gst = 9 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "PurchaseGstDeferral.deferred_gst.aud"
+      message: "Exact nonnegative AUD money is required"
+      expression: "this.currency_code == 'AUD' && this.minor_units >= 0"
+    }
+  ];
+  CivilDate ordinary_last_claim_date = 10 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "PurchaseGstDeferral.ordinary_last_claim_date.calendar"
+      message: "Date must exist in the Gregorian calendar"
+      expression: "this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))"
+    }
+  ];
+  string reason = 11 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 512
+  }];
+  bytes source_hash = 12 [(buf.validate.field).bytes.len = 32];
+  string actor_user_id = 13 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  google.protobuf.Timestamp recorded_at = 14 [(buf.validate.field).required = true];
+}
+
+message LegacyPurchaseDocumentRef {
+  string document_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 reviewed_version = 2 [(buf.validate.field).uint64.gte = 1];
+  bytes original_content_hash = 3 [(buf.validate.field).bytes.len = 32];
+  bytes reviewed_snapshot_hash = 4 [(buf.validate.field).bytes.len = 32];
+}
+
+// Opening provenance is complete without a document link.
+
+message LegacyPurchaseOpeningPayableRef {
+  string opening_payable_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 source_version = 2 [(buf.validate.field).uint64.gte = 1];
+  bytes source_hash = 3 [(buf.validate.field).bytes.len = 32];
+}
+
+message LegacyPurchaseSourceRef {
+  oneof source {
+    option (buf.validate.oneof).required = true;
+    LegacyPurchaseDocumentRef document = 1;
+    LegacyPurchaseOpeningPayableRef opening_payable = 2;
+  }
+}
+
+message LegacyPurchaseReviewInput {
+  option (buf.validate.message).cel = {
+    id: "purchase.legacy.claimed"
+    message: "Already claimed requires retained claim period and evidence"
+    expression: "this.disposition != 2 || (has(this.previously_claimed_period) && has(this.claim_evidence))"
+  };
+  option (buf.validate.message).cel = {
+    id: "purchase.legacy.evidence_only"
+    message: "Evidence-only review must link the existing purchase"
+    expression: "this.disposition != 5 || has(this.linked_posting_id)"
+  };
+  LegacyPurchaseSourceRef source = 1 [(buf.validate.field).required = true];
+  PurchaseClaimPeriod affected_period = 2 [(buf.validate.field).required = true];
+  CivilDate reporting_balance_date = 3 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "LegacyPurchaseReviewInput.reporting_balance_date.calendar"
+      message: "Date must exist in the Gregorian calendar"
+      expression: "this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))"
+    }
+  ];
+  LegacyPurchaseDisposition disposition = 4 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  repeated PurchaseRetainedSourceRef supporting_payments = 5 [(buf.validate.field).repeated = {max_items: 200}];
+  optional PurchaseClaimPeriod previously_claimed_period = 6;
+  optional PurchaseRetainedSourceRef claim_evidence = 7;
+  repeated PurchaseRetainedSourceRef supporting_evidence = 8 [(buf.validate.field).repeated = {max_items: 200}];
+  optional string linked_posting_id = 9 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string reason = 10 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 512
+  }];
+}
+
+message LegacyPurchaseReview {
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  LegacyPurchaseReviewInput review = 3 [(buf.validate.field).required = true];
+  uint64 source_revision = 4 [(buf.validate.field).uint64.gte = 1];
+  bytes source_hash = 5 [(buf.validate.field).bytes.len = 32];
+  string actor_user_id = 6 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  google.protobuf.Timestamp recorded_at = 7 [(buf.validate.field).required = true];
+}
+
+message GetPurchaseAccountingRequest {
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string document_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+}
+
+message GetPurchaseAccountingResponse {
+  PurchaseAccounting accounting = 1 [(buf.validate.field).required = true];
+}
+
+// Ordinary on-time input does not require delayed-claim dates.
+
+message PostReviewedPurchaseRequest {
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string document_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 expected_reviewed_version = 4 [(buf.validate.field).uint64.gte = 1];
+  repeated PurchaseAllocationInput allocations = 5 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 50
+  }];
+  PurchaseEvidenceInput evidence = 6 [(buf.validate.field).required = true];
+  PurchaseDuplicateReview duplicate_review = 7 [(buf.validate.field).required = true];
+  PurchasePriorAccountingReview prior_accounting_review = 8 [(buf.validate.field).required = true];
+}
+
+message PostReviewedPurchaseResponse {
+  PurchasePosting posting = 1 [(buf.validate.field).required = true];
+  optional Journal journal = 2;
+  PurchaseAccounting accounting = 3 [(buf.validate.field).required = true];
+}
+
+// Ordinary on-time input does not require delayed-claim dates.
+
+message RecordPurchasePaymentRequest {
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string document_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 expected_accounting_version = 4 [(buf.validate.field).uint64.gte = 1];
+  CivilDate actual_payment_date = 5 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "RecordPurchasePaymentRequest.actual_payment_date.calendar"
+      message: "Date must exist in the Gregorian calendar"
+      expression: "this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))"
+    }
+  ];
+  Money amount = 6 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "RecordPurchasePaymentRequest.amount.aud"
+      message: "Exact nonnegative AUD money is required"
+      expression: "this.currency_code == 'AUD' && this.minor_units > 0"
+    }
+  ];
+  string bank_account_id = 7 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string reference = 8 [(buf.validate.field).string = {max_len: 512}];
+}
+
+message RecordPurchasePaymentResponse {
+  PurchasePayment payment = 1 [(buf.validate.field).required = true];
+  Journal journal = 2 [(buf.validate.field).required = true];
+  PurchaseAccounting accounting = 3 [(buf.validate.field).required = true];
+}
+
+message ListPurchasePaymentsRequest {
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string document_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  PageRequest page = 4 [(buf.validate.field).required = true];
+}
+
+message ListPurchasePaymentsResponse {
+  repeated PurchasePayment payments = 1 [(buf.validate.field).repeated = {max_items: 200}];
+  PageInfo page = 2 [(buf.validate.field).required = true];
+}
+
+message RecordPurchaseTaxEvidenceRequest {
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string document_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 expected_accounting_version = 4 [(buf.validate.field).uint64.gte = 1];
+  PurchaseEvidenceInput evidence = 5 [(buf.validate.field).required = true];
+}
+
+message RecordPurchaseTaxEvidenceResponse {
+  PurchaseTaxEvidence evidence = 1 [(buf.validate.field).required = true];
+  PurchaseAccounting accounting = 2 [(buf.validate.field).required = true];
+}
+
+message AttributePurchaseGstRequest {
+  option (buf.validate.message).cel = {
+    id: "purchase.attribution.mechanical_timing"
+    message: "Claim and release dates must respect each source event, held evidence and deadline"
+    expression: "(this.release_posting_date.year * 10000 + this.release_posting_date.month * 100 + this.release_posting_date.day) >= (this.claim_period.period_start.year * 10000 + this.claim_period.period_start.month * 100 + this.claim_period.period_start.day) && (this.release_posting_date.year * 10000 + this.release_posting_date.month * 100 + this.release_posting_date.day) <= (this.claim_period.period_end.year * 10000 + this.claim_period.period_end.month * 100 + this.claim_period.period_end.day) && this.portions.all(p, (p.normal_event_date.year * 10000 + p.normal_event_date.month * 100 + p.normal_event_date.day) <= (this.claim_period.period_end.year * 10000 + this.claim_period.period_end.month * 100 + this.claim_period.period_end.day) && (p.normal_event_date.year * 10000 + p.normal_event_date.month * 100 + p.normal_event_date.day) <= (this.release_posting_date.year * 10000 + this.release_posting_date.month * 100 + this.release_posting_date.day) && (p.evidence_held_date.year * 10000 + p.evidence_held_date.month * 100 + p.evidence_held_date.day) <= (this.timing_review.reviewed_as_of.year * 10000 + this.timing_review.reviewed_as_of.month * 100 + this.timing_review.reviewed_as_of.day) && (this.timing_review.reviewed_as_of.year * 10000 + this.timing_review.reviewed_as_of.month * 100 + this.timing_review.reviewed_as_of.day) <= (p.ordinary_last_claim_date.year * 10000 + p.ordinary_last_claim_date.month * 100 + p.ordinary_last_claim_date.day))"
+  };
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string document_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 expected_accounting_version = 4 [(buf.validate.field).uint64.gte = 1];
+  repeated PurchaseGstSourcePortion portions = 5 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 200
+  }];
+  PurchaseClaimPeriod claim_period = 6 [(buf.validate.field).required = true];
+  CivilDate release_posting_date = 7 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "AttributePurchaseGstRequest.release_posting_date.calendar"
+      message: "Date must exist in the Gregorian calendar"
+      expression: "this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))"
+    }
+  ];
+  PurchaseClaimTimingReview timing_review = 8 [(buf.validate.field).required = true];
+  optional string deferral_id = 9 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+}
+
+message AttributePurchaseGstResponse {
+  repeated PurchaseGstAttribution attributions = 1 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 200
+  }];
+  Journal journal = 2 [(buf.validate.field).required = true];
+  PurchaseAccounting accounting = 3 [(buf.validate.field).required = true];
+}
+
+message DeferPurchaseGstClaimRequest {
+  option (buf.validate.message).cel = {
+    id: "purchase.deferral.mechanical_timing"
+    message: "Deferral requires evidence available by review and an unexpired individual deadline"
+    expression: "this.portions.all(p, (p.evidence_held_date.year * 10000 + p.evidence_held_date.month * 100 + p.evidence_held_date.day) <= (this.timing_review.reviewed_as_of.year * 10000 + this.timing_review.reviewed_as_of.month * 100 + this.timing_review.reviewed_as_of.day) && (this.timing_review.reviewed_as_of.year * 10000 + this.timing_review.reviewed_as_of.month * 100 + this.timing_review.reviewed_as_of.day) <= (p.ordinary_last_claim_date.year * 10000 + p.ordinary_last_claim_date.month * 100 + p.ordinary_last_claim_date.day))"
+  };
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string document_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 expected_accounting_version = 4 [(buf.validate.field).uint64.gte = 1];
+  repeated PurchaseGstSourcePortion portions = 5 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 200
+  }];
+  PurchaseClaimPeriod affected_period = 6 [(buf.validate.field).required = true];
+  PurchaseClaimTimingReview timing_review = 7 [(buf.validate.field).required = true];
+  string reason = 8 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 512
+  }];
+}
+
+message DeferPurchaseGstClaimResponse {
+  PurchaseGstDeferral deferral = 1 [(buf.validate.field).required = true];
+  PurchaseAccounting accounting = 2 [(buf.validate.field).required = true];
+}
+
+message ResolveLegacyPurchaseReviewRequest {
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  LegacyPurchaseReviewInput review = 3 [(buf.validate.field).required = true];
+}
+
+message ResolveLegacyPurchaseReviewResponse {
+  LegacyPurchaseReview review = 1 [(buf.validate.field).required = true];
+}
+
+service PurchaseService {
+  rpc GetPurchaseAccounting(GetPurchaseAccountingRequest) returns (GetPurchaseAccountingResponse);
+  rpc PostReviewedPurchase(PostReviewedPurchaseRequest) returns (PostReviewedPurchaseResponse);
+  rpc RecordPurchasePayment(RecordPurchasePaymentRequest) returns (RecordPurchasePaymentResponse);
+  rpc ListPurchasePayments(ListPurchasePaymentsRequest) returns (ListPurchasePaymentsResponse);
+  rpc RecordPurchaseTaxEvidence(RecordPurchaseTaxEvidenceRequest) returns (RecordPurchaseTaxEvidenceResponse);
+  rpc AttributePurchaseGst(AttributePurchaseGstRequest) returns (AttributePurchaseGstResponse);
+  rpc DeferPurchaseGstClaim(DeferPurchaseGstClaimRequest) returns (DeferPurchaseGstClaimResponse);
+  rpc ResolveLegacyPurchaseReview(ResolveLegacyPurchaseReviewRequest) returns (ResolveLegacyPurchaseReviewResponse);
+}

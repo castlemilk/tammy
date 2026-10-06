@@ -11,13 +11,15 @@ import type { AuthenticationContext, CivilDate, CommandContext, Money } from "./
 import { file_tammy_v1_common } from "./common_pb.js";
 import type { GstBasis } from "./organisation_pb.js";
 import { file_tammy_v1_organisation } from "./organisation_pb.js";
+import type { LegacyPurchaseDisposition, LegacyPurchaseSourceRef, PurchaseBasClassification, PurchaseCashFlowClassification, PurchaseClaimPeriod, PurchaseClaimTimingReview, PurchaseGstSourcePortion, PurchaseRetainedSourceRef, PurchaseReviewStatus, PurchaseUse } from "./purchases_pb.js";
+import { file_tammy_v1_purchases } from "./purchases_pb.js";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file tammy/v1/tax.proto.
  */
 export const file_tammy_v1_tax: GenFile = /*@__PURE__*/
-  fileDesc("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ZWF0ZUJhc0RyYWZ0UmVxdWVzdBI5Cg9jb21tYW5kX2NvbnRleHQYASABKAsyGC50YW1teS52MS5Db21tYW5kQ29udGV4dEIGukgDyAEBEmUKD29yZ2FuaXNhdGlvbl9pZBgCIAEoCUJMukhJckcyRV5bMC05YS1mXXs4fS1bMC05YS1mXXs0fS03WzAtOWEtZl17M30tWzg5YWJdWzAtOWEtZl17M30tWzAtOWEtZl17MTJ9JBIxCgxwZXJpb2Rfc3RhcnQYAyABKAsyEy50YW1teS52MS5DaXZpbERhdGVCBrpIA8gBARIvCgpwZXJpb2RfZW5kGAQgASgLMhMudGFtbXkudjEuQ2l2aWxEYXRlQga6SAPIAQEiSwoWQ3JlYXRlQmFzRHJhZnRSZXNwb25zZRIxCgl3b3JrcGFwZXIYASABKAsyFi50YW1teS52MS5CYXNXb3JrcGFwZXJCBrpIA8gBASLDAQoZR2V0Q3VycmVudEJhc0RyYWZ0UmVxdWVzdBI/Cg5hdXRoZW50aWNhdGlvbhgBIAEoCzIfLnRhbW15LnYxLkF1dGhlbnRpY2F0aW9uQ29udGV4dEIGukgDyAEBEmUKD29yZ2FuaXNhdGlvbl9pZBgCIAEoCUJMukhJckcyRV5bMC05YS1mXXs4fS1bMC05YS1mXXs0fS03WzAtOWEtZl17M30tWzg5YWJdWzAtOWEtZl17M30tWzAtOWEtZl17MTJ9JCJPChpHZXRDdXJyZW50QmFzRHJhZnRSZXNwb25zZRIxCgl3b3JrcGFwZXIYASABKAsyFi50YW1teS52MS5CYXNXb3JrcGFwZXJCBrpIA8gBASplChJCYXNXb3JrcGFwZXJTdGF0dXMSJAogQkFTX1dPUktQQVBFUl9TVEFUVVNfVU5TUEVDSUZJRUQQABIpCiVCQVNfV09SS1BBUEVSX1NUQVRVU19EUkFGVF9OT1RfTE9ER0VEEAEywgEKClRheFNlcnZpY2USUwoOQ3JlYXRlQmFzRHJhZnQSHy50YW1teS52MS5DcmVhdGVCYXNEcmFmdFJlcXVlc3QaIC50YW1teS52MS5DcmVhdGVCYXNEcmFmdFJlc3BvbnNlEl8KEkdldEN1cnJlbnRCYXNEcmFmdBIjLnRhbW15LnYxLkdldEN1cnJlbnRCYXNEcmFmdFJlcXVlc3QaJC50YW1teS52MS5HZXRDdXJyZW50QmFzRHJhZnRSZXNwb25zZUJHWkVnaXRodWIuY29tL3RhbW15YXBwL3RhbW15L3NlcnZpY2VzL2NvcmUvaW50ZXJuYWwvZ2VuL3RhbW15L3YxO3RhbW15djFiBnByb3RvMw", [file_buf_validate_validate, file_google_protobuf_timestamp, file_tammy_v1_common, file_tammy_v1_organisation]);
+  fileDesc("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aWNlX2RhdGUuY2FsZW5kYXISKURhdGUgbXVzdCBleGlzdCBpbiB0aGUgR3JlZ29yaWFuIGNhbGVuZGFyGpwBdGhpcy5kYXkgPD0gKHRoaXMubW9udGggPT0gMiA/ICgodGhpcy55ZWFyICUgNCA9PSAwICYmICh0aGlzLnllYXIgJSAxMDAgIT0gMCB8fCB0aGlzLnllYXIgJSA0MDAgPT0gMCkpID8gMjkgOiAyOCkgOiAodGhpcy5tb250aCBpbiBbNCwgNiwgOSwgMTFdID8gMzAgOiAzMSkpyAEBEr4CChNhY3R1YWxfcGF5bWVudF9kYXRlGA8gASgLMhMudGFtbXkudjEuQ2l2aWxEYXRlQoYCukiCAroB/gEKMkJhc1B1cmNoYXNlU291cmNlTGluZS5hY3R1YWxfcGF5bWVudF9kYXRlLmNhbGVuZGFyEilEYXRlIG11c3QgZXhpc3QgaW4gdGhlIEdyZWdvcmlhbiBjYWxlbmRhchqcAXRoaXMuZGF5IDw9ICh0aGlzLm1vbnRoID09IDIgPyAoKHRoaXMueWVhciAlIDQgPT0gMCAmJiAodGhpcy55ZWFyICUgMTAwICE9IDAgfHwgdGhpcy55ZWFyICUgNDAwID09IDApKSA/IDI5IDogMjgpIDogKHRoaXMubW9udGggaW4gWzQsIDYsIDksIDExXSA/IDMwIDogMzEpKUgEiAEBEsACChVub3JtYWxfdGF4X2V2ZW50X2RhdGUYECABKAsyEy50YW1teS52MS5DaXZpbERhdGVCiwK6SIcCugGAAgo0QmFzUHVyY2hhc2VTb3VyY2VMaW5lLm5vcm1hbF90YXhfZXZlbnRfZGF0ZS5jYWxlbmRhchIpRGF0ZSBtdXN0IGV4aXN0IGluIHRoZSBHcmVnb3JpYW4gY2FsZW5kYXIanAF0aGlzLmRheSA8PSAodGhpcy5tb250aCA9PSAyID8gKCh0aGlzLnllYXIgJSA0ID09IDAgJiYgKHRoaXMueWVhciAlIDEwMCAhPSAwIHx8IHRoaXMueWVhciAlIDQwMCA9PSAwKSkgPyAyOSA6IDI4KSA6ICh0aGlzLm1vbnRoIGluIFs0LCA2LCA5LCAxMV0gPyAzMCA6IDMxKSnIAQESOwoMY2xhaW1fcGVyaW9kGBEgASgLMh0udGFtbXkudjEuUHVyY2hhc2VDbGFpbVBlcmlvZEIGukgDyAEBEsABCg9hbGxvY2F0ZWRfZ3Jvc3MYEiABKAsyDy50YW1teS52MS5Nb25leUKVAbpIkQG6AYoBCilCYXNQdXJjaGFzZVNvdXJjZUxpbmUuYWxsb2NhdGVkX2dyb3NzLmF1ZBInRXhhY3Qgbm9ubmVnYXRpdmUgQVVEIG1vbmV5IGlzIHJlcXVpcmVkGjR0aGlzLmN1cnJlbmN5X2NvZGUgPT0gJ0FVRCcgJiYgdGhpcy5taW5vcl91bml0cyA+PSAwyAEBEroBCgxzdXBwbGllcl9nc3QYEyABKAsyDy50YW1teS52MS5Nb25leUKSAbpIjgG6AYcBCiZCYXNQdXJjaGFzZVNvdXJjZUxpbmUuc3VwcGxpZXJfZ3N0LmF1ZBInRXhhY3Qgbm9ubmVnYXRpdmUgQVVEIG1vbmV5IGlzIHJlcXVpcmVkGjR0aGlzLmN1cnJlbmN5X2NvZGUgPT0gJ0FVRCcgJiYgdGhpcy5taW5vcl91bml0cyA+PSAwyAEBEroBCgxlbGlnaWJsZV9nc3QYFCABKAsyDy50YW1teS52MS5Nb25leUKSAbpIjgG6AYcBCiZCYXNQdXJjaGFzZVNvdXJjZUxpbmUuZWxpZ2libGVfZ3N0LmF1ZBInRXhhY3Qgbm9ubmVnYXRpdmUgQVVEIG1vbmV5IGlzIHJlcXVpcmVkGjR0aGlzLmN1cnJlbmN5X2NvZGUgPT0gJ0FVRCcgJiYgdGhpcy5taW5vcl91bml0cyA+PSAwyAEBErgBCgtjbGFpbWVkX2dzdBgVIAEoCzIPLnRhbW15LnYxLk1vbmV5QpEBukiNAboBhgEKJUJhc1B1cmNoYXNlU291cmNlTGluZS5jbGFpbWVkX2dzdC5hdWQSJ0V4YWN0IG5vbm5lZ2F0aXZlIEFVRCBtb25leSBpcyByZXF1aXJlZBo0dGhpcy5jdXJyZW5jeV9jb2RlID09ICdBVUQnICYmIHRoaXMubWlub3JfdW5pdHMgPj0gMMgBARI9CghldmlkZW5jZRgWIAEoCzIjLnRhbW15LnYxLlB1cmNoYXNlUmV0YWluZWRTb3VyY2VSZWZCBrpIA8gBARIgCg9zb3VyY2VfcmV2aXNpb24YFyABKARCB7pIBDICKAESHAoLc291cmNlX2hhc2gYGCABKAxCB7pIBHoCaCA62AG6SNQBGtEBCh5wdXJjaGFzZS5iYXMuc291cmNlX2hhc2hfcGFpcnMSRVBheW1lbnQgYW5kIGF0dHJpYnV0aW9uIGlkZW50aXRpZXMgbmVlZCB0aGVpciBpbW11dGFibGUgc291cmNlIGhhc2hlcxpoaGFzKHRoaXMucGF5bWVudF9pZCkgPT0gaGFzKHRoaXMucGF5bWVudF9oYXNoKSAmJiBoYXModGhpcy5hdHRyaWJ1dGlvbl9pZCkgPT0gaGFzKHRoaXMuYXR0cmlidXRpb25faGFzaClCDQoLX3BheW1lbnRfaWRCDwoNX3BheW1lbnRfaGFzaEIRCg9fYXR0cmlidXRpb25faWRCEwoRX2F0dHJpYnV0aW9uX2hhc2hCFgoUX2FjdHVhbF9wYXltZW50X2RhdGUirwgKFkJhc1B1cmNoYXNlRnV0dXJlQ2xhaW0SYQoLZGVmZXJyYWxfaWQYASABKAlCTLpISXJHMkVeWzAtOWEtZl17OH0tWzAtOWEtZl17NH0tN1swLTlhLWZdezN9LVs4OWFiXVswLTlhLWZdezN9LVswLTlhLWZdezEyfSQSZQoPb3JnYW5pc2F0aW9uX2lkGAIgASgJQky6SElyRzJFXlswLTlhLWZdezh9LVswLTlhLWZdezR9LTdbMC05YS1mXXszfS1bODlhYl1bMC05YS1mXXszfS1bMC05YS1mXXsxMn0kEmAKCnBvc3RpbmdfaWQYAyABKAlCTLpISXJHMkVeWzAtOWEtZl17OH0tWzAtOWEtZl17NH0tN1swLTlhLWZdezN9LVs4OWFiXVswLTlhLWZdezN9LVswLTlhLWZdezEyfSQSYQoLZG9jdW1lbnRfaWQYBCABKAlCTLpISXJHMkVeWzAtOWEtZl17OH0tWzAtOWEtZl17NH0tN1swLTlhLWZdezN9LVs4OWFiXVswLTlhLWZdezN9LVswLTlhLWZdezEyfSQSIwoSYWNjb3VudGluZ192ZXJzaW9uGAUgASgEQge6SAQyAigBEh4KDWRlZmVycmFsX2hhc2gYBiABKAxCB7pIBHoCaCASOwoHcG9ydGlvbhgHIAEoCzIiLnRhbW15LnYxLlB1cmNoYXNlR3N0U291cmNlUG9ydGlvbkIGukgDyAEBEj4KD2FmZmVjdGVkX3BlcmlvZBgIIAEoCzIdLnRhbW15LnYxLlB1cmNoYXNlQ2xhaW1QZXJpb2RCBrpIA8gBARJCCg10aW1pbmdfcmV2aWV3GAkgASgLMiMudGFtbXkudjEuUHVyY2hhc2VDbGFpbVRpbWluZ1Jldmlld0IGukgDyAEBEsUBChZhbGxvY2F0ZWRfZGVmZXJyZWRfZ3N0GAogASgLMg8udGFtbXkudjEuTW9uZXlCkwG6SI8BugGIAQoncHVyY2hhc2UuYmFzLmZ1dHVyZV9jbGFpbS5hbGxvY2F0ZWRfZ3N0EidFeGFjdCBub25uZWdhdGl2ZSBBVUQgbW9uZXkgaXMgcmVxdWlyZWQaNHRoaXMuY3VycmVuY3lfY29kZSA9PSAnQVVEJyAmJiB0aGlzLm1pbm9yX3VuaXRzID49IDDIAQESGgoGcmVhc29uGAsgASgJQgq6SAdyBRABGIAEEmMKDWFjdG9yX3VzZXJfaWQYDCABKAlCTLpISXJHMkVeWzAtOWEtZl17OH0tWzAtOWEtZl17NH0tN1swLTlhLWZdezN9LVs4OWFiXVswLTlhLWZdezN9LVswLTlhLWZdezEyfSQSNwoLcmVjb3JkZWRfYXQYDSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQga6SAPIAQEi3wwKF0Jhc1B1cmNoYXNlTGVnYWN5UmV2aWV3ElgKAmlkGAEgASgJQky6SElyRzJFXlswLTlhLWZdezh9LVswLTlhLWZdezR9LTdbMC05YS1mXXszfS1bODlhYl1bMC05YS1mXXszfS1bMC05YS1mXXsxMn0kEmUKD29yZ2FuaXNhdGlvbl9pZBgCIAEoCUJMukhJckcyRV5bMC05YS1mXXs4fS1bMC05YS1mXXs0fS03WzAtOWEtZl17M30tWzg5YWJdWzAtOWEtZl17M30tWzAtOWEtZl17MTJ9JBI5CgZzb3VyY2UYAyABKAsyIS50YW1teS52MS5MZWdhY3lQdXJjaGFzZVNvdXJjZVJlZkIGukgDyAEBEj4KD2FmZmVjdGVkX3BlcmlvZBgEIAEoCzIdLnRhbW15LnYxLlB1cmNoYXNlQ2xhaW1QZXJpb2RCBrpIA8gBARLAAgoWcmVwb3J0aW5nX2JhbGFuY2VfZGF0ZRgFIAEoCzITLnRhbW15LnYxLkNpdmlsRGF0ZUKKArpIhgK6Af8BCjNwdXJjaGFzZS5iYXMubGVnYWN5LnJlcG9ydGluZ19iYWxhbmNlX2RhdGUuY2FsZW5kYXISKURhdGUgbXVzdCBleGlzdCBpbiB0aGUgR3JlZ29yaWFuIGNhbGVuZGFyGpwBdGhpcy5kYXkgPD0gKHRoaXMubW9udGggPT0gMiA/ICgodGhpcy55ZWFyICUgNCA9PSAwICYmICh0aGlzLnllYXIgJSAxMDAgIT0gMCB8fCB0aGlzLnllYXIgJSA0MDAgPT0gMCkpID8gMjkgOiAyOCkgOiAodGhpcy5tb250aCBpbiBbNCwgNiwgOSwgMTFdID8gMzAgOiAzMSkpyAEBEkQKC2Rpc3Bvc2l0aW9uGAYgASgOMiMudGFtbXkudjEuTGVnYWN5UHVyY2hhc2VEaXNwb3NpdGlvbkIKukgHggEEEAEgABJFChlwcmV2aW91c2x5X2NsYWltZWRfcGVyaW9kGAcgASgLMh0udGFtbXkudjEuUHVyY2hhc2VDbGFpbVBlcmlvZEgAiAEBEkAKDmNsYWltX2V2aWRlbmNlGAggASgLMiMudGFtbXkudjEuUHVyY2hhc2VSZXRhaW5lZFNvdXJjZVJlZkgBiAEBEmwKEWxpbmtlZF9wb3N0aW5nX2lkGAkgASgJQky6SElyRzJFXlswLTlhLWZdezh9LVswLTlhLWZdezR9LTdbMC05YS1mXXszfS1bODlhYl1bMC05YS1mXXszfS1bMC05YS1mXXsxMn0kSAKIAQESGgoGcmVhc29uGAogASgJQgq6SAdyBRABGIAEEiAKD3NvdXJjZV9yZXZpc2lvbhgLIAEoBEIHukgEMgIoARIcCgtzb3VyY2VfaGFzaBgMIAEoDEIHukgEegJoIBJjCg1hY3Rvcl91c2VyX2lkGA0gASgJQky6SElyRzJFXlswLTlhLWZdezh9LVswLTlhLWZdezR9LTdbMC05YS1mXXszfS1bODlhYl1bMC05YS1mXXszfS1bMC05YS1mXXsxMn0kEjcKC3JlY29yZGVkX2F0GA4gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIGukgDyAEBOsYCukjCAhqtAQobcHVyY2hhc2UuYmFzLmxlZ2FjeS5jbGFpbWVkEjJBbHJlYWR5IGNsYWltZWQgbmVlZHMgcmV0YWluZWQgcGVyaW9kIGFuZCBldmlkZW5jZRpadGhpcy5kaXNwb3NpdGlvbiAhPSAyIHx8IChoYXModGhpcy5wcmV2aW91c2x5X2NsYWltZWRfcGVyaW9kKSAmJiBoYXModGhpcy5jbGFpbV9ldmlkZW5jZSkpGo8BCiFwdXJjaGFzZS5iYXMubGVnYWN5LmV2aWRlbmNlX29ubHkSNEV2aWRlbmNlLW9ubHkgcmV2aWV3IG11c3QgbGluayB0aGUgZXhpc3RpbmcgcHVyY2hhc2UaNHRoaXMuZGlzcG9zaXRpb24gIT0gNSB8fCBoYXModGhpcy5saW5rZWRfcG9zdGluZ19pZClCHAoaX3ByZXZpb3VzbHlfY2xhaW1lZF9wZXJpb2RCEQoPX2NsYWltX2V2aWRlbmNlQhQKEl9saW5rZWRfcG9zdGluZ19pZCKVAgoYQmFzUHVyY2hhc2VMZWdhY3lTdXBwb3J0El8KCXJldmlld19pZBgBIAEoCUJMukhJckcyRV5bMC05YS1mXXs4fS1bMC05YS1mXXs0fS03WzAtOWEtZl17M30tWzg5YWJdWzAtOWEtZl17M30tWzAtOWEtZl17MTJ9JBJACgRraW5kGAIgASgOMiYudGFtbXkudjEuQmFzUHVyY2hhc2VMZWdhY3lTdXBwb3J0S2luZEIKukgHggEEEAEgABIZCghzZXF1ZW5jZRgDIAEoDUIHukgEKgIoARI7CgZzb3VyY2UYBCABKAsyIy50YW1teS52MS5QdXJjaGFzZVJldGFpbmVkU291cmNlUmVmQga6SAPIAQEi4g8KEUJhc1B1cmNoYXNlUmV2aWV3Ej0KDWxlZ2FjeV9zb3VyY2UYASABKAsyIS50YW1teS52MS5MZWdhY3lQdXJjaGFzZVNvdXJjZVJlZkgAiAEBEmUKCnBvc3RpbmdfaWQYAiABKAlCTLpISXJHMkVeWzAtOWEtZl17OH0tWzAtOWEtZl17NH0tN1swLTlhLWZdezN9LVs4OWFiXVswLTlhLWZdezN9LVswLTlhLWZdezEyfSRIAYgBARJlCgpwYXltZW50X2lkGAMgASgJQky6SElyRzJFXlswLTlhLWZdezh9LVswLTlhLWZdezR9LTdbMC05YS1mXXszfS1bODlhYl1bMC05YS1mXXszfS1bMC05YS1mXXsxMn0kSAKIAQESZgoLZGVmZXJyYWxfaWQYBCABKAlCTLpISXJHMkVeWzAtOWEtZl17OH0tWzAtOWEtZl17NH0tN1swLTlhLWZdezN9LVs4OWFiXVswLTlhLWZdezN9LVswLTlhLWZdezEyfSRIA4gBARI6CgZzdGF0dXMYBSABKA4yHi50YW1teS52MS5QdXJjaGFzZVJldmlld1N0YXR1c0IKukgHggEEEAEgABI+Cg9hZmZlY3RlZF9wZXJpb2QYBiABKAsyHS50YW1teS52MS5QdXJjaGFzZUNsYWltUGVyaW9kQga6SAPIAQESrAIKDGludm9pY2VfZGF0ZRgHIAEoCzITLnRhbW15LnYxLkNpdmlsRGF0ZUL7AbpI9wG6AfMBCidCYXNQdXJjaGFzZVJldmlldy5pbnZvaWNlX2RhdGUuY2FsZW5kYXISKURhdGUgbXVzdCBleGlzdCBpbiB0aGUgR3JlZ29yaWFuIGNhbGVuZGFyGpwBdGhpcy5kYXkgPD0gKHRoaXMubW9udGggPT0gMiA/ICgodGhpcy55ZWFyICUgNCA9PSAwICYmICh0aGlzLnllYXIgJSAxMDAgIT0gMCB8fCB0aGlzLnllYXIgJSA0MDAgPT0gMCkpID8gMjkgOiAyOCkgOiAodGhpcy5tb250aCBpbiBbNCwgNiwgOSwgMTFdID8gMzAgOiAzMSkpSASIAQESugIKE2FjdHVhbF9wYXltZW50X2RhdGUYCCABKAsyEy50YW1teS52MS5DaXZpbERhdGVCggK6SP4BugH6AQouQmFzUHVyY2hhc2VSZXZpZXcuYWN0dWFsX3BheW1lbnRfZGF0ZS5jYWxlbmRhchIpRGF0ZSBtdXN0IGV4aXN0IGluIHRoZSBHcmVnb3JpYW4gY2FsZW5kYXIanAF0aGlzLmRheSA8PSAodGhpcy5tb250aCA9PSAyID8gKCh0aGlzLnllYXIgJSA0ID09IDAgJiYgKHRoaXMueWVhciAlIDEwMCAhPSAwIHx8IHRoaXMueWVhciAlIDQwMCA9PSAwKSkgPyAyOSA6IDI4KSA6ICh0aGlzLm1vbnRoIGluIFs0LCA2LCA5LCAxMV0gPyAzMCA6IDMxKSlIBYgBARK2AQoMZWxpZ2libGVfZ3N0GAkgASgLMg8udGFtbXkudjEuTW9uZXlCjgG6SIoBugGDAQoiQmFzUHVyY2hhc2VSZXZpZXcuZWxpZ2libGVfZ3N0LmF1ZBInRXhhY3Qgbm9ubmVnYXRpdmUgQVVEIG1vbmV5IGlzIHJlcXVpcmVkGjR0aGlzLmN1cnJlbmN5X2NvZGUgPT0gJ0FVRCcgJiYgdGhpcy5taW5vcl91bml0cyA+PSAwyAEBErgBCg11bmNsYWltZWRfZ3N0GAogASgLMg8udGFtbXkudjEuTW9uZXlCjwG6SIsBugGEAQojQmFzUHVyY2hhc2VSZXZpZXcudW5jbGFpbWVkX2dzdC5hdWQSJ0V4YWN0IG5vbm5lZ2F0aXZlIEFVRCBtb25leSBpcyByZXF1aXJlZBo0dGhpcy5jdXJyZW5jeV9jb2RlID09ICdBVUQnICYmIHRoaXMubWlub3JfdW5pdHMgPj0gMMgBARI9Cg1sZWdhY3lfcmV2aWV3GAsgASgLMiEudGFtbXkudjEuQmFzUHVyY2hhc2VMZWdhY3lSZXZpZXdIBogBARJGChdmdXR1cmVfY2xhaW1fb2JsaWdhdGlvbhgMIAEoCzIgLnRhbW15LnYxLkJhc1B1cmNoYXNlRnV0dXJlQ2xhaW1IB4gBARI6CghldmlkZW5jZRgNIAEoCzIjLnRhbW15LnYxLlB1cmNoYXNlUmV0YWluZWRTb3VyY2VSZWZICIgBARIgCg9zb3VyY2VfcmV2aXNpb24YDiABKARCB7pIBDICKAESHAoLc291cmNlX2hhc2gYDyABKAxCB7pIBHoCaCASGgoGcmVhc29uGBAgASgJQgq6SAdyBRABGIAEEjkKBGtpbmQYESABKA4yHy50YW1teS52MS5CYXNQdXJjaGFzZVJldmlld0tpbmRCCrpIB4IBBBABIABCEAoOX2xlZ2FjeV9zb3VyY2VCDQoLX3Bvc3RpbmdfaWRCDQoLX3BheW1lbnRfaWRCDgoMX2RlZmVycmFsX2lkQg8KDV9pbnZvaWNlX2RhdGVCFgoUX2FjdHVhbF9wYXltZW50X2RhdGVCEAoOX2xlZ2FjeV9yZXZpZXdCGgoYX2Z1dHVyZV9jbGFpbV9vYmxpZ2F0aW9uQgsKCV9ldmlkZW5jZSLFCgoMQmFzV29ya3BhcGVyElgKAmlkGAEgASgJQky6SElyRzJFXlswLTlhLWZdezh9LVswLTlhLWZdezR9LTdbMC05YS1mXXszfS1bODlhYl1bMC05YS1mXXszfS1bMC05YS1mXXsxMn0kEmUKD29yZ2FuaXNhdGlvbl9pZBgCIAEoCUJMukhJckcyRV5bMC05YS1mXXs4fS1bMC05YS1mXXs0fS03WzAtOWEtZl17M30tWzg5YWJdWzAtOWEtZl17M30tWzAtOWEtZl17MTJ9JBIYCgd2ZXJzaW9uGAMgASgEQge6SAQyAigBEjEKDHBlcmlvZF9zdGFydBgEIAEoCzITLnRhbW15LnYxLkNpdmlsRGF0ZUIGukgDyAEBEi8KCnBlcmlvZF9lbmQYBSABKAsyEy50YW1teS52MS5DaXZpbERhdGVCBrpIA8gBARI2CgZzdGF0dXMYBiABKA4yHC50YW1teS52MS5CYXNXb3JrcGFwZXJTdGF0dXNCCLpIBYIBAhABEikKCHNhbGVzX2cxGAcgASgLMg8udGFtbXkudjEuTW9uZXlCBrpIA8gBARIwCg9nc3Rfb25fc2FsZXNfMWEYCCABKAsyDy50YW1teS52MS5Nb25leUIGukgDyAEBEi8KDmdzdF9jcmVkaXRzXzFiGAkgASgLMg8udGFtbXkudjEuTW9uZXlCBrpIA8gBARIwCg9uZXRfZ3N0X3BheWFibGUYCiABKAsyDy50YW1teS52MS5Nb25leUIGukgDyAEBEjMKB3NvdXJjZXMYCyADKAsyFy50YW1teS52MS5CYXNTb3VyY2VMaW5lQgm6SAaSAQMQ6AcSNgoKY3JlYXRlZF9hdBgMIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBrpIA8gBARIvCglnc3RfYmFzaXMYDSABKA4yEi50YW1teS52MS5Hc3RCYXNpc0IIukgFggECEAESPgoNc2FsZXNfc291cmNlcxgOIAMoCzIcLnRhbW15LnYxLkJhc1NhbGVzU291cmNlTGluZUIJukgGkgEDEOgHEiMKEnNvdXJjZV9maW5nZXJwcmludBgPIAEoDEIHukgEegIYIBIXCg9zb3VyY2VzX2NoYW5nZWQYECABKAgSKAoPcmV2aWV3X3dhcm5pbmdzGBEgAygJQg+6SAySAQkQCiIFcgMY9AMSJAocZXhjbHVkZWRfY2FzaF9wdXJjaGFzZV9jb3VudBgSIAEoBBJEChBwdXJjaGFzZV9zb3VyY2VzGBMgAygLMh8udGFtbXkudjEuQmFzUHVyY2hhc2VTb3VyY2VMaW5lQgm6SAaSAQMQ6AcSQAoQcHVyY2hhc2VfcmV2aWV3cxgUIAMoCzIbLnRhbW15LnYxLkJhc1B1cmNoYXNlUmV2aWV3Qgm6SAaSAQMQ6AcSMgoUbGVnYWN5X2NhbmRpZGF0ZV9nc3QYFSABKAsyDy50YW1teS52MS5Nb25leUgAiAEBElIKFnB1cmNoYXNlX3NvdXJjZV9mb3JtYXQYFiABKA4yIS50YW1teS52MS5CYXNQdXJjaGFzZVNvdXJjZUZvcm1hdEIKukgHggEEEAEgAEgBiAEBEk4KF2xlZ2FjeV9wdXJjaGFzZV9zdXBwb3J0GBcgAygLMiIudGFtbXkudjEuQmFzUHVyY2hhc2VMZWdhY3lTdXBwb3J0Qgm6SAaSAQMQ6AdCFwoVX2xlZ2FjeV9jYW5kaWRhdGVfZ3N0QhkKF19wdXJjaGFzZV9zb3VyY2VfZm9ybWF0Ip0CChVDcmVhdGVCYXNEcmFmdFJlcXVlc3QSOQoPY29tbWFuZF9jb250ZXh0GAEgASgLMhgudGFtbXkudjEuQ29tbWFuZENvbnRleHRCBrpIA8gBARJlCg9vcmdhbmlzYXRpb25faWQYAiABKAlCTLpISXJHMkVeWzAtOWEtZl17OH0tWzAtOWEtZl17NH0tN1swLTlhLWZdezN9LVs4OWFiXVswLTlhLWZdezN9LVswLTlhLWZdezEyfSQSMQoMcGVyaW9kX3N0YXJ0GAMgASgLMhMudGFtbXkudjEuQ2l2aWxEYXRlQga6SAPIAQESLwoKcGVyaW9kX2VuZBgEIAEoCzITLnRhbW15LnYxLkNpdmlsRGF0ZUIGukgDyAEBIksKFkNyZWF0ZUJhc0RyYWZ0UmVzcG9uc2USMQoJd29ya3BhcGVyGAEgASgLMhYudGFtbXkudjEuQmFzV29ya3BhcGVyQga6SAPIAQEiwwEKGUdldEN1cnJlbnRCYXNEcmFmdFJlcXVlc3QSPwoOYXV0aGVudGljYXRpb24YASABKAsyHy50YW1teS52MS5BdXRoZW50aWNhdGlvbkNvbnRleHRCBrpIA8gBARJlCg9vcmdhbmlzYXRpb25faWQYAiABKAlCTLpISXJHMkVeWzAtOWEtZl17OH0tWzAtOWEtZl17NH0tN1swLTlhLWZdezN9LVs4OWFiXVswLTlhLWZdezN9LVswLTlhLWZdezEyfSQiTwoaR2V0Q3VycmVudEJhc0RyYWZ0UmVzcG9uc2USMQoJd29ya3BhcGVyGAEgASgLMhYudGFtbXkudjEuQmFzV29ya3BhcGVyQga6SAPIAQEqZQoSQmFzV29ya3BhcGVyU3RhdHVzEiQKIEJBU19XT1JLUEFQRVJfU1RBVFVTX1VOU1BFQ0lGSUVEEAASKQolQkFTX1dPUktQQVBFUl9TVEFUVVNfRFJBRlRfTk9UX0xPREdFRBABKpMFChVCYXNQdXJjaGFzZVJldmlld0tpbmQSKAokQkFTX1BVUkNIQVNFX1JFVklFV19LSU5EX1VOU1BFQ0lGSUVEEAASMwovQkFTX1BVUkNIQVNFX1JFVklFV19LSU5EX1VOUkVTT0xWRURfRUxJR0lCSUxJVFkQARItCilCQVNfUFVSQ0hBU0VfUkVWSUVXX0tJTkRfTUlTU0lOR19FVklERU5DRRACEikKJUJBU19QVVJDSEFTRV9SRVZJRVdfS0lORF9DTEFJTV9USU1JTkcQAxIsCihCQVNfUFVSQ0hBU0VfUkVWSUVXX0tJTkRfRVhDTFVERURfVU5QQUlEEAQSPgo6QkFTX1BVUkNIQVNFX1JFVklFV19LSU5EX0VYQ0xVREVEX1BSSVZBVEVfT1JfTk9OQ1JFRElUQUJMRRAFEiYKIkJBU19QVVJDSEFTRV9SRVZJRVdfS0lORF9EVVBMSUNBVEUQBhIzCi9CQVNfUFVSQ0hBU0VfUkVWSUVXX0tJTkRfVU5TVVBQT1JURURfU0VUVExFTUVOVBAHEjIKLkJBU19QVVJDSEFTRV9SRVZJRVdfS0lORF9ERUZFUlJFRF9GVVRVUkVfQ0xBSU0QCBIwCixCQVNfUFVSQ0hBU0VfUkVWSUVXX0tJTkRfT0xEX0xFR0FDWV9ET0NVTUVOVBAJEjQKMEJBU19QVVJDSEFTRV9SRVZJRVdfS0lORF9VTkRBVEVEX0xFR0FDWV9ET0NVTUVOVBAKEiwKKEJBU19QVVJDSEFTRV9SRVZJRVdfS0lORF9PUEVOSU5HX1BBWUFCTEUQCxIsCihCQVNfUFVSQ0hBU0VfUkVWSUVXX0tJTkRfUkVTT0xWRURfTEVHQUNZEAwqrQEKHEJhc1B1cmNoYXNlTGVnYWN5U3VwcG9ydEtpbmQSMAosQkFTX1BVUkNIQVNFX0xFR0FDWV9TVVBQT1JUX0tJTkRfVU5TUEVDSUZJRUQQABIsCihCQVNfUFVSQ0hBU0VfTEVHQUNZX1NVUFBPUlRfS0lORF9QQVlNRU5UEAESLQopQkFTX1BVUkNIQVNFX0xFR0FDWV9TVVBQT1JUX0tJTkRfRVZJREVOQ0UQAipzChdCYXNQdXJjaGFzZVNvdXJjZUZvcm1hdBIqCiZCQVNfUFVSQ0hBU0VfU09VUkNFX0ZPUk1BVF9VTlNQRUNJRklFRBAAEiwKKEJBU19QVVJDSEFTRV9TT1VSQ0VfRk9STUFUX1JFQ09OQ0lMRURfVjEQATLCAQoKVGF4U2VydmljZRJTCg5DcmVhdGVCYXNEcmFmdBIfLnRhbW15LnYxLkNyZWF0ZUJhc0RyYWZ0UmVxdWVzdBogLnRhbW15LnYxLkNyZWF0ZUJhc0RyYWZ0UmVzcG9uc2USXwoSR2V0Q3VycmVudEJhc0RyYWZ0EiMudGFtbXkudjEuR2V0Q3VycmVudEJhc0RyYWZ0UmVxdWVzdBokLnRhbW15LnYxLkdldEN1cnJlbnRCYXNEcmFmdFJlc3BvbnNlQkdaRWdpdGh1Yi5jb20vdGFtbXlhcHAvdGFtbXkvc2VydmljZXMvY29yZS9pbnRlcm5hbC9nZW4vdGFtbXkvdjE7dGFtbXl2MWIGcHJvdG8z", [file_buf_validate_validate, file_google_protobuf_timestamp, file_tammy_v1_common, file_tammy_v1_organisation, file_tammy_v1_purchases]);
 
 /**
  * @generated from message tammy.v1.BasSourceLine
@@ -119,6 +121,436 @@ export const BasSalesSourceLineSchema: GenMessage<BasSalesSourceLine> = /*@__PUR
   messageDesc(file_tammy_v1_tax, 1);
 
 /**
+ * Reconciled 1B claimed source. Invoice, actual payment and normal tax event remain separate.
+ *
+ * @generated from message tammy.v1.BasPurchaseSourceLine
+ */
+export type BasPurchaseSourceLine = Message<"tammy.v1.BasPurchaseSourceLine"> & {
+  /**
+   * @generated from field: string posting_id = 1;
+   */
+  postingId: string;
+
+  /**
+   * @generated from field: bytes posting_hash = 2;
+   */
+  postingHash: Uint8Array;
+
+  /**
+   * @generated from field: string document_id = 3;
+   */
+  documentId: string;
+
+  /**
+   * @generated from field: bytes original_content_hash = 4;
+   */
+  originalContentHash: Uint8Array;
+
+  /**
+   * @generated from field: bytes reviewed_snapshot_hash = 5;
+   */
+  reviewedSnapshotHash: Uint8Array;
+
+  /**
+   * @generated from field: optional string payment_id = 6;
+   */
+  paymentId?: string | undefined;
+
+  /**
+   * @generated from field: optional bytes payment_hash = 7;
+   */
+  paymentHash?: Uint8Array | undefined;
+
+  /**
+   * @generated from field: optional string attribution_id = 8;
+   */
+  attributionId?: string | undefined;
+
+  /**
+   * @generated from field: optional bytes attribution_hash = 9;
+   */
+  attributionHash?: Uint8Array | undefined;
+
+  /**
+   * @generated from field: uint32 allocation_sequence = 10;
+   */
+  allocationSequence: number;
+
+  /**
+   * @generated from field: tammy.v1.PurchaseUse use = 11;
+   */
+  use: PurchaseUse;
+
+  /**
+   * @generated from field: tammy.v1.PurchaseBasClassification bas_classification = 12;
+   */
+  basClassification: PurchaseBasClassification;
+
+  /**
+   * @generated from field: tammy.v1.PurchaseCashFlowClassification cash_flow_classification = 13;
+   */
+  cashFlowClassification: PurchaseCashFlowClassification;
+
+  /**
+   * @generated from field: tammy.v1.CivilDate invoice_date = 14;
+   */
+  invoiceDate?: CivilDate | undefined;
+
+  /**
+   * @generated from field: optional tammy.v1.CivilDate actual_payment_date = 15;
+   */
+  actualPaymentDate?: CivilDate | undefined;
+
+  /**
+   * @generated from field: tammy.v1.CivilDate normal_tax_event_date = 16;
+   */
+  normalTaxEventDate?: CivilDate | undefined;
+
+  /**
+   * @generated from field: tammy.v1.PurchaseClaimPeriod claim_period = 17;
+   */
+  claimPeriod?: PurchaseClaimPeriod | undefined;
+
+  /**
+   * @generated from field: tammy.v1.Money allocated_gross = 18;
+   */
+  allocatedGross?: Money | undefined;
+
+  /**
+   * @generated from field: tammy.v1.Money supplier_gst = 19;
+   */
+  supplierGst?: Money | undefined;
+
+  /**
+   * @generated from field: tammy.v1.Money eligible_gst = 20;
+   */
+  eligibleGst?: Money | undefined;
+
+  /**
+   * @generated from field: tammy.v1.Money claimed_gst = 21;
+   */
+  claimedGst?: Money | undefined;
+
+  /**
+   * @generated from field: tammy.v1.PurchaseRetainedSourceRef evidence = 22;
+   */
+  evidence?: PurchaseRetainedSourceRef | undefined;
+
+  /**
+   * @generated from field: uint64 source_revision = 23;
+   */
+  sourceRevision: bigint;
+
+  /**
+   * @generated from field: bytes source_hash = 24;
+   */
+  sourceHash: Uint8Array;
+};
+
+/**
+ * Describes the message tammy.v1.BasPurchaseSourceLine.
+ * Use `create(BasPurchaseSourceLineSchema)` to create a new message.
+ */
+export const BasPurchaseSourceLineSchema: GenMessage<BasPurchaseSourceLine> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_tax, 2);
+
+/**
+ * One immutable deferral allocation portion. The amount is core-computed for this portion,
+ * never the whole deferral repeated on every row. All deadline/timing facts are saved for exact exports.
+ *
+ * @generated from message tammy.v1.BasPurchaseFutureClaim
+ */
+export type BasPurchaseFutureClaim = Message<"tammy.v1.BasPurchaseFutureClaim"> & {
+  /**
+   * @generated from field: string deferral_id = 1;
+   */
+  deferralId: string;
+
+  /**
+   * @generated from field: string organisation_id = 2;
+   */
+  organisationId: string;
+
+  /**
+   * @generated from field: string posting_id = 3;
+   */
+  postingId: string;
+
+  /**
+   * @generated from field: string document_id = 4;
+   */
+  documentId: string;
+
+  /**
+   * @generated from field: uint64 accounting_version = 5;
+   */
+  accountingVersion: bigint;
+
+  /**
+   * @generated from field: bytes deferral_hash = 6;
+   */
+  deferralHash: Uint8Array;
+
+  /**
+   * @generated from field: tammy.v1.PurchaseGstSourcePortion portion = 7;
+   */
+  portion?: PurchaseGstSourcePortion | undefined;
+
+  /**
+   * @generated from field: tammy.v1.PurchaseClaimPeriod affected_period = 8;
+   */
+  affectedPeriod?: PurchaseClaimPeriod | undefined;
+
+  /**
+   * @generated from field: tammy.v1.PurchaseClaimTimingReview timing_review = 9;
+   */
+  timingReview?: PurchaseClaimTimingReview | undefined;
+
+  /**
+   * @generated from field: tammy.v1.Money allocated_deferred_gst = 10;
+   */
+  allocatedDeferredGst?: Money | undefined;
+
+  /**
+   * @generated from field: string reason = 11;
+   */
+  reason: string;
+
+  /**
+   * @generated from field: string actor_user_id = 12;
+   */
+  actorUserId: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp recorded_at = 13;
+   */
+  recordedAt?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message tammy.v1.BasPurchaseFutureClaim.
+ * Use `create(BasPurchaseFutureClaimSchema)` to create a new message.
+ */
+export const BasPurchaseFutureClaimSchema: GenMessage<BasPurchaseFutureClaim> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_tax, 3);
+
+/**
+ * Shallow immutable decision. Supporting payment/evidence links are retained once in
+ * BasWorkpaper.legacy_purchase_support; exports never need a live follow-up query.
+ *
+ * @generated from message tammy.v1.BasPurchaseLegacyReview
+ */
+export type BasPurchaseLegacyReview = Message<"tammy.v1.BasPurchaseLegacyReview"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string organisation_id = 2;
+   */
+  organisationId: string;
+
+  /**
+   * @generated from field: tammy.v1.LegacyPurchaseSourceRef source = 3;
+   */
+  source?: LegacyPurchaseSourceRef | undefined;
+
+  /**
+   * @generated from field: tammy.v1.PurchaseClaimPeriod affected_period = 4;
+   */
+  affectedPeriod?: PurchaseClaimPeriod | undefined;
+
+  /**
+   * @generated from field: tammy.v1.CivilDate reporting_balance_date = 5;
+   */
+  reportingBalanceDate?: CivilDate | undefined;
+
+  /**
+   * @generated from field: tammy.v1.LegacyPurchaseDisposition disposition = 6;
+   */
+  disposition: LegacyPurchaseDisposition;
+
+  /**
+   * @generated from field: optional tammy.v1.PurchaseClaimPeriod previously_claimed_period = 7;
+   */
+  previouslyClaimedPeriod?: PurchaseClaimPeriod | undefined;
+
+  /**
+   * @generated from field: optional tammy.v1.PurchaseRetainedSourceRef claim_evidence = 8;
+   */
+  claimEvidence?: PurchaseRetainedSourceRef | undefined;
+
+  /**
+   * @generated from field: optional string linked_posting_id = 9;
+   */
+  linkedPostingId?: string | undefined;
+
+  /**
+   * @generated from field: string reason = 10;
+   */
+  reason: string;
+
+  /**
+   * @generated from field: uint64 source_revision = 11;
+   */
+  sourceRevision: bigint;
+
+  /**
+   * @generated from field: bytes source_hash = 12;
+   */
+  sourceHash: Uint8Array;
+
+  /**
+   * @generated from field: string actor_user_id = 13;
+   */
+  actorUserId: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp recorded_at = 14;
+   */
+  recordedAt?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message tammy.v1.BasPurchaseLegacyReview.
+ * Use `create(BasPurchaseLegacyReviewSchema)` to create a new message.
+ */
+export const BasPurchaseLegacyReviewSchema: GenMessage<BasPurchaseLegacyReview> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_tax, 4);
+
+/**
+ * Globally bounded and deduplicated by review/kind/sequence/source; preserves meaningful link order.
+ *
+ * @generated from message tammy.v1.BasPurchaseLegacySupport
+ */
+export type BasPurchaseLegacySupport = Message<"tammy.v1.BasPurchaseLegacySupport"> & {
+  /**
+   * @generated from field: string review_id = 1;
+   */
+  reviewId: string;
+
+  /**
+   * @generated from field: tammy.v1.BasPurchaseLegacySupportKind kind = 2;
+   */
+  kind: BasPurchaseLegacySupportKind;
+
+  /**
+   * @generated from field: uint32 sequence = 3;
+   */
+  sequence: number;
+
+  /**
+   * @generated from field: tammy.v1.PurchaseRetainedSourceRef source = 4;
+   */
+  source?: PurchaseRetainedSourceRef | undefined;
+};
+
+/**
+ * Describes the message tammy.v1.BasPurchaseLegacySupport.
+ * Use `create(BasPurchaseLegacySupportSchema)` to create a new message.
+ */
+export const BasPurchaseLegacySupportSchema: GenMessage<BasPurchaseLegacySupport> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_tax, 5);
+
+/**
+ * @generated from message tammy.v1.BasPurchaseReview
+ */
+export type BasPurchaseReview = Message<"tammy.v1.BasPurchaseReview"> & {
+  /**
+   * @generated from field: optional tammy.v1.LegacyPurchaseSourceRef legacy_source = 1;
+   */
+  legacySource?: LegacyPurchaseSourceRef | undefined;
+
+  /**
+   * @generated from field: optional string posting_id = 2;
+   */
+  postingId?: string | undefined;
+
+  /**
+   * @generated from field: optional string payment_id = 3;
+   */
+  paymentId?: string | undefined;
+
+  /**
+   * @generated from field: optional string deferral_id = 4;
+   */
+  deferralId?: string | undefined;
+
+  /**
+   * @generated from field: tammy.v1.PurchaseReviewStatus status = 5;
+   */
+  status: PurchaseReviewStatus;
+
+  /**
+   * @generated from field: tammy.v1.PurchaseClaimPeriod affected_period = 6;
+   */
+  affectedPeriod?: PurchaseClaimPeriod | undefined;
+
+  /**
+   * @generated from field: optional tammy.v1.CivilDate invoice_date = 7;
+   */
+  invoiceDate?: CivilDate | undefined;
+
+  /**
+   * @generated from field: optional tammy.v1.CivilDate actual_payment_date = 8;
+   */
+  actualPaymentDate?: CivilDate | undefined;
+
+  /**
+   * @generated from field: tammy.v1.Money eligible_gst = 9;
+   */
+  eligibleGst?: Money | undefined;
+
+  /**
+   * @generated from field: tammy.v1.Money unclaimed_gst = 10;
+   */
+  unclaimedGst?: Money | undefined;
+
+  /**
+   * @generated from field: optional tammy.v1.BasPurchaseLegacyReview legacy_review = 11;
+   */
+  legacyReview?: BasPurchaseLegacyReview | undefined;
+
+  /**
+   * @generated from field: optional tammy.v1.BasPurchaseFutureClaim future_claim_obligation = 12;
+   */
+  futureClaimObligation?: BasPurchaseFutureClaim | undefined;
+
+  /**
+   * @generated from field: optional tammy.v1.PurchaseRetainedSourceRef evidence = 13;
+   */
+  evidence?: PurchaseRetainedSourceRef | undefined;
+
+  /**
+   * @generated from field: uint64 source_revision = 14;
+   */
+  sourceRevision: bigint;
+
+  /**
+   * @generated from field: bytes source_hash = 15;
+   */
+  sourceHash: Uint8Array;
+
+  /**
+   * @generated from field: string reason = 16;
+   */
+  reason: string;
+
+  /**
+   * @generated from field: tammy.v1.BasPurchaseReviewKind kind = 17;
+   */
+  kind: BasPurchaseReviewKind;
+};
+
+/**
+ * Describes the message tammy.v1.BasPurchaseReview.
+ * Use `create(BasPurchaseReviewSchema)` to create a new message.
+ */
+export const BasPurchaseReviewSchema: GenMessage<BasPurchaseReview> = /*@__PURE__*/
+  messageDesc(file_tammy_v1_tax, 6);
+
+/**
  * @generated from message tammy.v1.BasWorkpaper
  */
 export type BasWorkpaper = Message<"tammy.v1.BasWorkpaper"> & {
@@ -163,6 +595,8 @@ export type BasWorkpaper = Message<"tammy.v1.BasWorkpaper"> & {
   gstOnSales1a?: Money | undefined;
 
   /**
+   * In reconciled format, 1B includes only claimed purchase sources; legacy candidates are separate.
+   *
    * @generated from field: tammy.v1.Money gst_credits_1b = 9;
    */
   gstCredits1b?: Money | undefined;
@@ -213,6 +647,35 @@ export type BasWorkpaper = Message<"tammy.v1.BasWorkpaper"> & {
    * @generated from field: uint64 excluded_cash_purchase_count = 18;
    */
   excludedCashPurchaseCount: bigint;
+
+  /**
+   * @generated from field: repeated tammy.v1.BasPurchaseSourceLine purchase_sources = 19;
+   */
+  purchaseSources: BasPurchaseSourceLine[];
+
+  /**
+   * @generated from field: repeated tammy.v1.BasPurchaseReview purchase_reviews = 20;
+   */
+  purchaseReviews: BasPurchaseReview[];
+
+  /**
+   * Legacy candidates are distinct from reconciled entitlement; absence is not zero.
+   *
+   * @generated from field: optional tammy.v1.Money legacy_candidate_gst = 21;
+   */
+  legacyCandidateGst?: Money | undefined;
+
+  /**
+   * @generated from field: optional tammy.v1.BasPurchaseSourceFormat purchase_source_format = 22;
+   */
+  purchaseSourceFormat?: BasPurchaseSourceFormat | undefined;
+
+  /**
+   * Complete saved supporting provenance has one global bound, not a per-review multiplier.
+   *
+   * @generated from field: repeated tammy.v1.BasPurchaseLegacySupport legacy_purchase_support = 23;
+   */
+  legacyPurchaseSupport: BasPurchaseLegacySupport[];
 };
 
 /**
@@ -220,7 +683,7 @@ export type BasWorkpaper = Message<"tammy.v1.BasWorkpaper"> & {
  * Use `create(BasWorkpaperSchema)` to create a new message.
  */
 export const BasWorkpaperSchema: GenMessage<BasWorkpaper> = /*@__PURE__*/
-  messageDesc(file_tammy_v1_tax, 2);
+  messageDesc(file_tammy_v1_tax, 7);
 
 /**
  * @generated from message tammy.v1.CreateBasDraftRequest
@@ -252,7 +715,7 @@ export type CreateBasDraftRequest = Message<"tammy.v1.CreateBasDraftRequest"> & 
  * Use `create(CreateBasDraftRequestSchema)` to create a new message.
  */
 export const CreateBasDraftRequestSchema: GenMessage<CreateBasDraftRequest> = /*@__PURE__*/
-  messageDesc(file_tammy_v1_tax, 3);
+  messageDesc(file_tammy_v1_tax, 8);
 
 /**
  * @generated from message tammy.v1.CreateBasDraftResponse
@@ -269,7 +732,7 @@ export type CreateBasDraftResponse = Message<"tammy.v1.CreateBasDraftResponse"> 
  * Use `create(CreateBasDraftResponseSchema)` to create a new message.
  */
 export const CreateBasDraftResponseSchema: GenMessage<CreateBasDraftResponse> = /*@__PURE__*/
-  messageDesc(file_tammy_v1_tax, 4);
+  messageDesc(file_tammy_v1_tax, 9);
 
 /**
  * @generated from message tammy.v1.GetCurrentBasDraftRequest
@@ -291,7 +754,7 @@ export type GetCurrentBasDraftRequest = Message<"tammy.v1.GetCurrentBasDraftRequ
  * Use `create(GetCurrentBasDraftRequestSchema)` to create a new message.
  */
 export const GetCurrentBasDraftRequestSchema: GenMessage<GetCurrentBasDraftRequest> = /*@__PURE__*/
-  messageDesc(file_tammy_v1_tax, 5);
+  messageDesc(file_tammy_v1_tax, 10);
 
 /**
  * @generated from message tammy.v1.GetCurrentBasDraftResponse
@@ -308,7 +771,7 @@ export type GetCurrentBasDraftResponse = Message<"tammy.v1.GetCurrentBasDraftRes
  * Use `create(GetCurrentBasDraftResponseSchema)` to create a new message.
  */
 export const GetCurrentBasDraftResponseSchema: GenMessage<GetCurrentBasDraftResponse> = /*@__PURE__*/
-  messageDesc(file_tammy_v1_tax, 6);
+  messageDesc(file_tammy_v1_tax, 11);
 
 /**
  * @generated from enum tammy.v1.BasWorkpaperStatus
@@ -330,6 +793,131 @@ export enum BasWorkpaperStatus {
  */
 export const BasWorkpaperStatusSchema: GenEnum<BasWorkpaperStatus> = /*@__PURE__*/
   enumDesc(file_tammy_v1_tax, 0);
+
+/**
+ * Complete unresolved, excluded, unsupported, old, undated, opening and future claim review outcomes.
+ *
+ * @generated from enum tammy.v1.BasPurchaseReviewKind
+ */
+export enum BasPurchaseReviewKind {
+  /**
+   * @generated from enum value: BAS_PURCHASE_REVIEW_KIND_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: BAS_PURCHASE_REVIEW_KIND_UNRESOLVED_ELIGIBILITY = 1;
+   */
+  UNRESOLVED_ELIGIBILITY = 1,
+
+  /**
+   * @generated from enum value: BAS_PURCHASE_REVIEW_KIND_MISSING_EVIDENCE = 2;
+   */
+  MISSING_EVIDENCE = 2,
+
+  /**
+   * @generated from enum value: BAS_PURCHASE_REVIEW_KIND_CLAIM_TIMING = 3;
+   */
+  CLAIM_TIMING = 3,
+
+  /**
+   * @generated from enum value: BAS_PURCHASE_REVIEW_KIND_EXCLUDED_UNPAID = 4;
+   */
+  EXCLUDED_UNPAID = 4,
+
+  /**
+   * @generated from enum value: BAS_PURCHASE_REVIEW_KIND_EXCLUDED_PRIVATE_OR_NONCREDITABLE = 5;
+   */
+  EXCLUDED_PRIVATE_OR_NONCREDITABLE = 5,
+
+  /**
+   * @generated from enum value: BAS_PURCHASE_REVIEW_KIND_DUPLICATE = 6;
+   */
+  DUPLICATE = 6,
+
+  /**
+   * @generated from enum value: BAS_PURCHASE_REVIEW_KIND_UNSUPPORTED_SETTLEMENT = 7;
+   */
+  UNSUPPORTED_SETTLEMENT = 7,
+
+  /**
+   * @generated from enum value: BAS_PURCHASE_REVIEW_KIND_DEFERRED_FUTURE_CLAIM = 8;
+   */
+  DEFERRED_FUTURE_CLAIM = 8,
+
+  /**
+   * @generated from enum value: BAS_PURCHASE_REVIEW_KIND_OLD_LEGACY_DOCUMENT = 9;
+   */
+  OLD_LEGACY_DOCUMENT = 9,
+
+  /**
+   * @generated from enum value: BAS_PURCHASE_REVIEW_KIND_UNDATED_LEGACY_DOCUMENT = 10;
+   */
+  UNDATED_LEGACY_DOCUMENT = 10,
+
+  /**
+   * @generated from enum value: BAS_PURCHASE_REVIEW_KIND_OPENING_PAYABLE = 11;
+   */
+  OPENING_PAYABLE = 11,
+
+  /**
+   * @generated from enum value: BAS_PURCHASE_REVIEW_KIND_RESOLVED_LEGACY = 12;
+   */
+  RESOLVED_LEGACY = 12,
+}
+
+/**
+ * Describes the enum tammy.v1.BasPurchaseReviewKind.
+ */
+export const BasPurchaseReviewKindSchema: GenEnum<BasPurchaseReviewKind> = /*@__PURE__*/
+  enumDesc(file_tammy_v1_tax, 1);
+
+/**
+ * @generated from enum tammy.v1.BasPurchaseLegacySupportKind
+ */
+export enum BasPurchaseLegacySupportKind {
+  /**
+   * @generated from enum value: BAS_PURCHASE_LEGACY_SUPPORT_KIND_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: BAS_PURCHASE_LEGACY_SUPPORT_KIND_PAYMENT = 1;
+   */
+  PAYMENT = 1,
+
+  /**
+   * @generated from enum value: BAS_PURCHASE_LEGACY_SUPPORT_KIND_EVIDENCE = 2;
+   */
+  EVIDENCE = 2,
+}
+
+/**
+ * Describes the enum tammy.v1.BasPurchaseLegacySupportKind.
+ */
+export const BasPurchaseLegacySupportKindSchema: GenEnum<BasPurchaseLegacySupportKind> = /*@__PURE__*/
+  enumDesc(file_tammy_v1_tax, 2);
+
+/**
+ * @generated from enum tammy.v1.BasPurchaseSourceFormat
+ */
+export enum BasPurchaseSourceFormat {
+  /**
+   * @generated from enum value: BAS_PURCHASE_SOURCE_FORMAT_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: BAS_PURCHASE_SOURCE_FORMAT_RECONCILED_V1 = 1;
+   */
+  RECONCILED_V1 = 1,
+}
+
+/**
+ * Describes the enum tammy.v1.BasPurchaseSourceFormat.
+ */
+export const BasPurchaseSourceFormatSchema: GenEnum<BasPurchaseSourceFormat> = /*@__PURE__*/
+  enumDesc(file_tammy_v1_tax, 3);
 
 /**
  * @generated from service tammy.v1.TaxService

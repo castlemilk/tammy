@@ -72,10 +72,25 @@ message GetDocumentResponse {
   Document document = 1 [(buf.validate.field).required = true];
 }
 
+enum DocumentAccountingFilter {
+  DOCUMENT_ACCOUNTING_FILTER_UNSPECIFIED = 0;
+  DOCUMENT_ACCOUNTING_FILTER_UNPOSTED = 1;
+  DOCUMENT_ACCOUNTING_FILTER_POSTED = 2;
+  DOCUMENT_ACCOUNTING_FILTER_NEEDS_GST_REVIEW = 3;
+}
+
 message ListDocumentsRequest {
   AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
   string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
   PageRequest page = 3 [(buf.validate.field).required = true];
+  optional DocumentStatus status = 4 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  optional DocumentAccountingFilter accounting = 5 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
 }
 message ListDocumentsResponse {
   repeated Document documents = 1 [(buf.validate.field).repeated.max_items = 200];

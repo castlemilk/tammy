@@ -30,6 +30,7 @@
     "./tammy/v1/invoices_pb.js": "./src/gen/tammy/v1/invoices_pb.ts",
     "./tammy/v1/organisation_pb.js": "./src/gen/tammy/v1/organisation_pb.ts",
     "./tammy/v1/overview_pb.js": "./src/gen/tammy/v1/overview_pb.ts",
+    "./tammy/v1/purchases_pb.js": "./src/gen/tammy/v1/purchases_pb.ts",
     "./tammy/v1/reporting_capability_pb.js": "./src/gen/tammy/v1/reporting_capability_pb.ts",
     "./tammy/v1/sbr_pb.js": "./src/gen/tammy/v1/sbr_pb.ts",
     "./tammy/v1/system_pb.js": "./src/gen/tammy/v1/system_pb.ts",

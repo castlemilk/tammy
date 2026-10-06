@@ -6,6 +6,7 @@ import "buf/validate/validate.proto";
 import "google/protobuf/timestamp.proto";
 import "tammy/v1/common.proto";
 import "tammy/v1/organisation.proto";
+import "tammy/v1/purchases.proto";
 
 option go_package = "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1";
 
@@ -35,6 +36,253 @@ message BasSalesSourceLine {
   bytes source_hash = 9 [(buf.validate.field).bytes.len = 32];
 }
 
+// Reconciled 1B claimed source. Invoice, actual payment and normal tax event remain separate.
+message BasPurchaseSourceLine {
+  option (buf.validate.message).cel = {
+    id: "purchase.bas.source_hash_pairs"
+    message: "Payment and attribution identities need their immutable source hashes"
+    expression: "has(this.payment_id) == has(this.payment_hash) && has(this.attribution_id) == has(this.attribution_hash)"
+  };
+  string posting_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  bytes posting_hash = 2 [(buf.validate.field).bytes.len = 32];
+  string document_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  bytes original_content_hash = 4 [(buf.validate.field).bytes.len = 32];
+  bytes reviewed_snapshot_hash = 5 [(buf.validate.field).bytes.len = 32];
+  optional string payment_id = 6 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  optional bytes payment_hash = 7 [(buf.validate.field).bytes.len = 32];
+  optional string attribution_id = 8 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  optional bytes attribution_hash = 9 [(buf.validate.field).bytes.len = 32];
+  uint32 allocation_sequence = 10 [(buf.validate.field).uint32.gte = 1];
+  PurchaseUse use = 11 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  PurchaseBasClassification bas_classification = 12 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  PurchaseCashFlowClassification cash_flow_classification = 13 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  CivilDate invoice_date = 14 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "BasPurchaseSourceLine.invoice_date.calendar"
+      message: "Date must exist in the Gregorian calendar"
+      expression: "this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))"
+    }
+  ];
+  optional CivilDate actual_payment_date = 15 [(buf.validate.field).cel = {
+    id: "BasPurchaseSourceLine.actual_payment_date.calendar"
+    message: "Date must exist in the Gregorian calendar"
+    expression: "this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))"
+  }];
+  CivilDate normal_tax_event_date = 16 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "BasPurchaseSourceLine.normal_tax_event_date.calendar"
+      message: "Date must exist in the Gregorian calendar"
+      expression: "this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))"
+    }
+  ];
+  PurchaseClaimPeriod claim_period = 17 [(buf.validate.field).required = true];
+  Money allocated_gross = 18 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "BasPurchaseSourceLine.allocated_gross.aud"
+      message: "Exact nonnegative AUD money is required"
+      expression: "this.currency_code == 'AUD' && this.minor_units >= 0"
+    }
+  ];
+  Money supplier_gst = 19 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "BasPurchaseSourceLine.supplier_gst.aud"
+      message: "Exact nonnegative AUD money is required"
+      expression: "this.currency_code == 'AUD' && this.minor_units >= 0"
+    }
+  ];
+  Money eligible_gst = 20 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "BasPurchaseSourceLine.eligible_gst.aud"
+      message: "Exact nonnegative AUD money is required"
+      expression: "this.currency_code == 'AUD' && this.minor_units >= 0"
+    }
+  ];
+  Money claimed_gst = 21 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "BasPurchaseSourceLine.claimed_gst.aud"
+      message: "Exact nonnegative AUD money is required"
+      expression: "this.currency_code == 'AUD' && this.minor_units >= 0"
+    }
+  ];
+  PurchaseRetainedSourceRef evidence = 22 [(buf.validate.field).required = true];
+  uint64 source_revision = 23 [(buf.validate.field).uint64.gte = 1];
+  bytes source_hash = 24 [(buf.validate.field).bytes.len = 32];
+}
+// Complete unresolved, excluded, unsupported, old, undated, opening and future claim review outcomes.
+enum BasPurchaseReviewKind {
+  BAS_PURCHASE_REVIEW_KIND_UNSPECIFIED = 0;
+  BAS_PURCHASE_REVIEW_KIND_UNRESOLVED_ELIGIBILITY = 1;
+  BAS_PURCHASE_REVIEW_KIND_MISSING_EVIDENCE = 2;
+  BAS_PURCHASE_REVIEW_KIND_CLAIM_TIMING = 3;
+  BAS_PURCHASE_REVIEW_KIND_EXCLUDED_UNPAID = 4;
+  BAS_PURCHASE_REVIEW_KIND_EXCLUDED_PRIVATE_OR_NONCREDITABLE = 5;
+  BAS_PURCHASE_REVIEW_KIND_DUPLICATE = 6;
+  BAS_PURCHASE_REVIEW_KIND_UNSUPPORTED_SETTLEMENT = 7;
+  BAS_PURCHASE_REVIEW_KIND_DEFERRED_FUTURE_CLAIM = 8;
+  BAS_PURCHASE_REVIEW_KIND_OLD_LEGACY_DOCUMENT = 9;
+  BAS_PURCHASE_REVIEW_KIND_UNDATED_LEGACY_DOCUMENT = 10;
+  BAS_PURCHASE_REVIEW_KIND_OPENING_PAYABLE = 11;
+  BAS_PURCHASE_REVIEW_KIND_RESOLVED_LEGACY = 12;
+}
+
+// One immutable deferral allocation portion. The amount is core-computed for this portion,
+// never the whole deferral repeated on every row. All deadline/timing facts are saved for exact exports.
+message BasPurchaseFutureClaim {
+  string deferral_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string posting_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string document_id = 4 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 accounting_version = 5 [(buf.validate.field).uint64.gte = 1];
+  bytes deferral_hash = 6 [(buf.validate.field).bytes.len = 32];
+  PurchaseGstSourcePortion portion = 7 [(buf.validate.field).required = true];
+  PurchaseClaimPeriod affected_period = 8 [(buf.validate.field).required = true];
+  PurchaseClaimTimingReview timing_review = 9 [(buf.validate.field).required = true];
+  Money allocated_deferred_gst = 10 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "purchase.bas.future_claim.allocated_gst"
+      message: "Exact nonnegative AUD money is required"
+      expression: "this.currency_code == 'AUD' && this.minor_units >= 0"
+    }
+  ];
+  string reason = 11 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 512
+  }];
+  string actor_user_id = 12 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  google.protobuf.Timestamp recorded_at = 13 [(buf.validate.field).required = true];
+}
+
+// Shallow immutable decision. Supporting payment/evidence links are retained once in
+// BasWorkpaper.legacy_purchase_support; exports never need a live follow-up query.
+message BasPurchaseLegacyReview {
+  option (buf.validate.message).cel = {
+    id: "purchase.bas.legacy.claimed"
+    message: "Already claimed needs retained period and evidence"
+    expression: "this.disposition != 2 || (has(this.previously_claimed_period) && has(this.claim_evidence))"
+  };
+  option (buf.validate.message).cel = {
+    id: "purchase.bas.legacy.evidence_only"
+    message: "Evidence-only review must link the existing purchase"
+    expression: "this.disposition != 5 || has(this.linked_posting_id)"
+  };
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  LegacyPurchaseSourceRef source = 3 [(buf.validate.field).required = true];
+  PurchaseClaimPeriod affected_period = 4 [(buf.validate.field).required = true];
+  CivilDate reporting_balance_date = 5 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "purchase.bas.legacy.reporting_balance_date.calendar"
+      message: "Date must exist in the Gregorian calendar"
+      expression: "this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))"
+    }
+  ];
+  LegacyPurchaseDisposition disposition = 6 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  optional PurchaseClaimPeriod previously_claimed_period = 7;
+  optional PurchaseRetainedSourceRef claim_evidence = 8;
+  optional string linked_posting_id = 9 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string reason = 10 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 512
+  }];
+  uint64 source_revision = 11 [(buf.validate.field).uint64.gte = 1];
+  bytes source_hash = 12 [(buf.validate.field).bytes.len = 32];
+  string actor_user_id = 13 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  google.protobuf.Timestamp recorded_at = 14 [(buf.validate.field).required = true];
+}
+
+enum BasPurchaseLegacySupportKind {
+  BAS_PURCHASE_LEGACY_SUPPORT_KIND_UNSPECIFIED = 0;
+  BAS_PURCHASE_LEGACY_SUPPORT_KIND_PAYMENT = 1;
+  BAS_PURCHASE_LEGACY_SUPPORT_KIND_EVIDENCE = 2;
+}
+
+// Globally bounded and deduplicated by review/kind/sequence/source; preserves meaningful link order.
+message BasPurchaseLegacySupport {
+  string review_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  BasPurchaseLegacySupportKind kind = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  uint32 sequence = 3 [(buf.validate.field).uint32.gte = 1];
+  PurchaseRetainedSourceRef source = 4 [(buf.validate.field).required = true];
+}
+
+message BasPurchaseReview {
+  optional LegacyPurchaseSourceRef legacy_source = 1;
+  optional string posting_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  optional string payment_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  optional string deferral_id = 4 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  PurchaseReviewStatus status = 5 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  PurchaseClaimPeriod affected_period = 6 [(buf.validate.field).required = true];
+  optional CivilDate invoice_date = 7 [(buf.validate.field).cel = {
+    id: "BasPurchaseReview.invoice_date.calendar"
+    message: "Date must exist in the Gregorian calendar"
+    expression: "this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))"
+  }];
+  optional CivilDate actual_payment_date = 8 [(buf.validate.field).cel = {
+    id: "BasPurchaseReview.actual_payment_date.calendar"
+    message: "Date must exist in the Gregorian calendar"
+    expression: "this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))"
+  }];
+  Money eligible_gst = 9 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "BasPurchaseReview.eligible_gst.aud"
+      message: "Exact nonnegative AUD money is required"
+      expression: "this.currency_code == 'AUD' && this.minor_units >= 0"
+    }
+  ];
+  Money unclaimed_gst = 10 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "BasPurchaseReview.unclaimed_gst.aud"
+      message: "Exact nonnegative AUD money is required"
+      expression: "this.currency_code == 'AUD' && this.minor_units >= 0"
+    }
+  ];
+  optional BasPurchaseLegacyReview legacy_review = 11;
+  optional BasPurchaseFutureClaim future_claim_obligation = 12;
+  optional PurchaseRetainedSourceRef evidence = 13;
+  uint64 source_revision = 14 [(buf.validate.field).uint64.gte = 1];
+  bytes source_hash = 15 [(buf.validate.field).bytes.len = 32];
+  string reason = 16 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 512
+  }];
+  BasPurchaseReviewKind kind = 17 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+}
+
+enum BasPurchaseSourceFormat {
+  BAS_PURCHASE_SOURCE_FORMAT_UNSPECIFIED = 0;
+  BAS_PURCHASE_SOURCE_FORMAT_RECONCILED_V1 = 1;
+}
+
 message BasWorkpaper {
   string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
   string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
@@ -44,6 +292,7 @@ message BasWorkpaper {
   BasWorkpaperStatus status = 6 [(buf.validate.field).enum.defined_only = true];
   Money sales_g1 = 7 [(buf.validate.field).required = true];
   Money gst_on_sales_1a = 8 [(buf.validate.field).required = true];
+  // In reconciled format, 1B includes only claimed purchase sources; legacy candidates are separate.
   Money gst_credits_1b = 9 [(buf.validate.field).required = true];
   Money net_gst_payable = 10 [(buf.validate.field).required = true];
   repeated BasSourceLine sources = 11 [(buf.validate.field).repeated.max_items = 1000];
@@ -60,6 +309,16 @@ message BasWorkpaper {
     }
   }];
   uint64 excluded_cash_purchase_count = 18;
+  repeated BasPurchaseSourceLine purchase_sources = 19 [(buf.validate.field).repeated.max_items = 1000];
+  repeated BasPurchaseReview purchase_reviews = 20 [(buf.validate.field).repeated.max_items = 1000];
+  // Legacy candidates are distinct from reconciled entitlement; absence is not zero.
+  optional Money legacy_candidate_gst = 21;
+  optional BasPurchaseSourceFormat purchase_source_format = 22 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  // Complete saved supporting provenance has one global bound, not a per-review multiplier.
+  repeated BasPurchaseLegacySupport legacy_purchase_support = 23 [(buf.validate.field).repeated.max_items = 1000];
 }
 
 message CreateBasDraftRequest {

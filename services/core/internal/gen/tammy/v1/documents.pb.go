@@ -72,6 +72,58 @@ func (DocumentStatus) EnumDescriptor() ([]byte, []int) {
 	return file_tammy_v1_documents_proto_rawDescGZIP(), []int{0}
 }
 
+type DocumentAccountingFilter int32
+
+const (
+	DocumentAccountingFilter_DOCUMENT_ACCOUNTING_FILTER_UNSPECIFIED      DocumentAccountingFilter = 0
+	DocumentAccountingFilter_DOCUMENT_ACCOUNTING_FILTER_UNPOSTED         DocumentAccountingFilter = 1
+	DocumentAccountingFilter_DOCUMENT_ACCOUNTING_FILTER_POSTED           DocumentAccountingFilter = 2
+	DocumentAccountingFilter_DOCUMENT_ACCOUNTING_FILTER_NEEDS_GST_REVIEW DocumentAccountingFilter = 3
+)
+
+// Enum value maps for DocumentAccountingFilter.
+var (
+	DocumentAccountingFilter_name = map[int32]string{
+		0: "DOCUMENT_ACCOUNTING_FILTER_UNSPECIFIED",
+		1: "DOCUMENT_ACCOUNTING_FILTER_UNPOSTED",
+		2: "DOCUMENT_ACCOUNTING_FILTER_POSTED",
+		3: "DOCUMENT_ACCOUNTING_FILTER_NEEDS_GST_REVIEW",
+	}
+	DocumentAccountingFilter_value = map[string]int32{
+		"DOCUMENT_ACCOUNTING_FILTER_UNSPECIFIED":      0,
+		"DOCUMENT_ACCOUNTING_FILTER_UNPOSTED":         1,
+		"DOCUMENT_ACCOUNTING_FILTER_POSTED":           2,
+		"DOCUMENT_ACCOUNTING_FILTER_NEEDS_GST_REVIEW": 3,
+	}
+)
+
+func (x DocumentAccountingFilter) Enum() *DocumentAccountingFilter {
+	p := new(DocumentAccountingFilter)
+	*p = x
+	return p
+}
+
+func (x DocumentAccountingFilter) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (DocumentAccountingFilter) Descriptor() protoreflect.EnumDescriptor {
+	return file_tammy_v1_documents_proto_enumTypes[1].Descriptor()
+}
+
+func (DocumentAccountingFilter) Type() protoreflect.EnumType {
+	return &file_tammy_v1_documents_proto_enumTypes[1]
+}
+
+func (x DocumentAccountingFilter) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use DocumentAccountingFilter.Descriptor instead.
+func (DocumentAccountingFilter) EnumDescriptor() ([]byte, []int) {
+	return file_tammy_v1_documents_proto_rawDescGZIP(), []int{1}
+}
+
 type DocumentCandidate struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	SupplierName  string                 `protobuf:"bytes,1,opt,name=supplier_name,json=supplierName,proto3" json:"supplier_name,omitempty"`
@@ -521,10 +573,12 @@ func (x *GetDocumentResponse) GetDocument() *Document {
 }
 
 type ListDocumentsRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Authentication *AuthenticationContext `protobuf:"bytes,1,opt,name=authentication,proto3" json:"authentication,omitempty"`
-	OrganisationId string                 `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId,proto3" json:"organisation_id,omitempty"`
-	Page           *PageRequest           `protobuf:"bytes,3,opt,name=page,proto3" json:"page,omitempty"`
+	state          protoimpl.MessageState    `protogen:"open.v1"`
+	Authentication *AuthenticationContext    `protobuf:"bytes,1,opt,name=authentication,proto3" json:"authentication,omitempty"`
+	OrganisationId string                    `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId,proto3" json:"organisation_id,omitempty"`
+	Page           *PageRequest              `protobuf:"bytes,3,opt,name=page,proto3" json:"page,omitempty"`
+	Status         *DocumentStatus           `protobuf:"varint,4,opt,name=status,proto3,enum=tammy.v1.DocumentStatus,oneof" json:"status,omitempty"`
+	Accounting     *DocumentAccountingFilter `protobuf:"varint,5,opt,name=accounting,proto3,enum=tammy.v1.DocumentAccountingFilter,oneof" json:"accounting,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -578,6 +632,20 @@ func (x *ListDocumentsRequest) GetPage() *PageRequest {
 		return x.Page
 	}
 	return nil
+}
+
+func (x *ListDocumentsRequest) GetStatus() DocumentStatus {
+	if x != nil && x.Status != nil {
+		return *x.Status
+	}
+	return DocumentStatus_DOCUMENT_STATUS_UNSPECIFIED
+}
+
+func (x *ListDocumentsRequest) GetAccounting() DocumentAccountingFilter {
+	if x != nil && x.Accounting != nil {
+		return *x.Accounting
+	}
+	return DocumentAccountingFilter_DOCUMENT_ACCOUNTING_FILTER_UNSPECIFIED
 }
 
 type ListDocumentsResponse struct {
@@ -791,11 +859,19 @@ const file_tammy_v1_documents_proto_rawDesc = "" +
 	"\vdocument_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\n" +
 	"documentId\"M\n" +
 	"\x13GetDocumentResponse\x126\n" +
-	"\bdocument\x18\x01 \x01(\v2\x12.tammy.v1.DocumentB\x06\xbaH\x03\xc8\x01\x01R\bdocument\"\x91\x02\n" +
+	"\bdocument\x18\x01 \x01(\v2\x12.tammy.v1.DocumentB\x06\xbaH\x03\xc8\x01\x01R\bdocument\"\xc3\x03\n" +
 	"\x14ListDocumentsRequest\x12O\n" +
 	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12u\n" +
 	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x121\n" +
-	"\x04page\x18\x03 \x01(\v2\x15.tammy.v1.PageRequestB\x06\xbaH\x03\xc8\x01\x01R\x04page\"\x84\x01\n" +
+	"\x04page\x18\x03 \x01(\v2\x15.tammy.v1.PageRequestB\x06\xbaH\x03\xc8\x01\x01R\x04page\x12A\n" +
+	"\x06status\x18\x04 \x01(\x0e2\x18.tammy.v1.DocumentStatusB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00H\x00R\x06status\x88\x01\x01\x12S\n" +
+	"\n" +
+	"accounting\x18\x05 \x01(\x0e2\".tammy.v1.DocumentAccountingFilterB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00H\x01R\n" +
+	"accounting\x88\x01\x01B\t\n" +
+	"\a_statusB\r\n" +
+	"\v_accounting\"\x84\x01\n" +
 	"\x15ListDocumentsResponse\x12;\n" +
 	"\tdocuments\x18\x01 \x03(\v2\x12.tammy.v1.DocumentB\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\tdocuments\x12.\n" +
 	"\x04page\x18\x02 \x01(\v2\x12.tammy.v1.PageInfoB\x06\xbaH\x03\xc8\x01\x01R\x04page\"\xcc\x02\n" +
@@ -810,7 +886,12 @@ const file_tammy_v1_documents_proto_rawDesc = "" +
 	"\x0eDocumentStatus\x12\x1f\n" +
 	"\x1bDOCUMENT_STATUS_UNSPECIFIED\x10\x00\x12 \n" +
 	"\x1cDOCUMENT_STATUS_NEEDS_REVIEW\x10\x01\x12\x1c\n" +
-	"\x18DOCUMENT_STATUS_REVIEWED\x10\x022\xe5\x02\n" +
+	"\x18DOCUMENT_STATUS_REVIEWED\x10\x02*\xc7\x01\n" +
+	"\x18DocumentAccountingFilter\x12*\n" +
+	"&DOCUMENT_ACCOUNTING_FILTER_UNSPECIFIED\x10\x00\x12'\n" +
+	"#DOCUMENT_ACCOUNTING_FILTER_UNPOSTED\x10\x01\x12%\n" +
+	"!DOCUMENT_ACCOUNTING_FILTER_POSTED\x10\x02\x12/\n" +
+	"+DOCUMENT_ACCOUNTING_FILTER_NEEDS_GST_REVIEW\x10\x032\xe5\x02\n" +
 	"\x0fDocumentService\x12S\n" +
 	"\x0eIngestDocument\x12\x1f.tammy.v1.IngestDocumentRequest\x1a .tammy.v1.IngestDocumentResponse\x12J\n" +
 	"\vGetDocument\x12\x1c.tammy.v1.GetDocumentRequest\x1a\x1d.tammy.v1.GetDocumentResponse\x12P\n" +
@@ -829,62 +910,65 @@ func file_tammy_v1_documents_proto_rawDescGZIP() []byte {
 	return file_tammy_v1_documents_proto_rawDescData
 }
 
-var file_tammy_v1_documents_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_tammy_v1_documents_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
 var file_tammy_v1_documents_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_tammy_v1_documents_proto_goTypes = []any{
 	(DocumentStatus)(0),                // 0: tammy.v1.DocumentStatus
-	(*DocumentCandidate)(nil),          // 1: tammy.v1.DocumentCandidate
-	(*Document)(nil),                   // 2: tammy.v1.Document
-	(*IngestDocumentRequest)(nil),      // 3: tammy.v1.IngestDocumentRequest
-	(*IngestDocumentResponse)(nil),     // 4: tammy.v1.IngestDocumentResponse
-	(*GetDocumentRequest)(nil),         // 5: tammy.v1.GetDocumentRequest
-	(*GetDocumentResponse)(nil),        // 6: tammy.v1.GetDocumentResponse
-	(*ListDocumentsRequest)(nil),       // 7: tammy.v1.ListDocumentsRequest
-	(*ListDocumentsResponse)(nil),      // 8: tammy.v1.ListDocumentsResponse
-	(*SaveDocumentReviewRequest)(nil),  // 9: tammy.v1.SaveDocumentReviewRequest
-	(*SaveDocumentReviewResponse)(nil), // 10: tammy.v1.SaveDocumentReviewResponse
-	(*CivilDate)(nil),                  // 11: tammy.v1.CivilDate
-	(*Money)(nil),                      // 12: tammy.v1.Money
-	(*timestamppb.Timestamp)(nil),      // 13: google.protobuf.Timestamp
-	(*CommandContext)(nil),             // 14: tammy.v1.CommandContext
-	(*AuthenticationContext)(nil),      // 15: tammy.v1.AuthenticationContext
-	(*PageRequest)(nil),                // 16: tammy.v1.PageRequest
-	(*PageInfo)(nil),                   // 17: tammy.v1.PageInfo
+	(DocumentAccountingFilter)(0),      // 1: tammy.v1.DocumentAccountingFilter
+	(*DocumentCandidate)(nil),          // 2: tammy.v1.DocumentCandidate
+	(*Document)(nil),                   // 3: tammy.v1.Document
+	(*IngestDocumentRequest)(nil),      // 4: tammy.v1.IngestDocumentRequest
+	(*IngestDocumentResponse)(nil),     // 5: tammy.v1.IngestDocumentResponse
+	(*GetDocumentRequest)(nil),         // 6: tammy.v1.GetDocumentRequest
+	(*GetDocumentResponse)(nil),        // 7: tammy.v1.GetDocumentResponse
+	(*ListDocumentsRequest)(nil),       // 8: tammy.v1.ListDocumentsRequest
+	(*ListDocumentsResponse)(nil),      // 9: tammy.v1.ListDocumentsResponse
+	(*SaveDocumentReviewRequest)(nil),  // 10: tammy.v1.SaveDocumentReviewRequest
+	(*SaveDocumentReviewResponse)(nil), // 11: tammy.v1.SaveDocumentReviewResponse
+	(*CivilDate)(nil),                  // 12: tammy.v1.CivilDate
+	(*Money)(nil),                      // 13: tammy.v1.Money
+	(*timestamppb.Timestamp)(nil),      // 14: google.protobuf.Timestamp
+	(*CommandContext)(nil),             // 15: tammy.v1.CommandContext
+	(*AuthenticationContext)(nil),      // 16: tammy.v1.AuthenticationContext
+	(*PageRequest)(nil),                // 17: tammy.v1.PageRequest
+	(*PageInfo)(nil),                   // 18: tammy.v1.PageInfo
 }
 var file_tammy_v1_documents_proto_depIdxs = []int32{
-	11, // 0: tammy.v1.DocumentCandidate.document_date:type_name -> tammy.v1.CivilDate
-	12, // 1: tammy.v1.DocumentCandidate.subtotal:type_name -> tammy.v1.Money
-	12, // 2: tammy.v1.DocumentCandidate.gst:type_name -> tammy.v1.Money
-	12, // 3: tammy.v1.DocumentCandidate.total:type_name -> tammy.v1.Money
+	12, // 0: tammy.v1.DocumentCandidate.document_date:type_name -> tammy.v1.CivilDate
+	13, // 1: tammy.v1.DocumentCandidate.subtotal:type_name -> tammy.v1.Money
+	13, // 2: tammy.v1.DocumentCandidate.gst:type_name -> tammy.v1.Money
+	13, // 3: tammy.v1.DocumentCandidate.total:type_name -> tammy.v1.Money
 	0,  // 4: tammy.v1.Document.status:type_name -> tammy.v1.DocumentStatus
-	1,  // 5: tammy.v1.Document.candidate:type_name -> tammy.v1.DocumentCandidate
-	13, // 6: tammy.v1.Document.created_at:type_name -> google.protobuf.Timestamp
-	13, // 7: tammy.v1.Document.reviewed_at:type_name -> google.protobuf.Timestamp
-	14, // 8: tammy.v1.IngestDocumentRequest.command_context:type_name -> tammy.v1.CommandContext
-	1,  // 9: tammy.v1.IngestDocumentRequest.candidate:type_name -> tammy.v1.DocumentCandidate
-	2,  // 10: tammy.v1.IngestDocumentResponse.document:type_name -> tammy.v1.Document
-	15, // 11: tammy.v1.GetDocumentRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	2,  // 12: tammy.v1.GetDocumentResponse.document:type_name -> tammy.v1.Document
-	15, // 13: tammy.v1.ListDocumentsRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	16, // 14: tammy.v1.ListDocumentsRequest.page:type_name -> tammy.v1.PageRequest
-	2,  // 15: tammy.v1.ListDocumentsResponse.documents:type_name -> tammy.v1.Document
-	17, // 16: tammy.v1.ListDocumentsResponse.page:type_name -> tammy.v1.PageInfo
-	14, // 17: tammy.v1.SaveDocumentReviewRequest.command_context:type_name -> tammy.v1.CommandContext
-	1,  // 18: tammy.v1.SaveDocumentReviewRequest.candidate:type_name -> tammy.v1.DocumentCandidate
-	2,  // 19: tammy.v1.SaveDocumentReviewResponse.document:type_name -> tammy.v1.Document
-	3,  // 20: tammy.v1.DocumentService.IngestDocument:input_type -> tammy.v1.IngestDocumentRequest
-	5,  // 21: tammy.v1.DocumentService.GetDocument:input_type -> tammy.v1.GetDocumentRequest
-	7,  // 22: tammy.v1.DocumentService.ListDocuments:input_type -> tammy.v1.ListDocumentsRequest
-	9,  // 23: tammy.v1.DocumentService.SaveDocumentReview:input_type -> tammy.v1.SaveDocumentReviewRequest
-	4,  // 24: tammy.v1.DocumentService.IngestDocument:output_type -> tammy.v1.IngestDocumentResponse
-	6,  // 25: tammy.v1.DocumentService.GetDocument:output_type -> tammy.v1.GetDocumentResponse
-	8,  // 26: tammy.v1.DocumentService.ListDocuments:output_type -> tammy.v1.ListDocumentsResponse
-	10, // 27: tammy.v1.DocumentService.SaveDocumentReview:output_type -> tammy.v1.SaveDocumentReviewResponse
-	24, // [24:28] is the sub-list for method output_type
-	20, // [20:24] is the sub-list for method input_type
-	20, // [20:20] is the sub-list for extension type_name
-	20, // [20:20] is the sub-list for extension extendee
-	0,  // [0:20] is the sub-list for field type_name
+	2,  // 5: tammy.v1.Document.candidate:type_name -> tammy.v1.DocumentCandidate
+	14, // 6: tammy.v1.Document.created_at:type_name -> google.protobuf.Timestamp
+	14, // 7: tammy.v1.Document.reviewed_at:type_name -> google.protobuf.Timestamp
+	15, // 8: tammy.v1.IngestDocumentRequest.command_context:type_name -> tammy.v1.CommandContext
+	2,  // 9: tammy.v1.IngestDocumentRequest.candidate:type_name -> tammy.v1.DocumentCandidate
+	3,  // 10: tammy.v1.IngestDocumentResponse.document:type_name -> tammy.v1.Document
+	16, // 11: tammy.v1.GetDocumentRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	3,  // 12: tammy.v1.GetDocumentResponse.document:type_name -> tammy.v1.Document
+	16, // 13: tammy.v1.ListDocumentsRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	17, // 14: tammy.v1.ListDocumentsRequest.page:type_name -> tammy.v1.PageRequest
+	0,  // 15: tammy.v1.ListDocumentsRequest.status:type_name -> tammy.v1.DocumentStatus
+	1,  // 16: tammy.v1.ListDocumentsRequest.accounting:type_name -> tammy.v1.DocumentAccountingFilter
+	3,  // 17: tammy.v1.ListDocumentsResponse.documents:type_name -> tammy.v1.Document
+	18, // 18: tammy.v1.ListDocumentsResponse.page:type_name -> tammy.v1.PageInfo
+	15, // 19: tammy.v1.SaveDocumentReviewRequest.command_context:type_name -> tammy.v1.CommandContext
+	2,  // 20: tammy.v1.SaveDocumentReviewRequest.candidate:type_name -> tammy.v1.DocumentCandidate
+	3,  // 21: tammy.v1.SaveDocumentReviewResponse.document:type_name -> tammy.v1.Document
+	4,  // 22: tammy.v1.DocumentService.IngestDocument:input_type -> tammy.v1.IngestDocumentRequest
+	6,  // 23: tammy.v1.DocumentService.GetDocument:input_type -> tammy.v1.GetDocumentRequest
+	8,  // 24: tammy.v1.DocumentService.ListDocuments:input_type -> tammy.v1.ListDocumentsRequest
+	10, // 25: tammy.v1.DocumentService.SaveDocumentReview:input_type -> tammy.v1.SaveDocumentReviewRequest
+	5,  // 26: tammy.v1.DocumentService.IngestDocument:output_type -> tammy.v1.IngestDocumentResponse
+	7,  // 27: tammy.v1.DocumentService.GetDocument:output_type -> tammy.v1.GetDocumentResponse
+	9,  // 28: tammy.v1.DocumentService.ListDocuments:output_type -> tammy.v1.ListDocumentsResponse
+	11, // 29: tammy.v1.DocumentService.SaveDocumentReview:output_type -> tammy.v1.SaveDocumentReviewResponse
+	26, // [26:30] is the sub-list for method output_type
+	22, // [22:26] is the sub-list for method input_type
+	22, // [22:22] is the sub-list for extension type_name
+	22, // [22:22] is the sub-list for extension extendee
+	0,  // [0:22] is the sub-list for field type_name
 }
 
 func init() { file_tammy_v1_documents_proto_init() }
@@ -894,12 +978,13 @@ func file_tammy_v1_documents_proto_init() {
 	}
 	file_tammy_v1_common_proto_init()
 	file_tammy_v1_documents_proto_msgTypes[0].OneofWrappers = []any{}
+	file_tammy_v1_documents_proto_msgTypes[6].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_tammy_v1_documents_proto_rawDesc), len(file_tammy_v1_documents_proto_rawDesc)),
-			NumEnums:      1,
+			NumEnums:      2,
 			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,

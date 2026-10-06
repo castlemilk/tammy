@@ -69,6 +69,181 @@ func (BasWorkpaperStatus) EnumDescriptor() ([]byte, []int) {
 	return file_tammy_v1_tax_proto_rawDescGZIP(), []int{0}
 }
 
+// Complete unresolved, excluded, unsupported, old, undated, opening and future claim review outcomes.
+type BasPurchaseReviewKind int32
+
+const (
+	BasPurchaseReviewKind_BAS_PURCHASE_REVIEW_KIND_UNSPECIFIED                       BasPurchaseReviewKind = 0
+	BasPurchaseReviewKind_BAS_PURCHASE_REVIEW_KIND_UNRESOLVED_ELIGIBILITY            BasPurchaseReviewKind = 1
+	BasPurchaseReviewKind_BAS_PURCHASE_REVIEW_KIND_MISSING_EVIDENCE                  BasPurchaseReviewKind = 2
+	BasPurchaseReviewKind_BAS_PURCHASE_REVIEW_KIND_CLAIM_TIMING                      BasPurchaseReviewKind = 3
+	BasPurchaseReviewKind_BAS_PURCHASE_REVIEW_KIND_EXCLUDED_UNPAID                   BasPurchaseReviewKind = 4
+	BasPurchaseReviewKind_BAS_PURCHASE_REVIEW_KIND_EXCLUDED_PRIVATE_OR_NONCREDITABLE BasPurchaseReviewKind = 5
+	BasPurchaseReviewKind_BAS_PURCHASE_REVIEW_KIND_DUPLICATE                         BasPurchaseReviewKind = 6
+	BasPurchaseReviewKind_BAS_PURCHASE_REVIEW_KIND_UNSUPPORTED_SETTLEMENT            BasPurchaseReviewKind = 7
+	BasPurchaseReviewKind_BAS_PURCHASE_REVIEW_KIND_DEFERRED_FUTURE_CLAIM             BasPurchaseReviewKind = 8
+	BasPurchaseReviewKind_BAS_PURCHASE_REVIEW_KIND_OLD_LEGACY_DOCUMENT               BasPurchaseReviewKind = 9
+	BasPurchaseReviewKind_BAS_PURCHASE_REVIEW_KIND_UNDATED_LEGACY_DOCUMENT           BasPurchaseReviewKind = 10
+	BasPurchaseReviewKind_BAS_PURCHASE_REVIEW_KIND_OPENING_PAYABLE                   BasPurchaseReviewKind = 11
+	BasPurchaseReviewKind_BAS_PURCHASE_REVIEW_KIND_RESOLVED_LEGACY                   BasPurchaseReviewKind = 12
+)
+
+// Enum value maps for BasPurchaseReviewKind.
+var (
+	BasPurchaseReviewKind_name = map[int32]string{
+		0:  "BAS_PURCHASE_REVIEW_KIND_UNSPECIFIED",
+		1:  "BAS_PURCHASE_REVIEW_KIND_UNRESOLVED_ELIGIBILITY",
+		2:  "BAS_PURCHASE_REVIEW_KIND_MISSING_EVIDENCE",
+		3:  "BAS_PURCHASE_REVIEW_KIND_CLAIM_TIMING",
+		4:  "BAS_PURCHASE_REVIEW_KIND_EXCLUDED_UNPAID",
+		5:  "BAS_PURCHASE_REVIEW_KIND_EXCLUDED_PRIVATE_OR_NONCREDITABLE",
+		6:  "BAS_PURCHASE_REVIEW_KIND_DUPLICATE",
+		7:  "BAS_PURCHASE_REVIEW_KIND_UNSUPPORTED_SETTLEMENT",
+		8:  "BAS_PURCHASE_REVIEW_KIND_DEFERRED_FUTURE_CLAIM",
+		9:  "BAS_PURCHASE_REVIEW_KIND_OLD_LEGACY_DOCUMENT",
+		10: "BAS_PURCHASE_REVIEW_KIND_UNDATED_LEGACY_DOCUMENT",
+		11: "BAS_PURCHASE_REVIEW_KIND_OPENING_PAYABLE",
+		12: "BAS_PURCHASE_REVIEW_KIND_RESOLVED_LEGACY",
+	}
+	BasPurchaseReviewKind_value = map[string]int32{
+		"BAS_PURCHASE_REVIEW_KIND_UNSPECIFIED":                       0,
+		"BAS_PURCHASE_REVIEW_KIND_UNRESOLVED_ELIGIBILITY":            1,
+		"BAS_PURCHASE_REVIEW_KIND_MISSING_EVIDENCE":                  2,
+		"BAS_PURCHASE_REVIEW_KIND_CLAIM_TIMING":                      3,
+		"BAS_PURCHASE_REVIEW_KIND_EXCLUDED_UNPAID":                   4,
+		"BAS_PURCHASE_REVIEW_KIND_EXCLUDED_PRIVATE_OR_NONCREDITABLE": 5,
+		"BAS_PURCHASE_REVIEW_KIND_DUPLICATE":                         6,
+		"BAS_PURCHASE_REVIEW_KIND_UNSUPPORTED_SETTLEMENT":            7,
+		"BAS_PURCHASE_REVIEW_KIND_DEFERRED_FUTURE_CLAIM":             8,
+		"BAS_PURCHASE_REVIEW_KIND_OLD_LEGACY_DOCUMENT":               9,
+		"BAS_PURCHASE_REVIEW_KIND_UNDATED_LEGACY_DOCUMENT":           10,
+		"BAS_PURCHASE_REVIEW_KIND_OPENING_PAYABLE":                   11,
+		"BAS_PURCHASE_REVIEW_KIND_RESOLVED_LEGACY":                   12,
+	}
+)
+
+func (x BasPurchaseReviewKind) Enum() *BasPurchaseReviewKind {
+	p := new(BasPurchaseReviewKind)
+	*p = x
+	return p
+}
+
+func (x BasPurchaseReviewKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (BasPurchaseReviewKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_tammy_v1_tax_proto_enumTypes[1].Descriptor()
+}
+
+func (BasPurchaseReviewKind) Type() protoreflect.EnumType {
+	return &file_tammy_v1_tax_proto_enumTypes[1]
+}
+
+func (x BasPurchaseReviewKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use BasPurchaseReviewKind.Descriptor instead.
+func (BasPurchaseReviewKind) EnumDescriptor() ([]byte, []int) {
+	return file_tammy_v1_tax_proto_rawDescGZIP(), []int{1}
+}
+
+type BasPurchaseLegacySupportKind int32
+
+const (
+	BasPurchaseLegacySupportKind_BAS_PURCHASE_LEGACY_SUPPORT_KIND_UNSPECIFIED BasPurchaseLegacySupportKind = 0
+	BasPurchaseLegacySupportKind_BAS_PURCHASE_LEGACY_SUPPORT_KIND_PAYMENT     BasPurchaseLegacySupportKind = 1
+	BasPurchaseLegacySupportKind_BAS_PURCHASE_LEGACY_SUPPORT_KIND_EVIDENCE    BasPurchaseLegacySupportKind = 2
+)
+
+// Enum value maps for BasPurchaseLegacySupportKind.
+var (
+	BasPurchaseLegacySupportKind_name = map[int32]string{
+		0: "BAS_PURCHASE_LEGACY_SUPPORT_KIND_UNSPECIFIED",
+		1: "BAS_PURCHASE_LEGACY_SUPPORT_KIND_PAYMENT",
+		2: "BAS_PURCHASE_LEGACY_SUPPORT_KIND_EVIDENCE",
+	}
+	BasPurchaseLegacySupportKind_value = map[string]int32{
+		"BAS_PURCHASE_LEGACY_SUPPORT_KIND_UNSPECIFIED": 0,
+		"BAS_PURCHASE_LEGACY_SUPPORT_KIND_PAYMENT":     1,
+		"BAS_PURCHASE_LEGACY_SUPPORT_KIND_EVIDENCE":    2,
+	}
+)
+
+func (x BasPurchaseLegacySupportKind) Enum() *BasPurchaseLegacySupportKind {
+	p := new(BasPurchaseLegacySupportKind)
+	*p = x
+	return p
+}
+
+func (x BasPurchaseLegacySupportKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (BasPurchaseLegacySupportKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_tammy_v1_tax_proto_enumTypes[2].Descriptor()
+}
+
+func (BasPurchaseLegacySupportKind) Type() protoreflect.EnumType {
+	return &file_tammy_v1_tax_proto_enumTypes[2]
+}
+
+func (x BasPurchaseLegacySupportKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use BasPurchaseLegacySupportKind.Descriptor instead.
+func (BasPurchaseLegacySupportKind) EnumDescriptor() ([]byte, []int) {
+	return file_tammy_v1_tax_proto_rawDescGZIP(), []int{2}
+}
+
+type BasPurchaseSourceFormat int32
+
+const (
+	BasPurchaseSourceFormat_BAS_PURCHASE_SOURCE_FORMAT_UNSPECIFIED   BasPurchaseSourceFormat = 0
+	BasPurchaseSourceFormat_BAS_PURCHASE_SOURCE_FORMAT_RECONCILED_V1 BasPurchaseSourceFormat = 1
+)
+
+// Enum value maps for BasPurchaseSourceFormat.
+var (
+	BasPurchaseSourceFormat_name = map[int32]string{
+		0: "BAS_PURCHASE_SOURCE_FORMAT_UNSPECIFIED",
+		1: "BAS_PURCHASE_SOURCE_FORMAT_RECONCILED_V1",
+	}
+	BasPurchaseSourceFormat_value = map[string]int32{
+		"BAS_PURCHASE_SOURCE_FORMAT_UNSPECIFIED":   0,
+		"BAS_PURCHASE_SOURCE_FORMAT_RECONCILED_V1": 1,
+	}
+)
+
+func (x BasPurchaseSourceFormat) Enum() *BasPurchaseSourceFormat {
+	p := new(BasPurchaseSourceFormat)
+	*p = x
+	return p
+}
+
+func (x BasPurchaseSourceFormat) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (BasPurchaseSourceFormat) Descriptor() protoreflect.EnumDescriptor {
+	return file_tammy_v1_tax_proto_enumTypes[3].Descriptor()
+}
+
+func (BasPurchaseSourceFormat) Type() protoreflect.EnumType {
+	return &file_tammy_v1_tax_proto_enumTypes[3]
+}
+
+func (x BasPurchaseSourceFormat) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use BasPurchaseSourceFormat.Descriptor instead.
+func (BasPurchaseSourceFormat) EnumDescriptor() ([]byte, []int) {
+	return file_tammy_v1_tax_proto_rawDescGZIP(), []int{3}
+}
+
 type BasSourceLine struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	DocumentId    string                 `protobuf:"bytes,1,opt,name=document_id,json=documentId,proto3" json:"document_id,omitempty"`
@@ -261,6 +436,768 @@ func (x *BasSalesSourceLine) GetSourceHash() []byte {
 	return nil
 }
 
+// Reconciled 1B claimed source. Invoice, actual payment and normal tax event remain separate.
+type BasPurchaseSourceLine struct {
+	state                  protoimpl.MessageState         `protogen:"open.v1"`
+	PostingId              string                         `protobuf:"bytes,1,opt,name=posting_id,json=postingId,proto3" json:"posting_id,omitempty"`
+	PostingHash            []byte                         `protobuf:"bytes,2,opt,name=posting_hash,json=postingHash,proto3" json:"posting_hash,omitempty"`
+	DocumentId             string                         `protobuf:"bytes,3,opt,name=document_id,json=documentId,proto3" json:"document_id,omitempty"`
+	OriginalContentHash    []byte                         `protobuf:"bytes,4,opt,name=original_content_hash,json=originalContentHash,proto3" json:"original_content_hash,omitempty"`
+	ReviewedSnapshotHash   []byte                         `protobuf:"bytes,5,opt,name=reviewed_snapshot_hash,json=reviewedSnapshotHash,proto3" json:"reviewed_snapshot_hash,omitempty"`
+	PaymentId              *string                        `protobuf:"bytes,6,opt,name=payment_id,json=paymentId,proto3,oneof" json:"payment_id,omitempty"`
+	PaymentHash            []byte                         `protobuf:"bytes,7,opt,name=payment_hash,json=paymentHash,proto3,oneof" json:"payment_hash,omitempty"`
+	AttributionId          *string                        `protobuf:"bytes,8,opt,name=attribution_id,json=attributionId,proto3,oneof" json:"attribution_id,omitempty"`
+	AttributionHash        []byte                         `protobuf:"bytes,9,opt,name=attribution_hash,json=attributionHash,proto3,oneof" json:"attribution_hash,omitempty"`
+	AllocationSequence     uint32                         `protobuf:"varint,10,opt,name=allocation_sequence,json=allocationSequence,proto3" json:"allocation_sequence,omitempty"`
+	Use                    PurchaseUse                    `protobuf:"varint,11,opt,name=use,proto3,enum=tammy.v1.PurchaseUse" json:"use,omitempty"`
+	BasClassification      PurchaseBasClassification      `protobuf:"varint,12,opt,name=bas_classification,json=basClassification,proto3,enum=tammy.v1.PurchaseBasClassification" json:"bas_classification,omitempty"`
+	CashFlowClassification PurchaseCashFlowClassification `protobuf:"varint,13,opt,name=cash_flow_classification,json=cashFlowClassification,proto3,enum=tammy.v1.PurchaseCashFlowClassification" json:"cash_flow_classification,omitempty"`
+	InvoiceDate            *CivilDate                     `protobuf:"bytes,14,opt,name=invoice_date,json=invoiceDate,proto3" json:"invoice_date,omitempty"`
+	ActualPaymentDate      *CivilDate                     `protobuf:"bytes,15,opt,name=actual_payment_date,json=actualPaymentDate,proto3,oneof" json:"actual_payment_date,omitempty"`
+	NormalTaxEventDate     *CivilDate                     `protobuf:"bytes,16,opt,name=normal_tax_event_date,json=normalTaxEventDate,proto3" json:"normal_tax_event_date,omitempty"`
+	ClaimPeriod            *PurchaseClaimPeriod           `protobuf:"bytes,17,opt,name=claim_period,json=claimPeriod,proto3" json:"claim_period,omitempty"`
+	AllocatedGross         *Money                         `protobuf:"bytes,18,opt,name=allocated_gross,json=allocatedGross,proto3" json:"allocated_gross,omitempty"`
+	SupplierGst            *Money                         `protobuf:"bytes,19,opt,name=supplier_gst,json=supplierGst,proto3" json:"supplier_gst,omitempty"`
+	EligibleGst            *Money                         `protobuf:"bytes,20,opt,name=eligible_gst,json=eligibleGst,proto3" json:"eligible_gst,omitempty"`
+	ClaimedGst             *Money                         `protobuf:"bytes,21,opt,name=claimed_gst,json=claimedGst,proto3" json:"claimed_gst,omitempty"`
+	Evidence               *PurchaseRetainedSourceRef     `protobuf:"bytes,22,opt,name=evidence,proto3" json:"evidence,omitempty"`
+	SourceRevision         uint64                         `protobuf:"varint,23,opt,name=source_revision,json=sourceRevision,proto3" json:"source_revision,omitempty"`
+	SourceHash             []byte                         `protobuf:"bytes,24,opt,name=source_hash,json=sourceHash,proto3" json:"source_hash,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *BasPurchaseSourceLine) Reset() {
+	*x = BasPurchaseSourceLine{}
+	mi := &file_tammy_v1_tax_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BasPurchaseSourceLine) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BasPurchaseSourceLine) ProtoMessage() {}
+
+func (x *BasPurchaseSourceLine) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_tax_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BasPurchaseSourceLine.ProtoReflect.Descriptor instead.
+func (*BasPurchaseSourceLine) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_tax_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *BasPurchaseSourceLine) GetPostingId() string {
+	if x != nil {
+		return x.PostingId
+	}
+	return ""
+}
+
+func (x *BasPurchaseSourceLine) GetPostingHash() []byte {
+	if x != nil {
+		return x.PostingHash
+	}
+	return nil
+}
+
+func (x *BasPurchaseSourceLine) GetDocumentId() string {
+	if x != nil {
+		return x.DocumentId
+	}
+	return ""
+}
+
+func (x *BasPurchaseSourceLine) GetOriginalContentHash() []byte {
+	if x != nil {
+		return x.OriginalContentHash
+	}
+	return nil
+}
+
+func (x *BasPurchaseSourceLine) GetReviewedSnapshotHash() []byte {
+	if x != nil {
+		return x.ReviewedSnapshotHash
+	}
+	return nil
+}
+
+func (x *BasPurchaseSourceLine) GetPaymentId() string {
+	if x != nil && x.PaymentId != nil {
+		return *x.PaymentId
+	}
+	return ""
+}
+
+func (x *BasPurchaseSourceLine) GetPaymentHash() []byte {
+	if x != nil {
+		return x.PaymentHash
+	}
+	return nil
+}
+
+func (x *BasPurchaseSourceLine) GetAttributionId() string {
+	if x != nil && x.AttributionId != nil {
+		return *x.AttributionId
+	}
+	return ""
+}
+
+func (x *BasPurchaseSourceLine) GetAttributionHash() []byte {
+	if x != nil {
+		return x.AttributionHash
+	}
+	return nil
+}
+
+func (x *BasPurchaseSourceLine) GetAllocationSequence() uint32 {
+	if x != nil {
+		return x.AllocationSequence
+	}
+	return 0
+}
+
+func (x *BasPurchaseSourceLine) GetUse() PurchaseUse {
+	if x != nil {
+		return x.Use
+	}
+	return PurchaseUse_PURCHASE_USE_UNSPECIFIED
+}
+
+func (x *BasPurchaseSourceLine) GetBasClassification() PurchaseBasClassification {
+	if x != nil {
+		return x.BasClassification
+	}
+	return PurchaseBasClassification_PURCHASE_BAS_CLASSIFICATION_UNSPECIFIED
+}
+
+func (x *BasPurchaseSourceLine) GetCashFlowClassification() PurchaseCashFlowClassification {
+	if x != nil {
+		return x.CashFlowClassification
+	}
+	return PurchaseCashFlowClassification_PURCHASE_CASH_FLOW_CLASSIFICATION_UNSPECIFIED
+}
+
+func (x *BasPurchaseSourceLine) GetInvoiceDate() *CivilDate {
+	if x != nil {
+		return x.InvoiceDate
+	}
+	return nil
+}
+
+func (x *BasPurchaseSourceLine) GetActualPaymentDate() *CivilDate {
+	if x != nil {
+		return x.ActualPaymentDate
+	}
+	return nil
+}
+
+func (x *BasPurchaseSourceLine) GetNormalTaxEventDate() *CivilDate {
+	if x != nil {
+		return x.NormalTaxEventDate
+	}
+	return nil
+}
+
+func (x *BasPurchaseSourceLine) GetClaimPeriod() *PurchaseClaimPeriod {
+	if x != nil {
+		return x.ClaimPeriod
+	}
+	return nil
+}
+
+func (x *BasPurchaseSourceLine) GetAllocatedGross() *Money {
+	if x != nil {
+		return x.AllocatedGross
+	}
+	return nil
+}
+
+func (x *BasPurchaseSourceLine) GetSupplierGst() *Money {
+	if x != nil {
+		return x.SupplierGst
+	}
+	return nil
+}
+
+func (x *BasPurchaseSourceLine) GetEligibleGst() *Money {
+	if x != nil {
+		return x.EligibleGst
+	}
+	return nil
+}
+
+func (x *BasPurchaseSourceLine) GetClaimedGst() *Money {
+	if x != nil {
+		return x.ClaimedGst
+	}
+	return nil
+}
+
+func (x *BasPurchaseSourceLine) GetEvidence() *PurchaseRetainedSourceRef {
+	if x != nil {
+		return x.Evidence
+	}
+	return nil
+}
+
+func (x *BasPurchaseSourceLine) GetSourceRevision() uint64 {
+	if x != nil {
+		return x.SourceRevision
+	}
+	return 0
+}
+
+func (x *BasPurchaseSourceLine) GetSourceHash() []byte {
+	if x != nil {
+		return x.SourceHash
+	}
+	return nil
+}
+
+// One immutable deferral allocation portion. The amount is core-computed for this portion,
+// never the whole deferral repeated on every row. All deadline/timing facts are saved for exact exports.
+type BasPurchaseFutureClaim struct {
+	state                protoimpl.MessageState     `protogen:"open.v1"`
+	DeferralId           string                     `protobuf:"bytes,1,opt,name=deferral_id,json=deferralId,proto3" json:"deferral_id,omitempty"`
+	OrganisationId       string                     `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId,proto3" json:"organisation_id,omitempty"`
+	PostingId            string                     `protobuf:"bytes,3,opt,name=posting_id,json=postingId,proto3" json:"posting_id,omitempty"`
+	DocumentId           string                     `protobuf:"bytes,4,opt,name=document_id,json=documentId,proto3" json:"document_id,omitempty"`
+	AccountingVersion    uint64                     `protobuf:"varint,5,opt,name=accounting_version,json=accountingVersion,proto3" json:"accounting_version,omitempty"`
+	DeferralHash         []byte                     `protobuf:"bytes,6,opt,name=deferral_hash,json=deferralHash,proto3" json:"deferral_hash,omitempty"`
+	Portion              *PurchaseGstSourcePortion  `protobuf:"bytes,7,opt,name=portion,proto3" json:"portion,omitempty"`
+	AffectedPeriod       *PurchaseClaimPeriod       `protobuf:"bytes,8,opt,name=affected_period,json=affectedPeriod,proto3" json:"affected_period,omitempty"`
+	TimingReview         *PurchaseClaimTimingReview `protobuf:"bytes,9,opt,name=timing_review,json=timingReview,proto3" json:"timing_review,omitempty"`
+	AllocatedDeferredGst *Money                     `protobuf:"bytes,10,opt,name=allocated_deferred_gst,json=allocatedDeferredGst,proto3" json:"allocated_deferred_gst,omitempty"`
+	Reason               string                     `protobuf:"bytes,11,opt,name=reason,proto3" json:"reason,omitempty"`
+	ActorUserId          string                     `protobuf:"bytes,12,opt,name=actor_user_id,json=actorUserId,proto3" json:"actor_user_id,omitempty"`
+	RecordedAt           *timestamppb.Timestamp     `protobuf:"bytes,13,opt,name=recorded_at,json=recordedAt,proto3" json:"recorded_at,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *BasPurchaseFutureClaim) Reset() {
+	*x = BasPurchaseFutureClaim{}
+	mi := &file_tammy_v1_tax_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BasPurchaseFutureClaim) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BasPurchaseFutureClaim) ProtoMessage() {}
+
+func (x *BasPurchaseFutureClaim) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_tax_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BasPurchaseFutureClaim.ProtoReflect.Descriptor instead.
+func (*BasPurchaseFutureClaim) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_tax_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *BasPurchaseFutureClaim) GetDeferralId() string {
+	if x != nil {
+		return x.DeferralId
+	}
+	return ""
+}
+
+func (x *BasPurchaseFutureClaim) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *BasPurchaseFutureClaim) GetPostingId() string {
+	if x != nil {
+		return x.PostingId
+	}
+	return ""
+}
+
+func (x *BasPurchaseFutureClaim) GetDocumentId() string {
+	if x != nil {
+		return x.DocumentId
+	}
+	return ""
+}
+
+func (x *BasPurchaseFutureClaim) GetAccountingVersion() uint64 {
+	if x != nil {
+		return x.AccountingVersion
+	}
+	return 0
+}
+
+func (x *BasPurchaseFutureClaim) GetDeferralHash() []byte {
+	if x != nil {
+		return x.DeferralHash
+	}
+	return nil
+}
+
+func (x *BasPurchaseFutureClaim) GetPortion() *PurchaseGstSourcePortion {
+	if x != nil {
+		return x.Portion
+	}
+	return nil
+}
+
+func (x *BasPurchaseFutureClaim) GetAffectedPeriod() *PurchaseClaimPeriod {
+	if x != nil {
+		return x.AffectedPeriod
+	}
+	return nil
+}
+
+func (x *BasPurchaseFutureClaim) GetTimingReview() *PurchaseClaimTimingReview {
+	if x != nil {
+		return x.TimingReview
+	}
+	return nil
+}
+
+func (x *BasPurchaseFutureClaim) GetAllocatedDeferredGst() *Money {
+	if x != nil {
+		return x.AllocatedDeferredGst
+	}
+	return nil
+}
+
+func (x *BasPurchaseFutureClaim) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *BasPurchaseFutureClaim) GetActorUserId() string {
+	if x != nil {
+		return x.ActorUserId
+	}
+	return ""
+}
+
+func (x *BasPurchaseFutureClaim) GetRecordedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.RecordedAt
+	}
+	return nil
+}
+
+// Shallow immutable decision. Supporting payment/evidence links are retained once in
+// BasWorkpaper.legacy_purchase_support; exports never need a live follow-up query.
+type BasPurchaseLegacyReview struct {
+	state                   protoimpl.MessageState     `protogen:"open.v1"`
+	Id                      string                     `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	OrganisationId          string                     `protobuf:"bytes,2,opt,name=organisation_id,json=organisationId,proto3" json:"organisation_id,omitempty"`
+	Source                  *LegacyPurchaseSourceRef   `protobuf:"bytes,3,opt,name=source,proto3" json:"source,omitempty"`
+	AffectedPeriod          *PurchaseClaimPeriod       `protobuf:"bytes,4,opt,name=affected_period,json=affectedPeriod,proto3" json:"affected_period,omitempty"`
+	ReportingBalanceDate    *CivilDate                 `protobuf:"bytes,5,opt,name=reporting_balance_date,json=reportingBalanceDate,proto3" json:"reporting_balance_date,omitempty"`
+	Disposition             LegacyPurchaseDisposition  `protobuf:"varint,6,opt,name=disposition,proto3,enum=tammy.v1.LegacyPurchaseDisposition" json:"disposition,omitempty"`
+	PreviouslyClaimedPeriod *PurchaseClaimPeriod       `protobuf:"bytes,7,opt,name=previously_claimed_period,json=previouslyClaimedPeriod,proto3,oneof" json:"previously_claimed_period,omitempty"`
+	ClaimEvidence           *PurchaseRetainedSourceRef `protobuf:"bytes,8,opt,name=claim_evidence,json=claimEvidence,proto3,oneof" json:"claim_evidence,omitempty"`
+	LinkedPostingId         *string                    `protobuf:"bytes,9,opt,name=linked_posting_id,json=linkedPostingId,proto3,oneof" json:"linked_posting_id,omitempty"`
+	Reason                  string                     `protobuf:"bytes,10,opt,name=reason,proto3" json:"reason,omitempty"`
+	SourceRevision          uint64                     `protobuf:"varint,11,opt,name=source_revision,json=sourceRevision,proto3" json:"source_revision,omitempty"`
+	SourceHash              []byte                     `protobuf:"bytes,12,opt,name=source_hash,json=sourceHash,proto3" json:"source_hash,omitempty"`
+	ActorUserId             string                     `protobuf:"bytes,13,opt,name=actor_user_id,json=actorUserId,proto3" json:"actor_user_id,omitempty"`
+	RecordedAt              *timestamppb.Timestamp     `protobuf:"bytes,14,opt,name=recorded_at,json=recordedAt,proto3" json:"recorded_at,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
+}
+
+func (x *BasPurchaseLegacyReview) Reset() {
+	*x = BasPurchaseLegacyReview{}
+	mi := &file_tammy_v1_tax_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BasPurchaseLegacyReview) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BasPurchaseLegacyReview) ProtoMessage() {}
+
+func (x *BasPurchaseLegacyReview) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_tax_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BasPurchaseLegacyReview.ProtoReflect.Descriptor instead.
+func (*BasPurchaseLegacyReview) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_tax_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *BasPurchaseLegacyReview) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *BasPurchaseLegacyReview) GetOrganisationId() string {
+	if x != nil {
+		return x.OrganisationId
+	}
+	return ""
+}
+
+func (x *BasPurchaseLegacyReview) GetSource() *LegacyPurchaseSourceRef {
+	if x != nil {
+		return x.Source
+	}
+	return nil
+}
+
+func (x *BasPurchaseLegacyReview) GetAffectedPeriod() *PurchaseClaimPeriod {
+	if x != nil {
+		return x.AffectedPeriod
+	}
+	return nil
+}
+
+func (x *BasPurchaseLegacyReview) GetReportingBalanceDate() *CivilDate {
+	if x != nil {
+		return x.ReportingBalanceDate
+	}
+	return nil
+}
+
+func (x *BasPurchaseLegacyReview) GetDisposition() LegacyPurchaseDisposition {
+	if x != nil {
+		return x.Disposition
+	}
+	return LegacyPurchaseDisposition_LEGACY_PURCHASE_DISPOSITION_UNSPECIFIED
+}
+
+func (x *BasPurchaseLegacyReview) GetPreviouslyClaimedPeriod() *PurchaseClaimPeriod {
+	if x != nil {
+		return x.PreviouslyClaimedPeriod
+	}
+	return nil
+}
+
+func (x *BasPurchaseLegacyReview) GetClaimEvidence() *PurchaseRetainedSourceRef {
+	if x != nil {
+		return x.ClaimEvidence
+	}
+	return nil
+}
+
+func (x *BasPurchaseLegacyReview) GetLinkedPostingId() string {
+	if x != nil && x.LinkedPostingId != nil {
+		return *x.LinkedPostingId
+	}
+	return ""
+}
+
+func (x *BasPurchaseLegacyReview) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *BasPurchaseLegacyReview) GetSourceRevision() uint64 {
+	if x != nil {
+		return x.SourceRevision
+	}
+	return 0
+}
+
+func (x *BasPurchaseLegacyReview) GetSourceHash() []byte {
+	if x != nil {
+		return x.SourceHash
+	}
+	return nil
+}
+
+func (x *BasPurchaseLegacyReview) GetActorUserId() string {
+	if x != nil {
+		return x.ActorUserId
+	}
+	return ""
+}
+
+func (x *BasPurchaseLegacyReview) GetRecordedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.RecordedAt
+	}
+	return nil
+}
+
+// Globally bounded and deduplicated by review/kind/sequence/source; preserves meaningful link order.
+type BasPurchaseLegacySupport struct {
+	state         protoimpl.MessageState       `protogen:"open.v1"`
+	ReviewId      string                       `protobuf:"bytes,1,opt,name=review_id,json=reviewId,proto3" json:"review_id,omitempty"`
+	Kind          BasPurchaseLegacySupportKind `protobuf:"varint,2,opt,name=kind,proto3,enum=tammy.v1.BasPurchaseLegacySupportKind" json:"kind,omitempty"`
+	Sequence      uint32                       `protobuf:"varint,3,opt,name=sequence,proto3" json:"sequence,omitempty"`
+	Source        *PurchaseRetainedSourceRef   `protobuf:"bytes,4,opt,name=source,proto3" json:"source,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BasPurchaseLegacySupport) Reset() {
+	*x = BasPurchaseLegacySupport{}
+	mi := &file_tammy_v1_tax_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BasPurchaseLegacySupport) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BasPurchaseLegacySupport) ProtoMessage() {}
+
+func (x *BasPurchaseLegacySupport) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_tax_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BasPurchaseLegacySupport.ProtoReflect.Descriptor instead.
+func (*BasPurchaseLegacySupport) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_tax_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *BasPurchaseLegacySupport) GetReviewId() string {
+	if x != nil {
+		return x.ReviewId
+	}
+	return ""
+}
+
+func (x *BasPurchaseLegacySupport) GetKind() BasPurchaseLegacySupportKind {
+	if x != nil {
+		return x.Kind
+	}
+	return BasPurchaseLegacySupportKind_BAS_PURCHASE_LEGACY_SUPPORT_KIND_UNSPECIFIED
+}
+
+func (x *BasPurchaseLegacySupport) GetSequence() uint32 {
+	if x != nil {
+		return x.Sequence
+	}
+	return 0
+}
+
+func (x *BasPurchaseLegacySupport) GetSource() *PurchaseRetainedSourceRef {
+	if x != nil {
+		return x.Source
+	}
+	return nil
+}
+
+type BasPurchaseReview struct {
+	state                 protoimpl.MessageState     `protogen:"open.v1"`
+	LegacySource          *LegacyPurchaseSourceRef   `protobuf:"bytes,1,opt,name=legacy_source,json=legacySource,proto3,oneof" json:"legacy_source,omitempty"`
+	PostingId             *string                    `protobuf:"bytes,2,opt,name=posting_id,json=postingId,proto3,oneof" json:"posting_id,omitempty"`
+	PaymentId             *string                    `protobuf:"bytes,3,opt,name=payment_id,json=paymentId,proto3,oneof" json:"payment_id,omitempty"`
+	DeferralId            *string                    `protobuf:"bytes,4,opt,name=deferral_id,json=deferralId,proto3,oneof" json:"deferral_id,omitempty"`
+	Status                PurchaseReviewStatus       `protobuf:"varint,5,opt,name=status,proto3,enum=tammy.v1.PurchaseReviewStatus" json:"status,omitempty"`
+	AffectedPeriod        *PurchaseClaimPeriod       `protobuf:"bytes,6,opt,name=affected_period,json=affectedPeriod,proto3" json:"affected_period,omitempty"`
+	InvoiceDate           *CivilDate                 `protobuf:"bytes,7,opt,name=invoice_date,json=invoiceDate,proto3,oneof" json:"invoice_date,omitempty"`
+	ActualPaymentDate     *CivilDate                 `protobuf:"bytes,8,opt,name=actual_payment_date,json=actualPaymentDate,proto3,oneof" json:"actual_payment_date,omitempty"`
+	EligibleGst           *Money                     `protobuf:"bytes,9,opt,name=eligible_gst,json=eligibleGst,proto3" json:"eligible_gst,omitempty"`
+	UnclaimedGst          *Money                     `protobuf:"bytes,10,opt,name=unclaimed_gst,json=unclaimedGst,proto3" json:"unclaimed_gst,omitempty"`
+	LegacyReview          *BasPurchaseLegacyReview   `protobuf:"bytes,11,opt,name=legacy_review,json=legacyReview,proto3,oneof" json:"legacy_review,omitempty"`
+	FutureClaimObligation *BasPurchaseFutureClaim    `protobuf:"bytes,12,opt,name=future_claim_obligation,json=futureClaimObligation,proto3,oneof" json:"future_claim_obligation,omitempty"`
+	Evidence              *PurchaseRetainedSourceRef `protobuf:"bytes,13,opt,name=evidence,proto3,oneof" json:"evidence,omitempty"`
+	SourceRevision        uint64                     `protobuf:"varint,14,opt,name=source_revision,json=sourceRevision,proto3" json:"source_revision,omitempty"`
+	SourceHash            []byte                     `protobuf:"bytes,15,opt,name=source_hash,json=sourceHash,proto3" json:"source_hash,omitempty"`
+	Reason                string                     `protobuf:"bytes,16,opt,name=reason,proto3" json:"reason,omitempty"`
+	Kind                  BasPurchaseReviewKind      `protobuf:"varint,17,opt,name=kind,proto3,enum=tammy.v1.BasPurchaseReviewKind" json:"kind,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
+}
+
+func (x *BasPurchaseReview) Reset() {
+	*x = BasPurchaseReview{}
+	mi := &file_tammy_v1_tax_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BasPurchaseReview) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BasPurchaseReview) ProtoMessage() {}
+
+func (x *BasPurchaseReview) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_tax_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BasPurchaseReview.ProtoReflect.Descriptor instead.
+func (*BasPurchaseReview) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_tax_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *BasPurchaseReview) GetLegacySource() *LegacyPurchaseSourceRef {
+	if x != nil {
+		return x.LegacySource
+	}
+	return nil
+}
+
+func (x *BasPurchaseReview) GetPostingId() string {
+	if x != nil && x.PostingId != nil {
+		return *x.PostingId
+	}
+	return ""
+}
+
+func (x *BasPurchaseReview) GetPaymentId() string {
+	if x != nil && x.PaymentId != nil {
+		return *x.PaymentId
+	}
+	return ""
+}
+
+func (x *BasPurchaseReview) GetDeferralId() string {
+	if x != nil && x.DeferralId != nil {
+		return *x.DeferralId
+	}
+	return ""
+}
+
+func (x *BasPurchaseReview) GetStatus() PurchaseReviewStatus {
+	if x != nil {
+		return x.Status
+	}
+	return PurchaseReviewStatus_PURCHASE_REVIEW_STATUS_UNSPECIFIED
+}
+
+func (x *BasPurchaseReview) GetAffectedPeriod() *PurchaseClaimPeriod {
+	if x != nil {
+		return x.AffectedPeriod
+	}
+	return nil
+}
+
+func (x *BasPurchaseReview) GetInvoiceDate() *CivilDate {
+	if x != nil {
+		return x.InvoiceDate
+	}
+	return nil
+}
+
+func (x *BasPurchaseReview) GetActualPaymentDate() *CivilDate {
+	if x != nil {
+		return x.ActualPaymentDate
+	}
+	return nil
+}
+
+func (x *BasPurchaseReview) GetEligibleGst() *Money {
+	if x != nil {
+		return x.EligibleGst
+	}
+	return nil
+}
+
+func (x *BasPurchaseReview) GetUnclaimedGst() *Money {
+	if x != nil {
+		return x.UnclaimedGst
+	}
+	return nil
+}
+
+func (x *BasPurchaseReview) GetLegacyReview() *BasPurchaseLegacyReview {
+	if x != nil {
+		return x.LegacyReview
+	}
+	return nil
+}
+
+func (x *BasPurchaseReview) GetFutureClaimObligation() *BasPurchaseFutureClaim {
+	if x != nil {
+		return x.FutureClaimObligation
+	}
+	return nil
+}
+
+func (x *BasPurchaseReview) GetEvidence() *PurchaseRetainedSourceRef {
+	if x != nil {
+		return x.Evidence
+	}
+	return nil
+}
+
+func (x *BasPurchaseReview) GetSourceRevision() uint64 {
+	if x != nil {
+		return x.SourceRevision
+	}
+	return 0
+}
+
+func (x *BasPurchaseReview) GetSourceHash() []byte {
+	if x != nil {
+		return x.SourceHash
+	}
+	return nil
+}
+
+func (x *BasPurchaseReview) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *BasPurchaseReview) GetKind() BasPurchaseReviewKind {
+	if x != nil {
+		return x.Kind
+	}
+	return BasPurchaseReviewKind_BAS_PURCHASE_REVIEW_KIND_UNSPECIFIED
+}
+
 type BasWorkpaper struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -271,24 +1208,32 @@ type BasWorkpaper struct {
 	Status         BasWorkpaperStatus     `protobuf:"varint,6,opt,name=status,proto3,enum=tammy.v1.BasWorkpaperStatus" json:"status,omitempty"`
 	SalesG1        *Money                 `protobuf:"bytes,7,opt,name=sales_g1,json=salesG1,proto3" json:"sales_g1,omitempty"`
 	GstOnSales_1A  *Money                 `protobuf:"bytes,8,opt,name=gst_on_sales_1a,json=gstOnSales1a,proto3" json:"gst_on_sales_1a,omitempty"`
-	GstCredits_1B  *Money                 `protobuf:"bytes,9,opt,name=gst_credits_1b,json=gstCredits1b,proto3" json:"gst_credits_1b,omitempty"`
-	NetGstPayable  *Money                 `protobuf:"bytes,10,opt,name=net_gst_payable,json=netGstPayable,proto3" json:"net_gst_payable,omitempty"`
-	Sources        []*BasSourceLine       `protobuf:"bytes,11,rep,name=sources,proto3" json:"sources,omitempty"`
-	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	GstBasis       GstBasis               `protobuf:"varint,13,opt,name=gst_basis,json=gstBasis,proto3,enum=tammy.v1.GstBasis" json:"gst_basis,omitempty"`
-	SalesSources   []*BasSalesSourceLine  `protobuf:"bytes,14,rep,name=sales_sources,json=salesSources,proto3" json:"sales_sources,omitempty"`
+	// In reconciled format, 1B includes only claimed purchase sources; legacy candidates are separate.
+	GstCredits_1B *Money                 `protobuf:"bytes,9,opt,name=gst_credits_1b,json=gstCredits1b,proto3" json:"gst_credits_1b,omitempty"`
+	NetGstPayable *Money                 `protobuf:"bytes,10,opt,name=net_gst_payable,json=netGstPayable,proto3" json:"net_gst_payable,omitempty"`
+	Sources       []*BasSourceLine       `protobuf:"bytes,11,rep,name=sources,proto3" json:"sources,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	GstBasis      GstBasis               `protobuf:"varint,13,opt,name=gst_basis,json=gstBasis,proto3,enum=tammy.v1.GstBasis" json:"gst_basis,omitempty"`
+	SalesSources  []*BasSalesSourceLine  `protobuf:"bytes,14,rep,name=sales_sources,json=salesSources,proto3" json:"sales_sources,omitempty"`
 	// Empty on a legacy snapshot; regenerate to retain complete provenance.
-	SourceFingerprint         []byte   `protobuf:"bytes,15,opt,name=source_fingerprint,json=sourceFingerprint,proto3" json:"source_fingerprint,omitempty"`
-	SourcesChanged            bool     `protobuf:"varint,16,opt,name=sources_changed,json=sourcesChanged,proto3" json:"sources_changed,omitempty"`
-	ReviewWarnings            []string `protobuf:"bytes,17,rep,name=review_warnings,json=reviewWarnings,proto3" json:"review_warnings,omitempty"`
-	ExcludedCashPurchaseCount uint64   `protobuf:"varint,18,opt,name=excluded_cash_purchase_count,json=excludedCashPurchaseCount,proto3" json:"excluded_cash_purchase_count,omitempty"`
-	unknownFields             protoimpl.UnknownFields
-	sizeCache                 protoimpl.SizeCache
+	SourceFingerprint         []byte                   `protobuf:"bytes,15,opt,name=source_fingerprint,json=sourceFingerprint,proto3" json:"source_fingerprint,omitempty"`
+	SourcesChanged            bool                     `protobuf:"varint,16,opt,name=sources_changed,json=sourcesChanged,proto3" json:"sources_changed,omitempty"`
+	ReviewWarnings            []string                 `protobuf:"bytes,17,rep,name=review_warnings,json=reviewWarnings,proto3" json:"review_warnings,omitempty"`
+	ExcludedCashPurchaseCount uint64                   `protobuf:"varint,18,opt,name=excluded_cash_purchase_count,json=excludedCashPurchaseCount,proto3" json:"excluded_cash_purchase_count,omitempty"`
+	PurchaseSources           []*BasPurchaseSourceLine `protobuf:"bytes,19,rep,name=purchase_sources,json=purchaseSources,proto3" json:"purchase_sources,omitempty"`
+	PurchaseReviews           []*BasPurchaseReview     `protobuf:"bytes,20,rep,name=purchase_reviews,json=purchaseReviews,proto3" json:"purchase_reviews,omitempty"`
+	// Legacy candidates are distinct from reconciled entitlement; absence is not zero.
+	LegacyCandidateGst   *Money                   `protobuf:"bytes,21,opt,name=legacy_candidate_gst,json=legacyCandidateGst,proto3,oneof" json:"legacy_candidate_gst,omitempty"`
+	PurchaseSourceFormat *BasPurchaseSourceFormat `protobuf:"varint,22,opt,name=purchase_source_format,json=purchaseSourceFormat,proto3,enum=tammy.v1.BasPurchaseSourceFormat,oneof" json:"purchase_source_format,omitempty"`
+	// Complete saved supporting provenance has one global bound, not a per-review multiplier.
+	LegacyPurchaseSupport []*BasPurchaseLegacySupport `protobuf:"bytes,23,rep,name=legacy_purchase_support,json=legacyPurchaseSupport,proto3" json:"legacy_purchase_support,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *BasWorkpaper) Reset() {
 	*x = BasWorkpaper{}
-	mi := &file_tammy_v1_tax_proto_msgTypes[2]
+	mi := &file_tammy_v1_tax_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -300,7 +1245,7 @@ func (x *BasWorkpaper) String() string {
 func (*BasWorkpaper) ProtoMessage() {}
 
 func (x *BasWorkpaper) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_tax_proto_msgTypes[2]
+	mi := &file_tammy_v1_tax_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -313,7 +1258,7 @@ func (x *BasWorkpaper) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BasWorkpaper.ProtoReflect.Descriptor instead.
 func (*BasWorkpaper) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_tax_proto_rawDescGZIP(), []int{2}
+	return file_tammy_v1_tax_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *BasWorkpaper) GetId() string {
@@ -442,6 +1387,41 @@ func (x *BasWorkpaper) GetExcludedCashPurchaseCount() uint64 {
 	return 0
 }
 
+func (x *BasWorkpaper) GetPurchaseSources() []*BasPurchaseSourceLine {
+	if x != nil {
+		return x.PurchaseSources
+	}
+	return nil
+}
+
+func (x *BasWorkpaper) GetPurchaseReviews() []*BasPurchaseReview {
+	if x != nil {
+		return x.PurchaseReviews
+	}
+	return nil
+}
+
+func (x *BasWorkpaper) GetLegacyCandidateGst() *Money {
+	if x != nil {
+		return x.LegacyCandidateGst
+	}
+	return nil
+}
+
+func (x *BasWorkpaper) GetPurchaseSourceFormat() BasPurchaseSourceFormat {
+	if x != nil && x.PurchaseSourceFormat != nil {
+		return *x.PurchaseSourceFormat
+	}
+	return BasPurchaseSourceFormat_BAS_PURCHASE_SOURCE_FORMAT_UNSPECIFIED
+}
+
+func (x *BasWorkpaper) GetLegacyPurchaseSupport() []*BasPurchaseLegacySupport {
+	if x != nil {
+		return x.LegacyPurchaseSupport
+	}
+	return nil
+}
+
 type CreateBasDraftRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	CommandContext *CommandContext        `protobuf:"bytes,1,opt,name=command_context,json=commandContext,proto3" json:"command_context,omitempty"`
@@ -454,7 +1434,7 @@ type CreateBasDraftRequest struct {
 
 func (x *CreateBasDraftRequest) Reset() {
 	*x = CreateBasDraftRequest{}
-	mi := &file_tammy_v1_tax_proto_msgTypes[3]
+	mi := &file_tammy_v1_tax_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -466,7 +1446,7 @@ func (x *CreateBasDraftRequest) String() string {
 func (*CreateBasDraftRequest) ProtoMessage() {}
 
 func (x *CreateBasDraftRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_tax_proto_msgTypes[3]
+	mi := &file_tammy_v1_tax_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -479,7 +1459,7 @@ func (x *CreateBasDraftRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateBasDraftRequest.ProtoReflect.Descriptor instead.
 func (*CreateBasDraftRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_tax_proto_rawDescGZIP(), []int{3}
+	return file_tammy_v1_tax_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *CreateBasDraftRequest) GetCommandContext() *CommandContext {
@@ -519,7 +1499,7 @@ type CreateBasDraftResponse struct {
 
 func (x *CreateBasDraftResponse) Reset() {
 	*x = CreateBasDraftResponse{}
-	mi := &file_tammy_v1_tax_proto_msgTypes[4]
+	mi := &file_tammy_v1_tax_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -531,7 +1511,7 @@ func (x *CreateBasDraftResponse) String() string {
 func (*CreateBasDraftResponse) ProtoMessage() {}
 
 func (x *CreateBasDraftResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_tax_proto_msgTypes[4]
+	mi := &file_tammy_v1_tax_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -544,7 +1524,7 @@ func (x *CreateBasDraftResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateBasDraftResponse.ProtoReflect.Descriptor instead.
 func (*CreateBasDraftResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_tax_proto_rawDescGZIP(), []int{4}
+	return file_tammy_v1_tax_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *CreateBasDraftResponse) GetWorkpaper() *BasWorkpaper {
@@ -564,7 +1544,7 @@ type GetCurrentBasDraftRequest struct {
 
 func (x *GetCurrentBasDraftRequest) Reset() {
 	*x = GetCurrentBasDraftRequest{}
-	mi := &file_tammy_v1_tax_proto_msgTypes[5]
+	mi := &file_tammy_v1_tax_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -576,7 +1556,7 @@ func (x *GetCurrentBasDraftRequest) String() string {
 func (*GetCurrentBasDraftRequest) ProtoMessage() {}
 
 func (x *GetCurrentBasDraftRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_tax_proto_msgTypes[5]
+	mi := &file_tammy_v1_tax_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -589,7 +1569,7 @@ func (x *GetCurrentBasDraftRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCurrentBasDraftRequest.ProtoReflect.Descriptor instead.
 func (*GetCurrentBasDraftRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_tax_proto_rawDescGZIP(), []int{5}
+	return file_tammy_v1_tax_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *GetCurrentBasDraftRequest) GetAuthentication() *AuthenticationContext {
@@ -615,7 +1595,7 @@ type GetCurrentBasDraftResponse struct {
 
 func (x *GetCurrentBasDraftResponse) Reset() {
 	*x = GetCurrentBasDraftResponse{}
-	mi := &file_tammy_v1_tax_proto_msgTypes[6]
+	mi := &file_tammy_v1_tax_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -627,7 +1607,7 @@ func (x *GetCurrentBasDraftResponse) String() string {
 func (*GetCurrentBasDraftResponse) ProtoMessage() {}
 
 func (x *GetCurrentBasDraftResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_tax_proto_msgTypes[6]
+	mi := &file_tammy_v1_tax_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -640,7 +1620,7 @@ func (x *GetCurrentBasDraftResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCurrentBasDraftResponse.ProtoReflect.Descriptor instead.
 func (*GetCurrentBasDraftResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_tax_proto_rawDescGZIP(), []int{6}
+	return file_tammy_v1_tax_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *GetCurrentBasDraftResponse) GetWorkpaper() *BasWorkpaper {
@@ -654,7 +1634,7 @@ var File_tammy_v1_tax_proto protoreflect.FileDescriptor
 
 const file_tammy_v1_tax_proto_rawDesc = "" +
 	"\n" +
-	"\x12tammy/v1/tax.proto\x12\btammy.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15tammy/v1/common.proto\x1a\x1btammy/v1/organisation.proto\"\x87\x03\n" +
+	"\x12tammy/v1/tax.proto\x12\btammy.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x15tammy/v1/common.proto\x1a\x1btammy/v1/organisation.proto\x1a\x18tammy/v1/purchases.proto\"\x87\x03\n" +
 	"\rBasSourceLine\x12m\n" +
 	"\vdocument_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\n" +
 	"documentId\x12-\n" +
@@ -677,7 +1657,146 @@ const file_tammy_v1_tax_proto_rawDesc = "" +
 	"\x0fsource_revision\x18\b \x01(\x04B\a\xbaH\x042\x02(\x01R\x0esourceRevision\x12(\n" +
 	"\vsource_hash\x18\t \x01(\fB\a\xbaH\x04z\x02h R\n" +
 	"sourceHashB\r\n" +
-	"\v_payment_id\"\x9c\t\n" +
+	"\v_payment_id\"\xf1\x1a\n" +
+	"\x15BasPurchaseSourceLine\x12k\n" +
+	"\n" +
+	"posting_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\tpostingId\x12*\n" +
+	"\fposting_hash\x18\x02 \x01(\fB\a\xbaH\x04z\x02h R\vpostingHash\x12m\n" +
+	"\vdocument_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\n" +
+	"documentId\x12;\n" +
+	"\x15original_content_hash\x18\x04 \x01(\fB\a\xbaH\x04z\x02h R\x13originalContentHash\x12=\n" +
+	"\x16reviewed_snapshot_hash\x18\x05 \x01(\fB\a\xbaH\x04z\x02h R\x14reviewedSnapshotHash\x12p\n" +
+	"\n" +
+	"payment_id\x18\x06 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$H\x00R\tpaymentId\x88\x01\x01\x12/\n" +
+	"\fpayment_hash\x18\a \x01(\fB\a\xbaH\x04z\x02h H\x01R\vpaymentHash\x88\x01\x01\x12x\n" +
+	"\x0eattribution_id\x18\b \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$H\x02R\rattributionId\x88\x01\x01\x127\n" +
+	"\x10attribution_hash\x18\t \x01(\fB\a\xbaH\x04z\x02h H\x03R\x0fattributionHash\x88\x01\x01\x128\n" +
+	"\x13allocation_sequence\x18\n" +
+	" \x01(\rB\a\xbaH\x04*\x02(\x01R\x12allocationSequence\x123\n" +
+	"\x03use\x18\v \x01(\x0e2\x15.tammy.v1.PurchaseUseB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x03use\x12^\n" +
+	"\x12bas_classification\x18\f \x01(\x0e2#.tammy.v1.PurchaseBasClassificationB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x11basClassification\x12n\n" +
+	"\x18cash_flow_classification\x18\r \x01(\x0e2(.tammy.v1.PurchaseCashFlowClassificationB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x16cashFlowClassification\x12\xbb\x02\n" +
+	"\finvoice_date\x18\x0e \x01(\v2\x13.tammy.v1.CivilDateB\x82\x02\xbaH\xfe\x01\xba\x01\xf7\x01\n" +
+	"+BasPurchaseSourceLine.invoice_date.calendar\x12)Date must exist in the Gregorian calendar\x1a\x9c\x01this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))\xc8\x01\x01R\vinvoiceDate\x12\xd1\x02\n" +
+	"\x13actual_payment_date\x18\x0f \x01(\v2\x13.tammy.v1.CivilDateB\x86\x02\xbaH\x82\x02\xba\x01\xfe\x01\n" +
+	"2BasPurchaseSourceLine.actual_payment_date.calendar\x12)Date must exist in the Gregorian calendar\x1a\x9c\x01this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))H\x04R\x11actualPaymentDate\x88\x01\x01\x12\xd4\x02\n" +
+	"\x15normal_tax_event_date\x18\x10 \x01(\v2\x13.tammy.v1.CivilDateB\x8b\x02\xbaH\x87\x02\xba\x01\x80\x02\n" +
+	"4BasPurchaseSourceLine.normal_tax_event_date.calendar\x12)Date must exist in the Gregorian calendar\x1a\x9c\x01this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))\xc8\x01\x01R\x12normalTaxEventDate\x12H\n" +
+	"\fclaim_period\x18\x11 \x01(\v2\x1d.tammy.v1.PurchaseClaimPeriodB\x06\xbaH\x03\xc8\x01\x01R\vclaimPeriod\x12\xd0\x01\n" +
+	"\x0fallocated_gross\x18\x12 \x01(\v2\x0f.tammy.v1.MoneyB\x95\x01\xbaH\x91\x01\xba\x01\x8a\x01\n" +
+	")BasPurchaseSourceLine.allocated_gross.aud\x12'Exact nonnegative AUD money is required\x1a4this.currency_code == 'AUD' && this.minor_units >= 0\xc8\x01\x01R\x0eallocatedGross\x12\xc7\x01\n" +
+	"\fsupplier_gst\x18\x13 \x01(\v2\x0f.tammy.v1.MoneyB\x92\x01\xbaH\x8e\x01\xba\x01\x87\x01\n" +
+	"&BasPurchaseSourceLine.supplier_gst.aud\x12'Exact nonnegative AUD money is required\x1a4this.currency_code == 'AUD' && this.minor_units >= 0\xc8\x01\x01R\vsupplierGst\x12\xc7\x01\n" +
+	"\feligible_gst\x18\x14 \x01(\v2\x0f.tammy.v1.MoneyB\x92\x01\xbaH\x8e\x01\xba\x01\x87\x01\n" +
+	"&BasPurchaseSourceLine.eligible_gst.aud\x12'Exact nonnegative AUD money is required\x1a4this.currency_code == 'AUD' && this.minor_units >= 0\xc8\x01\x01R\veligibleGst\x12\xc4\x01\n" +
+	"\vclaimed_gst\x18\x15 \x01(\v2\x0f.tammy.v1.MoneyB\x91\x01\xbaH\x8d\x01\xba\x01\x86\x01\n" +
+	"%BasPurchaseSourceLine.claimed_gst.aud\x12'Exact nonnegative AUD money is required\x1a4this.currency_code == 'AUD' && this.minor_units >= 0\xc8\x01\x01R\n" +
+	"claimedGst\x12G\n" +
+	"\bevidence\x18\x16 \x01(\v2#.tammy.v1.PurchaseRetainedSourceRefB\x06\xbaH\x03\xc8\x01\x01R\bevidence\x120\n" +
+	"\x0fsource_revision\x18\x17 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0esourceRevision\x12(\n" +
+	"\vsource_hash\x18\x18 \x01(\fB\a\xbaH\x04z\x02h R\n" +
+	"sourceHash:\xd8\x01\xbaH\xd4\x01\x1a\xd1\x01\n" +
+	"\x1epurchase.bas.source_hash_pairs\x12EPayment and attribution identities need their immutable source hashes\x1ahhas(this.payment_id) == has(this.payment_hash) && has(this.attribution_id) == has(this.attribution_hash)B\r\n" +
+	"\v_payment_idB\x0f\n" +
+	"\r_payment_hashB\x11\n" +
+	"\x0f_attribution_idB\x13\n" +
+	"\x11_attribution_hashB\x16\n" +
+	"\x14_actual_payment_date\"\xe1\t\n" +
+	"\x16BasPurchaseFutureClaim\x12m\n" +
+	"\vdeferral_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\n" +
+	"deferralId\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12k\n" +
+	"\n" +
+	"posting_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\tpostingId\x12m\n" +
+	"\vdocument_id\x18\x04 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\n" +
+	"documentId\x126\n" +
+	"\x12accounting_version\x18\x05 \x01(\x04B\a\xbaH\x042\x02(\x01R\x11accountingVersion\x12,\n" +
+	"\rdeferral_hash\x18\x06 \x01(\fB\a\xbaH\x04z\x02h R\fdeferralHash\x12D\n" +
+	"\aportion\x18\a \x01(\v2\".tammy.v1.PurchaseGstSourcePortionB\x06\xbaH\x03\xc8\x01\x01R\aportion\x12N\n" +
+	"\x0faffected_period\x18\b \x01(\v2\x1d.tammy.v1.PurchaseClaimPeriodB\x06\xbaH\x03\xc8\x01\x01R\x0eaffectedPeriod\x12P\n" +
+	"\rtiming_review\x18\t \x01(\v2#.tammy.v1.PurchaseClaimTimingReviewB\x06\xbaH\x03\xc8\x01\x01R\ftimingReview\x12\xdb\x01\n" +
+	"\x16allocated_deferred_gst\x18\n" +
+	" \x01(\v2\x0f.tammy.v1.MoneyB\x93\x01\xbaH\x8f\x01\xba\x01\x88\x01\n" +
+	"'purchase.bas.future_claim.allocated_gst\x12'Exact nonnegative AUD money is required\x1a4this.currency_code == 'AUD' && this.minor_units >= 0\xc8\x01\x01R\x14allocatedDeferredGst\x12\"\n" +
+	"\x06reason\x18\v \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\x80\x04R\x06reason\x12p\n" +
+	"\ractor_user_id\x18\f \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\vactorUserId\x12C\n" +
+	"\vrecorded_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\n" +
+	"recordedAt\"\xa4\x0e\n" +
+	"\x17BasPurchaseLegacyReview\x12\\\n" +
+	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12u\n" +
+	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12A\n" +
+	"\x06source\x18\x03 \x01(\v2!.tammy.v1.LegacyPurchaseSourceRefB\x06\xbaH\x03\xc8\x01\x01R\x06source\x12N\n" +
+	"\x0faffected_period\x18\x04 \x01(\v2\x1d.tammy.v1.PurchaseClaimPeriodB\x06\xbaH\x03\xc8\x01\x01R\x0eaffectedPeriod\x12\xd6\x02\n" +
+	"\x16reporting_balance_date\x18\x05 \x01(\v2\x13.tammy.v1.CivilDateB\x8a\x02\xbaH\x86\x02\xba\x01\xff\x01\n" +
+	"3purchase.bas.legacy.reporting_balance_date.calendar\x12)Date must exist in the Gregorian calendar\x1a\x9c\x01this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))\xc8\x01\x01R\x14reportingBalanceDate\x12Q\n" +
+	"\vdisposition\x18\x06 \x01(\x0e2#.tammy.v1.LegacyPurchaseDispositionB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\vdisposition\x12^\n" +
+	"\x19previously_claimed_period\x18\a \x01(\v2\x1d.tammy.v1.PurchaseClaimPeriodH\x00R\x17previouslyClaimedPeriod\x88\x01\x01\x12O\n" +
+	"\x0eclaim_evidence\x18\b \x01(\v2#.tammy.v1.PurchaseRetainedSourceRefH\x01R\rclaimEvidence\x88\x01\x01\x12}\n" +
+	"\x11linked_posting_id\x18\t \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$H\x02R\x0flinkedPostingId\x88\x01\x01\x12\"\n" +
+	"\x06reason\x18\n" +
+	" \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\x80\x04R\x06reason\x120\n" +
+	"\x0fsource_revision\x18\v \x01(\x04B\a\xbaH\x042\x02(\x01R\x0esourceRevision\x12(\n" +
+	"\vsource_hash\x18\f \x01(\fB\a\xbaH\x04z\x02h R\n" +
+	"sourceHash\x12p\n" +
+	"\ractor_user_id\x18\r \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\vactorUserId\x12C\n" +
+	"\vrecorded_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\n" +
+	"recordedAt:\xc6\x02\xbaH\xc2\x02\x1a\xad\x01\n" +
+	"\x1bpurchase.bas.legacy.claimed\x122Already claimed needs retained period and evidence\x1aZthis.disposition != 2 || (has(this.previously_claimed_period) && has(this.claim_evidence))\x1a\x8f\x01\n" +
+	"!purchase.bas.legacy.evidence_only\x124Evidence-only review must link the existing purchase\x1a4this.disposition != 5 || has(this.linked_posting_id)B\x1c\n" +
+	"\x1a_previously_claimed_periodB\x11\n" +
+	"\x0f_claim_evidenceB\x14\n" +
+	"\x12_linked_posting_id\"\xb7\x02\n" +
+	"\x18BasPurchaseLegacySupport\x12i\n" +
+	"\treview_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\breviewId\x12F\n" +
+	"\x04kind\x18\x02 \x01(\x0e2&.tammy.v1.BasPurchaseLegacySupportKindB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x04kind\x12#\n" +
+	"\bsequence\x18\x03 \x01(\rB\a\xbaH\x04*\x02(\x01R\bsequence\x12C\n" +
+	"\x06source\x18\x04 \x01(\v2#.tammy.v1.PurchaseRetainedSourceRefB\x06\xbaH\x03\xc8\x01\x01R\x06source\"\xbe\x11\n" +
+	"\x11BasPurchaseReview\x12K\n" +
+	"\rlegacy_source\x18\x01 \x01(\v2!.tammy.v1.LegacyPurchaseSourceRefH\x00R\flegacySource\x88\x01\x01\x12p\n" +
+	"\n" +
+	"posting_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$H\x01R\tpostingId\x88\x01\x01\x12p\n" +
+	"\n" +
+	"payment_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$H\x02R\tpaymentId\x88\x01\x01\x12r\n" +
+	"\vdeferral_id\x18\x04 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$H\x03R\n" +
+	"deferralId\x88\x01\x01\x12B\n" +
+	"\x06status\x18\x05 \x01(\x0e2\x1e.tammy.v1.PurchaseReviewStatusB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x06status\x12N\n" +
+	"\x0faffected_period\x18\x06 \x01(\v2\x1d.tammy.v1.PurchaseClaimPeriodB\x06\xbaH\x03\xc8\x01\x01R\x0eaffectedPeriod\x12\xb9\x02\n" +
+	"\finvoice_date\x18\a \x01(\v2\x13.tammy.v1.CivilDateB\xfb\x01\xbaH\xf7\x01\xba\x01\xf3\x01\n" +
+	"'BasPurchaseReview.invoice_date.calendar\x12)Date must exist in the Gregorian calendar\x1a\x9c\x01this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))H\x04R\vinvoiceDate\x88\x01\x01\x12\xcd\x02\n" +
+	"\x13actual_payment_date\x18\b \x01(\v2\x13.tammy.v1.CivilDateB\x82\x02\xbaH\xfe\x01\xba\x01\xfa\x01\n" +
+	".BasPurchaseReview.actual_payment_date.calendar\x12)Date must exist in the Gregorian calendar\x1a\x9c\x01this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))H\x05R\x11actualPaymentDate\x88\x01\x01\x12\xc3\x01\n" +
+	"\feligible_gst\x18\t \x01(\v2\x0f.tammy.v1.MoneyB\x8e\x01\xbaH\x8a\x01\xba\x01\x83\x01\n" +
+	"\"BasPurchaseReview.eligible_gst.aud\x12'Exact nonnegative AUD money is required\x1a4this.currency_code == 'AUD' && this.minor_units >= 0\xc8\x01\x01R\veligibleGst\x12\xc6\x01\n" +
+	"\runclaimed_gst\x18\n" +
+	" \x01(\v2\x0f.tammy.v1.MoneyB\x8f\x01\xbaH\x8b\x01\xba\x01\x84\x01\n" +
+	"#BasPurchaseReview.unclaimed_gst.aud\x12'Exact nonnegative AUD money is required\x1a4this.currency_code == 'AUD' && this.minor_units >= 0\xc8\x01\x01R\funclaimedGst\x12K\n" +
+	"\rlegacy_review\x18\v \x01(\v2!.tammy.v1.BasPurchaseLegacyReviewH\x06R\flegacyReview\x88\x01\x01\x12]\n" +
+	"\x17future_claim_obligation\x18\f \x01(\v2 .tammy.v1.BasPurchaseFutureClaimH\aR\x15futureClaimObligation\x88\x01\x01\x12D\n" +
+	"\bevidence\x18\r \x01(\v2#.tammy.v1.PurchaseRetainedSourceRefH\bR\bevidence\x88\x01\x01\x120\n" +
+	"\x0fsource_revision\x18\x0e \x01(\x04B\a\xbaH\x042\x02(\x01R\x0esourceRevision\x12(\n" +
+	"\vsource_hash\x18\x0f \x01(\fB\a\xbaH\x04z\x02h R\n" +
+	"sourceHash\x12\"\n" +
+	"\x06reason\x18\x10 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\x80\x04R\x06reason\x12?\n" +
+	"\x04kind\x18\x11 \x01(\x0e2\x1f.tammy.v1.BasPurchaseReviewKindB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x04kindB\x10\n" +
+	"\x0e_legacy_sourceB\r\n" +
+	"\v_posting_idB\r\n" +
+	"\v_payment_idB\x0e\n" +
+	"\f_deferral_idB\x0f\n" +
+	"\r_invoice_dateB\x16\n" +
+	"\x14_actual_payment_dateB\x10\n" +
+	"\x0e_legacy_reviewB\x1a\n" +
+	"\x18_future_claim_obligationB\v\n" +
+	"\t_evidence\"\x93\r\n" +
 	"\fBasWorkpaper\x12\\\n" +
 	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12u\n" +
 	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12!\n" +
@@ -700,7 +1819,15 @@ const file_tammy_v1_tax_proto_rawDesc = "" +
 	"\x0fsources_changed\x18\x10 \x01(\bR\x0esourcesChanged\x128\n" +
 	"\x0freview_warnings\x18\x11 \x03(\tB\x0f\xbaH\f\x92\x01\t\x10\n" +
 	"\"\x05r\x03\x18\xf4\x03R\x0ereviewWarnings\x12?\n" +
-	"\x1cexcluded_cash_purchase_count\x18\x12 \x01(\x04R\x19excludedCashPurchaseCount\"\xd5\x02\n" +
+	"\x1cexcluded_cash_purchase_count\x18\x12 \x01(\x04R\x19excludedCashPurchaseCount\x12U\n" +
+	"\x10purchase_sources\x18\x13 \x03(\v2\x1f.tammy.v1.BasPurchaseSourceLineB\t\xbaH\x06\x92\x01\x03\x10\xe8\aR\x0fpurchaseSources\x12Q\n" +
+	"\x10purchase_reviews\x18\x14 \x03(\v2\x1b.tammy.v1.BasPurchaseReviewB\t\xbaH\x06\x92\x01\x03\x10\xe8\aR\x0fpurchaseReviews\x12F\n" +
+	"\x14legacy_candidate_gst\x18\x15 \x01(\v2\x0f.tammy.v1.MoneyH\x00R\x12legacyCandidateGst\x88\x01\x01\x12h\n" +
+	"\x16purchase_source_format\x18\x16 \x01(\x0e2!.tammy.v1.BasPurchaseSourceFormatB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00H\x01R\x14purchaseSourceFormat\x88\x01\x01\x12e\n" +
+	"\x17legacy_purchase_support\x18\x17 \x03(\v2\".tammy.v1.BasPurchaseLegacySupportB\t\xbaH\x06\x92\x01\x03\x10\xe8\aR\x15legacyPurchaseSupportB\x17\n" +
+	"\x15_legacy_candidate_gstB\x19\n" +
+	"\x17_purchase_source_format\"\xd5\x02\n" +
 	"\x15CreateBasDraftRequest\x12I\n" +
 	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
 	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12>\n" +
@@ -716,7 +1843,29 @@ const file_tammy_v1_tax_proto_rawDesc = "" +
 	"\tworkpaper\x18\x01 \x01(\v2\x16.tammy.v1.BasWorkpaperB\x06\xbaH\x03\xc8\x01\x01R\tworkpaper*e\n" +
 	"\x12BasWorkpaperStatus\x12$\n" +
 	" BAS_WORKPAPER_STATUS_UNSPECIFIED\x10\x00\x12)\n" +
-	"%BAS_WORKPAPER_STATUS_DRAFT_NOT_LODGED\x10\x012\xc2\x01\n" +
+	"%BAS_WORKPAPER_STATUS_DRAFT_NOT_LODGED\x10\x01*\x93\x05\n" +
+	"\x15BasPurchaseReviewKind\x12(\n" +
+	"$BAS_PURCHASE_REVIEW_KIND_UNSPECIFIED\x10\x00\x123\n" +
+	"/BAS_PURCHASE_REVIEW_KIND_UNRESOLVED_ELIGIBILITY\x10\x01\x12-\n" +
+	")BAS_PURCHASE_REVIEW_KIND_MISSING_EVIDENCE\x10\x02\x12)\n" +
+	"%BAS_PURCHASE_REVIEW_KIND_CLAIM_TIMING\x10\x03\x12,\n" +
+	"(BAS_PURCHASE_REVIEW_KIND_EXCLUDED_UNPAID\x10\x04\x12>\n" +
+	":BAS_PURCHASE_REVIEW_KIND_EXCLUDED_PRIVATE_OR_NONCREDITABLE\x10\x05\x12&\n" +
+	"\"BAS_PURCHASE_REVIEW_KIND_DUPLICATE\x10\x06\x123\n" +
+	"/BAS_PURCHASE_REVIEW_KIND_UNSUPPORTED_SETTLEMENT\x10\a\x122\n" +
+	".BAS_PURCHASE_REVIEW_KIND_DEFERRED_FUTURE_CLAIM\x10\b\x120\n" +
+	",BAS_PURCHASE_REVIEW_KIND_OLD_LEGACY_DOCUMENT\x10\t\x124\n" +
+	"0BAS_PURCHASE_REVIEW_KIND_UNDATED_LEGACY_DOCUMENT\x10\n" +
+	"\x12,\n" +
+	"(BAS_PURCHASE_REVIEW_KIND_OPENING_PAYABLE\x10\v\x12,\n" +
+	"(BAS_PURCHASE_REVIEW_KIND_RESOLVED_LEGACY\x10\f*\xad\x01\n" +
+	"\x1cBasPurchaseLegacySupportKind\x120\n" +
+	",BAS_PURCHASE_LEGACY_SUPPORT_KIND_UNSPECIFIED\x10\x00\x12,\n" +
+	"(BAS_PURCHASE_LEGACY_SUPPORT_KIND_PAYMENT\x10\x01\x12-\n" +
+	")BAS_PURCHASE_LEGACY_SUPPORT_KIND_EVIDENCE\x10\x02*s\n" +
+	"\x17BasPurchaseSourceFormat\x12*\n" +
+	"&BAS_PURCHASE_SOURCE_FORMAT_UNSPECIFIED\x10\x00\x12,\n" +
+	"(BAS_PURCHASE_SOURCE_FORMAT_RECONCILED_V1\x10\x012\xc2\x01\n" +
 	"\n" +
 	"TaxService\x12S\n" +
 	"\x0eCreateBasDraft\x12\x1f.tammy.v1.CreateBasDraftRequest\x1a .tammy.v1.CreateBasDraftResponse\x12_\n" +
@@ -734,57 +1883,117 @@ func file_tammy_v1_tax_proto_rawDescGZIP() []byte {
 	return file_tammy_v1_tax_proto_rawDescData
 }
 
-var file_tammy_v1_tax_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_tammy_v1_tax_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_tammy_v1_tax_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
+var file_tammy_v1_tax_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_tammy_v1_tax_proto_goTypes = []any{
-	(BasWorkpaperStatus)(0),            // 0: tammy.v1.BasWorkpaperStatus
-	(*BasSourceLine)(nil),              // 1: tammy.v1.BasSourceLine
-	(*BasSalesSourceLine)(nil),         // 2: tammy.v1.BasSalesSourceLine
-	(*BasWorkpaper)(nil),               // 3: tammy.v1.BasWorkpaper
-	(*CreateBasDraftRequest)(nil),      // 4: tammy.v1.CreateBasDraftRequest
-	(*CreateBasDraftResponse)(nil),     // 5: tammy.v1.CreateBasDraftResponse
-	(*GetCurrentBasDraftRequest)(nil),  // 6: tammy.v1.GetCurrentBasDraftRequest
-	(*GetCurrentBasDraftResponse)(nil), // 7: tammy.v1.GetCurrentBasDraftResponse
-	(*CivilDate)(nil),                  // 8: tammy.v1.CivilDate
-	(*Money)(nil),                      // 9: tammy.v1.Money
-	(*timestamppb.Timestamp)(nil),      // 10: google.protobuf.Timestamp
-	(GstBasis)(0),                      // 11: tammy.v1.GstBasis
-	(*CommandContext)(nil),             // 12: tammy.v1.CommandContext
-	(*AuthenticationContext)(nil),      // 13: tammy.v1.AuthenticationContext
+	(BasWorkpaperStatus)(0),             // 0: tammy.v1.BasWorkpaperStatus
+	(BasPurchaseReviewKind)(0),          // 1: tammy.v1.BasPurchaseReviewKind
+	(BasPurchaseLegacySupportKind)(0),   // 2: tammy.v1.BasPurchaseLegacySupportKind
+	(BasPurchaseSourceFormat)(0),        // 3: tammy.v1.BasPurchaseSourceFormat
+	(*BasSourceLine)(nil),               // 4: tammy.v1.BasSourceLine
+	(*BasSalesSourceLine)(nil),          // 5: tammy.v1.BasSalesSourceLine
+	(*BasPurchaseSourceLine)(nil),       // 6: tammy.v1.BasPurchaseSourceLine
+	(*BasPurchaseFutureClaim)(nil),      // 7: tammy.v1.BasPurchaseFutureClaim
+	(*BasPurchaseLegacyReview)(nil),     // 8: tammy.v1.BasPurchaseLegacyReview
+	(*BasPurchaseLegacySupport)(nil),    // 9: tammy.v1.BasPurchaseLegacySupport
+	(*BasPurchaseReview)(nil),           // 10: tammy.v1.BasPurchaseReview
+	(*BasWorkpaper)(nil),                // 11: tammy.v1.BasWorkpaper
+	(*CreateBasDraftRequest)(nil),       // 12: tammy.v1.CreateBasDraftRequest
+	(*CreateBasDraftResponse)(nil),      // 13: tammy.v1.CreateBasDraftResponse
+	(*GetCurrentBasDraftRequest)(nil),   // 14: tammy.v1.GetCurrentBasDraftRequest
+	(*GetCurrentBasDraftResponse)(nil),  // 15: tammy.v1.GetCurrentBasDraftResponse
+	(*CivilDate)(nil),                   // 16: tammy.v1.CivilDate
+	(*Money)(nil),                       // 17: tammy.v1.Money
+	(PurchaseUse)(0),                    // 18: tammy.v1.PurchaseUse
+	(PurchaseBasClassification)(0),      // 19: tammy.v1.PurchaseBasClassification
+	(PurchaseCashFlowClassification)(0), // 20: tammy.v1.PurchaseCashFlowClassification
+	(*PurchaseClaimPeriod)(nil),         // 21: tammy.v1.PurchaseClaimPeriod
+	(*PurchaseRetainedSourceRef)(nil),   // 22: tammy.v1.PurchaseRetainedSourceRef
+	(*PurchaseGstSourcePortion)(nil),    // 23: tammy.v1.PurchaseGstSourcePortion
+	(*PurchaseClaimTimingReview)(nil),   // 24: tammy.v1.PurchaseClaimTimingReview
+	(*timestamppb.Timestamp)(nil),       // 25: google.protobuf.Timestamp
+	(*LegacyPurchaseSourceRef)(nil),     // 26: tammy.v1.LegacyPurchaseSourceRef
+	(LegacyPurchaseDisposition)(0),      // 27: tammy.v1.LegacyPurchaseDisposition
+	(PurchaseReviewStatus)(0),           // 28: tammy.v1.PurchaseReviewStatus
+	(GstBasis)(0),                       // 29: tammy.v1.GstBasis
+	(*CommandContext)(nil),              // 30: tammy.v1.CommandContext
+	(*AuthenticationContext)(nil),       // 31: tammy.v1.AuthenticationContext
 }
 var file_tammy_v1_tax_proto_depIdxs = []int32{
-	8,  // 0: tammy.v1.BasSourceLine.document_date:type_name -> tammy.v1.CivilDate
-	9,  // 1: tammy.v1.BasSourceLine.gross:type_name -> tammy.v1.Money
-	9,  // 2: tammy.v1.BasSourceLine.gst_credit:type_name -> tammy.v1.Money
-	8,  // 3: tammy.v1.BasSalesSourceLine.tax_date:type_name -> tammy.v1.CivilDate
-	9,  // 4: tammy.v1.BasSalesSourceLine.gross:type_name -> tammy.v1.Money
-	9,  // 5: tammy.v1.BasSalesSourceLine.gst:type_name -> tammy.v1.Money
-	8,  // 6: tammy.v1.BasWorkpaper.period_start:type_name -> tammy.v1.CivilDate
-	8,  // 7: tammy.v1.BasWorkpaper.period_end:type_name -> tammy.v1.CivilDate
-	0,  // 8: tammy.v1.BasWorkpaper.status:type_name -> tammy.v1.BasWorkpaperStatus
-	9,  // 9: tammy.v1.BasWorkpaper.sales_g1:type_name -> tammy.v1.Money
-	9,  // 10: tammy.v1.BasWorkpaper.gst_on_sales_1a:type_name -> tammy.v1.Money
-	9,  // 11: tammy.v1.BasWorkpaper.gst_credits_1b:type_name -> tammy.v1.Money
-	9,  // 12: tammy.v1.BasWorkpaper.net_gst_payable:type_name -> tammy.v1.Money
-	1,  // 13: tammy.v1.BasWorkpaper.sources:type_name -> tammy.v1.BasSourceLine
-	10, // 14: tammy.v1.BasWorkpaper.created_at:type_name -> google.protobuf.Timestamp
-	11, // 15: tammy.v1.BasWorkpaper.gst_basis:type_name -> tammy.v1.GstBasis
-	2,  // 16: tammy.v1.BasWorkpaper.sales_sources:type_name -> tammy.v1.BasSalesSourceLine
-	12, // 17: tammy.v1.CreateBasDraftRequest.command_context:type_name -> tammy.v1.CommandContext
-	8,  // 18: tammy.v1.CreateBasDraftRequest.period_start:type_name -> tammy.v1.CivilDate
-	8,  // 19: tammy.v1.CreateBasDraftRequest.period_end:type_name -> tammy.v1.CivilDate
-	3,  // 20: tammy.v1.CreateBasDraftResponse.workpaper:type_name -> tammy.v1.BasWorkpaper
-	13, // 21: tammy.v1.GetCurrentBasDraftRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	3,  // 22: tammy.v1.GetCurrentBasDraftResponse.workpaper:type_name -> tammy.v1.BasWorkpaper
-	4,  // 23: tammy.v1.TaxService.CreateBasDraft:input_type -> tammy.v1.CreateBasDraftRequest
-	6,  // 24: tammy.v1.TaxService.GetCurrentBasDraft:input_type -> tammy.v1.GetCurrentBasDraftRequest
-	5,  // 25: tammy.v1.TaxService.CreateBasDraft:output_type -> tammy.v1.CreateBasDraftResponse
-	7,  // 26: tammy.v1.TaxService.GetCurrentBasDraft:output_type -> tammy.v1.GetCurrentBasDraftResponse
-	25, // [25:27] is the sub-list for method output_type
-	23, // [23:25] is the sub-list for method input_type
-	23, // [23:23] is the sub-list for extension type_name
-	23, // [23:23] is the sub-list for extension extendee
-	0,  // [0:23] is the sub-list for field type_name
+	16, // 0: tammy.v1.BasSourceLine.document_date:type_name -> tammy.v1.CivilDate
+	17, // 1: tammy.v1.BasSourceLine.gross:type_name -> tammy.v1.Money
+	17, // 2: tammy.v1.BasSourceLine.gst_credit:type_name -> tammy.v1.Money
+	16, // 3: tammy.v1.BasSalesSourceLine.tax_date:type_name -> tammy.v1.CivilDate
+	17, // 4: tammy.v1.BasSalesSourceLine.gross:type_name -> tammy.v1.Money
+	17, // 5: tammy.v1.BasSalesSourceLine.gst:type_name -> tammy.v1.Money
+	18, // 6: tammy.v1.BasPurchaseSourceLine.use:type_name -> tammy.v1.PurchaseUse
+	19, // 7: tammy.v1.BasPurchaseSourceLine.bas_classification:type_name -> tammy.v1.PurchaseBasClassification
+	20, // 8: tammy.v1.BasPurchaseSourceLine.cash_flow_classification:type_name -> tammy.v1.PurchaseCashFlowClassification
+	16, // 9: tammy.v1.BasPurchaseSourceLine.invoice_date:type_name -> tammy.v1.CivilDate
+	16, // 10: tammy.v1.BasPurchaseSourceLine.actual_payment_date:type_name -> tammy.v1.CivilDate
+	16, // 11: tammy.v1.BasPurchaseSourceLine.normal_tax_event_date:type_name -> tammy.v1.CivilDate
+	21, // 12: tammy.v1.BasPurchaseSourceLine.claim_period:type_name -> tammy.v1.PurchaseClaimPeriod
+	17, // 13: tammy.v1.BasPurchaseSourceLine.allocated_gross:type_name -> tammy.v1.Money
+	17, // 14: tammy.v1.BasPurchaseSourceLine.supplier_gst:type_name -> tammy.v1.Money
+	17, // 15: tammy.v1.BasPurchaseSourceLine.eligible_gst:type_name -> tammy.v1.Money
+	17, // 16: tammy.v1.BasPurchaseSourceLine.claimed_gst:type_name -> tammy.v1.Money
+	22, // 17: tammy.v1.BasPurchaseSourceLine.evidence:type_name -> tammy.v1.PurchaseRetainedSourceRef
+	23, // 18: tammy.v1.BasPurchaseFutureClaim.portion:type_name -> tammy.v1.PurchaseGstSourcePortion
+	21, // 19: tammy.v1.BasPurchaseFutureClaim.affected_period:type_name -> tammy.v1.PurchaseClaimPeriod
+	24, // 20: tammy.v1.BasPurchaseFutureClaim.timing_review:type_name -> tammy.v1.PurchaseClaimTimingReview
+	17, // 21: tammy.v1.BasPurchaseFutureClaim.allocated_deferred_gst:type_name -> tammy.v1.Money
+	25, // 22: tammy.v1.BasPurchaseFutureClaim.recorded_at:type_name -> google.protobuf.Timestamp
+	26, // 23: tammy.v1.BasPurchaseLegacyReview.source:type_name -> tammy.v1.LegacyPurchaseSourceRef
+	21, // 24: tammy.v1.BasPurchaseLegacyReview.affected_period:type_name -> tammy.v1.PurchaseClaimPeriod
+	16, // 25: tammy.v1.BasPurchaseLegacyReview.reporting_balance_date:type_name -> tammy.v1.CivilDate
+	27, // 26: tammy.v1.BasPurchaseLegacyReview.disposition:type_name -> tammy.v1.LegacyPurchaseDisposition
+	21, // 27: tammy.v1.BasPurchaseLegacyReview.previously_claimed_period:type_name -> tammy.v1.PurchaseClaimPeriod
+	22, // 28: tammy.v1.BasPurchaseLegacyReview.claim_evidence:type_name -> tammy.v1.PurchaseRetainedSourceRef
+	25, // 29: tammy.v1.BasPurchaseLegacyReview.recorded_at:type_name -> google.protobuf.Timestamp
+	2,  // 30: tammy.v1.BasPurchaseLegacySupport.kind:type_name -> tammy.v1.BasPurchaseLegacySupportKind
+	22, // 31: tammy.v1.BasPurchaseLegacySupport.source:type_name -> tammy.v1.PurchaseRetainedSourceRef
+	26, // 32: tammy.v1.BasPurchaseReview.legacy_source:type_name -> tammy.v1.LegacyPurchaseSourceRef
+	28, // 33: tammy.v1.BasPurchaseReview.status:type_name -> tammy.v1.PurchaseReviewStatus
+	21, // 34: tammy.v1.BasPurchaseReview.affected_period:type_name -> tammy.v1.PurchaseClaimPeriod
+	16, // 35: tammy.v1.BasPurchaseReview.invoice_date:type_name -> tammy.v1.CivilDate
+	16, // 36: tammy.v1.BasPurchaseReview.actual_payment_date:type_name -> tammy.v1.CivilDate
+	17, // 37: tammy.v1.BasPurchaseReview.eligible_gst:type_name -> tammy.v1.Money
+	17, // 38: tammy.v1.BasPurchaseReview.unclaimed_gst:type_name -> tammy.v1.Money
+	8,  // 39: tammy.v1.BasPurchaseReview.legacy_review:type_name -> tammy.v1.BasPurchaseLegacyReview
+	7,  // 40: tammy.v1.BasPurchaseReview.future_claim_obligation:type_name -> tammy.v1.BasPurchaseFutureClaim
+	22, // 41: tammy.v1.BasPurchaseReview.evidence:type_name -> tammy.v1.PurchaseRetainedSourceRef
+	1,  // 42: tammy.v1.BasPurchaseReview.kind:type_name -> tammy.v1.BasPurchaseReviewKind
+	16, // 43: tammy.v1.BasWorkpaper.period_start:type_name -> tammy.v1.CivilDate
+	16, // 44: tammy.v1.BasWorkpaper.period_end:type_name -> tammy.v1.CivilDate
+	0,  // 45: tammy.v1.BasWorkpaper.status:type_name -> tammy.v1.BasWorkpaperStatus
+	17, // 46: tammy.v1.BasWorkpaper.sales_g1:type_name -> tammy.v1.Money
+	17, // 47: tammy.v1.BasWorkpaper.gst_on_sales_1a:type_name -> tammy.v1.Money
+	17, // 48: tammy.v1.BasWorkpaper.gst_credits_1b:type_name -> tammy.v1.Money
+	17, // 49: tammy.v1.BasWorkpaper.net_gst_payable:type_name -> tammy.v1.Money
+	4,  // 50: tammy.v1.BasWorkpaper.sources:type_name -> tammy.v1.BasSourceLine
+	25, // 51: tammy.v1.BasWorkpaper.created_at:type_name -> google.protobuf.Timestamp
+	29, // 52: tammy.v1.BasWorkpaper.gst_basis:type_name -> tammy.v1.GstBasis
+	5,  // 53: tammy.v1.BasWorkpaper.sales_sources:type_name -> tammy.v1.BasSalesSourceLine
+	6,  // 54: tammy.v1.BasWorkpaper.purchase_sources:type_name -> tammy.v1.BasPurchaseSourceLine
+	10, // 55: tammy.v1.BasWorkpaper.purchase_reviews:type_name -> tammy.v1.BasPurchaseReview
+	17, // 56: tammy.v1.BasWorkpaper.legacy_candidate_gst:type_name -> tammy.v1.Money
+	3,  // 57: tammy.v1.BasWorkpaper.purchase_source_format:type_name -> tammy.v1.BasPurchaseSourceFormat
+	9,  // 58: tammy.v1.BasWorkpaper.legacy_purchase_support:type_name -> tammy.v1.BasPurchaseLegacySupport
+	30, // 59: tammy.v1.CreateBasDraftRequest.command_context:type_name -> tammy.v1.CommandContext
+	16, // 60: tammy.v1.CreateBasDraftRequest.period_start:type_name -> tammy.v1.CivilDate
+	16, // 61: tammy.v1.CreateBasDraftRequest.period_end:type_name -> tammy.v1.CivilDate
+	11, // 62: tammy.v1.CreateBasDraftResponse.workpaper:type_name -> tammy.v1.BasWorkpaper
+	31, // 63: tammy.v1.GetCurrentBasDraftRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	11, // 64: tammy.v1.GetCurrentBasDraftResponse.workpaper:type_name -> tammy.v1.BasWorkpaper
+	12, // 65: tammy.v1.TaxService.CreateBasDraft:input_type -> tammy.v1.CreateBasDraftRequest
+	14, // 66: tammy.v1.TaxService.GetCurrentBasDraft:input_type -> tammy.v1.GetCurrentBasDraftRequest
+	13, // 67: tammy.v1.TaxService.CreateBasDraft:output_type -> tammy.v1.CreateBasDraftResponse
+	15, // 68: tammy.v1.TaxService.GetCurrentBasDraft:output_type -> tammy.v1.GetCurrentBasDraftResponse
+	67, // [67:69] is the sub-list for method output_type
+	65, // [65:67] is the sub-list for method input_type
+	65, // [65:65] is the sub-list for extension type_name
+	65, // [65:65] is the sub-list for extension extendee
+	0,  // [0:65] is the sub-list for field type_name
 }
 
 func init() { file_tammy_v1_tax_proto_init() }
@@ -794,14 +2003,19 @@ func file_tammy_v1_tax_proto_init() {
 	}
 	file_tammy_v1_common_proto_init()
 	file_tammy_v1_organisation_proto_init()
+	file_tammy_v1_purchases_proto_init()
 	file_tammy_v1_tax_proto_msgTypes[1].OneofWrappers = []any{}
+	file_tammy_v1_tax_proto_msgTypes[2].OneofWrappers = []any{}
+	file_tammy_v1_tax_proto_msgTypes[4].OneofWrappers = []any{}
+	file_tammy_v1_tax_proto_msgTypes[6].OneofWrappers = []any{}
+	file_tammy_v1_tax_proto_msgTypes[7].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_tammy_v1_tax_proto_rawDesc), len(file_tammy_v1_tax_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   7,
+			NumEnums:      4,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
