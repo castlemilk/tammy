@@ -15,7 +15,7 @@ import (
 )
 
 func TestOpeningConversionAndPeriodControlsUseOneEncryptedTransaction(t *testing.T) {
-	workspace := testkit.NewEncryptedWorkspace(t)
+	workspace := testkit.NewEncryptedWorkspaceAtVersion(t, 12)
 	tx, err := workspace.Database.BeginEncryptedTx(context.Background(), nil)
 	if err != nil {
 		t.Fatal(err)

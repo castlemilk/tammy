@@ -40,14 +40,13 @@ func CheckedJournalTotals(lines []*tammyv1.JournalLine) (int64, int64, error) {
 // manual is true, every referenced account must be ordinary and postable.
 func ValidateJournal(journal *tammyv1.Journal, accounts map[string]*tammyv1.Account, manual bool) error {
 	if journal == nil || !ids.IsCanonicalV7(journal.Id) || !ids.IsCanonicalV7(journal.OrganisationId) ||
-		journal.Version == 0 || journal.State != tammyv1.JournalState_JOURNAL_STATE_POSTED ||
-		journal.Source < tammyv1.JournalSource_JOURNAL_SOURCE_OPENING_CONVERSION ||
-		journal.Source > tammyv1.JournalSource_JOURNAL_SOURCE_INVOICE_PAYMENT || !validCivilDate(journal.PostingDate) ||
+		journal.Version == 0 || journal.Version > math.MaxInt64 || journal.State != tammyv1.JournalState_JOURNAL_STATE_POSTED ||
+		!supportedJournalSource(journal.Source) || !validCivilDate(journal.PostingDate) ||
 		len(journal.Memo) > 512 || strings.TrimSpace(journal.Memo) != journal.Memo ||
 		len(journal.Lines) < 2 || len(journal.Lines) > 1000 || journal.TotalDebits == nil ||
 		journal.TotalCredits == nil || journal.TotalDebits.CurrencyCode != "AUD" ||
 		journal.TotalCredits.CurrencyCode != "AUD" || journal.PostedAt == nil ||
-		journal.PostedAt.CheckValid() != nil || journal.FinancialRevision == 0 {
+		journal.PostedAt.CheckValid() != nil || journal.FinancialRevision == 0 || journal.FinancialRevision > math.MaxInt64 {
 		return ErrInvalidJournal
 	}
 	seen := make(map[string]struct{}, len(journal.Lines))

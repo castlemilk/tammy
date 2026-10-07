@@ -19,13 +19,19 @@ type EncryptedWorkspace struct {
 }
 
 func NewEncryptedWorkspace(t testing.TB) *EncryptedWorkspace {
+	return NewEncryptedWorkspaceAtVersion(t, 2)
+}
+
+// NewEncryptedWorkspaceAtVersion provides an explicit schema prefix for tests
+// that use a current repository or exercise historical migration behavior.
+func NewEncryptedWorkspaceAtVersion(t testing.TB, version uint32) *EncryptedWorkspace {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "workspace.db")
 	key := make([]byte, sqlcipher.KeySize)
 	for index := range key {
 		key[index] = byte(index + 1)
 	}
-	if _, err := sqlcipher.MigrateWorkspace(context.Background(), path, key, 2); err != nil {
+	if _, err := sqlcipher.MigrateWorkspace(context.Background(), path, key, version); err != nil {
 		t.Fatalf("migrate encrypted workspace: %v", err)
 	}
 	database, err := sqlcipher.Open(context.Background(), path, key)

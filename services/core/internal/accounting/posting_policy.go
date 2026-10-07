@@ -12,6 +12,39 @@ import (
 
 var ErrPostingPolicy = errors.New("accounting: posting policy rejected intent")
 
+func supportedJournalSource(source tammyv1.JournalSource) bool {
+	switch source {
+	case tammyv1.JournalSource_JOURNAL_SOURCE_OPENING_CONVERSION, tammyv1.JournalSource_JOURNAL_SOURCE_MANUAL,
+		tammyv1.JournalSource_JOURNAL_SOURCE_REVERSAL, tammyv1.JournalSource_JOURNAL_SOURCE_RECEIVABLE,
+		tammyv1.JournalSource_JOURNAL_SOURCE_INVOICE_PAYMENT, tammyv1.JournalSource_JOURNAL_SOURCE_PURCHASE,
+		tammyv1.JournalSource_JOURNAL_SOURCE_PURCHASE_PAYMENT, tammyv1.JournalSource_JOURNAL_SOURCE_PURCHASE_GST_ATTRIBUTION:
+		return true
+	}
+	return false
+}
+
+func journalSourceKind(sourceType string, source tammyv1.JournalSource) (int64, bool) {
+	switch source {
+	case tammyv1.JournalSource_JOURNAL_SOURCE_PURCHASE:
+		return 6, sourceType == "PAYABLE"
+	case tammyv1.JournalSource_JOURNAL_SOURCE_PURCHASE_PAYMENT:
+		return 7, sourceType == "BANKING"
+	case tammyv1.JournalSource_JOURNAL_SOURCE_PURCHASE_GST_ATTRIBUTION:
+		return 8, sourceType == "TAX"
+	}
+	return 0, source != tammyv1.JournalSource_JOURNAL_SOURCE_UNSPECIFIED && parseJournalSource(sourceType, 0) == source
+}
+
+func workflowOwnedJournal(source tammyv1.JournalSource) bool {
+	switch source {
+	case tammyv1.JournalSource_JOURNAL_SOURCE_RECEIVABLE, tammyv1.JournalSource_JOURNAL_SOURCE_INVOICE_PAYMENT,
+		tammyv1.JournalSource_JOURNAL_SOURCE_PURCHASE, tammyv1.JournalSource_JOURNAL_SOURCE_PURCHASE_PAYMENT,
+		tammyv1.JournalSource_JOURNAL_SOURCE_PURCHASE_GST_ATTRIBUTION:
+		return true
+	}
+	return false
+}
+
 type TaxCodeReadPort interface {
 	GetEffectiveTaxCode(context.Context, string, string, string) (*tammyv1.TaxCode, error)
 }

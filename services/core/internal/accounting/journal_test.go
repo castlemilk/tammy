@@ -7,8 +7,57 @@ import (
 	"time"
 
 	tammyv1 "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
+
+func TestPurchaseJournalSourcesAreExplicitlySupported(t *testing.T) {
+	accounts := map[string]*tammyv1.Account{testAssetID: postingAccount(testAssetID, tammyv1.AccountType_ACCOUNT_TYPE_ASSET), testExpenseID: postingAccount(testExpenseID, tammyv1.AccountType_ACCOUNT_TYPE_EXPENSE)}
+	for _, source := range []tammyv1.JournalSource{tammyv1.JournalSource_JOURNAL_SOURCE_PURCHASE, tammyv1.JournalSource_JOURNAL_SOURCE_PURCHASE_PAYMENT, tammyv1.JournalSource_JOURNAL_SOURCE_PURCHASE_GST_ATTRIBUTION} {
+		journal := proto.Clone(balancedJournal()).(*tammyv1.Journal)
+		journal.Source = source
+		if err := ValidateJournal(journal, accounts, false); err != nil {
+			t.Errorf("source %s rejected: %v", source, err)
+		}
+	}
+	for _, source := range []tammyv1.JournalSource{0, 9, -1} {
+		journal := proto.Clone(balancedJournal()).(*tammyv1.Journal)
+		journal.Source = source
+		if !errors.Is(ValidateJournal(journal, accounts, false), ErrInvalidJournal) {
+			t.Errorf("unsupported source %d admitted", source)
+		}
+	}
+}
+
+func TestPurchaseJournalSourcePairsAndLegacyFallback(t *testing.T) {
+	for _, test := range []struct {
+		sql    string
+		kind   int64
+		public tammyv1.JournalSource
+	}{
+		{"PAYABLE", 6, tammyv1.JournalSource_JOURNAL_SOURCE_PURCHASE},
+		{"BANKING", 7, tammyv1.JournalSource_JOURNAL_SOURCE_PURCHASE_PAYMENT},
+		{"TAX", 8, tammyv1.JournalSource_JOURNAL_SOURCE_PURCHASE_GST_ATTRIBUTION},
+		{"BANKING", 0, tammyv1.JournalSource_JOURNAL_SOURCE_INVOICE_PAYMENT},
+		{"RECEIVABLE", 0, tammyv1.JournalSource_JOURNAL_SOURCE_RECEIVABLE},
+	} {
+		kind, valid := journalSourceKind(test.sql, test.public)
+		if !valid || kind != test.kind || parseJournalSource(test.sql, test.kind) != test.public || !workflowOwnedJournal(test.public) {
+			t.Errorf("invalid source mapping: %#v", test)
+		}
+	}
+	for _, test := range []struct {
+		sql  string
+		kind int64
+	}{{"BANKING", 6}, {"TAX", 7}, {"PAYABLE", 8}, {"BANKING", math.MaxInt64}, {"MANUAL", 7}, {"PAYABLE", 0}} {
+		if parseJournalSource(test.sql, test.kind) != 0 {
+			t.Errorf("mismatched stored pair admitted: %#v", test)
+		}
+	}
+	if _, valid := journalSourceKind("BANKING", tammyv1.JournalSource_JOURNAL_SOURCE_PURCHASE); valid {
+		t.Fatal("mismatched posting pair admitted")
+	}
+}
 
 const (
 	testJournalID = "018f0000-0000-7000-8000-000000000301"

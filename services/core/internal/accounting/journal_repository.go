@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"math"
 	"strconv"
 	"time"
 
@@ -71,8 +72,11 @@ func (repository *JournalRepository) Post(
 	now time.Time,
 ) error {
 	if repository == nil || repository.executor == nil || ctx == nil || journal == nil ||
-		!ids.IsCanonicalV7(sourceID) || sourceRevision == 0 || now.IsZero() ||
-		(sourceType != "MANUAL" && sourceType != "REVERSAL" && sourceType != "OPENING" && sourceType != "RECEIVABLE" && sourceType != "BANKING") {
+		!ids.IsCanonicalV7(sourceID) || sourceRevision == 0 || sourceRevision > math.MaxInt64 || now.IsZero() {
+		return ErrJournalRepository
+	}
+	sourceKind, validSource := journalSourceKind(sourceType, journal.Source)
+	if !validSource {
 		return ErrJournalRepository
 	}
 	periods, err := NewPeriodRepository(repository.executor)
@@ -109,12 +113,12 @@ func (repository *JournalRepository) Post(
 	}
 	_, err = repository.executor.ExecContext(ctx, `
 		INSERT INTO journals(
-			id, organisation_id, version, source_type, source_id, source_revision,
+			id, organisation_id, version, source_type, source_kind, source_id, source_revision,
 			state, journal_date, description, reversal_of_journal_id,
 			total_debits_minor, total_credits_minor, currency_code, financial_revision,
 			posted_at, created_at
-		) VALUES (?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, 'AUD', ?, NULL, ?)`,
-		journal.Id, journal.OrganisationId, journal.Version, sourceType, sourceID, sourceRevision,
+		) VALUES (?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, 'AUD', ?, NULL, ?)`,
+		journal.Id, journal.OrganisationId, journal.Version, sourceType, sourceKind, sourceID, sourceRevision,
 		civilDateString(journal.PostingDate), journal.Memo, nullableString(journal.ReversalOfJournalId),
 		journal.TotalDebits.MinorUnits, journal.TotalCredits.MinorUnits, journal.FinancialRevision,
 		now.UTC().Format(time.RFC3339Nano),
@@ -215,7 +219,7 @@ func (repository *JournalRepository) Get(ctx context.Context, journalID string) 
 		return nil, ErrJournalRepository
 	}
 	rows, err := repository.executor.QueryContext(ctx, `
-		SELECT id, organisation_id, version, source_type, state, journal_date, description,
+		SELECT id, organisation_id, version, source_type, source_kind, state, journal_date, description,
 		       reversal_of_journal_id, reversed_by_journal_id, total_debits_minor,
 		       total_credits_minor, financial_revision, posted_at
 		FROM journals WHERE id = ?`, journalID)
@@ -295,7 +299,7 @@ func (repository *JournalRepository) Reverse(ctx context.Context, journalID stri
 	if err != nil {
 		return nil, nil, err
 	}
-	if original.Source == tammyv1.JournalSource_JOURNAL_SOURCE_RECEIVABLE || original.Source == tammyv1.JournalSource_JOURNAL_SOURCE_INVOICE_PAYMENT {
+	if workflowOwnedJournal(original.Source) {
 		return nil, nil, ErrJournalSourceConflict
 	}
 	if original.Version != expectedVersion || original.State != tammyv1.JournalState_JOURNAL_STATE_POSTED || original.ReversedByJournalId != nil {
@@ -589,17 +593,18 @@ func (repository *JournalRepository) loadJournalLines(ctx context.Context, journ
 func scanJournal(scanner interface{ Scan(...any) error }) (*tammyv1.Journal, error) {
 	journal := &tammyv1.Journal{TotalDebits: audMoney(0), TotalCredits: audMoney(0)}
 	var source, state, date, postedAt string
+	var sourceKind int64
 	var reversalOf, reversedBy sql.NullString
-	if err := scanner.Scan(&journal.Id, &journal.OrganisationId, &journal.Version, &source, &state, &date,
+	if err := scanner.Scan(&journal.Id, &journal.OrganisationId, &journal.Version, &source, &sourceKind, &state, &date,
 		&journal.Memo, &reversalOf, &reversedBy, &journal.TotalDebits.MinorUnits,
 		&journal.TotalCredits.MinorUnits, &journal.FinancialRevision, &postedAt); err != nil {
 		return nil, err
 	}
-	journal.Source = parseJournalSource(source)
+	journal.Source = parseJournalSource(source, sourceKind)
 	journal.State = parseJournalState(state)
 	journal.PostingDate = parseCivilDate(date)
 	instant, err := time.Parse(time.RFC3339Nano, postedAt)
-	if err != nil || journal.PostingDate == nil {
+	if err != nil || journal.PostingDate == nil || !supportedJournalSource(journal.Source) {
 		return nil, ErrJournalRepository
 	}
 	journal.PostedAt = timestamppb.New(instant)
@@ -653,7 +658,16 @@ func parseTaxTreatment(value string) tammyv1.TaxTreatment {
 		"OUT_OF_SCOPE": tammyv1.TaxTreatment_TAX_TREATMENT_OUT_OF_SCOPE}[value]
 }
 
-func parseJournalSource(value string) tammyv1.JournalSource {
+func parseJournalSource(value string, kind int64) tammyv1.JournalSource {
+	if kind != 0 {
+		source := tammyv1.JournalSource(kind)
+		if kind == 6 || kind == 7 || kind == 8 {
+			if storedKind, valid := journalSourceKind(value, source); valid && storedKind == kind {
+				return source
+			}
+		}
+		return tammyv1.JournalSource_JOURNAL_SOURCE_UNSPECIFIED
+	}
 	return map[string]tammyv1.JournalSource{"OPENING": tammyv1.JournalSource_JOURNAL_SOURCE_OPENING_CONVERSION,
 		"MANUAL": tammyv1.JournalSource_JOURNAL_SOURCE_MANUAL, "REVERSAL": tammyv1.JournalSource_JOURNAL_SOURCE_REVERSAL, "RECEIVABLE": tammyv1.JournalSource_JOURNAL_SOURCE_RECEIVABLE, "BANKING": tammyv1.JournalSource_JOURNAL_SOURCE_INVOICE_PAYMENT}[value]
 }
