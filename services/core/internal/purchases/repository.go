@@ -75,6 +75,12 @@ func (r *Repository) Get(ctx context.Context, org, id string) (*tammyv1.Purchase
 	return r.get(ctx, org, id, false)
 }
 func (r *Repository) get(ctx context.Context, org, id string, pendingInitialEvent bool) (*tammyv1.PurchaseAccounting, error) {
+	if r == nil || r.now == nil {
+		return nil, ErrRepository
+	}
+	return r.getAt(ctx, org, id, pendingInitialEvent, r.now().UTC())
+}
+func (r *Repository) getAt(ctx context.Context, org, id string, pendingInitialEvent bool, readAsOf time.Time) (*tammyv1.PurchaseAccounting, error) {
 	doc, err := r.document(ctx, org, id)
 	if err != nil {
 		return nil, err
@@ -128,10 +134,9 @@ func (r *Repository) get(ctx context.Context, org, id string, pendingInitialEven
 	if evidence == nil {
 		return nil, ErrRepository
 	}
-	// Append-command projections are added with their owned writers. Fail
-	// visibly if a newer retained source exists rather than returning initial
-	// zero payment/claim totals as though that source did not exist.
-	rows, err := r.executor.QueryContext(ctx, `SELECT (SELECT count(*) FROM purchase_payments_v1 WHERE posting_id=? AND organisation_id=?)+(SELECT count(*) FROM purchase_gst_attributions_v1 WHERE posting_id=? AND organisation_id=?)+(SELECT count(*) FROM purchase_gst_deferrals_v1 WHERE posting_id=? AND organisation_id=?)`, posting.Id, org, posting.Id, org, posting.Id, org)
+	// Claim/deferral writers extend this projection with their owned sources.
+	// Refuse unsupported later facts rather than returning stale zero totals.
+	rows, err := r.executor.QueryContext(ctx, `SELECT (SELECT count(*) FROM purchase_gst_attributions_v1 WHERE posting_id=? AND organisation_id=?)+(SELECT count(*) FROM purchase_gst_deferrals_v1 WHERE posting_id=? AND organisation_id=?)`, posting.Id, org, posting.Id, org)
 	if err != nil {
 		return nil, ErrRepository
 	}
@@ -141,7 +146,7 @@ func (r *Repository) get(ctx context.Context, org, id string, pendingInitialEven
 	}
 	asOf := posting.PostedAt.AsTime().UTC()
 	if !pendingInitialEvent {
-		asOf = r.now().UTC()
+		asOf = readAsOf
 	}
 	value.ReviewOutcomes, err = purchaseEvidenceOutcomes(evidence.Review, posting.InvoiceDate, asOf)
 	if err != nil {
@@ -194,12 +199,14 @@ func (r *Repository) get(ctx context.Context, org, id string, pendingInitialEven
 			return nil, ErrRepository
 		}
 	}
-	version, err := r.verifyEvents(ctx, posting, pendingInitialEvent, value)
-	if err != nil {
+	if err := r.verifyPaymentHistory(ctx, posting, pendingInitialEvent, value); err != nil {
 		return nil, err
 	}
-	if version > 0 {
-		value.AccountingVersion = version
+	// Public readiness follows the supplied trusted clock; historical events
+	// were compared in full at each event's own recorded timestamp above.
+	value.ReviewOutcomes, err = purchaseEvidenceOutcomes(evidence.Review, posting.InvoiceDate, asOf)
+	if err != nil {
+		return nil, err
 	}
 	return value, nil
 }
@@ -355,13 +362,20 @@ func (r *Repository) verifyAllocations(ctx context.Context, p *tammyv1.PurchaseP
 }
 
 func (r *Repository) retainedEvidence(ctx context.Context, p *tammyv1.PurchasePosting) (*tammyv1.PurchaseTaxEvidence, error) {
+	history, err := r.retainedEvidenceHistory(ctx, p)
+	if err != nil || len(history) == 0 {
+		return nil, err
+	}
+	return history[len(history)-1], nil
+}
+
+func (r *Repository) retainedEvidenceHistory(ctx context.Context, p *tammyv1.PurchasePosting) ([]*tammyv1.PurchaseTaxEvidence, error) {
 	rows, err := r.executor.QueryContext(ctx, `SELECT id,accounting_version,classification,source_document_id,source_version,source_hash,held_date,registration_review_confirmed,business_use_review_confirmed,evidence_review_confirmed,reason,evidence_proto,record_hash,actor_user_id,created_at FROM purchase_tax_evidence_v1 WHERE organisation_id=? AND posting_id=? AND document_id=? ORDER BY accounting_version,id`, p.OrganisationId, p.Id, p.DocumentId)
 	if err != nil {
 		return nil, ErrRepository
 	}
 	defer rows.Close()
-	var latest *tammyv1.PurchaseTaxEvidence
-	first := true
+	var history []*tammyv1.PurchaseTaxEvidence
 	for rows.Next() {
 		var id, reason, actor, stamp string
 		var version uint64
@@ -374,7 +388,7 @@ func (r *Repository) retainedEvidence(ctx context.Context, p *tammyv1.PurchasePo
 			return nil, ErrRepository
 		}
 		e := &tammyv1.PurchaseTaxEvidence{}
-		if proto.Unmarshal(content, e) != nil || !canonicalPurchaseBytes(e, content) || !verifyPurchaseHash(e, hash) || !bytes.Equal(hash, e.SourceHash) || e.Id != id || e.OrganisationId != p.OrganisationId || e.DocumentId != p.DocumentId || e.AccountingVersion != version || e.ActorUserId != actor || e.RecordedAt == nil || e.RecordedAt.CheckValid() != nil || e.RecordedAt.AsTime().UTC().Format(time.RFC3339Nano) != stamp || e.Review == nil {
+		if proto.Unmarshal(content, e) != nil || !canonicalPurchaseBytes(e, content) || !verifyPurchaseHash(e, hash) || !bytes.Equal(hash, e.SourceHash) || e.Id != id || !ids.IsCanonicalV7(id) || e.OrganisationId != p.OrganisationId || e.DocumentId != p.DocumentId || e.AccountingVersion != version || version == 0 || version > math.MaxInt64 || e.ActorUserId != actor || !ids.IsCanonicalV7(actor) || e.RecordedAt == nil || e.RecordedAt.CheckValid() != nil || e.RecordedAt.AsTime().UTC().Format(time.RFC3339Nano) != stamp || e.Review == nil {
 			return nil, ErrRepository
 		}
 		review := e.Review
@@ -384,11 +398,16 @@ func (r *Repository) retainedEvidence(ctx context.Context, p *tammyv1.PurchasePo
 		if review.Source != nil && (review.Source.SourceId != sourceID.String || !sourceVersion.Valid || sourceVersion.Int64 <= 0 || review.Source.SourceVersion != uint64(sourceVersion.Int64) || !bytes.Equal(review.Source.SourceHash, sourceHash)) {
 			return nil, ErrRepository
 		}
-		if !first || version != 1 || !proto.Equal(review, p.Evidence) {
+		if (review.Source == nil && (sourceVersion.Valid || len(sourceHash) != 0)) || (len(history) == 0 && (version != 1 || !proto.Equal(review, p.Evidence) || e.ActorUserId != p.ActorUserId || !proto.Equal(e.RecordedAt, p.PostedAt))) || (len(history) > 0 && version <= history[len(history)-1].AccountingVersion) {
 			return nil, ErrRepository
 		}
-		first = false
-		latest = e
+		if err := ValidatePurchaseEvidence(e.Review, nil); err != nil {
+			return nil, err
+		}
+		if err := r.verifyEvidenceSource(ctx, p.OrganisationId, e.Review); err != nil {
+			return nil, err
+		}
+		history = append(history, e)
 	}
 	if rows.Err() != nil {
 		return nil, ErrRepository
@@ -396,15 +415,7 @@ func (r *Repository) retainedEvidence(ctx context.Context, p *tammyv1.PurchasePo
 	if err := rows.Close(); err != nil {
 		return nil, err
 	}
-	if latest != nil {
-		if err := ValidatePurchaseEvidence(latest.Review, nil); err != nil {
-			return nil, err
-		}
-		if err := r.verifyEvidenceSource(ctx, p.OrganisationId, latest.Review); err != nil {
-			return nil, err
-		}
-	}
-	return latest, nil
+	return history, nil
 }
 
 func canonicalPurchaseBytes(message proto.Message, content []byte) bool {
@@ -413,7 +424,7 @@ func canonicalPurchaseBytes(message proto.Message, content []byte) bool {
 }
 
 func (r *Repository) verifyEvents(ctx context.Context, p *tammyv1.PurchasePosting, pending bool, derived *tammyv1.PurchaseAccounting) (uint64, error) {
-	rows, err := r.executor.QueryContext(ctx, `SELECT operation_key,posting_id,document_id,opening_payable_id,accounting_version,command_type,financial_revision,ledger_revision,tax_source_revision,settlement_revision,result_proto,result_sha256,journal_id,created_at FROM purchase_accounting_events_v1 WHERE organisation_id=? AND scope_kind='POSTING' AND scope_id=? ORDER BY accounting_version`, p.OrganisationId, p.Id)
+	rows, err := r.executor.QueryContext(ctx, `SELECT operation_key,posting_id,document_id,opening_payable_id,accounting_version,command_type,financial_revision,ledger_revision,tax_source_revision,settlement_revision,result_proto,result_sha256,journal_id,created_at FROM purchase_accounting_events_v1 WHERE organisation_id=? AND scope_kind='POSTING' AND scope_id=? AND accounting_version=1`, p.OrganisationId, p.Id)
 	if err != nil {
 		return 0, ErrRepository
 	}
