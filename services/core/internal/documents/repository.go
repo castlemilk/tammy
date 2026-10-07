@@ -112,30 +112,17 @@ func (repository *Repository) getOne(ctx context.Context, predicate string, valu
 	return document, nil
 }
 
-// List returns a bounded stable page ordered newest first.
+// List keeps first-page callers working. Transport adapters must use ListPage
+// with their authenticated cursor encoder to expose continuation safely.
 func (repository *Repository) List(ctx context.Context, organisationID string, limit int) ([]*tammyv1.Document, error) {
-	if repository == nil || repository.executor == nil || ctx == nil ||
-		!ids.IsCanonicalV7(organisationID) || limit < 1 || limit > 200 {
+	page, err := repository.ListPage(ctx, organisationID, PageOptions{Limit: limit, EncodeCursor: func(string) (string, error) {
+		// List discards continuation; reserve the maximum transport token space.
+		return strings.Repeat("x", 2048), nil
+	}})
+	if errors.Is(err, ErrInvalidPage) {
 		return nil, ErrRepository
 	}
-	rows, err := repository.executor.QueryContext(ctx, documentSelect+`
-		WHERE organisation_id = ? ORDER BY created_at DESC, id DESC LIMIT ?`, organisationID, limit)
-	if err != nil {
-		return nil, fmt.Errorf("%w: list documents: %v", ErrRepository, err)
-	}
-	defer rows.Close()
-	documents := make([]*tammyv1.Document, 0, limit)
-	for rows.Next() {
-		document, scanErr := scanDocument(rows)
-		if scanErr != nil {
-			return nil, ErrRepository
-		}
-		documents = append(documents, document)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("%w: finish document list: %v", ErrRepository, err)
-	}
-	return documents, nil
+	return page.Documents, err
 }
 
 func (repository *Repository) SaveReview(

@@ -6,6 +6,7 @@ package localproduct
 
 import (
 	"context"
+	"crypto/hmac"
 	"crypto/sha256"
 	"database/sql"
 	"errors"
@@ -27,6 +28,7 @@ import (
 	"github.com/tammyapp/tammy/services/core/internal/idempotency"
 	"github.com/tammyapp/tammy/services/core/internal/organisations"
 	"github.com/tammyapp/tammy/services/core/internal/platform/clock"
+	"github.com/tammyapp/tammy/services/core/internal/platform/paging"
 	"github.com/tammyapp/tammy/services/core/internal/reporting"
 	"github.com/tammyapp/tammy/services/core/internal/storage/sqlcipher"
 	"github.com/tammyapp/tammy/services/core/internal/transport"
@@ -178,11 +180,21 @@ func (module *LedgerModule) Activate(activation app.LocalWorkspaceActivation) er
 	}); err != nil {
 		return err
 	}
+	if len(activation.InstallationKey) < 32 {
+		return ErrLedgerModule
+	}
+	documentCursorMAC := hmac.New(sha256.New, activation.InstallationKey)
+	_, _ = documentCursorMAC.Write([]byte("tammy.document-page.v1\x00" + activation.WorkspaceID))
+	documentCursors, err := paging.NewCodec(documentCursorMAC.Sum(nil))
+	if err != nil {
+		return ErrLedgerModule
+	}
 	if err := module.documentRoute.set(&documentHandler{
 		database: activation.Database,
 		identity: activation.Identity,
 		now:      activation.Now,
 		newID:    activation.NewID,
+		cursors:  documentCursors,
 	}); err != nil {
 		return err
 	}
@@ -585,6 +597,7 @@ type documentHandler struct {
 	identity app.LocalModuleIdentity
 	now      func() time.Time
 	newID    func() (string, error)
+	cursors  *paging.Codec
 }
 
 func (handler *documentHandler) IngestDocument(
@@ -684,8 +697,10 @@ func (handler *documentHandler) ListDocuments(
 	ctx context.Context,
 	request *connect.Request[tammyv1.ListDocumentsRequest],
 ) (*connect.Response[tammyv1.ListDocumentsResponse], error) {
-	if handler == nil || handler.database == nil || handler.identity == nil || request == nil ||
-		request.Msg == nil || request.Msg.Authentication == nil || request.Msg.Page == nil || request.Msg.Page.Cursor != nil {
+	if handler == nil || handler.database == nil || handler.identity == nil || handler.cursors == nil || handler.now == nil || request == nil ||
+		request.Msg == nil || request.Msg.Authentication == nil || request.Msg.Page == nil ||
+		(request.Msg.Status != nil && request.Msg.GetStatus() == tammyv1.DocumentStatus_DOCUMENT_STATUS_UNSPECIFIED) ||
+		(request.Msg.Accounting != nil && request.Msg.GetAccounting() == tammyv1.DocumentAccountingFilter_DOCUMENT_ACCOUNTING_FILTER_UNSPECIFIED) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, ErrLedgerModule)
 	}
 	if err := handler.identity.RequireActiveSessionReadOnly(ctx, request.Msg.Authentication); err != nil {
@@ -698,22 +713,61 @@ func (handler *documentHandler) ListDocuments(
 	if pageSize < 1 || pageSize > 200 {
 		return nil, connect.NewError(connect.CodeInvalidArgument, ErrLedgerModule)
 	}
+	var reviewAsOf time.Time
+	reviewDay := ""
+	if request.Msg.GetAccounting() == tammyv1.DocumentAccountingFilter_DOCUMENT_ACCOUNTING_FILTER_NEEDS_GST_REVIEW {
+		reviewAsOf = handler.now().UTC()
+		reviewDay = reviewAsOf.Format("2006-01-02")
+	}
+	queryHash := sha256.Sum256([]byte(fmt.Sprintf("tammy.v1.DocumentService.ListDocuments\x00%s\x00%s\x00%s\x00%d\x00%d\x00%d\x00%s",
+		request.Msg.OrganisationId, request.Msg.Authentication.ActorUserId, request.Msg.Authentication.SessionId,
+		pageSize, request.Msg.GetStatus(), request.Msg.GetAccounting(), reviewDay)))
+	position := ""
+	if request.Msg.Page.Cursor != nil {
+		cursor, err := handler.cursors.Decode(request.Msg.Page.GetCursor(), queryHash)
+		if err != nil || cursor.Snapshot != "documents-v1" {
+			return nil, connect.NewError(connect.CodeInvalidArgument, ErrLedgerModule)
+		}
+		position = cursor.Position
+	}
+	encodeCursor := func(position string) (string, error) {
+		return handler.cursors.Encode(paging.Cursor{Snapshot: "documents-v1", Position: position, QueryHash: queryHash})
+	}
 	tx, err := handler.database.BeginEncryptedTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
 	}
 	defer tx.Rollback()
+	if err := handler.identity.ValidateAuthorizationWithin(ctx, tx, request.Msg.Authentication, authorisation.ActionReadFinancial); err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, ErrLedgerModule)
+	}
 	repository, err := documents.NewRepository(tx)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
 	}
-	items, err := repository.List(ctx, request.Msg.OrganisationId, pageSize)
-	if err != nil || tx.Commit() != nil {
+	page, err := repository.ListPage(ctx, request.Msg.OrganisationId, documents.PageOptions{
+		Position: position, Limit: pageSize, Status: request.Msg.GetStatus(), Accounting: request.Msg.GetAccounting(), ReviewAsOf: reviewAsOf, EncodeCursor: encodeCursor,
+	})
+	if errors.Is(err, documents.ErrInvalidPage) {
+		return nil, connect.NewError(connect.CodeInvalidArgument, ErrLedgerModule)
+	}
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+	}
+	info := &tammyv1.PageInfo{ReturnedCount: uint32(len(page.Documents))}
+	if page.NextPosition != "" {
+		cursor, err := encodeCursor(page.NextPosition)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
+		}
+		info.NextCursor = &cursor
+	}
+	if tx.Commit() != nil {
 		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
 	}
 	return connect.NewResponse(&tammyv1.ListDocumentsResponse{
-		Documents: items,
-		Page:      &tammyv1.PageInfo{ReturnedCount: uint32(len(items))},
+		Documents: page.Documents,
+		Page:      info,
 	}), nil
 }
 
