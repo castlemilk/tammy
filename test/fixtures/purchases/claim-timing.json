@@ -1,0 +1,73 @@
+{
+  "rule_version": "au-gst-ordinary-claim-limit-v1",
+  "access_date": "2026-10-07",
+  "legislation": {
+    "url": "https://www.legislation.gov.au/C2004A00446/2026-01-01/2026-01-01/text/original/epub/OEBPS/document_1/document_1.html",
+    "version": "Compilation 96, 2026-01-01, sections 29-10 and 93-5",
+    "retrieval": "Full official compilation retrieved; ATO API direct retrieval failed, official indexed contents confirmed worked examples."
+  },
+  "supported_rule": "The ordinary credit limit is the fourth calendar anniversary of the actual required return date for the earliest otherwise eligible source portion, disregarding invoice holding. The final civil day is allowed. No weekend roll or amendment-review extension is applied.",
+  "unsupported": [
+    "Missing or disputed actual required-return provenance",
+    "A missing fourth calendar anniversary or a year beyond 9999",
+    "Special section 93-10 entitlement exceptions",
+    "Unverified section 29-10(5)-(6) approved-form notification or later-period election"
+  ],
+  "cases": [
+    {
+      "name": "Tim",
+      "required_return_due_date": "2017-07-28",
+      "last_claim_date": "2021-07-28",
+      "first_outside_date": "2021-07-29",
+      "source_url": "https://www.ato.gov.au/api/public/content/0-a7296cdd-cec8-49dc-b597-1d94ac991a01",
+      "source_version": "Official indexed Tim cash-accounting example, accessed 2026-10-07",
+      "derivation": "ATO worked example"
+    },
+    {
+      "name": "Mia Sunday final day",
+      "required_return_due_date": "2020-04-28",
+      "last_claim_date": "2024-04-28",
+      "first_outside_date": "2024-04-29",
+      "source_url": "https://www.ato.gov.au/api/public/content/0-1e92db95-a75c-4f4e-a3d4-39f43b1a3b25",
+      "source_version": "Official indexed Mia cash-accounting example, accessed 2026-10-07",
+      "derivation": "ATO worked example; no working-day roll"
+    },
+    {
+      "name": "Esmeralda credit limit distinct from amendment review",
+      "required_return_due_date": "2012-10-28",
+      "last_claim_date": "2016-10-28",
+      "first_outside_date": "2016-10-29",
+      "amendment_review_last_date": "2016-10-29",
+      "source_url": "https://www.ato.gov.au/businesses-and-organisations/gst-excise-and-indirect-taxes/guide-to-self-assessment-for-indirect-taxes/period-of-review",
+      "source_version": "Last updated 2024-09-03, official indexed contents accessed 2026-10-07",
+      "derivation": "ATO worked example; amendment review does not extend the credit limit"
+    },
+    {
+      "name": "Leap-day anniversary",
+      "required_return_due_date": "2024-02-29",
+      "last_claim_date": "2028-02-29",
+      "first_outside_date": "2028-03-01",
+      "source_url": "https://www.legislation.gov.au/C2004A00446/2026-01-01/2026-01-01/text/original/epub/OEBPS/document_1/document_1.html",
+      "source_version": "Compilation 96, section 93-5, accessed 2026-10-07",
+      "derivation": "Implementation inference from ordinary anniversary rule, not an ATO worked leap-day example"
+    },
+    {
+      "name": "Missing 2100 leap-day anniversary",
+      "required_return_due_date": "2096-02-29",
+      "last_claim_date": "",
+      "first_outside_date": "",
+      "source_url": "https://www.legislation.gov.au/C2004A00446/2026-01-01/2026-01-01/text/original/epub/OEBPS/document_1/document_1.html",
+      "source_version": "Compilation 96, section 93-5, accessed 2026-10-07",
+      "derivation": "Conservative unsupported calendar boundary; no inferred replacement date"
+    },
+    {
+      "name": "Anniversary beyond supported calendar",
+      "required_return_due_date": "9996-01-28",
+      "last_claim_date": "",
+      "first_outside_date": "",
+      "source_url": "https://www.legislation.gov.au/C2004A00446/2026-01-01/2026-01-01/text/original/epub/OEBPS/document_1/document_1.html",
+      "source_version": "Compilation 96, section 93-5, accessed 2026-10-07",
+      "derivation": "Product calendar boundary; unsupported, not a legal entitlement ruling"
+    }
+  ]
+}
