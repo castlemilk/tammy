@@ -65,7 +65,11 @@ func (r *Repository) PostReviewed(ctx context.Context, request *tammyv1.PostRevi
 			accounts[allocation.AccountId] = account
 		}
 	}
-	input := ReviewedPurchaseInput{OrganisationID: profile.Id, DocumentID: doc.Id, ReviewedVersion: doc.Version, Document: doc, Allocations: request.Allocations, Accounts: accounts, GSTBasis: profile.GstBasis, GSTProfileVersion: profile.Version, GSTHistoryWatermark: watermark, Evidence: request.Evidence}
+	exceptionRule, err := r.ResolveEvidenceRule(ctx, profile.Id, doc.Id, request.Evidence)
+	if err != nil {
+		return nil, err
+	}
+	input := ReviewedPurchaseInput{OrganisationID: profile.Id, DocumentID: doc.Id, ReviewedVersion: doc.Version, Document: doc, Allocations: request.Allocations, Accounts: accounts, GSTBasis: profile.GstBasis, GSTProfileVersion: profile.Version, GSTHistoryWatermark: watermark, Evidence: request.Evidence, ExceptionRule: exceptionRule}
 	amounts, err := ValidateReviewedPurchase(input)
 	if err != nil {
 		return nil, err
@@ -73,7 +77,7 @@ func (r *Repository) PostReviewed(ctx context.Context, request *tammyv1.PostRevi
 	if err := r.verifyEvidenceSource(ctx, profile.Id, request.Evidence); err != nil {
 		return nil, err
 	}
-	readiness, err := EvidenceReadinessFor(request.Evidence, doc.Candidate.DocumentDate, purchaseAsOf(now), nil)
+	readiness, err := EvidenceReadinessFor(request.Evidence, doc.Candidate.DocumentDate, purchaseAsOf(now), exceptionRule)
 	if err != nil {
 		return nil, err
 	}

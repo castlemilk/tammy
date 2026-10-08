@@ -1,0 +1,32 @@
+{
+  "id": "019a4210-0000-7000-8000-000000000075",
+  "version": "au-gst-tax-invoice-low-value-v1",
+  "revision": 1,
+  "kind": "LOW_VALUE_ACQUISITION",
+  "effective_from": "2025-11-01",
+  "net_transaction_limit_minor": 7500,
+  "currency": "AUD",
+  "requires_reviewed_owned_support": true,
+  "requires_registration_business_and_evidence_review": true,
+  "transaction_scope": "whole reviewed document total, never individual allocations",
+  "sources": [
+    {
+      "url": "https://www.legislation.gov.au/F2019L00417/2025-11-01/2025-11-01/text/original/pdf",
+      "version": "Compilation No. 5, 1 November 2025, F2025C01015",
+      "provision": "29-80.01",
+      "access_date": "2026-10-07"
+    },
+    {
+      "url": "https://www.ato.gov.au/law/view/document?LocID=%22GST%2FGSTR20131%2FNAT%2FATO%2Ffp81%22&PiT=20231128000001",
+      "version": "GSTR 2013/1, consolidated ruling 3 April 2019",
+      "point_in_time": "2023-11-28",
+      "provision": "paragraphs 58 and 91; footnote 39",
+      "access_date": "2026-10-07"
+    }
+  ],
+  "limits": [
+    "Conservative application to reviewed whole transaction subtotal at or below 7500 AUD cents. Mixed taxable value cannot be derived from allocations or OCR.",
+    "Specific retained waivers and Commissioner discretion are unsupported.",
+    "Separate invoices cannot establish that a transaction was not split; the reviewer must identify the complete transaction."
+  ]
+}

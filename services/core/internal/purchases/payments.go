@@ -59,7 +59,7 @@ func (r *Repository) RecordPayment(ctx context.Context, request *tammyv1.RecordP
 	if err != nil || evidence == nil {
 		return nil, ErrRepository
 	}
-	readiness, err := EvidenceReadinessFor(evidence.Review, request.ActualPaymentDate, purchaseAsOf(now), nil)
+	readiness, err := r.evidenceReadiness(ctx, posting.OrganisationId, posting.DocumentId, evidence.Review, request.ActualPaymentDate, purchaseAsOf(now))
 	if err != nil {
 		return nil, err
 	}
@@ -140,6 +140,9 @@ func (r *Repository) RecordPayment(ctx context.Context, request *tammyv1.RecordP
 		}
 	}
 	if err := applyPaymentState(state, payment, readiness); err != nil {
+		return nil, err
+	}
+	if err := r.refreshClaimOutcomes(ctx, state, now); err != nil {
 		return nil, err
 	}
 	response := &tammyv1.RecordPurchasePaymentResponse{Payment: payment, Journal: journal, Accounting: state}
@@ -300,7 +303,16 @@ func (r *Repository) verifyPaymentHistory(ctx context.Context, posting *tammyv1.
 	if err != nil {
 		return err
 	}
+	attributions, err := r.loadAttributions(ctx, posting)
+	if err != nil {
+		return err
+	}
+	deferrals, err := r.loadDeferrals(ctx, posting)
+	if err != nil {
+		return err
+	}
 	index, evidenceIndex := 0, 1
+	attributionIndex, deferralIndex := 0, 0
 	selected := evidences[0]
 	for _, e := range events {
 		digest := sha256.Sum256(e.content)
@@ -309,6 +321,7 @@ func (r *Repository) verifyPaymentHistory(ctx context.Context, posting *tammyv1.
 			return ErrRepository
 		}
 		var historical *tammyv1.PurchaseAccounting
+		var eventActor string
 		switch e.command {
 		case purchaseService + "RecordPurchasePayment":
 			if index >= len(payments) || payments[index].AccountingVersion != e.version || !e.journalID.Valid {
@@ -321,7 +334,7 @@ func (r *Repository) verifyPaymentHistory(ctx context.Context, posting *tammyv1.
 			if err := r.verifyPaymentAllocations(ctx, posting, payment, state.Paid.MinorUnits); err != nil {
 				return err
 			}
-			readiness, err := EvidenceReadinessFor(selected.Review, payment.ActualPaymentDate, purchaseAsOf(instant), nil)
+			readiness, err := r.evidenceReadiness(ctx, posting.OrganisationId, posting.DocumentId, selected.Review, payment.ActualPaymentDate, purchaseAsOf(instant))
 			if err != nil {
 				return ErrRepository
 			}
@@ -337,6 +350,7 @@ func (r *Repository) verifyPaymentHistory(ctx context.Context, posting *tammyv1.
 				return err
 			}
 			historical = response.Accounting
+			eventActor = payment.ActorUserId
 			index++
 		case purchaseService + "RecordPurchaseTaxEvidence":
 			if e.journalID.Valid || evidenceIndex >= len(evidences) || evidences[evidenceIndex].AccountingVersion != e.version || evidences[evidenceIndex].RecordedAt.AsTime().UTC().Format(time.RFC3339Nano) != e.stamp {
@@ -349,11 +363,33 @@ func (r *Repository) verifyPaymentHistory(ctx context.Context, posting *tammyv1.
 			}
 			state.AccountingVersion = e.version
 			historical = response.Accounting
+			eventActor = selected.ActorUserId
 			evidenceIndex++
+		case purchaseService + "AttributePurchaseGst":
+			var consumed int
+			historical, consumed, err = r.replayAttributionEvent(ctx, posting, e, attributions[attributionIndex:], deferrals, state, instant)
+			if err != nil {
+				return err
+			}
+			attributionIndex += consumed
+			eventActor = attributions[attributionIndex-1].value.ActorUserId
+		case purchaseService + "DeferPurchaseGstClaim":
+			if deferralIndex >= len(deferrals) {
+				return ErrRepository
+			}
+			historical, err = r.replayDeferralEvent(ctx, posting, e, deferrals[deferralIndex], state, instant)
+			if err != nil {
+				return err
+			}
+			deferralIndex++
+			eventActor = deferrals[deferralIndex-1].ActorUserId
 		default:
 			return ErrRepository
 		}
-		state.ReviewOutcomes, err = purchaseEvidenceOutcomes(selected.Review, posting.InvoiceDate, instant)
+		if err := r.verifyElectedEventActor(ctx, e.operation, e.command, eventActor); err != nil {
+			return err
+		}
+		err = r.refreshClaimOutcomes(ctx, state, instant)
 		if err != nil || !proto.Equal(historical, state) {
 			return ErrRepository
 		}
@@ -368,13 +404,16 @@ func (r *Repository) verifyPaymentHistory(ctx context.Context, posting *tammyv1.
 		}
 		want := uint8(8)
 		if e.journalID.Valid {
-			want |= 3
+			want |= 1
+			if e.command == purchaseService+"RecordPurchasePayment" {
+				want |= 2
+			}
 		}
 		if mask != want || financial != e.financial || ledger != e.ledger || tax != e.tax || settlement != e.settlement {
 			return ErrRepository
 		}
 	}
-	if index != len(payments) || evidenceIndex != len(evidences) {
+	if index != len(payments) || evidenceIndex != len(evidences) || attributionIndex != len(attributions) || deferralIndex != len(deferrals) {
 		return ErrRepository
 	}
 	return nil

@@ -19,6 +19,7 @@ import (
 )
 
 var (
+	ErrInvalidCommand  = errors.New("purchases: invalid command context or scope")
 	ErrRepository      = errors.New("purchases: repository failure or corrupt retained facts")
 	ErrNotFound        = errors.New("purchases: document not found in organisation")
 	ErrConflict        = errors.New("purchases: stale or already posted source")
@@ -134,21 +135,11 @@ func (r *Repository) getAt(ctx context.Context, org, id string, pendingInitialEv
 	if evidence == nil {
 		return nil, ErrRepository
 	}
-	// Claim/deferral writers extend this projection with their owned sources.
-	// Refuse unsupported later facts rather than returning stale zero totals.
-	rows, err := r.executor.QueryContext(ctx, `SELECT (SELECT count(*) FROM purchase_gst_attributions_v1 WHERE posting_id=? AND organisation_id=?)+(SELECT count(*) FROM purchase_gst_deferrals_v1 WHERE posting_id=? AND organisation_id=?)`, posting.Id, org, posting.Id, org)
-	if err != nil {
-		return nil, ErrRepository
-	}
-	var laterSources int64
-	if (purchaseRevisionRow{rows: rows}).Scan(&laterSources) != nil || laterSources != 0 {
-		return nil, ErrRepository
-	}
 	asOf := posting.PostedAt.AsTime().UTC()
 	if !pendingInitialEvent {
 		asOf = readAsOf
 	}
-	value.ReviewOutcomes, err = purchaseEvidenceOutcomes(evidence.Review, posting.InvoiceDate, asOf)
+	value.ReviewOutcomes, err = r.evidenceOutcomes(ctx, posting, evidence.Review, asOf)
 	if err != nil {
 		return nil, err
 	}
@@ -204,8 +195,7 @@ func (r *Repository) getAt(ctx context.Context, org, id string, pendingInitialEv
 	}
 	// Public readiness follows the supplied trusted clock; historical events
 	// were compared in full at each event's own recorded timestamp above.
-	value.ReviewOutcomes, err = purchaseEvidenceOutcomes(evidence.Review, posting.InvoiceDate, asOf)
-	if err != nil {
+	if err := r.refreshClaimOutcomes(ctx, value, asOf); err != nil {
 		return nil, err
 	}
 	return value, nil
@@ -216,11 +206,11 @@ func clearPurchaseOutcomes() *tammyv1.PurchaseAccountingReviewOutcomes {
 	return &tammyv1.PurchaseAccountingReviewOutcomes{Evidence: clear, Timing: clear, Duplicate: clear, PriorAccounting: clear, Legacy: clear}
 }
 
-func purchaseEvidenceOutcomes(evidence *tammyv1.PurchaseEvidenceInput, eventDate *tammyv1.CivilDate, asOf time.Time) (*tammyv1.PurchaseAccountingReviewOutcomes, error) {
+func purchaseEvidenceOutcomes(evidence *tammyv1.PurchaseEvidenceInput, eventDate *tammyv1.CivilDate, asOf time.Time, rule *ReviewedExceptionRule) (*tammyv1.PurchaseAccountingReviewOutcomes, error) {
 	if asOf.IsZero() {
 		return nil, ErrRepository
 	}
-	readiness, err := EvidenceReadinessFor(evidence, eventDate, purchaseAsOf(asOf.UTC()), nil)
+	readiness, err := EvidenceReadinessFor(evidence, eventDate, purchaseAsOf(asOf.UTC()), rule)
 	if err != nil {
 		return nil, err
 	}
@@ -401,7 +391,7 @@ func (r *Repository) retainedEvidenceHistory(ctx context.Context, p *tammyv1.Pur
 		if (review.Source == nil && (sourceVersion.Valid || len(sourceHash) != 0)) || (len(history) == 0 && (version != 1 || !proto.Equal(review, p.Evidence) || e.ActorUserId != p.ActorUserId || !proto.Equal(e.RecordedAt, p.PostedAt))) || (len(history) > 0 && version <= history[len(history)-1].AccountingVersion) {
 			return nil, ErrRepository
 		}
-		if err := ValidatePurchaseEvidence(e.Review, nil); err != nil {
+		if _, err := r.ResolveEvidenceRule(ctx, p.OrganisationId, p.DocumentId, e.Review); err != nil {
 			return nil, err
 		}
 		if err := r.verifyEvidenceSource(ctx, p.OrganisationId, e.Review); err != nil {
@@ -454,9 +444,12 @@ func (r *Repository) verifyEvents(ctx context.Context, p *tammyv1.PurchasePostin
 		return 0, ErrRepository
 	}
 	expected := proto.Clone(derived).(*tammyv1.PurchaseAccounting)
-	expected.ReviewOutcomes, err = purchaseEvidenceOutcomes(p.Evidence, p.InvoiceDate, p.PostedAt.AsTime().UTC())
+	expected.ReviewOutcomes, err = r.evidenceOutcomes(ctx, p, p.Evidence, p.PostedAt.AsTime().UTC())
 	if err != nil || !proto.Equal(response.Accounting, expected) {
 		return 0, ErrRepository
+	}
+	if err := r.verifyElectedEventActor(ctx, operation, command, p.ActorUserId); err != nil {
+		return 0, err
 	}
 	if p.JournalId == nil {
 		if response.Journal != nil {
