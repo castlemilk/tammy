@@ -191,7 +191,7 @@ export async function regenerateInvoiceBas(
   await page.getByLabel("Period end", { exact: true }).fill(end);
   await expect(page.getByLabel("Period start", { exact: true })).toHaveValue(start);
   await expect(page.getByLabel("Period end", { exact: true })).toHaveValue(end);
-  const button = page.getByRole("button", { name: "Regenerate local draft", exact: true });
+  const button = page.getByRole("button", { name: /^(Create|Regenerate) local draft$/ });
   await expect(button).toBeEnabled();
   await button.click();
   await expect(

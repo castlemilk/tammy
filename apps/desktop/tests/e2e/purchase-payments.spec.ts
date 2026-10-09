@@ -161,7 +161,9 @@ test("purchases/payments-gst: missing evidence, deferral, explicit claim and leg
     .locator("summary")
     .filter({ hasText: /^Review claim period or defer GST$/ })
     .click();
-  await reopenedPanel.getByLabel("Retained deferral portion", { exact: true }).selectOption("0");
+  await reopenedPanel
+    .getByRole("combobox", { name: "Retained deferral portion", exact: true })
+    .selectOption("0");
   for (const [label, date] of [
     ["Claim / affected period start", "2026-10-01"],
     ["Claim / affected period end", "2026-12-31"],
@@ -262,7 +264,7 @@ test("purchases/payments-gst: missing evidence, deferral, explicit claim and leg
   ] as const)
     await legacyPanel.getByLabel(label, { exact: true }).fill(date);
   await legacyPanel
-    .getByLabel("Legacy disposition", { exact: true })
+    .getByRole("combobox", { name: "Legacy disposition", exact: true })
     .selectOption(String(LegacyPurchaseDisposition.NONCREDITABLE));
   await legacyPanel
     .getByLabel("Legacy supporting evidence", { exact: true })

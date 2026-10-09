@@ -734,7 +734,12 @@ export async function setupAndRunCurrentAccountingWorkflow(
   expect(attention.attentionItems).toHaveLength(0);
 
   await assertRoute(page, "Documents", "/documents", "Documents");
-  await expect(page.getByText(WORKFLOW_FIXTURE.sourceDocument.sourceDisplayName)).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      name: WORKFLOW_FIXTURE.sourceDocument.sourceDisplayName,
+      exact: true,
+    }),
+  ).toBeVisible();
   await expect(page.getByText("Reviewed", { exact: true }).first()).toBeVisible();
   await assertRoute(page, "Banking", "/banking", "Banking");
   await expect(page.getByText("$681.00", { exact: true })).toBeVisible();

@@ -105,7 +105,8 @@ export async function setupPurchaseWorkspace(
         code,
         name,
         type,
-        normalBalance: type === a.AccountType.EQUITY ? a.NormalBalance.CREDIT : a.NormalBalance.DEBIT,
+        normalBalance:
+          type === a.AccountType.EQUITY ? a.NormalBalance.CREDIT : a.NormalBalance.DEBIT,
         reportClassification: "custom.account",
         cashFlowClassification: flow,
       }),
@@ -380,15 +381,21 @@ export async function postPurchaseThroughUi(
   for (const [index, allocation] of allocations.entries()) {
     if (index) await panel.getByRole("button", { name: "Add allocation", exact: true }).click();
     const n = index + 1;
-    await panel.getByLabel(`Account ${n}`, { exact: true }).selectOption(allocation.account.id);
+    await panel
+      .getByRole("combobox", { name: `Account ${n}`, exact: true })
+      .selectOption(allocation.account.id);
     await panel.getByLabel(`Gross ${n} (AUD)`, { exact: true }).fill(allocation.gross);
     await panel.getByLabel(`Supplier GST ${n} (AUD)`, { exact: true }).fill(allocation.supplier);
     await panel.getByLabel(`Eligible GST ${n} (AUD)`, { exact: true }).fill(allocation.eligible);
-    await panel.getByLabel(`Use ${n}`, { exact: true }).selectOption(String(allocation.use));
     await panel
-      .getByLabel(`BAS classification ${n}`, { exact: true })
+      .getByRole("combobox", { name: `Use ${n}`, exact: true })
+      .selectOption(String(allocation.use));
+    await panel
+      .getByRole("combobox", { name: `BAS classification ${n}`, exact: true })
       .selectOption(String(allocation.bas));
-    await panel.getByLabel(`Cash flow ${n}`, { exact: true }).selectOption(String(allocation.flow));
+    await panel
+      .getByRole("combobox", { name: `Cash flow ${n}`, exact: true })
+      .selectOption(String(allocation.flow));
     if (allocation.use === p.PurchaseUse.PRIVATE)
       await panel
         .getByLabel(`Private / noncreditable reason ${n}`, { exact: true })
@@ -421,7 +428,7 @@ export async function fillPurchaseEvidence(
   held: string,
 ) {
   await panel
-    .getByLabel("GST evidence classification", { exact: true })
+    .getByRole("combobox", { name: "GST evidence classification", exact: true })
     .selectOption(
       String(
         evidence === "invoice"
@@ -455,7 +462,9 @@ export async function recordPurchasePaymentThroughUi(
   if ((await summary.locator("..").getAttribute("open")) === null) await summary.click();
   await panel.getByLabel("Actual payment date", { exact: true }).fill(date);
   await panel.getByLabel("Payment amount (AUD)", { exact: true }).fill(amount);
-  await panel.getByLabel("Payment bank account", { exact: true }).selectOption(workspace.bank.id);
+  await panel
+    .getByRole("combobox", { name: "Payment bank account", exact: true })
+    .selectOption(workspace.bank.id);
   await panel.getByLabel("Payment reference", { exact: true }).fill(reference);
   await panel.getByRole("button", { name: "Review recorded payment", exact: true }).click();
   await panel.getByRole("button", { name: "Confirm recorded payment", exact: true }).click();
