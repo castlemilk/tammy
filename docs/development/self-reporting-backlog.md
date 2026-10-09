@@ -29,10 +29,10 @@ It uses four priorities:
 | Chart, journals, trial balance | Partial | Opening balances, reversals, periods, complete ledger, financial statements, source subledgers. |
 | Document evidence | Partial | Broader evidence types, extraction/review provenance, deductions/assets/income binding, retention UX. |
 | Banking | Partial | Standard import formats, transfers, automated suggestions with human approval, full reconciliation reports. |
-| GST/BAS | Local cash/non-cash GST workpapers with invoice sales, purchase sources, provenance, regeneration and exact saved PDF/CSV exports | Complete labels, cash purchase payment evidence, adjustments, IAS, validation, declaration, amendment, delivery, receipt. |
+| GST/BAS | Quarterly cash/non-cash GST workpapers include invoice sales, reconciled purchase sources, review/deferral provenance, regeneration and exact saved PDF/CSV exports | Complete cross-domain source coverage, BAS labels and lifecycle, PAYG, adjustments, declaration, amendment and external handling. |
 | Audit/backup/restore core | Backend components | Complete user journeys, evidence exports, release validation. |
 | Sales and receivables | Invoice issue posts sales/receivables/GST; dated partial/full receipts and root income/balance reporting | Customer register, quotes, credit notes, overpayments/refunds, bank matching, ageing and delivery. |
-| Purchases and payables | Narrow reviewed documents only | Full bills, credits, payments, allocations, ageing required. |
+| Purchases and payables | Reviewed-source posting, ordered allocations, immutable actual-dated payments, basis-aware GST attribution, explicit evidence/legacy/deferral review, cash-flow facts and saved BAS provenance | Supplier/bill register and approvals, opening-payable settlement, supplier credits, refunds/reversals/corrections, bank matching, ageing and complete payables workflow. |
 | Fixed assets and depreciation | No | Required for business accounts and annual tax. |
 | Payroll/STP/super | No | Full employer-reporting programme required. |
 | Annual business tax | No | Entity profiles, tax reconciliation, schedules, calculation, delivery required. |
@@ -143,7 +143,7 @@ The electron-vite, Conveyor, and Builder migration gives the desktop a typed rep
 
 Implemented invoice and income slices: versioned encrypted drafts, editable manual/reviewed-expense lines, exact ex-GST AUD calculations, mixed tax treatments, immutable issued snapshots, company templates/logos, offline pdfcn PDFs and human-reviewed MCP proposals. Issue atomically posts sales, receivables and basis-aware GST. Dated partial/full receipts retain exact allocations and reduce receivables without posting income again. Overview reports business revenue, invoice income, receipts and as-of balances across all retained sources. Older issued invoices require explicit review before linking. See [Invoice builder](invoice-builder.md) and [packaged income/BAS acceptance](invoice-income-bas-acceptance-2026-10-04.md).
 
-BOOK-02 remains incomplete: customer registers, quotes, recurring billing, credit notes, write-offs, deposits, overpayments/refunds, invoice/payment reversals, bank matching, ageing, customer statements and delivery remain outstanding. The grouped checkboxes above cover these complete workflows rather than the implemented subsets.
+BOOK-02 remains incomplete: customer registers, quotes, recurring billing, credit notes, write-offs, deposits, overpayments/refunds, invoice/payment reversals, bank matching, ageing, customer statements and delivery remain outstanding. Purchase posting and payment are buyer-side BOOK-03 workflows; they do not complete sales settlement or receivables. The grouped checkboxes above cover these complete workflows rather than the implemented subsets.
 
 **Exit:** Sales documents, settlements, receivables control, bank matches, financial reports, and GST labels reconcile exactly.
 
@@ -158,6 +158,8 @@ BOOK-02 remains incomplete: customer registers, quotes, recurring billing, credi
 - [ ] Payments, allocations, overpayments, refunds, reversals, and bank matching.
 - [ ] Aged payables, supplier statements, due-date workflow, and duplicate-invoice detection.
 - [ ] Feed contractor facts to TPAR eligibility and payments reporting.
+
+Implemented purchase slice: a human confirms allocations from a reviewed local source, posts the expense/payable once, records immutable actual-dated partial payments, and reviews basis-aware GST, evidence, legacy candidates, suspense, deferrals and explicit attribution. Retained cash-flow classifications, source provenance and saved BAS detail remain auditable. This is not a supplier register or complete bills/payables workflow; all grouped BOOK-03 workflow checkboxes above remain open. Opening-without-document is covered through a test-only historical fixture and does not provide an operator settlement workflow.
 
 **Exit:** Purchases, settlements, payables control, banking, GST credits, deductions, and retained evidence reconcile exactly.
 
@@ -179,7 +181,7 @@ BOOK-02 remains incomplete: customer registers, quotes, recurring billing, credi
 **Priority:** P0  
 **Users:** GST/PAYG-registered businesses
 
-Implemented local GST workpapers for 2024–2027 attribute non-cash invoice sales on issue dates and cash sales on actual receipt dates, with G1/1A sales provenance, retained figures, source-change notices and regeneration. Eligible reviewed purchases contribute credits on the non-cash basis; cash purchase credits without payment evidence are excluded with a visible warning. Overview income summaries and displayed saved workpapers now export exact PDF/CSV files through the authenticated native save boundary. Stale sources never silently regenerate an export; complete retained rows and identities survive restart. This does not complete BAS-01 or enable declaration/lodgement. See [packaged income/BAS acceptance](invoice-income-bas-acceptance-2026-10-04.md) and [export acceptance](income-bas-exports-acceptance-2026-10-06.md). The authorised reporting programme proceeds to purchase accounting, then the supported BAS preparation lifecycle.
+Implemented local quarterly GST workpapers for 2024–2027 include cash/non-cash invoice sales and reconciled purchase sources with actual-payment or invoice-date claim timing, retained source/review rows, legacy candidate separation, evidence/deferral provenance, stale-source notices and explicit regeneration. Overview income summaries and displayed saved workpapers export exact PDF/CSV through the authenticated native save boundary; stale workpapers never silently regenerate. The phase-two [purchase acceptance](purchase-payments-gst-acceptance-2026-10-05.md) covers the purchase accounting and operator-review slice. BAS-01 remains incomplete: cross-domain source coverage, complete labels, PAYG, adjustments, preparation, freeze, declaration, amendment and external handling remain for later phases. All grouped BAS-01 checkboxes below remain open; the accepted purchase slice does not imply complete BAS capability.
 
 - [ ] Support cash and non-cash GST bases, monthly/quarterly/annual cycles, branches, and period transitions.
 - [ ] Calculate and explain G1, G2, G3, G10, G11, G21-G24, 1A, 1B, and derived totals as applicable.
