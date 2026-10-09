@@ -68,7 +68,7 @@ test("captures one serial five-image real packaged UI journey", async ({ electro
     },
     { heading: "Trial balance", link: "Trial balance", ready: fixture.accounts[0]?.name },
     { heading: "Banking", link: "Banking", ready: "Reconciled" },
-    { heading: "GST & BAS", link: "GST & BAS", ready: fixture.sourceDocument.supplierName },
+    { heading: "GST & BAS", link: "GST & BAS", ready: "Unresolved legacy source" },
   ] as const;
   const images = [];
   for (const [index, target] of targets.entries()) {
@@ -83,6 +83,14 @@ test("captures one serial five-image real packaged UI journey", async ({ electro
         .fill("2024-05-12,HARBOUR OFFICE SUPPLIES WCS-2024Q4-001,-319.00");
     }
     await expect(page.getByText(/^(?:Loading|Checking)\b/iu)).toHaveCount(0);
+    if (target.heading === "Documents") {
+      await expect(
+        page.getByRole("option", { name: "6100 · Office expenses", exact: true }),
+      ).toBeAttached();
+      await expect(
+        page.getByRole("option", { name: "3100 · Owner contributions", exact: true }),
+      ).toBeAttached();
+    }
     await expect(
       page.getByText(/^(?:Documents|Trial balance|Banking data) (?:is )?unavailable\.?$/iu),
     ).toHaveCount(0);

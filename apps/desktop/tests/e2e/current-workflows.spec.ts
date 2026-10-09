@@ -80,6 +80,14 @@ test("runs the current accounting workflows through the packaged app", async ({
         .fill("2024-05-12,HARBOUR OFFICE SUPPLIES WCS-2024Q4-001,-319.00");
     }
     await expect(page.getByText(/^(?:Loading|Checking)\b/iu)).toHaveCount(0);
+    if (target.heading === "Documents") {
+      await expect(
+        page.getByRole("option", { name: "6100 · Office expenses", exact: true }),
+      ).toBeAttached();
+      await expect(
+        page.getByRole("option", { name: "3100 · Owner contributions", exact: true }),
+      ).toBeAttached();
+    }
     const definition = fixture.screenshots[index];
     if (!definition) throw new Error("APP_STORE_SCREENSHOT_FIXTURE_INVALID");
     const actualSnapshot = normalizeAccessibilitySnapshot(

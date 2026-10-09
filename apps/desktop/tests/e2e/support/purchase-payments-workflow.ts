@@ -214,6 +214,64 @@ export async function retainPurchaseThroughUi(
   expect(document.sha256).toHaveLength(32);
   return document;
 }
+
+// Volume fixtures use the same authenticated document commands as ordinary
+// intake and review; primary financial decisions remain UI actions.
+export async function retainPurchaseVolumeProof(
+  page: Page,
+  workspace: AuthenticatedAccountingWorkspace,
+  sequence: number,
+): Promise<d.Document> {
+  const number = `VOLUME-PROOF-${String(sequence).padStart(4, "0")}`;
+  const candidate = create(d.DocumentCandidateSchema, {
+    supplierName: "Synthetic supporting notice",
+    invoiceNumber: number,
+    documentDate: purchaseDate("2026-08-31"),
+    subtotal: { currencyCode: "AUD", minorUnits: 0n },
+    gst: { currencyCode: "AUD", minorUnits: 0n },
+    total: { currencyCode: "AUD", minorUnits: 0n },
+  });
+  const ingested = await purchaseProto(
+    page,
+    "documents",
+    "ingestDocument",
+    d.IngestDocumentRequestSchema,
+    d.IngestDocumentResponseSchema,
+    create(d.IngestDocumentRequestSchema, {
+      commandContext: purchaseCommand(workspace),
+      organisationId: workspace.organisationId,
+      sourceDisplayName: `${number}.pdf`,
+      mimeType: "application/pdf",
+      original: syntheticPurchasePdf(number, true),
+      extractedText: `Synthetic zero-value supporting notice ${number}`,
+      candidate,
+    }),
+    32_768,
+    131_072,
+  );
+  if (!ingested.document) throw new Error("PURCHASE_VOLUME_INTAKE_MISSING");
+  expect(ingested.document.version).toBe(1n);
+  const reviewed = await purchaseProto(
+    page,
+    "documents",
+    "saveDocumentReview",
+    d.SaveDocumentReviewRequestSchema,
+    d.SaveDocumentReviewResponseSchema,
+    create(d.SaveDocumentReviewRequestSchema, {
+      commandContext: purchaseCommand(workspace),
+      documentId: ingested.document.id,
+      expectedVersion: ingested.document.version,
+      candidate,
+    }),
+    32_768,
+    131_072,
+  );
+  if (!reviewed.document) throw new Error("PURCHASE_VOLUME_REVIEW_MISSING");
+  expect(reviewed.document.status).toBe(d.DocumentStatus.REVIEWED);
+  expect(reviewed.document.version).toBe(2n);
+  expect(reviewed.document.candidate).toEqual(candidate);
+  return reviewed.document;
+}
 export async function openPurchase(page: Page, number: string) {
   await page.getByRole("link", { name: "Documents", exact: true }).click();
   await page.getByRole("button").filter({ hasText: number }).click();

@@ -1,4 +1,4 @@
-import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { create, toBinary } from "@bufbuild/protobuf";
@@ -14,6 +14,7 @@ import {
   RecordPurchasePaymentResponseSchema,
 } from "@tammy/connect-client/tammy/v1/purchases_pb.js";
 import { BasWorkpaperSchema } from "@tammy/connect-client/tammy/v1/tax_pb.js";
+import { validateBasSnapshot } from "@tammy/reporting";
 import { expect, test } from "./fixtures";
 import { assertPurchaseExportArtifacts } from "./support/purchase-export-assertions";
 import {
@@ -32,11 +33,12 @@ import {
   regeneratePurchaseBas,
   reopenPurchaseWorkspace,
   retainPurchaseThroughUi,
+  retainPurchaseVolumeProof,
   reviewPurchaseEvidenceThroughUi,
   savePurchaseExport,
   setupPurchaseWorkspace,
 } from "./support/purchase-payments-workflow";
-import { reportArtifactHash } from "./support/reporting-export-artifacts";
+import { parseReportCsv, reportArtifactHash } from "./support/reporting-export-artifacts";
 
 const acceptanceRoot = fileURLToPath(
   new URL("../../../../.tmp/purchase-payments-gst-e2e/", import.meta.url),
@@ -119,7 +121,7 @@ test("purchases/payments-gst: missing evidence, deferral, explicit claim and leg
     ["Timing review as-of date", "2026-10-09"],
   ] as const)
     await panel.getByLabel(label, { exact: true }).fill(date);
-  await panel.getByLabel("Due-date proof", { exact: true }).selectOption(proof.id);
+  await panel.getByRole("combobox", { name: "Due-date proof", exact: true }).selectOption(proof.id);
   await panel
     .getByLabel("Claim / deferral review reason", { exact: true })
     .fill(
@@ -259,7 +261,7 @@ test("purchases/payments-gst: missing evidence, deferral, explicit claim and leg
     .click();
   for (const [label, date] of [
     ["Legacy affected period start", "2026-10-01"],
-    ["Legacy affected period end", "2026-12-31"],
+    ["Legacy affected period end", "2026-10-09"],
     ["Legacy reporting balance date", "2026-10-09"],
   ] as const)
     await legacyPanel.getByLabel(label, { exact: true }).fill(date);
@@ -267,7 +269,7 @@ test("purchases/payments-gst: missing evidence, deferral, explicit claim and leg
     .getByRole("combobox", { name: "Legacy disposition", exact: true })
     .selectOption(String(LegacyPurchaseDisposition.NONCREDITABLE));
   await legacyPanel
-    .getByLabel("Legacy supporting evidence", { exact: true })
+    .getByRole("combobox", { name: "Legacy supporting evidence", exact: true })
     .selectOption(document.id);
   await legacyPanel
     .getByLabel("Legacy review reason", { exact: true })
@@ -284,17 +286,44 @@ test("purchases/payments-gst: missing evidence, deferral, explicit claim and leg
   await legacyPanel
     .getByRole("button", { name: "Confirm legacy purchase review", exact: true })
     .click();
-  await expect
-    .poll(async () => (await readPurchase(page, workspace, proof.id)).accounting?.accountingVersion)
-    .toBe(1n);
+  await expect(legacyPanel.getByRole("status")).toContainText("Legacy decision retained:");
+  expect((await readPurchase(page, workspace, proof.id)).accounting?.accountingVersion).toBe(0n);
   expect((await readPurchase(page, workspace, proof.id)).accounting?.posted).toBe(false);
   await expectPurchaseControls(page, workspace, { ...controls, "1150": 1000n, "1170": 0n });
   const final = await regeneratePurchaseBas(page, workspace, "2026-10-01", "2026-12-31", 1000n);
+  await writeFile(
+    path.join(directory, "claimed-and-reviewed.pb"),
+    toBinary(BasWorkpaperSchema, final),
+  );
+  validateBasSnapshot({
+    organisation: {
+      id: workspace.organisationId,
+      version: 1n,
+      legalName: "Synthetic Purchase Acceptance Pty Ltd",
+      displayName: "Purchase Acceptance",
+      abn: "51824753556",
+    },
+    workpaper: final,
+    acquiredAt: new Date().toISOString(),
+  });
   const finalCsv = path.join(directory, "claimed-and-reviewed.csv");
   const finalPdf = path.join(directory, "claimed-and-reviewed.pdf");
   await savePurchaseExport(electronHarness, "CSV", finalCsv, "2026-10-01", "2026-12-31");
   await savePurchaseExport(electronHarness, "PDF", finalPdf, "2026-10-01", "2026-12-31");
   await assertPurchaseExportArtifacts(finalCsv, finalPdf, final);
+  // A legacy decision can cover only dates already reviewed. It cannot waive
+  // a whole future quarter; the complete Q4 draft above retains that limitation.
+  const scopedLegacy = await regeneratePurchaseBas(page, workspace, "2026-10-01", "2026-10-09", 0n);
+  expect(
+    scopedLegacy.purchaseReviews.some(
+      (review) => review.legacyReview?.disposition === LegacyPurchaseDisposition.NONCREDITABLE,
+    ),
+  ).toBe(true);
+  const legacyCsv = path.join(directory, "reviewed-through-today.csv");
+  const legacyPdf = path.join(directory, "reviewed-through-today.pdf");
+  await savePurchaseExport(electronHarness, "CSV", legacyCsv, "2026-10-01", "2026-10-09");
+  await savePurchaseExport(electronHarness, "PDF", legacyPdf, "2026-10-01", "2026-10-09");
+  await assertPurchaseExportArtifacts(legacyCsv, legacyPdf, scopedLegacy);
   await page.screenshot({
     path: path.join(directory, "claim-and-legacy-review.png"),
     animations: "disabled",
@@ -305,6 +334,156 @@ test("purchases/payments-gst: missing evidence, deferral, explicit claim and leg
   });
   expect(electronHarness.pageErrors).toEqual([]);
 });
+
+test("purchases/payments-gst: document and payment page 201 remain reachable and source overflow retains the saved draft", async ({
+  electronHarness,
+}, testInfo) => {
+  test.setTimeout(420_000);
+  const directory = path.join(acceptanceRoot, "pagination-capacity");
+  await mkdir(directory, { recursive: true });
+  let page = electronHarness.currentPage();
+  let workspace = await setupPurchaseWorkspace(electronHarness, "cash");
+  const number = "PURCHASE-PAGE-201";
+  const document = await retainPurchaseThroughUi(page, workspace, number);
+  const posted = await postPurchaseThroughUi(page, workspace, document);
+  expect(posted.accounting?.accountingVersion).toBe(1n);
+  const paymentIds: string[] = [];
+  for (let sequence = 1; sequence <= 200; sequence++) {
+    const payment = await purchaseProto(
+      page,
+      "purchases",
+      "recordPurchasePayment",
+      RecordPurchasePaymentRequestSchema,
+      RecordPurchasePaymentResponseSchema,
+      create(RecordPurchasePaymentRequestSchema, {
+        commandContext: purchaseCommand(workspace),
+        organisationId: workspace.organisationId,
+        documentId: document.id,
+        expectedAccountingVersion: BigInt(sequence),
+        actualPaymentDate: purchaseDate("2026-09-30"),
+        amount: { currencyCode: "AUD", minorUnits: 1n },
+        bankAccountId: workspace.bank.id,
+        reference: `Seed payment ${String(sequence).padStart(3, "0")}`,
+      }),
+      131_072,
+    );
+    expect(payment.accounting?.accountingVersion).toBe(BigInt(sequence + 1));
+    if (!payment.payment) throw new Error("PURCHASE_VOLUME_PAYMENT_MISSING");
+    paymentIds.push(payment.payment.id);
+  }
+  const proofIds: string[] = [];
+  for (let sequence = 1; sequence <= 200; sequence++) {
+    proofIds.push((await retainPurchaseVolumeProof(page, workspace, sequence)).id);
+  }
+  await page.getByRole("link", { name: "Overview", exact: true }).click();
+  await page.getByRole("link", { name: "Documents", exact: true }).click();
+  await expect(page.getByRole("button").filter({ hasText: number })).toHaveCount(0);
+  await page.getByRole("button", { name: "Next document page", exact: true }).click();
+  await page.getByRole("button").filter({ hasText: number }).click();
+  const panel = page.getByRole("region", { name: "Purchase accounting", exact: true });
+  await expect(panel).toBeVisible();
+  await expect(page.getByRole("heading", { name: `${number}.pdf`, exact: true })).toBeVisible();
+  await recordPurchasePaymentThroughUi(
+    page,
+    workspace,
+    document.id,
+    "2026-09-30",
+    "108.00",
+    "Final payment 201 through UI",
+  );
+  await panel.getByRole("button", { name: "Next payment page", exact: true }).click();
+  const table = panel.getByRole("table", { name: "Purchase payments", exact: true });
+  await expect(table).toContainText("Seed payment 001");
+  await expect(table).not.toContainText("Seed payment 002");
+  const payments = await readPurchasePayments(page, workspace, document.id);
+  expect(payments).toHaveLength(201);
+  expect(new Set(payments.map((payment) => payment.id)).size).toBe(201);
+  expect(payments.map((payment) => payment.id).slice(1)).toEqual(paymentIds.toReversed());
+  expect(payments.reduce((sum, payment) => sum + (payment.amount?.minorUnits ?? 0n), 0n)).toBe(
+    11000n,
+  );
+  const controls = {
+    "6101": 10000n,
+    "1000": -11000n,
+    "2000": 0n,
+    "1150": 1000n,
+    "1160": 0n,
+    "1170": 0n,
+  };
+  await expectPurchaseControls(page, workspace, controls);
+  // Changing filters resets the cursor while the owned selected document stays reachable.
+  await page.getByRole("combobox", { name: "Accounting filter", exact: true }).selectOption("2");
+  await expect(
+    page.getByRole("button", { name: "Previous document page", exact: true }),
+  ).toBeDisabled();
+  await expect(page.getByRole("heading", { name: `${number}.pdf`, exact: true })).toBeVisible();
+  await page.getByRole("combobox", { name: "Accounting filter", exact: true }).selectOption("0");
+  await expect(page.getByRole("heading", { name: `${number}.pdf`, exact: true })).toBeVisible();
+  const saved = await regeneratePurchaseBas(page, workspace, "2026-07-01", "2026-09-30", 1000n);
+  expect(saved.purchaseSources).toHaveLength(201);
+  expect(saved.purchaseReviews).toHaveLength(200);
+  expect(
+    saved.purchaseSources.reduce(
+      (sum, source) => sum + (source.allocatedGross?.minorUnits ?? 0n),
+      0n,
+    ),
+  ).toBe(11000n);
+  expect(
+    saved.purchaseReviews
+      .map((review) =>
+        review.legacySource?.source.case === "document"
+          ? review.legacySource.source.value.documentId
+          : undefined,
+      )
+      .sort(),
+  ).toEqual(proofIds.toSorted());
+  const csv = path.join(directory, "complete.csv");
+  const pdf = path.join(directory, "complete.pdf");
+  await savePurchaseExport(electronHarness, "CSV", csv, "2026-07-01", "2026-09-30");
+  await savePurchaseExport(electronHarness, "PDF", pdf, "2026-07-01", "2026-09-30");
+  await assertPurchaseExportArtifacts(csv, pdf, saved);
+  for (let sequence = 201; sequence <= 1001; sequence++) {
+    proofIds.push((await retainPurchaseVolumeProof(page, workspace, sequence)).id);
+  }
+  await page.getByRole("button", { name: "Regenerate local draft", exact: true }).click();
+  await expect(page.getByRole("alert")).toBeVisible();
+  const retained = await readPurchaseBas(page, workspace);
+  expect(retained.id).toBe(saved.id);
+  expect(retained.version).toBe(saved.version);
+  expect(retained.purchaseSources).toEqual(saved.purchaseSources);
+  expect(retained.purchaseReviews).toEqual(saved.purchaseReviews);
+  expect(retained.gstCredits1b).toEqual(saved.gstCredits1b);
+  expect(retained.sourcesChanged).toBe(true);
+  expect(retained.reviewWarnings).toContain(
+    "The complete current source set exceeds supported workpaper capacity. Saved figures have been retained; complete preparation requires supported volume.",
+  );
+  const overflowCsv = path.join(directory, "overflow-retained.csv");
+  const overflowPdf = path.join(directory, "overflow-retained.pdf");
+  await savePurchaseExport(electronHarness, "CSV", overflowCsv, "2026-07-01", "2026-09-30");
+  await savePurchaseExport(electronHarness, "PDF", overflowPdf, "2026-07-01", "2026-09-30");
+  await assertPurchaseExportArtifacts(overflowCsv, overflowPdf, retained);
+  await page.screenshot({
+    path: path.join(directory, "source-capacity-retained.png"),
+    animations: "disabled",
+  });
+  const reopened = await reopenPurchaseWorkspace(electronHarness);
+  page = reopened.page;
+  workspace = { ...workspace, ...reopened.workspace };
+  expect(await readPurchasePayments(page, workspace, document.id)).toEqual(payments);
+  expect((await readPurchaseBas(page, workspace)).id).toBe(saved.id);
+  await expectPurchaseControls(page, workspace, controls);
+  await writeFile(
+    path.join(directory, "reconciliation.json"),
+    `${JSON.stringify({ documentId: document.id, retainedWorkpaperId: saved.id, paymentIds: payments.map((payment) => payment.id), reviewedProofIds: proofIds, sourceCount: saved.purchaseSources.length, retainedReviewCount: saved.purchaseReviews.length, rejectedCurrentCandidateCount: proofIds.length, gstMinor: "1000", actualLedger: Object.fromEntries(Object.entries(controls).map(([code, minor]) => [code, minor.toString()])), artifacts: await Promise.all([csv, pdf, overflowCsv, overflowPdf].map(async (file) => ({ file: path.basename(file), sha256: await reportArtifactHash(file) }))) }, null, 2)}\n`,
+  );
+  await testInfo.attach("pagination-capacity-reconciliation", {
+    path: path.join(directory, "reconciliation.json"),
+    contentType: "application/json",
+  });
+  expect(electronHarness.pageErrors).toEqual([]);
+  expect(electronHarness.consoleErrors).toEqual([]);
+});
+
 for (const variant of [
   { basis: "cash", mixed: false },
   { basis: "non-cash", mixed: false },
@@ -597,10 +776,35 @@ for (const variant of [
       "1170": 0n,
     });
     await page.getByRole("link", { name: "GST & BAS", exact: true }).click();
-    expect((await readPurchaseBas(page, reopened.workspace)).id).toBe(secondSaved.id);
+    const restartedWorkpaper = await readPurchaseBas(page, reopened.workspace);
+    expect(restartedWorkpaper.id).toBe(secondSaved.id);
     const restartedCsv = path.join(directory, "restarted.csv");
     await savePurchaseExport(electronHarness, "CSV", restartedCsv, "2026-10-01", "2026-12-31");
-    expect(await readFile(restartedCsv)).toEqual(await readFile(staleCsv));
+    await assertPurchaseExportArtifacts(restartedCsv, stalePdf, restartedWorkpaper);
+    const [beforeRestart, afterRestart] = await Promise.all([
+      parseReportCsv(staleCsv),
+      parseReportCsv(restartedCsv),
+    ]);
+    const acquisition = (rows: typeof beforeRestart.rows) => {
+      const matches = rows.filter((row) => row.kind === "metadata" && row.metric === "acquired_at");
+      expect(matches).toHaveLength(1);
+      const value = matches[0]?.value;
+      if (value === undefined) throw new Error("PURCHASE_EXPORT_ACQUISITION_MISSING");
+      expect(value).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+      expect(new Date(value).toISOString()).toBe(value);
+      return value;
+    };
+    const acquiredBefore = acquisition(beforeRestart.rows);
+    const acquiredAfter = acquisition(afterRestart.rows);
+    expect(Date.parse(acquiredAfter)).toBeGreaterThanOrEqual(Date.parse(acquiredBefore));
+    expect(afterRestart.header).toEqual(beforeRestart.header);
+    expect(afterRestart.rows).toEqual(
+      beforeRestart.rows.map((row) =>
+        row.kind === "metadata" && row.metric === "acquired_at"
+          ? { ...row, value: acquiredAfter }
+          : row,
+      ),
+    );
     const artifactFiles = [
       firstCsv,
       firstPdf,

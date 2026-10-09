@@ -63,6 +63,23 @@ test("normalizes the complete ARIA tree including accessibility-only names", () 
   );
 });
 
+test("normalizes only the valid saved workpaper UUID while preserving version and all other text", () => {
+  assert.deepEqual(
+    normalizeAccessibilitySnapshot(
+      '- paragraph: "Saved workpaper: 01900000-0000-7000-8000-00000000000b · version 2"\n',
+    ),
+    ["Saved workpaper: retained UUIDv7 · version 2"],
+  );
+  for (const invalid of [
+    "Saved workpaper: invalid · version 1",
+    "Saved workpaper: 01900000-0000-4000-8000-00000000000b · version 1",
+    "Saved workpaper: 01900000-0000-7000-8000-00000000000b · version 0",
+    "Other source: 01900000-0000-7000-8000-00000000000b · version 1",
+  ]) {
+    assert.deepEqual(normalizeAccessibilitySnapshot(`- paragraph: "${invalid}"\n`), [invalid]);
+  }
+});
+
 function crc32(bytes) {
   let crc = 0xffffffff;
   for (const byte of bytes) {

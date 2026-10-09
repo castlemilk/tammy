@@ -740,7 +740,9 @@ export async function setupAndRunCurrentAccountingWorkflow(
       exact: true,
     }),
   ).toBeVisible();
-  await expect(page.getByText("Reviewed", { exact: true }).first()).toBeVisible();
+  await expect(
+    page.getByText("Reviewed", { exact: true }).filter({ visible: true }).first(),
+  ).toBeVisible();
   await assertRoute(page, "Banking", "/banking", "Banking");
   await expect(page.getByText("$681.00", { exact: true })).toBeVisible();
   await expect(page.getByText("Reconciled", { exact: true })).toBeVisible();
