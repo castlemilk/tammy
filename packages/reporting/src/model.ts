@@ -503,7 +503,6 @@ function purchaseTimingReview(value: PurchaseClaimTimingReview | undefined) {
 function futureClaim(
   value: PurchaseFutureClaim | undefined,
   review: BasPurchaseReview,
-  report: BasSnapshot["workpaper"],
   orgId: string,
 ) {
   if (!value) invalid();
@@ -518,7 +517,7 @@ function futureClaim(
   if (review.paymentId !== undefined && value.portion?.source.case === "payment") {
     if (review.paymentId !== value.portion.source.value.paymentId) invalid();
   }
-  claimPeriodMatchesReport(value.affectedPeriod, report.periodStart, report.periodEnd);
+  const [, affectedEnd] = purchaseClaimPeriod(value.affectedPeriod);
   const portion = value.portion;
   if (!portion) invalid();
   switch (portion.source.case) {
@@ -549,16 +548,16 @@ function futureClaim(
     invalid();
   const eventDate = reportDate(portion.normalEventDate);
   const [earliestStart, earliestEnd] = purchaseClaimPeriod(portion.earliestOtherwiseEligiblePeriod);
-  if (eventDate > earliestEnd || earliestStart > reportDate(report.periodEnd)) invalid();
+  if (eventDate > earliestEnd || earliestStart > affectedEnd) invalid();
   const dueDate = reportDate(portion.requiredReturnDueDate);
   const ordinaryLastClaimDate = reportDate(portion.ordinaryLastClaimDate);
   if (ordinaryLastClaimDate < dueDate) invalid();
   retainedSource(portion.dueDateEvidence);
   identity(portion.evidenceId);
   const evidenceHeldDate = reportDate(portion.evidenceHeldDate);
-  if (review.evidence?.sourceId !== portion.evidenceId) invalid();
-  if (evidenceHeldDate > reportDate(report.periodEnd)) invalid();
-  claimPeriodMatchesReport(value.affectedPeriod, report.periodStart, report.periodEnd);
+  // The immutable deferral records its original evidence and reviewed scope.
+  // The enclosing outcome separately retains the current evidence and period.
+  if (evidenceHeldDate > affectedEnd) invalid();
   purchaseTimingReview(value.timingReview);
   const deferredAmount = requiredMoney(value.allocatedDeferredGst);
   const unclaimedAmount = requiredMoney(review.unclaimedGst);
@@ -615,8 +614,8 @@ function purchaseReview(value: BasPurchaseReview, report: BasSnapshot["workpaper
       source.hash !== decisionSource.hash
     )
       invalid();
-    claimPeriodMatchesReport(decision.affectedPeriod, report.periodStart, report.periodEnd);
-    reportDate(decision.reportingBalanceDate);
+    const [, decisionEnd] = purchaseClaimPeriod(decision.affectedPeriod);
+    if (reportDate(decision.reportingBalanceDate) < decisionEnd) invalid();
     enumLabel(decision.disposition, legacyDispositions);
     if (decision.previouslyClaimedPeriod !== undefined)
       purchaseClaimPeriod(decision.previouslyClaimedPeriod);
@@ -636,7 +635,7 @@ function purchaseReview(value: BasPurchaseReview, report: BasSnapshot["workpaper
   }
   if (value.futureClaimObligation !== undefined) {
     if (kind !== "deferred_future_claim") invalid();
-    futureClaim(value.futureClaimObligation, value, report, orgId);
+    futureClaim(value.futureClaimObligation, value, orgId);
   }
   return { ...value, status, kind, legacy: source };
 }

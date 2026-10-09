@@ -226,9 +226,12 @@ function assertPurchaseCsv(csv: ParsedReportCsv, bas: BasWorkpaper) {
     assert.equal(rowValue(row, "evidence_id"), source.evidence?.sourceId ?? "");
     assert.equal(
       rowValue(row, "evidence_version"),
-      source.evidence?.sourceVersion.toString() ?? "",
+      source.evidence?.sourceVersion.toString() ?? "not retained",
     );
-    assert.equal(rowValue(row, "evidence_hash"), hash(source.evidence?.sourceHash));
+    assert.equal(
+      rowValue(row, "evidence_hash"),
+      source.evidence ? hash(source.evidence.sourceHash) : "not retained",
+    );
   }
 
   const reviewRows = csv.rows.filter((row) => row.kind === "purchase_reviews");
@@ -267,9 +270,12 @@ function assertPurchaseCsv(csv: ParsedReportCsv, bas: BasWorkpaper) {
     assert.equal(rowValue(row, "evidence_id"), review.evidence?.sourceId ?? "");
     assert.equal(
       rowValue(row, "evidence_version"),
-      review.evidence?.sourceVersion.toString() ?? "",
+      review.evidence?.sourceVersion.toString() ?? "not retained",
     );
-    assert.equal(rowValue(row, "evidence_hash"), hash(review.evidence?.sourceHash));
+    assert.equal(
+      rowValue(row, "evidence_hash"),
+      review.evidence ? hash(review.evidence.sourceHash) : "not retained",
+    );
     const retainedLegacySource = review.legacySource?.source;
     if (retainedLegacySource?.case === "document") {
       assert.equal(rowValue(row, "legacy_source_kind"), "document");
@@ -318,6 +324,7 @@ function assertPurchaseCsv(csv: ParsedReportCsv, bas: BasWorkpaper) {
         rowValue(row, "deferral_accounting_version"),
         future.accountingVersion.toString(),
       );
+      assert.equal(rowValue(row, "deferral_evidence_id"), future.portion?.evidenceId ?? "");
       assert.equal(rowValue(row, "original_deferred_gst"), amount(future.allocatedDeferredGst));
       assert.equal(rowValue(row, "deferral_reason"), future.reason);
       assert.equal(rowValue(row, "deferral_actor_user_id"), future.actorUserId);

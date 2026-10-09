@@ -645,6 +645,39 @@ test("reconciled BAS preserves both hashes for a reviewed legacy purchase docume
   assert.ok(text.includes("0f".repeat(32)));
   assert.ok(text.includes("10".repeat(32)));
 });
+test("reconciled BAS preserves a legacy decision's narrower reviewed period without treating it as current-period resolution", async () => {
+  const { renderBasCsv, renderBasPdf } = await import("./reports.ts");
+  const value = reconciledBas();
+  const reviews = (value.workpaper as unknown as { purchaseReviews: Record<string, unknown>[] })
+    .purchaseReviews;
+  const review = reviews.find((candidate) => candidate.legacyReview !== undefined);
+  assert.ok(review);
+  const decision = review.legacyReview as {
+    affectedPeriod: typeof claimPeriod;
+    reportingBalanceDate: typeof date;
+    disposition: number;
+  };
+  decision.affectedPeriod.periodEnd.day = 9;
+  decision.reportingBalanceDate.day = 9;
+  decision.disposition = 4;
+  review.status = 4;
+  const rows = parse(Buffer.from(renderBasCsv(value)), { columns: true }) as Record<
+    string,
+    string
+  >[];
+  const row = rows.find((candidate) => candidate.legacy_review_id === id(508));
+  assert.ok(row);
+  assert.equal(row.review_affected_period_end, "2026-10-31");
+  assert.equal(row.legacy_affected_period_end, "2026-10-09");
+  assert.equal(row.reporting_balance_date, "2026-10-09");
+  assert.equal(row.review_status, "unresolved_legacy");
+  assert.equal(row.legacy_disposition, "noncreditable");
+  assert.equal(row.current_unclaimed_gst, "6.00");
+  assert.equal(rows.find((candidate) => candidate.metric === "gst_credits_1b")?.value, "12.50");
+  const { text } = await pdfText(await renderBasPdf(value));
+  assert.ok(text.includes("2026-10-09"));
+});
+
 test("reconciled BAS PDF retains unresolved legacy source identity and document hashes without a decision", async () => {
   const { renderBasPdf } = await renderer();
   const value = reconciledBas();
@@ -709,6 +742,35 @@ test("reconciled BAS neutralises formula text and preserves Unicode plus negativ
   assert.ok(text.includes("INV-Élodie-Δοκιμή-Привет"));
   assert.ok(text.includes("-0.01"));
 });
+test("reconciled BAS keeps original deferral scope and evidence distinct from the current review", async () => {
+  const { renderBasCsv, renderBasPdf } = await renderer();
+  const value = reconciledBas();
+  const reviews = (value.workpaper as unknown as { purchaseReviews: Record<string, unknown>[] })
+    .purchaseReviews;
+  const review = reviews.find((candidate) => candidate.futureClaimObligation !== undefined);
+  assert.ok(review);
+  const future = review.futureClaimObligation as { affectedPeriod: typeof claimPeriod };
+  future.affectedPeriod.periodEnd.day = 9;
+  review.evidence = retainedRef(id(514), 6n, 14);
+  review.status = 2;
+  const rows = parse(Buffer.from(renderBasCsv(value)), { columns: true }) as Record<
+    string,
+    string
+  >[];
+  const row = rows.find((candidate) => candidate.deferral_id === id(504));
+  assert.ok(row);
+  assert.equal(row.review_affected_period_end, "2026-10-31");
+  assert.equal(row.deferral_affected_period_end, "2026-10-09");
+  assert.equal(row.evidence_id, id(514));
+  assert.equal(row.deferral_evidence_id, id(505));
+  assert.equal(row.review_status, "needs_evidence");
+  assert.equal(row.current_unclaimed_gst, "2.50");
+  const { text } = await pdfText(await renderBasPdf(value));
+  assert.ok(text.includes("2026-10-09"));
+  assert.ok(text.includes(id(514)));
+  assert.ok(text.includes(id(505)));
+});
+
 test("reconciled BAS retains a future-claim obligation when its current status is clear", async () => {
   const { renderBasCsv } = await renderer();
   const value = reconciledBas();
