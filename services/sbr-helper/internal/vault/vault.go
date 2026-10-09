@@ -274,7 +274,33 @@ func newDevelopmentVault(component CredentialComponent, opener CredentialFileOpe
 }
 
 func newSimulatorDevelopmentKeychainStore() (*KeychainStore, error) {
-	return newDevelopmentKeychainStore(simulatorKeychainVersion)
+	identity, err := currentSimulatorCodeIdentity()
+	if err != nil {
+		return nil, err
+	}
+	suffix, err := simulatorServiceSuffix(identity)
+	clear(identity)
+	if err != nil {
+		return nil, err
+	}
+	return newDevelopmentKeychainStore(suffix)
+}
+
+// Development ACLs trust the current signed helper. A differently signed test
+// or rebuilt helper must not read another helper's installation secrets.
+// The exact code identity stays stable across restarts and staged-path moves.
+func simulatorServiceSuffix(identity []byte) (string, error) {
+	if len(identity) != 20 && len(identity) != 32 {
+		return "", ErrVaultInaccessible
+	}
+	var nonzero byte
+	for _, value := range identity {
+		nonzero |= value
+	}
+	if nonzero == 0 {
+		return "", ErrVaultInaccessible
+	}
+	return simulatorKeychainVersion + "." + hex.EncodeToString(identity), nil
 }
 
 func validNamespace(namespace Namespace) bool {

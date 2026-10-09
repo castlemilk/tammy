@@ -101,6 +101,29 @@ static OSStatus sbr_open_keychain(const char *path,SecKeychainRef *out){return S
 static OSStatus sbr_delete_keychain(SecKeychainRef keychain){return SecKeychainDelete(keychain);}
 static void sbr_release_keychain(SecKeychainRef keychain){if(keychain)CFRelease(keychain);}
 static void sbr_zero_free(void *bytes,size_t length){if(bytes){volatile unsigned char *cursor=(volatile unsigned char*)bytes;while(length--)*cursor++=0;free(bytes);}}
+static OSStatus sbr_current_code_identity(void **bytes_out, size_t *length_out) {
+  *bytes_out = NULL; *length_out = 0;
+  SecCodeRef code = NULL; SecStaticCodeRef static_code = NULL; CFDictionaryRef info = NULL;
+  OSStatus status = SecCodeCopySelf(kSecCSDefaultFlags, &code);
+  if (status == errSecSuccess) status = SecCodeCheckValidity(code, kSecCSStrictValidate, NULL);
+  if (status == errSecSuccess) status = SecCodeCopyStaticCode(code, kSecCSDefaultFlags, &static_code);
+  if (status == errSecSuccess) status = SecCodeCopySigningInformation(static_code, kSecCSDefaultFlags, &info);
+  if (status == errSecSuccess) {
+    CFTypeRef identity = CFDictionaryGetValue(info, kSecCodeInfoUnique);
+    if (!identity || CFGetTypeID(identity) != CFDataGetTypeID()) status = errSecDecode;
+    else {
+      CFIndex length = CFDataGetLength((CFDataRef)identity);
+      if (length != 20 && length != 32) status = errSecDecode;
+      else {
+        void *owned = malloc((size_t)length);
+        if (!owned) status = errSecAllocate;
+        else { memcpy(owned, CFDataGetBytePtr((CFDataRef)identity), (size_t)length); *bytes_out = owned; *length_out = (size_t)length; }
+      }
+    }
+  }
+  if (info) CFRelease(info); if (static_code) CFRelease(static_code); if (code) CFRelease(code);
+  return status;
+}
 */
 import "C"
 
@@ -131,6 +154,19 @@ type keychainNative interface {
 type securityFrameworkNative struct {
 	keychain     C.SecKeychainRef
 	wipeObserver func(bool)
+}
+
+func currentSimulatorCodeIdentity() ([]byte, error) {
+	var output unsafe.Pointer
+	var length C.size_t
+	if status := C.sbr_current_code_identity(&output, &length); status != C.errSecSuccess {
+		return nil, ErrVaultInaccessible
+	}
+	defer C.sbr_zero_free(output, length)
+	if output == nil || (length != 20 && length != 32) {
+		return nil, ErrVaultInaccessible
+	}
+	return C.GoBytes(output, C.int(length)), nil
 }
 
 func newProductionKeychainStore(teamID string) (*KeychainStore, error) {

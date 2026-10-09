@@ -4,6 +4,8 @@ package vault
 
 type KeychainStore struct{}
 
+func currentSimulatorCodeIdentity() ([]byte, error) { return nil, ErrVaultUnsupported }
+
 func newProductionKeychainStore(string) (*KeychainStore, error) {
 	return nil, ErrVaultUnsupported
 }

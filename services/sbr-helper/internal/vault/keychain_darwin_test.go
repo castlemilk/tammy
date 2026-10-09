@@ -73,15 +73,45 @@ func TestKeychainServiceNameIsNamespaceSeparated(t *testing.T) {
 }
 
 func TestSimulatorVaultUsesVersionedDevelopmentKeychainService(t *testing.T) {
+	identity, err := currentSimulatorCodeIdentity()
+	if err != nil {
+		t.Fatal(err)
+	}
+	suffix, err := simulatorServiceSuffix(identity)
+	if err != nil {
+		t.Fatal(err)
+	}
 	store, err := newSimulatorDevelopmentKeychainStore()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if store.service != "com.tammy.sbr.development.simulator-v2" {
+	if store.service != "com.tammy.sbr.development."+suffix {
 		t.Fatalf("simulator service = %q", store.service)
 	}
 	if store.policy != developmentChannel().policy {
 		t.Fatalf("simulator policy = %+v", store.policy)
+	}
+}
+
+func TestSimulatorServiceIsBoundToExactCodeIdentity(t *testing.T) {
+	first := bytes.Repeat([]byte{0x11}, 20)
+	second := bytes.Repeat([]byte{0x22}, 20)
+	a, err := simulatorServiceSuffix(first)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := simulatorServiceSuffix(second)
+	if err != nil || a == b || a != "simulator-v2."+strings.Repeat("11", 20) {
+		t.Fatalf("code-bound simulator services = %q %q, error=%v", a, b, err)
+	}
+	again, err := simulatorServiceSuffix(bytes.Clone(first))
+	if err != nil || again != a {
+		t.Fatal("the same signed helper changed its simulator service")
+	}
+	for _, invalid := range [][]byte{nil, make([]byte, 20), bytes.Repeat([]byte{1}, 19), bytes.Repeat([]byte{1}, 33)} {
+		if _, err := simulatorServiceSuffix(invalid); !errors.Is(err, ErrVaultInaccessible) {
+			t.Fatalf("invalid code identity admitted: length=%d error=%v", len(invalid), err)
+		}
 	}
 }
 
