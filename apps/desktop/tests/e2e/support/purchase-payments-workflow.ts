@@ -105,7 +105,7 @@ export async function setupPurchaseWorkspace(
         code,
         name,
         type,
-        normalBalance: a.NormalBalance.DEBIT,
+        normalBalance: type === a.AccountType.EQUITY ? a.NormalBalance.CREDIT : a.NormalBalance.DEBIT,
         reportClassification: "custom.account",
         cashFlowClassification: flow,
       }),
@@ -256,7 +256,7 @@ export async function readPurchasePayments(
         authentication: purchaseAuth(workspace),
         organisationId: workspace.organisationId,
         documentId,
-        page: { pageSize: 200, cursor },
+        page: { pageSize: 200, cursor: cursor || undefined },
       }),
     );
     payments.push(...result.payments);

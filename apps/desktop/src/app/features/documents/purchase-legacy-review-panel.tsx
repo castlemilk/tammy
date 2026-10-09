@@ -106,7 +106,7 @@ export function PurchaseLegacyReviewPanel({
         create(ListJournalsRequestSchema, {
           authentication: { actorUserId: workspace.userId, sessionId: workspace.sessionId },
           organisationId: workspace.organisationId!,
-          page: { pageSize: 200, cursor: cursors.at(-1) ?? "" },
+          page: { pageSize: 200, cursor: cursors.at(-1) || undefined },
         }),
       ),
     [workspace.userId, workspace.sessionId, workspace.organisationId, cursors],

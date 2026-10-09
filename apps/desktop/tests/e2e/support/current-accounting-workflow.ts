@@ -680,20 +680,20 @@ export async function setupAndRunCurrentAccountingWorkflow(
   });
   expect(createdBas.workpaper?.salesG1?.minorUnits).toBe(0n);
   expect(createdBas.workpaper?.gstOnSales1a?.minorUnits).toBe(0n);
-  expect(createdBas.workpaper?.gstCredits1b?.minorUnits).toBe(
-    gstBasis === "cash" ? 0n : BigInt(WORKFLOW_FIXTURE.bas.gstCreditsMinorUnits),
+  // The old reviewed document and manual journal have no owned purchase
+  // relationship. Its GST stays discoverable as a legacy candidate outside 1B.
+  expect(createdBas.workpaper?.gstCredits1b?.minorUnits).toBe(0n);
+  expect(createdBas.workpaper?.netGstPayable?.minorUnits).toBe(0n);
+  expect(createdBas.workpaper?.sources).toHaveLength(0);
+  expect(createdBas.workpaper?.purchaseSources).toHaveLength(0);
+  expect(createdBas.workpaper?.purchaseReviews).toHaveLength(1);
+  expect(createdBas.workpaper?.legacyCandidateGst?.minorUnits).toBe(
+    BigInt(WORKFLOW_FIXTURE.sourceDocument.gstMinorUnits),
   );
-  expect(createdBas.workpaper?.netGstPayable?.minorUnits).toBe(
-    gstBasis === "cash" ? 0n : BigInt(WORKFLOW_FIXTURE.bas.netGstPayableMinorUnits),
-  );
-  expect(createdBas.workpaper?.sources).toHaveLength(gstBasis === "cash" ? 0 : 1);
-  if (gstBasis === "cash") expect(createdBas.workpaper?.excludedCashPurchaseCount).toBe(1n);
-  else
-    expect(createdBas.workpaper?.sources[0]).toMatchObject({
-      documentId: retainedDocument.id,
-      supplierName: WORKFLOW_FIXTURE.sourceDocument.supplierName,
-      invoiceNumber: WORKFLOW_FIXTURE.sourceDocument.invoiceNumber,
-    });
+  expect(createdBas.workpaper?.purchaseReviews[0]?.legacySource?.source).toMatchObject({
+    case: "document",
+    value: { documentId: retainedDocument.id, reviewedVersion: 2n },
+  });
 
   const currentBas = await invokeProto(
     page,
@@ -749,10 +749,7 @@ export async function setupAndRunCurrentAccountingWorkflow(
   await expect(
     page.getByText(WORKFLOW_FIXTURE.bas.statusLabel, { exact: true }).first(),
   ).toBeVisible();
-  if (gstBasis !== "cash")
-    await expect(
-      page.getByText(WORKFLOW_FIXTURE.sourceDocument.supplierName, { exact: true }),
-    ).toBeVisible();
+  await expect(page.getByText("Unresolved legacy source", { exact: true })).toBeVisible();
   await assertRoute(page, "Overview", "/overview", "Overview");
   await expect(page.getByText(WORKFLOW_FIXTURE.bas.statusLabel, { exact: true })).toBeVisible();
 

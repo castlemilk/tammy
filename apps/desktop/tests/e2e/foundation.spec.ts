@@ -45,7 +45,7 @@ test("runs the packaged first-run journey offline and exits cleanly", async ({
   await expect(page.getByLabel("Workspace passphrase")).toHaveAttribute("type", "password");
   await expect(page.getByLabel("Administrator password")).toHaveAttribute("type", "password");
   await expect(
-    page.getByText("Tammy supports a local invoice and reviewed-expense GST workpaper only."),
+    page.getByText("Tammy supports a local invoice and reconciled purchase GST workpaper."),
   ).toBeVisible();
   await expect(
     page.getByText("Tammy does not prepare, declare, or lodge a complete BAS."),

@@ -39,7 +39,7 @@ export function RetainedDocumentPicker({
           organisationId: workspace.organisationId!,
           status: DocumentStatus.REVIEWED,
           ...(accounting ? { accounting } : {}),
-          page: { pageSize: 200, cursor },
+          page: { pageSize: 200, cursor: cursor || undefined },
         }),
       ),
     [accounting, cursor, workspace.organisationId, workspace.sessionId, workspace.userId],

@@ -48,7 +48,7 @@ it("reaches the next document page and resets signed cursors when filtering", as
       first,
       ...Array.from({ length: 199 }, (_, index) =>
         create(DocumentSchema, {
-          id: `018f0000-0000-7000-8000-${String(index + 2).padStart(12, "0")}`,
+          id: `018f0000-0000-7000-8000-${String(index + 1000).padStart(12, "0")}`,
           organisationId,
           sourceDisplayName: `Invoice ${index + 2}`,
           status: DocumentStatus.REVIEWED,
@@ -79,6 +79,7 @@ it("reaches the next document page and resets signed cursors when filtering", as
     />,
   );
   await screen.findAllByText("First invoice");
+  expect(requests[0]?.page?.cursor).toBeUndefined();
   await user.click(screen.getByRole("button", { name: "Next document page" }));
   await screen.findByText("Invoice 201");
   expect(requests.at(-1)?.page?.cursor).toBe("signed-page-2");
@@ -88,7 +89,7 @@ it("reaches the next document page and resets signed cursors when filtering", as
     screen.getByLabelText("Accounting filter"),
     String(DocumentAccountingFilter.NEEDS_GST_REVIEW),
   );
-  expect(requests.at(-1)?.page?.cursor).toBe("");
+  expect(requests.at(-1)?.page?.cursor).toBeUndefined();
   expect(requests.at(-1)?.accounting).toBe(DocumentAccountingFilter.NEEDS_GST_REVIEW);
 });
 const reviewCodec = createProtoMethodCodec({

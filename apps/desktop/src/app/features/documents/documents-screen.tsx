@@ -115,7 +115,7 @@ export function DocumentsScreen({
         create(ListDocumentsRequestSchema, {
           authentication: { actorUserId: userId, sessionId },
           organisationId,
-          page: create(PageRequestSchema, { pageSize: 200, cursor: cursors.at(-1) ?? "" }),
+          page: create(PageRequestSchema, { pageSize: 200, cursor: cursors.at(-1) || undefined }),
           ...(accountingFilter ? { accounting: accountingFilter } : {}),
           ...(statusFilter ? { status: statusFilter } : {}),
         }),

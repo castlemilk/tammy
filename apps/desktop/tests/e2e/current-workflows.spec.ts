@@ -66,7 +66,7 @@ test("runs the current accounting workflows through the packaged app", async ({
     },
     { heading: "Trial balance", link: "Trial balance", ready: fixture.accounts[0]?.name },
     { heading: "Banking", link: "Banking", ready: "Reconciled" },
-    { heading: "GST & BAS", link: "GST & BAS", ready: fixture.sourceDocument.supplierName },
+    { heading: "GST & BAS", link: "GST & BAS", ready: "Unresolved legacy source" },
   ] as const;
   for (const [index, target] of targets.entries()) {
     await page.getByRole("link", { name: target.link }).click();
