@@ -30,7 +30,7 @@ export async function parseReportCsv(file: string): Promise<ParsedReportCsv> {
 }
 
 /** Mozilla PDF.js reads real saved pages independently of Forme's font/stream layout. */
-export async function parseReportPdf(file: string): Promise<string> {
+export async function readPdfPages(file: string): Promise<readonly string[]> {
   const bytes = await readFile(file);
   if (
     bytes.length < 8 ||
@@ -53,12 +53,17 @@ export async function parseReportPdf(file: string): Promise<string> {
       pages.push(content.items.map((item) => ("str" in item ? item.str : "")).join(" "));
       page.cleanup();
     }
-    const text = pages.join("\f");
-    if (!text.trim()) throw new Error("REPORTING_ACCEPTANCE_PDF_TEXT_MISSING");
-    return text;
+    if (!pages.some((page) => page.trim()))
+      throw new Error("REPORTING_ACCEPTANCE_PDF_TEXT_MISSING");
+    return pages;
   } finally {
     await loading.destroy();
   }
+}
+
+/** Preserves the original flattened-text API for existing acceptance checks. */
+export async function parseReportPdf(file: string): Promise<string> {
+  return (await readPdfPages(file)).join("\f");
 }
 
 export function exactDecimal(minor: bigint | undefined): string {

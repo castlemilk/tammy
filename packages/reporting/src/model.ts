@@ -19,6 +19,160 @@ interface Context {
   readonly organisation: ReportOrganisation;
   readonly acquiredAt: string;
 }
+interface RetainedSourceRef {
+  readonly sourceId: string;
+  readonly sourceVersion: bigint;
+  readonly sourceHash: Uint8Array;
+}
+interface ClaimPeriod {
+  readonly periodStart?: CivilDate | undefined;
+  readonly periodEnd?: CivilDate | undefined;
+}
+interface LegacySourceRef {
+  readonly source:
+    | {
+        readonly case: "document";
+        readonly value: {
+          readonly documentId: string;
+          readonly reviewedVersion: bigint;
+          readonly originalContentHash: Uint8Array;
+          readonly reviewedSnapshotHash: Uint8Array;
+        };
+      }
+    | {
+        readonly case: "openingPayable";
+        readonly value: {
+          readonly openingPayableId: string;
+          readonly sourceVersion: bigint;
+          readonly sourceHash: Uint8Array;
+        };
+      }
+    | { readonly case: undefined; readonly value?: undefined };
+}
+interface PurchaseClaimTimingReview {
+  readonly reviewedAsOf?: CivilDate | undefined;
+  readonly allowablePeriodConfirmed: boolean;
+  readonly ordinaryTimeLimitConfirmed: boolean;
+  readonly evidenceHeldConfirmed: boolean;
+  readonly reason: string;
+}
+interface PurchaseSourcePortion {
+  readonly source:
+    | {
+        readonly case: "posting";
+        readonly value: {
+          readonly postingId: string;
+          readonly postingHash: Uint8Array;
+          readonly allocationSequence: number;
+        };
+      }
+    | {
+        readonly case: "payment";
+        readonly value: {
+          readonly postingId: string;
+          readonly postingHash: Uint8Array;
+          readonly paymentId: string;
+          readonly paymentHash: Uint8Array;
+          readonly allocationSequence: number;
+        };
+      }
+    | { readonly case: undefined; readonly value?: undefined };
+  readonly normalEventDate?: CivilDate | undefined;
+  readonly earliestOtherwiseEligiblePeriod?: ClaimPeriod | undefined;
+  readonly requiredReturnDueDate?: CivilDate | undefined;
+  readonly dueDateEvidence?: RetainedSourceRef | undefined;
+  readonly ordinaryLastClaimDate?: CivilDate | undefined;
+  readonly evidenceId: string;
+  readonly evidenceHeldDate?: CivilDate | undefined;
+}
+interface PurchaseFutureClaim {
+  readonly deferralId: string;
+  readonly organisationId: string;
+  readonly postingId: string;
+  readonly documentId: string;
+  readonly accountingVersion: bigint;
+  readonly deferralHash: Uint8Array;
+  readonly portion?: PurchaseSourcePortion | undefined;
+  readonly affectedPeriod?: ClaimPeriod | undefined;
+  readonly timingReview?: PurchaseClaimTimingReview | undefined;
+  readonly allocatedDeferredGst?: Money | undefined;
+  readonly reason: string;
+  readonly actorUserId: string;
+  readonly recordedAt?: { readonly seconds: bigint; readonly nanos: number } | undefined;
+}
+interface PurchaseLegacyReview {
+  readonly id: string;
+  readonly organisationId: string;
+  readonly source?: LegacySourceRef | undefined;
+  readonly affectedPeriod?: ClaimPeriod | undefined;
+  readonly reportingBalanceDate?: CivilDate | undefined;
+  readonly disposition: number;
+  readonly previouslyClaimedPeriod?: ClaimPeriod | undefined;
+  readonly claimEvidence?: RetainedSourceRef | undefined;
+  readonly linkedPostingId?: string | undefined;
+  readonly reason: string;
+  readonly sourceRevision: bigint;
+  readonly sourceHash: Uint8Array;
+  readonly actorUserId: string;
+  readonly recordedAt?: { readonly seconds: bigint; readonly nanos: number } | undefined;
+}
+interface BasPurchaseSourceLine {
+  readonly postingId: string;
+  readonly postingHash: Uint8Array;
+  readonly documentId: string;
+  readonly originalContentHash: Uint8Array;
+  readonly reviewedSnapshotHash: Uint8Array;
+  readonly paymentId?: string | undefined;
+  readonly paymentHash?: Uint8Array | undefined;
+  readonly attributionId?: string | undefined;
+  readonly attributionHash?: Uint8Array | undefined;
+  readonly allocationSequence: number;
+  readonly accountId?: string | undefined;
+  readonly accountVersion?: bigint | undefined;
+  readonly supplierName?: string | undefined;
+  readonly invoiceNumber?: string | undefined;
+  readonly use: number;
+  readonly basClassification: number;
+  readonly cashFlowClassification: number;
+  readonly invoiceDate?: CivilDate | undefined;
+  readonly actualPaymentDate?: CivilDate | undefined;
+  readonly normalTaxEventDate?: CivilDate | undefined;
+  readonly releasePostingDate?: CivilDate | undefined;
+  readonly claimPeriod?: ClaimPeriod | undefined;
+  readonly allocatedGross?: Money | undefined;
+  readonly supplierGst?: Money | undefined;
+  readonly eligibleGst?: Money | undefined;
+  readonly claimedGst?: Money | undefined;
+  readonly evidence?: RetainedSourceRef | undefined;
+  readonly sourceRevision: bigint;
+  readonly sourceHash: Uint8Array;
+}
+interface BasPurchaseLegacySupport {
+  readonly reviewId: string;
+  readonly kind: number;
+  readonly sequence: number;
+  readonly source?: RetainedSourceRef | undefined;
+}
+interface BasPurchaseReview {
+  readonly legacySource?: LegacySourceRef | undefined;
+  readonly documentId?: string | undefined;
+  readonly postingId?: string | undefined;
+  readonly paymentId?: string | undefined;
+  readonly deferralId?: string | undefined;
+  readonly status: number;
+  readonly affectedPeriod?: ClaimPeriod | undefined;
+  readonly invoiceDate?: CivilDate | undefined;
+  readonly actualPaymentDate?: CivilDate | undefined;
+  readonly eligibleGst?: Money | undefined;
+  readonly unclaimedGst?: Money | undefined;
+  readonly legacyReview?: PurchaseLegacyReview | undefined;
+  readonly futureClaimObligation?: PurchaseFutureClaim | undefined;
+  readonly evidence?: RetainedSourceRef | undefined;
+  readonly sourceRevision: bigint;
+  readonly sourceHash: Uint8Array;
+  readonly reason: string;
+  readonly kind: number;
+}
 export interface IncomeSnapshot extends Context {
   readonly summary: {
     readonly organisationId: string;
@@ -74,6 +228,11 @@ export interface BasSnapshot extends Context {
       readonly gross?: Money | undefined;
       readonly gstCredit?: Money | undefined;
     }[];
+    readonly purchaseSourceFormat?: number | undefined;
+    readonly legacyCandidateGst?: Money | undefined;
+    readonly purchaseSources?: readonly BasPurchaseSourceLine[] | undefined;
+    readonly purchaseReviews?: readonly BasPurchaseReview[] | undefined;
+    readonly legacyPurchaseSupport?: readonly BasPurchaseLegacySupport[] | undefined;
   };
 }
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
@@ -128,6 +287,11 @@ function money(value: Money | undefined, signed = false) {
   if (!signed && value.minorUnits < 0n) invalid();
   return amount;
 }
+function requiredMoney(value: Money | undefined) {
+  if (!value) invalid();
+  money(value);
+  return value;
+}
 function basis(value: number) {
   if (value === 1) return "Cash";
   if (value === 2) return "Non-cash";
@@ -170,6 +334,410 @@ function context(value: Context) {
 }
 function period(start?: CivilDate, end?: CivilDate) {
   if (reportDate(start) > reportDate(end)) invalid();
+}
+const purchaseUses = { 1: "business", 2: "private" } as const;
+const purchaseBasClassifications = { 1: "capital", 2: "non_capital", 3: "excluded" } as const;
+const cashFlowClassifications = { 1: "operating", 2: "investing", 3: "financing" } as const;
+const purchaseReviewStatuses = {
+  1: "clear",
+  2: "needs_evidence",
+  3: "needs_timing_review",
+  4: "unresolved_legacy",
+  5: "unsupported",
+  6: "deferred",
+} as const;
+const purchaseReviewKinds = {
+  1: "unresolved_eligibility",
+  2: "missing_evidence",
+  3: "claim_timing",
+  4: "excluded_unpaid",
+  5: "excluded_private_or_noncreditable",
+  6: "duplicate",
+  7: "unsupported_settlement",
+  8: "deferred_future_claim",
+  9: "old_legacy_document",
+  10: "undated_legacy_document",
+  11: "opening_payable",
+  12: "resolved_legacy",
+} as const;
+const legacyDispositions = {
+  1: "confirmed_unpaid_through_balance",
+  2: "already_claimed",
+  3: "duplicate",
+  4: "noncreditable",
+  5: "evidence_only_linked_purchase",
+  6: "unsupported_existing_settlement",
+} as const;
+const legacySupportKinds = { 1: "payment", 2: "evidence" } as const;
+function enumLabel<T extends Record<number, string>>(value: number, values: T): T[keyof T] {
+  if (!Number.isInteger(value) || !Object.hasOwn(values, value)) invalid();
+  return values[value as keyof T];
+}
+function purchaseClaimPeriod(value: ClaimPeriod | undefined) {
+  if (!value) invalid();
+  period(value.periodStart, value.periodEnd);
+  return [reportDate(value.periodStart), reportDate(value.periodEnd)] as const;
+}
+function retainedSource(value: RetainedSourceRef | undefined) {
+  if (!value) invalid();
+  identity(value.sourceId);
+  uint(value.sourceVersion, true);
+  hash(value.sourceHash);
+  return value;
+}
+function legacySource(value: LegacySourceRef | undefined) {
+  if (!value) invalid();
+  switch (value.source.case) {
+    case "document":
+      identity(value.source.value.documentId);
+      uint(value.source.value.reviewedVersion, true);
+      hash(value.source.value.originalContentHash);
+      hash(value.source.value.reviewedSnapshotHash);
+      return {
+        kind: "document",
+        id: value.source.value.documentId,
+        version: value.source.value.reviewedVersion,
+        originalHash: hash(value.source.value.originalContentHash),
+        reviewedHash: hash(value.source.value.reviewedSnapshotHash),
+        hash: "",
+      } as const;
+    case "openingPayable":
+      identity(value.source.value.openingPayableId);
+      uint(value.source.value.sourceVersion, true);
+      hash(value.source.value.sourceHash);
+      return {
+        kind: "opening_payable",
+        id: value.source.value.openingPayableId,
+        version: value.source.value.sourceVersion,
+        originalHash: "",
+        reviewedHash: "",
+        hash: hash(value.source.value.sourceHash),
+      } as const;
+    default:
+      return invalid();
+  }
+}
+function claimPeriodMatchesReport(
+  value: ClaimPeriod | undefined,
+  start: CivilDate | undefined,
+  end: CivilDate | undefined,
+) {
+  const [claimStart, claimEnd] = purchaseClaimPeriod(value);
+  if (claimStart !== reportDate(start) || claimEnd !== reportDate(end)) invalid();
+}
+function sourceHash(value: Uint8Array) {
+  return hash(value);
+}
+function timestamp(value: { readonly seconds: bigint; readonly nanos: number } | undefined) {
+  return reportTimestamp(value);
+}
+function purchaseSourceLine(value: BasPurchaseSourceLine, report: BasSnapshot["workpaper"]) {
+  identity(value.postingId);
+  sourceHash(value.postingHash);
+  identity(value.documentId);
+  sourceHash(value.originalContentHash);
+  sourceHash(value.reviewedSnapshotHash);
+  if ((value.paymentId === undefined) !== (value.paymentHash === undefined)) invalid();
+  if (value.paymentId !== undefined) identity(value.paymentId);
+  if (value.paymentHash !== undefined) sourceHash(value.paymentHash);
+  if ((value.attributionId === undefined) !== (value.attributionHash === undefined)) invalid();
+  if (value.attributionId !== undefined) identity(value.attributionId);
+  if (value.attributionHash !== undefined) sourceHash(value.attributionHash);
+  if (
+    !Number.isInteger(value.allocationSequence) ||
+    value.allocationSequence < 1 ||
+    value.allocationSequence > 0xffffffff
+  )
+    invalid();
+  enumLabel(value.use, purchaseUses);
+  enumLabel(value.basClassification, purchaseBasClassifications);
+  enumLabel(value.cashFlowClassification, cashFlowClassifications);
+  if ((value.accountId === undefined) !== (value.accountVersion === undefined)) invalid();
+  if (value.accountId !== undefined) identity(value.accountId);
+  if (value.accountVersion !== undefined) uint(value.accountVersion, true);
+  if (value.supplierName !== undefined) text(value.supplierName, 256);
+  if (value.invoiceNumber !== undefined) text(value.invoiceNumber, 128);
+  const invoiceDate = reportDate(value.invoiceDate);
+  const normalEvent = reportDate(value.normalTaxEventDate);
+  const [claimStart, claimEnd] = purchaseClaimPeriod(value.claimPeriod);
+  if (claimStart !== reportDate(report.periodStart) || claimEnd !== reportDate(report.periodEnd))
+    invalid();
+  if (invoiceDate > claimEnd || normalEvent > claimEnd) invalid();
+  if ((value.paymentId === undefined) !== (value.actualPaymentDate === undefined)) invalid();
+  const paymentDate = value.actualPaymentDate ? reportDate(value.actualPaymentDate) : undefined;
+  if (paymentDate && paymentDate > claimEnd) invalid();
+  if (report.gstBasis === 1 && (paymentDate === undefined || normalEvent !== paymentDate))
+    invalid();
+  if (report.gstBasis === 2 && normalEvent !== invoiceDate) invalid();
+  if (value.releasePostingDate !== undefined) {
+    const releaseDate = reportDate(value.releasePostingDate);
+    if (releaseDate < normalEvent || releaseDate < claimStart || releaseDate > claimEnd) invalid();
+  }
+  const gross = requiredMoney(value.allocatedGross);
+  const supplier = requiredMoney(value.supplierGst);
+  const eligible = requiredMoney(value.eligibleGst);
+  const claimed = requiredMoney(value.claimedGst);
+  if (
+    supplier.minorUnits > gross.minorUnits ||
+    eligible.minorUnits > supplier.minorUnits ||
+    claimed.minorUnits > eligible.minorUnits
+  )
+    invalid();
+  if ((value.use === 2 || value.basClassification === 3) && claimed.minorUnits !== 0n) invalid();
+  retainedSource(value.evidence);
+  uint(value.sourceRevision, true);
+  sourceHash(value.sourceHash);
+  return value;
+}
+function purchaseTimingReview(value: PurchaseClaimTimingReview | undefined) {
+  if (!value) invalid();
+  reportDate(value.reviewedAsOf);
+  if (
+    value.allowablePeriodConfirmed !== true ||
+    value.ordinaryTimeLimitConfirmed !== true ||
+    value.evidenceHeldConfirmed !== true
+  )
+    invalid();
+  text(value.reason, 512, true);
+}
+function futureClaim(
+  value: PurchaseFutureClaim | undefined,
+  review: BasPurchaseReview,
+  report: BasSnapshot["workpaper"],
+  orgId: string,
+) {
+  if (!value) invalid();
+  identity(value.deferralId);
+  if (value.organisationId !== orgId) invalid();
+  identity(value.organisationId);
+  identity(value.postingId);
+  identity(value.documentId);
+  uint(value.accountingVersion, true);
+  sourceHash(value.deferralHash);
+  if (value.deferralId !== review.deferralId || value.postingId !== review.postingId) invalid();
+  if (review.paymentId !== undefined && value.portion?.source.case === "payment") {
+    if (review.paymentId !== value.portion.source.value.paymentId) invalid();
+  }
+  claimPeriodMatchesReport(value.affectedPeriod, report.periodStart, report.periodEnd);
+  const portion = value.portion;
+  if (!portion) invalid();
+  switch (portion.source.case) {
+    case "posting":
+      identity(portion.source.value.postingId);
+      sourceHash(portion.source.value.postingHash);
+      if (portion.source.value.postingId !== value.postingId) invalid();
+      break;
+    case "payment":
+      identity(portion.source.value.postingId);
+      sourceHash(portion.source.value.postingHash);
+      identity(portion.source.value.paymentId);
+      sourceHash(portion.source.value.paymentHash);
+      if (
+        portion.source.value.postingId !== value.postingId ||
+        portion.source.value.paymentId !== review.paymentId
+      )
+        invalid();
+      break;
+    default:
+      invalid();
+  }
+  if (
+    !Number.isInteger(portion.source.value.allocationSequence) ||
+    portion.source.value.allocationSequence < 1 ||
+    portion.source.value.allocationSequence > 0xffffffff
+  )
+    invalid();
+  const eventDate = reportDate(portion.normalEventDate);
+  const [earliestStart, earliestEnd] = purchaseClaimPeriod(portion.earliestOtherwiseEligiblePeriod);
+  if (eventDate > earliestEnd || earliestStart > reportDate(report.periodEnd)) invalid();
+  const dueDate = reportDate(portion.requiredReturnDueDate);
+  const ordinaryLastClaimDate = reportDate(portion.ordinaryLastClaimDate);
+  if (ordinaryLastClaimDate < dueDate) invalid();
+  retainedSource(portion.dueDateEvidence);
+  identity(portion.evidenceId);
+  const evidenceHeldDate = reportDate(portion.evidenceHeldDate);
+  if (review.evidence?.sourceId !== portion.evidenceId) invalid();
+  if (evidenceHeldDate > reportDate(report.periodEnd)) invalid();
+  claimPeriodMatchesReport(value.affectedPeriod, report.periodStart, report.periodEnd);
+  purchaseTimingReview(value.timingReview);
+  const deferredAmount = requiredMoney(value.allocatedDeferredGst);
+  const unclaimedAmount = requiredMoney(review.unclaimedGst);
+  if (deferredAmount.minorUnits < unclaimedAmount.minorUnits) invalid();
+  text(value.reason, 512, true);
+  identity(value.actorUserId);
+  timestamp(value.recordedAt);
+  return value;
+}
+function purchaseReview(value: BasPurchaseReview, report: BasSnapshot["workpaper"], orgId: string) {
+  const status = enumLabel(value.status, purchaseReviewStatuses);
+  const kind = enumLabel(value.kind, purchaseReviewKinds);
+  if (
+    value.postingId === undefined &&
+    value.paymentId === undefined &&
+    value.deferralId === undefined &&
+    value.legacySource === undefined
+  )
+    invalid();
+  if (value.documentId !== undefined) identity(value.documentId);
+  if (value.postingId !== undefined) identity(value.postingId);
+  if (value.paymentId !== undefined) identity(value.paymentId);
+  if (value.deferralId !== undefined) identity(value.deferralId);
+  const hasFutureClaim = value.futureClaimObligation !== undefined;
+  if (
+    (value.deferralId === undefined) !== !hasFutureClaim ||
+    (kind === "deferred_future_claim") !== hasFutureClaim
+  )
+    invalid();
+  claimPeriodMatchesReport(value.affectedPeriod, report.periodStart, report.periodEnd);
+  if (value.invoiceDate !== undefined) reportDate(value.invoiceDate);
+  if (value.actualPaymentDate !== undefined) reportDate(value.actualPaymentDate);
+  const eligibleAmount = requiredMoney(value.eligibleGst);
+  const unclaimedAmount = requiredMoney(value.unclaimedGst);
+  if (unclaimedAmount.minorUnits > eligibleAmount.minorUnits) invalid();
+  if (value.evidence !== undefined) retainedSource(value.evidence);
+  uint(value.sourceRevision, true);
+  sourceHash(value.sourceHash);
+  text(value.reason, 512, true);
+  const source = value.legacySource === undefined ? undefined : legacySource(value.legacySource);
+  if (value.legacyReview !== undefined) {
+    const decision = value.legacyReview;
+    identity(decision.id);
+    if (decision.organisationId !== orgId) invalid();
+    identity(decision.organisationId);
+    const decisionSource = legacySource(decision.source);
+    if (
+      !source ||
+      source.kind !== decisionSource.kind ||
+      source.id !== decisionSource.id ||
+      source.version !== decisionSource.version ||
+      source.originalHash !== decisionSource.originalHash ||
+      source.reviewedHash !== decisionSource.reviewedHash ||
+      source.hash !== decisionSource.hash
+    )
+      invalid();
+    claimPeriodMatchesReport(decision.affectedPeriod, report.periodStart, report.periodEnd);
+    reportDate(decision.reportingBalanceDate);
+    enumLabel(decision.disposition, legacyDispositions);
+    if (decision.previouslyClaimedPeriod !== undefined)
+      purchaseClaimPeriod(decision.previouslyClaimedPeriod);
+    if (decision.claimEvidence !== undefined) retainedSource(decision.claimEvidence);
+    if (
+      decision.disposition === 2 &&
+      (!decision.previouslyClaimedPeriod || !decision.claimEvidence)
+    )
+      invalid();
+    if (decision.linkedPostingId !== undefined) identity(decision.linkedPostingId);
+    if (decision.disposition === 5 && decision.linkedPostingId === undefined) invalid();
+    text(decision.reason, 512, true);
+    uint(decision.sourceRevision, true);
+    sourceHash(decision.sourceHash);
+    identity(decision.actorUserId);
+    timestamp(decision.recordedAt);
+  }
+  if (value.futureClaimObligation !== undefined) {
+    if (kind !== "deferred_future_claim") invalid();
+    futureClaim(value.futureClaimObligation, value, report, orgId);
+  }
+  return { ...value, status, kind, legacy: source };
+}
+function validatePurchaseSources(report: BasSnapshot["workpaper"], orgId: string) {
+  const sourceFormat = report.purchaseSourceFormat;
+  const sourceLines = report.purchaseSources;
+  const purchaseReviews = report.purchaseReviews;
+  const legacySupport = report.legacyPurchaseSupport;
+  const sources = sourceLines ?? [];
+  const reviews = purchaseReviews ?? [];
+  const support = legacySupport ?? [];
+  if (!Array.isArray(sources) || !Array.isArray(reviews) || !Array.isArray(support)) invalid();
+  if (sources.length > 1000 || reviews.length > 1000 || support.length > 1000)
+    throw new Error("REPORT_SOURCE_LIMIT");
+  if (sourceFormat === undefined) {
+    if (
+      sources.length > 0 ||
+      reviews.length > 0 ||
+      support.length > 0 ||
+      report.legacyCandidateGst !== undefined
+    )
+      invalid();
+    return false;
+  }
+  if (sourceFormat !== 1) invalid();
+  if (
+    !Array.isArray(sourceLines) ||
+    !Array.isArray(purchaseReviews) ||
+    !Array.isArray(legacySupport)
+  )
+    invalid();
+  if (report.legacyCandidateGst !== undefined) money(report.legacyCandidateGst);
+  const sourceKeys = new Set<string>();
+  let typedClaims = 0n;
+  for (const source of sources) {
+    purchaseSourceLine(source, report);
+    const key = `${source.postingId}/${source.paymentId ?? ""}/${source.attributionId ?? ""}/${source.allocationSequence}`;
+    if (sourceKeys.has(key)) invalid();
+    sourceKeys.add(key);
+    typedClaims += requiredMoney(source.claimedGst).minorUnits;
+  }
+  const reviewIds = new Set<string>();
+  const postedDocuments = new Map<string, string>();
+  for (const source of sources) {
+    const documentId = postedDocuments.get(source.postingId);
+    if (documentId !== undefined && documentId !== source.documentId) invalid();
+    postedDocuments.set(source.postingId, source.documentId);
+  }
+  const legacyReviewIds = new Set<string>();
+  for (const review of reviews) {
+    const checked = purchaseReview(review, report, orgId);
+    const key = `${checked.kind}/${review.postingId ?? ""}/${review.paymentId ?? ""}/${review.deferralId ?? ""}/${checked.legacy?.kind ?? ""}/${checked.legacy?.id ?? ""}`;
+    if (reviewIds.has(key)) invalid();
+    reviewIds.add(key);
+    if (review.legacyReview) {
+      if (legacyReviewIds.has(review.legacyReview.id)) invalid();
+      legacyReviewIds.add(review.legacyReview.id);
+    }
+    if (
+      review.documentId !== undefined &&
+      review.futureClaimObligation &&
+      review.documentId !== review.futureClaimObligation.documentId
+    )
+      invalid();
+    if (review.postingId) {
+      const documentId = postedDocuments.get(review.postingId);
+      if (
+        documentId !== undefined &&
+        ((review.documentId !== undefined && documentId !== review.documentId) ||
+          (review.futureClaimObligation && documentId !== review.futureClaimObligation.documentId))
+      )
+        invalid();
+    }
+  }
+  const supportOrder = new Map<string, number>();
+  const supportKeys = new Set<string>();
+  for (const link of support) {
+    identity(link.reviewId);
+    enumLabel(link.kind, legacySupportKinds);
+    if (!Number.isInteger(link.sequence) || link.sequence < 1 || link.sequence > 0xffffffff)
+      invalid();
+    if (!legacyReviewIds.has(link.reviewId)) invalid();
+    const source = retainedSource(link.source);
+    const key = `${link.reviewId}/${link.kind}/${link.sequence}/${source.sourceId}/${source.sourceVersion}`;
+    if (supportKeys.has(key)) invalid();
+    supportKeys.add(key);
+    const orderKey = `${link.reviewId}/${link.kind}`;
+    const expected = (supportOrder.get(orderKey) ?? 0) + 1;
+    if (link.sequence !== expected) invalid();
+    supportOrder.set(orderKey, expected);
+  }
+  let legacyDirectClaims = 0n;
+  for (const source of report.sources)
+    legacyDirectClaims += requiredMoney(source.gstCredit).minorUnits;
+  const gstCredits = requiredMoney(report.gstCredits1b);
+  if (
+    legacyDirectClaims + typedClaims > 9223372036854775807n ||
+    legacyDirectClaims + typedClaims !== gstCredits.minorUnits
+  )
+    invalid();
+  return true;
 }
 export function validateIncomeSnapshot(value: IncomeSnapshot): IncomeSnapshot {
   context(value);
@@ -237,6 +805,7 @@ export function validateBasSnapshot(value: BasSnapshot): BasSnapshot {
     uint(source.sourceRevision, true);
     hash(source.sourceHash);
   }
+  validatePurchaseSources(report, value.organisation.id);
   return value;
 }
 export function boundedReportBytes(bytes: Uint8Array) {

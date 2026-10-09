@@ -3,11 +3,25 @@ import { mkdtemp, readdir, readFile, rm, stat, symlink } from "node:fs/promises"
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { create } from "@bufbuild/protobuf";
+import { MoneySchema } from "@tammy/connect-client/tammy/v1/common_pb.js";
 import { UserSchema, UserState } from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import { BusinessIncomeSummarySchema } from "@tammy/connect-client/tammy/v1/invoices_pb.js";
 import { OrganisationSchema } from "@tammy/connect-client/tammy/v1/organisation_pb.js";
-import { BasWorkpaperSchema } from "@tammy/connect-client/tammy/v1/tax_pb.js";
+import {
+  LegacyPurchaseOpeningPayableRefSchema,
+  LegacyPurchaseSourceRefSchema,
+  PurchaseClaimPeriodSchema,
+} from "@tammy/connect-client/tammy/v1/purchases_pb.js";
+import type { BasWorkpaper } from "@tammy/connect-client/tammy/v1/tax_pb.js";
+import {
+  BasPurchaseLegacyReviewSchema,
+  BasPurchaseLegacySupportSchema,
+  BasPurchaseReviewSchema,
+  BasPurchaseSourceLineSchema,
+  BasWorkpaperSchema,
+} from "@tammy/connect-client/tammy/v1/tax_pb.js";
 import { afterEach, expect, it, vi } from "vitest";
+import { assertPurchasePdfRows } from "../../tests/e2e/support/purchase-export-assertions.js";
 import { createReportExports } from "./report-export";
 
 const directories: string[] = [];
@@ -21,6 +35,8 @@ const orgId = "018f0000-0000-7000-8000-000000000004",
 const start = { year: 2026, month: 10, day: 1 },
   end = { ...start, day: 31 };
 const money = (minorUnits = 0n) => ({ currencyCode: "AUD", minorUnits });
+const hash = (byte: number) => new Uint8Array(32).fill(byte);
+const id = (index: number) => `018f0000-0000-7000-8000-${String(index).padStart(12, "0")}`;
 async function fixture() {
   const directory = await mkdtemp(path.join(tmpdir(), "tammy-report-export-"));
   directories.push(directory);
@@ -335,4 +351,207 @@ it("exports the stale saved BAS and retained warnings without replacing it", asy
   expect(f.renderBas.mock.calls[0]?.[0]).toMatchObject({
     workpaper: { id: basId, sourcesChanged: true, reviewWarnings: ["retained review warning"] },
   });
+});
+it("captures and retains the exact typed purchase workpaper before native selection", async () => {
+  const f = await fixture();
+  const period = create(PurchaseClaimPeriodSchema, { periodStart: start, periodEnd: end });
+  const source = create(BasPurchaseSourceLineSchema, {
+    postingId: id(20),
+    postingHash: hash(1),
+    documentId: id(21),
+    originalContentHash: hash(2),
+    reviewedSnapshotHash: hash(3),
+    paymentId: id(22),
+    paymentHash: hash(4),
+    allocationSequence: 1,
+    accountId: id(23),
+    accountVersion: 5n,
+    supplierName: "Retained Supplier",
+    invoiceNumber: "PUR-20",
+    use: 1,
+    basClassification: 2,
+    cashFlowClassification: 1,
+    invoiceDate: start,
+    actualPaymentDate: { ...start, day: 2 },
+    normalTaxEventDate: { ...start, day: 2 },
+    releasePostingDate: { ...start, day: 3 },
+    claimPeriod: period,
+    allocatedGross: money(11000n),
+    supplierGst: money(1000n),
+    eligibleGst: money(1000n),
+    claimedGst: money(),
+    evidence: { sourceId: id(24), sourceVersion: 2n, sourceHash: hash(5) },
+    sourceRevision: 3n,
+    sourceHash: hash(6),
+  });
+  const legacySource = create(LegacyPurchaseSourceRefSchema, {
+    source: {
+      case: "openingPayable",
+      value: create(LegacyPurchaseOpeningPayableRefSchema, {
+        openingPayableId: id(25),
+        sourceVersion: 4n,
+        sourceHash: hash(7),
+      }),
+    },
+  });
+  const legacyReview = create(BasPurchaseLegacyReviewSchema, {
+    id: id(26),
+    organisationId: orgId,
+    source: legacySource,
+    affectedPeriod: period,
+    reportingBalanceDate: end,
+    disposition: 1,
+    reason: "Retained opening source decision.",
+    sourceRevision: 8n,
+    sourceHash: hash(8),
+    actorUserId: id(27),
+    recordedAt: { seconds: 1791165784n, nanos: 123456789 },
+  });
+  const review = create(BasPurchaseReviewSchema, {
+    legacySource,
+    status: 4,
+    affectedPeriod: period,
+    eligibleGst: money(700n),
+    unclaimedGst: money(700n),
+    legacyReview,
+    sourceRevision: 9n,
+    sourceHash: hash(9),
+    reason: "Retained legacy review reason.",
+    kind: 11,
+  });
+  const support = create(BasPurchaseLegacySupportSchema, {
+    reviewId: id(26),
+    kind: 1,
+    sequence: 1,
+    source: { sourceId: id(28), sourceVersion: 10n, sourceHash: hash(10) },
+  });
+  f.workpaper.purchaseSourceFormat = 1;
+  f.workpaper.legacyCandidateGst = create(MoneySchema, {
+    currencyCode: "AUD",
+    minorUnits: 123n,
+  });
+  f.workpaper.purchaseSources.push(source);
+  f.workpaper.purchaseReviews.push(review);
+  f.workpaper.legacyPurchaseSupport.push(support);
+  f.select.mockImplementation(async () => {
+    source.supplierName = "Later Supplier";
+    source.postingHash.fill(99);
+    review.reason = "Later review reason.";
+    legacyReview.reason = "Later legacy decision.";
+    support.source?.sourceHash.fill(98);
+    if (f.workpaper.legacyCandidateGst) f.workpaper.legacyCandidateGst.minorUnits = 999n;
+    return { canceled: false, filePath: f.filePath };
+  });
+  await expect(f.exporter.exportBas(f.bas)).resolves.toEqual({ saved: true });
+  const snapshot = f.renderBas.mock.calls[0]?.[0] as {
+    workpaper: {
+      id: string;
+      sourceFingerprint: Uint8Array;
+      purchaseSources: { supplierName: string; postingHash: Uint8Array; accountId: string }[];
+      purchaseReviews: { reason: string; legacyReview?: { reason: string } }[];
+      legacyPurchaseSupport: { source?: { sourceHash: Uint8Array } }[];
+      legacyCandidateGst?: { minorUnits: bigint };
+    };
+  };
+  expect(snapshot.workpaper.id).toBe(basId);
+  expect(snapshot.workpaper.sourceFingerprint).toEqual(new Uint8Array(32));
+  expect(snapshot.workpaper.purchaseSources[0]?.supplierName).toBe("Retained Supplier");
+  expect(snapshot.workpaper.purchaseSources[0]?.accountId).toBe(id(23));
+  expect(snapshot.workpaper.purchaseSources[0]?.postingHash).toEqual(hash(1));
+  expect(snapshot.workpaper.purchaseSources[0]?.postingHash).not.toBe(source.postingHash);
+  expect(snapshot.workpaper.purchaseReviews[0]?.reason).toBe("Retained legacy review reason.");
+  expect(snapshot.workpaper.purchaseReviews[0]?.legacyReview?.reason).toBe(
+    "Retained opening source decision.",
+  );
+  expect(snapshot.workpaper.legacyPurchaseSupport[0]?.source?.sourceHash).toEqual(hash(10));
+  expect(snapshot.workpaper.legacyCandidateGst?.minorUnits).toBe(123n);
+  expect(Object.isFrozen(snapshot.workpaper.purchaseSources)).toBe(true);
+  expect(Object.isFrozen(snapshot.workpaper.purchaseSources[0])).toBe(true);
+  expect(f.client.getCurrentBasDraft).toHaveBeenCalledTimes(1);
+});
+
+it("rejects missing, duplicated, or amount-swapped purchase PDF rows", () => {
+  const source = (index: number, claimed: bigint) => ({
+    postingId: id(index),
+    postingHash: hash(index),
+    documentId: id(index + 1),
+    originalContentHash: hash(index + 1),
+    reviewedSnapshotHash: hash(index + 2),
+    paymentId: id(index + 3),
+    paymentHash: hash(index + 3),
+    attributionId: id(index + 4),
+    attributionHash: hash(index + 4),
+    allocationSequence: index,
+    accountId: id(index + 5),
+    accountVersion: 6n,
+    supplierName: `Supplier ${index}`,
+    invoiceNumber: `PUR-${index}`,
+    use: 1,
+    basClassification: 1,
+    cashFlowClassification: 1,
+    invoiceDate: start,
+    actualPaymentDate: { ...start, day: 2 },
+    normalTaxEventDate: { ...start, day: 2 },
+    releasePostingDate: { ...start, day: 3 },
+    claimPeriod: { periodStart: start, periodEnd: end },
+    allocatedGross: money(10000n),
+    supplierGst: money(1000n),
+    eligibleGst: money(1000n),
+    claimedGst: money(claimed),
+    evidence: { sourceId: id(index + 6), sourceVersion: 7n, sourceHash: hash(index + 6) },
+    sourceRevision: 8n,
+    sourceHash: hash(index + 7),
+  });
+  const first = source(101, 50n);
+  const second = source(201, 200n);
+  const legacy = {
+    documentId: id(401),
+    supplierName: "Legacy supplier",
+    invoiceNumber: "LEG-1",
+    documentDate: start,
+    gross: money(1100n),
+    gstCredit: money(100n),
+  };
+  const bas = {
+    purchaseSourceFormat: 1,
+    sources: [legacy],
+    purchaseSources: [first, second],
+    purchaseReviews: [],
+    legacyPurchaseSupport: [],
+    gstCredits1b: money(350n),
+  } as unknown as BasWorkpaper;
+  const hex = (value: Uint8Array) => Buffer.from(value).toString("hex");
+  const typedRow = (value: typeof first) =>
+    [
+      `Source allocation ${value.postingId} sequence ${value.allocationSequence} · document ${value.documentId}`,
+      `Supplier ${value.supplierName} · Invoice ${value.invoiceNumber}`,
+      `Posting ${value.postingId} · posting hash ${hex(value.postingHash)}`,
+      `Original content hash ${hex(value.originalContentHash)} · reviewed snapshot hash ${hex(value.reviewedSnapshotHash)}`,
+      `Payment ${value.paymentId} · payment hash ${hex(value.paymentHash)}`,
+      `Attribution ${value.attributionId} · attribution hash ${hex(value.attributionHash)}`,
+      `Allocation ${value.allocationSequence} · account ${value.accountId} · account version ${value.accountVersion}`,
+      "Use business · BAS class capital · cash flow operating",
+      "Invoice date 2026-10-01 · actual payment date 2026-10-02 · normal tax event 2026-10-02",
+      "Selected claim period 2026-10-01 to 2026-10-31 · release posting date 2026-10-03",
+      `Allocation amounts · gross allocated $100.00 · supplier GST $10.00 · eligible GST $10.00 · claimed GST $${(value.claimedGst.minorUnits / 100n).toString()}.${String(value.claimedGst.minorUnits % 100n).padStart(2, "0")}`,
+      `Evidence ${value.evidence.sourceId} · version ${value.evidence.sourceVersion} · hash ${hex(value.evidence.sourceHash)}`,
+      `Source revision ${value.sourceRevision} · source hash ${hex(value.sourceHash)}`,
+    ].join(" ");
+  const legacyRow = `Legacy purchase row ${legacy.documentId} · supplier ${legacy.supplierName} · invoice ${legacy.invoiceNumber} · source date 2026-10-01 · gross $11.00 · GST credit $1.00`;
+  const firstRow = typedRow(first);
+  const secondRow = typedRow(second);
+  const pages = [legacyRow, firstRow, secondRow, "GST credits 1B $3.50"];
+
+  expect(() => assertPurchasePdfRows(pages, bas)).not.toThrow();
+  expect(() => assertPurchasePdfRows([legacyRow, firstRow, "GST credits 1B $3.50"], bas)).toThrow(
+    /exactly once/u,
+  );
+  expect(() =>
+    assertPurchasePdfRows([legacyRow, firstRow, firstRow, secondRow, "GST credits 1B $3.50"], bas),
+  ).toThrow(/exactly once/u);
+  const swappedFirst = firstRow.replace("claimed GST $0.50", "claimed GST $2.00");
+  const swappedSecond = secondRow.replace("claimed GST $2.00", "claimed GST $0.50");
+  expect(() =>
+    assertPurchasePdfRows([legacyRow, swappedFirst, swappedSecond, "GST credits 1B $3.50"], bas),
+  ).toThrow(/is missing claimed GST/u);
 });
