@@ -40,10 +40,11 @@ type fact struct {
 	SourceRevision string `json:"sourceRevision"`
 }
 type evidence struct {
-	WorkspaceID    string            `json:"workspaceId"`
-	OrganisationID string            `json:"organisationId"`
-	Facts          []fact            `json:"facts"`
-	Projection     map[string]string `json:"projection"`
+	WorkspaceID                string            `json:"workspaceId"`
+	OrganisationID             string            `json:"organisationId"`
+	Facts                      []fact            `json:"facts"`
+	Projection                 map[string]string `json:"projection"`
+	SbrSimulatorTransportCount int64             `json:"sbrSimulatorTransportCount"`
 }
 
 func main() {
@@ -199,6 +200,16 @@ WHERE f.organisation_id=? AND j.source_kind=7 AND j.source_id=p.id GROUP BY f.ca
 	if err = errors.Join(rows.Err(), rows.Close()); err != nil {
 		return err
 	}
+	// Purchase journeys must not create simulator transport attempts. This
+	// scoped aggregate reads the immutable workspace/org history without
+	// exposing request data or allowing the inspector to modify it.
+	stage = "SBR_TRANSPORTS"
+	var simulatorTransportCount int64
+	if err = tx.QueryRowContext(ctx, `SELECT count(*) FROM sbr_simulator_transports_v1
+WHERE workspace_id=? AND organisation_id=?`, input.WorkspaceID, input.OrganisationID).Scan(&simulatorTransportCount); err != nil || simulatorTransportCount < 0 || simulatorTransportCount > 10000 {
+		return errors.New("invalid SBR simulator transport count")
+	}
+	out.SbrSimulatorTransportCount = simulatorTransportCount
 	stage = "OUTPUT"
 	return json.NewEncoder(os.Stdout).Encode(out)
 }

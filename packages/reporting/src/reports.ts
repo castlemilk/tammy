@@ -553,6 +553,8 @@ function purchaseReviewCsvFields(
     source_revision: String(review.sourceRevision),
     source_hash: hash(review.sourceHash),
     source_date: optionalDate(review.actualPaymentDate ?? review.invoiceDate),
+    invoice_date: optionalDate(review.invoiceDate),
+    actual_payment_date: optionalDate(review.actualPaymentDate),
     gross: "",
     gst: money(review.unclaimedGst),
     eligible_gst: money(review.eligibleGst),

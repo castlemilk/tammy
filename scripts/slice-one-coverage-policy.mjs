@@ -97,6 +97,15 @@ const roleGuardedStalePersistent = [
   "STALE_VERSION",
   "IDEMPOTENCY_CONFLICT",
 ];
+const PURCHASE_PERSISTENT_FAILURES = [
+  "AUTHENTICATION_REQUIRED",
+  "PERMISSION_DENIED",
+  "NOT_FOUND",
+  "IDEMPOTENCY_CONFLICT",
+  "STALE_VERSION",
+  "CLOSED_PERIOD",
+  "INVALID_PURCHASE_ACCOUNTING",
+];
 
 export const SBR_DECLARED_FUTURE_RPCS = [];
 
@@ -245,6 +254,64 @@ export const SLICE_ONE_RPC_POLICY = {
     mode: "query",
     failures: [...authenticated, "INVALID_CURSOR"],
     list: ["empty", "populated"],
+  }),
+  "tammy.v1.PurchaseService.GetPurchaseAccounting": rpc({
+    name: "GetPurchaseAccounting",
+    route: "/documents",
+    rolePolicy: accountingRead,
+    mode: "query",
+    failures: [...authenticated, "NOT_FOUND"],
+    list: ["found", "not_found"],
+  }),
+  "tammy.v1.PurchaseService.PostReviewedPurchase": rpc({
+    name: "PostReviewedPurchase",
+    route: "/documents",
+    rolePolicy: adminAndPreparer,
+    mode: "persistent_command",
+    failures: PURCHASE_PERSISTENT_FAILURES,
+  }),
+  "tammy.v1.PurchaseService.RecordPurchasePayment": rpc({
+    name: "RecordPurchasePayment",
+    route: "/documents",
+    rolePolicy: adminAndPreparer,
+    mode: "persistent_command",
+    failures: PURCHASE_PERSISTENT_FAILURES,
+  }),
+  "tammy.v1.PurchaseService.ListPurchasePayments": rpc({
+    name: "ListPurchasePayments",
+    route: "/documents",
+    rolePolicy: accountingRead,
+    mode: "query",
+    failures: [...authenticated, "NOT_FOUND", "INVALID_CURSOR"],
+    list: ["empty", "populated", "filtered", "first_page", "next_page"],
+  }),
+  "tammy.v1.PurchaseService.RecordPurchaseTaxEvidence": rpc({
+    name: "RecordPurchaseTaxEvidence",
+    route: "/documents",
+    rolePolicy: adminAndPreparer,
+    mode: "persistent_command",
+    failures: PURCHASE_PERSISTENT_FAILURES,
+  }),
+  "tammy.v1.PurchaseService.AttributePurchaseGst": rpc({
+    name: "AttributePurchaseGst",
+    route: "/documents",
+    rolePolicy: adminAndPreparer,
+    mode: "persistent_command",
+    failures: PURCHASE_PERSISTENT_FAILURES,
+  }),
+  "tammy.v1.PurchaseService.DeferPurchaseGstClaim": rpc({
+    name: "DeferPurchaseGstClaim",
+    route: "/documents",
+    rolePolicy: adminAndPreparer,
+    mode: "persistent_command",
+    failures: PURCHASE_PERSISTENT_FAILURES,
+  }),
+  "tammy.v1.PurchaseService.ResolveLegacyPurchaseReview": rpc({
+    name: "ResolveLegacyPurchaseReview",
+    route: "/documents",
+    rolePolicy: adminAndPreparer,
+    mode: "persistent_command",
+    failures: PURCHASE_PERSISTENT_FAILURES,
   }),
   "tammy.v1.ReportingCapabilityService.GetReportingCapability": rpc({
     name: "GetReportingCapability",

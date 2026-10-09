@@ -99,7 +99,7 @@ for (const gstBasis of ["cash", "non-cash"] as const) {
     await issueExportInvoice(page, number);
     await expectInvoiceJournal(page, workspace, number, 17000n, 18000n, 1000n);
     await recordInvoiceReceipt(page, number, "2026-10-02", "90.00", "Export partial receipt");
-    await retainPurchase(page, workspace);
+    const firstPurchase = await retainPurchase(page, workspace);
     const organisation = await readOrganisation(page, workspace);
     await showBusinessIncome(page, periodStart, periodEnd, asOfDate);
     const income = await readBusinessIncome(page, workspace, periodStart, periodEnd, asOfDate);
@@ -133,10 +133,18 @@ for (const gstBasis of ["cash", "non-cash"] as const) {
     expect(initialBas.sourcesChanged).toBe(false);
     expect(initialBas.salesSources).toHaveLength(1);
     expect(initialBas.sources).toHaveLength(0);
-    expect(initialBas.purchaseReviews).toHaveLength(1);
-    expect(initialBas.legacyCandidateGst?.minorUnits).toBe(1000n);
+    // Complete discovery also retains the workflow's older $29 GST candidate.
+    expect(initialBas.purchaseReviews).toHaveLength(2);
+    expect(initialBas.purchaseReviews.map((review) => review.eligibleGst?.minorUnits)).toEqual([
+      2900n,
+      1000n,
+    ]);
+    expect(initialBas.purchaseReviews[1]?.legacySource).toMatchObject({
+      source: { case: "document", value: { documentId: firstPurchase.id } },
+    });
+    expect(initialBas.legacyCandidateGst?.minorUnits).toBe(3900n);
     expect(initialBas.gstCredits1b?.minorUnits).toBe(0n);
-    expect(initialBas.excludedCashPurchaseCount).toBe(gstBasis === "cash" ? 1n : 0n);
+    expect(initialBas.excludedCashPurchaseCount).toBe(gstBasis === "cash" ? 2n : 0n);
     const basCsvPath = path.join(directory, "bas.csv");
     const basPdfPath = path.join(directory, "bas.pdf");
     await saveExport(electronHarness, page.locator("main"), "CSV", basCsvPath);
@@ -187,7 +195,13 @@ for (const gstBasis of ["cash", "non-cash"] as const) {
     await rm(invalidDestination, { recursive: true });
 
     await recordInvoiceReceipt(page, number, "2026-10-03", "45.00", "Export later receipt");
-    await retainPurchase(page, workspace, revisedSupplier, "EXPORT-PURCHASE-002", 2);
+    const secondPurchase = await retainPurchase(
+      page,
+      workspace,
+      revisedSupplier,
+      "EXPORT-PURCHASE-002",
+      2,
+    );
     await page.getByRole("link", { name: "GST & BAS", exact: true }).click();
     await expect(page.getByText(/Sources changed since this workpaper was saved/)).toBeVisible();
     const staleBas = await readBas(page, workspace);
@@ -223,14 +237,22 @@ for (const gstBasis of ["cash", "non-cash"] as const) {
     expect(regenerated.sourcesChanged).toBe(false);
     expect(regenerated.salesSources).toHaveLength(gstBasis === "cash" ? 2 : 1);
     expect(regenerated.sources).toHaveLength(0);
-    expect(regenerated.purchaseReviews).toHaveLength(2);
-    expect(regenerated.legacyCandidateGst?.minorUnits).toBe(2000n);
-    expect(regenerated.excludedCashPurchaseCount).toBe(gstBasis === "cash" ? 2n : 0n);
+    expect(regenerated.purchaseReviews).toHaveLength(3);
+    expect(regenerated.legacyCandidateGst?.minorUnits).toBe(4900n);
+    expect(regenerated.excludedCashPurchaseCount).toBe(gstBasis === "cash" ? 3n : 0n);
     expect(regenerated.gstCredits1b?.minorUnits).toBe(0n);
     expect(regenerated.netGstPayable?.minorUnits).toBe(gstBasis === "cash" ? 750n : 1000n);
+    expect(regenerated.purchaseReviews.map((review) => review.eligibleGst?.minorUnits)).toEqual([
+      2900n,
+      1000n,
+      1000n,
+    ]);
+    expect(regenerated.purchaseReviews.slice(0, 2)).toEqual(initialBas.purchaseReviews);
+    expect(regenerated.purchaseReviews[2]?.legacySource).toMatchObject({
+      source: { case: "document", value: { documentId: secondPurchase.id } },
+    });
     for (const review of regenerated.purchaseReviews) {
       expect(review.legacySource?.source.case).toBe("document");
-      expect(review.eligibleGst?.minorUnits).toBe(1000n);
       expect(review.sourceHash).toHaveLength(32);
     }
     const regeneratedCsvPath = path.join(directory, "regenerated-bas.csv");

@@ -11,6 +11,17 @@ import {
 const SYSTEM_RPC = "tammy.v1.SystemService.GetDiagnostics";
 const ALL_ROLES_ALLOWED = ["workspace_admin", "business_preparer", "business_lodger", "auditor"];
 const CURRENT_WORKFLOW_CASE = "walkthrough/current-accounting-workflows";
+const PURCHASE_CASE = "purchases/payments-gst";
+const PURCHASE_RPCS = [
+  "tammy.v1.PurchaseService.GetPurchaseAccounting",
+  "tammy.v1.PurchaseService.PostReviewedPurchase",
+  "tammy.v1.PurchaseService.RecordPurchasePayment",
+  "tammy.v1.PurchaseService.ListPurchasePayments",
+  "tammy.v1.PurchaseService.RecordPurchaseTaxEvidence",
+  "tammy.v1.PurchaseService.AttributePurchaseGst",
+  "tammy.v1.PurchaseService.DeferPurchaseGstClaim",
+  "tammy.v1.PurchaseService.ResolveLegacyPurchaseReview",
+];
 const EXPOSED_BUSINESS_RPCS = [
   "tammy.v1.WorkspaceService.CreateWorkspace",
   "tammy.v1.WorkspaceService.ConfirmRecovery",
@@ -37,11 +48,11 @@ const EXPOSED_BUSINESS_RPCS = [
   "tammy.v1.TaxService.GetCurrentBasDraft",
 ];
 
-test("coverage declares the exact normative policy for all 130 non-system RPCs", async () => {
+test("coverage declares the exact normative policy for all 138 non-system RPCs", async () => {
   const coverage = parseCoverageManifest(await readFile("test/e2e/coverage.yaml", "utf8"));
   const actualRpcNames = Object.keys(coverage.rpcs).filter((rpcName) => rpcName !== SYSTEM_RPC);
 
-  assert.equal(Object.keys(SLICE_ONE_RPC_POLICY).length, 130);
+  assert.equal(Object.keys(SLICE_ONE_RPC_POLICY).length, 138);
   assert.deepEqual(actualRpcNames.sort(), Object.keys(SLICE_ONE_RPC_POLICY).sort());
 
   for (const [rpcName, expected] of Object.entries(SLICE_ONE_RPC_POLICY)) {
@@ -59,6 +70,74 @@ test("coverage declares the exact normative policy for all 130 non-system RPCs",
       expected,
       rpcName,
     );
+  }
+});
+
+test("packaged purchase payments and GST catalogue preserves production policy", async () => {
+  const coverage = parseCoverageManifest(await readFile("test/e2e/coverage.yaml", "utf8"));
+  const scenario = coverage.scenarios["E2E-00"];
+
+  assert.ok(scenario.cases.includes(PURCHASE_CASE));
+  assert.ok(!scenario.futureCases.includes(PURCHASE_CASE));
+
+  const expectedAdminAndPreparer = {
+    workspace_admin: "planned_allowed",
+    business_preparer: "planned_allowed",
+    business_lodger: "planned_permission_denied",
+    auditor: "planned_permission_denied",
+  };
+  const expectedPersistentFailures = [
+    "AUTHENTICATION_REQUIRED",
+    "PERMISSION_DENIED",
+    "NOT_FOUND",
+    "IDEMPOTENCY_CONFLICT",
+    "STALE_VERSION",
+    "CLOSED_PERIOD",
+    "INVALID_PURCHASE_ACCOUNTING",
+  ];
+
+  for (const rpcName of PURCHASE_RPCS) {
+    const rpc = coverage.rpcs[rpcName];
+    assert.equal(rpc.stage, "production", rpcName);
+    assert.deepEqual(rpc.cases, [PURCHASE_CASE], rpcName);
+    assert.equal(rpc.futureCases, undefined, rpcName);
+
+    const policy = SLICE_ONE_RPC_POLICY[rpcName];
+    assert.deepEqual(policy.routes, ["/documents"], rpcName);
+    if (rpcName.endsWith("GetPurchaseAccounting") || rpcName.endsWith("ListPurchasePayments")) {
+      assert.deepEqual(policy.roles, {
+        workspace_admin: "planned_allowed",
+        business_preparer: "planned_allowed",
+        business_lodger: "planned_allowed",
+        auditor: "planned_allowed",
+      });
+      assert.deepEqual(policy.idempotency, {
+        mode: "query",
+        outcomes: ["not_applicable"],
+      });
+      assert.deepEqual(
+        policy.principalFailures,
+        rpcName.endsWith("GetPurchaseAccounting")
+          ? ["AUTHENTICATION_REQUIRED", "NOT_FOUND"]
+          : ["AUTHENTICATION_REQUIRED", "NOT_FOUND", "INVALID_CURSOR"],
+        rpcName,
+      );
+      assert.deepEqual(
+        policy.list.states,
+        rpcName.endsWith("GetPurchaseAccounting")
+          ? ["found", "not_found"]
+          : ["empty", "populated", "filtered", "first_page", "next_page"],
+        rpcName,
+      );
+      continue;
+    }
+
+    assert.deepEqual(policy.roles, expectedAdminAndPreparer, rpcName);
+    assert.deepEqual(policy.principalFailures, expectedPersistentFailures, rpcName);
+    assert.deepEqual(policy.idempotency, {
+      mode: "persistent_command",
+      outcomes: ["exact_replay", "changed_request_conflict"],
+    });
   }
 });
 
@@ -279,6 +358,7 @@ test("reporting capability is promoted only with the packaged pre-setup evidence
     "foundation/offline-ready",
     "reporting/capability-registry",
     CURRENT_WORKFLOW_CASE,
+    "purchases/payments-gst",
   ]);
   assert.ok(!coverage.scenarios["E2E-00"].futureCases.includes("reporting/capability-registry"));
 });

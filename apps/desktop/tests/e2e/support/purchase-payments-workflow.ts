@@ -149,10 +149,16 @@ export async function setupPurchaseWorkspace(
 }
 
 // A real one-page PDF original; all tax and amount decisions are reviewed in UI.
-export function syntheticPurchasePdf(number: string, isNotice = false): Buffer {
-  const text = isNotice
-    ? `BT /F1 12 Tf 50 750 Td (Synthetic required-return notice ${number}) Tj 0 -20 Td (Required return due date 03 November 2026) Tj 0 -20 Td (Supporting evidence only - no purchase or payment value) Tj ET`
-    : `BT /F1 12 Tf 50 750 Td (Synthetic tax invoice ${number}) Tj 0 -20 Td (Supplier ABN 51 824 753 556) Tj 0 -20 Td (Purchase total AUD 110.00 including GST 10.00) Tj ET`;
+export function syntheticPurchasePdf(
+  number: string,
+  isNotice: boolean | "legacy-review" = false,
+): Buffer {
+  const text =
+    isNotice === "legacy-review"
+      ? `BT /F1 12 Tf 50 750 Td (Synthetic legacy source review ${number}) Tj 0 -20 Td (Opening supplier item unpaid through 09 October 2026) Tj 0 -20 Td (Earlier invoice paid AUD 110.00 on 02 October 2026) Tj 0 -20 Td (Separate sources - no purchase credit or opening settlement inferred) Tj ET`
+      : isNotice
+        ? `BT /F1 12 Tf 50 750 Td (Synthetic required-return notice ${number}) Tj 0 -20 Td (Required return due date 03 November 2026) Tj 0 -20 Td (Supporting evidence only - no purchase or payment value) Tj ET`
+        : `BT /F1 12 Tf 50 750 Td (Synthetic tax invoice ${number}) Tj 0 -20 Td (Supplier ABN 51 824 753 556) Tj 0 -20 Td (Purchase total AUD 110.00 including GST 10.00) Tj ET`;
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",
     "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
@@ -179,12 +185,16 @@ export async function retainPurchaseThroughUi(
   number: string,
   invoiceDate = "2026-08-31",
   zeroMoney = false,
+  legacyReviewProof = false,
 ): Promise<d.Document> {
   await page.getByRole("link", { name: "Documents", exact: true }).click();
   await page.locator('input[type="file"]').setInputFiles({
     name: `${number}.pdf`,
     mimeType: "application/pdf",
-    buffer: syntheticPurchasePdf(number, zeroMoney),
+    buffer: syntheticPurchasePdf(
+      number,
+      zeroMoney && legacyReviewProof ? "legacy-review" : zeroMoney,
+    ),
   });
   await expect(page.getByRole("heading", { name: `${number}.pdf`, exact: true })).toBeVisible();
   await page.getByLabel("Supplier", { exact: true }).fill('=Synthetic supplier, "Élodie"');

@@ -434,7 +434,9 @@ it("links legacy evidence only to a selected owned posted purchase with returned
   await user.click(screen.getByRole("button", { name: "Review legacy decision" }));
   await waitFor(() => expect(propose).toHaveBeenCalledOnce());
   const request = purchaseCodecs.legacy.decodeRequest(propose.mock.calls[0]![1]);
-  expect(request.review?.disposition).toBe(p.LegacyPurchaseDisposition.EVIDENCE_ONLY_LINKED_PURCHASE);
+  expect(request.review?.disposition).toBe(
+    p.LegacyPurchaseDisposition.EVIDENCE_ONLY_LINKED_PURCHASE,
+  );
   expect(request.review?.linkedPostingId).toBe(postingId);
   await user.selectOptions(
     screen.getByLabelText("Legacy disposition"),

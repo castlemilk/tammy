@@ -19,9 +19,9 @@ describe("purchase generated contracts", () => {
       if (field?.fieldKind !== "list" || field.listKind !== "message")
         throw new Error("Missing retained source provenance");
       expect(field.message.typeName).toBe("tammy.v1.SourceRef");
-      expect(PurchaseService.method.postReviewedPurchase.input.fields.some((f) => f.name === name)).toBe(
-        false,
-      );
+      expect(
+        PurchaseService.method.postReviewedPurchase.input.fields.some((f) => f.name === name),
+      ).toBe(false);
     }
     if (!posting) throw new Error("Missing posting");
     const message = populated(posting);

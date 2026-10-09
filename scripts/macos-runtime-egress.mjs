@@ -16,7 +16,7 @@ const SUPPORT_URL = "https://tammy-accounting.castlemilk.chatgpt.site/support";
 export const MACOS_RUNTIME_EGRESS_SANDBOX_PROFILE = [
   "(version 1)",
   "(allow default)",
-  "(deny network* (with report))",
+  "(deny network*)",
   '(allow network-inbound (local ip "localhost:*"))',
   '(allow network-outbound (remote ip "localhost:*"))',
 ].join("\n");
@@ -57,7 +57,11 @@ export async function probeMacOSSandboxExec() {
   let server;
   try {
     await access("/usr/bin/sandbox-exec");
-    server = createServer((socket) => socket.end("ok"));
+    server = createServer((socket) => {
+      // The connection probe destroys its socket as soon as connect succeeds.
+      socket.on("error", () => undefined);
+      socket.end("ok");
+    });
     await new Promise((resolve, reject) => {
       server.once("error", reject);
       server.listen(0, "127.0.0.1", resolve);

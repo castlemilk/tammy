@@ -24,8 +24,8 @@ import {
   aud,
   decimalAud,
   exactAud,
-  purchaseAttemptScope,
   type PurchaseMutation,
+  purchaseAttemptScope,
   purchaseAttemptsFor,
 } from "./purchase-command-state";
 import {
@@ -493,7 +493,58 @@ export function PurchaseAccountingPanel({
                         </td>
                         <td className="pr-3">{payment.reference || "—"}</td>
                         <td className="break-all">
-                          {payment.id} · version {payment.accountingVersion}
+                          <div>
+                            {payment.id} · version {payment.accountingVersion}
+                          </div>
+                          <details className="mt-1">
+                            <summary className="cursor-pointer text-muted-foreground">
+                              Retained payment details
+                            </summary>
+                            <dl className="mt-2 grid gap-1">
+                              <dt>Bank account</dt>
+                              <dd>{payment.bankAccountId || "—"}</dd>
+                              <dt>Payment journal</dt>
+                              <dd>{payment.journalId || "—"}</dd>
+                              <dt>Payment source hash</dt>
+                              <dd>{sourceHash(payment.sourceHash)}</dd>
+                              <dt>Financial revision</dt>
+                              <dd>{payment.financialRevision}</dd>
+                              <dt>Recorded by</dt>
+                              <dd>{payment.actorUserId || "—"}</dd>
+                              <dt>Recorded at</dt>
+                              <dd>{timestampLabel(payment.recordedAt)}</dd>
+                              <dt>Ordered allocations</dt>
+                              <dd>
+                                {payment.allocations.length > 0 ? (
+                                  <ol className="grid gap-1">
+                                    {[...payment.allocations]
+                                      .sort((left, right) => left.sequence - right.sequence)
+                                      .map((allocation) => (
+                                        <li
+                                          className="border-l border-border pl-2"
+                                          key={allocation.sequence}
+                                        >
+                                          Allocation {allocation.sequence} · account{" "}
+                                          {allocation.accountId} · version{" "}
+                                          {allocation.accountVersion} ·{" "}
+                                          {purchaseUseLabel(allocation.use)} ·{" "}
+                                          {purchaseBasClassificationLabel(
+                                            allocation.basClassification,
+                                          )}{" "}
+                                          ·{" "}
+                                          {purchaseCashFlowLabel(allocation.cashFlowClassification)}{" "}
+                                          · {aud(allocation.gross?.minorUnits)} gross ·{" "}
+                                          {aud(allocation.supplierGst?.minorUnits)} supplier GST ·{" "}
+                                          {aud(allocation.eligibleGst?.minorUnits)} eligible GST
+                                        </li>
+                                      ))}
+                                  </ol>
+                                ) : (
+                                  "No allocation detail returned."
+                                )}
+                              </dd>
+                            </dl>
+                          </details>
                         </td>
                       </tr>
                     ))}
@@ -604,6 +655,9 @@ function PurchaseProjection({
   readonly evidence?: p.PurchaseTaxEvidence | undefined;
   readonly accounts: readonly Account[];
 }) {
+  const originalEvidence = value.posting?.evidence;
+  const latestEvidenceReview = evidence?.review;
+  const summaryEvidence = latestEvidenceReview ?? originalEvidence;
   const rows = [
     ["Gross", value.posting?.gross?.minorUnits],
     ["Supplier GST", value.posting?.supplierGst?.minorUnits],
@@ -661,7 +715,9 @@ function PurchaseProjection({
                     const account = accounts.find((candidate) => candidate.id === row.accountId);
                     return (
                       <>
-                        <div>{account ? `${account.code} · ${account.name}` : "Retained account"}</div>
+                        <div>
+                          {account ? `${account.code} · ${account.name}` : "Retained account"}
+                        </div>
                         <div className="break-all text-muted-foreground">
                           {row.accountId} · version {row.accountVersion}
                         </div>
@@ -695,12 +751,229 @@ function PurchaseProjection({
         </table>
       </div>
       <p className="text-[9px] break-all text-muted-foreground">
-        Posting: {value.posting?.id} · evidence: {evidence?.id ?? "—"} · held{" "}
-        {dateLabel(evidence?.review?.heldDate)}
+        Posting: {value.posting?.id} · evidence: {evidence?.id ?? "posting snapshot"} · held{" "}
+        {dateLabel(summaryEvidence?.heldDate)}
       </p>
+      <details>
+        <summary className="cursor-pointer text-[9px] text-muted-foreground">
+          Retained posting and evidence details
+        </summary>
+        <div className="mt-2 grid gap-2 break-all text-[9px]">
+          <section>
+            <h4 className="font-semibold">Posting provenance</h4>
+            <dl className="grid grid-cols-[minmax(120px,1fr)_minmax(0,2fr)] gap-1">
+              <dt>Posting source hash</dt>
+              <dd>{sourceHash(value.posting?.sourceHash)}</dd>
+              <dt>Reviewed source version</dt>
+              <dd>{value.posting?.reviewedVersion ?? "—"}</dd>
+              <dt>Original document hash</dt>
+              <dd>{sourceHash(value.posting?.originalContentHash)}</dd>
+              <dt>Reviewed snapshot hash</dt>
+              <dd>{sourceHash(value.posting?.reviewedSnapshotHash)}</dd>
+              <dt>Posting journal</dt>
+              <dd>{value.posting?.journalId || "—"}</dd>
+              <dt>Financial revision</dt>
+              <dd>{value.posting?.financialRevision ?? "—"}</dd>
+              <dt>Posted by</dt>
+              <dd>{value.posting?.actorUserId || "—"}</dd>
+              <dt>Posted at</dt>
+              <dd>{timestampLabel(value.posting?.postedAt)}</dd>
+              <dt>GST basis profile</dt>
+              <dd>
+                {value.posting?.gstBasis === GstBasis.CASH
+                  ? "Cash"
+                  : value.posting?.gstBasis === GstBasis.NON_CASH
+                    ? "Non-cash"
+                    : "No GST basis"}{" "}
+                · profile {value.posting?.gstProfileVersion ?? "—"} · history watermark{" "}
+                {value.posting?.gstHistoryWatermark ?? "—"}
+              </dd>
+            </dl>
+          </section>
+          <section>
+            <h4 className="font-semibold">Original posting evidence · immutable snapshot</h4>
+            <dl className="grid grid-cols-[minmax(120px,1fr)_minmax(0,2fr)] gap-1">
+              <EvidenceReviewFacts review={originalEvidence} prefix="Original evidence" />
+            </dl>
+          </section>
+          <section>
+            <h4 className="font-semibold">Latest evidence review</h4>
+            {evidence ? (
+              <>
+                <dl className="grid grid-cols-[minmax(120px,1fr)_minmax(0,2fr)] gap-1">
+                  <dt>Latest evidence record</dt>
+                  <dd>
+                    {evidence.id} · accounting version {evidence.accountingVersion}
+                  </dd>
+                  <dt>Evidence source hash</dt>
+                  <dd>{sourceHash(evidence.sourceHash)}</dd>
+                  <dt>Evidence recorded by</dt>
+                  <dd>{evidence.actorUserId || "—"}</dd>
+                  <dt>Evidence recorded at</dt>
+                  <dd>{timestampLabel(evidence.recordedAt)}</dd>
+                </dl>
+                <dl className="mt-1 grid grid-cols-[minmax(120px,1fr)_minmax(0,2fr)] gap-1">
+                  <EvidenceReviewFacts review={latestEvidenceReview} prefix="Evidence" />
+                </dl>
+              </>
+            ) : (
+              <p>No latest evidence record returned.</p>
+            )}
+          </section>
+        </div>
+      </details>
     </div>
   );
 }
+
+function EvidenceReviewFacts({
+  review,
+  prefix,
+}: {
+  readonly review: p.PurchaseEvidenceInput | undefined;
+  readonly prefix: string;
+}) {
+  const exception = review?.exceptionReview;
+  if (!review) {
+    return (
+      <>
+        <dt>{prefix} review</dt>
+        <dd>No evidence review returned.</dd>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <dt>{prefix} review</dt>
+      <dd>
+        {evidenceClassificationLabel(review.classification)} · held {dateLabel(review.heldDate)}
+      </dd>
+      <dt>{prefix} document</dt>
+      <dd>
+        {review.source
+          ? `${review.source.sourceId} · version ${review.source.sourceVersion} · ${sourceHash(review.source.sourceHash)}`
+          : "—"}
+      </dd>
+      <dt>{prefix} review confirmations</dt>
+      <dd>
+        Registration {review.registrationReviewConfirmed ? "confirmed" : "not confirmed"} · business
+        use {review.businessUseReviewConfirmed ? "confirmed" : "not confirmed"} · evidence{" "}
+        {review.evidenceReviewConfirmed ? "confirmed" : "not confirmed"}
+      </dd>
+      <dt>{prefix} review reason</dt>
+      <dd>{review.reason || "—"}</dd>
+      {exception ? (
+        <>
+          <dt>{prefix} exception kind</dt>
+          <dd>{exceptionKindLabel(exception.kind)}</dd>
+          <dt>{prefix} retained rule</dt>
+          <dd>{retainedSourceLabel(exception.rule)}</dd>
+          <dt>{prefix} supporting records</dt>
+          <dd>
+            {exception.supportingRecords.length ? (
+              <ol className="grid gap-1">
+                {exception.supportingRecords.map((source, index) => (
+                  <li key={`${source.sourceId}:${source.sourceVersion}`}>
+                    Record {index + 1} · {retainedSourceLabel(source)}
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              "No supporting records returned."
+            )}
+          </dd>
+          <dt>{prefix} exception confirmations</dt>
+          <dd>
+            Tax invoice not required{" "}
+            {exception.taxInvoiceNotRequiredReviewConfirmed ? "confirmed" : "not confirmed"} ·
+            supporting record requirements{" "}
+            {exception.supportingRecordRequirementsReviewConfirmed ? "confirmed" : "not confirmed"}
+          </dd>
+          <dt>{prefix} exception review reason</dt>
+          <dd>{exception.reason || "—"}</dd>
+        </>
+      ) : null}
+    </>
+  );
+}
+
+function sourceHash(value: Uint8Array | undefined): string {
+  return value?.length
+    ? [...value].map((byte) => byte.toString(16).padStart(2, "0")).join("")
+    : "—";
+}
+
+function retainedSourceLabel(value: p.PurchaseRetainedSourceRef | undefined): string {
+  return value
+    ? `${value.sourceId} · version ${value.sourceVersion} · ${sourceHash(value.sourceHash)}`
+    : "—";
+}
+
+function timestampLabel(
+  value: { readonly seconds: bigint; readonly nanos: number } | undefined,
+): string {
+  if (!value) return "—";
+  const date = new Date(Number(value.seconds) * 1_000);
+  if (!Number.isFinite(date.getTime())) return "—";
+  const fractional = value.nanos
+    ? `.${String(value.nanos).padStart(9, "0").replace(/0+$/u, "")}`
+    : "";
+  return `${date.toISOString().slice(0, 19)}${fractional}Z`;
+}
+
+function evidenceClassificationLabel(value: p.PurchaseEvidenceClassification | undefined): string {
+  switch (value) {
+    case p.PurchaseEvidenceClassification.TAX_INVOICE:
+      return "Tax invoice";
+    case p.PurchaseEvidenceClassification.SUPPORTED_EXCEPTION:
+      return "Supported exception";
+    case p.PurchaseEvidenceClassification.UNKNOWN:
+      return "Unknown / missing";
+    default:
+      return "—";
+  }
+}
+
+function exceptionKindLabel(value: p.PurchaseTaxInvoiceExceptionKind | undefined): string {
+  switch (value) {
+    case p.PurchaseTaxInvoiceExceptionKind.LOW_VALUE_ACQUISITION:
+      return "Low-value acquisition";
+    case p.PurchaseTaxInvoiceExceptionKind.SPECIFIC_RETAINED_WAIVER:
+      return "Specific retained waiver";
+    default:
+      return "Unknown exception";
+  }
+}
+
+function purchaseUseLabel(value: p.PurchaseUse): string {
+  return value === p.PurchaseUse.PRIVATE ? "Private" : "Business";
+}
+
+function purchaseBasClassificationLabel(value: p.PurchaseBasClassification): string {
+  switch (value) {
+    case p.PurchaseBasClassification.CAPITAL:
+      return "Capital";
+    case p.PurchaseBasClassification.NON_CAPITAL:
+      return "Non-capital";
+    default:
+      return "Excluded";
+  }
+}
+
+function purchaseCashFlowLabel(value: p.PurchaseCashFlowClassification): string {
+  switch (value) {
+    case p.PurchaseCashFlowClassification.OPERATING:
+      return "Operating";
+    case p.PurchaseCashFlowClassification.INVESTING:
+      return "Investing";
+    case p.PurchaseCashFlowClassification.FINANCING:
+      return "Financing";
+    default:
+      return "Unclassified";
+  }
+}
+
 function PaymentForm({
   document,
   workspace,

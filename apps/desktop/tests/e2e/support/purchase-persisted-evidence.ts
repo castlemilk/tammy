@@ -25,6 +25,7 @@ export async function buildPurchaseEvidenceInspector() {
 export interface PurchasePersistedEvidence {
   readonly workspaceId: string;
   readonly organisationId: string;
+  readonly sbrSimulatorTransportCount: number;
   readonly facts: readonly {
     readonly id: string;
     readonly journalId: string;
@@ -82,7 +83,7 @@ export async function inspectPurchasePersistedEvidence(
         const diagnostic = stderr.toString("utf8").trim();
         reject(
           new Error(
-            /^PURCHASE_PACKAGED_INSPECTION_FAILED_(INPUT|INSTALLATION_KEY|HEADER|UNWRAP|DATABASE|ORGANISATION|BANK_FACTS|PROJECTION|OUTPUT)$/.test(
+            /^PURCHASE_PACKAGED_INSPECTION_FAILED_(INPUT|INSTALLATION_KEY|HEADER|UNWRAP|DATABASE|ORGANISATION|BANK_FACTS|PROJECTION|SBR_TRANSPORTS|OUTPUT)$/.test(
               diagnostic,
             )
               ? diagnostic
@@ -96,6 +97,9 @@ export async function inspectPurchasePersistedEvidence(
         if (
           result.workspaceId !== workspace.workspaceId ||
           result.organisationId !== workspace.organisationId ||
+          !Number.isSafeInteger(result.sbrSimulatorTransportCount) ||
+          result.sbrSimulatorTransportCount < 0 ||
+          result.sbrSimulatorTransportCount > 10_000 ||
           !Array.isArray(result.facts) ||
           !result.projection
         )

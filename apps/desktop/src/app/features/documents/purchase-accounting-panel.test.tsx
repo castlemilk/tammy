@@ -1,5 +1,4 @@
 import { create } from "@bufbuild/protobuf";
-import { SourceRefSchema } from "@tammy/connect-client/tammy/v1/common_pb.js";
 import {
   AccountDesignation,
   AccountSchema,
@@ -7,6 +6,7 @@ import {
   AccountType,
   ListAccountsResponseSchema,
 } from "@tammy/connect-client/tammy/v1/accounting_pb.js";
+import { MoneySchema, SourceRefSchema } from "@tammy/connect-client/tammy/v1/common_pb.js";
 import {
   DocumentCandidateSchema,
   DocumentSchema,
@@ -32,9 +32,12 @@ import {
   PurchaseEvidenceInputSchema,
   PurchaseGstAttributionSchema,
   PurchaseGstDeferralSchema,
+  PurchasePaymentAllocationSchema,
   PurchasePaymentSchema,
   PurchasePostingSchema,
   PurchaseTaxEvidenceSchema,
+  PurchaseTaxInvoiceExceptionKind,
+  PurchaseTaxInvoiceExceptionReviewSchema,
   PurchaseUse,
   RecordPurchaseTaxEvidenceResponseSchema,
   ResolveLegacyPurchaseReviewResponseSchema,
@@ -356,9 +359,7 @@ it("blocks posting when more than one owned duplicate candidate needs selection"
       workspace={workspace}
     />,
   );
-  expect(
-    await screen.findByText(/Multiple possible duplicate purchases were found/),
-  ).toBeTruthy();
+  expect(await screen.findByText(/Multiple possible duplicate purchases were found/)).toBeTruthy();
   expect(screen.queryByLabelText("No duplicate transaction found")).toBeNull();
   expect(
     (screen.getByRole("button", { name: "Add purchase to accounts" }) as HTMLButtonElement)
@@ -513,9 +514,7 @@ it("shows retained allocation account identity, name and cash-flow class to read
     }),
   ];
   fixture.procedures.purchases.getPurchaseAccounting.mockResolvedValue(
-    purchaseCodecs.get.encodeResponse(
-      create(GetPurchaseAccountingResponseSchema, { accounting }),
-    ),
+    purchaseCodecs.get.encodeResponse(create(GetPurchaseAccountingResponseSchema, { accounting })),
   );
   render(
     <PurchaseAccountingPanel
@@ -532,6 +531,306 @@ it("shows retained allocation account identity, name and cash-flow class to read
   expect(within(allocations).getByText("Investing")).toBeTruthy();
   expect(fixture.procedures.accounting.listAccounts).toHaveBeenCalledOnce();
   expect(screen.queryByRole("button", { name: "Record payment" })).toBeNull();
+});
+
+it("discloses retained payment, posting and latest evidence provenance", async () => {
+  const { fixture, accounting } = setup(true);
+  accounting.paymentCount = 2n;
+  accounting.paid = create(MoneySchema, { currencyCode: "AUD", minorUnits: 6500n });
+  accounting.outstanding = create(MoneySchema, { currencyCode: "AUD", minorUnits: 4500n });
+  accounting.posting = create(PurchasePostingSchema, {
+    id: "018f0000-0000-7000-8000-000000000020",
+    organisationId: org,
+    documentId: doc.id,
+    reviewedVersion: 2n,
+    originalContentHash: new Uint8Array(32).fill(3),
+    reviewedSnapshotHash: new Uint8Array(32).fill(4),
+    supplierName: "Office",
+    invoiceNumber: "INV1",
+    invoiceDate: { year: 2026, month: 9, day: 25 },
+    gstBasis: GstBasis.NON_CASH,
+    gstProfileVersion: 2n,
+    gstHistoryWatermark: 1n,
+    gross: { currencyCode: "AUD", minorUnits: 11000n },
+    supplierGst: { currencyCode: "AUD", minorUnits: 1000n },
+    eligibleGst: { currencyCode: "AUD", minorUnits: 1000n },
+    evidence: create(PurchaseEvidenceInputSchema, {
+      classification: PurchaseEvidenceClassification.SUPPORTED_EXCEPTION,
+      source: { sourceId: doc.id, sourceVersion: 2n, sourceHash: new Uint8Array(32).fill(5) },
+      heldDate: { year: 2026, month: 9, day: 30 },
+      registrationReviewConfirmed: true,
+      businessUseReviewConfirmed: true,
+      evidenceReviewConfirmed: true,
+      reason: "Original low-value acquisition exception reviewed",
+      exceptionReview: create(PurchaseTaxInvoiceExceptionReviewSchema, {
+        kind: PurchaseTaxInvoiceExceptionKind.LOW_VALUE_ACQUISITION,
+        rule: {
+          sourceId: "018f0000-0000-7000-8000-000000000090",
+          sourceVersion: 1n,
+          sourceHash: new Uint8Array(32).fill(11),
+        },
+        supportingRecords: [
+          {
+            sourceId: "018f0000-0000-7000-8000-000000000091",
+            sourceVersion: 3n,
+            sourceHash: new Uint8Array(32).fill(12),
+          },
+        ],
+        taxInvoiceNotRequiredReviewConfirmed: true,
+        supportingRecordRequirementsReviewConfirmed: true,
+        reason: "Retained low-value rule and record reviewed",
+      }),
+    }),
+    journalId: "018f0000-0000-7000-8000-000000000021",
+    financialRevision: 3n,
+    sourceHash: new Uint8Array(32).fill(6),
+    actorUserId: workspace.userId,
+    postedAt: { seconds: 0n, nanos: 250_000_000 },
+  });
+  const latestEvidence = create(PurchaseTaxEvidenceSchema, {
+    id: "018f0000-0000-7000-8000-000000000022",
+    organisationId: org,
+    documentId: doc.id,
+    accountingVersion: 2n,
+    review: create(PurchaseEvidenceInputSchema, {
+      classification: PurchaseEvidenceClassification.TAX_INVOICE,
+      source: { sourceId: doc.id, sourceVersion: 2n, sourceHash: new Uint8Array(32).fill(7) },
+      heldDate: { year: 2026, month: 10, day: 1 },
+      registrationReviewConfirmed: true,
+      businessUseReviewConfirmed: true,
+      evidenceReviewConfirmed: true,
+      reason: "Updated held-date review",
+    }),
+    actorUserId: "018f0000-0000-7000-8000-000000000005",
+    recordedAt: { seconds: 2n, nanos: 0 },
+    sourceHash: new Uint8Array(32).fill(8),
+  });
+  fixture.procedures.purchases.getPurchaseAccounting.mockResolvedValue(
+    purchaseCodecs.get.encodeResponse(
+      create(GetPurchaseAccountingResponseSchema, { accounting, latestEvidence }),
+    ),
+  );
+  fixture.procedures.purchases.listPurchasePayments.mockResolvedValue(
+    purchaseCodecs.list.encodeResponse(
+      create(ListPurchasePaymentsResponseSchema, {
+        payments: [
+          create(PurchasePaymentSchema, {
+            id: "018f0000-0000-7000-8000-000000000030",
+            organisationId: org,
+            postingId: accounting.posting.id,
+            documentId: doc.id,
+            accountingVersion: 2n,
+            actualPaymentDate: { year: 2026, month: 10, day: 2 },
+            amount: { currencyCode: "AUD", minorUnits: 5500n },
+            bankAccountId: "018f0000-0000-7000-8000-000000000031",
+            reference: "transfer-to-supplier",
+            journalId: "018f0000-0000-7000-8000-000000000032",
+            sourceHash: new Uint8Array(32).fill(9),
+            allocations: [
+              create(PurchasePaymentAllocationSchema, {
+                sequence: 2,
+                accountId: "018f0000-0000-7000-8000-000000000041",
+                accountVersion: 2n,
+                gross: { currencyCode: "AUD", minorUnits: 3000n },
+                supplierGst: { currencyCode: "AUD", minorUnits: 300n },
+                eligibleGst: { currencyCode: "AUD", minorUnits: 300n },
+                use: PurchaseUse.BUSINESS,
+                basClassification: PurchaseBasClassification.NON_CAPITAL,
+                cashFlowClassification: PurchaseCashFlowClassification.OPERATING,
+              }),
+              create(PurchasePaymentAllocationSchema, {
+                sequence: 1,
+                accountId: "018f0000-0000-7000-8000-000000000040",
+                accountVersion: 4n,
+                gross: { currencyCode: "AUD", minorUnits: 2500n },
+                supplierGst: { currencyCode: "AUD", minorUnits: 200n },
+                eligibleGst: { currencyCode: "AUD", minorUnits: 0n },
+                use: PurchaseUse.PRIVATE,
+                basClassification: PurchaseBasClassification.EXCLUDED,
+                cashFlowClassification: PurchaseCashFlowClassification.FINANCING,
+              }),
+            ],
+            financialRevision: 5n,
+            actorUserId: workspace.userId,
+            recordedAt: { seconds: 3n, nanos: 0 },
+          }),
+          create(PurchasePaymentSchema, {
+            id: "018f0000-0000-7000-8000-000000000033",
+            organisationId: org,
+            postingId: accounting.posting.id,
+            documentId: doc.id,
+            accountingVersion: 3n,
+            actualPaymentDate: { year: 2026, month: 10, day: 3 },
+            amount: { currencyCode: "AUD", minorUnits: 1000n },
+            bankAccountId: "018f0000-0000-7000-8000-000000000034",
+            reference: "second-payment",
+            journalId: "018f0000-0000-7000-8000-000000000035",
+            sourceHash: new Uint8Array(32).fill(10),
+            allocations: [
+              create(PurchasePaymentAllocationSchema, {
+                sequence: 1,
+                accountId: "018f0000-0000-7000-8000-000000000040",
+                accountVersion: 4n,
+                gross: { currencyCode: "AUD", minorUnits: 1000n },
+                supplierGst: { currencyCode: "AUD", minorUnits: 100n },
+                eligibleGst: { currencyCode: "AUD", minorUnits: 100n },
+                use: PurchaseUse.BUSINESS,
+                basClassification: PurchaseBasClassification.NON_CAPITAL,
+                cashFlowClassification: PurchaseCashFlowClassification.OPERATING,
+              }),
+            ],
+            financialRevision: 6n,
+            actorUserId: workspace.userId,
+            recordedAt: { seconds: 4n, nanos: 0 },
+          }),
+        ],
+        page: { returnedCount: 2 },
+      }),
+    ),
+  );
+  const user = userEvent.setup();
+  render(
+    <PurchaseAccountingPanel
+      api={fixture.conveyor.purchases}
+      accountingApi={fixture.conveyor.accounting}
+      documentApi={fixture.conveyor.documents}
+      document={doc}
+      workspace={workspace}
+    />,
+  );
+
+  const paymentRow = (await screen.findByText("transfer-to-supplier")).closest("tr");
+  if (!paymentRow) throw new Error("Expected the first retained payment row.");
+  await user.click(within(paymentRow).getByText("Retained payment details"));
+  expect(within(paymentRow).getByText("018f0000-0000-7000-8000-000000000031")).toBeTruthy();
+  expect(within(paymentRow).getByText("018f0000-0000-7000-8000-000000000032")).toBeTruthy();
+  expect(within(paymentRow).getByText("09".repeat(32))).toBeTruthy();
+  const revisionLabel = within(paymentRow).getByText("Financial revision");
+  expect(revisionLabel.nextElementSibling?.textContent).toBe("5");
+  expect(within(paymentRow).getByText(workspace.userId)).toBeTruthy();
+  expect(within(paymentRow).getByText("1970-01-01T00:00:03Z")).toBeTruthy();
+  const allocations = within(paymentRow).getAllByRole("listitem");
+  expect(allocations).toHaveLength(2);
+  expect(allocations[0]?.textContent).toContain("Allocation 1");
+  expect(allocations[0]?.textContent).toContain("Private");
+  expect(allocations[0]?.textContent).toContain("Excluded");
+  expect(allocations[0]?.textContent).toContain("Financing");
+  expect(allocations[0]?.textContent).toContain("$25.00 gross");
+  expect(allocations[0]?.textContent).toContain("$2.00 supplier GST");
+  expect(allocations[0]?.textContent).toContain("$0.00 eligible GST");
+  expect(allocations[1]?.textContent).toContain("Allocation 2");
+  expect(allocations[1]?.textContent).toContain("Business");
+  expect(allocations[1]?.textContent).toContain("Non-capital");
+  expect(allocations[1]?.textContent).toContain("Operating");
+  expect(allocations[1]?.textContent).toContain("$30.00 gross");
+  expect(allocations[1]?.textContent).toContain("$3.00 supplier GST");
+  expect(allocations[1]?.textContent).toContain("$3.00 eligible GST");
+
+  const secondPaymentRow = (await screen.findByText("second-payment")).closest("tr");
+  if (!secondPaymentRow) throw new Error("Expected the second retained payment row.");
+  await user.click(within(secondPaymentRow).getByText("Retained payment details"));
+  expect(within(secondPaymentRow).getByText("018f0000-0000-7000-8000-000000000034")).toBeTruthy();
+  expect(within(secondPaymentRow).getByText("018f0000-0000-7000-8000-000000000035")).toBeTruthy();
+  expect(within(secondPaymentRow).getByText("0a".repeat(32))).toBeTruthy();
+  expect(within(secondPaymentRow).getByText("6")).toBeTruthy();
+
+  const disclosure = await screen.findByText("Retained posting and evidence details");
+  const sourceDetails = disclosure.closest("details");
+  if (!sourceDetails) throw new Error("Retained source details are missing");
+  await user.click(within(sourceDetails).getByText("Retained posting and evidence details"));
+  expect(within(sourceDetails).getByText("06".repeat(32))).toBeTruthy();
+  expect(within(sourceDetails).getByText("04".repeat(32))).toBeTruthy();
+  expect(within(sourceDetails).getByText(workspace.userId)).toBeTruthy();
+  expect(within(sourceDetails).getByText("1970-01-01T00:00:00.25Z")).toBeTruthy();
+  expect(within(sourceDetails).getByText("Latest evidence record")).toBeTruthy();
+  expect(within(sourceDetails).getByText("018f0000-0000-7000-8000-000000000005")).toBeTruthy();
+  expect(within(sourceDetails).getByText("1970-01-01T00:00:02Z")).toBeTruthy();
+  expect(within(sourceDetails).getByText("Tax invoice · held 01/10/2026")).toBeTruthy();
+  expect(within(sourceDetails).getByText("Updated held-date review")).toBeTruthy();
+  expect(within(sourceDetails).getByText("08".repeat(32))).toBeTruthy();
+  expect(sourceDetails.textContent).toContain("07".repeat(32));
+
+  const originalHeading = within(sourceDetails).getByRole("heading", {
+    name: "Original posting evidence · immutable snapshot",
+  });
+  const originalSection = originalHeading.closest("section");
+  if (!originalSection) throw new Error("Original posting evidence details are missing");
+  expect(originalSection.textContent).toContain("Supported exception · held 30/09/2026");
+  expect(originalSection.textContent).toContain(
+    "Original low-value acquisition exception reviewed",
+  );
+  expect(originalSection.textContent).toContain("05".repeat(32));
+  expect(originalSection.textContent).toContain("Low-value acquisition");
+  expect(originalSection.textContent).toContain("018f0000-0000-7000-8000-000000000090");
+  expect(originalSection.textContent).toContain("0b".repeat(32));
+  expect(originalSection.textContent).toContain("018f0000-0000-7000-8000-000000000091");
+  expect(originalSection.textContent).toContain("0c".repeat(32));
+  expect(originalSection.textContent).toContain("Retained low-value rule and record reviewed");
+
+  const latestHeading = within(sourceDetails).getByRole("heading", {
+    name: "Latest evidence review",
+  });
+  const latestSection = latestHeading.closest("section");
+  if (!latestSection) throw new Error("Latest evidence review details are missing");
+  expect(latestSection.textContent).toContain("Tax invoice · held 01/10/2026");
+  expect(latestSection.textContent).toContain("Updated held-date review");
+  expect(latestSection.textContent).toContain("07".repeat(32));
+});
+
+it("labels posting evidence as a snapshot when no latest evidence record is returned", async () => {
+  const { fixture, accounting } = setup(true);
+  accounting.posting = create(PurchasePostingSchema, {
+    id: "018f0000-0000-7000-8000-000000000020",
+    organisationId: org,
+    documentId: doc.id,
+    reviewedVersion: 2n,
+    originalContentHash: new Uint8Array(32).fill(3),
+    reviewedSnapshotHash: new Uint8Array(32).fill(4),
+    supplierName: "Office",
+    invoiceNumber: "INV1",
+    invoiceDate: { year: 2026, month: 9, day: 25 },
+    gstBasis: GstBasis.NON_CASH,
+    gstProfileVersion: 1n,
+    gross: { currencyCode: "AUD", minorUnits: 11000n },
+    supplierGst: { currencyCode: "AUD", minorUnits: 1000n },
+    eligibleGst: { currencyCode: "AUD", minorUnits: 1000n },
+    evidence: create(PurchaseEvidenceInputSchema, {
+      classification: PurchaseEvidenceClassification.TAX_INVOICE,
+      source: { sourceId: doc.id, sourceVersion: 2n, sourceHash: new Uint8Array(32).fill(5) },
+      heldDate: { year: 2026, month: 9, day: 30 },
+      registrationReviewConfirmed: true,
+      businessUseReviewConfirmed: true,
+      evidenceReviewConfirmed: true,
+      reason: "Evidence retained with the original posting",
+    }),
+    journalId: "018f0000-0000-7000-8000-000000000021",
+    financialRevision: 3n,
+    sourceHash: new Uint8Array(32).fill(6),
+    actorUserId: workspace.userId,
+    postedAt: { seconds: 0n, nanos: 0 },
+  });
+  fixture.procedures.purchases.getPurchaseAccounting.mockResolvedValue(
+    purchaseCodecs.get.encodeResponse(create(GetPurchaseAccountingResponseSchema, { accounting })),
+  );
+  const user = userEvent.setup();
+  render(
+    <PurchaseAccountingPanel
+      api={fixture.conveyor.purchases}
+      accountingApi={fixture.conveyor.accounting}
+      documentApi={fixture.conveyor.documents}
+      document={doc}
+      workspace={workspace}
+    />,
+  );
+
+  const disclosure = await screen.findByText("Retained posting and evidence details");
+  const sourceDetails = disclosure.closest("details");
+  if (!sourceDetails) throw new Error("Retained source details are missing");
+  await user.click(within(sourceDetails).getByText("Retained posting and evidence details"));
+  expect(sourceDetails.textContent).toContain("No latest evidence record returned.");
+  expect(sourceDetails.textContent).toContain("Tax invoice · held 30/09/2026");
+  expect(sourceDetails.textContent).toContain("Evidence retained with the original posting");
+  expect(sourceDetails.textContent).toContain("05".repeat(32));
 });
 
 it("retains a reviewed evidence decision through the panel's confirmed command", async () => {

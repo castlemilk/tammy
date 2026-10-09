@@ -15,7 +15,11 @@ import { Button } from "../../components/ui/button";
 import { purchaseCorrectionGuidance } from "../documents/purchase-accounting-panel";
 import { authenticatedPurchaseRetry } from "../documents/purchase-attempt-recovery";
 import { purchaseCodecs } from "../documents/purchase-codecs";
-import { aud, purchaseAttemptScope, purchaseAttemptsFor } from "../documents/purchase-command-state";
+import {
+  aud,
+  purchaseAttemptScope,
+  purchaseAttemptsFor,
+} from "../documents/purchase-command-state";
 import { dateLabel } from "../documents/purchase-fields";
 import { PurchaseLegacyReviewPanel } from "../documents/purchase-legacy-review-panel";
 import type { ProposePurchase } from "../documents/purchase-posting-form";

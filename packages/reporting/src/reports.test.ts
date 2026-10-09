@@ -444,6 +444,8 @@ test("reconciled BAS CSV exports exact purchase provenance, allocation, review a
   assert.equal(field(deferred, "review_status"), "deferred");
   assert.equal(field(deferred, "review_kind"), "deferred_future_claim");
   assert.equal(field(deferred, "document_id"), id(501));
+  assert.equal(field(deferred, "invoice_date"), "2026-10-01");
+  assert.equal(field(deferred, "actual_payment_date"), "2026-10-02");
   assert.equal(field(deferred, "review_affected_period_start"), "2026-10-01");
   assert.equal(field(deferred, "review_affected_period_end"), "2026-10-31");
   assert.equal(
@@ -886,8 +888,10 @@ test("reconciled BAS independently parses all 1000 supported purchase source row
   const source = (value.workpaper as unknown as { purchaseSources: Record<string, unknown>[] })
     .purchaseSources[0];
   assert.ok(source);
+  const postingId = id(500);
   const sources = Array.from({ length: 1000 }, (_, index) => ({
     ...structuredClone(source),
+    postingId,
     allocationSequence: index + 1,
   }));
   Object.assign(value.workpaper, {
@@ -916,8 +920,52 @@ test("reconciled BAS independently parses all 1000 supported purchase source row
   assert.ok(pdfBytes.length < 16 * 1024 * 1024);
   const { text, pageCount } = await pdfText(pdfBytes);
   assert.ok(pageCount > 0);
-  assert.ok(text.includes("Allocation 1"));
-  assert.ok(text.includes("Allocation 1000"));
+  const allocationMarkers = [
+    ...text.matchAll(/Source allocation\s+([0-9a-f-]{36})\s+sequence\s+([0-9]+)/gu),
+  ].map((match) => `${match[1]}/${match[2]}`);
+  assert.deepEqual(
+    allocationMarkers,
+    sources.map((source) => `${postingId}/${source.allocationSequence}`),
+    "PDF must retain every allocation marker exactly once and in saved order",
+  );
+  const purchaseReviews = (
+    value.workpaper as unknown as {
+      purchaseReviews: { reason: string; sourceRevision: bigint; sourceHash: Uint8Array }[];
+    }
+  ).purchaseReviews;
+  assert.equal((text.match(/Review document /gu) ?? []).length, purchaseReviews.length);
+  for (const review of purchaseReviews) {
+    assert.ok(text.includes(`Review reason: ${review.reason}`));
+    assert.ok(
+      text.includes(
+        `Source revision ${review.sourceRevision} · source hash ${Buffer.from(review.sourceHash).toString("hex")}`,
+      ),
+    );
+  }
+  const legacyPurchaseSupport = (
+    value.workpaper as unknown as {
+      legacyPurchaseSupport: {
+        kind: number;
+        sequence: number;
+        source?: { sourceId: string; sourceVersion: bigint; sourceHash: Uint8Array };
+      }[];
+    }
+  ).legacyPurchaseSupport;
+  assert.equal(
+    (text.match(/Supporting (?:payment|evidence) /gu) ?? []).length,
+    legacyPurchaseSupport.length,
+  );
+  const normalized = text.replace(/\s+/gu, " ");
+  const tokens = normalized.replaceAll(" ", "");
+  for (const link of legacyPurchaseSupport) {
+    const kind = link.kind === 1 ? "payment" : "evidence";
+    const source = link.source;
+    assert.ok(source);
+    assert.ok(normalized.includes(`Supporting ${kind} ${link.sequence}:`));
+    assert.ok(tokens.includes(source.sourceId));
+    assert.ok(normalized.includes(`version ${source.sourceVersion}`));
+    assert.ok(tokens.includes(Buffer.from(source.sourceHash).toString("hex")));
+  }
   assert.ok(text.includes("2510.00"));
 });
 test("purchase PDF rows keep each allocation identity, provenance and exact amounts together", async () => {

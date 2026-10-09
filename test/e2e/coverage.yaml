@@ -5,9 +5,9 @@ scenarios:
       - foundation/offline-ready
       - reporting/capability-registry
       - walkthrough/current-accounting-workflows
+      - purchases/payments-gst
     futureCases:
       - slice-1/foundation-contracts
-      - purchases/payments-gst
       - walkthrough/blank-overview
       - walkthrough/demo-overview
       - walkthrough/noncash-supplier-month
@@ -69,10 +69,9 @@ scenarios:
       - invoices/income-payments-bas
 rpcs:
   tammy.v1.PurchaseService.GetPurchaseAccounting:
-    stage: declared_future
+    stage: production
     preload: getPurchaseAccounting
-    cases: []
-    futureCases: [purchases/payments-gst]
+    cases: [purchases/payments-gst]
     projections: [get_purchase_accounting_result]
     routes: [/documents]
     roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_allowed, auditor: planned_allowed}
@@ -80,10 +79,9 @@ rpcs:
     list: {states: [found, not_found]}
     idempotency: {mode: query, outcomes: [not_applicable]}
   tammy.v1.PurchaseService.PostReviewedPurchase:
-    stage: declared_future
+    stage: production
     preload: postReviewedPurchase
-    cases: []
-    futureCases: [purchases/payments-gst]
+    cases: [purchases/payments-gst]
     projections: [post_reviewed_purchase_result]
     routes: [/documents]
     roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_permission_denied, auditor: planned_permission_denied}
@@ -91,10 +89,9 @@ rpcs:
     list: {states: [not_applicable]}
     idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
   tammy.v1.PurchaseService.RecordPurchasePayment:
-    stage: declared_future
+    stage: production
     preload: recordPurchasePayment
-    cases: []
-    futureCases: [purchases/payments-gst]
+    cases: [purchases/payments-gst]
     projections: [record_purchase_payment_result]
     routes: [/documents]
     roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_permission_denied, auditor: planned_permission_denied}
@@ -102,10 +99,9 @@ rpcs:
     list: {states: [not_applicable]}
     idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
   tammy.v1.PurchaseService.ListPurchasePayments:
-    stage: declared_future
+    stage: production
     preload: listPurchasePayments
-    cases: []
-    futureCases: [purchases/payments-gst]
+    cases: [purchases/payments-gst]
     projections: [list_purchase_payments_result]
     routes: [/documents]
     roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_allowed, auditor: planned_allowed}
@@ -113,10 +109,9 @@ rpcs:
     list: {states: [empty, populated, filtered, first_page, next_page]}
     idempotency: {mode: query, outcomes: [not_applicable]}
   tammy.v1.PurchaseService.RecordPurchaseTaxEvidence:
-    stage: declared_future
+    stage: production
     preload: recordPurchaseTaxEvidence
-    cases: []
-    futureCases: [purchases/payments-gst]
+    cases: [purchases/payments-gst]
     projections: [record_purchase_tax_evidence_result]
     routes: [/documents]
     roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_permission_denied, auditor: planned_permission_denied}
@@ -124,10 +119,9 @@ rpcs:
     list: {states: [not_applicable]}
     idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
   tammy.v1.PurchaseService.AttributePurchaseGst:
-    stage: declared_future
+    stage: production
     preload: attributePurchaseGst
-    cases: []
-    futureCases: [purchases/payments-gst]
+    cases: [purchases/payments-gst]
     projections: [attribute_purchase_gst_result]
     routes: [/documents]
     roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_permission_denied, auditor: planned_permission_denied}
@@ -135,10 +129,9 @@ rpcs:
     list: {states: [not_applicable]}
     idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
   tammy.v1.PurchaseService.DeferPurchaseGstClaim:
-    stage: declared_future
+    stage: production
     preload: deferPurchaseGstClaim
-    cases: []
-    futureCases: [purchases/payments-gst]
+    cases: [purchases/payments-gst]
     projections: [defer_purchase_gst_claim_result]
     routes: [/documents]
     roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_permission_denied, auditor: planned_permission_denied}
@@ -146,10 +139,9 @@ rpcs:
     list: {states: [not_applicable]}
     idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
   tammy.v1.PurchaseService.ResolveLegacyPurchaseReview:
-    stage: declared_future
+    stage: production
     preload: resolveLegacyPurchaseReview
-    cases: []
-    futureCases: [purchases/payments-gst]
+    cases: [purchases/payments-gst]
     projections: [resolve_legacy_purchase_review_result]
     routes: [/documents]
     roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_permission_denied, auditor: planned_permission_denied}

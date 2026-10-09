@@ -12,6 +12,22 @@ const sha = (digit) => digit.repeat(64);
 const privacyUrl = "https://tammy-accounting.castlemilk.chatgpt.site/privacy";
 const supportUrl = "https://tammy-accounting.castlemilk.chatgpt.site/support";
 
+test("enforces loopback-only networking in the actual macOS sandbox and child", {
+  skip: process.platform !== "darwin",
+  timeout: 15_000,
+}, async () => {
+  assert.deepEqual(await detectMacOSEgressEnforcer(), {
+    kind: "sandbox-exec",
+    preflight: {
+      auditSamples: 3,
+      childInheritanceDenied: true,
+      dnsDenied: true,
+      loopbackAllowed: true,
+      nonLoopbackDenied: true,
+    },
+  });
+});
+
 test("requires a positive active-containment and audit preflight", async () => {
   const passing = {
     auditSamples: 3,

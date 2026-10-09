@@ -1,16 +1,16 @@
 import { create } from "@bufbuild/protobuf";
 import {
-  DocumentAccountingFilter,
   type Document,
+  DocumentAccountingFilter,
 } from "@tammy/connect-client/tammy/v1/documents_pb.js";
-import { GetPurchaseAccountingRequestSchema } from "@tammy/connect-client/tammy/v1/purchases_pb.js";
 import type { PurchasePosting } from "@tammy/connect-client/tammy/v1/purchases_pb.js";
+import { GetPurchaseAccountingRequestSchema } from "@tammy/connect-client/tammy/v1/purchases_pb.js";
 import { useEffect, useMemo } from "react";
 import type { TammyConveyorModule } from "../../../conveyor/client";
 import { Button } from "../../components/ui/button";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
-import { aud } from "./purchase-command-state";
 import { purchaseCodecs } from "./purchase-codecs";
+import { aud } from "./purchase-command-state";
 import { dateLabel } from "./purchase-fields";
 import { RetainedDocumentPicker } from "./retained-document-picker";
 
@@ -34,14 +34,11 @@ export function OwnedPostedPurchasePicker({
   const input = useMemo(
     () =>
       purchaseCodecs.get.encodeRequest(
-        create(
-          GetPurchaseAccountingRequestSchema,
-          {
-            authentication: { actorUserId: workspace.userId, sessionId: workspace.sessionId },
-            organisationId: workspace.organisationId!,
-            documentId: selected?.id ?? "",
-          },
-        ),
+        create(GetPurchaseAccountingRequestSchema, {
+          authentication: { actorUserId: workspace.userId, sessionId: workspace.sessionId },
+          organisationId: workspace.organisationId!,
+          documentId: selected?.id ?? "",
+        }),
       ),
     [selected?.id, workspace.organisationId, workspace.sessionId, workspace.userId],
   );
@@ -71,7 +68,7 @@ export function OwnedPostedPurchasePicker({
       : undefined;
   useEffect(() => {
     onPostingChange(posting);
-  }, [onPostingChange, posting, selected?.id]);
+  }, [onPostingChange, posting]);
 
   return (
     <div className="grid gap-2">
@@ -99,12 +96,12 @@ export function OwnedPostedPurchasePicker({
               {dateLabel(posting.invoiceDate)} · {aud(posting.gross?.minorUnits)}
             </dd>
             <dt>Owned posting source</dt>
-            <dd>{posting.id} · {posting.documentId}</dd>
+            <dd>
+              {posting.id} · {posting.documentId}
+            </dd>
             <dt>Posting hash</dt>
             <dd>
-              {[...posting.sourceHash]
-                .map((byte) => byte.toString(16).padStart(2, "0"))
-                .join("")}
+              {[...posting.sourceHash].map((byte) => byte.toString(16).padStart(2, "0")).join("")}
             </dd>
           </dl>
         </div>

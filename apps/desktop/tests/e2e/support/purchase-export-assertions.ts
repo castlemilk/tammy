@@ -263,6 +263,8 @@ function assertPurchaseCsv(csv: ParsedReportCsv, bas: BasWorkpaper) {
       review.postingId ?? review.futureClaimObligation?.postingId ?? "",
     );
     assert.equal(rowValue(row, "payment_id"), review.paymentId ?? "");
+    assert.equal(rowValue(row, "invoice_date"), date(review.invoiceDate));
+    assert.equal(rowValue(row, "actual_payment_date"), date(review.actualPaymentDate));
     assert.equal(
       rowValue(row, "deferral_id"),
       review.deferralId ?? review.futureClaimObligation?.deferralId ?? "",
@@ -408,11 +410,11 @@ function assertPurchaseCsv(csv: ParsedReportCsv, bas: BasWorkpaper) {
       );
       assert.equal(
         rowValue(row, "previously_claimed_period_start"),
-        date(decision.previouslyClaimedPeriod?.periodStart),
+        decision.previouslyClaimedPeriod ? date(decision.previouslyClaimedPeriod.periodStart) : "",
       );
       assert.equal(
         rowValue(row, "previously_claimed_period_end"),
-        date(decision.previouslyClaimedPeriod?.periodEnd),
+        decision.previouslyClaimedPeriod ? date(decision.previouslyClaimedPeriod.periodEnd) : "",
       );
       assert.equal(rowValue(row, "linked_posting_id"), decision.linkedPostingId ?? "");
       sourceRef(row, decision.claimEvidence, "claim_evidence_");
