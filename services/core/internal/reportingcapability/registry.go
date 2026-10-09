@@ -54,10 +54,11 @@ func NewRegistry(appVersion string) (*Registry, error) {
 				entity: tammyv1.ReportingEntityType_REPORTING_ENTITY_TYPE_AU_BUSINESS,
 				year:   2024,
 			}: {
-				status:  tammyv1.ReportingCapabilityStatus_REPORTING_CAPABILITY_STATUS_AVAILABLE,
-				summary: "Tammy supports a local invoice and reviewed-expense GST workpaper only.",
+				status:      tammyv1.ReportingCapabilityStatus_REPORTING_CAPABILITY_STATUS_AVAILABLE,
+				summary:     "Tammy supports a local invoice and reconciled purchase GST workpaper.",
+				limitations: []string{"Purchase credits use retained accounting and actual payments or reviewed claim periods. Legacy purchase candidates remain provisional outside reconciled 1B until reviewed.", "Evidence suspense and future claim decisions remain visible for review. Complete BAS preparation, declaration and lodgement are unavailable."},
 				modes: reportingModes(
-					availableMode(tammyv1.ReportingCapabilityMode_REPORTING_CAPABILITY_MODE_PREPARATION, "Local invoice and reviewed-expense GST workpaper preparation is available."),
+					availableMode(tammyv1.ReportingCapabilityMode_REPORTING_CAPABILITY_MODE_PREPARATION, "Local invoice and reconciled purchase GST workpaper preparation is available."),
 					unavailableMode(tammyv1.ReportingCapabilityMode_REPORTING_CAPABILITY_MODE_SIMULATOR, "GST workpaper simulation is not implemented.", "GST_WORKPAPER_SIMULATOR_NOT_IMPLEMENTED"),
 					unavailableMode(tammyv1.ReportingCapabilityMode_REPORTING_CAPABILITY_MODE_EVTE, "GST workpaper EVTE delivery is not implemented.", "GST_WORKPAPER_EVTE_NOT_IMPLEMENTED"),
 					unavailableMode(tammyv1.ReportingCapabilityMode_REPORTING_CAPABILITY_MODE_PRODUCTION, "GST workpaper production delivery is not implemented.", "GST_WORKPAPER_PRODUCTION_NOT_IMPLEMENTED"),

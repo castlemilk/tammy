@@ -5,11 +5,14 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math"
+	"time"
 
 	tammyv1 "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1"
 	"github.com/tammyapp/tammy/services/core/internal/invoices"
+	"github.com/tammyapp/tammy/services/core/internal/purchases"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -25,9 +28,10 @@ type basSources struct {
 	warnings              []string
 	excludedCashPurchases uint64
 	fingerprint           []byte
+	ownedPurchases        *purchases.BASSnapshot
 }
 
-func (repository *Repository) collectBASSources(ctx context.Context, organisationID, start, end string) (*basSources, error) {
+func (repository *Repository) collectBASSources(ctx context.Context, organisationID, start, end string, asOf time.Time) (*basSources, error) {
 	sources := &basSources{}
 	var basis int32
 	if err := querySingle(repository.executor, ctx, `SELECT gst_basis FROM organisations WHERE id=?`, []any{organisationID}, &basis); err != nil || basis < 1 || basis > 2 {
@@ -37,40 +41,63 @@ func (repository *Repository) collectBASSources(ctx context.Context, organisatio
 	if _, err := invoices.CheckGSTBasisHistory(ctx, repository.executor, organisationID, 0); err != nil {
 		return nil, ErrGSTBasis
 	}
-	rows, err := repository.executor.QueryContext(ctx, `SELECT id,version,supplier_name,invoice_number,document_date,total_minor,gst_minor FROM documents WHERE organisation_id=? AND status='REVIEWED' AND document_date BETWEEN ? AND ? ORDER BY document_date,id LIMIT 1001`, organisationID, start, end)
-	if err != nil {
+	var modern int
+	if err := querySingle(repository.executor, ctx, `SELECT count(*) FROM sqlite_master WHERE type='table' AND name='bas_workpaper_purchase_metadata_v1'`, nil, &modern); err != nil {
 		return nil, ErrRepository
 	}
-	for rows.Next() {
-		line := &tammyv1.BasSourceLine{Gross: aud(0), GstCredit: aud(0)}
-		var date string
-		var version uint64
-		if err := rows.Scan(&line.DocumentId, &version, &line.SupplierName, &line.InvoiceNumber, &date, &line.Gross.MinorUnits, &line.GstCredit.MinorUnits); err != nil {
-			rows.Close()
-			return nil, ErrRepository
-		}
-		line.DocumentDate = parseCivilDate(date)
-		if line.DocumentDate == nil || line.Gross.MinorUnits < 0 || line.GstCredit.MinorUnits < 0 || line.GstCredit.MinorUnits > line.Gross.MinorUnits {
-			rows.Close()
-			return nil, ErrRepository
-		}
-		sources.purchases = append(sources.purchases, line)
-		sources.purchaseVersions = append(sources.purchaseVersions, version)
-		if len(sources.purchases) > maximumBASSources {
-			rows.Close()
+	if modern == 1 {
+		period := &tammyv1.PurchaseClaimPeriod{PeriodStart: parseCivilDate(start), PeriodEnd: parseCivilDate(end)}
+		capture, err := repository.purchasePort.CaptureBAS(ctx, organisationID, period, period.PeriodEnd, asOf)
+		if errors.Is(err, purchases.ErrSourceBound) {
 			return nil, ErrSourceBound
 		}
-	}
-	if err := rows.Err(); err != nil {
+		if errors.Is(err, invoices.ErrGSTBasisHistory) {
+			return nil, ErrGSTBasis
+		}
+		if err != nil || capture == nil {
+			return nil, ErrRepository
+		}
+		sources.ownedPurchases = capture
+		sources.excludedCashPurchases = capture.ExcludedCashPurchaseCount
+		if len(capture.Reviews) > 0 {
+			sources.warnings = append(sources.warnings, fmt.Sprintf("%d retained purchase review rows include legacy candidates, evidence suspense, exclusions or future claims. Review the complete typed purchase details before relying on this draft.", len(capture.Reviews)))
+		}
+	} else {
+		rows, err := repository.executor.QueryContext(ctx, `SELECT id,version,supplier_name,invoice_number,document_date,total_minor,gst_minor FROM documents WHERE organisation_id=? AND status='REVIEWED' AND document_date BETWEEN ? AND ? ORDER BY document_date,id LIMIT 1001`, organisationID, start, end)
+		if err != nil {
+			return nil, ErrRepository
+		}
+		for rows.Next() {
+			line := &tammyv1.BasSourceLine{Gross: aud(0), GstCredit: aud(0)}
+			var date string
+			var version uint64
+			if err := rows.Scan(&line.DocumentId, &version, &line.SupplierName, &line.InvoiceNumber, &date, &line.Gross.MinorUnits, &line.GstCredit.MinorUnits); err != nil {
+				rows.Close()
+				return nil, ErrRepository
+			}
+			line.DocumentDate = parseCivilDate(date)
+			if line.DocumentDate == nil || line.Gross.MinorUnits < 0 || line.GstCredit.MinorUnits < 0 || line.GstCredit.MinorUnits > line.Gross.MinorUnits {
+				rows.Close()
+				return nil, ErrRepository
+			}
+			sources.purchases = append(sources.purchases, line)
+			sources.purchaseVersions = append(sources.purchaseVersions, version)
+			if len(sources.purchases) > maximumBASSources {
+				rows.Close()
+				return nil, ErrSourceBound
+			}
+		}
+		if err := rows.Err(); err != nil {
+			rows.Close()
+			return nil, ErrRepository
+		}
 		rows.Close()
-		return nil, ErrRepository
-	}
-	rows.Close()
-	if sources.basis == tammyv1.GstBasis_GST_BASIS_CASH {
-		sources.excludedCashPurchases = uint64(len(sources.purchases))
-		// Retain these source identities in the fingerprint even though their credits
-		// are excluded: newly reviewed receipts still change what needs review.
-		sources.warnings = append(sources.warnings, fmt.Sprintf("Cash-basis purchase credits need payment evidence. %d reviewed expenses dated in this period are excluded because purchase payments are not recorded.", sources.excludedCashPurchases))
+		if sources.basis == tammyv1.GstBasis_GST_BASIS_CASH {
+			sources.excludedCashPurchases = uint64(len(sources.purchases))
+			// Retain these source identities in the fingerprint even though their credits
+			// are excluded: newly reviewed receipts still change what needs review.
+			sources.warnings = append(sources.warnings, fmt.Sprintf("Cash-basis purchase credits need payment evidence. %d reviewed expenses dated in this period are excluded because purchase payments are not recorded.", sources.excludedCashPurchases))
+		}
 	}
 	sales, err := repository.invoiceBASSales(ctx, organisationID, start, end)
 	if err != nil {
@@ -85,12 +112,21 @@ func (repository *Repository) collectBASSources(ctx context.Context, organisatio
 		sources.warnings = append(sources.warnings, fmt.Sprintf("%d issued invoices dated on or before the period end have not been added to accounts. Review them before relying on this workpaper.", unposted))
 	}
 	fingerprintView := &tammyv1.BasWorkpaper{OrganisationId: organisationID, PeriodStart: parseCivilDate(start), PeriodEnd: parseCivilDate(end), GstBasis: sources.basis, Sources: sources.purchases, SalesSources: sources.sales, ReviewWarnings: sources.warnings, ExcludedCashPurchaseCount: sources.excludedCashPurchases}
+	if sources.ownedPurchases != nil {
+		fingerprintView.PurchaseSources = sources.ownedPurchases.Sources
+		fingerprintView.PurchaseReviews = sources.ownedPurchases.Reviews
+		fingerprintView.LegacyPurchaseSupport = sources.ownedPurchases.LegacySupport
+		fingerprintView.LegacyCandidateGst = sources.ownedPurchases.LegacyCandidateGST
+	}
 	encoded, err := proto.MarshalOptions{Deterministic: true}.Marshal(fingerprintView)
 	if err != nil {
 		return nil, ErrRepository
 	}
 	digest := sha256.New()
 	digest.Write(encoded)
+	if sources.ownedPurchases != nil {
+		digest.Write(sources.ownedPurchases.Fingerprint)
+	}
 	for _, version := range sources.purchaseVersions {
 		var value [8]byte
 		binary.BigEndian.PutUint64(value[:], version)

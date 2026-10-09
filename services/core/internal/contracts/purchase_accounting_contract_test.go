@@ -401,6 +401,8 @@ func purchaseMaxBASFixture(t *testing.T, d protoreflect.MessageDescriptor) *dyna
 				m.Set(f, protoreflect.ValueOfBytes(bytes.Repeat([]byte{42}, 32)))
 			case protoreflect.EnumKind:
 				m.Set(f, protoreflect.ValueOfEnum(f.Enum().Values().Get(1).Number()))
+			case protoreflect.Uint64Kind:
+				m.Set(f, protoreflect.ValueOfUint64(1))
 			default:
 				t.Fatalf("unhandled maximal BAS optional %s", f.FullName())
 			}
@@ -443,6 +445,58 @@ func TestPurchaseBASOptionalSourceIdentitiesNeedTheirHashes(t *testing.T) {
 		if err := protovalidate.Validate(m); err == nil {
 			t.Errorf("%s identity accepted without immutable source hash", name)
 		}
+	}
+}
+
+func TestPurchaseBASAdditiveExportMetadataPreservesOlderSourceShape(t *testing.T) {
+	d := purchaseDescriptor(t, "BasPurchaseSourceLine")
+	legacy := purchaseFixture(d)
+	before, err := proto.MarshalOptions{Deterministic: true}.Marshal(legacy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := protovalidate.Validate(legacy); err != nil {
+		t.Fatalf("older source shape rejected: %v", err)
+	}
+	accountID := d.Fields().ByName("account_id")
+	accountVersion := d.Fields().ByName("account_version")
+	if accountID == nil || accountVersion == nil || accountID.Number() != 25 || accountVersion.Number() != 26 || !accountID.HasOptionalKeyword() || !accountVersion.HasOptionalKeyword() {
+		t.Fatal("account metadata must append optional retained facts")
+	}
+	complete := proto.Clone(legacy).(*dynamicpb.Message)
+	complete.Set(accountID, protoreflect.ValueOfString("018f0c4a-7b9d-7abc-8def-0123456789ab"))
+	complete.Set(accountVersion, protoreflect.ValueOfUint64(1))
+	complete.Set(d.Fields().ByName("supplier_name"), protoreflect.ValueOfString("Retained supplier"))
+	complete.Set(d.Fields().ByName("invoice_number"), protoreflect.ValueOfString("INV-01"))
+	date := d.Fields().ByName("release_posting_date")
+	complete.Set(date, protoreflect.ValueOfMessage(purchaseFixture(date.Message())))
+	if err := protovalidate.Validate(complete); err != nil {
+		t.Fatalf("complete metadata rejected: %v", err)
+	}
+	for _, remove := range []protoreflect.FieldDescriptor{accountID, accountVersion} {
+		invalid := proto.Clone(complete).(*dynamicpb.Message)
+		invalid.Clear(remove)
+		if protovalidate.Validate(invalid) == nil {
+			t.Fatal("partial account provenance accepted")
+		}
+	}
+	invalid := proto.Clone(complete).(*dynamicpb.Message)
+	invalid.Set(accountVersion, protoreflect.ValueOfUint64(0))
+	if protovalidate.Validate(invalid) == nil {
+		t.Fatal("zero account version accepted")
+	}
+	invalid = proto.Clone(complete).(*dynamicpb.Message)
+	invalid.Mutable(date).Message().Set(date.Message().Fields().ByName("year"), protoreflect.ValueOfInt32(2023))
+	if protovalidate.Validate(invalid) == nil {
+		t.Fatal("nonexistent release date accepted")
+	}
+	decoded := dynamicpb.NewMessage(d)
+	if err := proto.Unmarshal(before, decoded); err != nil {
+		t.Fatal(err)
+	}
+	after, err := proto.MarshalOptions{Deterministic: true}.Marshal(decoded)
+	if err != nil || !bytes.Equal(before, after) {
+		t.Fatal("additive metadata rewrote older source bytes")
 	}
 }
 

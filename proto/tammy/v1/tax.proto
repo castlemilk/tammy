@@ -43,6 +43,11 @@ message BasPurchaseSourceLine {
     message: "Payment and attribution identities need their immutable source hashes"
     expression: "has(this.payment_id) == has(this.payment_hash) && has(this.attribution_id) == has(this.attribution_hash)"
   };
+  option (buf.validate.message).cel = {
+    id: "purchase.bas.account_pair"
+    message: "Retained account identity and version must be present together"
+    expression: "has(this.account_id) == has(this.account_version)"
+  };
   string posting_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
   bytes posting_hash = 2 [(buf.validate.field).bytes.len = 32];
   string document_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
@@ -122,6 +127,16 @@ message BasPurchaseSourceLine {
   PurchaseRetainedSourceRef evidence = 22 [(buf.validate.field).required = true];
   uint64 source_revision = 23 [(buf.validate.field).uint64.gte = 1];
   bytes source_hash = 24 [(buf.validate.field).bytes.len = 32];
+  // Additive metadata for exact saved exports; older retained rows remain valid.
+  optional string account_id = 25 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  optional uint64 account_version = 26 [(buf.validate.field).uint64.gte = 1];
+  optional string supplier_name = 27 [(buf.validate.field).string.max_len = 256];
+  optional string invoice_number = 28 [(buf.validate.field).string.max_len = 128];
+  optional CivilDate release_posting_date = 29 [(buf.validate.field).cel = {
+    id: "BasPurchaseSourceLine.release_posting_date.calendar"
+    message: "Date must exist in the Gregorian calendar"
+    expression: "this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))"
+  }];
 }
 // Complete unresolved, excluded, unsupported, old, undated, opening and future claim review outcomes.
 enum BasPurchaseReviewKind {

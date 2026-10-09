@@ -483,7 +483,7 @@ func (handler *taxHandler) CreateBasDraft(ctx context.Context, request *connect.
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
 	}
-	repository, _ := reporting.NewRepository(tx)
+	repository, _ := reporting.NewRepositoryWithClock(tx, handler.now)
 	instant := handler.now()
 	workpaper, err := repository.CreateBASDraft(ctx, request.Msg.CommandContext.IdempotencyKey, id, request.Msg.OrganisationId, request.Msg.PeriodStart, request.Msg.PeriodEnd, instant)
 	if err != nil {
@@ -515,7 +515,7 @@ func (handler *taxHandler) GetCurrentBasDraft(ctx context.Context, request *conn
 		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
 	}
 	defer tx.Rollback()
-	repository, _ := reporting.NewRepository(tx)
+	repository, _ := reporting.NewRepositoryWithClock(tx, handler.now)
 	workpaper, err := repository.GetCurrentBASDraft(ctx, request.Msg.OrganisationId)
 	if err != nil {
 		if errors.Is(err, reporting.ErrNotFound) {

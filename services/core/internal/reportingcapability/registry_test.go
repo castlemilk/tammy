@@ -99,7 +99,7 @@ func TestRegistryLookupReturnsExactCurrentCapabilities(t *testing.T) {
 			entity:  tammyv1.ReportingEntityType_REPORTING_ENTITY_TYPE_AU_BUSINESS,
 			year:    2024,
 			status:  tammyv1.ReportingCapabilityStatus_REPORTING_CAPABILITY_STATUS_AVAILABLE,
-			summary: "Tammy supports a local invoice and reviewed-expense GST workpaper only.",
+			summary: "Tammy supports a local invoice and reconciled purchase GST workpaper.",
 		},
 		{
 			name:    "complete BAS",
@@ -197,8 +197,8 @@ func TestRegistryLookupReturnsIndependentValues(t *testing.T) {
 		tammyv1.ReportingEntityType_REPORTING_ENTITY_TYPE_AU_BUSINESS,
 		2024,
 	)
-	if first == second || second.GetSummary() != "Tammy supports a local invoice and reviewed-expense GST workpaper only." ||
-		len(second.GetLimitations()) != 0 || second.GetModes()[0].GetSummary() != "Local invoice and reviewed-expense GST workpaper preparation is available." ||
+	if first == second || second.GetSummary() != "Tammy supports a local invoice and reconciled purchase GST workpaper." ||
+		len(second.GetLimitations()) != 2 || second.GetModes()[0].GetSummary() != "Local invoice and reconciled purchase GST workpaper preparation is available." ||
 		second.GetModes()[1].GetBlockers()[0] != "GST_WORKPAPER_SIMULATOR_NOT_IMPLEMENTED" {
 		t.Fatalf("second Lookup() reused mutable state: first=%#v second=%#v", first, second)
 	}

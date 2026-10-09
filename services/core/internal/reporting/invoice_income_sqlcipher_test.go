@@ -279,16 +279,17 @@ func addReportPayment(t *testing.T, tx *sqlcipher.Transaction, number, invoice i
 func addReportPurchase(t *testing.T, tx *sqlcipher.Transaction, number int, date string, total, gst int64) {
 	t.Helper()
 	reportExec(t, tx, `INSERT OR IGNORE INTO users(id,email,display_name,status,created_at,updated_at) VALUES(?,'report@example.test','Report','PENDING','2026-10-01T00:00:00Z','2026-10-01T00:00:00Z')`, reportID(5))
-	digest := sha256.Sum256([]byte(fmt.Sprintf("source-%d", number)))
-	reportExec(t, tx, `INSERT INTO documents(id,operation_key,organisation_id,version,status,source_display_name,mime_type,byte_length,sha256,original_bytes,extracted_text,supplier_name,invoice_number,document_date,subtotal_minor,gst_minor,total_minor,created_by_user_id,created_at,reviewed_at) VALUES(?,?,?,2,'REVIEWED','Fixture.png','image/png',1,?,X'01','','Supplier','PURCHASE',?,?,?,?,?,'2026-10-01T00:00:00Z','2026-10-01T00:00:00Z')`, reportID(number), reportID(number+80000), reportOrgID, digest[:], date, total-gst, gst, total, reportID(5))
+	original := []byte(fmt.Sprintf("source-%d", number))
+	digest := sha256.Sum256(original)
+	reportExec(t, tx, `INSERT INTO documents(id,operation_key,organisation_id,version,status,source_display_name,mime_type,byte_length,sha256,original_bytes,extracted_text,supplier_name,invoice_number,document_date,subtotal_minor,gst_minor,total_minor,created_by_user_id,created_at,reviewed_at) VALUES(?,?,?,2,'REVIEWED','Fixture.png','image/png',?,?,?,'','Supplier','PURCHASE',?,?,?,?,?,'2026-10-01T00:00:00Z','2026-10-01T00:00:00Z')`, reportID(number), reportID(number+80000), reportOrgID, len(original), digest[:], original, date, total-gst, gst, total, reportID(5))
 }
 
 func TestBASNonCashPurchaseCreditsAndInvalidPeriods(t *testing.T) {
 	tx, repository := reportFixture(t, tammyv1.GstBasis_GST_BASIS_NON_CASH)
 	addReportPurchase(t, tx, 600, "2026-10-01", 1100, 100)
 	saved, err := repository.CreateBASDraft(context.Background(), reportID(1000), reportID(1001), reportOrgID, reportDate("2026-10-01"), reportDate("2026-12-31"), time.Date(2026, 10, 3, 0, 0, 0, 0, time.UTC))
-	if err != nil || saved.GstCredits_1B.MinorUnits != 100 || saved.NetGstPayable.MinorUnits != -100 || len(saved.Sources) != 1 || saved.ExcludedCashPurchaseCount != 0 {
-		t.Fatalf("non-cash reviewed credits missing: %v %v", saved, err)
+	if err != nil || saved.GstCredits_1B.MinorUnits != 0 || saved.NetGstPayable.MinorUnits != 0 || len(saved.Sources) != 0 || saved.GetLegacyCandidateGst().GetMinorUnits() != 100 || len(saved.PurchaseReviews) != 1 || saved.ExcludedCashPurchaseCount != 0 {
+		t.Fatalf("non-cash legacy candidate was claimed without accounting or lost: %v %v", saved, err)
 	}
 	_, err = repository.CreateBASDraft(context.Background(), reportID(1002), reportID(1003), reportOrgID, &tammyv1.CivilDate{Year: 2026, Month: 2, Day: 30}, reportDate("2026-12-31"), time.Date(2026, 10, 3, 0, 0, 0, 0, time.UTC))
 	if err == nil {

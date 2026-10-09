@@ -463,8 +463,14 @@ type BasPurchaseSourceLine struct {
 	Evidence               *PurchaseRetainedSourceRef     `protobuf:"bytes,22,opt,name=evidence,proto3" json:"evidence,omitempty"`
 	SourceRevision         uint64                         `protobuf:"varint,23,opt,name=source_revision,json=sourceRevision,proto3" json:"source_revision,omitempty"`
 	SourceHash             []byte                         `protobuf:"bytes,24,opt,name=source_hash,json=sourceHash,proto3" json:"source_hash,omitempty"`
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
+	// Additive metadata for exact saved exports; older retained rows remain valid.
+	AccountId          *string    `protobuf:"bytes,25,opt,name=account_id,json=accountId,proto3,oneof" json:"account_id,omitempty"`
+	AccountVersion     *uint64    `protobuf:"varint,26,opt,name=account_version,json=accountVersion,proto3,oneof" json:"account_version,omitempty"`
+	SupplierName       *string    `protobuf:"bytes,27,opt,name=supplier_name,json=supplierName,proto3,oneof" json:"supplier_name,omitempty"`
+	InvoiceNumber      *string    `protobuf:"bytes,28,opt,name=invoice_number,json=invoiceNumber,proto3,oneof" json:"invoice_number,omitempty"`
+	ReleasePostingDate *CivilDate `protobuf:"bytes,29,opt,name=release_posting_date,json=releasePostingDate,proto3,oneof" json:"release_posting_date,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *BasPurchaseSourceLine) Reset() {
@@ -661,6 +667,41 @@ func (x *BasPurchaseSourceLine) GetSourceRevision() uint64 {
 func (x *BasPurchaseSourceLine) GetSourceHash() []byte {
 	if x != nil {
 		return x.SourceHash
+	}
+	return nil
+}
+
+func (x *BasPurchaseSourceLine) GetAccountId() string {
+	if x != nil && x.AccountId != nil {
+		return *x.AccountId
+	}
+	return ""
+}
+
+func (x *BasPurchaseSourceLine) GetAccountVersion() uint64 {
+	if x != nil && x.AccountVersion != nil {
+		return *x.AccountVersion
+	}
+	return 0
+}
+
+func (x *BasPurchaseSourceLine) GetSupplierName() string {
+	if x != nil && x.SupplierName != nil {
+		return *x.SupplierName
+	}
+	return ""
+}
+
+func (x *BasPurchaseSourceLine) GetInvoiceNumber() string {
+	if x != nil && x.InvoiceNumber != nil {
+		return *x.InvoiceNumber
+	}
+	return ""
+}
+
+func (x *BasPurchaseSourceLine) GetReleasePostingDate() *CivilDate {
+	if x != nil {
+		return x.ReleasePostingDate
 	}
 	return nil
 }
@@ -1657,7 +1698,7 @@ const file_tammy_v1_tax_proto_rawDesc = "" +
 	"\x0fsource_revision\x18\b \x01(\x04B\a\xbaH\x042\x02(\x01R\x0esourceRevision\x12(\n" +
 	"\vsource_hash\x18\t \x01(\fB\a\xbaH\x04z\x02h R\n" +
 	"sourceHashB\r\n" +
-	"\v_payment_id\"\xf1\x1a\n" +
+	"\v_payment_id\"\xcd!\n" +
 	"\x15BasPurchaseSourceLine\x12k\n" +
 	"\n" +
 	"posting_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\tpostingId\x12*\n" +
@@ -1698,13 +1739,26 @@ const file_tammy_v1_tax_proto_rawDesc = "" +
 	"\bevidence\x18\x16 \x01(\v2#.tammy.v1.PurchaseRetainedSourceRefB\x06\xbaH\x03\xc8\x01\x01R\bevidence\x120\n" +
 	"\x0fsource_revision\x18\x17 \x01(\x04B\a\xbaH\x042\x02(\x01R\x0esourceRevision\x12(\n" +
 	"\vsource_hash\x18\x18 \x01(\fB\a\xbaH\x04z\x02h R\n" +
-	"sourceHash:\xd8\x01\xbaH\xd4\x01\x1a\xd1\x01\n" +
-	"\x1epurchase.bas.source_hash_pairs\x12EPayment and attribution identities need their immutable source hashes\x1ahhas(this.payment_id) == has(this.payment_hash) && has(this.attribution_id) == has(this.attribution_hash)B\r\n" +
+	"sourceHash\x12p\n" +
+	"\n" +
+	"account_id\x18\x19 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$H\x05R\taccountId\x88\x01\x01\x125\n" +
+	"\x0faccount_version\x18\x1a \x01(\x04B\a\xbaH\x042\x02(\x01H\x06R\x0eaccountVersion\x88\x01\x01\x122\n" +
+	"\rsupplier_name\x18\x1b \x01(\tB\b\xbaH\x05r\x03\x18\x80\x02H\aR\fsupplierName\x88\x01\x01\x124\n" +
+	"\x0einvoice_number\x18\x1c \x01(\tB\b\xbaH\x05r\x03\x18\x80\x01H\bR\rinvoiceNumber\x88\x01\x01\x12\xd4\x02\n" +
+	"\x14release_posting_date\x18\x1d \x01(\v2\x13.tammy.v1.CivilDateB\x87\x02\xbaH\x83\x02\xba\x01\xff\x01\n" +
+	"3BasPurchaseSourceLine.release_posting_date.calendar\x12)Date must exist in the Gregorian calendar\x1a\x9c\x01this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))H\tR\x12releasePostingDate\x88\x01\x01:\xe9\x02\xbaH\xe5\x02\x1a\xd1\x01\n" +
+	"\x1epurchase.bas.source_hash_pairs\x12EPayment and attribution identities need their immutable source hashes\x1ahhas(this.payment_id) == has(this.payment_hash) && has(this.attribution_id) == has(this.attribution_hash)\x1a\x8e\x01\n" +
+	"\x19purchase.bas.account_pair\x12>Retained account identity and version must be present together\x1a1has(this.account_id) == has(this.account_version)B\r\n" +
 	"\v_payment_idB\x0f\n" +
 	"\r_payment_hashB\x11\n" +
 	"\x0f_attribution_idB\x13\n" +
 	"\x11_attribution_hashB\x16\n" +
-	"\x14_actual_payment_date\"\xe1\t\n" +
+	"\x14_actual_payment_dateB\r\n" +
+	"\v_account_idB\x12\n" +
+	"\x10_account_versionB\x10\n" +
+	"\x0e_supplier_nameB\x11\n" +
+	"\x0f_invoice_numberB\x17\n" +
+	"\x15_release_posting_date\"\xe1\t\n" +
 	"\x16BasPurchaseFutureClaim\x12m\n" +
 	"\vdeferral_id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\n" +
 	"deferralId\x12u\n" +
@@ -1938,62 +1992,63 @@ var file_tammy_v1_tax_proto_depIdxs = []int32{
 	17, // 15: tammy.v1.BasPurchaseSourceLine.eligible_gst:type_name -> tammy.v1.Money
 	17, // 16: tammy.v1.BasPurchaseSourceLine.claimed_gst:type_name -> tammy.v1.Money
 	22, // 17: tammy.v1.BasPurchaseSourceLine.evidence:type_name -> tammy.v1.PurchaseRetainedSourceRef
-	23, // 18: tammy.v1.BasPurchaseFutureClaim.portion:type_name -> tammy.v1.PurchaseGstSourcePortion
-	21, // 19: tammy.v1.BasPurchaseFutureClaim.affected_period:type_name -> tammy.v1.PurchaseClaimPeriod
-	24, // 20: tammy.v1.BasPurchaseFutureClaim.timing_review:type_name -> tammy.v1.PurchaseClaimTimingReview
-	17, // 21: tammy.v1.BasPurchaseFutureClaim.allocated_deferred_gst:type_name -> tammy.v1.Money
-	25, // 22: tammy.v1.BasPurchaseFutureClaim.recorded_at:type_name -> google.protobuf.Timestamp
-	26, // 23: tammy.v1.BasPurchaseLegacyReview.source:type_name -> tammy.v1.LegacyPurchaseSourceRef
-	21, // 24: tammy.v1.BasPurchaseLegacyReview.affected_period:type_name -> tammy.v1.PurchaseClaimPeriod
-	16, // 25: tammy.v1.BasPurchaseLegacyReview.reporting_balance_date:type_name -> tammy.v1.CivilDate
-	27, // 26: tammy.v1.BasPurchaseLegacyReview.disposition:type_name -> tammy.v1.LegacyPurchaseDisposition
-	21, // 27: tammy.v1.BasPurchaseLegacyReview.previously_claimed_period:type_name -> tammy.v1.PurchaseClaimPeriod
-	22, // 28: tammy.v1.BasPurchaseLegacyReview.claim_evidence:type_name -> tammy.v1.PurchaseRetainedSourceRef
-	25, // 29: tammy.v1.BasPurchaseLegacyReview.recorded_at:type_name -> google.protobuf.Timestamp
-	2,  // 30: tammy.v1.BasPurchaseLegacySupport.kind:type_name -> tammy.v1.BasPurchaseLegacySupportKind
-	22, // 31: tammy.v1.BasPurchaseLegacySupport.source:type_name -> tammy.v1.PurchaseRetainedSourceRef
-	26, // 32: tammy.v1.BasPurchaseReview.legacy_source:type_name -> tammy.v1.LegacyPurchaseSourceRef
-	28, // 33: tammy.v1.BasPurchaseReview.status:type_name -> tammy.v1.PurchaseReviewStatus
-	21, // 34: tammy.v1.BasPurchaseReview.affected_period:type_name -> tammy.v1.PurchaseClaimPeriod
-	16, // 35: tammy.v1.BasPurchaseReview.invoice_date:type_name -> tammy.v1.CivilDate
-	16, // 36: tammy.v1.BasPurchaseReview.actual_payment_date:type_name -> tammy.v1.CivilDate
-	17, // 37: tammy.v1.BasPurchaseReview.eligible_gst:type_name -> tammy.v1.Money
-	17, // 38: tammy.v1.BasPurchaseReview.unclaimed_gst:type_name -> tammy.v1.Money
-	8,  // 39: tammy.v1.BasPurchaseReview.legacy_review:type_name -> tammy.v1.BasPurchaseLegacyReview
-	7,  // 40: tammy.v1.BasPurchaseReview.future_claim_obligation:type_name -> tammy.v1.BasPurchaseFutureClaim
-	22, // 41: tammy.v1.BasPurchaseReview.evidence:type_name -> tammy.v1.PurchaseRetainedSourceRef
-	1,  // 42: tammy.v1.BasPurchaseReview.kind:type_name -> tammy.v1.BasPurchaseReviewKind
-	16, // 43: tammy.v1.BasWorkpaper.period_start:type_name -> tammy.v1.CivilDate
-	16, // 44: tammy.v1.BasWorkpaper.period_end:type_name -> tammy.v1.CivilDate
-	0,  // 45: tammy.v1.BasWorkpaper.status:type_name -> tammy.v1.BasWorkpaperStatus
-	17, // 46: tammy.v1.BasWorkpaper.sales_g1:type_name -> tammy.v1.Money
-	17, // 47: tammy.v1.BasWorkpaper.gst_on_sales_1a:type_name -> tammy.v1.Money
-	17, // 48: tammy.v1.BasWorkpaper.gst_credits_1b:type_name -> tammy.v1.Money
-	17, // 49: tammy.v1.BasWorkpaper.net_gst_payable:type_name -> tammy.v1.Money
-	4,  // 50: tammy.v1.BasWorkpaper.sources:type_name -> tammy.v1.BasSourceLine
-	25, // 51: tammy.v1.BasWorkpaper.created_at:type_name -> google.protobuf.Timestamp
-	29, // 52: tammy.v1.BasWorkpaper.gst_basis:type_name -> tammy.v1.GstBasis
-	5,  // 53: tammy.v1.BasWorkpaper.sales_sources:type_name -> tammy.v1.BasSalesSourceLine
-	6,  // 54: tammy.v1.BasWorkpaper.purchase_sources:type_name -> tammy.v1.BasPurchaseSourceLine
-	10, // 55: tammy.v1.BasWorkpaper.purchase_reviews:type_name -> tammy.v1.BasPurchaseReview
-	17, // 56: tammy.v1.BasWorkpaper.legacy_candidate_gst:type_name -> tammy.v1.Money
-	3,  // 57: tammy.v1.BasWorkpaper.purchase_source_format:type_name -> tammy.v1.BasPurchaseSourceFormat
-	9,  // 58: tammy.v1.BasWorkpaper.legacy_purchase_support:type_name -> tammy.v1.BasPurchaseLegacySupport
-	30, // 59: tammy.v1.CreateBasDraftRequest.command_context:type_name -> tammy.v1.CommandContext
-	16, // 60: tammy.v1.CreateBasDraftRequest.period_start:type_name -> tammy.v1.CivilDate
-	16, // 61: tammy.v1.CreateBasDraftRequest.period_end:type_name -> tammy.v1.CivilDate
-	11, // 62: tammy.v1.CreateBasDraftResponse.workpaper:type_name -> tammy.v1.BasWorkpaper
-	31, // 63: tammy.v1.GetCurrentBasDraftRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	11, // 64: tammy.v1.GetCurrentBasDraftResponse.workpaper:type_name -> tammy.v1.BasWorkpaper
-	12, // 65: tammy.v1.TaxService.CreateBasDraft:input_type -> tammy.v1.CreateBasDraftRequest
-	14, // 66: tammy.v1.TaxService.GetCurrentBasDraft:input_type -> tammy.v1.GetCurrentBasDraftRequest
-	13, // 67: tammy.v1.TaxService.CreateBasDraft:output_type -> tammy.v1.CreateBasDraftResponse
-	15, // 68: tammy.v1.TaxService.GetCurrentBasDraft:output_type -> tammy.v1.GetCurrentBasDraftResponse
-	67, // [67:69] is the sub-list for method output_type
-	65, // [65:67] is the sub-list for method input_type
-	65, // [65:65] is the sub-list for extension type_name
-	65, // [65:65] is the sub-list for extension extendee
-	0,  // [0:65] is the sub-list for field type_name
+	16, // 18: tammy.v1.BasPurchaseSourceLine.release_posting_date:type_name -> tammy.v1.CivilDate
+	23, // 19: tammy.v1.BasPurchaseFutureClaim.portion:type_name -> tammy.v1.PurchaseGstSourcePortion
+	21, // 20: tammy.v1.BasPurchaseFutureClaim.affected_period:type_name -> tammy.v1.PurchaseClaimPeriod
+	24, // 21: tammy.v1.BasPurchaseFutureClaim.timing_review:type_name -> tammy.v1.PurchaseClaimTimingReview
+	17, // 22: tammy.v1.BasPurchaseFutureClaim.allocated_deferred_gst:type_name -> tammy.v1.Money
+	25, // 23: tammy.v1.BasPurchaseFutureClaim.recorded_at:type_name -> google.protobuf.Timestamp
+	26, // 24: tammy.v1.BasPurchaseLegacyReview.source:type_name -> tammy.v1.LegacyPurchaseSourceRef
+	21, // 25: tammy.v1.BasPurchaseLegacyReview.affected_period:type_name -> tammy.v1.PurchaseClaimPeriod
+	16, // 26: tammy.v1.BasPurchaseLegacyReview.reporting_balance_date:type_name -> tammy.v1.CivilDate
+	27, // 27: tammy.v1.BasPurchaseLegacyReview.disposition:type_name -> tammy.v1.LegacyPurchaseDisposition
+	21, // 28: tammy.v1.BasPurchaseLegacyReview.previously_claimed_period:type_name -> tammy.v1.PurchaseClaimPeriod
+	22, // 29: tammy.v1.BasPurchaseLegacyReview.claim_evidence:type_name -> tammy.v1.PurchaseRetainedSourceRef
+	25, // 30: tammy.v1.BasPurchaseLegacyReview.recorded_at:type_name -> google.protobuf.Timestamp
+	2,  // 31: tammy.v1.BasPurchaseLegacySupport.kind:type_name -> tammy.v1.BasPurchaseLegacySupportKind
+	22, // 32: tammy.v1.BasPurchaseLegacySupport.source:type_name -> tammy.v1.PurchaseRetainedSourceRef
+	26, // 33: tammy.v1.BasPurchaseReview.legacy_source:type_name -> tammy.v1.LegacyPurchaseSourceRef
+	28, // 34: tammy.v1.BasPurchaseReview.status:type_name -> tammy.v1.PurchaseReviewStatus
+	21, // 35: tammy.v1.BasPurchaseReview.affected_period:type_name -> tammy.v1.PurchaseClaimPeriod
+	16, // 36: tammy.v1.BasPurchaseReview.invoice_date:type_name -> tammy.v1.CivilDate
+	16, // 37: tammy.v1.BasPurchaseReview.actual_payment_date:type_name -> tammy.v1.CivilDate
+	17, // 38: tammy.v1.BasPurchaseReview.eligible_gst:type_name -> tammy.v1.Money
+	17, // 39: tammy.v1.BasPurchaseReview.unclaimed_gst:type_name -> tammy.v1.Money
+	8,  // 40: tammy.v1.BasPurchaseReview.legacy_review:type_name -> tammy.v1.BasPurchaseLegacyReview
+	7,  // 41: tammy.v1.BasPurchaseReview.future_claim_obligation:type_name -> tammy.v1.BasPurchaseFutureClaim
+	22, // 42: tammy.v1.BasPurchaseReview.evidence:type_name -> tammy.v1.PurchaseRetainedSourceRef
+	1,  // 43: tammy.v1.BasPurchaseReview.kind:type_name -> tammy.v1.BasPurchaseReviewKind
+	16, // 44: tammy.v1.BasWorkpaper.period_start:type_name -> tammy.v1.CivilDate
+	16, // 45: tammy.v1.BasWorkpaper.period_end:type_name -> tammy.v1.CivilDate
+	0,  // 46: tammy.v1.BasWorkpaper.status:type_name -> tammy.v1.BasWorkpaperStatus
+	17, // 47: tammy.v1.BasWorkpaper.sales_g1:type_name -> tammy.v1.Money
+	17, // 48: tammy.v1.BasWorkpaper.gst_on_sales_1a:type_name -> tammy.v1.Money
+	17, // 49: tammy.v1.BasWorkpaper.gst_credits_1b:type_name -> tammy.v1.Money
+	17, // 50: tammy.v1.BasWorkpaper.net_gst_payable:type_name -> tammy.v1.Money
+	4,  // 51: tammy.v1.BasWorkpaper.sources:type_name -> tammy.v1.BasSourceLine
+	25, // 52: tammy.v1.BasWorkpaper.created_at:type_name -> google.protobuf.Timestamp
+	29, // 53: tammy.v1.BasWorkpaper.gst_basis:type_name -> tammy.v1.GstBasis
+	5,  // 54: tammy.v1.BasWorkpaper.sales_sources:type_name -> tammy.v1.BasSalesSourceLine
+	6,  // 55: tammy.v1.BasWorkpaper.purchase_sources:type_name -> tammy.v1.BasPurchaseSourceLine
+	10, // 56: tammy.v1.BasWorkpaper.purchase_reviews:type_name -> tammy.v1.BasPurchaseReview
+	17, // 57: tammy.v1.BasWorkpaper.legacy_candidate_gst:type_name -> tammy.v1.Money
+	3,  // 58: tammy.v1.BasWorkpaper.purchase_source_format:type_name -> tammy.v1.BasPurchaseSourceFormat
+	9,  // 59: tammy.v1.BasWorkpaper.legacy_purchase_support:type_name -> tammy.v1.BasPurchaseLegacySupport
+	30, // 60: tammy.v1.CreateBasDraftRequest.command_context:type_name -> tammy.v1.CommandContext
+	16, // 61: tammy.v1.CreateBasDraftRequest.period_start:type_name -> tammy.v1.CivilDate
+	16, // 62: tammy.v1.CreateBasDraftRequest.period_end:type_name -> tammy.v1.CivilDate
+	11, // 63: tammy.v1.CreateBasDraftResponse.workpaper:type_name -> tammy.v1.BasWorkpaper
+	31, // 64: tammy.v1.GetCurrentBasDraftRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	11, // 65: tammy.v1.GetCurrentBasDraftResponse.workpaper:type_name -> tammy.v1.BasWorkpaper
+	12, // 66: tammy.v1.TaxService.CreateBasDraft:input_type -> tammy.v1.CreateBasDraftRequest
+	14, // 67: tammy.v1.TaxService.GetCurrentBasDraft:input_type -> tammy.v1.GetCurrentBasDraftRequest
+	13, // 68: tammy.v1.TaxService.CreateBasDraft:output_type -> tammy.v1.CreateBasDraftResponse
+	15, // 69: tammy.v1.TaxService.GetCurrentBasDraft:output_type -> tammy.v1.GetCurrentBasDraftResponse
+	68, // [68:70] is the sub-list for method output_type
+	66, // [66:68] is the sub-list for method input_type
+	66, // [66:66] is the sub-list for extension type_name
+	66, // [66:66] is the sub-list for extension extendee
+	0,  // [0:66] is the sub-list for field type_name
 }
 
 func init() { file_tammy_v1_tax_proto_init() }
