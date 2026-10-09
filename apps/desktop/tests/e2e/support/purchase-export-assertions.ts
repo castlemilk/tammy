@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import type { BasWorkpaper } from "@tammy/connect-client/tammy/v1/tax_pb.js";
+import { pdfRetainsMetadata, pdfRetainsReviewDocument } from "./purchase-pdf-provenance.js";
 import {
   exactDecimal,
   type ParsedReportCsv,
@@ -613,11 +614,15 @@ function assertPurchasePdf(pdf: string, bas: BasWorkpaper, pages: readonly strin
       amount(review.eligibleGst),
       amount(review.unclaimedGst),
     ])
-      if (token) assert.ok(normalized.includes(token), `purchase PDF is missing ${token}`);
+      if (token) {
+        assert.ok(pdfRetainsMetadata(normalized, token), `purchase PDF is missing ${token}`);
+      }
     const future = review.futureClaimObligation;
     const reviewDocumentId = review.documentId ?? future?.documentId;
     assert.ok(
-      normalized.includes(`Review document ${reviewDocumentId ?? "not retained"}`),
+      reviewDocumentId === undefined
+        ? normalized.includes("Review document not retained")
+        : pdfRetainsReviewDocument(normalized, reviewDocumentId),
       `purchase PDF is missing review document ${reviewDocumentId ?? "not retained"}`,
     );
     if (future) {
@@ -656,7 +661,9 @@ function assertPurchasePdf(pdf: string, bas: BasWorkpaper, pages: readonly strin
         future.actorUserId,
         timestamp(future.recordedAt),
       ])
-        if (token) assert.ok(normalized.includes(token), `purchase PDF is missing ${token}`);
+        if (token) {
+          assert.ok(pdfRetainsMetadata(normalized, token), `purchase PDF is missing ${token}`);
+        }
     }
     const decision = review.legacyReview;
     if (decision) {
@@ -675,7 +682,9 @@ function assertPurchasePdf(pdf: string, bas: BasWorkpaper, pages: readonly strin
         decision.claimEvidence?.sourceId ?? "",
         hash(decision.claimEvidence?.sourceHash),
       ])
-        if (token) assert.ok(normalized.includes(token), `purchase PDF is missing ${token}`);
+        if (token) {
+          assert.ok(pdfRetainsMetadata(normalized, token), `purchase PDF is missing ${token}`);
+        }
     }
     const legacySource = review.legacySource?.source;
     if (legacySource?.case === "document") {
@@ -685,14 +694,20 @@ function assertPurchasePdf(pdf: string, bas: BasWorkpaper, pages: readonly strin
         hash(legacySource.value.originalContentHash),
         hash(legacySource.value.reviewedSnapshotHash),
       ])
-        assert.ok(normalized.includes(token), `purchase PDF is missing legacy source ${token}`);
+        assert.ok(
+          pdfRetainsMetadata(normalized, token),
+          `purchase PDF is missing legacy source ${token}`,
+        );
     } else if (legacySource?.case === "openingPayable") {
       for (const token of [
         legacySource.value.openingPayableId,
         legacySource.value.sourceVersion.toString(),
         hash(legacySource.value.sourceHash),
       ])
-        assert.ok(normalized.includes(token), `purchase PDF is missing opening payable ${token}`);
+        assert.ok(
+          pdfRetainsMetadata(normalized, token),
+          `purchase PDF is missing opening payable ${token}`,
+        );
     }
   }
   for (const link of bas.legacyPurchaseSupport) {

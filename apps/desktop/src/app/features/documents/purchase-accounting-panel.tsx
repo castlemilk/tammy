@@ -473,7 +473,10 @@ export function PurchaseAccountingPanel({
                 Retained payment history · {accounting.paymentCount} total
               </h3>
               <div className="mt-2 overflow-x-auto">
-                <table className="w-full text-left text-[9px]" aria-label="Purchase payments">
+                <table
+                  className="w-full text-left text-[9px] [&_td]:align-top"
+                  aria-label="Purchase payments"
+                >
                   <thead>
                     <tr>
                       <th className="py-2 pr-3">Actual date</th>
@@ -694,7 +697,10 @@ function PurchaseProjection({
         ))}
       </dl>
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-[9px]" aria-label="Posted purchase allocations">
+        <table
+          className="w-full text-left text-[9px] [&_th]:pr-2 [&_td]:pr-2"
+          aria-label="Posted purchase allocations"
+        >
           <thead>
             <tr>
               <th>Allocation</th>
