@@ -12,6 +12,8 @@
 /.tmp/invoice-cost-table-e2e/
 /.tmp/invoice-income-bas-e2e/
 /.tmp/reporting-exports-e2e/
+/.tmp/purchase-payments-gst-e2e/
+/.tmp/purchase-e2e-inspector/
 node_modules/
 .pnpm-store/
 **/.vite/
