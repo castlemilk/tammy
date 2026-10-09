@@ -771,6 +771,7 @@ func TestSelectedPayloadDefinesClosedMappingForEveryEventType(t *testing.T) {
 		{tammyv1.AuditEventType_AUDIT_EVENT_TYPE_SIGNING_KEY_ROTATED, &tammyv1.AuditEventPayload{Payload: &tammyv1.AuditEventPayload_SigningKeyRotated{SigningKeyRotated: &tammyv1.SigningKeyRotatedEvent{}}}, "tammy.v1.SigningKeyRotatedEvent"},
 		{tammyv1.AuditEventType_AUDIT_EVENT_TYPE_WORKSPACE_RESTORED, &tammyv1.AuditEventPayload{Payload: &tammyv1.AuditEventPayload_WorkspaceRestored{WorkspaceRestored: &tammyv1.WorkspaceRestoredEvent{}}}, "tammy.v1.WorkspaceRestoredEvent"},
 		{tammyv1.AuditEventType_AUDIT_EVENT_TYPE_SBR_CHANGED, &tammyv1.AuditEventPayload{Payload: &tammyv1.AuditEventPayload_SbrChanged{SbrChanged: &tammyv1.SbrAuditEvent{}}}, "tammy.v1.SbrAuditEvent"},
+		{tammyv1.AuditEventType_AUDIT_EVENT_TYPE_PURCHASE_ACCOUNTING_CHANGED, &tammyv1.AuditEventPayload{Payload: &tammyv1.AuditEventPayload_PurchaseAccountingChanged{PurchaseAccountingChanged: &tammyv1.PurchaseAccountingChangedEvent{}}}, "tammy.v1.PurchaseAccountingChangedEvent"},
 	}
 	if len(tammyv1.AuditEventType_name) != len(testCases)+1 {
 		t.Fatalf("defined audit event enums = %d, mapped payloads = %d", len(tammyv1.AuditEventType_name)-1, len(testCases))

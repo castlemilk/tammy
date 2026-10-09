@@ -1086,8 +1086,10 @@ type BasPurchaseReview struct {
 	SourceHash            []byte                     `protobuf:"bytes,15,opt,name=source_hash,json=sourceHash,proto3" json:"source_hash,omitempty"`
 	Reason                string                     `protobuf:"bytes,16,opt,name=reason,proto3" json:"reason,omitempty"`
 	Kind                  BasPurchaseReviewKind      `protobuf:"varint,17,opt,name=kind,proto3,enum=tammy.v1.BasPurchaseReviewKind" json:"kind,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	// Retained posting document routing even when no credit source is claimed.
+	DocumentId    *string `protobuf:"bytes,18,opt,name=document_id,json=documentId,proto3,oneof" json:"document_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *BasPurchaseReview) Reset() {
@@ -1237,6 +1239,13 @@ func (x *BasPurchaseReview) GetKind() BasPurchaseReviewKind {
 		return x.Kind
 	}
 	return BasPurchaseReviewKind_BAS_PURCHASE_REVIEW_KIND_UNSPECIFIED
+}
+
+func (x *BasPurchaseReview) GetDocumentId() string {
+	if x != nil && x.DocumentId != nil {
+		return *x.DocumentId
+	}
+	return ""
 }
 
 type BasWorkpaper struct {
@@ -1811,7 +1820,7 @@ const file_tammy_v1_tax_proto_rawDesc = "" +
 	"\x04kind\x18\x02 \x01(\x0e2&.tammy.v1.BasPurchaseLegacySupportKindB\n" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x04kind\x12#\n" +
 	"\bsequence\x18\x03 \x01(\rB\a\xbaH\x04*\x02(\x01R\bsequence\x12C\n" +
-	"\x06source\x18\x04 \x01(\v2#.tammy.v1.PurchaseRetainedSourceRefB\x06\xbaH\x03\xc8\x01\x01R\x06source\"\xbe\x11\n" +
+	"\x06source\x18\x04 \x01(\v2#.tammy.v1.PurchaseRetainedSourceRefB\x06\xbaH\x03\xc8\x01\x01R\x06source\"\xc2\x12\n" +
 	"\x11BasPurchaseReview\x12K\n" +
 	"\rlegacy_source\x18\x01 \x01(\v2!.tammy.v1.LegacyPurchaseSourceRefH\x00R\flegacySource\x88\x01\x01\x12p\n" +
 	"\n" +
@@ -1841,7 +1850,9 @@ const file_tammy_v1_tax_proto_rawDesc = "" +
 	"\x06reason\x18\x10 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\x80\x04R\x06reason\x12?\n" +
 	"\x04kind\x18\x11 \x01(\x0e2\x1f.tammy.v1.BasPurchaseReviewKindB\n" +
-	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x04kindB\x10\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x04kind\x12r\n" +
+	"\vdocument_id\x18\x12 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$H\tR\n" +
+	"documentId\x88\x01\x01B\x10\n" +
 	"\x0e_legacy_sourceB\r\n" +
 	"\v_posting_idB\r\n" +
 	"\v_payment_idB\x0e\n" +
@@ -1850,7 +1861,8 @@ const file_tammy_v1_tax_proto_rawDesc = "" +
 	"\x14_actual_payment_dateB\x10\n" +
 	"\x0e_legacy_reviewB\x1a\n" +
 	"\x18_future_claim_obligationB\v\n" +
-	"\t_evidence\"\x93\r\n" +
+	"\t_evidenceB\x0e\n" +
+	"\f_document_id\"\x93\r\n" +
 	"\fBasWorkpaper\x12\\\n" +
 	"\x02id\x18\x01 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x02id\x12u\n" +
 	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12!\n" +

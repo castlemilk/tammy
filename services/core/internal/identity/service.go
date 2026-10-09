@@ -49,6 +49,20 @@ type AuditPort interface {
 	Record(context.Context, workspace.MutationExecutor, string, string) error
 }
 
+// SessionAuditPort supplies the actual proposed session and user projections
+// before their shared transaction commits. An audit adapter can record the
+// authenticated actor without reading state that has not yet been persisted.
+type SessionAuditPort interface {
+	RecordSessionStarted(context.Context, workspace.MutationExecutor, string, *tammyv1.User, *tammyv1.Session) error
+}
+
+func (service *Service) recordSessionAudit(ctx context.Context, executor workspace.MutationExecutor, operation, legacyMutation, legacySubject string, user *tammyv1.User, session *tammyv1.Session) error {
+	if typed, ok := service.audit.(SessionAuditPort); ok {
+		return typed.RecordSessionStarted(ctx, executor, operation, proto.Clone(user).(*tammyv1.User), proto.Clone(session).(*tammyv1.Session))
+	}
+	return service.audit.Record(ctx, executor, legacyMutation, legacySubject)
+}
+
 // WorkspaceSessionLifecycle joins the durable workspace state transition to
 // the identity transaction, then converges the installation catalogue after
 // commit. The Within method must use only the supplied executor and must not
@@ -391,7 +405,7 @@ func (service *Service) SignIn(ctx context.Context, request *connect.Request[tam
 		if err := service.sessionLifecycle.SessionStartedWithin(lifecycleCtx, executor, sessionID); err != nil {
 			return err
 		}
-		if err := service.audit.Record(ctx, executor, "session_started", sessionID); err != nil {
+		if err := service.recordSessionAudit(ctx, executor, "tammy.v1.IdentityService.SignIn", "session_started", sessionID, userProjection(record, *current), sessionProjection(session)); err != nil {
 			return err
 		}
 		if err := service.sessionLifecycle.SessionStartedAuditedWithin(lifecycleCtx, executor); err != nil {
@@ -599,7 +613,7 @@ func (service *Service) ActivateUser(ctx context.Context, request *connect.Reque
 		if err := service.sessionLifecycle.SessionStartedWithin(lifecycleCtx, executor, sessionID); err != nil {
 			return err
 		}
-		if err := service.audit.Record(ctx, executor, "user_activated", record.ID); err != nil {
+		if err := service.recordSessionAudit(ctx, executor, "tammy.v1.IdentityService.ActivateUser", "user_activated", record.ID, userProjection(record, *current), sessionProjection(session)); err != nil {
 			return err
 		}
 		if err := service.sessionLifecycle.SessionStartedAuditedWithin(lifecycleCtx, executor); err != nil {

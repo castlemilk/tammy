@@ -194,6 +194,11 @@ func TestPurchaseBASMaximalUnicodeSnapshotFailsBeforeSave(t *testing.T) {
 			line.Clear(line.Descriptor().Fields().ByName(name))
 		}
 	}
+	reviews := older.Get(older.Descriptor().Fields().ByName("purchase_reviews")).List()
+	for i := 0; i < reviews.Len(); i++ {
+		row := reviews.Get(i).Message()
+		row.Clear(row.Descriptor().Fields().ByName("document_id"))
+	}
 	if size := proto.Size(older.Interface()); size != 13060275 {
 		t.Fatalf("original Task-one maximal Unicode bytes changed: %d", size)
 	}

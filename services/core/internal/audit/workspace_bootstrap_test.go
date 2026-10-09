@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -14,7 +15,10 @@ import (
 
 	tammyv1 "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1"
 	"github.com/tammyapp/tammy/services/core/internal/platform/clock"
+	"github.com/tammyapp/tammy/services/core/internal/storage/sqlcipher"
 	"github.com/tammyapp/tammy/services/core/internal/workspace"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type boundedInitialMirrorExecutor struct {
@@ -150,7 +154,8 @@ func TestWorkspaceAuditAdapterBootstrapsChainAndEncryptedSigningKeyInCallerTrans
 			}
 		}
 		if mutation.Kind == "SESSION_STARTED" {
-			identityEvent, identityPayload := integrationAuditEvent("01890f60-4d6d-7c12-8f02-6c9129d5b108")
+			identityEvent, identityPayload := initialAdministratorIdentityEvent(workspaceID, "01890f60-4d6d-7c12-8f02-6c9129d5b006", mutation.OperationID, now)
+			identityEvent.Id = "01890f60-4d6d-7c12-8f02-6c9129d5b108"
 			if _, err := adapter.AppendInitialAdministratorAudit(ctx, transaction, setupID, identityEvent, identityPayload); err != nil {
 				t.Fatal(err)
 			}
@@ -227,7 +232,8 @@ func TestWorkspaceAuditAdapterRepairsInitialMirrorAfterCommittedSignInCallbackCr
 			t.Fatal(err)
 		}
 	}
-	identityEvent, identityPayload := integrationAuditEvent("01890f60-4d6d-7c12-8f02-6c9129d5b124")
+	identityEvent, identityPayload := initialAdministratorIdentityEvent(workspaceID, "01890f60-4d6d-7c12-8f02-6c9129d5b006", operationIDs[2], now)
+	identityEvent.Id = "01890f60-4d6d-7c12-8f02-6c9129d5b124"
 	if _, err := adapter.AppendInitialAdministratorAudit(ctx, transaction, setupID, identityEvent, identityPayload); err != nil {
 		t.Fatal(err)
 	}
@@ -259,6 +265,166 @@ func TestWorkspaceAuditAdapterRepairsInitialMirrorAfterCommittedSignInCallbackCr
 		t.Fatalf("restarted decision=%v baseline=%v lifecycle=%v saves=%d writable=%v",
 			decision, store.baseline, store.lifecycle, store.saves, restartedGate.Writable())
 	}
+}
+
+func TestInitialAdministratorProofSurvivesCommittedLockUnlockAfterSignIn(t *testing.T) {
+	ctx := context.Background()
+	database := newEncryptedAuditDatabase(t)
+	now := time.Date(2026, 8, 4, 7, 30, 0, 0, time.UTC)
+	store := &memoryMirrorStore{}
+	gate := NewWriteGate()
+	identifiers := []string{
+		"01890f60-4d6d-7c12-8f02-6c9129d5b131", // CREATE event
+		"01890f60-4d6d-7c12-8f02-6c9129d5b132", // recovery event
+		"01890f60-4d6d-7c12-8f02-6c9129d5b133", // initial workspace session event
+		"01890f60-4d6d-7c12-8f02-6c9129d5b134", // LOCK event
+		"01890f60-4d6d-7c12-8f02-6c9129d5b135", // UNLOCK event
+	}
+	adapter, err := NewWorkspaceAuditAdapter(WorkspaceAuditAdapterConfig{Clock: clock.Func(func() time.Time { return now }),
+		Random: bytes.NewReader(bytes.Repeat([]byte{0x53}, 256)), NewID: func() (string, error) { id := identifiers[0]; identifiers = identifiers[1:]; return id, nil },
+		SchemaFingerprint: bytes.Repeat([]byte{0x44}, sha256.Size), Mirror: store, Gate: gate})
+	if err != nil {
+		t.Fatal(err)
+	}
+	workspaceID := "01890f60-4d6d-7c12-8f02-6c9129d5b001"
+	setupID := "01890f60-4d6d-7c12-8f02-6c9129d5b121"
+	recoveryID := "01890f60-4d6d-7c12-8f02-6c9129d5b122"
+	userID := "01890f60-4d6d-7c12-8f02-6c9129d5b126"
+	sessionID := "01890f60-4d6d-7c12-8f02-6c9129d5b127"
+	if err := adapter.BeginInitialMirrorLifecycle(ctx, workspaceID, setupID); err != nil {
+		t.Fatal(err)
+	}
+
+	raw, err := database.BeginEncryptedTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	if err != nil {
+		t.Fatal(err)
+	}
+	transaction := &auditLifecycleTransaction{Transaction: raw}
+	if _, err := adapter.BootstrapWorkspaceAudit(ctx, transaction, workspaceID, bytes.Repeat([]byte{0x62}, 32), now); err != nil {
+		t.Fatal(err)
+	}
+	for index, kind := range []string{"CREATE", "RECOVERY_CONFIRMATION", "SESSION_STARTED"} {
+		operationID := []string{setupID, recoveryID, sessionID}[index]
+		if err := adapter.AppendWorkspaceMutation(ctx, transaction, workspace.WorkspaceMutation{OperationID: operationID, Kind: kind,
+			WorkspaceID: workspaceID, Version: 1, SemanticHash: "3123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}); err != nil {
+			t.Fatalf("append initial %s transition: %v", kind, err)
+		}
+	}
+	identityEvent, identityPayload := initialAdministratorIdentityEvent(workspaceID, userID, sessionID, now)
+	if _, err := adapter.AppendInitialAdministratorAudit(ctx, transaction, setupID, identityEvent, identityPayload); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeInitialWorkspaceRecord(ctx, transaction, workspaceID, setupID, 1,
+		tammyv1.WorkspaceState_WORKSPACE_STATE_AUTHENTICATED); err != nil {
+		t.Fatal(err)
+	}
+	if err := adapter.EstablishInitialMirror(ctx, transaction, workspaceID, setupID); err != nil {
+		t.Fatalf("first-admin sign-in should register its post-commit publication: %v", err)
+	}
+	if len(transaction.afterCommit) != 1 {
+		t.Fatalf("sign-in registered %d post-commit publications, want 1", len(transaction.afterCommit))
+	}
+	// Commit the real SQL chain but skip its callback, matching a process crash
+	// after the session transaction commits and before the OS baseline is saved.
+	if err := transaction.Transaction.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	if store.saves != 0 {
+		t.Fatal("crash simulation unexpectedly published the initial OS baseline")
+	}
+
+	appendInitialSecurityTransition(t, ctx, database, adapter, workspaceID, setupID, "LOCK",
+		tammyv1.WorkspaceState_WORKSPACE_STATE_AUTHENTICATED, tammyv1.WorkspaceState_WORKSPACE_STATE_LOCKED,
+		"01890f60-4d6d-7c12-8f02-6c9129d5b128")
+	appendInitialSecurityTransition(t, ctx, database, adapter, workspaceID, setupID, "UNLOCK",
+		tammyv1.WorkspaceState_WORKSPACE_STATE_LOCKED, tammyv1.WorkspaceState_WORKSPACE_STATE_UNAUTHENTICATED,
+		"01890f60-4d6d-7c12-8f02-6c9129d5b129")
+
+	header, err := LoadChainHeader(ctx, database, workspaceID, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !initialAdministratorAuditComplete(ctx, database, header) {
+		t.Fatal("validated initial administrator-session proof was lost after real LOCK/UNLOCK transitions")
+	}
+	verifier, err := NewSQLMirrorVerifier(&auditServiceTransactions{database: database, workspaceID: workspaceID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	verified, err := verifier.VerifyFull(ctx, workspaceID, header.Generation)
+	if err != nil || !verified.InitialAdministratorSessionComplete {
+		t.Fatalf("production verifier lost initial session evidence after LOCK/UNLOCK: complete=%v err=%v", verified.InitialAdministratorSessionComplete, err)
+	}
+	restartedGate := NewWriteGate()
+	decision, err := NewMirrorReconciler(store, verifier, restartedGate).Open(ctx,
+		&tammyv1.AuditMirrorBaseline{WorkspaceId: workspaceID, Generation: header.Generation,
+			Sequence: header.CurrentSequence, Head: append([]byte(nil), header.CurrentHead[:]...)})
+	if err != nil || decision != MirrorDecisionInitialEstablished || !restartedGate.Writable() ||
+		store.lifecycle == nil || store.lifecycle.Phase != InitialMirrorEstablished || store.baseline == nil ||
+		store.baseline.Sequence != header.CurrentSequence || !bytes.Equal(store.baseline.Head, header.CurrentHead[:]) {
+		t.Fatalf("restart did not repair the install-bound baseline after LOCK/UNLOCK: decision=%v gate=%v lifecycle=%v baseline=%v err=%v",
+			decision, restartedGate.Writable(), store.lifecycle, store.baseline, err)
+	}
+}
+
+func appendInitialSecurityTransition(t *testing.T, ctx context.Context, database *sqlcipher.Database, adapter *WorkspaceAuditAdapter,
+	workspaceID, setupID, kind string, from, to tammyv1.WorkspaceState, operationID string) {
+	t.Helper()
+	raw, err := database.BeginEncryptedTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	if err != nil {
+		t.Fatal(err)
+	}
+	transaction := &auditLifecycleTransaction{Transaction: raw}
+	if err := writeInitialWorkspaceRecord(ctx, transaction, workspaceID, setupID, 1, from); err != nil {
+		t.Fatal(err)
+	}
+	if err := adapter.AppendWorkspaceMutation(ctx, transaction, workspace.WorkspaceMutation{OperationID: operationID, Kind: kind,
+		WorkspaceID: workspaceID, Version: 1, SemanticHash: "4123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}); err != nil {
+		t.Fatalf("append initial %s transition: %v", kind, err)
+	}
+	if err := writeInitialWorkspaceRecord(ctx, transaction, workspaceID, setupID, 1, to); err != nil {
+		t.Fatal(err)
+	}
+	if err := transaction.Transaction.Commit(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func writeInitialWorkspaceRecord(ctx context.Context, executor Executor, workspaceID, setupID string, version uint64,
+	state tammyv1.WorkspaceState) error {
+	body, err := json.Marshal(struct {
+		ID      string
+		Version uint64
+		State   tammyv1.WorkspaceState
+		SetupID string
+	}{ID: workspaceID, Version: version, State: state, SetupID: setupID})
+	if err != nil {
+		return err
+	}
+	_, err = executor.ExecContext(ctx, `INSERT INTO workspace_metadata(key,value,revision,updated_at) VALUES(?,?,1,?)
+		ON CONFLICT(key) DO UPDATE SET value=excluded.value,revision=workspace_metadata.revision+1,updated_at=excluded.updated_at`,
+		"workspace.record.v1", body, time.Date(2026, 8, 4, 7, 30, 0, 0, time.UTC).Format(time.RFC3339Nano))
+	return err
+}
+
+func initialAdministratorIdentityEvent(workspaceID, userID, sessionID string, now time.Time) (*tammyv1.AuditEvent, []byte) {
+	payload := &tammyv1.UserStateChangedEvent{UserId: userID,
+		FromState: tammyv1.UserState_USER_STATE_ACTIVE, ToState: tammyv1.UserState_USER_STATE_ACTIVE, ReasonCode: "SIGN_IN"}
+	payloadProto, _ := proto.MarshalOptions{Deterministic: true}.Marshal(payload)
+	commandID := sessionID
+	sessionHash := bytes.Repeat([]byte{0x66}, sha256.Size)
+	userHash := bytes.Repeat([]byte{0x67}, sha256.Size)
+	return &tammyv1.AuditEvent{
+		Id: "01890f60-4d6d-7c12-8f02-6c9129d5b130", WorkspaceId: workspaceID,
+		Type: tammyv1.AuditEventType_AUDIT_EVENT_TYPE_USER_STATE_CHANGED, OccurredAt: timestamppb.New(now),
+		Actor:                    &tammyv1.AuthenticationContext{ActorUserId: userID, SessionId: sessionID},
+		Source:                   &tammyv1.SourceRef{Type: "identity_session", Id: sessionID, Revision: 1, ContentHash: sessionHash},
+		AffectedResources:        []*tammyv1.SourceRef{{Type: "identity_user", Id: userID, Revision: 1, ContentHash: userHash}},
+		Payload:                  &tammyv1.AuditEventPayload{Payload: &tammyv1.AuditEventPayload_UserStateChanged{UserStateChanged: payload}},
+		PayloadSchemaFingerprint: bytes.Repeat([]byte{0x44}, sha256.Size), CommandId: &commandID,
+		CommandType: "tammy.v1.IdentityService.SignIn",
+		Result:      &tammyv1.AuditResultMetadata{TypeName: "tammy.v1.SignInResponse", DeterministicSha256: bytes.Repeat([]byte{0x68}, sha256.Size), OutcomeCode: "SUCCESS"},
+	}, payloadProto
 }
 
 func TestRestartedInitialSignInBeforeReconcileCannotOverwriteMirrorAhead(t *testing.T) {

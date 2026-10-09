@@ -13,7 +13,10 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
+	tammyv1 "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1"
+	"github.com/tammyapp/tammy/services/core/internal/reporting"
 	"github.com/tammyapp/tammy/services/core/internal/storage/migrations"
 	"github.com/tammyapp/tammy/services/core/internal/storage/sqlcipher"
 	"github.com/tammyapp/tammy/services/core/internal/workspace"
@@ -24,7 +27,7 @@ type historicalSchemaObject struct{ kind, name, table, statement string }
 // Reconstruct a test-created workspace on a genuine migration prefix. Only the
 // destination's retained columns are copied; source schema/migration rows never
 // enter the historical fixture. All key handling stays in this test file.
-func replaceWorkspaceWithHistoricalPrefix(t *testing.T, ctx context.Context, root string, passphrase []byte, target uint32) {
+func replaceWorkspaceWithHistoricalPrefix(t *testing.T, ctx context.Context, root string, passphrase []byte, target uint32, template *tammyv1.BasWorkpaper) *tammyv1.BasWorkpaper {
 	t.Helper()
 	key := historicalFixtureDEK(t, root, passphrase)
 	defer workspace.Zero(key)
@@ -58,6 +61,23 @@ func replaceWorkspaceWithHistoricalPrefix(t *testing.T, ctx context.Context, roo
 		}
 	}
 	transplantHistoricalRows(t, ctx, source, destination, pristine)
+	// Capture a genuinely historical source shape on the actual prefix, rather
+	// than downgrading a reconciled-v1 snapshot into tables that cannot retain it.
+	tx, err := destination.BeginEncryptedTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	repository, err := reporting.NewRepository(tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	legacy, err := repository.CreateBASDraft(ctx, "018f0000-0000-7000-8000-000000000f13", "018f0000-0000-7000-8000-000000000f14", template.OrganisationId, template.PeriodStart, template.PeriodEnd, time.Now().UTC())
+	if err != nil || legacy.PurchaseSourceFormat != nil || len(legacy.PurchaseReviews) != 0 {
+		t.Fatalf("historical workpaper source shape = %v, %v", legacy, err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
 	if !reflect.DeepEqual(pristine, historicalSchemaSnapshot(t, ctx, destination)) {
 		t.Fatal("fixture schema differs from pristine migration prefix")
 	}
@@ -101,6 +121,7 @@ func replaceWorkspaceWithHistoricalPrefix(t *testing.T, ctx context.Context, roo
 			t.Fatal(err)
 		}
 	}
+	return legacy
 }
 
 func historicalFixtureDEK(t *testing.T, root string, passphrase []byte) []byte {
@@ -170,7 +191,7 @@ func transplantHistoricalRows(t *testing.T, ctx context.Context, source, destina
 	}
 	var tables []tableRows
 	for _, object := range schema {
-		if object.kind != "table" || object.name == "schema_migrations" {
+		if object.kind != "table" || object.name == "schema_migrations" || strings.HasPrefix(object.name, "bas_workpaper") {
 			continue
 		}
 		quoted := historicalIdentifier(object.name)

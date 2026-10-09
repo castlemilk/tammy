@@ -66,6 +66,32 @@ enum AuditEventType {
 
   // AUDIT_EVENT_TYPE_SBR_CHANGED records one redacted SBR readiness or helper lifecycle event.
   AUDIT_EVENT_TYPE_SBR_CHANGED = 17;
+
+  // AUDIT_EVENT_TYPE_PURCHASE_ACCOUNTING_CHANGED records one accepted purchase mutation.
+  AUDIT_EVENT_TYPE_PURCHASE_ACCOUNTING_CHANGED = 18;
+}
+
+// PurchaseAuditAction distinguishes accepted purchase mutations without retaining evidence content.
+enum PurchaseAuditAction {
+  PURCHASE_AUDIT_ACTION_UNSPECIFIED = 0;
+  PURCHASE_AUDIT_ACTION_POSTED = 1;
+  PURCHASE_AUDIT_ACTION_PAYMENT_RECORDED = 2;
+  PURCHASE_AUDIT_ACTION_TAX_EVIDENCE_RECORDED = 3;
+  PURCHASE_AUDIT_ACTION_GST_ATTRIBUTED = 4;
+  PURCHASE_AUDIT_ACTION_GST_DEFERRED = 5;
+  PURCHASE_AUDIT_ACTION_LEGACY_REVIEW_RESOLVED = 6;
+}
+
+// PurchaseAccountingChangedEvent records the accepted command kind and exact
+// committed revisions. AuditEvent retains the actor, source hashes, affected
+// resources and complete response commitment; private evidence remains owned.
+message PurchaseAccountingChangedEvent {
+  PurchaseAuditAction action = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  uint64 accounting_version = 2 [(buf.validate.field).uint64.gte = 1];
+  uint64 financial_revision = 3 [(buf.validate.field).uint64.gte = 1];
 }
 
 // SbrAuditAction is the closed redacted SBR audit lifecycle.
@@ -421,5 +447,8 @@ message AuditEventPayload {
 
     // sbr_changed records one redacted local SBR readiness transition.
     SbrAuditEvent sbr_changed = 17;
+
+    // purchase_accounting_changed records one accepted owned purchase mutation.
+    PurchaseAccountingChangedEvent purchase_accounting_changed = 18;
   }
 }

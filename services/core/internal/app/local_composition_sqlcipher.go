@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/tammyapp/tammy/services/core/internal/audit"
 	"github.com/tammyapp/tammy/services/core/internal/authorisation"
 	"github.com/tammyapp/tammy/services/core/internal/buildinfo"
 	tammyv1 "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1"
@@ -48,6 +49,7 @@ type LocalCompositionConfig struct {
 	Root           string
 	AttemptAnchors workspace.AnchorStore
 	Modules        []LocalWorkspaceModule
+	AuditMirror    audit.MirrorStore
 }
 
 // LocalModuleIdentity is the narrow authenticated identity capability exposed
@@ -62,12 +64,16 @@ type LocalModuleIdentity interface {
 }
 
 type LocalWorkspaceActivation struct {
-	Database        *sqlcipher.Database
-	WorkspaceID     string
-	Identity        LocalModuleIdentity
-	InstallationKey []byte
-	Now             func() time.Time
-	NewID           func() (string, error)
+	Database               *sqlcipher.Database
+	WorkspaceID            string
+	Identity               LocalModuleIdentity
+	InstallationKey        []byte
+	Now                    func() time.Time
+	NewID                  func() (string, error)
+	AuditAppender          *audit.Appender
+	AuditGate              *audit.WriteGate
+	AuditSchemaFingerprint []byte
+	ReconcileAuditWithin   func(context.Context, workspace.MutationExecutor) error
 }
 
 // LocalWorkspaceModule contributes generated routes at construction and binds
@@ -94,18 +100,6 @@ func (resolver localCapabilityResolver) Resolve(_ context.Context, reference *ta
 	default:
 		return "", ErrComposition
 	}
-}
-
-type localIdentityAudit struct{}
-
-func (localIdentityAudit) Record(context.Context, workspace.MutationExecutor, string, string) error {
-	return nil
-}
-
-type localWorkspaceAudit struct{}
-
-func (localWorkspaceAudit) AppendWorkspaceMutation(context.Context, workspace.MutationExecutor, workspace.WorkspaceMutation) error {
-	return nil
 }
 
 type localOrganisationImpact struct{}
@@ -320,6 +314,7 @@ type localRuntime struct {
 	identityFactorKey  []byte
 	sbrInstallationKey []byte
 	modules            []LocalWorkspaceModule
+	audit              *localAuditRuntime
 }
 
 type localWorkspaceHandler struct {
@@ -385,6 +380,9 @@ func (runtime *localRuntime) activate(workspaceID string) error {
 	if err != nil {
 		return err
 	}
+	if err := runtime.audit.activate(context.Background(), database, workspaceID, runtime.clock.Now().UTC()); err != nil {
+		return err
+	}
 	repository, err := identity.NewDatabaseRepository(database)
 	if err != nil {
 		return err
@@ -392,7 +390,7 @@ func (runtime *localRuntime) activate(workspaceID string) error {
 	service, err := identity.NewService(identity.Config{
 		Repository: repository, Passwords: runtime.passwords, Clock: runtime.clock, Random: rand.Reader,
 		IDs: runtime.ids, Attempts: runtime.identityAttempts, FactorEncryptionKey: append([]byte(nil), runtime.identityFactorKey...),
-		Audit: localIdentityAudit{}, SessionLifecycle: localSessionLifecycle{service: &runtime.workspace},
+		Audit: localIdentityAudit{runtime.audit}, SessionLifecycle: localSessionLifecycle{service: &runtime.workspace},
 	})
 	if err != nil {
 		return err
@@ -419,6 +417,11 @@ func (runtime *localRuntime) activate(workspaceID string) error {
 		Database: database, WorkspaceID: workspaceID, Identity: runtime.bridge,
 		InstallationKey: append([]byte(nil), runtime.sbrInstallationKey...),
 		Now:             runtime.clock.Now, NewID: runtime.ids.New,
+		AuditAppender: runtime.audit.appender, AuditGate: runtime.audit.gate,
+		AuditSchemaFingerprint: append([]byte(nil), runtime.audit.fingerprint[:]...),
+		ReconcileAuditWithin: func(ctx context.Context, executor workspace.MutationExecutor) error {
+			return runtime.audit.openWithin(ctx, executor, workspaceID)
+		},
 	}
 	for _, module := range runtime.modules {
 		if module == nil || module.Activate(activation) != nil {
@@ -515,10 +518,15 @@ func NewLocalComposition(config LocalCompositionConfig) (*Composition, error) {
 	runtime := &localRuntime{passwords: passwords, clock: source, ids: generator, modules: modules,
 		workspaceAttempts: workspaceAttempts, identityAttempts: identityAttempts,
 		identityFactorKey: deriveLocalKey(master, "identity-factor"), sbrInstallationKey: deriveLocalKey(master, "sbr-scope")}
+	runtime.audit, err = newLocalAuditRuntime(config.AuditMirror, source, generator.New)
+	if err != nil {
+		_ = runtime.Close()
+		return nil, err
+	}
 	bootstrapIdentity, err := identity.NewService(identity.Config{
 		Repository: identity.NewMemoryRepository(), Passwords: passwords, Clock: source, Random: rand.Reader,
 		IDs: generator, Attempts: identityAttempts, FactorEncryptionKey: append([]byte(nil), runtime.identityFactorKey...),
-		Audit: localIdentityAudit{}, SessionLifecycle: localSessionLifecycle{service: &runtime.workspace},
+		Audit: localIdentityAudit{runtime.audit}, SessionLifecycle: localSessionLifecycle{service: &runtime.workspace},
 	})
 	if err != nil {
 		_ = runtime.Close()
@@ -532,7 +540,7 @@ func NewLocalComposition(config LocalCompositionConfig) (*Composition, error) {
 		Repository:   catalogue,
 		Capabilities: localCapabilityResolver{directory: workspaceDirectory, database: filepath.Join(workspaceDirectory, "tammy-workspace.db")},
 		Storage:      workspace.NewSQLCipherStorageFactory(localMigrationTarget), Identity: runtime.bridge,
-		Audit: localWorkspaceAudit{}, OrganisationImpact: localOrganisationImpact{}, Passwords: passwords,
+		Audit: localWorkspaceAudit{runtime.audit}, OrganisationImpact: localOrganisationImpact{}, Passwords: passwords,
 		RememberedKeys: remembered, Attempts: workspaceAttempts, Clock: source, IDs: generator,
 		HeaderAuthenticationKey: deriveLocalKey(master, "workspace-header"), InstallationKey: deriveLocalKey(master, "workspace-installation"),
 	})

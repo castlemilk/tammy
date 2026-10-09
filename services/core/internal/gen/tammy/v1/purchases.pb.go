@@ -3019,16 +3019,110 @@ func (x *GetPurchaseAccountingRequest) GetDocumentId() string {
 	return ""
 }
 
-type GetPurchaseAccountingResponse struct {
+// Complete bounded core-discovered duplicate matches for a reviewed unposted source.
+type PurchaseDuplicateMatch struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Accounting    *PurchaseAccounting    `protobuf:"bytes,1,opt,name=accounting,proto3" json:"accounting,omitempty"`
+	Posting       *SourceRef             `protobuf:"bytes,1,opt,name=posting,proto3" json:"posting,omitempty"`
+	DocumentId    string                 `protobuf:"bytes,2,opt,name=document_id,json=documentId,proto3" json:"document_id,omitempty"`
+	SupplierName  string                 `protobuf:"bytes,3,opt,name=supplier_name,json=supplierName,proto3" json:"supplier_name,omitempty"`
+	InvoiceNumber string                 `protobuf:"bytes,4,opt,name=invoice_number,json=invoiceNumber,proto3" json:"invoice_number,omitempty"`
+	InvoiceDate   *CivilDate             `protobuf:"bytes,5,opt,name=invoice_date,json=invoiceDate,proto3" json:"invoice_date,omitempty"`
+	Gross         *Money                 `protobuf:"bytes,6,opt,name=gross,proto3" json:"gross,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
+func (x *PurchaseDuplicateMatch) Reset() {
+	*x = PurchaseDuplicateMatch{}
+	mi := &file_tammy_v1_purchases_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PurchaseDuplicateMatch) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PurchaseDuplicateMatch) ProtoMessage() {}
+
+func (x *PurchaseDuplicateMatch) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_purchases_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PurchaseDuplicateMatch.ProtoReflect.Descriptor instead.
+func (*PurchaseDuplicateMatch) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_purchases_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *PurchaseDuplicateMatch) GetPosting() *SourceRef {
+	if x != nil {
+		return x.Posting
+	}
+	return nil
+}
+
+func (x *PurchaseDuplicateMatch) GetDocumentId() string {
+	if x != nil {
+		return x.DocumentId
+	}
+	return ""
+}
+
+func (x *PurchaseDuplicateMatch) GetSupplierName() string {
+	if x != nil {
+		return x.SupplierName
+	}
+	return ""
+}
+
+func (x *PurchaseDuplicateMatch) GetInvoiceNumber() string {
+	if x != nil {
+		return x.InvoiceNumber
+	}
+	return ""
+}
+
+func (x *PurchaseDuplicateMatch) GetInvoiceDate() *CivilDate {
+	if x != nil {
+		return x.InvoiceDate
+	}
+	return nil
+}
+
+func (x *PurchaseDuplicateMatch) GetGross() *Money {
+	if x != nil {
+		return x.Gross
+	}
+	return nil
+}
+
+type GetPurchaseAccountingResponse struct {
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	Accounting *PurchaseAccounting    `protobuf:"bytes,1,opt,name=accounting,proto3" json:"accounting,omitempty"`
+	// One verified current evidence record lets a reopened panel select its
+	// retained ID without embedding the complete accounting history. Unposted
+	// documents have no purchase evidence record.
+	LatestEvidence *PurchaseTaxEvidence `protobuf:"bytes,2,opt,name=latest_evidence,json=latestEvidence,proto3,oneof" json:"latest_evidence,omitempty"`
+	// The most recent immutable decision is recoverable before a BAS draft is
+	// regenerated. Complete earlier decisions remain in BAS source capture;
+	// this retained amount does not imply the portion is still unclaimed.
+	LatestDeferral      *PurchaseGstDeferral      `protobuf:"bytes,3,opt,name=latest_deferral,json=latestDeferral,proto3,oneof" json:"latest_deferral,omitempty"`
+	DuplicateCandidates []*PurchaseDuplicateMatch `protobuf:"bytes,4,rep,name=duplicate_candidates,json=duplicateCandidates,proto3" json:"duplicate_candidates,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
 func (x *GetPurchaseAccountingResponse) Reset() {
 	*x = GetPurchaseAccountingResponse{}
-	mi := &file_tammy_v1_purchases_proto_msgTypes[25]
+	mi := &file_tammy_v1_purchases_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3040,7 +3134,7 @@ func (x *GetPurchaseAccountingResponse) String() string {
 func (*GetPurchaseAccountingResponse) ProtoMessage() {}
 
 func (x *GetPurchaseAccountingResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_purchases_proto_msgTypes[25]
+	mi := &file_tammy_v1_purchases_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3053,12 +3147,33 @@ func (x *GetPurchaseAccountingResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPurchaseAccountingResponse.ProtoReflect.Descriptor instead.
 func (*GetPurchaseAccountingResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_purchases_proto_rawDescGZIP(), []int{25}
+	return file_tammy_v1_purchases_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *GetPurchaseAccountingResponse) GetAccounting() *PurchaseAccounting {
 	if x != nil {
 		return x.Accounting
+	}
+	return nil
+}
+
+func (x *GetPurchaseAccountingResponse) GetLatestEvidence() *PurchaseTaxEvidence {
+	if x != nil {
+		return x.LatestEvidence
+	}
+	return nil
+}
+
+func (x *GetPurchaseAccountingResponse) GetLatestDeferral() *PurchaseGstDeferral {
+	if x != nil {
+		return x.LatestDeferral
+	}
+	return nil
+}
+
+func (x *GetPurchaseAccountingResponse) GetDuplicateCandidates() []*PurchaseDuplicateMatch {
+	if x != nil {
+		return x.DuplicateCandidates
 	}
 	return nil
 }
@@ -3079,7 +3194,7 @@ type PostReviewedPurchaseRequest struct {
 
 func (x *PostReviewedPurchaseRequest) Reset() {
 	*x = PostReviewedPurchaseRequest{}
-	mi := &file_tammy_v1_purchases_proto_msgTypes[26]
+	mi := &file_tammy_v1_purchases_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3091,7 +3206,7 @@ func (x *PostReviewedPurchaseRequest) String() string {
 func (*PostReviewedPurchaseRequest) ProtoMessage() {}
 
 func (x *PostReviewedPurchaseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_purchases_proto_msgTypes[26]
+	mi := &file_tammy_v1_purchases_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3104,7 +3219,7 @@ func (x *PostReviewedPurchaseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PostReviewedPurchaseRequest.ProtoReflect.Descriptor instead.
 func (*PostReviewedPurchaseRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_purchases_proto_rawDescGZIP(), []int{26}
+	return file_tammy_v1_purchases_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *PostReviewedPurchaseRequest) GetCommandContext() *CommandContext {
@@ -3174,7 +3289,7 @@ type PostReviewedPurchaseResponse struct {
 
 func (x *PostReviewedPurchaseResponse) Reset() {
 	*x = PostReviewedPurchaseResponse{}
-	mi := &file_tammy_v1_purchases_proto_msgTypes[27]
+	mi := &file_tammy_v1_purchases_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3186,7 +3301,7 @@ func (x *PostReviewedPurchaseResponse) String() string {
 func (*PostReviewedPurchaseResponse) ProtoMessage() {}
 
 func (x *PostReviewedPurchaseResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_purchases_proto_msgTypes[27]
+	mi := &file_tammy_v1_purchases_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3199,7 +3314,7 @@ func (x *PostReviewedPurchaseResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PostReviewedPurchaseResponse.ProtoReflect.Descriptor instead.
 func (*PostReviewedPurchaseResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_purchases_proto_rawDescGZIP(), []int{27}
+	return file_tammy_v1_purchases_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *PostReviewedPurchaseResponse) GetPosting() *PurchasePosting {
@@ -3239,7 +3354,7 @@ type RecordPurchasePaymentRequest struct {
 
 func (x *RecordPurchasePaymentRequest) Reset() {
 	*x = RecordPurchasePaymentRequest{}
-	mi := &file_tammy_v1_purchases_proto_msgTypes[28]
+	mi := &file_tammy_v1_purchases_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3251,7 +3366,7 @@ func (x *RecordPurchasePaymentRequest) String() string {
 func (*RecordPurchasePaymentRequest) ProtoMessage() {}
 
 func (x *RecordPurchasePaymentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_purchases_proto_msgTypes[28]
+	mi := &file_tammy_v1_purchases_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3264,7 +3379,7 @@ func (x *RecordPurchasePaymentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RecordPurchasePaymentRequest.ProtoReflect.Descriptor instead.
 func (*RecordPurchasePaymentRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_purchases_proto_rawDescGZIP(), []int{28}
+	return file_tammy_v1_purchases_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *RecordPurchasePaymentRequest) GetCommandContext() *CommandContext {
@@ -3334,7 +3449,7 @@ type RecordPurchasePaymentResponse struct {
 
 func (x *RecordPurchasePaymentResponse) Reset() {
 	*x = RecordPurchasePaymentResponse{}
-	mi := &file_tammy_v1_purchases_proto_msgTypes[29]
+	mi := &file_tammy_v1_purchases_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3346,7 +3461,7 @@ func (x *RecordPurchasePaymentResponse) String() string {
 func (*RecordPurchasePaymentResponse) ProtoMessage() {}
 
 func (x *RecordPurchasePaymentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_purchases_proto_msgTypes[29]
+	mi := &file_tammy_v1_purchases_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3359,7 +3474,7 @@ func (x *RecordPurchasePaymentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RecordPurchasePaymentResponse.ProtoReflect.Descriptor instead.
 func (*RecordPurchasePaymentResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_purchases_proto_rawDescGZIP(), []int{29}
+	return file_tammy_v1_purchases_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *RecordPurchasePaymentResponse) GetPayment() *PurchasePayment {
@@ -3395,7 +3510,7 @@ type ListPurchasePaymentsRequest struct {
 
 func (x *ListPurchasePaymentsRequest) Reset() {
 	*x = ListPurchasePaymentsRequest{}
-	mi := &file_tammy_v1_purchases_proto_msgTypes[30]
+	mi := &file_tammy_v1_purchases_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3407,7 +3522,7 @@ func (x *ListPurchasePaymentsRequest) String() string {
 func (*ListPurchasePaymentsRequest) ProtoMessage() {}
 
 func (x *ListPurchasePaymentsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_purchases_proto_msgTypes[30]
+	mi := &file_tammy_v1_purchases_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3420,7 +3535,7 @@ func (x *ListPurchasePaymentsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPurchasePaymentsRequest.ProtoReflect.Descriptor instead.
 func (*ListPurchasePaymentsRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_purchases_proto_rawDescGZIP(), []int{30}
+	return file_tammy_v1_purchases_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *ListPurchasePaymentsRequest) GetAuthentication() *AuthenticationContext {
@@ -3461,7 +3576,7 @@ type ListPurchasePaymentsResponse struct {
 
 func (x *ListPurchasePaymentsResponse) Reset() {
 	*x = ListPurchasePaymentsResponse{}
-	mi := &file_tammy_v1_purchases_proto_msgTypes[31]
+	mi := &file_tammy_v1_purchases_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3473,7 +3588,7 @@ func (x *ListPurchasePaymentsResponse) String() string {
 func (*ListPurchasePaymentsResponse) ProtoMessage() {}
 
 func (x *ListPurchasePaymentsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_purchases_proto_msgTypes[31]
+	mi := &file_tammy_v1_purchases_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3486,7 +3601,7 @@ func (x *ListPurchasePaymentsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPurchasePaymentsResponse.ProtoReflect.Descriptor instead.
 func (*ListPurchasePaymentsResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_purchases_proto_rawDescGZIP(), []int{31}
+	return file_tammy_v1_purchases_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *ListPurchasePaymentsResponse) GetPayments() []*PurchasePayment {
@@ -3516,7 +3631,7 @@ type RecordPurchaseTaxEvidenceRequest struct {
 
 func (x *RecordPurchaseTaxEvidenceRequest) Reset() {
 	*x = RecordPurchaseTaxEvidenceRequest{}
-	mi := &file_tammy_v1_purchases_proto_msgTypes[32]
+	mi := &file_tammy_v1_purchases_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3528,7 +3643,7 @@ func (x *RecordPurchaseTaxEvidenceRequest) String() string {
 func (*RecordPurchaseTaxEvidenceRequest) ProtoMessage() {}
 
 func (x *RecordPurchaseTaxEvidenceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_purchases_proto_msgTypes[32]
+	mi := &file_tammy_v1_purchases_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3541,7 +3656,7 @@ func (x *RecordPurchaseTaxEvidenceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RecordPurchaseTaxEvidenceRequest.ProtoReflect.Descriptor instead.
 func (*RecordPurchaseTaxEvidenceRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_purchases_proto_rawDescGZIP(), []int{32}
+	return file_tammy_v1_purchases_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *RecordPurchaseTaxEvidenceRequest) GetCommandContext() *CommandContext {
@@ -3589,7 +3704,7 @@ type RecordPurchaseTaxEvidenceResponse struct {
 
 func (x *RecordPurchaseTaxEvidenceResponse) Reset() {
 	*x = RecordPurchaseTaxEvidenceResponse{}
-	mi := &file_tammy_v1_purchases_proto_msgTypes[33]
+	mi := &file_tammy_v1_purchases_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3601,7 +3716,7 @@ func (x *RecordPurchaseTaxEvidenceResponse) String() string {
 func (*RecordPurchaseTaxEvidenceResponse) ProtoMessage() {}
 
 func (x *RecordPurchaseTaxEvidenceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_purchases_proto_msgTypes[33]
+	mi := &file_tammy_v1_purchases_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3614,7 +3729,7 @@ func (x *RecordPurchaseTaxEvidenceResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use RecordPurchaseTaxEvidenceResponse.ProtoReflect.Descriptor instead.
 func (*RecordPurchaseTaxEvidenceResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_purchases_proto_rawDescGZIP(), []int{33}
+	return file_tammy_v1_purchases_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *RecordPurchaseTaxEvidenceResponse) GetEvidence() *PurchaseTaxEvidence {
@@ -3648,7 +3763,7 @@ type AttributePurchaseGstRequest struct {
 
 func (x *AttributePurchaseGstRequest) Reset() {
 	*x = AttributePurchaseGstRequest{}
-	mi := &file_tammy_v1_purchases_proto_msgTypes[34]
+	mi := &file_tammy_v1_purchases_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3660,7 +3775,7 @@ func (x *AttributePurchaseGstRequest) String() string {
 func (*AttributePurchaseGstRequest) ProtoMessage() {}
 
 func (x *AttributePurchaseGstRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_purchases_proto_msgTypes[34]
+	mi := &file_tammy_v1_purchases_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3673,7 +3788,7 @@ func (x *AttributePurchaseGstRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AttributePurchaseGstRequest.ProtoReflect.Descriptor instead.
 func (*AttributePurchaseGstRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_purchases_proto_rawDescGZIP(), []int{34}
+	return file_tammy_v1_purchases_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *AttributePurchaseGstRequest) GetCommandContext() *CommandContext {
@@ -3750,7 +3865,7 @@ type AttributePurchaseGstResponse struct {
 
 func (x *AttributePurchaseGstResponse) Reset() {
 	*x = AttributePurchaseGstResponse{}
-	mi := &file_tammy_v1_purchases_proto_msgTypes[35]
+	mi := &file_tammy_v1_purchases_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3762,7 +3877,7 @@ func (x *AttributePurchaseGstResponse) String() string {
 func (*AttributePurchaseGstResponse) ProtoMessage() {}
 
 func (x *AttributePurchaseGstResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_purchases_proto_msgTypes[35]
+	mi := &file_tammy_v1_purchases_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3775,7 +3890,7 @@ func (x *AttributePurchaseGstResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AttributePurchaseGstResponse.ProtoReflect.Descriptor instead.
 func (*AttributePurchaseGstResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_purchases_proto_rawDescGZIP(), []int{35}
+	return file_tammy_v1_purchases_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *AttributePurchaseGstResponse) GetAttributions() []*PurchaseGstAttribution {
@@ -3815,7 +3930,7 @@ type DeferPurchaseGstClaimRequest struct {
 
 func (x *DeferPurchaseGstClaimRequest) Reset() {
 	*x = DeferPurchaseGstClaimRequest{}
-	mi := &file_tammy_v1_purchases_proto_msgTypes[36]
+	mi := &file_tammy_v1_purchases_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3827,7 +3942,7 @@ func (x *DeferPurchaseGstClaimRequest) String() string {
 func (*DeferPurchaseGstClaimRequest) ProtoMessage() {}
 
 func (x *DeferPurchaseGstClaimRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_purchases_proto_msgTypes[36]
+	mi := &file_tammy_v1_purchases_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3840,7 +3955,7 @@ func (x *DeferPurchaseGstClaimRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeferPurchaseGstClaimRequest.ProtoReflect.Descriptor instead.
 func (*DeferPurchaseGstClaimRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_purchases_proto_rawDescGZIP(), []int{36}
+	return file_tammy_v1_purchases_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *DeferPurchaseGstClaimRequest) GetCommandContext() *CommandContext {
@@ -3909,7 +4024,7 @@ type DeferPurchaseGstClaimResponse struct {
 
 func (x *DeferPurchaseGstClaimResponse) Reset() {
 	*x = DeferPurchaseGstClaimResponse{}
-	mi := &file_tammy_v1_purchases_proto_msgTypes[37]
+	mi := &file_tammy_v1_purchases_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3921,7 +4036,7 @@ func (x *DeferPurchaseGstClaimResponse) String() string {
 func (*DeferPurchaseGstClaimResponse) ProtoMessage() {}
 
 func (x *DeferPurchaseGstClaimResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_purchases_proto_msgTypes[37]
+	mi := &file_tammy_v1_purchases_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3934,7 +4049,7 @@ func (x *DeferPurchaseGstClaimResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeferPurchaseGstClaimResponse.ProtoReflect.Descriptor instead.
 func (*DeferPurchaseGstClaimResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_purchases_proto_rawDescGZIP(), []int{37}
+	return file_tammy_v1_purchases_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *DeferPurchaseGstClaimResponse) GetDeferral() *PurchaseGstDeferral {
@@ -3962,7 +4077,7 @@ type ResolveLegacyPurchaseReviewRequest struct {
 
 func (x *ResolveLegacyPurchaseReviewRequest) Reset() {
 	*x = ResolveLegacyPurchaseReviewRequest{}
-	mi := &file_tammy_v1_purchases_proto_msgTypes[38]
+	mi := &file_tammy_v1_purchases_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3974,7 +4089,7 @@ func (x *ResolveLegacyPurchaseReviewRequest) String() string {
 func (*ResolveLegacyPurchaseReviewRequest) ProtoMessage() {}
 
 func (x *ResolveLegacyPurchaseReviewRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_purchases_proto_msgTypes[38]
+	mi := &file_tammy_v1_purchases_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3987,7 +4102,7 @@ func (x *ResolveLegacyPurchaseReviewRequest) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ResolveLegacyPurchaseReviewRequest.ProtoReflect.Descriptor instead.
 func (*ResolveLegacyPurchaseReviewRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_purchases_proto_rawDescGZIP(), []int{38}
+	return file_tammy_v1_purchases_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *ResolveLegacyPurchaseReviewRequest) GetCommandContext() *CommandContext {
@@ -4020,7 +4135,7 @@ type ResolveLegacyPurchaseReviewResponse struct {
 
 func (x *ResolveLegacyPurchaseReviewResponse) Reset() {
 	*x = ResolveLegacyPurchaseReviewResponse{}
-	mi := &file_tammy_v1_purchases_proto_msgTypes[39]
+	mi := &file_tammy_v1_purchases_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4032,7 +4147,7 @@ func (x *ResolveLegacyPurchaseReviewResponse) String() string {
 func (*ResolveLegacyPurchaseReviewResponse) ProtoMessage() {}
 
 func (x *ResolveLegacyPurchaseReviewResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_purchases_proto_msgTypes[39]
+	mi := &file_tammy_v1_purchases_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4045,7 +4160,7 @@ func (x *ResolveLegacyPurchaseReviewResponse) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use ResolveLegacyPurchaseReviewResponse.ProtoReflect.Descriptor instead.
 func (*ResolveLegacyPurchaseReviewResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_purchases_proto_rawDescGZIP(), []int{39}
+	return file_tammy_v1_purchases_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *ResolveLegacyPurchaseReviewResponse) GetReview() *LegacyPurchaseReview {
@@ -4401,11 +4516,27 @@ const file_tammy_v1_purchases_proto_rawDesc = "" +
 	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12u\n" +
 	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12m\n" +
 	"\vdocument_id\x18\x03 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\n" +
-	"documentId\"e\n" +
+	"documentId\"\xe3\a\n" +
+	"\x16PurchaseDuplicateMatch\x12\x80\x02\n" +
+	"\aposting\x18\x01 \x01(\v2\x13.tammy.v1.SourceRefB\xd0\x01\xbaH\xcc\x01\xba\x01\xc5\x01\n" +
+	" purchase.duplicate_match.posting\x12HAn immutable purchase posting with its complete content hash is required\x1aWthis.type == 'purchase_posting' && this.revision == 1u && size(this.content_hash) == 32\xc8\x01\x01R\aposting\x12m\n" +
+	"\vdocument_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\n" +
+	"documentId\x12-\n" +
+	"\rsupplier_name\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x04R\fsupplierName\x12/\n" +
+	"\x0einvoice_number\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x01R\rinvoiceNumber\x12\xbe\x02\n" +
+	"\finvoice_date\x18\x05 \x01(\v2\x13.tammy.v1.CivilDateB\x85\x02\xbaH\x81\x02\xba\x01\xfa\x01\n" +
+	".purchase.duplicate_match.invoice_date.calendar\x12)Date must exist in the Gregorian calendar\x1a\x9c\x01this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))\xc8\x01\x01R\vinvoiceDate\x12\xb5\x01\n" +
+	"\x05gross\x18\x06 \x01(\v2\x0f.tammy.v1.MoneyB\x8d\x01\xbaH\x89\x01\xba\x01\x82\x01\n" +
+	"\x1epurchase.duplicate_match.gross\x12*Retained nonnegative AUD money is required\x1a4this.currency_code == 'AUD' && this.minor_units >= 0\xc8\x01\x01R\x05gross\"\x86\x03\n" +
 	"\x1dGetPurchaseAccountingResponse\x12D\n" +
 	"\n" +
 	"accounting\x18\x01 \x01(\v2\x1c.tammy.v1.PurchaseAccountingB\x06\xbaH\x03\xc8\x01\x01R\n" +
-	"accounting\"\xe8\x05\n" +
+	"accounting\x12K\n" +
+	"\x0flatest_evidence\x18\x02 \x01(\v2\x1d.tammy.v1.PurchaseTaxEvidenceH\x00R\x0elatestEvidence\x88\x01\x01\x12K\n" +
+	"\x0flatest_deferral\x18\x03 \x01(\v2\x1d.tammy.v1.PurchaseGstDeferralH\x01R\x0elatestDeferral\x88\x01\x01\x12]\n" +
+	"\x14duplicate_candidates\x18\x04 \x03(\v2 .tammy.v1.PurchaseDuplicateMatchB\b\xbaH\x05\x92\x01\x02\x102R\x13duplicateCandidatesB\x12\n" +
+	"\x10_latest_evidenceB\x12\n" +
+	"\x10_latest_deferral\"\xe8\x05\n" +
 	"\x1bPostReviewedPurchaseRequest\x12I\n" +
 	"\x0fcommand_context\x18\x01 \x01(\v2\x18.tammy.v1.CommandContextB\x06\xbaH\x03\xc8\x01\x01R\x0ecommandContext\x12u\n" +
 	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x12m\n" +
@@ -4578,7 +4709,7 @@ func file_tammy_v1_purchases_proto_rawDescGZIP() []byte {
 }
 
 var file_tammy_v1_purchases_proto_enumTypes = make([]protoimpl.EnumInfo, 9)
-var file_tammy_v1_purchases_proto_msgTypes = make([]protoimpl.MessageInfo, 40)
+var file_tammy_v1_purchases_proto_msgTypes = make([]protoimpl.MessageInfo, 41)
 var file_tammy_v1_purchases_proto_goTypes = []any{
 	(PurchaseUse)(0),                            // 0: tammy.v1.PurchaseUse
 	(PurchaseBasClassification)(0),              // 1: tammy.v1.PurchaseBasClassification
@@ -4614,182 +4745,189 @@ var file_tammy_v1_purchases_proto_goTypes = []any{
 	(*LegacyPurchaseReviewInput)(nil),           // 31: tammy.v1.LegacyPurchaseReviewInput
 	(*LegacyPurchaseReview)(nil),                // 32: tammy.v1.LegacyPurchaseReview
 	(*GetPurchaseAccountingRequest)(nil),        // 33: tammy.v1.GetPurchaseAccountingRequest
-	(*GetPurchaseAccountingResponse)(nil),       // 34: tammy.v1.GetPurchaseAccountingResponse
-	(*PostReviewedPurchaseRequest)(nil),         // 35: tammy.v1.PostReviewedPurchaseRequest
-	(*PostReviewedPurchaseResponse)(nil),        // 36: tammy.v1.PostReviewedPurchaseResponse
-	(*RecordPurchasePaymentRequest)(nil),        // 37: tammy.v1.RecordPurchasePaymentRequest
-	(*RecordPurchasePaymentResponse)(nil),       // 38: tammy.v1.RecordPurchasePaymentResponse
-	(*ListPurchasePaymentsRequest)(nil),         // 39: tammy.v1.ListPurchasePaymentsRequest
-	(*ListPurchasePaymentsResponse)(nil),        // 40: tammy.v1.ListPurchasePaymentsResponse
-	(*RecordPurchaseTaxEvidenceRequest)(nil),    // 41: tammy.v1.RecordPurchaseTaxEvidenceRequest
-	(*RecordPurchaseTaxEvidenceResponse)(nil),   // 42: tammy.v1.RecordPurchaseTaxEvidenceResponse
-	(*AttributePurchaseGstRequest)(nil),         // 43: tammy.v1.AttributePurchaseGstRequest
-	(*AttributePurchaseGstResponse)(nil),        // 44: tammy.v1.AttributePurchaseGstResponse
-	(*DeferPurchaseGstClaimRequest)(nil),        // 45: tammy.v1.DeferPurchaseGstClaimRequest
-	(*DeferPurchaseGstClaimResponse)(nil),       // 46: tammy.v1.DeferPurchaseGstClaimResponse
-	(*ResolveLegacyPurchaseReviewRequest)(nil),  // 47: tammy.v1.ResolveLegacyPurchaseReviewRequest
-	(*ResolveLegacyPurchaseReviewResponse)(nil), // 48: tammy.v1.ResolveLegacyPurchaseReviewResponse
-	(*CivilDate)(nil),                           // 49: tammy.v1.CivilDate
-	(*timestamppb.Timestamp)(nil),               // 50: google.protobuf.Timestamp
-	(*Money)(nil),                               // 51: tammy.v1.Money
-	(GstBasis)(0),                               // 52: tammy.v1.GstBasis
-	(*SourceRef)(nil),                           // 53: tammy.v1.SourceRef
-	(*AuthenticationContext)(nil),               // 54: tammy.v1.AuthenticationContext
-	(*CommandContext)(nil),                      // 55: tammy.v1.CommandContext
-	(*Journal)(nil),                             // 56: tammy.v1.Journal
-	(*PageRequest)(nil),                         // 57: tammy.v1.PageRequest
-	(*PageInfo)(nil),                            // 58: tammy.v1.PageInfo
+	(*PurchaseDuplicateMatch)(nil),              // 34: tammy.v1.PurchaseDuplicateMatch
+	(*GetPurchaseAccountingResponse)(nil),       // 35: tammy.v1.GetPurchaseAccountingResponse
+	(*PostReviewedPurchaseRequest)(nil),         // 36: tammy.v1.PostReviewedPurchaseRequest
+	(*PostReviewedPurchaseResponse)(nil),        // 37: tammy.v1.PostReviewedPurchaseResponse
+	(*RecordPurchasePaymentRequest)(nil),        // 38: tammy.v1.RecordPurchasePaymentRequest
+	(*RecordPurchasePaymentResponse)(nil),       // 39: tammy.v1.RecordPurchasePaymentResponse
+	(*ListPurchasePaymentsRequest)(nil),         // 40: tammy.v1.ListPurchasePaymentsRequest
+	(*ListPurchasePaymentsResponse)(nil),        // 41: tammy.v1.ListPurchasePaymentsResponse
+	(*RecordPurchaseTaxEvidenceRequest)(nil),    // 42: tammy.v1.RecordPurchaseTaxEvidenceRequest
+	(*RecordPurchaseTaxEvidenceResponse)(nil),   // 43: tammy.v1.RecordPurchaseTaxEvidenceResponse
+	(*AttributePurchaseGstRequest)(nil),         // 44: tammy.v1.AttributePurchaseGstRequest
+	(*AttributePurchaseGstResponse)(nil),        // 45: tammy.v1.AttributePurchaseGstResponse
+	(*DeferPurchaseGstClaimRequest)(nil),        // 46: tammy.v1.DeferPurchaseGstClaimRequest
+	(*DeferPurchaseGstClaimResponse)(nil),       // 47: tammy.v1.DeferPurchaseGstClaimResponse
+	(*ResolveLegacyPurchaseReviewRequest)(nil),  // 48: tammy.v1.ResolveLegacyPurchaseReviewRequest
+	(*ResolveLegacyPurchaseReviewResponse)(nil), // 49: tammy.v1.ResolveLegacyPurchaseReviewResponse
+	(*CivilDate)(nil),                           // 50: tammy.v1.CivilDate
+	(*timestamppb.Timestamp)(nil),               // 51: google.protobuf.Timestamp
+	(*Money)(nil),                               // 52: tammy.v1.Money
+	(GstBasis)(0),                               // 53: tammy.v1.GstBasis
+	(*SourceRef)(nil),                           // 54: tammy.v1.SourceRef
+	(*AuthenticationContext)(nil),               // 55: tammy.v1.AuthenticationContext
+	(*CommandContext)(nil),                      // 56: tammy.v1.CommandContext
+	(*Journal)(nil),                             // 57: tammy.v1.Journal
+	(*PageRequest)(nil),                         // 58: tammy.v1.PageRequest
+	(*PageInfo)(nil),                            // 59: tammy.v1.PageInfo
 }
 var file_tammy_v1_purchases_proto_depIdxs = []int32{
-	49,  // 0: tammy.v1.PurchaseClaimPeriod.period_start:type_name -> tammy.v1.CivilDate
-	49,  // 1: tammy.v1.PurchaseClaimPeriod.period_end:type_name -> tammy.v1.CivilDate
+	50,  // 0: tammy.v1.PurchaseClaimPeriod.period_start:type_name -> tammy.v1.CivilDate
+	50,  // 1: tammy.v1.PurchaseClaimPeriod.period_end:type_name -> tammy.v1.CivilDate
 	8,   // 2: tammy.v1.PurchaseTaxInvoiceExceptionReview.kind:type_name -> tammy.v1.PurchaseTaxInvoiceExceptionKind
 	9,   // 3: tammy.v1.PurchaseTaxInvoiceExceptionReview.rule:type_name -> tammy.v1.PurchaseRetainedSourceRef
 	9,   // 4: tammy.v1.PurchaseTaxInvoiceExceptionReview.supporting_records:type_name -> tammy.v1.PurchaseRetainedSourceRef
 	9,   // 5: tammy.v1.PurchaseEvidenceInput.source:type_name -> tammy.v1.PurchaseRetainedSourceRef
 	3,   // 6: tammy.v1.PurchaseEvidenceInput.classification:type_name -> tammy.v1.PurchaseEvidenceClassification
-	49,  // 7: tammy.v1.PurchaseEvidenceInput.held_date:type_name -> tammy.v1.CivilDate
+	50,  // 7: tammy.v1.PurchaseEvidenceInput.held_date:type_name -> tammy.v1.CivilDate
 	11,  // 8: tammy.v1.PurchaseEvidenceInput.exception_review:type_name -> tammy.v1.PurchaseTaxInvoiceExceptionReview
 	12,  // 9: tammy.v1.PurchaseTaxEvidence.review:type_name -> tammy.v1.PurchaseEvidenceInput
-	50,  // 10: tammy.v1.PurchaseTaxEvidence.recorded_at:type_name -> google.protobuf.Timestamp
-	51,  // 11: tammy.v1.PurchaseAllocationInput.gross:type_name -> tammy.v1.Money
-	51,  // 12: tammy.v1.PurchaseAllocationInput.supplier_gst:type_name -> tammy.v1.Money
-	51,  // 13: tammy.v1.PurchaseAllocationInput.eligible_gst:type_name -> tammy.v1.Money
+	51,  // 10: tammy.v1.PurchaseTaxEvidence.recorded_at:type_name -> google.protobuf.Timestamp
+	52,  // 11: tammy.v1.PurchaseAllocationInput.gross:type_name -> tammy.v1.Money
+	52,  // 12: tammy.v1.PurchaseAllocationInput.supplier_gst:type_name -> tammy.v1.Money
+	52,  // 13: tammy.v1.PurchaseAllocationInput.eligible_gst:type_name -> tammy.v1.Money
 	0,   // 14: tammy.v1.PurchaseAllocationInput.use:type_name -> tammy.v1.PurchaseUse
 	1,   // 15: tammy.v1.PurchaseAllocationInput.bas_classification:type_name -> tammy.v1.PurchaseBasClassification
 	2,   // 16: tammy.v1.PurchaseAllocationInput.cash_flow_classification:type_name -> tammy.v1.PurchaseCashFlowClassification
 	4,   // 17: tammy.v1.PurchaseDuplicateReview.decision:type_name -> tammy.v1.PurchaseDuplicateDecision
 	5,   // 18: tammy.v1.PurchasePriorAccountingReview.decision:type_name -> tammy.v1.PurchasePriorAccountingDecision
-	49,  // 19: tammy.v1.PurchasePosting.invoice_date:type_name -> tammy.v1.CivilDate
-	52,  // 20: tammy.v1.PurchasePosting.gst_basis:type_name -> tammy.v1.GstBasis
-	51,  // 21: tammy.v1.PurchasePosting.gross:type_name -> tammy.v1.Money
-	51,  // 22: tammy.v1.PurchasePosting.supplier_gst:type_name -> tammy.v1.Money
-	51,  // 23: tammy.v1.PurchasePosting.eligible_gst:type_name -> tammy.v1.Money
+	50,  // 19: tammy.v1.PurchasePosting.invoice_date:type_name -> tammy.v1.CivilDate
+	53,  // 20: tammy.v1.PurchasePosting.gst_basis:type_name -> tammy.v1.GstBasis
+	52,  // 21: tammy.v1.PurchasePosting.gross:type_name -> tammy.v1.Money
+	52,  // 22: tammy.v1.PurchasePosting.supplier_gst:type_name -> tammy.v1.Money
+	52,  // 23: tammy.v1.PurchasePosting.eligible_gst:type_name -> tammy.v1.Money
 	14,  // 24: tammy.v1.PurchasePosting.allocations:type_name -> tammy.v1.PurchaseAllocationInput
 	12,  // 25: tammy.v1.PurchasePosting.evidence:type_name -> tammy.v1.PurchaseEvidenceInput
 	15,  // 26: tammy.v1.PurchasePosting.duplicate_review:type_name -> tammy.v1.PurchaseDuplicateReview
 	16,  // 27: tammy.v1.PurchasePosting.prior_accounting_review:type_name -> tammy.v1.PurchasePriorAccountingReview
-	50,  // 28: tammy.v1.PurchasePosting.posted_at:type_name -> google.protobuf.Timestamp
-	53,  // 29: tammy.v1.PurchasePosting.duplicate_candidates:type_name -> tammy.v1.SourceRef
-	53,  // 30: tammy.v1.PurchasePosting.prior_accounting_sources:type_name -> tammy.v1.SourceRef
+	51,  // 28: tammy.v1.PurchasePosting.posted_at:type_name -> google.protobuf.Timestamp
+	54,  // 29: tammy.v1.PurchasePosting.duplicate_candidates:type_name -> tammy.v1.SourceRef
+	54,  // 30: tammy.v1.PurchasePosting.prior_accounting_sources:type_name -> tammy.v1.SourceRef
 	6,   // 31: tammy.v1.PurchaseAccountingReviewOutcomes.evidence:type_name -> tammy.v1.PurchaseReviewStatus
 	6,   // 32: tammy.v1.PurchaseAccountingReviewOutcomes.timing:type_name -> tammy.v1.PurchaseReviewStatus
 	6,   // 33: tammy.v1.PurchaseAccountingReviewOutcomes.duplicate:type_name -> tammy.v1.PurchaseReviewStatus
 	6,   // 34: tammy.v1.PurchaseAccountingReviewOutcomes.prior_accounting:type_name -> tammy.v1.PurchaseReviewStatus
 	6,   // 35: tammy.v1.PurchaseAccountingReviewOutcomes.legacy:type_name -> tammy.v1.PurchaseReviewStatus
 	17,  // 36: tammy.v1.PurchaseAccounting.posting:type_name -> tammy.v1.PurchasePosting
-	51,  // 37: tammy.v1.PurchaseAccounting.paid:type_name -> tammy.v1.Money
-	51,  // 38: tammy.v1.PurchaseAccounting.outstanding:type_name -> tammy.v1.Money
-	51,  // 39: tammy.v1.PurchaseAccounting.eligible_gst:type_name -> tammy.v1.Money
-	51,  // 40: tammy.v1.PurchaseAccounting.deferred_gst:type_name -> tammy.v1.Money
-	51,  // 41: tammy.v1.PurchaseAccounting.suspense_gst:type_name -> tammy.v1.Money
-	51,  // 42: tammy.v1.PurchaseAccounting.attributed_gst:type_name -> tammy.v1.Money
+	52,  // 37: tammy.v1.PurchaseAccounting.paid:type_name -> tammy.v1.Money
+	52,  // 38: tammy.v1.PurchaseAccounting.outstanding:type_name -> tammy.v1.Money
+	52,  // 39: tammy.v1.PurchaseAccounting.eligible_gst:type_name -> tammy.v1.Money
+	52,  // 40: tammy.v1.PurchaseAccounting.deferred_gst:type_name -> tammy.v1.Money
+	52,  // 41: tammy.v1.PurchaseAccounting.suspense_gst:type_name -> tammy.v1.Money
+	52,  // 42: tammy.v1.PurchaseAccounting.attributed_gst:type_name -> tammy.v1.Money
 	18,  // 43: tammy.v1.PurchaseAccounting.review_outcomes:type_name -> tammy.v1.PurchaseAccountingReviewOutcomes
-	51,  // 44: tammy.v1.PurchasePaymentAllocation.gross:type_name -> tammy.v1.Money
-	51,  // 45: tammy.v1.PurchasePaymentAllocation.supplier_gst:type_name -> tammy.v1.Money
-	51,  // 46: tammy.v1.PurchasePaymentAllocation.eligible_gst:type_name -> tammy.v1.Money
+	52,  // 44: tammy.v1.PurchasePaymentAllocation.gross:type_name -> tammy.v1.Money
+	52,  // 45: tammy.v1.PurchasePaymentAllocation.supplier_gst:type_name -> tammy.v1.Money
+	52,  // 46: tammy.v1.PurchasePaymentAllocation.eligible_gst:type_name -> tammy.v1.Money
 	0,   // 47: tammy.v1.PurchasePaymentAllocation.use:type_name -> tammy.v1.PurchaseUse
 	1,   // 48: tammy.v1.PurchasePaymentAllocation.bas_classification:type_name -> tammy.v1.PurchaseBasClassification
 	2,   // 49: tammy.v1.PurchasePaymentAllocation.cash_flow_classification:type_name -> tammy.v1.PurchaseCashFlowClassification
-	49,  // 50: tammy.v1.PurchasePayment.actual_payment_date:type_name -> tammy.v1.CivilDate
-	51,  // 51: tammy.v1.PurchasePayment.amount:type_name -> tammy.v1.Money
+	50,  // 50: tammy.v1.PurchasePayment.actual_payment_date:type_name -> tammy.v1.CivilDate
+	52,  // 51: tammy.v1.PurchasePayment.amount:type_name -> tammy.v1.Money
 	20,  // 52: tammy.v1.PurchasePayment.allocations:type_name -> tammy.v1.PurchasePaymentAllocation
-	50,  // 53: tammy.v1.PurchasePayment.recorded_at:type_name -> google.protobuf.Timestamp
+	51,  // 53: tammy.v1.PurchasePayment.recorded_at:type_name -> google.protobuf.Timestamp
 	22,  // 54: tammy.v1.PurchaseGstSourcePortion.posting:type_name -> tammy.v1.PurchasePostingPortionRef
 	23,  // 55: tammy.v1.PurchaseGstSourcePortion.payment:type_name -> tammy.v1.PurchasePaymentPortionRef
-	49,  // 56: tammy.v1.PurchaseGstSourcePortion.normal_event_date:type_name -> tammy.v1.CivilDate
+	50,  // 56: tammy.v1.PurchaseGstSourcePortion.normal_event_date:type_name -> tammy.v1.CivilDate
 	10,  // 57: tammy.v1.PurchaseGstSourcePortion.earliest_otherwise_eligible_period:type_name -> tammy.v1.PurchaseClaimPeriod
-	49,  // 58: tammy.v1.PurchaseGstSourcePortion.required_return_due_date:type_name -> tammy.v1.CivilDate
+	50,  // 58: tammy.v1.PurchaseGstSourcePortion.required_return_due_date:type_name -> tammy.v1.CivilDate
 	9,   // 59: tammy.v1.PurchaseGstSourcePortion.due_date_evidence:type_name -> tammy.v1.PurchaseRetainedSourceRef
-	49,  // 60: tammy.v1.PurchaseGstSourcePortion.ordinary_last_claim_date:type_name -> tammy.v1.CivilDate
-	49,  // 61: tammy.v1.PurchaseGstSourcePortion.evidence_held_date:type_name -> tammy.v1.CivilDate
-	49,  // 62: tammy.v1.PurchaseClaimTimingReview.reviewed_as_of:type_name -> tammy.v1.CivilDate
+	50,  // 60: tammy.v1.PurchaseGstSourcePortion.ordinary_last_claim_date:type_name -> tammy.v1.CivilDate
+	50,  // 61: tammy.v1.PurchaseGstSourcePortion.evidence_held_date:type_name -> tammy.v1.CivilDate
+	50,  // 62: tammy.v1.PurchaseClaimTimingReview.reviewed_as_of:type_name -> tammy.v1.CivilDate
 	24,  // 63: tammy.v1.PurchaseGstAttribution.portion:type_name -> tammy.v1.PurchaseGstSourcePortion
 	10,  // 64: tammy.v1.PurchaseGstAttribution.claim_period:type_name -> tammy.v1.PurchaseClaimPeriod
-	49,  // 65: tammy.v1.PurchaseGstAttribution.release_posting_date:type_name -> tammy.v1.CivilDate
+	50,  // 65: tammy.v1.PurchaseGstAttribution.release_posting_date:type_name -> tammy.v1.CivilDate
 	25,  // 66: tammy.v1.PurchaseGstAttribution.timing_review:type_name -> tammy.v1.PurchaseClaimTimingReview
-	51,  // 67: tammy.v1.PurchaseGstAttribution.claimed_gst:type_name -> tammy.v1.Money
-	50,  // 68: tammy.v1.PurchaseGstAttribution.recorded_at:type_name -> google.protobuf.Timestamp
+	52,  // 67: tammy.v1.PurchaseGstAttribution.claimed_gst:type_name -> tammy.v1.Money
+	51,  // 68: tammy.v1.PurchaseGstAttribution.recorded_at:type_name -> google.protobuf.Timestamp
 	24,  // 69: tammy.v1.PurchaseGstDeferral.portions:type_name -> tammy.v1.PurchaseGstSourcePortion
 	10,  // 70: tammy.v1.PurchaseGstDeferral.affected_period:type_name -> tammy.v1.PurchaseClaimPeriod
 	25,  // 71: tammy.v1.PurchaseGstDeferral.timing_review:type_name -> tammy.v1.PurchaseClaimTimingReview
-	51,  // 72: tammy.v1.PurchaseGstDeferral.deferred_gst:type_name -> tammy.v1.Money
-	49,  // 73: tammy.v1.PurchaseGstDeferral.ordinary_last_claim_date:type_name -> tammy.v1.CivilDate
-	50,  // 74: tammy.v1.PurchaseGstDeferral.recorded_at:type_name -> google.protobuf.Timestamp
+	52,  // 72: tammy.v1.PurchaseGstDeferral.deferred_gst:type_name -> tammy.v1.Money
+	50,  // 73: tammy.v1.PurchaseGstDeferral.ordinary_last_claim_date:type_name -> tammy.v1.CivilDate
+	51,  // 74: tammy.v1.PurchaseGstDeferral.recorded_at:type_name -> google.protobuf.Timestamp
 	28,  // 75: tammy.v1.LegacyPurchaseSourceRef.document:type_name -> tammy.v1.LegacyPurchaseDocumentRef
 	29,  // 76: tammy.v1.LegacyPurchaseSourceRef.opening_payable:type_name -> tammy.v1.LegacyPurchaseOpeningPayableRef
 	30,  // 77: tammy.v1.LegacyPurchaseReviewInput.source:type_name -> tammy.v1.LegacyPurchaseSourceRef
 	10,  // 78: tammy.v1.LegacyPurchaseReviewInput.affected_period:type_name -> tammy.v1.PurchaseClaimPeriod
-	49,  // 79: tammy.v1.LegacyPurchaseReviewInput.reporting_balance_date:type_name -> tammy.v1.CivilDate
+	50,  // 79: tammy.v1.LegacyPurchaseReviewInput.reporting_balance_date:type_name -> tammy.v1.CivilDate
 	7,   // 80: tammy.v1.LegacyPurchaseReviewInput.disposition:type_name -> tammy.v1.LegacyPurchaseDisposition
 	9,   // 81: tammy.v1.LegacyPurchaseReviewInput.supporting_payments:type_name -> tammy.v1.PurchaseRetainedSourceRef
 	10,  // 82: tammy.v1.LegacyPurchaseReviewInput.previously_claimed_period:type_name -> tammy.v1.PurchaseClaimPeriod
 	9,   // 83: tammy.v1.LegacyPurchaseReviewInput.claim_evidence:type_name -> tammy.v1.PurchaseRetainedSourceRef
 	9,   // 84: tammy.v1.LegacyPurchaseReviewInput.supporting_evidence:type_name -> tammy.v1.PurchaseRetainedSourceRef
 	31,  // 85: tammy.v1.LegacyPurchaseReview.review:type_name -> tammy.v1.LegacyPurchaseReviewInput
-	50,  // 86: tammy.v1.LegacyPurchaseReview.recorded_at:type_name -> google.protobuf.Timestamp
-	54,  // 87: tammy.v1.GetPurchaseAccountingRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	19,  // 88: tammy.v1.GetPurchaseAccountingResponse.accounting:type_name -> tammy.v1.PurchaseAccounting
-	55,  // 89: tammy.v1.PostReviewedPurchaseRequest.command_context:type_name -> tammy.v1.CommandContext
-	14,  // 90: tammy.v1.PostReviewedPurchaseRequest.allocations:type_name -> tammy.v1.PurchaseAllocationInput
-	12,  // 91: tammy.v1.PostReviewedPurchaseRequest.evidence:type_name -> tammy.v1.PurchaseEvidenceInput
-	15,  // 92: tammy.v1.PostReviewedPurchaseRequest.duplicate_review:type_name -> tammy.v1.PurchaseDuplicateReview
-	16,  // 93: tammy.v1.PostReviewedPurchaseRequest.prior_accounting_review:type_name -> tammy.v1.PurchasePriorAccountingReview
-	17,  // 94: tammy.v1.PostReviewedPurchaseResponse.posting:type_name -> tammy.v1.PurchasePosting
-	56,  // 95: tammy.v1.PostReviewedPurchaseResponse.journal:type_name -> tammy.v1.Journal
-	19,  // 96: tammy.v1.PostReviewedPurchaseResponse.accounting:type_name -> tammy.v1.PurchaseAccounting
-	55,  // 97: tammy.v1.RecordPurchasePaymentRequest.command_context:type_name -> tammy.v1.CommandContext
-	49,  // 98: tammy.v1.RecordPurchasePaymentRequest.actual_payment_date:type_name -> tammy.v1.CivilDate
-	51,  // 99: tammy.v1.RecordPurchasePaymentRequest.amount:type_name -> tammy.v1.Money
-	21,  // 100: tammy.v1.RecordPurchasePaymentResponse.payment:type_name -> tammy.v1.PurchasePayment
-	56,  // 101: tammy.v1.RecordPurchasePaymentResponse.journal:type_name -> tammy.v1.Journal
-	19,  // 102: tammy.v1.RecordPurchasePaymentResponse.accounting:type_name -> tammy.v1.PurchaseAccounting
-	54,  // 103: tammy.v1.ListPurchasePaymentsRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	57,  // 104: tammy.v1.ListPurchasePaymentsRequest.page:type_name -> tammy.v1.PageRequest
-	21,  // 105: tammy.v1.ListPurchasePaymentsResponse.payments:type_name -> tammy.v1.PurchasePayment
-	58,  // 106: tammy.v1.ListPurchasePaymentsResponse.page:type_name -> tammy.v1.PageInfo
-	55,  // 107: tammy.v1.RecordPurchaseTaxEvidenceRequest.command_context:type_name -> tammy.v1.CommandContext
-	12,  // 108: tammy.v1.RecordPurchaseTaxEvidenceRequest.evidence:type_name -> tammy.v1.PurchaseEvidenceInput
-	13,  // 109: tammy.v1.RecordPurchaseTaxEvidenceResponse.evidence:type_name -> tammy.v1.PurchaseTaxEvidence
-	19,  // 110: tammy.v1.RecordPurchaseTaxEvidenceResponse.accounting:type_name -> tammy.v1.PurchaseAccounting
-	55,  // 111: tammy.v1.AttributePurchaseGstRequest.command_context:type_name -> tammy.v1.CommandContext
-	24,  // 112: tammy.v1.AttributePurchaseGstRequest.portions:type_name -> tammy.v1.PurchaseGstSourcePortion
-	10,  // 113: tammy.v1.AttributePurchaseGstRequest.claim_period:type_name -> tammy.v1.PurchaseClaimPeriod
-	49,  // 114: tammy.v1.AttributePurchaseGstRequest.release_posting_date:type_name -> tammy.v1.CivilDate
-	25,  // 115: tammy.v1.AttributePurchaseGstRequest.timing_review:type_name -> tammy.v1.PurchaseClaimTimingReview
-	26,  // 116: tammy.v1.AttributePurchaseGstResponse.attributions:type_name -> tammy.v1.PurchaseGstAttribution
-	56,  // 117: tammy.v1.AttributePurchaseGstResponse.journal:type_name -> tammy.v1.Journal
-	19,  // 118: tammy.v1.AttributePurchaseGstResponse.accounting:type_name -> tammy.v1.PurchaseAccounting
-	55,  // 119: tammy.v1.DeferPurchaseGstClaimRequest.command_context:type_name -> tammy.v1.CommandContext
-	24,  // 120: tammy.v1.DeferPurchaseGstClaimRequest.portions:type_name -> tammy.v1.PurchaseGstSourcePortion
-	10,  // 121: tammy.v1.DeferPurchaseGstClaimRequest.affected_period:type_name -> tammy.v1.PurchaseClaimPeriod
-	25,  // 122: tammy.v1.DeferPurchaseGstClaimRequest.timing_review:type_name -> tammy.v1.PurchaseClaimTimingReview
-	27,  // 123: tammy.v1.DeferPurchaseGstClaimResponse.deferral:type_name -> tammy.v1.PurchaseGstDeferral
-	19,  // 124: tammy.v1.DeferPurchaseGstClaimResponse.accounting:type_name -> tammy.v1.PurchaseAccounting
-	55,  // 125: tammy.v1.ResolveLegacyPurchaseReviewRequest.command_context:type_name -> tammy.v1.CommandContext
-	31,  // 126: tammy.v1.ResolveLegacyPurchaseReviewRequest.review:type_name -> tammy.v1.LegacyPurchaseReviewInput
-	32,  // 127: tammy.v1.ResolveLegacyPurchaseReviewResponse.review:type_name -> tammy.v1.LegacyPurchaseReview
-	33,  // 128: tammy.v1.PurchaseService.GetPurchaseAccounting:input_type -> tammy.v1.GetPurchaseAccountingRequest
-	35,  // 129: tammy.v1.PurchaseService.PostReviewedPurchase:input_type -> tammy.v1.PostReviewedPurchaseRequest
-	37,  // 130: tammy.v1.PurchaseService.RecordPurchasePayment:input_type -> tammy.v1.RecordPurchasePaymentRequest
-	39,  // 131: tammy.v1.PurchaseService.ListPurchasePayments:input_type -> tammy.v1.ListPurchasePaymentsRequest
-	41,  // 132: tammy.v1.PurchaseService.RecordPurchaseTaxEvidence:input_type -> tammy.v1.RecordPurchaseTaxEvidenceRequest
-	43,  // 133: tammy.v1.PurchaseService.AttributePurchaseGst:input_type -> tammy.v1.AttributePurchaseGstRequest
-	45,  // 134: tammy.v1.PurchaseService.DeferPurchaseGstClaim:input_type -> tammy.v1.DeferPurchaseGstClaimRequest
-	47,  // 135: tammy.v1.PurchaseService.ResolveLegacyPurchaseReview:input_type -> tammy.v1.ResolveLegacyPurchaseReviewRequest
-	34,  // 136: tammy.v1.PurchaseService.GetPurchaseAccounting:output_type -> tammy.v1.GetPurchaseAccountingResponse
-	36,  // 137: tammy.v1.PurchaseService.PostReviewedPurchase:output_type -> tammy.v1.PostReviewedPurchaseResponse
-	38,  // 138: tammy.v1.PurchaseService.RecordPurchasePayment:output_type -> tammy.v1.RecordPurchasePaymentResponse
-	40,  // 139: tammy.v1.PurchaseService.ListPurchasePayments:output_type -> tammy.v1.ListPurchasePaymentsResponse
-	42,  // 140: tammy.v1.PurchaseService.RecordPurchaseTaxEvidence:output_type -> tammy.v1.RecordPurchaseTaxEvidenceResponse
-	44,  // 141: tammy.v1.PurchaseService.AttributePurchaseGst:output_type -> tammy.v1.AttributePurchaseGstResponse
-	46,  // 142: tammy.v1.PurchaseService.DeferPurchaseGstClaim:output_type -> tammy.v1.DeferPurchaseGstClaimResponse
-	48,  // 143: tammy.v1.PurchaseService.ResolveLegacyPurchaseReview:output_type -> tammy.v1.ResolveLegacyPurchaseReviewResponse
-	136, // [136:144] is the sub-list for method output_type
-	128, // [128:136] is the sub-list for method input_type
-	128, // [128:128] is the sub-list for extension type_name
-	128, // [128:128] is the sub-list for extension extendee
-	0,   // [0:128] is the sub-list for field type_name
+	51,  // 86: tammy.v1.LegacyPurchaseReview.recorded_at:type_name -> google.protobuf.Timestamp
+	55,  // 87: tammy.v1.GetPurchaseAccountingRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	54,  // 88: tammy.v1.PurchaseDuplicateMatch.posting:type_name -> tammy.v1.SourceRef
+	50,  // 89: tammy.v1.PurchaseDuplicateMatch.invoice_date:type_name -> tammy.v1.CivilDate
+	52,  // 90: tammy.v1.PurchaseDuplicateMatch.gross:type_name -> tammy.v1.Money
+	19,  // 91: tammy.v1.GetPurchaseAccountingResponse.accounting:type_name -> tammy.v1.PurchaseAccounting
+	13,  // 92: tammy.v1.GetPurchaseAccountingResponse.latest_evidence:type_name -> tammy.v1.PurchaseTaxEvidence
+	27,  // 93: tammy.v1.GetPurchaseAccountingResponse.latest_deferral:type_name -> tammy.v1.PurchaseGstDeferral
+	34,  // 94: tammy.v1.GetPurchaseAccountingResponse.duplicate_candidates:type_name -> tammy.v1.PurchaseDuplicateMatch
+	56,  // 95: tammy.v1.PostReviewedPurchaseRequest.command_context:type_name -> tammy.v1.CommandContext
+	14,  // 96: tammy.v1.PostReviewedPurchaseRequest.allocations:type_name -> tammy.v1.PurchaseAllocationInput
+	12,  // 97: tammy.v1.PostReviewedPurchaseRequest.evidence:type_name -> tammy.v1.PurchaseEvidenceInput
+	15,  // 98: tammy.v1.PostReviewedPurchaseRequest.duplicate_review:type_name -> tammy.v1.PurchaseDuplicateReview
+	16,  // 99: tammy.v1.PostReviewedPurchaseRequest.prior_accounting_review:type_name -> tammy.v1.PurchasePriorAccountingReview
+	17,  // 100: tammy.v1.PostReviewedPurchaseResponse.posting:type_name -> tammy.v1.PurchasePosting
+	57,  // 101: tammy.v1.PostReviewedPurchaseResponse.journal:type_name -> tammy.v1.Journal
+	19,  // 102: tammy.v1.PostReviewedPurchaseResponse.accounting:type_name -> tammy.v1.PurchaseAccounting
+	56,  // 103: tammy.v1.RecordPurchasePaymentRequest.command_context:type_name -> tammy.v1.CommandContext
+	50,  // 104: tammy.v1.RecordPurchasePaymentRequest.actual_payment_date:type_name -> tammy.v1.CivilDate
+	52,  // 105: tammy.v1.RecordPurchasePaymentRequest.amount:type_name -> tammy.v1.Money
+	21,  // 106: tammy.v1.RecordPurchasePaymentResponse.payment:type_name -> tammy.v1.PurchasePayment
+	57,  // 107: tammy.v1.RecordPurchasePaymentResponse.journal:type_name -> tammy.v1.Journal
+	19,  // 108: tammy.v1.RecordPurchasePaymentResponse.accounting:type_name -> tammy.v1.PurchaseAccounting
+	55,  // 109: tammy.v1.ListPurchasePaymentsRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	58,  // 110: tammy.v1.ListPurchasePaymentsRequest.page:type_name -> tammy.v1.PageRequest
+	21,  // 111: tammy.v1.ListPurchasePaymentsResponse.payments:type_name -> tammy.v1.PurchasePayment
+	59,  // 112: tammy.v1.ListPurchasePaymentsResponse.page:type_name -> tammy.v1.PageInfo
+	56,  // 113: tammy.v1.RecordPurchaseTaxEvidenceRequest.command_context:type_name -> tammy.v1.CommandContext
+	12,  // 114: tammy.v1.RecordPurchaseTaxEvidenceRequest.evidence:type_name -> tammy.v1.PurchaseEvidenceInput
+	13,  // 115: tammy.v1.RecordPurchaseTaxEvidenceResponse.evidence:type_name -> tammy.v1.PurchaseTaxEvidence
+	19,  // 116: tammy.v1.RecordPurchaseTaxEvidenceResponse.accounting:type_name -> tammy.v1.PurchaseAccounting
+	56,  // 117: tammy.v1.AttributePurchaseGstRequest.command_context:type_name -> tammy.v1.CommandContext
+	24,  // 118: tammy.v1.AttributePurchaseGstRequest.portions:type_name -> tammy.v1.PurchaseGstSourcePortion
+	10,  // 119: tammy.v1.AttributePurchaseGstRequest.claim_period:type_name -> tammy.v1.PurchaseClaimPeriod
+	50,  // 120: tammy.v1.AttributePurchaseGstRequest.release_posting_date:type_name -> tammy.v1.CivilDate
+	25,  // 121: tammy.v1.AttributePurchaseGstRequest.timing_review:type_name -> tammy.v1.PurchaseClaimTimingReview
+	26,  // 122: tammy.v1.AttributePurchaseGstResponse.attributions:type_name -> tammy.v1.PurchaseGstAttribution
+	57,  // 123: tammy.v1.AttributePurchaseGstResponse.journal:type_name -> tammy.v1.Journal
+	19,  // 124: tammy.v1.AttributePurchaseGstResponse.accounting:type_name -> tammy.v1.PurchaseAccounting
+	56,  // 125: tammy.v1.DeferPurchaseGstClaimRequest.command_context:type_name -> tammy.v1.CommandContext
+	24,  // 126: tammy.v1.DeferPurchaseGstClaimRequest.portions:type_name -> tammy.v1.PurchaseGstSourcePortion
+	10,  // 127: tammy.v1.DeferPurchaseGstClaimRequest.affected_period:type_name -> tammy.v1.PurchaseClaimPeriod
+	25,  // 128: tammy.v1.DeferPurchaseGstClaimRequest.timing_review:type_name -> tammy.v1.PurchaseClaimTimingReview
+	27,  // 129: tammy.v1.DeferPurchaseGstClaimResponse.deferral:type_name -> tammy.v1.PurchaseGstDeferral
+	19,  // 130: tammy.v1.DeferPurchaseGstClaimResponse.accounting:type_name -> tammy.v1.PurchaseAccounting
+	56,  // 131: tammy.v1.ResolveLegacyPurchaseReviewRequest.command_context:type_name -> tammy.v1.CommandContext
+	31,  // 132: tammy.v1.ResolveLegacyPurchaseReviewRequest.review:type_name -> tammy.v1.LegacyPurchaseReviewInput
+	32,  // 133: tammy.v1.ResolveLegacyPurchaseReviewResponse.review:type_name -> tammy.v1.LegacyPurchaseReview
+	33,  // 134: tammy.v1.PurchaseService.GetPurchaseAccounting:input_type -> tammy.v1.GetPurchaseAccountingRequest
+	36,  // 135: tammy.v1.PurchaseService.PostReviewedPurchase:input_type -> tammy.v1.PostReviewedPurchaseRequest
+	38,  // 136: tammy.v1.PurchaseService.RecordPurchasePayment:input_type -> tammy.v1.RecordPurchasePaymentRequest
+	40,  // 137: tammy.v1.PurchaseService.ListPurchasePayments:input_type -> tammy.v1.ListPurchasePaymentsRequest
+	42,  // 138: tammy.v1.PurchaseService.RecordPurchaseTaxEvidence:input_type -> tammy.v1.RecordPurchaseTaxEvidenceRequest
+	44,  // 139: tammy.v1.PurchaseService.AttributePurchaseGst:input_type -> tammy.v1.AttributePurchaseGstRequest
+	46,  // 140: tammy.v1.PurchaseService.DeferPurchaseGstClaim:input_type -> tammy.v1.DeferPurchaseGstClaimRequest
+	48,  // 141: tammy.v1.PurchaseService.ResolveLegacyPurchaseReview:input_type -> tammy.v1.ResolveLegacyPurchaseReviewRequest
+	35,  // 142: tammy.v1.PurchaseService.GetPurchaseAccounting:output_type -> tammy.v1.GetPurchaseAccountingResponse
+	37,  // 143: tammy.v1.PurchaseService.PostReviewedPurchase:output_type -> tammy.v1.PostReviewedPurchaseResponse
+	39,  // 144: tammy.v1.PurchaseService.RecordPurchasePayment:output_type -> tammy.v1.RecordPurchasePaymentResponse
+	41,  // 145: tammy.v1.PurchaseService.ListPurchasePayments:output_type -> tammy.v1.ListPurchasePaymentsResponse
+	43,  // 146: tammy.v1.PurchaseService.RecordPurchaseTaxEvidence:output_type -> tammy.v1.RecordPurchaseTaxEvidenceResponse
+	45,  // 147: tammy.v1.PurchaseService.AttributePurchaseGst:output_type -> tammy.v1.AttributePurchaseGstResponse
+	47,  // 148: tammy.v1.PurchaseService.DeferPurchaseGstClaim:output_type -> tammy.v1.DeferPurchaseGstClaimResponse
+	49,  // 149: tammy.v1.PurchaseService.ResolveLegacyPurchaseReview:output_type -> tammy.v1.ResolveLegacyPurchaseReviewResponse
+	142, // [142:150] is the sub-list for method output_type
+	134, // [134:142] is the sub-list for method input_type
+	134, // [134:134] is the sub-list for extension type_name
+	134, // [134:134] is the sub-list for extension extendee
+	0,   // [0:134] is the sub-list for field type_name
 }
 
 func init() { file_tammy_v1_purchases_proto_init() }
@@ -4814,15 +4952,16 @@ func file_tammy_v1_purchases_proto_init() {
 		(*LegacyPurchaseSourceRef_OpeningPayable)(nil),
 	}
 	file_tammy_v1_purchases_proto_msgTypes[22].OneofWrappers = []any{}
-	file_tammy_v1_purchases_proto_msgTypes[27].OneofWrappers = []any{}
-	file_tammy_v1_purchases_proto_msgTypes[34].OneofWrappers = []any{}
+	file_tammy_v1_purchases_proto_msgTypes[26].OneofWrappers = []any{}
+	file_tammy_v1_purchases_proto_msgTypes[28].OneofWrappers = []any{}
+	file_tammy_v1_purchases_proto_msgTypes[35].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_tammy_v1_purchases_proto_rawDesc), len(file_tammy_v1_purchases_proto_rawDesc)),
 			NumEnums:      9,
-			NumMessages:   40,
+			NumMessages:   41,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/tammyapp/tammy/services/core/internal/audit"
 	"github.com/tammyapp/tammy/services/core/internal/buildinfo"
 	tammyv1 "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1"
 	tammyv1connect "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1/tammyv1connect"
@@ -69,6 +70,7 @@ func TestLocalCompositionCreatesConfirmsAndAuthenticatesRealWorkspace(t *testing
 		Info:           buildinfo.Info{Version: "local-integration"},
 		Root:           t.TempDir(),
 		AttemptAnchors: workspace.NewMemoryAnchorStore(),
+		AuditMirror:    newLocalTestAuditMirror(),
 		Modules:        []LocalWorkspaceModule{migrationCapture},
 	})
 	if err != nil {
@@ -236,7 +238,8 @@ func assertLocalReportingCapability(
 func TestLocalCompositionReopensAndAuthenticatesExistingWorkspaceAfterRestart(t *testing.T) {
 	root := t.TempDir()
 	anchors := workspace.NewMemoryAnchorStore()
-	first, stopFirst := startLocalCompositionTestServer(t, root, anchors)
+	mirror := newLocalTestAuditMirror()
+	first, stopFirst := startLocalCompositionTestServer(t, root, anchors, mirror)
 	t.Cleanup(stopFirst)
 
 	createRequest := connect.NewRequest(&tammyv1.CreateWorkspaceRequest{
@@ -269,7 +272,7 @@ func TestLocalCompositionReopensAndAuthenticatesExistingWorkspaceAfterRestart(t 
 	}
 
 	stopFirst()
-	second, stopSecond := startLocalCompositionTestServer(t, root, anchors)
+	second, stopSecond := startLocalCompositionTestServer(t, root, anchors, mirror)
 	t.Cleanup(stopSecond)
 	unlock := connect.NewRequest(&tammyv1.UnlockWorkspaceRequest{
 		WorkspaceFile: &tammyv1.ApprovedFileRef{CapabilityId: LocalWorkspaceFileCapability},
@@ -284,6 +287,29 @@ func TestLocalCompositionReopensAndAuthenticatesExistingWorkspaceAfterRestart(t 
 	}
 	if opened.Msg.Workspace == nil || opened.Msg.Workspace.Id != created.Msg.Workspace.Id {
 		t.Fatalf("UnlockWorkspace() = %#v", opened.Msg)
+	}
+	if second.capture.database == nil {
+		t.Fatal("reopened workspace did not activate its database")
+	}
+	stored, err := audit.LoadStoredEvents(context.Background(), second.capture.database, created.Msg.Workspace.Id, 1, 3, 4)
+	if err != nil || len(stored) != 2 {
+		t.Fatalf("pending creation lock/unlock events = %v, %v", stored, err)
+	}
+	for index, want := range []struct {
+		reason string
+		from   tammyv1.WorkspaceState
+		to     tammyv1.WorkspaceState
+	}{
+		{"LOCK", tammyv1.WorkspaceState_WORKSPACE_STATE_UNAUTHENTICATED, tammyv1.WorkspaceState_WORKSPACE_STATE_LOCKED},
+		{"UNLOCK", tammyv1.WorkspaceState_WORKSPACE_STATE_LOCKED, tammyv1.WorkspaceState_WORKSPACE_STATE_UNAUTHENTICATED},
+	} {
+		transition := stored[index].Event.GetPayload().GetWorkspaceStateChanged()
+		if transition == nil || transition.ReasonCode != want.reason || transition.FromState != want.from || transition.ToState != want.to {
+			t.Fatalf("pending creation transition %d = %v, want %+v", index, transition, want)
+		}
+	}
+	if _, err := mirror.Load(context.Background(), created.Msg.Workspace.Id); err != audit.ErrMirrorMissing {
+		t.Fatalf("pre-sign-in lock/unlock established a mirror: %v", err)
 	}
 	signIn := connect.NewRequest(&tammyv1.SignInRequest{
 		Username: "admin@tammy.local",
@@ -303,14 +329,18 @@ type localCompositionTestClients struct {
 	capability string
 	identity   tammyv1connect.IdentityServiceClient
 	workspace  tammyv1connect.WorkspaceServiceClient
+	capture    *localMigrationCaptureModule
 }
 
-func startLocalCompositionTestServer(t *testing.T, root string, anchors workspace.AnchorStore) (localCompositionTestClients, func()) {
+func startLocalCompositionTestServer(t *testing.T, root string, anchors workspace.AnchorStore, mirror audit.MirrorStore) (localCompositionTestClients, func()) {
 	t.Helper()
+	capture := &localMigrationCaptureModule{}
 	composition, err := NewLocalComposition(LocalCompositionConfig{
 		Info:           buildinfo.Info{Version: "local-restart-integration"},
 		Root:           root,
 		AttemptAnchors: anchors,
+		AuditMirror:    mirror,
+		Modules:        []LocalWorkspaceModule{capture},
 	})
 	if err != nil {
 		t.Fatalf("NewLocalComposition() error = %v", err)
@@ -337,6 +367,7 @@ func startLocalCompositionTestServer(t *testing.T, root string, anchors workspac
 		capability: ready.Capability,
 		identity:   tammyv1connect.NewIdentityServiceClient(httpClient, baseURL),
 		workspace:  tammyv1connect.NewWorkspaceServiceClient(httpClient, baseURL),
+		capture:    capture,
 	}
 	var once sync.Once
 	return clients, func() {

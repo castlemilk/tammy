@@ -329,7 +329,13 @@ func (r *Repository) savePurchaseSnapshot(ctx context.Context, w *tammyv1.BasWor
 		}
 		kind := "POSTING"
 		var document, opening, legacy any
+		if s.DocumentId != nil {
+			document = *s.DocumentId
+		}
 		if ref := s.LegacySource.GetDocument(); ref != nil {
+			if s.DocumentId != nil && *s.DocumentId != ref.DocumentId {
+				return ErrRepository
+			}
 			kind = "DOCUMENT"
 			document = ref.DocumentId
 		}
@@ -435,7 +441,12 @@ func (r *Repository) loadPurchaseSnapshot(ctx context.Context, w *tammyv1.BasWor
 		}
 		actualKind := "POSTING"
 		var actualDocument, actualOpening, actualLegacy *string
+		actualDocument = value.DocumentId
 		if ref := value.LegacySource.GetDocument(); ref != nil {
+			if value.DocumentId != nil && *value.DocumentId != ref.DocumentId {
+				_ = rows.Close()
+				return ErrRepository
+			}
 			actualKind = "DOCUMENT"
 			id := ref.DocumentId
 			actualDocument = &id

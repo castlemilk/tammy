@@ -203,24 +203,30 @@ type CommandResult struct {
 type OrdinaryOperation string
 
 const (
-	OrdinaryOperationCreateOrganisation       OrdinaryOperation = "tammy.v1.OrganisationService.CreateOrganisation"
-	OrdinaryOperationUpdateOrganisation       OrdinaryOperation = "tammy.v1.OrganisationService.UpdateOrganisation"
-	OrdinaryOperationRecordEntityVerification OrdinaryOperation = "tammy.v1.OrganisationService.RecordEntityVerification"
-	OrdinaryOperationCreateAccount            OrdinaryOperation = "tammy.v1.AccountingService.CreateAccount"
-	OrdinaryOperationUpdateAccount            OrdinaryOperation = "tammy.v1.AccountingService.UpdateAccount"
-	OrdinaryOperationSetAccountStatus         OrdinaryOperation = "tammy.v1.AccountingService.SetAccountStatus"
-	OrdinaryOperationPostOpeningConversion    OrdinaryOperation = "tammy.v1.AccountingService.PostOpeningConversion"
-	OrdinaryOperationReplaceOpeningConversion OrdinaryOperation = "tammy.v1.AccountingService.ReplaceOpeningConversion"
-	OrdinaryOperationPostManualJournal        OrdinaryOperation = "tammy.v1.AccountingService.PostManualJournal"
-	OrdinaryOperationReverseJournal           OrdinaryOperation = "tammy.v1.AccountingService.ReverseJournal"
-	OrdinaryOperationClosePeriod              OrdinaryOperation = "tammy.v1.AccountingService.ClosePeriod"
-	OrdinaryOperationReopenPeriod             OrdinaryOperation = "tammy.v1.AccountingService.ReopenPeriod"
-	OrdinaryOperationSaveInvoiceDraft         OrdinaryOperation = "tammy.v1.InvoiceService.SaveInvoiceDraft"
-	OrdinaryOperationIssueInvoice             OrdinaryOperation = "tammy.v1.InvoiceService.IssueInvoice"
-	OrdinaryOperationPostInvoiceIncome        OrdinaryOperation = "tammy.v1.InvoiceService.PostInvoiceIncome"
-	OrdinaryOperationRecordInvoicePayment     OrdinaryOperation = "tammy.v1.InvoiceService.RecordInvoicePayment"
-	OrdinaryOperationSaveInvoiceTemplate      OrdinaryOperation = "tammy.v1.InvoiceService.SaveInvoiceTemplate"
-	OrdinaryOperationUploadInvoiceLogo        OrdinaryOperation = "tammy.v1.InvoiceService.UploadInvoiceLogo"
+	OrdinaryOperationCreateOrganisation          OrdinaryOperation = "tammy.v1.OrganisationService.CreateOrganisation"
+	OrdinaryOperationUpdateOrganisation          OrdinaryOperation = "tammy.v1.OrganisationService.UpdateOrganisation"
+	OrdinaryOperationRecordEntityVerification    OrdinaryOperation = "tammy.v1.OrganisationService.RecordEntityVerification"
+	OrdinaryOperationCreateAccount               OrdinaryOperation = "tammy.v1.AccountingService.CreateAccount"
+	OrdinaryOperationUpdateAccount               OrdinaryOperation = "tammy.v1.AccountingService.UpdateAccount"
+	OrdinaryOperationSetAccountStatus            OrdinaryOperation = "tammy.v1.AccountingService.SetAccountStatus"
+	OrdinaryOperationPostOpeningConversion       OrdinaryOperation = "tammy.v1.AccountingService.PostOpeningConversion"
+	OrdinaryOperationReplaceOpeningConversion    OrdinaryOperation = "tammy.v1.AccountingService.ReplaceOpeningConversion"
+	OrdinaryOperationPostManualJournal           OrdinaryOperation = "tammy.v1.AccountingService.PostManualJournal"
+	OrdinaryOperationReverseJournal              OrdinaryOperation = "tammy.v1.AccountingService.ReverseJournal"
+	OrdinaryOperationClosePeriod                 OrdinaryOperation = "tammy.v1.AccountingService.ClosePeriod"
+	OrdinaryOperationReopenPeriod                OrdinaryOperation = "tammy.v1.AccountingService.ReopenPeriod"
+	OrdinaryOperationSaveInvoiceDraft            OrdinaryOperation = "tammy.v1.InvoiceService.SaveInvoiceDraft"
+	OrdinaryOperationIssueInvoice                OrdinaryOperation = "tammy.v1.InvoiceService.IssueInvoice"
+	OrdinaryOperationPostInvoiceIncome           OrdinaryOperation = "tammy.v1.InvoiceService.PostInvoiceIncome"
+	OrdinaryOperationRecordInvoicePayment        OrdinaryOperation = "tammy.v1.InvoiceService.RecordInvoicePayment"
+	OrdinaryOperationSaveInvoiceTemplate         OrdinaryOperation = "tammy.v1.InvoiceService.SaveInvoiceTemplate"
+	OrdinaryOperationUploadInvoiceLogo           OrdinaryOperation = "tammy.v1.InvoiceService.UploadInvoiceLogo"
+	OrdinaryOperationPostReviewedPurchase        OrdinaryOperation = "tammy.v1.PurchaseService.PostReviewedPurchase"
+	OrdinaryOperationRecordPurchasePayment       OrdinaryOperation = "tammy.v1.PurchaseService.RecordPurchasePayment"
+	OrdinaryOperationRecordPurchaseTaxEvidence   OrdinaryOperation = "tammy.v1.PurchaseService.RecordPurchaseTaxEvidence"
+	OrdinaryOperationAttributePurchaseGst        OrdinaryOperation = "tammy.v1.PurchaseService.AttributePurchaseGst"
+	OrdinaryOperationDeferPurchaseGstClaim       OrdinaryOperation = "tammy.v1.PurchaseService.DeferPurchaseGstClaim"
+	OrdinaryOperationResolveLegacyPurchaseReview OrdinaryOperation = "tammy.v1.PurchaseService.ResolveLegacyPurchaseReview"
 )
 
 type ordinaryOperationDefinition struct {
@@ -561,6 +567,30 @@ func ordinaryOperationDefinitionFor(operation OrdinaryOperation) (ordinaryOperat
 		definition.action = authorisation.ActionPostAccounting
 		definition.requestType = "tammy.v1.UploadInvoiceLogoRequest"
 		definition.resultType = "tammy.v1.UploadInvoiceLogoResponse"
+	case OrdinaryOperationPostReviewedPurchase:
+		definition.action = authorisation.ActionPostAccounting
+		definition.requestType = "tammy.v1.PostReviewedPurchaseRequest"
+		definition.resultType = "tammy.v1.PostReviewedPurchaseResponse"
+	case OrdinaryOperationRecordPurchasePayment:
+		definition.action = authorisation.ActionPostAccounting
+		definition.requestType = "tammy.v1.RecordPurchasePaymentRequest"
+		definition.resultType = "tammy.v1.RecordPurchasePaymentResponse"
+	case OrdinaryOperationRecordPurchaseTaxEvidence:
+		definition.action = authorisation.ActionPrepareTax
+		definition.requestType = "tammy.v1.RecordPurchaseTaxEvidenceRequest"
+		definition.resultType = "tammy.v1.RecordPurchaseTaxEvidenceResponse"
+	case OrdinaryOperationAttributePurchaseGst:
+		definition.action = authorisation.ActionPrepareTax
+		definition.requestType = "tammy.v1.AttributePurchaseGstRequest"
+		definition.resultType = "tammy.v1.AttributePurchaseGstResponse"
+	case OrdinaryOperationDeferPurchaseGstClaim:
+		definition.action = authorisation.ActionPrepareTax
+		definition.requestType = "tammy.v1.DeferPurchaseGstClaimRequest"
+		definition.resultType = "tammy.v1.DeferPurchaseGstClaimResponse"
+	case OrdinaryOperationResolveLegacyPurchaseReview:
+		definition.action = authorisation.ActionPrepareTax
+		definition.requestType = "tammy.v1.ResolveLegacyPurchaseReviewRequest"
+		definition.resultType = "tammy.v1.ResolveLegacyPurchaseReviewResponse"
 	default:
 		return ordinaryOperationDefinition{}, false
 	}

@@ -291,6 +291,8 @@ message BasPurchaseReview {
     defined_only: true
     not_in: [0]
   }];
+  // Retained posting document routing even when no credit source is claimed.
+  optional string document_id = 18 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 }
 
 enum BasPurchaseSourceFormat {

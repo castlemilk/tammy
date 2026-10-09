@@ -436,7 +436,7 @@ func (r *Repository) basPostingReviews(out *BASSnapshot, state *tammyv1.Purchase
 	p := state.Posting
 	base := func(kind tammyv1.BasPurchaseReviewKind, status tammyv1.PurchaseReviewStatus, eligible, unclaimed int64, reason string) *tammyv1.BasPurchaseReview {
 		id := p.Id
-		return &tammyv1.BasPurchaseReview{PostingId: &id, Status: status, AffectedPeriod: proto.Clone(period).(*tammyv1.PurchaseClaimPeriod), InvoiceDate: cloneClaimDate(p.InvoiceDate), EligibleGst: purchaseJournalMoney(eligible), UnclaimedGst: purchaseJournalMoney(unclaimed), Evidence: basEvidenceRef(evidences[len(evidences)-1]), SourceRevision: state.AccountingVersion, SourceHash: append([]byte(nil), p.SourceHash...), Reason: reason, Kind: kind}
+		return &tammyv1.BasPurchaseReview{PostingId: &id, DocumentId: proto.String(p.DocumentId), Status: status, AffectedPeriod: proto.Clone(period).(*tammyv1.PurchaseClaimPeriod), InvoiceDate: cloneClaimDate(p.InvoiceDate), EligibleGst: purchaseJournalMoney(eligible), UnclaimedGst: purchaseJournalMoney(unclaimed), Evidence: basEvidenceRef(evidences[len(evidences)-1]), SourceRevision: state.AccountingVersion, SourceHash: append([]byte(nil), p.SourceHash...), Reason: reason, Kind: kind}
 	}
 	if state.ReviewOutcomes.Evidence != tammyv1.PurchaseReviewStatus_PURCHASE_REVIEW_STATUS_CLEAR {
 		for _, source := range out.Sources {

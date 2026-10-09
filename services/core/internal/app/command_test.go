@@ -13,6 +13,7 @@ import (
 	"github.com/tammyapp/tammy/services/core/internal/idempotency"
 	"github.com/tammyapp/tammy/services/core/internal/platform/canonical"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 var errCommandInjected = errors.New("injected command failure")
@@ -724,4 +725,84 @@ func validCommandOutcomeForResultAndOperation(result *tammyv1.CreateOrganisation
 		Result: &tammyv1.AuditResultMetadata{TypeName: "tammy.v1.CreateOrganisationResponse",
 			DeterministicSha256: digest[:], OutcomeCode: "SUCCESS"},
 	}, AuditPayload: append([]byte(nil), payload...), ResourceID: commandWorkspaceID}
+}
+
+// Purchase commands use the same owned transaction and exact protobuf binding
+// as invoice commands. Queries never enter the durable mutation coordinator.
+func TestCoordinatorPurchaseCommandsBindTypesAndCommitOnce(t *testing.T) {
+	for _, test := range []struct {
+		method   string
+		request  proto.Message
+		response proto.Message
+		action   authorisation.Action
+	}{
+		{"PostReviewedPurchase", &tammyv1.PostReviewedPurchaseRequest{}, &tammyv1.PostReviewedPurchaseResponse{Accounting: &tammyv1.PurchaseAccounting{DocumentId: commandWorkspaceID}}, authorisation.ActionPostAccounting},
+		{"RecordPurchasePayment", &tammyv1.RecordPurchasePaymentRequest{}, &tammyv1.RecordPurchasePaymentResponse{Accounting: &tammyv1.PurchaseAccounting{DocumentId: commandWorkspaceID}}, authorisation.ActionPostAccounting},
+		{"RecordPurchaseTaxEvidence", &tammyv1.RecordPurchaseTaxEvidenceRequest{}, &tammyv1.RecordPurchaseTaxEvidenceResponse{Accounting: &tammyv1.PurchaseAccounting{DocumentId: commandWorkspaceID}}, authorisation.ActionPrepareTax},
+		{"AttributePurchaseGst", &tammyv1.AttributePurchaseGstRequest{}, &tammyv1.AttributePurchaseGstResponse{Accounting: &tammyv1.PurchaseAccounting{DocumentId: commandWorkspaceID}}, authorisation.ActionPrepareTax},
+		{"DeferPurchaseGstClaim", &tammyv1.DeferPurchaseGstClaimRequest{}, &tammyv1.DeferPurchaseGstClaimResponse{Accounting: &tammyv1.PurchaseAccounting{DocumentId: commandWorkspaceID}}, authorisation.ActionPrepareTax},
+		{"ResolveLegacyPurchaseReview", &tammyv1.ResolveLegacyPurchaseReviewRequest{}, &tammyv1.ResolveLegacyPurchaseReviewResponse{Review: &tammyv1.LegacyPurchaseReview{Id: commandWorkspaceID}}, authorisation.ActionPrepareTax},
+	} {
+		t.Run(test.method, func(t *testing.T) {
+			operation := OrdinaryOperation("tammy.v1.PurchaseService." + test.method)
+			request := proto.Clone(test.request)
+			commandContext := &tammyv1.CommandContext{IdempotencyKey: commandOperationID, Authentication: &tammyv1.AuthenticationContext{ActorUserId: commandActorID, SessionId: commandSessionID}}
+			field := request.ProtoReflect().Descriptor().Fields().ByName("command_context")
+			request.ProtoReflect().Set(field, protoreflect.ValueOfMessage(commandContext.ProtoReflect()))
+			for _, failure := range []string{"", "wrong request", "wrong response"} {
+				t.Run(failure, func(t *testing.T) {
+					coordinator, transactions, order := newCommandCoordinatorHarness(t, "")
+					coordinator.authorizer = &purchaseCommandAuthorizer{commandAuthorizer: commandAuthorizer{order: order}, want: test.action, t: t}
+					command := validCommand()
+					command.Operation, command.Request = operation, request
+					command.NewResult = func() proto.Message { return test.response.ProtoReflect().New().Interface() }
+					command.BuildResult = func(context.Context, commandRepositories, proto.Message) (CommandResult, error) {
+						result := proto.Clone(test.response)
+						encoded, err := proto.MarshalOptions{Deterministic: true}.Marshal(result)
+						if err != nil {
+							return CommandResult{}, err
+						}
+						digest := sha256.Sum256(encoded)
+						return CommandResult{Result: result, AuditPayload: []byte{1}, ResourceID: commandWorkspaceID, AuditEvent: &tammyv1.AuditEvent{WorkspaceId: commandWorkspaceID, Actor: commandContext.Authentication, CommandType: string(operation), IdempotencyKey: proto.String(commandOperationID), Result: &tammyv1.AuditResultMetadata{TypeName: string(result.ProtoReflect().Descriptor().FullName()), DeterministicSha256: digest[:], OutcomeCode: "SUCCESS"}}}, nil
+					}
+					if failure == "wrong request" {
+						command.Request = validCommand().Request
+					}
+					if failure == "wrong response" {
+						command.NewResult = validCommand().NewResult
+					}
+					result, err := coordinator.Execute(context.Background(), command)
+					if failure == "" {
+						if err != nil || !proto.Equal(result, test.response) || transactions.commits != 1 || len(transactions.state.source) != 1 || len(transactions.state.ledger) != 1 || len(transactions.state.audit) != 1 || len(transactions.state.results) != 1 {
+							t.Fatalf("result=%v error=%v commits=%d state=%+v", result, err, transactions.commits, transactions.state)
+						}
+					} else if result != nil || !errors.Is(err, ErrCommand) || transactions.commits != 0 || transactions.rollbacks != 1 || !reflect.DeepEqual(transactions.state, commandState{}) {
+						t.Fatalf("cross-command type accepted: result=%v error=%v state=%+v", result, err, transactions.state)
+					}
+				})
+			}
+		})
+	}
+	for _, method := range []string{"GetPurchaseAccounting", "ListPurchasePayments", "ArbitraryMutation"} {
+		coordinator, transactions, _ := newCommandCoordinatorHarness(t, "")
+		command := validCommand()
+		command.Operation = OrdinaryOperation("tammy.v1.PurchaseService." + method)
+		if result, err := coordinator.Execute(context.Background(), command); result != nil || !errors.Is(err, ErrCommand) || transactions.commits != 0 || !reflect.DeepEqual(transactions.state, commandState{}) {
+			t.Fatalf("purchase query/arbitrary method admitted: method=%s result=%v error=%v", method, result, err)
+		}
+	}
+}
+
+type purchaseCommandAuthorizer struct {
+	commandAuthorizer
+	t    *testing.T
+	want authorisation.Action
+}
+
+func (a *purchaseCommandAuthorizer) Authorize(ctx context.Context, scope CommandScope[commandRepositories], auth *tammyv1.AuthenticationContext, action authorisation.Action) (AuthorizedActor, error) {
+	a.t.Helper()
+	if action != a.want {
+		a.t.Fatalf("authorization action=%s want=%s", action, a.want)
+	}
+	return a.commandAuthorizer.Authorize(ctx, scope, auth, action)
 }

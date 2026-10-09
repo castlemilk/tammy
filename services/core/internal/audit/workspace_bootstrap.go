@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"io"
 	"strings"
@@ -171,6 +172,16 @@ func (adapter *WorkspaceAuditAdapter) AppendWorkspaceMutation(
 		contentHash = digest[:]
 	}
 	fromState, toState := workspaceMutationStates(mutation.Kind)
+	initialSetupID := ""
+	if adapter.appender.gate.initialMirrorPending() && (mutation.Kind == "LOCK" || mutation.Kind == "UNLOCK") {
+		// The pending creation capability permits security state changes only
+		// for the authoritative record belonging to that same creation attempt.
+		// Read the prior state before workspace persists its proposed record.
+		fromState, initialSetupID, err = initialSecurityMutationState(ctx, executor, mutation)
+		if err != nil {
+			return err
+		}
+	}
 	payload := &tammyv1.WorkspaceStateChangedEvent{
 		WorkspaceId: mutation.WorkspaceID, FromState: fromState,
 		ToState: toState, ReasonCode: stableReasonCode(mutation.Kind),
@@ -191,8 +202,8 @@ func (adapter *WorkspaceAuditAdapter) AppendWorkspaceMutation(
 	}
 	if adapter.appender.gate.initialMirrorPending() {
 		switch mutation.Kind {
-		case "CREATE", "RECOVERY_CONFIRMATION", "SESSION_STARTED":
-			setupID := ""
+		case "CREATE", "RECOVERY_CONFIRMATION", "SESSION_STARTED", "LOCK", "UNLOCK":
+			setupID := initialSetupID
 			if mutation.Kind == "CREATE" {
 				setupID = mutation.OperationID
 			}
@@ -202,6 +213,35 @@ func (adapter *WorkspaceAuditAdapter) AppendWorkspaceMutation(
 	}
 	_, err = adapter.appender.Append(ctx, executor, event, payloadProto)
 	return err
+}
+
+func initialSecurityMutationState(ctx context.Context, executor Executor, mutation workspace.WorkspaceMutation) (tammyv1.WorkspaceState, string, error) {
+	rows, err := executor.QueryContext(ctx, `SELECT value FROM workspace_metadata WHERE key=?`, "workspace.record.v1")
+	if err != nil {
+		return tammyv1.WorkspaceState_WORKSPACE_STATE_UNSPECIFIED, "", err
+	}
+	defer rows.Close()
+	var body []byte
+	if !rows.Next() || rows.Scan(&body) != nil || rows.Next() || rows.Err() != nil {
+		return tammyv1.WorkspaceState_WORKSPACE_STATE_UNSPECIFIED, "", ErrWriteGate
+	}
+	var prior struct {
+		ID      string
+		Version uint64
+		State   tammyv1.WorkspaceState
+		SetupID string
+	}
+	if json.Unmarshal(body, &prior) != nil || prior.ID != mutation.WorkspaceID || prior.Version != mutation.Version || prior.SetupID == "" {
+		return tammyv1.WorkspaceState_WORKSPACE_STATE_UNSPECIFIED, "", ErrWriteGate
+	}
+	if mutation.Kind == "UNLOCK" && prior.State != tammyv1.WorkspaceState_WORKSPACE_STATE_LOCKED {
+		return tammyv1.WorkspaceState_WORKSPACE_STATE_UNSPECIFIED, "", ErrWriteGate
+	}
+	if mutation.Kind == "LOCK" && prior.State != tammyv1.WorkspaceState_WORKSPACE_STATE_PENDING_RECOVERY &&
+		prior.State != tammyv1.WorkspaceState_WORKSPACE_STATE_UNAUTHENTICATED && prior.State != tammyv1.WorkspaceState_WORKSPACE_STATE_AUTHENTICATED {
+		return tammyv1.WorkspaceState_WORKSPACE_STATE_UNSPECIFIED, "", ErrWriteGate
+	}
+	return prior.State, prior.SetupID, nil
 }
 
 // AppendInitialAdministratorAudit is the lifecycle-scoped path for the
@@ -272,11 +312,7 @@ func initialAdministratorAuditComplete(ctx context.Context, executor Executor, h
 	snapshot := StoredEventSnapshot{WorkspaceID: header.WorkspaceID, Generation: header.Generation,
 		EndSequence: header.CurrentSequence, EndHead: header.CurrentHead}
 	checkpoint := StoredEventCheckpoint{Head: header.GenesisHash}
-	recoverySequence := uint64(0)
-	sessionSequence := uint64(0)
-	finalSequence := uint64(0)
-	finalHasActor := false
-	finalCommandType := ""
+	initial := initialAdministratorEvidence{}
 	for checkpoint.AfterSequence < snapshot.EndSequence {
 		page, err := LoadStoredEventPage(ctx, executor, snapshot, checkpoint,
 			StoredEventPageSizeLimit, StoredEventPageByteBudget)
@@ -291,25 +327,7 @@ func initialAdministratorAuditComplete(ctx context.Context, executor Executor, h
 			if event == nil || event.WorkspaceId != header.WorkspaceID {
 				return false
 			}
-			transition := event.GetPayload().GetWorkspaceStateChanged()
-			if transition != nil && transition.WorkspaceId == header.WorkspaceID {
-				switch transition.ReasonCode {
-				case "RECOVERY_CONFIRMATION":
-					if transition.FromState == tammyv1.WorkspaceState_WORKSPACE_STATE_PENDING_RECOVERY &&
-						transition.ToState == tammyv1.WorkspaceState_WORKSPACE_STATE_UNAUTHENTICATED {
-						recoverySequence = event.Sequence
-					}
-				case "SESSION_STARTED":
-					if recoverySequence != 0 && event.Sequence > recoverySequence &&
-						transition.FromState == tammyv1.WorkspaceState_WORKSPACE_STATE_UNAUTHENTICATED &&
-						transition.ToState == tammyv1.WorkspaceState_WORKSPACE_STATE_AUTHENTICATED {
-						sessionSequence = event.Sequence
-					}
-				}
-			}
-			finalSequence = event.Sequence
-			finalHasActor = event.Actor != nil
-			finalCommandType = event.CommandType
+			initial.accept(event, header.WorkspaceID)
 		}
 		checkpoint = page.Checkpoint
 		if !page.HasMore && checkpoint.AfterSequence != snapshot.EndSequence {
@@ -326,9 +344,7 @@ func initialAdministratorAuditComplete(ctx context.Context, executor Executor, h
 		verification.VerifiedThroughSequence != header.CurrentSequence || verifiedHead != header.CurrentHead {
 		return false
 	}
-	commandType := strings.ToLower(finalCommandType)
-	return sessionSequence != 0 && finalSequence > sessionSequence && finalHasActor &&
-		strings.Contains(commandType, "identity") && (strings.Contains(commandType, "sign_in") || strings.Contains(commandType, "signin"))
+	return initial.complete()
 }
 
 func workspaceMutationStates(kind string) (tammyv1.WorkspaceState, tammyv1.WorkspaceState) {
@@ -341,6 +357,8 @@ func workspaceMutationStates(kind string) (tammyv1.WorkspaceState, tammyv1.Works
 		return tammyv1.WorkspaceState_WORKSPACE_STATE_UNAUTHENTICATED, tammyv1.WorkspaceState_WORKSPACE_STATE_AUTHENTICATED
 	case "LOCK", "EXPIRE_SETUP":
 		return tammyv1.WorkspaceState_WORKSPACE_STATE_UNSPECIFIED, tammyv1.WorkspaceState_WORKSPACE_STATE_LOCKED
+	case "UNLOCK":
+		return tammyv1.WorkspaceState_WORKSPACE_STATE_LOCKED, tammyv1.WorkspaceState_WORKSPACE_STATE_UNAUTHENTICATED
 	default:
 		return tammyv1.WorkspaceState_WORKSPACE_STATE_UNSPECIFIED, tammyv1.WorkspaceState_WORKSPACE_STATE_UNAUTHENTICATED
 	}

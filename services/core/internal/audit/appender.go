@@ -62,6 +62,7 @@ var (
 		tammyv1.AuditEventType_AUDIT_EVENT_TYPE_SIGNING_KEY_ROTATED:         {field: "signing_key_rotated", message: "tammy.v1.SigningKeyRotatedEvent"},
 		tammyv1.AuditEventType_AUDIT_EVENT_TYPE_WORKSPACE_RESTORED:          {field: "workspace_restored", message: "tammy.v1.WorkspaceRestoredEvent"},
 		tammyv1.AuditEventType_AUDIT_EVENT_TYPE_SBR_CHANGED:                 {field: "sbr_changed", message: "tammy.v1.SbrAuditEvent"},
+		tammyv1.AuditEventType_AUDIT_EVENT_TYPE_PURCHASE_ACCOUNTING_CHANGED: {field: "purchase_accounting_changed", message: "tammy.v1.PurchaseAccountingChangedEvent"},
 	}
 )
 

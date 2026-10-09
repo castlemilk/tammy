@@ -133,7 +133,36 @@ func purchaseFixture(d protoreflect.MessageDescriptor) *dynamicpb.Message {
 			m.Set(f, v)
 		}
 	}
+	if d.Name() == "PurchaseDuplicateMatch" {
+		ref := m.Get(d.Fields().ByName("posting")).Message()
+		ref.Set(ref.Descriptor().Fields().ByName("type"), protoreflect.ValueOfString("purchase_posting"))
+	}
 	return m
+}
+
+func TestPurchaseDuplicateMatchesRequireCommittedPostingProvenance(t *testing.T) {
+	d := purchaseDescriptor(t, "PurchaseDuplicateMatch")
+	for _, malformed := range []string{"type", "revision", "content_hash"} {
+		t.Run(malformed, func(t *testing.T) {
+			m := purchaseFixture(d)
+			if err := protovalidate.Validate(m); err != nil {
+				t.Fatalf("valid retained match rejected: %v", err)
+			}
+			ref := m.Get(d.Fields().ByName("posting")).Message()
+			field := ref.Descriptor().Fields().ByName(protoreflect.Name(malformed))
+			switch malformed {
+			case "type":
+				ref.Set(field, protoreflect.ValueOfString("invoice"))
+			case "revision":
+				ref.Set(field, protoreflect.ValueOfUint64(2))
+			case "content_hash":
+				ref.Clear(field)
+			}
+			if err := protovalidate.Validate(m); err == nil {
+				t.Fatal("duplicate match accepted without immutable purchase posting provenance")
+			}
+		})
+	}
 }
 
 func TestPurchaseEightRPCDescriptorsAndRoundTrips(t *testing.T) {

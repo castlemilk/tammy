@@ -870,12 +870,43 @@ func TestPurchaseBASNewOnTimeEvidenceStillRequiresExplicitSuspenseClaim(t *testi
 			continue
 		}
 		found = true
+		documentField := row.ProtoReflect().Descriptor().Fields().ByName("document_id")
+		if documentField == nil || row.ProtoReflect().Get(documentField).String() != f.request.DocumentId {
+			t.Fatal("unresolved posted purchase has no retained document route")
+		}
 		if row.Kind != tammyv1.BasPurchaseReviewKind_BAS_PURCHASE_REVIEW_KIND_CLAIM_TIMING || row.Status != tammyv1.PurchaseReviewStatus_PURCHASE_REVIEW_STATUS_NEEDS_TIMING_REVIEW || row.UnclaimedGst.MinorUnits != 1000 {
 			t.Fatalf("supported evidence cleared unresolved suspense claim: %v", row)
 		}
 	}
 	if !found || len(snapshot.Sources) != 0 {
 		t.Fatal("unclaimed suspense disappeared or was reported in1B")
+	}
+	bas, err := reporting.NewRepositoryWithClock(tx, func() time.Time { return f.now }, repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	key, _ := f.id()
+	id, _ := f.id()
+	w, err := bas.CreateBASDraft(ctx, key, id, postingOrg, period.PeriodStart, period.PeriodEnd, f.now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var indexedDocument *string
+	if err := tx.QueryRowContext(ctx, `SELECT document_id FROM bas_workpaper_purchase_reviews_v1 WHERE workpaper_id=? AND posting_id=?`, w.Id, posted.Accounting.Posting.Id).Scan(&indexedDocument); err != nil || indexedDocument == nil || *indexedDocument != f.request.DocumentId {
+		t.Fatalf("saved posting review does not index its retained document route: %v", err)
+	}
+	loaded, err := bas.GetCurrentBASDraft(ctx, postingOrg)
+	if err != nil || !proto.Equal(w, loaded) {
+		t.Fatalf("saved posting review did not retain its exact document route: %v", err)
+	}
+	if _, err := tx.ExecContext(ctx, `DROP TRIGGER bas_workpaper_purchase_reviews_v1_no_update`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE bas_workpaper_purchase_reviews_v1 SET document_id=NULL WHERE workpaper_id=? AND posting_id=?`, w.Id, posted.Accounting.Posting.Id); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := bas.GetCurrentBASDraft(ctx, postingOrg); !errors.Is(err, reporting.ErrRepository) {
+		t.Fatalf("saved review accepted a document index inconsistent with retained facts: %v", err)
 	}
 }
 

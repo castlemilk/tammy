@@ -31,6 +31,7 @@ import (
 func TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealServer(t *testing.T) {
 	root := t.TempDir()
 	anchors := workspace.NewMemoryAnchorStore()
+	auditMirror := newPurchaseTestAuditMirror()
 	module, err := NewLedgerModule()
 	if err != nil {
 		t.Fatal(err)
@@ -39,6 +40,7 @@ func TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealSer
 		Info:           buildinfo.Info{Version: "local-ledger-integration"},
 		Root:           root,
 		AttemptAnchors: anchors,
+		AuditMirror:    auditMirror,
 		Modules:        []app.LocalWorkspaceModule{module},
 	})
 	if err != nil {
@@ -593,6 +595,6 @@ func TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealSer
 		t.Fatalf("revisions = %#v, want financial=11 banking=3 tax-source=6 settlement=1", attention.Msg.Revisions)
 	}
 	t.Run("upgrades version 10 on authenticated unlock after restart", func(t *testing.T) {
-		assertHistoricalPrefixUpgradeAfterRestart(t, root, anchors, composition, server, module, issuedInvoice.Msg.Invoice, currentBAS.Msg.Workpaper)
+		assertHistoricalPrefixUpgradeAfterRestart(t, root, anchors, auditMirror, composition, server, module, issuedInvoice.Msg.Invoice, currentBAS.Msg.Workpaper)
 	})
 }

@@ -24,7 +24,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func assertHistoricalPrefixUpgradeAfterRestart(t *testing.T, root string, anchors workspace.AnchorStore,
+func assertHistoricalPrefixUpgradeAfterRestart(t *testing.T, root string, anchors workspace.AnchorStore, auditMirror *purchaseTestAuditMirror,
 	previous *app.Composition, previousServer *transport.Server, previousModule *LedgerModule,
 	invoice *tammyv1.Invoice, workpaper *tammyv1.BasWorkpaper,
 ) {
@@ -39,7 +39,7 @@ func assertHistoricalPrefixUpgradeAfterRestart(t *testing.T, root string, anchor
 	if err := previous.Close(); err != nil {
 		t.Fatal(err)
 	}
-	replaceWorkspaceWithHistoricalPrefix(t, ctx, root, []byte("workspace-passphrase-long-enough"), 11)
+	workpaper = replaceWorkspaceWithHistoricalPrefix(t, ctx, root, []byte("workspace-passphrase-long-enough"), 11, workpaper)
 	path := filepath.Join(root, "core", "workspace", "tammy-workspace.db")
 	lockedBytes, err := os.ReadFile(path)
 	if err != nil {
@@ -51,7 +51,7 @@ func assertHistoricalPrefixUpgradeAfterRestart(t *testing.T, root string, anchor
 	}
 	composition, err := app.NewLocalComposition(app.LocalCompositionConfig{
 		Info: buildinfo.Info{Version: "workspace-upgrade-integration"}, Root: root,
-		AttemptAnchors: anchors, Modules: []app.LocalWorkspaceModule{module},
+		AttemptAnchors: anchors, AuditMirror: auditMirror, Modules: []app.LocalWorkspaceModule{module},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -131,7 +131,12 @@ func assertHistoricalPrefixUpgradeAfterRestart(t *testing.T, root string, anchor
 	taxClient := tammyv1connect.NewTaxServiceClient(httpClient, baseURL)
 	getRequest := &tammyv1.GetCurrentBasDraftRequest{Authentication: auth, OrganisationId: invoice.OrganisationId}
 	retained, err := taxClient.GetCurrentBasDraft(ctx, brandingRequest(getRequest, ready.Capability))
-	if err != nil || !proto.Equal(retained.Msg.Workpaper, workpaper) {
+	if err != nil {
+		t.Fatalf("read historical saved BAS after upgrade: %v", err)
+	}
+	unchanged := proto.Clone(retained.Msg.Workpaper).(*tammyv1.BasWorkpaper)
+	unchanged.SourcesChanged = workpaper.SourcesChanged
+	if !proto.Equal(unchanged, workpaper) {
 		t.Fatalf("saved BAS figures or sources changed across upgrade: %v, %v", retained, err)
 	}
 	regenerated, err := taxClient.CreateBasDraft(ctx, brandingRequest(&tammyv1.CreateBasDraftRequest{

@@ -702,8 +702,48 @@ message GetPurchaseAccountingRequest {
   string document_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
 }
 
+// Complete bounded core-discovered duplicate matches for a reviewed unposted source.
+message PurchaseDuplicateMatch {
+  SourceRef posting = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "purchase.duplicate_match.posting"
+      message: "An immutable purchase posting with its complete content hash is required"
+      expression: "this.type == 'purchase_posting' && this.revision == 1u && size(this.content_hash) == 32"
+    }
+  ];
+  string document_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string supplier_name = 3 [(buf.validate.field).string.max_len = 512];
+  string invoice_number = 4 [(buf.validate.field).string.max_len = 128];
+  CivilDate invoice_date = 5 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "purchase.duplicate_match.invoice_date.calendar"
+      message: "Date must exist in the Gregorian calendar"
+      expression: "this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))"
+    }
+  ];
+  Money gross = 6 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "purchase.duplicate_match.gross"
+      message: "Retained nonnegative AUD money is required"
+      expression: "this.currency_code == 'AUD' && this.minor_units >= 0"
+    }
+  ];
+}
+
 message GetPurchaseAccountingResponse {
   PurchaseAccounting accounting = 1 [(buf.validate.field).required = true];
+  // One verified current evidence record lets a reopened panel select its
+  // retained ID without embedding the complete accounting history. Unposted
+  // documents have no purchase evidence record.
+  optional PurchaseTaxEvidence latest_evidence = 2;
+  // The most recent immutable decision is recoverable before a BAS draft is
+  // regenerated. Complete earlier decisions remain in BAS source capture;
+  // this retained amount does not imply the portion is still unclaimed.
+  optional PurchaseGstDeferral latest_deferral = 3;
+  repeated PurchaseDuplicateMatch duplicate_candidates = 4 [(buf.validate.field).repeated.max_items = 50];
 }
 
 // Ordinary on-time input does not require delayed-claim dates.

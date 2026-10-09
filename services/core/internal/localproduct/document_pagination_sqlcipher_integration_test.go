@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -30,26 +31,51 @@ import (
 
 type documentPageServer struct {
 	module                     *LedgerModule
+	activation                 app.LocalWorkspaceActivation
+	auditMirror                *purchaseTestAuditMirror
 	client                     tammyv1connect.DocumentServiceClient
+	purchases                  tammyv1connect.PurchaseServiceClient
+	workspace                  tammyv1connect.WorkspaceServiceClient
 	identity                   tammyv1connect.IdentityServiceClient
 	authentication             *tammyv1.AuthenticationContext
 	organisationID, capability string
+	stop                       func()
+}
+
+type documentPageObservedModule struct {
+	*LedgerModule
+	activation app.LocalWorkspaceActivation
+}
+
+func (module *documentPageObservedModule) Activate(activation app.LocalWorkspaceActivation) error {
+	module.activation = activation
+	return module.LedgerModule.Activate(activation)
 }
 
 func newDocumentPageServer(t *testing.T) documentPageServer {
+	return newDocumentPageServerWithBasis(t, tammyv1.GstBasis_GST_BASIS_NON_CASH)
+}
+
+func newDocumentPageServerWithBasis(t *testing.T, basis tammyv1.GstBasis) documentPageServer {
+	return newDocumentPageServerAtRoot(t, basis, t.TempDir(), workspace.NewMemoryAnchorStore(), newPurchaseTestAuditMirror(), true, "")
+}
+
+// A retained root has already completed recovery. Reopening it authenticates
+// through the real unlock/session path while preserving its existing sources.
+func newDocumentPageServerAtRoot(t *testing.T, basis tammyv1.GstBasis, root string, anchors workspace.AnchorStore, mirror *purchaseTestAuditMirror, createWorkspace bool, retainedOrganisation string) documentPageServer {
 	t.Helper()
 	module, err := NewLedgerModule()
 	if err != nil {
 		t.Fatal(err)
 	}
+	observed := &documentPageObservedModule{LedgerModule: module}
 	composition, err := app.NewLocalComposition(app.LocalCompositionConfig{
-		Info: buildinfo.Info{Version: "document-page-integration"}, Root: t.TempDir(),
-		AttemptAnchors: workspace.NewMemoryAnchorStore(), Modules: []app.LocalWorkspaceModule{module},
+		Info: buildinfo.Info{Version: "document-page-integration"}, Root: root,
+		AttemptAnchors: anchors, AuditMirror: mirror, Modules: []app.LocalWorkspaceModule{observed},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = composition.Close() })
 	server, err := transport.NewServer(composition.Registrar(), io.Discard)
 	if err != nil {
 		t.Fatal(err)
@@ -57,11 +83,16 @@ func newDocumentPageServer(t *testing.T) documentPageServer {
 	if err := server.Start(); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-		defer cancel()
-		_ = server.Shutdown(ctx)
-	})
+	var stopOnce sync.Once
+	stop := func() {
+		stopOnce.Do(func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+			_ = server.Shutdown(ctx)
+			_ = composition.Close()
+		})
+	}
+	t.Cleanup(stop)
 	ready := server.Ready()
 	roots := x509.NewCertPool()
 	if !roots.AppendCertsFromPEM([]byte(ready.CAPEM)) {
@@ -73,44 +104,57 @@ func newDocumentPageServer(t *testing.T) documentPageServer {
 	identityClient := tammyv1connect.NewIdentityServiceClient(httpClient, baseURL)
 	ctx := context.Background()
 	setupID := "018f0000-0000-7000-8000-000000000101"
-	created, err := workspaceClient.CreateWorkspace(ctx, brandingRequest(&tammyv1.CreateWorkspaceRequest{
-		SetupId: setupID, Destination: &tammyv1.ApprovedFileRef{CapabilityId: app.LocalWorkspaceDirectoryCapability},
-		WorkspacePassphrase:   &tammyv1.SecretInput{Utf8: []byte("workspace-passphrase-long-enough")},
-		AdministratorUsername: "admin@tammy.local", AdministratorDisplayName: "Tammy Admin",
-		AdministratorPassword: &tammyv1.SecretInput{Utf8: []byte("administrator-password-long-enough")},
-	}, ready.Capability))
-	if err != nil {
-		t.Fatal(err)
-	}
-	groups, err := workspace.ParseRecoveryGroups(created.Msg.RecoverySecret.Utf8)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := workspaceClient.ConfirmRecovery(ctx, brandingRequest(&tammyv1.ConfirmRecoveryRequest{SetupId: setupID,
-		Confirmations: []*tammyv1.RecoveryGroupConfirmation{{GroupIndex: 0, Value: groups[0]}, {GroupIndex: 1, Value: groups[1]}},
-	}, ready.Capability)); err != nil {
-		t.Fatal(err)
+	if createWorkspace {
+		created, err := workspaceClient.CreateWorkspace(ctx, brandingRequest(&tammyv1.CreateWorkspaceRequest{
+			SetupId: setupID, Destination: &tammyv1.ApprovedFileRef{CapabilityId: app.LocalWorkspaceDirectoryCapability},
+			WorkspacePassphrase:   &tammyv1.SecretInput{Utf8: []byte("workspace-passphrase-long-enough")},
+			AdministratorUsername: "admin@tammy.local", AdministratorDisplayName: "Tammy Admin",
+			AdministratorPassword: &tammyv1.SecretInput{Utf8: []byte("administrator-password-long-enough")},
+		}, ready.Capability))
+		if err != nil {
+			t.Fatal(err)
+		}
+		groups, err := workspace.ParseRecoveryGroups(created.Msg.RecoverySecret.Utf8)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := workspaceClient.ConfirmRecovery(ctx, brandingRequest(&tammyv1.ConfirmRecoveryRequest{SetupId: setupID,
+			Confirmations: []*tammyv1.RecoveryGroupConfirmation{{GroupIndex: 0, Value: groups[0]}, {GroupIndex: 1, Value: groups[1]}},
+		}, ready.Capability)); err != nil {
+			t.Fatal(err)
+		}
+	} else {
+		if _, err := workspaceClient.UnlockWorkspace(ctx, brandingRequest(&tammyv1.UnlockWorkspaceRequest{
+			WorkspaceFile: &tammyv1.ApprovedFileRef{CapabilityId: app.LocalWorkspaceFileCapability},
+			Proof:         &tammyv1.WorkspaceUnlockProof{Proof: &tammyv1.WorkspaceUnlockProof_Passphrase{Passphrase: &tammyv1.SecretInput{Utf8: []byte("workspace-passphrase-long-enough")}}},
+		}, ready.Capability)); err != nil {
+			t.Fatal(err)
+		}
 	}
 	authenticated, err := identityClient.SignIn(ctx, brandingRequest(&tammyv1.SignInRequest{Username: "admin@tammy.local", Password: &tammyv1.SecretInput{Utf8: []byte("administrator-password-long-enough")}}, ready.Capability))
 	if err != nil {
 		t.Fatal(err)
 	}
 	authentication := &tammyv1.AuthenticationContext{ActorUserId: authenticated.Msg.User.Id, SessionId: authenticated.Msg.Session.Id}
-	bundle, err := artefacts.LoadAUGSTV1()
-	if err != nil {
-		t.Fatal(err)
+	organisationID := retainedOrganisation
+	if organisationID == "" {
+		bundle, err := artefacts.LoadAUGSTV1()
+		if err != nil {
+			t.Fatal(err)
+		}
+		organisation, err := tammyv1connect.NewOrganisationServiceClient(httpClient, baseURL).CreateOrganisation(ctx, brandingRequest(&tammyv1.CreateOrganisationRequest{
+			CommandContext: &tammyv1.CommandContext{IdempotencyKey: "018f0000-0000-7000-8000-000000000102", Authentication: authentication},
+			Abn:            "51824753556", LegalName: "Tammy Business Pty Ltd", DisplayName: "Tammy",
+			EntityType: "AU_PRIVATE_COMPANY", GstBasis: basis,
+			GstReportingFrequency: tammyv1.GstReportingFrequency_GST_REPORTING_FREQUENCY_QUARTERLY, FinancialYearEndMonth: 6, ActiveTaxRuleBundle: bundle.Source,
+		}, ready.Capability))
+		if err != nil {
+			t.Fatal(err)
+		}
+		organisationID = organisation.Msg.Organisation.Id
 	}
-	organisation, err := tammyv1connect.NewOrganisationServiceClient(httpClient, baseURL).CreateOrganisation(ctx, brandingRequest(&tammyv1.CreateOrganisationRequest{
-		CommandContext: &tammyv1.CommandContext{IdempotencyKey: "018f0000-0000-7000-8000-000000000102", Authentication: authentication},
-		Abn:            "51824753556", LegalName: "Tammy Business Pty Ltd", DisplayName: "Tammy",
-		EntityType: "AU_PRIVATE_COMPANY", GstBasis: tammyv1.GstBasis_GST_BASIS_NON_CASH,
-		GstReportingFrequency: tammyv1.GstReportingFrequency_GST_REPORTING_FREQUENCY_QUARTERLY, FinancialYearEndMonth: 6, ActiveTaxRuleBundle: bundle.Source,
-	}, ready.Capability))
-	if err != nil {
-		t.Fatal(err)
-	}
-	return documentPageServer{module: module, client: tammyv1connect.NewDocumentServiceClient(httpClient, baseURL), identity: identityClient,
-		authentication: authentication, organisationID: organisation.Msg.Organisation.Id, capability: ready.Capability}
+	return documentPageServer{module: module, activation: observed.activation, auditMirror: mirror, client: tammyv1connect.NewDocumentServiceClient(httpClient, baseURL), purchases: tammyv1connect.NewPurchaseServiceClient(httpClient, baseURL), workspace: workspaceClient, identity: identityClient,
+		authentication: authentication, organisationID: organisationID, capability: ready.Capability, stop: stop}
 }
 
 func (server documentPageServer) seed(t *testing.T, count int, extractedText string) []*tammyv1.Document {
