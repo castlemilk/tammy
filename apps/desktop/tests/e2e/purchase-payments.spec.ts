@@ -38,11 +38,20 @@ import {
   savePurchaseExport,
   setupPurchaseWorkspace,
 } from "./support/purchase-payments-workflow";
+import {
+  buildPurchaseEvidenceInspector,
+  inspectPurchasePersistedEvidence,
+  type PurchasePersistedEvidence,
+} from "./support/purchase-persisted-evidence";
 import { parseReportCsv, reportArtifactHash } from "./support/reporting-export-artifacts";
 
 const acceptanceRoot = fileURLToPath(
   new URL("../../../../.tmp/purchase-payments-gst-e2e/", import.meta.url),
 );
+
+test.beforeAll(async () => {
+  await buildPurchaseEvidenceInspector();
+});
 
 test("purchases/payments-gst: missing evidence, deferral, explicit claim and legacy review retain their separate effects", async ({
   electronHarness,
@@ -757,7 +766,42 @@ for (const variant of [
       path: screenshot,
       contentType: "image/png",
     });
-    const reopened = await reopenPurchaseWorkspace(electronHarness);
+    let persisted: PurchasePersistedEvidence | undefined;
+    const reopened = await reopenPurchaseWorkspace(electronHarness, async (userDataPath) => {
+      persisted = await inspectPurchasePersistedEvidence(userDataPath, workspace);
+    });
+    if (!persisted) throw new Error("PURCHASE_PERSISTED_EVIDENCE_MISSING");
+    expect(persisted.projection).toEqual(
+      variant.mixed
+        ? { OPERATING: "-6600", INVESTING: "-2200", FINANCING: "-2200" }
+        : { OPERATING: "-11000" },
+    );
+    expect(persisted.facts).toHaveLength(variant.mixed ? 6 : 2);
+    expect(new Set(persisted.facts.map((fact) => fact.id)).size).toBe(persisted.facts.length);
+    for (const payment of payments) {
+      const facts = persisted.facts.filter((fact) => fact.paymentId === payment.id);
+      expect(facts.map((fact) => [fact.category, fact.amountMinor])).toEqual(
+        variant.mixed
+          ? [
+              ["OPERATING", "-3300"],
+              ["INVESTING", "-1100"],
+              ["FINANCING", "-1100"],
+            ]
+          : [["OPERATING", "-5500"]],
+      );
+      for (const fact of facts) {
+        expect(fact.journalId).toBe(payment.journalId);
+        // Each retained payment is the first revision of its own source journal.
+        expect(fact.sourceRevision).toBe("1");
+        expect(fact.paymentDate).toBe(
+          payment.actualPaymentDate?.month === 9 ? "2026-09-30" : "2026-10-02",
+        );
+      }
+    }
+    await writeFile(
+      path.join(directory, "actual-cash-flow-facts.json"),
+      `${JSON.stringify(persisted, null, 2)}\n`,
+    );
     page = reopened.page;
     expect(reopened.workspace.workspaceId).toBe(workspace.workspaceId);
     expect(reopened.workspace.sessionId).not.toBe(workspace.sessionId);

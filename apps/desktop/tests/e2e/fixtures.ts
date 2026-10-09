@@ -82,6 +82,7 @@ export interface ElectronHarness {
   readonly markSbrPassed: (fixtureSha256: string) => void;
   readonly restart: (
     stage: "accounting-workflow-restart" | "sbr-helper-death-recovery",
+    inspectClosedWorkspace?: (userDataPath: string) => Promise<void>,
   ) => Promise<Page>;
   readonly switchUserDataRoot: (name: "secondary") => Promise<Page>;
   readonly usePrimaryUserDataRoot: () => Promise<Page>;
@@ -796,9 +797,25 @@ function fixtureOperations(
           }
           state.sbrFixtureSha256 = fixtureSha256;
         },
-        restart: async (stage) => {
+        restart: async (stage, inspectClosedWorkspace) => {
+          if (inspectClosedWorkspace) {
+            if (
+              stage !== "accounting-workflow-restart" ||
+              state.currentUserDataPath !== state.primaryUserDataPath
+            ) {
+              throw new Error("INVALID_E2E_CLOSED_WORKSPACE_INSPECTION");
+            }
+          }
           await closeCurrent(stage);
-          return (await launch()).page;
+          let restarted: Awaited<ReturnType<typeof launch>>;
+          try {
+            await inspectClosedWorkspace?.(state.currentUserDataPath);
+          } finally {
+            // Restore a live application even when the observer fails, so the
+            // ordinary authenticated teardown can reap and verify its processes.
+            restarted = await launch();
+          }
+          return restarted.page;
         },
         switchUserDataRoot: async (name) => {
           if (name !== "secondary") throw new Error("INVALID_E2E_USER_DATA_ROOT");

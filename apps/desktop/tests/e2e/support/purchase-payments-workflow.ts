@@ -660,8 +660,11 @@ export async function savePurchaseExport(
   await expect(button).toBeEnabled();
   if (process.platform !== "win32") expect((await stat(filePath)).mode & 0o777).toBe(0o600);
 }
-export async function reopenPurchaseWorkspace(harness: ElectronHarness) {
-  const page = await harness.restart("accounting-workflow-restart");
+export async function reopenPurchaseWorkspace(
+  harness: ElectronHarness,
+  inspectClosedWorkspace?: (userDataPath: string) => Promise<void>,
+) {
+  const page = await harness.restart("accounting-workflow-restart", inspectClosedWorkspace);
   await page.getByLabel("Workspace passphrase", { exact: true }).fill(CURRENT_WORKFLOW_PASSPHRASE);
   await page.getByLabel("Email or username", { exact: true }).fill(CURRENT_WORKFLOW_USERNAME);
   await page
