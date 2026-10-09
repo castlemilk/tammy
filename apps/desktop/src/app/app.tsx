@@ -568,10 +568,14 @@ function ActiveRouteContent({
         workspace={workspace}
       />
     );
-  if (path === "/documents")
+  if (path === "/documents" || path.startsWith("/documents?"))
     return (
       <DocumentsScreen
+        key={`${workspace?.workspaceId}:${workspace?.organisationId}:${workspace?.userId}:${workspace?.sessionId}`}
         api={conveyor.documents}
+        purchaseApi={conveyor.purchases}
+        accountingApi={conveyor.accounting}
+        initialDocumentId={new URLSearchParams(path.split("?")[1]).get("document") ?? undefined}
         onDocumentsChanged={() => conveyor.reporting.getAttentionSummary.invalidate()}
         workspace={workspace}
       />
@@ -587,8 +591,13 @@ function ActiveRouteContent({
   if (path === "/gst-bas")
     return (
       <BasScreen
+        key={`${workspace?.workspaceId}:${workspace?.userId}:${workspace?.sessionId}:${workspace?.organisationId ?? ""}`}
         api={conveyor.reporting}
         organisationApi={conveyor.organisation}
+        purchaseApi={conveyor.purchases}
+        documentApi={conveyor.documents}
+        accountingApi={conveyor.accounting}
+        onReviewDocument={(id) => onNavigate(`/documents?document=${encodeURIComponent(id)}`)}
         onBasDraftChanged={() => conveyor.reporting.getAttentionSummary.invalidate()}
         workspace={workspace}
       />

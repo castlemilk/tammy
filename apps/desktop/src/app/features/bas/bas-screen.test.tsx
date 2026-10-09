@@ -316,7 +316,7 @@ it("keeps saved BAS figures and sales provenance visible until a stale draft is 
     status: BasWorkpaperStatus.DRAFT_NOT_LODGED,
     gstBasis: GstBasis.CASH,
     sourcesChanged: true,
-    salesG1: { currencyCode: "AUD", minorUnits: 5500n },
+    salesG1: { currencyCode: "AUD", minorUnits: 9_000_000_000_000_000_001n },
     gstOnSales1a: { currencyCode: "AUD", minorUnits: 500n },
     gstCredits1b: { currencyCode: "AUD", minorUnits: 0n },
     netGstPayable: { currencyCode: "AUD", minorUnits: 500n },
@@ -389,7 +389,8 @@ it("keeps saved BAS figures and sales provenance visible until a stale draft is 
   expect(screen.getByRole("table", { name: "BAS sales sources" }).textContent).toContain(
     "Receipt customer",
   );
-  expect(screen.getByTestId("bas-sales-g1").textContent).toContain("$55.00");
+  expect(screen.getByRole("table", { name: "BAS sales sources" }).textContent).toContain("$55.00");
+  expect(screen.getByTestId("bas-sales-g1").textContent).toContain("$90,000,000,000,000,000.01");
   expect(screen.getByLabelText("Period start")).toHaveProperty("value", "2026-07-01");
   await userEvent.click(await screen.findByRole("button", { name: "Regenerate local draft" }));
   await expect(

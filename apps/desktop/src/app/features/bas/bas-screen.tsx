@@ -16,17 +16,19 @@ import {
 } from "@tammy/connect-client/tammy/v1/tax_pb.js";
 import { validateBasSnapshot } from "@tammy/reporting/model";
 import { Calculator, FileCheck2 } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import { Button } from "../../components/ui/button";
+import { aud } from "../documents/purchase-command-state";
 import {
   ReportExportActions,
   type ReportOrganisationApi,
 } from "../reporting/report-export-actions";
 import { ReportingCapabilityNotice } from "../reporting/reporting-capability-notice";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
+import { type BasPurchaseControls, BasPurchaseDetails } from "./bas-purchase-details";
 
 const createCodec = createProtoMethodCodec({
   input: CreateBasDraftRequestSchema,
@@ -52,13 +54,27 @@ export function BasScreen({
   onBasDraftChanged,
   organisationApi,
   workspace,
+  purchaseApi,
+  documentApi,
+  accountingApi,
+  onReviewDocument,
 }: {
   readonly api: BasAPI;
   readonly organisationApi?: ReportOrganisationApi;
   readonly now?: Date;
   readonly onBasDraftChanged?: () => Promise<void>;
   readonly workspace: AuthenticatedWorkspace | undefined;
-}) {
+} & BasPurchaseControls) {
+  const screenScope = `${workspace?.workspaceId ?? ""}:${workspace?.organisationId ?? ""}:${workspace?.userId ?? ""}:${workspace?.sessionId ?? ""}`;
+  const scopeRef = useRef(screenScope);
+  scopeRef.current = screenScope;
+  const active = useRef(true);
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
   const [defaultPeriod] = useState(() => currentQuarter(now ?? new Date()));
   const [editedPeriod, setEditedPeriod] = useState<{
     readonly start: string;
@@ -115,6 +131,8 @@ export function BasScreen({
 
   const createDraft = async () => {
     if (!workspace?.organisationId) return;
+    const commandScope = screenScope;
+    const isCurrent = () => active.current && scopeRef.current === commandScope;
     if (!gstWorkpaperAvailable) {
       setError("GST workpaper support is unavailable for the selected tax year.");
       return;
@@ -140,17 +158,19 @@ export function BasScreen({
       const response = createCodec.decodeResponse(
         await api.createBasDraft(createCodec.encodeRequest(request)),
       );
+      if (!isCurrent()) return;
       if (!response.workpaper) throw new Error("missing workpaper");
       await Promise.all([
         api.getCurrentBasDraft.invalidate(currentBasInput),
         onBasDraftChanged?.(),
       ]);
     } catch {
-      setError(
-        "The local BAS draft could not be created. Check the selected period and source records, then try again.",
-      );
+      if (isCurrent())
+        setError(
+          "The local BAS draft could not be created. Check the selected period and source records, then try again.",
+        );
     } finally {
-      setBusy(false);
+      if (isCurrent()) setBusy(false);
     }
   };
 
@@ -291,13 +311,21 @@ export function BasScreen({
           </div>
         </section>
       ) : (
-        <Workpaper value={workpaper} />
+        <Workpaper
+          value={workpaper}
+          purchaseApi={purchaseApi}
+          documentApi={documentApi}
+          accountingApi={accountingApi}
+          workspace={workspace}
+          onReviewDocument={onReviewDocument}
+          onChanged={() => api.getCurrentBasDraft.invalidate(currentBasInput)}
+        />
       )}
     </div>
   );
 }
 
-function Workpaper({ value }: { readonly value: BasWorkpaper }) {
+function Workpaper({ value, ...controls }: { readonly value: BasWorkpaper } & BasPurchaseControls) {
   return (
     <div className="grid gap-4">
       <section
@@ -313,6 +341,9 @@ function Workpaper({ value }: { readonly value: BasWorkpaper }) {
         </p>
         <p className="text-[9px] text-muted-foreground">
           Saved reporting period: {formatDate(value.periodStart)} – {formatDate(value.periodEnd)}
+        </p>
+        <p className="text-[9px] text-muted-foreground break-all">
+          Saved workpaper: {value.id} · version {value.version}
         </p>
         {value.sourcesChanged ? (
           <p className="text-[10px] text-warning" role="status">
@@ -444,6 +475,7 @@ function Workpaper({ value }: { readonly value: BasWorkpaper }) {
           </table>
         )}
       </section>
+      <BasPurchaseDetails value={value} {...controls} />
       <p className="text-[9px] text-muted-foreground">
         Status:{" "}
         {value.status === BasWorkpaperStatus.DRAFT_NOT_LODGED
@@ -545,9 +577,7 @@ function formatDate(
     : "—";
 }
 function money(value: bigint | undefined): string {
-  return new Intl.NumberFormat("en-AU", { style: "currency", currency: "AUD" }).format(
-    Number(value ?? 0n) / 100,
-  );
+  return aud(value);
 }
 function abs(value: bigint | undefined): bigint {
   return (value ?? 0n) < 0n ? -(value ?? 0n) : (value ?? 0n);

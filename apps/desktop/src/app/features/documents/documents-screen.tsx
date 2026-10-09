@@ -7,8 +7,11 @@ import {
 } from "@tammy/connect-client/tammy/v1/common_pb.js";
 import {
   type Document,
+  DocumentAccountingFilter,
   DocumentCandidateSchema,
   DocumentStatus,
+  GetDocumentRequestSchema,
+  GetDocumentResponseSchema,
   IngestDocumentRequestSchema,
   IngestDocumentResponseSchema,
   ListDocumentsRequestSchema,
@@ -24,6 +27,12 @@ import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import { Button } from "../../components/ui/button";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
 import { extractNativePdfText } from "./pdf-text";
+import {
+  type PurchaseAccountingAPI,
+  PurchaseAccountingPanel,
+  type PurchaseAPI,
+} from "./purchase-accounting-panel";
+import { aud } from "./purchase-command-state";
 
 const ingestCodec = createProtoMethodCodec({
   input: IngestDocumentRequestSchema,
@@ -43,20 +52,33 @@ const reviewCodec = createProtoMethodCodec({
   maximumResponseBytes: 2 * 1024 * 1024,
   output: SaveDocumentReviewResponseSchema,
 });
+const getDocumentCodec = createProtoMethodCodec({
+  input: GetDocumentRequestSchema,
+  output: GetDocumentResponseSchema,
+  maximumRequestBytes: 16_384,
+  maximumResponseBytes: 2_097_152,
+});
 
 interface DocumentsScreenProps {
   readonly api: Pick<
     TammyConveyorModule<"documents">,
-    "ingestDocument" | "listDocuments" | "saveDocumentReview"
+    "ingestDocument" | "listDocuments" | "getDocument" | "saveDocumentReview"
   >;
   readonly onDocumentsChanged?: () => Promise<void>;
+  readonly purchaseApi?: PurchaseAPI;
+  readonly accountingApi?: PurchaseAccountingAPI;
+  readonly initialDocumentId?: string | undefined;
   readonly workspace: AuthenticatedWorkspace | undefined;
 }
 
 type DocumentState =
   | { readonly status: "loading" }
   | { readonly status: "unavailable" }
-  | { readonly documents: readonly Document[]; readonly status: "ready" };
+  | {
+      readonly documents: readonly Document[];
+      readonly nextCursor: string;
+      readonly status: "ready";
+    };
 
 interface ReviewFields {
   readonly supplierName: string;
@@ -67,8 +89,20 @@ interface ReviewFields {
   readonly total: string;
 }
 
-export function DocumentsScreen({ api, onDocumentsChanged, workspace }: DocumentsScreenProps) {
-  const [selectedID, setSelectedID] = useState<string>();
+export function DocumentsScreen({
+  api,
+  onDocumentsChanged,
+  workspace,
+  purchaseApi,
+  accountingApi,
+  initialDocumentId,
+}: DocumentsScreenProps) {
+  const [selectedID, setSelectedID] = useState<string>(initialDocumentId ?? "");
+  const [retainedSelection, setRetainedSelection] = useState<Document>();
+  const [cursors, setCursors] = useState<readonly string[]>([""]);
+  const [accountingFilter, setAccountingFilter] = useState<DocumentAccountingFilter>();
+  const [statusFilter, setStatusFilter] = useState<DocumentStatus>();
+  const [locating, setLocating] = useState(Boolean(initialDocumentId));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const input = useRef<HTMLInputElement>(null);
@@ -81,39 +115,86 @@ export function DocumentsScreen({ api, onDocumentsChanged, workspace }: Document
         create(ListDocumentsRequestSchema, {
           authentication: { actorUserId: userId, sessionId },
           organisationId,
-          page: create(PageRequestSchema, { pageSize: 200 }),
+          page: create(PageRequestSchema, { pageSize: 200, cursor: cursors.at(-1) ?? "" }),
+          ...(accountingFilter ? { accounting: accountingFilter } : {}),
+          ...(statusFilter ? { status: statusFilter } : {}),
         }),
       ),
-    [organisationId, sessionId, userId],
+    [organisationId, sessionId, userId, cursors, accountingFilter, statusFilter],
   );
   const documentsQuery = api.listDocuments.useQuery({
     enabled: organisationId.length > 0,
     input: listInput,
     retry: false,
   });
+  const selectedInput = useMemo(
+    () =>
+      getDocumentCodec.encodeRequest(
+        create(GetDocumentRequestSchema, {
+          authentication: { actorUserId: userId, sessionId },
+          documentId: initialDocumentId ?? "",
+        }),
+      ),
+    [userId, sessionId, initialDocumentId],
+  );
+  const selectedQuery = api.getDocument.useQuery({
+    enabled: Boolean(initialDocumentId && organisationId),
+    input: selectedInput,
+    retry: false,
+  });
+  useEffect(() => {
+    if (!initialDocumentId) return;
+    try {
+      const retained =
+        selectedQuery.data && getDocumentCodec.decodeResponse(selectedQuery.data).document;
+      if (retained?.id === initialDocumentId && retained.organisationId === organisationId) {
+        setSelectedID(retained.id);
+        setRetainedSelection(retained);
+        setLocating(false);
+      } else if (selectedQuery.isError) {
+        setLocating(false);
+        setError("This document could not be located in the current organisation.");
+      }
+    } catch {
+      setLocating(false);
+      setError("This document could not be located in the current organisation.");
+    }
+  }, [initialDocumentId, organisationId, selectedQuery.data, selectedQuery.isError]);
   const state = useMemo<DocumentState>(() => {
     if (!organisationId || documentsQuery.isError) return { status: "unavailable" };
     if (!documentsQuery.data) return { status: "loading" };
     try {
       return {
         documents: listCodec.decodeResponse(documentsQuery.data).documents,
+        nextCursor: listCodec.decodeResponse(documentsQuery.data).page?.nextCursor ?? "",
         status: "ready",
       };
     } catch {
       return { status: "unavailable" };
     }
   }, [documentsQuery.data, documentsQuery.isError, organisationId]);
+  useEffect(() => {
+    if (state.status !== "ready") return;
+    const current = state.documents.find((item) => item.id === selectedID);
+    if (current) {
+      setRetainedSelection(current);
+      setLocating(false);
+    } else if (locating) return;
+    else if (!selectedID && state.documents[0]) {
+      setSelectedID(state.documents[0].id);
+      setRetainedSelection(state.documents[0]);
+    }
+  }, [state, selectedID, locating]);
   const effectiveSelectedID =
-    state.status === "ready" && state.documents.some((item) => item.id === selectedID)
-      ? selectedID
-      : state.status === "ready"
-        ? state.documents[0]?.id
-        : undefined;
+    selectedID || (state.status === "ready" ? state.documents[0]?.id : undefined);
 
   const selected =
     state.status === "ready"
-      ? state.documents.find((item) => item.id === effectiveSelectedID)
-      : undefined;
+      ? (state.documents.find((item) => item.id === effectiveSelectedID) ??
+        (retainedSelection?.organisationId === organisationId ? retainedSelection : undefined))
+      : retainedSelection?.organisationId === organisationId
+        ? retainedSelection
+        : undefined;
 
   const upload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -196,8 +277,41 @@ export function DocumentsScreen({ api, onDocumentsChanged, workspace }: Document
 
       <div className="grid min-h-[560px] grid-cols-[minmax(300px,0.9fr)_minmax(420px,1.4fr)] gap-4 max-[900px]:grid-cols-1">
         <section className="overflow-hidden rounded-[6px] border border-border bg-surface">
-          <div className="border-b border-border px-3 py-2 text-[9px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
-            Needs review
+          <div className="grid gap-2 border-b border-border px-3 py-2 text-[9px]">
+            <p className="font-semibold uppercase tracking-[0.05em] text-muted-foreground">
+              Retained documents
+            </p>
+            <label className="grid gap-1">
+              Accounting filter
+              <select
+                className="focus-ring rounded border border-border bg-surface p-1"
+                value={accountingFilter ?? 0}
+                onChange={(event) => {
+                  setAccountingFilter(Number(event.target.value) || undefined);
+                  setCursors([""]);
+                }}
+              >
+                <option value={0}>All accounting states</option>
+                <option value={DocumentAccountingFilter.UNPOSTED}>Not posted</option>
+                <option value={DocumentAccountingFilter.POSTED}>Posted purchases</option>
+                <option value={DocumentAccountingFilter.NEEDS_GST_REVIEW}>Needs GST review</option>
+              </select>
+            </label>
+            <label className="grid gap-1">
+              Review filter
+              <select
+                className="focus-ring rounded border border-border bg-surface p-1"
+                value={statusFilter ?? 0}
+                onChange={(event) => {
+                  setStatusFilter(Number(event.target.value) || undefined);
+                  setCursors([""]);
+                }}
+              >
+                <option value={0}>All review states</option>
+                <option value={DocumentStatus.NEEDS_REVIEW}>Needs extraction review</option>
+                <option value={DocumentStatus.REVIEWED}>Reviewed</option>
+              </select>
+            </label>
           </div>
           {state.status === "ready" && state.documents.length > 0 ? (
             <ul className="divide-y divide-border">
@@ -234,17 +348,60 @@ export function DocumentsScreen({ api, onDocumentsChanged, workspace }: Document
           ) : (
             <DocumentEmpty status={state.status} />
           )}
+          {locating ? (
+            <p className="px-3 py-2 text-[10px]" role="status">
+              Locating selected document…
+            </p>
+          ) : null}
+          <div className="flex flex-wrap gap-2 border-t border-border p-3">
+            <Button
+              type="button"
+              className="h-7 text-[9px]"
+              disabled={cursors.length < 2 || documentsQuery.isFetching}
+              onClick={() => setCursors((current) => current.slice(0, -1))}
+            >
+              Previous document page
+            </Button>
+            <Button
+              type="button"
+              className="h-7 text-[9px]"
+              disabled={state.status !== "ready" || !state.nextCursor || documentsQuery.isFetching}
+              onClick={() => {
+                if (state.status === "ready" && state.nextCursor)
+                  setCursors((current) => [...current, state.nextCursor]);
+              }}
+            >
+              Next document page
+            </Button>
+          </div>
         </section>
-        <ReviewPanel
-          api={api}
-          document={selected}
-          onSaved={() =>
-            Promise.all([api.listDocuments.invalidate(listInput), onDocumentsChanged?.()]).then(
-              () => undefined,
-            )
-          }
-          workspace={workspace}
-        />
+        <div className="grid min-w-0 content-start gap-4">
+          <ReviewPanel
+            api={api}
+            document={selected}
+            onSaved={() =>
+              Promise.all([api.listDocuments.invalidate(listInput), onDocumentsChanged?.()]).then(
+                () => undefined,
+              )
+            }
+            workspace={workspace}
+          />
+          {selected && workspace?.organisationId && purchaseApi && accountingApi ? (
+            <PurchaseAccountingPanel
+              key={`${workspace.workspaceId}:${workspace.userId}:${workspace.sessionId}:${selected.id}`}
+              api={purchaseApi}
+              accountingApi={accountingApi}
+              documentApi={api}
+              document={selected}
+              workspace={workspace}
+              onChanged={() =>
+                Promise.all([api.listDocuments.invalidate(listInput), onDocumentsChanged?.()]).then(
+                  () => undefined,
+                )
+              }
+            />
+          ) : null}
+        </div>
       </div>
     </div>
   );
@@ -528,9 +685,7 @@ function minorToDecimal(value: bigint | undefined): string {
   return `${((value ?? 0n) / 100n).toString()}.${((value ?? 0n) % 100n).toString().padStart(2, "0")}`;
 }
 function formatMoney(value: bigint | undefined): string {
-  return new Intl.NumberFormat("en-AU", { style: "currency", currency: "AUD" }).format(
-    Number(value ?? 0n) / 100,
-  );
+  return aud(value);
 }
 function formatBytes(value: bigint): string {
   return value < 1024n ? `${value} B` : `${(Number(value) / 1024).toFixed(1)} KB`;

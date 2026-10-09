@@ -262,6 +262,8 @@ paidAfter = purchaseGross => afterEligible[i] = allocationEligibleGST[i]
 
 ### Task 14: Build the Documents accounting and evidence controls
 
+**Implementation checkpoint (2026-10-09):** Documents and BAS now expose confirmed posting, payments, evidence, explicit claim/deferral and legacy review through the schema-bound purchase module. Owned source/account selectors, retained duplicate provenance, exact-cent amounts, page-201 renderer tests, scoped uncertainty recovery and session-aware exact-key retries are implemented. Initial renderer REDs covered absent purchase modules, document pagination and typed BAS details. The combined renderer/bridge/acquisition run passed 266 tests across 11 files; desktop typecheck passed. The actual packaged journeys, layout/focus inspection and final acceptance remain outstanding; this checkpoint does not complete Task 14.
+
 **Files:**
 
 - Modify `apps/desktop/src/app/features/documents/documents-screen.tsx`, `documents-screen.test.tsx` and `apps/desktop/src/app/app.tsx` where API/state injection is required.
@@ -277,6 +279,8 @@ paidAfter = purchaseGross => afterEligible[i] = allocationEligibleGST[i]
 ## Chunk 4: Exact exports, real acceptance and phase-three handoff
 
 ### Task 15: Extend phase-one saved-workpaper exports with typed purchase sources
+
+**Implementation checkpoint (2026-10-09):** Saved-snapshot CSV/PDF rendering includes all typed purchase source and review provenance, ordered allocations, separate dates, exact money, retained evidence and claim deadlines. Independent parsers reject omitted repeated rows and altered claim amounts, and reconcile every retained row plus 1B. Reporting tests passed 30 tests, including complete 1,000-row PDF/CSV bounds; focused desktop export/bridge regressions passed 79 tests. Scoped formatting and desktop typecheck passed. Historical workpaper shape and the existing native writer/authentication/cancellation contracts remain covered. Actual packaged exports and visual PDF inspection remain required before Task 15 is complete.
 
 **Files:**
 
