@@ -39,6 +39,7 @@ import {
   regenerateInvoiceBas,
   showBusinessIncome,
 } from "./support/invoice-income-workflow";
+import { assertPurchaseExportArtifacts } from "./support/purchase-export-assertions";
 import {
   exactDecimal,
   type ParsedReportCsv,
@@ -131,7 +132,10 @@ for (const gstBasis of ["cash", "non-cash"] as const) {
     const initialBas = await readBas(page, workspace);
     expect(initialBas.sourcesChanged).toBe(false);
     expect(initialBas.salesSources).toHaveLength(1);
-    expect(initialBas.sources).toHaveLength(gstBasis === "cash" ? 0 : 1);
+    expect(initialBas.sources).toHaveLength(0);
+    expect(initialBas.purchaseReviews).toHaveLength(1);
+    expect(initialBas.legacyCandidateGst?.minorUnits).toBe(1000n);
+    expect(initialBas.gstCredits1b?.minorUnits).toBe(0n);
     expect(initialBas.excludedCashPurchaseCount).toBe(gstBasis === "cash" ? 1n : 0n);
     const basCsvPath = path.join(directory, "bas.csv");
     const basPdfPath = path.join(directory, "bas.pdf");
@@ -148,6 +152,7 @@ for (const gstBasis of ["cash", "non-cash"] as const) {
       async () => {
         assertBasCsv(await parseReportCsv(basCsvPath), initialBas, organisation);
         assertBasPdf(await parseReportPdf(basPdfPath), initialBas, organisation);
+        await assertPurchaseExportArtifacts(basCsvPath, basPdfPath, initialBas);
       },
     );
     const beforeExport = await readBas(page, workspace);
@@ -192,6 +197,8 @@ for (const gstBasis of ["cash", "non-cash"] as const) {
     expect(staleBas.salesG1).toEqual(initialBas.salesG1);
     expect(staleBas.gstOnSales1a).toEqual(initialBas.gstOnSales1a);
     expect(staleBas.sources).toEqual(initialBas.sources);
+    expect(staleBas.purchaseReviews).toEqual(initialBas.purchaseReviews);
+    expect(staleBas.legacyCandidateGst).toEqual(initialBas.legacyCandidateGst);
     const staleCsvPath = path.join(directory, "stale-bas.csv");
     const stalePdfPath = path.join(directory, "stale-bas.pdf");
     await saveExport(electronHarness, page.locator("main"), "CSV", staleCsvPath);
@@ -200,6 +207,7 @@ for (const gstBasis of ["cash", "non-cash"] as const) {
     await retainComparison(directory, "stale-bas", { organisation, bas: staleBas }, async () => {
       assertBasCsv(await parseReportCsv(staleCsvPath), staleBas, organisation);
       assertBasPdf(await parseReportPdf(stalePdfPath), staleBas, organisation);
+      await assertPurchaseExportArtifacts(staleCsvPath, stalePdfPath, staleBas);
     });
     expect(await readBas(page, workspace)).toEqual(staleBas);
 
@@ -214,12 +222,17 @@ for (const gstBasis of ["cash", "non-cash"] as const) {
     expect(regenerated.id).not.toBe(initialBas.id);
     expect(regenerated.sourcesChanged).toBe(false);
     expect(regenerated.salesSources).toHaveLength(gstBasis === "cash" ? 2 : 1);
-    expect(regenerated.sources).toHaveLength(gstBasis === "cash" ? 0 : 2);
+    expect(regenerated.sources).toHaveLength(0);
+    expect(regenerated.purchaseReviews).toHaveLength(2);
+    expect(regenerated.legacyCandidateGst?.minorUnits).toBe(2000n);
     expect(regenerated.excludedCashPurchaseCount).toBe(gstBasis === "cash" ? 2n : 0n);
-    expect(regenerated.gstCredits1b?.minorUnits).toBe(gstBasis === "cash" ? 0n : 2000n);
-    expect(regenerated.netGstPayable?.minorUnits).toBe(gstBasis === "cash" ? 750n : -1000n);
-    if (gstBasis === "non-cash")
-      expect(regenerated.sources.map((source) => source.supplierName)).toContain(revisedSupplier);
+    expect(regenerated.gstCredits1b?.minorUnits).toBe(0n);
+    expect(regenerated.netGstPayable?.minorUnits).toBe(gstBasis === "cash" ? 750n : 1000n);
+    for (const review of regenerated.purchaseReviews) {
+      expect(review.legacySource?.source.case).toBe("document");
+      expect(review.eligibleGst?.minorUnits).toBe(1000n);
+      expect(review.sourceHash).toHaveLength(32);
+    }
     const regeneratedCsvPath = path.join(directory, "regenerated-bas.csv");
     const regeneratedPdfPath = path.join(directory, "regenerated-bas.pdf");
     await saveExport(electronHarness, page.locator("main"), "CSV", regeneratedCsvPath);
@@ -231,6 +244,7 @@ for (const gstBasis of ["cash", "non-cash"] as const) {
       async () => {
         assertBasCsv(await parseReportCsv(regeneratedCsvPath), regenerated, organisation);
         assertBasPdf(await parseReportPdf(regeneratedPdfPath), regenerated, organisation);
+        await assertPurchaseExportArtifacts(regeneratedCsvPath, regeneratedPdfPath, regenerated);
       },
     );
     // Saved exports themselves remain immutable after both ledger and document changes.
@@ -252,6 +266,7 @@ for (const gstBasis of ["cash", "non-cash"] as const) {
       { organisation, bas: regenerated },
       async () => {
         assertBasCsv(await parseReportCsv(restartedCsvPath), regenerated, organisation);
+        await assertPurchaseExportArtifacts(restartedCsvPath, regeneratedPdfPath, regenerated);
       },
     );
     await showBusinessIncome(page, periodStart, periodEnd, asOfDate);
@@ -619,7 +634,23 @@ function assertIncomePdf(text: string, income: BusinessIncomeSummary, organisati
   expect(tokens).toContain(`unpostedissuedcount${income.unpostedIssuedCount}`);
 }
 
-function assertBasCsv(csv: ParsedReportCsv, bas: BasWorkpaper, organisation: Organisation) {
+function assertBasCsv(rawCsv: ParsedReportCsv, bas: BasWorkpaper, organisation: Organisation) {
+  const csv =
+    bas.purchaseSourceFormat === undefined
+      ? rawCsv
+      : {
+          ...rawCsv,
+          header: rawCsv.header.slice(0, 15),
+          rows: rawCsv.rows.map((row) =>
+            Object.fromEntries(
+              rawCsv.header.slice(0, 15).map((key) => {
+                const value = row[key];
+                if (value === undefined) throw new Error("BAS_EXPORT_BASE_COLUMN_MISSING");
+                return [key, value];
+              }),
+            ),
+          ),
+        };
   expect(csv.header).toEqual([
     "kind",
     "metric",
