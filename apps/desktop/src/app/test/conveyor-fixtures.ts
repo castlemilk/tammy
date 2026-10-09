@@ -79,6 +79,16 @@ function createProcedures(): ConveyorFixtureProcedures {
       ingestDocument: unavailable(),
       saveDocumentReview: unavailable(),
     },
+    purchases: {
+      getPurchaseAccounting: unavailable(),
+      postReviewedPurchase: unavailable(),
+      recordPurchasePayment: unavailable(),
+      listPurchasePayments: unavailable(),
+      recordPurchaseTaxEvidence: unavailable(),
+      attributePurchaseGst: unavailable(),
+      deferPurchaseGstClaim: unavailable(),
+      resolveLegacyPurchaseReview: unavailable(),
+    },
     reporting: {
       exportIncome: unavailable(),
       exportBas: unavailable(),

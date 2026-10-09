@@ -6,12 +6,13 @@ import {
   isBoundedUtf8String,
 } from "./conveyor-contract";
 
-it("exports a frozen complete eight-module Conveyor contract", () => {
+it("exports a frozen complete nine-module Conveyor contract", () => {
   expect(Object.keys(CONVEYOR_MANIFEST).sort()).toEqual([
     "accounting",
     "banking",
     "documents",
     "organisation",
+    "purchases",
     "reporting",
     "sbr",
     "system",
@@ -26,6 +27,7 @@ it("exports a frozen complete eight-module Conveyor contract", () => {
     "conveyor:accounting",
     "conveyor:banking",
     "conveyor:documents",
+    "conveyor:purchases",
     "conveyor:reporting",
     "conveyor:sbr",
   ]);

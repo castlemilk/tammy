@@ -6,7 +6,7 @@ vi.mock("electron", () => ({ app: { isPackaged: true } }));
 import manifest from "../shared/conveyor-manifest.json";
 import { createTammyRouter } from "./router";
 
-test("the router composes exactly the fixed eight-module manifest and cannot dispatch an unknown method", async () => {
+test("the router composes exactly the fixed nine-module manifest and cannot dispatch an unknown method", async () => {
   const client = new Proxy({}, { get: () => async (request: unknown) => request });
   const router = createTammyRouter();
   const caller = createCaller(router, {

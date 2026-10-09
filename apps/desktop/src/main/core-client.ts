@@ -93,6 +93,25 @@ import type {
   GetAttentionSummaryResponse,
 } from "@tammy/connect-client/tammy/v1/overview_pb.js";
 import { OverviewService } from "@tammy/connect-client/tammy/v1/overview_pb.js";
+import {
+  type AttributePurchaseGstRequest,
+  type AttributePurchaseGstResponse,
+  type DeferPurchaseGstClaimRequest,
+  type DeferPurchaseGstClaimResponse,
+  type GetPurchaseAccountingRequest,
+  type GetPurchaseAccountingResponse,
+  type ListPurchasePaymentsRequest,
+  type ListPurchasePaymentsResponse,
+  type PostReviewedPurchaseRequest,
+  type PostReviewedPurchaseResponse,
+  PurchaseService,
+  type RecordPurchasePaymentRequest,
+  type RecordPurchasePaymentResponse,
+  type RecordPurchaseTaxEvidenceRequest,
+  type RecordPurchaseTaxEvidenceResponse,
+  type ResolveLegacyPurchaseReviewRequest,
+  type ResolveLegacyPurchaseReviewResponse,
+} from "@tammy/connect-client/tammy/v1/purchases_pb.js";
 import type {
   GetReportingCapabilityRequest,
   GetReportingCapabilityResponse,
@@ -136,9 +155,9 @@ import type {
   UnlockWorkspaceResponse,
 } from "@tammy/connect-client/tammy/v1/workspace_pb.js";
 import { WorkspaceService } from "@tammy/connect-client/tammy/v1/workspace_pb.js";
-
 import type { SystemDiagnostics } from "../shared/conveyor-contract";
 import type { CoreReadiness } from "../shared/readiness";
+import { purchaseCoreCorrection } from "./purchase-errors";
 
 export type { SystemDiagnostics } from "../shared/conveyor-contract";
 
@@ -147,6 +166,31 @@ const EXPECTED_API_VERSION = "tammy.v1";
 const CORE_VERSION_PATTERN = /^[\x20-\x7e]{1,128}$/;
 
 export interface CoreClient {
+  readonly getPurchaseAccounting: (
+    request: GetPurchaseAccountingRequest,
+  ) => Promise<GetPurchaseAccountingResponse>;
+  readonly postReviewedPurchase: (
+    request: PostReviewedPurchaseRequest,
+  ) => Promise<PostReviewedPurchaseResponse>;
+  readonly recordPurchasePayment: (
+    request: RecordPurchasePaymentRequest,
+  ) => Promise<RecordPurchasePaymentResponse>;
+  readonly listPurchasePayments: (
+    request: ListPurchasePaymentsRequest,
+  ) => Promise<ListPurchasePaymentsResponse>;
+  readonly recordPurchaseTaxEvidence: (
+    request: RecordPurchaseTaxEvidenceRequest,
+  ) => Promise<RecordPurchaseTaxEvidenceResponse>;
+  readonly attributePurchaseGst: (
+    request: AttributePurchaseGstRequest,
+  ) => Promise<AttributePurchaseGstResponse>;
+  readonly deferPurchaseGstClaim: (
+    request: DeferPurchaseGstClaimRequest,
+  ) => Promise<DeferPurchaseGstClaimResponse>;
+  readonly resolveLegacyPurchaseReview: (
+    request: ResolveLegacyPurchaseReviewRequest,
+  ) => Promise<ResolveLegacyPurchaseReviewResponse>;
+
   readonly getInvoiceAccounting: (
     request: GetInvoiceAccountingRequest,
   ) => Promise<GetInvoiceAccountingResponse>;
@@ -309,6 +353,7 @@ export function createCoreClient(
   const invoiceClient = createClient(InvoiceService, transport);
   const bankingClient = createClient(BankingService, transport);
   const documentClient = createClient(DocumentService, transport);
+  const purchaseClient = createClient(PurchaseService, transport);
   const overviewClient = createClient(OverviewService, transport);
   const reportingCapabilityClient = createClient(ReportingCapabilityService, transport);
   const workspaceClient = createClient(WorkspaceService, transport);
@@ -325,7 +370,34 @@ export function createCoreClient(
     }
   };
 
+  const purchaseRequest = async <Response>(request: () => Promise<Response>): Promise<Response> => {
+    try {
+      return await request();
+    } catch (error) {
+      throw (
+        purchaseCoreCorrection(error) ??
+        new ConnectError("Core request failed.", ConnectError.from(error).code)
+      );
+    }
+  };
+
   return Object.freeze({
+    getPurchaseAccounting: (request: GetPurchaseAccountingRequest) =>
+      purchaseRequest(() => purchaseClient.getPurchaseAccounting(request)),
+    postReviewedPurchase: (request: PostReviewedPurchaseRequest) =>
+      purchaseRequest(() => purchaseClient.postReviewedPurchase(request)),
+    recordPurchasePayment: (request: RecordPurchasePaymentRequest) =>
+      purchaseRequest(() => purchaseClient.recordPurchasePayment(request)),
+    listPurchasePayments: (request: ListPurchasePaymentsRequest) =>
+      purchaseRequest(() => purchaseClient.listPurchasePayments(request)),
+    recordPurchaseTaxEvidence: (request: RecordPurchaseTaxEvidenceRequest) =>
+      purchaseRequest(() => purchaseClient.recordPurchaseTaxEvidence(request)),
+    attributePurchaseGst: (request: AttributePurchaseGstRequest) =>
+      purchaseRequest(() => purchaseClient.attributePurchaseGst(request)),
+    deferPurchaseGstClaim: (request: DeferPurchaseGstClaimRequest) =>
+      purchaseRequest(() => purchaseClient.deferPurchaseGstClaim(request)),
+    resolveLegacyPurchaseReview: (request: ResolveLegacyPurchaseReviewRequest) =>
+      purchaseRequest(() => purchaseClient.resolveLegacyPurchaseReview(request)),
     getInvoiceAccounting: (request: GetInvoiceAccountingRequest) =>
       coreRequest(() => invoiceClient.getInvoiceAccounting(request)),
     postInvoiceIncome: (request: PostInvoiceIncomeRequest) =>

@@ -41,6 +41,30 @@ function occurrences(calls: readonly string[], value: string): number {
 
 function unusedCoreMethods() {
   return {
+    getPurchaseAccounting: vi.fn(async () => {
+      throw new Error("unused");
+    }),
+    postReviewedPurchase: vi.fn(async () => {
+      throw new Error("unused");
+    }),
+    recordPurchasePayment: vi.fn(async () => {
+      throw new Error("unused");
+    }),
+    listPurchasePayments: vi.fn(async () => {
+      throw new Error("unused");
+    }),
+    recordPurchaseTaxEvidence: vi.fn(async () => {
+      throw new Error("unused");
+    }),
+    attributePurchaseGst: vi.fn(async () => {
+      throw new Error("unused");
+    }),
+    deferPurchaseGstClaim: vi.fn(async () => {
+      throw new Error("unused");
+    }),
+    resolveLegacyPurchaseReview: vi.fn(async () => {
+      throw new Error("unused");
+    }),
     getInvoiceAccounting: vi.fn(async () => {
       throw new Error("unavailable");
     }),

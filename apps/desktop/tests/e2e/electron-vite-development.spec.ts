@@ -174,6 +174,7 @@ test("runs the real electron-vite development runtime offline and cleans up Core
       "banking",
       "documents",
       "organisation",
+      "purchases",
       "reporting",
       "sbr",
       "system",

@@ -116,7 +116,7 @@ describe("owned Conveyor registration", () => {
     expect(() => configuration.authorize(second.event)).not.toThrow();
   });
 
-  it("registers exactly eight procedure handlers and one guarded manifest with streams disabled", () => {
+  it("registers exactly nine procedure handlers and one guarded manifest with streams disabled", () => {
     const ipcMain = createIpcMain();
     const harness = createWindow();
     const dispose = registerTammyConveyor(options(ipcMain, () => harness.window));
@@ -128,6 +128,7 @@ describe("owned Conveyor registration", () => {
       "conveyor:accounting",
       "conveyor:banking",
       "conveyor:documents",
+      "conveyor:purchases",
       "conveyor:reporting",
       "conveyor:sbr",
     ]);

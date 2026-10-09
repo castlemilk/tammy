@@ -5,6 +5,7 @@ import { accounting } from "./modules/accounting";
 import { banking } from "./modules/banking";
 import { documents } from "./modules/documents";
 import { organisationModule } from "./modules/organisation";
+import { purchases } from "./modules/purchases";
 import { reporting } from "./modules/reporting";
 import { sbr } from "./modules/sbr";
 import { system } from "./modules/system";
@@ -17,6 +18,7 @@ const modules = Object.freeze({
   accounting,
   banking,
   documents,
+  purchases,
   reporting,
   sbr,
 });

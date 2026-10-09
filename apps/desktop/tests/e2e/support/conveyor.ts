@@ -7,6 +7,7 @@ const CHANNELS = {
   banking: "conveyor:banking",
   documents: "conveyor:documents",
   organisation: "conveyor:organisation",
+  purchases: "conveyor:purchases",
   reporting: "conveyor:reporting",
   sbr: "conveyor:sbr",
   system: "conveyor:system",

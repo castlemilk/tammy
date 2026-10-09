@@ -121,6 +121,7 @@ function validConveyorManifest() {
     banking: { getBankingSummary: "query" },
     documents: { listDocuments: "query" },
     organisation: { getCurrentUser: "query" },
+    purchases: { getPurchaseAccounting: "query" },
     reporting: { getAttentionSummary: "query" },
     sbr: { getSbrReadiness: "query" },
     system: { getSystemDiagnostics: "query" },
@@ -157,6 +158,7 @@ test("Conveyor manifest flattens the fixed module surface", async () => {
     "banking",
     "documents",
     "organisation",
+    "purchases",
     "reporting",
     "sbr",
     "system",
@@ -166,6 +168,7 @@ test("Conveyor manifest flattens the fixed module surface", async () => {
     "getAttentionSummary",
     "getBankingSummary",
     "getCurrentUser",
+    "getPurchaseAccounting",
     "getSbrReadiness",
     "getSystemDiagnostics",
     "getWorkspaceState",
@@ -183,8 +186,10 @@ test("Conveyor manifest rejects unknown modules, kinds, and duplicate procedures
   const duplicateMethod = validConveyorManifest();
   duplicateMethod.workspace.getWorkspaceState = "query";
   duplicateMethod.accounting.getWorkspaceState = "query";
+  const missingPurchases = validConveyorManifest();
+  delete missingPurchases.purchases;
 
-  for (const invalid of [unknownModule, unknownKind, duplicateMethod]) {
+  for (const invalid of [unknownModule, unknownKind, duplicateMethod, missingPurchases]) {
     assert.throws(() => parseConveyorManifest(invalid), {
       message: "E2E_COVERAGE_CONVEYOR_MANIFEST_INVALID",
     });
@@ -1074,6 +1079,7 @@ test("loads coverage from the descriptor and production manifests", async (conte
     ["tammy.v1.BankingService.GetBankingSummary", "getBankingSummary"],
     ["tammy.v1.DocumentService.ListDocuments", "listDocuments"],
     ["tammy.v1.IdentityService.GetCurrentUser", "getCurrentUser"],
+    ["tammy.v1.PurchaseService.GetPurchaseAccounting", "getPurchaseAccounting"],
     ["tammy.v1.OverviewService.GetAttentionSummary", "getAttentionSummary"],
     ["tammy.v1.SbrService.GetSbrReadiness", "getSbrReadiness"],
     ["tammy.v1.WorkspaceService.GetWorkspaceState", "getWorkspaceState"],
@@ -1101,6 +1107,7 @@ test("loads coverage from the descriptor and production manifests", async (conte
     banking: { getBankingSummary: "query" },
     documents: { listDocuments: "query" },
     organisation: { getCurrentUser: "query" },
+    purchases: { getPurchaseAccounting: "query" },
     reporting: { getAttentionSummary: "query" },
     sbr: { getSbrReadiness: "query" },
     system: { getSystemDiagnostics: "query" },
@@ -1118,6 +1125,7 @@ test("loads coverage from the descriptor and production manifests", async (conte
           { name: "SystemService", method: [{ name: "GetDiagnostics" }] },
           { name: "AccountingService", method: [{ name: "ListAccounts" }] },
           { name: "BankingService", method: [{ name: "GetBankingSummary" }] },
+          { name: "PurchaseService", method: [{ name: "GetPurchaseAccounting" }] },
           { name: "DocumentService", method: [{ name: "ListDocuments" }] },
           { name: "IdentityService", method: [{ name: "GetCurrentUser" }] },
           { name: "OverviewService", method: [{ name: "GetAttentionSummary" }] },

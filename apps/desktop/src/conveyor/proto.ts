@@ -1,5 +1,6 @@
 import { ConveyorError, type StandardSchemaV1 } from "electron-conveyor/define";
 import { z } from "zod";
+import { PurchaseCoreCorrection } from "../shared/purchase-errors";
 
 interface ProtoCodec<Request, Response> {
   decodeRequest(frame: Uint8Array): Request;
@@ -53,7 +54,8 @@ export async function invokeCore<Request, Response>(
     const copiedResponse = copyFrame(encoded, Number.MAX_SAFE_INTEGER);
     if (copiedResponse === undefined) throw new Error("INVALID_RESPONSE");
     return copiedResponse;
-  } catch {
+  } catch (error) {
+    if (error instanceof PurchaseCoreCorrection) throw new ConveyorError(error.code, error.code);
     throw new ConveyorError("CORE_REQUEST_FAILED", "CORE_REQUEST_FAILED");
   }
 }

@@ -6,6 +6,7 @@ import * as identityProto from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import * as invoicesProto from "@tammy/connect-client/tammy/v1/invoices_pb.js";
 import * as organisationProto from "@tammy/connect-client/tammy/v1/organisation_pb.js";
 import * as overviewProto from "@tammy/connect-client/tammy/v1/overview_pb.js";
+import * as purchasesProto from "@tammy/connect-client/tammy/v1/purchases_pb.js";
 import * as reportingCapabilityProto from "@tammy/connect-client/tammy/v1/reporting_capability_pb.js";
 import * as taxProto from "@tammy/connect-client/tammy/v1/tax_pb.js";
 import * as workspaceProto from "@tammy/connect-client/tammy/v1/workspace_pb.js";
@@ -59,6 +60,78 @@ interface OrdinaryCase {
 }
 
 const ORDINARY_CASES = [
+  {
+    module: "purchases",
+    method: "getPurchaseAccounting",
+    coreMethod: "getPurchaseAccounting",
+    input: purchasesProto.GetPurchaseAccountingRequestSchema,
+    output: purchasesProto.GetPurchaseAccountingResponseSchema,
+    maximumRequestBytes: 16_384,
+    maximumResponseBytes: 4 * 1024 * 1024,
+  },
+  {
+    module: "purchases",
+    method: "postReviewedPurchase",
+    coreMethod: "postReviewedPurchase",
+    input: purchasesProto.PostReviewedPurchaseRequestSchema,
+    output: purchasesProto.PostReviewedPurchaseResponseSchema,
+    maximumRequestBytes: 131_072,
+    maximumResponseBytes: 4 * 1024 * 1024,
+  },
+  {
+    module: "purchases",
+    method: "recordPurchasePayment",
+    coreMethod: "recordPurchasePayment",
+    input: purchasesProto.RecordPurchasePaymentRequestSchema,
+    output: purchasesProto.RecordPurchasePaymentResponseSchema,
+    maximumRequestBytes: 131_072,
+    maximumResponseBytes: 4 * 1024 * 1024,
+  },
+  {
+    module: "purchases",
+    method: "listPurchasePayments",
+    coreMethod: "listPurchasePayments",
+    input: purchasesProto.ListPurchasePaymentsRequestSchema,
+    output: purchasesProto.ListPurchasePaymentsResponseSchema,
+    maximumRequestBytes: 16_384,
+    maximumResponseBytes: 4 * 1024 * 1024,
+  },
+  {
+    module: "purchases",
+    method: "recordPurchaseTaxEvidence",
+    coreMethod: "recordPurchaseTaxEvidence",
+    input: purchasesProto.RecordPurchaseTaxEvidenceRequestSchema,
+    output: purchasesProto.RecordPurchaseTaxEvidenceResponseSchema,
+    maximumRequestBytes: 131_072,
+    maximumResponseBytes: 4 * 1024 * 1024,
+  },
+  {
+    module: "purchases",
+    method: "attributePurchaseGst",
+    coreMethod: "attributePurchaseGst",
+    input: purchasesProto.AttributePurchaseGstRequestSchema,
+    output: purchasesProto.AttributePurchaseGstResponseSchema,
+    maximumRequestBytes: 131_072,
+    maximumResponseBytes: 4 * 1024 * 1024,
+  },
+  {
+    module: "purchases",
+    method: "deferPurchaseGstClaim",
+    coreMethod: "deferPurchaseGstClaim",
+    input: purchasesProto.DeferPurchaseGstClaimRequestSchema,
+    output: purchasesProto.DeferPurchaseGstClaimResponseSchema,
+    maximumRequestBytes: 131_072,
+    maximumResponseBytes: 4 * 1024 * 1024,
+  },
+  {
+    module: "purchases",
+    method: "resolveLegacyPurchaseReview",
+    coreMethod: "resolveLegacyPurchaseReview",
+    input: purchasesProto.ResolveLegacyPurchaseReviewRequestSchema,
+    output: purchasesProto.ResolveLegacyPurchaseReviewResponseSchema,
+    maximumRequestBytes: 131_072,
+    maximumResponseBytes: 4 * 1024 * 1024,
+  },
   {
     module: "accounting",
     method: "getInvoiceAccounting",

@@ -1,5 +1,12 @@
 import { ConveyorError } from "electron-conveyor/define";
+import { isPurchaseCorrectionCode } from "../shared/purchase-errors";
 
-export function sanitizeHandlerError(_error: unknown): ConveyorError {
+export function sanitizeHandlerError(error: unknown): ConveyorError {
+  if (
+    error instanceof ConveyorError &&
+    isPurchaseCorrectionCode(error.code) &&
+    error.message === error.code
+  )
+    return new ConveyorError(error.code, error.code);
   return new ConveyorError("CORE_REQUEST_FAILED", "CORE_REQUEST_FAILED");
 }

@@ -52,6 +52,16 @@
     "ingestDocument": "command",
     "saveDocumentReview": "command"
   },
+  "purchases": {
+    "getPurchaseAccounting": "query",
+    "postReviewedPurchase": "command",
+    "recordPurchasePayment": "command",
+    "listPurchasePayments": "query",
+    "recordPurchaseTaxEvidence": "command",
+    "attributePurchaseGst": "command",
+    "deferPurchaseGstClaim": "command",
+    "resolveLegacyPurchaseReview": "command"
+  },
   "reporting": {
     "exportIncome": "command",
     "exportBas": "command",

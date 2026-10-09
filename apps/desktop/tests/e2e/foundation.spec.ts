@@ -168,6 +168,7 @@ test("runs the packaged first-run journey offline and exits cleanly", async ({
     "banking",
     "documents",
     "organisation",
+    "purchases",
     "reporting",
     "sbr",
     "system",

@@ -49,6 +49,7 @@ const CONVEYOR_MODULES = [
   "accounting",
   "banking",
   "documents",
+  "purchases",
   "reporting",
   "sbr",
 ];
