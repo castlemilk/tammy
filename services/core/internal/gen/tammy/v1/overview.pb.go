@@ -34,6 +34,8 @@ const (
 	AttentionItemKind_ATTENTION_ITEM_KIND_BANKING_RECONCILIATION AttentionItemKind = 2
 	// ATTENTION_ITEM_KIND_BAS_WORKPAPER links to an exact retained BAS workpaper resource.
 	AttentionItemKind_ATTENTION_ITEM_KIND_BAS_WORKPAPER AttentionItemKind = 3
+	// ATTENTION_ITEM_KIND_BAS_PREPARATION links to an exact local preparation resource.
+	AttentionItemKind_ATTENTION_ITEM_KIND_BAS_PREPARATION AttentionItemKind = 4
 )
 
 // Enum value maps for AttentionItemKind.
@@ -43,12 +45,14 @@ var (
 		1: "ATTENTION_ITEM_KIND_DOCUMENT_REVIEW",
 		2: "ATTENTION_ITEM_KIND_BANKING_RECONCILIATION",
 		3: "ATTENTION_ITEM_KIND_BAS_WORKPAPER",
+		4: "ATTENTION_ITEM_KIND_BAS_PREPARATION",
 	}
 	AttentionItemKind_value = map[string]int32{
 		"ATTENTION_ITEM_KIND_UNSPECIFIED":            0,
 		"ATTENTION_ITEM_KIND_DOCUMENT_REVIEW":        1,
 		"ATTENTION_ITEM_KIND_BANKING_RECONCILIATION": 2,
 		"ATTENTION_ITEM_KIND_BAS_WORKPAPER":          3,
+		"ATTENTION_ITEM_KIND_BAS_PREPARATION":        4,
 	}
 )
 
@@ -91,6 +95,16 @@ const (
 	BasAttentionStatus_BAS_ATTENTION_STATUS_DRAFT_NOT_LODGED BasAttentionStatus = 2
 	// BAS_ATTENTION_STATUS_OUTDATED means retained source changes require regeneration.
 	BasAttentionStatus_BAS_ATTENTION_STATUS_OUTDATED BasAttentionStatus = 3
+	// BAS_ATTENTION_STATUS_ACTION_NEEDED means a profile or period is missing before preparation exists, or an existing local preparation is collecting or blocked. Exact preparation and family references may be absent before creation.
+	BasAttentionStatus_BAS_ATTENTION_STATUS_ACTION_NEEDED BasAttentionStatus = 4
+	// BAS_ATTENTION_STATUS_REVIEW_READY means the exact current preparation passed validation.
+	BasAttentionStatus_BAS_ATTENTION_STATUS_REVIEW_READY BasAttentionStatus = 5
+	// BAS_ATTENTION_STATUS_FROZEN_FOR_MANUAL_HANDOFF means a reviewed local snapshot was frozen.
+	BasAttentionStatus_BAS_ATTENTION_STATUS_FROZEN_FOR_MANUAL_HANDOFF BasAttentionStatus = 6
+	// BAS_ATTENTION_STATUS_EXTERNAL_CONFIRMATION_RECORDED means a user recorded external handling.
+	BasAttentionStatus_BAS_ATTENTION_STATUS_EXTERNAL_CONFIRMATION_RECORDED BasAttentionStatus = 7
+	// BAS_ATTENTION_STATUS_DISPUTED means retained external observations require review.
+	BasAttentionStatus_BAS_ATTENTION_STATUS_DISPUTED BasAttentionStatus = 8
 )
 
 // Enum value maps for BasAttentionStatus.
@@ -100,12 +114,22 @@ var (
 		1: "BAS_ATTENTION_STATUS_NOT_CREATED",
 		2: "BAS_ATTENTION_STATUS_DRAFT_NOT_LODGED",
 		3: "BAS_ATTENTION_STATUS_OUTDATED",
+		4: "BAS_ATTENTION_STATUS_ACTION_NEEDED",
+		5: "BAS_ATTENTION_STATUS_REVIEW_READY",
+		6: "BAS_ATTENTION_STATUS_FROZEN_FOR_MANUAL_HANDOFF",
+		7: "BAS_ATTENTION_STATUS_EXTERNAL_CONFIRMATION_RECORDED",
+		8: "BAS_ATTENTION_STATUS_DISPUTED",
 	}
 	BasAttentionStatus_value = map[string]int32{
-		"BAS_ATTENTION_STATUS_UNSPECIFIED":      0,
-		"BAS_ATTENTION_STATUS_NOT_CREATED":      1,
-		"BAS_ATTENTION_STATUS_DRAFT_NOT_LODGED": 2,
-		"BAS_ATTENTION_STATUS_OUTDATED":         3,
+		"BAS_ATTENTION_STATUS_UNSPECIFIED":                    0,
+		"BAS_ATTENTION_STATUS_NOT_CREATED":                    1,
+		"BAS_ATTENTION_STATUS_DRAFT_NOT_LODGED":               2,
+		"BAS_ATTENTION_STATUS_OUTDATED":                       3,
+		"BAS_ATTENTION_STATUS_ACTION_NEEDED":                  4,
+		"BAS_ATTENTION_STATUS_REVIEW_READY":                   5,
+		"BAS_ATTENTION_STATUS_FROZEN_FOR_MANUAL_HANDOFF":      6,
+		"BAS_ATTENTION_STATUS_EXTERNAL_CONFIRMATION_RECORDED": 7,
+		"BAS_ATTENTION_STATUS_DISPUTED":                       8,
 	}
 )
 
@@ -451,8 +475,14 @@ type GetAttentionSummaryResponse struct {
 	AsOfDate *CivilDate `protobuf:"bytes,9,opt,name=as_of_date,json=asOfDate,proto3" json:"as_of_date,omitempty"`
 	// reporting_period echoes the exact inclusive reporting range used by the snapshot.
 	ReportingPeriod *ReportingPeriod `protobuf:"bytes,10,opt,name=reporting_period,json=reportingPeriod,proto3" json:"reporting_period,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// bas_preparation is the exact local preparation identity when this period has one.
+	BasPreparation *SourceRef `protobuf:"bytes,11,opt,name=bas_preparation,json=basPreparation,proto3,oneof" json:"bas_preparation,omitempty"`
+	// bas_family is the stable exact statement-family identity when one has been established.
+	BasFamily *SourceRef `protobuf:"bytes,12,opt,name=bas_family,json=basFamily,proto3,oneof" json:"bas_family,omitempty"`
+	// bas_frozen is the exact immutable handoff snapshot when the preparation has been frozen.
+	BasFrozen     *SourceRef `protobuf:"bytes,13,opt,name=bas_frozen,json=basFrozen,proto3,oneof" json:"bas_frozen,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetAttentionSummaryResponse) Reset() {
@@ -555,6 +585,27 @@ func (x *GetAttentionSummaryResponse) GetReportingPeriod() *ReportingPeriod {
 	return nil
 }
 
+func (x *GetAttentionSummaryResponse) GetBasPreparation() *SourceRef {
+	if x != nil {
+		return x.BasPreparation
+	}
+	return nil
+}
+
+func (x *GetAttentionSummaryResponse) GetBasFamily() *SourceRef {
+	if x != nil {
+		return x.BasFamily
+	}
+	return nil
+}
+
+func (x *GetAttentionSummaryResponse) GetBasFrozen() *SourceRef {
+	if x != nil {
+		return x.BasFrozen
+	}
+	return nil
+}
+
 var File_tammy_v1_overview_proto protoreflect.FileDescriptor
 
 const file_tammy_v1_overview_proto_rawDesc = "" +
@@ -583,7 +634,7 @@ const file_tammy_v1_overview_proto_rawDesc = "" +
 	"\x0forganisation_id\x18\x02 \x01(\tBL\xbaHIrG2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$R\x0eorganisationId\x129\n" +
 	"\n" +
 	"as_of_date\x18\x03 \x01(\v2\x13.tammy.v1.CivilDateB\x06\xbaH\x03\xc8\x01\x01R\basOfDate\x12L\n" +
-	"\x10reporting_period\x18\x04 \x01(\v2\x19.tammy.v1.ReportingPeriodB\x06\xbaH\x03\xc8\x01\x01R\x0freportingPeriod\"\x98\x06\n" +
+	"\x10reporting_period\x18\x04 \x01(\v2\x19.tammy.v1.ReportingPeriodB\x06\xbaH\x03\xc8\x01\x01R\x0freportingPeriod\"\xd8\x0e\n" +
 	"\x1bGetAttentionSummaryResponse\x12C\n" +
 	"\x18documents_needing_review\x18\x01 \x01(\rB\t\xbaH\x06*\x04\x18\xc0\x84=R\x16documentsNeedingReview\x12J\n" +
 	"\x1cdocuments_reviewed_in_period\x18\x02 \x01(\rB\t\xbaH\x06*\x04\x18\xc0\x84=R\x19documentsReviewedInPeriod\x12Z\n" +
@@ -598,17 +649,35 @@ const file_tammy_v1_overview_proto_rawDesc = "" +
 	"\n" +
 	"as_of_date\x18\t \x01(\v2\x13.tammy.v1.CivilDateB\x06\xbaH\x03\xc8\x01\x01R\basOfDate\x12L\n" +
 	"\x10reporting_period\x18\n" +
-	" \x01(\v2\x19.tammy.v1.ReportingPeriodB\x06\xbaH\x03\xc8\x01\x01R\x0freportingPeriod*\xb8\x01\n" +
+	" \x01(\v2\x19.tammy.v1.ReportingPeriodB\x06\xbaH\x03\xc8\x01\x01R\x0freportingPeriod\x12\xbf\x01\n" +
+	"\x0fbas_preparation\x18\v \x01(\v2\x13.tammy.v1.SourceRefB|\xbaHy\xba\x01v\n" +
+	"\x1doverview.bas_preparation.type\x125Preparation reference must identify a BAS preparation\x1a\x1ethis.type == 'bas_preparation'H\x00R\x0ebasPreparation\x88\x01\x01\x12\xa1\x01\n" +
+	"\n" +
+	"bas_family\x18\f \x01(\v2\x13.tammy.v1.SourceRefBh\xbaHe\xba\x01b\n" +
+	"\x18overview.bas_family.type\x12+Family reference must identify a BAS family\x1a\x19this.type == 'bas_family'H\x01R\tbasFamily\x88\x01\x01\x12\xaa\x01\n" +
+	"\n" +
+	"bas_frozen\x18\r \x01(\v2\x13.tammy.v1.SourceRefBq\xbaHn\xba\x01k\n" +
+	"\x18overview.bas_frozen.type\x124Frozen reference must identify a frozen BAS snapshot\x1a\x19this.type == 'bas_frozen'H\x02R\tbasFrozen\x88\x01\x01:\xf8\x03\xbaH\xf4\x03\x1a\xf1\x03\n" +
+	"!overview.bas_exact_resource_shape\x12oNew BAS statuses require exact preparation and family identities, and frozen states require the frozen identity\x1a\xda\x02(this.bas_status != 5 || (has(this.bas_preparation) && has(this.bas_family))) && ((this.bas_status != 6 && this.bas_status != 7 && this.bas_status != 8) || (has(this.bas_preparation) && has(this.bas_family) && has(this.bas_frozen))) && (!has(this.bas_frozen) || (has(this.bas_preparation) && has(this.bas_family) && this.bas_status in [6, 7, 8]))B\x12\n" +
+	"\x10_bas_preparationB\r\n" +
+	"\v_bas_familyB\r\n" +
+	"\v_bas_frozen*\xe1\x01\n" +
 	"\x11AttentionItemKind\x12#\n" +
 	"\x1fATTENTION_ITEM_KIND_UNSPECIFIED\x10\x00\x12'\n" +
 	"#ATTENTION_ITEM_KIND_DOCUMENT_REVIEW\x10\x01\x12.\n" +
 	"*ATTENTION_ITEM_KIND_BANKING_RECONCILIATION\x10\x02\x12%\n" +
-	"!ATTENTION_ITEM_KIND_BAS_WORKPAPER\x10\x03*\xae\x01\n" +
+	"!ATTENTION_ITEM_KIND_BAS_WORKPAPER\x10\x03\x12'\n" +
+	"#ATTENTION_ITEM_KIND_BAS_PREPARATION\x10\x04*\x8d\x03\n" +
 	"\x12BasAttentionStatus\x12$\n" +
 	" BAS_ATTENTION_STATUS_UNSPECIFIED\x10\x00\x12$\n" +
 	" BAS_ATTENTION_STATUS_NOT_CREATED\x10\x01\x12)\n" +
 	"%BAS_ATTENTION_STATUS_DRAFT_NOT_LODGED\x10\x02\x12!\n" +
-	"\x1dBAS_ATTENTION_STATUS_OUTDATED\x10\x032u\n" +
+	"\x1dBAS_ATTENTION_STATUS_OUTDATED\x10\x03\x12&\n" +
+	"\"BAS_ATTENTION_STATUS_ACTION_NEEDED\x10\x04\x12%\n" +
+	"!BAS_ATTENTION_STATUS_REVIEW_READY\x10\x05\x122\n" +
+	".BAS_ATTENTION_STATUS_FROZEN_FOR_MANUAL_HANDOFF\x10\x06\x127\n" +
+	"3BAS_ATTENTION_STATUS_EXTERNAL_CONFIRMATION_RECORDED\x10\a\x12!\n" +
+	"\x1dBAS_ATTENTION_STATUS_DISPUTED\x10\b2u\n" +
 	"\x0fOverviewService\x12b\n" +
 	"\x13GetAttentionSummary\x12$.tammy.v1.GetAttentionSummaryRequest\x1a%.tammy.v1.GetAttentionSummaryResponseBGZEgithub.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1b\x06proto3"
 
@@ -651,13 +720,16 @@ var file_tammy_v1_overview_proto_depIdxs = []int32{
 	4,  // 9: tammy.v1.GetAttentionSummaryResponse.revisions:type_name -> tammy.v1.AttentionRevisionVector
 	7,  // 10: tammy.v1.GetAttentionSummaryResponse.as_of_date:type_name -> tammy.v1.CivilDate
 	2,  // 11: tammy.v1.GetAttentionSummaryResponse.reporting_period:type_name -> tammy.v1.ReportingPeriod
-	5,  // 12: tammy.v1.OverviewService.GetAttentionSummary:input_type -> tammy.v1.GetAttentionSummaryRequest
-	6,  // 13: tammy.v1.OverviewService.GetAttentionSummary:output_type -> tammy.v1.GetAttentionSummaryResponse
-	13, // [13:14] is the sub-list for method output_type
-	12, // [12:13] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	8,  // 12: tammy.v1.GetAttentionSummaryResponse.bas_preparation:type_name -> tammy.v1.SourceRef
+	8,  // 13: tammy.v1.GetAttentionSummaryResponse.bas_family:type_name -> tammy.v1.SourceRef
+	8,  // 14: tammy.v1.GetAttentionSummaryResponse.bas_frozen:type_name -> tammy.v1.SourceRef
+	5,  // 15: tammy.v1.OverviewService.GetAttentionSummary:input_type -> tammy.v1.GetAttentionSummaryRequest
+	6,  // 16: tammy.v1.OverviewService.GetAttentionSummary:output_type -> tammy.v1.GetAttentionSummaryResponse
+	16, // [16:17] is the sub-list for method output_type
+	15, // [15:16] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_tammy_v1_overview_proto_init() }
@@ -666,6 +738,7 @@ func file_tammy_v1_overview_proto_init() {
 		return
 	}
 	file_tammy_v1_common_proto_init()
+	file_tammy_v1_overview_proto_msgTypes[4].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

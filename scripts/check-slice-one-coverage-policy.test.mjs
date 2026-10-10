@@ -47,10 +47,43 @@ const EXPOSED_BUSINESS_RPCS = [
   "tammy.v1.TaxService.CreateBasDraft",
   "tammy.v1.TaxService.GetCurrentBasDraft",
 ];
+const BAS_PREPARATION_DECLARED_FUTURE_RPCS = [
+  "tammy.v1.BasPreparationService.GetBasObligationsProfile",
+  "tammy.v1.BasPreparationService.ListBasObligationsProfiles",
+  "tammy.v1.BasPreparationService.GetBasCalendar",
+  "tammy.v1.BasPreparationService.ListBasPeriods",
+  "tammy.v1.BasPreparationService.GetBasPreparation",
+  "tammy.v1.BasPreparationService.ListBasPreparations",
+  "tammy.v1.BasPreparationService.GetBasCalculation",
+  "tammy.v1.BasPreparationService.ListBasCalculations",
+  "tammy.v1.BasPreparationService.GetFrozenBas",
+  "tammy.v1.BasPreparationService.ListFrozenBas",
+  "tammy.v1.BasPreparationService.GetBasExternalObservation",
+  "tammy.v1.BasPreparationService.ListBasExternalObservations",
+  "tammy.v1.BasPreparationService.GetBasExternalDisputeResolution",
+  "tammy.v1.BasPreparationService.ListBasExternalDisputeResolutions",
+  "tammy.v1.BasPreparationService.ListBasExportEvents",
+  "tammy.v1.BasPreparationService.SetBasObligationsProfile",
+  "tammy.v1.BasPreparationService.ConfirmBasPeriod",
+  "tammy.v1.BasPreparationService.SaveBasPaygInputs",
+  "tammy.v1.BasPreparationService.RegenerateBasPreparation",
+  "tammy.v1.BasPreparationService.ValidateBasPreparation",
+  "tammy.v1.BasPreparationService.AcknowledgeBasWarnings",
+  "tammy.v1.BasPreparationService.FreezeBasForManualHandoff",
+  "tammy.v1.BasPreparationService.CreateBasReplacement",
+  "tammy.v1.BasPreparationService.CreateBasRevision",
+  "tammy.v1.BasPreparationService.RecordExternalBasObservation",
+  "tammy.v1.BasPreparationService.CorrectExternalBasObservation",
+  "tammy.v1.BasPreparationService.ResolveExternalBasDispute",
+  "tammy.v1.BasPreparationService.ReplaceRejectedBasAttempt",
+  "tammy.v1.BasPreparationService.RecordBasExportEvent",
+];
 
-test("coverage declares the exact normative policy for all 138 non-system RPCs", async () => {
+test("coverage declares the exact normative policy for all 138 existing non-system RPCs", async () => {
   const coverage = parseCoverageManifest(await readFile("test/e2e/coverage.yaml", "utf8"));
-  const actualRpcNames = Object.keys(coverage.rpcs).filter((rpcName) => rpcName !== SYSTEM_RPC);
+  const actualRpcNames = Object.keys(coverage.rpcs).filter(
+    (rpcName) => rpcName !== SYSTEM_RPC && !rpcName.startsWith("tammy.v1.BasPreparationService."),
+  );
 
   assert.equal(Object.keys(SLICE_ONE_RPC_POLICY).length, 138);
   assert.deepEqual(actualRpcNames.sort(), Object.keys(SLICE_ONE_RPC_POLICY).sort());
@@ -70,6 +103,165 @@ test("coverage declares the exact normative policy for all 138 non-system RPCs",
       expected,
       rpcName,
     );
+  }
+});
+
+test("BAS preparation keeps its exact 29-RPC surface declared for future evidence", async () => {
+  const coverage = parseCoverageManifest(await readFile("test/e2e/coverage.yaml", "utf8"));
+  const preloadMethods = flattenConveyorManifest(
+    JSON.parse(await readFile("apps/desktop/src/shared/conveyor-manifest.json", "utf8")),
+  );
+  const servicePrefix = "tammy.v1.BasPreparationService.";
+  const actualRpcNames = Object.keys(coverage.rpcs).filter((rpcName) =>
+    rpcName.startsWith(servicePrefix),
+  );
+  const futureCases = [
+    "bas-preparation/contracts",
+    "bas-preparation/lifecycle",
+    "bas-preparation/permissions",
+    "bas-preparation/coverage",
+    "bas-preparation/manual-handoff",
+  ];
+  const allRolesAllowed = {
+    workspace_admin: "planned_allowed",
+    business_preparer: "planned_allowed",
+    business_lodger: "planned_allowed",
+    auditor: "planned_allowed",
+  };
+  const preparationRoles = {
+    workspace_admin: "planned_allowed",
+    business_preparer: "planned_allowed",
+    business_lodger: "planned_permission_denied",
+    auditor: "planned_permission_denied",
+  };
+  const approvalRoles = {
+    workspace_admin: "planned_permission_denied",
+    business_preparer: "planned_permission_denied",
+    business_lodger: "planned_allowed",
+    auditor: "planned_permission_denied",
+  };
+  const approvalMethods = new Set([
+    "FreezeBasForManualHandoff",
+    "CreateBasReplacement",
+    "RecordExternalBasObservation",
+    "CorrectExternalBasObservation",
+    "ResolveExternalBasDispute",
+    "ReplaceRejectedBasAttempt",
+  ]);
+  const factorAssertionMethods = new Set([
+    "FreezeBasForManualHandoff",
+    "CreateBasReplacement",
+    "RecordExternalBasObservation",
+    "ResolveExternalBasDispute",
+    "ReplaceRejectedBasAttempt",
+  ]);
+  const factorAssertionFailures = [
+    "FACTOR_ASSERTION_REQUIRED",
+    "FACTOR_ASSERTION_STALE",
+    "FACTOR_ASSERTION_REPLAY",
+  ];
+  const queryMethods = new Set(
+    BAS_PREPARATION_DECLARED_FUTURE_RPCS.slice(0, 15).map((rpcName) =>
+      rpcName.slice(servicePrefix.length),
+    ),
+  );
+  const listMethods = new Set([
+    "ListBasObligationsProfiles",
+    "ListBasPeriods",
+    "ListBasPreparations",
+    "ListBasCalculations",
+    "ListFrozenBas",
+    "ListBasExternalObservations",
+    "ListBasExternalDisputeResolutions",
+    "ListBasExportEvents",
+  ]);
+  const scenario = coverage.scenarios["E2E-21"];
+
+  assert.equal(BAS_PREPARATION_DECLARED_FUTURE_RPCS.length, 29);
+  assert.deepEqual(actualRpcNames, BAS_PREPARATION_DECLARED_FUTURE_RPCS);
+  assert.deepEqual(scenario.futureCases, futureCases);
+
+  for (const rpcName of BAS_PREPARATION_DECLARED_FUTURE_RPCS) {
+    const rpc = coverage.rpcs[rpcName];
+    const method = rpcName.slice(servicePrefix.length);
+    const isQuery = queryMethods.has(method);
+    const roles =
+      isQuery || method === "RecordBasExportEvent"
+        ? allRolesAllowed
+        : approvalMethods.has(method)
+          ? approvalRoles
+          : preparationRoles;
+    const projection = `${method.replace(
+      /[A-Z]/g,
+      (letter, index) => `${index === 0 ? "" : "_"}${letter.toLowerCase()}`,
+    )}_result`;
+
+    assert.equal(rpc.stage, "declared_future", rpcName);
+    assert.deepEqual(rpc.cases, [], rpcName);
+    assert.ok(rpc.futureCases.length > 0, rpcName);
+    assert.ok(
+      rpc.futureCases.every((futureCase) => futureCases.includes(futureCase)),
+      rpcName,
+    );
+    assert.ok(rpc.futureCases.includes("bas-preparation/contracts"), rpcName);
+    assert.ok(rpc.futureCases.includes("bas-preparation/permissions"), rpcName);
+    assert.ok(rpc.futureCases.includes("bas-preparation/coverage"), rpcName);
+    assert.deepEqual(rpc.projections, [projection], rpcName);
+    assert.deepEqual(rpc.routes, ["/bas"], rpcName);
+    assert.deepEqual(rpc.roles, roles, rpcName);
+    assert.ok(!preloadMethods.includes(rpc.preload), rpcName);
+    assert.ok(rpc.principalFailures.includes("AUTHENTICATION_REQUIRED"), rpcName);
+    assert.ok(rpc.principalFailures.includes("NOT_FOUND"), rpcName);
+
+    if (listMethods.has(method)) {
+      assert.deepEqual(
+        rpc.list.states,
+        method === "ListBasExternalDisputeResolutions"
+          ? ["empty", "populated", "filtered", "next_page"]
+          : ["empty", "populated", "next_page"],
+        rpcName,
+      );
+      assert.ok(rpc.principalFailures.includes("INVALID_CURSOR"), rpcName);
+    } else if (method === "GetBasCalendar") {
+      assert.deepEqual(rpc.list.states, ["empty", "populated"], rpcName);
+    } else if (isQuery) {
+      assert.deepEqual(rpc.list.states, ["found", "not_found"], rpcName);
+    } else {
+      assert.deepEqual(rpc.list.states, ["not_applicable"], rpcName);
+      assert.deepEqual(
+        rpc.idempotency,
+        {
+          mode: "persistent_command",
+          outcomes: ["exact_replay", "changed_request_conflict"],
+        },
+        rpcName,
+      );
+      assert.ok(rpc.principalFailures.includes("STALE_VERSION"), rpcName);
+      assert.ok(rpc.principalFailures.includes("IDEMPOTENCY_CONFLICT"), rpcName);
+      if (approvalMethods.has(method)) {
+        assert.ok(rpc.principalFailures.includes("PERMISSION_DENIED"), rpcName);
+        for (const failure of factorAssertionFailures) {
+          assert.equal(
+            rpc.principalFailures.includes(failure),
+            factorAssertionMethods.has(method),
+            `${rpcName}: ${failure}`,
+          );
+        }
+      } else if (method !== "RecordBasExportEvent") {
+        assert.ok(rpc.principalFailures.includes("PERMISSION_DENIED"), rpcName);
+      }
+    }
+
+    if (isQuery) {
+      assert.deepEqual(
+        rpc.idempotency,
+        {
+          mode: "query",
+          outcomes: ["not_applicable"],
+        },
+        rpcName,
+      );
+    }
   }
 });
 

@@ -1,0 +1,2179 @@
+syntax = "proto3";
+
+package tammy.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+import "tammy/v1/common.proto";
+import "tammy/v1/organisation.proto";
+import "tammy/v1/tax.proto";
+
+option go_package = "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1";
+
+// BasApplicability distinguishes an unanswered question from an explicit inactive obligation.
+enum BasApplicability {
+  BAS_APPLICABILITY_UNSPECIFIED = 0;
+  BAS_APPLICABILITY_UNKNOWN = 1;
+  BAS_APPLICABILITY_ACTIVE = 2;
+  BAS_APPLICABILITY_NOT_APPLICABLE = 3;
+}
+
+enum BasRegistrationStatus {
+  BAS_REGISTRATION_STATUS_UNSPECIFIED = 0;
+  BAS_REGISTRATION_STATUS_UNKNOWN = 1;
+  BAS_REGISTRATION_STATUS_REGISTERED = 2;
+  BAS_REGISTRATION_STATUS_NOT_REGISTERED = 3;
+}
+
+enum BasGstMethod {
+  BAS_GST_METHOD_UNSPECIFIED = 0;
+  BAS_GST_METHOD_UNKNOWN = 1;
+  BAS_GST_METHOD_SIMPLER = 2;
+  BAS_GST_METHOD_FULL = 3;
+  BAS_GST_METHOD_INSTALMENT = 4;
+  BAS_GST_METHOD_UNSUPPORTED = 5;
+}
+
+enum BasTurnoverCategory {
+  BAS_TURNOVER_CATEGORY_UNSPECIFIED = 0;
+  BAS_TURNOVER_CATEGORY_UNKNOWN = 1;
+  BAS_TURNOVER_CATEGORY_SMALL = 2;
+  BAS_TURNOVER_CATEGORY_MEDIUM = 3;
+  BAS_TURNOVER_CATEGORY_LARGE = 4;
+  BAS_TURNOVER_CATEGORY_UNSUPPORTED = 5;
+}
+
+enum BasGstBasis {
+  BAS_GST_BASIS_UNSPECIFIED = 0;
+  BAS_GST_BASIS_UNKNOWN = 1;
+  BAS_GST_BASIS_CASH = 2;
+  BAS_GST_BASIS_ACCRUAL = 3;
+  BAS_GST_BASIS_UNSUPPORTED = 4;
+}
+
+enum BasCadence {
+  BAS_CADENCE_UNSPECIFIED = 0;
+  BAS_CADENCE_UNKNOWN = 1;
+  BAS_CADENCE_MONTHLY = 2;
+  BAS_CADENCE_QUARTERLY = 3;
+  BAS_CADENCE_ANNUAL = 4;
+  BAS_CADENCE_MIXED = 5;
+  BAS_CADENCE_UNSUPPORTED = 6;
+}
+
+enum BasPaygwCategory {
+  BAS_PAYGW_CATEGORY_UNSPECIFIED = 0;
+  BAS_PAYGW_CATEGORY_UNKNOWN = 1;
+  BAS_PAYGW_CATEGORY_SMALL = 2;
+  BAS_PAYGW_CATEGORY_MEDIUM = 3;
+  BAS_PAYGW_CATEGORY_LARGE = 4;
+  BAS_PAYGW_CATEGORY_UNSUPPORTED = 5;
+}
+
+enum BasPrefillRequirement {
+  BAS_PREFILL_REQUIREMENT_UNSPECIFIED = 0;
+  BAS_PREFILL_REQUIREMENT_UNKNOWN = 1;
+  BAS_PREFILL_REQUIREMENT_NOT_REQUIRED = 2;
+  BAS_PREFILL_REQUIREMENT_REVIEWED = 3;
+  BAS_PREFILL_REQUIREMENT_UNAVAILABLE = 4;
+  BAS_PREFILL_REQUIREMENT_UNSUPPORTED = 5;
+}
+
+enum BasPaygiMethod {
+  BAS_PAYGI_METHOD_UNSPECIFIED = 0;
+  BAS_PAYGI_METHOD_UNKNOWN = 1;
+  BAS_PAYGI_METHOD_AMOUNT = 2;
+  BAS_PAYGI_METHOD_RATE = 3;
+  BAS_PAYGI_METHOD_NOT_APPLICABLE = 4;
+  BAS_PAYGI_METHOD_UNSUPPORTED = 5;
+}
+
+enum BasNoticeOperativeStatus {
+  BAS_NOTICE_OPERATIVE_STATUS_UNSPECIFIED = 0;
+  BAS_NOTICE_OPERATIVE_STATUS_UNKNOWN = 1;
+  BAS_NOTICE_OPERATIVE_STATUS_OPERATIVE = 2;
+  BAS_NOTICE_OPERATIVE_STATUS_INOPERATIVE = 3;
+}
+
+enum BasPriorVariationDisposition {
+  BAS_PRIOR_VARIATION_DISPOSITION_UNSPECIFIED = 0;
+  BAS_PRIOR_VARIATION_DISPOSITION_UNKNOWN = 1;
+  BAS_PRIOR_VARIATION_DISPOSITION_NONE = 2;
+  BAS_PRIOR_VARIATION_DISPOSITION_REFLECTED_IN_CURRENT_NOTICE = 3;
+  BAS_PRIOR_VARIATION_DISPOSITION_UNCERTAIN = 4;
+  BAS_PRIOR_VARIATION_DISPOSITION_NEW = 5;
+}
+
+enum BasPaygiUnsupportedState {
+  BAS_PAYGI_UNSUPPORTED_STATE_UNSPECIFIED = 0;
+  BAS_PAYGI_UNSUPPORTED_STATE_NONE = 1;
+  BAS_PAYGI_UNSUPPORTED_STATE_VARIATION_FIELDS_REQUIRED = 2;
+  BAS_PAYGI_UNSUPPORTED_STATE_CLAIM_5B = 3;
+  BAS_PAYGI_UNSUPPORTED_STATE_OTHER = 4;
+}
+
+enum BasT1ReviewDecision {
+  BAS_T1_REVIEW_DECISION_UNSPECIFIED = 0;
+  BAS_T1_REVIEW_DECISION_UNKNOWN = 1;
+  BAS_T1_REVIEW_DECISION_REVIEWED = 2;
+  BAS_T1_REVIEW_DECISION_NOT_REVIEWED = 3;
+}
+
+enum BasPreparationState {
+  BAS_PREPARATION_STATE_UNSPECIFIED = 0;
+  BAS_PREPARATION_STATE_COLLECTING = 1;
+  BAS_PREPARATION_STATE_BLOCKED = 2;
+  BAS_PREPARATION_STATE_REVIEW_READY = 3;
+  BAS_PREPARATION_STATE_FROZEN_FOR_MANUAL_HANDOFF = 4;
+  BAS_PREPARATION_STATE_EXTERNAL_CONFIRMATION_RECORDED = 5;
+  BAS_PREPARATION_STATE_SUPERSEDED_BEFORE_CONFIRMATION = 6;
+  BAS_PREPARATION_STATE_SUPERSEDED_AFTER_RECORDED_REJECTION = 7;
+  BAS_PREPARATION_STATE_SUPERSEDED_BY_CONFIRMED_REVISION = 8;
+}
+
+enum BasExternalTrust {
+  BAS_EXTERNAL_TRUST_UNSPECIFIED = 0;
+  BAS_EXTERNAL_TRUST_USER_RECORDED_UNVERIFIED = 1;
+}
+
+enum BasExternalEventKind {
+  BAS_EXTERNAL_EVENT_KIND_UNSPECIFIED = 0;
+  BAS_EXTERNAL_EVENT_KIND_COMPLETED_LODGEMENT = 1;
+  BAS_EXTERNAL_EVENT_KIND_ACCEPTANCE = 2;
+  BAS_EXTERNAL_EVENT_KIND_PENDING = 3;
+  BAS_EXTERNAL_EVENT_KIND_UNKNOWN = 4;
+  BAS_EXTERNAL_EVENT_KIND_REJECTION = 5;
+  BAS_EXTERNAL_EVENT_KIND_REVIEWER_HANDOFF = 6;
+  BAS_EXTERNAL_EVENT_KIND_PAYMENT = 7;
+  BAS_EXTERNAL_EVENT_KIND_REFUND = 8;
+}
+
+enum BasExternalChannel {
+  BAS_EXTERNAL_CHANNEL_UNSPECIFIED = 0;
+  BAS_EXTERNAL_CHANNEL_ONLINE_PORTAL = 1;
+  BAS_EXTERNAL_CHANNEL_TAX_AGENT = 2;
+  BAS_EXTERNAL_CHANNEL_PAPER = 3;
+  BAS_EXTERNAL_CHANNEL_PHONE = 4;
+  BAS_EXTERNAL_CHANNEL_OTHER = 5;
+}
+
+enum BasDisputeOverlayState {
+  BAS_DISPUTE_OVERLAY_STATE_UNSPECIFIED = 0;
+  BAS_DISPUTE_OVERLAY_STATE_NONE = 1;
+  BAS_DISPUTE_OVERLAY_STATE_DISPUTED = 2;
+  BAS_DISPUTE_OVERLAY_STATE_CORRECTION_REQUIRED = 3;
+  BAS_DISPUTE_OVERLAY_STATE_RESOLVED_UPHELD = 4;
+}
+
+enum BasDisputeResolutionOutcome {
+  BAS_DISPUTE_RESOLUTION_OUTCOME_UNSPECIFIED = 0;
+  BAS_DISPUTE_RESOLUTION_OUTCOME_UPHOLD_RECORDED_CHAIN = 1;
+  BAS_DISPUTE_RESOLUTION_OUTCOME_REQUIRE_CORRECTIVE_REVISION = 2;
+}
+
+enum BasPeriodWindow {
+  BAS_PERIOD_WINDOW_UNSPECIFIED = 0;
+  BAS_PERIOD_WINDOW_MONTHLY = 1;
+  BAS_PERIOD_WINDOW_JUL_SEP = 2;
+  BAS_PERIOD_WINDOW_OCT_DEC = 3;
+  BAS_PERIOD_WINDOW_JAN_MAR = 4;
+  BAS_PERIOD_WINDOW_APR_JUN = 5;
+  BAS_PERIOD_WINDOW_CUSTOM = 6;
+}
+
+enum BasDueDateKind {
+  BAS_DUE_DATE_KIND_UNSPECIFIED = 0;
+  BAS_DUE_DATE_KIND_NORMAL_SUGGESTION = 1;
+  BAS_DUE_DATE_KIND_USER_RECORDED_EXTERNAL_DATE = 2;
+  BAS_DUE_DATE_KIND_USER_RECORDED_DEFERRAL = 3;
+}
+
+enum BasPeriodSupportState {
+  BAS_PERIOD_SUPPORT_STATE_UNSPECIFIED = 0;
+  BAS_PERIOD_SUPPORT_STATE_SUPPORTED = 1;
+  BAS_PERIOD_SUPPORT_STATE_PART_PERIOD_REGISTRATION = 2;
+  BAS_PERIOD_SUPPORT_STATE_CADENCE_CHANGE = 3;
+  BAS_PERIOD_SUPPORT_STATE_MIXED_WINDOW = 4;
+  BAS_PERIOD_SUPPORT_STATE_ANNUAL_METHOD = 5;
+  BAS_PERIOD_SUPPORT_STATE_OTHER_UNSUPPORTED = 6;
+}
+
+enum BasAmountState {
+  BAS_AMOUNT_STATE_UNSPECIFIED = 0;
+  BAS_AMOUNT_STATE_UNSET = 1;
+  BAS_AMOUNT_STATE_UNKNOWN = 2;
+  BAS_AMOUNT_STATE_NOT_APPLICABLE = 3;
+  BAS_AMOUNT_STATE_KNOWN_ZERO = 4;
+  BAS_AMOUNT_STATE_KNOWN = 5;
+}
+
+enum BasFormLabel {
+  BAS_FORM_LABEL_UNSPECIFIED = 0;
+  BAS_FORM_LABEL_G1 = 1;
+  BAS_FORM_LABEL_1A = 2;
+  BAS_FORM_LABEL_1B = 3;
+  BAS_FORM_LABEL_W1 = 4;
+  BAS_FORM_LABEL_W2 = 5;
+  BAS_FORM_LABEL_W3 = 6;
+  BAS_FORM_LABEL_W4 = 7;
+  BAS_FORM_LABEL_W5 = 8;
+  BAS_FORM_LABEL_4 = 9;
+  BAS_FORM_LABEL_T1 = 10;
+  BAS_FORM_LABEL_T2 = 11;
+  BAS_FORM_LABEL_T7 = 12;
+  BAS_FORM_LABEL_T11 = 13;
+  BAS_FORM_LABEL_5A = 14;
+  BAS_FORM_LABEL_5B = 15;
+  BAS_FORM_LABEL_8A = 16;
+  BAS_FORM_LABEL_8B = 17;
+  BAS_FORM_LABEL_9 = 18;
+}
+
+enum BasAmountDirection {
+  BAS_AMOUNT_DIRECTION_UNSPECIFIED = 0;
+  BAS_AMOUNT_DIRECTION_NIL = 1;
+  BAS_AMOUNT_DIRECTION_PAYABLE = 2;
+  BAS_AMOUNT_DIRECTION_REFUNDABLE = 3;
+}
+
+enum BasCoverageCandidateKind {
+  BAS_COVERAGE_CANDIDATE_KIND_UNSPECIFIED = 0;
+  BAS_COVERAGE_CANDIDATE_KIND_INVOICE_POSTING = 1;
+  BAS_COVERAGE_CANDIDATE_KIND_PURCHASE_SETTLEMENT = 2;
+  BAS_COVERAGE_CANDIDATE_KIND_PURCHASE_CREDIT = 3;
+  BAS_COVERAGE_CANDIDATE_KIND_MANUAL_TAX_FACT = 4;
+  BAS_COVERAGE_CANDIDATE_KIND_PAYG_FACT = 5;
+  BAS_COVERAGE_CANDIDATE_KIND_OPENING_OR_LEGACY_FACT = 6;
+  BAS_COVERAGE_CANDIDATE_KIND_OTHER_OBLIGATION = 7;
+}
+
+enum BasCoverageDisposition {
+  BAS_COVERAGE_DISPOSITION_UNSPECIFIED = 0;
+  BAS_COVERAGE_DISPOSITION_ELIGIBLE = 1;
+  BAS_COVERAGE_DISPOSITION_EXCLUDED_WITH_REASON = 2;
+  BAS_COVERAGE_DISPOSITION_UNRESOLVED = 3;
+  BAS_COVERAGE_DISPOSITION_UNSUPPORTED = 4;
+  BAS_COVERAGE_DISPOSITION_REVIEWED_ZERO = 5;
+  BAS_COVERAGE_DISPOSITION_NOT_APPLICABLE = 6;
+}
+
+enum BasFindingSeverity {
+  BAS_FINDING_SEVERITY_UNSPECIFIED = 0;
+  BAS_FINDING_SEVERITY_BLOCKER = 1;
+  BAS_FINDING_SEVERITY_WARNING = 2;
+  BAS_FINDING_SEVERITY_INFORMATION = 3;
+  BAS_FINDING_SEVERITY_UNSUPPORTED = 4;
+}
+
+enum BasCalculationOutcome {
+  BAS_CALCULATION_OUTCOME_UNSPECIFIED = 0;
+  BAS_CALCULATION_OUTCOME_COMPLETE = 1;
+  BAS_CALCULATION_OUTCOME_INCOMPLETE = 2;
+  BAS_CALCULATION_OUTCOME_UNSUPPORTED = 3;
+}
+
+enum BasExportFormat {
+  BAS_EXPORT_FORMAT_UNSPECIFIED = 0;
+  BAS_EXPORT_FORMAT_PDF = 1;
+  BAS_EXPORT_FORMAT_CSV = 2;
+}
+
+enum BasExportPhase {
+  BAS_EXPORT_PHASE_UNSPECIFIED = 0;
+  BAS_EXPORT_PHASE_STARTED = 1;
+  BAS_EXPORT_PHASE_FINISHED = 2;
+}
+
+enum BasExportOutcome {
+  BAS_EXPORT_OUTCOME_UNSPECIFIED = 0;
+  BAS_EXPORT_OUTCOME_CANCELLED = 1;
+  BAS_EXPORT_OUTCOME_FAILED = 2;
+  BAS_EXPORT_OUTCOME_SUCCEEDED = 3;
+}
+
+enum BasCorrectionKind {
+  BAS_CORRECTION_KIND_UNSPECIFIED = 0;
+  BAS_CORRECTION_KIND_RETRACT_AS_INCORRECT = 1;
+  BAS_CORRECTION_KIND_REPLACE_ASSERTION = 2;
+}
+
+enum BasTraceOperation {
+  BAS_TRACE_OPERATION_UNSPECIFIED = 0;
+  BAS_TRACE_OPERATION_INPUT = 1;
+  BAS_TRACE_OPERATION_TRUNCATE_TO_WHOLE_DOLLARS = 2;
+  BAS_TRACE_OPERATION_SUM = 3;
+  BAS_TRACE_OPERATION_COPY = 4;
+  BAS_TRACE_OPERATION_MULTIPLY = 5;
+  BAS_TRACE_OPERATION_ABSOLUTE_DIFFERENCE = 6;
+}
+
+// BasCivilDateRange contains inclusive Gregorian civil dates.
+message BasCivilDateRange {
+  option (buf.validate.message).cel = {
+    id: "bas.date_range.order"
+    message: "The inclusive end date must not precede the start date"
+    expression: "this.start_date.year * 10000 + this.start_date.month * 100 + this.start_date.day <= this.end_date.year * 10000 + this.end_date.month * 100 + this.end_date.day"
+  };
+  CivilDate start_date = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "bas.date_range.start_calendar"
+      message: "Start date must exist in the Gregorian calendar"
+      expression: "this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))"
+    }
+  ];
+  CivilDate end_date = 2 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "bas.date_range.end_calendar"
+      message: "End date must exist in the Gregorian calendar"
+      expression: "this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))"
+    }
+  ];
+}
+
+// BasEffectiveInterval records when a profile assertion applies.
+message BasEffectiveInterval {
+  option (buf.validate.message).cel = {
+    id: "bas.interval.order"
+    message: "Effective end date must not precede its start date"
+    expression: "!has(this.end_date) || this.start_date.year * 10000 + this.start_date.month * 100 + this.start_date.day <= this.end_date.year * 10000 + this.end_date.month * 100 + this.end_date.day"
+  };
+  CivilDate start_date = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "bas.interval.start_calendar"
+      message: "Effective start date must exist in the Gregorian calendar"
+      expression: "this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))"
+    }
+  ];
+  optional CivilDate end_date = 2 [(buf.validate.field).cel = {
+    id: "bas.interval.end_calendar"
+    message: "Effective end date must exist in the Gregorian calendar"
+    expression: "this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))"
+  }];
+}
+
+// BasObligationAnswer retains one explicit activity-statement obligation decision.
+message BasObligationAnswer {
+  option (buf.validate.message).cel = {
+    id: "bas.obligation.answer.review"
+    message: "Active and not-applicable answers require a reason, and active answers require evidence"
+    expression: "this.applicability == 1 || (this.applicability == 2 && size(this.reason) > 0 && this.evidence.size() > 0) || (this.applicability == 3 && size(this.reason) > 0)"
+  };
+  BasApplicability applicability = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  repeated SourceRef evidence = 2 [(buf.validate.field).repeated.max_items = 20];
+  string reason = 3 [(buf.validate.field).string.max_len = 512];
+}
+
+// BasOtherObligationInventory prevents one reviewed flag from hiding unclassified statement sections.
+message BasOtherObligationInventory {
+  BasObligationAnswer fringe_benefits_tax = 1 [(buf.validate.field).required = true];
+  BasObligationAnswer wine_equalisation_tax = 2 [(buf.validate.field).required = true];
+  BasObligationAnswer luxury_car_tax = 3 [(buf.validate.field).required = true];
+  BasObligationAnswer fuel_tax_credits = 4 [(buf.validate.field).required = true];
+  BasObligationAnswer deferred_company_instalments = 5 [(buf.validate.field).required = true];
+  BasObligationAnswer deferred_or_import_gst = 6 [(buf.validate.field).required = true];
+  BasObligationAnswer special_gst_schemes_or_adjustments = 7 [(buf.validate.field).required = true];
+  BasObligationAnswer other_activity_statement_obligations = 8 [(buf.validate.field).required = true];
+}
+
+message BasGstProfileInput {
+  option (buf.validate.message).cel = {
+    id: "bas.profile.gst_consistency"
+    message: "GST registration, applicability and registration dates must be internally consistent"
+    expression: "(this.applicability == 2 && this.registration_status == 2 && has(this.registration_interval)) || (this.applicability == 3 && this.registration_status == 3 && !has(this.registration_interval)) || (this.applicability == 1 && (this.registration_status == 1 || this.registration_status == 2 || this.registration_status == 3))"
+  };
+  BasApplicability applicability = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  BasRegistrationStatus registration_status = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  BasGstMethod reporting_method = 3 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  BasTurnoverCategory turnover_category = 4 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  BasGstBasis gst_basis = 5 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  BasCadence cadence = 6 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  optional BasEffectiveInterval registration_interval = 7;
+  repeated SourceRef evidence = 8 [(buf.validate.field).repeated.max_items = 20];
+  string reason = 9 [(buf.validate.field).string.max_len = 512];
+}
+
+message BasPaygwProfileInput {
+  BasObligationAnswer applicability = 1 [(buf.validate.field).required = true];
+  BasPaygwCategory category = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  BasCadence cadence = 3 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  BasPrefillRequirement prefill_requirement = 4 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  repeated BasFormLabel confirmed_statement_labels = 5 [(buf.validate.field).repeated = {
+    max_items: 4
+    items: {
+      enum: {
+        defined_only: true
+        not_in: 0
+      }
+    }
+  }];
+  repeated SourceRef statement_requirement_evidence = 6 [(buf.validate.field).repeated.max_items = 20];
+  string reason = 7 [(buf.validate.field).string.max_len = 512];
+}
+
+message BasIncomeYearIdentity {
+  string income_year_id = 1 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  BasCivilDateRange dates = 2 [(buf.validate.field).required = true];
+  SourceRef confirmation = 3 [(buf.validate.field).required = true];
+}
+
+message BasPaygiProfileInput {
+  option (buf.validate.message).cel = {
+    id: "bas.profile.paygi_income_year"
+    message: "An active amount or rate method is tied to a confirmed income year"
+    expression: "(this.applicability.applicability == 2 && (this.method == 2 || this.method == 3) && has(this.confirmed_income_year)) || (this.applicability.applicability == 2 && (this.method == 1 || this.method == 5) && !has(this.confirmed_income_year)) || (this.applicability.applicability == 3 && this.method == 4 && !has(this.confirmed_income_year)) || this.applicability.applicability == 1"
+  };
+  BasObligationAnswer applicability = 1 [(buf.validate.field).required = true];
+  BasPaygiMethod method = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  BasCadence cadence = 3 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  optional BasIncomeYearIdentity confirmed_income_year = 4;
+  repeated SourceRef evidence = 5 [(buf.validate.field).repeated.max_items = 20];
+  string reason = 6 [(buf.validate.field).string.max_len = 512];
+}
+
+// BasObligationsProfileInput is one complete immutable revision of the organization's BAS scope.
+message BasObligationsProfileInput {
+  BasEffectiveInterval effective_interval = 1 [(buf.validate.field).required = true];
+  BasGstProfileInput gst = 2 [(buf.validate.field).required = true];
+  BasPaygwProfileInput paygw = 3 [(buf.validate.field).required = true];
+  BasPaygiProfileInput paygi = 4 [(buf.validate.field).required = true];
+  BasOtherObligationInventory other_obligations = 5 [(buf.validate.field).required = true];
+  repeated SourceRef evidence = 6 [(buf.validate.field).repeated.max_items = 20];
+  string reason = 7 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 512
+  }];
+}
+
+message BasObligationsProfile {
+  string profile_id = 1 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  uint64 revision = 3 [(buf.validate.field).uint64.gte = 1];
+  bytes content_hash = 4 [(buf.validate.field).bytes.len = 32];
+  BasObligationsProfileInput profile = 5 [(buf.validate.field).required = true];
+  optional SourceRef previous_profile = 6;
+  string actor_user_id = 7 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  google.protobuf.Timestamp recorded_at = 8 [(buf.validate.field).required = true];
+}
+
+message BasObligationsProfileSummary {
+  SourceRef profile = 1 [(buf.validate.field).required = true];
+  BasEffectiveInterval effective_interval = 2 [(buf.validate.field).required = true];
+  optional SourceRef previous_profile = 3;
+  string actor_user_id = 4 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  google.protobuf.Timestamp recorded_at = 5 [(buf.validate.field).required = true];
+}
+
+message BasPeriodSuggestion {
+  BasCivilDateRange period = 1 [(buf.validate.field).required = true];
+  BasPeriodWindow window = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  CivilDate nominal_due_date = 3 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "bas.suggestion.due_calendar"
+      message: "Nominal due date must exist in the Gregorian calendar"
+      expression: "this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))"
+    }
+  ];
+  string due_date_rule_version = 4 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+  }];
+  bytes due_date_rule_hash = 5 [(buf.validate.field).bytes.len = 32];
+  optional SourceRef profile = 6 [(buf.validate.field).cel = {
+    id: "bas.period_suggestion.profile_type"
+    message: "Period suggestion profile reference must identify a BAS obligations profile"
+    expression: "this.type == 'bas_obligations_profile'"
+  }];
+}
+
+message BasPeriodSupportFinding {
+  string stable_code = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 96
+    pattern: "^[A-Z][A-Z0-9_]*$"
+  }];
+  string safe_message = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 512
+  }];
+  repeated SourceRef sources = 3 [(buf.validate.field).repeated.max_items = 20];
+}
+
+message BasPeriodConfirmationInput {
+  option (buf.validate.message).cel = {
+    id: "bas.period.actual_due_date_evidence"
+    message: "A user-recorded external date or deferral needs retained evidence"
+    expression: "this.due_date_kind == 1 || this.due_date_evidence.size() > 0"
+  };
+  BasCivilDateRange period = 1 [(buf.validate.field).required = true];
+  BasPeriodWindow window = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  SourceRef profile = 3 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "bas.period_confirmation.profile_type"
+      message: "Period confirmation profile reference must identify a BAS obligations profile"
+      expression: "this.type == 'bas_obligations_profile'"
+    }
+  ];
+  CivilDate nominal_due_date = 4 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "bas.confirmation.nominal_calendar"
+      message: "Nominal due date must exist in the Gregorian calendar"
+      expression: "this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))"
+    }
+  ];
+  string due_date_rule_version = 5 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+  }];
+  bytes due_date_rule_hash = 6 [(buf.validate.field).bytes.len = 32];
+  CivilDate confirmed_due_date = 7 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "bas.confirmation.confirmed_calendar"
+      message: "Confirmed due date must exist in the Gregorian calendar"
+      expression: "this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))"
+    }
+  ];
+  BasDueDateKind due_date_kind = 8 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  repeated SourceRef due_date_evidence = 9 [(buf.validate.field).repeated.max_items = 20];
+  BasPeriodSupportState support_state = 10 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  repeated BasPeriodSupportFinding support_findings = 11 [(buf.validate.field).repeated.max_items = 100];
+  repeated SourceRef registration_evidence = 12 [(buf.validate.field).repeated.max_items = 20];
+  string reason = 13 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 512
+  }];
+}
+
+message BasConfirmedPeriod {
+  string period_id = 1 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  uint64 version = 3 [(buf.validate.field).uint64.gte = 1];
+  BasPeriodConfirmationInput confirmation = 4 [(buf.validate.field).required = true];
+  string actor_user_id = 5 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  google.protobuf.Timestamp confirmed_at = 6 [(buf.validate.field).required = true];
+  bytes content_hash = 7 [(buf.validate.field).bytes.len = 32];
+}
+
+message BasPeriodSummary {
+  SourceRef period = 1 [(buf.validate.field).required = true];
+  BasCivilDateRange dates = 2 [(buf.validate.field).required = true];
+  BasPeriodWindow window = 3 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  CivilDate confirmed_due_date = 4 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "bas.period_summary.due_calendar"
+      message: "Confirmed due date must exist in the Gregorian calendar"
+      expression: "this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))"
+    }
+  ];
+  BasPeriodSupportState support_state = 5 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  optional SourceRef profile = 6 [(buf.validate.field).cel = {
+    id: "bas.period_summary.profile_type"
+    message: "Period summary profile reference must identify a BAS obligations profile"
+    expression: "this.type == 'bas_obligations_profile'"
+  }];
+  google.protobuf.Timestamp confirmed_at = 7 [(buf.validate.field).required = true];
+  optional SourceRef current_preparation = 8;
+}
+
+// BasExpectedIdentity makes absence an explicit chain expectation instead of a fabricated ID.
+message BasExpectedIdentity {
+  option (buf.validate.message).cel = {
+    id: "bas.chain.identity.explicit"
+    message: "Expected chain object and its version must be present together, or absence must be explicit"
+    expression: "(has(this.retained) && has(this.expected_version)) || (has(this.absent) && this.absent && !has(this.expected_version))"
+  };
+  oneof expected_state {
+    SourceRef retained = 1;
+    bool absent = 2 [(buf.validate.field).bool.const = true];
+  }
+  // Required for present branch and active-attempt identities; omitted only with explicit absence.
+  optional uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
+}
+
+message BasChainExpectation {
+  option (buf.validate.message).cel = {
+    id: "bas.chain.object_types"
+    message: "Chain references must identify the exact family, root, head, branch and active attempt types"
+    expression: "this.family.type == 'bas_family' && this.root_preparation.type == 'bas_preparation' && (!has(this.latest_head.retained) || this.latest_head.retained.type == 'bas_preparation') && (!has(this.branch.retained) || this.branch.retained.type == 'bas_branch') && (!has(this.active_attempt.retained) || this.active_attempt.retained.type == 'bas_preparation')"
+  };
+  SourceRef family = 1 [(buf.validate.field).required = true];
+  uint64 expected_family_version = 2 [(buf.validate.field).uint64.gte = 1];
+  SourceRef root_preparation = 3 [(buf.validate.field).required = true];
+  BasExpectedIdentity latest_head = 4 [(buf.validate.field).required = true];
+  BasExpectedIdentity branch = 5 [(buf.validate.field).required = true];
+  BasExpectedIdentity active_attempt = 6 [(buf.validate.field).required = true];
+}
+
+// BasAmountInput carries an exact nonnegative AUD-cent decision when and only when it is known.
+message BasAmountInput {
+  option (buf.validate.message).cel = {
+    id: "bas.amount.state_payload"
+    message: "Known labels need exact positive AUD cents and zero labels need exactly zero cents"
+    expression: "(this.state == 4 && has(this.amount) && this.amount.currency_code == 'AUD' && this.amount.minor_units == 0) || (this.state == 5 && has(this.amount) && this.amount.currency_code == 'AUD' && this.amount.minor_units > 0) || ((this.state == 1 || this.state == 2 || this.state == 3) && !has(this.amount))"
+  };
+  BasAmountState state = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  optional Money amount = 2 [(buf.validate.field).cel = {
+    id: "bas.amount.nonnegative_aud"
+    message: "Amount must be nonnegative AUD"
+    expression: "this.currency_code == 'AUD' && this.minor_units >= 0"
+  }];
+  repeated SourceRef evidence = 3 [(buf.validate.field).repeated.max_items = 20];
+  string reason = 4 [(buf.validate.field).string.max_len = 512];
+}
+
+// BasPaygwInputs retains reviewed withholding labels rather than estimating them from wages.
+message BasPaygwInputs {
+  BasPaygwCategory category = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  BasAmountInput w1_total_payments = 2 [(buf.validate.field).required = true];
+  BasAmountInput w2_amount_withheld = 3 [(buf.validate.field).required = true];
+  BasAmountInput w3_other_withholding = 4 [(buf.validate.field).required = true];
+  BasAmountInput w4_no_abn_withholding = 5 [(buf.validate.field).required = true];
+  repeated SourceRef payroll_statement_evidence = 6 [(buf.validate.field).repeated.max_items = 20];
+  BasPrefillRequirement prefill_review = 7 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  string review_reason = 8 [(buf.validate.field).string.max_len = 512];
+}
+
+// BasPaygiInputs retains notice, income-year and variation evidence for one selected instalment method.
+message BasPaygiInputs {
+  option (buf.validate.message).cel = {
+    id: "bas.paygi.method_payload"
+    message: "T7 and rate-method T1/T2 payloads must match the selected method"
+    expression: "(this.method == 2 && has(this.t7_amount) && !has(this.rate_t1) && !has(this.rate_t2)) || (this.method == 3 && !has(this.t7_amount) && has(this.rate_t1) && has(this.rate_t2)) || ((this.method == 1 || this.method == 4 || this.method == 5) && !has(this.t7_amount) && !has(this.rate_t1) && !has(this.rate_t2))"
+  };
+  option (buf.validate.message).cel = {
+    id: "bas.paygi.income_year_method"
+    message: "A selected PAYGI method needs the confirmed income-year identity"
+    expression: "((this.method == 2 || this.method == 3) && has(this.confirmed_income_year)) || ((this.method == 1 || this.method == 4 || this.method == 5) && !has(this.confirmed_income_year))"
+  };
+  option (buf.validate.message).cel = {
+    id: "bas.paygi.notice_evidence"
+    message: "An operative notice has exact retained provenance"
+    expression: "this.notice_operative_status != 2 || has(this.notice)"
+  };
+  option (buf.validate.message).cel = {
+    id: "bas.paygi.unsupported_payload"
+    message: "Claimed 5B or variation fields remain explicitly marked unsupported"
+    expression: "(!has(this.claim_5b) || this.unsupported_state == 3) && ((!has(this.proposed_variation_rate) && !has(this.proposed_variation_amount)) || this.unsupported_state == 2)"
+  };
+  option (buf.validate.message).cel = {
+    id: "bas.paygi.t1_review"
+    message: "A positive or zero T1 is used only after an explicit T1 review"
+    expression: "(this.method == 3 && this.t1_review_decision == 2 && has(this.rate_t1) && (this.rate_t1.state == 4 || this.rate_t1.state == 5)) || (this.method == 3 && this.t1_review_decision != 2 && (!has(this.rate_t1) || this.rate_t1.state == 1 || this.rate_t1.state == 2)) || ((this.method == 1 || this.method == 2 || this.method == 4 || this.method == 5) && this.t1_review_decision != 2 && !has(this.rate_t1))"
+  };
+  BasPaygiMethod method = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  optional SourceRef notice = 2;
+  BasNoticeOperativeStatus notice_operative_status = 3 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  BasPriorVariationDisposition prior_variation = 4 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  BasPaygiUnsupportedState unsupported_state = 5 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  BasT1ReviewDecision t1_review_decision = 16 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  optional BasAmountInput t7_amount = 6;
+  optional BasAmountInput rate_t1 = 7;
+  optional Decimal rate_t2 = 8 [(buf.validate.field).cel = {
+    id: "bas.paygi.rate_nonnegative"
+    message: "Rate must be a nonnegative bounded exact decimal"
+    expression: "this.coefficient >= 0 && this.scale <= 18"
+  }];
+  optional BasAmountInput business_income_comparison = 9;
+  optional BasAmountInput claim_5b = 10;
+  optional Decimal proposed_variation_rate = 11 [(buf.validate.field).cel = {
+    id: "bas.paygi.variation_rate_nonnegative"
+    message: "Variation rate must be a nonnegative bounded exact decimal"
+    expression: "this.coefficient >= 0 && this.scale <= 18"
+  }];
+  optional Money proposed_variation_amount = 12 [(buf.validate.field).cel = {
+    id: "bas.paygi.variation_amount_aud"
+    message: "Variation amount must be nonnegative AUD"
+    expression: "this.currency_code == 'AUD' && this.minor_units >= 0"
+  }];
+  optional BasIncomeYearIdentity confirmed_income_year = 13;
+  repeated SourceRef evidence = 14 [(buf.validate.field).repeated.max_items = 20];
+  string review_reason = 15 [(buf.validate.field).string.max_len = 512];
+}
+
+message BasTraceOperand {
+  option (buf.validate.message).cel = {
+    id: "bas.trace_operand.state"
+    message: "Calculation operands must be known values, including an explicit known zero"
+    expression: "(this.state == 4 && this.exact_cents_numerator == '0' && this.reported_whole_dollars == 0) || (this.state == 5 && this.exact_cents_numerator != '0')"
+  };
+  BasFormLabel label = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  string exact_cents_numerator = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 80
+    pattern: "^(0|[1-9][0-9]{0,78})$"
+  }];
+  string exact_cents_denominator = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 80
+    pattern: "^[1-9][0-9]{0,78}$"
+  }];
+  int64 reported_whole_dollars = 4 [(buf.validate.field).int64.gte = 0];
+  BasAmountState state = 5 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+}
+
+// BasLabelTrace preserves nonnegative exact-cent operands and a separately signed rounding difference.
+message BasLabelTrace {
+  option (buf.validate.message).cel = {
+    id: "bas.label_trace.state_payload"
+    message: "Known labels carry exact values; only derived label 9 may report whole dollars when exact cents are zero"
+    expression: "(this.label != 18 || this.operation == 6) && ((this.state == 4 && has(this.exact_cents_numerator) && this.exact_cents_numerator == '0' && has(this.exact_cents_denominator) && has(this.reported_whole_dollars) && has(this.rounding_difference_cents_numerator) && has(this.rounding_difference_cents_denominator) && ((this.label == 18 && this.reported_whole_dollars > 0 && this.rounding_difference_cents_numerator.startsWith('-')) || (this.reported_whole_dollars == 0 && this.rounding_difference_cents_numerator == '0'))) || (this.state == 5 && has(this.exact_cents_numerator) && this.exact_cents_numerator != '0' && has(this.exact_cents_denominator) && has(this.reported_whole_dollars) && has(this.rounding_difference_cents_numerator) && has(this.rounding_difference_cents_denominator)) || ((this.state == 1 || this.state == 2 || this.state == 3) && !has(this.exact_cents_numerator) && !has(this.exact_cents_denominator) && !has(this.reported_whole_dollars) && !has(this.rounding_difference_cents_numerator) && !has(this.rounding_difference_cents_denominator)))"
+  };
+  BasFormLabel label = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  BasTraceOperation operation = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  optional string exact_cents_numerator = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 80
+    pattern: "^(0|[1-9][0-9]{0,78})$"
+  }];
+  optional string exact_cents_denominator = 4 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 80
+    pattern: "^[1-9][0-9]{0,78}$"
+  }];
+  optional int64 reported_whole_dollars = 5 [(buf.validate.field).int64.gte = 0];
+  // Signed because omitting cents can produce a negative reportable difference.
+  optional string rounding_difference_cents_numerator = 6 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 80
+    pattern: "^(0|[1-9][0-9]{0,78}|-[1-9][0-9]{0,78})$"
+  }];
+  optional string rounding_difference_cents_denominator = 7 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 80
+    pattern: "^[1-9][0-9]{0,78}$"
+  }];
+  repeated BasTraceOperand operands = 8 [(buf.validate.field).repeated.max_items = 8];
+  repeated SourceRef evidence = 9 [(buf.validate.field).repeated.max_items = 20];
+  string rule_id = 10 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+    pattern: "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"
+  }];
+  BasAmountState state = 11 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+}
+
+message BasCalculationResult {
+  option (buf.validate.message).cel = {
+    id: "bas.calculation.complete_direction"
+    message: "A complete calculation has a payable, refundable or nil direction"
+    expression: "this.outcome != 1 || this.label_9_direction in [1, 2, 3]"
+  };
+  BasCalculationOutcome outcome = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  BasAmountDirection label_9_direction = 2 [(buf.validate.field).enum.defined_only = true];
+  repeated BasLabelTrace labels = 3 [(buf.validate.field).repeated.max_items = 32];
+}
+
+// BasSourceCoverage is one explicit eligible, excluded, unresolved or unsupported candidate disposition.
+message BasSourceCoverage {
+  SourceRef source = 1 [(buf.validate.field).required = true];
+  BasCoverageCandidateKind candidate_kind = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  BasCoverageDisposition disposition = 3 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  optional Money eligible_amount = 4 [(buf.validate.field).cel = {
+    id: "bas.coverage.amount_aud_nonnegative"
+    message: "Eligible amount must be nonnegative AUD"
+    expression: "this.currency_code == 'AUD' && this.minor_units >= 0"
+  }];
+  optional CivilDate tax_date = 5 [(buf.validate.field).cel = {
+    id: "bas.coverage.tax_date_calendar"
+    message: "Tax date must exist in the Gregorian calendar"
+    expression: "this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))"
+  }];
+  repeated SourceRef lineage = 6 [(buf.validate.field).repeated.max_items = 20];
+  repeated SourceRef evidence = 7 [(buf.validate.field).repeated.max_items = 20];
+  string classification_code = 8 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 96
+    pattern: "^[A-Z][A-Z0-9_]*$"
+  }];
+  string reason = 9 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 512
+  }];
+}
+
+message BasValidationFinding {
+  string finding_id = 1 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  BasFindingSeverity severity = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  string stable_code = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+    pattern: "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"
+  }];
+  string safe_message = 4 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 512
+  }];
+  repeated SourceRef sources = 5 [(buf.validate.field).repeated.max_items = 20];
+}
+
+message BasValidationSnapshot {
+  string validation_id = 1 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  uint64 revision = 2 [(buf.validate.field).uint64.gte = 1];
+  bytes content_hash = 3 [(buf.validate.field).bytes.len = 32];
+  string preparation_id = 4 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  bytes preparation_hash = 5 [(buf.validate.field).bytes.len = 32];
+  string calculation_id = 6 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  bytes calculation_hash = 7 [(buf.validate.field).bytes.len = 32];
+  bytes source_snapshot_hash = 8 [(buf.validate.field).bytes.len = 32];
+  repeated BasValidationFinding findings = 9 [(buf.validate.field).repeated.max_items = 200];
+  google.protobuf.Timestamp created_at = 10 [(buf.validate.field).required = true];
+  // These identify reviewed financial inputs and remain stable when workflow metadata changes.
+  uint64 input_revision = 11 [(buf.validate.field).uint64.gte = 1];
+  bytes input_hash = 12 [(buf.validate.field).bytes.len = 32];
+}
+
+message BasWarningAcknowledgementInput {
+  string finding_id = 1 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  bytes finding_hash = 2 [(buf.validate.field).bytes.len = 32];
+}
+
+message BasWarningAcknowledgement {
+  string acknowledgement_id = 1 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  SourceRef validation = 2 [(buf.validate.field).required = true];
+  SourceRef finding = 3 [(buf.validate.field).required = true];
+  bytes source_snapshot_hash = 4 [(buf.validate.field).bytes.len = 32];
+  string actor_user_id = 5 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  google.protobuf.Timestamp acknowledged_at = 6 [(buf.validate.field).required = true];
+}
+
+// BasPreparation is the mutable lifecycle aggregate pointing to immutable retained snapshots.
+message BasPreparation {
+  string preparation_id = 1 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  uint64 version = 3 [(buf.validate.field).uint64.gte = 1];
+  SourceRef family = 4 [(buf.validate.field).required = true];
+  SourceRef period = 5 [(buf.validate.field).required = true];
+  SourceRef profile = 6 [(buf.validate.field).required = true];
+  BasPreparationState state = 7 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  optional SourceRef current_calculation = 8;
+  optional SourceRef current_validation = 9;
+  optional SourceRef frozen_bas = 10;
+  optional SourceRef predecessor = 11;
+  optional SourceRef superseded_by = 12;
+  BasDisputeOverlayState dispute_overlay = 13 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  bytes source_snapshot_hash = 14 [(buf.validate.field).bytes.len = 32];
+  google.protobuf.Timestamp created_at = 15 [(buf.validate.field).required = true];
+  google.protobuf.Timestamp updated_at = 16 [(buf.validate.field).required = true];
+  // content_hash protects the mutable aggregate for expected-version command CAS.
+  bytes content_hash = 17 [(buf.validate.field).bytes.len = 32];
+  // Input identity changes only when reviewed facts change, not on validation or export events.
+  uint64 input_revision = 18 [(buf.validate.field).uint64.gte = 1];
+  bytes input_hash = 19 [(buf.validate.field).bytes.len = 32];
+}
+
+// BasPreparationSummary is intentionally shallow for history pages.
+message BasPreparationSummary {
+  SourceRef preparation = 1 [(buf.validate.field).required = true];
+  SourceRef family = 2 [(buf.validate.field).required = true];
+  SourceRef period = 3 [(buf.validate.field).required = true];
+  SourceRef profile = 4 [(buf.validate.field).required = true];
+  BasPreparationState state = 5 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  optional SourceRef current_calculation = 6;
+  optional SourceRef frozen_bas = 7;
+  optional SourceRef predecessor = 8;
+  BasDisputeOverlayState dispute_overlay = 9 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  google.protobuf.Timestamp updated_at = 10 [(buf.validate.field).required = true];
+  uint64 input_revision = 11 [(buf.validate.field).uint64.gte = 1];
+  bytes input_hash = 12 [(buf.validate.field).bytes.len = 32];
+}
+
+// BasSourceRevisionVector pins each source family read by one calculation transaction.
+message BasSourceRevisionVector {
+  uint64 financial_revision = 1 [(buf.validate.field).uint64.gte = 0];
+  uint64 ledger_revision = 2 [(buf.validate.field).uint64.gte = 0];
+  uint64 settlement_revision = 3 [(buf.validate.field).uint64.gte = 0];
+  uint64 banking_revision = 4 [(buf.validate.field).uint64.gte = 0];
+  uint64 tax_source_revision = 5 [(buf.validate.field).uint64.gte = 0];
+  uint64 organisation_profile_revision = 6 [(buf.validate.field).uint64.gte = 0];
+  uint64 rule_bundle_revision = 7 [(buf.validate.field).uint64.gte = 0];
+  uint64 payg_revision = 8 [(buf.validate.field).uint64.gte = 0];
+  uint64 bas_profile_revision = 9 [(buf.validate.field).uint64.gte = 0];
+  uint64 period_revision = 10 [(buf.validate.field).uint64.gte = 0];
+}
+
+// BasCalculation is the exact immutable calculation and complete bounded source-coverage snapshot.
+message BasCalculation {
+  string calculation_id = 1 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  uint64 version = 3 [(buf.validate.field).uint64.gte = 1];
+  bytes content_hash = 4 [(buf.validate.field).bytes.len = 32];
+  SourceRef preparation = 5 [(buf.validate.field).required = true];
+  SourceRef family = 6 [(buf.validate.field).required = true];
+  SourceRef period = 7 [(buf.validate.field).required = true];
+  SourceRef profile = 8 [(buf.validate.field).required = true];
+  SourceRef cent_workpaper = 9 [(buf.validate.field).required = true];
+  // This is a retained immutable copy of the existing cent-level workpaper, not an authority state.
+  BasWorkpaper workpaper_snapshot = 10 [(buf.validate.field).required = true];
+  bytes source_snapshot_hash = 11 [(buf.validate.field).bytes.len = 32];
+  bytes coverage_manifest_hash = 12 [(buf.validate.field).bytes.len = 32];
+  bytes revision_vector_hash = 13 [(buf.validate.field).bytes.len = 32];
+  string rule_version = 14 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+  }];
+  bytes rule_hash = 15 [(buf.validate.field).bytes.len = 32];
+  string calculator_version = 16 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+  }];
+  bytes calculator_hash = 17 [(buf.validate.field).bytes.len = 32];
+  string form_version = 18 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+  }];
+  bytes form_hash = 19 [(buf.validate.field).bytes.len = 32];
+  string schema_version = 20 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+  }];
+  bytes schema_hash = 21 [(buf.validate.field).bytes.len = 32];
+  string descriptor_version = 22 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+  }];
+  bytes descriptor_hash = 23 [(buf.validate.field).bytes.len = 32];
+  BasCalculationResult result = 24 [(buf.validate.field).required = true];
+  repeated BasSourceCoverage coverage = 25 [(buf.validate.field).repeated.max_items = 1000];
+  repeated BasValidationFinding findings = 26 [(buf.validate.field).repeated.max_items = 200];
+  google.protobuf.Timestamp created_at = 27 [(buf.validate.field).required = true];
+  // input_revision/input_hash are stable across validation, warning and export history updates.
+  uint64 input_revision = 28 [(buf.validate.field).uint64.gte = 1];
+  bytes input_hash = 29 [(buf.validate.field).bytes.len = 32];
+  BasConfirmedPeriod period_snapshot = 30 [(buf.validate.field).required = true];
+  BasObligationsProfile profile_snapshot = 31 [(buf.validate.field).required = true];
+  BasPaygwInputs paygw_inputs = 32 [(buf.validate.field).required = true];
+  BasPaygiInputs paygi_inputs = 33 [(buf.validate.field).required = true];
+  Organisation organisation_snapshot = 34 [(buf.validate.field).required = true];
+  SourceRef organisation_identity = 35 [(buf.validate.field).required = true];
+  bytes organisation_snapshot_hash = 36 [(buf.validate.field).bytes.len = 32];
+  BasSourceRevisionVector revision_vector = 37 [(buf.validate.field).required = true];
+}
+
+// BasCalculationSummary omits the large coverage body from list/history responses.
+message BasCalculationSummary {
+  SourceRef calculation = 1 [(buf.validate.field).required = true];
+  SourceRef preparation = 2 [(buf.validate.field).required = true];
+  SourceRef family = 3 [(buf.validate.field).required = true];
+  SourceRef period = 4 [(buf.validate.field).required = true];
+  BasCalculationOutcome outcome = 5 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  google.protobuf.Timestamp created_at = 6 [(buf.validate.field).required = true];
+}
+
+message BasFrozenBas {
+  string frozen_id = 1 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  bytes content_hash = 3 [(buf.validate.field).bytes.len = 32];
+  SourceRef preparation = 4 [(buf.validate.field).required = true];
+  SourceRef family = 5 [(buf.validate.field).required = true];
+  SourceRef period = 6 [(buf.validate.field).required = true];
+  SourceRef profile = 7 [(buf.validate.field).required = true];
+  SourceRef calculation = 8 [(buf.validate.field).required = true];
+  SourceRef validation = 9 [(buf.validate.field).required = true];
+  BasCalculation calculation_snapshot = 10 [(buf.validate.field).required = true];
+  repeated BasWarningAcknowledgement acknowledgements = 11 [(buf.validate.field).repeated.max_items = 200];
+  bytes approved_snapshot_hash = 12 [(buf.validate.field).bytes.len = 32];
+  string approval_actor_user_id = 13 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  string fresh_factor_assertion_id = 14 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  google.protobuf.Timestamp approved_at = 15 [(buf.validate.field).required = true];
+  string approval_reason = 16 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 512
+  }];
+}
+
+// BasFrozenBasSummary keeps history pages bounded and points at the immutable exact snapshot.
+message BasFrozenBasSummary {
+  SourceRef frozen_bas = 1 [(buf.validate.field).required = true];
+  SourceRef preparation = 2 [(buf.validate.field).required = true];
+  SourceRef family = 3 [(buf.validate.field).required = true];
+  SourceRef period = 4 [(buf.validate.field).required = true];
+  SourceRef calculation = 5 [(buf.validate.field).required = true];
+  google.protobuf.Timestamp approved_at = 6 [(buf.validate.field).required = true];
+}
+
+message BasExternalObservationInput {
+  BasExternalEventKind event_kind = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  BasExternalChannel channel = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  google.protobuf.Timestamp claimed_event_at = 3 [(buf.validate.field).required = true];
+  optional string external_reference = 4 [(buf.validate.field).string.max_len = 256];
+  repeated SourceRef evidence = 5 [(buf.validate.field).repeated.max_items = 20];
+  string reason = 6 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 512
+  }];
+}
+
+message BasExternalObservation {
+  option (buf.validate.message).cel = {
+    id: "bas.external_observation.payload_and_correction_subject"
+    message: "An observation is either a normal event without correction lineage or a typed correction of the exact retained observation"
+    expression: "(has(this.observation) && !has(this.correction) && !has(this.corrects_observation)) || (has(this.correction) && !has(this.observation) && has(this.corrects_observation) && this.corrects_observation.type == 'bas_external_observation' && this.correction.disputed_observation.type == 'bas_external_observation' && this.corrects_observation.type == this.correction.disputed_observation.type && this.corrects_observation.id == this.correction.disputed_observation.id && this.corrects_observation.revision == this.correction.disputed_observation.revision && this.corrects_observation.content_hash == this.correction.disputed_observation.content_hash && this.observation_id != this.correction.disputed_observation.id)"
+  };
+  string observation_id = 1 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  SourceRef frozen_bas = 3 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "bas.external_observation.frozen_type"
+      message: "External observation must refer to a frozen BAS snapshot"
+      expression: "this.type == 'bas_frozen'"
+    }
+  ];
+  oneof payload {
+    BasExternalObservationInput observation = 4;
+    BasExternalObservationCorrectionInput correction = 10;
+  }
+  BasExternalTrust trust = 5 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  string actor_user_id = 6 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  google.protobuf.Timestamp recorded_at = 7 [(buf.validate.field).required = true];
+  bytes content_hash = 8 [(buf.validate.field).bytes.len = 32];
+  optional SourceRef corrects_observation = 9;
+}
+
+message BasExternalObservationSummary {
+  option (buf.validate.message).cel = {
+    id: "bas.external_observation_summary.kind_shape"
+    message: "A history summary is either an ordinary event or a correction with its exact corrected observation"
+    expression: "(has(this.event_kind) && !has(this.correction_kind) && !has(this.corrects_observation)) || (has(this.correction_kind) && !has(this.event_kind) && has(this.corrects_observation) && this.corrects_observation.type == 'bas_external_observation')"
+  };
+  SourceRef observation = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "bas.external_observation_summary.observation_type"
+      message: "History observation reference must identify a BAS external observation"
+      expression: "this.type == 'bas_external_observation'"
+    }
+  ];
+  SourceRef frozen_bas = 2 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "bas.external_observation_summary.frozen_type"
+      message: "History observation must refer to a frozen BAS snapshot"
+      expression: "this.type == 'bas_frozen'"
+    }
+  ];
+  optional BasExternalEventKind event_kind = 3 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  BasExternalTrust trust = 4 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  optional SourceRef corrects_observation = 5;
+  google.protobuf.Timestamp recorded_at = 6 [(buf.validate.field).required = true];
+  optional BasCorrectionKind correction_kind = 7 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+}
+
+message BasExternalObservationCorrectionInput {
+  option (buf.validate.message).cel = {
+    id: "bas.external_observation_correction.details"
+    message: "Retraction carries no replacement assertion; replacement carries a corrected event kind or event time"
+    expression: "this.disputed_observation.type == 'bas_external_observation' && ((this.correction_kind == 1 && !has(this.corrected_event_kind) && !has(this.corrected_claimed_event_at)) || (this.correction_kind == 2 && (has(this.corrected_event_kind) || has(this.corrected_claimed_event_at))))"
+  };
+  SourceRef disputed_observation = 1 [(buf.validate.field).required = true];
+  BasCorrectionKind correction_kind = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  optional BasExternalEventKind corrected_event_kind = 3 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  optional google.protobuf.Timestamp corrected_claimed_event_at = 4;
+  repeated SourceRef evidence = 5 [(buf.validate.field).repeated.max_items = 20];
+  string reason = 6 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 512
+  }];
+}
+
+message BasExternalDisputeInput {
+  option (buf.validate.message).cel = {
+    id: "bas.external_dispute.source_types"
+    message: "Disputes identify external observation sources and affected BAS preparation sources"
+    expression: "this.disputed_observations.all(observation, observation.type == 'bas_external_observation') && this.affected_confirmed_chain.all(preparation, preparation.type == 'bas_preparation')"
+  };
+  BasDisputeResolutionOutcome outcome = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  repeated SourceRef disputed_observations = 2 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 200
+  }];
+  repeated SourceRef affected_confirmed_chain = 3 [(buf.validate.field).repeated.max_items = 200];
+  bytes dependent_chain_manifest_hash = 4 [(buf.validate.field).bytes.len = 32];
+  repeated SourceRef evidence = 5 [(buf.validate.field).repeated.max_items = 20];
+  string reason = 6 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 512
+  }];
+}
+
+message BasExternalDisputeResolution {
+  string resolution_id = 1 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  SourceRef family = 2 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "bas.external_dispute_resolution.family_type"
+      message: "Dispute resolution family reference must identify a BAS family"
+      expression: "this.type == 'bas_family'"
+    }
+  ];
+  BasExternalDisputeInput resolution = 3 [(buf.validate.field).required = true];
+  string actor_user_id = 4 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  google.protobuf.Timestamp resolved_at = 5 [(buf.validate.field).required = true];
+  bytes content_hash = 6 [(buf.validate.field).bytes.len = 32];
+}
+
+// BasExternalDisputeResolutionSummary is a shallow history projection for bounded pages.
+message BasExternalDisputeResolutionSummary {
+  SourceRef resolution = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "bas.external_dispute_resolution_summary.resolution_type"
+      message: "Resolution reference must identify a BAS external dispute resolution"
+      expression: "this.type == 'bas_external_dispute_resolution'"
+    }
+  ];
+  SourceRef family = 2 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "bas.external_dispute_resolution_summary.family_type"
+      message: "Resolution family reference must identify a BAS family"
+      expression: "this.type == 'bas_family'"
+    }
+  ];
+  BasDisputeResolutionOutcome outcome = 3 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  google.protobuf.Timestamp resolved_at = 4 [(buf.validate.field).required = true];
+}
+
+message BasExportTarget {
+  option (buf.validate.message).cel = {
+    id: "bas.export.target.exact"
+    message: "Export target must identify one exact calculation or frozen snapshot"
+    expression: "(has(this.calculation) && this.calculation.type == 'bas_calculation') || (has(this.frozen_bas) && this.frozen_bas.type == 'bas_frozen')"
+  };
+  oneof exact_target {
+    SourceRef calculation = 1;
+    SourceRef frozen_bas = 2;
+  }
+}
+
+message BasExportEventInput {
+  option (buf.validate.message).cel = {
+    id: "bas.export.phase_outcome_artifact"
+    message: "Started exports have no outcome or digest; successful completion needs a SHA256 artifact digest"
+    expression: "(this.phase == 1 && !has(this.outcome) && !has(this.artifact_hash)) || (this.phase == 2 && has(this.outcome) && ((this.outcome == 3 && has(this.artifact_hash)) || ((this.outcome == 1 || this.outcome == 2) && !has(this.artifact_hash))))"
+  };
+  BasExportTarget target = 1 [(buf.validate.field).required = true];
+  BasExportFormat format = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  BasExportPhase phase = 3 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  optional BasExportOutcome outcome = 4 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  optional bytes artifact_hash = 5 [(buf.validate.field).bytes.len = 32];
+  google.protobuf.Timestamp occurred_at = 6 [(buf.validate.field).required = true];
+  string reason = 7 [(buf.validate.field).string.max_len = 512];
+}
+
+message BasExportEvent {
+  string export_event_id = 1 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  BasExportEventInput event = 3 [(buf.validate.field).required = true];
+  string actor_user_id = 4 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  google.protobuf.Timestamp recorded_at = 5 [(buf.validate.field).required = true];
+  bytes content_hash = 6 [(buf.validate.field).bytes.len = 32];
+}
+
+// BasExportEventSummary avoids including renderer or report bodies in history pages.
+message BasExportEventSummary {
+  SourceRef export_event = 1 [(buf.validate.field).required = true];
+  BasExportTarget target = 2 [(buf.validate.field).required = true];
+  BasExportFormat format = 3 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  BasExportPhase phase = 4 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  optional BasExportOutcome outcome = 5 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  google.protobuf.Timestamp recorded_at = 6 [(buf.validate.field).required = true];
+}
+
+// GetBasObligationsProfile resolves the effective profile at a civil date or an exact profile identity.
+message GetBasObligationsProfileRequest {
+  option (buf.validate.message).cel = {
+    id: "bas.profile_query.exact_identity_pair"
+    message: "Exact profile ID and hash must be supplied together"
+    expression: "has(this.profile_id) == has(this.profile_hash)"
+  };
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  CivilDate as_of_date = 3 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "bas.profile_query.as_of_calendar"
+      message: "As-of date must exist in the Gregorian calendar"
+      expression: "this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))"
+    }
+  ];
+  optional string profile_id = 4 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  optional bytes profile_hash = 5 [(buf.validate.field).bytes.len = 32];
+}
+message GetBasObligationsProfileResponse {
+  BasObligationsProfile profile = 1 [(buf.validate.field).required = true];
+}
+
+message ListBasObligationsProfilesRequest {
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  PageRequest page = 3 [(buf.validate.field).required = true];
+}
+message ListBasObligationsProfilesResponse {
+  repeated BasObligationsProfileSummary profiles = 1 [(buf.validate.field).repeated.max_items = 200];
+  PageInfo page = 2 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "bas.profiles_page.count"
+      message: "Profile page count cannot exceed 200"
+      expression: "this.returned_count <= 200"
+    }
+  ];
+}
+
+message GetBasCalendarRequest {
+  option (buf.validate.message).cel = {
+    id: "bas.calendar.horizon_years"
+    message: "Calendar horizon may span no more than ten calendar years"
+    expression: "this.horizon.end_date.year - this.horizon.start_date.year <= 9"
+  };
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  CivilDate as_of_date = 3 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "bas.calendar.as_of_calendar"
+      message: "As-of date must exist in the Gregorian calendar"
+      expression: "this.day <= (this.month == 2 ? ((this.year % 4 == 0 && (this.year % 100 != 0 || this.year % 400 == 0)) ? 29 : 28) : (this.month in [4, 6, 9, 11] ? 30 : 31))"
+    }
+  ];
+  // horizon includes no more than ten calendar years (end year minus start year <= 9).
+  BasCivilDateRange horizon = 4 [(buf.validate.field).required = true];
+  optional SourceRef profile = 5 [(buf.validate.field).cel = {
+    id: "bas.calendar.profile_type"
+    message: "Calendar profile reference must identify a BAS obligations profile"
+    expression: "this.type == 'bas_obligations_profile'"
+  }];
+}
+message GetBasCalendarResponse {
+  // suggestions contains the complete bounded horizon without truncation; monthly plus quarterly suggestions total at most 160 over ten calendar years.
+  repeated BasPeriodSuggestion suggestions = 1 [(buf.validate.field).repeated.max_items = 200];
+}
+
+message ListBasPeriodsRequest {
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  optional BasCivilDateRange range = 3;
+  PageRequest page = 4 [(buf.validate.field).required = true];
+}
+message ListBasPeriodsResponse {
+  repeated BasPeriodSummary periods = 1 [(buf.validate.field).repeated.max_items = 200];
+  PageInfo page = 2 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "bas.periods_page.count"
+      message: "Period page count cannot exceed 200"
+      expression: "this.returned_count <= 200"
+    }
+  ];
+}
+
+message GetBasPreparationRequest {
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  string preparation_id = 3 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  bytes preparation_hash = 4 [(buf.validate.field).bytes.len = 32];
+}
+message GetBasPreparationResponse {
+  option (buf.validate.message).cel = {
+    id: "bas.preparation_query.saved_payg_pair"
+    message: "A saved PAYGW and PAYGI input snapshot is returned together or neither is present"
+    expression: "has(this.paygw_inputs) == has(this.paygi_inputs)"
+  };
+  BasPreparation preparation = 1 [(buf.validate.field).required = true];
+  optional BasCalculation current_calculation = 2;
+  optional BasValidationSnapshot current_validation = 3;
+  // Current chain expectations are separate from the retained preparation snapshot.
+  BasChainExpectation current_chain = 4 [(buf.validate.field).required = true];
+  // Acknowledgements bind to the exact retained validation, finding and source identities.
+  repeated BasWarningAcknowledgement acknowledgements = 5 [(buf.validate.field).repeated.max_items = 200];
+  // Saved PAYG inputs correspond to this preparation's input_revision and input_hash, never unlabelled live values.
+  optional BasPaygwInputs paygw_inputs = 6;
+  optional BasPaygiInputs paygi_inputs = 7;
+}
+
+message ListBasPreparationsRequest {
+  option (buf.validate.message).cel = {
+    id: "bas.preparations_query.family_identity_pair"
+    message: "Exact family ID and hash must be supplied together"
+    expression: "has(this.family_id) == has(this.family_hash)"
+  };
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  optional string family_id = 3 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  optional bytes family_hash = 4 [(buf.validate.field).bytes.len = 32];
+  PageRequest page = 5 [(buf.validate.field).required = true];
+}
+message ListBasPreparationsResponse {
+  repeated BasPreparationSummary preparations = 1 [(buf.validate.field).repeated.max_items = 200];
+  PageInfo page = 2 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "bas.preparations_page.count"
+      message: "Preparation page count cannot exceed 200"
+      expression: "this.returned_count <= 200"
+    }
+  ];
+}
+
+message GetBasCalculationRequest {
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  string calculation_id = 3 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  bytes calculation_hash = 4 [(buf.validate.field).bytes.len = 32];
+}
+message GetBasCalculationResponse {
+  BasCalculation calculation = 1 [(buf.validate.field).required = true];
+}
+
+message ListBasCalculationsRequest {
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  string preparation_id = 3 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  bytes preparation_hash = 4 [(buf.validate.field).bytes.len = 32];
+  PageRequest page = 5 [(buf.validate.field).required = true];
+}
+message ListBasCalculationsResponse {
+  repeated BasCalculationSummary calculations = 1 [(buf.validate.field).repeated.max_items = 200];
+  PageInfo page = 2 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "bas.calculations_page.count"
+      message: "Calculation page count cannot exceed 200"
+      expression: "this.returned_count <= 200"
+    }
+  ];
+}
+
+message GetFrozenBasRequest {
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  string frozen_id = 3 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  bytes frozen_hash = 4 [(buf.validate.field).bytes.len = 32];
+}
+message GetFrozenBasResponse {
+  BasFrozenBas frozen_bas = 1 [(buf.validate.field).required = true];
+}
+
+message ListFrozenBasRequest {
+  option (buf.validate.message).cel = {
+    id: "bas.frozen_query.family_identity_pair"
+    message: "Exact family ID and hash must be supplied together"
+    expression: "has(this.family_id) == has(this.family_hash)"
+  };
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  optional string family_id = 3 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  optional bytes family_hash = 4 [(buf.validate.field).bytes.len = 32];
+  PageRequest page = 5 [(buf.validate.field).required = true];
+}
+message ListFrozenBasResponse {
+  repeated BasFrozenBasSummary frozen_bas = 1 [(buf.validate.field).repeated.max_items = 200];
+  PageInfo page = 2 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "bas.frozen_page.count"
+      message: "Frozen BAS page count cannot exceed 200"
+      expression: "this.returned_count <= 200"
+    }
+  ];
+}
+
+message ListBasExternalObservationsRequest {
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  string frozen_id = 3 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  bytes frozen_hash = 4 [(buf.validate.field).bytes.len = 32];
+  PageRequest page = 5 [(buf.validate.field).required = true];
+}
+message ListBasExternalObservationsResponse {
+  repeated BasExternalObservationSummary observations = 1 [(buf.validate.field).repeated.max_items = 200];
+  PageInfo page = 2 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "bas.observations_page.count"
+      message: "External observation page count cannot exceed 200"
+      expression: "this.returned_count <= 200"
+    }
+  ];
+}
+
+message GetBasExternalObservationRequest {
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  string observation_id = 3 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  bytes observation_hash = 4 [(buf.validate.field).bytes.len = 32];
+}
+message GetBasExternalObservationResponse {
+  BasExternalObservation observation = 1 [(buf.validate.field).required = true];
+}
+
+message GetBasExternalDisputeResolutionRequest {
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  string resolution_id = 3 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  bytes resolution_hash = 4 [(buf.validate.field).bytes.len = 32];
+}
+message GetBasExternalDisputeResolutionResponse {
+  BasExternalDisputeResolution resolution = 1 [(buf.validate.field).required = true];
+}
+
+message ListBasExternalDisputeResolutionsRequest {
+  option (buf.validate.message).cel = {
+    id: "bas.external_dispute_resolutions_query.family_identity_pair"
+    message: "Exact family ID and hash must be supplied together"
+    expression: "has(this.family_id) == has(this.family_hash)"
+  };
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  optional string family_id = 3 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  optional bytes family_hash = 4 [(buf.validate.field).bytes.len = 32];
+  PageRequest page = 5 [(buf.validate.field).required = true];
+}
+message ListBasExternalDisputeResolutionsResponse {
+  repeated BasExternalDisputeResolutionSummary resolutions = 1 [(buf.validate.field).repeated.max_items = 200];
+  PageInfo page = 2 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "bas.external_dispute_resolutions_page.count"
+      message: "External dispute resolution page count cannot exceed 200"
+      expression: "this.returned_count <= 200"
+    }
+  ];
+}
+
+message ListBasExportEventsRequest {
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  BasExportTarget target = 3 [(buf.validate.field).required = true];
+  PageRequest page = 4 [(buf.validate.field).required = true];
+}
+message ListBasExportEventsResponse {
+  repeated BasExportEventSummary events = 1 [(buf.validate.field).repeated.max_items = 200];
+  PageInfo page = 2 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "bas.exports_page.count"
+      message: "Export event page count cannot exceed 200"
+      expression: "this.returned_count <= 200"
+    }
+  ];
+}
+
+message SetBasObligationsProfileRequest {
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  // Zero is valid only when no profile revision exists yet.
+  uint64 expected_version = 3;
+  BasObligationsProfileInput profile = 4 [(buf.validate.field).required = true];
+}
+message SetBasObligationsProfileResponse {
+  BasObligationsProfile profile = 1 [(buf.validate.field).required = true];
+}
+
+message ConfirmBasPeriodRequest {
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  // Zero is valid for the first confirmation of this period.
+  uint64 expected_version = 3;
+  BasPeriodConfirmationInput period = 4 [(buf.validate.field).required = true];
+}
+message ConfirmBasPeriodResponse {
+  BasConfirmedPeriod period = 1 [(buf.validate.field).required = true];
+}
+
+message SaveBasPaygInputsRequest {
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
+  string preparation_id = 4 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  bytes preparation_hash = 5 [(buf.validate.field).bytes.len = 32];
+  BasPaygwInputs paygw = 6 [(buf.validate.field).required = true];
+  BasPaygiInputs paygi = 7 [(buf.validate.field).required = true];
+}
+message SaveBasPaygInputsResponse {
+  BasPreparation preparation = 1 [(buf.validate.field).required = true];
+}
+
+message RegenerateBasPreparationRequest {
+  option (buf.validate.message).cel = {
+    id: "bas.regenerate.genesis_identity"
+    message: "Genesis creates a family and preparation only from explicit absence; existing objects require exact retained identities"
+    expression: "this.period.type == 'bas_period' && this.profile.type == 'bas_obligations_profile' && ((this.expected_version == 0u && has(this.preparation_expectation.absent) && (!has(this.family_expectation.retained) || this.family_expectation.retained.type == 'bas_family')) || (this.expected_version >= 1 && has(this.preparation_expectation.retained) && this.preparation_expectation.retained.type == 'bas_preparation' && this.preparation_expectation.expected_version == this.expected_version && has(this.family_expectation.retained) && this.family_expectation.retained.type == 'bas_family'))"
+  };
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  // Zero is valid when creating the initial preparation for a family.
+  uint64 expected_version = 3;
+  // Explicit absence lets the service create the stable family without a caller-fabricated hash.
+  BasExpectedIdentity family_expectation = 4 [(buf.validate.field).required = true];
+  SourceRef period = 5 [(buf.validate.field).required = true];
+  SourceRef profile = 6 [(buf.validate.field).required = true];
+  BasExpectedIdentity preparation_expectation = 7 [(buf.validate.field).required = true];
+}
+message RegenerateBasPreparationResponse {
+  BasPreparation preparation = 1 [(buf.validate.field).required = true];
+  BasCalculation calculation = 2 [(buf.validate.field).required = true];
+}
+
+message ValidateBasPreparationRequest {
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
+  string preparation_id = 4 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  bytes preparation_hash = 5 [(buf.validate.field).bytes.len = 32];
+  string calculation_id = 6 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  bytes calculation_hash = 7 [(buf.validate.field).bytes.len = 32];
+}
+message ValidateBasPreparationResponse {
+  BasPreparation preparation = 1 [(buf.validate.field).required = true];
+  BasValidationSnapshot validation = 2 [(buf.validate.field).required = true];
+}
+
+message AcknowledgeBasWarningsRequest {
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
+  string preparation_id = 4 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  bytes preparation_hash = 5 [(buf.validate.field).bytes.len = 32];
+  string validation_id = 6 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  bytes validation_hash = 7 [(buf.validate.field).bytes.len = 32];
+  repeated BasWarningAcknowledgementInput warnings = 8 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 200
+  }];
+  bytes source_snapshot_hash = 9 [(buf.validate.field).bytes.len = 32];
+}
+message AcknowledgeBasWarningsResponse {
+  repeated BasWarningAcknowledgement acknowledgements = 1 [(buf.validate.field).repeated.max_items = 200];
+  BasPreparation preparation = 2 [(buf.validate.field).required = true];
+}
+
+message FreezeBasForManualHandoffRequest {
+  option (buf.validate.message).cel = {
+    id: "bas.freeze.fresh_factor"
+    message: "Freezing a BAS requires a purpose-bound fresh factor"
+    expression: "has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'bas_freeze_manual_handoff'"
+  };
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
+  BasChainExpectation chain = 4 [(buf.validate.field).required = true];
+  string preparation_id = 5 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  bytes preparation_hash = 6 [(buf.validate.field).bytes.len = 32];
+  string calculation_id = 7 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  bytes calculation_hash = 8 [(buf.validate.field).bytes.len = 32];
+  string validation_id = 9 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  bytes validation_hash = 10 [(buf.validate.field).bytes.len = 32];
+  string approval_reason = 11 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 512
+  }];
+}
+message FreezeBasForManualHandoffResponse {
+  BasPreparation preparation = 1 [(buf.validate.field).required = true];
+  BasFrozenBas frozen_bas = 2 [(buf.validate.field).required = true];
+}
+
+message CreateBasReplacementRequest {
+  option (buf.validate.message).cel = {
+    id: "bas.replacement.fresh_factor"
+    message: "Replacing a frozen attempt requires a purpose-bound fresh factor"
+    expression: "has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'bas_replace_unused_attempt'"
+  };
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
+  BasChainExpectation chain = 4 [(buf.validate.field).required = true];
+  string predecessor_frozen_id = 5 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  bytes predecessor_frozen_hash = 6 [(buf.validate.field).bytes.len = 32];
+  string reason = 7 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 512
+  }];
+}
+message CreateBasReplacementResponse {
+  BasPreparation predecessor = 1 [(buf.validate.field).required = true];
+  BasPreparation replacement = 2 [(buf.validate.field).required = true];
+}
+
+message CreateBasRevisionRequest {
+  option (buf.validate.message).cel = {
+    id: "bas.revision.typed_sources"
+    message: "Revision uses a retained BAS period and obligations profile"
+    expression: "this.period.type == 'bas_period' && this.profile.type == 'bas_obligations_profile'"
+  };
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
+  BasChainExpectation chain = 4 [(buf.validate.field).required = true];
+  string effective_original_preparation_id = 5 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  bytes effective_original_preparation_hash = 6 [(buf.validate.field).bytes.len = 32];
+  string latest_confirmed_head_id = 7 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  bytes latest_confirmed_head_hash = 8 [(buf.validate.field).bytes.len = 32];
+  SourceRef period = 9 [(buf.validate.field).required = true];
+  SourceRef profile = 10 [(buf.validate.field).required = true];
+  string reason = 11 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 512
+  }];
+}
+message CreateBasRevisionResponse {
+  BasPreparation original = 1 [(buf.validate.field).required = true];
+  BasPreparation revision = 2 [(buf.validate.field).required = true];
+}
+
+message RecordExternalBasObservationRequest {
+  option (buf.validate.message).cel = {
+    id: "bas.external_confirmation.fresh_factor"
+    message: "A claimed completed lodgement or acceptance requires a purpose-bound fresh factor"
+    expression: "(this.observation.event_kind != 1 && this.observation.event_kind != 2) || (has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'bas_record_external_confirmation')"
+  };
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
+  BasChainExpectation chain = 4 [(buf.validate.field).required = true];
+  string frozen_id = 5 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  bytes frozen_hash = 6 [(buf.validate.field).bytes.len = 32];
+  BasExternalObservationInput observation = 7 [(buf.validate.field).required = true];
+}
+message RecordExternalBasObservationResponse {
+  BasExternalObservation observation = 1 [(buf.validate.field).required = true];
+  BasPreparation preparation = 2 [(buf.validate.field).required = true];
+}
+
+message CorrectExternalBasObservationRequest {
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
+  BasChainExpectation chain = 4 [(buf.validate.field).required = true];
+  string frozen_id = 5 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  bytes frozen_hash = 6 [(buf.validate.field).bytes.len = 32];
+  BasExternalObservationCorrectionInput correction = 7 [(buf.validate.field).required = true];
+}
+message CorrectExternalBasObservationResponse {
+  BasExternalObservation correction = 1 [(buf.validate.field).required = true];
+  BasPreparation preparation = 2 [(buf.validate.field).required = true];
+}
+
+message ResolveExternalBasDisputeRequest {
+  option (buf.validate.message).cel = {
+    id: "bas.dispute_resolution.fresh_factor"
+    message: "Resolving an external BAS dispute requires a purpose-bound fresh factor"
+    expression: "has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'bas_resolve_external_dispute'"
+  };
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
+  BasChainExpectation chain = 4 [(buf.validate.field).required = true];
+  BasExternalDisputeInput resolution = 5 [(buf.validate.field).required = true];
+}
+message ResolveExternalBasDisputeResponse {
+  BasExternalDisputeResolution resolution = 1 [(buf.validate.field).required = true];
+  BasPreparation preparation = 2 [(buf.validate.field).required = true];
+}
+
+message ReplaceRejectedBasAttemptRequest {
+  option (buf.validate.message).cel = {
+    id: "bas.rejected_replacement.fresh_factor"
+    message: "Replacing a rejected BAS attempt requires a purpose-bound fresh factor"
+    expression: "has(this.command_context) && has(this.command_context.fresh_factor) && this.command_context.fresh_factor.purpose == 'bas_replace_rejected_attempt'"
+  };
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
+  BasChainExpectation chain = 4 [(buf.validate.field).required = true];
+  string rejected_preparation_id = 5 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  bytes rejected_preparation_hash = 6 [(buf.validate.field).bytes.len = 32];
+  SourceRef resolved_rejection = 7 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "bas.rejected_replacement.rejection_type"
+      message: "Resolved rejection must identify a retained external observation"
+      expression: "this.type == 'bas_external_observation'"
+    }
+  ];
+  string reason = 8 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 512
+  }];
+}
+message ReplaceRejectedBasAttemptResponse {
+  BasPreparation rejected_attempt = 1 [(buf.validate.field).required = true];
+  BasPreparation replacement_attempt = 2 [(buf.validate.field).required = true];
+}
+
+message RecordBasExportEventRequest {
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  // Zero is valid when recording the first export event for this immutable target.
+  uint64 expected_version = 3;
+  BasExportEventInput event = 4 [(buf.validate.field).required = true];
+}
+message RecordBasExportEventResponse {
+  BasExportEvent event = 1 [(buf.validate.field).required = true];
+}
+
+// BasPreparationService is a future local contract; it is not mounted by the current runtime.
+// It records preparation and user-reported external handling, and exposes no submission transport.
+service BasPreparationService {
+  rpc GetBasObligationsProfile(GetBasObligationsProfileRequest) returns (GetBasObligationsProfileResponse);
+  rpc ListBasObligationsProfiles(ListBasObligationsProfilesRequest) returns (ListBasObligationsProfilesResponse);
+  rpc GetBasCalendar(GetBasCalendarRequest) returns (GetBasCalendarResponse);
+  rpc ListBasPeriods(ListBasPeriodsRequest) returns (ListBasPeriodsResponse);
+  rpc GetBasPreparation(GetBasPreparationRequest) returns (GetBasPreparationResponse);
+  rpc ListBasPreparations(ListBasPreparationsRequest) returns (ListBasPreparationsResponse);
+  rpc GetBasCalculation(GetBasCalculationRequest) returns (GetBasCalculationResponse);
+  rpc ListBasCalculations(ListBasCalculationsRequest) returns (ListBasCalculationsResponse);
+  rpc GetFrozenBas(GetFrozenBasRequest) returns (GetFrozenBasResponse);
+  rpc ListFrozenBas(ListFrozenBasRequest) returns (ListFrozenBasResponse);
+  rpc GetBasExternalObservation(GetBasExternalObservationRequest) returns (GetBasExternalObservationResponse);
+  rpc ListBasExternalObservations(ListBasExternalObservationsRequest) returns (ListBasExternalObservationsResponse);
+  rpc GetBasExternalDisputeResolution(GetBasExternalDisputeResolutionRequest) returns (GetBasExternalDisputeResolutionResponse);
+  rpc ListBasExternalDisputeResolutions(ListBasExternalDisputeResolutionsRequest) returns (ListBasExternalDisputeResolutionsResponse);
+  rpc ListBasExportEvents(ListBasExportEventsRequest) returns (ListBasExportEventsResponse);
+  rpc SetBasObligationsProfile(SetBasObligationsProfileRequest) returns (SetBasObligationsProfileResponse);
+  rpc ConfirmBasPeriod(ConfirmBasPeriodRequest) returns (ConfirmBasPeriodResponse);
+  rpc SaveBasPaygInputs(SaveBasPaygInputsRequest) returns (SaveBasPaygInputsResponse);
+  rpc RegenerateBasPreparation(RegenerateBasPreparationRequest) returns (RegenerateBasPreparationResponse);
+  rpc ValidateBasPreparation(ValidateBasPreparationRequest) returns (ValidateBasPreparationResponse);
+  rpc AcknowledgeBasWarnings(AcknowledgeBasWarningsRequest) returns (AcknowledgeBasWarningsResponse);
+  rpc FreezeBasForManualHandoff(FreezeBasForManualHandoffRequest) returns (FreezeBasForManualHandoffResponse);
+  rpc CreateBasReplacement(CreateBasReplacementRequest) returns (CreateBasReplacementResponse);
+  rpc CreateBasRevision(CreateBasRevisionRequest) returns (CreateBasRevisionResponse);
+  rpc RecordExternalBasObservation(RecordExternalBasObservationRequest) returns (RecordExternalBasObservationResponse);
+  rpc CorrectExternalBasObservation(CorrectExternalBasObservationRequest) returns (CorrectExternalBasObservationResponse);
+  rpc ResolveExternalBasDispute(ResolveExternalBasDisputeRequest) returns (ResolveExternalBasDisputeResponse);
+  rpc ReplaceRejectedBasAttempt(ReplaceRejectedBasAttemptRequest) returns (ReplaceRejectedBasAttemptResponse);
+  rpc RecordBasExportEvent(RecordBasExportEventRequest) returns (RecordBasExportEventResponse);
+}

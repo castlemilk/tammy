@@ -20,6 +20,9 @@ enum AttentionItemKind {
 
   // ATTENTION_ITEM_KIND_BAS_WORKPAPER links to an exact retained BAS workpaper resource.
   ATTENTION_ITEM_KIND_BAS_WORKPAPER = 3;
+
+  // ATTENTION_ITEM_KIND_BAS_PREPARATION links to an exact local preparation resource.
+  ATTENTION_ITEM_KIND_BAS_PREPARATION = 4;
 }
 
 // BasAttentionStatus is the bounded overview state of the requested BAS period.
@@ -35,6 +38,21 @@ enum BasAttentionStatus {
 
   // BAS_ATTENTION_STATUS_OUTDATED means retained source changes require regeneration.
   BAS_ATTENTION_STATUS_OUTDATED = 3;
+
+  // BAS_ATTENTION_STATUS_ACTION_NEEDED means a profile or period is missing before preparation exists, or an existing local preparation is collecting or blocked. Exact preparation and family references may be absent before creation.
+  BAS_ATTENTION_STATUS_ACTION_NEEDED = 4;
+
+  // BAS_ATTENTION_STATUS_REVIEW_READY means the exact current preparation passed validation.
+  BAS_ATTENTION_STATUS_REVIEW_READY = 5;
+
+  // BAS_ATTENTION_STATUS_FROZEN_FOR_MANUAL_HANDOFF means a reviewed local snapshot was frozen.
+  BAS_ATTENTION_STATUS_FROZEN_FOR_MANUAL_HANDOFF = 6;
+
+  // BAS_ATTENTION_STATUS_EXTERNAL_CONFIRMATION_RECORDED means a user recorded external handling.
+  BAS_ATTENTION_STATUS_EXTERNAL_CONFIRMATION_RECORDED = 7;
+
+  // BAS_ATTENTION_STATUS_DISPUTED means retained external observations require review.
+  BAS_ATTENTION_STATUS_DISPUTED = 8;
 }
 
 // ReportingPeriod is one requested inclusive civil-date reporting range.
@@ -105,6 +123,11 @@ message GetAttentionSummaryRequest {
 
 // GetAttentionSummaryResponse returns bounded attention counts and typed immutable links.
 message GetAttentionSummaryResponse {
+  option (buf.validate.message).cel = {
+    id: "overview.bas_exact_resource_shape"
+    message: "New BAS statuses require exact preparation and family identities, and frozen states require the frozen identity"
+    expression: "(this.bas_status != 5 || (has(this.bas_preparation) && has(this.bas_family))) && ((this.bas_status != 6 && this.bas_status != 7 && this.bas_status != 8) || (has(this.bas_preparation) && has(this.bas_family) && has(this.bas_frozen))) && (!has(this.bas_frozen) || (has(this.bas_preparation) && has(this.bas_family) && this.bas_status in [6, 7, 8]))"
+  };
   // documents_needing_review is the bounded count of documents awaiting human review.
   uint32 documents_needing_review = 1 [(buf.validate.field).uint32.lte = 1000000];
 
@@ -137,6 +160,27 @@ message GetAttentionSummaryResponse {
 
   // reporting_period echoes the exact inclusive reporting range used by the snapshot.
   ReportingPeriod reporting_period = 10 [(buf.validate.field).required = true];
+
+  // bas_preparation is the exact local preparation identity when this period has one.
+  optional SourceRef bas_preparation = 11 [(buf.validate.field).cel = {
+    id: "overview.bas_preparation.type"
+    message: "Preparation reference must identify a BAS preparation"
+    expression: "this.type == 'bas_preparation'"
+  }];
+
+  // bas_family is the stable exact statement-family identity when one has been established.
+  optional SourceRef bas_family = 12 [(buf.validate.field).cel = {
+    id: "overview.bas_family.type"
+    message: "Family reference must identify a BAS family"
+    expression: "this.type == 'bas_family'"
+  }];
+
+  // bas_frozen is the exact immutable handoff snapshot when the preparation has been frozen.
+  optional SourceRef bas_frozen = 13 [(buf.validate.field).cel = {
+    id: "overview.bas_frozen.type"
+    message: "Frozen reference must identify a frozen BAS snapshot"
+    expression: "this.type == 'bas_frozen'"
+  }];
 }
 
 // OverviewService exposes only the read-only cross-module attention projection.

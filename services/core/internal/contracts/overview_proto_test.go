@@ -80,6 +80,9 @@ func TestOverviewDescriptorsExposeBoundedAttentionSummary(t *testing.T) {
 		"revisions":                            protoreflect.MessageKind,
 		"as_of_date":                           protoreflect.MessageKind,
 		"reporting_period":                     protoreflect.MessageKind,
+		"bas_preparation":                      protoreflect.MessageKind,
+		"bas_family":                           protoreflect.MessageKind,
+		"bas_frozen":                           protoreflect.MessageKind,
 	})
 	for _, name := range []protoreflect.Name{
 		"documents_needing_review",
@@ -129,12 +132,18 @@ func TestOverviewDescriptorsExposeBoundedAttentionSummary(t *testing.T) {
 		"ATTENTION_ITEM_KIND_DOCUMENT_REVIEW",
 		"ATTENTION_ITEM_KIND_BANKING_RECONCILIATION",
 		"ATTENTION_ITEM_KIND_BAS_WORKPAPER",
+		"ATTENTION_ITEM_KIND_BAS_PREPARATION",
 	})
 	assertEnumValues(t, "tammy.v1.BasAttentionStatus", []protoreflect.Name{
 		"BAS_ATTENTION_STATUS_UNSPECIFIED",
 		"BAS_ATTENTION_STATUS_NOT_CREATED",
 		"BAS_ATTENTION_STATUS_DRAFT_NOT_LODGED",
 		"BAS_ATTENTION_STATUS_OUTDATED",
+		"BAS_ATTENTION_STATUS_ACTION_NEEDED",
+		"BAS_ATTENTION_STATUS_REVIEW_READY",
+		"BAS_ATTENTION_STATUS_FROZEN_FOR_MANUAL_HANDOFF",
+		"BAS_ATTENTION_STATUS_EXTERNAL_CONFIRMATION_RECORDED",
+		"BAS_ATTENTION_STATUS_DISPUTED",
 	})
 	assertEnumRejectsUnspecified(t, item.Fields().ByName("kind"))
 	assertEnumRejectsUnspecified(t, response.Fields().ByName("bas_status"))
@@ -380,6 +389,69 @@ func validAttentionSummary(revision uint64) *tammyv1.GetAttentionSummaryResponse
 			StartDate: date(2024, 4, 1),
 			EndDate:   date(2024, 6, 30),
 		},
+	}
+}
+
+func TestOverviewBasLifecycleRefsPreserveOlderResponseBytes(t *testing.T) {
+	response := validAttentionSummary(0)
+	descriptor := response.ProtoReflect().Descriptor()
+	before, err := proto.MarshalOptions{Deterministic: true}.Marshal(response)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, name := range []protoreflect.Name{"bas_preparation", "bas_family", "bas_frozen"} {
+		field := descriptor.Fields().ByName(name)
+		if field == nil || field.Number() != protoreflect.FieldNumber(11+i) || field.Kind() != protoreflect.MessageKind || field.Message().FullName() != "tammy.v1.SourceRef" || !field.HasOptionalKeyword() || fieldRules(t, field).GetRequired() {
+			t.Fatalf("%s must append optional exact retained identity at field %d", name, 11+i)
+		}
+		if response.ProtoReflect().Has(field) {
+			t.Fatalf("older response invented %s", name)
+		}
+	}
+	if err := protovalidate.Validate(response); err != nil {
+		t.Fatalf("older overview response rejected: %v", err)
+	}
+	decoded := &tammyv1.GetAttentionSummaryResponse{}
+	if err := proto.Unmarshal(before, decoded); err != nil {
+		t.Fatal(err)
+	}
+	after, err := proto.MarshalOptions{Deterministic: true}.Marshal(decoded)
+	if err != nil || !bytes.Equal(before, after) {
+		t.Fatal("additive BAS identity fields changed older retained response bytes")
+	}
+}
+
+func TestOverviewBasLifecycleStatusRequiresExactRetainedRefs(t *testing.T) {
+	for _, status := range []tammyv1.BasAttentionStatus{5, 6, 7, 8} {
+		response := validAttentionSummary(1)
+		response.BasStatus = status
+		if err := protovalidate.Validate(response); err == nil {
+			t.Fatalf("lifecycle status %d accepted without exact retained identities", status)
+		}
+		message := response.ProtoReflect()
+		names := []protoreflect.Name{"bas_preparation", "bas_family"}
+		if status >= 6 {
+			names = append(names, "bas_frozen")
+		}
+		for _, name := range names {
+			field := message.Descriptor().Fields().ByName(name)
+			if field == nil {
+				t.Fatalf("missing exact retained lifecycle reference %s", name)
+			}
+			ref := &tammyv1.SourceRef{Type: string(name), Id: "018f0000-0000-7000-8000-000000000001", Revision: 1, ContentHash: make([]byte, 32)}
+			message.Set(field, protoreflect.ValueOfMessage(ref.ProtoReflect()))
+		}
+		if err := protovalidate.Validate(response); err != nil {
+			t.Fatalf("exact local lifecycle references rejected for %d: %v", status, err)
+		}
+		for _, name := range names {
+			malformed := proto.Clone(response).(*tammyv1.GetAttentionSummaryResponse)
+			ref := malformed.ProtoReflect().Mutable(message.Descriptor().Fields().ByName(name)).Message()
+			ref.Set(ref.Descriptor().Fields().ByName("type"), protoreflect.ValueOfString("bas_workpaper"))
+			if err := protovalidate.Validate(malformed); err == nil {
+				t.Fatalf("lifecycle reference %s accepted a legacy workpaper as its identity", name)
+			}
+		}
 	}
 }
 

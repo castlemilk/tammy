@@ -12,6 +12,7 @@ export const TRANSITION_FIXTURES = Object.freeze([
   "test/fixtures/banking/transitions.pb.json",
   "test/fixtures/reporting/transitions.pb.json",
   "test/fixtures/tax/transitions.pb.json",
+  "test/fixtures/bas-preparation/transitions.pb.json",
 ]);
 
 async function readFixture(file) {
