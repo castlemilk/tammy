@@ -6,6 +6,8 @@ Execution plans: [income/BAS exports](../plans/2026-10-05-income-bas-exports.md)
 
 Implementation status, 2026-10-10: phase one remains accepted at clean source d04a532295e977c3a88b3550e7935cdbf52c6272. Phase two completes the purchase accounting, payment, GST source/review, saved-workpaper export and operator-review scope after the fresh package gate recorded in [purchase acceptance](../../development/purchase-payments-gst-acceptance-2026-10-05.md); the stable phase-three contract and its completeness limits are documented in [purchase reporting sources](../../development/purchase-reporting-sources.md). Migration 0012 remains the purchase upgrade and 0013 remains reserved for BAS preparation/freeze lifecycle. This does not complete the programme: phase three still owns complete source coverage, obligation/PAYG preparation, review/freeze and manual external handoff.
 
+Phase-three tasks 1 and 2 now have reviewed, tested calculator/calendar foundations and generated preparation contracts. Their [plan checkpoints](../plans/2026-10-05-bas-preparation-lifecycle.md) record the actual verification. The service remains declared future; lifecycle policy, encrypted persistence, complete capture, approval authority, desktop workflow and packaged acceptance remain open.
+
 ## Delivery order and review boundaries
 
 Deliver three focused changes in the existing accounting style. Each receives its own implementation plan, focused tests and packaged desktop acceptance before the next depends on it.
