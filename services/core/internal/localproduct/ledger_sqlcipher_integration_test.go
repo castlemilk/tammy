@@ -547,6 +547,23 @@ func TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealSer
 		t.Fatalf("terminal CompleteBankReconciliation() error = %v; want failed precondition", err)
 	}
 
+	var beforeReportFinancial, beforeReportTaxSource int64
+	if err := module.db.QueryRowContext(context.Background(), `SELECT financial_revision,tax_source_revision FROM financial_revisions WHERE id=1`).Scan(&beforeReportFinancial, &beforeReportTaxSource); err != nil {
+		t.Fatal(err)
+	}
+	if beforeReportFinancial != 10 || beforeReportTaxSource != 5 {
+		t.Fatalf("source mutations produced revisions financial=%d tax=%d; want 10/5 before saving a BAS report", beforeReportFinancial, beforeReportTaxSource)
+	}
+	assertReportSourceRevisions := func() {
+		t.Helper()
+		var financial, taxSource int64
+		if err := module.db.QueryRowContext(context.Background(), `SELECT financial_revision,tax_source_revision FROM financial_revisions WHERE id=1`).Scan(&financial, &taxSource); err != nil {
+			t.Fatal(err)
+		}
+		if financial != beforeReportFinancial || taxSource != beforeReportTaxSource {
+			t.Fatalf("saving a BAS report changed source revisions: financial=%d tax=%d; want %d/%d", financial, taxSource, beforeReportFinancial, beforeReportTaxSource)
+		}
+	}
 	createBAS := connect.NewRequest(&tammyv1.CreateBasDraftRequest{
 		CommandContext: &tammyv1.CommandContext{
 			IdempotencyKey: "018f0000-0000-7000-8000-00000000010d",
@@ -561,6 +578,12 @@ func TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealSer
 	if err != nil {
 		t.Fatalf("CreateBasDraft() error = %v", err)
 	}
+	assertReportSourceRevisions()
+	replayedBAS, err := taxClient.CreateBasDraft(context.Background(), createBAS)
+	if err != nil || replayedBAS == nil || !proto.Equal(replayedBAS.Msg.Workpaper, createdBAS.Msg.Workpaper) {
+		t.Fatalf("identical report-save replay changed the retained workpaper: response=%v err=%v", replayedBAS, err)
+	}
+	assertReportSourceRevisions()
 	getCurrentBAS := connect.NewRequest(&tammyv1.GetCurrentBasDraftRequest{
 		Authentication: authentication,
 		OrganisationId: created.Msg.Organisation.Id,
@@ -590,9 +613,9 @@ func TestLedgerModuleCreatesOrganisationAndInstallsAustralianChartThroughRealSer
 	if err != nil || attention.Msg.Revisions == nil {
 		t.Fatalf("GetAttentionSummary() = %#v, %v", attention, err)
 	}
-	if attention.Msg.Revisions.BankingRevision != 3 || attention.Msg.Revisions.TaxSourceRevision != 6 ||
-		attention.Msg.Revisions.FinancialRevision != 11 || attention.Msg.Revisions.SettlementRevision != 1 {
-		t.Fatalf("revisions = %#v, want financial=11 banking=3 tax-source=6 settlement=1", attention.Msg.Revisions)
+	if attention.Msg.Revisions.BankingRevision != 3 || attention.Msg.Revisions.TaxSourceRevision != uint64(beforeReportTaxSource) ||
+		attention.Msg.Revisions.FinancialRevision != uint64(beforeReportFinancial) || attention.Msg.Revisions.SettlementRevision != 1 {
+		t.Fatalf("revisions = %#v, want financial=%d banking=3 tax-source=%d settlement=1", attention.Msg.Revisions, beforeReportFinancial, beforeReportTaxSource)
 	}
 	t.Run("upgrades version 10 on authenticated unlock after restart", func(t *testing.T) {
 		assertHistoricalPrefixUpgradeAfterRestart(t, root, anchors, auditMirror, composition, server, module, issuedInvoice.Msg.Invoice, currentBAS.Msg.Workpaper)

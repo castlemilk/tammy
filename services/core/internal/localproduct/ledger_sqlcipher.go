@@ -499,11 +499,6 @@ func (handler *taxHandler) CreateBasDraft(ctx context.Context, request *connect.
 		}
 		return nil, connect.NewError(connect.CodeFailedPrecondition, ErrLedgerModule)
 	}
-	if workpaper.Id == id {
-		if err := bumpTaxSourceRevision(ctx, tx, instant); err != nil {
-			return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
-		}
-	}
 	if err := tx.Commit(); err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, ErrLedgerModule)
 	}
