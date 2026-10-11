@@ -1,0 +1,222 @@
+syntax = "proto3";
+
+package tammy.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+import "tammy/v1/bas_preparation.proto";
+import "tammy/v1/common.proto";
+
+option go_package = "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1";
+
+// BasBranchPurpose records why a branch was first created. Corrective adoption
+// is represented by BasBranchWorkflowState and never rewrites this identity.
+enum BasBranchPurpose {
+  BAS_BRANCH_PURPOSE_UNSPECIFIED = 0;
+  BAS_BRANCH_PURPOSE_REPLACEMENT = 1;
+  BAS_BRANCH_PURPOSE_REVISION = 2;
+}
+
+// BasBranchWorkflowState is mutable workflow state owned by a branch version.
+enum BasBranchWorkflowState {
+  BAS_BRANCH_WORKFLOW_STATE_UNSPECIFIED = 0;
+  BAS_BRANCH_WORKFLOW_STATE_ACTIVE = 1;
+  BAS_BRANCH_WORKFLOW_STATE_CORRECTIVE = 2;
+  BAS_BRANCH_WORKFLOW_STATE_RESOLVED = 3;
+  BAS_BRANCH_WORKFLOW_STATE_CLOSED = 4;
+}
+
+// BasFamilyIdentity permanently binds one organisation to an actual reporting
+// date scope and BAS window. Profile and rule revisions do not change identity.
+message BasFamilyIdentity {
+  string family_id = 1 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  BasCivilDateRange period_scope = 3 [(buf.validate.field).required = true];
+  BasPeriodWindow window = 4 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  google.protobuf.Timestamp created_at = 5 [(buf.validate.field).required = true];
+  bytes content_hash = 6 [(buf.validate.field).bytes.len = 32];
+}
+
+// BasFamilyState is the versioned family aggregate pointer. Root, confirmed
+// effective original, current head and branch are exact retained references.
+message BasFamilyState {
+  option (buf.validate.message).cel = {
+    id: "bas.retention.family_state.selectors"
+    message: "Family chain pointers must identify their retained BAS resource types"
+    expression: "(!has(this.latest_head.retained) || this.latest_head.retained.type == 'bas_preparation') && (!has(this.active_branch.retained) || this.active_branch.retained.type == 'bas_branch')"
+  };
+
+  SourceRef family = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "bas.retention.family_state.family_type"
+      message: "Family state must identify a BAS family"
+      expression: "this.type == 'bas_family' && this.revision == 1u"
+    }
+  ];
+  uint64 version = 2 [(buf.validate.field).uint64.gte = 1];
+  SourceRef root_preparation = 3 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "bas.retention.family_state.root_type"
+      message: "The immutable family root must identify a BAS preparation"
+      expression: "this.type == 'bas_preparation'"
+    }
+  ];
+  optional SourceRef effective_original = 4 [(buf.validate.field).cel = {
+    id: "bas.retention.family_state.effective_original_type"
+    message: "A confirmed effective original must identify a BAS preparation"
+    expression: "this.type == 'bas_preparation'"
+  }];
+  BasExpectedIdentity latest_head = 5 [(buf.validate.field).required = true];
+  BasExpectedIdentity active_branch = 6 [(buf.validate.field).required = true];
+  BasDisputeOverlayState dispute_overlay = 7 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  uint64 last_family_event_ordinal = 8;
+  google.protobuf.Timestamp updated_at = 9 [(buf.validate.field).required = true];
+  bytes content_hash = 10 [(buf.validate.field).bytes.len = 32];
+}
+
+// BasBranchIdentity retains immutable lineage and the branch's original
+// purpose. An absent root head is explicit for a replacement before any
+// confirmed head exists; it is not represented by a fabricated identity.
+message BasBranchIdentity {
+  option (buf.validate.message).cel = {
+    id: "bas.retention.branch_identity.root_head_type"
+    message: "A present branch root head must identify a BAS preparation"
+    expression: "!has(this.root_head.retained) || this.root_head.retained.type == 'bas_preparation'"
+  };
+
+  string branch_id = 1 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  SourceRef family = 3 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "bas.retention.branch_identity.family_type"
+      message: "A branch must identify a BAS family"
+      expression: "this.type == 'bas_family' && this.revision == 1u"
+    }
+  ];
+  BasBranchPurpose original_purpose = 4 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  SourceRef family_root_preparation = 5 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "bas.retention.branch_identity.root_type"
+      message: "A branch's immutable family root must identify a BAS preparation"
+      expression: "this.type == 'bas_preparation'"
+    }
+  ];
+  BasExpectedIdentity root_head = 6 [(buf.validate.field).required = true];
+  optional SourceRef effective_original = 7 [(buf.validate.field).cel = {
+    id: "bas.retention.branch_identity.effective_original_type"
+    message: "A confirmed effective original must identify a BAS preparation"
+    expression: "this.type == 'bas_preparation'"
+  }];
+  google.protobuf.Timestamp created_at = 8 [(buf.validate.field).required = true];
+  bytes content_hash = 9 [(buf.validate.field).bytes.len = 32];
+}
+
+// BasBranchState is an append-only branch workflow version. Corrective
+// resolution, active attempt and frozen barrier pointers stay separate from
+// the immutable branch identity and its original purpose.
+message BasBranchState {
+  option (buf.validate.message).cel = {
+    id: "bas.retention.branch_state.selectors"
+    message: "Branch workflow pointers must identify retained BAS resources"
+    expression: "(!has(this.active_attempt.retained) || this.active_attempt.retained.type == 'bas_preparation') && (!has(this.barrier_preparation) || this.barrier_preparation.type == 'bas_preparation') && (!has(this.frozen_barrier) || this.frozen_barrier.type == 'bas_frozen') && has(this.barrier_preparation) == has(this.frozen_barrier)"
+  };
+
+  SourceRef branch_identity = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "bas.retention.branch_state.identity_type"
+      message: "Branch state must identify the immutable revision-one BAS branch identity"
+      expression: "this.type == 'bas_branch' && this.revision == 1u"
+    }
+  ];
+  uint64 version = 2 [(buf.validate.field).uint64.gte = 1];
+  BasBranchWorkflowState workflow_state = 3 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  BasExpectedIdentity active_attempt = 4 [(buf.validate.field).required = true];
+  optional SourceRef resolution = 5 [(buf.validate.field).cel = {
+    id: "bas.retention.branch_state.resolution_type"
+    message: "A corrective resolution must identify a BAS external dispute resolution"
+    expression: "this.type == 'bas_external_dispute_resolution'"
+  }];
+  optional SourceRef barrier_preparation = 6 [(buf.validate.field).cel = {
+    id: "bas.retention.branch_state.barrier_preparation_type"
+    message: "A frozen barrier preparation must identify a BAS preparation"
+    expression: "this.type == 'bas_preparation'"
+  }];
+  optional SourceRef frozen_barrier = 7 [(buf.validate.field).cel = {
+    id: "bas.retention.branch_state.frozen_barrier_type"
+    message: "A frozen barrier must identify a frozen BAS handoff"
+    expression: "this.type == 'bas_frozen'"
+  }];
+  google.protobuf.Timestamp updated_at = 8 [(buf.validate.field).required = true];
+  bytes content_hash = 9 [(buf.validate.field).bytes.len = 32];
+}
+
+// BasSavedPaygInputs binds one immutable reviewed PAYGW/PAYGI pair to its
+// preparation and input revision. input_hash identifies only the PAYG pair;
+// content_hash covers this scoped envelope and its own metadata.
+message BasSavedPaygInputs {
+  option (buf.validate.message).cel = {
+    id: "bas.retention.saved_payg.preparation_id_binding"
+    message: "The exact preparation reference must match the scoped preparation ID"
+    expression: "this.preparation.id == this.preparation_id"
+  };
+
+  string input_snapshot_id = 1 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  string organisation_id = 2 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  string preparation_id = 3 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  SourceRef preparation = 4 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "bas.retention.saved_payg.preparation_type"
+      message: "Saved PAYG inputs must identify a retained BAS preparation"
+      expression: "this.type == 'bas_preparation'"
+    }
+  ];
+  uint64 input_revision = 5 [(buf.validate.field).uint64.gte = 1];
+  bytes input_hash = 6 [(buf.validate.field).bytes.len = 32];
+  BasPaygwInputs paygw_inputs = 7 [(buf.validate.field).required = true];
+  BasPaygiInputs paygi_inputs = 8 [(buf.validate.field).required = true];
+  string actor_user_id = 9 [(buf.validate.field).string = {
+    len: 36
+    pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  }];
+  google.protobuf.Timestamp recorded_at = 10 [(buf.validate.field).required = true];
+  bytes content_hash = 11 [(buf.validate.field).bytes.len = 32];
+}

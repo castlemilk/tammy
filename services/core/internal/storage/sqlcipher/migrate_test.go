@@ -18,7 +18,7 @@ import (
 
 func TestApplyMigrationsSupportsEveryEncryptedSchemaPrefix(t *testing.T) {
 	t.Parallel()
-	for _, target := range []uint32{1, 2, 11, 12} {
+	for _, target := range []uint32{1, 2, 11, 12, 13} {
 		t.Run(fmt.Sprintf("prefix_%d", target), func(t *testing.T) {
 			t.Parallel()
 			ctx := context.Background()
@@ -535,7 +535,22 @@ func expectedTables(target uint32) []string {
 	if target == 1 {
 		return platform
 	}
-	return append(platform, "organisations", "accounts", "journals", "journal_lines", "financial_revisions")
+	tables := append(platform, "organisations", "accounts", "journals", "journal_lines", "financial_revisions")
+	if target == 13 {
+		tables = append(tables,
+			"bas_profiles_v1", "bas_profile_versions_v1", "bas_profile_heads_v1",
+			"bas_periods_v1", "bas_period_versions_v1", "bas_period_heads_v1",
+			"bas_family_identities_v1", "bas_family_state_v1", "bas_family_events_v1",
+			"bas_preparation_identities_v1", "bas_preparation_versions_v1", "bas_preparation_heads_v1",
+			"bas_branch_identities_v1", "bas_branch_versions_v1", "bas_branch_heads_v1",
+			"bas_payg_input_versions_v1", "bas_calculations_v1", "bas_calculation_coverage_v1",
+			"bas_validations_v1", "bas_validation_findings_v1", "bas_warning_acknowledgements_v1",
+			"bas_frozen_bas_v1", "bas_frozen_acknowledgements_v1", "bas_export_events_v1",
+			"bas_external_observations_v1", "bas_external_observation_corrections_v1",
+			"bas_dispute_resolutions_v1", "bas_dispute_resolution_observations_v1", "bas_dispute_resolution_preparations_v1",
+		)
+	}
+	return tables
 }
 
 func assertTablesPresent(t *testing.T, database *Database, tables []string) {
