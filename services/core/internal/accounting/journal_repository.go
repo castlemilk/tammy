@@ -180,14 +180,14 @@ func (repository *JournalRepository) insertTaxFact(ctx context.Context, fact Tax
 			attributed_gross_minor, attributed_net_minor, attributed_gst_minor,
 			remaining_gross_minor, remaining_net_minor, remaining_gst_minor,
 			tax_rule_type, tax_rule_id, tax_rule_revision, tax_rule_content_hash,
-			source_type, source_id, source_revision, created_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			source_type, source_id, source_revision, source_content_hash, created_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		fact.ID, fact.OrganisationID, fact.JournalLineID, fact.TaxCode, taxTreatmentName(fact.Treatment),
 		fact.OriginalGrossMinor, fact.OriginalNetMinor, fact.OriginalGSTMinor,
 		fact.AttributedGrossMinor, fact.AttributedNetMinor, fact.AttributedGSTMinor,
 		fact.RemainingGrossMinor, fact.RemainingNetMinor, fact.RemainingGSTMinor,
 		fact.Rule.Type, fact.Rule.Id, fact.Rule.Revision, fact.Rule.ContentHash,
-		fact.Source.Type, fact.Source.Id, fact.Source.Revision, now.UTC().Format(time.RFC3339Nano))
+		fact.Source.Type, fact.Source.Id, fact.Source.Revision, fact.Source.ContentHash, now.UTC().Format(time.RFC3339Nano))
 	if err != nil {
 		return fmt.Errorf("%w: insert tax fact: %v", ErrJournalRepository, err)
 	}
@@ -377,7 +377,7 @@ func (repository *JournalRepository) reversalTaxFacts(ctx context.Context, origi
 			       attributed_gross_minor, attributed_net_minor, attributed_gst_minor,
 			       remaining_gross_minor, remaining_net_minor, remaining_gst_minor,
 			       tax_rule_type, tax_rule_id, tax_rule_revision, tax_rule_content_hash,
-			       source_type, source_id, source_revision
+			       source_type, source_id, source_revision, source_content_hash
 			FROM tax_facts WHERE journal_line_id=?`, line.Id)
 		if err != nil {
 			return nil, ErrJournalRepository
@@ -393,7 +393,8 @@ func (repository *JournalRepository) reversalTaxFacts(ctx context.Context, origi
 			&fact.OriginalGSTMinor, &fact.AttributedGrossMinor, &fact.AttributedNetMinor,
 			&fact.AttributedGSTMinor, &fact.RemainingGrossMinor, &fact.RemainingNetMinor,
 			&fact.RemainingGSTMinor, &fact.Rule.Type, &fact.Rule.Id, &fact.Rule.Revision,
-			&fact.Rule.ContentHash, &fact.Source.Type, &fact.Source.Id, &fact.Source.Revision); err != nil || rows.Next() || rows.Err() != nil {
+			&fact.Rule.ContentHash, &fact.Source.Type, &fact.Source.Id, &fact.Source.Revision,
+			&fact.Source.ContentHash); err != nil || rows.Next() || rows.Err() != nil {
 			_ = rows.Close()
 			return nil, ErrJournalRepository
 		}

@@ -737,7 +737,7 @@ func (f *postingFixture) seedPriorJournal(sourceID string, source tammyv1.Journa
 func TestPostReviewedPurchasePriorJournalAndOpeningProvenanceBlocksRecognition(t *testing.T) {
 	for _, kind := range []string{"journal header", "manual tax fact", "opening document", "replaced opening hash", "opening scalar corruption"} {
 		t.Run(kind, func(t *testing.T) {
-			workspace := testkit.NewEncryptedWorkspaceAtVersion(t, 12)
+			workspace := testkit.NewEncryptedWorkspaceAtVersion(t, 13)
 			ctx := context.Background()
 			tx, err := workspace.Database.BeginEncryptedTx(ctx, nil)
 			if err != nil {
@@ -909,7 +909,7 @@ func TestPostReviewedPurchaseLegacyDecisionsVerifyScalarsAndEvidenceOnlyLinks(t 
 }
 
 func TestPostReviewedPurchasePriorDiscoveryFailsVisiblyAboveBound(t *testing.T) {
-	workspace := testkit.NewEncryptedWorkspaceAtVersion(t, 12)
+	workspace := testkit.NewEncryptedWorkspaceAtVersion(t, 13)
 	ctx := context.Background()
 	tx, err := workspace.Database.BeginEncryptedTx(ctx, nil)
 	if err != nil {
