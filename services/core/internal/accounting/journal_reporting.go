@@ -37,14 +37,28 @@ type JournalReportingRecord struct {
 func (repository *JournalRepository) GetForReporting(
 	ctx context.Context, organisationID, journalID string,
 ) (*JournalReportingRecord, error) {
+	return repository.GetForReportingWithPayloadBudget(ctx, organisationID, journalID,
+		maxTaxFactReportingCaptureBytes)
+}
+
+// GetForReportingWithPayloadBudget checks the complete parent's retained bytes
+// against the caller's remaining capture budget before loading journal data.
+// The ordinary accounting limit still applies when the caller supplies more.
+// PayloadBytes reports actual retained bytes, independently of the budget.
+func (repository *JournalRepository) GetForReportingWithPayloadBudget(
+	ctx context.Context, organisationID, journalID string, maximumPayloadBytes int64,
+) (*JournalReportingRecord, error) {
 	if repository == nil || repository.executor == nil || ctx == nil ||
-		!ids.IsCanonicalV7(organisationID) || journalID == "" {
+		!ids.IsCanonicalV7(organisationID) || journalID == "" || maximumPayloadBytes < 0 {
 		return nil, ErrJournalRepository
 	}
 	if err := ctx.Err(); err != nil {
 		return nil, errors.Join(ErrJournalRepository, err)
 	}
-	remainingBytes := int64(maxTaxFactReportingCaptureBytes)
+	if maximumPayloadBytes > maxTaxFactReportingCaptureBytes {
+		maximumPayloadBytes = maxTaxFactReportingCaptureBytes
+	}
+	remainingBytes := maximumPayloadBytes
 	if err := repository.preflightTaxFactReportingJournal(ctx, journalID, organisationID, &remainingBytes); err != nil {
 		return nil, err
 	}
@@ -68,6 +82,6 @@ func (repository *JournalRepository) GetForReporting(
 		Journal: snapshot.journal, SourceType: snapshot.sourceType, SourceKind: snapshot.sourceKind,
 		SourceID: snapshot.sourceID, SourceRevision: snapshot.sourceRev,
 		CreatedAt: snapshot.createdAt, State: snapshot.state, ContentHash: digest.Sum(nil),
-		PayloadBytes: int64(maxTaxFactReportingCaptureBytes) - remainingBytes,
+		PayloadBytes: maximumPayloadBytes - remainingBytes,
 	}, nil
 }
