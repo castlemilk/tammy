@@ -170,7 +170,7 @@ func (repository *JournalRepository) CaptureTaxFactsForReporting(
 
 		snapshot := journalCache[candidate.journalID]
 		if snapshot == nil {
-			if err := repository.preflightTaxFactReportingJournal(ctx, candidate.journalID, &remainingBytes); err != nil {
+			if err := repository.preflightTaxFactReportingJournal(ctx, candidate.journalID, organisationID, &remainingBytes); err != nil {
 				return nil, err
 			}
 			snapshot, err = repository.loadTaxFactReportingJournal(ctx, candidate.journalID, organisationID)
@@ -235,14 +235,14 @@ func (repository *JournalRepository) preflightTaxFactReportingCandidates(
 }
 
 func (repository *JournalRepository) preflightTaxFactReportingJournal(
-	ctx context.Context, journalID string, remainingBytes *int64,
+	ctx context.Context, journalID, organisationID string, remainingBytes *int64,
 ) error {
 	headerSize := taxFactReportingPayloadSizeSQL(
 		"id", "organisation_id", "source_type", "source_id", "state", "journal_date", "description",
 		"reversal_of_journal_id", "reversed_by_journal_id", "currency_code", "posted_at", "created_at",
 	)
 	if err := repository.reserveTaxFactReportingPayload(ctx, remainingBytes, "journals", 1,
-		`SELECT count(*), total(`+headerSize+`) FROM journals WHERE id = ?`, journalID); err != nil {
+		`SELECT count(*), total(`+headerSize+`) FROM journals WHERE id = ? AND organisation_id = ?`, journalID, organisationID); err != nil {
 		return err
 	}
 	lineSize := taxFactReportingPayloadSizeSQL(
@@ -251,9 +251,10 @@ func (repository *JournalRepository) preflightTaxFactReportingJournal(
 	)
 	return repository.reserveTaxFactReportingPayload(ctx, remainingBytes, "journal lines", maxTaxFactReportingJournalLines,
 		`SELECT count(*), total(payload_bytes) FROM (
-		 SELECT `+lineSize+` AS payload_bytes FROM journal_lines WHERE journal_id = ?
+		 SELECT `+lineSize+` AS payload_bytes FROM journal_lines AS line WHERE journal_id = ?
+		 AND EXISTS (SELECT 1 FROM journals WHERE id = line.journal_id AND organisation_id = ?)
 		 ORDER BY line_number, id LIMIT ?
-		)`, journalID, maxTaxFactReportingJournalLines+1)
+		)`, journalID, organisationID, maxTaxFactReportingJournalLines+1)
 }
 
 // Each row costs its retained TEXT/BLOB bytes plus a conservative 512-byte
@@ -401,7 +402,7 @@ func (repository *JournalRepository) loadTaxFactReportingJournal(
 		SELECT id, organisation_id, version, source_type, source_kind, source_id, source_revision,
 		       state, journal_date, description, reversal_of_journal_id, reversed_by_journal_id,
 		       total_debits_minor, total_credits_minor, currency_code, financial_revision, posted_at, created_at
-		FROM journals WHERE id = ?`, journalID)
+		FROM journals WHERE id = ? AND organisation_id = ?`, journalID, organisationID)
 	if err != nil {
 		return nil, taxFactReportingReadError("query parent journal", err)
 	}
