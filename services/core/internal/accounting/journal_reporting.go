@@ -41,6 +41,44 @@ func (repository *JournalRepository) GetForReporting(
 		maxTaxFactReportingCaptureBytes)
 }
 
+// PreflightForReportingWithPayloadBudget returns the retained parent and line
+// byte charge without loading their bodies. Aggregate readers can reserve all
+// unique parents before hydrating any source. The caller must still obtain and
+// verify the full proof through GetForReportingWithPayloadBudget, using the same
+// transaction. Missing and foreign parents return no size.
+func (repository *JournalRepository) PreflightForReportingWithPayloadBudget(
+	ctx context.Context, organisationID, journalID string, maximumPayloadBytes int64,
+) (int64, error) {
+	if repository == nil || repository.executor == nil || ctx == nil ||
+		!ids.IsCanonicalV7(organisationID) || journalID == "" || maximumPayloadBytes < 0 {
+		return 0, ErrJournalRepository
+	}
+	if err := ctx.Err(); err != nil {
+		return 0, errors.Join(ErrJournalRepository, err)
+	}
+	if maximumPayloadBytes > maxTaxFactReportingCaptureBytes {
+		maximumPayloadBytes = maxTaxFactReportingCaptureBytes
+	}
+	remainingBytes := maximumPayloadBytes
+	if err := repository.preflightTaxFactReportingJournal(ctx, journalID, organisationID, &remainingBytes); err != nil {
+		var bound *TaxFactReportingBoundError
+		if errors.As(err, &bound) && bound.Resource == "capture bytes" {
+			err = &TaxFactReportingBoundError{Resource: bound.Resource, Limit: int(maximumPayloadBytes)}
+		}
+		return 0, errors.Join(ErrJournalRepository, err, ctx.Err())
+	}
+	if err := ctx.Err(); err != nil {
+		return 0, errors.Join(ErrJournalRepository, err)
+	}
+	payloadBytes := maximumPayloadBytes - remainingBytes
+	// An owned parent always has a positive header-row charge. Both private
+	// size queries are organisation-scoped, so zero means no owned parent.
+	if payloadBytes <= 0 {
+		return 0, ErrJournalRepository
+	}
+	return payloadBytes, nil
+}
+
 // GetForReportingWithPayloadBudget checks the complete parent's retained bytes
 // against the caller's remaining capture budget before loading journal data.
 // The ordinary accounting limit still applies when the caller supplies more.
