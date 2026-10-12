@@ -18,7 +18,7 @@ import (
 
 func TestApplyMigrationsSupportsEveryEncryptedSchemaPrefix(t *testing.T) {
 	t.Parallel()
-	for _, target := range []uint32{1, 2, 11, 12, 13} {
+	for _, target := range []uint32{1, 2, 11, 12, 13, 14} {
 		t.Run(fmt.Sprintf("prefix_%d", target), func(t *testing.T) {
 			t.Parallel()
 			ctx := context.Background()
@@ -37,6 +37,9 @@ func TestApplyMigrationsSupportsEveryEncryptedSchemaPrefix(t *testing.T) {
 			}
 			if target == 1 {
 				assertTablesAbsent(t, database, []string{"organisations", "accounts", "journals"})
+			}
+			if target == 13 {
+				assertTablesAbsent(t, database, []string{"bas_calculation_raw_coverage_v1"})
 			}
 		})
 	}
@@ -536,7 +539,7 @@ func expectedTables(target uint32) []string {
 		return platform
 	}
 	tables := append(platform, "organisations", "accounts", "journals", "journal_lines", "financial_revisions")
-	if target == 13 {
+	if target == 13 || target == 14 {
 		tables = append(tables,
 			"bas_profiles_v1", "bas_profile_versions_v1", "bas_profile_heads_v1",
 			"bas_periods_v1", "bas_period_versions_v1", "bas_period_heads_v1",
@@ -549,6 +552,9 @@ func expectedTables(target uint32) []string {
 			"bas_external_observations_v1", "bas_external_observation_corrections_v1",
 			"bas_dispute_resolutions_v1", "bas_dispute_resolution_observations_v1", "bas_dispute_resolution_preparations_v1",
 		)
+		if target == 14 {
+			tables = append(tables, "bas_calculation_raw_coverage_v1")
+		}
 	}
 	return tables
 }

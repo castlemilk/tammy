@@ -11,10 +11,10 @@ func TestEmbeddedMigrationsAreOrderedAndContentAuthenticated(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(steps) != 13 {
-		t.Fatalf("migration count = %d, want 13", len(steps))
+	if len(steps) != 14 {
+		t.Fatalf("migration count = %d, want 14", len(steps))
 	}
-	wantNames := []string{"0001_platform.sql", "0002_ledger.sql", "0003_audit_idempotency.sql", "0004_pre_restore_archives.sql", "0005_documents.sql", "0006_banking_reporting.sql", "0007_sbr_readiness.sql", "0008_invoices.sql", "0009_invoice_branding.sql", "0010_invoice_income.sql", "0011_bas_save_order.sql", "0012_purchase_payments_gst.sql", "0013_bas_preparation.sql"}
+	wantNames := []string{"0001_platform.sql", "0002_ledger.sql", "0003_audit_idempotency.sql", "0004_pre_restore_archives.sql", "0005_documents.sql", "0006_banking_reporting.sql", "0007_sbr_readiness.sql", "0008_invoices.sql", "0009_invoice_branding.sql", "0010_invoice_income.sql", "0011_bas_save_order.sql", "0012_purchase_payments_gst.sql", "0013_bas_preparation.sql", "0014_bas_raw_source_identities.sql"}
 	for index, step := range steps {
 		wantVersion := uint32(index + 1)
 		if step.Version != wantVersion || step.Name != wantNames[index] {
@@ -46,7 +46,7 @@ func TestPrefixReturnsAnIndependentOrderedCopy(t *testing.T) {
 	if again[0].Name != "0001_platform.sql" {
 		t.Fatalf("embedded migration was mutable: %#v", again[0])
 	}
-	for _, target := range []uint32{0, 14} {
+	for _, target := range []uint32{0, 15} {
 		if _, err := Prefix(target); err == nil {
 			t.Fatalf("Prefix(%d) succeeded", target)
 		}

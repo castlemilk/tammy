@@ -147,6 +147,8 @@ func TestLocalCompositionCreatesConfirmsAndAuthenticatesRealWorkspace(t *testing
 		"invoice_logo_assets_v1",
 		"invoice_templates_v1",
 		"invoice_branding_command_audit_v1",
+		"bas_calculation_coverage_v1",
+		"bas_calculation_raw_coverage_v1",
 	} {
 		var count int
 		if err := migrationCapture.database.QueryRowContext(context.Background(),

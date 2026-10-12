@@ -29,14 +29,14 @@ func TestStorageOpenUpgradesAnExistingVersion10Workspace(t *testing.T) {
 	if err := old.Close(); err != nil {
 		t.Fatal(err)
 	}
-	opened, err := NewSQLCipherStorageFactory(13).Open(ctx, path, key)
+	opened, err := NewSQLCipherStorageFactory(14).Open(ctx, path, key)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = opened.Close() })
 	var version int
-	if err := opened.Database().QueryRowContext(ctx, `SELECT max(version) FROM schema_migrations`).Scan(&version); err != nil || version != 13 {
-		t.Fatalf("opened schema version = %d, %v; want 13", version, err)
+	if err := opened.Database().QueryRowContext(ctx, `SELECT max(version) FROM schema_migrations`).Scan(&version); err != nil || version != 14 {
+		t.Fatalf("opened schema version = %d, %v; want 14", version, err)
 	}
 	var value []byte
 	var revision int
@@ -47,7 +47,7 @@ func TestStorageOpenUpgradesAnExistingVersion10Workspace(t *testing.T) {
 
 func TestStorageOpenKeepsCurrentWorkspaceSharedAndRefusesActiveOldWorkspaceMigration(t *testing.T) {
 	ctx := context.Background()
-	for _, version := range []uint32{10, 11, 12, 13} {
+	for _, version := range []uint32{10, 11, 12, 13, 14} {
 		t.Run(fmt.Sprint(version), func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "workspace.db")
 			key := bytes.Repeat([]byte{0x74}, sqlcipher.KeySize)
@@ -56,7 +56,7 @@ func TestStorageOpenKeepsCurrentWorkspaceSharedAndRefusesActiveOldWorkspaceMigra
 				t.Fatal(err)
 			}
 			defer owner.Close()
-			if version == 13 {
+			if version == 14 {
 				writer, err := owner.Database().BeginEncryptedTx(ctx, nil)
 				if err != nil {
 					t.Fatal(err)
@@ -66,8 +66,8 @@ func TestStorageOpenKeepsCurrentWorkspaceSharedAndRefusesActiveOldWorkspaceMigra
 					t.Fatal(err)
 				}
 			}
-			opened, err := NewSQLCipherStorageFactory(13).Open(ctx, path, key)
-			if version < 13 {
+			opened, err := NewSQLCipherStorageFactory(14).Open(ctx, path, key)
+			if version < 14 {
 				if opened != nil {
 					_ = opened.Close()
 				}
@@ -94,7 +94,7 @@ func TestStorageOpenRejectsANewerSchemaWithoutChangingIt(t *testing.T) {
 	ctx := context.Background()
 	path := filepath.Join(t.TempDir(), "workspace.db")
 	key := bytes.Repeat([]byte{0x78}, sqlcipher.KeySize)
-	newer, err := NewSQLCipherStorageFactory(13).Create(ctx, path, key)
+	newer, err := NewSQLCipherStorageFactory(14).Create(ctx, path, key)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,7 +120,7 @@ func TestStorageOpenRejectsANewerSchemaWithoutChangingIt(t *testing.T) {
 
 func TestStorageOpenRejectsMissingFileWithoutCreatingAWorkspace(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "missing.db")
-	opened, err := NewSQLCipherStorageFactory(13).Open(context.Background(), path, bytes.Repeat([]byte{0x75}, sqlcipher.KeySize))
+	opened, err := NewSQLCipherStorageFactory(14).Open(context.Background(), path, bytes.Repeat([]byte{0x75}, sqlcipher.KeySize))
 	if opened != nil {
 		_ = opened.Close()
 	}
@@ -158,7 +158,7 @@ func TestStorageOpenWrongKeyOrChecksumFailurePreservesVersion10Workspace(t *test
 			if test == "wrong key" {
 				openKey = bytes.Repeat([]byte{0x77}, sqlcipher.KeySize)
 			}
-			opened, err := NewSQLCipherStorageFactory(13).Open(ctx, path, openKey)
+			opened, err := NewSQLCipherStorageFactory(14).Open(ctx, path, openKey)
 			if opened != nil {
 				_ = opened.Close()
 			}

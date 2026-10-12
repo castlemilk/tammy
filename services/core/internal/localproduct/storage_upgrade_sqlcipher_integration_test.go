@@ -97,11 +97,11 @@ func assertHistoricalPrefixUpgradeAfterRestart(t *testing.T, root string, anchor
 	if err := unlock("workspace-passphrase-long-enough"); err != nil {
 		t.Fatal(err)
 	}
-	if err := module.db.QueryRowContext(ctx, `SELECT max(version) FROM schema_migrations`).Scan(&version); err != nil || version != 13 {
-		t.Fatalf("unlocked schema version = %d, %v; want 13", version, err)
+	if err := module.db.QueryRowContext(ctx, `SELECT max(version) FROM schema_migrations`).Scan(&version); err != nil || version != 14 {
+		t.Fatalf("unlocked schema version = %d, %v; want 14", version, err)
 	}
 	assertHistoricalFixtureIntegrity(t, ctx, module.db)
-	for _, table := range []string{"purchase_postings_v1", "purchase_posting_allocations_v1", "purchase_payments_v1", "purchase_payment_allocations_v1", "purchase_tax_evidence_v1", "purchase_gst_attributions_v1", "purchase_gst_deferrals_v1", "purchase_gst_deferral_portions_v1", "purchase_legacy_reviews_v1", "purchase_accounting_events_v1", "purchase_command_audit_v1", "bas_workpaper_purchase_sources_v1", "bas_workpaper_purchase_reviews_v1", "bas_workpaper_purchase_support_v1", "bas_workpaper_purchase_metadata_v1", "bas_profile_versions_v1", "bas_period_versions_v1", "bas_family_identities_v1", "bas_family_state_v1", "bas_preparation_versions_v1", "bas_calculations_v1", "bas_payg_input_versions_v1", "bas_validations_v1", "bas_frozen_bas_v1", "bas_family_events_v1"} {
+	for _, table := range []string{"purchase_postings_v1", "purchase_posting_allocations_v1", "purchase_payments_v1", "purchase_payment_allocations_v1", "purchase_tax_evidence_v1", "purchase_gst_attributions_v1", "purchase_gst_deferrals_v1", "purchase_gst_deferral_portions_v1", "purchase_legacy_reviews_v1", "purchase_accounting_events_v1", "purchase_command_audit_v1", "bas_workpaper_purchase_sources_v1", "bas_workpaper_purchase_reviews_v1", "bas_workpaper_purchase_support_v1", "bas_workpaper_purchase_metadata_v1", "bas_profile_versions_v1", "bas_period_versions_v1", "bas_family_identities_v1", "bas_family_state_v1", "bas_preparation_versions_v1", "bas_calculations_v1", "bas_calculation_coverage_v1", "bas_calculation_raw_coverage_v1", "bas_payg_input_versions_v1", "bas_validations_v1", "bas_frozen_bas_v1", "bas_family_events_v1"} {
 		var count int
 		if err := module.db.QueryRowContext(ctx, `SELECT count(*) FROM `+table).Scan(&count); err != nil || count != 0 {
 			t.Fatalf("upgrade created %s rows: %d, %v", table, count, err)
