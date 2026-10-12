@@ -2081,7 +2081,8 @@ func validCapture(capture CurrentCapture) bool {
 
 func validFinding(finding *tammyv1.BasValidationFinding) bool {
 	if finding == nil || !validUUIDv7(finding.FindingId) || len(finding.StableCode) == 0 || len(finding.StableCode) > 96 || !findingCodePattern.MatchString(finding.StableCode) ||
-		utf8.RuneCountInString(finding.SafeMessage) == 0 || utf8.RuneCountInString(finding.SafeMessage) > 512 || len(finding.Sources) > 20 {
+		utf8.RuneCountInString(finding.SafeMessage) == 0 || utf8.RuneCountInString(finding.SafeMessage) > 512 ||
+		len(finding.Sources) > 20 || len(finding.SourceIdentities) > basSourceIdentityMaximum {
 		return false
 	}
 	switch finding.Severity {
@@ -2096,6 +2097,9 @@ func validFinding(finding *tammyv1.BasValidationFinding) bool {
 		if source == nil || !validRef(source, source.Type) {
 			return false
 		}
+	}
+	if !validBASIdentityProjection(finding.SourceIdentities, finding.Sources) {
+		return false
 	}
 	return true
 }

@@ -59,6 +59,15 @@ func (repository *CalculationRepository) Append(ctx context.Context, value *tamm
 	if !repository.ready(ctx) || value == nil {
 		return nil, ErrCalculationRepository
 	}
+	if len(value.Coverage) > calculationCoverageCountMaximum {
+		return nil, errors.Join(ErrCalculationRepository, ErrSnapshotBound)
+	}
+	for _, coverage := range value.Coverage {
+		if coverage != nil && (len(coverage.Lineage) > basSourceIdentityMaximum || len(coverage.Evidence) > basSourceIdentityMaximum ||
+			len(coverage.LineageIdentities) > basSourceIdentityMaximum || len(coverage.EvidenceIdentities) > basSourceIdentityMaximum) {
+			return nil, errors.Join(ErrCalculationRepository, ErrSnapshotBound)
+		}
+	}
 	wire, digest, err := sealCalculation(value)
 	if err != nil {
 		return nil, errors.Join(ErrCalculationRepository, err)
@@ -70,6 +79,23 @@ func (repository *CalculationRepository) Append(ctx context.Context, value *tamm
 	createdAt, ok := basTimestampSQLText(value.CreatedAt)
 	if !ok {
 		return nil, ErrCalculationRepository
+	}
+	coverage, usesNewCoverageIdentity, err := prepareCalculationCoverage(value.Coverage)
+	if err != nil {
+		return nil, errors.Join(ErrCalculationRepository, err)
+	}
+	if usesNewCoverageIdentity {
+		payloadBytes, err := calculationCoveragePayloadBytes(coverage, value.CalculationId, value.OrganisationId, value.Family.Id, digest[:])
+		if err != nil {
+			return nil, errors.Join(ErrCalculationRepository, err)
+		}
+		if payloadBytes > calculationCoverageIdentityPayloadLimit {
+			return nil, errors.Join(ErrCalculationRepository, ErrSnapshotBound)
+		}
+		available, err := calculationRawCoverageAvailable(ctx, repository.executor)
+		if err != nil || !available {
+			return nil, errors.Join(ErrCalculationRepository, ErrSnapshotCorrupt, err)
+		}
 	}
 
 	owner, err := repository.preparations.GetCurrent(ctx, value.OrganisationId, value.Preparation.Id)
@@ -99,10 +125,6 @@ func (repository *CalculationRepository) Append(ctx context.Context, value *tamm
 		return nil, errors.Join(ErrCalculationRepository, err)
 	}
 	organisationWire, err := marshalCalculationFrame(value.OrganisationSnapshot, 1024*1024)
-	if err != nil {
-		return nil, errors.Join(ErrCalculationRepository, err)
-	}
-	coverage, err := prepareCalculationCoverage(value.Coverage)
 	if err != nil {
 		return nil, errors.Join(ErrCalculationRepository, err)
 	}
@@ -145,15 +167,33 @@ func (repository *CalculationRepository) Append(ctx context.Context, value *tamm
 		return nil, errors.Join(ErrCalculationRepository, err, rollback())
 	}
 	for _, row := range coverage {
-		if _, err := repository.executor.ExecContext(ctx, `INSERT INTO bas_calculation_coverage_v1(
-			calculation_id,organisation_id,family_id,calculation_version,calculation_hash,sequence,candidate_kind,disposition,
-			source_type,source_id,source_revision,source_hash,eligible_amount_minor,currency_code,tax_date,classification_code,reason,
-			lineage_proto,evidence_proto,coverage_proto,content_hash)
-			VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-			value.CalculationId, value.OrganisationId, value.Family.Id, version, digest, row.sequence, row.candidateKind, row.disposition,
-			row.sourceType, row.sourceID, row.sourceRevision, row.sourceHash, row.amountMinor, row.currencyCode, row.taxDate,
-			row.classification, row.reason, row.lineageWire, row.evidenceWire, row.wire, row.hash); err != nil {
-			return nil, errors.Join(ErrCalculationRepository, err, rollback())
+		var insertErr error
+		if row.raw {
+			var originalContentHash any
+			if row.originalContentHash != nil {
+				originalContentHash = row.originalContentHash
+			}
+			_, insertErr = repository.executor.ExecContext(ctx, `INSERT INTO bas_calculation_raw_coverage_v1(
+				calculation_id,organisation_id,family_id,calculation_version,calculation_hash,sequence,candidate_kind,disposition,
+				raw_source_type,raw_source_id,original_revision,original_content_hash,computed_proof_hash,proof_scope,
+				eligible_amount_minor,currency_code,tax_date,classification_code,reason,lineage_proto,evidence_proto,coverage_proto,content_hash)
+				VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+				value.CalculationId, value.OrganisationId, value.Family.Id, version, digest, row.sequence, row.candidateKind, row.disposition,
+				row.rawSourceType, row.rawSourceID, row.originalRevision, originalContentHash, row.computedProofHash, row.proofScope,
+				row.amountMinor, row.currencyCode, row.taxDate, row.classification, row.reason,
+				row.lineageWire, row.evidenceWire, row.wire, row.hash)
+		} else {
+			_, insertErr = repository.executor.ExecContext(ctx, `INSERT INTO bas_calculation_coverage_v1(
+				calculation_id,organisation_id,family_id,calculation_version,calculation_hash,sequence,candidate_kind,disposition,
+				source_type,source_id,source_revision,source_hash,eligible_amount_minor,currency_code,tax_date,classification_code,reason,
+				lineage_proto,evidence_proto,coverage_proto,content_hash)
+				VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+				value.CalculationId, value.OrganisationId, value.Family.Id, version, digest, row.sequence, row.candidateKind, row.disposition,
+				row.sourceType, row.sourceID, row.sourceRevision, row.sourceHash, row.amountMinor, row.currencyCode, row.taxDate,
+				row.classification, row.reason, row.lineageWire, row.evidenceWire, row.wire, row.hash)
+		}
+		if insertErr != nil {
+			return nil, errors.Join(ErrCalculationRepository, insertErr, rollback())
 		}
 	}
 	if _, err := repository.executor.ExecContext(ctx, "RELEASE SAVEPOINT "+savepoint); err != nil {
@@ -307,27 +347,52 @@ func (repository *CalculationRepository) requireNextVersion(ctx context.Context,
 type calculationCoverageInsert struct {
 	sequence, sourceRevision                         int64
 	candidateKind, disposition, sourceType, sourceID string
+	raw                                              bool
+	rawSourceType, rawSourceID, proofScope           string
+	originalRevision                                 any
+	originalRevisionPresent                          bool
+	originalContentHash, computedProofHash           []byte
 	sourceHash                                       []byte
 	amountMinor, currencyCode, taxDate               any
 	classification, reason                           string
 	lineageWire, evidenceWire, wire, hash            []byte
 }
 
-func prepareCalculationCoverage(values []*tammyv1.BasSourceCoverage) ([]calculationCoverageInsert, error) {
+const calculationCoverageIdentityPayloadLimit int64 = 8 * 1024 * 1024
+
+func prepareCalculationCoverage(values []*tammyv1.BasSourceCoverage) ([]calculationCoverageInsert, bool, error) {
 	if len(values) > calculationCoverageCountMaximum {
-		return nil, ErrSnapshotBound
+		return nil, false, ErrSnapshotBound
 	}
 	rows := make([]calculationCoverageInsert, len(values))
+	usesNewIdentity := false
 	for index, value := range values {
-		if value == nil || value.Source == nil || value.Source.Type == "" || len(value.Source.Type) > 128 ||
+		if value == nil || (value.Source == nil) == (value.RawSource == nil) {
+			return nil, false, ErrSnapshotCorrupt
+		}
+		if value.RawSource != nil {
+			if !validBASRawSourceRef(value.RawSource) {
+				return nil, false, ErrSnapshotCorrupt
+			}
+			usesNewIdentity = true
+		} else if value.Source.Type == "" || len(value.Source.Type) > 128 ||
 			!validBASSourceRef(value.Source, value.Source.Type, "") {
-			return nil, ErrSnapshotCorrupt
+			return nil, false, ErrSnapshotCorrupt
+		}
+		if len(value.LineageIdentities) > basSourceIdentityMaximum || len(value.EvidenceIdentities) > basSourceIdentityMaximum {
+			return nil, false, ErrSnapshotBound
+		}
+		if !validBASIdentityProjection(value.LineageIdentities, value.Lineage) ||
+			!validBASIdentityProjection(value.EvidenceIdentities, value.Evidence) {
+			return nil, false, ErrSnapshotCorrupt
+		}
+		if len(value.LineageIdentities) > 0 || len(value.EvidenceIdentities) > 0 {
+			usesNewIdentity = true
 		}
 		candidateKind, candidateOK := basCoverageCandidateKindSQL(value.CandidateKind)
 		disposition, dispositionOK := basCoverageDispositionSQL(value.Disposition)
-		sourceRevision, revisionOK := basSQLiteRevision(value.Source.Revision)
-		if !candidateOK || !dispositionOK || !revisionOK {
-			return nil, ErrSnapshotCorrupt
+		if !candidateOK || !dispositionOK {
+			return nil, false, ErrSnapshotCorrupt
 		}
 		var amountMinor, currencyCode, taxDate any
 		if value.EligibleAmount != nil {
@@ -336,33 +401,118 @@ func prepareCalculationCoverage(values []*tammyv1.BasSourceCoverage) ([]calculat
 		if value.TaxDate != nil {
 			date, ok := basCivilDateSQLText(value.TaxDate)
 			if !ok {
-				return nil, ErrSnapshotCorrupt
+				return nil, false, ErrSnapshotCorrupt
 			}
 			taxDate = date
 		}
 		wire, err := marshalCalculationFrame(value, 1024*1024)
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
-		lineage, err := marshalCoverageReferences(value.Lineage, true)
+		lineage, err := marshalCoverageIdentityReferences(value.Lineage, value.LineageIdentities, true)
 		if err != nil || len(lineage) > 2*1024*1024 {
-			return nil, ErrSnapshotBound
+			return nil, false, ErrSnapshotBound
 		}
-		evidence, err := marshalCoverageReferences(value.Evidence, false)
+		evidence, err := marshalCoverageIdentityReferences(value.Evidence, value.EvidenceIdentities, false)
 		if err != nil || len(evidence) > 2*1024*1024 {
-			return nil, ErrSnapshotBound
+			return nil, false, ErrSnapshotBound
 		}
 		rowHash := sha256.Sum256(wire)
-		rows[index] = calculationCoverageInsert{
-			sequence: int64(index + 1), sourceRevision: sourceRevision,
-			candidateKind: candidateKind, disposition: disposition,
-			sourceType: value.Source.Type, sourceID: value.Source.Id,
-			sourceHash: bytes.Clone(value.Source.ContentHash), amountMinor: amountMinor, currencyCode: currencyCode, taxDate: taxDate,
+		row := calculationCoverageInsert{
+			sequence: int64(index + 1), candidateKind: candidateKind, disposition: disposition,
+			amountMinor: amountMinor, currencyCode: currencyCode, taxDate: taxDate,
 			classification: value.ClassificationCode, reason: value.Reason,
 			lineageWire: lineage, evidenceWire: evidence, wire: wire, hash: bytes.Clone(rowHash[:]),
 		}
+		if value.Source != nil {
+			sourceRevision, revisionOK := basSQLiteRevision(value.Source.Revision)
+			if !revisionOK {
+				return nil, false, ErrSnapshotCorrupt
+			}
+			row.sourceType, row.sourceID, row.sourceRevision = value.Source.Type, value.Source.Id, sourceRevision
+			row.sourceHash = bytes.Clone(value.Source.ContentHash)
+		} else {
+			raw := value.RawSource
+			row.raw = true
+			row.rawSourceType, row.rawSourceID = raw.Type, raw.Id
+			row.originalRevisionPresent = raw.OriginalRevision != nil
+			if raw.OriginalRevision != nil {
+				row.originalRevision = *raw.OriginalRevision
+			}
+			row.originalContentHash = bytes.Clone(raw.OriginalContentHash)
+			row.computedProofHash = bytes.Clone(raw.ComputedProofHash)
+			row.proofScope = coverageProofScopeSQL(raw.ProofScope)
+		}
+		rows[index] = row
 	}
-	return rows, nil
+	return rows, usesNewIdentity, nil
+}
+
+func marshalCoverageIdentityReferences(references []*tammyv1.SourceRef, identities []*tammyv1.BasSourceIdentity,
+	lineage bool) ([]byte, error) {
+	if !validBASIdentityProjection(identities, references) {
+		return nil, ErrSnapshotCorrupt
+	}
+	if len(identities) == 0 {
+		return marshalCoverageReferences(references, lineage)
+	}
+	frame := &tammyv1.BasSourceCoverage{}
+	if lineage {
+		frame.LineageIdentities = cloneBASSourceIdentities(identities)
+	} else {
+		frame.EvidenceIdentities = cloneBASSourceIdentities(identities)
+	}
+	return (proto.MarshalOptions{Deterministic: true}).Marshal(frame)
+}
+
+func cloneBASSourceIdentities(values []*tammyv1.BasSourceIdentity) []*tammyv1.BasSourceIdentity {
+	result := make([]*tammyv1.BasSourceIdentity, len(values))
+	for index, value := range values {
+		if value != nil {
+			result[index] = proto.Clone(value).(*tammyv1.BasSourceIdentity)
+		}
+	}
+	return result
+}
+
+func calculationCoveragePayloadBytes(rows []calculationCoverageInsert, calculationID, organisationID, familyID string,
+	calculationHash []byte) (int64, error) {
+	var total int64
+	for _, row := range rows {
+		cells := []int64{
+			512,
+			int64(len(calculationID)), int64(len(organisationID)), int64(len(familyID)), 8, int64(len(calculationHash)),
+			8, int64(len(row.candidateKind)), int64(len(row.disposition)),
+			int64(len(row.classification)), int64(len(row.reason)),
+			int64(len(row.lineageWire)), int64(len(row.evidenceWire)), int64(len(row.wire)), int64(len(row.hash)),
+		}
+		if row.raw {
+			cells = append(cells, int64(len(row.rawSourceType)), int64(len(row.rawSourceID)),
+				int64(len(row.computedProofHash)), int64(len(row.proofScope)))
+			if row.originalRevisionPresent {
+				cells = append(cells, 8)
+			}
+			cells = append(cells, int64(len(row.originalContentHash)))
+		} else {
+			cells = append(cells, int64(len(row.sourceType)), int64(len(row.sourceID)), 8, int64(len(row.sourceHash)))
+		}
+		if row.amountMinor != nil {
+			cells = append(cells, 8)
+		}
+		if currency, ok := row.currencyCode.(string); ok {
+			cells = append(cells, int64(len(currency)))
+		}
+		if date, ok := row.taxDate.(string); ok {
+			cells = append(cells, int64(len(date)))
+		}
+		for _, cell := range cells {
+			if cell < 0 || cell > calculationCoverageIdentityPayloadLimit-total {
+				return 0, ErrSnapshotBound
+			}
+			total += cell
+		}
+	}
+	return total, nil
 }
 
 func marshalCoverageReferences(values []*tammyv1.SourceRef, lineage bool) ([]byte, error) {
@@ -460,37 +610,70 @@ func basCalculationOutcomeSQL(value tammyv1.BasCalculationOutcome) (string, bool
 
 func (repository *CalculationRepository) verifyCoverageRows(ctx context.Context, calculation calculationReadRecord,
 	value *tammyv1.BasCalculation) error {
-	rows, err := repository.executor.QueryContext(ctx, `SELECT count(*),COALESCE(SUM(length(lineage_proto)+length(evidence_proto)+length(coverage_proto)),0)
-		FROM bas_calculation_coverage_v1 WHERE calculation_id=? AND calculation_version=?`, calculation.id, calculation.version)
+	available, err := calculationRawCoverageAvailable(ctx, repository.executor)
 	if err != nil {
 		return err
 	}
-	if !rows.Next() {
-		return errors.Join(ErrSnapshotCorrupt, rows.Err(), rows.Close())
-	}
-	var count, total int64
-	if err := rows.Scan(&count, &total); err != nil || rows.Next() || rows.Err() != nil {
-		return errors.Join(ErrSnapshotCorrupt, err, rows.Err(), rows.Close())
-	}
-	if err := rows.Close(); err != nil {
-		return err
-	}
-	if count < 0 || count > calculationCoverageCountMaximum || total < 0 {
-		return ErrSnapshotBound
-	}
-	if total > calculationCoverageFrameLimit {
-		return ErrSnapshotBound
-	}
-	if count != int64(len(value.Coverage)) {
+	usesNewIdentity := calculationUsesNewCoverageIdentity(value.Coverage)
+	if usesNewIdentity && !available {
 		return ErrSnapshotCorrupt
 	}
-	coverageRows, err := repository.executor.QueryContext(ctx, `SELECT sequence,candidate_kind,disposition,source_type,source_id,
-		source_revision,source_hash,eligible_amount_minor,currency_code,tax_date,classification_code,reason,
-		CASE WHEN length(lineage_proto)<=2097152 THEN lineage_proto ELSE NULL END,length(lineage_proto),
-		CASE WHEN length(evidence_proto)<=2097152 THEN evidence_proto ELSE NULL END,length(evidence_proto),
-		CASE WHEN length(coverage_proto)<=1048576 THEN coverage_proto ELSE NULL END,length(coverage_proto),content_hash
-		FROM bas_calculation_coverage_v1 WHERE calculation_id=? AND calculation_version=? ORDER BY sequence`,
-		calculation.id, calculation.version)
+	canonicalAggregate, err := calculationCoverageAggregateFor(ctx, repository.executor,
+		"bas_calculation_coverage_v1", calculation.id, calculation.version, usesNewIdentity)
+	if err != nil {
+		return err
+	}
+	rawAggregate := calculationCoverageAggregate{}
+	if available {
+		rawAggregate, err = calculationCoverageAggregateFor(ctx, repository.executor,
+			"bas_calculation_raw_coverage_v1", calculation.id, calculation.version, usesNewIdentity)
+		if err != nil {
+			return err
+		}
+	}
+	combinedCount, ok := safeCalculationCoverageSum(canonicalAggregate.count, rawAggregate.count)
+	if !ok || combinedCount < 0 || combinedCount > calculationCoverageCountMaximum {
+		return ErrSnapshotBound
+	}
+	if combinedCount != int64(len(value.Coverage)) {
+		return ErrSnapshotCorrupt
+	}
+	var expectedCanonical, expectedRaw int64
+	for _, coverage := range value.Coverage {
+		if coverage == nil || (coverage.Source == nil) == (coverage.RawSource == nil) {
+			return ErrSnapshotCorrupt
+		}
+		if coverage.RawSource != nil {
+			expectedRaw++
+		} else {
+			expectedCanonical++
+		}
+	}
+	if canonicalAggregate.count != expectedCanonical || rawAggregate.count != expectedRaw {
+		return ErrSnapshotCorrupt
+	}
+	if usesNewIdentity {
+		payload, ok := safeCalculationCoverageSum(canonicalAggregate.payloadBytes, rawAggregate.payloadBytes)
+		if !ok || payload > calculationCoverageIdentityPayloadLimit {
+			return ErrSnapshotBound
+		}
+	} else {
+		if canonicalAggregate.frameBytes > calculationCoverageFrameLimit || rawAggregate.count != 0 {
+			return ErrSnapshotBound
+		}
+	}
+
+	query := calculationCanonicalCoverageReadSQL
+	if available {
+		query = calculationMergedCoverageReadSQL
+	}
+	var coverageRows *sql.Rows
+	if available {
+		coverageRows, err = repository.executor.QueryContext(ctx, query, calculation.id, calculation.version,
+			calculation.id, calculation.version)
+	} else {
+		coverageRows, err = repository.executor.QueryContext(ctx, query, calculation.id, calculation.version)
+	}
 	if err != nil {
 		return err
 	}
@@ -499,13 +682,17 @@ func (repository *CalculationRepository) verifyCoverageRows(ctx context.Context,
 			return errors.Join(ErrSnapshotCorrupt, coverageRows.Err(), coverageRows.Close())
 		}
 		var row calculationCoverageReadRecord
-		if err := coverageRows.Scan(&row.sequence, &row.candidateKind, &row.disposition, &row.sourceType, &row.sourceID,
-			&row.sourceRevision, &row.sourceHash, &row.amountMinor, &row.currencyCode, &row.taxDate, &row.classification, &row.reason,
-			&row.lineageWire, &row.lineageLength, &row.evidenceWire, &row.evidenceLength, &row.wire, &row.wireLength, &row.hash); err != nil {
+		if err := coverageRows.Scan(&row.calculationID, &row.organisationID, &row.familyID, &row.calculationVersion,
+			&row.calculationHash, &row.sequence, &row.candidateKind, &row.disposition, &row.sourceType, &row.sourceID,
+			&row.sourceRevision, &row.sourceHash, &row.sourceHashPresent, &row.originalRevision, &row.originalContentHash,
+			&row.originalContentHashPresent, &row.computedProofHash, &row.computedProofHashPresent, &row.proofScope,
+			&row.amountMinor, &row.currencyCode, &row.taxDate, &row.classification, &row.reason,
+			&row.lineageWire, &row.lineageLength, &row.evidenceWire, &row.evidenceLength, &row.wire, &row.wireLength,
+			&row.hash, &row.raw); err != nil {
 			_ = coverageRows.Close()
 			return err
 		}
-		if err := verifyCalculationCoverageRow(row, expected, int64(index+1)); err != nil {
+		if err := verifyCalculationCoverageRow(row, expected, int64(index+1), calculation); err != nil {
 			_ = coverageRows.Close()
 			return err
 		}
@@ -517,24 +704,35 @@ func (repository *CalculationRepository) verifyCoverageRows(ctx context.Context,
 }
 
 type calculationCoverageReadRecord struct {
-	sequence, sourceRevision, lineageLength, evidenceLength, wireLength      int64
-	candidateKind, disposition, sourceType, sourceID, classification, reason string
-	sourceHash, lineageWire, evidenceWire, wire, hash                        []byte
-	amountMinor                                                              sql.NullInt64
-	currencyCode, taxDate                                                    sql.NullString
+	calculationID, organisationID, familyID, candidateKind, disposition, sourceType, sourceID  string
+	classification, reason                                                                     string
+	sequence, calculationVersion, lineageLength, evidenceLength, wireLength, sourceHashPresent int64
+	originalContentHashPresent, computedProofHashPresent, raw                                  int64
+	calculationHash, sourceHash, originalContentHash, computedProofHash                        []byte
+	lineageWire, evidenceWire, wire, hash                                                      []byte
+	sourceRevision, originalRevision                                                           sql.NullInt64
+	proofScope, currencyCode, taxDate                                                          sql.NullString
+	amountMinor                                                                                sql.NullInt64
 }
 
 func verifyCalculationCoverageRow(record calculationCoverageReadRecord, expected *tammyv1.BasSourceCoverage,
-	sequence int64) error {
-	if expected == nil || record.sequence != sequence || record.sequence <= 0 || record.sourceRevision <= 0 ||
-		len(record.sourceHash) != sha256.Size || len(record.hash) != sha256.Size {
+	sequence int64, calculation calculationReadRecord) error {
+	if expected == nil || record.sequence != sequence || record.sequence <= 0 || record.calculationID != calculation.id ||
+		record.organisationID != calculation.organisationID || record.familyID != calculation.familyID ||
+		record.calculationVersion != calculation.version || !bytes.Equal(record.calculationHash, calculation.hash) ||
+		len(record.calculationHash) != sha256.Size || len(record.hash) != sha256.Size {
 		return ErrSnapshotCorrupt
 	}
-	lineage, err := marshalCoverageReferences(expected.Lineage, true)
+	if expected == nil || (expected.Source == nil) == (expected.RawSource == nil) ||
+		!validBASIdentityProjection(expected.LineageIdentities, expected.Lineage) ||
+		!validBASIdentityProjection(expected.EvidenceIdentities, expected.Evidence) {
+		return ErrSnapshotCorrupt
+	}
+	lineage, err := marshalCoverageIdentityReferences(expected.Lineage, expected.LineageIdentities, true)
 	if err != nil {
 		return err
 	}
-	evidence, err := marshalCoverageReferences(expected.Evidence, false)
+	evidence, err := marshalCoverageIdentityReferences(expected.Evidence, expected.EvidenceIdentities, false)
 	if err != nil {
 		return err
 	}
@@ -575,15 +773,194 @@ func verifyCalculationCoverageRow(record calculationCoverageReadRecord, expected
 		taxDateMatches = record.taxDate.Valid && record.taxDate.String == expectedDate
 	}
 	digest := sha256.Sum256(wire)
-	if record.candidateKind != candidate || record.disposition != disposition || record.sourceType != expected.Source.Type ||
-		record.sourceID != expected.Source.Id || uint64(record.sourceRevision) != expected.Source.Revision ||
-		!bytes.Equal(record.sourceHash, expected.Source.ContentHash) || !amountMatches || !currencyMatches || !taxDateMatches ||
+	if record.candidateKind != candidate || record.disposition != disposition || !amountMatches || !currencyMatches || !taxDateMatches ||
 		record.classification != expected.ClassificationCode || record.reason != expected.Reason ||
 		!bytes.Equal(record.lineageWire, lineage) || !bytes.Equal(record.evidenceWire, evidence) ||
 		!bytes.Equal(record.wire, wire) || !bytes.Equal(record.hash, digest[:]) {
 		return ErrSnapshotCorrupt
 	}
+	if expected.Source != nil {
+		if record.raw != 0 || !validBASSourceRef(expected.Source, expected.Source.Type, "") ||
+			record.sourceType != expected.Source.Type || record.sourceID != expected.Source.Id || !record.sourceRevision.Valid ||
+			uint64(record.sourceRevision.Int64) != expected.Source.Revision || record.sourceHashPresent != 1 ||
+			!bytes.Equal(record.sourceHash, expected.Source.ContentHash) || record.originalRevision.Valid ||
+			record.originalContentHashPresent != 0 || record.computedProofHashPresent != 0 || record.proofScope.Valid {
+			return ErrSnapshotCorrupt
+		}
+	} else {
+		raw := expected.RawSource
+		if record.raw != 1 || !validBASRawSourceRef(raw) || record.sourceType != raw.Type || record.sourceID != raw.Id ||
+			record.sourceRevision.Valid || record.sourceHashPresent != 0 || record.originalContentHashPresent != boolInt(raw.OriginalContentHash != nil) ||
+			record.computedProofHashPresent != 1 || !record.proofScope.Valid || record.proofScope.String != coverageProofScopeSQL(raw.ProofScope) ||
+			!bytes.Equal(record.computedProofHash, raw.ComputedProofHash) {
+			return ErrSnapshotCorrupt
+		}
+		if raw.OriginalRevision == nil {
+			if record.originalRevision.Valid {
+				return ErrSnapshotCorrupt
+			}
+		} else if !record.originalRevision.Valid || record.originalRevision.Int64 != *raw.OriginalRevision {
+			return ErrSnapshotCorrupt
+		}
+		if raw.OriginalContentHash == nil {
+			if record.originalContentHashPresent != 0 || record.originalContentHash != nil {
+				return ErrSnapshotCorrupt
+			}
+		} else if record.originalContentHashPresent != 1 || !bytes.Equal(record.originalContentHash, raw.OriginalContentHash) {
+			return ErrSnapshotCorrupt
+		}
+	}
 	return nil
+}
+
+func boolInt(value bool) int64 {
+	if value {
+		return 1
+	}
+	return 0
+}
+
+func coverageProofScopeSQL(value tammyv1.BasSourceProofScope) string {
+	return strings.TrimPrefix(value.String(), "BAS_SOURCE_PROOF_SCOPE_")
+}
+
+const calculationCanonicalCoverageReadSQL = `SELECT calculation_id,organisation_id,family_id,calculation_version,calculation_hash,
+	sequence,candidate_kind,disposition,source_type,source_id,source_revision,source_hash,source_hash IS NOT NULL,
+	NULL AS original_revision,NULL AS original_content_hash,0 AS original_content_hash_present,
+	NULL AS computed_proof_hash,0 AS computed_proof_hash_present,NULL AS proof_scope,
+	eligible_amount_minor,currency_code,tax_date,classification_code,reason,
+	CASE WHEN length(lineage_proto)<=2097152 THEN lineage_proto ELSE NULL END,length(lineage_proto),
+	CASE WHEN length(evidence_proto)<=2097152 THEN evidence_proto ELSE NULL END,length(evidence_proto),
+	CASE WHEN length(coverage_proto)<=1048576 THEN coverage_proto ELSE NULL END,length(coverage_proto),content_hash,0 AS is_raw
+	FROM bas_calculation_coverage_v1 WHERE calculation_id=? AND calculation_version=? ORDER BY sequence`
+
+const calculationMergedCoverageReadSQL = `SELECT * FROM (
+	SELECT calculation_id,organisation_id,family_id,calculation_version,calculation_hash,sequence,candidate_kind,disposition,
+		source_type AS source_type,source_id AS source_id,source_revision,source_hash,source_hash IS NOT NULL,
+		NULL AS original_revision,NULL AS original_content_hash,0 AS original_content_hash_present,
+		NULL AS computed_proof_hash,0 AS computed_proof_hash_present,NULL AS proof_scope,
+		eligible_amount_minor,currency_code,tax_date,classification_code,reason,
+		CASE WHEN length(lineage_proto)<=2097152 THEN lineage_proto ELSE NULL END,length(lineage_proto),
+		CASE WHEN length(evidence_proto)<=2097152 THEN evidence_proto ELSE NULL END,length(evidence_proto),
+		CASE WHEN length(coverage_proto)<=1048576 THEN coverage_proto ELSE NULL END,length(coverage_proto),content_hash,0 AS is_raw
+	FROM bas_calculation_coverage_v1 WHERE calculation_id=? AND calculation_version=?
+	UNION ALL
+	SELECT calculation_id,organisation_id,family_id,calculation_version,calculation_hash,sequence,candidate_kind,disposition,
+		raw_source_type AS source_type,raw_source_id AS source_id,NULL AS source_revision,NULL AS source_hash,0 AS source_hash_present,
+		original_revision,original_content_hash,original_content_hash IS NOT NULL,
+		computed_proof_hash,computed_proof_hash IS NOT NULL,proof_scope,
+		eligible_amount_minor,currency_code,tax_date,classification_code,reason,
+		CASE WHEN length(lineage_proto)<=2097152 THEN lineage_proto ELSE NULL END,length(lineage_proto),
+		CASE WHEN length(evidence_proto)<=2097152 THEN evidence_proto ELSE NULL END,length(evidence_proto),
+		CASE WHEN length(coverage_proto)<=1048576 THEN coverage_proto ELSE NULL END,length(coverage_proto),content_hash,1 AS is_raw
+	FROM bas_calculation_raw_coverage_v1 WHERE calculation_id=? AND calculation_version=?
+) ORDER BY sequence`
+
+const canonicalCoveragePayloadExpression = `512
+	+length(CAST(calculation_id AS BLOB))+length(CAST(organisation_id AS BLOB))+length(CAST(family_id AS BLOB))
+	+8+length(calculation_hash)+8+length(CAST(candidate_kind AS BLOB))+length(CAST(disposition AS BLOB))
+	+length(CAST(source_type AS BLOB))+length(CAST(source_id AS BLOB))+8+length(source_hash)
+	+CASE WHEN eligible_amount_minor IS NULL THEN 0 ELSE 8 END
+	+CASE WHEN currency_code IS NULL THEN 0 ELSE length(CAST(currency_code AS BLOB)) END
+	+CASE WHEN tax_date IS NULL THEN 0 ELSE length(CAST(tax_date AS BLOB)) END
+	+length(CAST(classification_code AS BLOB))+length(CAST(reason AS BLOB))
+	+length(lineage_proto)+length(evidence_proto)+length(coverage_proto)+length(content_hash)`
+
+const rawCoveragePayloadExpression = `512
+	+length(CAST(calculation_id AS BLOB))+length(CAST(organisation_id AS BLOB))+length(CAST(family_id AS BLOB))
+	+8+length(calculation_hash)+8+length(CAST(candidate_kind AS BLOB))+length(CAST(disposition AS BLOB))
+	+length(CAST(raw_source_type AS BLOB))+length(CAST(raw_source_id AS BLOB))
+	+CASE WHEN original_revision IS NULL THEN 0 ELSE 8 END
+	+CASE WHEN original_content_hash IS NULL THEN 0 ELSE length(original_content_hash) END
+	+length(computed_proof_hash)+length(CAST(proof_scope AS BLOB))
+	+CASE WHEN eligible_amount_minor IS NULL THEN 0 ELSE 8 END
+	+CASE WHEN currency_code IS NULL THEN 0 ELSE length(CAST(currency_code AS BLOB)) END
+	+CASE WHEN tax_date IS NULL THEN 0 ELSE length(CAST(tax_date AS BLOB)) END
+	+length(CAST(classification_code AS BLOB))+length(CAST(reason AS BLOB))
+	+length(lineage_proto)+length(evidence_proto)+length(coverage_proto)+length(content_hash)`
+
+type calculationCoverageAggregate struct {
+	count, payloadBytes, frameBytes int64
+}
+
+func calculationCoverageAggregateFor(ctx context.Context, executor app.CommandSQLExecutor, table, calculationID string,
+	version int64, includeNormalized bool) (calculationCoverageAggregate, error) {
+	var expression string
+	switch table {
+	case "bas_calculation_coverage_v1":
+		if includeNormalized {
+			expression = canonicalCoveragePayloadExpression
+		}
+	case "bas_calculation_raw_coverage_v1":
+		if includeNormalized {
+			expression = rawCoveragePayloadExpression
+		}
+	default:
+		return calculationCoverageAggregate{}, ErrSnapshotCorrupt
+	}
+	query := "SELECT COUNT(*),COALESCE(SUM(length(lineage_proto)+length(evidence_proto)+length(coverage_proto)),0),0 FROM " + table +
+		" WHERE calculation_id=? AND calculation_version=?"
+	if includeNormalized {
+		query = "SELECT COUNT(*),COALESCE(SUM(length(lineage_proto)+length(evidence_proto)+length(coverage_proto)),0),COALESCE(SUM(" + expression + "),0) FROM " + table +
+			" WHERE calculation_id=? AND calculation_version=?"
+	}
+	rows, err := executor.QueryContext(ctx, query, calculationID, version)
+	if err != nil {
+		return calculationCoverageAggregate{}, err
+	}
+	if !rows.Next() {
+		return calculationCoverageAggregate{}, errors.Join(ErrSnapshotCorrupt, rows.Err(), rows.Close())
+	}
+	var aggregate calculationCoverageAggregate
+	if err := rows.Scan(&aggregate.count, &aggregate.frameBytes, &aggregate.payloadBytes); err != nil || rows.Next() || rows.Err() != nil {
+		return calculationCoverageAggregate{}, errors.Join(ErrSnapshotCorrupt, err, rows.Err(), rows.Close())
+	}
+	if err := rows.Close(); err != nil {
+		return calculationCoverageAggregate{}, err
+	}
+	if aggregate.count < 0 || aggregate.frameBytes < 0 || aggregate.payloadBytes < 0 {
+		return calculationCoverageAggregate{}, ErrSnapshotCorrupt
+	}
+	return aggregate, nil
+}
+
+func safeCalculationCoverageSum(left, right int64) (int64, bool) {
+	if left < 0 || right < 0 || left > math.MaxInt64-right {
+		return 0, false
+	}
+	return left + right, true
+}
+
+func calculationUsesNewCoverageIdentity(values []*tammyv1.BasSourceCoverage) bool {
+	for _, value := range values {
+		if value != nil && (value.RawSource != nil || len(value.LineageIdentities) > 0 || len(value.EvidenceIdentities) > 0) {
+			return true
+		}
+	}
+	return false
+}
+
+func calculationRawCoverageAvailable(ctx context.Context, executor app.CommandSQLExecutor) (bool, error) {
+	rows, err := executor.QueryContext(ctx, `SELECT COALESCE(MAX(version),0),EXISTS(
+		SELECT 1 FROM sqlite_schema WHERE type='table' AND name='bas_calculation_raw_coverage_v1') FROM schema_migrations`)
+	if err != nil {
+		return false, errors.Join(ErrCalculationRepository, err)
+	}
+	if !rows.Next() {
+		return false, errors.Join(ErrSnapshotCorrupt, rows.Err(), rows.Close())
+	}
+	var version int64
+	var present int64
+	if err := rows.Scan(&version, &present); err != nil || rows.Next() || rows.Err() != nil {
+		return false, errors.Join(ErrSnapshotCorrupt, err, rows.Err(), rows.Close())
+	}
+	if err := rows.Close(); err != nil {
+		return false, err
+	}
+	if version < 0 || (version >= 14) != (present == 1) || (present != 0 && present != 1) {
+		return false, ErrSnapshotCorrupt
+	}
+	return present == 1, nil
 }
 
 func boundedCalculationRecordBytes(wire []byte, length int64, maximum int) error {
