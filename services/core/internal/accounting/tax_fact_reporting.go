@@ -294,10 +294,20 @@ func (repository *JournalRepository) preflightTaxFactReportingCapture(
 		"fact.source_type", "fact.source_id", "fact.source_content_hash", "fact.created_at",
 		"line.journal_id", "journal.organisation_id", "journal.journal_date",
 	)
+	baseNumericStorage := taxFactReportingInvalidNumericStorageSQL(
+		[]string{
+			"fact.original_gross_minor", "fact.original_net_minor", "fact.original_gst_minor",
+			"fact.attributed_gross_minor", "fact.attributed_net_minor", "fact.attributed_gst_minor",
+			"fact.remaining_gross_minor", "fact.remaining_net_minor", "fact.remaining_gst_minor",
+			"fact.tax_rule_revision", "fact.source_revision",
+		},
+		[]string{"line.line_number"},
+	)
 	factCount, basePayloadBytes, err := repository.reserveTaxFactReportingPayloadDetails(ctx, &remainingBytes,
 		"tax facts", maxTaxFactReportingFacts,
-		`SELECT count(*), total(payload_bytes) FROM (
-		 SELECT `+baseSize+` AS payload_bytes FROM tax_facts AS fact
+		`SELECT count(*), total(payload_bytes), coalesce(sum(invalid_numeric_storage), 0) FROM (
+		 SELECT `+baseSize+` AS payload_bytes, `+baseNumericStorage+` AS invalid_numeric_storage
+		 FROM tax_facts AS fact
 		 LEFT JOIN journal_lines AS line ON line.id = fact.journal_line_id
 		 LEFT JOIN journals AS journal ON journal.id = line.journal_id
 		 WHERE fact.organisation_id = ?
@@ -467,8 +477,12 @@ func (repository *JournalRepository) preflightTaxFactReportingJournal(
 		"id", "organisation_id", "source_type", "source_id", "state", "journal_date", "description",
 		"reversal_of_journal_id", "reversed_by_journal_id", "currency_code", "posted_at", "created_at",
 	)
+	headerNumericStorage := taxFactReportingInvalidNumericStorageSQL(
+		[]string{"version", "source_kind", "source_revision", "total_debits_minor", "total_credits_minor", "financial_revision"},
+		nil,
+	)
 	headerCount, headerBytes, err := repository.reserveTaxFactReportingPayloadDetails(ctx, remainingBytes, "journals", 1,
-		`SELECT count(*), total(`+headerSize+`) FROM journals WHERE id = ? AND organisation_id = ?`, journalID, organisationID)
+		`SELECT count(*), total(`+headerSize+`), coalesce(sum(`+headerNumericStorage+`), 0) FROM journals WHERE id = ? AND organisation_id = ?`, journalID, organisationID)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -479,10 +493,15 @@ func (repository *JournalRepository) preflightTaxFactReportingJournal(
 		"id", "journal_id", "account_id", "currency_code", "memo", "tax_code_id",
 		"tax_rule_type", "tax_rule_id", "tax_rule_content_hash",
 	)
+	lineNumericStorage := taxFactReportingInvalidNumericStorageSQL(
+		[]string{"line.line_number", "line.debit_minor", "line.credit_minor"},
+		[]string{"line.tax_amount_minor", "line.tax_rule_revision"},
+	)
 	lineCount, lineBytes, err := repository.reserveTaxFactReportingPayloadDetails(ctx, remainingBytes,
 		"journal lines", maxTaxFactReportingJournalLines,
-		`SELECT count(*), total(payload_bytes) FROM (
-		 SELECT `+lineSize+` AS payload_bytes FROM journal_lines AS line WHERE journal_id = ?
+		`SELECT count(*), total(payload_bytes), coalesce(sum(invalid_numeric_storage), 0) FROM (
+		 SELECT `+lineSize+` AS payload_bytes, `+lineNumericStorage+` AS invalid_numeric_storage
+		 FROM journal_lines AS line WHERE journal_id = ?
 		 AND EXISTS (SELECT 1 FROM journals WHERE id = line.journal_id AND organisation_id = ?)
 		 ORDER BY line_number, id LIMIT ?
 		)`, journalID, organisationID, maxTaxFactReportingJournalLines+1)
@@ -505,6 +524,22 @@ func taxFactReportingPayloadSizeSQL(columns ...string) string {
 	return strings.Join(parts, " + ")
 }
 
+// taxFactReportingInvalidNumericStorageSQL emits a row-level 0/1 expression.
+// All identifiers passed here are static repository-owned SQL columns.
+func taxFactReportingInvalidNumericStorageSQL(requiredColumns, nullableColumns []string) string {
+	conditions := make([]string, 0, len(requiredColumns)+len(nullableColumns))
+	for _, column := range requiredColumns {
+		conditions = append(conditions, "typeof("+column+") <> 'integer'")
+	}
+	for _, column := range nullableColumns {
+		conditions = append(conditions, "("+column+" IS NOT NULL AND typeof("+column+") <> 'integer')")
+	}
+	if len(conditions) == 0 {
+		return "0"
+	}
+	return "CASE WHEN (" + strings.Join(conditions, " OR ") + ") THEN 1 ELSE 0 END"
+}
+
 func (repository *JournalRepository) reserveTaxFactReportingPayload(
 	ctx context.Context, remainingBytes *int64, resource string, rowLimit int, query string, args ...any,
 ) error {
@@ -515,7 +550,7 @@ func (repository *JournalRepository) reserveTaxFactReportingPayload(
 func (repository *JournalRepository) reserveTaxFactReportingPayloadDetails(
 	ctx context.Context, remainingBytes *int64, resource string, rowLimit int, query string, args ...any,
 ) (int, int64, error) {
-	var count int
+	var count, invalidNumericRows int
 	var payloadBytes float64
 	// SQLite total() avoids integer-sum overflow for unconstrained legacy
 	// cells. Integral byte counts remain exact throughout the 8 MiB budget.
@@ -526,7 +561,7 @@ func (repository *JournalRepository) reserveTaxFactReportingPayloadDetails(
 	if !rows.Next() {
 		return 0, 0, errors.Join(ErrJournalRepository, sql.ErrNoRows, rows.Err(), rows.Close())
 	}
-	if err := rows.Scan(&count, &payloadBytes); err != nil {
+	if err := rows.Scan(&count, &payloadBytes, &invalidNumericRows); err != nil {
 		return 0, 0, errors.Join(taxFactReportingReadError("scan preflight "+resource, err), rows.Close())
 	}
 	if rows.Next() {
@@ -551,6 +586,9 @@ func (repository *JournalRepository) reserveTaxFactReportingPayloadDetails(
 	payloadByteCount := int64(payloadBytes)
 	if float64(payloadByteCount) != payloadBytes {
 		return 0, 0, fmt.Errorf("%w: non-integral %s payload size", ErrJournalRepository, resource)
+	}
+	if invalidNumericRows != 0 {
+		return 0, 0, fmt.Errorf("%w: %s contain non-integer numeric storage", ErrJournalRepository, resource)
 	}
 	*remainingBytes -= payloadByteCount
 	return count, payloadByteCount, nil

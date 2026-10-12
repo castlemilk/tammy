@@ -67,6 +67,23 @@ type RuleBundleReportingRecord struct {
 	PayloadBytes   int64
 }
 
+// RuleBundleReportingPreflight contains size-only metadata for a retained rule bundle and its catalogue.
+type RuleBundleReportingPreflight struct {
+	BundleID              string
+	CatalogueCount        int
+	ParentPayloadBytes    int64
+	CataloguePayloadBytes int64
+	PayloadBytes          int64
+}
+
+// ruleReportingReservation is shared by the size-only public API and the full
+// reporting capture. The caller budget is kept private because it is a bound,
+// not retained source metadata.
+type ruleReportingReservation struct {
+	RuleBundleReportingPreflight
+	maximumPayloadBytes int64
+}
+
 type ruleReportingParent struct {
 	id, organisationID, bundleType, version, semanticSHA256 string
 	rulesProto                                              []byte
@@ -79,6 +96,25 @@ type ruleReportingCatalogueRow struct {
 	id, code, ruleBundleID, label, treatment, effectiveFrom string
 	rateMillionths                                          int64
 	effectiveTo                                             sql.NullString
+}
+
+// PreflightForReportingWithPayloadBudget reports the retained row count and
+// exact retained-byte charge without hydrating body fields or verifying the
+// source hash. A successful result is size-only metadata, not a proof claim.
+func (repository *Repository) PreflightForReportingWithPayloadBudget(
+	ctx context.Context,
+	organisationID string,
+	source *tammyv1.SourceRef,
+	maximumPayloadBytes int64,
+) (*RuleBundleReportingPreflight, error) {
+	reservation, err := repository.reserveRuleReportingCapture(
+		ctx, organisationID, source, maximumPayloadBytes,
+	)
+	if err != nil {
+		return nil, err
+	}
+	metadata := reservation.RuleBundleReportingPreflight
+	return &metadata, nil
 }
 
 // GetForReporting reads the complete retained bundle and catalogue selected
@@ -104,6 +140,83 @@ func (repository *Repository) GetForReportingWithPayloadBudget(
 	source *tammyv1.SourceRef,
 	maximumPayloadBytes int64,
 ) (*RuleBundleReportingRecord, error) {
+	reservation, err := repository.reserveRuleReportingCapture(
+		ctx, organisationID, source, maximumPayloadBytes,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	parent, err := repository.loadRuleReportingParent(ctx, organisationID, source.Id)
+	if err != nil {
+		return nil, err
+	}
+	catalogueRows, err := repository.loadRuleReportingCatalogue(ctx, organisationID, source.Id)
+	if err != nil {
+		return nil, err
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, errors.Join(ErrRuleRepository, err)
+	}
+	actualParentPayloadBytes, actualCataloguePayloadBytes, actualPayloadBytes, ok :=
+		ruleReportingPayloadComponents(parent, catalogueRows)
+	if !ok {
+		return nil, errors.Join(fmt.Errorf("%w: retained rule payload size overflow", ErrRuleRepository), ctx.Err())
+	}
+	catalogueIdentityMatches := true
+	for _, row := range catalogueRows {
+		if row.ruleBundleID != reservation.BundleID {
+			catalogueIdentityMatches = false
+			break
+		}
+	}
+	if parent.id != reservation.BundleID || parent.organisationID != organisationID ||
+		!catalogueIdentityMatches || int64(len(catalogueRows)) != int64(reservation.CatalogueCount) ||
+		actualParentPayloadBytes != reservation.ParentPayloadBytes ||
+		actualCataloguePayloadBytes != reservation.CataloguePayloadBytes ||
+		actualPayloadBytes != reservation.PayloadBytes {
+		return nil, errors.Join(fmt.Errorf("%w: retained rule source changed during reporting capture", ErrRuleRepository), ctx.Err())
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, errors.Join(ErrRuleRepository, err)
+	}
+	if actualPayloadBytes > reservation.maximumPayloadBytes {
+		return nil, &RuleReportingBoundError{Resource: "capture bytes", Limit: reservation.maximumPayloadBytes}
+	}
+
+	bundle, err := verifyRuleReportingParent(parent, organisationID, source)
+	if err != nil {
+		return nil, errors.Join(err, ctx.Err())
+	}
+	catalogue, err := verifyRuleReportingCatalogue(bundle, catalogueRows)
+	if err != nil {
+		return nil, errors.Join(err, ctx.Err())
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, errors.Join(ErrRuleRepository, err)
+	}
+	proofHash, err := ruleReportingProofHash(ctx, parent, catalogueRows)
+	if err != nil {
+		return nil, err
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, errors.Join(ErrRuleRepository, err)
+	}
+
+	return &RuleBundleReportingRecord{
+		Bundle: bundle, OrganisationID: parent.organisationID, BundleType: parent.bundleType,
+		SemanticSHA256: parent.semanticSHA256, RetainedAt: parent.retainedAt,
+		EffectiveTo: optionalRuleReportingString(parent.effectiveTo), Catalogue: catalogue,
+		ContentHash: proofHash, PayloadBytes: actualPayloadBytes,
+	}, nil
+}
+
+func (repository *Repository) reserveRuleReportingCapture(
+	ctx context.Context,
+	organisationID string,
+	source *tammyv1.SourceRef,
+	maximumPayloadBytes int64,
+) (*ruleReportingReservation, error) {
 	if repository == nil || repository.executor == nil || ctx == nil ||
 		!ids.IsCanonicalV7(organisationID) || !validRuleReportingSource(source) || maximumPayloadBytes < 0 {
 		return nil, ErrRuleRepository
@@ -140,55 +253,13 @@ func (repository *Repository) GetForReportingWithPayloadBudget(
 		return nil, errors.Join(ErrRuleRepository, err)
 	}
 
-	parent, err := repository.loadRuleReportingParent(ctx, organisationID, source.Id)
-	if err != nil {
-		return nil, err
-	}
-	catalogueRows, err := repository.loadRuleReportingCatalogue(ctx, organisationID, source.Id)
-	if err != nil {
-		return nil, err
-	}
-	if err := ctx.Err(); err != nil {
-		return nil, errors.Join(ErrRuleRepository, err)
-	}
-	actualPayloadBytes, ok := ruleReportingPayloadBytes(parent, catalogueRows)
-	if !ok {
-		return nil, errors.Join(fmt.Errorf("%w: retained rule payload size overflow", ErrRuleRepository), ctx.Err())
-	}
-	if actualPayloadBytes != payloadBytes {
-		return nil, errors.Join(fmt.Errorf("%w: retained rule source changed during reporting capture", ErrRuleRepository), ctx.Err())
-	}
-	if err := ctx.Err(); err != nil {
-		return nil, errors.Join(ErrRuleRepository, err)
-	}
-	if actualPayloadBytes > maximumPayloadBytes {
-		return nil, &RuleReportingBoundError{Resource: "capture bytes", Limit: maximumPayloadBytes}
-	}
-
-	bundle, err := verifyRuleReportingParent(parent, organisationID, source)
-	if err != nil {
-		return nil, errors.Join(err, ctx.Err())
-	}
-	catalogue, err := verifyRuleReportingCatalogue(bundle, catalogueRows)
-	if err != nil {
-		return nil, errors.Join(err, ctx.Err())
-	}
-	if err := ctx.Err(); err != nil {
-		return nil, errors.Join(ErrRuleRepository, err)
-	}
-	proofHash, err := ruleReportingProofHash(ctx, parent, catalogueRows)
-	if err != nil {
-		return nil, err
-	}
-	if err := ctx.Err(); err != nil {
-		return nil, errors.Join(ErrRuleRepository, err)
-	}
-
-	return &RuleBundleReportingRecord{
-		Bundle: bundle, OrganisationID: parent.organisationID, BundleType: parent.bundleType,
-		SemanticSHA256: parent.semanticSHA256, RetainedAt: parent.retainedAt,
-		EffectiveTo: optionalRuleReportingString(parent.effectiveTo), Catalogue: catalogue,
-		ContentHash: proofHash, PayloadBytes: actualPayloadBytes,
+	return &ruleReportingReservation{
+		RuleBundleReportingPreflight: RuleBundleReportingPreflight{
+			BundleID: source.Id, CatalogueCount: int(catalogueCount),
+			ParentPayloadBytes: parentBytes, CataloguePayloadBytes: catalogueBytes,
+			PayloadBytes: payloadBytes,
+		},
+		maximumPayloadBytes: maximumPayloadBytes,
 	}, nil
 }
 
@@ -533,27 +604,40 @@ func ruleReportingInt64Bytes(value int64) []byte {
 	return encoded[:]
 }
 
-func ruleReportingPayloadBytes(parent ruleReportingParent, catalogue []ruleReportingCatalogueRow) (int64, bool) {
-	total := int64(0)
-	if !addRuleReportingBytesInPlace(&total, 512) ||
-		!addRuleReportingCell(&total, parent.id) || !addRuleReportingCell(&total, parent.organisationID) ||
-		!addRuleReportingCell(&total, parent.bundleType) || !addRuleReportingCell(&total, parent.version) ||
-		!addRuleReportingCell(&total, parent.semanticSHA256) || !addRuleReportingBytesInPlace(&total, int64(len(parent.rulesProto))) ||
-		!addRuleReportingCell(&total, parent.effectiveFrom) ||
-		(parent.effectiveTo.Valid && !addRuleReportingCell(&total, parent.effectiveTo.String)) ||
-		!addRuleReportingCell(&total, parent.retainedAt) {
-		return 0, false
+func ruleReportingPayloadComponents(
+	parent ruleReportingParent,
+	catalogue []ruleReportingCatalogueRow,
+) (parentBytes, catalogueBytes, payloadBytes int64, ok bool) {
+	if !addRuleReportingBytesInPlace(&parentBytes, 512) ||
+		!addRuleReportingCell(&parentBytes, parent.id) || !addRuleReportingCell(&parentBytes, parent.organisationID) ||
+		!addRuleReportingCell(&parentBytes, parent.bundleType) || !addRuleReportingCell(&parentBytes, parent.version) ||
+		!addRuleReportingCell(&parentBytes, parent.semanticSHA256) ||
+		!addRuleReportingBytesInPlace(&parentBytes, int64(len(parent.rulesProto))) ||
+		!addRuleReportingCell(&parentBytes, parent.effectiveFrom) ||
+		(parent.effectiveTo.Valid && !addRuleReportingCell(&parentBytes, parent.effectiveTo.String)) ||
+		!addRuleReportingCell(&parentBytes, parent.retainedAt) {
+		return 0, 0, 0, false
 	}
 	for _, row := range catalogue {
-		if !addRuleReportingBytesInPlace(&total, 512) || !addRuleReportingCell(&total, row.id) ||
-			!addRuleReportingCell(&total, row.code) || !addRuleReportingCell(&total, row.ruleBundleID) ||
-			!addRuleReportingCell(&total, row.label) || !addRuleReportingCell(&total, strconv.FormatInt(row.rateMillionths, 10)) ||
-			!addRuleReportingCell(&total, row.treatment) || !addRuleReportingCell(&total, row.effectiveFrom) ||
-			(row.effectiveTo.Valid && !addRuleReportingCell(&total, row.effectiveTo.String)) {
-			return 0, false
+		if !addRuleReportingBytesInPlace(&catalogueBytes, 512) || !addRuleReportingCell(&catalogueBytes, row.id) ||
+			!addRuleReportingCell(&catalogueBytes, row.code) || !addRuleReportingCell(&catalogueBytes, row.ruleBundleID) ||
+			!addRuleReportingCell(&catalogueBytes, row.label) ||
+			!addRuleReportingCell(&catalogueBytes, strconv.FormatInt(row.rateMillionths, 10)) ||
+			!addRuleReportingCell(&catalogueBytes, row.treatment) || !addRuleReportingCell(&catalogueBytes, row.effectiveFrom) ||
+			(row.effectiveTo.Valid && !addRuleReportingCell(&catalogueBytes, row.effectiveTo.String)) {
+			return 0, 0, 0, false
 		}
 	}
-	return total, true
+	payloadBytes, ok = addRuleReportingBytes(parentBytes, catalogueBytes)
+	if !ok {
+		return 0, 0, 0, false
+	}
+	return parentBytes, catalogueBytes, payloadBytes, true
+}
+
+func ruleReportingPayloadBytes(parent ruleReportingParent, catalogue []ruleReportingCatalogueRow) (int64, bool) {
+	_, _, payloadBytes, ok := ruleReportingPayloadComponents(parent, catalogue)
+	return payloadBytes, ok
 }
 
 func addRuleReportingBytes(left, right int64) (int64, bool) {

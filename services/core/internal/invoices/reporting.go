@@ -439,10 +439,11 @@ func (port *ReportingPort) preflightBASReporting(
 		"invoice.id", "invoice.organisation_id", "invoice.state", "invoice.number", "invoice.invoice_proto",
 		"invoice.created_at", "invoice.updated_at",
 	)
+	invoiceNumericStorage := reportingInvalidNumericStorageRowSQL("invoice.version")
 	invoiceRows, invoiceBytes, err := port.queryBASReportingPayload(
 		ctx, "invoices", maxBASReportingInvoices, maximumPayloadBytes,
-		"SELECT count(*), total(payload_bytes) FROM ("+
-			"SELECT "+invoiceSize+" AS payload_bytes FROM invoices_v1 AS invoice "+
+		"SELECT count(*), total(payload_bytes), coalesce(sum(invalid_numeric_storage),0) FROM ("+
+			"SELECT "+invoiceSize+" AS payload_bytes, "+invoiceNumericStorage+" AS invalid_numeric_storage FROM invoices_v1 AS invoice "+
 			"WHERE invoice.organisation_id=? ORDER BY invoice.created_at,invoice.id LIMIT ?)",
 		organisationID, maxBASReportingInvoices+1,
 	)
@@ -454,9 +455,14 @@ func (port *ReportingPort) preflightBASReporting(
 		"posting.invoice_id", "posting.organisation_id", "posting.invoice_date", "posting.revenue_account_id",
 		"posting.journal_id", "posting.source_hash", "posting.created_at",
 	)
+	postingNumericStorage := reportingInvalidNumericStorageRowSQL(
+		"posting.invoice_version", "posting.gst_basis", "posting.invoice_net_minor", "posting.invoice_gst_minor",
+		"posting.invoice_total_minor", "posting.bas_sales_gross_minor", "posting.profile_version",
+		"posting.basis_audit_sequence", "posting.financial_revision",
+	)
 	postingRows, postingBytes, err := port.queryBASReportingPayload(
 		ctx, "invoice postings", 0, maximumPayloadBytes,
-		"SELECT count(*), total("+postingSize+") FROM invoice_income_postings_v1 AS posting "+
+		"SELECT count(*), total("+postingSize+"), coalesce(sum("+postingNumericStorage+"),0) FROM invoice_income_postings_v1 AS posting "+
 			"JOIN invoices_v1 AS invoice ON invoice.id=posting.invoice_id "+
 			"WHERE invoice.organisation_id=?",
 		organisationID,
@@ -466,9 +472,13 @@ func (port *ReportingPort) preflightBASReporting(
 	}
 
 	incomeLineSize := reportingPayloadSize("income_line.invoice_id")
+	incomeLineNumericStorage := reportingInvalidNumericStorageRowSQL(
+		"income_line.sequence", "income_line.gross_minor", "income_line.net_minor",
+		"income_line.gst_minor", "income_line.treatment",
+	)
 	incomeLineRows, incomeLineBytes, err := port.queryBASReportingPayload(
 		ctx, "invoice income lines", 0, maximumPayloadBytes,
-		"SELECT count(*), total("+incomeLineSize+") FROM invoice_income_lines_v1 AS income_line "+
+		"SELECT count(*), total("+incomeLineSize+"), coalesce(sum("+incomeLineNumericStorage+"),0) FROM invoice_income_lines_v1 AS income_line "+
 			"JOIN invoice_income_postings_v1 AS posting ON posting.invoice_id=income_line.invoice_id "+
 			"JOIN invoices_v1 AS invoice ON invoice.id=posting.invoice_id "+
 			"WHERE invoice.organisation_id=?",
@@ -483,10 +493,13 @@ func (port *ReportingPort) preflightBASReporting(
 		"receipt.bank_account_id", "receipt.journal_id", "receipt.reference", "receipt.payment_proto",
 		"receipt.source_hash", "receipt.created_at",
 	)
+	receiptNumericStorage := reportingInvalidNumericStorageRowSQL(
+		"receipt.amount_minor", "receipt.allocated_gst_minor", "receipt.bas_sales_gross_minor",
+	)
 	receiptRows, receiptBytes, err := port.queryBASReportingPayload(
 		ctx, "receipts", maxBASReportingReceipts, maximumPayloadBytes,
-		"SELECT count(*), total(payload_bytes) FROM ("+
-			"SELECT "+receiptSize+" AS payload_bytes FROM invoice_payment_v1 AS receipt "+
+		"SELECT count(*), total(payload_bytes), coalesce(sum(invalid_numeric_storage),0) FROM ("+
+			"SELECT "+receiptSize+" AS payload_bytes, "+receiptNumericStorage+" AS invalid_numeric_storage FROM invoice_payment_v1 AS receipt "+
 			"JOIN invoices_v1 AS invoice ON invoice.id=receipt.invoice_id "+
 			"WHERE invoice.organisation_id=? "+
 			"ORDER BY receipt.invoice_id,receipt.payment_date,receipt.created_at,receipt.id LIMIT ?)",
@@ -497,9 +510,12 @@ func (port *ReportingPort) preflightBASReporting(
 	}
 
 	allocationSize := reportingPayloadSize("allocation.payment_id")
+	allocationNumericStorage := reportingInvalidNumericStorageRowSQL(
+		"allocation.sequence", "allocation.gross_minor", "allocation.gst_minor",
+	)
 	allocationRows, allocationBytes, err := port.queryBASReportingPayload(
 		ctx, "receipt allocations", 0, maximumPayloadBytes,
-		"SELECT count(*), total("+allocationSize+") FROM invoice_payment_lines_v1 AS allocation "+
+		"SELECT count(*), total("+allocationSize+"), coalesce(sum("+allocationNumericStorage+"),0) FROM invoice_payment_lines_v1 AS allocation "+
 			"JOIN invoice_payment_v1 AS receipt ON receipt.id=allocation.payment_id "+
 			"JOIN invoices_v1 AS invoice ON invoice.id=receipt.invoice_id "+
 			"WHERE invoice.organisation_id=?",
@@ -563,7 +579,8 @@ func (port *ReportingPort) preflightBASReporting(
 	}, nil
 }
 
-// queryBASReportingPayload reads only row counts and retained SQL byte totals.
+// queryBASReportingPayload reads only row counts, retained SQL byte totals,
+// and numeric storage-class violations.
 func (port *ReportingPort) queryBASReportingPayload(
 	ctx context.Context,
 	resource string,
@@ -580,9 +597,9 @@ func (port *ReportingPort) queryBASReportingPayload(
 		rowsErr, closeErr := rows.Err(), rows.Close()
 		return 0, 0, errors.Join(ErrRepository, sql.ErrNoRows, rowsErr, closeErr)
 	}
-	var count int64
+	var count, invalidNumericRows int64
 	var payloadBytes float64
-	if err := rows.Scan(&count, &payloadBytes); err != nil {
+	if err := rows.Scan(&count, &payloadBytes, &invalidNumericRows); err != nil {
 		return 0, 0, errors.Join(ErrRepository, err, rows.Close())
 	}
 	if rows.Next() {
@@ -608,6 +625,9 @@ func (port *ReportingPort) queryBASReportingPayload(
 	}
 	if payloadBytes > float64(maximumPayloadBytes) {
 		return 0, 0, &SourceBoundError{Resource: "capture bytes", Limit: maximumPayloadBytes}
+	}
+	if invalidNumericRows != 0 {
+		return 0, 0, fmt.Errorf("%w: %s contain non-integer numeric storage", ErrRepository, resource)
 	}
 	return count, int64(payloadBytes), nil
 }
@@ -740,6 +760,22 @@ func cloneBASReportingPreflight(value BASReportingPreflight) BASReportingPreflig
 	}
 	value.JournalPayloadBytes = copied
 	return value
+}
+
+// reportingInvalidNumericStorageRowSQL emits a row-level 0/1 expression.
+// All identifiers passed here are static repository-owned SQL columns.
+func reportingInvalidNumericStorageRowSQL(columns ...string) string {
+	predicate := ""
+	for _, column := range columns {
+		if predicate != "" {
+			predicate += " OR "
+		}
+		predicate += "typeof(" + column + ") <> 'integer'"
+	}
+	if predicate == "" {
+		return "0"
+	}
+	return "CASE WHEN (" + predicate + ") THEN 1 ELSE 0 END"
 }
 
 func reportingPayloadSize(columns ...string) string {

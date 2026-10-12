@@ -25,15 +25,21 @@ const purchaseCoverageFingerprintTag = "tammy/purchases/coverage-reporting/v1"
 // their immutable history, and the complete linked journal reversal closure.
 // It does not classify, deduplicate, or decide BAS eligibility.
 type PurchaseCoverageReportingCapture struct {
-	OrganisationID string
-	Postings       []PostingReportingRecord
-	LegacySources  []*LegacyPurchaseReportingRecord
-	Documents      []PostingDocumentReportingRecord
-	Journals       []*accounting.JournalReportingRecord
-	Rows           []PurchaseReportingRetainedRow
-	Fingerprint    []byte
-	PayloadBytes   int64
-	ReceiptCount   int
+	OrganisationID      string
+	Postings            []PostingReportingRecord
+	LegacySources       []*LegacyPurchaseReportingRecord
+	Documents           []PostingDocumentReportingRecord
+	Journals            []*accounting.JournalReportingRecord
+	Rows                []PurchaseReportingRetainedRow
+	Fingerprint         []byte
+	PayloadBytes        int64
+	RootCount           int
+	ReceiptCount        int
+	JournalCount        int
+	JournalIDs          []string
+	JournalPayloadBytes map[string]int64
+	BasePayloadBytes    int64
+	TaxFactPayloadBytes int64
 }
 
 // LegacyPurchaseReportingRecord retains the source identity and its explicit
@@ -72,11 +78,101 @@ func (r *Repository) CaptureCoverageForBAS(ctx context.Context, organisationID s
 	return r.CaptureCoverageForBASWithPayloadBudget(ctx, organisationID, maximumPostingReportingPayloadSize)
 }
 
-func (r *Repository) CaptureCoverageForBASWithPayloadBudget(
+// PurchaseCoverageReportingPreflight describes the exact bounded reservation
+// used by CaptureCoverageForBASWithPayloadBudget. RootCount combines modern
+// postings, documents without a modern posting, and POSTED/REPLACED opening
+// payables. ReceiptCount combines modern payment rows and unique explicitly
+// linked POSTED manual cash-receipt journals; opening/reversal lineage does
+// not add receipts. JournalCount includes the unique complete parent closure.
+// TaxFactPayloadBytes is a component of BasePayloadBytes.
+type PurchaseCoverageReportingPreflight struct {
+	RootCount           int
+	ReceiptCount        int
+	JournalCount        int
+	JournalIDs          []string
+	JournalPayloadBytes map[string]int64
+	BasePayloadBytes    int64
+	TaxFactPayloadBytes int64
+	PayloadBytes        int64
+}
+
+type purchaseCoverageReportingReservation struct {
+	maximumPayloadBytes      int64
+	rootCount                int64
+	modernPostingCount       int64
+	modernPaymentCount       int64
+	receiptCount             int
+	receiptIDs               map[string]struct{}
+	documentIDs              []string
+	openingRootIDs           []string
+	openingRootConversions   []string
+	conversionIDs            []string
+	conversionDiscoveryBytes int64
+	priorEdges               []purchaseCoverageEdge
+	edgePayload              int64
+	operationKeys            []string
+	needsExceptionRule       bool
+	baseQueries              []postingReportingQuery
+	preflightSizes           []int64
+	preflightCounts          []int64
+	reserved                 int64
+	scalarJournalIDs         []string
+	journalHeaders           map[string]purchaseCoverageJournalHeader
+	journalIDs               []string
+	accountIDs               map[string]struct{}
+	allFactAccountQueries    []postingReportingQuery
+	factAccountSizes         []int64
+	factAccountCounts        []int64
+	factAccountReserved      int64
+	taxFactPayloadBytes      int64
+	journalPayloadByID       map[string]int64
+	journalPayloadReserved   int64
+	basePayloadBytes         int64
+	payloadBytes             int64
+	remaining                int64
+}
+
+func purchaseCoverageReportingPreflightSnapshot(reservation *purchaseCoverageReportingReservation) *PurchaseCoverageReportingPreflight {
+	if reservation == nil {
+		return nil
+	}
+	journalIDs := append([]string(nil), reservation.journalIDs...)
+	journalPayloadBytes := make(map[string]int64, len(reservation.journalPayloadByID))
+	for id, charge := range reservation.journalPayloadByID {
+		journalPayloadBytes[id] = charge
+	}
+	return &PurchaseCoverageReportingPreflight{
+		RootCount:           int(reservation.rootCount),
+		ReceiptCount:        reservation.receiptCount,
+		JournalCount:        len(journalIDs),
+		JournalIDs:          journalIDs,
+		JournalPayloadBytes: journalPayloadBytes,
+		BasePayloadBytes:    reservation.basePayloadBytes,
+		TaxFactPayloadBytes: reservation.taxFactPayloadBytes,
+		PayloadBytes:        reservation.payloadBytes,
+	}
+}
+
+func (r *Repository) PreflightCoverageForBASWithPayloadBudget(
 	ctx context.Context,
 	organisationID string,
 	maximumPayloadBytes int64,
-) (*PurchaseCoverageReportingCapture, error) {
+) (*PurchaseCoverageReportingPreflight, error) {
+	reservation, err := r.reserveCoverageForBAS(ctx, organisationID, maximumPayloadBytes)
+	if err != nil {
+		return nil, err
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, errors.Join(ErrRepository, err)
+	}
+	return purchaseCoverageReportingPreflightSnapshot(reservation), nil
+}
+
+func (r *Repository) reserveCoverageForBAS(
+	ctx context.Context,
+	organisationID string,
+	maximumPayloadBytes int64,
+) (*purchaseCoverageReportingReservation, error) {
 	if r == nil || r.executor == nil || r.now == nil || ctx == nil || !ids.IsCanonicalV7(organisationID) || maximumPayloadBytes < 0 {
 		return nil, ErrRepository
 	}
@@ -221,12 +317,27 @@ func (r *Repository) CaptureCoverageForBASWithPayloadBudget(
 	if err != nil {
 		return nil, purchaseReportingReadError(ctx, err)
 	}
+	var taxFactPayloadBytes int64
+	if len(allFactAccountQueries) != len(factAccountSizes) {
+		return nil, ErrRepository
+	}
+	for index, query := range allFactAccountQueries {
+		if query.table != "tax_facts" {
+			continue
+		}
+		var ok bool
+		taxFactPayloadBytes, ok = addPostingReportingBytes(taxFactPayloadBytes, factAccountSizes[index])
+		if !ok || taxFactPayloadBytes > maximumPayloadBytes {
+			return nil, &SourceBoundError{Resource: "capture bytes", Limit: maximumPayloadBytes}
+		}
+	}
 	journalRepository, err := accounting.NewJournalRepository(r.executor)
 	if err != nil {
 		return nil, errors.Join(ErrRepository, err, ctx.Err())
 	}
 	parentRemaining := remaining
 	var journalPayloadReserved int64
+	journalPayloadByID := make(map[string]int64, len(journalIDs))
 	for _, journalID := range journalIDs {
 		if err := ctx.Err(); err != nil {
 			return nil, errors.Join(ErrRepository, err)
@@ -250,6 +361,10 @@ func (r *Repository) CaptureCoverageForBASWithPayloadBudget(
 			return nil, &SourceBoundError{Resource: "capture bytes", Limit: maximumPayloadBytes}
 		}
 		parentRemaining -= parentBytes
+		if _, exists := journalPayloadByID[journalID]; exists {
+			return nil, ErrRepository
+		}
+		journalPayloadByID[journalID] = parentBytes
 		journalPayloadReserved, ok = addPostingReportingBytes(journalPayloadReserved, parentBytes)
 		if !ok || journalPayloadReserved > maximumPayloadBytes {
 			return nil, &SourceBoundError{Resource: "capture bytes", Limit: maximumPayloadBytes}
@@ -259,6 +374,98 @@ func (r *Repository) CaptureCoverageForBASWithPayloadBudget(
 		return nil, errors.Join(ErrRepository, err)
 	}
 
+	basePayloadBytes, ok := addPostingReportingBytes(edgePayload, reserved)
+	if !ok {
+		return nil, &SourceBoundError{Resource: "capture bytes", Limit: maximumPayloadBytes}
+	}
+	basePayloadBytes, ok = addPostingReportingBytes(basePayloadBytes, factAccountReserved)
+	if !ok || basePayloadBytes > maximumPayloadBytes || taxFactPayloadBytes > basePayloadBytes {
+		return nil, &SourceBoundError{Resource: "capture bytes", Limit: maximumPayloadBytes}
+	}
+	payloadBytes, ok := addPostingReportingBytes(basePayloadBytes, journalPayloadReserved)
+	if !ok || payloadBytes > maximumPayloadBytes {
+		return nil, &SourceBoundError{Resource: "capture bytes", Limit: maximumPayloadBytes}
+	}
+	if len(journalPayloadByID) != len(journalIDs) {
+		return nil, ErrRepository
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, errors.Join(ErrRepository, err)
+	}
+	return &purchaseCoverageReportingReservation{
+		maximumPayloadBytes:      maximumPayloadBytes,
+		rootCount:                rootCount,
+		modernPostingCount:       modernPostingCount,
+		modernPaymentCount:       modernPaymentCount,
+		receiptCount:             len(receiptIDs) + int(modernPaymentCount),
+		receiptIDs:               receiptIDs,
+		documentIDs:              documentIDs,
+		openingRootIDs:           openingRootIDs,
+		openingRootConversions:   openingRootConversions,
+		conversionIDs:            conversionIDs,
+		conversionDiscoveryBytes: conversionDiscoveryBytes,
+		priorEdges:               priorEdges,
+		edgePayload:              edgePayload,
+		operationKeys:            operationKeys,
+		needsExceptionRule:       needsExceptionRule,
+		baseQueries:              baseQueries,
+		preflightSizes:           preflightSizes,
+		preflightCounts:          preflightCounts,
+		reserved:                 reserved,
+		scalarJournalIDs:         scalarJournalIDs,
+		journalHeaders:           journalHeaders,
+		journalIDs:               journalIDs,
+		accountIDs:               accountIDs,
+		allFactAccountQueries:    allFactAccountQueries,
+		factAccountSizes:         factAccountSizes,
+		factAccountCounts:        factAccountCounts,
+		factAccountReserved:      factAccountReserved,
+		taxFactPayloadBytes:      taxFactPayloadBytes,
+		journalPayloadByID:       journalPayloadByID,
+		journalPayloadReserved:   journalPayloadReserved,
+		basePayloadBytes:         basePayloadBytes,
+		payloadBytes:             payloadBytes,
+		remaining:                remaining,
+	}, nil
+}
+
+func (r *Repository) CaptureCoverageForBASWithPayloadBudget(
+	ctx context.Context,
+	organisationID string,
+	maximumPayloadBytes int64,
+) (*PurchaseCoverageReportingCapture, error) {
+	reservation, err := r.reserveCoverageForBAS(ctx, organisationID, maximumPayloadBytes)
+	if err != nil {
+		return nil, err
+	}
+	maximumPayloadBytes = reservation.maximumPayloadBytes
+	rootCount := reservation.rootCount
+	modernPostingCount := reservation.modernPostingCount
+	modernPaymentCount := reservation.modernPaymentCount
+	receiptIDs := reservation.receiptIDs
+	documentIDs := reservation.documentIDs
+	openingRootIDs := reservation.openingRootIDs
+	openingRootConversions := reservation.openingRootConversions
+	conversionIDs := reservation.conversionIDs
+	priorEdges := reservation.priorEdges
+	edgePayload := reservation.edgePayload
+	operationKeys := reservation.operationKeys
+	needsExceptionRule := reservation.needsExceptionRule
+	baseQueries := reservation.baseQueries
+	preflightSizes := reservation.preflightSizes
+	preflightCounts := reservation.preflightCounts
+	reserved := reservation.reserved
+	scalarJournalIDs := reservation.scalarJournalIDs
+	journalHeaders := reservation.journalHeaders
+	journalIDs := reservation.journalIDs
+	accountIDs := reservation.accountIDs
+	allFactAccountQueries := reservation.allFactAccountQueries
+	factAccountSizes := reservation.factAccountSizes
+	factAccountCounts := reservation.factAccountCounts
+	factAccountReserved := reservation.factAccountReserved
+	journalPayloadReserved := reservation.journalPayloadReserved
+	journalPayloadByID := reservation.journalPayloadByID
+	remaining := reservation.remaining
 	baseRows, loadedPayload, err := purchaseCoverageLoadQueries(ctx, r.executor, baseQueries, preflightSizes, preflightCounts, maximumPayloadBytes)
 	if err != nil {
 		return nil, purchaseReportingReadError(ctx, err)
@@ -275,6 +482,10 @@ func (r *Repository) CaptureCoverageForBASWithPayloadBudget(
 		return nil, ErrRepository
 	}
 	baseRows = append(baseRows, factAccountRows...)
+	if purchaseCoverageRowsForTable(baseRows, "purchase_payments_v1") != modernPaymentCount ||
+		len(journalIDs) != len(journalPayloadByID) || len(journalIDs) != len(journalHeaders) {
+		return nil, ErrRepository
+	}
 
 	// Ensure every org document ID was represented by one complete SQL row.
 	if purchaseCoverageRowsForTable(baseRows, "documents") != int64(len(documentIDs)) {
@@ -363,7 +574,25 @@ func (r *Repository) CaptureCoverageForBASWithPayloadBudget(
 	if err != nil {
 		return nil, purchaseReportingReadError(ctx, err)
 	}
-	if journalPayload != journalPayloadReserved {
+	if journalPayload != journalPayloadReserved || len(journalRecords) != len(journalIDs) || len(journalPayloadByID) != len(journalIDs) {
+		return nil, ErrRepository
+	}
+	seenJournalIDs := make(map[string]struct{}, len(journalRecords))
+	for _, proof := range journalRecords {
+		if proof == nil || proof.Journal == nil {
+			return nil, ErrRepository
+		}
+		id := proof.Journal.Id
+		reservedBytes, ok := journalPayloadByID[id]
+		if !ok || proof.PayloadBytes != reservedBytes {
+			return nil, ErrRepository
+		}
+		if _, duplicate := seenJournalIDs[id]; duplicate {
+			return nil, ErrRepository
+		}
+		seenJournalIDs[id] = struct{}{}
+	}
+	if len(seenJournalIDs) != len(journalPayloadByID) {
 		return nil, ErrRepository
 	}
 	remaining -= journalPayload
@@ -434,17 +663,17 @@ func (r *Repository) CaptureCoverageForBASWithPayloadBudget(
 		return nil, purchaseReportingReadError(ctx, err)
 	}
 
-	payloadBytes, ok := addPostingReportingBytes(reserved, edgePayload)
+	actualBasePayloadBytes, ok := addPostingReportingBytes(edgePayload, loadedPayload)
 	if !ok {
 		return nil, &SourceBoundError{Resource: "capture bytes", Limit: maximumPayloadBytes}
 	}
-	payloadBytes, ok = addPostingReportingBytes(payloadBytes, factAccountReserved)
-	if !ok {
-		return nil, &SourceBoundError{Resource: "capture bytes", Limit: maximumPayloadBytes}
+	actualBasePayloadBytes, ok = addPostingReportingBytes(actualBasePayloadBytes, factAccountPayload)
+	if !ok || actualBasePayloadBytes != reservation.basePayloadBytes || actualBasePayloadBytes > maximumPayloadBytes {
+		return nil, ErrRepository
 	}
-	payloadBytes, ok = addPostingReportingBytes(payloadBytes, journalPayload)
-	if !ok || payloadBytes > maximumPayloadBytes {
-		return nil, &SourceBoundError{Resource: "capture bytes", Limit: maximumPayloadBytes}
+	payloadBytes, ok := addPostingReportingBytes(actualBasePayloadBytes, journalPayload)
+	if !ok || payloadBytes != reservation.payloadBytes || payloadBytes > maximumPayloadBytes {
+		return nil, ErrRepository
 	}
 	rows := baseRows
 	fingerprint, err := purchaseCoverageFingerprint(ctx, organisationID, rows, journalRecords)
@@ -454,11 +683,14 @@ func (r *Repository) CaptureCoverageForBASWithPayloadBudget(
 	if err := ctx.Err(); err != nil {
 		return nil, errors.Join(ErrRepository, err)
 	}
+	metadata := purchaseCoverageReportingPreflightSnapshot(reservation)
 	return &PurchaseCoverageReportingCapture{
 		OrganisationID: organisationID, Postings: postings, LegacySources: legacySources,
 		Documents: documentRecords, Journals: journalRecords, Rows: rows,
 		Fingerprint: fingerprint, PayloadBytes: payloadBytes,
-		ReceiptCount: len(receiptIDs) + int(modernPaymentCount),
+		RootCount: metadata.RootCount, ReceiptCount: metadata.ReceiptCount, JournalCount: metadata.JournalCount,
+		JournalIDs: metadata.JournalIDs, JournalPayloadBytes: metadata.JournalPayloadBytes,
+		BasePayloadBytes: actualBasePayloadBytes, TaxFactPayloadBytes: reservation.taxFactPayloadBytes,
 	}, nil
 }
 
