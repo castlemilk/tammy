@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"hash"
 	"math"
+	"sort"
 	"time"
 
 	"github.com/tammyapp/tammy/services/core/internal/accounting"
@@ -47,8 +48,38 @@ type ReportingPort struct {
 }
 
 type BASReportingCapture struct {
-	Candidates  []BASInvoiceCandidate
-	Fingerprint []byte
+	Candidates          []BASInvoiceCandidate
+	Fingerprint         []byte
+	CandidateCount      int
+	ReceiptCount        int
+	JournalCount        int
+	JournalIDs          []string
+	BasePayloadBytes    int64
+	JournalPayloadBytes map[string]int64
+	PayloadBytes        int64
+}
+
+// BASReportingPreflight is the exact read-only reservation for the complete
+// organisation invoice census. JournalPayloadBytes contains one charge for
+// each sorted, unique complete journal parent.
+type BASReportingPreflight struct {
+	CandidateCount      int
+	ReceiptCount        int
+	JournalCount        int
+	JournalIDs          []string
+	BasePayloadBytes    int64
+	JournalPayloadBytes map[string]int64
+	PayloadBytes        int64
+}
+
+type basReportingReservation struct {
+	BASReportingPreflight
+
+	invoiceRows, postingRows, incomeLineRows    int64
+	receiptRows, allocationRows                 int64
+	invoicePayloadBytes, postingPayloadBytes    int64
+	incomeLinePayloadBytes, receiptPayloadBytes int64
+	allocationPayloadBytes                      int64
 }
 
 type BASInvoiceCandidate struct {
@@ -139,11 +170,58 @@ func (port *ReportingPort) CaptureBAS(
 	organisationID string,
 	period *tammyv1.BasCivilDateRange,
 ) (*BASReportingCapture, error) {
+	return port.CaptureBASWithPayloadBudget(ctx, organisationID, period, int64(maxBASReportingBytes))
+}
+
+// PreflightBASWithPayloadBudget reserves the complete invoice and receipt
+// census, including unique complete journal parents, without loading any
+// invoice, payment, journal, or journal-line body.
+func (port *ReportingPort) PreflightBASWithPayloadBudget(
+	ctx context.Context,
+	organisationID string,
+	period *tammyv1.BasCivilDateRange,
+	maximumPayloadBytes int64,
+) (*BASReportingPreflight, error) {
 	if port == nil || port.executor == nil || port.journals == nil || ctx == nil ||
-		!ids.IsCanonicalV7(organisationID) {
+		!ids.IsCanonicalV7(organisationID) || maximumPayloadBytes < 0 {
 		return nil, ErrRepository
 	}
+	if err := ctx.Err(); err != nil {
+		return nil, errors.Join(ErrRepository, err)
+	}
+	if _, _, err := reportingPeriodBounds(period); err != nil {
+		return nil, err
+	}
+	reservation, err := port.preflightBASReporting(ctx, organisationID, maximumPayloadBytes)
+	if err != nil {
+		return nil, err
+	}
+	metadata := cloneBASReportingPreflight(reservation.BASReportingPreflight)
+	return &metadata, nil
+}
+
+// CaptureBASWithPayloadBudget loads the invoice census only after a single
+// caller-budget reservation covers all invoice, receipt, allocation, and
+// unique journal-parent payloads.
+func (port *ReportingPort) CaptureBASWithPayloadBudget(
+	ctx context.Context,
+	organisationID string,
+	period *tammyv1.BasCivilDateRange,
+	maximumPayloadBytes int64,
+) (*BASReportingCapture, error) {
+	if port == nil || port.executor == nil || port.journals == nil || ctx == nil ||
+		!ids.IsCanonicalV7(organisationID) || maximumPayloadBytes < 0 {
+		return nil, ErrRepository
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, errors.Join(ErrRepository, err)
+	}
 	startDate, endDate, err := reportingPeriodBounds(period)
+	if err != nil {
+		return nil, err
+	}
+	maximumPayloadBytes = normalizeBASReportingPayloadBudget(maximumPayloadBytes)
+	reservation, err := port.preflightBASReporting(ctx, organisationID, maximumPayloadBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -151,10 +229,6 @@ func (port *ReportingPort) CaptureBAS(
 		return nil, errors.Join(ErrRepository, err)
 	}
 
-	remainingBytes := int64(maxBASReportingBytes)
-	if err := port.preflightBASReporting(ctx, organisationID, &remainingBytes); err != nil {
-		return nil, err
-	}
 	candidates, err := port.loadBASReportingInvoices(ctx, organisationID)
 	if err != nil {
 		return nil, err
@@ -191,7 +265,13 @@ func (port *ReportingPort) CaptureBAS(
 	if err != nil {
 		return nil, err
 	}
+	if err := verifyBASReportingBaseReservation(
+		ctx, reservation, candidates, postings, incomeLines, receiptByID, allocations,
+	); err != nil {
+		return nil, err
+	}
 	journalCache := make(map[string]*accounting.JournalReportingRecord)
+	loadedJournalPayloadBytes := make(map[string]int64, reservation.JournalCount)
 	for _, invoice := range candidates {
 		if err := ctx.Err(); err != nil {
 			return nil, errors.Join(ErrRepository, err)
@@ -204,7 +284,10 @@ func (port *ReportingPort) CaptureBAS(
 				return nil, err
 			}
 			if posting.JournalID != nil {
-				proof, err := port.reportingJournal(ctx, organisationID, *posting.JournalID, journalCache, &remainingBytes)
+				proof, err := port.reportingJournal(
+					ctx, organisationID, *posting.JournalID, journalCache,
+					reservation.JournalPayloadBytes, loadedJournalPayloadBytes, maximumPayloadBytes,
+				)
 				if err != nil {
 					return nil, err
 				}
@@ -259,7 +342,10 @@ func (port *ReportingPort) CaptureBAS(
 					return nil, fmt.Errorf("%w: receipts over-allocate invoice %s line %d GST", ErrRepository, invoiceID, allocationIndex+1)
 				}
 			}
-			proof, err := port.reportingJournal(ctx, organisationID, receipt.JournalID, journalCache, &remainingBytes)
+			proof, err := port.reportingJournal(
+				ctx, organisationID, receipt.JournalID, journalCache,
+				reservation.JournalPayloadBytes, loadedJournalPayloadBytes, maximumPayloadBytes,
+			)
 			if err != nil {
 				return nil, err
 			}
@@ -275,6 +361,9 @@ func (port *ReportingPort) CaptureBAS(
 			return nil, fmt.Errorf("%w: allocations refer to missing receipt %s", ErrRepository, receiptID)
 		}
 	}
+	if err := verifyBASReportingParentCharges(reservation, loadedJournalPayloadBytes); err != nil {
+		return nil, err
+	}
 	ordered := make([]BASInvoiceCandidate, 0, len(candidates))
 	for _, candidate := range candidates {
 		if err := ctx.Err(); err != nil {
@@ -289,7 +378,14 @@ func (port *ReportingPort) CaptureBAS(
 	if err := ctx.Err(); err != nil {
 		return nil, errors.Join(ErrRepository, err)
 	}
-	return &BASReportingCapture{Candidates: ordered, Fingerprint: fingerprint}, nil
+	metadata := cloneBASReportingPreflight(reservation.BASReportingPreflight)
+	return &BASReportingCapture{
+		Candidates: ordered, Fingerprint: fingerprint,
+		CandidateCount: metadata.CandidateCount, ReceiptCount: metadata.ReceiptCount,
+		JournalCount: metadata.JournalCount, JournalIDs: metadata.JournalIDs,
+		BasePayloadBytes:    metadata.BasePayloadBytes,
+		JournalPayloadBytes: metadata.JournalPayloadBytes, PayloadBytes: metadata.PayloadBytes,
+	}, nil
 }
 
 func reportingPeriodBounds(period *tammyv1.BasCivilDateRange) (string, string, error) {
@@ -328,38 +424,58 @@ func invoiceIssuePeriodDisposition(issueDate, startDate, endDate string) (string
 func (port *ReportingPort) preflightBASReporting(
 	ctx context.Context,
 	organisationID string,
-	remainingBytes *int64,
-) error {
+	maximumPayloadBytes int64,
+) (*basReportingReservation, error) {
+	if port == nil || port.executor == nil || port.journals == nil || ctx == nil ||
+		!ids.IsCanonicalV7(organisationID) || maximumPayloadBytes < 0 {
+		return nil, ErrRepository
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, errors.Join(ErrRepository, err)
+	}
+	maximumPayloadBytes = normalizeBASReportingPayloadBudget(maximumPayloadBytes)
+
 	invoiceSize := reportingPayloadSize(
 		"invoice.id", "invoice.organisation_id", "invoice.state", "invoice.number", "invoice.invoice_proto",
 		"invoice.created_at", "invoice.updated_at",
 	)
-	if err := port.reserveBASReportingPayload(ctx, remainingBytes, "invoices", maxBASReportingInvoices,
-		`SELECT count(*), total(payload_bytes) FROM (
-		 SELECT `+invoiceSize+` AS payload_bytes FROM invoices_v1 AS invoice
-		 WHERE invoice.organisation_id = ? ORDER BY invoice.created_at, invoice.id LIMIT ?
-		)`, organisationID, maxBASReportingInvoices+1); err != nil {
-		return err
+	invoiceRows, invoiceBytes, err := port.queryBASReportingPayload(
+		ctx, "invoices", maxBASReportingInvoices, maximumPayloadBytes,
+		"SELECT count(*), total(payload_bytes) FROM ("+
+			"SELECT "+invoiceSize+" AS payload_bytes FROM invoices_v1 AS invoice "+
+			"WHERE invoice.organisation_id=? ORDER BY invoice.created_at,invoice.id LIMIT ?)",
+		organisationID, maxBASReportingInvoices+1,
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	postingSize := reportingPayloadSize(
 		"posting.invoice_id", "posting.organisation_id", "posting.invoice_date", "posting.revenue_account_id",
 		"posting.journal_id", "posting.source_hash", "posting.created_at",
 	)
-	if err := port.reserveBASReportingPayload(ctx, remainingBytes, "invoice postings", 0,
-		`SELECT count(*), total(`+postingSize+`) FROM invoice_income_postings_v1 AS posting
-		 JOIN invoices_v1 AS invoice ON invoice.id = posting.invoice_id
-		 WHERE invoice.organisation_id = ?`, organisationID); err != nil {
-		return err
+	postingRows, postingBytes, err := port.queryBASReportingPayload(
+		ctx, "invoice postings", 0, maximumPayloadBytes,
+		"SELECT count(*), total("+postingSize+") FROM invoice_income_postings_v1 AS posting "+
+			"JOIN invoices_v1 AS invoice ON invoice.id=posting.invoice_id "+
+			"WHERE invoice.organisation_id=?",
+		organisationID,
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	incomeLineSize := reportingPayloadSize("income_line.invoice_id")
-	if err := port.reserveBASReportingPayload(ctx, remainingBytes, "invoice income lines", 0,
-		`SELECT count(*), total(`+incomeLineSize+`) FROM invoice_income_lines_v1 AS income_line
-		 JOIN invoice_income_postings_v1 AS posting ON posting.invoice_id = income_line.invoice_id
-		 JOIN invoices_v1 AS invoice ON invoice.id = posting.invoice_id
-		 WHERE invoice.organisation_id = ?`, organisationID); err != nil {
-		return err
+	incomeLineRows, incomeLineBytes, err := port.queryBASReportingPayload(
+		ctx, "invoice income lines", 0, maximumPayloadBytes,
+		"SELECT count(*), total("+incomeLineSize+") FROM invoice_income_lines_v1 AS income_line "+
+			"JOIN invoice_income_postings_v1 AS posting ON posting.invoice_id=income_line.invoice_id "+
+			"JOIN invoices_v1 AS invoice ON invoice.id=posting.invoice_id "+
+			"WHERE invoice.organisation_id=?",
+		organisationID,
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	receiptSize := reportingPayloadSize(
@@ -367,22 +483,263 @@ func (port *ReportingPort) preflightBASReporting(
 		"receipt.bank_account_id", "receipt.journal_id", "receipt.reference", "receipt.payment_proto",
 		"receipt.source_hash", "receipt.created_at",
 	)
-	if err := port.reserveBASReportingPayload(ctx, remainingBytes, "receipts", maxBASReportingReceipts,
-		`SELECT count(*), total(payload_bytes) FROM (
-		 SELECT `+receiptSize+` AS payload_bytes FROM invoice_payment_v1 AS receipt
-		 JOIN invoices_v1 AS invoice ON invoice.id = receipt.invoice_id
-		 WHERE invoice.organisation_id = ?
-		 ORDER BY receipt.invoice_id, receipt.payment_date, receipt.created_at, receipt.id LIMIT ?
-		)`, organisationID, maxBASReportingReceipts+1); err != nil {
-		return err
+	receiptRows, receiptBytes, err := port.queryBASReportingPayload(
+		ctx, "receipts", maxBASReportingReceipts, maximumPayloadBytes,
+		"SELECT count(*), total(payload_bytes) FROM ("+
+			"SELECT "+receiptSize+" AS payload_bytes FROM invoice_payment_v1 AS receipt "+
+			"JOIN invoices_v1 AS invoice ON invoice.id=receipt.invoice_id "+
+			"WHERE invoice.organisation_id=? "+
+			"ORDER BY receipt.invoice_id,receipt.payment_date,receipt.created_at,receipt.id LIMIT ?)",
+		organisationID, maxBASReportingReceipts+1,
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	allocationSize := reportingPayloadSize("allocation.payment_id")
-	return port.reserveBASReportingPayload(ctx, remainingBytes, "receipt allocations", 0,
-		`SELECT count(*), total(`+allocationSize+`) FROM invoice_payment_lines_v1 AS allocation
-		 JOIN invoice_payment_v1 AS receipt ON receipt.id = allocation.payment_id
-		 JOIN invoices_v1 AS invoice ON invoice.id = receipt.invoice_id
-		 WHERE invoice.organisation_id = ?`, organisationID)
+	allocationRows, allocationBytes, err := port.queryBASReportingPayload(
+		ctx, "receipt allocations", 0, maximumPayloadBytes,
+		"SELECT count(*), total("+allocationSize+") FROM invoice_payment_lines_v1 AS allocation "+
+			"JOIN invoice_payment_v1 AS receipt ON receipt.id=allocation.payment_id "+
+			"JOIN invoices_v1 AS invoice ON invoice.id=receipt.invoice_id "+
+			"WHERE invoice.organisation_id=?",
+		organisationID,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	basePayloadBytes := int64(0)
+	for _, charge := range []int64{
+		invoiceBytes, postingBytes, incomeLineBytes, receiptBytes, allocationBytes,
+	} {
+		var ok bool
+		if basePayloadBytes, ok = checkedBASAdd(basePayloadBytes, charge); !ok {
+			return nil, fmt.Errorf("%w: invoice reporting base payload overflow", ErrRepository)
+		}
+		if basePayloadBytes > maximumPayloadBytes {
+			return nil, &SourceBoundError{Resource: "capture bytes", Limit: maximumPayloadBytes}
+		}
+	}
+
+	journalIDs, err := port.preflightBASReportingJournalIDs(ctx, organisationID)
+	if err != nil {
+		return nil, err
+	}
+	remainingBytes := maximumPayloadBytes - basePayloadBytes
+	journalPayloadBytes := make(map[string]int64, len(journalIDs))
+	for _, journalID := range journalIDs {
+		if err := ctx.Err(); err != nil {
+			return nil, errors.Join(ErrRepository, err)
+		}
+		payloadBytes, err := port.journals.PreflightForReportingWithPayloadBudget(
+			ctx, organisationID, journalID, remainingBytes,
+		)
+		if err != nil {
+			return nil, invoiceReportingAccountingReadError(err, maximumPayloadBytes)
+		}
+		if payloadBytes <= 0 {
+			return nil, fmt.Errorf("%w: journal %s has no retained reporting payload", ErrRepository, journalID)
+		}
+		if payloadBytes > remainingBytes {
+			return nil, &SourceBoundError{Resource: "capture bytes", Limit: maximumPayloadBytes}
+		}
+		remainingBytes -= payloadBytes
+		journalPayloadBytes[journalID] = payloadBytes
+	}
+
+	return &basReportingReservation{
+		BASReportingPreflight: BASReportingPreflight{
+			CandidateCount: int(invoiceRows), ReceiptCount: int(receiptRows),
+			JournalCount: len(journalIDs), JournalIDs: journalIDs,
+			BasePayloadBytes: basePayloadBytes, JournalPayloadBytes: journalPayloadBytes,
+			PayloadBytes: maximumPayloadBytes - remainingBytes,
+		},
+		invoiceRows: invoiceRows, postingRows: postingRows, incomeLineRows: incomeLineRows,
+		receiptRows: receiptRows, allocationRows: allocationRows,
+		invoicePayloadBytes: invoiceBytes, postingPayloadBytes: postingBytes,
+		incomeLinePayloadBytes: incomeLineBytes, receiptPayloadBytes: receiptBytes,
+		allocationPayloadBytes: allocationBytes,
+	}, nil
+}
+
+// queryBASReportingPayload reads only row counts and retained SQL byte totals.
+func (port *ReportingPort) queryBASReportingPayload(
+	ctx context.Context,
+	resource string,
+	rowLimit int64,
+	maximumPayloadBytes int64,
+	query string,
+	arguments ...any,
+) (int64, int64, error) {
+	rows, err := port.executor.QueryContext(ctx, query, arguments...)
+	if err != nil {
+		return 0, 0, errors.Join(ErrRepository, fmt.Errorf("preflight %s: %w", resource, err), ctx.Err())
+	}
+	if !rows.Next() {
+		rowsErr, closeErr := rows.Err(), rows.Close()
+		return 0, 0, errors.Join(ErrRepository, sql.ErrNoRows, rowsErr, closeErr)
+	}
+	var count int64
+	var payloadBytes float64
+	if err := rows.Scan(&count, &payloadBytes); err != nil {
+		return 0, 0, errors.Join(ErrRepository, err, rows.Close())
+	}
+	if rows.Next() {
+		rowsErr, closeErr := rows.Err(), rows.Close()
+		return 0, 0, errors.Join(ErrRepository, errors.New("preflight returned multiple aggregates"), rowsErr, closeErr)
+	}
+	rowsErr, closeErr := rows.Err(), rows.Close()
+	if rowsErr != nil || closeErr != nil {
+		return 0, 0, errors.Join(ErrRepository, rowsErr, closeErr)
+	}
+	if err := ctx.Err(); err != nil {
+		return 0, 0, errors.Join(ErrRepository, err)
+	}
+	if count < 0 {
+		return 0, 0, fmt.Errorf("%w: negative preflight row count for %s", ErrRepository, resource)
+	}
+	if rowLimit > 0 && count > rowLimit {
+		return 0, 0, &SourceBoundError{Resource: resource, Limit: rowLimit}
+	}
+	if payloadBytes < 0 || math.IsNaN(payloadBytes) || math.IsInf(payloadBytes, 0) ||
+		math.Trunc(payloadBytes) != payloadBytes {
+		return 0, 0, fmt.Errorf("%w: invalid preflight payload size for %s", ErrRepository, resource)
+	}
+	if payloadBytes > float64(maximumPayloadBytes) {
+		return 0, 0, &SourceBoundError{Resource: "capture bytes", Limit: maximumPayloadBytes}
+	}
+	return count, int64(payloadBytes), nil
+}
+
+func normalizeBASReportingPayloadBudget(maximumPayloadBytes int64) int64 {
+	if maximumPayloadBytes > int64(maxBASReportingBytes) {
+		return int64(maxBASReportingBytes)
+	}
+	return maximumPayloadBytes
+}
+
+// preflightBASReportingJournalIDs reads bounded parent identities only. Full
+// invoice, receipt, journal, and line bodies remain untouched until every
+// unique parent has passed its owner and size preflight.
+func (port *ReportingPort) preflightBASReportingJournalIDs(
+	ctx context.Context,
+	organisationID string,
+) ([]string, error) {
+	unique := make(map[string]struct{})
+	readPostings := func() error {
+		rows, err := port.executor.QueryContext(ctx,
+			"SELECT posting.invoice_id,posting.organisation_id,posting.journal_id "+
+				"FROM invoice_income_postings_v1 AS posting "+
+				"JOIN invoices_v1 AS invoice ON invoice.id=posting.invoice_id "+
+				"WHERE invoice.organisation_id=? AND posting.journal_id IS NOT NULL "+
+				"ORDER BY posting.journal_id,posting.invoice_id LIMIT ?",
+			organisationID, maxBASReportingInvoices+1)
+		if err != nil {
+			return errors.Join(ErrRepository, fmt.Errorf("preflight invoice journal identities: %w", err), ctx.Err())
+		}
+		var count int64
+		for rows.Next() {
+			if err := ctx.Err(); err != nil {
+				return errors.Join(ErrRepository, err, rows.Close())
+			}
+			var invoiceID, ownerID, journalID string
+			if err := rows.Scan(&invoiceID, &ownerID, &journalID); err != nil {
+				return errors.Join(ErrRepository, err, rows.Close())
+			}
+			count++
+			if count > maxBASReportingInvoices {
+				return errors.Join(&SourceBoundError{Resource: "invoice journals", Limit: maxBASReportingInvoices}, rows.Close())
+			}
+			if !ids.IsCanonicalV7(invoiceID) || ownerID != organisationID || journalID == "" {
+				return errors.Join(fmt.Errorf("%w: invoice journal identity has an invalid owner or ID", ErrRepository), rows.Close())
+			}
+			unique[journalID] = struct{}{}
+		}
+		rowsErr, closeErr := rows.Err(), rows.Close()
+		if rowsErr != nil || closeErr != nil {
+			return errors.Join(ErrRepository, rowsErr, closeErr)
+		}
+		return nil
+	}
+	if err := readPostings(); err != nil {
+		return nil, err
+	}
+
+	readReceipts := func() error {
+		rows, err := port.executor.QueryContext(ctx,
+			"SELECT receipt.id,receipt.organisation_id,receipt.invoice_id,receipt.journal_id "+
+				"FROM invoice_payment_v1 AS receipt "+
+				"JOIN invoices_v1 AS invoice ON invoice.id=receipt.invoice_id "+
+				"WHERE invoice.organisation_id=? "+
+				"ORDER BY receipt.journal_id,receipt.id LIMIT ?",
+			organisationID, maxBASReportingReceipts+1)
+		if err != nil {
+			return errors.Join(ErrRepository, fmt.Errorf("preflight receipt journal identities: %w", err), ctx.Err())
+		}
+		var count int64
+		for rows.Next() {
+			if err := ctx.Err(); err != nil {
+				return errors.Join(ErrRepository, err, rows.Close())
+			}
+			var receiptID, ownerID, invoiceID, journalID string
+			if err := rows.Scan(&receiptID, &ownerID, &invoiceID, &journalID); err != nil {
+				return errors.Join(ErrRepository, err, rows.Close())
+			}
+			count++
+			if count > maxBASReportingReceipts {
+				return errors.Join(&SourceBoundError{Resource: "receipt journals", Limit: maxBASReportingReceipts}, rows.Close())
+			}
+			if !ids.IsCanonicalV7(receiptID) || ownerID != organisationID ||
+				!ids.IsCanonicalV7(invoiceID) || journalID == "" {
+				return errors.Join(fmt.Errorf("%w: receipt journal identity has an invalid owner or ID", ErrRepository), rows.Close())
+			}
+			unique[journalID] = struct{}{}
+		}
+		rowsErr, closeErr := rows.Err(), rows.Close()
+		if rowsErr != nil || closeErr != nil {
+			return errors.Join(ErrRepository, rowsErr, closeErr)
+		}
+		return nil
+	}
+	if err := readReceipts(); err != nil {
+		return nil, err
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, errors.Join(ErrRepository, err)
+	}
+
+	journalIDs := make([]string, 0, len(unique))
+	for journalID := range unique {
+		journalIDs = append(journalIDs, journalID)
+	}
+	sort.Strings(journalIDs)
+	return journalIDs, nil
+}
+
+func invoiceReportingAccountingReadError(err error, maximumPayloadBytes int64) error {
+	var bound *accounting.TaxFactReportingBoundError
+	if errors.As(err, &bound) {
+		limit := int64(bound.Limit)
+		if bound.Resource == "capture bytes" {
+			limit = maximumPayloadBytes
+		}
+		return errors.Join(&SourceBoundError{Resource: bound.Resource, Limit: limit}, err)
+	}
+	if errors.Is(err, accounting.ErrTaxFactReportingBound) {
+		return errors.Join(ErrSourceBound, err)
+	}
+	return errors.Join(ErrRepository, err)
+}
+
+func cloneBASReportingPreflight(value BASReportingPreflight) BASReportingPreflight {
+	value.JournalIDs = append([]string(nil), value.JournalIDs...)
+	copied := make(map[string]int64, len(value.JournalPayloadBytes))
+	for journalID, payloadBytes := range value.JournalPayloadBytes {
+		copied[journalID] = payloadBytes
+	}
+	value.JournalPayloadBytes = copied
+	return value
 }
 
 func reportingPayloadSize(columns ...string) string {
@@ -404,49 +761,173 @@ func joinSQLParts(parts []string) string {
 	return result
 }
 
-func (port *ReportingPort) reserveBASReportingPayload(
+func addBASReportingRowPayload(total *int64, fieldLengths ...int) bool {
+	if total == nil || *total < 0 {
+		return false
+	}
+	rowBytes := int64(512)
+	for _, length := range fieldLengths {
+		if length < 0 || int64(length) > math.MaxInt64-rowBytes {
+			return false
+		}
+		rowBytes += int64(length)
+	}
+	sum, ok := checkedBASAdd(*total, rowBytes)
+	if !ok {
+		return false
+	}
+	*total = sum
+	return true
+}
+
+func verifyBASReportingBaseReservation(
 	ctx context.Context,
-	remainingBytes *int64,
-	resource string,
-	rowLimit int64,
-	query string,
-	args ...any,
+	reservation *basReportingReservation,
+	candidates []BASInvoiceCandidate,
+	postings map[string]*BASInvoicePosting,
+	incomeLines map[string][]BASInvoiceIncomeLine,
+	receipts map[string]*BASInvoiceReceipt,
+	allocations map[string][]BASInvoicePaymentLine,
 ) error {
-	rows, err := port.executor.QueryContext(ctx, query, args...)
-	if err != nil {
-		return errors.Join(ErrRepository, fmt.Errorf("preflight %s: %w", resource, err), ctx.Err())
+	if reservation == nil {
+		return ErrRepository
 	}
-	if !rows.Next() {
-		rowsErr, closeErr := rows.Err(), rows.Close()
-		return errors.Join(ErrRepository, sql.ErrNoRows, rowsErr, closeErr)
+	var invoiceBytes, postingBytes, incomeLineBytes, receiptBytes, allocationBytes int64
+	for _, candidate := range candidates {
+		if err := ctx.Err(); err != nil {
+			return errors.Join(ErrRepository, err)
+		}
+		if !addBASReportingRowPayload(&invoiceBytes,
+			len(candidate.ID), len(candidate.OrganisationID), len(candidate.State), len(candidate.Number),
+			len(candidate.InvoiceProto), len(candidate.CreatedAt), len(candidate.UpdatedAt)) {
+			return fmt.Errorf("%w: invoice retained-byte charge overflow", ErrRepository)
+		}
 	}
-	var count int64
-	var payloadBytes float64
-	if err := rows.Scan(&count, &payloadBytes); err != nil {
-		return errors.Join(ErrRepository, err, rows.Close())
+	for _, posting := range postings {
+		if err := ctx.Err(); err != nil {
+			return errors.Join(ErrRepository, err)
+		}
+		journalIDBytes := 0
+		if posting.JournalID != nil {
+			journalIDBytes = len(*posting.JournalID)
+		}
+		if !addBASReportingRowPayload(&postingBytes,
+			len(posting.InvoiceID), len(posting.OrganisationID), len(posting.InvoiceDate),
+			len(posting.RevenueAccountID), journalIDBytes, len(posting.SourceHash), len(posting.CreatedAt)) {
+			return fmt.Errorf("%w: invoice posting retained-byte charge overflow", ErrRepository)
+		}
 	}
-	if rows.Next() {
-		rowsErr, closeErr := rows.Err(), rows.Close()
-		return errors.Join(ErrRepository, errors.New("preflight returned multiple aggregates"), rowsErr, closeErr)
+	var actualIncomeLineRows int64
+	for _, lines := range incomeLines {
+		for _, line := range lines {
+			if err := ctx.Err(); err != nil {
+				return errors.Join(ErrRepository, err)
+			}
+			actualIncomeLineRows++
+			if !addBASReportingRowPayload(&incomeLineBytes, len(line.InvoiceID)) {
+				return fmt.Errorf("%w: invoice income-line retained-byte charge overflow", ErrRepository)
+			}
+		}
 	}
-	rowsErr, closeErr := rows.Err(), rows.Close()
-	if rowsErr != nil || closeErr != nil {
-		return errors.Join(ErrRepository, rowsErr, closeErr)
+	for _, receipt := range receipts {
+		if err := ctx.Err(); err != nil {
+			return errors.Join(ErrRepository, err)
+		}
+		if receipt == nil || !addBASReportingRowPayload(&receiptBytes,
+			len(receipt.ID), len(receipt.OrganisationID), len(receipt.InvoiceID), len(receipt.PaymentDate),
+			len(receipt.BankAccountID), len(receipt.JournalID), len(receipt.Reference),
+			len(receipt.PaymentProto), len(receipt.SourceHash), len(receipt.CreatedAt)) {
+			return fmt.Errorf("%w: invoice receipt retained-byte charge overflow", ErrRepository)
+		}
 	}
-	if err := ctx.Err(); err != nil {
-		return errors.Join(ErrRepository, err)
+	var actualAllocationRows int64
+	for _, lines := range allocations {
+		for _, allocation := range lines {
+			if err := ctx.Err(); err != nil {
+				return errors.Join(ErrRepository, err)
+			}
+			actualAllocationRows++
+			if !addBASReportingRowPayload(&allocationBytes, len(allocation.PaymentID)) {
+				return fmt.Errorf("%w: invoice allocation retained-byte charge overflow", ErrRepository)
+			}
+		}
 	}
-	if rowLimit > 0 && count > rowLimit {
-		return &SourceBoundError{Resource: resource, Limit: rowLimit}
+
+	if int64(len(candidates)) != reservation.invoiceRows ||
+		int64(len(postings)) != reservation.postingRows ||
+		actualIncomeLineRows != reservation.incomeLineRows ||
+		int64(len(receipts)) != reservation.receiptRows ||
+		actualAllocationRows != reservation.allocationRows ||
+		invoiceBytes != reservation.invoicePayloadBytes ||
+		postingBytes != reservation.postingPayloadBytes ||
+		incomeLineBytes != reservation.incomeLinePayloadBytes ||
+		receiptBytes != reservation.receiptPayloadBytes ||
+		allocationBytes != reservation.allocationPayloadBytes {
+		return fmt.Errorf("%w: invoice reporting row counts or retained-byte charges changed after preflight", ErrRepository)
 	}
-	if payloadBytes < 0 || math.IsNaN(payloadBytes) || math.IsInf(payloadBytes, 0) || math.Trunc(payloadBytes) != payloadBytes {
-		return fmt.Errorf("%w: invalid preflight payload size for %s", ErrRepository, resource)
+
+	actualBaseBytes := int64(0)
+	for _, charge := range []int64{invoiceBytes, postingBytes, incomeLineBytes, receiptBytes, allocationBytes} {
+		var ok bool
+		if actualBaseBytes, ok = checkedBASAdd(actualBaseBytes, charge); !ok {
+			return fmt.Errorf("%w: loaded invoice reporting payload overflow", ErrRepository)
+		}
 	}
-	if payloadBytes > float64(*remainingBytes) {
-		return &SourceBoundError{Resource: "capture bytes", Limit: maxBASReportingBytes}
+	if actualBaseBytes != reservation.BasePayloadBytes ||
+		int64(len(candidates)) != int64(reservation.CandidateCount) ||
+		int64(len(receipts)) != int64(reservation.ReceiptCount) {
+		return fmt.Errorf("%w: loaded invoice reporting base does not match its reservation", ErrRepository)
 	}
-	*remainingBytes -= int64(payloadBytes)
+
+	actualJournalIDs := make(map[string]struct{})
+	for _, posting := range postings {
+		if posting.JournalID != nil {
+			actualJournalIDs[*posting.JournalID] = struct{}{}
+		}
+	}
+	for _, receipt := range receipts {
+		actualJournalIDs[receipt.JournalID] = struct{}{}
+	}
+	actualSortedJournalIDs := make([]string, 0, len(actualJournalIDs))
+	for journalID := range actualJournalIDs {
+		actualSortedJournalIDs = append(actualSortedJournalIDs, journalID)
+	}
+	sort.Strings(actualSortedJournalIDs)
+	if !equalBASReportingJournalIDs(actualSortedJournalIDs, reservation.JournalIDs) ||
+		len(reservation.JournalPayloadBytes) != reservation.JournalCount {
+		return fmt.Errorf("%w: loaded invoice journal identities changed after preflight", ErrRepository)
+	}
 	return nil
+}
+
+func verifyBASReportingParentCharges(
+	reservation *basReportingReservation,
+	loadedJournalPayloadBytes map[string]int64,
+) error {
+	if reservation == nil || len(loadedJournalPayloadBytes) != reservation.JournalCount ||
+		len(reservation.JournalPayloadBytes) != reservation.JournalCount {
+		return fmt.Errorf("%w: loaded invoice journal count changed after preflight", ErrRepository)
+	}
+	for _, journalID := range reservation.JournalIDs {
+		expected, ok := reservation.JournalPayloadBytes[journalID]
+		actual, loaded := loadedJournalPayloadBytes[journalID]
+		if !ok || !loaded || expected <= 0 || actual != expected {
+			return fmt.Errorf("%w: loaded journal %s retained-byte charge changed after preflight", ErrRepository, journalID)
+		}
+	}
+	return nil
+}
+
+func equalBASReportingJournalIDs(left, right []string) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for index := range left {
+		if left[index] != right[index] {
+			return false
+		}
+	}
+	return true
 }
 
 func (port *ReportingPort) loadBASReportingInvoices(
@@ -844,33 +1325,36 @@ func (port *ReportingPort) reportingJournal(
 	organisationID string,
 	journalID string,
 	cache map[string]*accounting.JournalReportingRecord,
-	remainingBytes *int64,
+	reservedJournalPayloadBytes map[string]int64,
+	loadedJournalPayloadBytes map[string]int64,
+	maximumPayloadBytes int64,
 ) (*accounting.JournalReportingRecord, error) {
+	reservedPayloadBytes, reserved := reservedJournalPayloadBytes[journalID]
+	if !reserved || reservedPayloadBytes <= 0 {
+		return nil, fmt.Errorf("%w: journal %s was not reserved before hydration", ErrRepository, journalID)
+	}
 	if proof := cache[journalID]; proof != nil {
+		if loadedJournalPayloadBytes[journalID] != reservedPayloadBytes {
+			return nil, fmt.Errorf("%w: cached journal %s differs from its reservation", ErrRepository, journalID)
+		}
 		return proof, nil
 	}
-	proof, err := port.journals.GetForReportingWithPayloadBudget(ctx, organisationID, journalID, *remainingBytes)
+	proof, err := port.journals.GetForReportingWithPayloadBudget(
+		ctx, organisationID, journalID, reservedPayloadBytes,
+	)
 	if err != nil {
-		if errors.Is(err, accounting.ErrTaxFactReportingBound) {
-			var bound *accounting.TaxFactReportingBoundError
-			if errors.As(err, &bound) {
-				return nil, errors.Join(&SourceBoundError{Resource: bound.Resource, Limit: int64(bound.Limit)}, err)
-			}
-			return nil, errors.Join(ErrSourceBound, err)
-		}
-		return nil, errors.Join(ErrRepository, err)
+		return nil, invoiceReportingAccountingReadError(err, maximumPayloadBytes)
 	}
-	if proof == nil || proof.Journal == nil || len(proof.ContentHash) != sha256.Size || proof.PayloadBytes < 0 {
+	if proof == nil || proof.Journal == nil || len(proof.ContentHash) != sha256.Size || proof.PayloadBytes <= 0 {
 		return nil, fmt.Errorf("%w: accounting journal %s has incomplete reporting proof", ErrRepository, journalID)
 	}
-	if proof.PayloadBytes > *remainingBytes {
-		return nil, &SourceBoundError{Resource: "capture bytes", Limit: maxBASReportingBytes}
+	if proof.PayloadBytes != reservedPayloadBytes {
+		return nil, fmt.Errorf("%w: accounting journal %s retained-byte charge changed after preflight", ErrRepository, journalID)
 	}
-	*remainingBytes -= proof.PayloadBytes
+	loadedJournalPayloadBytes[journalID] = proof.PayloadBytes
 	cache[journalID] = proof
 	return proof, nil
 }
-
 func validateBASInvoiceJournal(candidate BASInvoiceCandidate, posting *BASInvoicePosting) error {
 	if posting == nil || posting.JournalID == nil || posting.Journal == nil {
 		return fmt.Errorf("%w: invoice %s posting has no full journal proof", ErrRepository, candidate.ID)

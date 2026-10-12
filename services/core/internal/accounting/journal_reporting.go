@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"errors"
+	"fmt"
 
 	tammyv1 "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1"
 	"github.com/tammyapp/tammy/services/core/internal/platform/ids"
@@ -60,17 +61,14 @@ func (repository *JournalRepository) PreflightForReportingWithPayloadBudget(
 		maximumPayloadBytes = maxTaxFactReportingCaptureBytes
 	}
 	remainingBytes := maximumPayloadBytes
-	if err := repository.preflightTaxFactReportingJournal(ctx, journalID, organisationID, &remainingBytes); err != nil {
-		var bound *TaxFactReportingBoundError
-		if errors.As(err, &bound) && bound.Resource == "capture bytes" {
-			err = &TaxFactReportingBoundError{Resource: bound.Resource, Limit: int(maximumPayloadBytes)}
-		}
+	payloadBytes, _, err := repository.preflightTaxFactReportingJournal(ctx, journalID, organisationID, &remainingBytes)
+	if err != nil {
+		err = withTaxFactReportingBudgetLimit(err, maximumPayloadBytes)
 		return 0, errors.Join(ErrJournalRepository, err, ctx.Err())
 	}
 	if err := ctx.Err(); err != nil {
 		return 0, errors.Join(ErrJournalRepository, err)
 	}
-	payloadBytes := maximumPayloadBytes - remainingBytes
 	// An owned parent always has a positive header-row charge. Both private
 	// size queries are organisation-scoped, so zero means no owned parent.
 	if payloadBytes <= 0 {
@@ -97,8 +95,10 @@ func (repository *JournalRepository) GetForReportingWithPayloadBudget(
 		maximumPayloadBytes = maxTaxFactReportingCaptureBytes
 	}
 	remainingBytes := maximumPayloadBytes
-	if err := repository.preflightTaxFactReportingJournal(ctx, journalID, organisationID, &remainingBytes); err != nil {
-		return nil, err
+	reservedPayloadBytes, reservedLineCount, err := repository.preflightTaxFactReportingJournal(
+		ctx, journalID, organisationID, &remainingBytes)
+	if err != nil {
+		return nil, withTaxFactReportingBudgetLimit(err, maximumPayloadBytes)
 	}
 	snapshot, err := repository.loadTaxFactReportingJournal(ctx, journalID, organisationID)
 	if err != nil {
@@ -106,6 +106,10 @@ func (repository *JournalRepository) GetForReportingWithPayloadBudget(
 	}
 	if err := ctx.Err(); err != nil {
 		return nil, errors.Join(ErrJournalRepository, err)
+	}
+	if snapshot.payloadBytes != reservedPayloadBytes || snapshot.lineCount != reservedLineCount {
+		return nil, errors.Join(ErrJournalRepository,
+			fmt.Errorf("journal %s rows changed between payload preflight and reporting capture", journalID))
 	}
 	digest := sha256.New()
 	hashTaxFactReportingFrame(digest, []byte("tammy/accounting/journal-reporting/v1"))
@@ -120,6 +124,6 @@ func (repository *JournalRepository) GetForReportingWithPayloadBudget(
 		Journal: snapshot.journal, SourceType: snapshot.sourceType, SourceKind: snapshot.sourceKind,
 		SourceID: snapshot.sourceID, SourceRevision: snapshot.sourceRev,
 		CreatedAt: snapshot.createdAt, State: snapshot.state, ContentHash: digest.Sum(nil),
-		PayloadBytes: maximumPayloadBytes - remainingBytes,
+		PayloadBytes: snapshot.payloadBytes,
 	}, nil
 }

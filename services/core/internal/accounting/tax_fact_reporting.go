@@ -45,11 +45,30 @@ func (err *TaxFactReportingBoundError) Error() string {
 
 func (err *TaxFactReportingBoundError) Unwrap() error { return ErrTaxFactReportingBound }
 
+// TaxFactReportingPreflight is the bounded retained-payload reservation for
+// one organisation's tax facts and each distinct complete parent journal.
+// PayloadBytes counts raw TEXT/BLOB bytes plus the fixed per-row allowance; it
+// is not protobuf size or a Go heap estimate.
+type TaxFactReportingPreflight struct {
+	BasePayloadBytes    int64
+	PayloadBytes        int64
+	FactCount           int
+	JournalCount        int
+	JournalIDs          []string
+	JournalPayloadBytes map[string]int64
+}
+
 // TaxFactReportingCapture is one immutable-in-transaction view of the
 // organisation's retained tax facts and their complete journal provenance.
 type TaxFactReportingCapture struct {
-	Facts       []TaxFactReportingRecord
-	Fingerprint []byte
+	Facts               []TaxFactReportingRecord
+	Fingerprint         []byte
+	BasePayloadBytes    int64
+	PayloadBytes        int64
+	FactCount           int
+	JournalCount        int
+	JournalIDs          []string
+	JournalPayloadBytes map[string]int64
 }
 
 // TaxFactReportingRecord preserves the SQL fact values and their source
@@ -96,6 +115,8 @@ type taxFactReportingJournalSnapshot struct {
 	journal      *tammyv1.Journal
 	journalProto []byte
 	raw          []byte
+	payloadBytes int64
+	lineCount    int
 	organisation string
 	sourceType   string
 	sourceKind   int64
@@ -123,6 +144,11 @@ type taxFactReportingRawLine struct {
 	ruleHash     []byte
 }
 
+type taxFactReportingReservation struct {
+	TaxFactReportingPreflight
+	journalLineCounts map[string]int
+}
+
 // CaptureTaxFactsForReporting returns every retained tax fact for one
 // organisation. It reads only through the caller-owned executor and never
 // commits, rolls back, or filters by journal state, source, date, treatment,
@@ -131,17 +157,33 @@ func (repository *JournalRepository) CaptureTaxFactsForReporting(
 	ctx context.Context,
 	organisationID string,
 ) (*TaxFactReportingCapture, error) {
-	if repository == nil || repository.executor == nil || ctx == nil || !ids.IsCanonicalV7(organisationID) {
-		return nil, ErrJournalRepository
-	}
-	if err := ctx.Err(); err != nil {
-		return nil, errors.Join(ErrJournalRepository, err)
-	}
+	return repository.CaptureTaxFactsForReportingWithPayloadBudget(
+		ctx, organisationID, maxTaxFactReportingCaptureBytes)
+}
 
-	// Size retained cells in SQL before scanning them into Go. The shared
-	// budget counts each fact and each distinct parent with all its lines.
-	remainingBytes := int64(maxTaxFactReportingCaptureBytes)
-	if err := repository.preflightTaxFactReportingCandidates(ctx, organisationID, &remainingBytes); err != nil {
+// PreflightTaxFactsForReportingWithPayloadBudget reserves the retained bytes
+// for every fact and each distinct complete parent before a caller hydrates
+// any fact or journal body. Oversized caller limits are clamped to the normal
+// eight MiB accounting ceiling.
+func (repository *JournalRepository) PreflightTaxFactsForReportingWithPayloadBudget(
+	ctx context.Context, organisationID string, maximumPayloadBytes int64,
+) (*TaxFactReportingPreflight, error) {
+	reservation, err := repository.preflightTaxFactReportingCapture(ctx, organisationID, maximumPayloadBytes)
+	if err != nil {
+		return nil, err
+	}
+	return &reservation.TaxFactReportingPreflight, nil
+}
+
+// CaptureTaxFactsForReportingWithPayloadBudget returns the same complete
+// provenance as CaptureTaxFactsForReporting while applying a caller's shared
+// retained-payload budget. The complete reservation is made before the first
+// fact or journal body is loaded.
+func (repository *JournalRepository) CaptureTaxFactsForReportingWithPayloadBudget(
+	ctx context.Context, organisationID string, maximumPayloadBytes int64,
+) (*TaxFactReportingCapture, error) {
+	reservation, err := repository.preflightTaxFactReportingCapture(ctx, organisationID, maximumPayloadBytes)
+	if err != nil {
 		return nil, err
 	}
 	candidates, err := repository.loadTaxFactReportingCandidates(ctx, organisationID)
@@ -153,6 +195,13 @@ func (repository *JournalRepository) CaptureTaxFactsForReporting(
 	}
 	if len(candidates) > maxTaxFactReportingFacts {
 		return nil, &TaxFactReportingBoundError{Resource: "tax facts", Limit: maxTaxFactReportingFacts}
+	}
+	var loadedFactPayloadBytes int64
+	for _, candidate := range candidates {
+		loadedFactPayloadBytes += taxFactReportingCandidatePayloadBytes(candidate)
+	}
+	if len(candidates) != reservation.FactCount || loadedFactPayloadBytes != reservation.BasePayloadBytes {
+		return nil, fmt.Errorf("%w: tax fact rows changed between payload preflight and capture", ErrJournalRepository)
 	}
 
 	journalCache := make(map[string]*taxFactReportingJournalSnapshot)
@@ -170,12 +219,13 @@ func (repository *JournalRepository) CaptureTaxFactsForReporting(
 
 		snapshot := journalCache[candidate.journalID]
 		if snapshot == nil {
-			if err := repository.preflightTaxFactReportingJournal(ctx, candidate.journalID, organisationID, &remainingBytes); err != nil {
-				return nil, err
-			}
 			snapshot, err = repository.loadTaxFactReportingJournal(ctx, candidate.journalID, organisationID)
 			if err != nil {
 				return nil, err
+			}
+			if expectedBytes, ok := reservation.JournalPayloadBytes[candidate.journalID]; !ok ||
+				snapshot.payloadBytes != expectedBytes || snapshot.lineCount != reservation.journalLineCounts[candidate.journalID] {
+				return nil, fmt.Errorf("%w: journal %s rows changed between payload preflight and capture", ErrJournalRepository, candidate.journalID)
 			}
 			journalCache[candidate.journalID] = snapshot
 		}
@@ -207,54 +257,239 @@ func (repository *JournalRepository) CaptureTaxFactsForReporting(
 	if err := ctx.Err(); err != nil {
 		return nil, errors.Join(ErrJournalRepository, err)
 	}
+	if len(journalCache) != reservation.JournalCount {
+		return nil, fmt.Errorf("%w: journal parents changed between payload preflight and capture", ErrJournalRepository)
+	}
 
 	fingerprint, err := taxFactReportingFingerprint(ctx, organisationID, records, journalCache)
 	if err != nil {
 		return nil, errors.Join(ErrJournalRepository, err)
 	}
-	return &TaxFactReportingCapture{Facts: records, Fingerprint: fingerprint}, nil
+	return &TaxFactReportingCapture{
+		Facts: records, Fingerprint: fingerprint,
+		BasePayloadBytes: reservation.BasePayloadBytes, PayloadBytes: reservation.PayloadBytes,
+		FactCount: reservation.FactCount, JournalCount: reservation.JournalCount,
+		JournalIDs:          append([]string(nil), reservation.JournalIDs...),
+		JournalPayloadBytes: cloneTaxFactReportingJournalPayloadBytes(reservation.JournalPayloadBytes),
+	}, nil
 }
 
-func (repository *JournalRepository) preflightTaxFactReportingCandidates(
-	ctx context.Context, organisationID string, remainingBytes *int64,
-) error {
-	size := taxFactReportingPayloadSizeSQL(
+func (repository *JournalRepository) preflightTaxFactReportingCapture(
+	ctx context.Context, organisationID string, maximumPayloadBytes int64,
+) (*taxFactReportingReservation, error) {
+	if repository == nil || repository.executor == nil || ctx == nil ||
+		!ids.IsCanonicalV7(organisationID) || maximumPayloadBytes < 0 {
+		return nil, ErrJournalRepository
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, errors.Join(ErrJournalRepository, err)
+	}
+	if maximumPayloadBytes > maxTaxFactReportingCaptureBytes {
+		maximumPayloadBytes = maxTaxFactReportingCaptureBytes
+	}
+	remainingBytes := maximumPayloadBytes
+	baseSize := taxFactReportingPayloadSizeSQL(
 		"fact.id", "fact.organisation_id", "fact.journal_line_id", "fact.tax_code", "fact.treatment",
 		"fact.tax_rule_type", "fact.tax_rule_id", "fact.tax_rule_content_hash",
 		"fact.source_type", "fact.source_id", "fact.source_content_hash", "fact.created_at",
 		"line.journal_id", "journal.organisation_id", "journal.journal_date",
 	)
-	return repository.reserveTaxFactReportingPayload(ctx, remainingBytes, "tax facts", maxTaxFactReportingFacts,
+	factCount, basePayloadBytes, err := repository.reserveTaxFactReportingPayloadDetails(ctx, &remainingBytes,
+		"tax facts", maxTaxFactReportingFacts,
 		`SELECT count(*), total(payload_bytes) FROM (
-		 SELECT `+size+` AS payload_bytes FROM tax_facts AS fact
+		 SELECT `+baseSize+` AS payload_bytes FROM tax_facts AS fact
 		 LEFT JOIN journal_lines AS line ON line.id = fact.journal_line_id
 		 LEFT JOIN journals AS journal ON journal.id = line.journal_id
 		 WHERE fact.organisation_id = ?
 		 ORDER BY journal.journal_date, journal.id, line.line_number, fact.id LIMIT ?
 		)`, organisationID, maxTaxFactReportingFacts+1)
+	if err != nil {
+		return nil, withTaxFactReportingBudgetLimit(err, maximumPayloadBytes)
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, errors.Join(ErrJournalRepository, err)
+	}
+	invalidCount, err := repository.countInvalidTaxFactReportingParents(ctx, organisationID)
+	if err != nil {
+		return nil, err
+	}
+	if invalidCount != 0 {
+		return nil, fmt.Errorf("%w: tax facts contain a missing or mismatched journal parent", ErrJournalRepository)
+	}
+	journalIDs, err := repository.taxFactReportingJournalIDs(ctx, organisationID)
+	if err != nil {
+		return nil, err
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, errors.Join(ErrJournalRepository, err)
+	}
+	journalPayloadBytes := make(map[string]int64, len(journalIDs))
+	journalLineCounts := make(map[string]int, len(journalIDs))
+	for _, journalID := range journalIDs {
+		if err := ctx.Err(); err != nil {
+			return nil, errors.Join(ErrJournalRepository, err)
+		}
+		payloadBytes, lineCount, err := repository.preflightTaxFactReportingJournal(
+			ctx, journalID, organisationID, &remainingBytes)
+		if err != nil {
+			return nil, withTaxFactReportingBudgetLimit(err, maximumPayloadBytes)
+		}
+		journalPayloadBytes[journalID] = payloadBytes
+		journalLineCounts[journalID] = lineCount
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, errors.Join(ErrJournalRepository, err)
+	}
+	var totalPayloadBytes = basePayloadBytes
+	for _, journalID := range journalIDs {
+		totalPayloadBytes += journalPayloadBytes[journalID]
+	}
+	return &taxFactReportingReservation{
+		TaxFactReportingPreflight: TaxFactReportingPreflight{
+			BasePayloadBytes: basePayloadBytes, PayloadBytes: totalPayloadBytes,
+			FactCount: factCount, JournalCount: len(journalIDs),
+			JournalIDs: journalIDs, JournalPayloadBytes: journalPayloadBytes,
+		},
+		journalLineCounts: journalLineCounts,
+	}, nil
+}
+
+func (repository *JournalRepository) countInvalidTaxFactReportingParents(
+	ctx context.Context, organisationID string,
+) (int, error) {
+	count, err := repository.queryTaxFactReportingCount(ctx, `
+		SELECT count(*)
+		FROM tax_facts AS fact
+		LEFT JOIN journal_lines AS line ON line.id = fact.journal_line_id
+		LEFT JOIN journals AS journal ON journal.id = line.journal_id
+		WHERE fact.organisation_id = ?
+		  AND (line.id IS NULL OR journal.id IS NULL OR journal.organisation_id != fact.organisation_id
+		       OR journal.id = '' OR line.journal_id = '' OR journal.journal_date IS NULL OR journal.journal_date = ''
+		       OR line.line_number < 1 OR line.line_number > ?)`,
+		organisationID, math.MaxUint32)
+	if err != nil {
+		return 0, taxFactReportingReadError("validate tax fact parents", err)
+	}
+	if err := ctx.Err(); err != nil {
+		return 0, errors.Join(ErrJournalRepository, err)
+	}
+	return count, nil
+}
+
+func (repository *JournalRepository) queryTaxFactReportingCount(
+	ctx context.Context, query string, arguments ...any,
+) (int, error) {
+	rows, err := repository.executor.QueryContext(ctx, query, arguments...)
+	if err != nil {
+		return 0, err
+	}
+	if !rows.Next() {
+		return 0, errors.Join(sql.ErrNoRows, rows.Err(), rows.Close())
+	}
+	var count int
+	if err := rows.Scan(&count); err != nil {
+		return 0, errors.Join(err, rows.Close())
+	}
+	if rows.Next() {
+		return 0, errors.Join(errors.New("count query returned multiple rows"), rows.Close())
+	}
+	rowsErr, closeErr := rows.Err(), rows.Close()
+	if rowsErr != nil || closeErr != nil {
+		return 0, errors.Join(rowsErr, closeErr)
+	}
+	if err := ctx.Err(); err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+func (repository *JournalRepository) taxFactReportingJournalIDs(
+	ctx context.Context, organisationID string,
+) ([]string, error) {
+	rows, err := repository.executor.QueryContext(ctx, `
+		SELECT DISTINCT journal.id
+		FROM tax_facts AS fact
+		JOIN journal_lines AS line ON line.id = fact.journal_line_id
+		JOIN journals AS journal ON journal.id = line.journal_id
+		WHERE fact.organisation_id = ? AND journal.organisation_id = fact.organisation_id
+		ORDER BY journal.id LIMIT ?`, organisationID, maxTaxFactReportingFacts+1)
+	if err != nil {
+		return nil, taxFactReportingReadError("query distinct tax fact parents", err)
+	}
+	journalIDs := make([]string, 0)
+	for rows.Next() {
+		if len(journalIDs) == maxTaxFactReportingFacts {
+			return nil, errors.Join(&TaxFactReportingBoundError{
+				Resource: "journal parents", Limit: maxTaxFactReportingFacts,
+			}, rows.Close())
+		}
+		var journalID string
+		if err := rows.Scan(&journalID); err != nil {
+			_ = rows.Close()
+			return nil, taxFactReportingReadError("scan distinct tax fact parent", err)
+		}
+		if journalID == "" || len(journalIDs) > 0 && journalIDs[len(journalIDs)-1] >= journalID {
+			_ = rows.Close()
+			return nil, fmt.Errorf("%w: tax fact parent identities are not unique and sorted", ErrJournalRepository)
+		}
+		journalIDs = append(journalIDs, journalID)
+	}
+	rowsErr, closeErr := rows.Err(), rows.Close()
+	if rowsErr != nil || closeErr != nil {
+		return nil, errors.Join(ErrJournalRepository, rowsErr, closeErr)
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, errors.Join(ErrJournalRepository, err)
+	}
+	return journalIDs, nil
+}
+
+func withTaxFactReportingBudgetLimit(err error, limit int64) error {
+	var bound *TaxFactReportingBoundError
+	if errors.As(err, &bound) && bound.Resource == "capture bytes" {
+		return &TaxFactReportingBoundError{Resource: bound.Resource, Limit: int(limit)}
+	}
+	return err
+}
+
+func cloneTaxFactReportingJournalPayloadBytes(values map[string]int64) map[string]int64 {
+	cloned := make(map[string]int64, len(values))
+	for journalID, payloadBytes := range values {
+		cloned[journalID] = payloadBytes
+	}
+	return cloned
 }
 
 func (repository *JournalRepository) preflightTaxFactReportingJournal(
 	ctx context.Context, journalID, organisationID string, remainingBytes *int64,
-) error {
+) (int64, int, error) {
 	headerSize := taxFactReportingPayloadSizeSQL(
 		"id", "organisation_id", "source_type", "source_id", "state", "journal_date", "description",
 		"reversal_of_journal_id", "reversed_by_journal_id", "currency_code", "posted_at", "created_at",
 	)
-	if err := repository.reserveTaxFactReportingPayload(ctx, remainingBytes, "journals", 1,
-		`SELECT count(*), total(`+headerSize+`) FROM journals WHERE id = ? AND organisation_id = ?`, journalID, organisationID); err != nil {
-		return err
+	headerCount, headerBytes, err := repository.reserveTaxFactReportingPayloadDetails(ctx, remainingBytes, "journals", 1,
+		`SELECT count(*), total(`+headerSize+`) FROM journals WHERE id = ? AND organisation_id = ?`, journalID, organisationID)
+	if err != nil {
+		return 0, 0, err
+	}
+	if headerCount != 1 {
+		return 0, 0, fmt.Errorf("%w: reporting parent journal %s is missing or foreign", ErrJournalRepository, journalID)
 	}
 	lineSize := taxFactReportingPayloadSizeSQL(
 		"id", "journal_id", "account_id", "currency_code", "memo", "tax_code_id",
 		"tax_rule_type", "tax_rule_id", "tax_rule_content_hash",
 	)
-	return repository.reserveTaxFactReportingPayload(ctx, remainingBytes, "journal lines", maxTaxFactReportingJournalLines,
+	lineCount, lineBytes, err := repository.reserveTaxFactReportingPayloadDetails(ctx, remainingBytes,
+		"journal lines", maxTaxFactReportingJournalLines,
 		`SELECT count(*), total(payload_bytes) FROM (
 		 SELECT `+lineSize+` AS payload_bytes FROM journal_lines AS line WHERE journal_id = ?
 		 AND EXISTS (SELECT 1 FROM journals WHERE id = line.journal_id AND organisation_id = ?)
 		 ORDER BY line_number, id LIMIT ?
 		)`, journalID, organisationID, maxTaxFactReportingJournalLines+1)
+	if err != nil {
+		return 0, 0, err
+	}
+	return headerBytes + lineBytes, lineCount, nil
 }
 
 // Each row costs its retained TEXT/BLOB bytes plus a conservative 512-byte
@@ -273,41 +508,52 @@ func taxFactReportingPayloadSizeSQL(columns ...string) string {
 func (repository *JournalRepository) reserveTaxFactReportingPayload(
 	ctx context.Context, remainingBytes *int64, resource string, rowLimit int, query string, args ...any,
 ) error {
+	_, _, err := repository.reserveTaxFactReportingPayloadDetails(ctx, remainingBytes, resource, rowLimit, query, args...)
+	return err
+}
+
+func (repository *JournalRepository) reserveTaxFactReportingPayloadDetails(
+	ctx context.Context, remainingBytes *int64, resource string, rowLimit int, query string, args ...any,
+) (int, int64, error) {
 	var count int
 	var payloadBytes float64
 	// SQLite total() avoids integer-sum overflow for unconstrained legacy
 	// cells. Integral byte counts remain exact throughout the 8 MiB budget.
 	rows, err := repository.executor.QueryContext(ctx, query, args...)
 	if err != nil {
-		return taxFactReportingReadError("preflight "+resource, err)
+		return 0, 0, taxFactReportingReadError("preflight "+resource, err)
 	}
 	if !rows.Next() {
-		return errors.Join(ErrJournalRepository, sql.ErrNoRows, rows.Err(), rows.Close())
+		return 0, 0, errors.Join(ErrJournalRepository, sql.ErrNoRows, rows.Err(), rows.Close())
 	}
 	if err := rows.Scan(&count, &payloadBytes); err != nil {
-		return errors.Join(taxFactReportingReadError("scan preflight "+resource, err), rows.Close())
+		return 0, 0, errors.Join(taxFactReportingReadError("scan preflight "+resource, err), rows.Close())
 	}
 	if rows.Next() {
-		return errors.Join(ErrJournalRepository, errors.New("preflight returned multiple totals"), rows.Close())
+		return 0, 0, errors.Join(ErrJournalRepository, errors.New("preflight returned multiple totals"), rows.Close())
 	}
 	rowsErr, closeErr := rows.Err(), rows.Close()
 	if rowsErr != nil || closeErr != nil {
-		return errors.Join(ErrJournalRepository, rowsErr, closeErr)
+		return 0, 0, errors.Join(ErrJournalRepository, rowsErr, closeErr)
 	}
 	if err := ctx.Err(); err != nil {
-		return errors.Join(ErrJournalRepository, err)
+		return 0, 0, errors.Join(ErrJournalRepository, err)
 	}
 	if count > rowLimit {
-		return &TaxFactReportingBoundError{Resource: resource, Limit: rowLimit}
+		return 0, 0, &TaxFactReportingBoundError{Resource: resource, Limit: rowLimit}
 	}
-	if payloadBytes < 0 || math.IsNaN(payloadBytes) {
-		return fmt.Errorf("%w: invalid %s payload size", ErrJournalRepository, resource)
+	if payloadBytes < 0 || math.IsNaN(payloadBytes) || math.IsInf(payloadBytes, 0) {
+		return 0, 0, fmt.Errorf("%w: invalid %s payload size", ErrJournalRepository, resource)
 	}
 	if payloadBytes > float64(*remainingBytes) {
-		return &TaxFactReportingBoundError{Resource: "capture bytes", Limit: maxTaxFactReportingCaptureBytes}
+		return 0, 0, &TaxFactReportingBoundError{Resource: "capture bytes", Limit: maxTaxFactReportingCaptureBytes}
 	}
-	*remainingBytes -= int64(payloadBytes)
-	return nil
+	payloadByteCount := int64(payloadBytes)
+	if float64(payloadByteCount) != payloadBytes {
+		return 0, 0, fmt.Errorf("%w: non-integral %s payload size", ErrJournalRepository, resource)
+	}
+	*remainingBytes -= payloadByteCount
+	return count, payloadByteCount, nil
 }
 
 func (repository *JournalRepository) loadTaxFactReportingCandidates(
@@ -394,6 +640,36 @@ func scanTaxFactReportingCandidate(scanner interface{ Scan(...any) error }) (tax
 	return candidate, nil
 }
 
+func taxFactReportingCandidatePayloadBytes(candidate taxFactReportingCandidate) int64 {
+	var ruleType, ruleID string
+	var ruleHash []byte
+	if candidate.record.Rule != nil {
+		ruleType, ruleID, ruleHash = candidate.record.Rule.Type, candidate.record.Rule.Id, candidate.record.Rule.ContentHash
+	}
+	return taxFactReportingPayloadBytes(
+		[]byte(candidate.record.ID), []byte(candidate.record.OrganisationID), []byte(candidate.record.JournalLineID),
+		[]byte(candidate.record.TaxCode), []byte(candidate.record.Treatment), []byte(ruleType), []byte(ruleID), ruleHash,
+		[]byte(candidate.record.SourceType), []byte(candidate.record.SourceID), candidate.record.SourceContentHash,
+		[]byte(candidate.record.CreatedAt), []byte(candidate.journalID), []byte(candidate.parentOrganisationID),
+		[]byte(candidate.journalDate),
+	)
+}
+
+func taxFactReportingPayloadBytes(values ...[]byte) int64 {
+	var payloadBytes int64 = 512
+	for _, value := range values {
+		payloadBytes += int64(len(value))
+	}
+	return payloadBytes
+}
+
+func taxFactReportingNullableStringPayloadBytes(value sql.NullString) []byte {
+	if !value.Valid {
+		return nil
+	}
+	return []byte(value.String)
+}
+
 func (repository *JournalRepository) loadTaxFactReportingJournal(
 	ctx context.Context,
 	journalID, organisationID string,
@@ -460,7 +736,13 @@ func (repository *JournalRepository) loadTaxFactReportingJournal(
 		journal.PostedAt = timestamppb.New(postedInstant)
 	}
 
-	lines, rawLines, err := repository.loadTaxFactReportingLines(ctx, journalID)
+	headerPayloadBytes := taxFactReportingPayloadBytes(
+		[]byte(id), []byte(parentOrganisation), []byte(sourceType), []byte(sourceID), []byte(state),
+		[]byte(journalDate), []byte(description), taxFactReportingNullableStringPayloadBytes(reversalOf),
+		taxFactReportingNullableStringPayloadBytes(reversedBy), []byte(currencyCode),
+		taxFactReportingNullableStringPayloadBytes(postedAt), []byte(createdAt),
+	)
+	lines, rawLines, linePayloadBytes, err := repository.loadTaxFactReportingLines(ctx, journalID)
 	if err != nil {
 		return nil, err
 	}
@@ -494,6 +776,7 @@ func (repository *JournalRepository) loadTaxFactReportingJournal(
 
 	return &taxFactReportingJournalSnapshot{
 		journal: journal, journalProto: protoBytes, raw: raw.Bytes(), organisation: parentOrganisation,
+		payloadBytes: headerPayloadBytes + linePayloadBytes, lineCount: len(lines),
 		sourceType: sourceType, sourceKind: sourceKind, sourceID: sourceID,
 		sourceRev: uint64(sourceRevision), createdAt: createdAt, state: state,
 	}, nil
@@ -502,40 +785,52 @@ func (repository *JournalRepository) loadTaxFactReportingJournal(
 func (repository *JournalRepository) loadTaxFactReportingLines(
 	ctx context.Context,
 	journalID string,
-) ([]*tammyv1.JournalLine, []byte, error) {
+) ([]*tammyv1.JournalLine, []byte, int64, error) {
 	rows, err := repository.executor.QueryContext(ctx, `
 		SELECT id, journal_id, line_number, account_id, debit_minor, credit_minor, currency_code, memo,
 		       tax_code_id, tax_amount_minor, tax_rule_type, tax_rule_id, tax_rule_revision, tax_rule_content_hash
 		FROM journal_lines WHERE journal_id = ? ORDER BY line_number, id LIMIT ?`, journalID, maxTaxFactReportingJournalLines+1)
 	if err != nil {
-		return nil, nil, taxFactReportingReadError("query journal lines", err)
+		return nil, nil, 0, taxFactReportingReadError("query journal lines", err)
 	}
 	lines := make([]*tammyv1.JournalLine, 0, 16)
 	rawLines := &bytes.Buffer{}
+	var payloadBytes int64
 	for rows.Next() {
 		if len(lines) == maxTaxFactReportingJournalLines {
 			_ = rows.Close()
-			return nil, nil, &TaxFactReportingBoundError{Resource: "journal lines", Limit: maxTaxFactReportingJournalLines}
+			return nil, nil, 0, &TaxFactReportingBoundError{Resource: "journal lines", Limit: maxTaxFactReportingJournalLines}
 		}
 		line, err := scanTaxFactReportingLine(rows)
 		if err != nil {
 			_ = rows.Close()
-			return nil, nil, taxFactReportingReadError("scan journal line", err)
+			return nil, nil, 0, taxFactReportingReadError("scan journal line", err)
 		}
 		if line.journalID != journalID || line.lineNumber < 1 || line.lineNumber > math.MaxUint32 {
 			_ = rows.Close()
-			return nil, nil, fmt.Errorf("%w: journal %s contains an invalid line identity or sequence", ErrJournalRepository, journalID)
+			return nil, nil, 0, fmt.Errorf("%w: journal %s contains an invalid line identity or sequence", ErrJournalRepository, journalID)
 		}
+		payloadBytes += taxFactReportingRawLinePayloadBytes(line)
 		appendTaxFactReportingRawLine(rawLines, line)
 		lines = append(lines, line.line)
 	}
 	rowsErr := rows.Err()
 	closeErr := rows.Close()
 	if rowsErr != nil || closeErr != nil {
-		return nil, nil, errors.Join(ErrJournalRepository, rowsErr, closeErr)
+		return nil, nil, 0, errors.Join(ErrJournalRepository, rowsErr, closeErr)
 	}
 	appendTaxFactReportingInt64(rawLines, int64(len(lines)))
-	return lines, rawLines.Bytes(), nil
+	return lines, rawLines.Bytes(), payloadBytes, nil
+}
+
+func taxFactReportingRawLinePayloadBytes(line taxFactReportingRawLine) int64 {
+	return taxFactReportingPayloadBytes(
+		[]byte(line.id), []byte(line.journalID), []byte(line.accountID), []byte(line.currency),
+		taxFactReportingNullableStringPayloadBytes(line.memo),
+		taxFactReportingNullableStringPayloadBytes(line.taxCode),
+		taxFactReportingNullableStringPayloadBytes(line.ruleType),
+		taxFactReportingNullableStringPayloadBytes(line.ruleID), line.ruleHash,
+	)
 }
 
 func scanTaxFactReportingLine(scanner interface{ Scan(...any) error }) (taxFactReportingRawLine, error) {

@@ -30,6 +30,7 @@ import (
 	"github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1/tammyv1connect"
 	"github.com/tammyapp/tammy/services/core/internal/localproduct"
 	"github.com/tammyapp/tammy/services/core/internal/purchases"
+	"github.com/tammyapp/tammy/services/core/internal/storage/migrations"
 	"github.com/tammyapp/tammy/services/core/internal/transport"
 	"github.com/tammyapp/tammy/services/core/internal/workspace"
 	"google.golang.org/protobuf/proto"
@@ -175,8 +176,13 @@ func newCoverageAuditServer(t *testing.T) coverageAuditServer {
 	if observed.activation.Database == nil || observed.activation.AuditAppender == nil || observed.activation.AuditGate == nil {
 		t.Fatal("workspace activation did not install the real encrypted database and audit writer")
 	}
-	if version := postScalar(t, observed.activation.Database, `SELECT COALESCE(MAX(version),0) FROM schema_migrations`); version != 13 {
-		t.Fatalf("purchase audit fixture schema version=%d, want native version 13", version)
+	steps, err := migrations.All()
+	if err != nil || len(steps) == 0 {
+		t.Fatalf("load current application migrations: %v", err)
+	}
+	expectedVersion := int64(steps[len(steps)-1].Version)
+	if version := postScalar(t, observed.activation.Database, `SELECT COALESCE(MAX(version),0) FROM schema_migrations`); version != expectedVersion {
+		t.Fatalf("purchase audit fixture schema version=%d, want current native version %d", version, expectedVersion)
 	}
 	signedIn, err := identityClient.SignIn(ctx, coverageAuditRequest(&tammyv1.SignInRequest{
 		Username: "coverage-admin@tammy.local", Password: &tammyv1.SecretInput{Utf8: []byte("administrator-password-long-enough")},
