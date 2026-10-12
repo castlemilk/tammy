@@ -890,9 +890,60 @@ message BasCalculationResult {
   repeated BasLabelTrace labels = 3 [(buf.validate.field).repeated.max_items = 32];
 }
 
+// BasSourceProofScope states exactly what the computed proof hash commits.
+// A reference-only projection does not claim that the referenced source body
+// was loaded or authenticated.
+enum BasSourceProofScope {
+  BAS_SOURCE_PROOF_SCOPE_UNSPECIFIED = 0;
+  BAS_SOURCE_PROOF_SCOPE_SOURCE_ROW_PROJECTION = 1;
+  BAS_SOURCE_PROOF_SCOPE_COMPLETE_JOURNAL = 2;
+  BAS_SOURCE_PROOF_SCOPE_REFERENCE_ONLY_PROJECTION = 3;
+}
+
+// BasRawSourceRef preserves an opaque noncanonical source identity and the
+// exact nullable provenance of its own retained row. original_revision and
+// original_content_hash remain absent when the source row stored SQL NULL.
+// computed_proof_hash is a distinct hash of the retained proof at proof_scope;
+// it never substitutes for an absent original source hash.
+message BasRawSourceRef {
+  string type = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+    pattern: "^[a-z][a-z0-9_]{0,127}$"
+  }];
+  string id = 2 [(buf.validate.field).string = {
+    min_len: 1
+    pattern: ".*\\S.*"
+  }];
+  optional int64 original_revision = 3 [(buf.validate.field).int64.gte = 0];
+  optional bytes original_content_hash = 4 [(buf.validate.field).bytes.len = 32];
+  bytes computed_proof_hash = 5 [(buf.validate.field).bytes.len = 32];
+  BasSourceProofScope proof_scope = 6 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+}
+
+// BasSourceIdentity is exactly one canonical or raw representation. The
+// ordinary message fields preserve existing generated accessors and wire use.
+message BasSourceIdentity {
+  option (buf.validate.message).cel = {
+    id: "bas.source_identity.exactly_one_kind"
+    message: "A source identity has exactly one canonical or raw representation"
+    expression: "has(this.canonical_source) != has(this.raw_source)"
+  };
+  SourceRef canonical_source = 1;
+  BasRawSourceRef raw_source = 10;
+}
+
 // BasSourceCoverage is one explicit eligible, excluded, unresolved or unsupported candidate disposition.
 message BasSourceCoverage {
-  SourceRef source = 1 [(buf.validate.field).required = true];
+  option (buf.validate.message).cel = {
+    id: "bas.coverage.mixed_lineage_projection"
+    message: "When mixed lineage or evidence identities are present, their canonical projections equal the legacy lists in order"
+    expression: "has(this.source) != has(this.raw_source) && (this.lineage_identities.size() == 0 || this.lineage_identities.filter(identity, has(identity.canonical_source)).map(identity, identity.canonical_source) == this.lineage) && (this.evidence_identities.size() == 0 || this.evidence_identities.filter(identity, has(identity.canonical_source)).map(identity, identity.canonical_source) == this.evidence)"
+  };
+  SourceRef source = 1;
   BasCoverageCandidateKind candidate_kind = 2 [(buf.validate.field).enum = {
     defined_only: true
     not_in: 0
@@ -922,9 +973,17 @@ message BasSourceCoverage {
     min_len: 1
     max_len: 512
   }];
+  BasRawSourceRef raw_source = 10;
+  repeated BasSourceIdentity lineage_identities = 11 [(buf.validate.field).repeated.max_items = 20];
+  repeated BasSourceIdentity evidence_identities = 12 [(buf.validate.field).repeated.max_items = 20];
 }
 
 message BasValidationFinding {
+  option (buf.validate.message).cel = {
+    id: "bas.validation_finding.mixed_source_projection"
+    message: "When mixed source identities are present, their canonical projection equals the legacy sources list in order"
+    expression: "this.source_identities.size() == 0 || this.source_identities.filter(identity, has(identity.canonical_source)).map(identity, identity.canonical_source) == this.sources"
+  };
   string finding_id = 1 [(buf.validate.field).string = {
     len: 36
     pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
@@ -943,6 +1002,7 @@ message BasValidationFinding {
     max_len: 512
   }];
   repeated SourceRef sources = 5 [(buf.validate.field).repeated.max_items = 20];
+  repeated BasSourceIdentity source_identities = 6 [(buf.validate.field).repeated.max_items = 20];
 }
 
 message BasValidationSnapshot {
