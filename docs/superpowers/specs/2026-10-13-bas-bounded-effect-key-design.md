@@ -1,8 +1,8 @@
 # BAS bounded effect-key discovery constraints (2026-10-13)
 
-Independent GPT-6 Luna Max review cleared these design constraints. Invoice/purchase API sketches and candidate mappings still require native TDD. The accounting candidate-key dependency below is implemented and verified; Task 5 acceptance remains open.
+Independent GPT-6 Luna Max review cleared these design constraints. The accounting and invoice candidate-key dependencies below are implemented and verified. Purchase scalar discovery and semantic candidate mappings still require native TDD; Task 5 acceptance remains open.
 
-Existing invoice/accounting payload-reader storage-class guards are accepted in `d1c19f5d`. Accounting candidate-key query guards are now accepted; the remaining scalar discovery and combined producer still require implementation.
+Existing invoice/accounting payload-reader storage-class guards are accepted in `d1c19f5d`. Accounting and invoice candidate-key query guards are now accepted; purchase scalar discovery and the combined producer still require implementation.
 
 ## Proposed boundary
 
@@ -46,6 +46,14 @@ Use namespaced physical keys such as `ScalarKey{module, family, ownerID, kind, e
 `ReadTaxFactBASKeys` verifies that reservation and returns exact fact/organisation/line/journal identities, line number and source type/ID/revision/hash presence/value. SQL guards ordered cumulative bytes and row numbers before projecting cells to the driver, including the count sentinel; loaded row charges must equal SQL charges. Cancellation or drift returns no partial result. The caller retains transaction ownership. Native writer, corruption, allocation/error bounds, rollback/reopen, race/TLS, default Core and production-build evidence is recorded in the [complete source plan](../plans/2026-10-12-bas-complete-source-capture.md).
 
 This is candidate identity discovery only. The source tuple does not become the fact row's own original provenance, and the projection is insufficient for duplicate fact proof removal. Future coordination must still apply every module's shared fences in the order above, verify complete raw fact proofs and retain each current fact as an independent candidate.
+
+## Accepted invoice candidate-key dependency
+
+`ReportingPort.SummarizeBASKeys` and `ReadBASKeys` retain invoice roots, postings, income lines, receipts and allocations without state/date filtering. Root and receipt counts have separate 1,000-row ceilings; physical keys have a 16,384-row ceiling and an 8 MiB scalar reservation. Family shape preserves exact opaque SQL identities, composite sequences, root own versions, posting invoice-source versions, nullable posting journal linkage and required posting/receipt source hashes. Existing body readers remain responsible for canonical domain IDs and complete proofs; source versions/hashes do not become child rows' own original provenance.
+
+Each family starts at retained rows and LEFT JOINs required owners, ancestors and journals. Missing or foreign links, malformed hashes and non-INTEGER scanned versions/sequences fail before typed keys are returned. The posting total is inspected only for INTEGER storage and its existing zero-total/nullable-journal integrity relationship. Ordered cumulative-byte and row-number guards withhold malformed, overflow and sentinel cells before driver copying. Loaded family counts and per-row charges must match the summary; cancellation and drift return no partial keys and leave the caller's transaction intact.
+
+Actual writer output, zero allocations, separate root/receipt boundaries, more than 1,000 physical child keys, corruption/drift allocation bounds, cancellation, encrypted reopen and caller rollback are verified. Count-only cap fixtures establish scalar bounds rather than financial body validity. Final native race, existing-route TLS regression, default Core, production build and independent GPT-6 Luna Max reviews are recorded in the [complete source plan](../plans/2026-10-12-bas-complete-source-capture.md). This accepts physical identity discovery only; eligibility, root/receipt fallback, child journal-line mapping, complete raw duplicate proofs, global reservations and the combined producer remain open.
 
 ## Tables and typed shapes
 
