@@ -1,8 +1,8 @@
 # BAS bounded effect-key discovery constraints (2026-10-13)
 
-Independent GPT-6 Luna Max review cleared these design constraints. The API sketches and candidate mappings still require native TDD; this document does not record implemented scalar discovery or completed Task 5 acceptance.
+Independent GPT-6 Luna Max review cleared these design constraints. Invoice/purchase API sketches and candidate mappings still require native TDD. The accounting candidate-key dependency below is implemented and verified; Task 5 acceptance remains open.
 
-Proposal only; the query-side storage-class guard described below is not implemented or activated by this draft.
+Existing invoice/accounting payload-reader storage-class guards are accepted in `d1c19f5d`. Accounting candidate-key query guards are now accepted; the remaining scalar discovery and combined producer still require implementation.
 
 ## Proposed boundary
 
@@ -38,6 +38,14 @@ accounting canonical fact rows + purchase BasePayloadBytes
 For fact deduplication, compare every purchase-retained row with its exact all-organisation accounting fact in the same verified transaction: fact ID, organisation ID, journal-line ID, every retained raw fact/source value, source type/ID/revision, nullable content-hash presence/value, and expected matched row set/count. Do not require purchase and accounting per-row byte charges to equal: accounting charges `512 + its selected TEXT/BLOB fields`, including joined parent IDs/organisation/date; purchase charges `512 + all selected retained-row columns`, including numeric values cast to text, and excludes joined-parent bytes. Validate each module's reserved-vs-loaded per-row charge independently. Subtract the purchase-declared `TaxFactPayloadBytes` only because the canonical accounting rows replace those duplicate purchase proof rows; on any identity/content mismatch, do not subtract or drop facts. Deduplicate shared complete-journal proofs only by exact organisation/journal ID and equal charge under the canonical accounting journal recipe; unequal charges fail closed. After hydration, compare each module's exact key set/count and independently computed byte charge to its reservation. `baspreparation` coordinates; it owns no table SQL or transaction lifecycle.
 
 Use namespaced physical keys such as `ScalarKey{module, family, ownerID, kind, effectID, sequence, parentID}`. Root/receipt decisions are fallback candidates only when no child effect exists; otherwise child rows carry the root/receipt decision and lineage, with no duplicate parent money row. Preserve zero-value allocations. Never collapse by `SourceRef`, shared journal, amount, account, or date.
+
+## Accepted accounting candidate-key dependency
+
+`JournalRepository.SummarizeTaxFactBASKeys` exposes aggregate-only organisation-bound `TaxFactBASScalarSummary` values. `RootCount` and `ReceiptCount` are zero; `ScalarKeyCount` counts physical facts, without applying the final semantic 1,000-candidate fence. Selected TEXT/BLOB cells plus 512 bytes per row fit one 8 MiB reservation, giving a physical ceiling of 16,384 keys. Missing/foreign owner, journal-line and journal parents, malformed nullable source hashes and non-INTEGER scanned source-revision/line-number cells fail before typed values are returned.
+
+`ReadTaxFactBASKeys` verifies that reservation and returns exact fact/organisation/line/journal identities, line number and source type/ID/revision/hash presence/value. SQL guards ordered cumulative bytes and row numbers before projecting cells to the driver, including the count sentinel; loaded row charges must equal SQL charges. Cancellation or drift returns no partial result. The caller retains transaction ownership. Native writer, corruption, allocation/error bounds, rollback/reopen, race/TLS, default Core and production-build evidence is recorded in the [complete source plan](../plans/2026-10-12-bas-complete-source-capture.md).
+
+This is candidate identity discovery only. The source tuple does not become the fact row's own original provenance, and the projection is insufficient for duplicate fact proof removal. Future coordination must still apply every module's shared fences in the order above, verify complete raw fact proofs and retain each current fact as an independent candidate.
 
 ## Tables and typed shapes
 
