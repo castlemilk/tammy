@@ -1,8 +1,8 @@
 # BAS bounded effect-key discovery constraints (2026-10-13)
 
-Independent GPT-6 Luna Max review cleared these design constraints. The accounting and invoice candidate-key dependencies below are implemented and verified. Purchase scalar discovery and semantic candidate mappings still require native TDD; Task 5 acceptance remains open.
+Independent GPT-6 Luna Max review cleared these design constraints. Accounting, invoice and purchase physical-key dependencies below are implemented and verified. Semantic candidate mappings, the combined producer and Task 5 acceptance remain open.
 
-Existing invoice/accounting payload-reader storage-class guards are accepted in `d1c19f5d`. Accounting and invoice candidate-key query guards are now accepted; purchase scalar discovery and the combined producer still require implementation.
+Existing invoice/accounting payload-reader storage-class guards are accepted in `d1c19f5d`. Accounting, invoice and purchase key-query guards are now accepted. The shared-fence-before-hydration order and open producer decisions below still require implementation.
 
 ## Proposed boundary
 
@@ -54,6 +54,18 @@ This is candidate identity discovery only. The source tuple does not become the 
 Each family starts at retained rows and LEFT JOINs required owners, ancestors and journals. Missing or foreign links, malformed hashes and non-INTEGER scanned versions/sequences fail before typed keys are returned. The posting total is inspected only for INTEGER storage and its existing zero-total/nullable-journal integrity relationship. Ordered cumulative-byte and row-number guards withhold malformed, overflow and sentinel cells before driver copying. Loaded family counts and per-row charges must match the summary; cancellation and drift return no partial keys and leave the caller's transaction intact.
 
 Actual writer output, zero allocations, separate root/receipt boundaries, more than 1,000 physical child keys, corruption/drift allocation bounds, cancellation, encrypted reopen and caller rollback are verified. Count-only cap fixtures establish scalar bounds rather than financial body validity. Final native race, existing-route TLS regression, default Core, production build and independent GPT-6 Luna Max reviews are recorded in the [complete source plan](../plans/2026-10-12-bas-complete-source-capture.md). This accepts physical identity discovery only; eligibility, root/receipt fallback, child journal-line mapping, complete raw duplicate proofs, global reservations and the combined producer remain open.
+
+## Accepted purchase physical-key dependency
+
+`purchases.Repository.SummarizeBASKeys` and `ReadBASKeys` retain 15 disjoint physical families on the caller's executor. The comparable reservation includes organisation, separate root/receipt counts, every family count, physical-key count and retained-cell charge. Roots and receipts each have a 1,000 ceiling; physical keys have a 16,384 ceiling and an 8 MiB reservation at 512 bytes plus selected TEXT/BLOB bytes per row. Exact composite identity is the first table primary-key cell plus sequence; event identity is `operation_key`. IDs remain opaque SQL identities, with complete domain/body proofs checked by ordinary readers.
+
+Every key has independent `IsRoot` and `IsReceipt` flags. Source hash, record/result hash, reviewed snapshot, due-date-source and claim-evidence-source provenance remain distinct and independently nullable where permitted. Opening conversion hashes remain raw 64-byte lowercase hex TEXT. The reader projects no amount, date, status, proto/body, document bytes or journal line and chooses no eligibility, latest review or candidate unit. Source/reference versions do not become a child row's own original provenance.
+
+Required owner/ancestor links use LEFT JOIN discovery and fail closed on missing/foreign edges. Private finite invalid-link markers abort even if there is no valid family row. Ordered cumulative-byte and sentinel SQL guards precede driver copying; loaded family counts, root/receipt flags, order and independent row charges must match the reservation. Cancellation or drift returns no partial result and leaves the caller's transaction intact.
+
+Flags retain the existing disjoint census: postings are roots, payments are receipts, documents lacking a modern posting and actual POSTED/REPLACED opening payables are roots, and context/proof rows are not roots. Promoted documents and immutable review history remain physical keys. DRAFT replacement-context payables are retained without root flags; unrelated valid DRAFT opening context stays excluded. Unique explicitly linked manual journals include nonreceipt history. The existing owned-cash credit predicate discovers receipts without inferring GST direction. Bounded replacement identity closure is not a complete chain/reversal proof.
+
+Real writer histories, legacy/opening/manual lineage, accepted 1,001 allocation keys, separate root/receipt caps, exact/short budgets, corruption/drift allocation bounds, cancellation, encrypted reopen and caller rollback are verified. Count-only rows establish scalar bounds rather than financial body validity. Independent specification then quality reviews, final native race, existing-route TLS, default Core and production build passed; the [complete source plan](../plans/2026-10-12-bas-complete-source-capture.md) records exact evidence, the accepted stress exclusion and quality-review model fallback after Luna Max usage was unavailable. Candidate units/fallback, legacy-review applicability, attribution/deferral conservation, supported journal-line mapping, full duplicate proofs, shared global fences and the combined producer remain open.
 
 ## Tables and typed shapes
 
