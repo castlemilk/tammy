@@ -1,6 +1,6 @@
 # BAS bounded effect-key discovery constraints (2026-10-13)
 
-Independent GPT-6 Luna Max review cleared these design constraints. Accounting, invoice and purchase physical-key dependencies below are implemented and verified. Semantic candidate mappings, the combined producer and Task 5 acceptance remain open.
+Independent GPT-6 Luna Max review cleared these design constraints. Accounting, invoice and purchase physical-key dependencies and invoice structural nomination below are implemented and verified. Purchase candidate mapping, the cross-module union, the combined producer and Task 5 acceptance remain open.
 
 Existing invoice/accounting payload-reader storage-class guards are accepted in `d1c19f5d`. Accounting, invoice and purchase key-query guards are now accepted. The shared-fence-before-hydration order and open producer decisions below still require implementation.
 
@@ -70,6 +70,10 @@ Real writer histories, legacy/opening/manual lineage, accepted 1,001 allocation 
 ## Accepted writer/reader candidate oracles
 
 The [candidate oracle checkpoint](../plans/2026-10-14-bas-candidate-mapping-oracles.md) now pins real legacy decisions and claim histories against physical scalar keys, complete readers and concrete BAS/accounting amounts. Exact writer response headers/hashes remain distinct from current remaining credit, and reads preserve the caller's transaction and retained state. Independent GPT-6 Luna Max specification then quality reviews and final focused/affected native race checks passed. This test-only acceptance does not choose semantic admission or add nomination APIs. The selector gaps and open candidate/union boundaries are recorded in the [oracle design](2026-10-14-bas-candidate-mapping-design.md).
+
+## Accepted invoice structural nomination
+
+The pure `invoices.NominateBASCandidates` helper now maps complete physical reservations to exact income-line and receipt-allocation units with disjoint zero-child parent fallbacks, retaining both families on either basis. It checks full shape/count/charge and parent/duplicate consistency, sorts opaque structured identities and enforces a local caller/1,000-candidate bound before returning. Full-reader eligibility, shared fences, exact purchase evidence suppression and the combined producer remain open. The [invoice nomination plan](../plans/2026-10-15-bas-invoice-nomination.md) records independent specification/quality review, real writer/full-reader identity checks, native race/TLS, default Core, production build and review-model fallback evidence.
 
 ## Tables and typed shapes
 
