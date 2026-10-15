@@ -1,6 +1,6 @@
 # BAS bounded effect-key discovery constraints (2026-10-13)
 
-Independent GPT-6 Luna Max review cleared these design constraints. Accounting, invoice and purchase physical-key dependencies and invoice structural nomination below are implemented and verified. Purchase candidate mapping, the cross-module union, the combined producer and Task 5 acceptance remain open.
+Independent GPT-6 Luna Max review cleared these design constraints. Accounting, invoice and purchase physical-key dependencies, invoice structural nomination and the modern purchase nomination subset below are implemented and verified. Exact legacy purchase nomination, the cross-module union, the combined producer and Task 5 acceptance remain open.
 
 Existing invoice/accounting payload-reader storage-class guards are accepted in `d1c19f5d`. Accounting, invoice and purchase key-query guards are now accepted. The shared-fence-before-hydration order and open producer decisions below still require implementation.
 
@@ -74,6 +74,10 @@ The [candidate oracle checkpoint](../plans/2026-10-14-bas-candidate-mapping-orac
 ## Accepted invoice structural nomination
 
 The pure `invoices.NominateBASCandidates` helper now maps complete physical reservations to exact income-line and receipt-allocation units with disjoint zero-child parent fallbacks, retaining both families on either basis. It checks full shape/count/charge and parent/duplicate consistency, sorts opaque structured identities and enforces a local caller/1,000-candidate bound before returning. Full-reader eligibility, shared fences, exact purchase evidence suppression and the combined producer remain open. The [invoice nomination plan](../plans/2026-10-15-bas-invoice-nomination.md) records independent specification/quality review, real writer/full-reader identity checks, native race/TLS, default Core, production build and review-model fallback evidence.
+
+## Accepted modern purchase structural nomination
+
+`purchases.Repository.ReadModernBASCandidates` now wraps one guarded physical-key read, retains all families and emits modern posting/payment allocation units or disjoint zero-child fallbacks. It preserves own versus referenced allocation sequences, checks candidate graph links, sorts exact structured identities and enforces the caller/1,000 modern-subset cap without body reads or partial output. This does not nominate legacy roots or establish a complete purchase/global union. The [modern purchase plan](../plans/2026-10-15-bas-modern-purchase-nomination.md) records GPT-6 Luna Max reviews, real writer/coverage and claim-conservation journeys, local count-only bounds, native race/TLS, default Core and pinned production-build evidence.
 
 ## Tables and typed shapes
 
