@@ -65,6 +65,10 @@ func TestPurchaseCoverageRejectsReciprocalReversalCycle(t *testing.T) {
 	if capture != nil || !errors.Is(err, purchases.ErrRepository) {
 		t.Fatalf("complete coverage accepted a closed reversal cycle or returned partial data: capture=%v err=%v", capture, err)
 	}
+	values, err := f.repo(tx).LegacyCandidates(ctx, postingOrg, &tammyv1.PurchaseClaimPeriod{PeriodStart: postDate(1), PeriodEnd: postDate(31)}, postDate(31))
+	if values != nil || !errors.Is(err, purchases.ErrRepository) {
+		t.Fatalf("legacy classification accepted a closed reversal cycle or returned partial data: candidates=%v err=%v", values, err)
+	}
 }
 
 func TestPurchaseCoverageKeepsHistoricalPaymentReviewAfterCashClassificationChange(t *testing.T) {
@@ -99,6 +103,13 @@ func TestPurchaseCoverageKeepsHistoricalPaymentReviewAfterCashClassificationChan
 	beforeSource := coverageLegacyDocument(t, before, documentID)
 	if len(beforeSource.Reviews) != 1 || !proto.Equal(beforeSource.Reviews[0], response.Review) {
 		t.Fatalf("capture omitted the exact historical payment review: %+v", beforeSource.Reviews)
+	}
+	beforeValues, err := f.repo(tx).LegacyCandidates(ctx, postingOrg, request.Review.AffectedPeriod, request.Review.ReportingBalanceDate)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if value := legacyCandidate(t, beforeValues, documentID); value.Status != tammyv1.PurchaseReviewStatus_PURCHASE_REVIEW_STATUS_UNSUPPORTED || value.Excluded {
+		t.Fatalf("current cash payment did not support the retained unsupported-settlement review: %+v", value)
 	}
 	if !reflect.DeepEqual(beforeCounts, coverageStateCounts(t, tx)) || postScalar(t, tx, `SELECT total_changes()`) != beforeChanges {
 		t.Fatal("pre-change coverage capture changed retained state")
@@ -136,6 +147,9 @@ func TestPurchaseCoverageKeepsHistoricalPaymentReviewAfterCashClassificationChan
 		t.Fatalf("reclassified manual journal remained a current cash receipt: count=%d", after.ReceiptCount)
 	}
 	afterSource := coverageLegacyDocument(t, after, documentID)
+	if journal := coverageJournal(t, after, payment.Id).Journal; journal.Version != payment.Version || !bytes.Equal(coverageMessageHash(t, journal), paymentHash) {
+		t.Fatal("account reclassification changed the journal version or canonical body hash")
+	}
 	if len(afterSource.Reviews) != 1 || !proto.Equal(afterSource.Reviews[0], response.Review) ||
 		len(afterSource.Reviews[0].Review.SupportingPayments) != 1 {
 		t.Fatalf("current account metadata invalidated or rewrote the immutable payment review: %+v", afterSource.Reviews)
@@ -156,7 +170,27 @@ func TestPurchaseCoverageKeepsHistoricalPaymentReviewAfterCashClassificationChan
 	if !ok || classification.Kind != "TEXT" || classification.Text != "balance_sheet.other" {
 		t.Fatalf("complete capture omitted the current account classification: %+v", classification)
 	}
+	afterValues, err := f.repo(tx).LegacyCandidates(ctx, postingOrg, request.Review.AffectedPeriod, request.Review.ReportingBalanceDate)
+	if err != nil {
+		t.Fatal(err)
+	}
+	value := legacyCandidate(t, afterValues, documentID)
+	if value.Status != tammyv1.PurchaseReviewStatus_PURCHASE_REVIEW_STATUS_UNRESOLVED_LEGACY || value.Excluded || len(value.Reviews) != 1 || !proto.Equal(value.Reviews[0], response.Review) {
+		t.Fatalf("current account classification did not invalidate support while retaining the immutable review: %+v", value)
+	}
+	assertLegacyCandidateJournalRefs(t, value.PriorSources, map[string]*tammyv1.Journal{payment.Id: payment})
 	if !reflect.DeepEqual(afterCounts, coverageStateCounts(t, tx)) || postScalar(t, tx, `SELECT total_changes()`) != afterChanges {
 		t.Fatal("post-change coverage capture changed retained state")
+	}
+	unsupported := electNextLegacy(t, f, request)
+	unsupported.Review.Reason = "Recheck unchanged journal support against current account classification"
+	countsBeforeRejection := coverageStateCounts(t, tx)
+	changesBeforeRejection := postScalar(t, tx, "SELECT total_changes()")
+	result, err := legacyRepo(t, f, tx).ResolveLegacy(ctx, unsupported)
+	if result != nil || !errors.Is(err, purchases.ErrInvalidLegacyReview) {
+		t.Fatalf("unchanged journal hash/version was accepted as current cash support after reclassification: result=%v err=%v", result, err)
+	}
+	if !tx.Authenticated() || !reflect.DeepEqual(countsBeforeRejection, coverageStateCounts(t, tx)) || postScalar(t, tx, "SELECT total_changes()") != changesBeforeRejection {
+		t.Fatal("rejected support review changed retained state or ended the caller transaction")
 	}
 }

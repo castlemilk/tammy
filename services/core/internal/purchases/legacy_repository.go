@@ -256,6 +256,8 @@ func (r *Repository) verifyLegacyPayment(ctx context.Context, org string, input 
 
 // Only explicit retained lineage and an actual cash credit establish that a
 // legacy payment is known. Expense recognition alone does not establish this.
+// Reversals remain lineage in the receipt census, but a current cash-credit
+// reversal can contradict a legacy exclusion just like a directly linked row.
 func (r *Repository) legacyJournalPayments(ctx context.Context, org string, source *tammyv1.LegacyPurchaseSourceRef) ([]*tammyv1.Journal, error) {
 	_, id, _, _, _, err := legacySourceScope(source)
 	if err != nil {
@@ -281,6 +283,15 @@ func (r *Repository) legacyJournalPayments(ctx context.Context, org string, sour
 	if errors.Join(rows.Err(), rows.Close()) != nil {
 		return nil, ErrRepository
 	}
+	discoveryRemaining := maximumPostingReportingPayloadSize
+	headers, err := purchaseCoverageJournalClosure(ctx, r.executor, org, journalIDs, &discoveryRemaining, maximumPostingReportingPayloadSize)
+	if err != nil {
+		return nil, err
+	}
+	if len(headers) > 1000 {
+		return nil, ErrSourceBound
+	}
+	journalIDs = purchaseCoverageMapKeysFromHeaders(headers)
 	journals, _ := accounting.NewJournalRepository(r.executor)
 	accounts, _ := accounting.NewAccountRepository(r.executor)
 	var result []*tammyv1.Journal
@@ -289,7 +300,12 @@ func (r *Repository) legacyJournalPayments(ctx context.Context, org string, sour
 		if err != nil || journal.OrganisationId != org {
 			return nil, ErrRepository
 		}
-		if journal.State != tammyv1.JournalState_JOURNAL_STATE_POSTED {
+		switch journal.Source {
+		case tammyv1.JournalSource_JOURNAL_SOURCE_PURCHASE, tammyv1.JournalSource_JOURNAL_SOURCE_PURCHASE_PAYMENT,
+			tammyv1.JournalSource_JOURNAL_SOURCE_PURCHASE_GST_ATTRIBUTION:
+			return nil, ErrRepository
+		}
+		if headers[id].sourceType == "OPENING" || journal.State != tammyv1.JournalState_JOURNAL_STATE_POSTED {
 			continue
 		}
 		for _, line := range journal.Lines {

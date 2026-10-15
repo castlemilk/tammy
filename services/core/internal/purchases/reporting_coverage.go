@@ -2145,7 +2145,31 @@ func verifyCoverageSupportingPayments(record *tammyv1.LegacyPurchaseReview, prio
 			}
 			continue
 		}
-		if _, linked := priorIDs[ref.SourceId]; !linked {
+		// The complete closure has already been verified. A retained payment
+		// may be a reversal descendant of this source's direct edge, but an
+		// unrelated journal captured for another source cannot support it.
+		linked := false
+		for id, steps := ref.SourceId, 0; steps < len(journalByID); steps++ {
+			ancestor := journalByID[id]
+			if ancestor == nil || ancestor.Journal == nil || ancestor.Journal.Id != id ||
+				ancestor.Journal.OrganisationId != record.OrganisationId || ancestor.SourceKind != 0 {
+				return ErrRepository
+			}
+			if _, direct := priorIDs[id]; direct {
+				linked = true
+				break
+			}
+			parentID := ancestor.Journal.GetReversalOfJournalId()
+			parent := journalByID[parentID]
+			if ancestor.SourceType != "REVERSAL" || parentID == "" || ancestor.SourceID != parentID ||
+				parent == nil || parent.Journal == nil || parent.Journal.GetReversedByJournalId() != id ||
+				parent.State != "REVERSED" || parent.Journal.State != tammyv1.JournalState_JOURNAL_STATE_REVERSED ||
+				parent.Journal.Version < 2 || ancestor.SourceRevision != parent.Journal.Version-1 {
+				return ErrRepository
+			}
+			id = parentID
+		}
+		if !linked {
 			return ErrRepository
 		}
 		proof := journalByID[ref.SourceId]
