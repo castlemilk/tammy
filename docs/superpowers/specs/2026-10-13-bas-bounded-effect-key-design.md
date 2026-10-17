@@ -93,6 +93,10 @@ SQL guards mask rejected cells before driver copying and preserve global invalid
 
 A separate static audit found that older purchase physical/decision, invoice root and accounting fact scopes can omit same-byte BLOB owners without a canonical target TEXT reference edge. Their module-specific native reproductions and fail-closed scope hardening remain prerequisites to combined completeness; the new document-state projection does not close those scopes.
 
+## Accepted direct legacy-decision owner scope correction
+
+The [direct owner correction](../plans/2026-10-17-bas-legacy-decision-owner-scope.md) admits only an exact 36-byte matching BLOB review owner to existing rejection checks when no target TEXT reference edge exposes it. It preserves accepted cells, existing reference joins, body masks and all reservation arithmetic. Actual native RED reproduced the omission; regression GREEN, real-writer/foreign-scope controls, post-fresh-empty-reservation sentinel and combined decision/document-state native race passed. Independent GPT-6 Luna Max specification/quality reviews, complete affected native race, existing-route TLS, default Core and pinned production build passed; the plan records exact evidence. Complete malformed-reference fanout and purchase physical/invoice/accounting scope hardening remain open; this adds no nomination, budget category or combined fence.
+
 ## Tables and typed shapes
 
 - **Invoices:** `invoices_v1` includes all states; `invoice_income_postings_v1` is keyed by invoice, `invoice_income_lines_v1` by `(invoice_id, sequence)`, `invoice_payment_v1` is the receipt row, and `invoice_payment_lines_v1` by `(payment_id, sequence)`. Existing shapes are `BASReportingCapture → BASInvoiceCandidate{Posting, Receipts} → BASInvoicePosting{IncomeLines}, BASInvoiceReceipt{Allocations}`. Expose invoice/posting and receipt/allocation keys, nullable journal linkage, and parent IDs. Keep all states, unposted/no-line roots, and zero-allocation receipts.

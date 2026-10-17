@@ -53,6 +53,8 @@ func purchaseBASLegacyDecisionCTE() string {
 	for index := range invalid {
 		invalid[index] = "(" + invalid[index] + ")"
 	}
+	// Include a same-byte BLOB owner only so the existing invalid-owner checks
+	// reject it; TEXT equality alone would silently omit it before validation.
 	return `WITH requested AS (SELECT ? AS organisation_id), decision_rows AS (
 	 SELECT r.id,r.organisation_id,r.source_kind,COALESCE(r.document_id,r.opening_payable_id) AS source_id,
 	        r.accounting_version,r.review_proto,r.record_hash,
@@ -69,7 +71,10 @@ func purchaseBASLegacyDecisionCTE() string {
 	 LEFT JOIN opening_conversions AS source_conversion ON source_conversion.id=source_payable.conversion_id
 	 LEFT JOIN documents AS claim_document ON claim_document.id=r.claim_evidence_source_id
 	 LEFT JOIN purchase_postings_v1 AS linked_posting ON linked_posting.id=r.linked_posting_id
-	 WHERE r.organisation_id=target.organisation_id OR source_document.organisation_id=target.organisation_id
+	 WHERE r.organisation_id=target.organisation_id
+	    OR (typeof(r.organisation_id)='blob' AND length(r.organisation_id)=36
+	        AND r.organisation_id=CAST(target.organisation_id AS BLOB))
+	    OR source_document.organisation_id=target.organisation_id
 	    OR source_conversion.organisation_id=target.organisation_id OR claim_document.organisation_id=target.organisation_id
 	    OR linked_posting.organisation_id=target.organisation_id
 	), source_rows AS (

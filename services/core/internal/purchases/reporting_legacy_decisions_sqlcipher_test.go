@@ -651,3 +651,118 @@ func TestPurchaseBASLegacyDecisionsSurviveEncryptedReopenAndCallerRollback(t *te
 		t.Fatalf("caller rollback changed committed decisions: %#v %v", summary, err)
 	}
 }
+
+func TestPurchaseBASLegacyDecisionsRejectSameByteBlobOwnerWithoutTargetTextReference(t *testing.T) {
+	ctx := context.Background()
+	tx, f, _, writerReview := purchaseBASLegacyDecisionFixture(t)
+	probe := &purchaseBASLegacyDecisionProbe{Transaction: tx}
+	repo := f.repo(probe)
+
+	// Passing control: a real writer-created, canonical owner remains readable.
+	control, err := repo.SummarizeBASLegacyDecisions(ctx, postingOrg)
+	if err != nil || control == nil || control.RecordCount != 1 {
+		t.Fatalf("canonical decision summary=%#v %v", control, err)
+	}
+	read, err := repo.ReadBASLegacyDecisions(ctx, postingOrg, *control, control.RecordCount, control.DecisionBytes)
+	if err != nil || read == nil || len(read.Reviews) != 1 || !proto.Equal(read.Reviews[0], writerReview) {
+		t.Fatalf("canonical writer decision read=%#v %v", read, err)
+	}
+	readsBeforeCorruption := probe.decisionReads
+	if readsBeforeCorruption != 1 {
+		t.Fatalf("canonical control decision reads=%d, want 1", readsBeforeCorruption)
+	}
+
+	// Corruption-only fixture: remove every requested-org TEXT owner arm, then
+	// preserve the requested UUID's exact bytes in the review owner as a BLOB.
+	// This does not claim financial validity after either owner is corrupted.
+	documentID := writerReview.Review.Source.GetDocument().GetDocumentId()
+	mutatePurchaseBASScalar(t, f, "documents",
+		`UPDATE documents SET organisation_id='foreign-owner' WHERE id=?`, documentID)
+	mutatePurchaseBASScalar(t, f, "purchase_legacy_reviews_v1",
+		`UPDATE purchase_legacy_reviews_v1 SET organisation_id=CAST(organisation_id AS BLOB) WHERE id=?`, writerReview.Id)
+	before := purchaseBASScalarState(t, tx)
+
+	if summary, err := repo.SummarizeBASLegacyDecisions(ctx, postingOrg); summary != nil || !errors.Is(err, purchases.ErrRepository) {
+		t.Fatalf("same-byte BLOB review owner without a target TEXT reference was omitted: summary=%#v err=%v", summary, err)
+	}
+	if got, err := repo.ReadBASLegacyDecisions(ctx, postingOrg, *control, control.RecordCount, control.DecisionBytes); got != nil || !errors.Is(err, purchases.ErrRepository) {
+		t.Fatalf("same-byte BLOB review owner read=%#v err=%v", got, err)
+	}
+	if probe.decisionReads != readsBeforeCorruption || probe.bodyReads != 0 || !tx.Authenticated() ||
+		!reflect.DeepEqual(before, purchaseBASScalarState(t, tx)) {
+		t.Fatal("owner-scope summary hydrated decision/financial bodies, wrote, or ended caller transaction")
+	}
+}
+
+func TestPurchaseBASLegacyDecisionsRejectSameByteBlobOwnerDriftAfterEmptyReservation(t *testing.T) {
+	ctx := context.Background()
+	tx, f, _, writerReview := purchaseBASLegacyDecisionFixture(t)
+	documentID := writerReview.Review.Source.GetDocument().GetDocumentId()
+
+	// Make the real writer-created row genuinely unrelated to the requested
+	// organisation before taking the empty reservation. This is corruption-only
+	// test setup, not a claim that the altered retained history is valid.
+	mutatePurchaseBASScalar(t, f, "documents",
+		`UPDATE documents SET organisation_id='foreign-owner' WHERE id=?`, documentID)
+	mutatePurchaseBASScalar(t, f, "purchase_legacy_reviews_v1",
+		`UPDATE purchase_legacy_reviews_v1 SET organisation_id='foreign-owner' WHERE id=?`, writerReview.Id)
+
+	probe := &purchaseBASLegacyDecisionProbe{Transaction: tx}
+	repo := f.repo(probe)
+	expected, err := repo.SummarizeBASLegacyDecisions(ctx, postingOrg)
+	if err != nil || expected == nil || *expected != (purchases.BASLegacyDecisionSummary{OrganisationID: postingOrg}) {
+		t.Fatalf("foreign baseline decision summary=%#v %v", expected, err)
+	}
+
+	var afterCorruption map[string]any
+	probe.beforeDecisionRead = func() error {
+		// This runs after Read's fresh empty summary but before the guarded SQL.
+		// Only the decision owner changes; the referenced document stays foreign.
+		mutatePurchaseBASScalar(t, f, "purchase_legacy_reviews_v1",
+			`UPDATE purchase_legacy_reviews_v1 SET organisation_id=CAST(? AS BLOB) WHERE id=?`, postingOrg, writerReview.Id)
+		afterCorruption = purchaseBASScalarState(t, tx)
+		return nil
+	}
+	got, err := repo.ReadBASLegacyDecisions(ctx, postingOrg, *expected, 0, 0)
+	if got != nil || err == nil {
+		t.Fatalf("same-byte BLOB owner drift returned a decision census: read=%#v err=%v", got, err)
+	}
+	var bound *purchases.SourceBoundError
+	if !errors.Is(err, purchases.ErrSourceBound) || !errors.As(err, &bound) || bound.Resource != "legacy decision records" || bound.Limit != 0 {
+		t.Fatalf("drift did not reach the zero-record sentinel: %v", err)
+	}
+	if probe.decisionReads != 1 || probe.bodyReads != 0 || !tx.Authenticated() || afterCorruption == nil ||
+		!reflect.DeepEqual(afterCorruption, purchaseBASScalarState(t, tx)) {
+		t.Fatal("drift guard hydrated bodies, wrote, or ended caller transaction")
+	}
+}
+
+func TestPurchaseBASLegacyDecisionsLeaveUnrelatedBlobOwnerOutOfScope(t *testing.T) {
+	ctx := context.Background()
+	tx, f, _, writerReview := purchaseBASLegacyDecisionFixture(t)
+	documentID := writerReview.Review.Source.GetDocument().GetDocumentId()
+	const foreignID = "018f0000-0000-7000-8000-000000009999"
+
+	// This corruption-only sentinel uses a different UUID value as a BLOB for
+	// both owner cells. It is intentionally unrelated to the requested org; it
+	// does not assert valid ownership or financial history after mutation.
+	mutatePurchaseBASScalar(t, f, "documents",
+		`UPDATE documents SET organisation_id=CAST(? AS BLOB) WHERE id=?`, foreignID, documentID)
+	mutatePurchaseBASScalar(t, f, "purchase_legacy_reviews_v1",
+		`UPDATE purchase_legacy_reviews_v1 SET organisation_id=CAST(? AS BLOB) WHERE id=?`, foreignID, writerReview.Id)
+	before := purchaseBASScalarState(t, tx)
+	probe := &purchaseBASLegacyDecisionProbe{Transaction: tx}
+	repo := f.repo(probe)
+
+	summary, err := repo.SummarizeBASLegacyDecisions(ctx, postingOrg)
+	if err != nil || summary == nil || *summary != (purchases.BASLegacyDecisionSummary{OrganisationID: postingOrg}) {
+		t.Fatalf("unrelated BLOB owner entered target decision census: summary=%#v %v", summary, err)
+	}
+	got, err := repo.ReadBASLegacyDecisions(ctx, postingOrg, *summary, 0, 0)
+	if err != nil || got == nil || got.Summary != *summary || len(got.Reviews) != 0 {
+		t.Fatalf("unrelated BLOB owner changed target decision read: read=%#v %v", got, err)
+	}
+	if probe.decisionReads != 1 || probe.bodyReads != 0 || !tx.Authenticated() || !reflect.DeepEqual(before, purchaseBASScalarState(t, tx)) {
+		t.Fatal("out-of-scope owner read hydrated bodies, wrote, or ended caller transaction")
+	}
+}
