@@ -85,6 +85,14 @@ The [decision-history dependency](../plans/2026-10-16-bas-legacy-decision-record
 
 This is a decision-body category, outside the physical-key API. A future producer must explicitly reserve its bytes in addition to existing scalar and payload categories before using the records for provisional nomination. Current owner/support/cash facts, exact post-body admission/suppression reconciliation, the complete candidate union and shared fences remain open. No currentness or journal body-hash proof follows from this reader, and overall Task 5 remains incomplete.
 
+## Accepted bounded document-state dependency
+
+The [document-state dependency](../plans/2026-10-17-bas-document-states.md) adds an aggregate summary and guarded all-organisation status/version/raw-SHA/nullable-posting-ID read. It retains reviewed/unreviewed, promoted and evidence documents without period/root/decision selection, under a separate 16,384-record/8 MiB charge of 512 plus selected ID/owner/status/hash/posting-ID bytes. It is additional to physical-key, decision and full-payload reservations; no shared subtraction follows without exact reuse/lifetime proof.
+
+SQL guards mask rejected cells before driver copying and preserve global invalid-link metadata even for an empty document census. Exact-byte BLOB owner/reference corruption is included solely for rejection. Focused native writer/drift/allocation and owner/reference regressions, GPT-6 Luna Max final reviews, affected native race, existing-route TLS, default Core and pinned production build passed; the plan records exact evidence and the independently verified binary hash. This supplies current scalar owner state, not source-body/hash verification, eligibility, currentness or exact evidence-only suppression. Later full-reader exact set/hash reconciliation, current-source/current-cash selectors, shared fences and the combined producer remain open.
+
+A separate static audit found that older purchase physical/decision, invoice root and accounting fact scopes can omit same-byte BLOB owners without a canonical target TEXT reference edge. Their module-specific native reproductions and fail-closed scope hardening remain prerequisites to combined completeness; the new document-state projection does not close those scopes.
+
 ## Tables and typed shapes
 
 - **Invoices:** `invoices_v1` includes all states; `invoice_income_postings_v1` is keyed by invoice, `invoice_income_lines_v1` by `(invoice_id, sequence)`, `invoice_payment_v1` is the receipt row, and `invoice_payment_lines_v1` by `(payment_id, sequence)`. Existing shapes are `BASReportingCapture → BASInvoiceCandidate{Posting, Receipts} → BASInvoicePosting{IncomeLines}, BASInvoiceReceipt{Allocations}`. Expose invoice/posting and receipt/allocation keys, nullable journal linkage, and parent IDs. Keep all states, unposted/no-line roots, and zero-allocation receipts.

@@ -1,0 +1,47 @@
+# BAS document states implementation plan
+
+Status: accepted, 2026-10-17. Implementation, final-source validation and independent reviews passed; overall Task 5 remains open.
+
+> **For agentic workers:** Use superpowers:subagent-driven-development. ROOT owns active Go files and all Go/gofmt/tests/builds/commits. Reuse issue/sbr-registration-ready; subagents draft only under `/tmp`.
+
+**Goal:** Read the complete organisation document-state census within a separate count/byte reservation without financial/source/event bodies.
+
+**Architecture:** Aggregate-only summary and guarded scalar state projection beside purchase reporting keys/decisions. Keep physical keys and full readers unchanged. [Design](../specs/2026-10-17-bas-document-states-design.md).
+
+**Tech Stack:** Go, native SQLCipher, race tests, real document/purchase writers and existing TLS regression journeys.
+
+## Chunk 1: Bounded complete owner state
+
+Create `services/core/internal/purchases/reporting_document_states.go`, `reporting_document_state_sql.go`, `reporting_document_states_test.go`, and `reporting_document_states_sqlcipher_test.go`.
+
+- [x] Independently review the complete census, exact charge, orphan/cross-owner/multiple-posting guards and deferred proof boundary.
+- [x] Activate nil/API tests; ROOT records API-absence RED in default/native build contexts before production code. Native writer fixtures are activated separately before acceptance; do not call compile-time API absence a behavioral RED.
+- [x] Implement typed summary/read, negative and short caller checks, 16,384-record/8 MiB caps, aggregate invalid-link markers even for empty document sets, selected-cell storage guards and aggregate-only summary.
+- [x] Implement SQL ordered cumulative-byte/count/sentinel masks before driver copying, canonical ID/status/version/hash/order validation, exact independent loaded charge/count and cancellation/no-partial semantics.
+- [x] Test all-state/all-history writer/full-owner equality, a real NEEDS_REVIEW-to-REVIEWED transition and promotion, retained evidence documents, exact/short/empty/negative budgets, over-1,000 metadata rows, physical count/byte caps, missing/foreign posting owners, malformed storage, oversized drift allocation/sentinel, cancellation, body independence, encrypted reopen/caller rollback and no writes. Explicitly test the private header's orphan-posting failure on an empty document census, including drift after the fresh summary. Inspect the defensive multiple-posting guard; a second identical TEXT document reference is constrained by global UNIQUE(document_id). Malformed byte-equivalent BLOB references are tested separately; this checkpoint does not rebuild schema.
+- [x] Obtain independent specification then quality review; resolve verified findings and run final focused native race.
+
+## Chunk 2: Validate and record
+
+- [x] Run complete affected purchase/reporting native race with only the previously accepted `TestPurchaseReportingCaptureAccepts1000ModernRootsAndRejects1001BeforeHydration` stress exclusion; no document-state/decision/scalar/nomination exclusion.
+- [x] Run final-source existing real TLS invoice/BAS and purchase commit/audit-rollback journeys.
+- [x] Run all default Core tests and pinned production build; independently verify binary SHA-256.
+- [x] Check formatting and staged scope/whitespace; update programme/lifecycle/complete-source records and bounded-effect constraints with precise additional-budget and proof limits.
+
+Finish by committing the validated source and documentation and verifying a clean worktree.
+
+## Evidence and remaining boundaries
+
+GPT-6 Luna Max design/plan review cleared after exact per-cell UTF-8 bounds and the empty-census metadata header were made explicit. Default/native API-absence builds both exited 1 for missing methods/types (`/tmp/tammy-bas-document-states-api-default-red-2026-10-17.log`, `/tmp/tammy-bas-document-states-api-native-red-2026-10-17.log`). First default API GREEN exited 0 in 0.509s (`/tmp/tammy-bas-document-states-api-default-first-green-2026-10-17.log`). The first activated native behavioral suite passed in 17.894s. ROOT added exact-36-byte noncanonical document/posting ID cases to reach Go validation after successful SQL storage checks; that focused native race passed in 17.950s (`/tmp/tammy-bas-document-states-focused-native-domain-final-2026-10-17.log`). Independent specification review cleared.
+
+Quality review exposed a real omission: SQLite TEXT equality excluded an owner UUID stored as a BLOB before its type guard could reject it. Native regressions reproduced silently empty document and partial orphan-posting censuses, exiting 1 in 1.998s (`/tmp/tammy-bas-document-states-blob-owner-native-red-2026-10-17.log`). SQL now admits exact 36-byte same-value BLOB owner cells solely into rejection paths, including global posting/document invalid-link scope. The same regressions exited 0 in 2.631s (`/tmp/tammy-bas-document-states-blob-owner-native-green-2026-10-17.log`), and quality re-review cleared the correction. The full focused native race after the owner correction, before the later reference correction, exited 0 in 18.955s (`/tmp/tammy-bas-document-states-focused-native-owner-proof-final-2026-10-17.log`).
+
+Specification re-review raised the equivalent reference edge: a foreign posting's BLOB document ID could evade a strict join to its owned TEXT document. Native static and after-fresh-summary cases reproduced partial reads with unchanged count/charge, exiting 1 in 2.170s (`/tmp/tammy-bas-document-states-blob-reference-native-red-2026-10-17.log`). A separate finite invalid-reference probe now uses a 36-byte guarded cast and indexed document lookup solely to reject that edge; data joins and accepted identity storage stay unchanged. The regressions, including a same-owner rejection control, exited 0 in 3.180s (`/tmp/tammy-bas-document-states-blob-reference-native-green-2026-10-17.log`). Final focused native race passed in 20.347s (`/tmp/tammy-bas-document-states-focused-native-reference-proof-final-2026-10-17.log`), and both GPT-6 Luna Max final re-reviews cleared the correction. ROOT interrupted the earlier native broad run (exit 130, `/tmp/tammy-bas-document-states-complete-native-race-interrupted-reference-review-2026-10-17.log`) before source edits; it is not passing evidence. Earlier TLS/default runs predate this reference correction and are superseded by final-source gates.
+
+Final-source complete affected native race passed in 617.123s for purchases and 24.329s for reporting (`/tmp/tammy-bas-document-states-complete-native-race-reference-proof-final-2026-10-17.log`), excluding only the previously accepted expensive public-posting stress fixture; no document-state/decision/scalar/nomination test was excluded. Existing real TLS invoice/BAS and purchase commit/audit-rollback journeys passed in 57.442s (`/tmp/tammy-bas-document-states-real-tls-reference-proof-final-2026-10-17.log`). All default Core packages passed (`/tmp/tammy-bas-document-states-default-core-reference-proof-final-2026-10-17.log`). The pinned SQLCipher 4.15.0 production build passed (`/tmp/tammy-bas-document-states-production-build-reference-proof-final-2026-10-17.log`), with independently verified binary SHA-256 `a5582d5281800796b71ee36b520bc828851a1fdb9b53a5272a9e4aeaf3b19c19`. Formatting and scope/whitespace checks passed. These TLS journeys protect existing routes, not a new endpoint or combined source producer.
+
+Real document Create/SaveReview and purchase/legacy review writers retain reviewed/unreviewed, promoted and evidence documents, detect stale reservations across real transitions, and match full owner values plus exact physical document keys. Separate Go byte lengths and SQL COUNT/SUM verify the charge. Structural count rows deliberately do not prove original source bytes; they establish the 1,001-row census and distinct 16,384/8 MiB aggregate ceilings. Corruption-only orphan setup verifies the private header after a fresh empty summary. Oversized 9 MiB ID/status/hash/version/posting-ID cells and an ordered oversized count sentinel stay below a 2 MiB Go allocation allowance after mutation, including the uncharged version cell. Body-column probes, corrupted excluded source/amount/event cells, cancellation, encrypted reopen, retained state and caller rollback pin the owned boundary. The schema-backed duplicate-posting branch was inspected, not exercised through a rebuilt schema.
+
+The new metadata category is additional to existing key, decision and full-payload reservations. It makes no source-currentness, eligibility, nomination or full-body proof. Payment/linked-posting/opening and current-cash dependencies, later complete proof/set reconciliation, shared candidate/byte fences and the combined producer remain open; overall Task 5 remains incomplete.
+
+A separate static owner-scope audit found similar scope-before-type risks in the older purchase physical-key/legacy-decision, invoice root and accounting tax-fact readers. Some malformed rows are already exposed by canonical target-owned reference edges; an exact-byte BLOB owner without such an edge can evade their TEXT filters. These are follow-up native reproduction and module-owned hardening tasks, not runtime failures reproduced by this checkpoint. This document-state census does not establish completeness of those other readers or accept their combined use as a global fence.
