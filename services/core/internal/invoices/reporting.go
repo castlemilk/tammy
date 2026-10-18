@@ -463,16 +463,16 @@ func (port *ReportingPort) preflightBASReporting(
 		"posting.invoice_id", "posting.organisation_id", "posting.invoice_date", "posting.revenue_account_id",
 		"posting.journal_id", "posting.source_hash", "posting.created_at",
 	)
-	postingNumericStorage := reportingInvalidNumericStorageRowSQL(
+	postingInvalidStorage := reportingInvalidNumericStorageRowSQL(
 		"posting.invoice_version", "posting.gst_basis", "posting.invoice_net_minor", "posting.invoice_gst_minor",
 		"posting.invoice_total_minor", "posting.bas_sales_gross_minor", "posting.profile_version",
 		"posting.basis_audit_sequence", "posting.financial_revision",
-	)
+	) + `+CASE WHEN (` + basInvoicePostingInvalidOwnerSQL + `) THEN 1 ELSE 0 END`
 	postingRows, postingBytes, err := port.queryBASReportingPayload(
 		ctx, "invoice postings", 0, maximumPayloadBytes,
-		"SELECT count(*), total("+postingSize+"), coalesce(sum("+postingNumericStorage+"),0) FROM invoice_income_postings_v1 AS posting "+
-			"JOIN invoices_v1 AS invoice ON invoice.id=posting.invoice_id "+
-			"WHERE invoice.organisation_id=?",
+		"WITH requested AS (SELECT ? AS organisation_id) "+
+			"SELECT count(*), total("+postingSize+"), coalesce(sum("+postingInvalidStorage+"),0) FROM "+basInvoicePostingOwnerFromSQL+
+			" CROSS JOIN requested AS target WHERE ("+basInvoicePostingOwnerScopeSQL+")",
 		organisationID,
 	)
 	if err != nil {
@@ -501,15 +501,15 @@ func (port *ReportingPort) preflightBASReporting(
 		"receipt.bank_account_id", "receipt.journal_id", "receipt.reference", "receipt.payment_proto",
 		"receipt.source_hash", "receipt.created_at",
 	)
-	receiptNumericStorage := reportingInvalidNumericStorageRowSQL(
+	receiptInvalidStorage := reportingInvalidNumericStorageRowSQL(
 		"receipt.amount_minor", "receipt.allocated_gst_minor", "receipt.bas_sales_gross_minor",
-	)
+	) + `+CASE WHEN (` + basInvoiceReceiptInvalidOwnerSQL + `) THEN 1 ELSE 0 END`
 	receiptRows, receiptBytes, err := port.queryBASReportingPayload(
 		ctx, "receipts", maxBASReportingReceipts, maximumPayloadBytes,
-		"SELECT count(*), total(payload_bytes), coalesce(sum(invalid_numeric_storage),0) FROM ("+
-			"SELECT "+receiptSize+" AS payload_bytes, "+receiptNumericStorage+" AS invalid_numeric_storage FROM invoice_payment_v1 AS receipt "+
-			"JOIN invoices_v1 AS invoice ON invoice.id=receipt.invoice_id "+
-			"WHERE invoice.organisation_id=? "+
+		"WITH requested AS (SELECT ? AS organisation_id) "+
+			"SELECT count(*), total(payload_bytes), coalesce(sum(invalid_storage),0) FROM ("+
+			"SELECT "+receiptSize+" AS payload_bytes, "+receiptInvalidStorage+" AS invalid_storage FROM "+basInvoiceReceiptOwnerFromSQL+
+			" CROSS JOIN requested AS target WHERE ("+basInvoiceReceiptOwnerScopeSQL+") "+
 			"ORDER BY receipt.invoice_id,receipt.payment_date,receipt.created_at,receipt.id LIMIT ?)",
 		organisationID, maxBASReportingReceipts+1,
 	)
@@ -588,7 +588,7 @@ func (port *ReportingPort) preflightBASReporting(
 }
 
 // queryBASReportingPayload reads only row counts, retained SQL byte totals,
-// and numeric storage-class violations.
+// and storage/parent violations.
 func (port *ReportingPort) queryBASReportingPayload(
 	ctx context.Context,
 	resource string,
@@ -657,10 +657,10 @@ func (port *ReportingPort) preflightBASReportingJournalIDs(
 	unique := make(map[string]struct{})
 	readPostings := func() error {
 		rows, err := port.executor.QueryContext(ctx,
-			"SELECT posting.invoice_id,posting.organisation_id,posting.journal_id "+
-				"FROM invoice_income_postings_v1 AS posting "+
-				"JOIN invoices_v1 AS invoice ON invoice.id=posting.invoice_id "+
-				"WHERE invoice.organisation_id=? AND posting.journal_id IS NOT NULL "+
+			basReportingGuardedChildRowsSQL("posting", basInvoicePostingOwnerFromSQL,
+				"("+basInvoicePostingOwnerScopeSQL+") AND (posting.journal_id IS NOT NULL OR ("+basInvoicePostingInvalidOwnerSQL+"))",
+				basInvoicePostingInvalidOwnerSQL, "invoice_id", "organisation_id", "journal_id")+
+				"SELECT posting.invoice_id,posting.organisation_id,posting.journal_id FROM guarded AS posting "+
 				"ORDER BY posting.journal_id,posting.invoice_id LIMIT ?",
 			organisationID, maxBASReportingInvoices+1)
 		if err != nil {
@@ -696,10 +696,10 @@ func (port *ReportingPort) preflightBASReportingJournalIDs(
 
 	readReceipts := func() error {
 		rows, err := port.executor.QueryContext(ctx,
-			"SELECT receipt.id,receipt.organisation_id,receipt.invoice_id,receipt.journal_id "+
-				"FROM invoice_payment_v1 AS receipt "+
-				"JOIN invoices_v1 AS invoice ON invoice.id=receipt.invoice_id "+
-				"WHERE invoice.organisation_id=? "+
+			basReportingGuardedChildRowsSQL("receipt", basInvoiceReceiptOwnerFromSQL,
+				basInvoiceReceiptOwnerScopeSQL, basInvoiceReceiptInvalidOwnerSQL,
+				"id", "organisation_id", "invoice_id", "journal_id")+
+				"SELECT receipt.id,receipt.organisation_id,receipt.invoice_id,receipt.journal_id FROM guarded AS receipt "+
 				"ORDER BY receipt.journal_id,receipt.id LIMIT ?",
 			organisationID, maxBASReportingReceipts+1)
 		if err != nil {
@@ -1058,12 +1058,16 @@ func (port *ReportingPort) loadBASReportingPostings(
 	organisationID string,
 	candidates map[string]*BASInvoiceCandidate,
 ) (map[string]*BASInvoicePosting, error) {
-	rows, err := port.executor.QueryContext(ctx, `SELECT posting.invoice_id,posting.organisation_id,
+	guardedRows := basReportingGuardedChildRowsSQL("posting", basInvoicePostingOwnerFromSQL,
+		basInvoicePostingOwnerScopeSQL, basInvoicePostingInvalidOwnerSQL,
+		"invoice_id", "organisation_id", "invoice_version", "invoice_date", "gst_basis", "revenue_account_id", "journal_id",
+		"invoice_net_minor", "invoice_gst_minor", "invoice_total_minor", "bas_sales_gross_minor", "profile_version",
+		"basis_audit_sequence", "financial_revision", "source_hash", "created_at")
+	rows, err := port.executor.QueryContext(ctx, guardedRows+`SELECT posting.invoice_id,posting.organisation_id,
 		posting.invoice_version,posting.invoice_date,posting.gst_basis,posting.revenue_account_id,posting.journal_id,
 		posting.invoice_net_minor,posting.invoice_gst_minor,posting.invoice_total_minor,posting.bas_sales_gross_minor,
 		posting.profile_version,posting.basis_audit_sequence,posting.financial_revision,posting.source_hash,posting.created_at
-		FROM invoice_income_postings_v1 AS posting JOIN invoices_v1 AS invoice ON invoice.id=posting.invoice_id
-		WHERE invoice.organisation_id=? ORDER BY posting.invoice_id`, organisationID)
+		FROM guarded AS posting ORDER BY posting.invoice_id`, organisationID)
 	if err != nil {
 		return nil, errors.Join(ErrRepository, fmt.Errorf("query invoice posting reporting sources: %w", err), ctx.Err())
 	}
@@ -1175,11 +1179,14 @@ func (port *ReportingPort) loadBASReportingReceipts(
 	organisationID string,
 	candidates map[string]*BASInvoiceCandidate,
 ) (map[string][]BASInvoiceReceipt, map[string]*BASInvoiceReceipt, error) {
-	rows, err := port.executor.QueryContext(ctx, `SELECT receipt.id,receipt.organisation_id,receipt.invoice_id,
+	guardedRows := basReportingGuardedChildRowsSQL("receipt", basInvoiceReceiptOwnerFromSQL,
+		basInvoiceReceiptOwnerScopeSQL, basInvoiceReceiptInvalidOwnerSQL,
+		"id", "organisation_id", "invoice_id", "payment_date", "amount_minor", "allocated_gst_minor", "bas_sales_gross_minor",
+		"bank_account_id", "journal_id", "reference", "payment_proto", "source_hash", "created_at")
+	rows, err := port.executor.QueryContext(ctx, guardedRows+`SELECT receipt.id,receipt.organisation_id,receipt.invoice_id,
 		receipt.payment_date,receipt.amount_minor,receipt.allocated_gst_minor,receipt.bas_sales_gross_minor,
 		receipt.bank_account_id,receipt.journal_id,receipt.reference,receipt.payment_proto,receipt.source_hash,receipt.created_at
-		FROM invoice_payment_v1 AS receipt JOIN invoices_v1 AS invoice ON invoice.id=receipt.invoice_id
-		WHERE invoice.organisation_id=?
+		FROM guarded AS receipt
 		ORDER BY receipt.invoice_id,receipt.payment_date,receipt.created_at,receipt.id`, organisationID)
 	if err != nil {
 		return nil, nil, errors.Join(ErrRepository, fmt.Errorf("query invoice receipt reporting sources: %w", err), ctx.Err())

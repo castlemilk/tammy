@@ -76,8 +76,8 @@ func basScalarRowsSQL() string {
 			 LEFT JOIN invoices_v1 AS invoice ON invoice.id=posting.invoice_id
 			 LEFT JOIN organisations AS owner ON owner.id=posting.organisation_id
 			 LEFT JOIN journals AS journal ON journal.id=posting.journal_id`,
-			predicate: `posting.organisation_id=target.organisation_id OR invoice.organisation_id=target.organisation_id`,
-			invalid: `owner.id IS NULL OR invoice.id IS NULL OR posting.invoice_id=''
+			predicate: basInvoicePostingOwnerScopeSQL,
+			invalid: `owner.id IS NULL OR typeof(posting.organisation_id)!='text' OR invoice.id IS NULL OR posting.invoice_id=''
 			 OR invoice.organisation_id!=posting.organisation_id OR typeof(posting.invoice_version)!='integer' OR posting.invoice_version<1
 			 OR typeof(posting.invoice_total_minor)!='integer' OR ((posting.invoice_total_minor=0)!=(posting.journal_id IS NULL))
 			 OR posting.source_hash IS NULL OR length(CAST(posting.source_hash AS BLOB))!=32
@@ -100,8 +100,8 @@ func basScalarRowsSQL() string {
 			 LEFT JOIN invoices_v1 AS invoice ON invoice.id=receipt.invoice_id
 			 LEFT JOIN organisations AS owner ON owner.id=receipt.organisation_id
 			 LEFT JOIN journals AS journal ON journal.id=receipt.journal_id`,
-			predicate: `receipt.organisation_id=target.organisation_id OR posting.organisation_id=target.organisation_id OR invoice.organisation_id=target.organisation_id`,
-			invalid: `owner.id IS NULL OR posting.invoice_id IS NULL OR invoice.id IS NULL OR receipt.id IS NULL OR receipt.id='' OR receipt.invoice_id=''
+			predicate: basInvoiceReceiptOwnerScopeSQL + ` OR posting.organisation_id=target.organisation_id`,
+			invalid: `owner.id IS NULL OR typeof(receipt.organisation_id)!='text' OR posting.invoice_id IS NULL OR invoice.id IS NULL OR receipt.id IS NULL OR receipt.id='' OR receipt.invoice_id=''
 			 OR invoice.organisation_id!=receipt.organisation_id OR posting.organisation_id!=receipt.organisation_id
 			 OR receipt.journal_id IS NULL OR receipt.journal_id='' OR journal.id IS NULL OR journal.organisation_id!=receipt.organisation_id
 			 OR receipt.source_hash IS NULL OR length(CAST(receipt.source_hash AS BLOB))!=32`,
