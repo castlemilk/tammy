@@ -26,6 +26,12 @@ const (
 	basReportingHashTag     = "tammy/invoices/bas-reporting-capture/v1"
 )
 
+// BLOB matches enter owner validation only; no accepted identity is normalized.
+// TEXT equality alone would omit this corruption before storage checks run.
+const basInvoiceOwnerScopeSQL = `invoice.organisation_id=target.organisation_id OR
+ (typeof(invoice.organisation_id)='blob' AND length(invoice.organisation_id)=36
+  AND invoice.organisation_id=CAST(target.organisation_id AS BLOB))`
+
 var ErrSourceBound = errors.New("invoices: reporting source exceeds its bound")
 
 type SourceBoundError struct {
@@ -439,12 +445,14 @@ func (port *ReportingPort) preflightBASReporting(
 		"invoice.id", "invoice.organisation_id", "invoice.state", "invoice.number", "invoice.invoice_proto",
 		"invoice.created_at", "invoice.updated_at",
 	)
-	invoiceNumericStorage := reportingInvalidNumericStorageRowSQL("invoice.version")
+	invoiceInvalidStorage := reportingInvalidNumericStorageRowSQL("invoice.version") +
+		`+CASE WHEN typeof(invoice.organisation_id)!='text' THEN 1 ELSE 0 END`
 	invoiceRows, invoiceBytes, err := port.queryBASReportingPayload(
 		ctx, "invoices", maxBASReportingInvoices, maximumPayloadBytes,
-		"SELECT count(*), total(payload_bytes), coalesce(sum(invalid_numeric_storage),0) FROM ("+
-			"SELECT "+invoiceSize+" AS payload_bytes, "+invoiceNumericStorage+" AS invalid_numeric_storage FROM invoices_v1 AS invoice "+
-			"WHERE invoice.organisation_id=? ORDER BY invoice.created_at,invoice.id LIMIT ?)",
+		"WITH requested AS (SELECT ? AS organisation_id) "+
+			"SELECT count(*), total(payload_bytes), coalesce(sum(invalid_storage),0) FROM ("+
+			"SELECT "+invoiceSize+" AS payload_bytes, "+invoiceInvalidStorage+" AS invalid_storage FROM invoices_v1 AS invoice "+
+			"CROSS JOIN requested AS target WHERE ("+basInvoiceOwnerScopeSQL+") ORDER BY invoice.created_at,invoice.id LIMIT ?)",
 		organisationID, maxBASReportingInvoices+1,
 	)
 	if err != nil {
@@ -597,9 +605,9 @@ func (port *ReportingPort) queryBASReportingPayload(
 		rowsErr, closeErr := rows.Err(), rows.Close()
 		return 0, 0, errors.Join(ErrRepository, sql.ErrNoRows, rowsErr, closeErr)
 	}
-	var count, invalidNumericRows int64
+	var count, invalidStorageRows int64
 	var payloadBytes float64
-	if err := rows.Scan(&count, &payloadBytes, &invalidNumericRows); err != nil {
+	if err := rows.Scan(&count, &payloadBytes, &invalidStorageRows); err != nil {
 		return 0, 0, errors.Join(ErrRepository, err, rows.Close())
 	}
 	if rows.Next() {
@@ -626,8 +634,8 @@ func (port *ReportingPort) queryBASReportingPayload(
 	if payloadBytes > float64(maximumPayloadBytes) {
 		return 0, 0, &SourceBoundError{Resource: "capture bytes", Limit: maximumPayloadBytes}
 	}
-	if invalidNumericRows != 0 {
-		return 0, 0, fmt.Errorf("%w: %s contain non-integer numeric storage", ErrRepository, resource)
+	if invalidStorageRows != 0 {
+		return 0, 0, fmt.Errorf("%w: %s contain invalid storage", ErrRepository, resource)
 	}
 	return count, int64(payloadBytes), nil
 }
@@ -970,9 +978,24 @@ func (port *ReportingPort) loadBASReportingInvoices(
 	ctx context.Context,
 	organisationID string,
 ) ([]BASInvoiceCandidate, error) {
-	rows, err := port.executor.QueryContext(ctx, `SELECT id,organisation_id,version,state,number,
-		invoice_proto,created_at,updated_at FROM invoices_v1 WHERE organisation_id=?
-		ORDER BY created_at,id LIMIT ?`, organisationID, maxBASReportingInvoices+1)
+	// A same-byte BLOB owner introduced after preflight must remain visible,
+	// but none of its cells may reach the driver as an accepted invoice row.
+	rows, err := port.executor.QueryContext(ctx, `WITH requested AS (SELECT ? AS organisation_id),
+	 guarded AS (
+	  SELECT CASE WHEN typeof(invoice.organisation_id)='text' THEN invoice.id END AS id,
+	   CASE WHEN typeof(invoice.organisation_id)='text' THEN invoice.organisation_id END AS organisation_id,
+	   CASE WHEN typeof(invoice.organisation_id)='text' THEN invoice.version END AS version,
+	   CASE WHEN typeof(invoice.organisation_id)='text' THEN invoice.state END AS state,
+	   CASE WHEN typeof(invoice.organisation_id)='text' THEN invoice.number END AS number,
+	   CASE WHEN typeof(invoice.organisation_id)='text' THEN invoice.invoice_proto END AS invoice_proto,
+	   CASE WHEN typeof(invoice.organisation_id)='text' THEN invoice.created_at END AS created_at,
+	   CASE WHEN typeof(invoice.organisation_id)='text' THEN invoice.updated_at END AS updated_at
+	  FROM invoices_v1 AS invoice CROSS JOIN requested AS target
+	  WHERE (`+basInvoiceOwnerScopeSQL+`)
+	  ORDER BY invoice.created_at,invoice.id LIMIT ?
+	 )
+	 SELECT id,organisation_id,version,state,number,invoice_proto,created_at,updated_at
+	 FROM guarded ORDER BY created_at,id`, organisationID, maxBASReportingInvoices+1)
 	if err != nil {
 		return nil, errors.Join(ErrRepository, fmt.Errorf("query invoice reporting sources: %w", err), ctx.Err())
 	}

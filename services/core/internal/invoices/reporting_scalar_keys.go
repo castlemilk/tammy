@@ -67,8 +67,8 @@ func basScalarRowsSQL() string {
 		{
 			kind: BASScalarInvoice, organisation: "invoice.organisation_id", invoice: "invoice.id", rootVersion: "invoice.version",
 			from:      `invoices_v1 AS invoice LEFT JOIN organisations AS owner ON owner.id=invoice.organisation_id`,
-			predicate: `invoice.organisation_id=target.organisation_id`,
-			invalid:   `owner.id IS NULL OR invoice.id IS NULL OR invoice.id='' OR typeof(invoice.version)!='integer' OR invoice.version<1`,
+			predicate: basInvoiceOwnerScopeSQL,
+			invalid:   `owner.id IS NULL OR typeof(invoice.organisation_id)!='text' OR invoice.id IS NULL OR invoice.id='' OR typeof(invoice.version)!='integer' OR invoice.version<1`,
 		},
 		{
 			kind: BASScalarPosting, organisation: "posting.organisation_id", invoice: "posting.invoice_id", postingVersion: "posting.invoice_version", journal: "posting.journal_id", sourceHash: "posting.source_hash",
