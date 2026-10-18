@@ -84,14 +84,10 @@ func basScalarRowsSQL() string {
 			 OR (posting.journal_id IS NOT NULL AND (posting.journal_id='' OR journal.id IS NULL OR journal.organisation_id!=posting.organisation_id))`,
 		},
 		{
-			kind: BASScalarIncomeLine, organisation: "posting.organisation_id", invoice: "income.invoice_id", sequence: "income.sequence",
-			from: `invoice_income_lines_v1 AS income
-			 LEFT JOIN invoice_income_postings_v1 AS posting ON posting.invoice_id=income.invoice_id
-			 LEFT JOIN invoices_v1 AS invoice ON invoice.id=income.invoice_id
-			 LEFT JOIN organisations AS owner ON owner.id=posting.organisation_id`,
-			predicate: `posting.organisation_id=target.organisation_id OR invoice.organisation_id=target.organisation_id OR (posting.invoice_id IS NULL AND invoice.id IS NULL)`,
-			invalid: `owner.id IS NULL OR posting.invoice_id IS NULL OR invoice.id IS NULL OR income.invoice_id=''
-			 OR invoice.organisation_id!=posting.organisation_id OR typeof(income.sequence)!='integer' OR income.sequence<1`,
+			kind: BASScalarIncomeLine, organisation: "posting.organisation_id", invoice: "income_line.invoice_id", sequence: "income_line.sequence",
+			from:      basInvoiceIncomeLineFromSQL,
+			predicate: basInvoiceIncomeLineScopeSQL,
+			invalid:   basInvoiceIncomeLineInvalidLinkSQL,
 		},
 		{
 			kind: BASScalarReceipt, organisation: "receipt.organisation_id", invoice: "receipt.invoice_id", receipt: "receipt.id", journal: "receipt.journal_id", sourceHash: "receipt.source_hash",
@@ -108,15 +104,9 @@ func basScalarRowsSQL() string {
 		},
 		{
 			kind: BASScalarAllocation, organisation: "receipt.organisation_id", invoice: "receipt.invoice_id", receipt: "allocation.payment_id", sequence: "allocation.sequence",
-			from: `invoice_payment_lines_v1 AS allocation
-			 LEFT JOIN invoice_payment_v1 AS receipt ON receipt.id=allocation.payment_id
-			 LEFT JOIN invoice_income_postings_v1 AS posting ON posting.invoice_id=receipt.invoice_id
-			 LEFT JOIN invoices_v1 AS invoice ON invoice.id=receipt.invoice_id
-			 LEFT JOIN organisations AS owner ON owner.id=receipt.organisation_id`,
-			predicate: `receipt.organisation_id=target.organisation_id OR posting.organisation_id=target.organisation_id OR invoice.organisation_id=target.organisation_id OR receipt.id IS NULL`,
-			invalid: `owner.id IS NULL OR receipt.id IS NULL OR posting.invoice_id IS NULL OR invoice.id IS NULL OR allocation.payment_id=''
-			 OR invoice.organisation_id!=receipt.organisation_id OR posting.organisation_id!=receipt.organisation_id
-			 OR typeof(allocation.sequence)!='integer' OR allocation.sequence<1`,
+			from:      basInvoiceAllocationFromSQL,
+			predicate: basInvoiceAllocationScopeSQL,
+			invalid:   basInvoiceAllocationInvalidLinkSQL,
 		},
 	}
 	parts := make([]string, 0, len(families))

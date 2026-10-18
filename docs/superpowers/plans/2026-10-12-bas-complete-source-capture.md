@@ -266,6 +266,14 @@ The [child owner-scope plan](2026-10-18-bas-invoice-child-owner-scope.md) record
 
 This owns direct posting/receipt owners and required-parent rejection for selected rows. It does not accept income-line/allocation orphan discovery, malformed-reference fanout, purchase physical scopes, current-source/current-cash selectors, full-reader exact set/hash reconciliation, shared fences or the combined producer. No overall Task 5 or packaged phase-three gate is complete.
 
+### Invoice income-line/allocation orphan correction (accepted, 2026-10-18)
+
+Both component families lack an organisation column. Their full aggregates and body reads now share the existing scalar LEFT JOIN relations, target parent-edge scopes and missing-parent rejection sentinel. No owner is inferred. Missing owner/posting/invoice/receipt links, owner disagreement and invalid sequence storage/value reject in preflight, together with the existing full numeric storage checks. Original resource names, row/byte charge recipes, family order and bound/byte priority remain. The body SQL masks every selected six/four component cell on any link or numeric-storage violation, preserving actual outer SELECT markers and valid values/order. Journal enumeration is unchanged.
+
+The [component orphan plan](2026-10-18-bas-invoice-component-orphans.md) records actual native RED in 13.943s: all six static cases passed preflight, both late orphans returned empty success, and still-linked 9 MiB numeric cells generated 37,748,888-byte errors with over 366 MB Go allocation after mutation. Focused native GREEN passed in 12.516s. It proves exact canonical writer/protobuf/provenance/charges, non-target TEXT scope, scalar parity, static rejection before body/journal reads, an empty-target global sentinel, tiny-budget priority and four late probes below 2 MiB allocation with bounded errors and exact body-stage stopping. Checks/triggers, state/`total_changes` and caller authentication are preserved. Independent GPT-6 Luna Max specification/quality reviews, complete affected native race, existing-route TLS, default Core and pinned production build passed against frozen Go source; the plan records exact final logs and the independently verified binary hash.
+
+This owns component orphan discovery and guarded component numeric/link projections only. Broader malformed-reference fanout, purchase physical scopes, current-source/current-cash selectors, exact full-reader set/hash reconciliation, shared fences and the combined producer remain open. No overall Task 5 or packaged phase-three gate is complete.
+
 ## Required native regressions
 
 - Candidate and receipt combined limits at exact limit and limit+1; oversized combined bytes at exact budget and budget-1; assert overflow happens before any body/payload query and returns no capture.

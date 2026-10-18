@@ -480,16 +480,12 @@ func (port *ReportingPort) preflightBASReporting(
 	}
 
 	incomeLineSize := reportingPayloadSize("income_line.invoice_id")
-	incomeLineNumericStorage := reportingInvalidNumericStorageRowSQL(
-		"income_line.sequence", "income_line.gross_minor", "income_line.net_minor",
-		"income_line.gst_minor", "income_line.treatment",
-	)
+	incomeLineInvalidStorage := "CASE WHEN (" + basInvoiceIncomeLineInvalidFullSQL + ") THEN 1 ELSE 0 END"
 	incomeLineRows, incomeLineBytes, err := port.queryBASReportingPayload(
 		ctx, "invoice income lines", 0, maximumPayloadBytes,
-		"SELECT count(*), total("+incomeLineSize+"), coalesce(sum("+incomeLineNumericStorage+"),0) FROM invoice_income_lines_v1 AS income_line "+
-			"JOIN invoice_income_postings_v1 AS posting ON posting.invoice_id=income_line.invoice_id "+
-			"JOIN invoices_v1 AS invoice ON invoice.id=posting.invoice_id "+
-			"WHERE invoice.organisation_id=?",
+		"WITH requested AS (SELECT ? AS organisation_id) "+
+			"SELECT count(*), total("+incomeLineSize+"), coalesce(sum("+incomeLineInvalidStorage+"),0) FROM "+basInvoiceIncomeLineFromSQL+
+			" CROSS JOIN requested AS target WHERE ("+basInvoiceIncomeLineScopeSQL+")",
 		organisationID,
 	)
 	if err != nil {
@@ -518,15 +514,12 @@ func (port *ReportingPort) preflightBASReporting(
 	}
 
 	allocationSize := reportingPayloadSize("allocation.payment_id")
-	allocationNumericStorage := reportingInvalidNumericStorageRowSQL(
-		"allocation.sequence", "allocation.gross_minor", "allocation.gst_minor",
-	)
+	allocationInvalidStorage := "CASE WHEN (" + basInvoiceAllocationInvalidFullSQL + ") THEN 1 ELSE 0 END"
 	allocationRows, allocationBytes, err := port.queryBASReportingPayload(
 		ctx, "receipt allocations", 0, maximumPayloadBytes,
-		"SELECT count(*), total("+allocationSize+"), coalesce(sum("+allocationNumericStorage+"),0) FROM invoice_payment_lines_v1 AS allocation "+
-			"JOIN invoice_payment_v1 AS receipt ON receipt.id=allocation.payment_id "+
-			"JOIN invoices_v1 AS invoice ON invoice.id=receipt.invoice_id "+
-			"WHERE invoice.organisation_id=?",
+		"WITH requested AS (SELECT ? AS organisation_id) "+
+			"SELECT count(*), total("+allocationSize+"), coalesce(sum("+allocationInvalidStorage+"),0) FROM "+basInvoiceAllocationFromSQL+
+			" CROSS JOIN requested AS target WHERE ("+basInvoiceAllocationScopeSQL+")",
 		organisationID,
 	)
 	if err != nil {
@@ -1135,12 +1128,12 @@ func (port *ReportingPort) loadBASReportingIncomeLines(
 	organisationID string,
 	postings map[string]*BASInvoicePosting,
 ) (map[string][]BASInvoiceIncomeLine, error) {
-	rows, err := port.executor.QueryContext(ctx, `SELECT income_line.invoice_id,income_line.sequence,
+	guardedRows := basReportingGuardedChildRowsSQL("income_line", basInvoiceIncomeLineFromSQL,
+		basInvoiceIncomeLineScopeSQL, basInvoiceIncomeLineInvalidFullSQL,
+		"invoice_id", "sequence", "gross_minor", "net_minor", "gst_minor", "treatment")
+	rows, err := port.executor.QueryContext(ctx, guardedRows+`SELECT income_line.invoice_id,income_line.sequence,
 		income_line.gross_minor,income_line.net_minor,income_line.gst_minor,income_line.treatment
-		FROM invoice_income_lines_v1 AS income_line
-		JOIN invoice_income_postings_v1 AS posting ON posting.invoice_id=income_line.invoice_id
-		JOIN invoices_v1 AS invoice ON invoice.id=posting.invoice_id
-		WHERE invoice.organisation_id=? ORDER BY income_line.invoice_id,income_line.sequence`, organisationID)
+		FROM guarded AS income_line ORDER BY income_line.invoice_id,income_line.sequence`, organisationID)
 	if err != nil {
 		return nil, errors.Join(ErrRepository, fmt.Errorf("query invoice income-line reporting sources: %w", err), ctx.Err())
 	}
@@ -1271,11 +1264,12 @@ func (port *ReportingPort) loadBASReportingAllocations(
 	organisationID string,
 	receipts map[string]*BASInvoiceReceipt,
 ) (map[string][]BASInvoicePaymentLine, error) {
-	rows, err := port.executor.QueryContext(ctx, `SELECT allocation.payment_id,allocation.sequence,
-		allocation.gross_minor,allocation.gst_minor FROM invoice_payment_lines_v1 AS allocation
-		JOIN invoice_payment_v1 AS receipt ON receipt.id=allocation.payment_id
-		JOIN invoices_v1 AS invoice ON invoice.id=receipt.invoice_id
-		WHERE invoice.organisation_id=? ORDER BY allocation.payment_id,allocation.sequence`, organisationID)
+	guardedRows := basReportingGuardedChildRowsSQL("allocation", basInvoiceAllocationFromSQL,
+		basInvoiceAllocationScopeSQL, basInvoiceAllocationInvalidFullSQL,
+		"payment_id", "sequence", "gross_minor", "gst_minor")
+	rows, err := port.executor.QueryContext(ctx, guardedRows+`SELECT allocation.payment_id,allocation.sequence,
+		allocation.gross_minor,allocation.gst_minor FROM guarded AS allocation
+		ORDER BY allocation.payment_id,allocation.sequence`, organisationID)
 	if err != nil {
 		return nil, errors.Join(ErrRepository, fmt.Errorf("query invoice receipt allocation sources: %w", err), ctx.Err())
 	}
