@@ -30,6 +30,8 @@ func purchaseBASModernFamilies() []purchaseBASScalarFamily {
 			 LEFT JOIN documents AS d ON d.id=p.document_id
 			 LEFT JOIN journals AS j ON j.id=p.journal_id`,
 			where: `p.organisation_id=target.organisation_id
+			 OR (typeof(p.organisation_id)='blob' AND length(p.organisation_id)=36
+			   AND p.organisation_id=CAST(target.organisation_id AS BLOB))
 			 OR d.organisation_id=target.organisation_id
 			 OR j.organisation_id=target.organisation_id`,
 			invalid: `owner.id IS NULL OR p.id IS NULL OR p.document_id IS NULL

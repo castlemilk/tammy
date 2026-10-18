@@ -274,6 +274,14 @@ The [component orphan plan](2026-10-18-bas-invoice-component-orphans.md) records
 
 This owns component orphan discovery and guarded component numeric/link projections only. Broader malformed-reference fanout, purchase physical scopes, current-source/current-cash selectors, exact full-reader set/hash reconciliation, shared fences and the combined producer remain open. No overall Task 5 or packaged phase-three gate is complete.
 
+### Purchase physical scalar posting/document owner correction (accepted, 2026-10-19)
+
+Only the direct owner arms of `BASScalarPosting` and `BASScalarDocument` now include the exact requested 36-byte UUID stored as a BLOB. Existing posting document/journal TEXT scope remains; the document root anti-join and every other physical family predicate are unchanged. Generic mandatory owner storage checks and window/CASE key masking reject admitted BLOB owners. No identity is normalized, and valid counts, root/receipt flags, order, charges and bounds keep their existing definitions.
+
+The [scalar root owner plan](2026-10-19-bas-purchase-scalar-root-owner-scope.md) records actual native RED in 7.015s: direct-only static summaries/key reads and ordinary/9 MiB late drift silently returned empty success. Focused native GREEN passed in 7.924s. Canonical zero/nonzero `PostReviewed` sources retain exact versions/hashes/journal presence/root flags/order and independent byte charges. A foreign-scope baseline has all 15 family counts zero; unrelated BLOB UUIDs remain outside scope. Both uncharged 9 MiB version probes mutate after the key reader's own fresh summary, verify SQL type/length without fetching the BLOB, and require the exact zero-key sentinel, no body query, under 2 MiB Go allocation, short errors and unchanged state/authentication. Independent GPT-6 Luna Max specification/quality reviews and final gates passed: affected purchase/accounting/reporting native race in 567.803s/56.257s/20.713s with only the previously accepted public-posting stress exclusion, existing-route real TLS in 57.295s, all default Core packages and the pinned production build. The plan records exact logs and the independently verified binary hash.
+
+This accepts no full purchase coverage correction. Its separate root/fallback census, document-ID discovery, generic body queries and later repository replay still need same-statement owner guards; `Get` currently reads document bodies before posting ownership. Other direct-owner families, opening orphan/replacement closure, reference fanout, current-source/current-cash selectors, exact full-reader set/hash reconciliation, shared fences and the combined producer remain open. No overall Task 5 or packaged phase-three gate is complete.
+
 ## Required native regressions
 
 - Candidate and receipt combined limits at exact limit and limit+1; oversized combined bytes at exact budget and budget-1; assert overflow happens before any body/payload query and returns no capture.

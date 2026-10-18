@@ -90,7 +90,9 @@ func purchaseBASLegacyFamilies() []purchaseBASScalarFamily {
 			required: []string{"organisation_id", "id", "object_version", "source_hash"},
 			from: `documents AS d
 			LEFT JOIN organisations AS owner ON owner.id=d.organisation_id`,
-			where: `d.organisation_id=target.organisation_id`,
+			where: `d.organisation_id=target.organisation_id
+				OR (typeof(d.organisation_id)='blob' AND length(d.organisation_id)=36
+				  AND d.organisation_id=CAST(target.organisation_id AS BLOB))`,
 			invalid: `owner.id IS NULL OR d.organisation_id IS NOT target.organisation_id
 				OR d.id IS NULL OR d.id=''
 				OR typeof(d.version)!='integer' OR d.version<1
