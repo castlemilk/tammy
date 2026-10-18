@@ -50,12 +50,14 @@ const taxFactBASScalarFromSQL = `
 	LEFT JOIN organisations AS owner ON owner.id = fact.organisation_id
 	LEFT JOIN journal_lines AS line ON line.id = fact.journal_line_id
 	LEFT JOIN journals AS journal ON journal.id = line.journal_id
-	WHERE fact.organisation_id = ?`
+	CROSS JOIN (SELECT ? AS organisation_id) AS target
+	WHERE (` + taxFactReportingOwnerScopeSQL + `)`
 
 func taxFactBASScalarInvalidSQL() string {
 	invalidStorage := taxFactReportingInvalidNumericStorageSQL(
 		[]string{"fact.source_revision"}, []string{"line.line_number"})
-	invalidKey := `CASE WHEN owner.id IS NULL OR line.id IS NULL OR journal.id IS NULL
+	invalidKey := `CASE WHEN owner.id IS NULL OR typeof(fact.organisation_id)!='text'
+	 OR line.id IS NULL OR journal.id IS NULL
 	 OR journal.organisation_id IS NULL OR journal.organisation_id != fact.organisation_id
 	 OR fact.id IS NULL OR fact.id = '' OR fact.journal_line_id = '' OR line.journal_id = ''
 	 OR fact.source_revision < 1 OR line.line_number < 1 OR line.line_number > 4294967295

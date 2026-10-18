@@ -27,6 +27,11 @@ const (
 	taxFactReportingFingerprintTag  = "tammy/accounting/tax-fact-reporting-capture/v1"
 )
 
+// BLOB matches enter owner validation only; accepted identities stay TEXT.
+const taxFactReportingOwnerScopeSQL = `fact.organisation_id = target.organisation_id OR
+ (typeof(fact.organisation_id)='blob' AND length(fact.organisation_id)=36
+  AND fact.organisation_id=CAST(target.organisation_id AS BLOB))`
+
 var ErrTaxFactReportingBound = errors.New("accounting: tax fact reporting capture exceeds its bound")
 
 // TaxFactReportingBoundError identifies which finite reporting projection
@@ -294,7 +299,7 @@ func (repository *JournalRepository) preflightTaxFactReportingCapture(
 		"fact.source_type", "fact.source_id", "fact.source_content_hash", "fact.created_at",
 		"line.journal_id", "journal.organisation_id", "journal.journal_date",
 	)
-	baseNumericStorage := taxFactReportingInvalidNumericStorageSQL(
+	baseInvalidStorage := taxFactReportingInvalidNumericStorageSQL(
 		[]string{
 			"fact.original_gross_minor", "fact.original_net_minor", "fact.original_gst_minor",
 			"fact.attributed_gross_minor", "fact.attributed_net_minor", "fact.attributed_gst_minor",
@@ -302,15 +307,16 @@ func (repository *JournalRepository) preflightTaxFactReportingCapture(
 			"fact.tax_rule_revision", "fact.source_revision",
 		},
 		[]string{"line.line_number"},
-	)
+	) + `+CASE WHEN typeof(fact.organisation_id)!='text' THEN 1 ELSE 0 END`
 	factCount, basePayloadBytes, err := repository.reserveTaxFactReportingPayloadDetails(ctx, &remainingBytes,
 		"tax facts", maxTaxFactReportingFacts,
-		`SELECT count(*), total(payload_bytes), coalesce(sum(invalid_numeric_storage), 0) FROM (
-		 SELECT `+baseSize+` AS payload_bytes, `+baseNumericStorage+` AS invalid_numeric_storage
+		`SELECT count(*), total(payload_bytes), coalesce(sum(invalid_storage), 0) FROM (
+		 SELECT `+baseSize+` AS payload_bytes, `+baseInvalidStorage+` AS invalid_storage
 		 FROM tax_facts AS fact
 		 LEFT JOIN journal_lines AS line ON line.id = fact.journal_line_id
 		 LEFT JOIN journals AS journal ON journal.id = line.journal_id
-		 WHERE fact.organisation_id = ?
+		 CROSS JOIN (SELECT ? AS organisation_id) AS target
+		 WHERE (`+taxFactReportingOwnerScopeSQL+`)
 		 ORDER BY journal.journal_date, journal.id, line.line_number, fact.id LIMIT ?
 		)`, organisationID, maxTaxFactReportingFacts+1)
 	if err != nil {
@@ -372,8 +378,10 @@ func (repository *JournalRepository) countInvalidTaxFactReportingParents(
 		FROM tax_facts AS fact
 		LEFT JOIN journal_lines AS line ON line.id = fact.journal_line_id
 		LEFT JOIN journals AS journal ON journal.id = line.journal_id
-		WHERE fact.organisation_id = ?
-		  AND (line.id IS NULL OR journal.id IS NULL OR journal.organisation_id != fact.organisation_id
+		CROSS JOIN (SELECT ? AS organisation_id) AS target
+		WHERE (`+taxFactReportingOwnerScopeSQL+`)
+		  AND (typeof(fact.organisation_id)!='text' OR line.id IS NULL OR journal.id IS NULL
+		       OR journal.organisation_id != fact.organisation_id
 		       OR journal.id = '' OR line.journal_id = '' OR journal.journal_date IS NULL OR journal.journal_date = ''
 		       OR line.line_number < 1 OR line.line_number > ?)`,
 		organisationID, math.MaxUint32)
@@ -550,7 +558,7 @@ func (repository *JournalRepository) reserveTaxFactReportingPayload(
 func (repository *JournalRepository) reserveTaxFactReportingPayloadDetails(
 	ctx context.Context, remainingBytes *int64, resource string, rowLimit int, query string, args ...any,
 ) (int, int64, error) {
-	var count, invalidNumericRows int
+	var count, invalidStorageRows int
 	var payloadBytes float64
 	// SQLite total() avoids integer-sum overflow for unconstrained legacy
 	// cells. Integral byte counts remain exact throughout the 8 MiB budget.
@@ -561,7 +569,7 @@ func (repository *JournalRepository) reserveTaxFactReportingPayloadDetails(
 	if !rows.Next() {
 		return 0, 0, errors.Join(ErrJournalRepository, sql.ErrNoRows, rows.Err(), rows.Close())
 	}
-	if err := rows.Scan(&count, &payloadBytes, &invalidNumericRows); err != nil {
+	if err := rows.Scan(&count, &payloadBytes, &invalidStorageRows); err != nil {
 		return 0, 0, errors.Join(taxFactReportingReadError("scan preflight "+resource, err), rows.Close())
 	}
 	if rows.Next() {
@@ -587,8 +595,8 @@ func (repository *JournalRepository) reserveTaxFactReportingPayloadDetails(
 	if float64(payloadByteCount) != payloadBytes {
 		return 0, 0, fmt.Errorf("%w: non-integral %s payload size", ErrJournalRepository, resource)
 	}
-	if invalidNumericRows != 0 {
-		return 0, 0, fmt.Errorf("%w: %s contain non-integer numeric storage", ErrJournalRepository, resource)
+	if invalidStorageRows != 0 {
+		return 0, 0, fmt.Errorf("%w: %s contain invalid storage", ErrJournalRepository, resource)
 	}
 	*remainingBytes -= payloadByteCount
 	return count, payloadByteCount, nil
@@ -598,7 +606,38 @@ func (repository *JournalRepository) loadTaxFactReportingCandidates(
 	ctx context.Context,
 	organisationID string,
 ) ([]taxFactReportingCandidate, error) {
+	// Mask a malformed direct owner before joining parents. Its row survives
+	// even a missing parent, but all fact and joined parent cells reach the
+	// driver as NULL, including corruption introduced after an empty preflight.
 	rows, err := repository.executor.QueryContext(ctx, `
+		WITH guarded_facts AS (
+		 SELECT CASE WHEN typeof(fact.organisation_id)='text' THEN fact.id END AS id,
+		        CASE WHEN typeof(fact.organisation_id)='text' THEN fact.organisation_id END AS organisation_id,
+		        CASE WHEN typeof(fact.organisation_id)='text' THEN fact.journal_line_id END AS journal_line_id,
+		        CASE WHEN typeof(fact.organisation_id)='text' THEN fact.tax_code END AS tax_code,
+		        CASE WHEN typeof(fact.organisation_id)='text' THEN fact.treatment END AS treatment,
+		        CASE WHEN typeof(fact.organisation_id)='text' THEN fact.original_gross_minor END AS original_gross_minor,
+		        CASE WHEN typeof(fact.organisation_id)='text' THEN fact.original_net_minor END AS original_net_minor,
+		        CASE WHEN typeof(fact.organisation_id)='text' THEN fact.original_gst_minor END AS original_gst_minor,
+		        CASE WHEN typeof(fact.organisation_id)='text' THEN fact.attributed_gross_minor END AS attributed_gross_minor,
+		        CASE WHEN typeof(fact.organisation_id)='text' THEN fact.attributed_net_minor END AS attributed_net_minor,
+		        CASE WHEN typeof(fact.organisation_id)='text' THEN fact.attributed_gst_minor END AS attributed_gst_minor,
+		        CASE WHEN typeof(fact.organisation_id)='text' THEN fact.remaining_gross_minor END AS remaining_gross_minor,
+		        CASE WHEN typeof(fact.organisation_id)='text' THEN fact.remaining_net_minor END AS remaining_net_minor,
+		        CASE WHEN typeof(fact.organisation_id)='text' THEN fact.remaining_gst_minor END AS remaining_gst_minor,
+		        CASE WHEN typeof(fact.organisation_id)='text' THEN fact.tax_rule_type END AS tax_rule_type,
+		        CASE WHEN typeof(fact.organisation_id)='text' THEN fact.tax_rule_id END AS tax_rule_id,
+		        CASE WHEN typeof(fact.organisation_id)='text' THEN fact.tax_rule_revision END AS tax_rule_revision,
+		        CASE WHEN typeof(fact.organisation_id)='text' THEN fact.tax_rule_content_hash END AS tax_rule_content_hash,
+		        CASE WHEN typeof(fact.organisation_id)='text' THEN fact.source_type END AS source_type,
+		        CASE WHEN typeof(fact.organisation_id)='text' THEN fact.source_id END AS source_id,
+		        CASE WHEN typeof(fact.organisation_id)='text' THEN fact.source_revision END AS source_revision,
+		        CASE WHEN typeof(fact.organisation_id)='text' THEN fact.source_content_hash END AS source_content_hash,
+		        CASE WHEN typeof(fact.organisation_id)='text' THEN fact.created_at END AS created_at
+		 FROM tax_facts AS fact
+		 CROSS JOIN (SELECT ? AS organisation_id) AS target
+		 WHERE (`+taxFactReportingOwnerScopeSQL+`)
+		)
 		SELECT fact.id, fact.organisation_id, fact.journal_line_id, fact.tax_code, fact.treatment,
 		       fact.original_gross_minor, fact.original_net_minor, fact.original_gst_minor,
 		       fact.attributed_gross_minor, fact.attributed_net_minor, fact.attributed_gst_minor,
@@ -606,10 +645,9 @@ func (repository *JournalRepository) loadTaxFactReportingCandidates(
 		       fact.tax_rule_type, fact.tax_rule_id, fact.tax_rule_revision, fact.tax_rule_content_hash,
 		       fact.source_type, fact.source_id, fact.source_revision, fact.source_content_hash, fact.created_at,
 		       line.journal_id, line.line_number, journal.organisation_id, journal.journal_date
-		FROM tax_facts AS fact
+		FROM guarded_facts AS fact
 	LEFT JOIN journal_lines AS line ON line.id = fact.journal_line_id
 	LEFT JOIN journals AS journal ON journal.id = line.journal_id
-		WHERE fact.organisation_id = ?
 		ORDER BY journal.journal_date, journal.id, line.line_number, fact.id
 		LIMIT ?`, organisationID, maxTaxFactReportingFacts+1)
 	if err != nil {
