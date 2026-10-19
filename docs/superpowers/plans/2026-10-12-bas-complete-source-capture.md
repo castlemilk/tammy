@@ -306,6 +306,12 @@ Static native RED failed in 4.022s: target-linked full preflight accepted and fu
 
 This accepts no missing/foreign allocation-parent discovery, owner drift after a successful allocation read and before another dependent-family statement, other owner families, opening orphan/replacement closure, current-source/current-cash selectors, exact full-reader reconciliation, shared fences or combined producer. Overall Task 5 and packaged phase-three acceptance remain open.
 
+### Shared scalar reservation stage (accepted, 2026-10-20)
+
+The [fixed Task 5 closeout plan](2026-10-20-bas-task5-closeout.md) owns the remaining finite repair/selector/producer/command sequence. `baspreparation.ReserveBASSourceScalars` now coordinates only the accepted invoice, purchase and accounting aggregate summaries. It preserves each comparable reservation, checks family-derived count consistency, and enforces combined 1,000 roots, 1,000 receipts, 16,384 physical keys and caller-clamped 8 MiB scalar bytes. Accounting fact keys add no roots/receipts. Ports expose no typed-key, parent-ID or body readers; errors and cancellation return no partial reservation. This does not reserve complete payloads, nominate semantic candidates, remove duplicate proofs or fingerprint source content.
+
+Actual API-absence RED preceded implementation. Independent quality review found underreported root/receipt totals; five unit regressions reproduced the acceptance before family-derived bounds were fixed. Final focused unit race passed in 1.569s and real schema-14 SQLCipher integration in 2.280s. Real invoice/document/journal+TaxFact writers prove exact mixed counts, aggregate-only reads, exact/short byte budgets, unchanged state/revisions/authentication and caller rollback. Complete BAS preparation native race passed in 335.583s without exclusions; default package tests passed in 1.087s. Independent GPT-6 Luna Max specification and final quality reviews cleared. The closeout plan records exact commands/logs. Shared complete-payload arithmetic, exact legacy nomination, reader repair groups, full proof reconciliation, the combined producer and real preparation-command acceptance remain open; Task 5 is incomplete.
+
 ## Required native regressions
 
 - Candidate and receipt combined limits at exact limit and limit+1; oversized combined bytes at exact budget and budget-1; assert overflow happens before any body/payload query and returns no capture.
