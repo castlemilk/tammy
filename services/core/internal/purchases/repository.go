@@ -338,7 +338,12 @@ func (r *Repository) loadPosting(ctx context.Context, org, docID string) (*tammy
 }
 
 func (r *Repository) verifyAllocations(ctx context.Context, p *tammyv1.PurchasePosting) error {
-	rows, err := r.executor.QueryContext(ctx, `SELECT sequence,account_id,account_version,gross_minor,supplier_gst_minor,eligible_gst_minor,use_kind,bas_classification,cash_flow_classification,noncreditable_reason,allocation_proto FROM purchase_posting_allocations_v1 WHERE posting_id=? AND organisation_id=? ORDER BY sequence`, p.Id, p.OrganisationId)
+	sqlText := `SELECT sequence,account_id,account_version,gross_minor,supplier_gst_minor,eligible_gst_minor,use_kind,bas_classification,cash_flow_classification,noncreditable_reason,allocation_proto FROM purchase_posting_allocations_v1 WHERE posting_id=? AND organisation_id=? ORDER BY sequence`
+	args := []any{p.Id, p.OrganisationId}
+	if r.reportingRootOwners {
+		sqlText, args = postingReportingReadSQL(purchaseReportingPostingAllocationReplayQuery(p.OrganisationId, p.Id))
+	}
+	rows, err := r.executor.QueryContext(ctx, sqlText, args...)
 	if err != nil {
 		return ErrRepository
 	}
@@ -348,7 +353,12 @@ func (r *Repository) verifyAllocations(ctx context.Context, p *tammyv1.PurchaseP
 	for rows.Next() {
 		a := &tammyv1.PurchaseAllocationInput{Gross: purchaseJournalMoney(0), SupplierGst: purchaseJournalMoney(0), EligibleGst: purchaseJournalMoney(0)}
 		var content []byte
-		if rows.Scan(&a.Sequence, &a.AccountId, &a.AccountVersion, &a.Gross.MinorUnits, &a.SupplierGst.MinorUnits, &a.EligibleGst.MinorUnits, &a.Use, &a.BasClassification, &a.CashFlowClassification, &a.NoncreditableReason, &content) != nil || index >= len(p.Allocations) {
+		destinations := []any{&a.Sequence, &a.AccountId, &a.AccountVersion, &a.Gross.MinorUnits, &a.SupplierGst.MinorUnits, &a.EligibleGst.MinorUnits, &a.Use, &a.BasClassification, &a.CashFlowClassification, &a.NoncreditableReason, &content}
+		var invalidOwner int64
+		if r.reportingRootOwners {
+			destinations = append([]any{&invalidOwner}, destinations...)
+		}
+		if rows.Scan(destinations...) != nil || invalidOwner != 0 || index >= len(p.Allocations) {
 			return ErrRepository
 		}
 		stored := &tammyv1.PurchaseAllocationInput{}

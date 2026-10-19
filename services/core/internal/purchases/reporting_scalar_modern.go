@@ -63,6 +63,8 @@ func purchaseBASModernFamilies() []purchaseBASScalarFamily {
 			 LEFT JOIN purchase_postings_v1 AS p ON p.id=a.posting_id
 			 LEFT JOIN accounts AS account ON account.id=a.account_id`,
 			where: `a.organisation_id=target.organisation_id
+			 OR (typeof(a.organisation_id)='blob' AND length(a.organisation_id)=36
+			   AND a.organisation_id=CAST(target.organisation_id AS BLOB))
 			 OR p.organisation_id=target.organisation_id
 			 OR account.organisation_id=target.organisation_id`,
 			invalid: `owner.id IS NULL OR a.posting_id IS NULL OR a.account_id IS NULL

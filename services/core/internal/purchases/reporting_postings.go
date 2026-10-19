@@ -162,8 +162,9 @@ func (r *Repository) CapturePostingsForReportingWithPayloadBudget(
 			return nil, ErrRepository
 		}
 		queries := postingReportingSourceQueries(organisationID)
+		emptyQueries := []postingReportingQuery{queries[0], queries[1], queries[2]}
 		remaining := maximumPayloadBytes
-		for _, query := range []postingReportingQuery{queries[0], queries[2]} {
+		for _, query := range emptyQueries {
 			_, count, err := preflightPostingReportingQuery(ctx, r.executor, query, &remaining, maximumPayloadBytes)
 			if err != nil {
 				return nil, postingReportingReadError(ctx, err)
@@ -171,6 +172,8 @@ func (r *Repository) CapturePostingsForReportingWithPayloadBudget(
 			if count != 0 {
 				return nil, ErrRepository
 			}
+		}
+		for _, query := range emptyQueries {
 			loaded, err := loadPostingReportingQuery(ctx, r.executor, query)
 			if err != nil {
 				return nil, postingReportingReadError(ctx, err)
@@ -436,6 +439,7 @@ func postingReportingSourceQueries(organisationID string) []postingReportingQuer
 		{table: "command_idempotency_v1", alias: "c", columns: strings.Fields("workspace_id actor_user_id fully_qualified_rpc_name operation_key semantic_hash_version request_type normalized_hash result_type result_proto outcome failure_code result_resource_id attempt retention_policy created_at completed_at"), from: "command_idempotency_v1 AS c", where: "c.operation_key IN (" + eventKeys + ")", args: []any{organisationID, organisationID}, orderBy: "c.operation_key"},
 	}
 	queries[0].ownerGuard = purchaseReportingRootOwnerGuard(organisationID, false)
+	queries[1].ownerGuard = purchaseReportingPostingAllocationOwnerGuard(organisationID)
 	queries[2].ownerGuard = purchaseReportingPaymentOwnerGuard(organisationID)
 	return queries
 }
