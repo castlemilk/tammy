@@ -193,7 +193,7 @@ func (r *Repository) reserveCoverageForBAS(
 	if rootCount > maximumPostingReportingRoots {
 		return nil, &SourceBoundError{Resource: "purchase roots", Limit: maximumPostingReportingRoots}
 	}
-	modernPostingCount, err := postingReportingCount(ctx, r.executor,
+	modernPostingCount, err := purchaseReportingOwnerCount(ctx, r.executor, purchaseReportingRootOwnerGuard(organisationID, false),
 		`SELECT count(*) FROM (SELECT 1 FROM purchase_postings_v1 WHERE organisation_id=? ORDER BY id LIMIT ?)`,
 		organisationID, maximumPostingReportingRoots+1)
 	if err != nil {
@@ -615,6 +615,7 @@ func (r *Repository) CaptureCoverageForBASWithPayloadBudget(
 		return nil, ErrRepository
 	}
 	reader.now = func() time.Time { return readAsOf }
+	reader.reportingRootOwners = true
 	postings := make([]PostingReportingRecord, 0, int(modernPostingCount))
 	for _, documentID := range postingReportingRootDocumentIDs(baseRows) {
 		if err := ctx.Err(); err != nil {
@@ -697,7 +698,7 @@ func (r *Repository) CaptureCoverageForBASWithPayloadBudget(
 func purchaseCoverageRootCount(ctx context.Context, executor interface {
 	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
 }, organisationID string) (int64, error) {
-	return postingReportingCount(ctx, executor, `SELECT count(*) FROM (
+	return purchaseReportingOwnerCount(ctx, executor, purchaseReportingRootOwnerGuard(organisationID, true), `SELECT count(*) FROM (
 		SELECT id FROM (SELECT id FROM purchase_postings_v1 WHERE organisation_id=? ORDER BY id LIMIT 1001)
 		UNION ALL
 		SELECT id FROM (SELECT d.id AS id FROM documents d WHERE d.organisation_id=? AND NOT EXISTS(
@@ -733,7 +734,8 @@ func purchaseCoverageDocumentIDs(ctx context.Context, executor interface {
 	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
 }, organisationID string, discoveryRemaining *int64, limit int64) ([]string, int64, error) {
 	query := postingReportingQuery{table: "coverage_document_ids", alias: "d", columns: []string{"id"},
-		from: "documents AS d", where: "d.organisation_id=?", args: []any{organisationID}, orderBy: "d.id"}
+		from: "documents AS d", where: "d.organisation_id=?", args: []any{organisationID}, orderBy: "d.id",
+		ownerGuard: purchaseReportingRootOwnerGuard(organisationID, true)}
 	rows, _, err := purchaseCoverageBoundedRows(ctx, executor, query, discoveryRemaining, limit)
 	if err != nil {
 		return nil, 0, err
@@ -1139,6 +1141,9 @@ func purchaseCoverageBaseQueries(organisationID string, documentIDs, conversionI
 		switch query.table {
 		case "purchase_accounting_events_v1", "financial_revision_claims", "command_idempotency_v1":
 			continue
+		}
+		if query.table == "purchase_postings_v1" {
+			query.ownerGuard = purchaseReportingRootOwnerGuard(organisationID, true)
 		}
 		queries = append(queries, query)
 	}

@@ -92,14 +92,15 @@ type PurchaseReportingRetainedValue struct {
 }
 
 type postingReportingQuery struct {
-	table   string
-	alias   string
-	columns []string
-	from    string
-	where   string
-	args    []any
-	orderBy string
-	limit   string
+	table      string
+	alias      string
+	columns    []string
+	from       string
+	where      string
+	args       []any
+	orderBy    string
+	limit      string
+	ownerGuard *postingReportingOwnerGuard
 }
 
 type postingReportingRowsResult struct {
@@ -138,7 +139,7 @@ func (r *Repository) CapturePostingsForReportingWithPayloadBudget(
 		maximumPayloadBytes = maximumPostingReportingPayloadSize
 	}
 
-	rootCount, err := postingReportingCount(ctx, r.executor,
+	rootCount, err := purchaseReportingOwnerCount(ctx, r.executor, purchaseReportingRootOwnerGuard(organisationID, false),
 		`SELECT count(*) FROM (SELECT 1 FROM purchase_postings_v1 WHERE organisation_id=? ORDER BY id LIMIT ?)`,
 		organisationID, maximumPostingReportingRoots+1)
 	if err != nil {
@@ -158,6 +159,22 @@ func (r *Repository) CapturePostingsForReportingWithPayloadBudget(
 	}
 	if rootCount == 0 {
 		if paymentCount != 0 {
+			return nil, ErrRepository
+		}
+		query := postingReportingSourceQueries(organisationID)[0]
+		remaining := maximumPayloadBytes
+		_, count, err := preflightPostingReportingQuery(ctx, r.executor, query, &remaining, maximumPayloadBytes)
+		if err != nil {
+			return nil, postingReportingReadError(ctx, err)
+		}
+		if count != 0 {
+			return nil, ErrRepository
+		}
+		loaded, err := loadPostingReportingQuery(ctx, r.executor, query)
+		if err != nil {
+			return nil, postingReportingReadError(ctx, err)
+		}
+		if len(loaded.rows) != 0 || loaded.payloadSize != 0 {
 			return nil, ErrRepository
 		}
 		fingerprint, err := postingReportingFingerprint(ctx, organisationID, nil, nil)
@@ -339,6 +356,7 @@ func (r *Repository) CapturePostingsForReportingWithPayloadBudget(
 		return nil, ErrRepository
 	}
 	reader.now = func() time.Time { return readAsOf }
+	reader.reportingRootOwners = true
 	postings := make([]PostingReportingRecord, 0, int(rootCount))
 	for _, documentID := range postingReportingRootDocumentIDs(retainedRows) {
 		if err := ctx.Err(); err != nil {
@@ -402,7 +420,7 @@ func (r *Repository) CapturePostingsForReportingWithPayloadBudget(
 func postingReportingSourceQueries(organisationID string) []postingReportingQuery {
 	const rootIDs = `SELECT id FROM purchase_postings_v1 WHERE organisation_id=?`
 	const eventKeys = `SELECT e.operation_key FROM purchase_accounting_events_v1 AS e WHERE e.organisation_id=? AND e.scope_kind='POSTING' AND e.scope_id IN (` + rootIDs + `)`
-	return []postingReportingQuery{
+	queries := []postingReportingQuery{
 		{table: "purchase_postings_v1", alias: "p", columns: strings.Fields("id organisation_id document_id reviewed_version original_content_hash reviewed_snapshot_hash reviewed_source_proto supplier_name supplier_identity invoice_number invoice_date gst_basis gst_profile_version gst_history_watermark gross_minor supplier_gst_minor eligible_gst_minor currency_code journal_id financial_revision duplicate_decision duplicate_reason prior_accounting_decision prior_accounting_reason normalized_supplier normalized_invoice source_hash posting_proto actor_user_id created_at"), from: "purchase_postings_v1 AS p", where: "p.organisation_id=?", args: []any{organisationID}, orderBy: "p.id", limit: " LIMIT 1001"},
 		{table: "purchase_posting_allocations_v1", alias: "a", columns: strings.Fields("posting_id organisation_id sequence account_id account_version gross_minor supplier_gst_minor eligible_gst_minor use_kind bas_classification cash_flow_classification noncreditable_reason allocation_proto"), from: "purchase_posting_allocations_v1 AS a", where: "a.organisation_id=? AND a.posting_id IN (" + rootIDs + ")", args: []any{organisationID, organisationID}, orderBy: "a.posting_id,a.sequence"},
 		{table: "purchase_payments_v1", alias: "p", columns: strings.Fields("id posting_id organisation_id accounting_version payment_date amount_minor currency_code bank_account_id journal_id reference payment_proto source_hash actor_user_id created_at"), from: "purchase_payments_v1 AS p", where: "p.organisation_id=? AND p.posting_id IN (" + rootIDs + ")", args: []any{organisationID, organisationID}, orderBy: "p.posting_id,p.accounting_version,p.id", limit: " LIMIT 1001"},
@@ -415,6 +433,8 @@ func postingReportingSourceQueries(organisationID string) []postingReportingQuer
 		{table: "financial_revision_claims", alias: "c", columns: strings.Fields("operation_key domain_mask financial_revision ledger_revision settlement_revision banking_revision tax_source_revision organisation_profile_revision rule_bundle_revision updated_at"), from: "financial_revision_claims AS c", where: "c.operation_key IN (" + eventKeys + ")", args: []any{organisationID, organisationID}, orderBy: "c.operation_key"},
 		{table: "command_idempotency_v1", alias: "c", columns: strings.Fields("workspace_id actor_user_id fully_qualified_rpc_name operation_key semantic_hash_version request_type normalized_hash result_type result_proto outcome failure_code result_resource_id attempt retention_policy created_at completed_at"), from: "command_idempotency_v1 AS c", where: "c.operation_key IN (" + eventKeys + ")", args: []any{organisationID, organisationID}, orderBy: "c.operation_key"},
 	}
+	queries[0].ownerGuard = purchaseReportingRootOwnerGuard(organisationID, false)
+	return queries
 }
 
 func postingReportingDocumentQueries(organisationID string, documentIDs []string) []postingReportingQuery {
@@ -435,6 +455,7 @@ func postingReportingDocumentQueries(organisationID string, documentIDs []string
 		queries = append(queries, postingReportingQuery{
 			table: "documents", alias: "d", columns: columns, from: "documents AS d",
 			where: "d.id IN (" + placeholders + ") AND d.organisation_id=?", args: args, orderBy: "d.id",
+			ownerGuard: purchaseReportingDocumentOwnerGuard(organisationID, batch),
 		})
 	}
 	return queries
@@ -540,13 +561,24 @@ func preflightPostingReportingQuery(
 	}
 	size := postingReportingPayloadSizeSQL(query.alias, query.columns)
 	sqlText := `SELECT count(*),total(payload_bytes) FROM (SELECT ` + size + ` AS payload_bytes FROM ` + query.from + ` WHERE ` + query.where + `)`
-	rows, err := executor.QueryContext(ctx, sqlText, query.args...)
+	args := query.args
+	var invalidOwner int64
+	if query.ownerGuard != nil {
+		sqlText = query.ownerGuard.cte() + `SELECT count(*),total(payload_bytes),
+			(SELECT invalid_owner FROM purchase_owner_guard) FROM (SELECT ` + size + ` AS payload_bytes FROM ` + query.from + ` WHERE ` + query.where + `)`
+		args = append(append([]any(nil), query.ownerGuard.args...), args...)
+	}
+	rows, err := executor.QueryContext(ctx, sqlText, args...)
 	if err != nil {
 		return 0, 0, errors.Join(ErrRepository, err, ctx.Err())
 	}
 	var count int64
 	var payload float64
-	if !rows.Next() || rows.Scan(&count, &payload) != nil || rows.Next() || rows.Err() != nil {
+	destinations := []any{&count, &payload}
+	if query.ownerGuard != nil {
+		destinations = append(destinations, &invalidOwner)
+	}
+	if !rows.Next() || rows.Scan(destinations...) != nil || rows.Next() || rows.Err() != nil {
 		return 0, 0, errors.Join(ErrRepository, rows.Err(), rows.Close(), ctx.Err())
 	}
 	if err := rows.Close(); err != nil {
@@ -554,6 +586,9 @@ func preflightPostingReportingQuery(
 	}
 	if err := ctx.Err(); err != nil {
 		return 0, 0, errors.Join(ErrRepository, err)
+	}
+	if invalidOwner != 0 {
+		return 0, 0, ErrRepository
 	}
 	if count < 0 || payload < 0 || math.IsNaN(payload) || math.IsInf(payload, 0) {
 		return 0, 0, ErrRepository
@@ -587,12 +622,8 @@ func loadPostingReportingQuery(
 	if len(query.columns) == 0 || query.from == "" || query.where == "" || query.orderBy == "" {
 		return postingReportingRowsResult{}, ErrRepository
 	}
-	selects := make([]string, len(query.columns))
-	for i, column := range query.columns {
-		selects[i] = query.alias + "." + column
-	}
-	sqlText := "SELECT " + strings.Join(selects, ",") + " FROM " + query.from + " WHERE " + query.where + " ORDER BY " + query.orderBy + query.limit
-	rows, err := executor.QueryContext(ctx, sqlText, query.args...)
+	sqlText, args := postingReportingReadSQL(query)
+	rows, err := executor.QueryContext(ctx, sqlText, args...)
 	if err != nil {
 		return postingReportingRowsResult{}, errors.Join(ErrRepository, err, ctx.Err())
 	}
@@ -606,9 +637,18 @@ func loadPostingReportingQuery(
 		for i := range destinations {
 			destinations[i] = new(any)
 		}
-		if err := rows.Scan(destinations...); err != nil {
+		scanDestinations := destinations
+		var invalidOwner int64
+		if query.ownerGuard != nil {
+			scanDestinations = append([]any{&invalidOwner}, destinations...)
+		}
+		if err := rows.Scan(scanDestinations...); err != nil {
 			_ = rows.Close()
 			return postingReportingRowsResult{}, errors.Join(ErrRepository, err, ctx.Err())
+		}
+		if invalidOwner != 0 {
+			_ = rows.Close()
+			return postingReportingRowsResult{}, errors.Join(ErrRepository, ctx.Err())
 		}
 		row := PurchaseReportingRetainedRow{Table: query.table, Columns: append([]string(nil), query.columns...), Values: make([]PurchaseReportingRetainedValue, len(query.columns))}
 		rowBytes := postingReportingRowOverhead

@@ -30,21 +30,25 @@ var (
 // Repository uses the caller's encrypted command transaction. The caller owns
 // election, commit/rollback, audit and durable command-result replay.
 type Repository struct {
-	executor app.CommandSQLExecutor
-	now      func() time.Time
-	newID    func() (string, error)
+	executor            app.CommandSQLExecutor
+	now                 func() time.Time
+	newID               func() (string, error)
+	reportingRootOwners bool
 }
 
 func NewRepository(executor app.CommandSQLExecutor, now func() time.Time, newID func() (string, error)) (*Repository, error) {
 	if executor == nil || now == nil || newID == nil {
 		return nil, ErrRepository
 	}
-	return &Repository{executor, now, newID}, nil
+	return &Repository{executor: executor, now: now, newID: newID}, nil
 }
 
 func (r *Repository) document(ctx context.Context, org, id string) (*tammyv1.Document, error) {
 	if r == nil || r.executor == nil || ctx == nil || !ids.IsCanonicalV7(org) || !ids.IsCanonicalV7(id) {
 		return nil, ErrRepository
+	}
+	if r.reportingRootOwners {
+		return r.reportingDocument(ctx, org, id)
 	}
 	repo, _ := documents.NewRepository(r.executor)
 	doc, err := repo.Get(ctx, id)
@@ -268,13 +272,26 @@ func verifyPurchaseHash(message proto.Message, hash []byte) bool {
 }
 
 func (r *Repository) loadPosting(ctx context.Context, org, docID string) (*tammyv1.PurchasePosting, error) {
-	rows, err := r.executor.QueryContext(ctx, `SELECT posting_proto,source_hash,reviewed_source_proto,reviewed_snapshot_hash FROM purchase_postings_v1 WHERE organisation_id=? AND document_id=?`, org, docID)
+	sqlText := `SELECT posting_proto,source_hash,reviewed_source_proto,reviewed_snapshot_hash FROM purchase_postings_v1 WHERE organisation_id=? AND document_id=?`
+	args := []any{org, docID}
+	if r.reportingRootOwners {
+		sqlText, args = postingReportingReadSQL(purchaseReportingPostingReplayQuery(org, docID))
+	}
+	rows, err := r.executor.QueryContext(ctx, sqlText, args...)
 	if err != nil {
 		return nil, ErrRepository
 	}
 	var content, hash, reviewed, reviewedHash []byte
-	if err := (purchaseRevisionRow{rows: rows}).Scan(&content, &hash, &reviewed, &reviewedHash); err != nil {
+	destinations := []any{&content, &hash, &reviewed, &reviewedHash}
+	var invalidOwner int64
+	if r.reportingRootOwners {
+		destinations = append([]any{&invalidOwner}, destinations...)
+	}
+	if err := (purchaseRevisionRow{rows: rows}).Scan(destinations...); err != nil {
 		return nil, err
+	}
+	if invalidOwner != 0 {
+		return nil, ErrRepository
 	}
 	p := &tammyv1.PurchasePosting{}
 	if proto.Unmarshal(content, p) != nil || !verifyPurchaseHash(p, hash) || !bytes.Equal(p.SourceHash, hash) || p.OrganisationId != org || p.DocumentId != docID || !ids.IsCanonicalV7(p.Id) || p.ReviewedVersion == 0 || p.ReviewedVersion > math.MaxInt64 || p.GstProfileVersion == 0 || p.GstProfileVersion > math.MaxInt64 || p.GstHistoryWatermark > math.MaxInt64 || p.FinancialRevision == 0 || p.FinancialRevision > math.MaxInt64 || !validPurchaseMoney(p.Gross) || !validPurchaseMoney(p.SupplierGst) || !validPurchaseMoney(p.EligibleGst) || p.PostedAt == nil || p.PostedAt.CheckValid() != nil || !ids.IsCanonicalV7(p.ActorUserId) {

@@ -162,6 +162,16 @@ const documentSelect = `
 	       document_date, subtotal_minor, gst_minor, total_minor, created_at, reviewed_at
 	FROM documents`
 
+// ScanRetainedDocument shares the mature document decoder with bounded owning
+// readers. The scanner supplies documentSelect's 17 columns in this order:
+// id, organisation_id, version, status, source_display_name, mime_type,
+// byte_length, sha256, extracted_text, supplier_name, invoice_number,
+// document_date, subtotal_minor, gst_minor, total_minor, created_at, reviewed_at.
+// The caller owns SQL scoping, bounds, additional result columns and row closure.
+func ScanRetainedDocument(scanner interface{ Scan(...any) error }) (*tammyv1.Document, error) {
+	return scanDocument(scanner)
+}
+
 func scanDocument(scanner interface{ Scan(...any) error }) (*tammyv1.Document, error) {
 	document := &tammyv1.Document{Candidate: &tammyv1.DocumentCandidate{
 		Subtotal: audMoney(0), Gst: audMoney(0), Total: audMoney(0),
