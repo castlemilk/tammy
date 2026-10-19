@@ -1,0 +1,40 @@
+package purchases
+
+import (
+	"database/sql"
+	"strings"
+)
+
+// A matching BLOB owner is visible only to reject it; payment selection keeps
+// its ordinary TEXT scope and its existing row and payload definitions.
+func purchaseReportingPaymentOwnerGuard(organisationID string) *postingReportingOwnerGuard {
+	return &postingReportingOwnerGuard{
+		invalid: `EXISTS(SELECT 1 FROM purchase_payments_v1 AS owner_payment
+			WHERE typeof(owner_payment.organisation_id)='blob' AND length(owner_payment.organisation_id)=36
+			AND owner_payment.organisation_id=CAST(? AS BLOB))`,
+		args: []any{organisationID},
+	}
+}
+
+func purchaseReportingPaymentReplayQuery(organisationID, postingID string) postingReportingQuery {
+	return postingReportingQuery{
+		table: "payment replay", alias: "p",
+		columns: strings.Fields("id accounting_version payment_date amount_minor currency_code bank_account_id journal_id reference payment_proto source_hash actor_user_id created_at"),
+		from:    "purchase_payments_v1 AS p", where: "p.posting_id=? AND p.organisation_id=?",
+		args: []any{postingID, organisationID}, orderBy: "p.accounting_version,p.id",
+		ownerGuard: purchaseReportingPaymentOwnerGuard(organisationID),
+	}
+}
+
+type purchaseReportingPaymentRow struct{ rows *sql.Rows }
+
+// The mature payment decoder consumes its original twelve destinations after
+// the guard flag. The actual SQL masks all twelve cells on rejection.
+func (row purchaseReportingPaymentRow) Scan(destinations ...any) error {
+	var invalidOwner int64
+	values := append([]any{&invalidOwner}, destinations...)
+	if err := row.rows.Scan(values...); err != nil || invalidOwner != 0 {
+		return ErrRepository
+	}
+	return nil
+}

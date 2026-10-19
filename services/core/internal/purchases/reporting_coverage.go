@@ -202,7 +202,7 @@ func (r *Repository) reserveCoverageForBAS(
 	if modernPostingCount > maximumPostingReportingRoots {
 		return nil, &SourceBoundError{Resource: "purchase roots", Limit: maximumPostingReportingRoots}
 	}
-	modernPaymentCount, err := postingReportingCount(ctx, r.executor,
+	modernPaymentCount, err := purchaseReportingOwnerCount(ctx, r.executor, purchaseReportingPaymentOwnerGuard(organisationID),
 		`SELECT count(*) FROM (SELECT 1 FROM purchase_payments_v1 WHERE organisation_id=? ORDER BY posting_id,accounting_version,id LIMIT ?)`,
 		organisationID, maximumPostingReportingPayments+1)
 	if err != nil {
@@ -1071,7 +1071,7 @@ func purchaseCoverageScalarJournalIDs(ctx context.Context, executor interface {
 }, organisationID string, conversionIDs []string, discoveryRemaining *int64, limit int64) ([]string, error) {
 	queries := []postingReportingQuery{
 		{table: "coverage_journal_ids", alias: "j", columns: []string{"journal_id"}, from: "purchase_postings_v1 AS j", where: "j.organisation_id=?", args: []any{organisationID}, orderBy: "j.id"},
-		{table: "coverage_journal_ids", alias: "j", columns: []string{"journal_id"}, from: "purchase_payments_v1 AS j", where: "j.organisation_id=?", args: []any{organisationID}, orderBy: "j.id"},
+		{table: "coverage_journal_ids", alias: "j", columns: []string{"journal_id"}, from: "purchase_payments_v1 AS j", where: "j.organisation_id=?", args: []any{organisationID}, orderBy: "j.id", ownerGuard: purchaseReportingPaymentOwnerGuard(organisationID)},
 		{table: "coverage_journal_ids", alias: "j", columns: []string{"journal_id"}, from: "purchase_accounting_events_v1 AS j", where: "j.organisation_id=?", args: []any{organisationID}, orderBy: "j.operation_key"},
 		{table: "coverage_journal_ids", alias: "j", columns: []string{"journal_id"}, from: "purchase_gst_attributions_v1 AS j", where: "j.organisation_id=?", args: []any{organisationID}, orderBy: "j.operation_key,j.id"},
 	}

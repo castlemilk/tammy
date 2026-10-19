@@ -148,7 +148,7 @@ func (r *Repository) CapturePostingsForReportingWithPayloadBudget(
 	if rootCount > maximumPostingReportingRoots {
 		return nil, &SourceBoundError{Resource: "posting roots", Limit: maximumPostingReportingRoots}
 	}
-	paymentCount, err := postingReportingCount(ctx, r.executor,
+	paymentCount, err := purchaseReportingOwnerCount(ctx, r.executor, purchaseReportingPaymentOwnerGuard(organisationID),
 		`SELECT count(*) FROM (SELECT 1 FROM purchase_payments_v1 WHERE organisation_id=? ORDER BY posting_id,accounting_version,id LIMIT ?)`,
 		organisationID, maximumPostingReportingPayments+1)
 	if err != nil {
@@ -161,21 +161,23 @@ func (r *Repository) CapturePostingsForReportingWithPayloadBudget(
 		if paymentCount != 0 {
 			return nil, ErrRepository
 		}
-		query := postingReportingSourceQueries(organisationID)[0]
+		queries := postingReportingSourceQueries(organisationID)
 		remaining := maximumPayloadBytes
-		_, count, err := preflightPostingReportingQuery(ctx, r.executor, query, &remaining, maximumPayloadBytes)
-		if err != nil {
-			return nil, postingReportingReadError(ctx, err)
-		}
-		if count != 0 {
-			return nil, ErrRepository
-		}
-		loaded, err := loadPostingReportingQuery(ctx, r.executor, query)
-		if err != nil {
-			return nil, postingReportingReadError(ctx, err)
-		}
-		if len(loaded.rows) != 0 || loaded.payloadSize != 0 {
-			return nil, ErrRepository
+		for _, query := range []postingReportingQuery{queries[0], queries[2]} {
+			_, count, err := preflightPostingReportingQuery(ctx, r.executor, query, &remaining, maximumPayloadBytes)
+			if err != nil {
+				return nil, postingReportingReadError(ctx, err)
+			}
+			if count != 0 {
+				return nil, ErrRepository
+			}
+			loaded, err := loadPostingReportingQuery(ctx, r.executor, query)
+			if err != nil {
+				return nil, postingReportingReadError(ctx, err)
+			}
+			if len(loaded.rows) != 0 || loaded.payloadSize != 0 {
+				return nil, ErrRepository
+			}
 		}
 		fingerprint, err := postingReportingFingerprint(ctx, organisationID, nil, nil)
 		if err != nil {
@@ -434,6 +436,7 @@ func postingReportingSourceQueries(organisationID string) []postingReportingQuer
 		{table: "command_idempotency_v1", alias: "c", columns: strings.Fields("workspace_id actor_user_id fully_qualified_rpc_name operation_key semantic_hash_version request_type normalized_hash result_type result_proto outcome failure_code result_resource_id attempt retention_policy created_at completed_at"), from: "command_idempotency_v1 AS c", where: "c.operation_key IN (" + eventKeys + ")", args: []any{organisationID, organisationID}, orderBy: "c.operation_key"},
 	}
 	queries[0].ownerGuard = purchaseReportingRootOwnerGuard(organisationID, false)
+	queries[2].ownerGuard = purchaseReportingPaymentOwnerGuard(organisationID)
 	return queries
 }
 

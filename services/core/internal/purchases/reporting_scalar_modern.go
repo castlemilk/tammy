@@ -93,6 +93,8 @@ func purchaseBASModernFamilies() []purchaseBASScalarFamily {
 			 LEFT JOIN accounts AS bank ON bank.id=pay.bank_account_id
 			 LEFT JOIN journals AS j ON j.id=pay.journal_id`,
 			where: `pay.organisation_id=target.organisation_id
+			 OR (typeof(pay.organisation_id)='blob' AND length(pay.organisation_id)=36
+			   AND pay.organisation_id=CAST(target.organisation_id AS BLOB))
 			 OR p.organisation_id=target.organisation_id
 			 OR bank.organisation_id=target.organisation_id
 			 OR j.organisation_id=target.organisation_id`,

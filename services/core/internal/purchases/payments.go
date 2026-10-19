@@ -191,13 +191,22 @@ func applyPaymentState(state *tammyv1.PurchaseAccounting, payment *tammyv1.Purch
 }
 
 func (r *Repository) loadPayments(ctx context.Context, posting *tammyv1.PurchasePosting) ([]*tammyv1.PurchasePayment, error) {
-	rows, err := r.executor.QueryContext(ctx, `SELECT id,accounting_version,payment_date,amount_minor,currency_code,bank_account_id,journal_id,reference,payment_proto,source_hash,actor_user_id,created_at FROM purchase_payments_v1 WHERE posting_id=? AND organisation_id=? ORDER BY accounting_version,id`, posting.Id, posting.OrganisationId)
+	sqlText := `SELECT id,accounting_version,payment_date,amount_minor,currency_code,bank_account_id,journal_id,reference,payment_proto,source_hash,actor_user_id,created_at FROM purchase_payments_v1 WHERE posting_id=? AND organisation_id=? ORDER BY accounting_version,id`
+	args := []any{posting.Id, posting.OrganisationId}
+	if r.reportingRootOwners {
+		sqlText, args = postingReportingReadSQL(purchaseReportingPaymentReplayQuery(posting.OrganisationId, posting.Id))
+	}
+	rows, err := r.executor.QueryContext(ctx, sqlText, args...)
 	if err != nil {
 		return nil, ErrRepository
 	}
+	var scanner paymentScanner = rows
+	if r.reportingRootOwners {
+		scanner = purchaseReportingPaymentRow{rows: rows}
+	}
 	var payments []*tammyv1.PurchasePayment
 	for rows.Next() {
-		payment, err := scanPayment(rows, posting)
+		payment, err := scanPayment(scanner, posting)
 		if err != nil {
 			_ = rows.Close()
 			return nil, err
