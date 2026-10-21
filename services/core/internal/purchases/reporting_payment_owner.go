@@ -26,15 +26,22 @@ func purchaseReportingPaymentReplayQuery(organisationID, postingID string) posti
 	}
 }
 
-type purchaseReportingPaymentRow struct{ rows *sql.Rows }
+type purchaseReportingOwnerRow struct{ rows *sql.Rows }
 
-// The mature payment decoder consumes its original twelve destinations after
-// the guard flag. The actual SQL masks all twelve cells on rejection.
-func (row purchaseReportingPaymentRow) Scan(destinations ...any) error {
+// Mature decoders consume their original destinations after the guard flag.
+// The guarded SQL masks every body cell on rejection.
+func (row purchaseReportingOwnerRow) Scan(destinations ...any) error {
 	var invalidOwner int64
 	values := append([]any{&invalidOwner}, destinations...)
 	if err := row.rows.Scan(values...); err != nil || invalidOwner != 0 {
 		return ErrRepository
 	}
 	return nil
+}
+
+func (r *Repository) reportingOwnerScanner(rows *sql.Rows) paymentScanner {
+	if r.reportingRootOwners {
+		return purchaseReportingOwnerRow{rows: rows}
+	}
+	return rows
 }

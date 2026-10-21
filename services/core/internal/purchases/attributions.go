@@ -458,16 +458,22 @@ type retainedAttribution struct {
 }
 
 func (r *Repository) loadAttributions(ctx context.Context, p *tammyv1.PurchasePosting) ([]retainedAttribution, error) {
-	rows, err := r.executor.QueryContext(ctx, `SELECT operation_key,attribution_proto,source_hash FROM purchase_gst_attributions_v1 WHERE posting_id=? AND organisation_id=? ORDER BY accounting_version,rowid`, p.Id, p.OrganisationId)
+	sqlText := `SELECT operation_key,attribution_proto,source_hash FROM purchase_gst_attributions_v1 WHERE posting_id=? AND organisation_id=? ORDER BY accounting_version,rowid`
+	args := []any{p.Id, p.OrganisationId}
+	if r.reportingRootOwners {
+		sqlText, args = postingReportingReadSQL(purchaseReportingAttributionReplayQuery(p.OrganisationId, p.Id))
+	}
+	rows, err := r.executor.QueryContext(ctx, sqlText, args...)
 	if err != nil {
 		return nil, ErrRepository
 	}
 	var result []retainedAttribution
 	var budget int
+	scanner := r.reportingOwnerScanner(rows)
 	for rows.Next() {
 		var operation string
 		var content, hash []byte
-		if rows.Scan(&operation, &content, &hash) != nil {
+		if scanner.Scan(&operation, &content, &hash) != nil {
 			_ = rows.Close()
 			return nil, ErrRepository
 		}

@@ -34,6 +34,8 @@ The [purchase posting-allocation owner correction](../plans/2026-10-19-bas-purch
 
 The [Task 5 closeout plan](../plans/2026-10-20-bas-task5-closeout.md) now fixes the remaining reader, selector, producer and real-command acceptance groups. Its first shared scalar reservation stage is accepted (2026-10-20): all three real module aggregate summaries run before typed identity/parent/body reads, with separate combined root/receipt fences, shared physical-key/byte limits and unchanged module reservations. Focused unit/native race, complete BAS preparation native race without exclusions, default package tests and independent GPT-6 Luna Max specification/quality reviews passed. This is a scalar count/size reservation only; complete payload/candidate reconciliation, the combined producer, Task 5 and packaged phase-three acceptance remain open.
 
+The remaining modern purchase direct-owner group is accepted (2026-10-22), with evidence in the [Task 5 closeout plan](../plans/2026-10-20-bas-task5-closeout.md). Six scalar families and their actual raw/replay paths reject matching BLOB ownership before copying retained bodies, including late parent-owner changes and empty captures. Canonical hashes/charges and modern versus full event/audit scopes are preserved. Independent reviews, focused/complete affected native race, existing-route TLS, default Core and the pinned build passed. Opening/history and reference/manual proof repairs, selector reconciliation, the complete producer, preparation command and overall Task 5 remain open.
+
 ## Delivery order and review boundaries
 
 Deliver three focused changes in the existing accounting style. Each receives its own implementation plan, focused tests and packaged desktop acceptance before the next depends on it.

@@ -128,6 +128,8 @@ func purchaseBASModernFamilies() []purchaseBASScalarFamily {
 			 LEFT JOIN purchase_posting_allocations_v1 AS pa
 			   ON pa.posting_id=a.posting_id AND pa.sequence=a.posting_allocation_sequence`,
 			where: `a.organisation_id=target.organisation_id
+			 OR (typeof(a.organisation_id)='blob' AND length(a.organisation_id)=36
+			   AND a.organisation_id=CAST(target.organisation_id AS BLOB))
 			 OR pay.organisation_id=target.organisation_id
 			 OR p.organisation_id=target.organisation_id
 			 OR pa.organisation_id=target.organisation_id`,
@@ -160,6 +162,8 @@ func purchaseBASModernFamilies() []purchaseBASScalarFamily {
 			 LEFT JOIN documents AS d ON d.id=e.document_id
 			 LEFT JOIN documents AS source_doc ON source_doc.id=e.source_document_id`,
 			where: `e.organisation_id=target.organisation_id
+			 OR (typeof(e.organisation_id)='blob' AND length(e.organisation_id)=36
+			   AND e.organisation_id=CAST(target.organisation_id AS BLOB))
 			 OR p.organisation_id=target.organisation_id
 			 OR d.organisation_id=target.organisation_id
 			 OR source_doc.organisation_id=target.organisation_id`,
@@ -202,6 +206,8 @@ func purchaseBASModernFamilies() []purchaseBASScalarFamily {
 			 LEFT JOIN opening_conversions AS conversion ON conversion.id=payable.conversion_id
 			 LEFT JOIN journals AS j ON j.id=ev.journal_id`,
 			where: `ev.organisation_id=target.organisation_id
+			 OR (typeof(ev.organisation_id)='blob' AND length(ev.organisation_id)=36
+			   AND ev.organisation_id=CAST(target.organisation_id AS BLOB))
 			 OR p.organisation_id=target.organisation_id
 			 OR d.organisation_id=target.organisation_id
 			 OR conversion.organisation_id=target.organisation_id
@@ -244,6 +250,8 @@ func purchaseBASModernFamilies() []purchaseBASScalarFamily {
 			  AND ev.scope_id=dfr.posting_id AND ev.accounting_version=dfr.accounting_version
 			  AND ev.command_type='tammy.v1.PurchaseService.DeferPurchaseGstClaim'`,
 			where: `dfr.organisation_id=target.organisation_id
+			 OR (typeof(dfr.organisation_id)='blob' AND length(dfr.organisation_id)=36
+			   AND dfr.organisation_id=CAST(target.organisation_id AS BLOB))
 			 OR p.organisation_id=target.organisation_id
 			 OR doc.organisation_id=target.organisation_id
 			 OR ev.organisation_id=target.organisation_id`,
@@ -291,6 +299,8 @@ func purchaseBASModernFamilies() []purchaseBASScalarFamily {
 			  AND payment_allocation.sequence=portion.allocation_sequence
 			 LEFT JOIN documents AS due_doc ON due_doc.id=portion.due_date_source_id`,
 			where: `portion.organisation_id=target.organisation_id
+			 OR (typeof(portion.organisation_id)='blob' AND length(portion.organisation_id)=36
+			   AND portion.organisation_id=CAST(target.organisation_id AS BLOB))
 			 OR dfr.organisation_id=target.organisation_id
 			 OR p.organisation_id=target.organisation_id
 			 OR evidence.organisation_id=target.organisation_id
@@ -369,6 +379,8 @@ func purchaseBASModernFamilies() []purchaseBASScalarFamily {
 			 LEFT JOIN documents AS due_doc ON due_doc.id=a.due_date_source_id
 			 LEFT JOIN journals AS j ON j.id=a.journal_id`,
 			where: `a.organisation_id=target.organisation_id
+			 OR (typeof(a.organisation_id)='blob' AND length(a.organisation_id)=36
+			   AND a.organisation_id=CAST(target.organisation_id AS BLOB))
 			 OR p.organisation_id=target.organisation_id
 			 OR doc.organisation_id=target.organisation_id
 			 OR ev.organisation_id=target.organisation_id

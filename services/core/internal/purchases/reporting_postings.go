@@ -162,9 +162,8 @@ func (r *Repository) CapturePostingsForReportingWithPayloadBudget(
 			return nil, ErrRepository
 		}
 		queries := postingReportingSourceQueries(organisationID)
-		emptyQueries := []postingReportingQuery{queries[0], queries[1], queries[2]}
 		remaining := maximumPayloadBytes
-		for _, query := range emptyQueries {
+		for _, query := range queries {
 			_, count, err := preflightPostingReportingQuery(ctx, r.executor, query, &remaining, maximumPayloadBytes)
 			if err != nil {
 				return nil, postingReportingReadError(ctx, err)
@@ -173,7 +172,7 @@ func (r *Repository) CapturePostingsForReportingWithPayloadBudget(
 				return nil, ErrRepository
 			}
 		}
-		for _, query := range emptyQueries {
+		for _, query := range queries {
 			loaded, err := loadPostingReportingQuery(ctx, r.executor, query)
 			if err != nil {
 				return nil, postingReportingReadError(ctx, err)
@@ -441,6 +440,14 @@ func postingReportingSourceQueries(organisationID string) []postingReportingQuer
 	queries[0].ownerGuard = purchaseReportingRootOwnerGuard(organisationID, false)
 	queries[1].ownerGuard = purchaseReportingPostingAllocationOwnerGuard(organisationID)
 	queries[2].ownerGuard = purchaseReportingPaymentOwnerGuard(organisationID)
+	queries[3].ownerGuard = purchaseReportingOwnerGuardForSet(organisationID, purchaseOwnersPaymentAllocation)
+	queries[4].ownerGuard = purchaseReportingOwnerGuardForSet(organisationID, purchaseOwnersEvidence)
+	queries[5].ownerGuard = purchaseReportingOwnerGuardForSet(organisationID, purchaseOwnersPostingEvent)
+	queries[6].ownerGuard = purchaseReportingOwnerGuardForSet(organisationID, purchaseOwnersDeferral)
+	queries[7].ownerGuard = purchaseReportingOwnerGuardForSet(organisationID, purchaseOwnersDeferralPortion)
+	queries[8].ownerGuard = purchaseReportingOwnerGuardForSet(organisationID, purchaseOwnersAttribution)
+	queries[9].ownerGuard = purchaseReportingOwnerGuardForSet(organisationID, purchaseOwnersPostingEvent)
+	queries[10].ownerGuard = purchaseReportingOwnerGuardForSet(organisationID, purchaseOwnersPostingEvent)
 	return queries
 }
 

@@ -152,3 +152,7 @@ Future coalescing needs a module-supplied exact source tuple (required source ty
 5. Only then wire body hydration; compare exact hydrated key sets/counts/charges and run broader integration/E2E gates.
 
 `ScalarKeyCount` remains a physical read count, not semantic coverage count. Keep unresolved attribution/deferral/review row semantics explicit in producer tests rather than choosing their coverage behavior here.
+
+## Remaining modern purchase direct-owner group accepted
+
+The [Task 5 closeout plan](../plans/2026-10-20-bas-task5-closeout.md) records acceptance on 2026-10-22 of the remaining six scalar direct-owner arms, family/parent owner guards on raw and reporting replay reads, all-11 empty preflight sequencing, POSTING-only modern events and coverage-only operation-batched audit checks. Native RED/GREEN preserves canonical identities/hashes/charges and bounded late 9 MiB rejection. Independent reviews and final native/TLS/default/build gates passed. This adds no candidate admission, new scalar budget, financial policy or combined capture; opening/reference/manual proof paths, exact nomination and shared reconciliation remain open.

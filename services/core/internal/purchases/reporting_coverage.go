@@ -1038,7 +1038,8 @@ func purchaseCoverageOperationKeys(ctx context.Context, executor interface {
 	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
 }, organisationID string, discoveryRemaining *int64, limit int64) ([]string, error) {
 	query := postingReportingQuery{table: "coverage_operation_keys", alias: "e", columns: []string{"operation_key"},
-		from: "purchase_accounting_events_v1 AS e", where: "e.organisation_id=?", args: []any{organisationID}, orderBy: "e.operation_key"}
+		from: "purchase_accounting_events_v1 AS e", where: "e.organisation_id=?", args: []any{organisationID}, orderBy: "e.operation_key",
+		ownerGuard: purchaseReportingOwnerGuardForSet(organisationID, purchaseOwnerCoverageEvents)}
 	rows, _, err := purchaseCoverageBoundedRows(ctx, executor, query, discoveryRemaining, limit)
 	if err != nil {
 		return nil, err
@@ -1057,7 +1058,7 @@ func purchaseCoverageOperationKeys(ctx context.Context, executor interface {
 func purchaseCoverageNeedsExceptionRule(ctx context.Context, executor interface {
 	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
 }, organisationID string) (bool, error) {
-	count, err := postingReportingCount(ctx, executor,
+	count, err := purchaseReportingOwnerCount(ctx, executor, purchaseReportingOwnerGuardForSet(organisationID, purchaseOwnersEvidence),
 		"SELECT count(*) FROM purchase_tax_evidence_v1 WHERE organisation_id=? AND classification=?",
 		organisationID, int64(tammyv1.PurchaseEvidenceClassification_PURCHASE_EVIDENCE_CLASSIFICATION_SUPPORTED_EXCEPTION))
 	if err != nil {
@@ -1072,8 +1073,8 @@ func purchaseCoverageScalarJournalIDs(ctx context.Context, executor interface {
 	queries := []postingReportingQuery{
 		{table: "coverage_journal_ids", alias: "j", columns: []string{"journal_id"}, from: "purchase_postings_v1 AS j", where: "j.organisation_id=?", args: []any{organisationID}, orderBy: "j.id"},
 		{table: "coverage_journal_ids", alias: "j", columns: []string{"journal_id"}, from: "purchase_payments_v1 AS j", where: "j.organisation_id=?", args: []any{organisationID}, orderBy: "j.id", ownerGuard: purchaseReportingPaymentOwnerGuard(organisationID)},
-		{table: "coverage_journal_ids", alias: "j", columns: []string{"journal_id"}, from: "purchase_accounting_events_v1 AS j", where: "j.organisation_id=?", args: []any{organisationID}, orderBy: "j.operation_key"},
-		{table: "coverage_journal_ids", alias: "j", columns: []string{"journal_id"}, from: "purchase_gst_attributions_v1 AS j", where: "j.organisation_id=?", args: []any{organisationID}, orderBy: "j.operation_key,j.id"},
+		{table: "coverage_journal_ids", alias: "j", columns: []string{"journal_id"}, from: "purchase_accounting_events_v1 AS j", where: "j.organisation_id=?", args: []any{organisationID}, orderBy: "j.operation_key", ownerGuard: purchaseReportingOwnerGuardForSet(organisationID, purchaseOwnerCoverageEvents)},
+		{table: "coverage_journal_ids", alias: "j", columns: []string{"journal_id"}, from: "purchase_gst_attributions_v1 AS j", where: "j.organisation_id=?", args: []any{organisationID}, orderBy: "j.operation_key,j.id", ownerGuard: purchaseReportingOwnerGuardForSet(organisationID, purchaseOwnersAttribution)},
 	}
 	for _, batch := range purchaseCoverageIDBatches(conversionIDs, 400) {
 		queries = append(queries, postingReportingQuery{
@@ -1151,7 +1152,7 @@ func purchaseCoverageBaseQueries(organisationID string, documentIDs, conversionI
 	queries = append(queries, purchaseCoverageLegacyReviewQuery(organisationID))
 	queries = append(queries, purchaseCoverageDocumentQueries(organisationID, documentIDs)...)
 	queries = append(queries, purchaseCoverageOpeningQueries(organisationID, conversionIDs)...)
-	queries = append(queries, purchaseCoverageOperationQueries(operationKeys)...)
+	queries = append(queries, purchaseCoverageOperationQueries(organisationID, operationKeys)...)
 	if includeExceptionRule {
 		queries = append(queries, postingReportingLowValueRuleQuery())
 	}
@@ -1163,6 +1164,7 @@ func purchaseCoverageEventQueries(organisationID string) []postingReportingQuery
 		table: "purchase_accounting_events_v1", alias: "e",
 		columns: strings.Fields("operation_key organisation_id scope_kind scope_id posting_id document_id opening_payable_id accounting_version command_type financial_revision ledger_revision tax_source_revision settlement_revision result_sha256 result_proto journal_id created_at"),
 		from:    "purchase_accounting_events_v1 AS e", where: "e.organisation_id=?", args: []any{organisationID}, orderBy: "e.scope_kind,e.scope_id,e.accounting_version,e.operation_key",
+		ownerGuard: purchaseReportingOwnerGuardForSet(organisationID, purchaseOwnerCoverageEvents),
 	}}
 }
 
@@ -1205,21 +1207,24 @@ func purchaseCoverageOpeningQueries(organisationID string, conversionIDs []strin
 	return queries
 }
 
-func purchaseCoverageOperationQueries(operationKeys []string) []postingReportingQuery {
+func purchaseCoverageOperationQueries(organisationID string, operationKeys []string) []postingReportingQuery {
 	queries := make([]postingReportingQuery, 0, 3*((len(operationKeys)+399)/400))
 	for _, batch := range purchaseCoverageIDBatches(operationKeys, 400) {
+		guard := purchaseReportingCoverageOperationOwnerGuard(organisationID, batch)
 		placeholders := purchaseCoveragePlaceholders(len(batch))
 		args := append([]any(nil), batchArgs(batch)...)
 		queries = append(queries, postingReportingQuery{
 			table: "financial_revision_claims", alias: "c",
 			columns: strings.Fields("operation_key domain_mask financial_revision ledger_revision settlement_revision banking_revision tax_source_revision organisation_profile_revision rule_bundle_revision updated_at"),
 			from:    "financial_revision_claims AS c", where: "c.operation_key IN (" + placeholders + ")", args: args, orderBy: "c.operation_key",
+			ownerGuard: guard,
 		})
 		idemArgs := append([]any(nil), batchArgs(batch)...)
 		queries = append(queries, postingReportingQuery{
 			table: "command_idempotency_v1", alias: "c",
 			columns: strings.Fields("workspace_id actor_user_id fully_qualified_rpc_name operation_key semantic_hash_version request_type normalized_hash result_type result_proto outcome failure_code result_resource_id attempt retention_policy created_at completed_at"),
 			from:    "command_idempotency_v1 AS c", where: "c.operation_key IN (" + placeholders + ")", args: idemArgs, orderBy: "c.operation_key",
+			ownerGuard: guard,
 		})
 		auditArgs := []any{}
 		auditArgs = append(auditArgs, batchArgs(batch)...)
@@ -1227,6 +1232,7 @@ func purchaseCoverageOperationQueries(operationKeys []string) []postingReporting
 			table: "purchase_command_audit_v1", alias: "a",
 			columns: strings.Fields("operation_key organisation_id workspace_id actor_user_id session_id command_type result_sha256 payload_proto occurred_at"),
 			from:    "purchase_command_audit_v1 AS a", where: "a.operation_key IN (" + placeholders + ")", args: auditArgs, orderBy: "a.operation_key",
+			ownerGuard: guard,
 		})
 	}
 	return queries

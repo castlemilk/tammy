@@ -51,16 +51,22 @@ func (r *Repository) VerifiedClaims(ctx context.Context, org, document string) (
 		result.Attributions = append(result.Attributions, a.value)
 	}
 	for _, d := range ds {
-		rows, err := r.executor.QueryContext(ctx, `SELECT sequence,deferred_gst_minor FROM purchase_gst_deferral_portions_v1 WHERE deferral_id=? AND posting_id=? AND organisation_id=? ORDER BY sequence`, d.Id, d.PostingId, d.OrganisationId)
+		sqlText := `SELECT sequence,deferred_gst_minor FROM purchase_gst_deferral_portions_v1 WHERE deferral_id=? AND posting_id=? AND organisation_id=? ORDER BY sequence`
+		args := []any{d.Id, d.PostingId, d.OrganisationId}
+		if r.reportingRootOwners {
+			sqlText, args = postingReportingReadSQL(purchaseReportingDeferralPortionReplayQuery(d.OrganisationId, d.PostingId, d.Id))
+		}
+		rows, err := r.executor.QueryContext(ctx, sqlText, args...)
 		if err != nil {
 			return VerifiedClaimHistory{}, ErrRepository
 		}
 		index := 0
 		var total int64
+		scanner := r.reportingOwnerScanner(rows)
 		for rows.Next() {
 			var sequence uint32
 			var amount int64
-			if rows.Scan(&sequence, &amount) != nil || index >= len(d.Portions) || sequence != uint32(index+1) || amount <= 0 || !addPurchaseAmount(&total, amount) {
+			if scanner.Scan(&sequence, &amount) != nil || index >= len(d.Portions) || sequence != uint32(index+1) || amount <= 0 || !addPurchaseAmount(&total, amount) {
 				_ = rows.Close()
 				return VerifiedClaimHistory{}, ErrRepository
 			}

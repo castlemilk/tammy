@@ -387,12 +387,18 @@ func (r *Repository) retainedEvidence(ctx context.Context, p *tammyv1.PurchasePo
 }
 
 func (r *Repository) retainedEvidenceHistory(ctx context.Context, p *tammyv1.PurchasePosting) ([]*tammyv1.PurchaseTaxEvidence, error) {
-	rows, err := r.executor.QueryContext(ctx, `SELECT id,accounting_version,classification,source_document_id,source_version,source_hash,held_date,registration_review_confirmed,business_use_review_confirmed,evidence_review_confirmed,reason,evidence_proto,record_hash,actor_user_id,created_at FROM purchase_tax_evidence_v1 WHERE organisation_id=? AND posting_id=? AND document_id=? ORDER BY accounting_version,id`, p.OrganisationId, p.Id, p.DocumentId)
+	sqlText := `SELECT id,accounting_version,classification,source_document_id,source_version,source_hash,held_date,registration_review_confirmed,business_use_review_confirmed,evidence_review_confirmed,reason,evidence_proto,record_hash,actor_user_id,created_at FROM purchase_tax_evidence_v1 WHERE organisation_id=? AND posting_id=? AND document_id=? ORDER BY accounting_version,id`
+	args := []any{p.OrganisationId, p.Id, p.DocumentId}
+	if r.reportingRootOwners {
+		sqlText, args = postingReportingReadSQL(purchaseReportingEvidenceReplayQuery(p.OrganisationId, p.Id, p.DocumentId))
+	}
+	rows, err := r.executor.QueryContext(ctx, sqlText, args...)
 	if err != nil {
 		return nil, ErrRepository
 	}
 	defer rows.Close()
 	var history []*tammyv1.PurchaseTaxEvidence
+	scanner := r.reportingOwnerScanner(rows)
 	for rows.Next() {
 		var id, reason, actor, stamp string
 		var version uint64
@@ -401,7 +407,7 @@ func (r *Repository) retainedEvidenceHistory(ctx context.Context, p *tammyv1.Pur
 		var sourceVersion sql.NullInt64
 		var sourceHash, content, hash []byte
 		var registration, business, confirmed bool
-		if rows.Scan(&id, &version, &classification, &sourceID, &sourceVersion, &sourceHash, &held, &registration, &business, &confirmed, &reason, &content, &hash, &actor, &stamp) != nil {
+		if scanner.Scan(&id, &version, &classification, &sourceID, &sourceVersion, &sourceHash, &held, &registration, &business, &confirmed, &reason, &content, &hash, &actor, &stamp) != nil {
 			return nil, ErrRepository
 		}
 		e := &tammyv1.PurchaseTaxEvidence{}
@@ -441,7 +447,12 @@ func canonicalPurchaseBytes(message proto.Message, content []byte) bool {
 }
 
 func (r *Repository) verifyEvents(ctx context.Context, p *tammyv1.PurchasePosting, pending bool, derived *tammyv1.PurchaseAccounting) (uint64, error) {
-	rows, err := r.executor.QueryContext(ctx, `SELECT operation_key,posting_id,document_id,opening_payable_id,accounting_version,command_type,financial_revision,ledger_revision,tax_source_revision,settlement_revision,result_proto,result_sha256,journal_id,created_at FROM purchase_accounting_events_v1 WHERE organisation_id=? AND scope_kind='POSTING' AND scope_id=? AND accounting_version=1`, p.OrganisationId, p.Id)
+	sqlText := `SELECT operation_key,posting_id,document_id,opening_payable_id,accounting_version,command_type,financial_revision,ledger_revision,tax_source_revision,settlement_revision,result_proto,result_sha256,journal_id,created_at FROM purchase_accounting_events_v1 WHERE organisation_id=? AND scope_kind='POSTING' AND scope_id=? AND accounting_version=1`
+	args := []any{p.OrganisationId, p.Id}
+	if r.reportingRootOwners {
+		sqlText, args = postingReportingReadSQL(purchaseReportingEventReplayQuery(p.OrganisationId, p.Id, true))
+	}
+	rows, err := r.executor.QueryContext(ctx, sqlText, args...)
 	if err != nil {
 		return 0, ErrRepository
 	}
@@ -459,7 +470,7 @@ func (r *Repository) verifyEvents(ctx context.Context, p *tammyv1.PurchasePostin
 	var postingID, documentID, openingID, journalID sql.NullString
 	var version, financial, ledger, taxSource, settlement uint64
 	var content, hash []byte
-	if rows.Scan(&operation, &postingID, &documentID, &openingID, &version, &command, &financial, &ledger, &taxSource, &settlement, &content, &hash, &journalID, &stamp) != nil || rows.Next() || rows.Err() != nil {
+	if r.reportingOwnerScanner(rows).Scan(&operation, &postingID, &documentID, &openingID, &version, &command, &financial, &ledger, &taxSource, &settlement, &content, &hash, &journalID, &stamp) != nil || rows.Next() || rows.Err() != nil {
 		return 0, ErrRepository
 	}
 	if err := rows.Close(); err != nil {

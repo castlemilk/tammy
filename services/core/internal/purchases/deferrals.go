@@ -125,15 +125,21 @@ func deferralPortionScalars(d *tammyv1.PurchaseGstDeferral, index int, p *tammyv
 	return m, nil
 }
 func (r *Repository) loadDeferrals(ctx context.Context, p *tammyv1.PurchasePosting) ([]*tammyv1.PurchaseGstDeferral, error) {
-	rows, err := r.executor.QueryContext(ctx, `SELECT deferral_proto,source_hash FROM purchase_gst_deferrals_v1 WHERE posting_id=? AND organisation_id=? ORDER BY accounting_version,rowid`, p.Id, p.OrganisationId)
+	sqlText := `SELECT deferral_proto,source_hash FROM purchase_gst_deferrals_v1 WHERE posting_id=? AND organisation_id=? ORDER BY accounting_version,rowid`
+	args := []any{p.Id, p.OrganisationId}
+	if r.reportingRootOwners {
+		sqlText, args = postingReportingReadSQL(purchaseReportingDeferralReplayQuery(p.OrganisationId, p.Id))
+	}
+	rows, err := r.executor.QueryContext(ctx, sqlText, args...)
 	if err != nil {
 		return nil, ErrRepository
 	}
 	var result []*tammyv1.PurchaseGstDeferral
 	var budget int
+	scanner := r.reportingOwnerScanner(rows)
 	for rows.Next() {
 		var content, hash []byte
-		if rows.Scan(&content, &hash) != nil {
+		if scanner.Scan(&content, &hash) != nil {
 			_ = rows.Close()
 			return nil, ErrRepository
 		}
@@ -166,16 +172,22 @@ func validRetainedDeferral(d *tammyv1.PurchaseGstDeferral, p *tammyv1.PurchasePo
 	return d != nil && ids.IsCanonicalV7(d.Id) && d.OrganisationId == p.OrganisationId && d.PostingId == p.Id && d.DocumentId == p.DocumentId && d.AccountingVersion > 1 && d.AccountingVersion <= math.MaxInt64 && ids.IsCanonicalV7(d.ActorUserId) && d.RecordedAt != nil && d.RecordedAt.CheckValid() == nil && len(d.Portions) > 0 && len(d.Portions) <= 200 && validClaimTimingPeriod(d.AffectedPeriod) && d.TimingReview != nil && validPurchaseMoney(d.DeferredGst) && d.DeferredGst.MinorUnits > 0 && validPurchaseDate(d.OrdinaryLastClaimDate) && purchaseReviewText(d.Reason, 512, true)
 }
 func (r *Repository) verifyDeferralPortions(ctx context.Context, d *tammyv1.PurchaseGstDeferral, expected []ownedClaimPortion) error {
-	rows, err := r.executor.QueryContext(ctx, `SELECT sequence,deferred_gst_minor FROM purchase_gst_deferral_portions_v1 WHERE deferral_id=? AND posting_id=? AND organisation_id=? ORDER BY sequence`, d.Id, d.PostingId, d.OrganisationId)
+	sqlText := `SELECT sequence,deferred_gst_minor FROM purchase_gst_deferral_portions_v1 WHERE deferral_id=? AND posting_id=? AND organisation_id=? ORDER BY sequence`
+	args := []any{d.Id, d.PostingId, d.OrganisationId}
+	if r.reportingRootOwners {
+		sqlText, args = postingReportingReadSQL(purchaseReportingDeferralPortionReplayQuery(d.OrganisationId, d.PostingId, d.Id))
+	}
+	rows, err := r.executor.QueryContext(ctx, sqlText, args...)
 	if err != nil {
 		return ErrRepository
 	}
 	var amounts []int64
 	var total int64
+	scanner := r.reportingOwnerScanner(rows)
 	for rows.Next() {
 		var sequence int
 		var amount int64
-		if rows.Scan(&sequence, &amount) != nil || sequence != len(amounts)+1 || len(amounts) >= len(d.Portions) || amount <= 0 || !addPurchaseAmount(&total, amount) {
+		if scanner.Scan(&sequence, &amount) != nil || sequence != len(amounts)+1 || len(amounts) >= len(d.Portions) || amount <= 0 || !addPurchaseAmount(&total, amount) {
 			_ = rows.Close()
 			return ErrRepository
 		}

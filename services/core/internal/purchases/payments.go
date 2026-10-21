@@ -200,10 +200,7 @@ func (r *Repository) loadPayments(ctx context.Context, posting *tammyv1.Purchase
 	if err != nil {
 		return nil, ErrRepository
 	}
-	var scanner paymentScanner = rows
-	if r.reportingRootOwners {
-		scanner = purchaseReportingPaymentRow{rows: rows}
-	}
+	scanner := r.reportingOwnerScanner(rows)
 	var payments []*tammyv1.PurchasePayment
 	for rows.Next() {
 		payment, err := scanPayment(scanner, posting)
@@ -241,17 +238,23 @@ func (r *Repository) verifyPaymentAllocations(ctx context.Context, posting *tamm
 	if err != nil {
 		return ErrRepository
 	}
-	rows, err := r.executor.QueryContext(ctx, `SELECT sequence,posting_allocation_sequence,gross_minor,supplier_gst_minor,eligible_gst_minor,use_kind,bas_classification,cash_flow_classification,allocation_proto FROM purchase_payment_allocations_v1 WHERE payment_id=? AND posting_id=? AND organisation_id=? ORDER BY sequence`, p.Id, posting.Id, posting.OrganisationId)
+	sqlText := `SELECT sequence,posting_allocation_sequence,gross_minor,supplier_gst_minor,eligible_gst_minor,use_kind,bas_classification,cash_flow_classification,allocation_proto FROM purchase_payment_allocations_v1 WHERE payment_id=? AND posting_id=? AND organisation_id=? ORDER BY sequence`
+	args := []any{p.Id, posting.Id, posting.OrganisationId}
+	if r.reportingRootOwners {
+		sqlText, args = postingReportingReadSQL(purchaseReportingPaymentAllocationReplayQuery(posting.OrganisationId, posting.Id, p.Id))
+	}
+	rows, err := r.executor.QueryContext(ctx, sqlText, args...)
 	if err != nil {
 		return ErrRepository
 	}
 	index := 0
+	scanner := r.reportingOwnerScanner(rows)
 	for rows.Next() {
 		var sequence, postingSequence uint32
 		var gross, supplier, eligible int64
 		var use, bas, flow int32
 		var content []byte
-		if rows.Scan(&sequence, &postingSequence, &gross, &supplier, &eligible, &use, &bas, &flow, &content) != nil || index >= len(deltas) {
+		if scanner.Scan(&sequence, &postingSequence, &gross, &supplier, &eligible, &use, &bas, &flow, &content) != nil || index >= len(deltas) {
 			_ = rows.Close()
 			return ErrRepository
 		}
@@ -277,14 +280,20 @@ type retainedPaymentEvent struct {
 }
 
 func (r *Repository) paymentEvents(ctx context.Context, posting *tammyv1.PurchasePosting) ([]retainedPaymentEvent, error) {
-	rows, err := r.executor.QueryContext(ctx, `SELECT operation_key,posting_id,document_id,opening_payable_id,accounting_version,command_type,financial_revision,ledger_revision,tax_source_revision,settlement_revision,result_proto,result_sha256,journal_id,created_at FROM purchase_accounting_events_v1 WHERE organisation_id=? AND scope_kind='POSTING' AND scope_id=? AND accounting_version>1 ORDER BY accounting_version`, posting.OrganisationId, posting.Id)
+	sqlText := `SELECT operation_key,posting_id,document_id,opening_payable_id,accounting_version,command_type,financial_revision,ledger_revision,tax_source_revision,settlement_revision,result_proto,result_sha256,journal_id,created_at FROM purchase_accounting_events_v1 WHERE organisation_id=? AND scope_kind='POSTING' AND scope_id=? AND accounting_version>1 ORDER BY accounting_version`
+	args := []any{posting.OrganisationId, posting.Id}
+	if r.reportingRootOwners {
+		sqlText, args = postingReportingReadSQL(purchaseReportingEventReplayQuery(posting.OrganisationId, posting.Id, false))
+	}
+	rows, err := r.executor.QueryContext(ctx, sqlText, args...)
 	if err != nil {
 		return nil, ErrRepository
 	}
 	var result []retainedPaymentEvent
+	scanner := r.reportingOwnerScanner(rows)
 	for rows.Next() {
 		var e retainedPaymentEvent
-		if rows.Scan(&e.operation, &e.postingID, &e.documentID, &e.openingID, &e.version, &e.command, &e.financial, &e.ledger, &e.tax, &e.settlement, &e.content, &e.hash, &e.journalID, &e.stamp) != nil {
+		if scanner.Scan(&e.operation, &e.postingID, &e.documentID, &e.openingID, &e.version, &e.command, &e.financial, &e.ledger, &e.tax, &e.settlement, &e.content, &e.hash, &e.journalID, &e.stamp) != nil {
 			_ = rows.Close()
 			return nil, ErrRepository
 		}
