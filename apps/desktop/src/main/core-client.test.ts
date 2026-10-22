@@ -62,7 +62,11 @@ import {
   SystemService,
 } from "@tammy/connect-client/tammy/v1/system_pb.js";
 import { CreateBasDraftRequestSchema } from "@tammy/connect-client/tammy/v1/tax_pb.js";
-import { UnlockWorkspaceRequestSchema } from "@tammy/connect-client/tammy/v1/workspace_pb.js";
+import {
+  CreateWorkspaceRequestSchema,
+  UnlockWorkspaceRequestSchema,
+  WorkspaceService,
+} from "@tammy/connect-client/tammy/v1/workspace_pb.js";
 import { describe, expect, it, vi } from "vitest";
 
 import type { CoreReadiness } from "../shared/readiness";
@@ -116,6 +120,10 @@ function fakeTransport(
     readonly timeoutMs: number | undefined;
     readonly headers: Headers;
   }>;
+  readonly receivedWorkspaceCreateCalls: Array<{
+    readonly timeoutMs: number | undefined;
+    readonly headers: Headers;
+  }>;
 } {
   const methods: unknown[] = [];
   const receivedHeaders: Headers[] = [];
@@ -125,6 +133,10 @@ function fakeTransport(
     readonly headers: Headers;
   }> = [];
   const receivedBasProfileListCalls: Array<{
+    readonly timeoutMs: number | undefined;
+    readonly headers: Headers;
+  }> = [];
+  const receivedWorkspaceCreateCalls: Array<{
     readonly timeoutMs: number | undefined;
     readonly headers: Headers;
   }> = [];
@@ -144,6 +156,21 @@ function fakeTransport(
                 throw failure;
               }
               return response;
+            },
+          });
+          router.service(WorkspaceService, {
+            createWorkspace: async (_request, context) => {
+              methods.push(context.method);
+              const headers = new Headers(context.requestHeader);
+              receivedHeaders.push(headers);
+              receivedWorkspaceCreateCalls.push({
+                timeoutMs: context.timeoutMs(),
+                headers,
+              });
+              if (rpcDelayMs > 0) {
+                await new Promise<void>((resolve) => setTimeout(resolve, rpcDelayMs));
+              }
+              return {};
             },
           });
           router.service(OverviewService, {
@@ -319,6 +346,7 @@ function fakeTransport(
     receivedTimeouts,
     receivedBasPreparationCalls,
     receivedBasProfileListCalls,
+    receivedWorkspaceCreateCalls,
   };
 }
 
@@ -501,6 +529,31 @@ describe("createCoreClient", () => {
     expect(receivedBasPreparationCalls[0]?.timeoutMs).toBeGreaterThan(29_000);
     expect(receivedBasPreparationCalls[0]?.timeoutMs).toBeLessThanOrEqual(30_000);
     expect(receivedBasPreparationCalls[0]?.headers.get("X-Tammy-Capability")).toBe(CAPABILITY);
+  }, 8_000);
+
+  it("bounds workspace creation at 30 seconds while ordinary RPCs keep the 5-second default", async () => {
+    const { factory, receivedTimeouts, receivedWorkspaceCreateCalls } = fakeTransport(
+      undefined,
+      undefined,
+      5_300,
+    );
+    const client = createCoreClient(READINESS, factory);
+    const [ordinaryResult, workspaceResult] = await Promise.allSettled([
+      client.getDiagnostics(),
+      client.createWorkspace(create(CreateWorkspaceRequestSchema)),
+    ]);
+
+    expect(ordinaryResult.status).toBe("rejected");
+    if (ordinaryResult.status === "rejected")
+      expect(ConnectError.from(ordinaryResult.reason).code).toBe(Code.DeadlineExceeded);
+    expect(workspaceResult.status).toBe("fulfilled");
+    expect(receivedTimeouts).toHaveLength(1);
+    expect(receivedTimeouts[0]).toBeGreaterThanOrEqual(4_900);
+    expect(receivedTimeouts[0]).toBeLessThanOrEqual(5_000);
+    expect(receivedWorkspaceCreateCalls).toHaveLength(1);
+    expect(receivedWorkspaceCreateCalls[0]?.timeoutMs).toBeGreaterThan(29_000);
+    expect(receivedWorkspaceCreateCalls[0]?.timeoutMs).toBeLessThanOrEqual(30_000);
+    expect(receivedWorkspaceCreateCalls[0]?.headers.get("X-Tammy-Capability")).toBe(CAPABILITY);
   }, 8_000);
 
   it("preserves explicit shorter BAS read deadlines, cancellation signals, and caller headers", async () => {

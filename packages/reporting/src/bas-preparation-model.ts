@@ -57,6 +57,8 @@ function invalid(): never {
   throw new Error("INVALID_REPORT_SNAPSHOT");
 }
 
+const maxInt64 = 9_223_372_036_854_775_807n;
+
 function text(value: string, maximum: number, required = false) {
   if (
     typeof value !== "string" ||
@@ -87,8 +89,15 @@ function uint(value: bigint, positive = false) {
 }
 
 function rational(numerator: string, denominator: string, signedNumerator = false) {
-  const integer = signedNumerator ? /^-?(?:0|[1-9][0-9]*)$/u : /^(?:0|[1-9][0-9]*)$/u;
-  if (!integer.test(numerator) || !/^[1-9][0-9]*$/u.test(denominator)) invalid();
+  const integer = signedNumerator
+    ? /^(?:0|[1-9][0-9]{0,78}|-[1-9][0-9]{0,78})$/u
+    : /^(?:0|[1-9][0-9]{0,78})$/u;
+  if (!integer.test(numerator) || !/^[1-9][0-9]{0,78}$/u.test(denominator)) invalid();
+}
+
+function nonnegativeInt64(value: bigint | undefined) {
+  if (value !== undefined && (typeof value !== "bigint" || value < 0n || value > maxInt64))
+    invalid();
 }
 
 function ref(value: SourceRef | undefined, expectedType?: string) {
@@ -135,16 +144,42 @@ function labelTrace(value: BasLabelTrace) {
   if (!Array.isArray(value.evidence) || value.evidence.length > 20) invalid();
   for (const evidence of value.evidence) ref(evidence);
   for (const operand of value.operands) {
-    if (operand.label < 1 || operand.label > 18 || operand.state < 1 || operand.state > 5)
+    if (operand.label < 1 || operand.label > 18 || (operand.state !== 4 && operand.state !== 5))
       invalid();
-    text(operand.exactCentsNumerator ?? "", 80, true);
-    text(operand.exactCentsDenominator ?? "", 80, true);
-    if (operand.exactRateNumerator !== undefined || operand.exactRateDenominator !== undefined) {
-      text(operand.exactRateNumerator ?? "", 80, true);
-      text(operand.exactRateDenominator ?? "", 80, true);
-      rational(operand.exactRateNumerator!, operand.exactRateDenominator!);
+    if (typeof operand.reportedWholeDollars !== "bigint") invalid();
+    nonnegativeInt64(operand.reportedWholeDollars);
+    if (operand.label === 11) {
+      const rateNumerator = operand.exactRateNumerator;
+      const rateDenominator = operand.exactRateDenominator;
+      if (
+        operand.exactCentsNumerator !== "" ||
+        operand.exactCentsDenominator !== "" ||
+        rateNumerator === undefined ||
+        rateDenominator === undefined ||
+        operand.reportedWholeDollars !== 0n
+      )
+        invalid();
+      text(rateNumerator, 80, true);
+      text(rateDenominator, 80, true);
+      rational(rateNumerator, rateDenominator);
+      if ((operand.state === 4) !== (rateNumerator === "0")) invalid();
+    } else {
+      if (
+        operand.exactCentsNumerator === undefined ||
+        operand.exactCentsDenominator === undefined ||
+        operand.exactRateNumerator !== undefined ||
+        operand.exactRateDenominator !== undefined
+      )
+        invalid();
+      text(operand.exactCentsNumerator, 80, true);
+      text(operand.exactCentsDenominator, 80, true);
+      rational(operand.exactCentsNumerator, operand.exactCentsDenominator);
+      if (
+        (operand.state === 4) !== (operand.exactCentsNumerator === "0") ||
+        (operand.state === 4 && operand.reportedWholeDollars !== 0n)
+      )
+        invalid();
     }
-    rational(operand.exactCentsNumerator, operand.exactCentsDenominator);
   }
   const numeric = [
     value.exactCentsNumerator,
@@ -154,7 +189,7 @@ function labelTrace(value: BasLabelTrace) {
     value.exactRateNumerator,
     value.exactRateDenominator,
   ];
-  if (value.reportedWholeDollars !== undefined && value.reportedWholeDollars < 0n) invalid();
+  nonnegativeInt64(value.reportedWholeDollars);
   if (value.state === 4 || value.state === 5) {
     if (value.label === 11) {
       text(value.exactRateNumerator ?? "", 80, true);

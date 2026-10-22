@@ -49,7 +49,15 @@ test("runs the current accounting workflows through the packaged app", async ({
   let page = electronHarness.currentPage();
   // Setup writes the review through the authenticated protocol fixture. Reload
   // the retained session so the Overview query reflects those committed writes.
+  await page.evaluate(() => window.history.replaceState(null, "", "/"));
   await page.reload();
+  const retainedWorkspace = await authenticatedWorkspace(page);
+  expect({
+    workspaceId: retainedWorkspace.workspaceId,
+    userId: retainedWorkspace.userId,
+    sessionId: retainedWorkspace.sessionId,
+    organisationId: retainedWorkspace.organisationId,
+  }).toEqual(workspace);
   await expect(page.getByRole("heading", { name: "Overview", exact: true })).toBeVisible();
   await expect(page.getByText("1 reviewed this quarter", { exact: true })).toBeVisible();
   const screenshotDirectory = path.resolve(

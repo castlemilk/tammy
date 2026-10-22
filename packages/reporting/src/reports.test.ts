@@ -647,6 +647,68 @@ test("reconciled BAS preserves both hashes for a reviewed legacy purchase docume
   assert.ok(text.includes("0f".repeat(32)));
   assert.ok(text.includes("10".repeat(32)));
 });
+test("reconciled BAS keeps distinct retained legacy decisions for one source and rejects a repeated decision", async () => {
+  const { renderBasCsv } = await renderer();
+  const value = reconciledBas();
+  const workpaper = value.workpaper as unknown as {
+    purchaseReviews: Record<string, unknown>[];
+    legacyPurchaseSupport: unknown[];
+  };
+  const purchaseReviews = workpaper.purchaseReviews;
+  const template = purchaseReviews[0];
+  assert.ok(template);
+  const source = {
+    source: {
+      case: "document",
+      value: {
+        documentId: id(777),
+        reviewedVersion: 5n,
+        originalContentHash: hash(15),
+        reviewedSnapshotHash: hash(16),
+      },
+    },
+  };
+  const retainedDecision = (decisionId: string, version: bigint) => {
+    const review = structuredClone(template);
+    const decision = structuredClone(review.legacyReview) as Record<string, unknown>;
+    review.legacySource = structuredClone(source);
+    review.legacyReview = {
+      ...decision,
+      id: decisionId,
+      source: structuredClone(source),
+      disposition: 4,
+      sourceRevision: version,
+      sourceHash: hash(Number(version) + 8),
+    };
+    review.kind = 12;
+    review.sourceRevision = version;
+    review.sourceHash = hash(Number(version) + 10);
+    review.reason = "Retained legacy decision excludes another purchase credit.";
+    return review;
+  };
+  const first = retainedDecision(id(600), 1n);
+  const second = retainedDecision(id(601), 2n);
+  purchaseReviews.splice(0, purchaseReviews.length, first, second);
+  workpaper.legacyPurchaseSupport.splice(0, workpaper.legacyPurchaseSupport.length);
+
+  const rows = parse(Buffer.from(renderBasCsv(value)), { columns: true }) as Record<
+    string,
+    string
+  >[];
+  const retainedRows = rows.filter(
+    (row) => row.source_kind === "purchase_review" && row.legacy_source_id === id(777),
+  );
+  assert.deepEqual(
+    retainedRows.map((row) => [row.legacy_review_id, row.source_revision]),
+    [
+      [id(600), "1"],
+      [id(601), "2"],
+    ],
+  );
+
+  purchaseReviews.push(structuredClone(first));
+  assert.throws(() => renderBasCsv(value), { message: "INVALID_REPORT_SNAPSHOT" });
+});
 test("reconciled BAS preserves a legacy decision's narrower reviewed period without treating it as current-period resolution", async () => {
   const { renderBasCsv, renderBasPdf } = await import("./reports.ts");
   const value = reconciledBas();

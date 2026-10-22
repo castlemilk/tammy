@@ -72,6 +72,7 @@ test("prepares and reviews an exact BAS period in the packaged app", async ({
       page: create(PageRequestSchema, { pageSize: 200 }),
     }),
   );
+  await page.evaluate(() => window.history.replaceState(null, "", "/"));
   await page.reload();
   const refreshedWorkspace = await authenticatedWorkspace(page);
   expect({

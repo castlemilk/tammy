@@ -687,7 +687,7 @@ function validatePurchaseSources(report: BasSnapshot["workpaper"], orgId: string
   const legacyReviewIds = new Set<string>();
   for (const review of reviews) {
     const checked = purchaseReview(review, report, orgId);
-    const key = `${checked.kind}/${review.postingId ?? ""}/${review.paymentId ?? ""}/${review.deferralId ?? ""}/${checked.legacy?.kind ?? ""}/${checked.legacy?.id ?? ""}`;
+    const key = `${checked.kind}/${review.postingId ?? ""}/${review.paymentId ?? ""}/${review.deferralId ?? ""}/${checked.legacy?.kind ?? ""}/${checked.legacy?.id ?? ""}/${review.legacyReview?.id ?? ""}`;
     if (reviewIds.has(key)) invalid();
     reviewIds.add(key);
     if (review.legacyReview) {

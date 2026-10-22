@@ -177,6 +177,7 @@ const CAPABILITY_HEADER = "X-Tammy-Capability";
 const EXPECTED_API_VERSION = "tammy.v1";
 const CORE_VERSION_PATTERN = /^[\x20-\x7e]{1,128}$/;
 const BAS_PREPARATION_GET_TIMEOUT_MS = 30_000;
+const WORKSPACE_CREATE_TIMEOUT_MS = 30_000;
 
 export interface CoreClient {
   /** The generated local BAS preparation service. Optional only for legacy test doubles. */
@@ -493,7 +494,9 @@ export function createCoreClient(
     getCurrentBasDraft: (request: GetCurrentBasDraftRequest) =>
       coreRequest(() => taxClient.getCurrentBasDraft(request)),
     createWorkspace: (request: CreateWorkspaceRequest) =>
-      coreRequest(() => workspaceClient.createWorkspace(request)),
+      coreRequest(() =>
+        workspaceClient.createWorkspace(request, { timeoutMs: WORKSPACE_CREATE_TIMEOUT_MS }),
+      ),
     confirmRecovery: (request: ConfirmRecoveryRequest) =>
       coreRequest(() => workspaceClient.confirmRecovery(request)),
     unlockWorkspace: (request: UnlockWorkspaceRequest) =>

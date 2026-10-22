@@ -63,7 +63,12 @@ import {
   CURRENT_WORKFLOW_PASSPHRASE,
   CURRENT_WORKFLOW_USERNAME,
 } from "./support/current-accounting-workflow";
-import { readInvoiceAccounting, recordInvoiceReceipt } from "./support/invoice-income-workflow";
+import {
+  expectInvoiceJournal,
+  readBusinessIncome,
+  readInvoiceAccounting,
+  recordInvoiceReceipt,
+} from "./support/invoice-income-workflow";
 import { installLegacyRuleCreateShimInMain } from "./support/legacy-rule-create-shim";
 import {
   expectPurchaseControls,
@@ -1528,6 +1533,23 @@ test("BAS lifecycle: clean cash sources, blocked PAYGI resolution, frozen handof
     "50.00",
     "Q3 GST-free receipt",
   );
+  await expectInvoiceJournal(page, workspace, "BAS-CASH-TAXABLE-001", 20000n, 22000n, 2000n);
+  await expectInvoiceJournal(page, workspace, "BAS-CASH-GSTFREE-001", 5000n, 5000n, 0n);
+  const q3Income = await readBusinessIncome(
+    page,
+    workspace,
+    "2026-07-01",
+    "2026-09-30",
+    "2026-09-30",
+  );
+  expect(q3Income.businessIncome?.minorUnits).toBe(25000n);
+  expect(q3Income.invoiceIncome?.minorUnits).toBe(25000n);
+  expect(q3Income.paymentsReceived?.minorUnits).toBe(16000n);
+  expect(q3Income.outstanding?.minorUnits).toBe(11000n);
+  expect(q3Income.invoiceGst?.minorUnits).toBe(1000n);
+  expect(q3Income.issuedCount).toBe(2n);
+  expect(q3Income.unpostedIssuedCount).toBe(0n);
+  expect(q3Income.unpostedIncome?.minorUnits).toBe(0n);
 
   const purchase = await retainPurchaseThroughUi(
     page,
@@ -1882,16 +1904,22 @@ test("BAS lifecycle: clean cash sources, blocked PAYGI resolution, frozen handof
     await cancelFrozenExport(page, electronHarness, frozenOneRef);
   } catch (error) {
     // Retain exact synthetic report evidence, never a session, TOTP secret/code or workspace database.
+    const frozenSourceFile = testInfo.outputPath("bas-original-frozen-export-source.pb");
+    await writeFile(frozenSourceFile, toBinary(BasFrozenBasSchema, frozenOneRecord));
     await testInfo.attach("bas-original-frozen-export-source.pb", {
-      body: Buffer.from(toBinary(BasFrozenBasSchema, frozenOneRecord)),
+      path: frozenSourceFile,
       contentType: "application/octet-stream",
     });
     try {
       const preparationRef = frozenOneRecord.calculationSnapshot?.preparation;
       if (preparationRef) {
         const detail = await getPreparation(page, workspace, preparationRef);
+        const preparationSourceFile = testInfo.outputPath(
+          "bas-original-preparation-export-source.pb",
+        );
+        await writeFile(preparationSourceFile, toBinary(GetBasPreparationResponseSchema, detail));
         await testInfo.attach("bas-original-preparation-export-source.pb", {
-          body: Buffer.from(toBinary(GetBasPreparationResponseSchema, detail)),
+          path: preparationSourceFile,
           contentType: "application/octet-stream",
         });
       }
