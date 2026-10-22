@@ -638,6 +638,29 @@ test("covers workspace setup, recovery, accounting, and interaction journeys thr
   expect(storedDocument.document?.candidate?.invoiceNumber).toBe("INV-029847");
   expect(storedDocument.document?.status).toBe(DocumentStatus.REVIEWED);
 
+  const readAttention = () =>
+    invokeProto(
+      page,
+      "getAttentionSummary",
+      attentionCodec,
+      create(GetAttentionSummaryRequestSchema, {
+        authentication,
+        organisationId,
+        asOfDate: PERIOD_END,
+        reportingPeriod: create(ReportingPeriodSchema, {
+          startDate: PERIOD_START,
+          endDate: PERIOD_END,
+        }),
+      }),
+    );
+  const revisionsBeforeBasCreate = await readAttention();
+  expect(revisionsBeforeBasCreate.revisions).toMatchObject({
+    financialRevision: 6n,
+    ledgerRevision: 1n,
+    bankingRevision: 3n,
+    taxSourceRevision: 2n,
+  });
+
   const createdBas = await invokeProto(
     page,
     "createBasDraft",
@@ -657,13 +680,15 @@ test("covers workspace setup, recovery, accounting, and interaction journeys thr
   });
   expect(createdBas.workpaper?.salesG1?.minorUnits).toBe(0n);
   expect(createdBas.workpaper?.gstOnSales1a?.minorUnits).toBe(0n);
-  expect(createdBas.workpaper?.gstCredits1b?.minorUnits).toBe(2_900n);
-  expect(createdBas.workpaper?.netGstPayable?.minorUnits).toBe(-2_900n);
-  expect(createdBas.workpaper?.sources).toHaveLength(1);
-  expect(createdBas.workpaper?.sources[0]).toMatchObject({
-    documentId: retainedDocument.id,
-    supplierName: "Officeworks Ltd",
-    invoiceNumber: "INV-029847",
+  expect(createdBas.workpaper?.gstCredits1b?.minorUnits).toBe(0n);
+  expect(createdBas.workpaper?.netGstPayable?.minorUnits).toBe(0n);
+  expect(createdBas.workpaper?.sources).toHaveLength(0);
+  expect(createdBas.workpaper?.purchaseSources).toHaveLength(0);
+  expect(createdBas.workpaper?.purchaseReviews).toHaveLength(1);
+  expect(createdBas.workpaper?.legacyCandidateGst?.minorUnits).toBe(2_900n);
+  expect(createdBas.workpaper?.purchaseReviews[0]?.legacySource?.source).toMatchObject({
+    case: "document",
+    value: { documentId: retainedDocument.id, reviewedVersion: 2n },
   });
 
   const currentBas = await invokeProto(
@@ -675,33 +700,21 @@ test("covers workspace setup, recovery, accounting, and interaction journeys thr
   expect(currentBas.workpaper?.id).toBe(createdBas.workpaper?.id);
   expect(currentBas.workpaper?.status).toBe(BasWorkpaperStatus.DRAFT_NOT_LODGED);
 
-  const attention = await invokeProto(
-    page,
-    "getAttentionSummary",
-    attentionCodec,
-    create(GetAttentionSummaryRequestSchema, {
-      authentication,
-      organisationId,
-      asOfDate: PERIOD_END,
-      reportingPeriod: create(ReportingPeriodSchema, {
-        startDate: PERIOD_START,
-        endDate: PERIOD_END,
-      }),
-    }),
-  );
+  const attention = await readAttention();
   expect(attention).toMatchObject({
     documentsNeedingReview: 0,
     documentsReviewedInPeriod: 1,
     bankingLinesNeedingReconciliation: 0,
     bankingLinesUnreconciledInPeriod: 0,
     currentDraftBasWorkpapers: 1,
-    basStatus: BasAttentionStatus.DRAFT_NOT_LODGED,
+    basStatus: BasAttentionStatus.ACTION_NEEDED,
   });
   expect(attention.revisions).toBeDefined();
-  expect(attention.revisions?.financialRevision).toBe(7n);
+  expect(attention.revisions?.financialRevision).toBe(6n);
   expect(attention.revisions?.ledgerRevision).toBe(1n);
   expect(attention.revisions?.bankingRevision).toBe(3n);
-  expect(attention.revisions?.taxSourceRevision).toBe(3n);
+  expect(attention.revisions?.taxSourceRevision).toBe(2n);
+  expect(attention.revisions).toEqual(revisionsBeforeBasCreate.revisions);
   expect(attention.attentionItems).toHaveLength(0);
 
   await assertRoute(page, "Documents", "/documents", "Documents");
@@ -727,13 +740,15 @@ test("covers workspace setup, recovery, accounting, and interaction journeys thr
   await assertRoute(page, "Trial balance", "/accounting/trial-balance", "Trial balance");
   await expect(page.getByText("$319.00", { exact: true }).first()).toBeVisible();
   await captureJourney(page, "08-trial-balance");
-  await assertRoute(page, "GST & BAS", "/gst-bas", "GST & BAS");
+  await assertRoute(page, "GST & BAS", "/gst-bas", "BAS preparation");
   await openSavedBasWorkpaperPanel(page);
   await expect(page.getByText("Draft — not lodged", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText("Officeworks Ltd", { exact: true })).toBeVisible();
+  await expect(page.getByText("Unresolved legacy source", { exact: true })).toBeVisible();
   await captureJourney(page, "09-gst-draft");
   await assertRoute(page, "Overview", "/overview", "Overview");
-  await expect(page.getByText("Draft — not lodged", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Action needed · review this exact BAS preparation", { exact: true }),
+  ).toBeVisible();
 
   await captureJourney(page, "10-overview");
   if (process.env.TAMMY_JOURNEY_CAPTURE !== "before") await interactionJourney(page);
