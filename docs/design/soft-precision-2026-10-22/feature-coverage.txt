@@ -1,0 +1,49 @@
+TAMMY FEATURE COVERAGE AND IMPLEMENTATION NOTES
+Source reviewed: castlemilk/tammy at aeda631070f9cb44289658c52128c595bf6133f7.
+Primary files: README.md; docs/development/tech-state.md; apps/desktop/src/renderer/app-shell/navigation.tsx; docs/superpowers/specs/2026-08-02-core-business-accounting-suite-design.md.
+These files describe connected development features versus planned suite scope. This is not a runtime audit.
+
+CURRENT CONNECTED AREAS / PROPOSED REDESIGNS
+- Local encrypted workspace create/reopen, recovery confirmation: board11.
+- Administrator sign-in and session: existing app capability; visual form should reuse board3 inputs, never copy generated secret values. Dedicated full sign-in/error screen remains to design.
+- Australian organisation setup: board11. Required fields/defaults must follow the actual contract, not generated optional labels.
+- Overview attention/activity: board1 visual hierarchy; replace exploratory data with actual local projections.
+- Documents: board8. Local PDF/PNG/JPEG <=10MiB, native PDF extraction and manual image review, retained evidence.
+- Banking: board8. Opening balance, signed CSV rows, explicit matching, completion only when all rows matched. No live feed.
+- Chart of accounts: board9. Add ordinary accounts; system/control protections from code.
+- Journals list/detail and balanced two-sided posting: board9 editor concept; use board8 table/detail pattern for list/history.
+- As-of trial balance: board9.
+- GST registry and reviewed-document draft workpaper: board9. No declaration/lodgement/submission.
+- Consolidated local activity: board8. Does not equal audit-chain verification.
+
+PLANNED SUITE / CORE EXISTS BUT FULL DESKTOP FLOW NOT CONNECTED
+- Customers/suppliers/both, local contact details: board10.
+- Quotes, accepted quote to invoice draft, sales credit notes: board10.
+- Invoice list, draft creation, issued read-only line detail, allocations and outstanding balances: boards2/7. Board2 is visual exploration; do not infer automatic email delivery.
+- Bills, supplier credits, outgoing/unallocated payments, settlement reversals: boards10/12. Supplier-credit and refund details should mirror reviewed credit/settlement patterns with their distinct domain rules; not all have dedicated full-screen mockups yet.
+- Item tracking: invoice/bill quantities, prices, GST treatment, document revision and payment allocation. NOT stock inventory, SKU availability, landed cost or COGS.
+- Opening balances, periods and correction/reversal workflows: board12.
+- Extended CSV/OFX/QFX import, similarity/duplicate warnings and transfers: board8 patterns; dedicated OFX mapping/transfer/duplicate screens remain future detail work.
+- Reporting catalogue: board10. Trial balance is connected; wider P&L/balance sheet/cash-flow/general ledger/aged subledgers/statements are planned, not proved available.
+- Complete BAS validation/simulator/export: planned in suite; not shown as ready in current-feature board9.
+- Backup/restore, integrity checks and audit evidence: board11. Core/test existence is not complete desktop availability.
+- Access/role administration and settings: board11 concept; not proof of connected settings.
+- Interrupted jobs, retry remaining work, conflicts, empty/loading states: board12 plus board3.
+- Migration recovery: should use explicit preview/check/restore flow, not silently overwrite a workspace; a dedicated full migration screen remains to design.
+
+EXPLORATORY ONLY / NOT IN CURRENT APPROVED SCOPE
+Boards1–6 include mobile, live account connections, automatic matching, recurring automation and forecasts as style exploration. These must not be advertised or implemented as current capabilities without a deliberate product decision. Mobile concept files are not a mobile app.
+Excluded suite scope includes payroll/STP, inventory/stock, multicurrency, multiple organisations inside one workspace, live bank feeds, production ATO/SBR, income-tax lodgement, e-invoicing networks, gateways/card processing, purchase orders, fixed-asset/depreciation modules, budgeting/project accounting, hosted accounting storage/relay and automatic heuristic posting.
+
+KNOWN IMAGE REVIEW NOTES
+- All screenshots are generated concepts with synthetic data, not tested software. The visual pack spans principal feature families, not every dialog or state.
+- Boards1–6 retain exploratory inconsistencies for artistic reference. Source-aligned requirements in this file supersede them.
+- Board7 corrected the already issued/part-paid invoice to read-only and removed a second Issue action. A payment form must not re-apply an already allocated payment: require a distinct selection and idempotent command.
+- Board8 shows a synthetic matched bank amount and receipt with differing amounts. Real matching must expose the discrepancy and enforce the actual matching rules; do not treat this picture as a valid reconciliation fixture.
+- Board9 corrected the journal to an ordinary expense reclassification. Chart codes, protection flags and top description still need normalisation to the repository chart; no generated badge defines accounting authority.
+- Board11 marks some organisation fields optional and depicts configurable defaults. Actual validation/allowed choices must come from the contract. Recovery instructions must reflect implemented recovery semantics.
+- Board12 was corrected to Equipment, Bank statements and PDF evidence. Retry messages must be based on actual persisted per-item status.
+- Art motifs, whitespace and type hierarchy are the intended references. Wordmark, date format, navigation and labels need one consistent production system.
+- Keyboard, screen-reader, zoom, contrast, reduced motion and real financial invariants remain implementation acceptance tests, not passed by these images.
+
+No app code, credentials, runtime data, CI settings or deployment configuration were changed for this pack.

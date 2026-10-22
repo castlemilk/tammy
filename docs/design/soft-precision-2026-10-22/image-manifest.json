@@ -1,0 +1,86 @@
+[
+  {
+    "file": "01-soft-precision-views.png",
+    "width": 1536,
+    "height": 1024,
+    "mode": "RGB",
+    "sha256": "c627e2021bbf4f23795a9b7490d9becdd0d332111359a99aa8f39fa946a8e3f9"
+  },
+  {
+    "file": "02-automation-invoices.png",
+    "width": 1586,
+    "height": 992,
+    "mode": "RGB",
+    "sha256": "232b863d658277ada528bb5b1576447f24ece4a278f6aedfd407944f4194eaa2"
+  },
+  {
+    "file": "03-design-system.png",
+    "width": 1536,
+    "height": 1024,
+    "mode": "RGB",
+    "sha256": "5e8e2462c81314718af90928615309ded1b04bddcfd5e5a66ff104ed6fc7edef"
+  },
+  {
+    "file": "04-paper-loop.png",
+    "width": 1374,
+    "height": 1145,
+    "mode": "RGBA",
+    "sha256": "9eff198680d28e92b5933821af7bf1599334b7a53d2aba1b95f1304d111edf5e"
+  },
+  {
+    "file": "05-cash-flow-month-end.png",
+    "width": 1774,
+    "height": 887,
+    "mode": "RGB",
+    "sha256": "9a2685e78437ce5a51def1518190ae2f480e57e8b52636d828426bdecd33ee93"
+  },
+  {
+    "file": "06-mobile-moments.png",
+    "width": 1536,
+    "height": 1024,
+    "mode": "RGB",
+    "sha256": "e4d087960eb41f0cd9e4bdae9fef516eaf4eefe0f9cf63fa35a66449a88a9cf4"
+  },
+  {
+    "file": "07-sales-item-tracking.png",
+    "width": 1942,
+    "height": 809,
+    "mode": "RGB",
+    "sha256": "96284946e17b516d42cd3d111a6c1ba37a1ac1b2172ed1cfac97dac152e6364c"
+  },
+  {
+    "file": "08-documents-banking-activity.png",
+    "width": 1536,
+    "height": 1024,
+    "mode": "RGB",
+    "sha256": "1ff7a89366290bd31c7a4747b51e81cc9820db9eeaf15bbbc489e08f9210b301"
+  },
+  {
+    "file": "09-accounting-core.png",
+    "width": 1536,
+    "height": 1024,
+    "mode": "RGB",
+    "sha256": "38de0e2dfb8397d95b1337d57ccb5e039298cbdd774d04824e0b9eba8ced76eb"
+  },
+  {
+    "file": "10-business-suite.png",
+    "width": 1536,
+    "height": 1024,
+    "mode": "RGB",
+    "sha256": "c3b6d4df95e96ec57b044832b958e56c635dd7b770e0e9348900336d17cc1b57"
+  },
+  {
+    "file": "11-workspace-recovery.png",
+    "width": 1536,
+    "height": 1024,
+    "mode": "RGB",
+    "sha256": "63416980c85a8690ae306f465de813124564ef63853068fa8440d0cd4baabb7f"
+  },
+  {
+    "file": "12-corrections-interruptions.png",
+    "width": 1536,
+    "height": 1024,
+    "mode": "RGB",
+    "sha256": "f83e6077032c8670449e223961191618b0a90a7216aba6d29e52e490e0e82ee1"
+  }
+]
