@@ -1,0 +1,25 @@
+{
+  "files": [
+    {
+      "path": "before/04-documents.png",
+      "library_file_id": "libfile_14b164f8b54c8191936a6620cf34a1b8",
+      "file_id": "file_00000000fb5081fd88e632c0816b2786",
+      "version": 0,
+      "sha256": "2b24441ebf57e46133e476e9376153564e9f737301a5461aee6aa2470fc68289"
+    },
+    {
+      "path": "after/04-documents.png",
+      "library_file_id": "libfile_f9cdc651ddbc8191972de1ffc6bc496c",
+      "file_id": "file_000000002bc481fb89481f15becd594b",
+      "version": 0,
+      "sha256": "de7ce3171026d84b0dad513bf6eb5720da1ea4aeefbb4f5fcd7ce3d1dcb658b3"
+    },
+    {
+      "path": "after/05-banking.png",
+      "library_file_id": "libfile_76cc7054a1b08191b9a968d5346ef61b",
+      "file_id": "file_000000004e8c81fb866c2327a93f2df0",
+      "version": 0,
+      "sha256": "89ea9f38244123ab54026029559055b4c13118fc524b67494e0f86ad65594e6b"
+    }
+  ]
+}

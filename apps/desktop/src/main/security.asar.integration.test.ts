@@ -57,17 +57,20 @@ async function pinnedElectron(): Promise<string> {
 async function runElectron(
   executable: string,
   rendererRoot: string,
+  userDataPath: string,
 ): Promise<{ readonly stderr: string; readonly stdout: string }> {
   const environment = { ...process.env };
   delete environment.ELECTRON_RUN_AS_NODE;
   environment.ELECTRON_DISABLE_SECURITY_WARNINGS = "true";
   environment.TAMMY_TEST_RENDERER_ROOT = rendererRoot;
   environment.TAMMY_TEST_SECURITY_SOURCE = SECURITY_SOURCE;
+  environment.TAMMY_TEST_USER_DATA_ROOT = userDataPath;
   const platformArguments = process.platform === "linux" ? ["--no-sandbox"] : [];
   return runHarnessProcess({
     closeConfirmationTimeoutMs: CLOSE_CONFIRMATION_TIMEOUT_MS,
     electronArguments: [
       ...platformArguments,
+      `--user-data-dir=${userDataPath}`,
       "--enable-logging=stderr",
       resolve(HARNESS_PATH, ".."),
     ],
@@ -97,7 +100,11 @@ describe("packaged ASAR renderer protocol", () => {
       const electronExecutable = await pinnedElectron();
       let result: { readonly stderr: string; readonly stdout: string };
       try {
-        result = await runElectron(electronExecutable, join(archive, "renderer"));
+        result = await runElectron(
+          electronExecutable,
+          join(archive, "renderer"),
+          join(directory, "user-data"),
+        );
       } catch (error) {
         safeToRemove = error instanceof HarnessProcessError && error.processClosed;
         throw error;
@@ -110,6 +117,7 @@ describe("packaged ASAR renderer protocol", () => {
         body: "<main>ASAR ready</main>",
         contentType: "text/html; charset=utf-8",
         dockVisible: process.platform === "darwin" ? false : null,
+        isolatedUserData: true,
         nosniff: "nosniff",
         status: 200,
       });

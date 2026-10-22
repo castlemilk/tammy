@@ -987,4 +987,9 @@ async function interactionJourney(page: import("@playwright/test").Page) {
     await documentsLink.evaluate((element) => getComputedStyle(element).transitionDuration),
   ).toBe("0s");
   await page.setViewportSize({ width: 1440, height: 1000 });
+  await assertRoute(page, "Documents", "/documents", "Documents");
+  await page.getByRole("button", { name: /Needs review/ }).click();
+  await expect(page.getByText("No matching documents", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Close review" }).click();
+  await expect(page.getByLabel("Search documents")).toBeFocused();
 }

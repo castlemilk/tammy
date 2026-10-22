@@ -1,0 +1,254 @@
+{
+  "capture": "Real packaged Electron renderer on Gamma-64GB.local; isolated synthetic fixtures",
+  "baselineRendererRevision": "14e502727155951f8468cc0d331cd2847aeaad56",
+  "baselinePackageRevision": "9c0312eb4f0ee58431419fbf1ed0c4c76243a29e",
+  "captureRendererRevision": "8daf67c8c712c3dd1a62980ac160e4e1653ec40c",
+  "capturePackage": {
+    "appSha256": "409ea0df0cfadb77b21dd1fe8776b499d643b4e84dbf0b30f46dbdde91a84564",
+    "coreSha256": "ed02e5ce9892fb7b523d7ccee4176538592221b80ca5a26daadd1c2870b9f62a",
+    "manifestSha256": "57b1e5227d76ebf46eb8355ba09f2ad8e5e5e484ad5abffa728f480e8ed495f5"
+  },
+  "target": "darwin-arm64",
+  "screenshots": [
+    {
+      "path": "after/04-documents.png",
+      "width": 1440,
+      "height": 1104,
+      "sha256": "de7ce3171026d84b0dad513bf6eb5720da1ea4aeefbb4f5fcd7ce3d1dcb658b3"
+    },
+    {
+      "path": "after/05-banking.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "89ea9f38244123ab54026029559055b4c13118fc524b67494e0f86ad65594e6b"
+    },
+    {
+      "path": "after/11-document-upload-error.png",
+      "width": 1440,
+      "height": 1178,
+      "sha256": "eaed276eecf1abc8798afa2e9634d0afe2bb1517fe9eb343c43726de1f135c0e"
+    },
+    {
+      "path": "after/12-review-error-preserved.png",
+      "width": 1440,
+      "height": 1271,
+      "sha256": "0325e0caca848caf663786b4f23285c7a23e6cc156ebd92a7e8ff9614da8e8ce"
+    },
+    {
+      "path": "after/13-review-saved.png",
+      "width": 1440,
+      "height": 1181,
+      "sha256": "089307ca4df0e8fc2b1bd707ce4328ef2b0f0787ffc4839aa71731baae84de94"
+    },
+    {
+      "path": "after/18-keyboard-focus.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "e56e7502beaabe760d3646a406f8ddd02855e7b0fc4fc8ed28cd27563f666507"
+    },
+    {
+      "path": "after/19-320-banking-import.png",
+      "width": 320,
+      "height": 2380,
+      "sha256": "8198f7cdf0dbd7ef4badc85059aa52afeda10e45a2a3b10730627832be8a8612"
+    },
+    {
+      "path": "after/19-320-banking.png",
+      "width": 320,
+      "height": 1257,
+      "sha256": "7b556c92f453cc49f28a0d48dc0cb68a15505138a41c514e213015b66762b441"
+    },
+    {
+      "path": "after/19-320-documents.png",
+      "width": 320,
+      "height": 2281,
+      "sha256": "3725876b7c60a30efc8088c46f4ab0f7eb6789ed47501afc1b876671ac1501f9"
+    },
+    {
+      "path": "after/19-390-banking.png",
+      "width": 390,
+      "height": 1120,
+      "sha256": "4b4942f371aa7c7cc43690ae53a32350dd5cbc30dec79bdc5e72037086e90d94"
+    },
+    {
+      "path": "after/19-390-documents.png",
+      "width": 390,
+      "height": 2040,
+      "sha256": "c4ae51ae78046d5cfc6f0471e30820564864da088371be48b28add49683676bc"
+    },
+    {
+      "path": "after/19-900-banking.png",
+      "width": 900,
+      "height": 1000,
+      "sha256": "aff1e31f7a1656f3c1a0623932689f7170b86980d5998456a0458343c4ea11d0"
+    },
+    {
+      "path": "after/19-900-documents.png",
+      "width": 900,
+      "height": 1686,
+      "sha256": "589022549ead958e73b4ef82a4bac9020f1400dfc99b5594760e61ca39d73424"
+    },
+    {
+      "path": "after/20-csv-validation.png",
+      "width": 1440,
+      "height": 1325,
+      "sha256": "9643204a8a04d598bb26b5f2ce72c5c099471603f9e4e0032c33207e7c2308a9"
+    },
+    {
+      "path": "after/21-statement-unmatched.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "0d04ee07775bf524a9f39acc49d2629463b314d642063a0341a59f18ccc0fafe"
+    },
+    {
+      "path": "after/22-statement-matched.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "c9d929767ae654e64dd5a9f53e661daf13cf55f681de419124515efb58496c65"
+    },
+    {
+      "path": "after/23-statement-reconciled.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "a9a18f6651c5b466195d2da3c296239a2be1dbc61337b203b4226738e9710b2e"
+    },
+    {
+      "path": "after/24-import-draft-reopened.png",
+      "width": 1440,
+      "height": 1227,
+      "sha256": "4269d1adddf46312a2e1d0d189d6a1a8854d7a3015dbf81e811546f05b18cbaa"
+    },
+    {
+      "path": "after/25-match-review-narrow.png",
+      "width": 320,
+      "height": 1981,
+      "sha256": "e5e2152702278f7411ba19d45d6bb26356ed03883b7fa51f67a6a04626144a55"
+    },
+    {
+      "path": "after/25-match-review.png",
+      "width": 1440,
+      "height": 1090,
+      "sha256": "f983f45e8ed1e9a2a6d66a031fa7f8300dcc8e5c46aea44c52112bd5eaef16e2"
+    },
+    {
+      "path": "after/26-document-search-empty.png",
+      "width": 1440,
+      "height": 1226,
+      "sha256": "706a3370c92427eefb29241139f7f777254a83a0cbcc8ea9902a240fb45d7cb4"
+    },
+    {
+      "path": "after/27-document-collection.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "7d914fda9d33892fa3da82c25e055953e49bd2c81b5b1d49921bc6e3d69a8e9d"
+    },
+    {
+      "path": "after/28-documents-empty.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "ab265f31b7755d10cce7dd125faebcf212b0d7bbced847980022a55f1b00e3c7"
+    },
+    {
+      "path": "after/29-banking-empty.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "ff2bc9c50d98e3087cbc0e9d79eb883bc06df30c12410a08560d7a9af02ccd2d"
+    },
+    {
+      "path": "before/04-documents.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "2b24441ebf57e46133e476e9376153564e9f737301a5461aee6aa2470fc68289"
+    },
+    {
+      "path": "before/05-banking.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "37c913aa19a8c63fb30f8b5f42f1936c67a47e4a7518da9c84ba9373a5dc78e3"
+    },
+    {
+      "path": "before/11-document-upload-error.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "627d6dc21cc4dc5ee6f95a4e188b9343fc8bba41e898b1648b0b2276526a0864"
+    },
+    {
+      "path": "before/12-review-error-preserved.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "751329d923dedaed11b4048602db5f5c70d5f410865f10e538419e13cdcb4f19"
+    },
+    {
+      "path": "before/13-review-saved.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "ceed6a1ba13f8e490e88d6ad9c4451ceb574d68e0ce864ed1f8ddf311663c0f1"
+    },
+    {
+      "path": "before/18-keyboard-focus.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "30d8999234495762eaefcabc07667cab61ed66ca178f922852e2c809ef575e44"
+    },
+    {
+      "path": "before/19-320-banking.png",
+      "width": 320,
+      "height": 1050,
+      "sha256": "4a8fbf819a3060d438c5f46f17d58fe36006d4bb5dd80810d187be1020edd547"
+    },
+    {
+      "path": "before/19-320-documents.png",
+      "width": 320,
+      "height": 1479,
+      "sha256": "a7fe321622a0af2c383e81f91f33ae38bc3a6b5459fab83ece1040fe587df3d3"
+    },
+    {
+      "path": "before/19-390-banking.png",
+      "width": 390,
+      "height": 1032,
+      "sha256": "11cfb0f78da3b9fc81f622ff37da4bcc91873878027e336e6726217f49a3a42a"
+    },
+    {
+      "path": "before/19-390-documents.png",
+      "width": 390,
+      "height": 1422,
+      "sha256": "b3ef4da800a37e15e8b751480a7efe268c045784695eec54870729df4ff0fb38"
+    },
+    {
+      "path": "before/19-900-banking.png",
+      "width": 900,
+      "height": 1000,
+      "sha256": "b3a0fce88ff20591cf3c4c101af1c7eb031936ce879d870617df9d3cfad99cd5"
+    },
+    {
+      "path": "before/19-900-documents.png",
+      "width": 900,
+      "height": 1000,
+      "sha256": "98f5a1bfd61ea62e68d8bb4450d3d4c02591b4af74a344cba83590a30ffd28a6"
+    },
+    {
+      "path": "before/20-csv-validation.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "c0ed0353650ceee3910c011176da320dc5a1d882a1745438235ae72681a79a82"
+    },
+    {
+      "path": "before/21-statement-unmatched.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "f6019bfbf8a0da39f3ab2fe833c514377c6790f1bf66b4c76aae6610dd4a304a"
+    },
+    {
+      "path": "before/22-statement-matched.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "e3edc499d1247341be38819ed8ef89c54b7d12610e0f04283f7dace5222ec9ce"
+    },
+    {
+      "path": "before/23-statement-reconciled.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "e4b1b1a8b072d077060aa49e2e7c79e29baef8140034912db3214f319b3cc3ee"
+    }
+  ]
+}

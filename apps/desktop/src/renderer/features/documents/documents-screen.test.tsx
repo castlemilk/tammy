@@ -216,3 +216,15 @@ it("keeps the loaded document projection bounded when a new source is retained",
   ).toHaveLength(201);
   expect(api.ingestDocument).toHaveBeenCalledOnce();
 });
+
+it("returns focus to document search if a status filter hides the selected source", async () => {
+  const { api } = fixture();
+  const user = userEvent.setup();
+  renderDocuments(api);
+  await screen.findByRole("table", { name: "Retained documents" });
+  await user.click(screen.getByRole("button", { name: /Reviewed/ }));
+  expect(screen.queryByRole("table", { name: "Retained documents" })).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Close review" }));
+  expect(document.activeElement).toBe(screen.getByLabelText("Search documents"));
+  expect(api.saveDocumentReview).not.toHaveBeenCalled();
+});

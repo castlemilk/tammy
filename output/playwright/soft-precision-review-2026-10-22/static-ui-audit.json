@@ -30,7 +30,7 @@
     {
       "category": "violation",
       "file": "apps/desktop/src/renderer/features/documents/documents-screen.tsx",
-      "line": 479,
+      "line": 487,
       "message": "Application-owned form does not declare its validation owner.",
       "remediation": "Add noValidate/novalidate and implement the canonical validation contract.",
       "ruleId": "form.novalidate-missing",

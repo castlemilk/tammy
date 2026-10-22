@@ -97,3 +97,62 @@ A final source review also bounded the in-memory post-upload projection at 200
 records, keeping its footer truthful when a new source arrives at the page limit.
 The focused regression verifies a newly retained source remains visible without
 expanding the loaded collection past that bound: **8/8 focused tests pass**.
+
+
+## Final capture and reliability record
+
+The final capture package renders source
+`8daf67c8c712c3dd1a62980ac160e4e1653ec40c`. Its complete current workflow passed
+in 28.1s in a fresh synthetic profile; the separate foundation run passed in 4.8s.
+`manifest.json` pins all **40 new PNGs** (16 before, 24 after), dimensions and
+package hashes. Three selected images were uploaded and renamed in Library;
+`library-delivery.json` records confirmed IDs and versions. Their bytes were not
+edited or generated.
+
+One earlier launch closed before any window. A later full capture attempt opened
+setup but workspace creation returned the existing generic error; a targeted
+fresh-profile diagnostic run then completed all assertions. These two local
+failures are retained as limitations, not reported as successful attempts. The
+unchanged core hash matches the baseline. The available error does not establish
+an underlying domain cause, and no request deadline or production setting was
+relaxed.
+
+A subsequent source-only focus correction returns to search when a document filter
+hides the selected row. It has unit and packaged-journey regression assertions;
+it does not change the captured appearance. The final code revision and hosted
+package result are identified by the PR/CI record.
+
+Default parallel native verification later timed out in three ordinary tests and
+the inherited ASAR fixture. A two-worker, bounded 10s ordinary-test run passed
+400 tests and reproduced only ASAR shutdown failure: expected HTML/headers were
+already printed, but process closure was not confirmed within the existing 20s.
+The test had no unique profile. A test-owned profile resolved the focused
+reproduction in 2.50s; an additional real Electron check enforces actual profile
+identity, including canonical macOS path aliases. Existing profiles and caches are
+preserved. The 20s execution and 5s close-confirmation guards remain unchanged.
+
+## Release path checkpoint
+
+The user extended this pass through deployment. The documented path is the Mac
+App Store; a local ad-hoc package is not a release. Repository release checks pass
+with complete metadata for `com.tammy.desktop`, version 0.1.0. Existing distribution
+and installer identities are present. Apple's CMS decoder verified the saved
+Tammy distribution profiles, including the 20260901 Build 3 profile valid until
+2027-09-01 and the earlier 20260813 profile valid until 2027-05-13. No credential
+or security grant was created.
+
+Current App Store Connect access redirects the Tammy app to
+`/login?targetUrl=%2Fapps%2F6800226692&authResult=FAILED`. Signing-input environment
+variables are unset. Repository metadata supplies non-secret URLs/team/export
+choices, but the next monotonic upload build number and actual submission status
+must be verified in the authenticated account. Sign-in was requested while the
+independent code, evidence and CI work continues. No upload or publication is
+claimed.
+
+The profile-identity check initially compared path strings and caught a macOS
+`/var` versus `/private/var` alias. It now compares canonical filesystem paths.
+The real isolated-profile ASAR test passed with the assertion enabled (15.90s;
+20s execution bound unchanged). The latest complete bounded run had already
+passed the other **400 tests**. Exact-commit hosted verification must confirm the
+combined 401-test suite; those outcomes are reported in the PR checks rather than
+being inferred from these separate local runs.

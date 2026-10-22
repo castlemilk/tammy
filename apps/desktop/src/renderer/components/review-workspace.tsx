@@ -1,5 +1,5 @@
 import { AlertCircle, CheckCircle2, FileSearch, LoaderCircle, Search } from "lucide-react";
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 
 export function WorkHeading({
   title,
@@ -74,6 +74,7 @@ export function WorkState({
 }
 
 export function WorkSearch({
+  inputRef,
   label,
   value,
   onChange,
@@ -81,6 +82,7 @@ export function WorkSearch({
   readonly label: string;
   readonly value: string;
   readonly onChange: (value: string) => void;
+  readonly inputRef?: Ref<HTMLInputElement>;
 }) {
   return (
     <label className="relative block w-full min-w-0 flex-1">
@@ -91,6 +93,7 @@ export function WorkSearch({
       <span className="sr-only">{label}</span>
       <input
         className="focus-ring h-11 w-full rounded-xl border border-border bg-surface pl-10 pr-3 text-[14px]"
+        ref={inputRef}
         type="search"
         placeholder={label}
         value={value}

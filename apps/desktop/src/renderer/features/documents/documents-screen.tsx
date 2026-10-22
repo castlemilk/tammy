@@ -79,6 +79,7 @@ export function DocumentsScreen({ api, workspace }: DocumentsScreenProps) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "review" | "reviewed">("all");
   const input = useRef<HTMLInputElement>(null);
+  const searchInput = useRef<HTMLInputElement>(null);
   const uploadActive = useRef(false);
   const rowButtons = useRef(new Map<string, HTMLButtonElement>());
 
@@ -224,7 +225,12 @@ export function DocumentsScreen({ api, workspace }: DocumentsScreenProps) {
             ]}
           />
           <div className="flex w-full min-w-0 max-w-[330px] items-center gap-2">
-            <WorkSearch label="Search documents" value={query} onChange={setQuery} />
+            <WorkSearch
+              inputRef={searchInput}
+              label="Search documents"
+              value={query}
+              onChange={setQuery}
+            />
             <Button
               aria-label="Refresh documents"
               disabled={busy || state.status === "loading"}
@@ -335,7 +341,9 @@ export function DocumentsScreen({ api, workspace }: DocumentsScreenProps) {
           workspace={workspace}
           onClose={() => {
             setSelectedID(undefined);
-            rowButtons.current.get(selected.id)?.focus();
+            const row = rowButtons.current.get(selected.id);
+            if (row) row.focus();
+            else searchInput.current?.focus();
           }}
           onSaved={(saved) =>
             setState((current) =>
