@@ -1492,7 +1492,7 @@ test("local Task front door preserves the safe development contract", async () =
     "pnpm sqlcipher:build",
     'Resolve-Path ".tmp/sqlcipher/ordinary/win32-x64/ordinary-sqlite3.exe"',
     "$env:TAMMY_ORDINARY_SQLITE3 = $probe",
-    "mise exec -- go test -race -tags tammy_sqlcipher ./services/core/internal/storage/sqlcipher/... ./services/core/internal/sbr ./services/core/internal/app ./services/core/cmd/tammy-core -count=1",
+    "go test -race -tags tammy_sqlcipher ./services/core/internal/storage/sqlcipher/... ./services/core/internal/sbr ./services/core/internal/app ./services/core/cmd/tammy-core -count=1",
     "SBR_UNAVAILABLE_ON_TARGET",
     "pnpm desktop:e2e",
     'classification = "WINDOWS11_23H2_X64_RELEASE_GATE"',
@@ -1506,17 +1506,11 @@ test("local Task front door preserves the safe development contract", async () =
     );
   }
   assert.equal(ciTasks.windows11.status, undefined, "CI tasks must never be cached");
-  const ciCommandsWithoutPinnedWindowsGo = Object.values(ciTasks)
-    .flatMap(shellCommands)
-    .join("\n")
-    .replace(
-      "mise exec -- go test -race -tags tammy_sqlcipher ./services/core/internal/storage/sqlcipher/... ./services/core/internal/sbr ./services/core/internal/app ./services/core/cmd/tammy-core -count=1",
-      "go test",
-    );
+  const ciCommands = Object.values(ciTasks).flatMap(shellCommands).join("\n");
   assert.doesNotMatch(
-    ciCommandsWithoutPinnedWindowsGo,
+    ciCommands,
     /\bmise(?:\s|$)/,
-    "CI tasks use Actions-provisioned tools directly",
+    "CI tasks use Actions-provisioned tools directly without requiring mise on runners",
   );
 
   const allCommands = [];

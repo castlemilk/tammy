@@ -51,6 +51,11 @@ test("Windows SQLCipher workflow derives, validates, and exports exact COMSPEC",
 test("Windows 11 workflow installs Task and delegates native evidence to one canonical scenario", async () => {
   const workflow = await readFile(workflowPath, "utf8");
   assert.match(workflow, /go install github\.com\/go-task\/task\/v3\/cmd\/task@v3\.52\.0/);
+  assert.match(
+    workflow,
+    /name: Set up pinned Go[\s\S]*go-version: 1\.26\.4/,
+    "the Windows 11 handoff uses the Actions-provisioned pinned Go directly",
+  );
   assert.match(workflow, /Join-Path \(go env GOPATH\) "bin"[\s\S]{0,240}\$env:GITHUB_PATH/);
   assert.match(
     workflow,
@@ -80,7 +85,7 @@ test("Windows 11 Task handoff preserves the full guarded native release-gate seq
     'throw "SQLCIPHER_BUILD_FAILED"',
     'Resolve-Path ".tmp/sqlcipher/ordinary/win32-x64/ordinary-sqlite3.exe"',
     "$env:TAMMY_ORDINARY_SQLITE3 = $probe",
-    "mise exec -- go test -race -tags tammy_sqlcipher ./services/core/internal/storage/sqlcipher/... ./services/core/internal/sbr ./services/core/internal/app ./services/core/cmd/tammy-core -count=1",
+    "go test -race -tags tammy_sqlcipher ./services/core/internal/storage/sqlcipher/... ./services/core/internal/sbr ./services/core/internal/app ./services/core/cmd/tammy-core -count=1",
     'throw "SQLCIPHER_GO_INTEGRATION_FAILED"',
     "pnpm desktop:e2e",
     'throw "WINDOWS11_PACKAGED_E2E_FAILED"',
@@ -92,11 +97,17 @@ test("Windows 11 Task handoff preserves the full guarded native release-gate seq
     "run_attempt = $env:GITHUB_RUN_ATTEMPT",
     'Set-Content -Encoding utf8 "apps/desktop/test-results/windows11-result.json"',
   ]);
+  assert.match(
+    command,
+    /; \$env:TAMMY_ORDINARY_SQLITE3 = \$probe; go test -race -tags tammy_sqlcipher \.\/services\/core\/internal\/storage\/sqlcipher\/\.\.\. \.\/services\/core\/internal\/sbr \.\/services\/core\/internal\/app \.\/services\/core\/cmd\/tammy-core -count=1; if \(\$LASTEXITCODE -ne 0\) \{ throw "SQLCIPHER_GO_INTEGRATION_FAILED" \}/,
+    "the SQLCipher integration must run with the pinned Go already provisioned by Actions",
+  );
+  assert.doesNotMatch(command, /\bmise(?:\s|$)/, "the hosted handoff must not require mise");
   for (const [commandExpression, guardExpression] of [
     ["pnpm sqlcipher:test", 'if ($LASTEXITCODE -ne 0) { throw "SQLCIPHER_NODE_TEST_FAILED" }'],
     ["pnpm sqlcipher:build", 'if ($LASTEXITCODE -ne 0) { throw "SQLCIPHER_BUILD_FAILED" }'],
     [
-      "mise exec -- go test -race -tags tammy_sqlcipher ./services/core/internal/storage/sqlcipher/... ./services/core/internal/sbr ./services/core/internal/app ./services/core/cmd/tammy-core -count=1",
+      "go test -race -tags tammy_sqlcipher ./services/core/internal/storage/sqlcipher/... ./services/core/internal/sbr ./services/core/internal/app ./services/core/cmd/tammy-core -count=1",
       'if ($LASTEXITCODE -ne 0) { throw "SQLCIPHER_GO_INTEGRATION_FAILED" }',
     ],
     ["pnpm desktop:e2e", 'if ($LASTEXITCODE -ne 0) { throw "WINDOWS11_PACKAGED_E2E_FAILED" }'],

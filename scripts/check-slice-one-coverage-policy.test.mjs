@@ -11,6 +11,7 @@ import {
 const SYSTEM_RPC = "tammy.v1.SystemService.GetDiagnostics";
 const ALL_ROLES_ALLOWED = ["workspace_admin", "business_preparer", "business_lodger", "auditor"];
 const CURRENT_WORKFLOW_CASE = "walkthrough/current-accounting-workflows";
+const FOUNDATION_RECOVERY_CASE = "foundation/workspace-recovery-confirmation";
 const PURCHASE_CASE = "purchases/payments-gst";
 const PURCHASE_RPCS = [
   "tammy.v1.PurchaseService.GetPurchaseAccounting",
@@ -556,6 +557,7 @@ test("reporting capability is promoted only with the packaged pre-setup evidence
     "reporting/capability-registry",
     CURRENT_WORKFLOW_CASE,
     "purchases/payments-gst",
+    FOUNDATION_RECOVERY_CASE,
   ]);
   assert.ok(!coverage.scenarios["E2E-00"].futureCases.includes("reporting/capability-registry"));
 });
@@ -570,7 +572,12 @@ test("every exposed business preload has production packaged evidence", async ()
   assert.deepEqual({ missing, declaredFuture }, { missing: [], declaredFuture: [] });
   assert.ok(coverage.scenarios["E2E-00"].cases.includes(CURRENT_WORKFLOW_CASE));
   for (const rpcName of EXPOSED_BUSINESS_RPCS) {
-    assert.deepEqual(coverage.rpcs[rpcName].cases, [CURRENT_WORKFLOW_CASE], rpcName);
+    const expectedCases =
+      rpcName === "tammy.v1.WorkspaceService.CreateWorkspace" ||
+      rpcName === "tammy.v1.WorkspaceService.ConfirmRecovery"
+        ? [FOUNDATION_RECOVERY_CASE, CURRENT_WORKFLOW_CASE]
+        : [CURRENT_WORKFLOW_CASE];
+    assert.deepEqual(coverage.rpcs[rpcName].cases, expectedCases, rpcName);
     assert.equal(coverage.rpcs[rpcName].futureCases, undefined, rpcName);
   }
 });
