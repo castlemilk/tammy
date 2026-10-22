@@ -5,6 +5,7 @@ scenarios:
       - foundation/offline-ready
       - reporting/capability-registry
       - walkthrough/current-accounting-workflows
+      - foundation/workspace-recovery-confirmation
     futureCases:
       - slice-1/foundation-contracts
       - walkthrough/blank-overview
@@ -88,6 +89,7 @@ rpcs:
     preload: createWorkspace
     cases:
       - walkthrough/current-accounting-workflows
+      - foundation/workspace-recovery-confirmation
     projections:
       - create_workspace_result
     routes:
@@ -116,6 +118,7 @@ rpcs:
     preload: confirmRecovery
     cases:
       - walkthrough/current-accounting-workflows
+      - foundation/workspace-recovery-confirmation
     projections:
       - confirm_recovery_result
     routes:
@@ -2330,10 +2333,9 @@ rpcs:
         - not_applicable
 transitions:
   tammy.v1.WorkspaceState.WORKSPACE_STATE_PENDING_RECOVERY->WORKSPACE_STATE_UNAUTHENTICATED:
-    stage: declared_future
-    cases: []
-    futureCases:
-      - slice-1/foundation-contracts
+    stage: production
+    cases:
+      - foundation/workspace-recovery-confirmation
   tammy.v1.WorkspaceState.WORKSPACE_STATE_LOCKED->WORKSPACE_STATE_UNAUTHENTICATED:
     stage: declared_future
     cases: []
@@ -2654,3 +2656,15 @@ transitions:
     cases: []
     futureCases:
       - slice-1/backup-audit-contracts
+  tammy.v1.DocumentStatus.DOCUMENT_STATUS_NEEDS_REVIEW->DOCUMENT_STATUS_REVIEWED:
+    stage: production
+    cases:
+      - walkthrough/current-accounting-workflows
+  tammy.v1.BankStatementLineStatus.BANK_STATEMENT_LINE_STATUS_UNMATCHED->BANK_STATEMENT_LINE_STATUS_MATCHED:
+    stage: production
+    cases:
+      - walkthrough/current-accounting-workflows
+  tammy.v1.BankStatementLineStatus.BANK_STATEMENT_LINE_STATUS_MATCHED->BANK_STATEMENT_LINE_STATUS_RECONCILED:
+    stage: production
+    cases:
+      - walkthrough/current-accounting-workflows

@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "transitions": [
+    {
+      "enum": "tammy.v1.BankStatementLineStatus",
+      "transition": "BANK_STATEMENT_LINE_STATUS_UNMATCHED->BANK_STATEMENT_LINE_STATUS_MATCHED"
+    },
+    {
+      "enum": "tammy.v1.BankStatementLineStatus",
+      "transition": "BANK_STATEMENT_LINE_STATUS_MATCHED->BANK_STATEMENT_LINE_STATUS_RECONCILED"
+    }
+  ]
+}

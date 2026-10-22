@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "transitions": [
+    {
+      "enum": "tammy.v1.DocumentStatus",
+      "transition": "DOCUMENT_STATUS_NEEDS_REVIEW->DOCUMENT_STATUS_REVIEWED"
+    }
+  ]
+}
