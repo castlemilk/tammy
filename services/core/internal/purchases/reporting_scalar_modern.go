@@ -87,8 +87,9 @@ func purchaseBASModernFamilies() []purchaseBASScalarFamily {
 				"source_type":         "j.source_type",
 				"accounting_version":  "pay.accounting_version",
 				"record_hash":         "pay.source_hash",
+				"actual_payment_date": "pay.payment_date",
 			},
-			required: []string{"posting_id", "account_id", "journal_id", "journal_source_kind", "source_type", "accounting_version", "record_hash"},
+			required: []string{"posting_id", "account_id", "journal_id", "journal_source_kind", "source_type", "accounting_version", "record_hash", "actual_payment_date"},
 			from: `purchase_payments_v1 AS pay
 			 LEFT JOIN organisations AS owner ON owner.id=pay.organisation_id
 			 LEFT JOIN purchase_postings_v1 AS p ON p.id=pay.posting_id
@@ -106,6 +107,9 @@ func purchaseBASModernFamilies() []purchaseBASScalarFamily {
 			 OR j.id IS NULL OR j.organisation_id IS NOT pay.organisation_id
 			 OR j.source_kind!=7 OR j.source_type!='BANKING' OR j.source_id IS NOT pay.id
 			 OR typeof(pay.accounting_version)!='integer' OR pay.accounting_version<1
+			 OR typeof(pay.payment_date)!='text' OR length(CAST(pay.payment_date AS BLOB))!=10
+			 OR pay.payment_date NOT GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'
+			 OR substr(pay.payment_date,1,4)='0000' OR date(pay.payment_date,'+0 days') IS NOT pay.payment_date
 			 OR pay.source_hash IS NULL OR typeof(pay.source_hash)!='blob' OR length(pay.source_hash)!=32`,
 			root:    "0",
 			receipt: "1",

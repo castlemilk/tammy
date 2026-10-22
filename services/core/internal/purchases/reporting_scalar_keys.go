@@ -60,7 +60,7 @@ type BASScalarKey struct {
 	PostingID, DocumentID, OpeningPayableID, ConversionID, PaymentID                         *string
 	AccountID, JournalID, EvidenceID, DeferralID, OperationKey, RelatedID                    *string
 	ScopeKind, ScopeID, SourceKind, SourceType, SourceID                                     *string
-	DueDateSourceID, ClaimEvidenceSourceID                                                   *string
+	ActualPaymentDate, DueDateSourceID, ClaimEvidenceSourceID                                *string
 	Sequence, PostingAllocationSequence, AllocationSequence                                  *uint64
 	ObjectVersion, AccountingVersion, AccountVersion, SourceVersion                          *uint64
 	DueDateSourceVersion, ClaimEvidenceSourceVersion, JournalSourceKind                      *uint64
@@ -79,6 +79,7 @@ var purchaseBASScalarStringColumns = []string{
 	"organisation_id", "id", "posting_id", "document_id", "opening_payable_id", "conversion_id", "payment_id",
 	"account_id", "journal_id", "evidence_id", "deferral_id", "operation_key", "related_id", "scope_kind", "scope_id",
 	"source_kind", "source_type", "source_id", "due_date_source_id", "claim_evidence_source_id",
+	"actual_payment_date",
 }
 
 var purchaseBASScalarIntegerColumns = []string{
@@ -339,7 +340,7 @@ func scanPurchaseBASScalarKey(rows *sql.Rows, remainingBytes, reservationBytes i
 		return key, 0, fmt.Errorf("%w: invalid purchase scalar row", ErrRepository)
 	}
 	key.OrganisationID, key.ID = text[0].String, text[1].String
-	stringTargets := []**string{&key.PostingID, &key.DocumentID, &key.OpeningPayableID, &key.ConversionID, &key.PaymentID, &key.AccountID, &key.JournalID, &key.EvidenceID, &key.DeferralID, &key.OperationKey, &key.RelatedID, &key.ScopeKind, &key.ScopeID, &key.SourceKind, &key.SourceType, &key.SourceID, &key.DueDateSourceID, &key.ClaimEvidenceSourceID}
+	stringTargets := []**string{&key.PostingID, &key.DocumentID, &key.OpeningPayableID, &key.ConversionID, &key.PaymentID, &key.AccountID, &key.JournalID, &key.EvidenceID, &key.DeferralID, &key.OperationKey, &key.RelatedID, &key.ScopeKind, &key.ScopeID, &key.SourceKind, &key.SourceType, &key.SourceID, &key.DueDateSourceID, &key.ClaimEvidenceSourceID, &key.ActualPaymentDate}
 	for i, target := range stringTargets {
 		if raw := text[i+2]; raw.Valid {
 			value := raw.String

@@ -81,7 +81,7 @@ func purchaseBASScalarIndependentBytes(keys []purchases.BASScalarKey) int64 {
 			key.PostingID, key.DocumentID, key.OpeningPayableID, key.ConversionID, key.PaymentID,
 			key.AccountID, key.JournalID, key.EvidenceID, key.DeferralID, key.OperationKey, key.RelatedID,
 			key.ScopeKind, key.ScopeID, key.SourceKind, key.SourceType, key.SourceID, key.DueDateSourceID,
-			key.ClaimEvidenceSourceID,
+			key.ClaimEvidenceSourceID, key.ActualPaymentDate,
 		} {
 			addOptionalText(value)
 		}
