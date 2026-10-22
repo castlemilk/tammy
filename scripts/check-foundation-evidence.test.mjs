@@ -540,6 +540,57 @@ test("allows only ad-hoc signing for the ordinary macOS PR package check", async
   assert.equal(packageStep.env.TAMMY_MACOS_ARTIFACT_PHASE, undefined);
 });
 
+test("packaged Playwright stops after the first CI failure without retrying", async () => {
+  const configUrl = new URL("../apps/desktop/playwright.config.ts", import.meta.url).href;
+  const expectedTests = [
+    "foundation.spec.ts",
+    "current-workflows.spec.ts",
+    "bas-lifecycle.spec.ts",
+    "bas-preparation.spec.ts",
+    "bas-preparation-guards.spec.ts",
+    "invoice-income.spec.ts",
+    "reporting-exports.spec.ts",
+    "purchase-payments.spec.ts",
+    "sbr-readiness.spec.ts",
+  ];
+
+  async function loadConfig(ci) {
+    const source = `
+      Object.defineProperty(process, "platform", { value: "darwin" });
+      Object.defineProperty(process, "arch", { value: "arm64" });
+      const { default: config } = await import(${JSON.stringify(configUrl)});
+      process.stdout.write(JSON.stringify({
+        retries: config.retries,
+        maxFailures: config.maxFailures,
+        workers: config.workers,
+        testMatch: config.projects.flatMap((project) => project.testMatch),
+      }));
+    `;
+    const { stdout } = await execFileAsync(
+      process.execPath,
+      ["--input-type=module", "-e", source],
+      {
+        cwd: path.resolve(import.meta.dirname, ".."),
+        env: { ...process.env, ...(ci ? { CI: "true" } : { CI: "" }) },
+      },
+    );
+    return JSON.parse(stdout);
+  }
+
+  assert.deepEqual(await loadConfig(true), {
+    retries: 0,
+    maxFailures: 1,
+    workers: 1,
+    testMatch: expectedTests,
+  });
+  assert.deepEqual(await loadConfig(false), {
+    retries: 0,
+    maxFailures: 0,
+    workers: 1,
+    testMatch: expectedTests,
+  });
+});
+
 function evidenceRow(sourceRequirementId, overrides = {}) {
   const row = {
     source_requirement_id: sourceRequirementId,

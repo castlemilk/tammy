@@ -609,15 +609,19 @@ test("purchases/payments-gst: document and payment page 201 remain reachable and
   electronHarness,
 }, testInfo) => {
   test.setTimeout(420_000);
+  const markVolumePhase = (phase: string) => console.info(`PURCHASE_201_PHASE=${phase}`);
   const directory = path.join(acceptanceRoot, "pagination-capacity");
   await mkdir(directory, { recursive: true });
   let page = electronHarness.currentPage();
   let workspace = await setupPurchaseWorkspace(electronHarness, "cash");
+  markVolumePhase("workspace_ready");
   const number = "PURCHASE-PAGE-201";
   const document = await retainPurchaseThroughUi(page, workspace, number);
   const posted = await postPurchaseThroughUi(page, workspace, document);
   expect(posted.accounting?.accountingVersion).toBe(1n);
+  markVolumePhase("document_posted");
   const paymentIds: string[] = [];
+  markVolumePhase("seed_payments_started");
   for (let sequence = 1; sequence <= 200; sequence++) {
     const payment = await purchaseProto(
       page,
@@ -640,11 +644,15 @@ test("purchases/payments-gst: document and payment page 201 remain reachable and
     expect(payment.accounting?.accountingVersion).toBe(BigInt(sequence + 1));
     if (!payment.payment) throw new Error("PURCHASE_VOLUME_PAYMENT_MISSING");
     paymentIds.push(payment.payment.id);
+    if (sequence % 100 === 0) markVolumePhase(`seed_payments_${sequence}`);
   }
+  markVolumePhase("seed_proofs_started");
   const proofIds: string[] = [];
   for (let sequence = 1; sequence <= 200; sequence++) {
     proofIds.push((await retainPurchaseVolumeProof(page, workspace, sequence)).id);
+    if (sequence % 100 === 0) markVolumePhase(`seed_proofs_${sequence}`);
   }
+  markVolumePhase("navigate_to_document_page");
   await page.getByRole("link", { name: "Overview", exact: true }).click();
   await page.getByRole("link", { name: "Documents", exact: true }).click();
   await expect(page.getByRole("button").filter({ hasText: number })).toHaveCount(0);
@@ -653,6 +661,7 @@ test("purchases/payments-gst: document and payment page 201 remain reachable and
   const panel = page.getByRole("region", { name: "Purchase accounting", exact: true });
   await expect(panel).toBeVisible();
   await expect(page.getByRole("heading", { name: `${number}.pdf`, exact: true })).toBeVisible();
+  markVolumePhase("page_201_document_selected");
   await recordPurchasePaymentThroughUi(
     page,
     workspace,
@@ -661,6 +670,7 @@ test("purchases/payments-gst: document and payment page 201 remain reachable and
     "108.00",
     "Final payment 201 through UI",
   );
+  markVolumePhase("page_201_payment_recorded");
   await panel.getByRole("button", { name: "Next payment page", exact: true }).click();
   const table = panel.getByRole("table", { name: "Purchase payments", exact: true });
   await expect(table).toContainText("Seed payment 001");
@@ -669,6 +679,7 @@ test("purchases/payments-gst: document and payment page 201 remain reachable and
   expect(payments).toHaveLength(201);
   expect(new Set(payments.map((payment) => payment.id)).size).toBe(201);
   expect(payments.map((payment) => payment.id).slice(1)).toEqual(paymentIds.toReversed());
+  markVolumePhase("page_201_payment_list_asserted");
   expect(payments.reduce((sum, payment) => sum + (payment.amount?.minorUnits ?? 0n), 0n)).toBe(
     11000n,
   );
@@ -681,6 +692,7 @@ test("purchases/payments-gst: document and payment page 201 remain reachable and
     "1170": 0n,
   };
   await expectPurchaseControls(page, workspace, controls);
+  markVolumePhase("page_201_ledger_asserted");
   // Changing filters resets the cursor while the owned selected document stays reachable.
   await page.getByRole("combobox", { name: "Accounting state", exact: true }).selectOption("2");
   await expect(
@@ -707,17 +719,27 @@ test("purchases/payments-gst: document and payment page 201 remain reachable and
       )
       .sort(),
   ).toEqual(proofIds.toSorted());
+  markVolumePhase("baseline_workpaper_asserted");
   const csv = path.join(directory, "complete.csv");
   const pdf = path.join(directory, "complete.pdf");
   await savePurchaseExport(electronHarness, "CSV", csv, "2026-07-01", "2026-09-30");
   await savePurchaseExport(electronHarness, "PDF", pdf, "2026-07-01", "2026-09-30");
   await assertPurchaseExportArtifacts(csv, pdf, saved);
   await writeFile(path.join(directory, "complete.core.pb"), toBinary(BasWorkpaperSchema, saved));
+  markVolumePhase("baseline_exports_complete");
+  markVolumePhase("overflow_proofs_started");
   for (let sequence = 201; sequence <= 1001; sequence++) {
     proofIds.push((await retainPurchaseVolumeProof(page, workspace, sequence)).id);
+    const overflowCount = sequence - 200;
+    if (overflowCount % 100 === 0) {
+      markVolumePhase(`overflow_proofs_${overflowCount}`);
+    }
   }
+  markVolumePhase("overflow_proofs_complete");
+  markVolumePhase("overflow_regeneration_started");
   await page.getByRole("button", { name: "Regenerate local draft", exact: true }).click();
   await expect(page.getByRole("alert")).toBeVisible();
+  markVolumePhase("capacity_notice_asserted");
   const retained = await readPurchaseBas(page, workspace);
   expect(retained.id).toBe(saved.id);
   expect(retained.version).toBe(saved.version);
@@ -728,6 +750,7 @@ test("purchases/payments-gst: document and payment page 201 remain reachable and
   expect(retained.reviewWarnings).toContain(
     "The complete current source set exceeds supported workpaper capacity. Saved figures have been retained; complete preparation requires supported volume.",
   );
+  markVolumePhase("retained_candidate_asserted");
   const overflowCsv = path.join(directory, "overflow-retained.csv");
   const overflowPdf = path.join(directory, "overflow-retained.pdf");
   await savePurchaseExport(electronHarness, "CSV", overflowCsv, "2026-07-01", "2026-09-30");
@@ -737,6 +760,7 @@ test("purchases/payments-gst: document and payment page 201 remain reachable and
     path.join(directory, "overflow-retained.core.pb"),
     toBinary(BasWorkpaperSchema, retained),
   );
+  markVolumePhase("overflow_exports_complete");
   await page.screenshot({
     path: path.join(directory, "source-capacity-retained.png"),
     animations: "disabled",
@@ -744,9 +768,11 @@ test("purchases/payments-gst: document and payment page 201 remain reachable and
   const reopened = await reopenPurchaseWorkspace(electronHarness);
   page = reopened.page;
   workspace = { ...workspace, ...reopened.workspace };
+  markVolumePhase("workspace_reopened");
   expect(await readPurchasePayments(page, workspace, document.id)).toEqual(payments);
   expect((await readPurchaseBas(page, workspace)).id).toBe(saved.id);
   await expectPurchaseControls(page, workspace, controls);
+  markVolumePhase("reopened_state_asserted");
   await writeFile(
     path.join(directory, "reconciliation.json"),
     `${JSON.stringify({ documentId: document.id, retainedWorkpaperId: saved.id, paymentIds: payments.map((payment) => payment.id), reviewedProofIds: proofIds, sourceCount: saved.purchaseSources.length, retainedReviewCount: saved.purchaseReviews.length, rejectedCurrentCandidateCount: proofIds.length, gstMinor: "1000", actualLedger: Object.fromEntries(Object.entries(controls).map(([code, minor]) => [code, minor.toString()])), artifacts: await Promise.all([csv, pdf, overflowCsv, overflowPdf].map(async (file) => ({ file: path.basename(file), sha256: await reportArtifactHash(file) }))) }, null, 2)}\n`,

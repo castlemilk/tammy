@@ -1505,40 +1505,76 @@ async function cancelFrozenExport(
   electronHarness: { readonly application: import("@playwright/test").ElectronApplication },
   ref: BasReference,
 ) {
-  await page.getByRole("button", { name: "Export", exact: true }).click();
-  await page
-    .getByRole("combobox", { name: "Exact report source", exact: true })
-    .selectOption("frozen_bas");
-  const identity = page.getByRole("combobox", {
-    name: "Frozen BAS identity",
-    exact: true,
-  });
-  await identity.selectOption(refKey(ref));
-  await expect(identity).toHaveValue(refKey(ref));
-  await page.getByRole("combobox", { name: "Format", exact: true }).selectOption("pdf");
-  await electronHarness.application.evaluate(({ dialog }) => {
-    dialog.showSaveDialog = async () => ({ canceled: true, filePath: "" });
-  });
-  await page.getByRole("button", { name: "Export PDF", exact: true }).click();
-  await expect(page.getByText("BAS export cancelled.", { exact: true })).toBeVisible();
-  const history = page.getByRole("region", { name: "Exact-target export history", exact: true });
-  await expect(history).toContainText("PDF");
-  await expect(history).toContainText("Cancelled");
-  const events = (
-    await exportEventsForFrozen(page, await authenticatedWorkspace(page), ref)
-  ).filter((event) => event.format === BasExportFormat.PDF);
-  expect(events).toHaveLength(2);
-  expect(
-    events.every((event) => {
-      const target = event.target?.exactTarget;
-      return target?.case === "frozenBas" && refKey(target.value) === refKey(ref);
-    }),
-    "cancelled export events remain bound to the exact frozen PDF target",
-  ).toBe(true);
-  expect(events.filter((event) => event.phase === BasExportPhase.STARTED)).toHaveLength(1);
-  const finished = events.filter((event) => event.phase === BasExportPhase.FINISHED);
-  expect(finished).toHaveLength(1);
-  expect(finished[0]?.outcome).toBe(BasExportOutcome.CANCELLED);
+  let phase = "start";
+  const mark = (next: string) => {
+    phase = next;
+    console.info(`BAS_ACCEPTANCE_CANCEL_PHASE=${phase}`);
+  };
+
+  try {
+    mark("open_export_dialog");
+    await page.getByRole("button", { name: "Export", exact: true }).click();
+
+    mark("select_frozen_source");
+    await page
+      .getByRole("combobox", { name: "Exact report source", exact: true })
+      .selectOption("frozen_bas");
+
+    const identity = page.getByRole("combobox", {
+      name: "Frozen BAS identity",
+      exact: true,
+    });
+    mark("select_frozen_identity");
+    await identity.selectOption(refKey(ref));
+    mark("assert_frozen_identity");
+    await expect(identity).toHaveValue(refKey(ref));
+
+    mark("select_pdf_format");
+    await page.getByRole("combobox", { name: "Format", exact: true }).selectOption("pdf");
+
+    mark("stub_save_dialog_cancel");
+    await electronHarness.application.evaluate(({ dialog }) => {
+      dialog.showSaveDialog = async () => ({ canceled: true, filePath: "" });
+    });
+
+    mark("click_export_pdf");
+    await page.getByRole("button", { name: "Export PDF", exact: true }).click();
+    mark("assert_cancelled_notice");
+    await expect(page.getByText("BAS export cancelled.", { exact: true })).toBeVisible();
+
+    const history = page.getByRole("region", { name: "Exact-target export history", exact: true });
+    mark("assert_history_pdf");
+    await expect(history).toContainText("PDF");
+    mark("assert_history_cancelled");
+    await expect(history).toContainText("Cancelled");
+
+    mark("load_export_events");
+    const events = (
+      await exportEventsForFrozen(page, await authenticatedWorkspace(page), ref)
+    ).filter((event) => event.format === BasExportFormat.PDF);
+
+    mark("assert_export_event_count");
+    expect(events).toHaveLength(2);
+    mark("assert_exact_frozen_target");
+    expect(
+      events.every((event) => {
+        const target = event.target?.exactTarget;
+        return target?.case === "frozenBas" && refKey(target.value) === refKey(ref);
+      }),
+      "cancelled export events remain bound to the exact frozen PDF target",
+    ).toBe(true);
+    mark("assert_started_event_count");
+    expect(events.filter((event) => event.phase === BasExportPhase.STARTED)).toHaveLength(1);
+    mark("assert_finished_event_count");
+    const finished = events.filter((event) => event.phase === BasExportPhase.FINISHED);
+    expect(finished).toHaveLength(1);
+    mark("assert_cancelled_outcome");
+    expect(finished[0]?.outcome).toBe(BasExportOutcome.CANCELLED);
+    mark("complete");
+  } catch (error) {
+    console.info(`BAS_ACCEPTANCE_CANCEL_FAILURE_PHASE=${phase}`);
+    throw error;
+  }
 }
 
 async function failFrozenExport(
