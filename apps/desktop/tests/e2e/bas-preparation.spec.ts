@@ -453,6 +453,9 @@ function assertCurrentConfirmedHead(
 }
 
 async function captureScreenshot(page: Page, testInfo: TestInfo, name: string) {
+  await expect(
+    page.getByRole("button", { name: "Refresh exact history", exact: true }),
+  ).toBeEnabled();
   const file = testInfo.outputPath(name);
   await mkdir(path.dirname(file), { recursive: true });
   await page.screenshot({
@@ -2092,7 +2095,6 @@ test("BAS lifecycle: clean cash sources, blocked PAYGI resolution, frozen handof
   const firstExports = [firstPdf, firstCsv];
   expect(firstExports.map((item) => item.hash)).toHaveLength(2);
   await recordConfirmation(page, totp, retainedEvidence, "SYNTHETIC-LODGE-001");
-  screenshots.push(await captureScreenshot(page, testInfo, "bas-user-recorded-unverified.png"));
 
   const observationsFrame = listObservationsCodec.encodeRequest(
     create(ListBasExternalObservationsRequestSchema, {
@@ -2115,6 +2117,16 @@ test("BAS lifecycle: clean cash sources, blocked PAYGI resolution, frozen handof
   expect(observations.observations[0]?.eventKind).toBe(BasExternalEventKind.COMPLETED_LODGEMENT);
   expect(observations.observations[0]?.trust).toBe(BasExternalTrust.USER_RECORDED_UNVERIFIED);
   expect(observations.observations[0]?.frozenBas?.id).toBe(frozenOneRef.id);
+  const recordedObservation = observations.observations[0]?.observation;
+  if (!recordedObservation?.id) throw new Error("BAS_ACCEPTANCE_RECORDED_OBSERVATION_MISSING");
+  await expect(
+    page
+      .getByRole("heading", { name: "External history and corrections", exact: true })
+      .locator("xpath=..")
+      .locator("span")
+      .filter({ hasText: recordedObservation.id }),
+  ).toBeVisible();
+  screenshots.push(await captureScreenshot(page, testInfo, "bas-user-recorded-unverified.png"));
 
   await createAndIssueInvoice(page, "BAS-REVISION-TAXABLE-001", "20.00", "taxable");
   await recordInvoiceReceipt(
