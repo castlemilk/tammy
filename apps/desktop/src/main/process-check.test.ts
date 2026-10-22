@@ -429,25 +429,47 @@ describe("packaged Electron main-process observation", () => {
     await expect(exited).resolves.toBeUndefined();
   });
 
-  it("requests native app quit then detaches automation without awaiting inherited pipes", async () => {
-    vi.useFakeTimers();
-    try {
-      const quit = vi.fn();
-      const close = vi.fn(() => new Promise<void>(() => {}));
-      const evaluate = vi.fn(async (callback: (electron: { app: { quit(): void } }) => void) => {
-        callback({ app: { quit } });
-      });
+  it("closes the inspector before Playwright quit and detaches without awaiting inherited pipes", async () => {
+    const events: string[] = [];
+    const app = new EventEmitter() as EventEmitter & { quit(): void };
+    app.quit = vi.fn(() => events.push("APP_QUIT"));
+    const closeInspector = vi.fn(() => events.push("INSPECTOR_CLOSE"));
+    const close = vi.fn(() => {
+      events.push("PLAYWRIGHT_CLOSE");
+      app.quit();
+      return new Promise<void>(() => {});
+    });
+    const evaluate = vi.fn(
+      async (
+        callback: (electron: {
+          app: typeof app;
+          __closeInspectorForTest: () => void;
+          __writeMarkerForTest: (marker: string) => void;
+        }) => void,
+      ) => {
+        events.push("EVALUATE");
+        callback({
+          app,
+          __closeInspectorForTest: closeInspector,
+          __writeMarkerForTest: (marker) => events.push(marker),
+        });
+      },
+    );
 
-      await requestGracefulElectronQuit({ close, evaluate } as never);
+    await requestGracefulElectronQuit({ close, evaluate } as never);
 
-      expect(close).toHaveBeenCalledOnce();
-      expect(quit).not.toHaveBeenCalled();
-      await vi.advanceTimersByTimeAsync(249);
-      expect(quit).not.toHaveBeenCalled();
-      await vi.advanceTimersByTimeAsync(1);
-      expect(quit).toHaveBeenCalledOnce();
-    } finally {
-      vi.useRealTimers();
-    }
+    expect(events).toEqual([
+      "EVALUATE",
+      "LOCAL_ENGINE_E2E_SHUTDOWN_QUIT_INTERCEPTOR_INSTALLED",
+      "PLAYWRIGHT_CLOSE",
+      "LOCAL_ENGINE_E2E_SHUTDOWN_QUIT_INTERCEPTED",
+      "LOCAL_ENGINE_E2E_SHUTDOWN_INSPECTOR_CLOSE_STARTED",
+      "INSPECTOR_CLOSE",
+      "LOCAL_ENGINE_E2E_SHUTDOWN_INSPECTOR_CLOSE_SETTLED",
+      "APP_QUIT",
+    ]);
+    expect(close).toHaveBeenCalledOnce();
+    expect(closeInspector).toHaveBeenCalledOnce();
+    expect(app.quit).toHaveBeenCalledOnce();
   });
 });

@@ -62,6 +62,8 @@ Native SQLCipher race regressions reproduced the lock inversion and writer reser
 
 The final four-regression native race run passed (`identity` 7.672s; `localproduct` 33.183s), and all 65 focused desktop diagnostics/client tests passed. Desktop typecheck, four-file Biome and native formatting checks passed. Independent review found the production authorization/snapshot boundary sound; its test-cleanup finding was fixed before the final run. The effective packaged configuration resolves retained artifacts inside this worktree's ignored `.tmp/bas-acceptance` directory, uses one worker and has zero retries when `CI` is unset. Fresh full affected native suites, the quick gate, complete sixteen-case packaged runtime and independent original/revision artifact inspection remain pending.
 
+The first full quick run on `fa144c56` passed scripts, default Core and package suites, then reported 1,212 desktop passes and one stale shutdown mock. That mock lacked Electron's `once` API and still expected the superseded delayed quit. It now models Playwright calling the installed quit wrapper and verifies installation, inspector closure, original quit and nonblocking detach in order. The 22 focused shutdown tests and Biome passed. This changes only the test mock; the full quick and packaged gates still require a fresh complete run.
+
 ## Chunk 1: Canonical setup and bounded bridge
 
 - [x] Reproduce the setup checksum mismatch with a test deriving ID, revision and SHA-256 from the actual bundled bytes; verify RED and GREEN for both GST bases.
