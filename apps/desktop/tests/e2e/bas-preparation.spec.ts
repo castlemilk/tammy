@@ -317,9 +317,15 @@ async function allFrozen(page: Page, workspace: Workspace): Promise<BasFrozenBas
         page: create(PageRequestSchema, { pageSize: 200, ...(cursor ? { cursor } : {}) }),
       }),
     );
-    const response = listFrozenCodec.decodeResponse(
-      await invokeConveyorFrame(page, "basPreparation", "listFrozenBas", frame),
-    );
+    const started = performance.now();
+    let response: ReturnType<typeof listFrozenCodec.decodeResponse>;
+    try {
+      response = listFrozenCodec.decodeResponse(
+        await invokeConveyorFrame(page, "basPreparation", "listFrozenBas", frame),
+      );
+    } finally {
+      console.info(`BAS_ACCEPTANCE_LIST_FROZEN_MS=${Math.ceil(performance.now() - started)}`);
+    }
     values.push(...response.frozenBas);
     const next = response.page?.nextCursor ?? "";
     if (next && next === cursor) throw new Error("BAS_ACCEPTANCE_FROZEN_CURSOR_REPEATED");

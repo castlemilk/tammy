@@ -1,5 +1,7 @@
 import { create } from "@bufbuild/protobuf";
 import {
+  type CallOptions,
+  type Client,
   Code,
   ConnectError,
   createContextValues,
@@ -10,9 +12,18 @@ import type { ConnectTransportOptions } from "@connectrpc/connect-node";
 import { ListAccountsRequestSchema } from "@tammy/connect-client/tammy/v1/accounting_pb.js";
 import {
   BasPreparationService,
+  GetBasCalculationRequestSchema,
+  GetBasExternalDisputeResolutionRequestSchema,
+  GetBasExternalObservationRequestSchema,
   GetBasPreparationRequestSchema,
   GetFrozenBasRequestSchema,
+  ListBasCalculationsRequestSchema,
+  ListBasExportEventsRequestSchema,
+  ListBasExternalDisputeResolutionsRequestSchema,
+  ListBasExternalObservationsRequestSchema,
   ListBasObligationsProfilesRequestSchema,
+  ListBasPreparationsRequestSchema,
+  ListFrozenBasRequestSchema,
 } from "@tammy/connect-client/tammy/v1/bas_preparation_pb.js";
 import {
   IngestDocumentRequestSchema,
@@ -121,6 +132,15 @@ function fakeTransport(
     readonly timeoutMs: number | undefined;
     readonly headers: Headers;
   }>;
+  readonly receivedFrozenBasListCalls: Array<{
+    readonly timeoutMs: number | undefined;
+    readonly headers: Headers;
+  }>;
+  readonly receivedBasProofReadCalls: Array<{
+    readonly method: unknown;
+    readonly timeoutMs: number | undefined;
+    readonly headers: Headers;
+  }>;
   readonly receivedBasProfileListCalls: Array<{
     readonly timeoutMs: number | undefined;
     readonly headers: Headers;
@@ -141,6 +161,15 @@ function fakeTransport(
     readonly timeoutMs: number | undefined;
     readonly headers: Headers;
   }> = [];
+  const receivedFrozenBasListCalls: Array<{
+    readonly timeoutMs: number | undefined;
+    readonly headers: Headers;
+  }> = [];
+  const receivedBasProofReadCalls: Array<{
+    readonly method: unknown;
+    readonly timeoutMs: number | undefined;
+    readonly headers: Headers;
+  }> = [];
   const receivedBasProfileListCalls: Array<{
     readonly timeoutMs: number | undefined;
     readonly headers: Headers;
@@ -149,6 +178,26 @@ function fakeTransport(
     readonly timeoutMs: number | undefined;
     readonly headers: Headers;
   }> = [];
+  const captureBasProofRead = (context: {
+    readonly method: unknown;
+    readonly requestHeader: Headers;
+    timeoutMs(): number | undefined;
+  }) => {
+    methods.push(context.method);
+    const call = {
+      method: context.method,
+      timeoutMs: context.timeoutMs(),
+      headers: new Headers(context.requestHeader),
+    };
+    receivedHeaders.push(call.headers);
+    receivedBasProofReadCalls.push(call);
+    return call;
+  };
+  const waitForRpcDelay = async () => {
+    if (rpcDelayMs > 0) {
+      await new Promise<void>((resolve) => setTimeout(resolve, rpcDelayMs));
+    }
+  };
   const factory = vi.fn(
     (options: ConnectTransportOptions): Transport =>
       createRouterTransport(
@@ -323,29 +372,70 @@ function fakeTransport(
               return {};
             },
             getBasPreparation: async (_request, context) => {
-              methods.push(context.method);
-              const headers = new Headers(context.requestHeader);
-              receivedHeaders.push(headers);
+              const call = captureBasProofRead(context);
               receivedBasPreparationCalls.push({
-                timeoutMs: context.timeoutMs(),
-                headers,
+                timeoutMs: call.timeoutMs,
+                headers: call.headers,
               });
-              if (rpcDelayMs > 0) {
-                await new Promise<void>((resolve) => setTimeout(resolve, rpcDelayMs));
-              }
+              await waitForRpcDelay();
+              return {};
+            },
+            listBasPreparations: async (_request, context) => {
+              captureBasProofRead(context);
+              await waitForRpcDelay();
+              return {};
+            },
+            getBasCalculation: async (_request, context) => {
+              captureBasProofRead(context);
+              await waitForRpcDelay();
+              return {};
+            },
+            listBasCalculations: async (_request, context) => {
+              captureBasProofRead(context);
+              await waitForRpcDelay();
               return {};
             },
             getFrozenBas: async (_request, context) => {
-              methods.push(context.method);
-              const headers = new Headers(context.requestHeader);
-              receivedHeaders.push(headers);
+              const call = captureBasProofRead(context);
               receivedFrozenBasCalls.push({
-                timeoutMs: context.timeoutMs(),
-                headers,
+                timeoutMs: call.timeoutMs,
+                headers: call.headers,
               });
-              if (rpcDelayMs > 0) {
-                await new Promise<void>((resolve) => setTimeout(resolve, rpcDelayMs));
-              }
+              await waitForRpcDelay();
+              return {};
+            },
+            listFrozenBas: async (_request, context) => {
+              const call = captureBasProofRead(context);
+              receivedFrozenBasListCalls.push({
+                timeoutMs: call.timeoutMs,
+                headers: call.headers,
+              });
+              await waitForRpcDelay();
+              return {};
+            },
+            getBasExternalObservation: async (_request, context) => {
+              captureBasProofRead(context);
+              await waitForRpcDelay();
+              return {};
+            },
+            listBasExternalObservations: async (_request, context) => {
+              captureBasProofRead(context);
+              await waitForRpcDelay();
+              return {};
+            },
+            getBasExternalDisputeResolution: async (_request, context) => {
+              captureBasProofRead(context);
+              await waitForRpcDelay();
+              return {};
+            },
+            listBasExternalDisputeResolutions: async (_request, context) => {
+              captureBasProofRead(context);
+              await waitForRpcDelay();
+              return {};
+            },
+            listBasExportEvents: async (_request, context) => {
+              captureBasProofRead(context);
+              await waitForRpcDelay();
               return {};
             },
           });
@@ -368,6 +458,8 @@ function fakeTransport(
     receivedTimeouts,
     receivedBasPreparationCalls,
     receivedFrozenBasCalls,
+    receivedFrozenBasListCalls,
+    receivedBasProofReadCalls,
     receivedBasProfileListCalls,
     receivedWorkspaceCreateCalls,
   };
@@ -378,6 +470,90 @@ function serialized(value: unknown): string {
     return `${value.name} ${value.message} ${JSON.stringify(value)}`;
   }
   return JSON.stringify(value);
+}
+
+type BasProofReadOperation = {
+  readonly name: string;
+  readonly method: unknown;
+  readonly call: (options?: CallOptions) => Promise<unknown>;
+};
+
+function basProofReadOperations(
+  client: Client<typeof BasPreparationService>,
+): BasProofReadOperation[] {
+  return [
+    {
+      name: "getBasPreparation",
+      method: BasPreparationService.method.getBasPreparation,
+      call: (options) => client.getBasPreparation(create(GetBasPreparationRequestSchema), options),
+    },
+    {
+      name: "listBasPreparations",
+      method: BasPreparationService.method.listBasPreparations,
+      call: (options) =>
+        client.listBasPreparations(create(ListBasPreparationsRequestSchema), options),
+    },
+    {
+      name: "getBasCalculation",
+      method: BasPreparationService.method.getBasCalculation,
+      call: (options) => client.getBasCalculation(create(GetBasCalculationRequestSchema), options),
+    },
+    {
+      name: "listBasCalculations",
+      method: BasPreparationService.method.listBasCalculations,
+      call: (options) =>
+        client.listBasCalculations(create(ListBasCalculationsRequestSchema), options),
+    },
+    {
+      name: "getFrozenBas",
+      method: BasPreparationService.method.getFrozenBas,
+      call: (options) => client.getFrozenBas(create(GetFrozenBasRequestSchema), options),
+    },
+    {
+      name: "listFrozenBas",
+      method: BasPreparationService.method.listFrozenBas,
+      call: (options) => client.listFrozenBas(create(ListFrozenBasRequestSchema), options),
+    },
+    {
+      name: "getBasExternalObservation",
+      method: BasPreparationService.method.getBasExternalObservation,
+      call: (options) =>
+        client.getBasExternalObservation(create(GetBasExternalObservationRequestSchema), options),
+    },
+    {
+      name: "listBasExternalObservations",
+      method: BasPreparationService.method.listBasExternalObservations,
+      call: (options) =>
+        client.listBasExternalObservations(
+          create(ListBasExternalObservationsRequestSchema),
+          options,
+        ),
+    },
+    {
+      name: "getBasExternalDisputeResolution",
+      method: BasPreparationService.method.getBasExternalDisputeResolution,
+      call: (options) =>
+        client.getBasExternalDisputeResolution(
+          create(GetBasExternalDisputeResolutionRequestSchema),
+          options,
+        ),
+    },
+    {
+      name: "listBasExternalDisputeResolutions",
+      method: BasPreparationService.method.listBasExternalDisputeResolutions,
+      call: (options) =>
+        client.listBasExternalDisputeResolutions(
+          create(ListBasExternalDisputeResolutionsRequestSchema),
+          options,
+        ),
+    },
+    {
+      name: "listBasExportEvents",
+      method: BasPreparationService.method.listBasExportEvents,
+      call: (options) =>
+        client.listBasExportEvents(create(ListBasExportEventsRequestSchema), options),
+    },
+  ];
 }
 
 describe("createCoreClient", () => {
@@ -521,36 +697,29 @@ describe("createCoreClient", () => {
     expect(receivedHeaders[0]?.get("X-Tammy-Capability")).toBe(CAPABILITY);
   });
 
-  it("bounds exact BAS preparation and frozen reads at 30 seconds while ordinary RPCs keep the 5-second default", async () => {
-    const {
-      factory,
-      receivedTimeouts,
-      receivedBasPreparationCalls,
-      receivedFrozenBasCalls,
-      receivedBasProfileListCalls,
-    } = fakeTransport(undefined, undefined, 5_300);
+  it("bounds the full-proof BAS reads at 30 seconds while ordinary and profile-list reads keep the 5-second default", async () => {
+    const { factory, receivedTimeouts, receivedBasProofReadCalls, receivedBasProfileListCalls } =
+      fakeTransport(undefined, undefined, 5_300);
     const client = createCoreClient(READINESS, factory);
 
     const preparationClient = client.basPreparation;
     if (!preparationClient) throw new Error("BAS preparation client is unavailable.");
-    const [ordinaryResult, profileListResult, preparationResult, frozenResult] =
-      await Promise.allSettled([
-        client.getDiagnostics(),
-        preparationClient.listBasObligationsProfiles(
-          create(ListBasObligationsProfilesRequestSchema),
-        ),
-        preparationClient.getBasPreparation(create(GetBasPreparationRequestSchema)),
-        preparationClient.getFrozenBas(create(GetFrozenBasRequestSchema)),
-      ]);
+    const proofReads = basProofReadOperations(preparationClient);
+    const results = await Promise.allSettled([
+      client.getDiagnostics(),
+      preparationClient.listBasObligationsProfiles(create(ListBasObligationsProfilesRequestSchema)),
+      ...proofReads.map((read) => read.call()),
+    ]);
 
-    for (const result of [ordinaryResult, profileListResult]) {
+    for (const result of results.slice(0, 2)) {
       expect(result.status).toBe("rejected");
       if (result.status === "rejected") {
         expect(ConnectError.from(result.reason).code).toBe(Code.DeadlineExceeded);
       }
     }
-    expect(preparationResult.status).toBe("fulfilled");
-    expect(frozenResult.status).toBe("fulfilled");
+    const proofReadResults = results.slice(2);
+    expect(proofReadResults).toHaveLength(proofReads.length);
+    for (const result of proofReadResults) expect(result.status).toBe("fulfilled");
     expect(receivedTimeouts).toHaveLength(1);
     expect(receivedTimeouts[0]).toBeGreaterThanOrEqual(4_900);
     expect(receivedTimeouts[0]).toBeLessThanOrEqual(5_000);
@@ -558,14 +727,14 @@ describe("createCoreClient", () => {
     expect(receivedBasProfileListCalls[0]?.timeoutMs).toBeGreaterThanOrEqual(4_900);
     expect(receivedBasProfileListCalls[0]?.timeoutMs).toBeLessThanOrEqual(5_000);
     expect(receivedBasProfileListCalls[0]?.headers.get("X-Tammy-Capability")).toBe(CAPABILITY);
-    expect(receivedBasPreparationCalls).toHaveLength(1);
-    expect(receivedBasPreparationCalls[0]?.timeoutMs).toBeGreaterThan(29_000);
-    expect(receivedBasPreparationCalls[0]?.timeoutMs).toBeLessThanOrEqual(30_000);
-    expect(receivedBasPreparationCalls[0]?.headers.get("X-Tammy-Capability")).toBe(CAPABILITY);
-    expect(receivedFrozenBasCalls).toHaveLength(1);
-    expect(receivedFrozenBasCalls[0]?.timeoutMs).toBeGreaterThan(29_000);
-    expect(receivedFrozenBasCalls[0]?.timeoutMs).toBeLessThanOrEqual(30_000);
-    expect(receivedFrozenBasCalls[0]?.headers.get("X-Tammy-Capability")).toBe(CAPABILITY);
+    expect(receivedBasProofReadCalls).toHaveLength(proofReads.length);
+    for (const operation of proofReads) {
+      const matching = receivedBasProofReadCalls.filter((call) => call.method === operation.method);
+      expect(matching).toHaveLength(1);
+      expect(matching[0]?.timeoutMs).toBeGreaterThan(29_000);
+      expect(matching[0]?.timeoutMs).toBeLessThanOrEqual(30_000);
+      expect(matching[0]?.headers.get("X-Tammy-Capability")).toBe(CAPABILITY);
+    }
   }, 8_000);
 
   it("bounds workspace creation at 30 seconds while ordinary RPCs keep the 5-second default", async () => {
@@ -631,18 +800,30 @@ describe("createCoreClient", () => {
     expect(shortCall?.timeoutMs).toBeLessThanOrEqual(100);
   });
 
-  it("preserves explicit GetFrozenBas deadlines, cancellation, caller headers, and capability", async () => {
-    const { factory, receivedFrozenBasCalls } = fakeTransport(undefined, undefined, 500);
+  it("preserves explicit frozen read deadlines, cancellation, caller headers, and capability", async () => {
+    const { factory, receivedFrozenBasCalls, receivedFrozenBasListCalls } = fakeTransport(
+      undefined,
+      undefined,
+      500,
+    );
     const client = createCoreClient(READINESS, factory);
     const preparation = client.basPreparation;
     if (!preparation) throw new Error("BAS preparation client is unavailable.");
 
     const controller = new AbortController();
+    const listController = new AbortController();
     const cancelledRead = preparation
       .getFrozenBas(create(GetFrozenBasRequestSchema), {
         timeoutMs: 30_000,
         signal: controller.signal,
         headers: { "X-Caller-Test": "frozen-cancel-preserved" },
+      })
+      .catch((error: unknown) => error);
+    const cancelledList = preparation
+      .listFrozenBas(create(ListFrozenBasRequestSchema), {
+        timeoutMs: 30_000,
+        signal: listController.signal,
+        headers: { "X-Caller-Test": "frozen-list-cancel-preserved" },
       })
       .catch((error: unknown) => error);
     const shortRead = preparation
@@ -651,12 +832,26 @@ describe("createCoreClient", () => {
         headers: { "X-Caller-Test": "frozen-timeout-preserved" },
       })
       .catch((error: unknown) => error);
+    const shortList = preparation
+      .listFrozenBas(create(ListFrozenBasRequestSchema), {
+        timeoutMs: 100,
+        headers: { "X-Caller-Test": "frozen-list-timeout-preserved" },
+      })
+      .catch((error: unknown) => error);
     setTimeout(() => controller.abort(), 25);
+    setTimeout(() => listController.abort(), 25);
 
-    const [cancelledError, shortError] = await Promise.all([cancelledRead, shortRead]);
+    const [cancelledError, cancelledListError, shortError, shortListError] = await Promise.all([
+      cancelledRead,
+      cancelledList,
+      shortRead,
+      shortList,
+    ]);
 
     expect(ConnectError.from(cancelledError).code).toBe(Code.Canceled);
+    expect(ConnectError.from(cancelledListError).code).toBe(Code.Canceled);
     expect(ConnectError.from(shortError).code).toBe(Code.DeadlineExceeded);
+    expect(ConnectError.from(shortListError).code).toBe(Code.DeadlineExceeded);
     const cancelledCall = receivedFrozenBasCalls.find(
       (call) => call.headers.get("X-Caller-Test") === "frozen-cancel-preserved",
     );
@@ -669,6 +864,94 @@ describe("createCoreClient", () => {
     expect(shortCall?.timeoutMs).toBeGreaterThan(0);
     expect(shortCall?.timeoutMs).toBeLessThanOrEqual(100);
     expect(shortCall?.headers.get("X-Tammy-Capability")).toBe(CAPABILITY);
+    const cancelledListCall = receivedFrozenBasListCalls.find(
+      (call) => call.headers.get("X-Caller-Test") === "frozen-list-cancel-preserved",
+    );
+    expect(cancelledListCall?.timeoutMs).toBeGreaterThan(29_000);
+    expect(cancelledListCall?.timeoutMs).toBeLessThanOrEqual(30_000);
+    expect(cancelledListCall?.headers.get("X-Tammy-Capability")).toBe(CAPABILITY);
+    const shortListCall = receivedFrozenBasListCalls.find(
+      (call) => call.headers.get("X-Caller-Test") === "frozen-list-timeout-preserved",
+    );
+    expect(shortListCall?.timeoutMs).toBeGreaterThan(0);
+    expect(shortListCall?.timeoutMs).toBeLessThanOrEqual(100);
+    expect(shortListCall?.headers.get("X-Tammy-Capability")).toBe(CAPABILITY);
+  });
+
+  it("preserves explicit deadlines, cancellation, caller headers, and capability across full-proof reads", async () => {
+    const { factory, receivedBasProofReadCalls } = fakeTransport(undefined, undefined, 500);
+    const client = createCoreClient(READINESS, factory);
+    const preparation = client.basPreparation;
+    if (!preparation) throw new Error("BAS preparation client is unavailable.");
+
+    const proofReads = basProofReadOperations(preparation);
+    const controllers: AbortController[] = [];
+    const pending: Promise<{
+      readonly operation: BasProofReadOperation;
+      readonly phase: "cancel" | "short";
+      readonly error: unknown | undefined;
+    }>[] = [];
+    const observe = (
+      operation: BasProofReadOperation,
+      phase: "cancel" | "short",
+      call: Promise<unknown>,
+    ) =>
+      call.then(
+        () => ({ operation, phase, error: undefined }),
+        (error: unknown) => ({ operation, phase, error }),
+      );
+
+    for (const operation of proofReads) {
+      const controller = new AbortController();
+      controllers.push(controller);
+      const cancelHeader = `${operation.name}:cancel`;
+      const shortHeader = `${operation.name}:short`;
+      pending.push(
+        observe(
+          operation,
+          "cancel",
+          operation.call({
+            timeoutMs: 30_000,
+            signal: controller.signal,
+            headers: { "X-Caller-Test": cancelHeader },
+          }),
+        ),
+        observe(
+          operation,
+          "short",
+          operation.call({
+            timeoutMs: 100,
+            headers: { "X-Caller-Test": shortHeader },
+          }),
+        ),
+      );
+    }
+    setTimeout(() => {
+      for (const controller of controllers) controller.abort();
+    }, 25);
+
+    const results = await Promise.all(pending);
+    expect(results).toHaveLength(proofReads.length * 2);
+    expect(receivedBasProofReadCalls).toHaveLength(proofReads.length * 2);
+    for (const result of results) {
+      expect(result.error).toBeDefined();
+      expect(ConnectError.from(result.error).code).toBe(
+        result.phase === "cancel" ? Code.Canceled : Code.DeadlineExceeded,
+      );
+      const expectedHeader = `${result.operation.name}:${result.phase}`;
+      const call = receivedBasProofReadCalls.find(
+        (candidate) => candidate.headers.get("X-Caller-Test") === expectedHeader,
+      );
+      expect(call?.method).toBe(result.operation.method);
+      expect(call?.headers.get("X-Tammy-Capability")).toBe(CAPABILITY);
+      if (result.phase === "cancel") {
+        expect(call?.timeoutMs).toBeGreaterThan(29_000);
+        expect(call?.timeoutMs).toBeLessThanOrEqual(30_000);
+      } else {
+        expect(call?.timeoutMs).toBeGreaterThan(0);
+        expect(call?.timeoutMs).toBeLessThanOrEqual(100);
+      }
+    }
   });
 
   it("maps every required identity, organisation, and SBR call to its generated client", async () => {

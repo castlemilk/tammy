@@ -471,7 +471,10 @@ describe("ElectronProcessDiagnostics", () => {
     const diagnostics = new ElectronProcessDiagnostics();
     diagnostics.observeStderr(
       [
-        "LOCAL_ENGINE_E2E_SHUTDOWN_QUIT_SCHEDULED",
+        "LOCAL_ENGINE_E2E_SHUTDOWN_QUIT_INTERCEPTOR_INSTALLED",
+        "LOCAL_ENGINE_E2E_SHUTDOWN_QUIT_INTERCEPTED",
+        "LOCAL_ENGINE_E2E_SHUTDOWN_INSPECTOR_CLOSE_STARTED",
+        "LOCAL_ENGINE_E2E_SHUTDOWN_INSPECTOR_CLOSE_SETTLED",
         "LOCAL_ENGINE_E2E_SHUTDOWN_BEFORE_QUIT",
         "LOCAL_ENGINE_SHUTDOWN_BEFORE_QUIT",
         "LOCAL_ENGINE_SHUTDOWN_REQUESTED",
@@ -486,7 +489,10 @@ describe("ElectronProcessDiagnostics", () => {
       ].join(" "),
     );
     const summary = diagnostics.formatSummary();
-    expect(summary).toContain("LOCAL_ENGINE_E2E_SHUTDOWN_QUIT_SCHEDULED");
+    expect(summary).toContain("LOCAL_ENGINE_E2E_SHUTDOWN_QUIT_INTERCEPTOR_INSTALLED");
+    expect(summary).toContain("LOCAL_ENGINE_E2E_SHUTDOWN_QUIT_INTERCEPTED");
+    expect(summary).toContain("LOCAL_ENGINE_E2E_SHUTDOWN_INSPECTOR_CLOSE_STARTED");
+    expect(summary).toContain("LOCAL_ENGINE_E2E_SHUTDOWN_INSPECTOR_CLOSE_SETTLED");
     expect(summary).toContain("LOCAL_ENGINE_E2E_SHUTDOWN_BEFORE_QUIT");
     expect(summary).toContain("LOCAL_ENGINE_SHUTDOWN_BEFORE_QUIT");
     expect(summary).toContain("LOCAL_ENGINE_SHUTDOWN_REQUESTED");

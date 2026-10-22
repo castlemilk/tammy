@@ -1,4 +1,5 @@
 import {
+  type CallOptions,
   type Client,
   ConnectError,
   createClient,
@@ -176,8 +177,18 @@ export type { SystemDiagnostics } from "../shared/conveyor-contract";
 const CAPABILITY_HEADER = "X-Tammy-Capability";
 const EXPECTED_API_VERSION = "tammy.v1";
 const CORE_VERSION_PATTERN = /^[\x20-\x7e]{1,128}$/;
-const BAS_PREPARATION_GET_TIMEOUT_MS = 30_000;
+const BAS_PROOF_READ_TIMEOUT_MS = 30_000;
 const WORKSPACE_CREATE_TIMEOUT_MS = 30_000;
+
+function withBasProofReadTimeout<Request, Response>(
+  read: (request: Request, options?: CallOptions) => Promise<Response>,
+): (request: Request, options?: CallOptions) => Promise<Response> {
+  return (request, options) =>
+    read(request, {
+      ...options,
+      timeoutMs: options?.timeoutMs ?? BAS_PROOF_READ_TIMEOUT_MS,
+    });
+}
 
 export interface CoreClient {
   /** The generated local BAS preparation service. Optional only for legacy test doubles. */
@@ -384,22 +395,25 @@ export function createCoreClient(
   const rawBasPreparationClient = createClient(BasPreparationService, transport);
   const basPreparationClient = Object.freeze({
     ...rawBasPreparationClient,
-    getBasPreparation: (
-      request: Parameters<typeof rawBasPreparationClient.getBasPreparation>[0],
-      options?: Parameters<typeof rawBasPreparationClient.getBasPreparation>[1],
-    ) =>
-      rawBasPreparationClient.getBasPreparation(request, {
-        ...options,
-        timeoutMs: options?.timeoutMs ?? BAS_PREPARATION_GET_TIMEOUT_MS,
-      }),
-    getFrozenBas: (
-      request: Parameters<typeof rawBasPreparationClient.getFrozenBas>[0],
-      options?: Parameters<typeof rawBasPreparationClient.getFrozenBas>[1],
-    ) =>
-      rawBasPreparationClient.getFrozenBas(request, {
-        ...options,
-        timeoutMs: options?.timeoutMs ?? BAS_PREPARATION_GET_TIMEOUT_MS,
-      }),
+    getBasPreparation: withBasProofReadTimeout(rawBasPreparationClient.getBasPreparation),
+    listBasPreparations: withBasProofReadTimeout(rawBasPreparationClient.listBasPreparations),
+    getBasCalculation: withBasProofReadTimeout(rawBasPreparationClient.getBasCalculation),
+    listBasCalculations: withBasProofReadTimeout(rawBasPreparationClient.listBasCalculations),
+    getFrozenBas: withBasProofReadTimeout(rawBasPreparationClient.getFrozenBas),
+    listFrozenBas: withBasProofReadTimeout(rawBasPreparationClient.listFrozenBas),
+    getBasExternalObservation: withBasProofReadTimeout(
+      rawBasPreparationClient.getBasExternalObservation,
+    ),
+    listBasExternalObservations: withBasProofReadTimeout(
+      rawBasPreparationClient.listBasExternalObservations,
+    ),
+    getBasExternalDisputeResolution: withBasProofReadTimeout(
+      rawBasPreparationClient.getBasExternalDisputeResolution,
+    ),
+    listBasExternalDisputeResolutions: withBasProofReadTimeout(
+      rawBasPreparationClient.listBasExternalDisputeResolutions,
+    ),
+    listBasExportEvents: withBasProofReadTimeout(rawBasPreparationClient.listBasExportEvents),
   });
 
   const coreRequest = async <Response>(

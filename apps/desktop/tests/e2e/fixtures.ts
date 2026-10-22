@@ -41,6 +41,7 @@ import {
   safeElectronCloseFailureCode,
   safeFirstWindowFailureCode,
 } from "./electron-process-diagnostics";
+import { installInspectorAwareQuit } from "./electron-quit-sequencing";
 import {
   type CoreProcessInstancePin,
   findAuthenticatedCoreProcesses,
@@ -458,19 +459,7 @@ export function observeMainExit(mainProcess: ChildProcess): Promise<void> {
 export async function requestGracefulElectronQuit(
   application: Pick<ElectronApplication, "close" | "evaluate">,
 ): Promise<void> {
-  await application.evaluate(({ app }) => {
-    const marker = (value: string) => process.stderr.write(`${value}\n`);
-    marker("LOCAL_ENGINE_E2E_SHUTDOWN_QUIT_SCHEDULED");
-    app.once("before-quit", () => marker("LOCAL_ENGINE_E2E_SHUTDOWN_BEFORE_QUIT"));
-    app.once("will-quit", () => marker("LOCAL_ENGINE_E2E_SHUTDOWN_WILL_QUIT"));
-    // Give Playwright's close request time to detach its Node inspector before
-    // Electron begins native shutdown. Otherwise Electron can wait forever for
-    // the still-attached debugger after app.quit().
-    setTimeout(() => {
-      marker("LOCAL_ENGINE_E2E_SHUTDOWN_QUIT_TIMER_FIRED");
-      app.quit();
-    }, 250);
-  });
+  await application.evaluate(installInspectorAwareQuit);
   void application.close().catch(() => undefined);
 }
 
