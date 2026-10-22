@@ -136,24 +136,23 @@ export function InvoiceTemplatePanel({
     }
   }
 
-  const labelClass = "grid min-w-0 gap-1 text-[10px] font-medium text-foreground";
+  const labelClass = "grid min-w-0 gap-1 text-[13px] font-medium text-foreground";
   return (
     <section
       aria-busy={loading || busy}
       aria-label="Company invoice template"
-      className="grid gap-3 border-y border-border py-4"
+      className="grid min-w-0 gap-4 border-y border-border py-5"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-[11px] font-semibold">Company invoice template</h2>
-          <p className="mt-1 text-[10px] leading-5 text-muted-foreground">
+          <h2 className="text-[16px] font-semibold">Company invoice template</h2>
+          <p className="mt-1 text-[13px] leading-5 text-muted-foreground">
             Logo, payment details and terms for new invoices.
           </p>
         </div>
         <Button
           aria-controls="invoice-template-fields"
           aria-expanded={expanded}
-          className="h-8 text-[10px]"
           disabled={disabled || busy}
           onClick={() => setExpanded((value) => !value)}
           type="button"
@@ -163,15 +162,14 @@ export function InvoiceTemplatePanel({
         </Button>
       </div>
       {loading ? (
-        <p className="text-[10px] text-muted-foreground">Loading company template…</p>
+        <p className="text-[13px] text-muted-foreground">Loading company template…</p>
       ) : null}
       {error ? (
         <div className="flex flex-wrap items-center gap-3">
-          <p className="text-[10px] text-destructive" role="alert">
+          <p className="text-[13px] text-destructive" role="alert">
             {error}
           </p>
           <Button
-            className="h-7 text-[10px]"
             disabled={loading || busy || disabled}
             onClick={onRetry}
             type="button"
@@ -188,7 +186,7 @@ export function InvoiceTemplatePanel({
               <label className={labelClass}>
                 Template seller address
                 <textarea
-                  className={`${invoiceFieldClass} h-16 py-2`}
+                  className={`${invoiceFieldClass} min-h-24 max-h-80 field-sizing-content resize-none py-3`}
                   maxLength={1000}
                   onChange={(event) => edit({ sellerAddress: event.target.value })}
                   value={editor?.sellerAddress ?? ""}
@@ -207,7 +205,7 @@ export function InvoiceTemplatePanel({
                   />
                 </label>
                 <span
-                  className="text-[10px] font-normal text-muted-foreground"
+                  className="text-[13px] font-normal text-muted-foreground"
                   id="invoice-template-terms-help"
                 >
                   0–365 days after the issue date
@@ -218,7 +216,7 @@ export function InvoiceTemplatePanel({
               <label className={labelClass}>
                 Default notes
                 <textarea
-                  className={`${invoiceFieldClass} h-20 py-2`}
+                  className={`${invoiceFieldClass} min-h-24 max-h-80 field-sizing-content resize-none py-3`}
                   maxLength={2000}
                   onChange={(event) => edit({ notes: event.target.value })}
                   value={editor?.notes ?? ""}
@@ -227,7 +225,7 @@ export function InvoiceTemplatePanel({
               <label className={labelClass}>
                 Default payment instructions
                 <textarea
-                  className={`${invoiceFieldClass} h-20 py-2`}
+                  className={`${invoiceFieldClass} min-h-24 max-h-80 field-sizing-content resize-none py-3`}
                   maxLength={1000}
                   onChange={(event) => edit({ paymentInstructions: event.target.value })}
                   value={editor?.paymentInstructions ?? ""}
@@ -239,7 +237,7 @@ export function InvoiceTemplatePanel({
                 Company logo
                 <input
                   accept="image/png,image/jpeg"
-                  className="focus-ring w-full text-[10px] text-muted-foreground file:mr-3 file:rounded-[4px] file:border file:border-border file:bg-background file:px-3 file:py-2 file:text-[10px] file:text-foreground"
+                  className="focus-ring w-full text-[13px] text-muted-foreground file:mr-3 file:rounded-xl file:border file:border-border file:bg-background file:px-3 file:py-3 file:text-[13px] file:text-foreground"
                   onChange={(event) => {
                     const file = event.target.files?.[0];
                     event.target.value = "";
@@ -248,47 +246,36 @@ export function InvoiceTemplatePanel({
                   type="file"
                 />
               </label>
-              <p className="text-[10px] text-muted-foreground">
+              <p className="text-[13px] text-muted-foreground">
                 PNG or JPEG · up to 1 MiB · maximum 4096 px per side and 4 million pixels.
               </p>
               {editor?.logoAssetId ? (
                 <div className="flex flex-wrap items-center gap-4">
                   <InvoiceLogo api={api} id={editor.logoAssetId} label="Company logo preview" />
-                  <Button
-                    className="h-7 text-[10px]"
-                    onClick={removeLogo}
-                    type="button"
-                    variant="outline"
-                  >
+                  <Button onClick={removeLogo} type="button" variant="outline">
                     Remove logo
                   </Button>
                 </div>
               ) : (
-                <p className="text-[10px] text-muted-foreground">No company logo selected.</p>
+                <p className="text-[13px] text-muted-foreground">No company logo selected.</p>
               )}
             </div>
           </fieldset>
           {failure ? (
-            <p className="text-[10px] text-destructive" role="alert">
+            <p className="text-[13px] text-destructive" role="alert">
               {failure}
             </p>
           ) : null}
           {notice ? (
-            <p className="text-[10px] text-muted-foreground" role="status">
+            <p className="text-[13px] text-muted-foreground" role="status">
               {notice}
             </p>
           ) : null}
           <div className="flex flex-wrap gap-2">
-            <Button
-              className="h-8 text-[10px]"
-              disabled={disabled || busy || !editor || loading}
-              onClick={save}
-              type="button"
-            >
+            <Button disabled={disabled || busy || !editor || loading} onClick={save} type="button">
               {busy ? "Working…" : "Save template"}
             </Button>
             <Button
-              className="h-8 text-[10px]"
               disabled={disabled || busy || !template || loading || !canApply}
               onClick={onApply}
               type="button"
@@ -298,7 +285,6 @@ export function InvoiceTemplatePanel({
             </Button>
             {failure ? (
               <Button
-                className="h-8 text-[10px]"
                 disabled={disabled || busy}
                 onClick={reloadVersion}
                 type="button"
@@ -308,7 +294,7 @@ export function InvoiceTemplatePanel({
               </Button>
             ) : null}
           </div>
-          <p className="text-[10px] leading-5 text-muted-foreground">
+          <p className="text-[13px] leading-5 text-muted-foreground">
             Saving updates company defaults. Apply replaces this draft’s logo, seller address,
             notes, payment instructions and due date. Saved invoices keep their own details.
           </p>

@@ -34,6 +34,12 @@ test.describe("Soft Precision financial workspace", () => {
     await page.getByLabel("Issue date", { exact: true }).fill("2026-09-30");
     await page.getByLabel("Due date", { exact: true }).fill("2026-10-30");
     await page.getByLabel("Customer name", { exact: true }).fill("Merri Studio — synthetic");
+    await page
+      .getByLabel("Customer address", { exact: true })
+      .fill("1 Example Lane, Melbourne VIC 3000 — synthetic");
+    await page
+      .getByLabel("Seller address", { exact: true })
+      .fill("2 Example Road, Melbourne VIC 3000 — synthetic");
     await page.getByLabel("Registered for GST", { exact: true }).check();
     await page.getByLabel("Description 1", { exact: true }).fill("Studio strategy workshop");
     await page.getByLabel("Quantity 1", { exact: true }).fill("1");
@@ -52,6 +58,18 @@ test.describe("Soft Precision financial workspace", () => {
     expect((await readInvoiceAccounting(page, workspace, "INV-UI-001")).invoice.version).toBe(1n);
     await capture(page, "03-saved-draft");
 
+    await page.getByRole("textbox", { name: /^Notes/ }).fill("Unsaved synthetic note");
+    await page.getByRole("button", { name: "New invoice", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Keep editing", exact: true })).toBeVisible();
+    await capture(page, "03b-unsaved-replacement");
+    await page.getByRole("button", { name: "Keep editing", exact: true }).click();
+    await expect(page.getByRole("textbox", { name: /^Notes/ })).toHaveValue(
+      "Unsaved synthetic note",
+    );
+    await page.getByRole("button", { name: "Open INV-UI-001", exact: true }).click();
+    await page.getByRole("button", { name: "Discard changes and continue", exact: true }).click();
+    await expect(page.getByRole("textbox", { name: /^Notes/ })).toHaveValue("");
+
     await page.getByRole("button", { name: "Manage invoice template", exact: true }).click();
     await expect(page.getByLabel("Template seller address", { exact: true })).toBeVisible();
     await capture(page, "04-template-editor");
@@ -69,7 +87,9 @@ test.describe("Soft Precision financial workspace", () => {
     await capture(page, "06-issued-read-only");
 
     await page.getByRole("button", { name: "Record payment", exact: true }).click();
-    await expect(page.getByLabel("Bank account", { exact: true })).not.toHaveValue("");
+    await page
+      .getByRole("combobox", { name: "Bank account", exact: true })
+      .selectOption({ label: "1000 · Business bank" });
     await page.getByLabel("Amount received (AUD)", { exact: true }).fill("500.00");
     await page
       .getByLabel("Payment reference (optional)", { exact: true })
@@ -108,6 +128,15 @@ test.describe("Soft Precision financial workspace", () => {
     expect((await readFile(exportedPath)).subarray(0, 5).toString()).toBe("%PDF-");
     if (process.platform !== "win32") expect((await stat(exportedPath)).mode & 0o777).toBe(0o600);
 
+    await page.getByRole("link", { name: "Overview", exact: true }).click();
+    await page.getByRole("link", { name: "Invoices", exact: true }).click();
+    await page.goBack();
+    await expect(page.getByRole("heading", { name: "Overview", exact: true })).toBeVisible();
+    await page.goForward();
+    await page.getByRole("button", { name: "Open INV-UI-001", exact: true }).click();
+    await expect(page.getByTestId("invoice-outstanding")).toContainText("$820.00");
+    await expect(page.getByLabel("Customer name", { exact: true })).toBeDisabled();
+
     if (phase !== "before") {
       const search = page.getByLabel("Search saved invoices", { exact: true });
       await search.fill("no-match-synthetic");
@@ -144,6 +173,17 @@ test.describe("Soft Precision financial workspace", () => {
 async function capture(page: Page, name: string) {
   if (!phase) return;
   await expect(page.getByRole("heading", { name: "Invoices", exact: true })).toBeAttached();
+  if (/^0[1239]|^10/.test(name)) {
+    await page.getByRole("heading", { name: "Invoices", exact: true }).scrollIntoViewIfNeeded();
+  } else if (name.startsWith("04")) {
+    await page.getByLabel("Template seller address", { exact: true }).scrollIntoViewIfNeeded();
+  } else if (name.startsWith("05")) {
+    await page.getByRole("button", { name: "Confirm issue", exact: true }).scrollIntoViewIfNeeded();
+  } else if (/^0[678]/.test(name)) {
+    await page
+      .getByRole("heading", { name: "Income & payments", exact: true })
+      .scrollIntoViewIfNeeded();
+  }
   const directory = path.resolve(
     path.dirname(fileURLToPath(import.meta.url)),
     "../../../../output/playwright/soft-precision-financial-2026-10-23",

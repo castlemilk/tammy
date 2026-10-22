@@ -42,26 +42,20 @@ export function ReviewedExpenseTable({
   const selectedCost = selected.reduce((sum, expense) => sum + expense.subtotalMinor, 0);
   return (
     <section
-      className="grid min-w-0 gap-3 border-t border-border pt-4"
+      className="grid min-w-0 gap-4 border-t border-border pt-6"
       aria-labelledby="reviewed-expenses-heading"
       aria-busy={loading}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-[12px] font-semibold" id="reviewed-expenses-heading">
+        <h2 className="text-[16px] font-semibold" id="reviewed-expenses-heading">
           Reviewed expenses
         </h2>
-        <Button
-          className="h-7 text-[10px]"
-          disabled={busy || loading}
-          onClick={onRefresh}
-          type="button"
-          variant="ghost"
-        >
+        <Button disabled={busy || loading} onClick={onRefresh} type="button" variant="ghost">
           <RefreshCw aria-hidden="true" className="size-3" />{" "}
           {error ? "Retry expenses" : "Refresh expenses"}
         </Button>
       </div>
-      <label className="grid min-w-0 gap-1 text-[10px] font-medium">
+      <label className="grid min-w-0 gap-1 text-[13px] font-medium">
         Search reviewed expenses
         <input
           className={`${invoiceFieldClass} max-w-[320px]`}
@@ -71,21 +65,21 @@ export function ReviewedExpenseTable({
         />
       </label>
       {loading ? (
-        <p className="text-[11px] text-muted-foreground" role="status">
+        <p className="text-[14px] text-muted-foreground" role="status">
           Loading reviewed expenses…
         </p>
       ) : null}
       {error ? (
-        <p className="text-[11px] text-destructive" role="alert">
+        <p className="text-[14px] text-destructive" role="alert">
           {error}
         </p>
       ) : null}
-      <div className="focus-ring min-w-0 overflow-x-auto rounded-[6px] border border-border bg-surface">
+      <div className="focus-ring min-w-0 overflow-x-auto rounded-[20px] border border-border bg-surface">
         <table
-          className="w-full min-w-[540px] border-collapse text-[11px]"
+          className="w-full min-w-[540px] border-collapse text-[14px]"
           aria-label="Reviewed expenses"
         >
-          <thead className="border-b border-border bg-muted/40 text-left text-[10px] text-muted-foreground">
+          <thead className="border-b border-border bg-muted/40 text-left text-[13px] text-muted-foreground">
             <tr>
               <th className="w-12 px-3 py-3 font-medium" scope="col">
                 <span className="sr-only">Select</span>
@@ -116,7 +110,7 @@ export function ReviewedExpenseTable({
                     <input
                       aria-label={`Select ${expense.description}`}
                       checked={selectedIds.includes(expense.id) && !added}
-                      className="focus-ring size-3.5 accent-primary"
+                      className="focus-ring size-4 accent-primary"
                       disabled={busy || loading || added}
                       onChange={(event) => onSelect(expense.id, event.target.checked)}
                       type="checkbox"
@@ -125,7 +119,7 @@ export function ReviewedExpenseTable({
                   <td className="px-3 py-3">
                     <span>{expense.description}</span>
                     {added ? (
-                      <span className="ml-2 rounded border border-border px-1.5 py-0.5 text-[9px] text-muted-foreground">
+                      <span className="ml-2 rounded border border-border px-1.5 py-0.5 text-[12px] text-muted-foreground">
                         Added
                       </span>
                     ) : null}
@@ -155,7 +149,7 @@ export function ReviewedExpenseTable({
         </table>
       </div>
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <label className="grid w-[130px] gap-1 text-[10px] font-medium">
+        <label className="grid w-[160px] gap-2 text-[13px] font-medium">
           Markup percentage
           <input
             className={`${invoiceFieldClass} text-right tabular-nums`}
@@ -166,12 +160,11 @@ export function ReviewedExpenseTable({
           />
         </label>
         <div className="flex flex-wrap items-center gap-3">
-          <p className="text-[10px] text-muted-foreground" data-testid="selected-expense-summary">
+          <p className="text-[13px] text-muted-foreground" data-testid="selected-expense-summary">
             {selected.length} selected ·{" "}
             <span className="tabular-nums">{formatAud(selectedCost)}</span> net cost
           </p>
           <Button
-            className="h-8 text-[10px]"
             disabled={busy || loading || !selected.length}
             onClick={onAdd}
             type="button"

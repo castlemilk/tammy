@@ -1,0 +1,23 @@
+{
+  "profile": "product-admin",
+  "sourceRoots": [
+    "apps/desktop/src/app"
+  ],
+  "locale": "en-AU",
+  "canonicalMap": "UX-CONTRACT.md",
+  "requiredCapabilities": [
+    "Select/Listbox",
+    "Date",
+    "Form",
+    "Scrollbar",
+    "CRUD"
+  ],
+  "ownership": {
+    "Select/Listbox": "native",
+    "Date": "native"
+  },
+  "evidence": {
+    "crudFullFlow": "apps/desktop/tests/e2e/financial-workspace.spec.ts",
+    "failurePaths": "apps/desktop/src/app/features/invoices/invoices-screen.test.tsx"
+  }
+}

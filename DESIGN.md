@@ -56,7 +56,7 @@ come first. English Australian dates and AUD financial values follow existing co
 README.md and docs/development/tech-state.md distinguish connected features from planned
 suite work. Generated screens cannot establish new financial or security behaviour.
 
-Runtime token ownership: apps/desktop/src/renderer/styles.css is canonical. This document
+Runtime token ownership: apps/desktop/src/app/styles.css is canonical. This document
 mirrors its accepted palette; shared Button, Badge, Card and AppShell consume the tokens.
 There is no generated token export or external font dependency.
 
