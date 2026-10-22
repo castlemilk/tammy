@@ -171,6 +171,7 @@ async function mountPaygInputsEditor(
   options: {
     readonly includeDifferentProfile?: boolean;
     readonly snapshotRefMismatch?: boolean;
+    readonly includeConfirmedPeriod?: boolean;
   } = {},
 ) {
   const fixture = createConveyorFixture();
@@ -198,6 +199,12 @@ async function mountPaygInputsEditor(
     id: "018f0000-0000-7000-8000-000000000206",
     revision: 1n,
     contentHash: new Uint8Array(32).fill(0x26),
+  });
+  const familyRef = create(SourceRefSchema, {
+    type: "bas_family",
+    id: "018f0000-0000-7000-8000-000000000211",
+    revision: 1n,
+    contentHash: new Uint8Array(32).fill(0x2b),
   });
   const preparationRef = create(SourceRefSchema, {
     type: "bas_preparation",
@@ -259,12 +266,7 @@ async function mountPaygInputsEditor(
     preparationId: preparationRef.id,
     organisationId: workspace.organisationId,
     version: preparationRef.revision,
-    family: create(SourceRefSchema, {
-      type: "bas_family",
-      id: "018f0000-0000-7000-8000-000000000211",
-      revision: 1n,
-      contentHash: new Uint8Array(32).fill(0x2b),
-    }),
+    family: familyRef,
     period: periodRef,
     profile: profileRef,
     state: BasPreparationState.COLLECTING,
@@ -333,7 +335,23 @@ async function mountPaygInputsEditor(
     },
   );
   fixture.procedures.basPreparation.listBasPeriods.mockResolvedValue(
-    codecs.periods.encodeResponse(create(ListBasPeriodsResponseSchema, {})),
+    codecs.periods.encodeResponse(
+      create(ListBasPeriodsResponseSchema, {
+        periods: options.includeConfirmedPeriod
+          ? [
+              create(BasPeriodSummarySchema, {
+                period: periodRef,
+                dates: create(BasCivilDateRangeSchema, {
+                  startDate: { year: 2026, month: 7, day: 1 },
+                  endDate: { year: 2026, month: 9, day: 30 },
+                }),
+                window: BasPeriodWindow.JUL_SEP,
+                profile: profileRef,
+              }),
+            ]
+          : [],
+      }),
+    ),
   );
   fixture.procedures.basPreparation.listBasPreparations.mockResolvedValue(
     codecs.preparations.encodeResponse(
@@ -341,11 +359,12 @@ async function mountPaygInputsEditor(
         preparations: [
           create(BasPreparationSummarySchema, {
             preparation: preparationRef,
-            family: preparation.family,
+            family: familyRef,
             period: periodRef,
             profile: profileRef,
             state: BasPreparationState.COLLECTING,
             currentCalculation: calculationRef,
+            updatedAt: create(TimestampSchema, { seconds: 1_798_000_000n, nanos: 100 }),
           }),
         ],
       }),
@@ -387,7 +406,17 @@ async function mountPaygInputsEditor(
   );
   const user = userEvent.setup();
   await screen.findByRole("button", { name: "Save exact PAYG inputs" });
-  return { fixture, user, incomeYearPin };
+  return {
+    fixture,
+    user,
+    incomeYearPin,
+    profileRef,
+    periodRef,
+    familyRef,
+    preparationRef,
+    preparation,
+    calculation,
+  };
 }
 
 async function enterPaygiInputs(
@@ -875,6 +904,244 @@ it("uses PAYGW category and prefill from the retained calculation profile when a
   expect(request.paygw?.category).toBe(BasPaygwCategory.SMALL);
   expect(request.paygw?.prefillReview).toBe(BasPrefillRequirement.NOT_REQUIRED);
 }, 15_000);
+
+it("keeps regeneration disabled until the saved PAYG preparation refresh is installed", async () => {
+  const {
+    fixture,
+    user,
+    incomeYearPin,
+    familyRef,
+    periodRef,
+    profileRef,
+    preparation,
+    calculation,
+  } = await mountPaygInputsEditor(true, { includeConfirmedPeriod: true });
+  if (!incomeYearPin) throw new Error("test fixture income-year pin missing");
+
+  const savedHash = new Uint8Array(32).fill(0x2e);
+  const savedRef = create(SourceRefSchema, {
+    type: "bas_preparation",
+    id: preparation.preparationId,
+    revision: preparation.version + 1n,
+    contentHash: savedHash,
+  });
+  const savedPreparation = create(BasPreparationSchema, {
+    ...preparation,
+    version: savedRef.revision,
+    contentHash: savedHash,
+  });
+  const calculationRef = create(SourceRefSchema, {
+    type: "bas_calculation",
+    id: calculation.calculationId,
+    revision: calculation.version,
+    contentHash: calculation.contentHash,
+  });
+  const savedSummary = create(BasPreparationSummarySchema, {
+    preparation: savedRef,
+    family: familyRef,
+    period: periodRef,
+    profile: profileRef,
+    state: BasPreparationState.COLLECTING,
+    currentCalculation: calculationRef,
+    updatedAt: create(TimestampSchema, { seconds: 1_798_000_001n, nanos: 200 }),
+  });
+  const refreshedHistory = codecs.preparations.encodeResponse(
+    create(ListBasPreparationsResponseSchema, { preparations: [savedSummary] }),
+  );
+  let releaseHistory: ((frame: Uint8Array) => void) | undefined;
+  const pendingHistory = new Promise<Uint8Array>((resolve) => {
+    releaseHistory = resolve;
+  });
+  fixture.procedures.basPreparation.listBasPreparations.mockClear();
+  fixture.procedures.basPreparation.listBasPreparations.mockImplementation(() => pendingHistory);
+  fixture.procedures.basPreparation.getBasPreparation.mockResolvedValue(
+    codecs.preparationDetail.encodeResponse(
+      create(GetBasPreparationResponseSchema, {
+        preparation: savedPreparation,
+        currentCalculation: calculation,
+      }),
+    ),
+  );
+
+  let regenerated: ReturnType<typeof codecs.regenerate.decodeRequest> | undefined;
+  fixture.procedures.basPreparation.regenerateBasPreparation.mockImplementation(async (frame) => {
+    regenerated = codecs.regenerate.decodeRequest(frame);
+    return codecs.regenerate.encodeResponse(
+      create(RegenerateBasPreparationResponseSchema, {
+        preparation: create(BasPreparationSchema, {
+          preparationId: "018f0000-0000-7000-8000-000000000214",
+          organisationId: preparation.organisationId,
+          version: 3n,
+          contentHash: new Uint8Array(32).fill(0x2f),
+          inputHash: new Uint8Array(32).fill(0x30),
+          sourceSnapshotHash: new Uint8Array(32).fill(0x31),
+        }),
+      }),
+    );
+  });
+
+  await enterPaygiInputs(user, {
+    incomeYearId: incomeYearPin.incomeYearId,
+    start: "2026-07-01",
+    end: "2027-06-30",
+  });
+  await user.click(screen.getByRole("button", { name: "Save exact PAYG inputs" }));
+  await waitFor(() =>
+    expect(fixture.procedures.basPreparation.saveBasPaygInputs).toHaveBeenCalledOnce(),
+  );
+  await screen.findByRole("button", { name: "Refreshing…" });
+  await user.click(screen.getByRole("button", { name: /^Prepare$/ }));
+  const disabledDuringRefresh = (
+    screen.getByRole("button", { name: "Regenerate exact calculation" }) as HTMLButtonElement
+  ).disabled;
+  expect(fixture.procedures.basPreparation.listBasPreparations).toHaveBeenCalledOnce();
+  expect(fixture.procedures.basPreparation.regenerateBasPreparation).not.toHaveBeenCalled();
+
+  if (!releaseHistory) throw new Error("deferred preparation history was not initialized");
+  releaseHistory(refreshedHistory);
+  expect(disabledDuringRefresh).toBe(true);
+  await screen.findByRole("button", { name: "Refresh exact history" });
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Regenerate exact calculation" })).toHaveProperty(
+      "disabled",
+      false,
+    ),
+  );
+  await user.click(screen.getByRole("button", { name: "Regenerate exact calculation" }));
+
+  await waitFor(() => expect(regenerated).toBeDefined());
+  expect(regenerated?.expectedVersion).toBe(savedRef.revision);
+  const retained = regenerated?.preparationExpectation?.expectedState;
+  expect(retained?.case).toBe("retained");
+  if (retained?.case === "retained") {
+    expect(retained.value.id).toBe(savedRef.id);
+    expect(retained.value.revision).toBe(savedRef.revision);
+    expect(retained.value.contentHash).toEqual(savedRef.contentHash);
+  }
+  expect(regenerated?.familyExpectation?.expectedState.case).toBe("retained");
+  expect(regenerated?.familyExpectation?.expectedVersion).toBe(familyRef.revision);
+}, 15_000);
+
+it.each([
+  { label: "later nanoseconds", firstNanos: 100, laterNanos: 200 },
+  { label: "exact timestamp tie", firstNanos: 100, laterNanos: 100 },
+])(
+  "regenerates from the latest appended same-period preparation on a $label",
+  async ({ firstNanos, laterNanos }) => {
+    const {
+      fixture,
+      user,
+      familyRef,
+      periodRef,
+      profileRef,
+      preparation,
+      preparationRef,
+      calculation,
+    } = await mountPaygInputsEditor(false, { includeConfirmedPeriod: true });
+    const laterRef = create(SourceRefSchema, {
+      type: "bas_preparation",
+      id: "018f0000-0000-7000-8000-000000000215",
+      revision: 4n,
+      contentHash: new Uint8Array(32).fill(0x35),
+    });
+    const laterCalculationRef = create(SourceRefSchema, {
+      type: "bas_calculation",
+      id: "018f0000-0000-7000-8000-000000000216",
+      revision: 1n,
+      contentHash: new Uint8Array(32).fill(0x36),
+    });
+    const laterPreparation = create(BasPreparationSchema, {
+      preparationId: laterRef.id,
+      organisationId: preparation.organisationId,
+      version: laterRef.revision,
+      family: familyRef,
+      period: periodRef,
+      profile: profileRef,
+      state: BasPreparationState.COLLECTING,
+      currentCalculation: laterCalculationRef,
+      contentHash: laterRef.contentHash,
+      inputHash: new Uint8Array(32).fill(0x37),
+      sourceSnapshotHash: new Uint8Array(32).fill(0x38),
+    });
+    const firstSummary = create(BasPreparationSummarySchema, {
+      preparation: preparationRef,
+      family: familyRef,
+      period: periodRef,
+      profile: profileRef,
+      state: BasPreparationState.SUPERSEDED_BY_CONFIRMED_REVISION,
+      currentCalculation: create(SourceRefSchema, {
+        type: "bas_calculation",
+        id: calculation.calculationId,
+        revision: calculation.version,
+        contentHash: calculation.contentHash,
+      }),
+      updatedAt: create(TimestampSchema, { seconds: 1_798_000_000n, nanos: firstNanos }),
+    });
+    const laterSummary = create(BasPreparationSummarySchema, {
+      preparation: laterRef,
+      family: familyRef,
+      period: periodRef,
+      profile: profileRef,
+      state: BasPreparationState.COLLECTING,
+      currentCalculation: laterCalculationRef,
+      updatedAt: create(TimestampSchema, { seconds: 1_798_000_000n, nanos: laterNanos }),
+    });
+    fixture.procedures.basPreparation.listBasPreparations.mockClear();
+    fixture.procedures.basPreparation.listBasPreparations.mockResolvedValue(
+      codecs.preparations.encodeResponse(
+        create(ListBasPreparationsResponseSchema, {
+          // The server returns history in append order: original, then linked revision.
+          preparations: [firstSummary, laterSummary],
+        }),
+      ),
+    );
+    fixture.procedures.basPreparation.getBasPreparation.mockImplementation(async (frame) => {
+      const request = codecs.preparationDetail.decodeRequest(frame);
+      return codecs.preparationDetail.encodeResponse(
+        create(GetBasPreparationResponseSchema, {
+          preparation: request.preparationId === laterRef.id ? laterPreparation : preparation,
+          currentCalculation:
+            request.preparationId === laterRef.id
+              ? create(BasCalculationSchema, {
+                  calculationId: laterCalculationRef.id,
+                  organisationId: preparation.organisationId,
+                  version: 1n,
+                  contentHash: laterCalculationRef.contentHash,
+                  preparation: laterRef,
+                  family: familyRef,
+                  period: periodRef,
+                  profile: profileRef,
+                  profileSnapshot: calculation.profileSnapshot,
+                })
+              : calculation,
+        }),
+      );
+    });
+
+    await user.click(screen.getByRole("button", { name: "Refresh exact history" }));
+    await waitFor(() =>
+      expect(fixture.procedures.basPreparation.listBasPreparations).toHaveBeenCalledOnce(),
+    );
+    await screen.findByRole("button", { name: "Refresh exact history" });
+    await user.click(screen.getByRole("button", { name: "Regenerate exact calculation" }));
+
+    const requestFrame = await waitFor(() => {
+      const frame = fixture.procedures.basPreparation.regenerateBasPreparation.mock.calls[0]?.[0];
+      if (!(frame instanceof Uint8Array)) throw new Error("regeneration request frame missing");
+      return frame;
+    });
+    const request = codecs.regenerate.decodeRequest(requestFrame);
+    expect(request.expectedVersion).toBe(laterRef.revision);
+    const retained = request.preparationExpectation?.expectedState;
+    expect(retained?.case).toBe("retained");
+    if (retained?.case === "retained") {
+      expect(retained.value.id).toBe(laterRef.id);
+      expect(retained.value.revision).toBe(laterRef.revision);
+      expect(retained.value.contentHash).toEqual(laterRef.contentHash);
+    }
+  },
+  15_000,
+);
 
 it.each([
   {

@@ -1108,6 +1108,7 @@ export function BasPreparationLifecycle({
     }
   };
   const refresh = () => {
+    setLoading(true);
     setReload((value) => value + 1);
     setExportHistoryReload((value) => value + 1);
   };
@@ -1371,8 +1372,12 @@ export function BasPreparationLifecycle({
         throw new Error("period/profile required");
       const previous = preparations
         .filter((item) => item.period?.id === selectedPeriodSummary.period?.id)
-        .sort((left, right) =>
-          Number((right.updatedAt?.seconds ?? 0n) - (left.updatedAt?.seconds ?? 0n)),
+        // Pages use append order; exact timestamp ties must prefer the newest append.
+        .reverse()
+        .sort(
+          (left, right) =>
+            Number((right.updatedAt?.seconds ?? 0n) - (left.updatedAt?.seconds ?? 0n)) ||
+            (right.updatedAt?.nanos ?? 0) - (left.updatedAt?.nanos ?? 0),
         )[0];
       const chain = preparationDetail?.currentChain;
       const correctiveGenesis = Boolean(
@@ -2177,7 +2182,7 @@ export function BasPreparationLifecycle({
           onConfirmPeriod={confirmSelectedPeriod}
           onRegenerate={regenerate}
           onSaveInputs={saveInputs}
-          busy={busy}
+          busy={busy || loading}
         />
       ) : null}
       {stage === "Review" ? (

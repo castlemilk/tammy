@@ -1328,12 +1328,12 @@ function assertPdfReport(
         ? `${before.rate[0]}/${before.rate[1]}`
         : before.cents
           ? `${before.cents[0]}/${before.cents[1]} cents`
-          : "not applicable";
+          : "not applicable cents";
       const currentValue = current.rate
         ? `${current.rate[0]}/${current.rate[1]}`
         : current.cents
           ? `${current.cents[0]}/${current.cents[1]} cents`
-          : "not applicable";
+          : "not applicable cents";
       expect(comparison, `${label} delta binds both exact values`).toContain(
         `${label} ${before.state}: ${beforeValue} ${current.state}: ${currentValue} ${delta}`,
       );
@@ -2317,7 +2317,7 @@ test("BAS lifecycle: clean cash sources, blocked PAYGI resolution, frozen handof
   const secondExports = [secondPdf, secondCsv];
   expect(secondExports.map((item) => item.hash)).toHaveLength(2);
   await recordConfirmation(page, totp, retainedEvidence, "SYNTHETIC-LODGE-002");
-  await expect(page.getByText("USER_RECORDED_UNVERIFIED", { exact: false })).toBeVisible();
+  await expectLifecycleMessage(page, "USER_RECORDED_UNVERIFIED");
   const secondObservations = await observationsForFrozen(page, workspace, frozenTwoRef);
   expect(secondObservations.observations).toHaveLength(1);
   expect(secondObservations.observations[0]?.eventKind).toBe(
