@@ -8,11 +8,13 @@ import test from "node:test";
 import {
   buildMasRawHelper,
   buildMasSimulatorProfile,
+  buildSbrHelper,
   createSbrHelperBuildPlan,
   generateSimulatorProfile,
   hashSbrHelperSourceTree,
   selectSbrHelperTarget,
 } from "./build-sbr-helper.mjs";
+import { authenticateSbrProfileBytes } from "./sbr-profile-schema.mjs";
 
 test("selects only the supported helper and authenticated unavailable target", () => {
   assert.deepEqual(selectSbrHelperTarget("darwin", "arm64"), {
@@ -45,7 +47,79 @@ test("build plan pins a deterministic non-empty Go build ID for the macOS load U
   assert.equal(plan.environment.GOARCH, "arm64");
   assert.equal(plan.environment.CGO_ENABLED, "1");
   assert.equal(plan.environment.SOURCE_DATE_EPOCH, "0");
+  assert.equal(plan.environment.MACOSX_DEPLOYMENT_TARGET, "14.0");
+  assert.equal(plan.environment.CGO_CFLAGS, "-mmacosx-version-min=14.0");
+  assert.equal(plan.environment.CGO_LDFLAGS, "-mmacosx-version-min=14.0");
   assert.equal(Object.hasOwn(plan.environment, "TAMMY_SBR_CREDENTIAL"), false);
+});
+
+test("ordinary simulator build binds the generated profile to the exact signed helper", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "tammy-ordinary-simulator-"));
+  try {
+    const configRoot = path.join(root, "config/sbr/simulator");
+    await Promise.all([
+      mkdir(configRoot, { recursive: true }),
+      mkdir(path.join(root, "services/sbr-helper"), { recursive: true }),
+      mkdir(path.join(root, "test/fixtures/sbr"), { recursive: true }),
+    ]);
+    const committed = new Map();
+    for (const name of ["profile-public-key.pem", "sbr-profile-v1.json", "sbr-profile-v1.sig"]) {
+      const bytes = await readFile(path.join("config/sbr/simulator", name));
+      committed.set(name, bytes);
+      await writeFile(path.join(configRoot, name), bytes);
+    }
+    await writeFile(path.join(root, "services/sbr-helper/go.mod"), "module fixture\n");
+    await writeFile(
+      path.join(root, "test/fixtures/sbr/simulator-profile-private-key.pem"),
+      await readFile("test/fixtures/sbr/simulator-profile-private-key.pem"),
+    );
+    const signedBytes = Buffer.from(
+      "same helper source linked with a different macOS SDK\nsigned\n",
+    );
+    let builds = 0;
+    let nativeProfileChecks = 0;
+    const runner = async (command, args, options) => {
+      if (command === "git") return { stdout: `${"a".repeat(40)}\n` };
+      if (command === "/usr/bin/codesign") {
+        await writeFile(args.at(-1), signedBytes);
+      } else {
+        assert.equal(command, "go");
+        if (args[0] === "build") {
+          builds++;
+          await writeFile(args[args.indexOf("-o") + 1], "deterministic raw helper\n");
+        } else {
+          assert.equal(args[0], "test");
+          nativeProfileChecks++;
+          assert.equal(
+            options.env.TAMMY_SBR_PROFILE_PATH,
+            path.join(root, "apps/desktop/resources/sbr/simulator/sbr-profile-v1.json"),
+          );
+          assert.equal(
+            options.env.TAMMY_SBR_PROFILE_SIGNATURE_PATH,
+            path.join(root, "apps/desktop/resources/sbr/simulator/sbr-profile-v1.sig"),
+          );
+        }
+      }
+      return { stdout: "" };
+    };
+    const result = await buildSbrHelper({ root, commandRunner: runner });
+    const staged = path.join(root, "apps/desktop/resources/sbr/simulator");
+    const authenticated = authenticateSbrProfileBytes({
+      profileBytes: await readFile(path.join(staged, "sbr-profile-v1.json")),
+      signatureBytes: await readFile(path.join(staged, "sbr-profile-v1.sig")),
+      publicKey: committed.get("profile-public-key.pem"),
+    });
+    assert.equal(builds, 2);
+    assert.equal(nativeProfileChecks, 1);
+    assert.equal(result.helper_sha256, createHash("sha256").update(signedBytes).digest("hex"));
+    assert.equal(authenticated.helper_sha256, result.helper_sha256);
+    assert.equal(authenticated.environment, "SIMULATOR");
+    assert.equal(authenticated.component_manifest_sha256, "NONE");
+    for (const [name, bytes] of committed)
+      assert.deepEqual(await readFile(path.join(configRoot, name)), bytes);
+  } finally {
+    await rm(root, { force: true, recursive: true });
+  }
 });
 
 test("simulator profile generator binds exact helper bytes and a test-only signer", async () => {

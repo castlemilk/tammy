@@ -51,7 +51,15 @@ export function createSbrHelperBuildPlan(
     ],
     cwd: path.join(root, "services/sbr-helper"),
     destination: path.join(root, "apps/desktop/resources/sbr-helper/darwin-arm64/tammy-sbr-helper"),
-    environment: { CGO_ENABLED: "1", GOARCH: "arm64", GOOS: "darwin", SOURCE_DATE_EPOCH: "0" },
+    environment: {
+      CGO_ENABLED: "1",
+      CGO_CFLAGS: "-mmacosx-version-min=14.0",
+      CGO_LDFLAGS: "-mmacosx-version-min=14.0",
+      GOARCH: "arm64",
+      GOOS: "darwin",
+      MACOSX_DEPLOYMENT_TARGET: "14.0",
+      SOURCE_DATE_EPOCH: "0",
+    },
     temporary,
   };
 }
@@ -401,8 +409,20 @@ export async function buildSbrHelper({
     await copyFile(outputs[0], temporaryDestination);
     await chmod(temporaryDestination, 0o500);
     await rename(temporaryDestination, plan.destination);
-    const profilePath = path.join(root, "config/sbr/simulator/sbr-profile-v1.json");
-    const signaturePath = path.join(root, "config/sbr/simulator/sbr-profile-v1.sig");
+    const stagedProfileRoot = path.join(root, "apps/desktop/resources/sbr/simulator");
+    const profilePath = path.join(stagedProfileRoot, "sbr-profile-v1.json");
+    const signaturePath = path.join(stagedProfileRoot, "sbr-profile-v1.sig");
+    const privateKey = createPrivateKey(
+      await readFile(path.join(root, "test/fixtures/sbr/simulator-profile-private-key.pem")),
+    );
+    // SDK and linker metadata vary across macOS hosts. Bind this build's exact
+    // signed bytes using the simulator-only key, as for the MAS simulator build.
+    await generateSimulatorProfile({
+      helper: plan.destination,
+      profile: profilePath,
+      signature: signaturePath,
+      signer: async (canonical) => sign(null, canonical, privateKey),
+    });
     const publicKey = await readFile(
       path.join(root, "config/sbr/simulator/profile-public-key.pem"),
     );
@@ -440,16 +460,11 @@ export async function buildSbrHelper({
           LANG: "C",
           LC_ALL: "C",
           TAMMY_SBR_HELPER_PATH: plan.destination,
+          TAMMY_SBR_PROFILE_PATH: profilePath,
+          TAMMY_SBR_PROFILE_SIGNATURE_PATH: signaturePath,
         },
       },
     );
-    const stagedProfileRoot = path.join(root, "apps/desktop/resources/sbr/simulator");
-    await rm(path.join(root, "apps/desktop/resources/sbr"), { force: true, recursive: true });
-    await mkdir(stagedProfileRoot, { recursive: true });
-    await Promise.all([
-      copyFile(profilePath, path.join(stagedProfileRoot, "sbr-profile-v1.json")),
-      copyFile(signaturePath, path.join(stagedProfileRoot, "sbr-profile-v1.sig")),
-    ]);
     const provenance = {
       helper_raw_sha256: sha256(raw[0]),
       helper_sha256: helperSha256,

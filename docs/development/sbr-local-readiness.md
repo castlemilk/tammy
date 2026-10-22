@@ -33,6 +33,8 @@ mise exec -- task package:e2e
 
 The simulator uses fixed test identity and credential material and cannot select an EVTE or production endpoint. Simulator and doctor launches carry explicit main-process authority and display `SIMULATOR — NOT FOR ATO LODGMENT` for the entire session. Doctor first prints the static EVTE preflight, then launches an isolated simulator; after normal workspace unlock and sign-in it opens `/settings/sbr?doctor=1` to inspect authenticated, redacted readiness.
 
+The macOS helper targets macOS 14. Each ordinary build verifies two identical builds and ad-hoc signatures, then signs a simulator-only profile binding those exact helper bytes. SDK and linker metadata may differ across build hosts, so generated profiles live with the ignored build resources; committed profile fixtures and the embedded public trust root stay unchanged. The build also checks the generated profile through the native verifier. EVTE still requires its separately issued signed inputs.
+
 `test:sbr` first verifies and builds its authenticated SQLCipher resource, so it is runnable after bootstrap from a clean checkout. It then owns the local helper race tests, core SBR and tagged SQLCipher integration graph, schemas, desktop surfaces, policy coverage, process/result checks, and contracts. The signed Keychain integration and native security-bookmark host remain separate opt-in tests: both fail closed until their external signing inputs exist. They are not silently skipped or treated as proof by `test:sbr`.
 
 Only a clean packaged E2E result is packaged evidence; an interactive launch is a development smoke. Generate and then consume evidence in order:
