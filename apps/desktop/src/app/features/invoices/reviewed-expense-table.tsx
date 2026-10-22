@@ -74,7 +74,12 @@ export function ReviewedExpenseTable({
           {error}
         </p>
       ) : null}
-      <div className="focus-ring min-w-0 overflow-x-auto rounded-[20px] border border-border bg-surface">
+      <div
+        className="focus-ring relative min-w-0 overflow-x-auto rounded-[20px] border border-border bg-surface"
+        role="region"
+        aria-label="Scrollable reviewed expenses"
+        tabIndex={0}
+      >
         <table
           className="w-full min-w-[540px] border-collapse text-[14px]"
           aria-label="Reviewed expenses"

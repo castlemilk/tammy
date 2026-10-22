@@ -154,7 +154,12 @@ export function InvoiceRecordList({
         />
       ) : (
         <>
-          <div className="relative min-w-0 overflow-x-auto">
+          <div
+            className="focus-ring relative min-w-0 overflow-x-auto"
+            role="region"
+            aria-label="Scrollable saved invoices"
+            tabIndex={0}
+          >
             <table
               className="work-table min-w-[850px] text-[14px] [&_th]:text-[12px]"
               aria-label="Saved invoices"
@@ -224,7 +229,7 @@ export function InvoiceRecordList({
               {start + 1}–{Math.min(start + pageSize, filtered.length)} of {filtered.length}{" "}
               invoices
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <Button
                 aria-label="Previous invoice page"
                 disabled={visiblePage === 0}

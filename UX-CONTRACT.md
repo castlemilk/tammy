@@ -66,3 +66,34 @@ The seven inherited supplementary audit exceptions remain intentional: six
 existing forms retain browser validation, and CSV text remains vertically
 resizable. No validation or editable-data affordance is weakened to satisfy the
 supplementary defaults. The new reference form has explicit inline validation.
+
+## Invoice workspace interaction contract (2026-10-23)
+
+Sources: implemented `invoices.proto`, native invoice accounting commands, and
+the existing connected invoice adapter. This pass changes presentation and
+recovery affordances; it does not change command semantics or authorization.
+
+- Saved invoices use ten-row client pages over the adapter's existing complete
+  cursor-loaded snapshot. Search and Draft/Issued filters are ephemeral local
+  view state. Search/filter changes reset paging; refresh clamps it. Clear restores
+  search focus. A failed list load is distinct from an empty workspace, and a
+  refresh error keeps previously loaded records visible.
+- Saving leaves the confirmed draft open. Validation preserves edits and focuses
+  the inline error. Opening another record or creating a new draft preserves the
+  existing explicit unsaved-replacement confirmation and Keep editing action.
+- Issuing requires the existing confirmation, locks the invoice and records its
+  native income/GST/receivable entry. It sends nothing to the customer. The issue
+  confirmation's cancel action writes nothing.
+- Recording money received is a separate explicit command. Cancel writes nothing;
+  successful feedback follows the confirmed response. Receipt totals do not add
+  income again. Export cancellation saves no file.
+- Invoice amount tables have labelled, focusable horizontal scroll containers.
+  Notes and addresses use bounded content growth rather than horizontal resizing.
+  Narrow layouts preserve natural page scrolling, readable numbers and visible
+  keyboard focus, including with reduced motion.
+
+The original seven supplementary audit exceptions remain. The reporting branch
+also contains eight native-validation forms and four literal test mock buttons
+flagged by that scanner. This pass resolves seven invoice textarea geometry
+findings; it preserves financial/security validation and records the remaining
+findings in the new evidence report without exclusions.

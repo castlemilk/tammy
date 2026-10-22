@@ -173,6 +173,32 @@ test.describe("Soft Precision financial workspace", () => {
         .getByRole("table", { name: "Invoice line items", exact: true })
         .scrollIntoViewIfNeeded();
       await capture(page, `12-lines-${width}`);
+      if (phase !== "before") {
+        const scrollArea = page
+          .getByRole("table", { name: "Invoice line items", exact: true })
+          .locator("..");
+        await scrollArea.evaluate((element) => {
+          element.scrollLeft = 0;
+        });
+        await scrollArea.focus();
+        await expect(scrollArea).toBeFocused();
+        await page.keyboard.press("ArrowRight");
+        await expect
+          .poll(() => scrollArea.evaluate((element) => element.scrollLeft))
+          .toBeGreaterThan(0);
+        await scrollArea.evaluate((element) => {
+          element.scrollLeft = element.scrollWidth;
+        });
+        await capture(page, `12b-line-amounts-${width}`);
+        const dimensions = await page.evaluate(() => ({
+          viewport: innerWidth,
+          available: document.documentElement.clientWidth,
+          document: document.documentElement.scrollWidth,
+        }));
+        expect(dimensions.document, JSON.stringify(dimensions)).toBeLessThanOrEqual(
+          dimensions.available,
+        );
+      }
     }
     expect(electronHarness.consoleErrors).toEqual([]);
     expect(electronHarness.pageErrors).toEqual([]);

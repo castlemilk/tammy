@@ -796,7 +796,7 @@ function MoneyRow({
 }) {
   return (
     <p
-      className={`flex items-baseline justify-between gap-3 text-[14px] ${strong ? "text-[20px] font-semibold text-foreground" : "text-muted-foreground"}`}
+      className={`flex flex-wrap items-baseline justify-between gap-3 text-[14px] ${strong ? "text-[20px] font-semibold text-foreground" : "text-muted-foreground"}`}
       data-testid={testId}
     >
       <span>{label}</span>

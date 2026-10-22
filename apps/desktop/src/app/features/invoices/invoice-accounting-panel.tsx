@@ -204,7 +204,7 @@ export function InvoiceAccountingPanel({
                 ? "Non-cash basis · GST recorded on issue"
                 : "GST basis unavailable"}
           </p>
-          <dl className="grid grid-cols-4 gap-4 max-[620px]:grid-cols-2">
+          <dl className="grid grid-cols-4 gap-4 max-[620px]:grid-cols-2 max-[380px]:grid-cols-1">
             <Metric label="Income (ex GST)" minor={incomeMinor} testId="posted-invoice-income" />
             <Metric label="Invoice GST" minor={gstMinor} />
             <Metric label="Received" minor={accounting.receivedMinor} testId="invoice-received" />
@@ -314,7 +314,12 @@ export function InvoiceAccountingPanel({
             </form>
           ) : null}
           {accounting.payments.length ? (
-            <div className="overflow-x-auto">
+            <div
+              className="focus-ring relative min-w-0 overflow-x-auto"
+              role="region"
+              aria-label="Scrollable recorded invoice payments"
+              tabIndex={0}
+            >
               <table
                 aria-label="Recorded invoice payments"
                 className="w-full border-collapse text-left text-[13px]"
@@ -331,7 +336,9 @@ export function InvoiceAccountingPanel({
                     <tr className="border-b border-border last:border-0" key={payment.id}>
                       <td className="py-2 pr-3">{payment.paymentDate}</td>
                       <td className="py-2 pr-3">{payment.reference || "—"}</td>
-                      <td className="py-2 text-right">{money(payment.amountMinor)}</td>
+                      <td className="whitespace-nowrap py-2 text-right tabular-nums">
+                        {money(payment.amountMinor)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

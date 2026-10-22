@@ -42,7 +42,12 @@ export function InvoiceLineTable({
           </Button>
         ) : null}
       </div>
-      <div className="focus-ring min-w-0 overflow-x-auto rounded-[20px] border border-border bg-surface">
+      <div
+        className="focus-ring relative min-w-0 overflow-x-auto rounded-[20px] border border-border bg-surface"
+        role="region"
+        aria-label="Scrollable invoice line items"
+        tabIndex={0}
+      >
         <table
           className="w-full min-w-[1000px] table-fixed border-collapse text-[14px]"
           aria-label="Invoice line items"

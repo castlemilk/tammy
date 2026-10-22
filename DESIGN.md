@@ -142,7 +142,7 @@ approved transparent paper-loop art appears only at arrival/completion, outside 
 - Do reuse semantic tokens and shared controls across connected screens.
 - Do verify real packaged screenshots with isolated synthetic data.
 - Do preserve core authorization, amounts, tax rules and idempotency.
-- Don't turn planned invoices, bank feeds or stock tracking into visible capabilities.
+- Don't turn planned bank feeds or stock tracking into visible capabilities.
 - Don't add art to financial tables or copy generated financial examples as contracts.
 
 ## Review workspace uplift (2026-10-22)
@@ -153,6 +153,21 @@ status filters, loading/empty state and inline feedback. `styles.css` owns
 `work-surface`, `work-table`, `work-input` and `work-eyebrow`; these reuse the
 established palette and geometry. Filters operate on the explicitly labelled
 loaded projection (up to 200), not the whole organisation.
+
+## Invoice workspace uplift (2026-10-23)
+
+Invoices now use the reporting branch's implemented invoice, template, issue,
+receipt and PDF contracts. Saved records reuse the review workspace search,
+filters and states, with ten-row client pages over the existing complete
+cursor-loaded snapshot. Only Draft and Issued are lifecycle statuses. Invoice
+totals, private cost estimates and actual receipt/outstanding balances are distinct.
+
+The full-width editor uses shared `work-input` controls. Address and note fields
+grow with content within a bounded height; invoice tables own their horizontal
+scroll and explicit keyboard focus. Hidden table headings stay within their
+positioned scroll container. Small-window receipt metrics stack before amounts
+need to wrap. Root sizing accounts for the vertical scrollbar at a 320px window,
+and shared buttons respect their available container width.
 
 Source text and review details sit below the document table in a two-column
 workspace, stacking below 1050px. There is no original-file preview API. Reviewed
