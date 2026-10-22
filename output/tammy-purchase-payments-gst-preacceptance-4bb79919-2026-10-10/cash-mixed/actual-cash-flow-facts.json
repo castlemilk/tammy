@@ -1,0 +1,77 @@
+{
+  "workspaceId": "01a11ecc-b76b-7e1a-8e0e-3cae4cbe61a1",
+  "organisationId": "01a11ecc-be57-73d9-a821-8f31b43035e0",
+  "facts": [
+    {
+      "id": "01a11ecc-c4e7-75d6-b7c7-39bfbcc3c33e:1",
+      "journalId": "01a11ecc-c4e7-718a-82c1-c6de7ba99f49",
+      "journalLineId": "01a11ecc-c4e7-75d6-b7c7-39bfbcc3c33e",
+      "paymentId": "01a11ecc-c4e6-727c-991a-9de92f7c13bc",
+      "paymentDate": "2026-09-30",
+      "category": "OPERATING",
+      "sequence": 1,
+      "amountMinor": "-3300",
+      "sourceRevision": "1"
+    },
+    {
+      "id": "01a11ecc-c4e7-75d6-b7c7-39bfbcc3c33e:2",
+      "journalId": "01a11ecc-c4e7-718a-82c1-c6de7ba99f49",
+      "journalLineId": "01a11ecc-c4e7-75d6-b7c7-39bfbcc3c33e",
+      "paymentId": "01a11ecc-c4e6-727c-991a-9de92f7c13bc",
+      "paymentDate": "2026-09-30",
+      "category": "INVESTING",
+      "sequence": 2,
+      "amountMinor": "-1100",
+      "sourceRevision": "1"
+    },
+    {
+      "id": "01a11ecc-c4e7-75d6-b7c7-39bfbcc3c33e:3",
+      "journalId": "01a11ecc-c4e7-718a-82c1-c6de7ba99f49",
+      "journalLineId": "01a11ecc-c4e7-75d6-b7c7-39bfbcc3c33e",
+      "paymentId": "01a11ecc-c4e6-727c-991a-9de92f7c13bc",
+      "paymentDate": "2026-09-30",
+      "category": "FINANCING",
+      "sequence": 3,
+      "amountMinor": "-1100",
+      "sourceRevision": "1"
+    },
+    {
+      "id": "01a11ecc-c869-7f13-8df2-05fd47eb1a0d:1",
+      "journalId": "01a11ecc-c869-7478-a008-bcb42a0a59cb",
+      "journalLineId": "01a11ecc-c869-7f13-8df2-05fd47eb1a0d",
+      "paymentId": "01a11ecc-c868-71eb-a25d-20d5fe1d9ab4",
+      "paymentDate": "2026-10-02",
+      "category": "OPERATING",
+      "sequence": 1,
+      "amountMinor": "-3300",
+      "sourceRevision": "1"
+    },
+    {
+      "id": "01a11ecc-c869-7f13-8df2-05fd47eb1a0d:2",
+      "journalId": "01a11ecc-c869-7478-a008-bcb42a0a59cb",
+      "journalLineId": "01a11ecc-c869-7f13-8df2-05fd47eb1a0d",
+      "paymentId": "01a11ecc-c868-71eb-a25d-20d5fe1d9ab4",
+      "paymentDate": "2026-10-02",
+      "category": "INVESTING",
+      "sequence": 2,
+      "amountMinor": "-1100",
+      "sourceRevision": "1"
+    },
+    {
+      "id": "01a11ecc-c869-7f13-8df2-05fd47eb1a0d:3",
+      "journalId": "01a11ecc-c869-7478-a008-bcb42a0a59cb",
+      "journalLineId": "01a11ecc-c869-7f13-8df2-05fd47eb1a0d",
+      "paymentId": "01a11ecc-c868-71eb-a25d-20d5fe1d9ab4",
+      "paymentDate": "2026-10-02",
+      "category": "FINANCING",
+      "sequence": 3,
+      "amountMinor": "-1100",
+      "sourceRevision": "1"
+    }
+  ],
+  "projection": {
+    "FINANCING": "-2200",
+    "INVESTING": "-2200",
+    "OPERATING": "-6600"
+  }
+}

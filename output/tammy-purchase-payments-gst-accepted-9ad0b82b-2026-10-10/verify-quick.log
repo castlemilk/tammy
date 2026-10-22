@@ -1,0 +1,1368 @@
+task: [test:verify:quick] mise exec -- pnpm check:toolchain
+$ node scripts/check-toolchain.mjs
+toolchain ok
+task: [test:verify:quick] mise exec -- pnpm test
+$ node --test scripts/*.test.mjs && node --test apps/desktop/scripts/*.test.mjs && go test ./services/core/... && pnpm --filter @tammy/invoices test && pnpm --filter @tammy/reporting test && pnpm --filter @tammy/local-api test && pnpm desktop:test
+▶ core build target
+  ✔ selects only the two supported target tables (1.286125ms)
+  ✔ rejects unsupported linux/x64 (0.830541ms)
+  ✔ rejects unsupported darwin/x64 (0.245ms)
+  ✔ rejects unsupported win32/arm64 (0.232459ms)
+  ✔ defaults only to a supported native target and permits an explicit supported CI target (0.485167ms)
+✔ core build target (4.085375ms)
+▶ authenticated SQLCipher inputs
+  ✔ authenticates the complete macOS resource set (26.408833ms)
+  ✔ rejects a missing VERSION (15.946041ms)
+  ✔ rejects a symlinked VERSION (16.051208ms)
+  ✔ rejects a missing LICENSE (12.604834ms)
+  ✔ rejects a symlinked LICENSE (17.835625ms)
+  ✔ rejects a missing darwin-arm64/LIBRARY_SHA256 (11.430458ms)
+  ✔ rejects a symlinked darwin-arm64/LIBRARY_SHA256 (14.966375ms)
+  ✔ rejects a missing darwin-arm64/HEADER_SHA256 (22.384541ms)
+  ✔ rejects a symlinked darwin-arm64/HEADER_SHA256 (14.337542ms)
+  ✔ rejects a missing darwin-arm64/include/sqlite3.h (9.475416ms)
+  ✔ rejects a symlinked darwin-arm64/include/sqlite3.h (10.870416ms)
+  ✔ rejects a missing darwin-arm64/lib/libsqlite3.a (8.969ms)
+  ✔ rejects a symlinked darwin-arm64/lib/libsqlite3.a (16.376792ms)
+  ✔ rejects version, library hash, canonical licence, and compiler drift (48.300708ms)
+  ✔ authenticates and rejects drift in the Windows provider archive and licence (53.351042ms)
+✔ authenticated SQLCipher inputs (302.74675ms)
+▶ core build plan
+  ✔ uses exact safe Go arguments and environment (1.017125ms)
+  ✔ rejects unsafe version "" (0.130667ms)
+  ✔ rejects unsafe version "1.0.0 evil" (0.049084ms)
+  ✔ rejects unsafe version "1.0.0\n-X evil=value" (0.0435ms)
+  ✔ rejects unsafe version "../1.0.0" (0.041333ms)
+  ✔ rejects path traversal and roots that are not absolute (0.1025ms)
+  ✔ rejects absent, wrong-target, and malformed SQLCipher inputs (0.1185ms)
+✔ core build plan (1.6115ms)
+▶ generated resources
+  ✔ removes every stale entry and symlink but preserves only zero-byte .gitkeep (10.655042ms)
+  ✔ rejects a symlink resource root and a non-empty .gitkeep (5.774375ms)
+  ✔ normalizes the repository's historical newline-only .gitkeep (35.905666ms)
+✔ generated resources (52.598167ms)
+▶ build execution
+  ✔ cleans, builds once, requires a regular output, and returns its SHA-256 (30.875875ms)
+  ✔ rejects a build that does not produce the binary (23.276125ms)
+  ✔ aborts a bounded build and cleans its partial output (18.374ms)
+  ✔ cleans the isolated cache and partial output after a build failure (20.947917ms)
+  ✔ rejects a cache directory outside the configured temporary root (8.251ms)
+  ✔ fails closed and removes the binary when cache cleanup fails (8.902875ms)
+✔ build execution (111.010833ms)
+✔ creates a Darwin Buf command plan through Node without a shell (2.492458ms)
+✔ assigns validation and evidence exact disjoint ignored temporary roots (4.883ms)
+✔ creates a win32 Buf command plan without cmd or bat shims (0.200416ms)
+✔ canonical descriptor command omits source information and retention options (0.134459ms)
+✔ validation mode omits source revision (0.508792ms)
+✔ retained descriptor manifest enforces the exact six-field schema (0.200417ms)
+✔ retained descriptor manifest requires the canonical relative path (0.0915ms)
+✔ real descriptor byte length (0.102583ms)
+✔ lowercase descriptor sha256 (0.105333ms)
+✔ pinned buf version (0.142916ms)
+✔ exact buf module (0.09025ms)
+✔ missing source revision (0.077458ms)
+✔ mismatched source revision (0.079375ms)
+✔ dirty evidence tree (0.092167ms)
+✔ validation build writes temporary descriptor and manifest without Git (12.356708ms)
+✔ evidence rejects a dirty tree before writing output (4.792708ms)
+✔ evidence detects an untracked Buf input when Git config hides untracked files (256.244542ms)
+✔ Buf failure leaves retained evidence unchanged and removes staging (8.122625ms)
+✔ partial staged descriptor output is rejected without changing retained evidence (15.4785ms)
+✔ Buf version mismatch leaves retained evidence unchanged and removes staging (11.665833ms)
+✔ source mutation after build leaves retained evidence unchanged (9.508125ms)
+✔ dirty mutation immediately before publish leaves retained evidence unchanged (14.554208ms)
+✔ publication failure rolls back the complete retained pair and removes staging (11.467ms)
+✔ double publication failure preserves the prior pair in stable recovery state (13.778ms)
+✔ contract cleanup cannot delete durable descriptor evidence recovery (45.386375ms)
+✔ contract cleanup cannot delete a held descriptor evidence transaction (14.932333ms)
+✔ concurrent descriptor evidence invocation fails closed without touching the owner (14.178166ms)
+✔ next evidence invocation restores valid recovery before dirty-tree rejection (16.289042ms)
+✔ malformed or ambiguous recovery state fails closed before Git checks (32.089542ms)
+✔ recovery state never overwrites a present retained pair (9.617208ms)
+✔ evidence publishes one validated pair after three clean source checks (9.293667ms)
+✔ descriptor command accepts only validation and evidence modes (0.1975ms)
+✔ accepts exact Darwin SBR provenance and exact Windows unavailability (2.248375ms)
+✔ rejects authorization claims, unknown fields, secrets, and mismatched status (2.039625ms)
+✔ selects only the supported helper and authenticated unavailable target (0.926166ms)
+✔ build plan pins a deterministic non-empty Go build ID for the macOS load UUID (0.1445ms)
+✔ simulator profile generator binds exact helper bytes and a test-only signer (17.811208ms)
+✔ production source contains no simulator private key material (9.174042ms)
+✔ Builder conditionally packages exact SBR resources and preserves helper bytes (1.325709ms)
+✔ generated helper, staged profiles, and provenance never dirty the source tree (2.135833ms)
+✔ MAS raw owner purges stale ignored artifacts and records this-run revision authority (36.15675ms)
+✔ MAS profile owner binds final signed bytes without mutating tracked runtime profile (34.253875ms)
+✔ unsigned MAS staging profile binds the exact raw helper bytes (35.810375ms)
+▶ SQLCipher build targets
+  ✔ supports only native macOS arm64 and Windows x64 (0.73575ms)
+  ✔ rejects unsupported linux/x64 (0.243416ms)
+  ✔ rejects unsupported darwin/x64 (0.094208ms)
+  ✔ rejects unsupported win32/arm64 (0.081208ms)
+✔ SQLCipher build targets (1.631042ms)
+▶ SQLCipher static build plan
+  ✔ creates an explicit CommonCrypto macOS arm64 plan and complete resources (0.408791ms)
+  ✔ rejects a non-absolute compiler, roots, cross-build, and system SQLite input (0.184542ms)
+  ✔ pins every Windows generator, compiler, and OpenSSL input without PATH fallback (0.217541ms)
+✔ SQLCipher static build plan (0.923042ms)
+▶ SQLCipher build execution
+  ✔ compiles a private staged wrapper beside sqlite3.c and cannot select a scripts shadow (62.006583ms)
+  ✔ fails closed on missing compiler dependency evidence (25.0425ms)
+  ✔ fails closed on wrong compiler dependency evidence (38.011541ms)
+  ✔ fails closed on duplicate compiler dependency evidence (24.560083ms)
+  ✔ stages the static library, header, license, version, and authenticated hash (66.388458ms)
+  ✔ fails closed when a successful tool invocation omits the static library (22.343792ms)
+  ✔ rejects a missing committed amalgamation wrapper before invoking tools (4.645417ms)
+  ✔ rejects a symlinked committed amalgamation wrapper before invoking tools (7.253916ms)
+  ✔ rejects a private source copy whose full-tree hash changes before configure (32.135417ms)
+  ✔ builds Windows only with exact generators and stages the authenticated provider (37.808625ms)
+  ✔ atomically retires the prior resource root and stages an exact new target root (37.15175ms)
+  ✔ fails closed when the resource root is replaced by a symlink immediately before retirement (25.559459ms)
+  ✔ fails closed when the resource root is replaced by a directory immediately before retirement (25.158708ms)
+  ✔ fails closed when the cache identity changes before resource retirement (25.613458ms)
+  ✔ fails closed when the resource-parent identity changes before resource retirement (27.936875ms)
+  ✔ uses non-recursive creation and never merges into a precreated replacement root (27.954833ms)
+✔ SQLCipher build execution (490.614833ms)
+▶ official Windows OpenSSL provider build
+  ✔ pins source, licence, configuration, tools, environment, version, and one archive (20.523667ms)
+  ✔ rejects a missing explicit COMSPEC before Configure (6.201083ms)
+  ✔ rejects a symlinked explicit COMSPEC before Configure (7.609458ms)
+  ✔ rejects a generated makefile without the exact absolute PERL before nmake (9.422375ms)
+  ✔ rejects generated toolchain drift before nmake (8.528166ms)
+  ✔ rejects pinned paths that appear only in comments (12.787167ms)
+✔ official Windows OpenSSL provider build (65.60625ms)
+﹣ rebuilds the real macOS arm64 static archive byte-for-byte reproducibly (0.037709ms) # SKIP
+✔ valid empty index (48.99375ms)
+✔ sorts reserved reporting and tax fixtures with other slices by fully-qualified enum and transition (12.207667ms)
+✔ repository index includes the reserved reporting and tax lifecycle fixtures (7.443459ms)
+✔ write mode writes the canonical empty transition index (12.646375ms)
+✔ check mode fails when the generated transition index drifts (9.479083ms)
+✔ command dispatch accepts only write and check modes (0.312333ms)
+✔ plans one exact development-signed five-image capture run (9.44375ms)
+✔ rejects capture plans that are not exact immutable build inputs (4.385166ms)
+✔ proves screenshot orchestration is external to the packaged app (166.157375ms)
+✔ binds Task 11 equivalence and the complete development app hash (26.892459ms)
+✔ uses a deterministic secret-free capture process environment (0.242625ms)
+✔ rejects a screenshot output ancestor symlink without writing outside (9.8145ms)
+✔ rejects a mutated derived plan path before filesystem access (10.888333ms)
+✔ reaps a stubborn descendant after an abnormal capture leader exit (401.864833ms)
+✔ executes the owner with a private strict contract and validates its capture (10.098208ms)
+✔ normalizes the complete ARIA tree including accessibility-only names (4.982542ms)
+✔ normalizes only the valid saved workpaper UUID while preserving version and all other text (0.499084ms)
+✔ validates the one strict fictional screenshot fixture (3.997167ms)
+✔ requires the reviewed reporting export controls and identity on only Overview and BAS (7.71125ms)
+✔ scans only the exact reviewed fictional reporting identity without admitting other ABNs (0.22125ms)
+✔ accepts approved invoice interface copy while rejecting unknown invoice references (0.261875ms)
+✔ requires the current invoice navigation without accepting stale shell snapshots (0.171709ms)
+✔ accepts only complete 1440 by 900 RGB non-interlaced PNG bytes (85.88325ms)
+✔ validates exact images, accessibility snapshots, hashes, captions and provenance (128.348041ms)
+✔ rejects package linkage without a candidate event and post-render secret text (227.256792ms)
+✔ accessibility snapshots are an exact allowlist, not a denylist (218.856916ms)
+✔ authenticates every package-linked candidate fact (103.349958ms)
+✔ promotes only a validated set and preserves unknown canonical content (464.036792ms)
+✔ recovers the last complete set across every promotion boundary (5629.629667ms)
+✔ recovers a stale owned lock after real child-process death with the right generation (6739.17825ms)
+✔ recovers after a stale-lock reclaimer dies with its ownership marker published (569.014375ms)
+✔ atomically reclaims one stale lock under a two-process barrier (589.436708ms)
+✔ refuses to rename or remove an unvalidated recovery backup (69.005167ms)
+✔ rejects a matching destination redirected through an ancestor symlink (36.309291ms)
+✔ mise pins Task 3.52.0 while preserving Node and Go pins (0.5295ms)
+✔ clean tree guard accepts only an empty successful porcelain status (2.542667ms)
+✔ clean tree guard reports the exact changed paths (0.293958ms)
+✔ clean tree guard propagates git spawn and non-zero failures (0.1775ms)
+✔ zero-argument CLI checks the inherited cwd without mutating files (118.504292ms)
+✔ zero-argument CLI reports untracked files hidden by Git configuration (107.305083ms)
+✔ connect-client typechecking includes its source tests (4.025042ms)
+✔ contract checker removes ignored descriptor temp residue on failure (63.39425ms)
+✔ contract checker passes production mode through and still cleans up (5.551458ms)
+✔ contract checker parses only the production mode flag (0.2895ms)
+✔ checker module exists (2.171667ms)
+✔ Conveyor manifest flattens the fixed module surface (0.622416ms)
+✔ Conveyor manifest rejects unknown modules, kinds, and duplicate procedures (1.04275ms)
+✔ native report exports remain in the desktop manifest without invented Core RPCs (0.229125ms)
+✔ parses the production-only coverage CLI option (0.205ms)
+✔ rejects missing, flag-like, duplicate, and unknown coverage CLI arguments (0.124958ms)
+✔ declared future RPC permits an absent planned preload (0.765208ms)
+✔ declared future RPC requires promotion when its preload is exposed (0.217ms)
+✔ RunSbrReadinessFixture production evidence is simulator-only (0.224708ms)
+✔ declared future RPC rejects executed cases (0.134417ms)
+✔ declared future RPC rejects an unknown future case (0.097125ms)
+✔ declared future transition permits a planned case (0.119959ms)
+✔ declared future transition rejects an executed case (0.072625ms)
+✔ a future case cannot satisfy a production RPC (0.080083ms)
+✔ a future case cannot satisfy a production transition (0.098292ms)
+✔ rejects an unknown coverage stage (0.072792ms)
+✔ production mode permits an unexposed declared future RPC (0.075083ms)
+✔ production mode permits a declared future transition (0.074709ms)
+✔ production RPC coverage requires an executed case (0.052584ms)
+✔ production transition coverage requires an executed case (0.053875ms)
+✔ business RPC coverage requires complete deterministic metadata (0.412792ms)
+✔ business RPC coverage accepts every normative idempotency class (0.310667ms)
+✔ production and future case IDs reject ambiguous semantic strings (0.272708ms)
+✔ only the planned slashless SBR simulator case bypasses namespaced case IDs (0.055167ms)
+✔ RPC semantic metadata rejects whitespace, control, bidi, and invisible strings (0.65275ms)
+✔ rejects unknown top-level coverage keys (0.060791ms)
+✔ rejects unknown scenario keys (0.054959ms)
+✔ rejects unknown RPC coverage keys (0.074875ms)
+✔ rejects unknown transition coverage keys (0.07075ms)
+✔ rejects unknown list metadata keys (0.051375ms)
+✔ rejects unknown idempotency metadata keys (0.054041ms)
+✔ scenario cases are nonempty, unique, disjoint, and globally unambiguous (0.111708ms)
+✔ RPC and transition case arrays reject empty and duplicate IDs (0.095875ms)
+✔ the legacy System stage omission never applies to transitions (0.058125ms)
+✔ missing descriptor RPC (0.051125ms)
+✔ unknown coverage RPC (0.05575ms)
+✔ missing transition (0.053791ms)
+✔ unknown transition (0.069958ms)
+✔ missing role outcome (0.085208ms)
+✔ extra role outcome (0.070333ms)
+✔ missing production preload (0.067041ms)
+✔ missing scenario case (0.064791ms)
+✔ malformed coverage manifest (0.045333ms)
+✔ malformed nested coverage manifest (0.060833ms)
+✔ duplicate YAML key (3.147333ms)
+✔ decodes descriptor RPCs with the generated well-known schema (0.635916ms)
+✔ reports a deterministic error for invalid descriptor wire data (0.149042ms)
+✔ permits only the reviewed pre-workspace system-query exception (0.098209ms)
+✔ rejects the reviewed system-query exception on business RPC coverage (0.098625ms)
+✔ system query requires the exact reviewed roles list and idempotency exceptions (0.184375ms)
+✔ system query validates optional development metadata when present (0.082542ms)
+✔ rejects an unreviewed not-applicable exception (0.051042ms)
+✔ real company EOFY descriptors and manifests catalogue only future surface (364.863042ms)
+✔ loads coverage from the descriptor and production manifests (25.546583ms)
+✔ retains runner provisioning, evidence classification, and artifacts around canonical CI tasks (7.072458ms)
+✔ records the pinned electron-vite Builder and Conveyor toolchain (0.752833ms)
+✔ keeps foundation traceability on the current build transport and tests (1.124ms)
+✔ documents the current Conveyor and packaged-runtime security controls (2.435375ms)
+✔ keeps current operator documentation on electron-vite Conveyor and Builder paths (2.206917ms)
+✔ keeps self-reporting and external approval boundaries explicitly open (0.654458ms)
+✔ distinguishes the authenticated Task build from raw bundle compilation (0.434291ms)
+✔ pins provisioning and evidence ownership independently for every CI job (16.238ms)
+✔ accepts the canonical fixed-header foundation matrix (1.335167ms)
+✔ requires the complete implemented Plan 1 foundation requirement set (0.092125ms)
+✔ requires the exact committed header (0.255917ms)
+✔ fails closed on malformed CSV quoting and row shapes (0.281917ms)
+✔ rejects duplicate and missing required requirement IDs (0.745875ms)
+✔ requires every field including design, test, evidence, owner, and DPO disposition (1.376041ms)
+✔ permits only the fixed evidence statuses (0.436ms)
+✔ rejects spreadsheet formula prefixes in evidence fields (0.46375ms)
+✔ rejects control, bidi, and invisible audit-spoofing characters in every column (14.534208ms)
+✔ allows a quoted newline without allowing other control characters (0.537333ms)
+✔ rejects Windows Server smoke presented as Windows 11 evidence (0.49575ms)
+✔ keys release-target classification to DESIGN-2.4 and DESIGN-13.5 semantics (0.362041ms)
+✔ rejects target evidence that omits any required unverified platform marker (2.761458ms)
+✔ does not let server smoke substitute for independent verified target evidence (0.365875ms)
+✔ allows explicitly absent Windows Server smoke without satisfying Windows 11 (0.211125ms)
+✔ allows a local packaged pass only when Windows 11 remains explicitly unverified (0.332375ms)
+✔ accepts one internally consistent target state for each implemented status (0.411333ms)
+✔ requires the three exact CI artifact identifiers exactly once (2.032833ms)
+✔ rejects contradictory values for every target evidence key (1.734125ms)
+✔ rejects duplicate target status and provenance keys (0.214333ms)
+✔ rejects unknown target keys and status values (0.268125ms)
+✔ requires local packaged command provenance as a separate exact token (0.228916ms)
+✔ requires honest protobuf breaking baseline status for DESIGN-13.3 (0.262875ms)
+✔ requires the complete no-claim product boundary in DESIGN-14 (1.429625ms)
+✔ binds the foundation-only product boundary to partial-target status (0.581834ms)
+✔ rejects contradictory product-boundary values for every protected capability (0.754041ms)
+✔ rejects duplicate, unknown, and legacy product-boundary assertions (1.8415ms)
+✔ rejects suffixed lookalikes for target, baseline, and product-boundary markers (0.725583ms)
+✔ rejects contradictory via suffixes on every mandatory verified target marker (1.174458ms)
+✔ rejects contradictory via suffixes on baseline and product-boundary markers (0.404375ms)
+✔ rejects verified target evidence that also retains exact unverified states (0.244875ms)
+✔ rejects an approval grant alongside the exact no-approval claim (0.157542ms)
+✔ rejects case and Unicode-lookalike mandatory markers (0.332083ms)
+✔ reads the evidence through one bounded no-follow file handle (11.809208ms)
+✔ rejects oversized, growing, and truncated evidence without an unbounded read (17.963584ms)
+✔ rejects file or committed-path identity changes during the bounded read (32.973875ms)
+✔ rejects a symlinked final path before opening it (7.567875ms)
+✔ accepts only a trusted physical root and the fixed evidence-relative path (11.636458ms)
+✔ rejects a real symlinked parent directory (5.027ms)
+✔ fails closed when an ancestor identity changes during validation (8.749375ms)
+✔ rejects a real FIFO replacement without blocking and closes its handle (66.69675ms)
+✔ documents exact-path and PID-scoped orphan recovery without broad process-name kills (5.648458ms)
+✔ generation produces the exact current output map (9.557458ms)
+✔ generated tree checker rejects tracked or untracked drift (2.334458ms)
+✔ required release-state gates reject blockers even when the state label matches (0.778ms)
+✔ release cleanliness ignores inherited Git repository and index redirection (222.348375ms)
+✔ accepts the canonical Gamma Systems release identity (1.452875ms)
+✔ release identity requires the exact shape and capability boundary (0.23ms)
+✔ rejects release identity drift in publisher (0.395958ms)
+✔ rejects release identity drift in supportEmail (0.139375ms)
+✔ rejects release identity drift in minimumMacOSVersion (0.273292ms)
+✔ rejects release identity drift in architectures (0.147375ms)
+✔ repository plist reader is portable and never shells out to plutil (0.863ms)
+✔ repository inspection binds Tammy identity, store resources and operator gates (388.2705ms)
+✔ repository inspection derives pre-upload and pre-submit states from canonical build records (880.178209ms)
+✔ non-signing check reports repository blockers without release input leakage (348.92225ms)
+✔ repository readiness binds the exact deployed public site to the canonical policy (1.279ms)
+✔ repository readiness rejects deployment evidence through a symlinked ancestor (613.296542ms)
+✔ repository readiness rejects a symlinked public-site root (439.265667ms)
+✔ repository readiness rejects a symlinked build ledger (481.552833ms)
+✔ repository inspection rejects installed-name drift from the desktop product name (604.173917ms)
+✔ company-controller attestations require the exact redacted accountable record (0.385875ms)
+✔ PNG dimension reader rejects malformed and non-square app icons (0.676958ms)
+✔ distribution inputs require absolute paths, explicit compliance and a positive build (0.437541ms)
+✔ unsigned staging accepts product facts but rejects every signing input (0.175042ms)
+✔ provisioning profiles bind the team, app identifier, mode, and expiry (0.314541ms)
+✔ decoded Apple profiles retain validation fields without converting certificate data (27.934625ms)
+✔ development signing does not require an installer identity (0.196083ms)
+✔ the repository checker emits the only release facts consumed by Builder (171.51725ms)
+✔ seller eligibility cannot be supplied through a symlink (210.440166ms)
+✔ build reservations and seller eligibility bind the exact version, build, and Team ID (0.392375ms)
+✔ store metadata is truthful, public-site bound, and leaves Apple facts operator-owned (0.862375ms)
+✔ public privacy policy states the shipped app, site, support, and cleanup boundaries (0.462375ms)
+✔ release metadata URLs must exactly match the configured public links (0.109125ms)
+✔ store plist validation requires exact sandbox inheritance and privacy values (0.232792ms)
+✔ records an explicit initial baseline when master has neither contract input (17.806541ms)
+✔ records an initial baseline from a real local-only master checkout (159.827792ms)
+✔ fails closed for a partial or malformed master baseline (15.77525ms)
+✔ fails closed when git inspection fails (4.124875ms)
+✔ fails closed when no fixed master reference can be resolved (4.280292ms)
+✔ fails closed when a fixed master reference resolves to malformed output (3.896708ms)
+✔ requires the current Buf configuration and at least one current contract (8.4225ms)
+✔ prefers a remote-only origin/master and runs Buf against its exact commit (7.406ms)
+✔ verifies a real checkout with only refs/remotes/origin/master (374.43625ms)
+✔ propagates an established Buf breaking failure (2.722917ms)
+✔ runs the pinned native Buf executable directly without a JavaScript shim (0.178542ms)
+✔ rejects a JavaScript launcher masquerading as the native Buf executable (3.754833ms)
+✔ resolves the installed platform package to a native Buf executable (1.0735ms)
+✔ Windows process-tree teardown forces descendants before the parent can exit (0.447416ms)
+✔ a failed Windows tree kill cannot report descendants as reaped (0.085125ms)
+✔ bounded teardown uses the injected Windows platform (0.2405ms)
+✔ a direct child close cannot cancel forced tree escalation (0.172167ms)
+✔ a timed-out command escalates and settles only after the child closes (0.14725ms)
+✔ a timed-out command leaves no stubborn grandchild (577.831125ms)
+✔ checks exactly the canonical preview routes (15.177917ms)
+✔ requires HTTPS outside built preview mode (0.267ms)
+✔ accepts framework hydration comments inside required visible text (0.725584ms)
+✔ rejects failures, non-HTML responses, and off-origin redirects (1.517958ms)
+✔ rejects an off-origin intermediate redirect even if it could return (0.276125ms)
+✔ follows a bounded same-origin redirect manually (0.535833ms)
+✔ requires canonical identity, navigation, privacy, support, platform, and boundary copy (1.536875ms)
+✔ requires absolute trusted Open Graph and X image metadata (0.327417ms)
+✔ requires exactly one trusted absolute canonical URL on every route (1.753667ms)
+✔ accepts the equivalent origin form for the root canonical URL (0.25075ms)
+✔ rejects placeholders, TestFlight copy, and positive production lodgement claims (0.389667ms)
+✔ bounds response bodies (1.409791ms)
+✔ times out a fetch that never returns headers (20.756708ms)
+✔ times out a response body that never completes (21.262833ms)
+✔ validates the strict public Sites deployment record (1.393958ms)
+✔ first deployment is immutable and creates no rollback event (8.113125ms)
+✔ rollback event requires a distinct existing prior passing deployment (7.308584ms)
+✔ deployment evidence rejects a symlinked deployments directory (1.960917ms)
+✔ current pointer rejects a pre-existing symbolic link (7.640917ms)
+✔ rollback evidence rejects a symlinked events directory (4.433417ms)
+✔ SBR operator docs use exact existing Task scenarios (65.501083ms)
+✔ every documented runnable SBR scenario has a real owner (6.416084ms)
+✔ SBR guide states the credential lifecycle and security boundary (1.471ms)
+✔ SBR guide owns the complete external registration handoff (2.914208ms)
+✔ current-state docs prohibit production SBR and BAS actions (2.096709ms)
+✔ reports missing exact installed inputs without claiming EVTE readiness (3.156042ms)
+✔ validates all exact installed inputs through the authenticated preflight (8.83025ms)
+✔ rejects unsafe installed inputs without disclosing their path (1.497792ms)
+✔ CLI is bounded, registration blocks nonzero, and doctor preflight may continue (200.476791ms)
+✔ coverage declares the exact normative policy for all 138 non-system RPCs (90.4935ms)
+✔ packaged purchase payments and GST catalogue preserves production policy (58.580917ms)
+✔ invoice draft and issue policy uses accounting-preparer roles and the dedicated invoice journey (37.599833ms)
+✔ company EOFY close, return preparation, and submission catalogue exactly 30 declared-future RPCs (37.15825ms)
+✔ packaged SBR readiness promotes all nine exposed and fail-closed RPCs (33.782458ms)
+✔ SBR credential inspection permits only administrators and business lodgers (0.166833ms)
+✔ reporting capability is promoted only with the packaged pre-setup evidence (27.589084ms)
+✔ every exposed business preload has production packaged evidence (44.185625ms)
+✔ current workflow policy names real routes and implemented command semantics (0.543667ms)
+✔ Slice 1 policy does not export a duplicate idempotency-mode vocabulary (0.614208ms)
+✔ coverage conflict failures match every public request concurrency field (22.077709ms)
+✔ session-action authentication failures match request presence (1.197334ms)
+✔ RPCs allowed to all four defined roles never claim permission denial (0.136917ms)
+✔ SetAccountStatus distinguishes system and control account failures (0.033459ms)
+✔ projection helper keeps TOTP initialisms in one snake-case token (0.090208ms)
+✔ site deployment tasks pass adversarial origins as one literal argument (481.358041ms)
+✔ MCP task requires a private connection file and passes its path literally (351.443792ms)
+✔ documentation presents Task scenarios as the local command front door (1.779292ms)
+✔ local Task front door preserves the safe development contract (5248.035167ms)
+✔ imports without argv or tool execution (38.412875ms)
+✔ creates a win32 command plan without cmd or bat shims (0.965709ms)
+✔ prefers an absolute pnpm JavaScript entry in a darwin command plan (0.13675ms)
+✔ reports command execution failures without leaking the underlying error (0.369292ms)
+✔ runs the current platform CLI without shell shims (408.427834ms)
+✔ accepts the exact pinned toolchain versions (0.185084ms)
+✔ reports every mismatched toolchain version (0.076292ms)
+✔ accepts only complete candidate-bound redacted privacy evidence (3.798584ms)
+✔ collects bounded exact-artifact facts and rejects resource drift (0.422417ms)
+✔ binds a bundled ASAR to the pinned production manifest and license metadata (60.403042ms)
+✔ parses the intentionally small policy Markdown contract (1.542541ms)
+✔ rejects indented ATX heading (0.283584ms)
+✔ rejects indented blockquote (0.091292ms)
+✔ rejects indented alternate list (0.05475ms)
+✔ rejects indented numbered list (0.055833ms)
+✔ rejects indented code (0.04875ms)
+✔ rejects fenced code (0.043209ms)
+✔ rejects table (0.042542ms)
+✔ rejects thematic break (0.046792ms)
+✔ rejects setext dash heading (0.085542ms)
+✔ rejects setext equals heading (0.049125ms)
+✔ rejects indented approved list (0.036583ms)
+✔ rejects raw HTML (0.049916ms)
+✔ rejects images (0.031417ms)
+✔ rejects relative links (0.047167ms)
+✔ rejects scripts (0.026291ms)
+✔ rejects duplicate headings (0.024208ms)
+✔ rejects unsupported syntax (0.024042ms)
+✔ rejects malformed inline syntax (0.027709ms)
+✔ rejects underscore emphasis (0.028292ms)
+✔ rejects strikethrough (0.023708ms)
+✔ rejects backslash escapes (0.027709ms)
+✔ rejects malformed link URLs (0.030709ms)
+✔ rejects mailto recipient other than support (0.028542ms)
+✔ rejects mailto header payload (0.03475ms)
+✔ rejects raw HTML in H1 (0.021542ms)
+✔ rejects unsupported syntax in effective date (0.021334ms)
+✔ rejects raw HTML in H2 (0.022375ms)
+✔ rejects missing effective date (0.020667ms)
+✔ generates safe deterministic TypeScript from trusted JSON inputs and parsed policy (0.649541ms)
+✔ rejects canonical identity drift: schema version (0.068542ms)
+✔ rejects canonical identity drift: extra top-level field (0.032417ms)
+✔ rejects canonical identity drift: bundle identifier (0.028209ms)
+✔ rejects canonical identity drift: architecture (0.037042ms)
+✔ rejects canonical identity drift: nested capability (0.028958ms)
+✔ rejects canonical identity drift: nested capability extra field (0.03225ms)
+✔ rejects invalid desktop semantic version 0.1 (0.063167ms)
+✔ rejects invalid desktop semantic version 01.1.0 (0.04575ms)
+✔ rejects invalid desktop semantic version 1.01.0 (0.04025ms)
+✔ rejects invalid desktop semantic version 1.0.01 (0.043541ms)
+✔ rejects invalid desktop semantic version 1.0.0- (0.032333ms)
+✔ rejects invalid desktop semantic version 1.0.0-alpha..1 (0.03525ms)
+✔ rejects invalid desktop semantic version 1.0.0+build..1 (0.038709ms)
+✔ writes byte-stable generated content to an explicit temporary output path (37.731042ms)
+✔ CLI --check never creates or changes generated output (165.077959ms)
+✔ cleans up an exclusively-created sibling temporary file after rename failure (4.172167ms)
+✔ retries a temporary-name collision before atomically replacing output (4.458458ms)
+✔ canonical repository policy, identity, and removal inventory generate deterministic public content (0.891833ms)
+✔ rejects invented public deletion guidance: additional path (0.457083ms)
+✔ rejects invented public deletion guidance: changed container path (0.117333ms)
+✔ rejects invented public deletion guidance: additional service (0.080458ms)
+✔ rejects invented public deletion guidance: development service (0.075709ms)
+✔ authenticates an archived package against one exact durable candidate record (12.743041ms)
+✔ rejects an archive or inspection that disagrees with the durable record (11.803833ms)
+✔ accounting launches the narrow package owner with no scenario arguments (1.265917ms)
+✔ accounting-fresh creates and retains one unique root passed only as Electron user data (0.200541ms)
+✔ pins the child to the Tammy repository when invoked from a foreign cwd (6.932042ms)
+✔ sbr-simulator launches the authenticated profile with isolated retained user data (0.190125ms)
+✔ sbr-evte stays fail-closed without creating a root or child (0.256166ms)
+✔ rejects extra or unknown inputs instead of forwarding them (0.086708ms)
+✔ forwards the first termination signal and finalizes once (0.204792ms)
+✔ bounds child output and escalates an unresponsive process group (0.272084ms)
+✔ keeps the retained-root marker on its own line after partial child stdout (0.107333ms)
+✔ uses direct child termination for supported Windows accounting (0.148583ms)
+✔ treats an already-exited macOS process group as a safe termination race (0.113833ms)
+✔ an error followed by close finalizes and reports a retained root exactly once (0.114375ms)
+✔ desktop package owner forwards only validated electron-vite arguments (0.303166ms)
+✔ scenario owner reserves the electron-vite sentinel and rejects the Forge sentinel (3.282709ms)
+✔ desktop package owner accepts only the owned SBR simulator root and explicit authority (0.217416ms)
+✔ desktop package owner rejects arbitrary arguments before starting a child (0.1805ms)
+✔ desktop:start:scenario reaches the rejecting owner instead of a generic shell (396.259375ms)
+✔ macOS SIGINT forwarding terminates the complete descendant process group (32.068291ms)
+✔ macOS SIGTERM forwarding terminates the complete descendant process group (33.797459ms)
+▶ maps spawn and nonzero child exits to deterministic errors
+  ✔ temporary-directory failure (0.444709ms)
+  ✔ synchronous spawn failure (0.228125ms)
+  ✔ spawn failure (0.165208ms)
+  ✔ child failure (0.166375ms)
+✔ maps spawn and nonzero child exits to deterministic errors (1.675125ms)
+✔ removes Tammy entries from only an explicit temporary macOS Keychain (782.708042ms)
+✔ owns the exact production local-data inventory (0.888084ms)
+✔ published inventory cannot be mutated into a broader removal boundary (0.221292ms)
+✔ removes only Tammy filesystem and Keychain data from an isolated home (12.383041ms)
+✔ refuses unsafe isolated-home and Team ID inputs (1.497459ms)
+✔ refuses absolute isolated-home paths containing glob syntax (0.527ms)
+✔ refuses a symlinked tammyContainer before deleting any data (11.044ms)
+✔ refuses a symlinked tammyGroup before deleting any data (15.153625ms)
+✔ refuses a target whose ancestor resolves outside the isolated home (57.299666ms)
+✔ refuses symlinked Library/Containers when the Tammy leaf is absent (16.38325ms)
+✔ refuses symlinked Library/Group Containers when the Tammy leaf is absent (18.145709ms)
+✔ refuses unknown and development Keychain services (0.27425ms)
+✔ owner has no executable CLI or shell deletion path (1.39725ms)
+✔ reads a clean committed product source and ledger reservation (206.511ms)
+✔ creates a redacted product-source record for one exact reservation (212.243459ms)
+✔ rejects a product-source record for an unreserved build or mismatched version (257.455167ms)
+✔ runs the read-only source command for an exact committed reservation (241.496458ms)
+✔ rejects ambiguous product-source command arguments (119.905167ms)
+✔ rejects dirty or uncommitted product-source facts (203.624667ms)
+✔ ignores inherited Git repository overrides and verifies the supplied root (285.961125ms)
+✔ creates an exact phase-two event without mutating the phase-one ledger (225.527791ms)
+✔ verifies a frozen source with only canonical screenshots and exact build records (345.747875ms)
+✔ rejects product changes and unvalidated bookkeeping after the frozen commit (884.343ms)
+✔ exposes only the monotonic readiness states (1.092875ms)
+✔ documents readiness, attestation, and lifecycle records in the release schema (53.492875ms)
+✔ derives readiness without requiring signing credentials for repository readiness (0.731833ms)
+✔ requires every exact candidate evidence boundary before candidate readiness (9.090334ms)
+✔ requires candidate, attestation, and lifecycle facts to be durable on the trusted remote (1.417959ms)
+✔ derives candidate durability from clean records reachable on the trusted Git remote (3552.454417ms)
+✔ requires all accountable pre-upload attestations and no App Store build ID (1.129709ms)
+✔ derives uploaded only from an exact candidate-bound uploaded event (0.802792ms)
+✔ requires processed build and declaration assets before pre-submit readiness (0.596958ms)
+✔ validates exact redacted common attestation schemas and kind-specific outcomes (0.384542ms)
+✔ rejects unknown fields, secrets, free-form blobs, unsafe references, and release drift (0.300333ms)
+✔ validates seller eligibility from the authorised active developer account (0.207292ms)
+✔ validates strict immutable lifecycle events (0.299375ms)
+✔ sorts redacted blockers and never lets lifecycle events skip readiness prerequisites (0.096042ms)
+✔ duplicate upload events cannot advance readiness (0.13175ms)
+✔ a conflicting second upload is ambiguous even when it targets different bytes (0.128167ms)
+✔ reordered lifecycle events are an explicit non-passing sequence (0.128458ms)
+✔ terminal lifecycle events consume readiness and submitted cannot precede upload (0.632ms)
+✔ attestation templates are explicitly non-passing operator guidance (4.940375ms)
+✔ enforces loopback-only networking in the actual macOS sandbox and child (93.076166ms)
+✔ requires a positive active-containment and audit preflight (0.442ms)
+✔ parses a pinned process tree and rejects replacements (0.368583ms)
+✔ records only exact gesture-bound public handoffs and strict zero-egress evidence (0.485625ms)
+✔ creates and authenticates a strict timestamp-independent unsigned manifest (168.898708ms)
+✔ requires the complete MAS runtime inventory and bundle fact bindings (2096.046708ms)
+✔ rejects unsafe symlinks and non-canonical manifest structure (137.158875ms)
+✔ atomically writes a manifest and clones only authenticated staging bytes (195.846125ms)
+✔ compares signed copies with only explicit signature and profile differences (632.630833ms)
+✔ ordinary packaging holds one owner across helper staging, manifest, package and verification (8.88ms)
+✔ ordinary package execution keeps one inherited owner through every command (21.075917ms)
+✔ ordinary output is an exact real directory (5.850041ms)
+✔ ordinary output rejects a symlink before Builder can overwrite it (6.293708ms)
+✔ exposes an injectable local package execution seam (0.503083ms)
+✔ distribution plan checks, builds, packages MAS and creates a signed flat package (2.408334ms)
+✔ development signing stops at a locally runnable MAS app (0.262166ms)
+✔ materializes exact Team-bound MAS entitlements without unresolved placeholders (27.303666ms)
+✔ release output rejects a symlinked ignored ancestor before locking or cleanup (14.188625ms)
+✔ release output rejects a direct Builder output symlink before Builder can overwrite it (9.992792ms)
+✔ code-signature normalization preserves the Mach-O payload and detects signed drift (124.961667ms)
+✔ publishes one authenticated unsigned payload and transactionally derives a signed copy (2036.4275ms)
+✔ mode-bound build and SBR manifests authenticate the exact packaged signed resources (707.999333ms)
+✔ distribution promotion requires a verified development-signed counterpart (457.032833ms)
+✔ development single-copy verification rejects unsigned resource drift (518.149625ms)
+✔ execution authenticates one unsigned stage before signing and publishing its copy (2.518917ms)
+✔ equivalence failure removes only the candidate staging copy before promotion (9.401ms)
+✔ development execution stops at the app without package validation or package output (1.4455ms)
+✔ outer MAS app seal failure stops before productbuild (1.391292ms)
+✔ build lock rejects concurrent owners, cleans failures, and never removes a foreign lock (13.230167ms)
+✔ distribution execution validates its package in the required order and emits stable JSON (10.8615ms)
+✔ distribution execution fails closed when a command runner cannot spawn (1.914042ms)
+✔ distribution execution treats an invalid package signature as fatal (1.441625ms)
+✔ distribution execution fails closed when Gatekeeper produces no verdict (1.219334ms)
+✔ distribution execution fails closed for an unclassifiable Gatekeeper verdict (1.144ms)
+✔ distribution execution records an ordinary pre-App-Store Gatekeeper rejection without failing (1.421125ms)
+✔ distribution execution fails closed for unexpected Gatekeeper status and verdict pairs (5.011166ms)
+✔ distribution execution preserves bounded validation-command output failures (2.1715ms)
+✔ distribution execution fails closed when Gatekeeper is terminated after a partial rejection (1.156625ms)
+✔ derives only the exact Electron macOS bundle (0.585958ms)
+✔ does nothing on platforms that do not require macOS signing (0.742167ms)
+✔ keeps a valid Electron runtime unchanged (0.909083ms)
+✔ ad-hoc signs an invalid Electron runtime and verifies the result (0.120916ms)
+✔ fails closed when the repaired runtime does not verify (0.141333ms)
+✔ validates one exact candidate-bound staged evidence set (46.02525ms)
+✔ collects one exact source set into an exclusive durable local staging directory (72.031917ms)
+✔ promotes atomically with the exclusive candidate event last (85.664791ms)
+✔ retains wrapped canonical UUID and SHA-256 identities exactly (1.6235ms)
+✔ rejects canonical UUID substrings with adjacent identifier characters (0.537959ms)
+✔ rejects SHA-256 substrings with adjacent identifier characters (0.518625ms)
+✔ rejects missing identities and same-length canonical substitutions (0.674666ms)
+✔ pairs the Review document label with exactly one complete identifier (0.992916ms)
+✔ keeps prose, dates, amounts, enums, versions, and timestamps on normalized text (0.088667ms)
+✔ checks outside-repository operator input without creating a record (20.313ms)
+✔ records one fact exclusively and enforces lifecycle prerequisites (70.24275ms)
+✔ rejects a fact whose local candidate prerequisite is not durable on origin (34.008792ms)
+✔ validates the strict monotonic build-number ledger (2.346375ms)
+✔ parses only the explicit reservation or read-only check CLI (0.157125ms)
+✔ derives consumed build numbers from immutable lifecycle events and binds them to reservations (9.592125ms)
+✔ rejects misplaced, misnamed, and unknown lifecycle event files (16.580583ms)
+✔ recognizes an exact candidate-built marker without treating it as consumption (11.358917ms)
+✔ atomically reserves a greater build number without phase-two facts (17.341292ms)
+✔ parallel reservation attempts never duplicate or corrupt the ledger (15.632458ms)
+✔ the committed ledger exposes the explicit build 2–5 reservations (0.919792ms)
+✔ ordinary helper builds reject a concurrent MAS owner and inherited children share ownership (10.495542ms)
+✔ the exact owned lock directory is ignored by a real clean Git tree (106.080375ms)
+✔ parses a deterministic nested manifest and exposes RFC 8785 bytes and hash (2.489ms)
+✔ canonicalization is independent of Array.prototype.toJSON pollution (0.457042ms)
+✔ canonicalization is independent of Array.prototype.reduce pollution (0.28425ms)
+✔ maps hostile manifest accessors to canonicalization errors (0.309417ms)
+✔ rejects missing, unknown, duplicate, and escaped-alias keys (0.349666ms)
+✔ rejects invalid root field types and bounded identifiers (0.691ms)
+✔ requires strict sorted normalized collision-free POSIX paths (0.704584ms)
+✔ allows dot-prefixed component path segments (40.261416ms)
+✔ uses raw UTF-8 byte ordering instead of locale ordering (0.421125ms)
+✔ rejects invalid lengths, hashes, file count, and aggregate size (1.969625ms)
+✔ the documentation manifest is schema-valid but deliberately cannot verify (14.3555ms)
+✔ bounds raw bytes, nesting, Unicode, and trailing JSON (0.540209ms)
+✔ enforces canonical manifest bytes for direct objects and parsed wrappers (14.882292ms)
+✔ accepts a canonical manifest exactly at the 256 KiB boundary (13.770625ms)
+✔ cross-hashes must be strict, equal, and bind exact canonical bytes (0.458208ms)
+✔ maps accessor and proxy hazards to deterministic errors without leaking details (1.449875ms)
+✔ a descriptor-relative test adapter verifies nested files with relative evidence (28.454834ms)
+✔ default Node bundle verification fails closed before opening component input (0.350417ms)
+✔ descriptor-adapter reflection hazards fail closed without leaking details (0.189917ms)
+✔ rejects length mismatch (15.420917ms)
+✔ rejects hash mismatch (7.946083ms)
+✔ rejects missing and undeclared files or directory content (35.378042ms)
+✔ rejects an empty undeclared directory (19.287791ms)
+✔ rejects a symlink file without following it (21.804125ms)
+✔ rejects a symlink directory without following it (17.880083ms)
+✔ rejects a symlink component root (5.996709ms)
+✔ a descriptor-relative adapter never accepts a swapped outside directory (8.868208ms)
+✔ a descriptor-relative adapter rejects real hard-link aliases (7.21825ms)
+✔ rejects a special file without blocking where supported (21.796416ms)
+✔ bounds actual entry count and directory depth (679.952875ms)
+✔ rejects repeated fake file identities and closes every descriptor (0.736833ms)
+✔ closes retained directory descriptors when a parent entry is swapped (0.272375ms)
+✔ closes root and file descriptors when verification fails (0.266709ms)
+✔ closes the root descriptor when root stat or enumeration fails (0.331375ms)
+✔ bounds reads if a declared file grows after its descriptor stat (0.210583ms)
+✔ fails closed before opening when secure flags are missing, invalid, or substituted (0.948375ms)
+✔ uses the platform no-follow and nonblocking flags on root and declared files (30.3645ms)
+✔ closed incomplete modes fail with one exact stable code and no output (275.581584ms)
+✔ the owner rejects every value outside its closed enum (104.038458ms)
+✔ the incomplete owner contains no child-process or output owner (0.950208ms)
+✔ parses the exact simulator schema and emits RFC 8785 canonical bytes (2.3795ms)
+✔ accepts the exact EVTE cross-hash shape (0.200791ms)
+✔ rejects unknown field (0.251917ms)
+✔ rejects missing field (0.094542ms)
+✔ rejects wrong schema version (0.410208ms)
+✔ rejects wrong target (0.243958ms)
+✔ rejects uppercase hash (0.0895ms)
+✔ rejects short hash (0.075125ms)
+✔ rejects malformed hash (0.085ms)
+✔ rejects non-string hash (0.13625ms)
+✔ rejects simulator component hash (0.085125ms)
+✔ rejects simulator registration hash (0.069125ms)
+✔ rejects simulator endpoint hash (0.061042ms)
+✔ rejects EVTE NONE component hash (0.065666ms)
+✔ rejects EVTE NONE registration hash (0.056ms)
+✔ rejects EVTE NONE endpoint hash (0.073875ms)
+✔ rejects EVTE non-string cross hash (0.085792ms)
+✔ rejects forbidden environment (0.056625ms)
+✔ rejects duplicate and escaped-alias keys before JSON parsing erases them (0.116875ms)
+✔ rejects duplicate keys nested inside an otherwise unknown field (0.071334ms)
+✔ permits array structure at the nesting boundary before schema rejection (0.1115ms)
+✔ rejects array structure over the nesting boundary deterministically (0.094ms)
+✔ permits object structure at the nesting boundary before schema rejection (0.095958ms)
+✔ rejects object structure over the nesting boundary deterministically (0.086667ms)
+✔ maps deeply nested array input to the bounded schema error (0.108875ms)
+✔ maps deeply nested object input to the bounded schema error (0.0735ms)
+✔ rejects non-object root (0.050708ms)
+✔ rejects trailing data (0.064375ms)
+✔ rejects invalid UTF-8 (0.040292ms)
+✔ rejects lone surrogate (0.0425ms)
+✔ rejects non-canonical offset (0.103292ms)
+✔ rejects fractional timestamp (0.075875ms)
+✔ rejects invalid calendar timestamp (0.064ms)
+✔ rejects not-yet-valid profile (0.060083ms)
+✔ rejects expired profile (0.066166ms)
+✔ rejects non-increasing validity window (0.055958ms)
+✔ bounds profile bytes before parsing (0.06175ms)
+✔ bounds detached signature bytes before decoding (0.327292ms)
+✔ verifies only strict base64 detached Ed25519 signatures over canonical bytes (1.604833ms)
+✔ rejects a wrong signature, wrong public key, and oversized trust input (0.769833ms)
+✔ accepts only one canonical Ed25519 SPKI public-key PEM (4.152375ms)
+✔ committed documentation fixture authenticates with its committed advisory test key (8.995625ms)
+✔ prototype toJSON pollution cannot authenticate a tampered profile (1.107ms)
+✔ canonicalization rejects accessors, toJSON hooks, and canonicalizer hazards deterministically (0.280875ms)
+✔ loads owned private regular profile inputs using no-follow opens (8.353875ms)
+✔ rejects a symlink profile file (5.255166ms)
+✔ rejects a symlink signature file (3.492042ms)
+✔ rejects a group/world-writable profile file (3.737792ms)
+✔ rejects a group/world-writable signature file (8.743459ms)
+✔ rejects non-regular input files (3.690916ms)
+✔ rejects an oversized profile file before parsing (2.26475ms)
+✔ validates file ownership through injectable open handles (0.1725ms)
+✔ fails closed before opening when no-follow semantics are unavailable or invalid (0.212291ms)
+✔ fails closed before opening when nonblocking semantics are unavailable or invalid (0.515ms)
+✔ cannot substitute the secure-open flags (2.18275ms)
+✔ closes every opened descriptor when the signature open fails (0.273709ms)
+✔ closes every opened descriptor when the signature stat fails (0.101208ms)
+✔ closes every opened descriptor when the signature read fails (0.108292ms)
+✔ bounds descriptor reads when a file grows after fstat (0.241917ms)
+✔ does not return while a concurrently opened signature handle remains pending (0.122542ms)
+✔ profile failure has fixed precedence and prevents a failing signature open (0.081792ms)
+✔ closes the profile descriptor after a stat failure (0.087042ms)
+✔ closes the profile descriptor after a read failure (0.057584ms)
+✔ rejects a FIFO without blocking on supported POSIX hosts (53.44825ms)
+✔ parses and freezes the exact Product ID scope bound to one registration service (4.479416ms)
+✔ parses the exact registration schema and emits stable canonical bytes and hash (0.696209ms)
+✔ bounds canonical registration evidence for direct objects, parsed wrappers, and crypto/readiness (46.876792ms)
+✔ bounds canonical endpoint evidence for direct objects and parsed wrappers (20.016375ms)
+✔ pre-conformance readiness accepts an enrolled service that has not started conformance (0.408333ms)
+✔ snapshots trusted clock milliseconds without calling overridable Date methods (3.225875ms)
+✔ uses captured Date intrinsics after ambient Date methods are monkeypatched (1.537708ms)
+✔ reports deterministic readiness failures without mutating signed input (1.67625ms)
+✔ uses stable registration readiness precedence independent of object key order (1.961333ms)
+✔ rejects unknown, missing, duplicate, escaped-alias, malformed, and oversized registration input (0.459166ms)
+✔ rejects invalid registration types, enums, dates, hashes, and state transitions (2.466666ms)
+✔ requires sorted unique services and sorted unique lowercase artefact hashes (0.710708ms)
+✔ parses only the exact bounded EVTE endpoint profile and returns canonical bytes (0.830542ms)
+✔ verifies strict detached Ed25519 registration signatures using only caller-pinned SPKI (1.200333ms)
+✔ rejects prototype pollution and hostile accessors without exposing accessor errors (0.976875ms)
+✔ rejects a caller-self-signed bundle at the code-owned unregistered trust root (1.282917ms)
+✔ normalizes revoked proxies for every high-level evidence byte field (1.729ms)
+✔ normalizes incompatible and revoked byte proxies across schema boundaries (0.599542ms)
+✔ rejects oversized bytes and strings before any Buffer copy across schema boundaries (45.040166ms)
+✔ accepts exact raw byte boundaries before structural validation (26.957709ms)
+✔ rejects every registration/profile/component/endpoint cross-hash or metadata mismatch (3.173416ms)
+✔ cross-binding requires exact sorted registration and endpoint service sets (1.926959ms)
+✔ keeps checked-in examples unsigned, placeholder-only, schema-valid, and not ready (7.860375ms)
+✔ reads and hashes a regular file through a stable no-follow handle (18.188459ms)
+✔ rejects a lexical symlink and a same-path replacement after reading (33.602291ms)
+✔ rejects files beyond the explicit read bound (2.061625ms)
+✔ fails closed for every missing native release input (1.335167ms)
+✔ unconfigured CLI exits closed before signing or showing a chooser (36.053583ms)
+✔ rejects unsupported hosts, ad-hoc identities, relative inputs, and identity/team mismatch (0.355209ms)
+✔ build plan signs native host and helper with the configured identity and shared authority (0.364958ms)
+✔ validates shared provisioning authority as exact plist fields, not text fragments (0.247167ms)
+✔ Swift fixture keeps file reading in the helper and uses scoped resolution/read/stop (3.625375ms)
+✔ MAS parent and SBR helper declare the same pinned app-group and Keychain authority (1.169333ms)
+▶ SQLCipher release pin
+  ✔ accepts only the exact official 4.15.0 archive identity (0.821875ms)
+  ✔ rejects release drift in version (0.302875ms)
+  ✔ rejects release drift in url (0.117584ms)
+  ✔ rejects release drift in sha256 (0.11975ms)
+  ✔ rejects release drift in sourceTreeSha256 (0.128958ms)
+  ✔ rejects release drift in archiveName (0.101292ms)
+  ✔ rejects release drift in rootDirectory (0.097541ms)
+✔ SQLCipher release pin (2.301125ms)
+▶ SQLCipher archive boundary
+  ✔ accepts regular files and directories only below the pinned root (6.280583ms)
+  ✔ rejects unsafe File entry  (0.131958ms)
+  ✔ rejects unsafe File entry ../escape (0.12475ms)
+  ✔ rejects unsafe File entry /absolute (0.059792ms)
+  ✔ rejects unsafe File entry C:\escape (0.048ms)
+  ✔ rejects unsafe File entry \\server\share\escape (0.044584ms)
+  ✔ rejects unsafe File entry sqlcipher-4.15.0\..\escape (0.064208ms)
+  ✔ rejects unsafe File entry sqlcipher-4.15.0/NUL name (0.048208ms)
+  ✔ rejects unsafe File entry sqlcipher-4.15.0/controlname (0.046042ms)
+  ✔ rejects unsafe File entry sqlcipher-4.15.0/../../escape (0.050041ms)
+  ✔ rejects unsafe File entry other-root/file (0.051416ms)
+  ✔ rejects unsafe SymbolicLink entry sqlcipher-4.15.0/link (0.057584ms)
+  ✔ rejects unsafe Link entry sqlcipher-4.15.0/hard (0.046542ms)
+  ✔ rejects unsafe CharacterDevice entry sqlcipher-4.15.0/device (0.050542ms)
+  ✔ rejects oversized and duplicate archive entries (0.19025ms)
+  ✔ bounds entry count and total uncompressed size (1.058417ms)
+  ✔ uses POSIX archive paths regardless of host path rules (0.095625ms)
+✔ SQLCipher archive boundary (8.70975ms)
+▶ SQLCipher cached source authentication
+  ✔ rejects tampering in a non-license source file (38.350625ms)
+✔ SQLCipher cached source authentication (38.843625ms)
+✔ verifies retained evidence against a fresh canonical build without mutating it (63.971209ms)
+✔ rejects duplicate or otherwise noncanonical raw manifest JSON (11.944834ms)
+✔ rejects internally consistent stale retained evidence without repairing it (13.310417ms)
+✔ rejects a retained source revision that is not a valid commit (12.5625ms)
+✔ rejects a subject that is not the source revision or its evidence-only child (6.004792ms)
+✔ rejects checkout source changes not represented by the retained revision (8.796583ms)
+✔ delegates non-mutating evidence verification to ordered Linux and Windows CI tasks (0.827125ms)
+✔ ordinary verification requires exact helper identity and no entitlements (11.989959ms)
+✔ MAS verification rejects network entitlements and wrong Team ID (5.827334ms)
+✔ MAS verification accepts only the expanded pinned Team authority (7.777834ms)
+✔ MAS verifier structurally rejects hostile entitlement values and extras (14.459917ms)
+✔ misleading requirement text cannot replace codesign requirement evaluation (9.379417ms)
+✔ Windows SQLCipher workflow derives, validates, and exports exact COMSPEC (2.393ms)
+✔ Windows 11 workflow installs Task and delegates native evidence to one canonical scenario (0.578542ms)
+✔ Windows 11 Task handoff preserves the full guarded native release-gate sequence (6.325ms)
+✔ creates the exact stable manifest fields and ordering (1.327292ms)
+✔ normalizes nested pin maps into stable key order (0.178375ms)
+✔ rehashes a signed core without executing it or changing authenticated provenance (19.191666ms)
+✔ rejects dirty CI source and unsupported targets (0.396625ms)
+✔ rejects SQLCipher version, runtime, hash, or shape drift (0.300584ms)
+✔ selects CI mode from only the exact CI flag (0.081959ms)
+✔ sanitizes Git redirection and stabilizes command locale (0.07675ms)
+✔ bounds command execution and settles only after the child callback (5.604542ms)
+✔ rejects malformed source revisions and hashes (0.5095ms)
+✔ rejects missing, extra, or unpinned version and lock entries (0.311333ms)
+✔ rejects credential, secret, token, password, or environment fields (0.227709ms)
+✔ hashes a sorted protobuf tree with path boundaries (13.206125ms)
+✔ does not collide when content contains the former path delimiter encoding (8.550833ms)
+✔ orders non-ASCII protobuf paths by UTF-8 bytes independent of locale (6.511333ms)
+✔ rejects a protobuf tree changed after a file is hashed (3.121042ms)
+✔ rejects a protobuf root replacement even when the file identity is preserved (3.810792ms)
+✔ rejects symlinks and an empty protobuf tree (4.557833ms)
+✔ cleans build staging and atomically writes canonical JSON (23.783166ms)
+✔ removes the temporary file when atomic rename fails (18.815042ms)
+✔ excludes a concurrent manifest publisher with a bounded staging lock (17.536708ms)
+✔ does not clean a replacement build root after taking the staging lock (12.443541ms)
+✔ does not traverse a symlink replacement while cleaning failed staging (24.317959ms)
+✔ rejects an invalid build staging keep file (8.838ms)
+✔ collects only committed pins, fixed git commands, and authenticated hashes (26.996625ms)
+✔ rejects redirected repositories and concurrent Git observations (20.681625ms)
+✔ consumes the existing exact-revision 0600 PASSED result into redacted evidence (8.673542ms)
+✔ fails closed for stale, malformed, insecure, or symlinked results and removes stale evidence (16.795292ms)
+✔ CLI accepts no inputs and does not invoke Playwright (55.610291ms)
+ℹ tests 757
+ℹ suites 12
+ℹ pass 756
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 1
+ℹ todo 0
+ℹ duration_ms 20723.121542
+✔ normalizes an ordinary macOS app without signing or leaking macOS usage keys (64.465292ms)
+✔ writes the exact unsigned MAS release profile and export-compliance boolean (75.447292ms)
+✔ does not invoke macOS plist tooling for Windows and rejects unsupported targets (2.16875ms)
+✔ rejects every ASCII control character in MAS public URLs (23.19075ms)
+✔ rejects symlinked output app roots and resources (42.829958ms)
+✔ electron-builder configuration is a deterministic Tammy package contract (7.094667ms)
+✔ the active desktop toolchain has no Electron Forge compatibility surface (1.475583ms)
+✔ resolves the exact macOS arm64 package paths (1.116166ms)
+✔ leaves Mac App Store artifacts under the dedicated release verifier (0.194709ms)
+✔ resolves the exact Windows x64 package paths (0.152458ms)
+✔ rejects unsupported targets, traversal tokens, and relative roots (0.115833ms)
+✔ rejects additional Builder output directories and application candidates (19.417375ms)
+✔ allows only Builder debug metadata beside the ordinary target (25.110042ms)
+✔ rejects a symlinked Builder output ancestor (9.102334ms)
+✔ verifies the exact darwin/arm64 source and packaged layout (14.709625ms)
+✔ verifies the exact win32/x64 source and packaged layout (7.657042ms)
+✔ rejects missing files and a source manifest outside the exact build path (8.420667ms)
+✔ rejects extra and stale recursive resource entries (12.696417ms)
+✔ rejects symlinks, non-zero keep files, and non-regular executables (25.333459ms)
+✔ rejects a hash-consistent but unauthenticated simulator profile signature (15.727084ms)
+✔ rejects manifest byte mismatch, core hash mismatch, and ASAR-contained core (23.160167ms)
+✔ allows quoted PEM delimiters used by bundled parsers (13.323166ms)
+✔ checks PEM delimiters across read boundaries and after harmless parser strings (115.338042ms)
+✔ rejects simulator private-key material and duplicate SBR resources (38.493584ms)
+✔ rejects semantically invalid authenticated manifests (73.736292ms)
+✔ rejects duplicate-key and noncanonical manifest JSON (18.261ms)
+✔ rejects packed darwin/arm64 core metadata inside app.asar (6.54575ms)
+✔ rejects unpacked darwin/arm64 core metadata inside app.asar (7.044334ms)
+✔ rejects packed win32/x64 core metadata inside app.asar (3.618459ms)
+✔ rejects unpacked win32/x64 core metadata inside app.asar (3.660791ms)
+✔ rejects malformed, truncated, and oversized ASAR headers (19.603792ms)
+✔ rejects a non-regular or symlinked app.asar (13.003791ms)
+✔ rejects noncanonical or escaping ASAR link targets (38.339333ms)
+✔ rejects an abusive ASAR packed offset without unbounded integer parsing (7.18725ms)
+✔ rejects a lost executable bit on macOS (20.366583ms)
+✔ rejects a resource tree changed before final identity revalidation (10.371667ms)
+ℹ tests 36
+ℹ suites 0
+ℹ pass 36
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 603.362625
+ok  	github.com/tammyapp/tammy/services/core/cmd/tammy-core	(cached)
+ok  	github.com/tammyapp/tammy/services/core/cmd/tammy-evidence-verify	(cached)
+ok  	github.com/tammyapp/tammy/services/core/internal/accounting	(cached)
+ok  	github.com/tammyapp/tammy/services/core/internal/accounting/templates	(cached)
+ok  	github.com/tammyapp/tammy/services/core/internal/annualreporting	(cached)
+ok  	github.com/tammyapp/tammy/services/core/internal/app	(cached)
+ok  	github.com/tammyapp/tammy/services/core/internal/artefacts	(cached)
+ok  	github.com/tammyapp/tammy/services/core/internal/audit	(cached)
+ok  	github.com/tammyapp/tammy/services/core/internal/authorisation	(cached)
+ok  	github.com/tammyapp/tammy/services/core/internal/backup	(cached)
+?   	github.com/tammyapp/tammy/services/core/internal/banking	[no test files]
+ok  	github.com/tammyapp/tammy/services/core/internal/buildinfo	(cached)
+ok  	github.com/tammyapp/tammy/services/core/internal/contracts	(cached)
+ok  	github.com/tammyapp/tammy/services/core/internal/documents	(cached)
+?   	github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1	[no test files]
+?   	github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1/tammyv1connect	[no test files]
+ok  	github.com/tammyapp/tammy/services/core/internal/idempotency	(cached)
+ok  	github.com/tammyapp/tammy/services/core/internal/identity	(cached)
+ok  	github.com/tammyapp/tammy/services/core/internal/invoices	(cached)
+ok  	github.com/tammyapp/tammy/services/core/internal/organisations	(cached)
+ok  	github.com/tammyapp/tammy/services/core/internal/overview	(cached)
+?   	github.com/tammyapp/tammy/services/core/internal/platform/abn	[no test files]
+ok  	github.com/tammyapp/tammy/services/core/internal/platform/canonical	(cached)
+ok  	github.com/tammyapp/tammy/services/core/internal/platform/clock	(cached)
+ok  	github.com/tammyapp/tammy/services/core/internal/platform/faults	(cached)
+ok  	github.com/tammyapp/tammy/services/core/internal/platform/ids	(cached)
+?   	github.com/tammyapp/tammy/services/core/internal/platform/jobs	[no test files]
+ok  	github.com/tammyapp/tammy/services/core/internal/platform/money	(cached)
+ok  	github.com/tammyapp/tammy/services/core/internal/platform/paging	(cached)
+ok  	github.com/tammyapp/tammy/services/core/internal/platform/uow	(cached)
+ok  	github.com/tammyapp/tammy/services/core/internal/purchases	(cached)
+?   	github.com/tammyapp/tammy/services/core/internal/reporting	[no test files]
+ok  	github.com/tammyapp/tammy/services/core/internal/reportingcapability	(cached)
+ok  	github.com/tammyapp/tammy/services/core/internal/restore	(cached)
+?   	github.com/tammyapp/tammy/services/core/internal/revisions	[no test files]
+?   	github.com/tammyapp/tammy/services/core/internal/sales	[no test files]
+ok  	github.com/tammyapp/tammy/services/core/internal/sbr	(cached)
+ok  	github.com/tammyapp/tammy/services/core/internal/sbrhelper	(cached)
+ok  	github.com/tammyapp/tammy/services/core/internal/sbrprofile	(cached)
+ok  	github.com/tammyapp/tammy/services/core/internal/storage/migrations	(cached)
+ok  	github.com/tammyapp/tammy/services/core/internal/system	(cached)
+ok  	github.com/tammyapp/tammy/services/core/internal/taxrules	(cached)
+?   	github.com/tammyapp/tammy/services/core/internal/testkit	[no test files]
+ok  	github.com/tammyapp/tammy/services/core/internal/transport	(cached)
+ok  	github.com/tammyapp/tammy/services/core/internal/workspace	(cached)
+$ node --test src/*.test.ts
+✔ calculates per-line half-up amounts, GST and private cost margin using minor units (2.202417ms)
+✔ rounds GST per line and never taxes GST-free, input-taxed or out-of-scope rows (0.223084ms)
+✔ permits incomplete customer and seller address in an editable draft, not in an issued invoice (1.405167ms)
+✔ rejects unknown properties and identity or execution data in an MCP draft (0.142375ms)
+✔ validates actual dates, due ordering, ABN checksums and UUIDv7 document references (0.271042ms)
+✔ rejects invalid quantities, prices, tax treatment and unregistered GST (0.261708ms)
+✔ bounds line count, text size and invoice totals (0.428ms)
+✔ allows blank draft dates for editing but requires calendar dates before issue (0.172042ms)
+✔ counts Unicode characters consistently with Core and rejects malformed Unicode (0.163625ms)
+✔ returns an independent normalized draft without mutating callers (0.157292ms)
+✔ formats AUD and thousandth quantities without exposing floating-point artifacts (22.4505ms)
+✔ publishes a strict bounded draft schema for MCP without exposing application identity fields (0.083292ms)
+✔ validates canonical local PNG and JPEG logo bytes with their actual dimensions (4.556667ms)
+✔ rejects remote, malformed, non-canonical, oversized and misleading logos before rendering (11.510958ms)
+✔ PDF readiness validates optional logos before the issue boundary (0.638917ms)
+✔ rejects a JPEG whose scan has no encoded image data (0.222ms)
+✔ contains wide and tall logos in the header without stretching their aspect ratios (78.466333ms)
+✔ allows an issued document with supported Latin, Greek and Cyrillic text (2.192334ms)
+✔ blocks structurally valid but unexportable CJK identities before issue without modifying the draft (0.316667ms)
+✔ preflights every customer-visible field but never private source references or costs (0.509333ms)
+✔ embeds a real transparent company PNG while retaining invoice identity and customer privacy (105.60925ms)
+✔ embeds a real company JPEG without accessing the network (48.0775ms)
+✔ fails rather than silently returning a PDF when valid PNG chunks contain invalid image data (41.193958ms)
+✔ renders an actual offline A4 pdfcn invoice with draft label, AUD and GST totals (39.412ms)
+✔ customer PDF excludes source document references, unit costs and margins (38.129583ms)
+✔ long descriptions, fifty rows and notes paginate with actual page counts and repeated headers (243.679292ms)
+✔ non-GST-registered sellers produce an Invoice, never a Tax Invoice (37.448667ms)
+✔ issued PDF validates identities and omits draft marking (36.431667ms)
+✔ PDF seller identity accepts 256 characters and rejects excessive text or controls (82.918625ms)
+✔ fails clearly on unsupported font characters rather than silently altering invoice identities (0.496208ms)
+✔ embeds its packaged Noto Sans font for Latin accents, Greek and Cyrillic without system fonts (40.303458ms)
+✔ keeps a standard three-line mixed-GST invoice and its payment instructions on one page (46.384542ms)
+ℹ tests 32
+ℹ suites 0
+ℹ pass 32
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 877.736917
+$ node --test src/*.test.ts
+✔ report font derivatives preserve every glyph and metric table while disabling substitution (9.272958ms)
+✔ report font modules regenerate exactly from pinned original files (46.360334ms)
+✔ income summary CSV preserves exact integer cents, dates, counts and authoritative context (46.423875ms)
+✔ BAS CSV is rectangular, retains every source, negative GST, formulas and warnings (25.815458ms)
+✔ empty sources and zero totals remain explicit, unsupported PDF text keeps Unicode CSV available (3.287209ms)
+✔ malformed dates, currencies, identity, money and source overflow fail visibly (1.028583ms)
+✔ both actual PDFs retain report totals and BAS source headers repeat across pages (292.635333ms)
+✔ CSV neutralises every formula prefix through whitespace and controls while keeping numeric negatives exact (6.950416ms)
+✔ reconciled BAS CSV exports exact purchase provenance, allocation, review and 1B reconciliation (3.345708ms)
+✔ reconciled BAS PDF independently exposes retained purchase hashes, review and opening source (324.818667ms)
+✔ reconciled BAS preserves optional retained metadata as not retained without a live lookup (134.751125ms)
+✔ reconciled BAS permits supplier and invoice metadata to be independently absent (257.265625ms)
+✔ reconciled BAS preserves both hashes for a reviewed legacy purchase document (130.1805ms)
+✔ reconciled BAS preserves a legacy decision's narrower reviewed period without treating it as current-period resolution (127.913042ms)
+✔ reconciled BAS PDF retains unresolved legacy source identity and document hashes without a decision (116.062375ms)
+✔ reconciled BAS neutralises formula text and preserves Unicode plus negative cents (126.399791ms)
+✔ reconciled BAS keeps original deferral scope and evidence distinct from the current review (127.227417ms)
+✔ reconciled BAS retains a future-claim obligation when its current status is clear (1.784292ms)
+✔ reconciled BAS requires complete bounded identities and reconciles only claimed source GST (16.237916ms)
+✔ reconciled BAS independently parses all 1000 supported purchase source rows (17532.906125ms)
+✔ purchase PDF rows keep each allocation identity, provenance and exact amounts together (133.189542ms)
+✔ byte bounds reject oversized output without truncation and accept the exact 16 MiB limit (0.938917ms)
+✔ saved workpaper creation time retains full nanosecond precision (1.273833ms)
+✔ BAS rejects invalid money, currencies, source identity, hash, basis and bounds (0.348542ms)
+✔ maximum BAS PDF renders all 1000 sales and 1000 purchases with intact dates and cents (4124.878708ms)
+✔ BAS source dates and full int64 cents remain intact beside long unbroken party identities (135.715625ms)
+✔ long organisation names keep PDF metric labels and exact amounts readable (119.571708ms)
+✔ each BAS source keeps its exact amount and retained identity together across page breaks (198.513584ms)
+✔ PDF text preserves Latin ligature sequences in every retained identity and provenance field (112.425458ms)
+✔ combining marks remain exact in CSV and fail visibly in PDF rather than losing characters (2.800917ms)
+✔ report fonts preserve precomposed Latin, Greek and Cyrillic text exactly (146.087125ms)
+✔ format controls stay exact in CSV and fail visibly in PDF (5.327666ms)
+ℹ tests 32
+ℹ suites 0
+ℹ pass 32
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 24366.857417
+$ node --test src/*.test.ts
+✔ broker binds ephemeral IPv4 loopback and serves only validated catalog reads (13.705375ms)
+✔ every route requires exactly one canonical Bearer capability (9.77125ms)
+✔ broker rejects browser origins, non-exact Host authorities, queries and generic RPC (6.065375ms)
+✔ broker requires JSON, rejects malformed/write envelopes and bounds request bytes (2.579083ms)
+✔ broker suppresses execution details and returns only whitelisted session errors (1.737334ms)
+✔ broker rejects non-JSON and oversized results without reflecting their values (4.442292ms)
+✔ broker times out a stalled read after five seconds (5005.3575ms)
+✔ closing the broker revokes its connection and is idempotent (2.219833ms)
+✔ broker bounds chunked bodies and rejects missing or duplicate Host headers (3.192084ms)
+✔ broker enforces five-second deadlines on unfinished headers and request bodies (5079.676292ms)
+✔ publishes a stable read-only tool and resource catalog (0.765708ms)
+✔ routes every public read to a currently connected Conveyor query (0.112917ms)
+✔ does not publish commands, credential workflows, document bodies, or unfinished services (0.243333ms)
+✔ connection validation permits only exact loopback authority and a canonical 32-byte capability (2.061708ms)
+✔ connection file reads require an absolute mode-0600 regular non-symlink file bounded at 4KiB (13.139416ms)
+✔ exports the complete local API contract from the package entrypoint (0.5595ms)
+✔ invoice proposal validates bounded drafts but rejects authority and calculated totals (1.976167ms)
+✔ MCP proposes an invoice over the real broker with no save/issue authority (17.524709ms)
+✔ SDK initialization and discovery expose exactly the safe read-only catalog (22.129333ms)
+✔ SDK tool calls and resource reads traverse the actual authenticated HTTP broker (15.336083ms)
+✔ MCP rejects nonempty arguments and unknown/write reads without executing them (1.74575ms)
+✔ MCP handles pairing denial, wrong capabilities, broker revocation and sanitized errors (5.486917ms)
+✔ relay bounds untrusted broker responses and never follows redirects with the capability (3.194334ms)
+✔ spawned stdio CLI supports SDK initialize/list/call/read end to end and no stdout logging (147.416ms)
+✔ CLI rejects invalid options and unsafe files without echoing secrets to either stream (383.98975ms)
+✔ validates and resolves a protocol-neutral read-only tool call (0.757334ms)
+✔ validates and resolves a protocol-neutral resource read (0.084166ms)
+✔ canonicalizes an omitted tool argument object to an empty object (0.070833ms)
+✔ rejects unsupported versions and operations with stable error codes (0.12175ms)
+✔ rejects unknown, write, credential, and unfinished tool names (0.104209ms)
+✔ rejects unknown resources and every non-empty tool argument object (0.101875ms)
+✔ rejects malformed envelopes and unexpected fields (0.078334ms)
+ℹ tests 32
+ℹ suites 0
+ℹ pass 32
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 10234.254375
+$ pnpm --dir apps/desktop test
+$ pnpm prepare:runtime
+$ node ../../scripts/prepare-electron-runtime.mjs
+electron runtime verified
+$ vitest run --maxWorkers=1
+
+ RUN  v4.1.10 /Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/apps/desktop
+
+
+ Test Files  85 passed (85)
+      Tests  1077 passed (1077)
+   Start at  09:34:23
+   Duration  87.92s (transform 1.57s, setup 5.58s, import 7.23s, tests 49.05s, environment 19.87s)
+
+task: [test:verify:quick] mise exec -- pnpm --filter @tammy/connect-client typecheck
+$ tsc --noEmit
+task: [test:verify:quick] mise exec -- pnpm --filter @tammy/invoices typecheck
+$ tsc --noEmit
+task: [test:verify:quick] mise exec -- pnpm --filter @tammy/local-api typecheck
+$ tsc --noEmit
+task: [test:verify:quick] mise exec -- pnpm --filter @tammy/reporting typecheck
+$ tsc --noEmit
+task: [test:verify:quick] mise exec -- pnpm desktop:typecheck
+$ pnpm --dir apps/desktop typecheck
+$ tsc --noEmit
+task: [test:verify:quick] mise exec -- pnpm contracts
+$ pnpm proto:format:check && pnpm proto:lint && pnpm proto:breaking && pnpm proto:generate && node scripts/check-contracts.mjs
+$ buf format --diff --exit-code
+$ buf lint
+$ node scripts/check-proto-breaking.mjs
+$ buf generate
+task: [test:verify:quick] mise exec -- pnpm lint
+$ biome check .
+apps/desktop/scripts/electron-builder-config.test.mjs:30:44 lint/suspicious/noTemplateCurlyInString ━━━━━━━━━━
+
+  ! Unexpected template string placeholder.
+  
+    28 │     },
+    29 │   );
+  > 30 │   assert.equal(config.directories.output, "${env.TAMMY_ELECTRON_BUILDER_OUTPUT}");
+       │                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    31 │   assert.equal(config.directories.buildResources, "assets");
+    32 │   assert.equal(config.npmRebuild, false);
+  
+  i Turn the string into a template string.
+  
+
+apps/desktop/scripts/electron-builder-config.test.mjs:84:43 lint/suspicious/noTemplateCurlyInString ━━━━━━━━━━
+
+  ! Unexpected template string placeholder.
+  
+    82 │   assert.equal(config.mas.identity, null);
+    83 │   assert.equal(config.mas.helperBundleId, "com.tammy.desktop.helper");
+  > 84 │   assert.equal(config.mas.bundleVersion, "${env.TAMMY_MACOS_BUILD_NUMBER}");
+       │                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    85 │   assert.equal(config.mas.minimumSystemVersion, "14.0");
+    86 │   assert.deepEqual(config.mas.extendInfo, {
+  
+  i Turn the string into a template string.
+  
+
+apps/desktop/scripts/electron-builder-config.test.mjs:87:22 lint/suspicious/noTemplateCurlyInString ━━━━━━━━━━
+
+  ! Unexpected template string placeholder.
+  
+    85 │   assert.equal(config.mas.minimumSystemVersion, "14.0");
+    86 │   assert.deepEqual(config.mas.extendInfo, {
+  > 87 │     ElectronTeamID: "${env.TAMMY_MACOS_TEAM_ID}",
+       │                      ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    88 │     TammyPrivacyPolicyURL: "${env.TAMMY_MACOS_PRIVACY_POLICY_URL}",
+    89 │     TammySupportURL: "${env.TAMMY_MACOS_SUPPORT_URL}",
+  
+  i Turn the string into a template string.
+  
+
+apps/desktop/scripts/electron-builder-config.test.mjs:88:29 lint/suspicious/noTemplateCurlyInString ━━━━━━━━━━
+
+  ! Unexpected template string placeholder.
+  
+    86 │   assert.deepEqual(config.mas.extendInfo, {
+    87 │     ElectronTeamID: "${env.TAMMY_MACOS_TEAM_ID}",
+  > 88 │     TammyPrivacyPolicyURL: "${env.TAMMY_MACOS_PRIVACY_POLICY_URL}",
+       │                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    89 │     TammySupportURL: "${env.TAMMY_MACOS_SUPPORT_URL}",
+    90 │   });
+  
+  i Turn the string into a template string.
+  
+
+apps/desktop/scripts/electron-builder-config.test.mjs:89:23 lint/suspicious/noTemplateCurlyInString ━━━━━━━━━━
+
+  ! Unexpected template string placeholder.
+  
+    87 │     ElectronTeamID: "${env.TAMMY_MACOS_TEAM_ID}",
+    88 │     TammyPrivacyPolicyURL: "${env.TAMMY_MACOS_PRIVACY_POLICY_URL}",
+  > 89 │     TammySupportURL: "${env.TAMMY_MACOS_SUPPORT_URL}",
+       │                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    90 │   });
+    91 │   assert.deepEqual(resourceNames(config.mas.extraResources), [
+  
+  i Turn the string into a template string.
+  
+
+apps/desktop/src/app/features/bas/bas-purchase-details.tsx:149:40 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    147 │                         type="button"
+    148 │                         className="mt-2 h-7 text-[9px]"
+  > 149 │                         onClick={() => controls.onReviewDocument!(source.documentId)}
+        │                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    150 │                       >
+    151 │                         Open purchase review
+  
+  i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+  
+    147 147 │                           type="button"
+    148 148 │                           className="mt-2 h-7 text-[9px]"
+    149     │ - ························onClick={()·=>·controls.onReviewDocument!(source.documentId)}
+        149 │ + ························onClick={()·=>·controls.onReviewDocument?.(source.documentId)}
+    150 150 │                         >
+    151 151 │                           Open purchase review
+  
+
+apps/desktop/src/app/features/bas/bas-purchase-details.tsx:276:57 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    274 │             <p>Balance date: {dateLabel(value.legacyReview.reportingBalanceDate)}</p>
+    275 │             {workpaper.legacyPurchaseSupport
+  > 276 │               .filter((support) => support.reviewId === value.legacyReview!.id)
+        │                                                         ^^^^^^^^^^^^^^^^^^^
+    277 │               .map((support) => (
+    278 │                 <p key={`${support.kind}:${support.sequence}`}>
+  
+  i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+  
+    274 274 │               <p>Balance date: {dateLabel(value.legacyReview.reportingBalanceDate)}</p>
+    275 275 │               {workpaper.legacyPurchaseSupport
+    276     │ - ··············.filter((support)·=>·support.reviewId·===·value.legacyReview!.id)
+        276 │ + ··············.filter((support)·=>·support.reviewId·===·value.legacyReview?.id)
+    277 277 │                 .map((support) => (
+    278 278 │                   <p key={`${support.kind}:${support.sequence}`}>
+  
+
+apps/desktop/src/app/features/bas/bas-purchase-details.tsx:290:26 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    288 │           type="button"
+    289 │           className="justify-self-start h-7 text-[9px]"
+  > 290 │           onClick={() => controls.onReviewDocument!(documentId)}
+        │                          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    291 │         >
+    292 │           Review purchase source
+  
+  i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+  
+    288 288 │             type="button"
+    289 289 │             className="justify-self-start h-7 text-[9px]"
+    290     │ - ··········onClick={()·=>·controls.onReviewDocument!(documentId)}
+        290 │ + ··········onClick={()·=>·controls.onReviewDocument?.(documentId)}
+    291 291 │           >
+    292 292 │             Review purchase source
+  
+
+apps/desktop/src/app/features/bas/bas-purchase-details.tsx:346:11 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    344 │       purchaseAttemptsFor(
+    345 │         purchaseAttemptScope(
+  > 346 │           controls.workspace!.workspaceId,
+        │           ^^^^^^^^^^^^^^^^^^^
+    347 │           controls.workspace!.organisationId!,
+    348 │           controls.workspace!.userId,
+  
+  i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+  
+    344 344 │         purchaseAttemptsFor(
+    345 345 │           purchaseAttemptScope(
+    346     │ - ··········controls.workspace!.workspaceId,
+        346 │ + ··········controls.workspace?.workspaceId,
+    347 347 │             controls.workspace!.organisationId!,
+    348 348 │             controls.workspace!.userId,
+  
+
+apps/desktop/src/app/features/bas/bas-purchase-details.tsx:347:11 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    345 │         purchaseAttemptScope(
+    346 │           controls.workspace!.workspaceId,
+  > 347 │           controls.workspace!.organisationId!,
+        │           ^^^^^^^^^^^^^^^^^^^
+    348 │           controls.workspace!.userId,
+    349 │           sourceKind,
+  
+  i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+  
+    345 345 │           purchaseAttemptScope(
+    346 346 │             controls.workspace!.workspaceId,
+    347     │ - ··········controls.workspace!.organisationId!,
+        347 │ + ··········controls.workspace?.organisationId!,
+    348 348 │             controls.workspace!.userId,
+    349 349 │             sourceKind,
+  
+
+apps/desktop/src/app/features/bas/bas-purchase-details.tsx:347:11 lint/style/noNonNullAssertion ━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    345 │         purchaseAttemptScope(
+    346 │           controls.workspace!.workspaceId,
+  > 347 │           controls.workspace!.organisationId!,
+        │           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    348 │           controls.workspace!.userId,
+    349 │           sourceKind,
+  
+
+apps/desktop/src/app/features/bas/bas-purchase-details.tsx:348:11 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    346 │           controls.workspace!.workspaceId,
+    347 │           controls.workspace!.organisationId!,
+  > 348 │           controls.workspace!.userId,
+        │           ^^^^^^^^^^^^^^^^^^^
+    349 │           sourceKind,
+    350 │           sourceId,
+  
+  i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+  
+    346 346 │             controls.workspace!.workspaceId,
+    347 347 │             controls.workspace!.organisationId!,
+    348     │ - ··········controls.workspace!.userId,
+        348 │ + ··········controls.workspace?.userId,
+    349 349 │             sourceKind,
+    350 350 │             sourceId,
+  
+
+apps/desktop/src/app/features/bas/bas-purchase-details.tsx:389:15 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    387 │     try {
+    388 │       const response = purchaseCodecs.legacy.decodeResponse(
+  > 389 │         await controls.purchaseApi!.resolveLegacyPurchaseReview(frame),
+        │               ^^^^^^^^^^^^^^^^^^^^^
+    390 │       );
+    391 │       if (!response.review) throw new Error();
+  
+  i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+  
+    387 387 │       try {
+    388 388 │         const response = purchaseCodecs.legacy.decodeResponse(
+    389     │ - ········await·controls.purchaseApi!.resolveLegacyPurchaseReview(frame),
+        389 │ + ········await·controls.purchaseApi?.resolveLegacyPurchaseReview(frame),
+    390 390 │         );
+    391 391 │         if (!response.review) throw new Error();
+  
+
+apps/desktop/src/app/features/bas/bas-purchase-details.tsx:426:22 lint/style/noNonNullAssertion ━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    424 │           affectedPeriod={review.affectedPeriod}
+    425 │           balanceDate={balanceDate}
+  > 426 │           workspace={controls.workspace!}
+        │                      ^^^^^^^^^^^^^^^^^^^
+    427 │           documentApi={controls.documentApi!}
+    428 │           purchaseApi={controls.purchaseApi!}
+  
+
+apps/desktop/src/app/features/bas/bas-purchase-details.tsx:427:24 lint/style/noNonNullAssertion ━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    425 │           balanceDate={balanceDate}
+    426 │           workspace={controls.workspace!}
+  > 427 │           documentApi={controls.documentApi!}
+        │                        ^^^^^^^^^^^^^^^^^^^^^
+    428 │           purchaseApi={controls.purchaseApi!}
+    429 │           accountingApi={controls.accountingApi!}
+  
+
+apps/desktop/src/app/features/bas/bas-purchase-details.tsx:428:24 lint/style/noNonNullAssertion ━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    426 │           workspace={controls.workspace!}
+    427 │           documentApi={controls.documentApi!}
+  > 428 │           purchaseApi={controls.purchaseApi!}
+        │                        ^^^^^^^^^^^^^^^^^^^^^
+    429 │           accountingApi={controls.accountingApi!}
+    430 │           propose={propose}
+  
+
+apps/desktop/src/app/features/bas/bas-purchase-details.tsx:429:26 lint/style/noNonNullAssertion ━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    427 │           documentApi={controls.documentApi!}
+    428 │           purchaseApi={controls.purchaseApi!}
+  > 429 │           accountingApi={controls.accountingApi!}
+        │                          ^^^^^^^^^^^^^^^^^^^^^^^
+    430 │           propose={propose}
+    431 │           onError={setError}
+  
+
+apps/desktop/src/app/features/bas/bas-purchase-details.tsx:456:32 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    454 │                 type="button"
+    455 │                 className="h-7 text-[9px]"
+  > 456 │                 onClick={() => controls.onReviewDocument!(source.value.documentId)}
+        │                                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    457 │               >
+    458 │                 Open source document
+  
+  i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+  
+    454 454 │                   type="button"
+    455 455 │                   className="h-7 text-[9px]"
+    456     │ - ················onClick={()·=>·controls.onReviewDocument!(source.value.documentId)}
+        456 │ + ················onClick={()·=>·controls.onReviewDocument?.(source.value.documentId)}
+    457 457 │                 >
+    458 458 │                   Open source document
+  
+
+apps/desktop/src/app/features/bas/bas-purchase-details.tsx:467:59 lint/style/noNonNullAssertion ━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    465 │             onClick={() => {
+    466 │               const retry = attempt.retry();
+  > 467 │               void send(authenticatedPurchaseRetry(retry, controls.workspace!), true);
+        │                                                           ^^^^^^^^^^^^^^^^^^^
+    468 │             }}
+    469 │           >
+  
+
+apps/desktop/src/app/features/documents/owned-posted-purchase-picker.tsx:39:27 lint/style/noNonNullAssertion ━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    37 │         create(GetPurchaseAccountingRequestSchema, {
+    38 │           authentication: { actorUserId: workspace.userId, sessionId: workspace.sessionId },
+  > 39 │           organisationId: workspace.organisationId!,
+       │                           ^^^^^^^^^^^^^^^^^^^^^^^^^
+    40 │           documentId: selected?.id ?? "",
+    41 │         }),
+  
+
+The number of diagnostics exceeds the limit allowed. Use --max-diagnostics to increase it.
+Diagnostics not shown: 87.
+Checked 464 files in 242ms. No fixes applied.
+Found 105 warnings.
+Found 2 infos.
+task: [test:verify:quick] git diff --check

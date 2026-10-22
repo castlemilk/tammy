@@ -39,17 +39,31 @@ interface NavigationProps {
 
 export function Navigation({ activePath, onNavigate }: NavigationProps) {
   return (
-    <nav aria-label="Primary" className="flex min-h-0 flex-1 flex-col px-2 pb-3 pt-3">
-      <ul className="m-0 grid list-none gap-1 p-0">
-        {PRIMARY_NAVIGATION.slice(0, -1).map((item) => (
-          <NavigationItem
-            activePath={activePath}
-            item={item}
-            key={item.href}
-            onNavigate={onNavigate}
-          />
+    <nav
+      aria-label="Primary"
+      className="flex min-h-0 flex-1 flex-col px-3 pb-4 pt-1 max-[900px]:px-2"
+    >
+      <div className="min-h-0 overflow-y-auto">
+        {[
+          { label: "Workspace", items: PRIMARY_NAVIGATION.slice(0, 3) },
+          { label: "Accounting", items: PRIMARY_NAVIGATION.slice(3, 7) },
+          { label: "Activity", items: PRIMARY_NAVIGATION.slice(7, 9) },
+        ].map((group) => (
+          <div className="mb-5" key={group.label}>
+            <p className="work-eyebrow mb-2 px-3 max-[900px]:sr-only">{group.label}</p>
+            <ul className="m-0 grid list-none gap-1 p-0">
+              {group.items.map((item) => (
+                <NavigationItem
+                  activePath={activePath}
+                  item={item}
+                  key={item.href}
+                  onNavigate={onNavigate}
+                />
+              ))}
+            </ul>
+          </div>
         ))}
-      </ul>
+      </div>
       <ul className="m-0 mt-auto list-none border-t border-border px-0 pb-0 pt-3">
         <NavigationItem
           activePath={activePath}
@@ -100,16 +114,16 @@ function NavigationItem({
     <li>
       <a
         aria-current={current ? "page" : undefined}
-        className={`focus-ring flex min-h-8 items-center gap-2 rounded-[5px] px-2 text-[11px] font-medium leading-4 no-underline transition-colors max-[900px]:justify-center max-[900px]:px-1 ${
+        className={`focus-ring flex min-h-11 items-center gap-3 rounded-xl px-3 text-[14px] font-medium leading-4 no-underline transition-colors max-[900px]:justify-center max-[900px]:px-1 ${
           active
-            ? "bg-forest text-white"
+            ? "bg-forest text-primary-foreground"
             : "text-muted-foreground hover:bg-muted hover:text-foreground"
         }`}
         href={item.href}
         onClick={navigate}
         title={item.label}
       >
-        <Icon aria-hidden="true" className="size-[13px] shrink-0" strokeWidth={1.8} />
+        <Icon aria-hidden="true" className="size-[18px] shrink-0" strokeWidth={1.8} />
         <span className="max-[900px]:sr-only">{item.label}</span>
       </a>
     </li>

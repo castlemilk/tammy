@@ -1,0 +1,22 @@
+{
+  "sourceRevision": "c9e2631b715f892c4284cbc2693a29496ac15d8d",
+  "target": "darwin-arm64",
+  "screenshots": {
+    "non-cash-issued-q3-bas.png": "a6fc939172e65ebd2b2c5cbe4a26121f06377e64d05d51bce01bbb597ff71172",
+    "non-cash-receipts-q4-overview.png": "dce422208263ec24eceda84c18747c6d0df4b2c273b1b8d881dcd715fdfa8a0b",
+    "non-cash-receipts-q4-bas.png": "041c5fe13fbf309bde37cb3fc27f2b5ed3a575049fdacc86336e795648ba6a39",
+    "cash-basis-first-receipt-bas.png": "541a25f342cd94e8eb0c08e1e04140642a180aa5dd836e7d0a87cfda9a004e3c",
+    "cash-basis-final-bas-after-restart.png": "375b00048f80b7545582633b018f4a8bdf3014b05c41b78db9e87143a843f738"
+  },
+  "validatedDate": "2026-10-04",
+  "packagedE2E": {
+    "passed": 4,
+    "failed": 0,
+    "durationMinutes": 5.6
+  },
+  "package": {
+    "appSha256": "df609fad244d0ddfa96fcee317823af15f7795e87d0013a74596ccbb137b63ab",
+    "coreSha256": "2b5832407c0740ecae498b9cde29a87fccede4388bf122f14cbe2f34ab45f915",
+    "manifestSha256": "a6f95f7753651536f2bd364466e210d24d55ace84d91e2eea3111b122008ee72"
+  }
+}

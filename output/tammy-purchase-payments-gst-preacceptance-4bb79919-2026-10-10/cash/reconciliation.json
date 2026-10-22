@@ -1,0 +1,49 @@
+{
+  "workspaceId": "01a11ecc-61ab-71da-aae0-388df9dbecb5",
+  "organisationId": "01a11ecc-68c7-7c99-9adf-467038e75af0",
+  "documentId": "01a11ecc-6a20-7cd0-9e23-1343edaf7e34",
+  "postingId": "01a11ecc-6bbf-7132-ba12-a7807914a597",
+  "paymentIds": [
+    "01a11ecc-746c-77b1-ba6b-974c90881a84",
+    "01a11ecc-6e0a-78a7-8c33-bacb4b4d01dd"
+  ],
+  "firstWorkpaperId": "01a11ecc-6f21-7350-9d32-959b6126f60e",
+  "secondWorkpaperId": "01a11ecc-7530-7149-b255-696d7f5a3a06",
+  "gstMinor": "1000",
+  "actualLedger": {
+    "expenseMinor": "10000",
+    "bankMinor": "-11000",
+    "payableMinor": "0",
+    "inputGstMinor": "1000"
+  },
+  "artifacts": [
+    {
+      "file": "first-quarter.csv",
+      "sha256": "6a734a9be57919736b6e29303632ff05f0d8eae8c8bc84aa2209d946c7d2b1c7"
+    },
+    {
+      "file": "first-quarter.pdf",
+      "sha256": "dc7ef3d512a44db10949de647968d6592574859ecca8edf23649d667ad1fb99b"
+    },
+    {
+      "file": "second-quarter.csv",
+      "sha256": "9213cc830b488bb808655e667fc95114370604a9ee854359646e880fc30cade9"
+    },
+    {
+      "file": "second-quarter.pdf",
+      "sha256": "6a2e4cbcc5617f41b34450efed62900cbd824cdabbc625181c7fb1b2ba0c1037"
+    },
+    {
+      "file": "retained-stale.csv",
+      "sha256": "169f9b56d879571622b9930d63c6a69d857339825f57bce4b96943a95058745d"
+    },
+    {
+      "file": "retained-stale.pdf",
+      "sha256": "657c5c5629d3291db62ff0363d184a67ff57dac065f476bfe4b2d5d0565d1209"
+    },
+    {
+      "file": "restarted.csv",
+      "sha256": "31cfb9d117497674ad448bbe64ba8f23a3f0d5cb1a56960c8af51b542d462f29"
+    }
+  ]
+}

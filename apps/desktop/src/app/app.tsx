@@ -486,7 +486,7 @@ function EngineStatus({
       <div
         aria-live="polite"
         aria-label="Local engine"
-        className="mb-4 flex items-center gap-2 text-[10px] text-muted-foreground"
+        className="mb-4 flex items-center gap-2 text-[14px] text-muted-foreground"
         role="status"
       >
         <LoaderCircle aria-hidden="true" className="size-3 animate-spin" />
@@ -498,14 +498,14 @@ function EngineStatus({
     <div
       aria-live="polite"
       aria-label="Local engine"
-      className="mb-4 flex items-center justify-between gap-4 rounded-[6px] border border-warning-border bg-warning-soft px-3 py-2"
+      className="mb-4 flex items-center justify-between gap-4 rounded-xl border border-warning-border bg-warning-soft px-3 py-2"
       role="status"
     >
-      <div className="flex items-center gap-2 text-[10px] text-foreground">
+      <div className="flex items-center gap-2 text-[14px] text-foreground">
         <AlertTriangle aria-hidden="true" className="size-3.5 text-warning" />
         Local engine unavailable. Your data has not left this device.
       </div>
-      <Button className="h-7 text-[10px]" onClick={onRetry} type="button" variant="outline">
+      <Button className="h-7 text-[14px]" onClick={onRetry} type="button" variant="outline">
         <RefreshCw aria-hidden="true" className="size-3" />
         Retry local engine
       </Button>
@@ -563,6 +563,10 @@ function ActiveRouteContent({
   readonly workspace: AuthenticatedWorkspace | undefined;
 }) {
   const initialBasPreparationTarget = useMemo(() => parseBasPreparationRouteTarget(path), [path]);
+  const initialDocumentId = useMemo(
+    () => new URLSearchParams(path.split("?")[1]).get("document") ?? undefined,
+    [path],
+  );
   if (path === "/overview")
     return (
       <OverviewScreen
@@ -581,7 +585,7 @@ function ActiveRouteContent({
         api={conveyor.documents}
         purchaseApi={conveyor.purchases}
         accountingApi={conveyor.accounting}
-        initialDocumentId={new URLSearchParams(path.split("?")[1]).get("document") ?? undefined}
+        {...(initialDocumentId ? { initialDocumentId } : {})}
         onDocumentsChanged={() => conveyor.reporting.getAttentionSummary.invalidate()}
         workspace={workspace}
       />

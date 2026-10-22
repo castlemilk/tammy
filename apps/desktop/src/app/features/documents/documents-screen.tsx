@@ -19,11 +19,18 @@ import {
   SaveDocumentReviewRequestSchema,
   SaveDocumentReviewResponseSchema,
 } from "@tammy/connect-client/tammy/v1/documents_pb.js";
-import { Check, FileText, LoaderCircle, Upload } from "lucide-react";
+import { Check, FileText, RefreshCw, Upload, X } from "lucide-react";
 import { type ChangeEvent, type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
+import {
+  WorkFilters,
+  WorkHeading,
+  WorkNotice,
+  WorkSearch,
+  WorkState,
+} from "../../components/review-workspace";
 import { Button } from "../../components/ui/button";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
 import { extractNativePdfText } from "./pdf-text";
@@ -67,7 +74,7 @@ interface DocumentsScreenProps {
   readonly onDocumentsChanged?: () => Promise<void>;
   readonly purchaseApi?: PurchaseAPI;
   readonly accountingApi?: PurchaseAccountingAPI;
-  readonly initialDocumentId?: string | undefined;
+  readonly initialDocumentId?: string;
   readonly workspace: AuthenticatedWorkspace | undefined;
 }
 
@@ -92,20 +99,27 @@ interface ReviewFields {
 export function DocumentsScreen({
   api,
   onDocumentsChanged,
-  workspace,
   purchaseApi,
   accountingApi,
   initialDocumentId,
+  workspace,
 }: DocumentsScreenProps) {
-  const [selectedID, setSelectedID] = useState<string>(initialDocumentId ?? "");
+  const [selectedID, setSelectedID] = useState(initialDocumentId ?? "");
   const [retainedSelection, setRetainedSelection] = useState<Document>();
   const [cursors, setCursors] = useState<readonly string[]>([""]);
   const [accountingFilter, setAccountingFilter] = useState<DocumentAccountingFilter>();
   const [statusFilter, setStatusFilter] = useState<DocumentStatus>();
   const [locating, setLocating] = useState(Boolean(initialDocumentId));
+  const [selectionDismissed, setSelectionDismissed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
+  const [refreshError, setRefreshError] = useState(false);
+  const [query, setQuery] = useState("");
+  const [statusChoice, setStatusChoice] = useState<"all" | "review" | "reviewed">("all");
   const input = useRef<HTMLInputElement>(null);
+  const searchInput = useRef<HTMLInputElement>(null);
+  const uploadActive = useRef(false);
+  const rowButtons = useRef(new Map<string, HTMLButtonElement>());
   const organisationId = workspace?.organisationId ?? "";
   const userId = workspace?.userId ?? "";
   const sessionId = workspace?.sessionId ?? "";
@@ -120,7 +134,7 @@ export function DocumentsScreen({
           ...(statusFilter ? { status: statusFilter } : {}),
         }),
       ),
-    [organisationId, sessionId, userId, cursors, accountingFilter, statusFilter],
+    [accountingFilter, cursors, organisationId, sessionId, statusFilter, userId],
   );
   const documentsQuery = api.listDocuments.useQuery({
     enabled: organisationId.length > 0,
@@ -135,7 +149,7 @@ export function DocumentsScreen({
           documentId: initialDocumentId ?? "",
         }),
       ),
-    [userId, sessionId, initialDocumentId],
+    [initialDocumentId, sessionId, userId],
   );
   const selectedQuery = api.getDocument.useQuery({
     enabled: Boolean(initialDocumentId && organisationId),
@@ -143,14 +157,19 @@ export function DocumentsScreen({
     retry: false,
   });
   useEffect(() => {
-    if (!initialDocumentId) return;
+    if (!initialDocumentId) {
+      setLocating(false);
+      return;
+    }
     try {
-      const retained =
-        selectedQuery.data && getDocumentCodec.decodeResponse(selectedQuery.data).document;
+      const retained = selectedQuery.data
+        ? getDocumentCodec.decodeResponse(selectedQuery.data).document
+        : undefined;
       if (retained?.id === initialDocumentId && retained.organisationId === organisationId) {
         setSelectedID(retained.id);
         setRetainedSelection(retained);
         setLocating(false);
+        setSelectionDismissed(false);
       } else if (selectedQuery.isError) {
         setLocating(false);
         setError("This document could not be located in the current organisation.");
@@ -164,42 +183,86 @@ export function DocumentsScreen({
     if (!organisationId || documentsQuery.isError) return { status: "unavailable" };
     if (!documentsQuery.data) return { status: "loading" };
     try {
+      const response = listCodec.decodeResponse(documentsQuery.data);
       return {
-        documents: listCodec.decodeResponse(documentsQuery.data).documents,
-        nextCursor: listCodec.decodeResponse(documentsQuery.data).page?.nextCursor ?? "",
+        documents: response.documents,
+        nextCursor: response.page?.nextCursor ?? "",
         status: "ready",
       };
     } catch {
       return { status: "unavailable" };
     }
   }, [documentsQuery.data, documentsQuery.isError, organisationId]);
+  const documents = state.status === "ready" ? state.documents : [];
   useEffect(() => {
     if (state.status !== "ready") return;
     const current = state.documents.find((item) => item.id === selectedID);
     if (current) {
-      setRetainedSelection(current);
+      if (
+        !retainedSelection ||
+        retainedSelection.id !== current.id ||
+        retainedSelection.organisationId !== current.organisationId ||
+        current.version >= retainedSelection.version
+      )
+        setRetainedSelection(current);
       setLocating(false);
     } else if (locating) return;
-    else if (!selectedID && state.documents[0]) {
+    else if (!selectedID && state.documents[0] && !selectionDismissed) {
       setSelectedID(state.documents[0].id);
       setRetainedSelection(state.documents[0]);
     }
-  }, [state, selectedID, locating]);
+  }, [locating, retainedSelection, selectedID, selectionDismissed, state]);
   const effectiveSelectedID =
-    selectedID || (state.status === "ready" ? state.documents[0]?.id : undefined);
-
-  const selected =
+    selectedID ||
+    (state.status === "ready" && !selectionDismissed ? state.documents[0]?.id : undefined);
+  const currentSelection =
     state.status === "ready"
-      ? (state.documents.find((item) => item.id === effectiveSelectedID) ??
-        (retainedSelection?.organisationId === organisationId ? retainedSelection : undefined))
-      : retainedSelection?.organisationId === organisationId
-        ? retainedSelection
-        : undefined;
+      ? state.documents.find((item) => item.id === effectiveSelectedID)
+      : undefined;
+  const retainedCurrent =
+    retainedSelection &&
+    effectiveSelectedID &&
+    retainedSelection.id === effectiveSelectedID &&
+    retainedSelection.organisationId === organisationId
+      ? retainedSelection
+      : undefined;
+  const selected =
+    currentSelection && (!retainedCurrent || currentSelection.version >= retainedCurrent.version)
+      ? currentSelection
+      : retainedCurrent;
+  const reviewCount = documents.filter((item) => item.status !== DocumentStatus.REVIEWED).length;
+  const visible = documents.filter((item) =>
+    [item.sourceDisplayName, item.candidate?.supplierName, item.candidate?.invoiceNumber]
+      .join(" ")
+      .toLowerCase()
+      .includes(query.toLowerCase().trim()),
+  );
+  const refreshDocuments = async () => {
+    const result = await documentsQuery.refetch();
+    if (result.isError) throw new Error("document refresh failed");
+    await onDocumentsChanged?.();
+  };
+  const refreshAfterSave = async () => {
+    try {
+      await refreshDocuments();
+      setRefreshError(false);
+    } catch {
+      setRefreshError(true);
+    }
+  };
+  const refresh = async () => {
+    setRefreshError(false);
+    try {
+      await refreshDocuments();
+    } catch {
+      setRefreshError(true);
+    }
+  };
 
   const upload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
-    if (!file || !workspace?.organisationId) return;
+    if (!file || !workspace?.organisationId || uploadActive.current) return;
     if (
       file.size < 1 ||
       file.size > 10 * 1024 * 1024 ||
@@ -208,83 +271,117 @@ export function DocumentsScreen({
       setError("Choose a PDF, PNG or JPEG no larger than 10 MB.");
       return;
     }
+    uploadActive.current = true;
     setBusy(true);
     setError(undefined);
+    let confirmed = false;
     try {
       const original = new Uint8Array(await file.arrayBuffer());
       const extractedText = file.type === "application/pdf" ? extractNativePdfText(original) : "";
-      const request = create(IngestDocumentRequestSchema, {
-        commandContext: create(CommandContextSchema, {
-          authentication: { actorUserId: workspace.userId, sessionId: workspace.sessionId },
-          idempotencyKey: uuidV7(),
-        }),
-        organisationId: workspace.organisationId,
-        sourceDisplayName: file.name,
-        mimeType: file.type,
-        original,
-        extractedText,
-        candidate: inferCandidate(extractedText, file.name),
-      });
       const response = ingestCodec.decodeResponse(
-        await api.ingestDocument(ingestCodec.encodeRequest(request)),
+        await api.ingestDocument(
+          ingestCodec.encodeRequest(
+            create(IngestDocumentRequestSchema, {
+              commandContext: create(CommandContextSchema, {
+                authentication: { actorUserId: workspace.userId, sessionId: workspace.sessionId },
+                idempotencyKey: uuidV7(),
+              }),
+              organisationId: workspace.organisationId,
+              sourceDisplayName: file.name,
+              mimeType: file.type,
+              original,
+              extractedText,
+              candidate: inferCandidate(extractedText, file.name),
+            }),
+          ),
+        ),
       );
-      if (!response.document) throw new Error("missing document");
-      setSelectedID(response.document.id);
-      await Promise.all([api.listDocuments.invalidate(listInput), onDocumentsChanged?.()]);
+      if (!response.document || response.document.organisationId !== workspace.organisationId)
+        throw new Error("missing retained document");
+      confirmed = true;
+      const retained = response.document;
+      setRetainedSelection(retained);
+      setSelectedID(retained.id);
+      setLocating(false);
+      setSelectionDismissed(false);
+      setCursors([""]);
+      setAccountingFilter(undefined);
+      setStatusFilter(undefined);
+      setStatusChoice("all");
+      setQuery("");
+      void onDocumentsChanged?.().catch(() => setRefreshError(true));
     } catch {
-      setError("The document could not be retained. It has not left this device.");
+      if (!confirmed) setError("The document could not be retained. It has not left this device.");
     } finally {
+      uploadActive.current = false;
       setBusy(false);
     }
   };
 
   return (
-    <div className="mx-auto grid w-full max-w-[1120px] gap-4">
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <h1 className="text-[18px] font-semibold tracking-[-0.02em] text-foreground">
-            Documents
-          </h1>
-          <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
-            Retain source files, review locally extracted details, then approve them for later
-            accounting.
-          </p>
-        </div>
-        <input
-          ref={input}
-          accept="application/pdf,image/png,image/jpeg"
-          className="sr-only"
-          onChange={upload}
-          type="file"
-        />
-        <Button disabled={busy} onClick={() => input.current?.click()} type="button">
-          {busy ? (
-            <LoaderCircle aria-hidden="true" className="size-3 animate-spin" />
-          ) : (
-            <Upload aria-hidden="true" className="size-3" />
-          )}
-          {busy ? "Retaining…" : "Upload document"}
-        </Button>
-      </div>
-      {error ? (
-        <p
-          className="rounded-[6px] border border-warning-border bg-warning-soft px-3 py-2 text-[10px]"
-          role="alert"
-        >
-          {error}
-        </p>
+    <div className="mx-auto grid w-full max-w-[1120px] gap-6">
+      <WorkHeading
+        title="Documents"
+        description="Keep source documents close to their review, purchase posting, and retained evidence."
+        action={
+          <>
+            <input
+              ref={input}
+              accept="application/pdf,image/png,image/jpeg"
+              className="sr-only"
+              onChange={upload}
+              type="file"
+            />
+            <Button
+              disabled={
+                busy ||
+                documentsQuery.isFetching ||
+                state.status !== "ready" ||
+                !workspace?.organisationId
+              }
+              onClick={() => input.current?.click()}
+              type="button"
+            >
+              <Upload aria-hidden="true" className="size-4" />
+              {busy ? "Retaining…" : "Upload document"}
+            </Button>
+          </>
+        }
+      />
+      {error ? <WorkNotice>{error}</WorkNotice> : null}
+      {refreshError ? (
+        <WorkNotice>
+          The last action was confirmed, but the latest document list could not be loaded. Refresh
+          before continuing.
+        </WorkNotice>
       ) : null}
-
-      <div className="grid min-h-[560px] grid-cols-[minmax(300px,0.9fr)_minmax(420px,1.4fr)] gap-4 max-[900px]:grid-cols-1">
-        <section className="overflow-hidden rounded-[6px] border border-border bg-surface">
-          <div className="grid gap-2 border-b border-border px-3 py-2 text-[9px]">
-            <p className="font-semibold uppercase tracking-[0.05em] text-muted-foreground">
-              Retained documents
-            </p>
-            <label className="grid gap-1">
-              Accounting filter
+      <section aria-label="Source documents" className="work-surface overflow-hidden">
+        <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border p-4">
+          <div className="grid min-w-0 gap-3 max-[700px]:w-full">
+            <WorkFilters
+              label="Document status"
+              value={statusChoice}
+              onChange={(value) => {
+                setStatusChoice(value);
+                setStatusFilter(
+                  value === "review"
+                    ? DocumentStatus.NEEDS_REVIEW
+                    : value === "reviewed"
+                      ? DocumentStatus.REVIEWED
+                      : undefined,
+                );
+                setCursors([""]);
+              }}
+              options={[
+                { value: "all", label: "All documents", count: documents.length },
+                { value: "review", label: "Needs review", count: reviewCount },
+                { value: "reviewed", label: "Reviewed", count: documents.length - reviewCount },
+              ]}
+            />
+            <label className="grid w-full max-w-[240px] gap-1 text-[12px] font-semibold">
+              Accounting state
               <select
-                className="focus-ring rounded border border-border bg-surface p-1"
+                className="focus-ring h-10 rounded-xl border border-border bg-surface px-3 text-[13px] font-normal"
                 value={accountingFilter ?? 0}
                 onChange={(event) => {
                   setAccountingFilter(Number(event.target.value) || undefined);
@@ -297,113 +394,199 @@ export function DocumentsScreen({
                 <option value={DocumentAccountingFilter.NEEDS_GST_REVIEW}>Needs GST review</option>
               </select>
             </label>
-            <label className="grid gap-1">
-              Review filter
-              <select
-                className="focus-ring rounded border border-border bg-surface p-1"
-                value={statusFilter ?? 0}
-                onChange={(event) => {
-                  setStatusFilter(Number(event.target.value) || undefined);
-                  setCursors([""]);
-                }}
-              >
-                <option value={0}>All review states</option>
-                <option value={DocumentStatus.NEEDS_REVIEW}>Needs extraction review</option>
-                <option value={DocumentStatus.REVIEWED}>Reviewed</option>
-              </select>
-            </label>
           </div>
-          {state.status === "ready" && state.documents.length > 0 ? (
-            <ul className="divide-y divide-border">
-              {state.documents.map((document) => (
-                <li key={document.id}>
-                  <button
-                    className={`grid w-full grid-cols-[1fr_auto] gap-3 px-3 py-3 text-left ${effectiveSelectedID === document.id ? "bg-success-soft" : "hover:bg-muted"}`}
-                    onClick={() => setSelectedID(document.id)}
-                    type="button"
-                  >
-                    <span className="min-w-0">
-                      <span className="block truncate text-[10px] font-semibold text-foreground">
-                        {document.candidate?.supplierName || document.sourceDisplayName}
-                      </span>
-                      <span className="mt-1 block truncate text-[9px] text-muted-foreground">
-                        {document.candidate?.invoiceNumber || "Invoice number not detected"} ·{" "}
-                        {formatDate(document.candidate?.documentDate)}
-                      </span>
-                    </span>
-                    <span className="text-right">
-                      <span className="block text-[10px] font-semibold text-foreground">
-                        {formatMoney(document.candidate?.total?.minorUnits)}
-                      </span>
-                      <span
-                        className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[8px] font-semibold ${document.status === DocumentStatus.REVIEWED ? "bg-success-soft text-forest" : "bg-warning-soft text-warning"}`}
-                      >
-                        {document.status === DocumentStatus.REVIEWED ? "Reviewed" : "Review"}
-                      </span>
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <DocumentEmpty status={state.status} />
-          )}
-          {locating ? (
-            <p className="px-3 py-2 text-[10px]" role="status">
-              Locating selected document…
-            </p>
-          ) : null}
-          <div className="flex flex-wrap gap-2 border-t border-border p-3">
+          <div className="flex w-full min-w-0 max-w-[330px] items-center gap-2">
+            <WorkSearch
+              inputRef={searchInput}
+              label="Search documents"
+              value={query}
+              onChange={setQuery}
+            />
             <Button
+              aria-label="Refresh documents"
+              disabled={busy || documentsQuery.isFetching}
+              onClick={() => void refresh()}
               type="button"
-              className="h-7 text-[9px]"
+              variant="ghost"
+            >
+              <RefreshCw aria-hidden="true" className="size-4" />
+            </Button>
+          </div>
+        </div>
+        {state.status !== "ready" ? (
+          <WorkState
+            title={state.status === "loading" ? "Loading documents" : "Documents unavailable"}
+            loading={state.status === "loading"}
+            description={
+              state.status === "loading"
+                ? "Opening the source documents retained in this workspace."
+                : "Your local documents could not be loaded. Try refreshing this view."
+            }
+            action={
+              state.status === "unavailable" ? (
+                <Button onClick={() => void refresh()} variant="outline">
+                  Try again
+                </Button>
+              ) : undefined
+            }
+          />
+        ) : visible.length === 0 ? (
+          <WorkState
+            title={documents.length ? "No matching documents" : "Your next clear step"}
+            description={
+              documents.length
+                ? "Try a different name or status. Your retained documents are still here."
+                : "Upload a local invoice or receipt. Check extracted details, then review any purchase posting and evidence separately."
+            }
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="work-table min-w-[650px]" aria-label="Retained documents">
+              <thead>
+                <tr>
+                  <th>Document & supplier</th>
+                  <th>Invoice</th>
+                  <th>Date</th>
+                  <th className="text-right">Total · AUD</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visible.map((document) => (
+                  <tr
+                    key={document.id}
+                    className={
+                      selected?.id === document.id ? "bg-forest-soft" : "hover:bg-background"
+                    }
+                  >
+                    <td>
+                      <button
+                        ref={(node) => {
+                          if (node) rowButtons.current.set(document.id, node);
+                          else rowButtons.current.delete(document.id);
+                        }}
+                        aria-pressed={selected?.id === document.id}
+                        className="focus-ring flex min-h-11 w-full items-center gap-3 rounded-lg text-left"
+                        onClick={() => {
+                          setSelectedID(document.id);
+                          setRetainedSelection(document);
+                          setLocating(false);
+                          setSelectionDismissed(false);
+                        }}
+                        type="button"
+                      >
+                        <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-border bg-surface text-forest">
+                          <FileText aria-hidden="true" className="size-4" />
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block max-w-[260px] truncate font-semibold">
+                            {document.sourceDisplayName}
+                          </span>
+                          <span className="mt-1 block text-[12px] text-muted-foreground">
+                            {document.candidate?.supplierName || "Supplier to review"}
+                          </span>
+                        </span>
+                      </button>
+                    </td>
+                    <td>{document.candidate?.invoiceNumber || "—"}</td>
+                    <td className="tabular-nums">{formatDate(document.candidate?.documentDate)}</td>
+                    <td className="text-right font-semibold tabular-nums">
+                      {formatMoney(document.candidate?.total?.minorUnits)}
+                    </td>
+                    <td>
+                      <DocumentStatusLabel reviewed={document.status === DocumentStatus.REVIEWED} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-3 text-[12px] text-muted-foreground">
+          <span>
+            {state.status === "ready"
+              ? `${visible.length} shown · ${documents.length} loaded (up to 200)`
+              : "Local source documents"}{" "}
+            · Files stay in this workspace
+          </span>
+          <div className="flex gap-2">
+            <Button
+              className="h-9 text-[12px]"
               disabled={cursors.length < 2 || documentsQuery.isFetching}
               onClick={() => setCursors((current) => current.slice(0, -1))}
+              type="button"
+              variant="outline"
             >
               Previous document page
             </Button>
             <Button
-              type="button"
-              className="h-7 text-[9px]"
+              className="h-9 text-[12px]"
               disabled={state.status !== "ready" || !state.nextCursor || documentsQuery.isFetching}
               onClick={() => {
                 if (state.status === "ready" && state.nextCursor)
                   setCursors((current) => [...current, state.nextCursor]);
               }}
+              type="button"
+              variant="outline"
             >
               Next document page
             </Button>
           </div>
-        </section>
-        <div className="grid min-w-0 content-start gap-4">
-          <ReviewPanel
-            api={api}
-            document={selected}
-            onSaved={() =>
-              Promise.all([api.listDocuments.invalidate(listInput), onDocumentsChanged?.()]).then(
-                () => undefined,
-              )
-            }
-            workspace={workspace}
-          />
-          {selected && workspace?.organisationId && purchaseApi && accountingApi ? (
-            <PurchaseAccountingPanel
-              key={`${workspace.workspaceId}:${workspace.userId}:${workspace.sessionId}:${selected.id}`}
-              api={purchaseApi}
-              accountingApi={accountingApi}
-              documentApi={api}
-              document={selected}
-              workspace={workspace}
-              onChanged={() =>
-                Promise.all([api.listDocuments.invalidate(listInput), onDocumentsChanged?.()]).then(
-                  () => undefined,
-                )
-              }
-            />
-          ) : null}
         </div>
+      </section>
+      {locating ? (
+        <p className="text-[13px] text-muted-foreground" role="status">
+          Locating selected document…
+        </p>
+      ) : null}
+      <div className="grid min-w-0 content-start gap-4">
+        <ReviewPanel
+          key={selected?.id ?? "no-selection"}
+          api={api}
+          document={selected}
+          workspace={workspace}
+          onClose={() => {
+            const closedID = selected?.id;
+            setSelectedID("");
+            setSelectionDismissed(true);
+            const row = closedID ? rowButtons.current.get(closedID) : undefined;
+            if (row) row.focus();
+            else searchInput.current?.focus();
+          }}
+          onSaved={(saved) => {
+            setRetainedSelection(saved);
+            setSelectedID(saved.id);
+            void refreshAfterSave();
+          }}
+        />
+        {selected && workspace?.organisationId && purchaseApi && accountingApi ? (
+          <PurchaseAccountingPanel
+            key={`${workspace.workspaceId}:${workspace.userId}:${workspace.sessionId}:${selected.id}`}
+            api={purchaseApi}
+            accountingApi={accountingApi}
+            documentApi={api}
+            document={selected}
+            workspace={workspace}
+            onChanged={refreshDocuments}
+          />
+        ) : null}
       </div>
     </div>
+  );
+}
+
+function DocumentStatusLabel({ reviewed }: { readonly reviewed: boolean }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[12px] font-semibold ${reviewed ? "bg-success-soft text-forest" : "bg-warning-soft text-warning"}`}
+    >
+      {reviewed ? (
+        <Check aria-hidden="true" className="size-3" />
+      ) : (
+        <span aria-hidden="true" className="size-1.5 rounded-full bg-warning" />
+      )}
+      {reviewed ? "Reviewed" : "Needs review"}
+    </span>
   );
 }
 
@@ -411,135 +594,186 @@ function ReviewPanel({
   api,
   document,
   onSaved,
+  onClose,
   workspace,
 }: {
   readonly api: Pick<TammyConveyorModule<"documents">, "saveDocumentReview">;
   readonly document: Document | undefined;
-  readonly onSaved: () => Promise<void>;
+  readonly onSaved: (document: Document) => void;
+  readonly onClose: () => void;
   readonly workspace: AuthenticatedWorkspace | undefined;
 }) {
   const initial = useMemo(() => fieldsFor(document), [document]);
   const [fields, setFields] = useState(initial);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
-  useEffect(() => setFields(initial), [initial]);
-  if (!document)
-    return (
-      <section className="grid place-items-center rounded-[6px] border border-dashed border-border bg-surface p-8 text-center">
-        <div>
-          <FileText className="mx-auto size-6 text-muted-foreground" />
-          <p className="mt-3 text-[11px] font-semibold">Select a document</p>
-          <p className="mt-1 text-[10px] text-muted-foreground">
-            Extracted details appear here for human review.
-          </p>
-        </div>
-      </section>
-    );
-
+  const active = useRef(false);
+  const attempt = useRef<{ signature: string; key: string } | undefined>(undefined);
+  const reviewed = document?.status === DocumentStatus.REVIEWED;
+  useEffect(() => {
+    setFields(initial);
+    setError(undefined);
+  }, [initial]);
   const save = async (event: FormEvent) => {
     event.preventDefault();
-    if (!workspace) return;
+    if (!workspace || !document || active.current || reviewed) return;
+    active.current = true;
     setSaving(true);
     setError(undefined);
+    const signature = JSON.stringify([document.id, document.version.toString(), fields]);
+    if (attempt.current?.signature !== signature) attempt.current = { signature, key: uuidV7() };
     try {
-      const request = create(SaveDocumentReviewRequestSchema, {
-        commandContext: create(CommandContextSchema, {
-          authentication: { actorUserId: workspace.userId, sessionId: workspace.sessionId },
-          idempotencyKey: uuidV7(),
-        }),
-        documentId: document.id,
-        expectedVersion: document.version,
-        candidate: candidateFromFields(fields),
-      });
       const response = reviewCodec.decodeResponse(
-        await api.saveDocumentReview(reviewCodec.encodeRequest(request)),
+        await api.saveDocumentReview(
+          reviewCodec.encodeRequest(
+            create(SaveDocumentReviewRequestSchema, {
+              commandContext: create(CommandContextSchema, {
+                authentication: { actorUserId: workspace.userId, sessionId: workspace.sessionId },
+                idempotencyKey: attempt.current.key,
+              }),
+              documentId: document.id,
+              expectedVersion: document.version,
+              candidate: candidateFromFields(fields),
+            }),
+          ),
+        ),
       );
-      if (!response.document || response.document.status !== DocumentStatus.REVIEWED)
+      if (
+        !response.document ||
+        response.document.id !== document.id ||
+        response.document.status !== DocumentStatus.REVIEWED
+      )
         throw new Error("review failed");
-      await onSaved();
+      attempt.current = undefined;
+      onSaved(response.document);
     } catch {
-      setError("The review could not be saved. Reload and try again.");
+      setError(
+        "The review could not be saved. Your changes are still here. Try again, or refresh the document list if it changed elsewhere.",
+      );
     } finally {
+      active.current = false;
       setSaving(false);
     }
   };
-
+  if (!document)
+    return (
+      <WorkState
+        title="Select a document"
+        description="Retained source text and review details appear here. Purchase posting and provenance controls are available when a document is selected."
+      />
+    );
   return (
-    <section className="rounded-[6px] border border-border bg-surface p-4">
-      <div className="flex items-start justify-between gap-3 border-b border-border pb-3">
-        <div>
-          <p className="text-[9px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
-            Source document
-          </p>
-          <h2 className="mt-1 text-[12px] font-semibold">{document.sourceDisplayName}</h2>
-          <p className="mt-1 text-[9px] text-muted-foreground">
+    <section aria-label="Document review" className="work-surface overflow-hidden">
+      <div className="flex items-start justify-between gap-3 border-b border-border p-5">
+        <div className="min-w-0">
+          <p className="work-eyebrow">{reviewed ? "Retained evidence" : "Review document"}</p>
+          <h2 className="mt-1 break-words font-serif text-[26px] leading-8">
+            {document.sourceDisplayName}
+          </h2>
+          <p className="mt-1 text-[12px] text-muted-foreground">
             {formatBytes(document.byteLength)} · retained locally
           </p>
         </div>
-        {document.status === DocumentStatus.REVIEWED ? (
-          <span className="flex items-center gap-1 rounded-full bg-success-soft px-2 py-1 text-[8px] font-semibold text-forest">
-            <Check className="size-3" /> Reviewed
-          </span>
-        ) : null}
+        <Button
+          aria-label="Close review"
+          disabled={saving}
+          onClick={onClose}
+          type="button"
+          variant="ghost"
+        >
+          <X aria-hidden="true" className="size-4" />
+        </Button>
       </div>
-      <div className="mt-4 grid grid-cols-[0.9fr_1.1fr] gap-4 max-[760px]:grid-cols-1">
-        <pre className="min-h-72 whitespace-pre-wrap break-words rounded-[5px] border border-border bg-background p-3 font-sans text-[9px] leading-5 text-muted-foreground">
-          {document.extractedText ||
-            "No native text was found. Enter the details from the source image manually."}
-        </pre>
-        <form className="grid content-start gap-3" onSubmit={save}>
+      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] max-[1050px]:grid-cols-1">
+        <div className="border-r border-border bg-background p-6 max-[1050px]:border-b max-[1050px]:border-r-0 max-[700px]:p-4">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-[14px] font-semibold">Extracted source text</h3>
+            <span className="text-[12px] text-muted-foreground">
+              {document.mimeType === "application/pdf" ? "Native PDF text" : "Image · manual entry"}
+            </span>
+          </div>
+          <div className="min-h-64 rounded-xl border border-border bg-surface p-6 max-[700px]:p-4">
+            <FileText aria-hidden="true" className="mb-5 size-6 text-forest" />
+            <pre className="whitespace-pre-wrap break-words font-sans text-[14px] leading-7 text-foreground">
+              {document.extractedText ||
+                "No native text was found. Enter the details from the source image manually."}
+            </pre>
+          </div>
+          <p className="mt-4 text-[12px] leading-5 text-muted-foreground">
+            This is retained text, not an original-file preview. Check the source file when
+            confirming details.
+          </p>
+        </div>
+        <form className="grid content-start gap-4 p-6 max-[700px]:p-4" onSubmit={save}>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-[14px] font-semibold">
+              {reviewed ? "Reviewed details" : "Check the details"}
+            </h3>
+            <DocumentStatusLabel reviewed={reviewed} />
+          </div>
+          <p className="text-[12px] leading-5 text-muted-foreground">
+            {reviewed
+              ? "Your review is saved. No accounting entries were posted by this action."
+              : "Suggestions need your confirmation. Saving a review does not post accounting entries."}
+          </p>
           <Field
             label="Supplier"
             onChange={(value) => setFields({ ...fields, supplierName: value })}
             value={fields.supplierName}
+            readOnly={reviewed || saving}
           />
-          <Field
-            label="Invoice number"
-            onChange={(value) => setFields({ ...fields, invoiceNumber: value })}
-            value={fields.invoiceNumber}
-          />
-          <Field
-            label="Date"
-            onChange={(value) => setFields({ ...fields, date: value })}
-            type="date"
-            value={fields.date}
-          />
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-3 max-[700px]:grid-cols-1">
             <Field
-              label="Subtotal"
-              onChange={(value) => setFields({ ...fields, subtotal: value })}
-              type="number"
-              value={fields.subtotal}
+              label="Invoice number"
+              onChange={(value) => setFields({ ...fields, invoiceNumber: value })}
+              value={fields.invoiceNumber}
+              readOnly={reviewed || saving}
             />
             <Field
-              label="GST"
-              onChange={(value) => setFields({ ...fields, gst: value })}
-              type="number"
-              value={fields.gst}
-            />
-            <Field
-              label="Total"
-              onChange={(value) => setFields({ ...fields, total: value })}
-              type="number"
-              value={fields.total}
+              label="Date"
+              type="date"
+              onChange={(value) => setFields({ ...fields, date: value })}
+              value={fields.date}
+              readOnly={reviewed || saving}
             />
           </div>
-          {error ? (
-            <p className="text-[9px] text-destructive" role="alert">
-              {error}
-            </p>
-          ) : null}
-          <Button
-            className="mt-1"
-            disabled={saving || document.status === DocumentStatus.REVIEWED}
-            type="submit"
-          >
-            {saving
-              ? "Saving…"
-              : document.status === DocumentStatus.REVIEWED
-                ? "Review saved"
-                : "Save review"}
-          </Button>
+          <div className="grid grid-cols-3 gap-3 max-[700px]:grid-cols-1">
+            {(
+              [
+                ["Subtotal", "subtotal"],
+                ["GST", "gst"],
+                ["Total", "total"],
+              ] as const
+            ).map(([label, key]) => (
+              <Field
+                key={key}
+                label={label}
+                type="number"
+                onChange={(value) => setFields({ ...fields, [key]: value })}
+                value={fields[key]}
+                readOnly={reviewed || saving}
+              />
+            ))}
+          </div>
+          {error ? <WorkNotice>{error}</WorkNotice> : null}
+          <div className="mt-2 flex flex-wrap items-center gap-3 border-t border-border pt-4">
+            <Button disabled={saving || reviewed} type="submit">
+              {saving ? "Saving…" : reviewed ? "Review saved" : "Save review"}
+            </Button>
+            {!reviewed ? (
+              <Button
+                disabled={saving}
+                onClick={() => {
+                  setFields(initial);
+                  setError(undefined);
+                }}
+                type="button"
+                variant="ghost"
+              >
+                Cancel changes
+              </Button>
+            ) : null}
+          </div>
         </form>
       </div>
     </section>
@@ -551,48 +785,27 @@ function Field({
   onChange,
   type = "text",
   value,
+  readOnly,
 }: {
   readonly label: string;
   readonly onChange: (value: string) => void;
   readonly type?: string;
   readonly value: string;
+  readonly readOnly: boolean;
 }) {
   return (
-    <label className="grid gap-1 text-[9px] font-semibold text-foreground">
+    <label className="grid gap-1.5 text-[12px] font-semibold">
       {label}
       <input
-        className="focus-ring h-8 rounded-[5px] border border-border bg-surface px-2 text-[10px] font-normal outline-none"
+        className="focus-ring h-11 min-w-0 w-full rounded-xl border border-border bg-surface px-3 text-[14px] font-normal read-only:bg-background"
         min={type === "number" ? "0" : undefined}
-        onChange={(event) => onChange(event.target.value)}
         step={type === "number" ? "0.01" : undefined}
+        onChange={(event) => onChange(event.target.value)}
+        readOnly={readOnly}
         type={type}
         value={value}
       />
     </label>
-  );
-}
-
-function DocumentEmpty({ status }: { readonly status: DocumentState["status"] }) {
-  return (
-    <div className="grid min-h-72 place-items-center p-6 text-center">
-      <div>
-        {status === "loading" ? (
-          <LoaderCircle className="mx-auto size-4 animate-spin text-forest" />
-        ) : (
-          <FileText className="mx-auto size-5 text-muted-foreground" />
-        )}
-        <p className="mt-2 text-[11px] font-semibold">
-          {status === "unavailable"
-            ? "Documents unavailable"
-            : status === "loading"
-              ? "Loading documents"
-              : "No documents yet"}
-        </p>
-        <p className="mt-1 text-[9px] text-muted-foreground">
-          Upload a local invoice or receipt to begin.
-        </p>
-      </div>
-    </div>
   );
 }
 

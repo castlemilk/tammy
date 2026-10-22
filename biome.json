@@ -1,20 +1,100 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.5.4/schema.json",
-  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
   "files": {
     "includes": [
       "**",
       "!**/internal/gen",
       "!**/src/gen",
-      "!apps/site/content/public-content.generated.ts",
       "!**/.vite",
       "!**/out",
-      "!**/playwright-report"
+      "!**/playwright-report",
+      "!output/tammy-income-bas-exports-2026-10-06-d04a5322/cash/evidence.json",
+      "!output/tammy-income-bas-exports-2026-10-06-d04a5322/cash/initial-bas-comparison.json",
+      "!output/tammy-income-bas-exports-2026-10-06-d04a5322/cash/initial-income-comparison.json",
+      "!output/tammy-income-bas-exports-2026-10-06-d04a5322/cash/regenerated-bas-comparison.json",
+      "!output/tammy-income-bas-exports-2026-10-06-d04a5322/cash/restarted-bas-comparison.json",
+      "!output/tammy-income-bas-exports-2026-10-06-d04a5322/cash/restarted-income-comparison.json",
+      "!output/tammy-income-bas-exports-2026-10-06-d04a5322/cash/stale-bas-comparison.json",
+      "!output/tammy-income-bas-exports-2026-10-06-d04a5322/independent-inspection.json",
+      "!output/tammy-income-bas-exports-2026-10-06-d04a5322/non-cash/evidence.json",
+      "!output/tammy-income-bas-exports-2026-10-06-d04a5322/non-cash/initial-bas-comparison.json",
+      "!output/tammy-income-bas-exports-2026-10-06-d04a5322/non-cash/initial-income-comparison.json",
+      "!output/tammy-income-bas-exports-2026-10-06-d04a5322/non-cash/regenerated-bas-comparison.json",
+      "!output/tammy-income-bas-exports-2026-10-06-d04a5322/non-cash/restarted-bas-comparison.json",
+      "!output/tammy-income-bas-exports-2026-10-06-d04a5322/non-cash/restarted-income-comparison.json",
+      "!output/tammy-income-bas-exports-2026-10-06-d04a5322/non-cash/stale-bas-comparison.json",
+      "!output/tammy-income-bas-exports-2026-10-06/cash/evidence.json",
+      "!output/tammy-income-bas-exports-2026-10-06/cash/initial-bas-comparison.json",
+      "!output/tammy-income-bas-exports-2026-10-06/cash/initial-income-comparison.json",
+      "!output/tammy-income-bas-exports-2026-10-06/cash/regenerated-bas-comparison.json",
+      "!output/tammy-income-bas-exports-2026-10-06/cash/restarted-bas-comparison.json",
+      "!output/tammy-income-bas-exports-2026-10-06/cash/restarted-income-comparison.json",
+      "!output/tammy-income-bas-exports-2026-10-06/cash/stale-bas-comparison.json",
+      "!output/tammy-income-bas-exports-2026-10-06/independent-inspection.json",
+      "!output/tammy-income-bas-exports-2026-10-06/non-cash/evidence.json",
+      "!output/tammy-income-bas-exports-2026-10-06/non-cash/initial-bas-comparison.json",
+      "!output/tammy-income-bas-exports-2026-10-06/non-cash/initial-income-comparison.json",
+      "!output/tammy-income-bas-exports-2026-10-06/non-cash/regenerated-bas-comparison.json",
+      "!output/tammy-income-bas-exports-2026-10-06/non-cash/restarted-bas-comparison.json",
+      "!output/tammy-income-bas-exports-2026-10-06/non-cash/restarted-income-comparison.json",
+      "!output/tammy-income-bas-exports-2026-10-06/non-cash/stale-bas-comparison.json",
+      "!output/tammy-invoice-demo/seed-demo.mjs",
+      "!output/tammy-invoice-demo/seed-demo.ts",
+      "!output/tammy-purchase-payments-gst-accepted-9ad0b82b-2026-10-10/artifact-audit.mjs",
+      "!output/tammy-purchase-payments-gst-accepted-9ad0b82b-2026-10-10/cash-mixed/journal-vectors.json",
+      "!output/tammy-purchase-payments-gst-accepted-9ad0b82b-2026-10-10/cash-mixed/reconciliation.json",
+      "!output/tammy-purchase-payments-gst-accepted-9ad0b82b-2026-10-10/cash/journal-vectors.json",
+      "!output/tammy-purchase-payments-gst-accepted-9ad0b82b-2026-10-10/cash/reconciliation.json",
+      "!output/tammy-purchase-payments-gst-accepted-9ad0b82b-2026-10-10/non-cash/journal-vectors.json",
+      "!output/tammy-purchase-payments-gst-accepted-9ad0b82b-2026-10-10/non-cash/reconciliation.json",
+      "!output/tammy-purchase-payments-gst-accepted-9ad0b82b-2026-10-10/package-integrity.json",
+      "!output/tammy-purchase-payments-gst-accepted-9ad0b82b-2026-10-10/sbr-e2e-result.json",
+      "!output/tammy-purchase-payments-gst-accepted-9ad0b82b-2026-10-10/visual/render-manifest.json",
+      "!output/tammy-purchase-payments-gst-preacceptance-4bb79919-2026-10-10/cash-mixed/journal-vectors.json",
+      "!output/tammy-purchase-payments-gst-preacceptance-4bb79919-2026-10-10/cash-mixed/reconciliation.json",
+      "!output/tammy-purchase-payments-gst-preacceptance-4bb79919-2026-10-10/cash/journal-vectors.json",
+      "!output/tammy-purchase-payments-gst-preacceptance-4bb79919-2026-10-10/cash/reconciliation.json",
+      "!output/tammy-purchase-payments-gst-preacceptance-4bb79919-2026-10-10/non-cash/journal-vectors.json",
+      "!output/tammy-purchase-payments-gst-preacceptance-4bb79919-2026-10-10/non-cash/reconciliation.json",
+      "!output/tammy-purchase-payments-gst-preacceptance-755a36d6-2026-10-10/artifacts/cash-mixed/journal-vectors.json",
+      "!output/tammy-purchase-payments-gst-preacceptance-755a36d6-2026-10-10/artifacts/cash-mixed/reconciliation.json",
+      "!output/tammy-purchase-payments-gst-preacceptance-755a36d6-2026-10-10/artifacts/cash/journal-vectors.json",
+      "!output/tammy-purchase-payments-gst-preacceptance-755a36d6-2026-10-10/artifacts/cash/reconciliation.json",
+      "!output/tammy-purchase-payments-gst-preacceptance-755a36d6-2026-10-10/artifacts/non-cash/journal-vectors.json",
+      "!output/tammy-purchase-payments-gst-preacceptance-755a36d6-2026-10-10/artifacts/non-cash/reconciliation.json",
+      "!output/tammy-purchase-payments-gst-preacceptance-755a36d6-2026-10-10/sbr-e2e-result.json",
+      "!apps/site/content/public-content.generated.ts"
     ]
   },
-  "formatter": { "enabled": true, "indentStyle": "space", "indentWidth": 2, "lineWidth": 100 },
-  "css": { "parser": { "tailwindDirectives": true } },
-  "javascript": { "formatter": { "quoteStyle": "double", "semicolons": "always" } },
-  "linter": { "enabled": true, "rules": { "preset": "recommended" } },
-  "assist": { "enabled": true, "actions": { "source": { "organizeImports": "on" } } }
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double",
+      "semicolons": "always"
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended"
+    }
+  },
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  }
 }

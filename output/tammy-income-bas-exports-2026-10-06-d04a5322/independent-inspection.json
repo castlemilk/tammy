@@ -1,0 +1,113 @@
+{
+  "method": "Independent csv-parse and Poppler audit; all CSV source fields and exact PDF provenance reconciled to retained authoritative Core records, artifact hashes and copied bytes verified.",
+  "summaries": [
+    {
+      "basis": "cash",
+      "revision": "d04a532295e977c3a88b3550e7935cdbf52c6272",
+      "sourceDirty": false,
+      "appSha256": "2a0df1bf2c1575b644633115e297ca4cbaac5c429bbfc8c734702f1bd821b67f",
+      "coreSha256": "59f04657746d1b303fea7476921987b9581de80d42c7a88c40bbd4e86a0d2950",
+      "hashesVerified": 20,
+      "checks": [
+        {
+          "stage": "initial-income",
+          "csvRows": 20,
+          "pdfPages": 1
+        },
+        {
+          "stage": "initial-bas",
+          "csvRows": 23,
+          "pdfPages": 2
+        },
+        {
+          "stage": "stale-bas",
+          "csvRows": 24,
+          "pdfPages": 2
+        },
+        {
+          "stage": "regenerated-bas",
+          "csvRows": 24,
+          "pdfPages": 2
+        },
+        {
+          "stage": "restarted-bas",
+          "csvRows": 24
+        },
+        {
+          "stage": "restarted-income",
+          "csvRows": 20
+        }
+      ],
+      "initialBas": {
+        "id": "01a10f36-e87b-7305-92fe-29f9fe7cb10f",
+        "fingerprint": "829f7a5c8200e9b0d8ec10ace8bd39c1d85b8532ccc9d9d1ce518a8cf1b96f00",
+        "g1": "80.00",
+        "oneA": "5.00",
+        "oneB": "0.00",
+        "net": "5.00"
+      },
+      "regeneratedBas": {
+        "id": "01a10f36-ed4c-7ef6-a075-dc0e531d7711",
+        "fingerprint": "5e7ae70ed0816149385b9ccb9770a6bce43fa230f004c9080b333b50653c7f1d",
+        "g1": "120.00",
+        "oneA": "7.50",
+        "oneB": "0.00",
+        "net": "7.50"
+      }
+    },
+    {
+      "basis": "non-cash",
+      "revision": "d04a532295e977c3a88b3550e7935cdbf52c6272",
+      "sourceDirty": false,
+      "appSha256": "2a0df1bf2c1575b644633115e297ca4cbaac5c429bbfc8c734702f1bd821b67f",
+      "coreSha256": "59f04657746d1b303fea7476921987b9581de80d42c7a88c40bbd4e86a0d2950",
+      "hashesVerified": 20,
+      "checks": [
+        {
+          "stage": "initial-income",
+          "csvRows": 20,
+          "pdfPages": 1
+        },
+        {
+          "stage": "initial-bas",
+          "csvRows": 23,
+          "pdfPages": 2
+        },
+        {
+          "stage": "stale-bas",
+          "csvRows": 24,
+          "pdfPages": 2
+        },
+        {
+          "stage": "regenerated-bas",
+          "csvRows": 24,
+          "pdfPages": 2
+        },
+        {
+          "stage": "restarted-bas",
+          "csvRows": 24
+        },
+        {
+          "stage": "restarted-income",
+          "csvRows": 20
+        }
+      ],
+      "initialBas": {
+        "id": "01a10f37-1a6a-76c3-92ee-8665c87e1344",
+        "fingerprint": "1ee619aeaf0743a1b44a5bcf0fd206c5f80a97f3fe4388bf35dd8c70cd3ab9c0",
+        "g1": "160.00",
+        "oneA": "10.00",
+        "oneB": "10.00",
+        "net": "0.00"
+      },
+      "regeneratedBas": {
+        "id": "01a10f37-1f2b-7ed0-b421-6fbb0167eea5",
+        "fingerprint": "fb0672f9f9a72af292d68387a7f9cf3e49414c1ec3b796332bff86e09d9e566c",
+        "g1": "160.00",
+        "oneA": "10.00",
+        "oneB": "20.00",
+        "net": "-10.00"
+      }
+    }
+  ]
+}

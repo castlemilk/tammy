@@ -1,0 +1,24 @@
+{
+  "name": "@electron-forge/plugin-base",
+  "version": "7.11.2",
+  "description": "Base plugin for Electron Forge",
+  "repository": "https://github.com/electron/forge",
+  "author": "Samuel Attard",
+  "license": "MIT",
+  "main": "dist/Plugin.js",
+  "typings": "dist/Plugin.d.ts",
+  "engines": {
+    "node": ">= 16.4.0"
+  },
+  "dependencies": {
+    "@electron-forge/shared-types": "7.11.2"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "gitHead": "f2a3ec8aa9c836aff95fcd83ce9c99842f0cda8a"
+}

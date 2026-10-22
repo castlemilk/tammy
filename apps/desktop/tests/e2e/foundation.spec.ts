@@ -1,5 +1,9 @@
 import { create, isFieldSet } from "@bufbuild/protobuf";
 import {
+  ApprovedFileRefSchema,
+  SecretInputSchema,
+} from "@tammy/connect-client/tammy/v1/common_pb.js";
+import {
   GetReportingCapabilityRequestSchema,
   GetReportingCapabilityResponseSchema,
   ReportingCapabilityMode,
@@ -9,6 +13,14 @@ import {
   ReportingModeCapabilitySchema,
   ReportKind,
 } from "@tammy/connect-client/tammy/v1/reporting_capability_pb.js";
+import {
+  ConfirmRecoveryRequestSchema,
+  ConfirmRecoveryResponseSchema,
+  CreateWorkspaceRequestSchema,
+  CreateWorkspaceResponseSchema,
+  RecoveryGroupConfirmationSchema,
+  WorkspaceState,
+} from "@tammy/connect-client/tammy/v1/workspace_pb.js";
 import { createProtoMethodCodec } from "../../src/shared/proto-ipc";
 import { consumeExpectedCspViolations } from "./csp-console";
 import { expect, test } from "./fixtures";
@@ -34,6 +46,33 @@ test("runs the packaged first-run journey offline and exits cleanly", async ({
   const { consoleErrors, page, pageErrors } = electronHarness;
   await expect(page).toHaveTitle("Tammy");
   await expect(page.getByRole("heading", { name: "Create your local workspace" })).toBeVisible();
+
+  await page.emulateMedia({ forcedColors: "none" });
+  const scrollbars = await page.evaluate(() => {
+    const region = document.createElement("div");
+    region.style.overflow = "auto";
+    region.style.width = "20px";
+    region.style.height = "20px";
+    const content = document.createElement("div");
+    content.style.width = "100px";
+    content.style.height = "100px";
+    region.append(content);
+    document.body.append(region);
+    const colors = {
+      root: getComputedStyle(document.documentElement).scrollbarColor,
+      region: getComputedStyle(region).scrollbarColor,
+    };
+    region.remove();
+    return colors;
+  });
+  expect(scrollbars.root).not.toBe("auto");
+  expect(scrollbars.region).toBe(scrollbars.root);
+  await page.emulateMedia({ forcedColors: "active" });
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).scrollbarColor)).toBe(
+    "auto",
+  );
+  await page.emulateMedia({ forcedColors: "none" });
+
   await expect(
     page.getByText("Your accounting data stays encrypted on this device."),
   ).toBeVisible();
@@ -268,3 +307,115 @@ async function windowReportingCapability(
   const response = await invokeConveyorFrame(page, "reporting", "getReportingCapability", request);
   return reportingCodec.decodeResponse(response);
 }
+
+const createWorkspaceCodec = createProtoMethodCodec({
+  input: CreateWorkspaceRequestSchema,
+  maximumRequestBytes: 32_768,
+  maximumResponseBytes: 65_536,
+  output: CreateWorkspaceResponseSchema,
+});
+const confirmRecoveryCodec = createProtoMethodCodec({
+  input: ConfirmRecoveryRequestSchema,
+  maximumRequestBytes: 16_384,
+  maximumResponseBytes: 16_384,
+  output: ConfirmRecoveryResponseSchema,
+});
+
+test.describe("supported workspace contract qualification", () => {
+  // The fixture traces only retry 1. This secret-bearing synthetic contract case
+  // must fail directly, without recording response frames in a retry trace.
+  test.describe.configure({ retries: 0 });
+
+  test("foundation/workspace-recovery-confirmation: qualifies pending recovery to unauthenticated through the packaged IPC boundary", async ({
+    electronHarness,
+  }) => {
+    const { page } = electronHarness;
+    await expect(page.getByRole("heading", { name: "Create your local workspace" })).toBeVisible();
+    const setupId = "018f0000-0000-7000-8000-000000000f01";
+    const request = createWorkspaceCodec.encodeRequest(
+      create(CreateWorkspaceRequestSchema, {
+        setupId,
+        destination: create(ApprovedFileRefSchema, { capabilityId: "local-workspace-directory" }),
+        workspacePassphrase: create(SecretInputSchema, {
+          utf8: new TextEncoder().encode("synthetic-qualification-workspace-passphrase"),
+        }),
+        administratorUsername: "qualification-admin@tammy.invalid",
+        administratorDisplayName: "Synthetic qualification owner",
+        administratorPassword: create(SecretInputSchema, {
+          utf8: new TextEncoder().encode("synthetic-qualification-administrator-password"),
+        }),
+      }),
+    );
+    const invoke = (method: "createWorkspace" | "confirmRecovery", frame: Uint8Array) =>
+      invokeConveyorFrame(page, "workspace", method, frame);
+    const created = createWorkspaceCodec.decodeResponse(await invoke("createWorkspace", request));
+    const secret = created.recoverySecret?.utf8;
+    const confirmationValues: Uint8Array[] = [];
+    let replaySecret: Uint8Array | undefined;
+    let confirmation: Uint8Array | undefined;
+    let incorrect: Uint8Array | undefined;
+    try {
+      expect(created.workspace?.state).toBe(WorkspaceState.PENDING_RECOVERY);
+      const workspaceId = created.workspace?.id;
+      if (!workspaceId || !secret?.byteLength)
+        throw new Error("SYNTHETIC_SETUP_PROJECTION_MISSING");
+      const groups = new TextDecoder()
+        .decode(secret)
+        .replaceAll("-", "")
+        .toUpperCase()
+        .match(/.{1,4}/g);
+      if (!groups || groups.length < 2) throw new Error("SYNTHETIC_RECOVERY_FORMAT_INVALID");
+      confirmationValues.push(
+        ...groups.slice(0, 2).map((value) => new TextEncoder().encode(value)),
+      );
+      const confirmationRequest = create(ConfirmRecoveryRequestSchema, {
+        setupId,
+        confirmations: confirmationValues.map((value, groupIndex) =>
+          create(RecoveryGroupConfirmationSchema, { groupIndex, value }),
+        ),
+      });
+      confirmation = confirmRecoveryCodec.encodeRequest(confirmationRequest);
+      const firstGroup = groups[0];
+      if (!firstGroup) throw new Error("SYNTHETIC_RECOVERY_GROUP_MISSING");
+      const wrongGroup = `${firstGroup.startsWith("A") ? "B" : "A"}${firstGroup.slice(1)}`;
+      incorrect = confirmRecoveryCodec.encodeRequest(
+        create(ConfirmRecoveryRequestSchema, {
+          setupId,
+          confirmations: [
+            create(RecoveryGroupConfirmationSchema, {
+              groupIndex: 0,
+              value: new TextEncoder().encode(wrongGroup),
+            }),
+            ...confirmationRequest.confirmations.slice(1),
+          ],
+        }),
+      );
+      await expect(invoke("confirmRecovery", incorrect)).rejects.toThrow("CORE_REQUEST_FAILED");
+      const replay = createWorkspaceCodec.decodeResponse(await invoke("createWorkspace", request));
+      replaySecret = replay.recoverySecret?.utf8;
+      expect(replay.workspace?.id).toBe(workspaceId);
+      expect(replay.workspace?.state).toBe(WorkspaceState.PENDING_RECOVERY);
+      expect(replay.workspace?.version).toBe(created.workspace?.version);
+      const confirmed = confirmRecoveryCodec.decodeResponse(
+        await invoke("confirmRecovery", confirmation),
+      );
+      expect(confirmed.workspace?.id).toBe(workspaceId);
+      expect(confirmed.workspace?.state).toBe(WorkspaceState.UNAUTHENTICATED);
+      const confirmedReplay = confirmRecoveryCodec.decodeResponse(
+        await invoke("confirmRecovery", confirmation),
+      );
+      expect(confirmedReplay.workspace?.id).toBe(workspaceId);
+      expect(confirmedReplay.workspace?.state).toBe(WorkspaceState.UNAUTHENTICATED);
+      expect(confirmedReplay.workspace?.version).toBe(confirmed.workspace?.version);
+      expect(electronHarness.consoleErrors).toEqual([]);
+      expect(electronHarness.pageErrors).toEqual([]);
+    } finally {
+      for (const value of confirmationValues) value.fill(0);
+      request.fill(0);
+      secret?.fill(0);
+      replaySecret?.fill(0);
+      confirmation?.fill(0);
+      incorrect?.fill(0);
+    }
+  });
+});

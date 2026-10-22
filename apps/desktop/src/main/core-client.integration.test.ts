@@ -134,7 +134,6 @@ interface ExecuteIntegrationCoreBuildOptions {
   readonly execFile?: IntegrationBuildExecFile | undefined;
   readonly signal: AbortSignal;
   readonly sourceEnvironment?: Readonly<NodeJS.ProcessEnv> | undefined;
-  readonly temporaryDirectory: string;
 }
 
 const productionIntegrationBuildExecFile: IntegrationBuildExecFile = async (
@@ -150,14 +149,11 @@ async function executeIntegrationCoreBuild({
   execFile: execute = productionIntegrationBuildExecFile,
   signal,
   sourceEnvironment = process.env,
-  temporaryDirectory,
 }: ExecuteIntegrationCoreBuildOptions): Promise<void> {
+  // The untagged core uses no cgo, so the shared Go build cache is safe to reuse.
   await execute("go", ["build", "-trimpath", "-o", binaryPath, "./services/core/cmd/tammy-core"], {
     cwd: repositoryRoot,
-    env: {
-      ...sourceEnvironment,
-      GOCACHE: path.join(temporaryDirectory, "go-cache"),
-    },
+    env: { ...sourceEnvironment },
     signal,
     windowsHide: true,
   });
@@ -365,7 +361,7 @@ describe("integration build timeout", () => {
 });
 
 describe("integration build environment", () => {
-  it("gives execFile a contained local Go cache without mutating inherited environment", async () => {
+  it("gives execFile the inherited environment and its Go cache without mutating it", async () => {
     const temporaryRoot = path.join(tmpdir(), "tammy-integration-environment");
     const binary = path.join(
       temporaryRoot,
@@ -387,7 +383,6 @@ describe("integration build environment", () => {
       },
       signal: abortController.signal,
       sourceEnvironment,
-      temporaryDirectory: temporaryRoot,
     });
 
     expect(calls).toHaveLength(1);
@@ -406,11 +401,8 @@ describe("integration build environment", () => {
       windowsHide: true,
     });
     expect(options.env).not.toBe(sourceEnvironment);
-    expect(options.env).toMatchObject({
-      ...sourceEnvironment,
-      GOCACHE: path.join(temporaryRoot, "go-cache"),
-    });
-    expect(path.relative(temporaryRoot, options.env.GOCACHE ?? "")).toBe("go-cache");
+    expect(options.env).toEqual(sourceEnvironment);
+    expect(options.env.GOCACHE).toBe("/shared/go-cache");
     expect(sourceEnvironment.GOCACHE).toBe("/shared/go-cache");
   });
 });
@@ -564,7 +556,6 @@ describe("CoreProcess and Connect-ES interoperability", () => {
         executeIntegrationCoreBuild({
           binaryPath,
           signal,
-          temporaryDirectory,
         }),
       BUILD_TIMEOUT_MS,
       productionTimeoutTimers,

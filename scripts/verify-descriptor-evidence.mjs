@@ -1,4 +1,4 @@
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,12 +19,99 @@ const RETAINED_PATHS = new Set([
   "compliance/contracts/descriptors.pb",
 ]);
 
+const MAX_OUTPUT_LINE_CHARACTERS = 1024 * 1024;
+const MAX_STDERR_CHARACTERS = 32 * 1024;
+
+function runVerificationCommand(command, args, { onStdoutLine, ...options }) {
+  if (!onStdoutLine) return execFileAsync(command, args, options);
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      ...options,
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true,
+    });
+    let pending = "";
+    let stderr = "";
+    let stderrTruncated = false;
+    let streamError;
+    let spawnError;
+    const consume = (line) => {
+      if (line.endsWith("\r")) line = line.slice(0, -1);
+      if (line.length > MAX_OUTPUT_LINE_CHARACTERS) {
+        throw new Error("DESCRIPTOR_GIT_OUTPUT_LINE_TOO_LONG");
+      }
+      onStdoutLine(line);
+    };
+    child.stdout.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => {
+      if (streamError) return;
+      try {
+        const lines = (pending + chunk).split("\n");
+        pending = lines.pop();
+        for (const line of lines) consume(line);
+        if (pending.length > MAX_OUTPUT_LINE_CHARACTERS) {
+          throw new Error("DESCRIPTOR_GIT_OUTPUT_LINE_TOO_LONG");
+        }
+      } catch (error) {
+        streamError = error;
+        pending = "";
+      }
+    });
+    child.stderr.setEncoding("utf8");
+    child.stderr.on("data", (chunk) => {
+      const remaining = MAX_STDERR_CHARACTERS - stderr.length;
+      stderr += chunk.slice(0, remaining);
+      if (chunk.length > remaining) stderrTruncated = true;
+    });
+    child.stdout.once("error", (error) => {
+      streamError ??= error;
+    });
+    child.stderr.once("error", (error) => {
+      streamError ??= error;
+    });
+    child.once("error", (error) => {
+      spawnError = error;
+    });
+    child.once("close", (code, signal) => {
+      if (stderrTruncated) stderr += "\n[output truncated]";
+      if (spawnError) return reject(spawnError);
+      if (code !== 0) {
+        return reject(
+          Object.assign(new Error(`${command} failed (${signal ?? code}): ${stderr}`), {
+            code,
+            signal,
+            cmd: `${command} ${args.join(" ")}`,
+            stderr,
+          }),
+        );
+      }
+      try {
+        if (streamError) throw streamError;
+        if (pending) consume(pending);
+        resolve({ stdout: "", stderr });
+      } catch (error) {
+        reject(error);
+      }
+    });
+  });
+}
+
+async function forEachGitOutputLine(run, root, args, consume) {
+  const { stdout } = await run("git", args, {
+    cwd: root,
+    shell: false,
+    onStdoutLine: consume,
+  });
+  // Injected test runners may return buffered output rather than invoke the consumer.
+  if (stdout) for (const line of String(stdout).split(/\r?\n/)) consume(line);
+}
+
 export async function verifyRetainedDescriptorEvidence({
   bufEntry = DEFAULT_BUF_ENTRY,
   nodeExecutable = process.execPath,
   platform = process.platform,
   root = process.cwd(),
-  run = execFileAsync,
+  run = runVerificationCommand,
   subjectRevision = "HEAD",
 }) {
   const retainedDirectory = path.join(root, "compliance/contracts");
@@ -72,30 +159,38 @@ export async function verifyRetainedDescriptorEvidence({
       ["rev-parse", "--verify", `${resolvedSubjectRevision}^`],
       { cwd: root, shell: false },
     );
-    const { stdout: changedStdout } = await run(
-      "git",
+    let changedPathCount = 0;
+    let invalidChangedPath = false;
+    await forEachGitOutputLine(
+      run,
+      root,
       ["diff", "--name-only", manifest.gitRevision, resolvedSubjectRevision, "--"],
-      { cwd: root, shell: false },
+      (line) => {
+        if (!line) return;
+        changedPathCount += 1;
+        if (!RETAINED_PATHS.has(line)) invalidChangedPath = true;
+      },
     );
-    const changedPaths = String(changedStdout).trim().split(/\r?\n/).filter(Boolean);
     if (
       String(parentStdout).trim() !== manifest.gitRevision ||
-      changedPaths.length === 0 ||
-      changedPaths.some((changedPath) => !RETAINED_PATHS.has(changedPath))
+      changedPathCount === 0 ||
+      invalidChangedPath
     ) {
       throw new Error("DESCRIPTOR_SOURCE_REVISION_MISMATCH");
     }
   }
-  const { stdout: statusStdout } = await run(
-    "git",
+  let invalidDirtyPath = false;
+  await forEachGitOutputLine(
+    run,
+    root,
     ["status", "--porcelain=v1", "--untracked-files=all"],
-    { cwd: root, shell: false },
+    (line) => {
+      if (!line) return;
+      const dirtyPath = line.slice(3).split(" -> ").at(-1);
+      if (!RETAINED_PATHS.has(dirtyPath)) invalidDirtyPath = true;
+    },
   );
-  const dirtyPaths = String(statusStdout)
-    .split(/\r?\n/)
-    .filter(Boolean)
-    .map((line) => line.slice(3).split(" -> ").at(-1));
-  if (dirtyPaths.some((dirtyPath) => !RETAINED_PATHS.has(dirtyPath))) {
+  if (invalidDirtyPath) {
     throw new Error("DESCRIPTOR_EVIDENCE_DIRTY_TREE");
   }
 

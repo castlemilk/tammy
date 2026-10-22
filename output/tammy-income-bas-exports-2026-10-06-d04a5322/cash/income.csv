@@ -1,0 +1,21 @@
+metric,value,currency,context
+organisation_id,01a10f36-d59d-7fdb-abf8-a0c5487d0d7f,,
+organisation_version,1,,
+organisation_legal_name,Wattle & Co Supplies Pty Ltd,,
+organisation_display_name,Wattle & Co Supplies,,
+organisation_abn,11000000560,,
+acquired_at,2026-10-06T03:16:58.701Z,,Immutable report acquisition
+report_type,Income summary,,"Summary, not a transaction listing"
+period_start,2026-10-01,,
+period_end,2026-12-31,,
+as_of_date,2026-10-03,,Invoices owing balance date
+gst_basis,Cash,,
+financial_revision,11,,
+business_income,170.00,AUD,Revenue excluding GST
+invoice_income,170.00,AUD,Invoice revenue excluding GST
+payments_received,90.00,AUD,Dated receipts in the selected period
+outstanding,90.00,AUD,Invoices owing as of the balance date
+invoice_gst,5.00,AUD,Invoice GST attributed in the selected period
+unposted_income,0.00,AUD,Unposted invoice income requiring review
+issued_count,1,,
+unposted_issued_count,0,,

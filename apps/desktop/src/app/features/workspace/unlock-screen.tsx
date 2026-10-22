@@ -25,6 +25,7 @@ import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import type { TammyConveyorModule } from "../../../conveyor/client";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
+import paperLoop from "../../assets/paper-loop.png";
 import { Button } from "../../components/ui/button";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
 
@@ -65,7 +66,7 @@ interface UnlockScreenProps {
 }
 
 function fieldClassName(): string {
-  return "focus-ring h-9 w-full rounded-[6px] border border-border bg-surface px-3 text-[12px] text-foreground outline-none placeholder:text-muted-foreground";
+  return "focus-ring h-11 w-full rounded-xl border border-border bg-surface px-3 text-[14px] text-foreground outline-none placeholder:text-muted-foreground";
 }
 
 export function UnlockScreen({
@@ -210,24 +211,25 @@ export function UnlockScreen({
 
   return (
     <main className="grid min-h-screen place-items-center bg-background px-5 py-8">
-      <section className="w-full max-w-[440px] rounded-[8px] border border-border bg-surface p-7 shadow-sm">
-        <div className="mb-6 flex items-start gap-3">
+      <section className="workspace-surface">
+        <div className="mb-6 flex items-start gap-4">
           <span className="grid size-9 shrink-0 place-items-center rounded-full bg-forest-soft text-forest">
             <KeyRound aria-hidden="true" className="size-4" />
           </span>
           <div>
-            <p className="font-serif text-[16px] font-bold text-forest">Tammy</p>
-            <h1 className="mt-1 text-[20px] font-semibold tracking-[-0.02em] text-foreground">
-              Unlock your workspace
-            </h1>
-            <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
+            <p className="font-serif text-[28px] font-bold tracking-[-0.04em] text-foreground">
+              tammy
+            </p>
+            <h1 className="mt-1 text-foreground page-title">Unlock your workspace</h1>
+            <p className="mt-1 text-[14px] leading-5 text-muted-foreground">
               Your encrypted accounting data stays on this device.
             </p>
           </div>
+          <img alt="" aria-hidden="true" className="arrival-art" src={paperLoop} />
         </div>
 
         <form className="grid gap-4" onSubmit={unlockAndSignIn}>
-          <label className="grid gap-1.5 text-[11px] font-medium text-foreground">
+          <label className="grid gap-1.5 text-[14px] font-medium text-foreground">
             Workspace passphrase
             <input
               autoComplete="current-password"
@@ -239,7 +241,7 @@ export function UnlockScreen({
               value={workspacePassphrase}
             />
           </label>
-          <label className="grid gap-1.5 text-[11px] font-medium text-foreground">
+          <label className="grid gap-1.5 text-[14px] font-medium text-foreground">
             Email or username
             <input
               autoComplete="username"
@@ -249,7 +251,7 @@ export function UnlockScreen({
               value={username}
             />
           </label>
-          <label className="grid gap-1.5 text-[11px] font-medium text-foreground">
+          <label className="grid gap-1.5 text-[14px] font-medium text-foreground">
             Administrator password
             <input
               autoComplete="current-password"
@@ -261,19 +263,19 @@ export function UnlockScreen({
               value={administratorPassword}
             />
           </label>
-          <Button className="mt-1 h-9 w-full text-[11px]" disabled={busy} type="submit">
+          <Button className="mt-1 h-11 w-full text-[14px]" disabled={busy} type="submit">
             {busy ? <LoaderCircle aria-hidden="true" className="size-3.5 animate-spin" /> : null}
             Unlock workspace
           </Button>
         </form>
         {error ? (
-          <p className="mt-4 text-[11px] text-destructive" role="alert">
+          <p className="mt-4 text-[14px] text-destructive" role="alert">
             {error}
           </p>
         ) : null}
         {onPrivacy ? (
           <button
-            className="focus-ring mt-4 text-[10px] font-medium text-forest underline"
+            className="focus-ring mt-4 text-[14px] font-medium text-forest underline"
             onClick={onPrivacy}
             type="button"
           >

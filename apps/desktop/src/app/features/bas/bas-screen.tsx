@@ -185,21 +185,21 @@ export function BasScreen({
   const exportBas = api.exportBas;
   return (
     <div className="mx-auto grid w-full max-w-[1120px] gap-4">
-      <div className="flex items-end justify-between gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-[18px] font-semibold tracking-[-0.02em]">
+          <h1 className="page-title">
             {purchaseReviewOnly ? "Purchase source review" : "GST & BAS"}
           </h1>
-          <p className="mt-1 text-[11px] text-muted-foreground">
+          <p className="mt-1 text-[14px] text-muted-foreground">
             {purchaseReviewOnly
               ? "Review purchase evidence and GST-credit blockers in the retained legacy workpaper."
               : "A local workpaper from invoice sales and reviewed expenses. Tammy does not lodge this BAS."}
           </p>
         </div>
         {workpaper ? (
-          <div className="rounded-[6px] border border-warning-border bg-warning-soft px-4 py-2">
-            <p className="text-[12px] font-semibold text-warning">Draft — not lodged</p>
-            <p className="mt-1 text-[9px] text-muted-foreground">Review locally when ready.</p>
+          <div className="rounded-xl border border-warning-border bg-warning-soft px-4 py-2">
+            <p className="text-[14px] font-semibold text-warning">Draft — not lodged</p>
+            <p className="mt-1 text-[12px] text-muted-foreground">Review locally when ready.</p>
           </div>
         ) : null}
       </div>
@@ -245,7 +245,7 @@ export function BasScreen({
           ) : (
             <>
               <div className="grid gap-1">
-                <h2 className="text-[10px] font-semibold">GST workpaper</h2>
+                <h2 className="text-[14px] font-semibold">GST workpaper</h2>
                 <ReportingCapabilityNotice
                   api={api}
                   entityType={ReportingEntityType.AU_BUSINESS}
@@ -255,7 +255,7 @@ export function BasScreen({
                 />
               </div>
               <div className="grid gap-1">
-                <h2 className="text-[10px] font-semibold">Full BAS return</h2>
+                <h2 className="text-[14px] font-semibold">Full BAS return</h2>
                 <ReportingCapabilityNotice
                   api={api}
                   entityType={ReportingEntityType.AU_BUSINESS}
@@ -269,7 +269,7 @@ export function BasScreen({
       ) : null}
       {!purchaseReviewOnly ? (
         <section
-          className="flex flex-wrap items-end gap-3 rounded-[6px] border border-border bg-surface p-3"
+          className="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-surface p-3"
           aria-label="BAS reporting period"
         >
           <DateField
@@ -293,7 +293,7 @@ export function BasScreen({
             value={end}
           />
           <Button
-            className="h-8 text-[10px]"
+            className="h-11 text-[14px]"
             disabled={
               busy || !gstWorkpaperAvailable || !parseDate(start) || !parseDate(end) || start > end
             }
@@ -303,7 +303,7 @@ export function BasScreen({
             {busy ? "Creating…" : workpaper ? "Regenerate local draft" : "Create local draft"}
           </Button>
           {workpaper ? (
-            <p className="text-[9px] leading-4 text-muted-foreground">
+            <p className="text-[12px] leading-4 text-muted-foreground">
               Saved figures remain visible until the new draft is created.
             </p>
           ) : null}
@@ -311,18 +311,18 @@ export function BasScreen({
       ) : null}
       {error ? (
         <p
-          className="rounded-[6px] border border-warning-border bg-warning-soft px-3 py-2 text-[10px]"
+          className="rounded-xl border border-warning-border bg-warning-soft px-3 py-2 text-[14px]"
           role="alert"
         >
           {error}
         </p>
       ) : null}
       {!workpaper && !purchaseReviewOnly ? (
-        <section className="grid min-h-[420px] place-items-center rounded-[6px] border border-dashed border-border bg-surface p-8 text-center">
+        <section className="grid min-h-[420px] place-items-center rounded-xl border border-dashed border-border bg-surface p-8 text-center">
           <div className="max-w-md">
             <Calculator className="mx-auto size-7 text-forest" />
             <h2 className="mt-3 text-[13px] font-semibold">Create a BAS workpaper</h2>
-            <p className="mt-2 text-[10px] leading-5 text-muted-foreground">
+            <p className="mt-2 text-[14px] leading-5 text-muted-foreground">
               Issued invoice sales and recorded receipts contribute according to the business’s GST
               basis. Reviewed purchases need appropriate evidence for GST credits.
             </p>
@@ -339,7 +339,7 @@ export function BasScreen({
           onChanged={() => api.getCurrentBasDraft.invalidate(currentBasInput)}
         />
       ) : (
-        <p className="rounded border border-dashed border-border bg-surface p-6 text-[10px] text-muted-foreground">
+        <p className="rounded border border-dashed border-border bg-surface p-6 text-[14px] text-muted-foreground">
           No retained local workpaper is available for purchase review. Review the source document
           in Documents to resolve purchase blockers.
         </p>
@@ -352,35 +352,35 @@ function Workpaper({ value, ...controls }: { readonly value: BasWorkpaper } & Ba
   return (
     <div className="grid gap-4">
       <section
-        className="grid gap-2 rounded-[6px] border border-border bg-surface p-3"
+        className="grid gap-2 rounded-xl border border-border bg-surface p-3"
         aria-label="BAS source review"
       >
-        <p className="text-[10px] font-medium">
+        <p className="text-[14px] font-medium">
           {value.gstBasis === GstBasis.CASH
             ? "Cash basis · sales follow recorded payments"
             : value.gstBasis === GstBasis.NON_CASH
               ? "Non-cash basis · sales follow invoice issue dates"
               : "Legacy workpaper · regenerate to review income and GST basis"}
         </p>
-        <p className="text-[9px] text-muted-foreground">
+        <p className="text-[12px] text-muted-foreground">
           Saved reporting period: {formatDate(value.periodStart)} – {formatDate(value.periodEnd)}
         </p>
-        <p className="text-[9px] text-muted-foreground break-all">
+        <p className="text-[12px] text-muted-foreground break-all">
           Saved workpaper: {value.id} · version {value.version}
         </p>
         {value.sourcesChanged ? (
-          <p className="text-[10px] text-warning" role="status">
+          <p className="text-[14px] text-warning" role="status">
             Sources changed since this workpaper was saved. Regenerate the local draft to include
             current income and GST. The figures below are the saved snapshot.
           </p>
         ) : null}
         {value.reviewWarnings.map((warning) => (
-          <p className="text-[10px] leading-5 text-warning" key={warning}>
+          <p className="text-[14px] leading-5 text-warning" key={warning}>
             {warning}
           </p>
         ))}
         {value.excludedCashPurchaseCount > 0n ? (
-          <p className="text-[9px] text-muted-foreground">
+          <p className="text-[12px] text-muted-foreground">
             {value.excludedCashPurchaseCount} reviewed purchase
             {value.excludedCashPurchaseCount === 1n ? " has" : "s have"} no recorded payment
             evidence and {value.excludedCashPurchaseCount === 1n ? "is" : "are"} excluded from GST
@@ -404,22 +404,22 @@ function Workpaper({ value, ...controls }: { readonly value: BasWorkpaper } & Ba
           value={abs(value.netGstPayable?.minorUnits)}
         />
       </section>
-      <section className="overflow-hidden rounded-[6px] border border-border bg-surface">
+      <section className="overflow-x-auto rounded-[20px] border border-border bg-surface">
         <div className="border-b border-border px-3 py-3">
-          <h2 className="text-[11px] font-semibold">Invoice sales sources</h2>
-          <p className="mt-1 text-[9px] text-muted-foreground">
+          <h2 className="text-[14px] font-semibold">Invoice sales sources</h2>
+          <p className="mt-1 text-[12px] text-muted-foreground">
             GST-inclusive sales and GST attributed to this period. Out-of-scope lines are excluded.
           </p>
         </div>
         {value.salesSources.length === 0 ? (
-          <p className="p-5 text-center text-[10px] text-muted-foreground">
+          <p className="p-5 text-center text-[14px] text-muted-foreground">
             No eligible invoice sales are attributed to this period.
           </p>
         ) : (
           <div className="overflow-x-auto">
             <table
               aria-label="BAS sales sources"
-              className="w-full border-collapse text-left text-[9px]"
+              className="w-full border-collapse text-left text-[12px]"
             >
               <thead>
                 <tr className="border-b border-border text-muted-foreground">
@@ -454,25 +454,25 @@ function Workpaper({ value, ...controls }: { readonly value: BasWorkpaper } & Ba
           </div>
         )}
       </section>
-      <section className="overflow-hidden rounded-[6px] border border-border bg-surface">
+      <section className="overflow-x-auto rounded-[20px] border border-border bg-surface">
         <div className="flex items-center justify-between border-b border-border px-3 py-3">
           <div>
-            <h2 className="text-[11px] font-semibold">Reviewed source documents</h2>
-            <p className="mt-1 text-[9px] text-muted-foreground">
+            <h2 className="text-[14px] font-semibold">Reviewed source documents</h2>
+            <p className="mt-1 text-[12px] text-muted-foreground">
               {formatDate(value.periodStart)} – {formatDate(value.periodEnd)}
             </p>
           </div>
-          <span className="flex items-center gap-1 rounded-full bg-success-soft px-2 py-1 text-[8px] font-semibold text-forest">
+          <span className="flex items-center gap-1 rounded-full bg-success-soft px-2 py-1 text-[12px] font-semibold text-forest">
             <FileCheck2 className="size-3" />
             {value.sources.length} source{value.sources.length === 1 ? "" : "s"}
           </span>
         </div>
         {value.sources.length === 0 ? (
-          <p className="p-8 text-center text-[10px] text-muted-foreground">
+          <p className="p-8 text-center text-[14px] text-muted-foreground">
             No reviewed purchase documents are included in GST credits for this period.
           </p>
         ) : (
-          <table className="w-full border-collapse text-left text-[9px]">
+          <table className="w-full border-collapse text-left text-[12px]">
             <thead>
               <tr className="border-b border-border text-muted-foreground">
                 <th className="px-3 py-2">Date</th>
@@ -499,7 +499,7 @@ function Workpaper({ value, ...controls }: { readonly value: BasWorkpaper } & Ba
         )}
       </section>
       <BasPurchaseDetails value={value} {...controls} />
-      <p className="text-[9px] text-muted-foreground">
+      <p className="text-[12px] text-muted-foreground">
         Status:{" "}
         {value.status === BasWorkpaperStatus.DRAFT_NOT_LODGED
           ? "Draft — not lodged"
@@ -523,9 +523,9 @@ function Metric({
   return (
     <div
       data-testid={testId}
-      className={`rounded-[6px] border p-4 ${emphasis ? "border-success-border bg-success-soft" : "border-border bg-surface"}`}
+      className={`rounded-xl border p-4 ${emphasis ? "border-success-border bg-success-soft" : "border-border bg-surface"}`}
     >
-      <p className="text-[8px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
+      <p className="text-[12px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
         {label}
       </p>
       <p
@@ -548,10 +548,10 @@ function DateField({
   readonly value: string;
 }) {
   return (
-    <label className="grid gap-1 text-left text-[9px] font-semibold">
+    <label className="grid gap-1 text-left text-[12px] font-semibold">
       {label}
       <input
-        className="focus-ring h-8 rounded-[5px] border border-border px-2 text-[10px]"
+        className="focus-ring h-11 rounded-xl border border-border px-2 text-[14px]"
         onChange={(event) => onChange(event.target.value)}
         onFocus={onFocus}
         type="date"

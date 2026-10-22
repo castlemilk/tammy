@@ -1,6 +1,12 @@
+import { realpath } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 
 import { app, net, protocol } from "electron";
+
+// This headless protocol fixture must not wait for macOS foreground activation.
+if (process.platform === "darwin") {
+  app.setActivationPolicy("accessory");
+}
 
 process.stderr.write("TAMMY_ASAR_HARNESS_START\n");
 
@@ -18,6 +24,13 @@ async function run() {
   security.installApplicationScheme({ app, protocol });
   process.stderr.write("TAMMY_ASAR_READY_WAIT\n");
   await app.whenReady();
+  if (
+    !process.env.TAMMY_TEST_USER_DATA_ROOT ||
+    (await realpath(app.getPath("userData"))) !==
+      (await realpath(process.env.TAMMY_TEST_USER_DATA_ROOT))
+  ) {
+    throw new Error("HARNESS_PROFILE_NOT_ISOLATED");
+  }
   process.stderr.write("TAMMY_ASAR_READY\n");
   await security.installApplicationProtocol({
     app,
@@ -30,6 +43,8 @@ async function run() {
   const result = {
     body: await response.text(),
     contentType: response.headers.get("Content-Type"),
+    dockVisible: process.platform === "darwin" ? app.dock.isVisible() : null,
+    isolatedUserData: true,
     nosniff: response.headers.get("X-Content-Type-Options"),
     status: response.status,
   };

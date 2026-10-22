@@ -5,13 +5,13 @@ export function PrivacyStatement() {
   const links = readPublicLinks();
   return (
     <section
-      className="rounded-[6px] border border-border bg-surface p-4"
+      className="rounded-xl border border-border bg-surface p-4"
       aria-labelledby="privacy-heading"
     >
-      <h2 className="text-[12px] font-semibold text-foreground" id="privacy-heading">
+      <h2 className="text-[14px] font-semibold text-foreground" id="privacy-heading">
         Privacy
       </h2>
-      <div className="mt-2 grid gap-2 text-[10px] leading-5 text-muted-foreground">
+      <div className="mt-2 grid gap-2 text-[14px] leading-5 text-muted-foreground">
         <p>
           Tammy stores your accounting records in an encrypted workspace on this Mac. The current
           app does not send those records to Tammy or third parties and does not include analytics,
@@ -58,9 +58,7 @@ export function PrivacyScreen({ onBack }: { readonly onBack: () => void }) {
       <div className="grid w-full max-w-[620px] gap-4">
         <div>
           <p className="font-serif text-[16px] font-bold text-forest">Tammy</p>
-          <h1 className="mt-1 text-[20px] font-semibold tracking-[-0.02em] text-foreground">
-            Privacy and support
-          </h1>
+          <h1 className="mt-1    text-foreground page-title">Privacy and support</h1>
         </div>
         <PrivacyStatement />
         <Button className="w-fit" onClick={onBack} type="button" variant="outline">

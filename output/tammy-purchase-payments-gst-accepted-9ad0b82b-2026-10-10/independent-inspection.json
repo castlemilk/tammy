@@ -1,0 +1,693 @@
+{
+  "auditedAt": "2026-10-09T23:55:59.662Z",
+  "sourceRevision": "9ad0b82b5ccd4c2f70133a656817d8de22e43249",
+  "directory": "/Users/benebsworth/projects/tammy/output/tammy-purchase-payments-gst-accepted-9ad0b82b-2026-10-10",
+  "comparisonCount": 18,
+  "distinctPdfCount": 15,
+  "distinctPdfPages": 271,
+  "artifacts": [
+    {
+      "file": "build-manifest.json",
+      "bytes": 1735,
+      "sha256": "64294ae2f3280c592e2b5a537c56b93d351960902eee29af8c5f07bebba1b692"
+    },
+    {
+      "file": "cash-mixed/actual-cash-flow-facts.json",
+      "bytes": 2630,
+      "sha256": "9096a4a051d2c33a1ccdd1e5f3cdf5ec5bcf39aa4075857e7e7efcd31b440117"
+    },
+    {
+      "file": "cash-mixed/first-quarter.core.pb",
+      "bytes": 2423,
+      "sha256": "f2bc42dfa0a8c81d30a33fbcf71ba81f19350ffd6049a27f8252a9875404ea40"
+    },
+    {
+      "file": "cash-mixed/first-quarter.csv",
+      "bytes": 11424,
+      "sha256": "da62991ace9adc54e112aa3b23c333d4ed11608a0f43278a26b0908d5232fbb1"
+    },
+    {
+      "file": "cash-mixed/first-quarter.pdf",
+      "bytes": 88428,
+      "sha256": "028e9f9dda471cd433cbfeb7b82429910344453b4359a80b60c079ab6040bb82"
+    },
+    {
+      "file": "cash-mixed/journal-vectors.json",
+      "bytes": 9638,
+      "sha256": "ae418725a5c566e1cd6363a2570bee44e302b8ad6072ed0e102f280d95d966e1"
+    },
+    {
+      "file": "cash-mixed/reconciliation.json",
+      "bytes": 3862,
+      "sha256": "e6a8022992e5d0dd3fcd239c030548de3b4802506c2a4179a24c79682643e7b7"
+    },
+    {
+      "file": "cash-mixed/restarted.core.pb",
+      "bytes": 1907,
+      "sha256": "4a1af066898852726e73f9010c593572c7870340cac9276ee499737b10463569"
+    },
+    {
+      "file": "cash-mixed/restarted.csv",
+      "bytes": 10703,
+      "sha256": "84df0385a42c7b13f9d0786f0dceb2232de54a98c16b0bbb00ef1168522fb634"
+    },
+    {
+      "file": "cash-mixed/retained-purchase-details.png",
+      "bytes": 270884,
+      "sha256": "cfd4c3192e69abe642a4abf9d813551593e321b2ac846cce788b2179df25dbe6"
+    },
+    {
+      "file": "cash-mixed/retained-stale.core.pb",
+      "bytes": 1907,
+      "sha256": "4a1af066898852726e73f9010c593572c7870340cac9276ee499737b10463569"
+    },
+    {
+      "file": "cash-mixed/retained-stale.csv",
+      "bytes": 10703,
+      "sha256": "457801fec8b089aaa67838e28802f7b6441cacb28c20e016c825e7d7c524d008"
+    },
+    {
+      "file": "cash-mixed/retained-stale.pdf",
+      "bytes": 83350,
+      "sha256": "427c29d9ee8e59110a3ee6b43786874b4e71fe2d0987cf39c98035422dfb4cf7"
+    },
+    {
+      "file": "cash-mixed/second-quarter.core.pb",
+      "bytes": 1904,
+      "sha256": "bca2a0d958a0c1ce6b19be7ce8c6dc1d96dc5461f4c8158f4cdb5cf4b0e88690"
+    },
+    {
+      "file": "cash-mixed/second-quarter.csv",
+      "bytes": 10484,
+      "sha256": "fa60cba29045766788f90126a242a03e8adf67a51d8d78197f5f9e2ac4847419"
+    },
+    {
+      "file": "cash-mixed/second-quarter.pdf",
+      "bytes": 82795,
+      "sha256": "94dc7192f18ced8288ed5630434b79b17b1a9c4f3bbd2bba9bc6b06d0d8b3e07"
+    },
+    {
+      "file": "cash-mixed/stale-retained-workpaper.png",
+      "bytes": 81974,
+      "sha256": "d11e04a532da22d1157571b4cb95699207c4a8f6e1517ba30d0ba8fc878aa4b5"
+    },
+    {
+      "file": "cash/actual-cash-flow-facts.json",
+      "bytes": 1007,
+      "sha256": "90e7de5ea1b487e032ab7e3f2483a0fc944826b4aeefbc16ba9472f44f8ebead"
+    },
+    {
+      "file": "cash/first-quarter.core.pb",
+      "bytes": 1285,
+      "sha256": "7f1c1b91fe29985e2b3037bdd4e53b3b62d0b3bc3bf6778c0a9638de6964a66c"
+    },
+    {
+      "file": "cash/first-quarter.csv",
+      "bytes": 9430,
+      "sha256": "a08c6d007d49692f3e98aee2a4f3bfca0d5044a361150c407b11a7031a02529d"
+    },
+    {
+      "file": "cash/first-quarter.pdf",
+      "bytes": 75426,
+      "sha256": "b52022a2d4b4d15ce67f6fe4d5e7efced357e60b37cf80af99c28d194c3b6d96"
+    },
+    {
+      "file": "cash/journal-vectors.json",
+      "bytes": 8531,
+      "sha256": "562e3ee30104024fa062d9a8679fb4caa1f31318bab8869b44a9be3ecad06a91"
+    },
+    {
+      "file": "cash/reconciliation.json",
+      "bytes": 3865,
+      "sha256": "b6296a8f4678c90c72b96df2fd78f0fddce49111584bb6b76310a5d4de159a21"
+    },
+    {
+      "file": "cash/restarted.core.pb",
+      "bytes": 769,
+      "sha256": "310ed8baeed9c43d41137ecd4bb83640e8efc4b8df5c3caa2e0b6db1ec5b2ee0"
+    },
+    {
+      "file": "cash/restarted.csv",
+      "bytes": 8708,
+      "sha256": "ed7615acdd5dcfef3bc76c5db206334e4e7b11b1e51d54c6be5eef967e8fc59a"
+    },
+    {
+      "file": "cash/retained-purchase-details.png",
+      "bytes": 239426,
+      "sha256": "d35153c86fe7c3494ae64784c2b90dff53b0bdb3321073bf88c96a52b0308272"
+    },
+    {
+      "file": "cash/retained-stale.core.pb",
+      "bytes": 769,
+      "sha256": "310ed8baeed9c43d41137ecd4bb83640e8efc4b8df5c3caa2e0b6db1ec5b2ee0"
+    },
+    {
+      "file": "cash/retained-stale.csv",
+      "bytes": 8708,
+      "sha256": "48ab8a29baf116577057ec97ee4164fa53152fa2a1e963cac85e37d568303f14"
+    },
+    {
+      "file": "cash/retained-stale.pdf",
+      "bytes": 70305,
+      "sha256": "11cedada5f75dcf97207b6e5470d99ee2539fd99afe17f375715bdf25c92bb75"
+    },
+    {
+      "file": "cash/second-quarter.core.pb",
+      "bytes": 766,
+      "sha256": "774b967e1efe353e1328dec4702022eac66d030cd0bf673111bb9c1cc3357a18"
+    },
+    {
+      "file": "cash/second-quarter.csv",
+      "bytes": 8489,
+      "sha256": "748b07280848cf74d9554b4ce6a4cf52a35da8408b2bcc71002b944e83a0b541"
+    },
+    {
+      "file": "cash/second-quarter.pdf",
+      "bytes": 69763,
+      "sha256": "52ba4031063f229ea92dbf9b83036dad5f0870fad6da0fc0fbabd86d25722a8a"
+    },
+    {
+      "file": "cash/stale-retained-workpaper.png",
+      "bytes": 82217,
+      "sha256": "ee1fbcdbde95480341f18af51e3eb556db8075c90fe047f2f1acdb9c4f247dd6"
+    },
+    {
+      "file": "evidence-deferral/claim-and-legacy-review.png",
+      "bytes": 81559,
+      "sha256": "e1a87d83d6ec7e67780696c6f322c00ea3fa5c34e2ee57b0e3caf7ac233e985d"
+    },
+    {
+      "file": "evidence-deferral/claimed-and-reviewed.core.pb",
+      "bytes": 2888,
+      "sha256": "885c07cebb3b971958d766fb12807e7321dfb940ca8043b8abe17a655d21b6bc"
+    },
+    {
+      "file": "evidence-deferral/claimed-and-reviewed.csv",
+      "bytes": 11664,
+      "sha256": "2f8b26440d535325ae4bf5ab2eb33a27f60606cfc53455968530422d28ee2661"
+    },
+    {
+      "file": "evidence-deferral/claimed-and-reviewed.pb",
+      "bytes": 2888,
+      "sha256": "885c07cebb3b971958d766fb12807e7321dfb940ca8043b8abe17a655d21b6bc"
+    },
+    {
+      "file": "evidence-deferral/claimed-and-reviewed.pdf",
+      "bytes": 85207,
+      "sha256": "ba43c46b7fe5e1c2422096016825dc542d403560fe75fd1d5b1e6267711e4338"
+    },
+    {
+      "file": "evidence-deferral/future-claim.core.pb",
+      "bytes": 1771,
+      "sha256": "28551a90cddda34deef143c011e4120ed91653945f42902e580c40db7eebdce4"
+    },
+    {
+      "file": "evidence-deferral/future-claim.csv",
+      "bytes": 9904,
+      "sha256": "ab6bc7bd62afb598432e8e20649a856d0ce66550d54c47edd0c7cac01be08abb"
+    },
+    {
+      "file": "evidence-deferral/future-claim.pdf",
+      "bytes": 78402,
+      "sha256": "89e62361ff0d5a23022a7dc6ebf09ceb090d320c0dfd0281efd164a7a6a5ee05"
+    },
+    {
+      "file": "evidence-deferral/reviewed-through-today.core.pb",
+      "bytes": 2304,
+      "sha256": "bf5aac32114a0c423f54d959ac3e5f0695c56a95f0efe3e6566feeb52a6af864"
+    },
+    {
+      "file": "evidence-deferral/reviewed-through-today.csv",
+      "bytes": 10625,
+      "sha256": "f37e87b50e00f3d58256d012894253111a9efee55d74978b7d4109ed08d84cc6"
+    },
+    {
+      "file": "evidence-deferral/reviewed-through-today.pdf",
+      "bytes": 80135,
+      "sha256": "2ffa495659e199ab9890176f356794da0d2cb9e1131b4bf376357040af81f27b"
+    },
+    {
+      "file": "non-cash/actual-cash-flow-facts.json",
+      "bytes": 1007,
+      "sha256": "d91997b8a2fc85fd5f2eba07ac6c64f223ab2fed5fd322e05c7c400b45ce5a6b"
+    },
+    {
+      "file": "non-cash/first-quarter.core.pb",
+      "bytes": 688,
+      "sha256": "803b908d6d2f76548ba0e19ca4f02fa5d9192e8c60994d85840f1a1c737ae29a"
+    },
+    {
+      "file": "non-cash/first-quarter.csv",
+      "bytes": 8410,
+      "sha256": "3a2dedfdd1921f75e8d0ccbfc18bc5a063a9ce6d9d9aae52d7ea431231139030"
+    },
+    {
+      "file": "non-cash/first-quarter.pdf",
+      "bytes": 69537,
+      "sha256": "a4999e8c79e89c5c670ef3967e3ff2cf9eafeb7ddf634e92f7d21ea521fa1db7"
+    },
+    {
+      "file": "non-cash/journal-vectors.json",
+      "bytes": 6315,
+      "sha256": "a549bed2607104b745bd2b391176fa13dc34eaa076bac7619442673533a86e67"
+    },
+    {
+      "file": "non-cash/reconciliation.json",
+      "bytes": 3865,
+      "sha256": "55882fe1990fee81b93ce4fc7c8ae3ee16c6b70fa179160d347f088bbee79253"
+    },
+    {
+      "file": "non-cash/restarted.core.pb",
+      "bytes": 190,
+      "sha256": "947711c05ea733ce915904ae989ce1f368d8938ec6b011187358ed97dca3e024"
+    },
+    {
+      "file": "non-cash/restarted.csv",
+      "bytes": 7717,
+      "sha256": "407387e2612cd33d0031ff9260cf8cdfa299d80accde97d2f4f71674d339ea9c"
+    },
+    {
+      "file": "non-cash/retained-purchase-details.png",
+      "bytes": 242130,
+      "sha256": "35a906cd4cddc4b3c2f5c8c32b94ab58f331f1f909c2041a1a29feb7c730b1b8"
+    },
+    {
+      "file": "non-cash/retained-stale.core.pb",
+      "bytes": 190,
+      "sha256": "947711c05ea733ce915904ae989ce1f368d8938ec6b011187358ed97dca3e024"
+    },
+    {
+      "file": "non-cash/retained-stale.csv",
+      "bytes": 7717,
+      "sha256": "5ee9453bd6486c0efc324d55aae23ef9d224dc0f2a0185a8ad7352f1fe8bce9e"
+    },
+    {
+      "file": "non-cash/retained-stale.pdf",
+      "bytes": 62754,
+      "sha256": "c784b3459db9c39de9c2ef9f9676e8845d27860a2cc9b18b9893504e4476c1c0"
+    },
+    {
+      "file": "non-cash/second-quarter.core.pb",
+      "bytes": 187,
+      "sha256": "16c1d42d043239682bfdaefcd28cc0182e193675b53f7629dd7fa0d2234b7837"
+    },
+    {
+      "file": "non-cash/second-quarter.csv",
+      "bytes": 7498,
+      "sha256": "d4369a535756d8a758354696ba563321a1be81b174fd8247b372d3206c9427d2"
+    },
+    {
+      "file": "non-cash/second-quarter.pdf",
+      "bytes": 62243,
+      "sha256": "377bf9ca9923c1b7732a01fe8ada290e79958f73b5e9e91eb6d5ee3cd4f52f60"
+    },
+    {
+      "file": "non-cash/stale-retained-workpaper.png",
+      "bytes": 81282,
+      "sha256": "1eb2ae20aff5c8789a4548c29aecd7a956e14fbde65188282283fc117a5b495e"
+    },
+    {
+      "file": "opening-legacy/opening-review.png",
+      "bytes": 85289,
+      "sha256": "0940c975830b6c976cc83c759174d9eb94079501da2c44837b1091e4ff69d038"
+    },
+    {
+      "file": "opening-legacy/opening-reviewed.core.pb",
+      "bytes": 2544,
+      "sha256": "7bc2c392c1ca81c609dd08291450550282e4aa55cd12d9e4a0234a47c2d934ea"
+    },
+    {
+      "file": "opening-legacy/opening-reviewed.csv",
+      "bytes": 12015,
+      "sha256": "755c71e7c695a3f5a38be1a5514946575bb557c4bf7c2c85cc6cb29bf94abd06"
+    },
+    {
+      "file": "opening-legacy/opening-reviewed.pdf",
+      "bytes": 83703,
+      "sha256": "01e8d686b0fa38b0b5a6b7e29465f56eb4fcfcb38ab61b021d775b030759a08e"
+    },
+    {
+      "file": "opening-legacy/reconciliation.json",
+      "bytes": 878,
+      "sha256": "d8fe4556a9ff2febc00a12bd7608bb2a499aa43b9f9e917b4b46e9849a1773cf"
+    },
+    {
+      "file": "package-e2e.log",
+      "bytes": 14651,
+      "sha256": "7b49e83f694ac5afd21ef69e32528c20691eec1c7da5dbed65d19c81a6df9ef8"
+    },
+    {
+      "file": "pagination-capacity/complete.core.pb",
+      "bytes": 167738,
+      "sha256": "8aa6049db30f666f6344851a1ce2dd32f9b766625607d211bfbca2799c3a4abc"
+    },
+    {
+      "file": "pagination-capacity/complete.csv",
+      "bytes": 349902,
+      "sha256": "3a57022d651a90deaf197aec3ea37d61e2ec9465064ef8468b2e2334545dfcf0"
+    },
+    {
+      "file": "pagination-capacity/complete.pdf",
+      "bytes": 2157827,
+      "sha256": "8ce0ebd7343a1766f3f71375d8ef2d591f7172117ed916504d7a25e462f32e75"
+    },
+    {
+      "file": "pagination-capacity/overflow-retained.core.pb",
+      "bytes": 167896,
+      "sha256": "0a7ccf5d071961a5518bc469732aeb60b29a10e420e10dcc248ed8b55a27b916"
+    },
+    {
+      "file": "pagination-capacity/overflow-retained.csv",
+      "bytes": 350396,
+      "sha256": "dcd75e90b4ded9fe8bc3543c14c20dcb7765d4b6339641f745d73dba54149e98"
+    },
+    {
+      "file": "pagination-capacity/overflow-retained.pdf",
+      "bytes": 2158573,
+      "sha256": "24bc0364870676f071b483fb11eab35db1fd510fdf52ba4e1818171785538454"
+    },
+    {
+      "file": "pagination-capacity/reconciliation.json",
+      "bytes": 53858,
+      "sha256": "4b07eb42d4ac9d613579fcf8f611199672a18514adade627cfc36b42005036bc"
+    },
+    {
+      "file": "pagination-capacity/source-capacity-retained.png",
+      "bytes": 83928,
+      "sha256": "6c51376e878743ded735e5a76731d00c2b4c0b23a4859f5067ef5c8a84f4504d"
+    },
+    {
+      "file": "sbr-e2e-result.json",
+      "bytes": 551,
+      "sha256": "82a8472441de0e513b05f904725ce5a85f2f0a9f26810bf2d19e07742f3a3ce5"
+    },
+    {
+      "file": "verify-quick.log",
+      "bytes": 93298,
+      "sha256": "d6288cd37ad2ac569361ea2a9a3a59e7d3b72d0a6745feb9546d8b9bcbb5bd8f"
+    }
+  ],
+  "comparisons": [
+    {
+      "csv": "cash-mixed/first-quarter.csv",
+      "pdf": "cash-mixed/first-quarter.pdf",
+      "core": "cash-mixed/first-quarter.core.pb",
+      "workpaperId": "01a122d3-8b0f-7595-a1af-5382ee8f1c83",
+      "version": "1",
+      "claimedGstMinor": "400",
+      "candidateGstMinor": "0",
+      "sourceRows": 3,
+      "reviewRows": 1,
+      "supportRows": 0,
+      "csvRows": 37,
+      "pages": 3
+    },
+    {
+      "csv": "cash-mixed/restarted.csv",
+      "pdf": "cash-mixed/retained-stale.pdf",
+      "core": "cash-mixed/restarted.core.pb",
+      "workpaperId": "01a122d3-8e93-7273-bdd2-6876c677021d",
+      "version": "1",
+      "claimedGstMinor": "400",
+      "candidateGstMinor": "0",
+      "sourceRows": 3,
+      "reviewRows": 0,
+      "supportRows": 0,
+      "csvRows": 36,
+      "pages": 3
+    },
+    {
+      "csv": "cash-mixed/retained-stale.csv",
+      "pdf": "cash-mixed/retained-stale.pdf",
+      "core": "cash-mixed/retained-stale.core.pb",
+      "workpaperId": "01a122d3-8e93-7273-bdd2-6876c677021d",
+      "version": "1",
+      "claimedGstMinor": "400",
+      "candidateGstMinor": "0",
+      "sourceRows": 3,
+      "reviewRows": 0,
+      "supportRows": 0,
+      "csvRows": 36,
+      "pages": 3
+    },
+    {
+      "csv": "cash-mixed/second-quarter.csv",
+      "pdf": "cash-mixed/second-quarter.pdf",
+      "core": "cash-mixed/second-quarter.core.pb",
+      "workpaperId": "01a122d3-8e93-7273-bdd2-6876c677021d",
+      "version": "1",
+      "claimedGstMinor": "400",
+      "candidateGstMinor": "0",
+      "sourceRows": 3,
+      "reviewRows": 0,
+      "supportRows": 0,
+      "csvRows": 35,
+      "pages": 3
+    },
+    {
+      "csv": "cash/first-quarter.csv",
+      "pdf": "cash/first-quarter.pdf",
+      "core": "cash/first-quarter.core.pb",
+      "workpaperId": "01a122d3-2281-762c-8774-e7bfffeae087",
+      "version": "1",
+      "claimedGstMinor": "500",
+      "candidateGstMinor": "0",
+      "sourceRows": 1,
+      "reviewRows": 1,
+      "supportRows": 0,
+      "csvRows": 35,
+      "pages": 2
+    },
+    {
+      "csv": "cash/restarted.csv",
+      "pdf": "cash/retained-stale.pdf",
+      "core": "cash/restarted.core.pb",
+      "workpaperId": "01a122d3-25e3-7456-94fa-9c1c2c065050",
+      "version": "1",
+      "claimedGstMinor": "500",
+      "candidateGstMinor": "0",
+      "sourceRows": 1,
+      "reviewRows": 0,
+      "supportRows": 0,
+      "csvRows": 34,
+      "pages": 2
+    },
+    {
+      "csv": "cash/retained-stale.csv",
+      "pdf": "cash/retained-stale.pdf",
+      "core": "cash/retained-stale.core.pb",
+      "workpaperId": "01a122d3-25e3-7456-94fa-9c1c2c065050",
+      "version": "1",
+      "claimedGstMinor": "500",
+      "candidateGstMinor": "0",
+      "sourceRows": 1,
+      "reviewRows": 0,
+      "supportRows": 0,
+      "csvRows": 34,
+      "pages": 2
+    },
+    {
+      "csv": "cash/second-quarter.csv",
+      "pdf": "cash/second-quarter.pdf",
+      "core": "cash/second-quarter.core.pb",
+      "workpaperId": "01a122d3-25e3-7456-94fa-9c1c2c065050",
+      "version": "1",
+      "claimedGstMinor": "500",
+      "candidateGstMinor": "0",
+      "sourceRows": 1,
+      "reviewRows": 0,
+      "supportRows": 0,
+      "csvRows": 33,
+      "pages": 2
+    },
+    {
+      "csv": "evidence-deferral/claimed-and-reviewed.csv",
+      "pdf": "evidence-deferral/claimed-and-reviewed.pdf",
+      "core": "evidence-deferral/claimed-and-reviewed.core.pb",
+      "workpaperId": "01a122d1-f030-7331-aba9-d62810a8d49b",
+      "version": "1",
+      "claimedGstMinor": "1000",
+      "candidateGstMinor": "0",
+      "sourceRows": 1,
+      "reviewRows": 2,
+      "supportRows": 1,
+      "csvRows": 37,
+      "pages": 3
+    },
+    {
+      "csv": "evidence-deferral/future-claim.csv",
+      "pdf": "evidence-deferral/future-claim.pdf",
+      "core": "evidence-deferral/future-claim.core.pb",
+      "workpaperId": "01a122d1-dffa-7eb6-a9a7-ec40b65f79e2",
+      "version": "1",
+      "claimedGstMinor": "0",
+      "candidateGstMinor": "0",
+      "sourceRows": 0,
+      "reviewRows": 2,
+      "supportRows": 0,
+      "csvRows": 35,
+      "pages": 3
+    },
+    {
+      "csv": "evidence-deferral/reviewed-through-today.csv",
+      "pdf": "evidence-deferral/reviewed-through-today.pdf",
+      "core": "evidence-deferral/reviewed-through-today.core.pb",
+      "workpaperId": "01a122d1-f2ec-7260-98c4-c2358b49ea9f",
+      "version": "1",
+      "claimedGstMinor": "0",
+      "candidateGstMinor": "0",
+      "sourceRows": 0,
+      "reviewRows": 2,
+      "supportRows": 1,
+      "csvRows": 36,
+      "pages": 3
+    },
+    {
+      "csv": "non-cash/first-quarter.csv",
+      "pdf": "non-cash/first-quarter.pdf",
+      "core": "non-cash/first-quarter.core.pb",
+      "workpaperId": "01a122d3-5664-76ae-8542-31618c89546c",
+      "version": "1",
+      "claimedGstMinor": "1000",
+      "candidateGstMinor": "0",
+      "sourceRows": 1,
+      "reviewRows": 0,
+      "supportRows": 0,
+      "csvRows": 33,
+      "pages": 2
+    },
+    {
+      "csv": "non-cash/restarted.csv",
+      "pdf": "non-cash/retained-stale.pdf",
+      "core": "non-cash/restarted.core.pb",
+      "workpaperId": "01a122d3-59a5-7aa5-8578-7748b7fabd76",
+      "version": "1",
+      "claimedGstMinor": "0",
+      "candidateGstMinor": "0",
+      "sourceRows": 0,
+      "reviewRows": 0,
+      "supportRows": 0,
+      "csvRows": 33,
+      "pages": 2
+    },
+    {
+      "csv": "non-cash/retained-stale.csv",
+      "pdf": "non-cash/retained-stale.pdf",
+      "core": "non-cash/retained-stale.core.pb",
+      "workpaperId": "01a122d3-59a5-7aa5-8578-7748b7fabd76",
+      "version": "1",
+      "claimedGstMinor": "0",
+      "candidateGstMinor": "0",
+      "sourceRows": 0,
+      "reviewRows": 0,
+      "supportRows": 0,
+      "csvRows": 33,
+      "pages": 2
+    },
+    {
+      "csv": "non-cash/second-quarter.csv",
+      "pdf": "non-cash/second-quarter.pdf",
+      "core": "non-cash/second-quarter.core.pb",
+      "workpaperId": "01a122d3-59a5-7aa5-8578-7748b7fabd76",
+      "version": "1",
+      "claimedGstMinor": "0",
+      "candidateGstMinor": "0",
+      "sourceRows": 0,
+      "reviewRows": 0,
+      "supportRows": 0,
+      "csvRows": 32,
+      "pages": 2
+    },
+    {
+      "csv": "opening-legacy/opening-reviewed.csv",
+      "pdf": "opening-legacy/opening-reviewed.pdf",
+      "core": "opening-legacy/opening-reviewed.core.pb",
+      "workpaperId": "01a122d1-beb5-7a0e-bdce-59d24b5e9b90",
+      "version": "1",
+      "claimedGstMinor": "0",
+      "candidateGstMinor": "1000",
+      "sourceRows": 0,
+      "reviewRows": 3,
+      "supportRows": 3,
+      "csvRows": 39,
+      "pages": 3
+    },
+    {
+      "csv": "pagination-capacity/complete.csv",
+      "pdf": "pagination-capacity/complete.pdf",
+      "core": "pagination-capacity/complete.core.pb",
+      "workpaperId": "01a122d2-78d7-702b-8d9f-5224767b3b4f",
+      "version": "1",
+      "claimedGstMinor": "1000",
+      "candidateGstMinor": "0",
+      "sourceRows": 201,
+      "reviewRows": 200,
+      "supportRows": 0,
+      "csvRows": 434,
+      "pages": 119
+    },
+    {
+      "csv": "pagination-capacity/overflow-retained.csv",
+      "pdf": "pagination-capacity/overflow-retained.pdf",
+      "core": "pagination-capacity/overflow-retained.core.pb",
+      "workpaperId": "01a122d2-78d7-702b-8d9f-5224767b3b4f",
+      "version": "1",
+      "claimedGstMinor": "1000",
+      "candidateGstMinor": "0",
+      "sourceRows": 201,
+      "reviewRows": 200,
+      "supportRows": 0,
+      "csvRows": 436,
+      "pages": 119
+    }
+  ],
+  "packagePins": {
+    "appExecutable": "/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/.tmp/electron-builder/ordinary/mac-arm64/Tammy.app/Contents/MacOS/Tammy",
+    "appSha256": "a3ebd5142a131b0e5905ca3816e082bc8a16593c0ff814295431d9c18575255a",
+    "coreExecutable": "/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/.tmp/electron-builder/ordinary/mac-arm64/Tammy.app/Contents/Resources/core/darwin-arm64/tammy-core",
+    "coreSha256": "a1e23f0f9893c8915eb209fd3106b3787453bcfe702f5005c020711e246defad",
+    "manifest": "/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/.tmp/electron-builder/ordinary/mac-arm64/Tammy.app/Contents/Resources/build/build-manifest.json",
+    "manifestSha256": "64294ae2f3280c592e2b5a537c56b93d351960902eee29af8c5f07bebba1b692",
+    "releaseKind": "ordinary-package",
+    "sourceRevision": "9ad0b82b5ccd4c2f70133a656817d8de22e43249",
+    "helperExecutable": "/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/.tmp/electron-builder/ordinary/mac-arm64/Tammy.app/Contents/Resources/sbr-helper/darwin-arm64/tammy-sbr-helper",
+    "helperSha256": "305bd9834a56573f420dbc6bb7224b3d2ecc22091aa30a4b1e11b6933bdedd82",
+    "profileFingerprint": "abcc23da7ccc63011fff8fe2ca16dfe495972b92cb7f70fe1915bd757a79823d",
+    "profileSha256": "e6038ff36d51c69c193df9b1ac09c0bef037451a05e95056cc55d72d3b944154",
+    "sbrStatus": "SIMULATOR_ENABLED",
+    "target": "darwin-arm64"
+  },
+  "appBundleSha256": "fdd1ce4bbeafd0a55d4fd74fb4901f837fee928707f5d7a127ebfd935d9f4fbc",
+  "nonEffects": [
+    {
+      "kind": "cash",
+      "unchangedBanking": true,
+      "sbrSimulatorTransportCount": 0
+    },
+    {
+      "kind": "non-cash",
+      "unchangedBanking": true,
+      "sbrSimulatorTransportCount": 0
+    },
+    {
+      "kind": "cash-mixed",
+      "unchangedBanking": true,
+      "sbrSimulatorTransportCount": 0
+    }
+  ],
+  "sbr": {
+    "schema": "tammy-sbr-e2e-result-v1",
+    "source_revision": "9ad0b82b5ccd4c2f70133a656817d8de22e43249",
+    "profile_sha256": "e6038ff36d51c69c193df9b1ac09c0bef037451a05e95056cc55d72d3b944154",
+    "helper_sha256": "305bd9834a56573f420dbc6bb7224b3d2ecc22091aa30a4b1e11b6933bdedd82",
+    "fixture_sha256": "d4b7b2991b21eff234e272015d39eeed8d332afeb95104dc2117a2c4484ef416",
+    "socket_samples": 72,
+    "socket_violations": 0,
+    "core_path_verified": true,
+    "helper_path_verified": true,
+    "core_orphans": 0,
+    "helper_orphans": 0,
+    "playwright_status": "PASSED",
+    "recorded_at": "2026-10-09T22:46:31.778Z"
+  }
+}

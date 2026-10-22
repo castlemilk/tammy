@@ -5,7 +5,7 @@ import { cn } from "../../lib/utils";
 
 // Source: ui.shadcn.com/r/styles/new-york-v4/badge.json; audited with shadcn@4.13.1.
 const badgeVariants = cva(
-  "inline-flex w-fit shrink-0 items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-semibold leading-4",
+  "inline-flex w-fit shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold leading-4",
   {
     variants: {
       variant: {

@@ -1,0 +1,934 @@
+{
+  "source": "Pinned Biome 2.5.4 complete JSON report, no fixes applied",
+  "comparisonBase": "aeda631070f9cb44289658c52128c595bf6133f7",
+  "summary": {
+    "errors": 861,
+    "warnings": 387,
+    "infos": 646,
+    "affectedPaths": 55,
+    "trackedAffectedPaths": 55,
+    "changedAffectedPaths": 0,
+    "cacheAffectedPaths": 0,
+    "outputAffectedPaths": 55,
+    "allAffectedFilesIdenticalToBase": true
+  },
+  "paths": [
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06-d04a5322/cash/evidence.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06-d04a5322/cash/initial-bas-comparison.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06-d04a5322/cash/initial-income-comparison.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06-d04a5322/cash/regenerated-bas-comparison.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06-d04a5322/cash/restarted-bas-comparison.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06-d04a5322/cash/restarted-income-comparison.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06-d04a5322/cash/stale-bas-comparison.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06-d04a5322/independent-inspection.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06-d04a5322/non-cash/evidence.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06-d04a5322/non-cash/initial-bas-comparison.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06-d04a5322/non-cash/initial-income-comparison.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06-d04a5322/non-cash/regenerated-bas-comparison.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06-d04a5322/non-cash/restarted-bas-comparison.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06-d04a5322/non-cash/restarted-income-comparison.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06-d04a5322/non-cash/stale-bas-comparison.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06/cash/evidence.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06/cash/initial-bas-comparison.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06/cash/initial-income-comparison.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06/cash/regenerated-bas-comparison.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06/cash/restarted-bas-comparison.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06/cash/restarted-income-comparison.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06/cash/stale-bas-comparison.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06/independent-inspection.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06/non-cash/evidence.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06/non-cash/initial-bas-comparison.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06/non-cash/initial-income-comparison.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06/non-cash/regenerated-bas-comparison.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06/non-cash/restarted-bas-comparison.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06/non-cash/restarted-income-comparison.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06/non-cash/stale-bas-comparison.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-invoice-demo/seed-demo.mjs",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 805,
+      "warnings": 369,
+      "infos": 646,
+      "categories": {
+        "lint/complexity/useLiteralKeys": 595,
+        "lint/style/useTemplate": 49,
+        "lint/correctness/useParseIntRadix": 1,
+        "lint/complexity/noExtraBooleanCast": 1,
+        "lint/complexity/useArrowFunction": 155,
+        "lint/complexity/noCommaOperator": 120,
+        "lint/suspicious/noRedundantUseStrict": 3,
+        "lint/suspicious/noConfusingLabels": 1,
+        "lint/suspicious/noTsIgnore": 2,
+        "lint/complexity/noArguments": 16,
+        "lint/style/useConst": 22,
+        "lint/complexity/useOptionalChain": 7,
+        "suppressions/unused": 1,
+        "lint/correctness/noUnusedVariables": 35,
+        "lint/correctness/noUnusedFunctionParameters": 2,
+        "lint/suspicious/noPrototypeBuiltins": 5,
+        "lint/suspicious/noAssignInExpressions": 579,
+        "lint/suspicious/noDoubleEquals": 147,
+        "lint/correctness/noInnerDeclarations": 32,
+        "lint/suspicious/noFallthroughSwitchClause": 2,
+        "lint/correctness/noSwitchDeclarations": 5,
+        "lint/suspicious/noShadowRestrictedNames": 4,
+        "lint/correctness/noInvalidUseBeforeDeclaration": 31,
+        "lint/correctness/noConstantCondition": 1,
+        "lint/suspicious/noThenProperty": 2,
+        "assist/source/organizeImports": 1,
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-invoice-demo/seed-demo.ts",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 2,
+      "warnings": 18,
+      "infos": 0,
+      "categories": {
+        "lint/style/noNonNullAssertion": 4,
+        "lint/suspicious/noExplicitAny": 14,
+        "format": 1,
+        "assist/source/organizeImports": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-accepted-9ad0b82b-2026-10-10/artifact-audit.mjs",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 2,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "assist/source/organizeImports": 1,
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-accepted-9ad0b82b-2026-10-10/cash-mixed/journal-vectors.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-accepted-9ad0b82b-2026-10-10/cash-mixed/reconciliation.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-accepted-9ad0b82b-2026-10-10/cash/journal-vectors.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-accepted-9ad0b82b-2026-10-10/cash/reconciliation.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-accepted-9ad0b82b-2026-10-10/non-cash/journal-vectors.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-accepted-9ad0b82b-2026-10-10/non-cash/reconciliation.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-accepted-9ad0b82b-2026-10-10/package-integrity.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-accepted-9ad0b82b-2026-10-10/sbr-e2e-result.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-accepted-9ad0b82b-2026-10-10/visual/render-manifest.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-preacceptance-4bb79919-2026-10-10/cash-mixed/journal-vectors.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-preacceptance-4bb79919-2026-10-10/cash-mixed/reconciliation.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-preacceptance-4bb79919-2026-10-10/cash/journal-vectors.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-preacceptance-4bb79919-2026-10-10/cash/reconciliation.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-preacceptance-4bb79919-2026-10-10/non-cash/journal-vectors.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-preacceptance-4bb79919-2026-10-10/non-cash/reconciliation.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-preacceptance-755a36d6-2026-10-10/artifacts/cash-mixed/journal-vectors.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-preacceptance-755a36d6-2026-10-10/artifacts/cash-mixed/reconciliation.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-preacceptance-755a36d6-2026-10-10/artifacts/cash/journal-vectors.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-preacceptance-755a36d6-2026-10-10/artifacts/cash/reconciliation.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-preacceptance-755a36d6-2026-10-10/artifacts/non-cash/journal-vectors.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-preacceptance-755a36d6-2026-10-10/artifacts/non-cash/reconciliation.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-preacceptance-755a36d6-2026-10-10/sbr-e2e-result.json",
+      "tracked": true,
+      "changedByThisPR": false,
+      "errors": 1,
+      "warnings": 0,
+      "infos": 0,
+      "categories": {
+        "format": 1
+      },
+      "lastTrackedChange": {
+        "commit": "e725aa2450bcdde80d15c74b0b07133a103b2e67",
+        "author": "Ben Ebsworth",
+        "email": "ben.ebsworth@gmail.com"
+      }
+    }
+  ],
+  "ownership": {
+    "historicalAuthors": ["Ben Ebsworth"],
+    "historicalCommits": ["e725aa2450bcdde80d15c74b0b07133a103b2e67"],
+    "currentArtifactOwner": "Not confirmed; no CODEOWNERS file exists in this checkout.",
+    "cleanupStatus": "Deferred until the current artifact owner is confirmed; no broad reformat or cache removal proposed in this PR.",
+    "originalLocalCache": "Preserved at /Users/benebsworth/projects/tammy/.pnpm-store; no files removed or untracked."
+  }
+}

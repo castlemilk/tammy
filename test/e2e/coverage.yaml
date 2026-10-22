@@ -6,6 +6,7 @@ scenarios:
       - reporting/capability-registry
       - walkthrough/current-accounting-workflows
       - purchases/payments-gst
+      - foundation/workspace-recovery-confirmation
     futureCases:
       - slice-1/foundation-contracts
       - walkthrough/blank-overview
@@ -359,6 +360,7 @@ rpcs:
     stage: production
     preload: createWorkspace
     cases:
+      - foundation/workspace-recovery-confirmation
       - walkthrough/current-accounting-workflows
     projections:
       - create_workspace_result
@@ -387,6 +389,7 @@ rpcs:
     stage: production
     preload: confirmRecovery
     cases:
+      - foundation/workspace-recovery-confirmation
       - walkthrough/current-accounting-workflows
     projections:
       - confirm_recovery_result
@@ -3636,10 +3639,8 @@ rpcs:
     idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
 transitions:
   tammy.v1.WorkspaceState.WORKSPACE_STATE_PENDING_RECOVERY->WORKSPACE_STATE_UNAUTHENTICATED:
-    stage: declared_future
-    cases: []
-    futureCases:
-      - slice-1/foundation-contracts
+    stage: production
+    cases: [foundation/workspace-recovery-confirmation]
   tammy.v1.WorkspaceState.WORKSPACE_STATE_LOCKED->WORKSPACE_STATE_UNAUTHENTICATED:
     stage: declared_future
     cases: []
@@ -4228,3 +4229,12 @@ transitions:
   tammy.v1.BasPreparationState.BAS_PREPARATION_STATE_REVIEW_READY->BAS_PREPARATION_STATE_FROZEN_FOR_MANUAL_HANDOFF:
     stage: production
     cases: [bas-preparation/lifecycle, bas-preparation/manual-handoff]
+  tammy.v1.BankStatementLineStatus.BANK_STATEMENT_LINE_STATUS_MATCHED->BANK_STATEMENT_LINE_STATUS_RECONCILED:
+    stage: production
+    cases: [walkthrough/current-accounting-workflows]
+  tammy.v1.BankStatementLineStatus.BANK_STATEMENT_LINE_STATUS_UNMATCHED->BANK_STATEMENT_LINE_STATUS_MATCHED:
+    stage: production
+    cases: [walkthrough/current-accounting-workflows]
+  tammy.v1.DocumentStatus.DOCUMENT_STATUS_NEEDS_REVIEW->DOCUMENT_STATUS_REVIEWED:
+    stage: production
+    cases: [walkthrough/current-accounting-workflows]

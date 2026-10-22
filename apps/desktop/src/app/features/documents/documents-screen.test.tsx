@@ -5,12 +5,14 @@ import {
   DocumentCandidateSchema,
   DocumentSchema,
   DocumentStatus,
+  IngestDocumentRequestSchema,
+  IngestDocumentResponseSchema,
   ListDocumentsRequestSchema,
   ListDocumentsResponseSchema,
   SaveDocumentReviewRequestSchema,
   SaveDocumentReviewResponseSchema,
 } from "@tammy/connect-client/tammy/v1/documents_pb.js";
-import { screen } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, it } from "vitest";
 
@@ -24,6 +26,93 @@ const listCodec = createProtoMethodCodec({
   maximumResponseBytes: 4 * 1024 * 1024,
   output: ListDocumentsResponseSchema,
 });
+const reviewCodec = createProtoMethodCodec({
+  input: SaveDocumentReviewRequestSchema,
+  maximumRequestBytes: 32_768,
+  maximumResponseBytes: 2 * 1024 * 1024,
+  output: SaveDocumentReviewResponseSchema,
+});
+const ingestCodec = createProtoMethodCodec({
+  input: IngestDocumentRequestSchema,
+  maximumRequestBytes: 11 * 1024 * 1024,
+  maximumResponseBytes: 2 * 1024 * 1024,
+  output: IngestDocumentResponseSchema,
+});
+
+const workspace = {
+  workspaceId: "018f0000-0000-7000-8000-000000000001",
+  userId: "018f0000-0000-7000-8000-000000000002",
+  sessionId: "018f0000-0000-7000-8000-000000000003",
+  organisationId: "018f0000-0000-7000-8000-000000000004",
+};
+
+function createReviewFixture() {
+  const fixture = createConveyorFixture();
+  const candidate = create(DocumentCandidateSchema, {
+    supplierName: "Officeworks",
+    invoiceNumber: "INV-029847",
+    subtotal: create(MoneySchema, { currencyCode: "AUD", minorUnits: 29_000n }),
+    gst: create(MoneySchema, { currencyCode: "AUD", minorUnits: 2_900n }),
+    total: create(MoneySchema, { currencyCode: "AUD", minorUnits: 31_900n }),
+  });
+  let retained = create(DocumentSchema, {
+    id: "018f0000-0000-7000-8000-000000000010",
+    organisationId: workspace.organisationId,
+    version: 1n,
+    status: DocumentStatus.NEEDS_REVIEW,
+    sourceDisplayName: "officeworks.pdf",
+    mimeType: "application/pdf",
+    byteLength: 4096n,
+    sha256: new Uint8Array(32).fill(7),
+    extractedText: "Officeworks Invoice INV-029847 Total $319.00",
+    candidate,
+  });
+  fixture.procedures.documents.listDocuments.mockImplementation(async (frame: Uint8Array) => {
+    const request = listCodec.decodeRequest(frame);
+    const documents = request.status && request.status !== retained.status ? [] : [retained];
+    return listCodec.encodeResponse(
+      create(ListDocumentsResponseSchema, {
+        documents,
+        page: { returnedCount: documents.length },
+      }),
+    );
+  });
+  fixture.procedures.documents.saveDocumentReview.mockImplementation(async (frame: Uint8Array) => {
+    const request = reviewCodec.decodeRequest(frame);
+    if (request.documentId !== retained.id || request.expectedVersion !== retained.version)
+      throw new Error("stale review request");
+    retained = create(DocumentSchema, {
+      ...retained,
+      version: retained.version + 1n,
+      status: DocumentStatus.REVIEWED,
+      candidate: request.candidate ?? retained.candidate,
+    });
+    return reviewCodec.encodeResponse(
+      create(SaveDocumentReviewResponseSchema, { document: retained }),
+    );
+  });
+  fixture.procedures.documents.ingestDocument.mockImplementation(async (frame: Uint8Array) => {
+    const request = ingestCodec.decodeRequest(frame);
+    return ingestCodec.encodeResponse(
+      create(IngestDocumentResponseSchema, {
+        document: create(DocumentSchema, {
+          ...retained,
+          id: "018f0000-0000-7000-8000-000000000999",
+          status: DocumentStatus.NEEDS_REVIEW,
+          sourceDisplayName: request.sourceDisplayName,
+          mimeType: request.mimeType,
+          byteLength: 3n,
+          candidate: request.candidate,
+        }),
+      }),
+    );
+  });
+  return { fixture, document: () => retained };
+}
+
+function renderDocuments(fixture: ReturnType<typeof createConveyorFixture>) {
+  return render(<DocumentsScreen api={fixture.conveyor.documents} workspace={workspace} />);
+}
 
 it("reaches the next document page and resets signed cursors when filtering", async () => {
   const fixture = createConveyorFixture();
@@ -86,20 +175,13 @@ it("reaches the next document page and resets signed cursors when filtering", as
   // Moving through the browser does not discard the selected source detail.
   expect(screen.getByRole("heading", { name: "First invoice" })).toBeTruthy();
   await user.selectOptions(
-    screen.getByLabelText("Accounting filter"),
+    screen.getByLabelText("Accounting state"),
     String(DocumentAccountingFilter.NEEDS_GST_REVIEW),
   );
   expect(requests.at(-1)?.page?.cursor).toBeUndefined();
   expect(requests.at(-1)?.accounting).toBe(DocumentAccountingFilter.NEEDS_GST_REVIEW);
 });
-const reviewCodec = createProtoMethodCodec({
-  input: SaveDocumentReviewRequestSchema,
-  maximumRequestBytes: 32_768,
-  maximumResponseBytes: 2 * 1024 * 1024,
-  output: SaveDocumentReviewResponseSchema,
-});
-
-it("lists retained documents and saves a human-reviewed candidate through named protobuf methods", async () => {
+it("keeps a confirmed review over a stale list response", async () => {
   const candidate = create(DocumentCandidateSchema, {
     supplierName: "Officeworks",
     invoiceNumber: "INV-029847",
@@ -132,15 +214,14 @@ it("lists retained documents and saves a human-reviewed candidate through named 
     expect(request.documentId).toBe(document.id);
     expect(request.expectedVersion).toBe(1n);
     expect(request.candidate?.supplierName).toBe("Officeworks Ltd");
+    const saved = create(DocumentSchema, {
+      ...document,
+      version: 2n,
+      status: DocumentStatus.REVIEWED,
+      candidate: request.candidate ?? candidate,
+    });
     return reviewCodec.encodeResponse(
-      create(SaveDocumentReviewResponseSchema, {
-        document: create(DocumentSchema, {
-          ...document,
-          version: 2n,
-          status: DocumentStatus.REVIEWED,
-          candidate: request.candidate ?? candidate,
-        }),
-      }),
+      create(SaveDocumentReviewResponseSchema, { document: saved }),
     );
   });
   const user = userEvent.setup();
@@ -162,6 +243,11 @@ it("lists retained documents and saves a human-reviewed candidate through named 
   await user.clear(supplier);
   await user.type(supplier, "Officeworks Ltd");
   await user.click(screen.getByRole("button", { name: "Save review" }));
+  expect(await screen.findByRole("button", { name: "Review saved" })).toHaveProperty(
+    "disabled",
+    true,
+  );
+  expect((screen.getByLabelText("Supplier") as HTMLInputElement).readOnly).toBe(true);
   expect(fixture.procedures.documents.saveDocumentReview).toHaveBeenCalledOnce();
 });
 
@@ -193,4 +279,145 @@ it("formats invoice totals exactly beyond JavaScript's safe integer range", asyn
     />,
   );
   expect(await screen.findByText("$90,000,000,000,000,000.01")).toBeTruthy();
+});
+
+it("saves once after human confirmation and shows the retained review as read-only", async () => {
+  const { fixture } = createReviewFixture();
+  const saveReview = fixture.procedures.documents.saveDocumentReview;
+  const confirmedReview = saveReview.getMockImplementation();
+  let confirm: ((frame: Uint8Array) => void) | undefined;
+  saveReview.mockImplementation(
+    () =>
+      new Promise<Uint8Array>((resolve) => {
+        confirm = resolve;
+      }),
+  );
+  const user = userEvent.setup();
+  renderDocuments(fixture);
+  await screen.findByRole("table", { name: "Retained documents" });
+  const supplier = screen.getByLabelText("Supplier") as HTMLInputElement;
+  await user.clear(supplier);
+  await user.type(supplier, "Officeworks Ltd");
+  await user.dblClick(screen.getByRole("button", { name: "Save review" }));
+  expect(saveReview).toHaveBeenCalledOnce();
+  expect((screen.getByRole("button", { name: "Saving…" }) as HTMLButtonElement).disabled).toBe(
+    true,
+  );
+
+  const request = saveReview.mock.calls[0]?.[0];
+  if (!request || !confirm || !confirmedReview) throw new Error("review confirmation missing");
+  const confirmation = await confirmedReview(request);
+  await act(async () => confirm?.(confirmation));
+
+  expect(
+    ((await screen.findByRole("button", { name: "Review saved" })) as HTMLButtonElement).disabled,
+  ).toBe(true);
+  expect(supplier.readOnly).toBe(true);
+  expect(supplier.value).toBe("Officeworks Ltd");
+  expect(saveReview).toHaveBeenCalledOnce();
+  await waitFor(() => expect(fixture.procedures.documents.listDocuments).toHaveBeenCalledTimes(2));
+});
+
+it("keeps failed review edits and retries with the same idempotency key", async () => {
+  const { fixture } = createReviewFixture();
+  fixture.procedures.documents.saveDocumentReview.mockRejectedValueOnce(
+    new Error("interrupted response"),
+  );
+  const user = userEvent.setup();
+  renderDocuments(fixture);
+  await screen.findByRole("table", { name: "Retained documents" });
+  await user.clear(screen.getByLabelText("Supplier"));
+  await user.type(screen.getByLabelText("Supplier"), "Officeworks Ltd");
+  await user.click(screen.getByRole("button", { name: "Save review" }));
+  expect(await screen.findByRole("alert")).toHaveProperty(
+    "textContent",
+    expect.stringContaining("Your changes are still here"),
+  );
+  expect((screen.getByLabelText("Supplier") as HTMLInputElement).value).toBe("Officeworks Ltd");
+
+  await user.click(screen.getByRole("button", { name: "Save review" }));
+  expect(await screen.findByRole("button", { name: "Review saved" })).toBeTruthy();
+  const requests = fixture.procedures.documents.saveDocumentReview.mock.calls.map(([frame]) =>
+    reviewCodec.decodeRequest(frame),
+  );
+  expect(requests).toHaveLength(2);
+  expect(requests[0]?.commandContext?.idempotencyKey).toBe(
+    requests[1]?.commandContext?.idempotencyKey,
+  );
+});
+
+it("restores cancelled edits and returns focus to the selected row when review closes", async () => {
+  const { fixture } = createReviewFixture();
+  const user = userEvent.setup();
+  renderDocuments(fixture);
+  await screen.findByRole("table", { name: "Retained documents" });
+  await user.type(screen.getByLabelText("Search documents"), "missing");
+  expect(screen.queryByRole("table", { name: "Retained documents" })).toBeNull();
+  expect(screen.getByText("No matching documents")).toBeTruthy();
+  await user.clear(screen.getByLabelText("Search documents"));
+  const rowButton = within(screen.getByRole("table", { name: "Retained documents" })).getByRole(
+    "button",
+  );
+  await user.clear(screen.getByLabelText("Supplier"));
+  await user.type(screen.getByLabelText("Supplier"), "Discard me");
+  await user.click(screen.getByRole("button", { name: "Cancel changes" }));
+  expect((screen.getByLabelText("Supplier") as HTMLInputElement).value).toBe("Officeworks");
+  await user.click(screen.getByRole("button", { name: "Close review" }));
+  expect(fixture.procedures.documents.saveDocumentReview).not.toHaveBeenCalled();
+  expect(screen.queryByRole("region", { name: "Document review" })).toBeNull();
+  expect(document.activeElement).toBe(rowButton);
+});
+
+it("shows a recoverable load failure without presenting an empty document collection", async () => {
+  const { fixture } = createReviewFixture();
+  fixture.procedures.documents.listDocuments.mockRejectedValueOnce(new Error("offline engine"));
+  const user = userEvent.setup();
+  renderDocuments(fixture);
+  expect(await screen.findByText("Documents unavailable")).toBeTruthy();
+  expect(screen.queryByText("Your next clear step")).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Try again" }));
+  expect(await screen.findByRole("table", { name: "Retained documents" })).toBeTruthy();
+});
+
+it("keeps the current page bounded while showing a newly retained source for review", async () => {
+  const { fixture, document: retained } = createReviewFixture();
+  const documents = Array.from({ length: 200 }, (_, index) =>
+    create(DocumentSchema, {
+      ...retained(),
+      id: `018f0000-0000-7000-8000-${(index + 100).toString().padStart(12, "0")}`,
+      sourceDisplayName: `retained-${index}.pdf`,
+    }),
+  );
+  fixture.procedures.documents.listDocuments.mockResolvedValue(
+    listCodec.encodeResponse(
+      create(ListDocumentsResponseSchema, { documents, page: { returnedCount: 200 } }),
+    ),
+  );
+  const user = userEvent.setup();
+  const { container } = renderDocuments(fixture);
+  await screen.findByRole("table", { name: "Retained documents" });
+  const file = new File(["synthetic"], "new-synthetic.png", { type: "image/png" });
+  Object.defineProperty(file, "arrayBuffer", {
+    value: async () => new Uint8Array([1, 2, 3]).buffer,
+  });
+  const input = container.querySelector<HTMLInputElement>('input[type="file"]');
+  if (!input) throw new Error("file input missing");
+  await user.upload(input, file);
+  expect(await screen.findByRole("heading", { name: "new-synthetic.png" })).toBeTruthy();
+  expect(
+    within(screen.getByRole("table", { name: "Retained documents" })).getAllByRole("row"),
+  ).toHaveLength(201);
+  expect(fixture.procedures.documents.ingestDocument).toHaveBeenCalledOnce();
+});
+
+it("returns focus to search when a status filter hides the selected source", async () => {
+  const { fixture } = createReviewFixture();
+  const user = userEvent.setup();
+  renderDocuments(fixture);
+  await screen.findByRole("table", { name: "Retained documents" });
+  await user.click(screen.getByRole("button", { name: /Reviewed/ }));
+  expect(screen.queryByRole("table", { name: "Retained documents" })).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Close review" }));
+  expect(document.activeElement).toBe(screen.getByLabelText("Search documents"));
+  expect(fixture.procedures.documents.saveDocumentReview).not.toHaveBeenCalled();
 });

@@ -1,0 +1,1071 @@
+{
+  "schemaVersion": 1,
+  "baselineRevision": "9e1395ca06ac8d7aed6b201a82a6309c6e271a37",
+  "policyChanged": false,
+  "auditBasis": "Static shipped SQLCipher composition and public desktop API audit; unsupported RPCs were not invoked. A core method declaration is not production qualification.",
+  "summary": {
+    "futureRpcCount": 55,
+    "desktopExposedFutureRpcs": 0,
+    "futureRpcsWithCoreDeclarations": 46,
+    "futureRpcServices": {
+      "AccountingService": 10,
+      "AuditService": 6,
+      "IdentityService": 15,
+      "OrganisationService": 3,
+      "WorkspaceService": 21
+    },
+    "futureRpcRuntimeBindings": {
+      "generated_unimplemented_fallback": 23,
+      "implemented_handler": 26,
+      "service_not_registered": 6
+    },
+    "futureRpcIdempotencyModes": {
+      "fresh_challenge": 3,
+      "persistent_command": 26,
+      "query": 20,
+      "recovery_operation": 2,
+      "restore": 1,
+      "session_action": 3
+    },
+    "futureTransitionCount": 64,
+    "qualifiedTransitionCount": 4
+  },
+  "qualifiedTransitions": [
+    {
+      "id": "tammy.v1.WorkspaceState.WORKSPACE_STATE_PENDING_RECOVERY->WORKSPACE_STATE_UNAUTHENTICATED",
+      "cases": ["foundation/workspace-recovery-confirmation"]
+    },
+    {
+      "id": "tammy.v1.DocumentStatus.DOCUMENT_STATUS_NEEDS_REVIEW->DOCUMENT_STATUS_REVIEWED",
+      "cases": ["walkthrough/current-accounting-workflows"]
+    },
+    {
+      "id": "tammy.v1.BankStatementLineStatus.BANK_STATEMENT_LINE_STATUS_UNMATCHED->BANK_STATEMENT_LINE_STATUS_MATCHED",
+      "cases": ["walkthrough/current-accounting-workflows"]
+    },
+    {
+      "id": "tammy.v1.BankStatementLineStatus.BANK_STATEMENT_LINE_STATUS_MATCHED->BANK_STATEMENT_LINE_STATUS_RECONCILED",
+      "cases": ["walkthrough/current-accounting-workflows"]
+    }
+  ],
+  "supportedFlowTestGaps": [
+    {
+      "transition": "tammy.v1.WorkspaceState.WORKSPACE_STATE_LOCKED->WORKSPACE_STATE_UNAUTHENTICATED",
+      "supportedFlow": "existing reopen/unlock screen",
+      "gap": "needs authoritative before/after workspace-state proof; the current journey proves reopen but not both public state projections"
+    },
+    {
+      "transition": "tammy.v1.WorkspaceState.WORKSPACE_STATE_UNAUTHENTICATED->WORKSPACE_STATE_AUTHENTICATED",
+      "supportedFlow": "existing local sign-in",
+      "gap": "needs authoritative workspace-state proof; an active Session response alone is not the WorkspaceState projection"
+    },
+    {
+      "transition": "tammy.v1.SessionState.SESSION_STATE_ACTIVE->SESSION_STATE_EXPIRED",
+      "supportedFlow": "process restart and fresh sign-in",
+      "gap": "current journey proves a fresh session, not exact expired-state and old-session denial projections"
+    }
+  ],
+  "futureRpcs": [
+    {
+      "rpc": "tammy.v1.WorkspaceService.LockWorkspace",
+      "service": "WorkspaceService",
+      "preload": "lockWorkspace",
+      "desktopExposed": false,
+      "idempotencyMode": "session_action",
+      "plannedRoutes": ["/unlock"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/app/local_composition_sqlcipher.go",
+          "line": 342
+        },
+        {
+          "file": "services/core/internal/workspace/service.go",
+          "line": 980
+        }
+      ],
+      "runtimeBinding": "implemented_handler",
+      "bindingEvidenceFile": "services/core/internal/app/local_composition_sqlcipher.go",
+      "gap": "desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.WorkspaceService.ForgetRememberedWorkspace",
+      "service": "WorkspaceService",
+      "preload": "forgetRememberedWorkspace",
+      "desktopExposed": false,
+      "idempotencyMode": "session_action",
+      "plannedRoutes": ["/unlock"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/app/local_composition_sqlcipher.go",
+          "line": 346
+        },
+        {
+          "file": "services/core/internal/workspace/service.go",
+          "line": 1206
+        }
+      ],
+      "runtimeBinding": "implemented_handler",
+      "bindingEvidenceFile": "services/core/internal/app/local_composition_sqlcipher.go",
+      "gap": "desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.WorkspaceService.GetWorkspaceState",
+      "service": "WorkspaceService",
+      "preload": "getWorkspaceState",
+      "desktopExposed": false,
+      "idempotencyMode": "query",
+      "plannedRoutes": ["/unlock"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/app/local_composition_sqlcipher.go",
+          "line": 350
+        },
+        {
+          "file": "services/core/internal/workspace/service.go",
+          "line": 1298
+        }
+      ],
+      "runtimeBinding": "implemented_handler",
+      "bindingEvidenceFile": "services/core/internal/app/local_composition_sqlcipher.go",
+      "gap": "desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.WorkspaceService.ChangePassphrase",
+      "service": "WorkspaceService",
+      "preload": "changeWorkspacePassphrase",
+      "desktopExposed": false,
+      "idempotencyMode": "persistent_command",
+      "plannedRoutes": ["/settings/security"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/app/local_composition_sqlcipher.go",
+          "line": 354
+        },
+        {
+          "file": "services/core/internal/workspace/service.go",
+          "line": 1477
+        }
+      ],
+      "runtimeBinding": "implemented_handler",
+      "bindingEvidenceFile": "services/core/internal/app/local_composition_sqlcipher.go",
+      "gap": "desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.WorkspaceService.RecoverWorkspace",
+      "service": "WorkspaceService",
+      "preload": "recoverWorkspace",
+      "desktopExposed": false,
+      "idempotencyMode": "recovery_operation",
+      "plannedRoutes": ["/recover"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/app/local_composition_sqlcipher.go",
+          "line": 358
+        },
+        {
+          "file": "services/core/internal/workspace/service.go",
+          "line": 1615
+        }
+      ],
+      "runtimeBinding": "implemented_handler",
+      "bindingEvidenceFile": "services/core/internal/app/local_composition_sqlcipher.go",
+      "gap": "desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.WorkspaceService.EstablishMovedWorkspaceTrust",
+      "service": "WorkspaceService",
+      "preload": "establishMovedWorkspaceTrust",
+      "desktopExposed": false,
+      "idempotencyMode": "persistent_command",
+      "plannedRoutes": ["/workspace-trust"],
+      "coreMethodDeclarations": [],
+      "runtimeBinding": "generated_unimplemented_fallback",
+      "bindingEvidenceFile": "services/core/internal/app/local_composition_sqlcipher.go",
+      "gap": "native runtime integration, desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.WorkspaceService.BackupWorkspace",
+      "service": "WorkspaceService",
+      "preload": "backupWorkspace",
+      "desktopExposed": false,
+      "idempotencyMode": "persistent_command",
+      "plannedRoutes": ["/settings/backup"],
+      "coreMethodDeclarations": [],
+      "runtimeBinding": "generated_unimplemented_fallback",
+      "bindingEvidenceFile": "services/core/internal/app/local_composition_sqlcipher.go",
+      "gap": "native runtime integration, desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.WorkspaceService.CancelBackup",
+      "service": "WorkspaceService",
+      "preload": "cancelBackup",
+      "desktopExposed": false,
+      "idempotencyMode": "persistent_command",
+      "plannedRoutes": ["/settings/backup"],
+      "coreMethodDeclarations": [],
+      "runtimeBinding": "generated_unimplemented_fallback",
+      "bindingEvidenceFile": "services/core/internal/app/local_composition_sqlcipher.go",
+      "gap": "native runtime integration, desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.WorkspaceService.GetBackupJob",
+      "service": "WorkspaceService",
+      "preload": "getBackupJob",
+      "desktopExposed": false,
+      "idempotencyMode": "query",
+      "plannedRoutes": ["/settings/backup"],
+      "coreMethodDeclarations": [],
+      "runtimeBinding": "generated_unimplemented_fallback",
+      "bindingEvidenceFile": "services/core/internal/app/local_composition_sqlcipher.go",
+      "gap": "native runtime integration, desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.WorkspaceService.ListBackupJobs",
+      "service": "WorkspaceService",
+      "preload": "listBackupJobs",
+      "desktopExposed": false,
+      "idempotencyMode": "query",
+      "plannedRoutes": ["/settings/backup"],
+      "coreMethodDeclarations": [],
+      "runtimeBinding": "generated_unimplemented_fallback",
+      "bindingEvidenceFile": "services/core/internal/app/local_composition_sqlcipher.go",
+      "gap": "native runtime integration, desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.WorkspaceService.RestoreWorkspace",
+      "service": "WorkspaceService",
+      "preload": "restoreWorkspace",
+      "desktopExposed": false,
+      "idempotencyMode": "restore",
+      "plannedRoutes": ["/restore"],
+      "coreMethodDeclarations": [],
+      "runtimeBinding": "generated_unimplemented_fallback",
+      "bindingEvidenceFile": "services/core/internal/app/local_composition_sqlcipher.go",
+      "gap": "native runtime integration, desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.WorkspaceService.GetRestoreStatus",
+      "service": "WorkspaceService",
+      "preload": "getRestoreStatus",
+      "desktopExposed": false,
+      "idempotencyMode": "query",
+      "plannedRoutes": ["/restore"],
+      "coreMethodDeclarations": [],
+      "runtimeBinding": "generated_unimplemented_fallback",
+      "bindingEvidenceFile": "services/core/internal/app/local_composition_sqlcipher.go",
+      "gap": "native runtime integration, desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.WorkspaceService.ExportPreRestoreArchive",
+      "service": "WorkspaceService",
+      "preload": "exportPreRestoreArchive",
+      "desktopExposed": false,
+      "idempotencyMode": "persistent_command",
+      "plannedRoutes": ["/restore/evidence"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/restore/pre_restore_export_job.go",
+          "line": 51
+        }
+      ],
+      "runtimeBinding": "generated_unimplemented_fallback",
+      "bindingEvidenceFile": "services/core/internal/app/local_composition_sqlcipher.go",
+      "gap": "native runtime integration, desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.WorkspaceService.CancelPreRestoreArchiveExport",
+      "service": "WorkspaceService",
+      "preload": "cancelPreRestoreArchiveExport",
+      "desktopExposed": false,
+      "idempotencyMode": "persistent_command",
+      "plannedRoutes": ["/restore/evidence"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/restore/pre_restore_export_job.go",
+          "line": 287
+        }
+      ],
+      "runtimeBinding": "generated_unimplemented_fallback",
+      "bindingEvidenceFile": "services/core/internal/app/local_composition_sqlcipher.go",
+      "gap": "native runtime integration, desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.WorkspaceService.RetryPreRestoreArchiveExport",
+      "service": "WorkspaceService",
+      "preload": "retryPreRestoreArchiveExport",
+      "desktopExposed": false,
+      "idempotencyMode": "persistent_command",
+      "plannedRoutes": ["/restore/evidence"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/restore/pre_restore_export_job.go",
+          "line": 107
+        }
+      ],
+      "runtimeBinding": "generated_unimplemented_fallback",
+      "bindingEvidenceFile": "services/core/internal/app/local_composition_sqlcipher.go",
+      "gap": "native runtime integration, desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.WorkspaceService.GetPreRestoreArchiveExportJob",
+      "service": "WorkspaceService",
+      "preload": "getPreRestoreArchiveExportJob",
+      "desktopExposed": false,
+      "idempotencyMode": "query",
+      "plannedRoutes": ["/restore/evidence"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/restore/pre_restore_export_job.go",
+          "line": 318
+        }
+      ],
+      "runtimeBinding": "generated_unimplemented_fallback",
+      "bindingEvidenceFile": "services/core/internal/app/local_composition_sqlcipher.go",
+      "gap": "native runtime integration, desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.WorkspaceService.ListPreRestoreArchiveExportJobs",
+      "service": "WorkspaceService",
+      "preload": "listPreRestoreArchiveExportJobs",
+      "desktopExposed": false,
+      "idempotencyMode": "query",
+      "plannedRoutes": ["/restore/evidence"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/restore/pre_restore_export_job.go",
+          "line": 343
+        }
+      ],
+      "runtimeBinding": "generated_unimplemented_fallback",
+      "bindingEvidenceFile": "services/core/internal/app/local_composition_sqlcipher.go",
+      "gap": "native runtime integration, desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.WorkspaceService.DeletePreRestoreArchive",
+      "service": "WorkspaceService",
+      "preload": "deletePreRestoreArchive",
+      "desktopExposed": false,
+      "idempotencyMode": "persistent_command",
+      "plannedRoutes": ["/restore/evidence"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/restore/pre_restore_delete.go",
+          "line": 47
+        }
+      ],
+      "runtimeBinding": "generated_unimplemented_fallback",
+      "bindingEvidenceFile": "services/core/internal/app/local_composition_sqlcipher.go",
+      "gap": "native runtime integration, desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.WorkspaceService.GetPreRestoreArchive",
+      "service": "WorkspaceService",
+      "preload": "getPreRestoreArchive",
+      "desktopExposed": false,
+      "idempotencyMode": "query",
+      "plannedRoutes": ["/restore/evidence"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/restore/pre_restore_commands.go",
+          "line": 71
+        }
+      ],
+      "runtimeBinding": "generated_unimplemented_fallback",
+      "bindingEvidenceFile": "services/core/internal/app/local_composition_sqlcipher.go",
+      "gap": "native runtime integration, desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.WorkspaceService.ListPreRestoreArchives",
+      "service": "WorkspaceService",
+      "preload": "listPreRestoreArchives",
+      "desktopExposed": false,
+      "idempotencyMode": "query",
+      "plannedRoutes": ["/restore/evidence"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/restore/pre_restore_commands.go",
+          "line": 89
+        }
+      ],
+      "runtimeBinding": "generated_unimplemented_fallback",
+      "bindingEvidenceFile": "services/core/internal/app/local_composition_sqlcipher.go",
+      "gap": "native runtime integration, desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.WorkspaceService.TransferOwnership",
+      "service": "WorkspaceService",
+      "preload": "transferWorkspaceOwnership",
+      "desktopExposed": false,
+      "idempotencyMode": "persistent_command",
+      "plannedRoutes": ["/settings/ownership"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/app/local_composition_sqlcipher.go",
+          "line": 362
+        },
+        {
+          "file": "services/core/internal/workspace/service.go",
+          "line": 1910
+        }
+      ],
+      "runtimeBinding": "implemented_handler",
+      "bindingEvidenceFile": "services/core/internal/app/local_composition_sqlcipher.go",
+      "gap": "desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.IdentityService.SignOut",
+      "service": "IdentityService",
+      "preload": "signOut",
+      "desktopExposed": false,
+      "idempotencyMode": "session_action",
+      "plannedRoutes": ["/sign-in"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/identity/service.go",
+          "line": 1275
+        }
+      ],
+      "runtimeBinding": "implemented_handler",
+      "bindingEvidenceFile": "services/core/internal/identity/service.go",
+      "gap": "desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.IdentityService.GetSession",
+      "service": "IdentityService",
+      "preload": "getSession",
+      "desktopExposed": false,
+      "idempotencyMode": "query",
+      "plannedRoutes": ["/sign-in"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/identity/service.go",
+          "line": 1252
+        }
+      ],
+      "runtimeBinding": "implemented_handler",
+      "bindingEvidenceFile": "services/core/internal/identity/service.go",
+      "gap": "desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.IdentityService.GetCurrentUser",
+      "service": "IdentityService",
+      "preload": "getCurrentUser",
+      "desktopExposed": false,
+      "idempotencyMode": "query",
+      "plannedRoutes": ["/sign-in"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/identity/service.go",
+          "line": 1304
+        }
+      ],
+      "runtimeBinding": "implemented_handler",
+      "bindingEvidenceFile": "services/core/internal/identity/service.go",
+      "gap": "desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.IdentityService.CreateUser",
+      "service": "IdentityService",
+      "preload": "createUser",
+      "desktopExposed": false,
+      "idempotencyMode": "persistent_command",
+      "plannedRoutes": ["/settings/users"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/identity/service.go",
+          "line": 406
+        }
+      ],
+      "runtimeBinding": "implemented_handler",
+      "bindingEvidenceFile": "services/core/internal/identity/service.go",
+      "gap": "desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.IdentityService.AssignRoles",
+      "service": "IdentityService",
+      "preload": "assignRoles",
+      "desktopExposed": false,
+      "idempotencyMode": "persistent_command",
+      "plannedRoutes": ["/settings/users"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/identity/service.go",
+          "line": 1130
+        }
+      ],
+      "runtimeBinding": "implemented_handler",
+      "bindingEvidenceFile": "services/core/internal/identity/service.go",
+      "gap": "desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.IdentityService.ResetUserAuthentication",
+      "service": "IdentityService",
+      "preload": "resetUserAuthentication",
+      "desktopExposed": false,
+      "idempotencyMode": "persistent_command",
+      "plannedRoutes": ["/settings/users"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/identity/service.go",
+          "line": 1026
+        }
+      ],
+      "runtimeBinding": "implemented_handler",
+      "bindingEvidenceFile": "services/core/internal/identity/service.go",
+      "gap": "desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.IdentityService.GetUser",
+      "service": "IdentityService",
+      "preload": "getUser",
+      "desktopExposed": false,
+      "idempotencyMode": "query",
+      "plannedRoutes": ["/settings/users"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/identity/service.go",
+          "line": 1324
+        }
+      ],
+      "runtimeBinding": "implemented_handler",
+      "bindingEvidenceFile": "services/core/internal/identity/service.go",
+      "gap": "desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.IdentityService.ListUsers",
+      "service": "IdentityService",
+      "preload": "listUsers",
+      "desktopExposed": false,
+      "idempotencyMode": "query",
+      "plannedRoutes": ["/settings/users"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/identity/service.go",
+          "line": 1353
+        }
+      ],
+      "runtimeBinding": "implemented_handler",
+      "bindingEvidenceFile": "services/core/internal/identity/service.go",
+      "gap": "desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.IdentityService.ActivateUser",
+      "service": "IdentityService",
+      "preload": "activateUser",
+      "desktopExposed": false,
+      "idempotencyMode": "fresh_challenge",
+      "plannedRoutes": ["/activate"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/identity/service.go",
+          "line": 480
+        }
+      ],
+      "runtimeBinding": "implemented_handler",
+      "bindingEvidenceFile": "services/core/internal/identity/service.go",
+      "gap": "desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.IdentityService.ChangePassword",
+      "service": "IdentityService",
+      "preload": "changePassword",
+      "desktopExposed": false,
+      "idempotencyMode": "persistent_command",
+      "plannedRoutes": ["/settings/security"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/identity/service.go",
+          "line": 608
+        }
+      ],
+      "runtimeBinding": "implemented_handler",
+      "bindingEvidenceFile": "services/core/internal/identity/service.go",
+      "gap": "desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.IdentityService.EnrolTOTP",
+      "service": "IdentityService",
+      "preload": "enrolTotp",
+      "desktopExposed": false,
+      "idempotencyMode": "persistent_command",
+      "plannedRoutes": ["/settings/security"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/identity/service.go",
+          "line": 675
+        }
+      ],
+      "runtimeBinding": "implemented_handler",
+      "bindingEvidenceFile": "services/core/internal/identity/service.go",
+      "gap": "desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.IdentityService.ConfirmTOTP",
+      "service": "IdentityService",
+      "preload": "confirmTotp",
+      "desktopExposed": false,
+      "idempotencyMode": "fresh_challenge",
+      "plannedRoutes": ["/settings/security"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/identity/service.go",
+          "line": 788
+        }
+      ],
+      "runtimeBinding": "implemented_handler",
+      "bindingEvidenceFile": "services/core/internal/identity/service.go",
+      "gap": "desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.IdentityService.AssertTOTP",
+      "service": "IdentityService",
+      "preload": "assertTotp",
+      "desktopExposed": false,
+      "idempotencyMode": "fresh_challenge",
+      "plannedRoutes": ["/settings/security"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/identity/service.go",
+          "line": 854
+        }
+      ],
+      "runtimeBinding": "implemented_handler",
+      "bindingEvidenceFile": "services/core/internal/identity/service.go",
+      "gap": "desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.IdentityService.DisableTOTP",
+      "service": "IdentityService",
+      "preload": "disableTotp",
+      "desktopExposed": false,
+      "idempotencyMode": "persistent_command",
+      "plannedRoutes": ["/settings/security"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/identity/service.go",
+          "line": 923
+        }
+      ],
+      "runtimeBinding": "implemented_handler",
+      "bindingEvidenceFile": "services/core/internal/identity/service.go",
+      "gap": "desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.IdentityService.RecoverAdministrator",
+      "service": "IdentityService",
+      "preload": "recoverAdministrator",
+      "desktopExposed": false,
+      "idempotencyMode": "recovery_operation",
+      "plannedRoutes": ["/recover"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/identity/service.go",
+          "line": 1711
+        },
+        {
+          "file": "services/core/internal/workspace/service.go",
+          "line": 1879
+        }
+      ],
+      "runtimeBinding": "implemented_handler",
+      "bindingEvidenceFile": "services/core/internal/identity/service.go",
+      "gap": "desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.OrganisationService.UpdateOrganisation",
+      "service": "OrganisationService",
+      "preload": "updateOrganisation",
+      "desktopExposed": false,
+      "idempotencyMode": "persistent_command",
+      "plannedRoutes": ["/settings/organisation"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/localproduct/ledger_sqlcipher.go",
+          "line": 1136
+        },
+        {
+          "file": "services/core/internal/organisations/service.go",
+          "line": 210
+        }
+      ],
+      "runtimeBinding": "implemented_handler",
+      "bindingEvidenceFile": "services/core/internal/localproduct/ledger_sqlcipher.go",
+      "gap": "desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.OrganisationService.RecordEntityVerification",
+      "service": "OrganisationService",
+      "preload": "recordEntityVerification",
+      "desktopExposed": false,
+      "idempotencyMode": "persistent_command",
+      "plannedRoutes": ["/settings/organisation"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/organisations/service.go",
+          "line": 42
+        }
+      ],
+      "runtimeBinding": "generated_unimplemented_fallback",
+      "bindingEvidenceFile": "services/core/internal/localproduct/ledger_sqlcipher.go",
+      "gap": "native runtime integration, desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.OrganisationService.GetOrganisation",
+      "service": "OrganisationService",
+      "preload": "getOrganisation",
+      "desktopExposed": false,
+      "idempotencyMode": "query",
+      "plannedRoutes": ["/settings/organisation"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/localproduct/ledger_sqlcipher.go",
+          "line": 1147
+        },
+        {
+          "file": "services/core/internal/organisations/read_port.go",
+          "line": 15
+        }
+      ],
+      "runtimeBinding": "implemented_handler",
+      "bindingEvidenceFile": "services/core/internal/localproduct/ledger_sqlcipher.go",
+      "gap": "desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.AccountingService.UpdateAccount",
+      "service": "AccountingService",
+      "preload": "updateAccount",
+      "desktopExposed": false,
+      "idempotencyMode": "persistent_command",
+      "plannedRoutes": ["/accounting/chart"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/accounting/service.go",
+          "line": 126
+        },
+        {
+          "file": "services/core/internal/localproduct/ledger_sqlcipher.go",
+          "line": 808
+        }
+      ],
+      "runtimeBinding": "implemented_handler",
+      "bindingEvidenceFile": "services/core/internal/localproduct/ledger_sqlcipher.go",
+      "gap": "desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.AccountingService.SetAccountStatus",
+      "service": "AccountingService",
+      "preload": "setAccountStatus",
+      "desktopExposed": false,
+      "idempotencyMode": "persistent_command",
+      "plannedRoutes": ["/accounting/chart"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/accounting/service.go",
+          "line": 172
+        },
+        {
+          "file": "services/core/internal/localproduct/ledger_sqlcipher.go",
+          "line": 822
+        }
+      ],
+      "runtimeBinding": "implemented_handler",
+      "bindingEvidenceFile": "services/core/internal/localproduct/ledger_sqlcipher.go",
+      "gap": "desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.AccountingService.ListTaxCodes",
+      "service": "AccountingService",
+      "preload": "listTaxCodes",
+      "desktopExposed": false,
+      "idempotencyMode": "query",
+      "plannedRoutes": ["/accounting/chart"],
+      "coreMethodDeclarations": [],
+      "runtimeBinding": "generated_unimplemented_fallback",
+      "bindingEvidenceFile": "services/core/internal/localproduct/ledger_sqlcipher.go",
+      "gap": "native runtime integration, desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.AccountingService.PostOpeningConversion",
+      "service": "AccountingService",
+      "preload": "postOpeningConversion",
+      "desktopExposed": false,
+      "idempotencyMode": "persistent_command",
+      "plannedRoutes": ["/accounting/opening-balances"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/accounting/opening_conversion_service.go",
+          "line": 195
+        }
+      ],
+      "runtimeBinding": "generated_unimplemented_fallback",
+      "bindingEvidenceFile": "services/core/internal/localproduct/ledger_sqlcipher.go",
+      "gap": "native runtime integration, desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.AccountingService.ReplaceOpeningConversion",
+      "service": "AccountingService",
+      "preload": "replaceOpeningConversion",
+      "desktopExposed": false,
+      "idempotencyMode": "persistent_command",
+      "plannedRoutes": ["/accounting/opening-balances"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/accounting/opening_conversion_service.go",
+          "line": 320
+        }
+      ],
+      "runtimeBinding": "generated_unimplemented_fallback",
+      "bindingEvidenceFile": "services/core/internal/localproduct/ledger_sqlcipher.go",
+      "gap": "native runtime integration, desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.AccountingService.ReverseJournal",
+      "service": "AccountingService",
+      "preload": "reverseJournal",
+      "desktopExposed": false,
+      "idempotencyMode": "persistent_command",
+      "plannedRoutes": ["/accounting/journals"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/accounting/posting_service.go",
+          "line": 95
+        }
+      ],
+      "runtimeBinding": "generated_unimplemented_fallback",
+      "bindingEvidenceFile": "services/core/internal/localproduct/ledger_sqlcipher.go",
+      "gap": "native runtime integration, desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.AccountingService.ClosePeriod",
+      "service": "AccountingService",
+      "preload": "closePeriod",
+      "desktopExposed": false,
+      "idempotencyMode": "persistent_command",
+      "plannedRoutes": ["/accounting/periods"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/accounting/period_command_service.go",
+          "line": 35
+        }
+      ],
+      "runtimeBinding": "generated_unimplemented_fallback",
+      "bindingEvidenceFile": "services/core/internal/localproduct/ledger_sqlcipher.go",
+      "gap": "native runtime integration, desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.AccountingService.ReopenPeriod",
+      "service": "AccountingService",
+      "preload": "reopenPeriod",
+      "desktopExposed": false,
+      "idempotencyMode": "persistent_command",
+      "plannedRoutes": ["/accounting/periods"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/accounting/period_command_service.go",
+          "line": 83
+        }
+      ],
+      "runtimeBinding": "generated_unimplemented_fallback",
+      "bindingEvidenceFile": "services/core/internal/localproduct/ledger_sqlcipher.go",
+      "gap": "native runtime integration, desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.AccountingService.GetAccount",
+      "service": "AccountingService",
+      "preload": "getAccount",
+      "desktopExposed": false,
+      "idempotencyMode": "query",
+      "plannedRoutes": ["/accounting/chart"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/localproduct/ledger_sqlcipher.go",
+          "line": 850
+        }
+      ],
+      "runtimeBinding": "implemented_handler",
+      "bindingEvidenceFile": "services/core/internal/localproduct/ledger_sqlcipher.go",
+      "gap": "desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.AccountingService.GetGeneralLedger",
+      "service": "AccountingService",
+      "preload": "getGeneralLedger",
+      "desktopExposed": false,
+      "idempotencyMode": "query",
+      "plannedRoutes": ["/accounting/general-ledger"],
+      "coreMethodDeclarations": [],
+      "runtimeBinding": "generated_unimplemented_fallback",
+      "bindingEvidenceFile": "services/core/internal/localproduct/ledger_sqlcipher.go",
+      "gap": "native runtime integration, desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.AuditService.VerifyChain",
+      "service": "AuditService",
+      "preload": "verifyChain",
+      "desktopExposed": false,
+      "idempotencyMode": "query",
+      "plannedRoutes": ["/audit"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/audit/service.go",
+          "line": 80
+        }
+      ],
+      "runtimeBinding": "service_not_registered",
+      "bindingEvidenceFile": "services/core/internal/app/local_composition_sqlcipher.go",
+      "gap": "native runtime integration, desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.AuditService.ListAuditEvents",
+      "service": "AuditService",
+      "preload": "listAuditEvents",
+      "desktopExposed": false,
+      "idempotencyMode": "query",
+      "plannedRoutes": ["/audit"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/audit/service.go",
+          "line": 132
+        }
+      ],
+      "runtimeBinding": "service_not_registered",
+      "bindingEvidenceFile": "services/core/internal/app/local_composition_sqlcipher.go",
+      "gap": "native runtime integration, desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.AuditService.ExportEvidence",
+      "service": "AuditService",
+      "preload": "exportEvidence",
+      "desktopExposed": false,
+      "idempotencyMode": "persistent_command",
+      "plannedRoutes": ["/audit"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/audit/service.go",
+          "line": 216
+        }
+      ],
+      "runtimeBinding": "service_not_registered",
+      "bindingEvidenceFile": "services/core/internal/app/local_composition_sqlcipher.go",
+      "gap": "native runtime integration, desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.AuditService.CancelAuditExport",
+      "service": "AuditService",
+      "preload": "cancelAuditExport",
+      "desktopExposed": false,
+      "idempotencyMode": "persistent_command",
+      "plannedRoutes": ["/audit"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/audit/service.go",
+          "line": 275
+        }
+      ],
+      "runtimeBinding": "service_not_registered",
+      "bindingEvidenceFile": "services/core/internal/app/local_composition_sqlcipher.go",
+      "gap": "native runtime integration, desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.AuditService.GetAuditExportJob",
+      "service": "AuditService",
+      "preload": "getAuditExportJob",
+      "desktopExposed": false,
+      "idempotencyMode": "query",
+      "plannedRoutes": ["/audit"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/audit/service.go",
+          "line": 340
+        }
+      ],
+      "runtimeBinding": "service_not_registered",
+      "bindingEvidenceFile": "services/core/internal/app/local_composition_sqlcipher.go",
+      "gap": "native runtime integration, desktop integration and end-to-end qualification missing"
+    },
+    {
+      "rpc": "tammy.v1.AuditService.ListAuditExportJobs",
+      "service": "AuditService",
+      "preload": "listAuditExportJobs",
+      "desktopExposed": false,
+      "idempotencyMode": "query",
+      "plannedRoutes": ["/audit"],
+      "coreMethodDeclarations": [
+        {
+          "file": "services/core/internal/audit/service.go",
+          "line": 362
+        }
+      ],
+      "runtimeBinding": "service_not_registered",
+      "bindingEvidenceFile": "services/core/internal/app/local_composition_sqlcipher.go",
+      "gap": "native runtime integration, desktop integration and end-to-end qualification missing"
+    }
+  ],
+  "futureTransitions": [
+    "tammy.v1.WorkspaceState.WORKSPACE_STATE_LOCKED->WORKSPACE_STATE_UNAUTHENTICATED",
+    "tammy.v1.WorkspaceState.WORKSPACE_STATE_UNAUTHENTICATED->WORKSPACE_STATE_AUTHENTICATED",
+    "tammy.v1.WorkspaceState.WORKSPACE_STATE_UNAUTHENTICATED->WORKSPACE_STATE_LOCKED",
+    "tammy.v1.WorkspaceState.WORKSPACE_STATE_AUTHENTICATED->WORKSPACE_STATE_LOCKED",
+    "tammy.v1.WorkspaceTrustState.WORKSPACE_TRUST_STATE_TRUSTED->WORKSPACE_TRUST_STATE_MOVED_READ_ONLY",
+    "tammy.v1.WorkspaceTrustState.WORKSPACE_TRUST_STATE_MOVED_READ_ONLY->WORKSPACE_TRUST_STATE_TRUSTED",
+    "tammy.v1.UserState.USER_STATE_PENDING_ACTIVATION->USER_STATE_ACTIVE",
+    "tammy.v1.UserState.USER_STATE_ACTIVE->USER_STATE_AUTHENTICATION_LOCKED",
+    "tammy.v1.UserState.USER_STATE_ACTIVE->USER_STATE_PENDING_ACTIVATION",
+    "tammy.v1.UserState.USER_STATE_AUTHENTICATION_LOCKED->USER_STATE_ACTIVE",
+    "tammy.v1.UserState.USER_STATE_AUTHENTICATION_LOCKED->USER_STATE_PENDING_ACTIVATION",
+    "tammy.v1.SessionState.SESSION_STATE_ACTIVE->SESSION_STATE_SIGNED_OUT",
+    "tammy.v1.SessionState.SESSION_STATE_ACTIVE->SESSION_STATE_EXPIRED",
+    "tammy.v1.SessionState.SESSION_STATE_ACTIVE->SESSION_STATE_INVALIDATED",
+    "tammy.v1.FactorState.FACTOR_STATE_PENDING_CONFIRMATION->FACTOR_STATE_ENABLED",
+    "tammy.v1.FactorState.FACTOR_STATE_ENABLED->FACTOR_STATE_DISABLED",
+    "tammy.v1.OrganisationVerificationState.ORGANISATION_VERIFICATION_STATE_UNVERIFIED->ORGANISATION_VERIFICATION_STATE_VERIFIED",
+    "tammy.v1.OrganisationVerificationState.ORGANISATION_VERIFICATION_STATE_UNVERIFIED->ORGANISATION_VERIFICATION_STATE_FAILED",
+    "tammy.v1.OrganisationVerificationState.ORGANISATION_VERIFICATION_STATE_FAILED->ORGANISATION_VERIFICATION_STATE_VERIFIED",
+    "tammy.v1.OrganisationVerificationState.ORGANISATION_VERIFICATION_STATE_FAILED->ORGANISATION_VERIFICATION_STATE_EXPIRED",
+    "tammy.v1.OrganisationVerificationState.ORGANISATION_VERIFICATION_STATE_VERIFIED->ORGANISATION_VERIFICATION_STATE_EXPIRED",
+    "tammy.v1.OrganisationVerificationState.ORGANISATION_VERIFICATION_STATE_VERIFIED->ORGANISATION_VERIFICATION_STATE_SUPERSEDED",
+    "tammy.v1.AccountStatus.ACCOUNT_STATUS_ACTIVE->ACCOUNT_STATUS_ARCHIVED",
+    "tammy.v1.AccountStatus.ACCOUNT_STATUS_ARCHIVED->ACCOUNT_STATUS_ACTIVE",
+    "tammy.v1.OpeningConversionState.OPENING_CONVERSION_STATE_POSTED->OPENING_CONVERSION_STATE_REPLACED",
+    "tammy.v1.JournalState.JOURNAL_STATE_POSTED->JOURNAL_STATE_REVERSED",
+    "tammy.v1.PeriodState.PERIOD_STATE_OPEN->PERIOD_STATE_CLOSED",
+    "tammy.v1.PeriodState.PERIOD_STATE_CLOSED->PERIOD_STATE_OPEN",
+    "tammy.v1.BackupJobState.BACKUP_JOB_STATE_QUEUED->BACKUP_JOB_STATE_RUNNING",
+    "tammy.v1.BackupJobState.BACKUP_JOB_STATE_QUEUED->BACKUP_JOB_STATE_CANCELLED",
+    "tammy.v1.BackupJobState.BACKUP_JOB_STATE_RUNNING->BACKUP_JOB_STATE_QUEUED",
+    "tammy.v1.BackupJobState.BACKUP_JOB_STATE_RUNNING->BACKUP_JOB_STATE_COMPLETED",
+    "tammy.v1.BackupJobState.BACKUP_JOB_STATE_RUNNING->BACKUP_JOB_STATE_FAILED_RETRYABLE",
+    "tammy.v1.BackupJobState.BACKUP_JOB_STATE_RUNNING->BACKUP_JOB_STATE_FAILED_TERMINAL",
+    "tammy.v1.BackupJobState.BACKUP_JOB_STATE_RUNNING->BACKUP_JOB_STATE_CANCELLED",
+    "tammy.v1.BackupJobState.BACKUP_JOB_STATE_FAILED_RETRYABLE->BACKUP_JOB_STATE_QUEUED",
+    "tammy.v1.BackupJobState.BACKUP_JOB_STATE_FAILED_RETRYABLE->BACKUP_JOB_STATE_CANCELLED",
+    "tammy.v1.RestoreState.RESTORE_STATE_PREPARED->RESTORE_STATE_STAGED",
+    "tammy.v1.RestoreState.RESTORE_STATE_PREPARED->RESTORE_STATE_ROLLED_BACK",
+    "tammy.v1.RestoreState.RESTORE_STATE_STAGED->RESTORE_STATE_SWAPPED",
+    "tammy.v1.RestoreState.RESTORE_STATE_STAGED->RESTORE_STATE_ROLLED_BACK",
+    "tammy.v1.RestoreState.RESTORE_STATE_SWAPPED->RESTORE_STATE_COMPLETE",
+    "tammy.v1.PreRestoreArchiveState.PRE_RESTORE_ARCHIVE_STATE_AVAILABLE->PRE_RESTORE_ARCHIVE_STATE_DELETED",
+    "tammy.v1.PreRestoreArchiveExportJobState.PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_QUEUED->PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_WRITING",
+    "tammy.v1.PreRestoreArchiveExportJobState.PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_QUEUED->PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_CANCELLED",
+    "tammy.v1.PreRestoreArchiveExportJobState.PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_QUEUED->PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_FAILED_RETRYABLE",
+    "tammy.v1.PreRestoreArchiveExportJobState.PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_WRITING->PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_VERIFIED",
+    "tammy.v1.PreRestoreArchiveExportJobState.PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_WRITING->PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_CANCELLED",
+    "tammy.v1.PreRestoreArchiveExportJobState.PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_WRITING->PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_FAILED_RETRYABLE",
+    "tammy.v1.PreRestoreArchiveExportJobState.PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_VERIFIED->PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_COMPLETED",
+    "tammy.v1.PreRestoreArchiveExportJobState.PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_FAILED_RETRYABLE->PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_QUEUED",
+    "tammy.v1.PreRestoreArchiveExportJobState.PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_FAILED_RETRYABLE->PRE_RESTORE_ARCHIVE_EXPORT_JOB_STATE_CANCELLED",
+    "tammy.v1.AuditExportJobState.AUDIT_EXPORT_JOB_STATE_QUEUED->AUDIT_EXPORT_JOB_STATE_RUNNING",
+    "tammy.v1.AuditExportJobState.AUDIT_EXPORT_JOB_STATE_QUEUED->AUDIT_EXPORT_JOB_STATE_CANCELLED",
+    "tammy.v1.AuditExportJobState.AUDIT_EXPORT_JOB_STATE_RUNNING->AUDIT_EXPORT_JOB_STATE_QUEUED",
+    "tammy.v1.AuditExportJobState.AUDIT_EXPORT_JOB_STATE_RUNNING->AUDIT_EXPORT_JOB_STATE_WAITING_FOR_INPUT",
+    "tammy.v1.AuditExportJobState.AUDIT_EXPORT_JOB_STATE_RUNNING->AUDIT_EXPORT_JOB_STATE_COMPLETED",
+    "tammy.v1.AuditExportJobState.AUDIT_EXPORT_JOB_STATE_RUNNING->AUDIT_EXPORT_JOB_STATE_FAILED_RETRYABLE",
+    "tammy.v1.AuditExportJobState.AUDIT_EXPORT_JOB_STATE_RUNNING->AUDIT_EXPORT_JOB_STATE_FAILED_TERMINAL",
+    "tammy.v1.AuditExportJobState.AUDIT_EXPORT_JOB_STATE_RUNNING->AUDIT_EXPORT_JOB_STATE_CANCELLED",
+    "tammy.v1.AuditExportJobState.AUDIT_EXPORT_JOB_STATE_WAITING_FOR_INPUT->AUDIT_EXPORT_JOB_STATE_QUEUED",
+    "tammy.v1.AuditExportJobState.AUDIT_EXPORT_JOB_STATE_WAITING_FOR_INPUT->AUDIT_EXPORT_JOB_STATE_CANCELLED",
+    "tammy.v1.AuditExportJobState.AUDIT_EXPORT_JOB_STATE_FAILED_RETRYABLE->AUDIT_EXPORT_JOB_STATE_QUEUED",
+    "tammy.v1.AuditExportJobState.AUDIT_EXPORT_JOB_STATE_FAILED_RETRYABLE->AUDIT_EXPORT_JOB_STATE_CANCELLED"
+  ],
+  "metadataState": "Follow-up qualification proposal; application implementation audited at baselineRevision."
+}

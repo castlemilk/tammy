@@ -1,0 +1,114 @@
+task: [package:e2e] mise exec -- pnpm desktop:e2e
+$ pnpm desktop:package && pnpm --dir apps/desktop e2e
+$ node scripts/package-desktop.mjs
+$ pnpm sqlcipher:build && node scripts/build-core.mjs
+$ node scripts/build-sqlcipher.mjs
+{"include":"/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/apps/desktop/resources/sqlcipher/darwin-arm64/include","headerSha256":"0c8e979c2e155864ebb10fd1beabb1c1d29a8b3a237659bd18802a9e0aa8bdcf","library":"/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/apps/desktop/resources/sqlcipher/darwin-arm64/lib/libsqlite3.a","librarySha256":"743224cba74f1cd88ba5a16b310a0f79c05451420b202ab21f194815df5e4398","target":"darwin-arm64","version":"4.15.0"}
+{"path":"/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/apps/desktop/resources/core/darwin-arm64/tammy-core","sha256":"59f04657746d1b303fea7476921987b9581de80d42c7a88c40bbd4e86a0d2950"}
+$ node scripts/build-sbr-helper.mjs
+SIMULATOR_ENABLED:darwin-arm64
+$ node scripts/write-build-manifest.mjs
+{"manifest":"/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/apps/desktop/resources/build/build-manifest.json","manifestSha256":"f03b07383c60ff56d0d9fd8ab68250d20d245bc4f7880fef59e31408314cc406","target":"darwin-arm64"}
+$ pnpm prepare:runtime
+$ node ../../scripts/prepare-electron-runtime.mjs
+electron runtime verified
+$ pnpm build && electron-builder --config electron-builder.yml --dir --publish never
+$ electron-vite build
+vite v7.3.6 building ssr environment for production...
+transforming...
+✓ 301 modules transformed.
+rendering chunks...
+out/main/index.js  2,543.98 kB
+✓ built in 882ms
+vite v7.3.6 building ssr environment for production...
+transforming...
+✓ 5 modules transformed.
+rendering chunks...
+out/preload/index.cjs  8.22 kB
+✓ built in 20ms
+vite v7.3.6 building client environment for production...
+transforming...
+✓ 2054 modules transformed.
+rendering chunks...
+../../out/renderer/index.html                     0.39 kB
+../../out/renderer/assets/index-CZhGxb6o.css     35.51 kB
+../../out/renderer/assets/index-C50qGMCC.js   1,671.71 kB
+✓ built in 1.41s
+  • electron-builder  version=26.15.3 os=25.5.0
+  • loaded configuration  file=/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/apps/desktop/electron-builder.yml
+  • description is missed in the package.json  appPackageFile=/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/apps/desktop/package.json
+  • author is missed in the package.json  appPackageFile=/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/apps/desktop/package.json
+  • packageManager not detected by file, falling back to environment detection  resolvedPackageManager=pnpm detected=/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/apps/desktop
+  • detected workspace root for project using packageManager field  pm=pnpm config=pnpm@11.15.0 resolved=/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready projectDir=/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/apps/desktop
+  • skipped dependencies rebuild  reason=npmRebuild is set to false
+  • packaging       platform=darwin arch=arm64 electron=43.1.1 appOutDir=/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/.tmp/electron-builder/ordinary/mac-arm64
+  • downloaded      label=electron progress=100%
+  • downloaded electron zip extracted successfully  output=/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/.tmp/electron-builder/ordinary/mac-arm64
+  • searching for node modules  pm=pnpm searchDir=/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/apps/desktop
+  • duplicate dependency references  dependencies=["@formepdf/react@0.25.0","zustand@5.0.14","raw-body@3.0.2","http-errors@2.0.1","iconv-lite@0.7.3","debug@4.4.3","mime-types@3.0.2","on-finished@2.4.1","qs@6.15.3","type-is@2.1.0","call-bound@1.0.4","get-intrinsic@1.3.0"]
+  • executing @electron/fuses  electronPath=/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/.tmp/electron-builder/ordinary/mac-arm64/Tammy.app
+  • signing         file=/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/.tmp/electron-builder/ordinary/mac-arm64/Tammy.app platform=darwin type=distribution identityName=- identityHash=none provisioningProfile=none
+  • skipped macOS notarization  reason=`notarize` options were unable to be generated
+✔ the macOS application bundle has a valid signature (153.952666ms)
+✔ the ad-hoc macOS executable does not enable hardened runtime (6.609208ms)
+✔ the ordinary macOS package preserves the authenticated ad-hoc SBR helper (37.989958ms)
+﹣ Windows packages contain no SBR helper resources and declare exact unavailability (0.104542ms) # SKIP
+✔ the macOS bundle omits unused sensitive permissions and unrestricted transport (4.212667ms)
+✔ the packaged executable carries the approved Electron fuse contract (22.262583ms)
+✔ the ASAR contains only the built application graph and has embedded integrity metadata (23.919333ms)
+✔ the package authenticates its SQLCipher core and licence resources (1908.720167ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 1
+ℹ todo 0
+ℹ duration_ms 2263.501708
+{"appExecutable":"/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/.tmp/electron-builder/ordinary/mac-arm64/Tammy.app/Contents/MacOS/Tammy","appSha256":"2a0df1bf2c1575b644633115e297ca4cbaac5c429bbfc8c734702f1bd821b67f","coreExecutable":"/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/.tmp/electron-builder/ordinary/mac-arm64/Tammy.app/Contents/Resources/core/darwin-arm64/tammy-core","coreSha256":"59f04657746d1b303fea7476921987b9581de80d42c7a88c40bbd4e86a0d2950","manifest":"/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/.tmp/electron-builder/ordinary/mac-arm64/Tammy.app/Contents/Resources/build/build-manifest.json","manifestSha256":"f03b07383c60ff56d0d9fd8ab68250d20d245bc4f7880fef59e31408314cc406","releaseKind":"ordinary-package","sourceRevision":"d04a532295e977c3a88b3550e7935cdbf52c6272","helperExecutable":"/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/.tmp/electron-builder/ordinary/mac-arm64/Tammy.app/Contents/Resources/sbr-helper/darwin-arm64/tammy-sbr-helper","helperSha256":"971b8a279ab24486ea5149f9eee6092040ef6e882dd009b3958c3505d9aff127","profileFingerprint":"4254d13f438a5d8c36682a9807b146f282942a7faa111f642fd5beb24f8ae370","profileSha256":"9a15f9254db9743808ef3b36187a53fbedf4024d7de96dc97c22e2f6a8ee4f3e","sbrStatus":"SIMULATOR_ENABLED","target":"darwin-arm64"}
+$ pnpm prepare:runtime
+$ node ../../scripts/prepare-electron-runtime.mjs
+electron runtime verified
+$ playwright test
+
+Running 6 tests using 1 worker
+
+(node:47484) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [darwin-arm64] › tests/e2e/current-workflows.spec.ts:38:1 › runs the current accounting workflows through the packaged app (16.8s)
+  ✓  2 [darwin-arm64] › tests/e2e/foundation.spec.ts:29:1 › runs the packaged first-run journey offline and exits cleanly (1.5s)
+  ✓  3 [darwin-arm64] › tests/e2e/invoice-income.spec.ts:21:1 › invoices/income-payments-bas: cash receipts, mixed GST and balances persist through restart (11.2s)
+Warning: Incorrect 'loca' table length -- attempting to fix it.
+Warning: TT: more functions defined than expected
+Warning: Incorrect 'loca' table length -- attempting to fix it.
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: Incorrect 'loca' table length -- attempting to fix it.
+Warning: TT: more functions defined than expected
+Warning: Incorrect 'loca' table length -- attempting to fix it.
+Warning: TT: more functions defined than expected
+Warning: Incorrect 'loca' table length -- attempting to fix it.
+Warning: TT: more functions defined than expected
+Warning: Incorrect 'loca' table length -- attempting to fix it.
+Warning: TT: more functions defined than expected
+Warning: Incorrect 'loca' table length -- attempting to fix it.
+Warning: TT: more functions defined than expected
+  ✓  4 [darwin-arm64] › tests/e2e/reporting-exports.spec.ts:84:3 › reporting/exports: cash income and retained BAS files reconcile through cancellation, regeneration and restart (12.6s)
+Warning: Incorrect 'loca' table length -- attempting to fix it.
+Warning: TT: more functions defined than expected
+Warning: Incorrect 'loca' table length -- attempting to fix it.
+Warning: TT: more functions defined than expected
+Warning: Incorrect 'loca' table length -- attempting to fix it.
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: Incorrect 'loca' table length -- attempting to fix it.
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+  ✓  5 [darwin-arm64] › tests/e2e/reporting-exports.spec.ts:84:3 › reporting/exports: non-cash income and retained BAS files reconcile through cancellation, regeneration and restart (13.0s)
+(node:51395) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  6 [darwin-arm64-sbr] › tests/e2e/sbr-readiness.spec.ts:206:1 › SBR readiness uses local RAM credential and deterministic simulator only (4.7m)
+
+  6 passed (5.7m)

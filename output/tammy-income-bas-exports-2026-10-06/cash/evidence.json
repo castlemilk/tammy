@@ -1,0 +1,92 @@
+{
+  "sourceRevision": "c74c9e020c406ae33d5a855316fe489cc58ec5bf",
+  "sourceDirty": false,
+  "appSha256": "b1d0c4fbfcc9612584e16aa85318d8984ef310a80e05516d151ae475d6ee7155",
+  "coreSha256": "2b5832407c0740ecae498b9cde29a87fccede4388bf122f14cbe2f34ab45f915",
+  "records": {
+    "gstBasis": "cash",
+    "status": "passed"
+  },
+  "artifacts": [
+    {
+      "file": "bas.csv",
+      "sha256": "37630306731457c70cf549d131d24adee3bda04b4850e3e3784724b03b998e9d"
+    },
+    {
+      "file": "bas.pdf",
+      "sha256": "a9538359135eb894f340b223f64aab5a4e0739dec925547bf22eeca09d3143ff"
+    },
+    {
+      "file": "income.csv",
+      "sha256": "0e39bee435c1aaed5bb17695d1da4eeec2a4a5be2d6ceaa52c66a2bd22f0285f"
+    },
+    {
+      "file": "income.pdf",
+      "sha256": "ccfb262e80f650868765622bc4c2ec0026a2fd0a50e3763b591f232ca04fa5a3"
+    },
+    {
+      "file": "initial-bas-comparison.json",
+      "sha256": "e3969b799ed2cdf30c8a14607e7ec861f61e79a629185d869fd7161825766171"
+    },
+    {
+      "file": "initial-bas.png",
+      "sha256": "34ce449c026b732b092cf11ef7e73e3d182af10a200e845224ef5d961d9f5131"
+    },
+    {
+      "file": "initial-income-comparison.json",
+      "sha256": "c867ebc02a25de49edd4dec51473c355387e7bf0691b99febb7136a57a0a84f8"
+    },
+    {
+      "file": "initial-income.png",
+      "sha256": "92c3cc9ab8235d81b59ef7deb911ae315c556a0b1dcfc32ac397bede2f03ec46"
+    },
+    {
+      "file": "regenerated-bas-comparison.json",
+      "sha256": "c7997ebd704615a3c3d36dc7b3a97a995b863fbe758ffd0bf45e1743037f4081"
+    },
+    {
+      "file": "regenerated-bas.csv",
+      "sha256": "0c7785b6750dc7745966b14ca92bc4cea42035b38e86f891968f9dfd3751baf7"
+    },
+    {
+      "file": "regenerated-bas.pdf",
+      "sha256": "495525fc87e1909a7abedf56d89a1396929c575c0a7a020172919f58103acdbf"
+    },
+    {
+      "file": "regenerated-bas.png",
+      "sha256": "b7b9ce24f71c6cce4e614025ac58fe0c4732ad8a8b0ec01cf31e0ccb0b44afb2"
+    },
+    {
+      "file": "restarted-bas-comparison.json",
+      "sha256": "5b9d847f34c61131907d86d0cb477fec71323c1b383db5a1ac1bd968fab7842b"
+    },
+    {
+      "file": "restarted-bas.csv",
+      "sha256": "ee4c674eb2849fe177efd5bafbda7d39055aec0c17dc336d2e37dd01cd75c853"
+    },
+    {
+      "file": "restarted-income-comparison.json",
+      "sha256": "a26bc3c0e74cb1aa4563747ad156475809bad4f71bec2ff259a97cc688dc486d"
+    },
+    {
+      "file": "restarted-income.csv",
+      "sha256": "38febd35f899effc5b9eb0cff2b78e9f9d74c9947ceca8e4c4cae651bb27484a"
+    },
+    {
+      "file": "stale-bas-comparison.json",
+      "sha256": "e559955531526b5cb2bd8e4b8626a2e504c7c1e0c02dcbb1697c6cfb77edced9"
+    },
+    {
+      "file": "stale-bas.csv",
+      "sha256": "4f67b71bdfaaad8098522e18c29bfa2a5511a5c44a51da335229c69ce4da0b98"
+    },
+    {
+      "file": "stale-bas.pdf",
+      "sha256": "15c5aa9b1fa0b973a5a8e4b2e9928fe6dec61fae91f9cc1e241f72ba9bf03813"
+    },
+    {
+      "file": "stale-bas.png",
+      "sha256": "daa0d6dded3b5fa8f389cb5dd6f50d42069626c7d37d8a11d59238c6c71e8fe7"
+    }
+  ]
+}

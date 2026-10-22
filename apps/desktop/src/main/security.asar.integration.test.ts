@@ -1,5 +1,4 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -13,6 +12,10 @@ import {
   spawnHarnessProcess,
   terminateHarnessProcess,
 } from "../../tests/helpers/electron-harness-process";
+import {
+  readPreparedTestElectron,
+  resolveTestElectronPackageRoot,
+} from "../../tests/helpers/prepared-electron";
 
 const DESKTOP_ROOT = process.cwd();
 const WORKSPACE_ROOT = resolve(DESKTOP_ROOT, "../..");
@@ -48,33 +51,26 @@ async function pinnedAsar(): Promise<AsarModule> {
 }
 
 async function pinnedElectron(): Promise<string> {
-  const require = createRequire(join(DESKTOP_ROOT, "package.json"));
-  const packageJson = JSON.parse(
-    await readFile(require.resolve("electron/package.json"), "utf8"),
-  ) as { readonly name?: unknown; readonly version?: unknown };
-  expect(packageJson).toMatchObject({
-    name: "electron",
-    version: "43.1.1",
-  });
-  const executable = require("electron") as unknown;
-  expect(typeof executable).toBe("string");
-  return executable as string;
+  return readPreparedTestElectron(await resolveTestElectronPackageRoot(DESKTOP_ROOT));
 }
 
 async function runElectron(
   executable: string,
   rendererRoot: string,
+  userDataPath: string,
 ): Promise<{ readonly stderr: string; readonly stdout: string }> {
   const environment = { ...process.env };
   delete environment.ELECTRON_RUN_AS_NODE;
   environment.ELECTRON_DISABLE_SECURITY_WARNINGS = "true";
   environment.TAMMY_TEST_RENDERER_ROOT = rendererRoot;
   environment.TAMMY_TEST_SECURITY_SOURCE = SECURITY_SOURCE;
+  environment.TAMMY_TEST_USER_DATA_ROOT = userDataPath;
   const platformArguments = process.platform === "linux" ? ["--no-sandbox"] : [];
   return runHarnessProcess({
     closeConfirmationTimeoutMs: CLOSE_CONFIRMATION_TIMEOUT_MS,
     electronArguments: [
       ...platformArguments,
+      `--user-data-dir=${userDataPath}`,
       "--enable-logging=stderr",
       resolve(HARNESS_PATH, ".."),
     ],
@@ -89,7 +85,9 @@ async function runElectron(
 }
 
 describe("packaged ASAR renderer protocol", () => {
-  it("serves a real archive through pinned Electron net.fetch", { timeout: 30_000 }, async () => {
+  it("boots a background harness and serves a real archive through pinned Electron net.fetch", {
+    timeout: 30_000,
+  }, async () => {
     const directory = await mkdtemp(join(tmpdir(), "tammy-asar-integration-"));
     let safeToRemove = true;
     try {
@@ -102,7 +100,11 @@ describe("packaged ASAR renderer protocol", () => {
       const electronExecutable = await pinnedElectron();
       let result: { readonly stderr: string; readonly stdout: string };
       try {
-        result = await runElectron(electronExecutable, join(archive, "renderer"));
+        result = await runElectron(
+          electronExecutable,
+          join(archive, "renderer"),
+          join(directory, "user-data"),
+        );
       } catch (error) {
         safeToRemove = error instanceof HarnessProcessError && error.processClosed;
         throw error;
@@ -114,6 +116,8 @@ describe("packaged ASAR renderer protocol", () => {
       expect(JSON.parse(resultLine?.slice("TAMMY_ASAR_RESULT ".length) ?? "")).toEqual({
         body: "<main>ASAR ready</main>",
         contentType: "text/html; charset=utf-8",
+        dockVisible: process.platform === "darwin" ? false : null,
+        isolatedUserData: true,
         nosniff: "nosniff",
         status: 200,
       });

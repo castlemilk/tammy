@@ -121,38 +121,37 @@ export function ChartScreen({ api, workspace }: ChartScreenProps) {
   };
 
   return (
-    <div className="mx-auto grid w-full max-w-[920px] gap-5">
-      <div className="flex items-end justify-between gap-4">
+    <div className="mx-auto grid w-full max-w-[1120px] gap-5">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-[18px] font-semibold tracking-[-0.02em] text-foreground">
-            Chart of accounts
-          </h1>
-          <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
+          <h1 className="text-foreground page-title">Chart of accounts</h1>
+          <p className="mt-1 text-[14px] leading-5 text-muted-foreground">
             Accounts installed for your Australian business ledger.
           </p>
         </div>
         <div className="flex items-center gap-3">
           {chart.status === "ready" ? (
-            <p className="text-[10px] font-medium text-muted-foreground">
+            <p className="text-[14px] font-medium text-muted-foreground">
               {chart.accounts.length} accounts
             </p>
           ) : null}
           <Button
-            className="h-8 text-[10px]"
+            className="h-11 text-[14px]"
+            aria-expanded={adding}
             onClick={() => setAdding((value) => !value)}
             type="button"
           >
-            <Plus aria-hidden="true" className="size-3" /> Add account
+            <Plus aria-hidden="true" className="size-3" /> {adding ? "Cancel" : "Add account"}
           </Button>
         </div>
       </div>
 
       {adding ? (
         <form
-          className="grid grid-cols-[120px_minmax(0,1fr)_160px_auto] gap-3 rounded-[6px] border border-border bg-surface p-3 max-[760px]:grid-cols-1"
+          className="grid grid-cols-[120px_minmax(0,1fr)_160px_auto] gap-3 rounded-xl border border-border bg-surface p-3 max-[760px]:grid-cols-1"
           onSubmit={addAccount}
         >
-          <label className="grid gap-1 text-[10px] font-medium text-foreground">
+          <label className="grid gap-1 text-[14px] font-medium text-foreground">
             Code
             <input
               className={fieldClassName()}
@@ -162,7 +161,7 @@ export function ChartScreen({ api, workspace }: ChartScreenProps) {
               value={code}
             />
           </label>
-          <label className="grid gap-1 text-[10px] font-medium text-foreground">
+          <label className="grid gap-1 text-[14px] font-medium text-foreground">
             Account name
             <input
               className={fieldClassName()}
@@ -172,7 +171,7 @@ export function ChartScreen({ api, workspace }: ChartScreenProps) {
               value={name}
             />
           </label>
-          <label className="grid gap-1 text-[10px] font-medium text-foreground">
+          <label className="grid gap-1 text-[14px] font-medium text-foreground">
             Type
             <select
               className={fieldClassName()}
@@ -192,15 +191,15 @@ export function ChartScreen({ api, workspace }: ChartScreenProps) {
         </form>
       ) : null}
       {error ? (
-        <p className="text-[10px] text-destructive" role="alert">
+        <p className="text-[14px] text-destructive" role="alert">
           {error}
         </p>
       ) : null}
 
-      <section className="overflow-hidden rounded-[6px] border border-border bg-surface">
+      <section className="overflow-x-auto rounded-[20px] border border-border bg-surface">
         {chart.status === "ready" && chart.accounts.length > 0 ? (
           <table className="w-full border-collapse text-left">
-            <thead className="border-b border-border bg-background/60 text-[9px] uppercase tracking-[0.05em] text-muted-foreground">
+            <thead className="border-b border-border bg-background/60 text-[12px] uppercase tracking-[0.05em] text-muted-foreground">
               <tr>
                 <th className="px-3 py-2 font-semibold">Code</th>
                 <th className="px-3 py-2 font-semibold">Account</th>
@@ -208,7 +207,7 @@ export function ChartScreen({ api, workspace }: ChartScreenProps) {
                 <th className="px-3 py-2 font-semibold">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border text-[10px]">
+            <tbody className="divide-y divide-border text-[14px]">
               {chart.accounts.map((account) => (
                 <tr key={account.id}>
                   <td className="w-24 px-3 py-2.5 font-mono font-medium text-foreground">
@@ -219,7 +218,7 @@ export function ChartScreen({ api, workspace }: ChartScreenProps) {
                     {accountTypeLabel(account.type)}
                   </td>
                   <td className="px-3 py-2.5">
-                    <span className="rounded-full bg-success-soft px-2 py-1 text-[9px] font-semibold text-forest">
+                    <span className="rounded-full bg-success-soft px-2 py-1 text-[12px] font-semibold text-forest">
                       {account.status === AccountStatus.ACTIVE ? "Active" : "Archived"}
                     </span>
                   </td>
@@ -236,10 +235,10 @@ export function ChartScreen({ api, workspace }: ChartScreenProps) {
                   className="mx-auto size-4 animate-spin text-forest"
                 />
               ) : null}
-              <p className="mt-2 text-[12px] font-semibold text-foreground">
+              <p className="mt-2 text-[14px] font-semibold text-foreground">
                 {chart.status === "unavailable" ? "Chart unavailable" : "No accounts yet"}
               </p>
-              <p className="mt-1 max-w-sm text-[10px] leading-4 text-muted-foreground">
+              <p className="mt-1 max-w-sm text-[14px] leading-4 text-muted-foreground">
                 {chart.status === "unavailable"
                   ? "The local chart could not be read. Your data remains on this device."
                   : "Accounts will appear here once they are installed."}
@@ -253,7 +252,7 @@ export function ChartScreen({ api, workspace }: ChartScreenProps) {
 }
 
 function fieldClassName(): string {
-  return "focus-ring h-9 w-full rounded-[6px] border border-border bg-surface px-3 text-[11px] text-foreground outline-none";
+  return "focus-ring h-11 w-full rounded-xl border border-border bg-surface px-3 text-[14px] text-foreground outline-none";
 }
 
 function normalBalanceFor(type: AccountType): NormalBalance {

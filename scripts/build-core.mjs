@@ -379,6 +379,7 @@ export async function buildCore({
   let buildError;
   let result;
   try {
+    // Fresh per build: Go's cache misses cgo SQLCipher changes, and packages sign this binary.
     cacheDirectory = await createBuildCache({
       makeDirectory: makeCacheDirectory,
       temporaryRoot,

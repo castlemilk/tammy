@@ -1,0 +1,148 @@
+{
+  "label": "restarted-bas",
+  "status": "passed",
+  "authority": {
+    "organisation": {
+      "$typeName": "tammy.v1.Organisation",
+      "id": "01a10f37-071f-705c-919d-2815c63fa62d",
+      "version": "1",
+      "abn": "11000000560",
+      "legalName": "Wattle & Co Supplies Pty Ltd",
+      "displayName": "Wattle & Co Supplies",
+      "entityType": "AU_PRIVATE_COMPANY",
+      "gstBasis": 2,
+      "gstReportingFrequency": 2,
+      "financialYearEndMonth": 6,
+      "verificationState": 1,
+      "ownerUserId": "01a10f37-03bb-7e46-9660-ae1e5014b37f",
+      "activeTaxRuleBundle": {
+        "$typeName": "tammy.v1.SourceRef",
+        "type": "tax_rule_bundle",
+        "id": "018f0000-0000-7000-8000-000000000022",
+        "revision": "1",
+        "contentHash": "e2f9cde094db43c30260dc54f089a1ab835912e75e8c29add5c7a240e90497e4"
+      }
+    },
+    "bas": {
+      "$typeName": "tammy.v1.BasWorkpaper",
+      "id": "01a10f37-1f2b-7ed0-b421-6fbb0167eea5",
+      "organisationId": "01a10f37-071f-705c-919d-2815c63fa62d",
+      "version": "1",
+      "status": 1,
+      "sources": [
+        {
+          "$typeName": "tammy.v1.BasSourceLine",
+          "documentId": "01a10f37-188b-7ff8-bed0-2520675f9f91",
+          "supplierName": "=Export supplier, \"Élodie\"",
+          "invoiceNumber": "EXPORT-PURCHASE-001",
+          "documentDate": {
+            "$typeName": "tammy.v1.CivilDate",
+            "year": 2026,
+            "month": 10,
+            "day": 3
+          },
+          "gross": {
+            "$typeName": "tammy.v1.Money",
+            "currencyCode": "AUD",
+            "minorUnits": "11000"
+          },
+          "gstCredit": {
+            "$typeName": "tammy.v1.Money",
+            "currencyCode": "AUD",
+            "minorUnits": "1000"
+          }
+        },
+        {
+          "$typeName": "tammy.v1.BasSourceLine",
+          "documentId": "01a10f37-1d3d-7a55-aa0e-2473da59cdc1",
+          "supplierName": "=Updated export supplier, \"Élodie\"",
+          "invoiceNumber": "EXPORT-PURCHASE-002",
+          "documentDate": {
+            "$typeName": "tammy.v1.CivilDate",
+            "year": 2026,
+            "month": 10,
+            "day": 3
+          },
+          "gross": {
+            "$typeName": "tammy.v1.Money",
+            "currencyCode": "AUD",
+            "minorUnits": "11000"
+          },
+          "gstCredit": {
+            "$typeName": "tammy.v1.Money",
+            "currencyCode": "AUD",
+            "minorUnits": "1000"
+          }
+        }
+      ],
+      "gstBasis": 2,
+      "salesSources": [
+        {
+          "$typeName": "tammy.v1.BasSalesSourceLine",
+          "invoiceId": "01a10f37-16eb-7c02-81a8-ce0067649f41",
+          "invoiceNumber": "EXPORT-ACCRUAL-001",
+          "customerName": "Export customer, \"Élodie\"",
+          "sourceRevision": "2",
+          "sourceHash": "ff5fc556e72c302d8e8998ac0fa771b7e6980dbdce9789835c748589c4bc7fd0",
+          "taxDate": {
+            "$typeName": "tammy.v1.CivilDate",
+            "year": 2026,
+            "month": 10,
+            "day": 1
+          },
+          "gross": {
+            "$typeName": "tammy.v1.Money",
+            "currencyCode": "AUD",
+            "minorUnits": "16000"
+          },
+          "gst": {
+            "$typeName": "tammy.v1.Money",
+            "currencyCode": "AUD",
+            "minorUnits": "1000"
+          }
+        }
+      ],
+      "sourceFingerprint": "fb0672f9f9a72af292d68387a7f9cf3e49414c1ec3b796332bff86e09d9e566c",
+      "sourcesChanged": false,
+      "reviewWarnings": [],
+      "excludedCashPurchaseCount": "0",
+      "periodStart": {
+        "$typeName": "tammy.v1.CivilDate",
+        "year": 2026,
+        "month": 10,
+        "day": 1
+      },
+      "periodEnd": {
+        "$typeName": "tammy.v1.CivilDate",
+        "year": 2026,
+        "month": 12,
+        "day": 31
+      },
+      "salesG1": {
+        "$typeName": "tammy.v1.Money",
+        "currencyCode": "AUD",
+        "minorUnits": "16000"
+      },
+      "gstOnSales1a": {
+        "$typeName": "tammy.v1.Money",
+        "currencyCode": "AUD",
+        "minorUnits": "1000"
+      },
+      "gstCredits1b": {
+        "$typeName": "tammy.v1.Money",
+        "currencyCode": "AUD",
+        "minorUnits": "2000"
+      },
+      "netGstPayable": {
+        "$typeName": "tammy.v1.Money",
+        "currencyCode": "AUD",
+        "minorUnits": "-1000"
+      },
+      "createdAt": {
+        "$typeName": "google.protobuf.Timestamp",
+        "seconds": "1791256633",
+        "nanos": 131580000
+      }
+    }
+  }
+}

@@ -240,25 +240,26 @@ export function JournalsScreen({
   }
 
   return (
-    <div className="mx-auto grid w-full max-w-[920px] gap-5">
-      <div className="flex items-end justify-between gap-4">
+    <div className="mx-auto grid w-full max-w-[1120px] gap-5">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-[18px] font-semibold tracking-[-0.02em] text-foreground">Journals</h1>
-          <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
+          <h1 className="text-foreground page-title">Journals</h1>
+          <p className="mt-1 text-[14px] leading-5 text-muted-foreground">
             Balanced accounting entries and their retained sources.
           </p>
         </div>
         <Button
-          className="h-8 text-[10px]"
+          className="h-11 text-[14px]"
           disabled={ordinaryAccounts.length < 2}
+          aria-expanded={adding}
           onClick={() => setAdding((value) => !value)}
           type="button"
         >
-          <Plus aria-hidden="true" className="size-3" /> New journal
+          <Plus aria-hidden="true" className="size-3" /> {adding ? "Cancel" : "New journal"}
         </Button>
       </div>
       {ordinaryAccounts.length < 2 && state.status === "ready" ? (
-        <p className="rounded-[6px] border border-warning-border bg-warning-soft px-3 py-2 text-[10px] text-foreground">
+        <p className="rounded-xl border border-warning-border bg-warning-soft px-3 py-2 text-[14px] text-foreground">
           Create at least two ordinary accounts before posting a manual journal.
         </p>
       ) : null}
@@ -280,14 +281,14 @@ export function JournalsScreen({
         />
       ) : null}
       {error ? (
-        <p className="text-[10px] text-destructive" role="alert">
+        <p className="text-[14px] text-destructive" role="alert">
           {error}
         </p>
       ) : null}
-      <section className="overflow-hidden rounded-[6px] border border-border bg-surface">
+      <section className="overflow-x-auto rounded-[20px] border border-border bg-surface">
         {state.status === "ready" && state.journals.length > 0 ? (
           <table className="w-full border-collapse text-left">
-            <thead className="border-b border-border bg-background/60 text-[9px] uppercase tracking-[0.05em] text-muted-foreground">
+            <thead className="border-b border-border bg-background/60 text-[12px] uppercase tracking-[0.05em] text-muted-foreground">
               <tr>
                 <th className="px-3 py-2">Date</th>
                 <th className="px-3 py-2">Description</th>
@@ -295,7 +296,7 @@ export function JournalsScreen({
                 <th className="px-3 py-2">State</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border text-[10px]">
+            <tbody className="divide-y divide-border text-[14px]">
               {state.journals.map((journal) => (
                 <tr
                   className="focus-ring cursor-pointer hover:bg-muted/50"
@@ -344,11 +345,11 @@ function JournalForm(props: {
 }) {
   return (
     <form
-      className="grid gap-3 rounded-[6px] border border-border bg-surface p-3"
+      className="grid gap-3 rounded-xl border border-border bg-surface p-3"
       onSubmit={props.onSubmit}
     >
       <div className="grid grid-cols-2 gap-3 max-[700px]:grid-cols-1">
-        <label className="grid gap-1 text-[10px] font-medium">
+        <label className="grid gap-1 text-[14px] font-medium">
           Date
           <input
             className={fieldClassName()}
@@ -358,7 +359,7 @@ function JournalForm(props: {
             value={props.date}
           />
         </label>
-        <label className="grid gap-1 text-[10px] font-medium">
+        <label className="grid gap-1 text-[14px] font-medium">
           Amount (AUD)
           <input
             className={fieldClassName()}
@@ -371,7 +372,7 @@ function JournalForm(props: {
           />
         </label>
       </div>
-      <label className="grid gap-1 text-[10px] font-medium">
+      <label className="grid gap-1 text-[14px] font-medium">
         Description
         <input
           className={fieldClassName()}
@@ -414,7 +415,7 @@ function AccountSelect({
   readonly value: string;
 }) {
   return (
-    <label className="grid gap-1 text-[10px] font-medium">
+    <label className="grid gap-1 text-[14px] font-medium">
       {label}
       <select
         className={fieldClassName()}
@@ -446,19 +447,19 @@ function JournalDetail({
     accounts.map((account) => [account.id, `${account.code} — ${account.name}`]),
   );
   return (
-    <div className="mx-auto grid w-full max-w-[920px] gap-5">
+    <div className="mx-auto grid w-full max-w-[1120px] gap-5">
       <div>
         <Button onClick={onBack} type="button" variant="ghost">
           <ArrowLeft aria-hidden="true" className="size-3" /> Journals
         </Button>
-        <h1 className="mt-3 text-[18px] font-semibold">{journal.memo || "Journal entry"}</h1>
-        <p className="mt-1 text-[11px] text-muted-foreground">
+        <h1 className="mt-3 page-title">{journal.memo || "Journal entry"}</h1>
+        <p className="mt-1 text-[14px] text-muted-foreground">
           {civilDateLabel(journal)} · {journal.state === 1 ? "Posted" : "Reversed"}
         </p>
       </div>
-      <section className="overflow-hidden rounded-[6px] border border-border bg-surface">
+      <section className="overflow-x-auto rounded-[20px] border border-border bg-surface">
         <table className="w-full border-collapse text-left">
-          <thead className="border-b border-border bg-background/60 text-[9px] uppercase text-muted-foreground">
+          <thead className="border-b border-border bg-background/60 text-[12px] uppercase text-muted-foreground">
             <tr>
               <th className="px-3 py-2">Account</th>
               <th className="px-3 py-2">Description</th>
@@ -466,7 +467,7 @@ function JournalDetail({
               <th className="px-3 py-2 text-right">Credit</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border text-[10px]">
+          <tbody className="divide-y divide-border text-[14px]">
             {journal.lines.map((line) => (
               <tr key={line.id}>
                 <td className="px-3 py-2.5 font-medium">
@@ -482,7 +483,7 @@ function JournalDetail({
               </tr>
             ))}
           </tbody>
-          <tfoot className="border-t border-border text-[10px] font-semibold">
+          <tfoot className="border-t border-border text-[14px] font-semibold">
             <tr>
               <td className="px-3 py-2.5" colSpan={2}>
                 Total
@@ -508,10 +509,10 @@ function EmptyState({ status }: { readonly status: JournalState["status"] }) {
         {status === "loading" ? (
           <LoaderCircle className="mx-auto size-4 animate-spin text-forest" />
         ) : null}
-        <p className="mt-2 text-[12px] font-semibold">
+        <p className="mt-2 text-[14px] font-semibold">
           {status === "unavailable" ? "Journals unavailable" : "No journals yet"}
         </p>
-        <p className="mt-1 text-[10px] text-muted-foreground">
+        <p className="mt-1 text-[14px] text-muted-foreground">
           Post a balanced manual journal to begin.
         </p>
       </div>
@@ -519,7 +520,7 @@ function EmptyState({ status }: { readonly status: JournalState["status"] }) {
   );
 }
 function fieldClassName(): string {
-  return "focus-ring h-9 w-full rounded-[6px] border border-border bg-surface px-3 text-[11px] outline-none";
+  return "focus-ring h-11 w-full rounded-xl border border-border bg-surface px-3 text-[14px] outline-none";
 }
 function amountToMinor(value: string): bigint {
   if (!/^\d+(?:\.\d{1,2})?$/.test(value)) return 0n;

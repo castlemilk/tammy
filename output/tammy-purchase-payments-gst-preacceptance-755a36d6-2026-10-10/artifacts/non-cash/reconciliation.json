@@ -1,0 +1,124 @@
+{
+  "workspaceId": "01a122a1-45d5-7df4-8cb7-75f1e816c1bf",
+  "organisationId": "01a122a1-4cd6-7d5a-95a8-046a09cd26cd",
+  "documentId": "01a122a1-59e1-70d0-ad3a-17d313e6b648",
+  "postingId": "01a122a1-5b81-77b7-b83f-b4dccc63e94d",
+  "paymentIds": [
+    "01a122a1-61b2-778b-8534-2de0666f9847",
+    "01a122a1-5d85-70e2-b95f-feeb5753e5df"
+  ],
+  "firstWorkpaperId": "01a122a1-5ea1-7f1b-88cc-4883a3fc6bfa",
+  "secondWorkpaperId": "01a122a1-62dc-7010-b39b-a03f866d2ef8",
+  "gstMinor": "1000",
+  "actualLedger": {
+    "expenseMinor": "10000",
+    "bankMinor": "-11000",
+    "payableMinor": "0",
+    "inputGstMinor": "1000"
+  },
+  "bankingBefore": {
+    "summary": {
+      "importedLineCount": 1,
+      "unmatchedLineCount": 0,
+      "unreconciledLineCount": 0,
+      "latestClosingBalance": {
+        "currencyCode": "AUD",
+        "minorUnits": "6234"
+      }
+    },
+    "lines": [
+      {
+        "id": "01a122a1-4e28-7226-b582-94950608ed99",
+        "statementImportId": "01a122a1-4e28-79aa-bd0e-26abc3f89cd9",
+        "organisationId": "01a122a1-4cd6-7d5a-95a8-046a09cd26cd",
+        "version": "3",
+        "transactionDate": "2026-08-30",
+        "description": "Purchase non-effects reconciliation baseline",
+        "amount": {
+          "currencyCode": "AUD",
+          "minorUnits": "1234"
+        },
+        "status": 3,
+        "matchReference": "PURCHASE-ACCEPTANCE-BASELINE-RECONCILIATION"
+      }
+    ]
+  },
+  "bankingAfter": {
+    "summary": {
+      "importedLineCount": 1,
+      "unmatchedLineCount": 0,
+      "unreconciledLineCount": 0,
+      "latestClosingBalance": {
+        "currencyCode": "AUD",
+        "minorUnits": "6234"
+      }
+    },
+    "lines": [
+      {
+        "id": "01a122a1-4e28-7226-b582-94950608ed99",
+        "statementImportId": "01a122a1-4e28-79aa-bd0e-26abc3f89cd9",
+        "organisationId": "01a122a1-4cd6-7d5a-95a8-046a09cd26cd",
+        "version": "3",
+        "transactionDate": "2026-08-30",
+        "description": "Purchase non-effects reconciliation baseline",
+        "amount": {
+          "currencyCode": "AUD",
+          "minorUnits": "1234"
+        },
+        "status": 3,
+        "matchReference": "PURCHASE-ACCEPTANCE-BASELINE-RECONCILIATION"
+      }
+    ]
+  },
+  "sbrSimulatorTransportCount": 0,
+  "artifacts": [
+    {
+      "file": "first-quarter.csv",
+      "sha256": "f9a2bc5be2f5f980f398c2303150cf3e1a846afb3dd6f4e1982383ec35311c3b"
+    },
+    {
+      "file": "first-quarter.pdf",
+      "sha256": "f28e50900d9100bca220c7dcb1513ac507ff0956fd9259ed5e9e4e761b1a5a4c"
+    },
+    {
+      "file": "first-quarter.core.pb",
+      "sha256": "fe712b49817fa0afbfee48fa18b02948992d06b3c1ce9a46effd080f5b06b379"
+    },
+    {
+      "file": "second-quarter.csv",
+      "sha256": "09836262110f67f22eb1242ddf7361b211ed44f9e9b13ace0ab5a736d1a84f25"
+    },
+    {
+      "file": "second-quarter.pdf",
+      "sha256": "997774bfffc7268bf8bfb0ff1a561bb90d8f8bb753299c45f0caf69badc8fa76"
+    },
+    {
+      "file": "second-quarter.core.pb",
+      "sha256": "b4b049ffdd13fb96b29039efd153cdd3e807b6df97ef341e89402d2ba1aaa449"
+    },
+    {
+      "file": "retained-stale.csv",
+      "sha256": "2bb8a35c3e533f72566b3c036fb3f1d6db46a2d6565e61ffaf5c47b7f05b3c0e"
+    },
+    {
+      "file": "retained-stale.pdf",
+      "sha256": "2345790c28761332789af3762df30edc198ae7328d72b917c415ebaca98d644b"
+    },
+    {
+      "file": "retained-stale.core.pb",
+      "sha256": "375e8d922415863344da0033ec2d800cac235b61ab134476767507b876584e7a"
+    },
+    {
+      "file": "restarted.csv",
+      "sha256": "f2529de21f352effdc755a4ec9ca8de72644b0df8272d5ff8932a3d7097d338c"
+    },
+    {
+      "file": "restarted.core.pb",
+      "sha256": "375e8d922415863344da0033ec2d800cac235b61ab134476767507b876584e7a"
+    },
+    {
+      "file": "retained-purchase-details.png",
+      "sha256": "ac4b79492dfdd62700924b304afac6814423734622c026ba461f1f074a6279b7"
+    }
+  ]
+}

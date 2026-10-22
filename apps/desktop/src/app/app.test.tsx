@@ -670,6 +670,8 @@ describe("App", () => {
 
     await screen.findByRole("button", { name: "Retry local engine" });
     await user.tab();
+    expect(document.activeElement).toBe(screen.getByRole("link", { name: "Skip to content" }));
+    await user.tab();
     expect(document.activeElement).toBe(screen.getByRole("link", { name: "Overview" }));
     await user.tab();
     expect(document.activeElement).toBe(screen.getByRole("link", { name: "Documents" }));
