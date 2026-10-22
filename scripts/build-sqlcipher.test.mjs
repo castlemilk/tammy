@@ -97,6 +97,10 @@ async function buildMacDependencyFixture({ dependencyEvidence = "valid", root, s
     vendor: async () => ({ sourceRoot, sourceTreeSha256: SOURCE_TREE_SHA256 }),
     sourceTreeHasher: async () => SOURCE_TREE_SHA256,
     execFile: async (command, args, options) => {
+      if (command === "/bin/sh") {
+        state.configureCFlags = options.env.CFLAGS;
+        state.configureLdFlags = options.env.LDFLAGS;
+      }
       if (command === "/usr/bin/make") {
         state.privateSource = options.cwd;
         await Promise.all([
@@ -276,6 +280,15 @@ describe("SQLCipher static build plan", () => {
 });
 
 describe("SQLCipher build execution", () => {
+  it("pins macOS configure probes and static objects to deployment target 14.0", async () => {
+    const { root, sourceRoot } = await fixtureRoot();
+    const build = await buildMacDependencyFixture({ root, sourceRoot });
+
+    assert.match(build.configureCFlags, /-mmacosx-version-min=14\.0/u);
+    assert.match(build.configureLdFlags, /-mmacosx-version-min=14\.0/u);
+    assert.ok(build.compilerArgs.includes("-mmacosx-version-min=14.0"));
+  });
+
   it("compiles a private staged wrapper beside sqlite3.c and cannot select a scripts shadow", async () => {
     const { root, sourceRoot } = await fixtureRoot();
     const shadowSqlite = path.join(root, "scripts/sqlite3.c");

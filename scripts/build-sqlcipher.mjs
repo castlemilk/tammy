@@ -13,6 +13,7 @@ import {
 
 const BUILD_TIMEOUT_MS = 10 * 60_000;
 const COMPILE_DEPENDENCY_TARGET = "tammy-sqlcipher-object";
+const MACOS_MINIMUM_VERSION_FLAG = "-mmacosx-version-min=14.0";
 const OPENSSL_LICENSE_SHA256 = "657443fd2340ed2d45d44ceb57df718bc810abcc060a9032f93759c4afab9fa2";
 const OPENSSL_SOURCE_SHA256 = "d71a811bfbd9153d7b30cbe476263302ee4b04a9a47ffea6e6a782326805c93f";
 const OPENSSL_VERSION = "3.5.7";
@@ -435,7 +436,7 @@ async function execute(execFile, command, args, options = {}) {
 
 async function compileMac(plan, source, committedWrapper, execFile) {
   const commonFlags = plan.defines.map((value) => `-D${value}`);
-  const cflags = ["-O2", "-g0", "-fPIC", ...commonFlags].join(" ");
+  const cflags = ["-O2", "-g0", "-fPIC", MACOS_MINIMUM_VERSION_FLAG, ...commonFlags].join(" ");
   await execute(
     execFile,
     "/bin/sh",
@@ -446,6 +447,7 @@ async function compileMac(plan, source, committedWrapper, execFile) {
         ...process.env,
         CC: plan.compiler,
         CFLAGS: cflags,
+        LDFLAGS: MACOS_MINIMUM_VERSION_FLAG,
       },
     },
   );
@@ -454,7 +456,15 @@ async function compileMac(plan, source, committedWrapper, execFile) {
     plan,
     source,
     committedWrapper,
-    ["-O2", "-g0", "-fPIC", `-ffile-prefix-map=${source}=.`, ...commonFlags, `-I${source}`],
+    [
+      "-O2",
+      "-g0",
+      "-fPIC",
+      MACOS_MINIMUM_VERSION_FLAG,
+      `-ffile-prefix-map=${source}=.`,
+      ...commonFlags,
+      `-I${source}`,
+    ],
     execFile,
   );
   await execute(

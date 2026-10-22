@@ -15,6 +15,7 @@ const SQLCIPHER_HASH_SYMBOL =
 const VERSION_PATTERN = /^[0-9A-Za-z][0-9A-Za-z.+-]{0,63}$/;
 const HASH_PATTERN = /^[a-f0-9]{64}$/;
 const SQLCIPHER_VERSION = "4.15.0";
+const MACOS_MINIMUM_VERSION_FLAG = "-mmacosx-version-min=14.0";
 
 const targets = Object.freeze({
   "darwin/arm64": Object.freeze({
@@ -249,6 +250,15 @@ export function createBuildPlan({
   const cipher = validateSqlcipherInput(root, details, sqlcipher);
   const resourcesRoot = path.join(root, "apps/desktop/resources/core");
   const output = resolveCoreBinary(resourcesRoot, target);
+  const cgoCFlags = [
+    ...(details.platform === "darwin" ? [MACOS_MINIMUM_VERSION_FLAG] : []),
+    "-DSQLITE_HAS_CODEC",
+    `-I${cipher.include}`,
+  ].join(" ");
+  const cgoLdFlags =
+    details.platform === "darwin"
+      ? `${MACOS_MINIMUM_VERSION_FLAG} ${cipher.library} -framework CoreFoundation -framework Security`
+      : `${cipher.library} ${cipher.providerLibrary} -lcrypt32 -luser32 -lws2_32`;
   return Object.freeze({
     args: Object.freeze([
       "build",
@@ -266,12 +276,9 @@ export function createBuildPlan({
       env: Object.freeze({
         ...sourceEnvironment,
         CC: cipher.compiler,
-        CGO_CFLAGS: `-DSQLITE_HAS_CODEC -I${cipher.include}`,
+        CGO_CFLAGS: cgoCFlags,
         CGO_ENABLED: "1",
-        CGO_LDFLAGS:
-          details.platform === "darwin"
-            ? `${cipher.library} -framework CoreFoundation -framework Security`
-            : `${cipher.library} ${cipher.providerLibrary} -lcrypt32 -luser32 -lws2_32`,
+        CGO_LDFLAGS: cgoLdFlags,
         GOARCH: details.goarch,
         GOOS: details.goos,
       }),

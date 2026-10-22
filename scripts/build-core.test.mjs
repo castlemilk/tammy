@@ -260,6 +260,30 @@ describe("authenticated SQLCipher inputs", () => {
 });
 
 describe("core build plan", () => {
+  it("pins macOS cgo compilation and linking to the supported 14.0 deployment target", () => {
+    const root = path.resolve("/workspace/tammy");
+    const plan = createBuildPlan({
+      root,
+      sqlcipher: sqlcipherInput(root, "darwin-arm64"),
+      target: selectTarget("darwin", "arm64"),
+      version: "0.1.0",
+    });
+    const include = path.join(root, "apps/desktop/resources/sqlcipher/darwin-arm64/include");
+    const library = path.join(
+      root,
+      "apps/desktop/resources/sqlcipher/darwin-arm64/lib/libsqlite3.a",
+    );
+
+    assert.equal(
+      plan.options.env.CGO_CFLAGS,
+      `-mmacosx-version-min=14.0 -DSQLITE_HAS_CODEC -I${include}`,
+    );
+    assert.equal(
+      plan.options.env.CGO_LDFLAGS,
+      `-mmacosx-version-min=14.0 ${library} -framework CoreFoundation -framework Security`,
+    );
+  });
+
   it("uses exact safe Go arguments and environment", () => {
     const root = path.resolve("/workspace/tammy");
     const plan = createBuildPlan({
