@@ -159,6 +159,10 @@ function productLabel(state: ProductIdState): string {
   }
 }
 
+function maySetUpOwnTotp(roles: readonly Role[]): boolean {
+  return roles.includes(Role.WORKSPACE_ADMIN) || roles.includes(Role.BUSINESS_LODGER);
+}
+
 function environmentCopy(environment: SbrEnvironment): { label: string; detail: string } {
   if (environment === SbrEnvironment.SIMULATOR) {
     return {
@@ -387,13 +391,26 @@ export function SbrReadinessScreen({
         <ReadinessSurface
           credentialStatus={state.credentialStatus}
           factorEnabled={factorEnabled}
-          onFactorEnabled={() => setFactorEnabled(true)}
           onNavigate={onNavigate}
           onRefresh={refresh}
           organisation={organisation}
           readiness={state.readiness}
           roles={workspace.roles}
           sbr={sbr}
+          workspace={workspace}
+        />
+      ) : null}
+      {factorEnabled ? (
+        <section
+          aria-label="Account security status"
+          className="border-t border-border pt-4 text-[11px] text-muted-foreground"
+        >
+          Security code is enabled for your account.
+        </section>
+      ) : maySetUpOwnTotp(workspace.roles) ? (
+        <TotpSetup
+          onEnabled={() => setFactorEnabled(true)}
+          api={organisation}
           workspace={workspace}
         />
       ) : null}
@@ -433,7 +450,6 @@ function UnavailableSurface() {
 function ReadinessSurface({
   credentialStatus,
   factorEnabled,
-  onFactorEnabled,
   onNavigate,
   onRefresh,
   organisation,
@@ -444,7 +460,6 @@ function ReadinessSurface({
 }: {
   readonly credentialStatus: MachineCredentialStatus;
   readonly factorEnabled: boolean;
-  readonly onFactorEnabled: () => void;
   readonly onNavigate: (path: string) => void;
   readonly onRefresh: () => void;
   readonly organisation: SbrReadinessScreenProps["organisation"];
@@ -588,18 +603,14 @@ function ReadinessSurface({
         </section>
       ) : null}
 
-      {roles.includes(Role.WORKSPACE_ADMIN) ? (
-        factorEnabled ? (
-          <MachineCredentialForm
-            credentialState={readiness.machineCredentialState}
-            onChanged={onRefresh}
-            organisation={organisation}
-            sbr={sbr}
-            workspace={workspace}
-          />
-        ) : (
-          <TotpSetup onEnabled={onFactorEnabled} api={organisation} workspace={workspace} />
-        )
+      {roles.includes(Role.WORKSPACE_ADMIN) && factorEnabled ? (
+        <MachineCredentialForm
+          credentialState={readiness.machineCredentialState}
+          onChanged={onRefresh}
+          organisation={organisation}
+          sbr={sbr}
+          workspace={workspace}
+        />
       ) : null}
 
       {roles.includes(Role.WORKSPACE_ADMIN) &&

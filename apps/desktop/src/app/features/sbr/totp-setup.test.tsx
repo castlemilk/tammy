@@ -149,10 +149,7 @@ it("shows provisioning material once, confirms it, and removes it permanently", 
       <TotpSetup api={organisationFor(api)} onEnabled={enabled} workspace={workspace} />
     </StrictMode>,
   );
-  await user.type(
-    screen.getByLabelText("Current administrator password"),
-    "administrator-password",
-  );
+  await user.type(screen.getByLabelText("Current account password"), "administrator-password");
   await user.dblClick(screen.getByRole("button", { name: "Begin TOTP setup" }));
   expect(api.enrolTotp).toHaveBeenCalledOnce();
   expect(await screen.findByText(secret)).toBeTruthy();
@@ -178,7 +175,7 @@ it("drops provisioning material on unmount and never renders a rejected password
   const view = render(
     <TotpSetup api={organisationFor(api)} onEnabled={vi.fn()} workspace={workspace} />,
   );
-  await user.type(screen.getByLabelText("Current administrator password"), "PRIVATE-PASSWORD");
+  await user.type(screen.getByLabelText("Current account password"), "PRIVATE-PASSWORD");
   await user.click(screen.getByRole("button", { name: "Begin TOTP setup" }));
   expect((await screen.findByRole("alert")).textContent).toMatch(/begin setup again/i);
   expect(document.body.textContent).not.toContain("PRIVATE-PASSWORD");
@@ -196,7 +193,7 @@ it("keeps one live error region mounted from first paint", async () => {
   const liveRegion = screen.getByRole("alert");
   expect(liveRegion.textContent).toBe("");
 
-  await user.type(screen.getByLabelText("Current administrator password"), "password");
+  await user.type(screen.getByLabelText("Current account password"), "password");
   await user.click(screen.getByRole("button", { name: "Begin TOTP setup" }));
 
   expect(screen.getByRole("alert")).toBe(liveRegion);
@@ -214,7 +211,7 @@ it("ignores an enrolment response that arrives after unmount", async () => {
   const view = render(
     <TotpSetup api={organisationFor(api)} onEnabled={vi.fn()} workspace={workspace} />,
   );
-  await user.type(screen.getByLabelText("Current administrator password"), "PRIVATE-PASSWORD");
+  await user.type(screen.getByLabelText("Current account password"), "PRIVATE-PASSWORD");
   await user.click(screen.getByRole("button", { name: "Begin TOTP setup" }));
   view.unmount();
   await act(async () => {
@@ -252,7 +249,7 @@ it("does not install enrolment material returned for a previous principal", asyn
   const view = render(
     <TotpSetup api={organisationFor(api)} onEnabled={enabled} workspace={workspace} />,
   );
-  await user.type(screen.getByLabelText("Current administrator password"), "password");
+  await user.type(screen.getByLabelText("Current account password"), "password");
   await user.click(screen.getByRole("button", { name: "Begin TOTP setup" }));
 
   view.rerender(
@@ -325,7 +322,7 @@ it("does not enable a renewed session from a previous session confirmation", asy
   const view = render(
     <TotpSetup api={organisationFor(api)} onEnabled={enabled} workspace={workspace} />,
   );
-  await user.type(screen.getByLabelText("Current administrator password"), "password");
+  await user.type(screen.getByLabelText("Current account password"), "password");
   await user.click(screen.getByRole("button", { name: "Begin TOTP setup" }));
   await screen.findByText(secret);
   await user.type(screen.getByLabelText("Six-digit code"), "123456");
@@ -376,7 +373,7 @@ it("does not apply a nested security refresh returned for a previous principal",
   const view = render(
     <TotpSetup api={organisationFor(api)} onEnabled={enabled} workspace={workspace} />,
   );
-  await user.type(screen.getByLabelText("Current administrator password"), "password");
+  await user.type(screen.getByLabelText("Current account password"), "password");
   await user.click(screen.getByRole("button", { name: "Begin TOTP setup" }));
   expect(api.getCurrentUser).toHaveBeenCalledOnce();
 
@@ -423,7 +420,7 @@ it("rejects malformed factor metadata without displaying returned provisioning m
   };
   const user = userEvent.setup();
   render(<TotpSetup api={organisationFor(api)} onEnabled={vi.fn()} workspace={workspace} />);
-  await user.type(screen.getByLabelText("Current administrator password"), "PRIVATE-PASSWORD");
+  await user.type(screen.getByLabelText("Current account password"), "PRIVATE-PASSWORD");
   await user.click(screen.getByRole("button", { name: "Begin TOTP setup" }));
   expect(await screen.findByRole("alert")).toBeTruthy();
   expect(document.body.textContent).not.toContain(secret);
@@ -456,7 +453,7 @@ it("restarts an authoritative pending setup and requests atomic seed rotation", 
   };
   const user = userEvent.setup();
   render(<TotpSetup api={organisationFor(api)} onEnabled={vi.fn()} workspace={pendingWorkspace} />);
-  await user.type(screen.getByLabelText("Current administrator password"), "password");
+  await user.type(screen.getByLabelText("Current account password"), "password");
   await user.click(screen.getByRole("button", { name: "Restart TOTP setup" }));
   expect(await screen.findByTestId("totp-provisioning-material")).toBeTruthy();
   expect(api.enrolTotp).toHaveBeenCalledOnce();
@@ -470,7 +467,7 @@ it("locks an ambiguous enrolment until an authoritative refresh succeeds", async
   };
   const user = userEvent.setup();
   render(<TotpSetup api={organisationFor(api)} onEnabled={vi.fn()} workspace={workspace} />);
-  await user.type(screen.getByLabelText("Current administrator password"), "password");
+  await user.type(screen.getByLabelText("Current account password"), "password");
   await user.click(screen.getByRole("button", { name: "Begin TOTP setup" }));
   expect(await screen.findByRole("button", { name: "Refresh security status" })).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "Begin TOTP setup" }));
@@ -506,7 +503,7 @@ it("rejects non-base32 provisioning shapes without ever displaying them", async 
   };
   const user = userEvent.setup();
   render(<TotpSetup api={organisationFor(api)} onEnabled={vi.fn()} workspace={workspace} />);
-  await user.type(screen.getByLabelText("Current administrator password"), "password");
+  await user.type(screen.getByLabelText("Current account password"), "password");
   await user.click(screen.getByRole("button", { name: "Begin TOTP setup" }));
   await screen.findByRole("alert");
   expect(document.body.textContent).not.toContain(malformed);
@@ -539,7 +536,7 @@ it("refreshes authoritative factor state after an ambiguous confirmation", async
   const enabled = vi.fn();
   const user = userEvent.setup();
   render(<TotpSetup api={organisationFor(api)} onEnabled={enabled} workspace={workspace} />);
-  await user.type(screen.getByLabelText("Current administrator password"), "password");
+  await user.type(screen.getByLabelText("Current account password"), "password");
   await user.click(screen.getByRole("button", { name: "Begin TOTP setup" }));
   await screen.findByText(secret);
   await user.type(screen.getByLabelText("Six-digit code"), "123456");
@@ -577,7 +574,7 @@ it("does not redisplay provisioning material after navigation", async () => {
   const view = render(
     <TotpSetup api={organisationFor(api)} onEnabled={vi.fn()} workspace={workspace} />,
   );
-  await user.type(screen.getByLabelText("Current administrator password"), "password");
+  await user.type(screen.getByLabelText("Current account password"), "password");
   await user.click(screen.getByRole("button", { name: "Begin TOTP setup" }));
   await screen.findByText(secret);
   view.unmount();

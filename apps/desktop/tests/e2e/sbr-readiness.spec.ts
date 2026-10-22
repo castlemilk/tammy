@@ -335,7 +335,7 @@ test("SBR readiness uses local RAM credential and deterministic simulator only",
 
   await navigateToSbrThroughSettings(page);
   await expect(page.getByRole("heading", { name: "SBR readiness", exact: true })).toBeVisible();
-  await page.getByLabel("Current administrator password").fill(CURRENT_WORKFLOW_ADMIN_PASSWORD);
+  await page.getByLabel("Current account password").fill(CURRENT_WORKFLOW_ADMIN_PASSWORD);
   await page.getByRole("button", { name: "Begin TOTP setup" }).click();
   const secret = await page.getByTestId("totp-provisioning-material").textContent();
   expect(secret).toMatch(/^[A-Z2-7]{32}$/);

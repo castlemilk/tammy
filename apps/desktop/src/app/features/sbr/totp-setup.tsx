@@ -326,12 +326,12 @@ export function TotpSetup({
             Set up a security code
           </h2>
           <p className="mt-1 text-[10px] leading-5 text-muted-foreground">
-            A fresh six-digit code is required before credential administration is available.
+            Protected actions require a fresh six-digit code and the appropriate role.
           </p>
           {!visiblePending ? (
             <form className="mt-3 grid max-w-[420px] gap-3" onSubmit={enrol}>
               <label className="grid gap-1.5 text-[11px] font-medium">
-                Current administrator password
+                Current account password
                 <input
                   autoComplete="current-password"
                   className={fieldClassName}

@@ -20,6 +20,14 @@ The repair control checks the current organisation on demand and offers an actio
 
 The reporting capability catalogue and onboarding copy must also describe the implemented supported local preparation path truthfully. Simulator, EVTE and production delivery remain unavailable.
 
+## Integrated acceptance corrections
+
+The ordinary packaged journey exposed a second prerequisite: account TOTP setup was nested inside the SBR-ready surface. An ordinary BAS workspace without an authenticated SBR profile therefore could not enrol the factor required by organisation repair and BAS approval. Expose self-service factor setup for the supported administrator and business-lodger roles independently of SBR readiness. Keep credential administration and simulator actions under their existing environment, role and factor checks. Confirm the actual enabled factor through the authenticated identity query; showing a credential-import button is not the acceptance signal for BAS security.
+
+The legacy-input fixture also required a test-only correction. Conveyor encodes the typed request inside a `google.protobuf.Any` envelope. The fixture must verify its exact type URL, descend into the payload, change only the intended source digest, and forward to the real handler. A regression uses the actual frame codec to prove the exact forwarded bytes and one-shot restoration.
+
+An intermittent pre-window failure initially exposed only `LOCAL_ENGINE_UNAVAILABLE`. Fixed startup-stage and concrete error-code diagnostics now preserve a bounded explanation without retaining raw errors, credentials, readiness content or paths. The failure remains unclassified until a reproduction provides a specific stage/code; it does not justify an unmeasured timeout increase.
+
 ## Chunk 1: Canonical setup and bounded bridge
 
 - [x] Reproduce the setup checksum mismatch with a test deriving ID, revision and SHA-256 from the actual bundled bytes; verify RED and GREEN for both GST bases.
@@ -33,6 +41,7 @@ The reporting capability catalogue and onboarding copy must also describe the im
 - [ ] Test exact legacy detection, correct and unrelated references, administrator restriction, exact update mask/version/reason/date, purpose-bound fresh authentication and failed/stale commands.
 - [ ] Update the build-pinned capability catalogue to advertise only supported local BAS preparation for its listed business/year combinations; preserve unavailable delivery modes and fail-closed unlisted combinations.
 - [ ] Update onboarding copy so it no longer claims the implemented local preparation workflow is unavailable.
+- [ ] Make account TOTP setup independent of SBR readiness, test supported roles and unavailable SBR responses, and retain all existing credential and simulator authority checks.
 
 ## Chunk 3: Integrated acceptance and closeout
 

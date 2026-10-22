@@ -40,6 +40,11 @@ import {
   PageRequestSchema,
 } from "@tammy/connect-client/tammy/v1/common_pb.js";
 import { DocumentCandidateSchema } from "@tammy/connect-client/tammy/v1/documents_pb.js";
+import {
+  FactorState,
+  GetCurrentUserRequestSchema,
+  GetCurrentUserResponseSchema,
+} from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import { InvoicePaymentSchema } from "@tammy/connect-client/tammy/v1/invoices_pb.js";
 import {
   GetOrganisationRequestSchema,
@@ -59,6 +64,7 @@ import {
   CURRENT_WORKFLOW_USERNAME,
 } from "./support/current-accounting-workflow";
 import { readInvoiceAccounting, recordInvoiceReceipt } from "./support/invoice-income-workflow";
+import { installLegacyRuleCreateShimInMain } from "./support/legacy-rule-create-shim";
 import {
   expectPurchaseControls,
   openPurchase,
@@ -80,6 +86,12 @@ const listFrozenCodec = createProtoMethodCodec({
   output: ListFrozenBasResponseSchema,
   maximumRequestBytes: 16_384,
   maximumResponseBytes: BAS_PREPARATION_RESPONSE_FRAME_LIMIT,
+});
+const currentUserCodec = createProtoMethodCodec({
+  input: GetCurrentUserRequestSchema,
+  output: GetCurrentUserResponseSchema,
+  maximumRequestBytes: 8_192,
+  maximumResponseBytes: 8_192,
 });
 const getFrozenCodec = createProtoMethodCodec({
   input: GetFrozenBasRequestSchema,
@@ -164,141 +176,12 @@ type BasExportSources = {
 };
 
 async function installLegacyRuleCreateShim(application: ElectronApplication): Promise<void> {
-  await application.evaluate(
-    ({ ipcMain }, { currentHashHex, legacyHashHex, stateKey }) => {
-      type InvokeHandler = (event: unknown, ...args: unknown[]) => unknown;
-      const handlers = (ipcMain as unknown as { _invokeHandlers?: Map<string, InvokeHandler> })
-        ._invokeHandlers;
-      const channel = "conveyor:organisation";
-      const original = handlers?.get(channel);
-      if (!handlers || !original) throw new Error("BAS_ACCEPTANCE_LEGACY_RULE_SHIM_UNAVAILABLE");
-
-      const fromHex = (value: string) => {
-        const bytes = new Uint8Array(value.length / 2);
-        for (let index = 0; index < bytes.length; index += 1) {
-          bytes[index] = Number.parseInt(value.slice(index * 2, index * 2 + 2), 16);
-        }
-        return bytes;
-      };
-      const currentHash = fromHex(currentHashHex);
-      const legacyHash = fromHex(legacyHashHex);
-      if (currentHash.length !== 32 || legacyHash.length !== 32)
-        throw new Error("BAS_ACCEPTANCE_LEGACY_RULE_HASH_INVALID");
-
-      const readVarint = (bytes: Uint8Array, cursor: { offset: number }, end: number): number => {
-        let value = 0;
-        let shift = 0;
-        while (cursor.offset < end && shift <= 49) {
-          const byte = bytes[cursor.offset];
-          if (byte === undefined) throw new Error("BAS_ACCEPTANCE_LEGACY_RULE_FRAME_INVALID");
-          cursor.offset += 1;
-          value += (byte & 0x7f) * 2 ** shift;
-          if ((byte & 0x80) === 0) return value;
-          shift += 7;
-        }
-        throw new Error("BAS_ACCEPTANCE_LEGACY_RULE_FRAME_INVALID");
-      };
-      const skipField = (
-        bytes: Uint8Array,
-        cursor: { offset: number },
-        end: number,
-        wireType: number,
-      ) => {
-        if (wireType === 0) {
-          readVarint(bytes, cursor, end);
-          return;
-        }
-        if (wireType === 1 || wireType === 5) {
-          cursor.offset += wireType === 1 ? 8 : 4;
-        } else if (wireType === 2) {
-          const length = readVarint(bytes, cursor, end);
-          cursor.offset += length;
-        } else {
-          throw new Error("BAS_ACCEPTANCE_LEGACY_RULE_FRAME_INVALID");
-        }
-        if (cursor.offset > end) throw new Error("BAS_ACCEPTANCE_LEGACY_RULE_FRAME_INVALID");
-      };
-      const sourceHashPosition = (bytes: Uint8Array, start: number, end: number) => {
-        const cursor = { offset: start };
-        let matchCount = 0;
-        let position = -1;
-        while (cursor.offset < end) {
-          const tag = readVarint(bytes, cursor, end);
-          const fieldNumber = Math.floor(tag / 8);
-          const wireType = tag & 7;
-          if (fieldNumber === 4 && wireType === 2) {
-            const length = readVarint(bytes, cursor, end);
-            const hashStart = cursor.offset;
-            if (length === currentHash.length && hashStart + length <= end) {
-              let matches = true;
-              for (let index = 0; index < length; index += 1) {
-                if (bytes[hashStart + index] !== currentHash[index]) matches = false;
-              }
-              if (matches) {
-                matchCount += 1;
-                position = hashStart;
-              }
-            }
-            cursor.offset += length;
-            if (cursor.offset > end) throw new Error("BAS_ACCEPTANCE_LEGACY_RULE_FRAME_INVALID");
-          } else {
-            skipField(bytes, cursor, end, wireType);
-          }
-        }
-        if (matchCount !== 1) throw new Error("BAS_ACCEPTANCE_LEGACY_RULE_REF_NOT_EXACT");
-        return position;
-      };
-      const locateBundleHash = (bytes: Uint8Array) => {
-        const cursor = { offset: 0 };
-        let bundleCount = 0;
-        let hashPosition = -1;
-        while (cursor.offset < bytes.length) {
-          const tag = readVarint(bytes, cursor, bytes.length);
-          const fieldNumber = Math.floor(tag / 8);
-          const wireType = tag & 7;
-          if (fieldNumber === 9 && wireType === 2) {
-            const length = readVarint(bytes, cursor, bytes.length);
-            const start = cursor.offset;
-            const end = start + length;
-            if (end > bytes.length) throw new Error("BAS_ACCEPTANCE_LEGACY_RULE_FRAME_INVALID");
-            bundleCount += 1;
-            hashPosition = sourceHashPosition(bytes, start, end);
-            cursor.offset = end;
-          } else {
-            skipField(bytes, cursor, bytes.length, wireType);
-          }
-        }
-        if (bundleCount !== 1 || hashPosition < 0)
-          throw new Error("BAS_ACCEPTANCE_LEGACY_RULE_REF_NOT_EXACT");
-        return hashPosition;
-      };
-
-      const state = { replacementCount: 0, restored: false };
-      Object.defineProperty(ipcMain, stateKey, { configurable: true, value: state });
-      const wrapped: InvokeHandler = async (event, ...args) => {
-        if (args[0] !== "createOrganisation" || !(args[1] instanceof Uint8Array)) {
-          return Reflect.apply(original, ipcMain, [event, ...args]);
-        }
-        if (state.replacementCount !== 0) return Reflect.apply(original, ipcMain, [event, ...args]);
-        const request = args[1];
-        const hashPosition = locateBundleHash(request);
-        const rewritten = request.slice();
-        rewritten.set(legacyHash, hashPosition);
-        state.replacementCount = 1;
-        handlers.set(channel, original);
-        state.restored = true;
-        const forwardedArgs = args.slice();
-        forwardedArgs[1] = rewritten;
-        return Reflect.apply(original, ipcMain, [event, ...forwardedArgs]);
-      };
-      handlers.set(channel, wrapped);
-    },
-    {
-      currentHashHex: CURRENT_TAX_RULE_HASH,
-      legacyHashHex: LEGACY_TAX_RULE_HASH,
-      stateKey: LEGACY_RULE_SHIM_STATE_KEY,
-    },
-  );
+  await application.evaluate(installLegacyRuleCreateShimInMain, {
+    currentHashHex: CURRENT_TAX_RULE_HASH,
+    expectedTypeUrl: "type.googleapis.com/tammy.v1.CreateOrganisationRequest",
+    legacyHashHex: LEGACY_TAX_RULE_HASH,
+    stateKey: LEGACY_RULE_SHIM_STATE_KEY,
+  });
 }
 
 async function readLegacyRuleShimResult(application: ElectronApplication) {
@@ -885,12 +768,12 @@ async function selectExactPreparation(page: Page, workspace: Workspace, family: 
   return summary;
 }
 
-async function setupTotp(page: Page): Promise<TotpClock> {
+async function setupTotp(page: Page, workspace: Workspace): Promise<TotpClock> {
   await page.getByRole("link", { name: "Settings", exact: true }).click();
   await page.getByRole("link", { name: "SBR readiness", exact: true }).click();
   await expect(page.getByRole("heading", { name: "SBR readiness", exact: true })).toBeVisible();
   await page
-    .getByLabel("Current administrator password", { exact: true })
+    .getByLabel("Current account password", { exact: true })
     .fill(CURRENT_WORKFLOW_ADMIN_PASSWORD);
   await page.getByRole("button", { name: "Begin TOTP setup", exact: true }).click();
   const secret = await page.getByTestId("totp-provisioning-material").textContent();
@@ -901,7 +784,21 @@ async function setupTotp(page: Page): Promise<TotpClock> {
     .getByLabel("Six-digit code", { exact: true })
     .fill(generateTotp(secret, confirmationTime));
   await page.getByRole("button", { name: "Confirm security code", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Import credential", exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Security code is enabled for your account.", { exact: true }),
+  ).toBeVisible();
+  const currentUser = currentUserCodec.decodeResponse(
+    await invokeConveyorFrame(
+      page,
+      "organisation",
+      "getCurrentUser",
+      currentUserCodec.encodeRequest(
+        create(GetCurrentUserRequestSchema, { authentication: authentication(workspace) }),
+      ),
+    ),
+  ).user;
+  expect(currentUser?.id).toBe(workspace.userId);
+  expect(currentUser?.factorState).toBe(FactorState.ENABLED);
   return { counter: Math.floor(confirmationTime / 30_000), secret };
 }
 
@@ -1600,7 +1497,7 @@ test("BAS lifecycle: clean cash sources, blocked PAYGI resolution, frozen handof
     restored: true,
   });
   let page = electronHarness.currentPage();
-  const totp = await setupTotp(page);
+  const totp = await setupTotp(page, workspace);
   const screenshots: string[] = [];
 
   await createAndIssueInvoice(page, "BAS-CASH-TAXABLE-001", "200.00", "taxable");

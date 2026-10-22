@@ -3,10 +3,16 @@ import { TimestampSchema } from "@bufbuild/protobuf/wkt";
 import {
   AuthenticationContextSchema,
   FreshFactorContextSchema,
+  OneTimeSecretOutputSchema,
 } from "@tammy/connect-client/tammy/v1/common_pb.js";
 import {
   AssertTOTPRequestSchema,
   AssertTOTPResponseSchema,
+  ConfirmTOTPRequestSchema,
+  ConfirmTOTPResponseSchema,
+  EnrolTOTPRequestSchema,
+  EnrolTOTPResponseSchema,
+  FactorSchema,
   FactorState,
   Role,
 } from "@tammy/connect-client/tammy/v1/identity_pb.js";
@@ -118,6 +124,18 @@ const factorCodec = createProtoMethodCodec({
   maximumRequestBytes: 8_192,
   maximumResponseBytes: 8_192,
   output: AssertTOTPResponseSchema,
+});
+const enrolCodec = createProtoMethodCodec({
+  input: EnrolTOTPRequestSchema,
+  maximumRequestBytes: 8_192,
+  maximumResponseBytes: 8_192,
+  output: EnrolTOTPResponseSchema,
+});
+const confirmCodec = createProtoMethodCodec({
+  input: ConfirmTOTPRequestSchema,
+  maximumRequestBytes: 8_192,
+  maximumResponseBytes: 8_192,
+  output: ConfirmTOTPResponseSchema,
 });
 const credentialStatusCodec = createProtoMethodCodec({
   input: GetMachineCredentialStatusRequestSchema,
@@ -628,6 +646,107 @@ describe("SbrReadinessScreen", () => {
     );
     expect(await screen.findByRole("heading", { name: "Set up a security code" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Import credential" })).toBeNull();
+  });
+
+  it.each([
+    [Role.WORKSPACE_ADMIN, "workspace administrator"],
+    [Role.BUSINESS_LODGER, "business lodger"],
+  ])("keeps self-service TOTP setup available to a %s when SBR queries fail", async (role) => {
+    const api = apiFor({
+      environment: SbrEnvironment.SIMULATOR,
+      state: SbrReadinessState.UNAVAILABLE,
+      machineCredentialState: MachineCredentialState.MISSING,
+      productIdState: ProductIdState.MISSING,
+    });
+    vi.mocked(api.getSbrReadiness).mockRejectedValue(new Error("profile unavailable"));
+    vi.mocked(api.getMachineCredentialStatus).mockRejectedValue(new Error("status unavailable"));
+
+    render(
+      <SbrReadinessScreen
+        api={api}
+        workspace={{
+          ...workspace,
+          roles: [role],
+          userFactorState: FactorState.DISABLED,
+        }}
+      />,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Readiness unavailable" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Set up a security code" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Begin TOTP setup" })).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: /credential|product id|simulator fixture/i }),
+    ).toBeNull();
+  });
+
+  it("keeps successful factor confirmation visible without exposing SBR controls when readiness is unavailable", async () => {
+    const secret = "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP";
+    const factorId = "01900f3c-7b2e-7cc4-98c4-dc0c0c073995";
+    const api = apiFor({
+      environment: SbrEnvironment.SIMULATOR,
+      state: SbrReadinessState.UNAVAILABLE,
+      machineCredentialState: MachineCredentialState.MISSING,
+      productIdState: ProductIdState.MISSING,
+    });
+    vi.mocked(api.getSbrReadiness).mockRejectedValue(new Error("profile unavailable"));
+    vi.mocked(api.getMachineCredentialStatus).mockRejectedValue(new Error("status unavailable"));
+    const enrolTotp = vi.fn(() =>
+      Promise.resolve(
+        enrolCodec.encodeResponse(
+          create(EnrolTOTPResponseSchema, {
+            factor: create(FactorSchema, {
+              id: factorId,
+              userId: workspace.userId,
+              version: 1n,
+              state: FactorState.PENDING_CONFIRMATION,
+              createdAt: create(TimestampSchema, { seconds: 1n }),
+            }),
+            provisioningSecret: create(OneTimeSecretOutputSchema, {
+              utf8: new TextEncoder().encode(secret),
+            }),
+          }),
+        ),
+      ),
+    );
+    const confirmTotp = vi.fn(() =>
+      Promise.resolve(
+        confirmCodec.encodeResponse(
+          create(ConfirmTOTPResponseSchema, {
+            factor: create(FactorSchema, {
+              id: factorId,
+              userId: workspace.userId,
+              version: 2n,
+              state: FactorState.ENABLED,
+              createdAt: create(TimestampSchema, { seconds: 1n }),
+            }),
+          }),
+        ),
+      ),
+    );
+    const user = userEvent.setup();
+
+    render(
+      <SbrReadinessScreen
+        api={{ ...api, enrolTotp, confirmTotp }}
+        workspace={{ ...workspace, userFactorState: FactorState.DISABLED }}
+      />,
+    );
+
+    await user.type(screen.getByLabelText("Current account password"), "current-password");
+    await user.click(await screen.findByRole("button", { name: "Begin TOTP setup" }));
+    expect(await screen.findByText(secret)).toBeTruthy();
+    await user.type(screen.getByLabelText("Six-digit code"), "123456");
+    await user.click(screen.getByRole("button", { name: "Confirm security code" }));
+
+    expect(await screen.findByText("Security code is enabled for your account.")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Set up a security code" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Import credential" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Begin TOTP setup" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /credential|product id|simulator fixture/i }),
+    ).toBeNull();
+    expect(screen.getByRole("heading", { name: "Readiness unavailable" })).toBeTruthy();
   });
 
   it("resets local factor gating when the authoritative principal projection changes", async () => {
