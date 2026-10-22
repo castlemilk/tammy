@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -29,6 +29,7 @@ async function fixture(context) {
     JSON.stringify(manifest),
   );
   await writeFile(path.join(root, "biome.json"), JSON.stringify(config));
+  await writeFile(path.join(root, ".gitattributes"), "output/archived.json -text\n");
   return { root, manifest, config };
 }
 
@@ -81,10 +82,49 @@ test("retained entries must be unique literal output paths with hashes", async (
   }
 });
 
+test("Git raw-byte protections must match the exact archival inventory", async (context) => {
+  const { root } = await fixture(context);
+  for (const source of ["", "output/** -text\n"]) {
+    await writeFile(path.join(root, ".gitattributes"), source);
+    await assert.rejects(verifyRetainedOutput({ root }), /RETAINED_OUTPUT_CHECKOUT_SCOPE_MISMATCH/);
+  }
+});
+
 test("the real retained inventory verifies and the lint front door always checks it", async () => {
   assert.equal(await verifyRetainedOutput({ root: ROOT }), 55);
   const manifest = JSON.parse(await readFile(path.join(ROOT, "package.json"), "utf8"));
   assert.equal(manifest.scripts.lint, "node scripts/check-retained-output.mjs && biome check .");
+});
+
+test("Git checkout preserves archived bytes with Windows-style newline conversion enabled", async (context) => {
+  const { root } = await fixture(context);
+  const inventory = JSON.parse(
+    await readFile(path.join(ROOT, "compliance/retained-output-lint.json"), "utf8"),
+  );
+  const retainedPath = inventory.entries[0].path;
+  const bytes = Buffer.from('{\n  "historical": true\n}\n');
+  await mkdir(path.dirname(path.join(root, retainedPath)), { recursive: true });
+  await writeFile(path.join(root, retainedPath), bytes);
+  await writeFile(
+    path.join(root, ".gitattributes"),
+    await readFile(path.join(ROOT, ".gitattributes")),
+  );
+  const git = (args, input) =>
+    execFileSync("git", args, {
+      cwd: root,
+      input,
+      maxBuffer: 64 * 1024,
+      windowsHide: true,
+    });
+  git(["init", "--quiet", "--template="]);
+  git(["-c", "core.autocrlf=true", "add", "--", ".gitattributes", retainedPath]);
+  const checkout = path.join(root, "windows-checkout");
+  await mkdir(checkout);
+  git(
+    ["-c", "core.autocrlf=true", "checkout-index", `--prefix=${checkout}/`, "-z", "--stdin"],
+    `${retainedPath}\0`,
+  );
+  assert.deepEqual(await readFile(path.join(checkout, retainedPath)), bytes);
 });
 
 test("new maintained code and JSON under output remain subject to Biome", async (context) => {

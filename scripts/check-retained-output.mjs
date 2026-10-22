@@ -37,6 +37,18 @@ export async function verifyRetainedOutput({ root = process.cwd() } = {}) {
   if (JSON.stringify(outputExclusions.sort()) !== JSON.stringify(expected)) {
     throw new Error("RETAINED_OUTPUT_LINT_SCOPE_MISMATCH");
   }
+  const attributes = await readFile(path.join(root, ".gitattributes"), "utf8");
+  const protectedPaths = attributes
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("output/") && line.endsWith(" -text"))
+    .sort();
+  if (
+    JSON.stringify(protectedPaths) !==
+    JSON.stringify([...paths].map((file) => `${file} -text`).sort())
+  ) {
+    throw new Error("RETAINED_OUTPUT_CHECKOUT_SCOPE_MISMATCH");
+  }
   for (const entry of manifest.entries) {
     const hash = createHash("sha256");
     for await (const chunk of createReadStream(path.join(root, entry.path))) hash.update(chunk);
