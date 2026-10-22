@@ -10,15 +10,8 @@ import {
 const root = fileURLToPath(new URL("../../../../../", import.meta.url));
 export async function buildPurchaseEvidenceInspector() {
   await promisify(execFile)(
-    "rtk",
-    [
-      "proxy",
-      "mise",
-      "exec",
-      "--",
-      "node",
-      path.join(root, "scripts/build-purchase-e2e-inspector.mjs"),
-    ],
+    process.execPath,
+    [path.join(root, "scripts/build-purchase-e2e-inspector.mjs")],
     { cwd: root, maxBuffer: 1024 * 1024 },
   );
 }

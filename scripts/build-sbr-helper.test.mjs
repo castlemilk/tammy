@@ -110,7 +110,7 @@ test("generated helper, staged profiles, and provenance never dirty the source t
     assert.match(source, new RegExp(`^${entry.replaceAll("/", "\\/")}$`, "m"));
 });
 
-test("MAS raw owner purges stale ignored artifacts and records this-run revision authority", async () => {
+test("MAS raw owner builds with Go on PATH and records this-run revision authority", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "tammy-mas-raw-"));
   try {
     await mkdir(path.join(root, "services/sbr-helper/cmd/tammy-sbr-helper"), {
@@ -126,6 +126,8 @@ test("MAS raw owner purges stale ignored artifacts and records this-run revision
     await writeFile(path.join(root, ".tmp/sbr-helper-build/provenance.json"), "stale");
     const runner = async (command, args) => {
       if (command === "git") return { stdout: `${"a".repeat(40)}\n` };
+      assert.equal(command, "go", "CI provides pinned Go on PATH without a mise executable");
+      assert.equal(args[0], "build");
       const output = args[args.indexOf("-o") + 1];
       await writeFile(output, "deterministic raw helper");
       return { stdout: "" };

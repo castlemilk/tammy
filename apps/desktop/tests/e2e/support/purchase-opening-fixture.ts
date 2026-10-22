@@ -32,15 +32,8 @@ import { purchaseDate, purchaseKey } from "./purchase-payments-workflow";
 const root = fileURLToPath(new URL("../../../../../", import.meta.url));
 export async function buildPurchaseOpeningFixture() {
   await promisify(execFile)(
-    "rtk",
-    [
-      "proxy",
-      "mise",
-      "exec",
-      "--",
-      "node",
-      path.join(root, "scripts/build-purchase-e2e-opening-fixture.mjs"),
-    ],
+    process.execPath,
+    [path.join(root, "scripts/build-purchase-e2e-opening-fixture.mjs")],
     { cwd: root, maxBuffer: 1024 * 1024 },
   );
 }

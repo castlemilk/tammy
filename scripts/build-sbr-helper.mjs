@@ -158,7 +158,7 @@ async function buildRawTwice(root, commandRunner) {
   const outputs = [path.join(staging, "one"), path.join(staging, "two")];
   for (const output of outputs) {
     const plan = createSbrHelperBuildPlan(root, output);
-    await commandRunner("mise", ["exec", "--", "go", ...plan.args], {
+    await commandRunner("go", plan.args, {
       cwd: plan.cwd,
       env: {
         HOME: process.env.HOME,
@@ -297,11 +297,8 @@ export async function buildMasSimulatorProfile({
     const goTemporary = path.join(goRoot, "tmp");
     await Promise.all([mkdir(goCache), mkdir(goTemporary)]);
     await commandRunner(
-      "mise",
+      "go",
       [
-        "exec",
-        "--",
-        "go",
         "test",
         "./services/core/internal/sbrprofile",
         "-run",
@@ -372,7 +369,7 @@ export async function buildSbrHelper({
     const outputs = [path.join(staging, "one"), path.join(staging, "two")];
     for (const output of outputs) {
       const plan = createSbrHelperBuildPlan(root, output);
-      await commandRunner("mise", ["exec", "--", "go", ...plan.args], {
+      await commandRunner("go", plan.args, {
         cwd: plan.cwd,
         env: {
           HOME: process.env.HOME,
@@ -425,11 +422,8 @@ export async function buildSbrHelper({
     if (authenticated.helper_sha256 !== helperSha256)
       throw new Error("SBR_SIMULATOR_HELPER_HASH_MISMATCH");
     await commandRunner(
-      "mise",
+      "go",
       [
-        "exec",
-        "--",
-        "go",
         "test",
         "./services/core/internal/sbrprofile",
         "-run",
