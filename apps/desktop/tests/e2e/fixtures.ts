@@ -436,9 +436,18 @@ function startPrivacyProcessObserver(
   };
 }
 
-function observePage(page: Page, consoleErrors: string[], pageErrors: string[]): void {
+function observePage(
+  page: Page,
+  consoleErrors: string[],
+  pageErrors: string[],
+  diagnostics: ElectronProcessDiagnostics,
+): void {
   page.on("console", (message: ConsoleMessage) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
+    if (message.type() === "error") {
+      const text = message.text();
+      diagnostics.observeConsoleMessage(text);
+      consoleErrors.push(text);
+    }
   });
   page.on("pageerror", (error) => pageErrors.push(error.message));
 }
@@ -776,7 +785,7 @@ function fixtureOperations(
         const observe = (page: Page) => {
           if (observed.has(page)) return;
           observed.add(page);
-          observePage(page, state.consoleErrors, state.pageErrors);
+          observePage(page, state.consoleErrors, state.pageErrors, processDiagnostics);
         };
         context.on("page", observe);
         context.pages().forEach(observe);

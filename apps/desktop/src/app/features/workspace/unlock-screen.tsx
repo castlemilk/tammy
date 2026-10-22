@@ -1,4 +1,5 @@
 import { create } from "@bufbuild/protobuf";
+import { Code, ConnectError } from "@connectrpc/connect";
 import {
   ApprovedFileRefSchema,
   AuthenticationContextSchema,
@@ -53,6 +54,63 @@ const organisationCodec = createProtoMethodCodec({
   maximumResponseBytes: 32_768,
   output: GetOrganisationResponseSchema,
 });
+
+const unlockFailureStages = {
+  WORKSPACE_UNLOCK: "LOCAL_ENGINE_UNLOCK_WORKSPACE_UNLOCK_FAILED",
+  SIGN_IN: "LOCAL_ENGINE_UNLOCK_SIGN_IN_FAILED",
+  CURRENT_USER_READ: "LOCAL_ENGINE_UNLOCK_CURRENT_USER_READ_FAILED",
+  ORGANISATION_READ: "LOCAL_ENGINE_UNLOCK_ORGANISATION_READ_FAILED",
+  PROJECTION_VALIDATION: "LOCAL_ENGINE_UNLOCK_PROJECTION_VALIDATION_FAILED",
+} as const;
+
+const connectCodeSuffixes = {
+  [Code.Canceled]: "CANCELED",
+  [Code.Unknown]: "UNKNOWN",
+  [Code.InvalidArgument]: "INVALID_ARGUMENT",
+  [Code.DeadlineExceeded]: "DEADLINE_EXCEEDED",
+  [Code.NotFound]: "NOT_FOUND",
+  [Code.AlreadyExists]: "ALREADY_EXISTS",
+  [Code.PermissionDenied]: "PERMISSION_DENIED",
+  [Code.ResourceExhausted]: "RESOURCE_EXHAUSTED",
+  [Code.FailedPrecondition]: "FAILED_PRECONDITION",
+  [Code.Aborted]: "ABORTED",
+  [Code.OutOfRange]: "OUT_OF_RANGE",
+  [Code.Unauthenticated]: "UNAUTHENTICATED",
+  [Code.Internal]: "INTERNAL",
+  [Code.Unavailable]: "UNAVAILABLE",
+  [Code.DataLoss]: "DATA_LOSS",
+  [Code.Unimplemented]: "UNIMPLEMENTED",
+} as const satisfies Readonly<Record<Code, string>>;
+
+type UnlockFailureStage = keyof typeof unlockFailureStages;
+
+function connectCodeMarker(error: unknown): string | undefined {
+  try {
+    if (
+      !(error instanceof ConnectError) ||
+      Object.getPrototypeOf(error) !== ConnectError.prototype ||
+      Object.getOwnPropertyDescriptor(error, "name")?.value !== "ConnectError"
+    )
+      return undefined;
+
+    const code = Object.getOwnPropertyDescriptor(error, "code")?.value;
+    if (
+      typeof code !== "number" ||
+      !Number.isInteger(code) ||
+      !Object.hasOwn(connectCodeSuffixes, code)
+    )
+      return undefined;
+    return `LOCAL_ENGINE_CONNECT_${connectCodeSuffixes[code as Code]}`;
+  } catch {
+    return undefined;
+  }
+}
+
+function logUnlockFailure(stage: UnlockFailureStage, error?: unknown): void {
+  const stageMarker = unlockFailureStages[stage];
+  const codeMarker = connectCodeMarker(error);
+  console.error(codeMarker ? `${stageMarker} ${codeMarker}` : stageMarker);
+}
 
 interface UnlockScreenProps {
   readonly organisation: Pick<
@@ -114,6 +172,9 @@ export function UnlockScreen({
     if (!pendingAuthentication) return;
     const key = `${pendingAuthentication.sessionId}:${pendingAuthentication.userId}`;
     if (currentUserQuery.isError || currentOrganisationQuery.isError) {
+      if (currentUserQuery.isError) logUnlockFailure("CURRENT_USER_READ", currentUserQuery.error);
+      if (currentOrganisationQuery.isError)
+        logUnlockFailure("ORGANISATION_READ", currentOrganisationQuery.error);
       setPendingAuthentication(undefined);
       setBusy(false);
       setError("The workspace could not be unlocked. Check your passphrase and sign-in details.");
@@ -149,7 +210,8 @@ export function UnlockScreen({
         organisationCanonicalAbn: currentOrganisation.organisation.abn,
         roles: [...currentUser.user.roles],
       });
-    } catch {
+    } catch (failure) {
+      logUnlockFailure("PROJECTION_VALIDATION", failure);
       setError("The workspace could not be unlocked. Check your passphrase and sign-in details.");
     } finally {
       completing.current = undefined;
@@ -158,8 +220,10 @@ export function UnlockScreen({
     }
   }, [
     currentOrganisationQuery.data,
+    currentOrganisationQuery.error,
     currentOrganisationQuery.isError,
     currentUserQuery.data,
+    currentUserQuery.error,
     currentUserQuery.isError,
     onAuthenticated,
     organisationId,
@@ -170,6 +234,7 @@ export function UnlockScreen({
     event.preventDefault();
     setBusy(true);
     setError(undefined);
+    let failureStage: UnlockFailureStage = "WORKSPACE_UNLOCK";
     try {
       const proof = create(WorkspaceUnlockProofSchema, {
         proof: {
@@ -188,6 +253,7 @@ export function UnlockScreen({
       );
       if (!opened.workspace?.id) throw new Error("invalid workspace");
 
+      failureStage = "SIGN_IN";
       const signIn = create(SignInRequestSchema, {
         username,
         password: create(SecretInputSchema, {
@@ -203,7 +269,8 @@ export function UnlockScreen({
         userId: authenticated.user.id,
         workspaceId: opened.workspace.id,
       });
-    } catch {
+    } catch (failure) {
+      logUnlockFailure(failureStage, failure);
       setError("The workspace could not be unlocked. Check your passphrase and sign-in details.");
       setBusy(false);
     }

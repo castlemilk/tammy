@@ -5,6 +5,7 @@ import {
   CORE_RPC_DIAGNOSTIC_MARKERS,
   SHUTDOWN_DIAGNOSTIC_MARKERS,
   STARTUP_DIAGNOSTIC_MARKERS,
+  UNLOCK_FAILURE_DIAGNOSTIC_MARKERS,
   WORKSPACE_CREATE_DIAGNOSTIC_MARKERS,
 } from "../../src/main/startup-diagnostics";
 
@@ -13,6 +14,7 @@ const SAFE_STDERR_MARKERS = [
   "LOCAL_ENGINE_SHUTDOWN_FAILED",
   ...SHUTDOWN_DIAGNOSTIC_MARKERS,
   ...STARTUP_DIAGNOSTIC_MARKERS,
+  ...UNLOCK_FAILURE_DIAGNOSTIC_MARKERS,
   ...CORE_RPC_DIAGNOSTIC_MARKERS,
   ...WORKSPACE_CREATE_DIAGNOSTIC_MARKERS,
   ...BAS_EXPORT_DIAGNOSTIC_MARKERS,
@@ -83,6 +85,10 @@ export class ElectronProcessDiagnostics {
         this.#prefixLengths[markerIndex] = prefixLength;
       }
     }
+  }
+
+  public observeConsoleMessage(message: string): void {
+    this.observeStderr(message);
   }
 
   public observeExit(code: number | null, signal: NodeJS.Signals | null): void {

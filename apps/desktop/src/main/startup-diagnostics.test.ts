@@ -10,6 +10,7 @@ import {
   safeCoreRpcFailure,
   safeDesktopStartupFailure,
   safeWorkspaceCreateFailure,
+  UNLOCK_FAILURE_DIAGNOSTIC_MARKERS,
 } from "./startup-diagnostics";
 
 it("classifies BAS export failures by fixed stage and concrete status only", () => {
@@ -30,6 +31,19 @@ it("classifies BAS export failures by fixed stage and concrete status only", () 
     expect(safeBasExportFailure(stage, new Error("private"))).toBe(
       `LOCAL_ENGINE_BAS_EXPORT_${stage}`,
     );
+  }
+});
+
+it("allowlists fixed unlock failure stages for packaged process diagnostics", () => {
+  expect(UNLOCK_FAILURE_DIAGNOSTIC_MARKERS).toEqual([
+    "LOCAL_ENGINE_UNLOCK_WORKSPACE_UNLOCK_FAILED",
+    "LOCAL_ENGINE_UNLOCK_SIGN_IN_FAILED",
+    "LOCAL_ENGINE_UNLOCK_CURRENT_USER_READ_FAILED",
+    "LOCAL_ENGINE_UNLOCK_ORGANISATION_READ_FAILED",
+    "LOCAL_ENGINE_UNLOCK_PROJECTION_VALIDATION_FAILED",
+  ]);
+  for (const marker of UNLOCK_FAILURE_DIAGNOSTIC_MARKERS) {
+    expect(marker).toMatch(/^LOCAL_ENGINE_UNLOCK_[A-Z_]+_FAILED$/u);
   }
 });
 

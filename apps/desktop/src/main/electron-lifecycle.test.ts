@@ -20,7 +20,10 @@ import {
   safeElectronCloseFailureCode,
   safeFirstWindowFailureCode,
 } from "../../tests/e2e/electron-process-diagnostics";
-import { SHUTDOWN_DIAGNOSTIC_MARKERS } from "./startup-diagnostics";
+import {
+  SHUTDOWN_DIAGNOSTIC_MARKERS,
+  UNLOCK_FAILURE_DIAGNOSTIC_MARKERS,
+} from "./startup-diagnostics";
 
 interface TestState {
   application?: true;
@@ -544,6 +547,34 @@ describe("ElectronProcessDiagnostics", () => {
     expect(summary).toContain("LOCAL_ENGINE_CONNECT_DEADLINE_EXCEEDED");
     expect(summary).toContain("LOCAL_ENGINE_WORKSPACE_CREATE_DURATION_5_TO_10_SECONDS");
     expect(summary).not.toContain("secret");
+  });
+  it("retains only fixed unlock stages and validated Connect status markers", () => {
+    const diagnostics = new ElectronProcessDiagnostics();
+    diagnostics.observeStderr(
+      "LOCAL_ENGINE_UNLOCK_ORGANISATION_READ_FAILED LOCAL_ENGINE_CONNECT_UNAUTHENTICATED password=secret path=/private/workspace",
+    );
+    const summary = diagnostics.formatSummary();
+    expect(summary).toContain("LOCAL_ENGINE_UNLOCK_ORGANISATION_READ_FAILED");
+    expect(summary).toContain("LOCAL_ENGINE_CONNECT_UNAUTHENTICATED");
+    expect(summary).not.toContain("password");
+    expect(summary).not.toContain("secret");
+    expect(summary).not.toContain("/private/workspace");
+    expect(UNLOCK_FAILURE_DIAGNOSTIC_MARKERS).toContain(
+      "LOCAL_ENGINE_UNLOCK_ORGANISATION_READ_FAILED",
+    );
+  });
+  it("filters renderer console messages through the same allowlist without retaining their text", () => {
+    const diagnostics = new ElectronProcessDiagnostics();
+    diagnostics.observeConsoleMessage(
+      "LOCAL_ENGINE_UNLOCK_WORKSPACE_UNLOCK_FAILED LOCAL_ENGINE_CONNECT_UNAUTHENTICATED password=do-not-retain path=/private/workspace",
+    );
+
+    const summary = diagnostics.formatSummary();
+    expect(summary).toContain("LOCAL_ENGINE_UNLOCK_WORKSPACE_UNLOCK_FAILED");
+    expect(summary).toContain("LOCAL_ENGINE_CONNECT_UNAUTHENTICATED");
+    expect(summary).not.toContain("password");
+    expect(summary).not.toContain("do-not-retain");
+    expect(summary).not.toContain("/private/workspace");
   });
   it("retains the fixed startup stage and error code without adjacent private text", () => {
     const diagnostics = new ElectronProcessDiagnostics();
