@@ -69,7 +69,7 @@ test("prepares and reviews an exact BAS period in the packaged app", async ({
     ["GST registration status", "registered"],
     ["GST reporting method", "simpler"],
     ["GST turnover category", "small"],
-    ["GST basis", "cash"],
+    ["GST basis", "accrual"],
     ["GST cadence", "quarterly"],
     ["PAYGI obligation", "not applicable"],
     ["PAYGI method", "not applicable"],
