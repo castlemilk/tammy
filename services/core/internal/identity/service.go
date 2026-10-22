@@ -1563,8 +1563,8 @@ func (service *Service) RequireAdministratorWithin(ctx context.Context, executor
 // in the caller-owned transaction before applying the centralized policy.
 func (service *Service) AuthorizeWithin(ctx context.Context, executor workspace.MutationExecutor,
 	authentication *tammyv1.AuthenticationContext, action authorisation.Action) error {
-	service.mu.Lock()
-	defer service.mu.Unlock()
+	// The caller owns this transaction and its identity state. Taking mu here
+	// would invert the writer -> mu order against identity-owned mutations.
 	if executor == nil {
 		return ErrRepositoryIntegrity
 	}
