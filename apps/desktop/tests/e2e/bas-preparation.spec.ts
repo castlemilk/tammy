@@ -30,6 +30,7 @@ import {
 } from "@tammy/connect-client/tammy/v1/common_pb.js";
 import { DocumentCandidateSchema } from "@tammy/connect-client/tammy/v1/documents_pb.js";
 import { InvoicePaymentSchema } from "@tammy/connect-client/tammy/v1/invoices_pb.js";
+import { LegacyPurchaseDisposition } from "@tammy/connect-client/tammy/v1/purchases_pb.js";
 import { BAS_PREPARATION_RESPONSE_FRAME_LIMIT } from "../../src/shared/bas-preparation-ipc";
 import { createProtoMethodCodec } from "../../src/shared/proto-ipc";
 import { expect, test } from "./fixtures";
@@ -43,6 +44,7 @@ import {
 import { readInvoiceAccounting, recordInvoiceReceipt } from "./support/invoice-income-workflow";
 import {
   expectPurchaseControls,
+  openPurchase,
   postPurchaseThroughUi,
   readPurchasePayments,
   recordPurchasePaymentThroughUi,
@@ -94,6 +96,7 @@ type RetainedEvidence = {
   readonly id: string;
   readonly revision: string;
   readonly hash: string;
+  readonly originalContentHash: string;
 };
 type BasReference = {
   readonly type: string;
@@ -152,7 +155,12 @@ function authentication(workspace: Workspace) {
 function evidenceFor(
   document: Awaited<ReturnType<typeof retainPurchaseThroughUi>>,
 ): RetainedEvidence {
-  if (!document.candidate || !document.id || document.version < 1n) {
+  if (
+    !document.candidate ||
+    !document.id ||
+    document.version < 1n ||
+    document.sha256.length !== 32
+  ) {
     throw new Error("BAS_ACCEPTANCE_RETAINED_EVIDENCE_MISSING");
   }
   return {
@@ -162,7 +170,46 @@ function evidenceFor(
     hash: createHash("sha256")
       .update(toBinary(DocumentCandidateSchema, document.candidate))
       .digest("hex"),
+    originalContentHash: hex(document.sha256),
   };
+}
+
+async function markSupportingDocumentNoncreditable(page: Page, number: string, documentId: string) {
+  await openPurchase(page, number);
+  const panel = page.getByRole("region", { name: "Purchase accounting", exact: true });
+  await panel
+    .locator("summary")
+    .filter({ hasText: /^Review legacy purchase \/ opening provenance$/ })
+    .click();
+  for (const [label, date] of [
+    ["Legacy affected period start", "2026-07-01"],
+    ["Legacy affected period end", "2026-09-30"],
+    ["Legacy reporting balance date", "2026-09-30"],
+  ] as const)
+    await panel.getByLabel(label, { exact: true }).fill(date);
+  await panel
+    .getByRole("combobox", { name: "Legacy disposition", exact: true })
+    .selectOption(String(LegacyPurchaseDisposition.NONCREDITABLE));
+  // The retained source itself explicitly says it is supporting evidence only
+  // and carries no purchase/payment value, so it is the direct evidence for this
+  // reviewed noncreditable classification.
+  await panel
+    .getByRole("combobox", { name: "Legacy supporting evidence", exact: true })
+    .selectOption(documentId);
+  await panel
+    .getByLabel("Legacy review reason", { exact: true })
+    .fill("Supporting evidence only; zero purchase value and zero purchase credit.");
+  await panel
+    .getByLabel(
+      "Reviewed legacy accounting, settlement and claimed status against retained records",
+      {
+        exact: true,
+      },
+    )
+    .check();
+  await panel.getByRole("button", { name: "Review legacy decision", exact: true }).click();
+  await panel.getByRole("button", { name: "Confirm legacy purchase review", exact: true }).click();
+  await expect(panel.getByRole("status")).toContainText("Legacy decision retained:");
 }
 
 async function allFrozen(page: Page, workspace: Workspace): Promise<BasFrozenBasSummary[]> {
@@ -919,9 +966,29 @@ function assertCsvSourceManifest(
   ]) {
     expect(coverageStrings, `coverage manifest includes ${sourceId}`).toContain(sourceId);
   }
-  // This supporting profile document has no financial value and must not become a coverage source.
-  expect(coverageStrings).not.toContain(sources.profileEvidence.id);
-  expect(coverageStrings).not.toContain(sources.profileEvidence.hash);
+  for (const source of [
+    sources.paygEvidence,
+    sources.actualDueDateEvidence,
+    sources.profileEvidence,
+  ]) {
+    const sourceRows = coverage.filter(
+      (row) => row.source_type === "documents" && row.source_id === source.id,
+    );
+    expect(sourceRows, `one complete coverage candidate for ${source.id}`).toHaveLength(1);
+    const sourceRow = sourceRows[0];
+    if (!sourceRow) throw new Error("BAS_ACCEPTANCE_SUPPORT_COVERAGE_MISSING");
+    expect(sourceRow).toMatchObject({
+      source_revision: source.revision,
+      source_hash: source.originalContentHash,
+      candidate_kind: "OPENING_OR_LEGACY_FACT",
+      disposition: "EXCLUDED_WITH_REASON",
+      classification_code: "LEGACY_EXCLUDED_BY_RETAINED_DECISION",
+      amount_currency: "",
+      amount_minor_units: "",
+    });
+    expect(coverageStrings).toContain(source.id);
+    expect(coverageStrings).toContain(source.originalContentHash);
+  }
 }
 
 function assertPdfReport(
@@ -1381,6 +1448,12 @@ test("BAS lifecycle: clean cash sources, blocked PAYGI resolution, frozen handof
     "profile-evidence",
   );
   const profileEvidence = evidenceFor(profileEvidenceDocument);
+  for (const source of [
+    ["BAS-PAYG-SUPPORT-001", support.id],
+    ["BAS-ACTUAL-DUE-DATE-STATEMENT-001", dueDateStatement.id],
+    ["BAS-PROFILE-REGISTRATION-EVIDENCE-001", profileEvidenceDocument.id],
+  ] as const)
+    await markSupportingDocumentNoncreditable(page, source[0], source[1]);
   const initialExportSources: BasExportSources = {
     sales: initialSales,
     purchase: purchaseSource,
