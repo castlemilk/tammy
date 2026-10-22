@@ -523,6 +523,23 @@ test("pins provisioning and evidence ownership independently for every CI job", 
   assert.equal(windowsArtifact.with["retention-days"], 30);
 });
 
+test("allows only ad-hoc signing for the ordinary macOS PR package check", async () => {
+  const foundation = YAML.parse(
+    await readFile(new URL("../.github/workflows/foundation-ci.yml", import.meta.url), "utf8"),
+  );
+  const builder = YAML.parse(
+    await readFile(new URL("../apps/desktop/electron-builder.yml", import.meta.url), "utf8"),
+  );
+  const macos = foundation.jobs["macos14-arm64-packaged"];
+  const packageStep = requiredStep(macos, "Run canonical macOS CI scenario");
+
+  assert.deepEqual(packageStep.env, { CSC_FOR_PULL_REQUEST: "true" });
+  assert.equal(builder.mac.identity, "-");
+  assert.equal(packageStep.env.CSC_LINK, undefined);
+  assert.equal(packageStep.env.CSC_KEY_PASSWORD, undefined);
+  assert.equal(packageStep.env.TAMMY_MACOS_ARTIFACT_PHASE, undefined);
+});
+
 function evidenceRow(sourceRequirementId, overrides = {}) {
   const row = {
     source_requirement_id: sourceRequirementId,

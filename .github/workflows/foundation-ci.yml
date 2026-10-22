@@ -109,6 +109,8 @@ jobs:
         run: test "$(task --version)" = "3.52.0"
 
       - name: Run canonical macOS CI scenario
+        env:
+          CSC_FOR_PULL_REQUEST: 'true'
         run: task ci:macos
 
       - name: Retain packaged failure evidence
