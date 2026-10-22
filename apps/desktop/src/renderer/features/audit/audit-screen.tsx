@@ -170,13 +170,13 @@ export function AuditScreen({
   return (
     <div className="mx-auto grid w-full max-w-[980px] gap-4">
       <div>
-        <h1 className="text-[18px] font-semibold tracking-[-0.02em]">Audit trail</h1>
-        <p className="mt-1 text-[11px] text-muted-foreground">
+        <h1 className=" page-title">Audit trail</h1>
+        <p className="mt-1 text-[14px] text-muted-foreground">
           A local chronological view of retained business records.
         </p>
       </div>
-      <section className="overflow-hidden rounded-[6px] border border-border bg-surface">
-        <div className="border-b border-border px-3 py-2 text-[9px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
+      <section className="overflow-x-auto rounded-[20px] border border-border bg-surface">
+        <div className="border-b border-border px-3 py-2 text-[12px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
           Recent activity
         </div>
         {activities === undefined && !unavailable ? (
@@ -190,16 +190,16 @@ export function AuditScreen({
                 className="grid grid-cols-[90px_1fr_auto] items-center gap-3 px-3 py-3"
                 key={`${activity.kind}-${activity.id}`}
               >
-                <span className="rounded-full bg-muted px-2 py-1 text-center text-[8px] font-semibold text-muted-foreground">
+                <span className="rounded-full bg-muted px-2 py-1 text-center text-[12px] font-semibold text-muted-foreground">
                   {activity.kind}
                 </span>
                 <span>
-                  <span className="block text-[10px] font-semibold">{activity.label}</span>
-                  <span className="mt-1 block text-[9px] text-muted-foreground">
+                  <span className="block text-[14px] font-semibold">{activity.label}</span>
+                  <span className="mt-1 block text-[12px] text-muted-foreground">
                     {activity.detail}
                   </span>
                 </span>
-                <time className="text-[9px] text-muted-foreground">
+                <time className="text-[12px] text-muted-foreground">
                   {activity.at > 0 ? new Date(activity.at).toLocaleDateString("en-AU") : "—"}
                 </time>
               </li>
@@ -209,17 +209,17 @@ export function AuditScreen({
           <div className="grid min-h-64 place-items-center p-8 text-center">
             <div>
               <FileClock className="mx-auto size-5 text-muted-foreground" />
-              <p className="mt-2 text-[11px] font-semibold">
+              <p className="mt-2 text-[14px] font-semibold">
                 {unavailable ? "Activity unavailable" : "No retained activity yet"}
               </p>
-              <p className="mt-1 text-[9px] text-muted-foreground">
+              <p className="mt-1 text-[12px] text-muted-foreground">
                 Documents, journals, banking and BAS drafts appear here.
               </p>
             </div>
           </div>
         )}
       </section>
-      <p className="text-[9px] text-muted-foreground">
+      <p className="text-[12px] text-muted-foreground">
         This product view does not replace exported audit-chain verification evidence.
       </p>
     </div>

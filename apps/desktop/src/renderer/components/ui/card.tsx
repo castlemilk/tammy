@@ -7,7 +7,7 @@ export function Card({ className, ...props }: React.ComponentProps<"section">) {
   return (
     <section
       className={cn(
-        "rounded-lg border border-border bg-surface text-surface-foreground",
+        "rounded-[20px] border border-border bg-surface text-surface-foreground",
         className,
       )}
       data-slot="card"

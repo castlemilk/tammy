@@ -153,12 +153,10 @@ export function DocumentsScreen({ api, workspace }: DocumentsScreenProps) {
 
   return (
     <div className="mx-auto grid w-full max-w-[1120px] gap-4">
-      <div className="flex items-end justify-between gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-[18px] font-semibold tracking-[-0.02em] text-foreground">
-            Documents
-          </h1>
-          <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
+          <h1 className="text-foreground page-title">Documents</h1>
+          <p className="mt-1 text-[14px] leading-5 text-muted-foreground">
             Retain source files, review locally extracted details, then approve them for later
             accounting.
           </p>
@@ -181,42 +179,43 @@ export function DocumentsScreen({ api, workspace }: DocumentsScreenProps) {
       </div>
       {error ? (
         <p
-          className="rounded-[6px] border border-warning-border bg-warning-soft px-3 py-2 text-[10px]"
+          className="rounded-xl border border-warning-border bg-warning-soft px-3 py-2 text-[14px]"
           role="alert"
         >
           {error}
         </p>
       ) : null}
 
-      <div className="grid min-h-[560px] grid-cols-[minmax(300px,0.9fr)_minmax(420px,1.4fr)] gap-4 max-[900px]:grid-cols-1">
-        <section className="overflow-hidden rounded-[6px] border border-border bg-surface">
-          <div className="border-b border-border px-3 py-2 text-[9px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
-            Needs review
+      <div className="grid min-h-[560px] grid-cols-[minmax(300px,0.9fr)_minmax(420px,1.4fr)] gap-4 max-[1100px]:grid-cols-1">
+        <section className="overflow-x-auto rounded-[20px] border border-border bg-surface">
+          <div className="border-b border-border px-3 py-2 text-[12px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
+            Source documents
           </div>
           {state.status === "ready" && state.documents.length > 0 ? (
             <ul className="divide-y divide-border">
               {state.documents.map((document) => (
                 <li key={document.id}>
                   <button
-                    className={`grid w-full grid-cols-[1fr_auto] gap-3 px-3 py-3 text-left ${selectedID === document.id ? "bg-success-soft" : "hover:bg-muted"}`}
+                    aria-pressed={selectedID === document.id}
+                    className={`focus-ring grid w-full grid-cols-[1fr_auto] gap-3 px-3 py-3 text-left ${selectedID === document.id ? "bg-success-soft" : "hover:bg-muted"}`}
                     onClick={() => setSelectedID(document.id)}
                     type="button"
                   >
                     <span className="min-w-0">
-                      <span className="block truncate text-[10px] font-semibold text-foreground">
+                      <span className="block truncate text-[14px] font-semibold text-foreground">
                         {document.candidate?.supplierName || document.sourceDisplayName}
                       </span>
-                      <span className="mt-1 block truncate text-[9px] text-muted-foreground">
+                      <span className="mt-1 block truncate text-[12px] text-muted-foreground">
                         {document.candidate?.invoiceNumber || "Invoice number not detected"} ·{" "}
                         {formatDate(document.candidate?.documentDate)}
                       </span>
                     </span>
                     <span className="text-right">
-                      <span className="block text-[10px] font-semibold text-foreground">
+                      <span className="block text-[14px] font-semibold text-foreground">
                         {formatMoney(document.candidate?.total?.minorUnits)}
                       </span>
                       <span
-                        className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[8px] font-semibold ${document.status === DocumentStatus.REVIEWED ? "bg-success-soft text-forest" : "bg-warning-soft text-warning"}`}
+                        className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[12px] font-semibold ${document.status === DocumentStatus.REVIEWED ? "bg-success-soft text-forest" : "bg-warning-soft text-warning"}`}
                       >
                         {document.status === DocumentStatus.REVIEWED ? "Reviewed" : "Review"}
                       </span>
@@ -258,11 +257,11 @@ function ReviewPanel({
   useEffect(() => setFields(initial), [initial]);
   if (!document)
     return (
-      <section className="grid place-items-center rounded-[6px] border border-dashed border-border bg-surface p-8 text-center">
+      <section className="grid place-items-center rounded-xl border border-dashed border-border bg-surface p-8 text-center">
         <div>
           <FileText className="mx-auto size-6 text-muted-foreground" />
-          <p className="mt-3 text-[11px] font-semibold">Select a document</p>
-          <p className="mt-1 text-[10px] text-muted-foreground">
+          <p className="mt-3 text-[14px] font-semibold">Select a document</p>
+          <p className="mt-1 text-[14px] text-muted-foreground">
             Extracted details appear here for human review.
           </p>
         </div>
@@ -298,25 +297,25 @@ function ReviewPanel({
   };
 
   return (
-    <section className="rounded-[6px] border border-border bg-surface p-4">
+    <section className="rounded-xl border border-border bg-surface p-4">
       <div className="flex items-start justify-between gap-3 border-b border-border pb-3">
         <div>
-          <p className="text-[9px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
             Source document
           </p>
-          <h2 className="mt-1 text-[12px] font-semibold">{document.sourceDisplayName}</h2>
-          <p className="mt-1 text-[9px] text-muted-foreground">
+          <h2 className="mt-1 text-[14px] font-semibold">{document.sourceDisplayName}</h2>
+          <p className="mt-1 text-[12px] text-muted-foreground">
             {formatBytes(document.byteLength)} · retained locally
           </p>
         </div>
         {document.status === DocumentStatus.REVIEWED ? (
-          <span className="flex items-center gap-1 rounded-full bg-success-soft px-2 py-1 text-[8px] font-semibold text-forest">
+          <span className="flex items-center gap-1 rounded-full bg-success-soft px-2 py-1 text-[12px] font-semibold text-forest">
             <Check className="size-3" /> Reviewed
           </span>
         ) : null}
       </div>
       <div className="mt-4 grid grid-cols-[0.9fr_1.1fr] gap-4 max-[760px]:grid-cols-1">
-        <pre className="min-h-72 whitespace-pre-wrap break-words rounded-[5px] border border-border bg-background p-3 font-sans text-[9px] leading-5 text-muted-foreground">
+        <pre className="min-h-72 whitespace-pre-wrap break-words rounded-xl border border-border bg-background p-3 font-sans text-[12px] leading-5 text-muted-foreground">
           {document.extractedText ||
             "No native text was found. Enter the details from the source image manually."}
         </pre>
@@ -358,7 +357,7 @@ function ReviewPanel({
             />
           </div>
           {error ? (
-            <p className="text-[9px] text-destructive" role="alert">
+            <p className="text-[12px] text-destructive" role="alert">
               {error}
             </p>
           ) : null}
@@ -391,10 +390,10 @@ function Field({
   readonly value: string;
 }) {
   return (
-    <label className="grid gap-1 text-[9px] font-semibold text-foreground">
+    <label className="grid gap-1 text-[12px] font-semibold text-foreground">
       {label}
       <input
-        className="focus-ring h-8 rounded-[5px] border border-border bg-surface px-2 text-[10px] font-normal outline-none"
+        className="focus-ring h-11 rounded-xl border border-border bg-surface px-2 text-[14px] font-normal outline-none"
         min={type === "number" ? "0" : undefined}
         onChange={(event) => onChange(event.target.value)}
         step={type === "number" ? "0.01" : undefined}
@@ -414,14 +413,14 @@ function DocumentEmpty({ status }: { readonly status: DocumentState["status"] })
         ) : (
           <FileText className="mx-auto size-5 text-muted-foreground" />
         )}
-        <p className="mt-2 text-[11px] font-semibold">
+        <p className="mt-2 text-[14px] font-semibold">
           {status === "unavailable"
             ? "Documents unavailable"
             : status === "loading"
               ? "Loading documents"
               : "No documents yet"}
         </p>
-        <p className="mt-1 text-[9px] text-muted-foreground">
+        <p className="mt-1 text-[12px] text-muted-foreground">
           Upload a local invoice or receipt to begin.
         </p>
       </div>

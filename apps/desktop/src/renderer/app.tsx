@@ -188,7 +188,7 @@ function EngineStatus({
     return (
       <div
         aria-live="polite"
-        className="mb-4 flex items-center gap-2 text-[10px] text-muted-foreground"
+        className="mb-4 flex items-center gap-2 text-[14px] text-muted-foreground"
         role="status"
       >
         <LoaderCircle aria-hidden="true" className="size-3 animate-spin" />
@@ -199,14 +199,14 @@ function EngineStatus({
   return (
     <div
       aria-live="polite"
-      className="mb-4 flex items-center justify-between gap-4 rounded-[6px] border border-warning-border bg-warning-soft px-3 py-2"
+      className="mb-4 flex items-center justify-between gap-4 rounded-xl border border-warning-border bg-warning-soft px-3 py-2"
       role="status"
     >
-      <div className="flex items-center gap-2 text-[10px] text-foreground">
+      <div className="flex items-center gap-2 text-[14px] text-foreground">
         <AlertTriangle aria-hidden="true" className="size-3.5 text-warning" />
         Local engine unavailable. Your data has not left this device.
       </div>
-      <Button className="h-7 text-[10px]" onClick={onRetry} type="button" variant="outline">
+      <Button className="h-7 text-[14px]" onClick={onRetry} type="button" variant="outline">
         <RefreshCw aria-hidden="true" className="size-3" />
         Retry local engine
       </Button>
@@ -250,10 +250,10 @@ function RouteContent({
   }
   if (path === "/settings") {
     return (
-      <div className="mx-auto grid w-full max-w-[920px] gap-5">
+      <div className="mx-auto grid w-full max-w-[1120px] gap-5">
         <div>
-          <h1 className="text-[18px] font-semibold tracking-[-0.02em] text-foreground">Settings</h1>
-          <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
+          <h1 className="text-foreground page-title">Settings</h1>
+          <p className="mt-1 text-[14px] leading-5 text-muted-foreground">
             Local workspace and system information.
           </p>
         </div>

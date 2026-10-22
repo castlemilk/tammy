@@ -29,9 +29,9 @@ import {
 } from "@tammy/connect-client/tammy/v1/workspace_pb.js";
 import { CheckCircle2, KeyRound, LoaderCircle } from "lucide-react";
 import { type FormEvent, useState } from "react";
-
 import type { TammyDesktopAPI } from "../../../shared/desktop-api";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
+import paperLoop from "../../assets/paper-loop.png";
 import { Button } from "../../components/ui/button";
 import { ReportingCapabilityNotice } from "../reporting/reporting-capability-notice";
 
@@ -105,7 +105,7 @@ function uuidV7(): string {
 }
 
 function fieldClassName(): string {
-  return "focus-ring h-9 w-full rounded-[6px] border border-border bg-surface px-3 text-[12px] text-foreground outline-none placeholder:text-muted-foreground";
+  return "focus-ring h-11 w-full rounded-xl border border-border bg-surface px-3 text-[14px] text-foreground outline-none placeholder:text-muted-foreground";
 }
 
 export function SetupScreen({ api, onAuthenticated, onPrivacy }: SetupScreenProps) {
@@ -237,22 +237,25 @@ export function SetupScreen({ api, onAuthenticated, onPrivacy }: SetupScreenProp
 
   return (
     <main className="grid min-h-screen place-items-center bg-background px-5 py-8">
-      <section className="w-full max-w-[520px] rounded-[8px] border border-border bg-surface p-7 shadow-sm">
-        <div className="mb-6 flex items-start gap-3">
+      <section className="workspace-surface">
+        <div className="mb-6 flex items-start gap-4">
           <span className="grid size-9 shrink-0 place-items-center rounded-full bg-forest-soft text-forest">
             <KeyRound aria-hidden="true" className="size-4" />
           </span>
           <div>
-            <p className="font-serif text-[16px] font-bold text-forest">Tammy</p>
-            <h1 className="mt-1 text-[20px] font-semibold tracking-[-0.02em] text-foreground">
+            <p className="font-serif text-[28px] font-bold tracking-[-0.04em] text-foreground">
+              tammy
+            </p>
+            <h1 className="mt-1    text-foreground page-title">
               {pending ? "Save your recovery code" : "Create your local workspace"}
             </h1>
-            <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
+            <p className="mt-1 text-[14px] leading-5 text-muted-foreground">
               {pending
                 ? "Keep this one-time code somewhere safe before continuing."
                 : "Your accounting data stays encrypted on this device."}
             </p>
           </div>
+          <img alt="" aria-hidden="true" className="arrival-art" src={paperLoop} />
         </div>
 
         <div className="mb-5">
@@ -267,8 +270,8 @@ export function SetupScreen({ api, onAuthenticated, onPrivacy }: SetupScreenProp
 
         {pending ? (
           <div className="grid gap-5">
-            <div className="rounded-[6px] border border-forest/20 bg-forest-soft px-4 py-4">
-              <p className="mb-2 flex items-center gap-2 text-[11px] font-semibold text-forest">
+            <div className="rounded-xl border border-ready-border bg-forest-soft px-4 py-4">
+              <p className="mb-2 flex items-center gap-2 text-[14px] font-semibold text-forest">
                 <CheckCircle2 aria-hidden="true" className="size-4" /> One-time recovery code
               </p>
               <p className="break-all font-mono text-[13px] leading-6 text-foreground">
@@ -276,7 +279,7 @@ export function SetupScreen({ api, onAuthenticated, onPrivacy }: SetupScreenProp
               </p>
             </div>
             <Button
-              className="h-9 w-full text-[11px]"
+              className="h-11 w-full text-[14px]"
               disabled={busy}
               onClick={confirmAndSignIn}
               type="button"
@@ -287,7 +290,7 @@ export function SetupScreen({ api, onAuthenticated, onPrivacy }: SetupScreenProp
           </div>
         ) : (
           <form className="grid gap-4" onSubmit={createWorkspace}>
-            <label className="grid gap-1.5 text-[11px] font-medium text-foreground">
+            <label className="grid gap-1.5 text-[14px] font-medium text-foreground">
               Your name
               <input
                 autoComplete="name"
@@ -297,7 +300,7 @@ export function SetupScreen({ api, onAuthenticated, onPrivacy }: SetupScreenProp
                 value={displayName}
               />
             </label>
-            <label className="grid gap-1.5 text-[11px] font-medium text-foreground">
+            <label className="grid gap-1.5 text-[14px] font-medium text-foreground">
               Email or username
               <input
                 autoComplete="username"
@@ -307,7 +310,7 @@ export function SetupScreen({ api, onAuthenticated, onPrivacy }: SetupScreenProp
                 value={username}
               />
             </label>
-            <label className="grid gap-1.5 text-[11px] font-medium text-foreground">
+            <label className="grid gap-1.5 text-[14px] font-medium text-foreground">
               Business legal name
               <input
                 className={fieldClassName()}
@@ -317,7 +320,7 @@ export function SetupScreen({ api, onAuthenticated, onPrivacy }: SetupScreenProp
                 value={businessLegalName}
               />
             </label>
-            <label className="grid gap-1.5 text-[11px] font-medium text-foreground">
+            <label className="grid gap-1.5 text-[14px] font-medium text-foreground">
               Business display name
               <input
                 className={fieldClassName()}
@@ -327,7 +330,7 @@ export function SetupScreen({ api, onAuthenticated, onPrivacy }: SetupScreenProp
                 value={businessDisplayName}
               />
             </label>
-            <label className="grid gap-1.5 text-[11px] font-medium text-foreground">
+            <label className="grid gap-1.5 text-[14px] font-medium text-foreground">
               ABN
               <input
                 className={fieldClassName()}
@@ -340,7 +343,7 @@ export function SetupScreen({ api, onAuthenticated, onPrivacy }: SetupScreenProp
                 value={abn}
               />
             </label>
-            <label className="grid gap-1.5 text-[11px] font-medium text-foreground">
+            <label className="grid gap-1.5 text-[14px] font-medium text-foreground">
               Workspace passphrase
               <input
                 autoComplete="new-password"
@@ -352,7 +355,7 @@ export function SetupScreen({ api, onAuthenticated, onPrivacy }: SetupScreenProp
                 value={workspacePassphrase}
               />
             </label>
-            <label className="grid gap-1.5 text-[11px] font-medium text-foreground">
+            <label className="grid gap-1.5 text-[14px] font-medium text-foreground">
               Administrator password
               <input
                 autoComplete="new-password"
@@ -364,20 +367,20 @@ export function SetupScreen({ api, onAuthenticated, onPrivacy }: SetupScreenProp
                 value={administratorPassword}
               />
             </label>
-            <Button className="mt-1 h-9 w-full text-[11px]" disabled={busy} type="submit">
+            <Button className="mt-1 h-11 w-full text-[14px]" disabled={busy} type="submit">
               {busy ? <LoaderCircle aria-hidden="true" className="size-3.5 animate-spin" /> : null}
               Create local workspace
             </Button>
           </form>
         )}
         {error ? (
-          <p className="mt-4 text-[11px] text-destructive" role="alert">
+          <p className="mt-4 text-[14px] text-destructive" role="alert">
             {error}
           </p>
         ) : null}
         {onPrivacy ? (
           <button
-            className="focus-ring mt-4 text-[10px] font-medium text-forest underline"
+            className="focus-ring mt-4 text-[14px] font-medium text-forest underline"
             onClick={onPrivacy}
             type="button"
           >

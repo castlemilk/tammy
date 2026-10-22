@@ -116,17 +116,17 @@ export function BasScreen({
 
   return (
     <div className="mx-auto grid w-full max-w-[1120px] gap-4">
-      <div className="flex items-end justify-between gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-[18px] font-semibold tracking-[-0.02em]">GST &amp; BAS</h1>
-          <p className="mt-1 text-[11px] text-muted-foreground">
+          <h1 className=" page-title">GST &amp; BAS</h1>
+          <p className="mt-1 text-[14px] text-muted-foreground">
             A local workpaper from reviewed documents. Tammy does not lodge this BAS.
           </p>
         </div>
         {workpaper ? (
-          <div className="rounded-[6px] border border-warning-border bg-warning-soft px-4 py-2">
-            <p className="text-[12px] font-semibold text-warning">Draft — not lodged</p>
-            <p className="mt-1 text-[9px] text-muted-foreground">Review locally when ready.</p>
+          <div className="rounded-xl border border-warning-border bg-warning-soft px-4 py-2">
+            <p className="text-[14px] font-semibold text-warning">Draft — not lodged</p>
+            <p className="mt-1 text-[12px] text-muted-foreground">Review locally when ready.</p>
           </div>
         ) : null}
       </div>
@@ -155,18 +155,18 @@ export function BasScreen({
       </section>
       {error ? (
         <p
-          className="rounded-[6px] border border-warning-border bg-warning-soft px-3 py-2 text-[10px]"
+          className="rounded-xl border border-warning-border bg-warning-soft px-3 py-2 text-[14px]"
           role="alert"
         >
           {error}
         </p>
       ) : null}
       {!workpaper ? (
-        <section className="grid min-h-[420px] place-items-center rounded-[6px] border border-dashed border-border bg-surface p-8 text-center">
+        <section className="grid min-h-[420px] place-items-center rounded-xl border border-dashed border-border bg-surface p-8 text-center">
           <div className="max-w-md">
             <Calculator className="mx-auto size-7 text-forest" />
             <h2 className="mt-3 text-[13px] font-semibold">Create a BAS workpaper</h2>
-            <p className="mt-2 text-[10px] leading-5 text-muted-foreground">
+            <p className="mt-2 text-[14px] leading-5 text-muted-foreground">
               Reviewed purchase documents in the period contribute to GST credits. No declaration or
               transmission is performed.
             </p>
@@ -206,25 +206,25 @@ function Workpaper({ value }: { readonly value: BasWorkpaper }) {
           value={abs(value.netGstPayable?.minorUnits)}
         />
       </section>
-      <section className="overflow-hidden rounded-[6px] border border-border bg-surface">
+      <section className="overflow-x-auto rounded-[20px] border border-border bg-surface">
         <div className="flex items-center justify-between border-b border-border px-3 py-3">
           <div>
-            <h2 className="text-[11px] font-semibold">Reviewed source documents</h2>
-            <p className="mt-1 text-[9px] text-muted-foreground">
+            <h2 className="text-[14px] font-semibold">Reviewed source documents</h2>
+            <p className="mt-1 text-[12px] text-muted-foreground">
               {formatDate(value.periodStart)} – {formatDate(value.periodEnd)}
             </p>
           </div>
-          <span className="flex items-center gap-1 rounded-full bg-success-soft px-2 py-1 text-[8px] font-semibold text-forest">
+          <span className="flex items-center gap-1 rounded-full bg-success-soft px-2 py-1 text-[12px] font-semibold text-forest">
             <FileCheck2 className="size-3" />
             {value.sources.length} source{value.sources.length === 1 ? "" : "s"}
           </span>
         </div>
         {value.sources.length === 0 ? (
-          <p className="p-8 text-center text-[10px] text-muted-foreground">
+          <p className="p-8 text-center text-[14px] text-muted-foreground">
             No reviewed purchase documents fall in this period.
           </p>
         ) : (
-          <table className="w-full border-collapse text-left text-[9px]">
+          <table className="w-full border-collapse text-left text-[12px]">
             <thead>
               <tr className="border-b border-border text-muted-foreground">
                 <th className="px-3 py-2">Date</th>
@@ -250,7 +250,7 @@ function Workpaper({ value }: { readonly value: BasWorkpaper }) {
           </table>
         )}
       </section>
-      <p className="text-[9px] text-muted-foreground">
+      <p className="text-[12px] text-muted-foreground">
         Status:{" "}
         {value.status === BasWorkpaperStatus.DRAFT_NOT_LODGED
           ? "Draft — not lodged"
@@ -271,9 +271,9 @@ function Metric({
 }) {
   return (
     <div
-      className={`rounded-[6px] border p-4 ${emphasis ? "border-success-border bg-success-soft" : "border-border bg-surface"}`}
+      className={`rounded-xl border p-4 ${emphasis ? "border-success-border bg-success-soft" : "border-border bg-surface"}`}
     >
-      <p className="text-[8px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
+      <p className="text-[12px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
         {label}
       </p>
       <p
@@ -294,10 +294,10 @@ function DateField({
   readonly value: string;
 }) {
   return (
-    <label className="grid gap-1 text-left text-[9px] font-semibold">
+    <label className="grid gap-1 text-left text-[12px] font-semibold">
       {label}
       <input
-        className="focus-ring h-8 rounded-[5px] border border-border px-2 text-[10px]"
+        className="focus-ring h-11 rounded-xl border border-border px-2 text-[14px]"
         onChange={(event) => onChange(event.target.value)}
         type="date"
         value={value}

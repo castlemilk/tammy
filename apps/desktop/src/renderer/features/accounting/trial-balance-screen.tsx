@@ -68,26 +68,24 @@ export function TrialBalanceScreen({ api, now, workspace }: TrialBalanceScreenPr
     };
   }, [api, day, month, workspace, year]);
   return (
-    <div className="mx-auto grid w-full max-w-[920px] gap-5">
+    <div className="mx-auto grid w-full max-w-[1120px] gap-5">
       <div>
-        <h1 className="text-[18px] font-semibold tracking-[-0.02em] text-foreground">
-          Trial balance
-        </h1>
-        <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
+        <h1 className="text-foreground page-title">Trial balance</h1>
+        <p className="mt-1 text-[14px] leading-5 text-muted-foreground">
           Debit and credit balances as at {instant.toLocaleDateString("en-AU")}.
         </p>
       </div>
-      <section className="overflow-hidden rounded-[6px] border border-border bg-surface">
+      <section className="overflow-x-auto rounded-[20px] border border-border bg-surface">
         {state.status === "ready" ? (
           <table className="w-full border-collapse text-left">
-            <thead className="border-b border-border bg-background/60 text-[9px] uppercase text-muted-foreground">
+            <thead className="border-b border-border bg-background/60 text-[12px] uppercase text-muted-foreground">
               <tr>
                 <th className="px-3 py-2">Account</th>
                 <th className="px-3 py-2 text-right">Debit (AUD)</th>
                 <th className="px-3 py-2 text-right">Credit (AUD)</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border text-[10px]">
+            <tbody className="divide-y divide-border text-[14px]">
               {state.value.lines.map((line) => (
                 <tr key={line.account?.id ?? line.code}>
                   <td className="px-3 py-2.5">
@@ -103,7 +101,7 @@ export function TrialBalanceScreen({ api, now, workspace }: TrialBalanceScreenPr
                 </tr>
               ))}
             </tbody>
-            <tfoot className="border-t border-border text-[10px] font-semibold text-forest">
+            <tfoot className="border-t border-border text-[14px] font-semibold text-forest">
               <tr>
                 <td className="px-3 py-2.5">Total</td>
                 <td className="px-3 py-2.5 text-right font-mono">
@@ -121,12 +119,12 @@ export function TrialBalanceScreen({ api, now, workspace }: TrialBalanceScreenPr
               {state.status === "loading" ? (
                 <LoaderCircle className="mx-auto size-4 animate-spin text-forest" />
               ) : null}
-              <p className="mt-2 text-[12px] font-semibold">
+              <p className="mt-2 text-[14px] font-semibold">
                 {state.status === "unavailable"
                   ? "Trial balance unavailable"
                   : "Loading trial balance"}
               </p>
-              <p className="mt-1 text-[10px] text-muted-foreground">
+              <p className="mt-1 text-[14px] text-muted-foreground">
                 Post a journal to establish a financial revision.
               </p>
             </div>

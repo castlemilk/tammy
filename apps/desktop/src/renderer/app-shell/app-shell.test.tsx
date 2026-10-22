@@ -110,7 +110,7 @@ it("renders the walkthrough app shell", async () => {
   render(<App />);
 
   expect(await screen.findByText("Local data")).toBeTruthy();
-  expect(screen.getByText("Tammy Business")).toBeTruthy();
+  expect(screen.getByText("Local workspace")).toBeTruthy();
 
   const navigation = screen.getByRole("navigation", { name: "Primary" });
   expect(

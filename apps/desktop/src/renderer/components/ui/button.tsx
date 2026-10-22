@@ -6,7 +6,7 @@ import { cn } from "../../lib/utils";
 
 // Source: ui.shadcn.com/r/styles/new-york-v4/button.json; audited with shadcn@4.13.1.
 const buttonVariants = cva(
-  "focus-ring inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold outline-none transition-colors disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
+  "focus-ring inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold outline-none transition-colors active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50",
   {
     variants: {
       variant: {

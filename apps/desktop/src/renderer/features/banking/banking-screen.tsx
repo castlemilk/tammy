@@ -205,15 +205,15 @@ export function BankingScreen({
 
   return (
     <div className="mx-auto grid w-full max-w-[1120px] gap-4">
-      <div className="flex items-end justify-between gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-[18px] font-semibold tracking-[-0.02em]">Banking</h1>
-          <p className="mt-1 text-[11px] text-muted-foreground">
+          <h1 className=" page-title">Banking</h1>
+          <p className="mt-1 text-[14px] text-muted-foreground">
             Import local statement rows, confirm matches, then reconcile.
           </p>
         </div>
-        <div className="rounded-[6px] border border-border bg-surface px-3 py-2 text-right">
-          <p className="text-[8px] uppercase tracking-[0.05em] text-muted-foreground">
+        <div className="rounded-xl border border-border bg-surface px-3 py-2 text-right">
+          <p className="text-[12px] uppercase tracking-[0.05em] text-muted-foreground">
             Latest statement balance
           </p>
           <p className="mt-1 text-[15px] font-semibold">
@@ -223,42 +223,42 @@ export function BankingScreen({
       </div>
       {error ? (
         <p
-          className="rounded-[6px] border border-warning-border bg-warning-soft px-3 py-2 text-[10px]"
+          className="rounded-xl border border-warning-border bg-warning-soft px-3 py-2 text-[14px]"
           role="alert"
         >
           {error}
         </p>
       ) : null}
-      <div className="grid grid-cols-[minmax(280px,.75fr)_minmax(460px,1.5fr)] gap-4 max-[900px]:grid-cols-1">
+      <div className="grid grid-cols-[minmax(280px,.75fr)_minmax(460px,1.5fr)] gap-4 max-[1100px]:grid-cols-1">
         <form
-          className="grid content-start gap-3 rounded-[6px] border border-border bg-surface p-4"
+          className="grid content-start gap-3 rounded-xl border border-border bg-surface p-4"
           onSubmit={importStatement}
         >
           <div>
-            <p className="text-[9px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
               Statement import
             </p>
-            <h2 className="mt-1 text-[12px] font-semibold">Business transaction account</h2>
+            <h2 className="mt-1 text-[14px] font-semibold">Business transaction account</h2>
           </div>
-          <label className="grid gap-1 text-[9px] font-semibold">
+          <label className="grid gap-1 text-[12px] font-semibold">
             Opening balance
             <input
-              className="focus-ring h-8 rounded-[5px] border border-border px-2 text-[10px]"
+              className="focus-ring h-11 rounded-xl border border-border px-2 text-[14px]"
               onChange={(event) => setOpeningBalance(event.target.value)}
               step="0.01"
               type="number"
               value={openingBalance}
             />
           </label>
-          <label className="grid gap-1 text-[9px] font-semibold">
+          <label className="grid gap-1 text-[12px] font-semibold">
             CSV rows
             <textarea
-              className="focus-ring min-h-32 rounded-[5px] border border-border p-2 font-mono text-[9px] leading-5"
+              className="focus-ring min-h-32 rounded-xl border border-border p-2 font-mono text-[12px] leading-5"
               onChange={(event) => setRows(event.target.value)}
               value={rows}
             />
           </label>
-          <p className="text-[9px] text-muted-foreground">
+          <p className="text-[12px] text-muted-foreground">
             Format: date, description, signed amount. Nothing is matched automatically.
           </p>
           <Button disabled={busy} type="submit">
@@ -266,13 +266,13 @@ export function BankingScreen({
             Import statement
           </Button>
         </form>
-        <section className="overflow-hidden rounded-[6px] border border-border bg-surface">
-          <div className="flex items-center justify-between border-b border-border px-3 py-2">
+        <section className="overflow-x-auto rounded-[20px] border border-border bg-surface">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-3 py-2">
             <div>
-              <p className="text-[9px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
+              <p className="text-[12px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
                 Statement lines
               </p>
-              <p className="mt-1 text-[9px] text-muted-foreground">
+              <p className="mt-1 text-[12px] text-muted-foreground">
                 {summary?.unmatchedLineCount ?? 0} unmatched · {summary?.unreconciledLineCount ?? 0}{" "}
                 unreconciled
               </p>
@@ -294,14 +294,14 @@ export function BankingScreen({
             <div className="grid min-h-64 place-items-center text-center">
               <div>
                 <Landmark className="mx-auto size-5 text-muted-foreground" />
-                <p className="mt-2 text-[11px] font-semibold">No statement lines yet</p>
-                <p className="mt-1 text-[9px] text-muted-foreground">
+                <p className="mt-2 text-[14px] font-semibold">No statement lines yet</p>
+                <p className="mt-1 text-[12px] text-muted-foreground">
                   Import the sample row to begin.
                 </p>
               </div>
             </div>
           ) : (
-            <table className="w-full border-collapse text-left text-[9px]">
+            <table className="w-full border-collapse text-left text-[12px]">
               <thead>
                 <tr className="border-b border-border text-muted-foreground">
                   <th className="px-3 py-2">Date</th>
@@ -325,7 +325,7 @@ export function BankingScreen({
                     <td className="px-3 py-2 text-right">
                       {line.status === BankStatementLineStatus.UNMATCHED ? (
                         <Button
-                          className="h-7 px-2 text-[9px]"
+                          className="h-7 px-2 text-[12px]"
                           disabled={busy}
                           onClick={() => match(line)}
                           type="button"
@@ -357,7 +357,7 @@ function Status({ status }: { readonly status: BankStatementLineStatus }) {
         : "Unmatched";
   return (
     <span
-      className={`rounded-full px-2 py-1 text-[8px] font-semibold ${status === BankStatementLineStatus.UNMATCHED ? "bg-warning-soft text-warning" : "bg-success-soft text-forest"}`}
+      className={`rounded-full px-2 py-1 text-[12px] font-semibold ${status === BankStatementLineStatus.UNMATCHED ? "bg-warning-soft text-warning" : "bg-success-soft text-forest"}`}
     >
       {label}
     </span>

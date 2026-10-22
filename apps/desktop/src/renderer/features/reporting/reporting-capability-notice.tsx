@@ -84,7 +84,7 @@ export function ReportingCapabilityNotice({
   }, [api, entityType, onStatusChange, report, taxYear]);
 
   return (
-    <section className="rounded-[6px] border border-border bg-background px-3 py-3 text-[10px]">
+    <section className="rounded-xl border border-border bg-background px-3 py-3 text-[14px]">
       <div aria-live="polite" role="status">
         {failed ? (
           <p className="font-semibold text-warning">{unavailableCopy}</p>

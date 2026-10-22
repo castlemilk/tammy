@@ -1,3 +1,6 @@
+import { mkdir } from "node:fs/promises";
+import path from "node:path";
+
 import { create, type DescMessage, type MessageShape } from "@bufbuild/protobuf";
 import {
   AccountType,
@@ -201,12 +204,15 @@ test("runs the current accounting workflows through the packaged app", async ({
   electronHarness,
 }) => {
   let page = electronHarness.page;
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await page.evaluate(() => {
     window.history.replaceState(null, "", "/setup/workspace");
     window.dispatchEvent(new PopStateEvent("popstate"));
   });
   await expect(page).toHaveURL(/\/setup\/workspace$/);
   await expect(page.getByRole("heading", { name: "Create your local workspace" })).toBeVisible();
+
+  await captureJourney(page, "01-workspace");
 
   await page.getByLabel("Your name").fill("Tammy Admin");
   await page.getByLabel("Email or username").fill(USERNAME);
@@ -218,6 +224,7 @@ test("runs the current accounting workflows through the packaged app", async ({
   await page.getByRole("button", { name: "Create local workspace" }).click();
   await expect(page.getByRole("heading", { name: "Save your recovery code" })).toBeVisible();
   await expect(page.getByText("One-time recovery code")).toBeVisible();
+  await captureJourney(page, "02-recovery", true);
   await page.getByRole("button", { name: "I saved my recovery code" }).click();
   await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
   await expect(
@@ -237,6 +244,8 @@ test("runs the current accounting workflows through the packaged app", async ({
   });
   await expect(page).toHaveURL(/\/unlock$/);
   await expect(page.getByRole("heading", { name: "Unlock your workspace" })).toBeVisible();
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await captureJourney(page, "03-unlock");
   await page.getByLabel("Workspace passphrase").fill(WORKSPACE_PASSPHRASE);
   await page.getByLabel("Email or username").fill(USERNAME);
   await page.getByLabel("Administrator password").fill(ADMINISTRATOR_PASSWORD);
@@ -659,20 +668,29 @@ test("runs the current accounting workflows through the packaged app", async ({
   await assertRoute(page, "Documents", "/documents", "Documents");
   await expect(page.getByText("officeworks-invoice.pdf")).toBeVisible();
   await expect(page.getByText("Reviewed", { exact: true }).first()).toBeVisible();
+  await captureJourney(page, "04-documents");
   await assertRoute(page, "Banking", "/banking", "Banking");
   await expect(page.getByText("$681.00", { exact: true })).toBeVisible();
+  await captureJourney(page, "05-banking");
   await expect(page.getByText("Reconciled", { exact: true })).toBeVisible();
   await assertRoute(page, "Chart of accounts", "/accounting/chart", "Chart of accounts");
   await expect(page.getByText("Office expenses", { exact: true })).toBeVisible();
+  await captureJourney(page, "06-chart");
   await assertRoute(page, "Journals", "/accounting/journals", "Journals");
   await expect(page.getByText("Office supplies paid personally", { exact: true })).toBeVisible();
+  await captureJourney(page, "07-journals");
   await assertRoute(page, "Trial balance", "/accounting/trial-balance", "Trial balance");
   await expect(page.getByText("$319.00", { exact: true }).first()).toBeVisible();
+  await captureJourney(page, "08-trial-balance");
   await assertRoute(page, "GST & BAS", "/gst-bas", "GST & BAS");
   await expect(page.getByText("Draft — not lodged", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("Officeworks Ltd", { exact: true })).toBeVisible();
+  await captureJourney(page, "09-gst-draft");
   await assertRoute(page, "Overview", "/overview", "Overview");
   await expect(page.getByText("Draft — not lodged", { exact: true })).toBeVisible();
+
+  await captureJourney(page, "10-overview");
+  if (process.env.TAMMY_JOURNEY_CAPTURE !== "before") await interactionJourney(page);
 
   expect(electronHarness.consoleErrors).toEqual([]);
   expect(electronHarness.pageErrors).toEqual([]);
@@ -739,4 +757,124 @@ async function assertRoute(
   await page.getByRole("link", { name: linkName }).click();
   await expect(page).toHaveURL(new RegExp(`${path.replaceAll("/", "\\/")}$`));
   await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
+}
+
+async function captureJourney(
+  page: import("@playwright/test").Page,
+  milestone: string,
+  recovery = false,
+) {
+  const phase = process.env.TAMMY_JOURNEY_CAPTURE;
+  if (phase !== "before" && phase !== "after") return;
+  const directory = path.resolve(
+    import.meta.dirname,
+    "../../../../output/playwright/soft-precision",
+    phase,
+  );
+  await mkdir(directory, { recursive: true });
+  await page.screenshot({
+    path: path.join(directory, `${milestone}.png`),
+    fullPage: true,
+    mask: recovery ? [page.locator("p.break-all")] : [],
+  });
+}
+
+async function interactionJourney(page: import("@playwright/test").Page) {
+  await assertRoute(page, "Documents", "/documents", "Documents");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "unsupported-synthetic.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("synthetic"),
+  });
+  await expect(page.getByRole("alert")).toContainText("Choose a PDF, PNG or JPEG");
+  await captureJourney(page, "11-document-upload-error");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "synthetic-supplies.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6iocAAAAASUVORK5CYII=",
+      "base64",
+    ),
+  });
+  await expect(page.getByRole("heading", { name: "synthetic-supplies.png" })).toBeVisible();
+  await page.getByLabel("Supplier", { exact: true }).fill("Wattle Studio Supplies (synthetic)");
+  await page.getByLabel("Invoice number").fill("SP-100");
+  await page.getByLabel("Date", { exact: true }).fill("2024-05-12");
+  await page.getByLabel("Subtotal", { exact: true }).fill("100.00");
+  await page.getByLabel("GST", { exact: true }).fill("10.00");
+  await page.getByLabel("Total", { exact: true }).fill("999.00");
+  await page.getByRole("button", { name: "Save review", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("The review could not be saved");
+  await expect(page.getByLabel("Supplier", { exact: true })).toHaveValue(
+    "Wattle Studio Supplies (synthetic)",
+  );
+  await captureJourney(page, "12-review-error-preserved");
+  await page.getByLabel("Total", { exact: true }).fill("110.00");
+  await page.getByRole("button", { name: "Save review", exact: true }).dblclick();
+  await expect(page.getByRole("button", { name: "Review saved", exact: true })).toBeDisabled();
+  await expect(page.getByText("$110.00", { exact: true })).toBeVisible();
+  await captureJourney(page, "13-review-saved");
+
+  await assertRoute(page, "Chart of accounts", "/accounting/chart", "Chart of accounts");
+  await page.getByRole("button", { name: "Add account", exact: true }).click();
+  await page.getByLabel("Code", { exact: true }).fill("TEST");
+  await page.getByLabel("Account name", { exact: true }).fill("Cancelled synthetic account");
+  await captureJourney(page, "14-account-entry");
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(page.getByLabel("Account name", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("cell", { name: "Cancelled synthetic account" })).toHaveCount(0);
+
+  await assertRoute(page, "Journals", "/accounting/journals", "Journals");
+  await page.getByRole("cell", { name: "Office supplies paid personally", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Office supplies paid personally", exact: true }),
+  ).toBeVisible();
+  await captureJourney(page, "15-journal-detail");
+  await page.getByRole("button", { name: "Journals", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Journals", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "New journal", exact: true }).click();
+  await expect(page.getByLabel("Debit account")).toBeVisible();
+  await captureJourney(page, "16-journal-entry");
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(page.getByLabel("Debit account")).toHaveCount(0);
+
+  await assertRoute(page, "Audit trail", "/audit", "Audit trail");
+  await expect(
+    page.getByText("Wattle Studio Supplies (synthetic)", { exact: false }).first(),
+  ).toBeVisible();
+  await captureJourney(page, "17-local-activity");
+  await page.goBack();
+  await expect(page.getByRole("heading", { name: "Journals", exact: true })).toBeVisible();
+  await page.goForward();
+  await expect(page.getByRole("heading", { name: "Audit trail", exact: true })).toBeVisible();
+
+  await page.getByRole("link", { name: "Overview", exact: true }).focus();
+  await page.keyboard.press("Tab");
+  const documentsLink = page.getByRole("link", { name: "Documents", exact: true });
+  await expect(documentsLink).toBeFocused();
+  expect(await documentsLink.evaluate((element) => getComputedStyle(element).outlineStyle)).toBe(
+    "solid",
+  );
+  await captureJourney(page, "18-keyboard-focus");
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  for (const width of [320, 390, 900]) {
+    await page.setViewportSize({ width, height: 1000 });
+    for (const [label, route, heading] of [
+      ["Documents", "/documents", "Documents"],
+      ["Banking", "/banking", "Banking"],
+      ["Trial balance", "/accounting/trial-balance", "Trial balance"],
+    ]) {
+      if (!label || !route || !heading) throw new Error("JOURNEY_ROUTE_MISSING");
+      await assertRoute(page, label, route, heading);
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      ).toBe(true);
+      await captureJourney(page, `19-${width}-${label.toLowerCase().replaceAll(" ", "-")}`);
+    }
+  }
+  expect(
+    await documentsLink.evaluate((element) => getComputedStyle(element).transitionDuration),
+  ).toBe("0s");
+  await page.setViewportSize({ width: 1440, height: 1000 });
 }
