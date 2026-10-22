@@ -8,7 +8,7 @@
 
 **Tech stack:** Existing protobuf/Connect, Electron Conveyor, React, SQLCipher Core and packaged Playwright acceptance.
 
-Status: implementation and final packaged verification in progress. This is a correction required by lifecycle Task 11, within the already authorised programme.
+Status, 2026-10-23: the canonical rule-reference correction, explicit repair flow, independent account-factor setup, and complete Task 11 acceptance are complete on source `9d36fbd05e5d2d4cc5fcadedce3b63c5fd5f3696`. The final quick gate, all 16 packaged cases, original/revision artifact reconciliation, screenshot inspection and PDF-page review passed. Fresh identity/localproduct native result: `PASS: identity 85/85 and localproduct 121/121 cases with SQLCipher and -race; zero failures/skips; exit 0`; independent final review and clean documentation commit: `independent requirement, code-quality and documentation reviews passed; ROOT committed the documentation, verified the clean worktree and unchanged accepted source trees, and retained the worktree for maintainer review`. The repair remains limited to the exact known historical bundle-reference tuple and does not rewrite frozen history.
 
 ## Evidence and design
 
@@ -99,8 +99,17 @@ The clean `092be0c1` main journey passed in 3.4 minutes, including the stronger 
 
 ## Chunk 3: Integrated acceptance and closeout
 
-- [ ] In the packaged main journey, reproduce the previous setup input through a one-shot test-only creation-frame substitution while calling the real Core handler. Do not modify the database, fabricate financial facts or replace Core responses.
-- [ ] Use the real administrator repair form and TOTP flow, verify the updated organisation identity/version, then complete the full invoice/purchase/PAYG/BAS/frozen export/revision journey.
-- [ ] Retain the newly corrected setup path in the other packaged guards and regressions. Verify failed export, same-total stale freeze and stale revision conflict cases.
-- [ ] Run focused tests, `rtk proxy env TMPDIR=/private/tmp GOFLAGS=-p=1 mise exec -- task verify:quick`, contract/coverage checks and the complete `task package:e2e`; inspect actual PDF/CSV files and screenshots.
-- [ ] Complete independent requirement/quality review, record final clean source and artifact hashes, update programme/development status and preserve the worktree for maintainer review.
+- [x] In the packaged main journey, reproduce the previous setup input through a one-shot test-only creation-frame substitution while calling the real Core handler. Do not modify the database, fabricate financial facts or replace Core responses.
+- [x] Use the real administrator repair form and TOTP flow, verify the updated organisation identity/version, then complete the full invoice/purchase/PAYG/BAS/frozen export/revision journey.
+- [x] Retain the newly corrected setup path in the other packaged guards and regressions. Verify failed export, same-total stale freeze and stale revision conflict cases.
+- [x] Run focused tests, `rtk proxy env TMPDIR=/private/tmp GOFLAGS=-p=1 mise exec -- task verify:quick`, contract/coverage checks and the complete `task package:e2e`; inspect actual PDF/CSV files and screenshots.
+- [x] Complete independent requirement/quality review, record final clean source and artifact hashes, update programme/development status and preserve the worktree for maintainer review.
+
+
+## Final integrated evidence (2026-10-23)
+
+The final quick gate and clean-source 16-case packaged suite passed on `9d36fbd05e5d2d4cc5fcadedce3b63c5fd5f3696`; the full runtime had 16 passes, no failures, retries, skips, not-run, or interruptions, exit 0. Package integrity passed 7 checks with its expected Windows-only skip on Darwin arm64. The main packaged journey exercised the exact legacy bundle-reference repair with administrator authority and real TOTP, current-profile/PAYG evidence, source-currentness controls, review/freeze, external confirmation and a linked revision, cancellation/failure, restart, and actual immutable exports. The package run log is `/tmp/tammy-bas-closeout-full-package-settled-screenshots-2026-10-23.log`.
+
+The artifact manifest SHA-256 is `c3ec196c5d24da1291ef6fbd9e6428dce9a98232c30f144d75639890db8876a8`. Independent checks reconciled all four exports, exact frozen/calculation identities, all 18 labels and predecessor deltas, source coverage/provenance, separate PAYGI profile-confirmation/current-notice references, and retained revision reasons. All eight screenshots and all 189 rendered PDF pages were visually reviewed; the index records one nonblocking page-115 pagination note, with content complete and legible. See the [phase-three acceptance record](../../development/bas-preparation-acceptance-2026-10-23.md).
+
+Fresh identity/localproduct native result: `PASS: identity 85/85 and localproduct 121/121 cases with SQLCipher and -race; zero failures/skips; exit 0`. Independent review and clean documentation commit: `independent requirement, code-quality and documentation reviews passed; ROOT committed the documentation, verified the clean worktree and unchanged accepted source trees, and retained the worktree for maintainer review`. Previous packaged failures and partial runs above remain historical diagnostics.
