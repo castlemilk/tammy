@@ -39,6 +39,7 @@ it("classifies only fixed Core RPC operations and actual Connect status codes", 
     "LIST_DOCUMENTS",
     "LIST_ACCOUNTS",
     "CREATE_BAS_DRAFT",
+    "GET_CURRENT_BAS_DRAFT",
     "UNLOCK_WORKSPACE",
     "SIGN_IN",
   ] as const;

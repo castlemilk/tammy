@@ -60,7 +60,7 @@ const ACCESSIBILITY_TEXT = [
     "0",
     "0 unreconciled this quarter",
     "GST & BAS",
-    "—",
+    "Draft",
     "Action needed · review this exact BAS preparation",
     "Open BAS preparation",
     "Business income",

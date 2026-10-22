@@ -281,7 +281,10 @@ export async function setupAndRunCurrentAccountingWorkflow(
   expect(createdWorkspace.organisationId).toMatch(UUID_V7);
 
   page = await electronHarness.restart("accounting-workflow-restart");
-  if (fixedRendererClock) await page.evaluate(installFixtureClock, fixedInstant);
+  if (fixedRendererClock) {
+    await electronHarness.application.context().addInitScript(installFixtureClock, fixedInstant);
+    await page.evaluate(installFixtureClock, fixedInstant);
+  }
   await page.evaluate(() => {
     window.history.replaceState(null, "", "/unlock");
     window.dispatchEvent(new PopStateEvent("popstate"));

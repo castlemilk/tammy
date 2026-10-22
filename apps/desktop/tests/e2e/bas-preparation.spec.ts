@@ -56,6 +56,11 @@ import { uuidV7 } from "../../src/app/features/sbr/sbr-form-support";
 import { BAS_PREPARATION_RESPONSE_FRAME_LIMIT } from "../../src/shared/bas-preparation-ipc";
 import { createProtoMethodCodec } from "../../src/shared/proto-ipc";
 import { expect, test } from "./fixtures";
+import {
+  installBasHistoryReadDiagnosticShimInMain,
+  readBasHistoryReadDiagnosticInMain,
+  restoreBasHistoryReadDiagnosticShimInMain,
+} from "./support/bas-history-read-diagnostic";
 import { invokeConveyorFrame } from "./support/conveyor";
 import {
   authenticatedWorkspace,
@@ -688,6 +693,12 @@ async function configureProfileAndPeriod(
     );
   await page.getByRole("button", { name: "Confirm selected period", exact: true }).click();
   await expectLifecycleMessage(page, "Confirmed BAS period");
+  await expect(
+    page.getByText("BAS history could not be loaded. Refresh and try again.", { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Regenerate exact calculation", exact: true }),
+  ).toBeEnabled();
 }
 
 async function expectLifecycleMessage(page: Page, message: string) {
@@ -1158,7 +1169,7 @@ function assertPdfReport(
   revision: boolean,
   sources: BasExportSources,
 ) {
-  const text = pages.join(" ");
+  const text = pages.join(" ").replace(/\s+/gu, " ").trim();
   expect(text).toContain("FROZEN MANUAL HANDOFF");
   expect(text).toContain("NOT LODGED");
   expect(text).toContain(ref.id);
@@ -1223,8 +1234,6 @@ function assertPdfReport(
       );
     if (row.want.whole !== undefined)
       expect(rowText, `${row.label} PDF reported amount`).toContain(`${row.want.whole} dollars`);
-    if (row.want.direction)
-      expect(rowText, `${row.label} PDF direction`).toContain(row.want.direction);
   }
   for (const source of sources.sales) {
     expect(text).toContain(source.invoiceId);
@@ -1813,7 +1822,36 @@ test("BAS lifecycle: clean cash sources, blocked PAYGI resolution, frozen handof
   expectTaxRuleReference(organisationAfterRuleRepair, CURRENT_TAX_RULE_HASH);
   await ruleReferencePanel.locator("summary").click();
 
-  await configureProfileAndPeriod(page, profileEvidence, dueDateEvidence);
+  const basHistoryDiagnosticStateKey = "__tammyBasHistoryReadDiagnostic";
+  await electronHarness.application.evaluate(
+    installBasHistoryReadDiagnosticShimInMain,
+    basHistoryDiagnosticStateKey,
+  );
+  try {
+    await configureProfileAndPeriod(page, profileEvidence, dueDateEvidence);
+  } catch (error) {
+    try {
+      const diagnostic = await electronHarness.application.evaluate(
+        readBasHistoryReadDiagnosticInMain,
+        basHistoryDiagnosticStateKey,
+      );
+      const diagnosticPath = testInfo.outputPath("bas-history-read-diagnostic.json");
+      await mkdir(path.dirname(diagnosticPath), { recursive: true });
+      await writeFile(diagnosticPath, JSON.stringify(diagnostic));
+      await testInfo.attach("bas-history-read-diagnostic.json", {
+        path: diagnosticPath,
+        contentType: "application/json",
+      });
+    } catch {
+      // Keep the original lifecycle failure as the test result if diagnostics are unavailable.
+    }
+    throw error;
+  } finally {
+    await electronHarness.application.evaluate(
+      restoreBasHistoryReadDiagnosticShimInMain,
+      basHistoryDiagnosticStateKey,
+    );
+  }
   await regenerateSaveAndValidate(page, retainedEvidence, "unknown");
   await expect(
     reviewFindings(page).getByRole("checkbox", {

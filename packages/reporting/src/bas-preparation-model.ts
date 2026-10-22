@@ -192,9 +192,22 @@ function labelTrace(value: BasLabelTrace) {
   nonnegativeInt64(value.reportedWholeDollars);
   if (value.state === 4 || value.state === 5) {
     if (value.label === 11) {
-      text(value.exactRateNumerator ?? "", 80, true);
-      text(value.exactRateDenominator ?? "", 80, true);
-      rational(value.exactRateNumerator!, value.exactRateDenominator!);
+      const rateNumerator = value.exactRateNumerator;
+      const rateDenominator = value.exactRateDenominator;
+      if (
+        value.exactCentsNumerator !== undefined ||
+        value.exactCentsDenominator !== undefined ||
+        value.reportedWholeDollars !== undefined ||
+        value.roundingDifferenceCentsNumerator !== undefined ||
+        value.roundingDifferenceCentsDenominator !== undefined ||
+        rateNumerator === undefined ||
+        rateDenominator === undefined
+      )
+        invalid();
+      text(rateNumerator, 80, true);
+      text(rateDenominator, 80, true);
+      rational(rateNumerator, rateDenominator);
+      if ((value.state === 4) !== (rateNumerator === "0")) invalid();
     } else {
       text(value.exactCentsNumerator ?? "", 80, true);
       text(value.exactCentsDenominator ?? "", 80, true);

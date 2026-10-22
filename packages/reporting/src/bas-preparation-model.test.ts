@@ -283,6 +283,36 @@ test("accepts known-zero PAYGI rate operands with the source state", () => {
   assert.doesNotThrow(() => validateBasPreparationReportSnapshot(value));
 });
 
+test("rejects T2 traces with money fields or a rate inconsistent with the known state", () => {
+  const mutations: ((trace: BasLabelTrace) => void)[] = [
+    (trace) => {
+      trace.exactCentsNumerator = "0";
+      trace.exactCentsDenominator = "1";
+    },
+    (trace) => {
+      trace.reportedWholeDollars = 0n;
+    },
+    (trace) => {
+      trace.roundingDifferenceCentsNumerator = "0";
+      trace.roundingDifferenceCentsDenominator = "1";
+    },
+    (trace) => {
+      trace.state = 4;
+    },
+    (trace) => {
+      trace.exactRateNumerator = "0";
+      trace.exactRateDenominator = "1";
+    },
+  ];
+  for (const mutate of mutations) {
+    const value = structuredClone(rateTraceSnapshot());
+    const trace = value.calculation.result?.labels.find((item) => item.label === 11);
+    assert.ok(trace);
+    mutate(trace);
+    assert.throws(() => validateBasPreparationReportSnapshot(value), /INVALID_REPORT_SNAPSHOT/);
+  }
+});
+
 test("accepts the 79-digit rational boundary defined by the protobuf pattern", () => {
   const value = structuredClone(rateTraceSnapshot());
   const numerator = "9".repeat(79);

@@ -73,7 +73,10 @@ import {
   RuntimeMode,
   SystemService,
 } from "@tammy/connect-client/tammy/v1/system_pb.js";
-import { CreateBasDraftRequestSchema } from "@tammy/connect-client/tammy/v1/tax_pb.js";
+import {
+  CreateBasDraftRequestSchema,
+  GetCurrentBasDraftRequestSchema,
+} from "@tammy/connect-client/tammy/v1/tax_pb.js";
 import {
   CreateWorkspaceRequestSchema,
   UnlockWorkspaceRequestSchema,
@@ -573,6 +576,10 @@ describe("createCoreClient", () => {
     [
       "CREATE_BAS_DRAFT",
       (client: CoreClient) => client.createBasDraft(create(CreateBasDraftRequestSchema)),
+    ],
+    [
+      "GET_CURRENT_BAS_DRAFT",
+      (client: CoreClient) => client.getCurrentBasDraft(create(GetCurrentBasDraftRequestSchema)),
     ],
     [
       "UNLOCK_WORKSPACE",

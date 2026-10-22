@@ -62,6 +62,7 @@ const ORPHAN_POLL_TIMEOUT_MS = 5_000;
 const STARTUP_DIAGNOSTIC_DELAY_MS = 2_000;
 const STARTUP_DIAGNOSTIC_TIMEOUT_MS = 5_000;
 const STARTUP_DIAGNOSTIC_MAX_BYTES = 1024 * 1024;
+const SHUTDOWN_DIAGNOSTIC_DELAY_MS = 7_000;
 const HELPER_SAMPLE_INTERVAL_MS = 10;
 
 export interface PackagedLayout {
@@ -531,6 +532,39 @@ async function firstWindowWithStartupDiagnostic(
   }
 }
 
+async function captureMacOSShutdownDiagnostic(state: FixtureLifecycleState): Promise<void> {
+  const process = state.mainProcess;
+  if (
+    state.packagedLayout.target !== "darwin-arm64" ||
+    !process?.pid ||
+    process.exitCode !== null ||
+    process.signalCode !== null
+  )
+    return;
+  const diagnosticPath = path.join(
+    path.dirname(state.rawArtifacts),
+    `electron-shutdown-${Date.now()}.sample.txt`,
+  );
+  try {
+    const { stdout, stderr } = await execFileAsync(
+      "/usr/bin/sample",
+      [String(process.pid), "1", "1"],
+      {
+        encoding: "utf8",
+        killSignal: "SIGKILL",
+        maxBuffer: STARTUP_DIAGNOSTIC_MAX_BYTES,
+        timeout: STARTUP_DIAGNOSTIC_TIMEOUT_MS,
+      },
+    );
+    await writeFile(diagnosticPath, `${stdout}${stderr}`, { encoding: "utf8", mode: 0o600 });
+  } catch {
+    await writeFile(diagnosticPath, "ELECTRON_SHUTDOWN_SAMPLE_FAILED\n", {
+      encoding: "utf8",
+      mode: 0o600,
+    });
+  }
+}
+
 async function observeAuthenticatedCorePath(state: FixtureLifecycleState): Promise<void> {
   const deadline = Date.now() + ORPHAN_POLL_TIMEOUT_MS;
   while (true) {
@@ -568,6 +602,9 @@ function fixtureOperations(
     state.processDiagnostics?.formatSummary(state.mainProcess) ??
     "electronProcess=UNKNOWN;stderrMarkers=none";
   const closeElectron = async (state: FixtureLifecycleState, stage: ElectronCloseStage) => {
+    const diagnosticTimer = setTimeout(() => {
+      void captureMacOSShutdownDiagnostic(state).catch(() => undefined);
+    }, SHUTDOWN_DIAGNOSTIC_DELAY_MS);
     try {
       await closeAndReapElectron({
         forceKillMain: () => {
@@ -583,6 +620,8 @@ function fixtureOperations(
     } catch (error) {
       const code = safeElectronCloseFailureCode(error);
       throw new Error(`${code} [stage=${stage}; ${processSummary(state)}]`);
+    } finally {
+      clearTimeout(diagnosticTimer);
     }
   };
 

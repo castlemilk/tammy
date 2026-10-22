@@ -42,7 +42,7 @@ import {
   reopenPurchaseWorkspace,
   retainPurchaseThroughUi,
   retainPurchaseVolumeProof,
-  reviewedDocumentMelbourneDate,
+  reviewedDocumentUtcDate,
   reviewPurchaseEvidenceThroughUi,
   savePurchaseExport,
   setupPurchaseWorkspace,
@@ -362,7 +362,7 @@ test("purchases/payments-gst: missing evidence, deferral, explicit claim and leg
     false,
     "required-return-notice",
   );
-  const timingAsOf = reviewedDocumentMelbourneDate(proof);
+  const timingAsOf = reviewedDocumentUtcDate(proof);
   await openPurchase(page, number);
   const panel = page.getByRole("region", { name: "Purchase accounting", exact: true });
   await panel

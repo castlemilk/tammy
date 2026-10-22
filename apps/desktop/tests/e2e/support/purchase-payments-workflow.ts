@@ -17,6 +17,7 @@ import {
   CURRENT_WORKFLOW_USERNAME,
 } from "./current-accounting-workflow";
 import { regenerateInvoiceBas } from "./invoice-income-workflow";
+import { timestampUtcCivilDate } from "./purchase-time.js";
 import { openSavedBasWorkpaperPanel } from "./saved-bas-workpaper-panel";
 
 export type PurchaseWorkspace = AuthenticatedAccountingWorkspace & {
@@ -273,23 +274,8 @@ export async function retainPurchaseThroughUi(
   return document;
 }
 
-export function reviewedDocumentMelbourneDate(document: d.Document): string {
-  const reviewedAt = document.reviewedAt;
-  if (!reviewedAt) throw new Error("PURCHASE_ACCEPTANCE_REVIEWED_AT_MISSING");
-  const instant = new Date(Number(reviewedAt.seconds) * 1000 + reviewedAt.nanos / 1_000_000);
-  const parts = new Intl.DateTimeFormat("en-AU", {
-    day: "2-digit",
-    month: "2-digit",
-    timeZone: "Australia/Melbourne",
-    year: "numeric",
-  }).formatToParts(instant);
-  const part = (type: "day" | "month" | "year") =>
-    parts.find((value) => value.type === type)?.value;
-  const year = part("year");
-  const month = part("month");
-  const day = part("day");
-  if (!year || !month || !day) throw new Error("PURCHASE_ACCEPTANCE_REVIEWED_AT_INVALID");
-  return `${year}-${month}-${day}`;
+export function reviewedDocumentUtcDate(document: d.Document): string {
+  return timestampUtcCivilDate(document.reviewedAt);
 }
 
 // Volume fixtures use the same authenticated document commands as ordinary

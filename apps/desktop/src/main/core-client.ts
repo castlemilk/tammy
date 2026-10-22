@@ -514,7 +514,7 @@ export function createCoreClient(
     createBasDraft: (request: CreateBasDraftRequest) =>
       coreRequest(() => taxClient.createBasDraft(request), "CREATE_BAS_DRAFT"),
     getCurrentBasDraft: (request: GetCurrentBasDraftRequest) =>
-      coreRequest(() => taxClient.getCurrentBasDraft(request)),
+      coreRequest(() => taxClient.getCurrentBasDraft(request), "GET_CURRENT_BAS_DRAFT"),
     createWorkspace: (request: CreateWorkspaceRequest) =>
       coreRequest(() =>
         workspaceClient.createWorkspace(request, { timeoutMs: WORKSPACE_CREATE_TIMEOUT_MS }),
