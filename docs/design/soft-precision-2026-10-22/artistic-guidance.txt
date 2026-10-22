@@ -1,0 +1,50 @@
+TAMMY — SOFT PRECISION
+Artistic guidance and proposed design system • 22 October 2026
+
+POSITION
+Warm and friendly accounting software, with no sharp edges: intelligent, quick and automatable. A capable companion, not a toy, an intimidating ledger or a chatbot bolted onto bookkeeping. Creative direction: the warmth of a good studio desk with the precision of a financial instrument.
+
+1. VISUAL LANGUAGE
+Oat canvas #F7F3EA; paper surfaces #FFFCF6; cocoa text #302A25; forest action #235C4B; apricot support #F2BFA5; butter highlight #F4DC91. Accent colours are surfaces, not low-contrast body text. Use solid dark text and visible focus outlines. Test every actual colour pairing before implementation; the boards are not an accessibility audit.
+Use a characterful soft serif for arrival moments and major headings, a humanist sans for controls and body, and tabular lining numerals for amounts. Avoid serif typography in dense tables. Font family selection/licensing remains an implementation choice.
+Spacing scale: 4, 8, 12, 16, 24, 32, 48, 64 px. Rounded corners: 12 px controls, 20 px cards, 28 px large surfaces. Pills reserved for compact actions and statuses, not every container. Minimum 44 px primary touch targets. Desktop rows approximately 48–56 px with an optional denser mode.
+Soft does not mean vague: strong hierarchy, crisp boundaries, explicit labels and aligned columns. Avoid gradients and texture behind numerical data. Use subtle shadows for overlays, not every card.
+
+2. SIGNATURE ART
+A folded-paper loop is the primary motif: repeated work becomes a smooth, continuous path. Supporting motifs: bridges for connection, nested forms for clarity, a sunrise for starting fresh. Matte ivory, forest and apricot surfaces; soft studio light; rounded silhouettes. Reserve art for onboarding, empty states, completion and marketing. No decoration competing with a reconciliation decision. No anthropomorphic money, piggy banks or generic AI sparkles as the whole identity.
+The isolated paper-loop PNG has a verified alpha channel. It is concept artwork, not a finalized logo; review edge quality at its intended size before production.
+
+3. PRODUCT VIEWS
+Today: cash position with reporting period and last-sync time; a short prioritised review queue; recent activity. Let the next useful action dominate, not a wall of metric cards.
+Transactions: precise table plus contextual review panel. Show bank entry, supporting receipt, match reasoning, ambiguity, proposed category and explicit approval. Preserve search/filter state when the panel closes.
+Receipt capture: quick camera/import path, editable extracted details, missing-field and duplicate review before save. Do not claim a receipt is saved until persistence succeeds.
+Invoices: editable line items with stable totals and currency; customer preview; distinct draft, ready, sent, overdue and paid states. Sending and payment are different events. The generated sample is AUD 1,200 + AUD 120 GST = AUD 1,320; real tax handling requires the product's actual rules.
+Automations: plain-language When / Only if / Then steps. Test against sample data, show a dry-run diff and side effects, then enable. Expose scope, last run, exceptions, pause, run history and edit controls. No invisible irreversible actions.
+Future extension: cash-flow report with historical/forecast separation; period-close checklist with evidence; onboarding connection health; mobile review inbox. These are proposed views, not claims about existing Tammy features.
+
+4. CORE COMPONENTS
+Application shell; quick switch/search; primary/secondary/text buttons; labelled fields; date and currency inputs; select; checkbox and toggle; filter chips; table with keyboard-operable detail panel; evidence card; match comparison; automation step; dry-run preview; activity timeline; inline validation; retry banner; empty state; confirmation dialog; toast with undo where genuinely reversible.
+Every interactive component needs default, hover, focus, pressed, disabled, loading and error states as appropriate. Do not disable controls without explaining why. Statuses use text and icon as well as colour.
+
+5. INTELLIGENCE AND TRUST
+Keep Suggested, Approved, Applied, Sent and Paid distinct. Explain evidence rather than inventing confidence percentages. Ambiguous matches need review. External sends, payments and irreversible changes must show the target and consequence. Undo is offered only when genuinely supported; otherwise provide a correction flow.
+Do not imply an automation is active while still a draft. Surface partial success and retries without duplicate writes. Show sync freshness and pending/offline states. Preserve user input on failure and focus after recovery.
+
+6. MOTION AND VOICE
+Motion should feel like a soft settling gesture, not bouncing jelly. Controls 120–160 ms, panels 180–240 ms, transitions up to 320 ms. Animate opacity/transform instead of expensive layout; respect reduced motion. Never animate financial values through misleading intermediate amounts. Avoid perpetual motion in working screens.
+Voice: calm, specific, non-judgmental. 'Two transactions need a look.' 'We found a possible match.' 'Review before applying.' Avoid shame, exaggerated certainty or claims such as 'Your changes are saved' unless verified by actual state.
+
+7. IMPLEMENTATION AND REVIEW BAR
+The image boards are generated visual explorations, not pixel-perfect build specifications or tested software. Normalize wordmark case, navigation, dates, merchant examples and labels before implementation. Board 1's queue counts are illustrative and not internally reliable; real fixtures must reconcile totals. Do not copy generated external brand marks or email addresses as approved assets/customer data. The written tokens and behaviour requirements take precedence over generated inconsistencies.
+Validate keyboard navigation, visible focus, contrast, reduced motion, responsive 320/390 px layouts, zoom, long names, negative/large amounts, repeated clicks, cancellation, back/forward, interrupted sync and automation replay. No code or existing repository was modified for this concept package.
+
+DELIVERABLES
+01-soft-precision-views.png: Today, reconciliation and receipt capture.
+02-automation-invoices.png: automation studio, invoice editor and quick actions.
+03-design-system.png: visual foundations, reusable components, trust states and motifs.
+04-paper-loop.png: isolated transparent sculptural artwork.
+Generated directly with the built-in image generation tool, without spawning new tasks.
+
+ADDITIONAL VIEWS
+05-cash-flow-month-end.png: forecast and close checklist concepts. Forecasts must start at the present boundary; reconcile illustrative chart values before building. Export readiness is gated on completed review.
+06-mobile-moments.png: onboarding, account connections, match review and invoice activity. Generated merchant/date examples are illustrative; mismatched merchant names require ambiguity review, not unqualified approval.
