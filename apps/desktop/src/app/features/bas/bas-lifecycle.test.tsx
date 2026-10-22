@@ -1,6 +1,7 @@
 import { create, type DescMessage } from "@bufbuild/protobuf";
 import { TimestampSchema } from "@bufbuild/protobuf/wkt";
 import {
+  BasApplicability,
   BasChainExpectationSchema,
   BasCivilDateRangeSchema,
   BasConfirmedPeriodSchema,
@@ -15,7 +16,9 @@ import {
   BasExternalEventKind,
   BasFrozenBasSummarySchema,
   BasLiveCurrentness,
+  BasObligationsProfileSchema,
   BasObligationsProfileSummarySchema,
+  BasPaygiMethod,
   BasPeriodSuggestionSchema,
   BasPeriodSummarySchema,
   BasPeriodWindow,
@@ -48,6 +51,8 @@ import {
   RegenerateBasPreparationResponseSchema,
   ResolveExternalBasDisputeRequestSchema,
   ResolveExternalBasDisputeResponseSchema,
+  SetBasObligationsProfileRequestSchema,
+  SetBasObligationsProfileResponseSchema,
 } from "@tammy/connect-client/tammy/v1/bas_preparation_pb.js";
 import {
   AuthenticationContextSchema,
@@ -64,7 +69,7 @@ import {
   UserSchema,
   UserState,
 } from "@tammy/connect-client/tammy/v1/identity_pb.js";
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, it } from "vitest";
 import { BAS_PREPARATION_RESPONSE_FRAME_LIMIT } from "../../../shared/bas-preparation-ipc";
@@ -114,6 +119,10 @@ const codecs = {
     ListBasExternalObservationsResponseSchema,
   ),
   calendar: responseCodec(GetBasCalendarRequestSchema, GetBasCalendarResponseSchema),
+  setProfile: responseCodec(
+    SetBasObligationsProfileRequestSchema,
+    SetBasObligationsProfileResponseSchema,
+  ),
 };
 
 it("continues paging when pages are empty but still carry a cursor", async () => {
@@ -285,6 +294,218 @@ it("keeps profile setup usable before a calendar can resolve an effective profil
   );
   expect(screen.queryByText("BAS history could not be loaded. Refresh and try again.")).toBeNull();
   expect(fixture.procedures.basPreparation.getBasCalendar).not.toHaveBeenCalled();
+});
+
+it("saves explicit registration dates and evidence-backed decided obligations", async () => {
+  const fixture = createConveyorFixture();
+  const workspace = {
+    workspaceId: "018f0000-0000-7000-8000-000000000081",
+    userId: "018f0000-0000-7000-8000-000000000082",
+    sessionId: "018f0000-0000-7000-8000-000000000083",
+    organisationId: "018f0000-0000-7000-8000-000000000084",
+    roles: [Role.BUSINESS_PREPARER],
+  };
+  const evidenceId = "018f0000-0000-7000-8000-000000000085";
+  const profileId = "018f0000-0000-7000-8000-000000000086";
+  const savedHash = new Uint8Array(32).fill(0x86);
+  fixture.procedures.organisation.getCurrentUser.mockResolvedValue(
+    codecs.user.encodeResponse(
+      create(GetCurrentUserResponseSchema, {
+        user: create(UserSchema, {
+          id: workspace.userId,
+          version: 1n,
+          username: "profile-preparer",
+          displayName: "Profile preparer",
+          state: UserState.ACTIVE,
+          roles: [Role.BUSINESS_PREPARER],
+        }),
+      }),
+    ),
+  );
+  fixture.procedures.basPreparation.listBasObligationsProfiles.mockResolvedValue(
+    codecs.profiles.encodeResponse(create(ListBasObligationsProfilesResponseSchema, {})),
+  );
+  fixture.procedures.basPreparation.listBasPeriods.mockResolvedValue(
+    codecs.periods.encodeResponse(create(ListBasPeriodsResponseSchema, {})),
+  );
+  fixture.procedures.basPreparation.listBasPreparations.mockResolvedValue(
+    codecs.preparations.encodeResponse(create(ListBasPreparationsResponseSchema, {})),
+  );
+  fixture.procedures.basPreparation.listFrozenBas.mockResolvedValue(
+    codecs.frozen.encodeResponse(create(ListFrozenBasResponseSchema, {})),
+  );
+  fixture.procedures.basPreparation.listBasExternalDisputeResolutions.mockResolvedValue(
+    codecs.disputes.encodeResponse(create(ListBasExternalDisputeResolutionsResponseSchema, {})),
+  );
+  fixture.procedures.basPreparation.setBasObligationsProfile.mockImplementation(async (frame) => {
+    const request = codecs.setProfile.decodeRequest(frame);
+    return codecs.setProfile.encodeResponse(
+      create(SetBasObligationsProfileResponseSchema, {
+        profile: create(BasObligationsProfileSchema, {
+          profileId,
+          organisationId: workspace.organisationId,
+          revision: 1n,
+          contentHash: savedHash,
+          profile: request.profile,
+          actorUserId: workspace.userId,
+        }),
+      }),
+    );
+  });
+
+  renderWithConveyor(
+    <BasPreparationLifecycle
+      api={fixture.conveyor.basPreparation}
+      identityApi={fixture.conveyor.organisation}
+      reportApi={fixture.conveyor.reporting}
+      workspace={workspace}
+    />,
+  );
+  const user = userEvent.setup();
+  await user.selectOptions(await screen.findByLabelText("GST obligation"), "2");
+  await user.selectOptions(screen.getByLabelText("GST registration status"), "2");
+  await user.selectOptions(screen.getByLabelText("PAYGW obligation"), "2");
+  await user.selectOptions(screen.getByLabelText("PAYGI obligation"), "2");
+  await user.selectOptions(screen.getByLabelText("PAYGI method"), String(BasPaygiMethod.RATE));
+  await user.selectOptions(screen.getByLabelText("Fringe benefits tax"), "3");
+  await user.selectOptions(screen.getByLabelText("Wine equalisation tax"), "2");
+  await user.type(
+    screen.getByLabelText("GST decision reason"),
+    "Registration and quarterly GST reviewed.",
+  );
+  await user.type(screen.getByLabelText("PAYGW reason"), "Quarterly payroll confirmed.");
+  await user.type(screen.getByLabelText("PAYGI reason"), "Quarterly instalment notice confirmed.");
+  await user.type(
+    screen.getByLabelText("Profile decision reason"),
+    "Reviewed all listed obligations.",
+  );
+  const save = screen.getByRole("button", { name: "Save immutable profile revision" });
+  expect(save).toHaveProperty("disabled", true);
+  expect(screen.getByText(/Enter the retained GST registration start date/)).toBeTruthy();
+  expect(screen.getByText(/Enter a complete retained source identity/)).toBeTruthy();
+  expect(screen.getByText(/Enter a canonical income-year UUID/)).toBeTruthy();
+
+  fireEvent.change(screen.getByLabelText("Effective from"), { target: { value: "2026-07-01" } });
+  fireEvent.change(screen.getByLabelText("GST registration effective from"), {
+    target: { value: "2025-07-01" },
+  });
+  await user.type(
+    screen.getByLabelText("Confirmed income year UUID"),
+    "018f0000-0000-7000-8000-000000000087",
+  );
+  fireEvent.change(screen.getByLabelText("Income year start"), {
+    target: { value: "2026-07-01" },
+  });
+  fireEvent.change(screen.getByLabelText("Income year end"), {
+    target: { value: "2027-06-30" },
+  });
+  const sharedEvidence = within(
+    screen.getByRole("group", { name: "Shared retained profile evidence identity" }),
+  );
+  await user.type(sharedEvidence.getByLabelText("Source type"), "document");
+  await user.type(sharedEvidence.getByLabelText("Source UUID"), evidenceId);
+  await user.type(sharedEvidence.getByLabelText("Revision"), "1");
+  await user.type(sharedEvidence.getByLabelText("SHA-256 hex"), "85".repeat(32));
+  await waitFor(() => expect(save).toHaveProperty("disabled", false));
+  await user.selectOptions(screen.getByLabelText("PAYGI obligation"), "3");
+  await waitFor(() => expect(save).toHaveProperty("disabled", true));
+  expect(screen.getByText(/Not-applicable PAYGI must use the not-applicable method/)).toBeTruthy();
+  await user.selectOptions(screen.getByLabelText("PAYGI obligation"), "1");
+  await waitFor(() => expect(save).toHaveProperty("disabled", false));
+
+  fireEvent.change(screen.getByLabelText("Effective from"), { target: { value: "" } });
+  await waitFor(() => expect(save).toHaveProperty("disabled", true));
+  expect(screen.getByText(/enter the profile effective start date/i)).toBeTruthy();
+  fireEvent.change(screen.getByLabelText("Effective from"), {
+    target: { value: "2026-07-01" },
+  });
+  await waitFor(() => expect(save).toHaveProperty("disabled", false));
+
+  fireEvent.change(screen.getByLabelText("Effective through (optional)"), {
+    target: { value: "2026-06-30" },
+  });
+  await waitFor(() => expect(save).toHaveProperty("disabled", true));
+  expect(screen.getByText(/profile end date must be on or after its start date/i)).toBeTruthy();
+  fireEvent.change(screen.getByLabelText("Effective through (optional)"), {
+    target: { value: "" },
+  });
+  await waitFor(() => expect(save).toHaveProperty("disabled", false));
+
+  fireEvent.change(screen.getByLabelText("GST registration effective through (optional)"), {
+    target: { value: "2025-06-30" },
+  });
+  await waitFor(() => expect(save).toHaveProperty("disabled", true));
+  expect(
+    screen.getByText(/GST registration end date must be on or after its start date/i),
+  ).toBeTruthy();
+  fireEvent.change(screen.getByLabelText("GST registration effective through (optional)"), {
+    target: { value: "" },
+  });
+  await waitFor(() => expect(save).toHaveProperty("disabled", false));
+
+  fireEvent.change(screen.getByLabelText("Income year end"), {
+    target: { value: "2026-06-30" },
+  });
+  await waitFor(() => expect(save).toHaveProperty("disabled", true));
+  expect(screen.getByText(/income year end date must be on or after its start date/i)).toBeTruthy();
+  fireEvent.change(screen.getByLabelText("Income year end"), {
+    target: { value: "2027-06-30" },
+  });
+  await waitFor(() => expect(save).toHaveProperty("disabled", false));
+
+  await user.click(save);
+
+  await waitFor(() =>
+    expect(fixture.procedures.basPreparation.setBasObligationsProfile).toHaveBeenCalledTimes(1),
+  );
+  const sentFrame = fixture.procedures.basPreparation.setBasObligationsProfile.mock.calls[0]?.[0];
+  if (!(sentFrame instanceof Uint8Array)) throw new Error("profile request frame missing");
+  const submitted = codecs.setProfile.decodeRequest(sentFrame).profile;
+  expect(submitted?.effectiveInterval?.startDate).toMatchObject({ year: 2026, month: 7, day: 1 });
+  expect(submitted?.gst?.registrationInterval?.startDate).toMatchObject({
+    year: 2025,
+    month: 7,
+    day: 1,
+  });
+  expect(submitted?.gst?.evidence[0]).toMatchObject({ type: "document", id: evidenceId });
+  expect(submitted?.paygw?.applicability?.applicability).toBe(BasApplicability.ACTIVE);
+  expect(submitted?.paygw?.applicability?.reason).toBe("Quarterly payroll confirmed.");
+  expect(submitted?.paygw?.applicability?.evidence[0]?.id).toBe(evidenceId);
+  expect(submitted?.paygi?.applicability?.applicability).toBe(BasApplicability.UNKNOWN);
+  expect(submitted?.paygi?.applicability?.reason).toBe("");
+  expect(submitted?.paygi?.applicability?.evidence).toHaveLength(0);
+  expect(submitted?.paygi?.confirmedIncomeYear).toMatchObject({
+    incomeYearId: "018f0000-0000-7000-8000-000000000087",
+    dates: {
+      startDate: { year: 2026, month: 7, day: 1 },
+      endDate: { year: 2027, month: 6, day: 30 },
+    },
+  });
+  expect(submitted?.paygi?.confirmedIncomeYear?.confirmation).toMatchObject({
+    type: "document",
+    id: evidenceId,
+    revision: 1n,
+  });
+  expect(
+    Array.from(submitted?.paygi?.confirmedIncomeYear?.confirmation?.contentHash ?? []),
+  ).toEqual(Array(32).fill(0x85));
+  expect(submitted?.otherObligations?.fringeBenefitsTax?.applicability).toBe(
+    BasApplicability.NOT_APPLICABLE,
+  );
+  expect(submitted?.otherObligations?.fringeBenefitsTax?.reason).toBe(
+    "Reviewed all listed obligations.",
+  );
+  expect(submitted?.otherObligations?.fringeBenefitsTax?.evidence[0]?.id).toBe(evidenceId);
+  expect(submitted?.otherObligations?.wineEqualisationTax?.applicability).toBe(
+    BasApplicability.ACTIVE,
+  );
+  expect(submitted?.otherObligations?.wineEqualisationTax?.reason).toBe(
+    "Reviewed all listed obligations.",
+  );
+  expect(submitted?.otherObligations?.wineEqualisationTax?.evidence[0]?.id).toBe(evidenceId);
+  expect(submitted?.otherObligations?.luxuryCarTax?.applicability).toBe(BasApplicability.UNKNOWN);
+  expect(submitted?.otherObligations?.luxuryCarTax?.reason).toBe("");
+  expect(submitted?.otherObligations?.luxuryCarTax?.evidence).toHaveLength(0);
 });
 
 it("exports the selected frozen handoff by its exact immutable identity", async () => {

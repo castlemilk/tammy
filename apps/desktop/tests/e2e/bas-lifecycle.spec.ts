@@ -1,5 +1,14 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 import { setupAndRunCurrentAccountingWorkflow } from "./support/current-accounting-workflow";
+
+async function expectLifecycleStatus(page: Page, message: string) {
+  const lifecycle = page.getByRole("region", {
+    name: "BAS preparation lifecycle",
+    exact: true,
+  });
+  await expect(lifecycle.getByRole("status").filter({ hasText: message })).toBeVisible();
+}
 
 test("prepares and reviews an exact BAS period in the packaged app", async ({
   electronHarness,
@@ -23,9 +32,16 @@ test("prepares and reviews an exact BAS period in the packaged app", async ({
     .getByLabel("Profile decision reason", { exact: true })
     .fill("Packaged lifecycle acceptance; unresolved obligations remain explicitly unknown.");
   await page.getByRole("button", { name: "Save immutable profile revision" }).click();
-  await expect(page.getByRole("status")).toContainText("Saved BAS obligations profile revision");
+  await expectLifecycleStatus(page, "Saved BAS obligations profile revision");
 
-  const periodSelect = page.getByLabel("Confirmed period history", { exact: true });
+  const lifecycleRegion = page.getByRole("region", {
+    name: "BAS preparation lifecycle",
+    exact: true,
+  });
+  const periodSelect = lifecycleRegion.getByRole("combobox", {
+    name: "Confirmed period history",
+    exact: true,
+  });
   await expect
     .poll(async () =>
       (await periodSelect.locator("option").allTextContents()).some((label) =>
@@ -41,10 +57,10 @@ test("prepares and reviews an exact BAS period in the packaged app", async ({
     .getByLabel("Period confirmation reason", { exact: true })
     .fill("Acceptance fixture uses the displayed BAS calendar suggestion.");
   await page.getByRole("button", { name: "Confirm selected period" }).click();
-  await expect(page.getByRole("status")).toContainText("Confirmed BAS period");
+  await expectLifecycleStatus(page, "Confirmed BAS period");
 
   await page.getByRole("button", { name: "Regenerate exact calculation" }).click();
-  await expect(page.getByRole("status")).toContainText("Prepared exact BAS version");
+  await expectLifecycleStatus(page, "Prepared exact BAS version");
   await expect(page.getByRole("button", { name: "Save exact PAYG inputs" })).toBeVisible();
   await page
     .getByLabel("PAYG review reason", { exact: true })
@@ -52,19 +68,17 @@ test("prepares and reviews an exact BAS period in the packaged app", async ({
       "No verified payroll or instalment amount entered; each unresolved label remains unknown.",
     );
   await page.getByRole("button", { name: "Save exact PAYG inputs" }).click();
-  await expect(page.getByRole("status")).toContainText(
-    "Saved PAYG inputs against the displayed preparation revision",
-  );
+  await expectLifecycleStatus(page, "Saved PAYG inputs against the displayed preparation revision");
   // PAYG input changes create a new immutable preparation with no calculation pointer.
   await page.getByRole("button", { name: "Regenerate exact calculation" }).click();
-  await expect(page.getByRole("status")).toContainText("Prepared exact BAS version");
+  await expectLifecycleStatus(page, "Prepared exact BAS version");
 
   await lifecycle.getByRole("button", { name: "Review", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Exact review snapshot", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Run validation on this exact calculation" }).click();
-  await expect(page.getByRole("status")).toContainText("Created review validation");
+  await expectLifecycleStatus(page, "Created review validation");
 
   await lifecycle.getByRole("button", { name: "Freeze", exact: true }).click();
   await expect(
@@ -84,7 +98,8 @@ test("prepares and reviews an exact BAS period in the packaged app", async ({
     page.getByRole("heading", { name: "Export an exact retained BAS version", exact: true }),
   ).toBeVisible();
   await page
-    .getByLabel("Exact report source", { exact: true })
+    .getByRole("region", { name: "BAS preparation lifecycle", exact: true })
+    .getByRole("combobox", { name: "Exact report source", exact: true })
     .selectOption({ label: "Retained calculation" });
   const exportButton = page.getByRole("button", { name: "Export PDF", exact: true });
   await expect(exportButton).toBeEnabled();
@@ -92,7 +107,12 @@ test("prepares and reviews an exact BAS period in the packaged app", async ({
     dialog.showSaveDialog = async () => ({ canceled: true, filePath: "" });
   });
   await exportButton.click();
-  await expect(page.getByRole("status")).toHaveText("BAS export cancelled.");
+  await expect(
+    page
+      .getByRole("region", { name: "BAS preparation lifecycle", exact: true })
+      .getByRole("status")
+      .filter({ hasText: "BAS export cancelled." }),
+  ).toHaveText("BAS export cancelled.");
 
   await lifecycle.getByRole("button", { name: "External record", exact: true }).click();
   await expect(

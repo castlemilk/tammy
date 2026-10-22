@@ -118,6 +118,7 @@ type BasExportSources = {
     readonly paymentHash: string;
   };
   readonly paygEvidence: RetainedEvidence;
+  readonly profileEvidence: RetainedEvidence;
   readonly actualDueDateEvidence: RetainedEvidence;
 };
 
@@ -362,7 +363,9 @@ async function createAndIssueInvoice(
     .fill(taxTreatment === "taxable" ? "Taxable synthetic service" : "GST-free synthetic service");
   await page.getByLabel("Unit price 1", { exact: true }).fill(price);
   await page.getByLabel("Unit cost 1", { exact: true }).fill("10.00");
-  await page.getByLabel("GST treatment 1", { exact: true }).selectOption(taxTreatment);
+  await page
+    .getByRole("combobox", { name: "GST treatment 1", exact: true })
+    .selectOption(taxTreatment);
   await page.getByRole("button", { name: "Save draft", exact: true }).click();
   await expect(page.getByText("Draft saved.", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Issue invoice", exact: true }).click();
@@ -410,17 +413,25 @@ async function configureProfileAndPeriod(
     "Special GST schemes or adjustments",
     "Other activity statement obligations",
   ]) {
-    await page.getByLabel(label, { exact: true }).selectOption({ label: "not applicable" });
+    await page
+      .getByRole("combobox", { name: label, exact: true })
+      .selectOption({ label: "not applicable" });
   }
   await page
     .getByLabel("GST decision reason", { exact: true })
     .fill("Synthetic business is GST registered and reports quarterly on a cash basis.");
+  await page.getByLabel("GST registration effective from", { exact: true }).fill("2025-07-01");
   await page
     .getByLabel("PAYGW reason", { exact: true })
     .fill("Synthetic payroll statement reviewed for this acceptance fixture.");
   await page
     .getByLabel("PAYGI reason", { exact: true })
     .fill("Synthetic operative PAYGI notice and prior-year instalment reviewed.");
+  await page
+    .getByLabel("Confirmed income year UUID", { exact: true })
+    .fill("018f2f5e-7b5e-7a11-8f00-000000000501");
+  await page.getByLabel("Income year start", { exact: true }).fill("2026-07-01");
+  await page.getByLabel("Income year end", { exact: true }).fill("2027-06-30");
   await fillEvidence(page, evidence);
   const dueDateEvidence = page.getByRole("group", {
     name: "Actual statement due-date evidence identity",
@@ -440,9 +451,12 @@ async function configureProfileAndPeriod(
     .getByLabel("Profile decision reason", { exact: true })
     .fill("Synthetic quarterly cash BAS obligations confirmed from retained fixture evidence.");
   await page.getByRole("button", { name: "Save immutable profile revision", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("Saved BAS obligations profile revision");
+  await expectLifecycleMessage(page, "Saved BAS obligations profile revision");
 
-  const periodSelect = page.getByLabel("Confirmed period history", { exact: true });
+  const periodSelect = page.getByRole("combobox", {
+    name: "Confirmed period history",
+    exact: true,
+  });
   await expect
     .poll(async () =>
       (await periodSelect.locator("option").allTextContents()).some(
@@ -470,7 +484,31 @@ async function configureProfileAndPeriod(
       "Synthetic supported quarter confirmed from the BAS calendar and retained GST registration evidence.",
     );
   await page.getByRole("button", { name: "Confirm selected period", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("Confirmed BAS period");
+  await expectLifecycleMessage(page, "Confirmed BAS period");
+}
+
+async function expectLifecycleMessage(page: Page, message: string) {
+  const lifecycle = page.getByRole("region", {
+    name: "BAS preparation lifecycle",
+    exact: true,
+  });
+  await expect(lifecycle.getByRole("status").filter({ hasText: message })).toBeVisible();
+}
+
+async function expectAuthorityMessage(page: Page, message: string) {
+  const authority = page.getByRole("region", { name: "BAS approval authority", exact: true });
+  await expect(authority.getByRole("status").filter({ hasText: message })).toBeVisible();
+}
+
+function reviewFindings(page: Page) {
+  return page
+    .getByRole("region", { name: "BAS preparation lifecycle", exact: true })
+    .getByRole("heading", { name: "Review findings", exact: true })
+    .locator("xpath=..");
+}
+
+async function expectNoReviewBlockers(page: Page) {
+  await expect(reviewFindings(page).getByText(/Blocker ·/)).toHaveCount(0);
 }
 
 async function regenerateSaveAndValidate(
@@ -480,25 +518,29 @@ async function regenerateSaveAndValidate(
 ) {
   await page.getByRole("button", { name: "Prepare", exact: true }).click();
   await page.getByRole("button", { name: "Regenerate exact calculation", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("Prepared exact BAS version");
+  await expectLifecycleMessage(page, "Prepared exact BAS version");
   await page
-    .getByLabel("W1 total payments state", { exact: true })
+    .getByRole("combobox", { name: "W1 total payments state", exact: true })
     .selectOption({ label: "known" });
   await page.getByLabel("W1 total payments exact AUD", { exact: true }).fill("1000.00");
   await page
-    .getByLabel("W2 amount withheld state", { exact: true })
+    .getByRole("combobox", { name: "W2 amount withheld state", exact: true })
     .selectOption({ label: "known" });
   await page.getByLabel("W2 amount withheld exact AUD", { exact: true }).fill("50.00");
   await page
-    .getByLabel("W3 other withholding state", { exact: true })
+    .getByRole("combobox", { name: "W3 other withholding state", exact: true })
     .selectOption({ label: "known zero" });
+  await page.getByLabel("W3 other withholding exact AUD", { exact: true }).fill("0.00");
   await page
-    .getByLabel("W4 no-ABN withholding state", { exact: true })
+    .getByRole("combobox", { name: "W4 no-ABN withholding state", exact: true })
     .selectOption({ label: "known zero" });
+  await page.getByLabel("W4 no-ABN withholding exact AUD", { exact: true }).fill("0.00");
   await page
-    .getByLabel("PAYGI method for this input", { exact: true })
+    .getByRole("combobox", { name: "PAYGI method for this input", exact: true })
     .selectOption({ label: "rate" });
-  await page.getByLabel("PAYGI amount state", { exact: true }).selectOption({ label: "known" });
+  await page
+    .getByRole("combobox", { name: "PAYGI amount state", exact: true })
+    .selectOption({ label: "known" });
   await page.getByLabel("PAYGI exact AUD (T7 or T1)", { exact: true }).fill("2010.99");
   await page.getByLabel("PAYGI exact T2 rate (e.g. 15.5)", { exact: true }).fill("1.7");
   await page
@@ -507,32 +549,35 @@ async function regenerateSaveAndValidate(
   await page.getByLabel("Income year start", { exact: true }).fill("2026-07-01");
   await page.getByLabel("Income year end", { exact: true }).fill("2027-06-30");
   await page
-    .getByLabel("PAYGI notice status", { exact: true })
+    .getByRole("combobox", { name: "PAYGI notice status", exact: true })
     .selectOption({ label: noticeStatus });
   await page
-    .getByLabel("PAYGI prior variation", { exact: true })
+    .getByRole("combobox", { name: "PAYGI prior variation", exact: true })
     .selectOption({ label: noticeStatus === "unknown" ? "unknown" : "none" });
   await page
     .getByLabel("PAYG review reason", { exact: true })
     .fill("Synthetic payroll statement, ATO PAYGI notice, and prior-year T1 reviewed.");
   await fillEvidence(page, evidence);
   await page.getByRole("button", { name: "Save exact PAYG inputs", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText(
+  await expectLifecycleMessage(
+    page,
     "Saved PAYG inputs against the displayed preparation revision",
   );
   // Saving inputs creates a new immutable preparation revision and clears its calculation pointer.
   await page.getByRole("button", { name: "Regenerate exact calculation", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("Prepared exact BAS version");
+  await expectLifecycleMessage(page, "Prepared exact BAS version");
   await page.getByRole("button", { name: "Review", exact: true }).click();
   await page.getByRole("button", { name: "Run validation on this exact calculation" }).click();
-  await expect(page.getByRole("status")).toContainText("Created review validation");
+  await expectLifecycleMessage(page, "Created review validation");
 }
 
 async function selectExactPreparation(page: Page, workspace: Workspace, family: BasReference) {
   const summary = await latestPreparationForFamily(page, workspace, family);
   const preparation = requiredPreparation(summary.preparation);
   await page.getByRole("button", { name: "Review", exact: true }).click();
-  await page.getByLabel("Preparation history", { exact: true }).selectOption(refKey(preparation));
+  await page
+    .getByRole("combobox", { name: "Preparation history", exact: true })
+    .selectOption(refKey(preparation));
   return summary;
 }
 
@@ -540,7 +585,9 @@ async function selectLatestPreparation(page: Page, workspace: Workspace) {
   const summary = await latestPreparationForFamily(page, workspace);
   const preparation = requiredPreparation(summary.preparation);
   await page.getByRole("button", { name: "Review", exact: true }).click();
-  await page.getByLabel("Preparation history", { exact: true }).selectOption(refKey(preparation));
+  await page
+    .getByRole("combobox", { name: "Preparation history", exact: true })
+    .selectOption(refKey(preparation));
   return summary;
 }
 
@@ -582,7 +629,7 @@ async function freezeCurrent(page: Page, clock: TotpClock, reason: string) {
   await page
     .getByRole("button", { name: "Approve and freeze exact snapshot", exact: true })
     .click();
-  await expect(page.getByRole("status")).toContainText("Frozen exact handoff");
+  await expectLifecycleMessage(page, "Frozen exact handoff");
 }
 
 async function recordConfirmation(
@@ -593,9 +640,11 @@ async function recordConfirmation(
 ) {
   await page.getByRole("button", { name: "External record", exact: true }).click();
   await page
-    .getByLabel("User-recorded event", { exact: true })
+    .getByRole("combobox", { name: "User-recorded event", exact: true })
     .selectOption({ label: "completed lodgement" });
-  await page.getByLabel("Channel", { exact: true }).selectOption({ label: "online portal" });
+  await page
+    .getByRole("combobox", { name: "Channel", exact: true })
+    .selectOption({ label: "online portal" });
   await page.getByLabel("Claimed event date", { exact: true }).fill("2026-10-22");
   await page.getByLabel("External reference (optional)", { exact: true }).fill(reference);
   await page
@@ -610,9 +659,7 @@ async function recordConfirmation(
   await page
     .getByRole("button", { name: "Record user-reported event as unverified", exact: true })
     .click();
-  await expect(page.getByRole("status")).toContainText(
-    "USER_RECORDED_UNVERIFIED. This is not ATO verification.",
-  );
+  await expectLifecycleMessage(page, "USER_RECORDED_UNVERIFIED. This is not ATO verification.");
 }
 
 async function latestFrozen(page: Page, workspace: Workspace) {
@@ -832,6 +879,14 @@ function assertCsvSourceManifest(
   expect(periodEvidenceStrings).toContain(sources.actualDueDateEvidence.id);
   expect(periodEvidenceStrings).toContain(sources.actualDueDateEvidence.hash);
 
+  const profileSnapshot = csv.rows.find(
+    (row) => row.record_type === "pinned_snapshot" && row.field === "profile_snapshot",
+  );
+  if (!profileSnapshot) throw new Error("BAS_ACCEPTANCE_PROFILE_SNAPSHOT_MISSING");
+  const profileSnapshotStrings = collectStrings(jsonRecord(profileSnapshot));
+  expect(profileSnapshotStrings).toContain(sources.profileEvidence.id);
+  expect(profileSnapshotStrings).toContain(sources.profileEvidence.hash);
+
   const payrollEvidenceRows = csv.rows.filter((row) => row.record_type === "trace_evidence");
   for (const label of ["W1", "W2", "T1"]) {
     expect(
@@ -864,6 +919,9 @@ function assertCsvSourceManifest(
   ]) {
     expect(coverageStrings, `coverage manifest includes ${sourceId}`).toContain(sourceId);
   }
+  // This supporting profile document has no financial value and must not become a coverage source.
+  expect(coverageStrings).not.toContain(sources.profileEvidence.id);
+  expect(coverageStrings).not.toContain(sources.profileEvidence.hash);
 }
 
 function assertPdfReport(
@@ -920,6 +978,8 @@ function assertPdfReport(
   expect(text).toContain(sources.purchase.paymentId);
   expect(text).toContain(sources.paygEvidence.id);
   expect(text).toContain(sources.paygEvidence.hash);
+  expect(text).toContain(sources.profileEvidence.id);
+  expect(text).toContain(sources.profileEvidence.hash);
   expect(text).toContain(sources.actualDueDateEvidence.id);
   expect(text).toContain(sources.actualDueDateEvidence.hash);
   for (const source of sources.sales) expect(text).toContain(source.sourceHash);
@@ -989,9 +1049,15 @@ async function exportFrozen(
   const file = testInfo.outputPath(name);
   await mkdir(path.dirname(file), { recursive: true });
   await page.getByRole("button", { name: "Export", exact: true }).click();
-  await page.getByLabel("Exact report source", { exact: true }).selectOption("frozen_bas");
-  await page.getByLabel("Frozen BAS identity", { exact: true }).selectOption(refKey(ref));
-  await page.getByLabel("Format", { exact: true }).selectOption(format.toLowerCase());
+  await page
+    .getByRole("combobox", { name: "Exact report source", exact: true })
+    .selectOption("frozen_bas");
+  await page
+    .getByRole("combobox", { name: "Frozen BAS identity", exact: true })
+    .selectOption(refKey(ref));
+  await page
+    .getByRole("combobox", { name: "Format", exact: true })
+    .selectOption(format.toLowerCase());
   await electronHarness.application.evaluate(({ dialog }, filePath) => {
     dialog.showSaveDialog = async () => ({ canceled: false, filePath });
   }, file);
@@ -1122,9 +1188,13 @@ async function cancelFrozenExport(
   ref: BasReference,
 ) {
   await page.getByRole("button", { name: "Export", exact: true }).click();
-  await page.getByLabel("Exact report source", { exact: true }).selectOption("frozen_bas");
-  await page.getByLabel("Frozen BAS identity", { exact: true }).selectOption(refKey(ref));
-  await page.getByLabel("Format", { exact: true }).selectOption("pdf");
+  await page
+    .getByRole("combobox", { name: "Exact report source", exact: true })
+    .selectOption("frozen_bas");
+  await page
+    .getByRole("combobox", { name: "Frozen BAS identity", exact: true })
+    .selectOption(refKey(ref));
+  await page.getByRole("combobox", { name: "Format", exact: true }).selectOption("pdf");
   await electronHarness.application.evaluate(({ dialog }) => {
     dialog.showSaveDialog = async () => ({ canceled: true, filePath: "" });
   });
@@ -1301,10 +1371,21 @@ test("BAS lifecycle: clean cash sources, blocked PAYGI resolution, frozen handof
     "actual-due-date-evidence",
   );
   const dueDateEvidence = evidenceFor(dueDateStatement);
+  const profileEvidenceDocument = await retainPurchaseThroughUi(
+    page,
+    workspace,
+    "BAS-PROFILE-REGISTRATION-EVIDENCE-001",
+    "2025-07-01",
+    true,
+    false,
+    "profile-evidence",
+  );
+  const profileEvidence = evidenceFor(profileEvidenceDocument);
   const initialExportSources: BasExportSources = {
     sales: initialSales,
     purchase: purchaseSource,
     paygEvidence: retainedEvidence,
+    profileEvidence,
     actualDueDateEvidence: dueDateEvidence,
   };
 
@@ -1315,7 +1396,7 @@ test("BAS lifecycle: clean cash sources, blocked PAYGI resolution, frozen handof
     await expect(stages.getByRole("button", { name: stage, exact: true })).toBeVisible();
   }
 
-  await configureProfileAndPeriod(page, retainedEvidence, dueDateEvidence);
+  await configureProfileAndPeriod(page, profileEvidence, dueDateEvidence);
   await regenerateSaveAndValidate(page, retainedEvidence, "unknown");
   await expect(page.getByText("PAYGI_NOTICE_STATUS_UNKNOWN", { exact: true })).toBeVisible();
   await expect(page.getByText("PAYGI_PRIOR_VARIATION_UNKNOWN", { exact: true })).toBeVisible();
@@ -1325,19 +1406,22 @@ test("BAS lifecycle: clean cash sources, blocked PAYGI resolution, frozen handof
 
   await page.getByRole("button", { name: "Prepare", exact: true }).click();
   await page
-    .getByLabel("PAYGI notice status", { exact: true })
+    .getByRole("combobox", { name: "PAYGI notice status", exact: true })
     .selectOption({ label: "operative" });
-  await page.getByLabel("PAYGI prior variation", { exact: true }).selectOption({ label: "none" });
+  await page
+    .getByRole("combobox", { name: "PAYGI prior variation", exact: true })
+    .selectOption({ label: "none" });
   await page.getByRole("button", { name: "Save exact PAYG inputs", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText(
+  await expectLifecycleMessage(
+    page,
     "Saved PAYG inputs against the displayed preparation revision",
   );
   await page.getByRole("button", { name: "Regenerate exact calculation", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("Prepared exact BAS version");
+  await expectLifecycleMessage(page, "Prepared exact BAS version");
   await page.getByRole("button", { name: "Review", exact: true }).click();
   await page.getByRole("button", { name: "Run validation on this exact calculation" }).click();
-  await expect(page.getByRole("status")).toContainText("Created review validation");
-  await expect(page.getByText(/Blocker ·/)).toHaveCount(0);
+  await expectLifecycleMessage(page, "Created review validation");
+  await expectNoReviewBlockers(page);
   screenshots.push(await captureScreenshot(page, testInfo, "bas-reviewed-labels.png"));
 
   await page.getByRole("button", { name: "Freeze", exact: true }).click();
@@ -1353,7 +1437,7 @@ test("BAS lifecycle: clean cash sources, blocked PAYGI resolution, frozen handof
     .check();
   await page.getByRole("button", { name: "Review role change", exact: true }).click();
   await page.getByRole("button", { name: "Confirm and save", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("BAS approval authority updated");
+  await expectAuthorityMessage(page, "BAS approval authority updated");
 
   const totp = await setupTotp(page);
   await page.getByRole("link", { name: "GST & BAS", exact: true }).click();
@@ -1463,28 +1547,32 @@ test("BAS lifecycle: clean cash sources, blocked PAYGI resolution, frozen handof
   await page
     .getByRole("button", { name: "Create revision from exact confirmed head", exact: true })
     .click();
-  await expect(page.getByRole("status")).toContainText("Created a BAS revision");
+  await expectLifecycleMessage(page, "Created a BAS revision");
   await page.getByRole("button", { name: "Prepare", exact: true }).click();
   await page.getByRole("button", { name: "Regenerate exact calculation", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("Prepared exact BAS version");
+  await expectLifecycleMessage(page, "Prepared exact BAS version");
   await page
-    .getByLabel("W1 total payments state", { exact: true })
+    .getByRole("combobox", { name: "W1 total payments state", exact: true })
     .selectOption({ label: "known" });
   await page.getByLabel("W1 total payments exact AUD", { exact: true }).fill("1000.00");
   await page
-    .getByLabel("W2 amount withheld state", { exact: true })
+    .getByRole("combobox", { name: "W2 amount withheld state", exact: true })
     .selectOption({ label: "known" });
   await page.getByLabel("W2 amount withheld exact AUD", { exact: true }).fill("50.00");
   await page
-    .getByLabel("W3 other withholding state", { exact: true })
+    .getByRole("combobox", { name: "W3 other withholding state", exact: true })
     .selectOption({ label: "known zero" });
+  await page.getByLabel("W3 other withholding exact AUD", { exact: true }).fill("0.00");
   await page
-    .getByLabel("W4 no-ABN withholding state", { exact: true })
+    .getByRole("combobox", { name: "W4 no-ABN withholding state", exact: true })
     .selectOption({ label: "known zero" });
+  await page.getByLabel("W4 no-ABN withholding exact AUD", { exact: true }).fill("0.00");
   await page
-    .getByLabel("PAYGI method for this input", { exact: true })
+    .getByRole("combobox", { name: "PAYGI method for this input", exact: true })
     .selectOption({ label: "rate" });
-  await page.getByLabel("PAYGI amount state", { exact: true }).selectOption({ label: "known" });
+  await page
+    .getByRole("combobox", { name: "PAYGI amount state", exact: true })
+    .selectOption({ label: "known" });
   await page.getByLabel("PAYGI exact AUD (T7 or T1)", { exact: true }).fill("2010.99");
   await page.getByLabel("PAYGI exact T2 rate (e.g. 15.5)", { exact: true }).fill("1.7");
   await page
@@ -1493,9 +1581,11 @@ test("BAS lifecycle: clean cash sources, blocked PAYGI resolution, frozen handof
   await page.getByLabel("Income year start", { exact: true }).fill("2026-07-01");
   await page.getByLabel("Income year end", { exact: true }).fill("2027-06-30");
   await page
-    .getByLabel("PAYGI notice status", { exact: true })
+    .getByRole("combobox", { name: "PAYGI notice status", exact: true })
     .selectOption({ label: "operative" });
-  await page.getByLabel("PAYGI prior variation", { exact: true }).selectOption({ label: "none" });
+  await page
+    .getByRole("combobox", { name: "PAYGI prior variation", exact: true })
+    .selectOption({ label: "none" });
   await page
     .getByLabel("PAYG review reason", { exact: true })
     .fill(
@@ -1503,21 +1593,22 @@ test("BAS lifecycle: clean cash sources, blocked PAYGI resolution, frozen handof
     );
   await fillEvidence(page, retainedEvidence);
   await page.getByRole("button", { name: "Save exact PAYG inputs", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText(
+  await expectLifecycleMessage(
+    page,
     "Saved PAYG inputs against the displayed preparation revision",
   );
   await page.getByRole("button", { name: "Regenerate exact calculation", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("Prepared exact BAS version");
+  await expectLifecycleMessage(page, "Prepared exact BAS version");
   await page.getByRole("button", { name: "Review", exact: true }).click();
   await page.getByRole("button", { name: "Run validation on this exact calculation" }).click();
-  await expect(page.getByRole("status")).toContainText("Created review validation");
-  await expect(page.getByText(/Blocker ·/)).toHaveCount(0);
-  const warnings = page.locator("input[type=checkbox]:not([disabled])");
+  await expectLifecycleMessage(page, "Created review validation");
+  await expectNoReviewBlockers(page);
+  const warnings = reviewFindings(page).locator('input[type="checkbox"]:not([disabled])');
   const warningCount = await warnings.count();
   if (warningCount > 0) {
     for (let index = 0; index < warningCount; index += 1) await warnings.nth(index).check();
     await page.getByRole("button", { name: "Acknowledge selected exact warnings" }).click();
-    await expect(page.getByRole("status")).toContainText("Recorded exact warning acknowledgement");
+    await expectLifecycleMessage(page, "Recorded exact warning acknowledgement");
   }
   screenshots.push(await captureScreenshot(page, testInfo, "bas-linked-revision-review.png"));
   await freezeCurrent(

@@ -495,6 +495,8 @@ export function BasPreparationLifecycle({
   const [rejectedReplacementReason, setRejectedReplacementReason] = useState("");
   const [effectiveStart, setEffectiveStart] = useState(todayDate());
   const [effectiveEnd, setEffectiveEnd] = useState("");
+  const [gstRegistrationStart, setGstRegistrationStart] = useState("");
+  const [gstRegistrationEnd, setGstRegistrationEnd] = useState("");
   const [profileReason, setProfileReason] = useState("");
   const [gstApplicability, setGstApplicability] = useState(BasApplicability.UNKNOWN);
   const [gstStatus, setGstStatus] = useState(BasRegistrationStatus.UNKNOWN);
@@ -1139,20 +1141,50 @@ export function BasPreparationLifecycle({
   const saveProfile = () =>
     execute(async () => {
       if (!workspace || !canPrepare || !profileReason.trim()) throw new Error("invalid profile");
-      if (gstApplicability === BasApplicability.ACTIVE && !gstReason.trim())
+      if (gstApplicability !== BasApplicability.UNKNOWN && !gstReason.trim())
         throw new Error("GST reason required");
       const refs = parseEvidence(evidence);
+      const paygiMethodNeedsIncomeYear =
+        paygiMethod === BasPaygiMethod.AMOUNT || paygiMethod === BasPaygiMethod.RATE;
+      if (
+        (paygiApplicability === BasApplicability.NOT_APPLICABLE &&
+          paygiMethod !== BasPaygiMethod.NOT_APPLICABLE) ||
+        (paygiApplicability === BasApplicability.ACTIVE &&
+          paygiMethod === BasPaygiMethod.NOT_APPLICABLE)
+      )
+        throw new Error("PAYGI applicability and method do not agree");
+      if (
+        paygiMethodNeedsIncomeYear &&
+        (!UUID.test(incomeYearId) || !incomeYearStart || !incomeYearEnd || !refs[0])
+      )
+        throw new Error(
+          "PAYGI amount and rate methods require a confirmed income year and evidence",
+        );
       const answer = (applicability: BasApplicability, answerReason = "") =>
-        create(BasObligationAnswerSchema, { applicability, evidence: [], reason: answerReason });
+        create(BasObligationAnswerSchema, {
+          applicability,
+          evidence: applicability === BasApplicability.UNKNOWN ? [] : refs,
+          reason: applicability === BasApplicability.UNKNOWN ? "" : answerReason.trim(),
+        });
       const other = create(
         BasOtherObligationInventorySchema,
         Object.fromEntries(
           OTHER_OBLIGATIONS.map(([key]) => [
             key,
-            answer(otherAnswers[key] ?? BasApplicability.UNKNOWN),
+            answer(otherAnswers[key] ?? BasApplicability.UNKNOWN, profileReason),
           ]),
         ),
       );
+      const confirmedIncomeYear = paygiMethodNeedsIncomeYear
+        ? create(BasIncomeYearIdentitySchema, {
+            incomeYearId,
+            dates: create(BasCivilDateRangeSchema, {
+              startDate: civil(incomeYearStart),
+              endDate: civil(incomeYearEnd),
+            }),
+            confirmation: refs[0],
+          })
+        : undefined;
       const profile = create(BasObligationsProfileInputSchema, {
         effectiveInterval: create(BasEffectiveIntervalSchema, {
           startDate: civil(effectiveStart),
@@ -1161,6 +1193,14 @@ export function BasPreparationLifecycle({
         gst: create(BasGstProfileInputSchema, {
           applicability: gstApplicability,
           registrationStatus: gstStatus,
+          ...(gstStatus === BasRegistrationStatus.REGISTERED
+            ? {
+                registrationInterval: create(BasEffectiveIntervalSchema, {
+                  startDate: civil(gstRegistrationStart),
+                  ...(gstRegistrationEnd ? { endDate: civil(gstRegistrationEnd) } : {}),
+                }),
+              }
+            : {}),
           reportingMethod: gstMethod,
           turnoverCategory: turnover,
           gstBasis,
@@ -1181,6 +1221,7 @@ export function BasPreparationLifecycle({
           applicability: answer(paygiApplicability, paygiReason),
           method: paygiMethod,
           cadence: paygiCadence,
+          ...(confirmedIncomeYear ? { confirmedIncomeYear } : {}),
           evidence: refs,
           reason: paygiReason,
         }),
@@ -1964,6 +2005,10 @@ export function BasPreparationLifecycle({
           setEffectiveStart={setEffectiveStart}
           effectiveEnd={effectiveEnd}
           setEffectiveEnd={setEffectiveEnd}
+          gstRegistrationStart={gstRegistrationStart}
+          setGstRegistrationStart={setGstRegistrationStart}
+          gstRegistrationEnd={gstRegistrationEnd}
+          setGstRegistrationEnd={setGstRegistrationEnd}
           profileReason={profileReason}
           setProfileReason={setProfileReason}
           gstApplicability={gstApplicability}
@@ -2178,6 +2223,10 @@ function PrepareStage(props: any) {
     setEffectiveStart,
     effectiveEnd,
     setEffectiveEnd,
+    gstRegistrationStart,
+    setGstRegistrationStart,
+    gstRegistrationEnd,
+    setGstRegistrationEnd,
     profileReason,
     setProfileReason,
     gstApplicability,
@@ -2253,6 +2302,62 @@ function PrepareStage(props: any) {
     onSaveInputs,
     busy,
   } = props;
+  const profileEvidenceComplete =
+    /^[a-z][a-z0-9_]{0,63}$/.test(evidence.type) &&
+    UUID.test(evidence.id) &&
+    /^[1-9]\d{0,19}$/.test(evidence.revision) &&
+    BigInt(evidence.revision || "0") <= 18446744073709551615n &&
+    HASH.test(evidence.hash);
+  const paygiMethodNeedsIncomeYear =
+    paygiMethod === BasPaygiMethod.AMOUNT || paygiMethod === BasPaygiMethod.RATE;
+  const hasDecidedObligation =
+    [gstApplicability, paygwApplicability, paygiApplicability, ...Object.values(otherAnswers)].some(
+      (value) => value !== BasApplicability.UNKNOWN,
+    ) ||
+    gstStatus !== BasRegistrationStatus.UNKNOWN ||
+    paygiMethodNeedsIncomeYear;
+  const profileIntervalValid =
+    Boolean(effectiveStart) && (!effectiveEnd || effectiveEnd >= effectiveStart);
+  const gstRegistrationIntervalValid =
+    gstStatus !== BasRegistrationStatus.REGISTERED ||
+    (Boolean(gstRegistrationStart) &&
+      (!gstRegistrationEnd || gstRegistrationEnd >= gstRegistrationStart));
+  const incomeYearDatesOrdered =
+    !paygiMethodNeedsIncomeYear ||
+    !incomeYearStart ||
+    !incomeYearEnd ||
+    incomeYearEnd >= incomeYearStart;
+  const gstStatusMatchesApplicability =
+    (gstApplicability === BasApplicability.UNKNOWN ||
+      (gstApplicability === BasApplicability.ACTIVE &&
+        gstStatus === BasRegistrationStatus.REGISTERED) ||
+      (gstApplicability === BasApplicability.NOT_APPLICABLE &&
+        gstStatus === BasRegistrationStatus.NOT_REGISTERED)) &&
+    (gstStatus !== BasRegistrationStatus.REGISTERED || Boolean(gstRegistrationStart));
+  const incomeYearIdentityComplete =
+    UUID.test(incomeYearId) && Boolean(incomeYearStart) && Boolean(incomeYearEnd);
+  const paygiProfileIncomeYearComplete = !paygiMethodNeedsIncomeYear || incomeYearIdentityComplete;
+  const paygiProfileMethodConsistent =
+    (paygiApplicability !== BasApplicability.NOT_APPLICABLE ||
+      paygiMethod === BasPaygiMethod.NOT_APPLICABLE) &&
+    (paygiApplicability !== BasApplicability.ACTIVE ||
+      paygiMethod !== BasPaygiMethod.NOT_APPLICABLE);
+  const decidedAnswerReasonsPresent =
+    (gstApplicability === BasApplicability.UNKNOWN || Boolean(gstReason.trim())) &&
+    (paygwApplicability === BasApplicability.UNKNOWN || Boolean(paygwReason.trim())) &&
+    (paygiApplicability === BasApplicability.UNKNOWN || Boolean(paygiReason.trim()));
+  const canSaveProfile =
+    canPrepare &&
+    !busy &&
+    Boolean(profileReason.trim()) &&
+    decidedAnswerReasonsPresent &&
+    profileIntervalValid &&
+    gstRegistrationIntervalValid &&
+    gstStatusMatchesApplicability &&
+    (!hasDecidedObligation || profileEvidenceComplete) &&
+    paygiProfileIncomeYearComplete &&
+    incomeYearDatesOrdered &&
+    paygiProfileMethodConsistent;
   const selectedPeriodItem = periods.find(
     (item: BasPeriodSummary) => refKey(item.period) === selectedPeriod,
   );
@@ -2352,6 +2457,41 @@ function PrepareStage(props: any) {
           />
           <TextInput label="GST decision reason" value={gstReason} setValue={setGstReason} />
         </div>
+        {!effectiveStart ? (
+          <p className="text-[9px] text-warning" role="note">
+            Enter the profile effective start date before saving.
+          </p>
+        ) : effectiveEnd && effectiveEnd < effectiveStart ? (
+          <p className="text-[9px] text-warning" role="note">
+            The profile end date must be on or after its start date.
+          </p>
+        ) : null}
+        {gstStatus === BasRegistrationStatus.REGISTERED ? (
+          <div className="grid gap-2">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+              <DateInput
+                label="GST registration effective from"
+                value={gstRegistrationStart}
+                setValue={setGstRegistrationStart}
+              />
+              <DateInput
+                label="GST registration effective through (optional)"
+                value={gstRegistrationEnd}
+                setValue={setGstRegistrationEnd}
+              />
+            </div>
+            {!gstRegistrationStart ? (
+              <p className="text-[9px] text-warning" role="note">
+                Enter the retained GST registration start date. This is separate from the profile
+                effective date and is required before a registered profile can be saved.
+              </p>
+            ) : gstRegistrationEnd && gstRegistrationEnd < gstRegistrationStart ? (
+              <p className="text-[9px] text-warning" role="note">
+                The GST registration end date must be on or after its start date.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <EnumField
             label="PAYGW obligation"
@@ -2430,6 +2570,12 @@ function PrepareStage(props: any) {
           />
           <TextInput label="PAYGI reason" value={paygiReason} setValue={setPaygiReason} />
         </div>
+        {!paygiProfileMethodConsistent ? (
+          <p className="text-[9px] text-warning" role="note">
+            Not-applicable PAYGI must use the not-applicable method. Active PAYGI cannot use that
+            method.
+          </p>
+        ) : null}
         <div className="grid gap-2 rounded border border-border bg-background p-3">
           <h3 className="text-[10px] font-semibold">Other activity statement obligations</h3>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -2449,19 +2595,76 @@ function PrepareStage(props: any) {
             ))}
           </div>
         </div>
+        {paygiMethodNeedsIncomeYear ? (
+          <div className="grid gap-2 rounded border border-border bg-background p-3">
+            <h3 className="text-[10px] font-semibold">PAYGI confirmed income year</h3>
+            <p className="text-[9px] leading-4 text-muted-foreground">
+              This income-year identity is retained in the obligations profile and reused for the
+              later PAYG input review. The first shared evidence identity below confirms this year.
+            </p>
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+              <TextInput
+                label="Confirmed income year UUID"
+                value={incomeYearId}
+                setValue={setIncomeYearId}
+              />
+              <DateInput
+                label="Income year start"
+                value={incomeYearStart}
+                setValue={setIncomeYearStart}
+              />
+              <DateInput
+                label="Income year end"
+                value={incomeYearEnd}
+                setValue={setIncomeYearEnd}
+              />
+            </div>
+            {!incomeYearIdentityComplete ? (
+              <p className="text-[9px] text-warning" role="note">
+                Enter a canonical income-year UUID and both calendar dates before saving this amount
+                or rate method or its later PAYG input.
+              </p>
+            ) : incomeYearEnd < incomeYearStart ? (
+              <p className="text-[9px] text-warning" role="note">
+                The income year end date must be on or after its start date.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
         <EvidenceEditor
           value={evidence}
           setValue={setEvidence}
-          label="Exact retained evidence identity (optional)"
+          label="Shared retained profile evidence identity"
         />
+        <p className="text-[9px] leading-4 text-muted-foreground">
+          This exact source is attached to GST, PAYGW, PAYGI and each selected active or not
+          applicable answer in the other-obligations inventory. It also confirms the PAYGI income
+          year. Unknown answers remain unresolved and receive no reason or evidence.
+        </p>
+        {hasDecidedObligation && !profileEvidenceComplete ? (
+          <p className="text-[9px] text-warning" role="note">
+            Enter a complete retained source identity before saving a decided obligation or selected
+            PAYGI amount or rate method.
+          </p>
+        ) : null}
+        {!gstStatusMatchesApplicability ? (
+          <p className="text-[9px] text-warning" role="note">
+            Active GST requires a registered status and registration start date. Not-applicable GST
+            requires a not-registered status.
+          </p>
+        ) : null}
         <TextInput
           label="Profile decision reason"
           value={profileReason}
           setValue={setProfileReason}
         />
+        <p className="text-[9px] leading-4 text-muted-foreground">
+          This reviewed profile reason is also retained as the reason for every selected active or
+          not applicable answer in the other-obligations inventory.
+        </p>
         <Button
           className="h-8 w-fit text-[10px]"
-          disabled={!canPrepare || busy || !profileReason.trim()}
+          disabled={!canSaveProfile}
           onClick={onSaveProfile}
           type="button"
         >
@@ -2698,25 +2901,6 @@ function PrepareStage(props: any) {
                 status are confirmed from the retained evidence. Unknown stays blocked; uncertain or
                 new variation handling remains unsupported.
               </p>
-            </div>
-          ) : null}
-          {paygiMethod === BasPaygiMethod.AMOUNT || paygiMethod === BasPaygiMethod.RATE ? (
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-              <TextInput
-                label="Confirmed income year UUID"
-                value={incomeYearId}
-                setValue={setIncomeYearId}
-              />
-              <DateInput
-                label="Income year start"
-                value={incomeYearStart}
-                setValue={setIncomeYearStart}
-              />
-              <DateInput
-                label="Income year end"
-                value={incomeYearEnd}
-                setValue={setIncomeYearEnd}
-              />
             </div>
           ) : null}
           <TextInput
