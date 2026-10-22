@@ -62,8 +62,9 @@ import {
 import { ConveyorError } from "electron-conveyor/define";
 import { BAS_PREPARATION_RESPONSE_FRAME_LIMIT } from "../../shared/bas-preparation-ipc";
 import { createProtoMethodCodec } from "../../shared/proto-ipc";
+import { invokeBasPreparation as invokeCore } from "../bas-preparation-proto";
 import { command, defineModule, query } from "../init";
-import { conveyorProtoFrame, invokeCore } from "../proto";
+import { conveyorProtoFrame } from "../proto";
 
 const MAX_QUERY = 16_384;
 const MAX_MUTATION = Math.floor(1.1 * 1024 * 1024);

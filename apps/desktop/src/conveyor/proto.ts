@@ -1,8 +1,9 @@
 import { ConveyorError, type StandardSchemaV1 } from "electron-conveyor/define";
 import { z } from "zod";
+import { BasCoreCorrection } from "../shared/bas-preparation-errors";
 import { PurchaseCoreCorrection } from "../shared/purchase-errors";
 
-interface ProtoCodec<Request, Response> {
+export interface ProtoCodec<Request, Response> {
   decodeRequest(frame: Uint8Array): Request;
   encodeResponse(response: Response): Uint8Array;
 }
@@ -55,7 +56,8 @@ export async function invokeCore<Request, Response>(
     if (copiedResponse === undefined) throw new Error("INVALID_RESPONSE");
     return copiedResponse;
   } catch (error) {
-    if (error instanceof PurchaseCoreCorrection) throw new ConveyorError(error.code, error.code);
+    if (error instanceof PurchaseCoreCorrection || error instanceof BasCoreCorrection)
+      throw new ConveyorError(error.code, error.code);
     throw new ConveyorError("CORE_REQUEST_FAILED", "CORE_REQUEST_FAILED");
   }
 }

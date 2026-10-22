@@ -2,6 +2,7 @@ import { create, type DescMessage } from "@bufbuild/protobuf";
 import { TimestampSchema } from "@bufbuild/protobuf/wkt";
 import {
   BasApplicability,
+  BasCalculationSchema,
   BasChainExpectationSchema,
   BasCivilDateRangeSchema,
   BasConfirmedPeriodSchema,
@@ -14,6 +15,7 @@ import {
   BasExportTargetSchema,
   BasExternalDisputeSummarySchema,
   BasExternalEventKind,
+  BasFindingSeverity,
   BasFrozenBasSummarySchema,
   BasLiveCurrentness,
   BasObligationsProfileSchema,
@@ -25,6 +27,8 @@ import {
   BasPreparationSchema,
   BasPreparationState,
   BasPreparationSummarySchema,
+  BasValidationFindingSchema,
+  BasValidationSnapshotSchema,
   ConfirmBasPeriodRequestSchema,
   ConfirmBasPeriodResponseSchema,
   GetBasCalendarRequestSchema,
@@ -1052,6 +1056,212 @@ it("keeps a retained review-ready state separate from changed live source curren
   );
   expect(fixture.procedures.basPreparation.freezeBasForManualHandoff).not.toHaveBeenCalled();
 });
+
+it.each([
+  {
+    code: "BAS_SOURCE_CAPACITY",
+    message:
+      "The complete BAS source exceeds the supported capture capacity. Retain the actual statement period and review source records or contact support.",
+  },
+  {
+    code: "BAS_CONFLICT",
+    message:
+      "The BAS history changed while you were reviewing it. Refresh the exact history, review the current blockers, and retry only if the action is still appropriate.",
+  },
+  {
+    code: "BAS_IDEMPOTENCY_CONFLICT",
+    message:
+      "This BAS action key was already used for a different request. Refresh the history and start a new action.",
+  },
+  {
+    code: "BAS_PERMISSION_DENIED",
+    message:
+      "Your current BAS role does not allow this action. Ask a workspace administrator to review your assigned roles.",
+  },
+  {
+    code: "BAS_AUTHENTICATION_REQUIRED",
+    message:
+      "Your session could not be verified for this BAS action. Sign in again, then refresh the exact history.",
+  },
+  {
+    code: "BAS_REQUEST_TIMEOUT",
+    message:
+      "The BAS request timed out. Refresh the exact history before retrying to check whether it was saved.",
+  },
+])(
+  "explains unsupported manual tax facts and gives safe guidance for $code",
+  async ({ code, message }) => {
+    const fixture = createConveyorFixture();
+    const workspace = {
+      workspaceId: "018f0000-0000-7000-8000-000000000041",
+      userId: "018f0000-0000-7000-8000-000000000042",
+      sessionId: "018f0000-0000-7000-8000-000000000043",
+      organisationId: "018f0000-0000-7000-8000-000000000044",
+    };
+    const preparationId = "018f0000-0000-7000-8000-000000000045";
+    const preparationHash = new Uint8Array(32).fill(0x45);
+    const calculationId = "018f0000-0000-7000-8000-000000000046";
+    const calculationHash = new Uint8Array(32).fill(0x46);
+    const preparationRef = create(SourceRefSchema, {
+      type: "bas_preparation",
+      id: preparationId,
+      revision: 1n,
+      contentHash: preparationHash,
+    });
+    const calculationRef = create(SourceRefSchema, {
+      type: "bas_calculation",
+      id: calculationId,
+      revision: 1n,
+      contentHash: calculationHash,
+    });
+    const family = create(SourceRefSchema, {
+      type: "bas_family",
+      id: "018f0000-0000-7000-8000-000000000047",
+      revision: 1n,
+      contentHash: new Uint8Array(32).fill(0x47),
+    });
+    const period = create(SourceRefSchema, {
+      type: "bas_period",
+      id: "018f0000-0000-7000-8000-000000000048",
+      revision: 1n,
+      contentHash: new Uint8Array(32).fill(0x48),
+    });
+    const profile = create(SourceRefSchema, {
+      type: "bas_obligations_profile",
+      id: "018f0000-0000-7000-8000-000000000049",
+      revision: 1n,
+      contentHash: new Uint8Array(32).fill(0x49),
+    });
+    const validationId = "018f0000-0000-7000-8000-00000000004a";
+    const validationHash = new Uint8Array(32).fill(0x4a);
+    const sourceSnapshotHash = new Uint8Array(32).fill(0x4b);
+    const warningId = "018f0000-0000-7000-8000-00000000004c";
+    const manualTaxFactId = "018f0000-0000-7000-8000-00000000004d";
+
+    fixture.procedures.organisation.getCurrentUser.mockResolvedValue(
+      codecs.user.encodeResponse(
+        create(GetCurrentUserResponseSchema, {
+          user: create(UserSchema, {
+            id: workspace.userId,
+            version: 2n,
+            username: "preparer",
+            displayName: "Preparer",
+            state: UserState.ACTIVE,
+            roles: [Role.BUSINESS_PREPARER],
+          }),
+        }),
+      ),
+    );
+    fixture.procedures.basPreparation.listBasObligationsProfiles.mockResolvedValue(
+      codecs.profiles.encodeResponse(create(ListBasObligationsProfilesResponseSchema, {})),
+    );
+    fixture.procedures.basPreparation.listBasPeriods.mockResolvedValue(
+      codecs.periods.encodeResponse(create(ListBasPeriodsResponseSchema, {})),
+    );
+    fixture.procedures.basPreparation.listBasPreparations.mockResolvedValue(
+      codecs.preparations.encodeResponse(
+        create(ListBasPreparationsResponseSchema, {
+          preparations: [
+            create(BasPreparationSummarySchema, {
+              preparation: preparationRef,
+              family,
+              period,
+              profile,
+              state: BasPreparationState.REVIEW_READY,
+              currentCalculation: calculationRef,
+              inputRevision: 1n,
+              inputHash: new Uint8Array(32).fill(0x4c),
+              updatedAt: create(TimestampSchema, { seconds: 1_792_656_000n }),
+            }),
+          ],
+        }),
+      ),
+    );
+    fixture.procedures.basPreparation.listFrozenBas.mockResolvedValue(
+      codecs.frozen.encodeResponse(create(ListFrozenBasResponseSchema, {})),
+    );
+    fixture.procedures.basPreparation.listBasExternalDisputeResolutions.mockResolvedValue(
+      codecs.disputes.encodeResponse(create(ListBasExternalDisputeResolutionsResponseSchema, {})),
+    );
+    fixture.procedures.basPreparation.getBasPreparation.mockResolvedValue(
+      codecs.preparationDetail.encodeResponse(
+        create(GetBasPreparationResponseSchema, {
+          preparation: create(BasPreparationSchema, {
+            preparationId,
+            organisationId: workspace.organisationId,
+            version: 1n,
+            state: BasPreparationState.REVIEW_READY,
+            contentHash: preparationHash,
+            inputHash: new Uint8Array(32).fill(0x4c),
+            sourceSnapshotHash,
+          }),
+          currentCalculation: create(BasCalculationSchema, {
+            calculationId,
+            organisationId: workspace.organisationId,
+            version: 1n,
+            contentHash: calculationHash,
+            preparation: preparationRef,
+            family,
+            period,
+            profile,
+          }),
+          currentValidation: create(BasValidationSnapshotSchema, {
+            validationId,
+            revision: 1n,
+            contentHash: validationHash,
+            preparationId,
+            preparationHash,
+            calculationId,
+            calculationHash,
+            sourceSnapshotHash,
+            createdAt: create(TimestampSchema, { seconds: 1_792_656_000n }),
+            inputRevision: 1n,
+            inputHash: new Uint8Array(32).fill(0x4c),
+            findings: [
+              create(BasValidationFindingSchema, {
+                findingId: warningId,
+                severity: BasFindingSeverity.WARNING,
+                stableCode: "SOURCE_REVIEW_NOTICE",
+                safeMessage: "Review the exact source records before continuing.",
+              }),
+              create(BasValidationFindingSchema, {
+                findingId: manualTaxFactId,
+                severity: BasFindingSeverity.UNSUPPORTED,
+                stableCode: "MANUAL_TAX_FACT_UNSUPPORTED",
+                safeMessage: "A manual accounting tax fact requires review.",
+              }),
+            ],
+          }),
+        }),
+      ),
+    );
+    fixture.procedures.basPreparation.acknowledgeBasWarnings.mockImplementation(async () => {
+      throw { code };
+    });
+
+    renderWithConveyor(
+      <BasPreparationLifecycle
+        api={fixture.conveyor.basPreparation}
+        identityApi={fixture.conveyor.organisation}
+        reportApi={fixture.conveyor.reporting}
+        workspace={workspace}
+      />,
+    );
+
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Review" }));
+    const findings = await screen.findByRole("heading", { name: "Review findings" });
+    const review = within(findings.parentElement as HTMLElement);
+    expect(
+      review.getByText(
+        "External review required: this manual accounting tax treatment is unsupported and must be reviewed externally before inclusion. Tammy will not infer, carry forward, or reclassify it.",
+      ),
+    ).toBeTruthy();
+    await user.click(review.getByLabelText(/Warning · SOURCE_REVIEW_NOTICE/));
+    await user.click(screen.getByRole("button", { name: "Acknowledge selected exact warnings" }));
+    expect(await screen.findByText(message)).toBeTruthy();
+  },
+);
 
 it("resolves only the server-derived disputed subject set for a Business Lodger", async () => {
   const fixture = createConveyorFixture();

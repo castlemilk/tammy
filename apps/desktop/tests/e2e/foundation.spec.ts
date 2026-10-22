@@ -166,6 +166,7 @@ test("runs the packaged first-run journey offline and exits cleanly", async ({
   expect(Object.keys(bridgeEvidence.manifest).sort()).toEqual([
     "accounting",
     "banking",
+    "basPreparation",
     "documents",
     "organisation",
     "purchases",

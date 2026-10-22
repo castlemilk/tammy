@@ -36,6 +36,12 @@ import {
   type StagedArtifact,
 } from "./electron-lifecycle";
 import {
+  ElectronProcessDiagnostics,
+  observeElectronProcessDiagnostics,
+  safeElectronCloseFailureCode,
+  safeFirstWindowFailureCode,
+} from "./electron-process-diagnostics";
+import {
   type CoreProcessInstancePin,
   findAuthenticatedCoreProcesses,
   findAuthenticatedStagedHelperProcesses,
@@ -98,6 +104,7 @@ interface FixtureLifecycleState {
   readonly coreProcessPins: Map<number, CoreProcessInstancePin>;
   mainClosed?: Promise<void>;
   mainProcess?: ChildProcess;
+  processDiagnostics?: ElectronProcessDiagnostics;
   page?: Page;
   readonly pageErrors: string[];
   readonly packagedLayout: PackagedLayout;
@@ -561,6 +568,28 @@ function fixtureOperations(
   use: (harness: ElectronHarness) => Promise<void>,
   testInfo: TestInfo,
 ): ElectronLifecycleOperations<FixtureLifecycleState, ElectronHarness> {
+  const processSummary = (state: FixtureLifecycleState): string =>
+    state.processDiagnostics?.formatSummary(state.mainProcess) ??
+    "electronProcess=UNKNOWN;stderrMarkers=none";
+  const closeElectron = async (state: FixtureLifecycleState, stage: ElectronCloseStage) => {
+    try {
+      await closeAndReapElectron({
+        forceKillMain: () => {
+          state.forcedKillUsed = true;
+          forceKillMain(state.mainProcess);
+        },
+        gracefulClose: () =>
+          state.application ? requestGracefulElectronQuit(state.application) : Promise.resolve(),
+        mainClosed: state.mainClosed ?? new Promise<void>(() => {}),
+        stage,
+        timeoutMs: CLOSE_TIMEOUT_MS,
+      });
+    } catch (error) {
+      const code = safeElectronCloseFailureCode(error);
+      throw new Error(`${code} [stage=${stage}; ${processSummary(state)}]`);
+    }
+  };
+
   return {
     assertNoOrphan: async (state) => {
       await pollForNoCoreProcesses({
@@ -609,17 +638,7 @@ function fixtureOperations(
     },
     closeAndReap: async (state) => {
       if (!state.application) return;
-      await closeAndReapElectron({
-        forceKillMain: () => {
-          state.forcedKillUsed = true;
-          forceKillMain(state.mainProcess);
-        },
-        gracefulClose: () =>
-          state.application ? requestGracefulElectronQuit(state.application) : Promise.resolve(),
-        mainClosed: state.mainClosed ?? new Promise<void>(() => {}),
-        stage: "final-test-teardown",
-        timeoutMs: CLOSE_TIMEOUT_MS,
-      });
+      await closeElectron(state, "final-test-teardown");
     },
     deleteStagedArtifacts: async (state, artifacts) => {
       for (const artifact of artifacts) {
@@ -705,6 +724,9 @@ function fixtureOperations(
         });
         state.application = application;
         state.mainProcess = application.process();
+        const processDiagnostics = new ElectronProcessDiagnostics();
+        state.processDiagnostics = processDiagnostics;
+        observeElectronProcessDiagnostics(state.mainProcess, processDiagnostics);
         state.mainClosed = observeMainExit(state.mainProcess);
         if (appStorePrivacyJourney) {
           if (!state.mainProcess.pid) throw new Error("ELECTRON_MAIN_PROCESS_MISSING");
@@ -727,7 +749,13 @@ function fixtureOperations(
           await context.tracing.start({ screenshots: true, snapshots: true });
           state.traceStarted = true;
         }
-        const page = await firstWindowWithStartupDiagnostic(application, state);
+        let page: Page;
+        try {
+          page = await firstWindowWithStartupDiagnostic(application, state);
+        } catch (error) {
+          const code = safeFirstWindowFailureCode(error);
+          throw new Error(`${code} [${processSummary(state)}]`);
+        }
         await observeAuthenticatedCorePath(state);
         observe(page);
         state.page = page;
@@ -745,17 +773,7 @@ function fixtureOperations(
       }
       const launched = await launch();
       const closeCurrent = async (stage: ElectronCloseStage) => {
-        await closeAndReapElectron({
-          forceKillMain: () => {
-            state.forcedKillUsed = true;
-            forceKillMain(state.mainProcess);
-          },
-          gracefulClose: () =>
-            state.application ? requestGracefulElectronQuit(state.application) : Promise.resolve(),
-          mainClosed: state.mainClosed ?? new Promise<void>(() => {}),
-          stage,
-          timeoutMs: CLOSE_TIMEOUT_MS,
-        });
+        await closeElectron(state, stage);
         await pollForNoCoreProcesses({
           intervalMs: ORPHAN_POLL_INTERVAL_MS,
           query: () =>

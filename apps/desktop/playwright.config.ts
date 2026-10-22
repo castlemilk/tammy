@@ -17,6 +17,7 @@ export default defineConfig({
         "current-workflows.spec.ts",
         "bas-lifecycle.spec.ts",
         "bas-preparation.spec.ts",
+        "bas-preparation-guards.spec.ts",
         "invoice-income.spec.ts",
         "reporting-exports.spec.ts",
         "purchase-payments.spec.ts",

@@ -88,7 +88,6 @@ const listPreparationsCodec = createProtoMethodCodec({
   maximumRequestBytes: 16_384,
   maximumResponseBytes: BAS_PREPARATION_RESPONSE_FRAME_LIMIT,
 });
-
 type Workspace = Awaited<ReturnType<typeof authenticatedWorkspace>>;
 type TotpClock = { counter: number; readonly secret: string };
 type RetainedEvidence = {

@@ -124,6 +124,7 @@ import {
 } from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TammyConveyorModule } from "../../../conveyor/client";
+import { isBasPreparationCorrectionCode } from "../../../shared/bas-preparation-errors";
 import { BAS_PREPARATION_RESPONSE_FRAME_LIMIT } from "../../../shared/bas-preparation-ipc";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import {
@@ -344,8 +345,30 @@ function parseEvidence(fields: EvidenceFields): Ref[] {
     }),
   ];
 }
-function errorCopy() {
-  return "The BAS change was not confirmed. Refresh the exact history and review blockers before retrying.";
+function errorCopy(error: unknown) {
+  const code =
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    isBasPreparationCorrectionCode(error.code)
+      ? error.code
+      : undefined;
+  switch (code) {
+    case "BAS_SOURCE_CAPACITY":
+      return "The complete BAS source exceeds the supported capture capacity. Retain the actual statement period and review source records or contact support.";
+    case "BAS_CONFLICT":
+      return "The BAS history changed while you were reviewing it. Refresh the exact history, review the current blockers, and retry only if the action is still appropriate.";
+    case "BAS_IDEMPOTENCY_CONFLICT":
+      return "This BAS action key was already used for a different request. Refresh the history and start a new action.";
+    case "BAS_PERMISSION_DENIED":
+      return "Your current BAS role does not allow this action. Ask a workspace administrator to review your assigned roles.";
+    case "BAS_AUTHENTICATION_REQUIRED":
+      return "Your session could not be verified for this BAS action. Sign in again, then refresh the exact history.";
+    case "BAS_REQUEST_TIMEOUT":
+      return "The BAS request timed out. Refresh the exact history before retrying to check whether it was saved.";
+    default:
+      return "The BAS change was not confirmed. Refresh the exact history and review blockers before retrying.";
+  }
 }
 function amountInput(state: BasAmountState, amount: string, evidence: Ref[], reason: string) {
   const parsed =
@@ -1036,8 +1059,8 @@ export function BasPreparationLifecycle({
     try {
       await work();
       await onChanged?.();
-    } catch {
-      setError(errorCopy());
+    } catch (cause) {
+      setError(errorCopy(cause));
     } finally {
       setBusy(false);
     }
@@ -3102,6 +3125,14 @@ function ReviewStage(props: any) {
                   <br />
                   {finding.safeMessage}
                   <br />
+                  {finding.stableCode === "MANUAL_TAX_FACT_UNSUPPORTED" ? (
+                    <span className="font-semibold text-amber-700">
+                      External review required: this manual accounting tax treatment is unsupported
+                      and must be reviewed externally before inclusion. Tammy will not infer, carry
+                      forward, or reclassify it.
+                    </span>
+                  ) : null}
+                  {finding.stableCode === "MANUAL_TAX_FACT_UNSUPPORTED" ? <br /> : null}
                   <span className="break-all text-muted-foreground">
                     Finding {finding.findingId} · source snapshot{" "}
                     {hex(validation.sourceSnapshotHash)}

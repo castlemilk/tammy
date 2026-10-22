@@ -58,6 +58,7 @@ const acceptanceRoot = fileURLToPath(
 );
 
 test.beforeAll(async () => {
+  test.setTimeout(300_000);
   await buildPurchaseEvidenceInspector();
   await buildPurchaseOpeningFixture();
 });

@@ -724,7 +724,7 @@ export async function setupAndRunCurrentAccountingWorkflow(
     bankingLinesNeedingReconciliation: 0,
     bankingLinesUnreconciledInPeriod: 0,
     currentDraftBasWorkpapers: 1,
-    basStatus: BasAttentionStatus.DRAFT_NOT_LODGED,
+    basStatus: BasAttentionStatus.ACTION_NEEDED,
   });
   expect(attention.revisions).toBeDefined();
   expect(attention.revisions?.financialRevision).toBe(7n);
@@ -764,7 +764,9 @@ export async function setupAndRunCurrentAccountingWorkflow(
   ).toBeVisible();
   await expect(page.getByText("Unresolved legacy source", { exact: true })).toBeVisible();
   await assertRoute(page, "Overview", "/overview", "Overview");
-  await expect(page.getByText(WORKFLOW_FIXTURE.bas.statusLabel, { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Action needed · review this exact BAS preparation", { exact: true }),
+  ).toBeVisible();
 
   expect(electronHarness.consoleErrors).toEqual([]);
   expect(electronHarness.pageErrors).toEqual([]);

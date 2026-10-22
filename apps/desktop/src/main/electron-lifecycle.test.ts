@@ -1,6 +1,9 @@
 // @vitest-environment node
 
+import type { ChildProcess } from "node:child_process";
+import { EventEmitter } from "node:events";
 import { join, resolve, sep } from "node:path";
+import { PassThrough } from "node:stream";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -11,6 +14,12 @@ import {
   runElectronLifecycle,
   type StagedArtifact,
 } from "../../tests/e2e/electron-lifecycle";
+import {
+  ElectronProcessDiagnostics,
+  observeElectronProcessDiagnostics,
+  safeElectronCloseFailureCode,
+  safeFirstWindowFailureCode,
+} from "../../tests/e2e/electron-process-diagnostics";
 
 interface TestState {
   application?: true;
@@ -453,6 +462,128 @@ describe("closeAndReapElectron", () => {
     }
 
     expect(errorMessages(caught)).toEqual(["graceful", "force", "ELECTRON_REAP_TIMEOUT"]);
+  });
+});
+
+describe("ElectronProcessDiagnostics", () => {
+  it("retains only allowlisted markers from stderr, never raw text", () => {
+    const diagnostics = new ElectronProcessDiagnostics();
+    diagnostics.observeStderr(
+      "path=/private/workspace password=do-not-retain token=not-a-token LOCAL_ENGINE_UNAVAILABLE",
+    );
+
+    expect(diagnostics.formatSummary()).toBe(
+      "electronProcess=RUNNING;stderrMarkers=LOCAL_ENGINE_UNAVAILABLE",
+    );
+    expect(diagnostics.formatSummary()).not.toContain("/private/workspace");
+    expect(diagnostics.formatSummary()).not.toContain("do-not-retain");
+    expect(diagnostics.formatSummary()).not.toContain("not-a-token");
+  });
+
+  it("recognizes an allowlisted marker split across byte chunks", () => {
+    const diagnostics = new ElectronProcessDiagnostics();
+    diagnostics.observeStderr(Buffer.from("LOCAL_ENGINE_SHUTDOWN_"));
+    diagnostics.observeStderr(Buffer.from("FAILED"));
+
+    expect(diagnostics.formatSummary()).toBe(
+      "electronProcess=RUNNING;stderrMarkers=LOCAL_ENGINE_SHUTDOWN_FAILED",
+    );
+  });
+
+  it("does not retain arbitrary error, credential, or path text", () => {
+    const diagnostics = new ElectronProcessDiagnostics();
+    diagnostics.observeStderr("startup failed at /secret/path with capability=private-value");
+    diagnostics.observeStderr("LOCAL_ENGINE_OTHER PRIVATE_TOKEN=secret");
+
+    expect(diagnostics.formatSummary()).toBe("electronProcess=RUNNING;stderrMarkers=none");
+  });
+
+  it("records a normalized process exit code and signal", () => {
+    const diagnostics = new ElectronProcessDiagnostics();
+    diagnostics.observeExit(1, null);
+
+    expect(diagnostics.formatSummary()).toBe(
+      "electronProcess=EXIT(code=1,signal=none);stderrMarkers=none",
+    );
+  });
+
+  it("removes the stderr observer when the child process closes", () => {
+    const diagnostics = new ElectronProcessDiagnostics();
+    const stderr = new PassThrough();
+    const events = new EventEmitter();
+    const process = Object.assign(events, {
+      exitCode: null,
+      signalCode: null,
+      stderr,
+    }) as unknown as ChildProcess;
+
+    observeElectronProcessDiagnostics(process, diagnostics);
+    expect(stderr.listenerCount("data")).toBe(1);
+
+    stderr.emit("data", Buffer.from("LOCAL_ENGINE_UNAVAILABLE"));
+    events.emit("exit", 0, null);
+    events.emit("close", 0, null);
+
+    expect(stderr.listenerCount("data")).toBe(0);
+    expect(events.listenerCount("exit")).toBe(0);
+    expect(events.listenerCount("close")).toBe(0);
+    expect(diagnostics.formatSummary(process)).toBe(
+      "electronProcess=EXIT(code=0,signal=none);stderrMarkers=LOCAL_ENGINE_UNAVAILABLE",
+    );
+  });
+
+  it("normalizes invalid process status fields instead of retaining arbitrary strings", () => {
+    const diagnostics = new ElectronProcessDiagnostics();
+    diagnostics.observeExit(999, "PRIVATE_SIGNAL" as NodeJS.Signals);
+
+    expect(diagnostics.formatSummary()).toBe(
+      "electronProcess=EXIT(code=unknown,signal=none);stderrMarkers=none",
+    );
+  });
+
+  it("uses valid ChildProcess exit fields when the exit event has not arrived yet", () => {
+    const diagnostics = new ElectronProcessDiagnostics();
+
+    expect(diagnostics.formatSummary({ exitCode: null, signalCode: null })).toBe(
+      "electronProcess=RUNNING;stderrMarkers=none",
+    );
+    expect(diagnostics.formatSummary({ exitCode: null, signalCode: "SIGKILL" })).toBe(
+      "electronProcess=EXIT(code=unknown,signal=SIGKILL);stderrMarkers=none",
+    );
+  });
+
+  it("reduces errors to fixed diagnostic enums without preserving exception text", () => {
+    expect(
+      safeFirstWindowFailureCode(
+        new Error("Target page, context or browser has been closed: /secret token=private"),
+      ),
+    ).toBe("ELECTRON_TARGET_CLOSED");
+    expect(safeFirstWindowFailureCode(new Error("passphrase=private"))).toBe(
+      "ELECTRON_FIRST_WINDOW_FAILED",
+    );
+    expect(
+      safeElectronCloseFailureCode(new Error("ELECTRON_CLOSE_TIMEOUT [stage=final-test-teardown]")),
+    ).toBe("ELECTRON_CLOSE_TIMEOUT");
+    expect(safeElectronCloseFailureCode(new Error("ELECTRON_CLOSE_FAILED token=private"))).toBe(
+      "ELECTRON_CLOSE_FAILED",
+    );
+  });
+
+  it("preserves only allowlisted causes from aggregated close failures", () => {
+    const failure = new AggregateError(
+      [
+        new Error("graceful shutdown failed at /private/path"),
+        new Error("ELECTRON_FORCE_KILL_FAILED token=private"),
+        new Error("ELECTRON_REAP_TIMEOUT [stage=final-test-teardown]"),
+      ],
+      "ELECTRON_CLOSE_FAILED",
+    );
+
+    expect(safeElectronCloseFailureCode(failure)).toBe(
+      "ELECTRON_CLOSE_FAILED(causes=ELECTRON_FORCE_KILL_FAILED,ELECTRON_REAP_TIMEOUT)",
+    );
+    expect(safeElectronCloseFailureCode(failure)).not.toContain("/private/path");
+    expect(safeElectronCloseFailureCode(failure)).not.toContain("token=private");
   });
 });
 
