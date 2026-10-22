@@ -39,5 +39,13 @@
     "existingWarnings": 135,
     "existingInfos": 2
   },
-  "hostedCi": "Reported separately at the pushed exact head; local checks do not establish hosted status."
+  "hostedCi": "Reported separately at the pushed exact head; local checks do not establish hosted status.",
+  "fullDesktopTests": {
+    "files": 104,
+    "passed": 1259,
+    "failed": 0,
+    "skipped": 0,
+    "durationSeconds": 120.12
+  },
+  "ciFollowup": "ci-followup.json"
 }

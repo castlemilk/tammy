@@ -41,7 +41,7 @@ Strict audit is therefore **not green**. No native validation, security form or 
 
 The reporting branch now implements local invoice/purchase accounting, BAS review/freeze/export and simulator SBR readiness. It still has 77 future RPC and 111 future transition entries. Its shipping-surface checker change is a separate product boundary decision; this UI pass does not infer approval from passing source or hosted tests.
 
-Ordinary macOS packaging and Windows Server smoke are not MAS, Windows 11 or ATO production qualification. App Store Connect authentication was verified; the last observed agreement banner requires action by the Account Holder. No legal agreement was accepted and no build was uploaded by this task.
+Ordinary macOS packaging and Windows Server smoke are not MAS, Windows 11 or ATO production qualification. App Store Connect authentication was verified. The current read-only release gate reports build 5 as `REPOSITORY_READY` with `CANDIDATE_EVIDENCE_INVALID`: qualified, exact-build MAS candidate evidence is absent. The pre-upload guard rejects this state. No legal agreement was accepted and no build was uploaded by this task.
 
 ## Verification detail
 
@@ -70,3 +70,11 @@ The final search review also removed duplicate native/application clear icons. T
 All 133 affected-screen tests (17 files), desktop TypeScript, and lint passed. Lint retains 135 existing warnings and two informational diagnostics. The final ordinary package passed seven integrity checks with the one Windows-only check skipped on macOS. Four packaged journeys passed in 1.2 minutes with zero retries/skips. There are 13 before and 17 after screenshots; all 81 historical screenshots and 55 archived files remain byte-identical. Hosted CI is reported separately for the pushed exact head.
 
 [Library delivery](library-delivery.json), [capture hashes](screenshots.json), [package provenance](after-package.json), [journey results](journeys.json), and [preservation check](preservation.json) are retained alongside the images.
+
+## CI follow-up
+
+The initial review head failed its strict Playwright configuration assertion because the newly registered financial journey was missing from the exact expected suite list. The expectation now requires that journey as well as every previous suite, supported target and failure-retention assertion.
+
+A complete local desktop run also exposed an unchanged base integration fixture using macOS’s temporary-path alias. The exact base fixture failed 1 of 15 tests with that alias and passed all 15 with the same physical temporary parent. The fixture now creates its executable through a canonical parent; the production path, hash and live-image verifier remains strict.
+
+The corrected checks passed 16 focused cases and all 1,259 desktop tests (104 files), with zero skips, in 120.12 seconds. Desktop TypeScript passed. These follow-ups change test files and evidence only; all application code and all 30 screenshot hashes remain unchanged. Original failure evidence and the controlled base comparison are retained in [ci-followup.json](ci-followup.json). New hosted results are tracked separately at the final pushed head.
