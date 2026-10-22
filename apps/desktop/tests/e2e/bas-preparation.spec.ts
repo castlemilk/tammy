@@ -371,9 +371,14 @@ async function getPreparation(page: Page, workspace: Workspace, ref: BasReferenc
       preparationHash: ref.contentHash,
     }),
   );
-  return getPreparationCodec.decodeResponse(
-    await invokeConveyorFrame(page, "basPreparation", "getBasPreparation", frame),
-  );
+  const started = performance.now();
+  try {
+    return getPreparationCodec.decodeResponse(
+      await invokeConveyorFrame(page, "basPreparation", "getBasPreparation", frame),
+    );
+  } finally {
+    console.info(`BAS_ACCEPTANCE_GET_PREPARATION_MS=${Math.ceil(performance.now() - started)}`);
+  }
 }
 
 async function getOrganisation(page: Page, workspace: Workspace): Promise<Organisation> {

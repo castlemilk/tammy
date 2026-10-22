@@ -9,6 +9,7 @@ import {
 import type { ConnectTransportOptions } from "@connectrpc/connect-node";
 import {
   BasPreparationService,
+  GetBasPreparationRequestSchema,
   ListBasObligationsProfilesRequestSchema,
 } from "@tammy/connect-client/tammy/v1/bas_preparation_pb.js";
 import {
@@ -92,23 +93,44 @@ function fakeTransport(
     networkRequired: false,
   },
   failure?: ConnectError,
+  rpcDelayMs = 0,
 ): {
   readonly factory: CoreTransportFactory;
   readonly methods: unknown[];
   readonly receivedHeaders: Headers[];
   readonly receivedTimeouts: Array<number | undefined>;
+  readonly receivedBasPreparationCalls: Array<{
+    readonly timeoutMs: number | undefined;
+    readonly headers: Headers;
+  }>;
+  readonly receivedBasProfileListCalls: Array<{
+    readonly timeoutMs: number | undefined;
+    readonly headers: Headers;
+  }>;
 } {
   const methods: unknown[] = [];
   const receivedHeaders: Headers[] = [];
   const receivedTimeouts: Array<number | undefined> = [];
+  const receivedBasPreparationCalls: Array<{
+    readonly timeoutMs: number | undefined;
+    readonly headers: Headers;
+  }> = [];
+  const receivedBasProfileListCalls: Array<{
+    readonly timeoutMs: number | undefined;
+    readonly headers: Headers;
+  }> = [];
   const factory = vi.fn(
     (options: ConnectTransportOptions): Transport =>
       createRouterTransport(
         (router) => {
           router.service(SystemService, {
-            getDiagnostics: (_request, context) => {
+            getDiagnostics: async (_request, context) => {
               methods.push(context.method);
               receivedHeaders.push(new Headers(context.requestHeader));
+              receivedTimeouts.push(context.timeoutMs());
+              if (rpcDelayMs > 0) {
+                await new Promise<void>((resolve) => setTimeout(resolve, rpcDelayMs));
+              }
               if (failure) {
                 throw failure;
               }
@@ -242,15 +264,39 @@ function fakeTransport(
             },
           });
           router.service(BasPreparationService, {
-            listBasObligationsProfiles: (_request, context) => {
+            listBasObligationsProfiles: async (_request, context) => {
               methods.push(context.method);
-              receivedHeaders.push(new Headers(context.requestHeader));
+              const headers = new Headers(context.requestHeader);
+              receivedHeaders.push(headers);
+              receivedBasProfileListCalls.push({
+                timeoutMs: context.timeoutMs(),
+                headers,
+              });
+              if (rpcDelayMs > 0) {
+                await new Promise<void>((resolve) => setTimeout(resolve, rpcDelayMs));
+              }
+              return {};
+            },
+            getBasPreparation: async (_request, context) => {
+              methods.push(context.method);
+              const headers = new Headers(context.requestHeader);
+              receivedHeaders.push(headers);
+              receivedBasPreparationCalls.push({
+                timeoutMs: context.timeoutMs(),
+                headers,
+              });
+              if (rpcDelayMs > 0) {
+                await new Promise<void>((resolve) => setTimeout(resolve, rpcDelayMs));
+              }
               return {};
             },
           });
         },
         {
           transport: {
+            ...(options.defaultTimeoutMs === undefined
+              ? {}
+              : { defaultTimeoutMs: options.defaultTimeoutMs }),
             interceptors: options.interceptors ?? [],
           },
         },
@@ -262,6 +308,8 @@ function fakeTransport(
     methods,
     receivedHeaders,
     receivedTimeouts,
+    receivedBasPreparationCalls,
+    receivedBasProfileListCalls,
   };
 }
 
@@ -356,6 +404,77 @@ describe("createCoreClient", () => {
     expect(methods).toEqual([BasPreparationService.method.listBasObligationsProfiles]);
     expect(receivedHeaders).toHaveLength(1);
     expect(receivedHeaders[0]?.get("X-Tammy-Capability")).toBe(CAPABILITY);
+  });
+
+  it("bounds only GetBasPreparation at 30 seconds while ordinary RPCs keep the 5-second default", async () => {
+    const { factory, receivedTimeouts, receivedBasPreparationCalls, receivedBasProfileListCalls } =
+      fakeTransport(undefined, undefined, 5_300);
+    const client = createCoreClient(READINESS, factory);
+
+    const preparationClient = client.basPreparation;
+    if (!preparationClient) throw new Error("BAS preparation client is unavailable.");
+    const [ordinaryResult, profileListResult, preparationResult] = await Promise.allSettled([
+      client.getDiagnostics(),
+      preparationClient.listBasObligationsProfiles(create(ListBasObligationsProfilesRequestSchema)),
+      preparationClient.getBasPreparation(create(GetBasPreparationRequestSchema)),
+    ]);
+
+    for (const result of [ordinaryResult, profileListResult]) {
+      expect(result.status).toBe("rejected");
+      if (result.status === "rejected") {
+        expect(ConnectError.from(result.reason).code).toBe(Code.DeadlineExceeded);
+      }
+    }
+    expect(preparationResult.status).toBe("fulfilled");
+    expect(receivedTimeouts).toHaveLength(1);
+    expect(receivedTimeouts[0]).toBeGreaterThanOrEqual(4_900);
+    expect(receivedTimeouts[0]).toBeLessThanOrEqual(5_000);
+    expect(receivedBasProfileListCalls).toHaveLength(1);
+    expect(receivedBasProfileListCalls[0]?.timeoutMs).toBeGreaterThanOrEqual(4_900);
+    expect(receivedBasProfileListCalls[0]?.timeoutMs).toBeLessThanOrEqual(5_000);
+    expect(receivedBasProfileListCalls[0]?.headers.get("X-Tammy-Capability")).toBe(CAPABILITY);
+    expect(receivedBasPreparationCalls).toHaveLength(1);
+    expect(receivedBasPreparationCalls[0]?.timeoutMs).toBeGreaterThan(29_000);
+    expect(receivedBasPreparationCalls[0]?.timeoutMs).toBeLessThanOrEqual(30_000);
+    expect(receivedBasPreparationCalls[0]?.headers.get("X-Tammy-Capability")).toBe(CAPABILITY);
+  }, 8_000);
+
+  it("preserves explicit shorter BAS read deadlines, cancellation signals, and caller headers", async () => {
+    const { factory, receivedBasPreparationCalls } = fakeTransport(undefined, undefined, 500);
+    const client = createCoreClient(READINESS, factory);
+    const preparation = client.basPreparation;
+    if (!preparation) throw new Error("BAS preparation client is unavailable.");
+
+    const controller = new AbortController();
+    const cancelledRead = preparation
+      .getBasPreparation(create(GetBasPreparationRequestSchema), {
+        timeoutMs: 30_000,
+        signal: controller.signal,
+        headers: { "X-Caller-Test": "cancel-preserved" },
+      })
+      .catch((error: unknown) => error);
+    const shortRead = preparation
+      .getBasPreparation(create(GetBasPreparationRequestSchema), {
+        timeoutMs: 100,
+        headers: { "X-Caller-Test": "timeout-preserved" },
+      })
+      .catch((error: unknown) => error);
+    setTimeout(() => controller.abort(), 25);
+
+    const [cancelledError, shortError] = await Promise.all([cancelledRead, shortRead]);
+
+    expect(ConnectError.from(cancelledError).code).toBe(Code.Canceled);
+    expect(ConnectError.from(shortError).code).toBe(Code.DeadlineExceeded);
+    const cancelledCall = receivedBasPreparationCalls.find(
+      (call) => call.headers.get("X-Caller-Test") === "cancel-preserved",
+    );
+    expect(cancelledCall?.timeoutMs).toBeGreaterThan(29_000);
+    expect(cancelledCall?.timeoutMs).toBeLessThanOrEqual(30_000);
+    const shortCall = receivedBasPreparationCalls.find(
+      (call) => call.headers.get("X-Caller-Test") === "timeout-preserved",
+    );
+    expect(shortCall?.timeoutMs).toBeGreaterThan(0);
+    expect(shortCall?.timeoutMs).toBeLessThanOrEqual(100);
   });
 
   it("maps every required identity, organisation, and SBR call to its generated client", async () => {

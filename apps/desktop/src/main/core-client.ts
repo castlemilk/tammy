@@ -175,6 +175,7 @@ export type { SystemDiagnostics } from "../shared/conveyor-contract";
 const CAPABILITY_HEADER = "X-Tammy-Capability";
 const EXPECTED_API_VERSION = "tammy.v1";
 const CORE_VERSION_PATTERN = /^[\x20-\x7e]{1,128}$/;
+const BAS_PREPARATION_GET_TIMEOUT_MS = 30_000;
 
 export interface CoreClient {
   /** The generated local BAS preparation service. Optional only for legacy test doubles. */
@@ -378,7 +379,18 @@ export function createCoreClient(
   const organisationClient = createClient(OrganisationService, transport);
   const taxClient = createClient(TaxService, transport);
   const sbrClient = createClient(SbrService, transport);
-  const basPreparationClient = createClient(BasPreparationService, transport);
+  const rawBasPreparationClient = createClient(BasPreparationService, transport);
+  const basPreparationClient = Object.freeze({
+    ...rawBasPreparationClient,
+    getBasPreparation: (
+      request: Parameters<typeof rawBasPreparationClient.getBasPreparation>[0],
+      options?: Parameters<typeof rawBasPreparationClient.getBasPreparation>[1],
+    ) =>
+      rawBasPreparationClient.getBasPreparation(request, {
+        ...options,
+        timeoutMs: options?.timeoutMs ?? BAS_PREPARATION_GET_TIMEOUT_MS,
+      }),
+  });
 
   const coreRequest = async <Response>(request: () => Promise<Response>): Promise<Response> => {
     try {
