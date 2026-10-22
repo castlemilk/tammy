@@ -439,7 +439,7 @@ describe("build execution", () => {
     assert.equal(calls.length, 1);
     assert.equal(calls[0].options.killSignal, "SIGKILL");
     assert.equal(calls[0].options.shell, false);
-    assert.equal(calls[0].options.timeout, 120_000);
+    assert.equal(calls[0].options.timeout, 300_000);
     assert.ok(calls[0].options.signal instanceof AbortSignal);
     assert.equal(calls[0].options.env.TAMMY_BUILD_SECRET, "must-not-be-printed");
     assert.equal(calls[0].options.env.PATH, "/tools");

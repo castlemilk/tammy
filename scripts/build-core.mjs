@@ -5,7 +5,9 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-const BUILD_TIMEOUT_MS = 120_000;
+// Each build compiles into a fresh private cache, including the Go standard
+// library. Allow cold compilation on a busy host while keeping a finite bound.
+const BUILD_TIMEOUT_MS = 300_000;
 const CORE_PACKAGE = "./services/core/cmd/tammy-core";
 const VERSION_SYMBOL = "github.com/tammyapp/tammy/services/core/internal/buildinfo.version";
 const SQLCIPHER_HASH_SYMBOL =
