@@ -6,6 +6,8 @@ Further follow-up: [descriptor provenance correction and large-output regression
 
 Latest follow-up: [Windows dependency setup, runtime budgets and lint ownership inventory](windows-dependency-followup.md).
 
+Combined checkpoint: [normal branch integration and combined verification](combined-verification.md).
+
 Captured on the user's Mac, 22 October 2026, using the repository-owned Electron
 Playwright fixture with a fresh isolated synthetic userData directory. These are real
 rendered app screenshots, not generated concept boards. All retained records, users,
