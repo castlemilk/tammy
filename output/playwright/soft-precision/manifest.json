@@ -1,0 +1,253 @@
+{
+  "capture": "Real packaged Electron renderer, isolated synthetic fixtures",
+  "baselineSource": "aeda631070f9cb44289658c52128c595bf6133f7",
+  "finalRendererSource": "660774a198b3baaa06d631a7c4036fa7f884eea6",
+  "screenshots": [
+    {
+      "path": "after/01-workspace.png",
+      "width": 1428,
+      "height": 1119,
+      "sha256": "4cb6f43943e96f71fc0bb4c71e051cc91622b2a1aa439adba171f804c22b13ac"
+    },
+    {
+      "path": "after/02-recovery.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "bcb3cea087121caa73d00efc796f85f17196bfb560dca9995769a70683e3222c"
+    },
+    {
+      "path": "after/03-unlock.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "68b50dd95c44c22b3dde2a01774472db9f859ba42130c1b164ebe41fab6fac1a"
+    },
+    {
+      "path": "after/04-documents.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "53cde204b950b38445e62408ceda06053bc1dfa73770fe69d54fa920fb2d421e"
+    },
+    {
+      "path": "after/05-banking.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "4b58c01c6caece0cc1aaa38142037d3790b407dc19ddd089859405c519adf1db"
+    },
+    {
+      "path": "after/06-chart.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "7a682a4fca4b109e72ce9daf4e25a7a9c590d53774574abb29673c7c488eeb5c"
+    },
+    {
+      "path": "after/07-journals.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "4dde9762eb65eccd326533221cd4e0cbee0b4e24a65f3d683a58c1622f863e8f"
+    },
+    {
+      "path": "after/08-trial-balance.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "f0ead9ff976b54e73c6c0026f68f6acd95d4b1cf312737a45f246e1d58602435"
+    },
+    {
+      "path": "after/09-gst-draft.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "cf083113aea62858f3cfccc60fd94d1b7252fd2f4a8aafd60d2c51d4e438a1cd"
+    },
+    {
+      "path": "after/10-overview.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "345fd3ed5816bd3b03bb2ac0767733dafe6232c82ce3cfcce6e5bc0cd66ec399"
+    },
+    {
+      "path": "after/11-document-upload-error.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "3c6e88c43977e7d2f799b1344a6e99eb9592e777eb2dd3166483595645d43006"
+    },
+    {
+      "path": "after/12-review-error-preserved.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "751329d923dedaed11b4048602db5f5c70d5f410865f10e538419e13cdcb4f19"
+    },
+    {
+      "path": "after/13-review-saved.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "ceed6a1ba13f8e490e88d6ad9c4451ceb574d68e0ce864ed1f8ddf311663c0f1"
+    },
+    {
+      "path": "after/14-account-entry.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "a66c30a217b07c63f09e62c4f0abb354d56ff3d28acc005cf76166469c120b47"
+    },
+    {
+      "path": "after/15-journal-detail.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "df5e6532667c50783b23079708675424da14c691a4c70fb368ca25392f7cad86"
+    },
+    {
+      "path": "after/16-journal-entry.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "bd1e995a10d9e201147b837d1fafcff5b7881c3b8a3e1cca773fa935bc6adcef"
+    },
+    {
+      "path": "after/17-local-activity.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "f57d02cd4de09d1ba07809497d0a11ecf796b940192804a3daebb08a5483abc2"
+    },
+    {
+      "path": "after/18-keyboard-focus.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "411f9e7d561f3e89f5d5ec23b41aa7bfe2c3e37112ab3e98d3b59d24f4cf1bcb"
+    },
+    {
+      "path": "after/19-320-banking.png",
+      "width": 320,
+      "height": 1050,
+      "sha256": "4a8fbf819a3060d438c5f46f17d58fe36006d4bb5dd80810d187be1020edd547"
+    },
+    {
+      "path": "after/19-320-documents.png",
+      "width": 320,
+      "height": 1479,
+      "sha256": "a7fe321622a0af2c383e81f91f33ae38bc3a6b5459fab83ece1040fe587df3d3"
+    },
+    {
+      "path": "after/19-320-trial-balance.png",
+      "width": 320,
+      "height": 1000,
+      "sha256": "651d6be9f95e984cedf77a65e42f0c25307004c49cd8709ee415eba6f7924247"
+    },
+    {
+      "path": "after/19-390-banking.png",
+      "width": 378,
+      "height": 1032,
+      "sha256": "eb05942d88bef033d4e7ded2070170c248cfc4ff53ea417af559f2f33d226441"
+    },
+    {
+      "path": "after/19-390-documents.png",
+      "width": 378,
+      "height": 1422,
+      "sha256": "62a629054734388f5b2ef316b04eae5a60ead72066433540b4c3e98acfb269ee"
+    },
+    {
+      "path": "after/19-390-trial-balance.png",
+      "width": 390,
+      "height": 1000,
+      "sha256": "b48a8b1fec056a28111a8e3295149575d1a8337d3798cccad0eebddcf3069d76"
+    },
+    {
+      "path": "after/19-900-banking.png",
+      "width": 900,
+      "height": 1000,
+      "sha256": "b3a0fce88ff20591cf3c4c101af1c7eb031936ce879d870617df9d3cfad99cd5"
+    },
+    {
+      "path": "after/19-900-documents.png",
+      "width": 900,
+      "height": 1000,
+      "sha256": "98f5a1bfd61ea62e68d8bb4450d3d4c02591b4af74a344cba83590a30ffd28a6"
+    },
+    {
+      "path": "after/19-900-trial-balance.png",
+      "width": 900,
+      "height": 1000,
+      "sha256": "a2b3d2ead11351d16abc8e2f114aa955890640a42e098873969946e629e80ac1"
+    },
+    {
+      "path": "after/20-csv-validation.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "b46c6b4a074341fe446b4269f59b6641476bf39a4cade052a4762627e851482a"
+    },
+    {
+      "path": "after/21-statement-unmatched.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "f6019bfbf8a0da39f3ab2fe833c514377c6790f1bf66b4c76aae6610dd4a304a"
+    },
+    {
+      "path": "after/22-statement-matched.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "e3edc499d1247341be38819ed8ef89c54b7d12610e0f04283f7dace5222ec9ce"
+    },
+    {
+      "path": "after/23-statement-reconciled.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "e4b1b1a8b072d077060aa49e2e7c79e29baef8140034912db3214f319b3cc3ee"
+    },
+    {
+      "path": "before/01-workspace.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "98d2d2df15bfb778fd16fa36ed8ce4e5b2efb31b7382e1b9431fc50b94645992"
+    },
+    {
+      "path": "before/02-recovery.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "fcf333396f2dc938b1451dc6aa8feee6272205e4bea5a5e5932febcbda28eda5"
+    },
+    {
+      "path": "before/03-unlock.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "83d61a266b6faa05193b289c21e03e93f799cb7052dad68fde1b0be15210b0ac"
+    },
+    {
+      "path": "before/04-documents.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "02b39f121533e7eb8529d7db910b76ddbbd68f5f1f2bce4d3d1e10a7ce752b5b"
+    },
+    {
+      "path": "before/05-banking.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "2038d9146023d0985f4e0f352ff80496cfeb011ede9b0bb426fc34024b74440e"
+    },
+    {
+      "path": "before/06-chart.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "4ea95db6bf10de84326437edb8e5209ba34443951e9c459a48bf612ef21b772a"
+    },
+    {
+      "path": "before/07-journals.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "e10eb5b4f739ccc3286f6ceb9ad383e2bd14e17e5ca25416af8b1bc68efea790"
+    },
+    {
+      "path": "before/08-trial-balance.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "8bc4856fcfe2224d5022df5dc4595b15d1bfc7e4ee173e20066effa417693bb0"
+    },
+    {
+      "path": "before/09-gst-draft.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "242f823f1b2453a67daf7acfef5c68cdb5993578e1dd57ee287bf83fd9cb703f"
+    },
+    {
+      "path": "before/10-overview.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "843a0aadad7d59fb79c157716936c57ffe76adab97f2e5e585edc22eef7c5dbd"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "files": [
+    {
+      "path": "before/04-documents.png",
+      "library_file_id": "libfile_df2cd86e02b48191bcc7e0950f6c1f57",
+      "file_id": "file_00000000510881fb9815b95300dc666f",
+      "version": 0,
+      "sha256": "02b39f121533e7eb8529d7db910b76ddbbd68f5f1f2bce4d3d1e10a7ce752b5b"
+    },
+    {
+      "path": "after/04-documents.png",
+      "library_file_id": "libfile_6e9aa066151c81918773a626a89f7063",
+      "file_id": "file_00000000621081f58678b1f5f2587b01",
+      "version": 1,
+      "sha256": "53cde204b950b38445e62408ceda06053bc1dfa73770fe69d54fa920fb2d421e"
+    },
+    {
+      "path": "after/09-gst-draft.png",
+      "library_file_id": "libfile_e27b0767e3bc81919b70d129a88d595e",
+      "file_id": "file_0000000095f481f59e079b926d406eda",
+      "version": 1,
+      "sha256": "cf083113aea62858f3cfccc60fd94d1b7252fd2f4a8aafd60d2c51d4e438a1cd"
+    }
+  ]
+}
