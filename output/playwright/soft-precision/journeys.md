@@ -4,6 +4,8 @@ Follow-up: [ASAR diagnosis, global-scrollbar correction and current CI evidence]
 
 Further follow-up: [descriptor provenance correction and large-output regressions](descriptor-verification-followup.md).
 
+Latest follow-up: [Windows dependency setup, runtime budgets and lint ownership inventory](windows-dependency-followup.md).
+
 Captured on the user's Mac, 22 October 2026, using the repository-owned Electron
 Playwright fixture with a fresh isolated synthetic userData directory. These are real
 rendered app screenshots, not generated concept boards. All retained records, users,

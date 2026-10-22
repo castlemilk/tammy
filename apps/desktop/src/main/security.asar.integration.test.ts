@@ -1,5 +1,4 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -13,6 +12,10 @@ import {
   spawnHarnessProcess,
   terminateHarnessProcess,
 } from "../../tests/helpers/electron-harness-process";
+import {
+  readPreparedTestElectron,
+  resolveTestElectronPackageRoot,
+} from "../../tests/helpers/prepared-electron";
 
 const DESKTOP_ROOT = process.cwd();
 const WORKSPACE_ROOT = resolve(DESKTOP_ROOT, "../..");
@@ -48,17 +51,7 @@ async function pinnedAsar(): Promise<AsarModule> {
 }
 
 async function pinnedElectron(): Promise<string> {
-  const require = createRequire(join(DESKTOP_ROOT, "package.json"));
-  const packageJson = JSON.parse(
-    await readFile(require.resolve("electron/package.json"), "utf8"),
-  ) as { readonly name?: unknown; readonly version?: unknown };
-  expect(packageJson).toMatchObject({
-    name: "electron",
-    version: "43.1.1",
-  });
-  const executable = require("electron") as unknown;
-  expect(typeof executable).toBe("string");
-  return executable as string;
+  return readPreparedTestElectron(await resolveTestElectronPackageRoot(DESKTOP_ROOT));
 }
 
 async function runElectron(
