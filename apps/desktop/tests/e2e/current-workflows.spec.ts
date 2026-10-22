@@ -1055,7 +1055,13 @@ async function interactionJourney(page: import("@playwright/test").Page) {
           exact: true,
         });
         const nextPage = page.getByRole("button", { name: "Next document page", exact: true });
-        await previousPage.scrollIntoViewIfNeeded();
+        const paginationGroup = previousPage.locator("..");
+        await paginationGroup.evaluate((element) => {
+          const bounds = element.getBoundingClientRect();
+          const top =
+            window.scrollY + bounds.top - Math.max(0, (window.innerHeight - bounds.height) / 2);
+          window.scrollTo(window.scrollX, Math.round(top));
+        });
         await expect(previousPage).toBeInViewport({ ratio: 1 });
         await expect(nextPage).toBeInViewport({ ratio: 1 });
       }
