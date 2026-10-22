@@ -89,7 +89,9 @@ async function runElectron(
 }
 
 describe("packaged ASAR renderer protocol", () => {
-  it("serves a real archive through pinned Electron net.fetch", { timeout: 30_000 }, async () => {
+  it("boots a background harness and serves a real archive through pinned Electron net.fetch", {
+    timeout: 30_000,
+  }, async () => {
     const directory = await mkdtemp(join(tmpdir(), "tammy-asar-integration-"));
     let safeToRemove = true;
     try {
@@ -114,6 +116,7 @@ describe("packaged ASAR renderer protocol", () => {
       expect(JSON.parse(resultLine?.slice("TAMMY_ASAR_RESULT ".length) ?? "")).toEqual({
         body: "<main>ASAR ready</main>",
         contentType: "text/html; charset=utf-8",
+        dockVisible: process.platform === "darwin" ? false : null,
         nosniff: "nosniff",
         status: 200,
       });

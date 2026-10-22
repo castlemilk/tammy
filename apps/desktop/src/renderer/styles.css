@@ -148,8 +148,6 @@
 
   .border-border {
     border-color: var(--border);
-    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
-    scrollbar-width: auto;
   }
 
   .border-ready-border {
@@ -323,6 +321,11 @@
     transition-duration: 0s;
     scroll-behavior: auto;
   }
+}
+
+* {
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  scrollbar-width: auto;
 }
 
 ::-webkit-scrollbar {

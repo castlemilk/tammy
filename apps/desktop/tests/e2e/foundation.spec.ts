@@ -34,6 +34,30 @@ test("runs the packaged first-run journey offline and exits cleanly", async ({
   const { consoleErrors, page, pageErrors } = electronHarness;
   await expect(page).toHaveTitle("Tammy");
   await expect(page.getByRole("heading", { name: "Create your local workspace" })).toBeVisible();
+
+  await page.emulateMedia({ forcedColors: "none" });
+  const scrollbars = await page.evaluate(() => {
+    const region = document.createElement("div");
+    region.style.overflow = "auto";
+    region.style.width = "20px";
+    region.style.height = "20px";
+    region.innerHTML = '<div style="width:100px;height:100px"></div>';
+    document.body.append(region);
+    const colors = {
+      root: getComputedStyle(document.documentElement).scrollbarColor,
+      region: getComputedStyle(region).scrollbarColor,
+    };
+    region.remove();
+    return colors;
+  });
+  expect(scrollbars.root).not.toBe("auto");
+  expect(scrollbars.region).toBe(scrollbars.root);
+  await page.emulateMedia({ forcedColors: "active" });
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).scrollbarColor)).toBe(
+    "auto",
+  );
+  await page.emulateMedia({ forcedColors: "none" });
+
   await expect(
     page.getByText("Your accounting data stays encrypted on this device."),
   ).toBeVisible();

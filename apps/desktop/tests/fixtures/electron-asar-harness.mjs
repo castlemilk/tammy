@@ -2,6 +2,11 @@ import { pathToFileURL } from "node:url";
 
 import { app, net, protocol } from "electron";
 
+// This headless protocol fixture must not wait for macOS foreground activation.
+if (process.platform === "darwin") {
+  app.setActivationPolicy("accessory");
+}
+
 process.stderr.write("TAMMY_ASAR_HARNESS_START\n");
 
 const rendererRoot = process.env.TAMMY_TEST_RENDERER_ROOT;
@@ -30,6 +35,7 @@ async function run() {
   const result = {
     body: await response.text(),
     contentType: response.headers.get("Content-Type"),
+    dockVisible: process.platform === "darwin" ? app.dock.isVisible() : null,
     nosniff: response.headers.get("X-Content-Type-Options"),
     status: response.status,
   };
