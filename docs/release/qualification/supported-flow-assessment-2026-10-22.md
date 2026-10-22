@@ -53,11 +53,21 @@ boundary in an isolated synthetic profile. It checks:
 3. Correct confirmation returns that workspace as UNAUTHENTICATED.
 4. Exact confirmation replay remains UNAUTHENTICATED at the same version.
 
-The native case passed locally in 6.6 seconds, without retries, using the existing
-authenticated package whose source is `8daf67c8c712c3dd1a62980ac160e4e1653ec40c`
-and core hash is `ed02e5ce9892fb7b523d7ccee4176538592221b80ca5a26daadd1c2870b9f62a`.
-The core source is unchanged from baseline. Hosted CI builds the follow-up source
-again and must verify the registered case before the evidence is treated as final.
+The first targeted native case passed locally in 6.6 seconds, without retries,
+before its coverage promotion. A fresh package of the complete follow-up source
+`c0f0892177dafe4ee917610a903105f3f200ed28` then passed all three packaged journeys
+in 13.9 seconds: current accounting workflows (9.4s), offline first-run (1.4s) and
+recovery confirmation (2.5s). Its build manifest reports a clean source tree;
+package signature/resource verification passed all four checks. The core source
+is unchanged from baseline and retains hash
+`ed02e5ce9892fb7b523d7ccee4176538592221b80ca5a26daadd1c2870b9f62a`.
+The application executable hash is
+`01fc63e85304a24792436dc49979e73539cd3dc9f06ea69498124e228416f54d`
+and build-manifest hash is
+`12b5ae226a0c2d7d241931eb9d203b935685a64796b81a3b572b0d0379f6486b`.
+These are local macOS arm64 checks, not App Store submission qualification or
+Windows 11 verification. Hosted CI must independently build and verify the
+registered case at the eventual pushed head.
 
 The case is an explicit native IPC contract test, paired with the existing full
 setup/recovery/sign-in GUI journey. It does not claim a new recovery UI or general
@@ -85,6 +95,12 @@ calculation, security permission, or checker policy changes are included.
 The result is four qualified transitions, with **55 RPCs and 64 transitions still
 future**. The production gate must continue failing until those remaining entries
 are genuinely qualified.
+
+Local validation also passed desktop TypeScript checking, complete lint (202
+files plus all 55 retained archive hashes), 53 transition-index/coverage checker
+tests, and the ordinary contract check. The direct production contract check
+still rejects this source with `E2E_COVERAGE_FUTURE_PROMOTION_REQUIRED`, as
+expected. All 81 retained screenshot hashes match their original manifests.
 
 ## Missing tests for supported behaviour
 
@@ -120,9 +136,10 @@ also remain separate; this task does not retry credentials or upload anything.
 
 ## Concurrent ownership and preservation
 
-The separate `issue/sbr-registration-ready` worktree is active at `3a897073` and
-has uncommitted core-client, lifecycle, startup-diagnostics and Electron fixture
-work. It was inspected read-only. This branch does not modify those files or
+The separate `issue/sbr-registration-ready` worktree was observed at `3a897073`
+during the audit and at `fe400fa2` before publication, with uncommitted
+core-client, lifecycle, startup-diagnostics and Electron fixture work. It was
+inspected read-only. This branch does not modify those files or
 import its unmerged features. The new case is in foundation.spec.ts; the existing
 current-workflows.spec.ts and shared fixtures are untouched by this follow-up.
 All 81 screenshot hashes and the 55 archived evidence files remain protected.
