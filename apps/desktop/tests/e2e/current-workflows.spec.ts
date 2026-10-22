@@ -101,6 +101,7 @@ import {
   updateCompanyInvoiceTemplate,
 } from "./support/invoice-template-workflow";
 import { callPairedApi, runPairedMcpSmoke } from "./support/local-api";
+import { openSavedBasWorkpaperPanel } from "./support/saved-bas-workpaper-panel";
 
 const UUID_V7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const USERNAME = "admin@tammy.local";
@@ -727,6 +728,7 @@ test("covers workspace setup, recovery, accounting, and interaction journeys thr
   await expect(page.getByText("$319.00", { exact: true }).first()).toBeVisible();
   await captureJourney(page, "08-trial-balance");
   await assertRoute(page, "GST & BAS", "/gst-bas", "GST & BAS");
+  await openSavedBasWorkpaperPanel(page);
   await expect(page.getByText("Draft — not lodged", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("Officeworks Ltd", { exact: true })).toBeVisible();
   await captureJourney(page, "09-gst-draft");
