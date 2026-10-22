@@ -6,8 +6,13 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { _electron, expect, test } from "@playwright/test";
-
+import { STARTUP_DIAGNOSTIC_MARKERS } from "../../src/main/startup-diagnostics";
 import { pollForNoCoreProcesses } from "./electron-lifecycle";
+import {
+  ElectronProcessDiagnostics,
+  observeElectronProcessDiagnostics,
+  safeFirstWindowFailureCode,
+} from "./electron-process-diagnostics";
 import { findExactCoreProcesses } from "./process-check";
 
 const desktopRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -20,6 +25,7 @@ const coreExecutable = path.join(
   `${process.platform}-${process.arch}`,
   process.platform === "win32" ? "tammy-core.exe" : "tammy-core",
 );
+const startupDiagnosticMarkers = new Set<string>(STARTUP_DIAGNOSTIC_MARKERS);
 
 function contentType(filePath: string): string {
   const extension = path.extname(filePath);
@@ -109,6 +115,7 @@ test("runs the real electron-vite development runtime offline and cleans up Core
   let userDataPath: string | undefined;
   let server: Awaited<ReturnType<typeof startRendererServer>> | undefined;
   let application: Awaited<ReturnType<typeof _electron.launch>> | undefined;
+  let processDiagnostics: ElectronProcessDiagnostics | undefined;
   let bodyFailure: unknown;
   const cleanupFailures: Error[] = [];
 
@@ -121,7 +128,9 @@ test("runs the real electron-vite development runtime offline and cleans up Core
   };
 
   try {
-    userDataPath = await mkdtemp(path.join(tmpdir(), "tammy-electron-vite-"));
+    const physicalTempRoot = await realpath(tmpdir());
+    userDataPath = await mkdtemp(path.join(physicalTempRoot, "tammy-electron-vite-"));
+    expect(await realpath(userDataPath)).toBe(userDataPath);
     server = await startRendererServer(rendererRoot);
     application = await _electron.launch({
       args: [mainEntry, `--user-data-dir=${userDataPath}`],
@@ -129,6 +138,8 @@ test("runs the real electron-vite development runtime offline and cleans up Core
       env: { ...process.env, ELECTRON_RENDERER_URL: server.origin },
       executablePath: electronExecutable,
     });
+    processDiagnostics = new ElectronProcessDiagnostics();
+    observeElectronProcessDiagnostics(application.process(), processDiagnostics);
     const page = await application.firstWindow();
     const bridgeEvidence = await page.evaluate(async () => {
       const bridgeKeys = Object.keys(window.conveyor).sort();
@@ -226,6 +237,17 @@ test("runs the real electron-vite development runtime offline and cleans up Core
     }
   }
   if (bodyFailure !== undefined) {
+    if (application && processDiagnostics) {
+      const summary = processDiagnostics.formatSummary();
+      const [processStatus, observedMarkers = "none"] = summary.split(";stderrMarkers=");
+      const startupMarkers = observedMarkers
+        .split(",")
+        .filter((marker) => startupDiagnosticMarkers.has(marker));
+      await test.info().attach("electron-safe-process-diagnostics", {
+        body: `${safeFirstWindowFailureCode(bodyFailure)};${processStatus};startupMarkers=${startupMarkers.join(",") || "none"}`,
+        contentType: "text/plain",
+      });
+    }
     if (cleanupFailures.length > 0) {
       throw new AggregateError(
         [bodyFailure, ...cleanupFailures],

@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"testing"
 	"time"
@@ -54,6 +55,16 @@ func (locator *countingProfileLocator) Locate(sbrprofile.Profile) (sbrprofile.Re
 	return locator.resources, nil
 }
 
+type countingDelegatingProfileLocator struct {
+	delegate sbrprofile.ResourceLocator
+	calls    int
+}
+
+func (locator *countingDelegatingProfileLocator) Locate(profile sbrprofile.Profile) (sbrprofile.ResourceSet, error) {
+	locator.calls++
+	return locator.delegate.Locate(profile)
+}
+
 type snapshotLauncher struct {
 	stagedRoot  string
 	helperBytes []byte
@@ -85,21 +96,37 @@ func TestAuthenticatedProfilePortLoadsCommittedSimulatorResources(t *testing.T) 
 	if err := os.Mkdir(runtimeBase, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	locator, err := sbrprofile.NewDirectoryResourceLocator(resources, runtimeBase)
+	directoryLocator, err := sbrprofile.NewDirectoryResourceLocator(resources, runtimeBase)
 	if err != nil {
 		t.Fatal(err)
 	}
+	locator := &countingDelegatingProfileLocator{delegate: directoryLocator}
 	provider, err := NewAuthenticatedProfilePort(profilePath, locator)
 	if err != nil {
 		t.Fatal(err)
 	}
-	profile, err := provider.Current(context.Background(), time.Date(2026, 8, 24, 0, 0, 0, 0, time.UTC))
+	now := time.Date(2026, 8, 24, 0, 0, 0, 0, time.UTC)
+	profile, err := provider.Current(context.Background(), now)
+	if unsupportedStagingTarget() {
+		assertUnsupportedStagingTarget(t, profile, err)
+		if locator.calls != 0 {
+			t.Fatalf("unsupported target located resources %d times", locator.calls)
+		}
+		entries, readErr := os.ReadDir(runtimeBase)
+		if readErr != nil || len(entries) != 0 {
+			t.Fatalf("unsupported target staged runtime entries=%v read error=%v", entries, readErr)
+		}
+		return
+	}
 	if err != nil || profile.Environment != tammyv1.SbrEnvironment_SBR_ENVIRONMENT_SIMULATOR ||
 		profile.ComponentVersion != "tammy-sbr-simulator-v1" || profile.Conformance != sbr.ConformanceSimulator ||
 		profile.ProfileFingerprint == [sha256.Size]byte{} ||
 		profile.RegistrationFingerprint == [sha256.Size]byte{} || profile.ComponentFingerprint == [sha256.Size]byte{} ||
-		!profile.AuthenticatedUntil.After(time.Date(2026, 8, 24, 0, 0, 0, 0, time.UTC)) {
+		!profile.AuthenticatedUntil.After(now) {
 		t.Fatalf("Current() = %+v, %v", profile, err)
+	}
+	if locator.calls != 1 {
+		t.Fatalf("supported target located resources %d times, want 1", locator.calls)
 	}
 }
 
@@ -125,6 +152,18 @@ func TestAuthenticatedProfileLeasePinsSnapshotAcrossSourceRotationAndCleansUp(t 
 	launcher := &snapshotLauncher{}
 	provider := &AuthenticatedProfilePort{profilePath: profilePath, locator: locator, launcher: launcher, now: func() time.Time { return now }}
 	profile, err := provider.Current(context.Background(), now)
+	if unsupportedStagingTarget() {
+		assertUnsupportedStagingTarget(t, profile, err)
+		if locator.calls != 0 || launcher.stagedRoot != "" || len(launcher.helperBytes) != 0 {
+			t.Fatalf("unsupported target used locator or launcher: locate calls=%d staged root=%q helper bytes=%d",
+				locator.calls, launcher.stagedRoot, len(launcher.helperBytes))
+		}
+		entries, readErr := os.ReadDir(runtimeBase)
+		if readErr != nil || len(entries) != 0 {
+			t.Fatalf("unsupported target staged runtime entries=%v read error=%v", entries, readErr)
+		}
+		return
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -148,6 +187,21 @@ func TestAuthenticatedProfileLeasePinsSnapshotAcrossSourceRotationAndCleansUp(t 
 	}
 	if _, err := os.Stat(rootPath); !os.IsNotExist(err) {
 		t.Fatalf("closed lease retained staged root %q: %v", rootPath, err)
+	}
+}
+
+func unsupportedStagingTarget() bool {
+	return !authenticatedProfileStagingSupported
+}
+
+func assertUnsupportedStagingTarget(t *testing.T, profile sbr.RuntimeProfile, err error) {
+	t.Helper()
+	expected := sbrprofile.UnsupportedTargetError()
+	if !errors.Is(err, expected) || err.Error() != expected.Error() {
+		t.Fatalf("unsupported target Current() error=%v, want exact %v", err, expected)
+	}
+	if !reflect.DeepEqual(profile, sbr.RuntimeProfile{}) {
+		t.Fatalf("unsupported target returned runtime authority profile: %+v", profile)
 	}
 }
 
