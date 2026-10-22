@@ -1049,6 +1049,16 @@ async function interactionJourney(page: import("@playwright/test").Page) {
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
       ).toBe(true);
       await captureJourney(page, `19-${width}-${label.toLowerCase().replaceAll(" ", "-")}`);
+      if (width === 320 && label === "Documents") {
+        const previousPage = page.getByRole("button", {
+          name: "Previous document page",
+          exact: true,
+        });
+        const nextPage = page.getByRole("button", { name: "Next document page", exact: true });
+        await previousPage.scrollIntoViewIfNeeded();
+        await expect(previousPage).toBeInViewport({ ratio: 1 });
+        await expect(nextPage).toBeInViewport({ ratio: 1 });
+      }
       if (width === 320 && label === "Banking") {
         await page.getByRole("button", { name: "Import statement", exact: true }).click();
         await page.getByLabel("Opening balance").fill("681.00");

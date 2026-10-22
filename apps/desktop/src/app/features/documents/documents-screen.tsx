@@ -517,7 +517,7 @@ export function DocumentsScreen({
               : "Local source documents"}{" "}
             · Files stay in this workspace
           </span>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               className="h-9 text-[12px]"
               disabled={cursors.length < 2 || documentsQuery.isFetching}
