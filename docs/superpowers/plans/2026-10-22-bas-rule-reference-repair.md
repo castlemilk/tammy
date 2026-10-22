@@ -76,6 +76,8 @@ Three deterministic component cases reproduced both defects: a paused post-save 
 
 The resulting full quick gate passed all 1,228 desktop tests, 757 script tests with the existing conditional native-reproduction skip, 36 desktop-script tests, 32 invoice tests, 39 reporting tests, 32 local-API tests, default Core, types, generated contracts and lint (135 existing warnings, two infos, no errors). Independent code review found no actionable defect. Full clean-source packaged runtime, complete affected native suites and independent artifact inspection remain pending.
 
+The clean `327473a1` package then passed the main journey's original/revision PDF/CSV assertions, both external confirmations, restart authentication, exact retained heads/frozen bytes, and authoritative `SOURCE_CHANGED` checks after later source mutation. Its last screen assertion matched two legitimate currentness paragraphs; target the selected frozen snapshot paragraph explicitly. The run was stopped gracefully after that known selector failure (eight passed, one failed, one interrupted, six not run, no retries), with no remaining packaged processes. It remains diagnostic rather than acceptance evidence. Final complete runtime and actual artifact inspection still require the corrected clean source.
+
 ## Chunk 1: Canonical setup and bounded bridge
 
 - [x] Reproduce the setup checksum mismatch with a test deriving ID, revision and SHA-256 from the actual bundled bytes; verify RED and GREEN for both GST bases.

@@ -2431,7 +2431,11 @@ test("BAS lifecycle: clean cash sources, blocked PAYGI resolution, frozen handof
   await page.getByRole("link", { name: "GST & BAS", exact: true }).click();
   await expect(page.getByRole("heading", { name: "BAS preparation", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Freeze", exact: true }).click();
-  await expect(page.getByText(/Source changed/)).toBeVisible();
+  await expect(
+    page.getByText(
+      /^Selected frozen snapshot live source currentness: Source changed since this snapshot\./,
+    ),
+  ).toBeVisible();
   screenshots.push(await captureScreenshot(page, testInfo, "bas-frozen-source-changed.png"));
   await attachBasSuccessEvidence(
     testInfo,
