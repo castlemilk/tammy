@@ -847,8 +847,11 @@ async function captureJourney(
   const phase = upliftPhase ?? process.env.TAMMY_JOURNEY_CAPTURE;
   if (phase !== "before" && phase !== "after") {
     if (/^(04-documents|05-banking|19-320-(documents|banking)|25-match-review)$/.test(milestone)) {
+      const screenshotPath = test.info().outputPath("integrated-ui", `integrated-ui-${milestone}.png`);
+      await mkdir(path.dirname(screenshotPath), { recursive: true });
+      await page.screenshot({ animations: "disabled", fullPage: true, path: screenshotPath });
       await test.info().attach(`integrated-ui-${milestone}.png`, {
-        body: await page.screenshot({ animations: "disabled", fullPage: true }),
+        path: screenshotPath,
         contentType: "image/png",
       });
     }
