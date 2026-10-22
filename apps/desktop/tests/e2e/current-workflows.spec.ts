@@ -772,6 +772,8 @@ async function captureJourney(
     phase,
   );
   await mkdir(directory, { recursive: true });
+  const viewport = page.viewportSize();
+  if (viewport) await page.mouse.move(viewport.width - 4, viewport.height - 4);
   await page.screenshot({
     path: path.join(directory, `${milestone}.png`),
     fullPage: true,
@@ -802,18 +804,44 @@ async function interactionJourney(page: import("@playwright/test").Page) {
   await page.getByLabel("Date", { exact: true }).fill("2024-05-12");
   await page.getByLabel("Subtotal", { exact: true }).fill("100.00");
   await page.getByLabel("GST", { exact: true }).fill("10.00");
-  await page.getByLabel("Total", { exact: true }).fill("999.00");
+  await page.getByLabel("Total", { exact: true }).fill("110.00");
+  const overlongSupplier = "Synthetic supplier ".repeat(16);
+  await page.getByLabel("Supplier", { exact: true }).fill(overlongSupplier);
   await page.getByRole("button", { name: "Save review", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("The review could not be saved");
-  await expect(page.getByLabel("Supplier", { exact: true })).toHaveValue(
-    "Wattle Studio Supplies (synthetic)",
-  );
+  await expect(page.getByLabel("Supplier", { exact: true })).toHaveValue(overlongSupplier);
   await captureJourney(page, "12-review-error-preserved");
-  await page.getByLabel("Total", { exact: true }).fill("110.00");
+  await page.getByLabel("Supplier", { exact: true }).fill("Wattle Studio Supplies (synthetic)");
   await page.getByRole("button", { name: "Save review", exact: true }).dblclick();
   await expect(page.getByRole("button", { name: "Review saved", exact: true })).toBeDisabled();
   await expect(page.getByText("$110.00", { exact: true })).toBeVisible();
   await captureJourney(page, "13-review-saved");
+  await assertRoute(page, "Banking", "/banking", "Banking");
+  await page.getByLabel("CSV rows").fill("invalid synthetic row");
+  await page.getByRole("button", { name: "Import statement", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("Use one row per line");
+  await captureJourney(page, "20-csv-validation");
+  await page.getByLabel("Opening balance").fill("123456789.01");
+  await page.getByLabel("CSV rows").fill("2024-05-12,Synthetic studio supplies,-110.00");
+  await page.getByRole("button", { name: "Import statement", exact: true }).click();
+  await expect(
+    page.getByRole("cell", { name: "Synthetic studio supplies", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Complete reconciliation", exact: true }),
+  ).toBeDisabled();
+  await captureJourney(page, "21-statement-unmatched");
+  await page.getByRole("button", { name: "Match", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Complete reconciliation", exact: true }),
+  ).toBeEnabled();
+  await captureJourney(page, "22-statement-matched");
+  await page.getByRole("button", { name: "Complete reconciliation", exact: true }).dblclick();
+  await expect(
+    page.getByRole("button", { name: "Complete reconciliation", exact: true }),
+  ).toBeDisabled();
+  await expect(page.getByText("$123,456,679.01", { exact: true })).toBeVisible();
+  await captureJourney(page, "23-statement-reconciled");
 
   await assertRoute(page, "Chart of accounts", "/accounting/chart", "Chart of accounts");
   await page.getByRole("button", { name: "Add account", exact: true }).click();

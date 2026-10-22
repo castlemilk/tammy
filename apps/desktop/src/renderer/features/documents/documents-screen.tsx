@@ -336,7 +336,7 @@ function ReviewPanel({
             type="date"
             value={fields.date}
           />
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-2 max-[700px]:grid-cols-1">
             <Field
               label="Subtotal"
               onChange={(value) => setFields({ ...fields, subtotal: value })}
