@@ -31,20 +31,35 @@ describe("createCoreLaunchArguments", () => {
   });
 
   it("passes the exact owned SBR profile to the local core", () => {
+    const resourcesRoot = path.join(
+      path.parse(process.cwd()).root,
+      "Applications",
+      "Tammy.app",
+      "Contents",
+      "Resources",
+    );
+    const profilePath = path.join(resourcesRoot, "sbr", "simulator", "sbr-profile-v1.json");
+    const userDataPath = path.join(
+      path.parse(process.cwd()).root,
+      "Users",
+      "test",
+      "Library",
+      "Application Support",
+      "Tammy",
+    );
     expect(
       createCoreLaunchArguments({
         isPackaged: true,
         sbrProfile: {
-          profilePath:
-            "/Applications/Tammy.app/Contents/Resources/sbr/simulator/sbr-profile-v1.json",
-          resourcesRoot: "/Applications/Tammy.app/Contents/Resources",
+          profilePath,
+          resourcesRoot,
         },
-        userDataPath: "/Users/test/Library/Application Support/Tammy",
+        userDataPath,
       }),
     ).toEqual([
       "--data-root",
-      path.join("/Users/test/Library/Application Support/Tammy", "local-core"),
-      "--sbr-profile=/Applications/Tammy.app/Contents/Resources/sbr/simulator/sbr-profile-v1.json",
+      path.join(userDataPath, "local-core"),
+      `--sbr-profile=${profilePath}`,
     ]);
   });
 
@@ -72,12 +87,18 @@ describe("parseLocalLaunchArguments", () => {
   });
 
   it("consumes one absolute accounting-fresh user-data directory", () => {
+    const userDataPath = path.join(
+      path.parse(process.cwd()).root,
+      "private",
+      "tmp",
+      "tammy-accounting-fresh-123",
+    );
     expect(
       parseLocalLaunchArguments([
         "/Applications/Tammy.app/Contents/MacOS/Tammy",
-        "--user-data-dir=/private/tmp/tammy-accounting-fresh-123",
+        `--user-data-dir=${userDataPath}`,
       ]),
-    ).toEqual({ userDataPath: "/private/tmp/tammy-accounting-fresh-123" });
+    ).toEqual({ userDataPath });
   });
 
   it.each([

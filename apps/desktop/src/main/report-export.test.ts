@@ -150,8 +150,12 @@ it("acquires organisation/report/organisation and writes private exact retained 
   const f = await fixture();
   expect(await f.exporter.exportIncome(f.income)).toEqual({ saved: true });
   expect(f.client.getOrganisation).toHaveBeenCalledTimes(2);
-  expect((await stat(f.filePath)).mode & 0o777).toBe(0o600);
-  expect(await readFile(f.filePath, "utf8")).toContain('"minorUnits":"10001"');
+  const fileStats = await stat(f.filePath);
+  expect(fileStats.isFile()).toBe(true);
+  if (process.platform !== "win32") expect(fileStats.mode & 0o777).toBe(0o600);
+  const exported = await readFile(f.filePath, "utf8");
+  expect(exported).toContain('"minorUnits":"10001"');
+  expect(exported).toContain('"legalName":"Retained Name"');
   expect(await readdir(f.directory)).toEqual(["report.csv"]);
 });
 

@@ -59,6 +59,20 @@ type FindProcesses = (
 
 const findProcesses = findExactCoreProcesses as FindProcesses;
 
+async function macOSFixtureRoot(prefix: string): Promise<{
+  readonly nativePath: string;
+  readonly posixPath: string;
+}> {
+  const temporaryDirectory = process.platform === "win32" ? process.cwd() : tmpdir();
+  const nativePath = await mkdtemp(path.join(temporaryDirectory, prefix));
+  const volumeRoot = path.win32.parse(process.cwd()).root;
+  const posixPath =
+    process.platform === "win32"
+      ? `/${path.win32.relative(volumeRoot, nativePath).split(path.win32.sep).join("/")}`
+      : nativePath;
+  return { nativePath, posixPath };
+}
+
 function resultRunner(
   error: Parameters<QueryCallback>[0],
   stdout = "",
@@ -98,10 +112,10 @@ describe("findExactCoreProcesses", () => {
   });
 
   it("rejects a macOS pgrep match whose live executable image is not the packaged core", async () => {
-    const root = await mkdtemp(path.join(tmpdir(), "tammy-core-process-evidence-"));
+    const { nativePath: root, posixPath } = await macOSFixtureRoot("tammy-core-process-evidence-");
     try {
-      const corePath = path.join(root, "tammy-core");
-      const foreignPath = path.join(root, "foreign-core");
+      const corePath = path.posix.join(posixPath, "tammy-core");
+      const foreignPath = path.posix.join(posixPath, "foreign-core");
       const bytes = Buffer.from("packaged-core");
       await writeFile(corePath, bytes);
       await writeFile(foreignPath, bytes);
@@ -129,9 +143,9 @@ describe("findExactCoreProcesses", () => {
   });
 
   it("authenticates the live macOS core image identity and digest before pinning its PID", async () => {
-    const root = await mkdtemp(path.join(tmpdir(), "tammy-core-process-evidence-"));
+    const { nativePath: root, posixPath } = await macOSFixtureRoot("tammy-core-process-evidence-");
     try {
-      const corePath = path.join(root, "tammy-core");
+      const corePath = path.posix.join(posixPath, "tammy-core");
       const bytes = Buffer.from("packaged-core");
       await writeFile(corePath, bytes);
       const stats = await lstat(corePath, { bigint: true });
@@ -175,9 +189,9 @@ describe("findExactCoreProcesses", () => {
   });
 
   it("refuses to authenticate a PID reused during macOS image observation", async () => {
-    const root = await mkdtemp(path.join(tmpdir(), "tammy-core-process-evidence-"));
+    const { nativePath: root, posixPath } = await macOSFixtureRoot("tammy-core-process-evidence-");
     try {
-      const corePath = path.join(root, "tammy-core");
+      const corePath = path.posix.join(posixPath, "tammy-core");
       const bytes = Buffer.from("packaged-core");
       await writeFile(corePath, bytes);
       const stats = await lstat(corePath, { bigint: true });
@@ -212,9 +226,9 @@ describe("findExactCoreProcesses", () => {
   });
 
   it("rejects a live macOS core image whose digest differs from package authority", async () => {
-    const root = await mkdtemp(path.join(tmpdir(), "tammy-core-process-evidence-"));
+    const { nativePath: root, posixPath } = await macOSFixtureRoot("tammy-core-process-evidence-");
     try {
-      const corePath = path.join(root, "tammy-core");
+      const corePath = path.posix.join(posixPath, "tammy-core");
       await writeFile(corePath, "substituted-core");
       const stats = await lstat(corePath, { bigint: true });
       const runner = vi.fn<QueryRunner>((command, _arguments, _options, callback) => {

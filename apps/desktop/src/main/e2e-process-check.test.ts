@@ -53,21 +53,27 @@ async function fixture(): Promise<{
   readonly bytes: Buffer;
   readonly stagedPath: string;
 }> {
-  const root = await mkdtemp(path.join(tmpdir(), "tammy-helper-observer-"));
+  const temporaryDirectory = process.platform === "win32" ? process.cwd() : tmpdir();
+  const root = await mkdtemp(path.join(temporaryDirectory, "tammy-helper-observer-"));
   temporaryRoots.push(root);
-  const packagedPath = path.join(
-    root,
+  const volumeRoot = path.win32.parse(process.cwd()).root;
+  const posixRoot =
+    process.platform === "win32"
+      ? `/${path.win32.relative(volumeRoot, root).split(path.win32.sep).join("/")}`
+      : root;
+  const packagedPath = path.posix.join(
+    posixRoot,
     "Tammy.app/Contents/Resources/sbr-helper/darwin-arm64/tammy-sbr-helper",
   );
-  const trustedRuntimeBase = path.join(root, "user-data/local-core/core/sbr-runtime");
-  const stagedPath = path.join(
+  const trustedRuntimeBase = path.posix.join(posixRoot, "user-data/local-core/core/sbr-runtime");
+  const stagedPath = path.posix.join(
     trustedRuntimeBase,
     "tammy-sbr-runtime-0123456789abcdef01234567",
     "sbr-helper",
   );
   const bytes = Buffer.from("authenticated packaged helper");
-  await mkdir(path.dirname(packagedPath), { recursive: true });
-  await mkdir(path.dirname(stagedPath), { recursive: true });
+  await mkdir(path.posix.dirname(packagedPath), { recursive: true });
+  await mkdir(path.posix.dirname(stagedPath), { recursive: true });
   await writeFile(packagedPath, bytes, { mode: 0o500 });
   await writeFile(stagedPath, bytes, { mode: 0o500 });
   return {
@@ -113,7 +119,7 @@ describe("packaged SBR helper process observation", () => {
     const processPattern = new RegExp(query ?? "", "u");
     expect(processPattern.test(stagedPath)).toBe(true);
     expect(processPattern.test("tammy-sbr-helper")).toBe(false);
-    expect(processPattern.test(`/tmp/foreign/${path.basename(stagedPath)}`)).toBe(false);
+    expect(processPattern.test(`/tmp/foreign/${path.posix.basename(stagedPath)}`)).toBe(false);
   });
 
   it("pins the exact staged helper when lsof also reports the macOS dynamic loader", async () => {
@@ -137,11 +143,11 @@ describe("packaged SBR helper process observation", () => {
       const { authority, bytes, stagedPath } = await fixture();
       let observedPath = stagedPath;
       if (failureKind === "foreign root") {
-        observedPath = path.join(
-          path.dirname(path.dirname(authority.trustedRuntimeBases[0] ?? "")),
+        observedPath = path.posix.join(
+          path.posix.dirname(path.posix.dirname(authority.trustedRuntimeBases[0] ?? "")),
           "foreign/tammy-sbr-runtime-0123456789abcdef01234567/sbr-helper",
         );
-        await mkdir(path.dirname(observedPath), { recursive: true });
+        await mkdir(path.posix.dirname(observedPath), { recursive: true });
         await writeFile(observedPath, bytes, { mode: 0o500 });
       } else if (failureKind === "digest mismatch") {
         await chmod(stagedPath, 0o700);
@@ -174,11 +180,11 @@ describe("packaged SBR helper process observation", () => {
 
   it("rejects a PID whose pinned absolute staged path changes", async () => {
     const { authority, bytes, stagedPath } = await fixture();
-    const secondPath = path.join(
+    const secondPath = path.posix.join(
       authority.trustedRuntimeBases[0] ?? "",
       "tammy-sbr-runtime-89abcdef0123456701234567/sbr-helper",
     );
-    await mkdir(path.dirname(secondPath), { recursive: true });
+    await mkdir(path.posix.dirname(secondPath), { recursive: true });
     await writeFile(secondPath, bytes, { mode: 0o500 });
     const execute = runner([
       { stdout: "53\n" },

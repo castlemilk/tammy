@@ -102,7 +102,12 @@ test("ordinary simulator build binds the generated profile to the exact signed h
       }
       return { stdout: "" };
     };
-    const result = await buildSbrHelper({ root, commandRunner: runner });
+    const result = await buildSbrHelper({
+      root,
+      platform: "darwin",
+      arch: "arm64",
+      commandRunner: runner,
+    });
     const staged = path.join(root, "apps/desktop/resources/sbr/simulator");
     const authenticated = authenticateSbrProfileBytes({
       profileBytes: await readFile(path.join(staged, "sbr-profile-v1.json")),

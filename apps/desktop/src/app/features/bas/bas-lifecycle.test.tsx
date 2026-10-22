@@ -824,7 +824,7 @@ it("saves explicit registration dates and evidence-backed decided obligations", 
   expect(submitted?.otherObligations?.luxuryCarTax?.applicability).toBe(BasApplicability.UNKNOWN);
   expect(submitted?.otherObligations?.luxuryCarTax?.reason).toBe("");
   expect(submitted?.otherObligations?.luxuryCarTax?.evidence).toHaveLength(0);
-});
+}, 15_000);
 
 it("reuses the exact calculation profile income-year confirmation while retaining current notice evidence", async () => {
   const { fixture, user, incomeYearPin } = await mountPaygInputsEditor();

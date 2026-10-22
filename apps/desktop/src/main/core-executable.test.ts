@@ -1,4 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("node:path", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:path")>();
+  return {
+    ...actual,
+    default: actual.posix,
+  };
+});
+
 import {
   type AuthenticatedCoreExecutable,
   verifyMacOSPrimaryExecutableImage,

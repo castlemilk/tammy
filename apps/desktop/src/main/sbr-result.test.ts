@@ -47,7 +47,9 @@ describe("SBR packaged result evidence", () => {
     await writePassedSbrE2eResult(destination, validResult(), { expectedRevision: REVISION, now });
 
     expect(JSON.parse(await readFile(destination, "utf8"))).toEqual(validResult());
-    expect((await lstat(destination)).mode & 0o777).toBe(0o600);
+    const resultStat = await lstat(destination);
+    expect(resultStat.isFile()).toBe(true);
+    if (process.platform !== "win32") expect(resultStat.mode & 0o777).toBe(0o600);
     expect(await readFile(destination, "utf8")).toBe(`${JSON.stringify(validResult())}\n`);
   });
 

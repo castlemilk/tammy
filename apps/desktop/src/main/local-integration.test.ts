@@ -43,7 +43,15 @@ describe("desktop API pairing", () => {
     try {
       await integration.enable();
       const connection = JSON.parse(await readFile(integration.connectionPath, "utf8"));
-      expect((await stat(integration.connectionPath)).mode & 0o777).toBe(0o600);
+      const connectionStat = await stat(integration.connectionPath);
+      expect(connectionStat.isFile()).toBe(true);
+      if (process.platform !== "win32") {
+        expect(connectionStat.mode & 0o777).toBe(0o600);
+      }
+      expect(Object.keys(connection).sort()).toEqual(["capability", "origin", "version"]);
+      expect(connection.capability).toMatch(/^[A-Za-z0-9_-]{43}$/u);
+      expect(connection.origin).toMatch(/^http:\/\/127\.0\.0\.1:[0-9]+$/u);
+      expect(connection.version).toBe("v1");
       const response = await fetch(`${connection.origin}/v1/read`, {
         method: "POST",
         headers: {

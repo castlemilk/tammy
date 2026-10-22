@@ -1,6 +1,9 @@
 packages/connect-client/src/gen/** whitespace=-blank-at-eof
 compliance/contracts/descriptor-manifest.json text eol=lf
 
+# The embedded rule bundle is authenticated by the SHA-256 of its literal bytes.
+services/core/internal/artefacts/bundles/au_gst_v1.pb.json -text
+
 # Preserve the literal bytes of the exact archived output lint inventory.
 output/tammy-income-bas-exports-2026-10-06-d04a5322/cash/evidence.json -text
 output/tammy-income-bas-exports-2026-10-06-d04a5322/cash/initial-bas-comparison.json -text
