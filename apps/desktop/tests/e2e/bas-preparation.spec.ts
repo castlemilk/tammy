@@ -726,6 +726,15 @@ function reviewFindings(page: Page) {
 }
 
 async function expectNoReviewBlockers(page: Page) {
+  await expect(
+    page.getByRole("button", { name: "Refresh exact history", exact: true }),
+  ).toBeEnabled();
+  await expect(reviewFindings(page)).toBeVisible();
+  await expect(
+    page
+      .getByRole("table", { name: "Exact BAS calculation labels", exact: true })
+      .locator("tbody tr"),
+  ).toHaveCount(18);
   await expect(reviewFindings(page).getByText(/Blocker ·/)).toHaveCount(0);
 }
 
@@ -2283,6 +2292,21 @@ test("BAS lifecycle: clean cash sources, blocked PAYGI resolution, frozen handof
     for (let index = 0; index < warningCount; index += 1) await warnings.nth(index).check();
     await page.getByRole("button", { name: "Acknowledge selected exact warnings" }).click();
     await expectLifecycleMessage(page, "Recorded exact warning acknowledgement");
+    await expectNoReviewBlockers(page);
+  }
+  const revisionLabels = page.getByRole("table", {
+    name: "Exact BAS calculation labels",
+    exact: true,
+  });
+  for (const [label, exactCents, wholeDollars] of [
+    ["G1", "18200/1", "182"],
+    ["9", "9117/1", "91"],
+  ] as const) {
+    const row = revisionLabels.getByRole("row").filter({
+      has: page.getByRole("cell", { name: label, exact: true }),
+    });
+    await expect(row.getByRole("cell").nth(2)).toHaveText(exactCents);
+    await expect(row.getByRole("cell").nth(3)).toHaveText(wholeDollars);
   }
   screenshots.push(await captureScreenshot(page, testInfo, "bas-linked-revision-review.png"));
   await freezeCurrent(
