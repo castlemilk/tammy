@@ -2,9 +2,15 @@ import { createHash } from "node:crypto";
 import { copyFile, mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { create, toBinary } from "@bufbuild/protobuf";
-import type { Page, TestInfo } from "@playwright/test";
+import type { ElectronApplication, Page, TestInfo } from "@playwright/test";
 import {
+  BasChainExpectationSchema,
   BasDisputeOverlayState,
+  type BasExportEventSummary,
+  BasExportFormat,
+  BasExportOutcome,
+  BasExportPhase,
+  BasExportTargetSchema,
   BasExternalEventKind,
   BasExternalTrust,
   type BasFrozenBas,
@@ -12,11 +18,15 @@ import {
   type BasFrozenBasSummary,
   BasLiveCurrentness,
   type BasPreparationSummary,
+  CreateBasRevisionRequestSchema,
+  CreateBasRevisionResponseSchema,
   GetBasPreparationRequestSchema,
   GetBasPreparationResponseSchema,
   GetFrozenBasRequestSchema,
   type GetFrozenBasResponse,
   GetFrozenBasResponseSchema,
+  ListBasExportEventsRequestSchema,
+  ListBasExportEventsResponseSchema,
   ListBasExternalObservationsRequestSchema,
   ListBasExternalObservationsResponseSchema,
   ListBasPreparationsRequestSchema,
@@ -26,11 +36,18 @@ import {
 } from "@tammy/connect-client/tammy/v1/bas_preparation_pb.js";
 import {
   AuthenticationContextSchema,
+  CommandContextSchema,
   PageRequestSchema,
 } from "@tammy/connect-client/tammy/v1/common_pb.js";
 import { DocumentCandidateSchema } from "@tammy/connect-client/tammy/v1/documents_pb.js";
 import { InvoicePaymentSchema } from "@tammy/connect-client/tammy/v1/invoices_pb.js";
+import {
+  GetOrganisationRequestSchema,
+  GetOrganisationResponseSchema,
+  type Organisation,
+} from "@tammy/connect-client/tammy/v1/organisation_pb.js";
 import { LegacyPurchaseDisposition } from "@tammy/connect-client/tammy/v1/purchases_pb.js";
+import { uuidV7 } from "../../src/app/features/sbr/sbr-form-support";
 import { BAS_PREPARATION_RESPONSE_FRAME_LIMIT } from "../../src/shared/bas-preparation-ipc";
 import { createProtoMethodCodec } from "../../src/shared/proto-ipc";
 import { expect, test } from "./fixtures";
@@ -88,6 +105,28 @@ const listPreparationsCodec = createProtoMethodCodec({
   maximumRequestBytes: 16_384,
   maximumResponseBytes: BAS_PREPARATION_RESPONSE_FRAME_LIMIT,
 });
+const listExportEventsCodec = createProtoMethodCodec({
+  input: ListBasExportEventsRequestSchema,
+  output: ListBasExportEventsResponseSchema,
+  maximumRequestBytes: 16_384,
+  maximumResponseBytes: BAS_PREPARATION_RESPONSE_FRAME_LIMIT,
+});
+const createRevisionCodec = createProtoMethodCodec({
+  input: CreateBasRevisionRequestSchema,
+  output: CreateBasRevisionResponseSchema,
+  maximumRequestBytes: 16_384,
+  maximumResponseBytes: 16_384,
+});
+const organisationCodec = createProtoMethodCodec({
+  input: GetOrganisationRequestSchema,
+  output: GetOrganisationResponseSchema,
+  maximumRequestBytes: 8_192,
+  maximumResponseBytes: 32_768,
+});
+const CURRENT_TAX_RULE_HASH = "1da4e89d4fa785da7591070e8a6054f91df5ed02bb4ec10a0c894a15141506de";
+const LEGACY_TAX_RULE_HASH = "e2f9cde094db43c30260dc54f089a1ab835912e75e8c29add5c7a240e90497e4";
+const DEFAULT_TAX_RULE_BUNDLE_ID = "018f0000-0000-7000-8000-000000000022";
+const LEGACY_RULE_SHIM_STATE_KEY = "__tammyBasLegacyRuleCreateShimState";
 type Workspace = Awaited<ReturnType<typeof authenticatedWorkspace>>;
 type TotpClock = { counter: number; readonly secret: string };
 type RetainedEvidence = {
@@ -124,8 +163,173 @@ type BasExportSources = {
   readonly actualDueDateEvidence: RetainedEvidence;
 };
 
+async function installLegacyRuleCreateShim(application: ElectronApplication): Promise<void> {
+  await application.evaluate(
+    ({ ipcMain }, { currentHashHex, legacyHashHex, stateKey }) => {
+      type InvokeHandler = (event: unknown, ...args: unknown[]) => unknown;
+      const handlers = (ipcMain as unknown as { _invokeHandlers?: Map<string, InvokeHandler> })
+        ._invokeHandlers;
+      const channel = "conveyor:organisation";
+      const original = handlers?.get(channel);
+      if (!handlers || !original) throw new Error("BAS_ACCEPTANCE_LEGACY_RULE_SHIM_UNAVAILABLE");
+
+      const fromHex = (value: string) => {
+        const bytes = new Uint8Array(value.length / 2);
+        for (let index = 0; index < bytes.length; index += 1) {
+          bytes[index] = Number.parseInt(value.slice(index * 2, index * 2 + 2), 16);
+        }
+        return bytes;
+      };
+      const currentHash = fromHex(currentHashHex);
+      const legacyHash = fromHex(legacyHashHex);
+      if (currentHash.length !== 32 || legacyHash.length !== 32)
+        throw new Error("BAS_ACCEPTANCE_LEGACY_RULE_HASH_INVALID");
+
+      const readVarint = (bytes: Uint8Array, cursor: { offset: number }, end: number): number => {
+        let value = 0;
+        let shift = 0;
+        while (cursor.offset < end && shift <= 49) {
+          const byte = bytes[cursor.offset];
+          if (byte === undefined) throw new Error("BAS_ACCEPTANCE_LEGACY_RULE_FRAME_INVALID");
+          cursor.offset += 1;
+          value += (byte & 0x7f) * 2 ** shift;
+          if ((byte & 0x80) === 0) return value;
+          shift += 7;
+        }
+        throw new Error("BAS_ACCEPTANCE_LEGACY_RULE_FRAME_INVALID");
+      };
+      const skipField = (
+        bytes: Uint8Array,
+        cursor: { offset: number },
+        end: number,
+        wireType: number,
+      ) => {
+        if (wireType === 0) {
+          readVarint(bytes, cursor, end);
+          return;
+        }
+        if (wireType === 1 || wireType === 5) {
+          cursor.offset += wireType === 1 ? 8 : 4;
+        } else if (wireType === 2) {
+          const length = readVarint(bytes, cursor, end);
+          cursor.offset += length;
+        } else {
+          throw new Error("BAS_ACCEPTANCE_LEGACY_RULE_FRAME_INVALID");
+        }
+        if (cursor.offset > end) throw new Error("BAS_ACCEPTANCE_LEGACY_RULE_FRAME_INVALID");
+      };
+      const sourceHashPosition = (bytes: Uint8Array, start: number, end: number) => {
+        const cursor = { offset: start };
+        let matchCount = 0;
+        let position = -1;
+        while (cursor.offset < end) {
+          const tag = readVarint(bytes, cursor, end);
+          const fieldNumber = Math.floor(tag / 8);
+          const wireType = tag & 7;
+          if (fieldNumber === 4 && wireType === 2) {
+            const length = readVarint(bytes, cursor, end);
+            const hashStart = cursor.offset;
+            if (length === currentHash.length && hashStart + length <= end) {
+              let matches = true;
+              for (let index = 0; index < length; index += 1) {
+                if (bytes[hashStart + index] !== currentHash[index]) matches = false;
+              }
+              if (matches) {
+                matchCount += 1;
+                position = hashStart;
+              }
+            }
+            cursor.offset += length;
+            if (cursor.offset > end) throw new Error("BAS_ACCEPTANCE_LEGACY_RULE_FRAME_INVALID");
+          } else {
+            skipField(bytes, cursor, end, wireType);
+          }
+        }
+        if (matchCount !== 1) throw new Error("BAS_ACCEPTANCE_LEGACY_RULE_REF_NOT_EXACT");
+        return position;
+      };
+      const locateBundleHash = (bytes: Uint8Array) => {
+        const cursor = { offset: 0 };
+        let bundleCount = 0;
+        let hashPosition = -1;
+        while (cursor.offset < bytes.length) {
+          const tag = readVarint(bytes, cursor, bytes.length);
+          const fieldNumber = Math.floor(tag / 8);
+          const wireType = tag & 7;
+          if (fieldNumber === 9 && wireType === 2) {
+            const length = readVarint(bytes, cursor, bytes.length);
+            const start = cursor.offset;
+            const end = start + length;
+            if (end > bytes.length) throw new Error("BAS_ACCEPTANCE_LEGACY_RULE_FRAME_INVALID");
+            bundleCount += 1;
+            hashPosition = sourceHashPosition(bytes, start, end);
+            cursor.offset = end;
+          } else {
+            skipField(bytes, cursor, bytes.length, wireType);
+          }
+        }
+        if (bundleCount !== 1 || hashPosition < 0)
+          throw new Error("BAS_ACCEPTANCE_LEGACY_RULE_REF_NOT_EXACT");
+        return hashPosition;
+      };
+
+      const state = { replacementCount: 0, restored: false };
+      Object.defineProperty(ipcMain, stateKey, { configurable: true, value: state });
+      const wrapped: InvokeHandler = async (event, ...args) => {
+        if (args[0] !== "createOrganisation" || !(args[1] instanceof Uint8Array)) {
+          return Reflect.apply(original, ipcMain, [event, ...args]);
+        }
+        if (state.replacementCount !== 0) return Reflect.apply(original, ipcMain, [event, ...args]);
+        const request = args[1];
+        const hashPosition = locateBundleHash(request);
+        const rewritten = request.slice();
+        rewritten.set(legacyHash, hashPosition);
+        state.replacementCount = 1;
+        handlers.set(channel, original);
+        state.restored = true;
+        const forwardedArgs = args.slice();
+        forwardedArgs[1] = rewritten;
+        return Reflect.apply(original, ipcMain, [event, ...forwardedArgs]);
+      };
+      handlers.set(channel, wrapped);
+    },
+    {
+      currentHashHex: CURRENT_TAX_RULE_HASH,
+      legacyHashHex: LEGACY_TAX_RULE_HASH,
+      stateKey: LEGACY_RULE_SHIM_STATE_KEY,
+    },
+  );
+}
+
+async function readLegacyRuleShimResult(application: ElectronApplication) {
+  return application.evaluate(({ ipcMain }, stateKey) => {
+    type ShimState = { replacementCount: number; restored: boolean };
+    const target = ipcMain as unknown as Record<string, unknown>;
+    const state = target[stateKey] as ShimState | undefined;
+    if (!state) throw new Error("BAS_ACCEPTANCE_LEGACY_RULE_SHIM_STATE_MISSING");
+    delete target[stateKey];
+    return { replacementCount: state.replacementCount, restored: state.restored };
+  }, LEGACY_RULE_SHIM_STATE_KEY);
+}
+
 function hex(value: Uint8Array) {
   return [...value].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function nextMelbourneCivilDate() {
+  const parts = new Intl.DateTimeFormat("en-AU", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "Australia/Melbourne",
+    year: "numeric",
+  }).formatToParts(new Date());
+  const part = (type: "day" | "month" | "year") =>
+    Number(parts.find((value) => value.type === type)?.value ?? 0);
+  const tomorrow = new Date(0);
+  tomorrow.setUTCFullYear(part("year"), part("month") - 1, part("day"));
+  tomorrow.setUTCHours(0, 0, 0, 0);
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+  return `${String(tomorrow.getUTCFullYear()).padStart(4, "0")}-${String(tomorrow.getUTCMonth() + 1).padStart(2, "0")}-${String(tomorrow.getUTCDate()).padStart(2, "0")}`;
 }
 function refKey(value: BasReference) {
   return `${value.type}:${value.id}:${value.revision}:${hex(value.contentHash)}`;
@@ -173,7 +377,12 @@ function evidenceFor(
   };
 }
 
-async function markSupportingDocumentNoncreditable(page: Page, number: string, documentId: string) {
+async function markSupportingDocumentNoncreditable(
+  page: Page,
+  number: string,
+  documentId: string,
+  reason = "Supporting evidence only; zero purchase value and zero purchase credit.",
+) {
   await openPurchase(page, number);
   const panel = page.getByRole("region", { name: "Purchase accounting", exact: true });
   await panel
@@ -195,9 +404,7 @@ async function markSupportingDocumentNoncreditable(page: Page, number: string, d
   await panel
     .getByRole("combobox", { name: "Legacy supporting evidence", exact: true })
     .selectOption(documentId);
-  await panel
-    .getByLabel("Legacy review reason", { exact: true })
-    .fill("Supporting evidence only; zero purchase value and zero purchase credit.");
+  await panel.getByLabel("Legacy review reason", { exact: true }).fill(reason);
   await panel
     .getByLabel(
       "Reviewed legacy accounting, settlement and claimed status against retained records",
@@ -247,6 +454,31 @@ async function getFrozen(page: Page, workspace: Workspace, ref: BasReference) {
   );
 }
 
+async function exportEventsForFrozen(page: Page, workspace: Workspace, ref: BasReference) {
+  const events: BasExportEventSummary[] = [];
+  let cursor = "";
+  do {
+    const frame = listExportEventsCodec.encodeRequest(
+      create(ListBasExportEventsRequestSchema, {
+        authentication: authentication(workspace),
+        organisationId: workspace.organisationId,
+        target: create(BasExportTargetSchema, {
+          exactTarget: { case: "frozenBas", value: ref },
+        }),
+        page: create(PageRequestSchema, { pageSize: 200, ...(cursor ? { cursor } : {}) }),
+      }),
+    );
+    const response = listExportEventsCodec.decodeResponse(
+      await invokeConveyorFrame(page, "basPreparation", "listBasExportEvents", frame),
+    );
+    events.push(...response.events);
+    const next = response.page?.nextCursor ?? "";
+    if (next && next === cursor) throw new Error("BAS_ACCEPTANCE_EXPORT_CURSOR_REPEATED");
+    cursor = next;
+  } while (cursor);
+  return events;
+}
+
 async function getPreparation(page: Page, workspace: Workspace, ref: BasReference) {
   const frame = getPreparationCodec.encodeRequest(
     create(GetBasPreparationRequestSchema, {
@@ -259,6 +491,29 @@ async function getPreparation(page: Page, workspace: Workspace, ref: BasReferenc
   return getPreparationCodec.decodeResponse(
     await invokeConveyorFrame(page, "basPreparation", "getBasPreparation", frame),
   );
+}
+
+async function getOrganisation(page: Page, workspace: Workspace): Promise<Organisation> {
+  const frame = organisationCodec.encodeRequest(
+    create(GetOrganisationRequestSchema, {
+      authentication: authentication(workspace),
+      organisationId: workspace.organisationId,
+    }),
+  );
+  const response = organisationCodec.decodeResponse(
+    await invokeConveyorFrame(page, "organisation", "getOrganisation", frame),
+  );
+  if (!response.organisation) throw new Error("BAS_ACCEPTANCE_ORGANISATION_MISSING");
+  return response.organisation;
+}
+
+function expectTaxRuleReference(organisation: Organisation, expectedHash: string) {
+  const reference = organisation.activeTaxRuleBundle;
+  if (!reference) throw new Error("BAS_ACCEPTANCE_TAX_RULE_REFERENCE_MISSING");
+  expect(reference.type).toBe("tax_rule_bundle");
+  expect(reference.id).toBe(DEFAULT_TAX_RULE_BUNDLE_ID);
+  expect(reference.revision).toBe(1n);
+  expect(hex(reference.contentHash)).toBe(expectedHash);
 }
 
 async function observationsForFrozen(page: Page, workspace: Workspace, ref: BasReference) {
@@ -431,7 +686,10 @@ async function configureProfileAndPeriod(
   evidence: RetainedEvidence,
   dueDateEvidenceIdentity: RetainedEvidence,
 ) {
-  await page.getByLabel("Effective from", { exact: true }).fill("2026-07-01");
+  const profileSection = page
+    .getByRole("heading", { name: "Obligations profile", exact: true })
+    .locator("xpath=ancestor::section[1]");
+  await profileSection.getByLabel("Effective from", { exact: true }).fill("2026-07-01");
   for (const [label, value] of [
     ["GST obligation", "active"],
     ["GST registration status", "registered"],
@@ -619,16 +877,6 @@ async function regenerateSaveAndValidate(
 
 async function selectExactPreparation(page: Page, workspace: Workspace, family: BasReference) {
   const summary = await latestPreparationForFamily(page, workspace, family);
-  const preparation = requiredPreparation(summary.preparation);
-  await page.getByRole("button", { name: "Review", exact: true }).click();
-  await page
-    .getByRole("combobox", { name: "Preparation history", exact: true })
-    .selectOption(refKey(preparation));
-  return summary;
-}
-
-async function selectLatestPreparation(page: Page, workspace: Workspace) {
-  const summary = await latestPreparationForFamily(page, workspace);
   const preparation = requiredPreparation(summary.preparation);
   await page.getByRole("button", { name: "Review", exact: true }).click();
   await page
@@ -1272,12 +1520,87 @@ async function cancelFrozenExport(
   await expect(history).toContainText(ref.id);
 }
 
+async function failFrozenExport(
+  page: Page,
+  electronHarness: { readonly application: import("@playwright/test").ElectronApplication },
+  testInfo: TestInfo,
+  workspace: Workspace,
+  ref: BasReference,
+) {
+  const blockingFile = testInfo.outputPath("bas-export-blocking-parent.bin");
+  const impossibleTarget = path.join(blockingFile, "failed-export.csv");
+  await writeFile(blockingFile, "a file cannot contain a child report path");
+  const frozenBefore = requiredFrozenRecord((await getFrozen(page, workspace, ref)).frozenBas);
+  const frozenBeforeBytes = Buffer.from(toBinary(BasFrozenBasSchema, frozenBefore));
+
+  await page.getByRole("button", { name: "Export", exact: true }).click();
+  await page
+    .getByRole("combobox", { name: "Exact report source", exact: true })
+    .selectOption("frozen_bas");
+  await page
+    .getByRole("combobox", { name: "Frozen BAS identity", exact: true })
+    .selectOption(refKey(ref));
+  await page.getByRole("combobox", { name: "Format", exact: true }).selectOption("csv");
+  await electronHarness.application.evaluate(({ dialog }, filePath) => {
+    dialog.showSaveDialog = async () => ({ canceled: false, filePath });
+  }, impossibleTarget);
+  await page.getByRole("button", { name: "Export CSV", exact: true }).click();
+  await expect(
+    page.getByText(
+      "The report could not be saved. Choose a writable PDF or CSV file and try again.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  expect((await stat(blockingFile)).isFile()).toBe(true);
+  await expect
+    .poll(() =>
+      stat(impossibleTarget).then(
+        () => true,
+        () => false,
+      ),
+    )
+    .toBe(false);
+
+  const history = page.getByRole("region", { name: "Exact-target export history", exact: true });
+  await expect(history).toContainText("CSV");
+  await expect(history).toContainText("Failed");
+  await expect(history).toContainText(ref.id);
+  const events = (await exportEventsForFrozen(page, workspace, ref)).filter(
+    (event) => event.format === BasExportFormat.CSV,
+  );
+  expect(events).toHaveLength(2);
+  expect(
+    events.every((event) => {
+      const target = event.target?.exactTarget;
+      return (
+        event.format === BasExportFormat.CSV &&
+        target?.case === "frozenBas" &&
+        refKey(target.value) === refKey(ref)
+      );
+    }),
+    "failed export events remain bound to the exact frozen CSV target",
+  ).toBe(true);
+  expect(events.filter((event) => event.phase === BasExportPhase.STARTED)).toHaveLength(1);
+  const finished = events.filter((event) => event.phase === BasExportPhase.FINISHED);
+  expect(finished).toHaveLength(1);
+  expect(finished[0]?.outcome).toBe(BasExportOutcome.FAILED);
+
+  const frozenAfter = requiredFrozenRecord((await getFrozen(page, workspace, ref)).frozenBas);
+  expect(Buffer.from(toBinary(BasFrozenBasSchema, frozenAfter))).toEqual(frozenBeforeBytes);
+}
+
 test("BAS lifecycle: clean cash sources, blocked PAYGI resolution, frozen handoffs, linked revision and immutable exports", async ({
   electronHarness,
 }, testInfo) => {
   test.setTimeout(900_000);
+  await installLegacyRuleCreateShim(electronHarness.application);
   const workspace = await setupPurchaseWorkspace(electronHarness, "cash");
+  expect(await readLegacyRuleShimResult(electronHarness.application)).toEqual({
+    replacementCount: 1,
+    restored: true,
+  });
   let page = electronHarness.currentPage();
+  const totp = await setupTotp(page);
   const screenshots: string[] = [];
 
   await createAndIssueInvoice(page, "BAS-CASH-TAXABLE-001", "200.00", "taxable");
@@ -1468,6 +1791,49 @@ test("BAS lifecycle: clean cash sources, blocked PAYGI resolution, frozen handof
     await expect(stages.getByRole("button", { name: stage, exact: true })).toBeVisible();
   }
 
+  const organisationBeforeRuleRepair = await getOrganisation(page, workspace);
+  expectTaxRuleReference(organisationBeforeRuleRepair, LEGACY_TAX_RULE_HASH);
+  const ruleReferencePanel = page.getByRole("group", {
+    name: "Tax-rule reference",
+    exact: true,
+  });
+  await expect(ruleReferencePanel).toBeVisible();
+  await ruleReferencePanel.locator("summary").click();
+  await ruleReferencePanel
+    .getByRole("button", { name: "Check stored tax-rule reference", exact: true })
+    .click();
+  await expect(ruleReferencePanel.getByRole("status")).toHaveText(
+    "This workspace uses the known legacy tax-rule reference.",
+  );
+  await expect(ruleReferencePanel).toContainText(LEGACY_TAX_RULE_HASH);
+  await expect(
+    ruleReferencePanel.getByLabel("Reason for rule-reference update", { exact: true }),
+  ).toBeVisible();
+  await ruleReferencePanel
+    .getByLabel("Reason for rule-reference update", { exact: true })
+    .fill(
+      "The previous application stored this tax-rule reference; update it to the supported bundle.",
+    );
+  await ruleReferencePanel
+    .getByLabel("Effective from", { exact: true })
+    .fill(nextMelbourneCivilDate());
+  await ruleReferencePanel
+    .getByLabel("Fresh TOTP code", { exact: true })
+    .fill(await nextFreshCode(totp));
+  await ruleReferencePanel
+    .getByRole("button", { name: "Confirm tax-rule reference update", exact: true })
+    .click();
+  await expect(ruleReferencePanel).toContainText(
+    "The active tax-rule reference was updated. Frozen BAS history is unchanged.",
+  );
+  const organisationAfterRuleRepair = await getOrganisation(page, workspace);
+  expect(organisationAfterRuleRepair.id).toBe(organisationBeforeRuleRepair.id);
+  expect(organisationAfterRuleRepair.version).toBe(organisationBeforeRuleRepair.version + 1n);
+  expect(organisationAfterRuleRepair.abn).toBe(organisationBeforeRuleRepair.abn);
+  expect(organisationAfterRuleRepair.gstBasis).toBe(organisationBeforeRuleRepair.gstBasis);
+  expectTaxRuleReference(organisationAfterRuleRepair, CURRENT_TAX_RULE_HASH);
+  await ruleReferencePanel.locator("summary").click();
+
   await configureProfileAndPeriod(page, profileEvidence, dueDateEvidence);
   await regenerateSaveAndValidate(page, retainedEvidence, "unknown");
   await expect(page.getByText("PAYGI_NOTICE_STATUS_UNKNOWN", { exact: true })).toBeVisible();
@@ -1494,13 +1860,30 @@ test("BAS lifecycle: clean cash sources, blocked PAYGI resolution, frozen handof
   await page.getByRole("button", { name: "Run validation on this exact calculation" }).click();
   await expectLifecycleMessage(page, "Created review validation");
   await expectNoReviewBlockers(page);
+  const reviewedSummaryBeforeSourceChange = await latestPreparationForFamily(page, workspace);
+  const reviewedRefBeforeSourceChange = requiredPreparation(
+    reviewedSummaryBeforeSourceChange.preparation,
+  );
+  const reviewedDetailBeforeSourceChange = await getPreparation(
+    page,
+    workspace,
+    reviewedRefBeforeSourceChange,
+  );
+  const reviewedCalculationBeforeSourceChange = reviewedDetailBeforeSourceChange.currentCalculation;
+  if (!reviewedCalculationBeforeSourceChange?.result || !reviewedSummaryBeforeSourceChange.family)
+    throw new Error("BAS_ACCEPTANCE_REVIEWED_CALCULATION_MISSING");
+  expect(reviewedCalculationBeforeSourceChange.result.labels).toHaveLength(18);
+  const reviewedSourceHashBeforeChange = hex(
+    reviewedCalculationBeforeSourceChange.sourceSnapshotHash,
+  );
+  const reviewedLabelsBeforeChange = reviewedCalculationBeforeSourceChange.result.labels;
   screenshots.push(await captureScreenshot(page, testInfo, "bas-reviewed-labels.png"));
 
   await page.getByRole("button", { name: "Freeze", exact: true }).click();
   await page
     .getByLabel("Approval reason", { exact: true })
     .fill("Approval is unavailable until a Business Lodger is assigned.");
-  await page.getByLabel("Authenticator code", { exact: true }).fill("000000");
+  await page.getByLabel("Authenticator code", { exact: true }).fill(await nextFreshCode(totp));
   await expect(
     page.getByRole("button", { name: "Approve and freeze exact snapshot" }),
   ).toBeDisabled();
@@ -1511,11 +1894,68 @@ test("BAS lifecycle: clean cash sources, blocked PAYGI resolution, frozen handof
   await page.getByRole("button", { name: "Confirm and save", exact: true }).click();
   await expectAuthorityMessage(page, "BAS approval authority updated");
 
-  const totp = await setupTotp(page);
   await page.getByRole("link", { name: "GST & BAS", exact: true }).click();
   await expect(page.getByRole("heading", { name: "BAS preparation", exact: true })).toBeVisible();
-  // Route changes preserve exact Core history; select the returned identity by its immutable ref.
-  await selectLatestPreparation(page, workspace);
+  // A second retained review on the already-zero support document changes source history
+  // without changing any BAS amount. It must stale the exact review and block its freeze.
+  await markSupportingDocumentNoncreditable(
+    page,
+    "BAS-PROFILE-REGISTRATION-EVIDENCE-001",
+    profileEvidenceDocument.id,
+    "Supporting evidence only; zero purchase value and zero purchase credit. Same-total source-currentness check.",
+  );
+  await page.getByRole("link", { name: "GST & BAS", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "BAS preparation", exact: true })).toBeVisible();
+  const staleDetailBeforeRegeneration = await getPreparation(
+    page,
+    workspace,
+    reviewedRefBeforeSourceChange,
+  );
+  expect(staleDetailBeforeRegeneration.liveCurrentness).toBe(BasLiveCurrentness.SOURCE_CHANGED);
+  await selectExactPreparation(page, workspace, reviewedSummaryBeforeSourceChange.family);
+  await page.getByRole("button", { name: "Freeze", exact: true }).click();
+  const staleFreezePanel = page
+    .getByRole("heading", { name: "Freeze for manual handoff", exact: true })
+    .locator("xpath=ancestor::section[1]");
+  await expect(staleFreezePanel).toContainText("Source changed since this snapshot");
+  await page
+    .getByLabel("Approval reason", { exact: true })
+    .fill("A current-source review is required before freeze.");
+  await page.getByLabel("Authenticator code", { exact: true }).fill(await nextFreshCode(totp));
+  await expect(
+    page.getByRole("button", { name: "Approve and freeze exact snapshot" }),
+  ).toBeDisabled();
+  screenshots.push(
+    await captureScreenshot(page, testInfo, "bas-same-total-source-stale-freeze-blocked.png"),
+  );
+
+  await page.getByRole("button", { name: "Prepare", exact: true }).click();
+  await page.getByRole("button", { name: "Regenerate exact calculation", exact: true }).click();
+  await expectLifecycleMessage(page, "Prepared exact BAS version");
+  await page.getByRole("button", { name: "Review", exact: true }).click();
+  await page.getByRole("button", { name: "Run validation on this exact calculation" }).click();
+  await expectLifecycleMessage(page, "Created review validation");
+  await expectNoReviewBlockers(page);
+  const reviewedSummaryAfterSourceChange = await latestPreparationForFamily(page, workspace);
+  const reviewedRefAfterSourceChange = requiredPreparation(
+    reviewedSummaryAfterSourceChange.preparation,
+  );
+  const reviewedDetailAfterSourceChange = await getPreparation(
+    page,
+    workspace,
+    reviewedRefAfterSourceChange,
+  );
+  const reviewedCalculationAfterSourceChange = reviewedDetailAfterSourceChange.currentCalculation;
+  if (!reviewedCalculationAfterSourceChange?.result)
+    throw new Error("BAS_ACCEPTANCE_REGENERATED_CALCULATION_MISSING");
+  expect(reviewedDetailAfterSourceChange.liveCurrentness).toBe(BasLiveCurrentness.CURRENT);
+  expect(reviewedCalculationAfterSourceChange.result.labels).toEqual(reviewedLabelsBeforeChange);
+  expect(hex(reviewedCalculationAfterSourceChange.sourceSnapshotHash)).not.toBe(
+    reviewedSourceHashBeforeChange,
+  );
+  screenshots.push(
+    await captureScreenshot(page, testInfo, "bas-same-total-source-revalidated.png"),
+  );
   await freezeCurrent(
     page,
     totp,
@@ -1529,6 +1969,7 @@ test("BAS lifecycle: clean cash sources, blocked PAYGI resolution, frozen handof
   expect(frozenOneRecord.calculationSnapshot?.result?.labels).toHaveLength(18);
   screenshots.push(await captureScreenshot(page, testInfo, "bas-frozen-identity-currentness.png"));
   await cancelFrozenExport(page, electronHarness, frozenOneRef);
+  await failFrozenExport(page, electronHarness, testInfo, workspace, frozenOneRef);
   const firstPdf = await exportFrozen(
     page,
     electronHarness,
@@ -1609,7 +2050,25 @@ test("BAS lifecycle: clean cash sources, blocked PAYGI resolution, frozen handof
   const firstFrozen = await getFrozen(page, await authenticatedWorkspace(page), frozenOneRef);
   const firstFamily = firstFrozen.frozenBas?.family;
   if (!firstFamily) throw new Error("BAS_ACCEPTANCE_FAMILY_MISSING");
-  await selectExactPreparation(page, await authenticatedWorkspace(page), firstFamily);
+  const revisionBaseSummary = await selectExactPreparation(
+    page,
+    await authenticatedWorkspace(page),
+    firstFamily,
+  );
+  const revisionBaseRef = requiredPreparation(revisionBaseSummary.preparation);
+  const revisionBaseDetail = await getPreparation(page, workspace, revisionBaseRef);
+  const staleRevisionChain = revisionBaseDetail.currentChain;
+  const effectiveOriginal = revisionBaseDetail.effectiveOriginal;
+  const confirmedHeadIdentity = staleRevisionChain?.latestHead?.expectedState;
+  const revisionBase = revisionBaseDetail.preparation;
+  if (
+    !staleRevisionChain ||
+    !effectiveOriginal ||
+    confirmedHeadIdentity?.case !== "retained" ||
+    !revisionBase?.period ||
+    !revisionBase.profile
+  )
+    throw new Error("BAS_ACCEPTANCE_REVISION_PRECONDITION_MISSING");
   await page.getByRole("button", { name: "External record", exact: true }).click();
   await page
     .getByLabel("Revision reason", { exact: true })
@@ -1620,6 +2079,57 @@ test("BAS lifecycle: clean cash sources, blocked PAYGI resolution, frozen handof
     .getByRole("button", { name: "Create revision from exact confirmed head", exact: true })
     .click();
   await expectLifecycleMessage(page, "Created a BAS revision");
+  const createdRevisionSummary = await latestPreparationForFamily(page, workspace, firstFamily);
+  const createdRevisionRef = requiredPreparation(createdRevisionSummary.preparation);
+  const createdRevisionDetail = await getPreparation(page, workspace, createdRevisionRef);
+  if (!createdRevisionDetail.currentChain)
+    throw new Error("BAS_ACCEPTANCE_CREATED_REVISION_CHAIN_MISSING");
+  const createdRevisionChainBytes = Buffer.from(
+    toBinary(BasChainExpectationSchema, createdRevisionDetail.currentChain),
+  );
+  const staleRevisionRequest = create(CreateBasRevisionRequestSchema, {
+    commandContext: create(CommandContextSchema, {
+      idempotencyKey: uuidV7(),
+      authentication: authentication(workspace),
+    }),
+    organisationId: workspace.organisationId,
+    expectedVersion: staleRevisionChain.expectedFamilyVersion,
+    chain: staleRevisionChain,
+    effectiveOriginalPreparationId: effectiveOriginal.id,
+    effectiveOriginalPreparationHash: effectiveOriginal.contentHash,
+    latestConfirmedHeadId: confirmedHeadIdentity.value.id,
+    latestConfirmedHeadHash: confirmedHeadIdentity.value.contentHash,
+    period: revisionBase.period,
+    profile: revisionBase.profile,
+    reason: "Stale retry must not create a second BAS revision.",
+  });
+  let staleRevisionError = "";
+  try {
+    await invokeConveyorFrame(
+      page,
+      "basPreparation",
+      "createBasRevision",
+      createRevisionCodec.encodeRequest(staleRevisionRequest),
+    );
+  } catch (error) {
+    staleRevisionError = error instanceof Error ? error.message : String(error);
+  }
+  expect(staleRevisionError, "stale revision CAS uses the safe conflict response").toContain(
+    "BAS_CONFLICT",
+  );
+  const afterStaleRevisionSummary = await latestPreparationForFamily(page, workspace, firstFamily);
+  const afterStaleRevisionRef = requiredPreparation(afterStaleRevisionSummary.preparation);
+  expect(
+    refKey(afterStaleRevisionRef),
+    "stale retry leaves the single active revision intact",
+  ).toBe(refKey(createdRevisionRef));
+  const afterStaleRevisionDetail = await getPreparation(page, workspace, afterStaleRevisionRef);
+  if (!afterStaleRevisionDetail.currentChain)
+    throw new Error("BAS_ACCEPTANCE_POST_CONFLICT_CHAIN_MISSING");
+  expect(
+    Buffer.from(toBinary(BasChainExpectationSchema, afterStaleRevisionDetail.currentChain)),
+    "stale retry cannot create a duplicate branch or active attempt",
+  ).toEqual(createdRevisionChainBytes);
   await page.getByRole("button", { name: "Prepare", exact: true }).click();
   await page.getByRole("button", { name: "Regenerate exact calculation", exact: true }).click();
   await expectLifecycleMessage(page, "Prepared exact BAS version");

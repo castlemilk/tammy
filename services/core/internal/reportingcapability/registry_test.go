@@ -102,12 +102,12 @@ func TestRegistryLookupReturnsExactCurrentCapabilities(t *testing.T) {
 			summary: "Tammy supports a local invoice and reconciled purchase GST workpaper.",
 		},
 		{
-			name:    "complete BAS",
+			name:    "supported BAS preparation",
 			report:  tammyv1.ReportKind_REPORT_KIND_BAS,
 			entity:  tammyv1.ReportingEntityType_REPORTING_ENTITY_TYPE_AU_BUSINESS,
 			year:    2024,
-			status:  tammyv1.ReportingCapabilityStatus_REPORTING_CAPABILITY_STATUS_UNSUPPORTED,
-			summary: "Complete BAS preparation, declaration, and lodgement are unavailable.",
+			status:  tammyv1.ReportingCapabilityStatus_REPORTING_CAPABILITY_STATUS_PREPARATION_ONLY,
+			summary: "Tammy supports local preparation of a limited Australian activity statement for explicitly supported obligations.",
 		},
 		{
 			name:    "individual income tax return",
@@ -130,12 +130,96 @@ func TestRegistryLookupReturnsExactCurrentCapabilities(t *testing.T) {
 			assertFourOrderedModes(t, got)
 			for index, mode := range got.GetModes() {
 				want := tammyv1.ReportingModeAvailability_REPORTING_MODE_AVAILABILITY_NOT_IMPLEMENTED
-				if tt.report == tammyv1.ReportKind_REPORT_KIND_GST_WORKPAPER && index == 0 {
+				if (tt.report == tammyv1.ReportKind_REPORT_KIND_GST_WORKPAPER || tt.report == tammyv1.ReportKind_REPORT_KIND_BAS) && index == 0 {
 					want = tammyv1.ReportingModeAvailability_REPORTING_MODE_AVAILABILITY_AVAILABLE
 				}
 				if mode.GetAvailability() != want {
 					t.Errorf("mode %d availability = %s, want %s", index, mode.GetAvailability(), want)
 				}
+			}
+		})
+	}
+}
+
+func TestRegistryAdvertisesOnlyScopedBASPreparationForSupportedYears(t *testing.T) {
+	const (
+		wantSummary = "Tammy supports local preparation of a limited Australian activity statement for explicitly supported obligations."
+		wantScope   = "Supported scope is Simpler GST with the same monthly or quarterly reporting cadence, small or medium PAYGW, and PAYGI using an operative ATO-notified amount or rate without initiating a variation."
+		wantLimits  = "Unknown or unsupported obligations block readiness and freezing; values are not inferred. Preparation produces a reviewed manual handoff only. Tammy does not transmit to the ATO or change SBR delivery status."
+	)
+	registry, err := NewRegistry("bas-capability-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for year := int32(2024); year <= 2027; year++ {
+		capability := registry.Lookup(
+			tammyv1.ReportKind_REPORT_KIND_BAS,
+			tammyv1.ReportingEntityType_REPORTING_ENTITY_TYPE_AU_BUSINESS,
+			year,
+		)
+		if capability.GetStatus() != tammyv1.ReportingCapabilityStatus_REPORTING_CAPABILITY_STATUS_PREPARATION_ONLY {
+			t.Fatalf("BAS %d status = %s", year, capability.GetStatus())
+		}
+		if capability.GetSummary() != wantSummary || !reflect.DeepEqual(capability.GetLimitations(), []string{wantScope, wantLimits}) {
+			t.Errorf("BAS %d capability text = summary %q, limitations %#v", year, capability.GetSummary(), capability.GetLimitations())
+		}
+		assertFourOrderedModes(t, capability)
+		if capability.GetModes()[0].GetAvailability() != tammyv1.ReportingModeAvailability_REPORTING_MODE_AVAILABILITY_AVAILABLE ||
+			capability.GetModes()[0].GetSummary() != "Local BAS preparation is available for the explicitly supported scope; unknown or unsupported obligations block readiness." {
+			t.Errorf("BAS %d preparation = %s", year, capability.GetModes()[0].GetAvailability())
+		}
+		wantDelivery := []struct {
+			summary string
+			blocker string
+		}{
+			{summary: "BAS simulation is not implemented.", blocker: "BAS_SIMULATOR_NOT_IMPLEMENTED"},
+			{summary: "BAS EVTE delivery is not implemented.", blocker: "BAS_EVTE_NOT_IMPLEMENTED"},
+			{summary: "BAS production delivery is not implemented.", blocker: "BAS_PRODUCTION_NOT_IMPLEMENTED"},
+		}
+		for index, mode := range capability.GetModes()[1:] {
+			if mode.GetAvailability() != tammyv1.ReportingModeAvailability_REPORTING_MODE_AVAILABILITY_NOT_IMPLEMENTED ||
+				mode.GetSummary() != wantDelivery[index].summary || !reflect.DeepEqual(mode.GetBlockers(), []string{wantDelivery[index].blocker}) {
+				t.Errorf("BAS %d delivery mode %d = %#v", year, index, mode)
+			}
+		}
+
+		text := strings.ToLower(capability.GetSummary() + " " + strings.Join(capability.GetLimitations(), " ") + " " + capability.GetModes()[0].GetSummary())
+		for _, fact := range []string{"simpler gst", "monthly or quarterly", "same", "small", "medium", "paygw", "paygi", "notified", "variation", "unknown", "unsupported", "manual handoff", "ato", "sbr"} {
+			if !strings.Contains(text, fact) {
+				t.Errorf("BAS %d capability omits %q: %s", year, fact, text)
+			}
+		}
+		if !strings.Contains(strings.ToLower(capability.GetModes()[1].GetSummary()), "not implemented") ||
+			!strings.Contains(strings.ToLower(capability.GetModes()[2].GetSummary()), "not implemented") ||
+			!strings.Contains(strings.ToLower(capability.GetModes()[3].GetSummary()), "not implemented") {
+			t.Errorf("BAS %d delivery modes are not clearly unavailable: %#v", year, capability.GetModes()[1:])
+		}
+	}
+}
+
+func TestRegistryBASPreparationFailsClosedOutsideYearsAndEntity(t *testing.T) {
+	registry, err := NewRegistry("bas-capability-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, test := range []struct {
+		name   string
+		entity tammyv1.ReportingEntityType
+		year   int32
+	}{
+		{name: "before supported years", entity: tammyv1.ReportingEntityType_REPORTING_ENTITY_TYPE_AU_BUSINESS, year: 2023},
+		{name: "after supported years", entity: tammyv1.ReportingEntityType_REPORTING_ENTITY_TYPE_AU_BUSINESS, year: 2028},
+		{name: "individual", entity: tammyv1.ReportingEntityType_REPORTING_ENTITY_TYPE_AU_INDIVIDUAL, year: 2026},
+		{name: "company", entity: tammyv1.ReportingEntityType_REPORTING_ENTITY_TYPE_AU_PRIVATE_COMPANY, year: 2026},
+		{name: "unknown entity", entity: tammyv1.ReportingEntityType(99), year: 2026},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			capability := registry.Lookup(tammyv1.ReportKind_REPORT_KIND_BAS, test.entity, test.year)
+			if capability.GetStatus() != tammyv1.ReportingCapabilityStatus_REPORTING_CAPABILITY_STATUS_UNSUPPORTED ||
+				capability.GetModes()[0].GetAvailability() != tammyv1.ReportingModeAvailability_REPORTING_MODE_AVAILABILITY_NOT_IMPLEMENTED {
+				t.Fatalf("BAS capability unexpectedly supports %s/%d: %#v", test.entity, test.year, capability)
 			}
 		})
 	}

@@ -17,6 +17,8 @@ import {
   GetOrganisationResponseSchema,
   RecordEntityVerificationRequestSchema,
   RecordEntityVerificationResponseSchema,
+  UpdateOrganisationRequestSchema,
+  UpdateOrganisationResponseSchema,
 } from "@tammy/connect-client/tammy/v1/organisation_pb.js";
 import { createProtoMethodCodec } from "../../shared/proto-ipc";
 import { command, defineModule, query } from "../init";
@@ -39,6 +41,12 @@ const organisation = createProtoMethodCodec({
   maximumRequestBytes: 8_192,
   maximumResponseBytes: 32_768,
   output: GetOrganisationResponseSchema,
+});
+const updateOrganisation = createProtoMethodCodec({
+  input: UpdateOrganisationRequestSchema,
+  maximumRequestBytes: 32_768,
+  maximumResponseBytes: 32_768,
+  output: UpdateOrganisationResponseSchema,
 });
 const createOrganisation = createProtoMethodCodec({
   input: CreateOrganisationRequestSchema,
@@ -83,6 +91,9 @@ export const organisationModule = defineModule({
   ),
   createOrganisation: command(conveyorProtoFrame(32_768), ({ input, ctx }) =>
     invokeCore(createOrganisation, input, ctx.client.createOrganisation),
+  ),
+  updateOrganisation: command(conveyorProtoFrame(32_768), ({ input, ctx }) =>
+    invokeCore(updateOrganisation, input, ctx.client.updateOrganisation),
   ),
   enrolTotp: command(conveyorProtoFrame(8_192), ({ input, ctx }) =>
     invokeCore(enrolTotp, input, ctx.client.enrolTotp),

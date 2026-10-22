@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { create } from "@bufbuild/protobuf";
 import { OneTimeSecretOutputSchema } from "@tammy/connect-client/tammy/v1/common_pb.js";
 import {
@@ -33,6 +34,7 @@ import {
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, it, vi } from "vitest";
+import retainedRuleBytes from "../../../../../../services/core/internal/artefacts/bundles/au_gst_v1.pb.json?raw";
 
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import { createConveyorFixture, renderWithConveyor as render } from "../../test/conveyor-fixtures";
@@ -183,7 +185,7 @@ it.each([GstBasis.NON_CASH, GstBasis.CASH])(
               entityType: request.entityType,
               status: ReportingCapabilityStatus.AVAILABLE,
               appVersion: "test-core",
-              summary: "Tammy supports a local reviewed-document GST workpaper only.",
+              summary: "Tammy supports a local invoice and reconciled purchase GST workpaper.",
             }),
           }),
         );
@@ -218,10 +220,14 @@ it.each([GstBasis.NON_CASH, GstBasis.CASH])(
       />,
     );
     expect(
-      await screen.findByText("Tammy supports a local reviewed-document GST workpaper only."),
+      await screen.findByText(
+        "Tammy supports a local invoice and reconciled purchase GST workpaper.",
+      ),
     ).toBeTruthy();
     expect(
-      screen.getByText("Tammy does not prepare, declare, or lodge a complete BAS."),
+      screen.getByText(
+        "Local BAS preparation requires confirmed supported obligations and source evidence. Tammy does not declare or lodge a BAS with the ATO.",
+      ),
     ).toBeTruthy();
     await user.type(screen.getByLabelText("Your name"), "Tammy Admin");
     await user.type(screen.getByLabelText("Email or username"), "admin@tammy.local");
@@ -264,6 +270,19 @@ it.each([GstBasis.NON_CASH, GstBasis.CASH])(
       }),
     );
     expect(createOrganisation).toHaveBeenCalledOnce();
+    const firstCreateCall = createOrganisation.mock.calls[0];
+    if (!firstCreateCall) throw new Error("Organisation was not created");
+    const organisationRequest = createOrganisationCodec.decodeRequest(firstCreateCall[0]);
+    const retainedRule = JSON.parse(retainedRuleBytes) as {
+      bundle_id: string;
+      revision: number;
+    };
+    expect(organisationRequest.activeTaxRuleBundle).toMatchObject({
+      type: "tax_rule_bundle",
+      id: retainedRule.bundle_id,
+      revision: BigInt(retainedRule.revision),
+      contentHash: new Uint8Array(createHash("sha256").update(retainedRuleBytes).digest()),
+    });
     const cached = cachedQueryMaterial(fixture.queryClient);
     for (const secret of [
       "workspace-passphrase-long-enough",

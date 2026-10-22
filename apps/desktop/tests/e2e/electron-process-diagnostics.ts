@@ -105,9 +105,19 @@ export function observeElectronProcessDiagnostics(
     mainProcess.removeListener("close", cleanup);
   };
 
-  stderr?.on("data", onStderrData);
+  const canReadStderr =
+    stderr !== null && !stderr.destroyed && !stderr.readableEnded && !stderr.closed;
+  if (canReadStderr) stderr.on("data", onStderrData);
   mainProcess.once("exit", onExit);
   mainProcess.once("close", cleanup);
+
+  // Process status fields expose an exit that happened just before listener
+  // registration. Keep reading live stderr until close; if the stream cannot
+  // deliver more data, clean up immediately when an exit is already known.
+  if (mainProcess.exitCode !== null || mainProcess.signalCode !== null) {
+    diagnostics.observeExit(mainProcess.exitCode, mainProcess.signalCode);
+    if (!canReadStderr) cleanup();
+  }
 }
 
 export function safeFirstWindowFailureCode(

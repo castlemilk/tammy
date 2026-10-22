@@ -1542,15 +1542,13 @@ rpcs:
         - exact_replay
         - changed_request_conflict
   tammy.v1.OrganisationService.UpdateOrganisation:
-    stage: declared_future
+    stage: production
     preload: updateOrganisation
-    cases: []
-    futureCases:
-      - slice-1/foundation-contracts
+    cases: [bas-preparation/lifecycle, bas-preparation/permissions]
     projections:
       - update_organisation_result
     routes:
-      - /settings/organisation
+      - /gst-bas
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_permission_denied

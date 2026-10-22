@@ -1066,7 +1066,7 @@ it.each([
   {
     code: "BAS_CONFLICT",
     message:
-      "The BAS history changed while you were reviewing it. Refresh the exact history, review the current blockers, and retry only if the action is still appropriate.",
+      "Core could not accept this BAS action. Refresh the exact history and review the current findings before retrying.",
   },
   {
     code: "BAS_IDEMPOTENCY_CONFLICT",

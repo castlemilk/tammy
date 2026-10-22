@@ -723,7 +723,7 @@ export const SLICE_ONE_RPC_POLICY = {
   }),
   "tammy.v1.OrganisationService.UpdateOrganisation": rpc({
     name: "UpdateOrganisation",
-    route: "/settings/organisation",
+    route: "/gst-bas",
     rolePolicy: admin,
     mode: "persistent_command",
     failures: [

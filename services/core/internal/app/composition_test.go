@@ -45,7 +45,11 @@ func TestBootCompositionRegistersBuildScopedServicesAndLeavesFutureServicesNotFo
 	if err != nil || response.Msg.CoreVersion != "composition-test" {
 		t.Fatalf("GetDiagnostics() = %#v, %v", response, err)
 	}
-	assertReportingCapability(t, tammyv1connect.NewReportingCapabilityServiceClient(server.Client(), server.URL), "composition-test")
+	reporting := tammyv1connect.NewReportingCapabilityServiceClient(server.Client(), server.URL)
+	assertReportingCapability(t, reporting, "composition-test", tammyv1.ReportKind_REPORT_KIND_GST_WORKPAPER,
+		tammyv1.ReportingCapabilityStatus_REPORTING_CAPABILITY_STATUS_AVAILABLE)
+	assertReportingCapability(t, reporting, "composition-test", tammyv1.ReportKind_REPORT_KIND_BAS,
+		tammyv1.ReportingCapabilityStatus_REPORTING_CAPABILITY_STATUS_PREPARATION_ONLY)
 	for _, path := range []string{
 		tammyv1connect.WorkspaceServiceGetWorkspaceStateProcedure,
 		tammyv1connect.IdentityServiceGetSessionProcedure,
@@ -81,7 +85,11 @@ func TestWorkspaceCompositionRegistersOnlyCompleteSuppliedGeneratedHandlers(t *t
 	} {
 		assertHTTPStatusNot(t, server.Client(), server.URL+path, http.StatusNotFound)
 	}
-	assertReportingCapability(t, tammyv1connect.NewReportingCapabilityServiceClient(server.Client(), server.URL), "workspace-composition-test")
+	reporting := tammyv1connect.NewReportingCapabilityServiceClient(server.Client(), server.URL)
+	assertReportingCapability(t, reporting, "workspace-composition-test", tammyv1.ReportKind_REPORT_KIND_GST_WORKPAPER,
+		tammyv1.ReportingCapabilityStatus_REPORTING_CAPABILITY_STATUS_AVAILABLE)
+	assertReportingCapability(t, reporting, "workspace-composition-test", tammyv1.ReportKind_REPORT_KIND_BAS,
+		tammyv1.ReportingCapabilityStatus_REPORTING_CAPABILITY_STATUS_PREPARATION_ONLY)
 	for _, path := range []string{
 		tammyv1connect.WorkspaceServiceGetWorkspaceStateProcedure,
 		tammyv1connect.OrganisationServiceGetOrganisationProcedure,
@@ -98,10 +106,16 @@ func TestWorkspaceCompositionRegistersOnlyCompleteSuppliedGeneratedHandlers(t *t
 	}
 }
 
-func assertReportingCapability(t *testing.T, client tammyv1connect.ReportingCapabilityServiceClient, appVersion string) {
+func assertReportingCapability(
+	t *testing.T,
+	client tammyv1connect.ReportingCapabilityServiceClient,
+	appVersion string,
+	report tammyv1.ReportKind,
+	status tammyv1.ReportingCapabilityStatus,
+) {
 	t.Helper()
 	request := connect.NewRequest(&tammyv1.GetReportingCapabilityRequest{
-		Report:     tammyv1.ReportKind_REPORT_KIND_GST_WORKPAPER,
+		Report:     report,
 		TaxYear:    2024,
 		EntityType: tammyv1.ReportingEntityType_REPORTING_ENTITY_TYPE_AU_BUSINESS,
 	})
@@ -114,11 +128,11 @@ func assertReportingCapability(t *testing.T, client tammyv1connect.ReportingCapa
 		capability.GetReport() != request.Msg.GetReport() ||
 		capability.GetTaxYear() != request.Msg.GetTaxYear() ||
 		capability.GetEntityType() != request.Msg.GetEntityType() ||
-		capability.GetStatus() != tammyv1.ReportingCapabilityStatus_REPORTING_CAPABILITY_STATUS_AVAILABLE ||
+		capability.GetStatus() != status ||
 		capability.GetAppVersion() != appVersion {
 		t.Fatalf("GetReportingCapability() = %#v; want key=%v/%v/%d status=%v app_version=%q",
 			capability, request.Msg.GetReport(), request.Msg.GetEntityType(), request.Msg.GetTaxYear(),
-			tammyv1.ReportingCapabilityStatus_REPORTING_CAPABILITY_STATUS_AVAILABLE, appVersion)
+			status, appVersion)
 	}
 }
 

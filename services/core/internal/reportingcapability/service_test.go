@@ -85,6 +85,49 @@ func TestServiceLooksUpCapabilityOnceAndReturnsOwnedResponse(t *testing.T) {
 	}
 }
 
+func TestServiceValidatesEveryCurrentCatalogueCell(t *testing.T) {
+	registry, err := NewRegistry("service-registry-contract-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	service, err := NewService(registry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reports := []tammyv1.ReportKind{
+		tammyv1.ReportKind_REPORT_KIND_GST_WORKPAPER,
+		tammyv1.ReportKind_REPORT_KIND_BAS,
+		tammyv1.ReportKind_REPORT_KIND_INDIVIDUAL_INCOME_TAX_RETURN,
+		tammyv1.ReportKind_REPORT_KIND_COMPANY_TAX_RETURN,
+	}
+	entities := []tammyv1.ReportingEntityType{
+		tammyv1.ReportingEntityType_REPORTING_ENTITY_TYPE_AU_BUSINESS,
+		tammyv1.ReportingEntityType_REPORTING_ENTITY_TYPE_AU_INDIVIDUAL,
+		tammyv1.ReportingEntityType_REPORTING_ENTITY_TYPE_AU_PRIVATE_COMPANY,
+	}
+
+	// Exercise each advertised year and its adjacent fail-closed years through
+	// the real response validator, not Registry.Lookup alone.
+	for year := int32(2023); year <= 2028; year++ {
+		for _, report := range reports {
+			for _, entity := range entities {
+				request := connect.NewRequest(&tammyv1.GetReportingCapabilityRequest{
+					Report: report, EntityType: entity, TaxYear: year,
+				})
+				response, callErr := service.GetReportingCapability(context.Background(), request)
+				if callErr != nil || response == nil || response.Msg.GetCapability() == nil {
+					t.Errorf("GetReportingCapability(%s/%s/%d) = %#v, %v", report, entity, year, response, callErr)
+					continue
+				}
+				capability := response.Msg.GetCapability()
+				if capability.GetReport() != report || capability.GetEntityType() != entity || capability.GetTaxYear() != year {
+					t.Errorf("GetReportingCapability(%s/%s/%d) returned mismatched key %#v", report, entity, year, capability)
+				}
+			}
+		}
+	}
+}
+
 func TestServiceRejectsInvalidRequestsWithoutLookup(t *testing.T) {
 	tests := []struct {
 		name    string

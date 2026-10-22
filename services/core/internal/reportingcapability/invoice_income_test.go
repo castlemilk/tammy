@@ -20,8 +20,14 @@ func TestGSTWorkpaperDescribesReconciledPurchasesAndLegacyReview(t *testing.T) {
 		}
 	}
 	bas := registry.Lookup(tammyv1.ReportKind_REPORT_KIND_BAS, tammyv1.ReportingEntityType_REPORTING_ENTITY_TYPE_AU_BUSINESS, 2024)
-	if bas.Status != tammyv1.ReportingCapabilityStatus_REPORTING_CAPABILITY_STATUS_UNSUPPORTED {
-		t.Fatal("purchase capture advertised complete BAS preparation")
+	if bas.Status != tammyv1.ReportingCapabilityStatus_REPORTING_CAPABILITY_STATUS_PREPARATION_ONLY ||
+		bas.Modes[0].Availability != tammyv1.ReportingModeAvailability_REPORTING_MODE_AVAILABILITY_AVAILABLE {
+		t.Fatal("purchase capture failed to advertise the separately implemented, scoped BAS preparation")
+	}
+	for _, limitation := range c.Limitations {
+		if strings.Contains(strings.ToLower(limitation), "bas preparation, declaration and lodgement are unavailable") {
+			t.Fatalf("GST workpaper still claims BAS preparation is globally unavailable: %s", limitation)
+		}
 	}
 }
 
@@ -41,8 +47,14 @@ func TestCurrentGSTWorkpaperYearsRemainLocalOnly(t *testing.T) {
 			}
 		}
 		bas := registry.Lookup(tammyv1.ReportKind_REPORT_KIND_BAS, tammyv1.ReportingEntityType_REPORTING_ENTITY_TYPE_AU_BUSINESS, year)
-		if bas.Status != tammyv1.ReportingCapabilityStatus_REPORTING_CAPABILITY_STATUS_UNSUPPORTED {
-			t.Errorf("complete BAS %d is available", year)
+		if bas.Status != tammyv1.ReportingCapabilityStatus_REPORTING_CAPABILITY_STATUS_PREPARATION_ONLY ||
+			bas.Modes[0].Availability != tammyv1.ReportingModeAvailability_REPORTING_MODE_AVAILABILITY_AVAILABLE {
+			t.Errorf("scoped BAS preparation %d is unavailable: %v", year, bas)
+		}
+		for _, mode := range bas.Modes[1:] {
+			if mode.Availability != tammyv1.ReportingModeAvailability_REPORTING_MODE_AVAILABILITY_NOT_IMPLEMENTED {
+				t.Errorf("BAS %d offers a delivery mode: %v", year, mode)
+			}
 		}
 	}
 }

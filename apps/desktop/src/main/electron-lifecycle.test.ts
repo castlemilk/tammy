@@ -532,6 +532,56 @@ describe("ElectronProcessDiagnostics", () => {
     );
   });
 
+  it("preserves process status and leaves no listeners when close preceded observation", () => {
+    const diagnostics = new ElectronProcessDiagnostics();
+    const events = new EventEmitter();
+    const process = Object.assign(events, {
+      exitCode: 0,
+      signalCode: null,
+      stderr: null,
+    }) as unknown as ChildProcess;
+
+    events.emit("exit", 0, null);
+    events.emit("close", 0, null);
+    observeElectronProcessDiagnostics(process, diagnostics);
+
+    expect(events.listenerCount("exit")).toBe(0);
+    expect(events.listenerCount("close")).toBe(0);
+    expect(diagnostics.formatSummary(process)).toBe(
+      "electronProcess=EXIT(code=0,signal=none);stderrMarkers=none",
+    );
+  });
+
+  it.each(["destroyed", "readableEnded", "closed"] as const)(
+    "skips an unavailable stderr stream when it is %s",
+    (state) => {
+      const diagnostics = new ElectronProcessDiagnostics();
+      const stderr = Object.assign(new EventEmitter(), {
+        closed: state === "closed",
+        destroyed: state === "destroyed",
+        readableEnded: state === "readableEnded",
+      });
+      const events = new EventEmitter();
+      const process = Object.assign(events, {
+        exitCode: null,
+        signalCode: null,
+        stderr,
+      }) as unknown as ChildProcess;
+
+      observeElectronProcessDiagnostics(process, diagnostics);
+      expect(stderr.listenerCount("data")).toBe(0);
+
+      events.emit("exit", 1, null);
+      events.emit("close", 1, null);
+
+      expect(events.listenerCount("exit")).toBe(0);
+      expect(events.listenerCount("close")).toBe(0);
+      expect(diagnostics.formatSummary(process)).toBe(
+        "electronProcess=EXIT(code=1,signal=none);stderrMarkers=none",
+      );
+    },
+  );
+
   it("normalizes invalid process status fields instead of retaining arbitrary strings", () => {
     const diagnostics = new ElectronProcessDiagnostics();
     diagnostics.observeExit(999, "PRIVATE_SIGNAL" as NodeJS.Signals);

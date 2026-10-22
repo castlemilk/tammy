@@ -95,6 +95,8 @@ import type {
   GetOrganisationResponse,
   RecordEntityVerificationRequest,
   RecordEntityVerificationResponse,
+  UpdateOrganisationRequest,
+  UpdateOrganisationResponse,
 } from "@tammy/connect-client/tammy/v1/organisation_pb.js";
 import { OrganisationService } from "@tammy/connect-client/tammy/v1/organisation_pb.js";
 import type {
@@ -277,6 +279,9 @@ export interface CoreClient {
   readonly confirmTotp: (request: ConfirmTOTPRequest) => Promise<ConfirmTOTPResponse>;
   readonly assertTotp: (request: AssertTOTPRequest) => Promise<AssertTOTPResponse>;
   readonly getOrganisation: (request: GetOrganisationRequest) => Promise<GetOrganisationResponse>;
+  readonly updateOrganisation: (
+    request: UpdateOrganisationRequest,
+  ) => Promise<UpdateOrganisationResponse>;
   readonly recordEntityVerification: (
     request: RecordEntityVerificationRequest,
   ) => Promise<RecordEntityVerificationResponse>;
@@ -490,6 +495,8 @@ export function createCoreClient(
       coreRequest(() => identityClient.assertTOTP(request)),
     getOrganisation: (request: GetOrganisationRequest) =>
       coreRequest(() => organisationClient.getOrganisation(request)),
+    updateOrganisation: (request: UpdateOrganisationRequest) =>
+      coreRequest(() => organisationClient.updateOrganisation(request)),
     recordEntityVerification: (request: RecordEntityVerificationRequest) =>
       coreRequest(() => organisationClient.recordEntityVerification(request)),
     getSbrReadiness: (request: GetSbrReadinessRequest) =>

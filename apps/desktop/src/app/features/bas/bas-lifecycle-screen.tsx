@@ -15,7 +15,10 @@ export function BasLifecycleScreen({
   ...legacyProps
 }: Omit<LegacyProps, "roleControlApi" | "purchaseReviewOnly"> & {
   readonly lifecycleApi: TammyConveyorModule<"basPreparation">;
-  readonly identityApi: Pick<TammyConveyorModule<"organisation">, "assertTotp" | "getCurrentUser">;
+  readonly identityApi: Pick<
+    TammyConveyorModule<"organisation">,
+    "assertTotp" | "getCurrentUser" | "getOrganisation" | "updateOrganisation"
+  >;
   readonly reportApi: Pick<TammyConveyorModule<"reporting">, "exportBasPreparation">;
   readonly roleControlApi: RoleControlApi;
   readonly initialPreparationTarget?: {

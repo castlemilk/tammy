@@ -1,6 +1,8 @@
 import { create, type DescMessage, type Message } from "@bufbuild/protobuf";
+import { FieldMaskSchema, TimestampSchema } from "@bufbuild/protobuf/wkt";
 import * as accountingProto from "@tammy/connect-client/tammy/v1/accounting_pb.js";
 import * as bankingProto from "@tammy/connect-client/tammy/v1/banking_pb.js";
+import * as commonProto from "@tammy/connect-client/tammy/v1/common_pb.js";
 import * as documentsProto from "@tammy/connect-client/tammy/v1/documents_pb.js";
 import * as identityProto from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import * as invoicesProto from "@tammy/connect-client/tammy/v1/invoices_pb.js";
@@ -238,6 +240,15 @@ const ORDINARY_CASES = [
     coreMethod: "createOrganisation",
     input: organisationProto.CreateOrganisationRequestSchema,
     output: organisationProto.CreateOrganisationResponseSchema,
+    maximumRequestBytes: 32_768,
+    maximumResponseBytes: 32_768,
+  },
+  {
+    module: "organisation",
+    method: "updateOrganisation",
+    coreMethod: "updateOrganisation",
+    input: organisationProto.UpdateOrganisationRequestSchema,
+    output: organisationProto.UpdateOrganisationResponseSchema,
     maximumRequestBytes: 32_768,
     maximumResponseBytes: 32_768,
   },
@@ -596,6 +607,100 @@ test("every ordinary request and response enforces its exact production byte bou
   }
 
   expect(calls).toEqual([]);
+});
+
+test("organisation update preserves its full request and result through the bounded bridge", async () => {
+  const testCase = ORDINARY_CASES.find(({ method }) => method === "updateOrganisation");
+  if (testCase === undefined) throw new Error("Missing updateOrganisation test case");
+  const { codec } = capturedCodec(testCase);
+  const taxRuleBundle = create(commonProto.SourceRefSchema, {
+    type: "tax_rule_bundle",
+    id: "018fcb44-a5b7-7b8c-8123-123456789abc",
+    revision: 14n,
+    contentHash: new Uint8Array(32).fill(0x6d),
+  });
+  const request = create(organisationProto.UpdateOrganisationRequestSchema, {
+    commandContext: create(commonProto.CommandContextSchema, {
+      idempotencyKey: "018fcb44-a5b7-7b8d-8123-123456789abc",
+      authentication: create(commonProto.AuthenticationContextSchema, {
+        actorUserId: "018fcb44-a5b7-7b8c-9123-123456789abd",
+        sessionId: "018fcb44-a5b7-7b8c-a123-123456789abe",
+      }),
+      freshFactor: create(commonProto.FreshFactorContextSchema, {
+        assertionId: "018fcb44-a5b7-7b8c-b123-123456789abf",
+        purpose: "update_organisation_high_risk",
+        assertedAt: create(TimestampSchema, { seconds: 1_792_612_800n }),
+      }),
+    }),
+    organisationId: "018fcb44-a5b7-7b8c-8123-123456789abc",
+    expectedVersion: 37n,
+    updateMask: create(FieldMaskSchema, { paths: ["active_tax_rule_bundle"] }),
+    patch: create(organisationProto.OrganisationPatchSchema, {
+      activeTaxRuleBundle: taxRuleBundle,
+    }),
+    reason: "Re-pin the confirmed tax rule bundle for future periods.",
+    effectiveDate: create(commonProto.CivilDateSchema, { year: 2026, month: 10, day: 22 }),
+  });
+  const response = create(organisationProto.UpdateOrganisationResponseSchema, {
+    organisation: create(organisationProto.OrganisationSchema, {
+      id: request.organisationId,
+      version: 38n,
+      abn: "51824753556",
+      legalName: "Example Pty Ltd",
+      displayName: "Example",
+      entityType: "company",
+      financialYearEndMonth: 6,
+      ownerUserId: "018fcb44-a5b7-7b8c-9123-123456789abd",
+      activeTaxRuleBundle: taxRuleBundle,
+    }),
+  });
+  const calls: Array<{ readonly method: string; readonly request: Message }> = [];
+  const client = new Proxy(
+    {},
+    {
+      get: (_target, property) => async (coreRequest: Message) => {
+        calls.push({ method: String(property), request: coreRequest });
+        return response;
+      },
+    },
+  );
+  const caller = createCaller(createTammyRouter(), {
+    ctx: { client: client as never, fileIntake: {} as never },
+  });
+
+  const responseFrame = await procedure(
+    caller,
+    "organisation",
+    "updateOrganisation",
+  )(codec.encodeRequest(request));
+
+  expect(calls).toEqual([{ method: "updateOrganisation", request }]);
+  expect(codec.decodeResponse(responseFrame as Uint8Array)).toEqual(response);
+});
+
+test("organisation update failures expose only the static sanitized error", async () => {
+  const testCase = ORDINARY_CASES.find(({ method }) => method === "updateOrganisation");
+  if (testCase === undefined) throw new Error("Missing updateOrganisation test case");
+  const { codec } = capturedCodec(testCase);
+  const request = create(organisationProto.UpdateOrganisationRequestSchema, {
+    reason: "CONFIDENTIAL_PROFILE_REASON_72c4",
+  });
+  const updateOrganisation = async () => {
+    throw new Error("/private/workspace.sqlite token=TOP_SECRET operation=update_organisation");
+  };
+  const caller = createCaller(createTammyRouter(), {
+    ctx: { client: { updateOrganisation } as never, fileIntake: {} as never },
+  });
+  const error = await procedure(
+    caller,
+    "organisation",
+    "updateOrganisation",
+  )(codec.encodeRequest(request)).catch((caught: unknown) => caught);
+
+  expect(error).toMatchObject({ code: "CORE_REQUEST_FAILED", message: "CORE_REQUEST_FAILED" });
+  expect(JSON.stringify(error)).not.toMatch(
+    /private|token|TOP_SECRET|CONFIDENTIAL_PROFILE_REASON/i,
+  );
 });
 
 test("system diagnostics is the sole zero-input Core call and sanitizes every failure", async () => {

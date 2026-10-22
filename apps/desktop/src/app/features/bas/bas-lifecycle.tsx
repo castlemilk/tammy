@@ -134,10 +134,14 @@ import {
 import { Button } from "../../components/ui/button";
 import { assertFreshFactor, authentication, uuidV7 } from "../sbr/sbr-form-support";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
+import { LegacyRuleReferenceRepair } from "./legacy-rule-reference-repair";
 
 type Api = TammyConveyorModule<"basPreparation">;
 type ExportApi = Pick<TammyConveyorModule<"reporting">, "exportBasPreparation">;
-type IdentityApi = Pick<TammyConveyorModule<"organisation">, "assertTotp" | "getCurrentUser">;
+type IdentityApi = Pick<
+  TammyConveyorModule<"organisation">,
+  "assertTotp" | "getCurrentUser" | "getOrganisation" | "updateOrganisation"
+>;
 type Ref = {
   readonly type: string;
   readonly id: string;
@@ -357,7 +361,7 @@ function errorCopy(error: unknown) {
     case "BAS_SOURCE_CAPACITY":
       return "The complete BAS source exceeds the supported capture capacity. Retain the actual statement period and review source records or contact support.";
     case "BAS_CONFLICT":
-      return "The BAS history changed while you were reviewing it. Refresh the exact history, review the current blockers, and retry only if the action is still appropriate.";
+      return "Core could not accept this BAS action. Refresh the exact history and review the current findings before retrying.";
     case "BAS_IDEMPOTENCY_CONFLICT":
       return "This BAS action key was already used for a different request. Refresh the history and start a new action.";
     case "BAS_PERMISSION_DENIED":
@@ -629,6 +633,11 @@ export function BasPreparationLifecycle({
     currentUser &&
       currentUser.id === workspace?.userId &&
       currentUser.roles.includes(Role.BUSINESS_LODGER),
+  );
+  const canManageRuleReference = Boolean(
+    currentUser &&
+      currentUser.id === workspace?.userId &&
+      currentUser.roles.includes(Role.WORKSPACE_ADMIN),
   );
   const identity = useCallback(() => {
     if (!workspace?.organisationId || !auth) throw new Error("workspace unavailable");
@@ -2016,6 +2025,13 @@ export function BasPreparationLifecycle({
       {stage === "Prepare" ? (
         <PrepareStage
           canPrepare={canPrepare}
+          canManageRuleReference={canManageRuleReference}
+          identityApi={identityApi}
+          onRuleReferenceUpdated={() => {
+            refresh();
+            void onChanged?.();
+          }}
+          workspace={workspace}
           profiles={profiles}
           selectedProfile={selectedProfile}
           periods={periods}
@@ -2234,6 +2250,10 @@ export function BasPreparationLifecycle({
 function PrepareStage(props: any) {
   const {
     canPrepare,
+    canManageRuleReference,
+    identityApi,
+    onRuleReferenceUpdated,
+    workspace,
     profiles,
     selectedProfile,
     periods,
@@ -2386,6 +2406,12 @@ function PrepareStage(props: any) {
   );
   return (
     <div className="grid gap-4">
+      <LegacyRuleReferenceRepair
+        api={identityApi}
+        canManage={canManageRuleReference}
+        onUpdated={onRuleReferenceUpdated}
+        workspace={workspace}
+      />
       <section className="grid gap-3 rounded border border-border bg-surface p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-[12px] font-semibold">Obligations profile</h2>

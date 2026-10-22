@@ -4,7 +4,6 @@ import {
   AuthenticationContextSchema,
   CommandContextSchema,
   SecretInputSchema,
-  SourceRefSchema,
 } from "@tammy/connect-client/tammy/v1/common_pb.js";
 import {
   GetCurrentUserRequestSchema,
@@ -34,6 +33,7 @@ import { CheckCircle2, KeyRound, LoaderCircle } from "lucide-react";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import type { TammyConveyorModule } from "../../../conveyor/client";
+import { createBundledTaxRuleSourceRef } from "../../../shared/bundled-tax-rule";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
 import { Button } from "../../components/ui/button";
 import { ReportingCapabilityNotice } from "../reporting/reporting-capability-notice";
@@ -203,14 +203,7 @@ export function SetupScreen({
           gstBasis: setup.gstBasis,
           gstReportingFrequency: GstReportingFrequency.QUARTERLY,
           financialYearEndMonth: 6,
-          activeTaxRuleBundle: create(SourceRefSchema, {
-            type: "tax_rule_bundle",
-            id: "018f0000-0000-7000-8000-000000000022",
-            revision: 1n,
-            contentHash: hexBytes(
-              "e2f9cde094db43c30260dc54f089a1ab835912e75e8c29add5c7a240e90497e4",
-            ),
-          }),
+          activeTaxRuleBundle: createBundledTaxRuleSourceRef(),
         });
         const created = createOrganisationCodec.decodeResponse(
           await organisation.createOrganisation(createOrganisationCodec.encodeRequest(request)),
@@ -357,7 +350,7 @@ export function SetupScreen({
           <ReportingCapabilityNotice
             api={reporting}
             entityType={ReportingEntityType.AU_BUSINESS}
-            fallbackCopy="Tammy does not prepare, declare, or lodge a complete BAS."
+            fallbackCopy="Local BAS preparation requires confirmed supported obligations and source evidence. Tammy does not declare or lodge a BAS with the ATO."
             report={ReportKind.GST_WORKPAPER}
             taxYear={2024}
           />
@@ -520,13 +513,4 @@ function validRoles(roles: readonly Role[]): boolean {
     new Set(roles).size === roles.length &&
     roles.every((role, index) => index === 0 || role > (roles[index - 1] ?? 0))
   );
-}
-
-function hexBytes(value: string): Uint8Array {
-  if (!/^[0-9a-f]{64}$/.test(value)) throw new Error("invalid checksum");
-  const bytes = new Uint8Array(value.length / 2);
-  for (let index = 0; index < bytes.length; index += 1) {
-    bytes[index] = Number.parseInt(value.slice(index * 2, index * 2 + 2), 16);
-  }
-  return bytes;
 }

@@ -23,6 +23,7 @@ import {
   GetOrganisationRequestSchema,
   OrganisationService,
   RecordEntityVerificationRequestSchema,
+  UpdateOrganisationRequestSchema,
 } from "@tammy/connect-client/tammy/v1/organisation_pb.js";
 import {
   GetAttentionSummaryRequestSchema,
@@ -169,6 +170,11 @@ function fakeTransport(
           });
           router.service(OrganisationService, {
             getOrganisation: (_request, context) => {
+              methods.push(context.method);
+              receivedHeaders.push(new Headers(context.requestHeader));
+              return {};
+            },
+            updateOrganisation: (_request, context) => {
               methods.push(context.method);
               receivedHeaders.push(new Headers(context.requestHeader));
               return {};
@@ -362,6 +368,7 @@ describe("createCoreClient", () => {
       ["confirmTotp", ConfirmTOTPRequestSchema],
       ["assertTotp", AssertTOTPRequestSchema],
       ["getOrganisation", GetOrganisationRequestSchema],
+      ["updateOrganisation", UpdateOrganisationRequestSchema],
       ["recordEntityVerification", RecordEntityVerificationRequestSchema],
       ["getSbrReadiness", GetSbrReadinessRequestSchema],
       ["importMachineCredential", ImportMachineCredentialRequestSchema],
@@ -385,6 +392,7 @@ describe("createCoreClient", () => {
       IdentityService.method.confirmTOTP,
       IdentityService.method.assertTOTP,
       OrganisationService.method.getOrganisation,
+      OrganisationService.method.updateOrganisation,
       OrganisationService.method.recordEntityVerification,
       SbrService.method.getSbrReadiness,
       SbrService.method.importMachineCredential,

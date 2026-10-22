@@ -13,6 +13,7 @@
     "assignRoles": "command",
     "getOrganisation": "query",
     "createOrganisation": "command",
+    "updateOrganisation": "command",
     "enrolTotp": "command",
     "confirmTotp": "command",
     "assertTotp": "command",

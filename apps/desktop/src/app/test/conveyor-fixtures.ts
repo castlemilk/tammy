@@ -38,6 +38,7 @@ function createProcedures(): ConveyorFixtureProcedures {
       getCurrentUser: unavailable(),
       assignRoles: unavailable(),
       getOrganisation: unavailable(),
+      updateOrganisation: unavailable(),
       createOrganisation: unavailable(),
       enrolTotp: unavailable(),
       confirmTotp: unavailable(),

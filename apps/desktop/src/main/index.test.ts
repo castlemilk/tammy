@@ -188,6 +188,9 @@ function unusedCoreMethods() {
     getOrganisation: vi.fn(async () => {
       throw new Error("unused");
     }),
+    updateOrganisation: vi.fn(async () => {
+      throw new Error("unused");
+    }),
     recordEntityVerification: vi.fn(async () => {
       throw new Error("unused");
     }),

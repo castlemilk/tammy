@@ -12,6 +12,12 @@ const maxAppVersionBytes = 128
 
 var ErrInvalidAppVersion = errors.New("reporting capability: invalid app version")
 
+const (
+	basPreparationSummary = "Tammy supports local preparation of a limited Australian activity statement for explicitly supported obligations."
+	basPreparationScope   = "Supported scope is Simpler GST with the same monthly or quarterly reporting cadence, small or medium PAYGW, and PAYGI using an operative ATO-notified amount or rate without initiating a variation."
+	basPreparationLimits  = "Unknown or unsupported obligations block readiness and freezing; values are not inferred. Preparation produces a reviewed manual handoff only. Tammy does not transmit to the ATO or change SBR delivery status."
+)
+
 type capabilityKey struct {
 	report tammyv1.ReportKind
 	entity tammyv1.ReportingEntityType
@@ -56,7 +62,7 @@ func NewRegistry(appVersion string) (*Registry, error) {
 			}: {
 				status:      tammyv1.ReportingCapabilityStatus_REPORTING_CAPABILITY_STATUS_AVAILABLE,
 				summary:     "Tammy supports a local invoice and reconciled purchase GST workpaper.",
-				limitations: []string{"Purchase credits use retained accounting and actual payments or reviewed claim periods. Legacy purchase candidates remain provisional outside reconciled 1B until reviewed.", "Evidence suspense and future claim decisions remain visible for review. Complete BAS preparation, declaration and lodgement are unavailable."},
+				limitations: []string{"Purchase credits use retained accounting and actual payments or reviewed claim periods. Legacy purchase candidates remain provisional outside reconciled 1B until reviewed.", "Evidence suspense and future claim decisions remain visible. This saved report is GST-only; local BAS preparation is available for its supported scope. Unknown or unsupported obligations block readiness. Tammy does not transmit a BAS to the ATO."},
 				modes: reportingModes(
 					availableMode(tammyv1.ReportingCapabilityMode_REPORTING_CAPABILITY_MODE_PREPARATION, "Local invoice and reconciled purchase GST workpaper preparation is available."),
 					unavailableMode(tammyv1.ReportingCapabilityMode_REPORTING_CAPABILITY_MODE_SIMULATOR, "GST workpaper simulation is not implemented.", "GST_WORKPAPER_SIMULATOR_NOT_IMPLEMENTED"),
@@ -69,13 +75,14 @@ func NewRegistry(appVersion string) (*Registry, error) {
 				entity: tammyv1.ReportingEntityType_REPORTING_ENTITY_TYPE_AU_BUSINESS,
 				year:   2024,
 			}: {
-				status:  tammyv1.ReportingCapabilityStatus_REPORTING_CAPABILITY_STATUS_UNSUPPORTED,
-				summary: "Complete BAS preparation, declaration, and lodgement are unavailable.",
+				status:      tammyv1.ReportingCapabilityStatus_REPORTING_CAPABILITY_STATUS_PREPARATION_ONLY,
+				summary:     basPreparationSummary,
+				limitations: []string{basPreparationScope, basPreparationLimits},
 				modes: reportingModes(
-					unavailableMode(tammyv1.ReportingCapabilityMode_REPORTING_CAPABILITY_MODE_PREPARATION, "Complete BAS preparation is not implemented.", "BAS_PREPARATION_NOT_IMPLEMENTED"),
-					unavailableMode(tammyv1.ReportingCapabilityMode_REPORTING_CAPABILITY_MODE_SIMULATOR, "Complete BAS simulation is not implemented.", "BAS_SIMULATOR_NOT_IMPLEMENTED"),
-					unavailableMode(tammyv1.ReportingCapabilityMode_REPORTING_CAPABILITY_MODE_EVTE, "Complete BAS EVTE delivery is not implemented.", "BAS_EVTE_NOT_IMPLEMENTED"),
-					unavailableMode(tammyv1.ReportingCapabilityMode_REPORTING_CAPABILITY_MODE_PRODUCTION, "Complete BAS production delivery is not implemented.", "BAS_PRODUCTION_NOT_IMPLEMENTED"),
+					availableMode(tammyv1.ReportingCapabilityMode_REPORTING_CAPABILITY_MODE_PREPARATION, "Local BAS preparation is available for the explicitly supported scope; unknown or unsupported obligations block readiness."),
+					unavailableMode(tammyv1.ReportingCapabilityMode_REPORTING_CAPABILITY_MODE_SIMULATOR, "BAS simulation is not implemented.", "BAS_SIMULATOR_NOT_IMPLEMENTED"),
+					unavailableMode(tammyv1.ReportingCapabilityMode_REPORTING_CAPABILITY_MODE_EVTE, "BAS EVTE delivery is not implemented.", "BAS_EVTE_NOT_IMPLEMENTED"),
+					unavailableMode(tammyv1.ReportingCapabilityMode_REPORTING_CAPABILITY_MODE_PRODUCTION, "BAS production delivery is not implemented.", "BAS_PRODUCTION_NOT_IMPLEMENTED"),
 				),
 			},
 			{
@@ -122,6 +129,7 @@ func NewRegistry(appVersion string) (*Registry, error) {
 	}
 	for year := int32(2025); year <= 2027; year++ {
 		registry.entries[capabilityKey{report: tammyv1.ReportKind_REPORT_KIND_GST_WORKPAPER, entity: tammyv1.ReportingEntityType_REPORTING_ENTITY_TYPE_AU_BUSINESS, year: year}] = registry.entries[capabilityKey{report: tammyv1.ReportKind_REPORT_KIND_GST_WORKPAPER, entity: tammyv1.ReportingEntityType_REPORTING_ENTITY_TYPE_AU_BUSINESS, year: 2024}]
+		registry.entries[capabilityKey{report: tammyv1.ReportKind_REPORT_KIND_BAS, entity: tammyv1.ReportingEntityType_REPORTING_ENTITY_TYPE_AU_BUSINESS, year: year}] = registry.entries[capabilityKey{report: tammyv1.ReportKind_REPORT_KIND_BAS, entity: tammyv1.ReportingEntityType_REPORTING_ENTITY_TYPE_AU_BUSINESS, year: 2024}]
 	}
 	return registry, nil
 }
