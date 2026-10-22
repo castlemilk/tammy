@@ -237,6 +237,8 @@ export function DocumentsScreen({
       .toLowerCase()
       .includes(query.toLowerCase().trim()),
   );
+  const hasActiveFilters =
+    statusFilter !== undefined || accountingFilter !== undefined || query.trim().length > 0;
   const refreshDocuments = async () => {
     const result = await documentsQuery.refetch();
     if (result.isError) throw new Error("document refresh failed");
@@ -432,11 +434,17 @@ export function DocumentsScreen({
           />
         ) : visible.length === 0 ? (
           <WorkState
-            title={documents.length ? "No matching documents" : "Your next clear step"}
+            title={
+              documents.length || hasActiveFilters
+                ? "No matching documents"
+                : "Your next clear step"
+            }
             description={
               documents.length
                 ? "Try a different name or status. Your retained documents are still here."
-                : "Upload a local invoice or receipt. Check extracted details, then review any purchase posting and evidence separately."
+                : hasActiveFilters
+                  ? "Try a different name or status, or clear filters to view all documents."
+                  : "Upload a local invoice or receipt. Check extracted details, then review any purchase posting and evidence separately."
             }
           />
         ) : (

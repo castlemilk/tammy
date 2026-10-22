@@ -11,7 +11,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"syscall"
 	"testing"
@@ -529,15 +528,6 @@ func stageSandboxIntegration(t *testing.T) (string, string, string, string, stri
 	return base, root, helper, probe, component, selected
 }
 
-func helperModuleRoot(t *testing.T) string {
-	t.Helper()
-	_, file, _, ok := runtime.Caller(0)
-	if !ok {
-		t.Fatal("runtime.Caller failed")
-	}
-	return filepath.Clean(filepath.Join(filepath.Dir(file), "../../..", "sbr-helper"))
-}
-
 func copyFile(t *testing.T, source, destination string, mode os.FileMode) {
 	t.Helper()
 	input, err := os.Open(source)
@@ -642,17 +632,4 @@ func classifySandboxError(err error) sandboxCapability {
 
 func permissionDenied(err error) bool {
 	return errors.Is(err, syscall.EPERM) || errors.Is(err, syscall.EACCES)
-}
-
-func sandboxApplyUnavailable(stderr []byte, runErr error) bool {
-	if runErr == nil {
-		return false
-	}
-	lower := bytes.ToLower(stderr)
-	if bytes.Contains(lower, []byte("sandbox_apply")) &&
-		(bytes.Contains(lower, []byte("operation not permitted")) || bytes.Contains(lower, []byte("not supported"))) {
-		return true
-	}
-	exitError, ok := runErr.(*exec.ExitError)
-	return ok && exitError.ExitCode() == 71 && bytes.Contains(lower, []byte("sandbox-exec"))
 }

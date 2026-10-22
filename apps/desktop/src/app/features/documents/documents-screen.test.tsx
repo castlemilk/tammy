@@ -379,6 +379,46 @@ it("shows a recoverable load failure without presenting an empty document collec
   expect(await screen.findByRole("table", { name: "Retained documents" })).toBeTruthy();
 });
 
+it("keeps the no-match state when a server-side filter returns an empty page", async () => {
+  const fixture = createConveyorFixture();
+  const reviewed = create(DocumentSchema, {
+    id: "018f0000-0000-7000-8000-000000000010",
+    organisationId: workspace.organisationId,
+    version: 1n,
+    status: DocumentStatus.REVIEWED,
+    sourceDisplayName: "reviewed-invoice.png",
+  });
+  const requests: ReturnType<typeof listCodec.decodeRequest>[] = [];
+  fixture.procedures.documents.listDocuments.mockImplementation(async (frame: Uint8Array) => {
+    const request = listCodec.decodeRequest(frame);
+    requests.push(request);
+    const documents = request.status && request.status !== reviewed.status ? [] : [reviewed];
+    return listCodec.encodeResponse(
+      create(ListDocumentsResponseSchema, {
+        documents,
+        page: { returnedCount: documents.length },
+      }),
+    );
+  });
+  const user = userEvent.setup();
+  renderDocuments(fixture);
+
+  const initialTable = await screen.findByRole("table", { name: "Retained documents" });
+  await within(initialTable).findByText("reviewed-invoice.png");
+  await user.click(screen.getByRole("button", { name: /Needs review/ }));
+
+  expect(await screen.findByText("No matching documents", { exact: true })).toBeTruthy();
+  expect(screen.queryByText("Your next clear step")).toBeNull();
+  expect(screen.getByRole("heading", { name: "reviewed-invoice.png" })).toBeTruthy();
+  expect(requests.at(-1)?.status).toBe(DocumentStatus.NEEDS_REVIEW);
+
+  await user.click(screen.getByRole("button", { name: /All documents/ }));
+  await within(screen.getByRole("table", { name: "Retained documents" })).findByText(
+    "reviewed-invoice.png",
+  );
+  expect(requests.at(-1)?.status).toBeUndefined();
+});
+
 it("keeps the current page bounded while showing a newly retained source for review", async () => {
   const { fixture, document: retained } = createReviewFixture();
   const documents = Array.from({ length: 200 }, (_, index) =>

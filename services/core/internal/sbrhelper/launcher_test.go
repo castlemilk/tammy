@@ -5,15 +5,10 @@ package sbrhelper
 import (
 	"bytes"
 	"context"
-	"crypto/ed25519"
-	"crypto/sha256"
-	"encoding/base64"
-	"encoding/hex"
 	"errors"
 	"io"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -21,8 +16,6 @@ import (
 	"github.com/tammyapp/tammy/services/core/internal/sbrprofile"
 	"golang.org/x/sys/unix"
 )
-
-type launcherLocator struct{ resources sbrprofile.ResourceSet }
 
 func scopedLauncherFixture(request Request) Request {
 	request.WorkspaceID = "018bcfe5-6800-7000-8000-000000000003"
@@ -34,10 +27,6 @@ func scopedLauncherFixture(request Request) Request {
 	request.ComponentFingerprint = bytes.Repeat([]byte{0x63}, 32)
 	request.ComponentVersion = "simulator-v1"
 	return request
-}
-
-func (l launcherLocator) Locate(sbrprofile.Profile) (sbrprofile.ResourceSet, error) {
-	return l.resources, nil
 }
 
 type delayedLauncherLocator struct {
@@ -745,38 +734,4 @@ func allZero(value []byte) bool {
 		}
 	}
 	return true
-}
-
-func writeLauncherProfile(t *testing.T, root string, helper []byte, now time.Time) string {
-	t.Helper()
-	sum := sha256.Sum256(helper)
-	raw := []byte(`{"component_manifest_sha256":"NONE","endpoint_profile_sha256":"NONE","environment":"SIMULATOR","expires_at":"` + now.Add(time.Hour).Format("2006-01-02T15:04:05Z") + `","helper_sha256":"` + hex.EncodeToString(sum[:]) + `","issued_at":"` + now.Add(-time.Hour).Format("2006-01-02T15:04:05Z") + `","registration_manifest_sha256":"NONE","schema_version":1,"target":"darwin/arm64"}`)
-	parsed, err := sbrprofile.ParseProfile(raw, now)
-	if err != nil {
-		t.Fatal(err)
-	}
-	seed, _ := hex.DecodeString("9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60")
-	signature := append([]byte(base64.StdEncoding.EncodeToString(ed25519.Sign(ed25519.NewKeyFromSeed(seed), parsed.Canonical))), '\n')
-	path := filepath.Join(root, "profile.json")
-	writeLauncherFile(t, path, raw, 0o600)
-	writeLauncherFile(t, strings.TrimSuffix(path, filepath.Ext(path))+".sig", signature, 0o600)
-	return path
-}
-func writeLauncherFile(t *testing.T, path string, data []byte, mode os.FileMode) {
-	t.Helper()
-	if err := os.WriteFile(path, data, mode); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chmod(path, mode); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func launcherRepositoryRoot(t *testing.T) string {
-	t.Helper()
-	_, file, _, ok := runtime.Caller(0)
-	if !ok {
-		t.Fatal("caller")
-	}
-	return filepath.Clean(filepath.Join(filepath.Dir(file), "../../../.."))
 }
