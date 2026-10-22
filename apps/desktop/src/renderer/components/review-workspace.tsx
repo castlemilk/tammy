@@ -83,7 +83,7 @@ export function WorkSearch({
   readonly onChange: (value: string) => void;
 }) {
   return (
-    <label className="relative block w-full max-w-[300px] min-w-0">
+    <label className="relative block w-full min-w-0 flex-1">
       <Search
         aria-hidden="true"
         className="pointer-events-none absolute left-3 top-3.5 size-4 text-muted-foreground"
@@ -116,7 +116,7 @@ export function WorkFilters<T extends string>({
   readonly onChange: (value: T) => void;
 }) {
   return (
-    <fieldset aria-label={label} className="flex flex-wrap gap-1">
+    <fieldset aria-label={label} className="flex min-w-0 flex-wrap gap-1">
       {options.map((option) => (
         <button
           type="button"

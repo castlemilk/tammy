@@ -509,9 +509,9 @@ export function BankingScreen({
               </li>
             ))}
           </ol>
-          <div className="text-right max-[1050px]:text-left">
+          <div className="min-w-0 text-right max-[1050px]:text-left">
             <p className="work-eyebrow">Latest statement balance</p>
-            <p className="mt-1 font-serif text-[28px] leading-8 tabular-nums">
+            <p className="mt-1 overflow-x-auto whitespace-nowrap font-serif text-[28px] leading-8 tabular-nums max-[700px]:text-[18px]">
               {summary?.latestClosingBalance
                 ? formatMoney(summary.latestClosingBalance.minorUnits)
                 : "—"}
@@ -541,7 +541,7 @@ export function BankingScreen({
               },
             ]}
           />
-          <div className="flex min-w-0 flex-wrap gap-2">
+          <div className="flex w-full min-w-0 max-w-[330px] gap-2">
             <WorkSearch label="Search statement lines" value={query} onChange={setQuery} />
             <Button
               aria-label="Refresh statement lines"

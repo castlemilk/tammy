@@ -223,7 +223,7 @@ export function DocumentsScreen({ api, workspace }: DocumentsScreenProps) {
               { value: "reviewed", label: "Reviewed", count: documents.length - reviewCount },
             ]}
           />
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <div className="flex w-full min-w-0 max-w-[330px] items-center gap-2">
             <WorkSearch label="Search documents" value={query} onChange={setQuery} />
             <Button
               aria-label="Refresh documents"

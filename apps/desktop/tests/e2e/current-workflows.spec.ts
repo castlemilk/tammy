@@ -231,6 +231,12 @@ test("runs the current accounting workflows through the packaged app", async ({
     page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "General ledger" }),
   ).toHaveCount(0);
 
+  await assertRoute(page, "Documents", "/documents", "Documents");
+  await expect(page.getByText("Your next clear step", { exact: true })).toBeVisible();
+  await captureJourney(page, "28-documents-empty");
+  await assertRoute(page, "Banking", "/banking", "Banking");
+  await expect(page.getByText("A calm start to reconciliation", { exact: true })).toBeVisible();
+  await captureJourney(page, "29-banking-empty");
   const createdWorkspace = await authenticatedWorkspace(page);
   expect(createdWorkspace.workspaceId).toMatch(UUID_V7);
   expect(createdWorkspace.userId).toMatch(UUID_V7);
@@ -666,13 +672,19 @@ test("runs the current accounting workflows through the packaged app", async ({
   expect(attention.attentionItems).toHaveLength(0);
 
   await assertRoute(page, "Documents", "/documents", "Documents");
-  await expect(page.getByText("officeworks-invoice.pdf")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "officeworks-invoice.pdf", exact: true }),
+  ).toBeVisible();
   await expect(page.getByText("Reviewed", { exact: true }).first()).toBeVisible();
   await captureJourney(page, "04-documents");
   await assertRoute(page, "Banking", "/banking", "Banking");
   await expect(page.getByText("$681.00", { exact: true })).toBeVisible();
   await captureJourney(page, "05-banking");
-  await expect(page.getByText("Reconciled", { exact: true })).toBeVisible();
+  await expect(
+    page
+      .getByRole("table", { name: "Statement lines" })
+      .getByRole("cell", { name: "Reconciled", exact: true }),
+  ).toBeVisible();
   await assertRoute(page, "Chart of accounts", "/accounting/chart", "Chart of accounts");
   await expect(page.getByText("Office expenses", { exact: true })).toBeVisible();
   await captureJourney(page, "06-chart");
@@ -784,11 +796,21 @@ async function captureJourney(
   await mkdir(directory, { recursive: true });
   const viewport = page.viewportSize();
   if (viewport) await page.mouse.move(viewport.width - 4, viewport.height - 4);
+  const retainedScroll = upliftPhase
+    ? await page.evaluate(() => ({ x: window.scrollX, y: window.scrollY }))
+    : undefined;
+  if (upliftPhase)
+    await page.evaluate(() => window.scrollTo({ top: 0, left: 0, behavior: "instant" }));
   await page.screenshot({
     path: path.join(directory, `${milestone}.png`),
     fullPage: true,
     mask: recovery ? [page.locator("p.break-all")] : [],
   });
+  if (retainedScroll)
+    await page.evaluate(
+      ({ x, y }) => window.scrollTo({ left: x, top: y, behavior: "instant" }),
+      retainedScroll,
+    );
 }
 
 async function interactionJourney(page: import("@playwright/test").Page) {
@@ -866,6 +888,12 @@ async function interactionJourney(page: import("@playwright/test").Page) {
   await expect(page.getByLabel("Reviewed source reference")).toBeFocused();
   await page.getByLabel("Reviewed source reference").fill("Cancelled synthetic reference");
   await captureJourney(page, "25-match-review");
+  await page.setViewportSize({ width: 320, height: 1000 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+  await captureJourney(page, "25-match-review-narrow");
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await page.getByRole("button", { name: "Cancel match" }).click();
   await expect(
     page.getByRole("button", { name: "Complete reconciliation", exact: true }),
@@ -941,6 +969,18 @@ async function interactionJourney(page: import("@playwright/test").Page) {
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
       ).toBe(true);
       await captureJourney(page, `19-${width}-${label.toLowerCase().replaceAll(" ", "-")}`);
+      if (width === 320 && label === "Banking") {
+        await page.getByRole("button", { name: "Import statement", exact: true }).click();
+        await page.getByLabel("Opening balance").fill("681.00");
+        await page.getByLabel("CSV rows").fill("2024-05-13,Synthetic narrow draft,-12.50");
+        expect(
+          await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+        ).toBe(true);
+        const balance = page.getByText("$123,456,679.01", { exact: true });
+        await expect(balance).toHaveCSS("white-space", "nowrap");
+        await captureJourney(page, "19-320-banking-import");
+        await page.getByRole("button", { name: "Cancel import" }).click();
+      }
     }
   }
   expect(
