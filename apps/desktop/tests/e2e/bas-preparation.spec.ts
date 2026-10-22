@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdir, stat, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { create, toBinary } from "@bufbuild/protobuf";
 import type { Page, TestInfo } from "@playwright/test";
@@ -995,12 +995,29 @@ async function exportFrozen(
 async function attachBasSuccessEvidence(
   testInfo: TestInfo,
   artifacts: readonly Awaited<ReturnType<typeof exportFrozen>>[],
+  screenshots: readonly string[],
+  sourceRevision: string,
 ) {
+  // Successful Playwright output is removed by preserveOutput=failures-only.
+  // Keep inspectable evidence outside that disposable directory.
+  const evidenceDirectory = path.resolve(
+    testInfo.config.rootDir,
+    "../../../../.tmp/bas-acceptance",
+    sourceRevision,
+    `${createHash("sha256").update(testInfo.testId).digest("hex").slice(0, 16)}-${Date.now()}-${testInfo.retry}`,
+  );
+  await mkdir(evidenceDirectory, { recursive: true });
   const manifestArtifacts = await Promise.all(
     artifacts.map(async (artifact) => {
       const fileInfo = await stat(artifact.file);
       const actualHash = await reportArtifactHash(artifact.file);
       expect(actualHash, `${artifact.format} artifact hash remains stable`).toBe(artifact.hash);
+      const retainedFile = path.join(evidenceDirectory, path.basename(artifact.file));
+      await copyFile(artifact.file, retainedFile);
+      expect(
+        await reportArtifactHash(retainedFile),
+        "retained export matches inspected bytes",
+      ).toBe(actualHash);
       return {
         name: path.basename(artifact.file),
         format: artifact.format,
@@ -1019,17 +1036,31 @@ async function attachBasSuccessEvidence(
       };
     }),
   );
-  const manifestPath = testInfo.outputPath("bas-success-artifact-manifest.json");
-  await writeFile(
-    manifestPath,
-    `${JSON.stringify({ schemaVersion: 1, artifacts: manifestArtifacts }, null, 2)}\n`,
-    "utf8",
+  const manifestScreenshots = await Promise.all(
+    screenshots.map(async (file) => {
+      const retainedFile = path.join(evidenceDirectory, path.basename(file));
+      await copyFile(file, retainedFile);
+      return {
+        name: path.basename(retainedFile),
+        sha256: await reportArtifactHash(retainedFile),
+        sizeBytes: (await stat(retainedFile)).size,
+      };
+    }),
   );
+  const manifest = {
+    schemaVersion: 1,
+    sourceRevision,
+    artifacts: manifestArtifacts,
+    screenshots: manifestScreenshots,
+  };
+  const manifestPath = path.join(evidenceDirectory, "bas-success-artifact-manifest.json");
+  await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+  expect(JSON.parse(await readFile(manifestPath, "utf8"))).toEqual(manifest);
   for (const artifact of artifacts) {
     await testInfo.attach(
       `bas-${artifact.format.toLowerCase()}-${artifact.frozenRef.id}.${artifact.format.toLowerCase()}`,
       {
-        path: artifact.file,
+        path: path.join(evidenceDirectory, path.basename(artifact.file)),
         contentType: artifact.format === "PDF" ? "application/pdf" : "text/csv",
       },
     );
@@ -1574,7 +1605,12 @@ test("BAS lifecycle: clean cash sources, blocked PAYGI resolution, frozen handof
   await page.getByRole("button", { name: "Freeze", exact: true }).click();
   await expect(page.getByText(/Source changed/)).toBeVisible();
   screenshots.push(await captureScreenshot(page, testInfo, "bas-frozen-source-changed.png"));
-  await attachBasSuccessEvidence(testInfo, [...firstExports, ...secondExports]);
+  await attachBasSuccessEvidence(
+    testInfo,
+    [...firstExports, ...secondExports],
+    screenshots,
+    electronHarness.packagedLayout.sourceRevision,
+  );
   expect(electronHarness.consoleErrors).toEqual([]);
   expect(electronHarness.pageErrors).toEqual([]);
 });
