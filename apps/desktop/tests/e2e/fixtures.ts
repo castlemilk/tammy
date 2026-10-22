@@ -895,7 +895,18 @@ export const test = base.extend<ElectronFixtures>({
       rawArtifacts,
       stagedArtifactsRoot: testInfo.outputPath("evidence-staging"),
     };
-    await runElectronLifecycle(state, fixtureOperations(use, testInfo));
+    try {
+      await runElectronLifecycle(state, fixtureOperations(use, testInfo));
+    } finally {
+      if (testInfo.status !== testInfo.expectedStatus) {
+        await testInfo.attach("electron-safe-process-diagnostics", {
+          body:
+            state.processDiagnostics?.formatSummary(state.mainProcess) ??
+            "electronProcess=UNKNOWN;stderrMarkers=none",
+          contentType: "text/plain",
+        });
+      }
+    }
   },
 });
 

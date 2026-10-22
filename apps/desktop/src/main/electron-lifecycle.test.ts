@@ -466,6 +466,17 @@ describe("closeAndReapElectron", () => {
 });
 
 describe("ElectronProcessDiagnostics", () => {
+  it("retains workspace creation status and timing markers without error data", () => {
+    const diagnostics = new ElectronProcessDiagnostics();
+    diagnostics.observeStderr(
+      "LOCAL_ENGINE_WORKSPACE_CREATE_FAILED LOCAL_ENGINE_CONNECT_DEADLINE_EXCEEDED LOCAL_ENGINE_WORKSPACE_CREATE_DURATION_5_TO_10_SECONDS private=secret",
+    );
+    const summary = diagnostics.formatSummary();
+    expect(summary).toContain("LOCAL_ENGINE_WORKSPACE_CREATE_FAILED");
+    expect(summary).toContain("LOCAL_ENGINE_CONNECT_DEADLINE_EXCEEDED");
+    expect(summary).toContain("LOCAL_ENGINE_WORKSPACE_CREATE_DURATION_5_TO_10_SECONDS");
+    expect(summary).not.toContain("secret");
+  });
   it("retains the fixed startup stage and error code without adjacent private text", () => {
     const diagnostics = new ElectronProcessDiagnostics();
     diagnostics.observeStderr(

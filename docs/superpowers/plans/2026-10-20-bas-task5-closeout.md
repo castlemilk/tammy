@@ -8,13 +8,15 @@
 
 **Tech Stack:** Go, native SQLCipher 4.15.0, generated BAS contracts, existing authenticated local command transactions and real TLS. Every shell command uses `rtk proxy`. Go commands run from `services/core` with `env TMPDIR=/private/tmp GOFLAGS=-p=1 mise exec --`.
 
-Status: in progress, 2026-10-22. The user authorised this closeout after the accepted payment and posting-allocation owner checkpoints. This plan consolidates the remaining Task 5 work; Tasks 6–11 retain their existing lifecycle scope. No Task 5 or packaged phase-three acceptance follows from a dependency alone.
+Status: Task 5 source capture and real preparation-command implementation are complete, 2026-10-22. The consolidated native BAS race passed in 673.627s (`/tmp/tammy-bas-closeout-native-bas-final-2026-10-22.log`) and the purchase race in 1,440.481s (`/tmp/tammy-bas-closeout-purchases-final-2026-10-22.log`); the purchase run excludes only the previously accepted expensive public-posting stress test `TestPurchaseReportingCaptureAccepts1000ModernRootsAndRejects1001BeforeHydration`. Focused producer/workpaper and localproduct TLS suites passed; the localproduct JSONL suite passed 118/118. Supported review/freeze/approval TLS passed in `/tmp/tammy-bas-supported-review-freeze-tls-third-2026-10-22.log`. The final documentation review/commit remains with ROOT. The packaged lifecycle journey, final quick/package gates, and independent artifact inspection remain Task 11 acceptance work and are pending.
+
+This plan's dated checkpoint entries below preserve the state known at each checkpoint; the status above and completed Task 5 checklist supersede earlier `in progress` and `remain open` wording. Task 5's supported boundary still treats unclassified manual tax facts as blockers and does not claim official ATO submission.
 
 ## Chunk 1: Freeze the finite dependency inventory
 
 - [x] Audit every remaining purchase family across scalar discovery, preflight, empty selection, actual body SQL and mature replay. Record protected paths and confirmed source gaps separately from observed native failures. Map every gap to a repair group below; add no unrelated hardening.
-- [ ] Pin the minimum current-source/current-cash and exact legacy nomination contracts against the accepted writer/reader oracles. Separate decision/body categories from physical keys; reserve every additional retained category explicitly.
-- [ ] Pin coordinator interfaces, stage ordering, coverage identity representation and the production command acceptance path. Independently review this plan before implementation of the corresponding chunk.
+- [x] Pin the minimum current-source/current-cash and exact legacy nomination contracts against the accepted writer/reader oracles. Separate decision/body categories from physical keys; reserve every additional retained category explicitly.
+- [x] Pin coordinator interfaces, stage ordering, coverage identity representation and the production command acceptance path. Independently review this plan before implementation of the corresponding chunk.
 
 The fixed repair groups are: remaining modern child/proof families; opening roots and replacement/reference closure; required parent/reference fanout and dependent-statement guards. Final inventory must name every affected table and statement before these groups can be accepted. Existing direct-owner checkpoints are retained; source inspection is not a runtime-defect claim.
 
@@ -42,7 +44,7 @@ The first reviewed contract is `ReserveBASSourceScalars(ctx context.Context, org
 - [x] Write failing coordinator tests proving that every aggregate summary runs before any typed-key/parent-ID preflight; combined root and receipt limits are distinct; shared scalar bytes and physical-key counts are bounded; cancellation/errors return no partial reservation and prevent subsequent reads.
 - [x] Run the tests and record actual RED before activating production code.
 - [x] Implement the typed scalar reservation stage. Accounting facts remain independent physical keys and add no roots/receipts; semantic candidate mapping happens later. Retain each module's original reservation and independent byte recipe. Do not subtract purchase tax-fact bytes on identity alone, equate the modules' per-row charges, or present an upper bound as the exact final payload.
-- [ ] Validate unique complete-journal identity/organisation/charge agreement and preserve all additional decision/document/selector categories for final arithmetic. Shared journal proof identity never merges financial effects.
+- [x] Validate unique complete-journal identity/organisation/charge agreement and preserve all additional decision/document/selector categories for final arithmetic. Shared journal proof identity never merges financial effects.
 - [x] Run focused unit/native SQLCipher tests and independent specification then quality review for the scalar reservation stage. Payload coordination remains separate.
 
 ## Chunk 3: Close the recorded reader repair groups
@@ -53,12 +55,12 @@ Modern direct-owner implementation uses a closed typed family set in `reporting_
 
 The empty modern path must preflight all 11 existing source queries before any read, then read and require every selection/charge to be empty; retain the original empty fingerprint. An early owner-only probe does not replace each actual guarded family read. The precise static implementation map is `/tmp/tammy-task5-modern-owner-production-2026-10-20.md`, with ROOT's direct posting-event scope correction applied. Required document/journal/reference fanout remains explicitly assigned to the finite cross-cutting inventory, rather than implied by direct modern owner acceptance.
 
-- [ ] Reproduce each recorded omission or rejected-body copy with real writer-backed native SQLCipher tests before its production repair. Include canonical TEXT controls and unrelated UUID scope isolation.
+- [x] Reproduce each recorded omission or rejected-body copy with real writer-backed native SQLCipher tests before its production repair. Include canonical TEXT controls and unrelated UUID scope isolation.
 - [x] Complete the six remaining modern direct-owner families in scalar, raw and replay statements, including parent-owner probes and empty captures. Required reference/link validation remains in the separate open fanout item below.
 - [x] Complete opening payable/conversion/item owner discovery, reserved replacement closure, scalar owner sentinels, raw body and reporting replay protection. Existing replacement/reference policy is preserved; the separate open fanout item retains broader required-link work.
-- [ ] Complete the recorded missing/foreign/BLOB reference fanout and dependent-family statement guards. Preserve selected cells, ordering, counts, charges, fingerprints and ordinary APIs for valid retained data.
-- [ ] Verify static rejection before bodies, late same/cross-row mutation, masked empty sentinels, bounded Go allocation for rejected 9 MiB cells, short errors, unchanged retained state/revisions and caller transaction ownership.
-- [ ] Independently review the complete finite inventory against implementation and native evidence; close the group only when every recorded row is covered.
+- [x] Complete the recorded missing/foreign/BLOB reference fanout and dependent-family statement guards. Preserve selected cells, ordering, counts, charges, fingerprints and ordinary APIs for valid retained data.
+- [x] Verify static rejection before bodies, late same/cross-row mutation, masked empty sentinels, bounded Go allocation for rejected 9 MiB cells, short errors, unchanged retained state/revisions and caller transaction ownership.
+- [x] Independently review the complete finite inventory against implementation and native evidence; close the group only when every recorded row is covered.
 
 The next opening/history group keeps the payable-rooted POSTED/REPLACED conversion scope and its bounded bidirectional replacement closure. Root counts/scalar invalid sentinels and root discovery gain a matching BLOB conversion rejection probe; raw conversion/payable/item statements recheck only their reserved conversion batches. Unrelated DRAFT and ordinary non-purchase conversions remain excluded. Reporting-only opening replay preserves the original 29-cell payable and 24-cell prior-source decoders under same-statement masks, with bounded accounting journal proofs. The eight-cell accounting conversion-header verifier gains a narrowly scoped organisation read. Full legacy review scalar/raw/replay checks use an organisation-wide direct-owner rejection probe while preserving each original source-kind/source-ID selection; event replay composes the already supported full-coverage event guard. This catches an earlier sibling history owner drifting before a later selected body read. The implementation map is `/tmp/tammy-task5-opening-reader-group-next-2026-10-22.md`; native RED precedes every production change.
 
@@ -72,37 +74,37 @@ The missing current-cash projection must include every existing predicate input:
 
 Final candidate identity includes module/kind and the exact component/sequence tuple; a shared parent source or journal never merges distinct financial units. Proof-body deduplication and any byte discount are separate from candidate count. These choices still require focused contract tests and independent review before implementation/acceptance of Chunk 4.
 
-- [ ] Write API/behaviour REDs for separately bounded current owner/support/opening/cash facts required by legacy decisions. Include all immutable applicable history, promoted documents, valid evidence-only sources, conflicting/stale reviews, later payments and reversal ancestry.
-- [ ] Implement only the reviewed purchase-owned selectors, with aggregate reservation, same-statement masks and independently recomputed charges. Do not load unreserved source/event/journal bodies before the candidate fence.
-- [ ] Implement exact legacy admission/suppression and opening candidate rules; keep history as proof without allocating one financial effect per decision. Preserve distinct posting/payment allocations and fallback semantics.
-- [ ] Reconcile the provisional candidate set and every selector/decision hash against complete module bodies. Any missing, additional or mismatched proof fails the whole capture. Keep every current accounting tax fact an independent typed blocker.
-- [ ] Pin only writer-supported journal-line mappings and verify exact duplicate accounting facts using every retained raw cell and nullable provenance field before removing duplicate purchase proof charges.
-- [ ] Run writer-backed nomination/conservation, corruption/drift/allocation and cancellation tests; obtain independent specification then quality review.
+- [x] Write API/behaviour REDs for separately bounded current owner/support/opening/cash facts required by legacy decisions. Include all immutable applicable history, promoted documents, valid evidence-only sources, conflicting/stale reviews, later payments and reversal ancestry.
+- [x] Implement only the reviewed purchase-owned selectors, with aggregate reservation, same-statement masks and independently recomputed charges. Do not load unreserved source/event/journal bodies before the candidate fence.
+- [x] Implement exact legacy admission/suppression and opening candidate rules; keep history as proof without allocating one financial effect per decision. Preserve distinct posting/payment allocations and fallback semantics.
+- [x] Reconcile the provisional candidate set and every selector/decision hash against complete module bodies. Any missing, additional or mismatched proof fails the whole capture. Keep every current accounting tax fact an independent typed blocker.
+- [x] Pin only writer-supported journal-line mappings and verify exact duplicate accounting facts using every retained raw cell and nullable provenance field before removing duplicate purchase proof charges.
+- [x] Run writer-backed nomination/conservation, corruption/drift/allocation and cancellation tests; obtain independent specification then quality review.
 
 ## Chunk 5: Complete transaction-scoped producer
 
 **Files:** create `services/core/internal/baspreparation/sources.go` with focused reservation/mapping/hash/reconciliation companions and tests as necessary. Reuse existing repositories for profile, period, PAYG, organisation, rules and revisions; coordinator owns no module-table SQL.
 
-- [ ] Write failing tests for deterministic typed union, exact disjoint parent fallbacks, zero/unpaid/old/future/undated sources, eligible/excluded/unresolved/unsupported decisions, cancellation and no partial capture.
-- [ ] Enforce shared root/receipt/scalar/effect/byte limits before source-body hydration. Final arithmetic includes every retained category exactly once and only proven duplicate reuse. Test exact limit and limit+1/one-byte-short with read-order probes.
-- [ ] Hydrate accepted module readers through the same executor and reconcile exact physical/candidate/proof sets, nullable provenance, counts and independent byte charges against reservations.
-- [ ] Build complete bounded coverage and supported integer/rational calculations. Preserve unresolved manual tax facts as source-linked blockers; never infer GST direction/timing from sign, account or date. Prove G1/1A/1B and payable/current/deferred/suspense conservation.
-- [ ] Hash complete ordered coverage and meaningful source decisions/evidence. Retain the complete revision vector for integrity; exclude aggregate `financial_revision` and report-only events from source-currentness comparison. Same-total source/evidence changes must invalidate review.
-- [ ] Use real module rows for mixed invoice, modern/legacy/opening purchase, manual-fact and shared-journal tests. Prove no writes or transaction completion by the producer; native encrypted reopen and caller rollback retain exact results.
-- [ ] Obtain independent specification then quality review before command integration.
+- [x] Write failing tests for deterministic typed union, exact disjoint parent fallbacks, zero/unpaid/old/future/undated sources, eligible/excluded/unresolved/unsupported decisions, cancellation and no partial capture.
+- [x] Enforce shared root/receipt/scalar/effect/byte limits before source-body hydration. Final arithmetic includes every retained category exactly once and only proven duplicate reuse. Test exact limit and limit+1/one-byte-short with read-order probes.
+- [x] Hydrate accepted module readers through the same executor and reconcile exact physical/candidate/proof sets, nullable provenance, counts and independent byte charges against reservations.
+- [x] Build complete bounded coverage and supported integer/rational calculations. Preserve unresolved manual tax facts as source-linked blockers; never infer GST direction/timing from sign, account or date. Prove G1/1A/1B and payable/current/deferred/suspense conservation.
+- [x] Hash complete ordered coverage and meaningful source decisions/evidence. Retain the complete revision vector for integrity; exclude aggregate `financial_revision` and report-only events from source-currentness comparison. Same-total source/evidence changes must invalidate review.
+- [x] Use real module rows for mixed invoice, modern/legacy/opening purchase, manual-fact and shared-journal tests. Prove no writes or transaction completion by the producer; native encrypted reopen and caller rollback retain exact results.
+- [x] Obtain independent specification then quality review before command integration.
 
 ## Chunk 6: Task 5 command acceptance and final evidence
 
 **Files:** preparation command/domain composition and authenticated `services/core/internal/localproduct/` integration tests. Use existing canonical preparation contracts and expected-version/idempotency infrastructure; preserve `CreateBasDraft` semantics.
 
-- [ ] Write a real TLS/native SQLCipher command RED that captures and appends the exact complete calculation under confirmed organisation/profile/period/rule/PAYG references.
-- [ ] Mount the required preparation command through existing authorization and command transaction ownership. Capture, calculation append, retained result and audit commit atomically; rollback and identical lost-response replay have single effects.
-- [ ] Test complete coverage identity/hash/amounts through the command, unchanged-total source changes, issued-unposted blockers, unsupported manual facts, cancellation/bounds and rollback. Existing saved-workpaper TLS tests are compatibility evidence only.
-- [ ] Run focused producer/command tests, then complete affected native race suites across baspreparation/reporting/invoices/purchases/accounting/artefacts/localproduct. Record the previously accepted purchase stress exclusion explicitly if still used; do not exclude new closeout regressions.
-- [ ] Run default Core, any changed-contract generation/checks, the pinned production build and independent binary hash verification. Inspect full outputs and exit results; final Go source is frozen throughout final gates.
-- [ ] Independently review full Task 5 requirements and final documentation, commit validated work, verify clean worktree/hash, and only then mark Task 5 accepted. Tasks 6–11 and packaged phase three remain open until their own acceptance.
+- [x] Write a real TLS/native SQLCipher command RED that captures and appends the exact complete calculation under confirmed organisation/profile/period/rule/PAYG references.
+- [x] Mount the required preparation command through existing authorization and command transaction ownership. Capture, calculation append, retained result and audit commit atomically; rollback and identical lost-response replay have single effects.
+- [x] Test complete coverage identity/hash/amounts through the command, unchanged-total source changes, issued-unposted blockers, unsupported manual facts, cancellation/bounds and rollback. Existing saved-workpaper TLS tests are compatibility evidence only.
+- [x] Run focused producer/command tests, then complete affected native race suites across baspreparation/reporting/invoices/purchases/accounting/artefacts/localproduct. Record the previously accepted purchase stress exclusion explicitly if still used; do not exclude new closeout regressions.
+- [x] Run default Core, any changed-contract generation/checks, the pinned production build and independent binary hash verification. Inspect full outputs and exit results; final Go source is frozen throughout final gates.
+- [ ] ROOT independently reviews and commits the final documentation, verifies the clean worktree/hash, and records Task 5 acceptance. The implementation and test gates above have passed; integrated packaged acceptance remains Task 11 and the overall phase remains open until that journey and artifact inspection pass.
 
-## Evidence and remaining work
+## Historical implementation checkpoints
 
 Starting source `40fe2ba3e2eedd1fa86597f45db1b6b64c024a2f` is clean. It accepts direct posting-allocation owner rejection and the preceding direct payment-owner checkpoint; native race, existing-route TLS, default Core, pinned build and GPT-6 Luna Max reviews passed as recorded in their plans. Starting binary SHA-256 is `42e3691a6f12de757d4d36b86fe87b57dbb56b43afe9a234b40ed09ebec6366f`.
 

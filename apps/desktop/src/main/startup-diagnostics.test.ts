@@ -6,6 +6,7 @@ import {
   type DesktopStartupStage,
   STARTUP_DIAGNOSTIC_MARKERS,
   safeDesktopStartupFailure,
+  safeWorkspaceCreateFailure,
 } from "./startup-diagnostics";
 
 const stages = [
@@ -129,4 +130,50 @@ it("returns a bounded ASCII marker even when hostile objects throw on inspection
   expect(result).toMatch(/^[A-Z0-9_ ]+$/u);
   expect(result.length).toBeLessThanOrEqual(96);
   expect(STARTUP_DIAGNOSTIC_MARKERS).toContain(result);
+});
+
+it("records only a fixed workspace operation, concrete status and elapsed bucket", () => {
+  const error = new ConnectError("password=secret /private/path", Code.DeadlineExceeded, {
+    "private-token": "secret",
+  });
+  expect(safeWorkspaceCreateFailure(error, 5_005)).toBe(
+    "LOCAL_ENGINE_WORKSPACE_CREATE_FAILED LOCAL_ENGINE_CONNECT_DEADLINE_EXCEEDED LOCAL_ENGINE_WORKSPACE_CREATE_DURATION_5_TO_10_SECONDS",
+  );
+});
+
+it("bounds workspace creation timings without retaining arbitrary errors", () => {
+  const cases = [
+    [0, "UNDER_1_SECOND"],
+    [999, "UNDER_1_SECOND"],
+    [1_000, "1_TO_5_SECONDS"],
+    [4_999, "1_TO_5_SECONDS"],
+    [5_000, "5_TO_10_SECONDS"],
+    [9_999, "5_TO_10_SECONDS"],
+    [10_000, "10_SECONDS_OR_MORE"],
+    [Number.NaN, "UNKNOWN"],
+    [-1, "UNKNOWN"],
+    [Number.POSITIVE_INFINITY, "UNKNOWN"],
+  ] as const;
+  for (const [elapsed, bucket] of cases) {
+    const result = safeWorkspaceCreateFailure(new Error("private secret"), elapsed);
+    expect(result).toBe(
+      `LOCAL_ENGINE_WORKSPACE_CREATE_FAILED LOCAL_ENGINE_WORKSPACE_CREATE_DURATION_${bucket}`,
+    );
+    expect(result).toMatch(/^[A-Z0-9_ ]+$/u);
+    expect(result.length).toBeLessThan(192);
+  }
+});
+
+it("does not inspect hostile workspace creation errors", () => {
+  const hostile = new Proxy(
+    {},
+    {
+      getPrototypeOf() {
+        throw new Error("secret");
+      },
+    },
+  );
+  expect(safeWorkspaceCreateFailure(hostile, 1)).toBe(
+    "LOCAL_ENGINE_WORKSPACE_CREATE_FAILED LOCAL_ENGINE_WORKSPACE_CREATE_DURATION_UNDER_1_SECOND",
+  );
 });

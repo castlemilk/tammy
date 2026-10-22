@@ -10,6 +10,7 @@ import {
   UnlockWorkspaceRequestSchema,
   UnlockWorkspaceResponseSchema,
 } from "@tammy/connect-client/tammy/v1/workspace_pb.js";
+import { safeWorkspaceCreateFailure } from "../../main/startup-diagnostics";
 import { createProtoMethodCodec } from "../../shared/proto-ipc";
 import { command, defineModule } from "../init";
 import { conveyorProtoFrame, invokeCore } from "../proto";
@@ -41,7 +42,15 @@ const signIn = createProtoMethodCodec({
 
 export const workspace = defineModule({
   createWorkspace: command(conveyorProtoFrame(32_768), ({ input, ctx }) =>
-    invokeCore(createWorkspace, input, ctx.client.createWorkspace),
+    invokeCore(createWorkspace, input, async (request) => {
+      const startedAt = performance.now();
+      try {
+        return await ctx.client.createWorkspace(request);
+      } catch (error) {
+        console.error(safeWorkspaceCreateFailure(error, performance.now() - startedAt));
+        throw error;
+      }
+    }),
   ),
   confirmRecovery: command(conveyorProtoFrame(16_384), ({ input, ctx }) =>
     invokeCore(confirmRecovery, input, ctx.client.confirmRecovery),

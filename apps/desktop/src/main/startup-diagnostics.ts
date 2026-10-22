@@ -66,6 +66,19 @@ export const STARTUP_DIAGNOSTIC_MARKERS = Object.freeze([
   ...Object.values(connectCodeMarkers),
 ]);
 
+const workspaceDurationMarkers = {
+  underOne: "LOCAL_ENGINE_WORKSPACE_CREATE_DURATION_UNDER_1_SECOND",
+  oneToFive: "LOCAL_ENGINE_WORKSPACE_CREATE_DURATION_1_TO_5_SECONDS",
+  fiveToTen: "LOCAL_ENGINE_WORKSPACE_CREATE_DURATION_5_TO_10_SECONDS",
+  tenOrMore: "LOCAL_ENGINE_WORKSPACE_CREATE_DURATION_10_SECONDS_OR_MORE",
+  unknown: "LOCAL_ENGINE_WORKSPACE_CREATE_DURATION_UNKNOWN",
+} as const;
+
+export const WORKSPACE_CREATE_DIAGNOSTIC_MARKERS = Object.freeze([
+  "LOCAL_ENGINE_WORKSPACE_CREATE_FAILED",
+  ...Object.values(workspaceDurationMarkers),
+]);
+
 function ownDataValue(value: object, name: string): unknown {
   const descriptor = Object.getOwnPropertyDescriptor(value, name);
   return descriptor && "value" in descriptor ? descriptor.value : undefined;
@@ -129,4 +142,19 @@ export function safeDesktopStartupFailure(stage: DesktopStartupStage, error: unk
       : stageMarkers.REGISTER;
   const codeMarker = coreProcessMarker(error) ?? connectMarker(error);
   return codeMarker ? `${stageMarker} ${codeMarker}` : stageMarker;
+}
+
+export function safeWorkspaceCreateFailure(error: unknown, elapsedMs: number): string {
+  const duration =
+    !Number.isFinite(elapsedMs) || elapsedMs < 0
+      ? workspaceDurationMarkers.unknown
+      : elapsedMs < 1_000
+        ? workspaceDurationMarkers.underOne
+        : elapsedMs < 5_000
+          ? workspaceDurationMarkers.oneToFive
+          : elapsedMs < 10_000
+            ? workspaceDurationMarkers.fiveToTen
+            : workspaceDurationMarkers.tenOrMore;
+  const code = connectMarker(error);
+  return ["LOCAL_ENGINE_WORKSPACE_CREATE_FAILED", ...(code ? [code] : []), duration].join(" ");
 }

@@ -30,6 +30,8 @@ The next real calculation correctly rejected a PAYGI income-year mismatch. The d
 
 An intermittent pre-window failure initially exposed only `LOCAL_ENGINE_UNAVAILABLE`. Fixed startup-stage and concrete error-code diagnostics now preserve a bounded explanation without retaining raw errors, credentials, readiness content or paths. The failure remains unclassified until a reproduction provides a specific stage/code; it does not justify an unmeasured timeout increase.
 
+The `b36c6ddf` packaged attempt stopped during `CreateWorkspace`, before the recovery screen and before any BAS action. Setup retained only generic failure copy, so this attempt supplies no Core status or cause. The creation boundary now records only a fixed operation marker, an allowlisted concrete Connect status and a coarse duration bucket; failed packaged tests attach only the bounded process summary. Request/response bodies, credentials, recovery values, paths and raw error messages are excluded. The existing request deadline remains unchanged until a reproduction supplies evidence.
+
 ## Chunk 1: Canonical setup and bounded bridge
 
 - [x] Reproduce the setup checksum mismatch with a test deriving ID, revision and SHA-256 from the actual bundled bytes; verify RED and GREEN for both GST bases.

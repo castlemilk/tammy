@@ -1,5 +1,6 @@
 import { create, type DescMessage, type Message } from "@bufbuild/protobuf";
 import { FieldMaskSchema, TimestampSchema } from "@bufbuild/protobuf/wkt";
+import { Code, ConnectError } from "@connectrpc/connect";
 import * as accountingProto from "@tammy/connect-client/tammy/v1/accounting_pb.js";
 import * as bankingProto from "@tammy/connect-client/tammy/v1/banking_pb.js";
 import * as commonProto from "@tammy/connect-client/tammy/v1/common_pb.js";
@@ -701,6 +702,70 @@ test("organisation update failures expose only the static sanitized error", asyn
   expect(JSON.stringify(error)).not.toMatch(
     /private|token|TOP_SECRET|CONFIDENTIAL_PROFILE_REASON/i,
   );
+});
+
+test("workspace creation logs only bounded failure markers and keeps the generic error boundary", async () => {
+  const testCase = ORDINARY_CASES.find(
+    ({ method, module }) => module === "workspace" && method === "createWorkspace",
+  );
+  if (testCase === undefined) throw new Error("Missing createWorkspace test case");
+  const { codec } = capturedCodec(testCase);
+  const privateWorkspacePassphrase = "WORKSPACE_CREATE_PRIVATE_PASSPHRASE_9d5e";
+  const privateAdministratorPassword = "WORKSPACE_CREATE_PRIVATE_PASSWORD_6f21";
+  const request = create(workspaceProto.CreateWorkspaceRequestSchema, {
+    setupId: "018fcb44-a5b7-7b8c-8123-123456789abc",
+    administratorUsername: "workspace-user",
+    administratorDisplayName: "Workspace User",
+    workspacePassphrase: create(commonProto.SecretInputSchema, {
+      utf8: new TextEncoder().encode(privateWorkspacePassphrase),
+    }),
+    administratorPassword: create(commonProto.SecretInputSchema, {
+      utf8: new TextEncoder().encode(privateAdministratorPassword),
+    }),
+  });
+  const failure = new ConnectError(
+    "/private/workspace.sqlite token=WORKSPACE_CREATE_PRIVATE_TOKEN",
+    Code.DeadlineExceeded,
+    { "private-header": "WORKSPACE_CREATE_PRIVATE_METADATA" },
+  );
+  const createWorkspace = vi.fn(async (_request: typeof request) => {
+    throw failure;
+  });
+  const caller = createCaller(createTammyRouter(), {
+    ctx: { client: { createWorkspace } as never, fileIntake: {} as never },
+  });
+  const logFailure = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+  try {
+    const error = await procedure(
+      caller,
+      "workspace",
+      "createWorkspace",
+    )(codec.encodeRequest(request)).catch((caught: unknown) => caught);
+
+    expect(error).toMatchObject({ code: "CORE_REQUEST_FAILED", message: "CORE_REQUEST_FAILED" });
+    expect(createWorkspace).toHaveBeenCalledOnce();
+    const forwarded = createWorkspace.mock.calls[0]?.[0];
+    if (!forwarded) throw new Error("Missing forwarded workspace request");
+    expect(Array.from(codec.encodeRequest(forwarded))).toEqual(
+      Array.from(codec.encodeRequest(request)),
+    );
+    expect(logFailure).toHaveBeenCalledOnce();
+    expect(logFailure.mock.calls[0]).toEqual([
+      expect.stringMatching(
+        /^LOCAL_ENGINE_WORKSPACE_CREATE_FAILED LOCAL_ENGINE_CONNECT_DEADLINE_EXCEEDED LOCAL_ENGINE_WORKSPACE_CREATE_DURATION_(?:UNDER_1_SECOND|1_TO_5_SECONDS|5_TO_10_SECONDS|10_SECONDS_OR_MORE|UNKNOWN)$/u,
+      ),
+    ]);
+    expect(JSON.stringify(logFailure.mock.calls)).not.toMatch(
+      /private|WORKSPACE_CREATE_PRIVATE|workspace\.sqlite|token=/i,
+    );
+    expect(JSON.stringify(error)).not.toMatch(
+      /private|WORKSPACE_CREATE_PRIVATE|workspace\.sqlite|token=/i,
+    );
+    expect(JSON.stringify(error)).not.toContain("LOCAL_ENGINE_");
+  } finally {
+    logFailure.mockRestore();
+  }
 });
 
 test("system diagnostics is the sole zero-input Core call and sanitizes every failure", async () => {
