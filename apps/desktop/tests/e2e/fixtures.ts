@@ -943,10 +943,16 @@ export const test = base.extend<ElectronFixtures>({
       await runElectronLifecycle(state, fixtureOperations(use, testInfo));
     } finally {
       if (testInfo.status !== testInfo.expectedStatus) {
-        await testInfo.attach("electron-safe-process-diagnostics", {
-          body:
-            state.processDiagnostics?.formatSummary(state.mainProcess) ??
+        const diagnosticsPath = testInfo.outputPath("electron-safe-process-diagnostics.txt");
+        await mkdir(path.dirname(diagnosticsPath), { recursive: true, mode: 0o700 });
+        await writeFile(
+          diagnosticsPath,
+          state.processDiagnostics?.formatSummary(state.mainProcess) ??
             "electronProcess=UNKNOWN;stderrMarkers=none",
+          { encoding: "utf8", mode: 0o600 },
+        );
+        await testInfo.attach("electron-safe-process-diagnostics", {
+          path: diagnosticsPath,
           contentType: "text/plain",
         });
       }

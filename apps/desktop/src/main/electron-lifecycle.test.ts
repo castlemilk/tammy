@@ -537,6 +537,29 @@ describe("ElectronProcessDiagnostics", () => {
     expect(summary).not.toContain("secret");
     expect(summary).not.toContain("/private/value");
   });
+  it("pairs the enrolment RPC with its Connect status across chunks", () => {
+    const diagnostics = new ElectronProcessDiagnostics();
+    diagnostics.observeStderr(
+      Buffer.from("LOCAL_ENGINE_CORE_RPC_ENROL_TOTP_FAILED LOCAL_ENGINE_CONNECT_DEADLINE_"),
+    );
+    diagnostics.observeStderr(
+      Buffer.from(
+        "EXCEEDED password=must-not-retain LOCAL_ENGINE_CORE_RPC_SIGN_IN_FAILED LOCAL_ENGINE_CONNECT_PERMISSION_DENIED capability=secret",
+      ),
+    );
+
+    const summary = diagnostics.formatSummary();
+    expect(summary).toContain(
+      "LOCAL_ENGINE_CORE_RPC_ENROL_TOTP_FAILED LOCAL_ENGINE_CONNECT_DEADLINE_EXCEEDED",
+    );
+    expect(summary).toContain("LOCAL_ENGINE_CORE_RPC_SIGN_IN_FAILED");
+    expect(summary).toContain("LOCAL_ENGINE_CONNECT_PERMISSION_DENIED");
+    expect(summary).not.toContain(
+      "LOCAL_ENGINE_CORE_RPC_ENROL_TOTP_FAILED LOCAL_ENGINE_CONNECT_PERMISSION_DENIED",
+    );
+    expect(summary).not.toContain("must-not-retain");
+    expect(summary).not.toContain("capability=secret");
+  });
   it("retains workspace creation status and timing markers without error data", () => {
     const diagnostics = new ElectronProcessDiagnostics();
     diagnostics.observeStderr(

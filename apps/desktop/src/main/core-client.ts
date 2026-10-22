@@ -549,7 +549,8 @@ export function createCoreClient(
       coreRequest(() => identityClient.getCurrentUser(request)),
     assignRoles: (request: AssignRolesRequest) =>
       coreRequest(() => identityClient.assignRoles(request)),
-    enrolTotp: (request: EnrolTOTPRequest) => coreRequest(() => identityClient.enrolTOTP(request)),
+    enrolTotp: (request: EnrolTOTPRequest) =>
+      coreRequest(() => identityClient.enrolTOTP(request), "ENROL_TOTP"),
     confirmTotp: (request: ConfirmTOTPRequest) =>
       coreRequest(() => identityClient.confirmTOTP(request)),
     assertTotp: (request: AssertTOTPRequest) =>

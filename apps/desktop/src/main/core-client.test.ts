@@ -621,6 +621,7 @@ describe("createCoreClient", () => {
       "GET_CURRENT_BAS_DRAFT",
       (client: CoreClient) => client.getCurrentBasDraft(create(GetCurrentBasDraftRequestSchema)),
     ],
+    ["ENROL_TOTP", (client: CoreClient) => client.enrolTotp(create(EnrolTOTPRequestSchema))],
     ["ASSERT_TOTP", (client: CoreClient) => client.assertTotp(create(AssertTOTPRequestSchema))],
     [
       "UNLOCK_WORKSPACE",
