@@ -158,7 +158,8 @@ export function syntheticPurchasePdf(
     | "payg-evidence"
     | "actual-due-date-evidence"
     | "required-return-notice"
-    | "profile-evidence" = false,
+    | "profile-evidence"
+    | "gst-registration-evidence" = false,
 ): Buffer {
   const text =
     isNotice === "legacy-review"
@@ -169,9 +170,11 @@ export function syntheticPurchasePdf(
           ? `BT /F1 12 Tf 50 750 Td (Synthetic ATO activity statement ${number}) Tj 0 -20 Td (Actual statement due date 28 October 2026) Tj 0 -20 Td (Supporting evidence only - no purchase or payment value) Tj ET`
           : isNotice === "profile-evidence"
             ? `BT /F1 12 Tf 50 750 Td (Synthetic business registration and obligation evidence ${number}) Tj 0 -20 Td (GST registration effective from 01 July 2025) Tj 0 -20 Td (Quarterly GST, PAYGW and PAYGI obligations reviewed; eight other statement obligations not applicable) Tj 0 -20 Td (Supporting evidence only - no purchase or payment value) Tj ET`
-            : isNotice
-              ? `BT /F1 12 Tf 50 750 Td (Synthetic required-return notice ${number}) Tj 0 -20 Td (Required return due date 03 November 2026) Tj 0 -20 Td (Supporting evidence only - no purchase or payment value) Tj ET`
-              : `BT /F1 12 Tf 50 750 Td (Synthetic tax invoice ${number}) Tj 0 -20 Td (Supplier ABN 51 824 753 556) Tj 0 -20 Td (Purchase total AUD 110.00 including GST 10.00) Tj ET`;
+            : isNotice === "gst-registration-evidence"
+              ? `BT /F1 12 Tf 50 750 Td (Synthetic GST registration and PAYGI status evidence ${number}) Tj 0 -20 Td (GST registration effective from 01 July 2025) Tj 0 -20 Td (Synthetic PAYGI notice confirms no instalment obligation applies) Tj 0 -20 Td (Supporting evidence only - no purchase or payment value) Tj ET`
+              : isNotice
+                ? `BT /F1 12 Tf 50 750 Td (Synthetic required-return notice ${number}) Tj 0 -20 Td (Required return due date 03 November 2026) Tj 0 -20 Td (Supporting evidence only - no purchase or payment value) Tj ET`
+                : `BT /F1 12 Tf 50 750 Td (Synthetic tax invoice ${number}) Tj 0 -20 Td (Supplier ABN 51 824 753 556) Tj 0 -20 Td (Purchase total AUD 110.00 including GST 10.00) Tj ET`;
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",
     "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
@@ -194,7 +197,7 @@ export function syntheticPurchasePdf(
 }
 export async function retainPurchaseThroughUi(
   page: Page,
-  workspace: PurchaseWorkspace,
+  workspace: AuthenticatedAccountingWorkspace,
   number: string,
   invoiceDate = "2026-08-31",
   zeroMoney = false,
@@ -204,7 +207,8 @@ export async function retainPurchaseThroughUi(
     | "payg-evidence"
     | "actual-due-date-evidence"
     | "required-return-notice"
-    | "profile-evidence" = "purchase",
+    | "profile-evidence"
+    | "gst-registration-evidence" = "purchase",
 ): Promise<d.Document> {
   await page.getByRole("link", { name: "Documents", exact: true }).click();
   await page.locator('input[type="file"]').setInputFiles({
@@ -217,7 +221,8 @@ export async function retainPurchaseThroughUi(
         : documentKind === "payg-evidence" ||
             documentKind === "actual-due-date-evidence" ||
             documentKind === "required-return-notice" ||
-            documentKind === "profile-evidence"
+            documentKind === "profile-evidence" ||
+            documentKind === "gst-registration-evidence"
           ? documentKind
           : zeroMoney,
     ),
@@ -232,9 +237,11 @@ export async function retainPurchaseThroughUi(
           ? "Synthetic ATO activity statement"
           : documentKind === "required-return-notice"
             ? "Synthetic ATO required-return notice"
-            : documentKind === "profile-evidence"
-              ? "Synthetic business registration evidence"
-              : '=Synthetic supplier, "Élodie"',
+            : documentKind === "gst-registration-evidence"
+              ? "Synthetic GST registration and PAYGI status evidence"
+              : documentKind === "profile-evidence"
+                ? "Synthetic business registration evidence"
+                : '=Synthetic supplier, "Élodie"',
     );
   const review = page
     .locator("section")

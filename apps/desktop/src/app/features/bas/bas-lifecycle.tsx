@@ -1133,8 +1133,9 @@ export function BasPreparationLifecycle({
               revision: String(targetRef.revision),
               hash: hex(targetRef.contentHash),
             };
+      const auth = authentication(workspace);
       const result = await reportApi.exportBasPreparation({
-        authentication: authentication(workspace),
+        authentication: { actorUserId: auth.actorUserId, sessionId: auth.sessionId },
         organisationId: workspace.organisationId,
         target: exactTarget,
         format: exportFormat,

@@ -71,7 +71,6 @@ import {
   SetBasObligationsProfileResponseSchema,
 } from "@tammy/connect-client/tammy/v1/bas_preparation_pb.js";
 import {
-  AuthenticationContextSchema,
   FreshFactorContextSchema,
   PageInfoSchema,
   SourceRefSchema,
@@ -90,6 +89,7 @@ import userEvent from "@testing-library/user-event";
 import { expect, it } from "vitest";
 import { BAS_PREPARATION_RESPONSE_FRAME_LIMIT } from "../../../shared/bas-preparation-ipc";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
+import { basPreparationExportRequest } from "../../../shared/report-export";
 import { createConveyorFixture, renderWithConveyor } from "../../test/conveyor-fixtures";
 import { BasPreparationLifecycle, readAllPages } from "./bas-lifecycle";
 
@@ -1046,12 +1046,14 @@ it("exports the selected frozen handoff by its exact immutable identity", async 
     expect(exportRequests[0].target.exactTarget.value.id).toBe(frozenId);
   expect(exportRequests[1]?.page?.cursor).toBe("next");
   await user.click(screen.getByRole("button", { name: "Export PDF" }));
+  const exportedRequest = fixture.procedures.reporting.exportBasPreparation.mock.calls.at(-1)?.[0];
+  expect(basPreparationExportRequest.safeParse(exportedRequest).success).toBe(true);
   await waitFor(() =>
     expect(fixture.procedures.reporting.exportBasPreparation).toHaveBeenCalledWith({
-      authentication: create(AuthenticationContextSchema, {
+      authentication: {
         actorUserId: workspace.userId,
         sessionId: workspace.sessionId,
-      }),
+      },
       organisationId: workspace.organisationId,
       target: { kind: "frozen_bas", id: frozenId, revision: "1", hash: "ab".repeat(32) },
       format: "pdf",

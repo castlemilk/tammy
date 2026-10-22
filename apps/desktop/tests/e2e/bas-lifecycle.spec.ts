@@ -1,6 +1,10 @@
+import { createHash } from "node:crypto";
+import { toBinary } from "@bufbuild/protobuf";
 import type { Page } from "@playwright/test";
+import { DocumentCandidateSchema } from "@tammy/connect-client/tammy/v1/documents_pb.js";
 import { expect, test } from "./fixtures";
 import { setupAndRunCurrentAccountingWorkflow } from "./support/current-accounting-workflow";
+import { retainPurchaseThroughUi } from "./support/purchase-payments-workflow";
 
 async function expectLifecycleStatus(page: Page, message: string) {
   const lifecycle = page.getByRole("region", {
@@ -14,8 +18,36 @@ test("prepares and reviews an exact BAS period in the packaged app", async ({
   electronHarness,
 }) => {
   test.setTimeout(240_000);
-  await setupAndRunCurrentAccountingWorkflow(electronHarness.page, electronHarness);
+  const workspace = await setupAndRunCurrentAccountingWorkflow(
+    electronHarness.page,
+    electronHarness,
+  );
   const page = electronHarness.currentPage();
+
+  const profileEvidenceDocument = await retainPurchaseThroughUi(
+    page,
+    workspace,
+    "BAS-LIFECYCLE-PROFILE-EVIDENCE",
+    "2026-07-01",
+    true,
+    false,
+    "gst-registration-evidence",
+  );
+  if (
+    !profileEvidenceDocument.candidate ||
+    !profileEvidenceDocument.id ||
+    profileEvidenceDocument.version < 1n
+  ) {
+    throw new Error("BAS_LIFECYCLE_RETAINED_PROFILE_EVIDENCE_MISSING");
+  }
+  const profileEvidence = {
+    type: "document",
+    id: profileEvidenceDocument.id,
+    revision: profileEvidenceDocument.version.toString(),
+    hash: createHash("sha256")
+      .update(toBinary(DocumentCandidateSchema, profileEvidenceDocument.candidate))
+      .digest("hex"),
+  };
 
   await page.getByRole("link", { name: "GST & BAS", exact: true }).click();
   await expect(page.getByRole("heading", { name: "BAS preparation", exact: true })).toBeVisible();
@@ -28,14 +60,46 @@ test("prepares and reviews an exact BAS period in the packaged app", async ({
     await expect(lifecycle.getByRole("button", { name: stage, exact: true })).toBeVisible();
   }
 
-  await page
+  const profileSection = page
     .getByRole("heading", { name: "Obligations profile", exact: true })
-    .locator("xpath=ancestor::section[1]")
-    .getByLabel("Effective from", { exact: true })
-    .fill("2024-04-01");
+    .locator("xpath=ancestor::section[1]");
+  await profileSection.getByLabel("Effective from", { exact: true }).fill("2026-07-01");
+  for (const [label, value] of [
+    ["GST obligation", "active"],
+    ["GST registration status", "registered"],
+    ["GST reporting method", "simpler"],
+    ["GST turnover category", "small"],
+    ["GST basis", "cash"],
+    ["GST cadence", "quarterly"],
+    ["PAYGI obligation", "not applicable"],
+    ["PAYGI method", "not applicable"],
+  ] as const) {
+    await profileSection.getByRole("combobox", { name: label, exact: true }).selectOption({
+      label: value,
+    });
+  }
+  await profileSection
+    .getByLabel("GST registration effective from", { exact: true })
+    .fill("2025-07-01");
+  await profileSection
+    .getByLabel("GST decision reason", { exact: true })
+    .fill("Synthetic retained registration evidence supports GST reporting for this period.");
+  await profileSection
+    .getByLabel("PAYGI reason", { exact: true })
+    .fill("The retained synthetic PAYGI notice confirms that no instalment applies.");
+  const evidenceGroup = page.getByRole("group", {
+    name: "Shared retained profile evidence identity",
+    exact: true,
+  });
+  await evidenceGroup.getByLabel("Source type", { exact: true }).fill(profileEvidence.type);
+  await evidenceGroup.getByLabel("Source UUID", { exact: true }).fill(profileEvidence.id);
+  await evidenceGroup.getByLabel("Revision", { exact: true }).fill(profileEvidence.revision);
+  await evidenceGroup.getByLabel("SHA-256 hex", { exact: true }).fill(profileEvidence.hash);
   await page
     .getByLabel("Profile decision reason", { exact: true })
-    .fill("Packaged lifecycle acceptance; unresolved obligations remain explicitly unknown.");
+    .fill(
+      "Synthetic retained evidence supports GST and the PAYGI not-applicable decision; other obligations remain unknown.",
+    );
   await page.getByRole("button", { name: "Save immutable profile revision" }).click();
   await expectLifecycleStatus(page, "Saved BAS obligations profile revision");
 
@@ -54,13 +118,25 @@ test("prepares and reviews an exact BAS period in the packaged app", async ({
       ),
     )
     .toBe(true);
-  const options = await periodSelect.locator("option").allTextContents();
-  const suggestionIndex = options.findIndex((label) => label.startsWith("Suggestion ·"));
-  expect(suggestionIndex).toBeGreaterThan(0);
-  await periodSelect.selectOption({ index: suggestionIndex });
+  const options = await periodSelect.locator("option").evaluateAll((items) =>
+    items.map((item) => ({
+      value: (item as HTMLOptionElement).value,
+      text: item.textContent ?? "",
+    })),
+  );
+  const q3 = options.find(
+    (item) =>
+      item.text.startsWith("Suggestion ·") &&
+      item.text.includes("2026-07-01") &&
+      item.text.includes("2026-09-30"),
+  );
+  if (!q3) throw new Error("BAS_LIFECYCLE_Q3_SUGGESTION_MISSING");
+  await periodSelect.selectOption(q3.value);
   await page
     .getByLabel("Period confirmation reason", { exact: true })
-    .fill("Acceptance fixture uses the displayed BAS calendar suggestion.");
+    .fill(
+      "The displayed Q3 2026 calendar period is confirmed; other statement obligations and due-date evidence remain unresolved.",
+    );
   await page.getByRole("button", { name: "Confirm selected period" }).click();
   await expectLifecycleStatus(page, "Confirmed BAS period");
 
