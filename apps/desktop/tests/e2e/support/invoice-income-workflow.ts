@@ -189,6 +189,18 @@ export async function regenerateInvoiceBas(
 ) {
   await page.getByRole("link", { name: "GST & BAS", exact: true }).click();
   await openSavedBasWorkpaperPanel(page);
+  const savedIdentity = page.locator("p").filter({ hasText: /^Saved workpaper: / });
+  const readSavedIdentity = async () => {
+    if (!(await savedIdentity.count())) return undefined;
+    const text = await savedIdentity.first().textContent();
+    if (!text) return undefined;
+    const match = text.trim().match(/^Saved workpaper: (\S+) · version ([0-9]+)$/u);
+    const id = match?.[1];
+    const version = match?.[2];
+    if (!id || version === undefined) throw new Error("SAVED_BAS_WORKPAPER_IDENTITY_INVALID");
+    return { id, version: BigInt(version) };
+  };
+  const previousIdentity = await readSavedIdentity();
   await page.getByLabel("Period start", { exact: true }).fill(start);
   await page.getByLabel("Period end", { exact: true }).fill(end);
   await expect(page.getByLabel("Period start", { exact: true })).toHaveValue(start);
@@ -196,6 +208,24 @@ export async function regenerateInvoiceBas(
   const button = page.getByRole("button", { name: /^(Create|Regenerate) local draft$/ });
   await expect(button).toBeEnabled();
   await button.click();
+  const failureCopy =
+    "The local BAS draft could not be created. Check the selected period and source records, then try again.";
+  await expect
+    .poll(
+      async () => {
+        if (await page.getByRole("alert").filter({ hasText: failureCopy }).count()) return "failed";
+        const latestIdentity = await readSavedIdentity();
+        if (!latestIdentity) return "waiting";
+        if (!previousIdentity) return "saved";
+        return latestIdentity.id !== previousIdentity.id ||
+          latestIdentity.version > previousIdentity.version
+          ? "saved"
+          : "waiting";
+      },
+      { timeout: 10_000 },
+    )
+    .toBe("saved");
+  await expect(page.getByRole("alert").filter({ hasText: failureCopy })).toHaveCount(0);
   await expect(
     page.getByText(`Saved reporting period: ${displayDate(start)} – ${displayDate(end)}`, {
       exact: true,

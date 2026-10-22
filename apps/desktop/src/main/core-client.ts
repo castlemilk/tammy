@@ -169,6 +169,7 @@ import { WorkspaceService } from "@tammy/connect-client/tammy/v1/workspace_pb.js
 import type { SystemDiagnostics } from "../shared/conveyor-contract";
 import type { CoreReadiness } from "../shared/readiness";
 import { purchaseCoreCorrection } from "./purchase-errors";
+import { safeCoreRpcFailure } from "./startup-diagnostics";
 
 export type { SystemDiagnostics } from "../shared/conveyor-contract";
 
@@ -392,10 +393,14 @@ export function createCoreClient(
       }),
   });
 
-  const coreRequest = async <Response>(request: () => Promise<Response>): Promise<Response> => {
+  const coreRequest = async <Response>(
+    request: () => Promise<Response>,
+    operation?: Parameters<typeof safeCoreRpcFailure>[0],
+  ): Promise<Response> => {
     try {
       return await request();
     } catch (error) {
+      if (operation) console.error(safeCoreRpcFailure(operation, error));
       throw new ConnectError("Core request failed.", ConnectError.from(error).code);
     }
   };
@@ -456,7 +461,7 @@ export function createCoreClient(
     createAccount: (request: CreateAccountRequest) =>
       coreRequest(() => accountingClient.createAccount(request)),
     listAccounts: (request: ListAccountsRequest) =>
-      coreRequest(() => accountingClient.listAccounts(request)),
+      coreRequest(() => accountingClient.listAccounts(request), "LIST_ACCOUNTS"),
     postManualJournal: (request: PostManualJournalRequest) =>
       coreRequest(() => accountingClient.postManualJournal(request)),
     listJournals: (request: ListJournalsRequest) =>
@@ -476,15 +481,15 @@ export function createCoreClient(
     getBankingSummary: (request: GetBankingSummaryRequest) =>
       coreRequest(() => bankingClient.getBankingSummary(request)),
     ingestDocument: (request: IngestDocumentRequest) =>
-      coreRequest(() => documentClient.ingestDocument(request)),
+      coreRequest(() => documentClient.ingestDocument(request), "INGEST_DOCUMENT"),
     listDocuments: (request: ListDocumentsRequest) =>
-      coreRequest(() => documentClient.listDocuments(request)),
+      coreRequest(() => documentClient.listDocuments(request), "LIST_DOCUMENTS"),
     getDocument: (request: GetDocumentRequest) =>
       coreRequest(() => documentClient.getDocument(request)),
     saveDocumentReview: (request: SaveDocumentReviewRequest) =>
       coreRequest(() => documentClient.saveDocumentReview(request)),
     createBasDraft: (request: CreateBasDraftRequest) =>
-      coreRequest(() => taxClient.createBasDraft(request)),
+      coreRequest(() => taxClient.createBasDraft(request), "CREATE_BAS_DRAFT"),
     getCurrentBasDraft: (request: GetCurrentBasDraftRequest) =>
       coreRequest(() => taxClient.getCurrentBasDraft(request)),
     createWorkspace: (request: CreateWorkspaceRequest) =>
@@ -492,8 +497,9 @@ export function createCoreClient(
     confirmRecovery: (request: ConfirmRecoveryRequest) =>
       coreRequest(() => workspaceClient.confirmRecovery(request)),
     unlockWorkspace: (request: UnlockWorkspaceRequest) =>
-      coreRequest(() => workspaceClient.unlockWorkspace(request)),
-    signIn: (request: SignInRequest) => coreRequest(() => identityClient.signIn(request)),
+      coreRequest(() => workspaceClient.unlockWorkspace(request), "UNLOCK_WORKSPACE"),
+    signIn: (request: SignInRequest) =>
+      coreRequest(() => identityClient.signIn(request), "SIGN_IN"),
     createOrganisation: (request: CreateOrganisationRequest) =>
       coreRequest(() => organisationClient.createOrganisation(request)),
     getCurrentUser: (request: GetCurrentUserRequest) =>

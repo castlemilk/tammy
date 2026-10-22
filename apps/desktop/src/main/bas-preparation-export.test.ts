@@ -736,6 +736,57 @@ it("logs only the safe stage and Connect code when export history cannot be read
   expect(output).not.toContain(f.request.authentication.sessionId);
 });
 
+it.each([
+  ["frozen read", "FROZEN_READ", "frozen_bas"],
+  ["calculation read", "CALCULATION_READ", "calculation"],
+  ["preparation read", "PREPARATION_READ", "calculation"],
+] as const)(
+  "logs only the fixed BAS snapshot stage and Connect code for %s",
+  async (_, stage, kind) => {
+    const value = fixture(kind);
+    const failure = new ConnectError(
+      "private snapshot path password=secret",
+      Code.DeadlineExceeded,
+    );
+    if (stage === "FROZEN_READ") value.basPreparation.getFrozenBas.mockRejectedValue(failure);
+    if (stage === "CALCULATION_READ")
+      value.basPreparation.getBasCalculation.mockRejectedValue(failure);
+    if (stage === "PREPARATION_READ")
+      value.basPreparation.getBasPreparation.mockRejectedValue(failure);
+    const diagnostic = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const f = await exporterFor(value, { format: "pdf", canceled: true });
+
+    await expect(f.exporter.exportBasPreparation(f.request)).rejects.toThrow(
+      "REPORT_REFRESH_REQUIRED",
+    );
+
+    expect(value.exportEvents).toHaveLength(0);
+    expect(diagnostic).toHaveBeenCalledTimes(1);
+    expect(diagnostic).toHaveBeenCalledWith(
+      `LOCAL_ENGINE_BAS_EXPORT_${stage} LOCAL_ENGINE_CONNECT_DEADLINE_EXCEEDED`,
+    );
+    const output = diagnostic.mock.calls.flat().join(" ");
+    expect(output).not.toContain("private snapshot path");
+    expect(output).not.toContain("password=secret");
+  },
+);
+
+it("classifies report-model rejection without exposing invalid snapshot values", async () => {
+  const value = fixture("frozen_bas");
+  value.preparation.creationReason = "private-invalid-".repeat(40);
+  const diagnostic = vi.spyOn(console, "error").mockImplementation(() => undefined);
+  const f = await exporterFor(value, { format: "pdf", canceled: true });
+
+  await expect(f.exporter.exportBasPreparation(f.request)).rejects.toThrow(
+    "REPORT_REFRESH_REQUIRED",
+  );
+
+  expect(value.exportEvents).toHaveLength(0);
+  expect(diagnostic).toHaveBeenCalledTimes(1);
+  expect(diagnostic).toHaveBeenCalledWith("LOCAL_ENGINE_BAS_EXPORT_SNAPSHOT_VALIDATION");
+  expect(diagnostic.mock.calls.flat().join(" ")).not.toContain("private-invalid");
+});
+
 it("logs the exact safe stage when the STARTED event append fails", async () => {
   const value = fixture("frozen_bas");
   value.basPreparation.recordBasExportEvent.mockRejectedValue(

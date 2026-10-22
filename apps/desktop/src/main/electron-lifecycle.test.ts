@@ -476,6 +476,18 @@ describe("ElectronProcessDiagnostics", () => {
     expect(summary).toContain("LOCAL_ENGINE_CONNECT_INVALID_ARGUMENT");
     expect(summary).not.toContain("private");
   });
+  it("retains fixed BAS snapshot and Core RPC markers without adjacent private text", () => {
+    const diagnostics = new ElectronProcessDiagnostics();
+    diagnostics.observeStderr(
+      "LOCAL_ENGINE_BAS_EXPORT_SNAPSHOT_VALIDATION LOCAL_ENGINE_CORE_RPC_SIGN_IN_FAILED LOCAL_ENGINE_CONNECT_UNAUTHENTICATED secret=/private/value",
+    );
+    const summary = diagnostics.formatSummary();
+    expect(summary).toContain("LOCAL_ENGINE_BAS_EXPORT_SNAPSHOT_VALIDATION");
+    expect(summary).toContain("LOCAL_ENGINE_CORE_RPC_SIGN_IN_FAILED");
+    expect(summary).toContain("LOCAL_ENGINE_CONNECT_UNAUTHENTICATED");
+    expect(summary).not.toContain("secret");
+    expect(summary).not.toContain("/private/value");
+  });
   it("retains workspace creation status and timing markers without error data", () => {
     const diagnostics = new ElectronProcessDiagnostics();
     diagnostics.observeStderr(

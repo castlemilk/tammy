@@ -3,9 +3,11 @@ import { expect, it } from "vitest";
 
 import { CoreProcessError, type CoreProcessErrorCode } from "./core-process";
 import {
+  CORE_RPC_DIAGNOSTIC_MARKERS,
   type DesktopStartupStage,
   STARTUP_DIAGNOSTIC_MARKERS,
   safeBasExportFailure,
+  safeCoreRpcFailure,
   safeDesktopStartupFailure,
   safeWorkspaceCreateFailure,
 } from "./startup-diagnostics";
@@ -13,6 +15,10 @@ import {
 it("classifies BAS export failures by fixed stage and concrete status only", () => {
   for (const stage of [
     "HISTORY_READ",
+    "FROZEN_READ",
+    "CALCULATION_READ",
+    "PREPARATION_READ",
+    "SNAPSHOT_VALIDATION",
     "EVENT_APPEND_STARTED",
     "EVENT_APPEND_FINISHED",
     "EXPORT_HANDLER",
@@ -25,6 +31,32 @@ it("classifies BAS export failures by fixed stage and concrete status only", () 
       `LOCAL_ENGINE_BAS_EXPORT_${stage}`,
     );
   }
+});
+
+it("classifies only fixed Core RPC operations and actual Connect status codes", () => {
+  const operations = [
+    "INGEST_DOCUMENT",
+    "LIST_DOCUMENTS",
+    "LIST_ACCOUNTS",
+    "CREATE_BAS_DRAFT",
+    "UNLOCK_WORKSPACE",
+    "SIGN_IN",
+  ] as const;
+  for (const operation of operations) {
+    const marker = `LOCAL_ENGINE_CORE_RPC_${operation}_FAILED`;
+    expect(
+      safeCoreRpcFailure(
+        operation,
+        new ConnectError("private evidence path and credential", Code.InvalidArgument),
+      ),
+    ).toBe(`${marker} LOCAL_ENGINE_CONNECT_INVALID_ARGUMENT`);
+    expect(safeCoreRpcFailure(operation, new Error("private"))).toBe(marker);
+    expect(CORE_RPC_DIAGNOSTIC_MARKERS).toContain(marker);
+  }
+  expect(safeCoreRpcFailure("untrusted-operation" as never, new Error("private"))).toBe(
+    "LOCAL_ENGINE_CORE_RPC_FAILED",
+  );
+  expect(CORE_RPC_DIAGNOSTIC_MARKERS).toContain("LOCAL_ENGINE_CORE_RPC_FAILED");
 });
 
 const stages = [

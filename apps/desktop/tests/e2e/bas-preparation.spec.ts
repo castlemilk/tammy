@@ -1878,7 +1878,28 @@ test("BAS lifecycle: clean cash sources, blocked PAYGI resolution, frozen handof
   const frozenOneRecord = requiredFrozenRecord(frozenOne.frozenBas);
   expect(frozenOneRecord.calculationSnapshot?.result?.labels).toHaveLength(18);
   screenshots.push(await captureScreenshot(page, testInfo, "bas-frozen-identity-currentness.png"));
-  await cancelFrozenExport(page, electronHarness, frozenOneRef);
+  try {
+    await cancelFrozenExport(page, electronHarness, frozenOneRef);
+  } catch (error) {
+    // Retain exact synthetic report evidence, never a session, TOTP secret/code or workspace database.
+    await testInfo.attach("bas-original-frozen-export-source.pb", {
+      body: Buffer.from(toBinary(BasFrozenBasSchema, frozenOneRecord)),
+      contentType: "application/octet-stream",
+    });
+    try {
+      const preparationRef = frozenOneRecord.calculationSnapshot?.preparation;
+      if (preparationRef) {
+        const detail = await getPreparation(page, workspace, preparationRef);
+        await testInfo.attach("bas-original-preparation-export-source.pb", {
+          body: Buffer.from(toBinary(GetBasPreparationResponseSchema, detail)),
+          contentType: "application/octet-stream",
+        });
+      }
+    } catch {
+      console.info("BAS_ACCEPTANCE_EXPORT_PROOF_ATTACHMENT_UNAVAILABLE");
+    }
+    throw error;
+  }
   await failFrozenExport(page, electronHarness, testInfo, workspace, frozenOneRef);
   const firstPdf = await exportFrozen(
     page,

@@ -47,6 +47,11 @@ test("runs the current accounting workflows through the packaged app", async ({
   );
   const fixture = validateScreenshotFixture(screenshotFixture);
   let page = electronHarness.currentPage();
+  // Setup writes the review through the authenticated protocol fixture. Reload
+  // the retained session so the Overview query reflects those committed writes.
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Overview", exact: true })).toBeVisible();
+  await expect(page.getByText("1 reviewed this quarter", { exact: true })).toBeVisible();
   const screenshotDirectory = path.resolve(
     path.dirname(fileURLToPath(import.meta.url)),
     "../../../../.tmp/invoice-cost-table-e2e",
@@ -66,7 +71,7 @@ test("runs the current accounting workflows through the packaged app", async ({
     },
     { heading: "Trial balance", link: "Trial balance", ready: fixture.accounts[0]?.name },
     { heading: "Banking", link: "Banking", ready: "Reconciled" },
-    { heading: "GST & BAS", link: "GST & BAS", ready: "BAS preparation" },
+    { heading: "BAS preparation", link: "GST & BAS", ready: "BAS preparation" },
   ] as const;
   for (const [index, target] of targets.entries()) {
     await page.getByRole("link", { name: target.link }).click();
@@ -88,7 +93,7 @@ test("runs the current accounting workflows through the packaged app", async ({
         page.getByRole("option", { name: "3100 · Owner contributions", exact: true }),
       ).toBeAttached();
     }
-    if (target.heading === "GST & BAS") {
+    if (target.link === "GST & BAS") {
       const stages = page.getByRole("navigation", { name: "BAS lifecycle stages" });
       for (const stage of ["Prepare", "Review", "Freeze", "Export", "External record"] as const) {
         await expect(stages.getByRole("button", { name: stage, exact: true })).toBeAttached();
@@ -114,7 +119,7 @@ test("runs the current accounting workflows through the packaged app", async ({
       path: screenPath,
       contentType: "image/png",
     });
-    if (target.heading === "GST & BAS") {
+    if (target.link === "GST & BAS") {
       expect.soft(actualSnapshot).toContain("BAS preparation");
       expect.soft(actualSnapshot).toContain("BAS lifecycle stages");
     } else {

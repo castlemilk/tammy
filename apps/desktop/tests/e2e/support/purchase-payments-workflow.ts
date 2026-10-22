@@ -1,5 +1,5 @@
-import { randomBytes } from "node:crypto";
-import { stat } from "node:fs/promises";
+import { createHash, randomBytes } from "node:crypto";
+import { readFile, stat } from "node:fs/promises";
 import { create, type DescMessage, type MessageShape } from "@bufbuild/protobuf";
 import type { Locator, Page } from "@playwright/test";
 import * as a from "@tammy/connect-client/tammy/v1/accounting_pb.js";
@@ -727,6 +727,10 @@ export async function savePurchaseExport(
     .getByRole("button", { name: `Export ${format}`, exact: true });
   await expect(button).toBeEnabled();
   await button.click();
+  const completion = `BAS ${format} exported.`;
+  await expect(
+    harness.currentPage().getByRole("status").filter({ hasText: completion }),
+  ).toHaveText(completion);
   await expect
     .poll(() =>
       stat(filePath).then(
@@ -735,8 +739,15 @@ export async function savePurchaseExport(
       ),
     )
     .toBe(true);
-  await expect(button).toBeEnabled();
-  if (process.platform !== "win32") expect((await stat(filePath)).mode & 0o777).toBe(0o600);
+  const [file, fileState] = await Promise.all([readFile(filePath), stat(filePath)]);
+  expect(file.length).toBeGreaterThan(0);
+  expect(fileState.size).toBe(file.length);
+  const sha256 = createHash("sha256").update(file).digest("hex");
+  expect(sha256).toMatch(/^[a-f0-9]{64}$/u);
+  if (process.platform !== "win32") expect(fileState.mode & 0o777).toBe(0o600);
+  // The BAS screen disables exports while its retained-workpaper query refetches
+  // after the native save dialog returns. The next export still checks readiness.
+  return { sha256, size: fileState.size };
 }
 export async function reopenPurchaseWorkspace(
   harness: ElectronHarness,

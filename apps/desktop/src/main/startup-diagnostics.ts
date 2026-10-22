@@ -81,6 +81,10 @@ export const WORKSPACE_CREATE_DIAGNOSTIC_MARKERS = Object.freeze([
 
 const basExportStageMarkers = {
   HISTORY_READ: "LOCAL_ENGINE_BAS_EXPORT_HISTORY_READ",
+  FROZEN_READ: "LOCAL_ENGINE_BAS_EXPORT_FROZEN_READ",
+  CALCULATION_READ: "LOCAL_ENGINE_BAS_EXPORT_CALCULATION_READ",
+  PREPARATION_READ: "LOCAL_ENGINE_BAS_EXPORT_PREPARATION_READ",
+  SNAPSHOT_VALIDATION: "LOCAL_ENGINE_BAS_EXPORT_SNAPSHOT_VALIDATION",
   EVENT_APPEND_STARTED: "LOCAL_ENGINE_BAS_EXPORT_EVENT_APPEND_STARTED",
   EVENT_APPEND_FINISHED: "LOCAL_ENGINE_BAS_EXPORT_EVENT_APPEND_FINISHED",
   EXPORT_HANDLER: "LOCAL_ENGINE_BAS_EXPORT_EXPORT_HANDLER",
@@ -88,6 +92,21 @@ const basExportStageMarkers = {
 
 export type BasExportDiagnosticStage = keyof typeof basExportStageMarkers;
 export const BAS_EXPORT_DIAGNOSTIC_MARKERS = Object.freeze(Object.values(basExportStageMarkers));
+
+const coreRpcOperationMarkers = {
+  INGEST_DOCUMENT: "LOCAL_ENGINE_CORE_RPC_INGEST_DOCUMENT_FAILED",
+  LIST_DOCUMENTS: "LOCAL_ENGINE_CORE_RPC_LIST_DOCUMENTS_FAILED",
+  LIST_ACCOUNTS: "LOCAL_ENGINE_CORE_RPC_LIST_ACCOUNTS_FAILED",
+  CREATE_BAS_DRAFT: "LOCAL_ENGINE_CORE_RPC_CREATE_BAS_DRAFT_FAILED",
+  UNLOCK_WORKSPACE: "LOCAL_ENGINE_CORE_RPC_UNLOCK_WORKSPACE_FAILED",
+  SIGN_IN: "LOCAL_ENGINE_CORE_RPC_SIGN_IN_FAILED",
+} as const;
+
+export type CoreRpcDiagnosticOperation = keyof typeof coreRpcOperationMarkers;
+export const CORE_RPC_DIAGNOSTIC_MARKERS = Object.freeze([
+  "LOCAL_ENGINE_CORE_RPC_FAILED",
+  ...Object.values(coreRpcOperationMarkers),
+]);
 
 function ownDataValue(value: object, name: string): unknown {
   const descriptor = Object.getOwnPropertyDescriptor(value, name);
@@ -174,6 +193,15 @@ export function safeBasExportFailure(stage: BasExportDiagnosticStage, error: unk
     typeof stage === "string" && Object.hasOwn(basExportStageMarkers, stage)
       ? basExportStageMarkers[stage]
       : basExportStageMarkers.EXPORT_HANDLER;
+  const code = connectMarker(error);
+  return code ? `${marker} ${code}` : marker;
+}
+
+export function safeCoreRpcFailure(operation: CoreRpcDiagnosticOperation, error: unknown): string {
+  const marker =
+    typeof operation === "string" && Object.hasOwn(coreRpcOperationMarkers, operation)
+      ? coreRpcOperationMarkers[operation]
+      : "LOCAL_ENGINE_CORE_RPC_FAILED";
   const code = connectMarker(error);
   return code ? `${marker} ${code}` : marker;
 }

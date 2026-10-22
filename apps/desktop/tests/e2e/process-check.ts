@@ -7,6 +7,56 @@ import path from "node:path";
 const PROCESS_QUERY_TIMEOUT_MS = 5_000;
 const verifiedPackagedAuthorities = new WeakSet<object>();
 
+type ProcessQueryOperation = "LSOF" | "PGREP" | "PS";
+
+function processQueryOperation(command: string): ProcessQueryOperation {
+  switch (command) {
+    case "/usr/sbin/lsof":
+      return "LSOF";
+    case "/usr/bin/pgrep":
+      return "PGREP";
+    case "/bin/ps":
+      return "PS";
+    default:
+      throw new Error("UNSUPPORTED_PROCESS_QUERY_OPERATION");
+  }
+}
+
+function processQueryFailureKind(
+  error: unknown,
+): "EXIT_NONZERO" | "SIGNAL" | "SPAWN_FAILED" | "TIMEOUT" | "UNKNOWN" {
+  if (error instanceof Error && error.message === "PROCESS_QUERY_TIMEOUT") return "TIMEOUT";
+  if (typeof error !== "object" || error === null) return "UNKNOWN";
+  if ("signal" in error && typeof error.signal === "string" && error.signal.length > 0) {
+    return "SIGNAL";
+  }
+  if ("code" in error && typeof error.code === "number" && error.code !== 0) {
+    return "EXIT_NONZERO";
+  }
+  if (
+    "code" in error &&
+    typeof error.code === "string" &&
+    ["EACCES", "ENOENT", "ENOTDIR", "EPERM"].includes(error.code)
+  ) {
+    return "SPAWN_FAILED";
+  }
+  return "UNKNOWN";
+}
+
+function processQueryFailed(command: string, error: unknown): Error {
+  return new Error(
+    `PROCESS_QUERY_FAILED: ${processQueryOperation(command)}_${processQueryFailureKind(error)}`,
+  );
+}
+
+function processQueryTimedOut(command: string): Error {
+  return new Error(`PROCESS_QUERY_TIMEOUT: ${processQueryOperation(command)}_TIMEOUT`);
+}
+
+function isProcessQueryTimeout(error: unknown): error is Error {
+  return error instanceof Error && error.message === "PROCESS_QUERY_TIMEOUT";
+}
+
 export interface CoreProcessMatch {
   readonly executablePath: string;
   readonly processId: number;
@@ -279,7 +329,7 @@ async function queryMacOSExecutableImage(
     if (typeof error === "object" && error !== null && "code" in error && error.code === 1) {
       return undefined;
     }
-    throw new Error("PROCESS_QUERY_FAILED");
+    throw processQueryFailed("/usr/sbin/lsof", error);
   }
   const lines = parseLines(stdout);
   if (lines.length === 0) return undefined;
@@ -410,7 +460,7 @@ async function queryMacOSCoreImage(
     if (typeof error === "object" && error !== null && "code" in error && error.code === 1) {
       return undefined;
     }
-    throw new Error("PROCESS_QUERY_FAILED");
+    throw processQueryFailed("/usr/sbin/lsof", error);
   }
   const lines = parseLines(stdout);
   if (lines.length < 5 || lines[0] !== `p${processId}`) {
@@ -461,7 +511,7 @@ async function queryMacOSInstanceToken(
     if (typeof error === "object" && error !== null && "code" in error && error.code === 1) {
       return undefined;
     }
-    throw new Error("PROCESS_QUERY_FAILED");
+    throw processQueryFailed("/bin/ps", error);
   }
   const tokens = parseLines(stdout).map((line) => line.trim());
   if (tokens.length === 0) return undefined;
@@ -523,11 +573,11 @@ async function queryExactStagedHelperProcessIds(
   try {
     stdout = await runBoundedQuery("/usr/bin/pgrep", ["-f", "-x", patternSource], dependencies);
   } catch (error) {
-    if (error instanceof Error && error.message === "PROCESS_QUERY_TIMEOUT") throw error;
+    if (isProcessQueryTimeout(error)) throw processQueryTimedOut("/usr/bin/pgrep");
     if (typeof error === "object" && error !== null && "code" in error && error.code === 1) {
       return [];
     }
-    throw new Error("PROCESS_QUERY_FAILED");
+    throw processQueryFailed("/usr/bin/pgrep", error);
   }
   return parseLines(stdout).map(parseProcessId);
 }
@@ -559,7 +609,7 @@ async function queryAuthenticatedStagedHelpers(
       if (typeof error === "object" && error !== null && "code" in error && error.code === 1) {
         continue;
       }
-      throw new Error("PROCESS_QUERY_FAILED");
+      throw processQueryFailed("/bin/ps", error);
     }
     const commands = parseLines(command);
     if (commands.length === 0) continue;
@@ -618,11 +668,11 @@ async function queryMacOS(
       dependencies,
     );
   } catch (error) {
-    if (error instanceof Error && error.message === "PROCESS_QUERY_TIMEOUT") throw error;
+    if (isProcessQueryTimeout(error)) throw processQueryTimedOut("/usr/bin/pgrep");
     if (typeof error === "object" && error !== null && "code" in error && error.code === 1) {
       return [];
     }
-    throw new Error("PROCESS_QUERY_FAILED");
+    throw processQueryFailed("/usr/bin/pgrep", error);
   }
   return parseLines(stdout).map((line) => ({
     executablePath: corePath,
@@ -722,7 +772,7 @@ async function queryWindows(
       environment,
     });
   } catch (error) {
-    if (error instanceof Error && error.message === "PROCESS_QUERY_TIMEOUT") throw error;
+    if (isProcessQueryTimeout(error)) throw error;
     throw new Error("PROCESS_QUERY_FAILED");
   }
   return parseLines(stdout).map((line) => parseWindowsLine(line, corePath));

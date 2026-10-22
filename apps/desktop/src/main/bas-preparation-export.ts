@@ -32,7 +32,7 @@ import {
 } from "@tammy/reporting";
 import type { BasPreparationExportRequest } from "../shared/report-export";
 import type { CoreClient } from "./core-client";
-import { safeBasExportFailure } from "./startup-diagnostics";
+import { type BasExportDiagnosticStage, safeBasExportFailure } from "./startup-diagnostics";
 
 type BasPreparationClient = NonNullable<CoreClient["basPreparation"]>;
 type Guard = () => void;
@@ -51,14 +51,38 @@ export interface BasPreparationExportOperation {
   failureDiagnosticLogged?: boolean;
 }
 
-function logBasExportFailure(
+export function logBasExportFailure(
   operation: BasPreparationExportOperation,
-  stage: "HISTORY_READ" | "EVENT_APPEND_STARTED" | "EVENT_APPEND_FINISHED" | "EXPORT_HANDLER",
+  stage: BasExportDiagnosticStage,
   error: unknown,
 ) {
   if (operation.failureDiagnosticLogged) return;
   operation.failureDiagnosticLogged = true;
   console.error(safeBasExportFailure(stage, error));
+}
+
+type BasSnapshotDiagnosticStage = Extract<
+  BasExportDiagnosticStage,
+  "FROZEN_READ" | "CALCULATION_READ" | "PREPARATION_READ" | "SNAPSHOT_VALIDATION"
+>;
+
+type SnapshotFailureReporter = (stage: BasSnapshotDiagnosticStage, error: unknown) => void;
+
+async function withSnapshotDiagnostic<T>(
+  stage: BasSnapshotDiagnosticStage,
+  reportFailure: SnapshotFailureReporter,
+  operation: () => T | Promise<T>,
+): Promise<T> {
+  try {
+    return await operation();
+  } catch (error) {
+    try {
+      reportFailure(stage, error);
+    } catch {
+      // Diagnostic output must not replace the original read or validation error.
+    }
+    throw error;
+  }
 }
 
 function copyBytes(value: Uint8Array) {
@@ -194,6 +218,7 @@ export async function loadBasPreparationReportSnapshot(
   request: BasPreparationExportRequest,
   guard: Guard,
   acquiredAt: string,
+  reportFailure: SnapshotFailureReporter,
 ): Promise<BasPreparationReportSnapshot> {
   const authentication = create(AuthenticationContextSchema, {
     actorUserId: request.authentication.actorUserId,
@@ -210,12 +235,23 @@ export async function loadBasPreparationReportSnapshot(
   let frozenBas: BasFrozenBas | undefined;
   let calculation: BasCalculation;
   if (target.kind === "frozen_bas") {
-    frozenBas = await getFrozenBas(client, authentication, request.organisationId, target, guard);
-    const calculationSnapshot = frozenBas.calculationSnapshot;
-    if (!calculationSnapshot) throw new Error("REPORT_REFRESH_REQUIRED");
-    calculation = structuredClone(calculationSnapshot);
-    if (calculation.organisationId !== request.organisationId)
-      throw new Error("REPORT_REFRESH_REQUIRED");
+    const frozenResult = await withSnapshotDiagnostic("FROZEN_READ", reportFailure, async () => {
+      const frozen = await getFrozenBas(
+        client,
+        authentication,
+        request.organisationId,
+        target,
+        guard,
+      );
+      const calculationSnapshot = frozen.calculationSnapshot;
+      if (!calculationSnapshot) throw new Error("REPORT_REFRESH_REQUIRED");
+      const frozenCalculation = structuredClone(calculationSnapshot);
+      if (frozenCalculation.organisationId !== request.organisationId)
+        throw new Error("REPORT_REFRESH_REQUIRED");
+      return { frozen, calculation: frozenCalculation };
+    });
+    frozenBas = frozenResult.frozen;
+    calculation = frozenResult.calculation;
   } else {
     const source = create(SourceRefSchema, {
       type: "bas_calculation",
@@ -223,33 +259,27 @@ export async function loadBasPreparationReportSnapshot(
       revision: target.revision,
       contentHash: copyBytes(target.hash),
     });
-    calculation = await getCalculation(
-      client,
-      authentication,
-      request.organisationId,
-      source,
-      guard,
+    calculation = await withSnapshotDiagnostic("CALCULATION_READ", reportFailure, () =>
+      getCalculation(client, authentication, request.organisationId, source, guard),
     );
   }
 
-  if (calculation.preparation?.type !== "bas_preparation")
-    throw new Error("REPORT_REFRESH_REQUIRED");
-  const currentPreparation = await getPreparation(
-    client,
-    authentication,
-    request.organisationId,
-    calculation.preparation,
-    guard,
-  );
-  let predecessor: BasPreparationReportSnapshot["predecessor"];
-  const predecessorRef = currentPreparation.preparation.predecessor;
-  if (predecessorRef) {
-    const prior = await getPreparation(
+  const currentPreparation = await withSnapshotDiagnostic("PREPARATION_READ", reportFailure, () => {
+    if (calculation.preparation?.type !== "bas_preparation")
+      throw new Error("REPORT_REFRESH_REQUIRED");
+    return getPreparation(
       client,
       authentication,
       request.organisationId,
-      predecessorRef,
+      calculation.preparation,
       guard,
+    );
+  });
+  let predecessor: BasPreparationReportSnapshot["predecessor"];
+  const predecessorRef = currentPreparation.preparation.predecessor;
+  if (predecessorRef) {
+    const prior = await withSnapshotDiagnostic("PREPARATION_READ", reportFailure, () =>
+      getPreparation(client, authentication, request.organisationId, predecessorRef, guard),
     );
     const priorCalculationRef =
       prior.preparation.currentCalculation ??
@@ -262,12 +292,14 @@ export async function loadBasPreparationReportSnapshot(
           })
         : undefined);
     const priorCalculation = priorCalculationRef
-      ? await getCalculation(
-          client,
-          authentication,
-          request.organisationId,
-          priorCalculationRef,
-          guard,
+      ? await withSnapshotDiagnostic("CALCULATION_READ", reportFailure, () =>
+          getCalculation(
+            client,
+            authentication,
+            request.organisationId,
+            priorCalculationRef,
+            guard,
+          ),
         )
       : undefined;
     predecessor = {
@@ -275,18 +307,20 @@ export async function loadBasPreparationReportSnapshot(
       ...(priorCalculation ? { calculation: priorCalculation } : {}),
     };
   }
-  const snapshot: BasPreparationReportSnapshot = {
-    kind: "bas_preparation_report_v1",
-    target,
-    organisation: reportOrganisationFromCalculation(calculation),
-    acquiredAt,
-    calculation,
-    ...(frozenBas ? { frozenBas } : {}),
-    preparation: currentPreparation.preparation,
-    ...(predecessor ? { predecessor } : {}),
-  };
-  validateBasPreparationReportSnapshot(snapshot);
-  return structuredClone(snapshot);
+  return withSnapshotDiagnostic("SNAPSHOT_VALIDATION", reportFailure, () => {
+    const snapshot: BasPreparationReportSnapshot = {
+      kind: "bas_preparation_report_v1",
+      target,
+      organisation: reportOrganisationFromCalculation(calculation),
+      acquiredAt,
+      calculation,
+      ...(frozenBas ? { frozenBas } : {}),
+      preparation: currentPreparation.preparation,
+      ...(predecessor ? { predecessor } : {}),
+    };
+    validateBasPreparationReportSnapshot(snapshot);
+    return structuredClone(snapshot);
+  });
 }
 
 interface ExportEventHistory {

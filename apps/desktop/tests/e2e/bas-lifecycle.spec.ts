@@ -1,10 +1,27 @@
 import { createHash } from "node:crypto";
-import { toBinary } from "@bufbuild/protobuf";
+import { create, toBinary } from "@bufbuild/protobuf";
 import type { Page } from "@playwright/test";
-import { DocumentCandidateSchema } from "@tammy/connect-client/tammy/v1/documents_pb.js";
+import {
+  AccountStatus,
+  ListAccountsRequestSchema,
+  ListAccountsResponseSchema,
+} from "@tammy/connect-client/tammy/v1/accounting_pb.js";
+import { PageRequestSchema } from "@tammy/connect-client/tammy/v1/common_pb.js";
+import {
+  DocumentCandidateSchema,
+  ListDocumentsRequestSchema,
+  ListDocumentsResponseSchema,
+} from "@tammy/connect-client/tammy/v1/documents_pb.js";
 import { expect, test } from "./fixtures";
-import { setupAndRunCurrentAccountingWorkflow } from "./support/current-accounting-workflow";
-import { retainPurchaseThroughUi } from "./support/purchase-payments-workflow";
+import {
+  authenticatedWorkspace,
+  setupAndRunCurrentAccountingWorkflow,
+} from "./support/current-accounting-workflow";
+import {
+  purchaseAuth,
+  purchaseProto,
+  retainPurchaseThroughUi,
+} from "./support/purchase-payments-workflow";
 
 async function expectLifecycleStatus(page: Page, message: string) {
   const lifecycle = page.getByRole("region", {
@@ -23,6 +40,46 @@ test("prepares and reviews an exact BAS period in the packaged app", async ({
     electronHarness,
   );
   const page = electronHarness.currentPage();
+  const activeWorkspace = await authenticatedWorkspace(page);
+  expect({
+    workspaceId: activeWorkspace.workspaceId,
+    userId: activeWorkspace.userId,
+    sessionId: activeWorkspace.sessionId,
+    organisationId: activeWorkspace.organisationId,
+  }).toEqual(workspace);
+  await purchaseProto(
+    page,
+    "documents",
+    "listDocuments",
+    ListDocumentsRequestSchema,
+    ListDocumentsResponseSchema,
+    create(ListDocumentsRequestSchema, {
+      authentication: purchaseAuth(workspace),
+      organisationId: workspace.organisationId,
+      page: create(PageRequestSchema, { pageSize: 200 }),
+    }),
+  );
+  await purchaseProto(
+    page,
+    "accounting",
+    "listAccounts",
+    ListAccountsRequestSchema,
+    ListAccountsResponseSchema,
+    create(ListAccountsRequestSchema, {
+      authentication: purchaseAuth(workspace),
+      organisationId: workspace.organisationId,
+      status: AccountStatus.ACTIVE,
+      page: create(PageRequestSchema, { pageSize: 200 }),
+    }),
+  );
+  await page.reload();
+  const refreshedWorkspace = await authenticatedWorkspace(page);
+  expect({
+    workspaceId: refreshedWorkspace.workspaceId,
+    userId: refreshedWorkspace.userId,
+    sessionId: refreshedWorkspace.sessionId,
+    organisationId: refreshedWorkspace.organisationId,
+  }).toEqual(workspace);
 
   const profileEvidenceDocument = await retainPurchaseThroughUi(
     page,

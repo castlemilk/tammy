@@ -42,6 +42,7 @@ import {
 import {
   type BasPreparationExportOperation,
   loadBasPreparationReportSnapshot,
+  logBasExportFailure,
   operationForBasPreparationExport,
   recordBasPreparationExportEvent,
 } from "./bas-preparation-export";
@@ -292,6 +293,7 @@ export function createReportExports(options: {
             request,
             guard,
             (options.now?.() ?? new Date()).toISOString(),
+            (stage, error) => logBasExportFailure(operation, stage, error),
           ),
         );
         await recordBasPreparationExportEvent(

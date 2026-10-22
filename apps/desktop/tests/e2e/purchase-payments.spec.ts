@@ -53,6 +53,7 @@ import {
   type PurchasePersistedEvidence,
 } from "./support/purchase-persisted-evidence";
 import { parseReportCsv, reportArtifactHash } from "./support/reporting-export-artifacts";
+import { openSavedBasWorkpaperPanel } from "./support/saved-bas-workpaper-panel";
 
 const acceptanceRoot = fileURLToPath(
   new URL("../../../../.tmp/purchase-payments-gst-e2e/", import.meta.url),
@@ -1033,6 +1034,7 @@ for (const variant of [
       PurchaseReviewStatus.NEEDS_EVIDENCE,
     );
     await page.getByRole("link", { name: "GST & BAS", exact: true }).click();
+    await openSavedBasWorkpaperPanel(page);
     await expect(page.getByText(/Sources changed since this workpaper was saved/)).toBeVisible();
     const stale = await readPurchaseBas(page, workspace);
     expect(stale.id).toBe(secondSaved.id);

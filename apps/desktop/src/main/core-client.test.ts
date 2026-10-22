@@ -7,11 +7,16 @@ import {
   type Transport,
 } from "@connectrpc/connect";
 import type { ConnectTransportOptions } from "@connectrpc/connect-node";
+import { ListAccountsRequestSchema } from "@tammy/connect-client/tammy/v1/accounting_pb.js";
 import {
   BasPreparationService,
   GetBasPreparationRequestSchema,
   ListBasObligationsProfilesRequestSchema,
 } from "@tammy/connect-client/tammy/v1/bas_preparation_pb.js";
+import {
+  IngestDocumentRequestSchema,
+  ListDocumentsRequestSchema,
+} from "@tammy/connect-client/tammy/v1/documents_pb.js";
 import {
   AssertTOTPRequestSchema,
   AssignRolesRequestSchema,
@@ -19,6 +24,7 @@ import {
   EnrolTOTPRequestSchema,
   GetCurrentUserRequestSchema,
   IdentityService,
+  SignInRequestSchema,
 } from "@tammy/connect-client/tammy/v1/identity_pb.js";
 import {
   GetOrganisationRequestSchema,
@@ -55,10 +61,13 @@ import {
   RuntimeMode,
   SystemService,
 } from "@tammy/connect-client/tammy/v1/system_pb.js";
+import { CreateBasDraftRequestSchema } from "@tammy/connect-client/tammy/v1/tax_pb.js";
+import { UnlockWorkspaceRequestSchema } from "@tammy/connect-client/tammy/v1/workspace_pb.js";
 import { describe, expect, it, vi } from "vitest";
 
 import type { CoreReadiness } from "../shared/readiness";
 import {
+  type CoreClient,
   CoreClientError,
   type CoreTransportFactory,
   capabilityInterceptor,
@@ -321,6 +330,61 @@ function serialized(value: unknown): string {
 }
 
 describe("createCoreClient", () => {
+  it.each([
+    [
+      "INGEST_DOCUMENT",
+      (client: CoreClient) => client.ingestDocument(create(IngestDocumentRequestSchema)),
+    ],
+    [
+      "LIST_DOCUMENTS",
+      (client: CoreClient) => client.listDocuments(create(ListDocumentsRequestSchema)),
+    ],
+    [
+      "LIST_ACCOUNTS",
+      (client: CoreClient) => client.listAccounts(create(ListAccountsRequestSchema)),
+    ],
+    [
+      "CREATE_BAS_DRAFT",
+      (client: CoreClient) => client.createBasDraft(create(CreateBasDraftRequestSchema)),
+    ],
+    [
+      "UNLOCK_WORKSPACE",
+      (client: CoreClient) => client.unlockWorkspace(create(UnlockWorkspaceRequestSchema)),
+    ],
+    ["SIGN_IN", (client: CoreClient) => client.signIn(create(SignInRequestSchema))],
+  ] as const)(
+    "retains only a fixed operation and status when %s fails",
+    async (operation, invoke) => {
+      const failure = new ConnectError(
+        "private path /tmp/payroll, password and source bytes",
+        Code.DeadlineExceeded,
+        {
+          Authorization: READINESS.capability,
+        },
+      );
+      const factory: CoreTransportFactory = () => ({
+        unary: async () => {
+          throw failure;
+        },
+        stream: async () => {
+          throw failure;
+        },
+      });
+      const diagnostic = vi.spyOn(console, "error").mockImplementation(() => undefined);
+      try {
+        await expect(invoke(createCoreClient(READINESS, factory))).rejects.toMatchObject({
+          code: Code.DeadlineExceeded,
+          rawMessage: "Core request failed.",
+        });
+        expect(diagnostic).toHaveBeenCalledExactlyOnceWith(
+          `LOCAL_ENGINE_CORE_RPC_${operation}_FAILED LOCAL_ENGINE_CONNECT_DEADLINE_EXCEEDED`,
+        );
+      } finally {
+        diagnostic.mockRestore();
+      }
+    },
+  );
+
   it("constructs the production transport with pinned loopback TLS 1.3 settings", async () => {
     const { factory } = fakeTransport();
     connectNodeMocks.createConnectTransport.mockImplementation(factory);
