@@ -40,6 +40,7 @@ it("classifies only fixed Core RPC operations and actual Connect status codes", 
     "LIST_ACCOUNTS",
     "CREATE_BAS_DRAFT",
     "GET_CURRENT_BAS_DRAFT",
+    "ASSERT_TOTP",
     "UNLOCK_WORKSPACE",
     "SIGN_IN",
   ] as const;
@@ -57,6 +58,17 @@ it("classifies only fixed Core RPC operations and actual Connect status codes", 
   expect(safeCoreRpcFailure("untrusted-operation" as never, new Error("private"))).toBe(
     "LOCAL_ENGINE_CORE_RPC_FAILED",
   );
+  expect(CORE_RPC_DIAGNOSTIC_MARKERS).toContain("LOCAL_ENGINE_CORE_RPC_FAILED");
+});
+
+it("classifies unassigned Core operations with a generic marker and only Connect status", () => {
+  const result = safeCoreRpcFailure(
+    undefined,
+    new ConnectError("private evidence /path token=secret", Code.DeadlineExceeded),
+  );
+  expect(result).toBe("LOCAL_ENGINE_CORE_RPC_FAILED LOCAL_ENGINE_CONNECT_DEADLINE_EXCEEDED");
+  expect(result).not.toContain("private");
+  expect(result).not.toContain("secret");
   expect(CORE_RPC_DIAGNOSTIC_MARKERS).toContain("LOCAL_ENGINE_CORE_RPC_FAILED");
 });
 

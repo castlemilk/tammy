@@ -423,7 +423,7 @@ export function createCoreClient(
     try {
       return await request();
     } catch (error) {
-      if (operation) console.error(safeCoreRpcFailure(operation, error));
+      console.error(safeCoreRpcFailure(operation, error));
       throw new ConnectError("Core request failed.", ConnectError.from(error).code);
     }
   };
@@ -535,7 +535,7 @@ export function createCoreClient(
     confirmTotp: (request: ConfirmTOTPRequest) =>
       coreRequest(() => identityClient.confirmTOTP(request)),
     assertTotp: (request: AssertTOTPRequest) =>
-      coreRequest(() => identityClient.assertTOTP(request)),
+      coreRequest(() => identityClient.assertTOTP(request), "ASSERT_TOTP"),
     getOrganisation: (request: GetOrganisationRequest) =>
       coreRequest(() => organisationClient.getOrganisation(request)),
     updateOrganisation: (request: UpdateOrganisationRequest) =>

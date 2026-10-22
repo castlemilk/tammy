@@ -5,7 +5,6 @@ package localproduct
 import (
 	"bytes"
 	"context"
-	"database/sql"
 	"errors"
 
 	"buf.build/go/protovalidate"
@@ -36,7 +35,9 @@ func (handler *basPreparationHandler) beginBASRead(ctx context.Context,
 	if err := handler.identity.RequireActiveSessionReadOnly(ctx, authentication); err != nil {
 		return nil, err
 	}
-	tx, err := handler.database.BeginEncryptedTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	// These queries only read. Pin one deferred snapshot without reserving the
+	// SQLite writer needed by concurrent identity and preparation commands.
+	tx, err := handler.database.BeginEncryptedTx(ctx, nil)
 	if err != nil {
 		return nil, err
 	}

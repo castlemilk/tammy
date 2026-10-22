@@ -238,6 +238,9 @@ function fakeTransport(
             getAttentionSummary: (_request, context) => {
               methods.push(context.method);
               receivedHeaders.push(new Headers(context.requestHeader));
+              if (failure) {
+                throw failure;
+              }
               return {
                 documentsNeedingReview: 3,
                 documentsReviewedInPeriod: 12,
@@ -581,6 +584,7 @@ describe("createCoreClient", () => {
       "GET_CURRENT_BAS_DRAFT",
       (client: CoreClient) => client.getCurrentBasDraft(create(GetCurrentBasDraftRequestSchema)),
     ],
+    ["ASSERT_TOTP", (client: CoreClient) => client.assertTotp(create(AssertTOTPRequestSchema))],
     [
       "UNLOCK_WORKSPACE",
       (client: CoreClient) => client.unlockWorkspace(create(UnlockWorkspaceRequestSchema)),
@@ -1149,21 +1153,29 @@ describe("createCoreClient", () => {
       }),
     );
     const { factory } = fakeTransport(undefined, failure);
+    const diagnostic = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
-    const error = await createCoreClient(READINESS, factory)
-      .getDiagnostics()
-      .catch((caught: unknown) => caught);
+    try {
+      const error = await createCoreClient(READINESS, factory)
+        .getAttentionSummary(create(GetAttentionSummaryRequestSchema))
+        .catch((caught: unknown) => caught);
 
-    expect(error).toBeInstanceOf(ConnectError);
-    expect(error).toMatchObject({
-      code: Code.Unauthenticated,
-      message: "[unauthenticated] Core request failed.",
-      rawMessage: "Core request failed.",
-    });
-    expect(serialized(error)).not.toContain(READINESS.port.toString());
-    expect(serialized(error)).not.toContain(READINESS.caPem);
-    expect(serialized(error)).not.toContain(READINESS.capability);
-    expect((error as ConnectError).metadata.get("Authorization")).toBeNull();
+      expect(error).toBeInstanceOf(ConnectError);
+      expect(error).toMatchObject({
+        code: Code.Unauthenticated,
+        message: "[unauthenticated] Core request failed.",
+        rawMessage: "Core request failed.",
+      });
+      expect(serialized(error)).not.toContain(READINESS.port.toString());
+      expect(serialized(error)).not.toContain(READINESS.caPem);
+      expect(serialized(error)).not.toContain(READINESS.capability);
+      expect((error as ConnectError).metadata.get("Authorization")).toBeNull();
+      expect(diagnostic).toHaveBeenCalledExactlyOnceWith(
+        "LOCAL_ENGINE_CORE_RPC_FAILED LOCAL_ENGINE_CONNECT_UNAUTHENTICATED",
+      );
+    } finally {
+      diagnostic.mockRestore();
+    }
   });
 });
 

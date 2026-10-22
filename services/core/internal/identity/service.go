@@ -1590,8 +1590,9 @@ func (service *Service) AuthorizeWithin(ctx context.Context, executor workspace.
 // re-authorize in the transaction that commits the owned mutation.
 func (service *Service) ValidateAuthorizationWithin(ctx context.Context, executor workspace.MutationExecutor,
 	authentication *tammyv1.AuthenticationContext, action authorisation.Action) error {
-	service.mu.Lock()
-	defer service.mu.Unlock()
+	// This state belongs only to the caller's transaction. Validation reads it
+	// without mutating service state, so taking mu here would invert the lock
+	// order of identity-owned mutations waiting for that transaction's writer.
 	if executor == nil {
 		return ErrRepositoryIntegrity
 	}

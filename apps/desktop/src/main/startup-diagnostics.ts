@@ -137,6 +137,7 @@ const coreRpcOperationMarkers = {
   LIST_ACCOUNTS: "LOCAL_ENGINE_CORE_RPC_LIST_ACCOUNTS_FAILED",
   CREATE_BAS_DRAFT: "LOCAL_ENGINE_CORE_RPC_CREATE_BAS_DRAFT_FAILED",
   GET_CURRENT_BAS_DRAFT: "LOCAL_ENGINE_CORE_RPC_GET_CURRENT_BAS_DRAFT_FAILED",
+  ASSERT_TOTP: "LOCAL_ENGINE_CORE_RPC_ASSERT_TOTP_FAILED",
   UNLOCK_WORKSPACE: "LOCAL_ENGINE_CORE_RPC_UNLOCK_WORKSPACE_FAILED",
   SIGN_IN: "LOCAL_ENGINE_CORE_RPC_SIGN_IN_FAILED",
 } as const;
@@ -236,7 +237,10 @@ export function safeBasExportFailure(stage: BasExportDiagnosticStage, error: unk
   return code ? `${marker} ${code}` : marker;
 }
 
-export function safeCoreRpcFailure(operation: CoreRpcDiagnosticOperation, error: unknown): string {
+export function safeCoreRpcFailure(
+  operation: CoreRpcDiagnosticOperation | undefined,
+  error: unknown,
+): string {
   const marker =
     typeof operation === "string" && Object.hasOwn(coreRpcOperationMarkers, operation)
       ? coreRpcOperationMarkers[operation]

@@ -530,11 +530,16 @@ func (handler *taxHandler) GetCurrentBasDraft(ctx context.Context, request *conn
 	if err := handler.identity.RequireActiveSessionReadOnly(ctx, request.Msg.Authentication); err != nil {
 		return nil, connect.NewError(connect.CodePermissionDenied, ErrLedgerModule)
 	}
-	tx, err := handler.database.BeginEncryptedTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	// Read the retained workpaper and its authorization from one deferred
+	// snapshot without reserving the writer needed by identity commands.
+	tx, err := handler.database.BeginEncryptedTx(ctx, nil)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, ErrLedgerModule)
 	}
 	defer tx.Rollback()
+	if err := handler.identity.ValidateAuthorizationWithin(ctx, tx, request.Msg.Authentication, authorisation.ActionReadFinancial); err != nil {
+		return nil, connect.NewError(connect.CodePermissionDenied, ErrLedgerModule)
+	}
 	repository, _ := reporting.NewRepositoryWithClock(tx, handler.now)
 	workpaper, err := repository.GetCurrentBASDraft(ctx, request.Msg.OrganisationId)
 	if err != nil {
