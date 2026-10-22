@@ -82,5 +82,19 @@
     "height": 1024,
     "mode": "RGB",
     "sha256": "f83e6077032c8670449e223961191618b0a90a7216aba6d29e52e490e0e82ee1"
+  },
+  {
+    "file": "13-sign-in-credits-import.png",
+    "width": 1536,
+    "height": 1024,
+    "mode": "RGB",
+    "sha256": "b0272b509e56aa7a163b64462d6ab1abfff1c1f2f8fb0e2971209ff45bca4542"
+  },
+  {
+    "file": "14-bas-transfers-migration.png",
+    "width": 1536,
+    "height": 1024,
+    "mode": "RGB",
+    "sha256": "c69bd6ad6ad4ee130132ae5c14ef3459343e1167842972d428c3fd3df1ba2ff0"
   }
 ]

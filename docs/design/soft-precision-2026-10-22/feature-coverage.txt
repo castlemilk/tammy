@@ -5,7 +5,7 @@ These files describe connected development features versus planned suite scope. 
 
 CURRENT CONNECTED AREAS / PROPOSED REDESIGNS
 - Local encrypted workspace create/reopen, recovery confirmation: board11.
-- Administrator sign-in and session: existing app capability; visual form should reuse board3 inputs, never copy generated secret values. Dedicated full sign-in/error screen remains to design.
+- Administrator sign-in and session: existing app capability; visual form should reuse board3 inputs, never copy generated secret values. Sign-in/error concept now included in board13.
 - Australian organisation setup: board11. Required fields/defaults must follow the actual contract, not generated optional labels.
 - Overview attention/activity: board1 visual hierarchy; replace exploratory data with actual local projections.
 - Documents: board8. Local PDF/PNG/JPEG <=10MiB, native PDF extraction and manual image review, retained evidence.
@@ -20,16 +20,16 @@ PLANNED SUITE / CORE EXISTS BUT FULL DESKTOP FLOW NOT CONNECTED
 - Customers/suppliers/both, local contact details: board10.
 - Quotes, accepted quote to invoice draft, sales credit notes: board10.
 - Invoice list, draft creation, issued read-only line detail, allocations and outstanding balances: boards2/7. Board2 is visual exploration; do not infer automatic email delivery.
-- Bills, supplier credits, outgoing/unallocated payments, settlement reversals: boards10/12. Supplier-credit and refund details should mirror reviewed credit/settlement patterns with their distinct domain rules; not all have dedicated full-screen mockups yet.
+- Bills, supplier credits, outgoing/unallocated payments, settlement reversals: boards10/12. Supplier-credit and refund details should mirror reviewed credit/settlement patterns with their distinct domain rules; Supplier credit and refund preview now included in board13.
 - Item tracking: invoice/bill quantities, prices, GST treatment, document revision and payment allocation. NOT stock inventory, SKU availability, landed cost or COGS.
 - Opening balances, periods and correction/reversal workflows: board12.
-- Extended CSV/OFX/QFX import, similarity/duplicate warnings and transfers: board8 patterns; dedicated OFX mapping/transfer/duplicate screens remain future detail work.
+- Extended CSV/OFX/QFX import, similarity/duplicate warnings and transfers: board8 patterns; Extended statement mapping/duplicate review and transfer concepts now included in boards13–14.
 - Reporting catalogue: board10. Trial balance is connected; wider P&L/balance sheet/cash-flow/general ledger/aged subledgers/statements are planned, not proved available.
-- Complete BAS validation/simulator/export: planned in suite; not shown as ready in current-feature board9.
+- Complete BAS validation/simulator/export: planned in suite; proposed validation, local simulator and export gate shown in board14, not as current availability.
 - Backup/restore, integrity checks and audit evidence: board11. Core/test existence is not complete desktop availability.
 - Access/role administration and settings: board11 concept; not proof of connected settings.
 - Interrupted jobs, retry remaining work, conflicts, empty/loading states: board12 plus board3.
-- Migration recovery: should use explicit preview/check/restore flow, not silently overwrite a workspace; a dedicated full migration screen remains to design.
+- Migration recovery: should use explicit preview/check/restore flow, not silently overwrite a workspace; a migration/recovery preview is included in board14.
 
 EXPLORATORY ONLY / NOT IN CURRENT APPROVED SCOPE
 Boards1–6 include mobile, live account connections, automatic matching, recurring automation and forecasts as style exploration. These must not be advertised or implemented as current capabilities without a deliberate product decision. Mobile concept files are not a mobile app.
@@ -47,3 +47,6 @@ KNOWN IMAGE REVIEW NOTES
 - Keyboard, screen-reader, zoom, contrast, reduced motion and real financial invariants remain implementation acceptance tests, not passed by these images.
 
 No app code, credentials, runtime data, CI settings or deployment configuration were changed for this pack.
+
+ADDITIONAL REVIEW NOTES
+Board13's extended import illustration uses a QFX filename with CSV-style column mapping. Implement format-specific parsing: column mapping belongs to CSV; OFX/QFX should show parsed-field validation. Refund direction must follow whether money is received from a supplier or returned to a customer. Board14's source-matched evidence and validation warnings are illustrative, not one internally consistent workpaper fixture. Generated bank identifiers are fictional; use masked test-only fixtures in implementation.

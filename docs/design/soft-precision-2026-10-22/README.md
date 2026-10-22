@@ -21,8 +21,11 @@ Proposed art direction, generated 22 October 2026. These are design references, 
 11. [Workspace, recovery, organisation and backup concepts](11-workspace-recovery.png)
 12. [Opening balances, period close, reversal and interrupted import](12-corrections-interruptions.png)
 
+13. [Local sign-in, supplier credits and import mapping](13-sign-in-credits-import.png)
+14. [BAS review, internal transfers and migration recovery](14-bas-transfers-migration.png)
+
 ## Important scope correction
-Boards 1–6 explored the visual direction before repository inspection. Their mobile, live-account connections, automation, forecasting and sending concepts are exploratory, NOT current capabilities. Boards 7–12 are informed by the current technical-state documentation and suite specification at commit aeda631070f9cb44289658c52128c595bf6133f7.
+Boards 1–6 explored the visual direction before repository inspection. Their mobile, live-account connections, automation, forecasting and sending concepts are exploratory, NOT current capabilities. Boards 7–14 are informed by the current technical-state documentation and suite specification at commit aeda631070f9cb44289658c52128c595bf6133f7.
 
 Tammy is a local-first AUD-only desktop app. Current banking is statement import and explicit matching, not live bank feeds. Current GST workpapers remain Draft — not lodged. Inventory/stock tracking, payment gateways, payroll and production ATO submission are excluded by the suite specification. Item tracking here means invoice/bill line detail, outstanding amounts, allocations and source evidence.
 
