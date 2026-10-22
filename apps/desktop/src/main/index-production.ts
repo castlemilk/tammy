@@ -57,6 +57,7 @@ import {
   installSessionGuards,
   installWindowGuards,
 } from "./security";
+import { type DesktopShutdownStage, desktopShutdownMarker } from "./startup-diagnostics";
 
 function releaseAll(releases: readonly (() => void)[]): void {
   for (const release of [...releases].reverse()) {
@@ -107,6 +108,13 @@ export function createProductionDependencies(
   let reportExports: ReportExports | undefined;
   let invoiceExport: InvoiceExport<GetInvoiceRequest> | undefined;
   let releaseIntegrationMenu: (() => void) | undefined;
+  const logShutdownMarker = (stage: DesktopShutdownStage): void => {
+    try {
+      console.error(desktopShutdownMarker(stage));
+    } catch {
+      // Diagnostic sinks must not prevent application shutdown.
+    }
+  };
   const releaseKind = resolveSbrFileReleaseKind({
     isMas:
       overrides.isMas ?? (process as NodeJS.Process & Readonly<{ mas?: boolean }>).mas === true,
@@ -154,9 +162,23 @@ export function createProductionDependencies(
     },
     stop: async () => {
       try {
-        await integration?.revoke();
+        if (integration) {
+          logShutdownMarker("INTEGRATION_REVOKE_STARTED");
+          try {
+            await integration.revoke();
+          } finally {
+            logShutdownMarker("INTEGRATION_REVOKE_SETTLED");
+          }
+        }
       } finally {
-        if (core) await core.stop();
+        if (core) {
+          logShutdownMarker("CORE_PROCESS_STOP_STARTED");
+          try {
+            await core.stop();
+          } finally {
+            logShutdownMarker("CORE_PROCESS_STOP_SETTLED");
+          }
+        }
       }
     },
   };
@@ -315,15 +337,28 @@ export function createProductionDependencies(
     listenForQuit: (listener) => {
       requestQuit = listener;
       const beforeQuit = (event: Event) => {
+        try {
+          console.error(desktopShutdownMarker("BEFORE_QUIT"));
+        } catch {
+          // Diagnostic sinks must not prevent application shutdown.
+        }
         event.preventDefault();
         listener();
       };
+      const windowAllClosed = () => {
+        try {
+          console.error(desktopShutdownMarker("WINDOW_ALL_CLOSED"));
+        } catch {
+          // Diagnostic sinks must not prevent application shutdown.
+        }
+        listener();
+      };
       app.on("before-quit", beforeQuit);
-      app.on("window-all-closed", listener);
+      app.on("window-all-closed", windowAllClosed);
       return () => {
         requestQuit = undefined;
         app.removeListener("before-quit", beforeQuit);
-        app.removeListener("window-all-closed", listener);
+        app.removeListener("window-all-closed", windowAllClosed);
       };
     },
     logger: { error: (message) => console.error(message) },

@@ -20,6 +20,7 @@ import {
   safeElectronCloseFailureCode,
   safeFirstWindowFailureCode,
 } from "../../tests/e2e/electron-process-diagnostics";
+import { SHUTDOWN_DIAGNOSTIC_MARKERS } from "./startup-diagnostics";
 
 interface TestState {
   application?: true;
@@ -466,6 +467,45 @@ describe("closeAndReapElectron", () => {
 });
 
 describe("ElectronProcessDiagnostics", () => {
+  it("retains fixed shutdown boundaries and the last reached phase without adjacent private data", () => {
+    const diagnostics = new ElectronProcessDiagnostics();
+    diagnostics.observeStderr(
+      [
+        "LOCAL_ENGINE_E2E_SHUTDOWN_QUIT_SCHEDULED",
+        "LOCAL_ENGINE_E2E_SHUTDOWN_BEFORE_QUIT",
+        "LOCAL_ENGINE_SHUTDOWN_BEFORE_QUIT",
+        "LOCAL_ENGINE_SHUTDOWN_REQUESTED",
+        "LOCAL_ENGINE_SHUTDOWN_INTEGRATION_REVOKE_STARTED",
+        "LOCAL_ENGINE_SHUTDOWN_INTEGRATION_REVOKE_SETTLED",
+        "LOCAL_ENGINE_SHUTDOWN_CORE_PROCESS_STOP_STARTED",
+        "LOCAL_ENGINE_SHUTDOWN_CORE_PROCESS_STOP_SETTLED",
+        "LOCAL_ENGINE_SHUTDOWN_CORE_STOP_STARTED",
+        "LOCAL_ENGINE_SHUTDOWN_FAILED",
+        "LOCAL_ENGINE_SHUTDOWN_CORE_STOP_STARTED",
+        "private capability=/secret",
+      ].join(" "),
+    );
+    const summary = diagnostics.formatSummary();
+    expect(summary).toContain("LOCAL_ENGINE_E2E_SHUTDOWN_QUIT_SCHEDULED");
+    expect(summary).toContain("LOCAL_ENGINE_E2E_SHUTDOWN_BEFORE_QUIT");
+    expect(summary).toContain("LOCAL_ENGINE_SHUTDOWN_BEFORE_QUIT");
+    expect(summary).toContain("LOCAL_ENGINE_SHUTDOWN_REQUESTED");
+    expect(summary).toContain("LOCAL_ENGINE_SHUTDOWN_INTEGRATION_REVOKE_STARTED");
+    expect(summary).toContain("LOCAL_ENGINE_SHUTDOWN_INTEGRATION_REVOKE_SETTLED");
+    expect(summary).toContain("LOCAL_ENGINE_SHUTDOWN_CORE_PROCESS_STOP_STARTED");
+    expect(summary).toContain("LOCAL_ENGINE_SHUTDOWN_CORE_PROCESS_STOP_SETTLED");
+    expect(summary).toContain("LOCAL_ENGINE_SHUTDOWN_CORE_STOP_STARTED");
+    expect(summary).toContain("LOCAL_ENGINE_SHUTDOWN_FAILED");
+    expect(summary.split("LOCAL_ENGINE_SHUTDOWN_CORE_STOP_STARTED")).toHaveLength(2);
+    expect(summary).not.toContain("LOCAL_ENGINE_SHUTDOWN_CORE_STOP_SUCCEEDED");
+    expect(summary).not.toContain("private");
+    expect(summary).not.toContain("/secret");
+    for (const marker of SHUTDOWN_DIAGNOSTIC_MARKERS) {
+      expect(typeof marker).toBe("string");
+      expect(marker).toMatch(/^LOCAL_ENGINE_(?:E2E_)?SHUTDOWN_[A-Z_]+$/u);
+    }
+  });
+
   it("retains only the fixed BAS export stage and status", () => {
     const diagnostics = new ElectronProcessDiagnostics();
     diagnostics.observeStderr(

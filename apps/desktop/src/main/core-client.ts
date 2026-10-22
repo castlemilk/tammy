@@ -392,6 +392,14 @@ export function createCoreClient(
         ...options,
         timeoutMs: options?.timeoutMs ?? BAS_PREPARATION_GET_TIMEOUT_MS,
       }),
+    getFrozenBas: (
+      request: Parameters<typeof rawBasPreparationClient.getFrozenBas>[0],
+      options?: Parameters<typeof rawBasPreparationClient.getFrozenBas>[1],
+    ) =>
+      rawBasPreparationClient.getFrozenBas(request, {
+        ...options,
+        timeoutMs: options?.timeoutMs ?? BAS_PREPARATION_GET_TIMEOUT_MS,
+      }),
   });
 
   const coreRequest = async <Response>(

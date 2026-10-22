@@ -344,6 +344,26 @@ describe("desktop application composition", () => {
     expect(window.show).toHaveBeenCalledOnce();
 
     await application.shutdown();
+    const shutdownMarkers = calls.filter((call) => call.startsWith("log:LOCAL_ENGINE_SHUTDOWN_"));
+    expect(shutdownMarkers).toContain("log:LOCAL_ENGINE_SHUTDOWN_REQUESTED");
+    expect(shutdownMarkers).toContain("log:LOCAL_ENGINE_SHUTDOWN_PRE_EXIT_CLEANUP_DONE");
+    expect(shutdownMarkers).toContain("log:LOCAL_ENGINE_SHUTDOWN_CORE_STOP_STARTED");
+    expect(shutdownMarkers).toContain("log:LOCAL_ENGINE_SHUTDOWN_CORE_STOP_SUCCEEDED");
+    expect(shutdownMarkers).toContain("log:LOCAL_ENGINE_SHUTDOWN_PENDING_RUNTIME_WAIT_STARTED");
+    expect(shutdownMarkers).toContain("log:LOCAL_ENGINE_SHUTDOWN_PENDING_RUNTIME_SETTLED");
+    expect(shutdownMarkers).toContain("log:LOCAL_ENGINE_SHUTDOWN_PENDING_CORE_WAIT_STARTED");
+    expect(shutdownMarkers).toContain("log:LOCAL_ENGINE_SHUTDOWN_PENDING_CORE_SETTLED");
+    expect(shutdownMarkers).toContain("log:LOCAL_ENGINE_SHUTDOWN_FINAL_RELEASES_DONE");
+    expect(shutdownMarkers).toContain("log:LOCAL_ENGINE_SHUTDOWN_EXIT_REQUESTED");
+    expect(shutdownMarkers.indexOf("log:LOCAL_ENGINE_SHUTDOWN_REQUESTED")).toBeLessThan(
+      shutdownMarkers.indexOf("log:LOCAL_ENGINE_SHUTDOWN_PRE_EXIT_CLEANUP_DONE"),
+    );
+    expect(shutdownMarkers.indexOf("log:LOCAL_ENGINE_SHUTDOWN_CORE_STOP_STARTED")).toBeLessThan(
+      shutdownMarkers.indexOf("log:LOCAL_ENGINE_SHUTDOWN_CORE_STOP_SUCCEEDED"),
+    );
+    expect(shutdownMarkers.indexOf("log:LOCAL_ENGINE_SHUTDOWN_FINAL_RELEASES_DONE")).toBeLessThan(
+      shutdownMarkers.indexOf("log:LOCAL_ENGINE_SHUTDOWN_EXIT_REQUESTED"),
+    );
     expect(
       calls.filter((call) =>
         [
@@ -490,6 +510,10 @@ describe("desktop application composition", () => {
     );
     expect(calls).not.toContain("exit:0");
     expect(calls).toContain("log:LOCAL_ENGINE_SHUTDOWN_FAILED");
+    expect(calls).toContain("log:LOCAL_ENGINE_SHUTDOWN_CORE_STOP_FAILED");
+    expect(calls).toContain("log:LOCAL_ENGINE_SHUTDOWN_FINAL_RELEASES_DONE");
+    expect(calls).toContain("log:LOCAL_ENGINE_SHUTDOWN_EXIT_REQUESTED");
+    expect(calls).not.toContain("log:LOCAL_ENGINE_SHUTDOWN_CORE_STOP_SUCCEEDED");
     expect(calls).toContain("exit:1");
     expect(calls.join(" ")).not.toContain("pid=123");
   });

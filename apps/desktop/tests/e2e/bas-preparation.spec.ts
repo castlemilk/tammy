@@ -1169,11 +1169,41 @@ function assertPdfReport(
   expect(tableStart).toBeGreaterThanOrEqual(0);
   expect(tableEnd).toBeGreaterThan(tableStart);
   const labelTable = text.slice(tableStart, tableEnd);
-  const labelRows = Object.entries(expectedLabels(revision)).map(([label, want]) => {
-    const start = labelTable.indexOf(`${label} ${want.state}`);
-    expect(start, `${label} table row`).toBeGreaterThanOrEqual(0);
-    return { label, want, start };
-  });
+  const expectedLabelOrder = [
+    "G1",
+    "1A",
+    "1B",
+    "W1",
+    "W2",
+    "W3",
+    "W4",
+    "W5",
+    "4",
+    "T1",
+    "T2",
+    "T7",
+    "T11",
+    "5A",
+    "5B",
+    "8A",
+    "8B",
+    "9",
+  ];
+  const labelRows = Object.entries(expectedLabels(revision))
+    .map(([label, want]) => {
+      const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+      const escapedState = want.state.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+      const match = new RegExp(`(?:^|\\s)(${escapedLabel})\\s+${escapedState}(?=\\s|$)`, "u").exec(
+        labelTable,
+      );
+      expect(match, `${label} exact table row`).not.toBeNull();
+      if (!match?.[1]) throw new Error("BAS_ACCEPTANCE_PDF_LABEL_ROW_MISSING");
+      const start = match.index + match[0].indexOf(match[1]);
+      return { label, want, start };
+    })
+    .sort((left, right) => left.start - right.start);
+  expect(labelRows.map((row) => row.label)).toEqual(expectedLabelOrder);
+  expect(new Set(labelRows.map((row) => row.label)).size).toBe(18);
   for (const [index, row] of labelRows.entries()) {
     const next = labelRows[index + 1];
     const rowText = labelTable.slice(row.start, next?.start ?? labelTable.length);
@@ -1412,9 +1442,12 @@ async function cancelFrozenExport(
   await page
     .getByRole("combobox", { name: "Exact report source", exact: true })
     .selectOption("frozen_bas");
-  await page
-    .getByRole("combobox", { name: "Frozen BAS identity", exact: true })
-    .selectOption(refKey(ref));
+  const identity = page.getByRole("combobox", {
+    name: "Frozen BAS identity",
+    exact: true,
+  });
+  await identity.selectOption(refKey(ref));
+  await expect(identity).toHaveValue(refKey(ref));
   await page.getByRole("combobox", { name: "Format", exact: true }).selectOption("pdf");
   await electronHarness.application.evaluate(({ dialog }) => {
     dialog.showSaveDialog = async () => ({ canceled: true, filePath: "" });
@@ -1424,7 +1457,21 @@ async function cancelFrozenExport(
   const history = page.getByRole("region", { name: "Exact-target export history", exact: true });
   await expect(history).toContainText("PDF");
   await expect(history).toContainText("Cancelled");
-  await expect(history).toContainText(ref.id);
+  const events = (
+    await exportEventsForFrozen(page, await authenticatedWorkspace(page), ref)
+  ).filter((event) => event.format === BasExportFormat.PDF);
+  expect(events).toHaveLength(2);
+  expect(
+    events.every((event) => {
+      const target = event.target?.exactTarget;
+      return target?.case === "frozenBas" && refKey(target.value) === refKey(ref);
+    }),
+    "cancelled export events remain bound to the exact frozen PDF target",
+  ).toBe(true);
+  expect(events.filter((event) => event.phase === BasExportPhase.STARTED)).toHaveLength(1);
+  const finished = events.filter((event) => event.phase === BasExportPhase.FINISHED);
+  expect(finished).toHaveLength(1);
+  expect(finished[0]?.outcome).toBe(BasExportOutcome.CANCELLED);
 }
 
 async function failFrozenExport(
@@ -1444,9 +1491,12 @@ async function failFrozenExport(
   await page
     .getByRole("combobox", { name: "Exact report source", exact: true })
     .selectOption("frozen_bas");
-  await page
-    .getByRole("combobox", { name: "Frozen BAS identity", exact: true })
-    .selectOption(refKey(ref));
+  const identity = page.getByRole("combobox", {
+    name: "Frozen BAS identity",
+    exact: true,
+  });
+  await identity.selectOption(refKey(ref));
+  await expect(identity).toHaveValue(refKey(ref));
   await page.getByRole("combobox", { name: "Format", exact: true }).selectOption("csv");
   await electronHarness.application.evaluate(({ dialog }, filePath) => {
     dialog.showSaveDialog = async () => ({ canceled: false, filePath });
@@ -1471,7 +1521,6 @@ async function failFrozenExport(
   const history = page.getByRole("region", { name: "Exact-target export history", exact: true });
   await expect(history).toContainText("CSV");
   await expect(history).toContainText("Failed");
-  await expect(history).toContainText(ref.id);
   const events = (await exportEventsForFrozen(page, workspace, ref)).filter(
     (event) => event.format === BasExportFormat.CSV,
   );

@@ -2,7 +2,12 @@ import type { CoreReadiness } from "../shared/readiness";
 import type { CoreClient } from "./core-client";
 import type { CoreProcess } from "./core-process";
 import type { SbrFileReleaseKind } from "./sbr-file-intake";
-import { type DesktopStartupStage, safeDesktopStartupFailure } from "./startup-diagnostics";
+import {
+  type DesktopShutdownStage,
+  type DesktopStartupStage,
+  desktopShutdownMarker,
+  safeDesktopStartupFailure,
+} from "./startup-diagnostics";
 
 export type DesktopApplicationErrorCode =
   | "APPLICATION_CLOSING"
@@ -89,6 +94,13 @@ export async function startDesktopApplication(
   let shutdownPromise: Promise<void> | undefined;
   let startupStage: DesktopStartupStage = "REGISTER";
   const cleanupSensitiveState = onceRelease(dependencies.cleanupSensitiveState);
+  const markShutdown = (stage: DesktopShutdownStage): void => {
+    try {
+      dependencies.logger.error(desktopShutdownMarker(stage));
+    } catch {
+      // Diagnostic sinks must not prevent local-engine shutdown.
+    }
+  };
 
   const ensureOpen = (): void => {
     if (closing) throw new DesktopApplicationError("APPLICATION_CLOSING");
@@ -96,6 +108,7 @@ export async function startDesktopApplication(
   const shutdown = (exitCode = 0): Promise<void> => {
     closing = true;
     if (shutdownPromise) return shutdownPromise;
+    markShutdown("REQUESTED");
     const coreWasPending = pendingCore !== undefined && !coreReady;
     // Publish the promise before closing the window can synchronously request quit again.
     shutdownPromise = Promise.resolve().then(async () => {
@@ -103,30 +116,51 @@ export async function startDesktopApplication(
       releaseSafely(cleanupSensitiveState);
       releaseSafely(releaseWindow);
       if (window && !window.isDestroyed()) window.close();
+      markShutdown("PRE_EXIT_CLEANUP_DONE");
       let stopFailed = false;
       if (pendingCore) {
+        markShutdown("CORE_STOP_STARTED");
         try {
           await dependencies.core.stop();
+          markShutdown("CORE_STOP_SUCCEEDED");
         } catch {
+          markShutdown("CORE_STOP_FAILED");
           stopFailed = true;
         }
       }
+      if (pendingRuntime) markShutdown("PENDING_RUNTIME_WAIT_STARTED");
+      if (pendingCore) markShutdown("PENDING_CORE_WAIT_STARTED");
       const [runtimeResult, coreResult] = await Promise.all([
         pendingRuntime?.then(
-          (release) => release,
-          () => undefined,
+          (release) => {
+            markShutdown("PENDING_RUNTIME_SETTLED");
+            return release;
+          },
+          () => {
+            markShutdown("PENDING_RUNTIME_REJECTED");
+            return undefined;
+          },
         ),
         pendingCore?.then(
-          () => true,
-          () => false,
+          () => {
+            markShutdown("PENDING_CORE_SETTLED");
+            return true;
+          },
+          () => {
+            markShutdown("PENDING_CORE_REJECTED");
+            return false;
+          },
         ),
       ]);
       releaseSafely(runtimeResult);
       if (coreWasPending && coreResult) {
+        markShutdown("LATE_CORE_STOP_STARTED");
         try {
           await dependencies.core.stop();
+          markShutdown("LATE_CORE_STOP_SUCCEEDED");
           stopFailed = false;
         } catch {
+          markShutdown("LATE_CORE_STOP_FAILED");
           stopFailed = true;
         }
       }
@@ -134,12 +168,16 @@ export async function startDesktopApplication(
         dependencies.logger.error("LOCAL_ENGINE_SHUTDOWN_FAILED");
         releaseSafely(releaseScheme);
         releaseSafely(unlistenQuit);
+        markShutdown("FINAL_RELEASES_DONE");
+        markShutdown("EXIT_REQUESTED");
         dependencies.exit(1);
         throw new DesktopApplicationError("LOCAL_ENGINE_SHUTDOWN_FAILED");
       }
       releaseSafely(releaseRuntime);
       releaseSafely(releaseScheme);
       releaseSafely(unlistenQuit);
+      markShutdown("FINAL_RELEASES_DONE");
+      markShutdown("EXIT_REQUESTED");
       dependencies.exit(exitCode);
     });
     void shutdownPromise.catch(() => undefined);

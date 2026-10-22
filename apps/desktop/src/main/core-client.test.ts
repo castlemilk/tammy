@@ -11,6 +11,7 @@ import { ListAccountsRequestSchema } from "@tammy/connect-client/tammy/v1/accoun
 import {
   BasPreparationService,
   GetBasPreparationRequestSchema,
+  GetFrozenBasRequestSchema,
   ListBasObligationsProfilesRequestSchema,
 } from "@tammy/connect-client/tammy/v1/bas_preparation_pb.js";
 import {
@@ -116,6 +117,10 @@ function fakeTransport(
     readonly timeoutMs: number | undefined;
     readonly headers: Headers;
   }>;
+  readonly receivedFrozenBasCalls: Array<{
+    readonly timeoutMs: number | undefined;
+    readonly headers: Headers;
+  }>;
   readonly receivedBasProfileListCalls: Array<{
     readonly timeoutMs: number | undefined;
     readonly headers: Headers;
@@ -129,6 +134,10 @@ function fakeTransport(
   const receivedHeaders: Headers[] = [];
   const receivedTimeouts: Array<number | undefined> = [];
   const receivedBasPreparationCalls: Array<{
+    readonly timeoutMs: number | undefined;
+    readonly headers: Headers;
+  }> = [];
+  const receivedFrozenBasCalls: Array<{
     readonly timeoutMs: number | undefined;
     readonly headers: Headers;
   }> = [];
@@ -326,6 +335,19 @@ function fakeTransport(
               }
               return {};
             },
+            getFrozenBas: async (_request, context) => {
+              methods.push(context.method);
+              const headers = new Headers(context.requestHeader);
+              receivedHeaders.push(headers);
+              receivedFrozenBasCalls.push({
+                timeoutMs: context.timeoutMs(),
+                headers,
+              });
+              if (rpcDelayMs > 0) {
+                await new Promise<void>((resolve) => setTimeout(resolve, rpcDelayMs));
+              }
+              return {};
+            },
           });
         },
         {
@@ -345,6 +367,7 @@ function fakeTransport(
     receivedHeaders,
     receivedTimeouts,
     receivedBasPreparationCalls,
+    receivedFrozenBasCalls,
     receivedBasProfileListCalls,
     receivedWorkspaceCreateCalls,
   };
@@ -498,18 +521,27 @@ describe("createCoreClient", () => {
     expect(receivedHeaders[0]?.get("X-Tammy-Capability")).toBe(CAPABILITY);
   });
 
-  it("bounds only GetBasPreparation at 30 seconds while ordinary RPCs keep the 5-second default", async () => {
-    const { factory, receivedTimeouts, receivedBasPreparationCalls, receivedBasProfileListCalls } =
-      fakeTransport(undefined, undefined, 5_300);
+  it("bounds exact BAS preparation and frozen reads at 30 seconds while ordinary RPCs keep the 5-second default", async () => {
+    const {
+      factory,
+      receivedTimeouts,
+      receivedBasPreparationCalls,
+      receivedFrozenBasCalls,
+      receivedBasProfileListCalls,
+    } = fakeTransport(undefined, undefined, 5_300);
     const client = createCoreClient(READINESS, factory);
 
     const preparationClient = client.basPreparation;
     if (!preparationClient) throw new Error("BAS preparation client is unavailable.");
-    const [ordinaryResult, profileListResult, preparationResult] = await Promise.allSettled([
-      client.getDiagnostics(),
-      preparationClient.listBasObligationsProfiles(create(ListBasObligationsProfilesRequestSchema)),
-      preparationClient.getBasPreparation(create(GetBasPreparationRequestSchema)),
-    ]);
+    const [ordinaryResult, profileListResult, preparationResult, frozenResult] =
+      await Promise.allSettled([
+        client.getDiagnostics(),
+        preparationClient.listBasObligationsProfiles(
+          create(ListBasObligationsProfilesRequestSchema),
+        ),
+        preparationClient.getBasPreparation(create(GetBasPreparationRequestSchema)),
+        preparationClient.getFrozenBas(create(GetFrozenBasRequestSchema)),
+      ]);
 
     for (const result of [ordinaryResult, profileListResult]) {
       expect(result.status).toBe("rejected");
@@ -518,6 +550,7 @@ describe("createCoreClient", () => {
       }
     }
     expect(preparationResult.status).toBe("fulfilled");
+    expect(frozenResult.status).toBe("fulfilled");
     expect(receivedTimeouts).toHaveLength(1);
     expect(receivedTimeouts[0]).toBeGreaterThanOrEqual(4_900);
     expect(receivedTimeouts[0]).toBeLessThanOrEqual(5_000);
@@ -529,6 +562,10 @@ describe("createCoreClient", () => {
     expect(receivedBasPreparationCalls[0]?.timeoutMs).toBeGreaterThan(29_000);
     expect(receivedBasPreparationCalls[0]?.timeoutMs).toBeLessThanOrEqual(30_000);
     expect(receivedBasPreparationCalls[0]?.headers.get("X-Tammy-Capability")).toBe(CAPABILITY);
+    expect(receivedFrozenBasCalls).toHaveLength(1);
+    expect(receivedFrozenBasCalls[0]?.timeoutMs).toBeGreaterThan(29_000);
+    expect(receivedFrozenBasCalls[0]?.timeoutMs).toBeLessThanOrEqual(30_000);
+    expect(receivedFrozenBasCalls[0]?.headers.get("X-Tammy-Capability")).toBe(CAPABILITY);
   }, 8_000);
 
   it("bounds workspace creation at 30 seconds while ordinary RPCs keep the 5-second default", async () => {
@@ -592,6 +629,46 @@ describe("createCoreClient", () => {
     );
     expect(shortCall?.timeoutMs).toBeGreaterThan(0);
     expect(shortCall?.timeoutMs).toBeLessThanOrEqual(100);
+  });
+
+  it("preserves explicit GetFrozenBas deadlines, cancellation, caller headers, and capability", async () => {
+    const { factory, receivedFrozenBasCalls } = fakeTransport(undefined, undefined, 500);
+    const client = createCoreClient(READINESS, factory);
+    const preparation = client.basPreparation;
+    if (!preparation) throw new Error("BAS preparation client is unavailable.");
+
+    const controller = new AbortController();
+    const cancelledRead = preparation
+      .getFrozenBas(create(GetFrozenBasRequestSchema), {
+        timeoutMs: 30_000,
+        signal: controller.signal,
+        headers: { "X-Caller-Test": "frozen-cancel-preserved" },
+      })
+      .catch((error: unknown) => error);
+    const shortRead = preparation
+      .getFrozenBas(create(GetFrozenBasRequestSchema), {
+        timeoutMs: 100,
+        headers: { "X-Caller-Test": "frozen-timeout-preserved" },
+      })
+      .catch((error: unknown) => error);
+    setTimeout(() => controller.abort(), 25);
+
+    const [cancelledError, shortError] = await Promise.all([cancelledRead, shortRead]);
+
+    expect(ConnectError.from(cancelledError).code).toBe(Code.Canceled);
+    expect(ConnectError.from(shortError).code).toBe(Code.DeadlineExceeded);
+    const cancelledCall = receivedFrozenBasCalls.find(
+      (call) => call.headers.get("X-Caller-Test") === "frozen-cancel-preserved",
+    );
+    expect(cancelledCall?.timeoutMs).toBeGreaterThan(29_000);
+    expect(cancelledCall?.timeoutMs).toBeLessThanOrEqual(30_000);
+    expect(cancelledCall?.headers.get("X-Tammy-Capability")).toBe(CAPABILITY);
+    const shortCall = receivedFrozenBasCalls.find(
+      (call) => call.headers.get("X-Caller-Test") === "frozen-timeout-preserved",
+    );
+    expect(shortCall?.timeoutMs).toBeGreaterThan(0);
+    expect(shortCall?.timeoutMs).toBeLessThanOrEqual(100);
+    expect(shortCall?.headers.get("X-Tammy-Capability")).toBe(CAPABILITY);
   });
 
   it("maps every required identity, organisation, and SBR call to its generated client", async () => {

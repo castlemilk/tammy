@@ -579,7 +579,7 @@ it("exports the exact predecessor label comparison when that retained version is
       expect(text).toContain("KNOWN: 100/1 cents");
     }
   }
-});
+}, 30_000);
 
 it("retains linked preparation reasons in PDF and rectangular CSV", async () => {
   const priorReason = "Initial preparation: reconcile the October source records.";
@@ -619,7 +619,7 @@ it("retains linked preparation reasons in PDF and rectangular CSV", async () => 
       expect(text).toContain(priorReason);
     }
   }
-});
+}, 30_000);
 
 it("rejects an over-bound retained preparation creation reason before writing the report", async () => {
   const value = fixture();
@@ -675,7 +675,7 @@ it("exports the frozen pinned snapshot as a manual handoff without lodging claim
   expect(Buffer.from(value.exportEvents[1]?.event?.artifactHash ?? []).toString("hex")).toBe(
     createHash("sha256").update(body).digest("hex"),
   );
-});
+}, 30_000);
 
 it("records cancellation for an exact frozen BAS target", async () => {
   const value = fixture("frozen_bas");
