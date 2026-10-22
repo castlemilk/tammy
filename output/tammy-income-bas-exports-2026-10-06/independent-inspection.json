@@ -1,0 +1,213 @@
+{
+  "method": "Independent csv-parse and Poppler audit of retained authoritative core comparisons; full suite outcome remains pending root.",
+  "summaries": [
+    {
+      "basis": "cash",
+      "checks": [
+        {
+          "label": "initial-income",
+          "csvRows": 20,
+          "pdfPages": 1
+        },
+        {
+          "label": "initial-bas",
+          "csvRows": 23,
+          "pdfPages": 2
+        },
+        {
+          "label": "stale-bas",
+          "csvRows": 24,
+          "pdfPages": 2
+        },
+        {
+          "label": "regenerated-bas",
+          "csvRows": 24,
+          "pdfPages": 2
+        },
+        {
+          "label": "restarted-bas",
+          "csvRows": 24
+        },
+        {
+          "label": "restarted-income",
+          "csvRows": 20
+        }
+      ],
+      "files": 21,
+      "hashesVerified": 20,
+      "sourceRevision": "c74c9e020c406ae33d5a855316fe489cc58ec5bf",
+      "sourceDirty": false,
+      "appSha256": "b1d0c4fbfcc9612584e16aa85318d8984ef310a80e05516d151ae475d6ee7155",
+      "coreSha256": "2b5832407c0740ecae498b9cde29a87fccede4388bf122f14cbe2f34ab45f915",
+      "income": {
+        "financialRevision": "11",
+        "businessIncome": "170.00",
+        "receipts": "90.00",
+        "owing": "90.00",
+        "gst": "5.00",
+        "restartedFinancialRevision": "16",
+        "restartedReceipts": "135.00",
+        "restartedOwing": "45.00"
+      },
+      "initialBas": {
+        "id": "01a10e19-e457-7ef5-bde1-2cff1ee4e7f1",
+        "fingerprint": "233fb5355d87b5870ad1d282b19f403fcce7678f0318f34e767797a91b01feaa",
+        "sales": "80.00",
+        "gst": "5.00",
+        "credits": "0.00",
+        "net": "5.00",
+        "salesRows": 1,
+        "purchaseRows": 0,
+        "excluded": "1"
+      },
+      "regeneratedBas": {
+        "id": "01a10e19-e97b-7caf-8f09-679cc9f70b13",
+        "fingerprint": "57baf09450e8ff6ca43715ef701c9cf08f0cad324f9c074ada07f247eb4cd6d8",
+        "sales": "120.00",
+        "gst": "7.50",
+        "credits": "0.00",
+        "net": "7.50",
+        "salesRows": 2,
+        "purchaseRows": 0,
+        "excluded": "2"
+      }
+    },
+    {
+      "basis": "non-cash",
+      "checks": [
+        {
+          "label": "initial-income",
+          "csvRows": 20,
+          "pdfPages": 1
+        },
+        {
+          "label": "initial-bas",
+          "csvRows": 23,
+          "pdfPages": 2
+        },
+        {
+          "label": "stale-bas",
+          "csvRows": 24,
+          "pdfPages": 2
+        },
+        {
+          "label": "regenerated-bas",
+          "csvRows": 24,
+          "pdfPages": 2
+        },
+        {
+          "label": "restarted-bas",
+          "csvRows": 24
+        },
+        {
+          "label": "restarted-income",
+          "csvRows": 20
+        }
+      ],
+      "files": 21,
+      "hashesVerified": 20,
+      "sourceRevision": "c74c9e020c406ae33d5a855316fe489cc58ec5bf",
+      "sourceDirty": false,
+      "appSha256": "b1d0c4fbfcc9612584e16aa85318d8984ef310a80e05516d151ae475d6ee7155",
+      "coreSha256": "2b5832407c0740ecae498b9cde29a87fccede4388bf122f14cbe2f34ab45f915",
+      "income": {
+        "financialRevision": "11",
+        "businessIncome": "170.00",
+        "receipts": "90.00",
+        "owing": "90.00",
+        "gst": "10.00",
+        "restartedFinancialRevision": "16",
+        "restartedReceipts": "135.00",
+        "restartedOwing": "45.00"
+      },
+      "initialBas": {
+        "id": "01a10e1a-18be-74ff-a7e1-52bc6864095c",
+        "fingerprint": "347cf403780c255a22ae5ed01d38f33030bb0036949c4047c2d4e3d8b449c393",
+        "sales": "160.00",
+        "gst": "10.00",
+        "credits": "10.00",
+        "net": "0.00",
+        "salesRows": 1,
+        "purchaseRows": 1,
+        "excluded": "0"
+      },
+      "regeneratedBas": {
+        "id": "01a10e1a-1df5-716f-9c9e-8c6bf0b6e80a",
+        "fingerprint": "ecc8e9a3a529707ac35668b9c74325f911c013ec016e2aaa4b85e6d550ce94c9",
+        "sales": "160.00",
+        "gst": "10.00",
+        "credits": "20.00",
+        "net": "-10.00",
+        "salesRows": 1,
+        "purchaseRows": 2,
+        "excluded": "0"
+      }
+    }
+  ],
+  "visualInspection": {
+    "pdfPages": 14,
+    "pdfDocuments": 8,
+    "applicationScreenshots": 8,
+    "popplerRasterDpi": 120,
+    "findings": [],
+    "reviewedAt": "2026-10-05T22:10:28.147Z"
+  },
+  "renderedPages": [
+    {
+      "file": "inspected-pages/cash-bas-1.png",
+      "sha256": "f8185b74d98426ed3822187eabcb7551391cc972227d3d49d3950c337bc56443"
+    },
+    {
+      "file": "inspected-pages/cash-bas-2.png",
+      "sha256": "127aa653663a84fa2d29fcd7318a9e4489c0a27eea49c308d1deecfaf22f666c"
+    },
+    {
+      "file": "inspected-pages/cash-income-1.png",
+      "sha256": "b0d99d8021514cc894d0e2767c5fa06f8965019d8e255fa4e3cfeba4be2e240e"
+    },
+    {
+      "file": "inspected-pages/cash-regenerated-bas-1.png",
+      "sha256": "685acff9b46bb048feedf59931b711fa067c3276e18b6ad13d45a082c48ae804"
+    },
+    {
+      "file": "inspected-pages/cash-regenerated-bas-2.png",
+      "sha256": "d578876cf08b925e21571fd6ad593f590348cb194717a3fc804c19304e615be8"
+    },
+    {
+      "file": "inspected-pages/cash-stale-bas-1.png",
+      "sha256": "4947636b8219ef3594115a8e1d5a0e876379dae597537ed31a3970e2f48c8319"
+    },
+    {
+      "file": "inspected-pages/cash-stale-bas-2.png",
+      "sha256": "127aa653663a84fa2d29fcd7318a9e4489c0a27eea49c308d1deecfaf22f666c"
+    },
+    {
+      "file": "inspected-pages/non-cash-bas-1.png",
+      "sha256": "f8fc4e38d17256982a50a619cc261dca866e7b32743dd416cf95c79f86cbba44"
+    },
+    {
+      "file": "inspected-pages/non-cash-bas-2.png",
+      "sha256": "5a75efe3a443129a7f892611629017510c7ed985f388e17a596742425a146b1c"
+    },
+    {
+      "file": "inspected-pages/non-cash-income-1.png",
+      "sha256": "640203b6240660071756141a5f13739312a98215fbe6f28c4bdb3532a17a370f"
+    },
+    {
+      "file": "inspected-pages/non-cash-regenerated-bas-1.png",
+      "sha256": "7b88480e2fb9b294c9158be64b4b354e26c0daf44f7d29230d801b786971e322"
+    },
+    {
+      "file": "inspected-pages/non-cash-regenerated-bas-2.png",
+      "sha256": "3b5632beae46629b06b8c5a536a82bdeef3ce938cce43a68a352f2d817cec0ba"
+    },
+    {
+      "file": "inspected-pages/non-cash-stale-bas-1.png",
+      "sha256": "691100731e4432edac22cc7ae8a370a7058baf8862f3f36cd3d0bc48e8abd03c"
+    },
+    {
+      "file": "inspected-pages/non-cash-stale-bas-2.png",
+      "sha256": "5a75efe3a443129a7f892611629017510c7ed985f388e17a596742425a146b1c"
+    }
+  ]
+}

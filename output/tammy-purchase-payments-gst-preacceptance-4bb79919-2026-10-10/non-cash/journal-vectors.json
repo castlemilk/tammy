@@ -1,0 +1,227 @@
+{
+  "postingJournal": {
+    "$typeName": "tammy.v1.Journal",
+    "id": "01a11ecc-9965-718d-b98a-5c37aa02e146",
+    "organisationId": "01a11ecc-9687-7382-bf53-5ab81defd828",
+    "version": "1",
+    "state": 1,
+    "source": 6,
+    "memo": "Purchase accounting",
+    "lines": [
+      {
+        "$typeName": "tammy.v1.JournalLine",
+        "id": "01a11ecc-9965-7568-85b1-ed93ae079674",
+        "journalId": "01a11ecc-9965-718d-b98a-5c37aa02e146",
+        "accountId": "01a11ecc-9776-7359-80fd-56d35f485629",
+        "sequence": 1,
+        "description": "",
+        "debit": {
+          "$typeName": "tammy.v1.Money",
+          "currencyCode": "AUD",
+          "minorUnits": "10000"
+        },
+        "credit": {
+          "$typeName": "tammy.v1.Money",
+          "currencyCode": "AUD",
+          "minorUnits": "0"
+        }
+      },
+      {
+        "$typeName": "tammy.v1.JournalLine",
+        "id": "01a11ecc-9965-7796-8356-dc386fc62eb4",
+        "journalId": "01a11ecc-9965-718d-b98a-5c37aa02e146",
+        "accountId": "018f0000-0000-7000-8000-000000000103",
+        "sequence": 2,
+        "description": "",
+        "debit": {
+          "$typeName": "tammy.v1.Money",
+          "currencyCode": "AUD",
+          "minorUnits": "1000"
+        },
+        "credit": {
+          "$typeName": "tammy.v1.Money",
+          "currencyCode": "AUD",
+          "minorUnits": "0"
+        }
+      },
+      {
+        "$typeName": "tammy.v1.JournalLine",
+        "id": "01a11ecc-9965-77a2-8e6a-b42320976c0f",
+        "journalId": "01a11ecc-9965-718d-b98a-5c37aa02e146",
+        "accountId": "018f0000-0000-7000-8000-000000000106",
+        "sequence": 3,
+        "description": "",
+        "debit": {
+          "$typeName": "tammy.v1.Money",
+          "currencyCode": "AUD",
+          "minorUnits": "0"
+        },
+        "credit": {
+          "$typeName": "tammy.v1.Money",
+          "currencyCode": "AUD",
+          "minorUnits": "11000"
+        }
+      }
+    ],
+    "financialRevision": "3",
+    "postingDate": {
+      "$typeName": "tammy.v1.CivilDate",
+      "year": 2026,
+      "month": 8,
+      "day": 31
+    },
+    "totalDebits": {
+      "$typeName": "tammy.v1.Money",
+      "currencyCode": "AUD",
+      "minorUnits": "11000"
+    },
+    "totalCredits": {
+      "$typeName": "tammy.v1.Money",
+      "currencyCode": "AUD",
+      "minorUnits": "11000"
+    },
+    "postedAt": {
+      "$typeName": "google.protobuf.Timestamp",
+      "seconds": "1791518087",
+      "nanos": 524293000
+    }
+  },
+  "firstJournal": {
+    "$typeName": "tammy.v1.Journal",
+    "id": "01a11ecc-9b5a-797d-983a-ee73473d86e7",
+    "organisationId": "01a11ecc-9687-7382-bf53-5ab81defd828",
+    "version": "1",
+    "state": 1,
+    "source": 7,
+    "memo": "Purchase accounting",
+    "lines": [
+      {
+        "$typeName": "tammy.v1.JournalLine",
+        "id": "01a11ecc-9b5a-7643-a177-8306aa560ffc",
+        "journalId": "01a11ecc-9b5a-797d-983a-ee73473d86e7",
+        "accountId": "018f0000-0000-7000-8000-000000000106",
+        "sequence": 1,
+        "description": "",
+        "debit": {
+          "$typeName": "tammy.v1.Money",
+          "currencyCode": "AUD",
+          "minorUnits": "5500"
+        },
+        "credit": {
+          "$typeName": "tammy.v1.Money",
+          "currencyCode": "AUD",
+          "minorUnits": "0"
+        }
+      },
+      {
+        "$typeName": "tammy.v1.JournalLine",
+        "id": "01a11ecc-9b5a-7868-9b18-618295f3a50a",
+        "journalId": "01a11ecc-9b5a-797d-983a-ee73473d86e7",
+        "accountId": "018f0000-0000-7000-8000-000000000101",
+        "sequence": 2,
+        "description": "",
+        "debit": {
+          "$typeName": "tammy.v1.Money",
+          "currencyCode": "AUD",
+          "minorUnits": "0"
+        },
+        "credit": {
+          "$typeName": "tammy.v1.Money",
+          "currencyCode": "AUD",
+          "minorUnits": "5500"
+        }
+      }
+    ],
+    "financialRevision": "5",
+    "postingDate": {
+      "$typeName": "tammy.v1.CivilDate",
+      "year": 2026,
+      "month": 9,
+      "day": 30
+    },
+    "totalDebits": {
+      "$typeName": "tammy.v1.Money",
+      "currencyCode": "AUD",
+      "minorUnits": "5500"
+    },
+    "totalCredits": {
+      "$typeName": "tammy.v1.Money",
+      "currencyCode": "AUD",
+      "minorUnits": "5500"
+    },
+    "postedAt": {
+      "$typeName": "google.protobuf.Timestamp",
+      "seconds": "1791518088",
+      "nanos": 24407000
+    }
+  },
+  "finalJournal": {
+    "$typeName": "tammy.v1.Journal",
+    "id": "01a11ecc-9eab-75b5-b12a-dc661fbf0ceb",
+    "organisationId": "01a11ecc-9687-7382-bf53-5ab81defd828",
+    "version": "1",
+    "state": 1,
+    "source": 7,
+    "memo": "Purchase accounting",
+    "lines": [
+      {
+        "$typeName": "tammy.v1.JournalLine",
+        "id": "01a11ecc-9eab-767c-b889-9329b8aae34c",
+        "journalId": "01a11ecc-9eab-75b5-b12a-dc661fbf0ceb",
+        "accountId": "018f0000-0000-7000-8000-000000000106",
+        "sequence": 1,
+        "description": "",
+        "debit": {
+          "$typeName": "tammy.v1.Money",
+          "currencyCode": "AUD",
+          "minorUnits": "5500"
+        },
+        "credit": {
+          "$typeName": "tammy.v1.Money",
+          "currencyCode": "AUD",
+          "minorUnits": "0"
+        }
+      },
+      {
+        "$typeName": "tammy.v1.JournalLine",
+        "id": "01a11ecc-9eab-77a0-a988-1baecff46e77",
+        "journalId": "01a11ecc-9eab-75b5-b12a-dc661fbf0ceb",
+        "accountId": "018f0000-0000-7000-8000-000000000101",
+        "sequence": 2,
+        "description": "",
+        "debit": {
+          "$typeName": "tammy.v1.Money",
+          "currencyCode": "AUD",
+          "minorUnits": "0"
+        },
+        "credit": {
+          "$typeName": "tammy.v1.Money",
+          "currencyCode": "AUD",
+          "minorUnits": "5500"
+        }
+      }
+    ],
+    "financialRevision": "7",
+    "postingDate": {
+      "$typeName": "tammy.v1.CivilDate",
+      "year": 2026,
+      "month": 10,
+      "day": 2
+    },
+    "totalDebits": {
+      "$typeName": "tammy.v1.Money",
+      "currencyCode": "AUD",
+      "minorUnits": "5500"
+    },
+    "totalCredits": {
+      "$typeName": "tammy.v1.Money",
+      "currencyCode": "AUD",
+      "minorUnits": "5500"
+    },
+    "postedAt": {
+      "$typeName": "google.protobuf.Timestamp",
+      "seconds": "1791518088",
+      "nanos": 873565000
+    }
+  }
+}

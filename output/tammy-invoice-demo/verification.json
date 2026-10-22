@@ -1,0 +1,62 @@
+{
+  "verifiedAt": "2026-10-01T12:23:10.321Z",
+  "profile": "/Users/benebsworth/projects/tammy/output/tammy-invoice-demo/user-data-company-template",
+  "executable": "/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/.tmp/electron-builder/ordinary/mac-arm64/Tammy.app/Contents/MacOS/Tammy",
+  "invoiceNumber": "TEST-2026-001",
+  "invoiceId": "01a0f76b-1c77-7742-aa7e-e9d8718ae858",
+  "state": "draft",
+  "sourceDocumentIds": [
+    "01a0f76b-1c26-70c4-b79a-23c070680170",
+    "01a0f76b-1c4a-79b5-9a11-a62ab5457407",
+    "01a0f76b-1c6a-742f-815a-987aa30dd087"
+  ],
+  "subtotalMinor": 15000,
+  "gstMinor": 1050,
+  "totalMinor": 16050,
+  "expenseReviewPersisted": true,
+  "draftReopened": true,
+  "companyTemplateSaved": true,
+  "invoiceLogoPersisted": true,
+  "invoicePdfLogoEmbedded": true,
+  "semanticTablesVerified": true,
+  "linkedExpenseReselectionDisabled": true,
+  "viewportChecks": [
+    {
+      "width": 1440,
+      "height": 900,
+      "pageScrollWidth": 1425,
+      "pageClientWidth": 1425,
+      "tableScrollWidth": 958,
+      "tableClientWidth": 958
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "pageScrollWidth": 1425,
+      "pageClientWidth": 1425,
+      "tableScrollWidth": 958,
+      "tableClientWidth": 958
+    },
+    {
+      "width": 1024,
+      "height": 700,
+      "pageScrollWidth": 1009,
+      "pageClientWidth": 1009,
+      "tableScrollWidth": 819,
+      "tableClientWidth": 819
+    }
+  ],
+  "exportedPdf": "/Users/benebsworth/projects/tammy/output/tammy-invoice-demo/TEST-2026-001-exported-from-Tammy.pdf",
+  "consoleErrors": [],
+  "stages": [
+    "Created isolated fictional demo workspace.",
+    "Retained and reviewed Office stationery: AUD 88.00.",
+    "Retained and reviewed Courier delivery: AUD 27.50.",
+    "Retained and reviewed Reference subscription: AUD 45.00.",
+    "Captured 1440×900 saved editor; page horizontal overflow absent, table scroll 958/958.",
+    "Saved the linked draft through Tammy and exported its real bundled-engine PDF.",
+    "Captured 1440×900 saved editor; page horizontal overflow absent, table scroll 958/958.",
+    "Captured 1024×700 saved editor; page horizontal overflow absent, table scroll 819/819.",
+    "Restart verified: all three expenses remain reviewed and TEST-2026-001 remains an editable saved draft."
+  ]
+}

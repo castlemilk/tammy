@@ -1,0 +1,9 @@
+{
+  "type": "module",
+  "name": "@buf/bufbuild_protovalidate.bufbuild_es",
+  "version": "2.12.1-20260709200747-435963d16310.1",
+  "description": "This package contains generated code for the protobuf module buf.build/bufbuild/protovalidate:435963d1631043e694e56e6bcc3c79c3 when generated with the plugin buf.build/bufbuild/es:v2.12.1 revision:1",
+  "peerDependencies": {
+    "@bufbuild/protobuf": "^2.12.1"
+  }
+}

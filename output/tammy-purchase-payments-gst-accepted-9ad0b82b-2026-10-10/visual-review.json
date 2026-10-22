@@ -1,0 +1,24 @@
+{
+  "sourceRevision": "9ad0b82b5ccd4c2f70133a656817d8de22e43249",
+  "reviewer": "root",
+  "renderedDistinctPdfs": 15,
+  "renderedPages": 271,
+  "allPageContactSheetsInspected": true,
+  "selectedDetailedPages": [
+    "opening-legacy/opening-reviewed.pdf:3",
+    "evidence-deferral/future-claim.pdf:2",
+    "evidence-deferral/claimed-and-reviewed.pdf:3",
+    "pagination-capacity/complete.pdf:60",
+    "pagination-capacity/complete.pdf:119",
+    "pagination-capacity/overflow-retained.pdf:1"
+  ],
+  "screenshotsInspected": [
+    "cash/retained-purchase-details.png",
+    "non-cash/retained-purchase-details.png",
+    "cash-mixed/retained-purchase-details.png",
+    "cash/stale-retained-workpaper.png",
+    "pagination-capacity/source-capacity-retained.png"
+  ],
+  "outcome": "No clipping, overlap, missing table header, or illegible selected-page provenance observed. Draft/not-lodged and source-changed text is retained. Contact sheets verify pagination and layout continuity, not every character; all semantic rows are independently reconciled to retained Core snapshots. Immutable original and latest evidence are separate in the UI and keyboard focus remains visible.",
+  "reviewLimit": "The delegated visual agent hit its account usage limit before completing a review; root performed the visual inspection."
+}

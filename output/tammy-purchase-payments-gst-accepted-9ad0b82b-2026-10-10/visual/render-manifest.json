@@ -1,0 +1,256 @@
+{
+  "sourceRevision": "9ad0b82b5ccd4c2f70133a656817d8de22e43249",
+  "records": [
+    {
+      "pdf": "cash-mixed/first-quarter.pdf",
+      "pages": 3,
+      "fullResolutionPages": [
+        1,
+        2,
+        3
+      ],
+      "fullResolutionFiles": [
+        "visual/cash-mixed--first-quarter--page-001.png",
+        "visual/cash-mixed--first-quarter--page-002.png",
+        "visual/cash-mixed--first-quarter--page-003.png"
+      ],
+      "allPageContactSheets": [
+        "visual/cash-mixed--first-quarter--contact-01.png"
+      ]
+    },
+    {
+      "pdf": "cash-mixed/retained-stale.pdf",
+      "pages": 3,
+      "fullResolutionPages": [
+        1,
+        2,
+        3
+      ],
+      "fullResolutionFiles": [
+        "visual/cash-mixed--retained-stale--page-001.png",
+        "visual/cash-mixed--retained-stale--page-002.png",
+        "visual/cash-mixed--retained-stale--page-003.png"
+      ],
+      "allPageContactSheets": [
+        "visual/cash-mixed--retained-stale--contact-01.png"
+      ]
+    },
+    {
+      "pdf": "cash-mixed/second-quarter.pdf",
+      "pages": 3,
+      "fullResolutionPages": [
+        1,
+        2,
+        3
+      ],
+      "fullResolutionFiles": [
+        "visual/cash-mixed--second-quarter--page-001.png",
+        "visual/cash-mixed--second-quarter--page-002.png",
+        "visual/cash-mixed--second-quarter--page-003.png"
+      ],
+      "allPageContactSheets": [
+        "visual/cash-mixed--second-quarter--contact-01.png"
+      ]
+    },
+    {
+      "pdf": "cash/first-quarter.pdf",
+      "pages": 2,
+      "fullResolutionPages": [
+        1,
+        2
+      ],
+      "fullResolutionFiles": [
+        "visual/cash--first-quarter--page-001.png",
+        "visual/cash--first-quarter--page-002.png"
+      ],
+      "allPageContactSheets": [
+        "visual/cash--first-quarter--contact-01.png"
+      ]
+    },
+    {
+      "pdf": "cash/retained-stale.pdf",
+      "pages": 2,
+      "fullResolutionPages": [
+        1,
+        2
+      ],
+      "fullResolutionFiles": [
+        "visual/cash--retained-stale--page-001.png",
+        "visual/cash--retained-stale--page-002.png"
+      ],
+      "allPageContactSheets": [
+        "visual/cash--retained-stale--contact-01.png"
+      ]
+    },
+    {
+      "pdf": "cash/second-quarter.pdf",
+      "pages": 2,
+      "fullResolutionPages": [
+        1,
+        2
+      ],
+      "fullResolutionFiles": [
+        "visual/cash--second-quarter--page-001.png",
+        "visual/cash--second-quarter--page-002.png"
+      ],
+      "allPageContactSheets": [
+        "visual/cash--second-quarter--contact-01.png"
+      ]
+    },
+    {
+      "pdf": "evidence-deferral/claimed-and-reviewed.pdf",
+      "pages": 3,
+      "fullResolutionPages": [
+        1,
+        2,
+        3
+      ],
+      "fullResolutionFiles": [
+        "visual/evidence-deferral--claimed-and-reviewed--page-001.png",
+        "visual/evidence-deferral--claimed-and-reviewed--page-002.png",
+        "visual/evidence-deferral--claimed-and-reviewed--page-003.png"
+      ],
+      "allPageContactSheets": [
+        "visual/evidence-deferral--claimed-and-reviewed--contact-01.png"
+      ]
+    },
+    {
+      "pdf": "evidence-deferral/future-claim.pdf",
+      "pages": 3,
+      "fullResolutionPages": [
+        1,
+        2,
+        3
+      ],
+      "fullResolutionFiles": [
+        "visual/evidence-deferral--future-claim--page-001.png",
+        "visual/evidence-deferral--future-claim--page-002.png",
+        "visual/evidence-deferral--future-claim--page-003.png"
+      ],
+      "allPageContactSheets": [
+        "visual/evidence-deferral--future-claim--contact-01.png"
+      ]
+    },
+    {
+      "pdf": "evidence-deferral/reviewed-through-today.pdf",
+      "pages": 3,
+      "fullResolutionPages": [
+        1,
+        2,
+        3
+      ],
+      "fullResolutionFiles": [
+        "visual/evidence-deferral--reviewed-through-today--page-001.png",
+        "visual/evidence-deferral--reviewed-through-today--page-002.png",
+        "visual/evidence-deferral--reviewed-through-today--page-003.png"
+      ],
+      "allPageContactSheets": [
+        "visual/evidence-deferral--reviewed-through-today--contact-01.png"
+      ]
+    },
+    {
+      "pdf": "non-cash/first-quarter.pdf",
+      "pages": 2,
+      "fullResolutionPages": [
+        1,
+        2
+      ],
+      "fullResolutionFiles": [
+        "visual/non-cash--first-quarter--page-001.png",
+        "visual/non-cash--first-quarter--page-002.png"
+      ],
+      "allPageContactSheets": [
+        "visual/non-cash--first-quarter--contact-01.png"
+      ]
+    },
+    {
+      "pdf": "non-cash/retained-stale.pdf",
+      "pages": 2,
+      "fullResolutionPages": [
+        1,
+        2
+      ],
+      "fullResolutionFiles": [
+        "visual/non-cash--retained-stale--page-001.png",
+        "visual/non-cash--retained-stale--page-002.png"
+      ],
+      "allPageContactSheets": [
+        "visual/non-cash--retained-stale--contact-01.png"
+      ]
+    },
+    {
+      "pdf": "non-cash/second-quarter.pdf",
+      "pages": 2,
+      "fullResolutionPages": [
+        1,
+        2
+      ],
+      "fullResolutionFiles": [
+        "visual/non-cash--second-quarter--page-001.png",
+        "visual/non-cash--second-quarter--page-002.png"
+      ],
+      "allPageContactSheets": [
+        "visual/non-cash--second-quarter--contact-01.png"
+      ]
+    },
+    {
+      "pdf": "opening-legacy/opening-reviewed.pdf",
+      "pages": 3,
+      "fullResolutionPages": [
+        1,
+        2,
+        3
+      ],
+      "fullResolutionFiles": [
+        "visual/opening-legacy--opening-reviewed--page-001.png",
+        "visual/opening-legacy--opening-reviewed--page-002.png",
+        "visual/opening-legacy--opening-reviewed--page-003.png"
+      ],
+      "allPageContactSheets": [
+        "visual/opening-legacy--opening-reviewed--contact-01.png"
+      ]
+    },
+    {
+      "pdf": "pagination-capacity/complete.pdf",
+      "pages": 119,
+      "fullResolutionPages": [
+        1,
+        60,
+        119
+      ],
+      "fullResolutionFiles": [
+        "visual/pagination-capacity--complete--page-001.png",
+        "visual/pagination-capacity--complete--page-060.png",
+        "visual/pagination-capacity--complete--page-119.png"
+      ],
+      "allPageContactSheets": [
+        "visual/pagination-capacity--complete--contact-01.png",
+        "visual/pagination-capacity--complete--contact-02.png",
+        "visual/pagination-capacity--complete--contact-03.png",
+        "visual/pagination-capacity--complete--contact-04.png",
+        "visual/pagination-capacity--complete--contact-05.png"
+      ]
+    },
+    {
+      "pdf": "pagination-capacity/overflow-retained.pdf",
+      "pages": 119,
+      "fullResolutionPages": [
+        1,
+        60,
+        119
+      ],
+      "fullResolutionFiles": [
+        "visual/pagination-capacity--overflow-retained--page-001.png",
+        "visual/pagination-capacity--overflow-retained--page-060.png",
+        "visual/pagination-capacity--overflow-retained--page-119.png"
+      ],
+      "allPageContactSheets": [
+        "visual/pagination-capacity--overflow-retained--contact-01.png",
+        "visual/pagination-capacity--overflow-retained--contact-02.png",
+        "visual/pagination-capacity--overflow-retained--contact-03.png",
+        "visual/pagination-capacity--overflow-retained--contact-04.png",
+        "visual/pagination-capacity--overflow-retained--contact-05.png"
+      ]
+    }
+  ]
+}

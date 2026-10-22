@@ -1,0 +1,106 @@
+{
+  "label": "initial-bas",
+  "status": "passed",
+  "authority": {
+    "organisation": {
+      "$typeName": "tammy.v1.Organisation",
+      "id": "01a10f36-d59d-7fdb-abf8-a0c5487d0d7f",
+      "version": "1",
+      "abn": "11000000560",
+      "legalName": "Wattle & Co Supplies Pty Ltd",
+      "displayName": "Wattle & Co Supplies",
+      "entityType": "AU_PRIVATE_COMPANY",
+      "gstBasis": 1,
+      "gstReportingFrequency": 2,
+      "financialYearEndMonth": 6,
+      "verificationState": 1,
+      "ownerUserId": "01a10f36-d23d-70fc-a0c3-94be0bd6cc6b",
+      "activeTaxRuleBundle": {
+        "$typeName": "tammy.v1.SourceRef",
+        "type": "tax_rule_bundle",
+        "id": "018f0000-0000-7000-8000-000000000022",
+        "revision": "1",
+        "contentHash": "e2f9cde094db43c30260dc54f089a1ab835912e75e8c29add5c7a240e90497e4"
+      }
+    },
+    "bas": {
+      "$typeName": "tammy.v1.BasWorkpaper",
+      "id": "01a10f36-e87b-7305-92fe-29f9fe7cb10f",
+      "organisationId": "01a10f36-d59d-7fdb-abf8-a0c5487d0d7f",
+      "version": "1",
+      "status": 1,
+      "sources": [],
+      "gstBasis": 1,
+      "salesSources": [
+        {
+          "$typeName": "tammy.v1.BasSalesSourceLine",
+          "invoiceId": "01a10f36-e4b8-75ca-8217-2f28e5238ca1",
+          "invoiceNumber": "EXPORT-CASH-001",
+          "customerName": "Export customer, \"Élodie\"",
+          "sourceRevision": "1",
+          "sourceHash": "aa05d5a3f9f23a96f708da2722b46b56e30abf5480bcfa7e2037c2893f815565",
+          "taxDate": {
+            "$typeName": "tammy.v1.CivilDate",
+            "year": 2026,
+            "month": 10,
+            "day": 2
+          },
+          "gross": {
+            "$typeName": "tammy.v1.Money",
+            "currencyCode": "AUD",
+            "minorUnits": "8000"
+          },
+          "gst": {
+            "$typeName": "tammy.v1.Money",
+            "currencyCode": "AUD",
+            "minorUnits": "500"
+          },
+          "paymentId": "01a10f36-e647-73d9-b4ec-3a23ebfdc546"
+        }
+      ],
+      "sourceFingerprint": "829f7a5c8200e9b0d8ec10ace8bd39c1d85b8532ccc9d9d1ce518a8cf1b96f00",
+      "sourcesChanged": false,
+      "reviewWarnings": [
+        "Cash-basis purchase credits need payment evidence. 1 reviewed expenses dated in this period are excluded because purchase payments are not recorded."
+      ],
+      "excludedCashPurchaseCount": "1",
+      "periodStart": {
+        "$typeName": "tammy.v1.CivilDate",
+        "year": 2026,
+        "month": 10,
+        "day": 1
+      },
+      "periodEnd": {
+        "$typeName": "tammy.v1.CivilDate",
+        "year": 2026,
+        "month": 12,
+        "day": 31
+      },
+      "salesG1": {
+        "$typeName": "tammy.v1.Money",
+        "currencyCode": "AUD",
+        "minorUnits": "8000"
+      },
+      "gstOnSales1a": {
+        "$typeName": "tammy.v1.Money",
+        "currencyCode": "AUD",
+        "minorUnits": "500"
+      },
+      "gstCredits1b": {
+        "$typeName": "tammy.v1.Money",
+        "currencyCode": "AUD",
+        "minorUnits": "0"
+      },
+      "netGstPayable": {
+        "$typeName": "tammy.v1.Money",
+        "currencyCode": "AUD",
+        "minorUnits": "500"
+      },
+      "createdAt": {
+        "$typeName": "google.protobuf.Timestamp",
+        "seconds": "1791256619",
+        "nanos": 131749000
+      }
+    }
+  }
+}

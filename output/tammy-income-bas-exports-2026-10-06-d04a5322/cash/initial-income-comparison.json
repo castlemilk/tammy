@@ -1,0 +1,83 @@
+{
+  "label": "initial-income",
+  "status": "passed",
+  "authority": {
+    "organisation": {
+      "$typeName": "tammy.v1.Organisation",
+      "id": "01a10f36-d59d-7fdb-abf8-a0c5487d0d7f",
+      "version": "1",
+      "abn": "11000000560",
+      "legalName": "Wattle & Co Supplies Pty Ltd",
+      "displayName": "Wattle & Co Supplies",
+      "entityType": "AU_PRIVATE_COMPANY",
+      "gstBasis": 1,
+      "gstReportingFrequency": 2,
+      "financialYearEndMonth": 6,
+      "verificationState": 1,
+      "ownerUserId": "01a10f36-d23d-70fc-a0c3-94be0bd6cc6b",
+      "activeTaxRuleBundle": {
+        "$typeName": "tammy.v1.SourceRef",
+        "type": "tax_rule_bundle",
+        "id": "018f0000-0000-7000-8000-000000000022",
+        "revision": "1",
+        "contentHash": "e2f9cde094db43c30260dc54f089a1ab835912e75e8c29add5c7a240e90497e4"
+      }
+    },
+    "income": {
+      "$typeName": "tammy.v1.BusinessIncomeSummary",
+      "organisationId": "01a10f36-d59d-7fdb-abf8-a0c5487d0d7f",
+      "issuedCount": "1",
+      "unpostedIssuedCount": "0",
+      "gstBasis": 1,
+      "financialRevision": "11",
+      "periodStart": {
+        "$typeName": "tammy.v1.CivilDate",
+        "year": 2026,
+        "month": 10,
+        "day": 1
+      },
+      "periodEnd": {
+        "$typeName": "tammy.v1.CivilDate",
+        "year": 2026,
+        "month": 12,
+        "day": 31
+      },
+      "asOfDate": {
+        "$typeName": "tammy.v1.CivilDate",
+        "year": 2026,
+        "month": 10,
+        "day": 3
+      },
+      "businessIncome": {
+        "$typeName": "tammy.v1.Money",
+        "currencyCode": "AUD",
+        "minorUnits": "17000"
+      },
+      "invoiceIncome": {
+        "$typeName": "tammy.v1.Money",
+        "currencyCode": "AUD",
+        "minorUnits": "17000"
+      },
+      "paymentsReceived": {
+        "$typeName": "tammy.v1.Money",
+        "currencyCode": "AUD",
+        "minorUnits": "9000"
+      },
+      "outstanding": {
+        "$typeName": "tammy.v1.Money",
+        "currencyCode": "AUD",
+        "minorUnits": "9000"
+      },
+      "invoiceGst": {
+        "$typeName": "tammy.v1.Money",
+        "currencyCode": "AUD",
+        "minorUnits": "500"
+      },
+      "unpostedIncome": {
+        "$typeName": "tammy.v1.Money",
+        "currencyCode": "AUD",
+        "minorUnits": "0"
+      }
+    }
+  }
+}

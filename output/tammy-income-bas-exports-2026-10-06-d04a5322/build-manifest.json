@@ -1,0 +1,47 @@
+{
+  "schema": "tammy-build-manifest-v1",
+  "source_revision": "d04a532295e977c3a88b3550e7935cdbf52c6272",
+  "source_dirty": false,
+  "target": "darwin-arm64",
+  "versions": {
+    "buf": "1.72.0",
+    "connect_es": "2.1.2",
+    "connect_go": "1.20.0",
+    "electron": "43.1.1",
+    "electron_builder": "26.15.3",
+    "electron_conveyor": "0.4.0",
+    "electron_vite": "5.0.0",
+    "go": "1.26.4",
+    "node": "24.18.0",
+    "playwright": "1.61.1",
+    "pnpm": "11.15.0",
+    "protobuf_es": "2.12.1",
+    "protobuf_go": "1.36.11",
+    "react": "19.2.7",
+    "shadcn": "4.13.1",
+    "tailwindcss": "4.3.3",
+    "typescript": "7.0.2",
+    "vite": "7.3.6",
+    "vitest": "4.1.10"
+  },
+  "lockfiles": {
+    "pnpm-lock.yaml": "8610bb904e6e20bc43dcd76c6c8a47b5279e75b4b325dc775bc91d32939e74a9",
+    "services/core/go.sum": "9157ca2d2d3b0c27ca1c67d3092a5683242af83fdf07b2f33b502cf2f16352ea"
+  },
+  "protobuf_tree_sha256": "ee9ea3ed65f3fa94a4f6d91e02dea1f39341392c9d1682aba8ac4fadd3bd1c39",
+  "core_sha256": "59f04657746d1b303fea7476921987b9581de80d42c7a88c40bbd4e86a0d2950",
+  "sqlcipher": {
+    "library_sha256": "743224cba74f1cd88ba5a16b310a0f79c05451420b202ab21f194815df5e4398",
+    "runtime_version": "4.15.0 community",
+    "version": "4.15.0"
+  },
+  "test_profile": "foundation-packaged-e2e",
+  "sbr_status": "SIMULATOR_ENABLED",
+  "sbr": {
+    "helper_sha256": "971b8a279ab24486ea5149f9eee6092040ef6e882dd009b3958c3505d9aff127",
+    "profile_sha256": "9a15f9254db9743808ef3b36187a53fbedf4024d7de96dc97c22e2f6a8ee4f3e",
+    "profile_signature_sha256": "e08f319011b0d26e23860cfae53aa87cfb99035f266a49cabd8bf0ed2120daa5",
+    "source_tree_sha256": "432fc51b64ba545ab23072e100f26955ab30c0d83fd63573b87be1a3cff46bed"
+  },
+  "signed": false
+}

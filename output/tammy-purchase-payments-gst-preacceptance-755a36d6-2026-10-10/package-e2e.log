@@ -1,0 +1,245 @@
+task: [package:e2e] mise exec -- pnpm desktop:e2e
+$ pnpm desktop:package && pnpm --dir apps/desktop e2e
+$ node scripts/package-desktop.mjs
+$ pnpm sqlcipher:build && node scripts/build-core.mjs
+$ node scripts/build-sqlcipher.mjs
+{"include":"/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/apps/desktop/resources/sqlcipher/darwin-arm64/include","headerSha256":"0c8e979c2e155864ebb10fd1beabb1c1d29a8b3a237659bd18802a9e0aa8bdcf","library":"/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/apps/desktop/resources/sqlcipher/darwin-arm64/lib/libsqlite3.a","librarySha256":"743224cba74f1cd88ba5a16b310a0f79c05451420b202ab21f194815df5e4398","target":"darwin-arm64","version":"4.15.0"}
+{"path":"/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/apps/desktop/resources/core/darwin-arm64/tammy-core","sha256":"a1e23f0f9893c8915eb209fd3106b3787453bcfe702f5005c020711e246defad"}
+$ node scripts/build-sbr-helper.mjs
+SIMULATOR_ENABLED:darwin-arm64
+$ node scripts/write-build-manifest.mjs
+{"manifest":"/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/apps/desktop/resources/build/build-manifest.json","manifestSha256":"856f09c864036039addfcdc3bf7751997a15f969091ddfd02f608440fdf8d7f9","target":"darwin-arm64"}
+$ pnpm prepare:runtime
+$ node ../../scripts/prepare-electron-runtime.mjs
+electron runtime verified
+$ pnpm build && electron-builder --config electron-builder.yml --dir --publish never
+$ electron-vite build
+vite v7.3.6 building ssr environment for production...
+transforming...
+✓ 305 modules transformed.
+rendering chunks...
+out/main/index.js  2,662.67 kB
+✓ built in 768ms
+vite v7.3.6 building ssr environment for production...
+transforming...
+✓ 5 modules transformed.
+rendering chunks...
+out/preload/index.cjs  8.56 kB
+✓ built in 11ms
+vite v7.3.6 building client environment for production...
+transforming...
+✓ 2068 modules transformed.
+rendering chunks...
+../../out/renderer/index.html                     0.39 kB
+../../out/renderer/assets/index-DDxtxpsx.css     37.77 kB
+../../out/renderer/assets/index-lqHEmgd9.js   1,915.84 kB
+✓ built in 1.40s
+  • electron-builder  version=26.15.3 os=25.5.0
+  • loaded configuration  file=/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/apps/desktop/electron-builder.yml
+  • description is missed in the package.json  appPackageFile=/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/apps/desktop/package.json
+  • author is missed in the package.json  appPackageFile=/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/apps/desktop/package.json
+  • packageManager not detected by file, falling back to environment detection  resolvedPackageManager=pnpm detected=/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/apps/desktop
+  • detected workspace root for project using packageManager field  pm=pnpm config=pnpm@11.15.0 resolved=/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready projectDir=/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/apps/desktop
+  • skipped dependencies rebuild  reason=npmRebuild is set to false
+  • packaging       platform=darwin arch=arm64 electron=43.1.1 appOutDir=/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/.tmp/electron-builder/ordinary/mac-arm64
+  • downloaded      label=electron progress=100%
+  • downloaded electron zip extracted successfully  output=/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/.tmp/electron-builder/ordinary/mac-arm64
+  • searching for node modules  pm=pnpm searchDir=/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/apps/desktop
+  • duplicate dependency references  dependencies=["@formepdf/react@0.25.0","zustand@5.0.14","raw-body@3.0.2","http-errors@2.0.1","iconv-lite@0.7.3","debug@4.4.3","mime-types@3.0.2","on-finished@2.4.1","qs@6.15.3","type-is@2.1.0","call-bound@1.0.4","get-intrinsic@1.3.0"]
+  • executing @electron/fuses  electronPath=/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/.tmp/electron-builder/ordinary/mac-arm64/Tammy.app
+  • signing         file=/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/.tmp/electron-builder/ordinary/mac-arm64/Tammy.app platform=darwin type=distribution identityName=- identityHash=none provisioningProfile=none
+  • skipped macOS notarization  reason=`notarize` options were unable to be generated
+✔ the macOS application bundle has a valid signature (147.989208ms)
+✔ the ad-hoc macOS executable does not enable hardened runtime (6.489542ms)
+✔ the ordinary macOS package preserves the authenticated ad-hoc SBR helper (36.121208ms)
+﹣ Windows packages contain no SBR helper resources and declare exact unavailability (0.106292ms) # SKIP
+✔ the macOS bundle omits unused sensitive permissions and unrestricted transport (4.015834ms)
+✔ the packaged executable carries the approved Electron fuse contract (21.468833ms)
+✔ the ASAR contains only the built application graph and has embedded integrity metadata (23.988958ms)
+✔ the package authenticates its SQLCipher core and licence resources (1949.200208ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 1
+ℹ todo 0
+ℹ duration_ms 2284.498833
+{"appExecutable":"/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/.tmp/electron-builder/ordinary/mac-arm64/Tammy.app/Contents/MacOS/Tammy","appSha256":"a292c8b9230a597ca3a4a95bd8b1581237ed2045922a11269d39c6f4d8283fd8","coreExecutable":"/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/.tmp/electron-builder/ordinary/mac-arm64/Tammy.app/Contents/Resources/core/darwin-arm64/tammy-core","coreSha256":"a1e23f0f9893c8915eb209fd3106b3787453bcfe702f5005c020711e246defad","manifest":"/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/.tmp/electron-builder/ordinary/mac-arm64/Tammy.app/Contents/Resources/build/build-manifest.json","manifestSha256":"856f09c864036039addfcdc3bf7751997a15f969091ddfd02f608440fdf8d7f9","releaseKind":"ordinary-package","sourceRevision":"755a36d68023ec1eb4d33a9634c8397aad54545d","helperExecutable":"/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/.tmp/electron-builder/ordinary/mac-arm64/Tammy.app/Contents/Resources/sbr-helper/darwin-arm64/tammy-sbr-helper","helperSha256":"305bd9834a56573f420dbc6bb7224b3d2ecc22091aa30a4b1e11b6933bdedd82","profileFingerprint":"abcc23da7ccc63011fff8fe2ca16dfe495972b92cb7f70fe1915bd757a79823d","profileSha256":"e6038ff36d51c69c193df9b1ac09c0bef037451a05e95056cc55d72d3b944154","sbrStatus":"SIMULATOR_ENABLED","target":"darwin-arm64"}
+$ pnpm prepare:runtime
+$ node ../../scripts/prepare-electron-runtime.mjs
+electron runtime verified
+$ playwright test
+
+Running 12 tests using 1 worker
+
+(node:86912) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [darwin-arm64] › tests/e2e/current-workflows.spec.ts:38:1 › runs the current accounting workflows through the packaged app (16.8s)
+  ✓   2 [darwin-arm64] › tests/e2e/foundation.spec.ts:29:1 › runs the packaged first-run journey offline and exits cleanly (1.7s)
+  ✓   3 [darwin-arm64] › tests/e2e/invoice-income.spec.ts:21:1 › invoices/income-payments-bas: cash receipts, mixed GST and balances persist through restart (11.7s)
+Warning: Incorrect 'loca' table length -- attempting to fix it.
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+  ✘   4 [darwin-arm64] › tests/e2e/purchase-payments.spec.ts:65:1 › purchases/payments-gst: opening without a document and an earlier-period legacy payment retain distinct review outcomes (12.3s)
+(node:87709) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Warning: Incorrect 'loca' table length -- attempting to fix it.
+Warning: TT: more functions defined than expected
+Warning: Incorrect 'loca' table length -- attempting to fix it.
+Warning: TT: more functions defined than expected
+  ✘   5 [darwin-arm64] › tests/e2e/purchase-payments.spec.ts:299:1 › purchases/payments-gst: missing evidence, deferral, explicit claim and legacy review retain their separate effects (6.3s)
+(node:87812) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Warning: Incorrect 'loca' table length -- attempting to fix it.
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: Incorrect 'loca' table length -- attempting to fix it.
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+  ✓   6 [darwin-arm64] › tests/e2e/purchase-payments.spec.ts:602:1 › purchases/payments-gst: document and payment page 201 remain reachable and source overflow retains the saved draft (1.1m)
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: Incorrect 'loca' table length -- attempting to fix it.
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: Incorrect 'loca' table length -- attempting to fix it.
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: Incorrect 'loca' table length -- attempting to fix it.
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+  ✓   7 [darwin-arm64] › tests/e2e/purchase-payments.spec.ts:761:3 › purchases/payments-gst: cash purchase, exact saved files and evidence survive restart (14.4s)
+Warning: Incorrect 'loca' table length -- attempting to fix it.
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: Incorrect 'loca' table length -- attempting to fix it.
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: Incorrect 'loca' table length -- attempting to fix it.
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: Incorrect 'loca' table length -- attempting to fix it.
+Warning: TT: more functions defined than expected
+  ✓   8 [darwin-arm64] › tests/e2e/purchase-payments.spec.ts:761:3 › purchases/payments-gst: non-cash purchase, exact saved files and evidence survive restart (13.7s)
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: Incorrect 'loca' table length -- attempting to fix it.
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: Incorrect 'loca' table length -- attempting to fix it.
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: Incorrect 'loca' table length -- attempting to fix it.
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+  ✓   9 [darwin-arm64] › tests/e2e/purchase-payments.spec.ts:761:3 › purchases/payments-gst: cash mixed/private/capital purchase, exact saved files and evidence survive restart (14.7s)
+Warning: Incorrect 'loca' table length -- attempting to fix it.
+Warning: TT: more functions defined than expected
+Warning: Incorrect 'loca' table length -- attempting to fix it.
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: Incorrect 'loca' table length -- attempting to fix it.
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: Incorrect 'loca' table length -- attempting to fix it.
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+  ✓  10 [darwin-arm64] › tests/e2e/reporting-exports.spec.ts:85:3 › reporting/exports: cash income and retained BAS files reconcile through cancellation, regeneration and restart (13.4s)
+Warning: Incorrect 'loca' table length -- attempting to fix it.
+Warning: TT: more functions defined than expected
+Warning: Incorrect 'loca' table length -- attempting to fix it.
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: Incorrect 'loca' table length -- attempting to fix it.
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: Incorrect 'loca' table length -- attempting to fix it.
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+Warning: TT: more functions defined than expected
+  ✓  11 [darwin-arm64] › tests/e2e/reporting-exports.spec.ts:85:3 › reporting/exports: non-cash income and retained BAS files reconcile through cancellation, regeneration and restart (13.3s)
+(node:89105) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  12 [darwin-arm64-sbr] › tests/e2e/sbr-readiness.spec.ts:206:1 › SBR readiness uses local RAM credential and deterministic simulator only (4.7m)
+
+
+  1) [darwin-arm64] › tests/e2e/purchase-payments.spec.ts:65:1 › purchases/payments-gst: opening without a document and an earlier-period legacy payment retain distinct review outcomes 
+
+    AssertionError: purchase PDF is missing 01a1229f-b4b8-72c9-bdb3-88a23482a796
+
+       at support/purchase-export-assertions.ts:678
+
+      676 |         hash(decision.claimEvidence?.sourceHash),
+      677 |       ])
+    > 678 |         if (token) assert.ok(normalized.includes(token), `purchase PDF is missing ${token}`);
+          |                           ^
+      679 |     }
+      680 |     const legacySource = review.legacySource?.source;
+      681 |     if (legacySource?.case === "document") {
+        at assertPurchasePdf (/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/apps/desktop/tests/e2e/support/purchase-export-assertions.ts:678:27)
+        at assertPurchaseExportArtifacts (/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/apps/desktop/tests/e2e/support/purchase-export-assertions.ts:740:3)
+        at /Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/apps/desktop/tests/e2e/purchase-payments.spec.ts:257:3
+
+    attachment #1: electron-screenshot (image/png) ─────────────────────────────────────────────────
+    test-results/purchase-payments-purchase-60e56-in-distinct-review-outcomes-darwin-arm64/attachments/electron-screenshot-d18d6a34a683b30f7be8d77755ab46d95f323722.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: electron-video (video/webm) ─────────────────────────────────────────────────────
+    test-results/purchase-payments-purchase-60e56-in-distinct-review-outcomes-darwin-arm64/attachments/electron-video-6b246967e2d4df4ebbca1818afa960ab1aed4da9.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/purchase-payments-purchase-60e56-in-distinct-review-outcomes-darwin-arm64/error-context.md
+
+  2) [darwin-arm64] › tests/e2e/purchase-payments.spec.ts:299:1 › purchases/payments-gst: missing evidence, deferral, explicit claim and legacy review retain their separate effects 
+
+    AssertionError: purchase PDF is missing 01a1229f-e974-77fb-97c2-d7a6fc6ddf03
+
+       at support/purchase-export-assertions.ts:659
+
+      657 |         timestamp(future.recordedAt),
+      658 |       ])
+    > 659 |         if (token) assert.ok(normalized.includes(token), `purchase PDF is missing ${token}`);
+          |                           ^
+      660 |     }
+      661 |     const decision = review.legacyReview;
+      662 |     if (decision) {
+        at assertPurchasePdf (/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/apps/desktop/tests/e2e/support/purchase-export-assertions.ts:659:27)
+        at assertPurchaseExportArtifacts (/Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/apps/desktop/tests/e2e/support/purchase-export-assertions.ts:740:3)
+        at /Users/benebsworth/projects/tammy/.worktrees/issue/sbr-registration-ready/apps/desktop/tests/e2e/purchase-payments.spec.ts:407:3
+
+    attachment #1: electron-screenshot (image/png) ─────────────────────────────────────────────────
+    test-results/purchase-payments-purchase-9ca6f-tain-their-separate-effects-darwin-arm64/attachments/electron-screenshot-86baed27abc910db11d7f1639b0de62fe9995efc.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: electron-video (video/webm) ─────────────────────────────────────────────────────
+    test-results/purchase-payments-purchase-9ca6f-tain-their-separate-effects-darwin-arm64/attachments/electron-video-00235760ad27c1363f50eeb7114f8643de50bb1f.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/purchase-payments-purchase-9ca6f-tain-their-separate-effects-darwin-arm64/error-context.md
+
+  2 failed
+    [darwin-arm64] › tests/e2e/purchase-payments.spec.ts:65:1 › purchases/payments-gst: opening without a document and an earlier-period legacy payment retain distinct review outcomes 
+    [darwin-arm64] › tests/e2e/purchase-payments.spec.ts:299:1 › purchases/payments-gst: missing evidence, deferral, explicit claim and legacy review retain their separate effects 
+  10 passed (7.9m)
+[ELIFECYCLE] Command failed with exit code 1.
+[ELIFECYCLE] Command failed with exit code 1.
+task: Failed to run task "package:e2e": exit status 1

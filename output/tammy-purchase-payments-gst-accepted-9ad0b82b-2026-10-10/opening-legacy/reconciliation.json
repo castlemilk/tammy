@@ -1,0 +1,23 @@
+{
+  "sourceRevision": "9ad0b82b5ccd4c2f70133a656817d8de22e43249",
+  "workspaceId": "01a122d1-9a95-786b-83b3-6a942fec7cb2",
+  "organisationId": "01a122d1-a182-7f32-8f15-443ea9a91694",
+  "openingPayableId": "01a122d1-aaa6-7bf0-a9ec-6f77109d6f54",
+  "openingJournalId": "01a122d1-aaa6-75d2-b7df-1f246e9fa7df",
+  "settlementJournalId": "01a122d1-b21f-7193-84bb-2421829ce121",
+  "legacyDocumentId": "01a122d1-a3d2-74d2-a3ec-963fd415e178",
+  "actualSettlementDate": "2026-10-02",
+  "workpaperId": "01a122d1-beb5-7a0e-bdce-59d24b5e9b90",
+  "claimedGstMinor": "0",
+  "candidateGstMinor": "1000",
+  "artifacts": [
+    {
+      "file": "opening-reviewed.csv",
+      "sha256": "755c71e7c695a3f5a38be1a5514946575bb557c4bf7c2c85cc6cb29bf94abd06"
+    },
+    {
+      "file": "opening-reviewed.pdf",
+      "sha256": "01e8d686b0fa38b0b5a6b7e29465f56eb4fcfcb38ab61b021d775b030759a08e"
+    }
+  ]
+}

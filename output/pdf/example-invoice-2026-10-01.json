@@ -1,0 +1,37 @@
+{
+  "number": "TEST-2026-001",
+  "issueDate": "2026-10-01",
+  "dueDate": "2026-10-15",
+  "sellerName": "Wattle & Co Test Pty Ltd",
+  "sellerAbn": "11000000560",
+  "sellerAddress": "1 Example Lane\nMelbourne VIC 3000",
+  "customerName": "Sample Customer Pty Ltd",
+  "customerAddress": "2 Sample Street\nMelbourne VIC 3000",
+  "gstRegistered": true,
+  "notes": "Example data for testing only. The GST treatment of these synthetic expense recharges is chosen for this test.",
+  "paymentInstructions": "Test invoice only. No payment required.",
+  "lines": [
+    {
+      "description": "Office stationery - expense recharge",
+      "quantityMilli": 1000,
+      "unitPriceMinor": 8000,
+      "unitCostMinor": 8000,
+      "taxTreatment": "taxable"
+    },
+    {
+      "description": "Courier delivery - expense recharge",
+      "quantityMilli": 1000,
+      "unitPriceMinor": 2500,
+      "unitCostMinor": 2500,
+      "taxTreatment": "taxable"
+    },
+    {
+      "description": "Reference subscription - expense recharge",
+      "quantityMilli": 1000,
+      "unitPriceMinor": 4500,
+      "unitCostMinor": 4500,
+      "taxTreatment": "gst-free"
+    }
+  ],
+  "state": "draft"
+}

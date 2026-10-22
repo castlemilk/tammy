@@ -1,0 +1,16 @@
+{"pdf": "cash-mixed/first-quarter.pdf", "pages": 3, "selected": [1, 2, 3]}
+{"pdf": "cash-mixed/retained-stale.pdf", "pages": 3, "selected": [1, 2, 3]}
+{"pdf": "cash-mixed/second-quarter.pdf", "pages": 3, "selected": [1, 2, 3]}
+{"pdf": "cash/first-quarter.pdf", "pages": 2, "selected": [1, 2]}
+{"pdf": "cash/retained-stale.pdf", "pages": 2, "selected": [1, 2]}
+{"pdf": "cash/second-quarter.pdf", "pages": 2, "selected": [1, 2]}
+{"pdf": "evidence-deferral/claimed-and-reviewed.pdf", "pages": 3, "selected": [1, 2, 3]}
+{"pdf": "evidence-deferral/future-claim.pdf", "pages": 3, "selected": [1, 2, 3]}
+{"pdf": "evidence-deferral/reviewed-through-today.pdf", "pages": 3, "selected": [1, 2, 3]}
+{"pdf": "non-cash/first-quarter.pdf", "pages": 2, "selected": [1, 2]}
+{"pdf": "non-cash/retained-stale.pdf", "pages": 2, "selected": [1, 2]}
+{"pdf": "non-cash/second-quarter.pdf", "pages": 2, "selected": [1, 2]}
+{"pdf": "opening-legacy/opening-reviewed.pdf", "pages": 3, "selected": [1, 2, 3]}
+{"pdf": "pagination-capacity/complete.pdf", "pages": 119, "selected": [1, 60, 119]}
+{"pdf": "pagination-capacity/overflow-retained.pdf", "pages": 119, "selected": [1, 60, 119]}
+{"pdfs": 15, "pages": 271, "visualDirectory": "/Users/benebsworth/projects/tammy/output/tammy-purchase-payments-gst-accepted-9ad0b82b-2026-10-10/visual"}

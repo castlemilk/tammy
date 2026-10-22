@@ -1,0 +1,31 @@
+{
+  "workspaceId": "01a11ecc-61ab-71da-aae0-388df9dbecb5",
+  "organisationId": "01a11ecc-68c7-7c99-9adf-467038e75af0",
+  "facts": [
+    {
+      "id": "01a11ecc-6e0a-74d8-ab4f-6d5f003547ae:1",
+      "journalId": "01a11ecc-6e0a-7e10-9874-e71db23a39b9",
+      "journalLineId": "01a11ecc-6e0a-74d8-ab4f-6d5f003547ae",
+      "paymentId": "01a11ecc-6e0a-78a7-8c33-bacb4b4d01dd",
+      "paymentDate": "2026-09-30",
+      "category": "OPERATING",
+      "sequence": 1,
+      "amountMinor": "-5500",
+      "sourceRevision": "1"
+    },
+    {
+      "id": "01a11ecc-746c-7a4f-bebc-c37fa96f819c:1",
+      "journalId": "01a11ecc-746c-7a9e-a1d6-93211b3637ab",
+      "journalLineId": "01a11ecc-746c-7a4f-bebc-c37fa96f819c",
+      "paymentId": "01a11ecc-746c-77b1-ba6b-974c90881a84",
+      "paymentDate": "2026-10-02",
+      "category": "OPERATING",
+      "sequence": 1,
+      "amountMinor": "-5500",
+      "sourceRevision": "1"
+    }
+  ],
+  "projection": {
+    "OPERATING": "-11000"
+  }
+}
