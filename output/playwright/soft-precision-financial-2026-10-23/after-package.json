@@ -1,0 +1,18 @@
+{
+  "sourceRevision": "57d04eaa475e8dc9aec02d1012c13fae30a09b35",
+  "sourceDirty": false,
+  "manifestSha256": "15b693232a203a200f0a073c32f26fda5d9cee9c51d49d8dfa382be6a870fe2c",
+  "appSha256": "b48c794d726e3b36ee61dc4ff97115e6932fd8f8dfee9312f813a250618089af",
+  "coreSha256": "e3818323fc4a26d54ac3217e885911c9969c7d6da29840cf8f882f8429140bf4",
+  "releaseKind": "ordinary-package",
+  "platform": "darwin-arm64",
+  "capturePhase": "after",
+  "fixture": "isolated synthetic workspace",
+  "packageIntegrity": {
+    "passed": 7,
+    "failed": 0,
+    "skipped": 1,
+    "skipReason": "Windows-only resource check on macOS"
+  },
+  "qualificationBoundary": "Ordinary ad-hoc local package, not MAS, Windows 11 or ATO qualification."
+}
