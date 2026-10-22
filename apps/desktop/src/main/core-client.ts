@@ -178,16 +178,30 @@ const CAPABILITY_HEADER = "X-Tammy-Capability";
 const EXPECTED_API_VERSION = "tammy.v1";
 const CORE_VERSION_PATTERN = /^[\x20-\x7e]{1,128}$/;
 const BAS_PROOF_READ_TIMEOUT_MS = 30_000;
+const BAS_LONG_RUNNING_COMMAND_TIMEOUT_MS = 30_000;
 const WORKSPACE_CREATE_TIMEOUT_MS = 30_000;
+
+function withDefaultCallTimeout<Request, Response>(
+  call: (request: Request, options?: CallOptions) => Promise<Response>,
+  defaultTimeoutMs: number,
+): (request: Request, options?: CallOptions) => Promise<Response> {
+  return (request, options) =>
+    call(request, {
+      ...options,
+      timeoutMs: options?.timeoutMs ?? defaultTimeoutMs,
+    });
+}
 
 function withBasProofReadTimeout<Request, Response>(
   read: (request: Request, options?: CallOptions) => Promise<Response>,
 ): (request: Request, options?: CallOptions) => Promise<Response> {
-  return (request, options) =>
-    read(request, {
-      ...options,
-      timeoutMs: options?.timeoutMs ?? BAS_PROOF_READ_TIMEOUT_MS,
-    });
+  return withDefaultCallTimeout(read, BAS_PROOF_READ_TIMEOUT_MS);
+}
+
+function withBasLongRunningCommandTimeout<Request, Response>(
+  command: (request: Request, options?: CallOptions) => Promise<Response>,
+): (request: Request, options?: CallOptions) => Promise<Response> {
+  return withDefaultCallTimeout(command, BAS_LONG_RUNNING_COMMAND_TIMEOUT_MS);
 }
 
 export interface CoreClient {
@@ -414,6 +428,10 @@ export function createCoreClient(
       rawBasPreparationClient.listBasExternalDisputeResolutions,
     ),
     listBasExportEvents: withBasProofReadTimeout(rawBasPreparationClient.listBasExportEvents),
+    regenerateBasPreparation: withBasLongRunningCommandTimeout(
+      rawBasPreparationClient.regenerateBasPreparation,
+    ),
+    createBasRevision: withBasLongRunningCommandTimeout(rawBasPreparationClient.createBasRevision),
   });
 
   const coreRequest = async <Response>(

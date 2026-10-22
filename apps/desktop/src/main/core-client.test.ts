@@ -12,6 +12,7 @@ import type { ConnectTransportOptions } from "@connectrpc/connect-node";
 import { ListAccountsRequestSchema } from "@tammy/connect-client/tammy/v1/accounting_pb.js";
 import {
   BasPreparationService,
+  CreateBasRevisionRequestSchema,
   GetBasCalculationRequestSchema,
   GetBasExternalDisputeResolutionRequestSchema,
   GetBasExternalObservationRequestSchema,
@@ -24,6 +25,7 @@ import {
   ListBasObligationsProfilesRequestSchema,
   ListBasPreparationsRequestSchema,
   ListFrozenBasRequestSchema,
+  RegenerateBasPreparationRequestSchema,
 } from "@tammy/connect-client/tammy/v1/bas_preparation_pb.js";
 import {
   IngestDocumentRequestSchema,
@@ -131,6 +133,11 @@ function fakeTransport(
     readonly timeoutMs: number | undefined;
     readonly headers: Headers;
   }>;
+  readonly receivedBasCommandCalls: Array<{
+    readonly method: unknown;
+    readonly timeoutMs: number | undefined;
+    readonly headers: Headers;
+  }>;
   readonly receivedFrozenBasCalls: Array<{
     readonly timeoutMs: number | undefined;
     readonly headers: Headers;
@@ -157,6 +164,11 @@ function fakeTransport(
   const receivedHeaders: Headers[] = [];
   const receivedTimeouts: Array<number | undefined> = [];
   const receivedBasPreparationCalls: Array<{
+    readonly timeoutMs: number | undefined;
+    readonly headers: Headers;
+  }> = [];
+  const receivedBasCommandCalls: Array<{
+    readonly method: unknown;
     readonly timeoutMs: number | undefined;
     readonly headers: Headers;
   }> = [];
@@ -364,6 +376,30 @@ function fakeTransport(
             },
           });
           router.service(BasPreparationService, {
+            regenerateBasPreparation: async (_request, context) => {
+              methods.push(context.method);
+              const call = {
+                method: context.method,
+                timeoutMs: context.timeoutMs(),
+                headers: new Headers(context.requestHeader),
+              };
+              receivedHeaders.push(call.headers);
+              receivedBasCommandCalls.push(call);
+              await waitForRpcDelay();
+              return {};
+            },
+            createBasRevision: async (_request, context) => {
+              methods.push(context.method);
+              const call = {
+                method: context.method,
+                timeoutMs: context.timeoutMs(),
+                headers: new Headers(context.requestHeader),
+              };
+              receivedHeaders.push(call.headers);
+              receivedBasCommandCalls.push(call);
+              await waitForRpcDelay();
+              return {};
+            },
             listBasObligationsProfiles: async (_request, context) => {
               methods.push(context.method);
               const headers = new Headers(context.requestHeader);
@@ -463,6 +499,7 @@ function fakeTransport(
     receivedHeaders,
     receivedTimeouts,
     receivedBasPreparationCalls,
+    receivedBasCommandCalls,
     receivedFrozenBasCalls,
     receivedFrozenBasListCalls,
     receivedBasProofReadCalls,
@@ -771,6 +808,96 @@ describe("createCoreClient", () => {
     expect(receivedWorkspaceCreateCalls[0]?.timeoutMs).toBeGreaterThan(29_000);
     expect(receivedWorkspaceCreateCalls[0]?.timeoutMs).toBeLessThanOrEqual(30_000);
     expect(receivedWorkspaceCreateCalls[0]?.headers.get("X-Tammy-Capability")).toBe(CAPABILITY);
+  }, 8_000);
+
+  it("bounds BAS regeneration and revision commands at 30 seconds without changing other RPCs", async () => {
+    const { factory, receivedTimeouts, receivedBasCommandCalls } = fakeTransport(
+      undefined,
+      undefined,
+      5_300,
+    );
+    const client = createCoreClient(READINESS, factory);
+    const preparation = client.basPreparation;
+    if (!preparation) throw new Error("BAS preparation client is unavailable.");
+
+    const revisionController = new AbortController();
+    const regenerationController = new AbortController();
+    const pending = Promise.allSettled([
+      client.getDiagnostics(),
+      preparation.regenerateBasPreparation(create(RegenerateBasPreparationRequestSchema)),
+      preparation.createBasRevision(create(CreateBasRevisionRequestSchema)),
+      preparation.regenerateBasPreparation(create(RegenerateBasPreparationRequestSchema), {
+        timeoutMs: 100,
+        headers: { "X-Caller-Test": "regenerate-short-deadline" },
+      }),
+      preparation.createBasRevision(create(CreateBasRevisionRequestSchema), {
+        timeoutMs: 100,
+        headers: { "X-Caller-Test": "revision-short-deadline" },
+      }),
+      preparation.regenerateBasPreparation(create(RegenerateBasPreparationRequestSchema), {
+        timeoutMs: 30_000,
+        signal: regenerationController.signal,
+        headers: { "X-Caller-Test": "regenerate-cancel" },
+      }),
+      preparation.createBasRevision(create(CreateBasRevisionRequestSchema), {
+        timeoutMs: 30_000,
+        signal: revisionController.signal,
+        headers: { "X-Caller-Test": "revision-cancel" },
+      }),
+    ]);
+    await vi.waitFor(() => expect(receivedBasCommandCalls).toHaveLength(6));
+    regenerationController.abort();
+    revisionController.abort();
+    const results = await pending;
+
+    expect(results[0]?.status).toBe("rejected");
+    if (results[0]?.status === "rejected")
+      expect(ConnectError.from(results[0].reason).code).toBe(Code.DeadlineExceeded);
+    expect(results[1]?.status).toBe("fulfilled");
+    expect(results[2]?.status).toBe("fulfilled");
+    for (const index of [3, 4]) {
+      expect(results[index]?.status).toBe("rejected");
+      const result = results[index];
+      if (result?.status === "rejected")
+        expect(ConnectError.from(result.reason).code).toBe(Code.DeadlineExceeded);
+    }
+    for (const index of [5, 6]) {
+      expect(results[index]?.status).toBe("rejected");
+      const result = results[index];
+      if (result?.status === "rejected")
+        expect(ConnectError.from(result.reason).code).toBe(Code.Canceled);
+    }
+    expect(receivedTimeouts[0]).toBeGreaterThanOrEqual(4_900);
+    expect(receivedTimeouts[0]).toBeLessThanOrEqual(5_000);
+    expect(receivedBasCommandCalls).toHaveLength(6);
+    for (const method of [
+      BasPreparationService.method.regenerateBasPreparation,
+      BasPreparationService.method.createBasRevision,
+    ]) {
+      const calls = receivedBasCommandCalls.filter((call) => call.method === method);
+      expect(calls).toHaveLength(3);
+      const operation =
+        method === BasPreparationService.method.regenerateBasPreparation
+          ? "regenerate"
+          : "revision";
+      const ordinary = calls.find((call) => call.headers.get("X-Caller-Test") === null);
+      expect(ordinary?.timeoutMs).toBeGreaterThan(29_000);
+      expect(ordinary?.timeoutMs).toBeLessThanOrEqual(30_000);
+      expect(ordinary?.headers.get("X-Tammy-Capability")).toBe(CAPABILITY);
+      const short = calls.find(
+        (call) => call.headers.get("X-Caller-Test") === `${operation}-short-deadline`,
+      );
+      expect(short?.headers.get("X-Caller-Test")).toBe(`${operation}-short-deadline`);
+      expect(short?.timeoutMs).toBeGreaterThan(0);
+      expect(short?.timeoutMs).toBeLessThanOrEqual(100);
+      const cancelled = calls.find(
+        (call) => call.headers.get("X-Caller-Test") === `${operation}-cancel`,
+      );
+      expect(cancelled?.headers.get("X-Caller-Test")).toBe(`${operation}-cancel`);
+      expect(cancelled?.timeoutMs).toBeGreaterThan(29_000);
+      expect(cancelled?.timeoutMs).toBeLessThanOrEqual(30_000);
+      for (const call of calls) expect(call.headers.get("X-Tammy-Capability")).toBe(CAPABILITY);
+    }
   }, 8_000);
 
   it("preserves explicit shorter BAS read deadlines, cancellation signals, and caller headers", async () => {
