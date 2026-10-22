@@ -106,12 +106,31 @@ func (repository *OpeningConversionRepository) Post(ctx context.Context, convers
 }
 
 func (repository *OpeningConversionRepository) Get(ctx context.Context, conversionID string) (*tammyv1.OpeningConversion, error) {
+	return repository.get(ctx, "", conversionID)
+}
+
+// GetForOrganisation reads the same eight header cells within the caller's
+// organisation. Missing or foreign headers return no conversion projection.
+func (repository *OpeningConversionRepository) GetForOrganisation(ctx context.Context, organisationID, conversionID string) (*tammyv1.OpeningConversion, error) {
+	if !ids.IsCanonicalV7(organisationID) {
+		return nil, ErrOpeningRepository
+	}
+	return repository.get(ctx, organisationID, conversionID)
+}
+
+func (repository *OpeningConversionRepository) get(ctx context.Context, organisationID, conversionID string) (*tammyv1.OpeningConversion, error) {
 	if repository == nil || repository.executor == nil || ctx == nil || !ids.IsCanonicalV7(conversionID) {
 		return nil, ErrOpeningRepository
 	}
-	rows, err := repository.executor.QueryContext(ctx, `
+	query := `
 		SELECT id, organisation_id, version, state, conversion_date, journal_id, replaced_by_id, financial_revision
-		FROM opening_conversions WHERE id=?`, conversionID)
+		FROM opening_conversions WHERE id=?`
+	args := []any{conversionID}
+	if organisationID != "" {
+		query += " AND organisation_id=? /* BAS purchase conversion header verification */"
+		args = append(args, organisationID)
+	}
+	rows, err := repository.executor.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, ErrOpeningRepository
 	}

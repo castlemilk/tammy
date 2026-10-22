@@ -306,14 +306,23 @@ func (r *Repository) priorSources(ctx context.Context, doc *tammyv1.Document) ([
 	}
 	reviewedHash := sha256.Sum256(content)
 	opening, _ := NewOpeningRepository(r.executor)
+	opening.reportingOwnerGuards = r.reportingRootOwners
 	openingRefs, err := opening.MatchingPriorSources(ctx, doc.OrganisationId, doc.Id, doc.Sha256, reviewedHash[:])
 	if err != nil {
+		if r.reportingRootOwners {
+			return nil, errors.Join(ErrRepository, err)
+		}
 		return nil, err
 	}
 	result = append(result, openingRefs...)
 	// A linked evidence document is not another transaction. Retain its reviewed
 	// decision as prior provenance so it cannot be posted as a new expense.
-	rows, err = r.executor.QueryContext(ctx, `SELECT id,review_proto,record_hash FROM purchase_legacy_reviews_v1 WHERE organisation_id=? AND (document_id=? OR source_hash=?) ORDER BY id`, doc.OrganisationId, doc.Id, doc.Sha256)
+	query := `SELECT id,review_proto,record_hash FROM purchase_legacy_reviews_v1 WHERE organisation_id=? AND (document_id=? OR source_hash=?) ORDER BY id`
+	args := []any{doc.OrganisationId, doc.Id, doc.Sha256}
+	if r.reportingRootOwners {
+		query, args = postingReportingReadSQL(purchaseReportingLegacyPriorReplayQuery(doc.OrganisationId, doc.Id, doc.Sha256))
+	}
+	rows, err = r.executor.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, ErrRepository
 	}
@@ -321,7 +330,7 @@ func (r *Repository) priorSources(ctx context.Context, doc *tammyv1.Document) ([
 	for rows.Next() {
 		var id string
 		var content, hash []byte
-		if rows.Scan(&id, &content, &hash) != nil {
+		if r.reportingOwnerScanner(rows).Scan(&id, &content, &hash) != nil {
 			_ = rows.Close()
 			return nil, ErrRepository
 		}
@@ -436,7 +445,15 @@ func (r *Repository) verifyLegacyDocumentReview(ctx context.Context, doc *tammyv
 		claimVersion = input.ClaimEvidence.SourceVersion
 		claimHash = input.ClaimEvidence.SourceHash
 	}
-	rows, err := r.executor.QueryContext(ctx, `SELECT count(*) FROM purchase_legacy_reviews_v1 WHERE id=? AND organisation_id=? AND source_kind='DOCUMENT' AND document_id=? AND opening_payable_id IS NULL AND source_version=? AND source_hash=? AND reviewed_snapshot_hash=? AND accounting_version=? AND affected_period_start=? AND affected_period_end=? AND reporting_balance_date=? AND disposition=? AND previously_claimed_period_start IS ? AND previously_claimed_period_end IS ? AND claim_evidence_source_id IS ? AND claim_evidence_source_version IS ? AND claim_evidence_source_hash IS ? AND linked_posting_id IS ? AND reason=? AND record_hash=? AND actor_user_id=? AND created_at=?`, record.Id, doc.OrganisationId, source.DocumentId, source.ReviewedVersion, source.OriginalContentHash, source.ReviewedSnapshotHash, record.SourceRevision, purchaseDateString(input.AffectedPeriod.PeriodStart), purchaseDateString(input.AffectedPeriod.PeriodEnd), purchaseDateString(input.ReportingBalanceDate), input.Disposition, claimedStart, claimedEnd, claimID, claimVersion, claimHash, purchaseNullable(input.LinkedPostingId), input.Reason, record.SourceHash, record.ActorUserId, record.RecordedAt.AsTime().UTC().Format(time.RFC3339Nano))
+	query := `SELECT count(*) FROM purchase_legacy_reviews_v1 WHERE id=? AND organisation_id=? AND source_kind='DOCUMENT' AND document_id=? AND opening_payable_id IS NULL AND source_version=? AND source_hash=? AND reviewed_snapshot_hash=? AND accounting_version=? AND affected_period_start=? AND affected_period_end=? AND reporting_balance_date=? AND disposition=? AND previously_claimed_period_start IS ? AND previously_claimed_period_end IS ? AND claim_evidence_source_id IS ? AND claim_evidence_source_version IS ? AND claim_evidence_source_hash IS ? AND linked_posting_id IS ? AND reason=? AND record_hash=? AND actor_user_id=? AND created_at=?`
+	args := []any{record.Id, doc.OrganisationId, source.DocumentId, source.ReviewedVersion, source.OriginalContentHash, source.ReviewedSnapshotHash, record.SourceRevision, purchaseDateString(input.AffectedPeriod.PeriodStart), purchaseDateString(input.AffectedPeriod.PeriodEnd), purchaseDateString(input.ReportingBalanceDate), input.Disposition, claimedStart, claimedEnd, claimID, claimVersion, claimHash, purchaseNullable(input.LinkedPostingId), input.Reason, record.SourceHash, record.ActorUserId, record.RecordedAt.AsTime().UTC().Format(time.RFC3339Nano)}
+	if r.reportingRootOwners {
+		guard := purchaseReportingLegacyReviewOwnerGuard(doc.OrganisationId)
+		query = guard.cte() + `SELECT CASE WHEN invalid_owner!=0 THEN -1 ELSE (` + query +
+			`) END FROM purchase_owner_guard /* BAS purchase owner count legacy scalar replay */`
+		args = append(append([]any(nil), guard.args...), args...)
+	}
+	rows, err := r.executor.QueryContext(ctx, query, args...)
 	if err != nil {
 		return ErrRepository
 	}

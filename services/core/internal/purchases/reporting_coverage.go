@@ -698,7 +698,7 @@ func (r *Repository) CaptureCoverageForBASWithPayloadBudget(
 func purchaseCoverageRootCount(ctx context.Context, executor interface {
 	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
 }, organisationID string) (int64, error) {
-	return purchaseReportingOwnerCount(ctx, executor, purchaseReportingRootOwnerGuard(organisationID, true), `SELECT count(*) FROM (
+	return purchaseReportingOwnerCount(ctx, executor, purchaseReportingCoverageRootOwnerGuard(organisationID), `SELECT count(*) FROM (
 		SELECT id FROM (SELECT id FROM purchase_postings_v1 WHERE organisation_id=? ORDER BY id LIMIT 1001)
 		UNION ALL
 		SELECT id FROM (SELECT d.id AS id FROM documents d WHERE d.organisation_id=? AND NOT EXISTS(
@@ -758,7 +758,8 @@ func purchaseCoverageOpeningRoots(ctx context.Context, executor interface {
 		from: `(SELECT p.id AS id,c.id AS conversion_id FROM purchase_opening_payables p
 		JOIN opening_conversions c ON c.id=p.conversion_id
 		WHERE c.organisation_id=? AND c.state IN ('POSTED','REPLACED')) AS r`,
-		where: "1=1", args: []any{organisationID}, orderBy: "r.id"}
+		where: "1=1", args: []any{organisationID}, orderBy: "r.id",
+		ownerGuard: purchaseReportingOpeningRootOwnerGuard(organisationID)}
 	rows, _, err := purchaseCoverageBoundedRows(ctx, executor, query, discoveryRemaining, limit)
 	if err != nil {
 		return nil, nil, err
@@ -822,6 +823,7 @@ func purchaseCoverageConversionClosure(ctx context.Context, executor interface {
 		from: `(` + closureCTE + ` SELECT c.id AS id,c.organisation_id AS organisation_id,c.replaced_by_id AS replaced_by_id
 		FROM opening_conversions c JOIN closure discovered ON discovered.id=c.id WHERE c.organisation_id=?) AS c`,
 		where: "1=1", orderBy: "c.id",
+		ownerGuard: purchaseReportingConversionOwnerGuard(organisationID, roots),
 	}
 	query.args = []any{organisationID}
 	query.args = append(query.args, batchArgs(roots)...)
@@ -1173,6 +1175,7 @@ func purchaseCoverageLegacyReviewQuery(organisationID string) postingReportingQu
 		table: "purchase_legacy_reviews_v1", alias: "r",
 		columns: strings.Fields("id organisation_id source_kind document_id opening_payable_id source_version source_hash reviewed_snapshot_hash accounting_version affected_period_start affected_period_end reporting_balance_date disposition previously_claimed_period_start previously_claimed_period_end claim_evidence_source_id claim_evidence_source_version claim_evidence_source_hash linked_posting_id reason review_proto record_hash actor_user_id created_at"),
 		from:    "purchase_legacy_reviews_v1 AS r", where: "r.organisation_id=?", args: []any{organisationID}, orderBy: "r.source_kind,COALESCE(r.document_id,r.opening_payable_id),r.accounting_version,r.id",
+		ownerGuard: purchaseReportingLegacyReviewOwnerGuard(organisationID),
 	}
 }
 
@@ -1183,6 +1186,7 @@ func purchaseCoverageDocumentQueries(organisationID string, documentIDs []string
 func purchaseCoverageOpeningQueries(organisationID string, conversionIDs []string) []postingReportingQuery {
 	queries := make([]postingReportingQuery, 0, 3*((len(conversionIDs)+399)/400))
 	for _, batch := range purchaseCoverageIDBatches(conversionIDs, 400) {
+		guard := purchaseReportingConversionOwnerGuard(organisationID, batch)
 		placeholders := purchaseCoveragePlaceholders(len(batch))
 		args := []any{organisationID}
 		args = append(args, batchArgs(batch)...)
@@ -1190,18 +1194,21 @@ func purchaseCoverageOpeningQueries(organisationID string, conversionIDs []strin
 			table: "opening_conversions", alias: "c",
 			columns: strings.Fields("id organisation_id conversion_date state source_sha256 journal_id version replaced_by_id financial_revision created_at"),
 			from:    "opening_conversions AS c", where: "c.organisation_id=? AND c.id IN (" + placeholders + ")", args: args, orderBy: "c.id",
+			ownerGuard: guard,
 		})
 		payableArgs := append([]any(nil), batchArgs(batch)...)
 		queries = append(queries, postingReportingQuery{
 			table: "purchase_opening_payables", alias: "p",
 			columns: strings.Fields("id conversion_id retained_input_proto created_at"),
 			from:    "purchase_opening_payables AS p", where: "p.conversion_id IN (" + placeholders + ")", args: payableArgs, orderBy: "p.id",
+			ownerGuard: guard,
 		})
 		itemArgs := append([]any(nil), batchArgs(batch)...)
 		queries = append(queries, postingReportingQuery{
 			table: "opening_items", alias: "i",
 			columns: strings.Fields("id conversion_id account_id item_kind debit_minor credit_minor currency_code source_type source_id source_revision source_content_hash original_issue_date original_due_date outstanding_gst_minor prior_gst_attributed_minor latest_statement_date latest_statement_balance_minor"),
 			from:    "opening_items AS i", where: "i.conversion_id IN (" + placeholders + ")", args: itemArgs, orderBy: "i.conversion_id,i.id",
+			ownerGuard: guard,
 		})
 	}
 	return queries
@@ -1812,6 +1819,7 @@ func purchaseCoverageHydrateOpenings(ctx context.Context, reader *Repository, or
 	if err != nil {
 		return nil, errors.Join(ErrRepository, err, ctx.Err())
 	}
+	repository.reportingOwnerGuards = reader.reportingRootOwners
 	result := make(map[string]*OpeningPayable, len(rootIDs))
 	for _, id := range rootIDs {
 		if err := ctx.Err(); err != nil {
@@ -1886,7 +1894,7 @@ func purchaseCoverageVerifyConversions(ctx context.Context, repository *accounti
 			}
 			continue
 		}
-		projection, err := repository.Get(ctx, id)
+		projection, err := repository.GetForOrganisation(ctx, header.organisationID, id)
 		if err != nil || projection == nil || projection.Id != id || projection.OrganisationId != header.organisationID || projection.Version != uint64(header.version) ||
 			projection.ConversionDate == nil || projection.ConversionDate.Year != int32(date.Year()) || projection.ConversionDate.Month != int32(date.Month()) || projection.ConversionDate.Day != int32(date.Day()) {
 			return errors.Join(ErrRepository, err, ctx.Err())

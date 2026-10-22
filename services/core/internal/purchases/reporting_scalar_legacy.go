@@ -37,6 +37,13 @@ purchase_bas_source_ids(id) AS (
 ),
 purchase_bas_invalid_links(invalid_count) AS (
 	SELECT
+	  (SELECT count(*) FROM purchase_opening_payables AS owner_p
+	   JOIN opening_conversions AS owner_c ON owner_c.id=owner_p.conversion_id
+	   CROSS JOIN requested AS target
+	   WHERE typeof(owner_c.organisation_id)='blob' AND length(owner_c.organisation_id)=36
+	     AND owner_c.organisation_id=CAST(target.organisation_id AS BLOB)
+	     AND owner_c.state IN ('POSTED','REPLACED'))
+	+
 	  (SELECT count(*)
 	   FROM purchase_opening_payables AS p
 	   LEFT JOIN opening_conversions AS c ON c.id=p.conversion_id
@@ -131,6 +138,8 @@ func purchaseBASLegacyFamilies() []purchaseBASScalarFamily {
 			LEFT JOIN documents AS claim_document ON claim_document.id=r.claim_evidence_source_id
 			LEFT JOIN purchase_postings_v1 AS linked_posting ON linked_posting.id=r.linked_posting_id`,
 			where: `r.organisation_id=target.organisation_id
+				OR (typeof(r.organisation_id)='blob' AND length(r.organisation_id)=36
+				  AND r.organisation_id=CAST(target.organisation_id AS BLOB))
 				OR source_document.organisation_id=target.organisation_id
 				OR source_conversion.organisation_id=target.organisation_id
 				OR claim_document.organisation_id=target.organisation_id

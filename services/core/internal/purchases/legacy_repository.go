@@ -338,11 +338,17 @@ func (r *Repository) ReadLegacy(ctx context.Context, org string, source *tammyv1
 		}
 	} else {
 		opening, _ := NewOpeningRepository(r.executor)
+		opening.reportingOwnerGuards = r.reportingRootOwners
 		if _, err := opening.GetOpeningPayable(ctx, org, id); err != nil {
 			return nil, err
 		}
 	}
-	rows, err := r.executor.QueryContext(ctx, `SELECT id,review_proto,record_hash FROM purchase_legacy_reviews_v1 WHERE organisation_id=? AND source_kind=? AND COALESCE(document_id,opening_payable_id)=? ORDER BY accounting_version`, org, kind, id)
+	query := `SELECT id,review_proto,record_hash FROM purchase_legacy_reviews_v1 WHERE organisation_id=? AND source_kind=? AND COALESCE(document_id,opening_payable_id)=? ORDER BY accounting_version`
+	args := []any{org, kind, id}
+	if r.reportingRootOwners {
+		query, args = postingReportingReadSQL(purchaseReportingLegacyReplayQuery(org, kind, id))
+	}
+	rows, err := r.executor.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, ErrRepository
 	}
@@ -350,7 +356,7 @@ func (r *Repository) ReadLegacy(ctx context.Context, org string, source *tammyv1
 	for rows.Next() {
 		var recordID string
 		var content, hash []byte
-		if rows.Scan(&recordID, &content, &hash) != nil {
+		if r.reportingOwnerScanner(rows).Scan(&recordID, &content, &hash) != nil {
 			_ = rows.Close()
 			return nil, ErrRepository
 		}
@@ -417,9 +423,17 @@ func (r *Repository) verifyLegacyScalars(ctx context.Context, record *tammyv1.Le
 	if input.ClaimEvidence != nil {
 		claimID, claimVersion, claimHash = input.ClaimEvidence.SourceId, input.ClaimEvidence.SourceVersion, input.ClaimEvidence.SourceHash
 	}
-	rows, err := r.executor.QueryContext(ctx, `SELECT count(*) FROM purchase_legacy_reviews_v1 WHERE id=? AND organisation_id=? AND source_kind=? AND document_id IS ? AND opening_payable_id IS ? AND source_version=? AND source_hash=? AND reviewed_snapshot_hash IS ? AND accounting_version=? AND affected_period_start=? AND affected_period_end=? AND reporting_balance_date=? AND disposition=? AND previously_claimed_period_start IS ? AND previously_claimed_period_end IS ? AND claim_evidence_source_id IS ? AND claim_evidence_source_version IS ? AND claim_evidence_source_hash IS ? AND linked_posting_id IS ? AND reason=? AND record_hash=? AND actor_user_id=? AND created_at=?`, record.Id, record.OrganisationId, kind, docID, openingID, version, hash, snapshot, record.SourceRevision,
+	query := `SELECT count(*) FROM purchase_legacy_reviews_v1 WHERE id=? AND organisation_id=? AND source_kind=? AND document_id IS ? AND opening_payable_id IS ? AND source_version=? AND source_hash=? AND reviewed_snapshot_hash IS ? AND accounting_version=? AND affected_period_start=? AND affected_period_end=? AND reporting_balance_date=? AND disposition=? AND previously_claimed_period_start IS ? AND previously_claimed_period_end IS ? AND claim_evidence_source_id IS ? AND claim_evidence_source_version IS ? AND claim_evidence_source_hash IS ? AND linked_posting_id IS ? AND reason=? AND record_hash=? AND actor_user_id=? AND created_at=?`
+	args := []any{record.Id, record.OrganisationId, kind, docID, openingID, version, hash, snapshot, record.SourceRevision,
 		purchaseDateString(input.AffectedPeriod.PeriodStart), purchaseDateString(input.AffectedPeriod.PeriodEnd), purchaseDateString(input.ReportingBalanceDate), input.Disposition,
-		claimedStart, claimedEnd, claimID, claimVersion, claimHash, purchaseNullable(input.LinkedPostingId), input.Reason, record.SourceHash, record.ActorUserId, record.RecordedAt.AsTime().UTC().Format(time.RFC3339Nano))
+		claimedStart, claimedEnd, claimID, claimVersion, claimHash, purchaseNullable(input.LinkedPostingId), input.Reason, record.SourceHash, record.ActorUserId, record.RecordedAt.AsTime().UTC().Format(time.RFC3339Nano)}
+	if r.reportingRootOwners {
+		guard := purchaseReportingLegacyReviewOwnerGuard(record.OrganisationId)
+		query = guard.cte() + `SELECT CASE WHEN invalid_owner!=0 THEN -1 ELSE (` + query +
+			`) END FROM purchase_owner_guard /* BAS purchase owner count legacy scalar replay */`
+		args = append(append([]any(nil), guard.args...), args...)
+	}
+	rows, err := r.executor.QueryContext(ctx, query, args...)
 	if err != nil {
 		return ErrRepository
 	}
@@ -431,7 +445,12 @@ func (r *Repository) verifyLegacyScalars(ctx context.Context, record *tammyv1.Le
 }
 
 func (r *Repository) verifyLegacyEvents(ctx context.Context, org, kind, id string, reviews []*tammyv1.LegacyPurchaseReview) error {
-	rows, err := r.executor.QueryContext(ctx, `SELECT e.operation_key,e.accounting_version,e.command_type,e.result_proto,e.result_sha256,e.created_at,e.posting_id,e.document_id,e.opening_payable_id,e.journal_id,e.financial_revision,e.ledger_revision,e.tax_source_revision,e.settlement_revision,c.domain_mask,c.financial_revision,c.ledger_revision,c.tax_source_revision,c.settlement_revision FROM purchase_accounting_events_v1 e LEFT JOIN financial_revision_claims c ON c.operation_key=e.operation_key WHERE e.organisation_id=? AND e.scope_kind=? AND e.scope_id=? ORDER BY e.accounting_version`, org, kind, id)
+	query := `SELECT e.operation_key,e.accounting_version,e.command_type,e.result_proto,e.result_sha256,e.created_at,e.posting_id,e.document_id,e.opening_payable_id,e.journal_id,e.financial_revision,e.ledger_revision,e.tax_source_revision,e.settlement_revision,c.domain_mask,c.financial_revision,c.ledger_revision,c.tax_source_revision,c.settlement_revision FROM purchase_accounting_events_v1 e LEFT JOIN financial_revision_claims c ON c.operation_key=e.operation_key WHERE e.organisation_id=? AND e.scope_kind=? AND e.scope_id=? ORDER BY e.accounting_version`
+	args := []any{org, kind, id}
+	if r.reportingRootOwners {
+		query, args = postingReportingReadSQL(purchaseReportingLegacyEventReplayQuery(org, kind, id))
+	}
+	rows, err := r.executor.QueryContext(ctx, query, args...)
 	if err != nil {
 		return ErrRepository
 	}
@@ -444,7 +463,7 @@ func (r *Repository) verifyLegacyEvents(ctx context.Context, org, kind, id strin
 		var content, hash []byte
 		var posting, document, opening, journal sql.NullString
 		var mask, cFinancial, cLedger, cTax, cSettlement sql.NullInt64
-		if rows.Scan(&operation, &version, &command, &content, &hash, &stamp, &posting, &document, &opening, &journal, &financial, &ledger, &tax, &settlement,
+		if r.reportingOwnerScanner(rows).Scan(&operation, &version, &command, &content, &hash, &stamp, &posting, &document, &opening, &journal, &financial, &ledger, &tax, &settlement,
 			&mask, &cFinancial, &cLedger, &cTax, &cSettlement) != nil || index >= len(reviews) {
 			return ErrRepository
 		}

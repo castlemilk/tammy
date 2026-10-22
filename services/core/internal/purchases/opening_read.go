@@ -55,7 +55,7 @@ func (r *OpeningRepository) readOpeningPayables(ctx context.Context, org, id str
 	if r == nil || r.executor == nil || ctx == nil || !ids.IsCanonicalV7(org) {
 		return nil, ErrOpeningRepository
 	}
-	rows, err := r.executor.QueryContext(ctx, `
+	query := `
 		SELECT p.id,p.conversion_id,p.retained_input_proto,c.version,c.conversion_date,
 		       i.id,i.account_id,i.item_kind,i.debit_minor,i.credit_minor,i.currency_code,
 		       i.source_type,i.source_id,i.source_revision,i.source_content_hash,
@@ -68,7 +68,12 @@ func (r *OpeningRepository) readOpeningPayables(ctx context.Context, org, id str
 		LEFT JOIN opening_items i ON i.id=p.id AND i.conversion_id=p.conversion_id
 		LEFT JOIN accounts a ON a.id=i.account_id
 		WHERE c.organisation_id=? AND c.state IN ('POSTED','REPLACED') AND (?='' OR p.id=?)
-		ORDER BY p.id`, org, id, id)
+		ORDER BY p.id`
+	args := []any{org, id, id}
+	if r.reportingOwnerGuards {
+		query, args = postingReportingReadSQL(purchaseReportingOpeningReplayQuery(org, id, false))
+	}
+	rows, err := r.executor.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, ErrOpeningRepository
 	}
@@ -80,9 +85,13 @@ func (r *OpeningRepository) readOpeningPayables(ctx context.Context, org, id str
 	}
 	var retained []retainedOpening
 	for rows.Next() {
+		var scanner paymentScanner = rows
+		if r.reportingOwnerGuards {
+			scanner = purchaseReportingOwnerRow{rows: rows}
+		}
 		var value retainedOpening
 		row := &value.row
-		if rows.Scan(&row.id, &row.conversionID, &row.encoded, &row.version, &row.conversionDate,
+		if scanner.Scan(&row.id, &row.conversionID, &row.encoded, &row.version, &row.conversionDate,
 			&row.itemID, &row.accountID, &row.kind, &row.debit, &row.credit, &row.currency,
 			&row.sourceType, &row.sourceID, &row.sourceVersion, &row.sourceHash,
 			&row.issueDate, &row.dueDate, &row.outstandingGST, &row.priorGST,
@@ -115,8 +124,17 @@ func (r *OpeningRepository) readOpeningPayables(ctx context.Context, org, id str
 			(value.state == "REPLACED" && (!value.replacedBy.Valid || !ids.IsCanonicalV7(value.replacedBy.String))) {
 			return nil, ErrOpeningRepository
 		}
-		journal, err := journalRepo.Get(ctx, value.journalID.String)
-		if err != nil || journal.OrganisationId != org || journal.Source != tammyv1.JournalSource_JOURNAL_SOURCE_OPENING_CONVERSION ||
+		var journal *tammyv1.Journal
+		if r.reportingOwnerGuards {
+			var proof *accounting.JournalReportingRecord
+			proof, err = journalRepo.GetForReporting(ctx, org, value.journalID.String)
+			if err == nil && proof != nil {
+				journal = proof.Journal
+			}
+		} else {
+			journal, err = journalRepo.Get(ctx, value.journalID.String)
+		}
+		if err != nil || journal == nil || journal.OrganisationId != org || journal.Source != tammyv1.JournalSource_JOURNAL_SOURCE_OPENING_CONVERSION ||
 			journal.FinancialRevision != uint64(value.financial.Int64) ||
 			(journal.State != tammyv1.JournalState_JOURNAL_STATE_POSTED && journal.State != tammyv1.JournalState_JOURNAL_STATE_REVERSED) {
 			return nil, ErrOpeningRepository

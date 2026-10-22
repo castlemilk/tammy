@@ -19,7 +19,10 @@ import (
 
 var ErrOpeningRepository = errors.New("purchases: opening repository failure")
 
-type OpeningRepository struct{ executor app.CommandSQLExecutor }
+type OpeningRepository struct {
+	executor             app.CommandSQLExecutor
+	reportingOwnerGuards bool
+}
 
 func NewOpeningRepository(executor app.CommandSQLExecutor) (*OpeningRepository, error) {
 	if executor == nil {
@@ -59,7 +62,7 @@ func (repository *OpeningRepository) MatchingPriorSources(ctx context.Context, o
 		!ids.IsCanonicalV7(documentID) || len(originalHash) != sha256.Size || len(reviewedHash) != sha256.Size {
 		return nil, ErrOpeningRepository
 	}
-	rows, err := repository.executor.QueryContext(ctx, `
+	query := `
 		SELECT p.id,p.conversion_id,p.retained_input_proto,c.version,c.conversion_date,
 		       i.id,i.account_id,i.item_kind,i.debit_minor,i.credit_minor,i.currency_code,
 		       i.source_type,i.source_id,i.source_revision,i.source_content_hash,
@@ -71,15 +74,24 @@ func (repository *OpeningRepository) MatchingPriorSources(ctx context.Context, o
 		LEFT JOIN opening_items i ON i.id=p.id AND i.conversion_id=p.conversion_id
 		LEFT JOIN accounts a ON a.id=i.account_id
 		WHERE c.organisation_id=? AND c.state IN ('POSTED','REPLACED')
-		ORDER BY p.id`, organisationID)
+		ORDER BY p.id`
+	args := []any{organisationID}
+	if repository.reportingOwnerGuards {
+		query, args = postingReportingReadSQL(purchaseReportingOpeningReplayQuery(organisationID, "", true))
+	}
+	rows, err := repository.executor.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, ErrOpeningRepository
 	}
 	defer rows.Close()
 	refs := make([]*tammyv1.SourceRef, 0)
 	for rows.Next() {
+		var scanner paymentScanner = rows
+		if repository.reportingOwnerGuards {
+			scanner = purchaseReportingOwnerRow{rows: rows}
+		}
 		var retained openingPriorSourceRow
-		if err := rows.Scan(&retained.id, &retained.conversionID, &retained.encoded, &retained.version, &retained.conversionDate,
+		if err := scanner.Scan(&retained.id, &retained.conversionID, &retained.encoded, &retained.version, &retained.conversionDate,
 			&retained.itemID, &retained.accountID, &retained.kind, &retained.debit, &retained.credit, &retained.currency,
 			&retained.sourceType, &retained.sourceID, &retained.sourceVersion, &retained.sourceHash,
 			&retained.issueDate, &retained.dueDate, &retained.outstandingGST, &retained.priorGST,
