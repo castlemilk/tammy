@@ -511,7 +511,7 @@ export function BankingScreen({
           </ol>
           <div className="min-w-0 text-right max-[1050px]:text-left">
             <p className="work-eyebrow">Latest statement balance</p>
-            <p className="mt-1 overflow-x-auto whitespace-nowrap font-serif text-[28px] leading-8 tabular-nums max-[700px]:text-[18px]">
+            <p className="mt-1 overflow-x-auto whitespace-nowrap text-[28px] font-semibold leading-8 tabular-nums max-[700px]:text-[18px]">
               {summary?.latestClosingBalance
                 ? formatMoney(summary.latestClosingBalance.minorUnits)
                 : "—"}

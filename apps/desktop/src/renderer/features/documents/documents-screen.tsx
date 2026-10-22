@@ -172,7 +172,7 @@ export function DocumentsScreen({ api, workspace }: DocumentsScreenProps) {
           ...(current.status === "ready"
             ? current.documents.filter((item) => item.id !== retained.id)
             : []),
-        ],
+        ].slice(0, 200),
       }));
       setSelectedID(retained.id);
       setQuery("");

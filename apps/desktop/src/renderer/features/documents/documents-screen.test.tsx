@@ -4,6 +4,8 @@ import {
   DocumentCandidateSchema,
   DocumentSchema,
   DocumentStatus,
+  IngestDocumentRequestSchema,
+  IngestDocumentResponseSchema,
   ListDocumentsRequestSchema,
   ListDocumentsResponseSchema,
   SaveDocumentReviewRequestSchema,
@@ -165,4 +167,52 @@ it("shows a recoverable load failure without presenting an empty collection", as
   expect(screen.queryByText("Your next clear step")).toBeNull();
   await user.click(screen.getByRole("button", { name: "Try again" }));
   expect(await screen.findByRole("table", { name: "Retained documents" })).toBeTruthy();
+});
+
+it("keeps the loaded document projection bounded when a new source is retained", async () => {
+  const { api, document: retained } = fixture();
+  const documents = Array.from({ length: 200 }, (_, index) =>
+    create(DocumentSchema, {
+      ...retained,
+      id: `018f0000-0000-7000-8000-${(index + 100).toString().padStart(12, "0")}`,
+      sourceDisplayName: `retained-${index}.pdf`,
+    }),
+  );
+  api.listDocuments.mockImplementation(async () =>
+    listCodec.encodeResponse(
+      create(ListDocumentsResponseSchema, { documents, page: { returnedCount: 200 } }),
+    ),
+  );
+  const ingestCodec = createProtoMethodCodec({
+    input: IngestDocumentRequestSchema,
+    maximumRequestBytes: 11 * 1024 * 1024,
+    maximumResponseBytes: 2 * 1024 * 1024,
+    output: IngestDocumentResponseSchema,
+  });
+  api.ingestDocument.mockImplementation(async () =>
+    ingestCodec.encodeResponse(
+      create(IngestDocumentResponseSchema, {
+        document: create(DocumentSchema, {
+          ...retained,
+          id: "018f0000-0000-7000-8000-000000000999",
+          sourceDisplayName: "new-synthetic.png",
+        }),
+      }),
+    ),
+  );
+  const user = userEvent.setup();
+  const { container } = renderDocuments(api);
+  await screen.findByRole("table", { name: "Retained documents" });
+  const file = new File(["synthetic"], "new-synthetic.png", { type: "image/png" });
+  Object.defineProperty(file, "arrayBuffer", {
+    value: async () => new Uint8Array([1, 2, 3]).buffer,
+  });
+  const input = container.querySelector<HTMLInputElement>('input[type="file"]');
+  if (!input) throw new Error("file input missing");
+  await user.upload(input, file);
+  await screen.findByRole("heading", { name: "new-synthetic.png" });
+  expect(
+    within(screen.getByRole("table", { name: "Retained documents" })).getAllByRole("row"),
+  ).toHaveLength(201);
+  expect(api.ingestDocument).toHaveBeenCalledOnce();
 });

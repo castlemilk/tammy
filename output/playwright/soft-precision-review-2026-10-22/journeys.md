@@ -92,3 +92,8 @@ lint exclusion added; this is not a strict-audit compliance claim.
 
 The local package is macOS arm64 development evidence. Hosted Windows Server smoke
 is not Windows 11 release qualification. No application was released or deployed.
+
+A final source review also bounded the in-memory post-upload projection at 200
+records, keeping its footer truthful when a new source arrives at the page limit.
+The focused regression verifies a newly retained source remains visible without
+expanding the loaded collection past that bound: **8/8 focused tests pass**.
