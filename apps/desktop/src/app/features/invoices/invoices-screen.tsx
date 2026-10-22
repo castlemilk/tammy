@@ -6,7 +6,7 @@ import {
   validateInvoiceForIssue,
 } from "@tammy/invoices/model";
 import { assertInvoicePdfReady } from "@tammy/invoices/pdf-policy";
-import { Download, Plus, RefreshCw } from "lucide-react";
+import { Download, Plus } from "lucide-react";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import type {
@@ -14,6 +14,7 @@ import type {
   InvoiceLogoPreview,
   InvoiceTemplateDefaults,
 } from "../../../shared/invoice-template";
+import { WorkNotice } from "../../components/review-workspace";
 import { Button } from "../../components/ui/button";
 import { type InvoiceAccountingApi, InvoiceAccountingPanel } from "./invoice-accounting-panel";
 import {
@@ -28,6 +29,7 @@ import {
 } from "./invoice-editor";
 import { InvoiceLineTable, invoiceFieldClass } from "./invoice-line-table";
 import { InvoiceLogo } from "./invoice-logo";
+import { InvoiceRecordList } from "./invoice-record-list";
 import { InvoiceTemplatePanel } from "./invoice-template-panel";
 import { ReviewedExpenseTable } from "./reviewed-expense-table";
 
@@ -72,7 +74,7 @@ type Replacement = {
 };
 
 const fieldClass = invoiceFieldClass;
-const labelClass = "grid min-w-0 gap-1 text-[10px] font-medium text-foreground";
+const labelClass = "grid min-w-0 gap-2 text-[14px] font-medium text-foreground";
 
 export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
   const [editor, setEditor] = useState<EditorDraft>(newEditor);
@@ -85,10 +87,12 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
   const [templateAttempt, setTemplateAttempt] = useState(0);
   const [current, setCurrent] = useState<InvoiceRecord>();
   const [records, setRecords] = useState<readonly InvoiceRecord[]>([]);
+  const [recordsError, setRecordsError] = useState<string>();
   const [expenses, setExpenses] = useState<readonly InvoiceExpense[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
+  const errorRef = useRef<HTMLDivElement>(null);
   const [notice, setNotice] = useState<string>();
   const [selectedExpenseIds, setSelectedExpenseIds] = useState<readonly string[]>([]);
   const [expensesLoading, setExpensesLoading] = useState(true);
@@ -115,15 +119,20 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
   }, [editor]);
 
   useEffect(() => {
+    if (error) errorRef.current?.focus();
+  }, [error]);
+
+  useEffect(() => {
     let active = true;
     setLoading(true);
+    setRecordsError(undefined);
     void api
       .list()
       .then((value) => {
         if (active) setRecords(value);
       })
       .catch(() => {
-        if (active) setError("Saved invoices could not be loaded. Try refreshing.");
+        if (active) setRecordsError("Saved invoices could not be loaded. Try refreshing.");
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -244,11 +253,11 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
 
   async function refresh() {
     setBusy(true);
-    setError(undefined);
+    setRecordsError(undefined);
     try {
       setRecords(await api.list());
     } catch {
-      setError("Saved invoices could not be loaded. Try refreshing.");
+      setRecordsError("Saved invoices could not be loaded. Try refreshing.");
     } finally {
       setBusy(false);
     }
@@ -386,26 +395,21 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
   }
 
   return (
-    <div className="mx-auto grid w-full max-w-[1200px] gap-5">
+    <div className="mx-auto grid w-full max-w-[1120px] gap-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-[18px] font-semibold tracking-[-0.02em] text-foreground">Invoices</h1>
-          <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
-            Build an AUD invoice from your work, costs and reviewed expenses.
+          <p className="work-eyebrow mb-2">Sales workspace</p>
+          <h1 className="page-title">Invoices</h1>
+          <p className="mt-2 max-w-[620px] text-[14px] leading-6 text-muted-foreground">
+            Bring your work into a clear invoice. Review the details, issue it, then record receipts
+            as they arrive.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button
-            className="h-8 text-[10px]"
-            disabled={busy}
-            onClick={loadProposal}
-            type="button"
-            variant="outline"
-          >
+          <Button disabled={busy} onClick={loadProposal} type="button" variant="outline">
             Use MCP draft
           </Button>
           <Button
-            className="h-8 text-[10px]"
             disabled={busy}
             onClick={() =>
               requestReplacement({
@@ -420,44 +424,44 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
             type="button"
             variant="outline"
           >
-            <Plus aria-hidden="true" className="size-3" /> New invoice
+            <Plus aria-hidden="true" className="size-4" /> New invoice
           </Button>
         </div>
       </header>
 
       {replacement ? (
         <div
-          className="flex flex-wrap items-center gap-3 rounded-[6px] border border-border bg-surface p-3 text-[11px]"
+          className="flex flex-wrap items-center gap-3 rounded-[20px] border border-border bg-surface p-3 text-[14px]"
           role="alert"
         >
           <p className="mr-auto">
             Replace unsaved changes? Your current edits have not been saved.
           </p>
-          <Button
-            className="h-8 text-[10px]"
-            onClick={() => setReplacement(undefined)}
-            type="button"
-            variant="outline"
-          >
+          <Button onClick={() => setReplacement(undefined)} type="button" variant="outline">
             Keep editing
           </Button>
-          <Button className="h-8 text-[10px]" onClick={() => replace(replacement)} type="button">
+          <Button onClick={() => replace(replacement)} type="button">
             Discard changes and continue
           </Button>
         </div>
       ) : null}
       {error ? (
-        <p className="text-[11px] text-destructive" role="alert">
-          {error}
-        </p>
+        <div className="focus-ring rounded-xl" ref={errorRef} tabIndex={-1}>
+          <WorkNotice>{error}</WorkNotice>
+        </div>
       ) : null}
-      {notice ? (
-        <p className="text-[11px] text-muted-foreground" role="status">
-          {notice}
-        </p>
-      ) : null}
+      {notice ? <WorkNotice success>{notice}</WorkNotice> : null}
 
-      <div className="grid grid-cols-[minmax(0,1fr)_220px] gap-5 max-[1180px]:grid-cols-1">
+      <InvoiceRecordList
+        records={records}
+        currentId={current?.id}
+        loading={loading}
+        error={recordsError}
+        busy={busy}
+        onRefresh={refresh}
+        onOpen={(record) => requestReplacement({ editor: toEditor(record.draft), record })}
+      />
+      <div className="grid min-w-0 gap-6">
         <div className="grid min-w-0 content-start gap-5">
           {issued && current && api.accounting && totals ? (
             <InvoiceAccountingPanel
@@ -470,20 +474,17 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
               key={current.id}
             />
           ) : null}
-          <form className="grid min-w-0 gap-5" onSubmit={save}>
-            <fieldset
-              className="grid gap-4 rounded-[6px] border border-border bg-surface p-4"
-              disabled={busy || issued}
-            >
-              <legend className="px-1 text-[11px] font-semibold text-foreground">
+          <form className="work-surface grid min-w-0 gap-6 p-5 sm:p-6" onSubmit={save}>
+            <fieldset className="grid min-w-0 gap-5" disabled={busy || issued}>
+              <legend className="mb-4 text-[16px] font-semibold text-foreground">
                 {issued ? "Issued invoice · read only" : "Invoice details"}
               </legend>
               {current ? (
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-[14px] text-muted-foreground">
                   Seller: {current.sellerName} · ABN {current.sellerAbn}
                 </p>
               ) : (
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-[14px] text-muted-foreground">
                   Seller name and ABN come from your signed-in organisation when you save.
                 </p>
               )}
@@ -492,7 +493,6 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
                   <InvoiceLogo api={api} id={logoAssetId} label="Invoice logo" />
                   {!issued ? (
                     <Button
-                      className="h-7 text-[10px]"
                       onClick={() => {
                         untouchedInitialDraft.current = false;
                         setLogoAssetId(undefined);
@@ -507,7 +507,7 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
                   ) : null}
                 </div>
               ) : null}
-              <div className="grid grid-cols-3 gap-3 max-[620px]:grid-cols-1">
+              <div className="grid grid-cols-3 gap-4 max-[620px]:grid-cols-1">
                 <label className={labelClass}>
                   Invoice number
                   <input
@@ -536,7 +536,7 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
                   />
                 </label>
               </div>
-              <div className="grid grid-cols-2 gap-3 max-[620px]:grid-cols-1">
+              <div className="grid grid-cols-2 gap-4 max-[620px]:grid-cols-1">
                 <label className={labelClass}>
                   Customer name
                   <input
@@ -559,7 +559,7 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
                 <label className={labelClass}>
                   Customer address
                   <textarea
-                    className={`${fieldClass} h-16 py-2`}
+                    className={`${fieldClass} min-h-24 max-h-80 field-sizing-content resize-none py-3`}
                     maxLength={1000}
                     onChange={(event) => edit({ customerAddress: event.target.value })}
                     value={editor.customerAddress}
@@ -568,16 +568,17 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
                 <label className={labelClass}>
                   Seller address
                   <textarea
-                    className={`${fieldClass} h-16 py-2`}
+                    className={`${fieldClass} min-h-24 max-h-80 field-sizing-content resize-none py-3`}
                     maxLength={1000}
                     onChange={(event) => edit({ sellerAddress: event.target.value })}
                     value={editor.sellerAddress}
                   />
                 </label>
               </div>
-              <label className="flex items-center gap-2 text-[11px] text-foreground">
+              <label className="flex min-h-11 items-center gap-3 text-[14px] text-foreground">
                 <input
                   checked={editor.gstRegistered}
+                  className="focus-ring size-4 accent-primary"
                   onChange={(event) =>
                     edit({
                       gstRegistered: event.target.checked,
@@ -592,7 +593,7 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
                 />{" "}
                 Registered for GST
               </label>
-              <p className="text-[10px] leading-5 text-muted-foreground">
+              <p className="text-[13px] leading-5 text-muted-foreground">
                 Only enable GST if this business is registered. Selling prices are exclusive of GST;
                 review the treatment on each line.
               </p>
@@ -629,7 +630,7 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
                 selectedIds={selectedExpenseIds}
               />
             ) : null}
-            <p className="text-[10px] leading-5 text-muted-foreground">
+            <p className="text-[13px] leading-5 text-muted-foreground">
               Unit costs are private invoice estimates. Import uses the expense’s net cost; markup
               changes your selling price. Editing a cost leaves the original reviewed document and
               ledger unchanged.
@@ -648,13 +649,13 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
             />
 
             <fieldset
-              className="grid grid-cols-2 gap-3 max-[620px]:grid-cols-1"
+              className="grid grid-cols-2 gap-4 max-[620px]:grid-cols-1"
               disabled={busy || issued}
             >
               <label className={labelClass}>
                 Notes
                 <textarea
-                  className={`${fieldClass} h-20 py-2`}
+                  className={`${fieldClass} min-h-24 max-h-80 field-sizing-content resize-none py-3`}
                   maxLength={2000}
                   onChange={(event) => edit({ notes: event.target.value })}
                   value={editor.notes}
@@ -663,7 +664,7 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
               <label className={labelClass}>
                 Payment instructions
                 <textarea
-                  className={`${fieldClass} h-20 py-2`}
+                  className={`${fieldClass} min-h-24 max-h-80 field-sizing-content resize-none py-3`}
                   maxLength={1000}
                   onChange={(event) => edit({ paymentInstructions: event.target.value })}
                   value={editor.paymentInstructions}
@@ -671,9 +672,56 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
               </label>
             </fieldset>
 
+            <section
+              className="grid gap-6 border-t border-border pt-6 md:grid-cols-2"
+              aria-label="Invoice totals"
+            >
+              <div className="grid content-start gap-3 rounded-2xl bg-muted/40 p-4">
+                <h2 className="text-[14px] font-semibold">Internal · never on the PDF</h2>
+                <MoneyRow
+                  label={fullyCosted ? "Private cost" : "Known private cost"}
+                  minor={totals?.costMinor}
+                  testId="invoice-cost"
+                />
+                <MoneyRow
+                  label="Profit (ex GST)"
+                  minor={fullyCosted ? totals?.marginMinor : undefined}
+                  testId="invoice-margin"
+                />
+                {!fullyCosted ? (
+                  <p className="text-[13px] leading-5 text-muted-foreground">
+                    Add a cost to every line to calculate profit. Enter 0 only for a known zero
+                    cost.
+                  </p>
+                ) : null}
+              </div>
+              <div className="grid content-start gap-3 p-4">
+                <h2 className="text-[14px] font-semibold">Invoice totals · AUD</h2>
+                <MoneyRow
+                  label="Subtotal"
+                  minor={totals?.subtotalMinor}
+                  testId="invoice-subtotal"
+                />
+                <MoneyRow label="GST" minor={totals?.gstMinor} testId="invoice-gst" />
+                <div className="border-t border-border pt-3">
+                  <MoneyRow
+                    label="Invoice total"
+                    minor={totals?.totalMinor}
+                    strong
+                    testId="invoice-total"
+                  />
+                </div>
+                {!totals ? (
+                  <p className="text-[13px] leading-5 text-muted-foreground">
+                    Enter valid quantities and amounts to calculate totals.
+                  </p>
+                ) : null}
+              </div>
+            </section>
+
             {confirmIssue ? (
               <div
-                className="grid gap-3 rounded-[6px] border border-border bg-surface p-3 text-[11px]"
+                className="grid gap-3 rounded-[20px] border border-border bg-surface p-3 text-[14px]"
                 role="alert"
               >
                 <p>
@@ -681,12 +729,11 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
                   the amount owing in the business ledger. Record actual receipts separately. Your
                   customer does not receive it automatically.
                 </p>
-                <div className="flex gap-2">
-                  <Button className="h-8 text-[10px]" disabled={busy} onClick={issue} type="button">
+                <div className="flex flex-wrap gap-2">
+                  <Button disabled={busy} onClick={issue} type="button">
                     Confirm issue
                   </Button>
                   <Button
-                    className="h-8 text-[10px]"
                     disabled={busy}
                     onClick={() => setConfirmIssue(false)}
                     type="button"
@@ -699,12 +746,11 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
             ) : null}
             <div className="flex flex-wrap items-center gap-2 border-t border-border pt-4">
               {!issued ? (
-                <Button className="h-8 text-[11px]" disabled={busy} type="submit">
+                <Button disabled={busy} type="submit">
                   {busy ? "Working…" : "Save draft"}
                 </Button>
               ) : null}
               <Button
-                className="h-8 text-[10px]"
                 disabled={!current || dirty || busy}
                 onClick={exportPdf}
                 type="button"
@@ -714,7 +760,6 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
               </Button>
               {!issued ? (
                 <Button
-                  className="h-8 text-[10px]"
                   disabled={!current || dirty || busy}
                   onClick={requestIssue}
                   type="button"
@@ -723,7 +768,7 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
                   Issue invoice
                 </Button>
               ) : null}
-              <p className="text-[10px] text-muted-foreground">
+              <p className="text-[13px] text-muted-foreground">
                 {dirty && current
                   ? "Save changes before exporting or issuing."
                   : issued
@@ -733,92 +778,6 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
             </div>
           </form>
         </div>
-
-        <aside className="grid content-start gap-5">
-          <section
-            className="grid gap-3 rounded-[6px] border border-border bg-surface p-4"
-            aria-label="Invoice totals"
-          >
-            <h2 className="text-[11px] font-semibold">Totals · AUD</h2>
-            <MoneyRow label="Subtotal" minor={totals?.subtotalMinor} testId="invoice-subtotal" />
-            <MoneyRow label="GST" minor={totals?.gstMinor} testId="invoice-gst" />
-            <div className="border-t border-border pt-3">
-              <MoneyRow
-                label="Total due"
-                minor={totals?.totalMinor}
-                strong
-                testId="invoice-total"
-              />
-            </div>
-            {!totals ? (
-              <p className="text-[10px] text-muted-foreground">
-                Enter valid quantities and amounts to calculate totals.
-              </p>
-            ) : null}
-            <div className="grid gap-2 border-t border-border pt-3">
-              <h3 className="text-[10px] font-semibold">Internal · never on the PDF</h3>
-              <MoneyRow
-                label={fullyCosted ? "Private cost" : "Known private cost"}
-                minor={totals?.costMinor}
-                testId="invoice-cost"
-              />
-              <MoneyRow
-                label="Profit (ex GST)"
-                minor={fullyCosted ? totals?.marginMinor : undefined}
-                testId="invoice-margin"
-              />
-              {!fullyCosted ? (
-                <p className="text-[10px] leading-5 text-muted-foreground">
-                  Add a cost to every line to calculate profit. Enter 0 only for a known zero cost.
-                </p>
-              ) : null}
-            </div>
-          </section>
-          <section className="grid gap-3" aria-label="Saved invoices" aria-busy={loading}>
-            <div className="flex items-center justify-between">
-              <h2 className="text-[11px] font-semibold">Saved invoices</h2>
-              <Button
-                aria-label="Refresh saved invoices"
-                className="h-7 px-2"
-                disabled={busy || loading}
-                onClick={refresh}
-                type="button"
-                variant="ghost"
-              >
-                <RefreshCw aria-hidden="true" className="size-3" />
-              </Button>
-            </div>
-            {loading ? (
-              <p className="text-[11px] text-muted-foreground">Loading invoices…</p>
-            ) : records.length ? (
-              <ul className="grid gap-2">
-                {records.map((record) => (
-                  <li key={record.id}>
-                    <button
-                      aria-label={`Open ${record.draft.number || "unnumbered invoice"}`}
-                      className="focus-ring grid w-full gap-1 rounded-[4px] border border-border bg-surface px-3 py-2 text-left disabled:opacity-50"
-                      disabled={busy}
-                      onClick={() => requestReplacement({ editor: toEditor(record.draft), record })}
-                      type="button"
-                    >
-                      <span className="flex justify-between gap-2 text-[11px] font-medium">
-                        <span>{record.draft.number || "Unnumbered"}</span>
-                        <span className="text-[9px] uppercase text-muted-foreground">
-                          {record.state}
-                        </span>
-                      </span>
-                      <span className="truncate text-[10px] text-muted-foreground">
-                        {record.draft.customerName || "Customer not set"}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-[11px] text-muted-foreground">No saved invoices yet.</p>
-            )}
-          </section>
-        </aside>
       </div>
     </div>
   );
@@ -837,11 +796,13 @@ function MoneyRow({
 }) {
   return (
     <p
-      className={`flex items-baseline justify-between gap-3 text-[11px] ${strong ? "font-semibold text-foreground" : "text-muted-foreground"}`}
+      className={`flex flex-wrap items-baseline justify-between gap-3 text-[14px] ${strong ? "text-[20px] font-semibold text-foreground" : "text-muted-foreground"}`}
       data-testid={testId}
     >
       <span>{label}</span>
-      <span className="tabular-nums">{minor === undefined ? "—" : formatAud(minor)}</span>
+      <span className="whitespace-nowrap tabular-nums">
+        {minor === undefined ? "—" : formatAud(minor)}
+      </span>
     </p>
   );
 }

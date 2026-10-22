@@ -1,10 +1,10 @@
 import { formatAud, type InvoiceTotals } from "@tammy/invoices/model";
 import { Plus, Trash2 } from "lucide-react";
+import { HorizontalScrollArea } from "../../components/horizontal-scroll-area";
 import { Button } from "../../components/ui/button";
 import type { EditorLine } from "./invoice-editor";
 
-export const invoiceFieldClass =
-  "focus-ring h-8 w-full min-w-0 rounded-[4px] border border-border bg-background px-2 text-[11px] text-foreground disabled:opacity-70";
+export const invoiceFieldClass = "work-input disabled:opacity-70";
 
 export function InvoiceLineTable({
   lines,
@@ -29,36 +29,38 @@ export function InvoiceLineTable({
   return (
     <section className="grid min-w-0 gap-3" aria-labelledby="invoice-lines-heading">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-[12px] font-semibold" id="invoice-lines-heading">
+        <h2 className="text-[16px] font-semibold" id="invoice-lines-heading">
           Invoice line items
         </h2>
         {!readOnly ? (
           <Button
-            className="h-8 text-[10px]"
             disabled={busy || lines.length >= 50}
             onClick={onAdd}
             type="button"
             variant="outline"
           >
-            <Plus aria-hidden="true" className="size-3" /> Add line item
+            <Plus aria-hidden="true" className="size-4" /> Add line item
           </Button>
         ) : null}
       </div>
-      <div className="focus-ring min-w-0 overflow-x-auto rounded-[6px] border border-border bg-surface">
+      <HorizontalScrollArea
+        label="Scrollable invoice line items"
+        className="rounded-[20px] border border-border bg-surface"
+      >
         <table
-          className="w-full min-w-[790px] table-fixed border-collapse text-[11px]"
+          className="w-full min-w-[1000px] table-fixed border-collapse text-[14px]"
           aria-label="Invoice line items"
         >
           <colgroup>
-            <col className="w-[27%]" />
-            <col className="w-[9%]" />
+            <col className="w-[25%]" />
+            <col className="w-[10%]" />
             <col className="w-[12%]" />
             <col className="w-[12%]" />
             <col className="w-[19%]" />
-            <col className="w-[14%]" />
-            {!readOnly ? <col className="w-[7%]" /> : null}
+            <col className="w-[16%]" />
+            {!readOnly ? <col className="w-[6%]" /> : null}
           </colgroup>
-          <thead className="border-b border-border bg-muted/40 text-left text-[10px] text-muted-foreground">
+          <thead className="border-b border-border bg-muted/40 text-left text-[13px] text-muted-foreground">
             <tr>
               <th className="px-3 py-3 font-medium" scope="col">
                 Description
@@ -67,16 +69,16 @@ export function InvoiceLineTable({
                 Quantity
               </th>
               <th className="px-2 py-3 text-right font-medium" scope="col">
-                Unit cost <span className="block text-[9px] font-normal">Private</span>
+                Unit cost <span className="block text-[12px] font-normal">Private</span>
               </th>
               <th className="px-2 py-3 text-right font-medium" scope="col">
-                Selling price <span className="block text-[9px] font-normal">Ex GST</span>
+                Selling price <span className="block text-[12px] font-normal">Ex GST</span>
               </th>
               <th className="px-2 py-3 font-medium" scope="col">
                 GST treatment
               </th>
               <th className="px-3 py-3 text-right font-medium" scope="col">
-                Line total <span className="block text-[9px] font-normal">Incl GST</span>
+                Line total <span className="block text-[12px] font-normal">Incl GST</span>
               </th>
               {!readOnly ? (
                 <th className="px-2 py-3" scope="col">
@@ -97,7 +99,7 @@ export function InvoiceLineTable({
                     onChange={(event) => onEdit(line.key, { description: event.target.value })}
                     value={line.description}
                   />
-                  <p className="mt-1.5 text-[9px] leading-4 text-muted-foreground">
+                  <p className="mt-1.5 text-[12px] leading-4 text-muted-foreground">
                     {line.sourceDocumentId
                       ? "Linked reviewed expense · internal only"
                       : "Manual line"}
@@ -153,8 +155,8 @@ export function InvoiceLineTable({
                     <option value="out-of-scope">Out of scope</option>
                   </select>
                 </td>
-                <td className="px-3 py-3 text-right align-top tabular-nums">
-                  <span className="block py-2">
+                <td className="px-3 py-3 whitespace-nowrap text-right align-top tabular-nums">
+                  <span className="block py-3">
                     {totals ? formatAud(totals.lines[index]?.totalMinor ?? 0) : "—"}
                   </span>
                 </td>
@@ -162,7 +164,7 @@ export function InvoiceLineTable({
                   <td className="px-2 py-3 align-top">
                     <Button
                       aria-label={`Remove line ${index + 1}`}
-                      className="h-8 px-2"
+                      className="size-11 p-0"
                       disabled={busy || lines.length === 1}
                       onClick={() => onRemove(line.key)}
                       type="button"
@@ -176,7 +178,7 @@ export function InvoiceLineTable({
             ))}
           </tbody>
         </table>
-      </div>
+      </HorizontalScrollArea>
     </section>
   );
 }

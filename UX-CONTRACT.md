@@ -11,7 +11,7 @@ sources of financial and security policy. Scope: Soft Precision styling, not a w
 | Select/Listbox | Existing native select fields | Existing product/API contract | Operating-system popup and keyboard model | Renderer/journal tests, packaged journey |
 | Date | Existing input type=date | Existing product/API contract | Native locale/calendar; contract civil dates | Renderer and packaged workflow assertions |
 | Form | Existing feature form and domain codec | Existing product/API contract | Native constraints retained; server errors inline | Unit tests, document invalid-total retry journey |
-| Scrollbar | styles.css global baseline | Existing product/API contract | Horizontal table scroll, natural page/form scroll | Narrow viewport assertions/screenshots |
+| Scrollbar | styles.css global baseline; components/HorizontalScrollArea | Existing product/API contract | Labelled keyboard-accessible horizontal table scroll, natural page/form scroll | Narrow viewport and keyboard assertions/screenshots |
 | CRUD | Existing named protobuf methods and feature handlers | Existing product/API contract | Explicit review/post/match/reconcile; disabled pending actions | Packaged tests and core invariants |
 | Table Selection | Existing document selection and journal detail navigation | Existing product/API contract | Local selection; no bulk scope | Keyboard, detail/back journeys |
 | Toast | No global toast system in current app | Existing product/API contract | Inline persistent status/error only | Renderer tests |
@@ -66,3 +66,34 @@ The seven inherited supplementary audit exceptions remain intentional: six
 existing forms retain browser validation, and CSV text remains vertically
 resizable. No validation or editable-data affordance is weakened to satisfy the
 supplementary defaults. The new reference form has explicit inline validation.
+
+## Invoice workspace interaction contract (2026-10-23)
+
+Sources: implemented `invoices.proto`, native invoice accounting commands, and
+the existing connected invoice adapter. This pass changes presentation and
+recovery affordances; it does not change command semantics or authorization.
+
+- Saved invoices use ten-row client pages over the adapter's existing complete
+  cursor-loaded snapshot. Search and Draft/Issued filters are ephemeral local
+  view state. Search/filter changes reset paging; refresh clamps it. Clear restores
+  search focus. A failed list load is distinct from an empty workspace, and a
+  refresh error keeps previously loaded records visible.
+- Saving leaves the confirmed draft open. Validation preserves edits and focuses
+  the inline error. Opening another record or creating a new draft preserves the
+  existing explicit unsaved-replacement confirmation and Keep editing action.
+- Issuing requires the existing confirmation, locks the invoice and records its
+  native income/GST/receivable entry. It sends nothing to the customer. The issue
+  confirmation's cancel action writes nothing.
+- Recording money received is a separate explicit command. Cancel writes nothing;
+  successful feedback follows the confirmed response. Receipt totals do not add
+  income again. Export cancellation saves no file.
+- Invoice amount tables have labelled, focusable horizontal scroll containers.
+  Notes and addresses use bounded content growth rather than horizontal resizing.
+  Narrow layouts preserve natural page scrolling, readable numbers and visible
+  keyboard focus, including with reduced motion.
+
+The original seven supplementary audit exceptions remain. The reporting branch
+also contains eight native-validation forms and four literal test mock buttons
+flagged by that scanner. This pass resolves seven invoice textarea geometry
+findings; it preserves financial/security validation and records the remaining
+findings in the new evidence report without exclusions.

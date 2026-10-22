@@ -1,6 +1,6 @@
 import { type ChildProcessWithoutNullStreams, execFile, spawn } from "node:child_process";
 import { EventEmitter } from "node:events";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -544,7 +544,8 @@ describe("CoreProcess and Connect-ES interoperability", () => {
   let childClose: ChildCloseObservation | undefined;
 
   beforeAll(async () => {
-    temporaryDirectory = await mkdtemp(path.join(tmpdir(), "tammy-core-test-"));
+    // macOS reports physical executable images; keep the fixture's authority path identical.
+    temporaryDirectory = await mkdtemp(path.join(await realpath(tmpdir()), "tammy-core-test-"));
     binaryPath = path.join(
       temporaryDirectory,
       process.platform === "win32" ? "tammy-core.exe" : "tammy-core",
@@ -581,6 +582,7 @@ describe("CoreProcess and Connect-ES interoperability", () => {
   }, 15_000);
 
   it("calls the real offline core, rejects a changed capability, and leaves no child", async () => {
+    expect(binaryPath).toBe(await realpath(binaryPath));
     const spawnCore: SpawnCoreProcess = (absoluteBinaryPath, args, options) => {
       child = spawn(absoluteBinaryPath, args, {
         env: options.env,

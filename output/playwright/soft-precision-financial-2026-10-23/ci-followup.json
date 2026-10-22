@@ -1,0 +1,45 @@
+{
+  "initialReviewHead": "4926988cb0ff679ee326bc2c08a7e261756e2603",
+  "initialHostedFailure": "https://github.com/castlemilk/tammy/actions/runs/39870323412/job/120142835375",
+  "configurationRegression": {
+    "before": "failed locally and on Ubuntu/Windows hosted checks because the exact testMatch expectation omitted the added financial workspace suite",
+    "after": "passed; every previous suite, target and retention assertion remains required"
+  },
+  "nativeFixtureComparison": {
+    "baseRevision": "216a1fbee518dfbea9f22efed20eebeec7baf279",
+    "baseFixtureSha256": "b52835a8e0d310085ffabad2fe1dd5935fabe29de33b401d5799dbb3109a2dca",
+    "runtimeDependenciesUnchanged": true,
+    "baseWithMacTemporaryAlias": {
+      "passed": 14,
+      "failed": 1,
+      "failure": "SPAWN_FAILED at strict live-image verification"
+    },
+    "sameBaseWithPhysicalTemporaryParent": {
+      "passed": 15,
+      "failed": 0
+    },
+    "correction": "Resolve the test temporary parent physically before creating the fixture; production path/hash/live-image verification is unchanged"
+  },
+  "focusedTests": {
+    "passed": 16,
+    "failed": 0
+  },
+  "fullDesktopTests": {
+    "files": 104,
+    "passed": 1259,
+    "failed": 0,
+    "skipped": 0,
+    "durationSeconds": 120.12
+  },
+  "desktopTypecheck": "passed",
+  "applicationSourceChangedSinceCaptures": false,
+  "screenshotBytesChanged": 0,
+  "preUploadGate": {
+    "releaseVersion": "0.1.0",
+    "buildNumber": "5",
+    "state": "REPOSITORY_READY",
+    "requiredState": "PRE_UPLOAD_READY",
+    "blocker": "CANDIDATE_EVIDENCE_INVALID",
+    "action": "No signing, acceptance, upload or submission performed."
+  }
+}

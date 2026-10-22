@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useState } from "react";
 
 import type { InvoiceAccountingRecord } from "../../../shared/invoice-accounting";
+import { HorizontalScrollArea } from "../../components/horizontal-scroll-area";
 import { Button } from "../../components/ui/button";
 import { invoiceFieldClass } from "./invoice-line-table";
 
@@ -167,14 +168,13 @@ export function InvoiceAccountingPanel({
 
   return (
     <section
-      className="grid gap-3 rounded-[6px] border border-border bg-surface p-4"
+      className="work-surface grid min-w-0 gap-5 p-5 sm:p-6"
       aria-label="Invoice accounting"
       aria-busy={loading || busy}
     >
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-[11px] font-semibold">Income &amp; payments</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-[16px] font-semibold">Income &amp; payments</h2>
         <Button
-          className="h-7 text-[10px]"
           disabled={busy || loading}
           onClick={() => setAttempt((value) => value + 1)}
           type="button"
@@ -184,28 +184,28 @@ export function InvoiceAccountingPanel({
         </Button>
       </div>
       {loading ? (
-        <p className="text-[10px] text-muted-foreground">Loading invoice accounting…</p>
+        <p className="text-[13px] text-muted-foreground">Loading invoice accounting…</p>
       ) : null}
       {error ? (
-        <p className="text-[10px] text-destructive" role="alert">
+        <p className="text-[13px] text-destructive" role="alert">
           {error}
         </p>
       ) : null}
       {notice ? (
-        <p className="text-[10px] text-forest" role="status">
+        <p className="text-[13px] text-forest" role="status">
           {notice}
         </p>
       ) : null}
       {accounting?.posted ? (
         <>
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-[13px] text-muted-foreground">
             {accounting.gstBasis === "cash"
               ? "Cash basis · GST follows recorded payments"
               : accounting.gstBasis === "non-cash"
                 ? "Non-cash basis · GST recorded on issue"
                 : "GST basis unavailable"}
           </p>
-          <dl className="grid grid-cols-4 gap-3 max-[620px]:grid-cols-2">
+          <dl className="grid grid-cols-4 gap-4 max-[620px]:grid-cols-2 max-[380px]:grid-cols-1">
             <Metric label="Income (ex GST)" minor={incomeMinor} testId="posted-invoice-income" />
             <Metric label="Invoice GST" minor={gstMinor} />
             <Metric label="Received" minor={accounting.receivedMinor} testId="invoice-received" />
@@ -215,13 +215,13 @@ export function InvoiceAccountingPanel({
               testId="invoice-outstanding"
             />
           </dl>
-          <p className="text-[9px] leading-4 text-muted-foreground">
+          <p className="text-[12px] leading-4 text-muted-foreground">
             Income is in the business ledger. Recording a receipt updates the bank and balance
             owing; it does not add income again.
           </p>
           {!paymentOpen && accounting.outstandingMinor > 0 ? (
             <Button
-              className="h-8 justify-self-start text-[10px]"
+              className="justify-self-start"
               disabled={busy}
               onClick={openPayment}
               type="button"
@@ -231,7 +231,7 @@ export function InvoiceAccountingPanel({
             </Button>
           ) : null}
           {accounting.outstandingMinor === 0 ? (
-            <p className="text-[10px] font-medium text-forest">No outstanding balance.</p>
+            <p className="text-[13px] font-medium text-forest">No outstanding balance.</p>
           ) : null}
           {paymentOpen ? (
             <form
@@ -240,7 +240,7 @@ export function InvoiceAccountingPanel({
               onSubmit={savePayment}
             >
               <div className="grid grid-cols-2 gap-3 max-[620px]:grid-cols-1">
-                <label className="grid gap-1 text-[10px] font-medium">
+                <label className="grid gap-1 text-[13px] font-medium">
                   Payment date
                   <input
                     className={invoiceFieldClass}
@@ -251,7 +251,7 @@ export function InvoiceAccountingPanel({
                     value={date}
                   />
                 </label>
-                <label className="grid gap-1 text-[10px] font-medium">
+                <label className="grid gap-1 text-[13px] font-medium">
                   Amount received (AUD)
                   <input
                     className={invoiceFieldClass}
@@ -261,7 +261,7 @@ export function InvoiceAccountingPanel({
                     value={amount}
                   />
                 </label>
-                <label className="grid gap-1 text-[10px] font-medium">
+                <label className="grid gap-1 text-[13px] font-medium">
                   Bank account
                   <select
                     className={invoiceFieldClass}
@@ -279,7 +279,7 @@ export function InvoiceAccountingPanel({
                     ))}
                   </select>
                 </label>
-                <label className="grid gap-1 text-[10px] font-medium">
+                <label className="grid gap-1 text-[13px] font-medium">
                   Payment reference (optional)
                   <input
                     className={invoiceFieldClass}
@@ -291,24 +291,19 @@ export function InvoiceAccountingPanel({
                 </label>
               </div>
               {!banksLoading && banks.length === 0 ? (
-                <p className="text-[10px] text-muted-foreground">
+                <p className="text-[13px] text-muted-foreground">
                   No active cash or bank account is available. Review the chart of accounts before
                   recording this receipt.
                 </p>
               ) : null}
-              <p className="text-[9px] text-muted-foreground">
+              <p className="text-[12px] text-muted-foreground">
                 Record money actually received. This saves a local accounting receipt.
               </p>
-              <div className="flex gap-2">
-                <Button
-                  className="h-8 text-[10px]"
-                  disabled={busy || banksLoading || banks.length === 0}
-                  type="submit"
-                >
+              <div className="flex flex-wrap gap-2">
+                <Button disabled={busy || banksLoading || banks.length === 0} type="submit">
                   {busy ? "Saving…" : "Save payment"}
                 </Button>
                 <Button
-                  className="h-8 text-[10px]"
                   disabled={busy}
                   onClick={() => setPaymentOpen(false)}
                   type="button"
@@ -320,10 +315,10 @@ export function InvoiceAccountingPanel({
             </form>
           ) : null}
           {accounting.payments.length ? (
-            <div className="overflow-x-auto">
+            <HorizontalScrollArea label="Scrollable recorded invoice payments">
               <table
                 aria-label="Recorded invoice payments"
-                className="w-full border-collapse text-left text-[10px]"
+                className="w-full border-collapse text-left text-[13px]"
               >
                 <thead>
                   <tr className="border-b border-border text-muted-foreground">
@@ -337,28 +332,30 @@ export function InvoiceAccountingPanel({
                     <tr className="border-b border-border last:border-0" key={payment.id}>
                       <td className="py-2 pr-3">{payment.paymentDate}</td>
                       <td className="py-2 pr-3">{payment.reference || "—"}</td>
-                      <td className="py-2 text-right">{money(payment.amountMinor)}</td>
+                      <td className="whitespace-nowrap py-2 text-right tabular-nums">
+                        {money(payment.amountMinor)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
               {accounting.paymentCount > accounting.payments.length ? (
-                <p className="mt-2 text-[9px] text-muted-foreground">
+                <p className="mt-2 text-[12px] text-muted-foreground">
                   Showing {accounting.payments.length} of {accounting.paymentCount} receipts. Totals
                   include every receipt.
                 </p>
               ) : null}
-            </div>
+            </HorizontalScrollArea>
           ) : null}
         </>
       ) : accounting ? (
         <>
-          <p className="text-[11px] font-semibold">Issued invoice needs accounting review</p>
-          <p className="text-[10px] leading-5 text-muted-foreground">
+          <p className="text-[16px] font-semibold">Issued invoice needs accounting review</p>
+          <p className="text-[13px] leading-5 text-muted-foreground">
             Older issued invoices have no automatic income entry. Check for an existing manual entry
             before adding this invoice to avoid recording the sale twice.
           </p>
-          <label className="flex items-start gap-2 text-[10px]">
+          <label className="flex items-start gap-2 text-[13px]">
             <input
               checked={reviewed}
               disabled={busy}
@@ -368,7 +365,7 @@ export function InvoiceAccountingPanel({
             I checked this invoice has not already been entered manually.
           </label>
           <Button
-            className="h-8 justify-self-start text-[10px]"
+            className="justify-self-start"
             disabled={!reviewed || busy}
             onClick={post}
             type="button"
@@ -392,8 +389,8 @@ function Metric({
 }) {
   return (
     <div data-testid={testId}>
-      <dt className="text-[9px] text-muted-foreground">{label}</dt>
-      <dd className="mt-1 text-[14px] font-semibold">{money(minor)}</dd>
+      <dt className="text-[12px] text-muted-foreground">{label}</dt>
+      <dd className="mt-2 break-words text-[22px] font-semibold tabular-nums">{money(minor)}</dd>
     </div>
   );
 }
