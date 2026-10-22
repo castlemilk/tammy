@@ -1142,6 +1142,11 @@ test("runs invoice, purchase, and BAS workflows through the packaged app", async
     if (!target.ready) throw new Error("APP_STORE_SCREENSHOT_FIXTURE_INVALID");
     await expect(page.getByText(target.ready, { exact: true }).first()).toBeVisible();
     if (target.heading === "Banking") {
+      await page.getByRole("button", { name: "Import statement", exact: true }).click();
+      const importForm = page.getByRole("form", { name: "Statement import", exact: true });
+      await expect(importForm).toBeVisible();
+      await expect(page.getByLabel("Opening balance")).toBeVisible();
+      await expect(page.getByLabel("CSV rows")).toBeVisible();
       await page.getByLabel("Opening balance").fill("1000.00");
       await page
         .getByLabel("CSV rows")
@@ -1165,8 +1170,6 @@ test("runs invoice, purchase, and BAS workflows through the packaged app", async
         page.getByRole("heading", { name: "BAS preparation", exact: true }),
       ).toBeVisible();
     }
-    const definition = fixture.screenshots[index];
-    if (!definition) throw new Error("APP_STORE_SCREENSHOT_FIXTURE_INVALID");
     const actualSnapshot = normalizeAccessibilitySnapshot(
       await page.locator("body").ariaSnapshot(),
     );
@@ -1182,11 +1185,56 @@ test("runs invoice, purchase, and BAS workflows through the packaged app", async
       path: screenPath,
       contentType: "image/png",
     });
-    if (target.link === "GST & BAS") {
-      expect.soft(actualSnapshot).toContain("BAS preparation");
-      expect.soft(actualSnapshot).toContain("BAS lifecycle stages");
-    } else {
-      expect.soft(actualSnapshot).toEqual(definition.completeAccessibilityText);
+    switch (target.heading) {
+      case "Overview":
+        await expect(
+          page.getByRole("heading", { name: "Needs review", exact: true }),
+        ).toBeVisible();
+        await expect(page.getByText("Nothing needs review", { exact: true })).toBeVisible();
+        await expect(
+          page.getByText("Your retained local workflows are up to date.", { exact: true }),
+        ).toBeVisible();
+        await expect(page.getByText("1 reviewed this quarter", { exact: true })).toBeVisible();
+        break;
+      case "Documents": {
+        const retainedDocuments = page.getByRole("table", {
+          name: "Retained documents",
+          exact: true,
+        });
+        await expect(retainedDocuments).toBeVisible();
+        const sourceRow = retainedDocuments
+          .getByRole("row")
+          .filter({ hasText: fixture.sourceDocument.sourceDisplayName });
+        await expect(sourceRow).toContainText(fixture.sourceDocument.supplierName);
+        await expect(sourceRow).toContainText(fixture.sourceDocument.invoiceNumber);
+        await expect(sourceRow).toContainText("Reviewed");
+        break;
+      }
+      case "Trial balance": {
+        const postingDateLabel = fixture.period.postingDate.split("-").reverse().join("/");
+        await expect(
+          page.getByText(`Debit and credit balances as at ${postingDateLabel}.`, { exact: true }),
+        ).toBeVisible();
+        await expect(
+          page.getByText(fixture.accounts[0]?.name ?? "", { exact: true }),
+        ).toBeVisible();
+        await expect(
+          page.getByText(fixture.accounts[1]?.name ?? "", { exact: true }),
+        ).toBeVisible();
+        break;
+      }
+      case "Banking":
+        await expect(
+          page.getByRole("region", { name: "Statement workspace", exact: true }),
+        ).toBeVisible();
+        await expect(
+          page.getByRole("form", { name: "Statement import", exact: true }),
+        ).toBeVisible();
+        break;
+      case "BAS preparation":
+        expect.soft(actualSnapshot).toContain("BAS preparation");
+        expect.soft(actualSnapshot).toContain("BAS lifecycle stages");
+        break;
     }
   }
   expect(electronHarness.consoleErrors).toEqual([]);

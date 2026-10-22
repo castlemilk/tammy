@@ -682,12 +682,12 @@ test("purchases/payments-gst: document and payment page 201 remain reachable and
   };
   await expectPurchaseControls(page, workspace, controls);
   // Changing filters resets the cursor while the owned selected document stays reachable.
-  await page.getByRole("combobox", { name: "Accounting filter", exact: true }).selectOption("2");
+  await page.getByRole("combobox", { name: "Accounting state", exact: true }).selectOption("2");
   await expect(
     page.getByRole("button", { name: "Previous document page", exact: true }),
   ).toBeDisabled();
   await expect(page.getByRole("heading", { name: `${number}.pdf`, exact: true })).toBeVisible();
-  await page.getByRole("combobox", { name: "Accounting filter", exact: true }).selectOption("0");
+  await page.getByRole("combobox", { name: "Accounting state", exact: true }).selectOption("0");
   await expect(page.getByRole("heading", { name: `${number}.pdf`, exact: true })).toBeVisible();
   const saved = await regeneratePurchaseBas(page, workspace, "2026-07-01", "2026-09-30", 1000n);
   expect(saved.purchaseSources).toHaveLength(201);
