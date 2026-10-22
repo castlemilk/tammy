@@ -14,6 +14,7 @@
 /.tmp/reporting-exports-e2e/
 /.tmp/purchase-payments-gst-e2e/
 /.tmp/purchase-e2e-inspector/
+/.tmp/bas-acceptance/
 node_modules/
 .pnpm-store/
 **/.vite/
