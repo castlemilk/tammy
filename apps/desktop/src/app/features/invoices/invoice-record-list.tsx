@@ -1,5 +1,5 @@
 import { calculateInvoice, formatAud } from "@tammy/invoices/model";
-import { ArrowRight, ChevronLeft, ChevronRight, RefreshCw, X } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { useRef, useState } from "react";
 import { HorizontalScrollArea } from "../../components/horizontal-scroll-area";
 import { WorkFilters, WorkNotice, WorkSearch, WorkState } from "../../components/review-workspace";
@@ -98,6 +98,7 @@ export function InvoiceRecordList({
           />
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:min-w-[260px]">
             <WorkSearch
+              clearLabel="Clear invoice search"
               inputRef={searchRef}
               label="Search saved invoices"
               onChange={(value) => {
@@ -106,17 +107,6 @@ export function InvoiceRecordList({
               }}
               value={search}
             />
-            {search ? (
-              <Button
-                aria-label="Clear invoice search"
-                onClick={clearSearch}
-                className="size-11 shrink-0 p-0"
-                type="button"
-                variant="ghost"
-              >
-                <X aria-hidden="true" className="size-4" />
-              </Button>
-            ) : null}
           </div>
         </div>
       ) : null}
