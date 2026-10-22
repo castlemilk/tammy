@@ -1,17 +1,9 @@
 {
   "profile": "product-admin",
-  "sourceRoots": [
-    "apps/desktop/src/app"
-  ],
+  "sourceRoots": ["apps/desktop/src/app"],
   "locale": "en-AU",
   "canonicalMap": "UX-CONTRACT.md",
-  "requiredCapabilities": [
-    "Select/Listbox",
-    "Date",
-    "Form",
-    "Scrollbar",
-    "CRUD"
-  ],
+  "requiredCapabilities": ["Select/Listbox", "Date", "Form", "Scrollbar", "CRUD"],
   "ownership": {
     "Select/Listbox": "native",
     "Date": "native"

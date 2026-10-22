@@ -151,8 +151,17 @@ test.describe("Soft Precision financial workspace", () => {
         .poll(() => search.evaluate((input) => getComputedStyle(input).outlineStyle))
         .toBe("solid");
       await capture(page, "10-keyboard-focus");
+      await expect(page.getByRole("textbox", { name: /^Notes/ })).toHaveCSS("resize", "none");
+      await expect(page.getByRole("textbox", { name: /^Notes/ })).toHaveCSS(
+        "field-sizing",
+        "content",
+      );
     }
     await page.emulateMedia({ reducedMotion: "reduce" });
+    await expect(page.getByRole("button", { name: "New invoice", exact: true })).toHaveCSS(
+      "transition-duration",
+      "0s",
+    );
     for (const width of [390, 320]) {
       await page.setViewportSize({ width, height: 900 });
       await expect

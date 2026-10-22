@@ -154,7 +154,7 @@ export function InvoiceRecordList({
         />
       ) : (
         <>
-          <div className="min-w-0 overflow-x-auto">
+          <div className="relative min-w-0 overflow-x-auto">
             <table
               className="work-table min-w-[850px] text-[14px] [&_th]:text-[12px]"
               aria-label="Saved invoices"

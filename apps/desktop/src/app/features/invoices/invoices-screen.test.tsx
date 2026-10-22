@@ -174,6 +174,7 @@ it("rejects excessive decimal precision without silently rounding or losing edit
   );
   expect(calls.saved).toEqual([]);
   expect(screen.getByDisplayValue("12.345")).toBeTruthy();
+  expect(document.activeElement).toBe(screen.getByRole("alert").parentElement);
 });
 
 it("imports a reviewed expense as a cost with an explicit markup", async () => {

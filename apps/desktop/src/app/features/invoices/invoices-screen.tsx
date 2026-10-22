@@ -92,6 +92,7 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
+  const errorRef = useRef<HTMLDivElement>(null);
   const [notice, setNotice] = useState<string>();
   const [selectedExpenseIds, setSelectedExpenseIds] = useState<readonly string[]>([]);
   const [expensesLoading, setExpensesLoading] = useState(true);
@@ -116,6 +117,10 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
       return undefined;
     }
   }, [editor]);
+
+  useEffect(() => {
+    if (error) errorRef.current?.focus();
+  }, [error]);
 
   useEffect(() => {
     let active = true;
@@ -440,7 +445,11 @@ export function InvoicesScreen({ api }: { readonly api: InvoicesApi }) {
           </Button>
         </div>
       ) : null}
-      {error ? <WorkNotice>{error}</WorkNotice> : null}
+      {error ? (
+        <div className="focus-ring rounded-xl" ref={errorRef} tabIndex={-1}>
+          <WorkNotice>{error}</WorkNotice>
+        </div>
+      ) : null}
       {notice ? <WorkNotice success>{notice}</WorkNotice> : null}
 
       <InvoiceRecordList
