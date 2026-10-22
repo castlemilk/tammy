@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useState } from "react";
 
 import type { InvoiceAccountingRecord } from "../../../shared/invoice-accounting";
+import { HorizontalScrollArea } from "../../components/horizontal-scroll-area";
 import { Button } from "../../components/ui/button";
 import { invoiceFieldClass } from "./invoice-line-table";
 
@@ -314,12 +315,7 @@ export function InvoiceAccountingPanel({
             </form>
           ) : null}
           {accounting.payments.length ? (
-            <div
-              className="focus-ring relative min-w-0 overflow-x-auto"
-              role="region"
-              aria-label="Scrollable recorded invoice payments"
-              tabIndex={0}
-            >
+            <HorizontalScrollArea label="Scrollable recorded invoice payments">
               <table
                 aria-label="Recorded invoice payments"
                 className="w-full border-collapse text-left text-[13px]"
@@ -349,7 +345,7 @@ export function InvoiceAccountingPanel({
                   include every receipt.
                 </p>
               ) : null}
-            </div>
+            </HorizontalScrollArea>
           ) : null}
         </>
       ) : accounting ? (

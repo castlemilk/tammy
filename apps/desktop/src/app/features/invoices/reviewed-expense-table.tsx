@@ -1,6 +1,7 @@
 import { formatAud } from "@tammy/invoices/model";
 import { RefreshCw } from "lucide-react";
 import { useState } from "react";
+import { HorizontalScrollArea } from "../../components/horizontal-scroll-area";
 import { Button } from "../../components/ui/button";
 import type { InvoiceExpense } from "./invoice-editor";
 import { invoiceFieldClass } from "./invoice-line-table";
@@ -74,11 +75,9 @@ export function ReviewedExpenseTable({
           {error}
         </p>
       ) : null}
-      <div
-        className="focus-ring relative min-w-0 overflow-x-auto rounded-[20px] border border-border bg-surface"
-        role="region"
-        aria-label="Scrollable reviewed expenses"
-        tabIndex={0}
+      <HorizontalScrollArea
+        label="Scrollable reviewed expenses"
+        className="rounded-[20px] border border-border bg-surface"
       >
         <table
           className="w-full min-w-[540px] border-collapse text-[14px]"
@@ -152,7 +151,7 @@ export function ReviewedExpenseTable({
             ) : null}
           </tbody>
         </table>
-      </div>
+      </HorizontalScrollArea>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <label className="grid w-[160px] gap-2 text-[13px] font-medium">
           Markup percentage

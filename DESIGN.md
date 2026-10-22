@@ -164,7 +164,8 @@ totals, private cost estimates and actual receipt/outstanding balances are disti
 
 The full-width editor uses shared `work-input` controls. Address and note fields
 grow with content within a bounded height; invoice tables own their horizontal
-scroll and explicit keyboard focus. Hidden table headings stay within their
+scroll and explicit keyboard focus through `components/HorizontalScrollArea`.
+Hidden table headings stay within their
 positioned scroll container. Small-window receipt metrics stack before amounts
 need to wrap. Root sizing accounts for the vertical scrollbar at a 320px window,
 and shared buttons respect their available container width.

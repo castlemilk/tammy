@@ -1,5 +1,6 @@
 import { formatAud, type InvoiceTotals } from "@tammy/invoices/model";
 import { Plus, Trash2 } from "lucide-react";
+import { HorizontalScrollArea } from "../../components/horizontal-scroll-area";
 import { Button } from "../../components/ui/button";
 import type { EditorLine } from "./invoice-editor";
 
@@ -42,11 +43,9 @@ export function InvoiceLineTable({
           </Button>
         ) : null}
       </div>
-      <div
-        className="focus-ring relative min-w-0 overflow-x-auto rounded-[20px] border border-border bg-surface"
-        role="region"
-        aria-label="Scrollable invoice line items"
-        tabIndex={0}
+      <HorizontalScrollArea
+        label="Scrollable invoice line items"
+        className="rounded-[20px] border border-border bg-surface"
       >
         <table
           className="w-full min-w-[1000px] table-fixed border-collapse text-[14px]"
@@ -179,7 +178,7 @@ export function InvoiceLineTable({
             ))}
           </tbody>
         </table>
-      </div>
+      </HorizontalScrollArea>
     </section>
   );
 }

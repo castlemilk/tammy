@@ -1,6 +1,7 @@
 import { calculateInvoice, formatAud } from "@tammy/invoices/model";
 import { ArrowRight, ChevronLeft, ChevronRight, RefreshCw, X } from "lucide-react";
 import { useRef, useState } from "react";
+import { HorizontalScrollArea } from "../../components/horizontal-scroll-area";
 import { WorkFilters, WorkNotice, WorkSearch, WorkState } from "../../components/review-workspace";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
@@ -154,12 +155,7 @@ export function InvoiceRecordList({
         />
       ) : (
         <>
-          <div
-            className="focus-ring relative min-w-0 overflow-x-auto"
-            role="region"
-            aria-label="Scrollable saved invoices"
-            tabIndex={0}
-          >
+          <HorizontalScrollArea label="Scrollable saved invoices">
             <table
               className="work-table min-w-[850px] text-[14px] [&_th]:text-[12px]"
               aria-label="Saved invoices"
@@ -223,7 +219,7 @@ export function InvoiceRecordList({
                 ))}
               </tbody>
             </table>
-          </div>
+          </HorizontalScrollArea>
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-3 text-[13px] text-muted-foreground sm:px-6">
             <p aria-live="polite">
               {start + 1}–{Math.min(start + pageSize, filtered.length)} of {filtered.length}{" "}

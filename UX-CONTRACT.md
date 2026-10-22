@@ -11,7 +11,7 @@ sources of financial and security policy. Scope: Soft Precision styling, not a w
 | Select/Listbox | Existing native select fields | Existing product/API contract | Operating-system popup and keyboard model | Renderer/journal tests, packaged journey |
 | Date | Existing input type=date | Existing product/API contract | Native locale/calendar; contract civil dates | Renderer and packaged workflow assertions |
 | Form | Existing feature form and domain codec | Existing product/API contract | Native constraints retained; server errors inline | Unit tests, document invalid-total retry journey |
-| Scrollbar | styles.css global baseline | Existing product/API contract | Horizontal table scroll, natural page/form scroll | Narrow viewport assertions/screenshots |
+| Scrollbar | styles.css global baseline; components/HorizontalScrollArea | Existing product/API contract | Labelled keyboard-accessible horizontal table scroll, natural page/form scroll | Narrow viewport and keyboard assertions/screenshots |
 | CRUD | Existing named protobuf methods and feature handlers | Existing product/API contract | Explicit review/post/match/reconcile; disabled pending actions | Packaged tests and core invariants |
 | Table Selection | Existing document selection and journal detail navigation | Existing product/API contract | Local selection; no bulk scope | Keyboard, detail/back journeys |
 | Toast | No global toast system in current app | Existing product/API contract | Inline persistent status/error only | Renderer tests |
