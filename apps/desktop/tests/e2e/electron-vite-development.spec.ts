@@ -1,4 +1,5 @@
-import { lstat, mkdtemp, readFile, realpath, rm } from "node:fs/promises";
+import type { ChildProcess } from "node:child_process";
+import { chmod, lstat, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
@@ -6,11 +7,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { _electron, expect, test } from "@playwright/test";
-import { STARTUP_DIAGNOSTIC_MARKERS } from "../../src/main/startup-diagnostics";
-import { pollForNoCoreProcesses } from "./electron-lifecycle";
+import { closeAndReapElectron, pollForNoCoreProcesses } from "./electron-lifecycle";
 import {
   ElectronProcessDiagnostics,
   observeElectronProcessDiagnostics,
+  safeElectronCloseFailureCode,
   safeFirstWindowFailureCode,
 } from "./electron-process-diagnostics";
 import { findExactCoreProcesses } from "./process-check";
@@ -25,7 +26,35 @@ const coreExecutable = path.join(
   `${process.platform}-${process.arch}`,
   process.platform === "win32" ? "tammy-core.exe" : "tammy-core",
 );
-const startupDiagnosticMarkers = new Set<string>(STARTUP_DIAGNOSTIC_MARKERS);
+const SMOKE_STAGE_MARKERS = Object.freeze({
+  TEMP_DIRECTORY: "ELECTRON_VITE_SMOKE_TEMP_DIRECTORY",
+  RENDERER_SERVER: "ELECTRON_VITE_SMOKE_RENDERER_SERVER",
+  ELECTRON_LAUNCH: "ELECTRON_VITE_SMOKE_ELECTRON_LAUNCH",
+  FIRST_WINDOW: "ELECTRON_VITE_SMOKE_FIRST_WINDOW",
+  BRIDGE_EVALUATION: "ELECTRON_VITE_SMOKE_BRIDGE_EVALUATION",
+  SANDBOX_CHECK: "ELECTRON_VITE_SMOKE_SANDBOX_CHECK",
+  CONTRACT_CHECKS: "ELECTRON_VITE_SMOKE_CONTRACT_CHECKS",
+  CORE_PROCESS_CHECK: "ELECTRON_VITE_SMOKE_CORE_PROCESS_CHECK",
+  APPLICATION_CLOSE: "ELECTRON_VITE_SMOKE_APPLICATION_CLOSE",
+  CORE_REAP: "ELECTRON_VITE_SMOKE_CORE_REAP",
+  RENDERER_SERVER_CLOSE: "ELECTRON_VITE_SMOKE_RENDERER_SERVER_CLOSE",
+  TEMP_DIRECTORY_CLEANUP: "ELECTRON_VITE_SMOKE_TEMP_DIRECTORY_CLEANUP",
+  COMPLETE: "ELECTRON_VITE_SMOKE_COMPLETE",
+} as const);
+
+type SmokeStage = keyof typeof SMOKE_STAGE_MARKERS;
+
+function processClosePromise(mainProcess: ChildProcess): Promise<void> {
+  if (mainProcess.exitCode !== null || mainProcess.signalCode !== null) return Promise.resolve();
+  return new Promise((resolve) => {
+    const onClose = () => {
+      mainProcess.removeListener("close", onClose);
+      resolve();
+    };
+    mainProcess.once("close", onClose);
+    if (mainProcess.exitCode !== null || mainProcess.signalCode !== null) onClose();
+  });
+}
 
 function contentType(filePath: string): string {
   const extension = path.extname(filePath);
@@ -117,7 +146,14 @@ test("runs the real electron-vite development runtime offline and cleans up Core
   let application: Awaited<ReturnType<typeof _electron.launch>> | undefined;
   let processDiagnostics: ElectronProcessDiagnostics | undefined;
   let bodyFailure: unknown;
+  let currentStage: SmokeStage = "TEMP_DIRECTORY";
+  const reachedStages: SmokeStage[] = [];
   const cleanupFailures: Error[] = [];
+
+  const enterStage = (stage: SmokeStage) => {
+    currentStage = stage;
+    if (reachedStages.at(-1) !== stage) reachedStages.push(stage);
+  };
 
   const recordCleanupFailure = (operation: string, failure: unknown) => {
     cleanupFailures.push(
@@ -127,11 +163,44 @@ test("runs the real electron-vite development runtime offline and cleans up Core
     );
   };
 
+  const attachSafeDiagnostics = async (failure: unknown): Promise<void> => {
+    const summary =
+      processDiagnostics?.formatSummary(application?.process()) ??
+      "electronProcess=UNKNOWN;stderrMarkers=none";
+    const closeCode = safeElectronCloseFailureCode(failure);
+    const failureCode =
+      closeCode === "ELECTRON_CLOSE_FAILED" ? safeFirstWindowFailureCode(failure) : closeCode;
+    const diagnosticPath = test
+      .info()
+      .outputPath(`electron-vite-safe-process-diagnostics-${currentStage.toLowerCase()}.txt`);
+    await mkdir(path.dirname(diagnosticPath), { recursive: true, mode: 0o700 });
+    await writeFile(
+      diagnosticPath,
+      `${[
+        `failure=${failureCode}`,
+        `currentStage=${SMOKE_STAGE_MARKERS[currentStage]}`,
+        `reachedStages=${reachedStages.map((stage) => SMOKE_STAGE_MARKERS[stage]).join(",")}`,
+        summary,
+      ].join("\n")}\n`,
+      { encoding: "utf8", mode: 0o600 },
+    );
+    await chmod(diagnosticPath, 0o600);
+    await test
+      .info()
+      .attach(`electron-vite-safe-process-diagnostics-${currentStage.toLowerCase()}`, {
+        path: diagnosticPath,
+        contentType: "text/plain",
+      });
+  };
+
   try {
+    enterStage("TEMP_DIRECTORY");
     const physicalTempRoot = await realpath(tmpdir());
     userDataPath = await mkdtemp(path.join(physicalTempRoot, "tammy-electron-vite-"));
     expect(await realpath(userDataPath)).toBe(userDataPath);
+    enterStage("RENDERER_SERVER");
     server = await startRendererServer(rendererRoot);
+    enterStage("ELECTRON_LAUNCH");
     application = await _electron.launch({
       args: [mainEntry, `--user-data-dir=${userDataPath}`],
       chromiumSandbox: true,
@@ -140,7 +209,9 @@ test("runs the real electron-vite development runtime offline and cleans up Core
     });
     processDiagnostics = new ElectronProcessDiagnostics();
     observeElectronProcessDiagnostics(application.process(), processDiagnostics);
+    enterStage("FIRST_WINDOW");
     const page = await application.firstWindow();
+    enterStage("BRIDGE_EVALUATION");
     const bridgeEvidence = await page.evaluate(async () => {
       const bridgeKeys = Object.keys(window.conveyor).sort();
       const manifest = window.conveyor.manifest();
@@ -171,6 +242,7 @@ test("runs the real electron-vite development runtime offline and cleans up Core
         unknownCallError,
       };
     });
+    enterStage("SANDBOX_CHECK");
     const sandboxEnabled = await application.evaluate(({ BrowserWindow }) => {
       const [window] = BrowserWindow.getAllWindows();
       const webContents = window?.webContents as unknown as
@@ -179,6 +251,7 @@ test("runs the real electron-vite development runtime offline and cleans up Core
       return webContents?.getLastWebPreferences().sandbox;
     });
 
+    enterStage("CONTRACT_CHECKS");
     expect(bridgeEvidence.bridgeKeys).toEqual(["invoke", "manifest", "subscribe"]);
     expect(bridgeEvidence.manifestModules).toEqual([
       "accounting",
@@ -202,52 +275,86 @@ test("runs the real electron-vite development runtime offline and cleans up Core
     expect(sandboxEnabled).toBe(true);
     expect(await page.evaluate(() => typeof process)).toBe("undefined");
     expect(new URL(page.url()).origin).toBe(server.origin);
+    enterStage("CORE_PROCESS_CHECK");
     expect((await findExactCoreProcesses(coreExecutable)).length).toBeGreaterThan(0);
   } catch (failure) {
     bodyFailure = failure;
-  }
-  if (application) {
     try {
-      await application.close();
-    } catch (failure) {
-      recordCleanupFailure("Electron application close failed", failure);
+      await attachSafeDiagnostics(failure);
+    } catch (diagnosticFailure) {
+      recordCleanupFailure("Safe process diagnostics capture failed", diagnosticFailure);
     }
-  }
-  try {
-    await pollForNoCoreProcesses({
-      intervalMs: 100,
-      query: () => findExactCoreProcesses(coreExecutable),
-      timeoutMs: 5_000,
-    });
-  } catch (failure) {
-    recordCleanupFailure("Core process cleanup failed", failure);
-  }
-  if (server) {
+  } finally {
+    if (application) {
+      enterStage("APPLICATION_CLOSE");
+      const mainProcess = application.process();
+      try {
+        await closeAndReapElectron({
+          forceKillMain: () => {
+            if (mainProcess.exitCode !== null || mainProcess.signalCode !== null) return;
+            if (!mainProcess.kill("SIGKILL")) throw new Error("ELECTRON_FORCE_KILL_FAILED");
+          },
+          gracefulClose: () => application?.close() ?? Promise.resolve(),
+          mainClosed: processClosePromise(mainProcess),
+          stage: "final-test-teardown",
+          timeoutMs: 5_000,
+        });
+      } catch (failure) {
+        recordCleanupFailure(
+          "Electron application close failed",
+          safeElectronCloseFailureCode(failure),
+        );
+        try {
+          await attachSafeDiagnostics(failure);
+        } catch (diagnosticFailure) {
+          recordCleanupFailure("Safe process diagnostics capture failed", diagnosticFailure);
+        }
+      }
+    }
+    enterStage("CORE_REAP");
     try {
-      await server.close();
+      await pollForNoCoreProcesses({
+        intervalMs: 100,
+        query: () => findExactCoreProcesses(coreExecutable),
+        timeoutMs: 5_000,
+      });
     } catch (failure) {
-      recordCleanupFailure("Renderer server close failed", failure);
+      recordCleanupFailure("Core process cleanup failed", failure);
+      try {
+        await attachSafeDiagnostics(failure);
+      } catch (diagnosticFailure) {
+        recordCleanupFailure("Safe process diagnostics capture failed", diagnosticFailure);
+      }
     }
-  }
-  if (userDataPath) {
-    try {
-      await rm(userDataPath, { force: true, recursive: true });
-    } catch (failure) {
-      recordCleanupFailure("Electron user-data cleanup failed", failure);
+    if (server) {
+      enterStage("RENDERER_SERVER_CLOSE");
+      try {
+        await server.close();
+      } catch (failure) {
+        recordCleanupFailure("Renderer server close failed", failure);
+        try {
+          await attachSafeDiagnostics(failure);
+        } catch (diagnosticFailure) {
+          recordCleanupFailure("Safe process diagnostics capture failed", diagnosticFailure);
+        }
+      }
     }
+    if (userDataPath) {
+      enterStage("TEMP_DIRECTORY_CLEANUP");
+      try {
+        await rm(userDataPath, { force: true, recursive: true });
+      } catch (failure) {
+        recordCleanupFailure("Electron user-data cleanup failed", failure);
+        try {
+          await attachSafeDiagnostics(failure);
+        } catch (diagnosticFailure) {
+          recordCleanupFailure("Safe process diagnostics capture failed", diagnosticFailure);
+        }
+      }
+    }
+    enterStage("COMPLETE");
   }
   if (bodyFailure !== undefined) {
-    if (application && processDiagnostics) {
-      const summary = processDiagnostics.formatSummary();
-      const [processStatus, observedMarkers = "none"] = summary.split(";stderrMarkers=");
-      const startupMarkers = observedMarkers
-        .split(",")
-        .filter((marker) => startupDiagnosticMarkers.has(marker));
-      await test.info().attach("electron-safe-process-diagnostics", {
-        body: `${safeFirstWindowFailureCode(bodyFailure)};${processStatus};startupMarkers=${startupMarkers.join(",") || "none"}`,
-        contentType: "text/plain",
-      });
-    }
     if (cleanupFailures.length > 0) {
       throw new AggregateError(
         [bodyFailure, ...cleanupFailures],

@@ -549,7 +549,11 @@ export function DocumentsScreen({
       ) : null}
       <div className="grid min-w-0 content-start gap-4">
         <ReviewPanel
-          key={selected?.id ?? "no-selection"}
+          key={
+            selected
+              ? `${selected.organisationId}:${selected.id}:${selected.version}`
+              : "no-selection"
+          }
           api={api}
           document={selected}
           workspace={workspace}
@@ -611,17 +615,13 @@ function ReviewPanel({
   readonly onClose: () => void;
   readonly workspace: AuthenticatedWorkspace | undefined;
 }) {
-  const initial = useMemo(() => fieldsFor(document), [document]);
+  const initial = fieldsFor(document);
   const [fields, setFields] = useState(initial);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
   const active = useRef(false);
   const attempt = useRef<{ signature: string; key: string } | undefined>(undefined);
   const reviewed = document?.status === DocumentStatus.REVIEWED;
-  useEffect(() => {
-    setFields(initial);
-    setError(undefined);
-  }, [initial]);
   const save = async (event: FormEvent) => {
     event.preventDefault();
     if (!workspace || !document || active.current || reviewed) return;

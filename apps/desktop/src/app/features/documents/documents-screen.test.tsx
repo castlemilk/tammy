@@ -114,6 +114,12 @@ function renderDocuments(fixture: ReturnType<typeof createConveyorFixture>) {
   return render(<DocumentsScreen api={fixture.conveyor.documents} workspace={workspace} />);
 }
 
+function lastReviewRequest(fixture: ReturnType<typeof createConveyorFixture>) {
+  const frame = fixture.procedures.documents.saveDocumentReview.mock.calls.at(-1)?.[0];
+  if (!frame) throw new Error("review save request missing");
+  return reviewCodec.decodeRequest(frame);
+}
+
 it("reaches the next document page and resets signed cursors when filtering", async () => {
   const fixture = createConveyorFixture();
   const organisationId = "018f0000-0000-7000-8000-000000000004";
@@ -133,17 +139,7 @@ it("reaches the next document page and resets signed cursors when filtering", as
   fixture.procedures.documents.listDocuments.mockImplementation(async (frame: Uint8Array) => {
     const request = listCodec.decodeRequest(frame);
     requests.push(request);
-    const firstPage = [
-      first,
-      ...Array.from({ length: 199 }, (_, index) =>
-        create(DocumentSchema, {
-          id: `018f0000-0000-7000-8000-${String(index + 1000).padStart(12, "0")}`,
-          organisationId,
-          sourceDisplayName: `Invoice ${index + 2}`,
-          status: DocumentStatus.REVIEWED,
-        }),
-      ),
-    ];
+    const firstPage = [first];
     const documents = request.page?.cursor ? [later] : firstPage;
     return listCodec.encodeResponse(
       create(ListDocumentsResponseSchema, {
@@ -249,6 +245,83 @@ it("keeps a confirmed review over a stale list response", async () => {
   );
   expect((screen.getByLabelText("Supplier") as HTMLInputElement).readOnly).toBe(true);
   expect(fixture.procedures.documents.saveDocumentReview).toHaveBeenCalledOnce();
+});
+
+it("preserves dirty review fields when a refreshed list returns the same document revision", async () => {
+  const { fixture } = createReviewFixture();
+  const user = userEvent.setup();
+  renderDocuments(fixture);
+  await screen.findByRole("table", { name: "Retained documents" });
+
+  const supplier = screen.getByLabelText("Supplier") as HTMLInputElement;
+  await user.clear(supplier);
+  await user.type(supplier, "Officeworks reviewed name");
+  await user.click(screen.getByRole("button", { name: "Refresh documents" }));
+  const refreshButton = screen.getByRole("button", { name: "Refresh documents" });
+  await waitFor(() => expect(fixture.procedures.documents.listDocuments).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect(refreshButton).toHaveProperty("disabled", false));
+
+  expect(supplier.value).toBe("Officeworks reviewed name");
+  await user.click(screen.getByRole("button", { name: "Save review" }));
+  await screen.findByRole("button", { name: "Review saved" });
+
+  const request = lastReviewRequest(fixture);
+  expect(request.documentId).toBe("018f0000-0000-7000-8000-000000000010");
+  expect(request.expectedVersion).toBe(1n);
+  expect(request.candidate?.supplierName).toBe("Officeworks reviewed name");
+});
+
+it("resets dirty review fields when the selected document revision changes", async () => {
+  const { fixture, document: readDocument } = createReviewFixture();
+  let listed = readDocument();
+  fixture.procedures.documents.listDocuments.mockImplementation(async () =>
+    listCodec.encodeResponse(
+      create(ListDocumentsResponseSchema, {
+        documents: [listed],
+        page: { returnedCount: 1 },
+      }),
+    ),
+  );
+  fixture.procedures.documents.saveDocumentReview.mockImplementation(async (frame: Uint8Array) => {
+    const request = reviewCodec.decodeRequest(frame);
+    expect(request.documentId).toBe(listed.id);
+    expect(request.expectedVersion).toBe(listed.version);
+    listed = create(DocumentSchema, {
+      ...listed,
+      version: listed.version + 1n,
+      status: DocumentStatus.REVIEWED,
+      candidate: request.candidate ?? listed.candidate,
+    });
+    return reviewCodec.encodeResponse(
+      create(SaveDocumentReviewResponseSchema, { document: listed }),
+    );
+  });
+  const user = userEvent.setup();
+  renderDocuments(fixture);
+  await screen.findByRole("table", { name: "Retained documents" });
+
+  const supplier = screen.getByLabelText("Supplier") as HTMLInputElement;
+  await user.clear(supplier);
+  await user.type(supplier, "Unsaved edit from older revision");
+  listed = create(DocumentSchema, {
+    ...listed,
+    version: 2n,
+    candidate: create(DocumentCandidateSchema, { supplierName: "Officeworks corrected revision" }),
+  });
+  await user.click(screen.getByRole("button", { name: "Refresh documents" }));
+  const refreshButton = screen.getByRole("button", { name: "Refresh documents" });
+  await waitFor(() => expect(fixture.procedures.documents.listDocuments).toHaveBeenCalledTimes(2));
+  await screen.findByText("Officeworks corrected revision");
+  await waitFor(() => expect(refreshButton).toHaveProperty("disabled", false));
+
+  expect((screen.getByLabelText("Supplier") as HTMLInputElement).value).toBe(
+    "Officeworks corrected revision",
+  );
+  await user.click(screen.getByRole("button", { name: "Save review" }));
+  await screen.findByRole("button", { name: "Review saved" });
+  const request = lastReviewRequest(fixture);
+  expect(request.expectedVersion).toBe(2n);
+  expect(request.candidate?.supplierName).toBe("Officeworks corrected revision");
 });
 
 it("formats invoice totals exactly beyond JavaScript's safe integer range", async () => {
