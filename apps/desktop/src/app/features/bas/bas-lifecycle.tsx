@@ -1,4 +1,4 @@
-import { create, type DescMessage, toBinary } from "@bufbuild/protobuf";
+import { clone, create, type DescMessage, toBinary } from "@bufbuild/protobuf";
 import { TimestampSchema } from "@bufbuild/protobuf/wkt";
 import {
   AcknowledgeBasWarningsRequestSchema,
@@ -33,6 +33,7 @@ import {
   BasGstBasis,
   BasGstMethod,
   BasGstProfileInputSchema,
+  type BasIncomeYearIdentity,
   BasIncomeYearIdentitySchema,
   type BasLabelTrace,
   BasLiveCurrentness,
@@ -349,7 +350,27 @@ function parseEvidence(fields: EvidenceFields): Ref[] {
     }),
   ];
 }
+function paygiInputError(
+  code:
+    | "PAYGI_PROFILE_IDENTITY_UNVERIFIED"
+    | "PAYGI_PROFILE_YEAR_MISSING"
+    | "PAYGI_PROFILE_YEAR_MISMATCH",
+) {
+  return Object.assign(new Error(), { code });
+}
 function errorCopy(error: unknown) {
+  const localCode =
+    typeof error === "object" && error !== null && "code" in error && typeof error.code === "string"
+      ? error.code
+      : undefined;
+  switch (localCode) {
+    case "PAYGI_PROFILE_IDENTITY_UNVERIFIED":
+      return "The calculation's retained profile identity could not be verified. Refresh the exact preparation before saving PAYG inputs.";
+    case "PAYGI_PROFILE_YEAR_MISSING":
+      return "PAYGI inputs require the exact confirmed income year in this calculation's retained profile. Select a calculation with a confirmed profile year or save the profile first.";
+    case "PAYGI_PROFILE_YEAR_MISMATCH":
+      return "PAYGI income-year fields differ from the retained profile. Restore the exact profile year or save a corrected profile before saving PAYG inputs.";
+  }
   const code =
     typeof error === "object" &&
     error !== null &&
@@ -473,8 +494,7 @@ export function BasPreparationLifecycle({
     useState<ReturnType<typeof preparationCodec.decodeResponse>>();
   const [frozenDetail, setFrozenDetail] =
     useState<ReturnType<typeof frozenDetailCodec.decodeResponse>>();
-  const [profileDetail, setProfileDetail] =
-    useState<ReturnType<typeof profileCodec.decodeResponse>>();
+  const [, setProfileDetail] = useState<ReturnType<typeof profileCodec.decodeResponse>>();
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -1388,45 +1408,69 @@ export function BasPreparationLifecycle({
 
   const saveInputs = () =>
     execute(async () => {
+      const currentCalculation = preparationDetail?.currentCalculation;
       if (
         !workspace ||
         !canPrepare ||
         !prep?.preparationId ||
         !prep.contentHash ||
-        !preparationDetail?.currentCalculation
+        !currentCalculation
       )
         throw new Error("preparation required");
+      const paygiMethodNeedsIncomeYear =
+        paygiMethod === BasPaygiMethod.AMOUNT || paygiMethod === BasPaygiMethod.RATE;
+      const profileSnapshot = currentCalculation.profileSnapshot;
+      const snapshotProfileRef = profileSnapshot
+        ? {
+            type: "bas_obligations_profile",
+            id: profileSnapshot.profileId,
+            revision: profileSnapshot.revision,
+            contentHash: profileSnapshot.contentHash,
+          }
+        : undefined;
+      if (
+        !profileSnapshot?.profile ||
+        !currentCalculation.profile ||
+        !prep.profile ||
+        refKey(snapshotProfileRef) !== refKey(currentCalculation.profile) ||
+        refKey(currentCalculation.profile) !== refKey(prep.profile)
+      )
+        throw paygiInputError("PAYGI_PROFILE_IDENTITY_UNVERIFIED");
       const refs = parseEvidence(evidence);
       const amounts = (key: "w1" | "w2" | "w3" | "w4") =>
         amountInput(paygwStates[key], paygwInputs[key], refs, paygwInputs.reason);
+      const retainedPaygwProfile = profileSnapshot.profile.paygw;
       const paygw = create(BasPaygwInputsSchema, {
-        category: profileDetail?.profile?.profile?.paygw?.category ?? BasPaygwCategory.UNKNOWN,
+        category: retainedPaygwProfile?.category ?? BasPaygwCategory.UNKNOWN,
         w1TotalPayments: amounts("w1"),
         w2AmountWithheld: amounts("w2"),
         w3OtherWithholding: amounts("w3"),
         w4NoAbnWithholding: amounts("w4"),
         payrollStatementEvidence: refs,
-        prefillReview:
-          profileDetail?.profile?.profile?.paygw?.prefillRequirement ??
-          BasPrefillRequirement.UNKNOWN,
+        prefillReview: retainedPaygwProfile?.prefillRequirement ?? BasPrefillRequirement.UNKNOWN,
         reviewReason: paygwInputs.reason,
       });
-      const confirmedIncomeYear =
-        paygiMethod === BasPaygiMethod.AMOUNT || paygiMethod === BasPaygiMethod.RATE
-          ? create(BasIncomeYearIdentitySchema, {
-              incomeYearId,
-              dates: create(BasCivilDateRangeSchema, {
-                startDate: civil(incomeYearStart),
-                endDate: civil(incomeYearEnd),
-              }),
-              confirmation: refs[0],
-            })
-          : undefined;
-      if (
-        (paygiMethod === BasPaygiMethod.AMOUNT || paygiMethod === BasPaygiMethod.RATE) &&
-        (!confirmedIncomeYear || !refs[0] || !UUID.test(incomeYearId))
-      )
-        throw new Error("PAYGI requires its confirmed income-year identity and evidence");
+      const profileIncomeYear = profileSnapshot?.profile?.paygi?.confirmedIncomeYear;
+      let confirmedIncomeYear: BasIncomeYearIdentity | undefined;
+      if (paygiMethodNeedsIncomeYear) {
+        if (
+          !profileIncomeYear?.incomeYearId ||
+          !UUID.test(profileIncomeYear.incomeYearId) ||
+          !profileIncomeYear.dates?.startDate ||
+          !profileIncomeYear.dates.endDate ||
+          !profileIncomeYear.confirmation
+        )
+          throw paygiInputError("PAYGI_PROFILE_YEAR_MISSING");
+        if (
+          incomeYearId !== profileIncomeYear.incomeYearId ||
+          incomeYearStart !== iso(profileIncomeYear.dates.startDate) ||
+          incomeYearEnd !== iso(profileIncomeYear.dates.endDate)
+        )
+          throw paygiInputError("PAYGI_PROFILE_YEAR_MISMATCH");
+        if (!refs[0])
+          throw new Error("PAYGI requires current notice evidence before saving inputs.");
+        confirmedIncomeYear = clone(BasIncomeYearIdentitySchema, profileIncomeYear);
+      }
       const paygi = create(BasPaygiInputsSchema, {
         method: paygiMethod,
         ...(refs[0] ? { notice: refs[0] } : {}),

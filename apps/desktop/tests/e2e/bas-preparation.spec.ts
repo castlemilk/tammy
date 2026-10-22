@@ -1733,8 +1733,16 @@ test("BAS lifecycle: clean cash sources, blocked PAYGI resolution, frozen handof
 
   await configureProfileAndPeriod(page, profileEvidence, dueDateEvidence);
   await regenerateSaveAndValidate(page, retainedEvidence, "unknown");
-  await expect(page.getByText("PAYGI_NOTICE_STATUS_UNKNOWN", { exact: true })).toBeVisible();
-  await expect(page.getByText("PAYGI_PRIOR_VARIATION_UNKNOWN", { exact: true })).toBeVisible();
+  await expect(
+    reviewFindings(page).getByRole("checkbox", {
+      name: /^Blocker · PAYGI_NOTICE_STATUS_UNKNOWN\b/u,
+    }),
+  ).toBeDisabled();
+  await expect(
+    reviewFindings(page).getByRole("checkbox", {
+      name: /^Blocker · PAYGI_PRIOR_VARIATION_UNKNOWN\b/u,
+    }),
+  ).toBeDisabled();
   await expect(
     page.getByRole("button", { name: "Acknowledge selected exact warnings" }),
   ).toBeDisabled();

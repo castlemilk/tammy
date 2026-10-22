@@ -26,22 +26,24 @@ The ordinary packaged journey exposed a second prerequisite: account TOTP setup 
 
 The legacy-input fixture also required a test-only correction. Conveyor encodes the typed request inside a `google.protobuf.Any` envelope. The fixture must verify its exact type URL, descend into the payload, change only the intended source digest, and forward to the real handler. A regression uses the actual frame codec to prove the exact forwarded bytes and one-shot restoration.
 
+The next real calculation correctly rejected a PAYGI income-year mismatch. The desktop had rebuilt the year using the current notice evidence, although the obligations profile had pinned separate confirmation evidence. PAYG input saving must preserve the exact income-year identity and confirmation from the preparation's immutable profile snapshot while retaining notice and payroll evidence separately. Edited year fields that disagree with that pin must receive specific guidance rather than silently changing its provenance. PAYGW category and prefill requirements come from that same verified profile snapshot, even when another profile is selected separately. Missing or mismatched snapshot references fail closed before saving. Core's exact identity comparison remains unchanged.
+
 An intermittent pre-window failure initially exposed only `LOCAL_ENGINE_UNAVAILABLE`. Fixed startup-stage and concrete error-code diagnostics now preserve a bounded explanation without retaining raw errors, credentials, readiness content or paths. The failure remains unclassified until a reproduction provides a specific stage/code; it does not justify an unmeasured timeout increase.
 
 ## Chunk 1: Canonical setup and bounded bridge
 
 - [x] Reproduce the setup checksum mismatch with a test deriving ID, revision and SHA-256 from the actual bundled bytes; verify RED and GREEN for both GST bases.
-- [ ] Centralise the canonical bundled reference and the exact known historical mismatch in `apps/desktop/src/shared/bundled-tax-rule.ts`; keep the setup regression tied to Core's actual bundle bytes.
-- [ ] Expose existing `UpdateOrganisation` through `apps/desktop/src/main/core-client.ts` and `apps/desktop/src/conveyor/modules/organisation.ts`, using bounded typed protobuf frames and existing sanitisation.
-- [ ] Verify byte fidelity, canonical result decoding and sanitised failures in focused bridge tests; regenerate and validate the desktop manifest/contracts.
+- [x] Centralise the canonical bundled reference and the exact known historical mismatch in `apps/desktop/src/shared/bundled-tax-rule.ts`; keep the setup regression tied to Core's actual bundle bytes.
+- [x] Expose existing `UpdateOrganisation` through `apps/desktop/src/main/core-client.ts` and `apps/desktop/src/conveyor/modules/organisation.ts`, using bounded typed protobuf frames and existing sanitisation.
+- [x] Verify byte fidelity, canonical result decoding and sanitised failures in focused bridge tests; regenerate and validate the desktop manifest/contracts.
 
 ## Chunk 2: Explicit repair and truthful capability
 
-- [ ] Add `apps/desktop/src/app/features/bas/legacy-rule-reference-repair.tsx` and mount it in Prepare without changing the BAS workflow state machine.
-- [ ] Test exact legacy detection, correct and unrelated references, administrator restriction, exact update mask/version/reason/date, purpose-bound fresh authentication and failed/stale commands.
-- [ ] Update the build-pinned capability catalogue to advertise only supported local BAS preparation for its listed business/year combinations; preserve unavailable delivery modes and fail-closed unlisted combinations.
-- [ ] Update onboarding copy so it no longer claims the implemented local preparation workflow is unavailable.
-- [ ] Make account TOTP setup independent of SBR readiness, test supported roles and unavailable SBR responses, and retain all existing credential and simulator authority checks.
+- [x] Add `apps/desktop/src/app/features/bas/legacy-rule-reference-repair.tsx` and mount it in Prepare without changing the BAS workflow state machine.
+- [x] Test exact legacy detection, correct and unrelated references, administrator restriction, exact update mask/version/reason/date, purpose-bound fresh authentication and failed/stale commands.
+- [x] Update the build-pinned capability catalogue to advertise only supported local BAS preparation for its listed business/year combinations; preserve unavailable delivery modes and fail-closed unlisted combinations.
+- [x] Update onboarding copy so it no longer claims the implemented local preparation workflow is unavailable.
+- [x] Make account TOTP setup independent of SBR readiness, test supported roles and unavailable SBR responses, and retain all existing credential and simulator authority checks.
 
 ## Chunk 3: Integrated acceptance and closeout
 

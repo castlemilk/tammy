@@ -2,11 +2,13 @@ import { create, type DescMessage } from "@bufbuild/protobuf";
 import { TimestampSchema } from "@bufbuild/protobuf/wkt";
 import {
   BasApplicability,
+  BasCadence,
   BasCalculationSchema,
   BasChainExpectationSchema,
   BasCivilDateRangeSchema,
   BasConfirmedPeriodSchema,
   BasDisputeOverlayState,
+  BasEffectiveIntervalSchema,
   BasExpectedIdentitySchema,
   BasExportEventSummarySchema,
   BasExportFormat,
@@ -17,13 +19,19 @@ import {
   BasExternalEventKind,
   BasFindingSeverity,
   BasFrozenBasSummarySchema,
+  BasIncomeYearIdentitySchema,
   BasLiveCurrentness,
+  BasObligationsProfileInputSchema,
   BasObligationsProfileSchema,
   BasObligationsProfileSummarySchema,
   BasPaygiMethod,
+  BasPaygiProfileInputSchema,
+  BasPaygwCategory,
+  BasPaygwProfileInputSchema,
   BasPeriodSuggestionSchema,
   BasPeriodSummarySchema,
   BasPeriodWindow,
+  BasPrefillRequirement,
   BasPreparationSchema,
   BasPreparationState,
   BasPreparationSummarySchema,
@@ -33,6 +41,8 @@ import {
   ConfirmBasPeriodResponseSchema,
   GetBasCalendarRequestSchema,
   GetBasCalendarResponseSchema,
+  GetBasObligationsProfileRequestSchema,
+  GetBasObligationsProfileResponseSchema,
   GetBasPreparationRequestSchema,
   GetBasPreparationResponseSchema,
   GetFrozenBasRequestSchema,
@@ -55,6 +65,8 @@ import {
   RegenerateBasPreparationResponseSchema,
   ResolveExternalBasDisputeRequestSchema,
   ResolveExternalBasDisputeResponseSchema,
+  SaveBasPaygInputsRequestSchema,
+  SaveBasPaygInputsResponseSchema,
   SetBasObligationsProfileRequestSchema,
   SetBasObligationsProfileResponseSchema,
 } from "@tammy/connect-client/tammy/v1/bas_preparation_pb.js";
@@ -94,6 +106,10 @@ function responseCodec<Input extends DescMessage, Output extends DescMessage>(
 }
 const codecs = {
   user: responseCodec(GetCurrentUserRequestSchema, GetCurrentUserResponseSchema),
+  profileDetail: responseCodec(
+    GetBasObligationsProfileRequestSchema,
+    GetBasObligationsProfileResponseSchema,
+  ),
   preparationDetail: responseCodec(GetBasPreparationRequestSchema, GetBasPreparationResponseSchema),
   assertTotp: responseCodec(AssertTOTPRequestSchema, AssertTOTPResponseSchema),
   resolveDispute: responseCodec(
@@ -127,7 +143,256 @@ const codecs = {
     SetBasObligationsProfileRequestSchema,
     SetBasObligationsProfileResponseSchema,
   ),
+  savePayg: responseCodec(SaveBasPaygInputsRequestSchema, SaveBasPaygInputsResponseSchema),
 };
+
+async function mountPaygInputsEditor(
+  includeIncomeYearPin = true,
+  options: {
+    readonly includeDifferentProfile?: boolean;
+    readonly snapshotRefMismatch?: boolean;
+  } = {},
+) {
+  const fixture = createConveyorFixture();
+  const workspace = {
+    workspaceId: "018f0000-0000-7000-8000-000000000201",
+    userId: "018f0000-0000-7000-8000-000000000202",
+    sessionId: "018f0000-0000-7000-8000-000000000203",
+    organisationId: "018f0000-0000-7000-8000-000000000204",
+    roles: [Role.BUSINESS_PREPARER],
+  };
+  const profileRef = create(SourceRefSchema, {
+    type: "bas_obligations_profile",
+    id: "018f0000-0000-7000-8000-000000000205",
+    revision: 1n,
+    contentHash: new Uint8Array(32).fill(0x25),
+  });
+  const differentProfileRef = create(SourceRefSchema, {
+    type: "bas_obligations_profile",
+    id: "018f0000-0000-7000-8000-000000000213",
+    revision: 2n,
+    contentHash: new Uint8Array(32).fill(0x2f),
+  });
+  const periodRef = create(SourceRefSchema, {
+    type: "bas_period",
+    id: "018f0000-0000-7000-8000-000000000206",
+    revision: 1n,
+    contentHash: new Uint8Array(32).fill(0x26),
+  });
+  const preparationRef = create(SourceRefSchema, {
+    type: "bas_preparation",
+    id: "018f0000-0000-7000-8000-000000000207",
+    revision: 1n,
+    contentHash: new Uint8Array(32).fill(0x27),
+  });
+  const calculationRef = create(SourceRefSchema, {
+    type: "bas_calculation",
+    id: "018f0000-0000-7000-8000-000000000208",
+    revision: 1n,
+    contentHash: new Uint8Array(32).fill(0x28),
+  });
+  const incomeYearPin = includeIncomeYearPin
+    ? create(BasIncomeYearIdentitySchema, {
+        incomeYearId: "018f0000-0000-7000-8000-000000000209",
+        dates: create(BasCivilDateRangeSchema, {
+          startDate: { year: 2026, month: 7, day: 1 },
+          endDate: { year: 2027, month: 6, day: 30 },
+        }),
+        confirmation: create(SourceRefSchema, {
+          type: "income_year_confirmation",
+          id: "018f0000-0000-7000-8000-000000000210",
+          revision: 3n,
+          contentHash: new Uint8Array(32).fill(0x2a),
+        }),
+      })
+    : undefined;
+  const profileSnapshot = create(BasObligationsProfileSchema, {
+    profileId: options.snapshotRefMismatch ? differentProfileRef.id : profileRef.id,
+    organisationId: workspace.organisationId,
+    revision: profileRef.revision,
+    contentHash: profileRef.contentHash,
+    profile: create(BasObligationsProfileInputSchema, {
+      paygw: create(BasPaygwProfileInputSchema, {
+        category: BasPaygwCategory.SMALL,
+        prefillRequirement: BasPrefillRequirement.NOT_REQUIRED,
+      }),
+      paygi: create(BasPaygiProfileInputSchema, {
+        method: BasPaygiMethod.RATE,
+        cadence: BasCadence.QUARTERLY,
+        ...(incomeYearPin ? { confirmedIncomeYear: incomeYearPin } : {}),
+      }),
+    }),
+  });
+  const differentProfile = create(BasObligationsProfileSchema, {
+    profileId: differentProfileRef.id,
+    organisationId: workspace.organisationId,
+    revision: differentProfileRef.revision,
+    contentHash: differentProfileRef.contentHash,
+    profile: create(BasObligationsProfileInputSchema, {
+      paygw: create(BasPaygwProfileInputSchema, {
+        category: BasPaygwCategory.MEDIUM,
+        prefillRequirement: BasPrefillRequirement.REVIEWED,
+      }),
+    }),
+  });
+  const preparation = create(BasPreparationSchema, {
+    preparationId: preparationRef.id,
+    organisationId: workspace.organisationId,
+    version: preparationRef.revision,
+    family: create(SourceRefSchema, {
+      type: "bas_family",
+      id: "018f0000-0000-7000-8000-000000000211",
+      revision: 1n,
+      contentHash: new Uint8Array(32).fill(0x2b),
+    }),
+    period: periodRef,
+    profile: profileRef,
+    state: BasPreparationState.COLLECTING,
+    currentCalculation: calculationRef,
+    contentHash: preparationRef.contentHash,
+    inputHash: new Uint8Array(32).fill(0x2c),
+    sourceSnapshotHash: new Uint8Array(32).fill(0x2d),
+  });
+  const calculation = create(BasCalculationSchema, {
+    calculationId: calculationRef.id,
+    organisationId: workspace.organisationId,
+    version: calculationRef.revision,
+    contentHash: calculationRef.contentHash,
+    preparation: preparationRef,
+    family: preparation.family,
+    period: periodRef,
+    profile: profileRef,
+    profileSnapshot,
+  });
+  fixture.procedures.organisation.getCurrentUser.mockResolvedValue(
+    codecs.user.encodeResponse(
+      create(GetCurrentUserResponseSchema, {
+        user: create(UserSchema, {
+          id: workspace.userId,
+          version: 1n,
+          username: "payg-preparer",
+          displayName: "PAYG preparer",
+          state: UserState.ACTIVE,
+          roles: [Role.BUSINESS_PREPARER],
+        }),
+      }),
+    ),
+  );
+  fixture.procedures.basPreparation.listBasObligationsProfiles.mockResolvedValue(
+    codecs.profiles.encodeResponse(
+      create(ListBasObligationsProfilesResponseSchema, {
+        profiles: [
+          create(BasObligationsProfileSummarySchema, {
+            profile: profileRef,
+            effectiveInterval: create(BasEffectiveIntervalSchema, {
+              startDate: { year: 2026, month: 7, day: 1 },
+            }),
+          }),
+          ...(options.includeDifferentProfile
+            ? [
+                create(BasObligationsProfileSummarySchema, {
+                  profile: differentProfileRef,
+                  effectiveInterval: create(BasEffectiveIntervalSchema, {
+                    startDate: { year: 2025, month: 7, day: 1 },
+                  }),
+                }),
+              ]
+            : []),
+        ],
+      }),
+    ),
+  );
+  fixture.procedures.basPreparation.getBasObligationsProfile.mockImplementation(
+    async (frame: Uint8Array) => {
+      const request = codecs.profileDetail.decodeRequest(frame);
+      const profile =
+        request.profileId === differentProfileRef.id ? differentProfile : profileSnapshot;
+      return codecs.profileDetail.encodeResponse(
+        create(GetBasObligationsProfileResponseSchema, { profile }),
+      );
+    },
+  );
+  fixture.procedures.basPreparation.listBasPeriods.mockResolvedValue(
+    codecs.periods.encodeResponse(create(ListBasPeriodsResponseSchema, {})),
+  );
+  fixture.procedures.basPreparation.listBasPreparations.mockResolvedValue(
+    codecs.preparations.encodeResponse(
+      create(ListBasPreparationsResponseSchema, {
+        preparations: [
+          create(BasPreparationSummarySchema, {
+            preparation: preparationRef,
+            family: preparation.family,
+            period: periodRef,
+            profile: profileRef,
+            state: BasPreparationState.COLLECTING,
+            currentCalculation: calculationRef,
+          }),
+        ],
+      }),
+    ),
+  );
+  fixture.procedures.basPreparation.listFrozenBas.mockResolvedValue(
+    codecs.frozen.encodeResponse(create(ListFrozenBasResponseSchema, {})),
+  );
+  fixture.procedures.basPreparation.listBasExternalDisputeResolutions.mockResolvedValue(
+    codecs.disputes.encodeResponse(create(ListBasExternalDisputeResolutionsResponseSchema, {})),
+  );
+  fixture.procedures.basPreparation.getBasCalendar.mockResolvedValue(
+    codecs.calendar.encodeResponse(create(GetBasCalendarResponseSchema, {})),
+  );
+  fixture.procedures.basPreparation.getBasPreparation.mockResolvedValue(
+    codecs.preparationDetail.encodeResponse(
+      create(GetBasPreparationResponseSchema, { preparation, currentCalculation: calculation }),
+    ),
+  );
+  fixture.procedures.basPreparation.saveBasPaygInputs.mockResolvedValue(
+    codecs.savePayg.encodeResponse(
+      create(SaveBasPaygInputsResponseSchema, {
+        preparation: create(BasPreparationSchema, {
+          ...preparation,
+          version: preparation.version + 1n,
+          contentHash: new Uint8Array(32).fill(0x2e),
+        }),
+      }),
+    ),
+  );
+
+  renderWithConveyor(
+    <BasPreparationLifecycle
+      api={fixture.conveyor.basPreparation}
+      identityApi={fixture.conveyor.organisation}
+      reportApi={fixture.conveyor.reporting}
+      workspace={workspace}
+    />,
+  );
+  const user = userEvent.setup();
+  await screen.findByRole("button", { name: "Save exact PAYG inputs" });
+  return { fixture, user, incomeYearPin };
+}
+
+async function enterPaygiInputs(
+  user: ReturnType<typeof userEvent.setup>,
+  year: { incomeYearId: string; start: string; end: string },
+  noticeId = "018f0000-0000-7000-8000-000000000212",
+) {
+  await user.selectOptions(
+    screen.getByLabelText("PAYGI method for this input"),
+    String(BasPaygiMethod.RATE),
+  );
+  await user.type(screen.getByLabelText("PAYGI exact T2 rate (e.g. 15.5)"), "15.5");
+  await user.type(screen.getByLabelText("Confirmed income year UUID"), year.incomeYearId);
+  fireEvent.change(screen.getByLabelText("Income year start"), {
+    target: { value: year.start },
+  });
+  fireEvent.change(screen.getByLabelText("Income year end"), { target: { value: year.end } });
+  const evidence = within(
+    screen.getByRole("group", { name: "Shared retained profile evidence identity" }),
+  );
+  await user.type(evidence.getByLabelText("Source type"), "paygi_notice");
+  await user.type(evidence.getByLabelText("Source UUID"), noticeId);
+  await user.type(evidence.getByLabelText("Revision"), "7");
+  await user.type(evidence.getByLabelText("SHA-256 hex"), "bc".repeat(32));
+}
 
 it("continues paging when pages are empty but still carry a cursor", async () => {
   const pages = [
@@ -511,6 +776,164 @@ it("saves explicit registration dates and evidence-backed decided obligations", 
   expect(submitted?.otherObligations?.luxuryCarTax?.reason).toBe("");
   expect(submitted?.otherObligations?.luxuryCarTax?.evidence).toHaveLength(0);
 });
+
+it("reuses the exact calculation profile income-year confirmation while retaining current notice evidence", async () => {
+  const { fixture, user, incomeYearPin } = await mountPaygInputsEditor();
+  if (!incomeYearPin) throw new Error("test fixture income-year pin missing");
+  await enterPaygiInputs(user, {
+    incomeYearId: incomeYearPin.incomeYearId,
+    start: "2026-07-01",
+    end: "2027-06-30",
+  });
+
+  await user.click(screen.getByRole("button", { name: "Save exact PAYG inputs" }));
+
+  await waitFor(() =>
+    expect(fixture.procedures.basPreparation.saveBasPaygInputs).toHaveBeenCalledTimes(1),
+  );
+  const frame = fixture.procedures.basPreparation.saveBasPaygInputs.mock.calls[0]?.[0];
+  if (!(frame instanceof Uint8Array)) throw new Error("PAYG input request frame missing");
+  const request = codecs.savePayg.decodeRequest(frame);
+  expect(request.paygi?.confirmedIncomeYear).toMatchObject({
+    incomeYearId: incomeYearPin.incomeYearId,
+    dates: {
+      startDate: { year: 2026, month: 7, day: 1 },
+      endDate: { year: 2027, month: 6, day: 30 },
+    },
+    confirmation: {
+      type: "income_year_confirmation",
+      id: "018f0000-0000-7000-8000-000000000210",
+      revision: 3n,
+    },
+  });
+  expect(Array.from(request.paygi?.confirmedIncomeYear?.confirmation?.contentHash ?? [])).toEqual(
+    Array(32).fill(0x2a),
+  );
+  expect(request.paygi?.notice).toMatchObject({
+    type: "paygi_notice",
+    id: "018f0000-0000-7000-8000-000000000212",
+    revision: 7n,
+  });
+  expect(Array.from(request.paygi?.notice?.contentHash ?? [])).toEqual(Array(32).fill(0xbc));
+  expect(request.paygi?.evidence[0]?.id).toBe("018f0000-0000-7000-8000-000000000212");
+  expect(request.paygw?.payrollStatementEvidence[0]?.id).toBe(
+    "018f0000-0000-7000-8000-000000000212",
+  );
+}, 15_000);
+
+it("uses PAYGW category and prefill from the retained calculation profile when another profile is selected", async () => {
+  const { fixture, user, incomeYearPin } = await mountPaygInputsEditor(true, {
+    includeDifferentProfile: true,
+  });
+  if (!incomeYearPin) throw new Error("test fixture income-year pin missing");
+
+  const profileSelect = screen.getByLabelText("Selected immutable profile");
+  const alternateOption = within(profileSelect).getByRole("option", { name: /Revision 2/ });
+  await user.selectOptions(profileSelect, (alternateOption as HTMLOptionElement).value);
+  await waitFor(() => {
+    const calls = fixture.procedures.basPreparation.getBasObligationsProfile.mock.calls;
+    const lastFrame = calls.at(-1)?.[0];
+    if (!(lastFrame instanceof Uint8Array)) throw new Error("profile detail request missing");
+    expect(codecs.profileDetail.decodeRequest(lastFrame).profileId).toBe(
+      "018f0000-0000-7000-8000-000000000213",
+    );
+  });
+
+  await enterPaygiInputs(user, {
+    incomeYearId: incomeYearPin.incomeYearId,
+    start: "2026-07-01",
+    end: "2027-06-30",
+  });
+  await user.click(screen.getByRole("button", { name: "Save exact PAYG inputs" }));
+
+  await waitFor(() =>
+    expect(fixture.procedures.basPreparation.saveBasPaygInputs).toHaveBeenCalledTimes(1),
+  );
+  const frame = fixture.procedures.basPreparation.saveBasPaygInputs.mock.calls[0]?.[0];
+  if (!(frame instanceof Uint8Array)) throw new Error("PAYG input request frame missing");
+  const request = codecs.savePayg.decodeRequest(frame);
+  expect(request.paygw?.category).toBe(BasPaygwCategory.SMALL);
+  expect(request.paygw?.prefillReview).toBe(BasPrefillRequirement.NOT_REQUIRED);
+}, 15_000);
+
+it.each([
+  {
+    name: "income-year identifier",
+    id: "018f0000-0000-7000-8000-000000000299",
+    start: "2026-07-01",
+    end: "2027-06-30",
+  },
+  {
+    name: "income-year start date",
+    id: "018f0000-0000-7000-8000-000000000209",
+    start: "2026-07-02",
+    end: "2027-06-30",
+  },
+  {
+    name: "income-year end date",
+    id: "018f0000-0000-7000-8000-000000000209",
+    start: "2026-07-01",
+    end: "2027-06-29",
+  },
+])(
+  "fails visibly when edited PAYGI $name differs from the calculation profile pin",
+  async (year) => {
+    const { fixture, user, incomeYearPin } = await mountPaygInputsEditor();
+    if (!incomeYearPin) throw new Error("test fixture income-year pin missing");
+    await enterPaygiInputs(user, {
+      incomeYearId: year.id,
+      start: year.start,
+      end: year.end,
+    });
+
+    await user.click(screen.getByRole("button", { name: "Save exact PAYG inputs" }));
+
+    expect(
+      await screen.findByText(
+        "PAYGI income-year fields differ from the retained profile. Restore the exact profile year or save a corrected profile before saving PAYG inputs.",
+      ),
+    ).toBeTruthy();
+    expect(fixture.procedures.basPreparation.saveBasPaygInputs).not.toHaveBeenCalled();
+  },
+  15_000,
+);
+
+it("fails closed when the retained calculation profile reference does not match the preparation", async () => {
+  const { fixture, user } = await mountPaygInputsEditor(false, {
+    snapshotRefMismatch: true,
+  });
+  await user.selectOptions(
+    screen.getByLabelText("PAYGI method for this input"),
+    String(BasPaygiMethod.NOT_APPLICABLE),
+  );
+
+  await user.click(screen.getByRole("button", { name: "Save exact PAYG inputs" }));
+
+  expect(
+    await screen.findByText(
+      "The calculation's retained profile identity could not be verified. Refresh the exact preparation before saving PAYG inputs.",
+    ),
+  ).toBeTruthy();
+  expect(fixture.procedures.basPreparation.saveBasPaygInputs).not.toHaveBeenCalled();
+}, 15_000);
+
+it("fails closed when the calculation profile has no confirmed PAYGI income year", async () => {
+  const { fixture, user } = await mountPaygInputsEditor(false);
+  await enterPaygiInputs(user, {
+    incomeYearId: "018f0000-0000-7000-8000-000000000209",
+    start: "2026-07-01",
+    end: "2027-06-30",
+  });
+
+  await user.click(screen.getByRole("button", { name: "Save exact PAYG inputs" }));
+
+  expect(
+    await screen.findByText(
+      "PAYGI inputs require the exact confirmed income year in this calculation's retained profile. Select a calculation with a confirmed profile year or save the profile first.",
+    ),
+  ).toBeTruthy();
+  expect(fixture.procedures.basPreparation.saveBasPaygInputs).not.toHaveBeenCalled();
+}, 15_000);
 
 it("exports the selected frozen handoff by its exact immutable identity", async () => {
   const fixture = createConveyorFixture();
