@@ -13,6 +13,7 @@ import {
 } from "../../../../scripts/check-app-store-screenshots.mjs";
 import { expect, test } from "./fixtures";
 import { setupAndRunCurrentAccountingWorkflow } from "./support/current-accounting-workflow";
+import { openSavedBasWorkpaperPanel } from "./support/saved-bas-workpaper-panel";
 
 const sha256 = (value: Uint8Array | string) => createHash("sha256").update(value).digest("hex");
 
@@ -74,6 +75,7 @@ test("captures one serial five-image real packaged UI journey", async ({ electro
   for (const [index, target] of targets.entries()) {
     await page.getByRole("link", { name: target.link }).click();
     await expect(page.getByRole("heading", { level: 1, name: target.heading })).toBeVisible();
+    if (target.heading === "GST & BAS") await openSavedBasWorkpaperPanel(page);
     if (!target.ready) throw new Error("APP_STORE_SCREENSHOT_FIXTURE_INVALID");
     await expect(page.getByText(target.ready, { exact: true }).first()).toBeVisible();
     if (target.heading === "Banking") {

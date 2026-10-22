@@ -47,6 +47,7 @@ import {
   parseReportPdf,
   reportArtifactHash,
 } from "./support/reporting-export-artifacts";
+import { openSavedBasWorkpaperPanel } from "./support/saved-bas-workpaper-panel";
 
 const periodStart = "2026-10-01";
 const periodEnd = "2026-12-31";
@@ -203,6 +204,7 @@ for (const gstBasis of ["cash", "non-cash"] as const) {
       2,
     );
     await page.getByRole("link", { name: "GST & BAS", exact: true }).click();
+    await openSavedBasWorkpaperPanel(page);
     await expect(page.getByText(/Sources changed since this workpaper was saved/)).toBeVisible();
     const staleBas = await readBas(page, workspace);
     expect(staleBas.id).toBe(initialBas.id);
@@ -279,6 +281,7 @@ for (const gstBasis of ["cash", "non-cash"] as const) {
     await unlockWorkspace(page);
     const restartedWorkspace = await authenticatedWorkspace(page);
     await page.getByRole("link", { name: "GST & BAS", exact: true }).click();
+    await openSavedBasWorkpaperPanel(page);
     expect(await readBas(page, restartedWorkspace)).toEqual(regenerated);
     const restartedCsvPath = path.join(directory, "restarted-bas.csv");
     await saveExport(electronHarness, page.locator("main"), "CSV", restartedCsvPath);

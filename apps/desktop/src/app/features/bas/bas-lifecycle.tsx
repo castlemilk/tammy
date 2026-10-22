@@ -766,6 +766,11 @@ export function BasPreparationLifecycle({
       const chosenProfile = nextProfiles.find(
         (item) => refKey(item.profile) === profileKey,
       )?.profile;
+      if (!chosenProfile) {
+        setSuggestions([]);
+        if (!periodKey && !initialPreparationRef) setSelectedPeriod("");
+        return;
+      }
       const calendarFrame = calendarCodec.encodeRequest(
         create(GetBasCalendarRequestSchema, {
           ...base,
@@ -774,7 +779,7 @@ export function BasPreparationLifecycle({
             startDate: { year: calendarStart, month: 1, day: 1 },
             endDate: { year: calendarEnd, month: 12, day: 31 },
           }),
-          ...(chosenProfile ? { profile: exactRef(chosenProfile) } : {}),
+          profile: exactRef(chosenProfile),
         }),
       );
       const nextCalendar = calendarCodec.decodeResponse(await api.getBasCalendar(calendarFrame));

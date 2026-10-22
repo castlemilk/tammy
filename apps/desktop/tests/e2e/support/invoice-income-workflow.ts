@@ -17,6 +17,7 @@ import { createProtoMethodCodec } from "../../../src/shared/proto-ipc";
 import { expect } from "../fixtures";
 import { invokeConveyorFrame } from "./conveyor";
 import type { AuthenticatedAccountingWorkspace } from "./current-accounting-workflow";
+import { openSavedBasWorkpaperPanel } from "./saved-bas-workpaper-panel";
 
 const list = createProtoMethodCodec({
   input: ListInvoicesRequestSchema,
@@ -187,6 +188,7 @@ export async function regenerateInvoiceBas(
   gst: string,
 ) {
   await page.getByRole("link", { name: "GST & BAS", exact: true }).click();
+  await openSavedBasWorkpaperPanel(page);
   await page.getByLabel("Period start", { exact: true }).fill(start);
   await page.getByLabel("Period end", { exact: true }).fill(end);
   await expect(page.getByLabel("Period start", { exact: true })).toHaveValue(start);

@@ -221,6 +221,72 @@ it("mounts all five lifecycle stages and keeps workspace admins read-only for ap
   expect(fixture.procedures.basPreparation.freezeBasForManualHandoff).not.toHaveBeenCalled();
 });
 
+it("keeps profile setup usable before a calendar can resolve an effective profile", async () => {
+  const fixture = createConveyorFixture();
+  const workspace = {
+    workspaceId: "018f0000-0000-7000-8000-000000000021",
+    userId: "018f0000-0000-7000-8000-000000000022",
+    sessionId: "018f0000-0000-7000-8000-000000000023",
+    organisationId: "018f0000-0000-7000-8000-000000000024",
+    roles: [Role.WORKSPACE_ADMIN],
+  };
+  fixture.procedures.organisation.getCurrentUser.mockResolvedValue(
+    codecs.user.encodeResponse(
+      create(GetCurrentUserResponseSchema, {
+        user: create(UserSchema, {
+          id: workspace.userId,
+          version: 1n,
+          username: "fresh-workspace-admin",
+          displayName: "Fresh workspace admin",
+          state: UserState.ACTIVE,
+          roles: [Role.WORKSPACE_ADMIN],
+        }),
+      }),
+    ),
+  );
+  fixture.procedures.basPreparation.listBasObligationsProfiles.mockResolvedValue(
+    codecs.profiles.encodeResponse(create(ListBasObligationsProfilesResponseSchema, {})),
+  );
+  fixture.procedures.basPreparation.listBasPeriods.mockResolvedValue(
+    codecs.periods.encodeResponse(create(ListBasPeriodsResponseSchema, {})),
+  );
+  fixture.procedures.basPreparation.listBasPreparations.mockResolvedValue(
+    codecs.preparations.encodeResponse(create(ListBasPreparationsResponseSchema, {})),
+  );
+  fixture.procedures.basPreparation.listFrozenBas.mockResolvedValue(
+    codecs.frozen.encodeResponse(create(ListFrozenBasResponseSchema, {})),
+  );
+  fixture.procedures.basPreparation.listBasExternalDisputeResolutions.mockResolvedValue(
+    codecs.disputes.encodeResponse(create(ListBasExternalDisputeResolutionsResponseSchema, {})),
+  );
+  fixture.procedures.basPreparation.getBasCalendar.mockRejectedValue(
+    new Error("NOT_FOUND without an effective obligations profile"),
+  );
+
+  renderWithConveyor(
+    <BasPreparationLifecycle
+      api={fixture.conveyor.basPreparation}
+      identityApi={fixture.conveyor.organisation}
+      reportApi={fixture.conveyor.reporting}
+      workspace={workspace}
+    />,
+  );
+
+  const user = userEvent.setup();
+  await user.type(
+    await screen.findByLabelText("Profile decision reason"),
+    "Fresh profile setup retains explicit business answers.",
+  );
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Save immutable profile revision" })).toHaveProperty(
+      "disabled",
+      false,
+    ),
+  );
+  expect(screen.queryByText("BAS history could not be loaded. Refresh and try again.")).toBeNull();
+  expect(fixture.procedures.basPreparation.getBasCalendar).not.toHaveBeenCalled();
+});
+
 it("exports the selected frozen handoff by its exact immutable identity", async () => {
   const fixture = createConveyorFixture();
   const workspace = {

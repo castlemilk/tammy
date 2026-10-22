@@ -17,6 +17,7 @@ import {
   CURRENT_WORKFLOW_USERNAME,
 } from "./current-accounting-workflow";
 import { regenerateInvoiceBas } from "./invoice-income-workflow";
+import { openSavedBasWorkpaperPanel } from "./saved-bas-workpaper-panel";
 
 export type PurchaseWorkspace = AuthenticatedAccountingWorkspace & {
   readonly expense: a.Account;
@@ -215,7 +216,10 @@ export async function retainPurchaseThroughUi(
           ? "Synthetic ATO activity statement"
           : '=Synthetic supplier, "Élodie"',
     );
-  await page.getByLabel("Invoice number", { exact: true }).fill(number);
+  const review = page
+    .locator("section")
+    .filter({ has: page.getByRole("heading", { name: `${number}.pdf`, exact: true }) });
+  await review.getByLabel("Invoice number", { exact: true }).fill(number);
   await page.getByLabel("Date", { exact: true }).fill(invoiceDate);
   await page.getByLabel("Subtotal", { exact: true }).fill(zeroMoney ? "0.00" : "100.00");
   await page.getByLabel("GST", { exact: true }).fill(zeroMoney ? "0.00" : "10.00");
@@ -652,6 +656,7 @@ export async function savePurchaseExport(
   start: string,
   end: string,
 ) {
+  await openSavedBasWorkpaperPanel(harness.currentPage());
   await harness.application.evaluate(
     ({ dialog }, selection) => {
       dialog.showSaveDialog = async (...args: unknown[]) => {

@@ -37,9 +37,9 @@ export function BasLifecycleScreen({
       />
       <details className="group rounded border border-border bg-surface">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 text-[11px] font-semibold [&::-webkit-details-marker]:hidden">
-          <span>Purchase source review</span>
+          <span>Saved workpapers and exports</span>
           <span className="text-[9px] font-normal text-muted-foreground">
-            Retained local workpaper and GST-credit blockers
+            Existing local GST workpapers, reports and purchase-source review
           </span>
           <span
             aria-hidden="true"
@@ -49,7 +49,7 @@ export function BasLifecycleScreen({
           </span>
         </summary>
         <div className="border-t border-border p-3">
-          <BasScreen {...legacyProps} purchaseReviewOnly />
+          <BasScreen {...legacyProps} />
         </div>
       </details>
     </div>

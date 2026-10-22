@@ -758,7 +758,7 @@ export async function setupAndRunCurrentAccountingWorkflow(
   for (const stage of ["Prepare", "Review", "Freeze", "Export", "External record"] as const) {
     await expect(lifecycle.getByRole("button", { name: stage, exact: true })).toBeVisible();
   }
-  await page.getByText("Purchase source review", { exact: true }).click();
+  await page.getByText("Saved workpapers and exports", { exact: true }).click();
   await expect(
     page.getByText(WORKFLOW_FIXTURE.bas.statusLabel, { exact: true }).first(),
   ).toBeVisible();

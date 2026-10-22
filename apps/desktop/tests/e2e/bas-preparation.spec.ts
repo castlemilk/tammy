@@ -284,6 +284,46 @@ async function latestPreparationForFamily(page: Page, workspace: Workspace, fami
   return latest;
 }
 
+async function latestPreparationForId(
+  page: Page,
+  workspace: Workspace,
+  family: BasReference,
+  preparationId: string,
+) {
+  const values: BasPreparationSummary[] = [];
+  let cursor = "";
+  do {
+    const frame = listPreparationsCodec.encodeRequest(
+      create(ListBasPreparationsRequestSchema, {
+        authentication: authentication(workspace),
+        organisationId: workspace.organisationId,
+        familyId: family.id,
+        familyHash: family.contentHash,
+        page: create(PageRequestSchema, { pageSize: 200, ...(cursor ? { cursor } : {}) }),
+      }),
+    );
+    const response = listPreparationsCodec.decodeResponse(
+      await invokeConveyorFrame(page, "basPreparation", "listBasPreparations", frame),
+    );
+    values.push(
+      ...response.preparations.filter((summary) => summary.preparation?.id === preparationId),
+    );
+    const next = response.page?.nextCursor ?? "";
+    if (next && next === cursor) throw new Error("BAS_ACCEPTANCE_PREPARATION_CURSOR_REPEATED");
+    cursor = next;
+  } while (cursor);
+  const latest = values.sort((left, right) => {
+    const leftRevision = left.preparation?.revision ?? 0n;
+    const rightRevision = right.preparation?.revision ?? 0n;
+    return rightRevision > leftRevision ? 1 : rightRevision < leftRevision ? -1 : 0;
+  })[0];
+  const current = latest?.preparation;
+  if (!current) throw new Error("BAS_ACCEPTANCE_EXPECTED_PREPARATION_IS_NOT_RETAINED");
+  if (!latest.family || refKey(latest.family) !== refKey(family))
+    throw new Error("BAS_ACCEPTANCE_EXPECTED_PREPARATION_FAMILY_CHANGED");
+  return current;
+}
+
 async function navigate(page: Page, destination: string) {
   await page.evaluate((target) => {
     window.history.replaceState(null, "", target);
@@ -301,7 +341,12 @@ async function createAndIssueInvoice(
   taxTreatment: "taxable" | "gst-free",
 ) {
   await page.getByRole("link", { name: "Invoices", exact: true }).click();
-  await page.getByLabel("Invoice number", { exact: true }).fill(number);
+  const invoiceNumber = page.getByLabel("Invoice number", { exact: true });
+  if (await invoiceNumber.isDisabled()) {
+    await page.getByRole("button", { name: "New invoice", exact: true }).click();
+  }
+  await expect(invoiceNumber).toBeEnabled();
+  await invoiceNumber.fill(number);
   await page.getByLabel("Issue date", { exact: true }).fill("2026-09-30");
   await page.getByLabel("Due date", { exact: true }).fill("2026-10-14");
   await page.getByLabel("Customer name", { exact: true }).fill("Synthetic BAS acceptance customer");
@@ -353,7 +398,7 @@ async function configureProfileAndPeriod(
     ["PAYGI method", "rate"],
     ["PAYGI cadence", "quarterly"],
   ] as const) {
-    await page.getByLabel(label, { exact: true }).selectOption({ label: value });
+    await page.getByRole("combobox", { name: label, exact: true }).selectOption({ label: value });
   }
   for (const label of [
     "Fringe benefits tax",
@@ -1523,10 +1568,19 @@ test("BAS lifecycle: clean cash sources, blocked PAYGI resolution, frozen handof
   const frozenTwoPreparation = frozenTwoRecord.preparation;
   if (!frozenTwoFamily || !frozenTwoPreparation)
     throw new Error("BAS_ACCEPTANCE_REVISION_CHAIN_IDENTITY_MISSING");
-  assertCurrentConfirmedHead(
-    await getPreparation(page, workspace, frozenTwoPreparation),
+  const currentConfirmedHead = await latestPreparationForId(
+    page,
+    workspace,
     frozenTwoFamily,
-    frozenTwoPreparation,
+    frozenTwoPreparation.id,
+  );
+  expect(currentConfirmedHead.revision, "freeze and confirmation append versions").toBe(
+    frozenTwoPreparation.revision + 2n,
+  );
+  assertCurrentConfirmedHead(
+    await getPreparation(page, workspace, currentConfirmedHead),
+    frozenTwoFamily,
+    currentConfirmedHead,
   );
 
   const firstFrozenBytes = Buffer.from(toBinary(BasFrozenBasSchema, frozenOneRecord));
@@ -1554,10 +1608,19 @@ test("BAS lifecycle: clean cash sources, blocked PAYGI resolution, frozen handof
     ),
   ).toEqual(secondFrozenBytes);
 
-  assertCurrentConfirmedHead(
-    await getPreparation(page, restartedWorkspace, frozenTwoPreparation),
+  const currentConfirmedHeadAfterRestart = await latestPreparationForId(
+    page,
+    restartedWorkspace,
     frozenTwoFamily,
-    frozenTwoPreparation,
+    frozenTwoPreparation.id,
+  );
+  expect(refKey(currentConfirmedHeadAfterRestart), "restart retains confirmed chain head").toBe(
+    refKey(currentConfirmedHead),
+  );
+  assertCurrentConfirmedHead(
+    await getPreparation(page, restartedWorkspace, currentConfirmedHeadAfterRestart),
+    frozenTwoFamily,
+    currentConfirmedHeadAfterRestart,
   );
   const secondObservationsAfterRestart = await observationsForFrozen(
     page,

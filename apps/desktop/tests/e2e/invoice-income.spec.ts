@@ -17,6 +17,7 @@ import {
   regenerateInvoiceBas,
   showBusinessIncome,
 } from "./support/invoice-income-workflow";
+import { openSavedBasWorkpaperPanel } from "./support/saved-bas-workpaper-panel";
 
 test("invoices/income-payments-bas: cash receipts, mixed GST and balances persist through restart", async ({
   electronHarness,
@@ -99,6 +100,7 @@ test("invoices/income-payments-bas: cash receipts, mixed GST and balances persis
   await recordInvoiceReceipt(page, "CASH-2026-001", "2026-10-02", "90.00", "Final half received");
   await expect(page.getByTestId("invoice-outstanding")).toContainText("$0.00");
   await page.getByRole("link", { name: "GST & BAS", exact: true }).click();
+  await openSavedBasWorkpaperPanel(page);
   await expect(page.getByText(/Sources changed since this workpaper was saved/)).toBeVisible();
   await expect(page.getByTestId("bas-sales-g1")).toContainText("$80.00");
   await regenerateInvoiceBas(page, "2026-10-01", "2026-12-31", "$160.00", "$10.00");
@@ -135,6 +137,7 @@ test("invoices/income-payments-bas: cash receipts, mixed GST and balances persis
     ),
   ).toBe(1000n);
   await page.getByRole("link", { name: "GST & BAS", exact: true }).click();
+  await openSavedBasWorkpaperPanel(page);
   await expect(page.getByTestId("bas-sales-g1")).toContainText("$160.00");
   await expect(page.getByTestId("bas-gst-on-sales-1a")).toContainText("$10.00");
   const finalScreenshot = path.join(screenshotDirectory, "cash-basis-final-bas-after-restart.png");
