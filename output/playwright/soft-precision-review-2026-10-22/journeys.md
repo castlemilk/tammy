@@ -156,3 +156,37 @@ The real isolated-profile ASAR test passed with the assertion enabled (15.90s;
 passed the other **400 tests**. Exact-commit hosted verification must confirm the
 combined 401-test suite; those outcomes are reported in the PR checks rather than
 being inferred from these separate local runs.
+
+## Hosted checkpoint and Windows follow-up
+
+At `06dfbbde0080fea63255d93a98f580db04c33f3c`, push run 39774396926 passed
+Ubuntu, macOS package and Windows Server smoke. PR run 39774467971 passed Ubuntu
+and macOS but the Windows document test did not reach its immediate mocked
+confirmation. Both runs used the same source. Ubuntu passed all 401 desktop tests,
+Go race checks, descriptor verification and full lint; macOS passed 55 SQLCipher
+checks, four signature/resource checks and both packaged journeys.
+
+The document test now explicitly holds the confirmation, checks the exact typed
+supplier and one pending command after a double click, then supplies the validated
+response and verifies read-only success. Its immediate-response retry case also
+asserts confirmed read-only success. This strengthens the pending/confirmation
+boundary without a production change or a broader timeout. All six document tests
+pass locally (1.48s test time); typecheck passes. The updated exact-head CI remains
+the merge authority.
+
+## Production qualification blocker
+
+The documented `contracts:production` command timed out in its existing bounded
+Buf breaking comparison in this local worktree (120s); it is not reported as
+passing. Its independent non-mutating production descriptor/coverage checker,
+`node scripts/check-contracts.mjs --require-production`, fails with the exact code
+`E2E_COVERAGE_FUTURE_PROMOTION_REQUIRED`.
+
+`test/e2e/coverage.yaml` still declares **55 RPCs and 65 transitions** as future
+coverage. Examples include workspace locking/recovery, moved-workspace trust and
+backup/cancellation qualification. The coverage manifest, checker and release Task
+were verified unchanged from master 14e. This is an inherited release gate, not a
+styling regression. Neither passing ordinary CI nor adding screenshots qualifies
+those contracts; no future case was relabelled and no release gate was weakened.
+App Store Connect authentication is additionally pending. No signed candidate,
+upload, App Review submission or production deployment has occurred.

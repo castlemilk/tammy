@@ -11,7 +11,7 @@ import {
   SaveDocumentReviewRequestSchema,
   SaveDocumentReviewResponseSchema,
 } from "@tammy/connect-client/tammy/v1/documents_pb.js";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, it, vi } from "vitest";
 
@@ -97,20 +97,38 @@ function renderDocuments(api: Parameters<typeof DocumentsScreen>[0]["api"]) {
 }
 it("saves a review once and displays the confirmed details as read-only", async () => {
   const { api } = fixture();
+  const confirmedReview = api.saveDocumentReview.getMockImplementation();
+  let confirm: ((frame: Uint8Array) => void) | undefined;
+  api.saveDocumentReview.mockImplementation(
+    () =>
+      new Promise<Uint8Array>((resolve) => {
+        confirm = resolve;
+      }),
+  );
   const user = userEvent.setup();
   renderDocuments(api);
   await screen.findByRole("table", { name: "Retained documents" });
-  const supplier = screen.getByLabelText("Supplier");
+  const supplier = screen.getByLabelText("Supplier") as HTMLInputElement;
   await user.clear(supplier);
   await user.type(supplier, "Officeworks Ltd");
+  expect(supplier.value).toBe("Officeworks Ltd");
   await user.dblClick(screen.getByRole("button", { name: "Save review" }));
-  await waitFor(() =>
-    expect(
-      (screen.getByRole("button", { name: "Review saved" }) as HTMLButtonElement).disabled,
-    ).toBe(true),
+  expect(api.saveDocumentReview).toHaveBeenCalledOnce();
+  expect((screen.getByRole("button", { name: "Saving…" }) as HTMLButtonElement).disabled).toBe(
+    true,
   );
-  expect((supplier as HTMLInputElement).readOnly).toBe(true);
-  expect((supplier as HTMLInputElement).value).toBe("Officeworks Ltd");
+  const request = api.saveDocumentReview.mock.calls[0]?.[0];
+  if (!request || !confirm || !confirmedReview) throw new Error("review confirmation missing");
+  const confirmation = await confirmedReview(request);
+  const complete = confirm;
+  await act(async () => {
+    complete(confirmation);
+  });
+  expect(
+    ((await screen.findByRole("button", { name: "Review saved" })) as HTMLButtonElement).disabled,
+  ).toBe(true);
+  expect(supplier.readOnly).toBe(true);
+  expect(supplier.value).toBe("Officeworks Ltd");
   expect(api.saveDocumentReview).toHaveBeenCalledOnce();
   expect(api.listDocuments).toHaveBeenCalledOnce();
 });
@@ -130,6 +148,9 @@ it("keeps failed review edits and retries the same command without duplicating a
   expect((screen.getByLabelText("Supplier") as HTMLInputElement).value).toBe("Officeworks Ltd");
   await user.click(screen.getByRole("button", { name: "Save review" }));
   await waitFor(() => expect(api.saveDocumentReview).toHaveBeenCalledTimes(2));
+  expect(
+    ((await screen.findByRole("button", { name: "Review saved" })) as HTMLButtonElement).disabled,
+  ).toBe(true);
   const requests = api.saveDocumentReview.mock.calls.map(([frame]) =>
     reviewCodec.decodeRequest(frame),
   );
