@@ -1,0 +1,226 @@
+{
+  "version": 1,
+  "captureBaseRevision": "aeda631070f9cb44289658c52128c595bf6133f7",
+  "entries": [
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06-d04a5322/cash/evidence.json",
+      "sha256": "710b3c897a6d7c3ec23191f94d43a30b5127c67bfd14ed86ce2d4e8c736cc46a"
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06-d04a5322/cash/initial-bas-comparison.json",
+      "sha256": "fa545ddb8c042521b7ac3b8d91e7b4a294408e6828f8ad8bc6764daf84907ddc"
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06-d04a5322/cash/initial-income-comparison.json",
+      "sha256": "a7fbc8a062fec028cce1d6c83a1b4e6893affd0bcfd1cf8e8122a1ef91bcd352"
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06-d04a5322/cash/regenerated-bas-comparison.json",
+      "sha256": "454504a4d4c285be1be797b79a324f26f7d5115e2190f958310ba0b004aab195"
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06-d04a5322/cash/restarted-bas-comparison.json",
+      "sha256": "3efe0863022586ab5434a7a56ace61022dd0aa55013b0d97d1041685dd51293a"
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06-d04a5322/cash/restarted-income-comparison.json",
+      "sha256": "562c70570172ae9ec4d9ea70c8c9b0e1975fc12534737c340aa6d1989b456511"
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06-d04a5322/cash/stale-bas-comparison.json",
+      "sha256": "ce103f281c97e02db65fecc44dfd6d42519d1894447c573d9041a45df7fa96cc"
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06-d04a5322/independent-inspection.json",
+      "sha256": "7ced4b1d3fabd1621ab32516d557b051ee30e0fe9c5b54c5ea6db0f9b8a241d1"
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06-d04a5322/non-cash/evidence.json",
+      "sha256": "63a4c439cf1b38b7a6a8aaed6fe40de16d1117a9427a62d442419bc8811a5dae"
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06-d04a5322/non-cash/initial-bas-comparison.json",
+      "sha256": "76efd9e35aac65af1fc9c0627291e2c65ff8d0bae17d5efb2bd7274cab0f751a"
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06-d04a5322/non-cash/initial-income-comparison.json",
+      "sha256": "31ae4f57a42bc088ee325be9cf44a41d13748f3bc6e204e437bf6d0d1c54e4d9"
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06-d04a5322/non-cash/regenerated-bas-comparison.json",
+      "sha256": "67d39ef2df8780f4c8910dda06553376760a1e051a1461d4e8e1e1300b4c35f4"
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06-d04a5322/non-cash/restarted-bas-comparison.json",
+      "sha256": "ba9896f6edfa890c14205cd56d63ef2a57bb788893ead7058379a918ce68cdcb"
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06-d04a5322/non-cash/restarted-income-comparison.json",
+      "sha256": "90404c7e5a1128cde94c5838b8c65c11b6d49afa844165c62985507410b85c3c"
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06-d04a5322/non-cash/stale-bas-comparison.json",
+      "sha256": "83c5977f9472b8a1b2fa23ab868f10c034cb74ae006b45a39afe2b506a64c816"
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06/cash/evidence.json",
+      "sha256": "2851dda39969bcc6ab5f50bb83adf1269ae72d5fc75e7b28f5938a2580cf7eae"
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06/cash/initial-bas-comparison.json",
+      "sha256": "e3969b799ed2cdf30c8a14607e7ec861f61e79a629185d869fd7161825766171"
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06/cash/initial-income-comparison.json",
+      "sha256": "c867ebc02a25de49edd4dec51473c355387e7bf0691b99febb7136a57a0a84f8"
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06/cash/regenerated-bas-comparison.json",
+      "sha256": "c7997ebd704615a3c3d36dc7b3a97a995b863fbe758ffd0bf45e1743037f4081"
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06/cash/restarted-bas-comparison.json",
+      "sha256": "5b9d847f34c61131907d86d0cb477fec71323c1b383db5a1ac1bd968fab7842b"
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06/cash/restarted-income-comparison.json",
+      "sha256": "a26bc3c0e74cb1aa4563747ad156475809bad4f71bec2ff259a97cc688dc486d"
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06/cash/stale-bas-comparison.json",
+      "sha256": "e559955531526b5cb2bd8e4b8626a2e504c7c1e0c02dcbb1697c6cfb77edced9"
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06/independent-inspection.json",
+      "sha256": "83e7ff986d9ff31f40b0a76ceed8ccfa779e60ecd1fb6d696b1981a1980835a1"
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06/non-cash/evidence.json",
+      "sha256": "71d2746a66b058df28013224f4abd87261577dec6cbe1cb6da3bc837d909744d"
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06/non-cash/initial-bas-comparison.json",
+      "sha256": "8ded5084da7a2da40fb4ab530f339bc05e8536616ac66e13a125448648ccfff3"
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06/non-cash/initial-income-comparison.json",
+      "sha256": "e9e6e955909fd2988d616b3556885db875d0a9daed60e19c3fd7455d87c252ca"
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06/non-cash/regenerated-bas-comparison.json",
+      "sha256": "78b726266e8f88880ba9516624703bd8a68d0ee09146cb85107402ae9de2f0b1"
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06/non-cash/restarted-bas-comparison.json",
+      "sha256": "d1abedbec547889908ab9c2155a9e6591181c6a5cc83f0284c67cbdaa188f399"
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06/non-cash/restarted-income-comparison.json",
+      "sha256": "6531fd5b34c63364ae85ba0efac4f3a6b74d9f15375e6e2fd181de0dca9cae9b"
+    },
+    {
+      "path": "output/tammy-income-bas-exports-2026-10-06/non-cash/stale-bas-comparison.json",
+      "sha256": "6e948778da198d2c7a019650a2d0ef23aed99160550c97265f7f2e88b500c1ac"
+    },
+    {
+      "path": "output/tammy-invoice-demo/seed-demo.mjs",
+      "sha256": "f907a2e25bf60c8e7ec704d95e21d7f313ea84f3f7487dc54c08d4833ad046cb"
+    },
+    {
+      "path": "output/tammy-invoice-demo/seed-demo.ts",
+      "sha256": "1aa6c80f32113b14a3a64d9dc40864bf74ae91859334f6707f06869464b9a595"
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-accepted-9ad0b82b-2026-10-10/artifact-audit.mjs",
+      "sha256": "018d2268434318be5feafbb4df6a87f0dcdacefece3c26ff04049f7115e47a78"
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-accepted-9ad0b82b-2026-10-10/cash-mixed/journal-vectors.json",
+      "sha256": "ae418725a5c566e1cd6363a2570bee44e302b8ad6072ed0e102f280d95d966e1"
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-accepted-9ad0b82b-2026-10-10/cash-mixed/reconciliation.json",
+      "sha256": "e6a8022992e5d0dd3fcd239c030548de3b4802506c2a4179a24c79682643e7b7"
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-accepted-9ad0b82b-2026-10-10/cash/journal-vectors.json",
+      "sha256": "562e3ee30104024fa062d9a8679fb4caa1f31318bab8869b44a9be3ecad06a91"
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-accepted-9ad0b82b-2026-10-10/cash/reconciliation.json",
+      "sha256": "b6296a8f4678c90c72b96df2fd78f0fddce49111584bb6b76310a5d4de159a21"
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-accepted-9ad0b82b-2026-10-10/non-cash/journal-vectors.json",
+      "sha256": "a549bed2607104b745bd2b391176fa13dc34eaa076bac7619442673533a86e67"
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-accepted-9ad0b82b-2026-10-10/non-cash/reconciliation.json",
+      "sha256": "55882fe1990fee81b93ce4fc7c8ae3ee16c6b70fa179160d347f088bbee79253"
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-accepted-9ad0b82b-2026-10-10/package-integrity.json",
+      "sha256": "f5ca4402d9789ef9785b72049f983393017cfbec78a02ba9dab74c3aefff8191"
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-accepted-9ad0b82b-2026-10-10/sbr-e2e-result.json",
+      "sha256": "82a8472441de0e513b05f904725ce5a85f2f0a9f26810bf2d19e07742f3a3ce5"
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-accepted-9ad0b82b-2026-10-10/visual/render-manifest.json",
+      "sha256": "7d22d7298b247d68595066fc2ab8e234812da889fed2ce4940825d1498225bf0"
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-preacceptance-4bb79919-2026-10-10/cash-mixed/journal-vectors.json",
+      "sha256": "bb9c5db5a4140624f314f3704f0e573e38624e33a826ff9d33e6f7c4de8f6358"
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-preacceptance-4bb79919-2026-10-10/cash-mixed/reconciliation.json",
+      "sha256": "d3a5b39cd9edaa16dbd7803d5079cc3b05df84da9058ebbe1027f62b3c05c5a4"
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-preacceptance-4bb79919-2026-10-10/cash/journal-vectors.json",
+      "sha256": "dc03aa1065e8e45bc90d5fc1ce55c0af4353bee99a3e54eef764195f3b208daf"
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-preacceptance-4bb79919-2026-10-10/cash/reconciliation.json",
+      "sha256": "4ca231791f50eeb1f209b0c1313babe2751c3da7abb6104da3e61067e5918e23"
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-preacceptance-4bb79919-2026-10-10/non-cash/journal-vectors.json",
+      "sha256": "557b0b7980e229d7b946b220c4b7bb8d24bba9cbd3b3e0e809c6b94740f202e3"
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-preacceptance-4bb79919-2026-10-10/non-cash/reconciliation.json",
+      "sha256": "25aa95d1d357c1532f7256cb59a2376a1b5b25b8eab0416e7fbe4cd45bde5e09"
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-preacceptance-755a36d6-2026-10-10/artifacts/cash-mixed/journal-vectors.json",
+      "sha256": "165a9a9e1904dbdae4d69e94eda585168f43ff8b2bb55d3ca4d30cfbdfbb307a"
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-preacceptance-755a36d6-2026-10-10/artifacts/cash-mixed/reconciliation.json",
+      "sha256": "d4ca04b4f28a7b4adad14cfb9414270ab013dbd31d5ed6045a66da684e4d0462"
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-preacceptance-755a36d6-2026-10-10/artifacts/cash/journal-vectors.json",
+      "sha256": "f2ee350fd52988bff4563587af90b64203cae367cabfdf5ed40693e98d6c4834"
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-preacceptance-755a36d6-2026-10-10/artifacts/cash/reconciliation.json",
+      "sha256": "d8db1b2d7a96ff6f4f2c18eebd83564e829d1de6d5543362bc5d961633ec4b93"
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-preacceptance-755a36d6-2026-10-10/artifacts/non-cash/journal-vectors.json",
+      "sha256": "4372088815bcc85970555627253be86275268d6fd53cb5cf07f29fd9b8012c8c"
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-preacceptance-755a36d6-2026-10-10/artifacts/non-cash/reconciliation.json",
+      "sha256": "36b7f44681b9e4ea9bf9b00542f7ef60a3ce13fba1cc0df803656ceec7e74c3f"
+    },
+    {
+      "path": "output/tammy-purchase-payments-gst-preacceptance-755a36d6-2026-10-10/sbr-e2e-result.json",
+      "sha256": "077bf6ae10ad0e61688691fa0698d7af54ab050e4b12d6e1871936385dad0888"
+    }
+  ]
+}
