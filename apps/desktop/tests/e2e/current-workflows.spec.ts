@@ -764,11 +764,21 @@ async function captureJourney(
   milestone: string,
   recovery = false,
 ) {
-  const phase = process.env.TAMMY_JOURNEY_CAPTURE;
+  const upliftPhase = process.env.TAMMY_UPLIFT_CAPTURE;
+  const phase = upliftPhase ?? process.env.TAMMY_JOURNEY_CAPTURE;
   if (phase !== "before" && phase !== "after") return;
+  if (
+    upliftPhase &&
+    !/^(04-documents|05-banking|11-|12-|13-|18-|19-\d+-(documents|banking)|20-|21-|22-|23-)/.test(
+      milestone,
+    )
+  )
+    return;
   const directory = path.resolve(
     import.meta.dirname,
-    "../../../../output/playwright/soft-precision",
+    upliftPhase
+      ? "../../../../output/playwright/soft-precision-review-2026-10-22"
+      : "../../../../output/playwright/soft-precision",
     phase,
   );
   await mkdir(directory, { recursive: true });
