@@ -1,11 +1,14 @@
 import { create } from "@bufbuild/protobuf";
 import {
+  BankStatementImportSchema,
   BankStatementLineSchema,
   BankStatementLineStatus,
   CompleteBankReconciliationRequestSchema,
   CompleteBankReconciliationResponseSchema,
   GetBankingSummaryRequestSchema,
   GetBankingSummaryResponseSchema,
+  ImportBankStatementRequestSchema,
+  ImportBankStatementResponseSchema,
   ListBankStatementLinesRequestSchema,
   ListBankStatementLinesResponseSchema,
   MatchBankStatementLineRequestSchema,
@@ -16,7 +19,7 @@ import {
   MoneySchema,
   PageInfoSchema,
 } from "@tammy/connect-client/tammy/v1/common_pb.js";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, it, vi } from "vitest";
 
@@ -49,7 +52,7 @@ const reconcileCodec = createProtoMethodCodec({
   output: CompleteBankReconciliationResponseSchema,
 });
 
-it("keeps matching distinct from reconciliation and only enables completion after matching", async () => {
+function fixture() {
   const organisationId = "018f0000-0000-7000-8000-000000000004";
   let status = BankStatementLineStatus.UNMATCHED;
   const line = () =>
@@ -64,7 +67,7 @@ it("keeps matching distinct from reconciliation and only enables completion afte
       status,
     });
   const api = {
-    importBankStatement: vi.fn(),
+    importBankStatement: vi.fn<(frame: Uint8Array) => Promise<Uint8Array>>(),
     listBankStatementLines: vi.fn(async () =>
       listCodec.encodeResponse(
         create(ListBankStatementLinesResponseSchema, {
@@ -110,29 +113,125 @@ it("keeps matching distinct from reconciliation and only enables completion afte
     | "listBankStatementLines"
     | "matchBankStatementLine"
   >;
+  return api;
+}
+const workspace = {
+  workspaceId: "018f0000-0000-7000-8000-000000000001",
+  userId: "018f0000-0000-7000-8000-000000000002",
+  sessionId: "018f0000-0000-7000-8000-000000000003",
+  organisationId: "018f0000-0000-7000-8000-000000000004",
+};
+const importCodec = createProtoMethodCodec({
+  input: ImportBankStatementRequestSchema,
+  maximumRequestBytes: 262_144,
+  maximumResponseBytes: 32_768,
+  output: ImportBankStatementResponseSchema,
+});
+
+it("requires an explicit reviewed reference and keeps matching distinct from reconciliation", async () => {
+  const api = fixture();
   const user = userEvent.setup();
-
-  render(
-    <BankingScreen
-      api={api}
-      workspace={{
-        workspaceId: "018f0000-0000-7000-8000-000000000001",
-        userId: "018f0000-0000-7000-8000-000000000002",
-        sessionId: "018f0000-0000-7000-8000-000000000003",
-        organisationId,
-      }}
-    />,
-  );
-
-  expect(await screen.findByText("Officeworks INV-029847")).toBeTruthy();
-  expect(screen.getByText("Unmatched")).toBeTruthy();
-  const complete = screen.getByRole("button", { name: "Complete reconciliation" });
-  expect((complete as HTMLButtonElement).disabled).toBe(true);
+  render(<BankingScreen api={api} workspace={workspace} />);
+  const table = await screen.findByRole("table", { name: "Statement lines" });
+  expect(within(table).getByText("Unmatched")).toBeTruthy();
+  const complete = screen.getByRole("button", {
+    name: "Complete reconciliation",
+  }) as HTMLButtonElement;
+  expect(complete.disabled).toBe(true);
   await user.click(screen.getByRole("button", { name: "Match" }));
-  expect(await screen.findByText("Matched")).toBeTruthy();
-  expect((complete as HTMLButtonElement).disabled).toBe(false);
-  await user.click(complete);
-  expect(await screen.findByText("Reconciled")).toBeTruthy();
+  expect(screen.getByLabelText("Reviewed source reference")).toBe(document.activeElement);
+  expect(
+    (screen.getByRole("button", { name: "Confirm match" }) as HTMLButtonElement).disabled,
+  ).toBe(true);
+  await user.type(screen.getByLabelText("Reviewed source reference"), "Cancelled reference");
+  await user.click(screen.getByRole("button", { name: "Cancel match" }));
+  expect(api.matchBankStatementLine).not.toHaveBeenCalled();
+  expect(screen.queryByRole("form", { name: "Match review" })).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Match" }));
+  expect((screen.getByLabelText("Reviewed source reference") as HTMLInputElement).value).toBe("");
+  await user.type(screen.getByLabelText("Reviewed source reference"), "Receipt INV-029847");
+  await user.dblClick(screen.getByRole("button", { name: "Confirm match" }));
+  expect(await within(table).findByText("Matched")).toBeTruthy();
+  const matchedFrame = api.matchBankStatementLine.mock.calls[0]?.[0];
+  if (!matchedFrame) throw new Error("match request missing");
+  expect(matchCodec.decodeRequest(matchedFrame).matchReference).toBe("Receipt INV-029847");
+  expect(complete.disabled).toBe(false);
+  await user.dblClick(complete);
+  expect(await within(table).findByText("Reconciled")).toBeTruthy();
   expect(api.matchBankStatementLine).toHaveBeenCalledOnce();
   expect(api.completeBankReconciliation).toHaveBeenCalledOnce();
+});
+
+it("retains a failed match draft and reuses its command key on an unchanged retry", async () => {
+  const api = fixture();
+  api.matchBankStatementLine.mockRejectedValueOnce(new Error("response interrupted"));
+  const user = userEvent.setup();
+  render(<BankingScreen api={api} workspace={workspace} />);
+  await user.click(await screen.findByRole("button", { name: "Match" }));
+  await user.type(screen.getByLabelText("Reviewed source reference"), "Receipt INV-029847");
+  await user.click(screen.getByRole("button", { name: "Confirm match" }));
+  expect(await screen.findByRole("alert")).toHaveProperty(
+    "textContent",
+    expect.stringContaining("Your reference is still here"),
+  );
+  expect((screen.getByLabelText("Reviewed source reference") as HTMLInputElement).value).toBe(
+    "Receipt INV-029847",
+  );
+  await user.click(screen.getByRole("button", { name: "Confirm match" }));
+  await waitFor(() => expect(api.matchBankStatementLine).toHaveBeenCalledTimes(2));
+  const requests = api.matchBankStatementLine.mock.calls.map(([frame]) =>
+    matchCodec.decodeRequest(frame),
+  );
+  expect(requests[0]?.commandContext?.idempotencyKey).toBe(
+    requests[1]?.commandContext?.idempotencyKey,
+  );
+});
+
+it("keeps confirmed imports separate from refresh failures and blocks duplicate writes", async () => {
+  const api = fixture();
+  let accepted = false;
+  api.importBankStatement.mockImplementation(async (frame: Uint8Array) => {
+    const request = importCodec.decodeRequest(frame);
+    expect(request.lines[0]?.amount?.minorUnits).toBe(-11000n);
+    expect(request.openingBalance?.minorUnits).toBe(12345678901n);
+    accepted = true;
+    return importCodec.encodeResponse(
+      create(ImportBankStatementResponseSchema, {
+        statementImport: create(BankStatementImportSchema, {
+          id: "018f0000-0000-7000-8000-000000000302",
+          organisationId: workspace.organisationId,
+          lineCount: 1,
+          openingBalance: request.openingBalance,
+          closingBalance: create(MoneySchema, { currencyCode: "AUD", minorUnits: 12345667901n }),
+        }),
+      }),
+    );
+  });
+  const originalList = api.listBankStatementLines.getMockImplementation();
+  if (!originalList) throw new Error("list fixture missing");
+  api.listBankStatementLines.mockImplementation(async () => {
+    if (accepted) throw new Error("refresh interrupted");
+    return originalList();
+  });
+  const user = userEvent.setup();
+  render(<BankingScreen api={api} workspace={workspace} />);
+  await screen.findByRole("table", { name: "Statement lines" });
+  await user.click(screen.getByRole("button", { name: "Import statement" }));
+  const form = screen.getByRole("form", { name: "Statement import" });
+  expect((screen.getByLabelText("Opening balance · AUD") as HTMLInputElement).value).toBe("");
+  await user.type(screen.getByLabelText("Opening balance · AUD"), "123456789.01");
+  await user.type(screen.getByLabelText("CSV rows"), "2024-05-12,Synthetic supplies,-110.00");
+  await user.dblClick(within(form).getByRole("button", { name: "Import statement" }));
+  expect(await screen.findByRole("alert")).toHaveProperty(
+    "textContent",
+    expect.stringContaining("The action was saved"),
+  );
+  expect(screen.queryByRole("form", { name: "Statement import" })).toBeNull();
+  expect(api.importBankStatement).toHaveBeenCalledOnce();
+  expect(
+    (screen.getByRole("button", { name: "Import statement" }) as HTMLButtonElement).disabled,
+  ).toBe(true);
+  expect(
+    (screen.getByRole("button", { name: "Complete reconciliation" }) as HTMLButtonElement).disabled,
+  ).toBe(true);
 });

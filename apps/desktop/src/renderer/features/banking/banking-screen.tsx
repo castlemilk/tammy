@@ -1,9 +1,11 @@
 import { create } from "@bufbuild/protobuf";
 import {
+  type BankStatementLine,
   BankStatementLineStatus,
   CompleteBankReconciliationRequestSchema,
   CompleteBankReconciliationResponseSchema,
   GetBankingSummaryRequestSchema,
+  type GetBankingSummaryResponse,
   GetBankingSummaryResponseSchema,
   ImportBankStatementRequestSchema,
   ImportBankStatementResponseSchema,
@@ -18,11 +20,18 @@ import {
   MoneySchema,
   PageRequestSchema,
 } from "@tammy/connect-client/tammy/v1/common_pb.js";
-import { Check, Landmark, Upload } from "lucide-react";
-import { type FormEvent, useCallback, useEffect, useState } from "react";
+import { ArrowRight, Check, FileInput, RefreshCw, Upload, X } from "lucide-react";
+import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 
 import type { TammyDesktopAPI } from "../../../shared/desktop-api";
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
+import {
+  WorkFilters,
+  WorkHeading,
+  WorkNotice,
+  WorkSearch,
+  WorkState,
+} from "../../components/review-workspace";
 import { Button } from "../../components/ui/button";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
 
@@ -73,18 +82,43 @@ export function BankingScreen({
   readonly api: BankingAPI;
   readonly workspace: AuthenticatedWorkspace | undefined;
 }) {
-  const [openingBalance, setOpeningBalance] = useState("1000.00");
-  const [rows, setRows] = useState("2024-05-12,Officeworks INV-029847,-319.00");
-  const [lines, setLines] = useState<
-    readonly import("@tammy/connect-client/tammy/v1/banking_pb.js").BankStatementLine[]
-  >([]);
-  const [summary, setSummary] =
-    useState<import("@tammy/connect-client/tammy/v1/banking_pb.js").GetBankingSummaryResponse>();
+  const [openingBalance, setOpeningBalance] = useState("");
+  const [rows, setRows] = useState("");
+  const [lines, setLines] = useState<readonly BankStatementLine[]>([]);
+  const [summary, setSummary] = useState<GetBankingSummaryResponse>();
+  const [status, setStatus] = useState<"loading" | "ready" | "unavailable">("loading");
+  const [importOpen, setImportOpen] = useState(false);
+  const [selected, setSelected] = useState<BankStatementLine>();
+  const [reference, setReference] = useState("");
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<"all" | "unmatched" | "matched" | "reconciled">("all");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
-
+  const [notice, setNotice] = useState<string>();
+  const [refreshError, setRefreshError] = useState(false);
+  const active = useRef(false);
+  const sequence = useRef(0);
+  const attempt = useRef<{ signature: string; key: string } | undefined>(undefined);
+  const importButton = useRef<HTMLButtonElement>(null);
+  const openingInput = useRef<HTMLInputElement>(null);
+  const referenceInput = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (importOpen) openingInput.current?.focus();
+  }, [importOpen]);
+  useEffect(() => {
+    if (selected) referenceInput.current?.focus();
+  }, [selected]);
+  const matchButtons = useRef(new Map<string, HTMLButtonElement>());
+  const attemptKey = (signature: string) => {
+    if (attempt.current?.signature !== signature) attempt.current = { signature, key: uuidV7() };
+    return attempt.current.key;
+  };
   const load = useCallback(async () => {
-    if (!workspace?.organisationId) return;
+    const current = ++sequence.current;
+    if (!workspace?.organisationId) {
+      setStatus("unavailable");
+      return;
+    }
     const authentication = { actorUserId: workspace.userId, sessionId: workspace.sessionId };
     const [lineFrame, summaryFrame] = await Promise.all([
       api.listBankStatementLines(
@@ -105,32 +139,75 @@ export function BankingScreen({
         ),
       ),
     ]);
-    setLines(listCodec.decodeResponse(lineFrame).lines);
-    setSummary(summaryCodec.decodeResponse(summaryFrame));
+    const nextLines = listCodec.decodeResponse(lineFrame).lines;
+    const nextSummary = summaryCodec.decodeResponse(summaryFrame);
+    if (current !== sequence.current) return;
+    setLines(nextLines);
+    setSummary(nextSummary);
+    setStatus("ready");
+    setRefreshError(false);
   }, [api, workspace]);
-
   useEffect(() => {
-    void load().catch(() => setError("Banking data is unavailable."));
+    void load().catch(() => setStatus("unavailable"));
+    return () => {
+      sequence.current += 1;
+    };
   }, [load]);
+  const refresh = async () => {
+    setStatus("loading");
+    try {
+      await load();
+    } catch {
+      setStatus("unavailable");
+    }
+  };
+  const refreshAfterSave = async () => {
+    try {
+      await load();
+    } catch {
+      setRefreshError(true);
+    }
+  };
+  const begin = () => {
+    if (active.current) return false;
+    active.current = true;
+    setBusy(true);
+    setError(undefined);
+    setNotice(undefined);
+    return true;
+  };
+  const end = () => {
+    active.current = false;
+    setBusy(false);
+  };
+  const command = (key: string) =>
+    create(CommandContextSchema, {
+      authentication: {
+        actorUserId: workspace?.userId ?? "",
+        sessionId: workspace?.sessionId ?? "",
+      },
+      idempotencyKey: key,
+    });
 
   const importStatement = async (event: FormEvent) => {
     event.preventDefault();
-    if (!workspace?.organisationId) return;
-    setBusy(true);
-    setError(undefined);
+    if (!workspace?.organisationId || !begin()) return;
+    let confirmed = false;
     try {
       const inputs = rows
         .split(/\r?\n/)
-        .filter(Boolean)
+        .filter((row) => row.trim())
         .map((row) => {
-          const [date = "", description = "", amount = ""] = row.split(",");
-          const parts = date.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
-          if (!parts || !description.trim()) throw new Error("invalid row");
+          const parts = row.split(",");
+          const [date = "", description = "", amount = ""] = parts;
+          const dateParts = date.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+          if (parts.length !== 3 || !dateParts || !description.trim())
+            throw new Error("invalid row");
           return {
             transactionDate: create(CivilDateSchema, {
-              year: Number(parts[1]),
-              month: Number(parts[2]),
-              day: Number(parts[3]),
+              year: Number(dateParts[1]),
+              month: Number(dateParts[2]),
+              day: Number(dateParts[3]),
             }),
             description: description.trim(),
             amount: create(MoneySchema, {
@@ -139,8 +216,9 @@ export function BankingScreen({
             }),
           };
         });
+      if (inputs.length < 1 || inputs.length > 1000) throw new Error("invalid count");
       const request = create(ImportBankStatementRequestSchema, {
-        commandContext: command(workspace),
+        commandContext: command(attemptKey(JSON.stringify(["import", openingBalance, rows]))),
         organisationId: workspace.organisationId,
         openingBalance: create(MoneySchema, {
           currencyCode: "AUD",
@@ -148,226 +226,516 @@ export function BankingScreen({
         }),
         lines: inputs,
       });
-      await api.importBankStatement(importCodec.encodeRequest(request));
-      await load();
+      const response = importCodec.decodeResponse(
+        await api.importBankStatement(importCodec.encodeRequest(request)),
+      );
+      if (!response.statementImport) throw new Error("missing confirmation");
+      confirmed = true;
+      attempt.current = undefined;
+      setImportOpen(false);
+      setOpeningBalance("");
+      setRows("");
+      setQuery("");
+      setFilter("all");
+      setNotice(
+        `Statement imported · ${response.statementImport.lineCount} lines retained. Review each match before reconciliation.`,
+      );
+      await refreshAfterSave();
     } catch {
-      setError("Use one row per line: YYYY-MM-DD,description,amount.");
+      if (!confirmed)
+        setError(
+          "The statement was not confirmed. Use one row per line: YYYY-MM-DD,description,amount. Check the opening balance and try again; the same unchanged request can be retried safely.",
+        );
     } finally {
-      setBusy(false);
+      end();
     }
   };
-
-  const match = async (
-    line: import("@tammy/connect-client/tammy/v1/banking_pb.js").BankStatementLine,
-  ) => {
-    if (!workspace) return;
-    setBusy(true);
-    setError(undefined);
+  const match = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!workspace || !selected) return;
+    if (!reference.trim() || reference.trim().length > 128) {
+      setError("Enter a reviewed source reference from 1 to 128 characters.");
+      return;
+    }
+    if (!begin()) return;
     try {
-      await api.matchBankStatementLine(
-        matchCodec.encodeRequest(
-          create(MatchBankStatementLineRequestSchema, {
-            commandContext: command(workspace),
-            lineId: line.id,
-            expectedVersion: line.version,
-            matchReference: "Reviewed accounting source",
-          }),
+      const response = matchCodec.decodeResponse(
+        await api.matchBankStatementLine(
+          matchCodec.encodeRequest(
+            create(MatchBankStatementLineRequestSchema, {
+              commandContext: command(
+                attemptKey(
+                  JSON.stringify([
+                    "match",
+                    selected.id,
+                    selected.version.toString(),
+                    reference.trim(),
+                  ]),
+                ),
+              ),
+              lineId: selected.id,
+              expectedVersion: selected.version,
+              matchReference: reference.trim(),
+            }),
+          ),
         ),
       );
-      await load();
+      if (
+        !response.line ||
+        response.line.id !== selected.id ||
+        response.line.status !== BankStatementLineStatus.MATCHED
+      )
+        throw new Error("missing match");
+      const matched = response.line;
+      setLines((current) => current.map((line) => (line.id === matched.id ? matched : line)));
+      setSelected(undefined);
+      setReference("");
+      attempt.current = undefined;
+      setNotice(
+        "Match saved. This reference records your review; no accounting entry or payment was created.",
+      );
+      await refreshAfterSave();
     } catch {
-      setError("The statement line could not be matched.");
+      setError(
+        "The match could not be confirmed. Your reference is still here. Try again, or refresh if this line changed elsewhere.",
+      );
     } finally {
-      setBusy(false);
+      end();
     }
   };
-
   const reconcile = async () => {
-    if (!workspace?.organisationId) return;
-    setBusy(true);
-    setError(undefined);
+    if (!workspace?.organisationId || !begin()) return;
     try {
-      await api.completeBankReconciliation(
-        reconcileCodec.encodeRequest(
-          create(CompleteBankReconciliationRequestSchema, {
-            commandContext: command(workspace),
-            organisationId: workspace.organisationId,
-          }),
+      const response = reconcileCodec.decodeResponse(
+        await api.completeBankReconciliation(
+          reconcileCodec.encodeRequest(
+            create(CompleteBankReconciliationRequestSchema, {
+              commandContext: command(
+                attemptKey(
+                  JSON.stringify([
+                    "reconcile",
+                    summary?.importedLineCount,
+                    summary?.unreconciledLineCount,
+                  ]),
+                ),
+              ),
+              organisationId: workspace.organisationId,
+            }),
+          ),
         ),
       );
-      await load();
+      if (!response.closingBalance) throw new Error("missing reconciliation");
+      attempt.current = undefined;
+      setNotice(
+        `Reconciliation complete · ${response.reconciledLineCount} lines reconciled. Closing balance ${formatMoney(response.closingBalance.minorUnits)}.`,
+      );
+      await refreshAfterSave();
     } catch {
-      setError("Match every imported line before completing reconciliation.");
+      setError(
+        "Reconciliation could not be confirmed. Match every imported line, refresh the view, and try again.",
+      );
     } finally {
-      setBusy(false);
+      end();
     }
   };
-
+  const count = (value: BankStatementLineStatus) =>
+    lines.filter((line) => line.status === value).length;
+  const visible = lines.filter(
+    (line) =>
+      (filter === "all" ||
+        (filter === "unmatched" && line.status === BankStatementLineStatus.UNMATCHED) ||
+        (filter === "matched" && line.status === BankStatementLineStatus.MATCHED) ||
+        (filter === "reconciled" && line.status === BankStatementLineStatus.RECONCILED)) &&
+      [line.description, line.matchReference]
+        .join(" ")
+        .toLowerCase()
+        .includes(query.trim().toLowerCase()),
+  );
+  const hasLines = (summary?.importedLineCount ?? 0) > 0;
+  const canReconcile =
+    status === "ready" &&
+    !refreshError &&
+    !busy &&
+    hasLines &&
+    (summary?.unmatchedLineCount ?? 0) === 0 &&
+    (summary?.unreconciledLineCount ?? 0) > 0;
+  const closeMatch = () => {
+    if (selected) matchButtons.current.get(selected.id)?.focus();
+    setSelected(undefined);
+    setReference("");
+    setError(undefined);
+  };
   return (
-    <div className="mx-auto grid w-full max-w-[1120px] gap-4">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className=" page-title">Banking</h1>
-          <p className="mt-1 text-[14px] text-muted-foreground">
-            Import local statement rows, confirm matches, then reconcile.
-          </p>
-        </div>
-        <div className="rounded-xl border border-border bg-surface px-3 py-2 text-right">
-          <p className="text-[12px] uppercase tracking-[0.05em] text-muted-foreground">
-            Latest statement balance
-          </p>
-          <p className="mt-1 text-[15px] font-semibold">
-            {formatMoney(summary?.latestClosingBalance?.minorUnits)}
-          </p>
-        </div>
-      </div>
-      {error ? (
-        <p
-          className="rounded-xl border border-warning-border bg-warning-soft px-3 py-2 text-[14px]"
-          role="alert"
-        >
-          {error}
-        </p>
+    <div className="mx-auto grid w-full max-w-[1120px] gap-6">
+      <WorkHeading
+        title="Banking"
+        description="Bring in a local statement, give every line a clear reference, and reconcile when your review is complete."
+        action={
+          !importOpen ? (
+            <Button
+              ref={importButton}
+              disabled={busy || status !== "ready" || refreshError}
+              onClick={() => {
+                setImportOpen(true);
+                setSelected(undefined);
+                setError(undefined);
+                setNotice(undefined);
+              }}
+              type="button"
+            >
+              <Upload aria-hidden="true" className="size-4" />
+              Import statement
+            </Button>
+          ) : undefined
+        }
+      />
+      {notice ? <WorkNotice success>{notice}</WorkNotice> : null}
+      {refreshError ? (
+        <WorkNotice>
+          The action was saved, but the latest statement view could not be loaded. Refresh before
+          continuing.{" "}
+          <Button disabled={busy} onClick={refresh} type="button" variant="outline">
+            Refresh statement lines
+          </Button>
+        </WorkNotice>
       ) : null}
-      <div className="grid grid-cols-[minmax(280px,.75fr)_minmax(460px,1.5fr)] gap-4 max-[1100px]:grid-cols-1">
+      {error ? <WorkNotice>{error}</WorkNotice> : null}
+      {importOpen ? (
         <form
-          className="grid content-start gap-3 rounded-xl border border-border bg-surface p-4"
+          aria-label="Statement import"
+          className="work-surface overflow-hidden"
           onSubmit={importStatement}
         >
-          <div>
-            <p className="text-[12px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
-              Statement import
-            </p>
-            <h2 className="mt-1 text-[14px] font-semibold">Business transaction account</h2>
-          </div>
-          <label className="grid gap-1 text-[12px] font-semibold">
-            Opening balance
-            <input
-              className="focus-ring h-11 rounded-xl border border-border px-2 text-[14px]"
-              onChange={(event) => setOpeningBalance(event.target.value)}
-              step="0.01"
-              type="number"
-              value={openingBalance}
-            />
-          </label>
-          <label className="grid gap-1 text-[12px] font-semibold">
-            CSV rows
-            <textarea
-              className="focus-ring min-h-32 rounded-xl border border-border p-2 font-mono text-[12px] leading-5"
-              onChange={(event) => setRows(event.target.value)}
-              value={rows}
-            />
-          </label>
-          <p className="text-[12px] text-muted-foreground">
-            Format: date, description, signed amount. Nothing is matched automatically.
-          </p>
-          <Button disabled={busy} type="submit">
-            <Upload className="size-3" />
-            Import statement
-          </Button>
-        </form>
-        <section className="overflow-x-auto rounded-[20px] border border-border bg-surface">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-3 py-2">
+          <div className="flex items-start justify-between gap-3 border-b border-border p-5">
             <div>
-              <p className="text-[12px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
-                Statement lines
-              </p>
-              <p className="mt-1 text-[12px] text-muted-foreground">
-                {summary?.unmatchedLineCount ?? 0} unmatched · {summary?.unreconciledLineCount ?? 0}{" "}
-                unreconciled
+              <p className="work-eyebrow">01 · Bring in a statement</p>
+              <h2 className="mt-1 font-serif text-[26px]">Import local CSV rows</h2>
+              <p className="mt-2 text-[13px] text-muted-foreground">
+                Enter the actual opening balance and statement rows. Nothing is matched
+                automatically.
               </p>
             </div>
             <Button
-              disabled={
-                busy ||
-                lines.length === 0 ||
-                (summary?.unmatchedLineCount ?? 0) > 0 ||
-                (summary?.unreconciledLineCount ?? 0) === 0
-              }
-              onClick={reconcile}
+              aria-label="Close statement import"
+              disabled={busy}
+              onClick={() => {
+                setImportOpen(false);
+                setError(undefined);
+                requestAnimationFrame(() => importButton.current?.focus());
+              }}
               type="button"
+              variant="ghost"
             >
-              Complete reconciliation
+              <X aria-hidden="true" className="size-4" />
             </Button>
           </div>
-          {lines.length === 0 ? (
-            <div className="grid min-h-64 place-items-center text-center">
-              <div>
-                <Landmark className="mx-auto size-5 text-muted-foreground" />
-                <p className="mt-2 text-[14px] font-semibold">No statement lines yet</p>
-                <p className="mt-1 text-[12px] text-muted-foreground">
-                  Import the sample row to begin.
+          <div className="grid grid-cols-[minmax(0,.7fr)_minmax(0,1.3fr)] gap-6 p-5 max-[1050px]:grid-cols-1">
+            <div>
+              <label className="grid gap-2 text-[12px] font-semibold">
+                Opening balance · AUD
+                <input
+                  ref={openingInput}
+                  className="work-input tabular-nums"
+                  disabled={busy}
+                  onChange={(event) => setOpeningBalance(event.target.value)}
+                  required
+                  step="0.01"
+                  type="number"
+                  value={openingBalance}
+                />
+              </label>
+              <p className="mt-3 text-[12px] leading-6 text-muted-foreground">
+                Use the balance immediately before these transactions. Negative amounts represent
+                money out.
+              </p>
+              <div className="mt-5 rounded-xl bg-background p-4 text-[12px] leading-6">
+                <p className="font-semibold">Three columns, one transaction per line</p>
+                <code className="break-words">YYYY-MM-DD,description,signed amount</code>
+                <p className="mt-2 text-muted-foreground">
+                  1–1,000 rows · AUD · no header row or commas inside descriptions
                 </p>
               </div>
             </div>
-          ) : (
-            <table className="w-full border-collapse text-left text-[12px]">
+            <label className="grid content-start gap-2 text-[12px] font-semibold">
+              CSV rows
+              <textarea
+                className="focus-ring min-h-52 min-w-0 resize-y rounded-xl border border-border bg-surface p-4 font-mono text-[13px] font-normal leading-6"
+                disabled={busy}
+                onChange={(event) => setRows(event.target.value)}
+                required
+                value={rows}
+                spellCheck={false}
+              />
+            </label>
+          </div>
+          <div className="flex flex-wrap gap-3 border-t border-border px-5 py-4">
+            <Button disabled={busy} type="submit">
+              <FileInput aria-hidden="true" className="size-4" />
+              {busy ? "Importing…" : "Import statement"}
+            </Button>
+            <Button
+              disabled={busy}
+              onClick={() => {
+                setImportOpen(false);
+                setRows("");
+                setOpeningBalance("");
+                setError(undefined);
+                requestAnimationFrame(() => importButton.current?.focus());
+              }}
+              type="button"
+              variant="ghost"
+            >
+              Cancel import
+            </Button>
+          </div>
+        </form>
+      ) : null}
+      <section aria-label="Statement workspace" className="work-surface overflow-hidden">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-5 border-b border-border bg-background p-5 max-[1050px]:grid-cols-1">
+          <ol
+            className="flex flex-wrap items-center gap-x-4 gap-y-3 text-[13px] font-semibold"
+            aria-label="Reconciliation progress"
+          >
+            {["Import statement", "Review matches", "Reconcile"].map((label, index) => (
+              <li
+                className={`flex items-center gap-2 ${hasLines && (index === 0 || (index === 1 && summary?.unmatchedLineCount === 0) || (index === 2 && summary?.unreconciledLineCount === 0)) ? "text-forest" : "text-muted-foreground"}`}
+                key={label}
+              >
+                <span className="grid size-7 place-items-center rounded-full border border-border bg-surface text-[12px]">
+                  {index + 1}
+                </span>
+                {label}
+                {index < 2 ? <ArrowRight aria-hidden="true" className="ml-1 size-3" /> : null}
+              </li>
+            ))}
+          </ol>
+          <div className="text-right max-[1050px]:text-left">
+            <p className="work-eyebrow">Latest statement balance</p>
+            <p className="mt-1 font-serif text-[28px] leading-8 tabular-nums">
+              {summary?.latestClosingBalance
+                ? formatMoney(summary.latestClosingBalance.minorUnits)
+                : "—"}
+            </p>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              AUD · from the latest retained import
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-4">
+          <WorkFilters
+            label="Statement status"
+            value={filter}
+            onChange={setFilter}
+            options={[
+              { value: "all", label: "All lines", count: lines.length },
+              {
+                value: "unmatched",
+                label: "Unmatched",
+                count: count(BankStatementLineStatus.UNMATCHED),
+              },
+              { value: "matched", label: "Matched", count: count(BankStatementLineStatus.MATCHED) },
+              {
+                value: "reconciled",
+                label: "Reconciled",
+                count: count(BankStatementLineStatus.RECONCILED),
+              },
+            ]}
+          />
+          <div className="flex min-w-0 flex-wrap gap-2">
+            <WorkSearch label="Search statement lines" value={query} onChange={setQuery} />
+            <Button
+              aria-label="Refresh statement lines"
+              disabled={busy || status === "loading"}
+              onClick={refresh}
+              variant="ghost"
+              type="button"
+            >
+              <RefreshCw aria-hidden="true" className="size-4" />
+            </Button>
+          </div>
+        </div>
+        {status !== "ready" ? (
+          <WorkState
+            title={status === "loading" ? "Loading statement lines" : "Banking data is unavailable"}
+            loading={status === "loading"}
+            description="Statement data is read from this local workspace."
+            action={
+              status === "unavailable" ? (
+                <Button onClick={refresh} type="button" variant="outline">
+                  Try again
+                </Button>
+              ) : undefined
+            }
+          />
+        ) : visible.length === 0 ? (
+          <WorkState
+            title={lines.length ? "No matching statement lines" : "A calm start to reconciliation"}
+            description={
+              lines.length
+                ? "Try another description, reference or status."
+                : "Import your local statement rows to begin. Each line needs an explicit reviewed reference before reconciliation."
+            }
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="work-table min-w-[720px]" aria-label="Statement lines">
               <thead>
-                <tr className="border-b border-border text-muted-foreground">
-                  <th className="px-3 py-2">Date</th>
-                  <th className="px-3 py-2">Description</th>
-                  <th className="px-3 py-2 text-right">Amount</th>
-                  <th className="px-3 py-2">State</th>
-                  <th className="px-3 py-2 text-right">Action</th>
+                <tr>
+                  <th>Date</th>
+                  <th>Description & reference</th>
+                  <th className="text-right">Amount · AUD</th>
+                  <th>State</th>
+                  <th className="text-right">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {lines.map((line) => (
-                  <tr className="border-b border-border last:border-0" key={line.id}>
-                    <td className="px-3 py-2">{formatDate(line.transactionDate)}</td>
-                    <td className="px-3 py-2 font-medium">{line.description}</td>
-                    <td className="px-3 py-2 text-right font-semibold">
+                {visible.map((line) => (
+                  <tr
+                    className={selected?.id === line.id ? "bg-forest-soft" : "hover:bg-background"}
+                    key={line.id}
+                  >
+                    <td className="whitespace-nowrap tabular-nums">
+                      {formatDate(line.transactionDate)}
+                    </td>
+                    <td>
+                      <p className="font-semibold">{line.description}</p>
+                      <p className="mt-1 text-[12px] text-muted-foreground">
+                        {line.matchReference || "No reviewed reference yet"}
+                      </p>
+                    </td>
+                    <td className="whitespace-nowrap text-right font-semibold tabular-nums">
                       {formatMoney(line.amount?.minorUnits)}
                     </td>
-                    <td className="px-3 py-2">
+                    <td>
                       <Status status={line.status} />
                     </td>
-                    <td className="px-3 py-2 text-right">
+                    <td className="text-right">
                       {line.status === BankStatementLineStatus.UNMATCHED ? (
                         <Button
-                          className="h-7 px-2 text-[12px]"
-                          disabled={busy}
-                          onClick={() => match(line)}
+                          ref={(node) => {
+                            if (node) matchButtons.current.set(line.id, node);
+                            else matchButtons.current.delete(line.id);
+                          }}
+                          disabled={busy || refreshError}
+                          onClick={() => {
+                            setSelected(line);
+                            setReference("");
+                            setError(undefined);
+                            setNotice(undefined);
+                            setImportOpen(false);
+                          }}
                           type="button"
                           variant="outline"
                         >
                           Match
                         </Button>
                       ) : (
-                        <Check className="ml-auto size-3 text-forest" />
+                        <Check
+                          aria-label="Review complete"
+                          className="ml-auto size-4 text-forest"
+                        />
                       )}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          )}
-        </section>
-      </div>
+          </div>
+        )}
+        <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border p-5">
+          <div>
+            <p className="text-[13px] font-semibold">
+              {summary?.unmatchedLineCount ?? 0} unmatched · {summary?.unreconciledLineCount ?? 0}{" "}
+              unreconciled
+            </p>
+            <p className="mt-1 text-[12px] leading-5 text-muted-foreground">
+              {lines.length} loaded (up to 200).{" "}
+              {canReconcile
+                ? "Every imported line is matched. You can complete reconciliation."
+                : hasLines && summary?.unreconciledLineCount === 0
+                  ? "All imported lines are reconciled."
+                  : "Review every unmatched line before completing reconciliation."}
+            </p>
+          </div>
+          <Button disabled={!canReconcile} onClick={reconcile} type="button">
+            {busy && !selected && !importOpen ? "Saving…" : "Complete reconciliation"}
+          </Button>
+        </div>
+      </section>
+      {selected ? (
+        <form
+          noValidate
+          aria-label="Match review"
+          className="work-surface overflow-hidden"
+          onSubmit={match}
+        >
+          <div className="flex items-start justify-between gap-4 border-b border-border p-5">
+            <div>
+              <p className="work-eyebrow">02 · Review a match</p>
+              <h2 className="mt-1 break-words font-serif text-[26px]">{selected.description}</h2>
+              <p className="mt-2 text-[13px] text-muted-foreground">
+                {formatDate(selected.transactionDate)} ·{" "}
+                <span className="font-semibold tabular-nums">
+                  {formatMoney(selected.amount?.minorUnits)}
+                </span>
+              </p>
+            </div>
+            <Button
+              aria-label="Close match review"
+              disabled={busy}
+              onClick={closeMatch}
+              type="button"
+              variant="ghost"
+            >
+              <X aria-hidden="true" className="size-4" />
+            </Button>
+          </div>
+          <div className="grid grid-cols-2 gap-6 p-5 max-[1050px]:grid-cols-1">
+            <label className="grid content-start gap-2 text-[12px] font-semibold">
+              Reviewed source reference
+              <input
+                ref={referenceInput}
+                aria-invalid={error ? true : undefined}
+                aria-describedby="match-reference-help"
+                className="work-input"
+                disabled={busy}
+                maxLength={128}
+                onChange={(event) => setReference(event.target.value)}
+                required
+                value={reference}
+              />
+            </label>
+            <p id="match-reference-help" className="text-[13px] leading-6 text-muted-foreground">
+              Check the source yourself, then record its invoice, receipt or journal reference. This
+              records a match only. It does not link a source document, post a journal, or send a
+              payment.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3 border-t border-border px-5 py-4">
+            <Button disabled={busy || !reference.trim()} type="submit">
+              {busy ? "Saving…" : "Confirm match"}
+            </Button>
+            <Button disabled={busy} onClick={closeMatch} type="button" variant="ghost">
+              Cancel match
+            </Button>
+          </div>
+        </form>
+      ) : null}
     </div>
   );
 }
-
 function Status({ status }: { readonly status: BankStatementLineStatus }) {
-  const label =
-    status === BankStatementLineStatus.RECONCILED
-      ? "Reconciled"
-      : status === BankStatementLineStatus.MATCHED
-        ? "Matched"
-        : "Unmatched";
   return (
     <span
-      className={`rounded-full px-2 py-1 text-[12px] font-semibold ${status === BankStatementLineStatus.UNMATCHED ? "bg-warning-soft text-warning" : "bg-success-soft text-forest"}`}
+      className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-[12px] font-semibold ${status === BankStatementLineStatus.UNMATCHED ? "bg-warning-soft text-warning" : "bg-success-soft text-forest"}`}
     >
-      {label}
+      {status === BankStatementLineStatus.RECONCILED
+        ? "Reconciled"
+        : status === BankStatementLineStatus.MATCHED
+          ? "Matched"
+          : "Unmatched"}
     </span>
   );
-}
-function command(workspace: AuthenticatedWorkspace) {
-  return create(CommandContextSchema, {
-    authentication: { actorUserId: workspace.userId, sessionId: workspace.sessionId },
-    idempotencyKey: uuidV7(),
-  });
 }
 function decimalToMinor(value: string): bigint {
   const match = value.trim().match(/^(-?)(\d+)(?:\.(\d{0,2}))?$/);

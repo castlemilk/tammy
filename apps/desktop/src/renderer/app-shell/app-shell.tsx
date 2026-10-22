@@ -1,7 +1,7 @@
 import { Leaf, LockKeyhole } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { Navigation } from "./navigation";
+import { Navigation, PRIMARY_NAVIGATION } from "./navigation";
 
 interface AppShellProps {
   readonly activePath: string;
@@ -10,6 +10,9 @@ interface AppShellProps {
 }
 
 export function AppShell({ activePath, children, onNavigate }: AppShellProps) {
+  const current = PRIMARY_NAVIGATION.find(
+    (item) => activePath === item.href || activePath.startsWith(`${item.href}/`),
+  );
   return (
     <div className="grid min-h-dvh grid-cols-[216px_minmax(0,1fr)] bg-background max-[900px]:grid-cols-[64px_minmax(0,1fr)]">
       <a
@@ -30,19 +33,28 @@ export function AppShell({ activePath, children, onNavigate }: AppShellProps) {
           />
         </div>
         <Navigation activePath={activePath} onNavigate={onNavigate} />
-        <p className="px-6 pb-5 text-[12px] text-muted-foreground max-[900px]:hidden">
-          A little clarity, every day.
-        </p>
+        <div className="mx-3 mb-4 rounded-xl bg-background p-3 max-[900px]:hidden">
+          <p className="flex items-center gap-2 text-[12px] font-semibold text-forest">
+            <LockKeyhole aria-hidden="true" className="size-3.5" />
+            Local workspace
+          </p>
+          <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
+            A little clarity, every day.
+            <br />
+            Your records stay on this device.
+          </p>
+        </div>
       </aside>
       <div className="min-w-0">
         <header className="flex min-h-16 flex-wrap items-center justify-between gap-2 border-b border-border px-8 py-3 max-[700px]:px-4 [-webkit-app-region:drag]">
           <div className="flex items-center gap-2 text-[12px] font-medium text-muted-foreground">
-            <span aria-hidden="true" className="size-1.5 rounded-full bg-success" />
-            <span>Local data</span>
+            <span>Workspace</span>
+            <span aria-hidden="true">/</span>
+            <span className="font-semibold text-foreground">{current?.label ?? "Workspace"}</span>
           </div>
           <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
             <LockKeyhole aria-hidden="true" className="size-4 text-forest" strokeWidth={1.8} />
-            <span>Local workspace</span>
+            <span>Local data</span>
           </div>
         </header>
         <main

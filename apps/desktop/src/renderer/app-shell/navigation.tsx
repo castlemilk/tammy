@@ -35,16 +35,27 @@ export function Navigation({ activePath, onNavigate }: NavigationProps) {
       aria-label="Primary"
       className="flex min-h-0 flex-1 flex-col px-3 pb-4 pt-1 max-[900px]:px-2"
     >
-      <ul className="m-0 grid list-none gap-1.5 p-0">
-        {PRIMARY_NAVIGATION.slice(0, -1).map((item) => (
-          <NavigationItem
-            activePath={activePath}
-            item={item}
-            key={item.href}
-            onNavigate={onNavigate}
-          />
+      <div className="min-h-0 overflow-y-auto">
+        {[
+          { label: "Workspace", items: PRIMARY_NAVIGATION.slice(0, 3) },
+          { label: "Accounting", items: PRIMARY_NAVIGATION.slice(3, 7) },
+          { label: "Activity", items: PRIMARY_NAVIGATION.slice(7, 8) },
+        ].map((group) => (
+          <div className="mb-5" key={group.label}>
+            <p className="work-eyebrow mb-2 px-3 max-[900px]:sr-only">{group.label}</p>
+            <ul className="m-0 grid list-none gap-1 p-0">
+              {group.items.map((item) => (
+                <NavigationItem
+                  activePath={activePath}
+                  item={item}
+                  key={item.href}
+                  onNavigate={onNavigate}
+                />
+              ))}
+            </ul>
+          </div>
         ))}
-      </ul>
+      </div>
       <ul className="m-0 mt-auto list-none border-t border-border px-0 pb-0 pt-3">
         <NavigationItem
           activePath={activePath}
@@ -78,7 +89,7 @@ function NavigationItem({
         aria-current={active ? "page" : undefined}
         className={`focus-ring flex min-h-11 items-center gap-3 rounded-xl px-3 text-[14px] font-medium leading-4 no-underline transition-colors max-[900px]:justify-center max-[900px]:px-1 ${
           active
-            ? "bg-forest-soft text-forest"
+            ? "bg-forest text-primary-foreground"
             : "text-muted-foreground hover:bg-muted hover:text-foreground"
         }`}
         href={item.href}

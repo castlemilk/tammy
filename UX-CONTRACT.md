@@ -36,3 +36,33 @@ Keep all existing security boundaries, sensitive-value handling and native valid
 Do not add unsupported Undo, automated posting, external sends or production ATO submission.
 Evidence is in output/playwright/soft-precision; never commit runtime traces, userData,
 private logs, recovery codes or credentials. Screenshots of recovery must mask the code.
+
+## Review workspace interaction contract (2026-10-22)
+
+Sources: `proto/tammy/v1/documents.proto`, `proto/tammy/v1/banking.proto`, the
+existing named desktop IPC methods, and the core command/idempotency contracts.
+No server/domain capability changes are included.
+
+- Document search/status controls filter only loaded records. Closing review
+  returns focus to the source row. Cancel changes restores the retained candidate
+  without a write; a failed review preserves edits. The confirmed reviewed record
+  is read-only and never presented as a posted accounting entry.
+- A statement starts with empty user inputs. Close preserves an in-screen draft;
+  Cancel import discards that draft without writing. Route navigation still uses
+  the existing ephemeral screen state and does not promise saved drafts.
+- Matching requires a reviewed source reference of 1–128 trimmed characters,
+  expected line version and command key. The new match form owns this small inline
+  validation explicitly; existing native financial/date validation remains.
+- Identical failed import/match/review commands retain their idempotency key for
+  an unchanged in-screen retry. A synchronous guard blocks repeated submit events.
+- Import/match/reconciliation success is announced only after decoding its named
+  confirmation. If the subsequent refresh fails, the UI says the action was saved
+  and blocks further writes until a successful refresh; it does not invite a
+  duplicate import. Cancelling a match writes nothing and restores row focus.
+- Reconciliation still requires every imported line to be matched. Global summary
+  counts and latest-import balance are distinct from the loaded table projection.
+
+The seven inherited supplementary audit exceptions remain intentional: six
+existing forms retain browser validation, and CSV text remains vertically
+resizable. No validation or editable-data affordance is weakened to satisfy the
+supplementary defaults. The new reference form has explicit inline validation.

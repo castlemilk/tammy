@@ -144,3 +144,24 @@ approved transparent paper-loop art appears only at arrival/completion, outside 
 - Do preserve core authorization, amounts, tax rules and idempotency.
 - Don't turn planned invoices, bank feeds or stock tracking into visible capabilities.
 - Don't add art to financial tables or copy generated financial examples as contracts.
+
+## Review workspace uplift (2026-10-22)
+
+Documents and Banking use a full-width working surface with an attached toolbar.
+`components/review-workspace.tsx` owns the shared heading, local search, counted
+status filters, loading/empty state and inline feedback. `styles.css` owns
+`work-surface`, `work-table`, `work-input` and `work-eyebrow`; these reuse the
+established palette and geometry. Filters operate on the explicitly labelled
+loaded projection (up to 200), not the whole organisation.
+
+Source text and review details sit below the document table in a two-column
+workspace, stacking below 1050px. There is no original-file preview API. Reviewed
+values are read-only and the confirmed protobuf response updates the record.
+Banking keeps import and manual match review as non-modal inline forms with
+normal document scrolling. The explicit reference records the user's review;
+it does not imply a ledger/document link or automated matching.
+
+The navigation groups existing routes into Workspace, Accounting and Activity.
+The forest selected item and route context use the same shell at every route.
+The compact rail retains accessible link names. Tables scroll horizontally inside
+their surface at narrow widths; forms stack and retain full values.

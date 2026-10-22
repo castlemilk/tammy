@@ -769,7 +769,7 @@ async function captureJourney(
   if (phase !== "before" && phase !== "after") return;
   if (
     upliftPhase &&
-    !/^(04-documents|05-banking|11-|12-|13-|18-|19-\d+-(documents|banking)|20-|21-|22-|23-)/.test(
+    !/^(04-documents|05-banking|11-|12-|13-|18-|19-\d+-(documents|banking)|20-|21-|22-|23-|2[4-9]-)/.test(
       milestone,
     )
   )
@@ -826,7 +826,26 @@ async function interactionJourney(page: import("@playwright/test").Page) {
   await expect(page.getByRole("button", { name: "Review saved", exact: true })).toBeDisabled();
   await expect(page.getByText("$110.00", { exact: true })).toBeVisible();
   await captureJourney(page, "13-review-saved");
+  await expect(page.getByLabel("Supplier", { exact: true })).toHaveAttribute("readonly", "");
+  await page.getByLabel("Search documents").fill("No synthetic match here");
+  await expect(page.getByText("No matching documents", { exact: true })).toBeVisible();
+  await captureJourney(page, "26-document-search-empty");
+  await page.getByLabel("Search documents").fill("");
+  await page.getByRole("button", { name: "Close review" }).click();
+  await expect(page.getByRole("region", { name: "Document review" })).toHaveCount(0);
+  await captureJourney(page, "27-document-collection");
   await assertRoute(page, "Banking", "/banking", "Banking");
+  await page.getByRole("button", { name: "Import statement", exact: true }).click();
+  await page.getByLabel("Opening balance").fill("1000.00");
+  await page.getByLabel("CSV rows").fill("Cancelled synthetic row");
+  await page.getByRole("button", { name: "Close statement import" }).click();
+  await page.getByRole("button", { name: "Import statement", exact: true }).click();
+  await expect(page.getByLabel("CSV rows")).toHaveValue("Cancelled synthetic row");
+  await captureJourney(page, "24-import-draft-reopened");
+  await page.getByRole("button", { name: "Cancel import" }).click();
+  await page.getByRole("button", { name: "Import statement", exact: true }).click();
+  await expect(page.getByLabel("CSV rows")).toHaveValue("");
+  await page.getByLabel("Opening balance").fill("1000.00");
   await page.getByLabel("CSV rows").fill("invalid synthetic row");
   await page.getByRole("button", { name: "Import statement", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("Use one row per line");
@@ -835,13 +854,26 @@ async function interactionJourney(page: import("@playwright/test").Page) {
   await page.getByLabel("CSV rows").fill("2024-05-12,Synthetic studio supplies,-110.00");
   await page.getByRole("button", { name: "Import statement", exact: true }).click();
   await expect(
-    page.getByRole("cell", { name: "Synthetic studio supplies", exact: true }),
+    page
+      .getByRole("table", { name: "Statement lines" })
+      .getByText("Synthetic studio supplies", { exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Complete reconciliation", exact: true }),
   ).toBeDisabled();
   await captureJourney(page, "21-statement-unmatched");
   await page.getByRole("button", { name: "Match", exact: true }).click();
+  await expect(page.getByLabel("Reviewed source reference")).toBeFocused();
+  await page.getByLabel("Reviewed source reference").fill("Cancelled synthetic reference");
+  await captureJourney(page, "25-match-review");
+  await page.getByRole("button", { name: "Cancel match" }).click();
+  await expect(
+    page.getByRole("button", { name: "Complete reconciliation", exact: true }),
+  ).toBeDisabled();
+  await page.getByRole("button", { name: "Match", exact: true }).click();
+  await expect(page.getByLabel("Reviewed source reference")).toHaveValue("");
+  await page.getByLabel("Reviewed source reference").fill("Synthetic receipt SP-100");
+  await page.getByRole("button", { name: "Confirm match", exact: true }).dblclick();
   await expect(
     page.getByRole("button", { name: "Complete reconciliation", exact: true }),
   ).toBeEnabled();
