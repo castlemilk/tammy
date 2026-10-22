@@ -15,8 +15,10 @@ import {
   BasExportOutcome,
   BasExportPhase,
   BasExportTargetSchema,
+  BasExternalChannel,
   BasExternalDisputeSummarySchema,
   BasExternalEventKind,
+  BasExternalObservationSummarySchema,
   BasFindingSeverity,
   BasFrozenBasSummarySchema,
   BasIncomeYearIdentitySchema,
@@ -39,6 +41,8 @@ import {
   BasValidationSnapshotSchema,
   ConfirmBasPeriodRequestSchema,
   ConfirmBasPeriodResponseSchema,
+  CreateBasReplacementRequestSchema,
+  CreateBasReplacementResponseSchema,
   GetBasCalendarRequestSchema,
   GetBasCalendarResponseSchema,
   GetBasObligationsProfileRequestSchema,
@@ -61,8 +65,12 @@ import {
   ListBasPreparationsResponseSchema,
   ListFrozenBasRequestSchema,
   ListFrozenBasResponseSchema,
+  RecordExternalBasObservationRequestSchema,
+  RecordExternalBasObservationResponseSchema,
   RegenerateBasPreparationRequestSchema,
   RegenerateBasPreparationResponseSchema,
+  ReplaceRejectedBasAttemptRequestSchema,
+  ReplaceRejectedBasAttemptResponseSchema,
   ResolveExternalBasDisputeRequestSchema,
   ResolveExternalBasDisputeResponseSchema,
   SaveBasPaygInputsRequestSchema,
@@ -144,6 +152,18 @@ const codecs = {
     SetBasObligationsProfileResponseSchema,
   ),
   savePayg: responseCodec(SaveBasPaygInputsRequestSchema, SaveBasPaygInputsResponseSchema),
+  recordObservation: responseCodec(
+    RecordExternalBasObservationRequestSchema,
+    RecordExternalBasObservationResponseSchema,
+  ),
+  createReplacement: responseCodec(
+    CreateBasReplacementRequestSchema,
+    CreateBasReplacementResponseSchema,
+  ),
+  replaceRejected: responseCodec(
+    ReplaceRejectedBasAttemptRequestSchema,
+    ReplaceRejectedBasAttemptResponseSchema,
+  ),
 };
 
 async function mountPaygInputsEditor(
@@ -2088,6 +2108,414 @@ it("resolves an exact linked preparation across empty pages and never substitute
     screen.getByRole("button", { name: "Run validation on this exact calculation" }),
   ).toHaveProperty("disabled", true);
 });
+
+function mountFrozenAttempt(
+  options: {
+    readonly postFreeze?: boolean;
+    readonly mismatchedFrozenLink?: "id" | "revision" | "hash";
+    readonly includeRejection?: boolean;
+    readonly factorPurpose?: string;
+  } = {},
+) {
+  const fixture = createConveyorFixture();
+  const workspace = {
+    workspaceId: "018f0000-0000-7000-8000-0000000000a1",
+    userId: "018f0000-0000-7000-8000-0000000000a2",
+    sessionId: "018f0000-0000-7000-8000-0000000000a3",
+    organisationId: "018f0000-0000-7000-8000-0000000000a4",
+  };
+  const preparationId = "018f0000-0000-7000-8000-0000000000a5";
+  const frozenRef = create(SourceRefSchema, {
+    type: "frozen_bas",
+    id: "018f0000-0000-7000-8000-0000000000a6",
+    revision: 1n,
+    contentHash: new Uint8Array(32).fill(0x61),
+  });
+  const linkedFrozenRef =
+    options.mismatchedFrozenLink === "id"
+      ? create(SourceRefSchema, {
+          ...frozenRef,
+          id: "018f0000-0000-7000-8000-0000000000a7",
+        })
+      : options.mismatchedFrozenLink === "revision"
+        ? create(SourceRefSchema, { ...frozenRef, revision: 2n })
+        : options.mismatchedFrozenLink === "hash"
+          ? create(SourceRefSchema, {
+              ...frozenRef,
+              contentHash: new Uint8Array(32).fill(0x62),
+            })
+          : frozenRef;
+  const currentVersion = options.postFreeze ? 2n : 1n;
+  const currentHash = new Uint8Array(32).fill(options.postFreeze ? 0x52 : 0x51);
+  const currentRef = create(SourceRefSchema, {
+    type: "bas_preparation",
+    id: preparationId,
+    revision: currentVersion,
+    contentHash: currentHash,
+  });
+  const approvalRef = create(SourceRefSchema, {
+    type: "bas_preparation",
+    id: preparationId,
+    revision: 1n,
+    contentHash: new Uint8Array(32).fill(0x51),
+  });
+  const family = create(SourceRefSchema, {
+    type: "bas_family",
+    id: "018f0000-0000-7000-8000-0000000000a8",
+    revision: 1n,
+    contentHash: new Uint8Array(32).fill(0x68),
+  });
+  const period = create(SourceRefSchema, {
+    type: "bas_period",
+    id: "018f0000-0000-7000-8000-0000000000a9",
+    revision: 1n,
+    contentHash: new Uint8Array(32).fill(0x69),
+  });
+  const currentPreparation = create(BasPreparationSchema, {
+    preparationId,
+    organisationId: workspace.organisationId,
+    version: currentVersion,
+    family,
+    period,
+    state: BasPreparationState.FROZEN_FOR_MANUAL_HANDOFF,
+    frozenBas: linkedFrozenRef,
+    contentHash: currentHash,
+    sourceSnapshotHash: new Uint8Array(32).fill(0x53),
+    inputHash: new Uint8Array(32).fill(0x54),
+  });
+  const chain = create(BasChainExpectationSchema, {
+    family,
+    expectedFamilyVersion: 8n,
+  });
+  const factor = create(FreshFactorContextSchema, {
+    assertionId: "018f0000-0000-7000-8000-0000000000aa",
+    purpose: options.factorPurpose ?? "bas_record_external_confirmation",
+    assertedAt: create(TimestampSchema, { seconds: 1_798_000_000n, nanos: 0 }),
+  });
+  const observationRef = create(SourceRefSchema, {
+    type: "bas_external_observation",
+    id: "018f0000-0000-7000-8000-0000000000ab",
+    revision: 1n,
+    contentHash: new Uint8Array(32).fill(0x6b),
+  });
+  let recordRequest: ReturnType<typeof codecs.recordObservation.decodeRequest> | undefined;
+  let replacementRequest: ReturnType<typeof codecs.createReplacement.decodeRequest> | undefined;
+  let rejectedReplacementRequest:
+    | ReturnType<typeof codecs.replaceRejected.decodeRequest>
+    | undefined;
+
+  fixture.procedures.organisation.getCurrentUser.mockResolvedValue(
+    codecs.user.encodeResponse(
+      create(GetCurrentUserResponseSchema, {
+        user: create(UserSchema, {
+          id: workspace.userId,
+          version: 2n,
+          username: "lodger",
+          displayName: "Lodger",
+          state: UserState.ACTIVE,
+          roles: [Role.BUSINESS_LODGER],
+        }),
+      }),
+    ),
+  );
+  fixture.procedures.organisation.assertTotp.mockResolvedValue(
+    codecs.assertTotp.encodeResponse(create(AssertTOTPResponseSchema, { freshFactor: factor })),
+  );
+  fixture.procedures.basPreparation.listBasObligationsProfiles.mockResolvedValue(
+    codecs.profiles.encodeResponse(create(ListBasObligationsProfilesResponseSchema, {})),
+  );
+  fixture.procedures.basPreparation.listBasPeriods.mockResolvedValue(
+    codecs.periods.encodeResponse(create(ListBasPeriodsResponseSchema, {})),
+  );
+  fixture.procedures.basPreparation.listBasPreparations.mockResolvedValue(
+    codecs.preparations.encodeResponse(
+      create(ListBasPreparationsResponseSchema, {
+        preparations: [
+          create(BasPreparationSummarySchema, {
+            preparation: currentRef,
+            family,
+            period,
+            state: BasPreparationState.FROZEN_FOR_MANUAL_HANDOFF,
+            frozenBas: linkedFrozenRef,
+          }),
+        ],
+      }),
+    ),
+  );
+  fixture.procedures.basPreparation.listFrozenBas.mockResolvedValue(
+    codecs.frozen.encodeResponse(
+      create(ListFrozenBasResponseSchema, {
+        frozenBas: [
+          create(BasFrozenBasSummarySchema, {
+            frozenBas: frozenRef,
+            preparation: approvalRef,
+            family,
+            period,
+          }),
+        ],
+      }),
+    ),
+  );
+  fixture.procedures.basPreparation.listBasExternalDisputeResolutions.mockResolvedValue(
+    codecs.disputes.encodeResponse(create(ListBasExternalDisputeResolutionsResponseSchema, {})),
+  );
+  fixture.procedures.basPreparation.listBasExternalObservations.mockResolvedValue(
+    codecs.observations.encodeResponse(
+      create(ListBasExternalObservationsResponseSchema, {
+        observations: options.includeRejection
+          ? [
+              create(BasExternalObservationSummarySchema, {
+                observation: observationRef,
+                frozenBas: frozenRef,
+                eventKind: BasExternalEventKind.REJECTION,
+              }),
+            ]
+          : [],
+      }),
+    ),
+  );
+  fixture.procedures.basPreparation.listBasExportEvents.mockResolvedValue(
+    codecs.exportEvents.encodeResponse(create(ListBasExportEventsResponseSchema, {})),
+  );
+  fixture.procedures.basPreparation.getBasCalendar.mockResolvedValue(
+    codecs.calendar.encodeResponse(create(GetBasCalendarResponseSchema, {})),
+  );
+  fixture.procedures.basPreparation.getFrozenBas.mockResolvedValue(
+    codecs.frozenDetail.encodeResponse(create(GetFrozenBasResponseSchema, {})),
+  );
+  fixture.procedures.basPreparation.getBasPreparation.mockResolvedValue(
+    codecs.preparationDetail.encodeResponse(
+      create(GetBasPreparationResponseSchema, {
+        preparation: currentPreparation,
+        currentChain: chain,
+      }),
+    ),
+  );
+  fixture.procedures.basPreparation.recordExternalBasObservation.mockImplementation((frame) => {
+    recordRequest = codecs.recordObservation.decodeRequest(frame);
+    return Promise.resolve(
+      codecs.recordObservation.encodeResponse(
+        create(RecordExternalBasObservationResponseSchema, { preparation: currentPreparation }),
+      ),
+    );
+  });
+  fixture.procedures.basPreparation.createBasReplacement.mockImplementation((frame) => {
+    replacementRequest = codecs.createReplacement.decodeRequest(frame);
+    return Promise.resolve(
+      codecs.createReplacement.encodeResponse(
+        create(CreateBasReplacementResponseSchema, { replacement: currentPreparation }),
+      ),
+    );
+  });
+  fixture.procedures.basPreparation.replaceRejectedBasAttempt.mockImplementation((frame) => {
+    rejectedReplacementRequest = codecs.replaceRejected.decodeRequest(frame);
+    return Promise.resolve(
+      codecs.replaceRejected.encodeResponse(
+        create(ReplaceRejectedBasAttemptResponseSchema, { replacementAttempt: currentPreparation }),
+      ),
+    );
+  });
+
+  renderWithConveyor(
+    <BasPreparationLifecycle
+      api={fixture.conveyor.basPreparation}
+      identityApi={fixture.conveyor.organisation}
+      reportApi={fixture.conveyor.reporting}
+      workspace={workspace}
+    />,
+  );
+
+  return {
+    fixture,
+    user: userEvent.setup(),
+    frozenRef,
+    currentRef,
+    approvalRef,
+    currentHash,
+    observationRef,
+    get recordRequest() {
+      return recordRequest;
+    },
+    get replacementRequest() {
+      return replacementRequest;
+    },
+    get rejectedReplacementRequest() {
+      return rejectedReplacementRequest;
+    },
+  };
+}
+
+it("records a confirmation against the frozen approval pin and current successor preparation", async () => {
+  const attempt = mountFrozenAttempt({ postFreeze: true });
+  const user = attempt.user;
+  await user.click(await screen.findByRole("button", { name: "External record" }));
+  await user.type(
+    screen.getByLabelText("User-recorded reason"),
+    "User reported completed lodgement",
+  );
+  await user.selectOptions(
+    screen.getByLabelText("User-recorded event"),
+    String(BasExternalEventKind.COMPLETED_LODGEMENT),
+  );
+  await user.selectOptions(
+    screen.getByLabelText("Channel"),
+    String(BasExternalChannel.ONLINE_PORTAL),
+  );
+  await user.type(
+    screen.getByLabelText("Fresh authenticator code for external confirmation"),
+    "123456",
+  );
+  await user.click(
+    screen.getByRole("button", { name: "Record user-reported event as unverified" }),
+  );
+
+  await waitFor(() =>
+    expect(attempt.fixture.procedures.organisation.assertTotp).toHaveBeenCalledOnce(),
+  );
+  await waitFor(() =>
+    expect(
+      attempt.fixture.procedures.basPreparation.recordExternalBasObservation,
+    ).toHaveBeenCalledOnce(),
+  );
+  expect(attempt.recordRequest?.frozenId).toBe(attempt.frozenRef.id);
+  expect(attempt.recordRequest?.frozenHash).toEqual(attempt.frozenRef.contentHash);
+  expect(attempt.recordRequest?.expectedVersion).toBe(8n);
+  expect(attempt.recordRequest?.commandContext?.freshFactor?.purpose).toBe(
+    "bas_record_external_confirmation",
+  );
+});
+
+it("replaces an unused frozen attempt using the current successor while preserving its approval pin", async () => {
+  const attempt = mountFrozenAttempt({
+    postFreeze: true,
+    factorPurpose: "bas_replace_unused_attempt",
+  });
+  const user = attempt.user;
+  await user.click(await screen.findByRole("button", { name: "Freeze" }));
+  await user.type(screen.getByLabelText("Replacement reason"), "Corrected source review");
+  await user.type(screen.getByLabelText("Authenticator code"), "123456");
+  await user.click(
+    screen.getByRole("button", { name: "Replace unused frozen attempt (fresh TOTP)" }),
+  );
+
+  await waitFor(() =>
+    expect(attempt.fixture.procedures.organisation.assertTotp).toHaveBeenCalledOnce(),
+  );
+  await waitFor(() =>
+    expect(attempt.fixture.procedures.basPreparation.createBasReplacement).toHaveBeenCalledOnce(),
+  );
+  expect(attempt.replacementRequest?.predecessorFrozenId).toBe(attempt.frozenRef.id);
+  expect(attempt.replacementRequest?.predecessorFrozenHash).toEqual(attempt.frozenRef.contentHash);
+  expect(attempt.replacementRequest?.expectedVersion).toBe(8n);
+  expect(attempt.replacementRequest?.commandContext?.freshFactor?.purpose).toBe(
+    "bas_replace_unused_attempt",
+  );
+});
+
+it("replaces a rejected attempt through its current owner and exact frozen reference", async () => {
+  const attempt = mountFrozenAttempt({
+    postFreeze: true,
+    includeRejection: true,
+    factorPurpose: "bas_replace_rejected_attempt",
+  });
+  const user = attempt.user;
+  await user.click(await screen.findByRole("button", { name: "External record" }));
+  await user.type(
+    screen.getByLabelText("Rejected-attempt replacement reason"),
+    "Reviewed rejection details",
+  );
+  await user.type(screen.getByLabelText("Fresh authenticator code"), "123456");
+  await user.click(
+    screen.getByRole("button", { name: "Replace selected rejected attempt (fresh TOTP)" }),
+  );
+
+  await waitFor(() =>
+    expect(attempt.fixture.procedures.organisation.assertTotp).toHaveBeenCalledOnce(),
+  );
+  await waitFor(() =>
+    expect(
+      attempt.fixture.procedures.basPreparation.replaceRejectedBasAttempt,
+    ).toHaveBeenCalledOnce(),
+  );
+  expect(attempt.rejectedReplacementRequest?.rejectedPreparationId).toBe(attempt.currentRef.id);
+  expect(attempt.rejectedReplacementRequest?.rejectedPreparationHash).toEqual(attempt.currentHash);
+  expect(attempt.rejectedReplacementRequest?.resolvedRejection).toEqual(attempt.observationRef);
+  expect(attempt.rejectedReplacementRequest?.commandContext?.freshFactor?.purpose).toBe(
+    "bas_replace_rejected_attempt",
+  );
+});
+
+const invalidFrozenOwnerPairs = (["record", "replaceUnused", "replaceRejected"] as const).flatMap(
+  (action) => (["id", "revision", "hash"] as const).map((mismatch) => [action, mismatch] as const),
+);
+
+it.each(invalidFrozenOwnerPairs)(
+  "blocks %s before TOTP when the current preparation frozen link differs by %s",
+  async (action, mismatch) => {
+    const factorPurpose =
+      action === "record"
+        ? "bas_record_external_confirmation"
+        : action === "replaceUnused"
+          ? "bas_replace_unused_attempt"
+          : "bas_replace_rejected_attempt";
+    const attempt = mountFrozenAttempt({
+      mismatchedFrozenLink: mismatch,
+      includeRejection: action === "replaceRejected",
+      factorPurpose,
+    });
+    const user = attempt.user;
+
+    if (action === "record") {
+      await user.click(await screen.findByRole("button", { name: "External record" }));
+      await user.type(
+        screen.getByLabelText("User-recorded reason"),
+        "User reported completed lodgement",
+      );
+      await user.selectOptions(
+        screen.getByLabelText("User-recorded event"),
+        String(BasExternalEventKind.COMPLETED_LODGEMENT),
+      );
+      await user.type(
+        screen.getByLabelText("Fresh authenticator code for external confirmation"),
+        "123456",
+      );
+      await user.click(
+        screen.getByRole("button", { name: "Record user-reported event as unverified" }),
+      );
+    } else if (action === "replaceUnused") {
+      await user.click(await screen.findByRole("button", { name: "Freeze" }));
+      await user.type(screen.getByLabelText("Replacement reason"), "Corrected source review");
+      await user.type(screen.getByLabelText("Authenticator code"), "123456");
+      await user.click(
+        screen.getByRole("button", { name: "Replace unused frozen attempt (fresh TOTP)" }),
+      );
+    } else {
+      await user.click(await screen.findByRole("button", { name: "External record" }));
+      await user.type(
+        screen.getByLabelText("Rejected-attempt replacement reason"),
+        "Reviewed rejection details",
+      );
+      await user.type(screen.getByLabelText("Fresh authenticator code"), "123456");
+      const replace = screen.getByRole("button", {
+        name: "Replace selected rejected attempt (fresh TOTP)",
+      });
+      await waitFor(() => expect(replace).toHaveProperty("disabled", false));
+      await user.click(replace);
+    }
+
+    expect((await screen.findByRole("alert")).textContent).toContain(
+      "The BAS change was not confirmed. Refresh the exact history and review blockers before retrying.",
+    );
+    expect(attempt.fixture.procedures.organisation.assertTotp).not.toHaveBeenCalled();
+    expect(
+      attempt.fixture.procedures.basPreparation.recordExternalBasObservation,
+    ).not.toHaveBeenCalled();
+    expect(attempt.fixture.procedures.basPreparation.createBasReplacement).not.toHaveBeenCalled();
+    expect(
+      attempt.fixture.procedures.basPreparation.replaceRejectedBasAttempt,
+    ).not.toHaveBeenCalled();
+  },
+);
 
 it("gates external observation authority by event kind for a sole Business Lodger", async () => {
   const fixture = createConveyorFixture();

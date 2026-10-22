@@ -307,6 +307,19 @@ function exactRef(value: Ref) {
 function refKey(value: Ref | undefined) {
   return value ? `${value.type}:${value.id}:${value.revision}:${hex(value.contentHash)}` : "";
 }
+function matchesFrozenTarget(
+  preparation: BasPreparation | undefined,
+  frozen: BasFrozenBasSummary | undefined,
+) {
+  // The frozen owner pins the reviewed preparation before freeze advances its
+  // mutable version. Bind the current owner through its exact frozen ref.
+  return Boolean(
+    preparation?.frozenBas &&
+      frozen?.frozenBas &&
+      frozen.preparation?.id === preparation.preparationId &&
+      refKey(preparation.frozenBas) === refKey(frozen.frozenBas),
+  );
+}
 function profileRef(value: BasObligationsProfile): Ref {
   return {
     type: "bas_obligations_profile",
@@ -1681,12 +1694,7 @@ export function BasPreparationLifecycle({
         !exact.currentChain ||
         !exact.preparation ||
         exact.preparation.state !== BasPreparationState.FROZEN_FOR_MANUAL_HANDOFF ||
-        selectedFrozenSummary.preparation?.id !== exact.preparation.preparationId ||
-        !selectedFrozenSummary.preparation ||
-        !sameBytes(
-          selectedFrozenSummary.preparation.contentHash,
-          selectedPreparationSummary?.preparation?.contentHash,
-        )
+        !matchesFrozenTarget(exact.preparation, selectedFrozenSummary)
       )
         throw new Error("attempt is not replaceable");
       const command = await freshCommand("bas_replace_unused_attempt");
@@ -1786,11 +1794,7 @@ export function BasPreparationLifecycle({
       if (
         !exact.currentChain ||
         exact.preparation?.version !== prep.version ||
-        selectedFrozenSummary.preparation?.id !== exact.preparation.preparationId ||
-        !sameBytes(
-          selectedFrozenSummary.preparation.contentHash,
-          selectedPreparationSummary?.preparation?.contentHash,
-        )
+        !matchesFrozenTarget(exact.preparation, selectedFrozenSummary)
       )
         throw new Error("chain changed");
       const refs = parseEvidence(evidence);
@@ -1928,7 +1932,9 @@ export function BasPreparationLifecycle({
         !rejectedReplacementReason.trim()
       )
         throw new Error("rejected attempt required");
-      const rejected = selectedFrozenSummary.preparation;
+      const rejected = preparations.find(
+        (item) => item.preparation?.id === selectedFrozenSummary.preparation?.id,
+      )?.preparation;
       const rejection = observations.find(
         (entry) =>
           entry.eventKind === BasExternalEventKind.REJECTION &&
@@ -1937,7 +1943,12 @@ export function BasPreparationLifecycle({
       )?.observation;
       if (!rejected || !rejection) throw new Error("rejection evidence unavailable");
       const exact = await refreshSelectedPreparation(rejected);
-      if (!exact.currentChain) throw new Error("chain unavailable");
+      if (
+        !exact.currentChain ||
+        exact.preparation?.state !== BasPreparationState.FROZEN_FOR_MANUAL_HANDOFF ||
+        !matchesFrozenTarget(exact.preparation, selectedFrozenSummary)
+      )
+        throw new Error("chain unavailable");
       const command = await freshCommand("bas_replace_rejected_attempt");
       const request = create(ReplaceRejectedBasAttemptRequestSchema, {
         commandContext: command,

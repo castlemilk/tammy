@@ -455,7 +455,11 @@ function assertCurrentConfirmedHead(
 async function captureScreenshot(page: Page, testInfo: TestInfo, name: string) {
   const file = testInfo.outputPath(name);
   await mkdir(path.dirname(file), { recursive: true });
-  await page.screenshot({ path: file, fullPage: true });
+  await page.screenshot({
+    path: file,
+    fullPage: true,
+    mask: [page.locator('input[inputmode="numeric"][maxlength="6"]')],
+  });
   await testInfo.attach(name, { path: file, contentType: "image/png" });
   return file;
 }
@@ -1122,12 +1126,48 @@ function assertCsvSourceManifest(
 
   const coverage = csv.rows.filter((row) => row.record_type === "coverage");
   expect(coverage.length).toBeGreaterThan(0);
-  for (const kind of ["INVOICE_POSTING", "PURCHASE_SETTLEMENT", "PURCHASE_CREDIT"]) {
+  for (const kind of ["INVOICE_POSTING", "PURCHASE_SETTLEMENT"]) {
     expect(
       coverage.some((row) => row.candidate_kind === kind && row.disposition === "ELIGIBLE"),
       `${kind} source disposition`,
     ).toBe(true);
   }
+  const purchaseCreditRows = coverage.filter(
+    (row) =>
+      row.candidate_kind === "PURCHASE_CREDIT" &&
+      row.source_type === "purchase_posting_allocations_v1" &&
+      row.source_id === sources.purchase.postingId,
+  );
+  expect(purchaseCreditRows, "cash-basis purchase posting coverage identity").toHaveLength(1);
+  const purchaseCreditRow = purchaseCreditRows[0];
+  if (!purchaseCreditRow) throw new Error("BAS_ACCEPTANCE_PURCHASE_CREDIT_COVERAGE_MISSING");
+  expect(purchaseCreditRow).toMatchObject({
+    disposition: "NOT_APPLICABLE",
+    classification_code: "NO_CURRENT_EFFECT_LINE",
+    amount_currency: "",
+    amount_minor_units: "",
+  });
+  expect(
+    coverage.some(
+      (row) => row.candidate_kind === "PURCHASE_CREDIT" && row.disposition === "ELIGIBLE",
+    ),
+    "cash-basis purchase posting does not count the credit before settlement",
+  ).toBe(false);
+  const q3SettlementRows = coverage.filter(
+    (row) => row.candidate_kind === "PURCHASE_SETTLEMENT" && row.disposition === "ELIGIBLE",
+  );
+  expect(q3SettlementRows, "the exact Q3 purchase payment carries one current credit").toHaveLength(
+    1,
+  );
+  expect(q3SettlementRows[0]).toMatchObject({
+    candidate_kind: "PURCHASE_SETTLEMENT",
+    source_type: "purchase_payment_allocations_v1",
+    source_id: sources.purchase.paymentId,
+    disposition: "ELIGIBLE",
+    classification_code: "CURRENT_PURCHASE_GST",
+    amount_currency: "AUD",
+    amount_minor_units: "500",
+  });
   const coverageStrings = coverage.flatMap((row) => collectStrings(jsonRecord(row)));
   for (const sourceId of [
     ...sources.sales.flatMap((sale) => [sale.invoiceId, sale.paymentId]),
