@@ -410,6 +410,107 @@ it("keeps the current page bounded while showing a newly retained source for rev
   expect(fixture.procedures.documents.ingestDocument).toHaveBeenCalledOnce();
 });
 
+it("refreshes the default document page after a source is retained", async () => {
+  const fixture = createConveyorFixture();
+  const existing = create(DocumentSchema, {
+    id: "018f0000-0000-7000-8000-000000000010",
+    organisationId: workspace.organisationId,
+    version: 1n,
+    status: DocumentStatus.NEEDS_REVIEW,
+    sourceDisplayName: "existing-invoice.png",
+    mimeType: "image/png",
+    byteLength: 3n,
+    sha256: new Uint8Array(32).fill(1),
+  });
+  let retainedDocuments = [existing];
+  const listRequests: ReturnType<typeof listCodec.decodeRequest>[] = [];
+  fixture.procedures.documents.listDocuments.mockImplementation(async (frame: Uint8Array) => {
+    const request = listCodec.decodeRequest(frame);
+    listRequests.push(request);
+    return listCodec.encodeResponse(
+      create(ListDocumentsResponseSchema, {
+        documents: retainedDocuments,
+        page: { returnedCount: retainedDocuments.length },
+      }),
+    );
+  });
+  fixture.procedures.documents.ingestDocument.mockImplementation(async (frame: Uint8Array) => {
+    const request = ingestCodec.decodeRequest(frame);
+    const retained = create(DocumentSchema, {
+      id: "018f0000-0000-7000-8000-000000000999",
+      organisationId: workspace.organisationId,
+      version: 1n,
+      status: DocumentStatus.NEEDS_REVIEW,
+      sourceDisplayName: request.sourceDisplayName,
+      mimeType: request.mimeType,
+      byteLength: 3n,
+      sha256: new Uint8Array(32).fill(2),
+      candidate: request.candidate,
+    });
+    retainedDocuments = [retained, ...retainedDocuments];
+    return ingestCodec.encodeResponse(create(IngestDocumentResponseSchema, { document: retained }));
+  });
+
+  const user = userEvent.setup();
+  const { container } = renderDocuments(fixture);
+  const table = await screen.findByRole("table", { name: "Retained documents" });
+  await within(table).findByText("existing-invoice.png");
+  expect(listRequests).toHaveLength(1);
+
+  const file = new File(["synthetic"], "new-invoice.png", { type: "image/png" });
+  Object.defineProperty(file, "arrayBuffer", {
+    value: async () => new Uint8Array([1, 2, 3]).buffer,
+  });
+  const input = container.querySelector<HTMLInputElement>('input[type="file"]');
+  if (!input) throw new Error("file input missing");
+  await user.upload(input, file);
+
+  const refreshedTable = screen.getByRole("table", { name: "Retained documents" });
+  await within(refreshedTable).findByText("new-invoice.png");
+  await waitFor(() => expect(listRequests).toHaveLength(2));
+  expect(listRequests.every((request) => request.page?.cursor === undefined)).toBe(true);
+  expect(listRequests.every((request) => request.page?.pageSize === 200)).toBe(true);
+  expect(await screen.findByRole("heading", { name: "new-invoice.png" })).toBeTruthy();
+  expect(screen.queryByText(/last action was confirmed/)).toBeNull();
+});
+
+it("keeps confirmed retention separate from a failed document-list refresh", async () => {
+  const { fixture, document: existingDocument } = createReviewFixture();
+  let listCalls = 0;
+  fixture.procedures.documents.listDocuments.mockImplementation(async () => {
+    listCalls += 1;
+    if (listCalls > 1) throw new Error("list refresh unavailable");
+    return listCodec.encodeResponse(
+      create(ListDocumentsResponseSchema, {
+        documents: [existingDocument()],
+        page: { returnedCount: 1 },
+      }),
+    );
+  });
+  const user = userEvent.setup();
+  const { container } = renderDocuments(fixture);
+  await screen.findByRole("table", { name: "Retained documents" });
+
+  const file = new File(["synthetic"], "confirmed-upload.png", { type: "image/png" });
+  Object.defineProperty(file, "arrayBuffer", {
+    value: async () => new Uint8Array([1, 2, 3]).buffer,
+  });
+  const input = container.querySelector<HTMLInputElement>('input[type="file"]');
+  if (!input) throw new Error("file input missing");
+  await user.upload(input, file);
+
+  expect(await screen.findByRole("heading", { name: "confirmed-upload.png" })).toBeTruthy();
+  expect(
+    await screen.findByText(
+      /The last action was confirmed, but the latest document list could not be loaded/,
+    ),
+  ).toBeTruthy();
+  expect(
+    screen.queryByText("The document could not be retained. It has not left this device."),
+  ).toBeNull();
+  expect(listCalls).toBe(2);
+});
+
 it("returns focus to search when a status filter hides the selected source", async () => {
   const { fixture } = createReviewFixture();
   const user = userEvent.setup();

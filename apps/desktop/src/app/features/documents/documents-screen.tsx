@@ -309,7 +309,7 @@ export function DocumentsScreen({
       setStatusFilter(undefined);
       setStatusChoice("all");
       setQuery("");
-      void onDocumentsChanged?.().catch(() => setRefreshError(true));
+      void refreshAfterSave();
     } catch {
       if (!confirmed) setError("The document could not be retained. It has not left this device.");
     } finally {
