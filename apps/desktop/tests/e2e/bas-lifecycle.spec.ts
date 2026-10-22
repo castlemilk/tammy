@@ -28,6 +28,7 @@ test("prepares and reviews an exact BAS period in the packaged app", async ({
     await expect(lifecycle.getByRole("button", { name: stage, exact: true })).toBeVisible();
   }
 
+  await page.getByLabel("Effective from", { exact: true }).fill("2024-04-01");
   await page
     .getByLabel("Profile decision reason", { exact: true })
     .fill("Packaged lifecycle acceptance; unresolved obligations remain explicitly unknown.");

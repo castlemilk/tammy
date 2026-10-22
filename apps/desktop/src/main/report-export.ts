@@ -46,6 +46,7 @@ import {
   recordBasPreparationExportEvent,
 } from "./bas-preparation-export";
 import type { CoreClient } from "./core-client";
+import { safeBasExportFailure } from "./startup-diagnostics";
 import { createValidatedExport } from "./validated-export";
 
 type Reader = {
@@ -379,6 +380,10 @@ export function createReportExports(options: {
                 options.now?.() ?? new Date(),
                 operation.guard,
               ).catch(() => undefined);
+            }
+            if (!operation.failureDiagnosticLogged) {
+              operation.failureDiagnosticLogged = true;
+              console.error(safeBasExportFailure("EXPORT_HANDLER", error));
             }
             throw reportExportError(error, "REPORT_SAVE_FAILED");
           }

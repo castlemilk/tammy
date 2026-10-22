@@ -79,6 +79,16 @@ export const WORKSPACE_CREATE_DIAGNOSTIC_MARKERS = Object.freeze([
   ...Object.values(workspaceDurationMarkers),
 ]);
 
+const basExportStageMarkers = {
+  HISTORY_READ: "LOCAL_ENGINE_BAS_EXPORT_HISTORY_READ",
+  EVENT_APPEND_STARTED: "LOCAL_ENGINE_BAS_EXPORT_EVENT_APPEND_STARTED",
+  EVENT_APPEND_FINISHED: "LOCAL_ENGINE_BAS_EXPORT_EVENT_APPEND_FINISHED",
+  EXPORT_HANDLER: "LOCAL_ENGINE_BAS_EXPORT_EXPORT_HANDLER",
+} as const;
+
+export type BasExportDiagnosticStage = keyof typeof basExportStageMarkers;
+export const BAS_EXPORT_DIAGNOSTIC_MARKERS = Object.freeze(Object.values(basExportStageMarkers));
+
 function ownDataValue(value: object, name: string): unknown {
   const descriptor = Object.getOwnPropertyDescriptor(value, name);
   return descriptor && "value" in descriptor ? descriptor.value : undefined;
@@ -157,4 +167,13 @@ export function safeWorkspaceCreateFailure(error: unknown, elapsedMs: number): s
             : workspaceDurationMarkers.tenOrMore;
   const code = connectMarker(error);
   return ["LOCAL_ENGINE_WORKSPACE_CREATE_FAILED", ...(code ? [code] : []), duration].join(" ");
+}
+
+export function safeBasExportFailure(stage: BasExportDiagnosticStage, error: unknown): string {
+  const marker =
+    typeof stage === "string" && Object.hasOwn(basExportStageMarkers, stage)
+      ? basExportStageMarkers[stage]
+      : basExportStageMarkers.EXPORT_HANDLER;
+  const code = connectMarker(error);
+  return code ? `${marker} ${code}` : marker;
 }

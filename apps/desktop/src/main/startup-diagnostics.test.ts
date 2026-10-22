@@ -5,9 +5,27 @@ import { CoreProcessError, type CoreProcessErrorCode } from "./core-process";
 import {
   type DesktopStartupStage,
   STARTUP_DIAGNOSTIC_MARKERS,
+  safeBasExportFailure,
   safeDesktopStartupFailure,
   safeWorkspaceCreateFailure,
 } from "./startup-diagnostics";
+
+it("classifies BAS export failures by fixed stage and concrete status only", () => {
+  for (const stage of [
+    "HISTORY_READ",
+    "EVENT_APPEND_STARTED",
+    "EVENT_APPEND_FINISHED",
+    "EXPORT_HANDLER",
+  ] as const) {
+    const failure = new ConnectError("private report path and evidence", Code.InvalidArgument);
+    expect(safeBasExportFailure(stage, failure)).toBe(
+      `LOCAL_ENGINE_BAS_EXPORT_${stage} LOCAL_ENGINE_CONNECT_INVALID_ARGUMENT`,
+    );
+    expect(safeBasExportFailure(stage, new Error("private"))).toBe(
+      `LOCAL_ENGINE_BAS_EXPORT_${stage}`,
+    );
+  }
+});
 
 const stages = [
   "REGISTER",

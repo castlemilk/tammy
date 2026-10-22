@@ -8,10 +8,12 @@ export async function openSavedBasWorkpaperPanel(page: Page) {
     has: page.getByText(SUMMARY, { exact: true }),
   });
   await expect(panel).toHaveCount(1);
+  const summary = panel.locator(":scope > summary");
+  await expect(summary).toHaveCount(1);
   const isOpen = await panel.evaluate((element) =>
     element instanceof HTMLDetailsElement ? element.open : false,
   );
-  if (!isOpen) await panel.locator("summary").click();
+  if (!isOpen) await summary.click();
   await expect(panel).toHaveAttribute("open", "");
   return panel;
 }

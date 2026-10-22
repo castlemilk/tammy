@@ -42,6 +42,7 @@ import {
   reopenPurchaseWorkspace,
   retainPurchaseThroughUi,
   retainPurchaseVolumeProof,
+  reviewedDocumentMelbourneDate,
   reviewPurchaseEvidenceThroughUi,
   savePurchaseExport,
   setupPurchaseWorkspace,
@@ -357,7 +358,10 @@ test("purchases/payments-gst: missing evidence, deferral, explicit claim and leg
     "REQUIRED-RETURN-NOTICE",
     "2026-10-01",
     true,
+    false,
+    "required-return-notice",
   );
+  const timingAsOf = reviewedDocumentMelbourneDate(proof);
   await openPurchase(page, number);
   const panel = page.getByRole("region", { name: "Purchase accounting", exact: true });
   await panel
@@ -371,7 +375,7 @@ test("purchases/payments-gst: missing evidence, deferral, explicit claim and leg
     ["Ordinary last claim date", "2030-11-03"],
     ["Claim / affected period start", "2026-10-01"],
     ["Claim / affected period end", "2026-12-31"],
-    ["Timing review as-of date", "2026-10-09"],
+    ["Timing review as-of date", timingAsOf],
   ] as const)
     await panel.getByLabel(label, { exact: true }).fill(date);
   await panel.getByRole("combobox", { name: "Due-date proof", exact: true }).selectOption(proof.id);
@@ -427,7 +431,7 @@ test("purchases/payments-gst: missing evidence, deferral, explicit claim and leg
     ["Claim / affected period start", "2026-10-01"],
     ["Claim / affected period end", "2026-12-31"],
     ["GST release posting date (for claim)", "2026-10-09"],
-    ["Timing review as-of date", "2026-10-09"],
+    ["Timing review as-of date", timingAsOf],
   ] as const)
     await reopenedPanel.getByLabel(label, { exact: true }).fill(date);
   await reopenedPanel

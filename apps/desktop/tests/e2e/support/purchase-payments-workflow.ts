@@ -157,6 +157,7 @@ export function syntheticPurchasePdf(
     | "legacy-review"
     | "payg-evidence"
     | "actual-due-date-evidence"
+    | "required-return-notice"
     | "profile-evidence" = false,
 ): Buffer {
   const text =
@@ -202,6 +203,7 @@ export async function retainPurchaseThroughUi(
     | "purchase"
     | "payg-evidence"
     | "actual-due-date-evidence"
+    | "required-return-notice"
     | "profile-evidence" = "purchase",
 ): Promise<d.Document> {
   await page.getByRole("link", { name: "Documents", exact: true }).click();
@@ -214,6 +216,7 @@ export async function retainPurchaseThroughUi(
         ? "legacy-review"
         : documentKind === "payg-evidence" ||
             documentKind === "actual-due-date-evidence" ||
+            documentKind === "required-return-notice" ||
             documentKind === "profile-evidence"
           ? documentKind
           : zeroMoney,
@@ -227,9 +230,11 @@ export async function retainPurchaseThroughUi(
         ? "Synthetic payroll and ATO notice"
         : documentKind === "actual-due-date-evidence"
           ? "Synthetic ATO activity statement"
-          : documentKind === "profile-evidence"
-            ? "Synthetic business registration evidence"
-            : '=Synthetic supplier, "Élodie"',
+          : documentKind === "required-return-notice"
+            ? "Synthetic ATO required-return notice"
+            : documentKind === "profile-evidence"
+              ? "Synthetic business registration evidence"
+              : '=Synthetic supplier, "Élodie"',
     );
   const review = page
     .locator("section")
@@ -259,6 +264,25 @@ export async function retainPurchaseThroughUi(
   expect(document.candidate?.total?.minorUnits).toBe(zeroMoney ? 0n : 11000n);
   expect(document.sha256).toHaveLength(32);
   return document;
+}
+
+export function reviewedDocumentMelbourneDate(document: d.Document): string {
+  const reviewedAt = document.reviewedAt;
+  if (!reviewedAt) throw new Error("PURCHASE_ACCEPTANCE_REVIEWED_AT_MISSING");
+  const instant = new Date(Number(reviewedAt.seconds) * 1000 + reviewedAt.nanos / 1_000_000);
+  const parts = new Intl.DateTimeFormat("en-AU", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "Australia/Melbourne",
+    year: "numeric",
+  }).formatToParts(instant);
+  const part = (type: "day" | "month" | "year") =>
+    parts.find((value) => value.type === type)?.value;
+  const year = part("year");
+  const month = part("month");
+  const day = part("day");
+  if (!year || !month || !day) throw new Error("PURCHASE_ACCEPTANCE_REVIEWED_AT_INVALID");
+  return `${year}-${month}-${day}`;
 }
 
 // Volume fixtures use the same authenticated document commands as ordinary

@@ -661,6 +661,31 @@ export async function setupAndRunCurrentAccountingWorkflow(
   );
   expect(storedDocument.document?.status).toBe(DocumentStatus.REVIEWED);
 
+  const readAttention = () =>
+    invokeProto(
+      page,
+      "getAttentionSummary",
+      attentionCodec,
+      create(GetAttentionSummaryRequestSchema, {
+        authentication,
+        organisationId,
+        asOfDate: PERIOD_END,
+        reportingPeriod: create(ReportingPeriodSchema, {
+          startDate: PERIOD_START,
+          endDate: PERIOD_END,
+        }),
+      }),
+    );
+  const revisionsBeforeBasCreate = await readAttention();
+  // The retained source writes are one journal, three banking commands, and
+  // two document commands. A saved BAS workpaper does not mutate these inputs.
+  expect(revisionsBeforeBasCreate.revisions).toMatchObject({
+    financialRevision: 6n,
+    ledgerRevision: 1n,
+    bankingRevision: 3n,
+    taxSourceRevision: 2n,
+  });
+
   const createdBas = await invokeProto(
     page,
     "createBasDraft",
@@ -704,20 +729,7 @@ export async function setupAndRunCurrentAccountingWorkflow(
   expect(currentBas.workpaper?.id).toBe(createdBas.workpaper?.id);
   expect(currentBas.workpaper?.status).toBe(BasWorkpaperStatus.DRAFT_NOT_LODGED);
 
-  const attention = await invokeProto(
-    page,
-    "getAttentionSummary",
-    attentionCodec,
-    create(GetAttentionSummaryRequestSchema, {
-      authentication,
-      organisationId,
-      asOfDate: PERIOD_END,
-      reportingPeriod: create(ReportingPeriodSchema, {
-        startDate: PERIOD_START,
-        endDate: PERIOD_END,
-      }),
-    }),
-  );
+  const attention = await readAttention();
   expect(attention).toMatchObject({
     documentsNeedingReview: 0,
     documentsReviewedInPeriod: 1,
@@ -727,10 +739,11 @@ export async function setupAndRunCurrentAccountingWorkflow(
     basStatus: BasAttentionStatus.ACTION_NEEDED,
   });
   expect(attention.revisions).toBeDefined();
-  expect(attention.revisions?.financialRevision).toBe(7n);
+  expect(attention.revisions?.financialRevision).toBe(6n);
   expect(attention.revisions?.ledgerRevision).toBe(1n);
   expect(attention.revisions?.bankingRevision).toBe(3n);
-  expect(attention.revisions?.taxSourceRevision).toBe(3n);
+  expect(attention.revisions?.taxSourceRevision).toBe(2n);
+  expect(attention.revisions).toEqual(revisionsBeforeBasCreate.revisions);
   expect(attention.attentionItems).toHaveLength(0);
 
   await assertRoute(page, "Documents", "/documents", "Documents");

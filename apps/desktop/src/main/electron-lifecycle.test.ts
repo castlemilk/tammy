@@ -466,6 +466,16 @@ describe("closeAndReapElectron", () => {
 });
 
 describe("ElectronProcessDiagnostics", () => {
+  it("retains only the fixed BAS export stage and status", () => {
+    const diagnostics = new ElectronProcessDiagnostics();
+    diagnostics.observeStderr(
+      "LOCAL_ENGINE_BAS_EXPORT_EVENT_APPEND_STARTED LOCAL_ENGINE_CONNECT_INVALID_ARGUMENT private-evidence",
+    );
+    const summary = diagnostics.formatSummary();
+    expect(summary).toContain("LOCAL_ENGINE_BAS_EXPORT_EVENT_APPEND_STARTED");
+    expect(summary).toContain("LOCAL_ENGINE_CONNECT_INVALID_ARGUMENT");
+    expect(summary).not.toContain("private");
+  });
   it("retains workspace creation status and timing markers without error data", () => {
     const diagnostics = new ElectronProcessDiagnostics();
     diagnostics.observeStderr(

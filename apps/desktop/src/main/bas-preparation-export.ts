@@ -32,6 +32,7 @@ import {
 } from "@tammy/reporting";
 import type { BasPreparationExportRequest } from "../shared/report-export";
 import type { CoreClient } from "./core-client";
+import { safeBasExportFailure } from "./startup-diagnostics";
 
 type BasPreparationClient = NonNullable<CoreClient["basPreparation"]>;
 type Guard = () => void;
@@ -47,6 +48,17 @@ export interface BasPreparationExportOperation {
   terminal?: boolean;
   artifactHash?: Uint8Array;
   guard?: Guard;
+  failureDiagnosticLogged?: boolean;
+}
+
+function logBasExportFailure(
+  operation: BasPreparationExportOperation,
+  stage: "HISTORY_READ" | "EVENT_APPEND_STARTED" | "EVENT_APPEND_FINISHED" | "EXPORT_HANDLER",
+  error: unknown,
+) {
+  if (operation.failureDiagnosticLogged) return;
+  operation.failureDiagnosticLogged = true;
+  console.error(safeBasExportFailure(stage, error));
 }
 
 function copyBytes(value: Uint8Array) {
@@ -301,35 +313,41 @@ async function readEventHistory(
   operation: BasPreparationExportOperation,
   guard: Guard,
 ): Promise<ExportEventHistory> {
-  let cursor: string | undefined;
-  let count = 0n;
-  let latest: BasExportEventSummary | undefined;
-  const seen = new Set<string>();
-  do {
-    const response = await client.listBasExportEvents(
-      create(ListBasExportEventsRequestSchema, {
-        authentication: operation.authentication,
-        organisationId: operation.organisationId,
-        target: basPreparationTargetRef(operation.target),
-        page: create(PageRequestSchema, { pageSize: 200, ...(cursor ? { cursor } : {}) }),
-      }),
-    );
-    guard();
-    if (!response.page || response.page.returnedCount !== response.events.length)
-      throw new Error("REPORT_SAVE_FAILED");
-    for (const event of response.events) {
-      if (!historyTargetMatches(event, operation.target)) throw new Error("REPORT_SAVE_FAILED");
-      latest = event;
-    }
-    count += BigInt(response.events.length);
-    if (count > 18446744073709551615n) throw new Error("REPORT_SAVE_FAILED");
-    cursor = response.page.nextCursor;
-    if (cursor !== undefined) {
-      if (!cursor || seen.has(cursor) || seen.size >= 10000) throw new Error("REPORT_SAVE_FAILED");
-      seen.add(cursor);
-    }
-  } while (cursor !== undefined);
-  return { count, ...(latest ? { latest } : {}) };
+  try {
+    let cursor: string | undefined;
+    let count = 0n;
+    let latest: BasExportEventSummary | undefined;
+    const seen = new Set<string>();
+    do {
+      const response = await client.listBasExportEvents(
+        create(ListBasExportEventsRequestSchema, {
+          authentication: operation.authentication,
+          organisationId: operation.organisationId,
+          target: basPreparationTargetRef(operation.target),
+          page: create(PageRequestSchema, { pageSize: 200, ...(cursor ? { cursor } : {}) }),
+        }),
+      );
+      guard();
+      if (!response.page || response.page.returnedCount !== response.events.length)
+        throw new Error("REPORT_SAVE_FAILED");
+      for (const event of response.events) {
+        if (!historyTargetMatches(event, operation.target)) throw new Error("REPORT_SAVE_FAILED");
+        latest = event;
+      }
+      count += BigInt(response.events.length);
+      if (count > 18446744073709551615n) throw new Error("REPORT_SAVE_FAILED");
+      cursor = response.page.nextCursor;
+      if (cursor !== undefined) {
+        if (!cursor || seen.has(cursor) || seen.size >= 10000)
+          throw new Error("REPORT_SAVE_FAILED");
+        seen.add(cursor);
+      }
+    } while (cursor !== undefined);
+    return { count, ...(latest ? { latest } : {}) };
+  } catch (error) {
+    logBasExportFailure(operation, "HISTORY_READ", error);
+    throw error;
+  }
 }
 
 function exportFormatFromSummary(value: BasExportEventSummary): "pdf" | "csv" {
@@ -383,8 +401,15 @@ async function appendBasPreparationExportEvent(
       await client.recordBasExportEvent(request);
       guard();
       return;
-    } catch {
-      if (attempt === 1) throw new Error("REPORT_SAVE_FAILED");
+    } catch (error) {
+      if (attempt === 1) {
+        logBasExportFailure(
+          operation,
+          phase === BasExportPhase.STARTED ? "EVENT_APPEND_STARTED" : "EVENT_APPEND_FINISHED",
+          error,
+        );
+        throw new Error("REPORT_SAVE_FAILED");
+      }
     }
   }
 }

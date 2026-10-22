@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { create } from "@bufbuild/protobuf";
 import { TimestampSchema } from "@bufbuild/protobuf/wkt";
+import { Code, ConnectError } from "@connectrpc/connect";
 import {
   BasAmountState,
   type BasCalculation,
@@ -55,9 +56,12 @@ import type { BasPreparationExportRequest } from "../shared/report-export";
 import { createReportExports } from "./report-export";
 
 const dirs: string[] = [];
-afterEach(async () =>
-  Promise.all(dirs.splice(0).map((directory) => rm(directory, { recursive: true, force: true }))),
-);
+afterEach(async () => {
+  vi.restoreAllMocks();
+  await Promise.all(
+    dirs.splice(0).map((directory) => rm(directory, { recursive: true, force: true })),
+  );
+});
 
 const orgId = "018f0000-0000-7000-8000-000000000004";
 const userId = "018f0000-0000-7000-8000-000000000002";
@@ -673,6 +677,29 @@ it("exports the frozen pinned snapshot as a manual handoff without lodging claim
   );
 });
 
+it("records cancellation for an exact frozen BAS target", async () => {
+  const value = fixture("frozen_bas");
+  const f = await exporterFor(value, { canceled: true, format: "pdf" });
+
+  await expect(f.exporter.exportBasPreparation(f.request)).resolves.toEqual({ saved: false });
+
+  expect(value.basPreparation.getFrozenBas).toHaveBeenCalledTimes(1);
+  expect(value.basPreparation.getBasCalculation).not.toHaveBeenCalled();
+  expect(value.exportEvents.map((event) => event.event?.phase)).toEqual([
+    BasExportPhase.STARTED,
+    BasExportPhase.FINISHED,
+  ]);
+  expect(value.exportEvents.map((event) => event.event?.outcome)).toEqual([
+    undefined,
+    BasExportOutcome.CANCELLED,
+  ]);
+  expect(
+    value.exportEvents.every((event) => event.event?.target?.exactTarget.case === "frozenBas"),
+  ).toBe(true);
+  expect(value.exportEvents[1]?.event?.reason).toBe("native_save_dialog_cancelled");
+  expect(await readdir(f.directory)).toEqual([]);
+});
+
 it("records cancellation after STARTED without creating a report file", async () => {
   const value = fixture();
   const f = await exporterFor(value, { canceled: true });
@@ -686,8 +713,86 @@ it("records cancellation after STARTED without creating a report file", async ()
   expect(await readdir(f.directory)).toEqual([]);
 });
 
+it("logs only the safe stage and Connect code when export history cannot be read", async () => {
+  const value = fixture("frozen_bas");
+  value.basPreparation.listBasExportEvents.mockRejectedValue(
+    new ConnectError("private path /tmp/evidence password=secret", Code.InvalidArgument),
+  );
+  const diagnostic = vi.spyOn(console, "error").mockImplementation(() => undefined);
+  const f = await exporterFor(value, { format: "pdf", canceled: true });
+
+  await expect(f.exporter.exportBasPreparation(f.request)).rejects.toThrow(
+    "REPORT_REFRESH_REQUIRED",
+  );
+
+  expect(value.basPreparation.recordBasExportEvent).not.toHaveBeenCalled();
+  expect(diagnostic).toHaveBeenCalledTimes(1);
+  const output = diagnostic.mock.calls.flat().join(" ");
+  expect(output).toContain("LOCAL_ENGINE_CONNECT_INVALID_ARGUMENT");
+  expect(output).toContain("LOCAL_ENGINE_BAS_EXPORT_HISTORY_READ");
+  expect(output).not.toContain("private path");
+  expect(output).not.toContain("password=secret");
+  expect(output).not.toContain(f.request.authentication.actorUserId);
+  expect(output).not.toContain(f.request.authentication.sessionId);
+});
+
+it("logs the exact safe stage when the STARTED event append fails", async () => {
+  const value = fixture("frozen_bas");
+  value.basPreparation.recordBasExportEvent.mockRejectedValue(
+    new ConnectError("private path /tmp/evidence password=secret", Code.InvalidArgument),
+  );
+  const diagnostic = vi.spyOn(console, "error").mockImplementation(() => undefined);
+  const f = await exporterFor(value, { format: "pdf", canceled: true });
+
+  await expect(f.exporter.exportBasPreparation(f.request)).rejects.toThrow("REPORT_SAVE_FAILED");
+
+  expect(value.basPreparation.recordBasExportEvent).toHaveBeenCalledTimes(2);
+  expect(value.exportEvents).toHaveLength(0);
+  expect(diagnostic).toHaveBeenCalledTimes(1);
+  const output = diagnostic.mock.calls.flat().join(" ");
+  expect(output).toContain("LOCAL_ENGINE_CONNECT_INVALID_ARGUMENT");
+  expect(output).toContain("LOCAL_ENGINE_BAS_EXPORT_EVENT_APPEND_STARTED");
+  expect(output).not.toContain("private path");
+  expect(output).not.toContain("password=secret");
+  expect(output).not.toContain(f.request.authentication.actorUserId);
+  expect(output).not.toContain(f.request.authentication.sessionId);
+});
+
+it("logs the FINISHED event append stage without exposing renderer diagnostics", async () => {
+  const value = fixture("frozen_bas");
+  const record = value.basPreparation.recordBasExportEvent;
+  record.mockImplementationOnce(async (request) => {
+    expect(request.expectedVersion).toBe(0n);
+    if (request.event)
+      value.exportEvents.push(create(BasExportEventSchema, { event: request.event }));
+    return {};
+  });
+  record.mockRejectedValueOnce(
+    new ConnectError("private path /tmp/evidence password=secret", Code.PermissionDenied),
+  );
+  record.mockRejectedValueOnce(
+    new ConnectError("private path /tmp/evidence password=secret", Code.PermissionDenied),
+  );
+  const diagnostic = vi.spyOn(console, "error").mockImplementation(() => undefined);
+  const f = await exporterFor(value, { format: "pdf", canceled: true });
+
+  await expect(f.exporter.exportBasPreparation(f.request)).rejects.toThrow("REPORT_SAVE_FAILED");
+
+  expect(value.exportEvents.map((event) => event.event?.phase)).toEqual([BasExportPhase.STARTED]);
+  expect(record).toHaveBeenCalledTimes(3);
+  expect(diagnostic).toHaveBeenCalledTimes(1);
+  const output = diagnostic.mock.calls.flat().join(" ");
+  expect(output).toContain("LOCAL_ENGINE_CONNECT_PERMISSION_DENIED");
+  expect(output).toContain("LOCAL_ENGINE_BAS_EXPORT_EVENT_APPEND_FINISHED");
+  expect(output).not.toContain("private path");
+  expect(output).not.toContain("password=secret");
+  expect(output).not.toContain(f.request.authentication.actorUserId);
+  expect(output).not.toContain(f.request.authentication.sessionId);
+});
+
 it("records render failure safely and leaves no partial output", async () => {
   const value = fixture();
+  const diagnostic = vi.spyOn(console, "error").mockImplementation(() => undefined);
   const f = await exporterFor(value, {
     render: async () => {
       throw new Error("private report path and contents");
@@ -697,6 +802,11 @@ it("records render failure safely and leaves no partial output", async () => {
   expect(value.exportEvents[1]?.event?.outcome).toBe(BasExportOutcome.FAILED);
   expect(value.exportEvents[1]?.event?.reason).toBe("export_failed");
   expect(await readdir(f.directory)).toEqual([]);
+  expect(diagnostic).toHaveBeenCalledWith("LOCAL_ENGINE_BAS_EXPORT_EXPORT_HANDLER");
+  expect(diagnostic).toHaveBeenCalledTimes(1);
+  const output = diagnostic.mock.calls.flat().join(" ");
+  expect(output).not.toContain("private report path");
+  expect(output).not.toContain("private report contents");
 });
 
 it("rejects a preparation reference with the right hash but the wrong revision before exporting", async () => {

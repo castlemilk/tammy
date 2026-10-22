@@ -48,7 +48,9 @@ test("runs the packaged first-run journey offline and exits cleanly", async ({
     page.getByText("Tammy supports a local invoice and reconciled purchase GST workpaper."),
   ).toBeVisible();
   await expect(
-    page.getByText("Tammy does not prepare, declare, or lodge a complete BAS."),
+    page.getByText(
+      "Local BAS preparation requires confirmed supported obligations and source evidence. Tammy does not declare or lodge a BAS with the ATO.",
+    ),
   ).toBeVisible();
 
   const gstWorkpaper = await windowReportingCapability(
@@ -74,7 +76,7 @@ test("runs the packaged first-run journey offline and exits cleanly", async ({
     report: ReportKind.BAS,
     taxYear: 2024,
     entityType: ReportingEntityType.AU_BUSINESS,
-    status: ReportingCapabilityStatus.UNSUPPORTED,
+    status: ReportingCapabilityStatus.PREPARATION_ONLY,
   });
   expect(bas.capability?.appVersion).toBe(gstWorkpaper.capability?.appVersion);
 
