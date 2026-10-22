@@ -712,11 +712,17 @@ export async function savePurchaseExport(
     .currentPage()
     .getByRole("button", { name: `Export ${format}`, exact: true });
   await expect(button).toBeEnabled();
+  const clickedAt = Date.now();
   await button.click();
   const completion = `BAS ${format} exported.`;
-  await expect(
-    harness.currentPage().getByRole("status").filter({ hasText: completion }),
-  ).toHaveText(completion);
+  const completed = harness.currentPage().getByRole("status").filter({ hasText: completion });
+  // Large workpapers finish rendering the PDF before writing the export file.
+  if (format === "PDF") {
+    await expect(completed).toHaveText(completion, { timeout: 120_000 });
+  } else {
+    await expect(completed).toHaveText(completion);
+  }
+  console.info(`PURCHASE_EXPORT_${format}_COMPLETE_MS=${Date.now() - clickedAt}`);
   await expect
     .poll(() =>
       stat(filePath).then(
