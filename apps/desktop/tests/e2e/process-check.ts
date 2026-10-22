@@ -1,7 +1,7 @@
 import { type ExecFileException, execFile as nodeExecFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { constants as fsConstants } from "node:fs";
-import { open } from "node:fs/promises";
+import { lstat, open } from "node:fs/promises";
 import path from "node:path";
 
 const PROCESS_QUERY_TIMEOUT_MS = 5_000;
@@ -375,6 +375,10 @@ function sameFileIdentity(
 async function authenticatedFileDigest(filePath: string): Promise<string> {
   let handle: Awaited<ReturnType<typeof open>> | undefined;
   try {
+    const pathBefore = await lstat(filePath);
+    if (pathBefore.isSymbolicLink()) {
+      throw new Error("UNAUTHENTICATED_STAGED_HELPER");
+    }
     handle = await open(filePath, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
     const before = await handle.stat();
     if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1 || before.size <= 0) {
