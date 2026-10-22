@@ -466,6 +466,18 @@ describe("closeAndReapElectron", () => {
 });
 
 describe("ElectronProcessDiagnostics", () => {
+  it("retains the fixed startup stage and error code without adjacent private text", () => {
+    const diagnostics = new ElectronProcessDiagnostics();
+    diagnostics.observeStderr(
+      "LOCAL_ENGINE_STARTUP_CORE_START LOCAL_ENGINE_CORE_READINESS_TIMEOUT path=/private token=private-secret",
+    );
+    const summary = diagnostics.formatSummary();
+    expect(summary).toContain("LOCAL_ENGINE_STARTUP_CORE_START");
+    expect(summary).toContain("LOCAL_ENGINE_CORE_READINESS_TIMEOUT");
+    expect(summary).not.toContain("/private");
+    expect(summary).not.toContain("private-secret");
+  });
+
   it("retains only allowlisted markers from stderr, never raw text", () => {
     const diagnostics = new ElectronProcessDiagnostics();
     diagnostics.observeStderr(

@@ -2,6 +2,7 @@ import type { CoreReadiness } from "../shared/readiness";
 import type { CoreClient } from "./core-client";
 import type { CoreProcess } from "./core-process";
 import type { SbrFileReleaseKind } from "./sbr-file-intake";
+import { type DesktopStartupStage, safeDesktopStartupFailure } from "./startup-diagnostics";
 
 export type DesktopApplicationErrorCode =
   | "APPLICATION_CLOSING"
@@ -86,6 +87,7 @@ export async function startDesktopApplication(
   let pendingCore: Promise<Readonly<CoreReadiness>> | undefined;
   let coreReady = false;
   let shutdownPromise: Promise<void> | undefined;
+  let startupStage: DesktopStartupStage = "REGISTER";
   const cleanupSensitiveState = onceRelease(dependencies.cleanupSensitiveState);
 
   const ensureOpen = (): void => {
@@ -148,33 +150,42 @@ export async function startDesktopApplication(
     releaseScheme = onceRelease(dependencies.registerScheme());
     unlistenQuit = onceRelease(dependencies.listenForQuit(() => void shutdown()));
     if (closing) unlistenQuit();
-  } catch {
+  } catch (error) {
     releaseSafely(releaseScheme);
     releaseSafely(cleanupSensitiveState);
     dependencies.logger.error("LOCAL_ENGINE_UNAVAILABLE");
+    dependencies.logger.error(safeDesktopStartupFailure(startupStage, error));
     dependencies.exit(1);
     throw new DesktopApplicationError("LOCAL_ENGINE_UNAVAILABLE");
   }
 
   try {
+    startupStage = "READY";
     await dependencies.ready();
     ensureOpen();
+    startupStage = "RUNTIME_SECURITY";
     pendingRuntime = dependencies.installRuntimeSecurity().then(onceRelease);
     releaseRuntime = await pendingRuntime;
     ensureOpen();
+    startupStage = "CORE_START";
     pendingCore = dependencies.core.start();
     const readiness = await pendingCore;
     coreReady = true;
     ensureOpen();
+    startupStage = "CORE_DIAGNOSTICS";
     const client = dependencies.createClient(readiness);
     await client.getDiagnostics();
     ensureOpen();
+    startupStage = "CONVEYOR";
     unregisterConveyor = onceRelease(dependencies.registerConveyor(() => window, client));
+    startupStage = "WINDOW";
     window = dependencies.createWindow();
+    startupStage = "WINDOW_SECURITY";
     releaseWindow = onceRelease(dependencies.installWindowSecurity(window));
     window.once("ready-to-show", () => {
       if (!closing && window && !window.isDestroyed()) window.show();
     });
+    startupStage = "LOAD_WINDOW";
     await window.loadURL(dependencies.applicationUrl);
     ensureOpen();
   } catch (error) {
@@ -183,6 +194,7 @@ export async function startDesktopApplication(
       throw error;
     }
     dependencies.logger.error("LOCAL_ENGINE_UNAVAILABLE");
+    dependencies.logger.error(safeDesktopStartupFailure(startupStage, error));
     await shutdown(1).catch(() => undefined);
     throw new DesktopApplicationError("LOCAL_ENGINE_UNAVAILABLE");
   }

@@ -1,7 +1,12 @@
 import type { ChildProcess } from "node:child_process";
 import { constants as osConstants } from "node:os";
+import { STARTUP_DIAGNOSTIC_MARKERS } from "../../src/main/startup-diagnostics";
 
-const SAFE_STDERR_MARKERS = ["LOCAL_ENGINE_UNAVAILABLE", "LOCAL_ENGINE_SHUTDOWN_FAILED"] as const;
+const SAFE_STDERR_MARKERS = [
+  "LOCAL_ENGINE_UNAVAILABLE",
+  "LOCAL_ENGINE_SHUTDOWN_FAILED",
+  ...STARTUP_DIAGNOSTIC_MARKERS,
+] as const;
 
 const SAFE_CLOSE_FAILURE_CODES = [
   "ELECTRON_CLOSE_TIMEOUT",

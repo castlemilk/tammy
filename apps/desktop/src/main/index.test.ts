@@ -431,6 +431,11 @@ describe("desktop application composition", () => {
       expect(calls).not.toContain("window:create");
       expect(calls.join(" ")).not.toContain(secret);
       expect(calls).toContain("log:LOCAL_ENGINE_UNAVAILABLE");
+      expect(calls).toContain(
+        failure === "start"
+          ? "log:LOCAL_ENGINE_STARTUP_CORE_START"
+          : "log:LOCAL_ENGINE_STARTUP_CORE_DIAGNOSTICS",
+      );
       expect(calls).toContain("exit:1");
     },
   );
@@ -691,6 +696,7 @@ describe("desktop application composition", () => {
       expect(dependencies.core.start).not.toHaveBeenCalled();
       expect(dependencies.createWindow).not.toHaveBeenCalled();
       expect(calls).toContain("log:LOCAL_ENGINE_UNAVAILABLE");
+      expect(calls).toContain("log:LOCAL_ENGINE_STARTUP_REGISTER");
       expect(calls).toContain("exit:1");
       expect(calls.join(" ")).not.toContain(secret);
       expect(releaseScheme).toHaveBeenCalledTimes(phase === "quit-listener" ? 1 : 0);
