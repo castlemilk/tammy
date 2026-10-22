@@ -1,0 +1,108 @@
+syntax = "proto3";
+
+package tammy.v1;
+
+import "buf/validate/validate.proto";
+
+option go_package = "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1";
+
+// BackupArchiveObject commits the encrypted archive manifest to one immutable module object.
+message BackupArchiveObject {
+  // path is a canonical relative member path, never a host path.
+  string path = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 512
+    pattern: "^[a-z0-9][A-Za-z0-9._/-]*$"
+  }];
+
+  // sha256 is the digest of the exact plaintext member bytes.
+  bytes sha256 = 2 [(buf.validate.field).bytes.len = 32];
+
+  // byte_length is the exact bounded plaintext member length.
+  uint64 byte_length = 3 [(buf.validate.field).uint64.lte = 1073741824];
+
+  // provider is the module-owned projection provider.
+  string provider = 4 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+    pattern: "^[a-z][a-z0-9_]*$"
+  }];
+
+  // provider_version dispatches restore to one exact immutable validator.
+  uint32 provider_version = 5 [(buf.validate.field).uint32.gte = 1];
+}
+
+// BackupArchiveManifest is the deterministically encoded and audit-lineage-signed backup manifest.
+message BackupArchiveManifest {
+  // format is the stable encrypted-workspace archive discriminator.
+  string format = 1 [(buf.validate.field).string.const = "tammy-backup-v1"];
+
+  // workspace_id identifies the encrypted workspace.
+  string workspace_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // schema_version is the exact migration schema included in the snapshot.
+  uint64 schema_version = 3 [(buf.validate.field).uint64.gte = 1];
+
+  // app_version is the bounded core version that authored the archive.
+  string app_version = 4 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+
+  // audit_generation identifies the signed audit branch.
+  uint64 audit_generation = 5 [(buf.validate.field).uint64.gte = 1];
+
+  // audit_sequence is zero only at a verified genesis snapshot.
+  uint64 audit_sequence = 6;
+
+  // audit_head is the exact verified event or genesis hash.
+  bytes audit_head = 7 [(buf.validate.field).bytes.len = 32];
+
+  // audit_root is the trusted lineage root fingerprint supplied outside the archive.
+  bytes audit_root = 8 [(buf.validate.field).bytes.len = 32];
+
+  // signing_key_id identifies the trusted workspace audit key used for the signature.
+  string signing_key_id = 9 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // signing_key_epoch is contiguous within the authenticated workspace lineage.
+  uint64 signing_key_epoch = 10 [(buf.validate.field).uint64.gte = 1];
+
+  // workspace_header_hash commits to the exact public workspace header bytes.
+  bytes workspace_header_hash = 11 [(buf.validate.field).bytes.len = 32];
+
+  // migration_manifest_hash commits to the ordered migration IDs and checksums.
+  bytes migration_manifest_hash = 12 [(buf.validate.field).bytes.len = 32];
+
+  // objects are strictly path-sorted and contain every encrypted member.
+  repeated BackupArchiveObject objects = 13 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 10000
+  }];
+}
+
+// BackupJobInput is the immutable restart-safe job input. It deliberately
+// excludes the backup passphrase, archive key, and archive bytes.
+message BackupJobInput {
+  string format = 1 [(buf.validate.field).string.const = "tammy-backup-job-v1"];
+  string workspace_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  bytes operation_hash = 3 [(buf.validate.field).bytes.len = 32];
+  bytes input_hash = 4 [(buf.validate.field).bytes.len = 32];
+  string destination_capability = 5 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string passphrase_capability = 6 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+}
+
+// BackupJobCheckpoint authenticates prepared encrypted bytes without storing
+// those bytes in SQL.
+message BackupJobCheckpoint {
+  string format = 1 [(buf.validate.field).string.const = "tammy-backup-job-checkpoint-v1"];
+  bytes manifest_hash = 2 [(buf.validate.field).bytes.len = 32];
+  bytes archive_hash = 3 [(buf.validate.field).bytes.len = 32];
+}
+
+// BackupJobResult records only verified destination metadata.
+message BackupJobResult {
+  string format = 1 [(buf.validate.field).string.const = "tammy-backup-job-result-v1"];
+  bytes manifest_hash = 2 [(buf.validate.field).bytes.len = 32];
+  bytes destination_hash = 3 [(buf.validate.field).bytes.len = 32];
+  string destination_capability = 4 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+}

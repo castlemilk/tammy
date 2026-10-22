@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Tammy app icon">
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#146346"/>
+      <stop offset="1" stop-color="#063b2a"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#background)"/>
+  <rect x="88" y="88" width="848" height="848" rx="168" fill="none" stroke="#f4f0e7" stroke-opacity="0.16" stroke-width="12"/>
+  <path fill="#f7f3ea" d="M286 269h452l22 149h-24c-17-51-39-85-67-103-25-16-61-24-109-24h-17v392c0 30 5 50 16 59 11 10 35 16 72 18v26H393v-26c37-2 61-8 72-18 11-9 16-29 16-59V291h-18c-47 0-83 8-108 24-28 18-50 52-67 103h-24l22-149Z"/>
+  <circle cx="512" cy="821" r="20" fill="#d4a547"/>
+</svg>

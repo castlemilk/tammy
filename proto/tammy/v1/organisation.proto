@@ -1,0 +1,360 @@
+syntax = "proto3";
+
+package tammy.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+import "tammy/v1/common.proto";
+
+option go_package = "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1";
+
+// OrganisationVerificationState is the independent entity-verification lifecycle.
+// Allowed transitions are UNVERIFIED -> VERIFIED | FAILED,
+// FAILED -> VERIFIED | EXPIRED, and VERIFIED -> EXPIRED | SUPERSEDED.
+enum OrganisationVerificationState {
+  // ORGANISATION_VERIFICATION_STATE_UNSPECIFIED indicates an unavailable state.
+  ORGANISATION_VERIFICATION_STATE_UNSPECIFIED = 0;
+
+  // ORGANISATION_VERIFICATION_STATE_UNVERIFIED blocks SBR activity.
+  ORGANISATION_VERIFICATION_STATE_UNVERIFIED = 1;
+
+  // ORGANISATION_VERIFICATION_STATE_VERIFIED enables SBR while evidence remains current.
+  ORGANISATION_VERIFICATION_STATE_VERIFIED = 2;
+
+  // ORGANISATION_VERIFICATION_STATE_FAILED retains a failed independent check as evidence.
+  ORGANISATION_VERIFICATION_STATE_FAILED = 3;
+
+  // ORGANISATION_VERIFICATION_STATE_EXPIRED retains evidence after its policy deadline.
+  ORGANISATION_VERIFICATION_STATE_EXPIRED = 4;
+
+  // ORGANISATION_VERIFICATION_STATE_SUPERSEDED retains evidence replaced by identity or ownership change.
+  ORGANISATION_VERIFICATION_STATE_SUPERSEDED = 5;
+}
+
+// VerificationSourceMethod identifies the independent source used for entity verification.
+enum VerificationSourceMethod {
+  // VERIFICATION_SOURCE_METHOD_UNSPECIFIED is never a successful verification source.
+  VERIFICATION_SOURCE_METHOD_UNSPECIFIED = 0;
+
+  // VERIFICATION_SOURCE_METHOD_ABR_ONLINE records a verified live Australian Business Register result.
+  VERIFICATION_SOURCE_METHOD_ABR_ONLINE = 1;
+
+  // VERIFICATION_SOURCE_METHOD_ABR_EXTRACT_MANUAL records a retained independent ABR extract or capture.
+  VERIFICATION_SOURCE_METHOD_ABR_EXTRACT_MANUAL = 2;
+
+  // VERIFICATION_SOURCE_METHOD_SIMULATOR_FIXTURE is accepted only by test-signed simulator builds.
+  VERIFICATION_SOURCE_METHOD_SIMULATOR_FIXTURE = 3;
+}
+
+// GstBasis identifies when GST facts are attributed to reporting periods.
+enum GstBasis {
+  // GST_BASIS_UNSPECIFIED indicates that GST basis has not been configured.
+  GST_BASIS_UNSPECIFIED = 0;
+
+  // GST_BASIS_CASH attributes GST as qualifying settlement occurs.
+  GST_BASIS_CASH = 1;
+
+  // GST_BASIS_NON_CASH attributes GST from posted source documents.
+  GST_BASIS_NON_CASH = 2;
+}
+
+// GstReportingFrequency identifies the organisation's configured GST reporting cadence.
+enum GstReportingFrequency {
+  // GST_REPORTING_FREQUENCY_UNSPECIFIED indicates that no cadence has been configured.
+  GST_REPORTING_FREQUENCY_UNSPECIFIED = 0;
+
+  // GST_REPORTING_FREQUENCY_MONTHLY uses calendar months.
+  GST_REPORTING_FREQUENCY_MONTHLY = 1;
+
+  // GST_REPORTING_FREQUENCY_QUARTERLY uses Australian GST quarters.
+  GST_REPORTING_FREQUENCY_QUARTERLY = 2;
+
+  // GST_REPORTING_FREQUENCY_ANNUALLY uses one annual GST period.
+  GST_REPORTING_FREQUENCY_ANNUALLY = 3;
+}
+
+// Organisation is the single bounded business profile projection for a workspace.
+message Organisation {
+  // id is an opaque UUIDv7 string.
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // version is the optimistic aggregate version.
+  uint64 version = 2 [(buf.validate.field).uint64.gte = 1];
+
+  // abn is the canonical eleven-digit Australian Business Number.
+  string abn = 3 [(buf.validate.field).string.pattern = "^[0-9]{11}$"];
+
+  // legal_name is the bounded registered entity name.
+  string legal_name = 4 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 256
+  }];
+
+  // display_name is the bounded name used throughout the workspace UI.
+  string display_name = 5 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 256
+  }];
+
+  // entity_type is a stable bounded entity classification.
+  string entity_type = 6 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 96
+  }];
+
+  // gst_basis controls timing of GST attribution.
+  GstBasis gst_basis = 7 [(buf.validate.field).enum.defined_only = true];
+
+  // gst_reporting_frequency controls later GST reporting-period boundaries.
+  GstReportingFrequency gst_reporting_frequency = 8 [(buf.validate.field).enum.defined_only = true];
+
+  // financial_year_end_month is in the inclusive range 1 through 12.
+  uint32 financial_year_end_month = 9 [(buf.validate.field).uint32 = {
+    gte: 1
+    lte: 12
+  }];
+
+  // verification_state is the current independent entity-verification lifecycle state.
+  OrganisationVerificationState verification_state = 10 [(buf.validate.field).enum.defined_only = true];
+
+  // owner_user_id is the current owner's opaque UUIDv7 identifier.
+  string owner_user_id = 11 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // active_tax_rule_bundle is immutable retained provenance for tax calculations.
+  SourceRef active_tax_rule_bundle = 12 [(buf.validate.field).required = true];
+}
+
+// OrganisationPatch contains only fields selected by UpdateOrganisationRequest.update_mask.
+message OrganisationPatch {
+  // abn is the canonical eleven-digit Australian Business Number.
+  string abn = 1 [(buf.validate.field).string.pattern = "^[0-9]{11}$"];
+
+  // legal_name is the bounded registered entity name.
+  string legal_name = 2 [(buf.validate.field).string.max_len = 256];
+
+  // display_name is the bounded UI name.
+  string display_name = 3 [(buf.validate.field).string.max_len = 256];
+
+  // entity_type is the bounded entity classification.
+  string entity_type = 4 [(buf.validate.field).string.max_len = 96];
+
+  // gst_basis is selected only for an effective future GST period boundary.
+  GstBasis gst_basis = 5 [(buf.validate.field).enum.defined_only = true];
+
+  // gst_reporting_frequency is selected only for an effective future GST period boundary.
+  GstReportingFrequency gst_reporting_frequency = 6 [(buf.validate.field).enum.defined_only = true];
+
+  // financial_year_end_month is in the inclusive range 1 through 12.
+  uint32 financial_year_end_month = 7 [(buf.validate.field).uint32.lte = 12];
+
+  // active_tax_rule_bundle is immutable retained tax-rule provenance.
+  SourceRef active_tax_rule_bundle = 8;
+}
+
+// VerificationEvidence is one bounded immutable PDF, JPEG, or PNG evidence object.
+message VerificationEvidence {
+  // mime_type is restricted by the domain to application/pdf, image/jpeg, or image/png.
+  string mime_type = 1 [(buf.validate.field).string = {
+    min_len: 9
+    max_len: 32
+  }];
+
+  // content is bounded to one MiB and is retained only inside encrypted storage.
+  bytes content = 2 [(buf.validate.field).bytes = {
+    min_len: 1
+    max_len: 1048576
+  }];
+
+  // content_hash is the caller-computed SHA-256 verified by the core before retention.
+  bytes content_hash = 3 [(buf.validate.field).bytes.len = 32];
+}
+
+// EntityVerification is retained immutable independent-source evidence metadata.
+message EntityVerification {
+  // id is an opaque UUIDv7 string.
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // organisation_id identifies the verified organisation.
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // state is the retained verification outcome.
+  OrganisationVerificationState state = 3 [(buf.validate.field).enum.defined_only = true];
+
+  // source_method identifies the approved independent verification source.
+  VerificationSourceMethod source_method = 4 [(buf.validate.field).enum.defined_only = true];
+
+  // source is immutable cross-module provenance for the independent result.
+  SourceRef source = 5 [(buf.validate.field).required = true];
+
+  // verified_legal_name is the name returned by the independent source.
+  string verified_legal_name = 6 [(buf.validate.field).string.max_len = 256];
+
+  // verified_entity_type is the entity classification returned by the independent source.
+  string verified_entity_type = 7 [(buf.validate.field).string.max_len = 96];
+
+  // evidence_object_id is the encrypted evidence object's opaque UUIDv7 identifier.
+  string evidence_object_id = 8 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // recorded_at is the core-authored retention instant.
+  google.protobuf.Timestamp recorded_at = 9 [(buf.validate.field).required = true];
+
+  // expires_at is the policy expiry instant, no later than 12 months after recording.
+  google.protobuf.Timestamp expires_at = 10 [(buf.validate.field).required = true];
+}
+
+// CreateOrganisationRequest creates the sole organisation in one ordinary audited command.
+message CreateOrganisationRequest {
+  // command_context carries a UUID idempotency key and authorized administrator.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+
+  // abn is the canonical eleven-digit Australian Business Number.
+  string abn = 2 [(buf.validate.field).string.pattern = "^[0-9]{11}$"];
+
+  // legal_name is the bounded registered entity name.
+  string legal_name = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 256
+  }];
+
+  // display_name is the bounded UI name.
+  string display_name = 4 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 256
+  }];
+
+  // entity_type is the bounded entity classification.
+  string entity_type = 5 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 96
+  }];
+
+  // gst_basis controls timing of GST attribution.
+  GstBasis gst_basis = 6 [(buf.validate.field).enum.defined_only = true];
+
+  // gst_reporting_frequency controls GST reporting-period boundaries.
+  GstReportingFrequency gst_reporting_frequency = 7 [(buf.validate.field).enum.defined_only = true];
+
+  // financial_year_end_month is in the inclusive range 1 through 12.
+  uint32 financial_year_end_month = 8 [(buf.validate.field).uint32 = {
+    gte: 1
+    lte: 12
+  }];
+
+  // active_tax_rule_bundle is immutable retained tax-rule provenance.
+  SourceRef active_tax_rule_bundle = 9 [(buf.validate.field).required = true];
+}
+
+// CreateOrganisationResponse returns the committed unverified organisation.
+message CreateOrganisationResponse {
+  // organisation is the sole workspace organisation projection.
+  Organisation organisation = 1 [(buf.validate.field).required = true];
+}
+
+// UpdateOrganisationRequest applies a FieldMask-selected optimistic update.
+message UpdateOrganisationRequest {
+  // command_context carries a UUID idempotency key and a new factor assertion when high-risk fields change.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+
+  // organisation_id is the sole organisation's opaque UUIDv7 identifier.
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // expected_version prevents stale profile, verification, and report-impact decisions.
+  uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
+
+  // update_mask is validated, deduplicated, and UTF-8 sorted before semantic hashing.
+  google.protobuf.FieldMask update_mask = 4 [(buf.validate.field).required = true];
+
+  // patch supplies values only for paths selected by update_mask.
+  OrganisationPatch patch = 5 [(buf.validate.field).required = true];
+
+  // reason is required for identity, GST-setting, and tax-rule changes.
+  optional string reason = 6 [(buf.validate.field).string.max_len = 512];
+
+  // effective_date is required for GST basis, frequency, or rule-bundle changes.
+  CivilDate effective_date = 7;
+}
+
+// UpdateOrganisationResponse returns the committed profile and verification state.
+message UpdateOrganisationResponse {
+  // organisation reflects the update and any verification supersession.
+  Organisation organisation = 1 [(buf.validate.field).required = true];
+}
+
+// RecordEntityVerificationRequest records bounded independent-source evidence.
+message RecordEntityVerificationRequest {
+  // command_context carries a UUID idempotency key and authorized administrator.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+
+  // organisation_id identifies the organisation being verified.
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // expected_version prevents recording evidence against stale identity fields.
+  uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
+
+  // source_method identifies the approved independent source.
+  VerificationSourceMethod source_method = 4 [(buf.validate.field).enum.defined_only = true];
+
+  // source is immutable provenance for the verification result.
+  SourceRef source = 5 [(buf.validate.field).required = true];
+
+  // verified_legal_name is the name returned by the independent source.
+  string verified_legal_name = 6 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 256
+  }];
+
+  // verified_entity_type is the entity classification returned by the source.
+  string verified_entity_type = 7 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 96
+  }];
+
+  // outcome is VERIFIED or FAILED; expiry and supersession are core-authored later transitions.
+  OrganisationVerificationState outcome = 8 [(buf.validate.field).enum.defined_only = true];
+
+  // evidence is the bounded encrypted evidence object.
+  VerificationEvidence evidence = 9 [(buf.validate.field).required = true];
+
+  // lookup_time is the independent-source lookup instant.
+  google.protobuf.Timestamp lookup_time = 10 [(buf.validate.field).required = true];
+}
+
+// RecordEntityVerificationResponse returns retained evidence metadata and current organisation.
+message RecordEntityVerificationResponse {
+  // verification is the immutable retained evidence metadata.
+  EntityVerification verification = 1 [(buf.validate.field).required = true];
+
+  // organisation reflects the current verification lifecycle state.
+  Organisation organisation = 2 [(buf.validate.field).required = true];
+}
+
+// GetOrganisationRequest requests the sole bounded organisation projection.
+message GetOrganisationRequest {
+  // authentication identifies an authorized principal.
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+
+  // organisation_id is an opaque UUIDv7 identifier.
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+}
+
+// GetOrganisationResponse returns the sole bounded organisation projection.
+message GetOrganisationResponse {
+  // organisation contains no raw evidence bytes or hidden transmission state.
+  Organisation organisation = 1 [(buf.validate.field).required = true];
+}
+
+// OrganisationService exposes the single-organisation profile and independent verification use cases.
+service OrganisationService {
+  // CreateOrganisation creates the sole unverified organisation.
+  rpc CreateOrganisation(CreateOrganisationRequest) returns (CreateOrganisationResponse);
+
+  // UpdateOrganisation applies optimistic FieldMask-selected profile and GST-setting changes.
+  rpc UpdateOrganisation(UpdateOrganisationRequest) returns (UpdateOrganisationResponse);
+
+  // RecordEntityVerification records bounded immutable independent-source evidence.
+  rpc RecordEntityVerification(RecordEntityVerificationRequest) returns (RecordEntityVerificationResponse);
+
+  // GetOrganisation returns the sole bounded organisation projection.
+  rpc GetOrganisation(GetOrganisationRequest) returns (GetOrganisationResponse);
+}

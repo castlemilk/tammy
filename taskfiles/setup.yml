@@ -1,0 +1,23 @@
+version: '3'
+
+tasks:
+  tools:
+    desc: Refresh the already bootstrapped pinned toolchain.
+    summary: Post-bootstrap repair/update only; use mise install before Task exists on a new machine.
+    cmds:
+      - mise install
+
+  deps:
+    desc: Activate pinned pnpm and install frozen workspace dependencies.
+    summary: Activates pnpm 11.15.0 before the lockfile-respecting install.
+    cmds:
+      - mise exec -- corepack prepare pnpm@11.15.0 --activate
+      - mise exec -- pnpm install --frozen-lockfile
+
+  check:
+    desc: Verify the pinned local toolchain and Task version.
+    summary: Requires Task 3.52.0 after validating the repository toolchain.
+    cmds:
+      - mise exec -- pnpm check:toolchain
+      - >-
+        mise exec -- task --version | mise exec -- node -e 'let output=""; process.stdin.on("data", (chunk) => output += chunk); process.stdin.on("end", () => { if (output.trim() !== "3.52.0") { console.error(`UNSUPPORTED_TASK_VERSION:${output.trim()}`); process.exit(1); } })'

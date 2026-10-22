@@ -1,0 +1,106 @@
+version: '3'
+
+includes:
+  setup:
+    taskfile: taskfiles/setup.yml
+  dev:
+    taskfile: taskfiles/dev.yml
+  diagnose:
+    taskfile: taskfiles/diagnostics.yml
+  test:
+    taskfile: taskfiles/test.yml
+  build:
+    taskfile: taskfiles/build.yml
+  package:
+    taskfile: taskfiles/package.yml
+  release:
+    taskfile: taskfiles/release.yml
+  ci:
+    taskfile: taskfiles/ci.yml
+
+tasks:
+  default:
+    desc: List Tammy task scenarios and product boundaries.
+    summary: |
+      Tammy is local-first encrypted accounting. Development-only BAS workpapers
+      with no ATO submission. Local packages are not production/App Store evidence,
+      and upload remains manual.
+    cmds:
+      - mise exec -- task --list
+      - >-
+        mise exec -- node -e 'console.log("Tammy boundaries: local-first encrypted accounting; development-only BAS workpapers; no ATO submission; local packages are not production/App Store evidence; upload remains manual.")'
+
+  setup:
+    desc: Repair pinned tools, install frozen dependencies, and check the local toolchain.
+    cmds:
+      - task: setup:tools
+      - task: setup:deps
+      - task: setup:check
+
+  dev:
+    desc: Launch the supported local desktop development scenario.
+    preconditions:
+      - sh: >-
+          mise exec -- node -e 'const target = process.argv[1] ?? `${process.platform}/${process.arch}`; if (!new Set(["darwin/arm64", "win32/x64"]).has(target)) { console.error(`UNSUPPORTED_SQLCIPHER_TARGET:${target}`); process.exit(1); }'
+        msg: Local desktop development requires darwin/arm64 or win32/x64.
+    cmds:
+      - task: dev:launch
+
+  test:
+    desc: Run Tammy's existing local test owner.
+    cmds:
+      - mise exec -- pnpm test
+
+  verify:
+    desc: Run the complete supported local verification scenario.
+    cmds:
+      - task: verify:full
+
+  verify:quick:
+    desc: Run fast repository verification without native SQLCipher integration.
+    cmds:
+      - task: test:verify:quick
+
+  verify:full:
+    desc: Run verification including supported native SQLCipher integration.
+    cmds:
+      - task: test:verify:full
+
+  verify:release:
+    desc: Run the macOS arm64 release-readiness verification scenario without signing.
+    cmds:
+      - task: test:verify:release
+
+  build:
+    desc: Build a raw supported desktop bundle for local diagnosis.
+    preconditions:
+      - sh: >-
+          mise exec -- node -e 'const target = process.argv[1] ?? `${process.platform}/${process.arch}`; if (!new Set(["darwin/arm64", "win32/x64"]).has(target)) { console.error(`UNSUPPORTED_SQLCIPHER_TARGET:${target}`); process.exit(1); }'
+        msg: Desktop builds require darwin/arm64 or win32/x64.
+    cmds:
+      - task: build:desktop
+
+  package:
+    desc: Build and authenticate an ordinary supported local desktop package.
+    preconditions:
+      - sh: >-
+          mise exec -- node -e 'const target = process.argv[1] ?? `${process.platform}/${process.arch}`; if (!new Set(["darwin/arm64", "win32/x64"]).has(target)) { console.error(`UNSUPPORTED_SQLCIPHER_TARGET:${target}`); process.exit(1); }'
+        msg: Package verification requires darwin/arm64 or win32/x64.
+    cmds:
+      - task: package:verify
+
+  deploy:mas:
+    desc: Create a signed macOS App Store package candidate for manual submission.
+    summary: |
+      Builds and locally validates the macOS package only; manual App Store submission
+      remains outside this task.
+    vars:
+      NODE_TARGET:
+        sh: >-
+          mise exec -- node -e 'process.stdout.write(process.platform + "/" + process.arch)'
+    preconditions:
+      - sh: >-
+          mise exec -- node -e 'const target = process.argv[1] ?? `${process.platform}/${process.arch}`; if (target !== "darwin/arm64") { console.error(`UNSUPPORTED_MACOS_RELEASE_TARGET:${target}`); process.exit(1); }'
+        msg: UNSUPPORTED_MACOS_RELEASE_TARGET:{{.NODE_TARGET}}
+    cmds:
+      - task: release:candidate

@@ -1,0 +1,22 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // Scoped to pinned Forge 7.11.2's undeclared NewCtx and listr2 7.0.2's
+    // type-only rxjs import. Remove when those pins are upgraded.
+    "skipLibCheck": true,
+    "types": ["node", "vite/client"],
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": [
+    "src",
+    "tests",
+    "vite.main.config.ts",
+    "vite.preload.config.ts",
+    "vite.renderer.config.ts",
+    "vitest.config.ts",
+    "forge.config.ts",
+    "playwright.config.ts"
+  ]
+}

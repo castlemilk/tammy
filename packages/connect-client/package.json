@@ -1,0 +1,34 @@
+{
+  "name": "@tammy/connect-client",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@buf/bufbuild_protovalidate.bufbuild_es": "2.12.1-20260709200747-435963d16310.1",
+    "@bufbuild/protobuf": "2.12.1"
+  },
+  "devDependencies": {
+    "@types/node": "26.1.1",
+    "vitest": "4.1.10"
+  },
+  "exports": {
+    "./tammy/v1/accounting_pb.js": "./src/gen/tammy/v1/accounting_pb.ts",
+    "./tammy/v1/audit_pb.js": "./src/gen/tammy/v1/audit_pb.ts",
+    "./tammy/v1/banking_pb.js": "./src/gen/tammy/v1/banking_pb.ts",
+    "./tammy/v1/common_pb.js": "./src/gen/tammy/v1/common_pb.ts",
+    "./tammy/v1/documents_pb.js": "./src/gen/tammy/v1/documents_pb.ts",
+    "./tammy/v1/events_pb.js": "./src/gen/tammy/v1/events_pb.ts",
+    "./tammy/v1/fixtures_pb.js": "./src/gen/tammy/v1/fixtures_pb.ts",
+    "./tammy/v1/identity_pb.js": "./src/gen/tammy/v1/identity_pb.ts",
+    "./tammy/v1/organisation_pb.js": "./src/gen/tammy/v1/organisation_pb.ts",
+    "./tammy/v1/overview_pb.js": "./src/gen/tammy/v1/overview_pb.ts",
+    "./tammy/v1/reporting_capability_pb.js": "./src/gen/tammy/v1/reporting_capability_pb.ts",
+    "./tammy/v1/system_pb.js": "./src/gen/tammy/v1/system_pb.ts",
+    "./tammy/v1/tax_pb.js": "./src/gen/tammy/v1/tax_pb.ts",
+    "./tammy/v1/workspace_pb.js": "./src/gen/tammy/v1/workspace_pb.ts"
+  }
+}

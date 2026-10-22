@@ -1,0 +1,113 @@
+syntax = "proto3";
+
+package tammy.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+import "tammy/v1/common.proto";
+
+option go_package = "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1";
+
+enum BankStatementLineStatus {
+  BANK_STATEMENT_LINE_STATUS_UNSPECIFIED = 0;
+  BANK_STATEMENT_LINE_STATUS_UNMATCHED = 1;
+  BANK_STATEMENT_LINE_STATUS_MATCHED = 2;
+  BANK_STATEMENT_LINE_STATUS_RECONCILED = 3;
+}
+
+message BankStatementLineInput {
+  CivilDate transaction_date = 1 [(buf.validate.field).required = true];
+  string description = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 256
+  }];
+  Money amount = 3 [(buf.validate.field).required = true];
+}
+
+message BankStatementLine {
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string statement_import_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string organisation_id = 3 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 version = 4 [(buf.validate.field).uint64.gte = 1];
+  CivilDate transaction_date = 5 [(buf.validate.field).required = true];
+  string description = 6 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 256
+  }];
+  Money amount = 7 [(buf.validate.field).required = true];
+  BankStatementLineStatus status = 8 [(buf.validate.field).enum.defined_only = true];
+  string match_reference = 9 [(buf.validate.field).string.max_len = 128];
+}
+
+message BankStatementImport {
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  Money opening_balance = 3 [(buf.validate.field).required = true];
+  Money closing_balance = 4 [(buf.validate.field).required = true];
+  uint32 line_count = 5;
+  google.protobuf.Timestamp imported_at = 6 [(buf.validate.field).required = true];
+}
+
+message ImportBankStatementRequest {
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  Money opening_balance = 3 [(buf.validate.field).required = true];
+  repeated BankStatementLineInput lines = 4 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 1000
+  }];
+}
+message ImportBankStatementResponse {
+  BankStatementImport statement_import = 1 [(buf.validate.field).required = true];
+}
+
+message ListBankStatementLinesRequest {
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  PageRequest page = 3 [(buf.validate.field).required = true];
+}
+message ListBankStatementLinesResponse {
+  repeated BankStatementLine lines = 1 [(buf.validate.field).repeated.max_items = 200];
+  PageInfo page = 2 [(buf.validate.field).required = true];
+}
+
+message MatchBankStatementLineRequest {
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string line_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
+  string match_reference = 4 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+  }];
+}
+message MatchBankStatementLineResponse {
+  BankStatementLine line = 1 [(buf.validate.field).required = true];
+}
+
+message CompleteBankReconciliationRequest {
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+}
+message CompleteBankReconciliationResponse {
+  uint32 reconciled_line_count = 1;
+  Money closing_balance = 2 [(buf.validate.field).required = true];
+}
+
+message GetBankingSummaryRequest {
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+}
+message GetBankingSummaryResponse {
+  uint32 imported_line_count = 1;
+  uint32 unmatched_line_count = 2;
+  uint32 unreconciled_line_count = 3;
+  Money latest_closing_balance = 4 [(buf.validate.field).required = true];
+}
+
+service BankingService {
+  rpc ImportBankStatement(ImportBankStatementRequest) returns (ImportBankStatementResponse);
+  rpc ListBankStatementLines(ListBankStatementLinesRequest) returns (ListBankStatementLinesResponse);
+  rpc MatchBankStatementLine(MatchBankStatementLineRequest) returns (MatchBankStatementLineResponse);
+  rpc CompleteBankReconciliation(CompleteBankReconciliationRequest) returns (CompleteBankReconciliationResponse);
+  rpc GetBankingSummary(GetBankingSummaryRequest) returns (GetBankingSummaryResponse);
+}

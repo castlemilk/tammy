@@ -1,0 +1,192 @@
+syntax = "proto3";
+
+package tammy.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+import "tammy/v1/accounting.proto";
+import "tammy/v1/common.proto";
+import "tammy/v1/organisation.proto";
+import "tammy/v1/overview.proto";
+
+option go_package = "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1";
+
+// CanonicalRequest is the shared cross-language boundary fixture for Task 2 normalization.
+// It is not a production RPC request and contains no real identities, secrets, or accounting data.
+message CanonicalRequest {
+  // command_context proves that authentication and idempotency metadata are typed and removable.
+  CommandContext command_context = 1;
+
+  // implicit_default_flag demonstrates that an implicit false value is omitted from normalized JSON.
+  bool implicit_default_flag = 2;
+
+  // explicit_default_flag demonstrates presence even when the selected value is false.
+  optional bool explicit_default_flag = 3;
+
+  // update_mask is the sole generic set-like exception and is normalized to sorted unique paths.
+  google.protobuf.FieldMask update_mask = 4;
+
+  // ordered_values demonstrates that repeated-field order is semantically significant.
+  repeated string ordered_values = 5 [(buf.validate.field).repeated.max_items = 16];
+
+  // signed_units demonstrates the standard Protobuf JSON decimal-string mapping for int64.
+  int64 signed_units = 6;
+
+  // observed_at demonstrates valid timestamp normalization to UTC and canonical fractional precision.
+  google.protobuf.Timestamp observed_at = 7;
+
+  // account_status demonstrates symbolic enum-name representation.
+  AccountStatus account_status = 8 [(buf.validate.field).enum.defined_only = true];
+
+  // explicit_zero demonstrates scalar presence for an explicitly supplied int64 zero.
+  optional int64 explicit_zero = 9;
+
+  // optional_note demonstrates absent versus explicitly present empty-string semantics.
+  optional string optional_note = 10 [(buf.validate.field).string.max_len = 64];
+}
+
+// WalkthroughOverviewOracle records exact deterministic attention outcomes without current-time values.
+message WalkthroughOverviewOracle {
+  // documents_needing_review is explicitly present even when the expected count is zero.
+  optional uint32 documents_needing_review = 1 [(buf.validate.field).uint32.lte = 1000000];
+
+  // documents_reviewed_in_period is explicitly present even when the expected count is zero.
+  optional uint32 documents_reviewed_in_period = 2 [(buf.validate.field).uint32.lte = 1000000];
+
+  // banking_lines_needing_reconciliation is explicitly present even when the expected count is zero.
+  optional uint32 banking_lines_needing_reconciliation = 3 [(buf.validate.field).uint32.lte = 1000000];
+
+  // banking_lines_unreconciled_in_period is explicitly present even when the expected count is zero.
+  optional uint32 banking_lines_unreconciled_in_period = 4 [(buf.validate.field).uint32.lte = 1000000];
+
+  // current_draft_bas_workpapers is explicitly present even when the expected count is zero.
+  optional uint32 current_draft_bas_workpapers = 5 [(buf.validate.field).uint32.lte = 1000000];
+
+  // bas_status is the expected local workpaper state.
+  BasAttentionStatus bas_status = 6 [(buf.validate.field).enum.defined_only = true];
+
+  // attention_items are exact typed immutable links in stable display order.
+  repeated AttentionItem attention_items = 7 [(buf.validate.field).repeated.max_items = 8];
+}
+
+// NoncashSupplierMonthFixture is the canonical deterministic walkthrough input and accounting oracle.
+// It contains synthetic identities, fixed civil dates, exact AUD minor units, and no clock-authored instants.
+// The retained document_review SourceRef content hash is SHA-256 over these UTF-8 fields joined by NUL bytes:
+// tammy.walkthrough.retained-review, v1, source_document_name, supplier_reference, bill_issue_date as YYYY-MM-DD,
+// currency_code, bill_net minor units, bill_gst minor units, and bill_gross minor units.
+message NoncashSupplierMonthFixture {
+  // organisation_name is the clearly synthetic demo entity name.
+  string organisation_name = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 256
+  }];
+
+  // synthetic_abn is an explicitly non-production eleven-digit fixture value.
+  string synthetic_abn = 2 [(buf.validate.field).string.pattern = "^[0-9]{11}$"];
+
+  // currency_code fixes every monetary value to AUD.
+  string currency_code = 3 [(buf.validate.field).string.const = "AUD"];
+
+  // gst_basis fixes the walkthrough to non-cash accrual attribution.
+  GstBasis gst_basis = 4 [(buf.validate.field).enum.defined_only = true];
+
+  // gst_reporting_frequency fixes the walkthrough to an Australian quarter.
+  GstReportingFrequency gst_reporting_frequency = 5 [(buf.validate.field).enum.defined_only = true];
+
+  // financial_year_end_month is June.
+  uint32 financial_year_end_month = 6 [(buf.validate.field).uint32 = {
+    gte: 1
+    lte: 12
+  }];
+
+  // bas_period is the fixed April through June 2024 reporting period.
+  ReportingPeriod bas_period = 7 [(buf.validate.field).required = true];
+
+  // primary_bank_name is the safe display label for the asset account.
+  string primary_bank_name = 8 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 160
+  }];
+
+  // opening_date is the fixed opening conversion date.
+  CivilDate opening_date = 9 [(buf.validate.field).required = true];
+
+  // opening_balance is the exact opening bank and statement balance.
+  Money opening_balance = 10 [(buf.validate.field).required = true];
+
+  // supplier_name is the synthetic supplier created before the bill draft.
+  string supplier_name = 11 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 256
+  }];
+
+  // source_document_name is the deterministic redistributable fixture filename.
+  string source_document_name = 12 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 255
+  }];
+
+  // supplier_reference is the exact source bill reference.
+  string supplier_reference = 13 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 96
+  }];
+
+  // bill_issue_date is the fixed source and posting date.
+  CivilDate bill_issue_date = 14 [(buf.validate.field).required = true];
+
+  // bill_tax_exclusive records the source's exact amount convention.
+  bool bill_tax_exclusive = 15;
+
+  // bill_net is the exact office-supplies expense before GST.
+  Money bill_net = 16 [(buf.validate.field).required = true];
+
+  // bill_gst is the exact retained purchase GST fact.
+  Money bill_gst = 17 [(buf.validate.field).required = true];
+
+  // bill_gross is the exact approved supplier bill.
+  Money bill_gross = 18 [(buf.validate.field).required = true];
+
+  // statement_start_date is the fixed first statement date.
+  CivilDate statement_start_date = 19 [(buf.validate.field).required = true];
+
+  // statement_end_date is the fixed final statement date.
+  CivilDate statement_end_date = 20 [(buf.validate.field).required = true];
+
+  // payment_date is the fixed statement withdrawal and supplier payment date.
+  CivilDate payment_date = 21 [(buf.validate.field).required = true];
+
+  // statement_withdrawal is the exact normalized negative ledger amount.
+  Money statement_withdrawal = 22 [(buf.validate.field).required = true];
+
+  // payment_amount is the exact positive supplier allocation amount.
+  Money payment_amount = 23 [(buf.validate.field).required = true];
+
+  // closing_bank_balance is the exact post-payment ledger and statement balance.
+  Money closing_bank_balance = 24 [(buf.validate.field).required = true];
+
+  // trial_balance_total_debits is the exact balanced debit-column total.
+  Money trial_balance_total_debits = 25 [(buf.validate.field).required = true];
+
+  // trial_balance_total_credits is the exact balanced credit-column total.
+  Money trial_balance_total_credits = 26 [(buf.validate.field).required = true];
+
+  // bas_g1 is the exact zero G1 amount.
+  Money bas_g1 = 27 [(buf.validate.field).required = true];
+
+  // bas_1a is the exact zero 1A amount.
+  Money bas_1a = 28 [(buf.validate.field).required = true];
+
+  // bas_1b is the exact purchase-credit amount recognized on bill approval.
+  Money bas_1b = 29 [(buf.validate.field).required = true];
+
+  // bas_net_refundable is the exact draft net GST refund.
+  Money bas_net_refundable = 30 [(buf.validate.field).required = true];
+
+  // after_extraction_overview is the exact initial needs-review projection.
+  WalkthroughOverviewOracle after_extraction_overview = 31 [(buf.validate.field).required = true];
+
+  // final_overview is the exact projection after payment, matching, reconciliation, and BAS creation.
+  WalkthroughOverviewOracle final_overview = 32 [(buf.validate.field).required = true];
+}

@@ -1,0 +1,382 @@
+syntax = "proto3";
+
+package tammy.v1;
+
+import "buf/validate/validate.proto";
+import "tammy/v1/accounting.proto";
+import "tammy/v1/common.proto";
+import "tammy/v1/identity.proto";
+import "tammy/v1/organisation.proto";
+import "tammy/v1/workspace.proto";
+
+option go_package = "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1";
+
+// AuditEventType is the stable typed event discriminator retained in the hash chain.
+enum AuditEventType {
+  // AUDIT_EVENT_TYPE_UNSPECIFIED is never a committed audit event type.
+  AUDIT_EVENT_TYPE_UNSPECIFIED = 0;
+
+  // AUDIT_EVENT_TYPE_WORKSPACE_STATE_CHANGED records secure open/authentication state changes.
+  AUDIT_EVENT_TYPE_WORKSPACE_STATE_CHANGED = 1;
+
+  // AUDIT_EVENT_TYPE_WORKSPACE_TRUST_ESTABLISHED records a new verified OS mirror baseline.
+  AUDIT_EVENT_TYPE_WORKSPACE_TRUST_ESTABLISHED = 2;
+
+  // AUDIT_EVENT_TYPE_USER_STATE_CHANGED records activation, reset, or lockout state changes.
+  AUDIT_EVENT_TYPE_USER_STATE_CHANGED = 3;
+
+  // AUDIT_EVENT_TYPE_FACTOR_STATE_CHANGED records TOTP enrolment or disablement.
+  AUDIT_EVENT_TYPE_FACTOR_STATE_CHANGED = 4;
+
+  // AUDIT_EVENT_TYPE_ORGANISATION_CHANGED records identity, GST, or ownership changes.
+  AUDIT_EVENT_TYPE_ORGANISATION_CHANGED = 5;
+
+  // AUDIT_EVENT_TYPE_ENTITY_VERIFICATION_CHANGED records retained verification outcomes.
+  AUDIT_EVENT_TYPE_ENTITY_VERIFICATION_CHANGED = 6;
+
+  // AUDIT_EVENT_TYPE_ACCOUNT_STATUS_CHANGED records archive and reactivation transitions.
+  AUDIT_EVENT_TYPE_ACCOUNT_STATUS_CHANGED = 7;
+
+  // AUDIT_EVENT_TYPE_OPENING_CONVERSION_CHANGED records posting or full replacement.
+  AUDIT_EVENT_TYPE_OPENING_CONVERSION_CHANGED = 8;
+
+  // AUDIT_EVENT_TYPE_JOURNAL_POSTED records one immutable balanced posting.
+  AUDIT_EVENT_TYPE_JOURNAL_POSTED = 9;
+
+  // AUDIT_EVENT_TYPE_PERIOD_STATE_CHANGED records close or reopen transitions.
+  AUDIT_EVENT_TYPE_PERIOD_STATE_CHANGED = 10;
+
+  // AUDIT_EVENT_TYPE_BACKUP_JOB_CHANGED records persisted encrypted backup changes.
+  AUDIT_EVENT_TYPE_BACKUP_JOB_CHANGED = 11;
+
+  // AUDIT_EVENT_TYPE_RESTORE_STATE_CHANGED records external-journal restore progression.
+  AUDIT_EVENT_TYPE_RESTORE_STATE_CHANGED = 12;
+
+  // AUDIT_EVENT_TYPE_PRE_RESTORE_ARCHIVE_CHANGED records retained predecessor evidence changes.
+  AUDIT_EVENT_TYPE_PRE_RESTORE_ARCHIVE_CHANGED = 13;
+
+  // AUDIT_EVENT_TYPE_EVIDENCE_EXPORT_CHANGED records persisted signed export changes.
+  AUDIT_EVENT_TYPE_EVIDENCE_EXPORT_CHANGED = 14;
+
+  // AUDIT_EVENT_TYPE_SIGNING_KEY_ROTATED records an authenticated workspace signing-key rotation.
+  AUDIT_EVENT_TYPE_SIGNING_KEY_ROTATED = 15;
+
+  // AUDIT_EVENT_TYPE_WORKSPACE_RESTORED records one completed generation-changing restore.
+  AUDIT_EVENT_TYPE_WORKSPACE_RESTORED = 16;
+}
+
+// WorkspaceStateChangedEvent is the typed payload for secure workspace state changes.
+message WorkspaceStateChangedEvent {
+  // workspace_id identifies the changed workspace.
+  string workspace_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // from_state is the validated predecessor state.
+  WorkspaceState from_state = 2 [(buf.validate.field).enum.defined_only = true];
+
+  // to_state is the committed successor state.
+  WorkspaceState to_state = 3 [(buf.validate.field).enum.defined_only = true];
+
+  // reason_code is a stable bounded machine-readable reason.
+  string reason_code = 4 [(buf.validate.field).string.max_len = 96];
+}
+
+// WorkspaceTrustEstablishedEvent records the verified predecessor head and destination baseline.
+message WorkspaceTrustEstablishedEvent {
+  // workspace_id identifies the moved workspace.
+  string workspace_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // prior_head is the exact verified 32-byte audit head.
+  bytes prior_head = 2 [(buf.validate.field).bytes.len = 32];
+
+  // destination_installation_hash is the non-reversible 32-byte installation identifier hash.
+  bytes destination_installation_hash = 3 [(buf.validate.field).bytes.len = 32];
+
+  // prior_mirror_unavailable is true for the moved-workspace trust path.
+  bool prior_mirror_unavailable = 4;
+}
+
+// UserStateChangedEvent is the typed payload for local user lifecycle changes.
+message UserStateChangedEvent {
+  // user_id identifies the changed local user.
+  string user_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // from_state is the validated predecessor state.
+  UserState from_state = 2 [(buf.validate.field).enum.defined_only = true];
+
+  // to_state is the committed successor state.
+  UserState to_state = 3 [(buf.validate.field).enum.defined_only = true];
+
+  // reason_code is a stable bounded machine-readable reason.
+  string reason_code = 4 [(buf.validate.field).string.max_len = 96];
+}
+
+// FactorStateChangedEvent is the typed payload for TOTP factor lifecycle changes.
+message FactorStateChangedEvent {
+  // factor_id identifies the changed factor.
+  string factor_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // user_id identifies the owning local user.
+  string user_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // from_state is the validated predecessor state.
+  FactorState from_state = 3 [(buf.validate.field).enum.defined_only = true];
+
+  // to_state is the committed successor state.
+  FactorState to_state = 4 [(buf.validate.field).enum.defined_only = true];
+}
+
+// OrganisationChangedEvent is the typed payload for organisation profile or ownership changes.
+message OrganisationChangedEvent {
+  // organisation_id identifies the changed organisation.
+  string organisation_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // previous_version is the optimistic predecessor version.
+  uint64 previous_version = 2 [(buf.validate.field).uint64.gte = 1];
+
+  // new_version is the committed successor version.
+  uint64 new_version = 3 [(buf.validate.field).uint64.gte = 1];
+
+  // changed_fields is a validated, deduplicated, UTF-8 sorted list of Protobuf field paths.
+  repeated string changed_fields = 4 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 32
+    unique: true
+  }];
+
+  // verification_superseded states whether the command invalidated independent verification.
+  bool verification_superseded = 5;
+}
+
+// EntityVerificationChangedEvent is the typed payload for entity-verification lifecycle changes.
+message EntityVerificationChangedEvent {
+  // verification_id identifies retained immutable evidence metadata.
+  string verification_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // organisation_id identifies the verified organisation.
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // from_state is the validated predecessor state.
+  OrganisationVerificationState from_state = 3 [(buf.validate.field).enum.defined_only = true];
+
+  // to_state is the committed successor state.
+  OrganisationVerificationState to_state = 4 [(buf.validate.field).enum.defined_only = true];
+
+  // evidence_hash is the exact 32-byte encrypted evidence-object hash.
+  bytes evidence_hash = 5 [(buf.validate.field).bytes.len = 32];
+}
+
+// AccountStatusChangedEvent is the typed payload for account lifecycle changes.
+message AccountStatusChangedEvent {
+  // account_id identifies the changed account.
+  string account_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // from_status is the validated predecessor status.
+  AccountStatus from_status = 2 [(buf.validate.field).enum.defined_only = true];
+
+  // to_status is the committed successor status.
+  AccountStatus to_status = 3 [(buf.validate.field).enum.defined_only = true];
+
+  // reason_hash is the exact 32-byte hash of retained bounded reason text.
+  bytes reason_hash = 4 [(buf.validate.field).bytes.len = 32];
+}
+
+// OpeningConversionChangedEvent is the typed payload for opening conversion posting and replacement.
+message OpeningConversionChangedEvent {
+  // conversion_id identifies the conversion aggregate.
+  string conversion_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // from_state is absent for initial posting.
+  optional OpeningConversionState from_state = 2;
+
+  // to_state is the committed successor state.
+  OpeningConversionState to_state = 3 [(buf.validate.field).enum.defined_only = true];
+
+  // journal_id identifies the immutable balanced posting created by this change.
+  string journal_id = 4 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+}
+
+// JournalPostedEvent is the typed payload for one immutable balanced journal posting.
+message JournalPostedEvent {
+  // journal_id identifies the immutable journal.
+  string journal_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // source identifies the workflow owning the posting.
+  JournalSource source = 2 [(buf.validate.field).enum.defined_only = true];
+
+  // total_debits is exact and equals total_credits.
+  Money total_debits = 3 [(buf.validate.field).required = true];
+
+  // total_credits is exact and equals total_debits.
+  Money total_credits = 4 [(buf.validate.field).required = true];
+
+  // reversal_of_journal_id is present only for a linked reversing journal.
+  optional string reversal_of_journal_id = 5 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+}
+
+// PeriodStateChangedEvent is the typed payload for accounting period close and reopen.
+message PeriodStateChangedEvent {
+  // period_id identifies the changed accounting period.
+  string period_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // from_state is the validated predecessor state.
+  PeriodState from_state = 2 [(buf.validate.field).enum.defined_only = true];
+
+  // to_state is the committed successor state.
+  PeriodState to_state = 3 [(buf.validate.field).enum.defined_only = true];
+
+  // reason_hash is present for reopen and contains the exact 32-byte retained reason hash.
+  optional bytes reason_hash = 4 [(buf.validate.field).bytes.len = 32];
+}
+
+// BackupJobChangedEvent is the typed payload for encrypted backup job changes.
+message BackupJobChangedEvent {
+  // job_id identifies the persisted backup job.
+  string job_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // from_state is absent for initial job creation.
+  optional BackupJobState from_state = 2;
+
+  // to_state is the committed successor state.
+  BackupJobState to_state = 3 [(buf.validate.field).enum.defined_only = true];
+
+  // manifest_hash is present only after archive verification.
+  optional bytes manifest_hash = 4 [(buf.validate.field).bytes.len = 32];
+}
+
+// RestoreStateChangedEvent is the typed payload for external-journal restore progression.
+message RestoreStateChangedEvent {
+  // operation_id identifies the external restore journal entry.
+  string operation_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // from_state is absent for PREPARED creation.
+  optional RestoreState from_state = 2;
+
+  // to_state is the fsync'd successor state.
+  RestoreState to_state = 3 [(buf.validate.field).enum.defined_only = true];
+
+  // backup_manifest_hash commits the operation to one exact backup.
+  bytes backup_manifest_hash = 4 [(buf.validate.field).bytes.len = 32];
+}
+
+// PreRestoreArchiveChangedEvent is the typed payload for retained predecessor evidence changes.
+message PreRestoreArchiveChangedEvent {
+  // archive_id identifies the retained encrypted archive.
+  string archive_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // from_state is absent for initial archive creation.
+  optional PreRestoreArchiveState from_state = 2;
+
+  // to_state is the committed successor state.
+  PreRestoreArchiveState to_state = 3 [(buf.validate.field).enum.defined_only = true];
+
+  // content_hash is the exact 32-byte encrypted archive hash.
+  bytes content_hash = 4 [(buf.validate.field).bytes.len = 32];
+}
+
+// EvidenceExportChangedEvent is the typed payload for a persisted signed export job.
+message EvidenceExportChangedEvent {
+  // job_id identifies the persisted export job.
+  string job_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // from_state is an optional bounded symbolic state name to avoid a cross-file import cycle.
+  optional string from_state = 2 [(buf.validate.field).string.max_len = 96];
+
+  // to_state is the required bounded symbolic state name.
+  string to_state = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 96
+  }];
+
+  // destination_hash is present only after verified atomic rename.
+  optional bytes destination_hash = 4 [(buf.validate.field).bytes.len = 32];
+}
+
+// SigningKeyRotatedEvent commits the audit chain to one exact fully signed rotation link.
+message SigningKeyRotatedEvent {
+  // workspace_id identifies the workspace-wide signing lineage.
+  string workspace_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // generation identifies the audit generation containing this rotation event.
+  uint64 generation = 2 [(buf.validate.field).uint64.gte = 1];
+
+  // successor_epoch is the newly active workspace-wide key epoch.
+  uint64 successor_epoch = 3 [(buf.validate.field).uint64.gte = 2];
+
+  // predecessor_key_id identifies the retired key.
+  string predecessor_key_id = 4 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // successor_key_id identifies the newly active key.
+  string successor_key_id = 5 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // rotation_link_sha256 is SHA-256 of the exact deterministic fully signed link protobuf.
+  bytes rotation_link_sha256 = 6 [(buf.validate.field).bytes.len = 32];
+}
+
+// WorkspaceRestoredEvent binds the new audit generation to the exact backup
+// manifest and retained predecessor archive used by one restore operation.
+message WorkspaceRestoredEvent {
+  string workspace_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  string operation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  uint64 predecessor_generation = 3 [(buf.validate.field).uint64.gte = 1];
+  uint64 backup_generation = 4 [(buf.validate.field).uint64.gte = 1];
+  uint64 restored_generation = 5 [(buf.validate.field).uint64.gte = 2];
+  bytes backup_manifest_hash = 6 [(buf.validate.field).bytes.len = 32];
+  string pre_restore_archive_id = 7 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+  bytes pre_restore_archive_hash = 8 [(buf.validate.field).bytes.len = 32];
+  bytes predecessor_head = 9 [(buf.validate.field).bytes.len = 32];
+  bytes archived_head = 10 [(buf.validate.field).bytes.len = 32];
+}
+
+// AuditEventPayload is a closed typed union; google.protobuf.Any is intentionally prohibited.
+message AuditEventPayload {
+  // payload selects exactly one typed event body matching AuditEventType.
+  oneof payload {
+    // workspace_state_changed records secure workspace lifecycle changes.
+    WorkspaceStateChangedEvent workspace_state_changed = 1;
+
+    // workspace_trust_established records a verified moved-workspace mirror baseline.
+    WorkspaceTrustEstablishedEvent workspace_trust_established = 2;
+
+    // user_state_changed records local user lifecycle changes.
+    UserStateChangedEvent user_state_changed = 3;
+
+    // factor_state_changed records TOTP factor lifecycle changes.
+    FactorStateChangedEvent factor_state_changed = 4;
+
+    // organisation_changed records profile, GST, or ownership changes.
+    OrganisationChangedEvent organisation_changed = 5;
+
+    // entity_verification_changed records independent verification lifecycle changes.
+    EntityVerificationChangedEvent entity_verification_changed = 6;
+
+    // account_status_changed records chart lifecycle changes.
+    AccountStatusChangedEvent account_status_changed = 7;
+
+    // opening_conversion_changed records opening posting or full replacement.
+    OpeningConversionChangedEvent opening_conversion_changed = 8;
+
+    // journal_posted records one immutable balanced posting.
+    JournalPostedEvent journal_posted = 9;
+
+    // period_state_changed records period close or reopen.
+    PeriodStateChangedEvent period_state_changed = 10;
+
+    // backup_job_changed records encrypted backup job changes.
+    BackupJobChangedEvent backup_job_changed = 11;
+
+    // restore_state_changed records external-journal restore progression.
+    RestoreStateChangedEvent restore_state_changed = 12;
+
+    // pre_restore_archive_changed records predecessor evidence retention or deletion.
+    PreRestoreArchiveChangedEvent pre_restore_archive_changed = 13;
+
+    // evidence_export_changed records persisted signed export changes.
+    EvidenceExportChangedEvent evidence_export_changed = 14;
+
+    // signing_key_rotated records one authenticated workspace signing-key rotation.
+    SigningKeyRotatedEvent signing_key_rotated = 15;
+
+    // workspace_restored records one generation-changing restore.
+    WorkspaceRestoredEvent workspace_restored = 16;
+  }
+}

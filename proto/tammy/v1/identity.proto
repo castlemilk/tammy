@@ -1,0 +1,546 @@
+syntax = "proto3";
+
+package tammy.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+import "tammy/v1/common.proto";
+
+option go_package = "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1";
+
+// Role is one additive local permission role; role sets are sorted and deduplicated by enum number.
+enum Role {
+  // ROLE_UNSPECIFIED is never a granted role.
+  ROLE_UNSPECIFIED = 0;
+
+  // ROLE_WORKSPACE_ADMIN manages workspace, users, organisation, and privileged accounting controls.
+  ROLE_WORKSPACE_ADMIN = 1;
+
+  // ROLE_BUSINESS_PREPARER prepares accounting and tax records without administration or lodgment.
+  ROLE_BUSINESS_PREPARER = 2;
+
+  // ROLE_BUSINESS_LODGER accepts declarations and performs direct SBR operations.
+  ROLE_BUSINESS_LODGER = 3;
+
+  // ROLE_AUDITOR reads complete audit and financial evidence without mutation rights.
+  ROLE_AUDITOR = 4;
+}
+
+// UserState is the local user credential lifecycle.
+// Allowed transitions are PENDING_ACTIVATION -> ACTIVE,
+// ACTIVE -> AUTHENTICATION_LOCKED | PENDING_ACTIVATION,
+// and AUTHENTICATION_LOCKED -> ACTIVE | PENDING_ACTIVATION.
+enum UserState {
+  // USER_STATE_UNSPECIFIED indicates an unavailable or invalid user state.
+  USER_STATE_UNSPECIFIED = 0;
+
+  // USER_STATE_PENDING_ACTIVATION requires the one-time activation challenge.
+  USER_STATE_PENDING_ACTIVATION = 1;
+
+  // USER_STATE_ACTIVE permits password sign-in subject to current roles and factors.
+  USER_STATE_ACTIVE = 2;
+
+  // USER_STATE_AUTHENTICATION_LOCKED is a persisted 15-minute failed-attempt cooldown.
+  USER_STATE_AUTHENTICATION_LOCKED = 3;
+}
+
+// SessionState is the one-user workspace session lifecycle.
+// Allowed transitions are ACTIVE -> SIGNED_OUT | EXPIRED | INVALIDATED.
+enum SessionState {
+  // SESSION_STATE_UNSPECIFIED indicates an unavailable or invalid session state.
+  SESSION_STATE_UNSPECIFIED = 0;
+
+  // SESSION_STATE_ACTIVE is the sole accepted authenticated session.
+  SESSION_STATE_ACTIVE = 1;
+
+  // SESSION_STATE_SIGNED_OUT ended by an explicit user action.
+  SESSION_STATE_SIGNED_OUT = 2;
+
+  // SESSION_STATE_EXPIRED ended because the inactivity or process boundary elapsed.
+  SESSION_STATE_EXPIRED = 3;
+
+  // SESSION_STATE_INVALIDATED ended because a security-sensitive change revoked sessions.
+  SESSION_STATE_INVALIDATED = 4;
+}
+
+// FactorState is the offline TOTP factor lifecycle.
+// Allowed transitions are PENDING_CONFIRMATION -> ENABLED and ENABLED -> DISABLED.
+enum FactorState {
+  // FACTOR_STATE_UNSPECIFIED indicates an unavailable or invalid factor state.
+  FACTOR_STATE_UNSPECIFIED = 0;
+
+  // FACTOR_STATE_PENDING_CONFIRMATION requires a fresh code before the secret is enabled.
+  FACTOR_STATE_PENDING_CONFIRMATION = 1;
+
+  // FACTOR_STATE_ENABLED permits rate-limited assertions with replay protection.
+  FACTOR_STATE_ENABLED = 2;
+
+  // FACTOR_STATE_DISABLED is terminal for that factor identifier.
+  FACTOR_STATE_DISABLED = 3;
+}
+
+// User is the bounded local identity projection without credential material.
+message User {
+  // id is an opaque UUIDv7 string.
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // version is the optimistic aggregate version.
+  uint64 version = 2 [(buf.validate.field).uint64.gte = 1];
+
+  // username is the unique normalized local login name.
+  string username = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+  }];
+
+  // display_name is bounded user-facing text.
+  string display_name = 4 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+  }];
+
+  // state is the current credential lifecycle state.
+  UserState state = 5 [(buf.validate.field).enum.defined_only = true];
+
+  // roles is a sorted, deduplicated complete role set.
+  repeated Role roles = 6 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 4
+    unique: true
+  }];
+
+  // factor_state is present when a TOTP factor exists for this user.
+  optional FactorState factor_state = 7;
+
+  // authentication_locked_until is present during a persisted cooldown.
+  google.protobuf.Timestamp authentication_locked_until = 8;
+}
+
+// Session is a bounded local session projection without bearer or secret material.
+message Session {
+  // id is an opaque UUIDv7 string.
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // user_id identifies the authenticated user.
+  string user_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // state is the session lifecycle state.
+  SessionState state = 3 [(buf.validate.field).enum.defined_only = true];
+
+  // created_at is the core-authored creation instant.
+  google.protobuf.Timestamp created_at = 4 [(buf.validate.field).required = true];
+
+  // expires_at is the bounded inactivity expiry instant.
+  google.protobuf.Timestamp expires_at = 5 [(buf.validate.field).required = true];
+
+  // ended_at is present only for a terminal session.
+  google.protobuf.Timestamp ended_at = 6;
+}
+
+// Factor is a bounded TOTP factor projection without seed or accepted counters.
+message Factor {
+  // id is an opaque UUIDv7 string.
+  string id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // user_id identifies the owning local user.
+  string user_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // version is the optimistic factor version.
+  uint64 version = 3 [(buf.validate.field).uint64.gte = 1];
+
+  // state is the current factor lifecycle state.
+  FactorState state = 4 [(buf.validate.field).enum.defined_only = true];
+
+  // created_at is the core-authored enrolment instant.
+  google.protobuf.Timestamp created_at = 5 [(buf.validate.field).required = true];
+}
+
+// SignInRequest is a fresh rate-limited credential challenge and is never replay-cached.
+message SignInRequest {
+  // username identifies the local user without revealing whether it exists on failure.
+  string username = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+  }];
+
+  // password is transient and never persisted, logged, or echoed.
+  SecretInput password = 2 [(buf.validate.field).required = true];
+}
+
+// SignInResponse returns the active principal and sole workspace session.
+message SignInResponse {
+  // user is the authenticated bounded projection.
+  User user = 1 [(buf.validate.field).required = true];
+
+  // session is the newly active session.
+  Session session = 2 [(buf.validate.field).required = true];
+}
+
+// SignOutRequest ends the current session and closes the workspace.
+message SignOutRequest {
+  // authentication identifies the current active principal.
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+}
+
+// SignOutResponse returns the terminal session projection.
+message SignOutResponse {
+  // session has the terminal SIGNED_OUT state.
+  Session session = 1 [(buf.validate.field).required = true];
+}
+
+// GetSessionRequest requests the current session projection.
+message GetSessionRequest {
+  // authentication identifies the current principal.
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+}
+
+// GetSessionResponse returns the current bounded session.
+message GetSessionResponse {
+  // session is absent when no session exists.
+  Session session = 1;
+}
+
+// GetCurrentUserRequest requests the current authenticated user projection.
+message GetCurrentUserRequest {
+  // authentication identifies the current principal.
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+}
+
+// GetCurrentUserResponse returns the current bounded user.
+message GetCurrentUserResponse {
+  // user is the current authenticated principal.
+  User user = 1 [(buf.validate.field).required = true];
+}
+
+// CreateUserRequest creates one pending local user in an ordinary audited command.
+message CreateUserRequest {
+  // command_context carries a UUID idempotency key and authorized administrator.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+
+  // username is the unique normalized local login name.
+  string username = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+  }];
+
+  // display_name is bounded user-facing text.
+  string display_name = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+  }];
+
+  // roles is the sorted, deduplicated initial complete role set.
+  repeated Role roles = 4 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 4
+    unique: true
+  }];
+}
+
+// CreateUserResponse returns pending user and single-display activation material.
+message CreateUserResponse {
+  // user is the committed pending projection.
+  User user = 1 [(buf.validate.field).required = true];
+
+  // activation_code is single-display material and must never enter fixtures or logs.
+  OneTimeSecretOutput activation_code = 2 [(buf.validate.field).required = true];
+
+  // expires_at is the 24-hour activation deadline.
+  google.protobuf.Timestamp expires_at = 3 [(buf.validate.field).required = true];
+}
+
+// AssignRolesRequest replaces a user's complete role set with optimistic concurrency.
+message AssignRolesRequest {
+  // command_context carries a UUID idempotency key and authorized administrator.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+
+  // user_id is the target user's opaque UUIDv7 identifier.
+  string user_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // expected_version prevents stale role replacement.
+  uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
+
+  // roles is the sorted, deduplicated complete replacement set.
+  repeated Role roles = 4 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 4
+    unique: true
+  }];
+}
+
+// AssignRolesResponse returns the committed user projection.
+message AssignRolesResponse {
+  // user reflects the complete role replacement.
+  User user = 1 [(buf.validate.field).required = true];
+}
+
+// ResetUserAuthenticationRequest returns a target user to pending activation after fresh factor proof.
+message ResetUserAuthenticationRequest {
+  // command_context carries a UUID idempotency key and new purpose-bound factor assertion.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+
+  // user_id is the target user's opaque UUIDv7 identifier.
+  string user_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // expected_version prevents resetting a changed user.
+  uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
+}
+
+// ResetUserAuthenticationResponse returns pending user and replacement activation material.
+message ResetUserAuthenticationResponse {
+  // user is the committed pending projection with factors and sessions invalidated.
+  User user = 1 [(buf.validate.field).required = true];
+
+  // activation_code is single-display material and must never enter fixtures or logs.
+  OneTimeSecretOutput activation_code = 2 [(buf.validate.field).required = true];
+
+  // expires_at is the 24-hour activation deadline.
+  google.protobuf.Timestamp expires_at = 3 [(buf.validate.field).required = true];
+}
+
+// GetUserRequest requests one bounded user projection.
+message GetUserRequest {
+  // authentication identifies an authorized principal.
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+
+  // user_id is an opaque UUIDv7 identifier.
+  string user_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+}
+
+// GetUserResponse returns one bounded user projection.
+message GetUserResponse {
+  // user contains no password, activation, factor seed, or attempt data.
+  User user = 1 [(buf.validate.field).required = true];
+}
+
+// ListUsersRequest requests a stable bounded user page.
+message ListUsersRequest {
+  // authentication identifies an authorized principal.
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+
+  // page requests the stable signed cursor page.
+  PageRequest page = 2 [(buf.validate.field).required = true];
+
+  // state is present only when filtering by one lifecycle state.
+  optional UserState state = 3;
+
+  // role is present only when filtering by one granted role.
+  optional Role role = 4;
+}
+
+// ListUsersResponse returns users in stable normalized-username and ID order.
+message ListUsersResponse {
+  // users is a bounded stable page.
+  repeated User users = 1 [(buf.validate.field).repeated.max_items = 200];
+
+  // page describes continuation of the same stable snapshot.
+  PageInfo page = 2 [(buf.validate.field).required = true];
+}
+
+// ActivateUserRequest is a fresh rate-limited one-time activation challenge.
+message ActivateUserRequest {
+  // username identifies the pending local user.
+  string username = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+  }];
+
+  // activation_code is transient and never persisted, logged, or echoed.
+  SecretInput activation_code = 2 [(buf.validate.field).required = true];
+
+  // new_password is transient and subject to the exact password policy.
+  SecretInput new_password = 3 [(buf.validate.field).required = true];
+}
+
+// ActivateUserResponse returns the active user and newly elected session.
+message ActivateUserResponse {
+  // user is the committed active projection.
+  User user = 1 [(buf.validate.field).required = true];
+
+  // session is the newly active sole workspace session.
+  Session session = 2 [(buf.validate.field).required = true];
+}
+
+// ChangePasswordRequest changes the current user's password in one replayable audited command.
+message ChangePasswordRequest {
+  // command_context carries a UUID idempotency key and current principal.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+
+  // expected_version prevents changing credentials after a concurrent identity update.
+  uint64 expected_version = 2 [(buf.validate.field).uint64.gte = 1];
+
+  // current_password is transient proof and never persisted or logged.
+  SecretInput current_password = 3 [(buf.validate.field).required = true];
+
+  // new_password is transient and subject to policy and prior-five history.
+  SecretInput new_password = 4 [(buf.validate.field).required = true];
+}
+
+// ChangePasswordResponse returns the committed user and terminal prior session.
+message ChangePasswordResponse {
+  // user reflects the advanced credential version.
+  User user = 1 [(buf.validate.field).required = true];
+
+  // invalidated_session is the session invalidated by the password change.
+  Session invalidated_session = 2 [(buf.validate.field).required = true];
+}
+
+// EnrolTOTPRequest creates one pending factor in a replayable audited command.
+message EnrolTOTPRequest {
+  // command_context carries a UUID idempotency key and current principal.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+
+  // current_password is transient proof and never persisted or logged.
+  SecretInput current_password = 2 [(buf.validate.field).required = true];
+}
+
+// EnrolTOTPResponse returns pending factor and single-display provisioning material.
+message EnrolTOTPResponse {
+  // factor is the committed pending projection.
+  Factor factor = 1 [(buf.validate.field).required = true];
+
+  // provisioning_secret is single-display material and must never enter fixtures or logs.
+  OneTimeSecretOutput provisioning_secret = 2 [(buf.validate.field).required = true];
+}
+
+// ConfirmTOTPRequest is a fresh rate-limited factor-enrolment challenge.
+message ConfirmTOTPRequest {
+  // authentication identifies the enrolling principal.
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+
+  // factor_id identifies the pending factor.
+  string factor_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // code is the transient six-digit TOTP value and is never logged.
+  TotpCodeInput code = 3 [(buf.validate.field).required = true];
+}
+
+// ConfirmTOTPResponse returns the enabled factor projection.
+message ConfirmTOTPResponse {
+  // factor is enabled exactly once for a successful challenge.
+  Factor factor = 1 [(buf.validate.field).required = true];
+}
+
+// AssertTOTPRequest is a fresh rate-limited purpose-bound factor challenge.
+message AssertTOTPRequest {
+  // authentication identifies the asserting principal.
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+
+  // code is the transient six-digit TOTP value and is never logged.
+  TotpCodeInput code = 2 [(buf.validate.field).required = true];
+
+  // purpose binds the assertion to one high-risk operation.
+  string purpose = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 96
+    pattern: "^[a-z][a-z0-9_]*$"
+  }];
+}
+
+// AssertTOTPResponse returns a single-use five-minute factor assertion reference.
+message AssertTOTPResponse {
+  // fresh_factor is core-authored and contains no TOTP secret or code.
+  FreshFactorContext fresh_factor = 1 [(buf.validate.field).required = true];
+}
+
+// DisableTOTPRequest disables the current factor in one replayable audited command.
+message DisableTOTPRequest {
+  // command_context carries a UUID idempotency key and a new purpose-bound factor assertion.
+  CommandContext command_context = 1 [(buf.validate.field).required = true];
+
+  // factor_id identifies the enabled factor.
+  string factor_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // expected_version prevents disabling a changed factor.
+  uint64 expected_version = 3 [(buf.validate.field).uint64.gte = 1];
+
+  // current_password is transient proof and never persisted or logged.
+  SecretInput current_password = 4 [(buf.validate.field).required = true];
+}
+
+// DisableTOTPResponse returns the terminal factor projection.
+message DisableTOTPResponse {
+  // factor has the terminal DISABLED state.
+  Factor factor = 1 [(buf.validate.field).required = true];
+}
+
+// RecoverAdministratorRequest performs workspace and sole-administrator break glass in one operation.
+message RecoverAdministratorRequest {
+  // recovery_operation_id is a caller-generated UUIDv7 for crash-safe operation election.
+  string recovery_operation_id = 1 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // workspace_file is an approved encrypted workspace capability.
+  ApprovedFileRef workspace_file = 2 [(buf.validate.field).required = true];
+
+  // recovery_secret is transient and accepted only by this recovery operation.
+  SecretInput recovery_secret = 3 [(buf.validate.field).required = true];
+
+  // administrator_username identifies the administrator to reset.
+  string administrator_username = 4 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 128
+  }];
+
+  // new_workspace_passphrase is transient and subject to workspace policy and history.
+  SecretInput new_workspace_passphrase = 5 [(buf.validate.field).required = true];
+
+  // new_user_password is transient and subject to user policy and history.
+  SecretInput new_user_password = 6 [(buf.validate.field).required = true];
+}
+
+// RecoverAdministratorResponse returns the reset administrator before the workspace closes.
+message RecoverAdministratorResponse {
+  // user is active with factors disabled and sessions invalidated.
+  User user = 1 [(buf.validate.field).required = true];
+}
+
+// IdentityService exposes local users, sessions, passwords, roles, and offline TOTP use cases.
+service IdentityService {
+  // SignIn is a fresh rate-limited credential challenge.
+  rpc SignIn(SignInRequest) returns (SignInResponse);
+
+  // SignOut invalidates the session and closes the workspace.
+  rpc SignOut(SignOutRequest) returns (SignOutResponse);
+
+  // GetSession returns the current bounded session projection.
+  rpc GetSession(GetSessionRequest) returns (GetSessionResponse);
+
+  // GetCurrentUser returns the current authenticated user projection.
+  rpc GetCurrentUser(GetCurrentUserRequest) returns (GetCurrentUserResponse);
+
+  // CreateUser creates a pending local user and single-display activation material.
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
+
+  // AssignRoles replaces a user's complete sorted role set.
+  rpc AssignRoles(AssignRolesRequest) returns (AssignRolesResponse);
+
+  // ResetUserAuthentication invalidates credentials, sessions, and factors after a new factor assertion.
+  rpc ResetUserAuthentication(ResetUserAuthenticationRequest) returns (ResetUserAuthenticationResponse);
+
+  // GetUser returns one bounded user projection.
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+
+  // ListUsers returns a stable bounded user page.
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+
+  // ActivateUser is a fresh rate-limited one-time activation challenge.
+  rpc ActivateUser(ActivateUserRequest) returns (ActivateUserResponse);
+
+  // ChangePassword changes the current password and invalidates the prior session.
+  rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse);
+
+  // EnrolTOTP creates a pending factor and single-display provisioning material.
+  rpc EnrolTOTP(EnrolTOTPRequest) returns (EnrolTOTPResponse);
+
+  // ConfirmTOTP is a fresh rate-limited factor-enrolment challenge.
+  rpc ConfirmTOTP(ConfirmTOTPRequest) returns (ConfirmTOTPResponse);
+
+  // AssertTOTP is a fresh rate-limited purpose-bound factor challenge.
+  rpc AssertTOTP(AssertTOTPRequest) returns (AssertTOTPResponse);
+
+  // DisableTOTP disables the current factor after password and new factor proof.
+  rpc DisableTOTP(DisableTOTPRequest) returns (DisableTOTPResponse);
+
+  // RecoverAdministrator performs audited workspace and sole-administrator break glass.
+  rpc RecoverAdministrator(RecoverAdministratorRequest) returns (RecoverAdministratorResponse);
+}

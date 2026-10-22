@@ -1,0 +1,7 @@
+# Tammy common-password denylist v1
+# Source revision: bfa9146e6d9d3ebb3d5d4a8096c60182da009204
+# Source URL: https://raw.githubusercontent.com/danielmiessler/SecLists/bfa9146e6d9d3ebb3d5d4a8096c60182da009204/Passwords/Common-Credentials/xato-net-10-million-passwords-10000.txt
+# Exact entry count: 10000
+# SecLists is provided under the MIT License; copyright Daniel Miessler and SecLists contributors.
+# License: https://github.com/danielmiessler/SecLists/blob/bfa9146e6d9d3ebb3d5d4a8096c60182da009204/LICENSE
+c63d5e4ccc31344d662583cc39ca4bd5bd20517ff1d24501f0c4e0c22d9b722a  tammy-common-passwords-v1.txt

@@ -1,0 +1,146 @@
+syntax = "proto3";
+
+package tammy.v1;
+
+import "buf/validate/validate.proto";
+import "tammy/v1/common.proto";
+
+option go_package = "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1;tammyv1";
+
+// AttentionItemKind identifies the owning workflow for one actionable overview item.
+enum AttentionItemKind {
+  // ATTENTION_ITEM_KIND_UNSPECIFIED indicates that no supported workflow kind was supplied.
+  ATTENTION_ITEM_KIND_UNSPECIFIED = 0;
+
+  // ATTENTION_ITEM_KIND_DOCUMENT_REVIEW links to an exact retained document-review resource.
+  ATTENTION_ITEM_KIND_DOCUMENT_REVIEW = 1;
+
+  // ATTENTION_ITEM_KIND_BANKING_RECONCILIATION links to an exact banking reconciliation resource.
+  ATTENTION_ITEM_KIND_BANKING_RECONCILIATION = 2;
+
+  // ATTENTION_ITEM_KIND_BAS_WORKPAPER links to an exact retained BAS workpaper resource.
+  ATTENTION_ITEM_KIND_BAS_WORKPAPER = 3;
+}
+
+// BasAttentionStatus is the bounded overview state of the requested BAS period.
+enum BasAttentionStatus {
+  // BAS_ATTENTION_STATUS_UNSPECIFIED indicates that the status could not be established.
+  BAS_ATTENTION_STATUS_UNSPECIFIED = 0;
+
+  // BAS_ATTENTION_STATUS_NOT_CREATED means the period has no retained workpaper.
+  BAS_ATTENTION_STATUS_NOT_CREATED = 1;
+
+  // BAS_ATTENTION_STATUS_DRAFT_NOT_LODGED means the current workpaper is a local draft only.
+  BAS_ATTENTION_STATUS_DRAFT_NOT_LODGED = 2;
+
+  // BAS_ATTENTION_STATUS_OUTDATED means retained source changes require regeneration.
+  BAS_ATTENTION_STATUS_OUTDATED = 3;
+}
+
+// ReportingPeriod is one requested inclusive civil-date reporting range.
+message ReportingPeriod {
+  // start_date is the inclusive first civil accounting date.
+  CivilDate start_date = 1 [(buf.validate.field).required = true];
+
+  // end_date is the inclusive final civil accounting date and is checked against start_date by the service.
+  CivilDate end_date = 2 [(buf.validate.field).required = true];
+}
+
+// AttentionItem is one typed link to an exact immutable business resource.
+message AttentionItem {
+  // kind identifies the owning workflow without exposing a renderer route.
+  AttentionItemKind kind = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+
+  // resource is immutable cross-module provenance for the actionable object.
+  SourceRef resource = 2 [(buf.validate.field).required = true];
+
+  // label is bounded safe presentation text and is never used as an identifier.
+  string label = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 160
+  }];
+}
+
+// AttentionRevisionVector pins every financial module read by one verified summary snapshot.
+message AttentionRevisionVector {
+  // financial_revision is the monotonic revision for the complete financial snapshot and is zero at genesis.
+  uint64 financial_revision = 1 [(buf.validate.field).uint64.gte = 0];
+
+  // ledger_revision pins accounting ledger inputs and remains zero until the module changes.
+  uint64 ledger_revision = 2 [(buf.validate.field).uint64.gte = 0];
+
+  // settlement_revision pins payment and allocation inputs and remains zero until the module changes.
+  uint64 settlement_revision = 3 [(buf.validate.field).uint64.gte = 0];
+
+  // banking_revision pins statement, match, and reconciliation inputs and remains zero until the module changes.
+  uint64 banking_revision = 4 [(buf.validate.field).uint64.gte = 0];
+
+  // tax_source_revision pins GST source facts and BAS inputs and remains zero until the module changes.
+  uint64 tax_source_revision = 5 [(buf.validate.field).uint64.gte = 0];
+
+  // organisation_profile_revision pins reporting identity and GST configuration and remains zero until changed.
+  uint64 organisation_profile_revision = 6 [(buf.validate.field).uint64.gte = 0];
+
+  // rule_bundle_revision pins the retained accounting and tax rules and remains zero until changed.
+  uint64 rule_bundle_revision = 7 [(buf.validate.field).uint64.gte = 0];
+}
+
+// GetAttentionSummaryRequest requests one read-only organisation snapshot.
+message GetAttentionSummaryRequest {
+  // authentication identifies the principal with accounting-read permission.
+  AuthenticationContext authentication = 1 [(buf.validate.field).required = true];
+
+  // organisation_id identifies the owning organisation.
+  string organisation_id = 2 [(buf.validate.field).string.pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"];
+
+  // as_of_date is the inclusive civil accounting date for the summary.
+  CivilDate as_of_date = 3 [(buf.validate.field).required = true];
+
+  // reporting_period is the requested inclusive reporting range.
+  ReportingPeriod reporting_period = 4 [(buf.validate.field).required = true];
+}
+
+// GetAttentionSummaryResponse returns bounded attention counts and typed immutable links.
+message GetAttentionSummaryResponse {
+  // documents_needing_review is the bounded count of documents awaiting human review.
+  uint32 documents_needing_review = 1 [(buf.validate.field).uint32.lte = 1000000];
+
+  // documents_reviewed_in_period is the bounded count sealed within reporting_period.
+  uint32 documents_reviewed_in_period = 2 [(buf.validate.field).uint32.lte = 1000000];
+
+  // banking_lines_needing_reconciliation is the bounded count still requiring reconciliation action.
+  uint32 banking_lines_needing_reconciliation = 3 [(buf.validate.field).uint32.lte = 1000000];
+
+  // banking_lines_unreconciled_in_period is the bounded count not covered by a completed reconciliation.
+  uint32 banking_lines_unreconciled_in_period = 4 [(buf.validate.field).uint32.lte = 1000000];
+
+  // current_draft_bas_workpapers is the bounded count of current local drafts for reporting_period.
+  uint32 current_draft_bas_workpapers = 5 [(buf.validate.field).uint32.lte = 1000000];
+
+  // bas_status is the typed local workpaper status for reporting_period.
+  BasAttentionStatus bas_status = 6 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+
+  // attention_items contains at most eight typed immutable business-resource links.
+  repeated AttentionItem attention_items = 7 [(buf.validate.field).repeated.max_items = 8];
+
+  // revisions pins every module read by this verified snapshot.
+  AttentionRevisionVector revisions = 8 [(buf.validate.field).required = true];
+
+  // as_of_date echoes the exact inclusive civil date used by the snapshot.
+  CivilDate as_of_date = 9 [(buf.validate.field).required = true];
+
+  // reporting_period echoes the exact inclusive reporting range used by the snapshot.
+  ReportingPeriod reporting_period = 10 [(buf.validate.field).required = true];
+}
+
+// OverviewService exposes only the read-only cross-module attention projection.
+service OverviewService {
+  // GetAttentionSummary returns one verified bounded accounting-read snapshot.
+  rpc GetAttentionSummary(GetAttentionSummaryRequest) returns (GetAttentionSummaryResponse);
+}
