@@ -1,5 +1,7 @@
 # Soft Precision: real packaged journeys
 
+Follow-up: [ASAR diagnosis, global-scrollbar correction and current CI evidence](followup-diagnosis.md). The original 41 capture files are preserved.
+
 Captured on the user's Mac, 22 October 2026, using the repository-owned Electron
 Playwright fixture with a fresh isolated synthetic userData directory. These are real
 rendered app screenshots, not generated concept boards. All retained records, users,
@@ -71,14 +73,14 @@ Commands run with pinned Node 24.18.0 and pnpm 11.15.0 via mise/corepack.
 | Ordinary local Electron package | Built; 4/4 signature/resource checks passed; source/package manifest and SQLCipher resource authentication passed. Ad-hoc development package only. |
 | Final packaged `pnpm --dir apps/desktop e2e --output /tmp/tammy-soft-precision-final-run-1` | 2/2 passed in 14.7s: full current workflow plus offline first-run/security/privacy/back/focus checks. No console/page errors; fixture verified core shutdown without an orphan. |
 | `pnpm lint` | Failed with 861 existing repository-wide formatting diagnostics, including retained JSON evidence under output/tammy-income-bas-exports-2026-10-06*. Those unrelated files were left untouched. |
-| Supplementary strict static UI audit | 8 findings retained and reviewed in static-ui-audit.json. Six request replacing existing native form validation; one requests disabling textarea resizing; one fails to see standards scrollbar properties nested in a CSS layer. Native validation and CSV editing behaviour are deliberately preserved in this visual-only migration. This is not a strict-audit compliance claim. |
+| Supplementary strict static UI audit | Initial 8 findings are recorded in static-ui-audit.json. Six concern existing native form validation; one concerns textarea resizing; one was a real global-scrollbar defect, corrected in the follow-up. The initial false-positive interpretation of that scrollbar finding was wrong. Native validation and CSV editing behaviour are deliberately preserved in this visual-only migration. This is not a strict-audit compliance claim. |
 
 The baseline packaged workflow passed in 8.9s. Final native core hash is unchanged:
 `a162de336a89b58f1575b6eb59d4ad88584495c5457205ff9b7d634ab67c55a9`.
 Final captured renderer package uses source `660774a198b3baaa06d631a7c4036fa7f884eea6`,
 app hash `fd72d91b1dc5a16c7b4b1eb2f86181b868db716b189fd0bbc749f7f2dc47f81b`,
 manifest hash `a5d64ec8d58a2fe94d1fea9ebd933e7a729535b8a358d9907aa9dc1bb06f467a`.
-Later commits only finalize evidence/reporting; no renderer change is hidden behind captures.
+The original 41 captures retain this renderer provenance. The follow-up separately verifies a global-scrollbar correction; it does not overwrite these capture files.
 
 Use a fresh output directory for each isolated packaged run. Reusing the earlier directory
 produced a fail-closed workspace-create error consistent with retained security anchors;

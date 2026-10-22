@@ -41,7 +41,10 @@ test("runs the packaged first-run journey offline and exits cleanly", async ({
     region.style.overflow = "auto";
     region.style.width = "20px";
     region.style.height = "20px";
-    region.innerHTML = '<div style="width:100px;height:100px"></div>';
+    const content = document.createElement("div");
+    content.style.width = "100px";
+    content.style.height = "100px";
+    region.append(content);
     document.body.append(region);
     const colors = {
       root: getComputedStyle(document.documentElement).scrollbarColor,
