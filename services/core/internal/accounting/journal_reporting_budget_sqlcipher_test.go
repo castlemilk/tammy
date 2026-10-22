@@ -147,11 +147,16 @@ func (executor *journalReportingBudgetExecutor) QueryContext(
 	query string,
 	arguments ...any,
 ) (*sql.Rows, error) {
-	if strings.Contains(query, "count(*)") && strings.Contains(query, "total(") {
+	if !strings.Contains(query, journalBodyMaskHeaderMarker) &&
+		!strings.Contains(query, journalBodyMaskLinesMarker) &&
+		strings.Contains(query, "count(*)") && strings.Contains(query, "total(") {
 		executor.preflightQueries++
 	}
-	if strings.Contains(query, "SELECT id, organisation_id, version, source_type, source_kind") ||
-		strings.Contains(query, "SELECT id, journal_id, line_number, account_id") {
+	headerBody := strings.Contains(query, journalBodyMaskHeaderMarker) ||
+		strings.Contains(query, "SELECT id, organisation_id, version, source_type, source_kind")
+	lineBody := strings.Contains(query, journalBodyMaskLinesMarker) ||
+		strings.Contains(query, "SELECT id, journal_id, line_number, account_id")
+	if headerBody || lineBody {
 		executor.hydrationQueries++
 	}
 	return executor.Transaction.QueryContext(ctx, query, arguments...)

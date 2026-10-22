@@ -107,9 +107,10 @@ func TestJournalRepositoryTaxFactSharedBudgetRejectsJournalDriftAfterPreflight(t
 	}
 	capture, err := repository.CaptureTaxFactsForReportingWithPayloadBudget(
 		fixture.ctx, accountTestOrganisationID, int64(maxTaxFactSharedBudgetBytes))
-	if capture != nil || !errors.Is(err, accounting.ErrJournalRepository) || !probe.mutated || probe.bodyHydrationQueries < 2 {
-		t.Fatalf("journal-drift capture = %#v, %v (mutated=%t); want drift rejection after one hydration",
-			capture, err, probe.mutated)
+	if capture != nil || !errors.Is(err, accounting.ErrJournalRepository) || !probe.mutated ||
+		probe.headerBodyQueries != 1 || probe.lineBodyQueries != 0 {
+		t.Fatalf("journal-drift capture = %#v, %v (mutated=%t, header=%d, lines=%d); want guarded header rejection before line hydration",
+			capture, err, probe.mutated, probe.headerBodyQueries, probe.lineBodyQueries)
 	}
 }
 
@@ -123,14 +124,24 @@ type taxFactSharedBudgetExtraProbe struct {
 	targetID                 string
 	mutated                  bool
 	bodyHydrationQueries     int
+	headerBodyQueries        int
+	lineBodyQueries          int
 }
 
 func (probe *taxFactSharedBudgetExtraProbe) QueryContext(
 	ctx context.Context, query string, arguments ...any,
 ) (*sql.Rows, error) {
 	factHydration := strings.Contains(query, "SELECT fact.id, fact.organisation_id, fact.journal_line_id, fact.tax_code")
-	journalHydration := strings.Contains(query, "SELECT id, organisation_id, version, source_type, source_kind")
-	lineHydration := strings.Contains(query, "SELECT id, journal_id, line_number, account_id")
+	journalHydration := strings.Contains(query, journalBodyMaskHeaderMarker) ||
+		strings.Contains(query, "SELECT id, organisation_id, version, source_type, source_kind")
+	lineHydration := strings.Contains(query, journalBodyMaskLinesMarker) ||
+		strings.Contains(query, "SELECT id, journal_id, line_number, account_id")
+	if journalHydration {
+		probe.headerBodyQueries++
+	}
+	if lineHydration {
+		probe.lineBodyQueries++
+	}
 	if factHydration || journalHydration || lineHydration {
 		probe.bodyHydrationQueries++
 	}

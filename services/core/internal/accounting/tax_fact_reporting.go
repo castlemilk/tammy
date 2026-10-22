@@ -224,7 +224,12 @@ func (repository *JournalRepository) CaptureTaxFactsForReportingWithPayloadBudge
 
 		snapshot := journalCache[candidate.journalID]
 		if snapshot == nil {
-			snapshot, err = repository.loadTaxFactReportingJournal(ctx, candidate.journalID, organisationID)
+			expectedBytes, bytesOK := reservation.JournalPayloadBytes[candidate.journalID]
+			expectedLines, linesOK := reservation.journalLineCounts[candidate.journalID]
+			if !bytesOK || !linesOK {
+				return nil, ErrJournalRepository
+			}
+			snapshot, err = repository.loadTaxFactReportingJournal(ctx, candidate.journalID, organisationID, expectedBytes, expectedLines)
 			if err != nil {
 				return nil, err
 			}
@@ -749,12 +754,12 @@ func taxFactReportingNullableStringPayloadBytes(value sql.NullString) []byte {
 func (repository *JournalRepository) loadTaxFactReportingJournal(
 	ctx context.Context,
 	journalID, organisationID string,
+	expectedPayloadBytes int64, expectedLineCount int,
 ) (*taxFactReportingJournalSnapshot, error) {
-	rows, err := repository.executor.QueryContext(ctx, `
-		SELECT id, organisation_id, version, source_type, source_kind, source_id, source_revision,
-		       state, journal_date, description, reversal_of_journal_id, reversed_by_journal_id,
-		       total_debits_minor, total_credits_minor, currency_code, financial_revision, posted_at, created_at
-		FROM journals WHERE id = ? AND organisation_id = ?`, journalID, organisationID)
+	if expectedPayloadBytes < 0 || expectedPayloadBytes > maxTaxFactReportingCaptureBytes || expectedLineCount < 0 || expectedLineCount > maxTaxFactReportingJournalLines {
+		return nil, ErrJournalRepository
+	}
+	rows, err := repository.executor.QueryContext(ctx, taxFactReportingJournalHeaderBodySQL, journalID, organisationID, expectedPayloadBytes, expectedLineCount)
 	if err != nil {
 		return nil, taxFactReportingReadError("query parent journal", err)
 	}
@@ -770,7 +775,7 @@ func (repository *JournalRepository) loadTaxFactReportingJournal(
 	var id, parentOrganisation, sourceType, sourceID, state, journalDate, description, currencyCode, createdAt string
 	var version, sourceRevision, totalDebits, totalCredits, financialRevision, sourceKind int64
 	var reversalOf, reversedBy, postedAt sql.NullString
-	if err := rows.Scan(&id, &parentOrganisation, &version, &sourceType, &sourceKind, &sourceID, &sourceRevision,
+	if err := (taxFactReportingBodyScanner{rows: rows}).Scan(&id, &parentOrganisation, &version, &sourceType, &sourceKind, &sourceID, &sourceRevision,
 		&state, &journalDate, &description, &reversalOf, &reversedBy, &totalDebits, &totalCredits, &currencyCode,
 		&financialRevision, &postedAt, &createdAt); err != nil {
 		_ = rows.Close()
@@ -818,7 +823,7 @@ func (repository *JournalRepository) loadTaxFactReportingJournal(
 		taxFactReportingNullableStringPayloadBytes(reversedBy), []byte(currencyCode),
 		taxFactReportingNullableStringPayloadBytes(postedAt), []byte(createdAt),
 	)
-	lines, rawLines, linePayloadBytes, err := repository.loadTaxFactReportingLines(ctx, journalID)
+	lines, rawLines, linePayloadBytes, err := repository.loadTaxFactReportingLines(ctx, journalID, organisationID, expectedPayloadBytes, expectedLineCount)
 	if err != nil {
 		return nil, err
 	}
@@ -860,24 +865,27 @@ func (repository *JournalRepository) loadTaxFactReportingJournal(
 
 func (repository *JournalRepository) loadTaxFactReportingLines(
 	ctx context.Context,
-	journalID string,
+	journalID, organisationID string,
+	expectedPayloadBytes int64, expectedLineCount int,
 ) ([]*tammyv1.JournalLine, []byte, int64, error) {
-	rows, err := repository.executor.QueryContext(ctx, `
-		SELECT id, journal_id, line_number, account_id, debit_minor, credit_minor, currency_code, memo,
-		       tax_code_id, tax_amount_minor, tax_rule_type, tax_rule_id, tax_rule_revision, tax_rule_content_hash
-		FROM journal_lines WHERE journal_id = ? ORDER BY line_number, id LIMIT ?`, journalID, maxTaxFactReportingJournalLines+1)
+	rows, err := repository.executor.QueryContext(ctx, taxFactReportingJournalLinesBodySQL, journalID, organisationID, expectedPayloadBytes, expectedLineCount, maxTaxFactReportingJournalLines+1)
 	if err != nil {
 		return nil, nil, 0, taxFactReportingReadError("query journal lines", err)
 	}
 	lines := make([]*tammyv1.JournalLine, 0, 16)
 	rawLines := &bytes.Buffer{}
 	var payloadBytes int64
+	noLineSeen := false
 	for rows.Next() {
 		if len(lines) == maxTaxFactReportingJournalLines {
 			_ = rows.Close()
 			return nil, nil, 0, &TaxFactReportingBoundError{Resource: "journal lines", Limit: maxTaxFactReportingJournalLines}
 		}
-		line, err := scanTaxFactReportingLine(rows)
+		line, err := scanTaxFactReportingLine(taxFactReportingBodyScanner{rows: rows, line: true})
+		if errors.Is(err, errTaxFactReportingNoLine) && len(lines) == 0 && !noLineSeen {
+			noLineSeen = true
+			continue
+		}
 		if err != nil {
 			_ = rows.Close()
 			return nil, nil, 0, taxFactReportingReadError("scan journal line", err)

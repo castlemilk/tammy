@@ -100,7 +100,7 @@ func (repository *JournalRepository) GetForReportingWithPayloadBudget(
 	if err != nil {
 		return nil, withTaxFactReportingBudgetLimit(err, maximumPayloadBytes)
 	}
-	snapshot, err := repository.loadTaxFactReportingJournal(ctx, journalID, organisationID)
+	snapshot, err := repository.loadTaxFactReportingJournal(ctx, journalID, organisationID, reservedPayloadBytes, reservedLineCount)
 	if err != nil {
 		return nil, err
 	}

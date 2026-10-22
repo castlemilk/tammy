@@ -396,6 +396,8 @@ func (probe *taxFactOwnerScopeProbe) QueryContext(
 		}
 	}
 	if strings.Contains(query, "SELECT fact.id, fact.organisation_id, fact.journal_line_id, fact.tax_code") ||
+		strings.Contains(query, journalBodyMaskHeaderMarker) ||
+		strings.Contains(query, journalBodyMaskLinesMarker) ||
 		strings.Contains(query, "SELECT id, organisation_id, version, source_type, source_kind") ||
 		strings.Contains(query, "SELECT id, journal_id, line_number, account_id") {
 		probe.bodyHydrationQueries++
@@ -431,10 +433,12 @@ func (probe *taxFactOwnerAtomicCaptureProbe) QueryContext(
 			}
 		}
 	}
-	if strings.Contains(query, "SELECT id, organisation_id, version, source_type, source_kind") {
+	if strings.Contains(query, journalBodyMaskHeaderMarker) ||
+		strings.Contains(query, "SELECT id, organisation_id, version, source_type, source_kind") {
 		probe.journalBodyQueries++
 	}
-	if strings.Contains(query, "SELECT id, journal_id, line_number, account_id") {
+	if strings.Contains(query, journalBodyMaskLinesMarker) ||
+		strings.Contains(query, "SELECT id, journal_id, line_number, account_id") {
 		probe.lineBodyQueries++
 	}
 	return probe.Transaction.QueryContext(ctx, query, arguments...)
