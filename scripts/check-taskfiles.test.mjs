@@ -928,6 +928,7 @@ test("local Task front door preserves the safe development contract", async () =
     "pnpm ci:lint",
     "pnpm test:proto-breaking",
     "pnpm contracts",
+    "node --test scripts/verify-descriptor-evidence.test.mjs scripts/build-descriptors.test.mjs",
     "pnpm proto:descriptors:verify",
   ]);
   assert.deepEqual(shellCommands(ciTasks.linux), [
@@ -948,6 +949,7 @@ test("local Task front door preserves the safe development contract", async () =
     ...ciBaseCommands,
     'pwsh -NoProfile -NonInteractive -Command \'& { if ($env:EVIDENCE_CLASSIFICATION -ne "WINDOWS_SERVER_SMOKE_ONLY") { throw "WINDOWS_SERVER_EVIDENCE_CLASSIFICATION_INVALID" }; if ($env:PROCESSOR_ARCHITECTURE -ne "AMD64") { throw "WINDOWS_SERVER_SMOKE_ONLY_REQUIRES_AMD64" } }\'',
     "pnpm test:proto-breaking",
+    "node --test scripts/verify-descriptor-evidence.test.mjs scripts/build-descriptors.test.mjs",
     "pnpm proto:descriptors:verify",
     "pnpm desktop:test",
     "pnpm desktop:typecheck",

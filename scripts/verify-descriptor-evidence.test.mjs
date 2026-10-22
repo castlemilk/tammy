@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -47,13 +48,13 @@ function manifestFor(descriptorBytes, overrides = {}) {
   };
 }
 
-async function writeRetainedEvidence(root, descriptorBytes = DESCRIPTOR_BYTES) {
+async function writeRetainedEvidence(root, descriptorBytes = DESCRIPTOR_BYTES, overrides = {}) {
   const retainedDirectory = path.join(root, "compliance/contracts");
   await mkdir(retainedDirectory, { recursive: true });
   await writeFile(path.join(retainedDirectory, "descriptors.pb"), descriptorBytes);
   await writeFile(
     path.join(retainedDirectory, "descriptor-manifest.json"),
-    `${JSON.stringify(manifestFor(descriptorBytes), null, 2)}\n`,
+    `${JSON.stringify(manifestFor(descriptorBytes, overrides), null, 2)}\n`,
   );
 }
 
@@ -298,5 +299,130 @@ test("delegates non-mutating evidence verification to ordered Linux and Windows 
   assert.match(
     windowsJob,
     /TAMMY_EVIDENCE_SUBJECT_REVISION: \$\{\{ github\.event\.pull_request\.head\.sha \|\| github\.sha \}\}[\s\S]*task ci:windows-smoke/,
+  );
+});
+
+async function largePathHistory(context) {
+  const root = await mkdtemp(path.join(os.tmpdir(), "tammy-large-git-evidence-"));
+  context.after(() => rm(root, { force: true, recursive: true }));
+  const git = (args, input) =>
+    execFileSync("git", args, {
+      cwd: root,
+      encoding: "utf8",
+      input,
+      maxBuffer: 8 * 1024 * 1024,
+      env: {
+        ...process.env,
+        GIT_AUTHOR_NAME: "Synthetic descriptor test",
+        GIT_AUTHOR_EMAIL: "descriptor@example.invalid",
+        GIT_COMMITTER_NAME: "Synthetic descriptor test",
+        GIT_COMMITTER_EMAIL: "descriptor@example.invalid",
+      },
+    }).trim();
+  git(["init", "--quiet", "--template="]);
+  const blob = git(["hash-object", "-w", "--stdin"], "");
+  const emptyTree = git(["mktree"], "");
+  const sourceRevision = git(["commit-tree", emptyTree, "-m", "Synthetic source"]);
+  const entries = Array.from(
+    { length: 12_000 },
+    (_, index) => `100644 blob ${blob}\t${String(index).padStart(5, "0")}-${"a".repeat(128)}\n`,
+  ).join("");
+  let tree = git(["mktree"], entries);
+  for (const directory of ["00", "files", "v11", ".pnpm-store"]) {
+    tree = git(["mktree"], `040000 tree ${tree}\t${directory}\n`);
+  }
+  const subjectRevision = git([
+    "commit-tree",
+    tree,
+    "-p",
+    sourceRevision,
+    "-m",
+    "Synthetic cache paths",
+  ]);
+  git(["update-ref", "HEAD", subjectRevision]);
+  await writeRetainedEvidence(root, DESCRIPTOR_BYTES, { gitRevision: sourceRevision });
+  return { git, root, sourceRevision, subjectRevision };
+}
+
+test("rejects a large real Git diff by provenance policy without overflowing stdout", async (context) => {
+  const { git, root, sourceRevision, subjectRevision } = await largePathHistory(context);
+  const output = git(["diff", "--name-only", sourceRevision, subjectRevision, "--"]);
+  assert.ok(
+    Buffer.byteLength(output) > 1024 * 1024,
+    "fixture must exceed execFile's default limit",
+  );
+  const { verifyRetainedDescriptorEvidence } = await import("./verify-descriptor-evidence.mjs");
+  await assert.rejects(verifyRetainedDescriptorEvidence({ root, subjectRevision }), {
+    message: "DESCRIPTOR_SOURCE_REVISION_MISMATCH",
+  });
+});
+
+test("rejects a large real Git status by dirty-tree policy without overflowing stdout", async (context) => {
+  const { git, root, sourceRevision } = await largePathHistory(context);
+  const output = git(["status", "--porcelain=v1", "--untracked-files=all"]);
+  assert.ok(
+    Buffer.byteLength(output) > 1024 * 1024,
+    "fixture must exceed execFile's default limit",
+  );
+  const { verifyRetainedDescriptorEvidence } = await import("./verify-descriptor-evidence.mjs");
+  await assert.rejects(
+    verifyRetainedDescriptorEvidence({ root, subjectRevision: sourceRevision }),
+    {
+      message: "DESCRIPTOR_EVIDENCE_DIRTY_TREE",
+    },
+  );
+});
+
+test("preserves a failing streamed Git command and its diagnostics", async (context) => {
+  const { git, root, sourceRevision } = await largePathHistory(context);
+  git(["config", "core.bare", "true"]);
+  const { verifyRetainedDescriptorEvidence } = await import("./verify-descriptor-evidence.mjs");
+  await assert.rejects(
+    verifyRetainedDescriptorEvidence({ root, subjectRevision: sourceRevision }),
+    (error) => {
+      assert.equal(error.code, 128);
+      assert.match(error.cmd, /^git status /);
+      assert.ok(error.stderr.length > 0);
+      assert.ok(error.message.includes(error.stderr));
+      return true;
+    },
+  );
+});
+
+test("rejects an internally consistent retained subset of the complete descriptor build", async (context) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "tammy-descriptor-subset-"));
+  context.after(() => rm(root, { force: true, recursive: true }));
+  await writeRetainedEvidence(root);
+  const fullDescriptorSet = create(FileDescriptorSetSchema, {
+    file: [
+      {
+        name: "tammy/v1/system.proto",
+        package: "tammy.v1",
+        service: [{ name: "SystemService", method: [{ name: "GetDiagnostics" }] }],
+      },
+      {
+        name: "tammy/v1/banking.proto",
+        package: "tammy.v1",
+        service: [{ name: "BankingService", method: [{ name: "GetBankingSummary" }] }],
+      },
+    ],
+  });
+  const freshBytes = Buffer.from(toBinary(FileDescriptorSetSchema, fullDescriptorSet));
+  const { run } = createRun({ freshBytes });
+  const { verifyRetainedDescriptorEvidence } = await import("./verify-descriptor-evidence.mjs");
+  await assert.rejects(
+    verifyRetainedDescriptorEvidence({
+      bufEntry: BUF_ENTRY,
+      nodeExecutable: NODE_EXECUTABLE,
+      platform: "darwin",
+      root,
+      run,
+      subjectRevision: SUBJECT_REVISION,
+    }),
+    { message: "DESCRIPTOR_RETAINED_BYTES_STALE" },
+  );
+  assert.deepEqual(
+    await readFile(path.join(root, "compliance/contracts/descriptors.pb")),
+    DESCRIPTOR_BYTES,
   );
 });
