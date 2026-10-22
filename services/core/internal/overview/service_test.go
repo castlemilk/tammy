@@ -26,12 +26,14 @@ func (access *overviewAccess) RequireRead(_ context.Context, authentication *tam
 }
 
 type overviewSnapshots struct {
-	calls int
-	value Snapshot
+	calls          int
+	value          Snapshot
+	receivedPeriod *tammyv1.ReportingPeriod
 }
 
-func (snapshots *overviewSnapshots) Attention(_ context.Context, organisationID string) (Snapshot, error) {
+func (snapshots *overviewSnapshots) Attention(_ context.Context, organisationID string, period *tammyv1.ReportingPeriod) (Snapshot, error) {
 	snapshots.calls++
+	snapshots.receivedPeriod = proto.Clone(period).(*tammyv1.ReportingPeriod)
 	if organisationID != overviewOrganisationID {
 		return Snapshot{}, ErrOverview
 	}

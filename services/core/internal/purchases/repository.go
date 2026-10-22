@@ -10,7 +10,6 @@ import (
 	"math"
 	"time"
 
-	"github.com/tammyapp/tammy/services/core/internal/accounting"
 	"github.com/tammyapp/tammy/services/core/internal/app"
 	"github.com/tammyapp/tammy/services/core/internal/documents"
 	tammyv1 "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1"
@@ -93,6 +92,11 @@ func (r *Repository) getAt(ctx context.Context, org, id string, pendingInitialEv
 	value := &tammyv1.PurchaseAccounting{OrganisationId: org, DocumentId: id, Paid: purchaseJournalMoney(0), Outstanding: proto.Clone(doc.Candidate.Total).(*tammyv1.Money), EligibleGst: purchaseJournalMoney(0), DeferredGst: purchaseJournalMoney(0), SuspenseGst: purchaseJournalMoney(0), AttributedGst: purchaseJournalMoney(0), ReviewOutcomes: clearPurchaseOutcomes()}
 	posting, err := r.loadPosting(ctx, org, id)
 	if errors.Is(err, sql.ErrNoRows) {
+		// Reporting replays only posting roots already retained by capture.
+		// A missing row is drift, so no unposted fallback can be accepted.
+		if r.reportingRootOwners {
+			return nil, ErrRepository
+		}
 		matches, err := r.duplicateCandidates(ctx, doc)
 		if err != nil {
 			return nil, err
@@ -150,24 +154,37 @@ func (r *Repository) getAt(ctx context.Context, org, id string, pendingInitialEv
 	// Claims follow the owned ledger movement. Later evidence cannot turn an
 	// original suspense balance into a claim without an explicit release journal.
 	if posting.JournalId != nil {
-		journals, _ := accounting.NewJournalRepository(r.executor)
-		journal, err := journals.Get(ctx, *posting.JournalId)
-		if err != nil {
-			return nil, err
+		var journal *tammyv1.Journal
+		if r.reportingRootOwners {
+			proof, err := r.reportingJournalProof(ctx, org, *posting.JournalId)
+			if err != nil {
+				return nil, err
+			}
+			if proof.SourceID != posting.Id || proof.SourceRevision != 1 {
+				return nil, ErrRepository
+			}
+			journal = proof.Journal
+		} else {
+			journal, err = r.reportingJournal(ctx, org, *posting.JournalId)
+			if err != nil {
+				return nil, err
+			}
 		}
 		if journal.OrganisationId != org || journal.Source != tammyv1.JournalSource_JOURNAL_SOURCE_PURCHASE || journal.FinancialRevision != posting.FinancialRevision {
 			return nil, ErrRepository
 		}
-		rows, err := r.executor.QueryContext(ctx, `SELECT source_id,source_revision FROM journals WHERE id=? AND organisation_id=?`, journal.Id, org)
-		if err != nil {
-			return nil, ErrRepository
+		if !r.reportingRootOwners {
+			rows, err := r.executor.QueryContext(ctx, `SELECT source_id,source_revision FROM journals WHERE id=? AND organisation_id=?`, journal.Id, org)
+			if err != nil {
+				return nil, ErrRepository
+			}
+			var sourceID string
+			var revision uint64
+			if (purchaseRevisionRow{rows: rows}).Scan(&sourceID, &revision) != nil || sourceID != posting.Id || revision != 1 {
+				return nil, ErrRepository
+			}
 		}
-		var sourceID string
-		var revision uint64
-		if (purchaseRevisionRow{rows: rows}).Scan(&sourceID, &revision) != nil || sourceID != posting.Id || revision != 1 {
-			return nil, ErrRepository
-		}
-		rows, err = r.executor.QueryContext(ctx, `SELECT a.code,SUM(l.debit_minor-l.credit_minor) FROM journal_lines l JOIN accounts a ON a.id=l.account_id AND a.organisation_id=? WHERE l.journal_id=? AND a.code IN ('1150','1160','1170') GROUP BY a.code`, org, journal.Id)
+		rows, err := r.executor.QueryContext(ctx, `SELECT a.code,SUM(l.debit_minor-l.credit_minor) FROM journal_lines l JOIN accounts a ON a.id=l.account_id AND a.organisation_id=? WHERE l.journal_id=? AND a.code IN ('1150','1160','1170') GROUP BY a.code`, org, journal.Id)
 		if err != nil {
 			return nil, ErrRepository
 		}
@@ -497,8 +514,7 @@ func (r *Repository) verifyEvents(ctx context.Context, p *tammyv1.PurchasePostin
 		if journalID.String != *p.JournalId || response.Journal == nil || response.Journal.Id != *p.JournalId {
 			return 0, ErrRepository
 		}
-		journals, _ := accounting.NewJournalRepository(r.executor)
-		journal, err := journals.Get(ctx, *p.JournalId)
+		journal, err := r.reportingJournal(ctx, p.OrganisationId, *p.JournalId)
 		if err != nil || !proto.Equal(journal, response.Journal) {
 			return 0, ErrRepository
 		}

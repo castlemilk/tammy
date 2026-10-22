@@ -122,6 +122,7 @@ function validConveyorManifest() {
     documents: { listDocuments: "query" },
     organisation: { getCurrentUser: "query" },
     purchases: { getPurchaseAccounting: "query" },
+    basPreparation: { getBasPreparation: "query" },
     reporting: { getAttentionSummary: "query" },
     sbr: { getSbrReadiness: "query" },
     system: { getSystemDiagnostics: "query" },
@@ -156,6 +157,7 @@ test("Conveyor manifest flattens the fixed module surface", async () => {
   assert.deepEqual(Object.keys(parseConveyorManifest(JSON.stringify(manifest))).sort(), [
     "accounting",
     "banking",
+    "basPreparation",
     "documents",
     "organisation",
     "purchases",
@@ -167,6 +169,7 @@ test("Conveyor manifest flattens the fixed module surface", async () => {
   assert.deepEqual(flattenConveyorManifest(manifest), [
     "getAttentionSummary",
     "getBankingSummary",
+    "getBasPreparation",
     "getCurrentUser",
     "getPurchaseAccounting",
     "getSbrReadiness",
@@ -1077,6 +1080,7 @@ test("loads coverage from the descriptor and production manifests", async (conte
   const fixtureRpcs = [
     ["tammy.v1.AccountingService.ListAccounts", "listAccounts"],
     ["tammy.v1.BankingService.GetBankingSummary", "getBankingSummary"],
+    ["tammy.v1.BasPreparationService.GetBasPreparation", "getBasPreparation"],
     ["tammy.v1.DocumentService.ListDocuments", "listDocuments"],
     ["tammy.v1.IdentityService.GetCurrentUser", "getCurrentUser"],
     ["tammy.v1.PurchaseService.GetPurchaseAccounting", "getPurchaseAccounting"],
@@ -1108,6 +1112,7 @@ test("loads coverage from the descriptor and production manifests", async (conte
     documents: { listDocuments: "query" },
     organisation: { getCurrentUser: "query" },
     purchases: { getPurchaseAccounting: "query" },
+    basPreparation: { getBasPreparation: "query" },
     reporting: { getAttentionSummary: "query" },
     sbr: { getSbrReadiness: "query" },
     system: { getSystemDiagnostics: "query" },
@@ -1125,6 +1130,7 @@ test("loads coverage from the descriptor and production manifests", async (conte
           { name: "SystemService", method: [{ name: "GetDiagnostics" }] },
           { name: "AccountingService", method: [{ name: "ListAccounts" }] },
           { name: "BankingService", method: [{ name: "GetBankingSummary" }] },
+          { name: "BasPreparationService", method: [{ name: "GetBasPreparation" }] },
           { name: "PurchaseService", method: [{ name: "GetPurchaseAccounting" }] },
           { name: "DocumentService", method: [{ name: "ListDocuments" }] },
           { name: "IdentityService", method: [{ name: "GetCurrentUser" }] },

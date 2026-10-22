@@ -87,6 +87,28 @@ describe("guarded walkthrough routes", () => {
     }
   });
 
+  it("accepts only a canonical exact BAS preparation link", () => {
+    const hash = "a1".repeat(32);
+    const path = `/gst-bas?preparation=${journalID}&revision=7&hash=${hash}`;
+    expect(resolveAppLocation(path, "authenticated")).toEqual({ path });
+
+    for (const location of [
+      `/gst-bas?preparation=${journalID}&revision=07&hash=${hash}`,
+      `/gst-bas?preparation=${journalID}&revision=0&hash=${hash}`,
+      `/gst-bas?preparation=${journalID}&revision=18446744073709551616&hash=${hash}`,
+      `/gst-bas?preparation=${journalID}&revision=7&hash=${hash.toUpperCase()}`,
+      `/gst-bas?preparation=${journalID}&revision=7&hash=${hash}&hash=${hash}`,
+      `/gst-bas?revision=7&preparation=${journalID}&hash=${hash}`,
+      `/gst-bas?preparation=${journalID}&revision=7&hash=${hash}&extra=1`,
+      `/gst-bas?preparation=bad-id&revision=7&hash=${hash}`,
+    ]) {
+      expect(resolveAppLocation(location, "authenticated")).toEqual({
+        notice: "That BAS preparation link is not valid.",
+        path: "/overview",
+      });
+    }
+  });
+
   it("preserves all complete nested routes without adding them to primary navigation", () => {
     for (const path of [
       "/workspace-trust",

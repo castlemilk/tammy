@@ -111,15 +111,29 @@ func (repository *JournalRepository) GetForReportingWithPayloadBudget(
 		return nil, errors.Join(ErrJournalRepository,
 			fmt.Errorf("journal %s rows changed between payload preflight and reporting capture", journalID))
 	}
+	proof, err := journalReportingRecordFromTaxFactSnapshot(organisationID, journalID, snapshot)
+	if err != nil {
+		return nil, err
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, errors.Join(ErrJournalRepository, err)
+	}
+	return proof, nil
+}
+
+// journalReportingRecordFromTaxFactSnapshot seals the existing bounded snapshot
+// without another journal read or a second retained body buffer.
+func journalReportingRecordFromTaxFactSnapshot(organisationID, journalID string, snapshot *taxFactReportingJournalSnapshot) (*JournalReportingRecord, error) {
+	if organisationID == "" || journalID == "" || snapshot == nil || snapshot.journal == nil ||
+		snapshot.organisation != organisationID || snapshot.journal.Id != journalID {
+		return nil, ErrJournalRepository
+	}
 	digest := sha256.New()
 	hashTaxFactReportingFrame(digest, []byte("tammy/accounting/journal-reporting/v1"))
 	hashTaxFactReportingFrame(digest, []byte(organisationID))
 	hashTaxFactReportingFrame(digest, []byte(journalID))
 	hashTaxFactReportingFrame(digest, snapshot.journalProto)
 	hashTaxFactReportingFrame(digest, snapshot.raw)
-	if err := ctx.Err(); err != nil {
-		return nil, errors.Join(ErrJournalRepository, err)
-	}
 	return &JournalReportingRecord{
 		Journal: snapshot.journal, SourceType: snapshot.sourceType, SourceKind: snapshot.sourceKind,
 		SourceID: snapshot.sourceID, SourceRevision: snapshot.sourceRev,

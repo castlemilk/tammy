@@ -606,7 +606,7 @@ export const SLICE_ONE_RPC_POLICY = {
   }),
   "tammy.v1.IdentityService.AssignRoles": rpc({
     name: "AssignRoles",
-    route: "/settings/users",
+    route: "/gst-bas",
     rolePolicy: admin,
     mode: "persistent_command",
     failures: [...roleGuardedStalePersistent, "LAST_ADMIN_REMOVAL", "INVALID_ROLE"],

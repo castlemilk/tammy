@@ -1,6 +1,8 @@
 import {
   AssertTOTPRequestSchema,
   AssertTOTPResponseSchema,
+  AssignRolesRequestSchema,
+  AssignRolesResponseSchema,
   ConfirmTOTPRequestSchema,
   ConfirmTOTPResponseSchema,
   EnrolTOTPRequestSchema,
@@ -25,6 +27,12 @@ const currentUser = createProtoMethodCodec({
   maximumRequestBytes: 8_192,
   maximumResponseBytes: 32_768,
   output: GetCurrentUserResponseSchema,
+});
+const assignRoles = createProtoMethodCodec({
+  input: AssignRolesRequestSchema,
+  maximumRequestBytes: 8_192,
+  maximumResponseBytes: 32_768,
+  output: AssignRolesResponseSchema,
 });
 const organisation = createProtoMethodCodec({
   input: GetOrganisationRequestSchema,
@@ -66,6 +74,9 @@ const recordVerification = createProtoMethodCodec({
 export const organisationModule = defineModule({
   getCurrentUser: query(conveyorProtoFrame(8_192), ({ input, ctx }) =>
     invokeCore(currentUser, input, ctx.client.getCurrentUser),
+  ),
+  assignRoles: command(conveyorProtoFrame(8_192), ({ input, ctx }) =>
+    invokeCore(assignRoles, input, ctx.client.assignRoles),
   ),
   getOrganisation: query(conveyorProtoFrame(8_192), ({ input, ctx }) =>
     invokeCore(organisation, input, ctx.client.getOrganisation),

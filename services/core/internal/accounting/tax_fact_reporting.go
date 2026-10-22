@@ -66,6 +66,8 @@ type TaxFactReportingPreflight struct {
 // TaxFactReportingCapture is one immutable-in-transaction view of the
 // organisation's retained tax facts and their complete journal provenance.
 type TaxFactReportingCapture struct {
+	// Journals reuses the complete cached proofs in JournalIDs order.
+	Journals            []*JournalReportingRecord
 	Facts               []TaxFactReportingRecord
 	Fingerprint         []byte
 	BasePayloadBytes    int64
@@ -275,8 +277,26 @@ func (repository *JournalRepository) CaptureTaxFactsForReportingWithPayloadBudge
 	if err != nil {
 		return nil, errors.Join(ErrJournalRepository, err)
 	}
+	journalProofs := make([]*JournalReportingRecord, 0, len(reservation.JournalIDs))
+	for _, journalID := range reservation.JournalIDs {
+		if err := ctx.Err(); err != nil {
+			return nil, errors.Join(ErrJournalRepository, err)
+		}
+		snapshot, ok := journalCache[journalID]
+		if !ok || snapshot == nil {
+			return nil, fmt.Errorf("%w: journal proof snapshot is missing", ErrJournalRepository)
+		}
+		proof, err := journalReportingRecordFromTaxFactSnapshot(organisationID, journalID, snapshot)
+		if err != nil {
+			return nil, err
+		}
+		journalProofs = append(journalProofs, proof)
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, errors.Join(ErrJournalRepository, err)
+	}
 	return &TaxFactReportingCapture{
-		Facts: records, Fingerprint: fingerprint,
+		Facts: records, Journals: journalProofs, Fingerprint: fingerprint,
 		BasePayloadBytes: reservation.BasePayloadBytes, PayloadBytes: reservation.PayloadBytes,
 		FactCount: reservation.FactCount, JournalCount: reservation.JournalCount,
 		JournalIDs:          append([]string(nil), reservation.JournalIDs...),

@@ -15,6 +15,8 @@ export default defineConfig({
       testMatch: [
         "foundation.spec.ts",
         "current-workflows.spec.ts",
+        "bas-lifecycle.spec.ts",
+        "bas-preparation.spec.ts",
         "invoice-income.spec.ts",
         "reporting-exports.spec.ts",
         "purchase-payments.spec.ts",

@@ -41,7 +41,7 @@ func localAttemptAnchorID(master []byte, purpose string) string {
 const (
 	LocalWorkspaceDirectoryCapability = "local-workspace-directory"
 	LocalWorkspaceFileCapability      = "local-workspace-file"
-	localMigrationTarget              = 14
+	localMigrationTarget              = 15
 )
 
 type LocalCompositionConfig struct {
@@ -64,16 +64,17 @@ type LocalModuleIdentity interface {
 }
 
 type LocalWorkspaceActivation struct {
-	Database               *sqlcipher.Database
-	WorkspaceID            string
-	Identity               LocalModuleIdentity
-	InstallationKey        []byte
-	Now                    func() time.Time
-	NewID                  func() (string, error)
-	AuditAppender          *audit.Appender
-	AuditGate              *audit.WriteGate
-	AuditSchemaFingerprint []byte
-	ReconcileAuditWithin   func(context.Context, workspace.MutationExecutor) error
+	RegisterBASAttentionProjector func(overview.BASAttentionProjector) error
+	Database                      *sqlcipher.Database
+	WorkspaceID                   string
+	Identity                      LocalModuleIdentity
+	InstallationKey               []byte
+	Now                           func() time.Time
+	NewID                         func() (string, error)
+	AuditAppender                 *audit.Appender
+	AuditGate                     *audit.WriteGate
+	AuditSchemaFingerprint        []byte
+	ReconcileAuditWithin          func(context.Context, workspace.MutationExecutor) error
 }
 
 // LocalWorkspaceModule contributes generated routes at construction and binds
@@ -414,7 +415,8 @@ func (runtime *localRuntime) activate(workspaceID string) error {
 		return err
 	}
 	activation := LocalWorkspaceActivation{
-		Database: database, WorkspaceID: workspaceID, Identity: runtime.bridge,
+		RegisterBASAttentionProjector: snapshots.RegisterBASAttentionProjector,
+		Database:                      database, WorkspaceID: workspaceID, Identity: runtime.bridge,
 		InstallationKey: append([]byte(nil), runtime.sbrInstallationKey...),
 		Now:             runtime.clock.Now, NewID: runtime.ids.New,
 		AuditAppender: runtime.audit.appender, AuditGate: runtime.audit.gate,

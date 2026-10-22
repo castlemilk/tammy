@@ -328,7 +328,20 @@ func TestBASRawIdentityContractDescriptorAndWireNumbers(t *testing.T) {
 	assertExactFields(t, raw, map[protoreflect.Name]protoreflect.Kind{
 		"type": protoreflect.StringKind, "id": protoreflect.StringKind, "original_revision": protoreflect.Int64Kind,
 		"original_content_hash": protoreflect.BytesKind, "computed_proof_hash": protoreflect.BytesKind, "proof_scope": protoreflect.EnumKind,
+		"component_sequence": protoreflect.Uint64Kind, "related_id": protoreflect.StringKind, "related_sequence": protoreflect.Uint64Kind,
 	})
+	for name, number := range map[protoreflect.Name]protoreflect.FieldNumber{"component_sequence": 7, "related_id": 8, "related_sequence": 9} {
+		field := rawIdentityField(t, raw, name)
+		if field.Number() != number || !field.HasPresence() || field.ContainingOneof() == nil {
+			t.Errorf("raw component field %s must preserve optional presence at wire number %d", name, number)
+		}
+		if name != "related_id" && fieldRules(t, field).GetUint64().GetGt() != 0 {
+			t.Errorf("present raw component sequence %s must be positive", name)
+		}
+	}
+	if rules := fieldRules(t, rawIdentityField(t, raw, "related_id")).GetString(); rules.GetMinLen() != 1 || rules.GetMaxLen() != 0 || rules.GetPattern() == "" {
+		t.Errorf("related source ID must remain nonblank and opaque: %v", rules)
+	}
 	typeField := rawIdentityField(t, raw, "type")
 	typeRules := fieldRules(t, typeField).GetString()
 	if typeRules.GetMinLen() != 1 || typeRules.GetMaxLen() != 128 || typeRules.GetPattern() == "" {

@@ -18,6 +18,7 @@ const NATIVE_ONLY_PROCEDURES = new Set([
   "exportInvoicePdf",
   "exportIncome",
   "exportBas",
+  "exportBasPreparation",
   "getInvoiceProposal",
 ]);
 const CASE_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)+$/;
@@ -52,6 +53,7 @@ const CONVEYOR_MODULES = [
   "purchases",
   "reporting",
   "sbr",
+  "basPreparation",
 ];
 
 function isRecord(value) {

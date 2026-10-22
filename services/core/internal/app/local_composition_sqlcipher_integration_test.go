@@ -205,7 +205,8 @@ func TestLocalCompositionCreatesConfirmsAndAuthenticatesRealWorkspace(t *testing
 	if err != nil {
 		t.Fatalf("GetAttentionSummary() error = %v", err)
 	}
-	if summary.Msg.BasStatus != tammyv1.BasAttentionStatus_BAS_ATTENTION_STATUS_NOT_CREATED ||
+	if summary.Msg.BasStatus != tammyv1.BasAttentionStatus_BAS_ATTENTION_STATUS_ACTION_NEEDED ||
+		summary.Msg.BasPreparation != nil || summary.Msg.BasFamily != nil || summary.Msg.BasFrozen != nil ||
 		summary.Msg.Revisions == nil || summary.Msg.Revisions.FinancialRevision != 0 {
 		t.Fatalf("GetAttentionSummary() = %#v", summary.Msg)
 	}

@@ -40,32 +40,34 @@ import (
 var ErrLedgerModule = errors.New("local product: ledger module unavailable")
 
 type LedgerModule struct {
-	organisationRoute *organisationRoute
-	accountingRoute   *accountingRoute
-	bankingRoute      *bankingRoute
-	documentRoute     *documentRoute
-	taxRoute          *taxRoute
-	invoiceRoute      *invoiceRoute
-	purchaseRoute     *purchaseRoute
-	mu                sync.RWMutex
-	db                *sqlcipher.Database
+	organisationRoute   *organisationRoute
+	accountingRoute     *accountingRoute
+	bankingRoute        *bankingRoute
+	documentRoute       *documentRoute
+	taxRoute            *taxRoute
+	invoiceRoute        *invoiceRoute
+	purchaseRoute       *purchaseRoute
+	basPreparationRoute *basPreparationRoute
+	mu                  sync.RWMutex
+	db                  *sqlcipher.Database
 }
 
 func NewLedgerModule() (*LedgerModule, error) {
 	return &LedgerModule{
-		organisationRoute: &organisationRoute{},
-		accountingRoute:   &accountingRoute{},
-		bankingRoute:      &bankingRoute{},
-		documentRoute:     &documentRoute{},
-		taxRoute:          &taxRoute{},
-		invoiceRoute:      &invoiceRoute{},
-		purchaseRoute:     &purchaseRoute{},
+		organisationRoute:   &organisationRoute{},
+		accountingRoute:     &accountingRoute{},
+		bankingRoute:        &bankingRoute{},
+		documentRoute:       &documentRoute{},
+		taxRoute:            &taxRoute{},
+		invoiceRoute:        &invoiceRoute{},
+		purchaseRoute:       &purchaseRoute{},
+		basPreparationRoute: &basPreparationRoute{},
 	}, nil
 }
 
 func (module *LedgerModule) HandlerFactories() []transport.GeneratedHandlerFactory {
 	if module == nil || module.organisationRoute == nil || module.accountingRoute == nil || module.bankingRoute == nil ||
-		module.documentRoute == nil || module.taxRoute == nil || module.invoiceRoute == nil || module.purchaseRoute == nil {
+		module.documentRoute == nil || module.taxRoute == nil || module.invoiceRoute == nil || module.purchaseRoute == nil || module.basPreparationRoute == nil {
 		return nil
 	}
 	return []transport.GeneratedHandlerFactory{
@@ -76,12 +78,13 @@ func (module *LedgerModule) HandlerFactories() []transport.GeneratedHandlerFacto
 		module.taxRoute.factory,
 		module.invoiceRoute.factory,
 		module.purchaseRoute.factory,
+		module.basPreparationRoute.factory,
 	}
 }
 
 func (module *LedgerModule) Activate(activation app.LocalWorkspaceActivation) error {
 	if module == nil || module.organisationRoute == nil || module.accountingRoute == nil || module.bankingRoute == nil ||
-		module.documentRoute == nil || module.taxRoute == nil || module.invoiceRoute == nil || module.purchaseRoute == nil ||
+		module.documentRoute == nil || module.taxRoute == nil || module.invoiceRoute == nil || module.purchaseRoute == nil || module.basPreparationRoute == nil ||
 		activation.Database == nil || activation.Identity == nil ||
 		activation.Now == nil || activation.NewID == nil {
 		return ErrLedgerModule
@@ -225,6 +228,21 @@ func (module *LedgerModule) Activate(activation app.LocalWorkspaceActivation) er
 	if err := activatePurchases(activation, module.purchaseRoute); err != nil {
 		module.mu.Unlock()
 		return err
+	}
+	if err := activateBASPreparation(activation, module.basPreparationRoute); err != nil {
+		module.mu.Unlock()
+		return err
+	}
+	if activation.RegisterBASAttentionProjector != nil {
+		projector, err := newBASOverviewProjector(activation.WorkspaceID, activation.InstallationKey)
+		if err != nil {
+			module.mu.Unlock()
+			return err
+		}
+		if err := activation.RegisterBASAttentionProjector(projector); err != nil {
+			module.mu.Unlock()
+			return err
+		}
 	}
 	module.db = activation.Database
 	module.mu.Unlock()

@@ -430,13 +430,14 @@ func (r *AccountingRepository) RecordPayment(ctx context.Context, invoice *tammy
 	if err = r.postJournal(ctx, journals, journal, "BANKING", paymentID, 1, flows); err != nil {
 		return nil, nil, err
 	}
-	payment := &tammyv1.InvoicePayment{Id: paymentID, OrganisationId: profile.Id, InvoiceId: invoice.Id, PaymentDate: proto.Clone(request.PaymentDate).(*tammyv1.CivilDate), Amount: proto.Clone(request.Amount).(*tammyv1.Money), AllocatedGst: incomeMoney(allocatedGST), BasSalesGross: incomeMoney(basGross), BankAccountId: bank.Id, Reference: request.Reference, JournalId: journal.Id, CreatedAt: timestamppb.New(r.now())}
+	recordedAt := r.now().UTC()
+	payment := &tammyv1.InvoicePayment{Id: paymentID, OrganisationId: profile.Id, InvoiceId: invoice.Id, PaymentDate: proto.Clone(request.PaymentDate).(*tammyv1.CivilDate), Amount: proto.Clone(request.Amount).(*tammyv1.Money), AllocatedGst: incomeMoney(allocatedGST), BasSalesGross: incomeMoney(basGross), BankAccountId: bank.Id, Reference: request.Reference, JournalId: journal.Id, CreatedAt: timestamppb.New(recordedAt)}
 	encoded, err := proto.MarshalOptions{Deterministic: true}.Marshal(payment)
 	if err != nil {
 		return nil, nil, ErrRepository
 	}
 	hash := sha256.Sum256(encoded)
-	_, err = r.executor.ExecContext(ctx, `INSERT INTO invoice_payment_v1(id,organisation_id,invoice_id,payment_date,amount_minor,allocated_gst_minor,bas_sales_gross_minor,bank_account_id,journal_id,reference,payment_proto,source_hash,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`, payment.Id, profile.Id, invoice.Id, paymentDate, request.Amount.MinorUnits, allocatedGST, basGross, bank.Id, journal.Id, request.Reference, encoded, hash[:], r.now().UTC().Format(time.RFC3339Nano))
+	_, err = r.executor.ExecContext(ctx, `INSERT INTO invoice_payment_v1(id,organisation_id,invoice_id,payment_date,amount_minor,allocated_gst_minor,bas_sales_gross_minor,bank_account_id,journal_id,reference,payment_proto,source_hash,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`, payment.Id, profile.Id, invoice.Id, paymentDate, request.Amount.MinorUnits, allocatedGST, basGross, bank.Id, journal.Id, request.Reference, encoded, hash[:], recordedAt.Format(time.RFC3339Nano))
 	if err != nil {
 		return nil, nil, ErrRepository
 	}

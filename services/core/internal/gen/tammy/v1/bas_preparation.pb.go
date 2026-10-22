@@ -2021,6 +2021,62 @@ func (BasSourceProofScope) EnumDescriptor() ([]byte, []int) {
 	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{34}
 }
 
+// A live read never rewrites a retained preparation, calculation or approval.
+type BasLiveCurrentness int32
+
+const (
+	BasLiveCurrentness_BAS_LIVE_CURRENTNESS_UNSPECIFIED    BasLiveCurrentness = 0
+	BasLiveCurrentness_BAS_LIVE_CURRENTNESS_NOT_ASSESSED   BasLiveCurrentness = 1
+	BasLiveCurrentness_BAS_LIVE_CURRENTNESS_CURRENT        BasLiveCurrentness = 2
+	BasLiveCurrentness_BAS_LIVE_CURRENTNESS_SOURCE_CHANGED BasLiveCurrentness = 3
+	BasLiveCurrentness_BAS_LIVE_CURRENTNESS_UNAVAILABLE    BasLiveCurrentness = 4
+)
+
+// Enum value maps for BasLiveCurrentness.
+var (
+	BasLiveCurrentness_name = map[int32]string{
+		0: "BAS_LIVE_CURRENTNESS_UNSPECIFIED",
+		1: "BAS_LIVE_CURRENTNESS_NOT_ASSESSED",
+		2: "BAS_LIVE_CURRENTNESS_CURRENT",
+		3: "BAS_LIVE_CURRENTNESS_SOURCE_CHANGED",
+		4: "BAS_LIVE_CURRENTNESS_UNAVAILABLE",
+	}
+	BasLiveCurrentness_value = map[string]int32{
+		"BAS_LIVE_CURRENTNESS_UNSPECIFIED":    0,
+		"BAS_LIVE_CURRENTNESS_NOT_ASSESSED":   1,
+		"BAS_LIVE_CURRENTNESS_CURRENT":        2,
+		"BAS_LIVE_CURRENTNESS_SOURCE_CHANGED": 3,
+		"BAS_LIVE_CURRENTNESS_UNAVAILABLE":    4,
+	}
+)
+
+func (x BasLiveCurrentness) Enum() *BasLiveCurrentness {
+	p := new(BasLiveCurrentness)
+	*p = x
+	return p
+}
+
+func (x BasLiveCurrentness) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (BasLiveCurrentness) Descriptor() protoreflect.EnumDescriptor {
+	return file_tammy_v1_bas_preparation_proto_enumTypes[35].Descriptor()
+}
+
+func (BasLiveCurrentness) Type() protoreflect.EnumType {
+	return &file_tammy_v1_bas_preparation_proto_enumTypes[35]
+}
+
+func (x BasLiveCurrentness) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use BasLiveCurrentness.Descriptor instead.
+func (BasLiveCurrentness) EnumDescriptor() ([]byte, []int) {
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{35}
+}
+
 // BasCivilDateRange contains inclusive Gregorian civil dates.
 type BasCivilDateRange struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -3896,8 +3952,11 @@ type BasTraceOperand struct {
 	ExactCentsDenominator string                 `protobuf:"bytes,3,opt,name=exact_cents_denominator,json=exactCentsDenominator,proto3" json:"exact_cents_denominator,omitempty"`
 	ReportedWholeDollars  int64                  `protobuf:"varint,4,opt,name=reported_whole_dollars,json=reportedWholeDollars,proto3" json:"reported_whole_dollars,omitempty"`
 	State                 BasAmountState         `protobuf:"varint,5,opt,name=state,proto3,enum=tammy.v1.BasAmountState" json:"state,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	// T2 is a percentage rate, not AUD cents. It is populated only for label T2.
+	ExactRateNumerator   *string `protobuf:"bytes,6,opt,name=exact_rate_numerator,json=exactRateNumerator,proto3,oneof" json:"exact_rate_numerator,omitempty"`
+	ExactRateDenominator *string `protobuf:"bytes,7,opt,name=exact_rate_denominator,json=exactRateDenominator,proto3,oneof" json:"exact_rate_denominator,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *BasTraceOperand) Reset() {
@@ -3965,6 +4024,20 @@ func (x *BasTraceOperand) GetState() BasAmountState {
 	return BasAmountState_BAS_AMOUNT_STATE_UNSPECIFIED
 }
 
+func (x *BasTraceOperand) GetExactRateNumerator() string {
+	if x != nil && x.ExactRateNumerator != nil {
+		return *x.ExactRateNumerator
+	}
+	return ""
+}
+
+func (x *BasTraceOperand) GetExactRateDenominator() string {
+	if x != nil && x.ExactRateDenominator != nil {
+		return *x.ExactRateDenominator
+	}
+	return ""
+}
+
 // BasLabelTrace preserves nonnegative exact-cent operands and a separately signed rounding difference.
 type BasLabelTrace struct {
 	state                 protoimpl.MessageState `protogen:"open.v1"`
@@ -3980,8 +4053,11 @@ type BasLabelTrace struct {
 	Evidence                           []*SourceRef       `protobuf:"bytes,9,rep,name=evidence,proto3" json:"evidence,omitempty"`
 	RuleId                             string             `protobuf:"bytes,10,opt,name=rule_id,json=ruleId,proto3" json:"rule_id,omitempty"`
 	State                              BasAmountState     `protobuf:"varint,11,opt,name=state,proto3,enum=tammy.v1.BasAmountState" json:"state,omitempty"`
-	unknownFields                      protoimpl.UnknownFields
-	sizeCache                          protoimpl.SizeCache
+	// T2's exact notified percentage uses this pair; exact_cents_* remains money-only.
+	ExactRateNumerator   *string `protobuf:"bytes,12,opt,name=exact_rate_numerator,json=exactRateNumerator,proto3,oneof" json:"exact_rate_numerator,omitempty"`
+	ExactRateDenominator *string `protobuf:"bytes,13,opt,name=exact_rate_denominator,json=exactRateDenominator,proto3,oneof" json:"exact_rate_denominator,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *BasLabelTrace) Reset() {
@@ -4091,6 +4167,20 @@ func (x *BasLabelTrace) GetState() BasAmountState {
 	return BasAmountState_BAS_AMOUNT_STATE_UNSPECIFIED
 }
 
+func (x *BasLabelTrace) GetExactRateNumerator() string {
+	if x != nil && x.ExactRateNumerator != nil {
+		return *x.ExactRateNumerator
+	}
+	return ""
+}
+
+func (x *BasLabelTrace) GetExactRateDenominator() string {
+	if x != nil && x.ExactRateDenominator != nil {
+		return *x.ExactRateDenominator
+	}
+	return ""
+}
+
 type BasCalculationResult struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	Outcome          BasCalculationOutcome  `protobuf:"varint,1,opt,name=outcome,proto3,enum=tammy.v1.BasCalculationOutcome" json:"outcome,omitempty"`
@@ -4164,8 +4254,13 @@ type BasRawSourceRef struct {
 	OriginalContentHash []byte                 `protobuf:"bytes,4,opt,name=original_content_hash,json=originalContentHash,proto3,oneof" json:"original_content_hash,omitempty"`
 	ComputedProofHash   []byte                 `protobuf:"bytes,5,opt,name=computed_proof_hash,json=computedProofHash,proto3" json:"computed_proof_hash,omitempty"`
 	ProofScope          BasSourceProofScope    `protobuf:"varint,6,opt,name=proof_scope,json=proofScope,proto3,enum=tammy.v1.BasSourceProofScope" json:"proof_scope,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	// Component identity is kept separate from the exact opaque parent ID.
+	// The optional related tuple preserves an allocation's referenced component.
+	ComponentSequence *uint64 `protobuf:"varint,7,opt,name=component_sequence,json=componentSequence,proto3,oneof" json:"component_sequence,omitempty"`
+	RelatedId         *string `protobuf:"bytes,8,opt,name=related_id,json=relatedId,proto3,oneof" json:"related_id,omitempty"`
+	RelatedSequence   *uint64 `protobuf:"varint,9,opt,name=related_sequence,json=relatedSequence,proto3,oneof" json:"related_sequence,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *BasRawSourceRef) Reset() {
@@ -4238,6 +4333,27 @@ func (x *BasRawSourceRef) GetProofScope() BasSourceProofScope {
 		return x.ProofScope
 	}
 	return BasSourceProofScope_BAS_SOURCE_PROOF_SCOPE_UNSPECIFIED
+}
+
+func (x *BasRawSourceRef) GetComponentSequence() uint64 {
+	if x != nil && x.ComponentSequence != nil {
+		return *x.ComponentSequence
+	}
+	return 0
+}
+
+func (x *BasRawSourceRef) GetRelatedId() string {
+	if x != nil && x.RelatedId != nil {
+		return *x.RelatedId
+	}
+	return ""
+}
+
+func (x *BasRawSourceRef) GetRelatedSequence() uint64 {
+	if x != nil && x.RelatedSequence != nil {
+		return *x.RelatedSequence
+	}
+	return 0
 }
 
 // BasSourceIdentity is exactly one canonical or raw representation. The
@@ -4804,8 +4920,11 @@ type BasPreparation struct {
 	// Input identity changes only when reviewed facts change, not on validation or export events.
 	InputRevision uint64 `protobuf:"varint,18,opt,name=input_revision,json=inputRevision,proto3" json:"input_revision,omitempty"`
 	InputHash     []byte `protobuf:"bytes,19,opt,name=input_hash,json=inputHash,proto3" json:"input_hash,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// The bounded explanation for creating a linked revision or replacement.
+	// It is immutable across all later versions of this preparation.
+	CreationReason string `protobuf:"bytes,20,opt,name=creation_reason,json=creationReason,proto3" json:"creation_reason,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *BasPreparation) Reset() {
@@ -4969,6 +5088,13 @@ func (x *BasPreparation) GetInputHash() []byte {
 		return x.InputHash
 	}
 	return nil
+}
+
+func (x *BasPreparation) GetCreationReason() string {
+	if x != nil {
+		return x.CreationReason
+	}
+	return ""
 }
 
 // BasPreparationSummary is intentionally shallow for history pages.
@@ -7419,6 +7545,67 @@ func (x *GetBasPreparationRequest) GetPreparationHash() []byte {
 	return nil
 }
 
+// Exact subjects and dependency proof derived from the complete retained log.
+type BasExternalDisputeSummary struct {
+	state                      protoimpl.MessageState `protogen:"open.v1"`
+	DisputedObservations       []*SourceRef           `protobuf:"bytes,1,rep,name=disputed_observations,json=disputedObservations,proto3" json:"disputed_observations,omitempty"`
+	AffectedConfirmedChain     []*SourceRef           `protobuf:"bytes,2,rep,name=affected_confirmed_chain,json=affectedConfirmedChain,proto3" json:"affected_confirmed_chain,omitempty"`
+	DependentChainManifestHash []byte                 `protobuf:"bytes,3,opt,name=dependent_chain_manifest_hash,json=dependentChainManifestHash,proto3" json:"dependent_chain_manifest_hash,omitempty"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
+}
+
+func (x *BasExternalDisputeSummary) Reset() {
+	*x = BasExternalDisputeSummary{}
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[58]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BasExternalDisputeSummary) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BasExternalDisputeSummary) ProtoMessage() {}
+
+func (x *BasExternalDisputeSummary) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[58]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BasExternalDisputeSummary.ProtoReflect.Descriptor instead.
+func (*BasExternalDisputeSummary) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{58}
+}
+
+func (x *BasExternalDisputeSummary) GetDisputedObservations() []*SourceRef {
+	if x != nil {
+		return x.DisputedObservations
+	}
+	return nil
+}
+
+func (x *BasExternalDisputeSummary) GetAffectedConfirmedChain() []*SourceRef {
+	if x != nil {
+		return x.AffectedConfirmedChain
+	}
+	return nil
+}
+
+func (x *BasExternalDisputeSummary) GetDependentChainManifestHash() []byte {
+	if x != nil {
+		return x.DependentChainManifestHash
+	}
+	return nil
+}
+
 type GetBasPreparationResponse struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
 	Preparation        *BasPreparation        `protobuf:"bytes,1,opt,name=preparation,proto3" json:"preparation,omitempty"`
@@ -7429,15 +7616,22 @@ type GetBasPreparationResponse struct {
 	// Acknowledgements bind to the exact retained validation, finding and source identities.
 	Acknowledgements []*BasWarningAcknowledgement `protobuf:"bytes,5,rep,name=acknowledgements,proto3" json:"acknowledgements,omitempty"`
 	// Saved PAYG inputs correspond to this preparation's input_revision and input_hash, never unlabelled live values.
-	PaygwInputs   *BasPaygwInputs `protobuf:"bytes,6,opt,name=paygw_inputs,json=paygwInputs,proto3,oneof" json:"paygw_inputs,omitempty"`
-	PaygiInputs   *BasPaygiInputs `protobuf:"bytes,7,opt,name=paygi_inputs,json=paygiInputs,proto3,oneof" json:"paygi_inputs,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	PaygwInputs *BasPaygwInputs `protobuf:"bytes,6,opt,name=paygw_inputs,json=paygwInputs,proto3,oneof" json:"paygw_inputs,omitempty"`
+	PaygiInputs *BasPaygiInputs `protobuf:"bytes,7,opt,name=paygi_inputs,json=paygiInputs,proto3,oneof" json:"paygi_inputs,omitempty"`
+	// The original confirmed version differs from the immutable collecting root.
+	EffectiveOriginal       *SourceRef                 `protobuf:"bytes,8,opt,name=effective_original,json=effectiveOriginal,proto3,oneof" json:"effective_original,omitempty"`
+	LiveCurrentness         BasLiveCurrentness         `protobuf:"varint,9,opt,name=live_currentness,json=liveCurrentness,proto3,enum=tammy.v1.BasLiveCurrentness" json:"live_currentness,omitempty"`
+	CurrentDisputeOverlay   BasDisputeOverlayState     `protobuf:"varint,10,opt,name=current_dispute_overlay,json=currentDisputeOverlay,proto3,enum=tammy.v1.BasDisputeOverlayState" json:"current_dispute_overlay,omitempty"`
+	CurrentBranchResolution *SourceRef                 `protobuf:"bytes,11,opt,name=current_branch_resolution,json=currentBranchResolution,proto3,oneof" json:"current_branch_resolution,omitempty"`
+	CurrentFrozenBarrier    *SourceRef                 `protobuf:"bytes,12,opt,name=current_frozen_barrier,json=currentFrozenBarrier,proto3,oneof" json:"current_frozen_barrier,omitempty"`
+	CurrentDispute          *BasExternalDisputeSummary `protobuf:"bytes,13,opt,name=current_dispute,json=currentDispute,proto3,oneof" json:"current_dispute,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *GetBasPreparationResponse) Reset() {
 	*x = GetBasPreparationResponse{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[58]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[59]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7449,7 +7643,7 @@ func (x *GetBasPreparationResponse) String() string {
 func (*GetBasPreparationResponse) ProtoMessage() {}
 
 func (x *GetBasPreparationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[58]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[59]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7462,7 +7656,7 @@ func (x *GetBasPreparationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetBasPreparationResponse.ProtoReflect.Descriptor instead.
 func (*GetBasPreparationResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{58}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{59}
 }
 
 func (x *GetBasPreparationResponse) GetPreparation() *BasPreparation {
@@ -7514,6 +7708,48 @@ func (x *GetBasPreparationResponse) GetPaygiInputs() *BasPaygiInputs {
 	return nil
 }
 
+func (x *GetBasPreparationResponse) GetEffectiveOriginal() *SourceRef {
+	if x != nil {
+		return x.EffectiveOriginal
+	}
+	return nil
+}
+
+func (x *GetBasPreparationResponse) GetLiveCurrentness() BasLiveCurrentness {
+	if x != nil {
+		return x.LiveCurrentness
+	}
+	return BasLiveCurrentness_BAS_LIVE_CURRENTNESS_UNSPECIFIED
+}
+
+func (x *GetBasPreparationResponse) GetCurrentDisputeOverlay() BasDisputeOverlayState {
+	if x != nil {
+		return x.CurrentDisputeOverlay
+	}
+	return BasDisputeOverlayState_BAS_DISPUTE_OVERLAY_STATE_UNSPECIFIED
+}
+
+func (x *GetBasPreparationResponse) GetCurrentBranchResolution() *SourceRef {
+	if x != nil {
+		return x.CurrentBranchResolution
+	}
+	return nil
+}
+
+func (x *GetBasPreparationResponse) GetCurrentFrozenBarrier() *SourceRef {
+	if x != nil {
+		return x.CurrentFrozenBarrier
+	}
+	return nil
+}
+
+func (x *GetBasPreparationResponse) GetCurrentDispute() *BasExternalDisputeSummary {
+	if x != nil {
+		return x.CurrentDispute
+	}
+	return nil
+}
+
 type ListBasPreparationsRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Authentication *AuthenticationContext `protobuf:"bytes,1,opt,name=authentication,proto3" json:"authentication,omitempty"`
@@ -7527,7 +7763,7 @@ type ListBasPreparationsRequest struct {
 
 func (x *ListBasPreparationsRequest) Reset() {
 	*x = ListBasPreparationsRequest{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[59]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[60]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7539,7 +7775,7 @@ func (x *ListBasPreparationsRequest) String() string {
 func (*ListBasPreparationsRequest) ProtoMessage() {}
 
 func (x *ListBasPreparationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[59]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[60]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7552,7 +7788,7 @@ func (x *ListBasPreparationsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListBasPreparationsRequest.ProtoReflect.Descriptor instead.
 func (*ListBasPreparationsRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{59}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *ListBasPreparationsRequest) GetAuthentication() *AuthenticationContext {
@@ -7600,7 +7836,7 @@ type ListBasPreparationsResponse struct {
 
 func (x *ListBasPreparationsResponse) Reset() {
 	*x = ListBasPreparationsResponse{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[60]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[61]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7612,7 +7848,7 @@ func (x *ListBasPreparationsResponse) String() string {
 func (*ListBasPreparationsResponse) ProtoMessage() {}
 
 func (x *ListBasPreparationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[60]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[61]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7625,7 +7861,7 @@ func (x *ListBasPreparationsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListBasPreparationsResponse.ProtoReflect.Descriptor instead.
 func (*ListBasPreparationsResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{60}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{61}
 }
 
 func (x *ListBasPreparationsResponse) GetPreparations() []*BasPreparationSummary {
@@ -7654,7 +7890,7 @@ type GetBasCalculationRequest struct {
 
 func (x *GetBasCalculationRequest) Reset() {
 	*x = GetBasCalculationRequest{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[61]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[62]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7666,7 +7902,7 @@ func (x *GetBasCalculationRequest) String() string {
 func (*GetBasCalculationRequest) ProtoMessage() {}
 
 func (x *GetBasCalculationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[61]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[62]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7679,7 +7915,7 @@ func (x *GetBasCalculationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetBasCalculationRequest.ProtoReflect.Descriptor instead.
 func (*GetBasCalculationRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{61}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{62}
 }
 
 func (x *GetBasCalculationRequest) GetAuthentication() *AuthenticationContext {
@@ -7719,7 +7955,7 @@ type GetBasCalculationResponse struct {
 
 func (x *GetBasCalculationResponse) Reset() {
 	*x = GetBasCalculationResponse{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[62]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[63]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7731,7 +7967,7 @@ func (x *GetBasCalculationResponse) String() string {
 func (*GetBasCalculationResponse) ProtoMessage() {}
 
 func (x *GetBasCalculationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[62]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[63]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7744,7 +7980,7 @@ func (x *GetBasCalculationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetBasCalculationResponse.ProtoReflect.Descriptor instead.
 func (*GetBasCalculationResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{62}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{63}
 }
 
 func (x *GetBasCalculationResponse) GetCalculation() *BasCalculation {
@@ -7767,7 +8003,7 @@ type ListBasCalculationsRequest struct {
 
 func (x *ListBasCalculationsRequest) Reset() {
 	*x = ListBasCalculationsRequest{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[63]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[64]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7779,7 +8015,7 @@ func (x *ListBasCalculationsRequest) String() string {
 func (*ListBasCalculationsRequest) ProtoMessage() {}
 
 func (x *ListBasCalculationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[63]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[64]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7792,7 +8028,7 @@ func (x *ListBasCalculationsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListBasCalculationsRequest.ProtoReflect.Descriptor instead.
 func (*ListBasCalculationsRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{63}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{64}
 }
 
 func (x *ListBasCalculationsRequest) GetAuthentication() *AuthenticationContext {
@@ -7840,7 +8076,7 @@ type ListBasCalculationsResponse struct {
 
 func (x *ListBasCalculationsResponse) Reset() {
 	*x = ListBasCalculationsResponse{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[64]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[65]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7852,7 +8088,7 @@ func (x *ListBasCalculationsResponse) String() string {
 func (*ListBasCalculationsResponse) ProtoMessage() {}
 
 func (x *ListBasCalculationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[64]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[65]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7865,7 +8101,7 @@ func (x *ListBasCalculationsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListBasCalculationsResponse.ProtoReflect.Descriptor instead.
 func (*ListBasCalculationsResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{64}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{65}
 }
 
 func (x *ListBasCalculationsResponse) GetCalculations() []*BasCalculationSummary {
@@ -7894,7 +8130,7 @@ type GetFrozenBasRequest struct {
 
 func (x *GetFrozenBasRequest) Reset() {
 	*x = GetFrozenBasRequest{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[65]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[66]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7906,7 +8142,7 @@ func (x *GetFrozenBasRequest) String() string {
 func (*GetFrozenBasRequest) ProtoMessage() {}
 
 func (x *GetFrozenBasRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[65]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[66]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7919,7 +8155,7 @@ func (x *GetFrozenBasRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFrozenBasRequest.ProtoReflect.Descriptor instead.
 func (*GetFrozenBasRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{65}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{66}
 }
 
 func (x *GetFrozenBasRequest) GetAuthentication() *AuthenticationContext {
@@ -7951,15 +8187,16 @@ func (x *GetFrozenBasRequest) GetFrozenHash() []byte {
 }
 
 type GetFrozenBasResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	FrozenBas     *BasFrozenBas          `protobuf:"bytes,1,opt,name=frozen_bas,json=frozenBas,proto3" json:"frozen_bas,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	FrozenBas       *BasFrozenBas          `protobuf:"bytes,1,opt,name=frozen_bas,json=frozenBas,proto3" json:"frozen_bas,omitempty"`
+	LiveCurrentness BasLiveCurrentness     `protobuf:"varint,2,opt,name=live_currentness,json=liveCurrentness,proto3,enum=tammy.v1.BasLiveCurrentness" json:"live_currentness,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *GetFrozenBasResponse) Reset() {
 	*x = GetFrozenBasResponse{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[66]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[67]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7971,7 +8208,7 @@ func (x *GetFrozenBasResponse) String() string {
 func (*GetFrozenBasResponse) ProtoMessage() {}
 
 func (x *GetFrozenBasResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[66]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[67]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7984,7 +8221,7 @@ func (x *GetFrozenBasResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFrozenBasResponse.ProtoReflect.Descriptor instead.
 func (*GetFrozenBasResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{66}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{67}
 }
 
 func (x *GetFrozenBasResponse) GetFrozenBas() *BasFrozenBas {
@@ -7992,6 +8229,13 @@ func (x *GetFrozenBasResponse) GetFrozenBas() *BasFrozenBas {
 		return x.FrozenBas
 	}
 	return nil
+}
+
+func (x *GetFrozenBasResponse) GetLiveCurrentness() BasLiveCurrentness {
+	if x != nil {
+		return x.LiveCurrentness
+	}
+	return BasLiveCurrentness_BAS_LIVE_CURRENTNESS_UNSPECIFIED
 }
 
 type ListFrozenBasRequest struct {
@@ -8007,7 +8251,7 @@ type ListFrozenBasRequest struct {
 
 func (x *ListFrozenBasRequest) Reset() {
 	*x = ListFrozenBasRequest{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[67]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[68]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8019,7 +8263,7 @@ func (x *ListFrozenBasRequest) String() string {
 func (*ListFrozenBasRequest) ProtoMessage() {}
 
 func (x *ListFrozenBasRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[67]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[68]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8032,7 +8276,7 @@ func (x *ListFrozenBasRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListFrozenBasRequest.ProtoReflect.Descriptor instead.
 func (*ListFrozenBasRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{67}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{68}
 }
 
 func (x *ListFrozenBasRequest) GetAuthentication() *AuthenticationContext {
@@ -8080,7 +8324,7 @@ type ListFrozenBasResponse struct {
 
 func (x *ListFrozenBasResponse) Reset() {
 	*x = ListFrozenBasResponse{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[68]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[69]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8092,7 +8336,7 @@ func (x *ListFrozenBasResponse) String() string {
 func (*ListFrozenBasResponse) ProtoMessage() {}
 
 func (x *ListFrozenBasResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[68]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[69]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8105,7 +8349,7 @@ func (x *ListFrozenBasResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListFrozenBasResponse.ProtoReflect.Descriptor instead.
 func (*ListFrozenBasResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{68}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{69}
 }
 
 func (x *ListFrozenBasResponse) GetFrozenBas() []*BasFrozenBasSummary {
@@ -8135,7 +8379,7 @@ type ListBasExternalObservationsRequest struct {
 
 func (x *ListBasExternalObservationsRequest) Reset() {
 	*x = ListBasExternalObservationsRequest{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[69]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[70]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8147,7 +8391,7 @@ func (x *ListBasExternalObservationsRequest) String() string {
 func (*ListBasExternalObservationsRequest) ProtoMessage() {}
 
 func (x *ListBasExternalObservationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[69]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[70]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8160,7 +8404,7 @@ func (x *ListBasExternalObservationsRequest) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ListBasExternalObservationsRequest.ProtoReflect.Descriptor instead.
 func (*ListBasExternalObservationsRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{69}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{70}
 }
 
 func (x *ListBasExternalObservationsRequest) GetAuthentication() *AuthenticationContext {
@@ -8208,7 +8452,7 @@ type ListBasExternalObservationsResponse struct {
 
 func (x *ListBasExternalObservationsResponse) Reset() {
 	*x = ListBasExternalObservationsResponse{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[70]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[71]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8220,7 +8464,7 @@ func (x *ListBasExternalObservationsResponse) String() string {
 func (*ListBasExternalObservationsResponse) ProtoMessage() {}
 
 func (x *ListBasExternalObservationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[70]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[71]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8233,7 +8477,7 @@ func (x *ListBasExternalObservationsResponse) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use ListBasExternalObservationsResponse.ProtoReflect.Descriptor instead.
 func (*ListBasExternalObservationsResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{70}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{71}
 }
 
 func (x *ListBasExternalObservationsResponse) GetObservations() []*BasExternalObservationSummary {
@@ -8262,7 +8506,7 @@ type GetBasExternalObservationRequest struct {
 
 func (x *GetBasExternalObservationRequest) Reset() {
 	*x = GetBasExternalObservationRequest{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[71]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[72]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8274,7 +8518,7 @@ func (x *GetBasExternalObservationRequest) String() string {
 func (*GetBasExternalObservationRequest) ProtoMessage() {}
 
 func (x *GetBasExternalObservationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[71]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[72]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8287,7 +8531,7 @@ func (x *GetBasExternalObservationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetBasExternalObservationRequest.ProtoReflect.Descriptor instead.
 func (*GetBasExternalObservationRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{71}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{72}
 }
 
 func (x *GetBasExternalObservationRequest) GetAuthentication() *AuthenticationContext {
@@ -8327,7 +8571,7 @@ type GetBasExternalObservationResponse struct {
 
 func (x *GetBasExternalObservationResponse) Reset() {
 	*x = GetBasExternalObservationResponse{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[72]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[73]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8339,7 +8583,7 @@ func (x *GetBasExternalObservationResponse) String() string {
 func (*GetBasExternalObservationResponse) ProtoMessage() {}
 
 func (x *GetBasExternalObservationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[72]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[73]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8352,7 +8596,7 @@ func (x *GetBasExternalObservationResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use GetBasExternalObservationResponse.ProtoReflect.Descriptor instead.
 func (*GetBasExternalObservationResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{72}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{73}
 }
 
 func (x *GetBasExternalObservationResponse) GetObservation() *BasExternalObservation {
@@ -8374,7 +8618,7 @@ type GetBasExternalDisputeResolutionRequest struct {
 
 func (x *GetBasExternalDisputeResolutionRequest) Reset() {
 	*x = GetBasExternalDisputeResolutionRequest{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[73]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[74]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8386,7 +8630,7 @@ func (x *GetBasExternalDisputeResolutionRequest) String() string {
 func (*GetBasExternalDisputeResolutionRequest) ProtoMessage() {}
 
 func (x *GetBasExternalDisputeResolutionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[73]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[74]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8399,7 +8643,7 @@ func (x *GetBasExternalDisputeResolutionRequest) ProtoReflect() protoreflect.Mes
 
 // Deprecated: Use GetBasExternalDisputeResolutionRequest.ProtoReflect.Descriptor instead.
 func (*GetBasExternalDisputeResolutionRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{73}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{74}
 }
 
 func (x *GetBasExternalDisputeResolutionRequest) GetAuthentication() *AuthenticationContext {
@@ -8439,7 +8683,7 @@ type GetBasExternalDisputeResolutionResponse struct {
 
 func (x *GetBasExternalDisputeResolutionResponse) Reset() {
 	*x = GetBasExternalDisputeResolutionResponse{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[74]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[75]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8451,7 +8695,7 @@ func (x *GetBasExternalDisputeResolutionResponse) String() string {
 func (*GetBasExternalDisputeResolutionResponse) ProtoMessage() {}
 
 func (x *GetBasExternalDisputeResolutionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[74]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[75]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8464,7 +8708,7 @@ func (x *GetBasExternalDisputeResolutionResponse) ProtoReflect() protoreflect.Me
 
 // Deprecated: Use GetBasExternalDisputeResolutionResponse.ProtoReflect.Descriptor instead.
 func (*GetBasExternalDisputeResolutionResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{74}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{75}
 }
 
 func (x *GetBasExternalDisputeResolutionResponse) GetResolution() *BasExternalDisputeResolution {
@@ -8487,7 +8731,7 @@ type ListBasExternalDisputeResolutionsRequest struct {
 
 func (x *ListBasExternalDisputeResolutionsRequest) Reset() {
 	*x = ListBasExternalDisputeResolutionsRequest{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[75]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[76]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8499,7 +8743,7 @@ func (x *ListBasExternalDisputeResolutionsRequest) String() string {
 func (*ListBasExternalDisputeResolutionsRequest) ProtoMessage() {}
 
 func (x *ListBasExternalDisputeResolutionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[75]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[76]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8512,7 +8756,7 @@ func (x *ListBasExternalDisputeResolutionsRequest) ProtoReflect() protoreflect.M
 
 // Deprecated: Use ListBasExternalDisputeResolutionsRequest.ProtoReflect.Descriptor instead.
 func (*ListBasExternalDisputeResolutionsRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{75}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{76}
 }
 
 func (x *ListBasExternalDisputeResolutionsRequest) GetAuthentication() *AuthenticationContext {
@@ -8560,7 +8804,7 @@ type ListBasExternalDisputeResolutionsResponse struct {
 
 func (x *ListBasExternalDisputeResolutionsResponse) Reset() {
 	*x = ListBasExternalDisputeResolutionsResponse{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[76]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[77]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8572,7 +8816,7 @@ func (x *ListBasExternalDisputeResolutionsResponse) String() string {
 func (*ListBasExternalDisputeResolutionsResponse) ProtoMessage() {}
 
 func (x *ListBasExternalDisputeResolutionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[76]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[77]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8585,7 +8829,7 @@ func (x *ListBasExternalDisputeResolutionsResponse) ProtoReflect() protoreflect.
 
 // Deprecated: Use ListBasExternalDisputeResolutionsResponse.ProtoReflect.Descriptor instead.
 func (*ListBasExternalDisputeResolutionsResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{76}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{77}
 }
 
 func (x *ListBasExternalDisputeResolutionsResponse) GetResolutions() []*BasExternalDisputeResolutionSummary {
@@ -8614,7 +8858,7 @@ type ListBasExportEventsRequest struct {
 
 func (x *ListBasExportEventsRequest) Reset() {
 	*x = ListBasExportEventsRequest{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[77]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[78]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8626,7 +8870,7 @@ func (x *ListBasExportEventsRequest) String() string {
 func (*ListBasExportEventsRequest) ProtoMessage() {}
 
 func (x *ListBasExportEventsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[77]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[78]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8639,7 +8883,7 @@ func (x *ListBasExportEventsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListBasExportEventsRequest.ProtoReflect.Descriptor instead.
 func (*ListBasExportEventsRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{77}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{78}
 }
 
 func (x *ListBasExportEventsRequest) GetAuthentication() *AuthenticationContext {
@@ -8680,7 +8924,7 @@ type ListBasExportEventsResponse struct {
 
 func (x *ListBasExportEventsResponse) Reset() {
 	*x = ListBasExportEventsResponse{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[78]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[79]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8692,7 +8936,7 @@ func (x *ListBasExportEventsResponse) String() string {
 func (*ListBasExportEventsResponse) ProtoMessage() {}
 
 func (x *ListBasExportEventsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[78]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[79]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8705,7 +8949,7 @@ func (x *ListBasExportEventsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListBasExportEventsResponse.ProtoReflect.Descriptor instead.
 func (*ListBasExportEventsResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{78}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{79}
 }
 
 func (x *ListBasExportEventsResponse) GetEvents() []*BasExportEventSummary {
@@ -8735,7 +8979,7 @@ type SetBasObligationsProfileRequest struct {
 
 func (x *SetBasObligationsProfileRequest) Reset() {
 	*x = SetBasObligationsProfileRequest{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[79]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[80]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8747,7 +8991,7 @@ func (x *SetBasObligationsProfileRequest) String() string {
 func (*SetBasObligationsProfileRequest) ProtoMessage() {}
 
 func (x *SetBasObligationsProfileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[79]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[80]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8760,7 +9004,7 @@ func (x *SetBasObligationsProfileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetBasObligationsProfileRequest.ProtoReflect.Descriptor instead.
 func (*SetBasObligationsProfileRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{79}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{80}
 }
 
 func (x *SetBasObligationsProfileRequest) GetCommandContext() *CommandContext {
@@ -8800,7 +9044,7 @@ type SetBasObligationsProfileResponse struct {
 
 func (x *SetBasObligationsProfileResponse) Reset() {
 	*x = SetBasObligationsProfileResponse{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[80]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[81]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8812,7 +9056,7 @@ func (x *SetBasObligationsProfileResponse) String() string {
 func (*SetBasObligationsProfileResponse) ProtoMessage() {}
 
 func (x *SetBasObligationsProfileResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[80]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[81]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8825,7 +9069,7 @@ func (x *SetBasObligationsProfileResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetBasObligationsProfileResponse.ProtoReflect.Descriptor instead.
 func (*SetBasObligationsProfileResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{80}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{81}
 }
 
 func (x *SetBasObligationsProfileResponse) GetProfile() *BasObligationsProfile {
@@ -8848,7 +9092,7 @@ type ConfirmBasPeriodRequest struct {
 
 func (x *ConfirmBasPeriodRequest) Reset() {
 	*x = ConfirmBasPeriodRequest{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[81]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[82]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8860,7 +9104,7 @@ func (x *ConfirmBasPeriodRequest) String() string {
 func (*ConfirmBasPeriodRequest) ProtoMessage() {}
 
 func (x *ConfirmBasPeriodRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[81]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[82]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8873,7 +9117,7 @@ func (x *ConfirmBasPeriodRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfirmBasPeriodRequest.ProtoReflect.Descriptor instead.
 func (*ConfirmBasPeriodRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{81}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{82}
 }
 
 func (x *ConfirmBasPeriodRequest) GetCommandContext() *CommandContext {
@@ -8913,7 +9157,7 @@ type ConfirmBasPeriodResponse struct {
 
 func (x *ConfirmBasPeriodResponse) Reset() {
 	*x = ConfirmBasPeriodResponse{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[82]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[83]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8925,7 +9169,7 @@ func (x *ConfirmBasPeriodResponse) String() string {
 func (*ConfirmBasPeriodResponse) ProtoMessage() {}
 
 func (x *ConfirmBasPeriodResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[82]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[83]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8938,7 +9182,7 @@ func (x *ConfirmBasPeriodResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfirmBasPeriodResponse.ProtoReflect.Descriptor instead.
 func (*ConfirmBasPeriodResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{82}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{83}
 }
 
 func (x *ConfirmBasPeriodResponse) GetPeriod() *BasConfirmedPeriod {
@@ -8963,7 +9207,7 @@ type SaveBasPaygInputsRequest struct {
 
 func (x *SaveBasPaygInputsRequest) Reset() {
 	*x = SaveBasPaygInputsRequest{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[83]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[84]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8975,7 +9219,7 @@ func (x *SaveBasPaygInputsRequest) String() string {
 func (*SaveBasPaygInputsRequest) ProtoMessage() {}
 
 func (x *SaveBasPaygInputsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[83]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[84]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8988,7 +9232,7 @@ func (x *SaveBasPaygInputsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SaveBasPaygInputsRequest.ProtoReflect.Descriptor instead.
 func (*SaveBasPaygInputsRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{83}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{84}
 }
 
 func (x *SaveBasPaygInputsRequest) GetCommandContext() *CommandContext {
@@ -9049,7 +9293,7 @@ type SaveBasPaygInputsResponse struct {
 
 func (x *SaveBasPaygInputsResponse) Reset() {
 	*x = SaveBasPaygInputsResponse{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[84]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[85]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9061,7 +9305,7 @@ func (x *SaveBasPaygInputsResponse) String() string {
 func (*SaveBasPaygInputsResponse) ProtoMessage() {}
 
 func (x *SaveBasPaygInputsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[84]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[85]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9074,7 +9318,7 @@ func (x *SaveBasPaygInputsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SaveBasPaygInputsResponse.ProtoReflect.Descriptor instead.
 func (*SaveBasPaygInputsResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{84}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{85}
 }
 
 func (x *SaveBasPaygInputsResponse) GetPreparation() *BasPreparation {
@@ -9101,7 +9345,7 @@ type RegenerateBasPreparationRequest struct {
 
 func (x *RegenerateBasPreparationRequest) Reset() {
 	*x = RegenerateBasPreparationRequest{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[85]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[86]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9113,7 +9357,7 @@ func (x *RegenerateBasPreparationRequest) String() string {
 func (*RegenerateBasPreparationRequest) ProtoMessage() {}
 
 func (x *RegenerateBasPreparationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[85]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[86]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9126,7 +9370,7 @@ func (x *RegenerateBasPreparationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegenerateBasPreparationRequest.ProtoReflect.Descriptor instead.
 func (*RegenerateBasPreparationRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{85}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{86}
 }
 
 func (x *RegenerateBasPreparationRequest) GetCommandContext() *CommandContext {
@@ -9188,7 +9432,7 @@ type RegenerateBasPreparationResponse struct {
 
 func (x *RegenerateBasPreparationResponse) Reset() {
 	*x = RegenerateBasPreparationResponse{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[86]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[87]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9200,7 +9444,7 @@ func (x *RegenerateBasPreparationResponse) String() string {
 func (*RegenerateBasPreparationResponse) ProtoMessage() {}
 
 func (x *RegenerateBasPreparationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[86]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[87]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9213,7 +9457,7 @@ func (x *RegenerateBasPreparationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegenerateBasPreparationResponse.ProtoReflect.Descriptor instead.
 func (*RegenerateBasPreparationResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{86}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{87}
 }
 
 func (x *RegenerateBasPreparationResponse) GetPreparation() *BasPreparation {
@@ -9245,7 +9489,7 @@ type ValidateBasPreparationRequest struct {
 
 func (x *ValidateBasPreparationRequest) Reset() {
 	*x = ValidateBasPreparationRequest{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[87]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[88]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9257,7 +9501,7 @@ func (x *ValidateBasPreparationRequest) String() string {
 func (*ValidateBasPreparationRequest) ProtoMessage() {}
 
 func (x *ValidateBasPreparationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[87]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[88]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9270,7 +9514,7 @@ func (x *ValidateBasPreparationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidateBasPreparationRequest.ProtoReflect.Descriptor instead.
 func (*ValidateBasPreparationRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{87}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{88}
 }
 
 func (x *ValidateBasPreparationRequest) GetCommandContext() *CommandContext {
@@ -9332,7 +9576,7 @@ type ValidateBasPreparationResponse struct {
 
 func (x *ValidateBasPreparationResponse) Reset() {
 	*x = ValidateBasPreparationResponse{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[88]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[89]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9344,7 +9588,7 @@ func (x *ValidateBasPreparationResponse) String() string {
 func (*ValidateBasPreparationResponse) ProtoMessage() {}
 
 func (x *ValidateBasPreparationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[88]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[89]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9357,7 +9601,7 @@ func (x *ValidateBasPreparationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidateBasPreparationResponse.ProtoReflect.Descriptor instead.
 func (*ValidateBasPreparationResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{88}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{89}
 }
 
 func (x *ValidateBasPreparationResponse) GetPreparation() *BasPreparation {
@@ -9391,7 +9635,7 @@ type AcknowledgeBasWarningsRequest struct {
 
 func (x *AcknowledgeBasWarningsRequest) Reset() {
 	*x = AcknowledgeBasWarningsRequest{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[89]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[90]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9403,7 +9647,7 @@ func (x *AcknowledgeBasWarningsRequest) String() string {
 func (*AcknowledgeBasWarningsRequest) ProtoMessage() {}
 
 func (x *AcknowledgeBasWarningsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[89]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[90]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9416,7 +9660,7 @@ func (x *AcknowledgeBasWarningsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AcknowledgeBasWarningsRequest.ProtoReflect.Descriptor instead.
 func (*AcknowledgeBasWarningsRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{89}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{90}
 }
 
 func (x *AcknowledgeBasWarningsRequest) GetCommandContext() *CommandContext {
@@ -9492,7 +9736,7 @@ type AcknowledgeBasWarningsResponse struct {
 
 func (x *AcknowledgeBasWarningsResponse) Reset() {
 	*x = AcknowledgeBasWarningsResponse{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[90]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[91]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9504,7 +9748,7 @@ func (x *AcknowledgeBasWarningsResponse) String() string {
 func (*AcknowledgeBasWarningsResponse) ProtoMessage() {}
 
 func (x *AcknowledgeBasWarningsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[90]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[91]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9517,7 +9761,7 @@ func (x *AcknowledgeBasWarningsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AcknowledgeBasWarningsResponse.ProtoReflect.Descriptor instead.
 func (*AcknowledgeBasWarningsResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{90}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{91}
 }
 
 func (x *AcknowledgeBasWarningsResponse) GetAcknowledgements() []*BasWarningAcknowledgement {
@@ -9553,7 +9797,7 @@ type FreezeBasForManualHandoffRequest struct {
 
 func (x *FreezeBasForManualHandoffRequest) Reset() {
 	*x = FreezeBasForManualHandoffRequest{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[91]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[92]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9565,7 +9809,7 @@ func (x *FreezeBasForManualHandoffRequest) String() string {
 func (*FreezeBasForManualHandoffRequest) ProtoMessage() {}
 
 func (x *FreezeBasForManualHandoffRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[91]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[92]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9578,7 +9822,7 @@ func (x *FreezeBasForManualHandoffRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FreezeBasForManualHandoffRequest.ProtoReflect.Descriptor instead.
 func (*FreezeBasForManualHandoffRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{91}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{92}
 }
 
 func (x *FreezeBasForManualHandoffRequest) GetCommandContext() *CommandContext {
@@ -9668,7 +9912,7 @@ type FreezeBasForManualHandoffResponse struct {
 
 func (x *FreezeBasForManualHandoffResponse) Reset() {
 	*x = FreezeBasForManualHandoffResponse{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[92]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[93]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9680,7 +9924,7 @@ func (x *FreezeBasForManualHandoffResponse) String() string {
 func (*FreezeBasForManualHandoffResponse) ProtoMessage() {}
 
 func (x *FreezeBasForManualHandoffResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[92]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[93]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9693,7 +9937,7 @@ func (x *FreezeBasForManualHandoffResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use FreezeBasForManualHandoffResponse.ProtoReflect.Descriptor instead.
 func (*FreezeBasForManualHandoffResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{92}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{93}
 }
 
 func (x *FreezeBasForManualHandoffResponse) GetPreparation() *BasPreparation {
@@ -9725,7 +9969,7 @@ type CreateBasReplacementRequest struct {
 
 func (x *CreateBasReplacementRequest) Reset() {
 	*x = CreateBasReplacementRequest{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[93]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[94]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9737,7 +9981,7 @@ func (x *CreateBasReplacementRequest) String() string {
 func (*CreateBasReplacementRequest) ProtoMessage() {}
 
 func (x *CreateBasReplacementRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[93]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[94]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9750,7 +9994,7 @@ func (x *CreateBasReplacementRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateBasReplacementRequest.ProtoReflect.Descriptor instead.
 func (*CreateBasReplacementRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{93}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{94}
 }
 
 func (x *CreateBasReplacementRequest) GetCommandContext() *CommandContext {
@@ -9812,7 +10056,7 @@ type CreateBasReplacementResponse struct {
 
 func (x *CreateBasReplacementResponse) Reset() {
 	*x = CreateBasReplacementResponse{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[94]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[95]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9824,7 +10068,7 @@ func (x *CreateBasReplacementResponse) String() string {
 func (*CreateBasReplacementResponse) ProtoMessage() {}
 
 func (x *CreateBasReplacementResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[94]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[95]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9837,7 +10081,7 @@ func (x *CreateBasReplacementResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateBasReplacementResponse.ProtoReflect.Descriptor instead.
 func (*CreateBasReplacementResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{94}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{95}
 }
 
 func (x *CreateBasReplacementResponse) GetPredecessor() *BasPreparation {
@@ -9873,7 +10117,7 @@ type CreateBasRevisionRequest struct {
 
 func (x *CreateBasRevisionRequest) Reset() {
 	*x = CreateBasRevisionRequest{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[95]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[96]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9885,7 +10129,7 @@ func (x *CreateBasRevisionRequest) String() string {
 func (*CreateBasRevisionRequest) ProtoMessage() {}
 
 func (x *CreateBasRevisionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[95]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[96]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9898,7 +10142,7 @@ func (x *CreateBasRevisionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateBasRevisionRequest.ProtoReflect.Descriptor instead.
 func (*CreateBasRevisionRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{95}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{96}
 }
 
 func (x *CreateBasRevisionRequest) GetCommandContext() *CommandContext {
@@ -9988,7 +10232,7 @@ type CreateBasRevisionResponse struct {
 
 func (x *CreateBasRevisionResponse) Reset() {
 	*x = CreateBasRevisionResponse{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[96]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[97]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10000,7 +10244,7 @@ func (x *CreateBasRevisionResponse) String() string {
 func (*CreateBasRevisionResponse) ProtoMessage() {}
 
 func (x *CreateBasRevisionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[96]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[97]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10013,7 +10257,7 @@ func (x *CreateBasRevisionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateBasRevisionResponse.ProtoReflect.Descriptor instead.
 func (*CreateBasRevisionResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{96}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{97}
 }
 
 func (x *CreateBasRevisionResponse) GetOriginal() *BasPreparation {
@@ -10045,7 +10289,7 @@ type RecordExternalBasObservationRequest struct {
 
 func (x *RecordExternalBasObservationRequest) Reset() {
 	*x = RecordExternalBasObservationRequest{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[97]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[98]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10057,7 +10301,7 @@ func (x *RecordExternalBasObservationRequest) String() string {
 func (*RecordExternalBasObservationRequest) ProtoMessage() {}
 
 func (x *RecordExternalBasObservationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[97]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[98]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10070,7 +10314,7 @@ func (x *RecordExternalBasObservationRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use RecordExternalBasObservationRequest.ProtoReflect.Descriptor instead.
 func (*RecordExternalBasObservationRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{97}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{98}
 }
 
 func (x *RecordExternalBasObservationRequest) GetCommandContext() *CommandContext {
@@ -10132,7 +10376,7 @@ type RecordExternalBasObservationResponse struct {
 
 func (x *RecordExternalBasObservationResponse) Reset() {
 	*x = RecordExternalBasObservationResponse{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[98]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[99]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10144,7 +10388,7 @@ func (x *RecordExternalBasObservationResponse) String() string {
 func (*RecordExternalBasObservationResponse) ProtoMessage() {}
 
 func (x *RecordExternalBasObservationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[98]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[99]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10157,7 +10401,7 @@ func (x *RecordExternalBasObservationResponse) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use RecordExternalBasObservationResponse.ProtoReflect.Descriptor instead.
 func (*RecordExternalBasObservationResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{98}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{99}
 }
 
 func (x *RecordExternalBasObservationResponse) GetObservation() *BasExternalObservation {
@@ -10189,7 +10433,7 @@ type CorrectExternalBasObservationRequest struct {
 
 func (x *CorrectExternalBasObservationRequest) Reset() {
 	*x = CorrectExternalBasObservationRequest{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[99]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[100]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10201,7 +10445,7 @@ func (x *CorrectExternalBasObservationRequest) String() string {
 func (*CorrectExternalBasObservationRequest) ProtoMessage() {}
 
 func (x *CorrectExternalBasObservationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[99]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[100]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10214,7 +10458,7 @@ func (x *CorrectExternalBasObservationRequest) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use CorrectExternalBasObservationRequest.ProtoReflect.Descriptor instead.
 func (*CorrectExternalBasObservationRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{99}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{100}
 }
 
 func (x *CorrectExternalBasObservationRequest) GetCommandContext() *CommandContext {
@@ -10276,7 +10520,7 @@ type CorrectExternalBasObservationResponse struct {
 
 func (x *CorrectExternalBasObservationResponse) Reset() {
 	*x = CorrectExternalBasObservationResponse{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[100]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[101]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10288,7 +10532,7 @@ func (x *CorrectExternalBasObservationResponse) String() string {
 func (*CorrectExternalBasObservationResponse) ProtoMessage() {}
 
 func (x *CorrectExternalBasObservationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[100]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[101]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10301,7 +10545,7 @@ func (x *CorrectExternalBasObservationResponse) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use CorrectExternalBasObservationResponse.ProtoReflect.Descriptor instead.
 func (*CorrectExternalBasObservationResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{100}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{101}
 }
 
 func (x *CorrectExternalBasObservationResponse) GetCorrection() *BasExternalObservation {
@@ -10331,7 +10575,7 @@ type ResolveExternalBasDisputeRequest struct {
 
 func (x *ResolveExternalBasDisputeRequest) Reset() {
 	*x = ResolveExternalBasDisputeRequest{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[101]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[102]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10343,7 +10587,7 @@ func (x *ResolveExternalBasDisputeRequest) String() string {
 func (*ResolveExternalBasDisputeRequest) ProtoMessage() {}
 
 func (x *ResolveExternalBasDisputeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[101]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[102]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10356,7 +10600,7 @@ func (x *ResolveExternalBasDisputeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResolveExternalBasDisputeRequest.ProtoReflect.Descriptor instead.
 func (*ResolveExternalBasDisputeRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{101}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{102}
 }
 
 func (x *ResolveExternalBasDisputeRequest) GetCommandContext() *CommandContext {
@@ -10404,7 +10648,7 @@ type ResolveExternalBasDisputeResponse struct {
 
 func (x *ResolveExternalBasDisputeResponse) Reset() {
 	*x = ResolveExternalBasDisputeResponse{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[102]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[103]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10416,7 +10660,7 @@ func (x *ResolveExternalBasDisputeResponse) String() string {
 func (*ResolveExternalBasDisputeResponse) ProtoMessage() {}
 
 func (x *ResolveExternalBasDisputeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[102]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[103]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10429,7 +10673,7 @@ func (x *ResolveExternalBasDisputeResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ResolveExternalBasDisputeResponse.ProtoReflect.Descriptor instead.
 func (*ResolveExternalBasDisputeResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{102}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{103}
 }
 
 func (x *ResolveExternalBasDisputeResponse) GetResolution() *BasExternalDisputeResolution {
@@ -10462,7 +10706,7 @@ type ReplaceRejectedBasAttemptRequest struct {
 
 func (x *ReplaceRejectedBasAttemptRequest) Reset() {
 	*x = ReplaceRejectedBasAttemptRequest{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[103]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[104]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10474,7 +10718,7 @@ func (x *ReplaceRejectedBasAttemptRequest) String() string {
 func (*ReplaceRejectedBasAttemptRequest) ProtoMessage() {}
 
 func (x *ReplaceRejectedBasAttemptRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[103]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[104]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10487,7 +10731,7 @@ func (x *ReplaceRejectedBasAttemptRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReplaceRejectedBasAttemptRequest.ProtoReflect.Descriptor instead.
 func (*ReplaceRejectedBasAttemptRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{103}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{104}
 }
 
 func (x *ReplaceRejectedBasAttemptRequest) GetCommandContext() *CommandContext {
@@ -10556,7 +10800,7 @@ type ReplaceRejectedBasAttemptResponse struct {
 
 func (x *ReplaceRejectedBasAttemptResponse) Reset() {
 	*x = ReplaceRejectedBasAttemptResponse{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[104]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[105]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10568,7 +10812,7 @@ func (x *ReplaceRejectedBasAttemptResponse) String() string {
 func (*ReplaceRejectedBasAttemptResponse) ProtoMessage() {}
 
 func (x *ReplaceRejectedBasAttemptResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[104]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[105]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10581,7 +10825,7 @@ func (x *ReplaceRejectedBasAttemptResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ReplaceRejectedBasAttemptResponse.ProtoReflect.Descriptor instead.
 func (*ReplaceRejectedBasAttemptResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{104}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{105}
 }
 
 func (x *ReplaceRejectedBasAttemptResponse) GetRejectedAttempt() *BasPreparation {
@@ -10611,7 +10855,7 @@ type RecordBasExportEventRequest struct {
 
 func (x *RecordBasExportEventRequest) Reset() {
 	*x = RecordBasExportEventRequest{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[105]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[106]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10623,7 +10867,7 @@ func (x *RecordBasExportEventRequest) String() string {
 func (*RecordBasExportEventRequest) ProtoMessage() {}
 
 func (x *RecordBasExportEventRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[105]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[106]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10636,7 +10880,7 @@ func (x *RecordBasExportEventRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RecordBasExportEventRequest.ProtoReflect.Descriptor instead.
 func (*RecordBasExportEventRequest) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{105}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{106}
 }
 
 func (x *RecordBasExportEventRequest) GetCommandContext() *CommandContext {
@@ -10676,7 +10920,7 @@ type RecordBasExportEventResponse struct {
 
 func (x *RecordBasExportEventResponse) Reset() {
 	*x = RecordBasExportEventResponse{}
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[106]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[107]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10688,7 +10932,7 @@ func (x *RecordBasExportEventResponse) String() string {
 func (*RecordBasExportEventResponse) ProtoMessage() {}
 
 func (x *RecordBasExportEventResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[106]
+	mi := &file_tammy_v1_bas_preparation_proto_msgTypes[107]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10701,7 +10945,7 @@ func (x *RecordBasExportEventResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RecordBasExportEventResponse.ProtoReflect.Descriptor instead.
 func (*RecordBasExportEventResponse) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{106}
+	return file_tammy_v1_bas_preparation_proto_rawDescGZIP(), []int{107}
 }
 
 func (x *RecordBasExportEventResponse) GetEvent() *BasExportEvent {
@@ -10964,16 +11208,20 @@ const file_tammy_v1_bas_preparation_proto_rawDesc = "" +
 	"\t_claim_5bB\x1a\n" +
 	"\x18_proposed_variation_rateB\x1c\n" +
 	"\x1a_proposed_variation_amountB\x18\n" +
-	"\x16_confirmed_income_year\"\xfb\x04\n" +
+	"\x16_confirmed_income_year\"\x8c\v\n" +
 	"\x0fBasTraceOperand\x128\n" +
 	"\x05label\x18\x01 \x01(\x0e2\x16.tammy.v1.BasFormLabelB\n" +
-	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x05label\x12U\n" +
-	"\x15exact_cents_numerator\x18\x02 \x01(\tB!\xbaH\x1er\x1c\x10\x01\x18P2\x16^(0|[1-9][0-9]{0,78})$R\x13exactCentsNumerator\x12U\n" +
-	"\x17exact_cents_denominator\x18\x03 \x01(\tB\x1d\xbaH\x1ar\x18\x10\x01\x18P2\x12^[1-9][0-9]{0,78}$R\x15exactCentsDenominator\x12=\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x05label\x12;\n" +
+	"\x15exact_cents_numerator\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18PR\x13exactCentsNumerator\x12?\n" +
+	"\x17exact_cents_denominator\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x18PR\x15exactCentsDenominator\x12=\n" +
 	"\x16reported_whole_dollars\x18\x04 \x01(\x03B\a\xbaH\x04\"\x02(\x00R\x14reportedWholeDollars\x12:\n" +
 	"\x05state\x18\x05 \x01(\x0e2\x18.tammy.v1.BasAmountStateB\n" +
-	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x05state:\x84\x02\xbaH\x80\x02\x1a\xfd\x01\n" +
-	"\x17bas.trace_operand.state\x12KCalculation operands must be known values, including an explicit known zero\x1a\x94\x01(this.state == 4 && this.exact_cents_numerator == '0' && this.reported_whole_dollars == 0) || (this.state == 5 && this.exact_cents_numerator != '0')\"\xea\x11\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x05state\x12X\n" +
+	"\x14exact_rate_numerator\x18\x06 \x01(\tB!\xbaH\x1er\x1c\x10\x01\x18P2\x16^(0|[1-9][0-9]{0,78})$H\x00R\x12exactRateNumerator\x88\x01\x01\x12X\n" +
+	"\x16exact_rate_denominator\x18\a \x01(\tB\x1d\xbaH\x1ar\x18\x10\x01\x18P2\x12^[1-9][0-9]{0,78}$H\x01R\x14exactRateDenominator\x88\x01\x01:\xdd\x06\xbaH\xd9\x06\x1a\xd6\x06\n" +
+	"\x17bas.trace_operand.state\x12KCalculation operands must be known values, including an explicit known zero\x1a\xed\x05(this.label == 11 && ((this.state == 4 && this.exact_rate_numerator == '0') || (this.state == 5 && this.exact_rate_numerator != '0')) && has(this.exact_rate_numerator) && has(this.exact_rate_denominator) && this.exact_rate_denominator.matches('^[1-9][0-9]{0,78}$') && this.exact_cents_numerator == '' && this.exact_cents_denominator == '' && this.reported_whole_dollars == 0) || (this.label != 11 && ((this.state == 4 && this.exact_cents_numerator == '0' && this.reported_whole_dollars == 0) || (this.state == 5 && this.exact_cents_numerator != '0')) && this.exact_cents_numerator.matches('^(0|[1-9][0-9]{0,78})$') && this.exact_cents_denominator.matches('^[1-9][0-9]{0,78}$') && !has(this.exact_rate_numerator) && !has(this.exact_rate_denominator))B\x17\n" +
+	"\x15_exact_rate_numeratorB\x19\n" +
+	"\x17_exact_rate_denominator\"\xe5\x18\n" +
 	"\rBasLabelTrace\x128\n" +
 	"\x05label\x18\x01 \x01(\x0e2\x16.tammy.v1.BasFormLabelB\n" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x05label\x12E\n" +
@@ -10989,19 +11237,23 @@ const file_tammy_v1_bas_preparation_proto_rawDesc = "" +
 	"\arule_id\x18\n" +
 	" \x01(\tB0\xbaH-r+\x10\x01\x18\x80\x012$^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$R\x06ruleId\x12:\n" +
 	"\x05state\x18\v \x01(\x0e2\x18.tammy.v1.BasAmountStateB\n" +
-	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x05state:\xb4\t\xbaH\xb0\t\x1a\xad\t\n" +
-	"\x1dbas.label_trace.state_payload\x12hKnown labels carry exact values; only derived label 9 may report whole dollars when exact cents are zero\x1a\xa1\b(this.label != 18 || this.operation == 6) && ((this.state == 4 && has(this.exact_cents_numerator) && this.exact_cents_numerator == '0' && has(this.exact_cents_denominator) && has(this.reported_whole_dollars) && has(this.rounding_difference_cents_numerator) && has(this.rounding_difference_cents_denominator) && ((this.label == 18 && this.reported_whole_dollars > 0 && this.rounding_difference_cents_numerator.startsWith('-')) || (this.reported_whole_dollars == 0 && this.rounding_difference_cents_numerator == '0'))) || (this.state == 5 && has(this.exact_cents_numerator) && this.exact_cents_numerator != '0' && has(this.exact_cents_denominator) && has(this.reported_whole_dollars) && has(this.rounding_difference_cents_numerator) && has(this.rounding_difference_cents_denominator)) || ((this.state == 1 || this.state == 2 || this.state == 3) && !has(this.exact_cents_numerator) && !has(this.exact_cents_denominator) && !has(this.reported_whole_dollars) && !has(this.rounding_difference_cents_numerator) && !has(this.rounding_difference_cents_denominator)))B\x18\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x05state\x12X\n" +
+	"\x14exact_rate_numerator\x18\f \x01(\tB!\xbaH\x1er\x1c\x10\x01\x18P2\x16^(0|[1-9][0-9]{0,78})$H\x05R\x12exactRateNumerator\x88\x01\x01\x12X\n" +
+	"\x16exact_rate_denominator\x18\r \x01(\tB\x1d\xbaH\x1ar\x18\x10\x01\x18P2\x12^[1-9][0-9]{0,78}$H\x06R\x14exactRateDenominator\x88\x01\x01:\xc7\x0e\xbaH\xc3\x0e\x1a\xc0\x0e\n" +
+	"\x1dbas.label_trace.state_payload\x12hKnown labels carry exact values; only derived label 9 may report whole dollars when exact cents are zero\x1a\xb4\r(this.label != 18 || this.operation == 6) && ((this.label == 11 && ((this.state == 4 && has(this.exact_rate_numerator) && this.exact_rate_numerator == '0' && has(this.exact_rate_denominator)) || (this.state == 5 && has(this.exact_rate_numerator) && this.exact_rate_numerator != '0' && has(this.exact_rate_denominator))) && !has(this.exact_cents_numerator) && !has(this.exact_cents_denominator) && !has(this.reported_whole_dollars) && !has(this.rounding_difference_cents_numerator) && !has(this.rounding_difference_cents_denominator)) || (this.label != 11 && ((this.state == 4 && has(this.exact_cents_numerator) && this.exact_cents_numerator == '0' && has(this.exact_cents_denominator) && has(this.reported_whole_dollars) && has(this.rounding_difference_cents_numerator) && has(this.rounding_difference_cents_denominator) && ((this.label == 18 && this.reported_whole_dollars > 0 && this.rounding_difference_cents_numerator.startsWith('-')) || (this.reported_whole_dollars == 0 && this.rounding_difference_cents_numerator == '0'))) || (this.state == 5 && has(this.exact_cents_numerator) && this.exact_cents_numerator != '0' && has(this.exact_cents_denominator) && has(this.reported_whole_dollars) && has(this.rounding_difference_cents_numerator) && has(this.rounding_difference_cents_denominator))) && !has(this.exact_rate_numerator) && !has(this.exact_rate_denominator)) || ((this.state == 1 || this.state == 2 || this.state == 3) && !has(this.exact_cents_numerator) && !has(this.exact_cents_denominator) && !has(this.reported_whole_dollars) && !has(this.rounding_difference_cents_numerator) && !has(this.rounding_difference_cents_denominator) && !has(this.exact_rate_numerator) && !has(this.exact_rate_denominator)))B\x18\n" +
 	"\x16_exact_cents_numeratorB\x1a\n" +
 	"\x18_exact_cents_denominatorB\x19\n" +
 	"\x17_reported_whole_dollarsB&\n" +
 	"$_rounding_difference_cents_numeratorB(\n" +
-	"&_rounding_difference_cents_denominator\"\x97\x03\n" +
+	"&_rounding_difference_cents_denominatorB\x17\n" +
+	"\x15_exact_rate_numeratorB\x19\n" +
+	"\x17_exact_rate_denominator\"\x97\x03\n" +
 	"\x14BasCalculationResult\x12E\n" +
 	"\aoutcome\x18\x01 \x01(\x0e2\x1f.tammy.v1.BasCalculationOutcomeB\n" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\aoutcome\x12R\n" +
 	"\x11label_9_direction\x18\x02 \x01(\x0e2\x1c.tammy.v1.BasAmountDirectionB\b\xbaH\x05\x82\x01\x02\x10\x01R\x0flabel9Direction\x129\n" +
 	"\x06labels\x18\x03 \x03(\v2\x17.tammy.v1.BasLabelTraceB\b\xbaH\x05\x92\x01\x02\x10 R\x06labels:\xa8\x01\xbaH\xa4\x01\x1a\xa1\x01\n" +
-	"\"bas.calculation.complete_direction\x12AA complete calculation has a payable, refundable or nil direction\x1a8this.outcome != 1 || this.label_9_direction in [1, 2, 3]\"\x9d\x03\n" +
+	"\"bas.calculation.complete_direction\x12AA complete calculation has a payable, refundable or nil direction\x1a8this.outcome != 1 || this.label_9_direction in [1, 2, 3]\"\xa7\x06\n" +
 	"\x0fBasRawSourceRef\x127\n" +
 	"\x04type\x18\x01 \x01(\tB#\xbaH r\x1e\x10\x01\x18\x80\x012\x17^[a-z][a-z0-9_]{0,127}$R\x04type\x12\x1f\n" +
 	"\x02id\x18\x02 \x01(\tB\x0f\xbaH\fr\n" +
@@ -11011,9 +11263,18 @@ const file_tammy_v1_bas_preparation_proto_rawDesc = "" +
 	"\x13computed_proof_hash\x18\x05 \x01(\fB\a\xbaH\x04z\x02h R\x11computedProofHash\x12J\n" +
 	"\vproof_scope\x18\x06 \x01(\x0e2\x1d.tammy.v1.BasSourceProofScopeB\n" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\n" +
-	"proofScopeB\x14\n" +
+	"proofScope\x12;\n" +
+	"\x12component_sequence\x18\a \x01(\x04B\a\xbaH\x042\x02 \x00H\x02R\x11componentSequence\x88\x01\x01\x123\n" +
+	"\n" +
+	"related_id\x18\b \x01(\tB\x0f\xbaH\fr\n" +
+	"\x10\x012\x06.*\\S.*H\x03R\trelatedId\x88\x01\x01\x127\n" +
+	"\x10related_sequence\x18\t \x01(\x04B\a\xbaH\x042\x02 \x00H\x04R\x0frelatedSequence\x88\x01\x01:\xa1\x01\xbaH\x9d\x01\x1a\x9a\x01\n" +
+	" bas.raw_source.related_component\x12AA related component sequence identifies a retained related source\x1a3!has(this.related_sequence) || has(this.related_id)B\x14\n" +
 	"\x12_original_revisionB\x18\n" +
-	"\x16_original_content_hash\"\xb4\x02\n" +
+	"\x16_original_content_hashB\x15\n" +
+	"\x13_component_sequenceB\r\n" +
+	"\v_related_idB\x13\n" +
+	"\x11_related_sequence\"\xb4\x02\n" +
 	"\x11BasSourceIdentity\x12>\n" +
 	"\x10canonical_source\x18\x01 \x01(\v2\x13.tammy.v1.SourceRefR\x0fcanonicalSource\x128\n" +
 	"\n" +
@@ -11083,7 +11344,7 @@ const file_tammy_v1_bas_preparation_proto_rawDesc = "" +
 	"\afinding\x18\x03 \x01(\v2\x13.tammy.v1.SourceRefB\x06\xbaH\x03\xc8\x01\x01R\afinding\x129\n" +
 	"\x14source_snapshot_hash\x18\x04 \x01(\fB\a\xbaH\x04z\x02h R\x12sourceSnapshotHash\x12s\n" +
 	"\ractor_user_id\x18\x05 \x01(\tBO\xbaHLrJ2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$\x98\x01$R\vactorUserId\x12K\n" +
-	"\x0facknowledged_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\x0eacknowledgedAt\"\xcb\n" +
+	"\x0facknowledged_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xbaH\x03\xc8\x01\x01R\x0eacknowledgedAt\"\xfe\n" +
 	"\n" +
 	"\x0eBasPreparation\x12v\n" +
 	"\x0epreparation_id\x18\x01 \x01(\tBO\xbaHLrJ2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$\x98\x01$R\rpreparationId\x12x\n" +
@@ -11111,7 +11372,8 @@ const file_tammy_v1_bas_preparation_proto_rawDesc = "" +
 	"\fcontent_hash\x18\x11 \x01(\fB\a\xbaH\x04z\x02h R\vcontentHash\x12.\n" +
 	"\x0einput_revision\x18\x12 \x01(\x04B\a\xbaH\x042\x02(\x01R\rinputRevision\x12&\n" +
 	"\n" +
-	"input_hash\x18\x13 \x01(\fB\a\xbaH\x04z\x02h R\tinputHashB\x16\n" +
+	"input_hash\x18\x13 \x01(\fB\a\xbaH\x04z\x02h R\tinputHash\x121\n" +
+	"\x0fcreation_reason\x18\x14 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x04R\x0ecreationReasonB\x16\n" +
 	"\x14_current_calculationB\x15\n" +
 	"\x13_current_validationB\r\n" +
 	"\v_frozen_basB\x0e\n" +
@@ -11430,7 +11692,11 @@ const file_tammy_v1_bas_preparation_proto_rawDesc = "" +
 	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12x\n" +
 	"\x0forganisation_id\x18\x02 \x01(\tBO\xbaHLrJ2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$\x98\x01$R\x0eorganisationId\x12v\n" +
 	"\x0epreparation_id\x18\x03 \x01(\tBO\xbaHLrJ2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$\x98\x01$R\rpreparationId\x122\n" +
-	"\x10preparation_hash\x18\x04 \x01(\fB\a\xbaH\x04z\x02h R\x0fpreparationHash\"\xb7\x06\n" +
+	"\x10preparation_hash\x18\x04 \x01(\fB\a\xbaH\x04z\x02h R\x0fpreparationHash\"\x96\x02\n" +
+	"\x19BasExternalDisputeSummary\x12S\n" +
+	"\x15disputed_observations\x18\x01 \x03(\v2\x13.tammy.v1.SourceRefB\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\x14disputedObservations\x12X\n" +
+	"\x18affected_confirmed_chain\x18\x02 \x03(\v2\x13.tammy.v1.SourceRefB\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\x16affectedConfirmedChain\x12J\n" +
+	"\x1ddependent_chain_manifest_hash\x18\x03 \x01(\fB\a\xbaH\x04z\x02h R\x1adependentChainManifestHash\"\xa8\f\n" +
 	"\x19GetBasPreparationResponse\x12B\n" +
 	"\vpreparation\x18\x01 \x01(\v2\x18.tammy.v1.BasPreparationB\x06\xbaH\x03\xc8\x01\x01R\vpreparation\x12N\n" +
 	"\x13current_calculation\x18\x02 \x01(\v2\x18.tammy.v1.BasCalculationH\x00R\x12currentCalculation\x88\x01\x01\x12S\n" +
@@ -11438,12 +11704,24 @@ const file_tammy_v1_bas_preparation_proto_rawDesc = "" +
 	"\rcurrent_chain\x18\x04 \x01(\v2\x1d.tammy.v1.BasChainExpectationB\x06\xbaH\x03\xc8\x01\x01R\fcurrentChain\x12Z\n" +
 	"\x10acknowledgements\x18\x05 \x03(\v2#.tammy.v1.BasWarningAcknowledgementB\t\xbaH\x06\x92\x01\x03\x10\xc8\x01R\x10acknowledgements\x12@\n" +
 	"\fpaygw_inputs\x18\x06 \x01(\v2\x18.tammy.v1.BasPaygwInputsH\x02R\vpaygwInputs\x88\x01\x01\x12@\n" +
-	"\fpaygi_inputs\x18\a \x01(\v2\x18.tammy.v1.BasPaygiInputsH\x03R\vpaygiInputs\x88\x01\x01:\xb3\x01\xbaH\xaf\x01\x1a\xac\x01\n" +
+	"\fpaygi_inputs\x18\a \x01(\v2\x18.tammy.v1.BasPaygiInputsH\x03R\vpaygiInputs\x88\x01\x01\x12\xda\x01\n" +
+	"\x12effective_original\x18\b \x01(\v2\x13.tammy.v1.SourceRefB\x90\x01\xbaH\x8c\x01\xba\x01\x88\x01\n" +
+	"-bas.preparation_query.effective_original_type\x127The effective original is an exact retained preparation\x1a\x1ethis.type == 'bas_preparation'H\x04R\x11effectiveOriginal\x88\x01\x01\x12Q\n" +
+	"\x10live_currentness\x18\t \x01(\x0e2\x1c.tammy.v1.BasLiveCurrentnessB\b\xbaH\x05\x82\x01\x02\x10\x01R\x0fliveCurrentness\x12b\n" +
+	"\x17current_dispute_overlay\x18\n" +
+	" \x01(\x0e2 .tammy.v1.BasDisputeOverlayStateB\b\xbaH\x05\x82\x01\x02\x10\x01R\x15currentDisputeOverlay\x12T\n" +
+	"\x19current_branch_resolution\x18\v \x01(\v2\x13.tammy.v1.SourceRefH\x05R\x17currentBranchResolution\x88\x01\x01\x12N\n" +
+	"\x16current_frozen_barrier\x18\f \x01(\v2\x13.tammy.v1.SourceRefH\x06R\x14currentFrozenBarrier\x88\x01\x01\x12Q\n" +
+	"\x0fcurrent_dispute\x18\r \x01(\v2#.tammy.v1.BasExternalDisputeSummaryH\aR\x0ecurrentDispute\x88\x01\x01:\xb3\x01\xbaH\xaf\x01\x1a\xac\x01\n" +
 	"%bas.preparation_query.saved_payg_pair\x12QA saved PAYGW and PAYGI input snapshot is returned together or neither is present\x1a0has(this.paygw_inputs) == has(this.paygi_inputs)B\x16\n" +
 	"\x14_current_calculationB\x15\n" +
 	"\x13_current_validationB\x0f\n" +
 	"\r_paygw_inputsB\x0f\n" +
-	"\r_paygi_inputs\"\xf3\x04\n" +
+	"\r_paygi_inputsB\x15\n" +
+	"\x13_effective_originalB\x1c\n" +
+	"\x1a_current_branch_resolutionB\x19\n" +
+	"\x17_current_frozen_barrierB\x12\n" +
+	"\x10_current_dispute\"\xf3\x04\n" +
 	"\x1aListBasPreparationsRequest\x12O\n" +
 	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12x\n" +
 	"\x0forganisation_id\x18\x02 \x01(\tBO\xbaHLrJ2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$\x98\x01$R\x0eorganisationId\x12q\n" +
@@ -11481,10 +11759,11 @@ const file_tammy_v1_bas_preparation_proto_rawDesc = "" +
 	"\x0forganisation_id\x18\x02 \x01(\tBO\xbaHLrJ2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$\x98\x01$R\x0eorganisationId\x12l\n" +
 	"\tfrozen_id\x18\x03 \x01(\tBO\xbaHLrJ2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$\x98\x01$R\bfrozenId\x12(\n" +
 	"\vfrozen_hash\x18\x04 \x01(\fB\a\xbaH\x04z\x02h R\n" +
-	"frozenHash\"U\n" +
+	"frozenHash\"\xa8\x01\n" +
 	"\x14GetFrozenBasResponse\x12=\n" +
 	"\n" +
-	"frozen_bas\x18\x01 \x01(\v2\x16.tammy.v1.BasFrozenBasB\x06\xbaH\x03\xc8\x01\x01R\tfrozenBas\"\xe7\x04\n" +
+	"frozen_bas\x18\x01 \x01(\v2\x16.tammy.v1.BasFrozenBasB\x06\xbaH\x03\xc8\x01\x01R\tfrozenBas\x12Q\n" +
+	"\x10live_currentness\x18\x02 \x01(\x0e2\x1c.tammy.v1.BasLiveCurrentnessB\b\xbaH\x05\x82\x01\x02\x10\x01R\x0fliveCurrentness\"\xe7\x04\n" +
 	"\x14ListFrozenBasRequest\x12O\n" +
 	"\x0eauthentication\x18\x01 \x01(\v2\x1f.tammy.v1.AuthenticationContextB\x06\xbaH\x03\xc8\x01\x01R\x0eauthentication\x12x\n" +
 	"\x0forganisation_id\x18\x02 \x01(\tBO\xbaHLrJ2E^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$\x98\x01$R\x0eorganisationId\x12q\n" +
@@ -11964,7 +12243,13 @@ const file_tammy_v1_bas_preparation_proto_rawDesc = "" +
 	"\"BAS_SOURCE_PROOF_SCOPE_UNSPECIFIED\x10\x00\x120\n" +
 	",BAS_SOURCE_PROOF_SCOPE_SOURCE_ROW_PROJECTION\x10\x01\x12+\n" +
 	"'BAS_SOURCE_PROOF_SCOPE_COMPLETE_JOURNAL\x10\x02\x124\n" +
-	"0BAS_SOURCE_PROOF_SCOPE_REFERENCE_ONLY_PROJECTION\x10\x032\xc9\x18\n" +
+	"0BAS_SOURCE_PROOF_SCOPE_REFERENCE_ONLY_PROJECTION\x10\x03*\xd2\x01\n" +
+	"\x12BasLiveCurrentness\x12$\n" +
+	" BAS_LIVE_CURRENTNESS_UNSPECIFIED\x10\x00\x12%\n" +
+	"!BAS_LIVE_CURRENTNESS_NOT_ASSESSED\x10\x01\x12 \n" +
+	"\x1cBAS_LIVE_CURRENTNESS_CURRENT\x10\x02\x12'\n" +
+	"#BAS_LIVE_CURRENTNESS_SOURCE_CHANGED\x10\x03\x12$\n" +
+	" BAS_LIVE_CURRENTNESS_UNAVAILABLE\x10\x042\xc9\x18\n" +
 	"\x15BasPreparationService\x12q\n" +
 	"\x18GetBasObligationsProfile\x12).tammy.v1.GetBasObligationsProfileRequest\x1a*.tammy.v1.GetBasObligationsProfileResponse\x12w\n" +
 	"\x1aListBasObligationsProfiles\x12+.tammy.v1.ListBasObligationsProfilesRequest\x1a,.tammy.v1.ListBasObligationsProfilesResponse\x12S\n" +
@@ -12008,8 +12293,8 @@ func file_tammy_v1_bas_preparation_proto_rawDescGZIP() []byte {
 	return file_tammy_v1_bas_preparation_proto_rawDescData
 }
 
-var file_tammy_v1_bas_preparation_proto_enumTypes = make([]protoimpl.EnumInfo, 35)
-var file_tammy_v1_bas_preparation_proto_msgTypes = make([]protoimpl.MessageInfo, 107)
+var file_tammy_v1_bas_preparation_proto_enumTypes = make([]protoimpl.EnumInfo, 36)
+var file_tammy_v1_bas_preparation_proto_msgTypes = make([]protoimpl.MessageInfo, 108)
 var file_tammy_v1_bas_preparation_proto_goTypes = []any{
 	(BasApplicability)(0),                             // 0: tammy.v1.BasApplicability
 	(BasRegistrationStatus)(0),                        // 1: tammy.v1.BasRegistrationStatus
@@ -12046,551 +12331,562 @@ var file_tammy_v1_bas_preparation_proto_goTypes = []any{
 	(BasCorrectionKind)(0),                            // 32: tammy.v1.BasCorrectionKind
 	(BasTraceOperation)(0),                            // 33: tammy.v1.BasTraceOperation
 	(BasSourceProofScope)(0),                          // 34: tammy.v1.BasSourceProofScope
-	(*BasCivilDateRange)(nil),                         // 35: tammy.v1.BasCivilDateRange
-	(*BasEffectiveInterval)(nil),                      // 36: tammy.v1.BasEffectiveInterval
-	(*BasObligationAnswer)(nil),                       // 37: tammy.v1.BasObligationAnswer
-	(*BasOtherObligationInventory)(nil),               // 38: tammy.v1.BasOtherObligationInventory
-	(*BasGstProfileInput)(nil),                        // 39: tammy.v1.BasGstProfileInput
-	(*BasPaygwProfileInput)(nil),                      // 40: tammy.v1.BasPaygwProfileInput
-	(*BasIncomeYearIdentity)(nil),                     // 41: tammy.v1.BasIncomeYearIdentity
-	(*BasPaygiProfileInput)(nil),                      // 42: tammy.v1.BasPaygiProfileInput
-	(*BasObligationsProfileInput)(nil),                // 43: tammy.v1.BasObligationsProfileInput
-	(*BasObligationsProfile)(nil),                     // 44: tammy.v1.BasObligationsProfile
-	(*BasObligationsProfileSummary)(nil),              // 45: tammy.v1.BasObligationsProfileSummary
-	(*BasPeriodSuggestion)(nil),                       // 46: tammy.v1.BasPeriodSuggestion
-	(*BasPeriodSupportFinding)(nil),                   // 47: tammy.v1.BasPeriodSupportFinding
-	(*BasPeriodConfirmationInput)(nil),                // 48: tammy.v1.BasPeriodConfirmationInput
-	(*BasConfirmedPeriod)(nil),                        // 49: tammy.v1.BasConfirmedPeriod
-	(*BasPeriodSummary)(nil),                          // 50: tammy.v1.BasPeriodSummary
-	(*BasExpectedIdentity)(nil),                       // 51: tammy.v1.BasExpectedIdentity
-	(*BasChainExpectation)(nil),                       // 52: tammy.v1.BasChainExpectation
-	(*BasAmountInput)(nil),                            // 53: tammy.v1.BasAmountInput
-	(*BasPaygwInputs)(nil),                            // 54: tammy.v1.BasPaygwInputs
-	(*BasPaygiInputs)(nil),                            // 55: tammy.v1.BasPaygiInputs
-	(*BasTraceOperand)(nil),                           // 56: tammy.v1.BasTraceOperand
-	(*BasLabelTrace)(nil),                             // 57: tammy.v1.BasLabelTrace
-	(*BasCalculationResult)(nil),                      // 58: tammy.v1.BasCalculationResult
-	(*BasRawSourceRef)(nil),                           // 59: tammy.v1.BasRawSourceRef
-	(*BasSourceIdentity)(nil),                         // 60: tammy.v1.BasSourceIdentity
-	(*BasSourceCoverage)(nil),                         // 61: tammy.v1.BasSourceCoverage
-	(*BasValidationFinding)(nil),                      // 62: tammy.v1.BasValidationFinding
-	(*BasValidationSnapshot)(nil),                     // 63: tammy.v1.BasValidationSnapshot
-	(*BasWarningAcknowledgementInput)(nil),            // 64: tammy.v1.BasWarningAcknowledgementInput
-	(*BasWarningAcknowledgement)(nil),                 // 65: tammy.v1.BasWarningAcknowledgement
-	(*BasPreparation)(nil),                            // 66: tammy.v1.BasPreparation
-	(*BasPreparationSummary)(nil),                     // 67: tammy.v1.BasPreparationSummary
-	(*BasSourceRevisionVector)(nil),                   // 68: tammy.v1.BasSourceRevisionVector
-	(*BasCalculation)(nil),                            // 69: tammy.v1.BasCalculation
-	(*BasCalculationSummary)(nil),                     // 70: tammy.v1.BasCalculationSummary
-	(*BasFrozenBas)(nil),                              // 71: tammy.v1.BasFrozenBas
-	(*BasFrozenBasSummary)(nil),                       // 72: tammy.v1.BasFrozenBasSummary
-	(*BasExternalObservationInput)(nil),               // 73: tammy.v1.BasExternalObservationInput
-	(*BasExternalObservation)(nil),                    // 74: tammy.v1.BasExternalObservation
-	(*BasExternalObservationSummary)(nil),             // 75: tammy.v1.BasExternalObservationSummary
-	(*BasExternalObservationCorrectionInput)(nil),     // 76: tammy.v1.BasExternalObservationCorrectionInput
-	(*BasExternalDisputeInput)(nil),                   // 77: tammy.v1.BasExternalDisputeInput
-	(*BasExternalDisputeResolution)(nil),              // 78: tammy.v1.BasExternalDisputeResolution
-	(*BasExternalDisputeResolutionSummary)(nil),       // 79: tammy.v1.BasExternalDisputeResolutionSummary
-	(*BasExportTarget)(nil),                           // 80: tammy.v1.BasExportTarget
-	(*BasExportEventInput)(nil),                       // 81: tammy.v1.BasExportEventInput
-	(*BasExportEvent)(nil),                            // 82: tammy.v1.BasExportEvent
-	(*BasExportEventSummary)(nil),                     // 83: tammy.v1.BasExportEventSummary
-	(*GetBasObligationsProfileRequest)(nil),           // 84: tammy.v1.GetBasObligationsProfileRequest
-	(*GetBasObligationsProfileResponse)(nil),          // 85: tammy.v1.GetBasObligationsProfileResponse
-	(*ListBasObligationsProfilesRequest)(nil),         // 86: tammy.v1.ListBasObligationsProfilesRequest
-	(*ListBasObligationsProfilesResponse)(nil),        // 87: tammy.v1.ListBasObligationsProfilesResponse
-	(*GetBasCalendarRequest)(nil),                     // 88: tammy.v1.GetBasCalendarRequest
-	(*GetBasCalendarResponse)(nil),                    // 89: tammy.v1.GetBasCalendarResponse
-	(*ListBasPeriodsRequest)(nil),                     // 90: tammy.v1.ListBasPeriodsRequest
-	(*ListBasPeriodsResponse)(nil),                    // 91: tammy.v1.ListBasPeriodsResponse
-	(*GetBasPreparationRequest)(nil),                  // 92: tammy.v1.GetBasPreparationRequest
-	(*GetBasPreparationResponse)(nil),                 // 93: tammy.v1.GetBasPreparationResponse
-	(*ListBasPreparationsRequest)(nil),                // 94: tammy.v1.ListBasPreparationsRequest
-	(*ListBasPreparationsResponse)(nil),               // 95: tammy.v1.ListBasPreparationsResponse
-	(*GetBasCalculationRequest)(nil),                  // 96: tammy.v1.GetBasCalculationRequest
-	(*GetBasCalculationResponse)(nil),                 // 97: tammy.v1.GetBasCalculationResponse
-	(*ListBasCalculationsRequest)(nil),                // 98: tammy.v1.ListBasCalculationsRequest
-	(*ListBasCalculationsResponse)(nil),               // 99: tammy.v1.ListBasCalculationsResponse
-	(*GetFrozenBasRequest)(nil),                       // 100: tammy.v1.GetFrozenBasRequest
-	(*GetFrozenBasResponse)(nil),                      // 101: tammy.v1.GetFrozenBasResponse
-	(*ListFrozenBasRequest)(nil),                      // 102: tammy.v1.ListFrozenBasRequest
-	(*ListFrozenBasResponse)(nil),                     // 103: tammy.v1.ListFrozenBasResponse
-	(*ListBasExternalObservationsRequest)(nil),        // 104: tammy.v1.ListBasExternalObservationsRequest
-	(*ListBasExternalObservationsResponse)(nil),       // 105: tammy.v1.ListBasExternalObservationsResponse
-	(*GetBasExternalObservationRequest)(nil),          // 106: tammy.v1.GetBasExternalObservationRequest
-	(*GetBasExternalObservationResponse)(nil),         // 107: tammy.v1.GetBasExternalObservationResponse
-	(*GetBasExternalDisputeResolutionRequest)(nil),    // 108: tammy.v1.GetBasExternalDisputeResolutionRequest
-	(*GetBasExternalDisputeResolutionResponse)(nil),   // 109: tammy.v1.GetBasExternalDisputeResolutionResponse
-	(*ListBasExternalDisputeResolutionsRequest)(nil),  // 110: tammy.v1.ListBasExternalDisputeResolutionsRequest
-	(*ListBasExternalDisputeResolutionsResponse)(nil), // 111: tammy.v1.ListBasExternalDisputeResolutionsResponse
-	(*ListBasExportEventsRequest)(nil),                // 112: tammy.v1.ListBasExportEventsRequest
-	(*ListBasExportEventsResponse)(nil),               // 113: tammy.v1.ListBasExportEventsResponse
-	(*SetBasObligationsProfileRequest)(nil),           // 114: tammy.v1.SetBasObligationsProfileRequest
-	(*SetBasObligationsProfileResponse)(nil),          // 115: tammy.v1.SetBasObligationsProfileResponse
-	(*ConfirmBasPeriodRequest)(nil),                   // 116: tammy.v1.ConfirmBasPeriodRequest
-	(*ConfirmBasPeriodResponse)(nil),                  // 117: tammy.v1.ConfirmBasPeriodResponse
-	(*SaveBasPaygInputsRequest)(nil),                  // 118: tammy.v1.SaveBasPaygInputsRequest
-	(*SaveBasPaygInputsResponse)(nil),                 // 119: tammy.v1.SaveBasPaygInputsResponse
-	(*RegenerateBasPreparationRequest)(nil),           // 120: tammy.v1.RegenerateBasPreparationRequest
-	(*RegenerateBasPreparationResponse)(nil),          // 121: tammy.v1.RegenerateBasPreparationResponse
-	(*ValidateBasPreparationRequest)(nil),             // 122: tammy.v1.ValidateBasPreparationRequest
-	(*ValidateBasPreparationResponse)(nil),            // 123: tammy.v1.ValidateBasPreparationResponse
-	(*AcknowledgeBasWarningsRequest)(nil),             // 124: tammy.v1.AcknowledgeBasWarningsRequest
-	(*AcknowledgeBasWarningsResponse)(nil),            // 125: tammy.v1.AcknowledgeBasWarningsResponse
-	(*FreezeBasForManualHandoffRequest)(nil),          // 126: tammy.v1.FreezeBasForManualHandoffRequest
-	(*FreezeBasForManualHandoffResponse)(nil),         // 127: tammy.v1.FreezeBasForManualHandoffResponse
-	(*CreateBasReplacementRequest)(nil),               // 128: tammy.v1.CreateBasReplacementRequest
-	(*CreateBasReplacementResponse)(nil),              // 129: tammy.v1.CreateBasReplacementResponse
-	(*CreateBasRevisionRequest)(nil),                  // 130: tammy.v1.CreateBasRevisionRequest
-	(*CreateBasRevisionResponse)(nil),                 // 131: tammy.v1.CreateBasRevisionResponse
-	(*RecordExternalBasObservationRequest)(nil),       // 132: tammy.v1.RecordExternalBasObservationRequest
-	(*RecordExternalBasObservationResponse)(nil),      // 133: tammy.v1.RecordExternalBasObservationResponse
-	(*CorrectExternalBasObservationRequest)(nil),      // 134: tammy.v1.CorrectExternalBasObservationRequest
-	(*CorrectExternalBasObservationResponse)(nil),     // 135: tammy.v1.CorrectExternalBasObservationResponse
-	(*ResolveExternalBasDisputeRequest)(nil),          // 136: tammy.v1.ResolveExternalBasDisputeRequest
-	(*ResolveExternalBasDisputeResponse)(nil),         // 137: tammy.v1.ResolveExternalBasDisputeResponse
-	(*ReplaceRejectedBasAttemptRequest)(nil),          // 138: tammy.v1.ReplaceRejectedBasAttemptRequest
-	(*ReplaceRejectedBasAttemptResponse)(nil),         // 139: tammy.v1.ReplaceRejectedBasAttemptResponse
-	(*RecordBasExportEventRequest)(nil),               // 140: tammy.v1.RecordBasExportEventRequest
-	(*RecordBasExportEventResponse)(nil),              // 141: tammy.v1.RecordBasExportEventResponse
-	(*CivilDate)(nil),                                 // 142: tammy.v1.CivilDate
-	(*SourceRef)(nil),                                 // 143: tammy.v1.SourceRef
-	(*timestamppb.Timestamp)(nil),                     // 144: google.protobuf.Timestamp
-	(*Money)(nil),                                     // 145: tammy.v1.Money
-	(*Decimal)(nil),                                   // 146: tammy.v1.Decimal
-	(*BasWorkpaper)(nil),                              // 147: tammy.v1.BasWorkpaper
-	(*Organisation)(nil),                              // 148: tammy.v1.Organisation
-	(*AuthenticationContext)(nil),                     // 149: tammy.v1.AuthenticationContext
-	(*PageRequest)(nil),                               // 150: tammy.v1.PageRequest
-	(*PageInfo)(nil),                                  // 151: tammy.v1.PageInfo
-	(*CommandContext)(nil),                            // 152: tammy.v1.CommandContext
+	(BasLiveCurrentness)(0),                           // 35: tammy.v1.BasLiveCurrentness
+	(*BasCivilDateRange)(nil),                         // 36: tammy.v1.BasCivilDateRange
+	(*BasEffectiveInterval)(nil),                      // 37: tammy.v1.BasEffectiveInterval
+	(*BasObligationAnswer)(nil),                       // 38: tammy.v1.BasObligationAnswer
+	(*BasOtherObligationInventory)(nil),               // 39: tammy.v1.BasOtherObligationInventory
+	(*BasGstProfileInput)(nil),                        // 40: tammy.v1.BasGstProfileInput
+	(*BasPaygwProfileInput)(nil),                      // 41: tammy.v1.BasPaygwProfileInput
+	(*BasIncomeYearIdentity)(nil),                     // 42: tammy.v1.BasIncomeYearIdentity
+	(*BasPaygiProfileInput)(nil),                      // 43: tammy.v1.BasPaygiProfileInput
+	(*BasObligationsProfileInput)(nil),                // 44: tammy.v1.BasObligationsProfileInput
+	(*BasObligationsProfile)(nil),                     // 45: tammy.v1.BasObligationsProfile
+	(*BasObligationsProfileSummary)(nil),              // 46: tammy.v1.BasObligationsProfileSummary
+	(*BasPeriodSuggestion)(nil),                       // 47: tammy.v1.BasPeriodSuggestion
+	(*BasPeriodSupportFinding)(nil),                   // 48: tammy.v1.BasPeriodSupportFinding
+	(*BasPeriodConfirmationInput)(nil),                // 49: tammy.v1.BasPeriodConfirmationInput
+	(*BasConfirmedPeriod)(nil),                        // 50: tammy.v1.BasConfirmedPeriod
+	(*BasPeriodSummary)(nil),                          // 51: tammy.v1.BasPeriodSummary
+	(*BasExpectedIdentity)(nil),                       // 52: tammy.v1.BasExpectedIdentity
+	(*BasChainExpectation)(nil),                       // 53: tammy.v1.BasChainExpectation
+	(*BasAmountInput)(nil),                            // 54: tammy.v1.BasAmountInput
+	(*BasPaygwInputs)(nil),                            // 55: tammy.v1.BasPaygwInputs
+	(*BasPaygiInputs)(nil),                            // 56: tammy.v1.BasPaygiInputs
+	(*BasTraceOperand)(nil),                           // 57: tammy.v1.BasTraceOperand
+	(*BasLabelTrace)(nil),                             // 58: tammy.v1.BasLabelTrace
+	(*BasCalculationResult)(nil),                      // 59: tammy.v1.BasCalculationResult
+	(*BasRawSourceRef)(nil),                           // 60: tammy.v1.BasRawSourceRef
+	(*BasSourceIdentity)(nil),                         // 61: tammy.v1.BasSourceIdentity
+	(*BasSourceCoverage)(nil),                         // 62: tammy.v1.BasSourceCoverage
+	(*BasValidationFinding)(nil),                      // 63: tammy.v1.BasValidationFinding
+	(*BasValidationSnapshot)(nil),                     // 64: tammy.v1.BasValidationSnapshot
+	(*BasWarningAcknowledgementInput)(nil),            // 65: tammy.v1.BasWarningAcknowledgementInput
+	(*BasWarningAcknowledgement)(nil),                 // 66: tammy.v1.BasWarningAcknowledgement
+	(*BasPreparation)(nil),                            // 67: tammy.v1.BasPreparation
+	(*BasPreparationSummary)(nil),                     // 68: tammy.v1.BasPreparationSummary
+	(*BasSourceRevisionVector)(nil),                   // 69: tammy.v1.BasSourceRevisionVector
+	(*BasCalculation)(nil),                            // 70: tammy.v1.BasCalculation
+	(*BasCalculationSummary)(nil),                     // 71: tammy.v1.BasCalculationSummary
+	(*BasFrozenBas)(nil),                              // 72: tammy.v1.BasFrozenBas
+	(*BasFrozenBasSummary)(nil),                       // 73: tammy.v1.BasFrozenBasSummary
+	(*BasExternalObservationInput)(nil),               // 74: tammy.v1.BasExternalObservationInput
+	(*BasExternalObservation)(nil),                    // 75: tammy.v1.BasExternalObservation
+	(*BasExternalObservationSummary)(nil),             // 76: tammy.v1.BasExternalObservationSummary
+	(*BasExternalObservationCorrectionInput)(nil),     // 77: tammy.v1.BasExternalObservationCorrectionInput
+	(*BasExternalDisputeInput)(nil),                   // 78: tammy.v1.BasExternalDisputeInput
+	(*BasExternalDisputeResolution)(nil),              // 79: tammy.v1.BasExternalDisputeResolution
+	(*BasExternalDisputeResolutionSummary)(nil),       // 80: tammy.v1.BasExternalDisputeResolutionSummary
+	(*BasExportTarget)(nil),                           // 81: tammy.v1.BasExportTarget
+	(*BasExportEventInput)(nil),                       // 82: tammy.v1.BasExportEventInput
+	(*BasExportEvent)(nil),                            // 83: tammy.v1.BasExportEvent
+	(*BasExportEventSummary)(nil),                     // 84: tammy.v1.BasExportEventSummary
+	(*GetBasObligationsProfileRequest)(nil),           // 85: tammy.v1.GetBasObligationsProfileRequest
+	(*GetBasObligationsProfileResponse)(nil),          // 86: tammy.v1.GetBasObligationsProfileResponse
+	(*ListBasObligationsProfilesRequest)(nil),         // 87: tammy.v1.ListBasObligationsProfilesRequest
+	(*ListBasObligationsProfilesResponse)(nil),        // 88: tammy.v1.ListBasObligationsProfilesResponse
+	(*GetBasCalendarRequest)(nil),                     // 89: tammy.v1.GetBasCalendarRequest
+	(*GetBasCalendarResponse)(nil),                    // 90: tammy.v1.GetBasCalendarResponse
+	(*ListBasPeriodsRequest)(nil),                     // 91: tammy.v1.ListBasPeriodsRequest
+	(*ListBasPeriodsResponse)(nil),                    // 92: tammy.v1.ListBasPeriodsResponse
+	(*GetBasPreparationRequest)(nil),                  // 93: tammy.v1.GetBasPreparationRequest
+	(*BasExternalDisputeSummary)(nil),                 // 94: tammy.v1.BasExternalDisputeSummary
+	(*GetBasPreparationResponse)(nil),                 // 95: tammy.v1.GetBasPreparationResponse
+	(*ListBasPreparationsRequest)(nil),                // 96: tammy.v1.ListBasPreparationsRequest
+	(*ListBasPreparationsResponse)(nil),               // 97: tammy.v1.ListBasPreparationsResponse
+	(*GetBasCalculationRequest)(nil),                  // 98: tammy.v1.GetBasCalculationRequest
+	(*GetBasCalculationResponse)(nil),                 // 99: tammy.v1.GetBasCalculationResponse
+	(*ListBasCalculationsRequest)(nil),                // 100: tammy.v1.ListBasCalculationsRequest
+	(*ListBasCalculationsResponse)(nil),               // 101: tammy.v1.ListBasCalculationsResponse
+	(*GetFrozenBasRequest)(nil),                       // 102: tammy.v1.GetFrozenBasRequest
+	(*GetFrozenBasResponse)(nil),                      // 103: tammy.v1.GetFrozenBasResponse
+	(*ListFrozenBasRequest)(nil),                      // 104: tammy.v1.ListFrozenBasRequest
+	(*ListFrozenBasResponse)(nil),                     // 105: tammy.v1.ListFrozenBasResponse
+	(*ListBasExternalObservationsRequest)(nil),        // 106: tammy.v1.ListBasExternalObservationsRequest
+	(*ListBasExternalObservationsResponse)(nil),       // 107: tammy.v1.ListBasExternalObservationsResponse
+	(*GetBasExternalObservationRequest)(nil),          // 108: tammy.v1.GetBasExternalObservationRequest
+	(*GetBasExternalObservationResponse)(nil),         // 109: tammy.v1.GetBasExternalObservationResponse
+	(*GetBasExternalDisputeResolutionRequest)(nil),    // 110: tammy.v1.GetBasExternalDisputeResolutionRequest
+	(*GetBasExternalDisputeResolutionResponse)(nil),   // 111: tammy.v1.GetBasExternalDisputeResolutionResponse
+	(*ListBasExternalDisputeResolutionsRequest)(nil),  // 112: tammy.v1.ListBasExternalDisputeResolutionsRequest
+	(*ListBasExternalDisputeResolutionsResponse)(nil), // 113: tammy.v1.ListBasExternalDisputeResolutionsResponse
+	(*ListBasExportEventsRequest)(nil),                // 114: tammy.v1.ListBasExportEventsRequest
+	(*ListBasExportEventsResponse)(nil),               // 115: tammy.v1.ListBasExportEventsResponse
+	(*SetBasObligationsProfileRequest)(nil),           // 116: tammy.v1.SetBasObligationsProfileRequest
+	(*SetBasObligationsProfileResponse)(nil),          // 117: tammy.v1.SetBasObligationsProfileResponse
+	(*ConfirmBasPeriodRequest)(nil),                   // 118: tammy.v1.ConfirmBasPeriodRequest
+	(*ConfirmBasPeriodResponse)(nil),                  // 119: tammy.v1.ConfirmBasPeriodResponse
+	(*SaveBasPaygInputsRequest)(nil),                  // 120: tammy.v1.SaveBasPaygInputsRequest
+	(*SaveBasPaygInputsResponse)(nil),                 // 121: tammy.v1.SaveBasPaygInputsResponse
+	(*RegenerateBasPreparationRequest)(nil),           // 122: tammy.v1.RegenerateBasPreparationRequest
+	(*RegenerateBasPreparationResponse)(nil),          // 123: tammy.v1.RegenerateBasPreparationResponse
+	(*ValidateBasPreparationRequest)(nil),             // 124: tammy.v1.ValidateBasPreparationRequest
+	(*ValidateBasPreparationResponse)(nil),            // 125: tammy.v1.ValidateBasPreparationResponse
+	(*AcknowledgeBasWarningsRequest)(nil),             // 126: tammy.v1.AcknowledgeBasWarningsRequest
+	(*AcknowledgeBasWarningsResponse)(nil),            // 127: tammy.v1.AcknowledgeBasWarningsResponse
+	(*FreezeBasForManualHandoffRequest)(nil),          // 128: tammy.v1.FreezeBasForManualHandoffRequest
+	(*FreezeBasForManualHandoffResponse)(nil),         // 129: tammy.v1.FreezeBasForManualHandoffResponse
+	(*CreateBasReplacementRequest)(nil),               // 130: tammy.v1.CreateBasReplacementRequest
+	(*CreateBasReplacementResponse)(nil),              // 131: tammy.v1.CreateBasReplacementResponse
+	(*CreateBasRevisionRequest)(nil),                  // 132: tammy.v1.CreateBasRevisionRequest
+	(*CreateBasRevisionResponse)(nil),                 // 133: tammy.v1.CreateBasRevisionResponse
+	(*RecordExternalBasObservationRequest)(nil),       // 134: tammy.v1.RecordExternalBasObservationRequest
+	(*RecordExternalBasObservationResponse)(nil),      // 135: tammy.v1.RecordExternalBasObservationResponse
+	(*CorrectExternalBasObservationRequest)(nil),      // 136: tammy.v1.CorrectExternalBasObservationRequest
+	(*CorrectExternalBasObservationResponse)(nil),     // 137: tammy.v1.CorrectExternalBasObservationResponse
+	(*ResolveExternalBasDisputeRequest)(nil),          // 138: tammy.v1.ResolveExternalBasDisputeRequest
+	(*ResolveExternalBasDisputeResponse)(nil),         // 139: tammy.v1.ResolveExternalBasDisputeResponse
+	(*ReplaceRejectedBasAttemptRequest)(nil),          // 140: tammy.v1.ReplaceRejectedBasAttemptRequest
+	(*ReplaceRejectedBasAttemptResponse)(nil),         // 141: tammy.v1.ReplaceRejectedBasAttemptResponse
+	(*RecordBasExportEventRequest)(nil),               // 142: tammy.v1.RecordBasExportEventRequest
+	(*RecordBasExportEventResponse)(nil),              // 143: tammy.v1.RecordBasExportEventResponse
+	(*CivilDate)(nil),                                 // 144: tammy.v1.CivilDate
+	(*SourceRef)(nil),                                 // 145: tammy.v1.SourceRef
+	(*timestamppb.Timestamp)(nil),                     // 146: google.protobuf.Timestamp
+	(*Money)(nil),                                     // 147: tammy.v1.Money
+	(*Decimal)(nil),                                   // 148: tammy.v1.Decimal
+	(*BasWorkpaper)(nil),                              // 149: tammy.v1.BasWorkpaper
+	(*Organisation)(nil),                              // 150: tammy.v1.Organisation
+	(*AuthenticationContext)(nil),                     // 151: tammy.v1.AuthenticationContext
+	(*PageRequest)(nil),                               // 152: tammy.v1.PageRequest
+	(*PageInfo)(nil),                                  // 153: tammy.v1.PageInfo
+	(*CommandContext)(nil),                            // 154: tammy.v1.CommandContext
 }
 var file_tammy_v1_bas_preparation_proto_depIdxs = []int32{
-	142, // 0: tammy.v1.BasCivilDateRange.start_date:type_name -> tammy.v1.CivilDate
-	142, // 1: tammy.v1.BasCivilDateRange.end_date:type_name -> tammy.v1.CivilDate
-	142, // 2: tammy.v1.BasEffectiveInterval.start_date:type_name -> tammy.v1.CivilDate
-	142, // 3: tammy.v1.BasEffectiveInterval.end_date:type_name -> tammy.v1.CivilDate
+	144, // 0: tammy.v1.BasCivilDateRange.start_date:type_name -> tammy.v1.CivilDate
+	144, // 1: tammy.v1.BasCivilDateRange.end_date:type_name -> tammy.v1.CivilDate
+	144, // 2: tammy.v1.BasEffectiveInterval.start_date:type_name -> tammy.v1.CivilDate
+	144, // 3: tammy.v1.BasEffectiveInterval.end_date:type_name -> tammy.v1.CivilDate
 	0,   // 4: tammy.v1.BasObligationAnswer.applicability:type_name -> tammy.v1.BasApplicability
-	143, // 5: tammy.v1.BasObligationAnswer.evidence:type_name -> tammy.v1.SourceRef
-	37,  // 6: tammy.v1.BasOtherObligationInventory.fringe_benefits_tax:type_name -> tammy.v1.BasObligationAnswer
-	37,  // 7: tammy.v1.BasOtherObligationInventory.wine_equalisation_tax:type_name -> tammy.v1.BasObligationAnswer
-	37,  // 8: tammy.v1.BasOtherObligationInventory.luxury_car_tax:type_name -> tammy.v1.BasObligationAnswer
-	37,  // 9: tammy.v1.BasOtherObligationInventory.fuel_tax_credits:type_name -> tammy.v1.BasObligationAnswer
-	37,  // 10: tammy.v1.BasOtherObligationInventory.deferred_company_instalments:type_name -> tammy.v1.BasObligationAnswer
-	37,  // 11: tammy.v1.BasOtherObligationInventory.deferred_or_import_gst:type_name -> tammy.v1.BasObligationAnswer
-	37,  // 12: tammy.v1.BasOtherObligationInventory.special_gst_schemes_or_adjustments:type_name -> tammy.v1.BasObligationAnswer
-	37,  // 13: tammy.v1.BasOtherObligationInventory.other_activity_statement_obligations:type_name -> tammy.v1.BasObligationAnswer
+	145, // 5: tammy.v1.BasObligationAnswer.evidence:type_name -> tammy.v1.SourceRef
+	38,  // 6: tammy.v1.BasOtherObligationInventory.fringe_benefits_tax:type_name -> tammy.v1.BasObligationAnswer
+	38,  // 7: tammy.v1.BasOtherObligationInventory.wine_equalisation_tax:type_name -> tammy.v1.BasObligationAnswer
+	38,  // 8: tammy.v1.BasOtherObligationInventory.luxury_car_tax:type_name -> tammy.v1.BasObligationAnswer
+	38,  // 9: tammy.v1.BasOtherObligationInventory.fuel_tax_credits:type_name -> tammy.v1.BasObligationAnswer
+	38,  // 10: tammy.v1.BasOtherObligationInventory.deferred_company_instalments:type_name -> tammy.v1.BasObligationAnswer
+	38,  // 11: tammy.v1.BasOtherObligationInventory.deferred_or_import_gst:type_name -> tammy.v1.BasObligationAnswer
+	38,  // 12: tammy.v1.BasOtherObligationInventory.special_gst_schemes_or_adjustments:type_name -> tammy.v1.BasObligationAnswer
+	38,  // 13: tammy.v1.BasOtherObligationInventory.other_activity_statement_obligations:type_name -> tammy.v1.BasObligationAnswer
 	0,   // 14: tammy.v1.BasGstProfileInput.applicability:type_name -> tammy.v1.BasApplicability
 	1,   // 15: tammy.v1.BasGstProfileInput.registration_status:type_name -> tammy.v1.BasRegistrationStatus
 	2,   // 16: tammy.v1.BasGstProfileInput.reporting_method:type_name -> tammy.v1.BasGstMethod
 	3,   // 17: tammy.v1.BasGstProfileInput.turnover_category:type_name -> tammy.v1.BasTurnoverCategory
 	4,   // 18: tammy.v1.BasGstProfileInput.gst_basis:type_name -> tammy.v1.BasGstBasis
 	5,   // 19: tammy.v1.BasGstProfileInput.cadence:type_name -> tammy.v1.BasCadence
-	36,  // 20: tammy.v1.BasGstProfileInput.registration_interval:type_name -> tammy.v1.BasEffectiveInterval
-	143, // 21: tammy.v1.BasGstProfileInput.evidence:type_name -> tammy.v1.SourceRef
-	37,  // 22: tammy.v1.BasPaygwProfileInput.applicability:type_name -> tammy.v1.BasObligationAnswer
+	37,  // 20: tammy.v1.BasGstProfileInput.registration_interval:type_name -> tammy.v1.BasEffectiveInterval
+	145, // 21: tammy.v1.BasGstProfileInput.evidence:type_name -> tammy.v1.SourceRef
+	38,  // 22: tammy.v1.BasPaygwProfileInput.applicability:type_name -> tammy.v1.BasObligationAnswer
 	6,   // 23: tammy.v1.BasPaygwProfileInput.category:type_name -> tammy.v1.BasPaygwCategory
 	5,   // 24: tammy.v1.BasPaygwProfileInput.cadence:type_name -> tammy.v1.BasCadence
 	7,   // 25: tammy.v1.BasPaygwProfileInput.prefill_requirement:type_name -> tammy.v1.BasPrefillRequirement
 	23,  // 26: tammy.v1.BasPaygwProfileInput.confirmed_statement_labels:type_name -> tammy.v1.BasFormLabel
-	143, // 27: tammy.v1.BasPaygwProfileInput.statement_requirement_evidence:type_name -> tammy.v1.SourceRef
-	35,  // 28: tammy.v1.BasIncomeYearIdentity.dates:type_name -> tammy.v1.BasCivilDateRange
-	143, // 29: tammy.v1.BasIncomeYearIdentity.confirmation:type_name -> tammy.v1.SourceRef
-	37,  // 30: tammy.v1.BasPaygiProfileInput.applicability:type_name -> tammy.v1.BasObligationAnswer
+	145, // 27: tammy.v1.BasPaygwProfileInput.statement_requirement_evidence:type_name -> tammy.v1.SourceRef
+	36,  // 28: tammy.v1.BasIncomeYearIdentity.dates:type_name -> tammy.v1.BasCivilDateRange
+	145, // 29: tammy.v1.BasIncomeYearIdentity.confirmation:type_name -> tammy.v1.SourceRef
+	38,  // 30: tammy.v1.BasPaygiProfileInput.applicability:type_name -> tammy.v1.BasObligationAnswer
 	8,   // 31: tammy.v1.BasPaygiProfileInput.method:type_name -> tammy.v1.BasPaygiMethod
 	5,   // 32: tammy.v1.BasPaygiProfileInput.cadence:type_name -> tammy.v1.BasCadence
-	41,  // 33: tammy.v1.BasPaygiProfileInput.confirmed_income_year:type_name -> tammy.v1.BasIncomeYearIdentity
-	143, // 34: tammy.v1.BasPaygiProfileInput.evidence:type_name -> tammy.v1.SourceRef
-	36,  // 35: tammy.v1.BasObligationsProfileInput.effective_interval:type_name -> tammy.v1.BasEffectiveInterval
-	39,  // 36: tammy.v1.BasObligationsProfileInput.gst:type_name -> tammy.v1.BasGstProfileInput
-	40,  // 37: tammy.v1.BasObligationsProfileInput.paygw:type_name -> tammy.v1.BasPaygwProfileInput
-	42,  // 38: tammy.v1.BasObligationsProfileInput.paygi:type_name -> tammy.v1.BasPaygiProfileInput
-	38,  // 39: tammy.v1.BasObligationsProfileInput.other_obligations:type_name -> tammy.v1.BasOtherObligationInventory
-	143, // 40: tammy.v1.BasObligationsProfileInput.evidence:type_name -> tammy.v1.SourceRef
-	43,  // 41: tammy.v1.BasObligationsProfile.profile:type_name -> tammy.v1.BasObligationsProfileInput
-	143, // 42: tammy.v1.BasObligationsProfile.previous_profile:type_name -> tammy.v1.SourceRef
-	144, // 43: tammy.v1.BasObligationsProfile.recorded_at:type_name -> google.protobuf.Timestamp
-	143, // 44: tammy.v1.BasObligationsProfileSummary.profile:type_name -> tammy.v1.SourceRef
-	36,  // 45: tammy.v1.BasObligationsProfileSummary.effective_interval:type_name -> tammy.v1.BasEffectiveInterval
-	143, // 46: tammy.v1.BasObligationsProfileSummary.previous_profile:type_name -> tammy.v1.SourceRef
-	144, // 47: tammy.v1.BasObligationsProfileSummary.recorded_at:type_name -> google.protobuf.Timestamp
-	35,  // 48: tammy.v1.BasPeriodSuggestion.period:type_name -> tammy.v1.BasCivilDateRange
+	42,  // 33: tammy.v1.BasPaygiProfileInput.confirmed_income_year:type_name -> tammy.v1.BasIncomeYearIdentity
+	145, // 34: tammy.v1.BasPaygiProfileInput.evidence:type_name -> tammy.v1.SourceRef
+	37,  // 35: tammy.v1.BasObligationsProfileInput.effective_interval:type_name -> tammy.v1.BasEffectiveInterval
+	40,  // 36: tammy.v1.BasObligationsProfileInput.gst:type_name -> tammy.v1.BasGstProfileInput
+	41,  // 37: tammy.v1.BasObligationsProfileInput.paygw:type_name -> tammy.v1.BasPaygwProfileInput
+	43,  // 38: tammy.v1.BasObligationsProfileInput.paygi:type_name -> tammy.v1.BasPaygiProfileInput
+	39,  // 39: tammy.v1.BasObligationsProfileInput.other_obligations:type_name -> tammy.v1.BasOtherObligationInventory
+	145, // 40: tammy.v1.BasObligationsProfileInput.evidence:type_name -> tammy.v1.SourceRef
+	44,  // 41: tammy.v1.BasObligationsProfile.profile:type_name -> tammy.v1.BasObligationsProfileInput
+	145, // 42: tammy.v1.BasObligationsProfile.previous_profile:type_name -> tammy.v1.SourceRef
+	146, // 43: tammy.v1.BasObligationsProfile.recorded_at:type_name -> google.protobuf.Timestamp
+	145, // 44: tammy.v1.BasObligationsProfileSummary.profile:type_name -> tammy.v1.SourceRef
+	37,  // 45: tammy.v1.BasObligationsProfileSummary.effective_interval:type_name -> tammy.v1.BasEffectiveInterval
+	145, // 46: tammy.v1.BasObligationsProfileSummary.previous_profile:type_name -> tammy.v1.SourceRef
+	146, // 47: tammy.v1.BasObligationsProfileSummary.recorded_at:type_name -> google.protobuf.Timestamp
+	36,  // 48: tammy.v1.BasPeriodSuggestion.period:type_name -> tammy.v1.BasCivilDateRange
 	19,  // 49: tammy.v1.BasPeriodSuggestion.window:type_name -> tammy.v1.BasPeriodWindow
-	142, // 50: tammy.v1.BasPeriodSuggestion.nominal_due_date:type_name -> tammy.v1.CivilDate
-	143, // 51: tammy.v1.BasPeriodSuggestion.profile:type_name -> tammy.v1.SourceRef
-	143, // 52: tammy.v1.BasPeriodSupportFinding.sources:type_name -> tammy.v1.SourceRef
-	35,  // 53: tammy.v1.BasPeriodConfirmationInput.period:type_name -> tammy.v1.BasCivilDateRange
+	144, // 50: tammy.v1.BasPeriodSuggestion.nominal_due_date:type_name -> tammy.v1.CivilDate
+	145, // 51: tammy.v1.BasPeriodSuggestion.profile:type_name -> tammy.v1.SourceRef
+	145, // 52: tammy.v1.BasPeriodSupportFinding.sources:type_name -> tammy.v1.SourceRef
+	36,  // 53: tammy.v1.BasPeriodConfirmationInput.period:type_name -> tammy.v1.BasCivilDateRange
 	19,  // 54: tammy.v1.BasPeriodConfirmationInput.window:type_name -> tammy.v1.BasPeriodWindow
-	143, // 55: tammy.v1.BasPeriodConfirmationInput.profile:type_name -> tammy.v1.SourceRef
-	142, // 56: tammy.v1.BasPeriodConfirmationInput.nominal_due_date:type_name -> tammy.v1.CivilDate
-	142, // 57: tammy.v1.BasPeriodConfirmationInput.confirmed_due_date:type_name -> tammy.v1.CivilDate
+	145, // 55: tammy.v1.BasPeriodConfirmationInput.profile:type_name -> tammy.v1.SourceRef
+	144, // 56: tammy.v1.BasPeriodConfirmationInput.nominal_due_date:type_name -> tammy.v1.CivilDate
+	144, // 57: tammy.v1.BasPeriodConfirmationInput.confirmed_due_date:type_name -> tammy.v1.CivilDate
 	20,  // 58: tammy.v1.BasPeriodConfirmationInput.due_date_kind:type_name -> tammy.v1.BasDueDateKind
-	143, // 59: tammy.v1.BasPeriodConfirmationInput.due_date_evidence:type_name -> tammy.v1.SourceRef
+	145, // 59: tammy.v1.BasPeriodConfirmationInput.due_date_evidence:type_name -> tammy.v1.SourceRef
 	21,  // 60: tammy.v1.BasPeriodConfirmationInput.support_state:type_name -> tammy.v1.BasPeriodSupportState
-	47,  // 61: tammy.v1.BasPeriodConfirmationInput.support_findings:type_name -> tammy.v1.BasPeriodSupportFinding
-	143, // 62: tammy.v1.BasPeriodConfirmationInput.registration_evidence:type_name -> tammy.v1.SourceRef
-	48,  // 63: tammy.v1.BasConfirmedPeriod.confirmation:type_name -> tammy.v1.BasPeriodConfirmationInput
-	144, // 64: tammy.v1.BasConfirmedPeriod.confirmed_at:type_name -> google.protobuf.Timestamp
-	143, // 65: tammy.v1.BasPeriodSummary.period:type_name -> tammy.v1.SourceRef
-	35,  // 66: tammy.v1.BasPeriodSummary.dates:type_name -> tammy.v1.BasCivilDateRange
+	48,  // 61: tammy.v1.BasPeriodConfirmationInput.support_findings:type_name -> tammy.v1.BasPeriodSupportFinding
+	145, // 62: tammy.v1.BasPeriodConfirmationInput.registration_evidence:type_name -> tammy.v1.SourceRef
+	49,  // 63: tammy.v1.BasConfirmedPeriod.confirmation:type_name -> tammy.v1.BasPeriodConfirmationInput
+	146, // 64: tammy.v1.BasConfirmedPeriod.confirmed_at:type_name -> google.protobuf.Timestamp
+	145, // 65: tammy.v1.BasPeriodSummary.period:type_name -> tammy.v1.SourceRef
+	36,  // 66: tammy.v1.BasPeriodSummary.dates:type_name -> tammy.v1.BasCivilDateRange
 	19,  // 67: tammy.v1.BasPeriodSummary.window:type_name -> tammy.v1.BasPeriodWindow
-	142, // 68: tammy.v1.BasPeriodSummary.confirmed_due_date:type_name -> tammy.v1.CivilDate
+	144, // 68: tammy.v1.BasPeriodSummary.confirmed_due_date:type_name -> tammy.v1.CivilDate
 	21,  // 69: tammy.v1.BasPeriodSummary.support_state:type_name -> tammy.v1.BasPeriodSupportState
-	143, // 70: tammy.v1.BasPeriodSummary.profile:type_name -> tammy.v1.SourceRef
-	144, // 71: tammy.v1.BasPeriodSummary.confirmed_at:type_name -> google.protobuf.Timestamp
-	143, // 72: tammy.v1.BasPeriodSummary.current_preparation:type_name -> tammy.v1.SourceRef
-	143, // 73: tammy.v1.BasExpectedIdentity.retained:type_name -> tammy.v1.SourceRef
-	143, // 74: tammy.v1.BasChainExpectation.family:type_name -> tammy.v1.SourceRef
-	143, // 75: tammy.v1.BasChainExpectation.root_preparation:type_name -> tammy.v1.SourceRef
-	51,  // 76: tammy.v1.BasChainExpectation.latest_head:type_name -> tammy.v1.BasExpectedIdentity
-	51,  // 77: tammy.v1.BasChainExpectation.branch:type_name -> tammy.v1.BasExpectedIdentity
-	51,  // 78: tammy.v1.BasChainExpectation.active_attempt:type_name -> tammy.v1.BasExpectedIdentity
+	145, // 70: tammy.v1.BasPeriodSummary.profile:type_name -> tammy.v1.SourceRef
+	146, // 71: tammy.v1.BasPeriodSummary.confirmed_at:type_name -> google.protobuf.Timestamp
+	145, // 72: tammy.v1.BasPeriodSummary.current_preparation:type_name -> tammy.v1.SourceRef
+	145, // 73: tammy.v1.BasExpectedIdentity.retained:type_name -> tammy.v1.SourceRef
+	145, // 74: tammy.v1.BasChainExpectation.family:type_name -> tammy.v1.SourceRef
+	145, // 75: tammy.v1.BasChainExpectation.root_preparation:type_name -> tammy.v1.SourceRef
+	52,  // 76: tammy.v1.BasChainExpectation.latest_head:type_name -> tammy.v1.BasExpectedIdentity
+	52,  // 77: tammy.v1.BasChainExpectation.branch:type_name -> tammy.v1.BasExpectedIdentity
+	52,  // 78: tammy.v1.BasChainExpectation.active_attempt:type_name -> tammy.v1.BasExpectedIdentity
 	22,  // 79: tammy.v1.BasAmountInput.state:type_name -> tammy.v1.BasAmountState
-	145, // 80: tammy.v1.BasAmountInput.amount:type_name -> tammy.v1.Money
-	143, // 81: tammy.v1.BasAmountInput.evidence:type_name -> tammy.v1.SourceRef
+	147, // 80: tammy.v1.BasAmountInput.amount:type_name -> tammy.v1.Money
+	145, // 81: tammy.v1.BasAmountInput.evidence:type_name -> tammy.v1.SourceRef
 	6,   // 82: tammy.v1.BasPaygwInputs.category:type_name -> tammy.v1.BasPaygwCategory
-	53,  // 83: tammy.v1.BasPaygwInputs.w1_total_payments:type_name -> tammy.v1.BasAmountInput
-	53,  // 84: tammy.v1.BasPaygwInputs.w2_amount_withheld:type_name -> tammy.v1.BasAmountInput
-	53,  // 85: tammy.v1.BasPaygwInputs.w3_other_withholding:type_name -> tammy.v1.BasAmountInput
-	53,  // 86: tammy.v1.BasPaygwInputs.w4_no_abn_withholding:type_name -> tammy.v1.BasAmountInput
-	143, // 87: tammy.v1.BasPaygwInputs.payroll_statement_evidence:type_name -> tammy.v1.SourceRef
+	54,  // 83: tammy.v1.BasPaygwInputs.w1_total_payments:type_name -> tammy.v1.BasAmountInput
+	54,  // 84: tammy.v1.BasPaygwInputs.w2_amount_withheld:type_name -> tammy.v1.BasAmountInput
+	54,  // 85: tammy.v1.BasPaygwInputs.w3_other_withholding:type_name -> tammy.v1.BasAmountInput
+	54,  // 86: tammy.v1.BasPaygwInputs.w4_no_abn_withholding:type_name -> tammy.v1.BasAmountInput
+	145, // 87: tammy.v1.BasPaygwInputs.payroll_statement_evidence:type_name -> tammy.v1.SourceRef
 	7,   // 88: tammy.v1.BasPaygwInputs.prefill_review:type_name -> tammy.v1.BasPrefillRequirement
 	8,   // 89: tammy.v1.BasPaygiInputs.method:type_name -> tammy.v1.BasPaygiMethod
-	143, // 90: tammy.v1.BasPaygiInputs.notice:type_name -> tammy.v1.SourceRef
+	145, // 90: tammy.v1.BasPaygiInputs.notice:type_name -> tammy.v1.SourceRef
 	9,   // 91: tammy.v1.BasPaygiInputs.notice_operative_status:type_name -> tammy.v1.BasNoticeOperativeStatus
 	10,  // 92: tammy.v1.BasPaygiInputs.prior_variation:type_name -> tammy.v1.BasPriorVariationDisposition
 	11,  // 93: tammy.v1.BasPaygiInputs.unsupported_state:type_name -> tammy.v1.BasPaygiUnsupportedState
 	12,  // 94: tammy.v1.BasPaygiInputs.t1_review_decision:type_name -> tammy.v1.BasT1ReviewDecision
-	53,  // 95: tammy.v1.BasPaygiInputs.t7_amount:type_name -> tammy.v1.BasAmountInput
-	53,  // 96: tammy.v1.BasPaygiInputs.rate_t1:type_name -> tammy.v1.BasAmountInput
-	146, // 97: tammy.v1.BasPaygiInputs.rate_t2:type_name -> tammy.v1.Decimal
-	53,  // 98: tammy.v1.BasPaygiInputs.business_income_comparison:type_name -> tammy.v1.BasAmountInput
-	53,  // 99: tammy.v1.BasPaygiInputs.claim_5b:type_name -> tammy.v1.BasAmountInput
-	146, // 100: tammy.v1.BasPaygiInputs.proposed_variation_rate:type_name -> tammy.v1.Decimal
-	145, // 101: tammy.v1.BasPaygiInputs.proposed_variation_amount:type_name -> tammy.v1.Money
-	41,  // 102: tammy.v1.BasPaygiInputs.confirmed_income_year:type_name -> tammy.v1.BasIncomeYearIdentity
-	143, // 103: tammy.v1.BasPaygiInputs.evidence:type_name -> tammy.v1.SourceRef
+	54,  // 95: tammy.v1.BasPaygiInputs.t7_amount:type_name -> tammy.v1.BasAmountInput
+	54,  // 96: tammy.v1.BasPaygiInputs.rate_t1:type_name -> tammy.v1.BasAmountInput
+	148, // 97: tammy.v1.BasPaygiInputs.rate_t2:type_name -> tammy.v1.Decimal
+	54,  // 98: tammy.v1.BasPaygiInputs.business_income_comparison:type_name -> tammy.v1.BasAmountInput
+	54,  // 99: tammy.v1.BasPaygiInputs.claim_5b:type_name -> tammy.v1.BasAmountInput
+	148, // 100: tammy.v1.BasPaygiInputs.proposed_variation_rate:type_name -> tammy.v1.Decimal
+	147, // 101: tammy.v1.BasPaygiInputs.proposed_variation_amount:type_name -> tammy.v1.Money
+	42,  // 102: tammy.v1.BasPaygiInputs.confirmed_income_year:type_name -> tammy.v1.BasIncomeYearIdentity
+	145, // 103: tammy.v1.BasPaygiInputs.evidence:type_name -> tammy.v1.SourceRef
 	23,  // 104: tammy.v1.BasTraceOperand.label:type_name -> tammy.v1.BasFormLabel
 	22,  // 105: tammy.v1.BasTraceOperand.state:type_name -> tammy.v1.BasAmountState
 	23,  // 106: tammy.v1.BasLabelTrace.label:type_name -> tammy.v1.BasFormLabel
 	33,  // 107: tammy.v1.BasLabelTrace.operation:type_name -> tammy.v1.BasTraceOperation
-	56,  // 108: tammy.v1.BasLabelTrace.operands:type_name -> tammy.v1.BasTraceOperand
-	143, // 109: tammy.v1.BasLabelTrace.evidence:type_name -> tammy.v1.SourceRef
+	57,  // 108: tammy.v1.BasLabelTrace.operands:type_name -> tammy.v1.BasTraceOperand
+	145, // 109: tammy.v1.BasLabelTrace.evidence:type_name -> tammy.v1.SourceRef
 	22,  // 110: tammy.v1.BasLabelTrace.state:type_name -> tammy.v1.BasAmountState
 	28,  // 111: tammy.v1.BasCalculationResult.outcome:type_name -> tammy.v1.BasCalculationOutcome
 	24,  // 112: tammy.v1.BasCalculationResult.label_9_direction:type_name -> tammy.v1.BasAmountDirection
-	57,  // 113: tammy.v1.BasCalculationResult.labels:type_name -> tammy.v1.BasLabelTrace
+	58,  // 113: tammy.v1.BasCalculationResult.labels:type_name -> tammy.v1.BasLabelTrace
 	34,  // 114: tammy.v1.BasRawSourceRef.proof_scope:type_name -> tammy.v1.BasSourceProofScope
-	143, // 115: tammy.v1.BasSourceIdentity.canonical_source:type_name -> tammy.v1.SourceRef
-	59,  // 116: tammy.v1.BasSourceIdentity.raw_source:type_name -> tammy.v1.BasRawSourceRef
-	143, // 117: tammy.v1.BasSourceCoverage.source:type_name -> tammy.v1.SourceRef
+	145, // 115: tammy.v1.BasSourceIdentity.canonical_source:type_name -> tammy.v1.SourceRef
+	60,  // 116: tammy.v1.BasSourceIdentity.raw_source:type_name -> tammy.v1.BasRawSourceRef
+	145, // 117: tammy.v1.BasSourceCoverage.source:type_name -> tammy.v1.SourceRef
 	25,  // 118: tammy.v1.BasSourceCoverage.candidate_kind:type_name -> tammy.v1.BasCoverageCandidateKind
 	26,  // 119: tammy.v1.BasSourceCoverage.disposition:type_name -> tammy.v1.BasCoverageDisposition
-	145, // 120: tammy.v1.BasSourceCoverage.eligible_amount:type_name -> tammy.v1.Money
-	142, // 121: tammy.v1.BasSourceCoverage.tax_date:type_name -> tammy.v1.CivilDate
-	143, // 122: tammy.v1.BasSourceCoverage.lineage:type_name -> tammy.v1.SourceRef
-	143, // 123: tammy.v1.BasSourceCoverage.evidence:type_name -> tammy.v1.SourceRef
-	59,  // 124: tammy.v1.BasSourceCoverage.raw_source:type_name -> tammy.v1.BasRawSourceRef
-	60,  // 125: tammy.v1.BasSourceCoverage.lineage_identities:type_name -> tammy.v1.BasSourceIdentity
-	60,  // 126: tammy.v1.BasSourceCoverage.evidence_identities:type_name -> tammy.v1.BasSourceIdentity
+	147, // 120: tammy.v1.BasSourceCoverage.eligible_amount:type_name -> tammy.v1.Money
+	144, // 121: tammy.v1.BasSourceCoverage.tax_date:type_name -> tammy.v1.CivilDate
+	145, // 122: tammy.v1.BasSourceCoverage.lineage:type_name -> tammy.v1.SourceRef
+	145, // 123: tammy.v1.BasSourceCoverage.evidence:type_name -> tammy.v1.SourceRef
+	60,  // 124: tammy.v1.BasSourceCoverage.raw_source:type_name -> tammy.v1.BasRawSourceRef
+	61,  // 125: tammy.v1.BasSourceCoverage.lineage_identities:type_name -> tammy.v1.BasSourceIdentity
+	61,  // 126: tammy.v1.BasSourceCoverage.evidence_identities:type_name -> tammy.v1.BasSourceIdentity
 	27,  // 127: tammy.v1.BasValidationFinding.severity:type_name -> tammy.v1.BasFindingSeverity
-	143, // 128: tammy.v1.BasValidationFinding.sources:type_name -> tammy.v1.SourceRef
-	60,  // 129: tammy.v1.BasValidationFinding.source_identities:type_name -> tammy.v1.BasSourceIdentity
-	62,  // 130: tammy.v1.BasValidationSnapshot.findings:type_name -> tammy.v1.BasValidationFinding
-	144, // 131: tammy.v1.BasValidationSnapshot.created_at:type_name -> google.protobuf.Timestamp
-	143, // 132: tammy.v1.BasWarningAcknowledgement.validation:type_name -> tammy.v1.SourceRef
-	143, // 133: tammy.v1.BasWarningAcknowledgement.finding:type_name -> tammy.v1.SourceRef
-	144, // 134: tammy.v1.BasWarningAcknowledgement.acknowledged_at:type_name -> google.protobuf.Timestamp
-	143, // 135: tammy.v1.BasPreparation.family:type_name -> tammy.v1.SourceRef
-	143, // 136: tammy.v1.BasPreparation.period:type_name -> tammy.v1.SourceRef
-	143, // 137: tammy.v1.BasPreparation.profile:type_name -> tammy.v1.SourceRef
+	145, // 128: tammy.v1.BasValidationFinding.sources:type_name -> tammy.v1.SourceRef
+	61,  // 129: tammy.v1.BasValidationFinding.source_identities:type_name -> tammy.v1.BasSourceIdentity
+	63,  // 130: tammy.v1.BasValidationSnapshot.findings:type_name -> tammy.v1.BasValidationFinding
+	146, // 131: tammy.v1.BasValidationSnapshot.created_at:type_name -> google.protobuf.Timestamp
+	145, // 132: tammy.v1.BasWarningAcknowledgement.validation:type_name -> tammy.v1.SourceRef
+	145, // 133: tammy.v1.BasWarningAcknowledgement.finding:type_name -> tammy.v1.SourceRef
+	146, // 134: tammy.v1.BasWarningAcknowledgement.acknowledged_at:type_name -> google.protobuf.Timestamp
+	145, // 135: tammy.v1.BasPreparation.family:type_name -> tammy.v1.SourceRef
+	145, // 136: tammy.v1.BasPreparation.period:type_name -> tammy.v1.SourceRef
+	145, // 137: tammy.v1.BasPreparation.profile:type_name -> tammy.v1.SourceRef
 	13,  // 138: tammy.v1.BasPreparation.state:type_name -> tammy.v1.BasPreparationState
-	143, // 139: tammy.v1.BasPreparation.current_calculation:type_name -> tammy.v1.SourceRef
-	143, // 140: tammy.v1.BasPreparation.current_validation:type_name -> tammy.v1.SourceRef
-	143, // 141: tammy.v1.BasPreparation.frozen_bas:type_name -> tammy.v1.SourceRef
-	143, // 142: tammy.v1.BasPreparation.predecessor:type_name -> tammy.v1.SourceRef
-	143, // 143: tammy.v1.BasPreparation.superseded_by:type_name -> tammy.v1.SourceRef
+	145, // 139: tammy.v1.BasPreparation.current_calculation:type_name -> tammy.v1.SourceRef
+	145, // 140: tammy.v1.BasPreparation.current_validation:type_name -> tammy.v1.SourceRef
+	145, // 141: tammy.v1.BasPreparation.frozen_bas:type_name -> tammy.v1.SourceRef
+	145, // 142: tammy.v1.BasPreparation.predecessor:type_name -> tammy.v1.SourceRef
+	145, // 143: tammy.v1.BasPreparation.superseded_by:type_name -> tammy.v1.SourceRef
 	17,  // 144: tammy.v1.BasPreparation.dispute_overlay:type_name -> tammy.v1.BasDisputeOverlayState
-	144, // 145: tammy.v1.BasPreparation.created_at:type_name -> google.protobuf.Timestamp
-	144, // 146: tammy.v1.BasPreparation.updated_at:type_name -> google.protobuf.Timestamp
-	143, // 147: tammy.v1.BasPreparationSummary.preparation:type_name -> tammy.v1.SourceRef
-	143, // 148: tammy.v1.BasPreparationSummary.family:type_name -> tammy.v1.SourceRef
-	143, // 149: tammy.v1.BasPreparationSummary.period:type_name -> tammy.v1.SourceRef
-	143, // 150: tammy.v1.BasPreparationSummary.profile:type_name -> tammy.v1.SourceRef
+	146, // 145: tammy.v1.BasPreparation.created_at:type_name -> google.protobuf.Timestamp
+	146, // 146: tammy.v1.BasPreparation.updated_at:type_name -> google.protobuf.Timestamp
+	145, // 147: tammy.v1.BasPreparationSummary.preparation:type_name -> tammy.v1.SourceRef
+	145, // 148: tammy.v1.BasPreparationSummary.family:type_name -> tammy.v1.SourceRef
+	145, // 149: tammy.v1.BasPreparationSummary.period:type_name -> tammy.v1.SourceRef
+	145, // 150: tammy.v1.BasPreparationSummary.profile:type_name -> tammy.v1.SourceRef
 	13,  // 151: tammy.v1.BasPreparationSummary.state:type_name -> tammy.v1.BasPreparationState
-	143, // 152: tammy.v1.BasPreparationSummary.current_calculation:type_name -> tammy.v1.SourceRef
-	143, // 153: tammy.v1.BasPreparationSummary.frozen_bas:type_name -> tammy.v1.SourceRef
-	143, // 154: tammy.v1.BasPreparationSummary.predecessor:type_name -> tammy.v1.SourceRef
+	145, // 152: tammy.v1.BasPreparationSummary.current_calculation:type_name -> tammy.v1.SourceRef
+	145, // 153: tammy.v1.BasPreparationSummary.frozen_bas:type_name -> tammy.v1.SourceRef
+	145, // 154: tammy.v1.BasPreparationSummary.predecessor:type_name -> tammy.v1.SourceRef
 	17,  // 155: tammy.v1.BasPreparationSummary.dispute_overlay:type_name -> tammy.v1.BasDisputeOverlayState
-	144, // 156: tammy.v1.BasPreparationSummary.updated_at:type_name -> google.protobuf.Timestamp
-	143, // 157: tammy.v1.BasCalculation.preparation:type_name -> tammy.v1.SourceRef
-	143, // 158: tammy.v1.BasCalculation.family:type_name -> tammy.v1.SourceRef
-	143, // 159: tammy.v1.BasCalculation.period:type_name -> tammy.v1.SourceRef
-	143, // 160: tammy.v1.BasCalculation.profile:type_name -> tammy.v1.SourceRef
-	143, // 161: tammy.v1.BasCalculation.cent_workpaper:type_name -> tammy.v1.SourceRef
-	147, // 162: tammy.v1.BasCalculation.workpaper_snapshot:type_name -> tammy.v1.BasWorkpaper
-	58,  // 163: tammy.v1.BasCalculation.result:type_name -> tammy.v1.BasCalculationResult
-	61,  // 164: tammy.v1.BasCalculation.coverage:type_name -> tammy.v1.BasSourceCoverage
-	62,  // 165: tammy.v1.BasCalculation.findings:type_name -> tammy.v1.BasValidationFinding
-	144, // 166: tammy.v1.BasCalculation.created_at:type_name -> google.protobuf.Timestamp
-	49,  // 167: tammy.v1.BasCalculation.period_snapshot:type_name -> tammy.v1.BasConfirmedPeriod
-	44,  // 168: tammy.v1.BasCalculation.profile_snapshot:type_name -> tammy.v1.BasObligationsProfile
-	54,  // 169: tammy.v1.BasCalculation.paygw_inputs:type_name -> tammy.v1.BasPaygwInputs
-	55,  // 170: tammy.v1.BasCalculation.paygi_inputs:type_name -> tammy.v1.BasPaygiInputs
-	148, // 171: tammy.v1.BasCalculation.organisation_snapshot:type_name -> tammy.v1.Organisation
-	143, // 172: tammy.v1.BasCalculation.organisation_identity:type_name -> tammy.v1.SourceRef
-	68,  // 173: tammy.v1.BasCalculation.revision_vector:type_name -> tammy.v1.BasSourceRevisionVector
-	143, // 174: tammy.v1.BasCalculationSummary.calculation:type_name -> tammy.v1.SourceRef
-	143, // 175: tammy.v1.BasCalculationSummary.preparation:type_name -> tammy.v1.SourceRef
-	143, // 176: tammy.v1.BasCalculationSummary.family:type_name -> tammy.v1.SourceRef
-	143, // 177: tammy.v1.BasCalculationSummary.period:type_name -> tammy.v1.SourceRef
+	146, // 156: tammy.v1.BasPreparationSummary.updated_at:type_name -> google.protobuf.Timestamp
+	145, // 157: tammy.v1.BasCalculation.preparation:type_name -> tammy.v1.SourceRef
+	145, // 158: tammy.v1.BasCalculation.family:type_name -> tammy.v1.SourceRef
+	145, // 159: tammy.v1.BasCalculation.period:type_name -> tammy.v1.SourceRef
+	145, // 160: tammy.v1.BasCalculation.profile:type_name -> tammy.v1.SourceRef
+	145, // 161: tammy.v1.BasCalculation.cent_workpaper:type_name -> tammy.v1.SourceRef
+	149, // 162: tammy.v1.BasCalculation.workpaper_snapshot:type_name -> tammy.v1.BasWorkpaper
+	59,  // 163: tammy.v1.BasCalculation.result:type_name -> tammy.v1.BasCalculationResult
+	62,  // 164: tammy.v1.BasCalculation.coverage:type_name -> tammy.v1.BasSourceCoverage
+	63,  // 165: tammy.v1.BasCalculation.findings:type_name -> tammy.v1.BasValidationFinding
+	146, // 166: tammy.v1.BasCalculation.created_at:type_name -> google.protobuf.Timestamp
+	50,  // 167: tammy.v1.BasCalculation.period_snapshot:type_name -> tammy.v1.BasConfirmedPeriod
+	45,  // 168: tammy.v1.BasCalculation.profile_snapshot:type_name -> tammy.v1.BasObligationsProfile
+	55,  // 169: tammy.v1.BasCalculation.paygw_inputs:type_name -> tammy.v1.BasPaygwInputs
+	56,  // 170: tammy.v1.BasCalculation.paygi_inputs:type_name -> tammy.v1.BasPaygiInputs
+	150, // 171: tammy.v1.BasCalculation.organisation_snapshot:type_name -> tammy.v1.Organisation
+	145, // 172: tammy.v1.BasCalculation.organisation_identity:type_name -> tammy.v1.SourceRef
+	69,  // 173: tammy.v1.BasCalculation.revision_vector:type_name -> tammy.v1.BasSourceRevisionVector
+	145, // 174: tammy.v1.BasCalculationSummary.calculation:type_name -> tammy.v1.SourceRef
+	145, // 175: tammy.v1.BasCalculationSummary.preparation:type_name -> tammy.v1.SourceRef
+	145, // 176: tammy.v1.BasCalculationSummary.family:type_name -> tammy.v1.SourceRef
+	145, // 177: tammy.v1.BasCalculationSummary.period:type_name -> tammy.v1.SourceRef
 	28,  // 178: tammy.v1.BasCalculationSummary.outcome:type_name -> tammy.v1.BasCalculationOutcome
-	144, // 179: tammy.v1.BasCalculationSummary.created_at:type_name -> google.protobuf.Timestamp
-	143, // 180: tammy.v1.BasFrozenBas.preparation:type_name -> tammy.v1.SourceRef
-	143, // 181: tammy.v1.BasFrozenBas.family:type_name -> tammy.v1.SourceRef
-	143, // 182: tammy.v1.BasFrozenBas.period:type_name -> tammy.v1.SourceRef
-	143, // 183: tammy.v1.BasFrozenBas.profile:type_name -> tammy.v1.SourceRef
-	143, // 184: tammy.v1.BasFrozenBas.calculation:type_name -> tammy.v1.SourceRef
-	143, // 185: tammy.v1.BasFrozenBas.validation:type_name -> tammy.v1.SourceRef
-	69,  // 186: tammy.v1.BasFrozenBas.calculation_snapshot:type_name -> tammy.v1.BasCalculation
-	65,  // 187: tammy.v1.BasFrozenBas.acknowledgements:type_name -> tammy.v1.BasWarningAcknowledgement
-	144, // 188: tammy.v1.BasFrozenBas.approved_at:type_name -> google.protobuf.Timestamp
-	143, // 189: tammy.v1.BasFrozenBasSummary.frozen_bas:type_name -> tammy.v1.SourceRef
-	143, // 190: tammy.v1.BasFrozenBasSummary.preparation:type_name -> tammy.v1.SourceRef
-	143, // 191: tammy.v1.BasFrozenBasSummary.family:type_name -> tammy.v1.SourceRef
-	143, // 192: tammy.v1.BasFrozenBasSummary.period:type_name -> tammy.v1.SourceRef
-	143, // 193: tammy.v1.BasFrozenBasSummary.calculation:type_name -> tammy.v1.SourceRef
-	144, // 194: tammy.v1.BasFrozenBasSummary.approved_at:type_name -> google.protobuf.Timestamp
+	146, // 179: tammy.v1.BasCalculationSummary.created_at:type_name -> google.protobuf.Timestamp
+	145, // 180: tammy.v1.BasFrozenBas.preparation:type_name -> tammy.v1.SourceRef
+	145, // 181: tammy.v1.BasFrozenBas.family:type_name -> tammy.v1.SourceRef
+	145, // 182: tammy.v1.BasFrozenBas.period:type_name -> tammy.v1.SourceRef
+	145, // 183: tammy.v1.BasFrozenBas.profile:type_name -> tammy.v1.SourceRef
+	145, // 184: tammy.v1.BasFrozenBas.calculation:type_name -> tammy.v1.SourceRef
+	145, // 185: tammy.v1.BasFrozenBas.validation:type_name -> tammy.v1.SourceRef
+	70,  // 186: tammy.v1.BasFrozenBas.calculation_snapshot:type_name -> tammy.v1.BasCalculation
+	66,  // 187: tammy.v1.BasFrozenBas.acknowledgements:type_name -> tammy.v1.BasWarningAcknowledgement
+	146, // 188: tammy.v1.BasFrozenBas.approved_at:type_name -> google.protobuf.Timestamp
+	145, // 189: tammy.v1.BasFrozenBasSummary.frozen_bas:type_name -> tammy.v1.SourceRef
+	145, // 190: tammy.v1.BasFrozenBasSummary.preparation:type_name -> tammy.v1.SourceRef
+	145, // 191: tammy.v1.BasFrozenBasSummary.family:type_name -> tammy.v1.SourceRef
+	145, // 192: tammy.v1.BasFrozenBasSummary.period:type_name -> tammy.v1.SourceRef
+	145, // 193: tammy.v1.BasFrozenBasSummary.calculation:type_name -> tammy.v1.SourceRef
+	146, // 194: tammy.v1.BasFrozenBasSummary.approved_at:type_name -> google.protobuf.Timestamp
 	15,  // 195: tammy.v1.BasExternalObservationInput.event_kind:type_name -> tammy.v1.BasExternalEventKind
 	16,  // 196: tammy.v1.BasExternalObservationInput.channel:type_name -> tammy.v1.BasExternalChannel
-	144, // 197: tammy.v1.BasExternalObservationInput.claimed_event_at:type_name -> google.protobuf.Timestamp
-	143, // 198: tammy.v1.BasExternalObservationInput.evidence:type_name -> tammy.v1.SourceRef
-	143, // 199: tammy.v1.BasExternalObservation.frozen_bas:type_name -> tammy.v1.SourceRef
-	73,  // 200: tammy.v1.BasExternalObservation.observation:type_name -> tammy.v1.BasExternalObservationInput
-	76,  // 201: tammy.v1.BasExternalObservation.correction:type_name -> tammy.v1.BasExternalObservationCorrectionInput
+	146, // 197: tammy.v1.BasExternalObservationInput.claimed_event_at:type_name -> google.protobuf.Timestamp
+	145, // 198: tammy.v1.BasExternalObservationInput.evidence:type_name -> tammy.v1.SourceRef
+	145, // 199: tammy.v1.BasExternalObservation.frozen_bas:type_name -> tammy.v1.SourceRef
+	74,  // 200: tammy.v1.BasExternalObservation.observation:type_name -> tammy.v1.BasExternalObservationInput
+	77,  // 201: tammy.v1.BasExternalObservation.correction:type_name -> tammy.v1.BasExternalObservationCorrectionInput
 	14,  // 202: tammy.v1.BasExternalObservation.trust:type_name -> tammy.v1.BasExternalTrust
-	144, // 203: tammy.v1.BasExternalObservation.recorded_at:type_name -> google.protobuf.Timestamp
-	143, // 204: tammy.v1.BasExternalObservation.corrects_observation:type_name -> tammy.v1.SourceRef
-	143, // 205: tammy.v1.BasExternalObservationSummary.observation:type_name -> tammy.v1.SourceRef
-	143, // 206: tammy.v1.BasExternalObservationSummary.frozen_bas:type_name -> tammy.v1.SourceRef
+	146, // 203: tammy.v1.BasExternalObservation.recorded_at:type_name -> google.protobuf.Timestamp
+	145, // 204: tammy.v1.BasExternalObservation.corrects_observation:type_name -> tammy.v1.SourceRef
+	145, // 205: tammy.v1.BasExternalObservationSummary.observation:type_name -> tammy.v1.SourceRef
+	145, // 206: tammy.v1.BasExternalObservationSummary.frozen_bas:type_name -> tammy.v1.SourceRef
 	15,  // 207: tammy.v1.BasExternalObservationSummary.event_kind:type_name -> tammy.v1.BasExternalEventKind
 	14,  // 208: tammy.v1.BasExternalObservationSummary.trust:type_name -> tammy.v1.BasExternalTrust
-	143, // 209: tammy.v1.BasExternalObservationSummary.corrects_observation:type_name -> tammy.v1.SourceRef
-	144, // 210: tammy.v1.BasExternalObservationSummary.recorded_at:type_name -> google.protobuf.Timestamp
+	145, // 209: tammy.v1.BasExternalObservationSummary.corrects_observation:type_name -> tammy.v1.SourceRef
+	146, // 210: tammy.v1.BasExternalObservationSummary.recorded_at:type_name -> google.protobuf.Timestamp
 	32,  // 211: tammy.v1.BasExternalObservationSummary.correction_kind:type_name -> tammy.v1.BasCorrectionKind
-	143, // 212: tammy.v1.BasExternalObservationCorrectionInput.disputed_observation:type_name -> tammy.v1.SourceRef
+	145, // 212: tammy.v1.BasExternalObservationCorrectionInput.disputed_observation:type_name -> tammy.v1.SourceRef
 	32,  // 213: tammy.v1.BasExternalObservationCorrectionInput.correction_kind:type_name -> tammy.v1.BasCorrectionKind
 	15,  // 214: tammy.v1.BasExternalObservationCorrectionInput.corrected_event_kind:type_name -> tammy.v1.BasExternalEventKind
-	144, // 215: tammy.v1.BasExternalObservationCorrectionInput.corrected_claimed_event_at:type_name -> google.protobuf.Timestamp
-	143, // 216: tammy.v1.BasExternalObservationCorrectionInput.evidence:type_name -> tammy.v1.SourceRef
+	146, // 215: tammy.v1.BasExternalObservationCorrectionInput.corrected_claimed_event_at:type_name -> google.protobuf.Timestamp
+	145, // 216: tammy.v1.BasExternalObservationCorrectionInput.evidence:type_name -> tammy.v1.SourceRef
 	18,  // 217: tammy.v1.BasExternalDisputeInput.outcome:type_name -> tammy.v1.BasDisputeResolutionOutcome
-	143, // 218: tammy.v1.BasExternalDisputeInput.disputed_observations:type_name -> tammy.v1.SourceRef
-	143, // 219: tammy.v1.BasExternalDisputeInput.affected_confirmed_chain:type_name -> tammy.v1.SourceRef
-	143, // 220: tammy.v1.BasExternalDisputeInput.evidence:type_name -> tammy.v1.SourceRef
-	143, // 221: tammy.v1.BasExternalDisputeResolution.family:type_name -> tammy.v1.SourceRef
-	77,  // 222: tammy.v1.BasExternalDisputeResolution.resolution:type_name -> tammy.v1.BasExternalDisputeInput
-	144, // 223: tammy.v1.BasExternalDisputeResolution.resolved_at:type_name -> google.protobuf.Timestamp
-	143, // 224: tammy.v1.BasExternalDisputeResolutionSummary.resolution:type_name -> tammy.v1.SourceRef
-	143, // 225: tammy.v1.BasExternalDisputeResolutionSummary.family:type_name -> tammy.v1.SourceRef
+	145, // 218: tammy.v1.BasExternalDisputeInput.disputed_observations:type_name -> tammy.v1.SourceRef
+	145, // 219: tammy.v1.BasExternalDisputeInput.affected_confirmed_chain:type_name -> tammy.v1.SourceRef
+	145, // 220: tammy.v1.BasExternalDisputeInput.evidence:type_name -> tammy.v1.SourceRef
+	145, // 221: tammy.v1.BasExternalDisputeResolution.family:type_name -> tammy.v1.SourceRef
+	78,  // 222: tammy.v1.BasExternalDisputeResolution.resolution:type_name -> tammy.v1.BasExternalDisputeInput
+	146, // 223: tammy.v1.BasExternalDisputeResolution.resolved_at:type_name -> google.protobuf.Timestamp
+	145, // 224: tammy.v1.BasExternalDisputeResolutionSummary.resolution:type_name -> tammy.v1.SourceRef
+	145, // 225: tammy.v1.BasExternalDisputeResolutionSummary.family:type_name -> tammy.v1.SourceRef
 	18,  // 226: tammy.v1.BasExternalDisputeResolutionSummary.outcome:type_name -> tammy.v1.BasDisputeResolutionOutcome
-	144, // 227: tammy.v1.BasExternalDisputeResolutionSummary.resolved_at:type_name -> google.protobuf.Timestamp
-	143, // 228: tammy.v1.BasExportTarget.calculation:type_name -> tammy.v1.SourceRef
-	143, // 229: tammy.v1.BasExportTarget.frozen_bas:type_name -> tammy.v1.SourceRef
-	80,  // 230: tammy.v1.BasExportEventInput.target:type_name -> tammy.v1.BasExportTarget
+	146, // 227: tammy.v1.BasExternalDisputeResolutionSummary.resolved_at:type_name -> google.protobuf.Timestamp
+	145, // 228: tammy.v1.BasExportTarget.calculation:type_name -> tammy.v1.SourceRef
+	145, // 229: tammy.v1.BasExportTarget.frozen_bas:type_name -> tammy.v1.SourceRef
+	81,  // 230: tammy.v1.BasExportEventInput.target:type_name -> tammy.v1.BasExportTarget
 	29,  // 231: tammy.v1.BasExportEventInput.format:type_name -> tammy.v1.BasExportFormat
 	30,  // 232: tammy.v1.BasExportEventInput.phase:type_name -> tammy.v1.BasExportPhase
 	31,  // 233: tammy.v1.BasExportEventInput.outcome:type_name -> tammy.v1.BasExportOutcome
-	144, // 234: tammy.v1.BasExportEventInput.occurred_at:type_name -> google.protobuf.Timestamp
-	81,  // 235: tammy.v1.BasExportEvent.event:type_name -> tammy.v1.BasExportEventInput
-	144, // 236: tammy.v1.BasExportEvent.recorded_at:type_name -> google.protobuf.Timestamp
-	143, // 237: tammy.v1.BasExportEventSummary.export_event:type_name -> tammy.v1.SourceRef
-	80,  // 238: tammy.v1.BasExportEventSummary.target:type_name -> tammy.v1.BasExportTarget
+	146, // 234: tammy.v1.BasExportEventInput.occurred_at:type_name -> google.protobuf.Timestamp
+	82,  // 235: tammy.v1.BasExportEvent.event:type_name -> tammy.v1.BasExportEventInput
+	146, // 236: tammy.v1.BasExportEvent.recorded_at:type_name -> google.protobuf.Timestamp
+	145, // 237: tammy.v1.BasExportEventSummary.export_event:type_name -> tammy.v1.SourceRef
+	81,  // 238: tammy.v1.BasExportEventSummary.target:type_name -> tammy.v1.BasExportTarget
 	29,  // 239: tammy.v1.BasExportEventSummary.format:type_name -> tammy.v1.BasExportFormat
 	30,  // 240: tammy.v1.BasExportEventSummary.phase:type_name -> tammy.v1.BasExportPhase
 	31,  // 241: tammy.v1.BasExportEventSummary.outcome:type_name -> tammy.v1.BasExportOutcome
-	144, // 242: tammy.v1.BasExportEventSummary.recorded_at:type_name -> google.protobuf.Timestamp
-	149, // 243: tammy.v1.GetBasObligationsProfileRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	142, // 244: tammy.v1.GetBasObligationsProfileRequest.as_of_date:type_name -> tammy.v1.CivilDate
-	44,  // 245: tammy.v1.GetBasObligationsProfileResponse.profile:type_name -> tammy.v1.BasObligationsProfile
-	149, // 246: tammy.v1.ListBasObligationsProfilesRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	150, // 247: tammy.v1.ListBasObligationsProfilesRequest.page:type_name -> tammy.v1.PageRequest
-	45,  // 248: tammy.v1.ListBasObligationsProfilesResponse.profiles:type_name -> tammy.v1.BasObligationsProfileSummary
-	151, // 249: tammy.v1.ListBasObligationsProfilesResponse.page:type_name -> tammy.v1.PageInfo
-	149, // 250: tammy.v1.GetBasCalendarRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	142, // 251: tammy.v1.GetBasCalendarRequest.as_of_date:type_name -> tammy.v1.CivilDate
-	35,  // 252: tammy.v1.GetBasCalendarRequest.horizon:type_name -> tammy.v1.BasCivilDateRange
-	143, // 253: tammy.v1.GetBasCalendarRequest.profile:type_name -> tammy.v1.SourceRef
-	46,  // 254: tammy.v1.GetBasCalendarResponse.suggestions:type_name -> tammy.v1.BasPeriodSuggestion
-	149, // 255: tammy.v1.ListBasPeriodsRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	35,  // 256: tammy.v1.ListBasPeriodsRequest.range:type_name -> tammy.v1.BasCivilDateRange
-	150, // 257: tammy.v1.ListBasPeriodsRequest.page:type_name -> tammy.v1.PageRequest
-	50,  // 258: tammy.v1.ListBasPeriodsResponse.periods:type_name -> tammy.v1.BasPeriodSummary
-	151, // 259: tammy.v1.ListBasPeriodsResponse.page:type_name -> tammy.v1.PageInfo
-	149, // 260: tammy.v1.GetBasPreparationRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	66,  // 261: tammy.v1.GetBasPreparationResponse.preparation:type_name -> tammy.v1.BasPreparation
-	69,  // 262: tammy.v1.GetBasPreparationResponse.current_calculation:type_name -> tammy.v1.BasCalculation
-	63,  // 263: tammy.v1.GetBasPreparationResponse.current_validation:type_name -> tammy.v1.BasValidationSnapshot
-	52,  // 264: tammy.v1.GetBasPreparationResponse.current_chain:type_name -> tammy.v1.BasChainExpectation
-	65,  // 265: tammy.v1.GetBasPreparationResponse.acknowledgements:type_name -> tammy.v1.BasWarningAcknowledgement
-	54,  // 266: tammy.v1.GetBasPreparationResponse.paygw_inputs:type_name -> tammy.v1.BasPaygwInputs
-	55,  // 267: tammy.v1.GetBasPreparationResponse.paygi_inputs:type_name -> tammy.v1.BasPaygiInputs
-	149, // 268: tammy.v1.ListBasPreparationsRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	150, // 269: tammy.v1.ListBasPreparationsRequest.page:type_name -> tammy.v1.PageRequest
-	67,  // 270: tammy.v1.ListBasPreparationsResponse.preparations:type_name -> tammy.v1.BasPreparationSummary
-	151, // 271: tammy.v1.ListBasPreparationsResponse.page:type_name -> tammy.v1.PageInfo
-	149, // 272: tammy.v1.GetBasCalculationRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	69,  // 273: tammy.v1.GetBasCalculationResponse.calculation:type_name -> tammy.v1.BasCalculation
-	149, // 274: tammy.v1.ListBasCalculationsRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	150, // 275: tammy.v1.ListBasCalculationsRequest.page:type_name -> tammy.v1.PageRequest
-	70,  // 276: tammy.v1.ListBasCalculationsResponse.calculations:type_name -> tammy.v1.BasCalculationSummary
-	151, // 277: tammy.v1.ListBasCalculationsResponse.page:type_name -> tammy.v1.PageInfo
-	149, // 278: tammy.v1.GetFrozenBasRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	71,  // 279: tammy.v1.GetFrozenBasResponse.frozen_bas:type_name -> tammy.v1.BasFrozenBas
-	149, // 280: tammy.v1.ListFrozenBasRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	150, // 281: tammy.v1.ListFrozenBasRequest.page:type_name -> tammy.v1.PageRequest
-	72,  // 282: tammy.v1.ListFrozenBasResponse.frozen_bas:type_name -> tammy.v1.BasFrozenBasSummary
-	151, // 283: tammy.v1.ListFrozenBasResponse.page:type_name -> tammy.v1.PageInfo
-	149, // 284: tammy.v1.ListBasExternalObservationsRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	150, // 285: tammy.v1.ListBasExternalObservationsRequest.page:type_name -> tammy.v1.PageRequest
-	75,  // 286: tammy.v1.ListBasExternalObservationsResponse.observations:type_name -> tammy.v1.BasExternalObservationSummary
-	151, // 287: tammy.v1.ListBasExternalObservationsResponse.page:type_name -> tammy.v1.PageInfo
-	149, // 288: tammy.v1.GetBasExternalObservationRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	74,  // 289: tammy.v1.GetBasExternalObservationResponse.observation:type_name -> tammy.v1.BasExternalObservation
-	149, // 290: tammy.v1.GetBasExternalDisputeResolutionRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	78,  // 291: tammy.v1.GetBasExternalDisputeResolutionResponse.resolution:type_name -> tammy.v1.BasExternalDisputeResolution
-	149, // 292: tammy.v1.ListBasExternalDisputeResolutionsRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	150, // 293: tammy.v1.ListBasExternalDisputeResolutionsRequest.page:type_name -> tammy.v1.PageRequest
-	79,  // 294: tammy.v1.ListBasExternalDisputeResolutionsResponse.resolutions:type_name -> tammy.v1.BasExternalDisputeResolutionSummary
-	151, // 295: tammy.v1.ListBasExternalDisputeResolutionsResponse.page:type_name -> tammy.v1.PageInfo
-	149, // 296: tammy.v1.ListBasExportEventsRequest.authentication:type_name -> tammy.v1.AuthenticationContext
-	80,  // 297: tammy.v1.ListBasExportEventsRequest.target:type_name -> tammy.v1.BasExportTarget
-	150, // 298: tammy.v1.ListBasExportEventsRequest.page:type_name -> tammy.v1.PageRequest
-	83,  // 299: tammy.v1.ListBasExportEventsResponse.events:type_name -> tammy.v1.BasExportEventSummary
-	151, // 300: tammy.v1.ListBasExportEventsResponse.page:type_name -> tammy.v1.PageInfo
-	152, // 301: tammy.v1.SetBasObligationsProfileRequest.command_context:type_name -> tammy.v1.CommandContext
-	43,  // 302: tammy.v1.SetBasObligationsProfileRequest.profile:type_name -> tammy.v1.BasObligationsProfileInput
-	44,  // 303: tammy.v1.SetBasObligationsProfileResponse.profile:type_name -> tammy.v1.BasObligationsProfile
-	152, // 304: tammy.v1.ConfirmBasPeriodRequest.command_context:type_name -> tammy.v1.CommandContext
-	48,  // 305: tammy.v1.ConfirmBasPeriodRequest.period:type_name -> tammy.v1.BasPeriodConfirmationInput
-	49,  // 306: tammy.v1.ConfirmBasPeriodResponse.period:type_name -> tammy.v1.BasConfirmedPeriod
-	152, // 307: tammy.v1.SaveBasPaygInputsRequest.command_context:type_name -> tammy.v1.CommandContext
-	54,  // 308: tammy.v1.SaveBasPaygInputsRequest.paygw:type_name -> tammy.v1.BasPaygwInputs
-	55,  // 309: tammy.v1.SaveBasPaygInputsRequest.paygi:type_name -> tammy.v1.BasPaygiInputs
-	66,  // 310: tammy.v1.SaveBasPaygInputsResponse.preparation:type_name -> tammy.v1.BasPreparation
-	152, // 311: tammy.v1.RegenerateBasPreparationRequest.command_context:type_name -> tammy.v1.CommandContext
-	51,  // 312: tammy.v1.RegenerateBasPreparationRequest.family_expectation:type_name -> tammy.v1.BasExpectedIdentity
-	143, // 313: tammy.v1.RegenerateBasPreparationRequest.period:type_name -> tammy.v1.SourceRef
-	143, // 314: tammy.v1.RegenerateBasPreparationRequest.profile:type_name -> tammy.v1.SourceRef
-	51,  // 315: tammy.v1.RegenerateBasPreparationRequest.preparation_expectation:type_name -> tammy.v1.BasExpectedIdentity
-	66,  // 316: tammy.v1.RegenerateBasPreparationResponse.preparation:type_name -> tammy.v1.BasPreparation
-	69,  // 317: tammy.v1.RegenerateBasPreparationResponse.calculation:type_name -> tammy.v1.BasCalculation
-	152, // 318: tammy.v1.ValidateBasPreparationRequest.command_context:type_name -> tammy.v1.CommandContext
-	66,  // 319: tammy.v1.ValidateBasPreparationResponse.preparation:type_name -> tammy.v1.BasPreparation
-	63,  // 320: tammy.v1.ValidateBasPreparationResponse.validation:type_name -> tammy.v1.BasValidationSnapshot
-	152, // 321: tammy.v1.AcknowledgeBasWarningsRequest.command_context:type_name -> tammy.v1.CommandContext
-	64,  // 322: tammy.v1.AcknowledgeBasWarningsRequest.warnings:type_name -> tammy.v1.BasWarningAcknowledgementInput
-	65,  // 323: tammy.v1.AcknowledgeBasWarningsResponse.acknowledgements:type_name -> tammy.v1.BasWarningAcknowledgement
-	66,  // 324: tammy.v1.AcknowledgeBasWarningsResponse.preparation:type_name -> tammy.v1.BasPreparation
-	152, // 325: tammy.v1.FreezeBasForManualHandoffRequest.command_context:type_name -> tammy.v1.CommandContext
-	52,  // 326: tammy.v1.FreezeBasForManualHandoffRequest.chain:type_name -> tammy.v1.BasChainExpectation
-	66,  // 327: tammy.v1.FreezeBasForManualHandoffResponse.preparation:type_name -> tammy.v1.BasPreparation
-	71,  // 328: tammy.v1.FreezeBasForManualHandoffResponse.frozen_bas:type_name -> tammy.v1.BasFrozenBas
-	152, // 329: tammy.v1.CreateBasReplacementRequest.command_context:type_name -> tammy.v1.CommandContext
-	52,  // 330: tammy.v1.CreateBasReplacementRequest.chain:type_name -> tammy.v1.BasChainExpectation
-	66,  // 331: tammy.v1.CreateBasReplacementResponse.predecessor:type_name -> tammy.v1.BasPreparation
-	66,  // 332: tammy.v1.CreateBasReplacementResponse.replacement:type_name -> tammy.v1.BasPreparation
-	152, // 333: tammy.v1.CreateBasRevisionRequest.command_context:type_name -> tammy.v1.CommandContext
-	52,  // 334: tammy.v1.CreateBasRevisionRequest.chain:type_name -> tammy.v1.BasChainExpectation
-	143, // 335: tammy.v1.CreateBasRevisionRequest.period:type_name -> tammy.v1.SourceRef
-	143, // 336: tammy.v1.CreateBasRevisionRequest.profile:type_name -> tammy.v1.SourceRef
-	66,  // 337: tammy.v1.CreateBasRevisionResponse.original:type_name -> tammy.v1.BasPreparation
-	66,  // 338: tammy.v1.CreateBasRevisionResponse.revision:type_name -> tammy.v1.BasPreparation
-	152, // 339: tammy.v1.RecordExternalBasObservationRequest.command_context:type_name -> tammy.v1.CommandContext
-	52,  // 340: tammy.v1.RecordExternalBasObservationRequest.chain:type_name -> tammy.v1.BasChainExpectation
-	73,  // 341: tammy.v1.RecordExternalBasObservationRequest.observation:type_name -> tammy.v1.BasExternalObservationInput
-	74,  // 342: tammy.v1.RecordExternalBasObservationResponse.observation:type_name -> tammy.v1.BasExternalObservation
-	66,  // 343: tammy.v1.RecordExternalBasObservationResponse.preparation:type_name -> tammy.v1.BasPreparation
-	152, // 344: tammy.v1.CorrectExternalBasObservationRequest.command_context:type_name -> tammy.v1.CommandContext
-	52,  // 345: tammy.v1.CorrectExternalBasObservationRequest.chain:type_name -> tammy.v1.BasChainExpectation
-	76,  // 346: tammy.v1.CorrectExternalBasObservationRequest.correction:type_name -> tammy.v1.BasExternalObservationCorrectionInput
-	74,  // 347: tammy.v1.CorrectExternalBasObservationResponse.correction:type_name -> tammy.v1.BasExternalObservation
-	66,  // 348: tammy.v1.CorrectExternalBasObservationResponse.preparation:type_name -> tammy.v1.BasPreparation
-	152, // 349: tammy.v1.ResolveExternalBasDisputeRequest.command_context:type_name -> tammy.v1.CommandContext
-	52,  // 350: tammy.v1.ResolveExternalBasDisputeRequest.chain:type_name -> tammy.v1.BasChainExpectation
-	77,  // 351: tammy.v1.ResolveExternalBasDisputeRequest.resolution:type_name -> tammy.v1.BasExternalDisputeInput
-	78,  // 352: tammy.v1.ResolveExternalBasDisputeResponse.resolution:type_name -> tammy.v1.BasExternalDisputeResolution
-	66,  // 353: tammy.v1.ResolveExternalBasDisputeResponse.preparation:type_name -> tammy.v1.BasPreparation
-	152, // 354: tammy.v1.ReplaceRejectedBasAttemptRequest.command_context:type_name -> tammy.v1.CommandContext
-	52,  // 355: tammy.v1.ReplaceRejectedBasAttemptRequest.chain:type_name -> tammy.v1.BasChainExpectation
-	143, // 356: tammy.v1.ReplaceRejectedBasAttemptRequest.resolved_rejection:type_name -> tammy.v1.SourceRef
-	66,  // 357: tammy.v1.ReplaceRejectedBasAttemptResponse.rejected_attempt:type_name -> tammy.v1.BasPreparation
-	66,  // 358: tammy.v1.ReplaceRejectedBasAttemptResponse.replacement_attempt:type_name -> tammy.v1.BasPreparation
-	152, // 359: tammy.v1.RecordBasExportEventRequest.command_context:type_name -> tammy.v1.CommandContext
-	81,  // 360: tammy.v1.RecordBasExportEventRequest.event:type_name -> tammy.v1.BasExportEventInput
-	82,  // 361: tammy.v1.RecordBasExportEventResponse.event:type_name -> tammy.v1.BasExportEvent
-	84,  // 362: tammy.v1.BasPreparationService.GetBasObligationsProfile:input_type -> tammy.v1.GetBasObligationsProfileRequest
-	86,  // 363: tammy.v1.BasPreparationService.ListBasObligationsProfiles:input_type -> tammy.v1.ListBasObligationsProfilesRequest
-	88,  // 364: tammy.v1.BasPreparationService.GetBasCalendar:input_type -> tammy.v1.GetBasCalendarRequest
-	90,  // 365: tammy.v1.BasPreparationService.ListBasPeriods:input_type -> tammy.v1.ListBasPeriodsRequest
-	92,  // 366: tammy.v1.BasPreparationService.GetBasPreparation:input_type -> tammy.v1.GetBasPreparationRequest
-	94,  // 367: tammy.v1.BasPreparationService.ListBasPreparations:input_type -> tammy.v1.ListBasPreparationsRequest
-	96,  // 368: tammy.v1.BasPreparationService.GetBasCalculation:input_type -> tammy.v1.GetBasCalculationRequest
-	98,  // 369: tammy.v1.BasPreparationService.ListBasCalculations:input_type -> tammy.v1.ListBasCalculationsRequest
-	100, // 370: tammy.v1.BasPreparationService.GetFrozenBas:input_type -> tammy.v1.GetFrozenBasRequest
-	102, // 371: tammy.v1.BasPreparationService.ListFrozenBas:input_type -> tammy.v1.ListFrozenBasRequest
-	106, // 372: tammy.v1.BasPreparationService.GetBasExternalObservation:input_type -> tammy.v1.GetBasExternalObservationRequest
-	104, // 373: tammy.v1.BasPreparationService.ListBasExternalObservations:input_type -> tammy.v1.ListBasExternalObservationsRequest
-	108, // 374: tammy.v1.BasPreparationService.GetBasExternalDisputeResolution:input_type -> tammy.v1.GetBasExternalDisputeResolutionRequest
-	110, // 375: tammy.v1.BasPreparationService.ListBasExternalDisputeResolutions:input_type -> tammy.v1.ListBasExternalDisputeResolutionsRequest
-	112, // 376: tammy.v1.BasPreparationService.ListBasExportEvents:input_type -> tammy.v1.ListBasExportEventsRequest
-	114, // 377: tammy.v1.BasPreparationService.SetBasObligationsProfile:input_type -> tammy.v1.SetBasObligationsProfileRequest
-	116, // 378: tammy.v1.BasPreparationService.ConfirmBasPeriod:input_type -> tammy.v1.ConfirmBasPeriodRequest
-	118, // 379: tammy.v1.BasPreparationService.SaveBasPaygInputs:input_type -> tammy.v1.SaveBasPaygInputsRequest
-	120, // 380: tammy.v1.BasPreparationService.RegenerateBasPreparation:input_type -> tammy.v1.RegenerateBasPreparationRequest
-	122, // 381: tammy.v1.BasPreparationService.ValidateBasPreparation:input_type -> tammy.v1.ValidateBasPreparationRequest
-	124, // 382: tammy.v1.BasPreparationService.AcknowledgeBasWarnings:input_type -> tammy.v1.AcknowledgeBasWarningsRequest
-	126, // 383: tammy.v1.BasPreparationService.FreezeBasForManualHandoff:input_type -> tammy.v1.FreezeBasForManualHandoffRequest
-	128, // 384: tammy.v1.BasPreparationService.CreateBasReplacement:input_type -> tammy.v1.CreateBasReplacementRequest
-	130, // 385: tammy.v1.BasPreparationService.CreateBasRevision:input_type -> tammy.v1.CreateBasRevisionRequest
-	132, // 386: tammy.v1.BasPreparationService.RecordExternalBasObservation:input_type -> tammy.v1.RecordExternalBasObservationRequest
-	134, // 387: tammy.v1.BasPreparationService.CorrectExternalBasObservation:input_type -> tammy.v1.CorrectExternalBasObservationRequest
-	136, // 388: tammy.v1.BasPreparationService.ResolveExternalBasDispute:input_type -> tammy.v1.ResolveExternalBasDisputeRequest
-	138, // 389: tammy.v1.BasPreparationService.ReplaceRejectedBasAttempt:input_type -> tammy.v1.ReplaceRejectedBasAttemptRequest
-	140, // 390: tammy.v1.BasPreparationService.RecordBasExportEvent:input_type -> tammy.v1.RecordBasExportEventRequest
-	85,  // 391: tammy.v1.BasPreparationService.GetBasObligationsProfile:output_type -> tammy.v1.GetBasObligationsProfileResponse
-	87,  // 392: tammy.v1.BasPreparationService.ListBasObligationsProfiles:output_type -> tammy.v1.ListBasObligationsProfilesResponse
-	89,  // 393: tammy.v1.BasPreparationService.GetBasCalendar:output_type -> tammy.v1.GetBasCalendarResponse
-	91,  // 394: tammy.v1.BasPreparationService.ListBasPeriods:output_type -> tammy.v1.ListBasPeriodsResponse
-	93,  // 395: tammy.v1.BasPreparationService.GetBasPreparation:output_type -> tammy.v1.GetBasPreparationResponse
-	95,  // 396: tammy.v1.BasPreparationService.ListBasPreparations:output_type -> tammy.v1.ListBasPreparationsResponse
-	97,  // 397: tammy.v1.BasPreparationService.GetBasCalculation:output_type -> tammy.v1.GetBasCalculationResponse
-	99,  // 398: tammy.v1.BasPreparationService.ListBasCalculations:output_type -> tammy.v1.ListBasCalculationsResponse
-	101, // 399: tammy.v1.BasPreparationService.GetFrozenBas:output_type -> tammy.v1.GetFrozenBasResponse
-	103, // 400: tammy.v1.BasPreparationService.ListFrozenBas:output_type -> tammy.v1.ListFrozenBasResponse
-	107, // 401: tammy.v1.BasPreparationService.GetBasExternalObservation:output_type -> tammy.v1.GetBasExternalObservationResponse
-	105, // 402: tammy.v1.BasPreparationService.ListBasExternalObservations:output_type -> tammy.v1.ListBasExternalObservationsResponse
-	109, // 403: tammy.v1.BasPreparationService.GetBasExternalDisputeResolution:output_type -> tammy.v1.GetBasExternalDisputeResolutionResponse
-	111, // 404: tammy.v1.BasPreparationService.ListBasExternalDisputeResolutions:output_type -> tammy.v1.ListBasExternalDisputeResolutionsResponse
-	113, // 405: tammy.v1.BasPreparationService.ListBasExportEvents:output_type -> tammy.v1.ListBasExportEventsResponse
-	115, // 406: tammy.v1.BasPreparationService.SetBasObligationsProfile:output_type -> tammy.v1.SetBasObligationsProfileResponse
-	117, // 407: tammy.v1.BasPreparationService.ConfirmBasPeriod:output_type -> tammy.v1.ConfirmBasPeriodResponse
-	119, // 408: tammy.v1.BasPreparationService.SaveBasPaygInputs:output_type -> tammy.v1.SaveBasPaygInputsResponse
-	121, // 409: tammy.v1.BasPreparationService.RegenerateBasPreparation:output_type -> tammy.v1.RegenerateBasPreparationResponse
-	123, // 410: tammy.v1.BasPreparationService.ValidateBasPreparation:output_type -> tammy.v1.ValidateBasPreparationResponse
-	125, // 411: tammy.v1.BasPreparationService.AcknowledgeBasWarnings:output_type -> tammy.v1.AcknowledgeBasWarningsResponse
-	127, // 412: tammy.v1.BasPreparationService.FreezeBasForManualHandoff:output_type -> tammy.v1.FreezeBasForManualHandoffResponse
-	129, // 413: tammy.v1.BasPreparationService.CreateBasReplacement:output_type -> tammy.v1.CreateBasReplacementResponse
-	131, // 414: tammy.v1.BasPreparationService.CreateBasRevision:output_type -> tammy.v1.CreateBasRevisionResponse
-	133, // 415: tammy.v1.BasPreparationService.RecordExternalBasObservation:output_type -> tammy.v1.RecordExternalBasObservationResponse
-	135, // 416: tammy.v1.BasPreparationService.CorrectExternalBasObservation:output_type -> tammy.v1.CorrectExternalBasObservationResponse
-	137, // 417: tammy.v1.BasPreparationService.ResolveExternalBasDispute:output_type -> tammy.v1.ResolveExternalBasDisputeResponse
-	139, // 418: tammy.v1.BasPreparationService.ReplaceRejectedBasAttempt:output_type -> tammy.v1.ReplaceRejectedBasAttemptResponse
-	141, // 419: tammy.v1.BasPreparationService.RecordBasExportEvent:output_type -> tammy.v1.RecordBasExportEventResponse
-	391, // [391:420] is the sub-list for method output_type
-	362, // [362:391] is the sub-list for method input_type
-	362, // [362:362] is the sub-list for extension type_name
-	362, // [362:362] is the sub-list for extension extendee
-	0,   // [0:362] is the sub-list for field type_name
+	146, // 242: tammy.v1.BasExportEventSummary.recorded_at:type_name -> google.protobuf.Timestamp
+	151, // 243: tammy.v1.GetBasObligationsProfileRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	144, // 244: tammy.v1.GetBasObligationsProfileRequest.as_of_date:type_name -> tammy.v1.CivilDate
+	45,  // 245: tammy.v1.GetBasObligationsProfileResponse.profile:type_name -> tammy.v1.BasObligationsProfile
+	151, // 246: tammy.v1.ListBasObligationsProfilesRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	152, // 247: tammy.v1.ListBasObligationsProfilesRequest.page:type_name -> tammy.v1.PageRequest
+	46,  // 248: tammy.v1.ListBasObligationsProfilesResponse.profiles:type_name -> tammy.v1.BasObligationsProfileSummary
+	153, // 249: tammy.v1.ListBasObligationsProfilesResponse.page:type_name -> tammy.v1.PageInfo
+	151, // 250: tammy.v1.GetBasCalendarRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	144, // 251: tammy.v1.GetBasCalendarRequest.as_of_date:type_name -> tammy.v1.CivilDate
+	36,  // 252: tammy.v1.GetBasCalendarRequest.horizon:type_name -> tammy.v1.BasCivilDateRange
+	145, // 253: tammy.v1.GetBasCalendarRequest.profile:type_name -> tammy.v1.SourceRef
+	47,  // 254: tammy.v1.GetBasCalendarResponse.suggestions:type_name -> tammy.v1.BasPeriodSuggestion
+	151, // 255: tammy.v1.ListBasPeriodsRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	36,  // 256: tammy.v1.ListBasPeriodsRequest.range:type_name -> tammy.v1.BasCivilDateRange
+	152, // 257: tammy.v1.ListBasPeriodsRequest.page:type_name -> tammy.v1.PageRequest
+	51,  // 258: tammy.v1.ListBasPeriodsResponse.periods:type_name -> tammy.v1.BasPeriodSummary
+	153, // 259: tammy.v1.ListBasPeriodsResponse.page:type_name -> tammy.v1.PageInfo
+	151, // 260: tammy.v1.GetBasPreparationRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	145, // 261: tammy.v1.BasExternalDisputeSummary.disputed_observations:type_name -> tammy.v1.SourceRef
+	145, // 262: tammy.v1.BasExternalDisputeSummary.affected_confirmed_chain:type_name -> tammy.v1.SourceRef
+	67,  // 263: tammy.v1.GetBasPreparationResponse.preparation:type_name -> tammy.v1.BasPreparation
+	70,  // 264: tammy.v1.GetBasPreparationResponse.current_calculation:type_name -> tammy.v1.BasCalculation
+	64,  // 265: tammy.v1.GetBasPreparationResponse.current_validation:type_name -> tammy.v1.BasValidationSnapshot
+	53,  // 266: tammy.v1.GetBasPreparationResponse.current_chain:type_name -> tammy.v1.BasChainExpectation
+	66,  // 267: tammy.v1.GetBasPreparationResponse.acknowledgements:type_name -> tammy.v1.BasWarningAcknowledgement
+	55,  // 268: tammy.v1.GetBasPreparationResponse.paygw_inputs:type_name -> tammy.v1.BasPaygwInputs
+	56,  // 269: tammy.v1.GetBasPreparationResponse.paygi_inputs:type_name -> tammy.v1.BasPaygiInputs
+	145, // 270: tammy.v1.GetBasPreparationResponse.effective_original:type_name -> tammy.v1.SourceRef
+	35,  // 271: tammy.v1.GetBasPreparationResponse.live_currentness:type_name -> tammy.v1.BasLiveCurrentness
+	17,  // 272: tammy.v1.GetBasPreparationResponse.current_dispute_overlay:type_name -> tammy.v1.BasDisputeOverlayState
+	145, // 273: tammy.v1.GetBasPreparationResponse.current_branch_resolution:type_name -> tammy.v1.SourceRef
+	145, // 274: tammy.v1.GetBasPreparationResponse.current_frozen_barrier:type_name -> tammy.v1.SourceRef
+	94,  // 275: tammy.v1.GetBasPreparationResponse.current_dispute:type_name -> tammy.v1.BasExternalDisputeSummary
+	151, // 276: tammy.v1.ListBasPreparationsRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	152, // 277: tammy.v1.ListBasPreparationsRequest.page:type_name -> tammy.v1.PageRequest
+	68,  // 278: tammy.v1.ListBasPreparationsResponse.preparations:type_name -> tammy.v1.BasPreparationSummary
+	153, // 279: tammy.v1.ListBasPreparationsResponse.page:type_name -> tammy.v1.PageInfo
+	151, // 280: tammy.v1.GetBasCalculationRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	70,  // 281: tammy.v1.GetBasCalculationResponse.calculation:type_name -> tammy.v1.BasCalculation
+	151, // 282: tammy.v1.ListBasCalculationsRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	152, // 283: tammy.v1.ListBasCalculationsRequest.page:type_name -> tammy.v1.PageRequest
+	71,  // 284: tammy.v1.ListBasCalculationsResponse.calculations:type_name -> tammy.v1.BasCalculationSummary
+	153, // 285: tammy.v1.ListBasCalculationsResponse.page:type_name -> tammy.v1.PageInfo
+	151, // 286: tammy.v1.GetFrozenBasRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	72,  // 287: tammy.v1.GetFrozenBasResponse.frozen_bas:type_name -> tammy.v1.BasFrozenBas
+	35,  // 288: tammy.v1.GetFrozenBasResponse.live_currentness:type_name -> tammy.v1.BasLiveCurrentness
+	151, // 289: tammy.v1.ListFrozenBasRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	152, // 290: tammy.v1.ListFrozenBasRequest.page:type_name -> tammy.v1.PageRequest
+	73,  // 291: tammy.v1.ListFrozenBasResponse.frozen_bas:type_name -> tammy.v1.BasFrozenBasSummary
+	153, // 292: tammy.v1.ListFrozenBasResponse.page:type_name -> tammy.v1.PageInfo
+	151, // 293: tammy.v1.ListBasExternalObservationsRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	152, // 294: tammy.v1.ListBasExternalObservationsRequest.page:type_name -> tammy.v1.PageRequest
+	76,  // 295: tammy.v1.ListBasExternalObservationsResponse.observations:type_name -> tammy.v1.BasExternalObservationSummary
+	153, // 296: tammy.v1.ListBasExternalObservationsResponse.page:type_name -> tammy.v1.PageInfo
+	151, // 297: tammy.v1.GetBasExternalObservationRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	75,  // 298: tammy.v1.GetBasExternalObservationResponse.observation:type_name -> tammy.v1.BasExternalObservation
+	151, // 299: tammy.v1.GetBasExternalDisputeResolutionRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	79,  // 300: tammy.v1.GetBasExternalDisputeResolutionResponse.resolution:type_name -> tammy.v1.BasExternalDisputeResolution
+	151, // 301: tammy.v1.ListBasExternalDisputeResolutionsRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	152, // 302: tammy.v1.ListBasExternalDisputeResolutionsRequest.page:type_name -> tammy.v1.PageRequest
+	80,  // 303: tammy.v1.ListBasExternalDisputeResolutionsResponse.resolutions:type_name -> tammy.v1.BasExternalDisputeResolutionSummary
+	153, // 304: tammy.v1.ListBasExternalDisputeResolutionsResponse.page:type_name -> tammy.v1.PageInfo
+	151, // 305: tammy.v1.ListBasExportEventsRequest.authentication:type_name -> tammy.v1.AuthenticationContext
+	81,  // 306: tammy.v1.ListBasExportEventsRequest.target:type_name -> tammy.v1.BasExportTarget
+	152, // 307: tammy.v1.ListBasExportEventsRequest.page:type_name -> tammy.v1.PageRequest
+	84,  // 308: tammy.v1.ListBasExportEventsResponse.events:type_name -> tammy.v1.BasExportEventSummary
+	153, // 309: tammy.v1.ListBasExportEventsResponse.page:type_name -> tammy.v1.PageInfo
+	154, // 310: tammy.v1.SetBasObligationsProfileRequest.command_context:type_name -> tammy.v1.CommandContext
+	44,  // 311: tammy.v1.SetBasObligationsProfileRequest.profile:type_name -> tammy.v1.BasObligationsProfileInput
+	45,  // 312: tammy.v1.SetBasObligationsProfileResponse.profile:type_name -> tammy.v1.BasObligationsProfile
+	154, // 313: tammy.v1.ConfirmBasPeriodRequest.command_context:type_name -> tammy.v1.CommandContext
+	49,  // 314: tammy.v1.ConfirmBasPeriodRequest.period:type_name -> tammy.v1.BasPeriodConfirmationInput
+	50,  // 315: tammy.v1.ConfirmBasPeriodResponse.period:type_name -> tammy.v1.BasConfirmedPeriod
+	154, // 316: tammy.v1.SaveBasPaygInputsRequest.command_context:type_name -> tammy.v1.CommandContext
+	55,  // 317: tammy.v1.SaveBasPaygInputsRequest.paygw:type_name -> tammy.v1.BasPaygwInputs
+	56,  // 318: tammy.v1.SaveBasPaygInputsRequest.paygi:type_name -> tammy.v1.BasPaygiInputs
+	67,  // 319: tammy.v1.SaveBasPaygInputsResponse.preparation:type_name -> tammy.v1.BasPreparation
+	154, // 320: tammy.v1.RegenerateBasPreparationRequest.command_context:type_name -> tammy.v1.CommandContext
+	52,  // 321: tammy.v1.RegenerateBasPreparationRequest.family_expectation:type_name -> tammy.v1.BasExpectedIdentity
+	145, // 322: tammy.v1.RegenerateBasPreparationRequest.period:type_name -> tammy.v1.SourceRef
+	145, // 323: tammy.v1.RegenerateBasPreparationRequest.profile:type_name -> tammy.v1.SourceRef
+	52,  // 324: tammy.v1.RegenerateBasPreparationRequest.preparation_expectation:type_name -> tammy.v1.BasExpectedIdentity
+	67,  // 325: tammy.v1.RegenerateBasPreparationResponse.preparation:type_name -> tammy.v1.BasPreparation
+	70,  // 326: tammy.v1.RegenerateBasPreparationResponse.calculation:type_name -> tammy.v1.BasCalculation
+	154, // 327: tammy.v1.ValidateBasPreparationRequest.command_context:type_name -> tammy.v1.CommandContext
+	67,  // 328: tammy.v1.ValidateBasPreparationResponse.preparation:type_name -> tammy.v1.BasPreparation
+	64,  // 329: tammy.v1.ValidateBasPreparationResponse.validation:type_name -> tammy.v1.BasValidationSnapshot
+	154, // 330: tammy.v1.AcknowledgeBasWarningsRequest.command_context:type_name -> tammy.v1.CommandContext
+	65,  // 331: tammy.v1.AcknowledgeBasWarningsRequest.warnings:type_name -> tammy.v1.BasWarningAcknowledgementInput
+	66,  // 332: tammy.v1.AcknowledgeBasWarningsResponse.acknowledgements:type_name -> tammy.v1.BasWarningAcknowledgement
+	67,  // 333: tammy.v1.AcknowledgeBasWarningsResponse.preparation:type_name -> tammy.v1.BasPreparation
+	154, // 334: tammy.v1.FreezeBasForManualHandoffRequest.command_context:type_name -> tammy.v1.CommandContext
+	53,  // 335: tammy.v1.FreezeBasForManualHandoffRequest.chain:type_name -> tammy.v1.BasChainExpectation
+	67,  // 336: tammy.v1.FreezeBasForManualHandoffResponse.preparation:type_name -> tammy.v1.BasPreparation
+	72,  // 337: tammy.v1.FreezeBasForManualHandoffResponse.frozen_bas:type_name -> tammy.v1.BasFrozenBas
+	154, // 338: tammy.v1.CreateBasReplacementRequest.command_context:type_name -> tammy.v1.CommandContext
+	53,  // 339: tammy.v1.CreateBasReplacementRequest.chain:type_name -> tammy.v1.BasChainExpectation
+	67,  // 340: tammy.v1.CreateBasReplacementResponse.predecessor:type_name -> tammy.v1.BasPreparation
+	67,  // 341: tammy.v1.CreateBasReplacementResponse.replacement:type_name -> tammy.v1.BasPreparation
+	154, // 342: tammy.v1.CreateBasRevisionRequest.command_context:type_name -> tammy.v1.CommandContext
+	53,  // 343: tammy.v1.CreateBasRevisionRequest.chain:type_name -> tammy.v1.BasChainExpectation
+	145, // 344: tammy.v1.CreateBasRevisionRequest.period:type_name -> tammy.v1.SourceRef
+	145, // 345: tammy.v1.CreateBasRevisionRequest.profile:type_name -> tammy.v1.SourceRef
+	67,  // 346: tammy.v1.CreateBasRevisionResponse.original:type_name -> tammy.v1.BasPreparation
+	67,  // 347: tammy.v1.CreateBasRevisionResponse.revision:type_name -> tammy.v1.BasPreparation
+	154, // 348: tammy.v1.RecordExternalBasObservationRequest.command_context:type_name -> tammy.v1.CommandContext
+	53,  // 349: tammy.v1.RecordExternalBasObservationRequest.chain:type_name -> tammy.v1.BasChainExpectation
+	74,  // 350: tammy.v1.RecordExternalBasObservationRequest.observation:type_name -> tammy.v1.BasExternalObservationInput
+	75,  // 351: tammy.v1.RecordExternalBasObservationResponse.observation:type_name -> tammy.v1.BasExternalObservation
+	67,  // 352: tammy.v1.RecordExternalBasObservationResponse.preparation:type_name -> tammy.v1.BasPreparation
+	154, // 353: tammy.v1.CorrectExternalBasObservationRequest.command_context:type_name -> tammy.v1.CommandContext
+	53,  // 354: tammy.v1.CorrectExternalBasObservationRequest.chain:type_name -> tammy.v1.BasChainExpectation
+	77,  // 355: tammy.v1.CorrectExternalBasObservationRequest.correction:type_name -> tammy.v1.BasExternalObservationCorrectionInput
+	75,  // 356: tammy.v1.CorrectExternalBasObservationResponse.correction:type_name -> tammy.v1.BasExternalObservation
+	67,  // 357: tammy.v1.CorrectExternalBasObservationResponse.preparation:type_name -> tammy.v1.BasPreparation
+	154, // 358: tammy.v1.ResolveExternalBasDisputeRequest.command_context:type_name -> tammy.v1.CommandContext
+	53,  // 359: tammy.v1.ResolveExternalBasDisputeRequest.chain:type_name -> tammy.v1.BasChainExpectation
+	78,  // 360: tammy.v1.ResolveExternalBasDisputeRequest.resolution:type_name -> tammy.v1.BasExternalDisputeInput
+	79,  // 361: tammy.v1.ResolveExternalBasDisputeResponse.resolution:type_name -> tammy.v1.BasExternalDisputeResolution
+	67,  // 362: tammy.v1.ResolveExternalBasDisputeResponse.preparation:type_name -> tammy.v1.BasPreparation
+	154, // 363: tammy.v1.ReplaceRejectedBasAttemptRequest.command_context:type_name -> tammy.v1.CommandContext
+	53,  // 364: tammy.v1.ReplaceRejectedBasAttemptRequest.chain:type_name -> tammy.v1.BasChainExpectation
+	145, // 365: tammy.v1.ReplaceRejectedBasAttemptRequest.resolved_rejection:type_name -> tammy.v1.SourceRef
+	67,  // 366: tammy.v1.ReplaceRejectedBasAttemptResponse.rejected_attempt:type_name -> tammy.v1.BasPreparation
+	67,  // 367: tammy.v1.ReplaceRejectedBasAttemptResponse.replacement_attempt:type_name -> tammy.v1.BasPreparation
+	154, // 368: tammy.v1.RecordBasExportEventRequest.command_context:type_name -> tammy.v1.CommandContext
+	82,  // 369: tammy.v1.RecordBasExportEventRequest.event:type_name -> tammy.v1.BasExportEventInput
+	83,  // 370: tammy.v1.RecordBasExportEventResponse.event:type_name -> tammy.v1.BasExportEvent
+	85,  // 371: tammy.v1.BasPreparationService.GetBasObligationsProfile:input_type -> tammy.v1.GetBasObligationsProfileRequest
+	87,  // 372: tammy.v1.BasPreparationService.ListBasObligationsProfiles:input_type -> tammy.v1.ListBasObligationsProfilesRequest
+	89,  // 373: tammy.v1.BasPreparationService.GetBasCalendar:input_type -> tammy.v1.GetBasCalendarRequest
+	91,  // 374: tammy.v1.BasPreparationService.ListBasPeriods:input_type -> tammy.v1.ListBasPeriodsRequest
+	93,  // 375: tammy.v1.BasPreparationService.GetBasPreparation:input_type -> tammy.v1.GetBasPreparationRequest
+	96,  // 376: tammy.v1.BasPreparationService.ListBasPreparations:input_type -> tammy.v1.ListBasPreparationsRequest
+	98,  // 377: tammy.v1.BasPreparationService.GetBasCalculation:input_type -> tammy.v1.GetBasCalculationRequest
+	100, // 378: tammy.v1.BasPreparationService.ListBasCalculations:input_type -> tammy.v1.ListBasCalculationsRequest
+	102, // 379: tammy.v1.BasPreparationService.GetFrozenBas:input_type -> tammy.v1.GetFrozenBasRequest
+	104, // 380: tammy.v1.BasPreparationService.ListFrozenBas:input_type -> tammy.v1.ListFrozenBasRequest
+	108, // 381: tammy.v1.BasPreparationService.GetBasExternalObservation:input_type -> tammy.v1.GetBasExternalObservationRequest
+	106, // 382: tammy.v1.BasPreparationService.ListBasExternalObservations:input_type -> tammy.v1.ListBasExternalObservationsRequest
+	110, // 383: tammy.v1.BasPreparationService.GetBasExternalDisputeResolution:input_type -> tammy.v1.GetBasExternalDisputeResolutionRequest
+	112, // 384: tammy.v1.BasPreparationService.ListBasExternalDisputeResolutions:input_type -> tammy.v1.ListBasExternalDisputeResolutionsRequest
+	114, // 385: tammy.v1.BasPreparationService.ListBasExportEvents:input_type -> tammy.v1.ListBasExportEventsRequest
+	116, // 386: tammy.v1.BasPreparationService.SetBasObligationsProfile:input_type -> tammy.v1.SetBasObligationsProfileRequest
+	118, // 387: tammy.v1.BasPreparationService.ConfirmBasPeriod:input_type -> tammy.v1.ConfirmBasPeriodRequest
+	120, // 388: tammy.v1.BasPreparationService.SaveBasPaygInputs:input_type -> tammy.v1.SaveBasPaygInputsRequest
+	122, // 389: tammy.v1.BasPreparationService.RegenerateBasPreparation:input_type -> tammy.v1.RegenerateBasPreparationRequest
+	124, // 390: tammy.v1.BasPreparationService.ValidateBasPreparation:input_type -> tammy.v1.ValidateBasPreparationRequest
+	126, // 391: tammy.v1.BasPreparationService.AcknowledgeBasWarnings:input_type -> tammy.v1.AcknowledgeBasWarningsRequest
+	128, // 392: tammy.v1.BasPreparationService.FreezeBasForManualHandoff:input_type -> tammy.v1.FreezeBasForManualHandoffRequest
+	130, // 393: tammy.v1.BasPreparationService.CreateBasReplacement:input_type -> tammy.v1.CreateBasReplacementRequest
+	132, // 394: tammy.v1.BasPreparationService.CreateBasRevision:input_type -> tammy.v1.CreateBasRevisionRequest
+	134, // 395: tammy.v1.BasPreparationService.RecordExternalBasObservation:input_type -> tammy.v1.RecordExternalBasObservationRequest
+	136, // 396: tammy.v1.BasPreparationService.CorrectExternalBasObservation:input_type -> tammy.v1.CorrectExternalBasObservationRequest
+	138, // 397: tammy.v1.BasPreparationService.ResolveExternalBasDispute:input_type -> tammy.v1.ResolveExternalBasDisputeRequest
+	140, // 398: tammy.v1.BasPreparationService.ReplaceRejectedBasAttempt:input_type -> tammy.v1.ReplaceRejectedBasAttemptRequest
+	142, // 399: tammy.v1.BasPreparationService.RecordBasExportEvent:input_type -> tammy.v1.RecordBasExportEventRequest
+	86,  // 400: tammy.v1.BasPreparationService.GetBasObligationsProfile:output_type -> tammy.v1.GetBasObligationsProfileResponse
+	88,  // 401: tammy.v1.BasPreparationService.ListBasObligationsProfiles:output_type -> tammy.v1.ListBasObligationsProfilesResponse
+	90,  // 402: tammy.v1.BasPreparationService.GetBasCalendar:output_type -> tammy.v1.GetBasCalendarResponse
+	92,  // 403: tammy.v1.BasPreparationService.ListBasPeriods:output_type -> tammy.v1.ListBasPeriodsResponse
+	95,  // 404: tammy.v1.BasPreparationService.GetBasPreparation:output_type -> tammy.v1.GetBasPreparationResponse
+	97,  // 405: tammy.v1.BasPreparationService.ListBasPreparations:output_type -> tammy.v1.ListBasPreparationsResponse
+	99,  // 406: tammy.v1.BasPreparationService.GetBasCalculation:output_type -> tammy.v1.GetBasCalculationResponse
+	101, // 407: tammy.v1.BasPreparationService.ListBasCalculations:output_type -> tammy.v1.ListBasCalculationsResponse
+	103, // 408: tammy.v1.BasPreparationService.GetFrozenBas:output_type -> tammy.v1.GetFrozenBasResponse
+	105, // 409: tammy.v1.BasPreparationService.ListFrozenBas:output_type -> tammy.v1.ListFrozenBasResponse
+	109, // 410: tammy.v1.BasPreparationService.GetBasExternalObservation:output_type -> tammy.v1.GetBasExternalObservationResponse
+	107, // 411: tammy.v1.BasPreparationService.ListBasExternalObservations:output_type -> tammy.v1.ListBasExternalObservationsResponse
+	111, // 412: tammy.v1.BasPreparationService.GetBasExternalDisputeResolution:output_type -> tammy.v1.GetBasExternalDisputeResolutionResponse
+	113, // 413: tammy.v1.BasPreparationService.ListBasExternalDisputeResolutions:output_type -> tammy.v1.ListBasExternalDisputeResolutionsResponse
+	115, // 414: tammy.v1.BasPreparationService.ListBasExportEvents:output_type -> tammy.v1.ListBasExportEventsResponse
+	117, // 415: tammy.v1.BasPreparationService.SetBasObligationsProfile:output_type -> tammy.v1.SetBasObligationsProfileResponse
+	119, // 416: tammy.v1.BasPreparationService.ConfirmBasPeriod:output_type -> tammy.v1.ConfirmBasPeriodResponse
+	121, // 417: tammy.v1.BasPreparationService.SaveBasPaygInputs:output_type -> tammy.v1.SaveBasPaygInputsResponse
+	123, // 418: tammy.v1.BasPreparationService.RegenerateBasPreparation:output_type -> tammy.v1.RegenerateBasPreparationResponse
+	125, // 419: tammy.v1.BasPreparationService.ValidateBasPreparation:output_type -> tammy.v1.ValidateBasPreparationResponse
+	127, // 420: tammy.v1.BasPreparationService.AcknowledgeBasWarnings:output_type -> tammy.v1.AcknowledgeBasWarningsResponse
+	129, // 421: tammy.v1.BasPreparationService.FreezeBasForManualHandoff:output_type -> tammy.v1.FreezeBasForManualHandoffResponse
+	131, // 422: tammy.v1.BasPreparationService.CreateBasReplacement:output_type -> tammy.v1.CreateBasReplacementResponse
+	133, // 423: tammy.v1.BasPreparationService.CreateBasRevision:output_type -> tammy.v1.CreateBasRevisionResponse
+	135, // 424: tammy.v1.BasPreparationService.RecordExternalBasObservation:output_type -> tammy.v1.RecordExternalBasObservationResponse
+	137, // 425: tammy.v1.BasPreparationService.CorrectExternalBasObservation:output_type -> tammy.v1.CorrectExternalBasObservationResponse
+	139, // 426: tammy.v1.BasPreparationService.ResolveExternalBasDispute:output_type -> tammy.v1.ResolveExternalBasDisputeResponse
+	141, // 427: tammy.v1.BasPreparationService.ReplaceRejectedBasAttempt:output_type -> tammy.v1.ReplaceRejectedBasAttemptResponse
+	143, // 428: tammy.v1.BasPreparationService.RecordBasExportEvent:output_type -> tammy.v1.RecordBasExportEventResponse
+	400, // [400:429] is the sub-list for method output_type
+	371, // [371:400] is the sub-list for method input_type
+	371, // [371:371] is the sub-list for extension type_name
+	371, // [371:371] is the sub-list for extension extendee
+	0,   // [0:371] is the sub-list for field type_name
 }
 
 func init() { file_tammy_v1_bas_preparation_proto_init() }
@@ -12614,6 +12910,7 @@ func file_tammy_v1_bas_preparation_proto_init() {
 	}
 	file_tammy_v1_bas_preparation_proto_msgTypes[18].OneofWrappers = []any{}
 	file_tammy_v1_bas_preparation_proto_msgTypes[20].OneofWrappers = []any{}
+	file_tammy_v1_bas_preparation_proto_msgTypes[21].OneofWrappers = []any{}
 	file_tammy_v1_bas_preparation_proto_msgTypes[22].OneofWrappers = []any{}
 	file_tammy_v1_bas_preparation_proto_msgTypes[24].OneofWrappers = []any{}
 	file_tammy_v1_bas_preparation_proto_msgTypes[26].OneofWrappers = []any{}
@@ -12635,17 +12932,17 @@ func file_tammy_v1_bas_preparation_proto_init() {
 	file_tammy_v1_bas_preparation_proto_msgTypes[49].OneofWrappers = []any{}
 	file_tammy_v1_bas_preparation_proto_msgTypes[53].OneofWrappers = []any{}
 	file_tammy_v1_bas_preparation_proto_msgTypes[55].OneofWrappers = []any{}
-	file_tammy_v1_bas_preparation_proto_msgTypes[58].OneofWrappers = []any{}
 	file_tammy_v1_bas_preparation_proto_msgTypes[59].OneofWrappers = []any{}
-	file_tammy_v1_bas_preparation_proto_msgTypes[67].OneofWrappers = []any{}
-	file_tammy_v1_bas_preparation_proto_msgTypes[75].OneofWrappers = []any{}
+	file_tammy_v1_bas_preparation_proto_msgTypes[60].OneofWrappers = []any{}
+	file_tammy_v1_bas_preparation_proto_msgTypes[68].OneofWrappers = []any{}
+	file_tammy_v1_bas_preparation_proto_msgTypes[76].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_tammy_v1_bas_preparation_proto_rawDesc), len(file_tammy_v1_bas_preparation_proto_rawDesc)),
-			NumEnums:      35,
-			NumMessages:   107,
+			NumEnums:      36,
+			NumMessages:   108,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

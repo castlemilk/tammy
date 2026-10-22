@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"sort"
 	"strconv"
+	"strings"
 
 	tammyv1 "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1"
 	"github.com/tammyapp/tammy/services/core/internal/platform/ids"
@@ -50,6 +52,7 @@ func (repository *ExportEventRepository) List(ctx context.Context, request Expor
 	}
 	queryHash := basPageQueryHash("bas_export_history_family_scan_v1", request.OrganisationID, refKey(family)+":"+kind+":"+refKey(target))
 	snapshot, position := basPageSnapshot{}, int64(0)
+	var boundaryRecords []exportPageRecord
 	if request.Cursor == nil {
 		endpoint, err := repository.loadExportFamilyPageRecords(ctx, request.OrganisationID, family, "ORDER BY append_ordinal DESC LIMIT 1")
 		if err != nil {
@@ -61,9 +64,7 @@ func (repository *ExportEventRepository) List(ctx context.Context, request Expor
 		if len(endpoint) != 1 {
 			return nil, errors.Join(ErrExportEventRepository, ErrSnapshotCorrupt)
 		}
-		if _, err := repository.verifyExportPageRecord(ctx, request, endpoint[0]); err != nil {
-			return nil, errors.Join(ErrExportEventRepository, err)
-		}
+		boundaryRecords = append(boundaryRecords, endpoint[0])
 		snapshot = basPageSnapshot{ordinal: endpoint[0].ordinal, hash: bytes.Clone(endpoint[0].exact.ContentHash)}
 	} else {
 		cursor, err := repository.cursors.Decode(*request.Cursor, queryHash)
@@ -82,16 +83,12 @@ func (repository *ExportEventRepository) List(ctx context.Context, request Expor
 		if err != nil || len(endpoint) != 1 || !bytes.Equal(endpoint[0].exact.ContentHash, snapshot.hash) {
 			return nil, errors.Join(ErrExportEventRepository, ErrSnapshotCorrupt, err)
 		}
-		if _, err := repository.verifyExportPageRecord(ctx, request, endpoint[0]); err != nil {
-			return nil, errors.Join(ErrExportEventRepository, err)
-		}
+		boundaryRecords = append(boundaryRecords, endpoint[0])
 		anchor, err := repository.loadExportFamilyPageRecords(ctx, request.OrganisationID, family, "AND append_ordinal=? LIMIT 1", position)
 		if err != nil || len(anchor) != 1 {
 			return nil, errors.Join(ErrExportEventRepository, ErrSnapshotCorrupt, err)
 		}
-		if _, err := repository.verifyExportPageRecord(ctx, request, anchor[0]); err != nil {
-			return nil, errors.Join(ErrExportEventRepository, err)
-		}
+		boundaryRecords = append(boundaryRecords, anchor[0])
 	}
 	records, err := repository.loadExportFamilyPageRecords(ctx, request.OrganisationID, family, "AND append_ordinal>? AND append_ordinal<=? ORDER BY append_ordinal LIMIT ?", position, snapshot.ordinal, pageSize+1)
 	if err != nil {
@@ -100,12 +97,26 @@ func (repository *ExportEventRepository) List(ctx context.Context, request Expor
 	if len(records) == 0 || len(records) > pageSize+1 {
 		return nil, errors.Join(ErrExportEventRepository, ErrSnapshotCorrupt)
 	}
-	values := make([]*tammyv1.BasExportEventSummary, 0, len(records))
 	last := position
-	for index, record := range records {
+	for _, record := range records {
 		if record.ordinal <= last || record.ordinal > snapshot.ordinal {
 			return nil, errors.Join(ErrExportEventRepository, ErrSnapshotCorrupt)
 		}
+		last = record.ordinal
+	}
+	proofRecords := make([]exportPageRecord, 0, len(boundaryRecords)+len(records))
+	proofRecords = append(proofRecords, boundaryRecords...)
+	proofRecords = append(proofRecords, records...)
+	if err := repository.verifyExportPageVersionPositions(ctx, request.OrganisationID, family.Id, snapshot.ordinal, proofRecords); err != nil {
+		return nil, errors.Join(ErrExportEventRepository, err)
+	}
+	for _, record := range boundaryRecords {
+		if _, err := repository.verifyExportPageRecord(ctx, request, record); err != nil {
+			return nil, errors.Join(ErrExportEventRepository, err)
+		}
+	}
+	values := make([]*tammyv1.BasExportEventSummary, 0, len(records))
+	for index, record := range records {
 		value, err := repository.verifyExportPageRecord(ctx, request, record)
 		if err != nil {
 			return nil, errors.Join(ErrExportEventRepository, err)
@@ -118,7 +129,6 @@ func (repository *ExportEventRepository) List(ctx context.Context, request Expor
 			}
 			values = append(values, summary)
 		}
-		last = record.ordinal
 	}
 	hasMore := len(records) > pageSize
 	if hasMore {
@@ -177,7 +187,9 @@ func (repository *ExportEventRepository) loadExportRecords(ctx context.Context, 
 }
 
 func (repository *ExportEventRepository) verifyExportPageRecord(ctx context.Context, request ExportEventListRequest, record exportPageRecord) (*tammyv1.BasExportEvent, error) {
-	value, err := repository.GetExact(ctx, request.OrganisationID, record.exact)
+	// List has already batch-proved the event's persisted target-local version
+	// position at the same family watermark. Keep every body-level proof here.
+	value, err := repository.getExact(ctx, request.OrganisationID, record.exact, false)
 	if err != nil {
 		return nil, err
 	}
@@ -185,4 +197,110 @@ func (repository *ExportEventRepository) verifyExportPageRecord(ctx context.Cont
 		return nil, ErrSnapshotCorrupt
 	}
 	return value, nil
+}
+
+// verifyExportPageVersionPositions replaces one prefix aggregate per event
+// with one window pass for the bounded List batch. Public GetExact continues to
+// use verifyExportVersionPrefix; this shortcut is confined to List after exact
+// SQL row positions have been checked here.
+func (repository *ExportEventRepository) verifyExportPageVersionPositions(ctx context.Context, org, familyID string, watermark int64, candidates []exportPageRecord) error {
+	if !ids.IsCanonicalV7(org) || !ids.IsCanonicalV7(familyID) || watermark <= 0 || len(candidates) == 0 || len(candidates) > basRepositoryPageSizeMaximum+3 {
+		return ErrSnapshotCorrupt
+	}
+	wanted := make(map[string]exportPageRecord, len(candidates))
+	for _, candidate := range candidates {
+		if candidate.ordinal <= 0 || candidate.ordinal > watermark || candidate.version <= 0 ||
+			!validBASSourceRef(candidate.exact, exportSnapshotSpec.resource, "") || candidate.exact.Revision != 1 {
+			return ErrSnapshotCorrupt
+		}
+		if previous, ok := wanted[candidate.exact.Id]; ok {
+			if previous.ordinal != candidate.ordinal || previous.version != candidate.version || !bytes.Equal(previous.exact.ContentHash, candidate.exact.ContentHash) {
+				return ErrSnapshotCorrupt
+			}
+			continue
+		}
+		wanted[candidate.exact.Id] = candidate
+	}
+	if len(wanted) == 0 || len(wanted) > basRepositoryPageSizeMaximum+3 {
+		return ErrSnapshotCorrupt
+	}
+
+	eventIDs := make([]string, 0, len(wanted))
+	args := make([]any, 0, 3+len(wanted))
+	args = append(args, org, familyID, watermark)
+	for id := range wanted {
+		eventIDs = append(eventIDs, id)
+	}
+	// Bound the dynamic SQL to placeholder punctuation only; all identifiers are
+	// values. Sorting keeps statement arguments deterministic for diagnostics.
+	sort.Strings(eventIDs)
+	for _, id := range eventIDs {
+		args = append(args, id)
+	}
+	places := strings.TrimSuffix(strings.Repeat("?,", len(eventIDs)), ",")
+	// Only targets represented by this bounded batch need prefix validation.
+	// The two fixed branches let SQLite use the existing target-key indexes
+	// rather than ranking unrelated event histories in the family. The final
+	// candidate-ID filter uses a second bounded placeholder set.
+	args = append(args, org, familyID, watermark, org, familyID, watermark)
+	for _, id := range eventIDs {
+		args = append(args, id)
+	}
+	query := "WITH candidate_targets AS MATERIALIZED (" +
+		" SELECT DISTINCT target_kind,calculation_id,calculation_version,calculation_hash,frozen_id,frozen_hash" +
+		" FROM bas_export_events_v1 WHERE organisation_id=? AND family_id=? AND append_ordinal<=?" +
+		" AND export_event_id IN (" + places + ")" +
+		"), target_history AS MATERIALIZED (" +
+		" SELECT e.append_ordinal,e.event_version,e.export_event_id,e.content_hash,e.target_kind," +
+		" e.calculation_id,e.calculation_version,e.calculation_hash,e.frozen_id,e.frozen_hash" +
+		" FROM candidate_targets AS c CROSS JOIN bas_export_events_v1 AS e INDEXED BY bas_export_events_calculation_page_idx" +
+		" WHERE c.target_kind='CALCULATION' AND e.target_kind='CALCULATION'" +
+		" AND e.organisation_id=? AND e.family_id=? AND e.append_ordinal<=?" +
+		" AND e.calculation_id=c.calculation_id AND e.calculation_version=c.calculation_version AND e.calculation_hash=c.calculation_hash" +
+		" UNION ALL" +
+		" SELECT e.append_ordinal,e.event_version,e.export_event_id,e.content_hash,e.target_kind," +
+		" e.calculation_id,e.calculation_version,e.calculation_hash,e.frozen_id,e.frozen_hash" +
+		" FROM candidate_targets AS c CROSS JOIN bas_export_events_v1 AS e INDEXED BY bas_export_events_frozen_page_idx" +
+		" WHERE c.target_kind='FROZEN' AND e.target_kind='FROZEN'" +
+		" AND e.organisation_id=? AND e.family_id=? AND e.append_ordinal<=?" +
+		" AND e.frozen_id=c.frozen_id AND e.frozen_hash=c.frozen_hash" +
+		"), ranked AS (" +
+		" SELECT append_ordinal,event_version,export_event_id,content_hash,target_kind," +
+		" calculation_id,calculation_version,calculation_hash,frozen_id,frozen_hash," +
+		" ROW_NUMBER() OVER (" +
+		" PARTITION BY target_kind,calculation_id,calculation_version,calculation_hash,frozen_id,frozen_hash" +
+		" ORDER BY append_ordinal) AS expected_version FROM target_history" +
+		"), checked AS (" +
+		" SELECT append_ordinal,event_version,export_event_id,content_hash,expected_version," +
+		" MAX(CASE WHEN event_version != expected_version THEN 1 ELSE 0 END) OVER (" +
+		" PARTITION BY target_kind,calculation_id,calculation_version,calculation_hash,frozen_id,frozen_hash" +
+		" ORDER BY append_ordinal ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS prefix_invalid" +
+		" FROM ranked" +
+		") SELECT append_ordinal,event_version,export_event_id,content_hash,expected_version,prefix_invalid" +
+		" FROM checked WHERE export_event_id IN (" + places + ")"
+	rows, err := repository.executor.QueryContext(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+	for rows.Next() {
+		var ordinal, version, expectedVersion, prefixInvalid int64
+		var eventID string
+		var contentHash []byte
+		if err := rows.Scan(&ordinal, &version, &eventID, &contentHash, &expectedVersion, &prefixInvalid); err != nil {
+			return errors.Join(err, rows.Close())
+		}
+		candidate, ok := wanted[eventID]
+		if !ok || candidate.ordinal != ordinal || candidate.version != version || expectedVersion != version || prefixInvalid != 0 ||
+			!bytes.Equal(candidate.exact.ContentHash, contentHash) {
+			return errors.Join(ErrSnapshotCorrupt, rows.Close())
+		}
+		delete(wanted, eventID)
+	}
+	if err := errors.Join(rows.Err(), rows.Close()); err != nil {
+		return err
+	}
+	if len(wanted) != 0 {
+		return ErrSnapshotCorrupt
+	}
+	return nil
 }

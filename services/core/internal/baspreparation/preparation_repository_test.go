@@ -50,11 +50,13 @@ func TestPreparationRepositoryRetainsVersionsAndRejectsStaleOrChangedIdentity(t 
 	if _, err := repository.Append(ctx, next, firstRef); !errors.Is(err, ErrPreparationConflict) {
 		t.Fatalf("stale preparation append: %v", err)
 	}
-	for _, kind := range []string{"attempt", "created_at", "branch", "predecessor"} {
+	for _, kind := range []string{"attempt", "created_at", "branch", "predecessor", "creation_reason"} {
 		changed := clonePreparationRetainedSnapshot(current)
 		changed.Preparation.Version++
 		changed.Preparation.ContentHash = nil
 		switch kind {
+		case "creation_reason":
+			changed.Preparation.CreationReason = "Changed the immutable creation explanation"
 		case "attempt":
 			changed.AttemptID = testUUID(9991)
 		case "created_at":

@@ -4,6 +4,7 @@ package overview
 
 import (
 	"context"
+	tammyv1 "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1"
 	"path/filepath"
 	"testing"
 
@@ -29,7 +30,7 @@ func TestSQLCipherSnapshotPortReadsBlankWorkspaceRevisionVector(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	snapshot, err := port.Attention(context.Background(), overviewOrganisationID)
+	snapshot, err := port.Attention(context.Background(), overviewOrganisationID, &tammyv1.ReportingPeriod{StartDate: &tammyv1.CivilDate{Year: 2026, Month: 7, Day: 1}, EndDate: &tammyv1.CivilDate{Year: 2026, Month: 9, Day: 30}})
 	if err != nil {
 		t.Fatalf("Attention() error = %v", err)
 	}

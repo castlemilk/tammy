@@ -151,14 +151,18 @@ export async function setupPurchaseWorkspace(
 // A real one-page PDF original; all tax and amount decisions are reviewed in UI.
 export function syntheticPurchasePdf(
   number: string,
-  isNotice: boolean | "legacy-review" = false,
+  isNotice: boolean | "legacy-review" | "payg-evidence" | "actual-due-date-evidence" = false,
 ): Buffer {
   const text =
     isNotice === "legacy-review"
       ? `BT /F1 12 Tf 50 750 Td (Synthetic legacy source review ${number}) Tj 0 -20 Td (Opening supplier item unpaid through 09 October 2026) Tj 0 -20 Td (Earlier invoice paid AUD 110.00 on 02 October 2026) Tj 0 -20 Td (Separate sources - no purchase credit or opening settlement inferred) Tj ET`
-      : isNotice
-        ? `BT /F1 12 Tf 50 750 Td (Synthetic required-return notice ${number}) Tj 0 -20 Td (Required return due date 03 November 2026) Tj 0 -20 Td (Supporting evidence only - no purchase or payment value) Tj ET`
-        : `BT /F1 12 Tf 50 750 Td (Synthetic tax invoice ${number}) Tj 0 -20 Td (Supplier ABN 51 824 753 556) Tj 0 -20 Td (Purchase total AUD 110.00 including GST 10.00) Tj ET`;
+      : isNotice === "payg-evidence"
+        ? `BT /F1 12 Tf 50 750 Td (Synthetic payroll and PAYG notice ${number}) Tj 0 -20 Td (W1 total payments AUD 1,000.00; W2 withheld AUD 50.00) Tj 0 -20 Td (PAYGI T1 AUD 2,010.99; operative rate 1.7 percent; prior variation none) Tj 0 -20 Td (Supporting evidence only - no purchase or payment value) Tj ET`
+        : isNotice === "actual-due-date-evidence"
+          ? `BT /F1 12 Tf 50 750 Td (Synthetic ATO activity statement ${number}) Tj 0 -20 Td (Actual statement due date 28 October 2026) Tj 0 -20 Td (Supporting evidence only - no purchase or payment value) Tj ET`
+          : isNotice
+            ? `BT /F1 12 Tf 50 750 Td (Synthetic required-return notice ${number}) Tj 0 -20 Td (Required return due date 03 November 2026) Tj 0 -20 Td (Supporting evidence only - no purchase or payment value) Tj ET`
+            : `BT /F1 12 Tf 50 750 Td (Synthetic tax invoice ${number}) Tj 0 -20 Td (Supplier ABN 51 824 753 556) Tj 0 -20 Td (Purchase total AUD 110.00 including GST 10.00) Tj ET`;
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",
     "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
@@ -186,6 +190,7 @@ export async function retainPurchaseThroughUi(
   invoiceDate = "2026-08-31",
   zeroMoney = false,
   legacyReviewProof = false,
+  documentKind: "purchase" | "payg-evidence" | "actual-due-date-evidence" = "purchase",
 ): Promise<d.Document> {
   await page.getByRole("link", { name: "Documents", exact: true }).click();
   await page.locator('input[type="file"]').setInputFiles({
@@ -193,11 +198,23 @@ export async function retainPurchaseThroughUi(
     mimeType: "application/pdf",
     buffer: syntheticPurchasePdf(
       number,
-      zeroMoney && legacyReviewProof ? "legacy-review" : zeroMoney,
+      legacyReviewProof
+        ? "legacy-review"
+        : documentKind === "payg-evidence" || documentKind === "actual-due-date-evidence"
+          ? documentKind
+          : zeroMoney,
     ),
   });
   await expect(page.getByRole("heading", { name: `${number}.pdf`, exact: true })).toBeVisible();
-  await page.getByLabel("Supplier", { exact: true }).fill('=Synthetic supplier, "Élodie"');
+  await page
+    .getByLabel("Supplier", { exact: true })
+    .fill(
+      documentKind === "payg-evidence"
+        ? "Synthetic payroll and ATO notice"
+        : documentKind === "actual-due-date-evidence"
+          ? "Synthetic ATO activity statement"
+          : '=Synthetic supplier, "Élodie"',
+    );
   await page.getByLabel("Invoice number", { exact: true }).fill(number);
   await page.getByLabel("Date", { exact: true }).fill(invoiceDate);
   await page.getByLabel("Subtotal", { exact: true }).fill(zeroMoney ? "0.00" : "100.00");

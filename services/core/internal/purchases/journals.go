@@ -269,16 +269,17 @@ func purchaseJournalMoney(amount int64) *tammyv1.Money {
 // JournalWriter posts within its caller's authenticated transaction. The caller
 // reserves the revision vector once and persists the owned source and event.
 type JournalWriter struct {
-	executor app.CommandSQLExecutor
-	now      func() time.Time
-	newID    func() (string, error)
+	executor             app.CommandSQLExecutor
+	now                  func() time.Time
+	newID                func() (string, error)
+	reportingOwnerGuards bool
 }
 
 func NewJournalWriter(executor app.CommandSQLExecutor, now func() time.Time, newID func() (string, error)) (*JournalWriter, error) {
 	if executor == nil || now == nil || newID == nil {
 		return nil, ErrPurchaseJournal
 	}
-	return &JournalWriter{executor, now, newID}, nil
+	return &JournalWriter{executor: executor, now: now, newID: newID}, nil
 }
 
 func (writer *JournalWriter) IsPostingDateOpen(ctx context.Context, organisationID string, date *tammyv1.CivilDate) error {
@@ -364,16 +365,27 @@ func (writer *JournalWriter) spec(ctx context.Context, organisationID, sourceID 
 	for id, account := range base {
 		spec.Accounts[id] = account
 	}
-	rows, err := writer.executor.QueryContext(ctx, `SELECT id FROM accounts WHERE organisation_id=? AND code IN ('2000','1150','1160','1170')`, organisationID)
+	query := `SELECT id FROM accounts WHERE organisation_id=? AND code IN ('2000','1150','1160','1170')`
+	args := []any{organisationID}
+	if writer.reportingOwnerGuards {
+		query, args = postingReportingReadSQL(purchaseReportingControlIDReplayQuery(organisationID))
+	}
+	rows, err := writer.executor.QueryContext(ctx, query, args...)
 	if err != nil {
 		return JournalSpec{}, err
 	}
 	var controlIDs []string
 	for rows.Next() {
 		var id string
-		if err := rows.Scan(&id); err != nil {
+		var scanErr error
+		if writer.reportingOwnerGuards {
+			scanErr = (purchaseReportingOwnerRow{rows: rows}).Scan(&id)
+		} else {
+			scanErr = rows.Scan(&id)
+		}
+		if scanErr != nil {
 			_ = rows.Close()
-			return JournalSpec{}, err
+			return JournalSpec{}, scanErr
 		}
 		controlIDs = append(controlIDs, id)
 	}
@@ -383,7 +395,13 @@ func (writer *JournalWriter) spec(ctx context.Context, organisationID, sourceID 
 	}
 	accounts, _ := accounting.NewAccountRepository(writer.executor)
 	for _, id := range controlIDs {
-		account, err := accounts.Get(ctx, id)
+		var account *tammyv1.Account
+		var err error
+		if writer.reportingOwnerGuards {
+			account, err = accounts.GetForReporting(ctx, organisationID, id)
+		} else {
+			account, err = accounts.Get(ctx, id)
+		}
 		if err != nil {
 			return JournalSpec{}, err
 		}

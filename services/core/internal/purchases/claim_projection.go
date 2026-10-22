@@ -5,7 +5,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/tammyapp/tammy/services/core/internal/accounting"
 	tammyv1 "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1"
 	"google.golang.org/protobuf/proto"
 )
@@ -220,8 +219,7 @@ func (r *Repository) verifyElectedEventActor(ctx context.Context, operation, com
 }
 
 func (r *Repository) verifyAttributionJournal(ctx context.Context, p *tammyv1.PurchasePosting, event retainedPaymentEvent, a *tammyv1.PurchaseGstAttribution, amount int64) (*tammyv1.Journal, error) {
-	journals, _ := accounting.NewJournalRepository(r.executor)
-	journal, err := journals.Get(ctx, a.JournalId)
+	journal, err := r.reportingJournal(ctx, p.OrganisationId, a.JournalId)
 	if err != nil || len(journal.Lines) != 2 {
 		return nil, ErrRepository
 	}
@@ -240,6 +238,7 @@ func (r *Repository) verifyAttributionJournal(ctx context.Context, p *tammyv1.Pu
 		index++
 		return id, nil
 	})
+	writer.reportingOwnerGuards = r.reportingRootOwners
 	spec, err := writer.spec(ctx, p.OrganisationId, event.operation, a.ReleasePostingDate, a.FinancialRevision, nil)
 	if err != nil {
 		return nil, ErrRepository

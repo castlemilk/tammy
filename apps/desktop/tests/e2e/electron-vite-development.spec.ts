@@ -172,6 +172,7 @@ test("runs the real electron-vite development runtime offline and cleans up Core
     expect(bridgeEvidence.manifestModules).toEqual([
       "accounting",
       "banking",
+      "basPreparation",
       "documents",
       "organisation",
       "purchases",

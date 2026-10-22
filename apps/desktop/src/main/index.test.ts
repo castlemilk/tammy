@@ -41,6 +41,9 @@ function occurrences(calls: readonly string[], value: string): number {
 
 function unusedCoreMethods() {
   return {
+    assignRoles: vi.fn(async () => {
+      throw new Error("unused");
+    }),
     getPurchaseAccounting: vi.fn(async () => {
       throw new Error("unused");
     }),

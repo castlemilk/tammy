@@ -143,8 +143,8 @@ func assertPurchaseRootOwnerModernDocumentRejected(t *testing.T, tx *sqlcipher.T
 	t.Helper()
 	probe := &purchaseRootOwnerModernDocumentProbe{CommandSQLExecutor: tx}
 	capture, err := f.repo(probe).CapturePostingsForReporting(context.Background(), postingOrg)
-	if capture != nil || !errors.Is(err, purchases.ErrRepository) || probe.postingBodyQueries == 0 || probe.documentBodyQueries != 0 {
-		t.Errorf("modern capture for BLOB-owned posted document returned result=%t err=%q postingBodyQueries=%d documentBodyQueries=%d; want nil result, repository error, and no document-body columns",
+	if capture != nil || !errors.Is(err, purchases.ErrRepository) || probe.postingBodyQueries != 0 || probe.documentBodyQueries != 0 {
+		t.Errorf("modern capture for BLOB-owned posted document returned result=%t err=%q postingBodyQueries=%d documentBodyQueries=%d; want nil result, repository error, and no posting or document-body columns",
 			capture != nil, purchaseRootOwnerErrorPreview(err), probe.postingBodyQueries, probe.documentBodyQueries)
 	}
 }

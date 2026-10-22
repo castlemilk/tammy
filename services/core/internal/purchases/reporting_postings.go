@@ -505,7 +505,8 @@ func postingReportingJournalFactQueries(organisationID string, journalIDs []stri
 			columns: strings.Fields("id organisation_id journal_line_id tax_code treatment original_gross_minor original_net_minor original_gst_minor attributed_gross_minor attributed_net_minor attributed_gst_minor remaining_gross_minor remaining_net_minor remaining_gst_minor tax_rule_type tax_rule_id tax_rule_revision tax_rule_content_hash source_type source_id source_revision source_content_hash created_at"),
 			from:    "tax_facts AS f JOIN journal_lines AS l ON l.id=f.journal_line_id JOIN journals AS j ON j.id=l.journal_id",
 			where:   "f.organisation_id=? AND j.organisation_id=? AND j.id IN (" + placeholders + ")", args: args,
-			orderBy: "j.id,l.line_number,f.id",
+			orderBy:    "j.id,l.line_number,f.id",
+			ownerGuard: purchaseReportingJournalFactReferenceGuard(organisationID, batch, "tax_facts"),
 		})
 	}
 	for _, batch := range chunks {
@@ -520,7 +521,8 @@ func postingReportingJournalFactQueries(organisationID string, journalIDs []stri
 			columns: strings.Fields("id organisation_id journal_line_id sequence category amount_minor source_revision created_at"),
 			from:    "cash_flow_facts AS f JOIN journal_lines AS l ON l.id=f.journal_line_id JOIN journals AS j ON j.id=l.journal_id",
 			where:   "f.organisation_id=? AND j.organisation_id=? AND j.id IN (" + placeholders + ")", args: args,
-			orderBy: "j.id,l.line_number,f.sequence,f.id",
+			orderBy:    "j.id,l.line_number,f.sequence,f.id",
+			ownerGuard: purchaseReportingJournalFactReferenceGuard(organisationID, batch, "cash_flow_facts"),
 		})
 	}
 	return queries
@@ -538,6 +540,7 @@ func postingReportingControlAccountQueries(organisationID string, required bool)
 		columns: strings.Fields("id organisation_id code name account_type subtype normal_balance status designation default_tax_code_id report_classification cash_flow_classification owner_module version created_at updated_at"),
 		from:    "accounts AS a", where: "a.organisation_id=? AND a.code IN ('2000','1150','1160','1170')",
 		args: []any{organisationID}, orderBy: "a.code,a.id",
+		ownerGuard: purchaseReportingAccountReferenceGuard(organisationID, nil, true),
 	}}
 }
 

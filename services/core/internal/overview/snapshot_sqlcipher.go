@@ -6,6 +6,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"sync"
 
 	tammyv1 "github.com/tammyapp/tammy/services/core/internal/gen/tammy/v1"
 	"github.com/tammyapp/tammy/services/core/internal/platform/ids"
@@ -16,8 +17,10 @@ import (
 // read-only encrypted transaction. Modules not installed in the current slice
 // report their honest zero state.
 type SQLCipherSnapshotPort struct {
-	database    *sqlcipher.Database
-	workspaceID string
+	database     *sqlcipher.Database
+	workspaceID  string
+	projectorMu  sync.RWMutex
+	basProjector BASAttentionProjector
 }
 
 func NewSQLCipherSnapshotPort(database *sqlcipher.Database, workspaceID string) (*SQLCipherSnapshotPort, error) {
@@ -27,7 +30,7 @@ func NewSQLCipherSnapshotPort(database *sqlcipher.Database, workspaceID string) 
 	return &SQLCipherSnapshotPort{database: database, workspaceID: workspaceID}, nil
 }
 
-func (port *SQLCipherSnapshotPort) Attention(ctx context.Context, organisationID string) (Snapshot, error) {
+func (port *SQLCipherSnapshotPort) Attention(ctx context.Context, organisationID string, reportingPeriod *tammyv1.ReportingPeriod) (Snapshot, error) {
 	if port == nil || port.database == nil || ctx == nil || !ids.IsCanonicalV7(organisationID) {
 		return Snapshot{}, ErrOverview
 	}
@@ -120,9 +123,13 @@ func (port *SQLCipherSnapshotPort) Attention(ctx context.Context, organisationID
 		WHERE organisation_id = ? AND status = 'DRAFT_NOT_LODGED'`, organisationID).Scan(&draftBASWorkpapers); err != nil {
 		return Snapshot{}, errors.Join(ErrOverview, err)
 	}
-	basStatus := tammyv1.BasAttentionStatus_BAS_ATTENTION_STATUS_NOT_CREATED
-	if draftBASWorkpapers > 0 {
-		basStatus = tammyv1.BasAttentionStatus_BAS_ATTENTION_STATUS_DRAFT_NOT_LODGED
+	projection := BASAttentionProjection{Status: tammyv1.BasAttentionStatus_BAS_ATTENTION_STATUS_ACTION_NEEDED}
+	if projector := port.basAttentionProjector(); projector != nil {
+		projected, err := projector.ProjectBASAttention(ctx, tx, organisationID, reportingPeriod)
+		if err != nil || !validateBASAttentionProjection(projected) {
+			return Snapshot{}, errors.Join(ErrOverview, err)
+		}
+		projection = projected
 	}
 	if err := tx.Commit(); err != nil {
 		return Snapshot{}, errors.Join(ErrOverview, err)
@@ -133,8 +140,29 @@ func (port *SQLCipherSnapshotPort) Attention(ctx context.Context, organisationID
 		BankingNeedingReview:   bankingNeedingReview,
 		BankingUnreconciled:    bankingUnreconciled,
 		DraftBASWorkpapers:     draftBASWorkpapers,
-		BASStatus:              basStatus,
+		BASStatus:              projection.Status,
+		BASPreparation:         cloneSourceRef(projection.Preparation),
+		BASFamily:              cloneSourceRef(projection.Family),
+		BASFrozen:              cloneSourceRef(projection.Frozen),
 		Items:                  items,
 		Revisions:              revisions,
 	}, nil
+}
+
+func (port *SQLCipherSnapshotPort) RegisterBASAttentionProjector(value BASAttentionProjector) error {
+	if port == nil || value == nil {
+		return ErrOverview
+	}
+	port.projectorMu.Lock()
+	defer port.projectorMu.Unlock()
+	if port.basProjector != nil {
+		return ErrOverview
+	}
+	port.basProjector = value
+	return nil
+}
+func (port *SQLCipherSnapshotPort) basAttentionProjector() BASAttentionProjector {
+	port.projectorMu.RLock()
+	defer port.projectorMu.RUnlock()
+	return port.basProjector
 }

@@ -5,6 +5,7 @@ import { CONVEYOR_MANIFEST } from "../../../src/shared/conveyor-contract";
 const CHANNELS = {
   accounting: "conveyor:accounting",
   banking: "conveyor:banking",
+  basPreparation: "conveyor:basPreparation",
   documents: "conveyor:documents",
   organisation: "conveyor:organisation",
   purchases: "conveyor:purchases",

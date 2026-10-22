@@ -35,6 +35,8 @@ type documentPageServer struct {
 	auditMirror                *purchaseTestAuditMirror
 	client                     tammyv1connect.DocumentServiceClient
 	purchases                  tammyv1connect.PurchaseServiceClient
+	invoices                   tammyv1connect.InvoiceServiceClient
+	basPreparation             tammyv1connect.BasPreparationServiceClient
 	workspace                  tammyv1connect.WorkspaceServiceClient
 	identity                   tammyv1connect.IdentityServiceClient
 	authentication             *tammyv1.AuthenticationContext
@@ -154,6 +156,8 @@ func newDocumentPageServerAtRoot(t *testing.T, basis tammyv1.GstBasis, root stri
 		organisationID = organisation.Msg.Organisation.Id
 	}
 	return documentPageServer{module: module, activation: observed.activation, auditMirror: mirror, client: tammyv1connect.NewDocumentServiceClient(httpClient, baseURL), purchases: tammyv1connect.NewPurchaseServiceClient(httpClient, baseURL), workspace: workspaceClient, identity: identityClient,
+		basPreparation: tammyv1connect.NewBasPreparationServiceClient(httpClient, baseURL),
+		invoices:       tammyv1connect.NewInvoiceServiceClient(httpClient, baseURL),
 		authentication: authentication, organisationID: organisationID, capability: ready.Capability, stop: stop}
 }
 

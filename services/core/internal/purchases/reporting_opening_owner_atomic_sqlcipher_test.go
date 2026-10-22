@@ -25,35 +25,42 @@ const purchaseOpeningAtomicLateCellBytes = 9 * 1024 * 1024
 
 type purchaseOpeningAtomicProbe struct {
 	app.CommandSQLExecutor
-	t                        *testing.T
-	fixture                  *postingFixture
-	tx                       *sqlcipher.Transaction
-	stage                    string
-	reject                   string
-	mutation                 func()
-	postingMutation          func()
-	targetID                 string
-	documentID               string
-	hookCount                int
-	postingHookCount         int
-	postingReplayReads       int
-	openingPriorReplayReads  int
-	rawOpeningBodyReads      int
-	rejects                  int
-	laterBodies              int
-	rawPreflightReads        int
-	documentReplayReads      int
-	legacyScalarCountQueries int
-	legacyScalarCountGuarded bool
-	rejectionMatched         bool
-	stateAfterMutation       map[string]any
-	triggersBefore           map[string]string
-	triggersAfterMutation    map[string]string
-	beforeRead               runtime.MemStats
-	lastRejectQuery          string
+	t                            *testing.T
+	fixture                      *postingFixture
+	tx                           *sqlcipher.Transaction
+	stage                        string
+	reject                       string
+	mutation                     func()
+	postingMutation              func()
+	targetID                     string
+	documentID                   string
+	hookCount                    int
+	postingHookCount             int
+	postingReplayReads           int
+	postingLaterBodies           int
+	postingStateAfterMutation    map[string]any
+	postingTriggersAfterMutation map[string]string
+	postingBeforeRead            runtime.MemStats
+	openingPriorReplayReads      int
+	rawOpeningBodyReads          int
+	rejects                      int
+	laterBodies                  int
+	rawPreflightReads            int
+	documentReplayReads          int
+	legacyScalarCountQueries     int
+	legacyScalarCountGuarded     bool
+	rejectionMatched             bool
+	stateAfterMutation           map[string]any
+	triggersBefore               map[string]string
+	triggersAfterMutation        map[string]string
+	beforeRead                   runtime.MemStats
+	lastRejectQuery              string
 }
 
 func (probe *purchaseOpeningAtomicProbe) QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
+	if probe.postingHookCount > 0 && purchaseOpeningAtomicIsBody(query) {
+		probe.postingLaterBodies++
+	}
 	if purchaseOpeningAtomicIsRawOpeningBody(query) {
 		probe.rawOpeningBodyReads++
 	}
@@ -94,6 +101,10 @@ func (probe *purchaseOpeningAtomicProbe) QueryContext(ctx context.Context, query
 			if got := postScalar(probe.t, probe.tx, "PRAGMA ignore_check_constraints"); got != 0 {
 				probe.t.Fatalf("posting reference fixture mutation left ignore_check_constraints=%d, want 0", got)
 			}
+			probe.postingStateAfterMutation = purchaseReportingRootOwnerState(probe.t, probe.tx, "full-coverage")
+			probe.postingTriggersAfterMutation = after
+			runtime.GC()
+			runtime.ReadMemStats(&probe.postingBeforeRead)
 		}
 	}
 
@@ -318,6 +329,29 @@ func purchaseOpeningAtomicIsLegacyScalarCount(query string) bool {
 		strings.HasPrefix(compact, "selectcount(*)frompurchase_legacy_reviews_v1whereid=?andorganisation_id=?")
 }
 
+// Required posting references now reject the route mutation before either
+// prior-source body is reached. Retain the older body-mask assertion below for
+// executions that actually reach that separately guarded boundary.
+func purchaseOpeningAtomicAssertEarlyPostingRejection(t *testing.T, probe *purchaseOpeningAtomicProbe, nilCapture bool, err error, after runtime.MemStats) {
+	t.Helper()
+	if probe.hookCount != 0 || probe.rejects != 0 || probe.postingHookCount != 1 || probe.postingReplayReads != 1 ||
+		probe.documentReplayReads != 1 || probe.postingLaterBodies != 0 || probe.openingPriorReplayReads != 0 ||
+		!nilCapture || !errors.Is(err, purchases.ErrRepository) {
+		t.Fatalf("%s early posting rejection: hooks=%d/%d document=%d posting=%d/%d later=%d prior=%d nil=%t err=%v",
+			probe.stage, probe.hookCount, probe.rejects, probe.documentReplayReads, probe.postingHookCount,
+			probe.postingReplayReads, probe.postingLaterBodies, probe.openingPriorReplayReads, nilCapture, err)
+	}
+	if after.TotalAlloc-probe.postingBeforeRead.TotalAlloc >= 2*1024*1024 || len(err.Error()) >= 512 {
+		t.Fatal("early posting-reference rejection exceeded its bounded allocation/error size")
+	}
+	if probe.postingStateAfterMutation == nil || !reflect.DeepEqual(probe.postingStateAfterMutation,
+		purchaseReportingRootOwnerState(t, probe.tx, "full-coverage")) ||
+		!reflect.DeepEqual(probe.postingTriggersAfterMutation, purchaseRootOwnerTriggerDefinitions(t, probe.tx)) ||
+		!probe.tx.Authenticated() || postScalar(t, probe.tx, "PRAGMA ignore_check_constraints") != 0 {
+		t.Fatal("early posting-reference rejection changed caller state, triggers, or authentication")
+	}
+}
+
 func purchaseOpeningAtomicAssertGuardedBody(t *testing.T, probe *purchaseOpeningAtomicProbe, nilCapture bool, err error, after runtime.MemStats) {
 	t.Helper()
 	allocation := after.TotalAlloc - probe.beforeRead.TotalAlloc
@@ -536,7 +570,11 @@ func TestPurchaseOpeningPriorReplayLateSiblingBodyIsAtomic(t *testing.T) {
 	capture, err := f.repo(probe).CaptureCoverageForBAS(ctx, postingOrg)
 	var after runtime.MemStats
 	runtime.ReadMemStats(&after)
-	purchaseOpeningAtomicAssertGuardedBody(t, probe, capture == nil, err, after)
+	if probe.hookCount == 0 {
+		purchaseOpeningAtomicAssertEarlyPostingRejection(t, probe, capture == nil, err, after)
+	} else {
+		purchaseOpeningAtomicAssertGuardedBody(t, probe, capture == nil, err, after)
+	}
 }
 
 func TestPurchaseLegacyPriorReviewReplayLateSiblingBodyIsAtomic(t *testing.T) {
@@ -593,7 +631,11 @@ func TestPurchaseLegacyPriorReviewReplayLateSiblingBodyIsAtomic(t *testing.T) {
 	capture, err := f.repo(probe).CaptureCoverageForBAS(ctx, postingOrg)
 	var after runtime.MemStats
 	runtime.ReadMemStats(&after)
-	purchaseOpeningAtomicAssertGuardedBody(t, probe, capture == nil, err, after)
+	if probe.hookCount == 0 {
+		purchaseOpeningAtomicAssertEarlyPostingRejection(t, probe, capture == nil, err, after)
+	} else {
+		purchaseOpeningAtomicAssertGuardedBody(t, probe, capture == nil, err, after)
+	}
 }
 
 func TestPurchaseConversionHeaderVerificationLateBLOBIsAtomic(t *testing.T) {

@@ -4,6 +4,7 @@ package overview
 import (
 	"context"
 	"errors"
+	"time"
 
 	"buf.build/go/protovalidate"
 	"connectrpc.com/connect"
@@ -19,7 +20,7 @@ type Access interface {
 }
 
 type SnapshotPort interface {
-	Attention(context.Context, string) (Snapshot, error)
+	Attention(context.Context, string, *tammyv1.ReportingPeriod) (Snapshot, error)
 }
 
 type RevisionVector struct {
@@ -40,6 +41,9 @@ type Snapshot struct {
 	BankingUnreconciled    uint32
 	DraftBASWorkpapers     uint32
 	BASStatus              tammyv1.BasAttentionStatus
+	BASPreparation         *tammyv1.SourceRef
+	BASFamily              *tammyv1.SourceRef
+	BASFrozen              *tammyv1.SourceRef
 	Items                  []*tammyv1.AttentionItem
 	Revisions              RevisionVector
 }
@@ -78,7 +82,7 @@ func (service *Service) GetAttentionSummary(
 	if err := service.access.RequireRead(ctx, authentication); err != nil {
 		return nil, connect.NewError(connect.CodePermissionDenied, ErrOverview)
 	}
-	snapshot, err := service.snapshots.Attention(ctx, request.Msg.OrganisationId)
+	snapshot, err := service.snapshots.Attention(ctx, request.Msg.OrganisationId, proto.Clone(request.Msg.ReportingPeriod).(*tammyv1.ReportingPeriod))
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, ErrOverview)
 	}
@@ -89,6 +93,9 @@ func (service *Service) GetAttentionSummary(
 		BankingLinesUnreconciledInPeriod:  snapshot.BankingUnreconciled,
 		CurrentDraftBasWorkpapers:         snapshot.DraftBASWorkpapers,
 		BasStatus:                         snapshot.BASStatus,
+		BasPreparation:                    cloneSourceRef(snapshot.BASPreparation),
+		BasFamily:                         cloneSourceRef(snapshot.BASFamily),
+		BasFrozen:                         cloneSourceRef(snapshot.BASFrozen),
 		AttentionItems:                    cloneItems(snapshot.Items),
 		Revisions: &tammyv1.AttentionRevisionVector{
 			FinancialRevision:           snapshot.Revisions.Financial,
@@ -122,6 +129,10 @@ func civilOrdinal(value *tammyv1.CivilDate) int64 {
 		value.Day < 1 || value.Day > 31 {
 		return 0
 	}
+	date := time.Date(int(value.Year), time.Month(value.Month), int(value.Day), 0, 0, 0, 0, time.UTC)
+	if date.Year() != int(value.Year) || int(date.Month()) != int(value.Month) || date.Day() != int(value.Day) {
+		return 0
+	}
 	return int64(value.Year)*10_000 + int64(value.Month)*100 + int64(value.Day)
 }
 
@@ -135,4 +146,11 @@ func cloneItems(items []*tammyv1.AttentionItem) []*tammyv1.AttentionItem {
 		cloned = append(cloned, proto.Clone(item).(*tammyv1.AttentionItem))
 	}
 	return cloned
+}
+
+func cloneSourceRef(value *tammyv1.SourceRef) *tammyv1.SourceRef {
+	if value == nil {
+		return nil
+	}
+	return proto.Clone(value).(*tammyv1.SourceRef)
 }

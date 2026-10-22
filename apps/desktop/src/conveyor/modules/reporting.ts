@@ -16,7 +16,9 @@ import { ConveyorError, type StandardSchemaV1 } from "electron-conveyor/define";
 import { createProtoMethodCodec } from "../../shared/proto-ipc";
 import {
   type BasExportRequest,
+  type BasPreparationExportRequest,
   basExportRequest,
+  basPreparationExportRequest,
   type IncomeExportRequest,
   incomeExportRequest,
   reportExportError,
@@ -87,6 +89,18 @@ export const reporting = defineModule({
       throw new ConveyorError(bounded.message, bounded.message);
     }
   }),
+  exportBasPreparation: command(
+    exportRequest<BasPreparationExportRequest>(basPreparationExportRequest),
+    async ({ input, ctx }) => {
+      try {
+        if (!ctx.reportExports) throw new Error();
+        return await ctx.reportExports.exportBasPreparation(input);
+      } catch (error) {
+        const bounded = reportExportError(error, "REPORT_SAVE_FAILED");
+        throw new ConveyorError(bounded.message, bounded.message);
+      }
+    },
+  ),
   getCurrentBasDraft: query(conveyorProtoFrame(16_384), ({ input, ctx }) =>
     invokeCore(currentBas, input, ctx.client.getCurrentBasDraft),
   ),

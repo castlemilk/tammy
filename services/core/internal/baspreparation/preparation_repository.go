@@ -83,6 +83,7 @@ func (repository *PreparationRepository) Append(ctx context.Context, retained *P
 			!sameBASSourceRef(expectedCurrent, preparationReference(prior)) || value.Version != prior.Version+1 ||
 			!sameBASSourceRef(value.Family, prior.Family) || retained.AttemptID != current.AttemptID ||
 			!samePreparationBranch(retained.BranchID, current.BranchID) || !proto.Equal(value.CreatedAt, prior.CreatedAt) ||
+			value.CreationReason != prior.CreationReason ||
 			!sameOptionalRef(value.Predecessor, prior.Predecessor) || !validPreparationInputSuccessor(retained, current) {
 			return nil, ErrPreparationConflict
 		}

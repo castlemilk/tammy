@@ -84,7 +84,9 @@ func (r *Repository) CaptureCoverageForBAS(ctx context.Context, organisationID s
 // payables. ReceiptCount combines modern payment rows and unique explicitly
 // linked POSTED manual cash-receipt journals; opening/reversal lineage does
 // not add receipts. JournalCount includes the unique complete parent closure.
-// TaxFactPayloadBytes is a component of BasePayloadBytes.
+// TaxFactCount and TaxFactPayloadBytes describe the exact selected direct tax
+// facts; TaxFactReuseProof is their aggregate equality check against the
+// accounting-owned fact rows.
 type PurchaseCoverageReportingPreflight struct {
 	RootCount           int
 	ReceiptCount        int
@@ -92,8 +94,19 @@ type PurchaseCoverageReportingPreflight struct {
 	JournalIDs          []string
 	JournalPayloadBytes map[string]int64
 	BasePayloadBytes    int64
+	TaxFactCount        int64
 	TaxFactPayloadBytes int64
+	TaxFactReuseProof   BASPurchaseTaxFactReuseProof
 	PayloadBytes        int64
+}
+
+// BASPurchaseTaxFactReuseProof records aggregate equality evidence for the
+// selected raw purchase tax facts and their accounting-owned fact rows.
+type BASPurchaseTaxFactReuseProof struct {
+	FactCount        int64
+	PayloadBytes     int64
+	MatchedFactCount int64
+	MismatchCount    int64
 }
 
 type purchaseCoverageReportingReservation struct {
@@ -124,7 +137,9 @@ type purchaseCoverageReportingReservation struct {
 	factAccountSizes         []int64
 	factAccountCounts        []int64
 	factAccountReserved      int64
+	taxFactCount             int64
 	taxFactPayloadBytes      int64
+	taxFactReuseProof        BASPurchaseTaxFactReuseProof
 	journalPayloadByID       map[string]int64
 	journalPayloadReserved   int64
 	basePayloadBytes         int64
@@ -148,7 +163,9 @@ func purchaseCoverageReportingPreflightSnapshot(reservation *purchaseCoverageRep
 		JournalIDs:          journalIDs,
 		JournalPayloadBytes: journalPayloadBytes,
 		BasePayloadBytes:    reservation.basePayloadBytes,
+		TaxFactCount:        reservation.taxFactCount,
 		TaxFactPayloadBytes: reservation.taxFactPayloadBytes,
+		TaxFactReuseProof:   reservation.taxFactReuseProof,
 		PayloadBytes:        reservation.payloadBytes,
 	}
 }
@@ -165,6 +182,13 @@ func (r *Repository) PreflightCoverageForBASWithPayloadBudget(
 	if err := ctx.Err(); err != nil {
 		return nil, errors.Join(ErrRepository, err)
 	}
+	proof, err := preflightPurchaseTaxFactReuse(ctx, r.executor, organisationID,
+		reservation.allFactAccountQueries, reservation.factAccountCounts, reservation.factAccountSizes,
+		reservation.taxFactCount, reservation.taxFactPayloadBytes)
+	if err != nil {
+		return nil, purchaseReportingReadError(ctx, err)
+	}
+	reservation.taxFactReuseProof = proof
 	return purchaseCoverageReportingPreflightSnapshot(reservation), nil
 }
 
@@ -317,8 +341,8 @@ func (r *Repository) reserveCoverageForBAS(
 	if err != nil {
 		return nil, purchaseReportingReadError(ctx, err)
 	}
-	var taxFactPayloadBytes int64
-	if len(allFactAccountQueries) != len(factAccountSizes) {
+	var taxFactCount, taxFactPayloadBytes int64
+	if len(allFactAccountQueries) != len(factAccountSizes) || len(allFactAccountQueries) != len(factAccountCounts) {
 		return nil, ErrRepository
 	}
 	for index, query := range allFactAccountQueries {
@@ -329,6 +353,10 @@ func (r *Repository) reserveCoverageForBAS(
 		taxFactPayloadBytes, ok = addPostingReportingBytes(taxFactPayloadBytes, factAccountSizes[index])
 		if !ok || taxFactPayloadBytes > maximumPayloadBytes {
 			return nil, &SourceBoundError{Resource: "capture bytes", Limit: maximumPayloadBytes}
+		}
+		taxFactCount, ok = addPostingReportingBytes(taxFactCount, factAccountCounts[index])
+		if !ok || taxFactCount > maximumPostingReportingPayloadSize/postingReportingRowOverhead {
+			return nil, &SourceBoundError{Resource: "tax facts", Limit: maximumPostingReportingPayloadSize / postingReportingRowOverhead}
 		}
 	}
 	journalRepository, err := accounting.NewJournalRepository(r.executor)
@@ -420,6 +448,7 @@ func (r *Repository) reserveCoverageForBAS(
 		factAccountSizes:         factAccountSizes,
 		factAccountCounts:        factAccountCounts,
 		factAccountReserved:      factAccountReserved,
+		taxFactCount:             taxFactCount,
 		taxFactPayloadBytes:      taxFactPayloadBytes,
 		journalPayloadByID:       journalPayloadByID,
 		journalPayloadReserved:   journalPayloadReserved,
@@ -713,9 +742,18 @@ func purchaseCoverageRootCount(ctx context.Context, executor interface {
 func purchaseCoverageBoundedRows(ctx context.Context, executor interface {
 	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
 }, query postingReportingQuery, remaining *int64, limit int64) ([]PurchaseReportingRetainedRow, int64, error) {
+	return purchaseCoverageBoundedRowsWithBodyGuard(ctx, executor, query, remaining, limit, nil)
+}
+
+func purchaseCoverageBoundedRowsWithBodyGuard(ctx context.Context, executor interface {
+	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
+}, query postingReportingQuery, remaining *int64, limit int64, bodyGuard func(postingReportingQuery, int64, int64) *postingReportingOwnerGuard) ([]PurchaseReportingRetainedRow, int64, error) {
 	size, count, err := preflightPostingReportingQuery(ctx, executor, query, remaining, limit)
 	if err != nil {
 		return nil, 0, err
+	}
+	if bodyGuard != nil {
+		query.ownerGuard = purchaseReportingCombineOwnerGuards(query.ownerGuard, bodyGuard(query, size, count))
 	}
 	loaded, err := loadPostingReportingQuery(ctx, executor, query)
 	if err != nil {
@@ -929,6 +967,7 @@ func purchaseCoverageManualJournalEdges(ctx context.Context, executor interface 
 			WHERE f.organisation_id=? AND j.organisation_id=? AND j.source_kind=0 AND j.source_type<>'OPENING' AND f.source_id IN (` + placeholders + `)
 			) ORDER BY source_id,journal_id) AS e`,
 			where: "1=1", args: args, orderBy: "e.source_id,e.journal_id",
+			ownerGuard: purchaseReportingManualSourceReferenceGuard(organisationID, batch),
 		}
 		rows, _, err := purchaseCoverageBoundedRows(ctx, executor, query, discoveryRemaining, limit)
 		if err != nil {
@@ -991,7 +1030,8 @@ func purchaseCoverageLegacyReceiptIDs(ctx context.Context, executor interface {
 			AND f.source_id IN (SELECT id FROM source_ids)
 		))`
 	countArgs := []any{organisationID, organisationID, organisationID}
-	candidateCount, err := postingReportingCount(ctx, executor,
+	guard := purchaseReportingReceiptReferenceGuard(organisationID)
+	candidateCount, err := purchaseReportingOwnerCount(ctx, executor, guard,
 		sourceCTE+` SELECT count(DISTINCT j.id)`+eligibleFrom, countArgs...)
 	if err != nil {
 		return nil, purchaseReportingReadError(ctx, err)
@@ -1006,6 +1046,7 @@ func purchaseCoverageLegacyReceiptIDs(ctx context.Context, executor interface {
 		table: "coverage_receipt_ids", alias: "r", columns: []string{"id"},
 		from:  `(` + sourceCTE + ` SELECT DISTINCT j.id AS id` + eligibleFrom + `) AS r`,
 		where: "1=1", args: countArgs, orderBy: "r.id",
+		ownerGuard: guard,
 	}
 	query.limit = " LIMIT ?"
 	query.args = append(query.args, remainingCapacity+1)
@@ -1073,16 +1114,18 @@ func purchaseCoverageScalarJournalIDs(ctx context.Context, executor interface {
 	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
 }, organisationID string, conversionIDs []string, discoveryRemaining *int64, limit int64) ([]string, error) {
 	queries := []postingReportingQuery{
-		{table: "coverage_journal_ids", alias: "j", columns: []string{"journal_id"}, from: "purchase_postings_v1 AS j", where: "j.organisation_id=?", args: []any{organisationID}, orderBy: "j.id"},
+		{table: "coverage_journal_ids", alias: "j", columns: []string{"journal_id"}, from: "purchase_postings_v1 AS j", where: "j.organisation_id=?", args: []any{organisationID}, orderBy: "j.id",
+			ownerGuard: purchaseReportingRootOwnerGuard(organisationID, false)},
 		{table: "coverage_journal_ids", alias: "j", columns: []string{"journal_id"}, from: "purchase_payments_v1 AS j", where: "j.organisation_id=?", args: []any{organisationID}, orderBy: "j.id", ownerGuard: purchaseReportingPaymentOwnerGuard(organisationID)},
 		{table: "coverage_journal_ids", alias: "j", columns: []string{"journal_id"}, from: "purchase_accounting_events_v1 AS j", where: "j.organisation_id=?", args: []any{organisationID}, orderBy: "j.operation_key", ownerGuard: purchaseReportingOwnerGuardForSet(organisationID, purchaseOwnerCoverageEvents)},
 		{table: "coverage_journal_ids", alias: "j", columns: []string{"journal_id"}, from: "purchase_gst_attributions_v1 AS j", where: "j.organisation_id=?", args: []any{organisationID}, orderBy: "j.operation_key,j.id", ownerGuard: purchaseReportingOwnerGuardForSet(organisationID, purchaseOwnersAttribution)},
 	}
-	for _, batch := range purchaseCoverageIDBatches(conversionIDs, 400) {
+	for _, batch := range purchaseCoverageIDBatches(conversionIDs, 300) {
 		queries = append(queries, postingReportingQuery{
 			table: "coverage_journal_ids", alias: "c", columns: []string{"journal_id"},
 			from: "opening_conversions AS c", where: "c.organisation_id=? AND c.id IN (" + purchaseCoveragePlaceholders(len(batch)) + ")",
 			args: append([]any{organisationID}, batchArgs(batch)...), orderBy: "c.id",
+			ownerGuard: purchaseReportingConversionJournalReferenceGuard(organisationID, batch),
 		})
 	}
 	result := make(map[string]struct{})
@@ -1112,13 +1155,14 @@ func purchaseCoverageOpeningAccountIDs(ctx context.Context, executor interface {
 	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
 }, organisationID string, conversionIDs []string, discoveryRemaining *int64, limit int64) (map[string]struct{}, error) {
 	result := make(map[string]struct{})
-	for _, batch := range purchaseCoverageIDBatches(conversionIDs, 400) {
+	for _, batch := range purchaseCoverageIDBatches(conversionIDs, 300) {
 		query := postingReportingQuery{
 			table: "coverage_opening_account_ids", alias: "a", columns: []string{"account_id"},
 			from: `(SELECT DISTINCT i.account_id AS account_id FROM opening_items i
 			JOIN opening_conversions c ON c.id=i.conversion_id
 			WHERE c.organisation_id=? AND c.id IN (` + purchaseCoveragePlaceholders(len(batch)) + `)) AS a`,
 			where: "1=1", args: append([]any{organisationID}, batchArgs(batch)...), orderBy: "a.account_id",
+			ownerGuard: purchaseReportingOpeningAccountReferenceGuard(organisationID, batch),
 		}
 		rows, _, err := purchaseCoverageBoundedRows(ctx, executor, query, discoveryRemaining, limit)
 		if err != nil {
@@ -1566,7 +1610,8 @@ func purchaseCoverageJournalClosure(ctx context.Context, executor interface {
 				from:    "journals AS j", where: "j.organisation_id=? AND j.id IN (" + purchaseCoveragePlaceholders(len(batch)) + ")",
 				args: append([]any{organisationID}, batchArgs(batch)...), orderBy: "j.id",
 			}
-			rows, _, err := purchaseCoverageBoundedRows(ctx, executor, query, discoveryRemaining, limit)
+			query.ownerGuard = purchaseReportingJournalClosureReferenceGuard(organisationID, batch)
+			rows, _, err := purchaseCoverageBoundedRowsWithBodyGuard(ctx, executor, query, discoveryRemaining, limit, purchaseReportingJournalClosureBodyReservationGuard)
 			if err != nil {
 				return nil, err
 			}
@@ -1666,6 +1711,7 @@ func purchaseCoverageJournalAccountIDs(ctx context.Context, executor interface {
 			from: `(SELECT DISTINCT l.account_id AS account_id FROM journal_lines l JOIN journals j ON j.id=l.journal_id
 			WHERE j.organisation_id=? AND j.id IN (` + purchaseCoveragePlaceholders(len(batch)) + `)) AS a`,
 			where: "1=1", args: append([]any{organisationID}, batchArgs(batch)...), orderBy: "a.account_id",
+			ownerGuard: purchaseReportingJournalAccountReferenceGuard(organisationID, batch),
 		}
 		rows, _, err := purchaseCoverageBoundedRows(ctx, executor, query, discoveryRemaining, limit)
 		if err != nil {
@@ -1698,11 +1744,13 @@ func purchaseCoverageAccountQueries(organisationID string, accountIDs []string, 
 			where += " AND a.code NOT IN ('2000','1150','1160','1170')"
 		}
 		queries = append(queries, postingReportingQuery{table: "accounts", alias: "a", columns: columns,
-			from: "accounts AS a", where: where, args: args, orderBy: "a.id"})
+			from: "accounts AS a", where: where, args: args, orderBy: "a.id",
+			ownerGuard: purchaseReportingAccountReferenceGuard(organisationID, batch, includeControls && index == 0)})
 	}
 	if includeControls && len(accountIDs) == 0 {
 		queries = append(queries, postingReportingQuery{table: "accounts", alias: "a", columns: columns,
-			from: "accounts AS a", where: "a.organisation_id=? AND a.code IN ('2000','1150','1160','1170')", args: []any{organisationID}, orderBy: "a.id"})
+			from: "accounts AS a", where: "a.organisation_id=? AND a.code IN ('2000','1150','1160','1170')", args: []any{organisationID}, orderBy: "a.id",
+			ownerGuard: purchaseReportingAccountReferenceGuard(organisationID, nil, true)})
 	}
 	return queries
 }

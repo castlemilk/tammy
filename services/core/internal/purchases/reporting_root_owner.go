@@ -26,7 +26,7 @@ func purchaseReportingRootOwnerGuard(organisationID string, allDocuments bool) *
 			AND owner_document.organisation_id=CAST(? AS BLOB))`
 		guard.args = append(guard.args, organisationID)
 	}
-	return guard
+	return purchaseReportingCombineOwnerGuards(guard, purchaseReportingModernFamilyReferenceGuard(organisationID, BASScalarPosting, false))
 }
 
 func (guard *postingReportingOwnerGuard) cte() string {

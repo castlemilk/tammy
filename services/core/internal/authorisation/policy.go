@@ -11,49 +11,70 @@ import (
 
 type Action string
 
+const ActionCorrectBASExternalObservation Action = "correct_bas_external_observation"
+
 const (
-	ActionManageWorkspace             Action = "manage_workspace"
-	ActionManageUsers                 Action = "manage_users"
-	ActionTransferOwner               Action = "transfer_owner"
-	ActionManageOrg                   Action = "manage_organisation"
-	ActionReadFinancial               Action = "read_financial"
-	ActionPostAccounting              Action = "post_accounting"
-	ActionManageAccounts              Action = "manage_accounts"
-	ActionPrepareTax                  Action = "prepare_tax"
-	ActionApproveFinancialClose       Action = "approve_financial_close"
-	ActionDeclareCompanyReturn        Action = "declare_company_return"
-	ActionLodge                       Action = "lodge"
-	ActionReadAudit                   Action = "read_audit"
-	ActionExportAudit                 Action = "export_audit"
-	ActionInspectSBR                  Action = "inspect_sbr"
-	ActionImportSBRMachineCredential  Action = "import_sbr_machine_credential"
-	ActionUnlockSBRMachineCredential  Action = "unlock_sbr_machine_credential"
-	ActionReplaceSBRMachineCredential Action = "replace_sbr_machine_credential"
-	ActionRemoveSBRMachineCredential  Action = "remove_sbr_machine_credential"
-	ActionManageSBRProductID          Action = "manage_sbr_product_id"
-	ActionUseSBRMachineCredential     Action = "use_sbr_machine_credential"
-	ActionRunSBRReadinessFixture      Action = "run_sbr_readiness_fixture"
+	ActionManageWorkspace                Action = "manage_workspace"
+	ActionManageUsers                    Action = "manage_users"
+	ActionTransferOwner                  Action = "transfer_owner"
+	ActionManageOrg                      Action = "manage_organisation"
+	ActionReadFinancial                  Action = "read_financial"
+	ActionPostAccounting                 Action = "post_accounting"
+	ActionManageAccounts                 Action = "manage_accounts"
+	ActionPrepareTax                     Action = "prepare_tax"
+	ActionApproveBASFreeze               Action = "approve_bas_freeze"
+	ActionApproveBASExternalConfirmation Action = "approve_bas_external_confirmation"
+	ActionApproveBASUnusedReplacement    Action = "approve_bas_unused_replacement"
+	ActionApproveBASDisputeResolution    Action = "approve_bas_dispute_resolution"
+	ActionApproveBASRejectedReplacement  Action = "approve_bas_rejected_replacement"
+	ActionApproveFinancialClose          Action = "approve_financial_close"
+	ActionDeclareCompanyReturn           Action = "declare_company_return"
+	ActionLodge                          Action = "lodge"
+	ActionReadAudit                      Action = "read_audit"
+	ActionExportAudit                    Action = "export_audit"
+	ActionInspectSBR                     Action = "inspect_sbr"
+	ActionImportSBRMachineCredential     Action = "import_sbr_machine_credential"
+	ActionUnlockSBRMachineCredential     Action = "unlock_sbr_machine_credential"
+	ActionReplaceSBRMachineCredential    Action = "replace_sbr_machine_credential"
+	ActionRemoveSBRMachineCredential     Action = "remove_sbr_machine_credential"
+	ActionManageSBRProductID             Action = "manage_sbr_product_id"
+	ActionUseSBRMachineCredential        Action = "use_sbr_machine_credential"
+	ActionRunSBRReadinessFixture         Action = "run_sbr_readiness_fixture"
+)
+
+const (
+	PurposeBASFreezeManualHandoff        = "bas_freeze_manual_handoff"
+	PurposeBASRecordExternalConfirmation = "bas_record_external_confirmation"
+	PurposeBASReplaceUnusedAttempt       = "bas_replace_unused_attempt"
+	PurposeBASResolveExternalDispute     = "bas_resolve_external_dispute"
+	PurposeBASReplaceRejectedAttempt     = "bas_replace_rejected_attempt"
 )
 
 var permissions = map[Action]map[tammyv1.Role]struct{}{
-	ActionManageWorkspace: roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN),
-	ActionManageUsers:     roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN),
-	ActionTransferOwner:   roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN),
-	ActionManageOrg:       roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN),
+	ActionCorrectBASExternalObservation: roleSet(tammyv1.Role_ROLE_BUSINESS_LODGER),
+	ActionManageWorkspace:               roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN),
+	ActionManageUsers:                   roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN),
+	ActionTransferOwner:                 roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN),
+	ActionManageOrg:                     roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN),
 	ActionReadFinancial: roleSet(
 		tammyv1.Role_ROLE_WORKSPACE_ADMIN,
 		tammyv1.Role_ROLE_BUSINESS_PREPARER,
 		tammyv1.Role_ROLE_BUSINESS_LODGER,
 		tammyv1.Role_ROLE_AUDITOR,
 	),
-	ActionPostAccounting:        roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN, tammyv1.Role_ROLE_BUSINESS_PREPARER),
-	ActionManageAccounts:        roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN),
-	ActionPrepareTax:            roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN, tammyv1.Role_ROLE_BUSINESS_PREPARER),
-	ActionApproveFinancialClose: roleSet(tammyv1.Role_ROLE_BUSINESS_LODGER),
-	ActionDeclareCompanyReturn:  roleSet(tammyv1.Role_ROLE_BUSINESS_LODGER),
-	ActionLodge:                 roleSet(tammyv1.Role_ROLE_BUSINESS_LODGER),
-	ActionReadAudit:             roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN, tammyv1.Role_ROLE_AUDITOR),
-	ActionExportAudit:           roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN, tammyv1.Role_ROLE_AUDITOR),
+	ActionPostAccounting:                 roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN, tammyv1.Role_ROLE_BUSINESS_PREPARER),
+	ActionManageAccounts:                 roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN),
+	ActionPrepareTax:                     roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN, tammyv1.Role_ROLE_BUSINESS_PREPARER),
+	ActionApproveBASFreeze:               roleSet(tammyv1.Role_ROLE_BUSINESS_LODGER),
+	ActionApproveBASExternalConfirmation: roleSet(tammyv1.Role_ROLE_BUSINESS_LODGER),
+	ActionApproveBASUnusedReplacement:    roleSet(tammyv1.Role_ROLE_BUSINESS_LODGER),
+	ActionApproveBASDisputeResolution:    roleSet(tammyv1.Role_ROLE_BUSINESS_LODGER),
+	ActionApproveBASRejectedReplacement:  roleSet(tammyv1.Role_ROLE_BUSINESS_LODGER),
+	ActionApproveFinancialClose:          roleSet(tammyv1.Role_ROLE_BUSINESS_LODGER),
+	ActionDeclareCompanyReturn:           roleSet(tammyv1.Role_ROLE_BUSINESS_LODGER),
+	ActionLodge:                          roleSet(tammyv1.Role_ROLE_BUSINESS_LODGER),
+	ActionReadAudit:                      roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN, tammyv1.Role_ROLE_AUDITOR),
+	ActionExportAudit:                    roleSet(tammyv1.Role_ROLE_WORKSPACE_ADMIN, tammyv1.Role_ROLE_AUDITOR),
 	ActionInspectSBR: roleSet(
 		tammyv1.Role_ROLE_WORKSPACE_ADMIN,
 		tammyv1.Role_ROLE_BUSINESS_LODGER,

@@ -173,6 +173,10 @@ func (repository *Repository) getByOperation(ctx context.Context, operationKey s
 }
 
 func (repository *Repository) getOne(ctx context.Context, predicate string, value any) (*tammyv1.BasWorkpaper, error) {
+	return repository.getOneMode(ctx, predicate, []any{value}, true)
+}
+
+func (repository *Repository) getOneMode(ctx context.Context, predicate string, arguments []any, compareCurrent bool) (*tammyv1.BasWorkpaper, error) {
 	workpaper := &tammyv1.BasWorkpaper{
 		SalesG1: aud(0), GstOnSales_1A: aud(0), GstCredits_1B: aud(0), NetGstPayable: aud(0),
 		Status: tammyv1.BasWorkpaperStatus_BAS_WORKPAPER_STATUS_DRAFT_NOT_LODGED,
@@ -182,7 +186,7 @@ func (repository *Repository) getOne(ctx context.Context, predicate string, valu
 	err := querySingle(repository.executor, ctx, `
 		SELECT id, organisation_id, version, period_start, period_end, status,
 		       sales_g1_minor, gst_on_sales_1a_minor, gst_credits_1b_minor,
-		       net_gst_payable_minor, created_at,gst_basis,source_fingerprint,review_warnings_json,excluded_cash_purchase_count FROM bas_workpapers `+predicate, []any{value},
+	       net_gst_payable_minor, created_at,gst_basis,source_fingerprint,review_warnings_json,excluded_cash_purchase_count FROM bas_workpapers `+predicate, arguments,
 		&workpaper.Id, &workpaper.OrganisationId, &workpaper.Version, &start, &end, &status,
 		&workpaper.SalesG1.MinorUnits, &workpaper.GstOnSales_1A.MinorUnits,
 		&workpaper.GstCredits_1B.MinorUnits, &workpaper.NetGstPayable.MinorUnits, &createdAt, &basis, &workpaper.SourceFingerprint, &warningsJSON, &workpaper.ExcludedCashPurchaseCount)
@@ -252,20 +256,22 @@ func (repository *Repository) getOne(ctx context.Context, predicate string, valu
 	if !basResponseFits(workpaper) {
 		return nil, ErrSourceBound
 	}
-	current, err := repository.collectBASSources(ctx, workpaper.OrganisationId, start, end, repository.now().UTC())
-	if errors.Is(err, ErrGSTBasis) {
-		workpaper.SourcesChanged = true
-		workpaper.ReviewWarnings = append(workpaper.ReviewWarnings, "GST basis history needs review before regenerating this workpaper. Saved figures have been retained.")
-	} else if errors.Is(err, ErrSourceBound) {
-		workpaper.SourcesChanged = true
-		workpaper.ReviewWarnings = append(workpaper.ReviewWarnings, "The complete current source set exceeds supported workpaper capacity. Saved figures have been retained; complete preparation requires supported volume.")
-	} else if err != nil {
-		return nil, err
-	} else {
-		workpaper.SourcesChanged = len(workpaper.SourceFingerprint) != 32 || !bytes.Equal(workpaper.SourceFingerprint, current.fingerprint)
-	}
-	if len(workpaper.SourceFingerprint) == 0 {
-		workpaper.ReviewWarnings = append(workpaper.ReviewWarnings, "This older workpaper has no complete sales fingerprint. Regenerate it to include linked invoice income.")
+	if compareCurrent {
+		current, err := repository.collectBASSources(ctx, workpaper.OrganisationId, start, end, repository.now().UTC())
+		if errors.Is(err, ErrGSTBasis) {
+			workpaper.SourcesChanged = true
+			workpaper.ReviewWarnings = append(workpaper.ReviewWarnings, "GST basis history needs review before regenerating this workpaper. Saved figures have been retained.")
+		} else if errors.Is(err, ErrSourceBound) {
+			workpaper.SourcesChanged = true
+			workpaper.ReviewWarnings = append(workpaper.ReviewWarnings, "The complete current source set exceeds supported workpaper capacity. Saved figures have been retained; complete preparation requires supported volume.")
+		} else if err != nil {
+			return nil, err
+		} else {
+			workpaper.SourcesChanged = len(workpaper.SourceFingerprint) != 32 || !bytes.Equal(workpaper.SourceFingerprint, current.fingerprint)
+		}
+		if len(workpaper.SourceFingerprint) == 0 {
+			workpaper.ReviewWarnings = append(workpaper.ReviewWarnings, "This older workpaper has no complete sales fingerprint. Regenerate it to include linked invoice income.")
+		}
 	}
 	if !basResponseFits(workpaper) {
 		return nil, ErrSourceBound

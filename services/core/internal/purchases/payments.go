@@ -438,8 +438,7 @@ func (r *Repository) verifyPaymentHistory(ctx context.Context, posting *tammyv1.
 }
 
 func (r *Repository) verifyPaymentJournal(ctx context.Context, posting *tammyv1.PurchasePosting, p *tammyv1.PurchasePayment, readiness EvidenceReadiness) (*tammyv1.Journal, error) {
-	journals, _ := accounting.NewJournalRepository(r.executor)
-	journal, err := journals.Get(ctx, p.JournalId)
+	journal, err := r.reportingJournal(ctx, p.OrganisationId, p.JournalId)
 	if err != nil || journal.OrganisationId != p.OrganisationId || journal.Source != tammyv1.JournalSource_JOURNAL_SOURCE_PURCHASE_PAYMENT || journal.State != tammyv1.JournalState_JOURNAL_STATE_POSTED || journal.FinancialRevision != p.FinancialRevision || !proto.Equal(journal.PostingDate, p.ActualPaymentDate) || !proto.Equal(journal.PostedAt, p.RecordedAt) {
 		return nil, ErrRepository
 	}
@@ -449,6 +448,7 @@ func (r *Repository) verifyPaymentJournal(ctx context.Context, posting *tammyv1.
 		return nil, ErrRepository
 	}
 	writer, _ := NewJournalWriter(r.executor, func() time.Time { return p.RecordedAt.AsTime() }, r.newID)
+	writer.reportingOwnerGuards = r.reportingRootOwners
 	spec, err := writer.spec(ctx, p.OrganisationId, p.Id, p.ActualPaymentDate, p.FinancialRevision, nil)
 	if err != nil {
 		return nil, ErrRepository

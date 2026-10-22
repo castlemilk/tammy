@@ -17,7 +17,11 @@ import { type TammyConveyor, tammyConveyor } from "../conveyor/client";
 import type { DesktopLaunchScenario } from "../shared/launch-scenario";
 import { createProtoMethodCodec } from "../shared/proto-ipc";
 import { AppShell } from "./app-shell/app-shell";
-import { resolveAppLocation, type WorkspaceAccess } from "./app-shell/router";
+import {
+  parseBasPreparationRouteTarget,
+  resolveAppLocation,
+  type WorkspaceAccess,
+} from "./app-shell/router";
 import { SimulatorBanner } from "./app-shell/simulator-banner";
 import { Button } from "./components/ui/button";
 import { ChartScreen } from "./features/accounting/chart-screen";
@@ -25,7 +29,7 @@ import { JournalsScreen } from "./features/accounting/journals-screen";
 import { TrialBalanceScreen } from "./features/accounting/trial-balance-screen";
 import { AuditScreen } from "./features/audit/audit-screen";
 import { BankingScreen } from "./features/banking/banking-screen";
-import { BasScreen } from "./features/bas/bas-screen";
+import { BasLifecycleScreen } from "./features/bas/bas-lifecycle-screen";
 import { DiagnosticsCard, type DiagnosticsState } from "./features/diagnostics/diagnostics-card";
 import { DocumentsScreen } from "./features/documents/documents-screen";
 import { ConnectedInvoicesScreen } from "./features/invoices/connected-invoices-screen";
@@ -558,12 +562,14 @@ function ActiveRouteContent({
   readonly state: DiagnosticsState;
   readonly workspace: AuthenticatedWorkspace | undefined;
 }) {
+  const initialBasPreparationTarget = useMemo(() => parseBasPreparationRouteTarget(path), [path]);
   if (path === "/overview")
     return (
       <OverviewScreen
         accountingApi={conveyor.accounting}
         organisationApi={conveyor.organisation}
         api={conveyor.reporting}
+        onOpenBas={onNavigate}
         onReviewInvoices={() => onNavigate("/invoices")}
         workspace={workspace}
       />
@@ -588,15 +594,22 @@ function ActiveRouteContent({
         workspace={workspace}
       />
     );
-  if (path === "/gst-bas")
+  if (path === "/gst-bas" || path.startsWith("/gst-bas?"))
     return (
-      <BasScreen
+      <BasLifecycleScreen
         key={`${workspace?.workspaceId}:${workspace?.userId}:${workspace?.sessionId}:${workspace?.organisationId ?? ""}`}
         api={conveyor.reporting}
+        reportApi={conveyor.reporting}
+        lifecycleApi={conveyor.basPreparation}
+        identityApi={conveyor.organisation}
         organisationApi={conveyor.organisation}
+        roleControlApi={conveyor.organisation}
         purchaseApi={conveyor.purchases}
         documentApi={conveyor.documents}
         accountingApi={conveyor.accounting}
+        {...(initialBasPreparationTarget
+          ? { initialPreparationTarget: initialBasPreparationTarget }
+          : {})}
         onReviewDocument={(id) => onNavigate(`/documents?document=${encodeURIComponent(id)}`)}
         onBasDraftChanged={() => conveyor.reporting.getAttentionSummary.invalidate()}
         workspace={workspace}

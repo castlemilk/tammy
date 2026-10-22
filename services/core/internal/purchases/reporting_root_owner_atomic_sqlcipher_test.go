@@ -494,3 +494,120 @@ func TestPurchaseReportingRootOwnerCrossTableBodyGuardsAreAtomic(t *testing.T) {
 		})
 	}
 }
+
+type purchaseReportingMissingSelectedPostingProbe struct {
+	app.CommandSQLExecutor
+	tx                   *sqlcipher.Transaction
+	fixture              *postingFixture
+	mode                 string
+	postingID            string
+	operationKey         string
+	removed              bool
+	rootBodyReads        int
+	documentReplayReads  int
+	postingReplayQueries int
+	duplicateFallback    int
+	priorSourceFallback  int
+	lateBodyQueries      int
+	afterMutationState   map[string]any
+}
+
+func removePurchaseReportingZeroPostingGraph(t *testing.T, f *postingFixture, postingID, operationKey string) {
+	t.Helper()
+	// Direct repository PostReviewed fixtures normally do not write the API
+	// audit. Delete it first if a future fixture wrapper does.
+	if postScalar(t, f.executor, `SELECT count(*) FROM purchase_command_audit_v1 WHERE operation_key=?`, operationKey) != 0 {
+		mutatePurchaseBASScalar(t, f, "purchase_command_audit_v1",
+			`DELETE FROM purchase_command_audit_v1 WHERE operation_key=?`, operationKey)
+	}
+	// Remove every graph FK child before its parent. A zero-total writer post
+	// has one event, tax-evidence row, and allocation, and no journal/payments.
+	mutatePurchaseBASScalar(t, f, "purchase_accounting_events_v1",
+		`DELETE FROM purchase_accounting_events_v1 WHERE operation_key=?`, operationKey)
+	mutatePurchaseBASScalar(t, f, "purchase_tax_evidence_v1",
+		`DELETE FROM purchase_tax_evidence_v1 WHERE posting_id=?`, postingID)
+	mutatePurchaseBASScalar(t, f, "purchase_posting_allocations_v1",
+		`DELETE FROM purchase_posting_allocations_v1 WHERE posting_id=?`, postingID)
+	mutatePurchaseBASScalar(t, f, "purchase_postings_v1",
+		`DELETE FROM purchase_postings_v1 WHERE id=?`, postingID)
+	mutatePurchaseBASScalar(t, f, "financial_revision_claims",
+		`DELETE FROM financial_revision_claims WHERE operation_key=?`, operationKey)
+	mutatePurchaseBASScalar(t, f, "command_idempotency_v1",
+		`DELETE FROM command_idempotency_v1 WHERE operation_key=?`, operationKey)
+}
+
+func (probe *purchaseReportingMissingSelectedPostingProbe) QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
+	compact := purchaseReportingRootOwnerCompactSQL(query)
+	if strings.Contains(query, "/* BAS purchase owner body purchase_postings_v1 */") {
+		probe.rootBodyReads++
+	}
+	if strings.HasPrefix(compact, "selectdocument_idfrompurchase_postings_v1whereorganisation_id=?orderbyid") {
+		probe.duplicateFallback++
+	}
+	if strings.HasPrefix(compact, "selectdistinctj.idfromjournalsjleftjoinjournal_lines") {
+		probe.priorSourceFallback++
+	}
+	if probe.postingReplayQueries > 0 && purchaseReportingRootOwnerIsBodyStatement(query) {
+		probe.lateBodyQueries++
+	}
+	if strings.Contains(query, "/* BAS purchase owner body document replay */") && !probe.removed {
+		if probe.rootBodyReads == 0 {
+			probe.fixture.t.Fatal("document replay preceded the retained posting-root read")
+		}
+		probe.removed = true
+		removePurchaseReportingZeroPostingGraph(probe.fixture.t, probe.fixture, probe.postingID, probe.operationKey)
+		probe.afterMutationState = purchaseReportingRootOwnerState(probe.fixture.t, probe.tx, probe.mode)
+	}
+	if strings.Contains(query, "/* BAS purchase owner body posting replay */") {
+		probe.postingReplayQueries++
+	}
+	rows, err := probe.CommandSQLExecutor.QueryContext(ctx, query, args...)
+	if strings.Contains(query, "/* BAS purchase owner body document replay */") && err == nil && rows != nil {
+		probe.documentReplayReads++
+	}
+	return rows, err
+}
+
+func TestPurchaseReportingGetRejectsMissingReservedPostingBeforeLegacyFallback(t *testing.T) {
+	for _, mode := range []string{"modern-capture", "full-coverage"} {
+		t.Run(mode, func(t *testing.T) {
+			ctx := context.Background()
+			workspace := testkit.NewEncryptedWorkspaceAtVersion(t, 13)
+			tx, err := workspace.Database.BeginEncryptedTx(ctx, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer tx.Rollback()
+
+			f := newPostingFixture(t, tx, tammyv1.GstBasis_GST_BASIS_CASH)
+			posted := postReportingPurchase(t, f, "OWNER-MISSING-RESERVED-POSTING",
+				purchaseReportingDate(2026, 8, 10), 0, 0)
+			if posted == nil || posted.Posting == nil || posted.Posting.JournalId != nil {
+				t.Fatal("expected a real zero-total posting with no journal")
+			}
+			operationKey := f.request.CommandContext.IdempotencyKey
+			probe := &purchaseReportingMissingSelectedPostingProbe{
+				CommandSQLExecutor: tx, tx: tx, fixture: f, mode: mode,
+				postingID: posted.Posting.Id, operationKey: operationKey,
+			}
+			nilCapture, err := purchaseReportingRootOwnerCapture(t, f.repo(probe), mode)
+			if !nilCapture || !errors.Is(err, purchases.ErrRepository) {
+				t.Fatalf("capture after reserved posting disappeared=%t err=%v, want nil capture/repository error", nilCapture, err)
+			}
+			if !probe.removed || probe.rootBodyReads == 0 || probe.documentReplayReads != 1 || probe.postingReplayQueries != 1 {
+				t.Fatalf("did not reach missing-post replay boundary: removed=%t root bodies=%d document replays=%d posting replays=%d",
+					probe.removed, probe.rootBodyReads, probe.documentReplayReads, probe.postingReplayQueries)
+			}
+			if probe.duplicateFallback != 0 || probe.priorSourceFallback != 0 || probe.lateBodyQueries != 0 {
+				t.Fatalf("missing reserved posting entered fallback: duplicate=%d prior=%d later bodies=%d",
+					probe.duplicateFallback, probe.priorSourceFallback, probe.lateBodyQueries)
+			}
+			if !tx.Authenticated() {
+				t.Fatal("late missing-post rejection ended the caller transaction")
+			}
+			if got := purchaseReportingRootOwnerState(t, tx, mode); !reflect.DeepEqual(got, probe.afterMutationState) {
+				t.Fatalf("capture changed transaction state after deterministic graph deletion: before=%v after=%v", probe.afterMutationState, got)
+			}
+		})
+	}
+}

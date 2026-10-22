@@ -10,6 +10,7 @@ import {
 } from "@tammy/connect-client/tammy/v1/overview_pb.js";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { expect, it } from "vitest";
 
 import { createProtoMethodCodec } from "../../../shared/proto-ipc";
@@ -25,6 +26,8 @@ const codec = createProtoMethodCodec({
 
 it("renders the live local attention summary through the named protobuf method", async () => {
   const fixture = createConveyorFixture();
+  const preparationId = "018f0000-0000-7000-8000-000000000020";
+  const preparationHash = new Uint8Array(32).fill(0x21);
   fixture.procedures.reporting.getAttentionSummary.mockImplementation(async (frame: Uint8Array) => {
     const request = codec.decodeRequest(frame);
     expect(request.organisationId).toBe("018f0000-0000-7000-8000-000000000004");
@@ -41,6 +44,12 @@ it("renders the live local attention summary through the named protobuf method",
         bankingLinesUnreconciledInPeriod: 5,
         currentDraftBasWorkpapers: 1,
         basStatus: BasAttentionStatus.DRAFT_NOT_LODGED,
+        basPreparation: create(SourceRefSchema, {
+          type: "bas_preparation",
+          id: preparationId,
+          revision: 3n,
+          contentHash: preparationHash,
+        }),
         attentionItems: [
           create(AttentionItemSchema, {
             kind: AttentionItemKind.DOCUMENT_REVIEW,
@@ -59,10 +68,12 @@ it("renders the live local attention summary through the named protobuf method",
       }),
     );
   });
+  const opened: string[] = [];
   render(
     <QueryClientProvider client={fixture.queryClient}>
       <OverviewScreen
         api={fixture.conveyor.reporting}
+        onOpenBas={(path) => opened.push(path)}
         now={new Date("2026-08-10T12:00:00+10:00")}
         workspace={{
           sessionId: "018f0000-0000-7000-8000-000000000003",
@@ -79,4 +90,11 @@ it("renders the live local attention summary through the named protobuf method",
   expect(screen.getByText("Draft — not lodged")).toBeTruthy();
   expect(screen.getByText("Officeworks invoice")).toBeTruthy();
   expect(fixture.procedures.reporting.getAttentionSummary).toHaveBeenCalledOnce();
+  const exactBasLink = await screen.findByRole("link", {
+    name: `Open exact BAS preparation ${preparationId}`,
+  });
+  const expectedPath = `/gst-bas?preparation=${preparationId}&revision=3&hash=${[...preparationHash].map((byte) => byte.toString(16).padStart(2, "0")).join("")}`;
+  expect(exactBasLink.getAttribute("href")).toBe(expectedPath);
+  await userEvent.setup().click(exactBasLink);
+  expect(opened).toEqual([expectedPath]);
 });

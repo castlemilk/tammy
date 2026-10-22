@@ -562,7 +562,9 @@ func TestAttributePurchaseConcurrentCallerClaimsOrDefersExactlyOne(t *testing.T)
 				go func(index int) {
 					defer workers.Done()
 					<-start
-					command, err := workspace.Database.BeginEncryptedTx(ctx, nil)
+					// Match the production command's immediate write transaction so
+					// the loser observes the committed accounting version.
+					command, err := workspace.Database.BeginEncryptedTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 					if err != nil {
 						results <- err
 						return

@@ -520,24 +520,15 @@ type purchaseModernOwnerAtomicProbe struct {
 }
 
 func (probe *purchaseModernOwnerAtomicProbe) QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
-	bodyStatement := purchaseModernOwnerAtomicBodyStatement(query) || purchaseModernOwnerAtomicFamilyReplayQuery(query)
+	wasAfterHook := probe.afterHook
 	if probe.expectEmptyPreflights && strings.Contains(query, "total(payload_bytes)") {
 		probe.sourcePreflights++
 	}
-	if bodyStatement {
-		if probe.expectEmptyPreflights && probe.bodyQueries == 0 && probe.sourcePreflights != 11 {
-			probe.t.Fatalf("empty capture began body reads after %d preflights; want all 11", probe.sourcePreflights)
-		}
-		probe.bodyQueries++
-		if probe.afterHook {
-			probe.laterBodies++
-		}
-	}
 	isRawPreflight := probe.stage == "raw" && purchaseModernOwnerAtomicFamilyPreflightQuery(query, probe.family)
-	isDocumentReplay := purchaseReportingRootOwnerIsDocumentReplayQuery(query)
-	isPostingReplay := purchaseModernOwnerAtomicIsPostingReplayQuery(query)
+	isDocumentReplay := probe.stage != "" && purchaseReportingRootOwnerIsDocumentReplayQuery(query)
+	isPostingReplay := probe.stage != "" && purchaseModernOwnerAtomicIsPostingReplayQuery(query)
 	isReplayStage := purchaseModernOwnerAtomicIsReplayStage(probe.stage)
-	matches := probe.matchesHook(query)
+	matches := probe.stage != "" && probe.matchesHook(query)
 	targetReplay := !isReplayStage || purchaseModernOwnerAtomicTailArgsEqual(args, probe.expectedReplayTail()...)
 	if matches && targetReplay {
 		probe.matchingOccurrences++
@@ -569,6 +560,26 @@ func (probe *purchaseModernOwnerAtomicProbe) QueryContext(ctx context.Context, q
 	}
 	rows, err := probe.CommandSQLExecutor.QueryContext(ctx, query, args...)
 	if err == nil && rows != nil {
+		columns, columnErr := rows.Columns()
+		if columnErr != nil {
+			probe.t.Fatal(columnErr)
+		}
+		bodyStatement := false
+		for _, column := range columns {
+			if purchaseCoverageBodyResultColumn(column) {
+				bodyStatement = true
+				break
+			}
+		}
+		if bodyStatement {
+			if probe.expectEmptyPreflights && probe.bodyQueries == 0 && probe.sourcePreflights != 11 {
+				probe.t.Fatalf("empty capture began body reads after %d preflights; want all 11", probe.sourcePreflights)
+			}
+			probe.bodyQueries++
+			if wasAfterHook {
+				probe.laterBodies++
+			}
+		}
 		if isRawPreflight {
 			probe.rawPreflightReads++
 		}
@@ -772,45 +783,6 @@ func purchaseModernOwnerAtomicReplayFamily(stage string) string {
 	}
 }
 
-func purchaseModernOwnerAtomicFamilyReplayQuery(query string) bool {
-	compact := purchaseReportingRootOwnerCompactSQL(query)
-	if strings.HasPrefix(compact, "selectcount(") || strings.Contains(compact, "total(payload_bytes)") || strings.Contains(compact, "length(cast(") {
-		return false
-	}
-	for _, family := range purchaseModernOwnerAtomicFamilies {
-		if strings.Contains(compact, "from"+family.table) && strings.Contains(compact, "where") {
-			return purchaseModernOwnerAtomicReplayQuery(query, family, "event-v1", compact) ||
-				purchaseModernOwnerAtomicReplayQuery(query, family, "payment-event", compact) ||
-				purchaseModernOwnerAtomicReplayQuery(query, family, "payment-allocation", compact) ||
-				purchaseModernOwnerAtomicReplayQuery(query, family, "evidence", compact) ||
-				purchaseModernOwnerAtomicReplayQuery(query, family, "attribution", compact) ||
-				purchaseModernOwnerAtomicReplayQuery(query, family, "deferral", compact) ||
-				purchaseModernOwnerAtomicReplayQuery(query, family, "deferral-portion", compact)
-		}
-	}
-	return false
-}
-
-func purchaseModernOwnerAtomicBodyStatement(query string) bool {
-	// Guarded scalar identity discovery uses the shared SQL builder but copies
-	// no retained body. Keep it separate from the payload/replay read counter.
-	for _, table := range []string{"coverage_document_ids", "coverage_operation_keys", "coverage_journal_ids"} {
-		if strings.Contains(query, "/* BAS purchase owner body "+table+" */") {
-			return false
-		}
-	}
-	return purchaseReportingRootOwnerIsBodyStatement(query) || purchaseModernOwnerAtomicFamilyBodyQuery(query)
-}
-
-func purchaseModernOwnerAtomicFamilyBodyQuery(query string) bool {
-	for _, family := range purchaseModernOwnerAtomicFamilies {
-		if purchaseModernOwnerAtomicFamilyRawQuery(query, family) || purchaseModernOwnerAtomicFamilyReplayQuery(query) {
-			return true
-		}
-	}
-	return false
-}
-
 func purchaseModernOwnerAtomicIsPostingReplayQuery(query string) bool {
 	if strings.Contains(query, "/* BAS purchase owner body posting replay */") {
 		return true
@@ -998,7 +970,7 @@ func purchaseModernOwnerAtomicAssertCell(t *testing.T, tx *sqlcipher.Transaction
 func purchaseModernOwnerAtomicMoveAllRootsOutOfTextScope(t *testing.T, f *postingFixture) {
 	t.Helper()
 	for _, table := range []string{
-		"documents", "purchase_postings_v1", "purchase_posting_allocations_v1", "purchase_payments_v1",
+		"documents", "journals", "accounts", "purchase_postings_v1", "purchase_posting_allocations_v1", "purchase_payments_v1",
 		"purchase_payment_allocations_v1", "purchase_tax_evidence_v1", "purchase_accounting_events_v1",
 		"purchase_gst_attributions_v1", "purchase_gst_deferrals_v1", "purchase_gst_deferral_portions_v1",
 	} {

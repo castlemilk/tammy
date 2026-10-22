@@ -287,9 +287,8 @@ func (r *Repository) priorSources(ctx context.Context, doc *tammyv1.Document) ([
 		return nil, ErrRepository
 	}
 	var result []*tammyv1.SourceRef
-	journals, _ := accounting.NewJournalRepository(r.executor)
 	for _, id := range journalIDs {
-		journal, err := journals.Get(ctx, id)
+		journal, err := r.reportingJournal(ctx, doc.OrganisationId, id)
 		if err != nil || journal.OrganisationId != doc.OrganisationId {
 			return nil, ErrRepository
 		}

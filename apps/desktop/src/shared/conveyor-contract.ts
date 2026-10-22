@@ -49,6 +49,7 @@ const EXPECTED_MODULES = Object.freeze([
   "organisation",
   "accounting",
   "banking",
+  "basPreparation",
   "documents",
   "purchases",
   "reporting",

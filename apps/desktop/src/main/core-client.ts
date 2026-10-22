@@ -1,4 +1,10 @@
-import { ConnectError, createClient, type Interceptor, type Transport } from "@connectrpc/connect";
+import {
+  type Client,
+  ConnectError,
+  createClient,
+  type Interceptor,
+  type Transport,
+} from "@connectrpc/connect";
 import { type ConnectTransportOptions, createConnectTransport } from "@connectrpc/connect-node";
 import type {
   CreateAccountRequest,
@@ -28,6 +34,7 @@ import type {
   MatchBankStatementLineResponse,
 } from "@tammy/connect-client/tammy/v1/banking_pb.js";
 import { BankingService } from "@tammy/connect-client/tammy/v1/banking_pb.js";
+import { BasPreparationService } from "@tammy/connect-client/tammy/v1/bas_preparation_pb.js";
 import type {
   GetDocumentRequest,
   GetDocumentResponse,
@@ -42,6 +49,8 @@ import { DocumentService } from "@tammy/connect-client/tammy/v1/documents_pb.js"
 import type {
   AssertTOTPRequest,
   AssertTOTPResponse,
+  AssignRolesRequest,
+  AssignRolesResponse,
   ConfirmTOTPRequest,
   ConfirmTOTPResponse,
   EnrolTOTPRequest,
@@ -166,6 +175,8 @@ const EXPECTED_API_VERSION = "tammy.v1";
 const CORE_VERSION_PATTERN = /^[\x20-\x7e]{1,128}$/;
 
 export interface CoreClient {
+  /** The generated local BAS preparation service. Optional only for legacy test doubles. */
+  readonly basPreparation?: Client<typeof BasPreparationService>;
   readonly getPurchaseAccounting: (
     request: GetPurchaseAccountingRequest,
   ) => Promise<GetPurchaseAccountingResponse>;
@@ -261,6 +272,7 @@ export interface CoreClient {
     request: CreateOrganisationRequest,
   ) => Promise<CreateOrganisationResponse>;
   readonly getCurrentUser: (request: GetCurrentUserRequest) => Promise<GetCurrentUserResponse>;
+  readonly assignRoles: (request: AssignRolesRequest) => Promise<AssignRolesResponse>;
   readonly enrolTotp: (request: EnrolTOTPRequest) => Promise<EnrolTOTPResponse>;
   readonly confirmTotp: (request: ConfirmTOTPRequest) => Promise<ConfirmTOTPResponse>;
   readonly assertTotp: (request: AssertTOTPRequest) => Promise<AssertTOTPResponse>;
@@ -361,6 +373,7 @@ export function createCoreClient(
   const organisationClient = createClient(OrganisationService, transport);
   const taxClient = createClient(TaxService, transport);
   const sbrClient = createClient(SbrService, transport);
+  const basPreparationClient = createClient(BasPreparationService, transport);
 
   const coreRequest = async <Response>(request: () => Promise<Response>): Promise<Response> => {
     try {
@@ -382,6 +395,7 @@ export function createCoreClient(
   };
 
   return Object.freeze({
+    basPreparation: basPreparationClient,
     getPurchaseAccounting: (request: GetPurchaseAccountingRequest) =>
       purchaseRequest(() => purchaseClient.getPurchaseAccounting(request)),
     postReviewedPurchase: (request: PostReviewedPurchaseRequest) =>
@@ -467,6 +481,8 @@ export function createCoreClient(
       coreRequest(() => organisationClient.createOrganisation(request)),
     getCurrentUser: (request: GetCurrentUserRequest) =>
       coreRequest(() => identityClient.getCurrentUser(request)),
+    assignRoles: (request: AssignRolesRequest) =>
+      coreRequest(() => identityClient.assignRoles(request)),
     enrolTotp: (request: EnrolTOTPRequest) => coreRequest(() => identityClient.enrolTOTP(request)),
     confirmTotp: (request: ConfirmTOTPRequest) =>
       coreRequest(() => identityClient.confirmTOTP(request)),

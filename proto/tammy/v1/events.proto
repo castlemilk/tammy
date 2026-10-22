@@ -69,6 +69,8 @@ enum AuditEventType {
 
   // AUDIT_EVENT_TYPE_PURCHASE_ACCOUNTING_CHANGED records one accepted purchase mutation.
   AUDIT_EVENT_TYPE_PURCHASE_ACCOUNTING_CHANGED = 18;
+  // AUDIT_EVENT_TYPE_BAS_PREPARATION_CHANGED records an accepted BAS preparation mutation.
+  AUDIT_EVENT_TYPE_BAS_PREPARATION_CHANGED = 19;
 }
 
 // PurchaseAuditAction distinguishes accepted purchase mutations without retaining evidence content.
@@ -92,6 +94,37 @@ message PurchaseAccountingChangedEvent {
   }];
   uint64 accounting_version = 2 [(buf.validate.field).uint64.gte = 1];
   uint64 financial_revision = 3 [(buf.validate.field).uint64.gte = 1];
+}
+
+// BasPreparationAuditAction identifies the accepted BAS preparation mutation.
+enum BasPreparationAuditAction {
+  BAS_PREPARATION_AUDIT_ACTION_UNSPECIFIED = 0;
+  BAS_PREPARATION_AUDIT_ACTION_PROFILE_SET = 1;
+  BAS_PREPARATION_AUDIT_ACTION_PERIOD_CONFIRMED = 2;
+  BAS_PREPARATION_AUDIT_ACTION_PAYG_INPUTS_SAVED = 3;
+  BAS_PREPARATION_AUDIT_ACTION_PREPARATION_REGENERATED = 4;
+  BAS_PREPARATION_AUDIT_ACTION_VALIDATION_RECORDED = 5;
+  BAS_PREPARATION_AUDIT_ACTION_WARNINGS_ACKNOWLEDGED = 6;
+  BAS_PREPARATION_AUDIT_ACTION_FROZEN_FOR_MANUAL_HANDOFF = 7;
+  BAS_PREPARATION_AUDIT_ACTION_EXTERNAL_OBSERVATION_RECORDED = 8;
+  BAS_PREPARATION_AUDIT_ACTION_EXTERNAL_OBSERVATION_CORRECTED = 9;
+  BAS_PREPARATION_AUDIT_ACTION_EXTERNAL_DISPUTE_RESOLVED = 10;
+  BAS_PREPARATION_AUDIT_ACTION_EXTERNAL_REPLACEMENT_CREATED = 11;
+  BAS_PREPARATION_AUDIT_ACTION_REVISION_CREATED = 12;
+  BAS_PREPARATION_AUDIT_ACTION_REJECTED_ATTEMPT_REPLACED = 13;
+  BAS_PREPARATION_AUDIT_ACTION_EXPORT_EVENT_RECORDED = 14;
+}
+
+// BasPreparationChangedEvent retains exact references. Financial inputs and
+// evidence content remain in the immutable domain snapshots.
+message BasPreparationChangedEvent {
+  BasPreparationAuditAction action = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+  SourceRef source = 2 [(buf.validate.field).required = true];
+  SourceRef previous = 3;
+  repeated SourceRef affected_resources = 4 [(buf.validate.field).repeated = {max_items: 8}];
 }
 
 // SbrAuditAction is the closed redacted SBR audit lifecycle.
@@ -450,5 +483,7 @@ message AuditEventPayload {
 
     // purchase_accounting_changed records one accepted owned purchase mutation.
     PurchaseAccountingChangedEvent purchase_accounting_changed = 18;
+    // bas_preparation_changed records accepted local BAS preparation mutations.
+    BasPreparationChangedEvent bas_preparation_changed = 19;
   }
 }

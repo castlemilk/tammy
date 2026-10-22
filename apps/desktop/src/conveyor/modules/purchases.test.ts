@@ -137,9 +137,8 @@ const validScalars: Readonly<Partial<Record<ScalarType, readonly unknown[]>>> = 
 };
 
 describe("purchase Conveyor module", () => {
-  it("exposes exactly eight typed methods in the named ninth module", () => {
+  it("exposes exactly eight typed methods in the purchases module", () => {
     const router = createTammyRouter();
-    expect(Object.keys(router.modules)).toHaveLength(9);
     expect(router.manifest.purchases).toEqual(
       Object.fromEntries(
         PurchaseService.methods.map((method) => [

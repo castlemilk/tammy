@@ -19,6 +19,7 @@
     "./tammy/v1/accounting_pb.js": "./src/gen/tammy/v1/accounting_pb.ts",
     "./tammy/v1/audit_pb.js": "./src/gen/tammy/v1/audit_pb.ts",
     "./tammy/v1/banking_pb.js": "./src/gen/tammy/v1/banking_pb.ts",
+    "./tammy/v1/bas_preparation_pb.js": "./src/gen/tammy/v1/bas_preparation_pb.ts",
     "./tammy/v1/common_pb.js": "./src/gen/tammy/v1/common_pb.ts",
     "./tammy/v1/company_return_submission_pb.js": "./src/gen/tammy/v1/company_return_submission_pb.ts",
     "./tammy/v1/company_tax_pb.js": "./src/gen/tammy/v1/company_tax_pb.ts",

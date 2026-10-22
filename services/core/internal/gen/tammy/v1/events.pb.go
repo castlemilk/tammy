@@ -64,6 +64,8 @@ const (
 	AuditEventType_AUDIT_EVENT_TYPE_SBR_CHANGED AuditEventType = 17
 	// AUDIT_EVENT_TYPE_PURCHASE_ACCOUNTING_CHANGED records one accepted purchase mutation.
 	AuditEventType_AUDIT_EVENT_TYPE_PURCHASE_ACCOUNTING_CHANGED AuditEventType = 18
+	// AUDIT_EVENT_TYPE_BAS_PREPARATION_CHANGED records an accepted BAS preparation mutation.
+	AuditEventType_AUDIT_EVENT_TYPE_BAS_PREPARATION_CHANGED AuditEventType = 19
 )
 
 // Enum value maps for AuditEventType.
@@ -88,6 +90,7 @@ var (
 		16: "AUDIT_EVENT_TYPE_WORKSPACE_RESTORED",
 		17: "AUDIT_EVENT_TYPE_SBR_CHANGED",
 		18: "AUDIT_EVENT_TYPE_PURCHASE_ACCOUNTING_CHANGED",
+		19: "AUDIT_EVENT_TYPE_BAS_PREPARATION_CHANGED",
 	}
 	AuditEventType_value = map[string]int32{
 		"AUDIT_EVENT_TYPE_UNSPECIFIED":                 0,
@@ -109,6 +112,7 @@ var (
 		"AUDIT_EVENT_TYPE_WORKSPACE_RESTORED":          16,
 		"AUDIT_EVENT_TYPE_SBR_CHANGED":                 17,
 		"AUDIT_EVENT_TYPE_PURCHASE_ACCOUNTING_CHANGED": 18,
+		"AUDIT_EVENT_TYPE_BAS_PREPARATION_CHANGED":     19,
 	}
 )
 
@@ -201,6 +205,92 @@ func (PurchaseAuditAction) EnumDescriptor() ([]byte, []int) {
 	return file_tammy_v1_events_proto_rawDescGZIP(), []int{1}
 }
 
+// BasPreparationAuditAction identifies the accepted BAS preparation mutation.
+type BasPreparationAuditAction int32
+
+const (
+	BasPreparationAuditAction_BAS_PREPARATION_AUDIT_ACTION_UNSPECIFIED                    BasPreparationAuditAction = 0
+	BasPreparationAuditAction_BAS_PREPARATION_AUDIT_ACTION_PROFILE_SET                    BasPreparationAuditAction = 1
+	BasPreparationAuditAction_BAS_PREPARATION_AUDIT_ACTION_PERIOD_CONFIRMED               BasPreparationAuditAction = 2
+	BasPreparationAuditAction_BAS_PREPARATION_AUDIT_ACTION_PAYG_INPUTS_SAVED              BasPreparationAuditAction = 3
+	BasPreparationAuditAction_BAS_PREPARATION_AUDIT_ACTION_PREPARATION_REGENERATED        BasPreparationAuditAction = 4
+	BasPreparationAuditAction_BAS_PREPARATION_AUDIT_ACTION_VALIDATION_RECORDED            BasPreparationAuditAction = 5
+	BasPreparationAuditAction_BAS_PREPARATION_AUDIT_ACTION_WARNINGS_ACKNOWLEDGED          BasPreparationAuditAction = 6
+	BasPreparationAuditAction_BAS_PREPARATION_AUDIT_ACTION_FROZEN_FOR_MANUAL_HANDOFF      BasPreparationAuditAction = 7
+	BasPreparationAuditAction_BAS_PREPARATION_AUDIT_ACTION_EXTERNAL_OBSERVATION_RECORDED  BasPreparationAuditAction = 8
+	BasPreparationAuditAction_BAS_PREPARATION_AUDIT_ACTION_EXTERNAL_OBSERVATION_CORRECTED BasPreparationAuditAction = 9
+	BasPreparationAuditAction_BAS_PREPARATION_AUDIT_ACTION_EXTERNAL_DISPUTE_RESOLVED      BasPreparationAuditAction = 10
+	BasPreparationAuditAction_BAS_PREPARATION_AUDIT_ACTION_EXTERNAL_REPLACEMENT_CREATED   BasPreparationAuditAction = 11
+	BasPreparationAuditAction_BAS_PREPARATION_AUDIT_ACTION_REVISION_CREATED               BasPreparationAuditAction = 12
+	BasPreparationAuditAction_BAS_PREPARATION_AUDIT_ACTION_REJECTED_ATTEMPT_REPLACED      BasPreparationAuditAction = 13
+	BasPreparationAuditAction_BAS_PREPARATION_AUDIT_ACTION_EXPORT_EVENT_RECORDED          BasPreparationAuditAction = 14
+)
+
+// Enum value maps for BasPreparationAuditAction.
+var (
+	BasPreparationAuditAction_name = map[int32]string{
+		0:  "BAS_PREPARATION_AUDIT_ACTION_UNSPECIFIED",
+		1:  "BAS_PREPARATION_AUDIT_ACTION_PROFILE_SET",
+		2:  "BAS_PREPARATION_AUDIT_ACTION_PERIOD_CONFIRMED",
+		3:  "BAS_PREPARATION_AUDIT_ACTION_PAYG_INPUTS_SAVED",
+		4:  "BAS_PREPARATION_AUDIT_ACTION_PREPARATION_REGENERATED",
+		5:  "BAS_PREPARATION_AUDIT_ACTION_VALIDATION_RECORDED",
+		6:  "BAS_PREPARATION_AUDIT_ACTION_WARNINGS_ACKNOWLEDGED",
+		7:  "BAS_PREPARATION_AUDIT_ACTION_FROZEN_FOR_MANUAL_HANDOFF",
+		8:  "BAS_PREPARATION_AUDIT_ACTION_EXTERNAL_OBSERVATION_RECORDED",
+		9:  "BAS_PREPARATION_AUDIT_ACTION_EXTERNAL_OBSERVATION_CORRECTED",
+		10: "BAS_PREPARATION_AUDIT_ACTION_EXTERNAL_DISPUTE_RESOLVED",
+		11: "BAS_PREPARATION_AUDIT_ACTION_EXTERNAL_REPLACEMENT_CREATED",
+		12: "BAS_PREPARATION_AUDIT_ACTION_REVISION_CREATED",
+		13: "BAS_PREPARATION_AUDIT_ACTION_REJECTED_ATTEMPT_REPLACED",
+		14: "BAS_PREPARATION_AUDIT_ACTION_EXPORT_EVENT_RECORDED",
+	}
+	BasPreparationAuditAction_value = map[string]int32{
+		"BAS_PREPARATION_AUDIT_ACTION_UNSPECIFIED":                    0,
+		"BAS_PREPARATION_AUDIT_ACTION_PROFILE_SET":                    1,
+		"BAS_PREPARATION_AUDIT_ACTION_PERIOD_CONFIRMED":               2,
+		"BAS_PREPARATION_AUDIT_ACTION_PAYG_INPUTS_SAVED":              3,
+		"BAS_PREPARATION_AUDIT_ACTION_PREPARATION_REGENERATED":        4,
+		"BAS_PREPARATION_AUDIT_ACTION_VALIDATION_RECORDED":            5,
+		"BAS_PREPARATION_AUDIT_ACTION_WARNINGS_ACKNOWLEDGED":          6,
+		"BAS_PREPARATION_AUDIT_ACTION_FROZEN_FOR_MANUAL_HANDOFF":      7,
+		"BAS_PREPARATION_AUDIT_ACTION_EXTERNAL_OBSERVATION_RECORDED":  8,
+		"BAS_PREPARATION_AUDIT_ACTION_EXTERNAL_OBSERVATION_CORRECTED": 9,
+		"BAS_PREPARATION_AUDIT_ACTION_EXTERNAL_DISPUTE_RESOLVED":      10,
+		"BAS_PREPARATION_AUDIT_ACTION_EXTERNAL_REPLACEMENT_CREATED":   11,
+		"BAS_PREPARATION_AUDIT_ACTION_REVISION_CREATED":               12,
+		"BAS_PREPARATION_AUDIT_ACTION_REJECTED_ATTEMPT_REPLACED":      13,
+		"BAS_PREPARATION_AUDIT_ACTION_EXPORT_EVENT_RECORDED":          14,
+	}
+)
+
+func (x BasPreparationAuditAction) Enum() *BasPreparationAuditAction {
+	p := new(BasPreparationAuditAction)
+	*p = x
+	return p
+}
+
+func (x BasPreparationAuditAction) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (BasPreparationAuditAction) Descriptor() protoreflect.EnumDescriptor {
+	return file_tammy_v1_events_proto_enumTypes[2].Descriptor()
+}
+
+func (BasPreparationAuditAction) Type() protoreflect.EnumType {
+	return &file_tammy_v1_events_proto_enumTypes[2]
+}
+
+func (x BasPreparationAuditAction) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use BasPreparationAuditAction.Descriptor instead.
+func (BasPreparationAuditAction) EnumDescriptor() ([]byte, []int) {
+	return file_tammy_v1_events_proto_rawDescGZIP(), []int{2}
+}
+
 // SbrAuditAction is the closed redacted SBR audit lifecycle.
 type SbrAuditAction int32
 
@@ -274,11 +364,11 @@ func (x SbrAuditAction) String() string {
 }
 
 func (SbrAuditAction) Descriptor() protoreflect.EnumDescriptor {
-	return file_tammy_v1_events_proto_enumTypes[2].Descriptor()
+	return file_tammy_v1_events_proto_enumTypes[3].Descriptor()
 }
 
 func (SbrAuditAction) Type() protoreflect.EnumType {
-	return &file_tammy_v1_events_proto_enumTypes[2]
+	return &file_tammy_v1_events_proto_enumTypes[3]
 }
 
 func (x SbrAuditAction) Number() protoreflect.EnumNumber {
@@ -287,7 +377,7 @@ func (x SbrAuditAction) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use SbrAuditAction.Descriptor instead.
 func (SbrAuditAction) EnumDescriptor() ([]byte, []int) {
-	return file_tammy_v1_events_proto_rawDescGZIP(), []int{2}
+	return file_tammy_v1_events_proto_rawDescGZIP(), []int{3}
 }
 
 // PurchaseAccountingChangedEvent records the accepted command kind and exact
@@ -353,6 +443,76 @@ func (x *PurchaseAccountingChangedEvent) GetFinancialRevision() uint64 {
 	return 0
 }
 
+// BasPreparationChangedEvent retains exact references. Financial inputs and
+// evidence content remain in the immutable domain snapshots.
+type BasPreparationChangedEvent struct {
+	state             protoimpl.MessageState    `protogen:"open.v1"`
+	Action            BasPreparationAuditAction `protobuf:"varint,1,opt,name=action,proto3,enum=tammy.v1.BasPreparationAuditAction" json:"action,omitempty"`
+	Source            *SourceRef                `protobuf:"bytes,2,opt,name=source,proto3" json:"source,omitempty"`
+	Previous          *SourceRef                `protobuf:"bytes,3,opt,name=previous,proto3" json:"previous,omitempty"`
+	AffectedResources []*SourceRef              `protobuf:"bytes,4,rep,name=affected_resources,json=affectedResources,proto3" json:"affected_resources,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *BasPreparationChangedEvent) Reset() {
+	*x = BasPreparationChangedEvent{}
+	mi := &file_tammy_v1_events_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BasPreparationChangedEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BasPreparationChangedEvent) ProtoMessage() {}
+
+func (x *BasPreparationChangedEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_tammy_v1_events_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BasPreparationChangedEvent.ProtoReflect.Descriptor instead.
+func (*BasPreparationChangedEvent) Descriptor() ([]byte, []int) {
+	return file_tammy_v1_events_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *BasPreparationChangedEvent) GetAction() BasPreparationAuditAction {
+	if x != nil {
+		return x.Action
+	}
+	return BasPreparationAuditAction_BAS_PREPARATION_AUDIT_ACTION_UNSPECIFIED
+}
+
+func (x *BasPreparationChangedEvent) GetSource() *SourceRef {
+	if x != nil {
+		return x.Source
+	}
+	return nil
+}
+
+func (x *BasPreparationChangedEvent) GetPrevious() *SourceRef {
+	if x != nil {
+		return x.Previous
+	}
+	return nil
+}
+
+func (x *BasPreparationChangedEvent) GetAffectedResources() []*SourceRef {
+	if x != nil {
+		return x.AffectedResources
+	}
+	return nil
+}
+
 // SbrAuditEvent contains fingerprints and closed codes only. It never retains
 // credential paths, passwords, Product IDs, endpoints, ABNs, or secret bytes.
 type SbrAuditEvent struct {
@@ -368,7 +528,7 @@ type SbrAuditEvent struct {
 
 func (x *SbrAuditEvent) Reset() {
 	*x = SbrAuditEvent{}
-	mi := &file_tammy_v1_events_proto_msgTypes[1]
+	mi := &file_tammy_v1_events_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -380,7 +540,7 @@ func (x *SbrAuditEvent) String() string {
 func (*SbrAuditEvent) ProtoMessage() {}
 
 func (x *SbrAuditEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_events_proto_msgTypes[1]
+	mi := &file_tammy_v1_events_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -393,7 +553,7 @@ func (x *SbrAuditEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SbrAuditEvent.ProtoReflect.Descriptor instead.
 func (*SbrAuditEvent) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_events_proto_rawDescGZIP(), []int{1}
+	return file_tammy_v1_events_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *SbrAuditEvent) GetAction() SbrAuditAction {
@@ -448,7 +608,7 @@ type WorkspaceStateChangedEvent struct {
 
 func (x *WorkspaceStateChangedEvent) Reset() {
 	*x = WorkspaceStateChangedEvent{}
-	mi := &file_tammy_v1_events_proto_msgTypes[2]
+	mi := &file_tammy_v1_events_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -460,7 +620,7 @@ func (x *WorkspaceStateChangedEvent) String() string {
 func (*WorkspaceStateChangedEvent) ProtoMessage() {}
 
 func (x *WorkspaceStateChangedEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_events_proto_msgTypes[2]
+	mi := &file_tammy_v1_events_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -473,7 +633,7 @@ func (x *WorkspaceStateChangedEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WorkspaceStateChangedEvent.ProtoReflect.Descriptor instead.
 func (*WorkspaceStateChangedEvent) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_events_proto_rawDescGZIP(), []int{2}
+	return file_tammy_v1_events_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *WorkspaceStateChangedEvent) GetWorkspaceId() string {
@@ -521,7 +681,7 @@ type WorkspaceTrustEstablishedEvent struct {
 
 func (x *WorkspaceTrustEstablishedEvent) Reset() {
 	*x = WorkspaceTrustEstablishedEvent{}
-	mi := &file_tammy_v1_events_proto_msgTypes[3]
+	mi := &file_tammy_v1_events_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -533,7 +693,7 @@ func (x *WorkspaceTrustEstablishedEvent) String() string {
 func (*WorkspaceTrustEstablishedEvent) ProtoMessage() {}
 
 func (x *WorkspaceTrustEstablishedEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_events_proto_msgTypes[3]
+	mi := &file_tammy_v1_events_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -546,7 +706,7 @@ func (x *WorkspaceTrustEstablishedEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WorkspaceTrustEstablishedEvent.ProtoReflect.Descriptor instead.
 func (*WorkspaceTrustEstablishedEvent) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_events_proto_rawDescGZIP(), []int{3}
+	return file_tammy_v1_events_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *WorkspaceTrustEstablishedEvent) GetWorkspaceId() string {
@@ -594,7 +754,7 @@ type UserStateChangedEvent struct {
 
 func (x *UserStateChangedEvent) Reset() {
 	*x = UserStateChangedEvent{}
-	mi := &file_tammy_v1_events_proto_msgTypes[4]
+	mi := &file_tammy_v1_events_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -606,7 +766,7 @@ func (x *UserStateChangedEvent) String() string {
 func (*UserStateChangedEvent) ProtoMessage() {}
 
 func (x *UserStateChangedEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_events_proto_msgTypes[4]
+	mi := &file_tammy_v1_events_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -619,7 +779,7 @@ func (x *UserStateChangedEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UserStateChangedEvent.ProtoReflect.Descriptor instead.
 func (*UserStateChangedEvent) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_events_proto_rawDescGZIP(), []int{4}
+	return file_tammy_v1_events_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *UserStateChangedEvent) GetUserId() string {
@@ -667,7 +827,7 @@ type FactorStateChangedEvent struct {
 
 func (x *FactorStateChangedEvent) Reset() {
 	*x = FactorStateChangedEvent{}
-	mi := &file_tammy_v1_events_proto_msgTypes[5]
+	mi := &file_tammy_v1_events_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -679,7 +839,7 @@ func (x *FactorStateChangedEvent) String() string {
 func (*FactorStateChangedEvent) ProtoMessage() {}
 
 func (x *FactorStateChangedEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_events_proto_msgTypes[5]
+	mi := &file_tammy_v1_events_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -692,7 +852,7 @@ func (x *FactorStateChangedEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FactorStateChangedEvent.ProtoReflect.Descriptor instead.
 func (*FactorStateChangedEvent) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_events_proto_rawDescGZIP(), []int{5}
+	return file_tammy_v1_events_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *FactorStateChangedEvent) GetFactorId() string {
@@ -742,7 +902,7 @@ type OrganisationChangedEvent struct {
 
 func (x *OrganisationChangedEvent) Reset() {
 	*x = OrganisationChangedEvent{}
-	mi := &file_tammy_v1_events_proto_msgTypes[6]
+	mi := &file_tammy_v1_events_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -754,7 +914,7 @@ func (x *OrganisationChangedEvent) String() string {
 func (*OrganisationChangedEvent) ProtoMessage() {}
 
 func (x *OrganisationChangedEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_events_proto_msgTypes[6]
+	mi := &file_tammy_v1_events_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -767,7 +927,7 @@ func (x *OrganisationChangedEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OrganisationChangedEvent.ProtoReflect.Descriptor instead.
 func (*OrganisationChangedEvent) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_events_proto_rawDescGZIP(), []int{6}
+	return file_tammy_v1_events_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *OrganisationChangedEvent) GetOrganisationId() string {
@@ -824,7 +984,7 @@ type EntityVerificationChangedEvent struct {
 
 func (x *EntityVerificationChangedEvent) Reset() {
 	*x = EntityVerificationChangedEvent{}
-	mi := &file_tammy_v1_events_proto_msgTypes[7]
+	mi := &file_tammy_v1_events_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -836,7 +996,7 @@ func (x *EntityVerificationChangedEvent) String() string {
 func (*EntityVerificationChangedEvent) ProtoMessage() {}
 
 func (x *EntityVerificationChangedEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_events_proto_msgTypes[7]
+	mi := &file_tammy_v1_events_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -849,7 +1009,7 @@ func (x *EntityVerificationChangedEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EntityVerificationChangedEvent.ProtoReflect.Descriptor instead.
 func (*EntityVerificationChangedEvent) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_events_proto_rawDescGZIP(), []int{7}
+	return file_tammy_v1_events_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *EntityVerificationChangedEvent) GetVerificationId() string {
@@ -904,7 +1064,7 @@ type AccountStatusChangedEvent struct {
 
 func (x *AccountStatusChangedEvent) Reset() {
 	*x = AccountStatusChangedEvent{}
-	mi := &file_tammy_v1_events_proto_msgTypes[8]
+	mi := &file_tammy_v1_events_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -916,7 +1076,7 @@ func (x *AccountStatusChangedEvent) String() string {
 func (*AccountStatusChangedEvent) ProtoMessage() {}
 
 func (x *AccountStatusChangedEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_events_proto_msgTypes[8]
+	mi := &file_tammy_v1_events_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -929,7 +1089,7 @@ func (x *AccountStatusChangedEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AccountStatusChangedEvent.ProtoReflect.Descriptor instead.
 func (*AccountStatusChangedEvent) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_events_proto_rawDescGZIP(), []int{8}
+	return file_tammy_v1_events_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *AccountStatusChangedEvent) GetAccountId() string {
@@ -977,7 +1137,7 @@ type OpeningConversionChangedEvent struct {
 
 func (x *OpeningConversionChangedEvent) Reset() {
 	*x = OpeningConversionChangedEvent{}
-	mi := &file_tammy_v1_events_proto_msgTypes[9]
+	mi := &file_tammy_v1_events_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -989,7 +1149,7 @@ func (x *OpeningConversionChangedEvent) String() string {
 func (*OpeningConversionChangedEvent) ProtoMessage() {}
 
 func (x *OpeningConversionChangedEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_events_proto_msgTypes[9]
+	mi := &file_tammy_v1_events_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1002,7 +1162,7 @@ func (x *OpeningConversionChangedEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OpeningConversionChangedEvent.ProtoReflect.Descriptor instead.
 func (*OpeningConversionChangedEvent) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_events_proto_rawDescGZIP(), []int{9}
+	return file_tammy_v1_events_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *OpeningConversionChangedEvent) GetConversionId() string {
@@ -1052,7 +1212,7 @@ type JournalPostedEvent struct {
 
 func (x *JournalPostedEvent) Reset() {
 	*x = JournalPostedEvent{}
-	mi := &file_tammy_v1_events_proto_msgTypes[10]
+	mi := &file_tammy_v1_events_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1064,7 +1224,7 @@ func (x *JournalPostedEvent) String() string {
 func (*JournalPostedEvent) ProtoMessage() {}
 
 func (x *JournalPostedEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_events_proto_msgTypes[10]
+	mi := &file_tammy_v1_events_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1077,7 +1237,7 @@ func (x *JournalPostedEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JournalPostedEvent.ProtoReflect.Descriptor instead.
 func (*JournalPostedEvent) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_events_proto_rawDescGZIP(), []int{10}
+	return file_tammy_v1_events_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *JournalPostedEvent) GetJournalId() string {
@@ -1132,7 +1292,7 @@ type PeriodStateChangedEvent struct {
 
 func (x *PeriodStateChangedEvent) Reset() {
 	*x = PeriodStateChangedEvent{}
-	mi := &file_tammy_v1_events_proto_msgTypes[11]
+	mi := &file_tammy_v1_events_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1144,7 +1304,7 @@ func (x *PeriodStateChangedEvent) String() string {
 func (*PeriodStateChangedEvent) ProtoMessage() {}
 
 func (x *PeriodStateChangedEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_events_proto_msgTypes[11]
+	mi := &file_tammy_v1_events_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1157,7 +1317,7 @@ func (x *PeriodStateChangedEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PeriodStateChangedEvent.ProtoReflect.Descriptor instead.
 func (*PeriodStateChangedEvent) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_events_proto_rawDescGZIP(), []int{11}
+	return file_tammy_v1_events_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *PeriodStateChangedEvent) GetPeriodId() string {
@@ -1205,7 +1365,7 @@ type BackupJobChangedEvent struct {
 
 func (x *BackupJobChangedEvent) Reset() {
 	*x = BackupJobChangedEvent{}
-	mi := &file_tammy_v1_events_proto_msgTypes[12]
+	mi := &file_tammy_v1_events_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1217,7 +1377,7 @@ func (x *BackupJobChangedEvent) String() string {
 func (*BackupJobChangedEvent) ProtoMessage() {}
 
 func (x *BackupJobChangedEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_events_proto_msgTypes[12]
+	mi := &file_tammy_v1_events_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1230,7 +1390,7 @@ func (x *BackupJobChangedEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BackupJobChangedEvent.ProtoReflect.Descriptor instead.
 func (*BackupJobChangedEvent) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_events_proto_rawDescGZIP(), []int{12}
+	return file_tammy_v1_events_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *BackupJobChangedEvent) GetJobId() string {
@@ -1278,7 +1438,7 @@ type RestoreStateChangedEvent struct {
 
 func (x *RestoreStateChangedEvent) Reset() {
 	*x = RestoreStateChangedEvent{}
-	mi := &file_tammy_v1_events_proto_msgTypes[13]
+	mi := &file_tammy_v1_events_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1290,7 +1450,7 @@ func (x *RestoreStateChangedEvent) String() string {
 func (*RestoreStateChangedEvent) ProtoMessage() {}
 
 func (x *RestoreStateChangedEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_events_proto_msgTypes[13]
+	mi := &file_tammy_v1_events_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1303,7 +1463,7 @@ func (x *RestoreStateChangedEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RestoreStateChangedEvent.ProtoReflect.Descriptor instead.
 func (*RestoreStateChangedEvent) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_events_proto_rawDescGZIP(), []int{13}
+	return file_tammy_v1_events_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *RestoreStateChangedEvent) GetOperationId() string {
@@ -1351,7 +1511,7 @@ type PreRestoreArchiveChangedEvent struct {
 
 func (x *PreRestoreArchiveChangedEvent) Reset() {
 	*x = PreRestoreArchiveChangedEvent{}
-	mi := &file_tammy_v1_events_proto_msgTypes[14]
+	mi := &file_tammy_v1_events_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1363,7 +1523,7 @@ func (x *PreRestoreArchiveChangedEvent) String() string {
 func (*PreRestoreArchiveChangedEvent) ProtoMessage() {}
 
 func (x *PreRestoreArchiveChangedEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_events_proto_msgTypes[14]
+	mi := &file_tammy_v1_events_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1376,7 +1536,7 @@ func (x *PreRestoreArchiveChangedEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PreRestoreArchiveChangedEvent.ProtoReflect.Descriptor instead.
 func (*PreRestoreArchiveChangedEvent) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_events_proto_rawDescGZIP(), []int{14}
+	return file_tammy_v1_events_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *PreRestoreArchiveChangedEvent) GetArchiveId() string {
@@ -1424,7 +1584,7 @@ type EvidenceExportChangedEvent struct {
 
 func (x *EvidenceExportChangedEvent) Reset() {
 	*x = EvidenceExportChangedEvent{}
-	mi := &file_tammy_v1_events_proto_msgTypes[15]
+	mi := &file_tammy_v1_events_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1436,7 +1596,7 @@ func (x *EvidenceExportChangedEvent) String() string {
 func (*EvidenceExportChangedEvent) ProtoMessage() {}
 
 func (x *EvidenceExportChangedEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_events_proto_msgTypes[15]
+	mi := &file_tammy_v1_events_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1449,7 +1609,7 @@ func (x *EvidenceExportChangedEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EvidenceExportChangedEvent.ProtoReflect.Descriptor instead.
 func (*EvidenceExportChangedEvent) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_events_proto_rawDescGZIP(), []int{15}
+	return file_tammy_v1_events_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *EvidenceExportChangedEvent) GetJobId() string {
@@ -1501,7 +1661,7 @@ type SigningKeyRotatedEvent struct {
 
 func (x *SigningKeyRotatedEvent) Reset() {
 	*x = SigningKeyRotatedEvent{}
-	mi := &file_tammy_v1_events_proto_msgTypes[16]
+	mi := &file_tammy_v1_events_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1513,7 +1673,7 @@ func (x *SigningKeyRotatedEvent) String() string {
 func (*SigningKeyRotatedEvent) ProtoMessage() {}
 
 func (x *SigningKeyRotatedEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_events_proto_msgTypes[16]
+	mi := &file_tammy_v1_events_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1526,7 +1686,7 @@ func (x *SigningKeyRotatedEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SigningKeyRotatedEvent.ProtoReflect.Descriptor instead.
 func (*SigningKeyRotatedEvent) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_events_proto_rawDescGZIP(), []int{16}
+	return file_tammy_v1_events_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *SigningKeyRotatedEvent) GetWorkspaceId() string {
@@ -1591,7 +1751,7 @@ type WorkspaceRestoredEvent struct {
 
 func (x *WorkspaceRestoredEvent) Reset() {
 	*x = WorkspaceRestoredEvent{}
-	mi := &file_tammy_v1_events_proto_msgTypes[17]
+	mi := &file_tammy_v1_events_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1603,7 +1763,7 @@ func (x *WorkspaceRestoredEvent) String() string {
 func (*WorkspaceRestoredEvent) ProtoMessage() {}
 
 func (x *WorkspaceRestoredEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_events_proto_msgTypes[17]
+	mi := &file_tammy_v1_events_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1616,7 +1776,7 @@ func (x *WorkspaceRestoredEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WorkspaceRestoredEvent.ProtoReflect.Descriptor instead.
 func (*WorkspaceRestoredEvent) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_events_proto_rawDescGZIP(), []int{17}
+	return file_tammy_v1_events_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *WorkspaceRestoredEvent) GetWorkspaceId() string {
@@ -1714,6 +1874,7 @@ type AuditEventPayload struct {
 	//	*AuditEventPayload_WorkspaceRestored
 	//	*AuditEventPayload_SbrChanged
 	//	*AuditEventPayload_PurchaseAccountingChanged
+	//	*AuditEventPayload_BasPreparationChanged
 	Payload       isAuditEventPayload_Payload `protobuf_oneof:"payload"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1721,7 +1882,7 @@ type AuditEventPayload struct {
 
 func (x *AuditEventPayload) Reset() {
 	*x = AuditEventPayload{}
-	mi := &file_tammy_v1_events_proto_msgTypes[18]
+	mi := &file_tammy_v1_events_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1733,7 +1894,7 @@ func (x *AuditEventPayload) String() string {
 func (*AuditEventPayload) ProtoMessage() {}
 
 func (x *AuditEventPayload) ProtoReflect() protoreflect.Message {
-	mi := &file_tammy_v1_events_proto_msgTypes[18]
+	mi := &file_tammy_v1_events_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1746,7 +1907,7 @@ func (x *AuditEventPayload) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AuditEventPayload.ProtoReflect.Descriptor instead.
 func (*AuditEventPayload) Descriptor() ([]byte, []int) {
-	return file_tammy_v1_events_proto_rawDescGZIP(), []int{18}
+	return file_tammy_v1_events_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *AuditEventPayload) GetPayload() isAuditEventPayload_Payload {
@@ -1918,6 +2079,15 @@ func (x *AuditEventPayload) GetPurchaseAccountingChanged() *PurchaseAccountingCh
 	return nil
 }
 
+func (x *AuditEventPayload) GetBasPreparationChanged() *BasPreparationChangedEvent {
+	if x != nil {
+		if x, ok := x.Payload.(*AuditEventPayload_BasPreparationChanged); ok {
+			return x.BasPreparationChanged
+		}
+	}
+	return nil
+}
+
 type isAuditEventPayload_Payload interface {
 	isAuditEventPayload_Payload()
 }
@@ -2012,6 +2182,11 @@ type AuditEventPayload_PurchaseAccountingChanged struct {
 	PurchaseAccountingChanged *PurchaseAccountingChangedEvent `protobuf:"bytes,18,opt,name=purchase_accounting_changed,json=purchaseAccountingChanged,proto3,oneof"`
 }
 
+type AuditEventPayload_BasPreparationChanged struct {
+	// bas_preparation_changed records accepted local BAS preparation mutations.
+	BasPreparationChanged *BasPreparationChangedEvent `protobuf:"bytes,19,opt,name=bas_preparation_changed,json=basPreparationChanged,proto3,oneof"`
+}
+
 func (*AuditEventPayload_WorkspaceStateChanged) isAuditEventPayload_Payload() {}
 
 func (*AuditEventPayload_WorkspaceTrustEstablished) isAuditEventPayload_Payload() {}
@@ -2048,6 +2223,8 @@ func (*AuditEventPayload_SbrChanged) isAuditEventPayload_Payload() {}
 
 func (*AuditEventPayload_PurchaseAccountingChanged) isAuditEventPayload_Payload() {}
 
+func (*AuditEventPayload_BasPreparationChanged) isAuditEventPayload_Payload() {}
+
 var File_tammy_v1_events_proto protoreflect.FileDescriptor
 
 const file_tammy_v1_events_proto_rawDesc = "" +
@@ -2057,7 +2234,13 @@ const file_tammy_v1_events_proto_rawDesc = "" +
 	"\x06action\x18\x01 \x01(\x0e2\x1d.tammy.v1.PurchaseAuditActionB\n" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x06action\x126\n" +
 	"\x12accounting_version\x18\x02 \x01(\x04B\a\xbaH\x042\x02(\x01R\x11accountingVersion\x126\n" +
-	"\x12financial_revision\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\x11financialRevision\"\xa0\x03\n" +
+	"\x12financial_revision\x18\x03 \x01(\x04B\a\xbaH\x042\x02(\x01R\x11financialRevision\"\x99\x02\n" +
+	"\x1aBasPreparationChangedEvent\x12G\n" +
+	"\x06action\x18\x01 \x01(\x0e2#.tammy.v1.BasPreparationAuditActionB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x06action\x123\n" +
+	"\x06source\x18\x02 \x01(\v2\x13.tammy.v1.SourceRefB\x06\xbaH\x03\xc8\x01\x01R\x06source\x12/\n" +
+	"\bprevious\x18\x03 \x01(\v2\x13.tammy.v1.SourceRefR\bprevious\x12L\n" +
+	"\x12affected_resources\x18\x04 \x03(\v2\x13.tammy.v1.SourceRefB\b\xbaH\x05\x92\x01\x02\x10\bR\x11affectedResources\"\xa0\x03\n" +
 	"\rSbrAuditEvent\x12<\n" +
 	"\x06action\x18\x01 \x01(\x0e2\x18.tammy.v1.SbrAuditActionB\n" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x06action\x12C\n" +
@@ -2192,7 +2375,7 @@ const file_tammy_v1_events_proto_rawDesc = "" +
 	"\x18pre_restore_archive_hash\x18\b \x01(\fB\a\xbaH\x04z\x02h R\x15preRestoreArchiveHash\x122\n" +
 	"\x10predecessor_head\x18\t \x01(\fB\a\xbaH\x04z\x02h R\x0fpredecessorHead\x12,\n" +
 	"\rarchived_head\x18\n" +
-	" \x01(\fB\a\xbaH\x04z\x02h R\farchivedHead\"\xff\f\n" +
+	" \x01(\fB\a\xbaH\x04z\x02h R\farchivedHead\"\xdf\r\n" +
 	"\x11AuditEventPayload\x12^\n" +
 	"\x17workspace_state_changed\x18\x01 \x01(\v2$.tammy.v1.WorkspaceStateChangedEventH\x00R\x15workspaceStateChanged\x12j\n" +
 	"\x1bworkspace_trust_established\x18\x02 \x01(\v2(.tammy.v1.WorkspaceTrustEstablishedEventH\x00R\x19workspaceTrustEstablished\x12O\n" +
@@ -2213,8 +2396,9 @@ const file_tammy_v1_events_proto_rawDesc = "" +
 	"\x12workspace_restored\x18\x10 \x01(\v2 .tammy.v1.WorkspaceRestoredEventH\x00R\x11workspaceRestored\x12:\n" +
 	"\vsbr_changed\x18\x11 \x01(\v2\x17.tammy.v1.SbrAuditEventH\x00R\n" +
 	"sbrChanged\x12j\n" +
-	"\x1bpurchase_accounting_changed\x18\x12 \x01(\v2(.tammy.v1.PurchaseAccountingChangedEventH\x00R\x19purchaseAccountingChangedB\t\n" +
-	"\apayload*\xcd\x06\n" +
+	"\x1bpurchase_accounting_changed\x18\x12 \x01(\v2(.tammy.v1.PurchaseAccountingChangedEventH\x00R\x19purchaseAccountingChanged\x12^\n" +
+	"\x17bas_preparation_changed\x18\x13 \x01(\v2$.tammy.v1.BasPreparationChangedEventH\x00R\x15basPreparationChangedB\t\n" +
+	"\apayload*\xfb\x06\n" +
 	"\x0eAuditEventType\x12 \n" +
 	"\x1cAUDIT_EVENT_TYPE_UNSPECIFIED\x10\x00\x12,\n" +
 	"(AUDIT_EVENT_TYPE_WORKSPACE_STATE_CHANGED\x10\x01\x120\n" +
@@ -2235,7 +2419,8 @@ const file_tammy_v1_events_proto_rawDesc = "" +
 	"$AUDIT_EVENT_TYPE_SIGNING_KEY_ROTATED\x10\x0f\x12'\n" +
 	"#AUDIT_EVENT_TYPE_WORKSPACE_RESTORED\x10\x10\x12 \n" +
 	"\x1cAUDIT_EVENT_TYPE_SBR_CHANGED\x10\x11\x120\n" +
-	",AUDIT_EVENT_TYPE_PURCHASE_ACCOUNTING_CHANGED\x10\x12*\xbf\x02\n" +
+	",AUDIT_EVENT_TYPE_PURCHASE_ACCOUNTING_CHANGED\x10\x12\x12,\n" +
+	"(AUDIT_EVENT_TYPE_BAS_PREPARATION_CHANGED\x10\x13*\xbf\x02\n" +
 	"\x13PurchaseAuditAction\x12%\n" +
 	"!PURCHASE_AUDIT_ACTION_UNSPECIFIED\x10\x00\x12 \n" +
 	"\x1cPURCHASE_AUDIT_ACTION_POSTED\x10\x01\x12*\n" +
@@ -2243,7 +2428,24 @@ const file_tammy_v1_events_proto_rawDesc = "" +
 	"+PURCHASE_AUDIT_ACTION_TAX_EVIDENCE_RECORDED\x10\x03\x12(\n" +
 	"$PURCHASE_AUDIT_ACTION_GST_ATTRIBUTED\x10\x04\x12&\n" +
 	"\"PURCHASE_AUDIT_ACTION_GST_DEFERRED\x10\x05\x120\n" +
-	",PURCHASE_AUDIT_ACTION_LEGACY_REVIEW_RESOLVED\x10\x06*\xb8\x05\n" +
+	",PURCHASE_AUDIT_ACTION_LEGACY_REVIEW_RESOLVED\x10\x06*\xe5\x06\n" +
+	"\x19BasPreparationAuditAction\x12,\n" +
+	"(BAS_PREPARATION_AUDIT_ACTION_UNSPECIFIED\x10\x00\x12,\n" +
+	"(BAS_PREPARATION_AUDIT_ACTION_PROFILE_SET\x10\x01\x121\n" +
+	"-BAS_PREPARATION_AUDIT_ACTION_PERIOD_CONFIRMED\x10\x02\x122\n" +
+	".BAS_PREPARATION_AUDIT_ACTION_PAYG_INPUTS_SAVED\x10\x03\x128\n" +
+	"4BAS_PREPARATION_AUDIT_ACTION_PREPARATION_REGENERATED\x10\x04\x124\n" +
+	"0BAS_PREPARATION_AUDIT_ACTION_VALIDATION_RECORDED\x10\x05\x126\n" +
+	"2BAS_PREPARATION_AUDIT_ACTION_WARNINGS_ACKNOWLEDGED\x10\x06\x12:\n" +
+	"6BAS_PREPARATION_AUDIT_ACTION_FROZEN_FOR_MANUAL_HANDOFF\x10\a\x12>\n" +
+	":BAS_PREPARATION_AUDIT_ACTION_EXTERNAL_OBSERVATION_RECORDED\x10\b\x12?\n" +
+	";BAS_PREPARATION_AUDIT_ACTION_EXTERNAL_OBSERVATION_CORRECTED\x10\t\x12:\n" +
+	"6BAS_PREPARATION_AUDIT_ACTION_EXTERNAL_DISPUTE_RESOLVED\x10\n" +
+	"\x12=\n" +
+	"9BAS_PREPARATION_AUDIT_ACTION_EXTERNAL_REPLACEMENT_CREATED\x10\v\x121\n" +
+	"-BAS_PREPARATION_AUDIT_ACTION_REVISION_CREATED\x10\f\x12:\n" +
+	"6BAS_PREPARATION_AUDIT_ACTION_REJECTED_ATTEMPT_REPLACED\x10\r\x126\n" +
+	"2BAS_PREPARATION_AUDIT_ACTION_EXPORT_EVENT_RECORDED\x10\x0e*\xb8\x05\n" +
 	"\x0eSbrAuditAction\x12 \n" +
 	"\x1cSBR_AUDIT_ACTION_UNSPECIFIED\x10\x00\x12(\n" +
 	"$SBR_AUDIT_ACTION_CREDENTIAL_IMPORTED\x10\x01\x12(\n" +
@@ -2275,93 +2477,101 @@ func file_tammy_v1_events_proto_rawDescGZIP() []byte {
 	return file_tammy_v1_events_proto_rawDescData
 }
 
-var file_tammy_v1_events_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_tammy_v1_events_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_tammy_v1_events_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
+var file_tammy_v1_events_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_tammy_v1_events_proto_goTypes = []any{
 	(AuditEventType)(0),                    // 0: tammy.v1.AuditEventType
 	(PurchaseAuditAction)(0),               // 1: tammy.v1.PurchaseAuditAction
-	(SbrAuditAction)(0),                    // 2: tammy.v1.SbrAuditAction
-	(*PurchaseAccountingChangedEvent)(nil), // 3: tammy.v1.PurchaseAccountingChangedEvent
-	(*SbrAuditEvent)(nil),                  // 4: tammy.v1.SbrAuditEvent
-	(*WorkspaceStateChangedEvent)(nil),     // 5: tammy.v1.WorkspaceStateChangedEvent
-	(*WorkspaceTrustEstablishedEvent)(nil), // 6: tammy.v1.WorkspaceTrustEstablishedEvent
-	(*UserStateChangedEvent)(nil),          // 7: tammy.v1.UserStateChangedEvent
-	(*FactorStateChangedEvent)(nil),        // 8: tammy.v1.FactorStateChangedEvent
-	(*OrganisationChangedEvent)(nil),       // 9: tammy.v1.OrganisationChangedEvent
-	(*EntityVerificationChangedEvent)(nil), // 10: tammy.v1.EntityVerificationChangedEvent
-	(*AccountStatusChangedEvent)(nil),      // 11: tammy.v1.AccountStatusChangedEvent
-	(*OpeningConversionChangedEvent)(nil),  // 12: tammy.v1.OpeningConversionChangedEvent
-	(*JournalPostedEvent)(nil),             // 13: tammy.v1.JournalPostedEvent
-	(*PeriodStateChangedEvent)(nil),        // 14: tammy.v1.PeriodStateChangedEvent
-	(*BackupJobChangedEvent)(nil),          // 15: tammy.v1.BackupJobChangedEvent
-	(*RestoreStateChangedEvent)(nil),       // 16: tammy.v1.RestoreStateChangedEvent
-	(*PreRestoreArchiveChangedEvent)(nil),  // 17: tammy.v1.PreRestoreArchiveChangedEvent
-	(*EvidenceExportChangedEvent)(nil),     // 18: tammy.v1.EvidenceExportChangedEvent
-	(*SigningKeyRotatedEvent)(nil),         // 19: tammy.v1.SigningKeyRotatedEvent
-	(*WorkspaceRestoredEvent)(nil),         // 20: tammy.v1.WorkspaceRestoredEvent
-	(*AuditEventPayload)(nil),              // 21: tammy.v1.AuditEventPayload
-	(WorkspaceState)(0),                    // 22: tammy.v1.WorkspaceState
-	(UserState)(0),                         // 23: tammy.v1.UserState
-	(FactorState)(0),                       // 24: tammy.v1.FactorState
-	(OrganisationVerificationState)(0),     // 25: tammy.v1.OrganisationVerificationState
-	(AccountStatus)(0),                     // 26: tammy.v1.AccountStatus
-	(OpeningConversionState)(0),            // 27: tammy.v1.OpeningConversionState
-	(JournalSource)(0),                     // 28: tammy.v1.JournalSource
-	(*Money)(nil),                          // 29: tammy.v1.Money
-	(PeriodState)(0),                       // 30: tammy.v1.PeriodState
-	(BackupJobState)(0),                    // 31: tammy.v1.BackupJobState
-	(RestoreState)(0),                      // 32: tammy.v1.RestoreState
-	(PreRestoreArchiveState)(0),            // 33: tammy.v1.PreRestoreArchiveState
+	(BasPreparationAuditAction)(0),         // 2: tammy.v1.BasPreparationAuditAction
+	(SbrAuditAction)(0),                    // 3: tammy.v1.SbrAuditAction
+	(*PurchaseAccountingChangedEvent)(nil), // 4: tammy.v1.PurchaseAccountingChangedEvent
+	(*BasPreparationChangedEvent)(nil),     // 5: tammy.v1.BasPreparationChangedEvent
+	(*SbrAuditEvent)(nil),                  // 6: tammy.v1.SbrAuditEvent
+	(*WorkspaceStateChangedEvent)(nil),     // 7: tammy.v1.WorkspaceStateChangedEvent
+	(*WorkspaceTrustEstablishedEvent)(nil), // 8: tammy.v1.WorkspaceTrustEstablishedEvent
+	(*UserStateChangedEvent)(nil),          // 9: tammy.v1.UserStateChangedEvent
+	(*FactorStateChangedEvent)(nil),        // 10: tammy.v1.FactorStateChangedEvent
+	(*OrganisationChangedEvent)(nil),       // 11: tammy.v1.OrganisationChangedEvent
+	(*EntityVerificationChangedEvent)(nil), // 12: tammy.v1.EntityVerificationChangedEvent
+	(*AccountStatusChangedEvent)(nil),      // 13: tammy.v1.AccountStatusChangedEvent
+	(*OpeningConversionChangedEvent)(nil),  // 14: tammy.v1.OpeningConversionChangedEvent
+	(*JournalPostedEvent)(nil),             // 15: tammy.v1.JournalPostedEvent
+	(*PeriodStateChangedEvent)(nil),        // 16: tammy.v1.PeriodStateChangedEvent
+	(*BackupJobChangedEvent)(nil),          // 17: tammy.v1.BackupJobChangedEvent
+	(*RestoreStateChangedEvent)(nil),       // 18: tammy.v1.RestoreStateChangedEvent
+	(*PreRestoreArchiveChangedEvent)(nil),  // 19: tammy.v1.PreRestoreArchiveChangedEvent
+	(*EvidenceExportChangedEvent)(nil),     // 20: tammy.v1.EvidenceExportChangedEvent
+	(*SigningKeyRotatedEvent)(nil),         // 21: tammy.v1.SigningKeyRotatedEvent
+	(*WorkspaceRestoredEvent)(nil),         // 22: tammy.v1.WorkspaceRestoredEvent
+	(*AuditEventPayload)(nil),              // 23: tammy.v1.AuditEventPayload
+	(*SourceRef)(nil),                      // 24: tammy.v1.SourceRef
+	(WorkspaceState)(0),                    // 25: tammy.v1.WorkspaceState
+	(UserState)(0),                         // 26: tammy.v1.UserState
+	(FactorState)(0),                       // 27: tammy.v1.FactorState
+	(OrganisationVerificationState)(0),     // 28: tammy.v1.OrganisationVerificationState
+	(AccountStatus)(0),                     // 29: tammy.v1.AccountStatus
+	(OpeningConversionState)(0),            // 30: tammy.v1.OpeningConversionState
+	(JournalSource)(0),                     // 31: tammy.v1.JournalSource
+	(*Money)(nil),                          // 32: tammy.v1.Money
+	(PeriodState)(0),                       // 33: tammy.v1.PeriodState
+	(BackupJobState)(0),                    // 34: tammy.v1.BackupJobState
+	(RestoreState)(0),                      // 35: tammy.v1.RestoreState
+	(PreRestoreArchiveState)(0),            // 36: tammy.v1.PreRestoreArchiveState
 }
 var file_tammy_v1_events_proto_depIdxs = []int32{
 	1,  // 0: tammy.v1.PurchaseAccountingChangedEvent.action:type_name -> tammy.v1.PurchaseAuditAction
-	2,  // 1: tammy.v1.SbrAuditEvent.action:type_name -> tammy.v1.SbrAuditAction
-	22, // 2: tammy.v1.WorkspaceStateChangedEvent.from_state:type_name -> tammy.v1.WorkspaceState
-	22, // 3: tammy.v1.WorkspaceStateChangedEvent.to_state:type_name -> tammy.v1.WorkspaceState
-	23, // 4: tammy.v1.UserStateChangedEvent.from_state:type_name -> tammy.v1.UserState
-	23, // 5: tammy.v1.UserStateChangedEvent.to_state:type_name -> tammy.v1.UserState
-	24, // 6: tammy.v1.FactorStateChangedEvent.from_state:type_name -> tammy.v1.FactorState
-	24, // 7: tammy.v1.FactorStateChangedEvent.to_state:type_name -> tammy.v1.FactorState
-	25, // 8: tammy.v1.EntityVerificationChangedEvent.from_state:type_name -> tammy.v1.OrganisationVerificationState
-	25, // 9: tammy.v1.EntityVerificationChangedEvent.to_state:type_name -> tammy.v1.OrganisationVerificationState
-	26, // 10: tammy.v1.AccountStatusChangedEvent.from_status:type_name -> tammy.v1.AccountStatus
-	26, // 11: tammy.v1.AccountStatusChangedEvent.to_status:type_name -> tammy.v1.AccountStatus
-	27, // 12: tammy.v1.OpeningConversionChangedEvent.from_state:type_name -> tammy.v1.OpeningConversionState
-	27, // 13: tammy.v1.OpeningConversionChangedEvent.to_state:type_name -> tammy.v1.OpeningConversionState
-	28, // 14: tammy.v1.JournalPostedEvent.source:type_name -> tammy.v1.JournalSource
-	29, // 15: tammy.v1.JournalPostedEvent.total_debits:type_name -> tammy.v1.Money
-	29, // 16: tammy.v1.JournalPostedEvent.total_credits:type_name -> tammy.v1.Money
-	30, // 17: tammy.v1.PeriodStateChangedEvent.from_state:type_name -> tammy.v1.PeriodState
-	30, // 18: tammy.v1.PeriodStateChangedEvent.to_state:type_name -> tammy.v1.PeriodState
-	31, // 19: tammy.v1.BackupJobChangedEvent.from_state:type_name -> tammy.v1.BackupJobState
-	31, // 20: tammy.v1.BackupJobChangedEvent.to_state:type_name -> tammy.v1.BackupJobState
-	32, // 21: tammy.v1.RestoreStateChangedEvent.from_state:type_name -> tammy.v1.RestoreState
-	32, // 22: tammy.v1.RestoreStateChangedEvent.to_state:type_name -> tammy.v1.RestoreState
-	33, // 23: tammy.v1.PreRestoreArchiveChangedEvent.from_state:type_name -> tammy.v1.PreRestoreArchiveState
-	33, // 24: tammy.v1.PreRestoreArchiveChangedEvent.to_state:type_name -> tammy.v1.PreRestoreArchiveState
-	5,  // 25: tammy.v1.AuditEventPayload.workspace_state_changed:type_name -> tammy.v1.WorkspaceStateChangedEvent
-	6,  // 26: tammy.v1.AuditEventPayload.workspace_trust_established:type_name -> tammy.v1.WorkspaceTrustEstablishedEvent
-	7,  // 27: tammy.v1.AuditEventPayload.user_state_changed:type_name -> tammy.v1.UserStateChangedEvent
-	8,  // 28: tammy.v1.AuditEventPayload.factor_state_changed:type_name -> tammy.v1.FactorStateChangedEvent
-	9,  // 29: tammy.v1.AuditEventPayload.organisation_changed:type_name -> tammy.v1.OrganisationChangedEvent
-	10, // 30: tammy.v1.AuditEventPayload.entity_verification_changed:type_name -> tammy.v1.EntityVerificationChangedEvent
-	11, // 31: tammy.v1.AuditEventPayload.account_status_changed:type_name -> tammy.v1.AccountStatusChangedEvent
-	12, // 32: tammy.v1.AuditEventPayload.opening_conversion_changed:type_name -> tammy.v1.OpeningConversionChangedEvent
-	13, // 33: tammy.v1.AuditEventPayload.journal_posted:type_name -> tammy.v1.JournalPostedEvent
-	14, // 34: tammy.v1.AuditEventPayload.period_state_changed:type_name -> tammy.v1.PeriodStateChangedEvent
-	15, // 35: tammy.v1.AuditEventPayload.backup_job_changed:type_name -> tammy.v1.BackupJobChangedEvent
-	16, // 36: tammy.v1.AuditEventPayload.restore_state_changed:type_name -> tammy.v1.RestoreStateChangedEvent
-	17, // 37: tammy.v1.AuditEventPayload.pre_restore_archive_changed:type_name -> tammy.v1.PreRestoreArchiveChangedEvent
-	18, // 38: tammy.v1.AuditEventPayload.evidence_export_changed:type_name -> tammy.v1.EvidenceExportChangedEvent
-	19, // 39: tammy.v1.AuditEventPayload.signing_key_rotated:type_name -> tammy.v1.SigningKeyRotatedEvent
-	20, // 40: tammy.v1.AuditEventPayload.workspace_restored:type_name -> tammy.v1.WorkspaceRestoredEvent
-	4,  // 41: tammy.v1.AuditEventPayload.sbr_changed:type_name -> tammy.v1.SbrAuditEvent
-	3,  // 42: tammy.v1.AuditEventPayload.purchase_accounting_changed:type_name -> tammy.v1.PurchaseAccountingChangedEvent
-	43, // [43:43] is the sub-list for method output_type
-	43, // [43:43] is the sub-list for method input_type
-	43, // [43:43] is the sub-list for extension type_name
-	43, // [43:43] is the sub-list for extension extendee
-	0,  // [0:43] is the sub-list for field type_name
+	2,  // 1: tammy.v1.BasPreparationChangedEvent.action:type_name -> tammy.v1.BasPreparationAuditAction
+	24, // 2: tammy.v1.BasPreparationChangedEvent.source:type_name -> tammy.v1.SourceRef
+	24, // 3: tammy.v1.BasPreparationChangedEvent.previous:type_name -> tammy.v1.SourceRef
+	24, // 4: tammy.v1.BasPreparationChangedEvent.affected_resources:type_name -> tammy.v1.SourceRef
+	3,  // 5: tammy.v1.SbrAuditEvent.action:type_name -> tammy.v1.SbrAuditAction
+	25, // 6: tammy.v1.WorkspaceStateChangedEvent.from_state:type_name -> tammy.v1.WorkspaceState
+	25, // 7: tammy.v1.WorkspaceStateChangedEvent.to_state:type_name -> tammy.v1.WorkspaceState
+	26, // 8: tammy.v1.UserStateChangedEvent.from_state:type_name -> tammy.v1.UserState
+	26, // 9: tammy.v1.UserStateChangedEvent.to_state:type_name -> tammy.v1.UserState
+	27, // 10: tammy.v1.FactorStateChangedEvent.from_state:type_name -> tammy.v1.FactorState
+	27, // 11: tammy.v1.FactorStateChangedEvent.to_state:type_name -> tammy.v1.FactorState
+	28, // 12: tammy.v1.EntityVerificationChangedEvent.from_state:type_name -> tammy.v1.OrganisationVerificationState
+	28, // 13: tammy.v1.EntityVerificationChangedEvent.to_state:type_name -> tammy.v1.OrganisationVerificationState
+	29, // 14: tammy.v1.AccountStatusChangedEvent.from_status:type_name -> tammy.v1.AccountStatus
+	29, // 15: tammy.v1.AccountStatusChangedEvent.to_status:type_name -> tammy.v1.AccountStatus
+	30, // 16: tammy.v1.OpeningConversionChangedEvent.from_state:type_name -> tammy.v1.OpeningConversionState
+	30, // 17: tammy.v1.OpeningConversionChangedEvent.to_state:type_name -> tammy.v1.OpeningConversionState
+	31, // 18: tammy.v1.JournalPostedEvent.source:type_name -> tammy.v1.JournalSource
+	32, // 19: tammy.v1.JournalPostedEvent.total_debits:type_name -> tammy.v1.Money
+	32, // 20: tammy.v1.JournalPostedEvent.total_credits:type_name -> tammy.v1.Money
+	33, // 21: tammy.v1.PeriodStateChangedEvent.from_state:type_name -> tammy.v1.PeriodState
+	33, // 22: tammy.v1.PeriodStateChangedEvent.to_state:type_name -> tammy.v1.PeriodState
+	34, // 23: tammy.v1.BackupJobChangedEvent.from_state:type_name -> tammy.v1.BackupJobState
+	34, // 24: tammy.v1.BackupJobChangedEvent.to_state:type_name -> tammy.v1.BackupJobState
+	35, // 25: tammy.v1.RestoreStateChangedEvent.from_state:type_name -> tammy.v1.RestoreState
+	35, // 26: tammy.v1.RestoreStateChangedEvent.to_state:type_name -> tammy.v1.RestoreState
+	36, // 27: tammy.v1.PreRestoreArchiveChangedEvent.from_state:type_name -> tammy.v1.PreRestoreArchiveState
+	36, // 28: tammy.v1.PreRestoreArchiveChangedEvent.to_state:type_name -> tammy.v1.PreRestoreArchiveState
+	7,  // 29: tammy.v1.AuditEventPayload.workspace_state_changed:type_name -> tammy.v1.WorkspaceStateChangedEvent
+	8,  // 30: tammy.v1.AuditEventPayload.workspace_trust_established:type_name -> tammy.v1.WorkspaceTrustEstablishedEvent
+	9,  // 31: tammy.v1.AuditEventPayload.user_state_changed:type_name -> tammy.v1.UserStateChangedEvent
+	10, // 32: tammy.v1.AuditEventPayload.factor_state_changed:type_name -> tammy.v1.FactorStateChangedEvent
+	11, // 33: tammy.v1.AuditEventPayload.organisation_changed:type_name -> tammy.v1.OrganisationChangedEvent
+	12, // 34: tammy.v1.AuditEventPayload.entity_verification_changed:type_name -> tammy.v1.EntityVerificationChangedEvent
+	13, // 35: tammy.v1.AuditEventPayload.account_status_changed:type_name -> tammy.v1.AccountStatusChangedEvent
+	14, // 36: tammy.v1.AuditEventPayload.opening_conversion_changed:type_name -> tammy.v1.OpeningConversionChangedEvent
+	15, // 37: tammy.v1.AuditEventPayload.journal_posted:type_name -> tammy.v1.JournalPostedEvent
+	16, // 38: tammy.v1.AuditEventPayload.period_state_changed:type_name -> tammy.v1.PeriodStateChangedEvent
+	17, // 39: tammy.v1.AuditEventPayload.backup_job_changed:type_name -> tammy.v1.BackupJobChangedEvent
+	18, // 40: tammy.v1.AuditEventPayload.restore_state_changed:type_name -> tammy.v1.RestoreStateChangedEvent
+	19, // 41: tammy.v1.AuditEventPayload.pre_restore_archive_changed:type_name -> tammy.v1.PreRestoreArchiveChangedEvent
+	20, // 42: tammy.v1.AuditEventPayload.evidence_export_changed:type_name -> tammy.v1.EvidenceExportChangedEvent
+	21, // 43: tammy.v1.AuditEventPayload.signing_key_rotated:type_name -> tammy.v1.SigningKeyRotatedEvent
+	22, // 44: tammy.v1.AuditEventPayload.workspace_restored:type_name -> tammy.v1.WorkspaceRestoredEvent
+	6,  // 45: tammy.v1.AuditEventPayload.sbr_changed:type_name -> tammy.v1.SbrAuditEvent
+	4,  // 46: tammy.v1.AuditEventPayload.purchase_accounting_changed:type_name -> tammy.v1.PurchaseAccountingChangedEvent
+	5,  // 47: tammy.v1.AuditEventPayload.bas_preparation_changed:type_name -> tammy.v1.BasPreparationChangedEvent
+	48, // [48:48] is the sub-list for method output_type
+	48, // [48:48] is the sub-list for method input_type
+	48, // [48:48] is the sub-list for extension type_name
+	48, // [48:48] is the sub-list for extension extendee
+	0,  // [0:48] is the sub-list for field type_name
 }
 
 func init() { file_tammy_v1_events_proto_init() }
@@ -2374,15 +2584,15 @@ func file_tammy_v1_events_proto_init() {
 	file_tammy_v1_identity_proto_init()
 	file_tammy_v1_organisation_proto_init()
 	file_tammy_v1_workspace_proto_init()
-	file_tammy_v1_events_proto_msgTypes[1].OneofWrappers = []any{}
-	file_tammy_v1_events_proto_msgTypes[9].OneofWrappers = []any{}
+	file_tammy_v1_events_proto_msgTypes[2].OneofWrappers = []any{}
 	file_tammy_v1_events_proto_msgTypes[10].OneofWrappers = []any{}
 	file_tammy_v1_events_proto_msgTypes[11].OneofWrappers = []any{}
 	file_tammy_v1_events_proto_msgTypes[12].OneofWrappers = []any{}
 	file_tammy_v1_events_proto_msgTypes[13].OneofWrappers = []any{}
 	file_tammy_v1_events_proto_msgTypes[14].OneofWrappers = []any{}
 	file_tammy_v1_events_proto_msgTypes[15].OneofWrappers = []any{}
-	file_tammy_v1_events_proto_msgTypes[18].OneofWrappers = []any{
+	file_tammy_v1_events_proto_msgTypes[16].OneofWrappers = []any{}
+	file_tammy_v1_events_proto_msgTypes[19].OneofWrappers = []any{
 		(*AuditEventPayload_WorkspaceStateChanged)(nil),
 		(*AuditEventPayload_WorkspaceTrustEstablished)(nil),
 		(*AuditEventPayload_UserStateChanged)(nil),
@@ -2401,14 +2611,15 @@ func file_tammy_v1_events_proto_init() {
 		(*AuditEventPayload_WorkspaceRestored)(nil),
 		(*AuditEventPayload_SbrChanged)(nil),
 		(*AuditEventPayload_PurchaseAccountingChanged)(nil),
+		(*AuditEventPayload_BasPreparationChanged)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_tammy_v1_events_proto_rawDesc), len(file_tammy_v1_events_proto_rawDesc)),
-			NumEnums:      3,
-			NumMessages:   19,
+			NumEnums:      4,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

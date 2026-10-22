@@ -31,6 +31,11 @@ func validBASRawSourceRef(value *tammyv1.BasRawSourceRef) bool {
 	if value.OriginalContentHash != nil && len(value.OriginalContentHash) != 32 {
 		return false
 	}
+	if (value.ComponentSequence != nil && *value.ComponentSequence == 0) ||
+		(value.RelatedSequence != nil && (*value.RelatedSequence == 0 || value.RelatedId == nil)) ||
+		(value.RelatedId != nil && (!utf8.ValidString(*value.RelatedId) || strings.TrimSpace(*value.RelatedId) == "")) {
+		return false
+	}
 	switch value.ProofScope {
 	case tammyv1.BasSourceProofScope_BAS_SOURCE_PROOF_SCOPE_SOURCE_ROW_PROJECTION,
 		tammyv1.BasSourceProofScope_BAS_SOURCE_PROOF_SCOPE_COMPLETE_JOURNAL,

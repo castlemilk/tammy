@@ -8,12 +8,13 @@ import (
 // A matching BLOB owner is visible only to reject it; payment selection keeps
 // its ordinary TEXT scope and its existing row and payload definitions.
 func purchaseReportingPaymentOwnerGuard(organisationID string) *postingReportingOwnerGuard {
-	return &postingReportingOwnerGuard{
+	guard := &postingReportingOwnerGuard{
 		invalid: `EXISTS(SELECT 1 FROM purchase_payments_v1 AS owner_payment
 			WHERE typeof(owner_payment.organisation_id)='blob' AND length(owner_payment.organisation_id)=36
 			AND owner_payment.organisation_id=CAST(? AS BLOB))`,
 		args: []any{organisationID},
 	}
+	return purchaseReportingCombineOwnerGuards(guard, purchaseReportingModernFamilyReferenceGuard(organisationID, BASScalarPayment, false))
 }
 
 func purchaseReportingPaymentReplayQuery(organisationID, postingID string) postingReportingQuery {

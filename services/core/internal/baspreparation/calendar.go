@@ -1,6 +1,8 @@
 package baspreparation
 
 import (
+	"bytes"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"time"
@@ -205,4 +207,13 @@ func calendarKey(date *tammyv1.CivilDate) string {
 		return ""
 	}
 	return fmt.Sprintf("%04d-%02d-%02d", date.Year, date.Month, date.Day)
+}
+
+const dueDateRuleMaterialV1 = "BAS-DUE-DATE-RULE-v1\n" +
+	"MONTHLY: nominal due date is day 21 of the following civil month; no weekend or holiday adjustment.\n" +
+	"QUARTERLY: nominal due date is day 28 of the following month after period end; December-quarter due date is February 28; no weekend or holiday adjustment.\n"
+
+func DueDateRuleFingerprint() []byte {
+	digest := sha256.Sum256([]byte(DueDateRuleVersion + "\x00" + dueDateRuleMaterialV1))
+	return bytes.Clone(digest[:])
 }

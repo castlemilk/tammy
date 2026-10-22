@@ -28,6 +28,7 @@ interface OverviewScreenProps {
     Partial<Pick<TammyConveyorModule<"reporting">, "exportIncome">>;
   readonly organisationApi?: ReportOrganisationApi;
   readonly accountingApi?: Pick<TammyConveyorModule<"accounting">, "getBusinessIncomeSummary">;
+  readonly onOpenBas?: (path: string) => void;
   readonly onReviewInvoices?: () => void;
   readonly now?: Date;
   readonly workspace: AuthenticatedWorkspace | undefined;
@@ -43,6 +44,7 @@ export function OverviewScreen({
   accountingApi,
   organisationApi,
   now,
+  onOpenBas,
   onReviewInvoices,
   workspace,
 }: OverviewScreenProps) {
@@ -100,7 +102,44 @@ export function OverviewScreen({
                   <p className="mt-0.5 text-[17px] font-semibold leading-5 text-foreground">
                     {card.value}
                   </p>
-                  <p className="mt-1 text-[9px] leading-4 text-muted-foreground">{card.detail}</p>
+                  {!(card.label === "GST & BAS" && onOpenBas) ? (
+                    <p className="mt-1 text-[9px] leading-4 text-muted-foreground">{card.detail}</p>
+                  ) : null}
+                  {card.label === "GST & BAS" && onOpenBas ? (
+                    <div className="mt-2 grid gap-1 border-t border-border pt-2">
+                      <p className="text-[9px] leading-4 text-muted-foreground">
+                        {summary.status === "ready"
+                          ? basAttentionDetail(summary.value.basStatus)
+                          : "BAS status unavailable"}
+                      </p>
+                      {summary.status === "ready"
+                        ? (() => {
+                            const target = basPreparationPath(summary.value.basPreparation);
+                            return target ? (
+                              <a
+                                aria-label={`Open exact BAS preparation ${summary.value.basPreparation?.id}`}
+                                className="w-fit text-[9px] font-semibold text-forest underline underline-offset-2"
+                                href={target}
+                                onClick={(event) => {
+                                  event.preventDefault();
+                                  onOpenBas(target);
+                                }}
+                              >
+                                Open exact preparation · {summary.value.basPreparation?.id}
+                              </a>
+                            ) : (
+                              <button
+                                className="w-fit text-left text-[9px] font-semibold text-forest underline underline-offset-2"
+                                onClick={() => onOpenBas("/gst-bas")}
+                                type="button"
+                              >
+                                Open BAS preparation
+                              </button>
+                            );
+                          })()
+                        : null}
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </section>
@@ -225,9 +264,38 @@ function basStatusLabel(status: BasAttentionStatus): string {
       return "Draft — not lodged";
     case BasAttentionStatus.OUTDATED:
       return "Draft — source changes detected";
+    case BasAttentionStatus.ACTION_NEEDED:
+      return "Action needed · review this exact BAS preparation";
+    case BasAttentionStatus.REVIEW_READY:
+      return "Review ready · awaiting Business Lodger approval";
+    case BasAttentionStatus.FROZEN_FOR_MANUAL_HANDOFF:
+      return "Frozen for manual handoff · not lodged";
+    case BasAttentionStatus.EXTERNAL_CONFIRMATION_RECORDED:
+      return "User-recorded external status · unverified";
+    case BasAttentionStatus.DISPUTED:
+      return "User-recorded status disputed · review required";
     case BasAttentionStatus.NOT_CREATED:
-      return "No workpaper created";
+      return "No BAS preparation yet";
     default:
       return "Status unavailable";
   }
+}
+
+function basAttentionDetail(status: BasAttentionStatus) {
+  return basStatusLabel(status);
+}
+
+function basPreparationPath(
+  ref: GetAttentionSummaryResponse["basPreparation"],
+): string | undefined {
+  if (
+    !ref ||
+    ref.type !== "bas_preparation" ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(ref.id) ||
+    ref.revision < 1n ||
+    ref.contentHash.byteLength !== 32
+  )
+    return undefined;
+  const hash = [...ref.contentHash].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  return `/gst-bas?preparation=${ref.id}&revision=${ref.revision}&hash=${hash}`;
 }

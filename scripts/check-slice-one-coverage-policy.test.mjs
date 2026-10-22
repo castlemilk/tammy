@@ -47,7 +47,7 @@ const EXPOSED_BUSINESS_RPCS = [
   "tammy.v1.TaxService.CreateBasDraft",
   "tammy.v1.TaxService.GetCurrentBasDraft",
 ];
-const BAS_PREPARATION_DECLARED_FUTURE_RPCS = [
+const BAS_PREPARATION_RPCS = [
   "tammy.v1.BasPreparationService.GetBasObligationsProfile",
   "tammy.v1.BasPreparationService.ListBasObligationsProfiles",
   "tammy.v1.BasPreparationService.GetBasCalendar",
@@ -106,7 +106,7 @@ test("coverage declares the exact normative policy for all 138 existing non-syst
   }
 });
 
-test("BAS preparation keeps its exact 29-RPC surface declared for future evidence", async () => {
+test("BAS preparation exposes its exact 29-RPC surface with lifecycle evidence", async () => {
   const coverage = parseCoverageManifest(await readFile("test/e2e/coverage.yaml", "utf8"));
   const preloadMethods = flattenConveyorManifest(
     JSON.parse(await readFile("apps/desktop/src/shared/conveyor-manifest.json", "utf8")),
@@ -115,7 +115,7 @@ test("BAS preparation keeps its exact 29-RPC surface declared for future evidenc
   const actualRpcNames = Object.keys(coverage.rpcs).filter((rpcName) =>
     rpcName.startsWith(servicePrefix),
   );
-  const futureCases = [
+  const cases = [
     "bas-preparation/contracts",
     "bas-preparation/lifecycle",
     "bas-preparation/permissions",
@@ -123,22 +123,22 @@ test("BAS preparation keeps its exact 29-RPC surface declared for future evidenc
     "bas-preparation/manual-handoff",
   ];
   const allRolesAllowed = {
-    workspace_admin: "planned_allowed",
-    business_preparer: "planned_allowed",
-    business_lodger: "planned_allowed",
-    auditor: "planned_allowed",
+    workspace_admin: "allowed",
+    business_preparer: "allowed",
+    business_lodger: "allowed",
+    auditor: "allowed",
   };
   const preparationRoles = {
-    workspace_admin: "planned_allowed",
-    business_preparer: "planned_allowed",
-    business_lodger: "planned_permission_denied",
-    auditor: "planned_permission_denied",
+    workspace_admin: "allowed",
+    business_preparer: "allowed",
+    business_lodger: "permission_denied",
+    auditor: "permission_denied",
   };
   const approvalRoles = {
-    workspace_admin: "planned_permission_denied",
-    business_preparer: "planned_permission_denied",
-    business_lodger: "planned_allowed",
-    auditor: "planned_permission_denied",
+    workspace_admin: "permission_denied",
+    business_preparer: "permission_denied",
+    business_lodger: "allowed",
+    auditor: "permission_denied",
   };
   const approvalMethods = new Set([
     "FreezeBasForManualHandoff",
@@ -161,9 +161,7 @@ test("BAS preparation keeps its exact 29-RPC surface declared for future evidenc
     "FACTOR_ASSERTION_REPLAY",
   ];
   const queryMethods = new Set(
-    BAS_PREPARATION_DECLARED_FUTURE_RPCS.slice(0, 15).map((rpcName) =>
-      rpcName.slice(servicePrefix.length),
-    ),
+    BAS_PREPARATION_RPCS.slice(0, 15).map((rpcName) => rpcName.slice(servicePrefix.length)),
   );
   const listMethods = new Set([
     "ListBasObligationsProfiles",
@@ -177,39 +175,46 @@ test("BAS preparation keeps its exact 29-RPC surface declared for future evidenc
   ]);
   const scenario = coverage.scenarios["E2E-21"];
 
-  assert.equal(BAS_PREPARATION_DECLARED_FUTURE_RPCS.length, 29);
-  assert.deepEqual(actualRpcNames, BAS_PREPARATION_DECLARED_FUTURE_RPCS);
-  assert.deepEqual(scenario.futureCases, futureCases);
+  assert.equal(BAS_PREPARATION_RPCS.length, 29);
+  assert.deepEqual(actualRpcNames, BAS_PREPARATION_RPCS);
+  assert.deepEqual(scenario.cases, cases);
 
-  for (const rpcName of BAS_PREPARATION_DECLARED_FUTURE_RPCS) {
+  for (const rpcName of BAS_PREPARATION_RPCS) {
     const rpc = coverage.rpcs[rpcName];
     const method = rpcName.slice(servicePrefix.length);
     const isQuery = queryMethods.has(method);
     const roles =
-      isQuery || method === "RecordBasExportEvent"
-        ? allRolesAllowed
-        : approvalMethods.has(method)
-          ? approvalRoles
-          : preparationRoles;
+      method === "RecordExternalBasObservation"
+        ? {
+            workspace_admin: "non_confirmation_only",
+            business_preparer: "non_confirmation_only",
+            business_lodger: "confirmation_only",
+            auditor: "permission_denied",
+          }
+        : isQuery || method === "RecordBasExportEvent"
+          ? allRolesAllowed
+          : approvalMethods.has(method)
+            ? approvalRoles
+            : preparationRoles;
     const projection = `${method.replace(
       /[A-Z]/g,
       (letter, index) => `${index === 0 ? "" : "_"}${letter.toLowerCase()}`,
     )}_result`;
 
-    assert.equal(rpc.stage, "declared_future", rpcName);
-    assert.deepEqual(rpc.cases, [], rpcName);
-    assert.ok(rpc.futureCases.length > 0, rpcName);
+    assert.equal(rpc.stage, "production", rpcName);
+    assert.equal(rpc.futureCases, undefined, rpcName);
+    assert.ok(rpc.cases.length > 0, rpcName);
     assert.ok(
-      rpc.futureCases.every((futureCase) => futureCases.includes(futureCase)),
+      rpc.cases.every((futureCase) => cases.includes(futureCase)),
       rpcName,
     );
-    assert.ok(rpc.futureCases.includes("bas-preparation/contracts"), rpcName);
-    assert.ok(rpc.futureCases.includes("bas-preparation/permissions"), rpcName);
-    assert.ok(rpc.futureCases.includes("bas-preparation/coverage"), rpcName);
+    assert.ok(rpc.cases.includes("bas-preparation/contracts"), rpcName);
+    assert.ok(rpc.cases.includes("bas-preparation/permissions"), rpcName);
+    assert.ok(rpc.cases.includes("bas-preparation/coverage"), rpcName);
     assert.deepEqual(rpc.projections, [projection], rpcName);
-    assert.deepEqual(rpc.routes, ["/bas"], rpcName);
+    assert.deepEqual(rpc.routes, ["/gst-bas"], rpcName);
     assert.deepEqual(rpc.roles, roles, rpcName);
-    assert.ok(!preloadMethods.includes(rpc.preload), rpcName);
+    assert.ok(preloadMethods.includes(rpc.preload), rpcName);
     assert.ok(rpc.principalFailures.includes("AUTHENTICATION_REQUIRED"), rpcName);
     assert.ok(rpc.principalFailures.includes("NOT_FOUND"), rpcName);
 

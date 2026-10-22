@@ -4,7 +4,9 @@ package baspreparation
 
 import (
 	"context"
+	"database/sql"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/tammyapp/tammy/services/core/internal/app"
@@ -213,6 +215,113 @@ func TestExportEventRepositoryMixedTargetScanPreservesEmptyContinuation(t *testi
 	}
 }
 
+func TestExportEventRepositoryListBatchVerifiesMixedTargetVersionPositions(t *testing.T) {
+	for index, corruption := range []string{"valid_mixed_targets", "older_prefix_cursor", "gap", "swap", "duplicate"} {
+		t.Run(corruption, func(t *testing.T) {
+			workspace, org, _ := newBASRepositoryWorkspace(t)
+			tx := beginBASRepositoryTx(t, workspace)
+			defer tx.Rollback()
+			ctx := context.Background()
+			fixture := seedFrozenRepositoryFixture(t, tx, org, uint64(44000+index), true, 0)
+			frozen, err := newFrozenRepositoryForTest(t, tx).Append(ctx, org, fixture.frozen, fixture.preparationRef)
+			if err != nil {
+				t.Fatal(err)
+			}
+			calculationTarget := calculationExportTargetForTest(fixture.frozen.Calculation)
+			frozenTarget := frozenExportTargetForBoundaryTest(frozen)
+			calculationFirst := appendExportPageEvent(t, tx, org, calculationTarget, 0, 44001, 300)
+			frozenFirst := appendExportPageEvent(t, tx, org, frozenTarget, 0, 44002, 250)
+			calculationSecond := appendExportPageEvent(t, tx, org, calculationTarget, 1, 44003, 200)
+			frozenSecond := appendExportPageEvent(t, tx, org, frozenTarget, 1, 44004, 150)
+			repository := newExportEventRepositoryForTest(t, tx)
+			request := ExportEventListRequest{OrganisationID: org, Target: calculationTarget, PageSize: 200}
+			if corruption == "older_prefix_cursor" {
+				request.PageSize = 1
+				firstPage, err := repository.List(ctx, request)
+				if err != nil || firstPage == nil || len(firstPage.Events) != 1 ||
+					!sameBASSourceRef(firstPage.Events[0].ExportEvent, calculationFirst) || firstPage.Page == nil || firstPage.Page.NextCursor == nil {
+					t.Fatalf("first cursor page did not return the first calculation event: page=%#v err=%v", firstPage, err)
+				}
+				request.Cursor = firstPage.Page.NextCursor
+				secondPage, err := repository.List(ctx, request)
+				if err != nil || secondPage == nil || len(secondPage.Events) != 0 || secondPage.Page == nil || secondPage.Page.NextCursor == nil {
+					t.Fatalf("second interleaved cursor page should be empty for this target and retain a cursor: page=%#v err=%v", secondPage, err)
+				}
+				if _, err := tx.ExecContext(ctx, "DROP TRIGGER bas_export_events_v1_no_update"); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := tx.ExecContext(ctx, "UPDATE bas_export_events_v1 SET event_version=99 WHERE export_event_id=?", calculationFirst.Id); err != nil {
+					t.Fatal(err)
+				}
+				request.Cursor = secondPage.Page.NextCursor
+				if page, err := repository.List(ctx, request); page != nil || !errors.Is(err, ErrSnapshotCorrupt) {
+					t.Fatalf("accepted earlier malformed calculation version outside the selected cursor batch: page=%#v err=%v", page, err)
+				}
+				return
+			}
+			if corruption == "valid_mixed_targets" {
+				probe := &exportPagePrefixProbe{CommandSQLExecutor: repository.executor}
+				repository.executor = probe
+				page, err := repository.List(ctx, request)
+				if err != nil || page == nil || len(page.Events) != 2 ||
+					!sameBASSourceRef(page.Events[0].ExportEvent, calculationFirst) ||
+					!sameBASSourceRef(page.Events[1].ExportEvent, calculationSecond) {
+					t.Fatalf("valid interleaved target-local versions were rejected or omitted: page=%#v err=%v", page, err)
+				}
+				frozenPage, err := repository.List(ctx, ExportEventListRequest{OrganisationID: org, Target: frozenTarget, PageSize: 200})
+				if err != nil || frozenPage == nil || len(frozenPage.Events) != 2 ||
+					!sameBASSourceRef(frozenPage.Events[0].ExportEvent, frozenFirst) ||
+					!sameBASSourceRef(frozenPage.Events[1].ExportEvent, frozenSecond) {
+					t.Fatalf("valid interleaved frozen target-local versions were rejected or omitted: page=%#v err=%v", frozenPage, err)
+				}
+				if probe.prefixAggregates != 0 || probe.windowProofs != 2 {
+					t.Fatalf("two list pages did %d prefix aggregates and %d window proofs", probe.prefixAggregates, probe.windowProofs)
+				}
+				if probe.windowPlanFailures != 0 || probe.calculationIndexPlans != 2 || probe.frozenIndexPlans != 2 {
+					t.Fatalf("candidate target history did not use both bounded indexes: planFailures=%d calculationIndex=%d frozenIndex=%d",
+						probe.windowPlanFailures, probe.calculationIndexPlans, probe.frozenIndexPlans)
+				}
+				if _, err := repository.GetExact(ctx, org, calculationSecond); err != nil {
+					t.Fatal(err)
+				}
+				if probe.prefixAggregates != 1 {
+					t.Fatal("public exact read bypassed its independent prefix proof")
+				}
+				return
+			}
+			if _, err := tx.ExecContext(ctx, "DROP TRIGGER bas_export_events_v1_no_update"); err != nil {
+				t.Fatal(err)
+			}
+			switch corruption {
+			case "gap":
+				if _, err := tx.ExecContext(ctx, "UPDATE bas_export_events_v1 SET event_version=3 WHERE export_event_id=?", calculationSecond.Id); err != nil {
+					t.Fatal(err)
+				}
+			case "swap":
+				if _, err := tx.ExecContext(ctx, "UPDATE bas_export_events_v1 SET event_version=99 WHERE export_event_id=?", calculationFirst.Id); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := tx.ExecContext(ctx, "UPDATE bas_export_events_v1 SET event_version=1 WHERE export_event_id=?", calculationSecond.Id); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := tx.ExecContext(ctx, "UPDATE bas_export_events_v1 SET event_version=2 WHERE export_event_id=?", calculationFirst.Id); err != nil {
+					t.Fatal(err)
+				}
+			case "duplicate":
+				if _, err := tx.ExecContext(ctx, "DROP INDEX bas_export_events_calculation_version_unique"); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := tx.ExecContext(ctx, "UPDATE bas_export_events_v1 SET event_version=1 WHERE export_event_id=?", calculationSecond.Id); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if page, err := repository.List(ctx, request); page != nil || !errors.Is(err, ErrSnapshotCorrupt) {
+				t.Fatalf("accepted mixed-target %s corruption: page=%#v err=%v", corruption, page, err)
+			}
+		})
+	}
+}
+
 func TestExportEventRepositorySchemaRejectsTargetVersionGapsAndReplaceCollisions(t *testing.T) {
 	workspace, org, _ := newBASRepositoryWorkspace(t)
 	tx := beginBASRepositoryTx(t, workspace)
@@ -280,4 +389,47 @@ func appendExportPageEvent(t *testing.T, executor app.CommandSQLExecutor, org st
 		t.Fatal(err)
 	}
 	return ref
+}
+
+// Observe database work, independently of the number of bodies returned by a
+// page. Listing must not repeat a full prefix aggregate for every body.
+type exportPagePrefixProbe struct {
+	app.CommandSQLExecutor
+	prefixAggregates      int
+	windowProofs          int
+	windowPlanFailures    int
+	calculationIndexPlans int
+	frozenIndexPlans      int
+}
+
+func (probe *exportPagePrefixProbe) QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
+	if strings.Contains(query, "COUNT(DISTINCT event_version)") {
+		probe.prefixAggregates++
+	}
+	if strings.Contains(query, "ROW_NUMBER() OVER (") {
+		probe.windowProofs++
+		planRows, err := probe.CommandSQLExecutor.QueryContext(ctx, "EXPLAIN QUERY PLAN "+query, args...)
+		if err != nil {
+			probe.windowPlanFailures++
+		} else {
+			for planRows.Next() {
+				var selectID, parentID, unused int64
+				var detail string
+				if err := planRows.Scan(&selectID, &parentID, &unused, &detail); err != nil {
+					probe.windowPlanFailures++
+					break
+				}
+				if strings.Contains(detail, "bas_export_events_calculation_page_idx") {
+					probe.calculationIndexPlans++
+				}
+				if strings.Contains(detail, "bas_export_events_frozen_page_idx") {
+					probe.frozenIndexPlans++
+				}
+			}
+			if err := errors.Join(planRows.Err(), planRows.Close()); err != nil {
+				probe.windowPlanFailures++
+			}
+		}
+	}
+	return probe.CommandSQLExecutor.QueryContext(ctx, query, args...)
 }

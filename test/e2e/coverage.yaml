@@ -68,8 +68,7 @@ scenarios:
     cases:
       - invoices/income-payments-bas
   E2E-21:
-    cases: []
-    futureCases:
+    cases:
       - bas-preparation/contracts
       - bas-preparation/lifecycle
       - bas-preparation/permissions
@@ -1193,15 +1192,13 @@ rpcs:
         - exact_replay
         - changed_request_conflict
   tammy.v1.IdentityService.AssignRoles:
-    stage: declared_future
+    stage: production
     preload: assignRoles
-    cases: []
-    futureCases:
-      - slice-1/foundation-contracts
+    cases: [bas-preparation/permissions]
     projections:
       - assign_roles_result
     routes:
-      - /settings/users
+      - /gst-bas
     roles:
       workspace_admin: planned_allowed
       business_preparer: planned_permission_denied
@@ -3350,321 +3347,292 @@ rpcs:
     list: {states: [not_applicable]}
     idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
   tammy.v1.BasPreparationService.GetBasObligationsProfile:
-    stage: declared_future
+    stage: production
     preload: getBasObligationsProfile
-    cases: []
-    futureCases: [bas-preparation/contracts, bas-preparation/permissions, bas-preparation/coverage]
+    cases: [bas-preparation/contracts, bas-preparation/permissions, bas-preparation/coverage]
     projections: [get_bas_obligations_profile_result]
-    routes: [/bas]
-    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_allowed, auditor: planned_allowed}
+    routes: [/gst-bas]
+    roles: {workspace_admin: allowed, business_preparer: allowed, business_lodger: allowed, auditor: allowed}
     principalFailures: [AUTHENTICATION_REQUIRED, NOT_FOUND]
     list: {states: [found, not_found]}
     idempotency: {mode: query, outcomes: [not_applicable]}
   tammy.v1.BasPreparationService.ListBasObligationsProfiles:
-    stage: declared_future
+    stage: production
     preload: listBasObligationsProfiles
-    cases: []
-    futureCases: [bas-preparation/contracts, bas-preparation/permissions, bas-preparation/coverage]
+    cases: [bas-preparation/contracts, bas-preparation/permissions, bas-preparation/coverage]
     projections: [list_bas_obligations_profiles_result]
-    routes: [/bas]
-    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_allowed, auditor: planned_allowed}
+    routes: [/gst-bas]
+    roles: {workspace_admin: allowed, business_preparer: allowed, business_lodger: allowed, auditor: allowed}
     principalFailures: [AUTHENTICATION_REQUIRED, NOT_FOUND, INVALID_CURSOR]
     list: {states: [empty, populated, next_page]}
     idempotency: {mode: query, outcomes: [not_applicable]}
   tammy.v1.BasPreparationService.GetBasCalendar:
-    stage: declared_future
+    stage: production
     preload: getBasCalendar
-    cases: []
-    futureCases: [bas-preparation/contracts, bas-preparation/permissions, bas-preparation/coverage, bas-preparation/lifecycle]
+    cases: [bas-preparation/contracts, bas-preparation/permissions, bas-preparation/coverage, bas-preparation/lifecycle]
     projections: [get_bas_calendar_result]
-    routes: [/bas]
-    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_allowed, auditor: planned_allowed}
+    routes: [/gst-bas]
+    roles: {workspace_admin: allowed, business_preparer: allowed, business_lodger: allowed, auditor: allowed}
     principalFailures: [AUTHENTICATION_REQUIRED, NOT_FOUND]
     list: {states: [empty, populated]}
     idempotency: {mode: query, outcomes: [not_applicable]}
   tammy.v1.BasPreparationService.ListBasPeriods:
-    stage: declared_future
+    stage: production
     preload: listBasPeriods
-    cases: []
-    futureCases: [bas-preparation/contracts, bas-preparation/permissions, bas-preparation/coverage, bas-preparation/lifecycle]
+    cases: [bas-preparation/contracts, bas-preparation/permissions, bas-preparation/coverage, bas-preparation/lifecycle]
     projections: [list_bas_periods_result]
-    routes: [/bas]
-    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_allowed, auditor: planned_allowed}
+    routes: [/gst-bas]
+    roles: {workspace_admin: allowed, business_preparer: allowed, business_lodger: allowed, auditor: allowed}
     principalFailures: [AUTHENTICATION_REQUIRED, NOT_FOUND, INVALID_CURSOR]
     list: {states: [empty, populated, next_page]}
     idempotency: {mode: query, outcomes: [not_applicable]}
   tammy.v1.BasPreparationService.GetBasPreparation:
-    stage: declared_future
+    stage: production
     preload: getBasPreparation
-    cases: []
-    futureCases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage]
+    cases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage]
     projections: [get_bas_preparation_result]
-    routes: [/bas]
-    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_allowed, auditor: planned_allowed}
+    routes: [/gst-bas]
+    roles: {workspace_admin: allowed, business_preparer: allowed, business_lodger: allowed, auditor: allowed}
     principalFailures: [AUTHENTICATION_REQUIRED, NOT_FOUND]
     list: {states: [found, not_found]}
     idempotency: {mode: query, outcomes: [not_applicable]}
   tammy.v1.BasPreparationService.ListBasPreparations:
-    stage: declared_future
+    stage: production
     preload: listBasPreparations
-    cases: []
-    futureCases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage]
+    cases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage]
     projections: [list_bas_preparations_result]
-    routes: [/bas]
-    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_allowed, auditor: planned_allowed}
+    routes: [/gst-bas]
+    roles: {workspace_admin: allowed, business_preparer: allowed, business_lodger: allowed, auditor: allowed}
     principalFailures: [AUTHENTICATION_REQUIRED, NOT_FOUND, INVALID_CURSOR]
     list: {states: [empty, populated, next_page]}
     idempotency: {mode: query, outcomes: [not_applicable]}
   tammy.v1.BasPreparationService.GetBasCalculation:
-    stage: declared_future
+    stage: production
     preload: getBasCalculation
-    cases: []
-    futureCases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage]
+    cases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage]
     projections: [get_bas_calculation_result]
-    routes: [/bas]
-    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_allowed, auditor: planned_allowed}
+    routes: [/gst-bas]
+    roles: {workspace_admin: allowed, business_preparer: allowed, business_lodger: allowed, auditor: allowed}
     principalFailures: [AUTHENTICATION_REQUIRED, NOT_FOUND]
     list: {states: [found, not_found]}
     idempotency: {mode: query, outcomes: [not_applicable]}
   tammy.v1.BasPreparationService.ListBasCalculations:
-    stage: declared_future
+    stage: production
     preload: listBasCalculations
-    cases: []
-    futureCases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage]
+    cases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage]
     projections: [list_bas_calculations_result]
-    routes: [/bas]
-    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_allowed, auditor: planned_allowed}
+    routes: [/gst-bas]
+    roles: {workspace_admin: allowed, business_preparer: allowed, business_lodger: allowed, auditor: allowed}
     principalFailures: [AUTHENTICATION_REQUIRED, NOT_FOUND, INVALID_CURSOR]
     list: {states: [empty, populated, next_page]}
     idempotency: {mode: query, outcomes: [not_applicable]}
   tammy.v1.BasPreparationService.GetFrozenBas:
-    stage: declared_future
+    stage: production
     preload: getFrozenBas
-    cases: []
-    futureCases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage, bas-preparation/manual-handoff]
+    cases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage, bas-preparation/manual-handoff]
     projections: [get_frozen_bas_result]
-    routes: [/bas]
-    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_allowed, auditor: planned_allowed}
+    routes: [/gst-bas]
+    roles: {workspace_admin: allowed, business_preparer: allowed, business_lodger: allowed, auditor: allowed}
     principalFailures: [AUTHENTICATION_REQUIRED, NOT_FOUND]
     list: {states: [found, not_found]}
     idempotency: {mode: query, outcomes: [not_applicable]}
   tammy.v1.BasPreparationService.ListFrozenBas:
-    stage: declared_future
+    stage: production
     preload: listFrozenBas
-    cases: []
-    futureCases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage, bas-preparation/manual-handoff]
+    cases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage, bas-preparation/manual-handoff]
     projections: [list_frozen_bas_result]
-    routes: [/bas]
-    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_allowed, auditor: planned_allowed}
+    routes: [/gst-bas]
+    roles: {workspace_admin: allowed, business_preparer: allowed, business_lodger: allowed, auditor: allowed}
     principalFailures: [AUTHENTICATION_REQUIRED, NOT_FOUND, INVALID_CURSOR]
     list: {states: [empty, populated, next_page]}
     idempotency: {mode: query, outcomes: [not_applicable]}
   tammy.v1.BasPreparationService.GetBasExternalObservation:
-    stage: declared_future
+    stage: production
     preload: getBasExternalObservation
-    cases: []
-    futureCases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage, bas-preparation/manual-handoff]
+    cases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage, bas-preparation/manual-handoff]
     projections: [get_bas_external_observation_result]
-    routes: [/bas]
-    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_allowed, auditor: planned_allowed}
+    routes: [/gst-bas]
+    roles: {workspace_admin: allowed, business_preparer: allowed, business_lodger: allowed, auditor: allowed}
     principalFailures: [AUTHENTICATION_REQUIRED, NOT_FOUND]
     list: {states: [found, not_found]}
     idempotency: {mode: query, outcomes: [not_applicable]}
   tammy.v1.BasPreparationService.ListBasExternalObservations:
-    stage: declared_future
+    stage: production
     preload: listBasExternalObservations
-    cases: []
-    futureCases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage, bas-preparation/manual-handoff]
+    cases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage, bas-preparation/manual-handoff]
     projections: [list_bas_external_observations_result]
-    routes: [/bas]
-    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_allowed, auditor: planned_allowed}
+    routes: [/gst-bas]
+    roles: {workspace_admin: allowed, business_preparer: allowed, business_lodger: allowed, auditor: allowed}
     principalFailures: [AUTHENTICATION_REQUIRED, NOT_FOUND, INVALID_CURSOR]
     list: {states: [empty, populated, next_page]}
     idempotency: {mode: query, outcomes: [not_applicable]}
   tammy.v1.BasPreparationService.GetBasExternalDisputeResolution:
-    stage: declared_future
+    stage: production
     preload: getBasExternalDisputeResolution
-    cases: []
-    futureCases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage, bas-preparation/manual-handoff]
+    cases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage, bas-preparation/manual-handoff]
     projections: [get_bas_external_dispute_resolution_result]
-    routes: [/bas]
-    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_allowed, auditor: planned_allowed}
+    routes: [/gst-bas]
+    roles: {workspace_admin: allowed, business_preparer: allowed, business_lodger: allowed, auditor: allowed}
     principalFailures: [AUTHENTICATION_REQUIRED, NOT_FOUND]
     list: {states: [found, not_found]}
     idempotency: {mode: query, outcomes: [not_applicable]}
   tammy.v1.BasPreparationService.ListBasExternalDisputeResolutions:
-    stage: declared_future
+    stage: production
     preload: listBasExternalDisputeResolutions
-    cases: []
-    futureCases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage, bas-preparation/manual-handoff]
+    cases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage, bas-preparation/manual-handoff]
     projections: [list_bas_external_dispute_resolutions_result]
-    routes: [/bas]
-    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_allowed, auditor: planned_allowed}
+    routes: [/gst-bas]
+    roles: {workspace_admin: allowed, business_preparer: allowed, business_lodger: allowed, auditor: allowed}
     principalFailures: [AUTHENTICATION_REQUIRED, NOT_FOUND, INVALID_CURSOR]
     list: {states: [empty, populated, filtered, next_page]}
     idempotency: {mode: query, outcomes: [not_applicable]}
   tammy.v1.BasPreparationService.ListBasExportEvents:
-    stage: declared_future
+    stage: production
     preload: listBasExportEvents
-    cases: []
-    futureCases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage, bas-preparation/manual-handoff]
+    cases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage, bas-preparation/manual-handoff]
     projections: [list_bas_export_events_result]
-    routes: [/bas]
-    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_allowed, auditor: planned_allowed}
+    routes: [/gst-bas]
+    roles: {workspace_admin: allowed, business_preparer: allowed, business_lodger: allowed, auditor: allowed}
     principalFailures: [AUTHENTICATION_REQUIRED, NOT_FOUND, INVALID_CURSOR]
     list: {states: [empty, populated, next_page]}
     idempotency: {mode: query, outcomes: [not_applicable]}
   tammy.v1.BasPreparationService.SetBasObligationsProfile:
-    stage: declared_future
+    stage: production
     preload: setBasObligationsProfile
-    cases: []
-    futureCases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage]
+    cases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage]
     projections: [set_bas_obligations_profile_result]
-    routes: [/bas]
-    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_permission_denied, auditor: planned_permission_denied}
+    routes: [/gst-bas]
+    roles: {workspace_admin: allowed, business_preparer: allowed, business_lodger: permission_denied, auditor: permission_denied}
     principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, NOT_FOUND, STALE_VERSION, IDEMPOTENCY_CONFLICT, UNSUPPORTED_BAS_PROFILE, SOURCE_CHANGED]
     list: {states: [not_applicable]}
     idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
   tammy.v1.BasPreparationService.ConfirmBasPeriod:
-    stage: declared_future
+    stage: production
     preload: confirmBasPeriod
-    cases: []
-    futureCases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage]
+    cases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage]
     projections: [confirm_bas_period_result]
-    routes: [/bas]
-    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_permission_denied, auditor: planned_permission_denied}
+    routes: [/gst-bas]
+    roles: {workspace_admin: allowed, business_preparer: allowed, business_lodger: permission_denied, auditor: permission_denied}
     principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, NOT_FOUND, STALE_VERSION, IDEMPOTENCY_CONFLICT, INVALID_PERIOD, SOURCE_CHANGED]
     list: {states: [not_applicable]}
     idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
   tammy.v1.BasPreparationService.SaveBasPaygInputs:
-    stage: declared_future
+    stage: production
     preload: saveBasPaygInputs
-    cases: []
-    futureCases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage]
+    cases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage]
     projections: [save_bas_payg_inputs_result]
-    routes: [/bas]
-    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_permission_denied, auditor: planned_permission_denied}
+    routes: [/gst-bas]
+    roles: {workspace_admin: allowed, business_preparer: allowed, business_lodger: permission_denied, auditor: permission_denied}
     principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, NOT_FOUND, STALE_VERSION, IDEMPOTENCY_CONFLICT, SOURCE_CHANGED, VALIDATION_REQUIRED]
     list: {states: [not_applicable]}
     idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
   tammy.v1.BasPreparationService.RegenerateBasPreparation:
-    stage: declared_future
+    stage: production
     preload: regenerateBasPreparation
-    cases: []
-    futureCases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage]
+    cases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage]
     projections: [regenerate_bas_preparation_result]
-    routes: [/bas]
-    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_permission_denied, auditor: planned_permission_denied}
+    routes: [/gst-bas]
+    roles: {workspace_admin: allowed, business_preparer: allowed, business_lodger: permission_denied, auditor: permission_denied}
     principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, NOT_FOUND, STALE_VERSION, IDEMPOTENCY_CONFLICT, SOURCE_CHANGED, UNSUPPORTED_BAS_PROFILE]
     list: {states: [not_applicable]}
     idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
   tammy.v1.BasPreparationService.ValidateBasPreparation:
-    stage: declared_future
+    stage: production
     preload: validateBasPreparation
-    cases: []
-    futureCases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage]
+    cases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage]
     projections: [validate_bas_preparation_result]
-    routes: [/bas]
-    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_permission_denied, auditor: planned_permission_denied}
+    routes: [/gst-bas]
+    roles: {workspace_admin: allowed, business_preparer: allowed, business_lodger: permission_denied, auditor: permission_denied}
     principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, NOT_FOUND, STALE_VERSION, IDEMPOTENCY_CONFLICT, SOURCE_CHANGED, VALIDATION_REQUIRED, UNSUPPORTED_BAS_PROFILE]
     list: {states: [not_applicable]}
     idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
   tammy.v1.BasPreparationService.AcknowledgeBasWarnings:
-    stage: declared_future
+    stage: production
     preload: acknowledgeBasWarnings
-    cases: []
-    futureCases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage]
+    cases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage]
     projections: [acknowledge_bas_warnings_result]
-    routes: [/bas]
-    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_permission_denied, auditor: planned_permission_denied}
+    routes: [/gst-bas]
+    roles: {workspace_admin: allowed, business_preparer: allowed, business_lodger: permission_denied, auditor: permission_denied}
     principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, NOT_FOUND, STALE_VERSION, IDEMPOTENCY_CONFLICT, SOURCE_CHANGED, VALIDATION_REQUIRED]
     list: {states: [not_applicable]}
     idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
   tammy.v1.BasPreparationService.FreezeBasForManualHandoff:
-    stage: declared_future
+    stage: production
     preload: freezeBasForManualHandoff
-    cases: []
-    futureCases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage, bas-preparation/manual-handoff]
+    cases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage, bas-preparation/manual-handoff]
     projections: [freeze_bas_for_manual_handoff_result]
-    routes: [/bas]
-    roles: {workspace_admin: planned_permission_denied, business_preparer: planned_permission_denied, business_lodger: planned_allowed, auditor: planned_permission_denied}
+    routes: [/gst-bas]
+    roles: {workspace_admin: permission_denied, business_preparer: permission_denied, business_lodger: allowed, auditor: permission_denied}
     principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, NOT_FOUND, STALE_VERSION, IDEMPOTENCY_CONFLICT, SOURCE_CHANGED, VALIDATION_REQUIRED, UNSUPPORTED_BAS_PROFILE, FACTOR_ASSERTION_REQUIRED, FACTOR_ASSERTION_STALE, FACTOR_ASSERTION_REPLAY]
     list: {states: [not_applicable]}
     idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
   tammy.v1.BasPreparationService.CreateBasReplacement:
-    stage: declared_future
+    stage: production
     preload: createBasReplacement
-    cases: []
-    futureCases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage, bas-preparation/manual-handoff]
+    cases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage, bas-preparation/manual-handoff]
     projections: [create_bas_replacement_result]
-    routes: [/bas]
-    roles: {workspace_admin: planned_permission_denied, business_preparer: planned_permission_denied, business_lodger: planned_allowed, auditor: planned_permission_denied}
+    routes: [/gst-bas]
+    roles: {workspace_admin: permission_denied, business_preparer: permission_denied, business_lodger: allowed, auditor: permission_denied}
     principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, NOT_FOUND, STALE_VERSION, IDEMPOTENCY_CONFLICT, BAS_CHAIN_CONFLICT, FACTOR_ASSERTION_REQUIRED, FACTOR_ASSERTION_STALE, FACTOR_ASSERTION_REPLAY]
     list: {states: [not_applicable]}
     idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
   tammy.v1.BasPreparationService.CreateBasRevision:
-    stage: declared_future
+    stage: production
     preload: createBasRevision
-    cases: []
-    futureCases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage, bas-preparation/manual-handoff]
+    cases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage, bas-preparation/manual-handoff]
     projections: [create_bas_revision_result]
-    routes: [/bas]
-    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_permission_denied, auditor: planned_permission_denied}
+    routes: [/gst-bas]
+    roles: {workspace_admin: allowed, business_preparer: allowed, business_lodger: permission_denied, auditor: permission_denied}
     principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, NOT_FOUND, STALE_VERSION, IDEMPOTENCY_CONFLICT, SOURCE_CHANGED, BAS_CHAIN_CONFLICT]
     list: {states: [not_applicable]}
     idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
   tammy.v1.BasPreparationService.RecordExternalBasObservation:
-    stage: declared_future
+    stage: production
     preload: recordExternalBasObservation
-    cases: []
-    futureCases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage, bas-preparation/manual-handoff]
+    cases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage, bas-preparation/manual-handoff]
     projections: [record_external_bas_observation_result]
-    routes: [/bas]
-    roles: {workspace_admin: planned_permission_denied, business_preparer: planned_permission_denied, business_lodger: planned_allowed, auditor: planned_permission_denied}
+    routes: [/gst-bas]
+    roles: {workspace_admin: non_confirmation_only, business_preparer: non_confirmation_only, business_lodger: confirmation_only, auditor: permission_denied}
     principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, NOT_FOUND, STALE_VERSION, IDEMPOTENCY_CONFLICT, SOURCE_CHANGED, BAS_CHAIN_CONFLICT, FACTOR_ASSERTION_REQUIRED, FACTOR_ASSERTION_STALE, FACTOR_ASSERTION_REPLAY]
     list: {states: [not_applicable]}
     idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
   tammy.v1.BasPreparationService.CorrectExternalBasObservation:
-    stage: declared_future
+    stage: production
     preload: correctExternalBasObservation
-    cases: []
-    futureCases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage, bas-preparation/manual-handoff]
+    cases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage, bas-preparation/manual-handoff]
     projections: [correct_external_bas_observation_result]
-    routes: [/bas]
-    roles: {workspace_admin: planned_permission_denied, business_preparer: planned_permission_denied, business_lodger: planned_allowed, auditor: planned_permission_denied}
+    routes: [/gst-bas]
+    roles: {workspace_admin: permission_denied, business_preparer: permission_denied, business_lodger: allowed, auditor: permission_denied}
     principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, NOT_FOUND, STALE_VERSION, IDEMPOTENCY_CONFLICT, BAS_CHAIN_CONFLICT]
     list: {states: [not_applicable]}
     idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
   tammy.v1.BasPreparationService.ResolveExternalBasDispute:
-    stage: declared_future
+    stage: production
     preload: resolveExternalBasDispute
-    cases: []
-    futureCases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage, bas-preparation/manual-handoff]
+    cases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage, bas-preparation/manual-handoff]
     projections: [resolve_external_bas_dispute_result]
-    routes: [/bas]
-    roles: {workspace_admin: planned_permission_denied, business_preparer: planned_permission_denied, business_lodger: planned_allowed, auditor: planned_permission_denied}
+    routes: [/gst-bas]
+    roles: {workspace_admin: permission_denied, business_preparer: permission_denied, business_lodger: allowed, auditor: permission_denied}
     principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, NOT_FOUND, STALE_VERSION, IDEMPOTENCY_CONFLICT, SOURCE_CHANGED, BAS_CHAIN_CONFLICT, FACTOR_ASSERTION_REQUIRED, FACTOR_ASSERTION_STALE, FACTOR_ASSERTION_REPLAY]
     list: {states: [not_applicable]}
     idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
   tammy.v1.BasPreparationService.ReplaceRejectedBasAttempt:
-    stage: declared_future
+    stage: production
     preload: replaceRejectedBasAttempt
-    cases: []
-    futureCases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage, bas-preparation/manual-handoff]
+    cases: [bas-preparation/contracts, bas-preparation/lifecycle, bas-preparation/permissions, bas-preparation/coverage, bas-preparation/manual-handoff]
     projections: [replace_rejected_bas_attempt_result]
-    routes: [/bas]
-    roles: {workspace_admin: planned_permission_denied, business_preparer: planned_permission_denied, business_lodger: planned_allowed, auditor: planned_permission_denied}
+    routes: [/gst-bas]
+    roles: {workspace_admin: permission_denied, business_preparer: permission_denied, business_lodger: allowed, auditor: permission_denied}
     principalFailures: [AUTHENTICATION_REQUIRED, PERMISSION_DENIED, NOT_FOUND, STALE_VERSION, IDEMPOTENCY_CONFLICT, BAS_CHAIN_CONFLICT, FACTOR_ASSERTION_REQUIRED, FACTOR_ASSERTION_STALE, FACTOR_ASSERTION_REPLAY]
     list: {states: [not_applicable]}
     idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
   tammy.v1.BasPreparationService.RecordBasExportEvent:
-    stage: declared_future
+    stage: production
     preload: recordBasExportEvent
-    cases: []
-    futureCases: [bas-preparation/contracts, bas-preparation/permissions, bas-preparation/coverage, bas-preparation/manual-handoff]
+    cases: [bas-preparation/contracts, bas-preparation/permissions, bas-preparation/coverage, bas-preparation/manual-handoff]
     projections: [record_bas_export_event_result]
-    routes: [/bas]
-    roles: {workspace_admin: planned_allowed, business_preparer: planned_allowed, business_lodger: planned_allowed, auditor: planned_allowed}
+    routes: [/gst-bas]
+    roles: {workspace_admin: allowed, business_preparer: allowed, business_lodger: allowed, auditor: allowed}
     principalFailures: [AUTHENTICATION_REQUIRED, NOT_FOUND, STALE_VERSION, IDEMPOTENCY_CONFLICT]
     list: {states: [not_applicable]}
     idempotency: {mode: persistent_command, outcomes: [exact_replay, changed_request_conflict]}
@@ -4230,46 +4198,35 @@ transitions:
     futureCases:
       - company-eofy/lifecycle
   tammy.v1.BasPreparationState.BAS_PREPARATION_STATE_BLOCKED->BAS_PREPARATION_STATE_COLLECTING:
-    stage: declared_future
-    cases: []
-    futureCases: [bas-preparation/lifecycle, bas-preparation/manual-handoff]
+    stage: production
+    cases: [bas-preparation/lifecycle, bas-preparation/manual-handoff]
   tammy.v1.BasPreparationState.BAS_PREPARATION_STATE_BLOCKED->BAS_PREPARATION_STATE_REVIEW_READY:
-    stage: declared_future
-    cases: []
-    futureCases: [bas-preparation/lifecycle, bas-preparation/manual-handoff]
+    stage: production
+    cases: [bas-preparation/lifecycle, bas-preparation/manual-handoff]
   tammy.v1.BasPreparationState.BAS_PREPARATION_STATE_COLLECTING->BAS_PREPARATION_STATE_BLOCKED:
-    stage: declared_future
-    cases: []
-    futureCases: [bas-preparation/lifecycle, bas-preparation/manual-handoff]
+    stage: production
+    cases: [bas-preparation/lifecycle, bas-preparation/manual-handoff]
   tammy.v1.BasPreparationState.BAS_PREPARATION_STATE_COLLECTING->BAS_PREPARATION_STATE_REVIEW_READY:
-    stage: declared_future
-    cases: []
-    futureCases: [bas-preparation/lifecycle, bas-preparation/manual-handoff]
+    stage: production
+    cases: [bas-preparation/lifecycle, bas-preparation/manual-handoff]
   tammy.v1.BasPreparationState.BAS_PREPARATION_STATE_EXTERNAL_CONFIRMATION_RECORDED->BAS_PREPARATION_STATE_SUPERSEDED_BY_CONFIRMED_REVISION:
-    stage: declared_future
-    cases: []
-    futureCases: [bas-preparation/lifecycle, bas-preparation/manual-handoff]
+    stage: production
+    cases: [bas-preparation/lifecycle, bas-preparation/manual-handoff]
   tammy.v1.BasPreparationState.BAS_PREPARATION_STATE_FROZEN_FOR_MANUAL_HANDOFF->BAS_PREPARATION_STATE_EXTERNAL_CONFIRMATION_RECORDED:
-    stage: declared_future
-    cases: []
-    futureCases: [bas-preparation/lifecycle, bas-preparation/manual-handoff]
+    stage: production
+    cases: [bas-preparation/lifecycle, bas-preparation/manual-handoff]
   tammy.v1.BasPreparationState.BAS_PREPARATION_STATE_FROZEN_FOR_MANUAL_HANDOFF->BAS_PREPARATION_STATE_SUPERSEDED_AFTER_RECORDED_REJECTION:
-    stage: declared_future
-    cases: []
-    futureCases: [bas-preparation/lifecycle, bas-preparation/manual-handoff]
+    stage: production
+    cases: [bas-preparation/lifecycle, bas-preparation/manual-handoff]
   tammy.v1.BasPreparationState.BAS_PREPARATION_STATE_FROZEN_FOR_MANUAL_HANDOFF->BAS_PREPARATION_STATE_SUPERSEDED_BEFORE_CONFIRMATION:
-    stage: declared_future
-    cases: []
-    futureCases: [bas-preparation/lifecycle, bas-preparation/manual-handoff]
+    stage: production
+    cases: [bas-preparation/lifecycle, bas-preparation/manual-handoff]
   tammy.v1.BasPreparationState.BAS_PREPARATION_STATE_REVIEW_READY->BAS_PREPARATION_STATE_BLOCKED:
-    stage: declared_future
-    cases: []
-    futureCases: [bas-preparation/lifecycle, bas-preparation/manual-handoff]
+    stage: production
+    cases: [bas-preparation/lifecycle, bas-preparation/manual-handoff]
   tammy.v1.BasPreparationState.BAS_PREPARATION_STATE_REVIEW_READY->BAS_PREPARATION_STATE_COLLECTING:
-    stage: declared_future
-    cases: []
-    futureCases: [bas-preparation/lifecycle, bas-preparation/manual-handoff]
+    stage: production
+    cases: [bas-preparation/lifecycle, bas-preparation/manual-handoff]
   tammy.v1.BasPreparationState.BAS_PREPARATION_STATE_REVIEW_READY->BAS_PREPARATION_STATE_FROZEN_FOR_MANUAL_HANDOFF:
-    stage: declared_future
-    cases: []
-    futureCases: [bas-preparation/lifecycle, bas-preparation/manual-handoff]
+    stage: production
+    cases: [bas-preparation/lifecycle, bas-preparation/manual-handoff]

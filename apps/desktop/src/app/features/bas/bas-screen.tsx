@@ -29,6 +29,7 @@ import {
 import { ReportingCapabilityNotice } from "../reporting/reporting-capability-notice";
 import type { AuthenticatedWorkspace } from "../setup/setup-screen";
 import { type BasPurchaseControls, BasPurchaseDetails } from "./bas-purchase-details";
+import { BASLodgerRoleControl } from "./business-lodger-role-control";
 
 const createCodec = createProtoMethodCodec({
   input: CreateBasDraftRequestSchema,
@@ -53,16 +54,23 @@ export function BasScreen({
   now,
   onBasDraftChanged,
   organisationApi,
+  roleControlApi,
   workspace,
   purchaseApi,
   documentApi,
   accountingApi,
   onReviewDocument,
+  purchaseReviewOnly = false,
 }: {
   readonly api: BasAPI;
   readonly organisationApi?: ReportOrganisationApi;
+  readonly roleControlApi?: Pick<
+    TammyConveyorModule<"organisation">,
+    "getCurrentUser" | "assignRoles"
+  >;
   readonly now?: Date;
   readonly onBasDraftChanged?: () => Promise<void>;
+  readonly purchaseReviewOnly?: boolean;
   readonly workspace: AuthenticatedWorkspace | undefined;
 } & BasPurchaseControls) {
   const screenScope = `${workspace?.workspaceId ?? ""}:${workspace?.organisationId ?? ""}:${workspace?.userId ?? ""}:${workspace?.sessionId ?? ""}`;
@@ -179,10 +187,13 @@ export function BasScreen({
     <div className="mx-auto grid w-full max-w-[1120px] gap-4">
       <div className="flex items-end justify-between gap-4">
         <div>
-          <h1 className="text-[18px] font-semibold tracking-[-0.02em]">GST &amp; BAS</h1>
+          <h1 className="text-[18px] font-semibold tracking-[-0.02em]">
+            {purchaseReviewOnly ? "Purchase source review" : "GST & BAS"}
+          </h1>
           <p className="mt-1 text-[11px] text-muted-foreground">
-            A local workpaper from invoice sales and reviewed expenses. Tammy does not lodge this
-            BAS.
+            {purchaseReviewOnly
+              ? "Review purchase evidence and GST-credit blockers in the retained legacy workpaper."
+              : "A local workpaper from invoice sales and reviewed expenses. Tammy does not lodge this BAS."}
           </p>
         </div>
         {workpaper ? (
@@ -192,7 +203,10 @@ export function BasScreen({
           </div>
         ) : null}
       </div>
-      {exportBas && organisationApi ? (
+      {!purchaseReviewOnly && roleControlApi ? (
+        <BASLodgerRoleControl api={roleControlApi} workspace={workspace} />
+      ) : null}
+      {!purchaseReviewOnly && exportBas && organisationApi ? (
         <ReportExportActions
           organisationApi={organisationApi}
           workspace={workspace}
@@ -222,75 +236,79 @@ export function BasScreen({
           }
         />
       ) : null}
-      <section className="grid gap-2" aria-label="Reporting support">
-        {taxYear === undefined ? (
-          <p aria-live="polite" role="status">
-            Choose a valid reporting period to check reporting support.
-          </p>
-        ) : (
-          <>
-            <div className="grid gap-1">
-              <h2 className="text-[10px] font-semibold">GST workpaper</h2>
-              <ReportingCapabilityNotice
-                api={api}
-                entityType={ReportingEntityType.AU_BUSINESS}
-                onStatusChange={updateGstCapability}
-                report={ReportKind.GST_WORKPAPER}
-                taxYear={taxYear}
-              />
-            </div>
-            <div className="grid gap-1">
-              <h2 className="text-[10px] font-semibold">Full BAS return</h2>
-              <ReportingCapabilityNotice
-                api={api}
-                entityType={ReportingEntityType.AU_BUSINESS}
-                report={ReportKind.BAS}
-                taxYear={taxYear}
-              />
-            </div>
-          </>
-        )}
-      </section>
-      <section
-        className="flex flex-wrap items-end gap-3 rounded-[6px] border border-border bg-surface p-3"
-        aria-label="BAS reporting period"
-      >
-        <DateField
-          label="Period start"
-          onChange={(date) => {
-            setEditedPeriod((current) => ({ start: date, end: current?.end ?? end }));
-          }}
-          onFocus={() => {
-            setEditedPeriod((current) => current ?? { start, end });
-          }}
-          value={start}
-        />
-        <DateField
-          label="Period end"
-          onChange={(date) => {
-            setEditedPeriod((current) => ({ start: current?.start ?? start, end: date }));
-          }}
-          onFocus={() => {
-            setEditedPeriod((current) => current ?? { start, end });
-          }}
-          value={end}
-        />
-        <Button
-          className="h-8 text-[10px]"
-          disabled={
-            busy || !gstWorkpaperAvailable || !parseDate(start) || !parseDate(end) || start > end
-          }
-          onClick={createDraft}
-          type="button"
+      {!purchaseReviewOnly ? (
+        <section className="grid gap-2" aria-label="Reporting support">
+          {taxYear === undefined ? (
+            <p aria-live="polite" role="status">
+              Choose a valid reporting period to check reporting support.
+            </p>
+          ) : (
+            <>
+              <div className="grid gap-1">
+                <h2 className="text-[10px] font-semibold">GST workpaper</h2>
+                <ReportingCapabilityNotice
+                  api={api}
+                  entityType={ReportingEntityType.AU_BUSINESS}
+                  onStatusChange={updateGstCapability}
+                  report={ReportKind.GST_WORKPAPER}
+                  taxYear={taxYear}
+                />
+              </div>
+              <div className="grid gap-1">
+                <h2 className="text-[10px] font-semibold">Full BAS return</h2>
+                <ReportingCapabilityNotice
+                  api={api}
+                  entityType={ReportingEntityType.AU_BUSINESS}
+                  report={ReportKind.BAS}
+                  taxYear={taxYear}
+                />
+              </div>
+            </>
+          )}
+        </section>
+      ) : null}
+      {!purchaseReviewOnly ? (
+        <section
+          className="flex flex-wrap items-end gap-3 rounded-[6px] border border-border bg-surface p-3"
+          aria-label="BAS reporting period"
         >
-          {busy ? "Creating…" : workpaper ? "Regenerate local draft" : "Create local draft"}
-        </Button>
-        {workpaper ? (
-          <p className="text-[9px] leading-4 text-muted-foreground">
-            Saved figures remain visible until the new draft is created.
-          </p>
-        ) : null}
-      </section>
+          <DateField
+            label="Period start"
+            onChange={(date) => {
+              setEditedPeriod((current) => ({ start: date, end: current?.end ?? end }));
+            }}
+            onFocus={() => {
+              setEditedPeriod((current) => current ?? { start, end });
+            }}
+            value={start}
+          />
+          <DateField
+            label="Period end"
+            onChange={(date) => {
+              setEditedPeriod((current) => ({ start: current?.start ?? start, end: date }));
+            }}
+            onFocus={() => {
+              setEditedPeriod((current) => current ?? { start, end });
+            }}
+            value={end}
+          />
+          <Button
+            className="h-8 text-[10px]"
+            disabled={
+              busy || !gstWorkpaperAvailable || !parseDate(start) || !parseDate(end) || start > end
+            }
+            onClick={createDraft}
+            type="button"
+          >
+            {busy ? "Creating…" : workpaper ? "Regenerate local draft" : "Create local draft"}
+          </Button>
+          {workpaper ? (
+            <p className="text-[9px] leading-4 text-muted-foreground">
+              Saved figures remain visible until the new draft is created.
+            </p>
+          ) : null}
+        </section>
+      ) : null}
       {error ? (
         <p
           className="rounded-[6px] border border-warning-border bg-warning-soft px-3 py-2 text-[10px]"
@@ -299,7 +317,7 @@ export function BasScreen({
           {error}
         </p>
       ) : null}
-      {!workpaper ? (
+      {!workpaper && !purchaseReviewOnly ? (
         <section className="grid min-h-[420px] place-items-center rounded-[6px] border border-dashed border-border bg-surface p-8 text-center">
           <div className="max-w-md">
             <Calculator className="mx-auto size-7 text-forest" />
@@ -310,7 +328,7 @@ export function BasScreen({
             </p>
           </div>
         </section>
-      ) : (
+      ) : workpaper ? (
         <Workpaper
           value={workpaper}
           purchaseApi={purchaseApi}
@@ -320,6 +338,11 @@ export function BasScreen({
           onReviewDocument={onReviewDocument}
           onChanged={() => api.getCurrentBasDraft.invalidate(currentBasInput)}
         />
+      ) : (
+        <p className="rounded border border-dashed border-border bg-surface p-6 text-[10px] text-muted-foreground">
+          No retained local workpaper is available for purchase review. Review the source document
+          in Documents to resolve purchase blockers.
+        </p>
       )}
     </div>
   );

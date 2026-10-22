@@ -46,8 +46,8 @@ func TestBasRawSourceIdentityMigration14FailurePreservesSchema13History(t *testi
 	}
 
 	steps := allMigrations(t)
-	if len(steps) != 14 {
-		t.Fatalf("embedded migration count = %d, want 14", len(steps))
+	if len(steps) != 15 {
+		t.Fatalf("embedded migration count = %d, want 15", len(steps))
 	}
 	if steps[13].Name != "0014_bas_raw_source_identities.sql" {
 		t.Fatalf("embedded migration tail = %q, want 0014_bas_raw_source_identities.sql", steps[13].Name)

@@ -181,6 +181,12 @@ func TestReserveBASSourceScalarsNativeSQLCipherEmptyAndMixed(t *testing.T) {
 
 func seedSourceScalarOrganisation(t *testing.T, ctx context.Context, tx *sqlcipher.Transaction,
 	organisationID, actorID string, now time.Time) {
+	seedSourceScalarOrganisationWithTaxProfile(t, ctx, tx, organisationID, actorID, now,
+		tammyv1.GstBasis_GST_BASIS_NON_CASH, &tammyv1.SourceRef{Type: "rule_bundle", Id: testUUID(9903), Revision: 1, ContentHash: make([]byte, 32)})
+}
+
+func seedSourceScalarOrganisationWithTaxProfile(t *testing.T, ctx context.Context, tx *sqlcipher.Transaction,
+	organisationID, actorID string, now time.Time, basis tammyv1.GstBasis, rule *tammyv1.SourceRef) {
 	t.Helper()
 	stamp := now.UTC().Format(time.RFC3339Nano)
 	if _, err := tx.ExecContext(ctx,
@@ -194,11 +200,11 @@ func seedSourceScalarOrganisation(t *testing.T, ctx context.Context, tx *sqlciph
 	}
 	organisation := &tammyv1.Organisation{
 		Id: organisationID, Version: 1, Abn: "51824753556", LegalName: "Scalar Pty Ltd", DisplayName: "Scalar",
-		EntityType: "AU_PRIVATE_COMPANY", GstBasis: tammyv1.GstBasis_GST_BASIS_NON_CASH,
+		EntityType: "AU_PRIVATE_COMPANY", GstBasis: basis,
 		GstReportingFrequency: tammyv1.GstReportingFrequency_GST_REPORTING_FREQUENCY_QUARTERLY,
 		FinancialYearEndMonth: 6, OwnerUserId: actorID,
 		VerificationState:   tammyv1.OrganisationVerificationState_ORGANISATION_VERIFICATION_STATE_UNVERIFIED,
-		ActiveTaxRuleBundle: &tammyv1.SourceRef{Type: "rule_bundle", Id: testUUID(9903), Revision: 1, ContentHash: make([]byte, 32)},
+		ActiveTaxRuleBundle: rule,
 	}
 	if err := repository.Create(ctx, organisation, now); err != nil {
 		t.Fatal(err)

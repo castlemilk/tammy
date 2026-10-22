@@ -1,4 +1,10 @@
+import { AsyncLocalStorage } from "node:async_hooks";
+import { createHash } from "node:crypto";
 import { create } from "@bufbuild/protobuf";
+import {
+  BasExportOutcome,
+  BasExportPhase,
+} from "@tammy/connect-client/tammy/v1/bas_preparation_pb.js";
 import type { AuthenticationContext } from "@tammy/connect-client/tammy/v1/common_pb.js";
 import {
   GetCurrentUserRequestSchema,
@@ -8,11 +14,14 @@ import { GetBusinessIncomeSummaryRequestSchema } from "@tammy/connect-client/tam
 import { GetOrganisationRequestSchema } from "@tammy/connect-client/tammy/v1/organisation_pb.js";
 import { GetCurrentBasDraftRequestSchema } from "@tammy/connect-client/tammy/v1/tax_pb.js";
 import {
+  type BasPreparationReportSnapshot,
   type BasSnapshot,
   boundedReportBytes,
   type IncomeSnapshot,
   renderBasCsv,
   renderBasPdf,
+  renderBasPreparationCsv,
+  renderBasPreparationPdf,
   renderIncomeCsv,
   renderIncomePdf,
   reportDate,
@@ -21,17 +30,26 @@ import {
 } from "@tammy/reporting";
 import {
   type BasExportRequest,
+  type BasPreparationExportRequest,
   basExportRequest,
+  basPreparationExportRequest,
   type IncomeExportRequest,
   incomeExportRequest,
   type ReportExports,
   type ReportFormat,
   reportExportError,
 } from "../shared/report-export";
+import {
+  type BasPreparationExportOperation,
+  loadBasPreparationReportSnapshot,
+  operationForBasPreparationExport,
+  recordBasPreparationExportEvent,
+} from "./bas-preparation-export";
 import type { CoreClient } from "./core-client";
 import { createValidatedExport } from "./validated-export";
 
 type Reader = {
+  readonly basPreparation?: NonNullable<CoreClient["basPreparation"]>;
   readonly getCurrentUser: (
     request: Parameters<CoreClient["getCurrentUser"]>[0],
   ) => Promise<Pick<Awaited<ReturnType<CoreClient["getCurrentUser"]>>, "user">>;
@@ -66,8 +84,32 @@ export function createReportExports(options: {
   readonly now?: () => Date;
   readonly renderIncome?: (snapshot: IncomeSnapshot, format: ReportFormat) => Promise<Uint8Array>;
   readonly renderBas?: (snapshot: BasSnapshot, format: ReportFormat) => Promise<Uint8Array>;
+  readonly renderBasPreparation?: (
+    snapshot: BasPreparationReportSnapshot,
+    format: ReportFormat,
+  ) => Promise<Uint8Array>;
 }): ReportExports {
-  const guardFor = (request: IncomeExportRequest | BasExportRequest) => {
+  const basPreparationContext = new AsyncLocalStorage<BasPreparationExportOperation>();
+  const basPreparationTargetTails = new Map<string, Promise<void>>();
+  const withBasPreparationTargetLock = async <T>(key: string, work: () => Promise<T>) => {
+    const predecessor = basPreparationTargetTails.get(key) ?? Promise.resolve();
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const tail = predecessor.then(() => gate);
+    basPreparationTargetTails.set(key, tail);
+    await predecessor;
+    try {
+      return await work();
+    } finally {
+      release();
+      if (basPreparationTargetTails.get(key) === tail) basPreparationTargetTails.delete(key);
+    }
+  };
+  const guardFor = (
+    request: IncomeExportRequest | BasExportRequest | BasPreparationExportRequest,
+  ) => {
     try {
       const captured = options.capture(
         createAuthentication(request.authentication),
@@ -85,7 +127,11 @@ export function createReportExports(options: {
     }
   };
   const revalidateFor =
-    (request: IncomeExportRequest | BasExportRequest, guard: () => void) => async () => {
+    (
+      request: IncomeExportRequest | BasExportRequest | BasPreparationExportRequest,
+      guard: () => void,
+    ) =>
+    async () => {
       try {
         const result = await options.client.getCurrentUser(
           create(GetCurrentUserRequestSchema, { authentication: request.authentication }),
@@ -230,7 +276,116 @@ export function createReportExports(options: {
       (async (snapshot: BasSnapshot, format: ReportFormat) =>
         format === "pdf" ? renderBasPdf(snapshot) : renderBasCsv(snapshot)),
   });
-  return { exportIncome: income.export, exportBas: bas.export };
+  const basPreparation = createValidatedExport({
+    ...shared,
+    prepare: async (input: BasPreparationExportRequest) => {
+      const request = freeze(structuredClone(parseBasPreparation(input)));
+      const operation = basPreparationContext.getStore();
+      if (!operation || !options.client.basPreparation) throw new Error("REPORT_REFRESH_REQUIRED");
+      const guard = guardFor(request);
+      operation.guard = guard;
+      try {
+        const snapshot = freeze(
+          await loadBasPreparationReportSnapshot(
+            options.client.basPreparation,
+            request,
+            guard,
+            (options.now?.() ?? new Date()).toISOString(),
+          ),
+        );
+        await recordBasPreparationExportEvent(
+          options.client.basPreparation,
+          operation,
+          BasExportPhase.STARTED,
+          undefined,
+          options.now?.() ?? new Date(),
+          guard,
+        );
+        operation.started = true;
+        return {
+          snapshot,
+          guard,
+          revalidateAuthorisation: revalidateFor(request, guard),
+          extension: request.format,
+          filename: `bas-${request.target.kind}-${request.target.id}-r${request.target.revision}.${request.format}`,
+        };
+      } catch (error) {
+        throw reportExportError(error, "REPORT_REFRESH_REQUIRED");
+      }
+    },
+    render: async (snapshot: BasPreparationReportSnapshot, format: ReportFormat) => {
+      const bytes = await (
+        options.renderBasPreparation ??
+        (async (value: BasPreparationReportSnapshot, extension: ReportFormat) =>
+          extension === "pdf" ? renderBasPreparationPdf(value) : renderBasPreparationCsv(value))
+      )(snapshot, format);
+      const operation = basPreparationContext.getStore();
+      if (operation) operation.artifactHash = createHash("sha256").update(bytes).digest();
+      return bytes;
+    },
+  });
+  return {
+    exportIncome: income.export,
+    exportBas: bas.export,
+    exportBasPreparation: async (input: BasPreparationExportRequest) => {
+      const request = parseBasPreparation(input);
+      const operation = operationForBasPreparationExport(request);
+      const targetKey = [
+        operation.organisationId,
+        operation.target.kind,
+        operation.target.id,
+        operation.target.revision.toString(),
+        Buffer.from(operation.target.hash).toString("hex"),
+      ].join(":");
+      return withBasPreparationTargetLock(targetKey, () =>
+        basPreparationContext.run(operation, async () => {
+          try {
+            const result = await basPreparation.export(request);
+            if (!operation.started || !options.client.basPreparation) return result;
+            if (result.saved) {
+              operation.terminal = true;
+              try {
+                await recordBasPreparationExportEvent(
+                  options.client.basPreparation,
+                  operation,
+                  BasExportPhase.FINISHED,
+                  BasExportOutcome.SUCCEEDED,
+                  options.now?.() ?? new Date(),
+                  operation.guard,
+                );
+              } catch {
+                // The file has already been atomically activated; report its true saved state.
+              }
+            } else {
+              operation.terminal = true;
+              await recordBasPreparationExportEvent(
+                options.client.basPreparation,
+                operation,
+                BasExportPhase.FINISHED,
+                BasExportOutcome.CANCELLED,
+                options.now?.() ?? new Date(),
+                operation.guard,
+              );
+            }
+            return result;
+          } catch (error) {
+            if (operation.started && !operation.terminal && options.client.basPreparation) {
+              operation.terminal = true;
+              await recordBasPreparationExportEvent(
+                options.client.basPreparation,
+                operation,
+                BasExportPhase.FINISHED,
+                BasExportOutcome.FAILED,
+                options.now?.() ?? new Date(),
+                operation.guard,
+              ).catch(() => undefined);
+            }
+            throw reportExportError(error, "REPORT_SAVE_FAILED");
+          }
+        }),
+      );
+    },
+  };
 }
 function createAuthentication(value: IncomeExportRequest["authentication"]): AuthenticationContext {
   return { $typeName: "tammy.v1.AuthenticationContext", ...value };
@@ -243,6 +398,11 @@ function parseIncome(input: IncomeExportRequest) {
 }
 function parseBas(input: BasExportRequest) {
   const parsed = basExportRequest.safeParse(input);
+  if (!parsed.success) throw new Error("REPORT_REFRESH_REQUIRED");
+  return parsed.data;
+}
+function parseBasPreparation(input: BasPreparationExportRequest) {
+  const parsed = basPreparationExportRequest.safeParse(input);
   if (!parsed.success) throw new Error("REPORT_REFRESH_REQUIRED");
   return parsed.data;
 }

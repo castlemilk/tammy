@@ -753,6 +753,12 @@ export async function setupAndRunCurrentAccountingWorkflow(
   await assertRoute(page, "Trial balance", "/accounting/trial-balance", "Trial balance");
   await expect(page.getByText("$319.00", { exact: true }).first()).toBeVisible();
   await assertRoute(page, "GST & BAS", "/gst-bas", "GST & BAS");
+  await expect(page.getByRole("heading", { name: "BAS preparation", exact: true })).toBeVisible();
+  const lifecycle = page.getByRole("navigation", { name: "BAS lifecycle stages" });
+  for (const stage of ["Prepare", "Review", "Freeze", "Export", "External record"] as const) {
+    await expect(lifecycle.getByRole("button", { name: stage, exact: true })).toBeVisible();
+  }
+  await page.getByText("Purchase source review", { exact: true }).click();
   await expect(
     page.getByText(WORKFLOW_FIXTURE.bas.statusLabel, { exact: true }).first(),
   ).toBeVisible();

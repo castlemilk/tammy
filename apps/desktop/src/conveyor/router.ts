@@ -3,6 +3,7 @@ import { buildManifest } from "electron-conveyor/define";
 import { CONVEYOR_MANIFEST } from "../shared/conveyor-contract";
 import { accounting } from "./modules/accounting";
 import { banking } from "./modules/banking";
+import { basPreparation } from "./modules/bas-preparation";
 import { documents } from "./modules/documents";
 import { organisationModule } from "./modules/organisation";
 import { purchases } from "./modules/purchases";
@@ -17,6 +18,7 @@ const modules = Object.freeze({
   organisation: organisationModule,
   accounting,
   banking,
+  basPreparation,
   documents,
   purchases,
   reporting,

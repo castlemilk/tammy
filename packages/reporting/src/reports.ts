@@ -3,9 +3,13 @@ import { Cell, Document, Page, Table, View } from "@formepdf/react";
 import { PageFooter, PageHeader, TableRow, Text, theme } from "@tammy/invoices/pdf-components";
 import { assertInvoicePdfTextSupported } from "@tammy/invoices/pdf-text-policy";
 import { createElement as h } from "react";
+import {
+  BAS_PREPARATION_LABELS,
+  type BasPreparationReportSnapshot,
+  validateBasPreparationReportSnapshot,
+} from "./bas-preparation-model.ts";
 import { notoSansBold } from "./fonts/noto-sans-bold.ts";
 import { notoSansRegular } from "./fonts/noto-sans-regular.ts";
-
 import {
   type BasSnapshot,
   boundedReportBytes,
@@ -18,6 +22,12 @@ import {
   validateIncomeSnapshot,
 } from "./model.ts";
 
+export type { BasPreparationReportSnapshot } from "./bas-preparation-model.ts";
+export {
+  BAS_PREPARATION_LABELS,
+  reportOrganisationFromCalculation,
+  validateBasPreparationReportSnapshot,
+} from "./bas-preparation-model.ts";
 export * from "./model.ts";
 
 type Context = { readonly organisation: ReportOrganisation; readonly acquiredAt: string };
@@ -772,6 +782,949 @@ function reconciledBasCsv(value: BasSnapshot) {
 export function renderBasCsv(value: BasSnapshot) {
   validateBasSnapshot(value);
   return value.workpaper.purchaseSourceFormat === 1 ? reconciledBasCsv(value) : legacyBasCsv(value);
+}
+
+function prettyRecord(value: unknown) {
+  return JSON.stringify(jsonValue(value), null, 2);
+}
+
+function exactPair(numerator?: string, denominator?: string) {
+  return numerator !== undefined && denominator !== undefined
+    ? `${numerator}/${denominator}`
+    : "not applicable";
+}
+
+function gcd(left: bigint, right: bigint): bigint {
+  let a = left < 0n ? -left : left;
+  let b = right < 0n ? -right : right;
+  while (b !== 0n) [a, b] = [b, a % b];
+  return a || 1n;
+}
+
+function subtractExactPairs(
+  afterNumerator: string,
+  afterDenominator: string,
+  beforeNumerator: string,
+  beforeDenominator: string,
+) {
+  const an = BigInt(afterNumerator);
+  const ad = BigInt(afterDenominator);
+  const bn = BigInt(beforeNumerator);
+  const bd = BigInt(beforeDenominator);
+  if (ad <= 0n || bd <= 0n) throw new Error("INVALID_REPORT_SNAPSHOT");
+  let numerator = an * bd - bn * ad;
+  let denominator = ad * bd;
+  const divisor = gcd(numerator, denominator);
+  numerator /= divisor;
+  denominator /= divisor;
+  return `${numerator}/${denominator}`;
+}
+
+function calculationComparison(
+  current: BasPreparationReportSnapshot["calculation"],
+  predecessor: NonNullable<BasPreparationReportSnapshot["predecessor"]>["calculation"],
+) {
+  if (!predecessor) return [] as [string, string, string, string][];
+  const older = new Map(predecessor.result!.labels.map((trace) => [trace.label, trace]));
+  const newer = new Map(current.result!.labels.map((trace) => [trace.label, trace]));
+  return BAS_PREPARATION_LABELS.map(({ code, label }): [string, string, string, string] => {
+    const before = older.get(code);
+    const after = newer.get(code);
+    if (!before || !after) throw new Error("INVALID_REPORT_SNAPSHOT");
+    const isRate = code === 11;
+    const beforeState = amountState(before.state);
+    const afterState = amountState(after.state);
+    let delta = "state-only; exact value unavailable";
+    if (
+      isRate &&
+      before.exactRateNumerator !== undefined &&
+      before.exactRateDenominator !== undefined &&
+      after.exactRateNumerator !== undefined &&
+      after.exactRateDenominator !== undefined
+    ) {
+      delta = `${subtractExactPairs(after.exactRateNumerator, after.exactRateDenominator, before.exactRateNumerator, before.exactRateDenominator)} rate units`;
+    } else if (
+      !isRate &&
+      before.exactCentsNumerator !== undefined &&
+      before.exactCentsDenominator !== undefined &&
+      after.exactCentsNumerator !== undefined &&
+      after.exactCentsDenominator !== undefined
+    ) {
+      delta = `${subtractExactPairs(after.exactCentsNumerator, after.exactCentsDenominator, before.exactCentsNumerator, before.exactCentsDenominator)} cents`;
+    }
+    const beforeValue = isRate
+      ? exactPair(before.exactRateNumerator, before.exactRateDenominator)
+      : `${exactPair(before.exactCentsNumerator, before.exactCentsDenominator)} cents`;
+    const afterValue = isRate
+      ? exactPair(after.exactRateNumerator, after.exactRateDenominator)
+      : `${exactPair(after.exactCentsNumerator, after.exactCentsDenominator)} cents`;
+    return [label, `${beforeState}: ${beforeValue}`, `${afterState}: ${afterValue}`, delta];
+  });
+}
+
+function reportRecordSection(title: string, values: readonly unknown[]) {
+  return [
+    h(Text, { style: { fontWeight: 700, marginTop: 12 } }, title),
+    ...(values.length
+      ? values.map((value, index) =>
+          h(
+            Text,
+            { key: `${title}-${index}`, style: { fontSize: 7, marginBottom: 6 } },
+            prettyRecord(value),
+          ),
+        )
+      : [h(Text, {}, "No retained records.")]),
+  ];
+}
+
+export async function renderBasPreparationPdf(value: BasPreparationReportSnapshot) {
+  validateBasPreparationReportSnapshot(value);
+  const { calculation, frozenBas } = value;
+  const period = calculation.periodSnapshot?.confirmation?.period;
+  if (!period?.startDate || !period.endDate) throw new Error("INVALID_REPORT_SNAPSHOT");
+  const result = calculation.result!;
+  const workpaper = calculation.workpaperSnapshot!;
+  const periodText = `${reportDate(period.startDate)} to ${reportDate(period.endDate)} · ${value.target.kind === "frozen_bas" ? "frozen manual handoff" : outcomeName(result.outcome).toLowerCase()} · not lodged`;
+  const status = frozenBas
+    ? "FROZEN MANUAL HANDOFF — NOT LODGED"
+    : result.outcome === 1
+      ? "READY FOR REVIEW — NOT FROZEN OR LODGED"
+      : `${outcomeName(result.outcome)} — NOT LODGED`;
+  const labels = new Map(result.labels.map((trace) => [trace.label, trace]));
+  const labelRows = BAS_PREPARATION_LABELS.map(({ code, label }) => {
+    const trace = labels.get(code);
+    if (!trace) throw new Error("INVALID_REPORT_SNAPSHOT");
+    const rate = code === 11;
+    const amount = rate
+      ? exactPair(trace.exactRateNumerator, trace.exactRateDenominator)
+      : `${exactPair(trace.exactCentsNumerator, trace.exactCentsDenominator)} cents`;
+    const whole =
+      trace.reportedWholeDollars === undefined
+        ? "not reported"
+        : `${trace.reportedWholeDollars} dollars`;
+    const rounding =
+      trace.roundingDifferenceCentsNumerator === undefined
+        ? "not applicable"
+        : `${trace.roundingDifferenceCentsNumerator}/${trace.roundingDifferenceCentsDenominator} cents`;
+    return [
+      label,
+      amountState(trace.state),
+      operationName(trace.operation),
+      `${amount}\n${whole}\nRounding difference: ${rounding}\nRule: ${trace.ruleId}`,
+    ];
+  });
+  const metadata = [
+    [
+      "Target",
+      `${value.target.kind} ${value.target.id} · revision ${value.target.revision} · hash ${hash(value.target.hash)}`,
+    ],
+    [
+      "Calculation",
+      `${calculation.calculationId} · revision ${calculation.version} · hash ${hash(calculation.contentHash)}`,
+    ],
+    [
+      "Preparation",
+      `${calculation.preparation?.id ?? "not retained"} · hash ${hash(calculation.preparation?.contentHash ?? new Uint8Array())}`,
+    ],
+    [
+      "Family / period / profile",
+      `${calculation.family?.id ?? "not retained"} / ${calculation.period?.id ?? "not retained"} / ${calculation.profile?.id ?? "not retained"}`,
+    ],
+    ["Creation reason", value.preparation?.creationReason || "Not recorded"],
+    ["Prior creation reason", value.predecessor?.preparation.creationReason || "Not recorded"],
+    [
+      "Pinned organisation",
+      `${value.organisation.legalName} · ${value.organisation.displayName} · ABN ${value.organisation.abn} · version ${value.organisation.version}`,
+    ],
+    [
+      "Snapshot / revision vector",
+      `${hash(calculation.sourceSnapshotHash)} / ${hash(calculation.revisionVectorHash)}`,
+    ],
+    ["Coverage manifest", hash(calculation.coverageManifestHash)],
+    ["Rule", `${calculation.ruleVersion} · ${hash(calculation.ruleHash)}`],
+    ["Calculator", `${calculation.calculatorVersion} · ${hash(calculation.calculatorHash)}`],
+    ["Form", `${calculation.formVersion} · ${hash(calculation.formHash)}`],
+    [
+      "Schema / descriptor",
+      `${calculation.schemaVersion} · ${hash(calculation.schemaHash)} / ${calculation.descriptorVersion} · ${hash(calculation.descriptorHash)}`,
+    ],
+    ["Input", `revision ${calculation.inputRevision} · ${hash(calculation.inputHash)}`],
+    ["Created / acquired", `${reportTimestamp(calculation.createdAt)} / ${value.acquiredAt}`],
+    ["Outcome", outcomeName(result.outcome)],
+    ["Label 9 direction", directionName(result.label9Direction)],
+    ["Coverage rows / findings", `${calculation.coverage.length} / ${calculation.findings.length}`],
+  ];
+  const comparison = value.predecessor?.calculation
+    ? calculationComparison(calculation, value.predecessor.calculation)
+    : [];
+  const frozenRows = frozenBas
+    ? [
+        ["Frozen snapshot", `${frozenBas.frozenId} · hash ${hash(frozenBas.contentHash)}`],
+        [
+          "Approved calculation",
+          `${frozenBas.calculation?.id ?? "not retained"} · hash ${hash(frozenBas.calculation?.contentHash ?? new Uint8Array())}`,
+        ],
+        [
+          "Validation",
+          `${frozenBas.validation?.id ?? "not retained"} · hash ${hash(frozenBas.validation?.contentHash ?? new Uint8Array())}`,
+        ],
+        [
+          "Approval actor / factor",
+          `${frozenBas.approvalActorUserId} / ${frozenBas.freshFactorAssertionId}`,
+        ],
+        ["Approved at", reportTimestamp(frozenBas.approvedAt)],
+        ["Approval reason", frozenBas.approvalReason],
+        ["Approved snapshot hash", hash(frozenBas.approvedSnapshotHash)],
+        ["Acknowledgements", String(frozenBas.acknowledgements.length)],
+      ]
+    : [];
+  const allStrings = [
+    status,
+    ...metadata.flat(),
+    ...frozenRows.flat(),
+    ...labelRows.flat(),
+    ...comparison.flat(),
+    ...calculation.coverage.map(prettyRecord),
+    ...calculation.findings.map(prettyRecord),
+    ...result.labels.map(prettyRecord),
+    ...workpaper.salesSources.map(prettyRecord),
+    ...workpaper.sources.map(prettyRecord),
+    ...workpaper.purchaseSources.map(prettyRecord),
+    ...workpaper.purchaseReviews.map(prettyRecord),
+    ...workpaper.legacyPurchaseSupport.map(prettyRecord),
+    prettyRecord(calculation.organisationSnapshot),
+    prettyRecord(calculation.revisionVector),
+    prettyRecord(calculation.profileSnapshot),
+    prettyRecord(calculation.periodSnapshot),
+    prettyRecord(calculation.paygwInputs),
+    prettyRecord(calculation.paygiInputs),
+    ...(value.predecessor ? [prettyRecord(value.predecessor.preparation)] : []),
+    value.preparation?.creationReason ?? "",
+    value.predecessor?.preparation.creationReason ?? "",
+    ...(frozenBas
+      ? [prettyRecord(frozenBas), ...frozenBas.acknowledgements.map(prettyRecord)]
+      : []),
+  ];
+  const contents = [
+    h(Text, { style: { fontWeight: 700, marginTop: 10, marginBottom: 8 } }, status),
+    reportTable(["Pinned identity", "Exact retained value"], metadata, [0.3, 0.7]),
+    reportTable(
+      ["BAS label", "State", "Operation", "Exact trace"],
+      labelRows,
+      [0.12, 0.17, 0.2, 0.51],
+    ),
+    ...(comparison.length
+      ? [
+          h(
+            Text,
+            { style: { fontWeight: 700, marginTop: 12 } },
+            "Exact predecessor calculation comparison",
+          ),
+          reportTable(
+            ["Label", "Predecessor", "This calculation", "Exact delta"],
+            comparison,
+            [0.12, 0.29, 0.29, 0.3],
+          ),
+        ]
+      : []),
+    ...(frozenRows.length
+      ? [reportTable(["Frozen approval", "Retained value"], frozenRows, [0.3, 0.7])]
+      : []),
+    ...reportRecordSection("All 18 calculation traces and evidence", calculation.result!.labels),
+    ...reportRecordSection("Pinned organisation and revision vector", [
+      calculation.organisationSnapshot!,
+      calculation.revisionVector!,
+    ]),
+    ...reportRecordSection("Full cent-level workpaper snapshot", [workpaper]),
+    ...reportRecordSection("PAYG withholding inputs", [calculation.paygwInputs!]),
+    ...reportRecordSection("PAYG instalment inputs", [calculation.paygiInputs!]),
+    ...reportRecordSection("Invoice sales sources", workpaper.salesSources),
+    ...reportRecordSection("Legacy purchase sources", workpaper.sources),
+    ...reportRecordSection("Purchase source allocations", workpaper.purchaseSources),
+    ...reportRecordSection("Purchase review and timing records", workpaper.purchaseReviews),
+    ...reportRecordSection("Legacy purchase support", workpaper.legacyPurchaseSupport),
+    ...reportRecordSection("Source coverage and full provenance", calculation.coverage),
+    ...reportRecordSection("Validation findings and source identities", calculation.findings),
+    ...(value.preparation ? reportRecordSection("Preparation", [value.preparation]) : []),
+    ...(value.predecessor
+      ? reportRecordSection("Exact predecessor preparation", [value.predecessor.preparation])
+      : []),
+    ...(value.predecessor?.calculation
+      ? reportRecordSection("Exact predecessor calculation", [value.predecessor.calculation])
+      : []),
+    ...(frozenBas
+      ? reportRecordSection("Freeze approval and warning acknowledgements", [
+          frozenBas,
+          ...frozenBas.acknowledgements,
+        ])
+      : []),
+  ];
+  return pdf(
+    { organisation: value.organisation, acquiredAt: value.acquiredAt },
+    frozenBas ? "Frozen BAS manual handoff" : "BAS preparation calculation",
+    periodText,
+    contents,
+    allStrings,
+  );
+}
+
+const basPreparationCsvColumns = [
+  "record_type",
+  "record_id",
+  "related_id",
+  "target_kind",
+  "target_id",
+  "target_revision",
+  "target_hash",
+  "calculation_id",
+  "calculation_revision",
+  "calculation_hash",
+  "period_start",
+  "period_end",
+  "label_code",
+  "label",
+  "state",
+  "operation",
+  "direction",
+  "rule_id",
+  "exact_cents_numerator",
+  "exact_cents_denominator",
+  "exact_rate_numerator",
+  "exact_rate_denominator",
+  "reported_whole_dollars",
+  "rounding_difference_cents_numerator",
+  "rounding_difference_cents_denominator",
+  "operand_index",
+  "source_type",
+  "source_id",
+  "source_revision",
+  "source_hash",
+  "proof_scope",
+  "component_sequence",
+  "related_source_id",
+  "related_sequence",
+  "candidate_kind",
+  "disposition",
+  "classification_code",
+  "tax_date",
+  "amount_currency",
+  "amount_minor_units",
+  "severity",
+  "stable_code",
+  "reason",
+  "actor_id",
+  "recorded_at",
+  "field",
+  "value",
+  "record_json",
+] as const;
+
+function jsonValue(value: unknown): unknown {
+  if (typeof value === "bigint") return value.toString();
+  if (value instanceof Uint8Array) return hash(value);
+  if (Array.isArray(value)) return value.map(jsonValue);
+  if (value && typeof value === "object")
+    return Object.fromEntries(
+      Object.entries(value)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, child]) => [key, jsonValue(child)]),
+    );
+  return value;
+}
+
+function recordJson(value: unknown) {
+  return JSON.stringify(jsonValue(value));
+}
+
+function basPreparationCsvRow(
+  type: string,
+  fields: Partial<Record<(typeof basPreparationCsvColumns)[number], string>> = {},
+  value?: unknown,
+) {
+  const row = Array<string>(basPreparationCsvColumns.length).fill("");
+  row[0] = type;
+  for (const [key, field] of Object.entries(fields)) {
+    const index = basPreparationCsvColumns.indexOf(
+      key as (typeof basPreparationCsvColumns)[number],
+    );
+    if (index < 0) throw new Error("INVALID_REPORT_SNAPSHOT");
+    row[index] = safeText(field ?? "");
+  }
+  if (value !== undefined) row[basPreparationCsvColumns.indexOf("record_json")] = recordJson(value);
+  return row;
+}
+
+function sourceIdentityFields(
+  value: unknown,
+): Partial<Record<(typeof basPreparationCsvColumns)[number], string>> {
+  if (!value || typeof value !== "object") return {};
+  const identity = value as {
+    readonly canonicalSource?: {
+      readonly type: string;
+      readonly id: string;
+      readonly revision: bigint;
+      readonly contentHash: Uint8Array;
+    };
+    readonly rawSource?: {
+      readonly type: string;
+      readonly id: string;
+      readonly originalRevision?: bigint;
+      readonly originalContentHash?: Uint8Array;
+      readonly computedProofHash: Uint8Array;
+      readonly proofScope: number;
+      readonly componentSequence?: bigint;
+      readonly relatedId?: string;
+      readonly relatedSequence?: bigint;
+    };
+  };
+  if (identity.canonicalSource)
+    return {
+      source_type: identity.canonicalSource.type,
+      source_id: identity.canonicalSource.id,
+      source_revision: identity.canonicalSource.revision.toString(),
+      source_hash: hash(identity.canonicalSource.contentHash),
+      proof_scope: "canonical_source_ref",
+    };
+  if (identity.rawSource)
+    return {
+      source_type: identity.rawSource.type,
+      source_id: identity.rawSource.id,
+      source_revision: identity.rawSource.originalRevision?.toString() ?? "",
+      source_hash: identity.rawSource.originalContentHash
+        ? hash(identity.rawSource.originalContentHash)
+        : "",
+      proof_scope: String(identity.rawSource.proofScope),
+      component_sequence: identity.rawSource.componentSequence?.toString() ?? "",
+      related_source_id: identity.rawSource.relatedId ?? "",
+      related_sequence: identity.rawSource.relatedSequence?.toString() ?? "",
+    };
+  return {};
+}
+
+function amountState(state: number) {
+  return (
+    (
+      { 1: "UNSET", 2: "UNKNOWN", 3: "NOT_APPLICABLE", 4: "KNOWN_ZERO", 5: "KNOWN" } as Record<
+        number,
+        string
+      >
+    )[state] ?? "INVALID"
+  );
+}
+
+function outcomeName(outcome: number) {
+  return (
+    ({ 1: "COMPLETE", 2: "INCOMPLETE", 3: "UNSUPPORTED" } as Record<number, string>)[outcome] ??
+    "INVALID"
+  );
+}
+
+function directionName(direction: number) {
+  return (
+    ({ 1: "NIL", 2: "PAYABLE", 3: "REFUNDABLE" } as Record<number, string>)[direction] ??
+    "UNSPECIFIED"
+  );
+}
+
+function operationName(operation: number) {
+  return (
+    (
+      {
+        1: "INPUT",
+        2: "TRUNCATE_TO_WHOLE_DOLLARS",
+        3: "SUM",
+        4: "COPY",
+        5: "MULTIPLY",
+        6: "ABSOLUTE_DIFFERENCE",
+      } as Record<number, string>
+    )[operation] ?? "INVALID"
+  );
+}
+
+function coverageKind(value: number) {
+  return (
+    (
+      {
+        1: "INVOICE_POSTING",
+        2: "PURCHASE_SETTLEMENT",
+        3: "PURCHASE_CREDIT",
+        4: "MANUAL_TAX_FACT",
+        5: "PAYG_FACT",
+        6: "OPENING_OR_LEGACY_FACT",
+        7: "OTHER_OBLIGATION",
+      } as Record<number, string>
+    )[value] ?? "INVALID"
+  );
+}
+
+function coverageDisposition(value: number) {
+  return (
+    (
+      {
+        1: "ELIGIBLE",
+        2: "EXCLUDED_WITH_REASON",
+        3: "UNRESOLVED",
+        4: "UNSUPPORTED",
+        5: "REVIEWED_ZERO",
+        6: "NOT_APPLICABLE",
+      } as Record<number, string>
+    )[value] ?? "INVALID"
+  );
+}
+
+function sourceIdentityRows(parentType: string, parentId: string, refs: readonly unknown[]) {
+  return refs.map((identity, index) =>
+    basPreparationCsvRow(
+      `${parentType}_identity`,
+      {
+        record_id: parentId,
+        operand_index: String(index),
+        ...sourceIdentityFields(identity),
+      },
+      identity,
+    ),
+  );
+}
+
+export function renderBasPreparationCsv(value: BasPreparationReportSnapshot) {
+  validateBasPreparationReportSnapshot(value);
+  const { calculation, target } = value;
+  const period = calculation.periodSnapshot?.confirmation?.period;
+  if (!period?.startDate || !period.endDate) throw new Error("INVALID_REPORT_SNAPSHOT");
+  const periodStart = reportDate(period.startDate);
+  const periodEnd = reportDate(period.endDate);
+  const rows: string[][] = [[...basPreparationCsvColumns]];
+  const metadata: readonly [string, string, unknown?][] = [
+    [
+      "report_kind",
+      target.kind === "frozen_bas"
+        ? "FROZEN_MANUAL_HANDOFF_NOT_LODGED"
+        : outcomeName(calculation.result!.outcome) === "COMPLETE"
+          ? "READY_FOR_REVIEW_NOT_FROZEN_OR_LODGED"
+          : `${outcomeName(calculation.result!.outcome)}_NOT_LODGED`,
+    ],
+    ["target_kind", target.kind],
+    ["target_id", target.id],
+    ["target_revision", target.revision.toString()],
+    ["target_hash", hash(target.hash)],
+    ["organisation_id", value.organisation.id],
+    ["organisation_version", value.organisation.version.toString()],
+    ["organisation_legal_name", value.organisation.legalName],
+    ["organisation_display_name", value.organisation.displayName],
+    ["organisation_abn", value.organisation.abn],
+    ["calculation_id", calculation.calculationId],
+    ["calculation_revision", calculation.version.toString()],
+    ["calculation_hash", hash(calculation.contentHash)],
+    ["preparation_ref", recordJson(calculation.preparation)],
+    ["preparation_creation_reason", value.preparation?.creationReason ?? "", value.preparation],
+    [
+      "predecessor_preparation_creation_reason",
+      value.predecessor?.preparation.creationReason ?? "",
+      value.predecessor?.preparation,
+    ],
+    ["family_ref", recordJson(calculation.family)],
+    ["period_ref", recordJson(calculation.period)],
+    ["profile_ref", recordJson(calculation.profile)],
+    ["period_start", periodStart],
+    ["period_end", periodEnd],
+    ["calculation_outcome", outcomeName(calculation.result!.outcome)],
+    ["label_9_direction", directionName(calculation.result!.label9Direction)],
+    ["source_snapshot_hash", hash(calculation.sourceSnapshotHash)],
+    ["coverage_manifest_hash", hash(calculation.coverageManifestHash)],
+    ["revision_vector_hash", hash(calculation.revisionVectorHash)],
+    ["rule_version", calculation.ruleVersion],
+    ["rule_hash", hash(calculation.ruleHash)],
+    ["calculator_version", calculation.calculatorVersion],
+    ["calculator_hash", hash(calculation.calculatorHash)],
+    ["form_version", calculation.formVersion],
+    ["form_hash", hash(calculation.formHash)],
+    ["schema_version", calculation.schemaVersion],
+    ["schema_hash", hash(calculation.schemaHash)],
+    ["descriptor_version", calculation.descriptorVersion],
+    ["descriptor_hash", hash(calculation.descriptorHash)],
+    ["organisation_snapshot_hash", hash(calculation.organisationSnapshotHash)],
+    ["input_revision", calculation.inputRevision.toString()],
+    ["input_hash", hash(calculation.inputHash)],
+    ["created_at", reportTimestamp(calculation.createdAt)],
+    ["acquired_at", value.acquiredAt],
+  ];
+  for (const [field, fieldValue, raw] of metadata)
+    rows.push(basPreparationCsvRow("metadata", { field, value: fieldValue }, raw));
+  for (const [field, raw] of [
+    ["organisation_snapshot", calculation.organisationSnapshot],
+    ["profile_snapshot", calculation.profileSnapshot],
+    ["period_snapshot", calculation.periodSnapshot],
+    ["paygw_inputs", calculation.paygwInputs],
+    ["paygi_inputs", calculation.paygiInputs],
+    ["revision_vector", calculation.revisionVector],
+  ] as const)
+    rows.push(basPreparationCsvRow("pinned_snapshot", { field }, raw));
+
+  const labels = new Map(calculation.result!.labels.map((trace) => [trace.label, trace]));
+  for (const definition of BAS_PREPARATION_LABELS) {
+    const trace = labels.get(definition.code);
+    if (!trace) throw new Error("INVALID_REPORT_SNAPSHOT");
+    rows.push(
+      basPreparationCsvRow(
+        "label",
+        {
+          record_id: calculation.calculationId,
+          calculation_id: calculation.calculationId,
+          calculation_revision: calculation.version.toString(),
+          calculation_hash: hash(calculation.contentHash),
+          period_start: periodStart,
+          period_end: periodEnd,
+          label_code: String(definition.code),
+          label: definition.label,
+          state: amountState(trace.state),
+          operation: operationName(trace.operation),
+          direction:
+            definition.code === 18 ? directionName(calculation.result!.label9Direction) : "",
+          rule_id: trace.ruleId,
+          exact_cents_numerator: trace.exactCentsNumerator ?? "",
+          exact_cents_denominator: trace.exactCentsDenominator ?? "",
+          exact_rate_numerator: trace.exactRateNumerator ?? "",
+          exact_rate_denominator: trace.exactRateDenominator ?? "",
+          reported_whole_dollars: trace.reportedWholeDollars?.toString() ?? "",
+          rounding_difference_cents_numerator: trace.roundingDifferenceCentsNumerator ?? "",
+          rounding_difference_cents_denominator: trace.roundingDifferenceCentsDenominator ?? "",
+        },
+        trace,
+      ),
+    );
+    rows.push(
+      ...trace.operands.map((operand, index) =>
+        basPreparationCsvRow(
+          "trace_operand",
+          {
+            record_id: calculation.calculationId,
+            related_id: definition.label,
+            label_code: String(definition.code),
+            label: definition.label,
+            state: amountState(operand.state),
+            operand_index: String(index),
+            exact_cents_numerator: operand.exactCentsNumerator,
+            exact_cents_denominator: operand.exactCentsDenominator,
+            exact_rate_numerator: operand.exactRateNumerator ?? "",
+            exact_rate_denominator: operand.exactRateDenominator ?? "",
+            reported_whole_dollars: operand.reportedWholeDollars.toString(),
+          },
+          operand,
+        ),
+      ),
+    );
+    rows.push(
+      ...trace.evidence.map((evidence, index) =>
+        basPreparationCsvRow(
+          "trace_evidence",
+          {
+            record_id: calculation.calculationId,
+            related_id: definition.label,
+            label_code: String(definition.code),
+            label: definition.label,
+            operand_index: String(index),
+            source_type: evidence.type,
+            source_id: evidence.id,
+            source_revision: evidence.revision.toString(),
+            source_hash: hash(evidence.contentHash),
+          },
+          evidence,
+        ),
+      ),
+    );
+  }
+
+  calculation.coverage.forEach((entry, index) => {
+    const fields = entry.source
+      ? {
+          source_type: entry.source.type,
+          source_id: entry.source.id,
+          source_revision: entry.source.revision.toString(),
+          source_hash: hash(entry.source.contentHash),
+        }
+      : entry.rawSource
+        ? sourceIdentityFields({ rawSource: entry.rawSource })
+        : {};
+    rows.push(
+      basPreparationCsvRow(
+        "coverage",
+        {
+          record_id: calculation.calculationId,
+          related_id: String(index),
+          ...fields,
+          candidate_kind: coverageKind(entry.candidateKind),
+          disposition: coverageDisposition(entry.disposition),
+          classification_code: entry.classificationCode,
+          tax_date: entry.taxDate ? reportDate(entry.taxDate) : "",
+          amount_currency: entry.eligibleAmount?.currencyCode ?? "",
+          amount_minor_units: entry.eligibleAmount?.minorUnits.toString() ?? "",
+          reason: entry.reason,
+        },
+        entry,
+      ),
+    );
+    rows.push(
+      ...sourceIdentityRows(
+        "coverage_lineage",
+        `${calculation.calculationId}:${index}`,
+        entry.lineageIdentities,
+      ),
+    );
+    rows.push(
+      ...sourceIdentityRows(
+        "coverage_evidence",
+        `${calculation.calculationId}:${index}`,
+        entry.evidenceIdentities,
+      ),
+    );
+    rows.push(
+      ...entry.lineage.map((source, sourceIndex) =>
+        basPreparationCsvRow(
+          "coverage_lineage_ref",
+          {
+            record_id: `${calculation.calculationId}:${index}`,
+            operand_index: String(sourceIndex),
+            source_type: source.type,
+            source_id: source.id,
+            source_revision: source.revision.toString(),
+            source_hash: hash(source.contentHash),
+          },
+          source,
+        ),
+      ),
+    );
+    rows.push(
+      ...entry.evidence.map((source, sourceIndex) =>
+        basPreparationCsvRow(
+          "coverage_evidence_ref",
+          {
+            record_id: `${calculation.calculationId}:${index}`,
+            operand_index: String(sourceIndex),
+            source_type: source.type,
+            source_id: source.id,
+            source_revision: source.revision.toString(),
+            source_hash: hash(source.contentHash),
+          },
+          source,
+        ),
+      ),
+    );
+  });
+  calculation.findings.forEach((entry) => {
+    rows.push(
+      basPreparationCsvRow(
+        "finding",
+        {
+          record_id: entry.findingId,
+          calculation_id: calculation.calculationId,
+          severity: String(entry.severity),
+          stable_code: entry.stableCode,
+          reason: entry.safeMessage,
+        },
+        entry,
+      ),
+    );
+    rows.push(...sourceIdentityRows("finding_source", entry.findingId, entry.sourceIdentities));
+    rows.push(
+      ...entry.sources.map((source, index) =>
+        basPreparationCsvRow(
+          "finding_source_ref",
+          {
+            record_id: entry.findingId,
+            operand_index: String(index),
+            source_type: source.type,
+            source_id: source.id,
+            source_revision: source.revision.toString(),
+            source_hash: hash(source.contentHash),
+          },
+          source,
+        ),
+      ),
+    );
+  });
+
+  const workpaper = calculation.workpaperSnapshot!;
+  rows.push(
+    ...workpaper.salesSources.map((source) =>
+      basPreparationCsvRow(
+        "sales_source",
+        {
+          record_id: source.invoiceId,
+          related_id: source.paymentId ?? "",
+        },
+        source,
+      ),
+    ),
+  );
+  rows.push(
+    ...workpaper.sources.map((source) =>
+      basPreparationCsvRow(
+        "legacy_purchase_source",
+        {
+          record_id: source.documentId,
+        },
+        source,
+      ),
+    ),
+  );
+  rows.push(
+    ...workpaper.purchaseSources.map((source) =>
+      basPreparationCsvRow(
+        "purchase_source",
+        {
+          record_id: source.postingId,
+          source_id: source.documentId,
+          source_hash: hash(source.postingHash),
+          component_sequence: String(source.allocationSequence),
+        },
+        source,
+      ),
+    ),
+  );
+  rows.push(
+    ...workpaper.purchaseReviews.map((source) =>
+      basPreparationCsvRow(
+        "purchase_review",
+        {
+          record_id:
+            source.legacyReview?.id ??
+            source.deferralId ??
+            source.postingId ??
+            source.documentId ??
+            "",
+          disposition: String(source.status),
+          reason: source.reason,
+          source_revision: source.sourceRevision.toString(),
+          source_hash: hash(source.sourceHash),
+        },
+        source,
+      ),
+    ),
+  );
+  rows.push(
+    ...workpaper.legacyPurchaseSupport.map((source) =>
+      basPreparationCsvRow(
+        "legacy_purchase_support",
+        {
+          record_id: source.reviewId,
+          candidate_kind: String(source.kind),
+          component_sequence: String(source.sequence),
+          ...(source.source
+            ? {
+                source_type: purchaseName(source.kind, legacySupportNames),
+                source_id: source.source.sourceId,
+                source_revision: source.source.sourceVersion.toString(),
+                source_hash: hash(source.source.sourceHash),
+              }
+            : {}),
+        },
+        source,
+      ),
+    ),
+  );
+
+  if (value.preparation)
+    rows.push(
+      basPreparationCsvRow(
+        "preparation",
+        {
+          record_id: value.preparation.preparationId,
+          target_id: value.preparation.preparationId,
+          target_revision: value.preparation.version.toString(),
+          target_hash: hash(value.preparation.contentHash),
+          disposition: String(value.preparation.state),
+          reason: value.preparation.creationReason,
+        },
+        value.preparation,
+      ),
+    );
+  if (value.predecessor) {
+    rows.push(
+      basPreparationCsvRow(
+        "predecessor_preparation",
+        {
+          record_id: value.predecessor.preparation.preparationId,
+          related_id: value.predecessor.preparation.predecessor?.id ?? "",
+          target_revision: value.predecessor.preparation.version.toString(),
+          target_hash: hash(value.predecessor.preparation.contentHash),
+          reason: value.predecessor.preparation.creationReason,
+        },
+        value.predecessor.preparation,
+      ),
+    );
+    if (value.predecessor.calculation)
+      rows.push(
+        basPreparationCsvRow(
+          "predecessor_calculation",
+          {
+            record_id: value.predecessor.calculation.calculationId,
+            calculation_revision: value.predecessor.calculation.version.toString(),
+            calculation_hash: hash(value.predecessor.calculation.contentHash),
+          },
+          value.predecessor.calculation,
+        ),
+      );
+    if (value.predecessor.calculation) {
+      for (const [label, before, after, delta] of calculationComparison(
+        calculation,
+        value.predecessor.calculation,
+      ))
+        rows.push(
+          basPreparationCsvRow("label_delta", {
+            record_id: value.predecessor.calculation.calculationId,
+            related_id: calculation.calculationId,
+            label,
+            value: delta,
+            reason: `predecessor=${before}; current=${after}`,
+          }),
+        );
+    }
+  }
+
+  if (value.frozenBas) {
+    rows.push(
+      basPreparationCsvRow(
+        "freeze_approval",
+        {
+          record_id: value.frozenBas.frozenId,
+          actor_id: value.frozenBas.approvalActorUserId,
+          recorded_at: reportTimestamp(value.frozenBas.approvedAt),
+          reason: value.frozenBas.approvalReason,
+          source_hash: hash(value.frozenBas.approvedSnapshotHash),
+        },
+        {
+          frozenId: value.frozenBas.frozenId,
+          frozenHash: value.frozenBas.contentHash,
+          preparation: value.frozenBas.preparation,
+          family: value.frozenBas.family,
+          period: value.frozenBas.period,
+          profile: value.frozenBas.profile,
+          calculation: value.frozenBas.calculation,
+          validation: value.frozenBas.validation,
+          approvalActorUserId: value.frozenBas.approvalActorUserId,
+          freshFactorAssertionId: value.frozenBas.freshFactorAssertionId,
+          approvedAt: value.frozenBas.approvedAt,
+          approvalReason: value.frozenBas.approvalReason,
+        },
+      ),
+    );
+    rows.push(
+      ...value.frozenBas.acknowledgements.map((ack) =>
+        basPreparationCsvRow(
+          "warning_acknowledgement",
+          {
+            record_id: ack.acknowledgementId,
+            related_id: ack.finding?.id ?? "",
+            actor_id: ack.actorUserId,
+            recorded_at: reportTimestamp(ack.acknowledgedAt),
+            source_hash: hash(ack.sourceSnapshotHash),
+          },
+          ack,
+        ),
+      ),
+    );
+  }
+  return csv(rows);
 }
 function ReportCell({
   children,

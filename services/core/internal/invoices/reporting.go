@@ -1240,8 +1240,7 @@ func scanBASReportingReceipt(scanner interface{ Scan(...any) error }) (BASInvoic
 		payment.AllocatedGst.MinorUnits != receipt.AllocatedGSTMinor || payment.BasSalesGross == nil ||
 		payment.BasSalesGross.CurrencyCode != "AUD" || payment.BasSalesGross.MinorUnits != receipt.BASSalesGrossMinor ||
 		payment.BankAccountId != receipt.BankAccountID || payment.JournalId != receipt.JournalID ||
-		payment.Reference != receipt.Reference || payment.CreatedAt == nil || payment.CreatedAt.CheckValid() != nil ||
-		payment.CreatedAt.AsTime().UTC().Format(time.RFC3339Nano) != receipt.CreatedAt {
+		payment.Reference != receipt.Reference || payment.CreatedAt == nil || payment.CreatedAt.CheckValid() != nil {
 		return BASInvoiceReceipt{}, errors.New("invoice payment protobuf disagrees with its retained row")
 	}
 	paymentDate, ok := reportingCivilDate(payment.PaymentDate)

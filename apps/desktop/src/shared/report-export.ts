@@ -33,12 +33,34 @@ export const incomeExportRequest = z
 export const basExportRequest = z
   .strictObject({ ...common, expectedWorkpaperId: uuid, expectedWorkpaperVersion: version })
   .refine((value) => value.periodStart <= value.periodEnd);
+const exactBasTarget = z.discriminatedUnion("kind", [
+  z.strictObject({
+    kind: z.literal("calculation"),
+    id: uuid,
+    revision: version,
+    hash: z.string().regex(/^[0-9a-f]{64}$/u),
+  }),
+  z.strictObject({
+    kind: z.literal("frozen_bas"),
+    id: uuid,
+    revision: z.literal("1"),
+    hash: z.string().regex(/^[0-9a-f]{64}$/u),
+  }),
+]);
+export const basPreparationExportRequest = z.strictObject({
+  authentication: common.authentication,
+  organisationId: common.organisationId,
+  target: exactBasTarget,
+  format: common.format,
+});
 export type IncomeExportRequest = z.infer<typeof incomeExportRequest>;
 export type BasExportRequest = z.infer<typeof basExportRequest>;
+export type BasPreparationExportRequest = z.infer<typeof basPreparationExportRequest>;
 export type ReportFormat = "pdf" | "csv";
 export interface ReportExports {
   exportIncome(request: IncomeExportRequest): Promise<{ readonly saved: boolean }>;
   exportBas(request: BasExportRequest): Promise<{ readonly saved: boolean }>;
+  exportBasPreparation(request: BasPreparationExportRequest): Promise<{ readonly saved: boolean }>;
 }
 export const REPORT_EXPORT_ERRORS = [
   "REPORT_REFRESH_REQUIRED",

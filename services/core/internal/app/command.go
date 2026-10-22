@@ -203,37 +203,53 @@ type CommandResult struct {
 type OrdinaryOperation string
 
 const (
-	OrdinaryOperationCreateOrganisation          OrdinaryOperation = "tammy.v1.OrganisationService.CreateOrganisation"
-	OrdinaryOperationUpdateOrganisation          OrdinaryOperation = "tammy.v1.OrganisationService.UpdateOrganisation"
-	OrdinaryOperationRecordEntityVerification    OrdinaryOperation = "tammy.v1.OrganisationService.RecordEntityVerification"
-	OrdinaryOperationCreateAccount               OrdinaryOperation = "tammy.v1.AccountingService.CreateAccount"
-	OrdinaryOperationUpdateAccount               OrdinaryOperation = "tammy.v1.AccountingService.UpdateAccount"
-	OrdinaryOperationSetAccountStatus            OrdinaryOperation = "tammy.v1.AccountingService.SetAccountStatus"
-	OrdinaryOperationPostOpeningConversion       OrdinaryOperation = "tammy.v1.AccountingService.PostOpeningConversion"
-	OrdinaryOperationReplaceOpeningConversion    OrdinaryOperation = "tammy.v1.AccountingService.ReplaceOpeningConversion"
-	OrdinaryOperationPostManualJournal           OrdinaryOperation = "tammy.v1.AccountingService.PostManualJournal"
-	OrdinaryOperationReverseJournal              OrdinaryOperation = "tammy.v1.AccountingService.ReverseJournal"
-	OrdinaryOperationClosePeriod                 OrdinaryOperation = "tammy.v1.AccountingService.ClosePeriod"
-	OrdinaryOperationReopenPeriod                OrdinaryOperation = "tammy.v1.AccountingService.ReopenPeriod"
-	OrdinaryOperationSaveInvoiceDraft            OrdinaryOperation = "tammy.v1.InvoiceService.SaveInvoiceDraft"
-	OrdinaryOperationIssueInvoice                OrdinaryOperation = "tammy.v1.InvoiceService.IssueInvoice"
-	OrdinaryOperationPostInvoiceIncome           OrdinaryOperation = "tammy.v1.InvoiceService.PostInvoiceIncome"
-	OrdinaryOperationRecordInvoicePayment        OrdinaryOperation = "tammy.v1.InvoiceService.RecordInvoicePayment"
-	OrdinaryOperationSaveInvoiceTemplate         OrdinaryOperation = "tammy.v1.InvoiceService.SaveInvoiceTemplate"
-	OrdinaryOperationUploadInvoiceLogo           OrdinaryOperation = "tammy.v1.InvoiceService.UploadInvoiceLogo"
-	OrdinaryOperationPostReviewedPurchase        OrdinaryOperation = "tammy.v1.PurchaseService.PostReviewedPurchase"
-	OrdinaryOperationRecordPurchasePayment       OrdinaryOperation = "tammy.v1.PurchaseService.RecordPurchasePayment"
-	OrdinaryOperationRecordPurchaseTaxEvidence   OrdinaryOperation = "tammy.v1.PurchaseService.RecordPurchaseTaxEvidence"
-	OrdinaryOperationAttributePurchaseGst        OrdinaryOperation = "tammy.v1.PurchaseService.AttributePurchaseGst"
-	OrdinaryOperationDeferPurchaseGstClaim       OrdinaryOperation = "tammy.v1.PurchaseService.DeferPurchaseGstClaim"
-	OrdinaryOperationResolveLegacyPurchaseReview OrdinaryOperation = "tammy.v1.PurchaseService.ResolveLegacyPurchaseReview"
+	OrdinaryOperationCreateOrganisation            OrdinaryOperation = "tammy.v1.OrganisationService.CreateOrganisation"
+	OrdinaryOperationUpdateOrganisation            OrdinaryOperation = "tammy.v1.OrganisationService.UpdateOrganisation"
+	OrdinaryOperationRecordEntityVerification      OrdinaryOperation = "tammy.v1.OrganisationService.RecordEntityVerification"
+	OrdinaryOperationCreateAccount                 OrdinaryOperation = "tammy.v1.AccountingService.CreateAccount"
+	OrdinaryOperationUpdateAccount                 OrdinaryOperation = "tammy.v1.AccountingService.UpdateAccount"
+	OrdinaryOperationSetAccountStatus              OrdinaryOperation = "tammy.v1.AccountingService.SetAccountStatus"
+	OrdinaryOperationPostOpeningConversion         OrdinaryOperation = "tammy.v1.AccountingService.PostOpeningConversion"
+	OrdinaryOperationReplaceOpeningConversion      OrdinaryOperation = "tammy.v1.AccountingService.ReplaceOpeningConversion"
+	OrdinaryOperationPostManualJournal             OrdinaryOperation = "tammy.v1.AccountingService.PostManualJournal"
+	OrdinaryOperationReverseJournal                OrdinaryOperation = "tammy.v1.AccountingService.ReverseJournal"
+	OrdinaryOperationClosePeriod                   OrdinaryOperation = "tammy.v1.AccountingService.ClosePeriod"
+	OrdinaryOperationReopenPeriod                  OrdinaryOperation = "tammy.v1.AccountingService.ReopenPeriod"
+	OrdinaryOperationSaveInvoiceDraft              OrdinaryOperation = "tammy.v1.InvoiceService.SaveInvoiceDraft"
+	OrdinaryOperationIssueInvoice                  OrdinaryOperation = "tammy.v1.InvoiceService.IssueInvoice"
+	OrdinaryOperationPostInvoiceIncome             OrdinaryOperation = "tammy.v1.InvoiceService.PostInvoiceIncome"
+	OrdinaryOperationRecordInvoicePayment          OrdinaryOperation = "tammy.v1.InvoiceService.RecordInvoicePayment"
+	OrdinaryOperationSaveInvoiceTemplate           OrdinaryOperation = "tammy.v1.InvoiceService.SaveInvoiceTemplate"
+	OrdinaryOperationUploadInvoiceLogo             OrdinaryOperation = "tammy.v1.InvoiceService.UploadInvoiceLogo"
+	OrdinaryOperationPostReviewedPurchase          OrdinaryOperation = "tammy.v1.PurchaseService.PostReviewedPurchase"
+	OrdinaryOperationRecordPurchasePayment         OrdinaryOperation = "tammy.v1.PurchaseService.RecordPurchasePayment"
+	OrdinaryOperationRecordPurchaseTaxEvidence     OrdinaryOperation = "tammy.v1.PurchaseService.RecordPurchaseTaxEvidence"
+	OrdinaryOperationAttributePurchaseGst          OrdinaryOperation = "tammy.v1.PurchaseService.AttributePurchaseGst"
+	OrdinaryOperationDeferPurchaseGstClaim         OrdinaryOperation = "tammy.v1.PurchaseService.DeferPurchaseGstClaim"
+	OrdinaryOperationResolveLegacyPurchaseReview   OrdinaryOperation = "tammy.v1.PurchaseService.ResolveLegacyPurchaseReview"
+	OrdinaryOperationSetBasObligationsProfile      OrdinaryOperation = "tammy.v1.BasPreparationService.SetBasObligationsProfile"
+	OrdinaryOperationConfirmBasPeriod              OrdinaryOperation = "tammy.v1.BasPreparationService.ConfirmBasPeriod"
+	OrdinaryOperationSaveBasPaygInputs             OrdinaryOperation = "tammy.v1.BasPreparationService.SaveBasPaygInputs"
+	OrdinaryOperationRegenerateBasPreparation      OrdinaryOperation = "tammy.v1.BasPreparationService.RegenerateBasPreparation"
+	OrdinaryOperationValidateBasPreparation        OrdinaryOperation = "tammy.v1.BasPreparationService.ValidateBasPreparation"
+	OrdinaryOperationAcknowledgeBasWarnings        OrdinaryOperation = "tammy.v1.BasPreparationService.AcknowledgeBasWarnings"
+	OrdinaryOperationCreateBasReplacement          OrdinaryOperation = "tammy.v1.BasPreparationService.CreateBasReplacement"
+	OrdinaryOperationCreateBasRevision             OrdinaryOperation = "tammy.v1.BasPreparationService.CreateBasRevision"
+	OrdinaryOperationFreezeBasForManualHandoff     OrdinaryOperation = "tammy.v1.BasPreparationService.FreezeBasForManualHandoff"
+	OrdinaryOperationRecordExternalBasObservation  OrdinaryOperation = "tammy.v1.BasPreparationService.RecordExternalBasObservation"
+	OrdinaryOperationCorrectExternalBasObservation OrdinaryOperation = "tammy.v1.BasPreparationService.CorrectExternalBasObservation"
+	OrdinaryOperationResolveExternalBasDispute     OrdinaryOperation = "tammy.v1.BasPreparationService.ResolveExternalBasDispute"
+	OrdinaryOperationReplaceRejectedBasAttempt     OrdinaryOperation = "tammy.v1.BasPreparationService.ReplaceRejectedBasAttempt"
 )
 
+const OrdinaryOperationRecordBasExportEvent OrdinaryOperation = "tammy.v1.BasPreparationService.RecordBasExportEvent"
+
 type ordinaryOperationDefinition struct {
-	rpcName     string
-	action      authorisation.Action
-	requestType string
-	resultType  string
+	rpcName        string
+	action         authorisation.Action
+	actionResolver func(proto.Message) (authorisation.Action, bool)
+	requestType    string
+	resultType     string
 }
 
 // OrdinaryCommand describes transaction-local phases. SaveSource and
@@ -289,11 +305,15 @@ func (coordinator *Coordinator[Repositories]) Execute(
 			return err
 		}
 		operation, known := ordinaryOperationDefinitionFor(command.Operation)
+		if !known || string(ownedRequest.ProtoReflect().Descriptor().FullName()) != operation.requestType {
+			return ErrCommand
+		}
+		action, known := ordinaryOperationActionFor(command.Operation, ownedRequest)
 		if !known {
 			return ErrCommand
 		}
 		scope := commandScope[Repositories]{transactionID: transaction.TransactionID(), repositories: transaction.Repositories()}
-		actor, err := coordinator.authorizer.Authorize(transactionContext, scope, ownedAuthentication, operation.action)
+		actor, err := coordinator.authorizer.Authorize(transactionContext, scope, ownedAuthentication, action)
 		if err != nil {
 			return err
 		}
@@ -303,7 +323,6 @@ func (coordinator *Coordinator[Repositories]) Execute(
 			return ErrCommand
 		}
 		if !ids.IsCanonicalV7(command.OperationKey) || command.NewResult == nil || command.BuildResult == nil ||
-			string(ownedRequest.ProtoReflect().Descriptor().FullName()) != operation.requestType ||
 			!matchesCommandContext(ownedRequest, ownedAuthentication, command.OperationKey) {
 			return ErrCommand
 		}
@@ -591,10 +610,106 @@ func ordinaryOperationDefinitionFor(operation OrdinaryOperation) (ordinaryOperat
 		definition.action = authorisation.ActionPrepareTax
 		definition.requestType = "tammy.v1.ResolveLegacyPurchaseReviewRequest"
 		definition.resultType = "tammy.v1.ResolveLegacyPurchaseReviewResponse"
+	case OrdinaryOperationSetBasObligationsProfile:
+		definition.action = authorisation.ActionPrepareTax
+		definition.requestType = "tammy.v1.SetBasObligationsProfileRequest"
+		definition.resultType = "tammy.v1.SetBasObligationsProfileResponse"
+	case OrdinaryOperationConfirmBasPeriod:
+		definition.action = authorisation.ActionPrepareTax
+		definition.requestType = "tammy.v1.ConfirmBasPeriodRequest"
+		definition.resultType = "tammy.v1.ConfirmBasPeriodResponse"
+	case OrdinaryOperationSaveBasPaygInputs:
+		definition.action = authorisation.ActionPrepareTax
+		definition.requestType = "tammy.v1.SaveBasPaygInputsRequest"
+		definition.resultType = "tammy.v1.SaveBasPaygInputsResponse"
+	case OrdinaryOperationRegenerateBasPreparation:
+		definition.action = authorisation.ActionPrepareTax
+		definition.requestType = "tammy.v1.RegenerateBasPreparationRequest"
+		definition.resultType = "tammy.v1.RegenerateBasPreparationResponse"
+	case OrdinaryOperationValidateBasPreparation:
+		definition.action = authorisation.ActionPrepareTax
+		definition.requestType = "tammy.v1.ValidateBasPreparationRequest"
+		definition.resultType = "tammy.v1.ValidateBasPreparationResponse"
+	case OrdinaryOperationAcknowledgeBasWarnings:
+		definition.action = authorisation.ActionPrepareTax
+		definition.requestType = "tammy.v1.AcknowledgeBasWarningsRequest"
+		definition.resultType = "tammy.v1.AcknowledgeBasWarningsResponse"
+	case OrdinaryOperationRecordBasExportEvent:
+		definition.action = authorisation.ActionReadFinancial
+		definition.requestType = "tammy.v1.RecordBasExportEventRequest"
+		definition.resultType = "tammy.v1.RecordBasExportEventResponse"
+	case OrdinaryOperationCreateBasReplacement:
+		definition.action = authorisation.ActionApproveBASUnusedReplacement
+		definition.requestType = "tammy.v1.CreateBasReplacementRequest"
+		definition.resultType = "tammy.v1.CreateBasReplacementResponse"
+	case OrdinaryOperationCreateBasRevision:
+		definition.action = authorisation.ActionPrepareTax
+		definition.requestType = "tammy.v1.CreateBasRevisionRequest"
+		definition.resultType = "tammy.v1.CreateBasRevisionResponse"
+	case OrdinaryOperationFreezeBasForManualHandoff:
+		definition.action = authorisation.ActionApproveBASFreeze
+		definition.requestType = "tammy.v1.FreezeBasForManualHandoffRequest"
+		definition.resultType = "tammy.v1.FreezeBasForManualHandoffResponse"
+	case OrdinaryOperationRecordExternalBasObservation:
+		definition.actionResolver = basExternalObservationAction
+		definition.requestType = "tammy.v1.RecordExternalBasObservationRequest"
+		definition.resultType = "tammy.v1.RecordExternalBasObservationResponse"
+	case OrdinaryOperationCorrectExternalBasObservation:
+		definition.action = authorisation.ActionCorrectBASExternalObservation
+		definition.requestType = "tammy.v1.CorrectExternalBasObservationRequest"
+		definition.resultType = "tammy.v1.CorrectExternalBasObservationResponse"
+	case OrdinaryOperationResolveExternalBasDispute:
+		definition.action = authorisation.ActionApproveBASDisputeResolution
+		definition.requestType = "tammy.v1.ResolveExternalBasDisputeRequest"
+		definition.resultType = "tammy.v1.ResolveExternalBasDisputeResponse"
+	case OrdinaryOperationReplaceRejectedBasAttempt:
+		definition.action = authorisation.ActionApproveBASRejectedReplacement
+		definition.requestType = "tammy.v1.ReplaceRejectedBasAttemptRequest"
+		definition.resultType = "tammy.v1.ReplaceRejectedBasAttemptResponse"
 	default:
 		return ordinaryOperationDefinition{}, false
 	}
 	return definition, true
+}
+
+// ordinaryOperationActionFor has no caller-controlled action input. Static
+// operations take their action from the closed registry; the sole dynamic BAS
+// case is resolved from the coordinator-owned typed request.
+func ordinaryOperationActionFor(operation OrdinaryOperation, request proto.Message) (authorisation.Action, bool) {
+	definition, known := ordinaryOperationDefinitionFor(operation)
+	if !known {
+		return "", false
+	}
+	if definition.actionResolver != nil {
+		return definition.actionResolver(request)
+	}
+	if definition.action == "" {
+		return "", false
+	}
+	return definition.action, true
+}
+
+func basExternalObservationAction(request proto.Message) (authorisation.Action, bool) {
+	value, ok := request.(*tammyv1.RecordExternalBasObservationRequest)
+	if !ok || value == nil || value.Observation == nil {
+		return "", false
+	}
+	switch value.Observation.GetEventKind() {
+	case tammyv1.BasExternalEventKind_BAS_EXTERNAL_EVENT_KIND_COMPLETED_LODGEMENT,
+		tammyv1.BasExternalEventKind_BAS_EXTERNAL_EVENT_KIND_ACCEPTANCE:
+		return authorisation.ActionApproveBASExternalConfirmation, true
+	case tammyv1.BasExternalEventKind_BAS_EXTERNAL_EVENT_KIND_PENDING,
+		tammyv1.BasExternalEventKind_BAS_EXTERNAL_EVENT_KIND_UNKNOWN,
+		tammyv1.BasExternalEventKind_BAS_EXTERNAL_EVENT_KIND_REJECTION,
+		tammyv1.BasExternalEventKind_BAS_EXTERNAL_EVENT_KIND_REVIEWER_HANDOFF,
+		tammyv1.BasExternalEventKind_BAS_EXTERNAL_EVENT_KIND_PAYMENT,
+		tammyv1.BasExternalEventKind_BAS_EXTERNAL_EVENT_KIND_REFUND:
+		return authorisation.ActionPrepareTax, true
+	default:
+		// Unspecified and future values fail closed. They cannot inherit the
+		// approval path or fall through to the lower-privilege preparation role.
+		return "", false
+	}
 }
 
 func (coordinator *Coordinator[Repositories]) check(stage string) error {

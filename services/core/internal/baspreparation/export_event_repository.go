@@ -166,6 +166,13 @@ func (repository *ExportEventRepository) Append(ctx context.Context, org, operat
 }
 
 func (repository *ExportEventRepository) GetExact(ctx context.Context, org string, exact *tammyv1.SourceRef) (*tammyv1.BasExportEvent, error) {
+	return repository.getExact(ctx, org, exact, true)
+}
+
+// getExact retains all exact row, protobuf, target and family validation. List
+// may skip only the per-row prefix aggregate after its batch window proof has
+// established the selected rows' exact target-local version positions.
+func (repository *ExportEventRepository) getExact(ctx context.Context, org string, exact *tammyv1.SourceRef, verifyVersionPrefix bool) (*tammyv1.BasExportEvent, error) {
 	if !repository.ready(ctx) || !ids.IsCanonicalV7(org) || !validBASSourceRef(exact, exportSnapshotSpec.resource, "") || exact.Revision != 1 {
 		return nil, ErrExportEventRepository
 	}
@@ -222,8 +229,10 @@ func (repository *ExportEventRepository) GetExact(ctx context.Context, org strin
 	if err != nil || family == nil || family.Id != familyID {
 		return nil, errors.Join(ErrExportEventRepository, ErrSnapshotCorrupt, err)
 	}
-	if err := repository.verifyExportVersionPrefix(ctx, org, value.Event.Target, ordinal, version); err != nil {
-		return nil, errors.Join(ErrExportEventRepository, ErrSnapshotCorrupt, err)
+	if verifyVersionPrefix {
+		if err := repository.verifyExportVersionPrefix(ctx, org, value.Event.Target, ordinal, version); err != nil {
+			return nil, errors.Join(ErrExportEventRepository, ErrSnapshotCorrupt, err)
+		}
 	}
 	return value, nil
 }

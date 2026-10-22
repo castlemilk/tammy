@@ -292,11 +292,9 @@ func (r *Repository) legacyJournalPayments(ctx context.Context, org string, sour
 		return nil, ErrSourceBound
 	}
 	journalIDs = purchaseCoverageMapKeysFromHeaders(headers)
-	journals, _ := accounting.NewJournalRepository(r.executor)
-	accounts, _ := accounting.NewAccountRepository(r.executor)
 	var result []*tammyv1.Journal
 	for _, id := range journalIDs {
-		journal, err := journals.Get(ctx, id)
+		journal, err := r.reportingJournal(ctx, org, id)
 		if err != nil || journal.OrganisationId != org {
 			return nil, ErrRepository
 		}
@@ -309,7 +307,7 @@ func (r *Repository) legacyJournalPayments(ctx context.Context, org string, sour
 			continue
 		}
 		for _, line := range journal.Lines {
-			account, err := accounts.Get(ctx, line.AccountId)
+			account, err := r.reportingAccount(ctx, org, line.AccountId)
 			if err != nil || account.OrganisationId != org {
 				return nil, ErrRepository
 			}
@@ -782,9 +780,8 @@ func (r *Repository) legacyPriorSources(ctx context.Context, doc *tammyv1.Docume
 		return nil, ErrRepository
 	}
 	var result []*tammyv1.SourceRef
-	journals, _ := accounting.NewJournalRepository(r.executor)
 	for _, id := range journalIDs {
-		journal, err := journals.Get(ctx, id)
+		journal, err := r.reportingJournal(ctx, doc.OrganisationId, id)
 		if err != nil || journal.OrganisationId != doc.OrganisationId {
 			return nil, ErrRepository
 		}

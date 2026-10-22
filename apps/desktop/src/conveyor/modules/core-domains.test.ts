@@ -216,6 +216,15 @@ const ORDINARY_CASES = [
   },
   {
     module: "organisation",
+    method: "assignRoles",
+    coreMethod: "assignRoles",
+    input: identityProto.AssignRolesRequestSchema,
+    output: identityProto.AssignRolesResponseSchema,
+    maximumRequestBytes: 8_192,
+    maximumResponseBytes: 32_768,
+  },
+  {
+    module: "organisation",
     method: "getOrganisation",
     coreMethod: "getOrganisation",
     input: organisationProto.GetOrganisationRequestSchema,

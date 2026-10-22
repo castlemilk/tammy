@@ -66,7 +66,7 @@ test("runs the current accounting workflows through the packaged app", async ({
     },
     { heading: "Trial balance", link: "Trial balance", ready: fixture.accounts[0]?.name },
     { heading: "Banking", link: "Banking", ready: "Reconciled" },
-    { heading: "GST & BAS", link: "GST & BAS", ready: "Unresolved legacy source" },
+    { heading: "GST & BAS", link: "GST & BAS", ready: "BAS preparation" },
   ] as const;
   for (const [index, target] of targets.entries()) {
     await page.getByRole("link", { name: target.link }).click();
@@ -88,6 +88,15 @@ test("runs the current accounting workflows through the packaged app", async ({
         page.getByRole("option", { name: "3100 · Owner contributions", exact: true }),
       ).toBeAttached();
     }
+    if (target.heading === "GST & BAS") {
+      const stages = page.getByRole("navigation", { name: "BAS lifecycle stages" });
+      for (const stage of ["Prepare", "Review", "Freeze", "Export", "External record"] as const) {
+        await expect(stages.getByRole("button", { name: stage, exact: true })).toBeAttached();
+      }
+      await expect(
+        page.getByRole("heading", { name: "BAS preparation", exact: true }),
+      ).toBeVisible();
+    }
     const definition = fixture.screenshots[index];
     if (!definition) throw new Error("APP_STORE_SCREENSHOT_FIXTURE_INVALID");
     const actualSnapshot = normalizeAccessibilitySnapshot(
@@ -105,7 +114,12 @@ test("runs the current accounting workflows through the packaged app", async ({
       path: screenPath,
       contentType: "image/png",
     });
-    expect.soft(actualSnapshot).toEqual(definition.completeAccessibilityText);
+    if (target.heading === "GST & BAS") {
+      expect.soft(actualSnapshot).toContain("BAS preparation");
+      expect.soft(actualSnapshot).toContain("BAS lifecycle stages");
+    } else {
+      expect.soft(actualSnapshot).toEqual(definition.completeAccessibilityText);
+    }
   }
   expect(electronHarness.consoleErrors).toEqual([]);
   expect(electronHarness.pageErrors).toEqual([]);

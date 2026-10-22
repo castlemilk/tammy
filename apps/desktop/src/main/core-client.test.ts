@@ -8,7 +8,12 @@ import {
 } from "@connectrpc/connect";
 import type { ConnectTransportOptions } from "@connectrpc/connect-node";
 import {
+  BasPreparationService,
+  ListBasObligationsProfilesRequestSchema,
+} from "@tammy/connect-client/tammy/v1/bas_preparation_pb.js";
+import {
   AssertTOTPRequestSchema,
+  AssignRolesRequestSchema,
   ConfirmTOTPRequestSchema,
   EnrolTOTPRequestSchema,
   GetCurrentUserRequestSchema,
@@ -141,6 +146,11 @@ function fakeTransport(
               receivedHeaders.push(new Headers(context.requestHeader));
               return {};
             },
+            assignRoles: (_request, context) => {
+              methods.push(context.method);
+              receivedHeaders.push(new Headers(context.requestHeader));
+              return {};
+            },
             enrolTOTP: (_request, context) => {
               methods.push(context.method);
               receivedHeaders.push(new Headers(context.requestHeader));
@@ -222,6 +232,13 @@ function fakeTransport(
               methods.push(context.method);
               receivedHeaders.push(new Headers(context.requestHeader));
               receivedTimeouts.push(context.timeoutMs());
+              return {};
+            },
+          });
+          router.service(BasPreparationService, {
+            listBasObligationsProfiles: (_request, context) => {
+              methods.push(context.method);
+              receivedHeaders.push(new Headers(context.requestHeader));
               return {};
             },
           });
@@ -321,11 +338,26 @@ describe("createCoreClient", () => {
     expect(receivedHeaders[0]?.get("X-Tammy-Capability")).toBe(CAPABILITY);
   });
 
+  it("exposes the generated BAS preparation client with capability authentication", async () => {
+    const { factory, methods, receivedHeaders } = fakeTransport();
+    const client = createCoreClient(READINESS, factory);
+
+    const response = await client.basPreparation?.listBasObligationsProfiles(
+      create(ListBasObligationsProfilesRequestSchema),
+    );
+
+    expect(response?.$typeName).toBe("tammy.v1.ListBasObligationsProfilesResponse");
+    expect(methods).toEqual([BasPreparationService.method.listBasObligationsProfiles]);
+    expect(receivedHeaders).toHaveLength(1);
+    expect(receivedHeaders[0]?.get("X-Tammy-Capability")).toBe(CAPABILITY);
+  });
+
   it("maps every required identity, organisation, and SBR call to its generated client", async () => {
     const { factory, methods, receivedHeaders } = fakeTransport();
     const client = createCoreClient(READINESS, factory);
     const calls = [
       ["getCurrentUser", GetCurrentUserRequestSchema],
+      ["assignRoles", AssignRolesRequestSchema],
       ["enrolTotp", EnrolTOTPRequestSchema],
       ["confirmTotp", ConfirmTOTPRequestSchema],
       ["assertTotp", AssertTOTPRequestSchema],
@@ -348,6 +380,7 @@ describe("createCoreClient", () => {
 
     expect(methods).toEqual([
       IdentityService.method.getCurrentUser,
+      IdentityService.method.assignRoles,
       IdentityService.method.enrolTOTP,
       IdentityService.method.confirmTOTP,
       IdentityService.method.assertTOTP,

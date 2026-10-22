@@ -803,26 +803,29 @@ message BasTraceOperand {
   option (buf.validate.message).cel = {
     id: "bas.trace_operand.state"
     message: "Calculation operands must be known values, including an explicit known zero"
-    expression: "(this.state == 4 && this.exact_cents_numerator == '0' && this.reported_whole_dollars == 0) || (this.state == 5 && this.exact_cents_numerator != '0')"
+    expression: "(this.label == 11 && ((this.state == 4 && this.exact_rate_numerator == '0') || (this.state == 5 && this.exact_rate_numerator != '0')) && has(this.exact_rate_numerator) && has(this.exact_rate_denominator) && this.exact_rate_denominator.matches('^[1-9][0-9]{0,78}$') && this.exact_cents_numerator == '' && this.exact_cents_denominator == '' && this.reported_whole_dollars == 0) || (this.label != 11 && ((this.state == 4 && this.exact_cents_numerator == '0' && this.reported_whole_dollars == 0) || (this.state == 5 && this.exact_cents_numerator != '0')) && this.exact_cents_numerator.matches('^(0|[1-9][0-9]{0,78})$') && this.exact_cents_denominator.matches('^[1-9][0-9]{0,78}$') && !has(this.exact_rate_numerator) && !has(this.exact_rate_denominator))"
   };
   BasFormLabel label = 1 [(buf.validate.field).enum = {
     defined_only: true
     not_in: 0
   }];
-  string exact_cents_numerator = 2 [(buf.validate.field).string = {
-    min_len: 1
-    max_len: 80
-    pattern: "^(0|[1-9][0-9]{0,78})$"
-  }];
-  string exact_cents_denominator = 3 [(buf.validate.field).string = {
-    min_len: 1
-    max_len: 80
-    pattern: "^[1-9][0-9]{0,78}$"
-  }];
+  string exact_cents_numerator = 2 [(buf.validate.field).string.max_len = 80];
+  string exact_cents_denominator = 3 [(buf.validate.field).string.max_len = 80];
   int64 reported_whole_dollars = 4 [(buf.validate.field).int64.gte = 0];
   BasAmountState state = 5 [(buf.validate.field).enum = {
     defined_only: true
     not_in: 0
+  }];
+  // T2 is a percentage rate, not AUD cents. It is populated only for label T2.
+  optional string exact_rate_numerator = 6 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 80
+    pattern: "^(0|[1-9][0-9]{0,78})$"
+  }];
+  optional string exact_rate_denominator = 7 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 80
+    pattern: "^[1-9][0-9]{0,78}$"
   }];
 }
 
@@ -831,7 +834,7 @@ message BasLabelTrace {
   option (buf.validate.message).cel = {
     id: "bas.label_trace.state_payload"
     message: "Known labels carry exact values; only derived label 9 may report whole dollars when exact cents are zero"
-    expression: "(this.label != 18 || this.operation == 6) && ((this.state == 4 && has(this.exact_cents_numerator) && this.exact_cents_numerator == '0' && has(this.exact_cents_denominator) && has(this.reported_whole_dollars) && has(this.rounding_difference_cents_numerator) && has(this.rounding_difference_cents_denominator) && ((this.label == 18 && this.reported_whole_dollars > 0 && this.rounding_difference_cents_numerator.startsWith('-')) || (this.reported_whole_dollars == 0 && this.rounding_difference_cents_numerator == '0'))) || (this.state == 5 && has(this.exact_cents_numerator) && this.exact_cents_numerator != '0' && has(this.exact_cents_denominator) && has(this.reported_whole_dollars) && has(this.rounding_difference_cents_numerator) && has(this.rounding_difference_cents_denominator)) || ((this.state == 1 || this.state == 2 || this.state == 3) && !has(this.exact_cents_numerator) && !has(this.exact_cents_denominator) && !has(this.reported_whole_dollars) && !has(this.rounding_difference_cents_numerator) && !has(this.rounding_difference_cents_denominator)))"
+    expression: "(this.label != 18 || this.operation == 6) && ((this.label == 11 && ((this.state == 4 && has(this.exact_rate_numerator) && this.exact_rate_numerator == '0' && has(this.exact_rate_denominator)) || (this.state == 5 && has(this.exact_rate_numerator) && this.exact_rate_numerator != '0' && has(this.exact_rate_denominator))) && !has(this.exact_cents_numerator) && !has(this.exact_cents_denominator) && !has(this.reported_whole_dollars) && !has(this.rounding_difference_cents_numerator) && !has(this.rounding_difference_cents_denominator)) || (this.label != 11 && ((this.state == 4 && has(this.exact_cents_numerator) && this.exact_cents_numerator == '0' && has(this.exact_cents_denominator) && has(this.reported_whole_dollars) && has(this.rounding_difference_cents_numerator) && has(this.rounding_difference_cents_denominator) && ((this.label == 18 && this.reported_whole_dollars > 0 && this.rounding_difference_cents_numerator.startsWith('-')) || (this.reported_whole_dollars == 0 && this.rounding_difference_cents_numerator == '0'))) || (this.state == 5 && has(this.exact_cents_numerator) && this.exact_cents_numerator != '0' && has(this.exact_cents_denominator) && has(this.reported_whole_dollars) && has(this.rounding_difference_cents_numerator) && has(this.rounding_difference_cents_denominator))) && !has(this.exact_rate_numerator) && !has(this.exact_rate_denominator)) || ((this.state == 1 || this.state == 2 || this.state == 3) && !has(this.exact_cents_numerator) && !has(this.exact_cents_denominator) && !has(this.reported_whole_dollars) && !has(this.rounding_difference_cents_numerator) && !has(this.rounding_difference_cents_denominator) && !has(this.exact_rate_numerator) && !has(this.exact_rate_denominator)))"
   };
   BasFormLabel label = 1 [(buf.validate.field).enum = {
     defined_only: true
@@ -874,6 +877,17 @@ message BasLabelTrace {
     defined_only: true
     not_in: 0
   }];
+  // T2's exact notified percentage uses this pair; exact_cents_* remains money-only.
+  optional string exact_rate_numerator = 12 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 80
+    pattern: "^(0|[1-9][0-9]{0,78})$"
+  }];
+  optional string exact_rate_denominator = 13 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 80
+    pattern: "^[1-9][0-9]{0,78}$"
+  }];
 }
 
 message BasCalculationResult {
@@ -906,6 +920,11 @@ enum BasSourceProofScope {
 // computed_proof_hash is a distinct hash of the retained proof at proof_scope;
 // it never substitutes for an absent original source hash.
 message BasRawSourceRef {
+  option (buf.validate.message).cel = {
+    id: "bas.raw_source.related_component"
+    message: "A related component sequence identifies a retained related source"
+    expression: "!has(this.related_sequence) || has(this.related_id)"
+  };
   string type = 1 [(buf.validate.field).string = {
     min_len: 1
     max_len: 128
@@ -922,6 +941,14 @@ message BasRawSourceRef {
     defined_only: true
     not_in: 0
   }];
+  // Component identity is kept separate from the exact opaque parent ID.
+  // The optional related tuple preserves an allocation's referenced component.
+  optional uint64 component_sequence = 7 [(buf.validate.field).uint64.gt = 0];
+  optional string related_id = 8 [(buf.validate.field).string = {
+    min_len: 1
+    pattern: ".*\\S.*"
+  }];
+  optional uint64 related_sequence = 9 [(buf.validate.field).uint64.gt = 0];
 }
 
 // BasSourceIdentity is exactly one canonical or raw representation. The
@@ -1088,6 +1115,9 @@ message BasPreparation {
   // Input identity changes only when reviewed facts change, not on validation or export events.
   uint64 input_revision = 18 [(buf.validate.field).uint64.gte = 1];
   bytes input_hash = 19 [(buf.validate.field).bytes.len = 32];
+  // The bounded explanation for creating a linked revision or replacement.
+  // It is immutable across all later versions of this preparation.
+  string creation_reason = 20 [(buf.validate.field).string.max_len = 512];
 }
 
 // BasPreparationSummary is intentionally shallow for history pages.
@@ -1623,6 +1653,22 @@ message GetBasPreparationRequest {
   }];
   bytes preparation_hash = 4 [(buf.validate.field).bytes.len = 32];
 }
+// A live read never rewrites a retained preparation, calculation or approval.
+enum BasLiveCurrentness {
+  BAS_LIVE_CURRENTNESS_UNSPECIFIED = 0;
+  BAS_LIVE_CURRENTNESS_NOT_ASSESSED = 1;
+  BAS_LIVE_CURRENTNESS_CURRENT = 2;
+  BAS_LIVE_CURRENTNESS_SOURCE_CHANGED = 3;
+  BAS_LIVE_CURRENTNESS_UNAVAILABLE = 4;
+}
+
+// Exact subjects and dependency proof derived from the complete retained log.
+message BasExternalDisputeSummary {
+  repeated SourceRef disputed_observations = 1 [(buf.validate.field).repeated.max_items = 200];
+  repeated SourceRef affected_confirmed_chain = 2 [(buf.validate.field).repeated.max_items = 200];
+  bytes dependent_chain_manifest_hash = 3 [(buf.validate.field).bytes.len = 32];
+}
+
 message GetBasPreparationResponse {
   option (buf.validate.message).cel = {
     id: "bas.preparation_query.saved_payg_pair"
@@ -1639,6 +1685,17 @@ message GetBasPreparationResponse {
   // Saved PAYG inputs correspond to this preparation's input_revision and input_hash, never unlabelled live values.
   optional BasPaygwInputs paygw_inputs = 6;
   optional BasPaygiInputs paygi_inputs = 7;
+  // The original confirmed version differs from the immutable collecting root.
+  optional SourceRef effective_original = 8 [(buf.validate.field).cel = {
+    id: "bas.preparation_query.effective_original_type"
+    message: "The effective original is an exact retained preparation"
+    expression: "this.type == 'bas_preparation'"
+  }];
+  BasLiveCurrentness live_currentness = 9 [(buf.validate.field).enum.defined_only = true];
+  BasDisputeOverlayState current_dispute_overlay = 10 [(buf.validate.field).enum.defined_only = true];
+  optional SourceRef current_branch_resolution = 11;
+  optional SourceRef current_frozen_barrier = 12;
+  optional BasExternalDisputeSummary current_dispute = 13;
 }
 
 message ListBasPreparationsRequest {
@@ -1726,6 +1783,7 @@ message GetFrozenBasRequest {
 }
 message GetFrozenBasResponse {
   BasFrozenBas frozen_bas = 1 [(buf.validate.field).required = true];
+  BasLiveCurrentness live_currentness = 2 [(buf.validate.field).enum.defined_only = true];
 }
 
 message ListFrozenBasRequest {
@@ -2204,7 +2262,7 @@ message RecordBasExportEventResponse {
   BasExportEvent event = 1 [(buf.validate.field).required = true];
 }
 
-// BasPreparationService is a future local contract; it is not mounted by the current runtime.
+// BasPreparationService is mounted by the local encrypted workspace runtime.
 // It records preparation and user-reported external handling, and exposes no submission transport.
 service BasPreparationService {
   rpc GetBasObligationsProfile(GetBasObligationsProfileRequest) returns (GetBasObligationsProfileResponse);

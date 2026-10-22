@@ -104,6 +104,13 @@ func TestLegacyCurrentnessEvidenceOnlySuppressionFollowsDirectNoTaxFactReversalC
 				t.Fatalf("coverage changed direct source edges: prior journal IDs=%v, want %s", legacy.PriorJournalIDs, original.Id)
 			}
 			assertCapturedLegacyReversal(t, tx, capture, sourceDocument.Id, reversed, reversal)
+			mapped := assertBASPurchaseMapMatchesMature(t, tx, f, request.Review.AffectedPeriod, request.Review.ReportingBalanceDate, tammyv1.GstBasis_GST_BASIS_NON_CASH)
+			for _, unit := range mapped.Units {
+				if unit.Candidate.Legacy != nil && unit.Candidate.Legacy.SourceID == sourceDocument.Id &&
+					(unit.IsCandidate == test.wantEvidenceOnly || unit.EvidenceOnly != test.wantEvidenceOnly || unit.Status != wantStatus) {
+					t.Fatalf("exact frozen legacy candidate/suppression disposition changed: %#v", unit)
+				}
+			}
 			if postScalar(t, tx, "SELECT total_changes()") != changes || !reflect.DeepEqual(counts, coverageStateCounts(t, tx)) {
 				t.Fatal("legacy classification or complete coverage changed retained state")
 			}
@@ -152,6 +159,7 @@ func TestLegacyCurrentnessFollowsReversalOfReversal(t *testing.T) {
 		t.Fatalf("transitive current cash credit failed to keep legacy source unresolved: %+v", value)
 	}
 	assertLegacyCandidateJournalRefs(t, value.PriorSources, map[string]*tammyv1.Journal{original.Id: reversedOriginal, final.Id: final})
+	assertBASPurchaseMapMatchesMature(t, tx, f, request.Review.AffectedPeriod, request.Review.ReportingBalanceDate, tammyv1.GstBasis_GST_BASIS_NON_CASH)
 	capture := captureCoverage(t, f.repo(tx), ctx)
 	legacy := coverageLegacyDocument(t, capture, documentID)
 	if capture.ReceiptCount != 0 || len(legacy.PaymentJournalIDs) != 0 || len(legacy.PriorJournalIDs) != 1 || legacy.PriorJournalIDs[0] != original.Id {
@@ -204,6 +212,7 @@ func TestLegacyCurrentnessRetainsExplicitTransitiveReversalPaymentSupport(t *tes
 				t.Fatalf("explicit reversal support did not remain exact and unsupported: %+v", value)
 			}
 			assertLegacyCandidateJournalRefs(t, value.PriorSources, map[string]*tammyv1.Journal{retained[0].Id: retained[0], current.Id: current})
+			assertBASPurchaseMapMatchesMature(t, tx, f, request.Review.AffectedPeriod, request.Review.ReportingBalanceDate, tammyv1.GstBasis_GST_BASIS_CASH)
 			capture, err := f.repo(tx).CaptureCoverageForBAS(ctx, postingOrg)
 			if err != nil || capture == nil {
 				t.Fatalf("complete coverage rejected real writer's exact transitive reversal payment support: capture=%v err=%v", capture, err)
@@ -242,6 +251,7 @@ func TestLegacyCurrentnessRetainsExplicitTransitiveReversalPaymentSupport(t *tes
 			if value.Excluded || value.Status != tammyv1.PurchaseReviewStatus_PURCHASE_REVIEW_STATUS_UNRESOLVED_LEGACY || len(value.Reviews) != 1 || !proto.Equal(value.Reviews[0], saved.Review) {
 				t.Fatalf("reversed explicit support did not become unresolved while retaining history: %+v", value)
 			}
+			assertBASPurchaseMapMatchesMature(t, tx, f, request.Review.AffectedPeriod, request.Review.ReportingBalanceDate, tammyv1.GstBasis_GST_BASIS_CASH)
 			if !tx.Authenticated() || postScalar(t, tx, "SELECT total_changes()") != changes || !reflect.DeepEqual(counts, coverageStateCounts(t, tx)) {
 				t.Fatal("historical transitive support readers changed retained state or ended the caller transaction")
 			}

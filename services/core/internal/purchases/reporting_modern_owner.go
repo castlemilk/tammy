@@ -30,11 +30,9 @@ const (
 
 func purchaseReportingOwnerGuardForSet(org string, owners purchaseReportingOwnerSet) *postingReportingOwnerGuard {
 	guard := &postingReportingOwnerGuard{}
+	parts := make([]string, 0, 18)
 	appendGuard := func(other *postingReportingOwnerGuard) {
-		if guard.invalid != "" {
-			guard.invalid += " OR "
-		}
-		guard.invalid += other.invalid
+		parts = append(parts, other.invalid)
 		guard.args = append(guard.args, other.args...)
 	}
 	if owners&purchaseOwnerPosting != 0 {
@@ -69,6 +67,24 @@ func purchaseReportingOwnerGuardForSet(org string, owners purchaseReportingOwner
 			args: []any{org},
 		})
 	}
+	for _, family := range []struct {
+		bit       purchaseReportingOwnerSet
+		kind      BASScalarKeyKind
+		allEvents bool
+	}{
+		{purchaseOwnerPaymentAllocation, BASScalarPaymentAllocation, false},
+		{purchaseOwnerEvidence, BASScalarEvidence, false},
+		{purchaseOwnerPostingEvent, BASScalarEvent, false},
+		{purchaseOwnerDeferral, BASScalarDeferral, false},
+		{purchaseOwnerDeferralPortion, BASScalarDeferralPortion, false},
+		{purchaseOwnerAttribution, BASScalarAttribution, false},
+		{purchaseOwnerCoverageEvents, BASScalarEvent, true},
+	} {
+		if owners&family.bit != 0 {
+			appendGuard(purchaseReportingModernFamilyReferenceGuard(org, family.kind, family.allEvents))
+		}
+	}
+	guard.invalid = strings.Join(parts, " OR ")
 	return guard
 }
 
