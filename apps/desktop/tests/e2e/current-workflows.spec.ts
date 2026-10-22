@@ -828,7 +828,15 @@ async function captureJourney(
 ) {
   const upliftPhase = process.env.TAMMY_UPLIFT_CAPTURE;
   const phase = upliftPhase ?? process.env.TAMMY_JOURNEY_CAPTURE;
-  if (phase !== "before" && phase !== "after") return;
+  if (phase !== "before" && phase !== "after") {
+    if (/^(04-documents|05-banking|19-320-(documents|banking)|25-match-review)$/.test(milestone)) {
+      await test.info().attach(`integrated-ui-${milestone}.png`, {
+        body: await page.screenshot({ animations: "disabled", fullPage: true }),
+        contentType: "image/png",
+      });
+    }
+    return;
+  }
   if (
     upliftPhase &&
     !/^(04-documents|05-banking|11-|12-|13-|18-|19-\d+-(documents|banking)|20-|21-|22-|23-|2[4-9]-)/.test(
