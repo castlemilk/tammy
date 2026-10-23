@@ -777,7 +777,10 @@ test("covers workspace setup, recovery, accounting, and interaction journeys thr
       await expect(page.getByRole("main").getByRole("list").first()).toBeVisible();
     if (route === "/settings/organisation")
       await expect(page.getByText("51824753556", { exact: true })).toBeVisible();
-    if (route === "/settings/sbr") await expect(page.locator("#sbr-summary-heading")).toBeVisible();
+    if (route === "/settings/sbr")
+      await expect(
+        page.getByRole("heading", { name: "Readiness unavailable", exact: true }),
+      ).toBeVisible();
     await captureJourney(page, capture);
   }
   await page.setViewportSize({ width: 320, height: 900 });
